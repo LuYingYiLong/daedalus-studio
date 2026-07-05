@@ -1,0 +1,34 @@
+{
+  "name": "daedalus-studio",
+  "version": "1.0.0",
+  "description": "daedalus-studio",
+  "license": "MIT",
+  "author": "LuYingYiLong",
+  "main": "out/main/index.js",
+  "config": {
+    "electron_mirror": "https://npmmirror.com/mirrors/electron/"
+  },
+  "scripts": {
+    "start": "node scripts/electron-vite.cjs dev",
+    "dev": "node scripts/electron-vite.cjs dev",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && node scripts/electron-vite.cjs build",
+    "preview": "node scripts/electron-vite.cjs preview",
+    "test": "npm run typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "electron": "^43.0.0",
+    "electron-vite": "^5.0.0",
+    "typescript": "^6.0.3",
+    "vite": "^7.3.6"
+  },
+  "dependencies": {
+    "antd": "^6.5.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  }
+}
