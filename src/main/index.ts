@@ -21,7 +21,7 @@ function createWindow(): void {
 		...(process.platform != "darwin" ? {
 			titleBarStyle: "hidden",
 			titleBarOverlay: {
-				color: "#141414",
+				color: "#14141400",
 				symbolColor: "#ffffff"
 			}
 		} : {})

@@ -31,42 +31,6 @@ body {
 	overflow: hidden;
 }
 
-.titlebar {
-	position: relative;
-	height: 30px;
-	display: flex;
-	justify-content: flex-start;
-	align-items: center;
-	-webkit-app-region: drag;
-	user-select: none;
-	padding-left: 8px;
-	font-family: Arial, Helvetica, sans-serif;
-}
-
-.titlebar-icon {
-	height: 16px;
-	width: 16px;
-	margin-right: 8px;
-}
-
-.titlebar p {
-	margin: 0;
-}
-
-.search-box {
-	width: 40%;
-	position: absolute;
-	left: 50%;
-	transform: translateX(-50%);
-	-webkit-app-region: no-drag;
-}
-
-.titlebar-action {
-	margin-left: 12px;
-	-webkit-app-region: no-drag;
-	cursor: pointer;
-}
-
 .app-shell {
 	display: grid;
 	grid-template-columns: 320px minmax(0, 1fr);

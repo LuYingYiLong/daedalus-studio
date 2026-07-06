@@ -1,7 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { ConfigProvider, theme } from "antd";
+import Titlebar from "./Titlebar";
+import BootSplash from "./BootSplash";
 import App from "./App";
-import "./index.css";
+import "./css/App.css";
 
 const rootElement = document.getElementById("root");
 
@@ -11,6 +14,17 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
 	<StrictMode>
-		<App />
+		<ConfigProvider
+			theme={{
+				algorithm: theme.darkAlgorithm,
+				token: {
+					colorPrimary: "#478cbf",
+					borderRadius: 4
+				}
+			}}
+		>
+			<Titlebar />
+			<BootSplash />
+		</ConfigProvider>
 	</StrictMode>
 );

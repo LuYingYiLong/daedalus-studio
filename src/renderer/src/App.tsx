@@ -1,19 +1,11 @@
-import { Avatar, Button, ConfigProvider, Input, Tree, Typography, theme } from "antd";
+import { Button, Input, Tree, Typography } from "antd";
 import type { DataNode } from "antd/es/tree";
 import { Icon } from "@/assets/icons";
 import type { MenuProps } from 'antd';
 import { Dropdown, Space } from 'antd';
 import { Divider } from 'antd';
-import { Select } from 'antd';
 
 const { TextArea } = Input;
-
-const topBarItems: MenuProps["items"] = [
-	{
-		label: "New session",
-		key: "0",
-	}
-];
 
 const addContextItems: MenuProps["items"] = [
 	{
@@ -65,35 +57,7 @@ const messages: ChatMessage[] = [
 
 function App(): React.JSX.Element {
 	return (
-		<ConfigProvider
-			theme={{
-				algorithm: theme.darkAlgorithm,
-				token: {
-					colorPrimary: "#478cbf",
-					borderRadius: 4
-				}
-			}}
-		>
-			<div className="titlebar">
-				<Icon className="titlebar-icon" name="icon" />
-				<p>Daedalus Studio</p>
-				<Dropdown
-					menu={{ items: topBarItems }}
-					trigger={["click"]}
-				>
-					<Space className="titlebar-action">
-						Files
-					</Space>
-				</Dropdown>
-				<Select
-					size="small"
-					placeholder="Search..."
-					notFoundContent="No session"
-					className="search-box"
-					suffixIcon={<Icon name="collapse" style={{ opacity: 0.5 }}/>}
-				/ >
-			</div>
-			<main className="app-shell">
+		<main className="app-shell">
 
 				<aside className="workspace-panel">
 					<header className="panel-header">
@@ -150,8 +114,7 @@ function App(): React.JSX.Element {
 						</div>
 					</footer>
 				</section>
-			</main>
-		</ConfigProvider>
+		</main>
 	);
 }
 
