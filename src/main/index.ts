@@ -7,14 +7,24 @@ function createWindow(): void {
 		height: 760,
 		minWidth: 900,
 		minHeight: 620,
-		backgroundColor: "#111318",
+		backgroundColor: "#141414",
 		show: false,
 		webPreferences: {
 			preload: join(__dirname, "../preload/index.js"),
 			contextIsolation: true,
 			nodeIntegration: false,
 			sandbox: false
-		}
+		},
+
+		// 自定义标题栏
+		titleBarStyle: "hidden",
+		...(process.platform != "darwin" ? {
+			titleBarStyle: "hidden",
+			titleBarOverlay: {
+				color: "#141414",
+				symbolColor: "#ffffff"
+			}
+		} : {})
 	});
 
 	mainWindow.once("ready-to-show", () => {
