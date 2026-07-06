@@ -2,7 +2,7 @@ import { Icon } from "@/assets/icons";
 import type { MenuProps } from "antd";
 import { Dropdown, Space } from "antd";
 import { Select } from "antd";
-import styles from "./css/Titlebar.module.css";
+import styles from "./Titlebar.module.css";
 
 const topBarItems: MenuProps["items"] = [
     {

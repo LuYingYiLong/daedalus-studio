@@ -4,6 +4,7 @@
 	min-height: 0;
 	overflow: hidden;
 	background: #141414;
+	margin-top: -30px;
 	-webkit-app-region: drag;
 }
 
@@ -42,6 +43,7 @@
 	align-items: center;
 	justify-content: center;
 	gap: 14px;
+	width: min(720px, calc(100vw - 96px));
 	font-weight: 800;
 	line-height: 1;
 	letter-spacing: 0;
@@ -54,13 +56,41 @@
 }
 
 .rotatingPill {
-	min-width: min(520px, 52vw);
-	min-height: clamp(54px, 7vw, 96px);
+	position: relative;
+	display: inline-flex;
+	flex: 0 0 auto;
+	min-height: clamp(24px, 24px, 96px);
 	align-items: center;
-	justify-content: left;
+	justify-content: center;
 	padding: 8px;
+	box-sizing: content-box;
+	overflow: hidden;
+	border-radius: var(--splash-border-radius);
 	color: #ffffff;
-	background: linear-gradient(135deg, #4d47bf, #478cbf);
-	box-shadow: 0 20px 56px rgba(139, 92, 246, 0.32);
+	background: #478cbf;
+	box-shadow: 0 20px 56px #478cbf;
 	font-size: clamp(24px, 24px, 72px);
+}
+
+.rotatingPillMeasureList {
+	position: absolute;
+	left: 0;
+	top: 0;
+	visibility: hidden;
+	pointer-events: none;
+}
+
+.rotatingPillMeasure {
+	display: block;
+	width: max-content;
+	white-space: pre;
+}
+
+.rotatingText {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
 }

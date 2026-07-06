@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import styles from './ColorBends.module.css';
+import './ColorBends.css';
 
 type ColorBendsProps = {
   className?: string;
@@ -332,5 +332,5 @@ export default function ColorBends({
     };
   }, []);
 
-  return <div ref={containerRef} className={[styles.colorBendsContainer, className].filter(Boolean).join(' ')} style={style} />;
+  return <div ref={containerRef} className={['colorBendsContainer', className].filter(Boolean).join(' ')} style={style} />;
 }

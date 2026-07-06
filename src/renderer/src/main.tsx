@@ -4,7 +4,7 @@ import { ConfigProvider, theme } from "antd";
 import Titlebar from "./Titlebar";
 import BootSplash from "./BootSplash";
 import App from "./App";
-import "./css/App.css";
+import "./App.css";
 
 const rootElement = document.getElementById("root");
 
