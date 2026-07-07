@@ -1,9 +1,20 @@
-import { contextBridge } from "electron";
+import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("electronAPI", {
 	versions: {
 		chrome: process.versions.chrome,
 		electron: process.versions.electron,
 		node: process.versions.node
+	},
+
+	backend: {
+		getPort: (): Promise<number> => ipcRenderer.invoke("backend:get-port"),
+		getStatus: (): Promise<string> => ipcRenderer.invoke("backend:get-status"),
+		healthCheck: (): Promise<boolean> => ipcRenderer.invoke("backend:health-check"),
+		onStatusChanged: (callback: (status: string) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, status: string): void => callback(status);
+			ipcRenderer.on("backend:status-changed", handler);
+			return () => { ipcRenderer.removeListener("backend:status-changed", handler); };
+		}
 	}
 });

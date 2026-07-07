@@ -24,7 +24,7 @@ createRoot(rootElement).render(
 			}}
 		>
 			<Titlebar />
-			<BootSplash />
+			<App />
 		</ConfigProvider>
 	</StrictMode>
 );

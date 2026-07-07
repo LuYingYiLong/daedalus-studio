@@ -1,5 +1,8 @@
 import { app, BrowserWindow, shell } from "electron";
 import { join } from "node:path";
+import { backendManager } from "./services/backend-manager";
+
+backendManager.registerIpc();
 
 function createWindow(): void {
 	const mainWindow: BrowserWindow = new BrowserWindow({
@@ -25,7 +28,11 @@ function createWindow(): void {
 				symbolColor: "#ffffff"
 			}
 		} : {})
+
 	});
+
+	// 启动 backendManager
+	backendManager.start(mainWindow);
 
 	mainWindow.once("ready-to-show", () => {
 		mainWindow.show();
