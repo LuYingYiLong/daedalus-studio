@@ -59,61 +59,61 @@ function App(): React.JSX.Element {
 	return (
 		<main className="app-shell">
 
-				<aside className="workspace-panel">
-					<header className="panel-header">
-						<Button type="text" block={true} className="btn">New session</Button>
-					</header>
-					<div className="tree-area">
-						<h3>Workspace</h3>
-						<Tree
-							className="workspace-tree"
-							blockNode
-							defaultExpandAll
-							defaultSelectedKeys={["prototype/scenes/main.tscn"]}
-							treeData={workspaceTree}
+			<aside className="workspace-panel">
+				<header className="panel-header">
+					<Button type="text" block={true} className="btn">New session</Button>
+				</header>
+				<div className="tree-area">
+					<h3>Workspace</h3>
+					<Tree
+						className="workspace-tree"
+						blockNode
+						defaultExpandAll
+						defaultSelectedKeys={["prototype/scenes/main.tscn"]}
+						treeData={workspaceTree}
+					/>
+				</div>
+			</aside>
+
+			<section className="chat-pane">
+				<header className="chat-header">
+					<div>
+						<Typography.Title level={3}>Session Name</Typography.Title>
+					</div>
+				</header>
+
+				<div className="message-list">
+					{messages.map((message, index) => (
+						<article key={`${message.author}-${index}`} className={`message message--${message.author}`}>
+							<div className="message-bubble">{message.content}</div>
+						</article>
+					))}
+				</div>
+
+				<footer className="composer">
+					<div className="composer-input-wrap">
+						<TextArea
+							autoSize={{ minRows: 4, maxRows: 6 }}
+							placeholder="What can I say?"
+							className="composer-text-area"
 						/>
-					</div>
-				</aside>
-
-				<section className="chat-pane">
-					<header className="chat-header">
-						<div>
-							<Typography.Title level={3}>Session Name</Typography.Title>
+						<div className="composer-bottom-bar">
+							<Dropdown
+								menu={{ items: addContextItems }}
+								trigger={["click"]}
+							>
+							</Dropdown>
+							<Divider orientation="vertical" />
+							<Button
+								type="text"
+								icon={<Icon name="send" className="composer-send-btn-icon"></Icon>}
+								className="composer-send-btn"
+							>
+							</Button>
 						</div>
-					</header>
-
-					<div className="message-list">
-						{messages.map((message, index) => (
-							<article key={`${message.author}-${index}`} className={`message message--${message.author}`}>
-								<div className="message-bubble">{message.content}</div>
-							</article>
-						))}
 					</div>
-
-					<footer className="composer">
-						<div className="composer-input-wrap">
-							<TextArea
-								autoSize={{ minRows: 4, maxRows: 6 }}
-								placeholder="What can I say?"
-								className="composer-text-area"
-							/>
-							<div className="composer-bottom-bar">
-								<Dropdown
-									menu={{ items: addContextItems }}
-									trigger={["click"]}
-								>
-								</Dropdown>
-								<Divider orientation="vertical" />
-								<Button
-									type="text"
-									icon={<Icon name="send" className="composer-send-btn-icon"></Icon>}
-									className="composer-send-btn"
-								>
-								</Button>
-							</div>
-						</div>
-					</footer>
-				</section>
+				</footer>
+			</section>
 		</main>
 	);
 }
