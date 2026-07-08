@@ -1,7 +1,7 @@
-import ColorBends from "./components/ColorBends";
-import RotatingText from "./components/RotatingText";
-import { Icon } from "@/assets/icons";
+import ColorBends from "./ColorBends";
+import RotatingText from "./RotatingText";
 import styles from "./BootSplash.module.css";
+import { Icon } from "@/assets/icons";
 import { theme } from "antd";
 import { motion } from "motion/react";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";

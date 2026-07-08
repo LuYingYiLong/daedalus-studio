@@ -29,8 +29,11 @@ function createWindow(): void {
 				height: 40
 			}
 		} : {})
-
 	});
+
+	if (!app.isPackaged) {
+		mainWindow.webContents.openDevTools({ mode: "detach" });
+	}
 
 	// 启动 backendManager
 	backendManager.start(mainWindow);

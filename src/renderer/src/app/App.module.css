@@ -1,0 +1,118 @@
+.shell {
+	display: grid;
+	grid-template-columns: 320px minmax(0, 1fr);
+	flex: 1;
+	min-height: 0;
+	background: #141414;
+}
+
+.workspaceSidebar {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	min-height: 0;
+	border-right: 1px solid #303030;
+}
+
+.workspaceHeader {
+	padding: 8px;
+}
+
+.createSessionButton {
+	justify-content: flex-start;
+}
+
+.chatPanel {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr) auto;
+	min-width: 0;
+	min-height: 0;
+}
+
+.chatHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 8px;
+}
+
+.chatTitle {
+	margin: 0;
+}
+
+.messageList {
+	min-height: 0;
+	overflow: auto;
+	padding: 8px;
+}
+
+.messageItem {
+	display: flex;
+	gap: 8px;
+	max-width: 760px;
+	margin-bottom: 8px;
+}
+
+.messageItemUser {
+	margin-left: auto;
+	flex-direction: row-reverse;
+}
+
+.messageBubble {
+	padding: 4px;
+	border: 1px solid #303030;
+	border-radius: 4px;
+	background: #1f1f1f;
+	line-height: 1.7;
+}
+
+.messageItemUser .messageBubble {
+	background: #478cbf;
+}
+
+.composer {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	padding: 8px;
+	border-top: 1px solid #303030;
+	background: rgba(20, 20, 20, 0.92);
+}
+
+.composerInputWrap {
+	position: relative;
+	display: flex;
+	align-items: flex-end;
+	min-width: 0;
+	width: 100%;
+}
+
+.composerTextArea {
+	padding-right: 92px;
+}
+
+.composerToolbar {
+	position: absolute;
+	right: 8px;
+	bottom: 8px;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.composerActionButton,
+.composerSendButton {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+}
+
+.composerActionIcon,
+.composerSendIcon {
+	width: 16px;
+	height: 16px;
+}
+
+.composerDivider {
+	height: 18px;
+	margin: 0 2px;
+}

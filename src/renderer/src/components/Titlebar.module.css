@@ -1,0 +1,56 @@
+.root {
+	position: relative;
+	display: flex;
+	flex: 0 0 40px;
+	align-items: center;
+	justify-content: flex-start;
+	height: 40px;
+	min-height: 40px;
+	max-height: 40px;
+	padding-left: 8px;
+	overflow: hidden;
+	font-family: Arial, Helvetica, sans-serif;
+	user-select: none;
+	-webkit-app-region: drag;
+}
+
+.brandIcon {
+	flex: 0 0 auto;
+	width: 20px;
+	height: 20px;
+	margin-right: 8px;
+}
+
+.brandName {
+	margin: 0;
+	font-size: 16px;
+	line-height: 40px;
+}
+
+.menuTrigger {
+	margin-left: 12px;
+	line-height: 40px;
+	cursor: pointer;
+	-webkit-app-region: no-drag;
+}
+
+.searchSelect {
+	position: absolute;
+	left: 50%;
+	width: min(40%, 760px);
+	transform: translateX(-50%);
+	-webkit-app-region: no-drag;
+}
+
+.searchSelect :global(.ant-select-selector) {
+	height: 22px !important;
+	min-height: 22px !important;
+}
+
+.searchSelect :global(.ant-select-selection-search-input) {
+	height: 20px !important;
+}
+
+.searchSelect :global(.ant-select-selection-placeholder) {
+	line-height: 20px !important;
+}

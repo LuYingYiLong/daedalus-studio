@@ -9,7 +9,6 @@
     "electron_mirror": "https://npmmirror.com/mirrors/electron/"
   },
   "scripts": {
-    "start": "node scripts/electron-vite.cjs dev",
     "dev": "node scripts/electron-vite.cjs dev",
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && node scripts/electron-vite.cjs build",

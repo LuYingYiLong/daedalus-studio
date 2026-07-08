@@ -1,10 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConfigProvider, theme } from "antd";
-import Titlebar from "./Titlebar";
-import BootSplash from "./BootSplash";
-import App from "./App";
-import "./App.css";
+import { probeBackendWorkspaceAndSessions } from "./api/dev-backend-probe";
+import Titlebar from "./components/Titlebar";
+import App from "./app/App";
+import "./styles/global.css";
 
 const rootElement = document.getElementById("root");
 
@@ -20,6 +20,11 @@ createRoot(rootElement).render(
 				token: {
 					colorPrimary: "#478cbf",
 					borderRadius: 4
+				},
+				components: {
+					Tree: {
+						indentSize: 16,
+					}
 				}
 			}}
 		>
@@ -28,3 +33,5 @@ createRoot(rootElement).render(
 		</ConfigProvider>
 	</StrictMode>
 );
+
+void probeBackendWorkspaceAndSessions();

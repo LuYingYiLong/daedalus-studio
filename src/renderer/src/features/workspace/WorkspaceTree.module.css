@@ -1,0 +1,48 @@
+.workspaceTreeRegion {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	min-height: 0;
+	padding: 8px;
+	overflow: hidden;
+}
+
+.workspaceTitleRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.workspaceTitle {
+	flex: 0 0 auto;
+	margin: 0;
+}
+
+.workspaceStatusText,
+.workspaceErrorText,
+.workspaceEmptyText {
+	display: block;
+	font-size: 12px;
+}
+
+.workspaceRefreshButton {
+	height: 22px;
+	padding: 0 6px;
+	font-size: 12px;
+}
+
+.workspaceErrorText,
+.workspaceEmptyText {
+	padding: 8px 0;
+}
+
+.workspaceTree {
+	min-height: 0;
+	overflow: auto;
+	background: transparent;
+}
+
+.workspaceTree :global(.ant-tree) {
+	background: transparent;
+}
