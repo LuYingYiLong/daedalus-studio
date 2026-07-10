@@ -5,6 +5,7 @@ import { Button, Collapse, Divider, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import { TimelineBodyPart } from "@/api/types";
 import React from "react";
+import ToolPart from "../chat/ToolPart";
 
 export type AssistantBubbleProps = {
 	content?: string;
@@ -34,6 +35,14 @@ function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: 
 					size="small"
 					className={styles.thinkingCollapse}
 					bordered={false}
+					expandIcon={(): React.ReactNode => (
+						<Icon
+							name="thinking"
+							style={{
+								width: 16
+							}}
+						/>
+					)}
 					defaultActiveKey={part.done ? [] : ["thinking"]}
 					items={[
 						{
@@ -48,6 +57,10 @@ function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: 
 					]}
 				/>
 			)
+		}
+
+		if (part.type === "tool") {
+			return <ToolPart key={index} part={part} />
 		}
 	}
 

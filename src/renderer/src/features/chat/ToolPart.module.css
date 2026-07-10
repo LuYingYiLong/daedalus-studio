@@ -1,0 +1,17 @@
+.toolCollapse {
+	width: 100%;
+	margin-top: 4px;
+	margin-bottom: 4px;
+	user-select: none;
+}
+
+.eventJson {
+	max-height: 200px;
+	margin: 0;
+	padding: 8px;
+	overflow: auto;
+	border-radius: 4px;
+	font-size: 14px;
+	white-space: pre-wrap;
+	user-select: text;
+}

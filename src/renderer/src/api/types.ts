@@ -65,6 +65,7 @@ export type TimelineAssistantBlock = {
 	bodyParts: TimelineBodyPart[];
 };
 
+
 export type TimelineBodyPart =
 	| { type: "markdown"; text: string }
 	| { type: "thinking"; text: string; done: boolean }
@@ -72,6 +73,8 @@ export type TimelineBodyPart =
 	| { type: "status"; title: string; details: string; status: string; code: string }
 	| { type: "plan"; planId: string; title: string; status: string; previewMarkdown: string }
 	| { type: "inline_diff"; sessionId: string; batchIds: string[] };
+	
+export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
 
 export type TimelineBlock = TimelineUserBlock | TimelineAssistantBlock;
 

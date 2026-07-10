@@ -2,6 +2,7 @@ import { TimelineAssistantBlock, TimelineBlock } from "@/api/types";
 import AssistantBubble from "../bubble/AssistantBubble";
 import UserBubble from "../bubble/UserBubble";
 import styles from "./MessageList.module.css";
+import { formatShortDateTime } from "@/utils/time-format";
 import { Spin, Alert } from "antd";
 
 export type MessageListProps = {
@@ -10,8 +11,7 @@ export type MessageListProps = {
 	errorMessage?: string | null;
 }
 
-function MessageList({ blocks, isLoading, errorMessage }: MessageListProps): React.JSX.Element {
-	function getAssistantMarkdown(block: TimelineAssistantBlock): string {
+function getAssistantMarkdown(block: TimelineAssistantBlock): string {
 		const markdown: string = block.bodyParts
 			.filter((part) => part.type === "markdown")
 			.map((part) => part.text)
@@ -20,16 +20,7 @@ function MessageList({ blocks, isLoading, errorMessage }: MessageListProps): Rea
 		return markdown.length > 0 ? markdown : block.content;
 	}
 
-	function formatTime(isoTime: string): string {
-		return new Intl.DateTimeFormat(undefined, {
-			month: "2-digit",
-			day: "2-digit",
-			hour: "2-digit",
-			minute: "2-digit",
-			hour12: false,
-		}).format(new Date(isoTime));
-	}
-
+function MessageList({ blocks, isLoading, errorMessage }: MessageListProps): React.JSX.Element {
 	return (
 		<section className={styles.messageList}>
 			{errorMessage ? (
@@ -42,7 +33,7 @@ function MessageList({ blocks, isLoading, errorMessage }: MessageListProps): Rea
 						return <UserBubble
 							key={block.id}
 							message={block.content}
-							sentTime={formatTime(block.sentAtUtc)}
+							sentTime={formatShortDateTime(block.sentAtUtc)}
 						/>
 					}
 
@@ -51,7 +42,7 @@ function MessageList({ blocks, isLoading, errorMessage }: MessageListProps): Rea
 							key={block.id}
 							bodyParts={block.bodyParts}
 							message={getAssistantMarkdown(block)}
-							endTime={formatTime(block.completedAtUtc)}
+							endTime={formatShortDateTime(block.completedAtUtc)}
 						/>
 					);
 				})
