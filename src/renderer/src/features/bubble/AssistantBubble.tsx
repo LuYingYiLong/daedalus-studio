@@ -1,17 +1,56 @@
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "./AssistantBubble.module.css";
-import { Button, Divider, Typography } from "antd";
+import { Button, Collapse, Divider, Typography } from "antd";
 import { Icon } from "@/assets/icons";
+import { TimelineBodyPart } from "@/api/types";
+import React from "react";
 
 export type AssistantBubbleProps = {
-	message: string;
+	content?: string;
+	bodyParts?: TimelineBodyPart[];
+	message?: string;
 	elapsedTime?: number;
 	endTime?: string;
 };
 
 
-function AssistantBubble({ message, elapsedTime, endTime }: AssistantBubbleProps): React.JSX.Element {
+function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: AssistantBubbleProps): React.JSX.Element {
+	function renderBodyPart(part: TimelineBodyPart, index: number): React.ReactNode {
+		if (part.type === "markdown") {
+			return (
+				<div key={index} className={styles.markdownPart}>
+					<Markdown remarkPlugins={[remarkGfm]}>
+						{part.text}
+					</Markdown>
+				</div>
+			);
+		}
+
+		if (part.type === "thinking" && part.text.trim().length > 0) {
+			return (
+				<Collapse
+					key={index}
+					size="small"
+					className={styles.thinkingCollapse}
+					bordered={false}
+					defaultActiveKey={part.done ? [] : ["thinking"]}
+					items={[
+						{
+							key: "thinking",
+							label: part.done ? "Thinking": "Thinking...",
+							children: (
+								<Markdown remarkPlugins={[remarkGfm]}>
+									{part.text}
+								</Markdown>
+							)
+						}
+					]}
+				/>
+			)
+		}
+	}
+
 	return (
 		<article className={styles.root}>
 			{elapsedTime ? (
@@ -21,9 +60,13 @@ function AssistantBubble({ message, elapsedTime, endTime }: AssistantBubbleProps
 				</div>
 			) : null}
 			<div className={styles.content}>
-				<Markdown remarkPlugins={[remarkGfm]}>
-					{message}
-				</Markdown>
+				{bodyParts ? (
+					bodyParts.map(renderBodyPart)
+				) : (
+					<Markdown remarkPlugins={[remarkGfm]}>
+						{message ?? content ?? ""}
+					</Markdown>
+				)}
 			</div>
 			<div className={styles.toolbar}>
 				<Button
@@ -31,7 +74,7 @@ function AssistantBubble({ message, elapsedTime, endTime }: AssistantBubbleProps
 					size="small"
 					icon={<Icon name="copy" />}
 					onClick={async () => {
-						await navigator.clipboard.writeText(message);
+						await navigator.clipboard.writeText(String(message));
 					}}
 				/>
 				{endTime ? (

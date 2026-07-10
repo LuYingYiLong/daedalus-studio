@@ -49,6 +49,7 @@ function MessageList({ blocks, isLoading, errorMessage }: MessageListProps): Rea
 					return (
 						<AssistantBubble
 							key={block.id}
+							bodyParts={block.bodyParts}
 							message={getAssistantMarkdown(block)}
 							endTime={formatTime(block.completedAtUtc)}
 						/>
