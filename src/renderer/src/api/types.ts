@@ -44,3 +44,48 @@ export type ClientHelloResult = {
 		protocolVersion: number;
 	};
 };
+
+export type TimelineUserBlock = {
+	id: string;
+	type: "user";
+	requestId: string;
+	content: string;
+	sentAtUtc: string;
+	additionalContext?: unknown[];
+};
+
+export type TimelineAssistantBlock = {
+	id: string;
+	type: "assistant";
+	requestId: string;
+	content: string;
+	startedAtUtc: string;
+	completedAtUtc: string;
+	status?: "failed";
+	bodyParts: TimelineBodyPart[];
+};
+
+export type TimelineBodyPart =
+	| { type: "markdown"; text: string }
+	| { type: "thinking"; text: string; done: boolean }
+	| { type: "tool"; tool_call_id: string; events: Record<string, unknown>[] }
+	| { type: "status"; title: string; details: string; status: string; code: string }
+	| { type: "plan"; planId: string; title: string; status: string; previewMarkdown: string }
+	| { type: "inline_diff"; sessionId: string; batchIds: string[] };
+
+export type TimelineBlock = TimelineUserBlock | TimelineAssistantBlock;
+
+export type SessionOpenResult = {
+	opened: true;
+	metadata: SessionMetadata;
+	blockCount: number;
+	blockOffset: number;
+	eventCount: number;
+	limit: number;
+	hasMoreBefore: boolean;
+	timelineBlocks: TimelineBlock[];
+	latestWorkflowSnapshot: unknown | null;
+	latestAgentSnapshot: unknown | null;
+	pendingGuides: unknown[];
+	workspaceWarning: string | null;
+};

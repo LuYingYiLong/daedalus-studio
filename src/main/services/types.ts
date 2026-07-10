@@ -1,5 +1,5 @@
 export type BackendStatus = 
-    "starting" 
+    | "starting" 
     | "healthy" 
     | "unhealthy" 
     | "stopped";

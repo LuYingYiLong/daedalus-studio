@@ -34,6 +34,8 @@ type PendingRequest = {
 	reject: (reason?: unknown) => void;
 };
 
+type BackendEventListener = (event: BackendEvent) => void;
+
 function isBackendResponse(message: unknown): message is BackendResponse {
 	return typeof message === "object"
 		&& message !== null

@@ -24,6 +24,8 @@
     "@vitejs/plugin-react": "^5.1.4",
     "electron": "^43.0.0",
     "electron-vite": "^5.0.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "typescript": "^6.0.3",
     "vite": "^7.3.6",
     "vite-plugin-svgr": "^5.2.0"

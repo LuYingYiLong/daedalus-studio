@@ -1,34 +1,19 @@
 .workspaceTreeRegion {
 	display: grid;
-	grid-template-rows: auto minmax(0, 1fr);
+	grid-template-rows: auto auto minmax(0, 1fr);
 	min-height: 0;
-	padding: 8px;
+	padding: 0 8px 8px 8px;
 	overflow: hidden;
 }
 
-.workspaceTitleRow {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 8px;
-	margin-bottom: 8px;
-}
-
-.workspaceTitle {
-	flex: 0 0 auto;
-	margin: 0;
+.workspaceStatusRow {
+	min-height: 20px;
 }
 
 .workspaceStatusText,
 .workspaceErrorText,
 .workspaceEmptyText {
 	display: block;
-	font-size: 12px;
-}
-
-.workspaceRefreshButton {
-	height: 22px;
-	padding: 0 6px;
 	font-size: 12px;
 }
 

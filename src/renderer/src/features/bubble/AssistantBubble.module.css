@@ -1,0 +1,85 @@
+.root {
+	display: flex;
+	flex-direction: column;
+    align-items: flex-start;
+	width: 100%;
+	margin-bottom: 8px;
+}
+
+.timingRow {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.timingRow .antDivider {
+    width: 100%;
+}
+
+.root:hover .toolbar {
+    opacity: 1;
+}
+
+.toolbar {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.content {
+	min-width: 0;
+	max-width: min(720px, 72%);
+	overflow: hidden;
+	border-radius: 4px;
+	line-height: 1.7;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+
+.content :global(p),
+.content :global(ul),
+.content :global(ol),
+.content :global(blockquote),
+.content :global(pre),
+.content :global(table) {
+	margin-top: 0;
+	margin-bottom: 8px;
+}
+
+.content :global(:last-child) {
+	margin-bottom: 0;
+}
+
+.content :global(pre) {
+	max-width: 100%;
+	padding: 8px;
+	overflow: auto;
+	border-radius: 4px;
+	background: rgba(0, 0, 0, 0.24);
+}
+
+.content :global(code) {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.content :global(pre code) {
+	white-space: pre;
+}
+
+.content :global(table) {
+	display: block;
+	max-width: 100%;
+	overflow: auto;
+	border-collapse: collapse;
+}
+
+.content :global(th),
+.content :global(td) {
+	padding: 4px 6px;
+	border: 1px solid rgba(255, 255, 255, 0.24);
+}

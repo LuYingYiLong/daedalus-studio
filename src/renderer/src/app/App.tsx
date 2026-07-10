@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { Button, Divider, Dropdown, Input, Typography } from "antd";
 import type { MenuProps } from "antd";
 import { Icon } from "@/assets/icons";
 import { selectWorkspace } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
+import { SessionOpenResult, TimelineBlock } from "@/api/types";
+import { openSession } from "@/api/session-api";
+import MessageList from "@/features/chat/MessageList";
 
 const { TextArea } = Input;
 
@@ -22,23 +26,13 @@ const addContextItems: MenuProps["items"] = [
 	}
 ];
 
-type ChatMessage = {
-	author: "assistant" | "user";
-	content: string;
-};
-
-const messages: ChatMessage[] = [
-	{
-		author: "assistant",
-		content: "选择左侧 Godot 工作区文件后，可以让我检查场景、修复脚本或运行验证。"
-	},
-	{
-		author: "user",
-		content: "先帮我看一下 main.tscn 的节点结构。"
-	}
-];
-
 function App(): React.JSX.Element {
+	const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState<number>(0);
+	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+	const [timelineBlocks, setTimelineBlocks] = useState<TimelineBlock[]>([]);
+	const [sessionError, setSessionError] = useState<string | null>(null);
+	const [isSessionLoading, setIsSessionLoading] = useState(false);
+
 	async function handleWorkspaceSelect(workspaceId: string): Promise<void> {
 		try {
 			const workspace = await selectWorkspace(workspaceId);
@@ -49,8 +43,30 @@ function App(): React.JSX.Element {
 		}
 	}
 
-	function handleSessionSelect(sessionId: string): void {
+	async function handleSessionSelect(sessionId: string): Promise<void> {
 		console.info("[App] session selected", { sessionId });
+
+		try {
+			setIsSessionLoading(true);
+			setSessionError(null);
+			setActiveSessionId(sessionId);
+			setTimelineBlocks([]);
+
+			const result: SessionOpenResult = await openSession(sessionId);
+
+			setTimelineBlocks(result.timelineBlocks);
+
+			if (result.workspaceWarning) {
+				console.warn("[App] session workspace warning", result.workspaceWarning);
+			}
+		} catch (error: unknown) {
+			const message: string = error instanceof Error ? error.message : "Failed to open session";
+
+			setSessionError(message);
+			console.error("[App] open session failed", error)
+		} finally {
+			setIsSessionLoading(false);
+		}
 	}
 
 	return (
@@ -62,7 +78,23 @@ function App(): React.JSX.Element {
 					</Button>
 				</header>
 
+				<div className={styles.workspaceTitleRow}>
+					<Typography.Title level={4} className={styles.workspaceTitle}>
+						Workspace
+					</Typography.Title>
+					<Button
+						className={styles.workspaceRefreshButton}
+						size="small"
+						type="text"
+						icon={<Icon name="reload" />}
+						onClick={(): void => {
+							setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+						}}
+					/>
+				</div>
+
 				<WorkspaceTree
+					refreshToken={workspaceRefreshToken}
 					onWorkspaceSelect={(workspaceId: string): void => {
 						void handleWorkspaceSelect(workspaceId);
 					}}
@@ -77,16 +109,11 @@ function App(): React.JSX.Element {
 					</Typography.Title>
 				</header>
 
-				<div className={styles.messageList}>
-					{messages.map((message: ChatMessage, index: number) => (
-						<article
-							key={`${message.author}-${index}`}
-							className={`${styles.messageItem} ${message.author === "user" ? styles.messageItemUser : ""}`}
-						>
-							<div className={styles.messageBubble}>{message.content}</div>
-						</article>
-					))}
-				</div>
+				<MessageList
+					blocks={timelineBlocks}
+					isLoading={isSessionLoading}
+					errorMessage={sessionError}
+				/>
 
 				<footer className={styles.composer}>
 					<div className={styles.composerInputWrap}>
@@ -106,7 +133,7 @@ function App(): React.JSX.Element {
 									className={styles.composerActionButton}
 								/>
 							</Dropdown>
-							<Divider type="vertical" className={styles.composerDivider} />
+							<Divider vertical={true} className={styles.composerDivider} />
 							<Button
 								type="text"
 								icon={<Icon name="send" className={styles.composerSendIcon} />}

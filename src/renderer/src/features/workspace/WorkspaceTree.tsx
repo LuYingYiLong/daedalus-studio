@@ -1,20 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
-import type { Key } from "react";
+import { useEffect, useMemo, useState, Key } from "react";
 import type { DataNode } from "antd/es/tree";
 import { fetchSessions } from "@/api/session-api";
 import { fetchWorkspaces } from "@/api/workspace-api";
-import { Button, Tree, Typography } from "antd";
+import { Tree, Typography } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import styles from "./WorkspaceTree.module.css";
 
 export type WorkspaceTreeProps = {
+	refreshToken?: number;
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onSessionSelect?: (sessionId: string) => void;
 };
 
 function createWorkspaceTreeData(workspaces: WorkspaceConfig[], sessions: SessionMetadata[]): DataNode[] {
-	return workspaces.map((workspace: WorkspaceConfig): DataNode => {
+	const workspaceIds: Set<string> = new Set(workspaces.map((workspace: WorkspaceConfig): string => workspace.id));
+	const workspaceNodes: DataNode[] = workspaces.map((workspace: WorkspaceConfig): DataNode => {
 		const workspaceSessions: SessionMetadata[] = sessions.filter((session: SessionMetadata): boolean => {
 			return session.workspaceId === workspace.id;
 		});
@@ -36,9 +37,29 @@ function createWorkspaceTreeData(workspaces: WorkspaceConfig[], sessions: Sessio
 				]
 		};
 	});
+	const unmatchedSessions: SessionMetadata[] = sessions.filter((session: SessionMetadata): boolean => {
+		return session.workspaceId === undefined || !workspaceIds.has(session.workspaceId);
+	});
+
+	if (unmatchedSessions.length === 0) {
+		return workspaceNodes;
+	}
+
+	return [
+		...workspaceNodes,
+		{
+			key: "session-group:unmatched",
+			title: workspaces.length === 0 ? "Sessions" : "Other sessions",
+			selectable: false,
+			children: unmatchedSessions.map((session: SessionMetadata): DataNode => ({
+				key: `session:${session.id}`,
+				title: session.title
+			}))
+		}
+	];
 }
 
-function WorkspaceTree({ onWorkspaceSelect, onSessionSelect }: WorkspaceTreeProps): React.JSX.Element {
+function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }: WorkspaceTreeProps): React.JSX.Element {
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([]);
 	const [sessions, setSessions] = useState<SessionMetadata[]>([]);
 	const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
@@ -107,7 +128,7 @@ function WorkspaceTree({ onWorkspaceSelect, onSessionSelect }: WorkspaceTreeProp
 					return `workspace:${workspace.id}`;
 				}));
 
-				if (workspaceList.workspaces.length === 0 && reloadIndex < 5) {
+				if (workspaceList.workspaces.length === 0 && sessionList.sessions.length === 0 && reloadIndex < 5) {
 					retryTimer = window.setTimeout((): void => {
 						setReloadIndex((currentReloadIndex: number): number => currentReloadIndex + 1);
 					}, 1200);
@@ -132,7 +153,7 @@ function WorkspaceTree({ onWorkspaceSelect, onSessionSelect }: WorkspaceTreeProp
 				window.clearTimeout(retryTimer);
 			}
 		};
-	}, [reloadIndex]);
+	}, [refreshToken, reloadIndex]);
 
 	const workspaceTreeData: DataNode[] = useMemo((): DataNode[] => {
 		return createWorkspaceTreeData(workspaces, sessions);
@@ -140,27 +161,13 @@ function WorkspaceTree({ onWorkspaceSelect, onSessionSelect }: WorkspaceTreeProp
 
 	return (
 		<div className={styles.workspaceTreeRegion}>
-			<div className={styles.workspaceTitleRow}>
-				<Typography.Title level={5} className={styles.workspaceTitle}>
-					Workspace
-				</Typography.Title>
-				{isWorkspaceLoading ? (
+			{isWorkspaceLoading ? (
+				<div className={styles.workspaceStatusRow}>
 					<Typography.Text type="secondary" className={styles.workspaceStatusText}>
 						Loading...
 					</Typography.Text>
-				) : (
-					<Button
-						size="small"
-						type="text"
-						className={styles.workspaceRefreshButton}
-						onClick={(): void => {
-							setReloadIndex((currentReloadIndex: number): number => currentReloadIndex + 1);
-						}}
-					>
-						Refresh
-					</Button>
-				)}
-			</div>
+				</div>
+			) : null}
 
 			{workspaceError ? (
 				<Typography.Text type="danger" className={styles.workspaceErrorText}>

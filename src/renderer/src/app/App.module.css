@@ -8,13 +8,36 @@
 
 .workspaceSidebar {
 	display: grid;
-	grid-template-rows: auto minmax(0, 1fr);
+	grid-template-rows: auto auto minmax(0, 1fr);
 	min-height: 0;
 	border-right: 1px solid #303030;
 }
 
 .workspaceHeader {
 	padding: 8px;
+}
+
+.workspaceTitleRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 0 8px 4px 8px;
+}
+
+.workspaceTitle {
+	margin: 0;
+}
+
+.workspaceRefreshButton {
+	width: 26px;
+	height: 26px;
+	padding: 0;
+}
+
+.workspaceRefreshButton svg {
+	width: 14px;
+	height: 14px;
 }
 
 .createSessionButton {
@@ -56,14 +79,18 @@
 .messageItemUser {
 	margin-left: auto;
 	flex-direction: row-reverse;
+	justify-content: flex-start;
 }
 
 .messageBubble {
+	min-width: 0;
+	max-width: min(720px, 72%);
 	padding: 4px;
 	border: 1px solid #303030;
 	border-radius: 4px;
 	background: #1f1f1f;
 	line-height: 1.7;
+	overflow-wrap: anywhere;
 }
 
 .messageItemUser .messageBubble {

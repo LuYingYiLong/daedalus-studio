@@ -1,12 +1,12 @@
 .root {
 	position: relative;
 	display: flex;
-	flex: 0 0 40px;
+	flex: 0 0 36px;
 	align-items: center;
 	justify-content: flex-start;
-	height: 40px;
-	min-height: 40px;
-	max-height: 40px;
+	height: 36px;
+	min-height: 36px;
+	max-height: 36px;
 	padding-left: 8px;
 	overflow: hidden;
 	font-family: Arial, Helvetica, sans-serif;
@@ -24,12 +24,12 @@
 .brandName {
 	margin: 0;
 	font-size: 16px;
-	line-height: 40px;
+	line-height: 36px;
 }
 
 .menuTrigger {
 	margin-left: 12px;
-	line-height: 40px;
+	line-height: 36px;
 	cursor: pointer;
 	-webkit-app-region: no-drag;
 }
