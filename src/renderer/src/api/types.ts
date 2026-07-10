@@ -65,6 +65,17 @@ export type TimelineAssistantBlock = {
 	bodyParts: TimelineBodyPart[];
 };
 
+export type TimelineEditedFile = {
+	displayPath?: string;
+	path?: string;
+	absolutePath?: string;
+	workspaceRoot?: string;
+	additions?: number;
+	deletions?: number;
+	existsAfter?: boolean;
+	afterSha256?: string;
+	undoable?: boolean;
+};
 
 export type TimelineBodyPart =
 	| { type: "markdown"; text: string }
@@ -72,12 +83,21 @@ export type TimelineBodyPart =
 	| { type: "tool"; tool_call_id: string; events: Record<string, unknown>[] }
 	| { type: "status"; title: string; details: string; status: string; code: string }
 	| { type: "plan"; planId: string; title: string; status: string; previewMarkdown: string }
-	| { type: "inline_diff"; sessionId: string; batchIds: string[] };
+	| {
+		type: "inline_diff";
+		sessionId: string;
+		batchIds: string[];
+		editedFileCount: number;
+		additions: number;
+		deletions: number;
+		undoable: boolean;
+		editedFiles: TimelineEditedFile[];
+	};
 	
 export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
 export type TimelineStatusPart = Extract<TimelineBodyPart, {type: "status"}>;
 export type TimelinePlanPart = Extract<TimelineBodyPart, { type: "plan" }>
-export type TimelineInlineDiff = Extract<TimelineBodyPart, { type: "inline_diff" }>
+export type TimelineInlineDiffPart = Extract<TimelineBodyPart, { type: "inline_diff" }>
 
 export type TimelineBlock = TimelineUserBlock | TimelineAssistantBlock;
 

@@ -1,0 +1,28 @@
+.diffCard {
+	width: 100%;
+	margin: 4px 0;
+}
+
+.fileItem {
+	display: grid !important;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 12px;
+	padding-inline: 0 !important;
+}
+
+.filePath {
+	min-width: 0;
+}
+
+.fileStats {
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.additions {
+	color: #00c853;
+}
+
+.deletions {
+	color: #ff5252;
+}

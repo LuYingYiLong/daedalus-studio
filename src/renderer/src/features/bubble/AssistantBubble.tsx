@@ -8,6 +8,7 @@ import React from "react";
 import ToolPart from "../chat/ToolPart";
 import StatusPart from "../chat/StatusPart";
 import PlanPart from "../chat/PlanPart";
+import InlineDiffPart from "../chat/InlineDiffPart";
 
 export type AssistantBubbleProps = {
 	content?: string;
@@ -70,6 +71,10 @@ function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: 
 
 		if (part.type === "plan") {
 			return <PlanPart key={index} part={part} />
+		}
+
+		if (part.type === "inline_diff") {
+			return <InlineDiffPart key={index} part={part} />
 		}
 	}
 
