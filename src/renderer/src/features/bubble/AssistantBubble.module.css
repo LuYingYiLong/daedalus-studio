@@ -37,8 +37,8 @@
 }
 
 .content {
-	min-width: 0;
-	max-width: min(720px, 72%);
+	width: clamp(320px, 72%, 720px);
+	max-width: 100%;
 	overflow: hidden;
 	border-radius: 4px;
 	line-height: 1.7;

@@ -6,6 +6,8 @@ import { Icon } from "@/assets/icons";
 import { TimelineBodyPart } from "@/api/types";
 import React from "react";
 import ToolPart from "../chat/ToolPart";
+import StatusPart from "../chat/StatusPart";
+import PlanPart from "../chat/PlanPart";
 
 export type AssistantBubbleProps = {
 	content?: string;
@@ -14,7 +16,6 @@ export type AssistantBubbleProps = {
 	elapsedTime?: number;
 	endTime?: string;
 };
-
 
 function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: AssistantBubbleProps): React.JSX.Element {
 	function renderBodyPart(part: TimelineBodyPart, index: number): React.ReactNode {
@@ -61,6 +62,14 @@ function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: 
 
 		if (part.type === "tool") {
 			return <ToolPart key={index} part={part} />
+		}
+
+		if (part.type === "status") {
+			return <StatusPart key={index} part={part} />
+		}
+
+		if (part.type === "plan") {
+			return <PlanPart key={index} part={part} />
 		}
 	}
 

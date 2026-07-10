@@ -1,0 +1,37 @@
+.planCard {
+	width: 100%;
+	margin: 4px 0;
+}
+
+.planCardBody {
+	padding: 8px 12px;
+}
+
+.markdownPreview {
+	box-sizing: border-box;
+	max-height: 180px;
+	padding-bottom: 24px;
+	overflow-x: hidden;
+	overflow-y: auto;
+	scrollbar-width: none;
+	mask-image: linear-gradient(
+		to bottom,
+		#000 0%,
+		#000 calc(100% - 48px),
+		transparent 100%
+	);
+}
+
+.markdownPreview :global(p),
+.markdownPreview :global(ul),
+.markdownPreview :global(ol),
+.markdownPreview :global(blockquote),
+.markdownPreview :global(pre),
+.markdownPreview :global(table) {
+	margin-top: 0;
+	margin-bottom: 8px;
+}
+
+.markdownPreview :global(:last-child) {
+	margin-bottom: 0;
+}

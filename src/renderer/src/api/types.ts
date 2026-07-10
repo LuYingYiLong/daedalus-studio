@@ -75,6 +75,9 @@ export type TimelineBodyPart =
 	| { type: "inline_diff"; sessionId: string; batchIds: string[] };
 	
 export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
+export type TimelineStatusPart = Extract<TimelineBodyPart, {type: "status"}>;
+export type TimelinePlanPart = Extract<TimelineBodyPart, { type: "plan" }>
+export type TimelineInlineDiff = Extract<TimelineBodyPart, { type: "inline_diff" }>
 
 export type TimelineBlock = TimelineUserBlock | TimelineAssistantBlock;
 
