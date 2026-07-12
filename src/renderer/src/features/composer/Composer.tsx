@@ -16,6 +16,7 @@ export type ComposerProps = {
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
 	onProviderModelChange?: (providerId: string, modelId: string) => void;
+	onCancel?: () => void;
 	onSubmit?: (message: string) => void;
 };
 
@@ -188,6 +189,7 @@ function Composer({
 	onModeChange,
 	onApprovalModeChange,
 	onProviderModelChange,
+	onCancel,
 	onSubmit
 }: ComposerProps): React.JSX.Element {
 	const [message, setMessage] = useState<string>("");
@@ -229,9 +231,14 @@ function Composer({
 	};
 
 	function submitMessage(): void {
+		if (isSending) {
+			onCancel?.();
+			return;
+		}
+
 		const trimmedMessage: string = message.trim();
 
-		if (trimmedMessage.length === 0 || isSending) {
+		if (trimmedMessage.length === 0) {
 			return;
 		}
 
@@ -243,7 +250,6 @@ function Composer({
 		<div className={styles.composerInputWrap}>
 			<Input.TextArea
 				value={message}
-				size="medium"
 				autoSize={{ minRows: 4, maxRows: 6 }}
 				placeholder="What can I say?"
 				className={styles.composerTextArea}
@@ -285,7 +291,6 @@ function Composer({
 						className={styles.composerActionButton}
 					/>
 				</Dropdown>
-				<Divider vertical={true} />
 				<Dropdown
 					menu={{
 						items: approvalModeItems,
@@ -326,10 +331,9 @@ function Composer({
 				</Dropdown>
 				<Button
 					type="text"
-					icon={<Icon name="send" className={styles.composerSendIcon} />}
+					icon={<Icon name={isSending ? "stop" : "send"} className={styles.composerSendIcon} />}
 					className={styles.composerSendButton}
-					disabled={message.trim().length === 0 || isSending}
-					loading={isSending}
+					disabled={!isSending && message.trim().length === 0}
 					onClick={submitMessage}
 				/>
 			</div>

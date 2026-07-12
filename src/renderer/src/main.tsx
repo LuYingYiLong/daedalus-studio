@@ -15,11 +15,11 @@ if (!rootElement) {
 createRoot(rootElement).render(
 	<StrictMode>
 		<ConfigProvider
-			componentSize="small"
 			theme={{
 				algorithm: theme.darkAlgorithm,
 				token: {
 					colorPrimary: "#478cbf",
+					fontFamily: `"Mona Sans", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
 				},
 				components: {
 					Tree: {

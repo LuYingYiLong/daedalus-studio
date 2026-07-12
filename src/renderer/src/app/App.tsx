@@ -11,8 +11,9 @@ import Composer from "@/features/composer/Composer";
 import { fetchProviderModelSelection, saveProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import { createBackendClient } from "@/api/backend-client";
 import type { BackendEvent } from "@/api/backend-rpc-client";
-import { sendChatMessage, type ChatMode } from "@/api/chat-api";
+import { cancelChatMessage, sendChatMessage, type ChatMode } from "@/api/chat-api";
 import { fetchApprovalList, setApprovalMode, type ApprovalMode } from "@/api/approval-api";
+import ApprovalDialog from "@/features/approval/ApprovalDialog";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -162,6 +163,16 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 			details: getStringValue(data, "message") || "Unknown backend error",
 			code: getStringValue(data, "code") || "agent_run_error"
 		});
+	} else if (event.event === "agent.run.cancelled" || event.event === "ai.cancelled") {
+		nextStatus = undefined;
+		completedAtUtc = nowIso;
+		nextParts = appendStatusPart(nextParts, {
+			type: "status",
+			status: "info",
+			title: "已停止",
+			details: getStringValue(data, "reason") || "用户停止了本次响应",
+			code: "cancelled"
+		});
 	} else if (event.event === "agent.message.done" || event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done") {
 		nextStatus = undefined;
 		completedAtUtc = nowIso;
@@ -223,6 +234,7 @@ function App(): React.JSX.Element {
 	const [sessionError, setSessionError] = useState<string | null>(null);
 	const [isSessionLoading, setIsSessionLoading] = useState(false);
 	const [isChatSending, setIsChatSending] = useState<boolean>(false);
+	const [activeChatRequestId, setActiveChatRequestId] = useState<string | null>(null);
 	const [providerModelSelection, setProviderModelSelection] = useState<ProviderModelSelection | null>(null);
 	const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
 	const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
@@ -403,6 +415,7 @@ function App(): React.JSX.Element {
 
 		setSessionError(null);
 		setIsChatSending(true);
+		setActiveChatRequestId(requestId);
 		setTimelineBlocks((currentBlocks: TimelineBlock[]): TimelineBlock[] => {
 			return [
 				...currentBlocks,
@@ -439,6 +452,21 @@ function App(): React.JSX.Element {
 			console.error("[App] send message failed", error);
 		} finally {
 			setIsChatSending(false);
+			setActiveChatRequestId((currentRequestId: string | null): string | null => {
+				return currentRequestId === requestId ? null : currentRequestId;
+			});
+		}
+	}
+
+	async function handleComposerCancel(): Promise<void> {
+		if (activeChatRequestId === null) {
+			return;
+		}
+
+		try {
+			await cancelChatMessage(activeChatRequestId);
+		} catch (error: unknown) {
+			console.error("[App] cancel chat failed", error);
 		}
 	}
 
@@ -504,6 +532,9 @@ function App(): React.JSX.Element {
 						}}
 						onProviderModelChange={(providerId: string, modelId: string): void => {
 							void handleProviderModelChange(providerId, modelId);
+						}}
+						onCancel={(): void => {
+							void handleComposerCancel();
 						}}
 						onSubmit={(message: string): void => {
 							void handleComposerSubmit(message);

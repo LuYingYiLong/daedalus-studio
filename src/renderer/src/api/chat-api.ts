@@ -8,6 +8,11 @@ export type SendChatMessageParams = {
 	mode: ChatMode;
 };
 
+export type CancelChatMessageResult = {
+	cancelled: boolean;
+	requestId: string;
+};
+
 export async function sendChatMessage(params: SendChatMessageParams): Promise<unknown> {
 	const client = await createBackendClient();
 
@@ -17,5 +22,13 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<un
 		options: {
 			stream: true
 		}
+	});
+}
+
+export async function cancelChatMessage(requestId: string): Promise<CancelChatMessageResult> {
+	const client = await createBackendClient();
+
+	return client.request<CancelChatMessageResult>("ai.cancel", {
+		requestId
 	});
 }

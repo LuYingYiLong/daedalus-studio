@@ -1,0 +1,104 @@
+.approvalDialog {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: min(480px, calc(100vw - 32px));
+	padding: 12px;
+	border: 1px solid;
+}
+
+.header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.titleGroup {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.title {
+	margin: 0 !important;
+}
+
+.subtitle {
+	font-size: 12px;
+}
+
+.summary {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+}
+
+.summaryItem {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.reason,
+.error {
+	border-radius: 6px;
+}
+
+.argsPanel {
+	overflow: hidden;
+	border: 1px solid rgb(255 255 255 / 8%);
+	border-radius: 6px;
+	background: rgb(0 0 0 / 16%);
+}
+
+.argsHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 8px 10px;
+	border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.argsPreview {
+	max-height: 180px;
+	margin: 0;
+	padding: 10px;
+	overflow: auto;
+	font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+	font-size: 12px;
+	line-height: 1.5;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.actions {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.approvalActionCard {
+	border-radius: 4px !important;
+	padding: 0px !important;
+}
+
+.approvalActionButton {
+	justify-content: flex-start;
+	text-align: left;
+	width: 100%;
+}
+
+.meta {
+	min-width: 0;
+	overflow: hidden;
+}
+
+@media (max-width: 520px) {
+	.summary {
+		grid-template-columns: 1fr;
+	}
+}
