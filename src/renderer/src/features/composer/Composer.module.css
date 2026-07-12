@@ -1,0 +1,91 @@
+.composerInputWrap {
+	position: relative;
+	display: flex;
+	align-items: flex-end;
+	min-width: 0;
+	width: 100%;
+}
+
+.composerTextArea {
+	padding-bottom: 42px;
+	padding-right: 42px;
+}
+
+.composerToolbar {
+	position: absolute;
+	left: 8px;
+	right: 8px;
+	bottom: 8px;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.composerActionButton,
+.composerSendButton {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+}
+
+.modelButton {
+	max-width: min(360px, 45vw);
+	height: 28px;
+	padding: 0 8px;
+}
+
+.modelButtonContent {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+}
+
+.modelButtonText {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.composerActionIcon,
+.composerSendIcon {
+	width: 16px;
+	height: 16px;
+}
+
+.composerSendButton {
+	margin-left: auto;
+}
+
+.providerGroupLabel {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	min-width: 180px;
+}
+
+.providerMutedText {
+	font-size: 11px;
+	color: rgb(140, 140, 140);
+}
+
+.modelMenuItem {
+	display: grid;
+	gap: 2px;
+	min-width: 220px;
+}
+
+.modelMenuName {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.modelMenuMeta {
+	overflow: hidden;
+	color: rgb(140, 140, 140);
+	font-size: 11px;
+	line-height: 1.2;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}

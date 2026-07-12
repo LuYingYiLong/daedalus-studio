@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState, Key } from "react";
-import type { DataNode } from "antd/es/tree";
+import { useEffect, useMemo, useState } from "react";
 import { fetchSessions } from "@/api/session-api";
 import { fetchWorkspaces } from "@/api/workspace-api";
-import { Tree, Typography } from "antd";
+import { Menu, Typography } from "antd";
+import type { MenuProps } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import styles from "./WorkspaceTree.module.css";
@@ -13,25 +13,33 @@ export type WorkspaceTreeProps = {
 	onSessionSelect?: (sessionId: string) => void;
 };
 
-function createWorkspaceTreeData(workspaces: WorkspaceConfig[], sessions: SessionMetadata[]): DataNode[] {
+type WorkspaceMenuItem = NonNullable<MenuProps["items"]>[number];
+type WorkspaceMenuItems = NonNullable<MenuProps["items"]>;
+
+function createSessionMenuItem(session: SessionMetadata): WorkspaceMenuItem {
+	return {
+		key: `session:${session.id}`,
+		label: session.title
+	};
+}
+
+function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: SessionMetadata[]): WorkspaceMenuItems {
 	const workspaceIds: Set<string> = new Set(workspaces.map((workspace: WorkspaceConfig): string => workspace.id));
-	const workspaceNodes: DataNode[] = workspaces.map((workspace: WorkspaceConfig): DataNode => {
+	const workspaceItems: WorkspaceMenuItems = workspaces.map((workspace: WorkspaceConfig): WorkspaceMenuItem => {
 		const workspaceSessions: SessionMetadata[] = sessions.filter((session: SessionMetadata): boolean => {
 			return session.workspaceId === workspace.id;
 		});
 
 		return {
 			key: `workspace:${workspace.id}`,
-			title: workspace.name,
+			label: workspace.name,
+			icon: <Icon name="folder" />,
 			children: workspaceSessions.length > 0
-				? workspaceSessions.map((session: SessionMetadata): DataNode => ({
-					key: `session:${session.id}`,
-					title: session.title
-				}))
+				? workspaceSessions.map(createSessionMenuItem)
 				: [
 					{
 						key: `workspace:${workspace.id}:empty`,
-						title: "No sessions",
+						label: "No sessions",
 						disabled: true
 					}
 				]
@@ -42,19 +50,16 @@ function createWorkspaceTreeData(workspaces: WorkspaceConfig[], sessions: Sessio
 	});
 
 	if (unmatchedSessions.length === 0) {
-		return workspaceNodes;
+		return workspaceItems;
 	}
 
 	return [
-		...workspaceNodes,
+		...workspaceItems,
 		{
 			key: "session-group:unmatched",
-			title: workspaces.length === 0 ? "Sessions" : "Other sessions",
-			selectable: false,
-			children: unmatchedSessions.map((session: SessionMetadata): DataNode => ({
-				key: `session:${session.id}`,
-				title: session.title
-			}))
+			label: workspaces.length === 0 ? "Sessions" : "Other sessions",
+			type: "group",
+			children: unmatchedSessions.map(createSessionMenuItem)
 		}
 	];
 }
@@ -63,21 +68,16 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }:
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([]);
 	const [sessions, setSessions] = useState<SessionMetadata[]>([]);
 	const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
-	const [expandedWorkspaceKeys, setExpandedWorkspaceKeys] = useState<Key[]>([]);
-	const [selectedTreeKeys, setSelectedTreeKeys] = useState<Key[]>([]);
+	const [openWorkspaceKeys, setOpenWorkspaceKeys] = useState<string[]>([]);
+	const [selectedMenuKeys, setSelectedMenuKeys] = useState<string[]>([]);
 	const [isWorkspaceLoading, setIsWorkspaceLoading] = useState<boolean>(true);
 	const [workspaceError, setWorkspaceError] = useState<string | null>(null);
 	const [reloadIndex, setReloadIndex] = useState<number>(0);
 
-	function handleTreeSelect(selectedKeys: Key[]): void {
-		const selectedKey: string = String(selectedKeys[0] ?? "");
+	const handleMenuClick: MenuProps["onClick"] = ({ key }): void => {
+		const selectedKey: string = String(key);
 
-		if (!selectedKey) {
-			setSelectedTreeKeys([]);
-			return;
-		}
-
-		setSelectedTreeKeys(selectedKeys);
+		setSelectedMenuKeys([selectedKey]);
 
 		if (selectedKey.startsWith("workspace:")) {
 			const workspaceId: string = selectedKey.slice("workspace:".length);
@@ -92,7 +92,24 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }:
 
 			onSessionSelect?.(sessionId);
 		}
-	}
+	};
+
+	const handleOpenChange: MenuProps["onOpenChange"] = (keys: string[]): void => {
+		setOpenWorkspaceKeys(keys);
+
+		const latestWorkspaceKey: string | undefined = keys.find((key: string): boolean => {
+			return !openWorkspaceKeys.includes(key) && key.startsWith("workspace:");
+		});
+
+		if (latestWorkspaceKey === undefined) {
+			return;
+		}
+
+		const workspaceId: string = latestWorkspaceKey.slice("workspace:".length);
+
+		setActiveWorkspaceId(workspaceId);
+		onWorkspaceSelect?.(workspaceId);
+	};
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -123,8 +140,8 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }:
 				setWorkspaces(workspaceList.workspaces);
 				setSessions(sessionList.sessions);
 				setActiveWorkspaceId(workspaceList.active);
-				setSelectedTreeKeys(workspaceList.active ? [`workspace:${workspaceList.active}`] : []);
-				setExpandedWorkspaceKeys(workspaceList.workspaces.map((workspace: WorkspaceConfig): string => {
+				setSelectedMenuKeys([]);
+				setOpenWorkspaceKeys(workspaceList.workspaces.map((workspace: WorkspaceConfig): string => {
 					return `workspace:${workspace.id}`;
 				}));
 
@@ -155,8 +172,8 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }:
 		};
 	}, [refreshToken, reloadIndex]);
 
-	const workspaceTreeData: DataNode[] = useMemo((): DataNode[] => {
-		return createWorkspaceTreeData(workspaces, sessions);
+	const workspaceMenuItems: WorkspaceMenuItems = useMemo((): WorkspaceMenuItems => {
+		return createWorkspaceMenuItems(workspaces, sessions);
 	}, [sessions, workspaces]);
 
 	return (
@@ -175,27 +192,23 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }:
 				</Typography.Text>
 			) : null}
 
-			{!isWorkspaceLoading && !workspaceError && workspaceTreeData.length === 0 ? (
+			{!isWorkspaceLoading && !workspaceError && workspaceMenuItems.length === 0 ? (
 				<Typography.Text type="secondary" className={styles.workspaceEmptyText}>
 					No workspaces
 				</Typography.Text>
 			) : (
-				<Tree
-					className={styles.workspaceTree}
-					blockNode={true}
-					expandedKeys={expandedWorkspaceKeys}
-					selectedKeys={selectedTreeKeys}
-					treeData={workspaceTreeData}
-					onExpand={(keys: Key[]): void => {
-						setExpandedWorkspaceKeys(keys);
-					}}
-					switcherIcon={<Icon name="folder" />}
-
-					onSelect={handleTreeSelect}
+				<Menu
+					className={styles.workspaceMenu}
+					mode="inline"
+					items={workspaceMenuItems}
+					openKeys={openWorkspaceKeys}
+					selectedKeys={selectedMenuKeys}
+					onOpenChange={handleOpenChange}
+					onClick={handleMenuClick}
 				/>
 			)}
 		</div>
-	)
+	);
 }
 
 export default WorkspaceTree;

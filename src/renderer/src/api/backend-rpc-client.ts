@@ -1,4 +1,5 @@
 type BackendRequest = {
+	protocolVersion: 2;
 	type: "request";
 	id: string;
 	method: string;
@@ -22,7 +23,7 @@ type BackendResponse =
 		};
 	};
 
-type BackendEvent = {
+export type BackendEvent = {
 	type: "event";
 	id: string;
 	event: string;
@@ -35,6 +36,17 @@ type PendingRequest = {
 };
 
 type BackendEventListener = (event: BackendEvent) => void;
+
+function createRequestParams(method: string, params: unknown): unknown {
+	if (method !== "client.hello") {
+		return params;
+	}
+
+	return {
+		...(typeof params === "object" && params !== null && !Array.isArray(params) ? params : {}),
+		protocolVersion: 2
+	};
+}
 
 function isBackendResponse(message: unknown): message is BackendResponse {
 	return typeof message === "object"
@@ -56,6 +68,7 @@ export class BackendRpcClient {
 	private socket: WebSocket | null = null;
 	private requestIndex: number = 0;
 	private readonly pendingRequests: Map<string, PendingRequest> = new Map();
+	private readonly eventListeners: Set<BackendEventListener> = new Set();
 
 	constructor(url: string) {
 		this.url = url;
@@ -90,21 +103,29 @@ export class BackendRpcClient {
 	}
 
 	request<TResult>(method: string, params?: unknown): Promise<TResult> {
+		const id: string = `studio-${Date.now()}-${this.requestIndex += 1}`;
+
+		return this.requestWithId<TResult>(id, method, params);
+	}
+
+	requestWithId<TResult>(id: string, method: string, params?: unknown): Promise<TResult> {
 		const socket: WebSocket | null = this.socket;
 
 		if (!socket || socket.readyState !== WebSocket.OPEN) {
 			return Promise.reject(new Error("后端连接尚未打开"));
 		}
 
-		const id: string = `studio-${Date.now()}-${this.requestIndex += 1}`;
 		const request: BackendRequest = {
+			protocolVersion: 2,
 			type: "request",
 			id,
 			method
 		};
 
-		if (params !== undefined) {
-			request.params = params;
+		const requestParams: unknown = createRequestParams(method, params);
+
+		if (requestParams !== undefined) {
+			request.params = requestParams;
 		}
 
 		return new Promise<TResult>((resolve, reject): void => {
@@ -114,6 +135,14 @@ export class BackendRpcClient {
 			});
 			socket.send(JSON.stringify(request));
 		});
+	}
+
+	addEventListener(listener: BackendEventListener): () => void {
+		this.eventListeners.add(listener);
+
+		return (): void => {
+			this.eventListeners.delete(listener);
+		};
 	}
 
 	close(): void {
@@ -138,6 +167,9 @@ export class BackendRpcClient {
 
 		if (isBackendEvent(message)) {
 			console.debug("[Daedalus backend:event]", message.event, message.data);
+			for (const listener of this.eventListeners) {
+				listener(message);
+			}
 			return;
 		}
 

@@ -19,7 +19,6 @@ createRoot(rootElement).render(
 				algorithm: theme.darkAlgorithm,
 				token: {
 					colorPrimary: "#478cbf",
-					borderRadius: 4
 				},
 				components: {
 					Tree: {

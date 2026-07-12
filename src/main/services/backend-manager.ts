@@ -107,10 +107,12 @@ class BackendManager {
 
 			ws.onopen = () => {
 				ws.send(JSON.stringify({
+					protocolVersion: 2,
 					type: "request",
 					id: "studio-hello",
 					method: "client.hello",
 					params: {
+						protocolVersion: 2,
 						clientType: "studio",
 						clientName: "Daedalus Studio",
 						capabilities: {
@@ -123,7 +125,7 @@ class BackendManager {
 						}
 					}
 				}));
-				ws.send(JSON.stringify({ type: "request", id: "health", method: "ping" }));
+				ws.send(JSON.stringify({ protocolVersion: 2, type: "request", id: "health", method: "ping" }));
 			};
 
             ws.onmessage = () => {

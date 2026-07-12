@@ -61,7 +61,7 @@ export type TimelineAssistantBlock = {
 	content: string;
 	startedAtUtc: string;
 	completedAtUtc: string;
-	status?: "failed";
+	status?: "failed" | "running";
 	bodyParts: TimelineBodyPart[];
 };
 
@@ -81,7 +81,18 @@ export type TimelineBodyPart =
 	| { type: "markdown"; text: string }
 	| { type: "thinking"; text: string; done: boolean }
 	| { type: "tool"; tool_call_id: string; events: Record<string, unknown>[] }
-	| { type: "status"; title: string; details: string; status: string; code: string }
+	| {
+		type: "status";
+		title: string;
+		details: string;
+		status: string;
+		code: string;
+		actionLabel?: string;
+		actionId?: string;
+		iconUid?: string;
+		planId?: string;
+		recommendedReplies?: string[];
+	}
 	| { type: "plan"; planId: string; title: string; status: string; previewMarkdown: string }
 	| {
 		type: "inline_diff";
@@ -114,4 +125,17 @@ export type SessionOpenResult = {
 	latestAgentSnapshot: unknown | null;
 	pendingGuides: unknown[];
 	workspaceWarning: string | null;
+};
+
+export type SessionTimelineResult = {
+	timeline: true;
+	sessionId: string;
+	blockCount: number;
+	blockOffset: number;
+	eventCount: number;
+	limit: number;
+	hasMoreBefore: boolean;
+	timelineBlocks: TimelineBlock[];
+	latestWorkflowSnapshot: unknown | null;
+	latestAgentSnapshot: unknown | null;
 };

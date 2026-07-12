@@ -14,7 +14,7 @@ export type AssistantBubbleProps = {
 	content?: string;
 	bodyParts?: TimelineBodyPart[];
 	message?: string;
-	elapsedTime?: number;
+	elapsedTime?: string;
 	endTime?: string;
 };
 
@@ -80,9 +80,9 @@ function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: 
 
 	return (
 		<article className={styles.root}>
-			{elapsedTime ? (
+			{elapsedTime !== undefined ? (
 				<div className={styles.timingRow}>
-					<Typography.Text type="secondary">{elapsedTime.toString() + "s"}</Typography.Text>
+					<Typography.Text type="secondary">{elapsedTime}</Typography.Text>
 					<Divider size="small" className={styles.antDivider} />
 				</div>
 			) : null}
