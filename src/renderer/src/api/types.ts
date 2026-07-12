@@ -21,6 +21,8 @@ export type SessionMetadata = {
 	activeSkillId?: string;
 	provider?: string;
 	model?: string;
+	chatMode?: "agent" | "ask" | "plan";
+	approvalMode?: "manual" | "auto-safe";
 	archivedAt?: string;
 	createdAt: string;
 	updatedAt: string;

@@ -1,14 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Input, Dropdown, Button, MenuProps, Divider } from "antd";
 import { Icon } from "@/assets/icons";
 import styles from "./Composer.module.css";
+import type { ApprovalMode } from "@/api/approval-api";
 import type { ChatMode } from "@/api/chat-api";
 import type { ProviderModelInfo, ProviderModelSelection, ProviderModelSelectionProvider } from "@/api/provider-api";
 
 export type ComposerProps = {
 	providerModelSelection: ProviderModelSelection | null;
+	selectedProviderId: string | null;
+	selectedModelId: string | null;
+	mode: ChatMode;
+	approvalMode: ApprovalMode;
 	isSending?: boolean;
-	onSubmit?: (message: string, mode: ChatMode) => void;
+	onModeChange?: (mode: ChatMode) => void;
+	onApprovalModeChange?: (mode: ApprovalMode) => void;
+	onProviderModelChange?: (providerId: string, modelId: string) => void;
+	onSubmit?: (message: string) => void;
 };
 
 type SelectedModel = {
@@ -28,7 +36,20 @@ const contextItems: MenuProps["items"] = [
 	{
 		key: "2",
 		label: "Add images",
-	}
+	},
+];
+
+const approvalModeItems: MenuProps["items"] = [
+	{
+		key: "manual",
+		label: "Manual",
+		icon: <Icon name="shield" />,
+	},
+	{
+		key: "auto-safe",
+		label: "Auto-safe",
+		icon: <Icon name="warning" />,
+	},
 ];
 
 const modeItems: MenuProps["items"] = [
@@ -53,6 +74,10 @@ function isComposerMode(value: string): value is ChatMode {
 	return value === "ask" || value === "agent" || value === "plan";
 }
 
+function isApprovalMode(value: string): value is ApprovalMode {
+	return value === "manual" || value === "auto-safe";
+}
+
 function createModelKey(provider: string, model: string): string {
 	return `model:${provider}:${model}`;
 }
@@ -74,17 +99,6 @@ function parseModelKey(key: string): SelectedModel | null {
 	return {
 		provider: value.slice(0, separatorIndex),
 		model: value.slice(separatorIndex + 1)
-	};
-}
-
-function getInitialSelectedModel(selection: ProviderModelSelection | null): SelectedModel | null {
-	if (selection === null) {
-		return null;
-	}
-
-	return {
-		provider: selection.activeModel.providerId,
-		model: selection.activeModel.modelId
 	};
 }
 
@@ -164,26 +178,41 @@ function createProviderModelItems(selection: ProviderModelSelection | null): Men
 	});
 }
 
-function Composer({ providerModelSelection, isSending = false, onSubmit }: ComposerProps): React.JSX.Element {
+function Composer({
+	providerModelSelection,
+	selectedProviderId,
+	selectedModelId,
+	mode,
+	approvalMode,
+	isSending = false,
+	onModeChange,
+	onApprovalModeChange,
+	onProviderModelChange,
+	onSubmit
+}: ComposerProps): React.JSX.Element {
 	const [message, setMessage] = useState<string>("");
-	const [mode, setMode] = useState<ChatMode>("ask");
-	const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(() => {
-		return getInitialSelectedModel(providerModelSelection);
-	});
-
-	useEffect((): void => {
-		setSelectedModel(getInitialSelectedModel(providerModelSelection));
-	}, [providerModelSelection]);
 
 	const handleModeClick: MenuProps["onClick"] = ({ key }): void => {
 		if (isComposerMode(key)) {
-			setMode(key);
+			onModeChange?.(key);
+		}
+	};
+
+	const handleApprovalModeClick: MenuProps["onClick"] = ({ key }): void => {
+		if (isApprovalMode(key)) {
+			onApprovalModeChange?.(key);
 		}
 	};
 
 	const providerModelItems: MenuProps["items"] = useMemo((): MenuProps["items"] => {
 		return createProviderModelItems(providerModelSelection);
 	}, [providerModelSelection]);
+	const selectedModel: SelectedModel | null = selectedProviderId === null || selectedModelId === null
+		? null
+		: {
+			provider: selectedProviderId,
+			model: selectedModelId
+		};
 	const selectedModelKey: string | undefined = selectedModel === null
 		? undefined
 		: createModelKey(selectedModel.provider, selectedModel.model);
@@ -196,7 +225,7 @@ function Composer({ providerModelSelection, isSending = false, onSubmit }: Compo
 			return;
 		}
 
-		setSelectedModel(nextSelectedModel);
+		onProviderModelChange?.(nextSelectedModel.provider, nextSelectedModel.model);
 	};
 
 	function submitMessage(): void {
@@ -206,7 +235,7 @@ function Composer({ providerModelSelection, isSending = false, onSubmit }: Compo
 			return;
 		}
 
-		onSubmit?.(trimmedMessage, mode);
+		onSubmit?.(trimmedMessage);
 		setMessage("");
 	}
 
@@ -214,6 +243,7 @@ function Composer({ providerModelSelection, isSending = false, onSubmit }: Compo
 		<div className={styles.composerInputWrap}>
 			<Input.TextArea
 				value={message}
+				size="medium"
 				autoSize={{ minRows: 4, maxRows: 6 }}
 				placeholder="What can I say?"
 				className={styles.composerTextArea}
@@ -245,13 +275,33 @@ function Composer({ providerModelSelection, isSending = false, onSubmit }: Compo
 					menu={{
 						items: modeItems,
 						selectedKeys: [mode],
-						onClick: handleModeClick
+						onClick: handleModeClick,
 					}}
 					trigger={["click"]}
 				>
 					<Button
 						type="text"
 						icon={<Icon name={mode} className={styles.composerActionIcon} />}
+						className={styles.composerActionButton}
+					/>
+				</Dropdown>
+				<Divider vertical={true} />
+				<Dropdown
+					menu={{
+						items: approvalModeItems,
+						selectedKeys: [approvalMode],
+						onClick: handleApprovalModeClick,
+					}}
+					trigger={["click"]}
+				>
+					<Button
+						type="text"
+						icon={(
+							<Icon
+								name={approvalMode === "auto-safe" ? "warning" : "shield"}
+								className={styles.composerActionIcon}
+							/>
+						)}
 						className={styles.composerActionButton}
 					/>
 				</Dropdown>

@@ -15,6 +15,7 @@ if (!rootElement) {
 createRoot(rootElement).render(
 	<StrictMode>
 		<ConfigProvider
+			componentSize="small"
 			theme={{
 				algorithm: theme.darkAlgorithm,
 				token: {

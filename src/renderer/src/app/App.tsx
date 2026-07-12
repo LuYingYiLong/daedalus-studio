@@ -5,13 +5,14 @@ import { selectWorkspace } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import { SessionOpenResult, TimelineAssistantBlock, TimelineBlock, TimelineBodyPart } from "@/api/types";
-import { fetchSessionTimeline, openSession } from "@/api/session-api";
+import { fetchSessionTimeline, openSession, saveSessionUiMetadata } from "@/api/session-api";
 import MessageList from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
-import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
+import { fetchProviderModelSelection, saveProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import { createBackendClient } from "@/api/backend-client";
 import type { BackendEvent } from "@/api/backend-rpc-client";
 import { sendChatMessage, type ChatMode } from "@/api/chat-api";
+import { fetchApprovalList, setApprovalMode, type ApprovalMode } from "@/api/approval-api";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -223,6 +224,10 @@ function App(): React.JSX.Element {
 	const [isSessionLoading, setIsSessionLoading] = useState(false);
 	const [isChatSending, setIsChatSending] = useState<boolean>(false);
 	const [providerModelSelection, setProviderModelSelection] = useState<ProviderModelSelection | null>(null);
+	const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
+	const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+	const [chatMode, setChatMode] = useState<ChatMode>("ask");
+	const [approvalMode, setApprovalModeState] = useState<ApprovalMode>("manual");
 
 	useEffect((): void => {
 		async function loadProviderModelSelection(): Promise<void> {
@@ -230,12 +235,28 @@ function App(): React.JSX.Element {
 				const result: ProviderModelSelection = await fetchProviderModelSelection();
 
 				setProviderModelSelection(result);
+				setSelectedProviderId(result.activeModel.providerId);
+				setSelectedModelId(result.activeModel.modelId);
 			} catch (error: unknown) {
 				console.error("[App] load provider model selection failed", error);
 			}
 		}
 
 		void loadProviderModelSelection();
+	}, []);
+
+	useEffect((): void => {
+		async function loadApprovalMode(): Promise<void> {
+			try {
+				const result = await fetchApprovalList();
+
+				setApprovalModeState(result.mode);
+			} catch (error: unknown) {
+				console.error("[App] load approval mode failed", error);
+			}
+		}
+
+		void loadApprovalMode();
 	}, []);
 
 	useEffect((): (() => void) => {
@@ -290,6 +311,7 @@ function App(): React.JSX.Element {
 			const result: SessionOpenResult = await openSession(sessionId);
 
 			setTimelineBlocks(result.timelineBlocks);
+			setChatMode(result.metadata.chatMode ?? "ask");
 
 			if (result.workspaceWarning) {
 				console.warn("[App] session workspace warning", result.workspaceWarning);
@@ -304,7 +326,73 @@ function App(): React.JSX.Element {
 		}
 	}
 
-	async function handleComposerSubmit(message: string, mode: ChatMode): Promise<void> {
+	async function handleModeChange(nextMode: ChatMode): Promise<void> {
+		setChatMode(nextMode);
+
+		if (activeSessionId === null) {
+			return;
+		}
+
+		try {
+			await saveSessionUiMetadata({
+				chatMode: nextMode
+			});
+			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		} catch (error: unknown) {
+			console.error("[App] save chat mode failed", error);
+		}
+	}
+
+	async function handleApprovalModeChange(nextMode: ApprovalMode): Promise<void> {
+		const previousMode: ApprovalMode = approvalMode;
+
+		setApprovalModeState(nextMode);
+
+		try {
+			const result = await setApprovalMode(nextMode);
+
+			setApprovalModeState(result.mode);
+		} catch (error: unknown) {
+			setApprovalModeState(previousMode);
+			console.error("[App] save approval mode failed", error);
+		}
+	}
+
+	async function handleProviderModelChange(providerId: string, modelId: string): Promise<void> {
+		const previousProviderId: string | null = selectedProviderId;
+		const previousModelId: string | null = selectedModelId;
+
+		setSelectedProviderId(providerId);
+		setSelectedModelId(modelId);
+
+		try {
+			await saveProviderModelSelection({
+				provider: providerId,
+				model: modelId,
+				activate: true
+			});
+
+			if (activeSessionId !== null) {
+				await saveSessionUiMetadata({
+					provider: providerId,
+					model: modelId
+				});
+			}
+
+			const result: ProviderModelSelection = await fetchProviderModelSelection();
+
+			setProviderModelSelection(result);
+			setSelectedProviderId(result.activeModel.providerId);
+			setSelectedModelId(result.activeModel.modelId);
+			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		} catch (error: unknown) {
+			setSelectedProviderId(previousProviderId);
+			setSelectedModelId(previousModelId);
+			console.error("[App] save provider model selection failed", error);
+		}
+	}
+
+	async function handleComposerSubmit(message: string): Promise<void> {
 		if (activeSessionId === null) {
 			setSessionError("请先打开一个会话再发送消息");
 			return;
@@ -326,7 +414,7 @@ function App(): React.JSX.Element {
 			await sendChatMessage({
 				requestId,
 				message,
-				mode
+				mode: chatMode
 			});
 
 			const timeline = await fetchSessionTimeline(activeSessionId);
@@ -403,9 +491,22 @@ function App(): React.JSX.Element {
 				<footer className={styles.composer}>
 					<Composer
 						providerModelSelection={providerModelSelection}
+						selectedProviderId={selectedProviderId}
+						selectedModelId={selectedModelId}
+						mode={chatMode}
+						approvalMode={approvalMode}
 						isSending={isChatSending}
-						onSubmit={(message: string, mode: ChatMode): void => {
-							void handleComposerSubmit(message, mode);
+						onModeChange={(mode: ChatMode): void => {
+							void handleModeChange(mode);
+						}}
+						onApprovalModeChange={(mode: ApprovalMode): void => {
+							void handleApprovalModeChange(mode);
+						}}
+						onProviderModelChange={(providerId: string, modelId: string): void => {
+							void handleProviderModelChange(providerId, modelId);
+						}}
+						onSubmit={(message: string): void => {
+							void handleComposerSubmit(message);
 						}}
 					/>
 				</footer>

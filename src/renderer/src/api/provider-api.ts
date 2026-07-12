@@ -53,8 +53,24 @@ export type ProviderModelSelectionProvider = {
 	modelsCacheUpdatedAt?: string | null;
 };
 
+export type SaveProviderModelSelectionParams = {
+	provider: string;
+	model: string;
+	activate?: boolean;
+};
+
 export async function fetchProviderModelSelection(): Promise<ProviderModelSelection> {
 	const client = await createBackendClient();
 
 	return client.request<ProviderModelSelection>("provider.modelSelection.get");
+}
+
+export async function saveProviderModelSelection(params: SaveProviderModelSelectionParams): Promise<unknown> {
+	const client = await createBackendClient();
+
+	return client.request("provider.config.set", {
+		provider: params.provider,
+		model: params.model,
+		activate: params.activate ?? true
+	});
 }
