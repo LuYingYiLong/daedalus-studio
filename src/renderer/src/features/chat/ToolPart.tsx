@@ -1,7 +1,9 @@
+import { TimelineBodyPart } from "@/api/types";
 import styles from "./ToolPart.module.css"
-import { TimelineToolPart } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import { Collapse } from "antd";
+
+export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
 
 type ToolStatus = "running" | "success" | "error" | "approval";
 
@@ -49,7 +51,6 @@ function ToolPart({ part }: ToolPartProps): React.JSX.Element {
 		<Collapse
 			size="small"
 			className={styles.toolCollapse}
-			bordered={false}
 			expandIcon={(): React.ReactNode => (
 				<Icon
 					name="mcp"

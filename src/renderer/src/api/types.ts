@@ -230,11 +230,6 @@ export type TimelineBodyPart =
 		undoable: boolean;
 		editedFiles: TimelineEditedFile[];
 	};
-	
-export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
-export type TimelineStatusPart = Extract<TimelineBodyPart, {type: "status"}>;
-export type TimelinePlanPart = Extract<TimelineBodyPart, { type: "plan" }>
-export type TimelineInlineDiffPart = Extract<TimelineBodyPart, { type: "inline_diff" }>
 
 export type TimelineBlock = TimelineUserBlock | TimelineAssistantBlock;
 

@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Typography } from "antd";
-import { Icon } from "@/assets/icons";
 import { selectWorkspace } from "@/api/workspace-api";
 import styles from "./App.module.css";
-import WorkspaceTree from "@/features/workspace/WorkspaceTree";
-import type { AdditionalContextItem, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkspaceConfig } from "@/api/types";
 import { fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession } from "@/api/session-api";
-import MessageList from "@/features/chat/MessageList";
-import Composer from "@/features/composer/Composer";
+import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import { createBackendClient } from "@/api/backend-client";
 import type { BackendEvent } from "@/api/backend-rpc-client";
@@ -31,6 +27,11 @@ import {
 } from "@/features/workbench/workbench-state";
 import { patchWorkbench } from "@/api/workbench-api";
 import { getSessionTitle } from "./session-title";
+import AppNavTabs, { type AppPageKey } from "./AppNavTabs";
+import AgentPage from "@/pages/agent/AgentPage";
+import SettingsPage from "@/pages/settings/SettingsPage";
+import DrawingPage from "@/pages/drawing/DrawingPage";
+import KnowledgePage from "@/pages/knowledge/KnowledgePage";
 
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -83,7 +84,69 @@ function getIsSending(workbench: WorkbenchSnapshot | null): boolean {
 	return status === "streaming" || status === "approval" || status === "paused" || status === "cancelling";
 }
 
+function createOptimisticUserBlock(requestId: string, message: string, additionalContext: AdditionalContextItem[]): TimelineBlock {
+	const contentChars: number = message.length + additionalContext.reduce((total: number, item: AdditionalContextItem): number => {
+		return total + item.title.length + (item.subtitle?.length ?? 0);
+	}, 0);
+
+	return {
+		id: `optimistic:${requestId}:user`,
+		type: "user",
+		requestId,
+		content: message,
+		sentAtUtc: new Date().toISOString(),
+		additionalContext,
+		renderHints: {
+			estimatedHeight: Math.max(96, Math.min(320, contentChars * 0.42) + (additionalContext.length > 0 ? 34 : 0)),
+			contentChars,
+			bodyPartCount: 1,
+			heavyPartCount: 0
+		}
+	};
+}
+
+function mergeOptimisticUserBlocks(currentPage: TimelinePageState, nextPage: TimelinePageState): TimelinePageState {
+	const optimisticUserBlocks: TimelineBlock[] = currentPage.blocks.filter((block: TimelineBlock): boolean => {
+		return block.type === "user" && block.id.startsWith("optimistic:");
+	});
+	const missingOptimisticUserBlocks: TimelineBlock[] = optimisticUserBlocks.filter((optimisticBlock: TimelineBlock): boolean => {
+		return !nextPage.blocks.some((block: TimelineBlock): boolean => {
+			return block.type === "user" && block.requestId === optimisticBlock.requestId;
+		});
+	});
+
+	if (missingOptimisticUserBlocks.length === 0) {
+		return nextPage;
+	}
+
+	return {
+		...nextPage,
+		blocks: [
+			...nextPage.blocks,
+			...missingOptimisticUserBlocks
+		],
+		blockCount: nextPage.blockCount + missingOptimisticUserBlocks.length,
+		hasMoreAfter: false
+	};
+}
+
+function trimTimelineFromRequest(page: TimelinePageState, requestId: string): TimelinePageState {
+	const firstIndex: number = page.blocks.findIndex((block: TimelineBlock): boolean => block.requestId === requestId);
+
+	if (firstIndex < 0) {
+		return page;
+	}
+
+	return {
+		...page,
+		blocks: page.blocks.slice(0, firstIndex),
+		blockCount: Math.max(0, page.blockCount - (page.blocks.length - firstIndex)),
+		hasMoreAfter: false
+	};
+}
+
 function App(): React.JSX.Element {
+	const [activePage, setActivePage] = useState<AppPageKey>("agent");
 	const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState<number>(0);
 	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 	const [activeSessionMetadata, setActiveSessionMetadata] = useState<SessionMetadata | null>(null);
@@ -94,20 +157,40 @@ function App(): React.JSX.Element {
 	const [isSessionLoading, setIsSessionLoading] = useState(false);
 	const [providerModelSelection, setProviderModelSelection] = useState<ProviderModelSelection | null>(null);
 	const [approvalMode, setApprovalModeState] = useState<ApprovalMode>("manual");
+	const [isApprovalModeSaving, setIsApprovalModeSaving] = useState<boolean>(false);
 	const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | null>(null);
 	const [workbenchPanelOpen, setWorkbenchPanelOpen] = useState<boolean>(true);
+	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
 	const pendingPatchRef = useRef<WorkbenchPatch>({});
 	const patchTimerRef = useRef<number | null>(null);
 	const patchSequenceRef = useRef<number>(0);
 	const isTimelinePageLoadingRef = useRef<boolean>(false);
+	const submittedComposerTextRef = useRef<{ requestId: string; text: string } | null>(null);
 
 	const applyWorkbench = useCallback((nextWorkbench: WorkbenchSnapshot): void => {
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot => {
-			return applyWorkbenchSnapshot(currentWorkbench, nextWorkbench);
+			const submittedComposerText = submittedComposerTextRef.current;
+			const normalizedWorkbench: WorkbenchSnapshot = submittedComposerText !== null
+				&& currentWorkbench?.composer.text === ""
+				&& nextWorkbench.composer.text === submittedComposerText.text
+				? {
+					...nextWorkbench,
+					composer: {
+						...nextWorkbench.composer,
+						text: ""
+					}
+				}
+				: nextWorkbench;
+
+			if (normalizedWorkbench.composer.text === "" && submittedComposerText !== null) {
+				submittedComposerTextRef.current = null;
+			}
+
+			return applyWorkbenchSnapshot(currentWorkbench, normalizedWorkbench);
 		});
 	}, []);
 
-	const sendPendingWorkbenchPatch = useCallback(async (): Promise<void> => {
+	const takePendingWorkbenchPatch = useCallback((): WorkbenchPatch => {
 		if (patchTimerRef.current !== null) {
 			window.clearTimeout(patchTimerRef.current);
 			patchTimerRef.current = null;
@@ -116,8 +199,14 @@ function App(): React.JSX.Element {
 		const pendingPatch: WorkbenchPatch = pendingPatchRef.current;
 		pendingPatchRef.current = {};
 
+		return pendingPatch;
+	}, []);
+
+	const sendWorkbenchPatch = useCallback(async (patch: WorkbenchPatch, applyResult: boolean = true): Promise<WorkbenchPatchResult | null> => {
+		const pendingPatch: WorkbenchPatch = patch;
+
 		if (Object.keys(pendingPatch).length === 0) {
-			return;
+			return null;
 		}
 
 		const result = await patchWorkbench({
@@ -125,8 +214,77 @@ function App(): React.JSX.Element {
 			clientSequence: patchSequenceRef.current += 1
 		});
 
-		applyWorkbench(result.workbench);
-	}, [activeSessionId, applyWorkbench]);
+		if (applyResult) {
+			applyWorkbench(result.workbench);
+		}
+
+		return result;
+	}, [applyWorkbench]);
+
+	const sendPendingWorkbenchPatch = useCallback(async (): Promise<void> => {
+		await sendWorkbenchPatch(takePendingWorkbenchPatch());
+	}, [sendWorkbenchPatch, takePendingWorkbenchPatch]);
+
+	function applyOptimisticActiveRun(requestId: string, clearComposerText: boolean): void {
+		const startedAt: string = new Date().toISOString();
+
+		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+			return currentWorkbench === null
+				? currentWorkbench
+				: {
+					...currentWorkbench,
+					composer: {
+						...currentWorkbench.composer,
+						text: clearComposerText ? "" : currentWorkbench.composer.text
+					},
+					activeRun: {
+						status: "streaming",
+						requestId,
+						startedAt
+					}
+				};
+		});
+	}
+
+	function applyOptimisticSend(requestId: string, message: string, additionalContext: AdditionalContextItem[], clearComposerText: boolean = true): void {
+		applyOptimisticActiveRun(requestId, clearComposerText);
+		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+			const hasUserBlock: boolean = currentPage.blocks.some((block: TimelineBlock): boolean => {
+				return block.type === "user" && block.requestId === requestId;
+			});
+
+			if (hasUserBlock) {
+				return currentPage;
+			}
+
+			return {
+				...currentPage,
+				blocks: [
+					...currentPage.blocks,
+					createOptimisticUserBlock(requestId, message, additionalContext)
+				],
+				blockCount: currentPage.blockCount + 1,
+				hasMoreAfter: false
+			};
+		});
+	}
+
+	function applyOptimisticRetry(retryFromRequestId: string, requestId: string, message: string, additionalContext: AdditionalContextItem[]): void {
+		applyOptimisticActiveRun(requestId, false);
+		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+			const trimmedPage: TimelinePageState = trimTimelineFromRequest(currentPage, retryFromRequestId);
+
+			return {
+				...trimmedPage,
+				blocks: [
+					...trimmedPage.blocks,
+					createOptimisticUserBlock(requestId, message, additionalContext)
+				],
+				blockCount: trimmedPage.blockCount + 1,
+				hasMoreAfter: false
+			};
+		});
+	}
 
 	const queueWorkbenchPatch = useCallback((patch: WorkbenchPatch, immediate: boolean = false): void => {
 		pendingPatchRef.current = mergePatch(pendingPatchRef.current, patch);
@@ -282,17 +440,37 @@ function App(): React.JSX.Element {
 	}
 
 	async function handleApprovalModeChange(nextMode: ApprovalMode): Promise<void> {
+		if (nextMode === approvalMode || isApprovalModeSaving) {
+			return;
+		}
+
 		const previousMode: ApprovalMode = approvalMode;
 
 		setApprovalModeState(nextMode);
+		setIsApprovalModeSaving(true);
+		setSessionError(null);
 
 		try {
 			const result = await setApprovalMode(nextMode);
 
 			setApprovalModeState(result.mode);
+			setActiveSessionMetadata((currentMetadata: SessionMetadata | null): SessionMetadata | null => {
+				return currentMetadata === null
+					? currentMetadata
+					: {
+						...currentMetadata,
+						approvalMode: result.mode
+					};
+			});
+			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 		} catch (error: unknown) {
+			const message: string = error instanceof Error ? error.message : "Failed to save approval mode";
+
 			setApprovalModeState(previousMode);
+			setSessionError(message);
 			console.error("[App] save approval mode failed", error);
+		} finally {
+			setIsApprovalModeSaving(false);
 		}
 	}
 
@@ -313,6 +491,10 @@ function App(): React.JSX.Element {
 	}
 
 	function handleComposerTextChange(nextText: string): void {
+		if (nextText.length > 0) {
+			submittedComposerTextRef.current = null;
+		}
+
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 			return currentWorkbench === null
 				? currentWorkbench
@@ -339,21 +521,49 @@ function App(): React.JSX.Element {
 		}
 
 		const requestId: string = createChatRequestId();
+		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
+		const chatMode: ChatMode = getChatMode(workbench);
+		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
+		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
 
 		try {
 			setSessionError(null);
-			await sendPendingWorkbenchPatch();
+			setActiveRetryRequestId(null);
+			submittedComposerTextRef.current = {
+				requestId,
+				text: message
+			};
+			applyOptimisticSend(requestId, message, additionalContext);
+
+			await flushPendingPatch;
 			await sendChatMessage({
 				requestId,
 				message,
-				mode: getChatMode(workbench),
-				additionalContext: workbench.composer.additionalContext
+				mode: chatMode,
+				additionalContext
 			});
 			await refreshLatestTimeline();
 			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to send message";
 
+			if (submittedComposerTextRef.current?.requestId === requestId) {
+				submittedComposerTextRef.current = null;
+			}
+			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+				return currentWorkbench === null
+					? currentWorkbench
+					: {
+						...currentWorkbench,
+						composer: {
+							...currentWorkbench.composer,
+							text: message
+						},
+						activeRun: currentWorkbench.activeRun.requestId === requestId
+							? { status: "idle" }
+							: currentWorkbench.activeRun
+					};
+			});
 			setSessionError(errorMessage);
 			setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 				return {
@@ -370,6 +580,63 @@ function App(): React.JSX.Element {
 				};
 			});
 			console.error("[App] send message failed", error);
+		}
+	}
+
+	async function handleRetryFromUserMessage(payload: RetryUserMessagePayload): Promise<boolean> {
+		if (activeSessionId === null || workbench === null) {
+			setSessionError("请先打开一个会话再重新发送消息");
+			return false;
+		}
+
+		if (getIsSending(workbench) || approvalAction !== null || isSessionLoading) {
+			return false;
+		}
+
+		const message: string = payload.message.trim();
+		if (message.length === 0) {
+			return false;
+		}
+
+		const requestId: string = createChatRequestId();
+		const chatMode: ChatMode = getChatMode(workbench);
+		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
+		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
+		const previousTimelinePage: TimelinePageState = timelinePage;
+
+		try {
+			setSessionError(null);
+			applyOptimisticRetry(payload.requestId, requestId, message, payload.additionalContext);
+
+			await flushPendingPatch;
+			await sendChatMessage({
+				requestId,
+				message,
+				mode: chatMode,
+				retryFromRequestId: payload.requestId,
+				additionalContext: payload.additionalContext
+			});
+			await refreshLatestTimeline();
+			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+			setActiveRetryRequestId(null);
+			return true;
+		} catch (error: unknown) {
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to retry message";
+
+			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+				return currentWorkbench === null
+					? currentWorkbench
+					: {
+						...currentWorkbench,
+						activeRun: currentWorkbench.activeRun.requestId === requestId
+							? { status: "idle" }
+							: currentWorkbench.activeRun
+					};
+			});
+			setSessionError(errorMessage);
+			setTimelinePage(previousTimelinePage);
+			console.error("[App] retry message failed", error);
+			return false;
 		}
 	}
 
@@ -393,7 +660,9 @@ function App(): React.JSX.Element {
 
 		const timeline: SessionTimelineResult = await fetchSessionTimeline(activeSessionId);
 
-		setTimelinePage(createTimelinePageFromTimelineResult(timeline));
+		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+			return mergeOptimisticUserBlocks(currentPage, createTimelinePageFromTimelineResult(timeline));
+		});
 	}
 
 	const handleLoadMoreBefore = useCallback((): void => {
@@ -476,113 +745,86 @@ function App(): React.JSX.Element {
 	const initialScrollToBottomKey: string = activeSessionId === null ? "" : `${activeSessionId}:${timelinePage.blockCount}`;
 
 	return (
-		<main className={`${styles.shell} ${workbenchPanelOpen ? styles.shellWithPanel : ""}`}>
-			<aside className={styles.workspaceSidebar}>
-				<header className={styles.workspaceHeader}>
-					<Button type="text" block={true} className={styles.createSessionButton}>
-						New session
-					</Button>
-				</header>
-
-				<div className={styles.workspaceTitleRow}>
-					<Typography.Title level={4} className={styles.workspaceTitle}>
-						Workspace
-					</Typography.Title>
-					<Button
-						className={styles.workspaceRefreshButton}
-						size="small"
-						type="text"
-						icon={<Icon name="reload" />}
-						onClick={(): void => {
-							setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
-						}}
-					/>
-				</div>
-
-				<WorkspaceTree
-					refreshToken={workspaceRefreshToken}
+		<main className={`${styles.shell} ${activePage === "agent" ? styles.agentShell : styles.pageShell} ${activePage === "agent" && workbenchPanelOpen ? styles.shellWithPanel : ""}`}>
+			<AppNavTabs activePage={activePage} onPageChange={setActivePage} />
+			{activePage === "agent" ? (
+				<AgentPage
+					workspaceRefreshToken={workspaceRefreshToken}
+					chatTitle={chatTitle}
+					workbenchPanelOpen={workbenchPanelOpen}
+					timelineBlocks={timelineBlocks}
+					isSessionLoading={isSessionLoading}
+					sessionError={sessionError}
+					hasMoreBefore={timelinePage.hasMoreBefore}
+					hasMoreAfter={timelinePage.hasMoreAfter}
+					initialScrollToBottomKey={initialScrollToBottomKey}
+					retryDisabled={getIsSending(workbench) || approvalAction !== null || isSessionLoading}
+					activeRetryRequestId={activeRetryRequestId}
+					providerModelSelection={providerModelSelection}
+					selectedProviderId={selectedProviderId}
+					selectedModelId={selectedModelId}
+					message={workbench?.composer.text ?? ""}
+					contextItems={workbench?.composer.additionalContext ?? []}
+					mode={getChatMode(workbench)}
+					approvalMode={approvalMode}
+					isSending={getIsSending(workbench) || approvalAction !== null}
+					isApprovalModeSaving={isApprovalModeSaving}
+					workbench={workbench}
+					activeWorkspace={activeWorkspace}
+					onWorkspaceRefresh={(): void => {
+						setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+					}}
 					onWorkspaceSelect={(workspaceId: string): void => {
 						void handleWorkspaceSelect(workspaceId);
 					}}
 					onSessionSelect={handleSessionSelect}
-				/>
-			</aside>
-
-			<section className={styles.chatPanel}>
-				<header className={styles.chatHeader}>
-					<Typography.Title level={4} className={styles.chatTitle}>
-						{chatTitle}
-					</Typography.Title>
-					<Button
-						type={workbenchPanelOpen ? "default" : "text"}
-						icon={<Icon name="mcp" />}
-						onClick={(): void => setWorkbenchPanelOpen((currentOpen: boolean): boolean => !currentOpen)}
-					>
-						Workbench
-					</Button>
-				</header>
-
-				<MessageList
-					blocks={timelineBlocks}
-					isLoading={isSessionLoading}
-					errorMessage={sessionError}
-					hasMoreBefore={timelinePage.hasMoreBefore}
-					hasMoreAfter={timelinePage.hasMoreAfter}
-					initialScrollToBottomKey={initialScrollToBottomKey}
+					onWorkbenchPanelOpenChange={setWorkbenchPanelOpen}
 					onLoadMoreBefore={handleLoadMoreBefore}
 					onLoadMoreAfter={handleLoadMoreAfter}
+					onRetryEditStart={(requestId: string): void => {
+						setActiveRetryRequestId(requestId);
+					}}
+					onRetryEditCancel={(requestId: string): void => {
+						setActiveRetryRequestId((currentRequestId: string | null): string | null => {
+							return currentRequestId === requestId ? null : currentRequestId;
+						});
+					}}
+					onRetryFromUserMessage={handleRetryFromUserMessage}
+					onMessageChange={handleComposerTextChange}
+					onModeChange={(mode: ChatMode): void => {
+						void handleModeChange(mode);
+					}}
+					onApprovalModeChange={(mode: ApprovalMode): void => {
+						void handleApprovalModeChange(mode);
+					}}
+					onProviderModelChange={(providerId: string, modelId: string): void => {
+						void handleProviderModelChange(providerId, modelId);
+					}}
+					onRemoveContext={(contextId: string): void => patchContext({ action: "remove", contextId })}
+					onPinContext={(contextId: string, pinned: boolean): void => patchContext({ action: "pin", contextId, pinned })}
+					onClearUnpinnedContext={(): void => patchContext({ action: "clearUnpinned" })}
+					onCancel={(): void => {
+						void handleComposerCancel();
+					}}
+					onSubmit={(): void => {
+						void handleComposerSubmit();
+					}}
+					onAddContext={(item: AdditionalContextItem): void => patchContext({ action: "addOrReplace", item })}
+					onClearHints={(): void => queueWorkbenchPatch({ nextStepHintsAction: "clear" }, true)}
+					onApprove={(approvalId: string): void => {
+						void handleApproveApproval(approvalId);
+					}}
+					onReject={(approvalId: string): void => {
+						void handleRejectApproval(approvalId);
+					}}
 				/>
-
-				<footer className={styles.composer}>
-					<Composer
-						providerModelSelection={providerModelSelection}
-						selectedProviderId={selectedProviderId}
-						selectedModelId={selectedModelId}
-						message={workbench?.composer.text ?? ""}
-						contextItems={workbench?.composer.additionalContext ?? []}
-						mode={getChatMode(workbench)}
-						approvalMode={approvalMode}
-						isSending={getIsSending(workbench) || approvalAction !== null}
-						onMessageChange={handleComposerTextChange}
-						onModeChange={(mode: ChatMode): void => {
-							void handleModeChange(mode);
-						}}
-						onApprovalModeChange={(mode: ApprovalMode): void => {
-							void handleApprovalModeChange(mode);
-						}}
-						onProviderModelChange={(providerId: string, modelId: string): void => {
-							void handleProviderModelChange(providerId, modelId);
-						}}
-						onRemoveContext={(contextId: string): void => patchContext({ action: "remove", contextId })}
-						onPinContext={(contextId: string, pinned: boolean): void => patchContext({ action: "pin", contextId, pinned })}
-						onClearUnpinnedContext={(): void => patchContext({ action: "clearUnpinned" })}
-						onCancel={(): void => {
-							void handleComposerCancel();
-						}}
-						onSubmit={(): void => {
-							void handleComposerSubmit();
-						}}
-					/>
-				</footer>
-			</section>
-
-			<WorkbenchPanel
-				open={workbenchPanelOpen}
-				workbench={workbench}
-				activeWorkspace={activeWorkspace}
-				onClose={(): void => setWorkbenchPanelOpen(false)}
-				onAddContext={(item: AdditionalContextItem): void => patchContext({ action: "addOrReplace", item })}
-				onRemoveContext={(contextId: string): void => patchContext({ action: "remove", contextId })}
-				onPinContext={(contextId: string, pinned: boolean): void => patchContext({ action: "pin", contextId, pinned })}
-				onClearUnpinnedContext={(): void => patchContext({ action: "clearUnpinned" })}
-				onClearHints={(): void => queueWorkbenchPatch({ nextStepHintsAction: "clear" }, true)}
-				onApprove={(approvalId: string): void => {
-					void handleApproveApproval(approvalId);
-				}}
-				onReject={(approvalId: string): void => {
-					void handleRejectApproval(approvalId);
-				}}
-			/>
+			) : activePage === "settings" ? (
+				<SettingsPage />
+			) : activePage === "drawing" ? (
+				<DrawingPage />
+			) : (
+				<KnowledgePage />
+			)}
 		</main>
 	);
 }

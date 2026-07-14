@@ -1,6 +1,7 @@
 import { TimelineAssistantBlock, TimelineBlock } from "@/api/types";
 import AssistantBubble from "../bubble/AssistantBubble";
 import UserBubble from "../bubble/UserBubble";
+import type { RetryUserMessagePayload } from "../bubble/UserBubble";
 import styles from "./MessageList.module.css";
 import { formatElapsedTime, formatShortDateTime } from "@/utils/time-format";
 import { Spin, Alert } from "antd";
@@ -23,6 +24,11 @@ export type MessageListProps = {
 	initialScrollToBottomKey?: string;
 	onLoadMoreBefore?: () => void;
 	onLoadMoreAfter?: () => void;
+	retryDisabled?: boolean;
+	activeRetryRequestId?: string | null;
+	onRetryEditStart?: (requestId: string) => void;
+	onRetryEditCancel?: (requestId: string) => void;
+	onRetryFromUserMessage?: (payload: RetryUserMessagePayload) => boolean | void | Promise<boolean | void>;
 };
 
 type ScrollAnchor = {
@@ -90,7 +96,12 @@ function MessageList({
 	hasMoreAfter = false,
 	initialScrollToBottomKey = "",
 	onLoadMoreBefore,
-	onLoadMoreAfter
+	onLoadMoreAfter,
+	retryDisabled = false,
+	activeRetryRequestId = null,
+	onRetryEditStart,
+	onRetryEditCancel,
+	onRetryFromUserMessage
 }: MessageListProps): React.JSX.Element {
 	const listRef = useRef<HTMLElement | null>(null);
 	const measuredHeightsRef = useRef<Map<string, number>>(new Map());
@@ -390,9 +401,15 @@ function MessageList({
 								<UserBubble
 									key={block.id}
 									entryId={block.id}
+									requestId={block.requestId}
 									message={block.content}
 									additionalContext={block.additionalContext ?? []}
 									sentTime={formatShortDateTime(block.sentAtUtc)}
+									disabled={retryDisabled}
+									isRetryEditing={activeRetryRequestId === block.requestId}
+									onRetryEditStart={onRetryEditStart}
+									onRetryEditCancel={onRetryEditCancel}
+									onRetryFromUserMessage={onRetryFromUserMessage}
 								/>
 							);
 						}

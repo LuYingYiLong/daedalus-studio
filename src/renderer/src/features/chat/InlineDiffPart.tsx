@@ -1,8 +1,9 @@
-import { TimelineInlineDiffPart } from "@/api/types";
+import { TimelineBodyPart } from "@/api/types";
 import { Button, Card, List, Typography } from "antd";
 import styles from "./InlineDiffPart.module.css";
 import { Icon } from "@/assets/icons";
 
+export type TimelineInlineDiffPart = Extract<TimelineBodyPart, { type: "inline_diff" }>;
 export type InlineDiffPartPorps = {
 	part: TimelineInlineDiffPart;
 };

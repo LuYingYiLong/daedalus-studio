@@ -9,6 +9,7 @@ import ToolPart from "../chat/ToolPart";
 import StatusPart from "../chat/StatusPart";
 import PlanPart from "../chat/PlanPart";
 import InlineDiffPart from "../chat/InlineDiffPart";
+import ThinkingPart from "../chat/ThinkingPart";
 
 export type AssistantBubbleProps = {
 	entryId?: string;
@@ -32,36 +33,7 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 		}
 
 		if (part.type === "thinking" && part.text.trim().length > 0) {
-			return (
-				<Collapse
-					key={index}
-					size="small"
-					className={styles.thinkingCollapse}
-					bordered={false}
-					expandIcon={(): React.ReactNode => (
-						<Icon
-							name="thinking"
-							style={{
-								width: 16
-							}}
-						/>
-					)}
-					defaultActiveKey={part.done ? [] : ["thinking"]}
-					items={[
-						{
-							key: "thinking",
-							label: part.done ? "Thinking" : "Thinking...",
-							children: (
-								<div className="markdown-body">
-									<Markdown remarkPlugins={[remarkGfm]}>
-										{part.text}
-									</Markdown>
-								</div>
-							)
-						}
-					]}
-				/>
-			)
+			return <ThinkingPart key={index} part={part} />
 		}
 
 		if (part.type === "tool") {

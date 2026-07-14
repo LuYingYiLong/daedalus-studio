@@ -1,11 +1,12 @@
 import { useMemo } from "react";
-import { Input, Dropdown, Button, MenuProps, Divider, Tag } from "antd";
+import { Input, Dropdown, Button, MenuProps, Divider } from "antd";
 import { Icon } from "@/assets/icons";
 import styles from "./Composer.module.css";
 import type { ApprovalMode } from "@/api/approval-api";
 import type { ChatMode } from "@/api/chat-api";
 import type { AdditionalContextItem } from "@/api/types";
 import type { ProviderModelInfo, ProviderModelSelection, ProviderModelSelectionProvider } from "@/api/provider-api";
+import AdditionalContextStrip from "@/features/bubble/AdditionalContextStrip";
 
 export type ComposerProps = {
 	providerModelSelection: ProviderModelSelection | null;
@@ -16,6 +17,7 @@ export type ComposerProps = {
 	mode: ChatMode;
 	approvalMode: ApprovalMode;
 	isSending?: boolean;
+	isApprovalModeSaving?: boolean;
 	onMessageChange?: (message: string) => void;
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
@@ -195,6 +197,7 @@ function Composer({
 	mode,
 	approvalMode,
 	isSending = false,
+	isApprovalModeSaving = false,
 	onMessageChange,
 	onModeChange,
 	onApprovalModeChange,
@@ -230,6 +233,7 @@ function Composer({
 		? undefined
 		: createModelKey(selectedModel.provider, selectedModel.model);
 	const selectedModelLabel: string = getSelectedModelLabel(providerModelSelection, selectedModel);
+	const approvalModeLabel: string = approvalMode === "auto-safe" ? "Auto Safe" : "Manual";
 
 	const handleProviderModelClick: MenuProps["onClick"] = ({ key }): void => {
 		const nextSelectedModel: SelectedModel | null = parseModelKey(String(key));
@@ -258,60 +262,50 @@ function Composer({
 
 	return (
 		<div className={styles.composerInputWrap}>
-			{composerContextItems.length > 0 ? (
-				<div className={styles.contextChips}>
-					{composerContextItems.map((item: AdditionalContextItem): React.ReactNode => (
-						<Tag
-							key={item.id}
-							closable={true}
-							className={styles.contextChip}
-							onClose={(event: React.MouseEvent<HTMLElement>): void => {
-								event.preventDefault();
-								onRemoveContext?.(item.id);
+			<div className={styles.composerSurface}>
+				{composerContextItems.length > 0 ? (
+					<div className={styles.contextArea}>
+						<AdditionalContextStrip
+							items={composerContextItems}
+							align="start"
+							interactive={true}
+							onTogglePin={(contextId: string, pinned: boolean): void => {
+								onPinContext?.(contextId, pinned);
+							}}
+							onRemove={(contextId: string): void => {
+								onRemoveContext?.(contextId);
+							}}
+						/>
+						<Button
+							type="text"
+							size="small"
+							className={styles.clearContextButton}
+							onClick={(): void => {
+								onClearUnpinnedContext?.();
 							}}
 						>
-							<button
-								type="button"
-								className={styles.pinButton}
-								onClick={(): void => {
-									onPinContext?.(item.id, item.pinned !== true);
-								}}
-							>
-								{item.pinned === true ? "Pinned" : "Pin"}
-							</button>
-							<span className={styles.contextTitle}>{item.title}</span>
-						</Tag>
-					))}
-					<Button
-						type="text"
-						size="small"
-						className={styles.clearContextButton}
-						onClick={(): void => {
-							onClearUnpinnedContext?.();
-						}}
-					>
-						Clear unpinned
-					</Button>
-				</div>
-			) : null}
-			<Input.TextArea
-				value={message}
-				autoSize={{ minRows: 4, maxRows: 6 }}
-				placeholder="What can I say?"
-				className={styles.composerTextArea}
-				onChange={(event: React.ChangeEvent<HTMLTextAreaElement>): void => {
-					onMessageChange?.(event.target.value);
-				}}
-				onPressEnter={(event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-					if (event.shiftKey) {
-						return;
-					}
+							Clear unpinned
+						</Button>
+					</div>
+				) : null}
+				<Input.TextArea
+					value={message}
+					autoSize={{ minRows: composerContextItems.length > 0 ? 3 : 4, maxRows: 12 }}
+					placeholder="What can I say?"
+					className={styles.composerTextArea}
+					onChange={(event: React.ChangeEvent<HTMLTextAreaElement>): void => {
+						onMessageChange?.(event.target.value);
+					}}
+					onPressEnter={(event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+						if (event.shiftKey) {
+							return;
+						}
 
-					event.preventDefault();
-					submitMessage();
-				}}
-			/>
-			<div className={styles.composerToolbar}>
+						event.preventDefault();
+						submitMessage();
+					}}
+				/>
+				<div className={styles.composerToolbar}>
 				<Dropdown
 					menu={{ items: contextItems }}
 					trigger={["click"]}
@@ -343,18 +337,22 @@ function Composer({
 						selectedKeys: [approvalMode],
 						onClick: handleApprovalModeClick,
 					}}
+					disabled={isApprovalModeSaving}
 					trigger={["click"]}
 				>
 					<Button
 						type="text"
+						loading={isApprovalModeSaving}
 						icon={(
 							<Icon
 								name={approvalMode === "auto-safe" ? "warning" : "shield"}
 								className={styles.composerActionIcon}
 							/>
 						)}
-						className={styles.composerActionButton}
-					/>
+						className={styles.approvalModeButton}
+					>
+						<span className={styles.approvalModeText}>{approvalModeLabel}</span>
+					</Button>
 				</Dropdown>
 				<Divider vertical={true} />
 				<Dropdown
@@ -382,6 +380,7 @@ function Composer({
 					disabled={!isSending && message.trim().length === 0}
 					onClick={submitMessage}
 				/>
+				</div>
 			</div>
 		</div>
 	);

@@ -1,8 +1,9 @@
 import { Alert } from "antd";
 import type { AlertProps } from "antd";
-import type { TimelineStatusPart } from "@/api/types";
+import type { TimelineBodyPart } from "@/api/types";
 import styles from "./StatusPart.module.css"
 
+export type TimelineStatusPart = Extract<TimelineBodyPart, {type: "status"}>;
 export type StatusPartProps = {
 	part: TimelineStatusPart;
 };

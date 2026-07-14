@@ -25,22 +25,6 @@
 .workspaceMenu {
 	min-height: 0;
 	overflow: auto;
-	background: transparent;
 	border-inline-end: 0;
 	user-select: none;
-}
-
-.workspaceMenu :global(.ant-menu) {
-	background: transparent;
-}
-
-.workspaceMenu :global(.ant-menu-item),
-.workspaceMenu :global(.ant-menu-submenu-title) {
-	width: 100%;
-	margin-inline: 0;
-}
-
-.workspaceMenu :global(.ant-menu-item-icon) {
-	width: 14px;
-	height: 14px;
 }

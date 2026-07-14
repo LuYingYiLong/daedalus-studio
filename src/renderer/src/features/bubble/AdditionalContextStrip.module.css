@@ -1,12 +1,22 @@
 .contextStrip {
 	display: flex;
-	align-self: flex-end;
 	gap: 6px;
 	width: fit-content;
-	max-width: min(900px, 90%);
+	max-width: 100%;
 	margin-bottom: 4px;
 	overflow-x: auto;
 	scrollbar-width: thin;
+}
+
+.alignEnd {
+	align-self: flex-end;
+	justify-content: flex-end;
+}
+
+.alignStart {
+	align-self: stretch;
+	justify-content: flex-start;
+	width: 100%;
 }
 
 .contextChip {
@@ -14,8 +24,8 @@
 	align-items: center;
 	flex: 0 0 auto;
 	gap: 6px;
-	min-width: 128px;
-	max-width: 280px;
+	min-width: 0;
+	max-width: min(280px, 100%);
 	height: 28px;
 	padding: 0 9px;
 	border: 1px solid rgba(255, 255, 255, 0.12);
@@ -23,6 +33,20 @@
 	color: rgba(255, 255, 255, 0.88);
 	background: rgba(255, 255, 255, 0.07);
 	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.interactiveChip {
+	cursor: pointer;
+}
+
+.interactiveChip:hover {
+	border-color: rgba(125, 190, 240, 0.44);
+	background: rgba(125, 190, 240, 0.12);
+}
+
+.interactiveChip:focus-visible {
+	outline: 2px solid rgba(125, 190, 240, 0.72);
+	outline-offset: 2px;
 }
 
 .contextIcon {

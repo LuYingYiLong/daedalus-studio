@@ -1,27 +1,85 @@
 .root {
 	display: flex;
 	flex-direction: column;
-    align-items: flex-end;
+	align-items: flex-end;
 	width: 100%;
 }
 
 .root:hover .toolbar {
-    opacity: 1;
+	opacity: 1;
 }
 
 .toolbar {
-    display: flex;
-    gap: 4px;
-    margin-top: 4px;
-    opacity: 0;
-    transition: opacity 0.15s;
+	display: flex;
+	gap: 4px;
+	margin-top: 4px;
+	opacity: 0;
+	transition: opacity 0.15s;
+}
+
+.bubbleStack {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	width: fit-content;
+	max-width: min(900px, 90%);
+	min-width: 0;
 }
 
 .content {
-	min-width: 0;
-	max-width: min(900px, 90%);
+	width: fit-content;
+	max-width: 100%;
+	min-width: 24px;
 	padding: 6px 8px;
 	overflow: hidden;
 	border-radius: 4px;
 	background: #478cbf;
+	cursor: text;
+}
+
+.content.content {
+	width: fit-content;
+}
+
+.disabledContent {
+	cursor: default;
+}
+
+.retryComposer {
+	display: flex;
+	flex-direction: column;
+	width: min(680px, 90vw);
+	max-width: 100%;
+	padding: 8px 8px 40px;
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid #478cbf;
+	border-radius: 8px;
+}
+
+.retryContextArea {
+	display: flex;
+	min-width: 0;
+}
+
+.retryTextArea {
+	padding: 0;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+	resize: none;
+}
+
+.retryTextArea:focus,
+.retryTextArea:hover {
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+}
+
+.retryToolbar {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 6px;
+	margin-bottom: -32px;
 }

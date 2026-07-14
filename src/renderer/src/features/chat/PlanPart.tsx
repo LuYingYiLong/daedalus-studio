@@ -1,4 +1,4 @@
-import { TimelinePlanPart } from "@/api/types";
+import { TimelineBodyPart } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import { Button, Card } from "antd";
 import React from "react";
@@ -6,6 +6,7 @@ import styles from "./PlanPart.module.css"
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+export type TimelinePlanPart = Extract<TimelineBodyPart, { type: "plan" }>;
 export type PlanPartProps = {
 	part: TimelinePlanPart;
 }

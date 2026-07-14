@@ -1,5 +1,4 @@
 .composerInputWrap {
-	position: relative;
 	display: flex;
 	flex-direction: column;
 	align-items: flex-end;
@@ -8,42 +7,28 @@
 	width: 100%;
 }
 
-.contextChips {
+.composerSurface {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	min-width: 0;
+	padding: 8px 8px 42px;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.03);
+	transition: border-color 0.15s;
+}
+
+.composerSurface:focus-within {
+	border-color: #478cbf;
+}
+
+.contextArea {
 	display: flex;
 	align-items: center;
-	align-self: stretch;
-	gap: 4px;
 	min-width: 0;
-	overflow: auto;
-	scrollbar-width: thin;
-}
-
-.contextChip {
-	display: inline-flex;
-	align-items: center;
-	max-width: 260px;
-	margin-inline-end: 0;
-}
-
-.contextTitle {
-	display: inline-block;
-	max-width: 160px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	vertical-align: bottom;
-	white-space: nowrap;
-}
-
-.pinButton {
-	margin: 0 6px 0 0;
-	padding: 0;
-	border: 0;
-	color: inherit;
-	background: transparent;
-	font: inherit;
-	font-size: 11px;
-	opacity: 0.72;
-	cursor: pointer;
+	width: 100%;
 }
 
 .clearContextButton {
@@ -55,8 +40,18 @@
 
 .composerTextArea {
 	width: 100%;
-	padding-bottom: 42px;
-	padding-right: 42px;
+	padding: 0 42px 0 0;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+	resize: none;
+}
+
+.composerTextArea:focus,
+.composerTextArea:hover {
+	border: 0;
+	background: transparent;
+	box-shadow: none;
 }
 
 .composerToolbar {
@@ -74,6 +69,18 @@
 	width: 28px;
 	height: 28px;
 	padding: 0;
+}
+
+.approvalModeButton {
+	height: 28px;
+	max-width: 112px;
+	padding: 0 8px;
+}
+
+.approvalModeText {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .modelButton {

@@ -25,6 +25,12 @@ createRoot(rootElement).render(
 				components: {
 					Tree: {
 						indentSize: 16,
+					},
+					Menu: {
+						itemBorderRadius: 4,
+						itemHeight: 30,
+						subMenuItemBg: "#ffffff00",
+						itemPaddingInline: 100,
 					}
 				}
 			}}
