@@ -52,7 +52,8 @@ function estimateBlockHeight(block: TimelineBlock): number {
 	}
 
 	if (block.type === "user") {
-		return Math.max(DEFAULT_USER_HEIGHT, Math.min(260, block.content.length * 0.42));
+		const contextHeight: number = block.additionalContext !== undefined && block.additionalContext.length > 0 ? 34 : 0;
+		return contextHeight + Math.max(DEFAULT_USER_HEIGHT, Math.min(260, block.content.length * 0.42));
 	}
 
 	const contentChars: number = block.bodyParts.reduce((total: number, part): number => {
@@ -390,6 +391,7 @@ function MessageList({
 									key={block.id}
 									entryId={block.id}
 									message={block.content}
+									additionalContext={block.additionalContext ?? []}
 									sentTime={formatShortDateTime(block.sentAtUtc)}
 								/>
 							);

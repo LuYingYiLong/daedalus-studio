@@ -3,17 +3,21 @@ import remarkGfm from "remark-gfm";
 import styles from "./UserBubble.module.css";
 import { Button, Typography } from "antd";
 import { Icon } from "@/assets/icons";
+import type { AdditionalContextItem } from "@/api/types";
+import AdditionalContextStrip from "./AdditionalContextStrip";
 
 export type UserBubbleProps = {
 	entryId?: string;
 	message: string;
+	additionalContext?: AdditionalContextItem[];
 	sentTime?: string;
 	showEditButton?: boolean;
 };
 
-function UserBubble({ entryId, message, sentTime, showEditButton }: UserBubbleProps): React.JSX.Element {
+function UserBubble({ entryId, message, additionalContext = [], sentTime, showEditButton }: UserBubbleProps): React.JSX.Element {
 	return (
 		<article className={styles.root} data-entry-id={entryId}>
+			<AdditionalContextStrip items={additionalContext} />
 			<div className={`${styles.content} markdown-body`}>
 				<Markdown remarkPlugins={[remarkGfm]}>
 					{message}
