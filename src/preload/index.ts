@@ -16,5 +16,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			ipcRenderer.on("backend:status-changed", handler);
 			return () => { ipcRenderer.removeListener("backend:status-changed", handler); };
 		}
+	},
+
+	workspaceFs: {
+		listChildren: (params: { workspaceRoot: string; relativePath?: string }): Promise<{ entries: Array<{ name: string; relativePath: string; resourcePath: string; kind: "file" | "folder" }> }> => {
+			return ipcRenderer.invoke("workspace-fs:list-children", params);
+		}
 	}
 });

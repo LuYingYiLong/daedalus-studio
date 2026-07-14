@@ -1,8 +1,10 @@
 import { app, BrowserWindow, shell } from "electron";
 import { join } from "node:path";
 import { backendManager } from "./services/backend-manager";
+import { registerWorkspaceFsIpc } from "./services/workspace-fs";
 
 backendManager.registerIpc();
+registerWorkspaceFsIpc();
 
 function createWindow(): void {
 	const mainWindow: BrowserWindow = new BrowserWindow({

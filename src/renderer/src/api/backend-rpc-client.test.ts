@@ -43,7 +43,14 @@ describe("BackendRpcClient", () => {
 		};
 
 		originalWebSocket = global.WebSocket;
-		global.WebSocket = vi.fn(() => mockWebSocketInstance) as any;
+		const MockWebSocket = vi.fn(function MockWebSocketConstructor() {
+			return mockWebSocketInstance;
+		}) as any;
+		MockWebSocket.CONNECTING = 0;
+		MockWebSocket.OPEN = 1;
+		MockWebSocket.CLOSING = 2;
+		MockWebSocket.CLOSED = 3;
+		global.WebSocket = MockWebSocket;
 
 		client = new BackendRpcClient("ws://localhost:38181", {
 			enableReconnect: false,
@@ -103,7 +110,7 @@ describe("BackendRpcClient", () => {
 		});
 
 		it("应支持手动关闭", () => {
-			client.connect();
+			void client.connect().catch(() => undefined);
 			client.close();
 
 			expect(mockWebSocketInstance.close).toHaveBeenCalled();
@@ -112,7 +119,7 @@ describe("BackendRpcClient", () => {
 		it("获取状态应正确", () => {
 			expect(client.getState()).toBe("disconnected");
 
-			client.connect();
+			void client.connect().catch(() => undefined);
 			expect(client.getState()).toBe("connecting");
 
 			client.close();
@@ -131,10 +138,11 @@ describe("BackendRpcClient", () => {
 			const requestPromise = client.request("test.method", { param: "value" });
 
 			expect(mockWebSocketInstance.send).toHaveBeenCalled();
+			const sentData = JSON.parse(mockWebSocketInstance.send.mock.calls[0][0]);
 
 			simulateMessage({
 				type: "response",
-				id: "studio-1-1",
+				id: sentData.id,
 				ok: true,
 				result: { data: "success" }
 			});
@@ -144,10 +152,11 @@ describe("BackendRpcClient", () => {
 
 		it("应处理错误响应", async () => {
 			const requestPromise = client.request("test.method");
+			const sentData = JSON.parse(mockWebSocketInstance.send.mock.calls[0][0]);
 
 			simulateMessage({
 				type: "response",
-				id: "studio-1-1",
+				id: sentData.id,
 				ok: false,
 				error: { code: "ERR_001", message: "Test error" }
 			});
@@ -233,14 +242,14 @@ describe("BackendRpcClient", () => {
 		});
 
 		it("client.hello 应自动添加 protocolVersion", () => {
-			client.request("client.hello", { clientType: "test" });
+			void client.request("client.hello", { clientType: "test" }).catch(() => undefined);
 
 			const sentData = JSON.parse(mockWebSocketInstance.send.mock.calls[0][0]);
 			expect(sentData.params).toHaveProperty("protocolVersion", 2);
 		});
 
 		it("其他方法不应添加 protocolVersion", () => {
-			client.request("other.method", { param: "value" });
+			void client.request("other.method", { param: "value" }).catch(() => undefined);
 
 			const sentData = JSON.parse(mockWebSocketInstance.send.mock.calls[0][0]);
 			expect(sentData.params).toEqual({ param: "value" });

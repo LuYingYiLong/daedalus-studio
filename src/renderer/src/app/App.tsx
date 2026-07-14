@@ -1,263 +1,159 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import { selectWorkspace } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
-import { SessionOpenResult, TimelineAssistantBlock, TimelineBlock, TimelineBodyPart } from "@/api/types";
-import { fetchSessionTimeline, openSession, saveSessionUiMetadata } from "@/api/session-api";
+import type { AdditionalContextItem, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkspaceConfig } from "@/api/types";
+import { fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession } from "@/api/session-api";
 import MessageList from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
-import ApprovalDialog from "@/features/approval/ApprovalDialog";
-import { fetchProviderModelSelection, saveProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
+import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import { createBackendClient } from "@/api/backend-client";
 import type { BackendEvent } from "@/api/backend-rpc-client";
 import { cancelChatMessage, sendChatMessage, type ChatMode } from "@/api/chat-api";
 import {
 	approveApproval,
 	rejectApproval,
-	fetchApprovalList,
 	setApprovalMode,
-	type PendingApproval,
 	type ApprovalMode,
 } from "@/api/approval-api";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function getEventData(event: BackendEvent): Record<string, unknown> {
-	return isRecord(event.data) ? event.data : {};
-}
-
-function getStringValue(record: Record<string, unknown>, key: string): string {
-	const value: unknown = record[key];
-
-	return typeof value === "string" ? value : "";
-}
+import WorkbenchPanel from "@/features/workbench/WorkbenchPanel";
+import {
+	applyBackendEventToTimeline,
+	applyWorkbenchSnapshot,
+	createTimelinePageFromOpenResult,
+	createTimelinePageFromTimelineResult,
+	emptyTimelinePage,
+	mergeTimelineAfter,
+	mergeTimelineBefore,
+	type TimelinePageState
+} from "@/features/workbench/workbench-state";
+import { patchWorkbench } from "@/api/workbench-api";
 
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function isApprovalRefreshEvent(event: BackendEvent): boolean {
-	return event.event === "agent.tool.approval_required"
-		|| event.event === "tool.approval_required"
-		|| event.event === "agent.tool.approved"
-		|| event.event === "agent.tool.rejected";
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function appendMarkdownPart(parts: TimelineBodyPart[], text: string): TimelineBodyPart[] {
-	if (text.length === 0) {
-		return parts;
+function getWorkbenchFromEvent(event: BackendEvent): WorkbenchSnapshot | null {
+	if (event.event !== "session.workbench.updated" || !isRecord(event.data)) {
+		return null;
 	}
 
-	const nextParts: TimelineBodyPart[] = [...parts];
-	const lastPart: TimelineBodyPart | undefined = nextParts[nextParts.length - 1];
-
-	if (lastPart?.type === "markdown") {
-		nextParts[nextParts.length - 1] = {
-			...lastPart,
-			text: lastPart.text + text
-		};
-		return nextParts;
+	const workbench: unknown = event.data.workbench;
+	if (!isRecord(workbench) || typeof workbench.revision !== "number") {
+		return null;
 	}
 
-	return [...nextParts, { type: "markdown", text }];
+	return workbench as WorkbenchSnapshot;
 }
 
-function appendThinkingPart(parts: TimelineBodyPart[], text: string, done: boolean): TimelineBodyPart[] {
-	const nextParts: TimelineBodyPart[] = [...parts];
-
-	for (let index: number = nextParts.length - 1; index >= 0; index -= 1) {
-		const part: TimelineBodyPart = nextParts[index]!;
-
-		if (part.type !== "thinking" || part.done) {
-			continue;
-		}
-
-		nextParts[index] = {
-			...part,
-			text: text.length > 0 ? part.text + text : part.text,
-			done: done ? true : part.done
-		};
-		return nextParts;
-	}
-
-	return [...nextParts, { type: "thinking", text, done }];
-}
-
-function appendToolPart(parts: TimelineBodyPart[], event: BackendEvent): TimelineBodyPart[] {
-	const data: Record<string, unknown> = getEventData(event);
-	const toolCallId: string = getStringValue(data, "toolCallId")
-		|| getStringValue(data, "approvalId")
-		|| `${getStringValue(data, "toolName") || "tool"}:${event.id}`;
-	const normalizedEvent: Record<string, unknown> = {
-		...data,
-		type: event.event.startsWith("agent.tool.") ? event.event.replace("agent.tool.", "tool.") : event.event
-	};
-
-	for (const part of parts) {
-		if (part.type === "tool" && part.tool_call_id === toolCallId) {
-			return parts.map((item: TimelineBodyPart): TimelineBodyPart => {
-				if (item.type !== "tool" || item.tool_call_id !== toolCallId) {
-					return item;
-				}
-
-				return {
-					...item,
-					events: [...item.events, normalizedEvent]
-				};
-			});
-		}
-	}
-
-	return [...parts, {
-		type: "tool",
-		tool_call_id: toolCallId,
-		events: [normalizedEvent]
-	}];
-}
-
-function appendStatusPart(parts: TimelineBodyPart[], status: TimelineBodyPart): TimelineBodyPart[] {
-	return [...parts, status];
-}
-
-function getAssistantContent(parts: TimelineBodyPart[], fallback: string): string {
-	const content: string = parts
-		.filter((part: TimelineBodyPart): part is Extract<TimelineBodyPart, { type: "markdown" }> => part.type === "markdown")
-		.map((part: Extract<TimelineBodyPart, { type: "markdown" }>): string => part.text)
-		.join("");
-
-	return content.length > 0 ? content : fallback;
-}
-
-function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: BackendEvent): TimelineAssistantBlock {
-	const data: Record<string, unknown> = getEventData(event);
-	const nowIso: string = new Date().toISOString();
-	let nextParts: TimelineBodyPart[] = block.bodyParts;
-	let nextStatus: TimelineAssistantBlock["status"] = block.status;
-	let completedAtUtc: string = block.completedAtUtc;
-
-	if (event.event === "ai.delta" || event.event === "agent.message.delta") {
-		nextParts = appendMarkdownPart(nextParts, getStringValue(data, "text"));
-	} else if (event.event === "ai.thinking.delta" || event.event === "agent.thinking.delta") {
-		nextParts = appendThinkingPart(nextParts, getStringValue(data, "text"), false);
-	} else if (event.event === "ai.thinking.done" || event.event === "agent.thinking.done") {
-		nextParts = appendThinkingPart(nextParts, "", true);
-	} else if (event.event === "ai.status") {
-		nextParts = appendStatusPart(nextParts, {
-			type: "status",
-			status: getStringValue(data, "status") || "message",
-			title: getStringValue(data, "title"),
-			details: getStringValue(data, "details") || getStringValue(data, "detail"),
-			code: getStringValue(data, "code")
-		});
-	} else if (event.event.startsWith("agent.tool.") || event.event.startsWith("tool.")) {
-		nextParts = appendToolPart(nextParts, event);
-	} else if (event.event === "plan.generated" || event.event === "plan.revised") {
-		const planId: string = getStringValue(data, "planId");
-
-		if (planId.length > 0) {
-			nextParts = [...nextParts, {
-				type: "plan",
-				planId,
-				title: getStringValue(data, "title") || "Plan",
-				status: getStringValue(data, "status"),
-				previewMarkdown: getStringValue(data, "previewMarkdown") || getStringValue(data, "markdown")
-			}];
-		}
-	} else if (event.event === "agent.run.error" || event.event === "workflow.error") {
-		nextStatus = "failed";
-		completedAtUtc = nowIso;
-		nextParts = appendStatusPart(nextParts, {
-			type: "status",
-			status: "error",
-			title: "后端返回错误",
-			details: getStringValue(data, "message") || "Unknown backend error",
-			code: getStringValue(data, "code") || "agent_run_error"
-		});
-	} else if (event.event === "agent.run.cancelled" || event.event === "ai.cancelled") {
-		nextStatus = undefined;
-		completedAtUtc = nowIso;
-		nextParts = appendStatusPart(nextParts, {
-			type: "status",
-			status: "info",
-			title: "已停止",
-			details: getStringValue(data, "reason") || "用户停止了本次响应",
-			code: "cancelled"
-		});
-	} else if (event.event === "agent.message.done" || event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done") {
-		nextStatus = undefined;
-		completedAtUtc = nowIso;
-	} else {
-		return block;
-	}
-
-	const content: string = getAssistantContent(nextParts, block.content);
-
+function mergePatch(left: WorkbenchPatch, right: WorkbenchPatch): WorkbenchPatch {
 	return {
-		...block,
-		content,
-		completedAtUtc,
-		status: nextStatus,
-		bodyParts: nextParts
+		...left,
+		...right,
+		composer: {
+			...left.composer,
+			...right.composer
+		}
 	};
 }
 
-function applyBackendEventToTimeline(blocks: TimelineBlock[], event: BackendEvent): TimelineBlock[] {
-	let changed: boolean = false;
-	const nextBlocks: TimelineBlock[] = blocks.map((block: TimelineBlock): TimelineBlock => {
-		if (block.type !== "assistant" || block.requestId !== event.id) {
-			return block;
-		}
-
-		changed = true;
-		return updateAssistantBlockFromEvent(block, event);
-	});
-
-	return changed ? nextBlocks : blocks;
+function getChatMode(workbench: WorkbenchSnapshot | null): ChatMode {
+	return workbench?.composer.chatMode ?? "ask";
 }
 
-function createOptimisticBlocks(requestId: string, message: string, sentAtUtc: string): TimelineBlock[] {
-	return [
-		{
-			id: `optimistic:${requestId}:user`,
-			type: "user",
-			requestId,
-			content: message,
-			sentAtUtc
-		},
-		{
-			id: `optimistic:${requestId}:assistant`,
-			type: "assistant",
-			requestId,
-			content: "",
-			startedAtUtc: sentAtUtc,
-			completedAtUtc: sentAtUtc,
-			status: "running",
-			bodyParts: []
-		}
-	];
+function getActiveRunRequestId(workbench: WorkbenchSnapshot | null): string | null {
+	const activeRun = workbench?.activeRun;
+	if (activeRun === undefined || activeRun.status === "idle") {
+		return null;
+	}
+
+	return activeRun.requestId ?? null;
+}
+
+function getIsSending(workbench: WorkbenchSnapshot | null): boolean {
+	const status = workbench?.activeRun.status;
+
+	return status === "streaming" || status === "approval" || status === "paused" || status === "cancelling";
 }
 
 function App(): React.JSX.Element {
 	const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState<number>(0);
 	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-	const [timelineBlocks, setTimelineBlocks] = useState<TimelineBlock[]>([]);
+	const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceConfig | null>(null);
+	const [timelinePage, setTimelinePage] = useState<TimelinePageState>(emptyTimelinePage);
+	const [workbench, setWorkbench] = useState<WorkbenchSnapshot | null>(null);
 	const [sessionError, setSessionError] = useState<string | null>(null);
 	const [isSessionLoading, setIsSessionLoading] = useState(false);
-	const [isChatSending, setIsChatSending] = useState<boolean>(false);
-	const [activeChatRequestId, setActiveChatRequestId] = useState<string | null>(null);
 	const [providerModelSelection, setProviderModelSelection] = useState<ProviderModelSelection | null>(null);
-	const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
-	const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
-	const [chatMode, setChatMode] = useState<ChatMode>("ask");
 	const [approvalMode, setApprovalModeState] = useState<ApprovalMode>("manual");
-	const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
-	const [activeApprovalId, setActiveApprovalId] = useState<string | null>(null);
-	const [approvalError, setApprovalError] = useState<string | null>(null);
 	const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | null>(null);
+	const [workbenchPanelOpen, setWorkbenchPanelOpen] = useState<boolean>(true);
+	const pendingPatchRef = useRef<WorkbenchPatch>({});
+	const patchTimerRef = useRef<number | null>(null);
+	const patchSequenceRef = useRef<number>(0);
+	const isTimelinePageLoadingRef = useRef<boolean>(false);
+
+	const applyWorkbench = useCallback((nextWorkbench: WorkbenchSnapshot): void => {
+		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot => {
+			return applyWorkbenchSnapshot(currentWorkbench, nextWorkbench);
+		});
+	}, []);
+
+	const sendPendingWorkbenchPatch = useCallback(async (): Promise<void> => {
+		if (patchTimerRef.current !== null) {
+			window.clearTimeout(patchTimerRef.current);
+			patchTimerRef.current = null;
+		}
+
+		const pendingPatch: WorkbenchPatch = pendingPatchRef.current;
+		pendingPatchRef.current = {};
+
+		if (Object.keys(pendingPatch).length === 0) {
+			return;
+		}
+
+		const result = await patchWorkbench({
+			...pendingPatch,
+			clientSequence: patchSequenceRef.current += 1
+		});
+
+		applyWorkbench(result.workbench);
+	}, [activeSessionId, applyWorkbench]);
+
+	const queueWorkbenchPatch = useCallback((patch: WorkbenchPatch, immediate: boolean = false): void => {
+		pendingPatchRef.current = mergePatch(pendingPatchRef.current, patch);
+
+		if (immediate) {
+			void sendPendingWorkbenchPatch().catch((error: unknown): void => {
+				console.error("[App] workbench patch failed", error);
+			});
+			return;
+		}
+
+		if (patchTimerRef.current !== null) {
+			window.clearTimeout(patchTimerRef.current);
+		}
+
+		patchTimerRef.current = window.setTimeout((): void => {
+			void sendPendingWorkbenchPatch().catch((error: unknown): void => {
+				console.error("[App] workbench patch failed", error);
+			});
+		}, 220);
+	}, [sendPendingWorkbenchPatch]);
+
+	useEffect((): (() => void) => {
+		return (): void => {
+			if (patchTimerRef.current !== null) {
+				window.clearTimeout(patchTimerRef.current);
+			}
+		};
+	}, []);
 
 	useEffect((): void => {
 		async function loadProviderModelSelection(): Promise<void> {
@@ -265,18 +161,12 @@ function App(): React.JSX.Element {
 				const result: ProviderModelSelection = await fetchProviderModelSelection();
 
 				setProviderModelSelection(result);
-				setSelectedProviderId(result.activeModel.providerId);
-				setSelectedModelId(result.activeModel.modelId);
 			} catch (error: unknown) {
 				console.error("[App] load provider model selection failed", error);
 			}
 		}
 
 		void loadProviderModelSelection();
-	}, []);
-
-	useEffect((): void => {
-		void refreshApprovals();
 	}, []);
 
 	useEffect((): (() => void) => {
@@ -292,12 +182,21 @@ function App(): React.JSX.Element {
 				}
 
 				unsubscribe = client.addEventListener((event: BackendEvent): void => {
-					setTimelineBlocks((currentBlocks: TimelineBlock[]): TimelineBlock[] => {
-						return applyBackendEventToTimeline(currentBlocks, event);
+					const eventWorkbench: WorkbenchSnapshot | null = getWorkbenchFromEvent(event);
+					if (eventWorkbench !== null) {
+						applyWorkbench(eventWorkbench);
+						return;
+					}
+
+					setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+						return {
+							...currentPage,
+							blocks: applyBackendEventToTimeline(currentPage.blocks, event)
+						};
 					});
 
-					if (isApprovalRefreshEvent(event)) {
-						void refreshApprovals();
+					if (event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done") {
+						void refreshLatestTimeline();
 					}
 				});
 			} catch (error: unknown) {
@@ -311,12 +210,13 @@ function App(): React.JSX.Element {
 			cancelled = true;
 			unsubscribe?.();
 		};
-	}, []);
+	}, [applyWorkbench]);
 
 	async function handleWorkspaceSelect(workspaceId: string): Promise<void> {
 		try {
 			const workspace = await selectWorkspace(workspaceId);
 
+			setActiveWorkspace(workspace);
 			console.info("[App] workspace selected", workspace);
 		} catch (error: unknown) {
 			console.error("[App] select workspace failed", error);
@@ -330,13 +230,22 @@ function App(): React.JSX.Element {
 			setIsSessionLoading(true);
 			setSessionError(null);
 			setActiveSessionId(sessionId);
-			setTimelineBlocks([]);
+			setTimelinePage(emptyTimelinePage);
+			setWorkbench(null);
 
 			const result: SessionOpenResult = await openSession(sessionId);
 
-			setTimelineBlocks(result.timelineBlocks);
-			setChatMode(result.metadata.chatMode ?? "ask");
-			void refreshApprovals();
+			setTimelinePage(createTimelinePageFromOpenResult(result));
+			setWorkbench(result.workbench);
+			setApprovalModeState(result.metadata.approvalMode ?? "manual");
+			if (typeof result.workbench.activeSelection.workspaceId === "string" && typeof result.workbench.activeSelection.workspaceRoot === "string") {
+				setActiveWorkspace({
+					id: result.workbench.activeSelection.workspaceId,
+					name: result.workbench.activeSelection.workspaceName ?? result.metadata.title,
+					kind: "godot",
+					rootPath: result.workbench.activeSelection.workspaceRoot
+				});
+			}
 
 			if (result.workspaceWarning) {
 				console.warn("[App] session workspace warning", result.workspaceWarning);
@@ -345,27 +254,26 @@ function App(): React.JSX.Element {
 			const message: string = error instanceof Error ? error.message : "Failed to open session";
 
 			setSessionError(message);
-			console.error("[App] open session failed", error)
+			console.error("[App] open session failed", error);
 		} finally {
 			setIsSessionLoading(false);
 		}
 	}
 
 	async function handleModeChange(nextMode: ChatMode): Promise<void> {
-		setChatMode(nextMode);
-
-		if (activeSessionId === null) {
-			return;
-		}
-
-		try {
-			await saveSessionUiMetadata({
-				chatMode: nextMode
-			});
-			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
-		} catch (error: unknown) {
-			console.error("[App] save chat mode failed", error);
-		}
+		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+			return currentWorkbench === null
+				? currentWorkbench
+				: {
+					...currentWorkbench,
+					composer: {
+						...currentWorkbench.composer,
+						chatMode: nextMode
+					}
+				};
+		});
+		queueWorkbenchPatch({ composer: { chatMode: nextMode } }, true);
+		setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 	}
 
 	async function handleApprovalModeChange(nextMode: ApprovalMode): Promise<void> {
@@ -384,135 +292,159 @@ function App(): React.JSX.Element {
 	}
 
 	async function handleProviderModelChange(providerId: string, modelId: string): Promise<void> {
-		const previousProviderId: string | null = selectedProviderId;
-		const previousModelId: string | null = selectedModelId;
-
-		setSelectedProviderId(providerId);
-		setSelectedModelId(modelId);
-
-		try {
-			await saveProviderModelSelection({
-				provider: providerId,
-				model: modelId,
-				activate: true
-			});
-
-			if (activeSessionId !== null) {
-				await saveSessionUiMetadata({
-					provider: providerId,
-					model: modelId
-				});
-			}
-
-			const result: ProviderModelSelection = await fetchProviderModelSelection();
-
-			setProviderModelSelection(result);
-			setSelectedProviderId(result.activeModel.providerId);
-			setSelectedModelId(result.activeModel.modelId);
-			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
-		} catch (error: unknown) {
-			setSelectedProviderId(previousProviderId);
-			setSelectedModelId(previousModelId);
-			console.error("[App] save provider model selection failed", error);
-		}
+		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+			return currentWorkbench === null
+				? currentWorkbench
+				: {
+					...currentWorkbench,
+					composer: {
+						...currentWorkbench.composer,
+						provider: providerId,
+						model: modelId
+					}
+				};
+		});
+		queueWorkbenchPatch({ composer: { provider: providerId, model: modelId } }, true);
 	}
 
-	async function handleComposerSubmit(message: string): Promise<void> {
-		if (activeSessionId === null) {
+	function handleComposerTextChange(nextText: string): void {
+		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+			return currentWorkbench === null
+				? currentWorkbench
+				: {
+					...currentWorkbench,
+					composer: {
+						...currentWorkbench.composer,
+						text: nextText
+					}
+				};
+		});
+		queueWorkbenchPatch({ composer: { text: nextText } });
+	}
+
+	async function handleComposerSubmit(): Promise<void> {
+		if (activeSessionId === null || workbench === null) {
 			setSessionError("请先打开一个会话再发送消息");
 			return;
 		}
 
-		const requestId: string = createChatRequestId();
-		const sentAtUtc: string = new Date().toISOString();
+		const message: string = workbench.composer.text.trim();
+		if (message.length === 0) {
+			return;
+		}
 
-		setSessionError(null);
-		setIsChatSending(true);
-		setActiveChatRequestId(requestId);
-		setTimelineBlocks((currentBlocks: TimelineBlock[]): TimelineBlock[] => {
-			return [
-				...currentBlocks,
-				...createOptimisticBlocks(requestId, message, sentAtUtc)
-			];
-		});
+		const requestId: string = createChatRequestId();
 
 		try {
+			setSessionError(null);
+			await sendPendingWorkbenchPatch();
 			await sendChatMessage({
 				requestId,
 				message,
-				mode: chatMode
+				mode: getChatMode(workbench),
+				additionalContext: workbench.composer.additionalContext
 			});
-
-			const timeline = await fetchSessionTimeline(activeSessionId);
-
-			setTimelineBlocks(timeline.timelineBlocks);
+			await refreshLatestTimeline();
 			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to send message";
 
 			setSessionError(errorMessage);
-			setTimelineBlocks((currentBlocks: TimelineBlock[]): TimelineBlock[] => {
-				return applyBackendEventToTimeline(currentBlocks, {
-					type: "event",
-					id: requestId,
-					event: "agent.run.error",
-					data: {
-						code: "frontend_send_error",
-						message: errorMessage
-					}
-				});
+			setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+				return {
+					...currentPage,
+					blocks: applyBackendEventToTimeline(currentPage.blocks, {
+						type: "event",
+						id: requestId,
+						event: "agent.run.error",
+						data: {
+							code: "frontend_send_error",
+							message: errorMessage
+						}
+					})
+				};
 			});
 			console.error("[App] send message failed", error);
-		} finally {
-			setIsChatSending(false);
-			setActiveChatRequestId((currentRequestId: string | null): string | null => {
-				return currentRequestId === requestId ? null : currentRequestId;
-			});
 		}
 	}
 
 	async function handleComposerCancel(): Promise<void> {
-		if (activeChatRequestId === null) {
+		const requestId: string | null = getActiveRunRequestId(workbench);
+		if (requestId === null) {
 			return;
 		}
 
 		try {
-			await cancelChatMessage(activeChatRequestId);
+			await cancelChatMessage(requestId);
 		} catch (error: unknown) {
 			console.error("[App] cancel chat failed", error);
 		}
 	}
 
-	async function refreshApprovals(): Promise<void> {
-		try {
-			const result = await fetchApprovalList();
-
-			setApprovalModeState(result.mode);
-			setPendingApprovals(result.pending);
-			setActiveApprovalId((currentApprovalId: string | null): string | null => {
-				if (currentApprovalId !== null && result.pending.some((approval: PendingApproval): boolean => approval.approvalId === currentApprovalId)) {
-					return currentApprovalId;
-				}
-
-				return result.pending[0]?.approvalId ?? null;
-			});
-			if (result.pending.length === 0) {
-				setApprovalError(null);
-			}
-		} catch (error: unknown) {
-			console.error("[App] refresh approvals failed", error);
+	async function refreshLatestTimeline(): Promise<void> {
+		if (activeSessionId === null) {
+			return;
 		}
+
+		const timeline: SessionTimelineResult = await fetchSessionTimeline(activeSessionId);
+
+		setTimelinePage(createTimelinePageFromTimelineResult(timeline));
+	}
+
+	const handleLoadMoreBefore = useCallback((): void => {
+		if (activeSessionId === null || !timelinePage.hasMoreBefore || isTimelinePageLoadingRef.current) {
+			return;
+		}
+
+		isTimelinePageLoadingRef.current = true;
+		void fetchSessionTimelineBefore(activeSessionId, timelinePage.blockOffset)
+			.then((result: SessionTimelineResult): void => {
+				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+					return mergeTimelineBefore(currentPage, createTimelinePageFromTimelineResult(result));
+				});
+			})
+			.catch((error: unknown): void => {
+				console.error("[App] load previous timeline page failed", error);
+			})
+			.finally((): void => {
+				isTimelinePageLoadingRef.current = false;
+			});
+	}, [activeSessionId, timelinePage.blockOffset, timelinePage.hasMoreBefore]);
+
+	const handleLoadMoreAfter = useCallback((): void => {
+		if (activeSessionId === null || !timelinePage.hasMoreAfter || isTimelinePageLoadingRef.current) {
+			return;
+		}
+
+		isTimelinePageLoadingRef.current = true;
+		void fetchSessionTimelineAfter(activeSessionId, timelinePage.blockOffset + timelinePage.blocks.length)
+			.then((result: SessionTimelineResult): void => {
+				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+					return mergeTimelineAfter(currentPage, createTimelinePageFromTimelineResult(result));
+				});
+			})
+			.catch((error: unknown): void => {
+				console.error("[App] load next timeline page failed", error);
+			})
+			.finally((): void => {
+				isTimelinePageLoadingRef.current = false;
+			});
+	}, [activeSessionId, timelinePage.blockOffset, timelinePage.blocks.length, timelinePage.hasMoreAfter]);
+
+	function patchContext(action: NonNullable<WorkbenchPatch["additionalContextAction"]>): void {
+		queueWorkbenchPatch({ additionalContextAction: action }, true);
 	}
 
 	async function handleApproveApproval(approvalId: string): Promise<void> {
 		try {
-			setApprovalError(null);
 			setApprovalAction("approve");
-
-			await approveApproval(approvalId);
-			await refreshApprovals();
+			await sendPendingWorkbenchPatch();
+			const result = await approveApproval(approvalId);
+			if ("workbench" in result && isRecord(result.workbench)) {
+				applyWorkbench(result.workbench as WorkbenchSnapshot);
+			}
 		} catch (error: unknown) {
-			setApprovalError(error instanceof Error ? error.message : "Failed to approve");
+			setSessionError(error instanceof Error ? error.message : "Failed to approve");
 		} finally {
 			setApprovalAction(null);
 		}
@@ -520,24 +452,24 @@ function App(): React.JSX.Element {
 
 	async function handleRejectApproval(approvalId: string): Promise<void> {
 		try {
-			setApprovalError(null);
 			setApprovalAction("reject");
-
-			await rejectApproval(approvalId);
-			await refreshApprovals();
+			const result = await rejectApproval(approvalId);
+			if ("workbench" in result && isRecord(result.workbench)) {
+				applyWorkbench(result.workbench as WorkbenchSnapshot);
+			}
 		} catch (error: unknown) {
-			setApprovalError(error instanceof Error ? error.message : "Failed to reject");
+			setSessionError(error instanceof Error ? error.message : "Failed to reject");
 		} finally {
 			setApprovalAction(null);
 		}
 	}
 
-	const activeApproval: PendingApproval | null = pendingApprovals.find((approval: PendingApproval): boolean => {
-		return approval.approvalId === activeApprovalId;
-	}) ?? pendingApprovals[0] ?? null;
+	const selectedProviderId: string | null = workbench?.composer.provider ?? providerModelSelection?.activeModel.providerId ?? null;
+	const selectedModelId: string | null = workbench?.composer.model ?? providerModelSelection?.activeModel.modelId ?? null;
+	const timelineBlocks: TimelineBlock[] = timelinePage.blocks;
 
 	return (
-		<main className={styles.shell}>
+		<main className={`${styles.shell} ${workbenchPanelOpen ? styles.shellWithPanel : ""}`}>
 			<aside className={styles.workspaceSidebar}>
 				<header className={styles.workspaceHeader}>
 					<Button type="text" block={true} className={styles.createSessionButton}>
@@ -572,39 +504,38 @@ function App(): React.JSX.Element {
 			<section className={styles.chatPanel}>
 				<header className={styles.chatHeader}>
 					<Typography.Title level={4} className={styles.chatTitle}>
-						Session Name
+						{workbench?.sessionId ?? activeSessionId ?? "Session"}
 					</Typography.Title>
+					<Button
+						type={workbenchPanelOpen ? "default" : "text"}
+						icon={<Icon name="mcp" />}
+						onClick={(): void => setWorkbenchPanelOpen((currentOpen: boolean): boolean => !currentOpen)}
+					>
+						Workbench
+					</Button>
 				</header>
 
 				<MessageList
 					blocks={timelineBlocks}
 					isLoading={isSessionLoading}
 					errorMessage={sessionError}
+					hasMoreBefore={timelinePage.hasMoreBefore}
+					hasMoreAfter={timelinePage.hasMoreAfter}
+					onLoadMoreBefore={handleLoadMoreBefore}
+					onLoadMoreAfter={handleLoadMoreAfter}
 				/>
-
-				<div className={styles.approvalDock}>
-					<ApprovalDialog
-						pendingApproval={activeApproval}
-						isApproving={approvalAction === "approve"}
-						isRejecting={approvalAction === "reject"}
-						errorMessage={approvalError}
-						onApprove={(approvalId: string): void => {
-							void handleApproveApproval(approvalId);
-						}}
-						onReject={(approvalId: string): void => {
-							void handleRejectApproval(approvalId);
-						}}
-					/>
-				</div>
 
 				<footer className={styles.composer}>
 					<Composer
 						providerModelSelection={providerModelSelection}
 						selectedProviderId={selectedProviderId}
 						selectedModelId={selectedModelId}
-						mode={chatMode}
+						message={workbench?.composer.text ?? ""}
+						contextItems={workbench?.composer.additionalContext ?? []}
+						mode={getChatMode(workbench)}
 						approvalMode={approvalMode}
-						isSending={isChatSending}
+						isSending={getIsSending(workbench) || approvalAction !== null}
+						onMessageChange={handleComposerTextChange}
 						onModeChange={(mode: ChatMode): void => {
 							void handleModeChange(mode);
 						}}
@@ -614,15 +545,36 @@ function App(): React.JSX.Element {
 						onProviderModelChange={(providerId: string, modelId: string): void => {
 							void handleProviderModelChange(providerId, modelId);
 						}}
+						onRemoveContext={(contextId: string): void => patchContext({ action: "remove", contextId })}
+						onPinContext={(contextId: string, pinned: boolean): void => patchContext({ action: "pin", contextId, pinned })}
+						onClearUnpinnedContext={(): void => patchContext({ action: "clearUnpinned" })}
 						onCancel={(): void => {
 							void handleComposerCancel();
 						}}
-						onSubmit={(message: string): void => {
-							void handleComposerSubmit(message);
+						onSubmit={(): void => {
+							void handleComposerSubmit();
 						}}
 					/>
 				</footer>
 			</section>
+
+			<WorkbenchPanel
+				open={workbenchPanelOpen}
+				workbench={workbench}
+				activeWorkspace={activeWorkspace}
+				onClose={(): void => setWorkbenchPanelOpen(false)}
+				onAddContext={(item: AdditionalContextItem): void => patchContext({ action: "addOrReplace", item })}
+				onRemoveContext={(contextId: string): void => patchContext({ action: "remove", contextId })}
+				onPinContext={(contextId: string, pinned: boolean): void => patchContext({ action: "pin", contextId, pinned })}
+				onClearUnpinnedContext={(): void => patchContext({ action: "clearUnpinned" })}
+				onClearHints={(): void => queueWorkbenchPatch({ nextStepHintsAction: "clear" }, true)}
+				onApprove={(approvalId: string): void => {
+					void handleApproveApproval(approvalId);
+				}}
+				onReject={(approvalId: string): void => {
+					void handleRejectApproval(approvalId);
+				}}
+			/>
 		</main>
 	);
 }

@@ -76,6 +76,52 @@ function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: 
 		if (part.type === "inline_diff") {
 			return <InlineDiffPart key={index} part={part} />
 		}
+
+		if (part.type === "summary_start") {
+			return null;
+		}
+
+		return (
+			<pre key={index} className={styles.unknownPart}>
+				{JSON.stringify(part, null, 2)}
+			</pre>
+		);
+	}
+
+	function renderBodyParts(parts: TimelineBodyPart[]): React.ReactNode {
+		const summaryStartIndex: number = parts.findIndex((part: TimelineBodyPart): boolean => part.type === "summary_start");
+
+		if (summaryStartIndex < 0) {
+			return parts.map(renderBodyPart);
+		}
+
+		const summaryStartPart: Extract<TimelineBodyPart, { type: "summary_start" }> = parts[summaryStartIndex] as Extract<TimelineBodyPart, { type: "summary_start" }>;
+		const foldedParts: TimelineBodyPart[] = parts.slice(0, summaryStartIndex);
+		const visibleParts: TimelineBodyPart[] = parts.slice(summaryStartIndex + 1);
+		const foldedChildren: React.ReactNode[] = foldedParts
+			.map(renderBodyPart)
+			.filter((node: React.ReactNode): boolean => node !== null && node !== undefined);
+
+		return (
+			<>
+				{foldedChildren.length > 0 ? (
+					<Collapse
+						size="small"
+						className={styles.summaryCollapse}
+						bordered={false}
+						defaultActiveKey={[]}
+						items={[
+							{
+								key: summaryStartPart.stepRunId || "summary-process",
+								label: summaryStartPart.foldTitle || "Process",
+								children: foldedChildren
+							}
+						]}
+					/>
+				) : null}
+				{visibleParts.map(renderBodyPart)}
+			</>
+		);
 	}
 
 	return (
@@ -88,7 +134,7 @@ function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: 
 			) : null}
 			<div className={styles.content}>
 				{bodyParts ? (
-					bodyParts.map(renderBodyPart)
+					renderBodyParts(bodyParts)
 				) : (
 					<Markdown remarkPlugins={[remarkGfm]}>
 						{message ?? content ?? ""}

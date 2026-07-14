@@ -1,4 +1,5 @@
 import { createBackendClient } from "./backend-client";
+import type { AdditionalContextItem } from "./types";
 
 export type ChatMode = "ask" | "agent" | "plan";
 
@@ -6,6 +7,7 @@ export type SendChatMessageParams = {
 	requestId: string;
 	message: string;
 	mode: ChatMode;
+	additionalContext?: AdditionalContextItem[];
 };
 
 export type CancelChatMessageResult = {
@@ -21,7 +23,8 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<un
 		mode: params.mode,
 		options: {
 			stream: true
-		}
+		},
+		additionalContext: params.additionalContext
 	});
 }
 

@@ -39,6 +39,26 @@ export async function fetchSessionTimeline(sessionId: string, limit: number = 10
 	});
 }
 
+export async function fetchSessionTimelineBefore(sessionId: string, beforeOffset: number, limit: number = 80): Promise<SessionTimelineResult> {
+	const client = await createBackendClient();
+
+	return client.request<SessionTimelineResult>("session.timeline", {
+		sessionId,
+		beforeOffset,
+		limit
+	});
+}
+
+export async function fetchSessionTimelineAfter(sessionId: string, afterOffset: number, limit: number = 80): Promise<SessionTimelineResult> {
+	const client = await createBackendClient();
+
+	return client.request<SessionTimelineResult>("session.timeline", {
+		sessionId,
+		afterOffset,
+		limit
+	});
+}
+
 export async function saveSessionUiMetadata(params: SaveSessionUiMetadataParams): Promise<SaveSessionResult> {
 	const client = await createBackendClient();
 

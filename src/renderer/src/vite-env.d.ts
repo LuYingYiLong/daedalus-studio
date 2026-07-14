@@ -19,6 +19,19 @@ declare global {
 	interface ElectronAPI {
 		versions: ElectronVersions;
 		backend: BackendAPI;
+		workspaceFs: {
+			listChildren: (params: {
+				workspaceRoot: string;
+				relativePath?: string;
+			}) => Promise<{
+				entries: Array<{
+					name: string;
+					relativePath: string;
+					resourcePath: string;
+					kind: "file" | "folder";
+				}>;
+			}>;
+		};
 	}
 
 	interface Window {

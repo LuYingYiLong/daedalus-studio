@@ -1,23 +1,30 @@
-import { useMemo, useState } from "react";
-import { Input, Dropdown, Button, MenuProps, Divider } from "antd";
+import { useMemo } from "react";
+import { Input, Dropdown, Button, MenuProps, Divider, Tag } from "antd";
 import { Icon } from "@/assets/icons";
 import styles from "./Composer.module.css";
 import type { ApprovalMode } from "@/api/approval-api";
 import type { ChatMode } from "@/api/chat-api";
+import type { AdditionalContextItem } from "@/api/types";
 import type { ProviderModelInfo, ProviderModelSelection, ProviderModelSelectionProvider } from "@/api/provider-api";
 
 export type ComposerProps = {
 	providerModelSelection: ProviderModelSelection | null;
 	selectedProviderId: string | null;
 	selectedModelId: string | null;
+	message: string;
+	contextItems?: AdditionalContextItem[];
 	mode: ChatMode;
 	approvalMode: ApprovalMode;
 	isSending?: boolean;
+	onMessageChange?: (message: string) => void;
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
 	onProviderModelChange?: (providerId: string, modelId: string) => void;
+	onRemoveContext?: (contextId: string) => void;
+	onPinContext?: (contextId: string, pinned: boolean) => void;
+	onClearUnpinnedContext?: () => void;
 	onCancel?: () => void;
-	onSubmit?: (message: string) => void;
+	onSubmit?: () => void;
 };
 
 type SelectedModel = {
@@ -183,17 +190,21 @@ function Composer({
 	providerModelSelection,
 	selectedProviderId,
 	selectedModelId,
+	message,
+	contextItems: composerContextItems = [],
 	mode,
 	approvalMode,
 	isSending = false,
+	onMessageChange,
 	onModeChange,
 	onApprovalModeChange,
 	onProviderModelChange,
+	onRemoveContext,
+	onPinContext,
+	onClearUnpinnedContext,
 	onCancel,
 	onSubmit
 }: ComposerProps): React.JSX.Element {
-	const [message, setMessage] = useState<string>("");
-
 	const handleModeClick: MenuProps["onClick"] = ({ key }): void => {
 		if (isComposerMode(key)) {
 			onModeChange?.(key);
@@ -242,19 +253,54 @@ function Composer({
 			return;
 		}
 
-		onSubmit?.(trimmedMessage);
-		setMessage("");
+		onSubmit?.();
 	}
 
 	return (
 		<div className={styles.composerInputWrap}>
+			{composerContextItems.length > 0 ? (
+				<div className={styles.contextChips}>
+					{composerContextItems.map((item: AdditionalContextItem): React.ReactNode => (
+						<Tag
+							key={item.id}
+							closable={true}
+							className={styles.contextChip}
+							onClose={(event: React.MouseEvent<HTMLElement>): void => {
+								event.preventDefault();
+								onRemoveContext?.(item.id);
+							}}
+						>
+							<button
+								type="button"
+								className={styles.pinButton}
+								onClick={(): void => {
+									onPinContext?.(item.id, item.pinned !== true);
+								}}
+							>
+								{item.pinned === true ? "Pinned" : "Pin"}
+							</button>
+							<span className={styles.contextTitle}>{item.title}</span>
+						</Tag>
+					))}
+					<Button
+						type="text"
+						size="small"
+						className={styles.clearContextButton}
+						onClick={(): void => {
+							onClearUnpinnedContext?.();
+						}}
+					>
+						Clear unpinned
+					</Button>
+				</div>
+			) : null}
 			<Input.TextArea
 				value={message}
 				autoSize={{ minRows: 4, maxRows: 6 }}
 				placeholder="What can I say?"
 				className={styles.composerTextArea}
 				onChange={(event: React.ChangeEvent<HTMLTextAreaElement>): void => {
-					setMessage(event.target.value);
+					onMessageChange?.(event.target.value);
 				}}
 				onPressEnter={(event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
 					if (event.shiftKey) {

@@ -32,6 +32,127 @@ export type SessionListResult = {
 	sessions: SessionMetadata[];
 };
 
+export type AdditionalContextItem = {
+	id: string;
+	kind: "editor_selection" | "scene" | "node" | "file" | "folder" | "script" | "script_selection" | "filesystem_selection" | "image";
+	title: string;
+	subtitle?: string;
+	pinned?: boolean;
+	source: "editor" | "manual";
+	resourcePath?: string;
+	nodePath?: string;
+	nodeType?: string;
+	scriptPath?: string;
+	summary?: string;
+	data?: unknown;
+};
+
+export type MessageQueueItem = {
+	id: string;
+	text?: string;
+	message?: string;
+	mode?: "agent" | "ask" | "plan";
+	status?: string;
+	createdAt?: string;
+	updatedAt?: string;
+	[key: string]: unknown;
+};
+
+export type PendingGuide = {
+	id?: string;
+	clientId?: string;
+	text?: string;
+	title?: string;
+	status?: string;
+	[key: string]: unknown;
+};
+
+export type WorkbenchActiveRun = {
+	status: "idle" | "streaming" | "paused" | "approval" | "cancelling";
+	requestId?: string;
+	startedAt?: string;
+	queueItemId?: string;
+	statusCode?: string;
+};
+
+export type WorkbenchPendingApproval = {
+	approvalId?: string;
+	toolName?: string;
+	llmToolName?: string;
+	reason?: string;
+	requestId?: string;
+	[key: string]: unknown;
+} | null;
+
+export type WorkbenchNextStepHint = {
+	id?: string;
+	title?: string;
+	text?: string;
+	message?: string;
+	[key: string]: unknown;
+};
+
+export type WorkbenchSnapshot = {
+	revision: number;
+	sessionId: string | null;
+	composer: {
+		text: string;
+		chatMode: "agent" | "ask" | "plan" | null;
+		provider?: string;
+		providerDisplayName?: string;
+		model?: string;
+		additionalContext: AdditionalContextItem[];
+		updatedAt?: string;
+	};
+	messageQueue: MessageQueueItem[];
+	pendingGuides: PendingGuide[];
+	activeRun: WorkbenchActiveRun;
+	pendingApproval: WorkbenchPendingApproval;
+	nextStepHints: {
+		hints: WorkbenchNextStepHint[];
+		trigger?: string;
+		anchorRequestId?: string;
+		generatedAt?: string;
+	};
+	activeSelection: {
+		workspaceId: string | null;
+		workspaceName?: string | null;
+		workspaceRoot?: string | null;
+		[key: string]: unknown;
+	};
+};
+
+export type WorkbenchPatch = {
+	clientSequence?: number;
+	composer?: {
+		text?: string;
+		chatMode?: "agent" | "ask" | "plan";
+		provider?: string;
+		model?: string;
+		additionalContext?: AdditionalContextItem[];
+	};
+	additionalContextAction?:
+		| { action: "set"; items: AdditionalContextItem[] }
+		| { action: "addOrReplace"; item: AdditionalContextItem }
+		| { action: "remove"; contextId: string }
+		| { action: "pin"; contextId: string; pinned: boolean }
+		| { action: "clearUnpinned" };
+	nextStepHintsAction?: "clear";
+};
+
+export type WorkbenchPatchResult = {
+	changed: boolean;
+	stale?: boolean;
+	workbench: WorkbenchSnapshot;
+};
+
+export type TimelineRenderHints = {
+	estimatedHeight: number;
+	contentChars: number;
+	bodyPartCount: number;
+	heavyPartCount: number;
+};
+
 // 客户端信息
 export type ClientHelloResult = {
 	connection: {
@@ -53,7 +174,8 @@ export type TimelineUserBlock = {
 	requestId: string;
 	content: string;
 	sentAtUtc: string;
-	additionalContext?: unknown[];
+	additionalContext?: AdditionalContextItem[];
+	renderHints?: TimelineRenderHints;
 };
 
 export type TimelineAssistantBlock = {
@@ -65,6 +187,7 @@ export type TimelineAssistantBlock = {
 	completedAtUtc: string;
 	status?: "failed" | "running";
 	bodyParts: TimelineBodyPart[];
+	renderHints?: TimelineRenderHints;
 };
 
 export type TimelineEditedFile = {
@@ -83,6 +206,7 @@ export type TimelineBodyPart =
 	| { type: "markdown"; text: string }
 	| { type: "thinking"; text: string; done: boolean }
 	| { type: "tool"; tool_call_id: string; events: Record<string, unknown>[] }
+	| { type: "summary_start"; runId: string; stepId: string; stepRunId: string; title: string; foldTitle: string }
 	| {
 		type: "status";
 		title: string;
@@ -122,10 +246,13 @@ export type SessionOpenResult = {
 	eventCount: number;
 	limit: number;
 	hasMoreBefore: boolean;
+	hasMoreAfter: boolean;
 	timelineBlocks: TimelineBlock[];
 	latestWorkflowSnapshot: unknown | null;
 	latestAgentSnapshot: unknown | null;
 	pendingGuides: unknown[];
+	messageQueue: MessageQueueItem[];
+	workbench: WorkbenchSnapshot;
 	workspaceWarning: string | null;
 };
 
@@ -137,6 +264,7 @@ export type SessionTimelineResult = {
 	eventCount: number;
 	limit: number;
 	hasMoreBefore: boolean;
+	hasMoreAfter: boolean;
 	timelineBlocks: TimelineBlock[];
 	latestWorkflowSnapshot: unknown | null;
 	latestAgentSnapshot: unknown | null;

@@ -1,0 +1,60 @@
+.panel {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	min-width: 320px;
+	max-width: 420px;
+	min-height: 0;
+	border-left: 1px solid rgba(255, 255, 255, 0.08);
+	background: #171717;
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 8px 10px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.title {
+	margin: 0 !important;
+}
+
+.tabs {
+	min-height: 0;
+	padding: 0 10px 10px;
+	overflow: hidden;
+}
+
+.tabs :global(.ant-tabs-content-holder),
+.tabs :global(.ant-tabs-content),
+.tabs :global(.ant-tabs-tabpane) {
+	min-height: 0;
+	height: 100%;
+}
+
+.tabContent {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-height: 0;
+	max-height: calc(100vh - 140px);
+	overflow: auto;
+	scrollbar-width: thin;
+}
+
+.section {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+}
+
+.sectionHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	min-width: 0;
+}
