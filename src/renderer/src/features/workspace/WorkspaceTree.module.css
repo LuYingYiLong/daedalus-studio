@@ -27,6 +27,7 @@
 	overflow: auto;
 	background: transparent;
 	border-inline-end: 0;
+	user-select: none;
 }
 
 .workspaceMenu :global(.ant-menu) {

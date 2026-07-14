@@ -1,7 +1,7 @@
-import { Collapse } from "antd";
 import styles from "./ToolPart.module.css"
 import { TimelineToolPart } from "@/api/types";
 import { Icon } from "@/assets/icons";
+import { Collapse } from "antd";
 
 type ToolStatus = "running" | "success" | "error" | "approval";
 
@@ -60,7 +60,7 @@ function ToolPart({ part }: ToolPartProps): React.JSX.Element {
 			)}
 			items={[
 				{
-					key: part.tool_call_id,
+					key: "tool",
 					label: `${statusText[status]} · ${toolName}`,
 					children: (
 						<pre className={styles.eventJson}>

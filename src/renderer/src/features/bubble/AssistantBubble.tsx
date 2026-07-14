@@ -11,6 +11,7 @@ import PlanPart from "../chat/PlanPart";
 import InlineDiffPart from "../chat/InlineDiffPart";
 
 export type AssistantBubbleProps = {
+	entryId?: string;
 	content?: string;
 	bodyParts?: TimelineBodyPart[];
 	message?: string;
@@ -18,11 +19,11 @@ export type AssistantBubbleProps = {
 	endTime?: string;
 };
 
-function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: AssistantBubbleProps): React.JSX.Element {
+function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, endTime }: AssistantBubbleProps): React.JSX.Element {
 	function renderBodyPart(part: TimelineBodyPart, index: number): React.ReactNode {
 		if (part.type === "markdown") {
 			return (
-				<div key={index} className={styles.markdownPart}>
+				<div key={index} className={`${styles.markdownPart} markdown-body`}>
 					<Markdown remarkPlugins={[remarkGfm]}>
 						{part.text}
 					</Markdown>
@@ -49,11 +50,13 @@ function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: 
 					items={[
 						{
 							key: "thinking",
-							label: part.done ? "Thinking": "Thinking...",
+							label: part.done ? "Thinking" : "Thinking...",
 							children: (
-								<Markdown remarkPlugins={[remarkGfm]}>
-									{part.text}
-								</Markdown>
+								<div className="markdown-body">
+									<Markdown remarkPlugins={[remarkGfm]}>
+										{part.text}
+									</Markdown>
+								</div>
 							)
 						}
 					]}
@@ -98,9 +101,7 @@ function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: 
 		const summaryStartPart: Extract<TimelineBodyPart, { type: "summary_start" }> = parts[summaryStartIndex] as Extract<TimelineBodyPart, { type: "summary_start" }>;
 		const foldedParts: TimelineBodyPart[] = parts.slice(0, summaryStartIndex);
 		const visibleParts: TimelineBodyPart[] = parts.slice(summaryStartIndex + 1);
-		const foldedChildren: React.ReactNode[] = foldedParts
-			.map(renderBodyPart)
-			.filter((node: React.ReactNode): boolean => node !== null && node !== undefined);
+		const foldedChildren: React.ReactNode[] = foldedParts.map(renderBodyPart).filter((child: React.ReactNode): boolean => child !== null && child !== undefined);
 
 		return (
 			<>
@@ -125,7 +126,7 @@ function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: 
 	}
 
 	return (
-		<article className={styles.root}>
+		<article className={styles.root} data-entry-id={entryId}>
 			{elapsedTime !== undefined ? (
 				<div className={styles.timingRow}>
 					<Typography.Text type="secondary">{elapsedTime}</Typography.Text>
@@ -136,9 +137,11 @@ function AssistantBubble({ content, bodyParts, message, elapsedTime, endTime }: 
 				{bodyParts ? (
 					renderBodyParts(bodyParts)
 				) : (
-					<Markdown remarkPlugins={[remarkGfm]}>
-						{message ?? content ?? ""}
-					</Markdown>
+					<div className="markdown-body">
+						<Markdown remarkPlugins={[remarkGfm]}>
+							{message ?? content ?? ""}
+						</Markdown>
+					</div>
 				)}
 			</div>
 			<div className={styles.toolbar}>

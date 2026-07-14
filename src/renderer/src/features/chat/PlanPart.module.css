@@ -21,17 +21,3 @@
 		transparent 100%
 	);
 }
-
-.markdownPreview :global(p),
-.markdownPreview :global(ul),
-.markdownPreview :global(ol),
-.markdownPreview :global(blockquote),
-.markdownPreview :global(pre),
-.markdownPreview :global(table) {
-	margin-top: 0;
-	margin-bottom: 8px;
-}
-
-.markdownPreview :global(:last-child) {
-	margin-bottom: 0;
-}

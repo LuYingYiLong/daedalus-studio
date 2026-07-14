@@ -3,7 +3,6 @@
 	grid-template-columns: 320px minmax(0, 1fr);
 	flex: 1;
 	min-height: 0;
-	background: #141414;
 }
 
 .shellWithPanel {
@@ -63,7 +62,11 @@
 }
 
 .chatTitle {
+	min-width: 0;
 	margin: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .composer {

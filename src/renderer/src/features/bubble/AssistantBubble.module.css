@@ -26,6 +26,7 @@
 	margin-top: 4px;
 	margin-bottom: 4px;
 	user-select: none;
+	border-radius: 4px;
 }
 
 .summaryCollapse {
@@ -57,56 +58,12 @@
 }
 
 .content {
-	width: clamp(320px, 72%, 720px);
+	width: 100%;
 	max-width: 100%;
 	overflow: hidden;
 	border-radius: 4px;
-	line-height: 1.7;
-	overflow-wrap: anywhere;
-	word-break: break-word;
 }
 
-
-.content :global(p),
-.content :global(ul),
-.content :global(ol),
-.content :global(blockquote),
-.content :global(pre),
-.content :global(table) {
-	margin-top: 0;
-	margin-bottom: 8px;
-}
-
-.content :global(:last-child) {
-	margin-bottom: 0;
-}
-
-.content :global(pre) {
-	max-width: 100%;
-	padding: 8px;
-	overflow: auto;
-	border-radius: 4px;
-	background: rgba(0, 0, 0, 0.24);
-}
-
-.content :global(code) {
-	white-space: pre-wrap;
-	overflow-wrap: anywhere;
-}
-
-.content :global(pre code) {
-	white-space: pre;
-}
-
-.content :global(table) {
-	display: block;
-	max-width: 100%;
-	overflow: auto;
-	border-collapse: collapse;
-}
-
-.content :global(th),
-.content :global(td) {
-	padding: 4px 6px;
-	border: 1px solid rgba(255, 255, 255, 0.24);
+.markdownPart {
+	width: 100%;
 }

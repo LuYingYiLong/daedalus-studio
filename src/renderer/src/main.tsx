@@ -5,6 +5,7 @@ import { probeBackendWorkspaceAndSessions } from "./api/dev-backend-probe";
 import Titlebar from "./components/Titlebar";
 import App from "./app/App";
 import "./styles/global.css";
+import "./styles/markdown.css";
 
 const rootElement = document.getElementById("root");
 

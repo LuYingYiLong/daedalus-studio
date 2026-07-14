@@ -32,7 +32,7 @@ function PlanPart({ part }: PlanPartProps): React.JSX.Element {
 				body: styles.planCardBody
 			}}
 		>
-			<div className={styles.markdownPreview}>
+			<div className={`${styles.markdownPreview} markdown-body`}>
 				<Markdown remarkPlugins={[remarkGfm]}>
 					{part.previewMarkdown}
 				</Markdown>

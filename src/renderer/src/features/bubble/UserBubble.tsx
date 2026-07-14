@@ -5,15 +5,16 @@ import { Button, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 
 export type UserBubbleProps = {
+	entryId?: string;
 	message: string;
 	sentTime?: string;
 	showEditButton?: boolean;
 };
 
-function UserBubble({ message, sentTime, showEditButton }: UserBubbleProps): React.JSX.Element {
+function UserBubble({ entryId, message, sentTime, showEditButton }: UserBubbleProps): React.JSX.Element {
 	return (
-		<article className={styles.root}>
-			<div className={styles.content}>
+		<article className={styles.root} data-entry-id={entryId}>
+			<div className={`${styles.content} markdown-body`}>
 				<Markdown remarkPlugins={[remarkGfm]}>
 					{message}
 				</Markdown>

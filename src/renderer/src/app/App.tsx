@@ -4,7 +4,7 @@ import { Icon } from "@/assets/icons";
 import { selectWorkspace } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
-import type { AdditionalContextItem, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkspaceConfig } from "@/api/types";
 import { fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession } from "@/api/session-api";
 import MessageList from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
@@ -30,6 +30,7 @@ import {
 	type TimelinePageState
 } from "@/features/workbench/workbench-state";
 import { patchWorkbench } from "@/api/workbench-api";
+import { getSessionTitle } from "./session-title";
 
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -85,6 +86,7 @@ function getIsSending(workbench: WorkbenchSnapshot | null): boolean {
 function App(): React.JSX.Element {
 	const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState<number>(0);
 	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+	const [activeSessionMetadata, setActiveSessionMetadata] = useState<SessionMetadata | null>(null);
 	const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceConfig | null>(null);
 	const [timelinePage, setTimelinePage] = useState<TimelinePageState>(emptyTimelinePage);
 	const [workbench, setWorkbench] = useState<WorkbenchSnapshot | null>(null);
@@ -223,19 +225,22 @@ function App(): React.JSX.Element {
 		}
 	}
 
-	async function handleSessionSelect(sessionId: string): Promise<void> {
+	async function handleSessionSelect(session: SessionMetadata): Promise<void> {
+		const sessionId: string = session.id;
 		console.info("[App] session selected", { sessionId });
 
 		try {
 			setIsSessionLoading(true);
 			setSessionError(null);
 			setActiveSessionId(sessionId);
+			setActiveSessionMetadata(session);
 			setTimelinePage(emptyTimelinePage);
 			setWorkbench(null);
 
 			const result: SessionOpenResult = await openSession(sessionId);
 
 			setTimelinePage(createTimelinePageFromOpenResult(result));
+			setActiveSessionMetadata(result.metadata);
 			setWorkbench(result.workbench);
 			setApprovalModeState(result.metadata.approvalMode ?? "manual");
 			if (typeof result.workbench.activeSelection.workspaceId === "string" && typeof result.workbench.activeSelection.workspaceRoot === "string") {
@@ -467,6 +472,8 @@ function App(): React.JSX.Element {
 	const selectedProviderId: string | null = workbench?.composer.provider ?? providerModelSelection?.activeModel.providerId ?? null;
 	const selectedModelId: string | null = workbench?.composer.model ?? providerModelSelection?.activeModel.modelId ?? null;
 	const timelineBlocks: TimelineBlock[] = timelinePage.blocks;
+	const chatTitle: string = getSessionTitle(activeSessionMetadata, activeSessionId);
+	const initialScrollToBottomKey: string = activeSessionId === null ? "" : `${activeSessionId}:${timelinePage.blockCount}`;
 
 	return (
 		<main className={`${styles.shell} ${workbenchPanelOpen ? styles.shellWithPanel : ""}`}>
@@ -504,7 +511,7 @@ function App(): React.JSX.Element {
 			<section className={styles.chatPanel}>
 				<header className={styles.chatHeader}>
 					<Typography.Title level={4} className={styles.chatTitle}>
-						{workbench?.sessionId ?? activeSessionId ?? "Session"}
+						{chatTitle}
 					</Typography.Title>
 					<Button
 						type={workbenchPanelOpen ? "default" : "text"}
@@ -521,6 +528,7 @@ function App(): React.JSX.Element {
 					errorMessage={sessionError}
 					hasMoreBefore={timelinePage.hasMoreBefore}
 					hasMoreAfter={timelinePage.hasMoreAfter}
+					initialScrollToBottomKey={initialScrollToBottomKey}
 					onLoadMoreBefore={handleLoadMoreBefore}
 					onLoadMoreAfter={handleLoadMoreAfter}
 				/>

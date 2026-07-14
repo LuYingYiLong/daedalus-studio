@@ -10,7 +10,7 @@ import styles from "./WorkspaceTree.module.css";
 export type WorkspaceTreeProps = {
 	refreshToken?: number;
 	onWorkspaceSelect?: (workspaceId: string) => void;
-	onSessionSelect?: (sessionId: string) => void;
+	onSessionSelect?: (session: SessionMetadata) => void;
 };
 
 type WorkspaceMenuItem = NonNullable<MenuProps["items"]>[number];
@@ -89,8 +89,11 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }:
 
 		if (selectedKey.startsWith("session:")) {
 			const sessionId: string = selectedKey.slice("session:".length);
+			const session: SessionMetadata | undefined = sessions.find((item: SessionMetadata): boolean => item.id === sessionId);
 
-			onSessionSelect?.(sessionId);
+			if (session !== undefined) {
+				onSessionSelect?.(session);
+			}
 		}
 	};
 
