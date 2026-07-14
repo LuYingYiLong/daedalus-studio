@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && node scripts/electron-vite.cjs build",
     "preview": "node scripts/electron-vite.cjs preview",
-    "test": "npm run typecheck"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@types/node": "^26.1.0",
@@ -22,13 +24,15 @@
     "@types/three": "^0.185.0",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.1.4",
+    "@vitest/coverage-v8": "^4.1.10",
     "electron": "^43.0.0",
     "electron-vite": "^5.0.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "typescript": "^6.0.3",
     "vite": "^7.3.6",
-    "vite-plugin-svgr": "^5.2.0"
+    "vite-plugin-svgr": "^5.2.0",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "antd": "^6.5.0",

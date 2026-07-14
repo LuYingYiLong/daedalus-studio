@@ -8,12 +8,19 @@ import { SessionOpenResult, TimelineAssistantBlock, TimelineBlock, TimelineBodyP
 import { fetchSessionTimeline, openSession, saveSessionUiMetadata } from "@/api/session-api";
 import MessageList from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
+import ApprovalDialog from "@/features/approval/ApprovalDialog";
 import { fetchProviderModelSelection, saveProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import { createBackendClient } from "@/api/backend-client";
 import type { BackendEvent } from "@/api/backend-rpc-client";
 import { cancelChatMessage, sendChatMessage, type ChatMode } from "@/api/chat-api";
-import { fetchApprovalList, setApprovalMode, type ApprovalMode } from "@/api/approval-api";
-import ApprovalDialog from "@/features/approval/ApprovalDialog";
+import {
+	approveApproval,
+	rejectApproval,
+	fetchApprovalList,
+	setApprovalMode,
+	type PendingApproval,
+	type ApprovalMode,
+} from "@/api/approval-api";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -31,6 +38,13 @@ function getStringValue(record: Record<string, unknown>, key: string): string {
 
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function isApprovalRefreshEvent(event: BackendEvent): boolean {
+	return event.event === "agent.tool.approval_required"
+		|| event.event === "tool.approval_required"
+		|| event.event === "agent.tool.approved"
+		|| event.event === "agent.tool.rejected";
 }
 
 function appendMarkdownPart(parts: TimelineBodyPart[], text: string): TimelineBodyPart[] {
@@ -240,6 +254,10 @@ function App(): React.JSX.Element {
 	const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
 	const [chatMode, setChatMode] = useState<ChatMode>("ask");
 	const [approvalMode, setApprovalModeState] = useState<ApprovalMode>("manual");
+	const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
+	const [activeApprovalId, setActiveApprovalId] = useState<string | null>(null);
+	const [approvalError, setApprovalError] = useState<string | null>(null);
+	const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | null>(null);
 
 	useEffect((): void => {
 		async function loadProviderModelSelection(): Promise<void> {
@@ -258,17 +276,7 @@ function App(): React.JSX.Element {
 	}, []);
 
 	useEffect((): void => {
-		async function loadApprovalMode(): Promise<void> {
-			try {
-				const result = await fetchApprovalList();
-
-				setApprovalModeState(result.mode);
-			} catch (error: unknown) {
-				console.error("[App] load approval mode failed", error);
-			}
-		}
-
-		void loadApprovalMode();
+		void refreshApprovals();
 	}, []);
 
 	useEffect((): (() => void) => {
@@ -287,6 +295,10 @@ function App(): React.JSX.Element {
 					setTimelineBlocks((currentBlocks: TimelineBlock[]): TimelineBlock[] => {
 						return applyBackendEventToTimeline(currentBlocks, event);
 					});
+
+					if (isApprovalRefreshEvent(event)) {
+						void refreshApprovals();
+					}
 				});
 			} catch (error: unknown) {
 				console.error("[App] subscribe backend events failed", error);
@@ -324,6 +336,7 @@ function App(): React.JSX.Element {
 
 			setTimelineBlocks(result.timelineBlocks);
 			setChatMode(result.metadata.chatMode ?? "ask");
+			void refreshApprovals();
 
 			if (result.workspaceWarning) {
 				console.warn("[App] session workspace warning", result.workspaceWarning);
@@ -470,6 +483,59 @@ function App(): React.JSX.Element {
 		}
 	}
 
+	async function refreshApprovals(): Promise<void> {
+		try {
+			const result = await fetchApprovalList();
+
+			setApprovalModeState(result.mode);
+			setPendingApprovals(result.pending);
+			setActiveApprovalId((currentApprovalId: string | null): string | null => {
+				if (currentApprovalId !== null && result.pending.some((approval: PendingApproval): boolean => approval.approvalId === currentApprovalId)) {
+					return currentApprovalId;
+				}
+
+				return result.pending[0]?.approvalId ?? null;
+			});
+			if (result.pending.length === 0) {
+				setApprovalError(null);
+			}
+		} catch (error: unknown) {
+			console.error("[App] refresh approvals failed", error);
+		}
+	}
+
+	async function handleApproveApproval(approvalId: string): Promise<void> {
+		try {
+			setApprovalError(null);
+			setApprovalAction("approve");
+
+			await approveApproval(approvalId);
+			await refreshApprovals();
+		} catch (error: unknown) {
+			setApprovalError(error instanceof Error ? error.message : "Failed to approve");
+		} finally {
+			setApprovalAction(null);
+		}
+	}
+
+	async function handleRejectApproval(approvalId: string): Promise<void> {
+		try {
+			setApprovalError(null);
+			setApprovalAction("reject");
+
+			await rejectApproval(approvalId);
+			await refreshApprovals();
+		} catch (error: unknown) {
+			setApprovalError(error instanceof Error ? error.message : "Failed to reject");
+		} finally {
+			setApprovalAction(null);
+		}
+	}
+
+	const activeApproval: PendingApproval | null = pendingApprovals.find((approval: PendingApproval): boolean => {
+		return approval.approvalId === activeApprovalId;
+	}) ?? pendingApprovals[0] ?? null;
+
 	return (
 		<main className={styles.shell}>
 			<aside className={styles.workspaceSidebar}>
@@ -515,6 +581,21 @@ function App(): React.JSX.Element {
 					isLoading={isSessionLoading}
 					errorMessage={sessionError}
 				/>
+
+				<div className={styles.approvalDock}>
+					<ApprovalDialog
+						pendingApproval={activeApproval}
+						isApproving={approvalAction === "approve"}
+						isRejecting={approvalAction === "reject"}
+						errorMessage={approvalError}
+						onApprove={(approvalId: string): void => {
+							void handleApproveApproval(approvalId);
+						}}
+						onReject={(approvalId: string): void => {
+							void handleRejectApproval(approvalId);
+						}}
+					/>
+				</div>
 
 				<footer className={styles.composer}>
 					<Composer

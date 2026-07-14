@@ -1,3 +1,6 @@
+import type { ReconnectConfig } from "./reconnection-strategy";
+import { ReconnectionManager, DEFAULT_RECONNECT_CONFIG } from "./reconnection-strategy";
+
 type BackendRequest = {
 	protocolVersion: 2;
 	type: "request";
@@ -37,6 +40,20 @@ type PendingRequest = {
 
 type BackendEventListener = (event: BackendEvent) => void;
 
+type ConnectionState = "disconnected" | "connecting" | "connected" | "reconnecting";
+
+type ClientConfig = {
+	readonly enableReconnect: boolean;
+	readonly reconnectConfig: ReconnectConfig;
+	readonly connectionTimeout: number;
+};
+
+const DEFAULT_CLIENT_CONFIG: ClientConfig = {
+	enableReconnect: true,
+	reconnectConfig: DEFAULT_RECONNECT_CONFIG,
+	connectionTimeout: 10000
+};
+
 function createRequestParams(method: string, params: unknown): unknown {
 	if (method !== "client.hello") {
 		return params;
@@ -65,13 +82,30 @@ function isBackendEvent(message: unknown): message is BackendEvent {
 
 export class BackendRpcClient {
 	private readonly url: string;
+	private readonly config: ClientConfig;
 	private socket: WebSocket | null = null;
 	private requestIndex: number = 0;
 	private readonly pendingRequests: Map<string, PendingRequest> = new Map();
 	private readonly eventListeners: Set<BackendEventListener> = new Set();
+	private state: ConnectionState = "disconnected";
+	private reconnectManager: ReconnectionManager | null = null;
+	private manualClose: boolean = false;
+	private connectResolve: (() => void) | null = null;
+	private connectReject: ((error: Error) => void) | null = null;
+	private connectionTimer: ReturnType<typeof setTimeout> | null = null;
 
-	constructor(url: string) {
+	constructor(url: string, config?: Partial<ClientConfig>) {
 		this.url = url;
+		this.config = { ...DEFAULT_CLIENT_CONFIG, ...config };
+
+		if (this.config.enableReconnect) {
+			this.reconnectManager = new ReconnectionManager(
+				this.config.reconnectConfig,
+				(message: string, context?: Record<string, unknown>): void => {
+					console.debug(`[Daedalus backend:reconnect] ${message}`, context ?? "");
+				}
+			);
+		}
 	}
 
 	connect(): Promise<void> {
@@ -79,27 +113,125 @@ export class BackendRpcClient {
 			return Promise.resolve();
 		}
 
+		if (this.state === "connecting" || this.state === "reconnecting") {
+			return new Promise((resolve, reject): void => {
+				this.connectResolve = resolve;
+				this.connectReject = reject;
+			});
+		}
+
+		this.manualClose = false;
+		const reconnectAttempt: number = this.reconnectManager?.getAttempt() ?? 0;
+		this.state = reconnectAttempt > 0 ? "reconnecting" : "connecting";
+
+		console.info(`[Daedalus backend] ${this.state === "reconnecting" ? "重连" : "连接"}中`, {
+			url: this.url,
+			attempt: this.reconnectManager?.getAttempt() ?? 0
+		});
+
+		return this.createConnection();
+	}
+
+	private createConnection(): Promise<void> {
 		return new Promise((resolve, reject): void => {
 			const socket: WebSocket = new WebSocket(this.url);
 			this.socket = socket;
+			this.connectResolve = resolve;
+			this.connectReject = reject;
 
-			socket.addEventListener("open", (): void => {
-				resolve();
-			}, { once: true });
+			socket.addEventListener("open", this.handleOpen);
+			socket.addEventListener("message", (event: MessageEvent): void => this.handleMessage(event.data));
+			socket.addEventListener("error", this.handleError);
+			socket.addEventListener("close", this.handleClose);
 
-			socket.addEventListener("message", (event: MessageEvent<string>): void => {
-				this.handleMessage(event.data);
-			});
-
-			socket.addEventListener("error", (): void => {
-				reject(new Error(`无法连接后端：${this.url}`));
-			}, { once: true });
-
-			socket.addEventListener("close", (): void => {
-				this.rejectPendingRequests(new Error("后端连接已关闭"));
-				this.socket = null;
-			});
+			this.connectionTimer = setTimeout((): void => {
+				this.handleConnectionTimeout();
+			}, this.config.connectionTimeout);
 		});
+	}
+
+	private handleOpen = (): void => {
+		this.clearConnectionTimer();
+
+		if (this.connectionTimer) {
+			clearTimeout(this.connectionTimer);
+			this.connectionTimer = null;
+		}
+
+		this.state = "connected";
+		this.reconnectManager?.reset();
+
+		console.info("[Daedalus backend] 连接已建立", { url: this.url });
+
+		if (this.connectResolve) {
+			this.connectResolve();
+			this.connectResolve = null;
+			this.connectReject = null;
+		}
+	};
+
+	private handleError = (): void => {
+		this.clearConnectionTimer();
+
+		const error: Error = new Error(`无法连接后端：${this.url}`);
+
+		console.error("[Daedalus backend] 连接错误", { url: this.url, error });
+
+		if (this.connectReject) {
+			this.connectReject(error);
+			this.connectReject = null;
+			this.connectResolve = null;
+		}
+	};
+
+	private handleClose = (): void => {
+		this.clearConnectionTimer();
+		this.socket = null;
+		this.rejectPendingRequests(new Error("后端连接已关闭"));
+
+		const wasManualClose: boolean = this.manualClose;
+
+		console.debug("[Daedalus backend] 连接已关闭", { manualClose: wasManualClose });
+
+		if (!wasManualClose && this.config.enableReconnect && this.reconnectManager) {
+			this.state = "reconnecting";
+
+			if (this.reconnectManager.isExhausted()) {
+				console.error("[Daedalus backend] 重连失败，已达最大尝试次数");
+				this.state = "disconnected";
+				return;
+			}
+
+			this.reconnectManager.scheduleReconnect((): void => {
+				this.connect().catch((error: Error): void => {
+					console.error("[Daedalus backend] 重连失败", error);
+				});
+			});
+		} else {
+			this.state = "disconnected";
+		}
+	};
+
+	private handleConnectionTimeout(): void {
+		this.clearConnectionTimer();
+
+		console.warn("[Daedalus backend] 连接超时", { url: this.url, timeout: this.config.connectionTimeout });
+
+		this.socket?.close();
+		this.state = "disconnected";
+
+		if (this.connectReject) {
+			this.connectReject(new Error(`连接超时：${this.config.connectionTimeout}ms`));
+			this.connectReject = null;
+			this.connectResolve = null;
+		}
+	}
+
+	private clearConnectionTimer(): void {
+		if (this.connectionTimer) {
+			clearTimeout(this.connectionTimer);
+			this.connectionTimer = null;
+		}
 	}
 
 	request<TResult>(method: string, params?: unknown): Promise<TResult> {
@@ -146,13 +278,22 @@ export class BackendRpcClient {
 	}
 
 	close(): void {
+		this.manualClose = true;
+		this.reconnectManager?.destroy();
+		this.clearConnectionTimer();
+
 		this.socket?.close();
 		this.socket = null;
+		this.state = "disconnected";
 		this.rejectPendingRequests(new Error("后端连接已手动关闭"));
 	}
 
 	isOpen(): boolean {
-		return this.socket?.readyState === WebSocket.OPEN;
+		return this.state === "connected" && this.socket?.readyState === WebSocket.OPEN;
+	}
+
+	getState(): ConnectionState {
+		return this.state;
 	}
 
 	private handleMessage(rawMessage: string): void {
