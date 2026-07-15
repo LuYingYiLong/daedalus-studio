@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { selectWorkspace } from "@/api/workspace-api";
 import styles from "./App.module.css";
-import type { AdditionalContextItem, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import { fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, type SaveSessionUiMetadataParams } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
@@ -35,6 +35,7 @@ import SettingsPage from "@/pages/settings/SettingsPage";
 import DrawingPage from "@/pages/drawing/DrawingPage";
 import KnowledgePage from "@/pages/knowledge/KnowledgePage";
 import { extractEnabledSkillRefs, type ComposerCompletionTrigger } from "@/features/composer/composer-completion";
+import { isWorkflowTodoClearEvent, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
 
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -177,6 +178,7 @@ function App(): React.JSX.Element {
 	const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | null>(null);
 	const [workbenchPanelOpen, setWorkbenchPanelOpen] = useState<boolean>(true);
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
+	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] = useState<WorkflowTodoSnapshot | null>(null);
 	const pendingPatchRef = useRef<WorkbenchPatch>({});
 	const patchTimerRef = useRef<number | null>(null);
 	const patchSequenceRef = useRef<number>(0);
@@ -432,6 +434,12 @@ function App(): React.JSX.Element {
 						void loadSkills();
 					}
 
+					if (event.event === "workflow.todo.updated" || event.event === "agent.run.snapshot") {
+						setWorkflowTodoSnapshot(normalizeWorkflowTodoSnapshot(event.data));
+					} else if (isWorkflowTodoClearEvent(event)) {
+						setWorkflowTodoSnapshot(null);
+					}
+
 					setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 						return {
 							...currentPage,
@@ -478,6 +486,7 @@ function App(): React.JSX.Element {
 			setActiveSessionMetadata(session);
 			setTimelinePage(emptyTimelinePage);
 			setWorkbench(null);
+			setWorkflowTodoSnapshot(null);
 
 			const result: SessionOpenResult = await openSession(sessionId);
 
@@ -516,6 +525,7 @@ function App(): React.JSX.Element {
 		setActiveSessionMetadata(null);
 		setTimelinePage(emptyTimelinePage);
 		setWorkbench(null);
+		setWorkflowTodoSnapshot(null);
 		setSessionError(null);
 	}
 
@@ -856,6 +866,8 @@ function App(): React.JSX.Element {
 			{activePage === "agent" ? (
 				<AgentPage
 					workspaceRefreshToken={workspaceRefreshToken}
+					activeSessionId={activeSessionId}
+					activeWorkspaceId={activeSessionMetadata?.workspaceId ?? activeWorkspace?.id ?? null}
 					chatTitle={chatTitle}
 					workbenchPanelOpen={workbenchPanelOpen}
 					timelineBlocks={timelineBlocks}
@@ -871,6 +883,7 @@ function App(): React.JSX.Element {
 					selectedModelId={selectedModelId}
 					message={workbench?.composer.text ?? ""}
 					contextItems={workbench?.composer.additionalContext ?? []}
+					workflowTodoSnapshot={workflowTodoSnapshot}
 					mode={getChatMode(workbench)}
 					approvalMode={approvalMode}
 					slashCommands={slashCommands}

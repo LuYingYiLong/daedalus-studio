@@ -1,10 +1,63 @@
+.composerRoot {
+	min-width: 0;
+	width: 100%;
+}
+
 .composerInputWrap {
+	position: relative;
 	display: flex;
 	flex-direction: column;
 	align-items: flex-end;
 	gap: 6px;
 	min-width: 0;
 	width: 100%;
+}
+
+.todoPanel {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: calc(100% + 6px);
+	z-index: 18;
+	max-height: min(360px, 45vh);
+	overflow: hidden;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	border-radius: 8px;
+	background: rgb(31, 31, 31);
+	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
+}
+
+.todoCollapse {
+	background: transparent;
+}
+
+.todoCollapse :global(.ant-collapse-header) {
+	align-items: center !important;
+	padding: 8px 10px !important;
+}
+
+.todoCollapse :global(.ant-collapse-content-box) {
+	max-height: calc(min(360px, 45vh) - 42px);
+	padding: 0 10px 10px !important;
+	overflow-y: auto;
+}
+
+.todoPanelBody {
+	min-width: 0;
+}
+
+.todoStepTitle,
+.todoStepDescription {
+	display: block;
+	max-width: min(520px, 70vw);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.todoStepDescription {
+	color: rgba(255, 255, 255, 0.56);
+	font-size: 12px;
 }
 
 .composerSurface {

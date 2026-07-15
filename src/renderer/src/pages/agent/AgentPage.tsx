@@ -1,6 +1,6 @@
 import { Button, Typography } from "antd";
 import { Icon } from "@/assets/icons";
-import type { AdditionalContextItem, SessionMetadata, TimelineBlock, WorkbenchSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, SessionMetadata, TimelineBlock, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode } from "@/api/approval-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
@@ -16,6 +16,8 @@ import styles from "./AgentPage.module.css";
 
 type AgentPageProps = {
 	workspaceRefreshToken: number;
+	activeSessionId: string | null;
+	activeWorkspaceId: string | null;
 	chatTitle: string;
 	workbenchPanelOpen: boolean;
 	timelineBlocks: TimelineBlock[];
@@ -31,6 +33,7 @@ type AgentPageProps = {
 	selectedModelId: string | null;
 	message: string;
 	contextItems: AdditionalContextItem[];
+	workflowTodoSnapshot: WorkflowTodoSnapshot | null;
 	mode: ChatMode;
 	approvalMode: ApprovalMode;
 	slashCommands: SlashCommandDefinition[];
@@ -67,6 +70,8 @@ type AgentPageProps = {
 
 function AgentPage({
 	workspaceRefreshToken,
+	activeSessionId,
+	activeWorkspaceId,
 	chatTitle,
 	workbenchPanelOpen,
 	timelineBlocks,
@@ -82,6 +87,7 @@ function AgentPage({
 	selectedModelId,
 	message,
 	contextItems,
+	workflowTodoSnapshot,
 	mode,
 	approvalMode,
 	slashCommands,
@@ -139,6 +145,8 @@ function AgentPage({
 
 				<WorkspaceTree
 					refreshToken={workspaceRefreshToken}
+					selectedSessionId={activeSessionId}
+					selectedWorkspaceId={activeWorkspaceId}
 					onWorkspaceSelect={onWorkspaceSelect}
 					onSessionSelect={onSessionSelect}
 					onSessionArchive={onSessionArchive}
@@ -182,6 +190,7 @@ function AgentPage({
 						selectedModelId={selectedModelId}
 						message={message}
 						contextItems={contextItems}
+						workflowTodoSnapshot={workflowTodoSnapshot}
 						mode={mode}
 						approvalMode={approvalMode}
 						slashCommands={slashCommands}

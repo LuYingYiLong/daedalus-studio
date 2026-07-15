@@ -5,10 +5,18 @@ import type { ProviderModelSelection } from "@/api/provider-api";
 import ProviderSettingsPage from "./ProviderSettingsPage";
 import DefaultModelSettingsPage from "./DefaultModelSettingsPage";
 import PersonalizationSettingsPage from "./PersonalizationSettingsPage";
+import ArchivedSessionSettingsPage from "./ArchivedSessionSettingsPage";
 import styles from "./SettingsPage.module.css";
 
 type MenuItem = Required<MenuProps>["items"][number];
-type SettingsPageKey = "provider" | "default_model" | "general" | "personalization" | "mcp_servers" | "skills";
+type SettingsPageKey = 
+	| "provider"
+	| "default_model"
+	| "general"
+	| "personalization"
+	| "mcp_servers" 
+	| "skills"
+	| "archived_sessions";
 
 type SettingsPageProps = {
 	onProviderModelSelectionChange?: (selection: ProviderModelSelection) => void;
@@ -46,8 +54,8 @@ const items: MenuItem[] = [
 		icon: <Icon name="skill" />,
 	},
 	{
-		key: "archived_session",
-		label: "Archived session",
+		key: "archived_sessions",
+		label: "Archived sessions",
 		icon: <Icon name="archive" />,
 	}
 ]
@@ -83,6 +91,8 @@ function SettingsPage({ onProviderModelSelectionChange }: SettingsPageProps): Re
 				<DefaultModelSettingsPage onSelectionChange={onProviderModelSelectionChange} />
 			) : activePage === "personalization" ? (
 				<PersonalizationSettingsPage />
+			) : activePage === "archived_sessions" ? (
+				<ArchivedSessionSettingsPage />
 			) : (
 				<section className={styles.placeholder}>
 					<div className={styles.placeholderHeader}>

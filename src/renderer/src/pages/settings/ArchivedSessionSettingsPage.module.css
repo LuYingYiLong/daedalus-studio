@@ -1,0 +1,128 @@
+.page {
+	display: grid;
+	grid-template-rows: auto auto minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+	padding: 0 8px;
+	overflow: hidden;
+}
+
+.header {
+	display: grid;
+	gap: 8px;
+}
+
+.titleRow {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	min-width: 0;
+	user-select: none;
+}
+
+.title {
+	min-width: 0;
+	margin: 0 !important;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.countText {
+	flex: none;
+}
+
+.spaceCompact {
+	width: 100%;
+}
+
+.searchBox {
+	min-width: 160px;
+}
+
+.workspaceSelect {
+	min-width: 180px;
+}
+
+.errorText,
+.emptyText {
+	display: block;
+	padding: 8px 0;
+	user-select: none;
+}
+
+.menuScroller {
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+	scrollbar-gutter: auto;
+	padding-top: 8px;
+}
+
+.archivedMenu {
+	border-inline-end: 0 !important;
+}
+
+.archivedMenu :global(.ant-menu-item) {
+	height: auto !important;
+	width: 100% !important;
+	min-height: 44px;
+	line-height: normal !important;
+	padding-block: 0px !important;
+	user-select: none;
+	margin-left: 0px !important;
+}
+
+.archivedMenu :global(.ant-menu-title-content) {
+	min-width: 0;
+	line-height: normal;
+}
+
+.sessionMenuItem {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	min-width: 0;
+}
+
+.sessionText {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+
+.sessionTitle,
+.sessionMeta {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.sessionMeta {
+	color: var(--ant-color-text-tertiary);
+	font-size: 12px;
+	line-height: 16px;
+}
+
+.sessionActions {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	opacity: 0;
+}
+
+.actionButton {
+	width: 22px;
+	height: 22px;
+	min-width: 22px;
+	padding: 0;
+	color: var(--ant-color-text-tertiary);
+}
+
+.sessionMenuItem:hover .sessionActions,
+.sessionActions:focus-within {
+	opacity: 1;
+}

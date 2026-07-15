@@ -18,6 +18,10 @@ export type SessionMetadata = {
 	id: string;
 	title: string;
 	workspaceId?: string;
+	workspaceName?: string;
+	workspaceKind?: "godot";
+	workspaceRoot?: string;
+	godotExecutablePath?: string;
 	activeSkillId?: string;
 	provider?: string;
 	model?: string;
@@ -90,6 +94,28 @@ export type WorkbenchNextStepHint = {
 	text?: string;
 	message?: string;
 	[key: string]: unknown;
+};
+
+export type WorkflowTodoStatus = "pending" | "running" | "in_progress" | "done" | "failed" | "paused" | string;
+
+export type WorkflowTodoStep = {
+	id: string;
+	title: string;
+	status: WorkflowTodoStatus;
+	phaseId?: string;
+	text?: string;
+};
+
+export type WorkflowTodoSnapshot = {
+	runId?: string;
+	workflowId?: string;
+	title?: string;
+	revision?: number;
+	source?: string;
+	steps: WorkflowTodoStep[];
+	todos: WorkflowTodoStep[];
+	activeStepRunId?: string;
+	activePhaseRunId?: string;
 };
 
 export type WorkbenchSnapshot = {

@@ -34,8 +34,21 @@
 	user-select: none;
 }
 
-.workspaceMenu .ant-menu-item {
+.workspaceMenu :global(.ant-menu-item),
+.workspaceMenu :global(.ant-menu-submenu-title) {
 	width: 100%;
+	min-width: 0;
+}
+
+.workspaceMenu :global(.ant-menu-title-content) {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.workspaceMenu :global(.ant-menu-item-icon) {
+	flex: none;
 }
 
 .menu {
@@ -49,6 +62,7 @@
 	gap: 4px;
 	width: 100%;
 	min-width: 0;
+	padding-left: 16px;
 }
 
 .sessionTitle {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Input, Dropdown, Button, MenuProps, Divider } from "antd";
+import { Input, Dropdown, Button, Divider, Collapse, Flex, Steps, Tooltip } from "antd";
+import type { MenuProps, StepsProps } from "antd";
 import type { TextAreaRef } from "antd/es/input/TextArea";
 import { Icon } from "@/assets/icons";
 import styles from "./Composer.module.css";
@@ -7,9 +8,10 @@ import type { ApprovalMode } from "@/api/approval-api";
 import type { ChatMode } from "@/api/chat-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
 import type { SkillSummary } from "@/api/skill-api";
-import type { AdditionalContextItem } from "@/api/types";
+import type { AdditionalContextItem, WorkflowTodoSnapshot, WorkflowTodoStep } from "@/api/types";
 import type { ProviderModelInfo, ProviderModelSelection, ProviderModelSelectionProvider } from "@/api/provider-api";
 import AdditionalContextStrip from "@/features/bubble/AdditionalContextStrip";
+import { getWorkflowTodoSnapshotKey, mapWorkflowTodoStatusToStepStatus } from "./workflow-todo";
 import {
 	createCompletionOptions,
 	getCompletionToken,
@@ -25,6 +27,7 @@ export type ComposerProps = {
 	selectedModelId: string | null;
 	message: string;
 	contextItems?: AdditionalContextItem[];
+	workflowTodoSnapshot?: WorkflowTodoSnapshot | null;
 	mode: ChatMode;
 	approvalMode: ApprovalMode;
 	slashCommands?: SlashCommandDefinition[];
@@ -216,12 +219,37 @@ function createCompletionSignature(token: ComposerCompletionToken, options: read
 	].join(":");
 }
 
+function createWorkflowTodoStepItems(steps: readonly WorkflowTodoStep[]): NonNullable<StepsProps["items"]> {
+	return steps.map((step: WorkflowTodoStep, index: number) => {
+		const title: string = step.title.trim() || step.text?.trim() || `Step ${index + 1}`;
+		const description: string | undefined = step.text !== undefined && step.text !== title ? step.text : undefined;
+
+		return {
+			key: step.id,
+			title: (
+				<Tooltip title={title}>
+					<span className={styles.todoStepTitle}>{title}</span>
+				</Tooltip>
+			),
+			description: description === undefined
+				? undefined
+				: (
+					<Tooltip title={description}>
+						<span className={styles.todoStepDescription}>{description}</span>
+					</Tooltip>
+				),
+			status: mapWorkflowTodoStatusToStepStatus(step.status)
+		};
+	});
+}
+
 function Composer({
 	providerModelSelection,
 	selectedProviderId,
 	selectedModelId,
 	message,
 	contextItems: composerContextItems = [],
+	workflowTodoSnapshot = null,
 	mode,
 	approvalMode,
 	slashCommands = [],
@@ -239,15 +267,19 @@ function Composer({
 	onSubmit,
 	onCompletionOpen
 }: ComposerProps): React.JSX.Element {
+	const rootRef = useRef<HTMLDivElement | null>(null);
 	const textAreaRef = useRef<TextAreaRef | null>(null);
 	const suppressedCompletionValueRef = useRef<string | null>(null);
 	const completionStateSignatureRef = useRef<string>("");
 	const lastSyncedMessageRef = useRef<string>(message);
+	const lastWorkflowTodoKeyRef = useRef<string>("");
+	const dismissedWorkflowTodoKeyRef = useRef<string>("");
 	const [draftMessage, setDraftMessage] = useState<string>(message);
 	const [completionToken, setCompletionToken] = useState<ComposerCompletionToken | null>(null);
 	const [completionOptions, setCompletionOptions] = useState<ComposerCompletionOption[]>([]);
 	const [selectedCompletionIndex, setSelectedCompletionIndex] = useState<number>(0);
 	const [isComposing, setIsComposing] = useState<boolean>(false);
+	const [todoPanelOpen, setTodoPanelOpen] = useState<boolean>(false);
 
 	const handleModeClick: MenuProps["onClick"] = ({ key }): void => {
 		if (isComposerMode(key)) {
@@ -276,12 +308,63 @@ function Composer({
 	const selectedModelLabel: string = getSelectedModelLabel(providerModelSelection, selectedModel);
 	const approvalModeLabel: string = approvalMode === "auto-safe" ? "Auto Safe" : "Manual";
 	const hasCompletion: boolean = completionToken !== null && completionOptions.length > 0;
+	const workflowTodoSteps: WorkflowTodoStep[] = workflowTodoSnapshot?.steps ?? [];
+	const hasWorkflowTodo: boolean = workflowTodoSteps.length > 0;
+	const workflowTodoKey: string = workflowTodoSnapshot === null ? "" : getWorkflowTodoSnapshotKey(workflowTodoSnapshot);
+	const workflowTodoStepItems: NonNullable<StepsProps["items"]> = useMemo((): NonNullable<StepsProps["items"]> => {
+		return createWorkflowTodoStepItems(workflowTodoSteps);
+	}, [workflowTodoSteps]);
+
+	function closeTodoPanel(markDismissed: boolean): void {
+		setTodoPanelOpen(false);
+		if (markDismissed && workflowTodoKey.length > 0) {
+			dismissedWorkflowTodoKeyRef.current = workflowTodoKey;
+		}
+	}
 
 	useEffect((): void => {
 		if (selectedCompletionIndex >= completionOptions.length) {
 			setSelectedCompletionIndex(Math.max(0, completionOptions.length - 1));
 		}
 	}, [completionOptions.length, selectedCompletionIndex]);
+
+	useEffect((): void => {
+		if (!hasWorkflowTodo) {
+			lastWorkflowTodoKeyRef.current = "";
+			setTodoPanelOpen(false);
+			return;
+		}
+
+		if (lastWorkflowTodoKeyRef.current === workflowTodoKey) {
+			return;
+		}
+
+		lastWorkflowTodoKeyRef.current = workflowTodoKey;
+		if (dismissedWorkflowTodoKeyRef.current !== workflowTodoKey) {
+			setTodoPanelOpen(true);
+		}
+	}, [hasWorkflowTodo, workflowTodoKey]);
+
+	useEffect((): (() => void) | void => {
+		if (!todoPanelOpen) {
+			return;
+		}
+
+		function handlePointerDown(event: PointerEvent): void {
+			const target: EventTarget | null = event.target;
+			if (target instanceof Node && rootRef.current?.contains(target)) {
+				return;
+			}
+
+			closeTodoPanel(true);
+		}
+
+		document.addEventListener("pointerdown", handlePointerDown);
+
+		return (): void => {
+			document.removeEventListener("pointerdown", handlePointerDown);
+		};
+	}, [todoPanelOpen, workflowTodoKey]);
 
 	useEffect((): void => {
 		const nativeTextArea: HTMLTextAreaElement | null = getNativeTextArea(textAreaRef.current);
@@ -331,6 +414,7 @@ function Composer({
 		lastSyncedMessageRef.current = "";
 		suppressedCompletionValueRef.current = null;
 		hideCompletion();
+		setTodoPanelOpen(false);
 		onMessageChange?.("");
 		onSubmit?.(trimmedMessage);
 	}
@@ -468,152 +552,198 @@ function Composer({
 	}
 
 	return (
-		<div className={styles.composerInputWrap}>
-			<div className={styles.composerSurface}>
-				{hasCompletion ? (
-					<div className={styles.completionPanel} role="listbox" aria-label="Composer completions">
-						{completionOptions.map((option: ComposerCompletionOption, index: number): React.ReactNode => {
-							const isSelected: boolean = index === selectedCompletionIndex;
-
-							return (
-								<button
-									key={`${option.trigger}:${option.key}`}
-									type="button"
-									className={`${styles.completionItem} ${isSelected ? styles.completionItemSelected : ""}`}
-									role="option"
-									aria-selected={isSelected}
-									onMouseDown={(event: React.MouseEvent<HTMLButtonElement>): void => {
-										event.preventDefault();
-										applyCompletion(option);
-									}}
-									onMouseEnter={(): void => {
-										setSelectedCompletionIndex(index);
-									}}
-								>
-									<span className={styles.completionLabel}>{option.label}</span>
-									<span className={styles.completionDescription}>{option.description}</span>
-								</button>
-							);
-						})}
+		<div ref={rootRef} className={styles.composerRoot}>
+			<div className={styles.composerInputWrap}>
+				{todoPanelOpen && hasWorkflowTodo && !hasCompletion ? (
+					<div className={styles.todoPanel}>
+						<Collapse
+							size="small"
+							defaultActiveKey={["todo"]}
+							className={styles.todoCollapse}
+							items={[{
+								key: "todo",
+								label: workflowTodoSnapshot?.title ?? "Todo",
+								children: (
+									<Flex vertical={true} gap="small" className={styles.todoPanelBody}>
+										<Steps
+											direction="vertical"
+											size="small"
+											current={Math.max(0, workflowTodoSteps.findIndex((step: WorkflowTodoStep): boolean => {
+												return step.status === "running" || step.status === "in_progress";
+											}))}
+											items={workflowTodoStepItems}
+										/>
+									</Flex>
+								)
+							}]}
+						/>
 					</div>
 				) : null}
-				{composerContextItems.length > 0 ? (
-					<div className={styles.contextArea}>
-						<AdditionalContextStrip
-							items={composerContextItems}
-							align="start"
-							interactive={true}
-							onTogglePin={(contextId: string, pinned: boolean): void => {
-								onPinContext?.(contextId, pinned);
-							}}
-							onRemove={(contextId: string): void => {
-								onRemoveContext?.(contextId);
-							}}
-						/>
+				<div className={styles.composerSurface}>
+					{hasCompletion ? (
+						<div className={styles.completionPanel} role="listbox" aria-label="Composer completions">
+							{completionOptions.map((option: ComposerCompletionOption, index: number): React.ReactNode => {
+								const isSelected: boolean = index === selectedCompletionIndex;
+
+								return (
+									<button
+										key={`${option.trigger}:${option.key}`}
+										type="button"
+										className={`${styles.completionItem} ${isSelected ? styles.completionItemSelected : ""}`}
+										role="option"
+										aria-selected={isSelected}
+										onMouseDown={(event: React.MouseEvent<HTMLButtonElement>): void => {
+											event.preventDefault();
+											applyCompletion(option);
+										}}
+										onMouseEnter={(): void => {
+											setSelectedCompletionIndex(index);
+										}}
+									>
+										<span className={styles.completionLabel}>{option.label}</span>
+										<span className={styles.completionDescription}>{option.description}</span>
+									</button>
+								);
+							})}
+						</div>
+					) : null}
+					{composerContextItems.length > 0 ? (
+						<div className={styles.contextArea}>
+							<AdditionalContextStrip
+								items={composerContextItems}
+								align="start"
+								interactive={true}
+								onTogglePin={(contextId: string, pinned: boolean): void => {
+									onPinContext?.(contextId, pinned);
+								}}
+								onRemove={(contextId: string): void => {
+									onRemoveContext?.(contextId);
+								}}
+							/>
+							<Button
+								type="text"
+								size="small"
+								className={styles.clearContextButton}
+								onClick={(): void => {
+									onClearUnpinnedContext?.();
+								}}
+							>
+								Clear unpinned
+							</Button>
+						</div>
+					) : null}
+					<Input.TextArea
+						ref={textAreaRef}
+						value={draftMessage}
+						autoSize={{ minRows: composerContextItems.length > 0 ? 3 : 4, maxRows: 12 }}
+						placeholder="What can I say?"
+						className={styles.composerTextArea}
+						onChange={handleTextAreaChange}
+						onKeyDown={handleTextAreaKeyDown}
+						onSelect={handleTextAreaSelection}
+						onCompositionStart={(): void => {
+							setIsComposing(true);
+						}}
+						onCompositionEnd={(event: React.CompositionEvent<HTMLTextAreaElement>): void => {
+							setIsComposing(false);
+							refreshCompletion(event.currentTarget.value, event.currentTarget.selectionStart);
+						}}
+					/>
+					<div className={styles.composerToolbar}>
+					<Dropdown
+						menu={{ items: contextItems }}
+						trigger={["click"]}
+					>
 						<Button
 							type="text"
-							size="small"
-							className={styles.clearContextButton}
+							icon={<Icon name="add" className={styles.composerActionIcon} />}
+							className={styles.composerActionButton}
+						/>
+					</Dropdown>
+					<Divider vertical={true} />
+					{hasWorkflowTodo ? (
+						<Button
+							type={todoPanelOpen ? "default" : "text"}
+							icon={<Icon name="todo_unchecked" className={styles.composerActionIcon} />}
+							className={styles.composerActionButton}
+							aria-label="Toggle workflow todo"
 							onClick={(): void => {
-								onClearUnpinnedContext?.();
+								if (todoPanelOpen) {
+									closeTodoPanel(true);
+									return;
+								}
+
+								if (workflowTodoKey.length > 0 && dismissedWorkflowTodoKeyRef.current === workflowTodoKey) {
+									dismissedWorkflowTodoKeyRef.current = "";
+								}
+								setTodoPanelOpen(true);
 							}}
+						/>
+					) : null}
+					<Dropdown
+						menu={{
+							items: modeItems,
+							selectedKeys: [mode],
+							onClick: handleModeClick,
+						}}
+						trigger={["click"]}
+					>
+						<Button
+							type="text"
+							icon={<Icon name={mode} className={styles.composerActionIcon} />}
+							className={styles.composerActionButton}
+						/>
+					</Dropdown>
+					<Dropdown
+						menu={{
+							items: approvalModeItems,
+							selectedKeys: [approvalMode],
+							onClick: handleApprovalModeClick,
+						}}
+						disabled={isApprovalModeSaving}
+						trigger={["click"]}
+					>
+						<Button
+							type="text"
+							loading={isApprovalModeSaving}
+							icon={(
+								<Icon
+									name={approvalMode === "auto-safe" ? "warning" : "shield"}
+									className={styles.composerActionIcon}
+								/>
+							)}
+							className={styles.approvalModeButton}
 						>
-							Clear unpinned
+							<span className={styles.approvalModeText}>{approvalModeLabel}</span>
 						</Button>
+					</Dropdown>
+					<Divider vertical={true} />
+					<Dropdown
+						disabled={providerModelSelection === null}
+						menu={{
+							items: providerModelItems,
+							selectedKeys: selectedModelKey === undefined ? [] : [selectedModelKey],
+							onClick: handleProviderModelClick
+						}}
+						trigger={["click"]}
+					>
+						<Button
+							type="text"
+							className={styles.modelButton}
+						>
+							<span className={styles.modelButtonContent}>
+								<span className={styles.modelButtonText}>{selectedModelLabel}</span>
+							</span>
+						</Button>
+					</Dropdown>
+					<Button
+						type="text"
+						icon={<Icon name={isSending ? "stop" : "send"} className={styles.composerSendIcon} />}
+						className={styles.composerSendButton}
+						disabled={!isSending && draftMessage.trim().length === 0}
+						onClick={submitMessage}
+					/>
 					</div>
-				) : null}
-				<Input.TextArea
-					ref={textAreaRef}
-					value={draftMessage}
-					autoSize={{ minRows: composerContextItems.length > 0 ? 3 : 4, maxRows: 12 }}
-					placeholder="What can I say?"
-					className={styles.composerTextArea}
-					onChange={handleTextAreaChange}
-					onKeyDown={handleTextAreaKeyDown}
-					onSelect={handleTextAreaSelection}
-					onCompositionStart={(): void => {
-						setIsComposing(true);
-					}}
-					onCompositionEnd={(event: React.CompositionEvent<HTMLTextAreaElement>): void => {
-						setIsComposing(false);
-						refreshCompletion(event.currentTarget.value, event.currentTarget.selectionStart);
-					}}
-				/>
-				<div className={styles.composerToolbar}>
-				<Dropdown
-					menu={{ items: contextItems }}
-					trigger={["click"]}
-				>
-					<Button
-						type="text"
-						icon={<Icon name="add" className={styles.composerActionIcon} />}
-						className={styles.composerActionButton}
-					/>
-				</Dropdown>
-				<Divider vertical={true} />
-				<Dropdown
-					menu={{
-						items: modeItems,
-						selectedKeys: [mode],
-						onClick: handleModeClick,
-					}}
-					trigger={["click"]}
-				>
-					<Button
-						type="text"
-						icon={<Icon name={mode} className={styles.composerActionIcon} />}
-						className={styles.composerActionButton}
-					/>
-				</Dropdown>
-				<Dropdown
-					menu={{
-						items: approvalModeItems,
-						selectedKeys: [approvalMode],
-						onClick: handleApprovalModeClick,
-					}}
-					disabled={isApprovalModeSaving}
-					trigger={["click"]}
-				>
-					<Button
-						type="text"
-						loading={isApprovalModeSaving}
-						icon={(
-							<Icon
-								name={approvalMode === "auto-safe" ? "warning" : "shield"}
-								className={styles.composerActionIcon}
-							/>
-						)}
-						className={styles.approvalModeButton}
-					>
-						<span className={styles.approvalModeText}>{approvalModeLabel}</span>
-					</Button>
-				</Dropdown>
-				<Divider vertical={true} />
-				<Dropdown
-					disabled={providerModelSelection === null}
-					menu={{
-						items: providerModelItems,
-						selectedKeys: selectedModelKey === undefined ? [] : [selectedModelKey],
-						onClick: handleProviderModelClick
-					}}
-					trigger={["click"]}
-				>
-					<Button
-						type="text"
-						className={styles.modelButton}
-					>
-						<span className={styles.modelButtonContent}>
-							<span className={styles.modelButtonText}>{selectedModelLabel}</span>
-						</span>
-					</Button>
-				</Dropdown>
-				<Button
-					type="text"
-					icon={<Icon name={isSending ? "stop" : "send"} className={styles.composerSendIcon} />}
-					className={styles.composerSendButton}
-					disabled={!isSending && draftMessage.trim().length === 0}
-					onClick={submitMessage}
-				/>
 				</div>
 			</div>
 		</div>

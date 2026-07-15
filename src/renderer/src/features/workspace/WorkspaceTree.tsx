@@ -10,6 +10,8 @@ import styles from "./WorkspaceTree.module.css";
 
 export type WorkspaceTreeProps = {
 	refreshToken?: number;
+	selectedSessionId?: string | null;
+	selectedWorkspaceId?: string | null;
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onSessionSelect?: (session: SessionMetadata) => void;
 	onSessionArchive?: (session: SessionMetadata) => void;
@@ -88,7 +90,26 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 	];
 }
 
-function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect, onSessionArchive }: WorkspaceTreeProps): React.JSX.Element {
+function getSelectedMenuKeys(selectedSessionId: string | null, selectedWorkspaceId: string | null, fallbackKeys: string[]): string[] {
+	if (selectedSessionId !== null) {
+		return [`session:${selectedSessionId}`];
+	}
+
+	if (selectedWorkspaceId !== null) {
+		return [`workspace:${selectedWorkspaceId}`];
+	}
+
+	return fallbackKeys;
+}
+
+function WorkspaceTree({
+	refreshToken = 0,
+	selectedSessionId = null,
+	selectedWorkspaceId = null,
+	onWorkspaceSelect,
+	onSessionSelect,
+	onSessionArchive
+}: WorkspaceTreeProps): React.JSX.Element {
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([]);
 	const [sessions, setSessions] = useState<SessionMetadata[]>([]);
 	const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
@@ -193,7 +214,6 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect, o
 				setWorkspaces(workspaceList.workspaces);
 				setSessions(sessionList.sessions);
 				setActiveWorkspaceId(workspaceList.active);
-				setSelectedMenuKeys([]);
 				setOpenWorkspaceKeys(workspaceList.workspaces.map((workspace: WorkspaceConfig): string => {
 					return `workspace:${workspace.id}`;
 				}));
@@ -233,6 +253,26 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect, o
 			}
 		});
 	}, [archivingSessionId, sessions, workspaces]);
+	const effectiveSelectedMenuKeys: string[] = getSelectedMenuKeys(selectedSessionId, selectedWorkspaceId, selectedMenuKeys);
+
+	useEffect((): void => {
+		if (selectedSessionId === null) {
+			return;
+		}
+
+		const selectedSession: SessionMetadata | undefined = sessions.find((session: SessionMetadata): boolean => {
+			return session.id === selectedSessionId;
+		});
+
+		if (selectedSession?.workspaceId === undefined) {
+			return;
+		}
+
+		const workspaceKey: string = `workspace:${selectedSession.workspaceId}`;
+		setOpenWorkspaceKeys((currentKeys: string[]): string[] => {
+			return currentKeys.includes(workspaceKey) ? currentKeys : [...currentKeys, workspaceKey];
+		});
+	}, [selectedSessionId, sessions]);
 
 	return (
 		<div className={styles.workspaceTreeRegion}>
@@ -262,7 +302,7 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect, o
 						mode="inline"
 						items={workspaceMenuItems}
 						openKeys={openWorkspaceKeys}
-						selectedKeys={selectedMenuKeys}
+						selectedKeys={effectiveSelectedMenuKeys}
 						onOpenChange={handleOpenChange}
 						onClick={handleMenuClick}
 					/>

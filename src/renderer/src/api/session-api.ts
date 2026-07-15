@@ -20,6 +20,20 @@ export type ArchiveSessionResult = {
 	metadata: SessionMetadata;
 };
 
+export type ArchivedSessionListResult = {
+	archivedSessions: SessionMetadata[];
+};
+
+export type RestoreArchivedSessionResult = {
+	restored: true;
+	metadata: SessionMetadata;
+};
+
+export type DeleteArchivedSessionResult = {
+	deletedArchived: true;
+	sessionId: string;
+};
+
 export async function fetchSessions(): Promise<SessionListResult> {
 	const client = await createBackendClient();
 
@@ -74,6 +88,28 @@ export async function archiveSession(sessionId: string): Promise<ArchiveSessionR
 	const client = await createBackendClient();
 
 	return client.request<ArchiveSessionResult>("session.archive", {
+		sessionId
+	});
+}
+
+export async function fetchArchivedSessions(): Promise<ArchivedSessionListResult> {
+	const client = await createBackendClient();
+
+	return client.request<ArchivedSessionListResult>("session.archived.list");
+}
+
+export async function restoreArchivedSession(sessionId: string): Promise<RestoreArchivedSessionResult> {
+	const client = await createBackendClient();
+
+	return client.request<RestoreArchivedSessionResult>("session.archived.restore", {
+		sessionId
+	});
+}
+
+export async function deleteArchivedSession(sessionId: string): Promise<DeleteArchivedSessionResult> {
+	const client = await createBackendClient();
+
+	return client.request<DeleteArchivedSessionResult>("session.archived.delete", {
 		sessionId
 	});
 }
