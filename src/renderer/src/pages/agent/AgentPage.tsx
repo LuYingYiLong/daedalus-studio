@@ -16,6 +16,7 @@ import styles from "./AgentPage.module.css";
 
 type AgentPageProps = {
 	workspaceRefreshToken: number;
+	isHome: boolean;
 	activeSessionId: string | null;
 	activeWorkspaceId: string | null;
 	chatTitle: string;
@@ -40,10 +41,18 @@ type AgentPageProps = {
 	skills: SkillSummary[];
 	isSending: boolean;
 	isApprovalModeSaving: boolean;
+	workspaceOptions: WorkspaceConfig[];
+	homeWorkspace: WorkspaceConfig | null;
+	workspaceFooterDisabled: boolean;
+	isWorkspaceAdding: boolean;
 	workbench: WorkbenchSnapshot | null;
 	activeWorkspace: WorkspaceConfig | null;
+	onNewSession: () => void;
 	onWorkspaceRefresh: () => void;
 	onWorkspaceSelect: (workspaceId: string) => void;
+	onHomeWorkspaceSelect: (workspaceId: string) => void;
+	onHomeWorkspaceAdd: () => void;
+	onHomeWorkspaceClear: () => void;
 	onSessionSelect: (session: SessionMetadata) => void;
 	onSessionArchive: (session: SessionMetadata) => void;
 	onWorkbenchPanelOpenChange: (open: boolean) => void;
@@ -70,6 +79,7 @@ type AgentPageProps = {
 
 function AgentPage({
 	workspaceRefreshToken,
+	isHome,
 	activeSessionId,
 	activeWorkspaceId,
 	chatTitle,
@@ -94,10 +104,18 @@ function AgentPage({
 	skills,
 	isSending,
 	isApprovalModeSaving,
+	workspaceOptions,
+	homeWorkspace,
+	workspaceFooterDisabled,
+	isWorkspaceAdding,
 	workbench,
 	activeWorkspace,
+	onNewSession,
 	onWorkspaceRefresh,
 	onWorkspaceSelect,
+	onHomeWorkspaceSelect,
+	onHomeWorkspaceAdd,
+	onHomeWorkspaceClear,
 	onSessionSelect,
 	onSessionArchive,
 	onWorkbenchPanelOpenChange,
@@ -125,7 +143,7 @@ function AgentPage({
 		<>
 			<aside className={styles.workspaceSidebar}>
 				<header className={styles.workspaceHeader}>
-					<Button type="text" block={true} className={styles.createSessionButton}>
+					<Button type="text" block={true} className={styles.createSessionButton} onClick={onNewSession}>
 						New session
 					</Button>
 				</header>
@@ -167,21 +185,39 @@ function AgentPage({
 					</Button>
 				</header>
 
-				<MessageList
-					blocks={timelineBlocks}
-					isLoading={isSessionLoading}
-					errorMessage={sessionError}
-					hasMoreBefore={hasMoreBefore}
-					hasMoreAfter={hasMoreAfter}
-					initialScrollToBottomKey={initialScrollToBottomKey}
-					onLoadMoreBefore={onLoadMoreBefore}
-					onLoadMoreAfter={onLoadMoreAfter}
-					retryDisabled={retryDisabled}
-					activeRetryRequestId={activeRetryRequestId}
-					onRetryEditStart={onRetryEditStart}
-					onRetryEditCancel={onRetryEditCancel}
-					onRetryFromUserMessage={onRetryFromUserMessage}
-				/>
+				{isHome ? (
+					<div className={styles.homePanel}>
+						<div className={styles.homeContent}>
+							<Typography.Title level={1} className={styles.homeTitle}>
+								Hi, how can I help with your Godot project?
+							</Typography.Title>
+							<Typography.Text className={styles.homeSubtitle}>
+								Choose a workspace or start without one.
+							</Typography.Text>
+							{sessionError !== null ? (
+								<Typography.Text type="danger" className={styles.homeError}>
+									{sessionError}
+								</Typography.Text>
+							) : null}
+						</div>
+					</div>
+				) : (
+					<MessageList
+						blocks={timelineBlocks}
+						isLoading={isSessionLoading}
+						errorMessage={sessionError}
+						hasMoreBefore={hasMoreBefore}
+						hasMoreAfter={hasMoreAfter}
+						initialScrollToBottomKey={initialScrollToBottomKey}
+						onLoadMoreBefore={onLoadMoreBefore}
+						onLoadMoreAfter={onLoadMoreAfter}
+						retryDisabled={retryDisabled}
+						activeRetryRequestId={activeRetryRequestId}
+						onRetryEditStart={onRetryEditStart}
+						onRetryEditCancel={onRetryEditCancel}
+						onRetryFromUserMessage={onRetryFromUserMessage}
+					/>
+				)}
 
 				<footer className={styles.composer}>
 					<Composer
@@ -197,10 +233,17 @@ function AgentPage({
 						skills={skills}
 						isSending={isSending}
 						isApprovalModeSaving={isApprovalModeSaving}
+						workspaceOptions={workspaceOptions}
+						selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
+						workspaceFooterDisabled={workspaceFooterDisabled}
+						isWorkspaceAdding={isWorkspaceAdding}
 						onMessageChange={onMessageChange}
 						onModeChange={onModeChange}
 						onApprovalModeChange={onApprovalModeChange}
 						onProviderModelChange={onProviderModelChange}
+						onWorkspaceSelect={onHomeWorkspaceSelect}
+						onWorkspaceAdd={onHomeWorkspaceAdd}
+						onWorkspaceClear={onHomeWorkspaceClear}
 						onRemoveContext={onRemoveContext}
 						onPinContext={onPinContext}
 						onClearUnpinnedContext={onClearUnpinnedContext}

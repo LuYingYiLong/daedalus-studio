@@ -31,6 +31,7 @@ declare global {
 					kind: "file" | "folder";
 				}>;
 			}>;
+			pickWorkspaceDirectory: () => Promise<string | null>;
 		};
 	}
 

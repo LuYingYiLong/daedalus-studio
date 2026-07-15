@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { BrowserWindow, dialog, ipcMain } from "electron";
 import { readdir } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
 
@@ -17,6 +17,8 @@ export type WorkspaceFsListChildrenParams = {
 export type WorkspaceFsListChildrenResult = {
 	entries: WorkspaceFsEntry[];
 };
+
+export type WorkspaceFsPickDirectoryResult = string | null;
 
 function assertInsideWorkspace(workspaceRoot: string, relativePath: string | undefined): { root: string; target: string; relativePath: string } {
 	const root: string = resolve(workspaceRoot);
@@ -69,8 +71,31 @@ export async function listWorkspaceChildren(params: WorkspaceFsListChildrenParam
 	return { entries };
 }
 
+export function getPickedWorkspaceDirectory(result: Electron.OpenDialogReturnValue): WorkspaceFsPickDirectoryResult {
+	if (result.canceled) {
+		return null;
+	}
+
+	return result.filePaths[0] ?? null;
+}
+
+export async function pickWorkspaceDirectory(owner: BrowserWindow | undefined): Promise<WorkspaceFsPickDirectoryResult> {
+	const options: Electron.OpenDialogOptions = {
+		title: "Select Godot project workspace",
+		properties: ["openDirectory"]
+	};
+	const result: Electron.OpenDialogReturnValue = owner === undefined
+		? await dialog.showOpenDialog(options)
+		: await dialog.showOpenDialog(owner, options);
+
+	return getPickedWorkspaceDirectory(result);
+}
+
 export function registerWorkspaceFsIpc(): void {
 	ipcMain.handle("workspace-fs:list-children", async (_event, params: WorkspaceFsListChildrenParams): Promise<WorkspaceFsListChildrenResult> => {
 		return listWorkspaceChildren(params);
+	});
+	ipcMain.handle("workspace-fs:pick-directory", async (event): Promise<WorkspaceFsPickDirectoryResult> => {
+		return pickWorkspaceDirectory(BrowserWindow.fromWebContents(event.sender) ?? undefined);
 	});
 }

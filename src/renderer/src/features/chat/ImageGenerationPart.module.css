@@ -1,7 +1,7 @@
 .root {
 	width: 100%;
 	margin: 8px 0;
-	padding: 10px;
+	padding: 8px;
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: 4px;
 	background: rgba(255, 255, 255, 0.035);
@@ -72,4 +72,8 @@
 	aspect-ratio: 1 / 1;
 	color: rgba(255, 255, 255, 0.48);
 	background: rgba(255, 255, 255, 0.04);
+}
+
+.alert {
+	border-radius: 4px;
 }

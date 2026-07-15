@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtempSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { listWorkspaceChildren } from "./workspace-fs";
+import { getPickedWorkspaceDirectory, listWorkspaceChildren } from "./workspace-fs";
 
 describe("workspace-fs", () => {
 	it("lists files and folders inside workspace root", async () => {
@@ -29,5 +29,19 @@ describe("workspace-fs", () => {
 			workspaceRoot: root,
 			relativePath: "../"
 		})).rejects.toThrow("outside workspace");
+	});
+
+	it("normalizes canceled workspace directory picks", () => {
+		expect(getPickedWorkspaceDirectory({
+			canceled: true,
+			filePaths: []
+		})).toBeNull();
+	});
+
+	it("normalizes selected workspace directory picks", () => {
+		expect(getPickedWorkspaceDirectory({
+			canceled: false,
+			filePaths: ["D:/GodotProjects/example"]
+		})).toBe("D:/GodotProjects/example");
 	});
 });

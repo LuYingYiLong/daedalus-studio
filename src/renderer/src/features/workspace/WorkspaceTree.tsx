@@ -256,6 +256,12 @@ function WorkspaceTree({
 	const effectiveSelectedMenuKeys: string[] = getSelectedMenuKeys(selectedSessionId, selectedWorkspaceId, selectedMenuKeys);
 
 	useEffect((): void => {
+		if (selectedSessionId === null && selectedWorkspaceId === null) {
+			setSelectedMenuKeys([]);
+		}
+	}, [selectedSessionId, selectedWorkspaceId]);
+
+	useEffect((): void => {
 		if (selectedSessionId === null) {
 			return;
 		}

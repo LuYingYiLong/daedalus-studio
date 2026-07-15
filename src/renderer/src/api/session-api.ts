@@ -1,12 +1,25 @@
 import { createBackendClient } from "./backend-client";
-import type { SessionListResult, SessionMetadata, SessionOpenResult, SessionTimelineResult } from "./types";
+import type { SessionListResult, SessionMetadata, SessionOpenResult, SessionTimelineResult, WorkbenchSnapshot } from "./types";
 import type { ChatMode } from "./chat-api";
+
+export type CreateSessionParams = {
+	title: string;
+	workspaceId?: string | null;
+	provider?: string;
+	model?: string;
+	chatMode?: ChatMode;
+	approvalMode?: "manual" | "auto-safe";
+};
 
 export type SaveSessionUiMetadataParams = {
 	provider?: string;
 	model?: string;
 	chatMode?: ChatMode;
 	approvalMode?: "manual" | "auto-safe";
+};
+
+export type CreateSessionResult = SessionMetadata & {
+	workbench: WorkbenchSnapshot;
 };
 
 export type SaveSessionResult = {
@@ -38,6 +51,12 @@ export async function fetchSessions(): Promise<SessionListResult> {
 	const client = await createBackendClient();
 
 	return client.request<SessionListResult>("session.list");
+}
+
+export async function createSession(params: CreateSessionParams): Promise<CreateSessionResult> {
+	const client = await createBackendClient();
+
+	return client.request<CreateSessionResult>("session.create", params);
 }
 
 export async function openSession(sessionId: string, limit: number = 100): Promise<SessionOpenResult> {

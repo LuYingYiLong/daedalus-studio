@@ -8,7 +8,7 @@ import type { ApprovalMode } from "@/api/approval-api";
 import type { ChatMode } from "@/api/chat-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
 import type { SkillSummary } from "@/api/skill-api";
-import type { AdditionalContextItem, WorkflowTodoSnapshot, WorkflowTodoStep } from "@/api/types";
+import type { AdditionalContextItem, WorkflowTodoSnapshot, WorkflowTodoStep, WorkspaceConfig } from "@/api/types";
 import type { ProviderModelInfo, ProviderModelSelection, ProviderModelSelectionProvider } from "@/api/provider-api";
 import AdditionalContextStrip from "@/features/bubble/AdditionalContextStrip";
 import { getWorkflowTodoSnapshotKey, mapWorkflowTodoStatusToStepStatus } from "./workflow-todo";
@@ -34,10 +34,17 @@ export type ComposerProps = {
 	skills?: SkillSummary[];
 	isSending?: boolean;
 	isApprovalModeSaving?: boolean;
+	workspaceOptions?: WorkspaceConfig[];
+	selectedWorkspace?: WorkspaceConfig | null;
+	workspaceFooterDisabled?: boolean;
+	isWorkspaceAdding?: boolean;
 	onMessageChange?: (message: string) => void;
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
 	onProviderModelChange?: (providerId: string, modelId: string) => void;
+	onWorkspaceSelect?: (workspaceId: string) => void;
+	onWorkspaceAdd?: () => void;
+	onWorkspaceClear?: () => void;
 	onRemoveContext?: (contextId: string) => void;
 	onPinContext?: (contextId: string, pinned: boolean) => void;
 	onClearUnpinnedContext?: () => void;
@@ -96,6 +103,9 @@ const modeItems: MenuProps["items"] = [
 		icon: <Icon name="plan" />
 	},
 ];
+
+const NO_WORKSPACE_KEY: string = "workspace:none";
+const ADD_WORKSPACE_KEY: string = "workspace:add";
 
 function isComposerMode(value: string): value is ChatMode {
 	return value === "ask" || value === "agent" || value === "plan";
@@ -205,6 +215,48 @@ function createProviderModelItems(selection: ProviderModelSelection | null): Men
 	});
 }
 
+function createWorkspaceKey(workspaceId: string): string {
+	return `workspace:${workspaceId}`;
+}
+
+function parseWorkspaceKey(key: string): string | null {
+	if (!key.startsWith("workspace:") || key === NO_WORKSPACE_KEY || key === ADD_WORKSPACE_KEY) {
+		return null;
+	}
+
+	return key.slice("workspace:".length);
+}
+
+function createWorkspaceFooterItems(workspaces: readonly WorkspaceConfig[]): MenuProps["items"] {
+	return [
+		...workspaces.map((workspace: WorkspaceConfig) => {
+			return {
+				key: createWorkspaceKey(workspace.id),
+				label: (
+					<span className={styles.workspaceMenuItem}>
+						<span className={styles.workspaceMenuName}>{workspace.name}</span>
+						<span className={styles.workspaceMenuPath}>{workspace.rootPath}</span>
+					</span>
+				),
+				icon: <Icon name="folder" />
+			};
+		}),
+		{
+			type: "divider" as const
+		},
+		{
+			key: NO_WORKSPACE_KEY,
+			label: "No workspace",
+			icon: <Icon name="close" />
+		},
+		{
+			key: ADD_WORKSPACE_KEY,
+			label: "Add workspace...",
+			icon: <Icon name="add" />
+		}
+	];
+}
+
 function getNativeTextArea(ref: TextAreaRef | null): HTMLTextAreaElement | null {
 	return ref?.resizableTextArea?.textArea ?? null;
 }
@@ -256,10 +308,17 @@ function Composer({
 	skills = [],
 	isSending = false,
 	isApprovalModeSaving = false,
+	workspaceOptions = [],
+	selectedWorkspace = null,
+	workspaceFooterDisabled = false,
+	isWorkspaceAdding = false,
 	onMessageChange,
 	onModeChange,
 	onApprovalModeChange,
 	onProviderModelChange,
+	onWorkspaceSelect,
+	onWorkspaceAdd,
+	onWorkspaceClear,
 	onRemoveContext,
 	onPinContext,
 	onClearUnpinnedContext,
@@ -293,9 +352,29 @@ function Composer({
 		}
 	};
 
+	const handleWorkspaceClick: MenuProps["onClick"] = ({ key }): void => {
+		const selectedKey: string = String(key);
+		if (selectedKey === NO_WORKSPACE_KEY) {
+			onWorkspaceClear?.();
+			return;
+		}
+		if (selectedKey === ADD_WORKSPACE_KEY) {
+			onWorkspaceAdd?.();
+			return;
+		}
+
+		const workspaceId: string | null = parseWorkspaceKey(selectedKey);
+		if (workspaceId !== null) {
+			onWorkspaceSelect?.(workspaceId);
+		}
+	};
+
 	const providerModelItems: MenuProps["items"] = useMemo((): MenuProps["items"] => {
 		return createProviderModelItems(providerModelSelection);
 	}, [providerModelSelection]);
+	const workspaceFooterItems: MenuProps["items"] = useMemo((): MenuProps["items"] => {
+		return createWorkspaceFooterItems(workspaceOptions);
+	}, [workspaceOptions]);
 	const selectedModel: SelectedModel | null = selectedProviderId === null || selectedModelId === null
 		? null
 		: {
@@ -306,6 +385,8 @@ function Composer({
 		? undefined
 		: createModelKey(selectedModel.provider, selectedModel.model);
 	const selectedModelLabel: string = getSelectedModelLabel(providerModelSelection, selectedModel);
+	const selectedWorkspaceKey: string = selectedWorkspace === null ? NO_WORKSPACE_KEY : createWorkspaceKey(selectedWorkspace.id);
+	const selectedWorkspaceLabel: string = selectedWorkspace?.name ?? "No workspace";
 	const approvalModeLabel: string = approvalMode === "auto-safe" ? "Auto Safe" : "Manual";
 	const hasCompletion: boolean = completionToken !== null && completionOptions.length > 0;
 	const workflowTodoSteps: WorkflowTodoStep[] = workflowTodoSnapshot?.steps ?? [];
@@ -746,6 +827,34 @@ function Composer({
 					</div>
 				</div>
 			</div>
+			<footer className={styles.footer}>
+				<Flex
+					align="start"
+					gap={8}
+					className={styles.workspaceFooterRow}
+				>
+					<Dropdown
+						disabled={workspaceFooterDisabled || isWorkspaceAdding}
+						menu={{
+							items: workspaceFooterItems,
+							selectedKeys: [selectedWorkspaceKey],
+							onClick: handleWorkspaceClick
+						}}
+						trigger={["click"]}
+					>
+						<Button
+							type="text"
+							size="small"
+							loading={isWorkspaceAdding}
+							disabled={workspaceFooterDisabled || isWorkspaceAdding}
+							icon={<Icon name={selectedWorkspace === null ? "close" : "folder"} />}
+							className={styles.workspaceFooterButton}
+						>
+							<span className={styles.workspaceFooterText}>{selectedWorkspaceLabel}</span>
+						</Button>
+					</Dropdown>
+				</Flex>
+			</footer>
 		</div>
 	);
 }

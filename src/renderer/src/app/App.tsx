@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { selectWorkspace } from "@/api/workspace-api";
+import { configureEnvironment, fetchWorkspaces, selectWorkspace } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import type { AdditionalContextItem, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
-import { fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, type SaveSessionUiMetadataParams } from "@/api/session-api";
+import { createSession, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, type SaveSessionUiMetadataParams } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import { createBackendClient } from "@/api/backend-client";
@@ -88,6 +88,26 @@ function getIsSending(workbench: WorkbenchSnapshot | null): boolean {
 	return status === "streaming" || status === "approval" || status === "paused" || status === "cancelling";
 }
 
+type HomeDraft = {
+	message: string;
+	workspaceId: string | null;
+	workspace: WorkspaceConfig | null;
+	chatMode: ChatMode;
+	providerId: string | null;
+	modelId: string | null;
+};
+
+function createHomeDraft(): HomeDraft {
+	return {
+		message: "",
+		workspaceId: null,
+		workspace: null,
+		chatMode: "ask",
+		providerId: null,
+		modelId: null
+	};
+}
+
 function createOptimisticUserBlock(requestId: string, message: string, additionalContext: AdditionalContextItem[]): TimelineBlock {
 	const contentChars: number = message.length + additionalContext.reduce((total: number, item: AdditionalContextItem): number => {
 		return total + item.title.length + (item.subtitle?.length ?? 0);
@@ -163,6 +183,11 @@ function trimTimelineFromRequest(page: TimelinePageState, requestId: string): Ti
 function App(): React.JSX.Element {
 	const [activePage, setActivePage] = useState<AppPageKey>("agent");
 	const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState<number>(0);
+	const [isNewSessionHome, setIsNewSessionHome] = useState<boolean>(true);
+	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() => createHomeDraft());
+	const [homeWorkspaceOptions, setHomeWorkspaceOptions] = useState<WorkspaceConfig[]>([]);
+	const [isWorkspaceAdding, setIsWorkspaceAdding] = useState<boolean>(false);
+	const [isHomeSubmitting, setIsHomeSubmitting] = useState<boolean>(false);
 	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 	const [activeSessionMetadata, setActiveSessionMetadata] = useState<SessionMetadata | null>(null);
 	const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceConfig | null>(null);
@@ -223,6 +248,16 @@ function App(): React.JSX.Element {
 			console.error("[App] load skills failed", error);
 		} finally {
 			skillsLoadingRef.current = false;
+		}
+	}, []);
+
+	const loadHomeWorkspaces = useCallback(async (): Promise<void> => {
+		try {
+			const result = await fetchWorkspaces();
+
+			setHomeWorkspaceOptions(result.workspaces);
+		} catch (error: unknown) {
+			console.error("[App] load home workspaces failed", error);
 		}
 	}, []);
 
@@ -403,13 +438,19 @@ function App(): React.JSX.Element {
 	}, [loadSlashCommands]);
 
 	useEffect((): void => {
-		if (activeSessionId === null && activeWorkspace === null) {
+		if (isNewSessionHome) {
+			void loadHomeWorkspaces();
+		}
+	}, [isNewSessionHome, loadHomeWorkspaces, workspaceRefreshToken]);
+
+	useEffect((): void => {
+		if (activeSessionId === null && activeWorkspace === null && homeDraft.workspace === null) {
 			setSkills([]);
 			return;
 		}
 
 		void loadSkills();
-	}, [activeSessionId, activeWorkspace?.id, loadSkills]);
+	}, [activeSessionId, activeWorkspace?.id, homeDraft.workspace?.id, loadSkills]);
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -475,6 +516,92 @@ function App(): React.JSX.Element {
 		}
 	}
 
+	function handleNewSession(): void {
+		takePendingWorkbenchPatch();
+		submittedComposerTextRef.current = null;
+		setIsNewSessionHome(true);
+		setHomeDraft(createHomeDraft());
+		setActiveSessionId(null);
+		setActiveSessionMetadata(null);
+		setActiveWorkspace(null);
+		setTimelinePage(emptyTimelinePage);
+		setWorkbench(null);
+		setWorkflowTodoSnapshot(null);
+		setActiveRetryRequestId(null);
+		setSessionError(null);
+		void loadHomeWorkspaces();
+	}
+
+	async function handleHomeWorkspaceSelect(workspaceId: string): Promise<void> {
+		try {
+			const workspace = await selectWorkspace(workspaceId);
+
+			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
+				...currentDraft,
+				workspaceId: workspace.id,
+				workspace
+			}));
+			setActiveWorkspace(workspace);
+			setSessionError(null);
+		} catch (error: unknown) {
+			setSessionError(error instanceof Error ? error.message : "Failed to select workspace");
+			console.error("[App] select home workspace failed", error);
+		}
+	}
+
+	function handleHomeWorkspaceClear(): void {
+		setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
+			...currentDraft,
+			workspaceId: null,
+			workspace: null
+		}));
+		setActiveWorkspace(null);
+	}
+
+	async function handleHomeWorkspaceAdd(): Promise<void> {
+		if (isWorkspaceAdding) {
+			return;
+		}
+
+		try {
+			setIsWorkspaceAdding(true);
+			const directory: string | null = await window.electronAPI.workspaceFs.pickWorkspaceDirectory();
+			if (directory === null) {
+				return;
+			}
+
+			const result = await configureEnvironment({ godotProjectPath: directory });
+			const workspace: WorkspaceConfig | null = result.workspace;
+			if (workspace === null) {
+				throw new Error("Workspace registration did not return a workspace");
+			}
+
+			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
+				...currentDraft,
+				workspaceId: workspace.id,
+				workspace
+			}));
+			setActiveWorkspace(workspace);
+			setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
+				const existingIndex: number = currentWorkspaces.findIndex((currentWorkspace: WorkspaceConfig): boolean => currentWorkspace.id === workspace.id);
+				if (existingIndex < 0) {
+					return [...currentWorkspaces, workspace];
+				}
+
+				const nextWorkspaces: WorkspaceConfig[] = [...currentWorkspaces];
+				nextWorkspaces[existingIndex] = workspace;
+				return nextWorkspaces;
+			});
+			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+			setSessionError(null);
+		} catch (error: unknown) {
+			setSessionError(error instanceof Error ? error.message : "Failed to add workspace");
+			console.error("[App] add home workspace failed", error);
+		} finally {
+			setIsWorkspaceAdding(false);
+		}
+	}
+
 	async function handleSessionSelect(session: SessionMetadata): Promise<void> {
 		const sessionId: string = session.id;
 		console.info("[App] session selected", { sessionId });
@@ -482,6 +609,7 @@ function App(): React.JSX.Element {
 		try {
 			setIsSessionLoading(true);
 			setSessionError(null);
+			setIsNewSessionHome(false);
 			setActiveSessionId(sessionId);
 			setActiveSessionMetadata(session);
 			setTimelinePage(emptyTimelinePage);
@@ -527,6 +655,8 @@ function App(): React.JSX.Element {
 		setWorkbench(null);
 		setWorkflowTodoSnapshot(null);
 		setSessionError(null);
+		setIsNewSessionHome(true);
+		setHomeDraft(createHomeDraft());
 	}
 
 	async function persistSessionUiMetadata(params: SaveSessionUiMetadataParams): Promise<void> {
@@ -555,6 +685,14 @@ function App(): React.JSX.Element {
 	}
 
 	async function handleModeChange(nextMode: ChatMode): Promise<void> {
+		if (isNewSessionHome) {
+			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
+				...currentDraft,
+				chatMode: nextMode
+			}));
+			return;
+		}
+
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 			return currentWorkbench === null
 				? currentWorkbench
@@ -598,6 +736,15 @@ function App(): React.JSX.Element {
 	}
 
 	async function handleProviderModelChange(providerId: string, modelId: string): Promise<void> {
+		if (isNewSessionHome) {
+			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
+				...currentDraft,
+				providerId,
+				modelId
+			}));
+			return;
+		}
+
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 			return currentWorkbench === null
 				? currentWorkbench
@@ -618,12 +765,125 @@ function App(): React.JSX.Element {
 			submittedComposerTextRef.current = null;
 		}
 
+		if (isNewSessionHome) {
+			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
+				...currentDraft,
+				message: nextText
+			}));
+			return;
+		}
+
 		queueWorkbenchPatch({ composer: { text: nextText } });
 	}
 
+	async function handleHomeComposerSubmit(nextMessage: string): Promise<void> {
+		const message: string = nextMessage.trim();
+		if (message.length === 0 || isHomeSubmitting) {
+			return;
+		}
+
+		const requestId: string = createChatRequestId();
+		const providerId: string | null = homeDraft.providerId ?? providerModelSelection?.activeModel.providerId ?? null;
+		const modelId: string | null = homeDraft.modelId ?? providerModelSelection?.activeModel.modelId ?? null;
+		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
+		let sessionCreated: boolean = false;
+
+		try {
+			setIsHomeSubmitting(true);
+			setSessionError(null);
+			setActiveRetryRequestId(null);
+			submittedComposerTextRef.current = {
+				requestId,
+				text: message
+			};
+
+			const created = await createSession({
+				title: "New session",
+				workspaceId: homeDraft.workspaceId,
+				provider: providerId ?? undefined,
+				model: modelId ?? undefined,
+				chatMode: homeDraft.chatMode,
+				approvalMode
+			});
+			sessionCreated = true;
+
+			setIsNewSessionHome(false);
+			setActiveSessionId(created.id);
+			setActiveSessionMetadata(created);
+			setActiveWorkspace(homeDraft.workspace);
+			setTimelinePage(emptyTimelinePage);
+			setWorkbench(created.workbench);
+			setWorkflowTodoSnapshot(null);
+			setHomeDraft(createHomeDraft());
+			applyOptimisticSend(requestId, message, created.workbench.composer.additionalContext);
+
+			await sendChatMessage({
+				requestId,
+				message,
+				mode: created.workbench.composer.chatMode ?? homeDraft.chatMode,
+				additionalContext: created.workbench.composer.additionalContext,
+				skillRefs
+			});
+			await refreshLatestTimeline(created.id);
+			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		} catch (error: unknown) {
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to start new session";
+
+			if (submittedComposerTextRef.current?.requestId === requestId) {
+				submittedComposerTextRef.current = null;
+			}
+			if (!sessionCreated) {
+				setIsNewSessionHome(true);
+				setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
+					...currentDraft,
+					message
+				}));
+			}
+			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+				return currentWorkbench === null
+					? currentWorkbench
+					: {
+						...currentWorkbench,
+						composer: {
+							...currentWorkbench.composer,
+							text: message
+						},
+						activeRun: currentWorkbench.activeRun.requestId === requestId
+							? { status: "idle" }
+							: currentWorkbench.activeRun
+					};
+			});
+			setSessionError(errorMessage);
+			if (sessionCreated) {
+				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+					return {
+						...currentPage,
+						blocks: applyBackendEventToTimeline(currentPage.blocks, {
+							type: "event",
+							id: requestId,
+							event: "agent.run.error",
+							data: {
+								code: "frontend_send_error",
+								message: errorMessage
+							}
+						})
+					};
+				});
+			}
+			console.error("[App] start new session failed", error);
+		} finally {
+			setIsHomeSubmitting(false);
+		}
+	}
+
 	async function handleComposerSubmit(nextMessage: string): Promise<void> {
+		if (isNewSessionHome) {
+			await handleHomeComposerSubmit(nextMessage);
+			return;
+		}
+
 		if (activeSessionId === null || workbench === null) {
-			setSessionError("请先打开一个会话再发送消息");
+			setSessionError("Please open session first before sending a message");
 			return;
 		}
 
@@ -769,12 +1029,13 @@ function App(): React.JSX.Element {
 		}
 	}
 
-	async function refreshLatestTimeline(): Promise<void> {
-		if (activeSessionId === null) {
+	async function refreshLatestTimeline(sessionIdOverride?: string): Promise<void> {
+		const sessionId: string | null = sessionIdOverride ?? activeSessionId;
+		if (sessionId === null) {
 			return;
 		}
 
-		const timeline: SessionTimelineResult = await fetchSessionTimeline(activeSessionId);
+		const timeline: SessionTimelineResult = await fetchSessionTimeline(sessionId);
 
 		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 			return mergeOptimisticUserBlocks(currentPage, createTimelinePageFromTimelineResult(timeline));
@@ -854,11 +1115,20 @@ function App(): React.JSX.Element {
 		}
 	}
 
-	const selectedProviderId: string | null = workbench?.composer.provider ?? providerModelSelection?.activeModel.providerId ?? null;
-	const selectedModelId: string | null = workbench?.composer.model ?? providerModelSelection?.activeModel.modelId ?? null;
+	const selectedProviderId: string | null = isNewSessionHome
+		? homeDraft.providerId ?? providerModelSelection?.activeModel.providerId ?? null
+		: workbench?.composer.provider ?? providerModelSelection?.activeModel.providerId ?? null;
+	const selectedModelId: string | null = isNewSessionHome
+		? homeDraft.modelId ?? providerModelSelection?.activeModel.modelId ?? null
+		: workbench?.composer.model ?? providerModelSelection?.activeModel.modelId ?? null;
 	const timelineBlocks: TimelineBlock[] = timelinePage.blocks;
-	const chatTitle: string = getSessionTitle(activeSessionMetadata, activeSessionId);
+	const chatTitle: string = isNewSessionHome ? "New session" : getSessionTitle(activeSessionMetadata, activeSessionId);
 	const initialScrollToBottomKey: string = activeSessionId === null ? "" : `${activeSessionId}:${timelinePage.blockCount}`;
+	const composerMessage: string = isNewSessionHome ? homeDraft.message : workbench?.composer.text ?? "";
+	const composerMode: ChatMode = isNewSessionHome ? homeDraft.chatMode : getChatMode(workbench);
+	const composerContextItems: AdditionalContextItem[] = isNewSessionHome ? [] : workbench?.composer.additionalContext ?? [];
+	const displayedWorkspace: WorkspaceConfig | null = isNewSessionHome ? homeDraft.workspace : activeWorkspace;
+	const composerIsSending: boolean = getIsSending(workbench) || approvalAction !== null || isHomeSubmitting;
 
 	return (
 		<main className={`${styles.shell} ${activePage === "agent" ? styles.agentShell : styles.pageShell} ${activePage === "agent" && workbenchPanelOpen ? styles.shellWithPanel : ""}`}>
@@ -866,8 +1136,9 @@ function App(): React.JSX.Element {
 			{activePage === "agent" ? (
 				<AgentPage
 					workspaceRefreshToken={workspaceRefreshToken}
+					isHome={isNewSessionHome}
 					activeSessionId={activeSessionId}
-					activeWorkspaceId={activeSessionMetadata?.workspaceId ?? activeWorkspace?.id ?? null}
+					activeWorkspaceId={isNewSessionHome ? homeDraft.workspaceId : activeSessionMetadata?.workspaceId ?? activeWorkspace?.id ?? null}
 					chatTitle={chatTitle}
 					workbenchPanelOpen={workbenchPanelOpen}
 					timelineBlocks={timelineBlocks}
@@ -876,28 +1147,40 @@ function App(): React.JSX.Element {
 					hasMoreBefore={timelinePage.hasMoreBefore}
 					hasMoreAfter={timelinePage.hasMoreAfter}
 					initialScrollToBottomKey={initialScrollToBottomKey}
-					retryDisabled={getIsSending(workbench) || approvalAction !== null || isSessionLoading}
+					retryDisabled={composerIsSending || isSessionLoading}
 					activeRetryRequestId={activeRetryRequestId}
 					providerModelSelection={providerModelSelection}
 					selectedProviderId={selectedProviderId}
 					selectedModelId={selectedModelId}
-					message={workbench?.composer.text ?? ""}
-					contextItems={workbench?.composer.additionalContext ?? []}
+					message={composerMessage}
+					contextItems={composerContextItems}
 					workflowTodoSnapshot={workflowTodoSnapshot}
-					mode={getChatMode(workbench)}
+					mode={composerMode}
 					approvalMode={approvalMode}
 					slashCommands={slashCommands}
 					skills={skills}
-					isSending={getIsSending(workbench) || approvalAction !== null}
+					isSending={composerIsSending}
 					isApprovalModeSaving={isApprovalModeSaving}
+					workspaceOptions={homeWorkspaceOptions}
+					homeWorkspace={homeDraft.workspace}
+					workspaceFooterDisabled={!isNewSessionHome || isHomeSubmitting}
+					isWorkspaceAdding={isWorkspaceAdding}
 					workbench={workbench}
-					activeWorkspace={activeWorkspace}
+					activeWorkspace={displayedWorkspace}
+					onNewSession={handleNewSession}
 					onWorkspaceRefresh={(): void => {
 						setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 					}}
 					onWorkspaceSelect={(workspaceId: string): void => {
-						void handleWorkspaceSelect(workspaceId);
+						void (isNewSessionHome ? handleHomeWorkspaceSelect(workspaceId) : handleWorkspaceSelect(workspaceId));
 					}}
+					onHomeWorkspaceSelect={(workspaceId: string): void => {
+						void handleHomeWorkspaceSelect(workspaceId);
+					}}
+					onHomeWorkspaceAdd={(): void => {
+						void handleHomeWorkspaceAdd();
+					}}
+					onHomeWorkspaceClear={handleHomeWorkspaceClear}
 					onSessionSelect={handleSessionSelect}
 					onSessionArchive={handleSessionArchive}
 					onWorkbenchPanelOpenChange={setWorkbenchPanelOpen}

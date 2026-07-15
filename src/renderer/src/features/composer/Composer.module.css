@@ -21,14 +21,10 @@
 	z-index: 18;
 	max-height: min(360px, 45vh);
 	overflow: hidden;
-	border: 1px solid rgba(255, 255, 255, 0.14);
-	border-radius: 8px;
-	background: rgb(31, 31, 31);
-	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
 }
 
 .todoCollapse {
-	background: transparent;
+	height: 16px;
 }
 
 .todoCollapse :global(.ant-collapse-header) {
@@ -69,7 +65,7 @@
 	padding: 8px 8px 42px;
 	border: 1px solid rgba(255, 255, 255, 0.14);
 	border-radius: 8px;
-	background: rgba(255, 255, 255, 0.03);
+	background: #1b1b1b;
 	transition: border-color 0.15s;
 }
 
@@ -87,7 +83,7 @@
 	max-height: 210px;
 	padding: 5px 0;
 	overflow: hidden;
-	border: 1px solid rgba(255, 255, 255, 0.14);
+	border: 1px solid #ffffff24;
 	border-radius: 8px;
 	background: rgb(31, 31, 31);
 	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
@@ -126,7 +122,7 @@
 }
 
 .completionDescription {
-	color: rgba(255, 255, 255, 0.56);
+	color: #ffffff8f;
 	font-size: 12px;
 }
 
@@ -249,4 +245,57 @@
 	line-height: 1.2;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.footer {
+	background-color: #ffffff24;
+	padding: 4px;
+	border-radius: 0px 0px 8px 8px;
+	margin-top: -6px;
+	min-height: 42px;
+}
+
+.workspaceFooterRow {
+	padding-top: 6px;
+	min-width: 0;
+}
+
+.workspaceFooterButton {
+	min-width: 0;
+	max-width: min(360px, 58vw);
+	height: 26px;
+	padding: 0 8px;
+}
+
+.workspaceFooterButton svg {
+	width: 14px;
+	height: 14px;
+}
+
+.workspaceFooterText {
+	display: block;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.workspaceMenuItem {
+	display: grid;
+	gap: 2px;
+	min-width: 220px;
+	max-width: 420px;
+}
+
+.workspaceMenuName,
+.workspaceMenuPath {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.workspaceMenuPath {
+	color: rgb(140, 140, 140);
+	font-size: 11px;
+	line-height: 1.2;
 }

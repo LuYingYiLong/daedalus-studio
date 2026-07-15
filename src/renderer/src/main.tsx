@@ -31,7 +31,11 @@ createRoot(rootElement).render(
 						itemHeight: 28,
 						itemPaddingInline: 8,
 						subMenuItemBg: "#ffffff00",
-					}
+					},
+					Alert: {
+						defaultPadding: 8,
+						withDescriptionPadding: 8,
+					},
 				}
 			}}
 		>

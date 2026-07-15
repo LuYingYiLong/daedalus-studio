@@ -45,7 +45,7 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 					key: "thinking",
 					label: part.done ? "Thinking" : "Thinking...",
 					children: (
-						<div className="markdown-body">
+						<div className="markdown-body" style={{userSelect: "text"}}>
 							<Markdown remarkPlugins={[remarkGfm]}>
 								{part.text}
 							</Markdown>

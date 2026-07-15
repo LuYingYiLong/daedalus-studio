@@ -90,7 +90,7 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 			<section className={styles.root}>
 				<div className={styles.header}>
 					<div className={styles.title}>
-						<Typography.Text strong={true}>Generating images</Typography.Text>
+						<Typography.Title level={4} className={styles.title}>Generating images</Typography.Title>
 						<Typography.Text className={styles.prompt}>{part.prompt}</Typography.Text>
 					</div>
 					<Spin size="small" />
@@ -102,7 +102,13 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 	if (part.status === "failed") {
 		return (
 			<section className={styles.root}>
-				<Alert type="error" showIcon={true} message="Image generation failed" description={part.error ?? "Unknown error"} />
+				<Alert
+					className={styles.alert}
+					type="error"
+					showIcon={true}
+					title="Image generation failed"
+					description={part.error ?? "Unknown error"}
+				/>
 			</section>
 		);
 	}
@@ -117,7 +123,7 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 				</div>
 			</div>
 			{errorMessage !== null ? (
-				<Alert type="warning" showIcon={true} message="Image preview unavailable" description={errorMessage} />
+				<Alert type="warning" showIcon={true} title="Image preview unavailable" description={errorMessage} />
 			) : null}
 			<Image.PreviewGroup
 				items={previewItems}

@@ -34,6 +34,7 @@ function StatusPart({ part }: StatusPartProps): React.JSX.Element | null {
 
 	return (
 		<Alert
+			className={styles.alert}
 			type={getAlertType(part.status)}
 			title={title}
 			description={details.length > 0 ? details : undefined}
