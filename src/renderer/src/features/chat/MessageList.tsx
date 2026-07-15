@@ -5,7 +5,7 @@ import type { RetryUserMessagePayload } from "../bubble/UserBubble";
 import styles from "./MessageList.module.css";
 import { formatElapsedTime, formatShortDateTime } from "@/utils/time-format";
 import { Spin, Alert } from "antd";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
 	areVisibleRangesEqual,
 	calculateVisibleRange,
@@ -435,4 +435,4 @@ function MessageList({
 	);
 }
 
-export default MessageList;
+export default memo(MessageList);

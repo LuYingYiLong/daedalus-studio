@@ -123,6 +123,86 @@ function appendToolPart(parts: TimelineBodyPart[], event: BackendEvent): Timelin
 	}];
 }
 
+function getToolCallKey(data: Record<string, unknown>, event: BackendEvent): string {
+	return getStringValue(data, "toolCallId")
+		|| getStringValue(data, "approvalId")
+		|| `${getStringValue(data, "toolName") || "tool"}:${event.id}`;
+}
+
+function getImageGenerationPrompt(data: Record<string, unknown>): string {
+	const args: unknown = data.args;
+	if (isRecord(args)) {
+		return getStringValue(args, "prompt");
+	}
+	const imageGeneration: unknown = data.imageGeneration;
+	if (isRecord(imageGeneration)) {
+		return getStringValue(imageGeneration, "prompt");
+	}
+	return "";
+}
+
+function appendImageGenerationPart(parts: TimelineBodyPart[], event: BackendEvent): TimelineBodyPart[] {
+	const data: Record<string, unknown> = getEventData(event);
+	if (getStringValue(data, "toolName") !== "mcp_image_generate") {
+		return parts;
+	}
+
+	const toolCallId: string = getToolCallKey(data, event);
+	let nextPart: Extract<TimelineBodyPart, { type: "image_generation" }> | null = null;
+
+	if (event.event === "agent.tool.call" || event.event === "tool.call") {
+		nextPart = {
+			type: "image_generation",
+			status: "running",
+			toolCallId,
+			prompt: getImageGenerationPrompt(data)
+		};
+	} else if (event.event === "agent.tool.result" || event.event === "tool.result") {
+		const imageGeneration: unknown = data.imageGeneration;
+		if (!isRecord(imageGeneration)) {
+			return parts;
+		}
+		const artifactsValue: unknown = imageGeneration.artifacts;
+		nextPart = {
+			type: "image_generation",
+			status: "completed",
+			toolCallId,
+			prompt: getStringValue(imageGeneration, "prompt") || getImageGenerationPrompt(data),
+			provider: getStringValue(imageGeneration, "provider"),
+			model: getStringValue(imageGeneration, "model"),
+			artifacts: Array.isArray(artifactsValue)
+				? artifactsValue.filter(isRecord) as Extract<TimelineBodyPart, { type: "image_generation" }>["artifacts"]
+				: []
+		};
+	} else if (event.event === "agent.tool.error" || event.event === "tool.error") {
+		nextPart = {
+			type: "image_generation",
+			status: "failed",
+			toolCallId,
+			prompt: getImageGenerationPrompt(data),
+			error: getStringValue(data, "message")
+		};
+	}
+
+	if (nextPart === null) {
+		return parts;
+	}
+
+	let replaced: boolean = false;
+	const nextParts: TimelineBodyPart[] = parts.map((part: TimelineBodyPart): TimelineBodyPart => {
+		if (part.type !== "image_generation" || part.toolCallId !== toolCallId) {
+			return part;
+		}
+		replaced = true;
+		return {
+			...nextPart,
+			prompt: nextPart.prompt.length > 0 ? nextPart.prompt : part.prompt
+		};
+	});
+
+	return replaced ? nextParts : [...parts, nextPart];
+}
+
 function appendSummaryStartPart(parts: TimelineBodyPart[], event: BackendEvent): TimelineBodyPart[] {
 	const data: Record<string, unknown> = getEventData(event);
 	const stepRunId: string = getStringValue(data, "stepRunId");
@@ -174,7 +254,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 			code: getStringValue(data, "code")
 		}];
 	} else if (event.event.startsWith("agent.tool.") || event.event.startsWith("tool.")) {
-		nextParts = appendToolPart(nextParts, event);
+		nextParts = appendImageGenerationPart(appendToolPart(nextParts, event), event);
 	} else if (event.event === "plan.generated" || event.event === "plan.revised") {
 		const planId: string = getStringValue(data, "planId");
 

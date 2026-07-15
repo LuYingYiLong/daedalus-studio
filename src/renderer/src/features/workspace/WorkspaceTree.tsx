@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchSessions } from "@/api/session-api";
+import type { MouseEvent } from "react";
+import { archiveSession, fetchSessions } from "@/api/session-api";
 import { fetchWorkspaces } from "@/api/workspace-api";
-import { Menu, Typography } from "antd";
+import { Button, Menu, Tooltip, Typography } from "antd";
 import type { MenuProps } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/api/types";
 import { Icon } from "@/assets/icons";
@@ -11,19 +12,42 @@ export type WorkspaceTreeProps = {
 	refreshToken?: number;
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onSessionSelect?: (session: SessionMetadata) => void;
+	onSessionArchive?: (session: SessionMetadata) => void;
 };
 
 type WorkspaceMenuItem = NonNullable<MenuProps["items"]>[number];
 type WorkspaceMenuItems = NonNullable<MenuProps["items"]>;
 
-function createSessionMenuItem(session: SessionMetadata): WorkspaceMenuItem {
+type CreateSessionMenuItemOptions = {
+	archivingSessionId: string | null;
+	onArchive: (session: SessionMetadata, event: MouseEvent<HTMLElement>) => void;
+};
+
+function createSessionMenuItem(session: SessionMetadata, options: CreateSessionMenuItemOptions): WorkspaceMenuItem {
+	const isArchiving: boolean = options.archivingSessionId === session.id;
+
 	return {
 		key: `session:${session.id}`,
-		label: session.title
+		label: (
+			<span className={styles.sessionMenuItem}>
+				<span className={styles.sessionTitle}>{session.title}</span>
+				<Tooltip title="Archive session" placement="right">
+					<Button
+						type="text"
+						size="small"
+						aria-label={`Archive ${session.title}`}
+						className={styles.archiveButton}
+						icon={<Icon name="archive" />}
+						loading={isArchiving}
+						onClick={(event: MouseEvent<HTMLElement>): void => options.onArchive(session, event)}
+					/>
+				</Tooltip>
+			</span>
+		)
 	};
 }
 
-function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: SessionMetadata[]): WorkspaceMenuItems {
+function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: SessionMetadata[], options: CreateSessionMenuItemOptions): WorkspaceMenuItems {
 	const workspaceIds: Set<string> = new Set(workspaces.map((workspace: WorkspaceConfig): string => workspace.id));
 	const workspaceItems: WorkspaceMenuItems = workspaces.map((workspace: WorkspaceConfig): WorkspaceMenuItem => {
 		const workspaceSessions: SessionMetadata[] = sessions.filter((session: SessionMetadata): boolean => {
@@ -35,7 +59,7 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 			label: workspace.name,
 			icon: <Icon name="folder" />,
 			children: workspaceSessions.length > 0
-				? workspaceSessions.map(createSessionMenuItem)
+				? workspaceSessions.map((session: SessionMetadata): WorkspaceMenuItem => createSessionMenuItem(session, options))
 				: [
 					{
 						key: `workspace:${workspace.id}:empty`,
@@ -59,12 +83,12 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 			key: "session-group:unmatched",
 			label: workspaces.length === 0 ? "Sessions" : "Other sessions",
 			type: "group",
-			children: unmatchedSessions.map(createSessionMenuItem)
+			children: unmatchedSessions.map((session: SessionMetadata): WorkspaceMenuItem => createSessionMenuItem(session, options))
 		}
 	];
 }
 
-function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }: WorkspaceTreeProps): React.JSX.Element {
+function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect, onSessionArchive }: WorkspaceTreeProps): React.JSX.Element {
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([]);
 	const [sessions, setSessions] = useState<SessionMetadata[]>([]);
 	const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
@@ -73,6 +97,7 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }:
 	const [isWorkspaceLoading, setIsWorkspaceLoading] = useState<boolean>(true);
 	const [workspaceError, setWorkspaceError] = useState<string | null>(null);
 	const [reloadIndex, setReloadIndex] = useState<number>(0);
+	const [archivingSessionId, setArchivingSessionId] = useState<string | null>(null);
 
 	const handleMenuClick: MenuProps["onClick"] = ({ key }): void => {
 		const selectedKey: string = String(key);
@@ -113,6 +138,31 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }:
 		setActiveWorkspaceId(workspaceId);
 		onWorkspaceSelect?.(workspaceId);
 	};
+
+	async function handleArchiveSession(session: SessionMetadata, event: MouseEvent<HTMLElement>): Promise<void> {
+		event.preventDefault();
+		event.stopPropagation();
+
+		if (archivingSessionId !== null) {
+			return;
+		}
+
+		try {
+			setArchivingSessionId(session.id);
+			await archiveSession(session.id);
+			setSessions((currentSessions: SessionMetadata[]): SessionMetadata[] => {
+				return currentSessions.filter((currentSession: SessionMetadata): boolean => currentSession.id !== session.id);
+			});
+			setSelectedMenuKeys((currentKeys: string[]): string[] => {
+				return currentKeys.filter((key: string): boolean => key !== `session:${session.id}`);
+			});
+			onSessionArchive?.(session);
+		} catch (error: unknown) {
+			setWorkspaceError(error instanceof Error ? error.message : "归档会话失败");
+		} finally {
+			setArchivingSessionId(null);
+		}
+	}
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -176,8 +226,13 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }:
 	}, [refreshToken, reloadIndex]);
 
 	const workspaceMenuItems: WorkspaceMenuItems = useMemo((): WorkspaceMenuItems => {
-		return createWorkspaceMenuItems(workspaces, sessions);
-	}, [sessions, workspaces]);
+		return createWorkspaceMenuItems(workspaces, sessions, {
+			archivingSessionId,
+			onArchive: (session: SessionMetadata, event: MouseEvent<HTMLElement>): void => {
+				void handleArchiveSession(session, event);
+			}
+		});
+	}, [archivingSessionId, sessions, workspaces]);
 
 	return (
 		<div className={styles.workspaceTreeRegion}>
@@ -201,7 +256,7 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }:
 				</Typography.Text>
 			) : (
 				<Menu
-					className={"daedalus-compact-menu"}
+					className={`daedalus-compact-menu ${styles.menu}`}
 					inlineIndent={8}
 					mode="inline"
 					items={workspaceMenuItems}

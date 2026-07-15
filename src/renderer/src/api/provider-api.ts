@@ -27,6 +27,7 @@ export type ProviderModelRouting = {
 	imageRecognition: ProviderTaskModelRef | null;
 	workflowPlanner: ProviderTaskModelRef | null;
 	sessionTitle: ProviderTaskModelRef | null;
+	imageGeneration: ProviderTaskModelRef | null;
 };
 
 export type ProviderModelInfo = {
@@ -51,6 +52,7 @@ export type ProviderModelCapabilities = {
 	tools?: boolean | undefined;
 	webSearch?: boolean | undefined;
 	vision?: boolean | undefined;
+	imageGeneration?: boolean | undefined;
 };
 
 export type ProviderModelSelectionProvider = {

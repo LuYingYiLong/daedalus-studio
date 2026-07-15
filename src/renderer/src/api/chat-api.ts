@@ -9,6 +9,7 @@ export type SendChatMessageParams = {
 	mode: ChatMode;
 	retryFromRequestId?: string;
 	additionalContext?: AdditionalContextItem[];
+	skillRefs?: string[];
 };
 
 export type CancelChatMessageResult = {
@@ -23,6 +24,7 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<un
 		message: params.message,
 		mode: params.mode,
 		retryFromRequestId: params.retryFromRequestId,
+		skillRefs: params.skillRefs,
 		options: {
 			stream: true
 		},

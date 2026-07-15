@@ -29,12 +29,12 @@ export const appNavItems: AppNavItem[] = [
 	{
 		key: "drawing",
 		label: "Draw",
-		icon: "scene_edit"
+		icon: "draw"
 	},
 	{
 		key: "knowledge",
 		label: "Knowledge",
-		icon: "read"
+		icon: "book"
 	}
 ];
 

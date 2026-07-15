@@ -27,3 +27,42 @@
 	border-inline-end: 0;
 	user-select: none;
 }
+
+.menu {
+	border-inline-end: 0 !important;
+}
+
+.sessionMenuItem {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 22px;
+	align-items: center;
+	gap: 4px;
+	width: 100%;
+	min-width: 0;
+}
+
+.sessionTitle {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.archiveButton {
+	width: 22px;
+	height: 22px;
+	min-width: 22px;
+	padding: 0;
+	opacity: 0;
+	color: var(--ant-color-text-tertiary);
+}
+
+.archiveButton svg {
+	width: 14px;
+	height: 14px;
+}
+
+.sessionMenuItem:hover .archiveButton,
+.archiveButton:focus-visible,
+.archiveButton[aria-disabled="true"] {
+	opacity: 1;
+}

@@ -3,10 +3,13 @@ import { Icon } from "@/assets/icons";
 import type { AdditionalContextItem, SessionMetadata, TimelineBlock, WorkbenchSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode } from "@/api/approval-api";
+import type { SlashCommandDefinition } from "@/api/command-api";
 import type { ProviderModelSelection } from "@/api/provider-api";
+import type { SkillSummary } from "@/api/skill-api";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import MessageList from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
+import type { ComposerCompletionTrigger } from "@/features/composer/composer-completion";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import WorkbenchPanel from "@/features/workbench/WorkbenchPanel";
 import styles from "./AgentPage.module.css";
@@ -30,6 +33,8 @@ type AgentPageProps = {
 	contextItems: AdditionalContextItem[];
 	mode: ChatMode;
 	approvalMode: ApprovalMode;
+	slashCommands: SlashCommandDefinition[];
+	skills: SkillSummary[];
 	isSending: boolean;
 	isApprovalModeSaving: boolean;
 	workbench: WorkbenchSnapshot | null;
@@ -37,6 +42,7 @@ type AgentPageProps = {
 	onWorkspaceRefresh: () => void;
 	onWorkspaceSelect: (workspaceId: string) => void;
 	onSessionSelect: (session: SessionMetadata) => void;
+	onSessionArchive: (session: SessionMetadata) => void;
 	onWorkbenchPanelOpenChange: (open: boolean) => void;
 	onLoadMoreBefore: () => void;
 	onLoadMoreAfter: () => void;
@@ -51,7 +57,8 @@ type AgentPageProps = {
 	onPinContext: (contextId: string, pinned: boolean) => void;
 	onClearUnpinnedContext: () => void;
 	onCancel: () => void;
-	onSubmit: () => void;
+	onSubmit: (message: string) => void;
+	onCompletionOpen: (trigger: ComposerCompletionTrigger) => void;
 	onAddContext: (item: AdditionalContextItem) => void;
 	onClearHints: () => void;
 	onApprove: (approvalId: string) => void;
@@ -77,6 +84,8 @@ function AgentPage({
 	contextItems,
 	mode,
 	approvalMode,
+	slashCommands,
+	skills,
 	isSending,
 	isApprovalModeSaving,
 	workbench,
@@ -84,6 +93,7 @@ function AgentPage({
 	onWorkspaceRefresh,
 	onWorkspaceSelect,
 	onSessionSelect,
+	onSessionArchive,
 	onWorkbenchPanelOpenChange,
 	onLoadMoreBefore,
 	onLoadMoreAfter,
@@ -99,6 +109,7 @@ function AgentPage({
 	onClearUnpinnedContext,
 	onCancel,
 	onSubmit,
+	onCompletionOpen,
 	onAddContext,
 	onClearHints,
 	onApprove,
@@ -130,6 +141,7 @@ function AgentPage({
 					refreshToken={workspaceRefreshToken}
 					onWorkspaceSelect={onWorkspaceSelect}
 					onSessionSelect={onSessionSelect}
+					onSessionArchive={onSessionArchive}
 				/>
 			</aside>
 
@@ -172,6 +184,8 @@ function AgentPage({
 						contextItems={contextItems}
 						mode={mode}
 						approvalMode={approvalMode}
+						slashCommands={slashCommands}
+						skills={skills}
 						isSending={isSending}
 						isApprovalModeSaving={isApprovalModeSaving}
 						onMessageChange={onMessageChange}
@@ -183,6 +197,7 @@ function AgentPage({
 						onClearUnpinnedContext={onClearUnpinnedContext}
 						onCancel={onCancel}
 						onSubmit={onSubmit}
+						onCompletionOpen={onCompletionOpen}
 					/>
 				</footer>
 			</section>

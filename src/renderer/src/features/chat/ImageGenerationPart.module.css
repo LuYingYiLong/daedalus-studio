@@ -1,0 +1,76 @@
+.root {
+	width: 100%;
+	margin: 8px 0;
+	padding: 10px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 6px;
+	background: rgba(255, 255, 255, 0.035);
+}
+
+.header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 8px;
+}
+
+.title {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.prompt {
+	display: -webkit-box;
+	max-width: 100%;
+	overflow: hidden;
+	color: rgba(255, 255, 255, 0.76);
+	font-size: 12px;
+	line-height: 1.45;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+.grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+	gap: 8px;
+}
+
+.imageButton {
+	display: block;
+	width: 100%;
+	padding: 0;
+	overflow: hidden;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 4px;
+	background: rgba(0, 0, 0, 0.2);
+	cursor: zoom-in;
+}
+
+.thumbnail {
+	display: block;
+	width: 100%;
+	aspect-ratio: 1 / 1;
+	object-fit: cover;
+}
+
+.actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 8px;
+}
+
+.placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	aspect-ratio: 1 / 1;
+	color: rgba(255, 255, 255, 0.48);
+	background: rgba(255, 255, 255, 0.04);
+}

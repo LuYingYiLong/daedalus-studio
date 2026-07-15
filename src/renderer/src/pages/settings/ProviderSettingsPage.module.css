@@ -1,8 +1,9 @@
-.providerPage {
+.page {
 	display: grid;
 	grid-template-columns: 320px minmax(0, 1fr);
 	min-width: 0;
 	min-height: 0;
+	padding-bottom: 8px;
 }
 
 .providerListPane {
@@ -99,7 +100,6 @@
 }
 
 .fieldHint {
-	font-size: 12px;
 	user-select: none;
 }
 
@@ -129,7 +129,7 @@
 }
 
 .modelTable :global(.ant-table) {
-	background: transparent;
+	height: 100%;
 }
 
 .modelTable :global(.ant-table-thead > tr > th) {

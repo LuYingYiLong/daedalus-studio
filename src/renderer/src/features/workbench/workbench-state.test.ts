@@ -94,6 +94,54 @@ describe("workbench-state", () => {
 		]);
 	});
 
+	it("updates image generation body part from tool result", () => {
+		const withCall = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "request-image",
+			event: "agent.tool.call",
+			data: {
+				toolCallId: "tool-image",
+				toolName: "mcp_image_generate",
+				args: { prompt: "blue castle" }
+			}
+		});
+		const withResult = applyBackendEventToTimeline(withCall, {
+			type: "event",
+			id: "request-image",
+			event: "agent.tool.result",
+			data: {
+				toolCallId: "tool-image",
+				toolName: "mcp_image_generate",
+				imageGeneration: {
+					status: "completed",
+					prompt: "blue castle",
+					provider: "openai",
+					model: "gpt-image-1",
+					artifacts: [{
+						imageId: "generated-image-a",
+						sessionId: "session-a",
+						mimeType: "image/png",
+						byteSize: 12,
+						provider: "openai",
+						model: "gpt-image-1",
+						prompt: "blue castle",
+						createdAt: "2026-01-01T00:00:00.000Z",
+						fileName: "generated-image-a.png"
+					}]
+				}
+			}
+		});
+		const assistant = withResult[0];
+		const parts = assistant?.type === "assistant" ? assistant.bodyParts : [];
+
+		expect(parts.filter((part) => part.type === "image_generation")).toHaveLength(1);
+		expect(parts.find((part) => part.type === "image_generation")).toMatchObject({
+			type: "image_generation",
+			status: "completed",
+			prompt: "blue castle"
+		});
+	});
+
 	it("merges timeline pages without duplicating block ids", () => {
 		const current = createTimelinePageFromTimelineResult({
 			timeline: true,

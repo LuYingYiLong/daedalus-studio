@@ -1,0 +1,38 @@
+.page {
+	min-width: 0;
+	min-height: 0;
+	padding: 0px 8px 0px 8px;
+	overflow: auto;
+}
+
+.card {
+	display: grid;
+	gap: 16px;
+	max-width: 980px;
+}
+
+.header {
+	user-select: none;
+}
+
+.title {
+	margin: 0px !important;
+}
+
+.loading {
+	display: grid;
+	min-height: 180px;
+	align-items: center;
+	justify-items: center;
+}
+
+.textarea {
+	font-family: inherit;
+	margin-bottom: 8px;
+}
+
+.footer {
+	display: flex;
+	justify-content: end;
+	gap: 4px;
+}

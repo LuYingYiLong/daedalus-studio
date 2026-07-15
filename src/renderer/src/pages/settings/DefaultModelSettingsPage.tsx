@@ -1,6 +1,6 @@
 import { Alert, Button, Select, Spin, Typography } from "antd";
 import type { SelectProps } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "@/assets/icons";
 import {
 	fetchProviderModelSelection,
@@ -23,27 +23,30 @@ type RoutingOption = {
 	key: RoutingKey;
 	title: string;
 	description: string;
-	fallbackLabel: string;
+	filterModel?: (model: ProviderModelInfo) => boolean;
 };
 
 const ROUTING_OPTIONS: RoutingOption[] = [
 	{
 		key: "sessionTitle",
 		title: "Session title model",
-		description: "Used for automatic session renaming and lightweight title generation.",
-		fallbackLabel: "Use active chat model"
+		description: "Used for automatic session renaming and lightweight title generation."
 	},
 	{
 		key: "workflowPlanner",
 		title: "Workflow planner model",
-		description: "Used for planning agent workflows before execution.",
-		fallbackLabel: "Use active chat model"
+		description: "Used for planning agent workflows before execution."
 	},
 	{
 		key: "imageRecognition",
 		title: "Image recognition model",
-		description: "Used when the active chat model cannot consume image context directly.",
-		fallbackLabel: "Use active chat model"
+		description: "Used when the active chat model cannot consume image context directly."
+	},
+	{
+		key: "imageGeneration",
+		title: "Image generation model",
+		description: "Used by @image-gen and mcp_image_generate. This must be configured explicitly.",
+		filterModel: (model: ProviderModelInfo): boolean => model.capabilities.imageGeneration === true
 	}
 ];
 
@@ -63,37 +66,28 @@ function decodeModelRef(value: string): ProviderTaskModelRef | null {
 	};
 }
 
-function createModelSelectOptions(selection: ProviderModelSelection | null, fallbackLabel: string): SelectProps["options"] {
+function createModelSelectOptions(selection: ProviderModelSelection | null, filterModel?: (model: ProviderModelInfo) => boolean): SelectProps["options"] {
 	if (selection === null) {
 		return [];
 	}
 
-	return [
-		{
-			label: fallbackLabel,
-			value: "__default__"
-		},
-		...selection.providers.map((provider: ProviderModelSelectionProvider) => {
-			return {
-				label: provider.displayName,
-				options: provider.models.map((model: ProviderModelInfo) => {
-					return {
-						label: `${model.displayName} / ${provider.displayName}`,
-						value: encodeModelRef({
-							provider: provider.provider,
-							model: model.id
-						})
-					};
-				})
-			};
-		})
-	];
-}
-
-function getActiveProvider(selection: ProviderModelSelection): ProviderModelSelectionProvider | null {
-	return selection.providers.find((provider: ProviderModelSelectionProvider): boolean => {
-		return provider.provider === selection.activeModel.providerId;
-	}) ?? null;
+	return selection.providers.map((provider: ProviderModelSelectionProvider) => {
+		const models: ProviderModelInfo[] = filterModel === undefined
+			? provider.models
+			: provider.models.filter(filterModel);
+		return {
+			label: provider.displayName,
+			options: models.map((model: ProviderModelInfo) => {
+				return {
+					label: `${model.displayName} / ${provider.displayName}`,
+					value: encodeModelRef({
+						provider: provider.provider,
+						model: model.id
+					})
+				};
+			})
+		};
+	}).filter((group): boolean => Array.isArray(group.options) && group.options.length > 0);
 }
 
 function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPageProps): React.JSX.Element {
@@ -135,17 +129,13 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 		};
 	}, [onSelectionChange]);
 
-	const activeProvider: ProviderModelSelectionProvider | null = useMemo((): ProviderModelSelectionProvider | null => {
-		return selection === null ? null : getActiveProvider(selection);
-	}, [selection]);
-
-	async function handleRoutingChange(key: RoutingKey, value: string): Promise<void> {
+	async function handleRoutingChange(key: RoutingKey, value: string | undefined): Promise<void> {
 		if (selection === null) {
 			return;
 		}
 
 		const modelRouting: Partial<ProviderModelRouting> = {
-			[key]: value === "__default__" ? null : decodeModelRef(value)
+			[key]: value === undefined ? null : decodeModelRef(value)
 		};
 		const activeModel: ProviderTaskModelRef = {
 			provider: selection.activeModel.providerId,
@@ -207,12 +197,9 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 
 				{ROUTING_OPTIONS.map((option: RoutingOption): React.JSX.Element => {
 					const routedModel: ProviderTaskModelRef | null = selection.modelRouting[option.key];
-					const value: string = routedModel === null
-						? "__default__"
+					const value: string | undefined = routedModel === null
+						? undefined
 						: encodeModelRef(routedModel);
-					const activeLabel: string = activeProvider === null
-						? selection.activeModel.modelId
-						: `${selection.activeModel.modelId} / ${activeProvider.displayName}`;
 
 					return (
 						<article key={option.key} className={styles.card}>
@@ -220,23 +207,26 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 								<Typography.Title level={4} className={styles.cardTitle}>
 									{option.title}
 								</Typography.Title>
+								<Typography.Text type="secondary" className={styles.description}>
+									{option.description}
+								</Typography.Text>
 							</div>
 							<div className={styles.controlRow}>
 								<Select
 									className={styles.modelSelect}
-									options={createModelSelectOptions(selection, `${option.fallbackLabel}: ${activeLabel}`)}
+									options={createModelSelectOptions(selection, option.filterModel)}
 									value={value}
-									showSearch={true}
-									optionFilterProp="label"
+									allowClear={true}
+									placeholder="Select a model"
+									showSearch={{
+										optionFilterProp: "label"
+									}}
 									loading={savingKey === option.key}
-									onChange={(nextValue: string): void => {
+									onChange={(nextValue: string | undefined): void => {
 										void handleRoutingChange(option.key, nextValue);
 									}}
 								/>
 							</div>
-							<Typography.Text type="secondary" className={styles.description}>
-								{option.description}
-							</Typography.Text>
 						</article>
 					);
 				})}

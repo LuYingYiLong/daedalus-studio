@@ -2,8 +2,9 @@ import { Menu, MenuProps, Typography } from "antd";
 import { useState } from "react";
 import { Icon } from "@/assets/icons";
 import type { ProviderModelSelection } from "@/api/provider-api";
-import DefaultModelSettingsPage from "./DefaultModelSettingsPage";
 import ProviderSettingsPage from "./ProviderSettingsPage";
+import DefaultModelSettingsPage from "./DefaultModelSettingsPage";
+import PersonalizationSettingsPage from "./PersonalizationSettingsPage";
 import styles from "./SettingsPage.module.css";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -75,6 +76,8 @@ function SettingsPage({ onProviderModelSelectionChange }: SettingsPageProps): Re
 				<ProviderSettingsPage onSelectionChange={onProviderModelSelectionChange} />
 			) : activePage === "default_model" ? (
 				<DefaultModelSettingsPage onSelectionChange={onProviderModelSelectionChange} />
+			) : activePage === "personalization" ? (
+				<PersonalizationSettingsPage />
 			) : (
 				<section className={styles.placeholder}>
 					<div className={styles.placeholderHeader}>

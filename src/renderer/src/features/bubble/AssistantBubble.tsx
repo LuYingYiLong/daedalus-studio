@@ -10,6 +10,7 @@ import StatusPart from "../chat/StatusPart";
 import PlanPart from "../chat/PlanPart";
 import InlineDiffPart from "../chat/InlineDiffPart";
 import ThinkingPart from "../chat/ThinkingPart";
+import ImageGenerationPart from "../chat/ImageGenerationPart";
 
 export type AssistantBubbleProps = {
 	entryId?: string;
@@ -50,6 +51,10 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 
 		if (part.type === "inline_diff") {
 			return <InlineDiffPart key={index} part={part} />
+		}
+
+		if (part.type === "image_generation") {
+			return <ImageGenerationPart key={index} part={part} />
 		}
 
 		if (part.type === "summary_start") {

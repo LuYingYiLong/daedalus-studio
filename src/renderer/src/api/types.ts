@@ -202,11 +202,36 @@ export type TimelineEditedFile = {
 	undoable?: boolean;
 };
 
+export type TimelineGeneratedImageArtifact = {
+	imageId: string;
+	sessionId: string;
+	mimeType: string;
+	width?: number;
+	height?: number;
+	byteSize: number;
+	provider: string;
+	model: string;
+	prompt: string;
+	revisedPrompt?: string;
+	createdAt: string;
+	fileName: string;
+};
+
 export type TimelineBodyPart =
 	| { type: "markdown"; text: string }
 	| { type: "thinking"; text: string; done: boolean }
 	| { type: "tool"; tool_call_id: string; events: Record<string, unknown>[] }
 	| { type: "summary_start"; runId: string; stepId: string; stepRunId: string; title: string; foldTitle: string }
+	| {
+		type: "image_generation";
+		status: "running" | "completed" | "failed";
+		prompt: string;
+		toolCallId?: string;
+		artifacts?: TimelineGeneratedImageArtifact[];
+		provider?: string;
+		model?: string;
+		error?: string;
+	}
 	| {
 		type: "status";
 		title: string;

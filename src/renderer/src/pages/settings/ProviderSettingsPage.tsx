@@ -13,7 +13,6 @@ import {
 	type ProviderModelSelectionProvider
 } from "@/api/provider-api";
 import styles from "./ProviderSettingsPage.module.css";
-import { truncate } from "node:fs";
 
 type CapabilityBadge = {
 	key: keyof ProviderModelCapabilities;
@@ -29,8 +28,9 @@ type ProviderSettingsPageProps = {
 const CAPABILITY_BADGES: CapabilityBadge[] = [
 	{ key: "reasoning", label: "Reasoning", icon: "thinking", color: "blue" },
 	{ key: "tools", label: "Tools", icon: "mcp", color: "orange" },
-	{ key: "webSearch", label: "Web", icon: "search", color: "green" },
-	{ key: "vision", label: "Vision", icon: "show", color: "purple" }
+	{ key: "webSearch", label: "Web", icon: "global", color: "green" },
+	{ key: "vision", label: "Vision", icon: "show", color: "purple" },
+	{ key: "imageGeneration", label: "Image", icon: "draw", color: "magenta" }
 ];
 
 function getModelTokenText(model: ProviderModelInfo): string {
@@ -210,7 +210,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 
 	if (isLoading && selection === null) {
 		return (
-			<section className={styles.providerPage}>
+			<section className={styles.page}>
 				<div className={styles.providerListPane}>
 					<Spin />
 				</div>
@@ -221,7 +221,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 
 	if (selection === null || selectedProvider === null) {
 		return (
-			<section className={styles.providerPage}>
+			<section className={styles.page}>
 				<div className={styles.providerListPane} />
 				<div className={styles.detailPane}>
 					<div className={styles.detailBody}>
@@ -255,7 +255,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 	];
 
 	return (
-		<section className={styles.providerPage}>
+		<section className={styles.page}>
 			<aside className={styles.providerListPane}>
 				<Input
 					prefix={<Icon name="search" />}

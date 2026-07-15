@@ -8,6 +8,8 @@ import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/
 import { createBackendClient } from "@/api/backend-client";
 import type { BackendEvent } from "@/api/backend-rpc-client";
 import { cancelChatMessage, sendChatMessage, type ChatMode } from "@/api/chat-api";
+import { fetchSlashCommands, type SlashCommandDefinition } from "@/api/command-api";
+import { fetchSkills, type SkillSummary } from "@/api/skill-api";
 import {
 	approveApproval,
 	rejectApproval,
@@ -32,6 +34,7 @@ import AgentPage from "@/pages/agent/AgentPage";
 import SettingsPage from "@/pages/settings/SettingsPage";
 import DrawingPage from "@/pages/drawing/DrawingPage";
 import KnowledgePage from "@/pages/knowledge/KnowledgePage";
+import { extractEnabledSkillRefs, type ComposerCompletionTrigger } from "@/features/composer/composer-completion";
 
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -109,23 +112,34 @@ function mergeOptimisticUserBlocks(currentPage: TimelinePageState, nextPage: Tim
 	const optimisticUserBlocks: TimelineBlock[] = currentPage.blocks.filter((block: TimelineBlock): boolean => {
 		return block.type === "user" && block.id.startsWith("optimistic:");
 	});
-	const missingOptimisticUserBlocks: TimelineBlock[] = optimisticUserBlocks.filter((optimisticBlock: TimelineBlock): boolean => {
+	const missingOptimisticUserBlocks: Map<string, TimelineBlock> = new Map(optimisticUserBlocks.filter((optimisticBlock: TimelineBlock): boolean => {
 		return !nextPage.blocks.some((block: TimelineBlock): boolean => {
 			return block.type === "user" && block.requestId === optimisticBlock.requestId;
 		});
-	});
+	}).map((optimisticBlock: TimelineBlock): [string, TimelineBlock] => [optimisticBlock.requestId, optimisticBlock]));
 
-	if (missingOptimisticUserBlocks.length === 0) {
+	if (missingOptimisticUserBlocks.size === 0) {
 		return nextPage;
+	}
+
+	const missingOptimisticUserBlockCount: number = missingOptimisticUserBlocks.size;
+	const blocks: TimelineBlock[] = [];
+	for (const block of nextPage.blocks) {
+		const optimisticBlock: TimelineBlock | undefined = missingOptimisticUserBlocks.get(block.requestId);
+		if (optimisticBlock !== undefined && block.type !== "user") {
+			blocks.push(optimisticBlock);
+			missingOptimisticUserBlocks.delete(block.requestId);
+		}
+		blocks.push(block);
 	}
 
 	return {
 		...nextPage,
 		blocks: [
-			...nextPage.blocks,
-			...missingOptimisticUserBlocks
+			...blocks,
+			...missingOptimisticUserBlocks.values()
 		],
-		blockCount: nextPage.blockCount + missingOptimisticUserBlocks.length,
+		blockCount: nextPage.blockCount + missingOptimisticUserBlockCount,
 		hasMoreAfter: false
 	};
 }
@@ -156,6 +170,8 @@ function App(): React.JSX.Element {
 	const [sessionError, setSessionError] = useState<string | null>(null);
 	const [isSessionLoading, setIsSessionLoading] = useState(false);
 	const [providerModelSelection, setProviderModelSelection] = useState<ProviderModelSelection | null>(null);
+	const [slashCommands, setSlashCommands] = useState<SlashCommandDefinition[]>([]);
+	const [skills, setSkills] = useState<SkillSummary[]>([]);
 	const [approvalMode, setApprovalModeState] = useState<ApprovalMode>("manual");
 	const [isApprovalModeSaving, setIsApprovalModeSaving] = useState<boolean>(false);
 	const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | null>(null);
@@ -166,6 +182,57 @@ function App(): React.JSX.Element {
 	const patchSequenceRef = useRef<number>(0);
 	const isTimelinePageLoadingRef = useRef<boolean>(false);
 	const submittedComposerTextRef = useRef<{ requestId: string; text: string } | null>(null);
+	const slashCommandsLoadingRef = useRef<boolean>(false);
+	const skillsLoadingRef = useRef<boolean>(false);
+	const slashCommandsRetryAtRef = useRef<number>(0);
+	const skillsRetryAtRef = useRef<number>(0);
+
+	const loadSlashCommands = useCallback(async (): Promise<void> => {
+		if (slashCommandsLoadingRef.current || Date.now() < slashCommandsRetryAtRef.current) {
+			return;
+		}
+
+		slashCommandsLoadingRef.current = true;
+		try {
+			setSlashCommands(await fetchSlashCommands());
+			slashCommandsRetryAtRef.current = 0;
+		} catch (error: unknown) {
+			slashCommandsRetryAtRef.current = Date.now() + 3000;
+			console.error("[App] load slash commands failed", error);
+		} finally {
+			slashCommandsLoadingRef.current = false;
+		}
+	}, []);
+
+	const loadSkills = useCallback(async (): Promise<void> => {
+		if (skillsLoadingRef.current || Date.now() < skillsRetryAtRef.current) {
+			return;
+		}
+
+		skillsLoadingRef.current = true;
+		try {
+			const result = await fetchSkills();
+
+			setSkills(result.skills);
+			skillsRetryAtRef.current = 0;
+		} catch (error: unknown) {
+			setSkills([]);
+			skillsRetryAtRef.current = Date.now() + 3000;
+			console.error("[App] load skills failed", error);
+		} finally {
+			skillsLoadingRef.current = false;
+		}
+	}, []);
+
+	const handleCompletionOpen = useCallback((trigger: ComposerCompletionTrigger): void => {
+		if (trigger === "/" && slashCommands.length === 0) {
+			void loadSlashCommands();
+		}
+
+		if (trigger === "@" && skills.length === 0) {
+			void loadSkills();
+		}
+	}, [loadSkills, loadSlashCommands, skills.length, slashCommands.length]);
 
 	const applyWorkbench = useCallback((nextWorkbench: WorkbenchSnapshot): void => {
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot => {
@@ -329,6 +396,19 @@ function App(): React.JSX.Element {
 		void loadProviderModelSelection();
 	}, []);
 
+	useEffect((): void => {
+		void loadSlashCommands();
+	}, [loadSlashCommands]);
+
+	useEffect((): void => {
+		if (activeSessionId === null && activeWorkspace === null) {
+			setSkills([]);
+			return;
+		}
+
+		void loadSkills();
+	}, [activeSessionId, activeWorkspace?.id, loadSkills]);
+
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
 		let unsubscribe: (() => void) | null = null;
@@ -346,6 +426,10 @@ function App(): React.JSX.Element {
 					if (eventWorkbench !== null) {
 						applyWorkbench(eventWorkbench);
 						return;
+					}
+
+					if (event.event === "skill.catalog.changed") {
+						void loadSkills();
 					}
 
 					setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
@@ -370,7 +454,7 @@ function App(): React.JSX.Element {
 			cancelled = true;
 			unsubscribe?.();
 		};
-	}, [applyWorkbench]);
+	}, [applyWorkbench, loadSkills]);
 
 	async function handleWorkspaceSelect(workspaceId: string): Promise<void> {
 		try {
@@ -421,6 +505,18 @@ function App(): React.JSX.Element {
 		} finally {
 			setIsSessionLoading(false);
 		}
+	}
+
+	function handleSessionArchive(session: SessionMetadata): void {
+		if (session.id !== activeSessionId) {
+			return;
+		}
+
+		setActiveSessionId(null);
+		setActiveSessionMetadata(null);
+		setTimelinePage(emptyTimelinePage);
+		setWorkbench(null);
+		setSessionError(null);
 	}
 
 	async function handleModeChange(nextMode: ChatMode): Promise<void> {
@@ -495,27 +591,16 @@ function App(): React.JSX.Element {
 			submittedComposerTextRef.current = null;
 		}
 
-		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
-			return currentWorkbench === null
-				? currentWorkbench
-				: {
-					...currentWorkbench,
-					composer: {
-						...currentWorkbench.composer,
-						text: nextText
-					}
-				};
-		});
 		queueWorkbenchPatch({ composer: { text: nextText } });
 	}
 
-	async function handleComposerSubmit(): Promise<void> {
+	async function handleComposerSubmit(nextMessage: string): Promise<void> {
 		if (activeSessionId === null || workbench === null) {
 			setSessionError("请先打开一个会话再发送消息");
 			return;
 		}
 
-		const message: string = workbench.composer.text.trim();
+		const message: string = nextMessage.trim();
 		if (message.length === 0) {
 			return;
 		}
@@ -523,6 +608,7 @@ function App(): React.JSX.Element {
 		const requestId: string = createChatRequestId();
 		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
 		const chatMode: ChatMode = getChatMode(workbench);
+		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
 		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
 
@@ -540,7 +626,8 @@ function App(): React.JSX.Element {
 				requestId,
 				message,
 				mode: chatMode,
-				additionalContext
+				additionalContext,
+				skillRefs
 			});
 			await refreshLatestTimeline();
 			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
@@ -600,6 +687,7 @@ function App(): React.JSX.Element {
 
 		const requestId: string = createChatRequestId();
 		const chatMode: ChatMode = getChatMode(workbench);
+		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
 		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
 		const previousTimelinePage: TimelinePageState = timelinePage;
@@ -614,7 +702,8 @@ function App(): React.JSX.Element {
 				message,
 				mode: chatMode,
 				retryFromRequestId: payload.requestId,
-				additionalContext: payload.additionalContext
+				additionalContext: payload.additionalContext,
+				skillRefs
 			});
 			await refreshLatestTimeline();
 			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
@@ -767,6 +856,8 @@ function App(): React.JSX.Element {
 					contextItems={workbench?.composer.additionalContext ?? []}
 					mode={getChatMode(workbench)}
 					approvalMode={approvalMode}
+					slashCommands={slashCommands}
+					skills={skills}
 					isSending={getIsSending(workbench) || approvalAction !== null}
 					isApprovalModeSaving={isApprovalModeSaving}
 					workbench={workbench}
@@ -778,6 +869,7 @@ function App(): React.JSX.Element {
 						void handleWorkspaceSelect(workspaceId);
 					}}
 					onSessionSelect={handleSessionSelect}
+					onSessionArchive={handleSessionArchive}
 					onWorkbenchPanelOpenChange={setWorkbenchPanelOpen}
 					onLoadMoreBefore={handleLoadMoreBefore}
 					onLoadMoreAfter={handleLoadMoreAfter}
@@ -806,9 +898,10 @@ function App(): React.JSX.Element {
 					onCancel={(): void => {
 						void handleComposerCancel();
 					}}
-					onSubmit={(): void => {
-						void handleComposerSubmit();
+					onSubmit={(message: string): void => {
+						void handleComposerSubmit(message);
 					}}
+					onCompletionOpen={handleCompletionOpen}
 					onAddContext={(item: AdditionalContextItem): void => patchContext({ action: "addOrReplace", item })}
 					onClearHints={(): void => queueWorkbenchPatch({ nextStepHintsAction: "clear" }, true)}
 					onApprove={(approvalId: string): void => {

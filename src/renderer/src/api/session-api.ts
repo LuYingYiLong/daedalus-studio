@@ -1,5 +1,5 @@
 import { createBackendClient } from "./backend-client";
-import type { SessionListResult, SessionOpenResult, SessionTimelineResult } from "./types";
+import type { SessionListResult, SessionMetadata, SessionOpenResult, SessionTimelineResult } from "./types";
 import type { ChatMode } from "./chat-api";
 
 export type SaveSessionUiMetadataParams = {
@@ -13,6 +13,11 @@ export type SaveSessionResult = {
 	saved: true;
 	sessionId: string;
 	messageCount: number;
+};
+
+export type ArchiveSessionResult = {
+	archived: true;
+	metadata: SessionMetadata;
 };
 
 export async function fetchSessions(): Promise<SessionListResult> {
@@ -63,4 +68,12 @@ export async function saveSessionUiMetadata(params: SaveSessionUiMetadataParams)
 	const client = await createBackendClient();
 
 	return client.request<SaveSessionResult>("session.save", params);
+}
+
+export async function archiveSession(sessionId: string): Promise<ArchiveSessionResult> {
+	const client = await createBackendClient();
+
+	return client.request<ArchiveSessionResult>("session.archive", {
+		sessionId
+	});
 }
