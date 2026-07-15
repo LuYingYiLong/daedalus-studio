@@ -28,9 +28,9 @@ createRoot(rootElement).render(
 					},
 					Menu: {
 						itemBorderRadius: 4,
-						itemHeight: 30,
+						itemHeight: 28,
+						itemPaddingInline: 8,
 						subMenuItemBg: "#ffffff00",
-						itemPaddingInline: 100,
 					}
 				}
 			}}

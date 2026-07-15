@@ -202,6 +202,7 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }:
 			) : (
 				<Menu
 					className={styles.workspaceMenu}
+					inlineIndent={8}
 					mode="inline"
 					items={workspaceMenuItems}
 					openKeys={openWorkspaceKeys}

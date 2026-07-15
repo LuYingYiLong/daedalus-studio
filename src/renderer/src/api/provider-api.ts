@@ -15,6 +15,7 @@ export type ProviderModelSelection = {
 		apiKeyMasked: string | null;
 	};
 	providers: ProviderModelSelectionProvider[];
+	modelRouting?: Record<string, unknown>;
 };
 
 export type ProviderModelInfo = {
@@ -36,6 +37,9 @@ export type ProviderModelCapabilities = {
 	imageInput?: boolean | undefined;
 	videoInput?: boolean | undefined;
 	reasoning?: boolean | undefined;
+	tools?: boolean | undefined;
+	webSearch?: boolean | undefined;
+	vision?: boolean | undefined;
 };
 
 export type ProviderModelSelectionProvider = {
@@ -59,6 +63,22 @@ export type SaveProviderModelSelectionParams = {
 	activate?: boolean;
 };
 
+export type ProviderModelsListResult = {
+	provider: string;
+	models: ProviderModelInfo[];
+	stale: boolean;
+	source: "api" | "cache" | "fallback";
+	error?: string | undefined;
+};
+
+export type SaveProviderConfigParams = {
+	provider: string;
+	apiKey?: string | undefined;
+	model?: string | undefined;
+	baseUrl?: string | null | undefined;
+	activate?: boolean | undefined;
+};
+
 export async function fetchProviderModelSelection(): Promise<ProviderModelSelection> {
 	const client = await createBackendClient();
 
@@ -72,5 +92,21 @@ export async function saveProviderModelSelection(params: SaveProviderModelSelect
 		provider: params.provider,
 		model: params.model,
 		activate: params.activate ?? true
+	});
+}
+
+export async function saveProviderConfig(params: SaveProviderConfigParams): Promise<ProviderModelSelection> {
+	const client = await createBackendClient();
+
+	await client.request("provider.config.set", params);
+	return client.request<ProviderModelSelection>("provider.modelSelection.get");
+}
+
+export async function listProviderModels(provider: string, refresh: boolean = false): Promise<ProviderModelsListResult> {
+	const client = await createBackendClient();
+
+	return client.request<ProviderModelsListResult>("provider.models.list", {
+		provider,
+		refresh
 	});
 }

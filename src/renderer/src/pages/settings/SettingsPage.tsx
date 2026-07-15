@@ -1,26 +1,91 @@
-import { Menu, Typography } from "antd";
+import { Menu, MenuProps, Typography } from "antd";
+import { useState } from "react";
 import { Icon } from "@/assets/icons";
-import styles from "../PagePlaceholder.module.css";
+import type { ProviderModelSelection } from "@/api/provider-api";
+import ProviderSettingsPage from "./ProviderSettingsPage";
+import styles from "./SettingsPage.module.css";
 
-function SettingsPage(): React.JSX.Element {
+type MenuItem = Required<MenuProps>["items"][number];
+type SettingsPageKey = "provider" | "default_model" | "general" | "personalization" | "mcp_servers" | "skills";
+
+type SettingsPageProps = {
+	onProviderModelSelectionChange?: (selection: ProviderModelSelection) => void;
+};
+
+const items: MenuItem[] = [
+	{
+		key: "provider",
+		label: "Provider",
+		icon: <Icon name="cloud" />,
+	},
+	{
+		key: "default_model",
+		label: "Default model",
+		icon: <Icon name="instance" />,
+	},
+	{
+		key: "general",
+		label: "General",
+		icon: <Icon name="equalizer" />,
+	},
+	{
+		key: "personalization",
+		label: "Personalization",
+		icon: <Icon name="magic" />,
+	},
+	{
+		key: "mcp_servers",
+		label: "MCP Servers",
+		icon: <Icon name="mcp" />,
+	},
+	{
+		key: "skills",
+		label: "Skills",
+		icon: <Icon name="skill" />,
+	}
+]
+
+function getSettingsPageTitle(key: SettingsPageKey): string {
+	const item = items.find((menuItem: MenuItem): boolean => {
+		return menuItem !== null && "key" in menuItem && menuItem.key === key;
+	});
+
+	return typeof item === "object" && item !== null && "label" in item && typeof item.label === "string"
+		? item.label
+		: "Settings";
+}
+
+function SettingsPage({ onProviderModelSelectionChange }: SettingsPageProps): React.JSX.Element {
+	const [activePage, setActivePage] = useState<SettingsPageKey>("provider");
+
 	return (
 		<section className={styles.page}>
-			<aside>
+			<aside className={styles.settingsSideBar}>
 				<Menu
-					
+					inlineIndent={8}
+					mode="inline"
+					items={items}
+					selectedKeys={[activePage]}
+					onClick={({ key }): void => setActivePage(key as SettingsPageKey)}
 				/>
 			</aside>
-			<div className={styles.header}>
-				<Icon name="settings" className={styles.icon} />
-				<div>
-					<Typography.Title level={3} className={styles.title}>
-						Settings
-					</Typography.Title>
-					<Typography.Text type="secondary">
-						Studio settings will live here.
-					</Typography.Text>
-				</div>
-			</div>
+			{activePage === "provider" ? (
+				<ProviderSettingsPage onSelectionChange={onProviderModelSelectionChange} />
+			) : (
+				<section className={styles.placeholder}>
+					<div className={styles.placeholderHeader}>
+						<Icon name="settings" className={styles.placeholderIcon} />
+						<div>
+							<Typography.Title level={3} className={styles.placeholderTitle}>
+								{getSettingsPageTitle(activePage)}
+							</Typography.Title>
+							<Typography.Text type="secondary">
+								This settings section will be implemented later.
+							</Typography.Text>
+						</div>
+					</div>
+				</section>
+			)}
 		</section>
 	);
 }

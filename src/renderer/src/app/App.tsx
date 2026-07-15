@@ -819,7 +819,7 @@ function App(): React.JSX.Element {
 					}}
 				/>
 			) : activePage === "settings" ? (
-				<SettingsPage />
+				<SettingsPage onProviderModelSelectionChange={setProviderModelSelection} />
 			) : activePage === "drawing" ? (
 				<DrawingPage />
 			) : (

@@ -1,0 +1,186 @@
+.providerPage {
+	display: grid;
+	grid-template-columns: 320px minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+}
+
+.providerListPane {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr) auto;
+	min-width: 0;
+	min-height: 0;
+	padding-left: 4px;
+	padding-right: 4px;
+}
+
+.providerMenu {
+	min-height: 0;
+	overflow: auto;
+	border-inline-end: 0;
+}
+
+.providerMenu :global(.ant-menu-title-content) {
+	min-width: 0;
+}
+
+.providerMenuLabel {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+}
+
+.providerIcon {
+	width: 20px;
+	height: 20px;
+	color: var(--ant-color-primary);
+}
+
+.providerName {
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.providerStatusTag {
+	margin-inline-end: 0;
+}
+
+.addProviderButton {
+	margin-top: 12px;
+}
+
+.detailPane {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+}
+
+.detailHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding-left: 8px;
+}
+
+.detailTitle {
+	margin: 0;
+}
+
+.detailBody {
+	display: grid;
+	align-content: start;
+	min-height: 0;
+	padding: 8px 8px 8px 8px;
+	overflow: auto;
+}
+
+.fieldGroup {
+	display: grid;
+	gap: 8px;
+}
+
+.fieldLabelRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.fieldLabel {
+	font-weight: 700;
+}
+
+.fieldHint {
+	font-size: 12px;
+	color: var(--ant-color-text-tertiary);
+}
+
+.modelSectionHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.modelTitle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 700;
+}
+
+.modelActions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.modelGroup {
+	border: 1px solid var(--ant-color-border-secondary);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.modelGroupHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 14px;
+	background: var(--ant-color-fill-quaternary);
+	font-weight: 700;
+}
+
+.modelTable {
+	border-top: 1px solid var(--ant-color-border-secondary);
+}
+
+.modelTable :global(.ant-table) {
+	background: transparent;
+}
+
+.modelTable :global(.ant-table-tbody > tr) {
+	cursor: pointer;
+}
+
+.modelTableRowSelected > td {
+	background: var(--ant-control-item-bg-active) !important;
+}
+
+.modelName {
+	min-width: 0;
+	overflow: hidden;
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.modelMeta {
+	margin-top: 2px;
+	font-size: 12px;
+	color: var(--ant-color-text-tertiary);
+}
+
+.capabilities {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.capabilityTag {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin-inline-end: 0;
+	border-radius: 999px;
+}
+
+.capabilityIcon {
+	width: 13px;
+	height: 13px;
+}

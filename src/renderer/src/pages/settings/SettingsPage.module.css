@@ -1,0 +1,39 @@
+.page {
+	display: grid;
+	grid-template-columns: 260px minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+}
+
+.settingsSideBar {
+	display: grid;
+	grid-template-rows: auto auto minmax(0, 1fr);
+	min-height: 0;
+}
+
+.placeholder {
+	display: grid;
+	min-width: 0;
+	min-height: 0;
+	align-content: start;
+	padding: 24px;
+}
+
+.placeholderHeader {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	max-width: 680px;
+	padding: 20px;
+	border-radius: 8px;
+}
+
+.placeholderIcon {
+	width: 28px;
+	height: 28px;
+	flex: 0 0 auto;
+}
+
+.placeholderTitle {
+	margin: 0 0 4px 0;
+}

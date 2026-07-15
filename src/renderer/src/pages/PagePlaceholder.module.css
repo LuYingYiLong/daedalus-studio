@@ -3,27 +3,4 @@
 	min-width: 0;
 	min-height: 0;
 	align-content: start;
-	padding: 24px;
-}
-
-.header {
-	display: flex;
-	align-items: center;
-	gap: 14px;
-	max-width: 680px;
-	padding: 20px;
-	border: 1px solid var(--ant-color-border-secondary);
-	border-radius: 8px;
-	background: var(--ant-color-bg-container);
-}
-
-.icon {
-	width: 28px;
-	height: 28px;
-	color: var(--ant-color-primary);
-	flex: 0 0 auto;
-}
-
-.title {
-	margin: 0 0 4px 0;
 }

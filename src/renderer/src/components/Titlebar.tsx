@@ -23,13 +23,6 @@ function Titlebar(): React.JSX.Element {
 					Files
 				</Space>
 			</Dropdown>
-			<Select
-				size="small"
-				placeholder="Search..."
-				notFoundContent="No session"
-				className={styles.searchSelect}
-				suffixIcon={<Icon name="collapse" style={{ opacity: 0.5 }} />}
-			/>
 		</div>
 	);
 }
