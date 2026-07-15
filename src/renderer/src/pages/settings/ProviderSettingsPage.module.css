@@ -6,6 +6,7 @@
 }
 
 .providerListPane {
+	position: relative;
 	display: grid;
 	grid-template-rows: auto minmax(0, 1fr) auto;
 	min-width: 0;
@@ -14,14 +15,18 @@
 	padding-right: 4px;
 }
 
+.providerListPane::after {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	width: 1px;
+	pointer-events: none;
+}
+
 .providerMenu {
 	min-height: 0;
 	overflow: auto;
-	border-inline-end: 0;
-}
-
-.providerMenu :global(.ant-menu-title-content) {
-	min-width: 0;
 }
 
 .providerMenuLabel {
@@ -57,13 +62,13 @@
 	grid-template-rows: auto minmax(0, 1fr);
 	min-width: 0;
 	min-height: 0;
+	padding: 0px 8px 8px 8px;
 }
 
 .detailHeader {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding-left: 8px;
 }
 
 .detailTitle {
@@ -74,7 +79,6 @@
 	display: grid;
 	align-content: start;
 	min-height: 0;
-	padding: 8px 8px 8px 8px;
 	overflow: auto;
 }
 
@@ -85,32 +89,31 @@
 
 .fieldLabelRow {
 	display: flex;
-	align-items: center;
 	justify-content: space-between;
 	gap: 12px;
 }
 
 .fieldLabel {
-	font-weight: 700;
+	user-select: none;
+	margin: 8px 0px 8px 0px !important;
 }
 
 .fieldHint {
 	font-size: 12px;
-	color: var(--ant-color-text-tertiary);
+	user-select: none;
 }
 
 .modelSectionHeader {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 12px;
+	gap: 8px;
 }
 
 .modelTitle {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	font-weight: 700;
 }
 
 .modelActions {
@@ -125,32 +128,23 @@
 	overflow: hidden;
 }
 
-.modelGroupHeader {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 10px 14px;
-	background: var(--ant-color-fill-quaternary);
-	font-weight: 700;
-}
-
-.modelTable {
-	border-top: 1px solid var(--ant-color-border-secondary);
-}
-
 .modelTable :global(.ant-table) {
 	background: transparent;
 }
 
-.modelTable :global(.ant-table-tbody > tr) {
-	cursor: pointer;
+.modelTable :global(.ant-table-thead > tr > th) {
+	padding: 9px 10px;
+	background: var(--ant-color-fill-quaternary);
+	border-bottom-color: var(--ant-color-border-secondary);
 }
 
-.modelTableRowSelected > td {
-	background: var(--ant-control-item-bg-active) !important;
+.modelTable :global(.ant-table-tbody > tr > td) {
+	padding: 10px;
+	border-bottom-color: var(--ant-color-border-secondary);
 }
 
 .modelName {
+	display: block;
 	min-width: 0;
 	overflow: hidden;
 	font-weight: 600;
@@ -159,6 +153,7 @@
 }
 
 .modelMeta {
+	display: block;
 	margin-top: 2px;
 	font-size: 12px;
 	color: var(--ant-color-text-tertiary);
@@ -178,9 +173,4 @@
 	gap: 4px;
 	margin-inline-end: 0;
 	border-radius: 999px;
-}
-
-.capabilityIcon {
-	width: 13px;
-	height: 13px;
 }

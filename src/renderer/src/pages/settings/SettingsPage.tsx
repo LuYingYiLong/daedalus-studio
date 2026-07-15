@@ -2,6 +2,7 @@ import { Menu, MenuProps, Typography } from "antd";
 import { useState } from "react";
 import { Icon } from "@/assets/icons";
 import type { ProviderModelSelection } from "@/api/provider-api";
+import DefaultModelSettingsPage from "./DefaultModelSettingsPage";
 import ProviderSettingsPage from "./ProviderSettingsPage";
 import styles from "./SettingsPage.module.css";
 
@@ -62,6 +63,7 @@ function SettingsPage({ onProviderModelSelectionChange }: SettingsPageProps): Re
 		<section className={styles.page}>
 			<aside className={styles.settingsSideBar}>
 				<Menu
+					className="daedalus-compact-menu daedalus-compact-menu-flush"
 					inlineIndent={8}
 					mode="inline"
 					items={items}
@@ -71,6 +73,8 @@ function SettingsPage({ onProviderModelSelectionChange }: SettingsPageProps): Re
 			</aside>
 			{activePage === "provider" ? (
 				<ProviderSettingsPage onSelectionChange={onProviderModelSelectionChange} />
+			) : activePage === "default_model" ? (
+				<DefaultModelSettingsPage onSelectionChange={onProviderModelSelectionChange} />
 			) : (
 				<section className={styles.placeholder}>
 					<div className={styles.placeholderHeader}>

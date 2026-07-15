@@ -15,7 +15,18 @@ export type ProviderModelSelection = {
 		apiKeyMasked: string | null;
 	};
 	providers: ProviderModelSelectionProvider[];
-	modelRouting?: Record<string, unknown>;
+	modelRouting: ProviderModelRouting;
+};
+
+export type ProviderTaskModelRef = {
+	provider: string;
+	model: string;
+};
+
+export type ProviderModelRouting = {
+	imageRecognition: ProviderTaskModelRef | null;
+	workflowPlanner: ProviderTaskModelRef | null;
+	sessionTitle: ProviderTaskModelRef | null;
 };
 
 export type ProviderModelInfo = {
@@ -77,6 +88,7 @@ export type SaveProviderConfigParams = {
 	model?: string | undefined;
 	baseUrl?: string | null | undefined;
 	activate?: boolean | undefined;
+	modelRouting?: Partial<ProviderModelRouting> | undefined;
 };
 
 export async function fetchProviderModelSelection(): Promise<ProviderModelSelection> {

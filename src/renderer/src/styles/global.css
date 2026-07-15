@@ -38,3 +38,30 @@ body {
 body {
 	overflow: hidden;
 }
+
+.daedalus-compact-menu {
+	border-inline-end: 0 !important;
+	background: transparent;
+	user-select: none;
+}
+
+.daedalus-compact-menu .ant-menu-item {
+	width: 100%;
+	margin-inline: 0 !important;
+}
+
+.daedalus-compact-menu .ant-menu-item-icon {
+	margin-inline-start: 4px;
+	margin-inline-end: 8px;
+}
+
+.daedalus-compact-menu .ant-menu-title-content {
+	min-width: 0;
+}
+
+.daedalus-compact-menu-flush .ant-menu-item {
+	margin-block: 0 4px !important;
+	padding-inline: 0 !important;
+	padding-left: 0 !important;
+	padding-right: 4px !important;
+}

@@ -201,7 +201,7 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect }:
 				</Typography.Text>
 			) : (
 				<Menu
-					className={styles.workspaceMenu}
+					className={"daedalus-compact-menu"}
 					inlineIndent={8}
 					mode="inline"
 					items={workspaceMenuItems}

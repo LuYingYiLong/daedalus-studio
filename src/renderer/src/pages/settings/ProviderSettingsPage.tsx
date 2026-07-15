@@ -1,7 +1,7 @@
-import { Alert, Button, Input, Menu, Space, Spin, Switch, Table, Tag, Tooltip, Typography } from "antd";
+import { Alert, Button, Input, Menu, Space, Spin, Table, Tag, Typography } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
-import type { ChangeEvent, HTMLAttributes } from "react";
+import type { ChangeEvent } from "react";
 import { Icon } from "@/assets/icons";
 import {
 	fetchProviderModelSelection,
@@ -13,6 +13,7 @@ import {
 	type ProviderModelSelectionProvider
 } from "@/api/provider-api";
 import styles from "./ProviderSettingsPage.module.css";
+import { truncate } from "node:fs";
 
 type CapabilityBadge = {
 	key: keyof ProviderModelCapabilities;
@@ -29,7 +30,7 @@ const CAPABILITY_BADGES: CapabilityBadge[] = [
 	{ key: "reasoning", label: "Reasoning", icon: "thinking", color: "blue" },
 	{ key: "tools", label: "Tools", icon: "mcp", color: "orange" },
 	{ key: "webSearch", label: "Web", icon: "search", color: "green" },
-	{ key: "vision", label: "Vision", icon: "file_browse", color: "purple" }
+	{ key: "vision", label: "Vision", icon: "show", color: "purple" }
 ];
 
 function getModelTokenText(model: ProviderModelInfo): string {
@@ -45,7 +46,7 @@ function renderCapabilityTags(capabilities: ProviderModelCapabilities): React.JS
 		<span className={styles.capabilities}>
 			{getVisibleCapabilities(capabilities).map((capability: CapabilityBadge): React.JSX.Element => (
 				<Tag key={capability.key} color={capability.color} className={styles.capabilityTag}>
-					<Icon name={capability.icon} className={styles.capabilityIcon} />
+					<Icon name={capability.icon} width={16} />
 					{capability.label}
 				</Tag>
 			))}
@@ -234,6 +235,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 	const modelColumns: TableProps<ProviderModelInfo>["columns"] = [
 		{
 			title: "Model",
+			align: "center",
 			key: "model",
 			render: (_value: unknown, model: ProviderModelInfo): React.JSX.Element => (
 				<span>
@@ -246,7 +248,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			title: "Capabilities",
 			dataIndex: "capabilities",
 			key: "capabilities",
-			align: "right",
+			align: "center",
 			width: 360,
 			render: (capabilities: ProviderModelCapabilities): React.JSX.Element => renderCapabilityTags(capabilities)
 		}
@@ -264,7 +266,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				/>
 
 				<Menu
-					className={styles.providerMenu}
+					className={`${styles.providerMenu} daedalus-compact-menu`}
 					inlineIndent={8}
 					items={providerMenuItems}
 					mode="inline"
@@ -279,20 +281,9 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 
 			<section className={styles.detailPane}>
 				<header className={styles.detailHeader}>
-					<Typography.Title level={4} className={styles.detailTitle}>
+					<Typography.Title level={3} className={styles.detailTitle}>
 						{selectedProvider.displayName}
 					</Typography.Title>
-					<Tooltip title="Activate this provider and model">
-						<Switch
-							checked={selectedProvider.selected}
-							loading={isSaving}
-							onChange={(checked: boolean): void => {
-								if (checked) {
-									void handleSaveProvider(selectedProvider);
-								}
-							}}
-						/>
-					</Tooltip>
 				</header>
 
 				<div className={styles.detailBody}>
@@ -314,7 +305,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 
 					<div className={styles.fieldGroup}>
 						<div className={styles.fieldLabelRow}>
-							<span className={styles.fieldLabel}>API Key</span>
+							<Typography.Title className={styles.fieldLabel} level={4}>API Key</Typography.Title>
 						</div>
 						<Space.Compact>
 							<Input.Password
@@ -332,45 +323,43 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 								Test
 							</Button>
 						</Space.Compact>
-						<span className={styles.fieldHint}>
+						<Typography.Text type="secondary" className={styles.fieldHint}>
 							{selectedProvider.apiKeyMasked !== null && !isApiKeyDirty ? `Saved key: ${selectedProvider.apiKeyMasked}` : "Only a newly entered key will be saved."}
-						</span>
+						</Typography.Text>
 					</div>
 
 					<div className={styles.fieldGroup}>
-						<span className={styles.fieldLabel}>API Base URL</span>
+						<Typography.Title className={styles.fieldLabel} level={4}>API Base URL</Typography.Title>
 						<Input
 							value={draftBaseUrl}
 							onChange={(event: ChangeEvent<HTMLInputElement>): void => setDraftBaseUrl(event.target.value)}
 						/>
-						<span className={styles.fieldHint}>
+						<Typography.Text type="secondary" className={styles.fieldHint}>
 							Model list source: {selectedProvider.modelsSource}
 							{selectedProvider.modelsCacheUpdatedAt ? ` · updated ${selectedProvider.modelsCacheUpdatedAt}` : ""}
-						</span>
+						</Typography.Text>
 					</div>
 
 					<div className={styles.modelSectionHeader}>
 						<div className={styles.modelTitle}>
-							<span>Models</span>
+							<Typography.Title className={styles.fieldLabel} level={4}>Models</Typography.Title>
 							<Tag>{selectedProvider.models.length}</Tag>
 						</div>
 						<div className={styles.modelActions}>
-							<Button
-								icon={<Icon name="reload" />}
-								onClick={(): void => void handleRefreshModels(selectedProvider)}
-								loading={isRefreshing}
-							>
-								Fetch models
-							</Button>
-							<Button icon={<Icon name="add" />} disabled={true} />
+							<Space.Compact>
+								<Button
+									icon={<Icon name="reload" />}
+									onClick={(): void => void handleRefreshModels(selectedProvider)}
+									loading={isRefreshing}
+								>
+									Fetch models
+								</Button>
+								<Button icon={<Icon name="add" />} disabled={true} />
+							</Space.Compact>
 						</div>
 					</div>
 
 					<div className={styles.modelGroup}>
-						<div className={styles.modelGroupHeader}>
-							<span>{selectedProvider.displayName}</span>
-							<span>{selectedProvider.modelsSource}</span>
-						</div>
 						<Table<ProviderModelInfo>
 							className={styles.modelTable}
 							columns={modelColumns}
@@ -378,18 +367,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 							pagination={false}
 							rowKey="id"
 							size="small"
-							rowClassName={(model: ProviderModelInfo): string => {
-								return selectedProvider.selectedModel === model.id && selectedProvider.selected
-									? styles.modelTableRowSelected
-									: "";
-							}}
-							onRow={(model: ProviderModelInfo): HTMLAttributes<HTMLElement> => ({
-								onClick: (): void => {
-									if (!isSaving) {
-										void handleSaveProvider(selectedProvider, model.id);
-									}
-								}
-							})}
+							scroll={{ x: true, y: 55 * 5 }}
 						/>
 					</div>
 				</div>
