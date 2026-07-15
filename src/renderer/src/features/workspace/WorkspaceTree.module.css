@@ -1,6 +1,6 @@
 .workspaceTreeRegion {
-	display: grid;
-	grid-template-rows: auto auto minmax(0, 1fr);
+	display: flex;
+	flex-direction: column;
 	min-height: 0;
 	overflow: hidden;
 }
@@ -21,11 +21,21 @@
 	padding: 8px 0;
 }
 
-.workspaceMenu {
+.workspaceMenuScroller {
 	min-height: 0;
-	overflow: auto;
-	border-inline-end: 0;
+	flex: 1;
+	overflow-x: hidden;
+	overflow-y: auto;
+	scrollbar-gutter: stable;
+}
+
+.workspaceMenu {
+	border-inline-end: 0 !important;
 	user-select: none;
+}
+
+.workspaceMenu .ant-menu-item {
+	width: 100%;
 }
 
 .menu {

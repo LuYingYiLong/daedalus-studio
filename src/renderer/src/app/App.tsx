@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { selectWorkspace } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import type { AdditionalContextItem, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkspaceConfig } from "@/api/types";
-import { fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession } from "@/api/session-api";
+import { fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, type SaveSessionUiMetadataParams } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import { createBackendClient } from "@/api/backend-client";
@@ -519,6 +519,31 @@ function App(): React.JSX.Element {
 		setSessionError(null);
 	}
 
+	async function persistSessionUiMetadata(params: SaveSessionUiMetadataParams): Promise<void> {
+		const sessionId: string | null = activeSessionId;
+		if (sessionId === null) {
+			return;
+		}
+
+		try {
+			await saveSessionUiMetadata(params);
+			setActiveSessionMetadata((currentMetadata: SessionMetadata | null): SessionMetadata | null => {
+				return currentMetadata === null || currentMetadata.id !== sessionId
+					? currentMetadata
+					: {
+						...currentMetadata,
+						...params
+					};
+			});
+			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		} catch (error: unknown) {
+			const message: string = error instanceof Error ? error.message : "Failed to save session UI state";
+
+			setSessionError(message);
+			console.error("[App] save session UI metadata failed", error);
+		}
+	}
+
 	async function handleModeChange(nextMode: ChatMode): Promise<void> {
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 			return currentWorkbench === null
@@ -532,7 +557,7 @@ function App(): React.JSX.Element {
 				};
 		});
 		queueWorkbenchPatch({ composer: { chatMode: nextMode } }, true);
-		setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		await persistSessionUiMetadata({ chatMode: nextMode });
 	}
 
 	async function handleApprovalModeChange(nextMode: ApprovalMode): Promise<void> {
@@ -550,15 +575,7 @@ function App(): React.JSX.Element {
 			const result = await setApprovalMode(nextMode);
 
 			setApprovalModeState(result.mode);
-			setActiveSessionMetadata((currentMetadata: SessionMetadata | null): SessionMetadata | null => {
-				return currentMetadata === null
-					? currentMetadata
-					: {
-						...currentMetadata,
-						approvalMode: result.mode
-					};
-			});
-			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+			await persistSessionUiMetadata({ approvalMode: result.mode });
 		} catch (error: unknown) {
 			const message: string = error instanceof Error ? error.message : "Failed to save approval mode";
 

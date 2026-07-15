@@ -7,14 +7,12 @@
 
 .cards {
 	display: grid;
-	gap: 18px;
+	gap: 16px;
 }
 
 .card {
 	display: grid;
 	gap: 14px;
-	max-width: 980px;
-	border-radius: 10px;
 }
 
 .cardHeader {
@@ -26,13 +24,13 @@
 }
 
 .controlRow {
-	display: grid;
 	grid-template-columns: minmax(280px, 460px) auto;
 	gap: 10px;
 	align-items: center;
 }
 
 .modelSelect {
+	width: 100%;
 	min-width: 0;
 }
 

@@ -250,22 +250,24 @@ function WorkspaceTree({ refreshToken = 0, onWorkspaceSelect, onSessionSelect, o
 				</Typography.Text>
 			) : null}
 
-			{!isWorkspaceLoading && !workspaceError && workspaceMenuItems.length === 0 ? (
-				<Typography.Text type="secondary" className={styles.workspaceEmptyText}>
-					No workspaces
-				</Typography.Text>
-			) : (
-				<Menu
-					className={`daedalus-compact-menu ${styles.menu}`}
-					inlineIndent={8}
-					mode="inline"
-					items={workspaceMenuItems}
-					openKeys={openWorkspaceKeys}
-					selectedKeys={selectedMenuKeys}
-					onOpenChange={handleOpenChange}
-					onClick={handleMenuClick}
-				/>
-			)}
+			<div className={styles.workspaceMenuScroller}>
+				{!isWorkspaceLoading && !workspaceError && workspaceMenuItems.length === 0 ? (
+					<Typography.Text type="secondary" className={styles.workspaceEmptyText}>
+						No workspaces
+					</Typography.Text>
+				) : (
+					<Menu
+						className={styles.workspaceMenu}
+						inlineIndent={8}
+						mode="inline"
+						items={workspaceMenuItems}
+						openKeys={openWorkspaceKeys}
+						selectedKeys={selectedMenuKeys}
+						onOpenChange={handleOpenChange}
+						onClick={handleMenuClick}
+					/>
+				)}
+			</div>
 		</div>
 	);
 }

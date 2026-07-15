@@ -44,6 +44,11 @@ const items: MenuItem[] = [
 		key: "skills",
 		label: "Skills",
 		icon: <Icon name="skill" />,
+	},
+	{
+		key: "archived_session",
+		label: "Archived session",
+		icon: <Icon name="archive" />,
 	}
 ]
 

@@ -111,7 +111,7 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 		<section className={styles.root}>
 			<div className={styles.header}>
 				<div className={styles.title}>
-					<Typography.Text strong={true}>Generated images</Typography.Text>
+					<Typography.Title level={4} className={styles.title}>Generated images</Typography.Title>
 					<Typography.Text type="secondary">{modelLabel}</Typography.Text>
 					<Typography.Text className={styles.prompt}>{part.prompt}</Typography.Text>
 				</div>
@@ -161,15 +161,15 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 				</div>
 			</Image.PreviewGroup>
 			<div className={styles.actions}>
-				<Button size="small" icon={<Icon name="copy" />} onClick={async (): Promise<void> => navigator.clipboard.writeText(part.prompt)}>
+				<Button icon={<Icon name="copy" />} onClick={async (): Promise<void> => navigator.clipboard.writeText(part.prompt)}>
 					Copy prompt
 				</Button>
 				{loadedImages[0] !== undefined ? (
 					<>
-						<Button size="small" onClick={async (): Promise<void> => copyImage(loadedImages[0]!.dataUrl)}>
+						<Button onClick={async (): Promise<void> => copyImage(loadedImages[0]!.dataUrl)}>
 							Copy image
 						</Button>
-						<Button size="small" onClick={(): void => downloadImage(loadedImages[0]!)}>
+						<Button onClick={(): void => downloadImage(loadedImages[0]!)}>
 							Save image
 						</Button>
 					</>
