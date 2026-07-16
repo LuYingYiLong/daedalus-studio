@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import type { AdditionalContextItem, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
-import { createSession, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, type SaveSessionUiMetadataParams } from "@/api/session-api";
+import { createSession, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, type SaveSessionUiMetadataParams } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import { createBackendClient } from "@/api/backend-client";
@@ -11,12 +11,9 @@ import { cancelChatMessage, sendChatMessage, type ChatMode } from "@/api/chat-ap
 import { fetchSlashCommands, type SlashCommandDefinition } from "@/api/command-api";
 import { fetchSkills, type SkillSummary } from "@/api/skill-api";
 import {
-	approveApproval,
-	rejectApproval,
 	setApprovalMode,
 	type ApprovalMode,
 } from "@/api/approval-api";
-import WorkbenchPanel from "@/features/workbench/WorkbenchPanel";
 import {
 	applyBackendEventToTimeline,
 	applyWorkbenchSnapshot,
@@ -88,6 +85,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function getBackendEventSessionId(event: BackendEvent): string | null {
+	if (!isRecord(event.data)) {
+		return null;
+	}
+
+	return typeof event.data.sessionId === "string" ? event.data.sessionId : null;
+}
+
+function getBackendEventSessionMetadata(event: BackendEvent): SessionMetadata | null {
+	if (!isRecord(event.data) || !isRecord(event.data.metadata)) {
+		return null;
+	}
+
+	const metadata: Record<string, unknown> = event.data.metadata;
+	return typeof metadata.id === "string" && typeof metadata.title === "string"
+		? metadata as SessionMetadata
+		: null;
+}
+
 function getWorkbenchFromEvent(event: BackendEvent): WorkbenchSnapshot | null {
 	if (event.event !== "session.workbench.updated" || !isRecord(event.data)) {
 		return null;
@@ -151,32 +167,36 @@ function createHomeDraft(): HomeDraft {
 	};
 }
 
-function createWorkspaceFromSessionOpenResult(result: SessionOpenResult): WorkspaceConfig | null {
-	const metadataWorkspaceId: string | undefined = result.metadata.workspaceId;
-	const metadataWorkspaceRoot: string | undefined = result.metadata.workspaceRoot;
+function createWorkspaceFromSessionMetadata(metadata: SessionMetadata, workbench: WorkbenchSnapshot): WorkspaceConfig | null {
+	const metadataWorkspaceId: string | undefined = metadata.workspaceId;
+	const metadataWorkspaceRoot: string | undefined = metadata.workspaceRoot;
 	if (metadataWorkspaceId !== undefined && metadataWorkspaceRoot !== undefined) {
 		return {
 			id: metadataWorkspaceId,
-			name: result.metadata.workspaceName ?? result.metadata.title,
-			kind: result.metadata.workspaceKind ?? "godot",
+			name: metadata.workspaceName ?? metadata.title,
+			kind: metadata.workspaceKind ?? "godot",
 			rootPath: metadataWorkspaceRoot,
-			godotExecutablePath: result.metadata.godotExecutablePath
+			godotExecutablePath: metadata.godotExecutablePath
 		};
 	}
 
-	const selection = result.workbench.activeSelection;
+	const selection = workbench.activeSelection;
 	if (typeof selection.workspaceId === "string" && typeof selection.workspaceRoot === "string") {
 		return {
 			id: selection.workspaceId,
 			name: typeof selection.workspaceName === "string" && selection.workspaceName.length > 0
 				? selection.workspaceName
-				: result.metadata.title,
+				: metadata.title,
 			kind: "godot",
 			rootPath: selection.workspaceRoot
 		};
 	}
 
 	return null;
+}
+
+function createWorkspaceFromSessionOpenResult(result: SessionOpenResult): WorkspaceConfig | null {
+	return createWorkspaceFromSessionMetadata(result.metadata, result.workbench);
 }
 
 function createOptimisticUserBlock(requestId: string, message: string, additionalContext: AdditionalContextItem[]): TimelineBlock {
@@ -260,6 +280,7 @@ function App(): React.JSX.Element {
 	const [isWorkspaceAdding, setIsWorkspaceAdding] = useState<boolean>(false);
 	const [isHomeSubmitting, setIsHomeSubmitting] = useState<boolean>(false);
 	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+	const activeSessionIdRef = useRef<string | null>(null);
 	const [activeSessionMetadata, setActiveSessionMetadata] = useState<SessionMetadata | null>(null);
 	const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceConfig | null>(null);
 	const [timelinePage, setTimelinePage] = useState<TimelinePageState>(emptyTimelinePage);
@@ -271,8 +292,6 @@ function App(): React.JSX.Element {
 	const [skills, setSkills] = useState<SkillSummary[]>([]);
 	const [approvalMode, setApprovalModeState] = useState<ApprovalMode>("manual");
 	const [isApprovalModeSaving, setIsApprovalModeSaving] = useState<boolean>(false);
-	const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | null>(null);
-	const [workbenchPanelOpen, setWorkbenchPanelOpen] = useState<boolean>(true);
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
 	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] = useState<WorkflowTodoSnapshot | null>(null);
 	const pendingPatchRef = useRef<WorkbenchPatch>({});
@@ -482,6 +501,10 @@ function App(): React.JSX.Element {
 		}, 220);
 	}, [sendPendingWorkbenchPatch]);
 
+	useEffect((): void => {
+		activeSessionIdRef.current = activeSessionId;
+	}, [activeSessionId]);
+
 	useEffect((): (() => void) => {
 		return (): void => {
 			if (patchTimerRef.current !== null) {
@@ -536,6 +559,19 @@ function App(): React.JSX.Element {
 				}
 
 				unsubscribe = client.addEventListener((event: BackendEvent): void => {
+					const eventSessionId: string | null = getBackendEventSessionId(event);
+					if (eventSessionId !== null && eventSessionId !== activeSessionIdRef.current) {
+						return;
+					}
+
+					if (event.event === "session.renamed") {
+						const metadata: SessionMetadata | null = getBackendEventSessionMetadata(event);
+						if (metadata !== null) {
+							setActiveSessionMetadata(metadata);
+						}
+						return;
+					}
+
 					const eventWorkbench: WorkbenchSnapshot | null = getWorkbenchFromEvent(event);
 					if (eventWorkbench !== null) {
 						applyWorkbench(eventWorkbench);
@@ -592,6 +628,7 @@ function App(): React.JSX.Element {
 		submittedComposerTextRef.current = null;
 		setIsNewSessionHome(true);
 		setHomeDraft(createHomeDraft());
+		activeSessionIdRef.current = null;
 		setActiveSessionId(null);
 		setActiveSessionMetadata(null);
 		setActiveWorkspace(null);
@@ -681,6 +718,7 @@ function App(): React.JSX.Element {
 			setIsSessionLoading(true);
 			setSessionError(null);
 			setIsNewSessionHome(false);
+			activeSessionIdRef.current = sessionId;
 			setActiveSessionId(sessionId);
 			setActiveSessionMetadata(session);
 			setActiveWorkspace(null);
@@ -710,6 +748,7 @@ function App(): React.JSX.Element {
 	}
 
 	function resetToNewSessionHome(): void {
+		activeSessionIdRef.current = null;
 		setActiveSessionId(null);
 		setActiveSessionMetadata(null);
 		setTimelinePage(emptyTimelinePage);
@@ -773,7 +812,6 @@ function App(): React.JSX.Element {
 						...params
 					};
 			});
-			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 		} catch (error: unknown) {
 			const message: string = error instanceof Error ? error.message : "Failed to save session UI state";
 
@@ -906,9 +944,10 @@ function App(): React.JSX.Element {
 			sessionCreated = true;
 
 			setIsNewSessionHome(false);
+			activeSessionIdRef.current = created.id;
 			setActiveSessionId(created.id);
 			setActiveSessionMetadata(created);
-			setActiveWorkspace(homeDraft.workspace);
+			setActiveWorkspace(createWorkspaceFromSessionMetadata(created, created.workbench));
 			setTimelinePage(emptyTimelinePage);
 			setWorkbench(created.workbench);
 			setWorkflowTodoSnapshot(null);
@@ -923,7 +962,6 @@ function App(): React.JSX.Element {
 				skillRefs
 			});
 			await refreshLatestTimeline(created.id);
-			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to start new session";
 
@@ -1061,7 +1099,7 @@ function App(): React.JSX.Element {
 			return false;
 		}
 
-		if (getIsSending(workbench) || approvalAction !== null || isSessionLoading) {
+		if (getIsSending(workbench) || isSessionLoading) {
 			return false;
 		}
 
@@ -1138,6 +1176,28 @@ function App(): React.JSX.Element {
 		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 			return mergeOptimisticUserBlocks(currentPage, createTimelinePageFromTimelineResult(timeline));
 		});
+
+		const sessionList = await fetchSessions();
+		const metadata: SessionMetadata | undefined = sessionList.sessions.find((session: SessionMetadata): boolean => session.id === sessionId);
+		if (metadata !== undefined) {
+			setActiveSessionMetadata(metadata);
+			setActiveWorkspace((currentWorkspace: WorkspaceConfig | null): WorkspaceConfig | null => {
+				if (metadata.workspaceId === undefined || metadata.workspaceRoot === undefined) {
+					return null;
+				}
+				if (currentWorkspace?.id === metadata.workspaceId) {
+					return currentWorkspace;
+				}
+
+				return {
+					id: metadata.workspaceId,
+					name: metadata.workspaceName ?? metadata.title,
+					kind: metadata.workspaceKind ?? "godot",
+					rootPath: metadata.workspaceRoot,
+					godotExecutablePath: metadata.godotExecutablePath
+				};
+			});
+		}
 	}
 
 	const handleLoadMoreBefore = useCallback((): void => {
@@ -1220,35 +1280,6 @@ function App(): React.JSX.Element {
 		}
 	}
 
-	async function handleApproveApproval(approvalId: string): Promise<void> {
-		try {
-			setApprovalAction("approve");
-			await sendPendingWorkbenchPatch();
-			const result = await approveApproval(approvalId);
-			if ("workbench" in result && isRecord(result.workbench)) {
-				applyWorkbench(result.workbench as WorkbenchSnapshot);
-			}
-		} catch (error: unknown) {
-			setSessionError(error instanceof Error ? error.message : "Failed to approve");
-		} finally {
-			setApprovalAction(null);
-		}
-	}
-
-	async function handleRejectApproval(approvalId: string): Promise<void> {
-		try {
-			setApprovalAction("reject");
-			const result = await rejectApproval(approvalId);
-			if ("workbench" in result && isRecord(result.workbench)) {
-				applyWorkbench(result.workbench as WorkbenchSnapshot);
-			}
-		} catch (error: unknown) {
-			setSessionError(error instanceof Error ? error.message : "Failed to reject");
-		} finally {
-			setApprovalAction(null);
-		}
-	}
-
 	const selectedProviderId: string | null = isNewSessionHome
 		? homeDraft.providerId ?? providerModelSelection?.activeModel.providerId ?? null
 		: workbench?.composer.provider ?? providerModelSelection?.activeModel.providerId ?? null;
@@ -1262,19 +1293,19 @@ function App(): React.JSX.Element {
 	const composerMode: ChatMode = isNewSessionHome ? homeDraft.chatMode : getChatMode(workbench);
 	const composerContextItems: AdditionalContextItem[] = isNewSessionHome ? [] : workbench?.composer.additionalContext ?? [];
 	const displayedWorkspace: WorkspaceConfig | null = isNewSessionHome ? homeDraft.workspace : activeWorkspace;
-	const composerIsSending: boolean = getIsSending(workbench) || approvalAction !== null || isHomeSubmitting;
+	const composerIsSending: boolean = getIsSending(workbench) || isHomeSubmitting;
 
 	return (
-		<main className={`${styles.shell} ${activePage === "agent" ? styles.agentShell : styles.pageShell} ${activePage === "agent" && workbenchPanelOpen ? styles.shellWithPanel : ""}`}>
+		<main className={`${styles.shell} ${activePage === "agent" ? styles.agentShell : styles.pageShell}`}>
 			<AppNavTabs activePage={activePage} onPageChange={setActivePage} />
 			{activePage === "agent" ? (
 				<AgentPage
 					workspaceRefreshToken={workspaceRefreshToken}
 					isHome={isNewSessionHome}
 					activeSessionId={activeSessionId}
+					activeSessionMetadata={activeSessionMetadata}
 					activeWorkspaceId={isNewSessionHome ? homeDraft.workspaceId : activeSessionMetadata?.workspaceId ?? activeWorkspace?.id ?? null}
 					chatTitle={chatTitle}
-					workbenchPanelOpen={workbenchPanelOpen}
 					timelineBlocks={timelineBlocks}
 					isSessionLoading={isSessionLoading}
 					sessionError={sessionError}
@@ -1299,7 +1330,6 @@ function App(): React.JSX.Element {
 					homeWorkspace={homeDraft.workspace}
 					workspaceFooterDisabled={!isNewSessionHome || isHomeSubmitting}
 					isWorkspaceAdding={isWorkspaceAdding}
-					workbench={workbench}
 					activeWorkspace={displayedWorkspace}
 					onNewSession={handleNewSession}
 					onWorkspaceRefresh={(): void => {
@@ -1318,7 +1348,6 @@ function App(): React.JSX.Element {
 					onSessionSelect={handleSessionSelect}
 					onSessionArchive={handleSessionArchive}
 					onWorkspaceDelete={handleWorkspaceDelete}
-					onWorkbenchPanelOpenChange={setWorkbenchPanelOpen}
 					onLoadMoreBefore={handleLoadMoreBefore}
 					onLoadMoreAfter={handleLoadMoreAfter}
 					onRetryEditStart={(requestId: string): void => {
@@ -1353,14 +1382,6 @@ function App(): React.JSX.Element {
 						void handleComposerSubmit(message);
 					}}
 					onCompletionOpen={handleCompletionOpen}
-					onAddContext={(item: AdditionalContextItem): void => patchContext({ action: "addOrReplace", item })}
-					onClearHints={(): void => queueWorkbenchPatch({ nextStepHintsAction: "clear" }, true)}
-					onApprove={(approvalId: string): void => {
-						void handleApproveApproval(approvalId);
-					}}
-					onReject={(approvalId: string): void => {
-						void handleRejectApproval(approvalId);
-					}}
 				/>
 			) : activePage === "settings" ? (
 				<SettingsPage onProviderModelSelectionChange={setProviderModelSelection} />

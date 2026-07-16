@@ -8,10 +8,6 @@
 	grid-template-columns: 56px 320px minmax(0, 1fr);
 }
 
-.shellWithPanel {
-	grid-template-columns: 56px 320px minmax(0, 1fr) minmax(320px, 28vw);
-}
-
 .pageShell {
 	grid-template-columns: 56px minmax(0, 1fr);
 }

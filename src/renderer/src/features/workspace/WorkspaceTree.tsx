@@ -13,6 +13,7 @@ export type WorkspaceTreeProps = {
 	refreshToken?: number;
 	selectedSessionId?: string | null;
 	selectedWorkspaceId?: string | null;
+	sessionUpdate?: SessionMetadata | null;
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onSessionSelect?: (session: SessionMetadata) => void;
 	onSessionArchive?: (session: SessionMetadata) => void;
@@ -158,6 +159,7 @@ function WorkspaceTree({
 	refreshToken = 0,
 	selectedSessionId = null,
 	selectedWorkspaceId = null,
+	sessionUpdate = null,
 	onWorkspaceSelect,
 	onSessionSelect,
 	onSessionArchive,
@@ -371,6 +373,23 @@ function WorkspaceTree({
 		});
 	}, [archivingSessionId, deletingWorkspaceId, sessions, workspaces]);
 	const effectiveSelectedMenuKeys: string[] = getSelectedMenuKeys(selectedSessionId, selectedWorkspaceId, selectedMenuKeys);
+
+	useEffect((): void => {
+		if (sessionUpdate === null) {
+			return;
+		}
+
+		setSessions((currentSessions: SessionMetadata[]): SessionMetadata[] => {
+			const existingIndex: number = currentSessions.findIndex((session: SessionMetadata): boolean => session.id === sessionUpdate.id);
+			if (existingIndex < 0) {
+				return [sessionUpdate, ...currentSessions];
+			}
+
+			const nextSessions: SessionMetadata[] = [...currentSessions];
+			nextSessions[existingIndex] = sessionUpdate;
+			return nextSessions;
+		});
+	}, [sessionUpdate]);
 
 	useEffect((): void => {
 		if (selectedSessionId === null && selectedWorkspaceId === null) {

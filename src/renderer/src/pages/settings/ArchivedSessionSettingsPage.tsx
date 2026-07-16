@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
-import { Button, Input, Menu, Modal, Popconfirm, Select, Space, Tooltip, Typography } from "antd";
+import { Button, Input, Menu, Modal, Popconfirm, Select, Space, Tag, Tooltip, Typography } from "antd";
 import type { MenuProps } from "antd";
 import { deleteArchivedSession, fetchArchivedSessions, restoreArchivedSession } from "@/api/session-api";
 import { fetchWorkspaces } from "@/api/workspace-api";
@@ -287,9 +287,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 					<Typography.Title level={3} className={styles.title}>
 						Archived sessions
 					</Typography.Title>
-					<Typography.Text type="secondary" className={styles.countText}>
-						{filteredSessions.length} / {archivedSessions.length}
-					</Typography.Text>
+					<Tag>{archivedSessions.length}</Tag>
 				</div>
 				<Space.Compact className={styles.spaceCompact}>
 					<Input
@@ -309,6 +307,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 					<Button
 						color="danger"
 						variant="solid"
+						icon={<Icon name="remove" />}
 						disabled={filteredSessions.length === 0 || isLoading || busySessionId !== null}
 						onClick={(): void => setDeleteAllOpen(true)}
 					>

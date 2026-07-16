@@ -100,6 +100,11 @@
 	color: var(--ant-color-text-tertiary);
 }
 
+.workspaceActionButton {
+	visibility: hidden;
+	pointer-events: none;
+}
+
 .workspaceActionButton svg,
 .archiveButton svg {
 	width: 14px;
@@ -107,11 +112,17 @@
 }
 
 .workspaceMenu :global(.ant-menu-submenu-title:hover) .workspaceActionButton,
-.workspaceMenu :global(.ant-menu-submenu-title:focus-within) .workspaceActionButton,
 .workspaceActionButton:focus-visible,
 .workspaceActionButton[aria-disabled="true"],
 .sessionMenuItem:hover .archiveButton,
 .archiveButton:focus-visible,
 .archiveButton[aria-disabled="true"] {
 	opacity: 1;
+}
+
+.workspaceMenu :global(.ant-menu-submenu-title:hover) .workspaceActionButton,
+.workspaceActionButton:focus-visible,
+.workspaceActionButton[aria-disabled="true"] {
+	visibility: visible;
+	pointer-events: auto;
 }

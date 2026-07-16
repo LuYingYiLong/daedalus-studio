@@ -1,0 +1,35 @@
+.page {
+	display: grid;
+	grid-template-rows: auto auto minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+	padding: 0 8px;
+	overflow: hidden;
+}
+
+.header {
+	display: grid;
+	gap: 8px;
+}
+
+.titleRow {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 8px;
+	user-select: none;
+}
+
+.title {
+	display: flex;
+	align-items: center;
+	margin: 0 !important;
+}
+
+.spaceCompact {
+	width: 100%;
+}
+
+.searchBox {
+	min-width: 160px;
+}

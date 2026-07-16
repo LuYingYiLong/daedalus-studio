@@ -42,6 +42,9 @@ createRoot(rootElement).render(
 						defaultPadding: 8,
 						withDescriptionPadding: 8,
 					},
+					Form: {
+						itemMarginBottom: 4,
+					},
 					Table: {
 						headerBorderRadius: 4,
 					},

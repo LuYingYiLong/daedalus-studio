@@ -14,23 +14,16 @@
 
 .titleRow {
 	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: 12px;
-	min-width: 0;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 8px;
 	user-select: none;
 }
 
 .title {
-	min-width: 0;
+	display: flex;
+	align-items: center;
 	margin: 0 !important;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.countText {
-	flex: none;
 }
 
 .spaceCompact {

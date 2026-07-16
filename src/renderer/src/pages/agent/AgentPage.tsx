@@ -1,6 +1,5 @@
 import { Button, Divider, Typography } from "antd";
-import { Icon } from "@/assets/icons";
-import type { AdditionalContextItem, SessionMetadata, TimelineBlock, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode } from "@/api/approval-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
@@ -12,16 +11,15 @@ import MessageList from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
 import type { ComposerCompletionTrigger } from "@/features/composer/composer-completion";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
-import WorkbenchPanel from "@/features/workbench/WorkbenchPanel";
 import styles from "./AgentPage.module.css";
 
 type AgentPageProps = {
 	workspaceRefreshToken: number;
 	isHome: boolean;
 	activeSessionId: string | null;
+	activeSessionMetadata: SessionMetadata | null;
 	activeWorkspaceId: string | null;
 	chatTitle: string;
-	workbenchPanelOpen: boolean;
 	timelineBlocks: TimelineBlock[];
 	isSessionLoading: boolean;
 	sessionError: string | null;
@@ -46,7 +44,6 @@ type AgentPageProps = {
 	homeWorkspace: WorkspaceConfig | null;
 	workspaceFooterDisabled: boolean;
 	isWorkspaceAdding: boolean;
-	workbench: WorkbenchSnapshot | null;
 	activeWorkspace: WorkspaceConfig | null;
 	onNewSession: () => void;
 	onWorkspaceRefresh: () => void;
@@ -57,7 +54,6 @@ type AgentPageProps = {
 	onSessionSelect: (session: SessionMetadata) => void;
 	onSessionArchive: (session: SessionMetadata) => void;
 	onWorkspaceDelete: (result: DeleteWorkspaceResult) => void;
-	onWorkbenchPanelOpenChange: (open: boolean) => void;
 	onLoadMoreBefore: () => void;
 	onLoadMoreAfter: () => void;
 	onRetryEditStart: (requestId: string) => void;
@@ -74,19 +70,15 @@ type AgentPageProps = {
 	onCancel: () => void;
 	onSubmit: (message: string) => void;
 	onCompletionOpen: (trigger: ComposerCompletionTrigger) => void;
-	onAddContext: (item: AdditionalContextItem) => void;
-	onClearHints: () => void;
-	onApprove: (approvalId: string) => void;
-	onReject: (approvalId: string) => void;
 };
 
 function AgentPage({
 	workspaceRefreshToken,
 	isHome,
 	activeSessionId,
+	activeSessionMetadata,
 	activeWorkspaceId,
 	chatTitle,
-	workbenchPanelOpen,
 	timelineBlocks,
 	isSessionLoading,
 	sessionError,
@@ -111,7 +103,6 @@ function AgentPage({
 	homeWorkspace,
 	workspaceFooterDisabled,
 	isWorkspaceAdding,
-	workbench,
 	activeWorkspace,
 	onNewSession,
 	onWorkspaceRefresh,
@@ -122,7 +113,6 @@ function AgentPage({
 	onSessionSelect,
 	onSessionArchive,
 	onWorkspaceDelete,
-	onWorkbenchPanelOpenChange,
 	onLoadMoreBefore,
 	onLoadMoreAfter,
 	onRetryEditStart,
@@ -138,11 +128,7 @@ function AgentPage({
 	onClearUnpinnedContext,
 	onCancel,
 	onSubmit,
-	onCompletionOpen,
-	onAddContext,
-	onClearHints,
-	onApprove,
-	onReject
+	onCompletionOpen
 }: AgentPageProps): React.JSX.Element {
 	return (
 		<>
@@ -159,6 +145,7 @@ function AgentPage({
 					refreshToken={workspaceRefreshToken}
 					selectedSessionId={activeSessionId}
 					selectedWorkspaceId={activeWorkspaceId}
+					sessionUpdate={activeSessionMetadata}
 					onWorkspaceSelect={onWorkspaceSelect}
 					onSessionSelect={onSessionSelect}
 					onSessionArchive={onSessionArchive}
@@ -171,13 +158,6 @@ function AgentPage({
 					<Typography.Title level={4} className={styles.chatTitle}>
 						{chatTitle}
 					</Typography.Title>
-					<Button
-						type={workbenchPanelOpen ? "default" : "text"}
-						icon={<Icon name="mcp" />}
-						onClick={(): void => onWorkbenchPanelOpenChange(!workbenchPanelOpen)}
-					>
-						Workbench
-					</Button>
 				</header>
 
 				{isHome ? (
@@ -249,20 +229,6 @@ function AgentPage({
 					/>
 				</footer>
 			</section>
-
-			<WorkbenchPanel
-				open={workbenchPanelOpen}
-				workbench={workbench}
-				activeWorkspace={activeWorkspace}
-				onClose={(): void => onWorkbenchPanelOpenChange(false)}
-				onAddContext={onAddContext}
-				onRemoveContext={onRemoveContext}
-				onPinContext={onPinContext}
-				onClearUnpinnedContext={onClearUnpinnedContext}
-				onClearHints={onClearHints}
-				onApprove={onApprove}
-				onReject={onReject}
-			/>
 		</>
 	);
 }
