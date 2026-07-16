@@ -135,7 +135,7 @@ function AgentPage({
 	onCompletionOpen
 }: AgentPageProps): React.JSX.Element {
 	return (
-		<>
+		<div className={styles.page}>
 			<aside className={styles.workspaceSidebar}>
 				<header className={styles.workspaceHeader}>
 					<Button type="text" block={true} className={styles.createSessionButton} onClick={onNewSession}>
@@ -155,7 +155,10 @@ function AgentPage({
 					onSessionArchive={onSessionArchive}
 					onWorkspaceDelete={onWorkspaceDelete}
 				/>
+
 			</aside>
+
+			<Divider vertical size="small"/>
 
 			<section className={styles.chatPanel}>
 				<header className={styles.chatHeader}>
@@ -235,7 +238,7 @@ function AgentPage({
 					/>
 				</footer>
 			</section>
-		</>
+		</div>
 	);
 }
 

@@ -48,6 +48,9 @@ createRoot(rootElement).render(
 					Table: {
 						headerBorderRadius: 4,
 					},
+					Progress: {
+						lineBorderRadius: 4,
+					}
 				}
 			}}
 		>

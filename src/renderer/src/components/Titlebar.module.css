@@ -9,9 +9,9 @@
 	max-height: 36px;
 	padding-left: 8px;
 	overflow: hidden;
-	font-family: Arial, Helvetica, sans-serif;
 	user-select: none;
 	-webkit-app-region: drag;
+	background-color: #292929;
 }
 
 .brandIcon {

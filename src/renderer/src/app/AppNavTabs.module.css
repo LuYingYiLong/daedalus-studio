@@ -2,8 +2,7 @@
 	display: grid;
 	min-width: 0;
 	min-height: 0;
-	border-right: 1px solid var(--ant-color-border-secondary);
-	background: var(--ant-color-bg-layout);
+	background: #1f1f1f;
 }
 
 .tabs {

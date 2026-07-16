@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Input, Dropdown, Button, Divider, Collapse, Flex, Steps, Tooltip } from "antd";
+import { Input, Dropdown, Button, Divider, Collapse, Flex, Steps, Tooltip, Popover, Progress, Typography, Spin } from "antd";
 import type { MenuProps, StepsProps } from "antd";
 import type { TextAreaRef } from "antd/es/input/TextArea";
 import { Icon } from "@/assets/icons";
@@ -10,6 +10,7 @@ import type { SlashCommandDefinition } from "@/api/command-api";
 import type { SkillSummary } from "@/api/skill-api";
 import type { AdditionalContextItem, WorkflowTodoSnapshot, WorkflowTodoStep, WorkspaceConfig } from "@/api/types";
 import type { ProviderModelInfo, ProviderModelSelection, ProviderModelSelectionProvider } from "@/api/provider-api";
+import { compressSession, estimateContextUsage, type ContextUsageEstimate } from "@/api/context-api";
 import AdditionalContextStrip from "@/features/bubble/AdditionalContextStrip";
 import { getWorkflowTodoSnapshotKey, mapWorkflowTodoStatusToStepStatus } from "./workflow-todo";
 import {
@@ -109,6 +110,7 @@ const modeItems: MenuProps["items"] = [
 
 const NO_WORKSPACE_KEY: string = "workspace:none";
 const ADD_WORKSPACE_KEY: string = "workspace:add";
+const EMPTY_CONTEXT_ITEMS: AdditionalContextItem[] = [];
 
 function isComposerMode(value: string): value is ChatMode {
 	return value === "ask" || value === "agent" || value === "plan";
@@ -299,12 +301,50 @@ function createWorkflowTodoStepItems(steps: readonly WorkflowTodoStep[]): NonNul
 	});
 }
 
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) {
+		return error.message;
+	}
+	return "Context estimate failed";
+}
+
+function formatTokenCount(tokens: number): string {
+	if (!Number.isFinite(tokens)) {
+		return "0";
+	}
+
+	const absoluteTokens: number = Math.abs(tokens);
+	if (absoluteTokens >= 1_000_000) {
+		const value: number = tokens / 1_000_000;
+		return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)}M`;
+	}
+	if (absoluteTokens >= 1_000) {
+		const value: number = tokens / 1_000;
+		return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)}K`;
+	}
+	return Math.max(0, Math.round(tokens)).toLocaleString();
+}
+
+function getContextUsageColor(percent: number): string {
+	if (percent >= 90) {
+		return "#ff4d4f";
+	}
+	if (percent >= 70) {
+		return "#faad14";
+	}
+	return "#478cbf";
+}
+
+function getContextUsageStatus(percent: number): "normal" | "exception" {
+	return percent >= 90 ? "exception" : "normal";
+}
+
 function Composer({
 	providerModelSelection,
 	selectedProviderId,
 	selectedModelId,
 	message,
-	contextItems: composerContextItems = [],
+	contextItems: composerContextItems = EMPTY_CONTEXT_ITEMS,
 	workflowTodoSnapshot = null,
 	mode,
 	approvalMode,
@@ -347,6 +387,10 @@ function Composer({
 	const [selectedCompletionIndex, setSelectedCompletionIndex] = useState<number>(0);
 	const [isComposing, setIsComposing] = useState<boolean>(false);
 	const [todoPanelOpen, setTodoPanelOpen] = useState<boolean>(false);
+	const [contextUsage, setContextUsage] = useState<ContextUsageEstimate | null>(null);
+	const [isContextUsageLoading, setIsContextUsageLoading] = useState<boolean>(false);
+	const [contextUsageError, setContextUsageError] = useState<string | null>(null);
+	const [isCompressingContext, setIsCompressingContext] = useState<boolean>(false);
 
 	const handleModeClick: MenuProps["onClick"] = ({ key }): void => {
 		if (isComposerMode(key)) {
@@ -427,6 +471,14 @@ function Composer({
 	const workflowTodoStepItems: NonNullable<StepsProps["items"]> = useMemo((): NonNullable<StepsProps["items"]> => {
 		return createWorkflowTodoStepItems(workflowTodoSteps);
 	}, [workflowTodoSteps]);
+	const contextUsagePercent: number = contextUsage?.percent ?? 0;
+	const contextUsageColor: string = getContextUsageColor(contextUsagePercent);
+	const contextUsageStatus: "normal" | "exception" = getContextUsageStatus(contextUsagePercent);
+	const compressDisabledReason: string | null = isSending
+		? "A message is being sent"
+		: contextUsage?.canCompress === false
+		? contextUsage.compressReason ?? "Compression unavailable"
+		: null;
 
 	function closeTodoPanel(markDismissed: boolean): void {
 		setTodoPanelOpen(false);
@@ -500,6 +552,40 @@ function Composer({
 			hideCompletion();
 		}
 	}, [message]);
+
+	useEffect((): (() => void) => {
+		let cancelled: boolean = false;
+		const timer: number = window.setTimeout((): void => {
+			setIsContextUsageLoading(true);
+			setContextUsageError(null);
+			void estimateContextUsage({
+				message: draftMessage,
+				mode,
+				provider: selectedModel?.provider,
+				model: selectedModel?.model,
+				additionalContext: composerContextItems
+			}).then((usage: ContextUsageEstimate): void => {
+				if (cancelled) {
+					return;
+				}
+				setContextUsage(usage);
+			}).catch((error: unknown): void => {
+				if (cancelled) {
+					return;
+				}
+				setContextUsageError(getErrorMessage(error));
+			}).finally((): void => {
+				if (!cancelled) {
+					setIsContextUsageLoading(false);
+				}
+			});
+		}, 350);
+
+		return (): void => {
+			cancelled = true;
+			window.clearTimeout(timer);
+		};
+	}, [draftMessage, mode, selectedModel?.provider, selectedModel?.model, composerContextItems]);
 
 	const handleProviderModelClick: MenuProps["onClick"] = ({ key }): void => {
 		const nextSelectedModel: SelectedModel | null = parseModelKey(String(key));
@@ -664,6 +750,117 @@ function Composer({
 		refreshCompletion(textArea.value, textArea.selectionStart);
 	}
 
+	async function refreshContextUsage(): Promise<void> {
+		setIsContextUsageLoading(true);
+		setContextUsageError(null);
+		try {
+			const usage: ContextUsageEstimate = await estimateContextUsage({
+				message: draftMessage,
+				mode,
+				provider: selectedModel?.provider,
+				model: selectedModel?.model,
+				additionalContext: composerContextItems
+			});
+			setContextUsage(usage);
+		} catch (error: unknown) {
+			setContextUsageError(getErrorMessage(error));
+		} finally {
+			setIsContextUsageLoading(false);
+		}
+	}
+
+	async function handleCompressContext(): Promise<void> {
+		setIsCompressingContext(true);
+		setContextUsageError(null);
+		try {
+			const result = await compressSession(8);
+			if (!result.compressed && result.reason !== undefined) {
+				setContextUsageError(result.reason);
+			}
+			await refreshContextUsage();
+		} catch (error: unknown) {
+			setContextUsageError(getErrorMessage(error));
+		} finally {
+			setIsCompressingContext(false);
+		}
+	}
+
+	const contextUsageContent: React.ReactNode = contextUsage === null ? (
+		<div className={contextUsageError === null ? styles.contextUsageLoading : styles.contextUsageError}>
+			{contextUsageError === null ? (
+				<>
+					<Spin size="small" />
+					<Typography.Text type="secondary">Estimating context...</Typography.Text>
+				</>
+			) : (
+				<>
+					<Typography.Text type="danger">{contextUsageError}</Typography.Text>
+					<Button size="small" onClick={(): void => { void refreshContextUsage(); }}>Retry</Button>
+				</>
+			)}
+		</div>
+	) : (
+		<div className={styles.contextUsagePanel}>
+			<div className={styles.contextUsageHeader}>
+				<div className={styles.contextUsageTitleRow}>
+					<Typography.Text strong>
+						{formatTokenCount(contextUsage.usedTokens)} / {formatTokenCount(contextUsage.contextWindowTokens)} tokens
+					</Typography.Text>
+					<Typography.Text type={contextUsage.percent >= 90 ? "danger" : "secondary"}>
+						{contextUsage.percent.toFixed(1)}%
+					</Typography.Text>
+				</div>
+				<Typography.Text type="secondary" className={styles.contextUsageMeta}>
+					{contextUsage.modelLabel} · {formatTokenCount(contextUsage.availableTokens)} available · {contextUsage.estimationSource}
+				</Typography.Text>
+			</div>
+			<Progress
+				percent={contextUsage.percent}
+				showInfo={false}
+				status={contextUsageStatus}
+				strokeColor={contextUsageColor}
+				className={styles.contextUsage}
+			/>
+			<div className={styles.contextUsageBreakdown}>
+				<div className={styles.contextUsageRow}>
+					<span>System & tools</span>
+					<span>{formatTokenCount(contextUsage.systemAndContextTokens)}</span>
+				</div>
+				<div className={styles.contextUsageRow}>
+					<span>History{contextUsage.summaryActive ? " (summary)" : ""}</span>
+					<span>{formatTokenCount(contextUsage.historyTokens)}</span>
+				</div>
+				<div className={styles.contextUsageRow}>
+					<span>Current message</span>
+					<span>{formatTokenCount(contextUsage.currentMessageTokens)}</span>
+				</div>
+				<div className={styles.contextUsageRow}>
+					<span>Reserved output</span>
+					<span>{formatTokenCount(contextUsage.outputReserveTokens)}</span>
+				</div>
+				<div className={styles.contextUsageRow}>
+					<span>Safety margin</span>
+					<span>{formatTokenCount(contextUsage.safetyMarginTokens)}</span>
+				</div>
+			</div>
+			{contextUsageError === null ? null : (
+				<Typography.Text type="danger" className={styles.contextUsageMeta}>{contextUsageError}</Typography.Text>
+			)}
+			<Tooltip title={compressDisabledReason ?? undefined}>
+				<span className={styles.contextUsageCompressWrap}>
+					<Button
+						block={true}
+						loading={isCompressingContext}
+						disabled={isCompressingContext || isSending || !contextUsage.canCompress}
+						onClick={(): void => { void handleCompressContext(); }}
+					>
+						Compress chat
+					</Button>
+				</span>
+			</Tooltip>
+		</div>
+	);
+
 	return (
 		<div ref={rootRef} className={styles.composerRoot}>
 			<input
@@ -687,7 +884,7 @@ function Composer({
 								children: (
 									<Flex vertical={true} gap="small" className={styles.todoPanelBody}>
 										<Steps
-											direction="vertical"
+											orientation="vertical"
 											size="small"
 											current={Math.max(0, workflowTodoSteps.findIndex((step: WorkflowTodoStep): boolean => {
 												return step.status === "running" || step.status === "in_progress";
@@ -858,6 +1055,22 @@ function Composer({
 							</span>
 						</Button>
 					</Dropdown>
+					<Popover
+						title="Context usage"
+						content={contextUsageContent}
+						trigger="click"
+					>
+						<button type="button" className={styles.contextUsageButton} aria-label="Context usage">
+							<Progress
+								type="circle"
+								percent={contextUsagePercent}
+								status={contextUsageStatus}
+								strokeColor={contextUsageColor}
+								showInfo={false}
+								size={16}
+							/>
+						</button>
+					</Popover>
 					<Button
 						type="text"
 						icon={<Icon name={isSending ? "stop" : "send"} className={styles.composerSendIcon} />}

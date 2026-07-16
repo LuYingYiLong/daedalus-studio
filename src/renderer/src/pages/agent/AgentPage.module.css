@@ -1,11 +1,32 @@
+.page {
+	display: grid;
+	grid-column: 2 / -1;
+	grid-template-columns: 320px auto minmax(0, 1fr);
+	width: 100%;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	overflow: hidden;
+}
+
+.page > :global(.ant-divider-vertical) {
+	align-self: stretch;
+	height: auto;
+	margin: 0;
+	border-inline-start-color: rgba(255, 255, 255, 0.14);
+}
+
 .workspaceSidebar {
 	display: grid;
 	grid-template-rows: auto auto minmax(0, 1fr);
+	width: 320px;
+	min-width: 0;
 	min-height: 0;
+	overflow: hidden;
 }
 
 .workspaceHeader {
-	padding: 0px 8px 0px 8px;
+	padding: 8px 8px 0px 8px;
 }
 
 .workspaceTitleRow {
@@ -41,20 +62,31 @@
 	grid-template-rows: auto minmax(0, 1fr) auto;
 	min-width: 0;
 	min-height: 0;
+	overflow: hidden;
+}
+
+.chatPanel > section {
+	width: min(100%, 880px);
+	min-width: 0;
+	justify-self: center;
 }
 
 .chatHeader {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-start;
 	gap: 16px;
-	padding: 0px 8px 0px 8px;
+	width: min(100%, 880px);
+	justify-self: center;
+	padding: 0 8px;
 }
 
 .chatTitle {
+	flex: 1 1 auto;
 	min-width: 0px;
 	margin: 0px;
 	overflow: hidden;
+	text-align: left;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	user-select: none;
@@ -96,5 +128,7 @@
 .composer {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
+	width: min(100%, 880px);
+	justify-self: center;
 	padding: 8px;
 }
