@@ -21,7 +21,8 @@ createRoot(rootElement).render(
 				token: {
 					borderRadius: 4,
 					colorPrimary: "#478cbf",
-					fontFamily: `"Mona Sans", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
+					fontFamily: `"Mona Sans", "Source Han Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
+					// fontFamilyCode: `"Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, Arial, Helvetica, sans-serif"`,
 				},
 				components: {
 					Button: {

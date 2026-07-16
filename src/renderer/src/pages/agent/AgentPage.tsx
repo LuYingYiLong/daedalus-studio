@@ -68,6 +68,7 @@ type AgentPageProps = {
 	message: string;
 	contextItems: AdditionalContextItem[];
 	workflowTodoSnapshot: WorkflowTodoSnapshot | null;
+	workflowTodoCollapsed: boolean;
 	mode: ChatMode;
 	approvalMode: ApprovalMode;
 	slashCommands: SlashCommandDefinition[];
@@ -106,6 +107,8 @@ type AgentPageProps = {
 	onClearUnpinnedContext: () => void;
 	onCancel: () => void;
 	onSubmit: (message: string) => void;
+	onWorkflowTodoDismiss: (snapshot: WorkflowTodoSnapshot) => void;
+	onWorkflowTodoCollapseChange: (collapsed: boolean) => void;
 	onCompletionOpen: (trigger: ComposerCompletionTrigger) => void;
 };
 
@@ -130,6 +133,7 @@ function AgentPage({
 	message,
 	contextItems,
 	workflowTodoSnapshot,
+	workflowTodoCollapsed,
 	mode,
 	approvalMode,
 	slashCommands,
@@ -168,6 +172,8 @@ function AgentPage({
 	onClearUnpinnedContext,
 	onCancel,
 	onSubmit,
+	onWorkflowTodoDismiss,
+	onWorkflowTodoCollapseChange,
 	onCompletionOpen
 }: AgentPageProps): React.JSX.Element {
 	const [workspaceLaunchTargets, setWorkspaceLaunchTargets] = useState<WorkspaceLaunchTarget[]>(FALLBACK_WORKSPACE_LAUNCH_TARGETS);
@@ -369,7 +375,7 @@ function AgentPage({
 					/>
 				)}
 
-				<footer className={styles.composer}>
+				<footer className={`${styles.composer} ${workflowTodoSnapshot === null ? "" : styles.composerWithTodo}`}>
 					<Composer
 						providerModelSelection={providerModelSelection}
 						selectedProviderId={selectedProviderId}
@@ -377,6 +383,7 @@ function AgentPage({
 						message={message}
 						contextItems={contextItems}
 						workflowTodoSnapshot={workflowTodoSnapshot}
+						workflowTodoCollapsed={workflowTodoCollapsed}
 						mode={mode}
 						approvalMode={approvalMode}
 						slashCommands={slashCommands}
@@ -387,6 +394,7 @@ function AgentPage({
 						selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
 						workspaceFooterDisabled={workspaceFooterDisabled}
 						isWorkspaceAdding={isWorkspaceAdding}
+						showContextUsage={!isHome}
 						onMessageChange={onMessageChange}
 						onModeChange={onModeChange}
 						onApprovalModeChange={onApprovalModeChange}
@@ -403,6 +411,8 @@ function AgentPage({
 						onClearUnpinnedContext={onClearUnpinnedContext}
 						onCancel={onCancel}
 						onSubmit={onSubmit}
+						onWorkflowTodoDismiss={onWorkflowTodoDismiss}
+						onWorkflowTodoCollapseChange={onWorkflowTodoCollapseChange}
 						onCompletionOpen={onCompletionOpen}
 					/>
 				</footer>

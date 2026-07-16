@@ -25,7 +25,7 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 		}
 	}, [part.done]);
 
-	if (part.text.trim().length === 0) {
+	if (part.done && part.text.trim().length === 0) {
 		return null;
 	}
 
@@ -46,9 +46,11 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 					label: part.done ? "Thinking" : "Thinking...",
 					children: (
 						<div className="markdown-body" style={{userSelect: "text"}}>
-							<Markdown remarkPlugins={[remarkGfm]}>
-								{part.text}
-							</Markdown>
+							{part.text.trim().length === 0 ? null : (
+								<Markdown remarkPlugins={[remarkGfm]}>
+									{part.text}
+								</Markdown>
+							)}
 						</div>
 					)
 				}

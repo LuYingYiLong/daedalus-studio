@@ -246,11 +246,13 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 	} else if (event.event === "agent.summary.started") {
 		nextParts = appendSummaryStartPart(nextParts, event);
 	} else if (event.event === "ai.status") {
+		const title: string = getStringValue(data, "title") || getStringValue(data, "stage");
+		const details: string = getStringValue(data, "details") || getStringValue(data, "detail") || getStringValue(data, "message");
 		nextParts = [...nextParts, {
 			type: "status",
 			status: getStringValue(data, "status") || "message",
-			title: getStringValue(data, "title"),
-			details: getStringValue(data, "details") || getStringValue(data, "detail"),
+			title,
+			details,
 			code: getStringValue(data, "code")
 		}];
 	} else if (event.event.startsWith("agent.tool.") || event.event.startsWith("tool.")) {

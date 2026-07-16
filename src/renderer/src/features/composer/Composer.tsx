@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Input, Dropdown, Button, Divider, Collapse, Flex, Steps, Tooltip, Popover, Progress, Typography, Spin } from "antd";
-import type { MenuProps, StepsProps } from "antd";
+import type { CollapseProps, MenuProps, ProgressProps, StepsProps } from "antd";
 import type { TextAreaRef } from "antd/es/input/TextArea";
 import { Icon } from "@/assets/icons";
 import styles from "./Composer.module.css";
@@ -29,6 +29,7 @@ export type ComposerProps = {
 	message: string;
 	contextItems?: AdditionalContextItem[];
 	workflowTodoSnapshot?: WorkflowTodoSnapshot | null;
+	workflowTodoCollapsed?: boolean;
 	mode: ChatMode;
 	approvalMode: ApprovalMode;
 	slashCommands?: SlashCommandDefinition[];
@@ -39,6 +40,7 @@ export type ComposerProps = {
 	selectedWorkspace?: WorkspaceConfig | null;
 	workspaceFooterDisabled?: boolean;
 	isWorkspaceAdding?: boolean;
+	showContextUsage?: boolean;
 	onMessageChange?: (message: string) => void;
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
@@ -55,12 +57,29 @@ export type ComposerProps = {
 	onClearUnpinnedContext?: () => void;
 	onCancel?: () => void;
 	onSubmit?: (message: string) => void;
+	onWorkflowTodoDismiss?: (snapshot: WorkflowTodoSnapshot) => void;
+	onWorkflowTodoCollapseChange?: (collapsed: boolean) => void;
 	onCompletionOpen?: (trigger: ComposerCompletionTrigger) => void;
 };
 
 type SelectedModel = {
 	provider: string;
 	model: string;
+};
+
+type ProgressStrokeColor = NonNullable<ProgressProps["strokeColor"]>;
+
+const CONTEXT_USAGE_NORMAL_STROKE: ProgressStrokeColor = {
+	"0%": "#44c2ff",
+	"100%": "#4ade80",
+};
+const CONTEXT_USAGE_WARNING_STROKE: ProgressStrokeColor = {
+	"0%": "#fadb14",
+	"100%": "#fa8c16",
+};
+const CONTEXT_USAGE_DANGER_STROKE: ProgressStrokeColor = {
+	"0%": "#ff7875",
+	"100%": "#ff4d4f",
 };
 
 const contextItems: MenuProps["items"] = [
@@ -326,14 +345,14 @@ function formatTokenCount(tokens: number): string {
 	return Math.max(0, Math.round(tokens)).toLocaleString();
 }
 
-function getContextUsageColor(percent: number): string {
+function getContextUsageStrokeColor(percent: number): ProgressStrokeColor {
 	if (percent >= 90) {
-		return "#ff4d4f";
+		return CONTEXT_USAGE_DANGER_STROKE;
 	}
 	if (percent >= 70) {
-		return "#faad14";
+		return CONTEXT_USAGE_WARNING_STROKE;
 	}
-	return "#478cbf";
+	return CONTEXT_USAGE_NORMAL_STROKE;
 }
 
 function getContextUsageStatus(percent: number): "normal" | "exception" {
@@ -347,6 +366,7 @@ function Composer({
 	message,
 	contextItems: composerContextItems = EMPTY_CONTEXT_ITEMS,
 	workflowTodoSnapshot = null,
+	workflowTodoCollapsed = false,
 	mode,
 	approvalMode,
 	slashCommands = [],
@@ -357,6 +377,7 @@ function Composer({
 	selectedWorkspace = null,
 	workspaceFooterDisabled = false,
 	isWorkspaceAdding = false,
+	showContextUsage = true,
 	onMessageChange,
 	onModeChange,
 	onApprovalModeChange,
@@ -372,6 +393,8 @@ function Composer({
 	onPinContext,
 	onCancel,
 	onSubmit,
+	onWorkflowTodoDismiss,
+	onWorkflowTodoCollapseChange,
 	onCompletionOpen
 }: ComposerProps): React.JSX.Element {
 	const rootRef = useRef<HTMLDivElement | null>(null);
@@ -388,6 +411,7 @@ function Composer({
 	const [selectedCompletionIndex, setSelectedCompletionIndex] = useState<number>(0);
 	const [isComposing, setIsComposing] = useState<boolean>(false);
 	const [todoPanelOpen, setTodoPanelOpen] = useState<boolean>(false);
+	const [todoCollapsed, setTodoCollapsed] = useState<boolean>(workflowTodoCollapsed);
 	const [contextUsage, setContextUsage] = useState<ContextUsageEstimate | null>(null);
 	const [isContextUsageLoading, setIsContextUsageLoading] = useState<boolean>(false);
 	const [contextUsageError, setContextUsageError] = useState<string | null>(null);
@@ -473,7 +497,7 @@ function Composer({
 		return createWorkflowTodoStepItems(workflowTodoSteps);
 	}, [workflowTodoSteps]);
 	const contextUsagePercent: number = contextUsage?.percent ?? 0;
-	const contextUsageColor: string = getContextUsageColor(contextUsagePercent);
+	const contextUsageStrokeColor: ProgressStrokeColor = getContextUsageStrokeColor(contextUsagePercent);
 	const contextUsageStatus: "normal" | "exception" = getContextUsageStatus(contextUsagePercent);
 	const compressDisabledReason: string | null = isSending
 		? "A message is being sent"
@@ -488,11 +512,32 @@ function Composer({
 		}
 	}
 
+	function dismissTodoPanel(): void {
+		if (workflowTodoSnapshot === null) {
+			closeTodoPanel(true);
+			return;
+		}
+
+		closeTodoPanel(true);
+		onWorkflowTodoDismiss?.(workflowTodoSnapshot);
+	}
+
+	function handleTodoCollapseChange(activeKey: CollapseProps["activeKey"]): void {
+		const activeKeys: string[] = Array.isArray(activeKey) ? activeKey.map(String) : [String(activeKey)];
+		const nextCollapsed: boolean = !activeKeys.includes("todo");
+		setTodoCollapsed(nextCollapsed);
+		onWorkflowTodoCollapseChange?.(nextCollapsed);
+	}
+
 	useEffect((): void => {
 		if (selectedCompletionIndex >= completionOptions.length) {
 			setSelectedCompletionIndex(Math.max(0, completionOptions.length - 1));
 		}
 	}, [completionOptions.length, selectedCompletionIndex]);
+
+	useEffect((): void => {
+		setTodoCollapsed(workflowTodoCollapsed);
+	}, [workflowTodoCollapsed, workflowTodoKey]);
 
 	useEffect((): void => {
 		if (!hasWorkflowTodo) {
@@ -510,27 +555,6 @@ function Composer({
 			setTodoPanelOpen(true);
 		}
 	}, [hasWorkflowTodo, workflowTodoKey]);
-
-	useEffect((): (() => void) | void => {
-		if (!todoPanelOpen) {
-			return;
-		}
-
-		function handlePointerDown(event: PointerEvent): void {
-			const target: EventTarget | null = event.target;
-			if (target instanceof Node && rootRef.current?.contains(target)) {
-				return;
-			}
-
-			closeTodoPanel(true);
-		}
-
-		document.addEventListener("pointerdown", handlePointerDown);
-
-		return (): void => {
-			document.removeEventListener("pointerdown", handlePointerDown);
-		};
-	}, [todoPanelOpen, workflowTodoKey]);
 
 	useEffect((): void => {
 		const nativeTextArea: HTMLTextAreaElement | null = getNativeTextArea(textAreaRef.current);
@@ -555,6 +579,13 @@ function Composer({
 	}, [message]);
 
 	useEffect((): (() => void) => {
+		if (!showContextUsage) {
+			setIsContextUsageLoading(false);
+			setContextUsage(null);
+			setContextUsageError(null);
+			return (): void => {};
+		}
+
 		let cancelled: boolean = false;
 		const timer: number = window.setTimeout((): void => {
 			setIsContextUsageLoading(true);
@@ -586,7 +617,7 @@ function Composer({
 			cancelled = true;
 			window.clearTimeout(timer);
 		};
-	}, [draftMessage, mode, selectedModel?.provider, selectedModel?.model, composerContextItems]);
+	}, [draftMessage, mode, selectedModel?.provider, selectedModel?.model, composerContextItems, showContextUsage]);
 
 	const handleProviderModelClick: MenuProps["onClick"] = ({ key }): void => {
 		const nextSelectedModel: SelectedModel | null = parseModelKey(String(key));
@@ -873,7 +904,7 @@ function Composer({
 				percent={contextUsage.percent}
 				showInfo={false}
 				status={contextUsageStatus}
-				strokeColor={contextUsageColor}
+				strokeColor={contextUsageStrokeColor}
 				className={styles.contextUsage}
 			/>
 			<div className={styles.contextUsageBreakdown}>
@@ -931,7 +962,9 @@ function Composer({
 					<div className={styles.todoPanel}>
 						<Collapse
 							size="small"
-							defaultActiveKey={["todo"]}
+							bordered={false}
+							activeKey={todoCollapsed ? [] : ["todo"]}
+							onChange={handleTodoCollapseChange}
 							className={styles.todoCollapse}
 							items={[{
 								key: "todo",
@@ -947,12 +980,24 @@ function Composer({
 											items={workflowTodoStepItems}
 										/>
 									</Flex>
-								)
+								),
+								extra: (
+									<Button
+										type="text"
+										size="small"
+										icon={<Icon name="close" />}
+										onClick={(event): void => {
+											event.preventDefault();
+											event.stopPropagation();
+											dismissTodoPanel();
+										}}
+									/>
+								),
 							}]}
 						/>
 					</div>
 				) : null}
-				<div className={styles.composerSurface}>
+				<div className={`${styles.composerSurface} ${hasWorkflowTodo ? styles.composerSurfaceHasTodo: ""}`}>
 					{hasCompletion ? (
 						<div className={styles.completionPanel} role="listbox" aria-label="Composer completions">
 							{completionOptions.map((option: ComposerCompletionOption, index: number): React.ReactNode => {
@@ -1027,25 +1072,6 @@ function Composer({
 						/>
 					</Dropdown>
 					<Divider vertical={true} />
-					{hasWorkflowTodo ? (
-						<Button
-							type={todoPanelOpen ? "default" : "text"}
-							icon={<Icon name="todo_unchecked" className={styles.composerActionIcon} />}
-							className={styles.composerActionButton}
-							aria-label="Toggle workflow todo"
-							onClick={(): void => {
-								if (todoPanelOpen) {
-									closeTodoPanel(true);
-									return;
-								}
-
-								if (workflowTodoKey.length > 0 && dismissedWorkflowTodoKeyRef.current === workflowTodoKey) {
-									dismissedWorkflowTodoKeyRef.current = "";
-								}
-								setTodoPanelOpen(true);
-							}}
-						/>
-					) : null}
 					<Dropdown
 						menu={{
 							items: modeItems,
@@ -1103,22 +1129,7 @@ function Composer({
 							</span>
 						</Button>
 					</Dropdown>
-					<Popover
-						title="Context usage"
-						content={contextUsageContent}
-						trigger="click"
-					>
-						<button type="button" className={styles.contextUsageButton} aria-label="Context usage">
-							<Progress
-								type="circle"
-								percent={contextUsagePercent}
-								status={contextUsageStatus}
-								strokeColor={contextUsageColor}
-								showInfo={false}
-								size={16}
-							/>
-						</button>
-					</Popover>
+
 					<Button
 						type="text"
 						icon={<Icon name={isSending ? "stop" : "send"} className={styles.composerSendIcon} />}
@@ -1132,6 +1143,7 @@ function Composer({
 			<footer className={styles.footer}>
 				<Flex
 					align="start"
+					justify="space-between"
 					gap={8}
 					className={styles.workspaceFooterRow}
 				>
@@ -1155,6 +1167,24 @@ function Composer({
 							<span className={styles.workspaceFooterText}>{selectedWorkspaceLabel}</span>
 						</Button>
 					</Dropdown>
+					{showContextUsage ? (
+						<Popover
+							title="Context usage"
+							content={contextUsageContent}
+							trigger="click"
+						>
+							<button type="button" className={styles.contextUsageButton} aria-label="Context usage">
+								<Progress
+									type="circle"
+									percent={contextUsagePercent}
+									status={contextUsageStatus}
+									strokeColor="#e0e0e0"
+									showInfo={false}
+									size={16}
+								/>
+							</button>
+						</Popover>
+					) : null}
 				</Flex>
 			</footer>
 		</div>

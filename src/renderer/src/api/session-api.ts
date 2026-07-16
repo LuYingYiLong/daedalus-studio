@@ -9,6 +9,7 @@ export type CreateSessionParams = {
 	model?: string;
 	chatMode?: ChatMode;
 	approvalMode?: "manual" | "auto-safe";
+	workflowTodoCollapsed?: boolean;
 };
 
 export type SaveSessionUiMetadataParams = {
@@ -16,6 +17,7 @@ export type SaveSessionUiMetadataParams = {
 	model?: string;
 	chatMode?: ChatMode;
 	approvalMode?: "manual" | "auto-safe";
+	workflowTodoCollapsed?: boolean;
 };
 
 export type CreateSessionResult = SessionMetadata & {
@@ -26,6 +28,16 @@ export type SaveSessionResult = {
 	saved: true;
 	sessionId: string;
 	messageCount: number;
+};
+
+export type SetSessionModelParams = {
+	provider: string;
+	model: string;
+};
+
+export type SetSessionModelResult = {
+	metadata: SessionMetadata;
+	workbench: WorkbenchSnapshot;
 };
 
 export type ArchiveSessionResult = {
@@ -45,6 +57,17 @@ export type RestoreArchivedSessionResult = {
 export type DeleteArchivedSessionResult = {
 	deletedArchived: true;
 	sessionId: string;
+};
+
+export type DismissWorkflowTodoParams = {
+	workflowId?: string;
+	runId?: string;
+};
+
+export type DismissWorkflowTodoResult = {
+	dismissed: true;
+	workflowId: string | null;
+	runId: string | null;
 };
 
 export async function fetchSessions(): Promise<SessionListResult> {
@@ -101,6 +124,18 @@ export async function saveSessionUiMetadata(params: SaveSessionUiMetadataParams)
 	const client = await createBackendClient();
 
 	return client.request<SaveSessionResult>("session.save", params);
+}
+
+export async function setSessionModel(params: SetSessionModelParams): Promise<SetSessionModelResult> {
+	const client = await createBackendClient();
+
+	return client.request<SetSessionModelResult>("session.model.set", params);
+}
+
+export async function dismissWorkflowTodo(params: DismissWorkflowTodoParams = {}): Promise<DismissWorkflowTodoResult> {
+	const client = await createBackendClient();
+
+	return client.request<DismissWorkflowTodoResult>("session.workflow.todo.dismiss", params);
 }
 
 export async function archiveSession(sessionId: string): Promise<ArchiveSessionResult> {

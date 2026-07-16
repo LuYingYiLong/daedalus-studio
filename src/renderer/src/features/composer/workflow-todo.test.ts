@@ -63,10 +63,14 @@ describe("workflow-todo", () => {
 	it("detects todo clear events", () => {
 		const doneEvent: BackendEvent = { type: "event", id: "run-a", event: "workflow.done", data: {} };
 		const errorEvent: BackendEvent = { type: "event", id: "run-a", event: "agent.run.error", data: {} };
+		const dismissEvent: BackendEvent = { type: "event", id: "run-a", event: "workflow.todo.dismissed", data: {} };
+		const cancelEvent: BackendEvent = { type: "event", id: "run-a", event: "agent.run.cancelled", data: {} };
 		const snapshotEvent: BackendEvent = { type: "event", id: "run-a", event: "agent.run.snapshot", data: {} };
 
-		expect(isWorkflowTodoClearEvent(doneEvent)).toBe(true);
+		expect(isWorkflowTodoClearEvent(doneEvent)).toBe(false);
 		expect(isWorkflowTodoClearEvent(errorEvent)).toBe(true);
+		expect(isWorkflowTodoClearEvent(dismissEvent)).toBe(true);
+		expect(isWorkflowTodoClearEvent(cancelEvent)).toBe(true);
 		expect(isWorkflowTodoClearEvent(snapshotEvent)).toBe(false);
 	});
 });

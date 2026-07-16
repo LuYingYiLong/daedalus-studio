@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import type { AdditionalContextItem, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
-import { createSession, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, type SaveSessionUiMetadataParams } from "@/api/session-api";
+import { createSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import { createBackendClient } from "@/api/backend-client";
@@ -257,6 +257,22 @@ function createWorkspaceFromSessionOpenResult(result: SessionOpenResult): Worksp
 	return createWorkspaceFromSessionMetadata(result.metadata, result.workbench);
 }
 
+function createWorkflowTodoSnapshotFromTimelineResult(result: {
+	latestWorkflowSnapshot: unknown | null;
+	latestAgentSnapshot: unknown | null;
+}): WorkflowTodoSnapshot | null {
+	return normalizeWorkflowTodoSnapshot(result.latestWorkflowSnapshot)
+		?? normalizeWorkflowTodoSnapshot(result.latestAgentSnapshot);
+}
+
+function getWorkflowTodoSnapshotIdentity(snapshot: WorkflowTodoSnapshot): string {
+	return snapshot.workflowId ?? snapshot.runId ?? snapshot.title ?? "workflow";
+}
+
+function isSameWorkflowTodoSnapshot(left: WorkflowTodoSnapshot, right: WorkflowTodoSnapshot): boolean {
+	return getWorkflowTodoSnapshotIdentity(left) === getWorkflowTodoSnapshotIdentity(right);
+}
+
 function createOptimisticUserBlock(requestId: string, message: string, additionalContext: AdditionalContextItem[]): TimelineBlock {
 	const contentChars: number = message.length + additionalContext.reduce((total: number, item: AdditionalContextItem): number => {
 		return total + item.title.length + (item.subtitle?.length ?? 0);
@@ -356,6 +372,7 @@ function App(): React.JSX.Element {
 	const patchTimerRef = useRef<number | null>(null);
 	const patchSequenceRef = useRef<number>(0);
 	const isTimelinePageLoadingRef = useRef<boolean>(false);
+	const activeChatRequestIdRef = useRef<string | null>(null);
 	const submittedComposerTextRef = useRef<{ requestId: string; text: string } | null>(null);
 	const slashCommandsLoadingRef = useRef<boolean>(false);
 	const skillsLoadingRef = useRef<boolean>(false);
@@ -519,6 +536,21 @@ function App(): React.JSX.Element {
 				],
 				blockCount: currentPage.blockCount + 1,
 				hasMoreAfter: false
+			};
+		});
+	}
+
+	function finishOptimisticActiveRun(requestId: string): void {
+		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+			if (currentWorkbench === null || currentWorkbench.activeRun.requestId !== requestId) {
+				return currentWorkbench;
+			}
+			if (currentWorkbench.activeRun.status === "approval") {
+				return currentWorkbench;
+			}
+			return {
+				...currentWorkbench,
+				activeRun: { status: "idle" }
 			};
 		});
 	}
@@ -793,6 +825,7 @@ function App(): React.JSX.Element {
 			setWorkbench(result.workbench);
 			setApprovalModeState(result.metadata.approvalMode ?? "manual");
 			setActiveWorkspace(createWorkspaceFromSessionOpenResult(result));
+			setWorkflowTodoSnapshot(createWorkflowTodoSnapshotFromTimelineResult(result));
 
 			if (result.workspaceWarning) {
 				console.warn("[App] session workspace warning", result.workspaceWarning);
@@ -830,7 +863,6 @@ function App(): React.JSX.Element {
 	}
 
 	function handleWorkspaceDelete(result: DeleteWorkspaceResult): void {
-		setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 		setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
 			return currentWorkspaces.filter((workspace: WorkspaceConfig): boolean => workspace.id !== result.workspaceId);
 		});
@@ -941,6 +973,12 @@ function App(): React.JSX.Element {
 			return;
 		}
 
+		const sessionId: string | null = activeSessionId;
+		if (sessionId === null) {
+			return;
+		}
+
+		const previousWorkbench: WorkbenchSnapshot | null = workbench;
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 			return currentWorkbench === null
 				? currentWorkbench
@@ -953,7 +991,22 @@ function App(): React.JSX.Element {
 					}
 				};
 		});
-		queueWorkbenchPatch({ composer: { provider: providerId, model: modelId } }, true);
+
+		try {
+			const result = await setSessionModel({ provider: providerId, model: modelId });
+			if (activeSessionIdRef.current !== sessionId) {
+				return;
+			}
+			setActiveSessionMetadata(result.metadata);
+			applyWorkbench(result.workbench);
+		} catch (error: unknown) {
+			if (activeSessionIdRef.current === sessionId && previousWorkbench !== null) {
+				setWorkbench(previousWorkbench);
+			}
+			const message: string = error instanceof Error ? error.message : "Failed to save session model";
+			setSessionError(message);
+			console.error("[App] save session model failed", error);
+		}
 	}
 
 	function handleComposerTextChange(nextText: string): void {
@@ -988,6 +1041,7 @@ function App(): React.JSX.Element {
 			setIsHomeSubmitting(true);
 			setSessionError(null);
 			setActiveRetryRequestId(null);
+			activeChatRequestIdRef.current = requestId;
 			submittedComposerTextRef.current = {
 				requestId,
 				text: message
@@ -1021,6 +1075,7 @@ function App(): React.JSX.Element {
 				additionalContext: created.workbench.composer.additionalContext,
 				skillRefs
 			});
+			finishOptimisticActiveRun(requestId);
 			await refreshLatestTimeline(created.id);
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to start new session";
@@ -1068,6 +1123,9 @@ function App(): React.JSX.Element {
 			}
 			console.error("[App] start new session failed", error);
 		} finally {
+			if (activeChatRequestIdRef.current === requestId) {
+				activeChatRequestIdRef.current = null;
+			}
 			setIsHomeSubmitting(false);
 		}
 	}
@@ -1100,6 +1158,7 @@ function App(): React.JSX.Element {
 		try {
 			setSessionError(null);
 			setActiveRetryRequestId(null);
+			activeChatRequestIdRef.current = requestId;
 			submittedComposerTextRef.current = {
 				requestId,
 				text: message
@@ -1114,6 +1173,7 @@ function App(): React.JSX.Element {
 				additionalContext,
 				skillRefs
 			});
+			finishOptimisticActiveRun(requestId);
 			await refreshLatestTimeline();
 			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 		} catch (error: unknown) {
@@ -1153,6 +1213,10 @@ function App(): React.JSX.Element {
 				};
 			});
 			console.error("[App] send message failed", error);
+		} finally {
+			if (activeChatRequestIdRef.current === requestId) {
+				activeChatRequestIdRef.current = null;
+			}
 		}
 	}
 
@@ -1180,6 +1244,7 @@ function App(): React.JSX.Element {
 
 		try {
 			setSessionError(null);
+			activeChatRequestIdRef.current = requestId;
 			applyOptimisticRetry(payload.requestId, requestId, message, payload.additionalContext);
 
 			await flushPendingPatch;
@@ -1191,6 +1256,7 @@ function App(): React.JSX.Element {
 				additionalContext: payload.additionalContext,
 				skillRefs
 			});
+			finishOptimisticActiveRun(requestId);
 			await refreshLatestTimeline();
 			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 			setActiveRetryRequestId(null);
@@ -1212,16 +1278,21 @@ function App(): React.JSX.Element {
 			setTimelinePage(previousTimelinePage);
 			console.error("[App] retry message failed", error);
 			return false;
+		} finally {
+			if (activeChatRequestIdRef.current === requestId) {
+				activeChatRequestIdRef.current = null;
+			}
 		}
 	}
 
 	async function handleComposerCancel(): Promise<void> {
-		const requestId: string | null = getActiveRunRequestId(workbench);
+		const requestId: string | null = activeChatRequestIdRef.current ?? getActiveRunRequestId(workbench);
 		if (requestId === null) {
 			return;
 		}
 
 		try {
+			activeChatRequestIdRef.current = requestId;
 			await cancelChatMessage(requestId);
 		} catch (error: unknown) {
 			console.error("[App] cancel chat failed", error);
@@ -1239,6 +1310,7 @@ function App(): React.JSX.Element {
 		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 			return mergeOptimisticUserBlocks(currentPage, createTimelinePageFromTimelineResult(timeline));
 		});
+		setWorkflowTodoSnapshot(createWorkflowTodoSnapshotFromTimelineResult(timeline));
 
 		const sessionList = await fetchSessions();
 		const metadata: SessionMetadata | undefined = sessionList.sessions.find((session: SessionMetadata): boolean => session.id === sessionId);
@@ -1261,6 +1333,35 @@ function App(): React.JSX.Element {
 				};
 			});
 		}
+	}
+
+	async function handleWorkflowTodoDismiss(snapshot: WorkflowTodoSnapshot): Promise<void> {
+		const params: { workflowId?: string; runId?: string } = {};
+		if (snapshot.workflowId !== undefined) {
+			params.workflowId = snapshot.workflowId;
+		}
+		if (snapshot.runId !== undefined) {
+			params.runId = snapshot.runId;
+		}
+
+		try {
+			await dismissWorkflowTodo(params);
+			setWorkflowTodoSnapshot((currentSnapshot: WorkflowTodoSnapshot | null): WorkflowTodoSnapshot | null => {
+				if (currentSnapshot === null || isSameWorkflowTodoSnapshot(currentSnapshot, snapshot)) {
+					return null;
+				}
+
+				return currentSnapshot;
+			});
+		} catch (error: unknown) {
+			const message: string = error instanceof Error ? error.message : "Failed to dismiss workflow todo";
+			setSessionError(message);
+			console.error("[App] dismiss workflow todo failed", error);
+		}
+	}
+
+	function handleWorkflowTodoCollapseChange(collapsed: boolean): void {
+		void persistSessionUiMetadata({ workflowTodoCollapsed: collapsed });
 	}
 
 	const handleLoadMoreBefore = useCallback((): void => {
@@ -1503,6 +1604,7 @@ function App(): React.JSX.Element {
 					message={composerMessage}
 					contextItems={composerContextItems}
 					workflowTodoSnapshot={workflowTodoSnapshot}
+					workflowTodoCollapsed={activeSessionMetadata?.workflowTodoCollapsed === true}
 					mode={composerMode}
 					approvalMode={approvalMode}
 					slashCommands={slashCommands}
@@ -1573,6 +1675,10 @@ function App(): React.JSX.Element {
 					onSubmit={(message: string): void => {
 						void handleComposerSubmit(message);
 					}}
+					onWorkflowTodoDismiss={(snapshot: WorkflowTodoSnapshot): void => {
+						void handleWorkflowTodoDismiss(snapshot);
+					}}
+					onWorkflowTodoCollapseChange={handleWorkflowTodoCollapseChange}
 					onCompletionOpen={handleCompletionOpen}
 				/>
 			) : activePage === "settings" ? (
