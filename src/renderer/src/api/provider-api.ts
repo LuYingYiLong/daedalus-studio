@@ -87,7 +87,7 @@ export type ProviderModelsListResult = {
 
 export type SaveProviderConfigParams = {
 	provider: string;
-	apiKey?: string | undefined;
+	apiKey?: string | null | undefined;
 	model?: string | undefined;
 	baseUrl?: string | null | undefined;
 	activate?: boolean | undefined;

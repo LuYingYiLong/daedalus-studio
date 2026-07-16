@@ -36,12 +36,49 @@ import { isWorkflowTodoClearEvent, normalizeWorkflowTodoSnapshot } from "@/featu
 import { saveImageAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
 
 type SupportedImageMimeType = SaveImageAttachmentParams["mimeType"];
+type WorkspacePickedEntry = {
+	name: string;
+	relativePath: string;
+	resourcePath: string;
+	kind: "file" | "folder";
+};
 
 const SUPPORTED_IMAGE_MIME_TYPES: readonly SupportedImageMimeType[] = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 const MAX_IMAGE_ATTACHMENT_BYTES: number = 1024 * 1024;
 
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createContextId(): string {
+	return typeof crypto.randomUUID === "function"
+		? `studio-context-${crypto.randomUUID()}`
+		: `studio-context-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function getContextTitle(entry: WorkspacePickedEntry): string {
+	if (entry.name.trim().length > 0) {
+		return entry.name;
+	}
+
+	const parts: string[] = entry.resourcePath.split("/").filter((part: string): boolean => part.length > 0);
+	return parts.at(-1) ?? entry.resourcePath;
+}
+
+function createWorkspacePathContextItem(entry: WorkspacePickedEntry, workspace: WorkspaceConfig): AdditionalContextItem {
+	return {
+		id: createContextId(),
+		kind: entry.kind,
+		title: getContextTitle(entry),
+		subtitle: entry.resourcePath,
+		source: "manual",
+		resourcePath: entry.resourcePath,
+		data: {
+			workspaceId: workspace.id,
+			workspaceRoot: workspace.rootPath,
+			relativePath: entry.relativePath
+		}
+	};
 }
 
 function isSupportedImageMimeType(value: string): value is SupportedImageMimeType {
@@ -1280,6 +1317,51 @@ function App(): React.JSX.Element {
 		}
 	}
 
+	function getContextWorkspace(): WorkspaceConfig | null {
+		if (activeWorkspace !== null) {
+			return activeWorkspace;
+		}
+		if (activeSessionMetadata?.workspaceId !== undefined && activeSessionMetadata.workspaceRoot !== undefined) {
+			return {
+				id: activeSessionMetadata.workspaceId,
+				name: activeSessionMetadata.workspaceName ?? activeSessionMetadata.workspaceId,
+				kind: activeSessionMetadata.workspaceKind ?? "godot",
+				rootPath: activeSessionMetadata.workspaceRoot,
+				godotExecutablePath: activeSessionMetadata.godotExecutablePath
+			};
+		}
+		return null;
+	}
+
+	async function handleAddWorkspaceContext(kind: "files" | "folder"): Promise<void> {
+		if (activeSessionId === null || isNewSessionHome) {
+			setSessionError("Please open a session before adding files or folders.");
+			return;
+		}
+		const workspace: WorkspaceConfig | null = getContextWorkspace();
+		if (workspace === null) {
+			setSessionError("Please select a workspace before adding files or folders.");
+			return;
+		}
+
+		try {
+			setSessionError(null);
+			const entries: WorkspacePickedEntry[] | null = kind === "files"
+				? await window.electronAPI.workspaceFs.pickWorkspaceFiles({ workspaceRoot: workspace.rootPath })
+				: await window.electronAPI.workspaceFs.pickWorkspaceFolder({ workspaceRoot: workspace.rootPath });
+			if (entries === null || entries.length === 0) {
+				return;
+			}
+			for (const entry of entries) {
+				patchContext({ action: "addOrReplace", item: createWorkspacePathContextItem(entry, workspace) });
+			}
+		} catch (error: unknown) {
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to add workspace context";
+			setSessionError(errorMessage);
+			console.error("[App] add workspace context failed", error);
+		}
+	}
+
 	const selectedProviderId: string | null = isNewSessionHome
 		? homeDraft.providerId ?? providerModelSelection?.activeModel.providerId ?? null
 		: workbench?.composer.provider ?? providerModelSelection?.activeModel.providerId ?? null;
@@ -1368,6 +1450,12 @@ function App(): React.JSX.Element {
 					}}
 					onProviderModelChange={(providerId: string, modelId: string): void => {
 						void handleProviderModelChange(providerId, modelId);
+					}}
+					onAddFiles={(): void => {
+						void handleAddWorkspaceContext("files");
+					}}
+					onAddFolder={(): void => {
+						void handleAddWorkspaceContext("folder");
 					}}
 					onAddImages={(files: File[]): void => {
 						void handleAddImageFiles(files);

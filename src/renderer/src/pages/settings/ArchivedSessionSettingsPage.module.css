@@ -35,7 +35,7 @@
 }
 
 .workspaceSelect {
-	min-width: 180px;
+	width: 20%;
 }
 
 .errorText,

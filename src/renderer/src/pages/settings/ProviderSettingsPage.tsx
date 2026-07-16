@@ -175,6 +175,35 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 		return payload;
 	}
 
+	async function handleClearApiKey(provider: ProviderModelSelectionProvider): Promise<void> {
+		if (!provider.configured) {
+			setDraftApiKey("");
+			setIsApiKeyDirty(false);
+			return;
+		}
+
+		try {
+			setIsSaving(true);
+			setErrorMessage(null);
+			const nextSelection: ProviderModelSelection = await saveProviderConfig({
+				provider: provider.provider,
+				apiKey: null,
+				baseUrl: draftBaseUrl.trim().length > 0 ? draftBaseUrl.trim() : null,
+				model: provider.selectedModel ?? provider.defaultModel,
+				activate: provider.selected
+			});
+			setSelection(nextSelection);
+			onSelectionChange?.(nextSelection);
+			setSelectedProviderId(provider.provider);
+			setDraftApiKey("");
+			setIsApiKeyDirty(false);
+		} catch (error: unknown) {
+			setErrorMessage(error instanceof Error ? error.message : "Failed to clear API key");
+		} finally {
+			setIsSaving(false);
+		}
+	}
+
 	async function handleSaveProvider(provider: ProviderModelSelectionProvider, modelId?: string): Promise<void> {
 		try {
 			setIsSaving(true);
@@ -323,6 +352,15 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 							>
 								Test
 							</Button>
+							<Button
+								aria-label="Clear API key"
+								title="Clear API key"
+								icon={<Icon name="clear" />}
+								danger={selectedProvider.configured}
+								disabled={isSaving || isRefreshing || (!selectedProvider.configured && draftApiKey.length === 0)}
+								loading={isSaving}
+								onClick={(): void => void handleClearApiKey(selectedProvider)}
+							/>
 						</Space.Compact>
 						<Typography.Text type="secondary" className={styles.fieldHint}>
 							{selectedProvider.apiKeyMasked !== null && !isApiKeyDirty ? `Saved key: ${selectedProvider.apiKeyMasked}` : "Only a newly entered key will be saved."}

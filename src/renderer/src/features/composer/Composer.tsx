@@ -45,6 +45,8 @@ export type ComposerProps = {
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onWorkspaceAdd?: () => void;
 	onWorkspaceClear?: () => void;
+	onAddFiles?: () => void;
+	onAddFolder?: () => void;
 	onAddImages?: (files: File[]) => void;
 	onRemoveContext?: (contextId: string) => void;
 	onPinContext?: (contextId: string, pinned: boolean) => void;
@@ -61,15 +63,15 @@ type SelectedModel = {
 
 const contextItems: MenuProps["items"] = [
 	{
-		key: "0",
+		key: "files",
 		label: "Add files",
 	},
 	{
-		key: "1",
+		key: "folder",
 		label: "Add folder",
 	},
 	{
-		key: "2",
+		key: "images",
 		label: "Add images",
 	},
 ];
@@ -321,6 +323,8 @@ function Composer({
 	onWorkspaceSelect,
 	onWorkspaceAdd,
 	onWorkspaceClear,
+	onAddFiles,
+	onAddFolder,
 	onAddImages,
 	onRemoveContext,
 	onPinContext,
@@ -374,7 +378,16 @@ function Composer({
 	};
 
 	const handleContextItemClick: MenuProps["onClick"] = ({ key }): void => {
-		if (String(key) === "2") {
+		const selectedKey: string = String(key);
+		if (selectedKey === "files") {
+			onAddFiles?.();
+			return;
+		}
+		if (selectedKey === "folder") {
+			onAddFolder?.();
+			return;
+		}
+		if (selectedKey === "images") {
 			imageInputRef.current?.click();
 		}
 	};

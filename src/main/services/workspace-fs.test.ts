@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtempSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { getPickedWorkspaceDirectory, listWorkspaceChildren, openWorkspaceDirectory } from "./workspace-fs";
+import { createWorkspaceEntryFromAbsolutePath, getPickedWorkspaceDirectory, listWorkspaceChildren, openWorkspaceDirectory } from "./workspace-fs";
 
 describe("workspace-fs", () => {
 	it("lists files and folders inside workspace root", async () => {
@@ -29,6 +29,35 @@ describe("workspace-fs", () => {
 			workspaceRoot: root,
 			relativePath: "../"
 		})).rejects.toThrow("outside workspace");
+	});
+
+	it("creates file and folder entries from selected workspace paths", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		await mkdir(join(root, "scripts"));
+		await writeFile(join(root, "scripts", "player.gd"), "extends Node", "utf8");
+
+		await expect(createWorkspaceEntryFromAbsolutePath(root, join(root, "scripts", "player.gd"), "file")).resolves.toEqual({
+			name: "player.gd",
+			relativePath: "scripts/player.gd",
+			resourcePath: "res://scripts/player.gd",
+			kind: "file"
+		});
+		await expect(createWorkspaceEntryFromAbsolutePath(root, join(root, "scripts"), "folder")).resolves.toEqual({
+			name: "scripts",
+			relativePath: "scripts",
+			resourcePath: "res://scripts",
+			kind: "folder"
+		});
+	});
+
+	it("rejects selected paths outside workspace or with the wrong kind", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const outsideRoot: string = mkdtempSync(join(tmpdir(), "daedalus-studio-outside-"));
+		const filePath: string = join(root, "project.godot");
+		await writeFile(filePath, "config_version=5", "utf8");
+
+		await expect(createWorkspaceEntryFromAbsolutePath(root, join(outsideRoot, "project.godot"), "file")).rejects.toThrow("outside workspace");
+		await expect(createWorkspaceEntryFromAbsolutePath(root, filePath, "folder")).rejects.toThrow("not a folder");
 	});
 
 	it("normalizes canceled workspace directory picks", () => {

@@ -34,7 +34,11 @@
 	min-width: 160px;
 }
 
-.serverList {
+.selectBox {
+	min-width: 20%;
+}
+
+.skillList {
 	display: grid;
 	align-content: start;
 	gap: 8px;
@@ -44,54 +48,59 @@
 	padding-top: 8px;
 }
 
-.mcpServerItem {
+.skillItem {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
 	gap: 12px;
 	min-width: 0;
-	padding: 8px 0px 8px 0px;
+	padding: 8px 0;
 	border-radius: 4px;
 	user-select: none;
 }
 
-.serverMain {
+.skillMain {
 	display: grid;
 	gap: 4px;
 	min-width: 0;
 }
 
-.serverTitleRow {
+.skillTitleRow {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	min-width: 0;
 }
 
-.serverTitle {
+.skillTitle {
 	margin: 0 !important;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-.serverDescription,
-.serverSummary,
-.serverMeta {
+.skillDescription,
+.skillSummary,
+.skillMeta {
 	display: block;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-.serverSummary {
+.skillSummary {
 	font-family: var(--ant-font-family-code);
 	font-size: 12px;
 	color: var(--ant-color-text);
 }
 
-.serverActions {
+.skillActions {
 	display: flex;
 	align-items: center;
 	gap: 8px;
+}
+
+.installForm {
+	display: grid;
+	gap: 12px;
 }

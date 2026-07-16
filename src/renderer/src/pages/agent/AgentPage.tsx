@@ -63,6 +63,8 @@ type AgentPageProps = {
 	onModeChange: (mode: ChatMode) => void;
 	onApprovalModeChange: (mode: ApprovalMode) => void;
 	onProviderModelChange: (providerId: string, modelId: string) => void;
+	onAddFiles: () => void;
+	onAddFolder: () => void;
 	onAddImages: (files: File[]) => void;
 	onRemoveContext: (contextId: string) => void;
 	onPinContext: (contextId: string, pinned: boolean) => void;
@@ -122,6 +124,8 @@ function AgentPage({
 	onModeChange,
 	onApprovalModeChange,
 	onProviderModelChange,
+	onAddFiles,
+	onAddFolder,
 	onAddImages,
 	onRemoveContext,
 	onPinContext,
@@ -216,6 +220,8 @@ function AgentPage({
 						onModeChange={onModeChange}
 						onApprovalModeChange={onApprovalModeChange}
 						onProviderModelChange={onProviderModelChange}
+						onAddFiles={onAddFiles}
+						onAddFolder={onAddFolder}
 						onAddImages={onAddImages}
 						onWorkspaceSelect={onHomeWorkspaceSelect}
 						onWorkspaceAdd={onHomeWorkspaceAdd}

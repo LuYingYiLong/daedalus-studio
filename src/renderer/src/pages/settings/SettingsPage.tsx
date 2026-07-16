@@ -7,7 +7,8 @@ import DefaultModelSettingsPage from "./DefaultModelSettingsPage";
 import PersonalizationSettingsPage from "./PersonalizationSettingsPage";
 import ArchivedSessionSettingsPage from "./ArchivedSessionSettingsPage";
 import styles from "./SettingsPage.module.css";
-import McpServersSettingsPage from "./MCPServersSettingsPage";
+import McpServersSettingsPage from "./McpServersSettingsPage";
+import SkillsSettingsPage from "./SkillsSettingsPage";
 
 type MenuItem = Required<MenuProps>["items"][number];
 type SettingsPageKey = 
@@ -94,6 +95,8 @@ function SettingsPage({ onProviderModelSelectionChange }: SettingsPageProps): Re
 				<PersonalizationSettingsPage />
 			) : activePage === "mcp_servers" ? (
 				<McpServersSettingsPage />
+			) : activePage === "skills" ? (
+				<SkillsSettingsPage />
 			) : activePage === "archived_sessions" ? (
 				<ArchivedSessionSettingsPage />
 			) : (

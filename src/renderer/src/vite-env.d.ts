@@ -32,7 +32,23 @@ declare global {
 				}>;
 			}>;
 			pickWorkspaceDirectory: () => Promise<string | null>;
+			pickWorkspaceFiles: (params: { workspaceRoot: string }) => Promise<Array<{
+				name: string;
+				relativePath: string;
+				resourcePath: string;
+				kind: "file" | "folder";
+			}> | null>;
+			pickWorkspaceFolder: (params: { workspaceRoot: string }) => Promise<Array<{
+				name: string;
+				relativePath: string;
+				resourcePath: string;
+				kind: "file" | "folder";
+			}> | null>;
 			openWorkspaceDirectory: (workspaceRoot: string) => Promise<{ opened: true }>;
+		};
+		skillFs: {
+			pickSkillZip: () => Promise<string | null>;
+			pickSkillDirectory: () => Promise<string | null>;
 		};
 	}
 
