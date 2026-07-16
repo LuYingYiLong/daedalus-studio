@@ -59,37 +59,48 @@
 
 .chatPanel {
 	display: grid;
-	grid-template-rows: auto minmax(0, 1fr) auto;
+	grid-template-rows: auto auto minmax(0, 1fr) auto;
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
 }
 
-.chatPanel > section {
-	width: min(100%, 880px);
-	min-width: 0;
-	justify-self: center;
+.chatPanel > :global(.ant-divider-horizontal) {
+	margin: 0;
 }
 
 .chatHeader {
 	display: flex;
 	align-items: center;
-	justify-content: flex-start;
-	gap: 16px;
-	width: min(100%, 880px);
-	justify-self: center;
-	padding: 0 8px;
+	justify-content: space-between;
+	gap: 8px;
+	width: 100%;
+	justify-self: stretch;
+	padding: 0px 8px;
+	min-height: 40px;
+	user-select: none;
 }
 
 .chatTitle {
 	flex: 1 1 auto;
 	min-width: 0px;
-	margin: 0px;
+	margin: 0px 8px !important;
 	overflow: hidden;
 	text-align: left;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	user-select: none;
+}
+
+.workspaceLaunchControls {
+	flex: 0 0 auto;
+	max-width: min(360px, 42vw);
+}
+
+.workspaceLaunchControls :global(.ant-btn:first-child) {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .homePanel {

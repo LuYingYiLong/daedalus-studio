@@ -353,8 +353,8 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 								Test
 							</Button>
 							<Button
-								aria-label="Clear API key"
-								title="Clear API key"
+								color="danger"
+								variant="solid"
 								icon={<Icon name="clear" />}
 								danger={selectedProvider.configured}
 								disabled={isSaving || isRefreshing || (!selectedProvider.configured && draftApiKey.length === 0)}

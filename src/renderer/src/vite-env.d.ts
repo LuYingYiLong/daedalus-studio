@@ -16,6 +16,8 @@ declare global {
 		onStatusChanged: (callback: (status: string) => void) => () => void;
 	}
 
+	type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
+
 	interface ElectronAPI {
 		versions: ElectronVersions;
 		backend: BackendAPI;
@@ -44,7 +46,22 @@ declare global {
 				resourcePath: string;
 				kind: "file" | "folder";
 			}> | null>;
+			getPathForFile: (file: File) => string;
+			createEntriesFromPaths: (params: { workspaceRoot: string; paths: string[] }) => Promise<Array<{
+				name: string;
+				relativePath: string;
+				resourcePath: string;
+				kind: "file" | "folder";
+			}>>;
 			openWorkspaceDirectory: (workspaceRoot: string) => Promise<{ opened: true }>;
+			listLaunchTargets: () => Promise<Array<{
+				id: WorkspaceLaunchTargetId;
+				label: string;
+			}>>;
+			openLaunchTarget: (params: {
+				workspaceRoot: string;
+				targetId: WorkspaceLaunchTargetId;
+			}) => Promise<{ opened: true; targetId: WorkspaceLaunchTargetId }>;
 		};
 		skillFs: {
 			pickSkillZip: () => Promise<string | null>;

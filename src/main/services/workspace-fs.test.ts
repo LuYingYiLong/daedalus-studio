@@ -1,9 +1,9 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtempSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkspaceEntryFromAbsolutePath, getPickedWorkspaceDirectory, listWorkspaceChildren, openWorkspaceDirectory } from "./workspace-fs";
+import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, getPickedWorkspaceDirectory, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceLaunchTarget } from "./workspace-fs";
 
 describe("workspace-fs", () => {
 	it("lists files and folders inside workspace root", async () => {
@@ -60,6 +60,35 @@ describe("workspace-fs", () => {
 		await expect(createWorkspaceEntryFromAbsolutePath(root, filePath, "folder")).rejects.toThrow("not a folder");
 	});
 
+	it("creates workspace entries from dropped absolute paths", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		await mkdir(join(root, "scripts"));
+		const filePath: string = join(root, "scripts", "player.gd");
+		await writeFile(filePath, "extends Node", "utf8");
+
+		await expect(createWorkspaceEntriesFromAbsolutePaths({
+			workspaceRoot: root,
+			paths: [filePath, filePath]
+		})).resolves.toEqual([{
+			name: "player.gd",
+			relativePath: "scripts/player.gd",
+			resourcePath: "res://scripts/player.gd",
+			kind: "file"
+		}]);
+	});
+
+	it("rejects dropped paths outside workspace root", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const outsideRoot: string = mkdtempSync(join(tmpdir(), "daedalus-studio-outside-"));
+		const filePath: string = join(outsideRoot, "other.gd");
+		await writeFile(filePath, "extends Node", "utf8");
+
+		await expect(createWorkspaceEntriesFromAbsolutePaths({
+			workspaceRoot: root,
+			paths: [filePath]
+		})).rejects.toThrow("outside workspace");
+	});
+
 	it("normalizes canceled workspace directory picks", () => {
 		expect(getPickedWorkspaceDirectory({
 			canceled: true,
@@ -99,5 +128,75 @@ describe("workspace-fs", () => {
 		await expect(openWorkspaceDirectory(root, async (): Promise<string> => {
 			return "explorer failed";
 		})).rejects.toThrow("explorer failed");
+	});
+
+	it("lists default and detected workspace launch targets", async () => {
+		const localAppData: string = "C:/Users/test/AppData/Local";
+		const programFiles: string = "C:/Program Files";
+		const existingPaths: Set<string> = new Set([
+			join(localAppData, "Programs", "Microsoft VS Code", "Code.exe"),
+			join(programFiles, "Git", "git-bash.exe")
+		]);
+
+		const targets = await listWorkspaceLaunchTargets({
+			platform: "win32",
+			env: {
+				LOCALAPPDATA: localAppData,
+				ProgramFiles: programFiles
+			},
+			pathExists: async (targetPath: string): Promise<boolean> => existingPaths.has(targetPath),
+			findOnPath: async (): Promise<string | null> => null
+		});
+
+		expect(targets.map((target) => target.id)).toEqual([
+			"file-explorer",
+			"terminal",
+			"vscode",
+			"git-bash"
+		]);
+	});
+
+	it("opens Git Bash in the workspace root", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const programFiles: string = "C:/Program Files";
+		const gitBashPath: string = join(programFiles, "Git", "git-bash.exe");
+		const spawned: Array<{ command: string; args: string[]; cwd: string }> = [];
+
+		await expect(openWorkspaceLaunchTarget(root, "git-bash", {
+			platform: "win32",
+			env: { ProgramFiles: programFiles },
+			pathExists: async (targetPath: string): Promise<boolean> => targetPath === gitBashPath,
+			findOnPath: async (): Promise<string | null> => null,
+			spawnProcess(command, args, options): { unref(): void } {
+				spawned.push({ command, args, cwd: options.cwd });
+				return { unref(): void {} };
+			}
+		})).resolves.toEqual({ opened: true, targetId: "git-bash" });
+
+		expect(spawned).toEqual([{
+			command: gitBashPath,
+			args: [`--cd=${resolve(root)}`],
+			cwd: resolve(root)
+		}]);
+	});
+
+	it("opens fallback terminal with workspace as cwd instead of an extra command argument", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const spawned: Array<{ command: string; args: string[]; cwd: string }> = [];
+
+		await expect(openWorkspaceLaunchTarget(root, "terminal", {
+			platform: "win32",
+			findOnPath: async (): Promise<string | null> => null,
+			spawnProcess(command, args, options): { unref(): void } {
+				spawned.push({ command, args, cwd: options.cwd });
+				return { unref(): void {} };
+			}
+		})).resolves.toEqual({ opened: true, targetId: "terminal" });
+
+		expect(spawned).toEqual([{
+			command: "cmd.exe",
+			args: ["/K"],
+			cwd: resolve(root)
+		}]);
 	});
 });

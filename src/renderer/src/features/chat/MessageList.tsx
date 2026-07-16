@@ -387,50 +387,52 @@ function MessageList({
 
 	return (
 		<section ref={listRef} className={styles.messageList}>
-			{errorMessage ? (
-				<Alert description={errorMessage} type="error" showIcon={true} />
-			) : null}
-			{isLoading ? (
-				<Spin className={styles.loadingIcon} />
-			) : (
-				<>
-					<div className={styles.spacer} style={{ height: topSpacerHeight }} />
-					{visibleBlocks.map((block: TimelineBlock): React.ReactNode => {
-						if (block.type === "user") {
+			<div className={styles.messageListContent}>
+				{errorMessage ? (
+					<Alert description={errorMessage} type="error" showIcon={true} />
+				) : null}
+				{isLoading ? (
+					<Spin className={styles.loadingIcon} />
+				) : (
+					<>
+						<div className={styles.spacer} style={{ height: topSpacerHeight }} />
+						{visibleBlocks.map((block: TimelineBlock): React.ReactNode => {
+							if (block.type === "user") {
+								return (
+									<UserBubble
+										key={block.id}
+										entryId={block.id}
+										requestId={block.requestId}
+										message={block.content}
+										additionalContext={block.additionalContext ?? []}
+										sentTime={formatShortDateTime(block.sentAtUtc)}
+										disabled={retryDisabled}
+										isRetryEditing={activeRetryRequestId === block.requestId}
+										onRetryEditStart={onRetryEditStart}
+										onRetryEditCancel={onRetryEditCancel}
+										onRetryFromUserMessage={onRetryFromUserMessage}
+									/>
+								);
+							}
+
 							return (
-								<UserBubble
+								<AssistantBubble
 									key={block.id}
 									entryId={block.id}
-									requestId={block.requestId}
-									message={block.content}
-									additionalContext={block.additionalContext ?? []}
-									sentTime={formatShortDateTime(block.sentAtUtc)}
-									disabled={retryDisabled}
-									isRetryEditing={activeRetryRequestId === block.requestId}
-									onRetryEditStart={onRetryEditStart}
-									onRetryEditCancel={onRetryEditCancel}
-									onRetryFromUserMessage={onRetryFromUserMessage}
+									bodyParts={block.bodyParts}
+									message={getAssistantMarkdown(block)}
+									elapsedTime={formatElapsedTime(
+										block.startedAtUtc,
+										block.status === "running" ? nowIsoTime : block.completedAtUtc
+									) ?? undefined}
+									endTime={block.status === "running" ? undefined : formatShortDateTime(block.completedAtUtc)}
 								/>
 							);
-						}
-
-						return (
-							<AssistantBubble
-								key={block.id}
-								entryId={block.id}
-								bodyParts={block.bodyParts}
-								message={getAssistantMarkdown(block)}
-								elapsedTime={formatElapsedTime(
-									block.startedAtUtc,
-									block.status === "running" ? nowIsoTime : block.completedAtUtc
-								) ?? undefined}
-								endTime={block.status === "running" ? undefined : formatShortDateTime(block.completedAtUtc)}
-							/>
-						);
-					})}
-					<div className={styles.spacer} style={{ height: bottomSpacerHeight }} />
-				</>
-			)}
+						})}
+						<div className={styles.spacer} style={{ height: bottomSpacerHeight }} />
+					</>
+				)}
+			</div>
 		</section>
 	);
 }

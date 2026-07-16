@@ -45,6 +45,7 @@ type WorkspacePickedEntry = {
 
 const SUPPORTED_IMAGE_MIME_TYPES: readonly SupportedImageMimeType[] = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 const MAX_IMAGE_ATTACHMENT_BYTES: number = 1024 * 1024;
+const RECENT_CONTEXT_FILE_WINDOW_MS: number = 2000;
 
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -83,6 +84,26 @@ function createWorkspacePathContextItem(entry: WorkspacePickedEntry, workspace: 
 
 function isSupportedImageMimeType(value: string): value is SupportedImageMimeType {
 	return SUPPORTED_IMAGE_MIME_TYPES.includes(value as SupportedImageMimeType);
+}
+
+function getLocalPathForFile(file: File): string | null {
+	try {
+		const filePath: string = window.electronAPI.workspaceFs.getPathForFile(file);
+		return filePath.trim().length > 0 ? filePath : null;
+	} catch {
+		const legacyPath: unknown = (file as File & { path?: unknown }).path;
+		return typeof legacyPath === "string" && legacyPath.trim().length > 0 ? legacyPath : null;
+	}
+}
+
+function createContextFileSignature(file: File): string {
+	return [
+		getLocalPathForFile(file) ?? "",
+		file.name,
+		file.type,
+		String(file.size),
+		String(file.lastModified)
+	].join("\u0000");
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -340,6 +361,7 @@ function App(): React.JSX.Element {
 	const skillsLoadingRef = useRef<boolean>(false);
 	const slashCommandsRetryAtRef = useRef<number>(0);
 	const skillsRetryAtRef = useRef<number>(0);
+	const recentContextFileSignaturesRef = useRef<Map<string, number>>(new Map());
 
 	const loadSlashCommands = useCallback(async (): Promise<void> => {
 		if (slashCommandsLoadingRef.current || Date.now() < slashCommandsRetryAtRef.current) {
@@ -456,7 +478,7 @@ function App(): React.JSX.Element {
 		await sendWorkbenchPatch(takePendingWorkbenchPatch());
 	}, [sendWorkbenchPatch, takePendingWorkbenchPatch]);
 
-	function applyOptimisticActiveRun(requestId: string, clearComposerText: boolean): void {
+	function applyOptimisticActiveRun(requestId: string, clearComposerText: boolean, clearComposerContext: boolean = false): void {
 		const startedAt: string = new Date().toISOString();
 
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
@@ -466,7 +488,8 @@ function App(): React.JSX.Element {
 					...currentWorkbench,
 					composer: {
 						...currentWorkbench.composer,
-						text: clearComposerText ? "" : currentWorkbench.composer.text
+						text: clearComposerText ? "" : currentWorkbench.composer.text,
+						additionalContext: clearComposerContext ? [] : currentWorkbench.composer.additionalContext
 					},
 					activeRun: {
 						status: "streaming",
@@ -478,7 +501,7 @@ function App(): React.JSX.Element {
 	}
 
 	function applyOptimisticSend(requestId: string, message: string, additionalContext: AdditionalContextItem[], clearComposerText: boolean = true): void {
-		applyOptimisticActiveRun(requestId, clearComposerText);
+		applyOptimisticActiveRun(requestId, clearComposerText, true);
 		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 			const hasUserBlock: boolean = currentPage.blocks.some((block: TimelineBlock): boolean => {
 				return block.type === "user" && block.requestId === requestId;
@@ -501,7 +524,7 @@ function App(): React.JSX.Element {
 	}
 
 	function applyOptimisticRetry(retryFromRequestId: string, requestId: string, message: string, additionalContext: AdditionalContextItem[]): void {
-		applyOptimisticActiveRun(requestId, false);
+		applyOptimisticActiveRun(requestId, false, false);
 		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 			const trimmedPage: TimelinePageState = trimTimelineFromRequest(currentPage, retryFromRequestId);
 
@@ -1069,7 +1092,9 @@ function App(): React.JSX.Element {
 		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
 		const chatMode: ChatMode = getChatMode(workbench);
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
+		const pendingPatch: WorkbenchPatch = mergePatch(takePendingWorkbenchPatch(), {
+			additionalContextAction: { action: "set", items: [] }
+		});
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
 
 		try {
@@ -1104,7 +1129,8 @@ function App(): React.JSX.Element {
 						...currentWorkbench,
 						composer: {
 							...currentWorkbench.composer,
-							text: message
+							text: message,
+							additionalContext
 						},
 						activeRun: currentWorkbench.activeRun.requestId === requestId
 							? { status: "idle" }
@@ -1362,6 +1388,81 @@ function App(): React.JSX.Element {
 		}
 	}
 
+	async function handleAddContextFiles(files: File[]): Promise<void> {
+		const now: number = Date.now();
+		for (const [signature, timestamp] of recentContextFileSignaturesRef.current) {
+			if (now - timestamp > RECENT_CONTEXT_FILE_WINDOW_MS) {
+				recentContextFileSignaturesRef.current.delete(signature);
+			}
+		}
+
+		const nextFiles: File[] = [];
+		for (const file of files) {
+			const signature: string = createContextFileSignature(file);
+			if (recentContextFileSignaturesRef.current.has(signature)) {
+				continue;
+			}
+
+			recentContextFileSignaturesRef.current.set(signature, now);
+			nextFiles.push(file);
+		}
+
+		if (nextFiles.length === 0) {
+			return;
+		}
+		if (activeSessionId === null || isNewSessionHome) {
+			setSessionError("Please open a session before adding files.");
+			return;
+		}
+
+		const imageFiles: File[] = [];
+		const workspaceFiles: File[] = [];
+		for (const file of nextFiles) {
+			if (isSupportedImageMimeType(file.type)) {
+				imageFiles.push(file);
+				continue;
+			}
+			workspaceFiles.push(file);
+		}
+
+		try {
+			setSessionError(null);
+			if (imageFiles.length > 0) {
+				await handleAddImageFiles(imageFiles);
+			}
+
+			if (workspaceFiles.length === 0) {
+				return;
+			}
+
+			const workspace: WorkspaceConfig | null = getContextWorkspace();
+			if (workspace === null) {
+				setSessionError(imageFiles.length > 0 ? "Images added. Select a workspace to add non-image files." : "Please select a workspace before adding files.");
+				return;
+			}
+
+			const paths: string[] = workspaceFiles
+				.map((file: File): string | null => getLocalPathForFile(file))
+				.filter((filePath: string | null): filePath is string => filePath !== null);
+			if (paths.length === 0) {
+				setSessionError(imageFiles.length > 0 ? "Images added. Dropped files did not expose local paths." : "Dropped files did not expose local paths.");
+				return;
+			}
+
+			const entries: WorkspacePickedEntry[] = await window.electronAPI.workspaceFs.createEntriesFromPaths({
+				workspaceRoot: workspace.rootPath,
+				paths
+			});
+			for (const entry of entries) {
+				patchContext({ action: "addOrReplace", item: createWorkspacePathContextItem(entry, workspace) });
+			}
+		} catch (error: unknown) {
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to add files";
+			setSessionError(errorMessage);
+			console.error("[App] add context files failed", error);
+		}
+	}
+
 	const selectedProviderId: string | null = isNewSessionHome
 		? homeDraft.providerId ?? providerModelSelection?.activeModel.providerId ?? null
 		: workbench?.composer.provider ?? providerModelSelection?.activeModel.providerId ?? null;
@@ -1459,6 +1560,9 @@ function App(): React.JSX.Element {
 					}}
 					onAddImages={(files: File[]): void => {
 						void handleAddImageFiles(files);
+					}}
+					onAddContextFiles={(files: File[]): void => {
+						void handleAddContextFiles(files);
 					}}
 					onRemoveContext={(contextId: string): void => patchContext({ action: "remove", contextId })}
 					onPinContext={(contextId: string, pinned: boolean): void => patchContext({ action: "pin", contextId, pinned })}

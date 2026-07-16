@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 
 contextBridge.exposeInMainWorld("electronAPI", {
 	versions: {
@@ -31,8 +31,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		pickWorkspaceFolder: (params: { workspaceRoot: string }): Promise<Array<{ name: string; relativePath: string; resourcePath: string; kind: "file" | "folder" }> | null> => {
 			return ipcRenderer.invoke("workspace-fs:pick-folder", params);
 		},
+		getPathForFile: (file: File): string => {
+			return webUtils.getPathForFile(file);
+		},
+		createEntriesFromPaths: (params: { workspaceRoot: string; paths: string[] }): Promise<Array<{ name: string; relativePath: string; resourcePath: string; kind: "file" | "folder" }>> => {
+			return ipcRenderer.invoke("workspace-fs:create-entries-from-paths", params);
+		},
 		openWorkspaceDirectory: (workspaceRoot: string): Promise<{ opened: true }> => {
 			return ipcRenderer.invoke("workspace-fs:open-directory", workspaceRoot);
+		},
+		listLaunchTargets: (): Promise<Array<{ id: "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash"; label: string }>> => {
+			return ipcRenderer.invoke("workspace-fs:list-launch-targets");
+		},
+		openLaunchTarget: (params: { workspaceRoot: string; targetId: "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" }): Promise<{ opened: true; targetId: "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" }> => {
+			return ipcRenderer.invoke("workspace-fs:open-launch-target", params);
 		}
 	},
 

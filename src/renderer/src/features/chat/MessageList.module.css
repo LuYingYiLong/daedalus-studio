@@ -2,7 +2,12 @@
 	min-height: 0;
 	overflow: auto;
 	padding: 8px;
-	scrollbar-width: thin;
+}
+
+.messageListContent {
+	width: min(100%, 880px);
+	min-width: 0;
+	margin: 0 auto;
 }
 
 .spacer {

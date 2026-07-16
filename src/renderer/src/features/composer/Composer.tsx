@@ -49,6 +49,7 @@ export type ComposerProps = {
 	onAddFiles?: () => void;
 	onAddFolder?: () => void;
 	onAddImages?: (files: File[]) => void;
+	onAddContextFiles?: (files: File[]) => void;
 	onRemoveContext?: (contextId: string) => void;
 	onPinContext?: (contextId: string, pinned: boolean) => void;
 	onClearUnpinnedContext?: () => void;
@@ -366,9 +367,9 @@ function Composer({
 	onAddFiles,
 	onAddFolder,
 	onAddImages,
+	onAddContextFiles,
 	onRemoveContext,
 	onPinContext,
-	onClearUnpinnedContext,
 	onCancel,
 	onSubmit,
 	onCompletionOpen
@@ -750,6 +751,60 @@ function Composer({
 		refreshCompletion(textArea.value, textArea.selectionStart);
 	}
 
+	function addContextFiles(files: File[]): boolean {
+		if (onAddContextFiles === undefined) {
+			return false;
+		}
+
+		if (files.length === 0) {
+			return false;
+		}
+
+		onAddContextFiles(files);
+		return true;
+	}
+
+	function addContextFilesFromList(fileList: FileList | null): boolean {
+		return addContextFiles(Array.from(fileList ?? []));
+	}
+
+	function handleTextAreaPaste(event: React.ClipboardEvent<HTMLTextAreaElement>): void {
+		const files: File[] = Array.from(event.clipboardData.files);
+		if (files.length === 0) {
+			for (const item of Array.from(event.clipboardData.items)) {
+				if (item.kind !== "file") {
+					continue;
+				}
+				const file: File | null = item.getAsFile();
+				if (file !== null) {
+					files.push(file);
+				}
+			}
+		}
+
+		if (addContextFiles(files)) {
+			event.preventDefault();
+		}
+	}
+
+	function handleTextAreaDragOver(event: React.DragEvent<HTMLTextAreaElement>): void {
+		if (event.dataTransfer.types.includes("Files")) {
+			event.preventDefault();
+			event.stopPropagation();
+			event.dataTransfer.dropEffect = "copy";
+		}
+	}
+
+	function handleTextAreaDrop(event: React.DragEvent<HTMLTextAreaElement>): void {
+		if (!event.dataTransfer.types.includes("Files")) {
+			return;
+		}
+
+		event.preventDefault();
+		event.stopPropagation();
+		addContextFilesFromList(event.dataTransfer.files);
+	}
+
 	async function refreshContextUsage(): Promise<void> {
 		setIsContextUsageLoading(true);
 		setContextUsageError(null);
@@ -938,27 +993,20 @@ function Composer({
 									onRemoveContext?.(contextId);
 								}}
 							/>
-							<Button
-								type="text"
-								size="small"
-								className={styles.clearContextButton}
-								onClick={(): void => {
-									onClearUnpinnedContext?.();
-								}}
-							>
-								Clear unpinned
-							</Button>
 						</div>
 					) : null}
 					<Input.TextArea
 						ref={textAreaRef}
 						value={draftMessage}
-						autoSize={{ minRows: composerContextItems.length > 0 ? 3 : 4, maxRows: 12 }}
+						autoSize={{ minRows: 4, maxRows: 12 }}
 						placeholder="What can I say?"
 						className={styles.composerTextArea}
 						onChange={handleTextAreaChange}
 						onKeyDown={handleTextAreaKeyDown}
 						onSelect={handleTextAreaSelection}
+						onPaste={handleTextAreaPaste}
+						onDragOver={handleTextAreaDragOver}
+						onDrop={handleTextAreaDrop}
 						onCompositionStart={(): void => {
 							setIsComposing(true);
 						}}

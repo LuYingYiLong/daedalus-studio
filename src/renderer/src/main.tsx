@@ -50,6 +50,9 @@ createRoot(rootElement).render(
 					},
 					Progress: {
 						lineBorderRadius: 4,
+					},
+					Modal: {
+						padding: 8,
 					}
 				}
 			}}
