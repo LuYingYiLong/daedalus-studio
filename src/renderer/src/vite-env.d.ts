@@ -32,6 +32,7 @@ declare global {
 				}>;
 			}>;
 			pickWorkspaceDirectory: () => Promise<string | null>;
+			openWorkspaceDirectory: (workspaceRoot: string) => Promise<{ opened: true }>;
 		};
 	}
 

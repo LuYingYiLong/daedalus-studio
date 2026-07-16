@@ -14,6 +14,13 @@ export type ConfigureEnvironmentResult = {
 	workspace: WorkspaceConfig | null;
 };
 
+export type DeleteWorkspaceResult = {
+	deleted: true;
+	workspaceId: string;
+	deletedSessionIds: string[];
+	deletedArchivedSessionIds: string[];
+};
+
 export async function fetchWorkspaces(): Promise<WorkspaceListResult> {
 	const client = await createBackendClient();
 
@@ -33,4 +40,12 @@ export async function configureEnvironment(params: ConfigureEnvironmentParams): 
 	const client = await createBackendClient();
 
 	return client.request<ConfigureEnvironmentResult>("environment.configure", params);
+}
+
+export async function deleteWorkspace(workspaceId: string): Promise<DeleteWorkspaceResult> {
+	const client = await createBackendClient();
+
+	return client.request<DeleteWorkspaceResult>("workspace.delete", {
+		workspaceId
+	});
 }

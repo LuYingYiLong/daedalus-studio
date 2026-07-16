@@ -19,10 +19,16 @@ createRoot(rootElement).render(
 			theme={{
 				algorithm: theme.darkAlgorithm,
 				token: {
+					borderRadius: 4,
 					colorPrimary: "#478cbf",
 					fontFamily: `"Mona Sans", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
 				},
 				components: {
+					Button: {
+						iconGap: 4,
+						paddingInline: 8,
+						paddingInlineLG: 8,
+					},
 					Tree: {
 						indentSize: 16,
 					},
@@ -35,6 +41,9 @@ createRoot(rootElement).render(
 					Alert: {
 						defaultPadding: 8,
 						withDescriptionPadding: 8,
+					},
+					Table: {
+						headerBorderRadius: 4,
 					},
 				}
 			}}

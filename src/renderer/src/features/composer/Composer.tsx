@@ -45,6 +45,7 @@ export type ComposerProps = {
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onWorkspaceAdd?: () => void;
 	onWorkspaceClear?: () => void;
+	onAddImages?: (files: File[]) => void;
 	onRemoveContext?: (contextId: string) => void;
 	onPinContext?: (contextId: string, pinned: boolean) => void;
 	onClearUnpinnedContext?: () => void;
@@ -180,6 +181,7 @@ function createProviderModelItems(selection: ProviderModelSelection | null): Men
 	return selection.providers.map((provider: ProviderModelSelectionProvider) => {
 		return {
 			key: `provider:${provider.provider}`,
+			popupClassName: styles.modelSubmenuPopup,
 			label: (
 				<span className={styles.providerGroupLabel}>
 					<span>{provider.displayName}</span>
@@ -319,6 +321,7 @@ function Composer({
 	onWorkspaceSelect,
 	onWorkspaceAdd,
 	onWorkspaceClear,
+	onAddImages,
 	onRemoveContext,
 	onPinContext,
 	onClearUnpinnedContext,
@@ -328,6 +331,7 @@ function Composer({
 }: ComposerProps): React.JSX.Element {
 	const rootRef = useRef<HTMLDivElement | null>(null);
 	const textAreaRef = useRef<TextAreaRef | null>(null);
+	const imageInputRef = useRef<HTMLInputElement | null>(null);
 	const suppressedCompletionValueRef = useRef<string | null>(null);
 	const completionStateSignatureRef = useRef<string>("");
 	const lastSyncedMessageRef = useRef<string>(message);
@@ -368,6 +372,21 @@ function Composer({
 			onWorkspaceSelect?.(workspaceId);
 		}
 	};
+
+	const handleContextItemClick: MenuProps["onClick"] = ({ key }): void => {
+		if (String(key) === "2") {
+			imageInputRef.current?.click();
+		}
+	};
+
+	function handleImageInputChange(event: React.ChangeEvent<HTMLInputElement>): void {
+		const files: File[] = Array.from(event.currentTarget.files ?? []);
+		event.currentTarget.value = "";
+		if (files.length === 0) {
+			return;
+		}
+		onAddImages?.(files);
+	}
 
 	const providerModelItems: MenuProps["items"] = useMemo((): MenuProps["items"] => {
 		return createProviderModelItems(providerModelSelection);
@@ -634,6 +653,14 @@ function Composer({
 
 	return (
 		<div ref={rootRef} className={styles.composerRoot}>
+			<input
+				ref={imageInputRef}
+				type="file"
+				accept="image/png,image/jpeg,image/webp,image/gif"
+				multiple={true}
+				hidden={true}
+				onChange={handleImageInputChange}
+			/>
 			<div className={styles.composerInputWrap}>
 				{todoPanelOpen && hasWorkflowTodo && !hasCompletion ? (
 					<div className={styles.todoPanel}>
@@ -732,7 +759,7 @@ function Composer({
 					/>
 					<div className={styles.composerToolbar}>
 					<Dropdown
-						menu={{ items: contextItems }}
+						menu={{ items: contextItems, onClick: handleContextItemClick }}
 						trigger={["click"]}
 					>
 						<Button
@@ -801,6 +828,7 @@ function Composer({
 					<Divider vertical={true} />
 					<Dropdown
 						disabled={providerModelSelection === null}
+						rootClassName={styles.modelDropdown}
 						menu={{
 							items: providerModelItems,
 							selectedKeys: selectedModelKey === undefined ? [] : [selectedModelKey],

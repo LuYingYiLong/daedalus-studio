@@ -1,10 +1,11 @@
-import { Button, Typography } from "antd";
+import { Button, Divider, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import type { AdditionalContextItem, SessionMetadata, TimelineBlock, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode } from "@/api/approval-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
 import type { ProviderModelSelection } from "@/api/provider-api";
+import type { DeleteWorkspaceResult } from "@/api/workspace-api";
 import type { SkillSummary } from "@/api/skill-api";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import MessageList from "@/features/chat/MessageList";
@@ -55,6 +56,7 @@ type AgentPageProps = {
 	onHomeWorkspaceClear: () => void;
 	onSessionSelect: (session: SessionMetadata) => void;
 	onSessionArchive: (session: SessionMetadata) => void;
+	onWorkspaceDelete: (result: DeleteWorkspaceResult) => void;
 	onWorkbenchPanelOpenChange: (open: boolean) => void;
 	onLoadMoreBefore: () => void;
 	onLoadMoreAfter: () => void;
@@ -65,6 +67,7 @@ type AgentPageProps = {
 	onModeChange: (mode: ChatMode) => void;
 	onApprovalModeChange: (mode: ApprovalMode) => void;
 	onProviderModelChange: (providerId: string, modelId: string) => void;
+	onAddImages: (files: File[]) => void;
 	onRemoveContext: (contextId: string) => void;
 	onPinContext: (contextId: string, pinned: boolean) => void;
 	onClearUnpinnedContext: () => void;
@@ -118,6 +121,7 @@ function AgentPage({
 	onHomeWorkspaceClear,
 	onSessionSelect,
 	onSessionArchive,
+	onWorkspaceDelete,
 	onWorkbenchPanelOpenChange,
 	onLoadMoreBefore,
 	onLoadMoreAfter,
@@ -128,6 +132,7 @@ function AgentPage({
 	onModeChange,
 	onApprovalModeChange,
 	onProviderModelChange,
+	onAddImages,
 	onRemoveContext,
 	onPinContext,
 	onClearUnpinnedContext,
@@ -148,18 +153,7 @@ function AgentPage({
 					</Button>
 				</header>
 
-				<div className={styles.workspaceTitleRow}>
-					<Typography.Title level={4} className={styles.workspaceTitle}>
-						Workspace
-					</Typography.Title>
-					<Button
-						className={styles.workspaceRefreshButton}
-						size="small"
-						type="text"
-						icon={<Icon name="reload" />}
-						onClick={onWorkspaceRefresh}
-					/>
-				</div>
+				<Divider size="small" />
 
 				<WorkspaceTree
 					refreshToken={workspaceRefreshToken}
@@ -168,6 +162,7 @@ function AgentPage({
 					onWorkspaceSelect={onWorkspaceSelect}
 					onSessionSelect={onSessionSelect}
 					onSessionArchive={onSessionArchive}
+					onWorkspaceDelete={onWorkspaceDelete}
 				/>
 			</aside>
 
@@ -241,6 +236,7 @@ function AgentPage({
 						onModeChange={onModeChange}
 						onApprovalModeChange={onApprovalModeChange}
 						onProviderModelChange={onProviderModelChange}
+						onAddImages={onAddImages}
 						onWorkspaceSelect={onHomeWorkspaceSelect}
 						onWorkspaceAdd={onHomeWorkspaceAdd}
 						onWorkspaceClear={onHomeWorkspaceClear}

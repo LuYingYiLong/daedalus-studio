@@ -203,6 +203,24 @@
 	white-space: nowrap;
 }
 
+.modelDropdown :global(.ant-dropdown-menu) {
+	max-height: min(520px, calc(100vh - 96px));
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.modelSubmenuPopup {
+	max-height: min(520px, calc(100vh - 96px));
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.modelSubmenuPopup :global(.ant-dropdown-menu) {
+	max-height: inherit;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
 .composerActionIcon,
 .composerSendIcon {
 	width: 16px;

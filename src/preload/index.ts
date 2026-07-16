@@ -24,6 +24,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		},
 		pickWorkspaceDirectory: (): Promise<string | null> => {
 			return ipcRenderer.invoke("workspace-fs:pick-directory");
+		},
+		openWorkspaceDirectory: (workspaceRoot: string): Promise<{ opened: true }> => {
+			return ipcRenderer.invoke("workspace-fs:open-directory", workspaceRoot);
 		}
 	}
 });

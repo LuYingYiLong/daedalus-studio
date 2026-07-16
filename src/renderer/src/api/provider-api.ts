@@ -53,6 +53,7 @@ export type ProviderModelCapabilities = {
 	webSearch?: boolean | undefined;
 	vision?: boolean | undefined;
 	imageGeneration?: boolean | undefined;
+	imageEdit?: boolean | undefined;
 };
 
 export type ProviderModelSelectionProvider = {

@@ -30,7 +30,8 @@ const CAPABILITY_BADGES: CapabilityBadge[] = [
 	{ key: "tools", label: "Tools", icon: "mcp", color: "orange" },
 	{ key: "webSearch", label: "Web", icon: "global", color: "green" },
 	{ key: "vision", label: "Vision", icon: "show", color: "purple" },
-	{ key: "imageGeneration", label: "Image", icon: "draw", color: "magenta" }
+	{ key: "imageGeneration", label: "Image", icon: "draw", color: "magenta" },
+	{ key: "imageEdit", label: "Edit", icon: "draw", color: "cyan" }
 ];
 
 function getModelTokenText(model: ProviderModelInfo): string {
@@ -367,7 +368,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 							pagination={false}
 							rowKey="id"
 							size="small"
-							scroll={{ x: true, y: 55 * 5 }}
+							scroll={{ x: true }}
 						/>
 					</div>
 				</div>

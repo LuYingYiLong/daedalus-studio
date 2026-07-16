@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { configureEnvironment, fetchWorkspaces, selectWorkspace } from "@/api/workspace-api";
+import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import type { AdditionalContextItem, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import { createSession, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, type SaveSessionUiMetadataParams } from "@/api/session-api";
@@ -36,9 +36,52 @@ import DrawingPage from "@/pages/drawing/DrawingPage";
 import KnowledgePage from "@/pages/knowledge/KnowledgePage";
 import { extractEnabledSkillRefs, type ComposerCompletionTrigger } from "@/features/composer/composer-completion";
 import { isWorkflowTodoClearEvent, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
+import { saveImageAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
+
+type SupportedImageMimeType = SaveImageAttachmentParams["mimeType"];
+
+const SUPPORTED_IMAGE_MIME_TYPES: readonly SupportedImageMimeType[] = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+const MAX_IMAGE_ATTACHMENT_BYTES: number = 1024 * 1024;
 
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function isSupportedImageMimeType(value: string): value is SupportedImageMimeType {
+	return SUPPORTED_IMAGE_MIME_TYPES.includes(value as SupportedImageMimeType);
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+	return new Promise((resolve, reject): void => {
+		const reader = new FileReader();
+		reader.addEventListener("load", (): void => {
+			if (typeof reader.result === "string") {
+				resolve(reader.result);
+				return;
+			}
+			reject(new Error("Failed to read image file."));
+		});
+		reader.addEventListener("error", (): void => {
+			reject(reader.error ?? new Error("Failed to read image file."));
+		});
+		reader.readAsDataURL(file);
+	});
+}
+
+function readImageDimensions(dataUrl: string): Promise<{ width?: number; height?: number }> {
+	return new Promise((resolve): void => {
+		const image = new window.Image();
+		image.onload = (): void => {
+			resolve({
+				width: image.naturalWidth > 0 ? image.naturalWidth : undefined,
+				height: image.naturalHeight > 0 ? image.naturalHeight : undefined
+			});
+		};
+		image.onerror = (): void => {
+			resolve({});
+		};
+		image.src = dataUrl;
+	});
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -106,6 +149,34 @@ function createHomeDraft(): HomeDraft {
 		providerId: null,
 		modelId: null
 	};
+}
+
+function createWorkspaceFromSessionOpenResult(result: SessionOpenResult): WorkspaceConfig | null {
+	const metadataWorkspaceId: string | undefined = result.metadata.workspaceId;
+	const metadataWorkspaceRoot: string | undefined = result.metadata.workspaceRoot;
+	if (metadataWorkspaceId !== undefined && metadataWorkspaceRoot !== undefined) {
+		return {
+			id: metadataWorkspaceId,
+			name: result.metadata.workspaceName ?? result.metadata.title,
+			kind: result.metadata.workspaceKind ?? "godot",
+			rootPath: metadataWorkspaceRoot,
+			godotExecutablePath: result.metadata.godotExecutablePath
+		};
+	}
+
+	const selection = result.workbench.activeSelection;
+	if (typeof selection.workspaceId === "string" && typeof selection.workspaceRoot === "string") {
+		return {
+			id: selection.workspaceId,
+			name: typeof selection.workspaceName === "string" && selection.workspaceName.length > 0
+				? selection.workspaceName
+				: result.metadata.title,
+			kind: "godot",
+			rootPath: selection.workspaceRoot
+		};
+	}
+
+	return null;
 }
 
 function createOptimisticUserBlock(requestId: string, message: string, additionalContext: AdditionalContextItem[]): TimelineBlock {
@@ -612,6 +683,7 @@ function App(): React.JSX.Element {
 			setIsNewSessionHome(false);
 			setActiveSessionId(sessionId);
 			setActiveSessionMetadata(session);
+			setActiveWorkspace(null);
 			setTimelinePage(emptyTimelinePage);
 			setWorkbench(null);
 			setWorkflowTodoSnapshot(null);
@@ -622,14 +694,7 @@ function App(): React.JSX.Element {
 			setActiveSessionMetadata(result.metadata);
 			setWorkbench(result.workbench);
 			setApprovalModeState(result.metadata.approvalMode ?? "manual");
-			if (typeof result.workbench.activeSelection.workspaceId === "string" && typeof result.workbench.activeSelection.workspaceRoot === "string") {
-				setActiveWorkspace({
-					id: result.workbench.activeSelection.workspaceId,
-					name: result.workbench.activeSelection.workspaceName ?? result.metadata.title,
-					kind: "godot",
-					rootPath: result.workbench.activeSelection.workspaceRoot
-				});
-			}
+			setActiveWorkspace(createWorkspaceFromSessionOpenResult(result));
 
 			if (result.workspaceWarning) {
 				console.warn("[App] session workspace warning", result.workspaceWarning);
@@ -644,19 +709,52 @@ function App(): React.JSX.Element {
 		}
 	}
 
-	function handleSessionArchive(session: SessionMetadata): void {
-		if (session.id !== activeSessionId) {
-			return;
-		}
-
+	function resetToNewSessionHome(): void {
 		setActiveSessionId(null);
 		setActiveSessionMetadata(null);
 		setTimelinePage(emptyTimelinePage);
 		setWorkbench(null);
 		setWorkflowTodoSnapshot(null);
+		setActiveRetryRequestId(null);
+		setActiveWorkspace(null);
 		setSessionError(null);
 		setIsNewSessionHome(true);
 		setHomeDraft(createHomeDraft());
+	}
+
+	function handleSessionArchive(session: SessionMetadata): void {
+		if (session.id !== activeSessionId) {
+			return;
+		}
+
+		resetToNewSessionHome();
+	}
+
+	function handleWorkspaceDelete(result: DeleteWorkspaceResult): void {
+		setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
+			return currentWorkspaces.filter((workspace: WorkspaceConfig): boolean => workspace.id !== result.workspaceId);
+		});
+		setHomeDraft((currentDraft: HomeDraft): HomeDraft => {
+			if (currentDraft.workspaceId !== result.workspaceId) {
+				return currentDraft;
+			}
+
+			return {
+				...currentDraft,
+				workspaceId: null,
+				workspace: null
+			};
+		});
+		setActiveWorkspace((currentWorkspace: WorkspaceConfig | null): WorkspaceConfig | null => {
+			return currentWorkspace?.id === result.workspaceId ? null : currentWorkspace;
+		});
+
+		const activeSessionDeleted: boolean = activeSessionId !== null && result.deletedSessionIds.includes(activeSessionId);
+		const activeWorkspaceDeleted: boolean = activeSessionMetadata?.workspaceId === result.workspaceId;
+		if (activeSessionDeleted || activeWorkspaceDeleted) {
+			resetToNewSessionHome();
+		}
 	}
 
 	async function persistSessionUiMetadata(params: SaveSessionUiMetadataParams): Promise<void> {
@@ -1086,6 +1184,42 @@ function App(): React.JSX.Element {
 		queueWorkbenchPatch({ additionalContextAction: action }, true);
 	}
 
+	async function handleAddImageFiles(files: File[]): Promise<void> {
+		if (activeSessionId === null || isNewSessionHome) {
+			setSessionError("Please open a session before adding images.");
+			return;
+		}
+
+		try {
+			setSessionError(null);
+			for (const file of files.slice(0, 3)) {
+				if (!isSupportedImageMimeType(file.type)) {
+					throw new Error(`Unsupported image type: ${file.type || file.name}`);
+				}
+				if (file.size <= 0 || file.size > MAX_IMAGE_ATTACHMENT_BYTES) {
+					throw new Error(`${file.name} is larger than 1 MiB.`);
+				}
+
+				const dataUrl: string = await readFileAsDataUrl(file);
+				const dimensions = await readImageDimensions(dataUrl);
+				const result = await saveImageAttachment({
+					sessionId: activeSessionId,
+					mimeType: file.type,
+					dataUrl,
+					byteSize: file.size,
+					width: dimensions.width,
+					height: dimensions.height,
+					title: file.name
+				});
+				patchContext({ action: "addOrReplace", item: result.attachment });
+			}
+		} catch (error: unknown) {
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to add image";
+			setSessionError(errorMessage);
+			console.error("[App] add image failed", error);
+		}
+	}
+
 	async function handleApproveApproval(approvalId: string): Promise<void> {
 		try {
 			setApprovalAction("approve");
@@ -1183,6 +1317,7 @@ function App(): React.JSX.Element {
 					onHomeWorkspaceClear={handleHomeWorkspaceClear}
 					onSessionSelect={handleSessionSelect}
 					onSessionArchive={handleSessionArchive}
+					onWorkspaceDelete={handleWorkspaceDelete}
 					onWorkbenchPanelOpenChange={setWorkbenchPanelOpen}
 					onLoadMoreBefore={handleLoadMoreBefore}
 					onLoadMoreAfter={handleLoadMoreAfter}
@@ -1204,6 +1339,9 @@ function App(): React.JSX.Element {
 					}}
 					onProviderModelChange={(providerId: string, modelId: string): void => {
 						void handleProviderModelChange(providerId, modelId);
+					}}
+					onAddImages={(files: File[]): void => {
+						void handleAddImageFiles(files);
 					}}
 					onRemoveContext={(contextId: string): void => patchContext({ action: "remove", contextId })}
 					onPinContext={(contextId: string, pinned: boolean): void => patchContext({ action: "pin", contextId, pinned })}

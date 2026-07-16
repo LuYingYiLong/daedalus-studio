@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import { archiveSession, fetchSessions } from "@/api/session-api";
-import { fetchWorkspaces } from "@/api/workspace-api";
-import { Button, Menu, Tooltip, Typography } from "antd";
+import { deleteWorkspace, fetchWorkspaces } from "@/api/workspace-api";
+import type { DeleteWorkspaceResult } from "@/api/workspace-api";
+import { Button, Dropdown, Menu, Modal, Tooltip, Typography } from "antd";
 import type { MenuProps } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/api/types";
 import { Icon } from "@/assets/icons";
@@ -15,6 +16,7 @@ export type WorkspaceTreeProps = {
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onSessionSelect?: (session: SessionMetadata) => void;
 	onSessionArchive?: (session: SessionMetadata) => void;
+	onWorkspaceDelete?: (result: DeleteWorkspaceResult) => void;
 };
 
 type WorkspaceMenuItem = NonNullable<MenuProps["items"]>[number];
@@ -23,6 +25,12 @@ type WorkspaceMenuItems = NonNullable<MenuProps["items"]>;
 type CreateSessionMenuItemOptions = {
 	archivingSessionId: string | null;
 	onArchive: (session: SessionMetadata, event: MouseEvent<HTMLElement>) => void;
+};
+
+type CreateWorkspaceMenuItemOptions = CreateSessionMenuItemOptions & {
+	deletingWorkspaceId: string | null;
+	onOpenInExplorer: (workspace: WorkspaceConfig) => void;
+	onDeleteWorkspace: (workspace: WorkspaceConfig) => void;
 };
 
 function createSessionMenuItem(session: SessionMetadata, options: CreateSessionMenuItemOptions): WorkspaceMenuItem {
@@ -49,16 +57,60 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 	};
 }
 
-function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: SessionMetadata[], options: CreateSessionMenuItemOptions): WorkspaceMenuItems {
+function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: SessionMetadata[], options: CreateWorkspaceMenuItemOptions): WorkspaceMenuItems {
 	const workspaceIds: Set<string> = new Set(workspaces.map((workspace: WorkspaceConfig): string => workspace.id));
 	const workspaceItems: WorkspaceMenuItems = workspaces.map((workspace: WorkspaceConfig): WorkspaceMenuItem => {
 		const workspaceSessions: SessionMetadata[] = sessions.filter((session: SessionMetadata): boolean => {
 			return session.workspaceId === workspace.id;
 		});
+		const isDeleting: boolean = options.deletingWorkspaceId === workspace.id;
+		const actionMenu: MenuProps = {
+			items: [
+				{
+					key: "open",
+					label: "Open in Explorer"
+				},
+				{
+					key: "delete",
+					label: "Delete",
+					danger: true,
+					disabled: options.deletingWorkspaceId !== null
+				}
+			],
+			onClick: ({ key, domEvent }): void => {
+				domEvent.preventDefault();
+				domEvent.stopPropagation();
+
+				if (key === "open") {
+					options.onOpenInExplorer(workspace);
+					return;
+				}
+				if (key === "delete") {
+					options.onDeleteWorkspace(workspace);
+				}
+			}
+		};
 
 		return {
 			key: `workspace:${workspace.id}`,
-			label: workspace.name,
+			label: (
+				<span className={styles.workspaceMenuItem}>
+					<span className={styles.workspaceTitle}>{workspace.name}</span>
+					<Dropdown menu={actionMenu} trigger={["click"]} placement="bottomRight">
+						<Button
+							type="text"
+							size="small"
+							aria-label={`Workspace actions for ${workspace.name}`}
+							icon={<Icon name="more" width={16} height={16} />}
+							loading={isDeleting}
+							onClick={(event: MouseEvent<HTMLElement>): void => {
+								event.preventDefault();
+								event.stopPropagation();
+							}}
+						/>
+					</Dropdown>
+				</span>
+			),
 			icon: <Icon name="folder" />,
 			children: workspaceSessions.length > 0
 				? workspaceSessions.map((session: SessionMetadata): WorkspaceMenuItem => createSessionMenuItem(session, options))
@@ -108,7 +160,8 @@ function WorkspaceTree({
 	selectedWorkspaceId = null,
 	onWorkspaceSelect,
 	onSessionSelect,
-	onSessionArchive
+	onSessionArchive,
+	onWorkspaceDelete
 }: WorkspaceTreeProps): React.JSX.Element {
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([]);
 	const [sessions, setSessions] = useState<SessionMetadata[]>([]);
@@ -119,6 +172,8 @@ function WorkspaceTree({
 	const [workspaceError, setWorkspaceError] = useState<string | null>(null);
 	const [reloadIndex, setReloadIndex] = useState<number>(0);
 	const [archivingSessionId, setArchivingSessionId] = useState<string | null>(null);
+	const [deleteTargetWorkspace, setDeleteTargetWorkspace] = useState<WorkspaceConfig | null>(null);
+	const [deletingWorkspaceId, setDeletingWorkspaceId] = useState<string | null>(null);
 
 	const handleMenuClick: MenuProps["onClick"] = ({ key }): void => {
 		const selectedKey: string = String(key);
@@ -185,6 +240,61 @@ function WorkspaceTree({
 		}
 	}
 
+	async function handleOpenWorkspaceInExplorer(workspace: WorkspaceConfig): Promise<void> {
+		try {
+			setWorkspaceError(null);
+			await window.electronAPI.workspaceFs.openWorkspaceDirectory(workspace.rootPath);
+		} catch (error: unknown) {
+			setWorkspaceError(error instanceof Error ? error.message : "Failed to open workspace directory");
+		}
+	}
+
+	async function handleConfirmDeleteWorkspace(): Promise<void> {
+		if (deleteTargetWorkspace === null || deletingWorkspaceId !== null) {
+			return;
+		}
+
+		const workspace: WorkspaceConfig = deleteTargetWorkspace;
+
+		try {
+			setDeletingWorkspaceId(workspace.id);
+			setWorkspaceError(null);
+			const result: DeleteWorkspaceResult = await deleteWorkspace(workspace.id);
+			const deletedSessionIds: Set<string> = new Set(result.deletedSessionIds);
+
+			setWorkspaces((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
+				return currentWorkspaces.filter((currentWorkspace: WorkspaceConfig): boolean => currentWorkspace.id !== workspace.id);
+			});
+			setSessions((currentSessions: SessionMetadata[]): SessionMetadata[] => {
+				return currentSessions.filter((session: SessionMetadata): boolean => !deletedSessionIds.has(session.id));
+			});
+			setOpenWorkspaceKeys((currentKeys: string[]): string[] => {
+				return currentKeys.filter((key: string): boolean => key !== `workspace:${workspace.id}`);
+			});
+			setSelectedMenuKeys((currentKeys: string[]): string[] => {
+				return currentKeys.filter((key: string): boolean => {
+					if (key === `workspace:${workspace.id}`) {
+						return false;
+					}
+					if (!key.startsWith("session:")) {
+						return true;
+					}
+
+					return !deletedSessionIds.has(key.slice("session:".length));
+				});
+			});
+			setActiveWorkspaceId((currentWorkspaceId: string | null): string | null => {
+				return currentWorkspaceId === workspace.id ? null : currentWorkspaceId;
+			});
+			setDeleteTargetWorkspace(null);
+			onWorkspaceDelete?.(result);
+		} catch (error: unknown) {
+			setWorkspaceError(error instanceof Error ? error.message : "Failed to delete workspace");
+		} finally {
+			setDeletingWorkspaceId(null);
+		}
+	}
+
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
 		let retryTimer: number | null = null;
@@ -248,11 +358,18 @@ function WorkspaceTree({
 	const workspaceMenuItems: WorkspaceMenuItems = useMemo((): WorkspaceMenuItems => {
 		return createWorkspaceMenuItems(workspaces, sessions, {
 			archivingSessionId,
+			deletingWorkspaceId,
 			onArchive: (session: SessionMetadata, event: MouseEvent<HTMLElement>): void => {
 				void handleArchiveSession(session, event);
+			},
+			onOpenInExplorer: (workspace: WorkspaceConfig): void => {
+				void handleOpenWorkspaceInExplorer(workspace);
+			},
+			onDeleteWorkspace: (workspace: WorkspaceConfig): void => {
+				setDeleteTargetWorkspace(workspace);
 			}
 		});
-	}, [archivingSessionId, sessions, workspaces]);
+	}, [archivingSessionId, deletingWorkspaceId, sessions, workspaces]);
 	const effectiveSelectedMenuKeys: string[] = getSelectedMenuKeys(selectedSessionId, selectedWorkspaceId, selectedMenuKeys);
 
 	useEffect((): void => {
@@ -306,6 +423,7 @@ function WorkspaceTree({
 						className={styles.workspaceMenu}
 						inlineIndent={8}
 						mode="inline"
+						expandIcon={(): null => null}
 						items={workspaceMenuItems}
 						openKeys={openWorkspaceKeys}
 						selectedKeys={effectiveSelectedMenuKeys}
@@ -314,6 +432,24 @@ function WorkspaceTree({
 					/>
 				)}
 			</div>
+
+			<Modal
+				title="Delete workspace?"
+				open={deleteTargetWorkspace !== null}
+				okText="Delete"
+				okButtonProps={{ danger: true }}
+				confirmLoading={deletingWorkspaceId !== null}
+				onOk={(): void => {
+					void handleConfirmDeleteWorkspace();
+				}}
+				onCancel={(): void => {
+					if (deletingWorkspaceId === null) {
+						setDeleteTargetWorkspace(null);
+					}
+				}}
+			>
+				This will delete the workspace from Daedalus and permanently delete its sessions. It will not delete files from your Godot project folder.
+			</Modal>
 		</div>
 	);
 }

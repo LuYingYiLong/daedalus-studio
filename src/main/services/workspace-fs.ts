@@ -1,5 +1,5 @@
-import { BrowserWindow, dialog, ipcMain } from "electron";
-import { readdir } from "node:fs/promises";
+import { BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { readdir, stat } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
 
 export type WorkspaceFsEntry = {
@@ -19,6 +19,9 @@ export type WorkspaceFsListChildrenResult = {
 };
 
 export type WorkspaceFsPickDirectoryResult = string | null;
+export type WorkspaceFsOpenDirectoryResult = {
+	opened: true;
+};
 
 function assertInsideWorkspace(workspaceRoot: string, relativePath: string | undefined): { root: string; target: string; relativePath: string } {
 	const root: string = resolve(workspaceRoot);
@@ -91,11 +94,32 @@ export async function pickWorkspaceDirectory(owner: BrowserWindow | undefined): 
 	return getPickedWorkspaceDirectory(result);
 }
 
+export async function openWorkspaceDirectory(
+	workspaceRoot: string,
+	openPath: (path: string) => Promise<string> = shell.openPath
+): Promise<WorkspaceFsOpenDirectoryResult> {
+	const root: string = resolve(workspaceRoot);
+	const rootStats = await stat(root);
+	if (!rootStats.isDirectory()) {
+		throw new Error("Workspace root is not a directory.");
+	}
+
+	const openError: string = await openPath(root);
+	if (openError.trim().length > 0) {
+		throw new Error(openError);
+	}
+
+	return { opened: true };
+}
+
 export function registerWorkspaceFsIpc(): void {
 	ipcMain.handle("workspace-fs:list-children", async (_event, params: WorkspaceFsListChildrenParams): Promise<WorkspaceFsListChildrenResult> => {
 		return listWorkspaceChildren(params);
 	});
 	ipcMain.handle("workspace-fs:pick-directory", async (event): Promise<WorkspaceFsPickDirectoryResult> => {
 		return pickWorkspaceDirectory(BrowserWindow.fromWebContents(event.sender) ?? undefined);
+	});
+	ipcMain.handle("workspace-fs:open-directory", async (_event, workspaceRoot: string): Promise<WorkspaceFsOpenDirectoryResult> => {
+		return openWorkspaceDirectory(workspaceRoot);
 	});
 }

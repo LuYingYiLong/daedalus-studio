@@ -3,6 +3,7 @@
 	grid-template-columns: 320px minmax(0, 1fr);
 	min-width: 0;
 	min-height: 0;
+	height: 100%;
 	padding-bottom: 8px;
 }
 
@@ -60,9 +61,13 @@
 
 .detailPane {
 	display: grid;
-	grid-template-rows: auto minmax(0, 1fr);
+	grid-template-rows: auto auto;
+	align-content: start;
 	min-width: 0;
 	min-height: 0;
+	max-height: 100%;
+	overflow-x: hidden;
+	overflow-y: auto;
 	padding: 0px 8px 8px 8px;
 }
 
@@ -74,13 +79,13 @@
 
 .detailTitle {
 	margin: 0;
+	user-select: none;
 }
 
 .detailBody {
 	display: grid;
 	align-content: start;
 	min-height: 0;
-	overflow: auto;
 }
 
 .fieldGroup {
@@ -125,11 +130,6 @@
 .modelGroup {
 	border: 1px solid var(--ant-color-border-secondary);
 	border-radius: 8px;
-	overflow: hidden;
-}
-
-.modelTable :global(.ant-table) {
-	height: 100%;
 }
 
 .modelTable :global(.ant-table-thead > tr > th) {

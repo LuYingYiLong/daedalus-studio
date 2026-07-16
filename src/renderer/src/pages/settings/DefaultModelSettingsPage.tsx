@@ -11,6 +11,7 @@ import {
 	type ProviderModelSelectionProvider,
 	type ProviderTaskModelRef
 } from "@/api/provider-api";
+import { isImageTaskModel } from "./provider-model-filters";
 import styles from "./DefaultModelSettingsPage.module.css";
 
 type RoutingKey = keyof ProviderModelRouting;
@@ -44,9 +45,9 @@ const ROUTING_OPTIONS: RoutingOption[] = [
 	},
 	{
 		key: "imageGeneration",
-		title: "Image generation model",
-		description: "Used by @image-gen and mcp_image_generate. This must be configured explicitly.",
-		filterModel: (model: ProviderModelInfo): boolean => model.capabilities.imageGeneration === true
+		title: "Image generation/edit model",
+		description: "Used by @image-gen and mcp_image_generate for text-to-image or image-to-image tasks. This must be configured explicitly.",
+		filterModel: isImageTaskModel
 	}
 ];
 

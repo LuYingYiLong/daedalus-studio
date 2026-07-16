@@ -51,8 +51,27 @@
 	flex: none;
 }
 
+.workspaceMenu :global(.ant-menu-submenu-arrow) {
+	display: none;
+}
+
 .menu {
 	border-inline-end: 0 !important;
+}
+
+.workspaceMenuItem {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 22px;
+	align-items: center;
+	gap: 4px;
+	width: 100%;
+	min-width: 0;
+}
+
+.workspaceTitle {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .sessionMenuItem {
@@ -71,6 +90,7 @@
 	white-space: nowrap;
 }
 
+.workspaceActionButton,
 .archiveButton {
 	width: 22px;
 	height: 22px;
@@ -80,11 +100,16 @@
 	color: var(--ant-color-text-tertiary);
 }
 
+.workspaceActionButton svg,
 .archiveButton svg {
 	width: 14px;
 	height: 14px;
 }
 
+.workspaceMenu :global(.ant-menu-submenu-title:hover) .workspaceActionButton,
+.workspaceMenu :global(.ant-menu-submenu-title:focus-within) .workspaceActionButton,
+.workspaceActionButton:focus-visible,
+.workspaceActionButton[aria-disabled="true"],
 .sessionMenuItem:hover .archiveButton,
 .archiveButton:focus-visible,
 .archiveButton[aria-disabled="true"] {
