@@ -240,9 +240,10 @@
 }
 
 .modelSubmenuPopup {
-	max-height: min(520px, calc(100vh - 96px));
+	max-height: min(360px, calc(100vh - 96px));
 	overflow-y: auto;
 	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
 	background: var(--ds-surface-elevated);
@@ -252,6 +253,7 @@
 	max-height: inherit;
 	overflow-y: auto;
 	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
 	border: 0;
 	box-shadow: none;
 }

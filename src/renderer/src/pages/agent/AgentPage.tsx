@@ -3,7 +3,7 @@ import { Button, Divider, Dropdown, message as antdMessage, Space, Typography } 
 import type { MenuProps } from "antd";
 import type { AdditionalContextItem, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
-import type { ApprovalMode } from "@/api/approval-api";
+import type { ApprovalMode, PendingApproval } from "@/api/approval-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
 import type { ProviderModelSelection } from "@/api/provider-api";
 import type { DeleteWorkspaceResult } from "@/api/workspace-api";
@@ -12,6 +12,7 @@ import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import MessageList from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
 import NewSessionHome from "./NewSessionHome";
+import ApprovalDialog from "@/features/approval/ApprovalDialog";
 import type { ComposerCompletionTrigger } from "@/features/composer/composer-completion";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import styles from "./AgentPage.module.css";
@@ -72,6 +73,10 @@ type AgentPageProps = {
 	workflowTodoCollapsed: boolean;
 	mode: ChatMode;
 	approvalMode: ApprovalMode;
+	pendingApproval: PendingApproval | null;
+	isApproving: boolean;
+	isRejecting: boolean;
+	approvalError: string | null;
 	slashCommands: SlashCommandDefinition[];
 	skills: SkillSummary[];
 	isSending: boolean;
@@ -100,6 +105,8 @@ type AgentPageProps = {
 	onMessageChange: (message: string) => void;
 	onModeChange: (mode: ChatMode) => void;
 	onApprovalModeChange: (mode: ApprovalMode) => void;
+	onApprovalApprove: (approvalId: string) => void;
+	onApprovalReject: (approvalId: string) => void;
 	onWebSearchEnabledChange: (enabled: boolean) => void;
 	onProviderModelChange: (providerId: string, modelId: string) => void;
 	onAddFiles: () => void;
@@ -140,6 +147,10 @@ function AgentPage({
 	workflowTodoCollapsed,
 	mode,
 	approvalMode,
+	pendingApproval,
+	isApproving,
+	isRejecting,
+	approvalError,
 	slashCommands,
 	skills,
 	isSending,
@@ -168,6 +179,8 @@ function AgentPage({
 	onMessageChange,
 	onModeChange,
 	onApprovalModeChange,
+	onApprovalApprove,
+	onApprovalReject,
 	onWebSearchEnabledChange,
 	onProviderModelChange,
 	onAddFiles,
@@ -370,47 +383,58 @@ function AgentPage({
 				)}
 
 				<footer className={`${styles.composer} ${workflowTodoSnapshot === null ? "" : styles.composerWithTodo}`}>
-					<Composer
-						providerModelSelection={providerModelSelection}
-						selectedProviderId={selectedProviderId}
-						selectedModelId={selectedModelId}
-						message={message}
-						contextItems={contextItems}
-						workflowTodoSnapshot={workflowTodoSnapshot}
-						workflowTodoCollapsed={workflowTodoCollapsed}
-						mode={mode}
-						approvalMode={approvalMode}
-						slashCommands={slashCommands}
-						skills={skills}
-						isSending={isSending}
-						isApprovalModeSaving={isApprovalModeSaving}
-						webSearchEnabled={webSearchEnabled}
-						workspaceOptions={workspaceOptions}
-						selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
-						workspaceFooterDisabled={workspaceFooterDisabled}
-						isWorkspaceAdding={isWorkspaceAdding}
-						showContextUsage={!isHome}
-						onMessageChange={onMessageChange}
-						onModeChange={onModeChange}
-						onApprovalModeChange={onApprovalModeChange}
-						onWebSearchEnabledChange={onWebSearchEnabledChange}
-						onProviderModelChange={onProviderModelChange}
-						onAddFiles={onAddFiles}
-						onAddFolder={onAddFolder}
-						onAddImages={onAddImages}
-						onAddContextFiles={onAddContextFiles}
-						onWorkspaceSelect={onHomeWorkspaceSelect}
-						onWorkspaceAdd={onHomeWorkspaceAdd}
-						onWorkspaceClear={onHomeWorkspaceClear}
-						onRemoveContext={onRemoveContext}
-						onPinContext={onPinContext}
-						onClearUnpinnedContext={onClearUnpinnedContext}
-						onCancel={onCancel}
-						onSubmit={onSubmit}
-						onWorkflowTodoDismiss={onWorkflowTodoDismiss}
-						onWorkflowTodoCollapseChange={onWorkflowTodoCollapseChange}
-						onCompletionOpen={onCompletionOpen}
-					/>
+					{!isHome && pendingApproval !== null ? (
+						<ApprovalDialog
+							pendingApproval={pendingApproval}
+							isApproving={isApproving}
+							isRejecting={isRejecting}
+							errorMessage={approvalError}
+							onApprove={onApprovalApprove}
+							onReject={onApprovalReject}
+						/>
+					) : (
+						<Composer
+							providerModelSelection={providerModelSelection}
+							selectedProviderId={selectedProviderId}
+							selectedModelId={selectedModelId}
+							message={message}
+							contextItems={contextItems}
+							workflowTodoSnapshot={workflowTodoSnapshot}
+							workflowTodoCollapsed={workflowTodoCollapsed}
+							mode={mode}
+							approvalMode={approvalMode}
+							slashCommands={slashCommands}
+							skills={skills}
+							isSending={isSending}
+							isApprovalModeSaving={isApprovalModeSaving}
+							webSearchEnabled={webSearchEnabled}
+							workspaceOptions={workspaceOptions}
+							selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
+							workspaceFooterDisabled={workspaceFooterDisabled}
+							isWorkspaceAdding={isWorkspaceAdding}
+							showContextUsage={!isHome}
+							onMessageChange={onMessageChange}
+							onModeChange={onModeChange}
+							onApprovalModeChange={onApprovalModeChange}
+							onWebSearchEnabledChange={onWebSearchEnabledChange}
+							onProviderModelChange={onProviderModelChange}
+							onAddFiles={onAddFiles}
+							onAddFolder={onAddFolder}
+							onAddImages={onAddImages}
+							onAddContextFiles={onAddContextFiles}
+							onWorkspaceSelect={onHomeWorkspaceSelect}
+							onWorkspaceAdd={onHomeWorkspaceAdd}
+							onWorkspaceClear={onHomeWorkspaceClear}
+							onRemoveContext={onRemoveContext}
+							onPinContext={onPinContext}
+							onClearUnpinnedContext={onClearUnpinnedContext}
+							onCancel={onCancel}
+							onSubmit={onSubmit}
+							onWorkflowTodoDismiss={onWorkflowTodoDismiss}
+							onWorkflowTodoCollapseChange={onWorkflowTodoCollapseChange}
+							onCompletionOpen={onCompletionOpen}
+						/>
+					)}
 				</footer>
 			</section>
 		</div>

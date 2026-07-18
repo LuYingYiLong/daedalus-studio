@@ -208,7 +208,10 @@ function McpServersSettingsPage(): React.JSX.Element {
 				{isLoading ? (
 					<Spin />
 				) : filteredServers.length === 0 ? (
-					<Empty description={servers.length === 0 ? "No custom MCP servers" : "No matching MCP servers"} />
+					<Empty
+						image={<Icon name="empty" />}
+						description={servers.length === 0 ? "No custom MCP servers" : "No matching MCP servers"}
+					/>
 				) : filteredServers.map((server: CustomMcpServer): React.JSX.Element => {
 					const isBusy: boolean = busyServerId === server.id;
 					return (

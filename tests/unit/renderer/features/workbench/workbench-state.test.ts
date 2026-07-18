@@ -21,7 +21,7 @@ function createWorkbench(revision: number, text: string): WorkbenchSnapshot {
 		messageQueue: [],
 		pendingGuides: [],
 		activeRun: { status: "idle" },
-		pendingApproval: null,
+		pendingApproval: { count: 0, first: null },
 		nextStepHints: { hints: [] },
 		activeSelection: { workspaceId: null }
 	};
@@ -140,6 +140,90 @@ describe("workbench-state", () => {
 			status: "completed",
 			prompt: "blue castle"
 		});
+	});
+
+	it("merges approval continuation events by run id when rpc ids differ", () => {
+		const withApprovalRequired = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "chat-request",
+			event: "agent.tool.approval_required",
+			data: {
+				runId: "run-approval",
+				stepRunId: "step-run-approval",
+				toolCallId: "tool-create",
+				approvalId: "approval-a",
+				toolName: "mcp_godot_create_text_file"
+			}
+		});
+		const withApprovedResult = applyBackendEventToTimeline(withApprovalRequired, {
+			type: "event",
+			id: "approval-rpc",
+			event: "agent.tool.result",
+			data: {
+				runId: "run-approval",
+				stepRunId: "step-run-approval",
+				toolCallId: "tool-create",
+				toolName: "mcp_godot_create_text_file"
+			}
+		});
+		const withFinalText = applyBackendEventToTimeline(withApprovedResult, {
+			type: "event",
+			id: "chat-request",
+			event: "agent.message.delta",
+			data: {
+				runId: "run-approval",
+				stepRunId: "step-run-approval",
+				text: "done"
+			}
+		});
+		const assistant = withFinalText[0];
+
+		expect(withFinalText).toHaveLength(1);
+		expect(assistant?.type).toBe("assistant");
+		expect(assistant?.type === "assistant" ? assistant.content : "").toBe("done");
+		expect(assistant?.type === "assistant" ? assistant.bodyParts.filter((part) => part.type === "tool") : []).toHaveLength(1);
+	});
+
+	it("merges approved tool events by approval id when tool call id is omitted", () => {
+		const withApprovalRequired = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "chat-request",
+			event: "agent.tool.approval_required",
+			data: {
+				toolCallId: "tool-create",
+				approvalId: "approval-a",
+				toolName: "mcp_godot_create_text_file"
+			}
+		});
+		const withApproved = applyBackendEventToTimeline(withApprovalRequired, {
+			type: "event",
+			id: "chat-request",
+			event: "agent.tool.approved",
+			data: {
+				approvalId: "approval-a",
+				toolName: "mcp_godot_create_text_file"
+			}
+		});
+		const withResult = applyBackendEventToTimeline(withApproved, {
+			type: "event",
+			id: "chat-request",
+			event: "agent.tool.result",
+			data: {
+				toolCallId: "tool-create",
+				toolName: "mcp_godot_create_text_file"
+			}
+		});
+		const assistant = withResult[0];
+		const toolParts = assistant?.type === "assistant"
+			? assistant.bodyParts.filter((part) => part.type === "tool")
+			: [];
+
+		expect(toolParts).toHaveLength(1);
+		expect(toolParts[0]?.events.map((eventRecord) => eventRecord.type)).toEqual([
+			"tool.approval_required",
+			"tool.approved",
+			"tool.result"
+		]);
 	});
 
 	it("merges timeline pages without duplicating block ids", () => {

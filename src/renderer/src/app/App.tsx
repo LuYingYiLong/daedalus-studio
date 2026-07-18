@@ -13,8 +13,12 @@ import { cancelChatMessage, sendChatMessage, type ChatMode } from "@/api/chat-ap
 import { fetchSlashCommands, type SlashCommandDefinition } from "@/api/command-api";
 import { fetchSkills, type SkillSummary } from "@/api/skill-api";
 import {
+	approveApproval,
+	fetchApprovalList,
+	rejectApproval,
 	setApprovalMode,
 	type ApprovalMode,
+	type PendingApproval,
 } from "@/api/approval-api";
 import {
 	applyBackendEventToTimeline,
@@ -207,6 +211,11 @@ function getIsSending(workbench: WorkbenchSnapshot | null): boolean {
 	const status = workbench?.activeRun.status;
 
 	return status === "streaming" || status === "approval" || status === "paused" || status === "cancelling";
+}
+
+function getPendingApprovalCount(workbench: WorkbenchSnapshot | null): number {
+	const count = workbench?.pendingApproval?.count;
+	return typeof count === "number" && Number.isFinite(count) ? count : 0;
 }
 
 type HomeDraft = {
@@ -424,6 +433,10 @@ function App(): React.JSX.Element {
 	const [skills, setSkills] = useState<SkillSummary[]>([]);
 	const [approvalMode, setApprovalModeState] = useState<ApprovalMode>("manual");
 	const [isApprovalModeSaving, setIsApprovalModeSaving] = useState<boolean>(false);
+	const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
+	const [approvalError, setApprovalError] = useState<string | null>(null);
+	const [isApproving, setIsApproving] = useState<boolean>(false);
+	const [isRejecting, setIsRejecting] = useState<boolean>(false);
 	const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
@@ -554,6 +567,24 @@ function App(): React.JSX.Element {
 			void loadSkills();
 		}
 	}, [loadSkills, loadSlashCommands, skills.length, slashCommands.length]);
+
+	const refreshPendingApproval = useCallback(async (): Promise<void> => {
+		if (activeSessionIdRef.current === null) {
+			setPendingApproval(null);
+			return;
+		}
+
+		try {
+			const result = await fetchApprovalList();
+			setApprovalModeState(result.mode);
+			setPendingApproval(result.pending[0] ?? null);
+			setApprovalError(null);
+		} catch (error: unknown) {
+			const message: string = error instanceof Error ? error.message : "Failed to load approvals";
+			setApprovalError(message);
+			console.error("[App] load approvals failed", error);
+		}
+	}, []);
 
 	const applyWorkbench = useCallback((nextWorkbench: WorkbenchSnapshot): void => {
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot => {
@@ -848,6 +879,16 @@ function App(): React.JSX.Element {
 			unsubscribe?.();
 		};
 	}, [applyWorkbench, generalSettings.autoExpandTodoList, loadSkills]);
+
+	useEffect((): void => {
+		if (isNewSessionHome || activeSessionId === null || getPendingApprovalCount(workbench) === 0) {
+			setPendingApproval(null);
+			setApprovalError(null);
+			return;
+		}
+
+		void refreshPendingApproval();
+	}, [activeSessionId, isNewSessionHome, refreshPendingApproval, workbench?.pendingApproval?.count, workbench?.pendingApproval?.first?.approvalId]);
 
 	async function handleWorkspaceSelect(workspaceId: string): Promise<void> {
 		try {
@@ -1213,6 +1254,47 @@ function App(): React.JSX.Element {
 			const message: string = error instanceof Error ? error.message : "Failed to save session model";
 			setSessionError(message);
 			console.error("[App] save session model failed", error);
+		}
+	}
+
+	async function handleApprovalApprove(approvalId: string): Promise<void> {
+		if (isApproving || isRejecting) {
+			return;
+		}
+
+		setIsApproving(true);
+		setApprovalError(null);
+		try {
+			await approveApproval(approvalId);
+			await refreshPendingApproval();
+			await refreshLatestTimeline();
+		} catch (error: unknown) {
+			const message: string = error instanceof Error ? error.message : "Failed to approve tool execution";
+			setApprovalError(message);
+			console.error("[App] approve approval failed", error);
+		} finally {
+			setIsApproving(false);
+		}
+	}
+
+	async function handleApprovalReject(approvalId: string): Promise<void> {
+		if (isApproving || isRejecting) {
+			return;
+		}
+
+		setIsRejecting(true);
+		setApprovalError(null);
+		try {
+			await rejectApproval(approvalId);
+			setPendingApproval(null);
+			await refreshPendingApproval();
+			await refreshLatestTimeline();
+		} catch (error: unknown) {
+			const message: string = error instanceof Error ? error.message : "Failed to reject tool execution";
+			setApprovalError(message);
+			console.error("[App] reject approval failed", error);
+		} finally {
+			setIsRejecting(false);
 		}
 	}
 
@@ -1862,6 +1944,10 @@ function App(): React.JSX.Element {
 					workflowTodoCollapsed={activeSessionMetadata?.workflowTodoCollapsed === true}
 					mode={composerMode}
 					approvalMode={approvalMode}
+					pendingApproval={pendingApproval}
+					isApproving={isApproving}
+					isRejecting={isRejecting}
+					approvalError={approvalError}
 					slashCommands={slashCommands}
 					skills={skills}
 					isSending={composerIsSending}
@@ -1909,6 +1995,12 @@ function App(): React.JSX.Element {
 					}}
 					onApprovalModeChange={(mode: ApprovalMode): void => {
 						void handleApprovalModeChange(mode);
+					}}
+					onApprovalApprove={(approvalId: string): void => {
+						void handleApprovalApprove(approvalId);
+					}}
+					onApprovalReject={(approvalId: string): void => {
+						void handleApprovalReject(approvalId);
 					}}
 					onWebSearchEnabledChange={handleWebSearchEnabledChange}
 					onProviderModelChange={(providerId: string, modelId: string): void => {

@@ -18,17 +18,25 @@ function getToolName(events: Record<string, unknown>[]): string {
 	return "Tool";
 }
 
-function getToolStatus(events: Record<string, unknown>[]): "running" | "success" | "error" | "approval" {
-	if (events.some((event) => event.type === "agent.tool.error" || event.type === "tool.error")) {
+function hasEventType(events: Record<string, unknown>[], eventTypes: string[]): boolean {
+	return events.some((event: Record<string, unknown>): boolean => typeof event.type === "string" && eventTypes.includes(event.type));
+}
+
+function getToolStatus(events: Record<string, unknown>[]): ToolStatus {
+	if (hasEventType(events, ["agent.tool.error", "tool.error"])) {
 		return "error";
 	}
 
-	if (events.some((event) => event.type === "agent.tool.approval_required" || event.type === "tool.approval_required")) {
-		return "approval";
+	if (hasEventType(events, ["agent.tool.result", "tool.result"])) {
+		return "success";
 	}
 
-	if (events.some((event) => event.type === "agent.tool.result" || event.type === "tool.result")) {
-		return "success";
+	if (hasEventType(events, ["agent.tool.approved", "tool.approved", "agent.tool.call", "tool.call", "agent.tool.progress", "tool.progress"])) {
+		return "running";
+	}
+
+	if (hasEventType(events, ["agent.tool.approval_required", "tool.approval_required"])) {
+		return "approval";
 	}
 
 	return "running";
@@ -48,14 +56,14 @@ function ToolPart({ part }: ToolPartProps): React.JSX.Element {
 		error: "Failed",
 		approval: "Approval required",
 	}
+	const statusColor: Record<ToolStatus, string> = {
+		running: "lime",
+		success: "green",
+		error: "red",
+		approval: "gold"
+	}
 	const genStatusTag = () => (
-		<Tag color={
-			statusText[status] === "Running" ? "lime" :
-			statusText[status] === "Done" ? "green" :
-			statusText[status] === "Failed" ? "red" :
-			statusText[status] === "Approval required" ? "green" :
-			""
-		}>
+		<Tag color={statusColor[status]}>
 			{statusText[status]}
 		</Tag>
 	)

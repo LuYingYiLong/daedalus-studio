@@ -102,9 +102,9 @@ function appendToolPart(parts: TimelineBodyPart[], event: BackendEvent): Timelin
 	};
 
 	for (const part of parts) {
-		if (part.type === "tool" && part.tool_call_id === toolCallId) {
+		if (part.type === "tool" && toolPartMatchesEvent(part, toolCallId, data)) {
 			return parts.map((item: TimelineBodyPart): TimelineBodyPart => {
-				if (item.type !== "tool" || item.tool_call_id !== toolCallId) {
+				if (item.type !== "tool" || !toolPartMatchesEvent(item, toolCallId, data)) {
 					return item;
 				}
 
@@ -121,6 +121,24 @@ function appendToolPart(parts: TimelineBodyPart[], event: BackendEvent): Timelin
 		tool_call_id: toolCallId,
 		events: [normalizedEvent]
 	}];
+}
+
+function toolPartMatchesEvent(part: Extract<TimelineBodyPart, { type: "tool" }>, toolCallId: string, data: Record<string, unknown>): boolean {
+	if (part.tool_call_id === toolCallId) {
+		return true;
+	}
+
+	const eventToolCallId: string = getStringValue(data, "toolCallId");
+	const approvalId: string = getStringValue(data, "approvalId");
+	return part.events.some((eventRecord: Record<string, unknown>): boolean => {
+		if (eventToolCallId.length > 0 && getStringValue(eventRecord, "toolCallId") === eventToolCallId) {
+			return true;
+		}
+		if (approvalId.length > 0 && getStringValue(eventRecord, "approvalId") === approvalId) {
+			return true;
+		}
+		return false;
+	});
 }
 
 function getToolCallKey(data: Record<string, unknown>, event: BackendEvent): string {
@@ -230,6 +248,31 @@ function getAssistantContent(parts: TimelineBodyPart[], fallback: string): strin
 	return content.length > 0 ? content : fallback;
 }
 
+function bodyPartHasRunId(part: TimelineBodyPart, runId: string): boolean {
+	if (runId.length === 0) {
+		return false;
+	}
+
+	if (part.type === "summary_start") {
+		return part.runId === runId;
+	}
+
+	if (part.type === "tool") {
+		return part.events.some((toolEvent: Record<string, unknown>): boolean => getStringValue(toolEvent, "runId") === runId);
+	}
+
+	return false;
+}
+
+function assistantBlockMatchesEvent(block: TimelineAssistantBlock, event: BackendEvent): boolean {
+	if (block.requestId === event.id) {
+		return true;
+	}
+
+	const runId: string = getStringValue(getEventData(event), "runId");
+	return block.bodyParts.some((part: TimelineBodyPart): boolean => bodyPartHasRunId(part, runId));
+}
+
 function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: BackendEvent): TimelineAssistantBlock {
 	const data: Record<string, unknown> = getEventData(event);
 	const nowIso: string = new Date().toISOString();
@@ -336,7 +379,7 @@ function createLiveAssistantBlock(event: BackendEvent): TimelineAssistantBlock {
 export function applyBackendEventToTimeline(blocks: TimelineBlock[], event: BackendEvent): TimelineBlock[] {
 	let changed: boolean = false;
 	const nextBlocks: TimelineBlock[] = blocks.map((block: TimelineBlock): TimelineBlock => {
-		if (block.type !== "assistant" || block.requestId !== event.id) {
+		if (block.type !== "assistant" || !assistantBlockMatchesEvent(block, event)) {
 			return block;
 		}
 

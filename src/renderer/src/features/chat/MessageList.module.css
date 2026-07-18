@@ -1,7 +1,9 @@
 .messageList {
 	min-height: 0;
-	overflow: auto;
+	overflow-x: hidden;
+	overflow-y: auto;
 	padding: 8px;
+	scrollbar-gutter: stable;
 }
 
 .messageListContent {

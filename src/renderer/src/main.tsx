@@ -25,7 +25,7 @@ const dsColors = {
 } as const;
 
 const dsFontFamily = `"Mona Sans", "Source Han Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-const dsFontFamilyCode = `"Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace`;
+const dsFontFamilyCode = `"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace`;
 
 if (!rootElement) {
 	throw new Error("Root element not found");
@@ -115,6 +115,8 @@ createRoot(rootElement).render(
 					},
 					Card: {
 						bodyPaddingSM: 8,
+						bodyPadding: 8,
+						headerPadding: 8,
 						headerPaddingSM: 8,
 					},
 				}

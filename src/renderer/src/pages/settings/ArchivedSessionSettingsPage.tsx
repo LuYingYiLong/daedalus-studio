@@ -58,8 +58,8 @@ function createArchivedSessionMenuItem(session: SessionMetadata, options: Create
 						<Button
 							type="text"
 							size="small"
+							shape="circle"
 							aria-label={`Unarchive ${session.title}`}
-							className={styles.actionButton}
 							icon={<Icon name="unarchive" width={16} height={16} />}
 							loading={isRestoring}
 							disabled={options.busySessionId !== null && !isRestoring}
@@ -77,9 +77,9 @@ function createArchivedSessionMenuItem(session: SessionMetadata, options: Create
 							<Button
 								type="text"
 								size="small"
+								shape="circle"
 								danger={true}
 								aria-label={`Delete ${session.title}`}
-								className={styles.actionButton}
 								icon={<Icon name="remove" width={16} height={16}/>}
 								loading={isDeleting}
 								disabled={options.busySessionId !== null && !isDeleting}
@@ -329,6 +329,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 					</Typography.Text>
 				) : filteredSessions.length === 0 ? (
 					<Empty
+						image={<Icon name="empty" />}
 						description={archivedSessions.length === 0 ? "No archived sessions" : "No matching archived sessions"}
 					/>
 				) : (

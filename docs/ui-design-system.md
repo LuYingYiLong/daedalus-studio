@@ -17,6 +17,7 @@
 | Token | 用途 |
 | --- | --- |
 | `--ds-bg` | 应用基础背景，固定为 `#141414` |
+| `--ds-code-bg` | Markdown的代码块背景 |
 | `--ds-bg-sunken` | 输入框、代码块、低层级内容背景 |
 | `--ds-surface` | 普通面板、卡片、Composer 背景 |
 | `--ds-surface-elevated` | Dropdown、Popover、菜单、浮层背景 |

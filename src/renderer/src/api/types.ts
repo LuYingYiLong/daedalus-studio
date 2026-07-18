@@ -82,13 +82,17 @@ export type WorkbenchActiveRun = {
 };
 
 export type WorkbenchPendingApproval = {
-	approvalId?: string;
-	toolName?: string;
-	llmToolName?: string;
-	reason?: string;
-	requestId?: string;
+	count: number;
+	first: {
+		approvalId?: string;
+		toolName?: string;
+		llmToolName?: string;
+		reason?: string;
+		requestId?: string;
+		[key: string]: unknown;
+	} | null;
 	[key: string]: unknown;
-} | null;
+};
 
 export type WorkbenchNextStepHint = {
 	id?: string;

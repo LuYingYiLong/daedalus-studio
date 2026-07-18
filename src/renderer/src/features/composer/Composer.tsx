@@ -1157,6 +1157,7 @@ function Composer({
 						<Dropdown
 							disabled={providerModelSelection === null}
 							rootClassName={styles.modelDropdown}
+							autoAdjustOverflow={true}
 							menu={{
 								items: providerModelItems,
 								selectedKeys: selectedModelKey === undefined ? [] : [selectedModelKey],

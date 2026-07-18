@@ -239,7 +239,10 @@ function SkillsSettingsPage(): React.JSX.Element {
 				{isLoading ? (
 					<Spin />
 				) : filteredSkills.length === 0 ? (
-					<Empty description={customSkills.length === 0 ? "No custom skills yet. Ask the agent to create a skill, or install one from ZIP/folder." : "No matching skills"} />
+					<Empty
+						image={<Icon name="empty" />}
+						description={customSkills.length === 0 ? "No custom skills yet. Ask the agent to create a skill, or install one from ZIP/folder." : "No matching skills"}
+					/>
 				) : filteredSkills.map((skill: SkillSummary): React.JSX.Element => {
 					const isBusy: boolean = busyRef === skill.ref;
 					return (

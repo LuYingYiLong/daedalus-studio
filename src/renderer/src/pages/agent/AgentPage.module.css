@@ -55,6 +55,7 @@
 }
 
 .chatPanel {
+	position: relative;
 	display: grid;
 	grid-template-rows: auto auto minmax(0, 1fr) auto;
 	min-width: 0;

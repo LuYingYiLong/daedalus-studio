@@ -17,24 +17,22 @@ function InlineDiffPart({ part }: InlineDiffPartPorps): React.JSX.Element {
 		<div>
 			<Button
 				type="text"
-				size="small"
 				icon={<Icon name="undo" />}
 			>Undo</Button>
 			<Button
 				type="text"
-				size="small"
 			>Review</Button>
 		</div>
 	);
 
 	return (
 		<Card
-			size="small"
 			title={`Edited ${part.editedFileCount} files`}
 			className={styles.diffCard}
 			extra={extra}
 		>
 			<List
+				size="small"
 				dataSource={part.editedFiles}
 				renderItem={(item) => (
 					<List.Item className={styles.fileItem}>
