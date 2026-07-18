@@ -16,11 +16,25 @@ declare global {
 		onStatusChanged: (callback: (status: string) => void) => () => void;
 	}
 
+	interface ClientPreferences {
+		minimizeToTrayOnClose: boolean;
+		lastComposerModel: {
+			providerId: string;
+			modelId: string;
+		} | null;
+	}
+
+	interface ClientPreferencesAPI {
+		get: () => Promise<ClientPreferences>;
+		update: (patch: Partial<ClientPreferences>) => Promise<ClientPreferences>;
+	}
+
 	type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
 
 	interface ElectronAPI {
 		versions: ElectronVersions;
 		backend: BackendAPI;
+		clientPreferences: ClientPreferencesAPI;
 		workspaceFs: {
 			listChildren: (params: {
 				workspaceRoot: string;

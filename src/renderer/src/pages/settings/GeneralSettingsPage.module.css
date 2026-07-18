@@ -1,0 +1,46 @@
+.page {
+	display: grid;
+	grid-template-rows: auto auto minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+	padding: 0px 8px;
+	overflow: hidden;
+}
+
+.header {
+	display: grid;
+	gap: 8px;
+}
+
+.titleRow {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 8px;
+	user-select: none;
+}
+
+.title {
+	display: flex;
+	align-items: center;
+	margin: 0px 0px 8px 0px !important;
+}
+
+.alert {
+	margin-bottom: 12px;
+}
+
+.loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 120px;
+}
+
+.preferenceList {
+	margin: -8px 0;
+}
+
+.preferenceItem {
+	padding-inline: 0 !important;
+}

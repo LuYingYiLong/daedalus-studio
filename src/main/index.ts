@@ -3,10 +3,15 @@ import { join } from "node:path";
 import { backendManager } from "./services/backend-manager";
 import { registerWorkspaceFsIpc } from "./services/workspace-fs";
 import { registerSkillFsIpc } from "./services/skill-fs";
+import { clientPreferencesService } from "./services/client-preferences";
+import { WindowLifecycleController } from "./services/window-lifecycle";
 
 backendManager.registerIpc();
 registerWorkspaceFsIpc();
 registerSkillFsIpc();
+clientPreferencesService.registerIpc();
+
+const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 
 function createWindow(): void {
 	const mainWindow: BrowserWindow = new BrowserWindow({
@@ -41,6 +46,7 @@ function createWindow(): void {
 
 	// 启动 backendManager
 	backendManager.start(mainWindow);
+	windowLifecycleController.attachWindow(mainWindow);
 
 	mainWindow.once("ready-to-show", () => {
 		mainWindow.show();
@@ -58,7 +64,8 @@ function createWindow(): void {
 	}
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+	await clientPreferencesService.load();
 	createWindow();
 
 	app.on("activate", () => {
@@ -66,6 +73,10 @@ app.whenReady().then(() => {
 			createWindow();
 		}
 	});
+});
+
+app.on("before-quit", () => {
+	windowLifecycleController.markQuitting();
 });
 
 app.on("window-all-closed", () => {

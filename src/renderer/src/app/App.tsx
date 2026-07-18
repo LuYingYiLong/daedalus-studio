@@ -5,6 +5,7 @@ import type { AdditionalContextItem, SessionMetadata, SessionOpenResult, Session
 import { createSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
+import type { ProviderModelSelectionProvider } from "@/api/provider-api";
 import { createBackendClient } from "@/api/backend-client";
 import type { BackendEvent } from "@/api/backend-rpc-client";
 import { cancelChatMessage, sendChatMessage, type ChatMode } from "@/api/chat-api";
@@ -32,8 +33,10 @@ import SettingsPage from "@/pages/settings/SettingsPage";
 import DrawingPage from "@/pages/drawing/DrawingPage";
 import KnowledgePage from "@/pages/knowledge/KnowledgePage";
 import { extractEnabledSkillRefs, type ComposerCompletionTrigger } from "@/features/composer/composer-completion";
-import { isWorkflowTodoClearEvent, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
+import { getWorkflowTodoSnapshotKey, isWorkflowTodoClearEvent, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
 import { saveImageAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
+import { DEFAULT_CLIENT_PREFERENCES, fetchClientPreferences, updateClientPreferences, type ClientPreferences } from "@/api/client-preferences-api";
+import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
 
 type SupportedImageMimeType = SaveImageAttachmentParams["mimeType"];
 type WorkspacePickedEntry = {
@@ -219,9 +222,58 @@ function createHomeDraft(): HomeDraft {
 		message: "",
 		workspaceId: null,
 		workspace: null,
-		chatMode: "ask",
+		chatMode: "agent",
 		providerId: null,
 		modelId: null
+	};
+}
+
+function findPreferredComposerModel(
+	preferences: ClientPreferences,
+	selection: ProviderModelSelection | null
+): { providerId: string; modelId: string } | null {
+	const lastComposerModel = preferences.lastComposerModel;
+	if (lastComposerModel !== null && selection !== null) {
+		const provider: ProviderModelSelectionProvider | undefined = selection.providers.find((item: ProviderModelSelectionProvider): boolean => {
+			return item.provider === lastComposerModel.providerId;
+		});
+		if (provider?.models.some((model): boolean => model.id === lastComposerModel.modelId) === true) {
+			return lastComposerModel;
+		}
+	}
+
+	const firstProviderWithModel: ProviderModelSelectionProvider | undefined = selection?.providers.find((provider: ProviderModelSelectionProvider): boolean => {
+		return provider.models.length > 0;
+	});
+	const firstModelId: string | undefined = firstProviderWithModel?.models[0]?.id;
+	if (firstProviderWithModel !== undefined && firstModelId !== undefined) {
+		return {
+			providerId: firstProviderWithModel.provider,
+			modelId: firstModelId
+		};
+	}
+
+	if (selection !== null) {
+		return selection.activeModel;
+	}
+
+	return null;
+}
+
+function createPreferredHomeDraft(
+	preferences: ClientPreferences,
+	selection: ProviderModelSelection | null
+): HomeDraft {
+	const draft: HomeDraft = createHomeDraft();
+	const preferredModel = findPreferredComposerModel(preferences, selection);
+	if (preferredModel === null) {
+		return draft;
+	}
+
+	return {
+		...draft,
+		providerId: preferredModel.providerId,
+		modelId: preferredModel.modelId
 	};
 }
 
@@ -368,6 +420,8 @@ function App(): React.JSX.Element {
 	const [isApprovalModeSaving, setIsApprovalModeSaving] = useState<boolean>(false);
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
 	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] = useState<WorkflowTodoSnapshot | null>(null);
+	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(DEFAULT_CLIENT_PREFERENCES);
+	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(DEFAULT_GENERAL_SETTINGS);
 	const pendingPatchRef = useRef<WorkbenchPatch>({});
 	const patchTimerRef = useRef<number | null>(null);
 	const patchSequenceRef = useRef<number>(0);
@@ -379,6 +433,7 @@ function App(): React.JSX.Element {
 	const slashCommandsRetryAtRef = useRef<number>(0);
 	const skillsRetryAtRef = useRef<number>(0);
 	const recentContextFileSignaturesRef = useRef<Map<string, number>>(new Map());
+	const initializedWorkflowTodoKeyRef = useRef<string>("");
 
 	const loadSlashCommands = useCallback(async (): Promise<void> => {
 		if (slashCommandsLoadingRef.current || Date.now() < slashCommandsRetryAtRef.current) {
@@ -425,6 +480,61 @@ function App(): React.JSX.Element {
 		} catch (error: unknown) {
 			console.error("[App] load home workspaces failed", error);
 		}
+	}, []);
+
+	function rememberLoadedWorkflowTodo(snapshot: WorkflowTodoSnapshot | null): void {
+		initializedWorkflowTodoKeyRef.current = snapshot === null ? "" : getWorkflowTodoSnapshotKey(snapshot);
+	}
+
+	function applyInitialWorkflowTodoPreference(snapshot: WorkflowTodoSnapshot | null): void {
+		if (snapshot === null) {
+			initializedWorkflowTodoKeyRef.current = "";
+			return;
+		}
+
+		const workflowTodoKey: string = getWorkflowTodoSnapshotKey(snapshot);
+		if (initializedWorkflowTodoKeyRef.current === workflowTodoKey) {
+			return;
+		}
+
+		initializedWorkflowTodoKeyRef.current = workflowTodoKey;
+		const workflowTodoCollapsed: boolean = !generalSettings.autoExpandTodoList;
+		setActiveSessionMetadata((currentMetadata: SessionMetadata | null): SessionMetadata | null => {
+			return currentMetadata === null
+				? currentMetadata
+				: {
+					...currentMetadata,
+					workflowTodoCollapsed
+				};
+		});
+		void saveSessionUiMetadata({ workflowTodoCollapsed }).catch((error: unknown): void => {
+			console.error("[App] save initial workflow todo collapsed state failed", error);
+		});
+	}
+
+	useEffect((): (() => void) => {
+		let cancelled: boolean = false;
+
+		async function loadPreferences(): Promise<void> {
+			try {
+				const [preferences, settings] = await Promise.all([
+					fetchClientPreferences(),
+					fetchGeneralSettings()
+				]);
+				if (!cancelled) {
+					setClientPreferences(preferences);
+					setGeneralSettings(settings);
+				}
+			} catch (error: unknown) {
+				console.error("[App] load preferences failed", error);
+			}
+		}
+
+		void loadPreferences();
+
+		return (): void => {
+			cancelled = true;
+		};
 	}, []);
 
 	const handleCompletionOpen = useCallback((trigger: ComposerCompletionTrigger): void => {
@@ -597,6 +707,29 @@ function App(): React.JSX.Element {
 		activeSessionIdRef.current = activeSessionId;
 	}, [activeSessionId]);
 
+	useEffect((): void => {
+		if (!isNewSessionHome) {
+			return;
+		}
+
+		setHomeDraft((currentDraft: HomeDraft): HomeDraft => {
+			if (currentDraft.providerId !== null || currentDraft.modelId !== null) {
+				return currentDraft;
+			}
+
+			const preferredModel = findPreferredComposerModel(clientPreferences, providerModelSelection);
+			if (preferredModel === null) {
+				return currentDraft;
+			}
+
+			return {
+				...currentDraft,
+				providerId: preferredModel.providerId,
+				modelId: preferredModel.modelId
+			};
+		});
+	}, [clientPreferences, isNewSessionHome, providerModelSelection]);
+
 	useEffect((): (() => void) => {
 		return (): void => {
 			if (patchTimerRef.current !== null) {
@@ -675,9 +808,12 @@ function App(): React.JSX.Element {
 					}
 
 					if (event.event === "workflow.todo.updated" || event.event === "agent.run.snapshot") {
-						setWorkflowTodoSnapshot(normalizeWorkflowTodoSnapshot(event.data));
+						const snapshot: WorkflowTodoSnapshot | null = normalizeWorkflowTodoSnapshot(event.data);
+						setWorkflowTodoSnapshot(snapshot);
+						applyInitialWorkflowTodoPreference(snapshot);
 					} else if (isWorkflowTodoClearEvent(event)) {
 						setWorkflowTodoSnapshot(null);
+						rememberLoadedWorkflowTodo(null);
 					}
 
 					setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
@@ -702,7 +838,7 @@ function App(): React.JSX.Element {
 			cancelled = true;
 			unsubscribe?.();
 		};
-	}, [applyWorkbench, loadSkills]);
+	}, [applyWorkbench, generalSettings.autoExpandTodoList, loadSkills]);
 
 	async function handleWorkspaceSelect(workspaceId: string): Promise<void> {
 		try {
@@ -719,7 +855,7 @@ function App(): React.JSX.Element {
 		takePendingWorkbenchPatch();
 		submittedComposerTextRef.current = null;
 		setIsNewSessionHome(true);
-		setHomeDraft(createHomeDraft());
+		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection));
 		activeSessionIdRef.current = null;
 		setActiveSessionId(null);
 		setActiveSessionMetadata(null);
@@ -727,6 +863,7 @@ function App(): React.JSX.Element {
 		setTimelinePage(emptyTimelinePage);
 		setWorkbench(null);
 		setWorkflowTodoSnapshot(null);
+		rememberLoadedWorkflowTodo(null);
 		setActiveRetryRequestId(null);
 		setSessionError(null);
 		void loadHomeWorkspaces();
@@ -817,6 +954,7 @@ function App(): React.JSX.Element {
 			setTimelinePage(emptyTimelinePage);
 			setWorkbench(null);
 			setWorkflowTodoSnapshot(null);
+			rememberLoadedWorkflowTodo(null);
 
 			const result: SessionOpenResult = await openSession(sessionId);
 
@@ -825,7 +963,9 @@ function App(): React.JSX.Element {
 			setWorkbench(result.workbench);
 			setApprovalModeState(result.metadata.approvalMode ?? "manual");
 			setActiveWorkspace(createWorkspaceFromSessionOpenResult(result));
-			setWorkflowTodoSnapshot(createWorkflowTodoSnapshotFromTimelineResult(result));
+			const workflowTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromTimelineResult(result);
+			setWorkflowTodoSnapshot(workflowTodo);
+			rememberLoadedWorkflowTodo(workflowTodo);
 
 			if (result.workspaceWarning) {
 				console.warn("[App] session workspace warning", result.workspaceWarning);
@@ -847,11 +987,12 @@ function App(): React.JSX.Element {
 		setTimelinePage(emptyTimelinePage);
 		setWorkbench(null);
 		setWorkflowTodoSnapshot(null);
+		rememberLoadedWorkflowTodo(null);
 		setActiveRetryRequestId(null);
 		setActiveWorkspace(null);
 		setSessionError(null);
 		setIsNewSessionHome(true);
-		setHomeDraft(createHomeDraft());
+		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection));
 	}
 
 	function handleSessionArchive(session: SessionMetadata): void {
@@ -970,6 +1111,7 @@ function App(): React.JSX.Element {
 				providerId,
 				modelId
 			}));
+			persistLastComposerModel(providerId, modelId);
 			return;
 		}
 
@@ -999,6 +1141,7 @@ function App(): React.JSX.Element {
 			}
 			setActiveSessionMetadata(result.metadata);
 			applyWorkbench(result.workbench);
+			persistLastComposerModel(providerId, modelId);
 		} catch (error: unknown) {
 			if (activeSessionIdRef.current === sessionId && previousWorkbench !== null) {
 				setWorkbench(previousWorkbench);
@@ -1007,6 +1150,24 @@ function App(): React.JSX.Element {
 			setSessionError(message);
 			console.error("[App] save session model failed", error);
 		}
+	}
+
+	function persistLastComposerModel(providerId: string, modelId: string): void {
+		const nextPreferences: ClientPreferences = {
+			...clientPreferences,
+			lastComposerModel: {
+				providerId,
+				modelId
+			}
+		};
+		setClientPreferences(nextPreferences);
+		void updateClientPreferences({
+			lastComposerModel: nextPreferences.lastComposerModel
+		}).then((savedPreferences: ClientPreferences): void => {
+			setClientPreferences(savedPreferences);
+		}).catch((error: unknown): void => {
+			console.error("[App] save last composer model failed", error);
+		});
 	}
 
 	function handleComposerTextChange(nextText: string): void {
@@ -1063,9 +1224,10 @@ function App(): React.JSX.Element {
 			setActiveSessionMetadata(created);
 			setActiveWorkspace(createWorkspaceFromSessionMetadata(created, created.workbench));
 			setTimelinePage(emptyTimelinePage);
-			setWorkbench(created.workbench);
-			setWorkflowTodoSnapshot(null);
-			setHomeDraft(createHomeDraft());
+				setWorkbench(created.workbench);
+				setWorkflowTodoSnapshot(null);
+				rememberLoadedWorkflowTodo(null);
+				setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection));
 			applyOptimisticSend(requestId, message, created.workbench.composer.additionalContext);
 
 			await sendChatMessage({
@@ -1310,7 +1472,9 @@ function App(): React.JSX.Element {
 		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 			return mergeOptimisticUserBlocks(currentPage, createTimelinePageFromTimelineResult(timeline));
 		});
-		setWorkflowTodoSnapshot(createWorkflowTodoSnapshotFromTimelineResult(timeline));
+		const workflowTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromTimelineResult(timeline);
+		setWorkflowTodoSnapshot(workflowTodo);
+		rememberLoadedWorkflowTodo(workflowTodo);
 
 		const sessionList = await fetchSessions();
 		const metadata: SessionMetadata | undefined = sessionList.sessions.find((session: SessionMetadata): boolean => session.id === sessionId);
@@ -1682,7 +1846,13 @@ function App(): React.JSX.Element {
 					onCompletionOpen={handleCompletionOpen}
 				/>
 			) : activePage === "settings" ? (
-				<SettingsPage onProviderModelSelectionChange={setProviderModelSelection} />
+				<SettingsPage
+					onProviderModelSelectionChange={setProviderModelSelection}
+					clientPreferences={clientPreferences}
+					generalSettings={generalSettings}
+					onClientPreferencesChange={setClientPreferences}
+					onGeneralSettingsChange={setGeneralSettings}
+				/>
 			) : activePage === "drawing" ? (
 				<DrawingPage />
 			) : (

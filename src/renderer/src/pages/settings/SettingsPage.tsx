@@ -9,6 +9,9 @@ import ArchivedSessionSettingsPage from "./ArchivedSessionSettingsPage";
 import styles from "./SettingsPage.module.css";
 import McpServersSettingsPage from "./McpServersSettingsPage";
 import SkillsSettingsPage from "./SkillsSettingsPage";
+import GeneralSettingsPage from "./GeneralSettingsPage";
+import type { ClientPreferences } from "@/api/client-preferences-api";
+import type { GeneralSettings } from "@/api/general-settings-api";
 
 type MenuItem = Required<MenuProps>["items"][number];
 type SettingsPageKey = 
@@ -22,6 +25,10 @@ type SettingsPageKey =
 
 type SettingsPageProps = {
 	onProviderModelSelectionChange?: (selection: ProviderModelSelection) => void;
+	clientPreferences: ClientPreferences;
+	generalSettings: GeneralSettings;
+	onClientPreferencesChange: (preferences: ClientPreferences) => void;
+	onGeneralSettingsChange: (settings: GeneralSettings) => void;
 };
 
 const items: MenuItem[] = [
@@ -72,7 +79,13 @@ function getSettingsPageTitle(key: SettingsPageKey): string {
 		: "Settings";
 }
 
-function SettingsPage({ onProviderModelSelectionChange }: SettingsPageProps): React.JSX.Element {
+function SettingsPage({
+	onProviderModelSelectionChange,
+	clientPreferences,
+	generalSettings,
+	onClientPreferencesChange,
+	onGeneralSettingsChange
+}: SettingsPageProps): React.JSX.Element {
 	const [activePage, setActivePage] = useState<SettingsPageKey>("provider");
 
 	return (
@@ -91,6 +104,13 @@ function SettingsPage({ onProviderModelSelectionChange }: SettingsPageProps): Re
 				<ProviderSettingsPage onSelectionChange={onProviderModelSelectionChange} />
 			) : activePage === "default_model" ? (
 				<DefaultModelSettingsPage onSelectionChange={onProviderModelSelectionChange} />
+			) : activePage === "general" ? (
+				<GeneralSettingsPage
+					clientPreferences={clientPreferences}
+					generalSettings={generalSettings}
+					onClientPreferencesChange={onClientPreferencesChange}
+					onGeneralSettingsChange={onGeneralSettingsChange}
+				/>
 			) : activePage === "personalization" ? (
 				<PersonalizationSettingsPage />
 			) : activePage === "mcp_servers" ? (

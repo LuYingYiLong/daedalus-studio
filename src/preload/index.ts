@@ -18,6 +18,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		}
 	},
 
+	clientPreferences: {
+		get: (): Promise<{ minimizeToTrayOnClose: boolean; lastComposerModel: { providerId: string; modelId: string } | null }> => {
+			return ipcRenderer.invoke("client-preferences:get");
+		},
+		update: (patch: Partial<{ minimizeToTrayOnClose: boolean; lastComposerModel: { providerId: string; modelId: string } | null }>): Promise<{ minimizeToTrayOnClose: boolean; lastComposerModel: { providerId: string; modelId: string } | null }> => {
+			return ipcRenderer.invoke("client-preferences:update", patch);
+		}
+	},
+
 	workspaceFs: {
 		listChildren: (params: { workspaceRoot: string; relativePath?: string }): Promise<{ entries: Array<{ name: string; relativePath: string; resourcePath: string; kind: "file" | "folder" }> }> => {
 			return ipcRenderer.invoke("workspace-fs:list-children", params);
