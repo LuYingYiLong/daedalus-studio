@@ -262,9 +262,14 @@ function findPreferredComposerModel(
 
 function createPreferredHomeDraft(
 	preferences: ClientPreferences,
-	selection: ProviderModelSelection | null
+	selection: ProviderModelSelection | null,
+	workspace: WorkspaceConfig | null = null
 ): HomeDraft {
-	const draft: HomeDraft = createHomeDraft();
+	const draft: HomeDraft = {
+		...createHomeDraft(),
+		workspaceId: workspace?.id ?? null,
+		workspace
+	};
 	const preferredModel = findPreferredComposerModel(preferences, selection);
 	if (preferredModel === null) {
 		return draft;
@@ -867,6 +872,51 @@ function App(): React.JSX.Element {
 		setActiveRetryRequestId(null);
 		setSessionError(null);
 		void loadHomeWorkspaces();
+	}
+
+	async function handleNewWorkspaceSession(workspace: WorkspaceConfig): Promise<void> {
+		takePendingWorkbenchPatch();
+		submittedComposerTextRef.current = null;
+		setIsNewSessionHome(true);
+		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection, workspace));
+		activeSessionIdRef.current = null;
+		setActiveSessionId(null);
+		setActiveSessionMetadata(null);
+		setActiveWorkspace(workspace);
+		setTimelinePage(emptyTimelinePage);
+		setWorkbench(null);
+		setWorkflowTodoSnapshot(null);
+		rememberLoadedWorkflowTodo(null);
+		setActiveRetryRequestId(null);
+		setSessionError(null);
+		setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
+			if (currentWorkspaces.some((currentWorkspace: WorkspaceConfig): boolean => currentWorkspace.id === workspace.id)) {
+				return currentWorkspaces;
+			}
+			return [...currentWorkspaces, workspace];
+		});
+
+		try {
+			const selectedWorkspace = await selectWorkspace(workspace.id);
+			setActiveWorkspace(selectedWorkspace);
+			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
+				...currentDraft,
+				workspaceId: selectedWorkspace.id,
+				workspace: selectedWorkspace
+			}));
+			setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
+				const existingIndex: number = currentWorkspaces.findIndex((currentWorkspace: WorkspaceConfig): boolean => currentWorkspace.id === selectedWorkspace.id);
+				if (existingIndex < 0) {
+					return [...currentWorkspaces, selectedWorkspace];
+				}
+				const nextWorkspaces: WorkspaceConfig[] = [...currentWorkspaces];
+				nextWorkspaces[existingIndex] = selectedWorkspace;
+				return nextWorkspaces;
+			});
+		} catch (error: unknown) {
+			setSessionError(error instanceof Error ? error.message : "Failed to select workspace");
+			console.error("[App] select workspace for new session failed", error);
+		}
 	}
 
 	async function handleHomeWorkspaceSelect(workspaceId: string): Promise<void> {
@@ -1781,6 +1831,9 @@ function App(): React.JSX.Element {
 					isWorkspaceAdding={isWorkspaceAdding}
 					activeWorkspace={displayedWorkspace}
 					onNewSession={handleNewSession}
+					onNewWorkspaceSession={(workspace: WorkspaceConfig): void => {
+						void handleNewWorkspaceSession(workspace);
+					}}
 					onWorkspaceRefresh={(): void => {
 						setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 					}}

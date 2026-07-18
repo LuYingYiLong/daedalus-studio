@@ -17,6 +17,7 @@ export type WorkspaceTreeProps = {
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onSessionSelect?: (session: SessionMetadata) => void;
 	onSessionArchive?: (session: SessionMetadata) => void;
+	onNewWorkspaceSession?: (workspace: WorkspaceConfig) => void;
 	onWorkspaceDelete?: (result: DeleteWorkspaceResult) => void;
 };
 
@@ -30,6 +31,7 @@ type CreateSessionMenuItemOptions = {
 
 type CreateWorkspaceMenuItemOptions = CreateSessionMenuItemOptions & {
 	deletingWorkspaceId: string | null;
+	onNewWorkspaceSession: (workspace: WorkspaceConfig, event: MouseEvent<HTMLElement>) => void;
 	onOpenInExplorer: (workspace: WorkspaceConfig) => void;
 	onDeleteWorkspace: (workspace: WorkspaceConfig) => void;
 };
@@ -97,19 +99,32 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 			label: (
 				<span className={styles.workspaceMenuItem}>
 					<span className={styles.workspaceTitle}>{workspace.name}</span>
-					<Dropdown menu={actionMenu} trigger={["click"]} placement="bottomRight">
-						<Button
-							type="text"
-							size="small"
-							aria-label={`Workspace actions for ${workspace.name}`}
-							icon={<Icon name="more" width={16} height={16} />}
-							loading={isDeleting}
-							onClick={(event: MouseEvent<HTMLElement>): void => {
-								event.preventDefault();
-								event.stopPropagation();
-							}}
-						/>
-					</Dropdown>
+					<span className={styles.workspaceActions}>
+						<Dropdown menu={actionMenu} trigger={["click"]} placement="bottomRight">
+							<Button
+								type="text"
+								size="small"
+								aria-label={`Workspace actions for ${workspace.name}`}
+								className={styles.workspaceActionButton}
+								icon={<Icon name="more" width={16} height={16} />}
+								loading={isDeleting}
+								onClick={(event: MouseEvent<HTMLElement>): void => {
+									event.preventDefault();
+									event.stopPropagation();
+								}}
+							/>
+						</Dropdown>
+						<Tooltip title="New session in workspace" placement="right">
+							<Button
+								type="text"
+								size="small"
+								aria-label={`New session in ${workspace.name}`}
+								className={styles.workspaceActionButton}
+								icon={<Icon name="add" width={16} height={16} />}
+								onClick={(event: MouseEvent<HTMLElement>): void => options.onNewWorkspaceSession(workspace, event)}
+							/>
+						</Tooltip>
+					</span>
 				</span>
 			),
 			icon: <Icon name="folder" />,
@@ -163,6 +178,7 @@ function WorkspaceTree({
 	onWorkspaceSelect,
 	onSessionSelect,
 	onSessionArchive,
+	onNewWorkspaceSession,
 	onWorkspaceDelete
 }: WorkspaceTreeProps): React.JSX.Element {
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([]);
@@ -240,6 +256,12 @@ function WorkspaceTree({
 		} finally {
 			setArchivingSessionId(null);
 		}
+	}
+
+	function handleNewWorkspaceSession(workspace: WorkspaceConfig, event: MouseEvent<HTMLElement>): void {
+		event.preventDefault();
+		event.stopPropagation();
+		onNewWorkspaceSession?.(workspace);
 	}
 
 	async function handleOpenWorkspaceInExplorer(workspace: WorkspaceConfig): Promise<void> {
@@ -361,6 +383,7 @@ function WorkspaceTree({
 		return createWorkspaceMenuItems(workspaces, sessions, {
 			archivingSessionId,
 			deletingWorkspaceId,
+			onNewWorkspaceSession: handleNewWorkspaceSession,
 			onArchive: (session: SessionMetadata, event: MouseEvent<HTMLElement>): void => {
 				void handleArchiveSession(session, event);
 			},

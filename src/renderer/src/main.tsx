@@ -52,6 +52,9 @@ createRoot(rootElement).render(
 					Progress: {
 						lineBorderRadius: 4,
 					},
+					Steps: {
+						iconFontSize: 8,
+					},
 					Modal: {
 						padding: 8,
 					}

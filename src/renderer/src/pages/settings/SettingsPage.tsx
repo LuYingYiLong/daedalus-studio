@@ -10,6 +10,7 @@ import styles from "./SettingsPage.module.css";
 import McpServersSettingsPage from "./McpServersSettingsPage";
 import SkillsSettingsPage from "./SkillsSettingsPage";
 import GeneralSettingsPage from "./GeneralSettingsPage";
+import SearchSettingsPage from "./SearchSettingsPage";
 import type { ClientPreferences } from "@/api/client-preferences-api";
 import type { GeneralSettings } from "@/api/general-settings-api";
 
@@ -18,6 +19,7 @@ type SettingsPageKey =
 	| "provider"
 	| "default_model"
 	| "general"
+	| "search"
 	| "personalization"
 	| "mcp_servers" 
 	| "skills"
@@ -46,6 +48,11 @@ const items: MenuItem[] = [
 		key: "general",
 		label: "General",
 		icon: <Icon name="equalizer" />,
+	},
+	{
+		key: "search",
+		label: "Search",
+		icon: <Icon name="search" />,
 	},
 	{
 		key: "personalization",
@@ -111,6 +118,8 @@ function SettingsPage({
 					onClientPreferencesChange={onClientPreferencesChange}
 					onGeneralSettingsChange={onGeneralSettingsChange}
 				/>
+			) : activePage === "search" ? (
+				<SearchSettingsPage />
 			) : activePage === "personalization" ? (
 				<PersonalizationSettingsPage />
 			) : activePage === "mcp_servers" ? (

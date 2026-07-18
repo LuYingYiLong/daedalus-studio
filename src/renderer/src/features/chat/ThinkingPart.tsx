@@ -32,6 +32,7 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 	return (
 		<Collapse
 			size="small"
+			bordered={false}
 			className={styles.thinkingCollapse}
 			activeKey={activeKeys}
 			onChange={(nextKeys: string | string[]): void => {

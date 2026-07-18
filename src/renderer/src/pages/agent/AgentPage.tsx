@@ -11,6 +11,7 @@ import type { SkillSummary } from "@/api/skill-api";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import MessageList from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
+import NewSessionHome from "./NewSessionHome";
 import type { ComposerCompletionTrigger } from "@/features/composer/composer-completion";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import styles from "./AgentPage.module.css";
@@ -81,6 +82,7 @@ type AgentPageProps = {
 	isWorkspaceAdding: boolean;
 	activeWorkspace: WorkspaceConfig | null;
 	onNewSession: () => void;
+	onNewWorkspaceSession: (workspace: WorkspaceConfig) => void;
 	onWorkspaceRefresh: () => void;
 	onWorkspaceSelect: (workspaceId: string) => void;
 	onHomeWorkspaceSelect: (workspaceId: string) => void;
@@ -146,6 +148,7 @@ function AgentPage({
 	isWorkspaceAdding,
 	activeWorkspace,
 	onNewSession,
+	onNewWorkspaceSession,
 	onWorkspaceRefresh,
 	onWorkspaceSelect,
 	onHomeWorkspaceSelect,
@@ -301,6 +304,7 @@ function AgentPage({
 					onWorkspaceSelect={onWorkspaceSelect}
 					onSessionSelect={onSessionSelect}
 					onSessionArchive={onSessionArchive}
+					onNewWorkspaceSession={onNewWorkspaceSession}
 					onWorkspaceDelete={onWorkspaceDelete}
 				/>
 
@@ -342,21 +346,7 @@ function AgentPage({
 				<Divider size="small"/>
 
 				{isHome ? (
-					<div className={styles.homePanel}>
-						<div className={styles.homeContent}>
-							<Typography.Title level={1} className={styles.homeTitle}>
-								Hi, how can I help with your Godot project?
-							</Typography.Title>
-							<Typography.Text className={styles.homeSubtitle}>
-								Choose a workspace or start without one.
-							</Typography.Text>
-							{sessionError !== null ? (
-								<Typography.Text type="danger" className={styles.homeError}>
-									{sessionError}
-								</Typography.Text>
-							) : null}
-						</div>
-					</div>
+					<NewSessionHome workspace={homeWorkspace} errorMessage={sessionError} />
 				) : (
 					<MessageList
 						blocks={timelineBlocks}

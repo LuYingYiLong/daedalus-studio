@@ -1,0 +1,61 @@
+.page {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+	padding: 0px 8px;
+	overflow: hidden;
+}
+
+.header {
+	display: grid;
+	gap: 8px;
+}
+
+.titleRow {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 8px;
+	user-select: none;
+}
+
+.title {
+	display: flex;
+	align-items: center;
+	margin: 0px 0px 8px 0px !important;
+}
+
+.content {
+	display: grid;
+	align-content: start;
+	gap: 12px;
+	min-width: 0;
+	min-height: 0;
+	overflow: auto;
+}
+
+.alert {
+	margin-bottom: 12px;
+}
+
+.loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 120px;
+}
+
+.settingsList {
+	margin: -8px 0;
+}
+
+.settingsItem {
+	padding-inline: 0 !important;
+}
+
+.modelControl {
+	display: grid;
+	gap: 8px;
+	width: min(520px, 100%);
+}

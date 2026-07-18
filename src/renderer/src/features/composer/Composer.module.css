@@ -35,12 +35,30 @@
 }
 
 .todoCollapse :global(.ant-collapse-content-box) {
+	padding: 4px;
 	max-height: calc(min(360px, 45vh) - 42px);
 	overflow-y: auto;
 }
 
+.todoCollapse :global(.ant-collapse-body) {
+	padding: 8px 12px 8px 8px !important;
+}
+
 .todoPanelBody {
 	min-width: 0;
+}
+
+.todoSteps {
+	width: 100%;
+}
+
+.todoSteps:global(.ant-steps-vertical) > :global(.ant-steps-item) {
+	min-height: 0;
+	padding-bottom: 4px;
+}
+
+.todoSteps:global(.ant-steps-vertical) > :global(.ant-steps-item:last-child) {
+	padding-bottom: 0;
 }
 
 .todoStepTitle,
@@ -55,6 +73,12 @@
 .todoStepDescription {
 	color: #ffffff8f;
 	font-size: 12px;
+}
+
+.todoStepIcon {
+	width: 16px;
+	height: 16px;
+	vertical-align: -2px;
 }
 
 .composerSurface {
@@ -232,16 +256,69 @@
 	height: 16px;
 }
 
-.contextUsageButton {
+.contextUsageAnchor {
+	position: relative;
 	display: inline-flex;
-	align-items: center;
-	justify-content: center;
+	flex: 0 0 28px;
 	width: 28px;
 	height: 28px;
-	padding: 0;
+	overflow: visible;
+}
+
+.contextUsageButton {
+	position: absolute;
+	top: 0;
+	right: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: end;
+	gap: 0;
+	width: 28px;
+	height: 28px;
+	padding: 0 6px;
 	border: 0;
-	background: transparent;
+	border-radius: 4px;
+	color: rgba(255, 255, 255, 0.88);
+	background: rgba(255, 255, 255, 0);
 	cursor: pointer;
+	overflow: hidden;
+	transition:
+		width 0.16s ease,
+		gap 0.16s ease,
+		background-color 0.16s ease;
+}
+
+.contextUsageButton:hover,
+.contextUsageButton:focus-visible {
+	gap: 6px;
+	width: 68px;
+	background: rgba(255, 255, 255, 0.16);
+}
+
+.contextUsageButtonText {
+	max-width: 0;
+	overflow: hidden;
+	font-family: "Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+	opacity: 0;
+	text-align: right;
+	white-space: nowrap;
+	transform: translateX(8px);
+	transition:
+		max-width 0.16s ease,
+		opacity 0.12s ease,
+		transform 0.16s ease;
+	mask-image: linear-gradient(to right, transparent 0, rgba(0, 0, 0, 0.45) 35%, #000 100%);
+}
+
+.contextUsageButton:hover .contextUsageButtonText,
+.contextUsageButton:focus-visible .contextUsageButtonText {
+	max-width: 34px;
+	opacity: 1;
+	transform: translateX(0);
+	mask-image: none;
 }
 
 .contextUsagePanel {

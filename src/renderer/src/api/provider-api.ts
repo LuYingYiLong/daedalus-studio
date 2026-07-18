@@ -43,7 +43,7 @@ export type ProviderModelInfo = {
 
 export type ProviderId = string;
 
-export type EndpointType = "openai-chat-completions" | "openai-responses";
+export type EndpointType = "openai-chat-completions" | "openai-responses" | "anthropic-messages";
 
 export type ProviderModelCapabilities = {
 	imageInput?: boolean | undefined;

@@ -28,7 +28,7 @@ type ProviderSettingsPageProps = {
 const CAPABILITY_BADGES: CapabilityBadge[] = [
 	{ key: "reasoning", label: "Reasoning", icon: "thinking", color: "blue" },
 	{ key: "tools", label: "Tools", icon: "mcp", color: "orange" },
-	{ key: "webSearch", label: "Web", icon: "global", color: "green" },
+	{ key: "webSearch", label: "Search", icon: "search", color: "green" },
 	{ key: "vision", label: "Vision", icon: "show", color: "purple" },
 	{ key: "imageGeneration", label: "Image", icon: "draw", color: "magenta" },
 	{ key: "imageEdit", label: "Edit", icon: "draw", color: "cyan" }

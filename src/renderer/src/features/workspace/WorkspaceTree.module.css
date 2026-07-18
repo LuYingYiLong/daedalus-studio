@@ -61,7 +61,7 @@
 
 .workspaceMenuItem {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) 22px;
+	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
 	gap: 4px;
 	width: 100%;
@@ -72,6 +72,20 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.workspaceActions {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	opacity: 0;
+	pointer-events: none;
+	transform: translateX(2px);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease,
+		visibility 120ms ease;
+	visibility: hidden;
 }
 
 .sessionMenuItem {
@@ -96,33 +110,23 @@
 	height: 22px;
 	min-width: 22px;
 	padding: 0;
-	opacity: 0;
 	color: var(--ant-color-text-tertiary);
 }
 
-.workspaceActionButton {
-	visibility: hidden;
-	pointer-events: none;
+.workspaceMenu :global(.ant-menu-submenu-title:hover) .workspaceActions,
+.workspaceMenu :global(.ant-menu-submenu-title:focus-within) .workspaceActions {
+	opacity: 1;
+	pointer-events: auto;
+	transform: translateX(0);
+	visibility: visible;
 }
 
-.workspaceActionButton svg,
-.archiveButton svg {
-	width: 14px;
-	height: 14px;
+.archiveButton {
+	opacity: 0;
 }
 
-.workspaceMenu :global(.ant-menu-submenu-title:hover) .workspaceActionButton,
-.workspaceActionButton:focus-visible,
-.workspaceActionButton[aria-disabled="true"],
 .sessionMenuItem:hover .archiveButton,
 .archiveButton:focus-visible,
 .archiveButton[aria-disabled="true"] {
 	opacity: 1;
-}
-
-.workspaceMenu :global(.ant-menu-submenu-title:hover) .workspaceActionButton,
-.workspaceActionButton:focus-visible,
-.workspaceActionButton[aria-disabled="true"] {
-	visibility: visible;
-	pointer-events: auto;
 }

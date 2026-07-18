@@ -225,6 +225,10 @@ function createProviderModelItems(selection: ProviderModelSelection | null): Men
 					modelBadges.push("Vision");
 				}
 
+				if (model.capabilities.webSearch) {
+					modelBadges.push("Search");
+				}
+
 				return {
 					key: createModelKey(provider.provider, model.id),
 					label: (
@@ -301,9 +305,11 @@ function createWorkflowTodoStepItems(steps: readonly WorkflowTodoStep[]): NonNul
 	return steps.map((step: WorkflowTodoStep, index: number) => {
 		const title: string = step.title.trim() || step.text?.trim() || `Step ${index + 1}`;
 		const description: string | undefined = step.text !== undefined && step.text !== title ? step.text : undefined;
+		const status = mapWorkflowTodoStatusToStepStatus(step.status);
 
 		return {
 			key: step.id,
+			icon: <Icon name={getWorkflowTodoIconName(step.status)} className={styles.todoStepIcon} />,
 			title: (
 				<Tooltip title={title}>
 					<span className={styles.todoStepTitle}>{title}</span>
@@ -316,9 +322,21 @@ function createWorkflowTodoStepItems(steps: readonly WorkflowTodoStep[]): NonNul
 						<span className={styles.todoStepDescription}>{description}</span>
 					</Tooltip>
 				),
-			status: mapWorkflowTodoStatusToStepStatus(step.status)
+			status
 		};
 	});
+}
+
+function getWorkflowTodoIconName(status: string): string {
+	if (status === "done" || status === "completed" || status === "success") {
+		return "todo_checked";
+	}
+
+	if (status === "failed" || status === "error" || status === "cancelled") {
+		return "todo_failed";
+	}
+
+	return "todo_unchecked";
 }
 
 function getErrorMessage(error: unknown): string {
@@ -974,6 +992,7 @@ function Composer({
 										<Steps
 											orientation="vertical"
 											size="small"
+											className={styles.todoSteps}
 											current={Math.max(0, workflowTodoSteps.findIndex((step: WorkflowTodoStep): boolean => {
 												return step.status === "running" || step.status === "in_progress";
 											}))}
@@ -1173,16 +1192,19 @@ function Composer({
 							content={contextUsageContent}
 							trigger="click"
 						>
-							<button type="button" className={styles.contextUsageButton} aria-label="Context usage">
-								<Progress
-									type="circle"
-									percent={contextUsagePercent}
-									status={contextUsageStatus}
-									strokeColor="#e0e0e0"
-									showInfo={false}
-									size={16}
-								/>
-							</button>
+							<span className={styles.contextUsageAnchor}>
+								<button type="button" className={styles.contextUsageButton} aria-label="Context usage">
+									<span className={styles.contextUsageButtonText}>{Math.round(contextUsagePercent)}%</span>
+									<Progress
+										type="circle"
+										percent={contextUsagePercent}
+										status={contextUsageStatus}
+										strokeColor="#e0e0e0"
+										showInfo={false}
+										size={16}
+									/>
+								</button>
+							</span>
 						</Popover>
 					) : null}
 				</Flex>

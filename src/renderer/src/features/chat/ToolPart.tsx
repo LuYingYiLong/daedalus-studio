@@ -50,6 +50,7 @@ function ToolPart({ part }: ToolPartProps): React.JSX.Element {
 	return (
 		<Collapse
 			size="small"
+			bordered={false}
 			className={styles.toolCollapse}
 			expandIcon={(): React.ReactNode => (
 				<Icon
