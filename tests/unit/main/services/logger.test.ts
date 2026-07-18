@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createLogger, setGlobalLevel, LogLevel } from "./logger";
+import { createLogger, setGlobalLevel, LogLevel } from "@main/services/logger";
 
 describe("Logger", () => {
 	let mockTransport: (entry: unknown) => void;

@@ -5,7 +5,7 @@ import {
 	isWorkflowTodoClearEvent,
 	mapWorkflowTodoStatusToStepStatus,
 	normalizeWorkflowTodoSnapshot
-} from "./workflow-todo";
+} from "@/features/composer/workflow-todo";
 
 describe("workflow-todo", () => {
 	it("normalizes workflow todo snapshots with steps", () => {

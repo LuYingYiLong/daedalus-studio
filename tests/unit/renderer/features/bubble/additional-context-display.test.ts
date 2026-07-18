@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AdditionalContextItem } from "@/api/types";
-import { summarizeAdditionalContextItem } from "./additional-context-display";
+import { summarizeAdditionalContextItem } from "@/features/bubble/additional-context-display";
 
 describe("additional-context-display", () => {
 	it("summarizes filesystem selections with item counts and tooltip paths", () => {

@@ -6,7 +6,7 @@ import {
 	extractEnabledSkillRefs,
 	getCompletionToken,
 	replaceCompletionToken
-} from "./composer-completion";
+} from "@/features/composer/composer-completion";
 
 const commands: SlashCommandDefinition[] = [
 	{

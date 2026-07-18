@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CLIENT_PREFERENCES } from "./client-preferences-store";
-import { shouldMinimizeToTrayOnClose } from "./window-lifecycle";
+import { DEFAULT_CLIENT_PREFERENCES } from "@main/services/client-preferences-store";
+import { shouldMinimizeToTrayOnClose } from "@main/services/window-lifecycle";
 
 describe("window lifecycle", () => {
 	it("hides to tray only when enabled and not quitting", () => {

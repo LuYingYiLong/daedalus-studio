@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { BackendRpcClient } from "./backend-rpc-client";
+import { BackendRpcClient } from "@/api/backend-rpc-client";
 
 describe("BackendRpcClient", () => {
 	let client: BackendRpcClient;

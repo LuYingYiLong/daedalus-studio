@@ -4,7 +4,7 @@ import {
 	loadClientPreferencesFile,
 	normalizeClientPreferences,
 	updateClientPreferencesFile
-} from "./client-preferences-store";
+} from "@main/services/client-preferences-store";
 
 function createMemoryIo(initialText: string | null = null): {
 	writes: string[];

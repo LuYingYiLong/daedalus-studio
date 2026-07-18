@@ -1,13 +1,9 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-
-const TEST_DIR: string = dirname(fileURLToPath(import.meta.url));
+import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("Composer todo preferences", () => {
 	it("does not apply global todo auto expand preference inside Composer", () => {
-		const source = readFileSync(join(TEST_DIR, "Composer.tsx"), "utf8");
+		const source: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
 
 		expect(source).not.toContain("autoExpandWorkflowTodo");
 		expect(source).toContain("if (dismissedWorkflowTodoKeyRef.current !== workflowTodoKey)");

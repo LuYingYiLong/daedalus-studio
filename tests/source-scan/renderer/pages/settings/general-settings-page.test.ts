@@ -1,17 +1,13 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-
-const TEST_DIR: string = dirname(fileURLToPath(import.meta.url));
+import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("GeneralSettingsPage", () => {
 	it("renders general options and splits backend settings from client preferences", () => {
-		const pageSource = readFileSync(join(TEST_DIR, "GeneralSettingsPage.tsx"), "utf8");
-		const apiSource = readFileSync(join(TEST_DIR, "..", "..", "api", "client-preferences-api.ts"), "utf8");
-		const generalApiSource = readFileSync(join(TEST_DIR, "..", "..", "api", "general-settings-api.ts"), "utf8");
-		const preloadSource = readFileSync(join(TEST_DIR, "..", "..", "..", "..", "preload", "index.ts"), "utf8");
-		const viteEnvSource = readFileSync(join(TEST_DIR, "..", "..", "vite-env.d.ts"), "utf8");
+		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "GeneralSettingsPage.tsx");
+		const apiSource: string = readRepoFile("src", "renderer", "src", "api", "client-preferences-api.ts");
+		const generalApiSource: string = readRepoFile("src", "renderer", "src", "api", "general-settings-api.ts");
+		const preloadSource: string = readRepoFile("src", "preload", "index.ts");
+		const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 
 		expect(pageSource).toContain("Auto-expand todo list");
 		expect(pageSource).toContain("Minimize to tray on close");

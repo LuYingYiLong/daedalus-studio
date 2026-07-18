@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getPickedSkillPath } from "./skill-fs";
+import { getPickedSkillPath } from "@main/services/skill-fs";
 
 describe("skill-fs", () => {
 	it("returns null when a skill path picker is cancelled", () => {

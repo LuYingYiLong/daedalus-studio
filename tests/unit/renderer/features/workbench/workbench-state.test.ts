@@ -7,7 +7,7 @@ import {
 	createTimelinePageFromTimelineResult,
 	mergeTimelineAfter,
 	mergeTimelineBefore
-} from "./workbench-state";
+} from "@/features/workbench/workbench-state";
 
 function createWorkbench(revision: number, text: string): WorkbenchSnapshot {
 	return {

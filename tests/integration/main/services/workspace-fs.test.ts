@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtempSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, getPickedWorkspaceDirectory, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceLaunchTarget } from "./workspace-fs";
+import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, getPickedWorkspaceDirectory, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceLaunchTarget } from "@main/services/workspace-fs";
 
 describe("workspace-fs", () => {
 	it("lists files and folders inside workspace root", async () => {

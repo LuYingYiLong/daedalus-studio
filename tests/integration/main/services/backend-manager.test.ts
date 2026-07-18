@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { BackendStatus } from "./types";
+import { BackendStatus } from "@main/services/types";
 
 describe("BackendManager", () => {
 	let mockMainWindow: any;
@@ -43,13 +43,13 @@ describe("BackendManager", () => {
 
 	describe("基础功能", () => {
 		it("开发模式端口应为 38181", async () => {
-			const { backendManager } = await import("./backend-manager");
+			const { backendManager } = await import("@main/services/backend-manager");
 
 			expect(backendManager.getPort()).toBe(38181);
 		});
 
 		it("初始状态应为 stopped", async () => {
-			const { backendManager } = await import("./backend-manager");
+			const { backendManager } = await import("@main/services/backend-manager");
 
 			const getStatus = vi.fn().mockResolvedValue("stopped");
 
@@ -59,7 +59,7 @@ describe("BackendManager", () => {
 
 	describe("状态管理", () => {
 		it("状态变更应发送到渲染进程", async () => {
-			const { backendManager } = await import("./backend-manager");
+			const { backendManager } = await import("@main/services/backend-manager");
 
 			await backendManager.start(mockMainWindow);
 
@@ -72,7 +72,7 @@ describe("BackendManager", () => {
 
 	describe("健康检查", () => {
 		it("停止时应清除健康检查", async () => {
-			const { backendManager } = await import("./backend-manager");
+			const { backendManager } = await import("@main/services/backend-manager");
 
 			await backendManager.start(mockMainWindow);
 			backendManager.stop();
@@ -84,7 +84,7 @@ describe("BackendManager", () => {
 
 	describe("进程管理", () => {
 		it("停止时应清理进程", async () => {
-			const { backendManager } = await import("./backend-manager");
+			const { backendManager } = await import("@main/services/backend-manager");
 
 			(backendManager as any).process = mockProcess;
 			backendManager.stop();

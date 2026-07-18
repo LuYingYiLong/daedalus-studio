@@ -5,7 +5,7 @@ import {
 	createPrefixHeights,
 	isNearBottomByMetrics,
 	shouldAutoFollowAppend
-} from "./message-list-virtual";
+} from "@/features/chat/message-list-virtual";
 
 describe("message-list-virtual", () => {
 	it("detects near-bottom state for initial and streaming scroll behavior", () => {

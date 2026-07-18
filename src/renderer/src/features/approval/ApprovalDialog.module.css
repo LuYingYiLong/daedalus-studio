@@ -6,7 +6,7 @@
 	padding: var(--ds-space-3);
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
-	background: var(--ds-surface-elevated);
+	background: var(--ds-surface);
 }
 
 .header {

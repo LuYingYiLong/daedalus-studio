@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { createMcpServerAddPayload, parseEnvLines, parseHeaderLines, parseLineList } from "./mcp-form-utils";
-
-const TEST_DIR: string = dirname(fileURLToPath(import.meta.url));
+import { createMcpServerAddPayload, parseEnvLines, parseHeaderLines, parseLineList } from "@/pages/settings/mcp-form-utils";
 
 describe("mcp-form-utils", () => {
 	it("parses multiline args, env and headers", () => {
@@ -57,11 +52,5 @@ describe("mcp-form-utils", () => {
 			headers: { Authorization: "Bearer token" }
 		});
 		expect("planAccess" in httpPayload).toBe(false);
-	});
-
-	it("does not render a plan access field in the settings page", () => {
-		const source = readFileSync(join(TEST_DIR, "McpServersSettingsPage.tsx"), "utf8");
-		expect(source).not.toContain("Plan access");
-		expect(source).not.toContain("planAccess");
 	});
 });

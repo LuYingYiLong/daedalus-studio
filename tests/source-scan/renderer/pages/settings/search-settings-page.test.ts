@@ -1,17 +1,13 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-
-const TEST_DIR: string = dirname(fileURLToPath(import.meta.url));
+import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("SearchSettingsPage", () => {
 	it("renders web search settings backed by backend RPC", () => {
-		const pageSource = readFileSync(join(TEST_DIR, "SearchSettingsPage.tsx"), "utf8");
-		const settingsSource = readFileSync(join(TEST_DIR, "SettingsPage.tsx"), "utf8");
-		const apiSource = readFileSync(join(TEST_DIR, "..", "..", "api", "web-search-settings-api.ts"), "utf8");
-		const providerSource = readFileSync(join(TEST_DIR, "ProviderSettingsPage.tsx"), "utf8");
-		const composerSource = readFileSync(join(TEST_DIR, "..", "..", "features", "composer", "Composer.tsx"), "utf8");
+		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "SearchSettingsPage.tsx");
+		const settingsSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "SettingsPage.tsx");
+		const apiSource: string = readRepoFile("src", "renderer", "src", "api", "web-search-settings-api.ts");
+		const providerSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "ProviderSettingsPage.tsx");
+		const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
 
 		expect(settingsSource).toContain('key: "search"');
 		expect(settingsSource).toContain('label: "Search"');

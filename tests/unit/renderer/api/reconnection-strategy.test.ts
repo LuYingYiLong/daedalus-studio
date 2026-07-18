@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { ReconnectionManager, DEFAULT_RECONNECT_CONFIG } from "./reconnection-strategy";
+import { ReconnectionManager, DEFAULT_RECONNECT_CONFIG } from "@/api/reconnection-strategy";
 
 describe("ReconnectionManager", () => {
 	let manager: ReconnectionManager;
