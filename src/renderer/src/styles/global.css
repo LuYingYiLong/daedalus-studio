@@ -42,7 +42,7 @@
 	--ds-control-height: 28px;
 	--ds-control-height-lg: 32px;
 	--ds-font-family: "Mona Sans", "Source Han Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-	--ds-font-family-code: "Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, Arial, Helvetica, sans-serif;
+	--ds-font-family-code: "Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
 	color-scheme: dark;
 	font-family: var(--ds-font-family);
 	background: var(--ds-bg);
@@ -105,10 +105,23 @@ body {
 
 .ant-popover .ant-popover-inner,
 .ant-dropdown .ant-dropdown-menu,
+.ant-dropdown-menu-submenu-popup .ant-dropdown-menu,
 .ant-modal .ant-modal-content {
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
 	background: var(--ds-surface-elevated);
+}
+
+.ant-dropdown-menu-submenu-popup {
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-surface-elevated);
+	overflow: hidden;
+}
+
+.ant-dropdown-menu-submenu-popup .ant-dropdown-menu {
+	border: 0;
+	box-shadow: none;
 }
 
 .ant-table-wrapper .ant-table,

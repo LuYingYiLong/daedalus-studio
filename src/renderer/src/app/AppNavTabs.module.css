@@ -3,7 +3,6 @@
 	min-width: 44px;
 	min-height: 0;
 	background: var(--ds-surface-elevated);
-	border-right: 1px solid var(--ds-border);
 }
 
 .navList {
@@ -45,9 +44,9 @@
 
 .navButton[data-active="true"]::after {
 	position: absolute;
-	top: 8px;
-	right: 0;
-	bottom: 8px;
+	top: 0px;
+	left: 0px;
+	bottom: 0px;
 	width: 2px;
 	content: "";
 	background: var(--ds-accent);

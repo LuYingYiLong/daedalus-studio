@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
-import { Button, Input, Menu, Modal, Popconfirm, Select, Space, Tag, Tooltip, Typography } from "antd";
+import { Button, Empty, Input, Menu, Modal, Popconfirm, Select, Space, Tag, Tooltip, Typography } from "antd";
 import type { MenuProps } from "antd";
 import { deleteArchivedSession, fetchArchivedSessions, restoreArchivedSession } from "@/api/session-api";
 import { fetchWorkspaces } from "@/api/workspace-api";
@@ -328,9 +328,9 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 						Loading archived sessions...
 					</Typography.Text>
 				) : filteredSessions.length === 0 ? (
-					<Typography.Text type="secondary" className={styles.emptyText}>
-						No archived sessions
-					</Typography.Text>
+					<Empty
+						description={archivedSessions.length === 0 ? "No archived sessions" : "No matching archived sessions"}
+					/>
 				) : (
 					<Menu
 						className={styles.archivedMenu}

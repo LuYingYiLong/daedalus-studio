@@ -1,4 +1,4 @@
-import { Menu, MenuProps, Typography } from "antd";
+import { Divider, Menu, MenuProps, Typography } from "antd";
 import { useState } from "react";
 import { Icon } from "@/assets/icons";
 import type { ProviderModelSelection } from "@/api/provider-api";
@@ -107,42 +107,47 @@ function SettingsPage({
 					onClick={({ key }): void => setActivePage(key as SettingsPageKey)}
 				/>
 			</aside>
-			{activePage === "provider" ? (
-				<ProviderSettingsPage onSelectionChange={onProviderModelSelectionChange} />
-			) : activePage === "default_model" ? (
-				<DefaultModelSettingsPage onSelectionChange={onProviderModelSelectionChange} />
-			) : activePage === "general" ? (
-				<GeneralSettingsPage
-					clientPreferences={clientPreferences}
-					generalSettings={generalSettings}
-					onClientPreferencesChange={onClientPreferencesChange}
-					onGeneralSettingsChange={onGeneralSettingsChange}
-				/>
-			) : activePage === "search" ? (
-				<SearchSettingsPage />
-			) : activePage === "personalization" ? (
-				<PersonalizationSettingsPage />
-			) : activePage === "mcp_servers" ? (
-				<McpServersSettingsPage />
-			) : activePage === "skills" ? (
-				<SkillsSettingsPage />
-			) : activePage === "archived_sessions" ? (
-				<ArchivedSessionSettingsPage />
-			) : (
-				<section className={styles.placeholder}>
-					<div className={styles.placeholderHeader}>
-						<Icon name="settings" className={styles.placeholderIcon} />
-						<div>
-							<Typography.Title level={3} className={styles.placeholderTitle}>
-								{getSettingsPageTitle(activePage)}
-							</Typography.Title>
-							<Typography.Text type="secondary">
-								This settings section will be implemented later.
-							</Typography.Text>
+
+			<Divider vertical size="small" className={styles.divider} />
+			
+			<div className={styles.activePage}>
+				{activePage === "provider" ? (
+					<ProviderSettingsPage onSelectionChange={onProviderModelSelectionChange} />
+				) : activePage === "default_model" ? (
+					<DefaultModelSettingsPage onSelectionChange={onProviderModelSelectionChange} />
+				) : activePage === "general" ? (
+					<GeneralSettingsPage
+						clientPreferences={clientPreferences}
+						generalSettings={generalSettings}
+						onClientPreferencesChange={onClientPreferencesChange}
+						onGeneralSettingsChange={onGeneralSettingsChange}
+					/>
+				) : activePage === "search" ? (
+					<SearchSettingsPage />
+				) : activePage === "personalization" ? (
+					<PersonalizationSettingsPage />
+				) : activePage === "mcp_servers" ? (
+					<McpServersSettingsPage />
+				) : activePage === "skills" ? (
+					<SkillsSettingsPage />
+				) : activePage === "archived_sessions" ? (
+					<ArchivedSessionSettingsPage />
+				) : (
+					<section className={styles.placeholder}>
+						<div className={styles.placeholderHeader}>
+							<Icon name="settings" className={styles.placeholderIcon} />
+							<div>
+								<Typography.Title level={3} className={styles.placeholderTitle}>
+									{getSettingsPageTitle(activePage)}
+								</Typography.Title>
+								<Typography.Text type="secondary">
+									This settings section will be implemented later.
+								</Typography.Text>
+							</div>
 						</div>
-					</div>
-				</section>
-			)}
+					</section>
+				)}
+			</div>
 		</section>
 	);
 }

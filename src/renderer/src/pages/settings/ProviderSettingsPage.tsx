@@ -1,4 +1,4 @@
-import { Alert, Button, Input, Menu, Space, Spin, Table, Tag, Typography } from "antd";
+import { Alert, Button, Divider, Input, Menu, Space, Spin, Table, Tag, Typography } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
@@ -204,23 +204,6 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 		}
 	}
 
-	async function handleSaveProvider(provider: ProviderModelSelectionProvider, modelId?: string): Promise<void> {
-		try {
-			setIsSaving(true);
-			setErrorMessage(null);
-			const nextSelection: ProviderModelSelection = await saveProviderConfig(createSavePayload(provider, modelId));
-			setSelection(nextSelection);
-			onSelectionChange?.(nextSelection);
-			setSelectedProviderId(provider.provider);
-			setDraftApiKey("");
-			setIsApiKeyDirty(false);
-		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to save provider config");
-		} finally {
-			setIsSaving(false);
-		}
-	}
-
 	async function handleRefreshModels(provider: ProviderModelSelectionProvider): Promise<void> {
 		try {
 			setIsRefreshing(true);
@@ -254,8 +237,10 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			<section className={styles.page}>
 				<div className={styles.providerListPane} />
 				<div className={styles.detailPane}>
-					<div className={styles.detailBody}>
-						<Alert type="error" description={errorMessage ?? "No provider settings available"} />
+					<div className={styles.detailContent}>
+						<div className={styles.detailBody}>
+							<Alert type="error" description={errorMessage ?? "No provider settings available"} />
+						</div>
 					</div>
 				</div>
 			</section>
@@ -309,105 +294,109 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				</Button>
 			</aside>
 
+			<Divider vertical size="small" className={styles.divider} />
+
 			<section className={styles.detailPane}>
-				<header className={styles.detailHeader}>
-					<Typography.Title level={3} className={styles.detailTitle}>
-						{selectedProvider.displayName}
-					</Typography.Title>
-				</header>
+				<div className={styles.detailContent}>
+					<header className={styles.detailHeader}>
+						<Typography.Title level={3} className={styles.detailTitle}>
+							{selectedProvider.displayName}
+						</Typography.Title>
+					</header>
 
-				<div className={styles.detailBody}>
-					{errorMessage !== null ? (
-						<Alert
-							type="warning"
-							showIcon={true}
-							description={errorMessage}
-							action={(
-								<Button
-									size="small"
-									type="text"
-									icon={<Icon name="close" />}
-									onClick={(): void => setErrorMessage(null)}
-								/>
-							)}
-						/>
-					) : null}
-
-					<div className={styles.fieldGroup}>
-						<div className={styles.fieldLabelRow}>
-							<Typography.Title className={styles.fieldLabel} level={4}>API Key</Typography.Title>
-						</div>
-						<Space.Compact>
-							<Input.Password
-								value={draftApiKey}
-								placeholder={selectedProvider.apiKeyMasked ?? "Enter API key"}
-								onChange={(event: ChangeEvent<HTMLInputElement>): void => {
-									setDraftApiKey(event.target.value);
-									setIsApiKeyDirty(true);
-								}}
+					<div className={styles.detailBody}>
+						{errorMessage !== null ? (
+							<Alert
+								type="warning"
+								showIcon={true}
+								description={errorMessage}
+								action={(
+									<Button
+										size="small"
+										type="text"
+										icon={<Icon name="close" />}
+										onClick={(): void => setErrorMessage(null)}
+									/>
+								)}
 							/>
-							<Button
-								onClick={(): void => void handleRefreshModels(selectedProvider)}
-								loading={isRefreshing}
-							>
-								Test
-							</Button>
-							<Button
-								color="danger"
-								variant="solid"
-								icon={<Icon name="clear" />}
-								danger={selectedProvider.configured}
-								disabled={isSaving || isRefreshing || (!selectedProvider.configured && draftApiKey.length === 0)}
-								loading={isSaving}
-								onClick={(): void => void handleClearApiKey(selectedProvider)}
-							/>
-						</Space.Compact>
-						<Typography.Text type="secondary" className={styles.fieldHint}>
-							{selectedProvider.apiKeyMasked !== null && !isApiKeyDirty ? `Saved key: ${selectedProvider.apiKeyMasked}` : "Only a newly entered key will be saved."}
-						</Typography.Text>
-					</div>
+						) : null}
 
-					<div className={styles.fieldGroup}>
-						<Typography.Title className={styles.fieldLabel} level={4}>API Base URL</Typography.Title>
-						<Input
-							value={draftBaseUrl}
-							onChange={(event: ChangeEvent<HTMLInputElement>): void => setDraftBaseUrl(event.target.value)}
-						/>
-						<Typography.Text type="secondary" className={styles.fieldHint}>
-							Model list source: {selectedProvider.modelsSource}
-							{selectedProvider.modelsCacheUpdatedAt ? ` · updated ${selectedProvider.modelsCacheUpdatedAt}` : ""}
-						</Typography.Text>
-					</div>
-
-					<div className={styles.modelSectionHeader}>
-						<div className={styles.modelTitle}>
-							<Typography.Title className={styles.fieldLabel} level={4}>Models</Typography.Title>
-							<Tag>{selectedProvider.models.length}</Tag>
-						</div>
-						<div className={styles.modelActions}>
+						<div className={styles.fieldGroup}>
+							<div className={styles.fieldLabelRow}>
+								<Typography.Title className={styles.fieldLabel} level={4}>API Key</Typography.Title>
+							</div>
 							<Space.Compact>
+								<Input.Password
+									value={draftApiKey}
+									placeholder={selectedProvider.apiKeyMasked ?? "Enter API key"}
+									onChange={(event: ChangeEvent<HTMLInputElement>): void => {
+										setDraftApiKey(event.target.value);
+										setIsApiKeyDirty(true);
+									}}
+								/>
 								<Button
-									icon={<Icon name="reload" />}
 									onClick={(): void => void handleRefreshModels(selectedProvider)}
 									loading={isRefreshing}
 								>
-									Fetch models
+									Test
 								</Button>
-								<Button icon={<Icon name="add" />} disabled={true} />
+								<Button
+									color="danger"
+									variant="solid"
+									icon={<Icon name="clear" />}
+									danger={selectedProvider.configured}
+									disabled={isSaving || isRefreshing || (!selectedProvider.configured && draftApiKey.length === 0)}
+									loading={isSaving}
+									onClick={(): void => void handleClearApiKey(selectedProvider)}
+								/>
 							</Space.Compact>
+							<Typography.Text type="secondary" className={styles.fieldHint}>
+								{selectedProvider.apiKeyMasked !== null && !isApiKeyDirty ? `Saved key: ${selectedProvider.apiKeyMasked}` : "Only a newly entered key will be saved."}
+							</Typography.Text>
 						</div>
-					</div>
 
-					<div className={styles.modelGroup}>
-						<Table<ProviderModelInfo>
-							className={styles.modelTable}
-							columns={modelColumns}
-							dataSource={selectedProvider.models}
-							pagination={false}
-							rowKey="id"
-							size="small"
-							scroll={{ x: true }}
-						/>
+						<div className={styles.fieldGroup}>
+							<Typography.Title className={styles.fieldLabel} level={4}>API Base URL</Typography.Title>
+							<Input
+								value={draftBaseUrl}
+								onChange={(event: ChangeEvent<HTMLInputElement>): void => setDraftBaseUrl(event.target.value)}
+							/>
+							<Typography.Text type="secondary" className={styles.fieldHint}>
+								Model list source: {selectedProvider.modelsSource}
+								{selectedProvider.modelsCacheUpdatedAt ? ` · updated ${selectedProvider.modelsCacheUpdatedAt}` : ""}
+							</Typography.Text>
+						</div>
+
+						<div className={styles.modelSectionHeader}>
+							<div className={styles.modelTitle}>
+								<Typography.Title className={styles.fieldLabel} level={4}>Models</Typography.Title>
+								<Tag>{selectedProvider.models.length}</Tag>
+							</div>
+							<div className={styles.modelActions}>
+								<Space.Compact>
+									<Button
+										icon={<Icon name="reload" />}
+										onClick={(): void => void handleRefreshModels(selectedProvider)}
+										loading={isRefreshing}
+									>
+										Fetch models
+									</Button>
+									<Button icon={<Icon name="add" />} disabled={true} />
+								</Space.Compact>
+							</div>
+						</div>
+
+						<div className={styles.modelGroup}>
+							<Table<ProviderModelInfo>
+								className={styles.modelTable}
+								columns={modelColumns}
+								dataSource={selectedProvider.models}
+								pagination={false}
+								rowKey="id"
+								size="small"
+								scroll={{ x: true }}
+							/>
+						</div>
 					</div>
 				</div>
 			</section>

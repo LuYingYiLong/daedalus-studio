@@ -66,6 +66,7 @@
 	gap: 4px;
 	width: 100%;
 	min-width: 0;
+	padding-inline-end: 8px;
 }
 
 .workspaceTitle {
@@ -92,10 +93,8 @@
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) 22px;
 	align-items: center;
-	gap: 4px;
 	width: 100%;
 	min-width: 0;
-	padding-left: 16px;
 }
 
 .sessionTitle {

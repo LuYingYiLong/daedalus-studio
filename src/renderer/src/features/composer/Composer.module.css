@@ -243,12 +243,17 @@
 	max-height: min(520px, calc(100vh - 96px));
 	overflow-y: auto;
 	overscroll-behavior: contain;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-surface-elevated);
 }
 
 .modelSubmenuPopup :global(.ant-dropdown-menu) {
 	max-height: inherit;
 	overflow-y: auto;
 	overscroll-behavior: contain;
+	border: 0;
+	box-shadow: none;
 }
 
 .composerActionIcon,

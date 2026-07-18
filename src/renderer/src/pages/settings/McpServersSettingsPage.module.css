@@ -3,7 +3,7 @@
 	grid-template-rows: auto auto minmax(0, 1fr);
 	min-width: 0;
 	min-height: 0;
-	padding: 0px 8px;
+	padding: var(--ds-space-2);
 	overflow: hidden;
 }
 
@@ -50,8 +50,10 @@
 	align-items: center;
 	gap: 12px;
 	min-width: 0;
-	padding: 8px 0px 8px 0px;
+	padding: var(--ds-space-2);
+	background-color: var(--ds-surface);
 	border-radius: var(--ds-radius-sm);
+	border: 1px solid var(--ds-border);
 	user-select: none;
 }
 
