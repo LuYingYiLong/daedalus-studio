@@ -3,17 +3,17 @@
 	margin-top: 4px;
 	margin-bottom: 4px;
 	user-select: none;
-	border-radius: 4px;
+	border-radius: var(--ds-radius-sm);
 }
 
 .eventJson {
 	max-height: 200px;
 	margin: 0;
-	padding: 8px;
+	padding: var(--ds-space-2);
 	overflow: auto;
-	border-radius: 4px;
+	border-radius: var(--ds-radius-sm);
 	font-size: 14px;
 	white-space: pre-wrap;
 	user-select: text;
-	font-family: "Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, Arial, Helvetica, sans-serif;
+	font-family: var(--ds-font-family-code);
 }

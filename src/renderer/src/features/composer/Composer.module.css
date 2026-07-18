@@ -8,7 +8,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: flex-end;
-	gap: 6px;
+	gap: var(--ds-space-1);
 	min-width: 0;
 	width: 100%;
 }
@@ -24,8 +24,8 @@
 }
 
 .todoCollapse {
-	background-color: #0a0a0a;
-	border-radius: 8px 8px 0px 0px;
+	background-color: var(--ds-bg-sunken);
+	border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
 	user-select: none;
 }
 
@@ -35,13 +35,13 @@
 }
 
 .todoCollapse :global(.ant-collapse-content-box) {
-	padding: 4px;
+	padding: var(--ds-space-1);
 	max-height: calc(min(360px, 45vh) - 42px);
 	overflow-y: auto;
 }
 
 .todoCollapse :global(.ant-collapse-body) {
-	padding: 8px 12px 8px 8px !important;
+	padding: var(--ds-space-2) var(--ds-space-3) var(--ds-space-2) var(--ds-space-2) !important;
 }
 
 .todoPanelBody {
@@ -71,7 +71,7 @@
 }
 
 .todoStepDescription {
-	color: #ffffff8f;
+	color: var(--ds-text-muted);
 	font-size: 12px;
 }
 
@@ -87,19 +87,19 @@
 	flex-direction: column;
 	width: 100%;
 	min-width: 0;
-	padding: 8px 8px 42px;
-	border: 1px solid rgba(255, 255, 255, 0.14);
-	border-radius: 8px;
-	background: #1b1b1b;
+	padding: var(--ds-space-2) var(--ds-space-2) 42px;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-surface);
 	transition: border-color 0.15s;
 }
 
 .composerSurfaceHasTodo {
-	border-radius: 0px 0px 8px 8px;
+	border-radius: 0 0 var(--ds-radius-lg) var(--ds-radius-lg);
 }
 
 .composerSurface:focus-within {
-	border-color: #478cbf;
+	border-color: var(--ds-accent);
 }
 
 .completionPanel {
@@ -112,9 +112,9 @@
 	max-height: 210px;
 	padding: 5px 0;
 	overflow: hidden;
-	border: 1px solid #ffffff24;
-	border-radius: 8px;
-	background: rgb(31, 31, 31);
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-surface-elevated);
 	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
 }
 
@@ -127,7 +127,7 @@
 	height: 28px;
 	padding: 0 10px;
 	border: 0;
-	color: rgba(255, 255, 255, 0.86);
+	color: var(--ds-text-primary);
 	background: transparent;
 	font: inherit;
 	text-align: left;
@@ -135,7 +135,7 @@
 }
 
 .completionItemSelected {
-	background: rgba(71, 140, 191, 0.34);
+	background: var(--ds-accent-muted);
 }
 
 .completionLabel,
@@ -146,12 +146,12 @@
 }
 
 .completionLabel {
-	font-family: "Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, Arial, Helvetica, sans-serif;
+	font-family: var(--ds-font-family-code);
 	font-size: 12px;
 }
 
 .completionDescription {
-	color: #ffffff8f;
+	color: var(--ds-text-muted);
 	font-size: 12px;
 }
 
@@ -195,11 +195,12 @@
 	gap: 4px;
 }
 
-.composerActionButton,
-.composerSendButton {
-	width: 28px;
-	height: 28px;
-	padding: 0;
+.searchButton {
+	color: inherit;
+}
+
+.searchButtonActive {
+	color: var(--ds-accent);
 }
 
 .approvalModeButton {
@@ -277,9 +278,9 @@
 	height: 28px;
 	padding: 0 6px;
 	border: 0;
-	border-radius: 4px;
-	color: rgba(255, 255, 255, 0.88);
-	background: rgba(255, 255, 255, 0);
+	border-radius: var(--ds-radius-sm);
+	color: var(--ds-text-primary);
+	background: transparent;
 	cursor: pointer;
 	overflow: hidden;
 	transition:
@@ -292,13 +293,13 @@
 .contextUsageButton:focus-visible {
 	gap: 6px;
 	width: 68px;
-	background: rgba(255, 255, 255, 0.16);
+	background: var(--ds-surface-active);
 }
 
 .contextUsageButtonText {
 	max-width: 0;
 	overflow: hidden;
-	font-family: "Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, Arial, Helvetica, sans-serif;
+	font-family: var(--ds-font-family-code);
 	font-size: 12px;
 	font-variant-numeric: tabular-nums;
 	line-height: 1;
@@ -310,7 +311,7 @@
 		max-width 0.16s ease,
 		opacity 0.12s ease,
 		transform 0.16s ease;
-	mask-image: linear-gradient(to right, transparent 0, rgba(0, 0, 0, 0.45) 35%, #000 100%);
+	mask-image: linear-gradient(to right, transparent 0, rgb(0 0 0 / 45%) 35%, rgb(0 0 0) 100%);
 }
 
 .contextUsageButton:hover .contextUsageButtonText,
@@ -323,7 +324,7 @@
 
 .contextUsagePanel {
 	display: grid;
-	gap: 10px;
+	gap: var(--ds-space-2);
 	width: 300px;
 	user-select: none;
 }
@@ -339,7 +340,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 12px;
+	gap: var(--ds-space-3);
 	min-width: 0;
 }
 
@@ -358,18 +359,18 @@
 
 .contextUsageBreakdown {
 	display: grid;
-	gap: 6px;
+	gap: var(--ds-space-1);
 }
 
 .contextUsageRow {
-	color: rgba(255, 255, 255, 0.72);
+	color: var(--ds-text-secondary);
 	font-size: 12px;
 	line-height: 1.4;
 }
 
 .contextUsageRow span:last-child {
-	color: rgba(255, 255, 255, 0.9);
-	font-family: "Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, Arial, Helvetica, sans-serif;
+	color: var(--ds-text-primary);
+	font-family: var(--ds-font-family-code);
 }
 
 .contextUsageLoading {
@@ -407,7 +408,7 @@
 
 .providerMutedText {
 	font-size: 11px;
-	color: rgb(140, 140, 140);
+	color: var(--ds-text-muted);
 }
 
 .modelMenuItem {
@@ -424,7 +425,7 @@
 
 .modelMenuMeta {
 	overflow: hidden;
-	color: rgb(140, 140, 140);
+	color: var(--ds-text-muted);
 	font-size: 11px;
 	line-height: 1.2;
 	text-overflow: ellipsis;
@@ -432,9 +433,9 @@
 }
 
 .footer {
-	background-color: #ffffff24;
-	padding: 4px;
-	border-radius: 0px 0px 8px 8px;
+	background-color: var(--ds-surface-active);
+	padding: var(--ds-space-1);
+	border-radius: 0 0 var(--ds-radius-lg) var(--ds-radius-lg);
 	margin-top: -6px;
 	min-height: 42px;
 }
@@ -479,7 +480,7 @@
 }
 
 .workspaceMenuPath {
-	color: rgb(140, 140, 140);
+	color: var(--ds-text-muted);
 	font-size: 11px;
 	line-height: 1.2;
 }

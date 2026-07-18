@@ -10,6 +10,7 @@ export type SendChatMessageParams = {
 	retryFromRequestId?: string;
 	additionalContext?: AdditionalContextItem[];
 	skillRefs?: string[];
+	webSearchEnabled?: boolean;
 };
 
 export type CancelChatMessageResult = {
@@ -25,6 +26,7 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<un
 		mode: params.mode,
 		retryFromRequestId: params.retryFromRequestId,
 		skillRefs: params.skillRefs,
+		webSearchEnabled: params.webSearchEnabled,
 		options: {
 			stream: true
 		},

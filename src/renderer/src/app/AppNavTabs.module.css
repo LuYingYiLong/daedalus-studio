@@ -2,8 +2,8 @@
 	width: 44px;
 	min-width: 44px;
 	min-height: 0;
-	background: #1f1f1f;
-	border-right: 1px solid #3b3b3b;
+	background: var(--ds-surface-elevated);
+	border-right: 1px solid var(--ds-border);
 }
 
 .navList {
@@ -26,21 +26,21 @@
 	border: 0;
 	border-radius: 0;
 	background: transparent;
-	color: #e0e0e0;
+	color: var(--ds-text-primary);
 	cursor: pointer;
 	line-height: 0;
 }
 
 .navButton:hover,
 .navButton:focus-visible {
-	background: #2a2a2a;
-	color: #ffffff;
+	background: var(--ds-surface-active);
+	color: var(--ds-text-inverse);
 	outline: none;
 }
 
 .navButton[data-active="true"] {
-	background: #274a5e;
-	color: #ffffff;
+	background: var(--ds-accent-muted);
+	color: var(--ds-text-inverse);
 }
 
 .navButton[data-active="true"]::after {
@@ -50,6 +50,7 @@
 	bottom: 8px;
 	width: 2px;
 	content: "";
+	background: var(--ds-accent);
 }
 
 .navIcon {

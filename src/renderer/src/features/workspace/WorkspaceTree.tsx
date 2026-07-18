@@ -47,6 +47,7 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 				<Tooltip title="Archive session" placement="right">
 					<Button
 						type="text"
+						shape="circle"
 						size="small"
 						aria-label={`Archive ${session.title}`}
 						className={styles.archiveButton}
@@ -103,6 +104,7 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 						<Dropdown menu={actionMenu} trigger={["click"]} placement="bottomRight">
 							<Button
 								type="text"
+								shape="circle"
 								size="small"
 								aria-label={`Workspace actions for ${workspace.name}`}
 								className={styles.workspaceActionButton}
@@ -117,6 +119,7 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 						<Tooltip title="New session in workspace" placement="right">
 							<Button
 								type="text"
+								shape="circle"
 								size="small"
 								aria-label={`New session in ${workspace.name}`}
 								className={styles.workspaceActionButton}

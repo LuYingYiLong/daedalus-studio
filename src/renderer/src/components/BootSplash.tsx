@@ -17,6 +17,7 @@ function BootSplash(): React.JSX.Element {
 	const [pillWidth, setPillWidth] = useState<number | "auto">("auto");
 	const measureRefs = useRef<Array<HTMLSpanElement | null>>([]);
 	const shrinkTimerRef = useRef<number | null>(null);
+	const accentColors: string[] = [token.colorPrimaryActive, token.colorPrimary, token.colorPrimaryHover];
 	const splashTokenStyle = {
 		"--splash-border-radius": `${token.borderRadius}px`
 	} as React.CSSProperties;
@@ -71,7 +72,7 @@ function BootSplash(): React.JSX.Element {
 
 	return (
 		<main className={styles.splash}>
-			<ColorBends colors={["#925cff", "#478cbf", "#00ffd1"]} className={styles.bends} />
+			<ColorBends colors={accentColors} className={styles.bends} />
 			<div className={styles.logoLayer}>
 				<div className={styles.splashContent}>
 					<Icon name="icon_large" className={styles.splashIcon} />

@@ -24,15 +24,15 @@
 	display: inline-flex;
 	align-items: center;
 	flex: 0 0 auto;
-	gap: 6px;
+	gap: var(--ds-space-1);
 	min-width: 0;
 	max-width: min(280px, 100%);
 	height: 28px;
-	padding: 0 9px;
-	border: 1px solid rgba(255, 255, 255, 0.12);
-	border-radius: 4px;
-	color: rgba(255, 255, 255, 0.88);
-	background: rgba(255, 255, 255, 0.07);
+	padding: 0 var(--ds-space-2);
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-sm);
+	color: var(--ds-text-primary);
+	background: var(--ds-surface-elevated);
 	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
@@ -41,12 +41,12 @@
 }
 
 .interactiveChip:hover {
-	border-color: rgba(125, 190, 240, 0.44);
-	background: rgba(125, 190, 240, 0.12);
+	border-color: var(--ds-accent);
+	background: var(--ds-accent-subtle);
 }
 
 .interactiveChip:focus-visible {
-	outline: 2px solid rgba(125, 190, 240, 0.72);
+	outline: 2px solid var(--ds-accent);
 	outline-offset: 2px;
 }
 
@@ -54,7 +54,7 @@
 	flex: 0 0 auto;
 	width: 15px;
 	height: 15px;
-	color: rgba(255, 255, 255, 0.72);
+	color: var(--ds-text-secondary);
 }
 
 .contextText {
@@ -74,7 +74,7 @@
 
 .contextMeta {
 	overflow: hidden;
-	color: rgba(255, 255, 255, 0.56);
+	color: var(--ds-text-muted);
 	font-size: 10px;
 	text-overflow: ellipsis;
 	text-transform: capitalize;
@@ -85,5 +85,5 @@
 	flex: 0 0 auto;
 	width: 13px;
 	height: 13px;
-	color: #7dbef0;
+	color: var(--ds-accent-hover);
 }

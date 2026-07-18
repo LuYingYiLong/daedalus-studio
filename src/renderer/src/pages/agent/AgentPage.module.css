@@ -13,7 +13,7 @@
 	align-self: stretch;
 	height: auto;
 	margin: 0;
-	border-inline-start-color: rgba(255, 255, 255, 0.14);
+	border-inline-start-color: var(--ds-border);
 }
 
 .workspaceSidebar {
@@ -108,13 +108,13 @@
 	place-items: center;
 	min-width: 0;
 	min-height: 0;
-	padding: 32px;
+	padding: var(--ds-space-4);
 }
 
 .homeContent {
 	display: grid;
 	justify-items: center;
-	gap: 10px;
+	gap: var(--ds-space-2);
 	width: min(800px, 100%);
 	text-align: center;
 	user-select: none;
@@ -127,7 +127,7 @@
 }
 
 .homeSubtitle {
-	color: rgba(255, 255, 255, 0.62);
+	color: var(--ds-text-secondary);
 }
 
 .homeError {

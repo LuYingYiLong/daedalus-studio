@@ -16,12 +16,14 @@ describe("SearchSettingsPage", () => {
 		expect(settingsSource).toContain('key: "search"');
 		expect(settingsSource).toContain('label: "Search"');
 		expect(settingsSource).toContain('icon: <Icon name="search" />');
-		expect(pageSource).toContain("Enable web search");
+		expect(pageSource).not.toContain("Enable web search");
 		expect(pageSource).toContain("Search model");
-		expect(pageSource).toContain("mcp_web_search");
+		expect(pageSource).toContain("Composer Search button");
 		expect(apiSource).toContain('client.request<WebSearchSettings>("webSearchSettings.get")');
 		expect(apiSource).toContain('client.request<WebSearchSettings>("webSearchSettings.update", patch)');
 		expect(providerSource).toContain('{ key: "webSearch", label: "Search", icon: "search"');
 		expect(composerSource).toContain('modelBadges.push("Search")');
+		expect(composerSource).toContain("webSearchEnabled");
+		expect(composerSource).toContain('Icon name="search"');
 	});
 });

@@ -36,6 +36,7 @@ export type ComposerProps = {
 	skills?: SkillSummary[];
 	isSending?: boolean;
 	isApprovalModeSaving?: boolean;
+	webSearchEnabled?: boolean;
 	workspaceOptions?: WorkspaceConfig[];
 	selectedWorkspace?: WorkspaceConfig | null;
 	workspaceFooterDisabled?: boolean;
@@ -44,6 +45,7 @@ export type ComposerProps = {
 	onMessageChange?: (message: string) => void;
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
+	onWebSearchEnabledChange?: (enabled: boolean) => void;
 	onProviderModelChange?: (providerId: string, modelId: string) => void;
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onWorkspaceAdd?: () => void;
@@ -70,16 +72,16 @@ type SelectedModel = {
 type ProgressStrokeColor = NonNullable<ProgressProps["strokeColor"]>;
 
 const CONTEXT_USAGE_NORMAL_STROKE: ProgressStrokeColor = {
-	"0%": "#44c2ff",
-	"100%": "#4ade80",
+	"0%": "var(--ds-accent)",
+	"100%": "var(--ds-success)",
 };
 const CONTEXT_USAGE_WARNING_STROKE: ProgressStrokeColor = {
-	"0%": "#fadb14",
-	"100%": "#fa8c16",
+	"0%": "var(--ds-warning)",
+	"100%": "var(--ds-warning)",
 };
 const CONTEXT_USAGE_DANGER_STROKE: ProgressStrokeColor = {
-	"0%": "#ff7875",
-	"100%": "#ff4d4f",
+	"0%": "var(--ds-danger)",
+	"100%": "var(--ds-danger)",
 };
 
 const contextItems: MenuProps["items"] = [
@@ -391,6 +393,7 @@ function Composer({
 	skills = [],
 	isSending = false,
 	isApprovalModeSaving = false,
+	webSearchEnabled = false,
 	workspaceOptions = [],
 	selectedWorkspace = null,
 	workspaceFooterDisabled = false,
@@ -399,6 +402,7 @@ function Composer({
 	onMessageChange,
 	onModeChange,
 	onApprovalModeChange,
+	onWebSearchEnabledChange,
 	onProviderModelChange,
 	onWorkspaceSelect,
 	onWorkspaceAdd,
@@ -1080,82 +1084,107 @@ function Composer({
 						}}
 					/>
 					<div className={styles.composerToolbar}>
-					<Dropdown
-						menu={{ items: contextItems, onClick: handleContextItemClick }}
-						trigger={["click"]}
-					>
-						<Button
-							type="text"
-							icon={<Icon name="add" className={styles.composerActionIcon} />}
-							className={styles.composerActionButton}
-						/>
-					</Dropdown>
-					<Divider vertical={true} />
-					<Dropdown
-						menu={{
-							items: modeItems,
-							selectedKeys: [mode],
-							onClick: handleModeClick,
-						}}
-						trigger={["click"]}
-					>
-						<Button
-							type="text"
-							icon={<Icon name={mode} className={styles.composerActionIcon} />}
-							className={styles.composerActionButton}
-						/>
-					</Dropdown>
-					<Dropdown
-						menu={{
-							items: approvalModeItems,
-							selectedKeys: [approvalMode],
-							onClick: handleApprovalModeClick,
-						}}
-						disabled={isApprovalModeSaving}
-						trigger={["click"]}
-					>
-						<Button
-							type="text"
-							loading={isApprovalModeSaving}
-							icon={(
-								<Icon
-									name={approvalMode === "auto-safe" ? "warning" : "shield"}
-									className={styles.composerActionIcon}
-								/>
-							)}
-							className={styles.approvalModeButton}
+					<Tooltip title="Add additional context">
+						<Dropdown
+							menu={{ items: contextItems, onClick: handleContextItemClick }}
+							trigger={["click"]}
 						>
-							<span className={styles.approvalModeText}>{approvalModeLabel}</span>
-						</Button>
-					</Dropdown>
+							<Button
+								type="text"
+								shape="circle"
+								icon={<Icon name="add" className={styles.composerActionIcon} />}
+							/>
+						</Dropdown>
+					</Tooltip>
+					
 					<Divider vertical={true} />
-					<Dropdown
-						disabled={providerModelSelection === null}
-						rootClassName={styles.modelDropdown}
-						menu={{
-							items: providerModelItems,
-							selectedKeys: selectedModelKey === undefined ? [] : [selectedModelKey],
-							onClick: handleProviderModelClick
-						}}
-						trigger={["click"]}
-					>
+					
+					<Tooltip title="Search">
 						<Button
 							type="text"
-							className={styles.modelButton}
+							shape="circle"
+							className={`${styles.searchButton} ${webSearchEnabled ? styles.searchButtonActive : ""}`}
+							icon={<Icon name="search" />}
+							aria-pressed={webSearchEnabled}
+							onClick={(): void => onWebSearchEnabledChange?.(!webSearchEnabled)}
+						/>
+					</Tooltip>
+					<Tooltip title="Mode">
+						<Dropdown
+							menu={{
+								items: modeItems,
+								selectedKeys: [mode],
+								onClick: handleModeClick,
+							}}
+							trigger={["click"]}
 						>
-							<span className={styles.modelButtonContent}>
-								<span className={styles.modelButtonText}>{selectedModelLabel}</span>
-							</span>
-						</Button>
-					</Dropdown>
+							<Button
+								type="text"
+								shape="circle"
+								icon={<Icon name={mode} className={styles.composerActionIcon} />}
+							/>
+						</Dropdown>
+					</Tooltip>
+					<Tooltip title="Approval mode">
+						<Dropdown
+							menu={{
+								items: approvalModeItems,
+								selectedKeys: [approvalMode],
+								onClick: handleApprovalModeClick,
+							}}
+							disabled={isApprovalModeSaving}
+							trigger={["click"]}
+						>
+							<Button
+								type="text"
+								loading={isApprovalModeSaving}
+								icon={(
+									<Icon
+										name={approvalMode === "auto-safe" ? "warning" : "shield"}
+										className={styles.composerActionIcon}
+									/>
+								)}
+								className={styles.approvalModeButton}
+							>
+								<span className={styles.approvalModeText}>{approvalModeLabel}</span>
+							</Button>
+						</Dropdown>
+					</Tooltip>	
 
-					<Button
-						type="text"
-						icon={<Icon name={isSending ? "stop" : "send"} className={styles.composerSendIcon} />}
-						className={styles.composerSendButton}
-						disabled={!isSending && draftMessage.trim().length === 0}
-						onClick={submitMessage}
-					/>
+					<Divider vertical={true} />
+					
+					<Tooltip title="Model">
+						<Dropdown
+							disabled={providerModelSelection === null}
+							rootClassName={styles.modelDropdown}
+							menu={{
+								items: providerModelItems,
+								selectedKeys: selectedModelKey === undefined ? [] : [selectedModelKey],
+								onClick: handleProviderModelClick
+							}}
+							trigger={["click"]}
+						>
+							<Button
+								type="text"
+								className={styles.modelButton}
+							>
+								<span className={styles.modelButtonContent}>
+									<span className={styles.modelButtonText}>{selectedModelLabel}</span>
+								</span>
+							</Button>
+						</Dropdown>
+					</Tooltip>
+					
+					<Tooltip title={isSending ? "Stop" : "Send"}>
+						<Button
+							type="text"
+							shape="circle"
+							icon={<Icon name={isSending ? "stop" : "send"} className={styles.composerSendIcon} />}
+							className={styles.composerSendButton}
+							disabled={!isSending && draftMessage.trim().length === 0}
+							onClick={submitMessage}
+						/>
+					</Tooltip>
 					</div>
 				</div>
 			</div>
@@ -1199,7 +1228,7 @@ function Composer({
 										type="circle"
 										percent={contextUsagePercent}
 										status={contextUsageStatus}
-										strokeColor="#e0e0e0"
+										strokeColor={contextUsageStrokeColor}
 										showInfo={false}
 										size={16}
 									/>

@@ -29,12 +29,17 @@ declare global {
 		update: (patch: Partial<ClientPreferences>) => Promise<ClientPreferences>;
 	}
 
+	interface ClipboardAPI {
+		writeText: (text: string) => Promise<{ written: true }>;
+	}
+
 	type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
 
 	interface ElectronAPI {
 		versions: ElectronVersions;
 		backend: BackendAPI;
 		clientPreferences: ClientPreferencesAPI;
+		clipboard: ClipboardAPI;
 		workspaceFs: {
 			listChildren: (params: {
 				workspaceRoot: string;

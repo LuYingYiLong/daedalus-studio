@@ -1,7 +1,8 @@
 import { TimelineBodyPart } from "@/api/types";
 import styles from "./ToolPart.module.css"
 import { Icon } from "@/assets/icons";
-import { Collapse } from "antd";
+import { Collapse, Tag } from "antd";
+import React from "react";
 
 export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
 
@@ -37,6 +38,7 @@ export type ToolPartProps = {
 	part: TimelineToolPart
 }
 
+
 function ToolPart({ part }: ToolPartProps): React.JSX.Element {
 	const toolName: string = getToolName(part.events);
 	const status = getToolStatus(part.events);
@@ -46,7 +48,18 @@ function ToolPart({ part }: ToolPartProps): React.JSX.Element {
 		error: "Failed",
 		approval: "Approval required",
 	}
-
+	const genStatusTag = () => (
+		<Tag color={
+			statusText[status] === "Running" ? "lime" :
+			statusText[status] === "Done" ? "green" :
+			statusText[status] === "Failed" ? "red" :
+			statusText[status] === "Approval required" ? "green" :
+			""
+		}>
+			{statusText[status]}
+		</Tag>
+	)
+	
 	return (
 		<Collapse
 			size="small"
@@ -63,12 +76,13 @@ function ToolPart({ part }: ToolPartProps): React.JSX.Element {
 			items={[
 				{
 					key: "tool",
-					label: `${statusText[status]} · ${toolName}`,
+					label: toolName,
 					children: (
 						<pre className={styles.eventJson}>
 							{JSON.stringify(part.events, null, 2)}
 						</pre>
-					)
+					),
+					extra: genStatusTag()
 				}
 			]}
 		/>

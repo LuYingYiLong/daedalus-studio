@@ -1,4 +1,4 @@
-import { Alert, Card, List, Select, Spin, Switch, Tag, Typography } from "antd";
+import { Alert, Card, List, Select, Spin, Typography } from "antd";
 import type { SelectProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -9,7 +9,7 @@ import {
 } from "@/api/web-search-settings-api";
 import styles from "./SearchSettingsPage.module.css";
 
-type SavingKey = "enabled" | "model";
+type SavingKey = "model";
 
 function encodeModelValue(option: WebSearchModelOption): string {
 	return `${option.provider}:${encodeURIComponent(option.model)}`;
@@ -98,9 +98,6 @@ function SearchSettingsPage(): React.JSX.Element {
 		return createModelOptions(settings);
 	}, [settings]);
 	const selectedModelValue: string | undefined = getSelectedModelValue(settings);
-	const selectedModel: WebSearchModelOption | undefined = settings?.models.find((option: WebSearchModelOption): boolean => {
-		return option.provider === settings.provider && option.model === settings.model;
-	});
 
 	async function savePatch(key: SavingKey, patch: Parameters<typeof updateWebSearchSettings>[0]): Promise<void> {
 		try {
@@ -156,24 +153,9 @@ function SearchSettingsPage(): React.JSX.Element {
 							className={styles.settingsList}
 							dataSource={[
 								{
-									key: "enabled",
-									title: "Enable web search",
-									description: "Expose provider-native web search to chats as mcp_web_search when the selected search model is configured.",
-									action: (
-										<Switch
-											checked={settings.enabled}
-											loading={savingKey === "enabled"}
-											disabled={savingKey !== null && savingKey !== "enabled"}
-											onChange={(checked: boolean): void => {
-												void savePatch("enabled", { enabled: checked });
-											}}
-										/>
-									)
-								},
-								{
 									key: "model",
 									title: "Search model",
-									description: "Daedalus currently supports provider-native search through Zhipu/Z.AI web_search models.",
+									description: "Choose the provider-native search model used when the Composer Search button is active.",
 									action: (
 										<Select
 											value={selectedModelValue}
@@ -197,7 +179,7 @@ function SearchSettingsPage(): React.JSX.Element {
 						/>
 					)}
 
-					{settings !== null && settings.enabled && !settings.configured ? (
+					{settings !== null && !settings.configured ? (
 						<Alert
 							type="info"
 							showIcon={true}

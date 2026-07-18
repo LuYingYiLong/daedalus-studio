@@ -4,7 +4,7 @@
 }
 
 .planCardBody {
-	padding: 8px 12px;
+	padding: var(--ds-space-2) var(--ds-space-3);
 }
 
 .markdownPreview {
@@ -16,8 +16,8 @@
 	scrollbar-width: none;
 	mask-image: linear-gradient(
 		to bottom,
-		#000 0%,
-		#000 calc(100% - 48px),
+		rgb(0 0 0) 0%,
+		rgb(0 0 0) calc(100% - 48px),
 		transparent 100%
 	);
 }

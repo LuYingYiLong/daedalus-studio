@@ -4,7 +4,7 @@
 	min-width: 0;
 	min-height: 0;
 	height: 100%;
-	padding: 8px 0px;
+	padding: var(--ds-space-2) 0;
 }
 
 .settingsSideBar {
@@ -12,7 +12,7 @@
 	display: grid;
 	grid-template-rows: auto auto minmax(0, 1fr);
 	min-height: 0;
-	padding: 0 6px;
+	padding: 0 var(--ds-space-2);
 }
 
 .settingsSideBar::after {
@@ -32,16 +32,18 @@
 	min-width: 0;
 	min-height: 0;
 	align-content: start;
-	padding: 24px;
+	padding: var(--ds-space-4);
 }
 
 .placeholderHeader {
 	display: flex;
 	align-items: center;
-	gap: 14px;
+	gap: var(--ds-space-3);
 	max-width: 680px;
-	padding: 20px;
-	border-radius: 8px;
+	padding: var(--ds-space-4);
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-surface);
 }
 
 .placeholderIcon {

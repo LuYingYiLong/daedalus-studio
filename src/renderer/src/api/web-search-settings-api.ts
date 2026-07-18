@@ -14,7 +14,6 @@ export type WebSearchModelOption = {
 
 export type WebSearchSettings = {
 	schemaVersion: 1;
-	enabled: boolean;
 	provider: string;
 	model: string;
 	updatedAt: string;
@@ -26,7 +25,6 @@ export type WebSearchSettings = {
 };
 
 export type WebSearchSettingsPatch = {
-	enabled?: boolean;
 	provider?: string;
 	model?: string;
 };

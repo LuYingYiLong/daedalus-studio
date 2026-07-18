@@ -10,6 +10,7 @@ export type CreateSessionParams = {
 	chatMode?: ChatMode;
 	approvalMode?: "manual" | "auto-safe";
 	workflowTodoCollapsed?: boolean;
+	webSearchEnabled?: boolean;
 };
 
 export type SaveSessionUiMetadataParams = {
@@ -18,6 +19,7 @@ export type SaveSessionUiMetadataParams = {
 	chatMode?: ChatMode;
 	approvalMode?: "manual" | "auto-safe";
 	workflowTodoCollapsed?: boolean;
+	webSearchEnabled?: boolean;
 };
 
 export type CreateSessionResult = SessionMetadata & {

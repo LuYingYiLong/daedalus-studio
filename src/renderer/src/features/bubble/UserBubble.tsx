@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "./UserBubble.module.css";
-import { Button, Input, Typography } from "antd";
+import { Button, Input, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import type { AdditionalContextItem } from "@/api/types";
 import AdditionalContextStrip from "./AdditionalContextStrip";
+import { copyTextToClipboard } from "@/utils/clipboard";
 
 export type RetryUserMessagePayload = {
 	requestId: string;
@@ -52,6 +53,7 @@ function UserBubble({
 	const [draftText, setDraftText] = useState<string>(message);
 	const [draftContext, setDraftContext] = useState<AdditionalContextItem[]>(() => cloneContextItems(additionalContext));
 	const [isSubmittingRetry, setIsSubmittingRetry] = useState<boolean>(false);
+	const [copied, setCopied] = useState<boolean>(false);
 
 	useEffect((): void => {
 		if (!isRetryEditing) {
@@ -119,6 +121,16 @@ function UserBubble({
 		setDraftContext((currentItems: AdditionalContextItem[]): AdditionalContextItem[] => {
 			return currentItems.filter((item: AdditionalContextItem): boolean => item.id !== contextId);
 		});
+	}
+
+	async function copyMessage(): Promise<void> {
+		try {
+			await copyTextToClipboard(message);
+			setCopied(true);
+			window.setTimeout((): void => setCopied(false), 1200);
+		} catch (error: unknown) {
+			console.error("[UserBubble] copy failed", error);
+		}
 	}
 
 	return (
@@ -201,11 +213,17 @@ function UserBubble({
 				{sentTime ? (
 					<Typography.Text type="secondary">{sentTime}</Typography.Text>
 				) : null}
-				<Button
-					type="text"
-					size="small"
-					icon={<Icon name="copy" />}
-				/>
+				<Tooltip title={copied ? "Copied" : "Copy"}>
+					<Button
+						type="text"
+						size="small"
+						aria-label="Copy user message"
+						icon={<Icon name="copy" />}
+						onClick={(): void => {
+							void copyMessage();
+						}}
+					/>
+				</Tooltip>
 				{showEditButton ? (
 					<Button
 						type="text"

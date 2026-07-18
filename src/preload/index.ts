@@ -27,6 +27,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		}
 	},
 
+	clipboard: {
+		writeText: (text: string): Promise<{ written: true }> => {
+			return ipcRenderer.invoke("clipboard:write-text", text);
+		}
+	},
+
 	workspaceFs: {
 		listChildren: (params: { workspaceRoot: string; relativePath?: string }): Promise<{ entries: Array<{ name: string; relativePath: string; resourcePath: string; kind: "file" | "folder" }> }> => {
 			return ipcRenderer.invoke("workspace-fs:list-children", params);

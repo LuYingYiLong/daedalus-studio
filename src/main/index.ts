@@ -3,12 +3,14 @@ import { join } from "node:path";
 import { backendManager } from "./services/backend-manager";
 import { registerWorkspaceFsIpc } from "./services/workspace-fs";
 import { registerSkillFsIpc } from "./services/skill-fs";
+import { registerClipboardIpc } from "./services/clipboard";
 import { clientPreferencesService } from "./services/client-preferences";
 import { WindowLifecycleController } from "./services/window-lifecycle";
 
 backendManager.registerIpc();
 registerWorkspaceFsIpc();
 registerSkillFsIpc();
+registerClipboardIpc();
 clientPreferencesService.registerIpc();
 
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);

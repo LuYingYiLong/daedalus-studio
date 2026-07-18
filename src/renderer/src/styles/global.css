@@ -12,10 +12,41 @@
 }
 
 :root {
+	--ds-bg: #141414;
+	--ds-bg-sunken: #0f0f0f;
+	--ds-surface: #1b1b1b;
+	--ds-surface-elevated: #1f1f1f;
+	--ds-surface-hover: #242424;
+	--ds-surface-active: #2a2a2a;
+	--ds-border: #3b3b3b;
+	--ds-border-subtle: #3b3b3b;
+	--ds-accent: #478cbf;
+	--ds-accent-hover: #5aa0d2;
+	--ds-accent-active: #386f98;
+	--ds-accent-muted: rgb(71 140 191 / 24%);
+	--ds-accent-subtle: rgb(71 140 191 / 14%);
+	--ds-text-primary: #e8e8e8;
+	--ds-text-secondary: #b8b8b8;
+	--ds-text-muted: #8c8c8c;
+	--ds-text-inverse: #ffffff;
+	--ds-danger: #ff4d4f;
+	--ds-warning: #faad14;
+	--ds-success: #52c41a;
+	--ds-space-1: 4px;
+	--ds-space-2: 8px;
+	--ds-space-3: 12px;
+	--ds-space-4: 16px;
+	--ds-radius-sm: 4px;
+	--ds-radius-lg: 8px;
+	--ds-control-height-sm: 24px;
+	--ds-control-height: 28px;
+	--ds-control-height-lg: 32px;
+	--ds-font-family: "Mona Sans", "Source Han Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	--ds-font-family-code: "Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, Arial, Helvetica, sans-serif;
 	color-scheme: dark;
-	font-family: "Mona Sans", "Source Han Sans SC","Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-	background: #141414;
-	color: #e0e0e0;
+	font-family: var(--ds-font-family);
+	background: var(--ds-bg);
+	color: var(--ds-text-primary);
 	text-rendering: optimizeLegibility;
 }
 
@@ -42,6 +73,66 @@ body {
 
 body {
 	overflow: hidden;
+}
+
+::selection {
+	background: var(--ds-accent-muted);
+	color: var(--ds-text-inverse);
+}
+
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--ds-bg);
+}
+
+::-webkit-scrollbar-thumb {
+	border: 2px solid var(--ds-bg);
+	border-radius: var(--ds-radius-sm);
+	background: var(--ds-border);
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--ds-text-muted);
+}
+
+.ant-tag {
+	border-radius: var(--ds-radius-sm);
+}
+
+.ant-popover .ant-popover-inner,
+.ant-dropdown .ant-dropdown-menu,
+.ant-modal .ant-modal-content {
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-surface-elevated);
+}
+
+.ant-table-wrapper .ant-table,
+.ant-table-wrapper .ant-table-container {
+	border-radius: var(--ds-radius-lg);
+}
+
+.daedalus-icon {
+	display: inline-block;
+	flex-shrink: 0;
+	color: currentColor;
+	vertical-align: -0.125em;
+}
+
+.daedalus-icon[data-tone="currentColor"] {
+	fill: currentColor;
+}
+
+.daedalus-icon[data-tone="currentColor"] :where([fill]:not([fill="none"])) {
+	fill: currentColor;
+}
+
+.daedalus-icon[data-tone="currentColor"] :where([stroke]:not([stroke="none"])) {
+	stroke: currentColor;
 }
 
 .daedalus-compact-menu {

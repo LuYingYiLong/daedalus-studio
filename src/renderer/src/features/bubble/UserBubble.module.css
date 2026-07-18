@@ -31,10 +31,10 @@
 	width: fit-content;
 	max-width: 100%;
 	min-width: 24px;
-	padding: 6px 8px;
+	padding: var(--ds-space-1) var(--ds-space-2);
 	overflow: hidden;
-	border-radius: 4px;
-	background: #478cbf;
+	border-radius: var(--ds-radius-sm);
+	background: var(--ds-accent);
 	cursor: text;
 }
 
@@ -51,10 +51,10 @@
 	flex-direction: column;
 	width: min(680px, 90vw);
 	max-width: 100%;
-	padding: 8px 8px 40px;
-	background: rgba(255, 255, 255, 0.03);
-	border: 1px solid #478cbf;
-	border-radius: 8px;
+	padding: var(--ds-space-2) var(--ds-space-2) 40px;
+	background: var(--ds-surface);
+	border: 1px solid var(--ds-accent);
+	border-radius: var(--ds-radius-lg);
 }
 
 .retryContextArea {

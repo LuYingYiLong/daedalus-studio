@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { message as antdMessage } from "antd";
 import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import type { AdditionalContextItem, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
@@ -423,6 +424,8 @@ function App(): React.JSX.Element {
 	const [skills, setSkills] = useState<SkillSummary[]>([]);
 	const [approvalMode, setApprovalModeState] = useState<ApprovalMode>("manual");
 	const [isApprovalModeSaving, setIsApprovalModeSaving] = useState<boolean>(false);
+	const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
+	const [messageApi, messageContextHolder] = antdMessage.useMessage();
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
 	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] = useState<WorkflowTodoSnapshot | null>(null);
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(DEFAULT_CLIENT_PREFERENCES);
@@ -798,6 +801,7 @@ function App(): React.JSX.Element {
 						const metadata: SessionMetadata | null = getBackendEventSessionMetadata(event);
 						if (metadata !== null) {
 							setActiveSessionMetadata(metadata);
+							setWebSearchEnabled(metadata.webSearchEnabled === true);
 						}
 						return;
 					}
@@ -868,6 +872,7 @@ function App(): React.JSX.Element {
 		setTimelinePage(emptyTimelinePage);
 		setWorkbench(null);
 		setWorkflowTodoSnapshot(null);
+		setWebSearchEnabled(false);
 		rememberLoadedWorkflowTodo(null);
 		setActiveRetryRequestId(null);
 		setSessionError(null);
@@ -886,6 +891,7 @@ function App(): React.JSX.Element {
 		setTimelinePage(emptyTimelinePage);
 		setWorkbench(null);
 		setWorkflowTodoSnapshot(null);
+		setWebSearchEnabled(false);
 		rememberLoadedWorkflowTodo(null);
 		setActiveRetryRequestId(null);
 		setSessionError(null);
@@ -1010,6 +1016,7 @@ function App(): React.JSX.Element {
 
 			setTimelinePage(createTimelinePageFromOpenResult(result));
 			setActiveSessionMetadata(result.metadata);
+			setWebSearchEnabled(result.metadata.webSearchEnabled === true);
 			setWorkbench(result.workbench);
 			setApprovalModeState(result.metadata.approvalMode ?? "manual");
 			setActiveWorkspace(createWorkspaceFromSessionOpenResult(result));
@@ -1156,6 +1163,9 @@ function App(): React.JSX.Element {
 
 	async function handleProviderModelChange(providerId: string, modelId: string): Promise<void> {
 		if (isNewSessionHome) {
+			if (isHomeSubmitting) {
+				void messageApi.info("Model changes apply to your next message.");
+			}
 			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
 				...currentDraft,
 				providerId,
@@ -1168,6 +1178,10 @@ function App(): React.JSX.Element {
 		const sessionId: string | null = activeSessionId;
 		if (sessionId === null) {
 			return;
+		}
+
+		if (getIsSending(workbench)) {
+			void messageApi.info("Model changes apply to your next message.");
 		}
 
 		const previousWorkbench: WorkbenchSnapshot | null = workbench;
@@ -1220,6 +1234,14 @@ function App(): React.JSX.Element {
 		});
 	}
 
+	function showWebSearchErrorIfRequested(requestedWebSearchEnabled: boolean, errorMessage: string): void {
+		if (!requestedWebSearchEnabled) {
+			return;
+		}
+
+		void messageApi.error(errorMessage);
+	}
+
 	function handleComposerTextChange(nextText: string): void {
 		if (nextText.length > 0) {
 			submittedComposerTextRef.current = null;
@@ -1247,6 +1269,7 @@ function App(): React.JSX.Element {
 		const modelId: string | null = homeDraft.modelId ?? providerModelSelection?.activeModel.modelId ?? null;
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
 		let sessionCreated: boolean = false;
+		const requestedWebSearchEnabled: boolean = webSearchEnabled;
 
 		try {
 			setIsHomeSubmitting(true);
@@ -1264,7 +1287,8 @@ function App(): React.JSX.Element {
 				provider: providerId ?? undefined,
 				model: modelId ?? undefined,
 				chatMode: homeDraft.chatMode,
-				approvalMode
+				approvalMode,
+				webSearchEnabled: requestedWebSearchEnabled
 			});
 			sessionCreated = true;
 
@@ -1285,7 +1309,8 @@ function App(): React.JSX.Element {
 				message,
 				mode: created.workbench.composer.chatMode ?? homeDraft.chatMode,
 				additionalContext: created.workbench.composer.additionalContext,
-				skillRefs
+				skillRefs,
+				webSearchEnabled: requestedWebSearchEnabled
 			});
 			finishOptimisticActiveRun(requestId);
 			await refreshLatestTimeline(created.id);
@@ -1317,6 +1342,7 @@ function App(): React.JSX.Element {
 					};
 			});
 			setSessionError(errorMessage);
+			showWebSearchErrorIfRequested(requestedWebSearchEnabled, errorMessage);
 			if (sessionCreated) {
 				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 					return {
@@ -1362,6 +1388,7 @@ function App(): React.JSX.Element {
 		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
 		const chatMode: ChatMode = getChatMode(workbench);
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
+		const requestedWebSearchEnabled: boolean = webSearchEnabled;
 		const pendingPatch: WorkbenchPatch = mergePatch(takePendingWorkbenchPatch(), {
 			additionalContextAction: { action: "set", items: [] }
 		});
@@ -1383,11 +1410,11 @@ function App(): React.JSX.Element {
 				message,
 				mode: chatMode,
 				additionalContext,
-				skillRefs
+				skillRefs,
+				webSearchEnabled: requestedWebSearchEnabled
 			});
 			finishOptimisticActiveRun(requestId);
 			await refreshLatestTimeline();
-			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to send message";
 
@@ -1410,6 +1437,7 @@ function App(): React.JSX.Element {
 					};
 			});
 			setSessionError(errorMessage);
+			showWebSearchErrorIfRequested(requestedWebSearchEnabled, errorMessage);
 			setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 				return {
 					...currentPage,
@@ -1453,6 +1481,7 @@ function App(): React.JSX.Element {
 		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
 		const previousTimelinePage: TimelinePageState = timelinePage;
+		const requestedWebSearchEnabled: boolean = webSearchEnabled;
 
 		try {
 			setSessionError(null);
@@ -1466,11 +1495,11 @@ function App(): React.JSX.Element {
 				mode: chatMode,
 				retryFromRequestId: payload.requestId,
 				additionalContext: payload.additionalContext,
-				skillRefs
+				skillRefs,
+				webSearchEnabled: requestedWebSearchEnabled
 			});
 			finishOptimisticActiveRun(requestId);
 			await refreshLatestTimeline();
-			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 			setActiveRetryRequestId(null);
 			return true;
 		} catch (error: unknown) {
@@ -1487,6 +1516,7 @@ function App(): React.JSX.Element {
 					};
 			});
 			setSessionError(errorMessage);
+			showWebSearchErrorIfRequested(requestedWebSearchEnabled, errorMessage);
 			setTimelinePage(previousTimelinePage);
 			console.error("[App] retry message failed", error);
 			return false;
@@ -1530,6 +1560,7 @@ function App(): React.JSX.Element {
 		const metadata: SessionMetadata | undefined = sessionList.sessions.find((session: SessionMetadata): boolean => session.id === sessionId);
 		if (metadata !== undefined) {
 			setActiveSessionMetadata(metadata);
+			setWebSearchEnabled(metadata.webSearchEnabled === true);
 			setActiveWorkspace((currentWorkspace: WorkspaceConfig | null): WorkspaceConfig | null => {
 				if (metadata.workspaceId === undefined || metadata.workspaceRoot === undefined) {
 					return null;
@@ -1792,9 +1823,19 @@ function App(): React.JSX.Element {
 	const composerContextItems: AdditionalContextItem[] = isNewSessionHome ? [] : workbench?.composer.additionalContext ?? [];
 	const displayedWorkspace: WorkspaceConfig | null = isNewSessionHome ? homeDraft.workspace : activeWorkspace;
 	const composerIsSending: boolean = getIsSending(workbench) || isHomeSubmitting;
+	const handleWebSearchEnabledChange = (enabled: boolean): void => {
+		setWebSearchEnabled(enabled);
+		if (!isNewSessionHome && activeSessionId !== null) {
+			void persistSessionUiMetadata({ webSearchEnabled: enabled });
+		}
+		if (composerIsSending) {
+			void messageApi.info("Web search changes apply to your next message.");
+		}
+	};
 
 	return (
 		<main className={`${styles.shell} ${activePage === "agent" ? styles.agentShell : styles.pageShell}`}>
+			{messageContextHolder}
 			<AppNavTabs activePage={activePage} onPageChange={setActivePage} />
 			{activePage === "agent" ? (
 				<AgentPage
@@ -1825,6 +1866,7 @@ function App(): React.JSX.Element {
 					skills={skills}
 					isSending={composerIsSending}
 					isApprovalModeSaving={isApprovalModeSaving}
+					webSearchEnabled={webSearchEnabled}
 					workspaceOptions={homeWorkspaceOptions}
 					homeWorkspace={homeDraft.workspace}
 					workspaceFooterDisabled={!isNewSessionHome || isHomeSubmitting}
@@ -1868,6 +1910,7 @@ function App(): React.JSX.Element {
 					onApprovalModeChange={(mode: ApprovalMode): void => {
 						void handleApprovalModeChange(mode);
 					}}
+					onWebSearchEnabledChange={handleWebSearchEnabledChange}
 					onProviderModelChange={(providerId: string, modelId: string): void => {
 						void handleProviderModelChange(providerId, modelId);
 					}}

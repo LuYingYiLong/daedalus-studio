@@ -6,7 +6,7 @@
 .fileItem {
 	display: grid !important;
 	grid-template-columns: minmax(0, 1fr) auto;
-	gap: 12px;
+	gap: var(--ds-space-3);
 	padding-inline: 0 !important;
 }
 
@@ -20,9 +20,9 @@
 }
 
 .additions {
-	color: #00c853;
+	color: var(--ds-success);
 }
 
 .deletions {
-	color: #ff5252;
+	color: var(--ds-danger);
 }

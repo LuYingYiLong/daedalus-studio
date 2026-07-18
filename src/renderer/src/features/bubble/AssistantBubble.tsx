@@ -1,7 +1,7 @@
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "./AssistantBubble.module.css";
-import { Button, Collapse, Divider, Typography } from "antd";
+import { Button, Collapse, Divider, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import { TimelineBodyPart } from "@/api/types";
 import React from "react";
@@ -11,6 +11,7 @@ import PlanPart from "../chat/PlanPart";
 import InlineDiffPart from "../chat/InlineDiffPart";
 import ThinkingPart from "../chat/ThinkingPart";
 import ImageGenerationPart from "../chat/ImageGenerationPart";
+import { copyTextToClipboard } from "@/utils/clipboard";
 
 export type AssistantBubbleProps = {
 	entryId?: string;
@@ -21,7 +22,49 @@ export type AssistantBubbleProps = {
 	endTime?: string;
 };
 
+function createAssistantCopyText(message?: string, content?: string, bodyParts?: TimelineBodyPart[]): string {
+	const explicitText: string = message ?? content ?? "";
+	if (explicitText.trim().length > 0) {
+		return explicitText;
+	}
+
+	if (bodyParts === undefined) {
+		return "";
+	}
+
+	return bodyParts
+		.map((part: TimelineBodyPart): string => {
+			if (part.type === "markdown") {
+				return part.text;
+			}
+			if (part.type === "plan") {
+				return part.previewMarkdown;
+			}
+			if (part.type === "image_generation") {
+				return part.prompt;
+			}
+			if (part.type === "status") {
+				return [part.title, part.details].filter((text: string): boolean => text.trim().length > 0).join("\n");
+			}
+			return "";
+		})
+		.filter((text: string): boolean => text.trim().length > 0)
+		.join("\n\n");
+}
+
 function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, endTime }: AssistantBubbleProps): React.JSX.Element {
+	const [copied, setCopied] = React.useState<boolean>(false);
+
+	async function copyMessage(): Promise<void> {
+		try {
+			await copyTextToClipboard(createAssistantCopyText(message, content, bodyParts));
+			setCopied(true);
+			window.setTimeout((): void => setCopied(false), 1200);
+		} catch (error: unknown) {
+			console.error("[AssistantBubble] copy failed", error);
+		}
+	}
+
 	function renderBodyPart(part: TimelineBodyPart, index: number): React.ReactNode {
 		if (part.type === "markdown") {
 			return (
@@ -122,14 +165,17 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 				)}
 			</div>
 			<div className={styles.toolbar}>
-				<Button
-					type="text"
-					size="small"
-					icon={<Icon name="copy" />}
-					onClick={async () => {
-						await navigator.clipboard.writeText(String(message));
-					}}
-				/>
+				<Tooltip title={copied ? "Copied" : "Copy"}>
+					<Button
+						type="text"
+						size="small"
+						aria-label="Copy assistant message"
+						icon={<Icon name="copy" />}
+						onClick={(): void => {
+							void copyMessage();
+						}}
+					/>
+				</Tooltip>
 				{endTime ? (
 					<Typography.Text type="secondary">{endTime}</Typography.Text>
 				) : null}

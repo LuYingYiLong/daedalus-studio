@@ -51,7 +51,7 @@
 	gap: 12px;
 	min-width: 0;
 	padding: 8px 0px 8px 0px;
-	border-radius: 4px;
+	border-radius: var(--ds-radius-sm);
 	user-select: none;
 }
 

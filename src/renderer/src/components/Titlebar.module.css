@@ -11,7 +11,7 @@
 	overflow: hidden;
 	user-select: none;
 	-webkit-app-region: drag;
-	background-color: #292929;
+	background-color: var(--ds-surface-active);
 }
 
 .brandIcon {
@@ -28,7 +28,7 @@
 }
 
 .menuTrigger {
-	margin-left: 12px;
+	margin-left: var(--ds-space-3);
 	line-height: 36px;
 	cursor: pointer;
 	-webkit-app-region: no-drag;

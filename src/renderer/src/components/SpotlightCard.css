@@ -1,13 +1,13 @@
 .card-spotlight {
 	position: relative;
-	border-radius: 1.5rem;
-	border: 1px solid #222;
-	background-color: #111;
-	padding: 2rem;
+	border-radius: var(--ds-radius-lg);
+	border: 1px solid var(--ds-border);
+	background-color: var(--ds-surface);
+	padding: var(--ds-space-4);
 	overflow: hidden;
 	--mouse-x: 50%;
 	--mouse-y: 50%;
-	--spotlight-color: rgba(255, 255, 255, 0.05);
+	--spotlight-color: rgb(255 255 255 / 5%);
 }
 
 .card-spotlight::before {
