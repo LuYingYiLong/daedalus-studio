@@ -184,6 +184,29 @@ function MessageList({
 		});
 	}, [updateVisibleRange]);
 
+	const syncViewportMetrics = useCallback((element: HTMLElement): void => {
+		autoFollowRef.current = isNearBottom(element);
+		viewportScrollTopRef.current = element.scrollTop;
+		viewportHeightRef.current = element.clientHeight;
+		scheduleVisibleRangeUpdate();
+	}, [scheduleVisibleRangeUpdate]);
+
+	const scheduleAutoFollowScroll = useCallback((behavior: ScrollBehavior = "auto"): void => {
+		if (!autoFollowRef.current) {
+			return;
+		}
+
+		window.requestAnimationFrame((): void => {
+			const element: HTMLElement | null = listRef.current;
+			if (element === null || !autoFollowRef.current) {
+				return;
+			}
+
+			scrollToBottom(element, behavior);
+			syncViewportMetrics(element);
+		});
+	}, [syncViewportMetrics]);
+
 	const updateViewport = useCallback((): void => {
 		const element: HTMLElement | null = listRef.current;
 
@@ -192,10 +215,7 @@ function MessageList({
 		}
 
 		const nearBottom: boolean = isNearBottom(element);
-		autoFollowRef.current = nearBottom;
-		viewportScrollTopRef.current = element.scrollTop;
-		viewportHeightRef.current = element.clientHeight;
-		scheduleVisibleRangeUpdate();
+		syncViewportMetrics(element);
 
 		if (element.scrollTop < LOAD_MORE_THRESHOLD && hasMoreBefore) {
 			const anchorElement = element.querySelector("[data-entry-id]") as HTMLElement | null;
@@ -215,7 +235,7 @@ function MessageList({
 		if (distanceFromBottom < LOAD_MORE_THRESHOLD && hasMoreAfter && nearBottom) {
 			onLoadMoreAfter?.();
 		}
-	}, [hasMoreAfter, hasMoreBefore, onLoadMoreAfter, onLoadMoreBefore, scheduleVisibleRangeUpdate]);
+	}, [hasMoreAfter, hasMoreBefore, onLoadMoreAfter, onLoadMoreBefore, syncViewportMetrics]);
 
 	useEffect((): (() => void) | void => {
 		const element: HTMLElement | null = listRef.current;
@@ -359,14 +379,9 @@ function MessageList({
 		}
 
 		if (shouldAutoFollowAppend(autoFollowRef.current, hasRunningAssistantBlock, blockCountIncreased)) {
-			window.requestAnimationFrame((): void => {
-				if (listRef.current !== null && autoFollowRef.current) {
-					scrollToBottom(listRef.current, hasRunningAssistantBlock ? "auto" : "smooth");
-					updateViewport();
-				}
-			});
+			scheduleAutoFollowScroll(hasRunningAssistantBlock ? "auto" : "smooth");
 		}
-	}, [renderableBlocks, hasRunningAssistantBlock, isLoading, updateViewport]);
+	}, [renderableBlocks, hasRunningAssistantBlock, isLoading, scheduleAutoFollowScroll]);
 
 	useEffect((): (() => void) | void => {
 		if (!hasRunningAssistantBlock) {

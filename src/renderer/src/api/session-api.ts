@@ -8,7 +8,7 @@ export type CreateSessionParams = {
 	provider?: string;
 	model?: string;
 	chatMode?: ChatMode;
-	approvalMode?: "manual" | "auto-safe";
+	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
 	webSearchEnabled?: boolean;
 };
@@ -17,7 +17,7 @@ export type SaveSessionUiMetadataParams = {
 	provider?: string;
 	model?: string;
 	chatMode?: ChatMode;
-	approvalMode?: "manual" | "auto-safe";
+	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
 	webSearchEnabled?: boolean;
 };

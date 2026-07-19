@@ -79,6 +79,13 @@
 	user-select: none;
 }
 
+.topMenuBar {
+	display: flex;
+	justify-content: start;
+	align-items: center;
+	gap: 8px;
+}
+
 .chatTitle {
 	flex: 1 1 auto;
 	min-width: 0px;
@@ -140,8 +147,4 @@
 	width: min(100%, 880px);
 	justify-self: center;
 	padding: 8px;
-}
-
-.composerWithTodo {
-	padding-top: 38px;
 }

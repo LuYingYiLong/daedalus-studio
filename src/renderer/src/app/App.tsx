@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { message as antdMessage } from "antd";
+import { Input, message as antdMessage, Modal, Typography } from "antd";
 import { useDiskSpaceCheck } from "@/hooks/useDiskSpaceCheck";
 import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
@@ -57,6 +57,7 @@ const SUPPORTED_IMAGE_MIME_TYPES: readonly SupportedImageMimeType[] = ["image/pn
 const MAX_IMAGE_ATTACHMENT_BYTES: number = 1024 * 1024;
 const RECENT_CONTEXT_FILE_WINDOW_MS: number = 2000;
 const PLAN_CLARIFICATION_SKIP_REPLY: string = "Continue with the current assumptions.";
+const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
 
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -560,6 +561,8 @@ function App(): React.JSX.Element {
 	const [planApprovalError, setPlanApprovalError] = useState<string | null>(null);
 	const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
+	const [isFullTrustModalOpen, setIsFullTrustModalOpen] = useState<boolean>(false);
+	const [fullTrustConfirmationText, setFullTrustConfirmationText] = useState<string>("");
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
 	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] = useState<WorkflowTodoSnapshot | null>(null);
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(DEFAULT_CLIENT_PREFERENCES);
@@ -1387,9 +1390,9 @@ function App(): React.JSX.Element {
 		await persistSessionUiMetadata({ chatMode: nextMode });
 	}
 
-	async function handleApprovalModeChange(nextMode: ApprovalMode): Promise<void> {
+	async function saveApprovalMode(nextMode: ApprovalMode, confirmationText?: string): Promise<boolean> {
 		if (nextMode === approvalMode || isApprovalModeSaving) {
-			return;
+			return false;
 		}
 
 		const previousMode: ApprovalMode = approvalMode;
@@ -1399,18 +1402,47 @@ function App(): React.JSX.Element {
 		setSessionError(null);
 
 		try {
-			const result = await setApprovalMode(nextMode);
+			const result = await setApprovalMode(nextMode, confirmationText);
 
 			setApprovalModeState(result.mode);
 			await persistSessionUiMetadata({ approvalMode: result.mode });
+			return true;
 		} catch (error: unknown) {
 			const message: string = error instanceof Error ? error.message : "Failed to save approval mode";
 
 			setApprovalModeState(previousMode);
 			setSessionError(message);
 			console.error("[App] save approval mode failed", error);
+			return false;
 		} finally {
 			setIsApprovalModeSaving(false);
+		}
+	}
+
+	async function handleApprovalModeChange(nextMode: ApprovalMode): Promise<void> {
+		if (nextMode === approvalMode || isApprovalModeSaving) {
+			return;
+		}
+
+		if (nextMode === "full-trust") {
+			setFullTrustConfirmationText("");
+			setIsFullTrustModalOpen(true);
+			return;
+		}
+
+		await saveApprovalMode(nextMode);
+	}
+
+	async function handleFullTrustConfirm(): Promise<void> {
+		if (fullTrustConfirmationText !== FULL_TRUST_CONFIRMATION_TEXT) {
+			void messageApi.error(`Type ${FULL_TRUST_CONFIRMATION_TEXT} to enable Full Trust.`);
+			return;
+		}
+
+		const didSave: boolean = await saveApprovalMode("full-trust", fullTrustConfirmationText);
+		if (didSave) {
+			setIsFullTrustModalOpen(false);
+			setFullTrustConfirmationText("");
 		}
 	}
 
@@ -1469,7 +1501,7 @@ function App(): React.JSX.Element {
 		}
 	}
 
-	async function handleApprovalApprove(approvalId: string): Promise<void> {
+	async function handleApprovalApprove(approvalId: string, consentText?: string): Promise<void> {
 		if (isApproving || isRejecting) {
 			return;
 		}
@@ -1477,7 +1509,7 @@ function App(): React.JSX.Element {
 		setIsApproving(true);
 		setApprovalError(null);
 		try {
-			await approveApproval(approvalId);
+			await approveApproval(approvalId, consentText);
 			await refreshPendingApproval();
 			await refreshLatestTimeline();
 		} catch (error: unknown) {
@@ -2254,6 +2286,41 @@ function App(): React.JSX.Element {
 	return (
 		<main className={`${styles.shell} ${activePage === "agent" ? styles.agentShell : styles.pageShell}`}>
 			{messageContextHolder}
+			<Modal
+				open={isFullTrustModalOpen}
+				title="Enable Full Trust?"
+				okText="Enable Full Trust"
+				cancelText="Cancel"
+				okButtonProps={{
+					danger: true,
+					disabled: fullTrustConfirmationText !== FULL_TRUST_CONFIRMATION_TEXT
+				}}
+				confirmLoading={isApprovalModeSaving}
+				onOk={(): void => {
+					void handleFullTrustConfirm();
+				}}
+				onCancel={(): void => {
+					if (!isApprovalModeSaving) {
+						setIsFullTrustModalOpen(false);
+						setFullTrustConfirmationText("");
+					}
+				}}
+			>
+				<Typography.Paragraph>
+					Full Trust disables the OS sandbox, automatically approves all tools, and lets terminal commands run with your normal user permissions.
+				</Typography.Paragraph>
+				<Typography.Paragraph type="secondary">
+					Type <Typography.Text code>{FULL_TRUST_CONFIRMATION_TEXT}</Typography.Text> to confirm this global security mode.
+				</Typography.Paragraph>
+				<Input
+					value={fullTrustConfirmationText}
+					placeholder={FULL_TRUST_CONFIRMATION_TEXT}
+					disabled={isApprovalModeSaving}
+					onChange={(event: React.ChangeEvent<HTMLInputElement>): void => {
+						setFullTrustConfirmationText(event.target.value);
+					}}
+				/>
+			</Modal>
 			<AppNavTabs activePage={activePage} onPageChange={setActivePage} />
 			{activePage === "agent" ? (
 				<AgentPage
@@ -2339,8 +2406,8 @@ function App(): React.JSX.Element {
 					onApprovalModeChange={(mode: ApprovalMode): void => {
 						void handleApprovalModeChange(mode);
 					}}
-					onApprovalApprove={(approvalId: string): void => {
-						void handleApprovalApprove(approvalId);
+					onApprovalApprove={(approvalId: string, consentText?: string): void => {
+						void handleApprovalApprove(approvalId, consentText);
 					}}
 					onApprovalReject={(approvalId: string): void => {
 						void handleApprovalReject(approvalId);

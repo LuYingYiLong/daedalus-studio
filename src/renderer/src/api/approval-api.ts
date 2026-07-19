@@ -1,6 +1,6 @@
 import { createBackendClient } from "./backend-client";
 
-export type ApprovalMode = "manual" | "auto-safe";
+export type ApprovalMode = "manual" | "auto-safe" | "full-trust";
 
 export type PendingApprovalStatus = "pending" | "interrupted";
 
@@ -21,6 +21,10 @@ export type PendingApproval = {
 	workspaceId?: string;
 	editorInstanceId?: string;
 	lastError?: string;
+	requiredConsent?: {
+		prompt: string;
+		expectedText: string;
+	};
 };
 
 export type ApprovalListResult = {
@@ -57,19 +61,21 @@ export async function fetchApprovalList(): Promise<ApprovalListResult> {
 	return client.request<ApprovalListResult>("approval.list");
 }
 
-export async function setApprovalMode(mode: ApprovalMode): Promise<SetApprovalModeResult> {
+export async function setApprovalMode(mode: ApprovalMode, confirmationText?: string): Promise<SetApprovalModeResult> {
 	const client = await createBackendClient();
 
 	return client.request<SetApprovalModeResult>("approval.mode.set", {
-		mode
+		mode,
+		confirmationText
 	});
 }
 
-export async function approveApproval(approvalId: string): Promise<ApproveApprovalResult> {
+export async function approveApproval(approvalId: string, consentText?: string): Promise<ApproveApprovalResult> {
 	const client = await createBackendClient();
 
 	return client.request<ApproveApprovalResult>("approval.approve", {
-		approvalId
+		approvalId,
+		consentText
 	});
 }
 

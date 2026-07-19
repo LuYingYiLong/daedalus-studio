@@ -3,6 +3,10 @@
 	width: 100%;
 }
 
+.composerRootWithVisibleTodo {
+	padding-top: 38px;
+}
+
 .composerInputWrap {
 	position: relative;
 	display: flex;
@@ -261,12 +265,6 @@
 .modelSubmenuPopup :global(.ant-dropdown-menu-item),
 .modelSubmenuPopup :global(.ant-dropdown-menu-submenu-title) {
 	margin-inline-end: 0;
-}
-
-.composerActionIcon,
-.composerSendIcon {
-	width: 16px;
-	height: 16px;
 }
 
 .contextUsageAnchor {

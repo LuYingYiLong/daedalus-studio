@@ -36,6 +36,24 @@
 	margin: 0 !important;
 }
 
+.consent {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.consentPrompt {
+	color: var(--ds-text-primary);
+}
+
+.consentHint {
+	font-size: 12px;
+}
+
+.consentInput {
+	border-radius: var(--ds-radius-sm);
+}
+
 .actions {
 	display: flex;
 	flex-direction: column;

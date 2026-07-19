@@ -103,11 +103,16 @@ const approvalModeItems: MenuProps["items"] = [
 	{
 		key: "manual",
 		label: "Manual",
-		icon: <Icon name="shield" />,
+		icon: <Icon name="hand" />,
 	},
 	{
 		key: "auto-safe",
 		label: "Auto-safe",
+		icon: <Icon name="shield" />,
+	},
+	{
+		key: "full-trust",
+		label: "Full Trust",
 		icon: <Icon name="warning" />,
 	},
 ];
@@ -126,7 +131,7 @@ const modeItems: MenuProps["items"] = [
 	{
 		key: "plan",
 		label: "Plan",
-		icon: <Icon name="plan" />
+		icon: <Icon name="todo" />
 	},
 ];
 
@@ -139,7 +144,7 @@ function isComposerMode(value: string): value is ChatMode {
 }
 
 function isApprovalMode(value: string): value is ApprovalMode {
-	return value === "manual" || value === "auto-safe";
+	return value === "manual" || value === "auto-safe" || value === "full-trust";
 }
 
 function createModelKey(provider: string, model: string): string {
@@ -510,10 +515,15 @@ function Composer({
 	const selectedModelLabel: string = getSelectedModelLabel(providerModelSelection, selectedModel);
 	const selectedWorkspaceKey: string = selectedWorkspace === null ? NO_WORKSPACE_KEY : createWorkspaceKey(selectedWorkspace.id);
 	const selectedWorkspaceLabel: string = selectedWorkspace?.name ?? "No workspace";
-	const approvalModeLabel: string = approvalMode === "auto-safe" ? "Auto Safe" : "Manual";
+	const approvalModeLabel: string = approvalMode === "full-trust"
+		? "Full Trust"
+		: approvalMode === "auto-safe"
+			? "Auto Safe"
+			: "Manual";
 	const hasCompletion: boolean = completionToken !== null && completionOptions.length > 0;
 	const workflowTodoSteps: WorkflowTodoStep[] = workflowTodoSnapshot?.steps ?? [];
 	const hasWorkflowTodo: boolean = workflowTodoSteps.length > 0;
+	const isWorkflowTodoPanelVisible: boolean = todoPanelOpen && hasWorkflowTodo && !hasCompletion;
 	const workflowTodoKey: string = workflowTodoSnapshot === null ? "" : getWorkflowTodoSnapshotKey(workflowTodoSnapshot);
 	const workflowTodoStepItems: NonNullable<StepsProps["items"]> = useMemo((): NonNullable<StepsProps["items"]> => {
 		return createWorkflowTodoStepItems(workflowTodoSteps);
@@ -564,6 +574,7 @@ function Composer({
 	useEffect((): void => {
 		if (!hasWorkflowTodo) {
 			lastWorkflowTodoKeyRef.current = "";
+			dismissedWorkflowTodoKeyRef.current = "";
 			setTodoPanelOpen(false);
 			return;
 		}
@@ -970,7 +981,7 @@ function Composer({
 	);
 
 	return (
-		<div ref={rootRef} className={styles.composerRoot}>
+		<div ref={rootRef} className={`${styles.composerRoot} ${isWorkflowTodoPanelVisible ? styles.composerRootWithVisibleTodo : ""}`}>
 			<input
 				ref={imageInputRef}
 				type="file"
@@ -980,7 +991,7 @@ function Composer({
 				onChange={handleImageInputChange}
 			/>
 			<div className={styles.composerInputWrap}>
-				{todoPanelOpen && hasWorkflowTodo && !hasCompletion ? (
+				{isWorkflowTodoPanelVisible ? (
 					<div className={styles.todoPanel}>
 						<Collapse
 							size="small"
@@ -1020,7 +1031,7 @@ function Composer({
 						/>
 					</div>
 				) : null}
-				<div className={`${styles.composerSurface} ${hasWorkflowTodo ? styles.composerSurfaceHasTodo: ""}`}>
+				<div className={`${styles.composerSurface} ${isWorkflowTodoPanelVisible ? styles.composerSurfaceHasTodo : ""}`}>
 					{hasCompletion ? (
 						<div className={styles.completionPanel} role="listbox" aria-label="Composer completions">
 							{completionOptions.map((option: ComposerCompletionOption, index: number): React.ReactNode => {
@@ -1140,7 +1151,7 @@ function Composer({
 								loading={isApprovalModeSaving}
 								icon={(
 									<Icon
-										name={approvalMode === "auto-safe" ? "warning" : "shield"}
+										name={approvalMode === "full-trust" ? "warning" : approvalMode === "auto-safe" ? "shield" : "hand"}
 										className={styles.composerActionIcon}
 									/>
 								)}

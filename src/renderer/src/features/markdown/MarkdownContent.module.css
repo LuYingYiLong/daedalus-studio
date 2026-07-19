@@ -14,6 +14,7 @@
 	padding: 0 var(--ds-space-2);
 	border-bottom: 1px solid var(--ds-border);
 	background: var(--ds-surface-elevated);
+	user-select: none;
 }
 
 .codeTitle {
@@ -24,13 +25,6 @@
 	color: var(--ds-text-primary);
 	font-size: 13px;
 	font-weight: 650;
-}
-
-.languageMark {
-	color: #f0a23a;
-	font-family: var(--ds-font-family-code);
-	font-size: 12px;
-	font-weight: 700;
 }
 
 .codeActions {
@@ -67,7 +61,7 @@
 	min-width: 100%;
 	margin: 0;
 	padding: var(--ds-space-2) var(--ds-space-3);
-	background: transparent;
+	background: transparent !important;
 	color: var(--ds-text-primary);
 	font-family: var(--ds-font-family-code);
 	font-size: 13px;
@@ -75,4 +69,10 @@
 	white-space: pre;
 	overflow-wrap: normal;
 	tab-size: 2;
+}
+
+/* highlight.js 样式调整 */
+.code.hljs {
+	background: transparent !important;
+	padding: 0 !important;
 }

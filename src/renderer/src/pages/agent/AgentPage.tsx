@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Divider, Dropdown, message as antdMessage, Space, Typography } from "antd";
-import type { MenuProps } from "antd";
+import { Button, Divider, Dropdown, message as antdMessage, Space, Typography, Popover, Collapse } from "antd";
+import type { CollapseProps, MenuProps } from "antd";
 import type { AdditionalContextItem, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode, PendingApproval } from "@/api/approval-api";
@@ -30,6 +30,18 @@ type WorkspaceLaunchTarget = {
 const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 	{ id: "file-explorer", label: "File Explorer" },
 	{ id: "terminal", label: "Terminal" }
+];
+
+const summaryItems: CollapseProps["items"] = [
+	{
+		key: "env_info",
+		label: "Env info",
+		children: (
+			<div>
+
+			</div>
+		),
+	}
 ];
 
 function isWorkspaceLaunchTargetId(value: string): value is WorkspaceLaunchTargetId {
@@ -114,7 +126,7 @@ type AgentPageProps = {
 	onMessageChange: (message: string) => void;
 	onModeChange: (mode: ChatMode) => void;
 	onApprovalModeChange: (mode: ApprovalMode) => void;
-	onApprovalApprove: (approvalId: string) => void;
+	onApprovalApprove: (approvalId: string, consentText?: string) => void;
 	onApprovalReject: (approvalId: string) => void;
 	onPlanClarificationSubmit: (reply: string) => void;
 	onPlanClarificationSkip: () => void;
@@ -359,28 +371,46 @@ function AgentPage({
 						{chatTitle}
 					</Typography.Title>
 					{showWorkspaceLaunchControls ? (
-						<Space.Compact size="small" className={styles.workspaceLaunchControls}>
-							<Button
-								loading={isOpeningLaunchTarget}
-								icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
-								onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
-							>
-								Open in {selectedLaunchTarget.label}
-							</Button>
-							<Dropdown
-								menu={{
-									items: workspaceLaunchMenuItems,
-									selectedKeys: [selectedLaunchTarget.id],
-									onClick: handleWorkspaceLaunchMenuClick
-								}}
-								trigger={["click"]}
+						<div className={styles.topMenuBar}>
+							<Space.Compact size="small" className={styles.workspaceLaunchControls}>
+								<Button
+									loading={isOpeningLaunchTarget}
+									icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
+									onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
+								>
+									Open in {selectedLaunchTarget.label}
+								</Button>
+								<Dropdown
+									menu={{
+										items: workspaceLaunchMenuItems,
+										selectedKeys: [selectedLaunchTarget.id],
+										onClick: handleWorkspaceLaunchMenuClick
+									}}
+									trigger={["click"]}
+								>
+									<Button
+										aria-label="Select workspace launch target"
+										icon={<Icon name="arrow-drop-down" />}
+									/>
+								</Dropdown>
+							</Space.Compact>
+							<Popover
+								trigger={[ "click" ]}
+								placement="bottom"
+								title="Summary"
+								content={(
+									<div className={styles.summaryPanel}>
+										<Collapse size="small" />
+									</div>
+								)}
 							>
 								<Button
-									aria-label="Select workspace launch target"
-									icon={<Icon name="arrow-drop-down" />}
+									type="text"
+									shape="circle"
+									icon={<Icon name="list-check" />}
 								/>
-							</Dropdown>
-						</Space.Compact>
+							</Popover>
+						</div>
 					) : null}
 				</header>
 
@@ -406,7 +436,7 @@ function AgentPage({
 					/>
 				)}
 
-				<footer className={`${styles.composer} ${workflowTodoSnapshot === null ? "" : styles.composerWithTodo}`}>
+				<footer className={styles.composer}>
 					{!isHome && pendingApproval !== null ? (
 						<ApprovalDialog
 							pendingApproval={pendingApproval}

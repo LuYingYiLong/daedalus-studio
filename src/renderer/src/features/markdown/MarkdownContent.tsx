@@ -3,7 +3,9 @@ import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/utils/clipboard";
+import hljs from "highlight.js";
 import styles from "./MarkdownContent.module.css";
+import "highlight.js/styles/github-dark.css";
 
 export type MarkdownContentProps = {
 	children: string;
@@ -49,33 +51,24 @@ function getCodeFileExtension(language: string): string {
 	return extensions[normalized] ?? (normalized.length > 0 ? normalized : "txt");
 }
 
-function downloadCode(code: string, language: string): void {
-	const extension: string = getCodeFileExtension(language);
-	const blob: Blob = new Blob([code], { type: "text/plain;charset=utf-8" });
-	const url: string = URL.createObjectURL(blob);
-	const anchor: HTMLAnchorElement = document.createElement("a");
-	anchor.href = url;
-	anchor.download = `snippet.${extension}`;
-	document.body.append(anchor);
-	anchor.click();
-	anchor.remove();
-	URL.revokeObjectURL(url);
-}
-
 function CodeBlock({ code, language }: CodeBlockProps): React.JSX.Element {
 	const label: string = formatLanguageLabel(language);
+
+	const highlightedCode: string = language.length > 0
+		? hljs.highlight(code, { language: language.replace(/^hljs/u, "") }).value
+		: hljs.highlightAuto(code).value;
 
 	return (
 		<div className={styles.codeBlock}>
 			<div className={styles.codeHeader}>
 				<div className={styles.codeTitle}>
-					<span className={styles.languageMark}>{"{}"}</span>
 					<span>{label}</span>
 				</div>
 				<div className={styles.codeActions}>
 					<Tooltip title="Copy code">
 						<Button
 							type="text"
+							shape="circle"
 							className={styles.codeAction}
 							aria-label="Copy code"
 							icon={<Icon name="copy" />}
@@ -84,19 +77,13 @@ function CodeBlock({ code, language }: CodeBlockProps): React.JSX.Element {
 							}}
 						/>
 					</Tooltip>
-					<Tooltip title="Download code">
-						<Button
-							type="text"
-							className={styles.codeAction}
-							aria-label="Download code"
-							icon={<Icon name="download" />}
-							onClick={(): void => downloadCode(code, language)}
-						/>
-					</Tooltip>
 				</div>
 			</div>
 			<div className={styles.codeScroller}>
-				<code className={styles.code}>{code}</code>
+				<code
+					className={styles.code}
+					dangerouslySetInnerHTML={{ __html: highlightedCode }}
+				/>
 			</div>
 		</div>
 	);

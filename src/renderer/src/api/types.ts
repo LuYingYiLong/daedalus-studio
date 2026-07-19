@@ -26,7 +26,7 @@ export type SessionMetadata = {
 	provider?: string;
 	model?: string;
 	chatMode?: "agent" | "ask" | "plan";
-	approvalMode?: "manual" | "auto-safe";
+	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
 	webSearchEnabled?: boolean;
 	archivedAt?: string;

@@ -1,6 +1,6 @@
-import { Alert, Button, theme, Typography } from "antd";
+import { Alert, Button, Input, theme, Typography } from "antd";
 import styles from "./ApprovalDialog.module.css";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { PendingApproval } from "@/api/approval-api";
 
 export type ApprovalDialogProps = {
@@ -8,7 +8,7 @@ export type ApprovalDialogProps = {
 	isApproving?: boolean;
 	isRejecting?: boolean;
 	errorMessage?: string | null;
-	onApprove?: (approvalId: string) => void;
+	onApprove?: (approvalId: string, consentText?: string) => void;
 	onReject?: (approvalId: string) => void;
 }
 
@@ -21,6 +21,11 @@ function ApprovalDialog({
 	onReject
 }: ApprovalDialogProps): React.JSX.Element | null {
 	const { token } = theme.useToken();
+	const [consentText, setConsentText] = useState<string>("");
+
+	useEffect((): void => {
+		setConsentText("");
+	}, [pendingApproval?.approvalId]);
 
 	if (pendingApproval === null) {
 		return null;
@@ -30,6 +35,8 @@ function ApprovalDialog({
 		borderRadius: token.borderRadiusSM
 	};
 	const isBusy: boolean = isApproving || isRejecting;
+	const requiredConsent = pendingApproval.requiredConsent;
+	const isConsentSatisfied: boolean = requiredConsent === undefined || consentText === requiredConsent.expectedText;
 
 	return (
 		<div className={styles.approvalDialog}>
@@ -68,16 +75,36 @@ function ApprovalDialog({
 				/>
 			) : null}
 
+			{requiredConsent !== undefined ? (
+				<div className={styles.consent}>
+					<Typography.Text className={styles.consentPrompt}>
+						{requiredConsent.prompt}
+					</Typography.Text>
+					<Typography.Text type="secondary" className={styles.consentHint}>
+						Type <Typography.Text code>{requiredConsent.expectedText}</Typography.Text> to approve this cross-workspace action.
+					</Typography.Text>
+					<Input
+						className={styles.consentInput}
+						value={consentText}
+						disabled={isBusy}
+						placeholder={requiredConsent.expectedText}
+						onChange={(event: React.ChangeEvent<HTMLInputElement>): void => {
+							setConsentText(event.target.value);
+						}}
+					/>
+				</div>
+			) : null}
+
 			<footer className={styles.actions}>
 				<Button
 					type="primary"
 					block
-					disabled={isBusy}
+					disabled={isBusy || !isConsentSatisfied}
 					loading={isApproving}
 					style={approvalActionButtonStyle}
 					className={styles.approvalActionButton}
 					onClick={(): void => {
-						onApprove?.(pendingApproval.approvalId);
+						onApprove?.(pendingApproval.approvalId, requiredConsent === undefined ? undefined : consentText);
 					}}
 				>Approve</Button>
 				<Button

@@ -1,7 +1,7 @@
 import type { TimelineBodyPart } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import { Collapse } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import MarkdownContent from "../markdown/MarkdownContent";
 import styles from "./ThinkingPart.module.css";
 
@@ -12,12 +12,41 @@ export type ThinkingPartProps = {
 };
 
 const ACTIVE_THINKING_LABELS: readonly string[] = ["Thinking", "Thinking.", "Thinking..", "Thinking..."];
+const THINKING_SCROLL_BOTTOM_THRESHOLD: number = 24;
 
 function normalizeActiveKeys(nextKeys: string | string[]): string[] {
 	return Array.isArray(nextKeys) ? nextKeys : [nextKeys];
 }
 
+function isNearScrollBottom(element: HTMLElement): boolean {
+	return element.scrollHeight - element.scrollTop - element.clientHeight <= THINKING_SCROLL_BOTTOM_THRESHOLD;
+}
+
+function scrollToThinkingBottom(element: HTMLElement): void {
+	element.scrollTop = element.scrollHeight;
+}
+
+function containScrollableWheel(event: React.WheelEvent<HTMLDivElement>): void {
+	const element: HTMLDivElement = event.currentTarget;
+	const canScroll: boolean = element.scrollHeight > element.clientHeight;
+
+	if (!canScroll) {
+		return;
+	}
+
+	const scrollingUp: boolean = event.deltaY < 0;
+	const scrollingDown: boolean = event.deltaY > 0;
+	const atTop: boolean = element.scrollTop <= 0;
+	const atBottom: boolean = isNearScrollBottom(element);
+
+	if ((scrollingUp && !atTop) || (scrollingDown && !atBottom)) {
+		event.stopPropagation();
+	}
+}
+
 function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
+	const contentRef = useRef<HTMLDivElement | null>(null);
+	const autoFollowRef = useRef<boolean>(true);
 	const [activeKeys, setActiveKeys] = useState<string[]>(() => part.done ? [] : ["thinking"]);
 	const [labelIndex, setLabelIndex] = useState<number>(0);
 
@@ -41,6 +70,21 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 		};
 	}, [part.done]);
 
+	useLayoutEffect((): void => {
+		const element: HTMLDivElement | null = contentRef.current;
+
+		if (element === null || !autoFollowRef.current) {
+			return;
+		}
+
+		window.requestAnimationFrame((): void => {
+			const currentElement: HTMLDivElement | null = contentRef.current;
+			if (currentElement !== null && autoFollowRef.current) {
+				scrollToThinkingBottom(currentElement);
+			}
+		});
+	}, [part.text]);
+
 	if (part.done && part.text.trim().length === 0) {
 		return null;
 	}
@@ -62,7 +106,14 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 					key: "thinking",
 					label: part.done ? "Thinking" : ACTIVE_THINKING_LABELS[labelIndex],
 					children: (
-						<div className="markdown-body" style={{userSelect: "text"}}>
+						<div
+							ref={contentRef}
+							className={`${styles.thinkingContent} markdown-body`}
+							onScroll={(event: React.UIEvent<HTMLDivElement>): void => {
+								autoFollowRef.current = isNearScrollBottom(event.currentTarget);
+							}}
+							onWheel={containScrollableWheel}
+						>
 							{part.text.trim().length === 0 ? null : (
 								<MarkdownContent>{part.text}</MarkdownContent>
 							)}
