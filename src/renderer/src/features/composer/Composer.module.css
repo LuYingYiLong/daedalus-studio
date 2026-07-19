@@ -241,9 +241,8 @@
 
 .modelSubmenuPopup {
 	max-height: min(360px, calc(100vh - 96px));
-	overflow-y: auto;
+	overflow: hidden;
 	overscroll-behavior: contain;
-	scrollbar-gutter: stable;
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
 	background: var(--ds-surface-elevated);
@@ -253,9 +252,15 @@
 	max-height: inherit;
 	overflow-y: auto;
 	overscroll-behavior: contain;
-	scrollbar-gutter: stable;
+	scrollbar-gutter: auto;
+	padding-inline-end: 2;
 	border: 0;
 	box-shadow: none;
+}
+
+.modelSubmenuPopup :global(.ant-dropdown-menu-item),
+.modelSubmenuPopup :global(.ant-dropdown-menu-submenu-title) {
+	margin-inline-end: 0;
 }
 
 .composerActionIcon,

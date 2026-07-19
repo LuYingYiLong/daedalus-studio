@@ -249,6 +249,19 @@ export type TimelineGeneratedImageArtifact = {
 	fileName: string;
 };
 
+export type PlanRecommendedReply = {
+	label: string;
+	text: string;
+	description?: string;
+};
+
+export type PlanClarificationState = {
+	planId: string;
+	title: string;
+	question: string;
+	recommendedReplies: PlanRecommendedReply[];
+};
+
 export type TimelineBodyPart =
 	| { type: "markdown"; text: string }
 	| { type: "thinking"; text: string; done: boolean }
@@ -274,7 +287,7 @@ export type TimelineBodyPart =
 		actionId?: string;
 		iconUid?: string;
 		planId?: string;
-		recommendedReplies?: string[];
+		recommendedReplies?: PlanRecommendedReply[];
 	}
 	| { type: "plan"; planId: string; title: string; status: string; previewMarkdown: string }
 	| {

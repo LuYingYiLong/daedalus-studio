@@ -1,0 +1,31 @@
+appId: com.daedalus.studio
+productName: Daedalus Studio
+
+directories:
+  buildResources: build
+  output: release
+
+files:
+  - out/**/*
+  - package.json
+
+extraResources:
+  - from: build/icon.ico
+    to: icon.ico
+
+asar: true
+
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+mac:
+  icon: build/icon.svg
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true

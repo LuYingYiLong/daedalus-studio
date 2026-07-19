@@ -138,7 +138,6 @@ function GeneralSettingsPage({
 			<div>
 				<Card
 					title="General settings"
-					size="small"
 				>
 					{errorMessage !== null ? (
 						<Alert

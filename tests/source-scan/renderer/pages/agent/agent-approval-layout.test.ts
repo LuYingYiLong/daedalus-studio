@@ -11,4 +11,11 @@ describe("AgentPage approval layout source", () => {
 		expect(source).not.toContain("className={styles.approvalLayer}");
 		expect(source).not.toContain("styles.approvalLayer");
 	});
+
+	it("renders plan clarification in the composer slot after approval and before composer", () => {
+		expect(source).toContain("pendingPlanClarification !== null ? (");
+		expect(source).toContain("<ClarificationDialog");
+		expect(source.indexOf("<ApprovalDialog")).toBeLessThan(source.indexOf("<ClarificationDialog"));
+		expect(source.indexOf("<ClarificationDialog")).toBeLessThan(source.indexOf("<Composer"));
+	});
 });

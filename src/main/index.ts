@@ -1,4 +1,5 @@
 import { app, BrowserWindow, shell } from "electron";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { backendManager } from "./services/backend-manager";
 import { registerWorkspaceFsIpc } from "./services/workspace-fs";
@@ -15,6 +16,18 @@ clientPreferencesService.registerIpc();
 
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 
+function getWindowIconPath(): string | undefined {
+	if (process.platform === "darwin") {
+		return undefined;
+	}
+
+	const iconPath: string = app.isPackaged
+		? join(process.resourcesPath, "icon.ico")
+		: join(app.getAppPath(), "build/icon.ico");
+
+	return existsSync(iconPath) ? iconPath : undefined;
+}
+
 function createWindow(): void {
 	const mainWindow: BrowserWindow = new BrowserWindow({
 		width: 1200,
@@ -22,6 +35,7 @@ function createWindow(): void {
 		minWidth: 900,
 		minHeight: 620,
 		backgroundColor: "#141414",
+		icon: getWindowIconPath(),
 		show: false,
 		webPreferences: {
 			preload: join(__dirname, "../preload/index.js"),

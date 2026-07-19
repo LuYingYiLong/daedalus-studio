@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { message as antdMessage } from "antd";
 import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
-import type { AdditionalContextItem, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, PlanClarificationState, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, TimelineBodyPart, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import { createSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
@@ -42,6 +42,7 @@ import { getWorkflowTodoSnapshotKey, isWorkflowTodoClearEvent, normalizeWorkflow
 import { saveImageAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
 import { DEFAULT_CLIENT_PREFERENCES, fetchClientPreferences, updateClientPreferences, type ClientPreferences } from "@/api/client-preferences-api";
 import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
+import { submitPlanClarification } from "@/api/plan-api";
 
 type SupportedImageMimeType = SaveImageAttachmentParams["mimeType"];
 type WorkspacePickedEntry = {
@@ -54,9 +55,65 @@ type WorkspacePickedEntry = {
 const SUPPORTED_IMAGE_MIME_TYPES: readonly SupportedImageMimeType[] = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 const MAX_IMAGE_ATTACHMENT_BYTES: number = 1024 * 1024;
 const RECENT_CONTEXT_FILE_WINDOW_MS: number = 2000;
+const PLAN_CLARIFICATION_SKIP_REPLY: string = "Continue with the current assumptions.";
+
+type TimelineStatusPart = Extract<TimelineBodyPart, { type: "status" }>;
 
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createPlanClarificationKey(clarification: PlanClarificationState): string {
+	return `${clarification.planId}\u0000${clarification.question}`;
+}
+
+function getPlanClarificationFromStatus(part: TimelineStatusPart): PlanClarificationState | null {
+	if (part.code !== "plan.clarification.required") {
+		return null;
+	}
+
+	const planId: string = part.planId?.trim() ?? "";
+	const question: string = part.details.trim();
+	if (planId.length === 0 || question.length === 0) {
+		return null;
+	}
+
+	return {
+		planId,
+		title: part.title.trim().length > 0 ? part.title.trim() : "Plan clarification",
+		question,
+		recommendedReplies: part.recommendedReplies ?? []
+	};
+}
+
+function getLatestPlanClarification(blocks: readonly TimelineBlock[]): PlanClarificationState | null {
+	let pendingClarification: PlanClarificationState | null = null;
+
+	for (const block of blocks) {
+		if (block.type !== "assistant") {
+			continue;
+		}
+
+		for (const part of block.bodyParts) {
+			if (part.type === "status") {
+				const clarification: PlanClarificationState | null = getPlanClarificationFromStatus(part);
+				if (clarification !== null) {
+					pendingClarification = clarification;
+					continue;
+				}
+				if (part.planId !== undefined && part.planId === pendingClarification?.planId && part.code === "plan.approved") {
+					pendingClarification = null;
+				}
+				continue;
+			}
+
+			if (part.type === "plan" && part.planId === pendingClarification?.planId) {
+				pendingClarification = null;
+			}
+		}
+	}
+
+	return pendingClarification;
 }
 
 function createContextId(): string {
@@ -437,6 +494,9 @@ function App(): React.JSX.Element {
 	const [approvalError, setApprovalError] = useState<string | null>(null);
 	const [isApproving, setIsApproving] = useState<boolean>(false);
 	const [isRejecting, setIsRejecting] = useState<boolean>(false);
+	const [suppressedPlanClarificationKey, setSuppressedPlanClarificationKey] = useState<string | null>(null);
+	const [isPlanClarificationSubmitting, setIsPlanClarificationSubmitting] = useState<boolean>(false);
+	const [planClarificationError, setPlanClarificationError] = useState<string | null>(null);
 	const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
@@ -505,6 +565,12 @@ function App(): React.JSX.Element {
 
 	function rememberLoadedWorkflowTodo(snapshot: WorkflowTodoSnapshot | null): void {
 		initializedWorkflowTodoKeyRef.current = snapshot === null ? "" : getWorkflowTodoSnapshotKey(snapshot);
+	}
+
+	function resetPlanClarificationUiState(): void {
+		setSuppressedPlanClarificationKey(null);
+		setIsPlanClarificationSubmitting(false);
+		setPlanClarificationError(null);
 	}
 
 	function applyInitialWorkflowTodoPreference(snapshot: WorkflowTodoSnapshot | null): void {
@@ -915,6 +981,7 @@ function App(): React.JSX.Element {
 		setWorkflowTodoSnapshot(null);
 		setWebSearchEnabled(false);
 		rememberLoadedWorkflowTodo(null);
+		resetPlanClarificationUiState();
 		setActiveRetryRequestId(null);
 		setSessionError(null);
 		void loadHomeWorkspaces();
@@ -934,6 +1001,7 @@ function App(): React.JSX.Element {
 		setWorkflowTodoSnapshot(null);
 		setWebSearchEnabled(false);
 		rememberLoadedWorkflowTodo(null);
+		resetPlanClarificationUiState();
 		setActiveRetryRequestId(null);
 		setSessionError(null);
 		setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
@@ -1052,6 +1120,7 @@ function App(): React.JSX.Element {
 			setWorkbench(null);
 			setWorkflowTodoSnapshot(null);
 			rememberLoadedWorkflowTodo(null);
+			resetPlanClarificationUiState();
 
 			const result: SessionOpenResult = await openSession(sessionId);
 
@@ -1086,6 +1155,7 @@ function App(): React.JSX.Element {
 		setWorkbench(null);
 		setWorkflowTodoSnapshot(null);
 		rememberLoadedWorkflowTodo(null);
+		resetPlanClarificationUiState();
 		setActiveRetryRequestId(null);
 		setActiveWorkspace(null);
 		setSessionError(null);
@@ -1898,6 +1968,16 @@ function App(): React.JSX.Element {
 		? homeDraft.modelId ?? providerModelSelection?.activeModel.modelId ?? null
 		: workbench?.composer.model ?? providerModelSelection?.activeModel.modelId ?? null;
 	const timelineBlocks: TimelineBlock[] = timelinePage.blocks;
+	const latestPlanClarification: PlanClarificationState | null = useMemo((): PlanClarificationState | null => {
+		return getLatestPlanClarification(timelineBlocks);
+	}, [timelineBlocks]);
+	const latestPlanClarificationKey: string | null = latestPlanClarification === null
+		? null
+		: createPlanClarificationKey(latestPlanClarification);
+	const pendingPlanClarification: PlanClarificationState | null = latestPlanClarificationKey !== null
+		&& latestPlanClarificationKey === suppressedPlanClarificationKey
+		? null
+		: latestPlanClarification;
 	const chatTitle: string = isNewSessionHome ? "New session" : getSessionTitle(activeSessionMetadata, activeSessionId);
 	const initialScrollToBottomKey: string = activeSessionId === null ? "" : `${activeSessionId}:${timelinePage.blockCount}`;
 	const composerMessage: string = isNewSessionHome ? homeDraft.message : workbench?.composer.text ?? "";
@@ -1914,6 +1994,37 @@ function App(): React.JSX.Element {
 			void messageApi.info("Web search changes apply to your next message.");
 		}
 	};
+
+	useEffect((): void => {
+		if (latestPlanClarificationKey === null && suppressedPlanClarificationKey !== null) {
+			setSuppressedPlanClarificationKey(null);
+		}
+		if (latestPlanClarificationKey !== suppressedPlanClarificationKey) {
+			setPlanClarificationError(null);
+			setIsPlanClarificationSubmitting(false);
+		}
+	}, [latestPlanClarificationKey, suppressedPlanClarificationKey]);
+
+	async function handlePlanClarificationSubmit(reply: string): Promise<void> {
+		const clarification: PlanClarificationState | null = pendingPlanClarification;
+		const trimmedReply: string = reply.trim();
+		if (clarification === null || trimmedReply.length === 0 || isPlanClarificationSubmitting) {
+			return;
+		}
+
+		try {
+			setIsPlanClarificationSubmitting(true);
+			setPlanClarificationError(null);
+			await submitPlanClarification(clarification.planId, trimmedReply);
+			setSuppressedPlanClarificationKey(createPlanClarificationKey(clarification));
+		} catch (error: unknown) {
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to submit clarification";
+			setPlanClarificationError(errorMessage);
+			console.error("[App] submit plan clarification failed", error);
+		} finally {
+			setIsPlanClarificationSubmitting(false);
+		}
+	}
 
 	return (
 		<main className={`${styles.shell} ${activePage === "agent" ? styles.agentShell : styles.pageShell}`}>
@@ -1948,6 +2059,9 @@ function App(): React.JSX.Element {
 					isApproving={isApproving}
 					isRejecting={isRejecting}
 					approvalError={approvalError}
+					pendingPlanClarification={pendingPlanClarification}
+					isPlanClarificationSubmitting={isPlanClarificationSubmitting}
+					planClarificationError={planClarificationError}
 					slashCommands={slashCommands}
 					skills={skills}
 					isSending={composerIsSending}
@@ -2001,6 +2115,12 @@ function App(): React.JSX.Element {
 					}}
 					onApprovalReject={(approvalId: string): void => {
 						void handleApprovalReject(approvalId);
+					}}
+					onPlanClarificationSubmit={(reply: string): void => {
+						void handlePlanClarificationSubmit(reply);
+					}}
+					onPlanClarificationSkip={(): void => {
+						void handlePlanClarificationSubmit(PLAN_CLARIFICATION_SKIP_REPLY);
 					}}
 					onWebSearchEnabledChange={handleWebSearchEnabledChange}
 					onProviderModelChange={(providerId: string, modelId: string): void => {

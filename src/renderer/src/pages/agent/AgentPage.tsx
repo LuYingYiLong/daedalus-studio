@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Divider, Dropdown, message as antdMessage, Space, Typography } from "antd";
 import type { MenuProps } from "antd";
-import type { AdditionalContextItem, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode, PendingApproval } from "@/api/approval-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
@@ -17,6 +17,7 @@ import type { ComposerCompletionTrigger } from "@/features/composer/composer-com
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import styles from "./AgentPage.module.css";
 import { Icon } from "@/assets/icons";
+import ClarificationDialog from "@/features/clarification/ClarificationDialog";
 
 type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
 
@@ -77,6 +78,9 @@ type AgentPageProps = {
 	isApproving: boolean;
 	isRejecting: boolean;
 	approvalError: string | null;
+	pendingPlanClarification: PlanClarificationState | null;
+	isPlanClarificationSubmitting: boolean;
+	planClarificationError: string | null;
 	slashCommands: SlashCommandDefinition[];
 	skills: SkillSummary[];
 	isSending: boolean;
@@ -107,6 +111,8 @@ type AgentPageProps = {
 	onApprovalModeChange: (mode: ApprovalMode) => void;
 	onApprovalApprove: (approvalId: string) => void;
 	onApprovalReject: (approvalId: string) => void;
+	onPlanClarificationSubmit: (reply: string) => void;
+	onPlanClarificationSkip: () => void;
 	onWebSearchEnabledChange: (enabled: boolean) => void;
 	onProviderModelChange: (providerId: string, modelId: string) => void;
 	onAddFiles: () => void;
@@ -151,6 +157,9 @@ function AgentPage({
 	isApproving,
 	isRejecting,
 	approvalError,
+	pendingPlanClarification,
+	isPlanClarificationSubmitting,
+	planClarificationError,
 	slashCommands,
 	skills,
 	isSending,
@@ -181,6 +190,8 @@ function AgentPage({
 	onApprovalModeChange,
 	onApprovalApprove,
 	onApprovalReject,
+	onPlanClarificationSubmit,
+	onPlanClarificationSkip,
 	onWebSearchEnabledChange,
 	onProviderModelChange,
 	onAddFiles,
@@ -391,6 +402,17 @@ function AgentPage({
 							errorMessage={approvalError}
 							onApprove={onApprovalApprove}
 							onReject={onApprovalReject}
+						/>
+					) : !isHome && pendingPlanClarification !== null ? (
+						<ClarificationDialog
+							planId={pendingPlanClarification.planId}
+							title={pendingPlanClarification.title}
+							question={pendingPlanClarification.question}
+							recommendedReplies={pendingPlanClarification.recommendedReplies}
+							isSubmitting={isPlanClarificationSubmitting}
+							errorMessage={planClarificationError}
+							onSubmit={onPlanClarificationSubmit}
+							onSkip={onPlanClarificationSkip}
 						/>
 					) : (
 						<Composer

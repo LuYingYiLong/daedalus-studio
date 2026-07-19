@@ -1,5 +1,5 @@
 import type { BackendEvent } from "@/api/backend-rpc-client";
-import type { SessionOpenResult, SessionTimelineResult, TimelineAssistantBlock, TimelineBlock, TimelineBodyPart, WorkbenchSnapshot } from "@/api/types";
+import type { PlanRecommendedReply, SessionOpenResult, SessionTimelineResult, TimelineAssistantBlock, TimelineBlock, TimelineBodyPart, WorkbenchSnapshot } from "@/api/types";
 
 export type TimelinePageState = {
 	blocks: TimelineBlock[];
@@ -49,6 +49,32 @@ function getStringValue(record: Record<string, unknown>, key: string): string {
 	const value: unknown = record[key];
 
 	return typeof value === "string" ? value : "";
+}
+
+function parsePlanRecommendedReplies(value: unknown): PlanRecommendedReply[] {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+
+	const replies: PlanRecommendedReply[] = [];
+	for (const item of value.slice(0, 3)) {
+		if (!isRecord(item)) {
+			continue;
+		}
+
+		const label: string = getStringValue(item, "label").trim();
+		const text: string = getStringValue(item, "text").trim();
+		const description: string = getStringValue(item, "description").trim();
+		if (label.length === 0 || text.length === 0) {
+			continue;
+		}
+		replies.push({
+			label,
+			text,
+			description: description.length > 0 ? description : undefined
+		});
+	}
+	return replies;
 }
 
 function appendMarkdownPart(parts: TimelineBodyPart[], text: string): TimelineBodyPart[] {
@@ -312,6 +338,16 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 				previewMarkdown: getStringValue(data, "previewMarkdown") || getStringValue(data, "markdown")
 			}];
 		}
+	} else if (event.event === "plan.clarification.required") {
+		nextParts = [...nextParts, {
+			type: "status",
+			status: "message",
+			title: getStringValue(data, "title"),
+			details: getStringValue(data, "question"),
+			code: "plan.clarification.required",
+			planId: getStringValue(data, "planId"),
+			recommendedReplies: parsePlanRecommendedReplies(data.recommendedReplies)
+		}];
 	} else if (event.event === "agent.run.error" || event.event === "workflow.error") {
 		nextStatus = "failed";
 		completedAtUtc = nowIso;
@@ -358,7 +394,8 @@ function shouldCreateAssistantBlock(event: BackendEvent): boolean {
 		|| event.event.startsWith("tool.")
 		|| event.event === "ai.status"
 		|| event.event === "plan.generated"
-		|| event.event === "plan.revised";
+		|| event.event === "plan.revised"
+		|| event.event === "plan.clarification.required";
 }
 
 function createLiveAssistantBlock(event: BackendEvent): TimelineAssistantBlock {

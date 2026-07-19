@@ -131,7 +131,7 @@ function SearchSettingsPage(): React.JSX.Element {
 			</header>
 
 			<div className={styles.content}>
-				<Card title="Web search" size="small">
+				<Card title="Web search">
 					{errorMessage !== null ? (
 						<Alert
 							type="warning"

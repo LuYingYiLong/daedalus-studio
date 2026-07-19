@@ -94,6 +94,44 @@ describe("workbench-state", () => {
 		]);
 	});
 
+	it("creates a live plan clarification status with structured replies", () => {
+		const blocks: TimelineBlock[] = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "request-plan",
+			event: "plan.clarification.required",
+			data: {
+				planId: "plan-a",
+				title: "Target shape",
+				question: "Choose the target experience.",
+				recommendedReplies: [
+					{
+						label: "Tool UI",
+						text: "Plan the tool UI first.",
+						description: "Best for validating interaction."
+					}
+				]
+			}
+		});
+		const assistant = blocks[0];
+		const statusPart = assistant?.type === "assistant"
+			? assistant.bodyParts.find((part) => part.type === "status")
+			: undefined;
+
+		expect(blocks).toHaveLength(1);
+		expect(statusPart).toMatchObject({
+			type: "status",
+			code: "plan.clarification.required",
+			planId: "plan-a",
+			title: "Target shape",
+			details: "Choose the target experience.",
+			recommendedReplies: [{
+				label: "Tool UI",
+				text: "Plan the tool UI first.",
+				description: "Best for validating interaction."
+			}]
+		});
+	});
+
 	it("updates image generation body part from tool result", () => {
 		const withCall = applyBackendEventToTimeline([], {
 			type: "event",
