@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import styles from "./PlanPart.module.css"
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { copyTextToClipboard } from "@/utils/clipboard";
 
 export type TimelinePlanPart = Extract<TimelineBodyPart, { type: "plan" }>;
 export type PlanPartProps = {
@@ -13,6 +14,7 @@ export type PlanPartProps = {
 
 function PlanPart({ part }: PlanPartProps): React.JSX.Element {
 	const [modalOpen, setModalOpen] = useState<boolean>(false);
+	const [copied, setCopied] = useState<boolean>(false);
 
 	const extra: React.ReactNode = (
 		<div>
@@ -23,15 +25,27 @@ function PlanPart({ part }: PlanPartProps): React.JSX.Element {
 					onClick={() => setModalOpen(true)}
 				/>
 			</Tooltip>
-			<Button
-				type="text"
-				icon={<Icon name="copy" />}
-				onClick={async () => {
-					await navigator.clipboard.writeText(part.previewMarkdown);
-				}}
-			/>
+			<Tooltip title={copied ? "Copied" : "Copy"}>
+				<Button
+					type="text"
+					icon={<Icon name="copy" />}
+					onClick={() => {
+						void copyPlan();
+					}}
+				/>
+			</Tooltip>
 		</div>
 	);
+
+	async function copyPlan(): Promise<void> {
+		try {
+			await copyTextToClipboard(part.previewMarkdown);
+			setCopied(true);
+			window.setTimeout((): void => setCopied(false), 1200);
+		} catch (error: unknown) {
+			console.error("[PlanPart] copy failed", error);
+		}
+	}
 
 	return (
 		<div>

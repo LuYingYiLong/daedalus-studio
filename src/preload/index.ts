@@ -70,5 +70,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		pickSkillDirectory: (): Promise<string | null> => {
 			return ipcRenderer.invoke("skill-fs:pick-directory");
 		}
+	},
+
+	checkDiskSpace: (driveLetter: string): Promise<{ drive: string; free: number; total: number } | null> => {
+		return ipcRenderer.invoke("electron:checkDiskSpace", driveLetter);
 	}
 });

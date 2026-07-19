@@ -73,22 +73,20 @@ function createArchivedSessionMenuItem(session: SessionMetadata, options: Create
 						okButtonProps={{ danger: true, loading: isDeleting }}
 						onConfirm={(): void => options.onDelete(session)}
 					>
-						<Tooltip title="Delete session" placement="top">
-							<Button
-								type="text"
-								size="small"
-								shape="circle"
-								danger={true}
-								aria-label={`Delete ${session.title}`}
-								icon={<Icon name="remove" width={16} height={16}/>}
-								loading={isDeleting}
-								disabled={options.busySessionId !== null && !isDeleting}
-								onClick={(event: MouseEvent<HTMLElement>): void => {
-									event.preventDefault();
-									event.stopPropagation();
-								}}
-							/>
-						</Tooltip>
+						<Button
+							type="text"
+							size="small"
+							shape="circle"
+							danger={true}
+							aria-label={`Delete ${session.title}`}
+							icon={<Icon name="remove" width={16} height={16}/>}
+							loading={isDeleting}
+							disabled={options.busySessionId !== null && !isDeleting}
+							onClick={(event: MouseEvent<HTMLElement>): void => {
+								event.preventDefault();
+								event.stopPropagation();
+							}}
+						/>
 					</Popconfirm>
 				</span>
 			</span>

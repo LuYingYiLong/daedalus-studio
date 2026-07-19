@@ -33,6 +33,12 @@ declare global {
 		writeText: (text: string) => Promise<{ written: true }>;
 	}
 
+	interface DiskSpaceInfo {
+		drive: string;
+		free: number;
+		total: number;
+	}
+
 	type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
 
 	interface ElectronAPI {
@@ -40,6 +46,7 @@ declare global {
 		backend: BackendAPI;
 		clientPreferences: ClientPreferencesAPI;
 		clipboard: ClipboardAPI;
+		checkDiskSpace: (driveLetter: string) => Promise<DiskSpaceInfo | null>;
 		workspaceFs: {
 			listChildren: (params: {
 				workspaceRoot: string;

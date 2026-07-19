@@ -7,6 +7,8 @@ export type SendChatMessageParams = {
 	requestId: string;
 	message: string;
 	mode: ChatMode;
+	provider?: string | undefined;
+	model?: string | undefined;
 	retryFromRequestId?: string;
 	additionalContext?: AdditionalContextItem[];
 	skillRefs?: string[];
@@ -24,6 +26,8 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<un
 	return client.requestWithId(params.requestId, "ai.chat", {
 		message: params.message,
 		mode: params.mode,
+		provider: params.provider,
+		model: params.model,
 		retryFromRequestId: params.retryFromRequestId,
 		skillRefs: params.skillRefs,
 		webSearchEnabled: params.webSearchEnabled,

@@ -12,17 +12,34 @@ export type ThinkingPartProps = {
 	part: TimelineThinkingPart;
 };
 
+const ACTIVE_THINKING_LABELS: readonly string[] = ["Thinking", "Thinking.", "Thinking..", "Thinking..."];
+
 function normalizeActiveKeys(nextKeys: string | string[]): string[] {
 	return Array.isArray(nextKeys) ? nextKeys : [nextKeys];
 }
 
 function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 	const [activeKeys, setActiveKeys] = useState<string[]>(() => part.done ? [] : ["thinking"]);
+	const [labelIndex, setLabelIndex] = useState<number>(0);
 
 	useEffect((): void => {
 		if (part.done) {
 			setActiveKeys([]);
 		}
+	}, [part.done]);
+
+	useEffect((): (() => void) | undefined => {
+		if (part.done) {
+			setLabelIndex(0);
+			return undefined;
+		}
+
+		const intervalId: number = window.setInterval((): void => {
+			setLabelIndex((currentIndex: number): number => (currentIndex + 1) % ACTIVE_THINKING_LABELS.length);
+		}, 500);
+		return (): void => {
+			window.clearInterval(intervalId);
+		};
 	}, [part.done]);
 
 	if (part.done && part.text.trim().length === 0) {
@@ -44,7 +61,7 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 			items={[
 				{
 					key: "thinking",
-					label: part.done ? "Thinking" : "Thinking...",
+					label: part.done ? "Thinking" : ACTIVE_THINKING_LABELS[labelIndex],
 					children: (
 						<div className="markdown-body" style={{userSelect: "text"}}>
 							{part.text.trim().length === 0 ? null : (

@@ -122,10 +122,39 @@ describe("workbench-state", () => {
 			id: "request-plan",
 			event: "agent.message.delta",
 			data: {
+				requestId: "request-plan",
+				operationRequestId: "request-plan",
+				planId: "plan-a",
+				mode: "plan",
 				text: "先确认目标。\n"
 			}
 		});
-		const withRevisedPlan: TimelineBlock[] = applyBackendEventToTimeline(withPrelude, {
+		const withThinking: TimelineBlock[] = applyBackendEventToTimeline(withPrelude, {
+			type: "event",
+			id: "plan-revise-rpc",
+			event: "agent.thinking.delta",
+			data: {
+				requestId: "request-plan",
+				operationRequestId: "plan-revise-rpc",
+				planId: "plan-a",
+				mode: "plan",
+				text: "读取项目结构。"
+			}
+		});
+		const withToolCall: TimelineBlock[] = applyBackendEventToTimeline(withThinking, {
+			type: "event",
+			id: "plan-revise-rpc",
+			event: "agent.tool.call",
+			data: {
+				requestId: "request-plan",
+				operationRequestId: "plan-revise-rpc",
+				planId: "plan-a",
+				runId: "request-plan",
+				toolCallId: "tool-read",
+				toolName: "mcp_godot_list_project_files"
+			}
+		});
+		const withRevisedPlan: TimelineBlock[] = applyBackendEventToTimeline(withToolCall, {
 			type: "event",
 			id: "plan-revise-rpc",
 			event: "plan.revised",
@@ -154,7 +183,7 @@ describe("workbench-state", () => {
 		expect(assistant?.type).toBe("assistant");
 		expect(assistant?.type === "assistant" ? assistant.requestId : "").toBe("request-plan");
 		expect(assistant?.type === "assistant" ? assistant.status : "missing").toBeUndefined();
-		expect(assistant?.type === "assistant" ? assistant.bodyParts.map((part) => part.type) : []).toEqual(["markdown", "plan"]);
+		expect(assistant?.type === "assistant" ? assistant.bodyParts.map((part) => part.type) : []).toEqual(["markdown", "thinking", "tool", "plan"]);
 	});
 
 	it("updates image generation body part from tool result", () => {

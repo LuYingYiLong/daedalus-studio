@@ -7,12 +7,14 @@ import { registerSkillFsIpc } from "./services/skill-fs";
 import { registerClipboardIpc } from "./services/clipboard";
 import { clientPreferencesService } from "./services/client-preferences";
 import { WindowLifecycleController } from "./services/window-lifecycle";
+import { registerSystemInfoIpc } from "./services/system-info";
 
 backendManager.registerIpc();
 registerWorkspaceFsIpc();
 registerSkillFsIpc();
 registerClipboardIpc();
 clientPreferencesService.registerIpc();
+registerSystemInfoIpc();
 
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 

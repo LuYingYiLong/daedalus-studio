@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { message as antdMessage } from "antd";
+import { useDiskSpaceCheck } from "@/hooks/useDiskSpaceCheck";
 import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import type { AdditionalContextItem, PlanApprovalState, PlanClarificationState, PlanRecommendedReply, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
@@ -67,6 +68,10 @@ function createPlanClarificationKey(clarification: PlanClarificationState): stri
 
 function createPlanApprovalKey(plan: PlanApprovalState): string {
 	return `${plan.planId}\u0000${plan.updatedAt}\u0000${plan.previewMarkdown}`;
+}
+
+function isBackendRpcErrorMessage(message: string): boolean {
+	return /^[a-z][a-z0-9_]*: /u.test(message);
 }
 
 function getStringField(record: Record<string, unknown>, key: string): string {
@@ -571,6 +576,8 @@ function App(): React.JSX.Element {
 	const skillsRetryAtRef = useRef<number>(0);
 	const recentContextFileSignaturesRef = useRef<Map<string, number>>(new Map());
 	const initializedWorkflowTodoKeyRef = useRef<string>("");
+
+	useDiskSpaceCheck();
 
 	useEffect((): void => {
 		if (workbench?.activeRun.status === "idle") {
@@ -1570,6 +1577,8 @@ function App(): React.JSX.Element {
 				requestId,
 				message,
 				mode: created.workbench.composer.chatMode ?? homeDraft.chatMode,
+				provider: providerId ?? undefined,
+				model: modelId ?? undefined,
 				additionalContext: created.workbench.composer.additionalContext,
 				skillRefs,
 				webSearchEnabled: requestedWebSearchEnabled
@@ -1605,7 +1614,7 @@ function App(): React.JSX.Element {
 			});
 			setSessionError(errorMessage);
 			showWebSearchErrorIfRequested(requestedWebSearchEnabled, errorMessage);
-			if (sessionCreated) {
+			if (sessionCreated && !isBackendRpcErrorMessage(errorMessage)) {
 				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 					return {
 						...currentPage,
@@ -1671,6 +1680,8 @@ function App(): React.JSX.Element {
 				requestId,
 				message,
 				mode: chatMode,
+				provider: workbench.composer.provider ?? undefined,
+				model: workbench.composer.model ?? undefined,
 				additionalContext,
 				skillRefs,
 				webSearchEnabled: requestedWebSearchEnabled
@@ -1700,20 +1711,22 @@ function App(): React.JSX.Element {
 			});
 			setSessionError(errorMessage);
 			showWebSearchErrorIfRequested(requestedWebSearchEnabled, errorMessage);
-			setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
-				return {
-					...currentPage,
-					blocks: applyBackendEventToTimeline(currentPage.blocks, {
-						type: "event",
-						id: requestId,
-						event: "agent.run.error",
-						data: {
-							code: "frontend_send_error",
-							message: errorMessage
-						}
-					})
-				};
-			});
+			if (!isBackendRpcErrorMessage(errorMessage)) {
+				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+					return {
+						...currentPage,
+						blocks: applyBackendEventToTimeline(currentPage.blocks, {
+							type: "event",
+							id: requestId,
+							event: "agent.run.error",
+							data: {
+								code: "frontend_send_error",
+								message: errorMessage
+							}
+						})
+					};
+				});
+			}
 			console.error("[App] send message failed", error);
 		} finally {
 			if (activeChatRequestIdRef.current === requestId) {
@@ -1755,6 +1768,8 @@ function App(): React.JSX.Element {
 				requestId,
 				message,
 				mode: chatMode,
+				provider: workbench.composer.provider ?? undefined,
+				model: workbench.composer.model ?? undefined,
 				retryFromRequestId: payload.requestId,
 				additionalContext: payload.additionalContext,
 				skillRefs,
@@ -2131,14 +2146,22 @@ function App(): React.JSX.Element {
 			return;
 		}
 
+		const currentClarificationKey: string = createPlanClarificationKey(clarification);
 		try {
 			setIsPlanClarificationSubmitting(true);
 			setPlanClarificationError(null);
-			await submitPlanClarification(clarification.planId, trimmedReply);
-			setSuppressedPlanClarificationKey(createPlanClarificationKey(clarification));
+			setSuppressedPlanClarificationKey(currentClarificationKey);
+			const result: PlanResult = await submitPlanClarification(clarification.planId, trimmedReply);
+			const nextClarification: PlanClarificationState | null = result.status === "clarification_required"
+				? normalizePlanClarification(result)
+				: null;
+			setLatestPlanClarification(nextClarification);
+			setLatestPlanApproval(getPlanApprovalFromResult(result));
+			setSuppressedPlanClarificationKey(nextClarification === null ? null : currentClarificationKey);
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to submit clarification";
 			setPlanClarificationError(errorMessage);
+			setSessionError(errorMessage);
 			console.error("[App] submit plan clarification failed", error);
 		} finally {
 			setIsPlanClarificationSubmitting(false);
@@ -2154,6 +2177,12 @@ function App(): React.JSX.Element {
 			setIsPlanApproving(true);
 			setPlanApprovalError(null);
 			const result = await approvePlan(planId);
+			setWorkbench(result.workbench);
+			setActiveSessionMetadata((currentMetadata: SessionMetadata | null): SessionMetadata | null => (
+				currentMetadata === null
+					? currentMetadata
+					: { ...currentMetadata, chatMode: result.chatMode }
+			));
 			activeChatRequestIdRef.current = result.executionRequestId;
 			applyOptimisticSend(result.executionRequestId, "执行计划。", []);
 			setLatestPlanApproval((currentPlanApproval: PlanApprovalState | null): PlanApprovalState | null => {

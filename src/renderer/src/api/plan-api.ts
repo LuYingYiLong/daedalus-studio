@@ -1,5 +1,5 @@
 import { createBackendClient } from "./backend-client";
-import type { PlanRecommendedReply } from "./types";
+import type { PlanRecommendedReply, WorkbenchSnapshot } from "./types";
 
 export type PlanStatus = "clarification_required" | "ready" | "approved" | "executing";
 
@@ -22,6 +22,8 @@ export type PlanApprovalResult = {
 	planApproved: true;
 	planId: string;
 	executionRequestId: string;
+	chatMode: "agent";
+	workbench: WorkbenchSnapshot;
 };
 
 export async function getPlan(planId: string, sessionId?: string): Promise<PlanResult> {

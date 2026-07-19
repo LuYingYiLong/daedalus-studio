@@ -264,6 +264,26 @@ function bodyPartHasRunId(part: TimelineBodyPart, runId: string): boolean {
 	return false;
 }
 
+function bodyPartHasPlanId(part: TimelineBodyPart, planId: string): boolean {
+	if (planId.length === 0) {
+		return false;
+	}
+
+	if (part.type === "plan") {
+		return part.planId === planId;
+	}
+
+	if (part.type === "status") {
+		return part.planId === planId;
+	}
+
+	if (part.type === "tool") {
+		return part.events.some((toolEvent: Record<string, unknown>): boolean => getStringValue(toolEvent, "planId") === planId);
+	}
+
+	return false;
+}
+
 function getCanonicalEventRequestId(event: BackendEvent): string {
 	const data: Record<string, unknown> = getEventData(event);
 
@@ -272,14 +292,84 @@ function getCanonicalEventRequestId(event: BackendEvent): string {
 		return executionRequestId.length > 0 ? executionRequestId : event.id;
 	}
 
-	if (event.event.startsWith("plan.") || event.event === "agent.message.done") {
-		const requestId: string = getStringValue(data, "requestId");
-		if (requestId.length > 0) {
+	const requestId: string = getStringValue(data, "requestId");
+	if (requestId.length > 0) {
+		const mode: string = getStringValue(data, "mode");
+		const planId: string = getStringValue(data, "planId");
+		if (event.event.startsWith("plan.") || mode === "plan" || planId.length > 0 || event.event === "agent.message.done") {
 			return requestId;
 		}
 	}
 
 	return event.id;
+}
+
+function assistantBlockHasPlanId(block: TimelineAssistantBlock, planId: string): boolean {
+	if (planId.length === 0) {
+		return false;
+	}
+
+	return block.bodyParts.some((part: TimelineBodyPart): boolean => bodyPartHasPlanId(part, planId));
+}
+
+function getEventPlanId(event: BackendEvent): string {
+	const data: Record<string, unknown> = getEventData(event);
+	const planId: string = getStringValue(data, "planId");
+	if (planId.length > 0) {
+		return planId;
+	}
+
+	const operationPlanId: string = getStringValue(data, "operationPlanId");
+	if (operationPlanId.length > 0) {
+		return operationPlanId;
+	}
+
+	return "";
+}
+
+function getExistingPlanRequestId(blocks: TimelineBlock[], planId: string): string | null {
+	if (planId.length === 0) {
+		return null;
+	}
+
+	for (const block of blocks) {
+		if (block.type === "assistant" && assistantBlockHasPlanId(block, planId)) {
+			return block.requestId;
+		}
+	}
+
+	return null;
+}
+
+function getCanonicalEventRequestIdForTimeline(blocks: TimelineBlock[], event: BackendEvent): string {
+	const requestId: string = getCanonicalEventRequestId(event);
+	if (requestId !== event.id) {
+		return requestId;
+	}
+
+	const existingPlanRequestId: string | null = getExistingPlanRequestId(blocks, getEventPlanId(event));
+	if (existingPlanRequestId !== null) {
+		return existingPlanRequestId;
+	}
+
+	return requestId;
+}
+
+function rewriteEventForTimeline(blocks: TimelineBlock[], event: BackendEvent): BackendEvent {
+	const requestId: string = getCanonicalEventRequestIdForTimeline(blocks, event);
+	if (requestId === event.id) {
+		return event;
+	}
+
+	const data: Record<string, unknown> = getEventData(event);
+	return {
+		...event,
+		id: requestId,
+		data: {
+			...data,
+			requestId
+		}
+	};
 }
 
 function replaceOrAppendPlanPart(parts: TimelineBodyPart[], planPart: Extract<TimelineBodyPart, { type: "plan" }>): TimelineBodyPart[] {
@@ -302,7 +392,11 @@ function assistantBlockMatchesEvent(block: TimelineAssistantBlock, event: Backen
 	}
 
 	const runId: string = getStringValue(getEventData(event), "runId");
-	return block.bodyParts.some((part: TimelineBodyPart): boolean => bodyPartHasRunId(part, runId));
+	if (block.bodyParts.some((part: TimelineBodyPart): boolean => bodyPartHasRunId(part, runId))) {
+		return true;
+	}
+
+	return assistantBlockHasPlanId(block, getEventPlanId(event));
 }
 
 function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: BackendEvent): TimelineAssistantBlock {
@@ -410,25 +504,26 @@ function createLiveAssistantBlock(event: BackendEvent): TimelineAssistantBlock {
 }
 
 export function applyBackendEventToTimeline(blocks: TimelineBlock[], event: BackendEvent): TimelineBlock[] {
+	const canonicalEvent: BackendEvent = rewriteEventForTimeline(blocks, event);
 	let changed: boolean = false;
 	const nextBlocks: TimelineBlock[] = blocks.map((block: TimelineBlock): TimelineBlock => {
-		if (block.type !== "assistant" || !assistantBlockMatchesEvent(block, event)) {
+		if (block.type !== "assistant" || !assistantBlockMatchesEvent(block, canonicalEvent)) {
 			return block;
 		}
 
 		changed = true;
-		return updateAssistantBlockFromEvent(block, event);
+		return updateAssistantBlockFromEvent(block, canonicalEvent);
 	});
 
 	if (changed) {
 		return nextBlocks;
 	}
 
-	if (!shouldCreateAssistantBlock(event)) {
+	if (!shouldCreateAssistantBlock(canonicalEvent)) {
 		return blocks;
 	}
 
-	return [...blocks, createLiveAssistantBlock(event)];
+	return [...blocks, createLiveAssistantBlock(canonicalEvent)];
 }
 
 export function createTimelinePageFromOpenResult(result: SessionOpenResult): TimelinePageState {
