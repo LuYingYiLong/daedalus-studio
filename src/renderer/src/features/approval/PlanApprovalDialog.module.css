@@ -1,8 +1,9 @@
-.clarificationDialog {
+.planApprovalDialog {
 	display: flex;
 	flex-direction: column;
 	width: 100%;
 	gap: 8px;
+	box-sizing: border-box;
 	padding: var(--ds-space-2);
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
@@ -27,55 +28,28 @@
 	margin: 0 !important;
 }
 
-.subtitle {
-	color: var(--ds-text-secondary);
-}
-
-.question {
-	margin: 0 !important;
+.planTitle {
+	overflow: hidden;
 	color: var(--ds-text-primary);
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-.suggestedReplies {
+.actions {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
 }
 
-.suggestedReplyButton {
-	height: auto;
-	min-height: 36px;
+.approveActionButton {
 	justify-content: flex-start;
-	padding: 8px;
-	text-align: left;
 }
 
-.replyContent {
-	display: flex;
-	min-width: 0;
-	flex-direction: column;
-	gap: 2px;
-}
-
-.replyLabel {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.replyDescription {
-	overflow: hidden;
-	color: var(--ds-text-secondary);
-	font-size: 12px;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.customReplyRow {
+.revisionRow {
 	width: 100%;
 }
 
-.customReplyInput {
+.revisionInput {
 	flex: 1 1 auto;
 }
 

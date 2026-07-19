@@ -262,6 +262,14 @@ export type PlanClarificationState = {
 	recommendedReplies: PlanRecommendedReply[];
 };
 
+export type PlanApprovalState = {
+	planId: string;
+	title: string;
+	status: string;
+	previewMarkdown: string;
+	updatedAt: string;
+};
+
 export type TimelineBodyPart =
 	| { type: "markdown"; text: string }
 	| { type: "thinking"; text: string; done: boolean }
@@ -315,6 +323,8 @@ export type SessionOpenResult = {
 	timelineBlocks: TimelineBlock[];
 	latestWorkflowSnapshot: unknown | null;
 	latestAgentSnapshot: unknown | null;
+	latestPlanClarification: PlanClarificationState | null;
+	latestPlanApproval: PlanApprovalState | null;
 	pendingGuides: unknown[];
 	messageQueue: MessageQueueItem[];
 	workbench: WorkbenchSnapshot;
@@ -333,4 +343,6 @@ export type SessionTimelineResult = {
 	timelineBlocks: TimelineBlock[];
 	latestWorkflowSnapshot: unknown | null;
 	latestAgentSnapshot: unknown | null;
+	latestPlanClarification: PlanClarificationState | null;
+	latestPlanApproval: PlanApprovalState | null;
 };

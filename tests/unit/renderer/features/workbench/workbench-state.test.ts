@@ -94,7 +94,7 @@ describe("workbench-state", () => {
 		]);
 	});
 
-	it("creates a live plan clarification status with structured replies", () => {
+	it("keeps live plan clarification events out of visible timeline blocks", () => {
 		const blocks: TimelineBlock[] = applyBackendEventToTimeline([], {
 			type: "event",
 			id: "request-plan",
@@ -112,24 +112,49 @@ describe("workbench-state", () => {
 				]
 			}
 		});
-		const assistant = blocks[0];
-		const statusPart = assistant?.type === "assistant"
-			? assistant.bodyParts.find((part) => part.type === "status")
-			: undefined;
 
-		expect(blocks).toHaveLength(1);
-		expect(statusPart).toMatchObject({
-			type: "status",
-			code: "plan.clarification.required",
-			planId: "plan-a",
-			title: "Target shape",
-			details: "Choose the target experience.",
-			recommendedReplies: [{
-				label: "Tool UI",
-				text: "Plan the tool UI first.",
-				description: "Best for validating interaction."
-			}]
+		expect(blocks).toHaveLength(0);
+	});
+
+	it("merges plan follow-up rpc events into the original assistant block", () => {
+		const withPrelude: TimelineBlock[] = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "request-plan",
+			event: "agent.message.delta",
+			data: {
+				text: "先确认目标。\n"
+			}
 		});
+		const withRevisedPlan: TimelineBlock[] = applyBackendEventToTimeline(withPrelude, {
+			type: "event",
+			id: "plan-revise-rpc",
+			event: "plan.revised",
+			data: {
+				requestId: "request-plan",
+				planId: "plan-a",
+				title: "Build the game",
+				status: "ready",
+				previewMarkdown: "Use HTML/CSS/JS."
+			}
+		});
+		const withDone: TimelineBlock[] = applyBackendEventToTimeline(withRevisedPlan, {
+			type: "event",
+			id: "plan-revise-rpc",
+			event: "agent.message.done",
+			data: {
+				runId: "plan-revise-rpc",
+				requestId: "request-plan",
+				mode: "plan",
+				planId: "plan-a"
+			}
+		});
+		const assistant = withDone[0];
+
+		expect(withDone).toHaveLength(1);
+		expect(assistant?.type).toBe("assistant");
+		expect(assistant?.type === "assistant" ? assistant.requestId : "").toBe("request-plan");
+		expect(assistant?.type === "assistant" ? assistant.status : "missing").toBeUndefined();
+		expect(assistant?.type === "assistant" ? assistant.bodyParts.map((part) => part.type) : []).toEqual(["markdown", "plan"]);
 	});
 
 	it("updates image generation body part from tool result", () => {
@@ -279,7 +304,9 @@ describe("workbench-state", () => {
 				{ id: "c", type: "user", requestId: "c", content: "c", sentAtUtc: "2026-01-01T00:00:00.000Z" }
 			],
 			latestWorkflowSnapshot: null,
-			latestAgentSnapshot: null
+			latestAgentSnapshot: null,
+			latestPlanClarification: null,
+			latestPlanApproval: null
 		});
 		const previous = createTimelinePageFromTimelineResult({
 			timeline: true,
@@ -295,7 +322,9 @@ describe("workbench-state", () => {
 				{ id: "b", type: "user", requestId: "b", content: "b", sentAtUtc: "2026-01-01T00:00:00.000Z" }
 			],
 			latestWorkflowSnapshot: null,
-			latestAgentSnapshot: null
+			latestAgentSnapshot: null,
+			latestPlanClarification: null,
+			latestPlanApproval: null
 		});
 		const next = createTimelinePageFromTimelineResult({
 			timeline: true,
@@ -310,7 +339,9 @@ describe("workbench-state", () => {
 				{ id: "c", type: "user", requestId: "c", content: "c", sentAtUtc: "2026-01-01T00:00:00.000Z" }
 			],
 			latestWorkflowSnapshot: null,
-			latestAgentSnapshot: null
+			latestAgentSnapshot: null,
+			latestPlanClarification: null,
+			latestPlanApproval: null
 		});
 
 		expect(mergeTimelineBefore(current, previous).blocks.map((block) => block.id)).toEqual(["a", "b", "c"]);

@@ -21,3 +21,8 @@
 		transparent 100%
 	);
 }
+
+.modalMarkdown {
+	max-height: 520px;
+	overflow-y: auto;
+}

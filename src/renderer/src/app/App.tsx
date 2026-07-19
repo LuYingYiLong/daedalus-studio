@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { message as antdMessage } from "antd";
 import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
-import type { AdditionalContextItem, PlanClarificationState, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, TimelineBodyPart, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, PlanApprovalState, PlanClarificationState, PlanRecommendedReply, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import { createSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
@@ -42,7 +42,7 @@ import { getWorkflowTodoSnapshotKey, isWorkflowTodoClearEvent, normalizeWorkflow
 import { saveImageAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
 import { DEFAULT_CLIENT_PREFERENCES, fetchClientPreferences, updateClientPreferences, type ClientPreferences } from "@/api/client-preferences-api";
 import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
-import { submitPlanClarification } from "@/api/plan-api";
+import { approvePlan, revisePlan, submitPlanClarification, type PlanResult } from "@/api/plan-api";
 
 type SupportedImageMimeType = SaveImageAttachmentParams["mimeType"];
 type WorkspacePickedEntry = {
@@ -57,8 +57,6 @@ const MAX_IMAGE_ATTACHMENT_BYTES: number = 1024 * 1024;
 const RECENT_CONTEXT_FILE_WINDOW_MS: number = 2000;
 const PLAN_CLARIFICATION_SKIP_REPLY: string = "Continue with the current assumptions.";
 
-type TimelineStatusPart = Extract<TimelineBodyPart, { type: "status" }>;
-
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -67,53 +65,106 @@ function createPlanClarificationKey(clarification: PlanClarificationState): stri
 	return `${clarification.planId}\u0000${clarification.question}`;
 }
 
-function getPlanClarificationFromStatus(part: TimelineStatusPart): PlanClarificationState | null {
-	if (part.code !== "plan.clarification.required") {
+function createPlanApprovalKey(plan: PlanApprovalState): string {
+	return `${plan.planId}\u0000${plan.updatedAt}\u0000${plan.previewMarkdown}`;
+}
+
+function getStringField(record: Record<string, unknown>, key: string): string {
+	const value: unknown = record[key];
+	return typeof value === "string" ? value : "";
+}
+
+function parsePlanRecommendedReplies(value: unknown): PlanRecommendedReply[] {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+
+	const replies: PlanRecommendedReply[] = [];
+	for (const item of value.slice(0, 3)) {
+		if (!isRecord(item)) {
+			continue;
+		}
+
+		const label: string = getStringField(item, "label").trim();
+		const text: string = getStringField(item, "text").trim();
+		const description: string = getStringField(item, "description").trim();
+		if (label.length === 0 || text.length === 0) {
+			continue;
+		}
+
+		replies.push({
+			label,
+			text,
+			description: description.length > 0 ? description : undefined
+		});
+	}
+	return replies;
+}
+
+function normalizePlanClarification(value: unknown): PlanClarificationState | null {
+	if (!isRecord(value)) {
 		return null;
 	}
 
-	const planId: string = part.planId?.trim() ?? "";
-	const question: string = part.details.trim();
+	const planId: string = getStringField(value, "planId").trim();
+	const question: string = getStringField(value, "question").trim();
 	if (planId.length === 0 || question.length === 0) {
 		return null;
 	}
 
+	const title: string = getStringField(value, "title").trim();
 	return {
 		planId,
-		title: part.title.trim().length > 0 ? part.title.trim() : "Plan clarification",
+		title: title.length > 0 ? title : "Plan clarification",
 		question,
-		recommendedReplies: part.recommendedReplies ?? []
+		recommendedReplies: parsePlanRecommendedReplies(value.recommendedReplies)
 	};
 }
 
-function getLatestPlanClarification(blocks: readonly TimelineBlock[]): PlanClarificationState | null {
-	let pendingClarification: PlanClarificationState | null = null;
-
-	for (const block of blocks) {
-		if (block.type !== "assistant") {
-			continue;
-		}
-
-		for (const part of block.bodyParts) {
-			if (part.type === "status") {
-				const clarification: PlanClarificationState | null = getPlanClarificationFromStatus(part);
-				if (clarification !== null) {
-					pendingClarification = clarification;
-					continue;
-				}
-				if (part.planId !== undefined && part.planId === pendingClarification?.planId && part.code === "plan.approved") {
-					pendingClarification = null;
-				}
-				continue;
-			}
-
-			if (part.type === "plan" && part.planId === pendingClarification?.planId) {
-				pendingClarification = null;
-			}
-		}
+function getPlanClarificationFromEvent(event: BackendEvent): PlanClarificationState | null {
+	if (event.event !== "plan.clarification.required") {
+		return null;
 	}
 
-	return pendingClarification;
+	return normalizePlanClarification(event.data);
+}
+
+function normalizePlanApproval(value: unknown): PlanApprovalState | null {
+	if (!isRecord(value)) {
+		return null;
+	}
+
+	const planId: string = getStringField(value, "planId").trim();
+	const status: string = getStringField(value, "status").trim();
+	const previewMarkdown: string = getStringField(value, "previewMarkdown").trim();
+	if (planId.length === 0 || status !== "ready") {
+		return null;
+	}
+
+	const title: string = getStringField(value, "title").trim();
+	return {
+		planId,
+		title: title.length > 0 ? title : "Plan",
+		status,
+		previewMarkdown,
+		updatedAt: getStringField(value, "updatedAt").trim()
+	};
+}
+
+function getPlanApprovalFromEvent(event: BackendEvent): PlanApprovalState | null {
+	if (event.event !== "plan.generated" && event.event !== "plan.revised") {
+		return null;
+	}
+
+	return normalizePlanApproval(event.data);
+}
+
+function getPlanApprovalFromResult(result: PlanResult): PlanApprovalState | null {
+	return normalizePlanApproval(result);
+}
+
+function getPlanIdFromEvent(event: BackendEvent): string {
+	return isRecord(event.data) ? getStringField(event.data, "planId").trim() : "";
 }
 
 function createContextId(): string {
@@ -494,9 +545,14 @@ function App(): React.JSX.Element {
 	const [approvalError, setApprovalError] = useState<string | null>(null);
 	const [isApproving, setIsApproving] = useState<boolean>(false);
 	const [isRejecting, setIsRejecting] = useState<boolean>(false);
+	const [latestPlanClarification, setLatestPlanClarification] = useState<PlanClarificationState | null>(null);
 	const [suppressedPlanClarificationKey, setSuppressedPlanClarificationKey] = useState<string | null>(null);
 	const [isPlanClarificationSubmitting, setIsPlanClarificationSubmitting] = useState<boolean>(false);
 	const [planClarificationError, setPlanClarificationError] = useState<string | null>(null);
+	const [latestPlanApproval, setLatestPlanApproval] = useState<PlanApprovalState | null>(null);
+	const [isPlanApproving, setIsPlanApproving] = useState<boolean>(false);
+	const [isPlanRevising, setIsPlanRevising] = useState<boolean>(false);
+	const [planApprovalError, setPlanApprovalError] = useState<string | null>(null);
 	const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
@@ -515,6 +571,12 @@ function App(): React.JSX.Element {
 	const skillsRetryAtRef = useRef<number>(0);
 	const recentContextFileSignaturesRef = useRef<Map<string, number>>(new Map());
 	const initializedWorkflowTodoKeyRef = useRef<string>("");
+
+	useEffect((): void => {
+		if (workbench?.activeRun.status === "idle") {
+			activeChatRequestIdRef.current = null;
+		}
+	}, [workbench?.activeRun.requestId, workbench?.activeRun.status]);
 
 	const loadSlashCommands = useCallback(async (): Promise<void> => {
 		if (slashCommandsLoadingRef.current || Date.now() < slashCommandsRetryAtRef.current) {
@@ -568,9 +630,17 @@ function App(): React.JSX.Element {
 	}
 
 	function resetPlanClarificationUiState(): void {
+		setLatestPlanClarification(null);
 		setSuppressedPlanClarificationKey(null);
 		setIsPlanClarificationSubmitting(false);
 		setPlanClarificationError(null);
+	}
+
+	function resetPlanApprovalUiState(): void {
+		setLatestPlanApproval(null);
+		setIsPlanApproving(false);
+		setIsPlanRevising(false);
+		setPlanApprovalError(null);
 	}
 
 	function applyInitialWorkflowTodoPreference(snapshot: WorkflowTodoSnapshot | null): void {
@@ -922,6 +992,40 @@ function App(): React.JSX.Element {
 						rememberLoadedWorkflowTodo(null);
 					}
 
+					const eventPlanClarification: PlanClarificationState | null = getPlanClarificationFromEvent(event);
+					if (eventPlanClarification !== null) {
+						setLatestPlanClarification(eventPlanClarification);
+						setLatestPlanApproval(null);
+						setPlanClarificationError(null);
+						setIsPlanClarificationSubmitting(false);
+					} else {
+						const eventPlanApproval: PlanApprovalState | null = getPlanApprovalFromEvent(event);
+						if (eventPlanApproval !== null) {
+							setLatestPlanApproval(eventPlanApproval);
+							setPlanApprovalError(null);
+							setIsPlanApproving(false);
+							setIsPlanRevising(false);
+						}
+					}
+					if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.approved") {
+						const eventPlanId: string = getPlanIdFromEvent(event);
+						setLatestPlanClarification((currentClarification: PlanClarificationState | null): PlanClarificationState | null => {
+							if (currentClarification === null) {
+								return null;
+							}
+							return eventPlanId.length === 0 || eventPlanId === currentClarification.planId ? null : currentClarification;
+						});
+					}
+					if (event.event === "plan.approved" || event.event === "plan.execution.started") {
+						const eventPlanId: string = getPlanIdFromEvent(event);
+						setLatestPlanApproval((currentPlanApproval: PlanApprovalState | null): PlanApprovalState | null => {
+							if (currentPlanApproval === null) {
+								return null;
+							}
+							return eventPlanId.length === 0 || eventPlanId === currentPlanApproval.planId ? null : currentPlanApproval;
+						});
+					}
+
 					setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 						return {
 							...currentPage,
@@ -982,6 +1086,7 @@ function App(): React.JSX.Element {
 		setWebSearchEnabled(false);
 		rememberLoadedWorkflowTodo(null);
 		resetPlanClarificationUiState();
+		resetPlanApprovalUiState();
 		setActiveRetryRequestId(null);
 		setSessionError(null);
 		void loadHomeWorkspaces();
@@ -1002,6 +1107,7 @@ function App(): React.JSX.Element {
 		setWebSearchEnabled(false);
 		rememberLoadedWorkflowTodo(null);
 		resetPlanClarificationUiState();
+		resetPlanApprovalUiState();
 		setActiveRetryRequestId(null);
 		setSessionError(null);
 		setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
@@ -1121,10 +1227,13 @@ function App(): React.JSX.Element {
 			setWorkflowTodoSnapshot(null);
 			rememberLoadedWorkflowTodo(null);
 			resetPlanClarificationUiState();
+			resetPlanApprovalUiState();
 
 			const result: SessionOpenResult = await openSession(sessionId);
 
 			setTimelinePage(createTimelinePageFromOpenResult(result));
+			setLatestPlanClarification(result.latestPlanClarification);
+			setLatestPlanApproval(result.latestPlanApproval);
 			setActiveSessionMetadata(result.metadata);
 			setWebSearchEnabled(result.metadata.webSearchEnabled === true);
 			setWorkbench(result.workbench);
@@ -1156,6 +1265,7 @@ function App(): React.JSX.Element {
 		setWorkflowTodoSnapshot(null);
 		rememberLoadedWorkflowTodo(null);
 		resetPlanClarificationUiState();
+		resetPlanApprovalUiState();
 		setActiveRetryRequestId(null);
 		setActiveWorkspace(null);
 		setSessionError(null);
@@ -1704,6 +1814,8 @@ function App(): React.JSX.Element {
 		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 			return mergeOptimisticUserBlocks(currentPage, createTimelinePageFromTimelineResult(timeline));
 		});
+		setLatestPlanClarification(timeline.latestPlanClarification);
+		setLatestPlanApproval(timeline.latestPlanApproval);
 		const workflowTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromTimelineResult(timeline);
 		setWorkflowTodoSnapshot(workflowTodo);
 		rememberLoadedWorkflowTodo(workflowTodo);
@@ -1968,9 +2080,6 @@ function App(): React.JSX.Element {
 		? homeDraft.modelId ?? providerModelSelection?.activeModel.modelId ?? null
 		: workbench?.composer.model ?? providerModelSelection?.activeModel.modelId ?? null;
 	const timelineBlocks: TimelineBlock[] = timelinePage.blocks;
-	const latestPlanClarification: PlanClarificationState | null = useMemo((): PlanClarificationState | null => {
-		return getLatestPlanClarification(timelineBlocks);
-	}, [timelineBlocks]);
 	const latestPlanClarificationKey: string | null = latestPlanClarification === null
 		? null
 		: createPlanClarificationKey(latestPlanClarification);
@@ -1978,6 +2087,10 @@ function App(): React.JSX.Element {
 		&& latestPlanClarificationKey === suppressedPlanClarificationKey
 		? null
 		: latestPlanClarification;
+	const latestPlanApprovalKey: string | null = latestPlanApproval === null
+		? null
+		: createPlanApprovalKey(latestPlanApproval);
+	const pendingPlanApproval: PlanApprovalState | null = latestPlanApproval;
 	const chatTitle: string = isNewSessionHome ? "New session" : getSessionTitle(activeSessionMetadata, activeSessionId);
 	const initialScrollToBottomKey: string = activeSessionId === null ? "" : `${activeSessionId}:${timelinePage.blockCount}`;
 	const composerMessage: string = isNewSessionHome ? homeDraft.message : workbench?.composer.text ?? "";
@@ -2005,6 +2118,12 @@ function App(): React.JSX.Element {
 		}
 	}, [latestPlanClarificationKey, suppressedPlanClarificationKey]);
 
+	useEffect((): void => {
+		setPlanApprovalError(null);
+		setIsPlanApproving(false);
+		setIsPlanRevising(false);
+	}, [latestPlanApprovalKey]);
+
 	async function handlePlanClarificationSubmit(reply: string): Promise<void> {
 		const clarification: PlanClarificationState | null = pendingPlanClarification;
 		const trimmedReply: string = reply.trim();
@@ -2023,6 +2142,53 @@ function App(): React.JSX.Element {
 			console.error("[App] submit plan clarification failed", error);
 		} finally {
 			setIsPlanClarificationSubmitting(false);
+		}
+	}
+
+	async function handlePlanApprove(planId: string): Promise<void> {
+		if (latestPlanApproval === null || planId !== latestPlanApproval.planId || isPlanApproving || isPlanRevising) {
+			return;
+		}
+
+		try {
+			setIsPlanApproving(true);
+			setPlanApprovalError(null);
+			const result = await approvePlan(planId);
+			activeChatRequestIdRef.current = result.executionRequestId;
+			applyOptimisticSend(result.executionRequestId, "执行计划。", []);
+			setLatestPlanApproval((currentPlanApproval: PlanApprovalState | null): PlanApprovalState | null => {
+				return currentPlanApproval?.planId === planId ? null : currentPlanApproval;
+			});
+		} catch (error: unknown) {
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to approve plan";
+			setPlanApprovalError(errorMessage);
+			console.error("[App] approve plan failed", error);
+		} finally {
+			setIsPlanApproving(false);
+		}
+	}
+
+	async function handlePlanRevise(planId: string, feedback: string): Promise<void> {
+		const trimmedFeedback: string = feedback.trim();
+		if (latestPlanApproval === null || planId !== latestPlanApproval.planId || trimmedFeedback.length === 0 || isPlanApproving || isPlanRevising) {
+			return;
+		}
+
+		try {
+			setIsPlanRevising(true);
+			setPlanApprovalError(null);
+			const result: PlanResult = await revisePlan(planId, trimmedFeedback);
+			const nextPlanApproval: PlanApprovalState | null = getPlanApprovalFromResult(result);
+			setLatestPlanApproval(nextPlanApproval);
+			if (result.status === "clarification_required") {
+				setLatestPlanClarification(normalizePlanClarification(result));
+			}
+		} catch (error: unknown) {
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to revise plan";
+			setPlanApprovalError(errorMessage);
+			console.error("[App] revise plan failed", error);
+		} finally {
+			setIsPlanRevising(false);
 		}
 	}
 
@@ -2062,6 +2228,10 @@ function App(): React.JSX.Element {
 					pendingPlanClarification={pendingPlanClarification}
 					isPlanClarificationSubmitting={isPlanClarificationSubmitting}
 					planClarificationError={planClarificationError}
+					pendingPlanApproval={pendingPlanApproval}
+					isPlanApproving={isPlanApproving}
+					isPlanRevising={isPlanRevising}
+					planApprovalError={planApprovalError}
 					slashCommands={slashCommands}
 					skills={skills}
 					isSending={composerIsSending}
@@ -2121,6 +2291,12 @@ function App(): React.JSX.Element {
 					}}
 					onPlanClarificationSkip={(): void => {
 						void handlePlanClarificationSubmit(PLAN_CLARIFICATION_SKIP_REPLY);
+					}}
+					onPlanApprove={(planId: string): void => {
+						void handlePlanApprove(planId);
+					}}
+					onPlanRevise={(planId: string, feedback: string): void => {
+						void handlePlanRevise(planId, feedback);
 					}}
 					onWebSearchEnabledChange={handleWebSearchEnabledChange}
 					onProviderModelChange={(providerId: string, modelId: string): void => {

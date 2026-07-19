@@ -39,9 +39,6 @@ function ClarificationDialog({
 					<Typography.Title level={4} className={styles.title}>
 						Clarification needed
 					</Typography.Title>
-					<Typography.Text className={styles.subtitle}>
-						{title}
-					</Typography.Text>
 				</div>
 			</header>
 

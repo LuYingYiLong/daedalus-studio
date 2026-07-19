@@ -1,5 +1,5 @@
 import type { BackendEvent } from "@/api/backend-rpc-client";
-import type { PlanRecommendedReply, SessionOpenResult, SessionTimelineResult, TimelineAssistantBlock, TimelineBlock, TimelineBodyPart, WorkbenchSnapshot } from "@/api/types";
+import type { SessionOpenResult, SessionTimelineResult, TimelineAssistantBlock, TimelineBlock, TimelineBodyPart, WorkbenchSnapshot } from "@/api/types";
 
 export type TimelinePageState = {
 	blocks: TimelineBlock[];
@@ -49,32 +49,6 @@ function getStringValue(record: Record<string, unknown>, key: string): string {
 	const value: unknown = record[key];
 
 	return typeof value === "string" ? value : "";
-}
-
-function parsePlanRecommendedReplies(value: unknown): PlanRecommendedReply[] {
-	if (!Array.isArray(value)) {
-		return [];
-	}
-
-	const replies: PlanRecommendedReply[] = [];
-	for (const item of value.slice(0, 3)) {
-		if (!isRecord(item)) {
-			continue;
-		}
-
-		const label: string = getStringValue(item, "label").trim();
-		const text: string = getStringValue(item, "text").trim();
-		const description: string = getStringValue(item, "description").trim();
-		if (label.length === 0 || text.length === 0) {
-			continue;
-		}
-		replies.push({
-			label,
-			text,
-			description: description.length > 0 ? description : undefined
-		});
-	}
-	return replies;
 }
 
 function appendMarkdownPart(parts: TimelineBodyPart[], text: string): TimelineBodyPart[] {
@@ -290,8 +264,40 @@ function bodyPartHasRunId(part: TimelineBodyPart, runId: string): boolean {
 	return false;
 }
 
+function getCanonicalEventRequestId(event: BackendEvent): string {
+	const data: Record<string, unknown> = getEventData(event);
+
+	if (event.event === "plan.execution.started") {
+		const executionRequestId: string = getStringValue(data, "executionRequestId");
+		return executionRequestId.length > 0 ? executionRequestId : event.id;
+	}
+
+	if (event.event.startsWith("plan.") || event.event === "agent.message.done") {
+		const requestId: string = getStringValue(data, "requestId");
+		if (requestId.length > 0) {
+			return requestId;
+		}
+	}
+
+	return event.id;
+}
+
+function replaceOrAppendPlanPart(parts: TimelineBodyPart[], planPart: Extract<TimelineBodyPart, { type: "plan" }>): TimelineBodyPart[] {
+	const existingIndex: number = parts.findIndex((part: TimelineBodyPart): boolean => {
+		return part.type === "plan" && part.planId === planPart.planId;
+	});
+
+	if (existingIndex < 0) {
+		return [...parts, planPart];
+	}
+
+	return parts.map((part: TimelineBodyPart, index: number): TimelineBodyPart => {
+		return index === existingIndex ? planPart : part;
+	});
+}
+
 function assistantBlockMatchesEvent(block: TimelineAssistantBlock, event: BackendEvent): boolean {
-	if (block.requestId === event.id) {
+	if (block.requestId === event.id || block.requestId === getCanonicalEventRequestId(event)) {
 		return true;
 	}
 
@@ -330,24 +336,14 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		const planId: string = getStringValue(data, "planId");
 
 		if (planId.length > 0) {
-			nextParts = [...nextParts, {
+			nextParts = replaceOrAppendPlanPart(nextParts, {
 				type: "plan",
 				planId,
 				title: getStringValue(data, "title") || "Plan",
 				status: getStringValue(data, "status"),
 				previewMarkdown: getStringValue(data, "previewMarkdown") || getStringValue(data, "markdown")
-			}];
+			});
 		}
-	} else if (event.event === "plan.clarification.required") {
-		nextParts = [...nextParts, {
-			type: "status",
-			status: "message",
-			title: getStringValue(data, "title"),
-			details: getStringValue(data, "question"),
-			code: "plan.clarification.required",
-			planId: getStringValue(data, "planId"),
-			recommendedReplies: parsePlanRecommendedReplies(data.recommendedReplies)
-		}];
 	} else if (event.event === "agent.run.error" || event.event === "workflow.error") {
 		nextStatus = "failed";
 		completedAtUtc = nowIso;
@@ -394,17 +390,17 @@ function shouldCreateAssistantBlock(event: BackendEvent): boolean {
 		|| event.event.startsWith("tool.")
 		|| event.event === "ai.status"
 		|| event.event === "plan.generated"
-		|| event.event === "plan.revised"
-		|| event.event === "plan.clarification.required";
+		|| event.event === "plan.revised";
 }
 
 function createLiveAssistantBlock(event: BackendEvent): TimelineAssistantBlock {
 	const nowIso: string = new Date().toISOString();
+	const requestId: string = getCanonicalEventRequestId(event);
 
 	return updateAssistantBlockFromEvent({
-		id: `live:${event.id}:assistant`,
+		id: `live:${requestId}:assistant`,
 		type: "assistant",
-		requestId: event.id,
+		requestId,
 		content: "",
 		startedAtUtc: nowIso,
 		completedAtUtc: nowIso,

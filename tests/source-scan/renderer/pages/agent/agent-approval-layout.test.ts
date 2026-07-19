@@ -15,7 +15,9 @@ describe("AgentPage approval layout source", () => {
 	it("renders plan clarification in the composer slot after approval and before composer", () => {
 		expect(source).toContain("pendingPlanClarification !== null ? (");
 		expect(source).toContain("<ClarificationDialog");
+		expect(source).toContain("<PlanApprovalDialog");
 		expect(source.indexOf("<ApprovalDialog")).toBeLessThan(source.indexOf("<ClarificationDialog"));
-		expect(source.indexOf("<ClarificationDialog")).toBeLessThan(source.indexOf("<Composer"));
+		expect(source.indexOf("<ClarificationDialog")).toBeLessThan(source.indexOf("<PlanApprovalDialog"));
+		expect(source.indexOf("<PlanApprovalDialog")).toBeLessThan(source.indexOf("<Composer"));
 	});
 });

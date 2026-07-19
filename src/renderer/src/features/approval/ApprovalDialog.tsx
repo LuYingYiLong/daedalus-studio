@@ -26,19 +26,13 @@ function ApprovalDialog({
 		return null;
 	}
 
-	const approvalDialogStyle: React.CSSProperties = {
-		backgroundColor: token.colorBgElevated,
-		borderColor: token.colorBorderSecondary,
-		borderRadius: token.borderRadiusLG,
-		boxShadow: "none"
-	};
 	const approvalActionButtonStyle: React.CSSProperties = {
 		borderRadius: token.borderRadiusSM
 	};
 	const isBusy: boolean = isApproving || isRejecting;
 
 	return (
-		<div className={styles.approvalDialog} style={approvalDialogStyle}>
+		<div className={styles.approvalDialog}>
 			<header className={styles.header}>
 				<div className={styles.titleGroup}>
 					<Typography.Title level={4} className={styles.title}>

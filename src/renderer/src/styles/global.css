@@ -215,6 +215,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
+	border-radius: var(--ds-space-2);
 	background: var(--ds-bg);
 }
 
