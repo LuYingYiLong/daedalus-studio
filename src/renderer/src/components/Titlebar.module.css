@@ -7,21 +7,16 @@
 	height: 36px;
 	min-height: 36px;
 	max-height: 36px;
-	padding-left: 8px;
 	overflow: hidden;
 	user-select: none;
 	-webkit-app-region: drag;
 	background-color: var(--ds-surface-active);
 }
 
-.brandIcon {
-	flex: 0 0 auto;
-	width: 20px;
-	height: 20px;
-	margin-right: 8px;
-}
-
 .brandName {
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
 	margin: 0;
 	font-size: 16px;
 	line-height: 36px;

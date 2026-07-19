@@ -2,7 +2,7 @@
   "name": "daedalus-studio",
   "version": "1.0.0",
   "description": "daedalus-studio",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "author": "LuYingYiLong",
   "main": "out/main/index.js",
   "config": {

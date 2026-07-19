@@ -59,3 +59,9 @@
 	gap: 8px;
 	width: min(520px, 100%);
 }
+
+.sliderControl {
+	width: min(520px, 42vw);
+	min-width: 320px;
+	padding: 0 8px;
+}

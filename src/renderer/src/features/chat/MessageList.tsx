@@ -52,6 +52,18 @@ function getAssistantMarkdown(block: TimelineAssistantBlock): string {
 	return markdown.length > 0 ? markdown : block.content;
 }
 
+export function shouldRenderTimelineBlock(block: TimelineBlock): boolean {
+	if (block.type !== "assistant") {
+		return true;
+	}
+
+	if (block.status === "running") {
+		return true;
+	}
+
+	return block.content.trim().length > 0 || block.bodyParts.length > 0;
+}
+
 function estimateBlockHeight(block: TimelineBlock): number {
 	if (block.renderHints?.estimatedHeight !== undefined) {
 		return Math.max(56, block.renderHints.estimatedHeight);
@@ -125,20 +137,23 @@ function MessageList({
 		startIndex: 0,
 		endIndex: 0
 	});
-	const hasRunningAssistantBlock: boolean = blocks.some((block: TimelineBlock): boolean => {
+	const renderableBlocks: TimelineBlock[] = useMemo((): TimelineBlock[] => {
+		return blocks.filter(shouldRenderTimelineBlock);
+	}, [blocks]);
+	const hasRunningAssistantBlock: boolean = renderableBlocks.some((block: TimelineBlock): boolean => {
 		return block.type === "assistant" && block.status === "running";
 	});
 	const heightById: Map<string, number> = measuredHeightsRef.current;
 	const estimatedHeights: number[] = useMemo((): number[] => {
-		return blocks.map((block: TimelineBlock): number => heightById.get(block.id) ?? estimateBlockHeight(block));
-	}, [blocks, heightById, measurementVersion]);
+		return renderableBlocks.map((block: TimelineBlock): number => heightById.get(block.id) ?? estimateBlockHeight(block));
+	}, [renderableBlocks, heightById, measurementVersion]);
 	const prefixHeights: number[] = useMemo((): number[] => createPrefixHeights(estimatedHeights), [estimatedHeights]);
 	const totalEstimatedHeight: number = prefixHeights[prefixHeights.length - 1] ?? 0;
 	const startIndex: number = visibleRange.startIndex;
 	const endIndex: number = visibleRange.endIndex;
 	const topSpacerHeight: number = prefixHeights[startIndex] ?? 0;
 	const bottomSpacerHeight: number = Math.max(0, totalEstimatedHeight - (prefixHeights[endIndex] ?? 0));
-	const visibleBlocks: TimelineBlock[] = blocks.slice(startIndex, endIndex);
+	const visibleBlocks: TimelineBlock[] = renderableBlocks.slice(startIndex, endIndex);
 	const visibleBlockIds: string = visibleBlocks.map((block: TimelineBlock): string => block.id).join("\n");
 
 	const updateVisibleRange = useCallback((): void => {
@@ -146,7 +161,7 @@ function MessageList({
 			prefixHeights,
 			viewportScrollTopRef.current,
 			viewportHeightRef.current,
-			blocks.length,
+			renderableBlocks.length,
 			OVERSCAN_BLOCKS
 		);
 
@@ -156,7 +171,7 @@ function MessageList({
 
 		visibleRangeRef.current = nextVisibleRange;
 		setVisibleRange(nextVisibleRange);
-	}, [blocks.length, prefixHeights]);
+	}, [renderableBlocks.length, prefixHeights]);
 
 	const scheduleVisibleRangeUpdate = useCallback((): void => {
 		if (viewportFrameRef.current !== null) {
@@ -306,7 +321,7 @@ function MessageList({
 		element.scrollTop += nextTop - anchor.top;
 		pendingAnchorRef.current = null;
 		updateViewport();
-	}, [blocks, updateViewport]);
+	}, [renderableBlocks, updateViewport]);
 
 	useLayoutEffect((): void => {
 		const element: HTMLElement | null = listRef.current;
@@ -336,8 +351,8 @@ function MessageList({
 
 	useEffect((): void => {
 		const element: HTMLElement | null = listRef.current;
-		const blockCountIncreased: boolean = blocks.length > lastBlockCountRef.current;
-		lastBlockCountRef.current = blocks.length;
+		const blockCountIncreased: boolean = renderableBlocks.length > lastBlockCountRef.current;
+		lastBlockCountRef.current = renderableBlocks.length;
 
 		if (element === null || isLoading) {
 			return;
@@ -351,7 +366,7 @@ function MessageList({
 				}
 			});
 		}
-	}, [blocks, hasRunningAssistantBlock, isLoading, updateViewport]);
+	}, [renderableBlocks, hasRunningAssistantBlock, isLoading, updateViewport]);
 
 	useEffect((): (() => void) | void => {
 		if (!hasRunningAssistantBlock) {

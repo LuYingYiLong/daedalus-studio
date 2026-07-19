@@ -13,8 +13,6 @@ const topBarItems: MenuProps["items"] = [
 function Titlebar(): React.JSX.Element {
 	return (
 		<div className={styles.root}>
-			<Icon className={styles.brandIcon} name="daedalus_icon" />
-			<p className={styles.brandName}>Daedalus Studio</p>
 			<Dropdown
 				menu={{ items: topBarItems }}
 				trigger={["click"]}
@@ -23,6 +21,7 @@ function Titlebar(): React.JSX.Element {
 					Files
 				</Space>
 			</Dropdown>
+			<p className={styles.brandName}>Daedalus Studio</p>
 		</div>
 	);
 }

@@ -14,6 +14,10 @@ describe("SearchSettingsPage", () => {
 		expect(settingsSource).toContain('icon: <Icon name="search" />');
 		expect(pageSource).not.toContain("Enable web search");
 		expect(pageSource).toContain("Search model");
+		expect(pageSource).toContain("Search result count");
+		expect(pageSource).toContain("SEARCH_RESULT_MARKS");
+		expect(pageSource).toContain("onChangeComplete");
+		expect(apiSource).toContain("maxResults: number");
 		expect(pageSource).toContain("Composer Search button");
 		expect(apiSource).toContain('client.request<WebSearchSettings>("webSearchSettings.get")');
 		expect(apiSource).toContain('client.request<WebSearchSettings>("webSearchSettings.update", patch)');

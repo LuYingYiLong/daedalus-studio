@@ -16,6 +16,7 @@ export type WebSearchSettings = {
 	schemaVersion: 1;
 	provider: string;
 	model: string;
+	maxResults: number;
 	updatedAt: string;
 	available: boolean;
 	configured: boolean;
@@ -27,6 +28,7 @@ export type WebSearchSettings = {
 export type WebSearchSettingsPatch = {
 	provider?: string;
 	model?: string;
+	maxResults?: number;
 };
 
 export async function fetchWebSearchSettings(): Promise<WebSearchSettings> {

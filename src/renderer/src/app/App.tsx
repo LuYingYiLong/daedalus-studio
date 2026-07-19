@@ -568,6 +568,7 @@ function App(): React.JSX.Element {
 	const patchTimerRef = useRef<number | null>(null);
 	const patchSequenceRef = useRef<number>(0);
 	const isTimelinePageLoadingRef = useRef<boolean>(false);
+	const navigationVersionRef = useRef<number>(0);
 	const activeChatRequestIdRef = useRef<string | null>(null);
 	const submittedComposerTextRef = useRef<{ requestId: string; text: string } | null>(null);
 	const slashCommandsLoadingRef = useRef<boolean>(false);
@@ -1079,6 +1080,7 @@ function App(): React.JSX.Element {
 	}
 
 	function handleNewSession(): void {
+		navigationVersionRef.current += 1;
 		takePendingWorkbenchPatch();
 		submittedComposerTextRef.current = null;
 		setIsNewSessionHome(true);
@@ -1100,6 +1102,8 @@ function App(): React.JSX.Element {
 	}
 
 	async function handleNewWorkspaceSession(workspace: WorkspaceConfig): Promise<void> {
+		const navigationVersion: number = navigationVersionRef.current + 1;
+		navigationVersionRef.current = navigationVersion;
 		takePendingWorkbenchPatch();
 		submittedComposerTextRef.current = null;
 		setIsNewSessionHome(true);
@@ -1126,6 +1130,10 @@ function App(): React.JSX.Element {
 
 		try {
 			const selectedWorkspace = await selectWorkspace(workspace.id);
+			if (navigationVersionRef.current !== navigationVersion || activeSessionIdRef.current !== null) {
+				return;
+			}
+
 			setActiveWorkspace(selectedWorkspace);
 			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
 				...currentDraft,
@@ -1148,8 +1156,13 @@ function App(): React.JSX.Element {
 	}
 
 	async function handleHomeWorkspaceSelect(workspaceId: string): Promise<void> {
+		const navigationVersion: number = navigationVersionRef.current + 1;
+		navigationVersionRef.current = navigationVersion;
 		try {
 			const workspace = await selectWorkspace(workspaceId);
+			if (navigationVersionRef.current !== navigationVersion || activeSessionIdRef.current !== null) {
+				return;
+			}
 
 			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
 				...currentDraft,
@@ -1165,6 +1178,7 @@ function App(): React.JSX.Element {
 	}
 
 	function handleHomeWorkspaceClear(): void {
+		navigationVersionRef.current += 1;
 		setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
 			...currentDraft,
 			workspaceId: null,
@@ -1178,6 +1192,8 @@ function App(): React.JSX.Element {
 			return;
 		}
 
+		const navigationVersion: number = navigationVersionRef.current + 1;
+		navigationVersionRef.current = navigationVersion;
 		try {
 			setIsWorkspaceAdding(true);
 			const directory: string | null = await window.electronAPI.workspaceFs.pickWorkspaceDirectory();
@@ -1189,6 +1205,9 @@ function App(): React.JSX.Element {
 			const workspace: WorkspaceConfig | null = result.workspace;
 			if (workspace === null) {
 				throw new Error("Workspace registration did not return a workspace");
+			}
+			if (navigationVersionRef.current !== navigationVersion || activeSessionIdRef.current !== null) {
+				return;
 			}
 
 			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
@@ -1218,6 +1237,8 @@ function App(): React.JSX.Element {
 	}
 
 	async function handleSessionSelect(session: SessionMetadata): Promise<void> {
+		const navigationVersion: number = navigationVersionRef.current + 1;
+		navigationVersionRef.current = navigationVersion;
 		const sessionId: string = session.id;
 		console.info("[App] session selected", { sessionId });
 
@@ -1237,6 +1258,9 @@ function App(): React.JSX.Element {
 			resetPlanApprovalUiState();
 
 			const result: SessionOpenResult = await openSession(sessionId);
+			if (navigationVersionRef.current !== navigationVersion || activeSessionIdRef.current !== sessionId) {
+				return;
+			}
 
 			setTimelinePage(createTimelinePageFromOpenResult(result));
 			setLatestPlanClarification(result.latestPlanClarification);
@@ -1264,6 +1288,7 @@ function App(): React.JSX.Element {
 	}
 
 	function resetToNewSessionHome(): void {
+		navigationVersionRef.current += 1;
 		activeSessionIdRef.current = null;
 		setActiveSessionId(null);
 		setActiveSessionMetadata(null);
@@ -2111,7 +2136,12 @@ function App(): React.JSX.Element {
 	const composerMessage: string = isNewSessionHome ? homeDraft.message : workbench?.composer.text ?? "";
 	const composerMode: ChatMode = isNewSessionHome ? homeDraft.chatMode : getChatMode(workbench);
 	const composerContextItems: AdditionalContextItem[] = isNewSessionHome ? [] : workbench?.composer.additionalContext ?? [];
-	const displayedWorkspace: WorkspaceConfig | null = isNewSessionHome ? homeDraft.workspace : activeWorkspace;
+	const currentSessionWorkspaceId: string | null = activeSessionMetadata?.workspaceId ?? null;
+	const displayedWorkspace: WorkspaceConfig | null = isNewSessionHome
+		? homeDraft.workspace
+		: currentSessionWorkspaceId === null
+			? null
+			: activeWorkspace;
 	const composerIsSending: boolean = getIsSending(workbench) || isHomeSubmitting;
 	const handleWebSearchEnabledChange = (enabled: boolean): void => {
 		setWebSearchEnabled(enabled);
@@ -2231,7 +2261,7 @@ function App(): React.JSX.Element {
 					isHome={isNewSessionHome}
 					activeSessionId={activeSessionId}
 					activeSessionMetadata={activeSessionMetadata}
-					activeWorkspaceId={isNewSessionHome ? homeDraft.workspaceId : activeSessionMetadata?.workspaceId ?? activeWorkspace?.id ?? null}
+					activeWorkspaceId={isNewSessionHome ? homeDraft.workspaceId : currentSessionWorkspaceId}
 					chatTitle={chatTitle}
 					timelineBlocks={timelineBlocks}
 					isSessionLoading={isSessionLoading}

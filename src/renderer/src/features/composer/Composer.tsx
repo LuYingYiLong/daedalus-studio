@@ -1189,6 +1189,7 @@ function Composer({
 					</div>
 				</div>
 			</div>
+			
 			<footer className={styles.footer}>
 				<Flex
 					align="start"

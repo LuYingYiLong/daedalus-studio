@@ -311,8 +311,8 @@
 .contextUsageButtonText {
 	max-width: 0;
 	overflow: hidden;
-	font-family: var(--ds-font-family-code);
-	font-size: 12px;
+	font-family: var(--ds-text-secondary);
+	font-size: 14px;
 	font-variant-numeric: tabular-nums;
 	line-height: 1;
 	opacity: 0;
