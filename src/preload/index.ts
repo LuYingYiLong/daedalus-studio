@@ -74,5 +74,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
 	checkDiskSpace: (driveLetter: string): Promise<{ drive: string; free: number; total: number } | null> => {
 		return ipcRenderer.invoke("electron:checkDiskSpace", driveLetter);
+	},
+
+	appInfo: {
+		getPackageInfo: (): Promise<{ name: string; version: string; description: string; license: string; author: string }> => {
+			return ipcRenderer.invoke("app:get-package-info");
+		}
 	}
 });

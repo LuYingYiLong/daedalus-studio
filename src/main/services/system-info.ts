@@ -1,5 +1,7 @@
 import { ipcMain } from 'electron';
 import { exec } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 
 const execAsync = promisify(exec);
@@ -8,6 +10,14 @@ export interface DiskSpaceInfo {
   drive: string;
   free: number;
   total: number;
+}
+
+export interface PackageInfo {
+  name: string;
+  version: string;
+  description: string;
+  license: string;
+  author: string;
 }
 
 /**
@@ -31,6 +41,31 @@ export function registerSystemInfoIpc(): void {
     } catch (error) {
       console.error('Error checking disk space:', error);
       return null;
+    }
+  });
+
+  // 获取应用 package.json 信息
+  ipcMain.handle('app:get-package-info', async (): Promise<PackageInfo> => {
+    try {
+      const packagePath = join(__dirname, '../../package.json');
+      const packageContent = await readFile(packagePath, 'utf-8');
+      const packageJson = JSON.parse(packageContent);
+      return {
+        name: packageJson.name || 'Daedalus Studio',
+        version: packageJson.version || '1.0.0',
+        description: packageJson.description || '',
+        license: packageJson.license || 'GPL-3.0-only',
+        author: packageJson.author || 'LuYingYiLong'
+      };
+    } catch (error) {
+      console.error('Failed to read package.json:', error);
+      return {
+        name: 'Daedalus Studio',
+        version: '1.0.0',
+        description: '',
+        license: 'GPL-3.0-only',
+        author: 'LuYingYiLong'
+      };
     }
   });
 }

@@ -1,0 +1,101 @@
+.page {
+	display: grid;
+	grid-template-rows: auto auto minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+	padding: var(--ds-space-2);
+	overflow: hidden;
+	user-select: none;
+}
+
+.header {
+	display: grid;
+	gap: 8px;
+}
+
+.titleRow {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 12px;
+	user-select: none;
+}
+
+.appIcon {
+	width: 24px;
+	height: 24px;
+	flex: 0 0 auto;
+}
+
+.title {
+	display: flex;
+	align-items: center;
+	margin: 0 0 8px 0 !important;
+}
+
+.content {
+	display: grid;
+	gap: var(--ds-space-2);
+	overflow: auto;
+	min-height: 0;
+}
+
+.loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 200px;
+}
+
+.infoCard {
+	display: grid;
+	gap: var(--ds-space-2);
+}
+
+.appHeader {
+	display: flex;
+	align-items: center;
+	gap: var(--ds-space-3);
+	padding-bottom: var(--ds-space-2);
+}
+
+.largeAppIcon {
+	width: 64px;
+	height: 64px;
+	flex: 0 0 auto;
+}
+
+.appInfo {
+	display: grid;
+	gap: 8px;
+}
+
+.appName {
+	margin: 0 !important;
+}
+
+.versionTag {
+	justify-self: start;
+}
+
+.description {
+	margin: var(--ds-space-2) 0 0 0;
+	color: var(--ds-text-secondary);
+}
+
+.detailsCard,
+.githubCard {
+	display: grid;
+}
+
+.githubLink {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 16px;
+}
+
+.linkIcon {
+	width: 16px;
+	height: 16px;
+}

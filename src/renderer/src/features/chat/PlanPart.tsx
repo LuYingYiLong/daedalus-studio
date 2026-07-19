@@ -3,9 +3,8 @@ import { Icon } from "@/assets/icons";
 import { Button, Card, Modal, Tooltip } from "antd";
 import React, { useState } from "react";
 import styles from "./PlanPart.module.css"
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { copyTextToClipboard } from "@/utils/clipboard";
+import MarkdownContent from "../markdown/MarkdownContent";
 
 export type TimelinePlanPart = Extract<TimelineBodyPart, { type: "plan" }>;
 export type PlanPartProps = {
@@ -58,9 +57,7 @@ function PlanPart({ part }: PlanPartProps): React.JSX.Element {
 				}}
 			>
 				<div className={`${styles.markdownPreview} markdown-body`}>
-					<Markdown remarkPlugins={[remarkGfm]}>
-						{part.previewMarkdown}
-					</Markdown>
+					<MarkdownContent>{part.previewMarkdown}</MarkdownContent>
 				</div>
 			</Card>
 			<Modal 
@@ -71,9 +68,7 @@ function PlanPart({ part }: PlanPartProps): React.JSX.Element {
 				onCancel={() => setModalOpen(false)}
 			>
 				<div className={`${styles.modalMarkdown} markdown-body`}>
-					<Markdown remarkPlugins={[remarkGfm]}>
-						{part.previewMarkdown}
-					</Markdown>
+					<MarkdownContent>{part.previewMarkdown}</MarkdownContent>
 				</div>
 			</Modal>
 		</div>

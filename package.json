@@ -1,7 +1,7 @@
 {
   "name": "daedalus-studio",
   "version": "1.0.0",
-  "description": "daedalus-studio",
+  "description": "Standalone workbench for AI-assisted Godot development",
   "license": "GPL-3.0-only",
   "author": "LuYingYiLong",
   "main": "out/main/index.js",

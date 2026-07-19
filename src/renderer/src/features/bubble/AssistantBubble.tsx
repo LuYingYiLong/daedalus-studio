@@ -1,5 +1,3 @@
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import styles from "./AssistantBubble.module.css";
 import { Button, Collapse, Divider, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
@@ -12,6 +10,7 @@ import InlineDiffPart from "../chat/InlineDiffPart";
 import ThinkingPart from "../chat/ThinkingPart";
 import ImageGenerationPart from "../chat/ImageGenerationPart";
 import { copyTextToClipboard } from "@/utils/clipboard";
+import MarkdownContent from "../markdown/MarkdownContent";
 
 export type AssistantBubbleProps = {
 	entryId?: string;
@@ -69,9 +68,7 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 		if (part.type === "markdown") {
 			return (
 				<div key={index} className={`${styles.markdownPart} markdown-body`}>
-					<Markdown remarkPlugins={[remarkGfm]}>
-						{part.text}
-					</Markdown>
+					<MarkdownContent>{part.text}</MarkdownContent>
 				</div>
 			);
 		}
@@ -158,9 +155,7 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 					renderBodyParts(bodyParts)
 				) : (
 					<div className="markdown-body">
-						<Markdown remarkPlugins={[remarkGfm]}>
-							{message ?? content ?? ""}
-						</Markdown>
+						<MarkdownContent>{message ?? content ?? ""}</MarkdownContent>
 					</div>
 				)}
 			</div>

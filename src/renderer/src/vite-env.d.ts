@@ -39,6 +39,18 @@ declare global {
 		total: number;
 	}
 
+	interface PackageInfo {
+		name: string;
+		version: string;
+		description: string;
+		license: string;
+		author: string;
+	}
+
+	interface AppInfoAPI {
+		getPackageInfo: () => Promise<PackageInfo>;
+	}
+
 	type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
 
 	interface ElectronAPI {
@@ -93,6 +105,7 @@ declare global {
 			pickSkillZip: () => Promise<string | null>;
 			pickSkillDirectory: () => Promise<string | null>;
 		};
+		appInfo: AppInfoAPI;
 	}
 
 	interface Window {

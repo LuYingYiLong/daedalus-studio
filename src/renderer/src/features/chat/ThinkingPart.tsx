@@ -2,8 +2,7 @@ import type { TimelineBodyPart } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import { Collapse } from "antd";
 import { useEffect, useState } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownContent from "../markdown/MarkdownContent";
 import styles from "./ThinkingPart.module.css";
 
 export type TimelineThinkingPart = Extract<TimelineBodyPart, { type: "thinking" }>;
@@ -65,9 +64,7 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 					children: (
 						<div className="markdown-body" style={{userSelect: "text"}}>
 							{part.text.trim().length === 0 ? null : (
-								<Markdown remarkPlugins={[remarkGfm]}>
-									{part.text}
-								</Markdown>
+								<MarkdownContent>{part.text}</MarkdownContent>
 							)}
 						</div>
 					)

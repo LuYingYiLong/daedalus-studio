@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import styles from "./UserBubble.module.css";
 import { Button, Input, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import type { AdditionalContextItem } from "@/api/types";
 import AdditionalContextStrip from "./AdditionalContextStrip";
 import { copyTextToClipboard } from "@/utils/clipboard";
+import MarkdownContent from "../markdown/MarkdownContent";
 
 export type RetryUserMessagePayload = {
 	requestId: string;
@@ -202,9 +201,7 @@ function UserBubble({
 								beginRetryEdit();
 							}}
 						>
-							<Markdown remarkPlugins={[remarkGfm]}>
-								{message}
-							</Markdown>
+							<MarkdownContent>{message}</MarkdownContent>
 						</div>
 					</>
 				)}
