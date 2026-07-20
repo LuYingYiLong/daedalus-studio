@@ -4,13 +4,13 @@
 	min-width: 0;
 	min-height: 0;
 	height: 100%;
+	user-select: none;
 }
 
 .panelTabs :global(.ant-tabs-nav) {
 	min-height: 34px;
 	margin: 0;
 	padding: 0 8px;
-	background: var(--ds-surface-elevated);
 }
 
 .panelTabs :global(.ant-tabs-nav-wrap) {
@@ -27,6 +27,7 @@
 
 .panelTabs :global(.ant-tabs-tab) {
 	border-radius: var(--ds-radius-sm) var(--ds-radius-sm) 0 0 !important;
+	transition: none;
 }
 
 .panelTabs :global(.ant-tabs-content-holder),
@@ -42,4 +43,12 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+}
+
+.draggableTab {
+	cursor: grab;
+}
+
+.draggableTab:active {
+	cursor: grabbing;
 }

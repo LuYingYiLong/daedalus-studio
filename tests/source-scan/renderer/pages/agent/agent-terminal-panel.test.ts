@@ -4,44 +4,54 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 describe("AgentPage terminal panel source", () => {
 	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "agent", "AgentPage.tsx");
 	const terminalPanelSource: string = readRepoFile("src", "renderer", "src", "features", "terminal", "TerminalPanel.tsx");
-	const terminalPanelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "terminal", "TerminalPanelTabs.tsx");
+	const dockPanelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.tsx");
 	const panelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "panel-tabs", "PanelTabs.tsx");
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 
-	it("wraps chat and review inside a vertical Splitter for the bottom terminal", () => {
+	it("wraps chat and side dock inside a vertical Splitter for the bottom dock", () => {
 		expect(agentSource).toContain("className={styles.agentVerticalSplitter}");
 		expect(agentSource).toContain("orientation=\"vertical\"");
-		expect(agentSource).toContain("onResize={handleTerminalResize}");
-		expect(agentSource).toContain("onResizeEnd={handleTerminalResizeEnd}");
-		expect(agentSource).toContain("TERMINAL_PANEL_DEFAULT_SIZE");
-		expect(agentSource).toContain("TERMINAL_PANEL_CLOSE_THRESHOLD");
-		expect(agentSource).toContain("<TerminalPanelTabs");
+		expect(agentSource).toContain("onResize={handleBottomDockResize}");
+		expect(agentSource).toContain("onResizeEnd={handleBottomDockResizeEnd}");
+		expect(agentSource).toContain("BOTTOM_DOCK_DEFAULT_SIZE");
+		expect(agentSource).toContain("BOTTOM_DOCK_CLOSE_THRESHOLD");
+		expect(agentSource).toContain("<DockPanelTabs");
+		expect(agentSource).toContain("dockId=\"bottom\"");
+		expect(agentSource).toContain("placement=\"bottom\"");
 		expect(agentSource).toContain("cwd={activeWorkspace?.rootPath ?? null}");
-		expect(agentSource).toContain("isOpen={terminalPanelOpen}");
-		expect(agentSource).toContain("onEmpty={closeTerminalPanel}");
+		expect(agentSource).toContain("isOpen={bottomDockOpen}");
+		expect(agentSource).toContain("defaultKind=\"terminal\"");
+		expect(agentSource).toContain("onEmpty={closeBottomDock}");
+	});
+
+	it("keeps side defaulting to review and bottom defaulting to terminal", () => {
+		expect(agentSource).toContain("defaultKind=\"review\"");
+		expect(agentSource).toContain("defaultKind=\"terminal\"");
+		expect(dockPanelTabsSource).toContain("return [createDockTab(dockId, defaultKind, 1)];");
+		expect(dockPanelTabsSource).not.toContain("getDefaultAvailableKind");
 	});
 
 	it("closes the bottom panel while dragging below the threshold", () => {
-		const resizeStart: number = agentSource.indexOf("function handleTerminalResize(sizes: number[]): void");
-		const resizeEnd: number = agentSource.indexOf("function handleTerminalResizeEnd(sizes: number[]): void");
+		const resizeStart: number = agentSource.indexOf("function handleBottomDockResize(sizes: number[]): void");
+		const resizeEnd: number = agentSource.indexOf("function handleBottomDockResizeEnd(sizes: number[]): void");
 		const resizeSource: string = agentSource.slice(resizeStart, resizeEnd);
 
 		expect(resizeStart).toBeGreaterThan(-1);
 		expect(resizeEnd).toBeGreaterThan(resizeStart);
-		expect(resizeSource).toContain("normalizedSize < TERMINAL_PANEL_CLOSE_THRESHOLD");
-		expect(resizeSource).toContain("closeTerminalPanel();");
+		expect(resizeSource).toContain("normalizedSize < BOTTOM_DOCK_CLOSE_THRESHOLD");
+		expect(resizeSource).toContain("closeBottomDock();");
 	});
 
 	it("places layout-bottom before layout-right and uses it as the panel switch", () => {
 		const bottomButtonIndex: number = agentSource.indexOf("icon={<Icon name=\"layout-bottom\" />}");
 		const rightButtonIndex: number = agentSource.indexOf("icon={<Icon name=\"layout-right\" />}");
 
-		expect(agentSource).toContain("const showTerminalButton: boolean = !isHome;");
+		expect(agentSource).toContain("const showBottomDockButton: boolean = !isHome;");
 		expect(bottomButtonIndex).toBeGreaterThan(-1);
 		expect(rightButtonIndex).toBeGreaterThan(-1);
 		expect(bottomButtonIndex).toBeLessThan(rightButtonIndex);
-		expect(agentSource).toContain("onClick={toggleTerminalPanel}");
-		expect(agentSource).toContain("aria-pressed={terminalPanelOpen}");
+		expect(agentSource).toContain("onClick={toggleBottomDock}");
+		expect(agentSource).toContain("aria-pressed={bottomDockOpen}");
 	});
 
 	it("uses xterm, FitAddon and the preload terminal API", () => {
@@ -59,18 +69,20 @@ describe("AgentPage terminal panel source", () => {
 		expect(terminalPanelSource).toContain("window.electronAPI.terminal.onExit");
 	});
 
-	it("renders terminal content through reusable editable tabs with an add dropdown", () => {
+	it("renders dock tabs that can add both terminal and review panels", () => {
 		expect(panelTabsSource).toContain("type=\"editable-card\"");
 		expect(panelTabsSource).toContain("hideAdd={true}");
 		expect(panelTabsSource).toContain("tabBarExtraContent={{");
 		expect(panelTabsSource).toContain("<Dropdown");
-		expect(terminalPanelTabsSource).toContain("PanelTabs");
-		expect(terminalPanelTabsSource).toContain("addItems");
-		expect(terminalPanelTabsSource).toContain("addLabel=\"Add terminal panel\"");
-		expect(terminalPanelTabsSource).toContain("forceRender: true");
-		expect(terminalPanelTabsSource).toContain("window.electronAPI.terminal.kill({ terminalId: targetKey })");
-		expect(terminalPanelTabsSource).toContain("onEmpty();");
-		expect(terminalPanelTabsSource).toContain("terminalId={tab.key}");
+		expect(dockPanelTabsSource).toContain("PanelTabs");
+		expect(dockPanelTabsSource).toContain("Review panel");
+		expect(dockPanelTabsSource).toContain("Terminal panel");
+		expect(dockPanelTabsSource).toContain("forceRender: tab.kind === \"terminal\"");
+		expect(dockPanelTabsSource).toContain("window.electronAPI.terminal.kill({ terminalId: targetKey })");
+		expect(dockPanelTabsSource).toContain("onEmpty();");
+		expect(dockPanelTabsSource).toContain("terminalId={tab.key}");
+		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} />");
+		expect(dockPanelTabsSource).toContain("onReorder={reorderDockTab}");
 		expect(terminalPanelSource).not.toContain("Tabs");
 	});
 

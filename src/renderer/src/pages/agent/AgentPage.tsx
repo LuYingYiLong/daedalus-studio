@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import type { AdditionalContextItem, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
@@ -21,8 +21,7 @@ import { Icon } from "@/assets/icons";
 import ClarificationDialog from "@/features/clarification/ClarificationDialog";
 import PlanApprovalDialog from "@/features/approval/PlanApprovalDialog";
 import MarkdownContent from "@/features/markdown/MarkdownContent";
-import ReviewPanelTabs from "@/features/review/ReviewPanelTabs";
-import TerminalPanelTabs from "@/features/terminal/TerminalPanelTabs";
+import DockPanelTabs, { type DockPanelActivationRequest, type DockPanelKind } from "@/features/dock/DockPanelTabs";
 
 type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
 
@@ -39,14 +38,14 @@ const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 const SUMMARY_PREVIEW_LIMIT: number = 3;
 const SUMMARY_SEE_MORE_LIMIT: number = 100;
 const COMMIT_OR_PUSH_PROMPT: string = "Commit or push the current workspace changes.";
-const REVIEW_PANEL_CLOSED_SIZE: number = 0;
-const REVIEW_PANEL_DEFAULT_SIZE: number = 520;
-const REVIEW_PANEL_MAX_SIZE: number = 720;
-const REVIEW_PANEL_CLOSE_THRESHOLD: number = 150;
-const TERMINAL_PANEL_CLOSED_SIZE: number = 0;
-const TERMINAL_PANEL_DEFAULT_SIZE: number = 280;
-const TERMINAL_PANEL_MAX_SIZE: number = 520;
-const TERMINAL_PANEL_CLOSE_THRESHOLD: number = 120;
+const SIDE_DOCK_CLOSED_SIZE: number = 0;
+const SIDE_DOCK_DEFAULT_SIZE: number = 520;
+const SIDE_DOCK_MAX_SIZE: number = 720;
+const SIDE_DOCK_CLOSE_THRESHOLD: number = 150;
+const BOTTOM_DOCK_CLOSED_SIZE: number = 0;
+const BOTTOM_DOCK_DEFAULT_SIZE: number = 280;
+const BOTTOM_DOCK_MAX_SIZE: number = 520;
+const BOTTOM_DOCK_CLOSE_THRESHOLD: number = 120;
 
 function isWorkspaceLaunchTargetId(value: string): value is WorkspaceLaunchTargetId {
 	return value === "file-explorer"
@@ -272,16 +271,18 @@ function AgentPage({
 	const [sourcesModalOpen, setSourcesModalOpen] = useState<boolean>(false);
 	const [previewSource, setPreviewSource] = useState<SessionOverviewSourceItem | null>(null);
 	const [previewPlan, setPreviewPlan] = useState<SessionOverviewPlanItem | null>(null);
-	const [reviewPanelOpen, setReviewPanelOpen] = useState<boolean>(false);
-	const [reviewPanelSize, setReviewPanelSize] = useState<number>(REVIEW_PANEL_DEFAULT_SIZE);
-	const [reviewPanelLastOpenSize, setReviewPanelLastOpenSize] = useState<number>(REVIEW_PANEL_DEFAULT_SIZE);
-	const [terminalPanelOpen, setTerminalPanelOpen] = useState<boolean>(false);
-	const [terminalPanelSize, setTerminalPanelSize] = useState<number>(TERMINAL_PANEL_DEFAULT_SIZE);
-	const [terminalPanelLastOpenSize, setTerminalPanelLastOpenSize] = useState<number>(TERMINAL_PANEL_DEFAULT_SIZE);
+	const dockActivationRequestIdRef = useRef<number>(0);
+	const [sideDockActivationRequest, setSideDockActivationRequest] = useState<DockPanelActivationRequest | null>(null);
+	const [sideDockOpen, setSideDockOpen] = useState<boolean>(false);
+	const [sideDockSize, setSideDockSize] = useState<number>(SIDE_DOCK_DEFAULT_SIZE);
+	const [sideDockLastOpenSize, setSideDockLastOpenSize] = useState<number>(SIDE_DOCK_DEFAULT_SIZE);
+	const [bottomDockOpen, setBottomDockOpen] = useState<boolean>(false);
+	const [bottomDockSize, setBottomDockSize] = useState<number>(BOTTOM_DOCK_DEFAULT_SIZE);
+	const [bottomDockLastOpenSize, setBottomDockLastOpenSize] = useState<number>(BOTTOM_DOCK_DEFAULT_SIZE);
 	const showWorkspaceLaunchControls: boolean = !isHome && activeWorkspace !== null;
 	const showSummaryButton: boolean = !isHome && activeSessionId !== null;
-	const showReviewButton: boolean = !isHome && activeWorkspace !== null;
-	const showTerminalButton: boolean = !isHome;
+	const showSideDockButton: boolean = !isHome;
+	const showBottomDockButton: boolean = !isHome;
 	const selectedLaunchTarget: WorkspaceLaunchTarget = useMemo((): WorkspaceLaunchTarget => {
 		return workspaceLaunchTargets.find((target: WorkspaceLaunchTarget): boolean => target.id === selectedLaunchTargetId)
 			?? workspaceLaunchTargets[0]
@@ -482,7 +483,7 @@ function AgentPage({
 		setSourcesModalOpen(false);
 		setPreviewSource(null);
 		setPreviewPlan(null);
-		setReviewPanelOpen(false);
+		setSideDockOpen(false);
 	}, [activeSessionId, activeWorkspace?.id]);
 
 	async function loadSummaryOverview(planLimit: number = SUMMARY_PREVIEW_LIMIT, sourceLimit: number = SUMMARY_PREVIEW_LIMIT): Promise<SessionOverviewResult | null> {
@@ -561,111 +562,126 @@ function AgentPage({
 		void openWorkspaceLaunchTarget(targetId);
 	};
 
+	function requestSideDockKind(kind: DockPanelKind): void {
+		dockActivationRequestIdRef.current += 1;
+		setSideDockActivationRequest({
+			id: dockActivationRequestIdRef.current,
+			kind
+		});
+	}
+
+	function openSideDock(kind?: DockPanelKind): void {
+		setSideDockSize(sideDockLastOpenSize);
+		setSideDockOpen(true);
+		if (kind !== undefined) {
+			requestSideDockKind(kind);
+		}
+	}
+
+	function closeSideDock(): void {
+		setSideDockOpen(false);
+	}
+
+	function toggleSideDock(): void {
+		if (sideDockOpen) {
+			closeSideDock();
+			return;
+		}
+		openSideDock();
+	}
+
 	function openReviewPanel(): void {
 		if (activeWorkspace === null) {
 			return;
 		}
-		setReviewPanelSize(reviewPanelLastOpenSize);
-		setReviewPanelOpen(true);
+		openSideDock("review");
 	}
 
-	function closeReviewPanel(): void {
-		setReviewPanelOpen(false);
+	function openBottomDock(): void {
+		setBottomDockSize(bottomDockLastOpenSize);
+		setBottomDockOpen(true);
 	}
 
-	function toggleReviewPanel(): void {
-		if (reviewPanelOpen) {
-			closeReviewPanel();
+	function closeBottomDock(): void {
+		setBottomDockOpen(false);
+	}
+
+	function toggleBottomDock(): void {
+		if (bottomDockOpen) {
+			closeBottomDock();
 			return;
 		}
-		openReviewPanel();
+		openBottomDock();
 	}
 
-	function openTerminalPanel(): void {
-		setTerminalPanelSize(terminalPanelLastOpenSize);
-		setTerminalPanelOpen(true);
-	}
-
-	function closeTerminalPanel(): void {
-		setTerminalPanelOpen(false);
-	}
-
-	function toggleTerminalPanel(): void {
-		if (terminalPanelOpen) {
-			closeTerminalPanel();
-			return;
-		}
-		openTerminalPanel();
-	}
-
-	function handleReviewResize(sizes: number[]): void {
+	function handleSideDockResize(sizes: number[]): void {
 		const nextSize: number | undefined = sizes[1];
 		if (nextSize === undefined || !Number.isFinite(nextSize)) {
 			return;
 		}
 
-		const normalizedSize: number = Math.min(REVIEW_PANEL_MAX_SIZE, Math.max(REVIEW_PANEL_CLOSED_SIZE, Math.trunc(nextSize)));
-		if (normalizedSize < REVIEW_PANEL_CLOSE_THRESHOLD) {
-			closeReviewPanel();
-			setReviewPanelSize(reviewPanelLastOpenSize);
+		const normalizedSize: number = Math.min(SIDE_DOCK_MAX_SIZE, Math.max(SIDE_DOCK_CLOSED_SIZE, Math.trunc(nextSize)));
+		if (normalizedSize < SIDE_DOCK_CLOSE_THRESHOLD) {
+			closeSideDock();
+			setSideDockSize(sideDockLastOpenSize);
 			return;
 		}
 
-		setReviewPanelSize(normalizedSize);
-		setReviewPanelOpen(true);
-		setReviewPanelLastOpenSize(normalizedSize);
+		setSideDockSize(normalizedSize);
+		setSideDockOpen(true);
+		setSideDockLastOpenSize(normalizedSize);
 	}
 
-	function handleReviewResizeEnd(sizes: number[]): void {
+	function handleSideDockResizeEnd(sizes: number[]): void {
 		const nextSize: number | undefined = sizes[1];
 		if (nextSize === undefined || !Number.isFinite(nextSize)) {
 			return;
 		}
-		if (nextSize < REVIEW_PANEL_CLOSE_THRESHOLD) {
-			closeReviewPanel();
-			setReviewPanelSize(reviewPanelLastOpenSize);
+		if (nextSize < SIDE_DOCK_CLOSE_THRESHOLD) {
+			closeSideDock();
+			setSideDockSize(sideDockLastOpenSize);
 			return;
 		}
 
-		const validSize: number = Math.min(REVIEW_PANEL_MAX_SIZE, Math.max(REVIEW_PANEL_CLOSE_THRESHOLD, Math.trunc(nextSize)));
-		setReviewPanelOpen(true);
-		setReviewPanelSize(validSize);
-		setReviewPanelLastOpenSize(validSize);
+		const validSize: number = Math.min(SIDE_DOCK_MAX_SIZE, Math.max(SIDE_DOCK_CLOSE_THRESHOLD, Math.trunc(nextSize)));
+		setSideDockOpen(true);
+		setSideDockSize(validSize);
+		setSideDockLastOpenSize(validSize);
 	}
 
-	function handleTerminalResize(sizes: number[]): void {
+	function handleBottomDockResize(sizes: number[]): void {
 		const nextSize: number | undefined = sizes[1];
 		if (nextSize === undefined || !Number.isFinite(nextSize)) {
 			return;
 		}
 
-		const normalizedSize: number = Math.min(TERMINAL_PANEL_MAX_SIZE, Math.max(TERMINAL_PANEL_CLOSED_SIZE, Math.trunc(nextSize)));
-		if (normalizedSize < TERMINAL_PANEL_CLOSE_THRESHOLD) {
-			closeTerminalPanel();
-			setTerminalPanelSize(terminalPanelLastOpenSize);
+		const normalizedSize: number = Math.min(BOTTOM_DOCK_MAX_SIZE, Math.max(BOTTOM_DOCK_CLOSED_SIZE, Math.trunc(nextSize)));
+		if (normalizedSize < BOTTOM_DOCK_CLOSE_THRESHOLD) {
+			closeBottomDock();
+			setBottomDockSize(bottomDockLastOpenSize);
 			return;
 		}
 
-		setTerminalPanelSize(normalizedSize);
-		setTerminalPanelOpen(true);
-		setTerminalPanelLastOpenSize(normalizedSize);
+		setBottomDockSize(normalizedSize);
+		setBottomDockOpen(true);
+		setBottomDockLastOpenSize(normalizedSize);
 	}
 
-	function handleTerminalResizeEnd(sizes: number[]): void {
+	function handleBottomDockResizeEnd(sizes: number[]): void {
 		const nextSize: number | undefined = sizes[1];
 		if (nextSize === undefined || !Number.isFinite(nextSize)) {
 			return;
 		}
-		if (nextSize < TERMINAL_PANEL_CLOSE_THRESHOLD) {
-			closeTerminalPanel();
-			setTerminalPanelSize(terminalPanelLastOpenSize);
+		if (nextSize < BOTTOM_DOCK_CLOSE_THRESHOLD) {
+			closeBottomDock();
+			setBottomDockSize(bottomDockLastOpenSize);
 			return;
 		}
 
-		const validSize: number = Math.min(TERMINAL_PANEL_MAX_SIZE, Math.max(TERMINAL_PANEL_CLOSE_THRESHOLD, Math.trunc(nextSize)));
-		setTerminalPanelOpen(true);
-		setTerminalPanelSize(validSize);
-		setTerminalPanelLastOpenSize(validSize);
+		const validSize: number = Math.min(BOTTOM_DOCK_MAX_SIZE, Math.max(BOTTOM_DOCK_CLOSE_THRESHOLD, Math.trunc(nextSize)));
+		setBottomDockOpen(true);
+		setBottomDockSize(validSize);
+		setBottomDockLastOpenSize(validSize);
 	}
 
 	function handlePageDragOver(event: React.DragEvent<HTMLDivElement>): void {
@@ -780,7 +796,7 @@ function AgentPage({
 			<Divider vertical size="small" />
 
 			<div className={styles.agentMain}>
-				{showWorkspaceLaunchControls || showSummaryButton || showTerminalButton || showReviewButton ? (
+				{showWorkspaceLaunchControls || showSummaryButton || showBottomDockButton || showSideDockButton ? (
 					<div className={styles.floatingActionSlot}>
 						<div className={styles.floatingActions}>
 							{showWorkspaceLaunchControls ? (
@@ -808,24 +824,24 @@ function AgentPage({
 								</Space.Compact>
 							) : null}
 							{showSummaryButton ? renderSummaryButton() : null}
-							{showTerminalButton ? (
+							{showBottomDockButton ? (
 								<Button
-									type={terminalPanelOpen ? "primary" : "text"}
+									type={bottomDockOpen ? "primary" : "text"}
 									shape="circle"
-									aria-label={terminalPanelOpen ? "Close terminal panel" : "Open terminal panel"}
-									aria-pressed={terminalPanelOpen}
+									aria-label={bottomDockOpen ? "Close bottom panel" : "Open bottom panel"}
+									aria-pressed={bottomDockOpen}
 									icon={<Icon name="layout-bottom" />}
-									onClick={toggleTerminalPanel}
+									onClick={toggleBottomDock}
 								/>
 							) : null}
-							{showReviewButton ? (
+							{showSideDockButton ? (
 								<Button
-									type={reviewPanelOpen ? "primary" : "text"}
+									type={sideDockOpen ? "primary" : "text"}
 									shape="circle"
-									aria-label={reviewPanelOpen ? "Close review panel" : "Open review panel"}
-									aria-pressed={reviewPanelOpen}
+									aria-label={sideDockOpen ? "Close side panel" : "Open side panel"}
+									aria-pressed={sideDockOpen}
 									icon={<Icon name="layout-right" />}
-									onClick={toggleReviewPanel}
+									onClick={toggleSideDock}
 								/>
 							) : null}
 						</div>
@@ -835,15 +851,15 @@ function AgentPage({
 					className={styles.agentVerticalSplitter}
 					orientation="vertical"
 					collapsible={{ motion: true }}
-					onResize={handleTerminalResize}
-					onResizeEnd={handleTerminalResizeEnd}
+					onResize={handleBottomDockResize}
+					onResizeEnd={handleBottomDockResizeEnd}
 				>
 					<Splitter.Panel min={360}>
 						<Splitter
 							className={styles.agentSplitter}
 							collapsible={{ motion: true }}
-							onResize={handleReviewResize}
-							onResizeEnd={handleReviewResizeEnd}
+							onResize={handleSideDockResize}
+							onResizeEnd={handleSideDockResizeEnd}
 						>
 							<Splitter.Panel min={360}>
 								<section className={styles.chatPanel}>
@@ -952,34 +968,45 @@ function AgentPage({
 									</footer>
 								</section>
 							</Splitter.Panel>
-							{showReviewButton ? (
+							{showSideDockButton ? (
 								<Splitter.Panel
-									size={reviewPanelOpen ? reviewPanelSize : REVIEW_PANEL_CLOSED_SIZE}
-									min={REVIEW_PANEL_CLOSED_SIZE}
-									max={REVIEW_PANEL_MAX_SIZE}
+									size={sideDockOpen ? sideDockSize : SIDE_DOCK_CLOSED_SIZE}
+									min={SIDE_DOCK_CLOSED_SIZE}
+									max={SIDE_DOCK_MAX_SIZE}
 									collapsible={{ start: true, showCollapsibleIcon: false }}
 								>
-									{reviewPanelOpen && activeWorkspace !== null ? (
-										<div className={styles.reviewPanelSlot}>
-											<ReviewPanelTabs workspaceId={activeWorkspace.id} onEmpty={closeReviewPanel} />
-										</div>
-									) : null}
+									<div className={styles.sideDockSlot} aria-hidden={!sideDockOpen}>
+										<DockPanelTabs
+											dockId="side"
+											placement="side"
+											workspaceId={activeWorkspace?.id ?? null}
+											cwd={activeWorkspace?.rootPath ?? null}
+											isOpen={sideDockOpen}
+											defaultKind="review"
+											activationRequest={sideDockActivationRequest}
+											onEmpty={closeSideDock}
+										/>
+									</div>
 								</Splitter.Panel>
 							) : null}
 						</Splitter>
 					</Splitter.Panel>
-					{showTerminalButton ? (
+					{showBottomDockButton ? (
 						<Splitter.Panel
-							size={terminalPanelOpen ? terminalPanelSize : TERMINAL_PANEL_CLOSED_SIZE}
-							min={TERMINAL_PANEL_CLOSED_SIZE}
-							max={TERMINAL_PANEL_MAX_SIZE}
+							size={bottomDockOpen ? bottomDockSize : BOTTOM_DOCK_CLOSED_SIZE}
+							min={BOTTOM_DOCK_CLOSED_SIZE}
+							max={BOTTOM_DOCK_MAX_SIZE}
 							collapsible={{ start: true, showCollapsibleIcon: false }}
 						>
-							<div className={styles.terminalPanelSlot} aria-hidden={!terminalPanelOpen}>
-								<TerminalPanelTabs
+							<div className={styles.bottomDockSlot} aria-hidden={!bottomDockOpen}>
+								<DockPanelTabs
+									dockId="bottom"
+									placement="bottom"
+									workspaceId={activeWorkspace?.id ?? null}
 									cwd={activeWorkspace?.rootPath ?? null}
-									isOpen={terminalPanelOpen}
-									onEmpty={closeTerminalPanel}
+									isOpen={bottomDockOpen}
+									defaultKind="terminal"
+									onEmpty={closeBottomDock}
 								/>
 							</div>
 						</Splitter.Panel>

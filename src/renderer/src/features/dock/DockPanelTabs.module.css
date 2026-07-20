@@ -1,11 +1,21 @@
 .panel {
 	display: grid;
 	grid-template-rows: minmax(0, 1fr);
+	box-sizing: border-box;
 	width: 100%;
 	height: 100%;
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
+}
+
+.side {
+	padding-top: 40px;
+	border-left: 1px solid var(--ds-border);
+	background: var(--ds-bg);
+}
+
+.bottom {
 	border-top: 1px solid var(--ds-border);
 	background: var(--ds-bg-sunken);
 }
