@@ -1,4 +1,4 @@
-import { Alert, Button, Image, Spin, Typography } from "antd";
+import { Alert, Dropdown, Image, message, Spin, Typography, type MenuProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import type { TimelineBodyPart, TimelineGeneratedImageArtifact } from "@/api/types";
 import { fetchGeneratedImageDataUrl } from "@/api/generated-image-api";
@@ -39,6 +39,7 @@ function downloadImage(image: LoadedImage): void {
 }
 
 function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): React.JSX.Element {
+	const [messageApi, contextHolder] = message.useMessage();
 	const artifacts: TimelineGeneratedImageArtifact[] = useMemo((): TimelineGeneratedImageArtifact[] => getArtifacts(part), [part]);
 	const [loadedImages, setLoadedImages] = useState<LoadedImage[]>([]);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -85,13 +86,55 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 		? `${part.provider} / ${part.model}`
 		: "Image generation";
 
+	function createImageContextMenu(image: LoadedImage): MenuProps {
+		return {
+			items: [
+				{
+					key: "copy-image",
+					label: "Copy image",
+					icon: <Icon name="copy" />
+				},
+				{
+					key: "save-image",
+					label: "Save image",
+					icon: <Icon name="download" />
+				}
+			],
+			onClick: (info): void => {
+				info.domEvent.stopPropagation();
+				if (info.key === "copy-image") {
+					void copyImage(image.dataUrl)
+						.then((): void => {
+							void messageApi.success("Image copied");
+						})
+						.catch((error: unknown): void => {
+							void messageApi.error(error instanceof Error ? error.message : "Failed to copy image");
+						});
+					return;
+				}
+
+				if (info.key === "save-image") {
+					downloadImage(image);
+				}
+			}
+		};
+	}
+
 	if (part.status === "running") {
 		return (
 			<section className={styles.root}>
 				<div className={styles.header}>
 					<div className={styles.title}>
 						<Typography.Title level={4} className={styles.title}>Generating images</Typography.Title>
-						<Typography.Text className={styles.prompt}>{part.prompt}</Typography.Text>
+						<Typography.Text
+							copyable={{
+								icon: [<Icon name="copy" />],
+								tooltips: ['Copy', 'Copied'],
+							}}
+							className={styles.prompt}
+						>
+							{part.prompt}
+						</Typography.Text>
 					</div>
 					<Spin size="small" />
 				</div>
@@ -115,11 +158,20 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 
 	return (
 		<section className={styles.root}>
+			{contextHolder}
 			<div className={styles.header}>
 				<div className={styles.title}>
 					<Typography.Title level={4} className={styles.title}>Generated images</Typography.Title>
 					<Typography.Text type="secondary">{modelLabel}</Typography.Text>
-					<Typography.Text className={styles.prompt}>{part.prompt}</Typography.Text>
+					<Typography.Text
+						copyable={{
+							icon: [<Icon name="copy" />, <Icon name="check" />],
+							tooltips: ["Copy", "Copied"],
+						}}
+						className={styles.prompt}
+					>
+						{part.prompt}
+					</Typography.Text>
 				</div>
 			</div>
 			{errorMessage !== null ? (
@@ -127,6 +179,13 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 			) : null}
 			<Image.PreviewGroup
 				items={previewItems}
+				classNames={{
+					popup: {
+						close: styles.previewClose,
+						footer: styles.previewFooter,
+						actions: styles.previewActions
+					}
+				}}
 				preview={{
 					open: previewOpen,
 					current: previewCurrent,
@@ -137,7 +196,7 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 				<div className={styles.grid}>
 					{artifacts.map((artifact: TimelineGeneratedImageArtifact, index: number): React.JSX.Element => {
 						const loadedImage: LoadedImage | undefined = loadedImages.find((image: LoadedImage): boolean => image.artifact.imageId === artifact.imageId);
-						return (
+						const imageButton: React.JSX.Element = (
 							<button
 								key={artifact.imageId}
 								type="button"
@@ -163,24 +222,21 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 								)}
 							</button>
 						);
+						if (loadedImage === undefined) {
+							return imageButton;
+						}
+						return (
+							<Dropdown
+								key={artifact.imageId}
+								trigger={["contextMenu"]}
+								menu={createImageContextMenu(loadedImage)}
+							>
+								{imageButton}
+							</Dropdown>
+						);
 					})}
 				</div>
 			</Image.PreviewGroup>
-			<div className={styles.actions}>
-				<Button icon={<Icon name="copy" />} onClick={async (): Promise<void> => navigator.clipboard.writeText(part.prompt)}>
-					Copy prompt
-				</Button>
-				{loadedImages[0] !== undefined ? (
-					<>
-						<Button onClick={async (): Promise<void> => copyImage(loadedImages[0]!.dataUrl)}>
-							Copy image
-						</Button>
-						<Button onClick={(): void => downloadImage(loadedImages[0]!)}>
-							Save image
-						</Button>
-					</>
-				) : null}
-			</div>
 		</section>
 	);
 }

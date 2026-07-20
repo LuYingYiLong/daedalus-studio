@@ -10,15 +10,17 @@
 }
 
 .workspaceStatusText,
-.workspaceErrorText,
 .workspaceEmptyText {
 	display: block;
 	font-size: 12px;
 }
 
-.workspaceErrorText,
 .workspaceEmptyText {
 	padding: 8px 0;
+}
+
+.workspaceErrorAlert {
+	margin: 4px 0 8px;
 }
 
 .workspaceMenuScroller {

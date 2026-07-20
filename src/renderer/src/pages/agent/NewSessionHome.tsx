@@ -1,4 +1,4 @@
-import { Typography } from "antd";
+import { Alert, Typography } from "antd";
 import type { WorkspaceConfig } from "@/api/types";
 import styles from "./AgentPage.module.css";
 
@@ -25,9 +25,12 @@ function NewSessionHome({ workspace, errorMessage }: NewSessionHomeProps): React
 					{subtitle}
 				</Typography.Text>
 				{errorMessage !== null ? (
-					<Typography.Text type="danger" className={styles.homeError}>
-						{errorMessage}
-					</Typography.Text>
+					<Alert
+						type="error"
+						showIcon={true}
+						description={errorMessage}
+						className={styles.homeError}
+					/>
 				) : null}
 			</div>
 		</div>

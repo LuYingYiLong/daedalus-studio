@@ -250,6 +250,7 @@ function AgentPage({
 	onWorkflowTodoCollapseChange,
 	onCompletionOpen
 }: AgentPageProps): React.JSX.Element {
+	const [messageApi, messageContextHolder] = antdMessage.useMessage();
 	const [workspaceLaunchTargets, setWorkspaceLaunchTargets] = useState<WorkspaceLaunchTarget[]>(FALLBACK_WORKSPACE_LAUNCH_TARGETS);
 	const [selectedLaunchTargetId, setSelectedLaunchTargetId] = useState<WorkspaceLaunchTargetId>("file-explorer");
 	const [isOpeningLaunchTarget, setIsOpeningLaunchTarget] = useState<boolean>(false);
@@ -526,7 +527,7 @@ function AgentPage({
 		} catch (error: unknown) {
 			const message: string = error instanceof Error ? error.message : "Failed to open workspace.";
 			console.error("[AgentPage] failed to open workspace launch target", error);
-			void antdMessage.error(message);
+			void messageApi.error(message);
 		} finally {
 			setIsOpeningLaunchTarget(false);
 		}
@@ -566,6 +567,7 @@ function AgentPage({
 			onDragOver={handlePageDragOver}
 			onDrop={handlePageDrop}
 		>
+			{messageContextHolder}
 			<aside className={styles.workspaceSidebar}>
 				<header className={styles.workspaceHeader}>
 					<Button type="text" block={true} className={styles.createSessionButton} onClick={onNewSession}>
@@ -616,7 +618,7 @@ function AgentPage({
 									>
 										<Button
 											aria-label="Select workspace launch target"
-											icon={<Icon name="arrow-drop-down" />}
+											icon={<Icon name="arrow-down" />}
 										/>
 									</Dropdown>
 								</Space.Compact>

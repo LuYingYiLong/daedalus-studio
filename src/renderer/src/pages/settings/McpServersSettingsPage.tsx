@@ -8,12 +8,13 @@ import {
 	fetchMcpConfig,
 	removeMcpServer,
 	setMcpServerEnabled,
+	updateMcpServer,
 	type CustomMcpServer,
 	type McpConfigListResult,
 	type McpRuntimeStatus,
 	type McpTransport
 } from "@/api/mcp-api";
-import { createMcpServerAddPayload, type McpServerFormValues } from "./mcp-form-utils";
+import { createMcpServerAddPayload, createMcpServerUpdatePayload, type McpServerFormValues } from "./mcp-form-utils";
 
 const DEFAULT_FORM_VALUES: McpServerFormValues = {
 	transport: "stdio"
@@ -49,9 +50,35 @@ function applyConfigResult(result: McpConfigListResult, setServers: (servers: Cu
 	setErrorMessage(result.error ?? null);
 }
 
+function createSecretEditText(names: string[], separator: "=" | ":"): string {
+	return names.map((name: string): string => `${name}${separator}`).join("\n");
+}
+
+function createEditFormValues(server: CustomMcpServer): McpServerFormValues {
+	if (server.transport === "stdio") {
+		return {
+			name: server.name,
+			description: server.description,
+			transport: server.transport,
+			command: server.command ?? "",
+			args: server.args.join("\n"),
+			env: createSecretEditText(server.envNames, "=")
+		};
+	}
+
+	return {
+		name: server.name,
+		description: server.description,
+		transport: server.transport,
+		url: server.url ?? "",
+		headers: createSecretEditText(server.headerNames, ":")
+	};
+}
+
 function McpServersSettingsPage(): React.JSX.Element {
 	const [form] = Form.useForm<McpServerFormValues>();
-	const [addMcpServerOpen, setAddMcpServerOpen] = useState<boolean>(false);
+	const [serverModalMode, setServerModalMode] = useState<"add" | "edit" | null>(null);
+	const [editingServer, setEditingServer] = useState<CustomMcpServer | null>(null);
 	const [servers, setServers] = useState<CustomMcpServer[]>([]);
 	const [query, setQuery] = useState<string>("");
 	const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -105,7 +132,20 @@ function McpServersSettingsPage(): React.JSX.Element {
 	function openAddModal(): void {
 		form.resetFields();
 		form.setFieldsValue(DEFAULT_FORM_VALUES);
-		setAddMcpServerOpen(true);
+		setEditingServer(null);
+		setServerModalMode("add");
+	}
+
+	function openEditModal(server: CustomMcpServer): void {
+		form.resetFields();
+		form.setFieldsValue(createEditFormValues(server));
+		setEditingServer(server);
+		setServerModalMode("edit");
+	}
+
+	function closeServerModal(): void {
+		setServerModalMode(null);
+		setEditingServer(null);
 	}
 
 	function handleTransportChange(nextTransport: McpTransport): void {
@@ -114,14 +154,16 @@ function McpServersSettingsPage(): React.JSX.Element {
 			: { transport: nextTransport, command: undefined, args: undefined, env: undefined });
 	}
 
-	async function handleSubmitAdd(): Promise<void> {
+	async function handleSubmitServer(): Promise<void> {
 		try {
 			setIsSaving(true);
 			setErrorMessage(null);
 			const values: McpServerFormValues = await form.validateFields();
-			const result = await addMcpServer(createMcpServerAddPayload(values));
+			const result = serverModalMode === "edit" && editingServer !== null
+				? await updateMcpServer(createMcpServerUpdatePayload(editingServer.id, values))
+				: await addMcpServer(createMcpServerAddPayload(values));
 			applyConfigResult(result, setServers, setErrorMessage);
-			setAddMcpServerOpen(false);
+			closeServerModal();
 			form.resetFields();
 		} catch (error: unknown) {
 			if (error instanceof Error) {
@@ -233,16 +275,15 @@ function McpServersSettingsPage(): React.JSX.Element {
 								</Typography.Text>
 							</div>
 							<div className={styles.serverActions}>
-								<Tooltip title={server.enabled ? "Disable" : "Enable"}>
-									<Switch
-										checked={server.enabled}
-										loading={isBusy}
-										disabled={busyServerId !== null && !isBusy}
-										onChange={(checked: boolean): void => {
-											void handleSetEnabled(server, checked);
-										}}
-									/>
-								</Tooltip>
+								<Button
+									type="text"
+									icon={<Icon name="pencil" />}
+									loading={isBusy}
+									disabled={busyServerId !== null && !isBusy}
+									onClick={(): void => openEditModal(server)}
+								>
+									Edit
+								</Button>
 								<Button
 									type="text"
 									danger={true}
@@ -253,6 +294,16 @@ function McpServersSettingsPage(): React.JSX.Element {
 								>
 									Delete
 								</Button>
+								<Tooltip title={server.enabled ? "Disable" : "Enable"}>
+									<Switch
+										checked={server.enabled}
+										loading={isBusy}
+										disabled={busyServerId !== null && !isBusy}
+										onChange={(checked: boolean): void => {
+											void handleSetEnabled(server, checked);
+										}}
+									/>
+								</Tooltip>
 							</div>
 						</div>
 					);
@@ -260,14 +311,14 @@ function McpServersSettingsPage(): React.JSX.Element {
 			</div>
 
 			<Modal
-				title="Add MCP server"
+				title={serverModalMode === "edit" ? "Edit MCP server" : "Add MCP server"}
 				centered={true}
-				open={addMcpServerOpen}
-				onCancel={(): void => setAddMcpServerOpen(false)}
+				open={serverModalMode !== null}
+				onCancel={closeServerModal}
 				onOk={(): void => {
-					void handleSubmitAdd();
+					void handleSubmitServer();
 				}}
-				okText="Add"
+				okText={serverModalMode === "edit" ? "Save" : "Add"}
 				confirmLoading={isSaving}
 				destroyOnHidden={true}
 			>
@@ -277,7 +328,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 					initialValues={DEFAULT_FORM_VALUES}
 				>
 					<Form.Item label="Name" name="name" rules={[{ required: true, message: "Name is required" }]}>
-						<Input placeholder="MCP server name" />
+						<Input placeholder="MCP server name" disabled={serverModalMode === "edit"} />
 					</Form.Item>
 					<Form.Item label="Description" name="description">
 						<TextArea rows={3} placeholder="MCP server description" />
@@ -301,7 +352,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 								<TextArea rows={3} placeholder={`arg1\narg2`} />
 							</Form.Item>
 							<Form.Item label="Env" name="env">
-								<TextArea rows={3} placeholder={`KEY1=value1\nKEY2=value2`} />
+								<TextArea rows={3} placeholder={serverModalMode === "edit" ? `TOKEN=\nNEW_TOKEN=value` : `KEY1=value1\nKEY2=value2`} />
 							</Form.Item>
 						</>
 					) : (
@@ -310,7 +361,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 								<Input placeholder="https://mcp.example.com/mcp" />
 							</Form.Item>
 							<Form.Item label="HTTP Header" name="headers">
-								<TextArea rows={3} placeholder={`Authorization: Bearer your_token_here\nContent-Type: application/json`} />
+								<TextArea rows={3} placeholder={serverModalMode === "edit" ? `Authorization:\nX-API-Key: value` : `Authorization: Bearer your_token_here\nContent-Type: application/json`} />
 							</Form.Item>
 						</>
 					)}

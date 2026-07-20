@@ -1105,6 +1105,7 @@ function App(): React.JSX.Element {
 			setActiveWorkspace(workspace);
 			console.info("[App] workspace selected", workspace);
 		} catch (error: unknown) {
+			showTransientError(error instanceof Error ? error.message : "Failed to select workspace");
 			console.error("[App] select workspace failed", error);
 		}
 	}
@@ -1180,7 +1181,7 @@ function App(): React.JSX.Element {
 				return nextWorkspaces;
 			});
 		} catch (error: unknown) {
-			setSessionError(error instanceof Error ? error.message : "Failed to select workspace");
+			showTransientError(error instanceof Error ? error.message : "Failed to select workspace");
 			console.error("[App] select workspace for new session failed", error);
 		}
 	}
@@ -1213,7 +1214,7 @@ function App(): React.JSX.Element {
 			setActiveWorkspace(workspace);
 			setSessionError(null);
 		} catch (error: unknown) {
-			setSessionError(error instanceof Error ? error.message : "Failed to select workspace");
+			showTransientError(error instanceof Error ? error.message : "Failed to select workspace");
 			console.error("[App] select home workspace failed", error);
 		}
 	}
@@ -1270,7 +1271,7 @@ function App(): React.JSX.Element {
 			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 			setSessionError(null);
 		} catch (error: unknown) {
-			setSessionError(error instanceof Error ? error.message : "Failed to add workspace");
+			showTransientError(error instanceof Error ? error.message : "Failed to add workspace");
 			console.error("[App] add home workspace failed", error);
 		} finally {
 			setIsWorkspaceAdding(false);
@@ -1566,14 +1567,17 @@ function App(): React.JSX.Element {
 			return;
 		}
 
+		const previousApproval: PendingApproval | null = pendingApproval;
 		setIsApproving(true);
 		setApprovalError(null);
+		setPendingApproval(null);
 		try {
 			await approveApproval(approvalId, consentText);
 			await refreshPendingApproval();
 			await refreshLatestTimeline();
 		} catch (error: unknown) {
 			const message: string = error instanceof Error ? error.message : "Failed to approve tool execution";
+			setPendingApproval(previousApproval);
 			setApprovalError(message);
 			console.error("[App] approve approval failed", error);
 		} finally {
@@ -1586,15 +1590,17 @@ function App(): React.JSX.Element {
 			return;
 		}
 
+		const previousApproval: PendingApproval | null = pendingApproval;
 		setIsRejecting(true);
 		setApprovalError(null);
+		setPendingApproval(null);
 		try {
 			await rejectApproval(approvalId);
-			setPendingApproval(null);
 			await refreshPendingApproval();
 			await refreshLatestTimeline();
 		} catch (error: unknown) {
 			const message: string = error instanceof Error ? error.message : "Failed to reject tool execution";
+			setPendingApproval(previousApproval);
 			setApprovalError(message);
 			console.error("[App] reject approval failed", error);
 		} finally {
@@ -1625,6 +1631,10 @@ function App(): React.JSX.Element {
 			return;
 		}
 
+		void messageApi.error(errorMessage);
+	}
+
+	function showTransientError(errorMessage: string): void {
 		void messageApi.error(errorMessage);
 	}
 
@@ -2077,12 +2087,11 @@ function App(): React.JSX.Element {
 
 	async function handleAddImageFiles(files: File[]): Promise<void> {
 		if (activeSessionId === null || isNewSessionHome) {
-			setSessionError("Please open a session before adding images.");
+			showTransientError("Please open a session before adding images.");
 			return;
 		}
 
 		try {
-			setSessionError(null);
 			for (const file of files.slice(0, 3)) {
 				if (!isSupportedImageMimeType(file.type)) {
 					throw new Error(`Unsupported image type: ${file.type || file.name}`);
@@ -2106,7 +2115,7 @@ function App(): React.JSX.Element {
 			}
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to add image";
-			setSessionError(errorMessage);
+			showTransientError(errorMessage);
 			console.error("[App] add image failed", error);
 		}
 	}
@@ -2129,17 +2138,16 @@ function App(): React.JSX.Element {
 
 	async function handleAddWorkspaceContext(kind: "files" | "folder"): Promise<void> {
 		if (activeSessionId === null || isNewSessionHome) {
-			setSessionError("Please open a session before adding files or folders.");
+			showTransientError("Please open a session before adding files or folders.");
 			return;
 		}
 		const workspace: WorkspaceConfig | null = getContextWorkspace();
 		if (workspace === null) {
-			setSessionError("Please select a workspace before adding files or folders.");
+			showTransientError("Please select a workspace before adding files or folders.");
 			return;
 		}
 
 		try {
-			setSessionError(null);
 			const entries: WorkspacePickedEntry[] | null = kind === "files"
 				? await window.electronAPI.workspaceFs.pickWorkspaceFiles({ workspaceRoot: workspace.rootPath })
 				: await window.electronAPI.workspaceFs.pickWorkspaceFolder({ workspaceRoot: workspace.rootPath });
@@ -2151,7 +2159,7 @@ function App(): React.JSX.Element {
 			}
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to add workspace context";
-			setSessionError(errorMessage);
+			showTransientError(errorMessage);
 			console.error("[App] add workspace context failed", error);
 		}
 	}
@@ -2179,7 +2187,7 @@ function App(): React.JSX.Element {
 			return;
 		}
 		if (activeSessionId === null || isNewSessionHome) {
-			setSessionError("Please open a session before adding files.");
+			showTransientError("Please open a session before adding files.");
 			return;
 		}
 
@@ -2194,7 +2202,6 @@ function App(): React.JSX.Element {
 		}
 
 		try {
-			setSessionError(null);
 			if (imageFiles.length > 0) {
 				await handleAddImageFiles(imageFiles);
 			}
@@ -2205,7 +2212,7 @@ function App(): React.JSX.Element {
 
 			const workspace: WorkspaceConfig | null = getContextWorkspace();
 			if (workspace === null) {
-				setSessionError(imageFiles.length > 0 ? "Images added. Select a workspace to add non-image files." : "Please select a workspace before adding files.");
+				showTransientError(imageFiles.length > 0 ? "Images added. Select a workspace to add non-image files." : "Please select a workspace before adding files.");
 				return;
 			}
 
@@ -2213,7 +2220,7 @@ function App(): React.JSX.Element {
 				.map((file: File): string | null => getLocalPathForFile(file))
 				.filter((filePath: string | null): filePath is string => filePath !== null);
 			if (paths.length === 0) {
-				setSessionError(imageFiles.length > 0 ? "Images added. Dropped files did not expose local paths." : "Dropped files did not expose local paths.");
+				showTransientError(imageFiles.length > 0 ? "Images added. Dropped files did not expose local paths." : "Dropped files did not expose local paths.");
 				return;
 			}
 
@@ -2226,7 +2233,7 @@ function App(): React.JSX.Element {
 			}
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to add files";
-			setSessionError(errorMessage);
+			showTransientError(errorMessage);
 			console.error("[App] add context files failed", error);
 		}
 	}

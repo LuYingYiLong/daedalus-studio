@@ -3,7 +3,7 @@ import type { MouseEvent } from "react";
 import { archiveSession, fetchSessions, renameSession } from "@/api/session-api";
 import { deleteWorkspace, fetchWorkspaces } from "@/api/workspace-api";
 import type { DeleteWorkspaceResult } from "@/api/workspace-api";
-import { Button, Dropdown, Input, Menu, message, Modal, Tooltip, Typography } from "antd";
+import { Alert, Button, Dropdown, Input, Menu, message, Modal, Tooltip, Typography } from "antd";
 import type { MenuProps } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/api/types";
 import { Icon } from "@/assets/icons";
@@ -49,20 +49,24 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 		items: [
 			{
 				key: "rename",
-				label: "Rename session"
+				label: "Rename session",
+				icon: <Icon name="pencil" />,
 			},
 			{
 				key: "archive",
 				label: "Archive session",
-				disabled: options.archivingSessionId !== null
+				icon: <Icon name="archive" />,
+				disabled: options.archivingSessionId !== null,
 			},
 			{
 				key: "open",
-				label: "Open in Explorer"
+				label: "Open in Explorer",
+				icon: <Icon name="folder-open" />,
 			},
 			{
 				key: "copy",
-				label: "Copy session ID"
+				label: "Copy session ID",
+				icon: <Icon name="copy" />,
 			}
 		],
 		onClick: ({ key, domEvent }): void => {
@@ -260,6 +264,12 @@ function WorkspaceTree({
 	const [renameError, setRenameError] = useState<string | null>(null);
 	const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
 
+	function showWorkspaceOperationError(error: unknown, fallbackMessage: string): void {
+		const errorMessage: string = error instanceof Error ? error.message : fallbackMessage;
+		console.error(`[WorkspaceTree] ${fallbackMessage}`, error);
+		void messageApi.error(errorMessage);
+	}
+
 	const handleMenuClick: MenuProps["onClick"] = ({ key }): void => {
 		const selectedKey: string = String(key);
 
@@ -316,7 +326,7 @@ function WorkspaceTree({
 			});
 			onSessionArchive?.(session);
 		} catch (error: unknown) {
-			setWorkspaceError(error instanceof Error ? error.message : "归档会话失败");
+			showWorkspaceOperationError(error, "Failed to archive session");
 		} finally {
 			setArchivingSessionId(null);
 		}
@@ -382,7 +392,9 @@ function WorkspaceTree({
 			setRenameTargetSession(null);
 			setRenameDraftTitle("");
 		} catch (error: unknown) {
-			setRenameError(error instanceof Error ? error.message : "Failed to rename session");
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to rename session";
+			setRenameError(errorMessage);
+			void messageApi.error(errorMessage);
 		} finally {
 			setRenamingSessionId(null);
 		}
@@ -393,7 +405,7 @@ function WorkspaceTree({
 			setWorkspaceError(null);
 			await window.electronAPI.sessionFs.openSessionDirectory(session.id);
 		} catch (error: unknown) {
-			setWorkspaceError(error instanceof Error ? error.message : "Failed to open session directory");
+			showWorkspaceOperationError(error, "Failed to open session directory");
 		}
 	}
 
@@ -402,7 +414,7 @@ function WorkspaceTree({
 			await copyTextToClipboard(session.id);
 			void messageApi.success("Session ID copied");
 		} catch (error: unknown) {
-			setWorkspaceError(error instanceof Error ? error.message : "Failed to copy session ID");
+			showWorkspaceOperationError(error, "Failed to copy session ID");
 		}
 	}
 
@@ -411,7 +423,7 @@ function WorkspaceTree({
 			setWorkspaceError(null);
 			await window.electronAPI.workspaceFs.openWorkspaceDirectory(workspace.rootPath);
 		} catch (error: unknown) {
-			setWorkspaceError(error instanceof Error ? error.message : "Failed to open workspace directory");
+			showWorkspaceOperationError(error, "Failed to open workspace directory");
 		}
 	}
 
@@ -455,7 +467,7 @@ function WorkspaceTree({
 			setDeleteTargetWorkspace(null);
 			onWorkspaceDelete?.(result);
 		} catch (error: unknown) {
-			setWorkspaceError(error instanceof Error ? error.message : "Failed to delete workspace");
+			showWorkspaceOperationError(error, "Failed to delete workspace");
 		} finally {
 			setDeletingWorkspaceId(null);
 		}
@@ -606,10 +618,16 @@ function WorkspaceTree({
 				</div>
 			) : null}
 
-			{workspaceError ? (
-				<Typography.Text type="danger" className={styles.workspaceErrorText}>
-					{workspaceError}
-				</Typography.Text>
+			{workspaceError !== null ? (
+				<Alert
+					type="error"
+					showIcon={true}
+					description={workspaceError}
+					closable={{
+						onClose: (): void => setWorkspaceError(null)
+					}}
+					className={styles.workspaceErrorAlert}
+				/>
 			) : null}
 
 			<div className={styles.workspaceMenuScroller}>

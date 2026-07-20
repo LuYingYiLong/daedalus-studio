@@ -332,7 +332,9 @@
 
 .homeError {
 	display: block;
+	width: min(520px, 100%);
 	max-width: 100%;
+	text-align: left;
 	overflow-wrap: anywhere;
 }
 

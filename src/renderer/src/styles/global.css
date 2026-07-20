@@ -185,11 +185,6 @@ body {
 	overflow: hidden;
 }
 
-::selection {
-	background: var(--ds-accent-muted);
-	color: var(--ds-text-inverse);
-}
-
 ::-webkit-scrollbar {
 	width: 10px;
 	height: 10px;

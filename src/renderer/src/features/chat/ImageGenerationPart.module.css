@@ -21,16 +21,10 @@
 	margin: 0px !important;
 }
 
-.prompt {
-	display: -webkit-box;
-	max-width: 100%;
-	overflow: hidden;
-	color: var(--ds-text-secondary);
-	font-size: 14px;
-	line-height: 1.45;
-	-webkit-box-orient: vertical;
-	line-clamp: 2;
+.prompt :global(.ant-typography-copy) {
+	color: var(--ds-text-primary);
 }
+
 
 .grid {
 	display: grid;
@@ -56,14 +50,6 @@
 	object-fit: cover;
 }
 
-.actions {
-	display: flex;
-	align-items: center;
-	flex-wrap: wrap;
-	gap: 6px;
-	margin-top: 8px;
-}
-
 .placeholder {
 	display: flex;
 	align-items: center;
@@ -76,4 +62,67 @@
 
 .alert {
 	border-radius: var(--ds-radius-sm);
+}
+
+.previewClose {
+	top: 44px !important;
+	right: 16px !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 32px !important;
+	height: 32px !important;
+	border: 1px solid var(--ds-border) !important;
+	border-radius: var(--ds-radius-lg) !important;
+	color: var(--ds-text-primary) !important;
+	background: var(--ds-surface-elevated) !important;
+	box-shadow: none !important;
+}
+
+.previewClose:hover {
+	color: var(--ds-accent) !important;
+	background: var(--ds-surface-hover) !important;
+}
+
+.previewFooter {
+	bottom: 16px !important;
+	padding: 0 !important;
+	color: var(--ds-text-primary) !important;
+	background: transparent !important;
+}
+
+.previewActions {
+	gap: 4px !important;
+	padding: 4px 8px !important;
+	border: 1px solid var(--ds-border) !important;
+	border-radius: var(--ds-radius-lg) !important;
+	color: var(--ds-text-primary) !important;
+	background: var(--ds-surface-elevated) !important;
+	box-shadow: none !important;
+}
+
+.previewActions :global(.ant-image-preview-actions-action) {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 28px !important;
+	height: 28px !important;
+	border-radius: var(--ds-radius-sm) !important;
+	color: var(--ds-text-secondary) !important;
+	background: transparent !important;
+	transition: color 120ms ease !important;
+}
+
+.previewActions :global(.ant-image-preview-actions-action:hover),
+.previewActions :global(.ant-image-preview-actions-action:focus-visible) {
+	color: var(--ds-accent) !important;
+	background: transparent !important;
+}
+
+.previewActions :global(.ant-image-preview-actions-action:hover .anticon),
+.previewActions :global(.ant-image-preview-actions-action:focus-visible .anticon),
+.previewActions :global(.ant-image-preview-actions-action:hover svg),
+.previewActions :global(.ant-image-preview-actions-action:focus-visible svg) {
+	color: var(--ds-accent) !important;
+	fill: currentColor !important;
 }

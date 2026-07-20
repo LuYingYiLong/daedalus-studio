@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createMcpServerAddPayload, parseEnvLines, parseHeaderLines, parseLineList } from "@/pages/settings/mcp-form-utils";
+import { createMcpServerAddPayload, createMcpServerUpdatePayload, parseEnvLines, parseHeaderLines, parseLineList } from "@/pages/settings/mcp-form-utils";
 
 describe("mcp-form-utils", () => {
 	it("parses multiline args, env and headers", () => {
@@ -52,5 +52,47 @@ describe("mcp-form-utils", () => {
 			headers: { Authorization: "Bearer token" }
 		});
 		expect("planAccess" in httpPayload).toBe(false);
+	});
+
+	it("creates update payloads and allows empty existing secrets", () => {
+		const stdioPayload = createMcpServerUpdatePayload("custom-demo", {
+			name: "Ignored",
+			description: "",
+			transport: "stdio",
+			command: "npx",
+			args: "-y\nserver",
+			env: "TOKEN=\nNEW_TOKEN=abc"
+		});
+		expect(stdioPayload).toEqual({
+			serverId: "custom-demo",
+			description: "",
+			transport: "stdio",
+			command: "npx",
+			args: ["-y", "server"],
+			env: {
+				TOKEN: "",
+				NEW_TOKEN: "abc"
+			}
+		});
+		expect("name" in stdioPayload).toBe(false);
+
+		const httpPayload = createMcpServerUpdatePayload("custom-http", {
+			name: "Ignored",
+			description: "Updated",
+			transport: "http",
+			url: "https://example.com/mcp",
+			headers: "Authorization:\nX-API-Key: value"
+		});
+		expect(httpPayload).toEqual({
+			serverId: "custom-http",
+			description: "Updated",
+			transport: "http",
+			url: "https://example.com/mcp",
+			headers: {
+				Authorization: "",
+				"X-API-Key": "value"
+			}
+		});
+		expect("name" in httpPayload).toBe(false);
 	});
 });
