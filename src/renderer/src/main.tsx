@@ -10,6 +10,7 @@ import {
 import { probeBackendWorkspaceAndSessions } from "./api/dev-backend-probe";
 import Titlebar from "./components/Titlebar";
 import App from "./app/App";
+import "react-diff-view/style/index.css";
 import "./styles/global.css";
 import "./styles/markdown.css";
 

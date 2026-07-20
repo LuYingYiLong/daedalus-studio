@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Typography, Popover, Collapse } from "antd";
+import { Affix, Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import type { AdditionalContextItem, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
@@ -21,6 +21,7 @@ import { Icon } from "@/assets/icons";
 import ClarificationDialog from "@/features/clarification/ClarificationDialog";
 import PlanApprovalDialog from "@/features/approval/PlanApprovalDialog";
 import MarkdownContent from "@/features/markdown/MarkdownContent";
+import GitDiffReviewPanel from "@/features/review/GitDiffReviewPanel";
 
 type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
 
@@ -37,6 +38,10 @@ const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 const SUMMARY_PREVIEW_LIMIT: number = 3;
 const SUMMARY_SEE_MORE_LIMIT: number = 100;
 const COMMIT_OR_PUSH_PROMPT: string = "Commit or push the current workspace changes.";
+const REVIEW_PANEL_CLOSED_SIZE: number = 0;
+const REVIEW_PANEL_DEFAULT_SIZE: number = 520;
+const REVIEW_PANEL_MAX_SIZE: number = 720;
+const REVIEW_PANEL_CLOSE_THRESHOLD: number = 240;
 
 function isWorkspaceLaunchTargetId(value: string): value is WorkspaceLaunchTargetId {
 	return value === "file-explorer"
@@ -262,8 +267,13 @@ function AgentPage({
 	const [sourcesModalOpen, setSourcesModalOpen] = useState<boolean>(false);
 	const [previewSource, setPreviewSource] = useState<SessionOverviewSourceItem | null>(null);
 	const [previewPlan, setPreviewPlan] = useState<SessionOverviewPlanItem | null>(null);
+	const [reviewPanelOpen, setReviewPanelOpen] = useState<boolean>(false);
+	const [reviewPanelSize, setReviewPanelSize] = useState<number>(REVIEW_PANEL_DEFAULT_SIZE);
+	const [reviewPanelLastOpenSize, setReviewPanelLastOpenSize] = useState<number>(REVIEW_PANEL_DEFAULT_SIZE);
 	const showWorkspaceLaunchControls: boolean = !isHome && activeWorkspace !== null;
 	const showSummaryButton: boolean = !isHome && activeSessionId !== null;
+	const showReviewButton: boolean = !isHome && activeWorkspace !== null;
+	const showTopMenuBar: boolean = showWorkspaceLaunchControls || showSummaryButton;
 	const selectedLaunchTarget: WorkspaceLaunchTarget = useMemo((): WorkspaceLaunchTarget => {
 		return workspaceLaunchTargets.find((target: WorkspaceLaunchTarget): boolean => target.id === selectedLaunchTargetId)
 			?? workspaceLaunchTargets[0]
@@ -464,7 +474,8 @@ function AgentPage({
 		setSourcesModalOpen(false);
 		setPreviewSource(null);
 		setPreviewPlan(null);
-	}, [activeSessionId]);
+		setReviewPanelOpen(false);
+	}, [activeSessionId, activeWorkspace?.id]);
 
 	async function loadSummaryOverview(planLimit: number = SUMMARY_PREVIEW_LIMIT, sourceLimit: number = SUMMARY_PREVIEW_LIMIT): Promise<SessionOverviewResult | null> {
 		if (activeSessionId === null) {
@@ -542,6 +553,59 @@ function AgentPage({
 		void openWorkspaceLaunchTarget(targetId);
 	};
 
+	function openReviewPanel(): void {
+		if (activeWorkspace === null) {
+			return;
+		}
+		setReviewPanelSize(reviewPanelLastOpenSize);
+		setReviewPanelOpen(true);
+	}
+
+	function closeReviewPanel(): void {
+		setReviewPanelOpen(false);
+	}
+
+	function toggleReviewPanel(): void {
+		if (reviewPanelOpen) {
+			closeReviewPanel();
+			return;
+		}
+		openReviewPanel();
+	}
+
+	function handleReviewResize(sizes: number[]): void {
+		const nextSize: number | undefined = sizes[1];
+		if (nextSize === undefined || !Number.isFinite(nextSize)) {
+			return;
+		}
+
+		const normalizedSize: number = Math.min(REVIEW_PANEL_MAX_SIZE, Math.max(REVIEW_PANEL_CLOSED_SIZE, Math.trunc(nextSize)));
+		setReviewPanelSize(normalizedSize);
+		if (normalizedSize > REVIEW_PANEL_CLOSED_SIZE) {
+			setReviewPanelOpen(true);
+		}
+		if (normalizedSize >= REVIEW_PANEL_CLOSE_THRESHOLD) {
+			setReviewPanelLastOpenSize(normalizedSize);
+		}
+	}
+
+	function handleReviewResizeEnd(sizes: number[]): void {
+		const nextSize: number | undefined = sizes[1];
+		if (nextSize === undefined || !Number.isFinite(nextSize)) {
+			return;
+		}
+		if (nextSize < REVIEW_PANEL_CLOSE_THRESHOLD) {
+			closeReviewPanel();
+			setReviewPanelSize(reviewPanelLastOpenSize);
+			return;
+		}
+
+		const validSize: number = Math.min(REVIEW_PANEL_MAX_SIZE, Math.max(REVIEW_PANEL_CLOSE_THRESHOLD, Math.trunc(nextSize)));
+		setReviewPanelOpen(true);
+		setReviewPanelSize(validSize);
+		setReviewPanelLastOpenSize(validSize);
+	}
+
 	function handlePageDragOver(event: React.DragEvent<HTMLDivElement>): void {
 		if (event.dataTransfer.types.includes("Files")) {
 			event.preventDefault();
@@ -590,194 +654,236 @@ function AgentPage({
 
 			</aside>
 
-			<Divider vertical size="small"/>
+			<Divider vertical size="small" />
 
-			<section className={styles.chatPanel}>
-				<header className={styles.chatHeader}>
-					<Typography.Title level={5} className={styles.chatTitle}>
-						{chatTitle}
-					</Typography.Title>
-					{showSummaryButton ? (
-						<div className={styles.topMenuBar}>
-							{showWorkspaceLaunchControls ? (
-								<Space.Compact size="small" className={styles.workspaceLaunchControls}>
-									<Button
-										loading={isOpeningLaunchTarget}
-										icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
-										onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
-									>
-										Open in {selectedLaunchTarget.label}
-									</Button>
-									<Dropdown
-										menu={{
-											items: workspaceLaunchMenuItems,
-											selectedKeys: [selectedLaunchTarget.id],
-											onClick: handleWorkspaceLaunchMenuClick
-										}}
-										trigger={["click"]}
-									>
-										<Button
-											aria-label="Select workspace launch target"
-											icon={<Icon name="arrow-down" />}
-										/>
-									</Dropdown>
-								</Space.Compact>
-							) : null}
-							<Popover
-								trigger={[ "click" ]}
-								placement="bottom"
-								open={summaryOpen}
-								onOpenChange={handleSummaryOpenChange}
-								className={styles.summaryPopver}
-								content={(
-									<div className={styles.summaryPanel}>
-										{isSummaryLoading && summaryOverview === null ? (
-											<div className={styles.summaryLoading}>
-												<Spin size="small" />
-											</div>
-										) : summaryError !== null ? (
-											<div className={styles.summaryEmpty}>
-												<Typography.Text type="danger">{summaryError}</Typography.Text>
+			<div className={styles.agentMain}>
+				{showReviewButton ? (
+					<div className={styles.reviewToggleSlot}>
+						<Affix offsetTop={0} className={styles.reviewAffix}>
+							<Button
+								type={reviewPanelOpen ? "primary" : "text"}
+								shape="circle"
+								aria-label={reviewPanelOpen ? "Close review panel" : "Open review panel"}
+								aria-pressed={reviewPanelOpen}
+								icon={<Icon name="layout-right" />}
+								onClick={toggleReviewPanel}
+							/>
+						</Affix>
+					</div>
+				) : null}
+				<Splitter
+					className={styles.agentSplitter}
+					collapsible={{ motion: true }}
+					onResize={handleReviewResize}
+					onResizeEnd={handleReviewResizeEnd}
+				>
+					<Splitter.Panel min={360}>
+						<section className={styles.chatPanel}>
+							<header className={styles.chatHeader}>
+								<Typography.Title level={5} className={styles.chatTitle}>
+									{chatTitle}
+								</Typography.Title>
+								{showTopMenuBar ? (
+									<div className={styles.topMenuBar}>
+										{showWorkspaceLaunchControls ? (
+											<Space.Compact size="small" className={styles.workspaceLaunchControls}>
+												<Button
+													loading={isOpeningLaunchTarget}
+													icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
+													onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
+												>
+													Open in {selectedLaunchTarget.label}
+												</Button>
+												<Dropdown
+													menu={{
+														items: workspaceLaunchMenuItems,
+														selectedKeys: [selectedLaunchTarget.id],
+														onClick: handleWorkspaceLaunchMenuClick
+													}}
+													trigger={["click"]}
+												>
+													<Button
+														aria-label="Select workspace launch target"
+														icon={<Icon name="arrow-down" />}
+													/>
+												</Dropdown>
+											</Space.Compact>
+										) : null}
+										{showSummaryButton ? (
+											<Popover
+												trigger={["click"]}
+												placement="bottom"
+												open={summaryOpen}
+												onOpenChange={handleSummaryOpenChange}
+												className={styles.summaryPopver}
+												content={(
+													<div className={styles.summaryPanel}>
+														{isSummaryLoading && summaryOverview === null ? (
+															<div className={styles.summaryLoading}>
+																<Spin size="small" />
+															</div>
+														) : summaryError !== null ? (
+															<div className={styles.summaryEmpty}>
+																<Typography.Text type="danger">{summaryError}</Typography.Text>
+																<Button
+																	type="text"
+																	icon={<Icon name="refresh" />}
+																	onClick={(): void => {
+																		void loadSummaryOverview();
+																	}}
+																>
+																	Retry
+																</Button>
+															</div>
+														) : summaryCollapseItems.length > 0 ? (
+															summaryCollapseItems.map((item, index): React.ReactNode => (
+																<div key={String(item?.key ?? index)}>
+																	{index > 0 ? <Divider size="small" /> : null}
+																	<Collapse
+																		size="small"
+																		bordered={false}
+																		items={item === undefined ? [] : [item]}
+																		className={styles.summaryCollapse}
+																		defaultActiveKey={[String(item?.key ?? "")]}
+																	/>
+																</div>
+															))
+														) : (
+															<Empty
+																image={Empty.PRESENTED_IMAGE_SIMPLE}
+																description="No summary yet"
+																className={styles.summaryEmpty}
+															/>
+														)}
+													</div>
+												)}
+											>
 												<Button
 													type="text"
-													icon={<Icon name="refresh" />}
-													onClick={(): void => {
-														void loadSummaryOverview();
-													}}
-												>
-													Retry
-												</Button>
-											</div>
-										) : summaryCollapseItems.length > 0 ? (
-											summaryCollapseItems.map((item, index): React.ReactNode => (
-												<div key={String(item?.key ?? index)}>
-													{index > 0 ? <Divider size="small"/> : null}
-													<Collapse
-														size="small"
-														bordered={false}
-														items={item === undefined ? [] : [item]}
-														className={styles.summaryCollapse}
-														defaultActiveKey={[String(item?.key ?? "")]}
-													/>
-												</div>
-											))
-										) : (
-											<Empty
-												image={Empty.PRESENTED_IMAGE_SIMPLE}
-												description="No summary yet"
-												className={styles.summaryEmpty}
-											/>
-										)}
+													shape="circle"
+													icon={<Icon name="list-check" />}
+												/>
+											</Popover>
+										) : null}
 									</div>
-								)}
-							>
-								<Button
-									type="text"
-									shape="circle"
-									icon={<Icon name="list-check" />}
+								) : null}
+							</header>
+
+						<Divider size="small" />
+
+						{isHome ? (
+							<NewSessionHome workspace={homeWorkspace} errorMessage={sessionError} />
+						) : (
+							<MessageList
+								blocks={timelineBlocks}
+								isLoading={isSessionLoading}
+								errorMessage={sessionError}
+								hasMoreBefore={hasMoreBefore}
+								hasMoreAfter={hasMoreAfter}
+								initialScrollToBottomKey={initialScrollToBottomKey}
+								onLoadMoreBefore={onLoadMoreBefore}
+								onLoadMoreAfter={onLoadMoreAfter}
+								retryDisabled={retryDisabled}
+								activeRetryRequestId={activeRetryRequestId}
+								onRetryEditStart={onRetryEditStart}
+								onRetryEditCancel={onRetryEditCancel}
+								onRetryFromUserMessage={onRetryFromUserMessage}
+								onInlineDiffReview={openReviewPanel}
+							/>
+						)}
+
+							<footer className={styles.composer}>
+							{!isHome && pendingApproval !== null ? (
+								<ApprovalDialog
+									pendingApproval={pendingApproval}
+									isApproving={isApproving}
+									isRejecting={isRejecting}
+									errorMessage={approvalError}
+									onApprove={onApprovalApprove}
+									onReject={onApprovalReject}
 								/>
-							</Popover>
-						</div>
+							) : !isHome && pendingPlanClarification !== null ? (
+								<ClarificationDialog
+									planId={pendingPlanClarification.planId}
+									title={pendingPlanClarification.title}
+									question={pendingPlanClarification.question}
+									recommendedReplies={pendingPlanClarification.recommendedReplies}
+									isSubmitting={isPlanClarificationSubmitting}
+									errorMessage={planClarificationError}
+									onSubmit={onPlanClarificationSubmit}
+									onSkip={onPlanClarificationSkip}
+								/>
+							) : !isHome && pendingPlanApproval !== null ? (
+								<PlanApprovalDialog
+									plan={pendingPlanApproval}
+									isApproving={isPlanApproving}
+									isRevising={isPlanRevising}
+									errorMessage={planApprovalError}
+									onApprove={onPlanApprove}
+									onRevise={onPlanRevise}
+								/>
+							) : (
+								<Composer
+									providerModelSelection={providerModelSelection}
+									selectedProviderId={selectedProviderId}
+									selectedModelId={selectedModelId}
+									message={message}
+									contextItems={contextItems}
+									workflowTodoSnapshot={workflowTodoSnapshot}
+									workflowTodoCollapsed={workflowTodoCollapsed}
+									mode={mode}
+									approvalMode={approvalMode}
+									slashCommands={slashCommands}
+									skills={skills}
+									isSending={isSending}
+									isApprovalModeSaving={isApprovalModeSaving}
+									webSearchEnabled={webSearchEnabled}
+									workspaceOptions={workspaceOptions}
+									selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
+									workspaceFooterDisabled={workspaceFooterDisabled}
+									isWorkspaceAdding={isWorkspaceAdding}
+									showContextUsage={!isHome}
+									onMessageChange={onMessageChange}
+									onModeChange={onModeChange}
+									onApprovalModeChange={onApprovalModeChange}
+									onWebSearchEnabledChange={onWebSearchEnabledChange}
+									onProviderModelChange={onProviderModelChange}
+									onAddFiles={onAddFiles}
+									onAddFolder={onAddFolder}
+									onAddImages={onAddImages}
+									onAddContextFiles={onAddContextFiles}
+									onWorkspaceSelect={onHomeWorkspaceSelect}
+									onWorkspaceAdd={onHomeWorkspaceAdd}
+									onWorkspaceClear={onHomeWorkspaceClear}
+									onRemoveContext={onRemoveContext}
+									onPinContext={onPinContext}
+									onClearUnpinnedContext={onClearUnpinnedContext}
+									onCancel={onCancel}
+									onSubmit={onSubmit}
+									onWorkflowTodoDismiss={onWorkflowTodoDismiss}
+									onWorkflowTodoCollapseChange={onWorkflowTodoCollapseChange}
+									onCompletionOpen={onCompletionOpen}
+								/>
+							)}
+							</footer>
+						</section>
+					</Splitter.Panel>
+					{showReviewButton ? (
+						<Splitter.Panel
+							size={reviewPanelOpen ? reviewPanelSize : REVIEW_PANEL_CLOSED_SIZE}
+							min={REVIEW_PANEL_CLOSED_SIZE}
+							max={REVIEW_PANEL_MAX_SIZE}
+							collapsible={{ start: true, showCollapsibleIcon: false }}
+						>
+							{reviewPanelOpen && activeWorkspace !== null ? (
+								<div className={styles.reviewPanelSlot}>
+									<GitDiffReviewPanel workspaceId={activeWorkspace.id} />
+								</div>
+							) : null}
+						</Splitter.Panel>
 					) : null}
-				</header>
-
-				<Divider size="small"/>
-
-				{isHome ? (
-					<NewSessionHome workspace={homeWorkspace} errorMessage={sessionError} />
-				) : (
-					<MessageList
-						blocks={timelineBlocks}
-						isLoading={isSessionLoading}
-						errorMessage={sessionError}
-						hasMoreBefore={hasMoreBefore}
-						hasMoreAfter={hasMoreAfter}
-						initialScrollToBottomKey={initialScrollToBottomKey}
-						onLoadMoreBefore={onLoadMoreBefore}
-						onLoadMoreAfter={onLoadMoreAfter}
-						retryDisabled={retryDisabled}
-						activeRetryRequestId={activeRetryRequestId}
-						onRetryEditStart={onRetryEditStart}
-						onRetryEditCancel={onRetryEditCancel}
-						onRetryFromUserMessage={onRetryFromUserMessage}
-					/>
-				)}
-
-				<footer className={styles.composer}>
-					{!isHome && pendingApproval !== null ? (
-						<ApprovalDialog
-							pendingApproval={pendingApproval}
-							isApproving={isApproving}
-							isRejecting={isRejecting}
-							errorMessage={approvalError}
-							onApprove={onApprovalApprove}
-							onReject={onApprovalReject}
-						/>
-					) : !isHome && pendingPlanClarification !== null ? (
-						<ClarificationDialog
-							planId={pendingPlanClarification.planId}
-							title={pendingPlanClarification.title}
-							question={pendingPlanClarification.question}
-							recommendedReplies={pendingPlanClarification.recommendedReplies}
-							isSubmitting={isPlanClarificationSubmitting}
-							errorMessage={planClarificationError}
-							onSubmit={onPlanClarificationSubmit}
-							onSkip={onPlanClarificationSkip}
-						/>
-					) : !isHome && pendingPlanApproval !== null ? (
-						<PlanApprovalDialog
-							plan={pendingPlanApproval}
-							isApproving={isPlanApproving}
-							isRevising={isPlanRevising}
-							errorMessage={planApprovalError}
-							onApprove={onPlanApprove}
-							onRevise={onPlanRevise}
-						/>
-					) : (
-						<Composer
-							providerModelSelection={providerModelSelection}
-							selectedProviderId={selectedProviderId}
-							selectedModelId={selectedModelId}
-							message={message}
-							contextItems={contextItems}
-							workflowTodoSnapshot={workflowTodoSnapshot}
-							workflowTodoCollapsed={workflowTodoCollapsed}
-							mode={mode}
-							approvalMode={approvalMode}
-							slashCommands={slashCommands}
-							skills={skills}
-							isSending={isSending}
-							isApprovalModeSaving={isApprovalModeSaving}
-							webSearchEnabled={webSearchEnabled}
-							workspaceOptions={workspaceOptions}
-							selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
-							workspaceFooterDisabled={workspaceFooterDisabled}
-							isWorkspaceAdding={isWorkspaceAdding}
-							showContextUsage={!isHome}
-							onMessageChange={onMessageChange}
-							onModeChange={onModeChange}
-							onApprovalModeChange={onApprovalModeChange}
-							onWebSearchEnabledChange={onWebSearchEnabledChange}
-							onProviderModelChange={onProviderModelChange}
-							onAddFiles={onAddFiles}
-							onAddFolder={onAddFolder}
-							onAddImages={onAddImages}
-							onAddContextFiles={onAddContextFiles}
-							onWorkspaceSelect={onHomeWorkspaceSelect}
-							onWorkspaceAdd={onHomeWorkspaceAdd}
-							onWorkspaceClear={onHomeWorkspaceClear}
-							onRemoveContext={onRemoveContext}
-							onPinContext={onPinContext}
-							onClearUnpinnedContext={onClearUnpinnedContext}
-							onCancel={onCancel}
-							onSubmit={onSubmit}
-							onWorkflowTodoDismiss={onWorkflowTodoDismiss}
-							onWorkflowTodoCollapseChange={onWorkflowTodoCollapseChange}
-							onCompletionOpen={onCompletionOpen}
-						/>
-					)}
-				</footer>
-			</section>
+				</Splitter>
+			</div>
 			<Modal
 				title="Plans"
 				open={plansModalOpen}

@@ -29,6 +29,7 @@ export type MessageListProps = {
 	onRetryEditStart?: (requestId: string) => void;
 	onRetryEditCancel?: (requestId: string) => void;
 	onRetryFromUserMessage?: (payload: RetryUserMessagePayload) => boolean | void | Promise<boolean | void>;
+	onInlineDiffReview?: () => void;
 };
 
 type ScrollAnchor = {
@@ -113,7 +114,8 @@ function MessageList({
 	activeRetryRequestId = null,
 	onRetryEditStart,
 	onRetryEditCancel,
-	onRetryFromUserMessage
+	onRetryFromUserMessage,
+	onInlineDiffReview
 }: MessageListProps): React.JSX.Element {
 	const listRef = useRef<HTMLElement | null>(null);
 	const measuredHeightsRef = useRef<Map<string, number>>(new Map());
@@ -456,6 +458,7 @@ function MessageList({
 										block.status === "running" ? nowIsoTime : block.completedAtUtc
 									) ?? undefined}
 									endTime={block.status === "running" ? undefined : formatShortDateTime(block.completedAtUtc)}
+									onInlineDiffReview={onInlineDiffReview}
 								/>
 							);
 						})}

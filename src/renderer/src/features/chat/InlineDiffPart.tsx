@@ -4,15 +4,16 @@ import styles from "./InlineDiffPart.module.css";
 import { Icon } from "@/assets/icons";
 
 export type TimelineInlineDiffPart = Extract<TimelineBodyPart, { type: "inline_diff" }>;
-export type InlineDiffPartPorps = {
+export type InlineDiffPartProps = {
 	part: TimelineInlineDiffPart;
+	onReview?: () => void;
 };
 
 function getFilePath(item: TimelineInlineDiffPart["editedFiles"][number]): string {
 	return item.displayPath ?? item.path ?? item.absolutePath ?? "Unknown file";
 }
 
-function InlineDiffPart({ part }: InlineDiffPartPorps): React.JSX.Element {
+function InlineDiffPart({ part, onReview }: InlineDiffPartProps): React.JSX.Element {
 	const extra: React.ReactNode = (
 		<div>
 			<Button
@@ -21,6 +22,8 @@ function InlineDiffPart({ part }: InlineDiffPartPorps): React.JSX.Element {
 			>Undo</Button>
 			<Button
 				type="text"
+				icon={<Icon name="layout-right" />}
+				onClick={onReview}
 			>Review</Button>
 		</div>
 	);
