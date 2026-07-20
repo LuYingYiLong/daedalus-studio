@@ -57,6 +57,7 @@ describe("client preferences store", () => {
 		})).toEqual({
 			preferences: {
 				minimizeToTrayOnClose: false,
+				theme: "system",
 				lastComposerModel: {
 					providerId: "minimax",
 					modelId: "MiniMax-M3"
@@ -78,6 +79,7 @@ describe("client preferences store", () => {
 
 		expect(nextPreferences).toEqual({
 			minimizeToTrayOnClose: true,
+			theme: "system",
 			lastComposerModel: null
 		});
 		expect(memory.writes.at(-1)).toBe(`${JSON.stringify(nextPreferences, null, 2)}\n`);
@@ -97,5 +99,15 @@ describe("client preferences store", () => {
 			providerId: "opencode_go",
 			modelId: "minimax-m3"
 		});
+	});
+
+	it("updates the theme preference", async () => {
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+
+		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
+			theme: "dark"
+		}, memory.io);
+
+		expect(nextPreferences.theme).toBe("dark");
 	});
 });

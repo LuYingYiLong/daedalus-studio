@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 
 export type ClientPreferences = {
 	minimizeToTrayOnClose: boolean;
+	theme: "system" | "light" | "dark";
 	lastComposerModel: {
 		providerId: string;
 		modelId: string;
@@ -13,6 +14,7 @@ export type ClientPreferencesPatch = Partial<ClientPreferences>;
 
 export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	minimizeToTrayOnClose: false,
+	theme: "system",
 	lastComposerModel: null
 };
 
@@ -49,6 +51,10 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 	const minimizeToTrayOnClose: boolean = typeof value.minimizeToTrayOnClose === "boolean"
 		? value.minimizeToTrayOnClose
 		: DEFAULT_CLIENT_PREFERENCES.minimizeToTrayOnClose;
+	const themePreference: ClientPreferences["theme"] =
+		value.theme === "light" || value.theme === "dark" || value.theme === "system"
+			? value.theme
+			: DEFAULT_CLIENT_PREFERENCES.theme;
 	const lastComposerModel = isRecord(value.lastComposerModel)
 		&& typeof value.lastComposerModel.providerId === "string"
 		&& value.lastComposerModel.providerId.trim().length > 0
@@ -63,11 +69,13 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 	return {
 		preferences: {
 			minimizeToTrayOnClose,
+			theme: themePreference,
 			lastComposerModel
 		},
 		normalized: value.minimizeToTrayOnClose !== minimizeToTrayOnClose
+			|| value.theme !== themePreference
 			|| JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel)
-			|| Object.keys(value).some((key: string): boolean => key !== "minimizeToTrayOnClose" && key !== "lastComposerModel")
+			|| Object.keys(value).some((key: string): boolean => key !== "minimizeToTrayOnClose" && key !== "theme" && key !== "lastComposerModel")
 	};
 }
 
@@ -79,6 +87,9 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	const patch: ClientPreferencesPatch = {};
 	if (typeof value.minimizeToTrayOnClose === "boolean") {
 		patch.minimizeToTrayOnClose = value.minimizeToTrayOnClose;
+	}
+	if (value.theme === "light" || value.theme === "dark" || value.theme === "system") {
+		patch.theme = value.theme;
 	}
 	if (value.lastComposerModel === null) {
 		patch.lastComposerModel = null;

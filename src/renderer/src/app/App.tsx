@@ -1188,6 +1188,17 @@ function App(): React.JSX.Element {
 	async function handleHomeWorkspaceSelect(workspaceId: string): Promise<void> {
 		const navigationVersion: number = navigationVersionRef.current + 1;
 		navigationVersionRef.current = navigationVersion;
+		const optimisticWorkspace: WorkspaceConfig | undefined = homeWorkspaceOptions.find((workspace: WorkspaceConfig): boolean => workspace.id === workspaceId);
+		if (optimisticWorkspace !== undefined) {
+			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
+				...currentDraft,
+				workspaceId: optimisticWorkspace.id,
+				workspace: optimisticWorkspace
+			}));
+			setActiveWorkspace(optimisticWorkspace);
+			setSessionError(null);
+		}
+
 		try {
 			const workspace = await selectWorkspace(workspaceId);
 			if (navigationVersionRef.current !== navigationVersion || activeSessionIdRef.current !== null) {

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, nativeTheme, shell } from "electron";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { backendManager } from "./services/backend-manager";
@@ -9,6 +9,8 @@ import { registerClipboardIpc } from "./services/clipboard";
 import { clientPreferencesService } from "./services/client-preferences";
 import { WindowLifecycleController } from "./services/window-lifecycle";
 import { registerSystemInfoIpc } from "./services/system-info";
+import { getWindowThemeColors, resolveWindowTheme, type WindowThemeColors } from "./services/window-theme";
+import type { ClientPreferences } from "./services/client-preferences";
 
 backendManager.registerIpc();
 registerWorkspaceFsIpc();
@@ -32,13 +34,37 @@ function getWindowIconPath(): string | undefined {
 	return existsSync(iconPath) ? iconPath : undefined;
 }
 
+function getCurrentWindowThemeColors(preferences: ClientPreferences): WindowThemeColors {
+	return getWindowThemeColors(resolveWindowTheme(preferences.theme, nativeTheme.shouldUseDarkColors));
+}
+
+function applyWindowTheme(mainWindow: BrowserWindow, preferences: ClientPreferences): void {
+	const colors: WindowThemeColors = getCurrentWindowThemeColors(preferences);
+	mainWindow.setBackgroundColor(colors.backgroundColor);
+	if (process.platform !== "darwin") {
+		mainWindow.setTitleBarOverlay({
+			color: colors.titleBarOverlayColor,
+			symbolColor: colors.symbolColor,
+			height: 36
+		});
+	}
+}
+
+function applyWindowThemeToAllWindows(): void {
+	const preferences: ClientPreferences = clientPreferencesService.getCachedPreferences();
+	for (const browserWindow of BrowserWindow.getAllWindows()) {
+		applyWindowTheme(browserWindow, preferences);
+	}
+}
+
 function createWindow(): void {
+	const colors: WindowThemeColors = getCurrentWindowThemeColors(clientPreferencesService.getCachedPreferences());
 	const mainWindow: BrowserWindow = new BrowserWindow({
 		width: 1200,
 		height: 760,
 		minWidth: 900,
 		minHeight: 620,
-		backgroundColor: "#141414",
+		backgroundColor: colors.backgroundColor,
 		icon: getWindowIconPath(),
 		show: false,
 		webPreferences: {
@@ -53,12 +79,13 @@ function createWindow(): void {
 		...(process.platform != "darwin" ? {
 			titleBarStyle: "hidden",
 			titleBarOverlay: {
-				color: "#14141400",
-				symbolColor: "#ffffff",
+				color: colors.titleBarOverlayColor,
+				symbolColor: colors.symbolColor,
 				height: 36
 			}
 		} : {})
 	});
+	applyWindowTheme(mainWindow, clientPreferencesService.getCachedPreferences());
 
 	if (!app.isPackaged) {
 		mainWindow.webContents.openDevTools({ mode: "detach" });
@@ -69,6 +96,7 @@ function createWindow(): void {
 	windowLifecycleController.attachWindow(mainWindow);
 
 	mainWindow.once("ready-to-show", () => {
+		applyWindowTheme(mainWindow, clientPreferencesService.getCachedPreferences());
 		mainWindow.show();
 	});
 
@@ -86,6 +114,12 @@ function createWindow(): void {
 
 app.whenReady().then(async () => {
 	await clientPreferencesService.load();
+	clientPreferencesService.onDidChange((): void => {
+		applyWindowThemeToAllWindows();
+	});
+	nativeTheme.on("updated", (): void => {
+		applyWindowThemeToAllWindows();
+	});
 	createWindow();
 
 	app.on("activate", () => {

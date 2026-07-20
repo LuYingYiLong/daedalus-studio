@@ -1,5 +1,38 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 
+type ClientPreferences = {
+	minimizeToTrayOnClose: boolean;
+	theme: "system" | "light" | "dark";
+	lastComposerModel: {
+		providerId: string;
+		modelId: string;
+	} | null;
+};
+
+function getCachedClientPreferences(): ClientPreferences {
+	return ipcRenderer.sendSync("client-preferences:get-cached") as ClientPreferences;
+}
+
+function resolveRendererTheme(themePreference: ClientPreferences["theme"]): "light" | "dark" {
+	if (themePreference === "light" || themePreference === "dark") {
+		return themePreference;
+	}
+	return globalThis.matchMedia?.("(prefers-color-scheme: light)").matches === true ? "light" : "dark";
+}
+
+const initialClientPreferences: ClientPreferences = getCachedClientPreferences();
+
+function applyInitialTheme(): void {
+	const rootElement: HTMLElement | null = document.documentElement;
+	if (rootElement === null) {
+		return;
+	}
+	rootElement.dataset.theme = resolveRendererTheme(initialClientPreferences.theme);
+}
+
+applyInitialTheme();
+document.addEventListener("readystatechange", applyInitialTheme, { once: true });
+
 contextBridge.exposeInMainWorld("electronAPI", {
 	versions: {
 		chrome: process.versions.chrome,
@@ -19,10 +52,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	},
 
 	clientPreferences: {
-		get: (): Promise<{ minimizeToTrayOnClose: boolean; lastComposerModel: { providerId: string; modelId: string } | null }> => {
+		getCached: (): { minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null } => {
+			return initialClientPreferences;
+		},
+		get: (): Promise<{ minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null }> => {
 			return ipcRenderer.invoke("client-preferences:get");
 		},
-		update: (patch: Partial<{ minimizeToTrayOnClose: boolean; lastComposerModel: { providerId: string; modelId: string } | null }>): Promise<{ minimizeToTrayOnClose: boolean; lastComposerModel: { providerId: string; modelId: string } | null }> => {
+		update: (patch: Partial<{ minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null }>): Promise<{ minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null }> => {
 			return ipcRenderer.invoke("client-preferences:update", patch);
 		}
 	},

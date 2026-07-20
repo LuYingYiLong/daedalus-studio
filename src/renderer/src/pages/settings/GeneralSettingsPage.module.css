@@ -30,6 +30,11 @@
 	margin-bottom: 12px;
 }
 
+.settingsStack {
+	display: grid;
+	gap: var(--ds-space-2);
+}
+
 .loading {
 	display: flex;
 	align-items: center;

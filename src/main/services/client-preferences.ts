@@ -13,6 +13,7 @@ class ClientPreferencesService {
 	private preferences: ClientPreferences = { ...DEFAULT_CLIENT_PREFERENCES };
 	private loaded: boolean = false;
 	private loadPromise: Promise<ClientPreferences> | null = null;
+	private readonly changeListeners: Set<(preferences: ClientPreferences) => void> = new Set();
 
 	getPreferencesPath(): string {
 		return join(app.getPath("userData"), "client-preferences.json");
@@ -20,6 +21,13 @@ class ClientPreferencesService {
 
 	getCachedPreferences(): ClientPreferences {
 		return { ...this.preferences };
+	}
+
+	onDidChange(listener: (preferences: ClientPreferences) => void): () => void {
+		this.changeListeners.add(listener);
+		return (): void => {
+			this.changeListeners.delete(listener);
+		};
 	}
 
 	async load(): Promise<ClientPreferences> {
@@ -42,10 +50,14 @@ class ClientPreferencesService {
 		await this.load();
 		this.preferences = await updateClientPreferencesFile(this.getPreferencesPath(), patch);
 		this.loaded = true;
+		this.notifyChange();
 		return this.getCachedPreferences();
 	}
 
 	registerIpc(): void {
+		ipcMain.on("client-preferences:get-cached", (event): void => {
+			event.returnValue = this.getCachedPreferences();
+		});
 		ipcMain.handle("client-preferences:get", async (): Promise<ClientPreferences> => await this.load());
 		ipcMain.handle("client-preferences:update", async (_event, patch: unknown): Promise<ClientPreferences> => {
 			return await this.update(normalizeClientPreferencesPatch(patch));
@@ -57,6 +69,13 @@ class ClientPreferencesService {
 		this.preferences = loaded.preferences;
 		this.loaded = true;
 		return this.getCachedPreferences();
+	}
+
+	private notifyChange(): void {
+		const preferences: ClientPreferences = this.getCachedPreferences();
+		for (const listener of this.changeListeners) {
+			listener(preferences);
+		}
 	}
 }
 

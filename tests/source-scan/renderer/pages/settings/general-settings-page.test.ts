@@ -11,6 +11,9 @@ describe("GeneralSettingsPage", () => {
 
 		expect(pageSource).toContain("Auto-expand todo list");
 		expect(pageSource).toContain("Minimize to tray on close");
+		expect(pageSource).toContain("Display settings");
+		expect(pageSource).toContain("Theme");
+		expect(pageSource).toContain("System");
 		expect(pageSource).toContain("updateClientPreferences");
 		expect(pageSource).toContain("updateGeneralSettings");
 		expect(apiSource).toContain("window.electronAPI.clientPreferences.get");

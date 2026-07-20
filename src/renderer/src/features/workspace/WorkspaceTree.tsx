@@ -37,6 +37,7 @@ type CreateSessionMenuItemOptions = {
 
 type CreateWorkspaceMenuItemOptions = CreateSessionMenuItemOptions & {
 	deletingWorkspaceId: string | null;
+	onWorkspaceFocus: (workspace: WorkspaceConfig, event: MouseEvent<HTMLElement>) => void;
 	onNewWorkspaceSession: (workspace: WorkspaceConfig, event: MouseEvent<HTMLElement>) => void;
 	onOpenWorkspaceInExplorer: (workspace: WorkspaceConfig) => void;
 	onDeleteWorkspace: (workspace: WorkspaceConfig) => void;
@@ -147,9 +148,17 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 		return {
 			key: `workspace:${workspace.id}`,
 			label: (
-				<span className={styles.workspaceMenuItem}>
+				<span
+					className={styles.workspaceMenuItem}
+					onMouseDown={(event: MouseEvent<HTMLElement>): void => options.onWorkspaceFocus(workspace, event)}
+				>
 					<span className={styles.workspaceTitle}>{workspace.name}</span>
-					<span className={styles.workspaceActions}>
+					<span
+						className={styles.workspaceActions}
+						onMouseDown={(event: MouseEvent<HTMLElement>): void => {
+							event.stopPropagation();
+						}}
+					>
 						<Dropdown menu={actionMenu} trigger={["click"]} placement="bottomRight">
 							<Button
 								type="text"
@@ -317,6 +326,17 @@ function WorkspaceTree({
 		event.preventDefault();
 		event.stopPropagation();
 		await handleArchiveSessionAction(session);
+	}
+
+	function handleWorkspaceFocus(workspace: WorkspaceConfig, event: MouseEvent<HTMLElement>): void {
+		if (event.button !== 0) {
+			return;
+		}
+
+		const workspaceKey: string = `workspace:${workspace.id}`;
+		setSelectedMenuKeys([workspaceKey]);
+		setActiveWorkspaceId(workspace.id);
+		onWorkspaceSelect?.(workspace.id);
 	}
 
 	function handleNewWorkspaceSession(workspace: WorkspaceConfig, event: MouseEvent<HTMLElement>): void {
@@ -505,6 +525,7 @@ function WorkspaceTree({
 		return createWorkspaceMenuItems(workspaces, sessions, {
 			archivingSessionId,
 			deletingWorkspaceId,
+			onWorkspaceFocus: handleWorkspaceFocus,
 			onNewWorkspaceSession: handleNewWorkspaceSession,
 			onArchiveButton: (session: SessionMetadata, event: MouseEvent<HTMLElement>): void => {
 				void handleArchiveSession(session, event);

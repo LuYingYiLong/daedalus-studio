@@ -18,6 +18,7 @@ declare global {
 
 	interface ClientPreferences {
 		minimizeToTrayOnClose: boolean;
+		theme: "system" | "light" | "dark";
 		lastComposerModel: {
 			providerId: string;
 			modelId: string;
@@ -25,6 +26,7 @@ declare global {
 	}
 
 	interface ClientPreferencesAPI {
+		getCached: () => ClientPreferences;
 		get: () => Promise<ClientPreferences>;
 		update: (patch: Partial<ClientPreferences>) => Promise<ClientPreferences>;
 	}

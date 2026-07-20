@@ -134,6 +134,32 @@
 	text-rendering: optimizeLegibility;
 }
 
+:root[data-theme="dark"] {
+	color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+	--ds-bg: #f5f5f5;
+	--ds-code-bg: #14141414;
+	--ds-bg-sunken: #eeeeee;
+	--ds-surface: #ffffff;
+	--ds-surface-elevated: #ffffff;
+	--ds-surface-hover: #f0f0f0;
+	--ds-surface-active: #e8e8e8;
+	--ds-border: #d6d6d6;
+	--ds-border-subtle: #d6d6d6;
+	--ds-accent: #478cbf;
+	--ds-accent-hover: #5aa0d2;
+	--ds-accent-active: #386f98;
+	--ds-accent-muted: rgb(71 140 191 / 18%);
+	--ds-accent-subtle: rgb(71 140 191 / 10%);
+	--ds-text-primary: #141414;
+	--ds-text-secondary: #4f4f4f;
+	--ds-text-muted: #737373;
+	--ds-text-inverse: #ffffff;
+	color-scheme: light;
+}
+
 * {
 	box-sizing: border-box;
 }
@@ -212,25 +238,6 @@ body {
 .ant-table-wrapper .ant-table,
 .ant-table-wrapper .ant-table-container {
 	border-radius: var(--ds-radius-lg);
-}
-
-.daedalus-icon {
-	display: inline-block;
-	flex-shrink: 0;
-	color: currentColor;
-	vertical-align: -0.125em;
-}
-
-.daedalus-icon[data-tone="currentColor"] {
-	fill: currentColor;
-}
-
-.daedalus-icon[data-tone="currentColor"] :where([fill]:not([fill="none"])) {
-	fill: currentColor;
-}
-
-.daedalus-icon[data-tone="currentColor"] :where([stroke]:not([stroke="none"])) {
-	stroke: currentColor;
 }
 
 .daedalus-compact-menu {

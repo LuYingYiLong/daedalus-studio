@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import styles from "./GeneralSettingsPage.module.css";
-import { Alert, Card, List, Spin, Switch, Typography } from "antd";
+import { Alert, Card, List, Segmented, Spin, Switch, Typography } from "antd";
 import {
 	fetchClientPreferences,
 	updateClientPreferences,
@@ -19,7 +19,8 @@ type GeneralSettingsPageProps = {
 	onGeneralSettingsChange: (settings: GeneralSettings) => void;
 };
 
-type SettingKey = "autoExpandTodoList" | "minimizeToTrayOnClose";
+type SettingKey = "autoExpandTodoList" | "minimizeToTrayOnClose" | "theme";
+type ThemePreference = ClientPreferences["theme"];
 
 function GeneralSettingsPage({
 	clientPreferences,
@@ -125,6 +126,30 @@ function GeneralSettingsPage({
 		}
 	}
 
+	async function handleThemeChange(themePreference: ThemePreference): Promise<void> {
+		const previousPreferences: ClientPreferences = draftClientPreferences;
+		const optimisticPreferences: ClientPreferences = {
+			...previousPreferences,
+			theme: themePreference
+		};
+
+		try {
+			setSavingKey("theme");
+			setErrorMessage(null);
+			setDraftClientPreferences(optimisticPreferences);
+			onClientPreferencesChange(optimisticPreferences);
+			const savedPreferences: ClientPreferences = await updateClientPreferences({ theme: themePreference });
+			setDraftClientPreferences(savedPreferences);
+			onClientPreferencesChange(savedPreferences);
+		} catch (error: unknown) {
+			setDraftClientPreferences(previousPreferences);
+			onClientPreferencesChange(previousPreferences);
+			setErrorMessage(error instanceof Error ? error.message : "Failed to save general settings");
+		} finally {
+			setSavingKey(null);
+		}
+	}
+
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
@@ -135,9 +160,9 @@ function GeneralSettingsPage({
 				</div>
 			</header>
 
-			<div>
+			<div className={styles.settingsStack}>
 				<Card
-					title="General settings"
+					title="Display settings"
 				>
 					{errorMessage !== null ? (
 						<Alert
@@ -151,6 +176,43 @@ function GeneralSettingsPage({
 						/>
 					) : null}
 
+					{isLoading ? (
+						<div className={styles.loading}>
+							<Spin />
+						</div>
+					) : (
+						<List className={styles.preferenceList}>
+							<List.Item
+								className={styles.preferenceItem}
+								actions={[
+									<Segmented
+										key="theme"
+										className={styles.themeControl}
+										value={draftClientPreferences.theme}
+										disabled={savingKey !== null && savingKey !== "theme"}
+										options={[
+											{ label: "System", value: "system" },
+											{ label: "Light", value: "light" },
+											{ label: "Dark", value: "dark" }
+										]}
+										onChange={(value: string | number): void => {
+											void handleThemeChange(value as ThemePreference);
+										}}
+									/>
+								]}
+							>
+								<List.Item.Meta
+									title={<Typography.Text>Theme</Typography.Text>}
+									description="Choose the Studio color theme for this device."
+								/>
+							</List.Item>
+						</List>
+					)}
+				</Card>
+
+				<Card
+					title="General settings"
+				>
 					{isLoading ? (
 						<div className={styles.loading}>
 							<Spin />
