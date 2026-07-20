@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import styles from "./GeneralSettingsPage.module.css";
-import { Alert, Card, List, Segmented, Spin, Switch, Typography } from "antd";
+import { Alert, Card, Segmented, Spin, Switch, Typography } from "antd";
 import {
 	fetchClientPreferences,
 	updateClientPreferences,
@@ -189,32 +189,27 @@ function GeneralSettingsPage({
 							<Spin />
 						</div>
 					) : (
-						<List className={styles.preferenceList}>
-							<List.Item
-								className={styles.preferenceItem}
-								actions={[
-									<Segmented
-										key="theme"
-										className={styles.themeControl}
-										value={draftClientPreferences.theme}
-										disabled={savingKey !== null && savingKey !== "theme"}
-										options={[
-											{ label: "System", value: "system" },
-											{ label: "Light", value: "light" },
-											{ label: "Dark", value: "dark" }
-										]}
-										onChange={(value: string | number): void => {
-											void handleThemeChange(value as ThemePreference);
-										}}
-									/>
-								]}
-							>
-								<List.Item.Meta
-									title={<Typography.Text>Theme</Typography.Text>}
-									description="Choose the Studio color theme for this device."
+						<div className={styles.preferenceList}>
+							<div className={styles.preferenceItem}>
+								<div className={styles.preferenceMeta}>
+									<Typography.Text>Theme</Typography.Text>
+									<Typography.Text type="secondary">Choose the Studio color theme for this device.</Typography.Text>
+								</div>
+								<Segmented
+									className={styles.themeControl}
+									value={draftClientPreferences.theme}
+									disabled={savingKey !== null && savingKey !== "theme"}
+									options={[
+										{ label: "System", value: "system" },
+										{ label: "Light", value: "light" },
+										{ label: "Dark", value: "dark" }
+									]}
+									onChange={(value: string | number): void => {
+										void handleThemeChange(value as ThemePreference);
+									}}
 								/>
-							</List.Item>
-						</List>
+							</div>
+						</div>
 					)}
 				</Card>
 
@@ -226,9 +221,8 @@ function GeneralSettingsPage({
 							<Spin />
 						</div>
 					) : (
-						<List
-							className={styles.preferenceList}
-							dataSource={[
+						<div className={styles.preferenceList}>
+							{[
 								{
 									key: "autoExpandTodoList" as const,
 									title: "Auto-expand todo list",
@@ -250,29 +244,23 @@ function GeneralSettingsPage({
 									checked: draftClientPreferences.minimizeToTrayOnClose,
 									onChange: handleMinimizeToTrayChange
 								}
-							]}
-							renderItem={(item): React.JSX.Element => (
-								<List.Item
-									className={styles.preferenceItem}
-									actions={[
-										<Switch
-											key={item.key}
-											checked={item.checked}
-											loading={savingKey === item.key}
-											disabled={savingKey !== null && savingKey !== item.key}
-											onChange={(checked: boolean): void => {
-												void item.onChange(checked);
-											}}
-										/>
-									]}
-								>
-									<List.Item.Meta
-										title={<Typography.Text>{item.title}</Typography.Text>}
-										description={item.description}
+							].map((item): React.JSX.Element => (
+								<div key={item.key} className={styles.preferenceItem}>
+									<div className={styles.preferenceMeta}>
+										<Typography.Text>{item.title}</Typography.Text>
+										<Typography.Text type="secondary">{item.description}</Typography.Text>
+									</div>
+									<Switch
+										checked={item.checked}
+										loading={savingKey === item.key}
+										disabled={savingKey !== null && savingKey !== item.key}
+										onChange={(checked: boolean): void => {
+											void item.onChange(checked);
+										}}
 									/>
-								</List.Item>
-							)}
-						/>
+								</div>
+							))}
+						</div>
 					)}
 				</Card>
 			</div>

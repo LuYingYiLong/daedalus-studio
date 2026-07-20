@@ -22,6 +22,7 @@ function createWorkbench(revision: number, text: string): WorkbenchSnapshot {
 		pendingGuides: [],
 		activeRun: { status: "idle" },
 		pendingApproval: { count: 0, first: null },
+		pendingToolBudget: null,
 		nextStepHints: { hints: [] },
 		activeSelection: { workspaceId: null }
 	};

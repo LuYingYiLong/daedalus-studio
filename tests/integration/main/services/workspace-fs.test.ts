@@ -180,6 +180,65 @@ describe("workspace-fs", () => {
 		}]);
 	});
 
+	it("opens PowerShell instead of the Windows Terminal app execution alias", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const wtAliasPath: string = "C:/Users/test/AppData/Local/Microsoft/WindowsApps/wt.exe";
+		const pwshPath: string = "C:/Program Files/PowerShell/7/pwsh.exe";
+		const findCalls: string[] = [];
+		const spawned: Array<{ command: string; args: string[]; cwd: string }> = [];
+
+		await expect(openWorkspaceLaunchTarget(root, "terminal", {
+			platform: "win32",
+			findOnPath: async (command: string): Promise<string | null> => {
+				findCalls.push(command);
+				if (command === "wt.exe") {
+					return wtAliasPath;
+				}
+				if (command === "pwsh.exe") {
+					return pwshPath;
+				}
+				return null;
+			},
+			spawnProcess(command, args, options): { unref(): void } {
+				spawned.push({ command, args, cwd: options.cwd });
+				return { unref(): void {} };
+			}
+		})).resolves.toEqual({ opened: true, targetId: "terminal" });
+
+		expect(findCalls).toEqual(["pwsh.exe"]);
+		expect(spawned).toEqual([{
+			command: pwshPath,
+			args: ["-NoExit"],
+			cwd: resolve(root)
+		}]);
+	});
+
+	it("opens Windows PowerShell when pwsh is unavailable", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const powershellPath: string = "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe";
+		const findCalls: string[] = [];
+		const spawned: Array<{ command: string; args: string[]; cwd: string }> = [];
+
+		await expect(openWorkspaceLaunchTarget(root, "terminal", {
+			platform: "win32",
+			findOnPath: async (command: string): Promise<string | null> => {
+				findCalls.push(command);
+				return command === "powershell.exe" ? powershellPath : null;
+			},
+			spawnProcess(command, args, options): { unref(): void } {
+				spawned.push({ command, args, cwd: options.cwd });
+				return { unref(): void {} };
+			}
+		})).resolves.toEqual({ opened: true, targetId: "terminal" });
+
+		expect(findCalls).toEqual(["pwsh.exe", "powershell.exe"]);
+		expect(spawned).toEqual([{
+			command: powershellPath,
+			args: ["-NoExit"],
+			cwd: resolve(root)
+		}]);
+	});
+
 	it("opens fallback terminal with workspace as cwd instead of an extra command argument", async () => {
 		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
 		const spawned: Array<{ command: string; args: string[]; cwd: string }> = [];

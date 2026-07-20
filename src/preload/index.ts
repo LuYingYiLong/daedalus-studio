@@ -184,8 +184,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		}
 	},
 
-	checkDiskSpace: (driveLetter: string): Promise<{ drive: string; free: number; total: number } | null> => {
-		return ipcRenderer.invoke("electron:checkDiskSpace", driveLetter);
+	checkDiskSpace: (): Promise<{ drive: string; free: number; total: number } | null> => {
+		return ipcRenderer.invoke("electron:checkDiskSpace");
 	},
 
 	appInfo: {

@@ -18,6 +18,9 @@ describe("GeneralSettingsPage", () => {
 		expect(pageSource).toContain("System");
 		expect(pageSource).toContain("updateClientPreferences");
 		expect(pageSource).toContain("updateGeneralSettings");
+		expect(pageSource).not.toContain("<List");
+		expect(pageSource).not.toContain("List.Item");
+		expect(pageSource).not.toContain(", List,");
 		expect(apiSource).toContain("window.electronAPI.clientPreferences.get");
 		expect(apiSource).toContain("window.electronAPI.clientPreferences.update");
 		expect(generalApiSource).toContain('client.request<GeneralSettings>("generalSettings.get")');

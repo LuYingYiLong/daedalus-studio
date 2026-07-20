@@ -20,6 +20,15 @@ export type CancelChatMessageResult = {
 	requestId: string;
 };
 
+export type ToolBudgetDecisionResult = {
+	budgetId: string;
+	continued?: boolean;
+	stopped?: boolean;
+	cancelled?: boolean;
+	requestId?: string;
+	workbench?: unknown;
+};
+
 export async function sendChatMessage(params: SendChatMessageParams): Promise<unknown> {
 	const client = await createBackendClient();
 
@@ -43,5 +52,21 @@ export async function cancelChatMessage(requestId: string): Promise<CancelChatMe
 
 	return client.request<CancelChatMessageResult>("ai.cancel", {
 		requestId
+	});
+}
+
+export async function continueToolBudget(budgetId: string): Promise<ToolBudgetDecisionResult> {
+	const client = await createBackendClient();
+
+	return client.request<ToolBudgetDecisionResult>("ai.toolBudget.continue", {
+		budgetId
+	});
+}
+
+export async function stopToolBudget(budgetId: string): Promise<ToolBudgetDecisionResult> {
+	const client = await createBackendClient();
+
+	return client.request<ToolBudgetDecisionResult>("ai.toolBudget.stop", {
+		budgetId
 	});
 }

@@ -17,6 +17,9 @@ describe("SearchSettingsPage", () => {
 		expect(pageSource).toContain("Search result count");
 		expect(pageSource).toContain("SEARCH_RESULT_MARKS");
 		expect(pageSource).toContain("onChangeComplete");
+		expect(pageSource).not.toContain("<List");
+		expect(pageSource).not.toContain("List.Item");
+		expect(pageSource).not.toContain(", List,");
 		expect(apiSource).toContain("maxResults: number");
 		expect(pageSource).toContain("Composer Search button");
 		expect(apiSource).toContain('client.request<WebSearchSettings>("webSearchSettings.get")');

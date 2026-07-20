@@ -165,6 +165,7 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 					<Button
 						type="text"
 						size="small"
+						shape="circle"
 						aria-label="Copy assistant message"
 						icon={<Icon name="copy" />}
 						onClick={(): void => {

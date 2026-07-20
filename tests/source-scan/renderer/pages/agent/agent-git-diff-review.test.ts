@@ -112,4 +112,12 @@ describe("AgentPage git diff review source", () => {
 		expect(inlineDiffSource).toContain("onReview?: () => void;");
 		expect(inlineDiffSource).toContain("onClick={onReview}");
 	});
+
+	it("renders inline diff files without deprecated Ant Design List", () => {
+		expect(inlineDiffSource).not.toContain("<List");
+		expect(inlineDiffSource).not.toContain("List.Item");
+		expect(inlineDiffSource).not.toContain(", List,");
+		expect(inlineDiffSource).toContain("<ul className={styles.fileList}>");
+		expect(inlineDiffSource).toContain("<li key={`${getFilePath(item)}:${index}`} className={styles.fileItem}>");
+	});
 });

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
-import type { AdditionalContextItem, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode, PendingApproval } from "@/api/approval-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
@@ -14,6 +14,7 @@ import MessageList from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
 import NewSessionHome from "./NewSessionHome";
 import ApprovalDialog from "@/features/approval/ApprovalDialog";
+import ToolBudgetDialog from "@/features/approval/ToolBudgetDialog";
 import type { ComposerCompletionTrigger } from "@/features/composer/composer-completion";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import styles from "./AgentPage.module.css";
@@ -116,6 +117,10 @@ type AgentPageProps = {
 	isApproving: boolean;
 	isRejecting: boolean;
 	approvalError: string | null;
+	pendingToolBudget: PendingToolBudget | null;
+	isToolBudgetContinuing: boolean;
+	isToolBudgetStopping: boolean;
+	toolBudgetError: string | null;
 	pendingPlanClarification: PlanClarificationState | null;
 	isPlanClarificationSubmitting: boolean;
 	planClarificationError: string | null;
@@ -157,6 +162,8 @@ type AgentPageProps = {
 	onApprovalModeChange: (mode: ApprovalMode) => void;
 	onApprovalApprove: (approvalId: string, consentText?: string) => void;
 	onApprovalReject: (approvalId: string) => void;
+	onToolBudgetContinue: (budgetId: string) => void;
+	onToolBudgetStop: (budgetId: string) => void;
 	onPlanClarificationSubmit: (reply: string) => void;
 	onPlanClarificationSkip: () => void;
 	onPlanApprove: (planId: string) => void;
@@ -205,6 +212,10 @@ function AgentPage({
 	isApproving,
 	isRejecting,
 	approvalError,
+	pendingToolBudget,
+	isToolBudgetContinuing,
+	isToolBudgetStopping,
+	toolBudgetError,
 	pendingPlanClarification,
 	isPlanClarificationSubmitting,
 	planClarificationError,
@@ -246,6 +257,8 @@ function AgentPage({
 	onApprovalModeChange,
 	onApprovalApprove,
 	onApprovalReject,
+	onToolBudgetContinue,
+	onToolBudgetStop,
 	onPlanClarificationSubmit,
 	onPlanClarificationSkip,
 	onPlanApprove,
@@ -912,6 +925,15 @@ function AgentPage({
 												errorMessage={approvalError}
 												onApprove={onApprovalApprove}
 												onReject={onApprovalReject}
+											/>
+										) : !isHome && pendingToolBudget !== null ? (
+											<ToolBudgetDialog
+												pendingToolBudget={pendingToolBudget}
+												isContinuing={isToolBudgetContinuing}
+												isStopping={isToolBudgetStopping}
+												errorMessage={toolBudgetError}
+												onContinue={onToolBudgetContinue}
+												onStop={onToolBudgetStop}
 											/>
 										) : !isHome && pendingPlanClarification !== null ? (
 											<ClarificationDialog

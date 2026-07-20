@@ -157,6 +157,7 @@ function MessageList({
 	const bottomSpacerHeight: number = Math.max(0, totalEstimatedHeight - (prefixHeights[endIndex] ?? 0));
 	const visibleBlocks: TimelineBlock[] = renderableBlocks.slice(startIndex, endIndex);
 	const visibleBlockIds: string = visibleBlocks.map((block: TimelineBlock): string => block.id).join("\n");
+	const canEditUserMessages: boolean = onRetryFromUserMessage !== undefined && !retryDisabled && !hasRunningAssistantBlock && activeRetryRequestId === null;
 
 	const updateVisibleRange = useCallback((): void => {
 		const nextVisibleRange: VisibleRange = calculateVisibleRange(
@@ -438,6 +439,7 @@ function MessageList({
 										message={block.content}
 										additionalContext={block.additionalContext ?? []}
 										sentTime={formatShortDateTime(block.sentAtUtc)}
+										showEditButton={canEditUserMessages}
 										disabled={retryDisabled}
 										isRetryEditing={activeRetryRequestId === block.requestId}
 										onRetryEditStart={onRetryEditStart}

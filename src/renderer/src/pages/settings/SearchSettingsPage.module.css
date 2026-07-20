@@ -47,11 +47,27 @@
 }
 
 .settingsList {
+	display: grid;
+	gap: 0;
 	margin: -8px 0;
 }
 
 .settingsItem {
-	padding-inline: 0 !important;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: var(--ds-space-3);
+	align-items: center;
+	padding: 12px 0;
+}
+
+.settingsItem + .settingsItem {
+	border-top: 1px solid var(--ds-border-subtle);
+}
+
+.settingsMeta {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
 }
 
 .modelControl {

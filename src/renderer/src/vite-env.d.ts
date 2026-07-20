@@ -140,7 +140,7 @@ declare global {
 		appUpdate: AppUpdateAPI;
 		terminal: TerminalAPI;
 		sessionFs: SessionFsAPI;
-		checkDiskSpace: (driveLetter: string) => Promise<DiskSpaceInfo | null>;
+		checkDiskSpace: () => Promise<DiskSpaceInfo | null>;
 		workspaceFs: {
 			listChildren: (params: {
 				workspaceRoot: string;

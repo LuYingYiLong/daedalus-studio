@@ -94,6 +94,19 @@ export type WorkbenchPendingApproval = {
 	[key: string]: unknown;
 };
 
+export type PendingToolBudget = {
+	budgetId: string;
+	requestId: string;
+	reason: string;
+	limitKind: "steps" | "tool_result_chars";
+	usedSteps: number;
+	maxSteps: number;
+	totalToolResultChars: number;
+	toolResultCharLimit: number;
+	additionalSteps: number;
+	createdAt: string;
+};
+
 export type WorkbenchNextStepHint = {
 	id?: string;
 	title?: string;
@@ -140,6 +153,7 @@ export type WorkbenchSnapshot = {
 	pendingGuides: PendingGuide[];
 	activeRun: WorkbenchActiveRun;
 	pendingApproval: WorkbenchPendingApproval;
+	pendingToolBudget: PendingToolBudget | null;
 	nextStepHints: {
 		hints: WorkbenchNextStepHint[];
 		trigger?: string;

@@ -138,6 +138,8 @@ function UserBubble({
 		}
 	}
 
+	const canShowEditButton: boolean = showEditButton === true && !isRetryEditing;
+
 	return (
 		<article className={styles.root} data-entry-id={entryId}>
 			<div className={styles.bubbleStack}>
@@ -220,6 +222,7 @@ function UserBubble({
 					<Button
 						type="text"
 						size="small"
+						shape="circle"
 						aria-label="Copy user message"
 						icon={<Icon name="copy" />}
 						onClick={(): void => {
@@ -227,16 +230,18 @@ function UserBubble({
 						}}
 					/>
 				</Tooltip>
-				{showEditButton ? (
-					<Button
-						type="text"
-						size="small"
-						icon={<Icon name="edit" />}
-						disabled={disabled}
-						onClick={() => {
-							beginRetryEdit();
-						}}
-					/>
+				{canShowEditButton ? (
+					<Tooltip title="Edit and resend">
+						<Button
+							type="text"
+							size="small"
+							shape="circle"
+							aria-label="Edit and resend user message"
+							icon={<Icon name="pencil" />}
+							disabled={disabled || isSubmittingRetry}
+							onClick={beginRetryEdit}
+						/>
+					</Tooltip>
 				) : null}
 			</div>
 		</article>

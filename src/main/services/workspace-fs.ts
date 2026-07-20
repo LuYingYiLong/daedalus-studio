@@ -179,13 +179,13 @@ async function resolveWorkspaceLaunchTarget(targetId: WorkspaceLaunchTargetId, o
 	}
 	if (targetId === "terminal") {
 		if (platform === "win32") {
-			const wtPath: string | null = await findOnPath("wt.exe");
-			if (wtPath !== null) {
-				return { id: "terminal", label: "Terminal", command: wtPath, args: ["-d"] };
-			}
 			const pwshPath: string | null = await findOnPath("pwsh.exe");
 			if (pwshPath !== null) {
 				return { id: "terminal", label: "Terminal", command: pwshPath, args: ["-NoExit"] };
+			}
+			const powershellPath: string | null = await findOnPath("powershell.exe");
+			if (powershellPath !== null) {
+				return { id: "terminal", label: "Terminal", command: powershellPath, args: ["-NoExit"] };
 			}
 			return { id: "terminal", label: "Terminal", command: "cmd.exe", args: ["/K"] };
 		}

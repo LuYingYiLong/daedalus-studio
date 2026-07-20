@@ -1,4 +1,4 @@
-import { Alert, Card, List, Select, Slider, Spin, Typography } from "antd";
+import { Alert, Card, Select, Slider, Spin, Typography } from "antd";
 import type { SelectProps, SliderSingleProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -173,9 +173,8 @@ function SearchSettingsPage(): React.JSX.Element {
 							<Spin />
 						</div>
 					) : (
-						<List
-							className={styles.settingsList}
-							dataSource={[
+						<div className={styles.settingsList}>
+							{[
 								{
 									key: "model",
 									title: "Search model",
@@ -211,16 +210,16 @@ function SearchSettingsPage(): React.JSX.Element {
 										</div>
 									)
 								}
-							]}
-							renderItem={(item): React.JSX.Element => (
-								<List.Item className={styles.settingsItem} actions={[item.action]}>
-									<List.Item.Meta
-										title={<Typography.Text>{item.title}</Typography.Text>}
-										description={item.description}
-									/>
-								</List.Item>
-							)}
-						/>
+							].map((item): React.JSX.Element => (
+								<div key={item.key} className={styles.settingsItem}>
+									<div className={styles.settingsMeta}>
+										<Typography.Text>{item.title}</Typography.Text>
+										<Typography.Text type="secondary">{item.description}</Typography.Text>
+									</div>
+									{item.action}
+								</div>
+							))}
+						</div>
 					)}
 
 					{settings !== null && !settings.configured ? (

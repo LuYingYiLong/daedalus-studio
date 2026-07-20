@@ -16,20 +16,6 @@ export function useDiskSpaceCheck() {
         // 延迟执行，确保应用已完全启动
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // 获取用户配置文件路径
-    
-        if (!) {
-          console.warn('Unable to get USERPROFILE environment variable');
-          return;
-        }
-
-        // 解析盘符（Windows 路径格式，如 C:\）
-        const  = userProfile.split(':')[0];
-        if (!driveLetter) {
-          console.warn('Unable to parse drive letter from USERPROFILE');
-          return;
-        }
-
         // 在 Electron 主进程中检查磁盘空间
         const result = await window.electronAPI.checkDiskSpace();
 
@@ -51,7 +37,7 @@ export function useDiskSpaceCheck() {
           });
         }
 
-        console.log(`Disk space check completed: ${freeSpaceGiB.toFixed(2)} GiB free on drive ${driveLetter}`);
+        console.log(`Disk space check completed: ${freeSpaceGiB.toFixed(2)} GiB free on drive ${result.drive}`);
       } catch (error) {
         console.error('Error checking disk space:', error);
       } finally {
@@ -64,4 +50,3 @@ export function useDiskSpaceCheck() {
 
   return { checked };
 }
-

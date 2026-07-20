@@ -3,14 +3,14 @@ import { Input, message as antdMessage, Modal, Typography } from "antd";
 import { useDiskSpaceCheck } from "@/hooks/useDiskSpaceCheck";
 import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
-import type { AdditionalContextItem, PlanApprovalState, PlanClarificationState, PlanRecommendedReply, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, PendingToolBudget, PlanApprovalState, PlanClarificationState, PlanRecommendedReply, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import { checkSessionIntegrity, createSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import type { ProviderModelSelectionProvider } from "@/api/provider-api";
 import { createBackendClient } from "@/api/backend-client";
 import type { BackendEvent } from "@/api/backend-rpc-client";
-import { cancelChatMessage, sendChatMessage, type ChatMode } from "@/api/chat-api";
+import { cancelChatMessage, continueToolBudget, sendChatMessage, stopToolBudget, type ChatMode } from "@/api/chat-api";
 import { fetchSlashCommands, type SlashCommandDefinition } from "@/api/command-api";
 import { fetchSkills, type SkillSummary } from "@/api/skill-api";
 import {
@@ -590,6 +590,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [approvalError, setApprovalError] = useState<string | null>(null);
 	const [isApproving, setIsApproving] = useState<boolean>(false);
 	const [isRejecting, setIsRejecting] = useState<boolean>(false);
+	const [isToolBudgetContinuing, setIsToolBudgetContinuing] = useState<boolean>(false);
+	const [isToolBudgetStopping, setIsToolBudgetStopping] = useState<boolean>(false);
+	const [toolBudgetError, setToolBudgetError] = useState<string | null>(null);
 	const [latestPlanClarification, setLatestPlanClarification] = useState<PlanClarificationState | null>(null);
 	const [suppressedPlanClarificationKey, setSuppressedPlanClarificationKey] = useState<string | null>(null);
 	const [isPlanClarificationSubmitting, setIsPlanClarificationSubmitting] = useState<boolean>(false);
@@ -627,6 +630,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			activeChatRequestIdRef.current = null;
 		}
 	}, [workbench?.activeRun.requestId, workbench?.activeRun.status]);
+
+	useEffect((): void => {
+		setToolBudgetError(null);
+	}, [workbench?.pendingToolBudget?.budgetId]);
 
 	const loadSlashCommands = useCallback(async (): Promise<void> => {
 		if (slashCommandsLoadingRef.current || Date.now() < slashCommandsRetryAtRef.current) {
@@ -1632,6 +1639,44 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 	}
 
+	async function handleToolBudgetContinue(budgetId: string): Promise<void> {
+		if (isToolBudgetContinuing || isToolBudgetStopping) {
+			return;
+		}
+
+		setIsToolBudgetContinuing(true);
+		setToolBudgetError(null);
+		try {
+			await continueToolBudget(budgetId);
+			await refreshLatestTimeline();
+		} catch (error: unknown) {
+			const message: string = error instanceof Error ? error.message : "Failed to continue tool budget";
+			setToolBudgetError(message);
+			console.error("[App] continue tool budget failed", error);
+		} finally {
+			setIsToolBudgetContinuing(false);
+		}
+	}
+
+	async function handleToolBudgetStop(budgetId: string): Promise<void> {
+		if (isToolBudgetContinuing || isToolBudgetStopping) {
+			return;
+		}
+
+		setIsToolBudgetStopping(true);
+		setToolBudgetError(null);
+		try {
+			await stopToolBudget(budgetId);
+			await refreshLatestTimeline();
+		} catch (error: unknown) {
+			const message: string = error instanceof Error ? error.message : "Failed to stop at tool budget";
+			setToolBudgetError(message);
+			console.error("[App] stop tool budget failed", error);
+		} finally {
+			setIsToolBudgetStopping(false);
+		}
+	}
+
 	function persistLastComposerModel(providerId: string, modelId: string): void {
 		const nextPreferences: ClientPreferences = {
 			...clientPreferences,
@@ -2286,6 +2331,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		? null
 		: createPlanApprovalKey(latestPlanApproval);
 	const pendingPlanApproval: PlanApprovalState | null = latestPlanApproval;
+	const pendingToolBudget: PendingToolBudget | null = isNewSessionHome ? null : workbench?.pendingToolBudget ?? null;
 	const chatTitle: string = isNewSessionHome ? "New session" : getSessionTitle(activeSessionMetadata, activeSessionId);
 	const initialScrollToBottomKey: string = activeSessionId === null ? "" : `${activeSessionId}:${timelinePage.blockCount}`;
 	const composerMessage: string = isNewSessionHome ? homeDraft.message : workbench?.composer.text ?? "";
@@ -2474,6 +2520,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					isApproving={isApproving}
 					isRejecting={isRejecting}
 					approvalError={approvalError}
+					pendingToolBudget={pendingToolBudget}
+					isToolBudgetContinuing={isToolBudgetContinuing}
+					isToolBudgetStopping={isToolBudgetStopping}
+					toolBudgetError={toolBudgetError}
 					pendingPlanClarification={pendingPlanClarification}
 					isPlanClarificationSubmitting={isPlanClarificationSubmitting}
 					planClarificationError={planClarificationError}
@@ -2538,6 +2588,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					}}
 					onApprovalReject={(approvalId: string): void => {
 						void handleApprovalReject(approvalId);
+					}}
+					onToolBudgetContinue={(budgetId: string): void => {
+						void handleToolBudgetContinue(budgetId);
+					}}
+					onToolBudgetStop={(budgetId: string): void => {
+						void handleToolBudgetStop(budgetId);
 					}}
 					onPlanClarificationSubmit={(reply: string): void => {
 						void handlePlanClarificationSubmit(reply);
