@@ -28,10 +28,13 @@ function shouldShowUpdateButton(preferences: ClientPreferences, state: AppUpdate
 
 function getUpdateButtonLabel(state: AppUpdateState | null): string {
 	if (state?.status === "downloading") {
-		return "Downloading";
+		return state.updateKind === "backend" ? "Updating" : "Downloading";
 	}
-	if (state?.status === "downloaded" || state?.status === "installing") {
+	if (state?.status === "installing") {
 		return "Installing";
+	}
+	if (state?.status === "downloaded") {
+		return state.updateKind === "backend" ? "Updated" : "Installing";
 	}
 	return "Update";
 }
@@ -41,7 +44,10 @@ function getModalStatusText(state: AppUpdateState | null): string {
 		return "Preparing update...";
 	}
 	if (state.status === "downloading") {
-		return "Downloading update...";
+		return state.backend.status === "downloading" ? "Installing backend update..." : "Downloading update...";
+	}
+	if (state.status === "downloaded" && state.updateKind === "backend") {
+		return "Backend updated. Close this dialog to continue.";
 	}
 	if (state.status === "downloaded" || state.status === "installing") {
 		return "Restarting to install...";
@@ -52,13 +58,32 @@ function getModalStatusText(state: AppUpdateState | null): string {
 	return "Preparing update...";
 }
 
+function getUpdateSummary(state: AppUpdateState | null): string {
+	if (state?.updateKind === "combined") {
+		return "Daedalus Studio and the backend both have updates.";
+	}
+	if (state?.updateKind === "backend") {
+		return "A Daedalus backend update is available.";
+	}
+	return "A Daedalus Studio update is available.";
+}
+
+function getComponentVersionText(label: string, state: AppUpdateComponentState): string | null {
+	if (state.availableVersion === null) {
+		return null;
+	}
+	return `${label}: ${state.currentVersion ?? "unknown"} -> ${state.availableVersion}`;
+}
+
 function Titlebar(): React.JSX.Element {
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(() => getCachedClientPreferences());
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
 	const [updateModalOpen, setUpdateModalOpen] = useState<boolean>(false);
 	const showUpdateButton: boolean = shouldShowUpdateButton(clientPreferences, updateState);
 	const updateProgress: number = Math.round(updateState?.progress ?? 0);
-	const isTerminalUpdateState: boolean = updateState?.status === "downloaded" || updateState?.status === "installing";
+	const isClientRestartState: boolean = updateState?.client.status === "downloaded" || updateState?.client.status === "installing";
+	const clientVersionText: string | null = updateState === null ? null : getComponentVersionText("Client", updateState.client);
+	const backendVersionText: string | null = updateState === null ? null : getComponentVersionText("Backend", updateState.backend);
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -103,6 +128,14 @@ function Titlebar(): React.JSX.Element {
 		void startDownload();
 	}
 
+	async function handleUpdateModalClose(): Promise<void> {
+		setUpdateModalOpen(false);
+		if (updateState?.updateKind === "backend" && updateState.backend.status === "downloaded") {
+			const nextState: AppUpdateState = await window.electronAPI.appUpdate.acknowledge();
+			setUpdateState(nextState);
+		}
+	}
+
 	return (
 		<div className={styles.root}>
 			<Dropdown
@@ -131,22 +164,22 @@ function Titlebar(): React.JSX.Element {
 				title="Daedalus Studio update"
 				open={updateModalOpen}
 				footer={null}
-				onCancel={(): void => setUpdateModalOpen(false)}
-				maskClosable={!isTerminalUpdateState}
-				closable={!isTerminalUpdateState}
+				onCancel={(): void => {
+					void handleUpdateModalClose();
+				}}
+				mask={{ closable: !isClientRestartState }}
+				closable={!isClientRestartState}
 			>
 				<div className={styles.updateModalBody}>
-					<Typography.Text>
-						{updateState?.availableVersion !== null && updateState?.availableVersion !== undefined
-							? `Version ${updateState.availableVersion} is available.`
-							: "A Daedalus Studio update is available."}
-					</Typography.Text>
+					<Typography.Text>{getUpdateSummary(updateState)}</Typography.Text>
+					{clientVersionText !== null ? <Typography.Text type="secondary">{clientVersionText}</Typography.Text> : null}
+					{backendVersionText !== null ? <Typography.Text type="secondary">{backendVersionText}</Typography.Text> : null}
 					{updateState?.releaseName !== null && updateState?.releaseName !== undefined ? (
 						<Typography.Text type="secondary">{updateState.releaseName}</Typography.Text>
 					) : null}
 					<Typography.Text type="secondary">{getModalStatusText(updateState)}</Typography.Text>
-					{updateState?.status === "downloading" || isTerminalUpdateState ? (
-						<Progress percent={isTerminalUpdateState ? 100 : updateProgress} status={isTerminalUpdateState ? "success" : "active"} />
+					{updateState?.status === "downloading" || updateState?.status === "downloaded" || updateState?.status === "installing" ? (
+						<Progress percent={updateState.status === "downloaded" || updateState.status === "installing" ? 100 : updateProgress} status={updateState.status === "downloaded" ? "success" : "active"} />
 					) : null}
 					{updateState?.status === "error" ? (
 						<Alert

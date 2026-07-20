@@ -67,20 +67,7 @@
 .actions {
 	display: inline-flex;
 	align-items: center;
-	gap: 2px;
-}
-
-.actions :global(.ant-btn) {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 26px;
-	height: 26px;
-}
-
-.actions svg {
-	width: 14px;
-	height: 14px;
+	gap: 4px;
 }
 
 .errorLine {

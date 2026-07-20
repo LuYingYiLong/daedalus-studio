@@ -12,7 +12,20 @@ type ClientPreferences = {
 
 type AppUpdateState = {
 	status: "idle" | "checking" | "available" | "downloading" | "downloaded" | "installing" | "not_available" | "error" | "unsupported";
+	updateKind: "client" | "backend" | "combined" | null;
 	currentVersion: string;
+	availableVersion: string | null;
+	releaseName: string | null;
+	releaseDate: string | null;
+	progress: number | null;
+	errorMessage: string | null;
+	client: AppUpdateComponentState;
+	backend: AppUpdateComponentState;
+};
+
+type AppUpdateComponentState = {
+	status: AppUpdateState["status"];
+	currentVersion: string | null;
 	availableVersion: string | null;
 	releaseName: string | null;
 	releaseDate: string | null;
@@ -55,6 +68,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		getPort: (): Promise<number> => ipcRenderer.invoke("backend:get-port"),
 		getStatus: (): Promise<string> => ipcRenderer.invoke("backend:get-status"),
 		healthCheck: (): Promise<boolean> => ipcRenderer.invoke("backend:health-check"),
+		restart: (): Promise<void> => ipcRenderer.invoke("backend:restart"),
 		onStatusChanged: (callback: (status: string) => void): (() => void) => {
 			const handler = (_event: Electron.IpcRendererEvent, status: string): void => callback(status);
 			ipcRenderer.on("backend:status-changed", handler);
@@ -86,6 +100,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		},
 		download: (): Promise<AppUpdateState> => {
 			return ipcRenderer.invoke("app-update:download");
+		},
+		acknowledge: (): Promise<AppUpdateState> => {
+			return ipcRenderer.invoke("app-update:acknowledge");
 		},
 		onStateChanged: (callback: (state: AppUpdateState) => void): (() => void) => {
 			const handler = (_event: Electron.IpcRendererEvent, payload: AppUpdateState): void => callback(payload);

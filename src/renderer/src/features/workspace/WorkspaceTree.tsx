@@ -14,6 +14,9 @@ export type WorkspaceTreeProps = {
 	refreshToken?: number;
 	selectedSessionId?: string | null;
 	selectedWorkspaceId?: string | null;
+	initialWorkspaces?: WorkspaceConfig[];
+	initialSessions?: SessionMetadata[];
+	initialActiveWorkspaceId?: string | null;
 	sessionUpdate?: SessionMetadata | null;
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onSessionSelect?: (session: SessionMetadata) => void;
@@ -239,6 +242,9 @@ function WorkspaceTree({
 	refreshToken = 0,
 	selectedSessionId = null,
 	selectedWorkspaceId = null,
+	initialWorkspaces = [],
+	initialSessions = [],
+	initialActiveWorkspaceId = null,
 	sessionUpdate = null,
 	onWorkspaceSelect,
 	onSessionSelect,
@@ -248,10 +254,10 @@ function WorkspaceTree({
 	onWorkspaceDelete
 }: WorkspaceTreeProps): React.JSX.Element {
 	const [messageApi, messageContextHolder] = message.useMessage();
-	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([]);
-	const [sessions, setSessions] = useState<SessionMetadata[]>([]);
-	const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
-	const [openWorkspaceKeys, setOpenWorkspaceKeys] = useState<string[]>([]);
+	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>(() => initialWorkspaces);
+	const [sessions, setSessions] = useState<SessionMetadata[]>(() => initialSessions);
+	const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(initialActiveWorkspaceId);
+	const [openWorkspaceKeys, setOpenWorkspaceKeys] = useState<string[]>(() => initialWorkspaces.map((workspace: WorkspaceConfig): string => `workspace:${workspace.id}`));
 	const [selectedMenuKeys, setSelectedMenuKeys] = useState<string[]>([]);
 	const [isWorkspaceLoading, setIsWorkspaceLoading] = useState<boolean>(true);
 	const [workspaceError, setWorkspaceError] = useState<string | null>(null);

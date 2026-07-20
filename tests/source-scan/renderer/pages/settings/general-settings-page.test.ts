@@ -11,6 +11,7 @@ describe("GeneralSettingsPage", () => {
 
 		expect(pageSource).toContain("Auto-expand todo list");
 		expect(pageSource).toContain("Check for updates on startup");
+		expect(pageSource).toContain("Daedalus Studio and backend updates");
 		expect(pageSource).toContain("Minimize to tray on close");
 		expect(pageSource).toContain("Display settings");
 		expect(pageSource).toContain("Theme");

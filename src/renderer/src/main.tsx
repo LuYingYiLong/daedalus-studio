@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useState } from "react";
+import { StrictMode, useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { ConfigProvider, theme as antdTheme, type ThemeConfig } from "antd";
 import {
@@ -7,8 +7,9 @@ import {
 	getCachedClientPreferences,
 	type ClientPreferences
 } from "./api/client-preferences-api";
-import { probeBackendWorkspaceAndSessions } from "./api/dev-backend-probe";
 import Titlebar from "./components/Titlebar";
+import BootSplash from "./app/BootSplash";
+import type { BootstrapData } from "./app/bootstrap";
 import App from "./app/App";
 import "react-diff-view/style/index.css";
 import "./styles/global.css";
@@ -162,8 +163,12 @@ function createStudioTheme(resolvedTheme: ResolvedTheme): ThemeConfig {
 function StudioThemeRoot(): React.JSX.Element {
 	const [themePreference, setThemePreference] = useState<ThemePreference>(() => getCachedClientPreferences().theme);
 	const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() => resolveTheme("system"));
+	const [bootstrapData, setBootstrapData] = useState<BootstrapData | null>(null);
 	const resolvedTheme: ResolvedTheme = themePreference === "system" ? systemTheme : themePreference;
 	const studioTheme: ThemeConfig = useMemo((): ThemeConfig => createStudioTheme(resolvedTheme), [resolvedTheme]);
+	const handleBootstrapReady = useCallback((data: BootstrapData): void => {
+		setBootstrapData(data);
+	}, []);
 
 	useEffect((): void => {
 		document.documentElement.dataset.theme = resolvedTheme;
@@ -211,7 +216,7 @@ function StudioThemeRoot(): React.JSX.Element {
 	return (
 		<ConfigProvider theme={studioTheme}>
 			<Titlebar />
-			<App />
+			{bootstrapData === null ? <BootSplash onReady={handleBootstrapReady} /> : <App bootstrapData={bootstrapData} />}
 		</ConfigProvider>
 	);
 }
@@ -221,5 +226,3 @@ createRoot(rootElement).render(
 		<StudioThemeRoot />
 	</StrictMode>
 );
-
-void probeBackendWorkspaceAndSessions();

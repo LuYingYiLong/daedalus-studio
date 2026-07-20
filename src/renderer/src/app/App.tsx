@@ -44,6 +44,7 @@ import { saveImageAttachment, type SaveImageAttachmentParams } from "@/api/image
 import { DEFAULT_CLIENT_PREFERENCES, fetchClientPreferences, updateClientPreferences, type ClientPreferences } from "@/api/client-preferences-api";
 import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
 import { approvePlan, revisePlan, submitPlanClarification, type PlanResult } from "@/api/plan-api";
+import type { BootstrapData } from "./bootstrap";
 
 type SupportedImageMimeType = SaveImageAttachmentParams["mimeType"];
 type WorkspacePickedEntry = {
@@ -51,6 +52,10 @@ type WorkspacePickedEntry = {
 	relativePath: string;
 	resourcePath: string;
 	kind: "file" | "folder";
+};
+
+type AppProps = {
+	bootstrapData: BootstrapData;
 };
 
 const SUPPORTED_IMAGE_MIME_TYPES: readonly SupportedImageMimeType[] = ["image/png", "image/jpeg", "image/webp", "image/gif"];
@@ -548,12 +553,12 @@ function trimTimelineFromRequest(page: TimelinePageState, requestId: string): Ti
 	};
 }
 
-function App(): React.JSX.Element {
+function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [activePage, setActivePage] = useState<AppPageKey>("agent");
 	const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState<number>(0);
 	const [isNewSessionHome, setIsNewSessionHome] = useState<boolean>(true);
-	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() => createHomeDraft());
-	const [homeWorkspaceOptions, setHomeWorkspaceOptions] = useState<WorkspaceConfig[]>([]);
+	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() => createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection));
+	const [homeWorkspaceOptions, setHomeWorkspaceOptions] = useState<WorkspaceConfig[]>(() => bootstrapData.workspaceList.workspaces);
 	const [isWorkspaceAdding, setIsWorkspaceAdding] = useState<boolean>(false);
 	const [isHomeSubmitting, setIsHomeSubmitting] = useState<boolean>(false);
 	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -564,9 +569,9 @@ function App(): React.JSX.Element {
 	const [workbench, setWorkbench] = useState<WorkbenchSnapshot | null>(null);
 	const [sessionError, setSessionError] = useState<string | null>(null);
 	const [isSessionLoading, setIsSessionLoading] = useState(false);
-	const [providerModelSelection, setProviderModelSelection] = useState<ProviderModelSelection | null>(null);
-	const [slashCommands, setSlashCommands] = useState<SlashCommandDefinition[]>([]);
-	const [skills, setSkills] = useState<SkillSummary[]>([]);
+	const [providerModelSelection, setProviderModelSelection] = useState<ProviderModelSelection | null>(bootstrapData.providerModelSelection);
+	const [slashCommands, setSlashCommands] = useState<SlashCommandDefinition[]>(() => bootstrapData.slashCommands);
+	const [skills, setSkills] = useState<SkillSummary[]>(() => bootstrapData.skills);
 	const [approvalMode, setApprovalModeState] = useState<ApprovalMode>("manual");
 	const [isApprovalModeSaving, setIsApprovalModeSaving] = useState<boolean>(false);
 	const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
@@ -587,8 +592,8 @@ function App(): React.JSX.Element {
 	const [fullTrustConfirmationText, setFullTrustConfirmationText] = useState<string>("");
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
 	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] = useState<WorkflowTodoSnapshot | null>(null);
-	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(DEFAULT_CLIENT_PREFERENCES);
-	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(DEFAULT_GENERAL_SETTINGS);
+	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(bootstrapData.clientPreferences ?? DEFAULT_CLIENT_PREFERENCES);
+	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(bootstrapData.generalSettings ?? DEFAULT_GENERAL_SETTINGS);
 	const pendingPatchRef = useRef<WorkbenchPatch>({});
 	const patchTimerRef = useRef<number | null>(null);
 	const patchSequenceRef = useRef<number>(0);
@@ -2457,6 +2462,9 @@ function App(): React.JSX.Element {
 					isApprovalModeSaving={isApprovalModeSaving}
 					webSearchEnabled={webSearchEnabled}
 					workspaceOptions={homeWorkspaceOptions}
+					initialWorkspaces={bootstrapData.workspaceList.workspaces}
+					initialSessions={bootstrapData.sessionList.sessions}
+					initialActiveWorkspaceId={bootstrapData.workspaceList.active}
 					homeWorkspace={homeDraft.workspace}
 					workspaceFooterDisabled={!isNewSessionHome || isHomeSubmitting}
 					isWorkspaceAdding={isWorkspaceAdding}

@@ -1,0 +1,29 @@
+.root {
+	display: grid;
+	min-height: 0;
+	flex: 1;
+	place-items: center;
+	padding: 32px;
+	background: var(--ds-bg);
+}
+
+.panel {
+	display: grid;
+	width: min(460px, 100%);
+	gap: 16px;
+}
+
+.brand {
+	display: grid;
+	gap: 4px;
+	text-align: center;
+}
+
+.progress {
+	display: grid;
+	gap: 8px;
+}
+
+.result {
+	max-width: 640px;
+}

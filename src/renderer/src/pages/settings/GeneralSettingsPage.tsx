@@ -239,7 +239,7 @@ function GeneralSettingsPage({
 								{
 									key: "autoCheckForUpdates" as const,
 									title: "Check for updates on startup",
-									description: "Check GitHub Releases for a new Daedalus Studio version when the app starts.",
+									description: "Check for Daedalus Studio and backend updates when the app starts.",
 									checked: draftClientPreferences.autoCheckForUpdates,
 									onChange: handleAutoCheckForUpdatesChange
 								},

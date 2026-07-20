@@ -352,19 +352,19 @@ function TerminalPanel({ terminalId, cwd, isOpen }: TerminalPanelProps): React.J
 				<div className={styles.statusGroup}>
 					<span className={styles.status}>{stateLabel}</span>
 				</div>
-				<div className={styles.metaGroup}>
+				<div></div>
+				{/* <div className={styles.metaGroup}>
 					<Typography.Text className={styles.shellLabel} title={terminalState?.shell ?? shellLabel}>
 						{shellLabel}
 					</Typography.Text>
 					<Typography.Text className={styles.cwdLabel} title={cwdLabel}>
 						{cwdLabel}
 					</Typography.Text>
-				</div>
+				</div> */}
 				<div className={styles.actions}>
 					<Button
 						type="text"
 						shape="circle"
-						size="small"
 						aria-label="Restart terminal"
 						disabled={isCreating}
 						icon={<Icon name="reload" />}
@@ -375,7 +375,6 @@ function TerminalPanel({ terminalId, cwd, isOpen }: TerminalPanelProps): React.J
 					<Button
 						type="text"
 						shape="circle"
-						size="small"
 						aria-label="Stop terminal"
 						disabled={!canKill}
 						icon={<Icon name="stop" />}

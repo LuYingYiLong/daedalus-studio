@@ -34,10 +34,13 @@
 	position: absolute;
 	top: 50%;
 	left: calc(100% + 8px);
+	z-index: 1;
 	height: 24px;
 	line-height: 22px;
 	transform: translateY(-50%);
 	white-space: nowrap;
+	pointer-events: auto;
+	-webkit-app-region: no-drag;
 }
 
 .updateModalBody {

@@ -13,6 +13,7 @@ declare global {
 		getPort: () => Promise<number>;
 		getStatus: () => Promise<string>;
 		healthCheck: () => Promise<boolean>;
+		restart: () => Promise<void>;
 		onStatusChanged: (callback: (status: string) => void) => () => void;
 	}
 
@@ -43,9 +44,11 @@ declare global {
 		| "error"
 		| "unsupported";
 
-	interface AppUpdateState {
+	type AppUpdateKind = "client" | "backend" | "combined" | null;
+
+	interface AppUpdateComponentState {
 		status: AppUpdateStatus;
-		currentVersion: string;
+		currentVersion: string | null;
 		availableVersion: string | null;
 		releaseName: string | null;
 		releaseDate: string | null;
@@ -53,9 +56,23 @@ declare global {
 		errorMessage: string | null;
 	}
 
+	interface AppUpdateState {
+		status: AppUpdateStatus;
+		updateKind: AppUpdateKind;
+		currentVersion: string;
+		availableVersion: string | null;
+		releaseName: string | null;
+		releaseDate: string | null;
+		progress: number | null;
+		errorMessage: string | null;
+		client: AppUpdateComponentState;
+		backend: AppUpdateComponentState;
+	}
+
 	interface AppUpdateAPI {
 		getState: () => Promise<AppUpdateState>;
 		download: () => Promise<AppUpdateState>;
+		acknowledge: () => Promise<AppUpdateState>;
 		onStateChanged: (callback: (state: AppUpdateState) => void) => () => void;
 	}
 

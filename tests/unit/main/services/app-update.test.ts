@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { AppUpdateService, type AppUpdateState } from "@main/services/app-update";
+import {
+	AppUpdateService,
+	type AppUpdateState,
+	type BackendUpdateCheckResult,
+	type BackendUpdateClient,
+	type BackendUpdateInstallResult
+} from "@main/services/app-update";
 
 type FakeUpdaterEventName =
 	| "checking-for-update"
@@ -29,6 +35,17 @@ function createUpdateInfo(version: string): FakeUpdateInfo {
 	};
 }
 
+function createBackendCheckResult(updateAvailable: boolean = false): BackendUpdateCheckResult {
+	return {
+		currentVersion: "1.0.8",
+		installedVersion: "1.0.8",
+		latestVersion: updateAvailable ? "1.0.9" : "1.0.8",
+		updateAvailable,
+		checkedAt: "2026-07-20T10:00:00.000Z",
+		errorMessage: null
+	};
+}
+
 class FakeAutoUpdater {
 	public autoDownload: boolean = true;
 	public allowPrerelease: boolean = true;
@@ -46,6 +63,7 @@ class FakeAutoUpdater {
 	public async checkForUpdates(): Promise<null> {
 		this.checkCount += 1;
 		this.emit("checking-for-update");
+		this.emit("update-not-available", createUpdateInfo("1.0.0"));
 		return null;
 	}
 
@@ -72,36 +90,76 @@ class FakeAutoUpdater {
 	}
 }
 
+class FakeBackendUpdateClient implements BackendUpdateClient {
+	public checkCount: number = 0;
+	public installCount: number = 0;
+	public restartCount: number = 0;
+	public checkResult: BackendUpdateCheckResult = createBackendCheckResult(false);
+	public checkError: Error | null = null;
+	public installError: Error | null = null;
+
+	public async check(): Promise<BackendUpdateCheckResult> {
+		this.checkCount += 1;
+		if (this.checkError !== null) {
+			throw this.checkError;
+		}
+		return this.checkResult;
+	}
+
+	public async install(version: string | null): Promise<BackendUpdateInstallResult> {
+		this.installCount += 1;
+		if (this.installError !== null) {
+			throw this.installError;
+		}
+		return {
+			installed: true,
+			version: version ?? "1.0.9",
+			previousVersion: "1.0.8",
+			installedAt: "2026-07-20T10:00:00.000Z"
+		};
+	}
+
+	public async restartAndWaitHealthy(): Promise<void> {
+		this.restartCount += 1;
+	}
+}
+
 describe("app update service", () => {
-	it("keeps updater disabled for unpackaged builds", async () => {
+	it("keeps client updater disabled for unpackaged builds while checking backend updates", async () => {
 		const fakeUpdater = new FakeAutoUpdater();
+		const fakeBackend = new FakeBackendUpdateClient();
 		const events: AppUpdateState[] = [];
 		const service = new AppUpdateService({
 			isPackaged: false,
 			currentVersion: "1.0.0",
 			autoUpdater: fakeUpdater,
+			backendUpdateClient: fakeBackend,
 			sendEvent: (_channel, state): void => {
 				events.push(state);
 			}
 		});
 
 		await expect(service.checkForUpdatesIfEnabled(true)).resolves.toMatchObject({
-			status: "unsupported",
-			currentVersion: "1.0.0"
+			status: "not_available",
+			client: { status: "unsupported" },
+			backend: { status: "not_available" }
 		});
 
 		expect(fakeUpdater.autoDownload).toBe(false);
 		expect(fakeUpdater.allowPrerelease).toBe(false);
 		expect(fakeUpdater.checkCount).toBe(0);
-		expect(events.at(-1)?.status).toBe("unsupported");
+		expect(fakeBackend.checkCount).toBe(1);
+		expect(events.at(-1)?.status).toBe("not_available");
 	});
 
 	it("does not check when auto check is disabled", async () => {
 		const fakeUpdater = new FakeAutoUpdater();
+		const fakeBackend = new FakeBackendUpdateClient();
 		const service = new AppUpdateService({
 			isPackaged: true,
 			currentVersion: "1.0.0",
 			autoUpdater: fakeUpdater,
+			backendUpdateClient: fakeBackend,
 			sendEvent: (): void => {}
 		});
 
@@ -109,17 +167,20 @@ describe("app update service", () => {
 			status: "idle"
 		});
 		expect(fakeUpdater.checkCount).toBe(0);
+		expect(fakeBackend.checkCount).toBe(0);
 	});
 
-	it("tracks update availability, download progress and install restart", async () => {
+	it("tracks client update availability, download progress and install restart", async () => {
 		vi.useFakeTimers();
 		try {
 			const fakeUpdater = new FakeAutoUpdater();
+			const fakeBackend = new FakeBackendUpdateClient();
 			const events: AppUpdateState[] = [];
 			const service = new AppUpdateService({
 				isPackaged: true,
 				currentVersion: "1.0.0",
 				autoUpdater: fakeUpdater,
+				backendUpdateClient: fakeBackend,
 				installDelayMs: 1,
 				sendEvent: (_channel, state): void => {
 					events.push(state);
@@ -129,6 +190,7 @@ describe("app update service", () => {
 			fakeUpdater.emit("update-available", createUpdateInfo("1.1.0"));
 			expect(service.getState()).toMatchObject({
 				status: "available",
+				updateKind: "client",
 				availableVersion: "1.1.0",
 				releaseName: "Daedalus Studio 1.1.0"
 			});
@@ -148,19 +210,106 @@ describe("app update service", () => {
 		}
 	});
 
-	it("converts updater errors to renderer state", () => {
+	it("installs backend-only updates and acknowledge hides the completed prompt", async () => {
 		const fakeUpdater = new FakeAutoUpdater();
+		const fakeBackend = new FakeBackendUpdateClient();
+		fakeBackend.checkResult = createBackendCheckResult(true);
 		const service = new AppUpdateService({
 			isPackaged: true,
 			currentVersion: "1.0.0",
 			autoUpdater: fakeUpdater,
+			backendUpdateClient: fakeBackend,
+			sendEvent: (): void => {}
+		});
+
+		await expect(service.checkForUpdates()).resolves.toMatchObject({
+			status: "available",
+			updateKind: "backend",
+			backend: {
+				availableVersion: "1.0.9"
+			}
+		});
+		await expect(service.download()).resolves.toMatchObject({
+			status: "downloaded",
+			updateKind: "backend",
+			backend: {
+				status: "downloaded",
+				currentVersion: "1.0.9"
+			}
+		});
+		expect(fakeBackend.installCount).toBe(1);
+		expect(fakeBackend.restartCount).toBe(1);
+		expect(service.acknowledge()).toMatchObject({
+			status: "not_available",
+			updateKind: null
+		});
+	});
+
+	it("installs backend before downloading client updates for combined updates", async () => {
+		const fakeUpdater = new FakeAutoUpdater();
+		const fakeBackend = new FakeBackendUpdateClient();
+		fakeBackend.checkResult = createBackendCheckResult(true);
+		const service = new AppUpdateService({
+			isPackaged: true,
+			currentVersion: "1.0.0",
+			autoUpdater: fakeUpdater,
+			backendUpdateClient: fakeBackend,
+			sendEvent: (): void => {}
+		});
+
+		await service.checkForUpdates();
+		fakeUpdater.emit("update-available", createUpdateInfo("1.1.0"));
+		await service.download();
+
+		expect(fakeBackend.installCount).toBe(1);
+		expect(fakeBackend.restartCount).toBe(1);
+		expect(fakeUpdater.downloadCount).toBe(1);
+		expect(service.getState().updateKind).toBe("combined");
+	});
+
+	it("does not continue to client download when backend install fails", async () => {
+		const fakeUpdater = new FakeAutoUpdater();
+		const fakeBackend = new FakeBackendUpdateClient();
+		fakeBackend.checkResult = createBackendCheckResult(true);
+		fakeBackend.installError = new Error("install failed");
+		const service = new AppUpdateService({
+			isPackaged: true,
+			currentVersion: "1.0.0",
+			autoUpdater: fakeUpdater,
+			backendUpdateClient: fakeBackend,
+			sendEvent: (): void => {}
+		});
+
+		await service.checkForUpdates();
+		fakeUpdater.emit("update-available", createUpdateInfo("1.1.0"));
+		await expect(service.download()).resolves.toMatchObject({
+			status: "available",
+			errorMessage: "install failed",
+			backend: {
+				status: "error"
+			}
+		});
+		expect(fakeUpdater.downloadCount).toBe(0);
+	});
+
+	it("converts updater errors to renderer state", () => {
+		const fakeUpdater = new FakeAutoUpdater();
+		const fakeBackend = new FakeBackendUpdateClient();
+		const service = new AppUpdateService({
+			isPackaged: true,
+			currentVersion: "1.0.0",
+			autoUpdater: fakeUpdater,
+			backendUpdateClient: fakeBackend,
 			sendEvent: (): void => {}
 		});
 
 		fakeUpdater.emit("error", new Error("network failed"));
 		expect(service.getState()).toMatchObject({
 			status: "error",
-			errorMessage: "network failed"
+			errorMessage: "network failed",
+			client: {
+				status: "error"
+			}
 		});
 	});
 });

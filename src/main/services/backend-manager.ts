@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from "electron";
-import { join } from "node:path";
-import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join, resolve, sep } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import WebSocket from "ws";
 import { ChildProcess, spawn } from "node:child_process";
 import { BackendStatus } from "./types";
@@ -15,6 +16,9 @@ const HEALTH_CHECK_INTERVAL: number = 5000;
 const HEALTH_CHECK_TIMEOUT: number = 2000;
 const MAX_RESTART_ATTEMPTS: number = 5;
 const RESTART_DELAY: number = 2000;
+const RESTART_HEALTH_TIMEOUT: number = 20000;
+const RESTART_HEALTH_POLL_INTERVAL: number = 500;
+const MANAGED_BACKEND_PACKAGE_NAME: string = "daedalus-backend";
 
 type ProcessManagerConfig = {
 	readonly maxRestartAttempts: number;
@@ -22,6 +26,73 @@ type ProcessManagerConfig = {
 	readonly healthCheckInterval: number;
 	readonly healthCheckTimeout: number;
 };
+
+type BackendLaunchTarget = {
+	readonly kind: "bundled" | "managed";
+	readonly cwd: string;
+	readonly entry: string;
+	readonly args: string[];
+	readonly version: string | null;
+};
+
+type BackendCurrentFile = {
+	version?: unknown;
+	path?: unknown;
+};
+
+function isInside(parentDir: string, childPath: string): boolean {
+	const resolvedParent: string = resolve(parentDir);
+	const resolvedChild: string = resolve(childPath);
+	return resolvedChild === resolvedParent || resolvedChild.startsWith(`${resolvedParent}${sep}`);
+}
+
+function getDaedalusDir(): string {
+	return join(process.env.USERPROFILE ?? homedir(), ".daedalus");
+}
+
+function getManagedBackendVersionsDir(): string {
+	return join(getDaedalusDir(), "backend", "versions");
+}
+
+function getManagedBackendCurrentPath(): string {
+	return join(getDaedalusDir(), "backend", "current.json");
+}
+
+export function resolveManagedBackendLaunchTarget(currentPath: string = getManagedBackendCurrentPath()): BackendLaunchTarget | null {
+	if (!existsSync(currentPath)) {
+		return null;
+	}
+
+	try {
+		const current: BackendCurrentFile = JSON.parse(readFileSync(currentPath, "utf8")) as BackendCurrentFile;
+		if (typeof current.path !== "string" || current.path.trim().length === 0) {
+			return null;
+		}
+		const version: string | null = typeof current.version === "string" && current.version.trim().length > 0
+			? current.version.trim()
+			: null;
+		const versionDir: string = resolve(current.path);
+		if (!isInside(getManagedBackendVersionsDir(), versionDir)) {
+			return null;
+		}
+
+		const packageRoot: string = join(versionDir, "node_modules", MANAGED_BACKEND_PACKAGE_NAME);
+		const entry: string = join(packageRoot, "src", "main.ts");
+		if (!existsSync(entry)) {
+			return null;
+		}
+
+		return {
+			kind: "managed",
+			cwd: packageRoot,
+			entry,
+			args: ["--import", "tsx", entry],
+			version
+		};
+	} catch {
+		return null;
+	}
+}
 
 class BackendManager {
 	private process: ChildProcess | null = null;
@@ -33,9 +104,10 @@ class BackendManager {
 	private restartTimer: ReturnType<typeof setTimeout> | null = null;
 	private isShuttingDown: boolean = false;
 	private readonly config: ProcessManagerConfig;
+	private readonly statusListeners: Set<(status: BackendStatus) => void> = new Set();
 
 	constructor() {
-		this.port = app.isPackaged ? PROD_PORT : DEV_PORT;
+		this.port = app?.isPackaged === true ? PROD_PORT : DEV_PORT;
 		this.config = {
 			maxRestartAttempts: MAX_RESTART_ATTEMPTS,
 			restartDelay: RESTART_DELAY,
@@ -52,34 +124,53 @@ class BackendManager {
 		if (!app.isPackaged) {
 			logger.info(`Development mode — expecting the backend to run on ws://localhost:${this.port}`);
 		} else {
-			const backendPath: string = this.validateBackendPath();
-			if (!backendPath) {
+			const launchTarget: BackendLaunchTarget | null = this.resolveBackendLaunchTarget();
+			if (launchTarget === null) {
 				logger.error("Backend path verification failed", undefined, { appPath: app.getAppPath() });
 				this.setStatus("unhealthy");
 				return;
 			}
-			await this.spawnProcess();
+			await this.spawnProcess(launchTarget);
 		}
 
 		this.startHealthCheck();
 	}
 
-	private validateBackendPath(): string {
+	private resolveBundledBackendLaunchTarget(): BackendLaunchTarget | null {
 		const backendPath: string = join(app.getAppPath(), "backend");
 
 		if (!existsSync(backendPath)) {
 			logger.error("Backend directory doesn't exist", undefined, { backendPath });
-			return "";
+			return null;
 		}
 
 		const entryPath: string = join(backendPath, "main.js");
 		if (!existsSync(entryPath)) {
 			logger.error("Backend entry file doesn't exist", undefined, { entryPath });
-			return "";
+			return null;
 		}
 
 		logger.info("Backend path verification successful", { backendPath, entryPath });
-		return backendPath;
+		return {
+			kind: "bundled",
+			cwd: backendPath,
+			entry: entryPath,
+			args: [entryPath],
+			version: null
+		};
+	}
+
+	private resolveBackendLaunchTarget(): BackendLaunchTarget | null {
+		const managedTarget: BackendLaunchTarget | null = resolveManagedBackendLaunchTarget();
+		if (managedTarget !== null) {
+			logger.info("Managed backend selected", {
+				version: managedTarget.version,
+				cwd: managedTarget.cwd
+			});
+			return managedTarget;
+		}
+
+		return this.resolveBundledBackendLaunchTarget();
 	}
 
 	stop(): void {
@@ -101,11 +192,22 @@ class BackendManager {
 		return this.port;
 	}
 
+	getStatus(): BackendStatus {
+		return this.status;
+	}
+
+	onDidChangeStatus(listener: (status: BackendStatus) => void): () => void {
+		this.statusListeners.add(listener);
+		return (): void => {
+			this.statusListeners.delete(listener);
+		};
+	}
+
 	registerIpc(): void {
 		ipcMain.handle("backend:get-port", (): number => this.port);
 		ipcMain.handle("backend:get-status", (): BackendStatus => this.status);
 		ipcMain.handle("backend:health-check", async (): Promise<boolean> => await this.ping());
-		ipcMain.handle("backend:restart", async (): Promise<void> => await this.restart());
+		ipcMain.handle("backend:restart", async (): Promise<void> => await this.restartAndWaitHealthy());
 	}
 
 	async restart(): Promise<void> {
@@ -123,21 +225,55 @@ class BackendManager {
 		this.setStatus("starting");
 
 		if (app.isPackaged) {
-			await this.spawnProcess();
+			const launchTarget: BackendLaunchTarget | null = this.resolveBackendLaunchTarget();
+			if (launchTarget === null) {
+				this.setStatus("unhealthy");
+				throw new Error("No packaged backend is available.");
+			}
+			await this.spawnProcess(launchTarget);
 		}
 
 		this.startHealthCheck();
 	}
 
-	private async spawnProcess(): Promise<void> {
-		const backendPath: string = join(app.getAppPath(), "backend");
-		const entry: string = join(backendPath, "main.js");
+	async restartAndWaitHealthy(): Promise<void> {
+		await this.restart();
+		await this.waitUntilHealthy(RESTART_HEALTH_TIMEOUT);
+	}
 
-		logger.info("Starting the backend process", { backendPath, entry, port: this.port });
+	async waitUntilHealthy(timeoutMs: number = RESTART_HEALTH_TIMEOUT): Promise<void> {
+		const deadline: number = Date.now() + timeoutMs;
+		while (Date.now() < deadline) {
+			const ok: boolean = await this.ping();
+			if (ok) {
+				this.setStatus("healthy");
+				this.restartAttempts = 0;
+				return;
+			}
+			await new Promise((resolve): void => {
+				setTimeout(resolve, RESTART_HEALTH_POLL_INTERVAL);
+			});
+		}
+		this.setStatus("unhealthy");
+		throw new Error("Timed out waiting for backend to become healthy.");
+	}
 
-		this.process = spawn(process.execPath, [entry], {
-			cwd: backendPath,
-			env: { ...process.env, PORT: String(this.port) },
+	private async spawnProcess(launchTarget: BackendLaunchTarget): Promise<void> {
+		logger.info("Starting the backend process", {
+			kind: launchTarget.kind,
+			cwd: launchTarget.cwd,
+			entry: launchTarget.entry,
+			version: launchTarget.version,
+			port: this.port
+		});
+
+		this.process = spawn(process.execPath, launchTarget.args, {
+			cwd: launchTarget.cwd,
+			env: {
+				...process.env,
+				ELECTRON_RUN_AS_NODE: "1",
+				PORT: String(this.port)
+			},
 			stdio: "pipe"
 		});
 
@@ -195,7 +331,12 @@ class BackendManager {
 			}
 
 			try {
-				await this.spawnProcess();
+				const launchTarget: BackendLaunchTarget | null = this.resolveBackendLaunchTarget();
+				if (launchTarget === null) {
+					this.setStatus("unhealthy");
+					return;
+				}
+				await this.spawnProcess(launchTarget);
 			} catch (error: unknown) {
 				logger.error("Backend process failed to restart", error as Error);
 				this.handleProcessCrash();
@@ -296,6 +437,9 @@ class BackendManager {
 		}
 		this.status = status;
 		this.mainWindow?.webContents.send("backend:status-changed", status);
+		for (const listener of this.statusListeners) {
+			listener(status);
+		}
 	}
 }
 

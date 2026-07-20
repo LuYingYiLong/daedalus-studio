@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse } from "antd";
+import { Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import type { AdditionalContextItem, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
@@ -129,6 +129,9 @@ type AgentPageProps = {
 	isApprovalModeSaving: boolean;
 	webSearchEnabled: boolean;
 	workspaceOptions: WorkspaceConfig[];
+	initialWorkspaces: WorkspaceConfig[];
+	initialSessions: SessionMetadata[];
+	initialActiveWorkspaceId: string | null;
 	homeWorkspace: WorkspaceConfig | null;
 	workspaceFooterDisabled: boolean;
 	isWorkspaceAdding: boolean;
@@ -215,6 +218,9 @@ function AgentPage({
 	isApprovalModeSaving,
 	webSearchEnabled,
 	workspaceOptions,
+	initialWorkspaces,
+	initialSessions,
+	initialActiveWorkspaceId,
 	homeWorkspace,
 	workspaceFooterDisabled,
 	isWorkspaceAdding,
@@ -782,6 +788,9 @@ function AgentPage({
 					refreshToken={workspaceRefreshToken}
 					selectedSessionId={activeSessionId}
 					selectedWorkspaceId={activeWorkspaceId}
+					initialWorkspaces={initialWorkspaces}
+					initialSessions={initialSessions}
+					initialActiveWorkspaceId={initialActiveWorkspaceId}
 					sessionUpdate={activeSessionMetadata}
 					onWorkspaceSelect={onWorkspaceSelect}
 					onSessionSelect={onSessionSelect}
@@ -825,24 +834,26 @@ function AgentPage({
 							) : null}
 							{showSummaryButton ? renderSummaryButton() : null}
 							{showBottomDockButton ? (
-								<Button
-									type={bottomDockOpen ? "primary" : "text"}
-									shape="circle"
-									aria-label={bottomDockOpen ? "Close bottom panel" : "Open bottom panel"}
-									aria-pressed={bottomDockOpen}
-									icon={<Icon name="layout-bottom" />}
-									onClick={toggleBottomDock}
-								/>
+								<Tooltip title={bottomDockOpen ? "Close bottom panel" : "Open bottom panel"}>
+									<Button
+										type={bottomDockOpen ? "primary" : "text"}
+										shape="circle"
+										aria-pressed={bottomDockOpen}
+										icon={<Icon name="layout-bottom" />}
+										onClick={toggleBottomDock}
+									/>
+								</Tooltip>
 							) : null}
 							{showSideDockButton ? (
-								<Button
-									type={sideDockOpen ? "primary" : "text"}
-									shape="circle"
-									aria-label={sideDockOpen ? "Close side panel" : "Open side panel"}
-									aria-pressed={sideDockOpen}
-									icon={<Icon name="layout-right" />}
-									onClick={toggleSideDock}
-								/>
+								<Tooltip title={sideDockOpen ? "Close sidebar" : "Open sidebar"}>
+									<Button
+										type={sideDockOpen ? "primary" : "text"}
+										shape="circle"
+										aria-pressed={sideDockOpen}
+										icon={<Icon name="layout-right" />}
+										onClick={toggleSideDock}
+									/>
+								</Tooltip>
 							) : null}
 						</div>
 					</div>
