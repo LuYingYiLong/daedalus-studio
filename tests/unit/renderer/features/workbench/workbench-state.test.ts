@@ -59,6 +59,103 @@ describe("workbench-state", () => {
 		expect(withDone[0]?.type === "assistant" ? withDone[0].status : "missing").toBeUndefined();
 	});
 
+	it("creates a running assistant block when an agent run starts", () => {
+		const blocks: TimelineBlock[] = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "request-started",
+			event: "agent.run.started",
+			data: {
+				runId: "request-started",
+				requestId: "request-started"
+			}
+		});
+
+		expect(blocks).toHaveLength(1);
+		expect(blocks[0]?.type).toBe("assistant");
+		if (blocks[0]?.type !== "assistant") {
+			throw new Error("Expected assistant block");
+		}
+		expect(blocks[0].status).toBe("running");
+		expect(blocks[0].requestId).toBe("request-started");
+		expect(blocks[0].bodyParts).toEqual([]);
+	});
+
+	it("deduplicates repeated cancellation events in the assistant block", () => {
+		const started: TimelineBlock[] = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "request-cancelled",
+			event: "agent.run.started",
+			data: {
+				runId: "request-cancelled",
+				requestId: "request-cancelled"
+			}
+		});
+		const withAgentCancel: TimelineBlock[] = applyBackendEventToTimeline(started, {
+			type: "event",
+			id: "request-cancelled",
+			event: "agent.run.cancelled",
+			data: {
+				requestId: "request-cancelled"
+			}
+		});
+		const withRepeatedCancel: TimelineBlock[] = applyBackendEventToTimeline(withAgentCancel, {
+			type: "event",
+			id: "request-cancelled",
+			event: "agent.run.cancelled",
+			data: {
+				requestId: "request-cancelled"
+			}
+		});
+		const assistant = withRepeatedCancel[0];
+
+		expect(assistant?.type).toBe("assistant");
+		if (assistant?.type !== "assistant") {
+			throw new Error("Expected assistant block");
+		}
+		expect(assistant.status).toBeUndefined();
+		expect(assistant.bodyParts.filter((part) => part.type === "status" && part.code === "cancelled")).toHaveLength(1);
+	});
+
+	it("deduplicates repeated terminal errors in the assistant block", () => {
+		const started: TimelineBlock[] = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "request-error",
+			event: "agent.run.started",
+			data: {
+				runId: "request-error",
+				requestId: "request-error"
+			}
+		});
+		const withWorkflowError: TimelineBlock[] = applyBackendEventToTimeline(started, {
+			type: "event",
+			id: "request-error",
+			event: "agent.run.error",
+			data: {
+				runId: "workflow-a",
+				code: "agent_run_error",
+				message: "oldText not found in file"
+			}
+		});
+		const withProviderError: TimelineBlock[] = applyBackendEventToTimeline(withWorkflowError, {
+			type: "event",
+			id: "request-error",
+			event: "agent.run.error",
+			data: {
+				runId: "request-error",
+				code: "provider_error",
+				message: "oldText not found in file"
+			}
+		});
+		const assistant = withProviderError[0];
+
+		expect(assistant?.type).toBe("assistant");
+		if (assistant?.type !== "assistant") {
+			throw new Error("Expected assistant block");
+		}
+		expect(assistant.status).toBe("failed");
+		expect(assistant.bodyParts.filter((part) => part.type === "status" && part.status === "error")).toHaveLength(1);
+	});
+
 	it("keeps summary_start before summary markdown", () => {
 		const blocks: TimelineBlock[] = applyBackendEventToTimeline([], {
 			type: "event",

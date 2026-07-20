@@ -19,6 +19,12 @@ function shouldShowUpdateButton(preferences: ClientPreferences, state: AppUpdate
 	if (!preferences.autoCheckForUpdates || state === null) {
 		return false;
 	}
+	const hasKnownUpdate: boolean = state.updateKind !== null
+		|| state.client.availableVersion !== null
+		|| state.backend.availableVersion !== null;
+	if (!hasKnownUpdate) {
+		return false;
+	}
 	return state.status === "available"
 		|| state.status === "downloading"
 		|| state.status === "downloaded"

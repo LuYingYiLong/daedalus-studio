@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Progress, Result, Spin, Typography } from "antd";
+import { Button, Progress, Result, Typography } from "antd";
 import { loadBootstrapData, type BootstrapData, type BootstrapProgress } from "./bootstrap";
 import styles from "./BootSplash.module.css";
 
@@ -127,7 +127,6 @@ function BootSplash({ onReady }: BootSplashProps): React.JSX.Element {
 				</div>
 				<div className={styles.progress}>
 					<Progress percent={loadingProgress.percent} status="active" />
-					<Spin />
 				</div>
 			</section>
 		</main>

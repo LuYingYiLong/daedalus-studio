@@ -388,6 +388,16 @@ function replaceOrAppendPlanPart(parts: TimelineBodyPart[], planPart: Extract<Ti
 	});
 }
 
+function hasStatusCode(parts: readonly TimelineBodyPart[], code: string): boolean {
+	return parts.some((part: TimelineBodyPart): boolean => part.type === "status" && part.code === code);
+}
+
+function hasErrorStatusDetails(parts: readonly TimelineBodyPart[], details: string): boolean {
+	return details.length > 0 && parts.some((part: TimelineBodyPart): boolean => {
+		return part.type === "status" && part.status === "error" && part.details === details;
+	});
+}
+
 function assistantBlockMatchesEvent(block: TimelineAssistantBlock, event: BackendEvent): boolean {
 	if (block.requestId === event.id || block.requestId === getCanonicalEventRequestId(event)) {
 		return true;
@@ -443,23 +453,28 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 	} else if (event.event === "agent.run.error" || event.event === "workflow.error") {
 		nextStatus = "failed";
 		completedAtUtc = nowIso;
-		nextParts = [...nextParts, {
-			type: "status",
-			status: "error",
-			title: "后端返回错误",
-			details: getStringValue(data, "message") || "Unknown backend error",
-			code: getStringValue(data, "code") || "agent_run_error"
-		}];
-	} else if (event.event === "agent.run.cancelled" || event.event === "ai.cancelled") {
+		const details: string = getStringValue(data, "message") || "Unknown backend error";
+		if (!hasErrorStatusDetails(nextParts, details)) {
+			nextParts = [...nextParts, {
+				type: "status",
+				status: "error",
+				title: "后端返回错误",
+				details,
+				code: getStringValue(data, "code") || "agent_run_error"
+			}];
+		}
+	} else if (event.event === "agent.run.cancelled") {
 		nextStatus = undefined;
 		completedAtUtc = nowIso;
-		nextParts = [...nextParts, {
-			type: "status",
-			status: "info",
-			title: "已停止",
-			details: getStringValue(data, "reason") || "用户停止了本次响应",
-			code: "cancelled"
-		}];
+		if (!hasStatusCode(nextParts, "cancelled")) {
+			nextParts = [...nextParts, {
+				type: "status",
+				status: "info",
+				title: "已停止",
+				details: getStringValue(data, "reason") || "用户停止了本次响应",
+				code: "cancelled"
+			}];
+		}
 	} else if (event.event === "agent.message.done" || event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done") {
 		nextStatus = undefined;
 		completedAtUtc = nowIso;
@@ -477,7 +492,8 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 }
 
 function shouldCreateAssistantBlock(event: BackendEvent): boolean {
-	return event.event === "ai.delta"
+	return event.event === "agent.run.started"
+		|| event.event === "ai.delta"
 		|| event.event === "agent.message.delta"
 		|| event.event === "ai.thinking.delta"
 		|| event.event === "agent.thinking.delta"

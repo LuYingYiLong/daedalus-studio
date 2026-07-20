@@ -25,7 +25,8 @@ export interface PackageInfo {
  */
 export function registerSystemInfoIpc(): void {
   // 检查磁盘空间
-  ipcMain.handle('electron:checkDiskSpace', async (_event, driveLetter: string): Promise<DiskSpaceInfo | null> => {
+  ipcMain.handle('electron:checkDiskSpace', async (_event) => {
+  const driveLetter = process.env.USERPROFILE?.charAt(0) || 'C';: string): Promise<DiskSpaceInfo | null> => {
     try {
       const platform = process.platform;
 
@@ -74,7 +75,7 @@ export function registerSystemInfoIpc(): void {
  * Windows 磁盘空间检测
  * 使用 PowerShell Get-Volume 命令
  */
-async function checkWindowsDiskSpace(driveLetter: string): Promise<DiskSpaceInfo | null> {
+async function checkWindowsDiskSpace(driveLetter): Promise<DiskSpaceInfo | null> {
   try {
     const drive = driveLetter.replace(':', '').toUpperCase();
     const command = `Get-Volume -DriveLetter ${drive} | Select-Object SizeRemaining, Size | ConvertTo-Json`;

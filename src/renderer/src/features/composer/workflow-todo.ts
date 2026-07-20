@@ -126,9 +126,5 @@ export function mapWorkflowTodoStatusToStepStatus(status: WorkflowTodoStatus): W
 }
 
 export function isWorkflowTodoClearEvent(event: BackendEvent): boolean {
-	return event.event === "workflow.todo.dismissed"
-		|| event.event === "workflow.error"
-		|| event.event === "agent.run.error"
-		|| event.event === "agent.run.cancelled"
-		|| event.event === "ai.cancelled";
+	return event.event === "workflow.todo.dismissed";
 }

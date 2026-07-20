@@ -315,6 +315,18 @@ function getWorkbenchFromEvent(event: BackendEvent): WorkbenchSnapshot | null {
 	return workbench as WorkbenchSnapshot;
 }
 
+function getBackendEventRequestId(event: BackendEvent): string {
+	if (isRecord(event.data) && typeof event.data.requestId === "string" && event.data.requestId.length > 0) {
+		return event.data.requestId;
+	}
+
+	return event.id;
+}
+
+function isRunCancellationEvent(event: BackendEvent): boolean {
+	return event.event === "agent.run.cancelled";
+}
+
 function mergePatch(left: WorkbenchPatch, right: WorkbenchPatch): WorkbenchPatch {
 	return {
 		...left,
@@ -1067,6 +1079,13 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 							}
 							return eventPlanId.length === 0 || eventPlanId === currentPlanApproval.planId ? null : currentPlanApproval;
 						});
+					}
+					if (isRunCancellationEvent(event)) {
+						const cancelledRequestId: string = getBackendEventRequestId(event);
+						finishOptimisticActiveRun(cancelledRequestId);
+						if (activeChatRequestIdRef.current === cancelledRequestId) {
+							activeChatRequestIdRef.current = null;
+						}
 					}
 
 					setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
@@ -1944,7 +1963,13 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 		try {
 			activeChatRequestIdRef.current = requestId;
-			await cancelChatMessage(requestId);
+			const result = await cancelChatMessage(requestId);
+			if (result.cancelled) {
+				finishOptimisticActiveRun(result.requestId);
+				if (activeChatRequestIdRef.current === result.requestId) {
+					activeChatRequestIdRef.current = null;
+				}
+			}
 		} catch (error: unknown) {
 			console.error("[App] cancel chat failed", error);
 		}

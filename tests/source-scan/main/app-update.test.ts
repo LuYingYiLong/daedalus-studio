@@ -51,6 +51,8 @@ describe("app update source", () => {
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.onStateChanged");
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.download");
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.acknowledge");
+		expect(titlebarSource).toContain("const hasKnownUpdate: boolean");
+		expect(titlebarSource).toContain("state.updateKind !== null");
 		expect(titlebarSource).toContain("<Modal");
 		expect(titlebarSource).toContain("mask={{ closable:");
 		expect(titlebarSource).not.toContain("maskClosable");

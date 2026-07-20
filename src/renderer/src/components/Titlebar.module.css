@@ -28,6 +28,7 @@
 	font-size: 16px;
 	line-height: 36px;
 	white-space: nowrap;
+	-webkit-app-region: drag;
 }
 
 .updateButton {

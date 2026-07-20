@@ -17,21 +17,21 @@ export function useDiskSpaceCheck() {
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // 获取用户配置文件路径
-        const userProfile = process.env.USERPROFILE || '';
-        if (!userProfile) {
+    
+        if (!) {
           console.warn('Unable to get USERPROFILE environment variable');
           return;
         }
 
         // 解析盘符（Windows 路径格式，如 C:\）
-        const driveLetter = userProfile.split(':')[0];
+        const  = userProfile.split(':')[0];
         if (!driveLetter) {
           console.warn('Unable to parse drive letter from USERPROFILE');
           return;
         }
 
         // 在 Electron 主进程中检查磁盘空间
-        const result = await window.electronAPI.checkDiskSpace(driveLetter);
+        const result = await window.electronAPI.checkDiskSpace();
 
         if (!result) {
           console.warn('Failed to check disk space');

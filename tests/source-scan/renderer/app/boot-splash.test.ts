@@ -25,6 +25,7 @@ describe("BootSplash", () => {
 		expect(splashSource).toContain("Retry");
 		expect(splashSource).toContain("Restart backend");
 		expect(splashSource).toContain("window.electronAPI.backend.restart()");
+		expect(splashSource).not.toContain("Spin");
 	});
 
 	it("preloads backend and first-screen data before entering the app", () => {
