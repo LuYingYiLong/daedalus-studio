@@ -74,6 +74,22 @@ export type DismissWorkflowTodoResult = {
 	runId: string | null;
 };
 
+export type SessionIntegrityIssue = {
+	file: "messages" | "events" | "approval-events" | "workflow-events" | "agent-events";
+	line: number;
+	expectedSessionId: string;
+	actualSessionId: string;
+	requestId?: string;
+	event?: string;
+};
+
+export type SessionIntegrityCheckResult = {
+	sessionId: string;
+	ok: boolean;
+	issues: SessionIntegrityIssue[];
+	checkedFiles: SessionIntegrityIssue["file"][];
+};
+
 export async function fetchSessions(): Promise<SessionListResult> {
 	const client = await createBackendClient();
 
@@ -121,6 +137,14 @@ export async function fetchSessionTimelineAfter(sessionId: string, afterOffset: 
 		sessionId,
 		afterOffset,
 		limit
+	});
+}
+
+export async function checkSessionIntegrity(sessionId: string): Promise<SessionIntegrityCheckResult> {
+	const client = await createBackendClient();
+
+	return client.request<SessionIntegrityCheckResult>("session.integrity.check", {
+		sessionId
 	});
 }
 

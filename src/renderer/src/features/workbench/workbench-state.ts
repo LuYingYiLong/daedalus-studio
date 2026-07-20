@@ -2,6 +2,7 @@ import type { BackendEvent } from "@/api/backend-rpc-client";
 import type { SessionOpenResult, SessionTimelineResult, TimelineAssistantBlock, TimelineBlock, TimelineBodyPart, WorkbenchSnapshot } from "@/api/types";
 
 export type TimelinePageState = {
+	sessionId: string | null;
 	blocks: TimelineBlock[];
 	blockCount: number;
 	blockOffset: number;
@@ -16,6 +17,7 @@ export type WorkbenchSessionState = {
 };
 
 export const emptyTimelinePage: TimelinePageState = {
+	sessionId: null,
 	blocks: [],
 	blockCount: 0,
 	blockOffset: 0,
@@ -528,6 +530,7 @@ export function applyBackendEventToTimeline(blocks: TimelineBlock[], event: Back
 
 export function createTimelinePageFromOpenResult(result: SessionOpenResult): TimelinePageState {
 	return {
+		sessionId: result.metadata.id,
 		blocks: result.timelineBlocks,
 		blockCount: result.blockCount,
 		blockOffset: result.blockOffset,
@@ -538,6 +541,7 @@ export function createTimelinePageFromOpenResult(result: SessionOpenResult): Tim
 
 export function createTimelinePageFromTimelineResult(result: SessionTimelineResult): TimelinePageState {
 	return {
+		sessionId: result.sessionId,
 		blocks: result.timelineBlocks,
 		blockCount: result.blockCount,
 		blockOffset: result.blockOffset,
@@ -547,10 +551,19 @@ export function createTimelinePageFromTimelineResult(result: SessionTimelineResu
 }
 
 export function mergeTimelineBefore(current: TimelinePageState, page: TimelinePageState): TimelinePageState {
+	if (current.sessionId !== null && page.sessionId !== null && current.sessionId !== page.sessionId) {
+		console.warn("[Timeline] ignored previous page for different session", {
+			currentSessionId: current.sessionId,
+			pageSessionId: page.sessionId
+		});
+		return current;
+	}
+
 	const knownIds: Set<string> = new Set(page.blocks.map((block: TimelineBlock): string => block.id));
 
 	return {
 		...page,
+		sessionId: current.sessionId ?? page.sessionId,
 		blocks: [
 			...page.blocks,
 			...current.blocks.filter((block: TimelineBlock): boolean => !knownIds.has(block.id))
@@ -561,10 +574,19 @@ export function mergeTimelineBefore(current: TimelinePageState, page: TimelinePa
 }
 
 export function mergeTimelineAfter(current: TimelinePageState, page: TimelinePageState): TimelinePageState {
+	if (current.sessionId !== null && page.sessionId !== null && current.sessionId !== page.sessionId) {
+		console.warn("[Timeline] ignored next page for different session", {
+			currentSessionId: current.sessionId,
+			pageSessionId: page.sessionId
+		});
+		return current;
+	}
+
 	const knownIds: Set<string> = new Set(current.blocks.map((block: TimelineBlock): string => block.id));
 
 	return {
 		...page,
+		sessionId: current.sessionId ?? page.sessionId,
 		blockOffset: current.blockOffset,
 		blocks: [
 			...current.blocks,

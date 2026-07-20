@@ -4,7 +4,7 @@ import { useDiskSpaceCheck } from "@/hooks/useDiskSpaceCheck";
 import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import type { AdditionalContextItem, PlanApprovalState, PlanClarificationState, PlanRecommendedReply, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
-import { createSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams } from "@/api/session-api";
+import { checkSessionIntegrity, createSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import type { ProviderModelSelectionProvider } from "@/api/provider-api";
@@ -273,6 +273,19 @@ function getBackendEventSessionId(event: BackendEvent): string | null {
 	return typeof event.data.sessionId === "string" ? event.data.sessionId : null;
 }
 
+function isSessionScopedBackendEvent(event: BackendEvent): boolean {
+	return event.event.startsWith("agent.")
+		|| event.event.startsWith("ai.")
+		|| event.event.startsWith("tool.")
+		|| event.event.startsWith("terminal.")
+		|| event.event.startsWith("workflow.")
+		|| event.event.startsWith("plan.")
+		|| event.event.startsWith("guide.")
+		|| event.event === "session.workbench.updated"
+		|| event.event === "session.renamed"
+		|| event.event === "message.queue.updated";
+}
+
 function getBackendEventSessionMetadata(event: BackendEvent): SessionMetadata | null {
 	if (!isRecord(event.data) || !isRecord(event.data.metadata)) {
 		return null;
@@ -476,6 +489,14 @@ function createOptimisticUserBlock(requestId: string, message: string, additiona
 }
 
 function mergeOptimisticUserBlocks(currentPage: TimelinePageState, nextPage: TimelinePageState): TimelinePageState {
+	if (currentPage.sessionId !== null && nextPage.sessionId !== null && currentPage.sessionId !== nextPage.sessionId) {
+		console.warn("[App] ignored timeline refresh for different session", {
+			currentSessionId: currentPage.sessionId,
+			nextSessionId: nextPage.sessionId
+		});
+		return currentPage;
+	}
+
 	const optimisticUserBlocks: TimelineBlock[] = currentPage.blocks.filter((block: TimelineBlock): boolean => {
 		return block.type === "user" && block.id.startsWith("optimistic:");
 	});
@@ -502,6 +523,7 @@ function mergeOptimisticUserBlocks(currentPage: TimelinePageState, nextPage: Tim
 
 	return {
 		...nextPage,
+		sessionId: currentPage.sessionId ?? nextPage.sessionId,
 		blocks: [
 			...blocks,
 			...missingOptimisticUserBlocks.values()
@@ -816,6 +838,7 @@ function App(): React.JSX.Element {
 	function applyOptimisticSend(requestId: string, message: string, additionalContext: AdditionalContextItem[], clearComposerText: boolean = true): void {
 		applyOptimisticActiveRun(requestId, clearComposerText, true);
 		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+			const sessionId: string | null = activeSessionIdRef.current;
 			const hasUserBlock: boolean = currentPage.blocks.some((block: TimelineBlock): boolean => {
 				return block.type === "user" && block.requestId === requestId;
 			});
@@ -826,6 +849,7 @@ function App(): React.JSX.Element {
 
 			return {
 				...currentPage,
+				sessionId: currentPage.sessionId ?? sessionId,
 				blocks: [
 					...currentPage.blocks,
 					createOptimisticUserBlock(requestId, message, additionalContext)
@@ -854,10 +878,12 @@ function App(): React.JSX.Element {
 	function applyOptimisticRetry(retryFromRequestId: string, requestId: string, message: string, additionalContext: AdditionalContextItem[]): void {
 		applyOptimisticActiveRun(requestId, false, false);
 		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+			const sessionId: string | null = activeSessionIdRef.current;
 			const trimmedPage: TimelinePageState = trimTimelineFromRequest(currentPage, retryFromRequestId);
 
 			return {
 				...trimmedPage,
+				sessionId: trimmedPage.sessionId ?? sessionId,
 				blocks: [
 					...trimmedPage.blocks,
 					createOptimisticUserBlock(requestId, message, additionalContext)
@@ -971,7 +997,8 @@ function App(): React.JSX.Element {
 
 				unsubscribe = client.addEventListener((event: BackendEvent): void => {
 					const eventSessionId: string | null = getBackendEventSessionId(event);
-					if (eventSessionId !== null && eventSessionId !== activeSessionIdRef.current) {
+					const activeSessionId: string | null = activeSessionIdRef.current;
+					if (isSessionScopedBackendEvent(event) && (eventSessionId === null || eventSessionId !== activeSessionId)) {
 						return;
 					}
 
@@ -1280,6 +1307,7 @@ function App(): React.JSX.Element {
 			if (result.workspaceWarning) {
 				console.warn("[App] session workspace warning", result.workspaceWarning);
 			}
+			void checkActiveSessionIntegrity(sessionId);
 		} catch (error: unknown) {
 			const message: string = error instanceof Error ? error.message : "Failed to open session";
 
@@ -1322,6 +1350,19 @@ function App(): React.JSX.Element {
 		}
 
 		setActiveSessionMetadata(session);
+	}
+
+	async function checkActiveSessionIntegrity(sessionId: string): Promise<void> {
+		try {
+			const result: SessionIntegrityCheckResult = await checkSessionIntegrity(sessionId);
+			if (activeSessionIdRef.current !== sessionId || result.ok) {
+				return;
+			}
+
+			setSessionError(`Session integrity warning: found ${result.issues.length} cross-session record${result.issues.length === 1 ? "" : "s"}. Existing data was not modified.`);
+		} catch (error: unknown) {
+			console.warn("[App] session integrity check failed", error);
+		}
 	}
 
 	function handleWorkspaceDelete(result: DeleteWorkspaceResult): void {
@@ -1890,6 +1931,14 @@ function App(): React.JSX.Element {
 		}
 
 		const timeline: SessionTimelineResult = await fetchSessionTimeline(sessionId);
+		if (activeSessionIdRef.current !== sessionId || timeline.sessionId !== sessionId) {
+			console.warn("[App] ignored latest timeline for inactive session", {
+				requestedSessionId: sessionId,
+				activeSessionId: activeSessionIdRef.current,
+				resultSessionId: timeline.sessionId
+			});
+			return;
+		}
 
 		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 			return mergeOptimisticUserBlocks(currentPage, createTimelinePageFromTimelineResult(timeline));
@@ -1959,8 +2008,17 @@ function App(): React.JSX.Element {
 		}
 
 		isTimelinePageLoadingRef.current = true;
+		const requestedSessionId: string = activeSessionId;
 		void fetchSessionTimelineBefore(activeSessionId, timelinePage.blockOffset)
 			.then((result: SessionTimelineResult): void => {
+				if (activeSessionIdRef.current !== requestedSessionId || result.sessionId !== requestedSessionId) {
+					console.warn("[App] ignored previous timeline page for inactive session", {
+						requestedSessionId,
+						activeSessionId: activeSessionIdRef.current,
+						resultSessionId: result.sessionId
+					});
+					return;
+				}
 				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 					return mergeTimelineBefore(currentPage, createTimelinePageFromTimelineResult(result));
 				});
@@ -1979,8 +2037,17 @@ function App(): React.JSX.Element {
 		}
 
 		isTimelinePageLoadingRef.current = true;
+		const requestedSessionId: string = activeSessionId;
 		void fetchSessionTimelineAfter(activeSessionId, timelinePage.blockOffset + timelinePage.blocks.length)
 			.then((result: SessionTimelineResult): void => {
+				if (activeSessionIdRef.current !== requestedSessionId || result.sessionId !== requestedSessionId) {
+					console.warn("[App] ignored next timeline page for inactive session", {
+						requestedSessionId,
+						activeSessionId: activeSessionIdRef.current,
+						resultSessionId: result.sessionId
+					});
+					return;
+				}
 				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 					return mergeTimelineAfter(currentPage, createTimelinePageFromTimelineResult(result));
 				});

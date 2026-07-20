@@ -124,7 +124,7 @@ function AboutSettingsPage(): React.JSX.Element {
 									rel="noopener noreferrer"
 									className={styles.githubLink}
 								>
-									<Icon name="external_link" className={styles.linkIcon} />
+									<Icon name="external-link" className={styles.linkIcon} />
 									{gitHubUrl}
 								</Typography.Link>
 							</Typography.Paragraph>

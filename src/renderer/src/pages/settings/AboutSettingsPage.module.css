@@ -67,11 +67,10 @@
 
 .appInfo {
 	display: grid;
-	gap: 8px;
 }
 
 .appName {
-	margin: 0 !important;
+	margin: 0px !important;
 }
 
 .versionTag {
@@ -79,7 +78,7 @@
 }
 
 .description {
-	margin: var(--ds-space-2) 0 0 0;
+	margin: 0px !important;
 	color: var(--ds-text-secondary);
 }
 
