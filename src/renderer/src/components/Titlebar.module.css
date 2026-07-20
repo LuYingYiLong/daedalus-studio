@@ -13,13 +13,36 @@
 	background-color: var(--ds-surface-active);
 }
 
-.brandName {
+.brandCluster {
 	position: absolute;
 	left: 50%;
+	display: inline-flex;
+	align-items: center;
+	height: 36px;
 	transform: translateX(-50%);
+	-webkit-app-region: no-drag;
+}
+
+.brandName {
 	margin: 0;
 	font-size: 16px;
 	line-height: 36px;
+	white-space: nowrap;
+}
+
+.updateButton {
+	position: absolute;
+	top: 50%;
+	left: calc(100% + 8px);
+	height: 24px;
+	line-height: 22px;
+	transform: translateY(-50%);
+	white-space: nowrap;
+}
+
+.updateModalBody {
+	display: grid;
+	gap: 8px;
 }
 
 .menuTrigger {

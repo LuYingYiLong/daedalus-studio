@@ -1,12 +1,23 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 
 type ClientPreferences = {
+	autoCheckForUpdates: boolean;
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
 	lastComposerModel: {
 		providerId: string;
 		modelId: string;
 	} | null;
+};
+
+type AppUpdateState = {
+	status: "idle" | "checking" | "available" | "downloading" | "downloaded" | "installing" | "not_available" | "error" | "unsupported";
+	currentVersion: string;
+	availableVersion: string | null;
+	releaseName: string | null;
+	releaseDate: string | null;
+	progress: number | null;
+	errorMessage: string | null;
 };
 
 function getCachedClientPreferences(): ClientPreferences {
@@ -52,13 +63,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	},
 
 	clientPreferences: {
-		getCached: (): { minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null } => {
+		getCached: (): { autoCheckForUpdates: boolean; minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null } => {
 			return initialClientPreferences;
 		},
-		get: (): Promise<{ minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null }> => {
+		get: (): Promise<{ autoCheckForUpdates: boolean; minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null }> => {
 			return ipcRenderer.invoke("client-preferences:get");
 		},
-		update: (patch: Partial<{ minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null }>): Promise<{ minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null }> => {
+		update: (patch: Partial<{ autoCheckForUpdates: boolean; minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null }>): Promise<{ autoCheckForUpdates: boolean; minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null }> => {
 			return ipcRenderer.invoke("client-preferences:update", patch);
 		}
 	},
@@ -66,6 +77,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	clipboard: {
 		writeText: (text: string): Promise<{ written: true }> => {
 			return ipcRenderer.invoke("clipboard:write-text", text);
+		}
+	},
+
+	appUpdate: {
+		getState: (): Promise<AppUpdateState> => {
+			return ipcRenderer.invoke("app-update:get-state");
+		},
+		download: (): Promise<AppUpdateState> => {
+			return ipcRenderer.invoke("app-update:download");
+		},
+		onStateChanged: (callback: (state: AppUpdateState) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, payload: AppUpdateState): void => callback(payload);
+			ipcRenderer.on("app-update:state-changed", handler);
+			return () => { ipcRenderer.removeListener("app-update:state-changed", handler); };
 		}
 	},
 

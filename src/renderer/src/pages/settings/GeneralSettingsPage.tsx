@@ -19,7 +19,7 @@ type GeneralSettingsPageProps = {
 	onGeneralSettingsChange: (settings: GeneralSettings) => void;
 };
 
-type SettingKey = "autoExpandTodoList" | "minimizeToTrayOnClose" | "theme";
+type SettingKey = "autoCheckForUpdates" | "autoExpandTodoList" | "minimizeToTrayOnClose" | "theme";
 type ThemePreference = ClientPreferences["theme"];
 
 function GeneralSettingsPage({
@@ -103,18 +103,26 @@ function GeneralSettingsPage({
 	}
 
 	async function handleMinimizeToTrayChange(checked: boolean): Promise<void> {
+		await updateClientPreferenceSwitch("minimizeToTrayOnClose", checked);
+	}
+
+	async function handleAutoCheckForUpdatesChange(checked: boolean): Promise<void> {
+		await updateClientPreferenceSwitch("autoCheckForUpdates", checked);
+	}
+
+	async function updateClientPreferenceSwitch(key: "autoCheckForUpdates" | "minimizeToTrayOnClose", checked: boolean): Promise<void> {
 		const previousPreferences: ClientPreferences = draftClientPreferences;
 		const optimisticPreferences: ClientPreferences = {
 			...previousPreferences,
-			minimizeToTrayOnClose: checked
+			[key]: checked
 		};
 
 		try {
-			setSavingKey("minimizeToTrayOnClose");
+			setSavingKey(key);
 			setErrorMessage(null);
 			setDraftClientPreferences(optimisticPreferences);
 			onClientPreferencesChange(optimisticPreferences);
-			const savedPreferences: ClientPreferences = await updateClientPreferences({ minimizeToTrayOnClose: checked });
+			const savedPreferences: ClientPreferences = await updateClientPreferences({ [key]: checked });
 			setDraftClientPreferences(savedPreferences);
 			onClientPreferencesChange(savedPreferences);
 		} catch (error: unknown) {
@@ -227,6 +235,13 @@ function GeneralSettingsPage({
 									description: "Expand the workflow todo list when a session creates a new todo list.",
 									checked: draftGeneralSettings.autoExpandTodoList,
 									onChange: handleAutoExpandTodoListChange
+								},
+								{
+									key: "autoCheckForUpdates" as const,
+									title: "Check for updates on startup",
+									description: "Check GitHub Releases for a new Daedalus Studio version when the app starts.",
+									checked: draftClientPreferences.autoCheckForUpdates,
+									onChange: handleAutoCheckForUpdatesChange
 								},
 								{
 									key: "minimizeToTrayOnClose" as const,

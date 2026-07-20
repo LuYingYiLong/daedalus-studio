@@ -56,6 +56,7 @@ describe("client preferences store", () => {
 			extra: true
 		})).toEqual({
 			preferences: {
+				autoCheckForUpdates: true,
 				minimizeToTrayOnClose: false,
 				theme: "system",
 				lastComposerModel: {
@@ -78,6 +79,7 @@ describe("client preferences store", () => {
 		}, memory.io);
 
 		expect(nextPreferences).toEqual({
+			autoCheckForUpdates: true,
 			minimizeToTrayOnClose: true,
 			theme: "system",
 			lastComposerModel: null
@@ -109,5 +111,15 @@ describe("client preferences store", () => {
 		}, memory.io);
 
 		expect(nextPreferences.theme).toBe("dark");
+	});
+
+	it("updates the startup update check preference", async () => {
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+
+		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
+			autoCheckForUpdates: false
+		}, memory.io);
+
+		expect(nextPreferences.autoCheckForUpdates).toBe(false);
 	});
 });

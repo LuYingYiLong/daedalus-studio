@@ -1,6 +1,11 @@
 appId: com.daedalus.studio
 productName: Daedalus Studio
 
+publish:
+  provider: github
+  owner: LuYingYiLong
+  repo: daedalus-studio
+
 directories:
   buildResources: build
   output: release

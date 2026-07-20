@@ -1,4 +1,5 @@
 export type ClientPreferences = {
+	autoCheckForUpdates: boolean;
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
 	lastComposerModel: {
@@ -10,6 +11,7 @@ export type ClientPreferences = {
 export type ClientPreferencesPatch = Partial<ClientPreferences>;
 
 export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
+	autoCheckForUpdates: true,
 	minimizeToTrayOnClose: false,
 	theme: "system",
 	lastComposerModel: null

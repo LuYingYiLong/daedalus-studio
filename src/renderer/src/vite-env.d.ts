@@ -17,6 +17,7 @@ declare global {
 	}
 
 	interface ClientPreferences {
+		autoCheckForUpdates: boolean;
 		minimizeToTrayOnClose: boolean;
 		theme: "system" | "light" | "dark";
 		lastComposerModel: {
@@ -29,6 +30,33 @@ declare global {
 		getCached: () => ClientPreferences;
 		get: () => Promise<ClientPreferences>;
 		update: (patch: Partial<ClientPreferences>) => Promise<ClientPreferences>;
+	}
+
+	type AppUpdateStatus =
+		| "idle"
+		| "checking"
+		| "available"
+		| "downloading"
+		| "downloaded"
+		| "installing"
+		| "not_available"
+		| "error"
+		| "unsupported";
+
+	interface AppUpdateState {
+		status: AppUpdateStatus;
+		currentVersion: string;
+		availableVersion: string | null;
+		releaseName: string | null;
+		releaseDate: string | null;
+		progress: number | null;
+		errorMessage: string | null;
+	}
+
+	interface AppUpdateAPI {
+		getState: () => Promise<AppUpdateState>;
+		download: () => Promise<AppUpdateState>;
+		onStateChanged: (callback: (state: AppUpdateState) => void) => () => void;
 	}
 
 	interface ClipboardAPI {
@@ -92,6 +120,7 @@ declare global {
 		backend: BackendAPI;
 		clientPreferences: ClientPreferencesAPI;
 		clipboard: ClipboardAPI;
+		appUpdate: AppUpdateAPI;
 		terminal: TerminalAPI;
 		sessionFs: SessionFsAPI;
 		checkDiskSpace: (driveLetter: string) => Promise<DiskSpaceInfo | null>;

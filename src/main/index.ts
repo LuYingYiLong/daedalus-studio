@@ -10,6 +10,7 @@ import { clientPreferencesService } from "./services/client-preferences";
 import { WindowLifecycleController } from "./services/window-lifecycle";
 import { registerSystemInfoIpc } from "./services/system-info";
 import { registerTerminalPtyIpc, terminalPtyService } from "./services/terminal-pty";
+import { appUpdateService } from "./services/app-update";
 import { getWindowThemeColors, resolveWindowTheme, type WindowThemeColors } from "./services/window-theme";
 import type { ClientPreferences } from "./services/client-preferences";
 
@@ -21,6 +22,7 @@ registerClipboardIpc();
 clientPreferencesService.registerIpc();
 registerSystemInfoIpc();
 registerTerminalPtyIpc();
+appUpdateService.registerIpc();
 
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 
@@ -115,7 +117,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(async () => {
-	await clientPreferencesService.load();
+	const preferences: ClientPreferences = await clientPreferencesService.load();
 	clientPreferencesService.onDidChange((): void => {
 		applyWindowThemeToAllWindows();
 	});
@@ -123,6 +125,7 @@ app.whenReady().then(async () => {
 		applyWindowThemeToAllWindows();
 	});
 	createWindow();
+	void appUpdateService.checkForUpdatesIfEnabled(preferences.autoCheckForUpdates);
 
 	app.on("activate", () => {
 		if (BrowserWindow.getAllWindows().length === 0) {

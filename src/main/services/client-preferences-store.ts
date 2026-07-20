@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 export type ClientPreferences = {
+	autoCheckForUpdates: boolean;
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
 	lastComposerModel: {
@@ -13,6 +14,7 @@ export type ClientPreferences = {
 export type ClientPreferencesPatch = Partial<ClientPreferences>;
 
 export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
+	autoCheckForUpdates: true,
 	minimizeToTrayOnClose: false,
 	theme: "system",
 	lastComposerModel: null
@@ -48,6 +50,9 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 		};
 	}
 
+	const autoCheckForUpdates: boolean = typeof value.autoCheckForUpdates === "boolean"
+		? value.autoCheckForUpdates
+		: DEFAULT_CLIENT_PREFERENCES.autoCheckForUpdates;
 	const minimizeToTrayOnClose: boolean = typeof value.minimizeToTrayOnClose === "boolean"
 		? value.minimizeToTrayOnClose
 		: DEFAULT_CLIENT_PREFERENCES.minimizeToTrayOnClose;
@@ -68,14 +73,16 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 
 	return {
 		preferences: {
+			autoCheckForUpdates,
 			minimizeToTrayOnClose,
 			theme: themePreference,
 			lastComposerModel
 		},
-		normalized: value.minimizeToTrayOnClose !== minimizeToTrayOnClose
+		normalized: value.autoCheckForUpdates !== autoCheckForUpdates
+			|| value.minimizeToTrayOnClose !== minimizeToTrayOnClose
 			|| value.theme !== themePreference
 			|| JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel)
-			|| Object.keys(value).some((key: string): boolean => key !== "minimizeToTrayOnClose" && key !== "theme" && key !== "lastComposerModel")
+			|| Object.keys(value).some((key: string): boolean => key !== "autoCheckForUpdates" && key !== "minimizeToTrayOnClose" && key !== "theme" && key !== "lastComposerModel")
 	};
 }
 
@@ -85,6 +92,9 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	}
 
 	const patch: ClientPreferencesPatch = {};
+	if (typeof value.autoCheckForUpdates === "boolean") {
+		patch.autoCheckForUpdates = value.autoCheckForUpdates;
+	}
 	if (typeof value.minimizeToTrayOnClose === "boolean") {
 		patch.minimizeToTrayOnClose = value.minimizeToTrayOnClose;
 	}

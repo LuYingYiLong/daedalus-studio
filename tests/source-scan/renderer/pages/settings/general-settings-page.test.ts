@@ -10,6 +10,7 @@ describe("GeneralSettingsPage", () => {
 		const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 
 		expect(pageSource).toContain("Auto-expand todo list");
+		expect(pageSource).toContain("Check for updates on startup");
 		expect(pageSource).toContain("Minimize to tray on close");
 		expect(pageSource).toContain("Display settings");
 		expect(pageSource).toContain("Theme");
@@ -23,5 +24,6 @@ describe("GeneralSettingsPage", () => {
 		expect(preloadSource).toContain("client-preferences:get");
 		expect(preloadSource).toContain("client-preferences:update");
 		expect(viteEnvSource).toContain("ClientPreferencesAPI");
+		expect(viteEnvSource).toContain("autoCheckForUpdates: boolean;");
 	});
 });
