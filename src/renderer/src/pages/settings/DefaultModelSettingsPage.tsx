@@ -217,7 +217,7 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 									className={styles.modelSelect}
 									options={createModelSelectOptions(selection, option.filterModel)}
 									value={value}
-									allowClear={true}
+									allowClear={{ clearIcon: <Icon name="clear" /> }}
 									placeholder="Select a model"
 									showSearch={{
 										optionFilterProp: "label"
@@ -226,6 +226,7 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 									onChange={(nextValue: string | undefined): void => {
 										void handleRoutingChange(option.key, nextValue);
 									}}
+									suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 								/>
 							</div>
 						</article>

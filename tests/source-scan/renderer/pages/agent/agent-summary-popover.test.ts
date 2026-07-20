@@ -15,7 +15,8 @@ describe("AgentPage summary popover source", () => {
 		expect(source).toContain("const showWorkspaceLaunchControls: boolean = !isHome && activeWorkspace !== null;");
 		expect(source).toContain("const showSummaryButton: boolean = !isHome && activeSessionId !== null;");
 		expect(source).toContain("{showWorkspaceLaunchControls ? (");
-		expect(source).toContain("{showSummaryButton ? (");
+		expect(source).toContain("{showSummaryButton ? renderSummaryButton() : null}");
+		expect(source).toContain("className={styles.floatingActionSlot}");
 	});
 
 	it("renders conditional sections, see more modals, and image preview", () => {

@@ -2,6 +2,7 @@
 	display: grid;
 	flex: 1;
 	min-height: 0;
+	background: var(--ds-bg);
 }
 
 .agentShell {

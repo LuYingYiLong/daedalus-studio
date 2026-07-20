@@ -152,6 +152,7 @@
 .completionLabel {
 	font-family: var(--ds-font-family-code);
 	font-size: 12px;
+	font-weight: 500;
 }
 
 .completionDescription {
@@ -381,6 +382,7 @@
 .contextUsageRow span:last-child {
 	color: var(--ds-text-primary);
 	font-family: var(--ds-font-family-code);
+	font-weight: 500;
 }
 
 .contextUsageLoading {

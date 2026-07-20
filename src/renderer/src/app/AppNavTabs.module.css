@@ -2,7 +2,7 @@
 	width: 44px;
 	min-width: 44px;
 	min-height: 0;
-	background: var(--ds-surface-elevated);
+	background: var(--ds-bg);
 }
 
 .navList {

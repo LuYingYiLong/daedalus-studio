@@ -35,6 +35,12 @@
 	min-width: 0;
 }
 
+.modelSelect :global(.ant-select-clear) {
+	margin-top: -8px;
+	width: 18px;
+	height: 18px;
+}
+
 .description {
 	margin: 0px !important;
 }

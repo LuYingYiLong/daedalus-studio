@@ -162,7 +162,7 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 			<div className={styles.header}>
 				<div className={styles.title}>
 					<Typography.Title level={4} className={styles.title}>Generated images</Typography.Title>
-					<Typography.Text type="secondary">{modelLabel}</Typography.Text>
+					<Typography.Text type="secondary" className={styles.modelLabel}>{modelLabel}</Typography.Text>
 					<Typography.Text
 						copyable={{
 							icon: [<Icon name="copy" />, <Icon name="check" />],

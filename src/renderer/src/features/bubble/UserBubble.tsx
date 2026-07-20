@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./UserBubble.module.css";
 import { Button, Input, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
@@ -53,8 +53,12 @@ function UserBubble({
 	const [draftContext, setDraftContext] = useState<AdditionalContextItem[]>(() => cloneContextItems(additionalContext));
 	const [isSubmittingRetry, setIsSubmittingRetry] = useState<boolean>(false);
 	const [copied, setCopied] = useState<boolean>(false);
+	const wasRetryEditingRef = useRef<boolean>(isRetryEditing);
 
 	useEffect((): void => {
+		const wasRetryEditing: boolean = wasRetryEditingRef.current;
+		wasRetryEditingRef.current = isRetryEditing;
+
 		if (!isRetryEditing) {
 			setDraftText(message);
 			setDraftContext(cloneContextItems(additionalContext));
@@ -62,8 +66,10 @@ function UserBubble({
 			return;
 		}
 
-		setDraftText(message);
-		setDraftContext(cloneContextItems(additionalContext));
+		if (!wasRetryEditing) {
+			setDraftText(message);
+			setDraftContext(cloneContextItems(additionalContext));
+		}
 	}, [additionalContext, isRetryEditing, message]);
 
 	function beginRetryEdit(): void {

@@ -1889,6 +1889,7 @@ function App(): React.JSX.Element {
 			setSessionError(null);
 			activeChatRequestIdRef.current = requestId;
 			applyOptimisticRetry(payload.requestId, requestId, message, payload.additionalContext);
+			setActiveRetryRequestId(null);
 
 			await flushPendingPatch;
 			await sendChatMessage({
@@ -1904,7 +1905,6 @@ function App(): React.JSX.Element {
 			});
 			finishOptimisticActiveRun(requestId);
 			await refreshLatestTimeline();
-			setActiveRetryRequestId(null);
 			return true;
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to retry message";

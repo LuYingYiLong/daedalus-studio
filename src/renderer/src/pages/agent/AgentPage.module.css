@@ -110,19 +110,12 @@
 	gap: 8px;
 	width: 100%;
 	justify-self: stretch;
-	padding: 0px 48px 0px 8px;
+	padding: 0px min(460px, calc(42vw + 96px)) 0px 8px;
 	min-height: 40px;
 	user-select: none;
 }
 
-.topMenuBar {
-	display: flex;
-	justify-content: start;
-	align-items: center;
-	gap: 8px;
-}
-
-.reviewToggleSlot {
+.floatingActionSlot {
 	position: absolute;
 	top: 0;
 	right: 8px;
@@ -134,18 +127,15 @@
 	pointer-events: none;
 }
 
-.reviewAffix {
+.floatingActions {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	gap: 8px;
 	pointer-events: auto;
 }
 
-.reviewAffix :global(.ant-affix) {
-	z-index: 20;
-}
-
-.reviewAffix :global(.ant-btn) {
+.floatingActions > :global(.ant-btn) {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -262,6 +252,7 @@
 	overflow: hidden;
 	font-family: var(--ds-font-family-code);
 	font-size: 12px;
+	font-weight: 500;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Affix, Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse } from "antd";
+import { Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import type { AdditionalContextItem, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
@@ -41,7 +41,7 @@ const COMMIT_OR_PUSH_PROMPT: string = "Commit or push the current workspace chan
 const REVIEW_PANEL_CLOSED_SIZE: number = 0;
 const REVIEW_PANEL_DEFAULT_SIZE: number = 520;
 const REVIEW_PANEL_MAX_SIZE: number = 720;
-const REVIEW_PANEL_CLOSE_THRESHOLD: number = 240;
+const REVIEW_PANEL_CLOSE_THRESHOLD: number = 150;
 
 function isWorkspaceLaunchTargetId(value: string): value is WorkspaceLaunchTargetId {
 	return value === "file-explorer"
@@ -273,7 +273,6 @@ function AgentPage({
 	const showWorkspaceLaunchControls: boolean = !isHome && activeWorkspace !== null;
 	const showSummaryButton: boolean = !isHome && activeSessionId !== null;
 	const showReviewButton: boolean = !isHome && activeWorkspace !== null;
-	const showTopMenuBar: boolean = showWorkspaceLaunchControls || showSummaryButton;
 	const selectedLaunchTarget: WorkspaceLaunchTarget = useMemo((): WorkspaceLaunchTarget => {
 		return workspaceLaunchTargets.find((target: WorkspaceLaunchTarget): boolean => target.id === selectedLaunchTargetId)
 			?? workspaceLaunchTargets[0]
@@ -580,13 +579,15 @@ function AgentPage({
 		}
 
 		const normalizedSize: number = Math.min(REVIEW_PANEL_MAX_SIZE, Math.max(REVIEW_PANEL_CLOSED_SIZE, Math.trunc(nextSize)));
+		if (normalizedSize < REVIEW_PANEL_CLOSE_THRESHOLD) {
+			closeReviewPanel();
+			setReviewPanelSize(reviewPanelLastOpenSize);
+			return;
+		}
+
 		setReviewPanelSize(normalizedSize);
-		if (normalizedSize > REVIEW_PANEL_CLOSED_SIZE) {
-			setReviewPanelOpen(true);
-		}
-		if (normalizedSize >= REVIEW_PANEL_CLOSE_THRESHOLD) {
-			setReviewPanelLastOpenSize(normalizedSize);
-		}
+		setReviewPanelOpen(true);
+		setReviewPanelLastOpenSize(normalizedSize);
 	}
 
 	function handleReviewResizeEnd(sizes: number[]): void {
@@ -625,6 +626,67 @@ function AgentPage({
 		}
 	}
 
+	function renderSummaryButton(): React.ReactNode {
+		return (
+			<Popover
+				trigger={["click"]}
+				placement="bottom"
+				open={summaryOpen}
+				onOpenChange={handleSummaryOpenChange}
+				className={styles.summaryPopver}
+				content={(
+					<div className={styles.summaryPanel}>
+						{isSummaryLoading && summaryOverview === null ? (
+							<div className={styles.summaryLoading}>
+								<Spin size="small" />
+							</div>
+						) : summaryError !== null ? (
+							<div className={styles.summaryEmpty}>
+								<Typography.Text type="danger">{summaryError}</Typography.Text>
+								<Button
+									type="text"
+									icon={<Icon name="refresh" />}
+									onClick={(): void => {
+										void loadSummaryOverview();
+									}}
+								>
+									Retry
+								</Button>
+							</div>
+						) : summaryCollapseItems.length > 0 ? (
+							summaryCollapseItems.map((item, index): React.ReactNode => (
+								<div key={String(item?.key ?? index)}>
+									{index > 0 ? <Divider size="small" /> : null}
+									<Collapse
+										size="small"
+										bordered={false}
+										items={item === undefined ? [] : [item]}
+										className={styles.summaryCollapse}
+										defaultActiveKey={[String(item?.key ?? "")]}
+									/>
+								</div>
+							))
+						) : (
+							<Empty
+								image={Empty.PRESENTED_IMAGE_SIMPLE}
+								description="No summary yet"
+								className={styles.summaryEmpty}
+							/>
+						)}
+					</div>
+				)}
+			>
+				<Button
+					type={summaryOpen ? "primary" : "text"}
+					shape="circle"
+					aria-label="Open session summary"
+					aria-pressed={summaryOpen}
+					icon={<Icon name="list-check" />}
+				/>
+			</Popover>
+		);
+	}
+
 	return (
 		<div
 			className={styles.page}
@@ -657,18 +719,45 @@ function AgentPage({
 			<Divider vertical size="small" />
 
 			<div className={styles.agentMain}>
-				{showReviewButton ? (
-					<div className={styles.reviewToggleSlot}>
-						<Affix offsetTop={0} className={styles.reviewAffix}>
-							<Button
-								type={reviewPanelOpen ? "primary" : "text"}
-								shape="circle"
-								aria-label={reviewPanelOpen ? "Close review panel" : "Open review panel"}
-								aria-pressed={reviewPanelOpen}
-								icon={<Icon name="layout-right" />}
-								onClick={toggleReviewPanel}
-							/>
-						</Affix>
+				{showWorkspaceLaunchControls || showSummaryButton || showReviewButton ? (
+					<div className={styles.floatingActionSlot}>
+						<div className={styles.floatingActions}>
+							{showWorkspaceLaunchControls ? (
+								<Space.Compact size="small" className={styles.workspaceLaunchControls}>
+									<Button
+										loading={isOpeningLaunchTarget}
+										icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
+										onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
+									>
+										Open in {selectedLaunchTarget.label}
+									</Button>
+									<Dropdown
+										menu={{
+											items: workspaceLaunchMenuItems,
+											selectedKeys: [selectedLaunchTarget.id],
+											onClick: handleWorkspaceLaunchMenuClick
+										}}
+										trigger={["click"]}
+									>
+										<Button
+											aria-label="Select workspace launch target"
+											icon={<Icon name="arrow-down" />}
+										/>
+									</Dropdown>
+								</Space.Compact>
+							) : null}
+							{showSummaryButton ? renderSummaryButton() : null}
+							{showReviewButton ? (
+								<Button
+									type={reviewPanelOpen ? "primary" : "text"}
+									shape="circle"
+									aria-label={reviewPanelOpen ? "Close review panel" : "Open review panel"}
+									aria-pressed={reviewPanelOpen}
+									icon={<Icon name="layout-right" />}
+									onClick={toggleReviewPanel}
+								/>
+							) : null}
+						</div>
 					</div>
 				) : null}
 				<Splitter
@@ -683,90 +772,6 @@ function AgentPage({
 								<Typography.Title level={5} className={styles.chatTitle}>
 									{chatTitle}
 								</Typography.Title>
-								{showTopMenuBar ? (
-									<div className={styles.topMenuBar}>
-										{showWorkspaceLaunchControls ? (
-											<Space.Compact size="small" className={styles.workspaceLaunchControls}>
-												<Button
-													loading={isOpeningLaunchTarget}
-													icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
-													onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
-												>
-													Open in {selectedLaunchTarget.label}
-												</Button>
-												<Dropdown
-													menu={{
-														items: workspaceLaunchMenuItems,
-														selectedKeys: [selectedLaunchTarget.id],
-														onClick: handleWorkspaceLaunchMenuClick
-													}}
-													trigger={["click"]}
-												>
-													<Button
-														aria-label="Select workspace launch target"
-														icon={<Icon name="arrow-down" />}
-													/>
-												</Dropdown>
-											</Space.Compact>
-										) : null}
-										{showSummaryButton ? (
-											<Popover
-												trigger={["click"]}
-												placement="bottom"
-												open={summaryOpen}
-												onOpenChange={handleSummaryOpenChange}
-												className={styles.summaryPopver}
-												content={(
-													<div className={styles.summaryPanel}>
-														{isSummaryLoading && summaryOverview === null ? (
-															<div className={styles.summaryLoading}>
-																<Spin size="small" />
-															</div>
-														) : summaryError !== null ? (
-															<div className={styles.summaryEmpty}>
-																<Typography.Text type="danger">{summaryError}</Typography.Text>
-																<Button
-																	type="text"
-																	icon={<Icon name="refresh" />}
-																	onClick={(): void => {
-																		void loadSummaryOverview();
-																	}}
-																>
-																	Retry
-																</Button>
-															</div>
-														) : summaryCollapseItems.length > 0 ? (
-															summaryCollapseItems.map((item, index): React.ReactNode => (
-																<div key={String(item?.key ?? index)}>
-																	{index > 0 ? <Divider size="small" /> : null}
-																	<Collapse
-																		size="small"
-																		bordered={false}
-																		items={item === undefined ? [] : [item]}
-																		className={styles.summaryCollapse}
-																		defaultActiveKey={[String(item?.key ?? "")]}
-																	/>
-																</div>
-															))
-														) : (
-															<Empty
-																image={Empty.PRESENTED_IMAGE_SIMPLE}
-																description="No summary yet"
-																className={styles.summaryEmpty}
-															/>
-														)}
-													</div>
-												)}
-											>
-												<Button
-													type="text"
-													shape="circle"
-													icon={<Icon name="list-check" />}
-												/>
-											</Popover>
-										) : null}
-									</div>
-								) : null}
 							</header>
 
 						<Divider size="small" />
