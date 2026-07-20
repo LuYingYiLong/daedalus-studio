@@ -86,6 +86,201 @@
 	gap: 8px;
 }
 
+.summaryCollapse {
+	background-color: transparent;
+	min-width: 324px;
+	user-select: none;
+}
+
+.summaryCollapse :global(.ant-collapse-header) {
+	padding: 0px 8px !important;
+}
+
+.summaryCollapse :global(.ant-collapse-body) {
+	padding: 4px 0px !important;
+}
+
+.summaryActionButton {
+	justify-content: start;
+	height: auto;
+	min-height: 28px;
+	padding: 4px 8px;
+}
+
+.diffRow {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	width: 100%;
+}
+
+.diffLabel {
+	display: grid;
+	align-items: center;
+	justify-self: start;
+	min-width: 0;
+}
+
+.diffCount {
+	display: grid;
+}
+
+.planList {
+	display: grid;
+	gap: 4px;
+}
+
+.sourceList {
+	display: grid;
+	gap: 4px;
+}
+
+.summaryPanel {
+	min-width: 324px;
+	max-width: 360px;
+}
+
+.summarySection {
+	display: grid;
+	gap: 4px;
+}
+
+.summaryLoading,
+.summaryEmpty {
+	display: grid;
+	justify-items: center;
+	gap: 8px;
+	min-width: 324px;
+	padding: 16px 8px;
+}
+
+.summaryListItem,
+.summaryModalItem {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+	padding: 6px 8px;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-sm);
+	background: var(--ds-surface);
+}
+
+.summaryPlanButtonContent {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+	width: 100%;
+}
+
+.summaryItemTitle {
+	display: block;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.summaryMeta {
+	display: block;
+	min-width: 0;
+	overflow: hidden;
+	font-size: 12px;
+	line-height: 1.35;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.summaryPath {
+	display: block;
+	min-width: 0;
+	overflow: hidden;
+	font-family: var(--ds-font-family-code);
+	font-size: 12px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.sourceButton {
+	justify-content: flex-start;
+	height: auto;
+	min-height: 40px;
+	padding: 4px 8px;
+}
+
+.sourceButton :global(.ant-btn-icon) {
+	display: inline-flex;
+	flex: 0 0 auto;
+}
+
+.sourceThumbnail {
+	width: 32px;
+	height: 32px;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-sm);
+	object-fit: cover;
+}
+
+.sourceText {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+	text-align: left;
+}
+
+.summaryModalList {
+	display: grid;
+	gap: 8px;
+	max-height: min(520px, 70vh);
+	overflow-y: auto;
+	padding-right: 0;
+}
+
+.summarySourceGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+	gap: 8px;
+	max-height: min(520px, 70vh);
+	overflow-y: auto;
+}
+
+.sourceGridButton {
+	display: grid;
+	gap: 6px;
+	justify-items: stretch;
+	height: auto;
+	padding: 8px;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-sm);
+}
+
+.sourceGridThumbnail {
+	width: 100%;
+	aspect-ratio: 1 / 1;
+	border-radius: var(--ds-radius-sm);
+	object-fit: cover;
+}
+
+.sourceGridText {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+	text-align: left;
+}
+
+.sourcePreviewImage {
+	display: block;
+	max-width: 100%;
+	max-height: min(70vh, 720px);
+	margin: 0 auto;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-sm);
+	object-fit: contain;
+}
+
+.planPreviewMarkdown {
+	max-height: min(70vh, 720px);
+	overflow: auto;
+}
+
 .chatTitle {
 	flex: 1 1 auto;
 	min-width: 0px;

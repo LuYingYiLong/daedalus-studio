@@ -3,7 +3,7 @@
 	margin: 8px 0;
 	padding: var(--ds-space-2);
 	border: 1px solid var(--ds-border);
-	border-radius: var(--ds-radius-sm);
+	border-radius: var(--ds-radius-lg);
 	background: var(--ds-surface);
 }
 

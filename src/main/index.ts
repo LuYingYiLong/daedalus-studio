@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { backendManager } from "./services/backend-manager";
 import { registerWorkspaceFsIpc } from "./services/workspace-fs";
+import { registerSessionFsIpc } from "./services/session-fs";
 import { registerSkillFsIpc } from "./services/skill-fs";
 import { registerClipboardIpc } from "./services/clipboard";
 import { clientPreferencesService } from "./services/client-preferences";
@@ -11,6 +12,7 @@ import { registerSystemInfoIpc } from "./services/system-info";
 
 backendManager.registerIpc();
 registerWorkspaceFsIpc();
+registerSessionFsIpc();
 registerSkillFsIpc();
 registerClipboardIpc();
 clientPreferencesService.registerIpc();

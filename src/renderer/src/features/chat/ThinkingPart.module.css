@@ -14,18 +14,11 @@
 .thinkingContent {
 	box-sizing: border-box;
 	max-height: 250px;
-	padding-top: 24px;
 	overflow-x: hidden;
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	scrollbar-width: none;
 	user-select: text;
-	mask-image: linear-gradient(
-		to top,
-		rgb(0 0 0) 0%,
-		rgb(0 0 0) calc(100% - 48px),
-		transparent 100%
-	);
 }
 
 .thinkingContent::-webkit-scrollbar {

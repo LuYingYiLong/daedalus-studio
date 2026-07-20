@@ -1316,6 +1316,14 @@ function App(): React.JSX.Element {
 		resetToNewSessionHome();
 	}
 
+	function handleSessionRename(session: SessionMetadata): void {
+		if (session.id !== activeSessionId) {
+			return;
+		}
+
+		setActiveSessionMetadata(session);
+	}
+
 	function handleWorkspaceDelete(result: DeleteWorkspaceResult): void {
 		setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
 			return currentWorkspaces.filter((workspace: WorkspaceConfig): boolean => workspace.id !== result.workspaceId);
@@ -2387,6 +2395,7 @@ function App(): React.JSX.Element {
 					onHomeWorkspaceClear={handleHomeWorkspaceClear}
 					onSessionSelect={handleSessionSelect}
 					onSessionArchive={handleSessionArchive}
+					onSessionRename={handleSessionRename}
 					onWorkspaceDelete={handleWorkspaceDelete}
 					onLoadMoreBefore={handleLoadMoreBefore}
 					onLoadMoreAfter={handleLoadMoreAfter}

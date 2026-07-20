@@ -79,7 +79,7 @@ function AboutSettingsPage(): React.JSX.Element {
 						<Card className={styles.infoCard}>
 							<div className={styles.appHeader}>
 								<Icon
-									name="daedalus_icon"
+									name="icon-colorful"
 									className={styles.largeAppIcon}
 								/>
 								<div className={styles.appInfo}>

@@ -24,8 +24,8 @@ const dsColors = {
 	textMuted: "#8c8c8c",
 } as const;
 
-const dsFontFamily = `"Mona Sans", "Source Han Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-const dsFontFamilyCode = `"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace`;
+const dsFontFamily = `"Mona Sans", "Wen Yuan Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+const dsFontFamilyCode = `"Fira Code", "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace`;
 
 if (!rootElement) {
 	throw new Error("Root element not found");

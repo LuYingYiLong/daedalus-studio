@@ -33,6 +33,10 @@ declare global {
 		writeText: (text: string) => Promise<{ written: true }>;
 	}
 
+	interface SessionFsAPI {
+		openSessionDirectory: (sessionId: string) => Promise<{ opened: true }>;
+	}
+
 	interface DiskSpaceInfo {
 		drive: string;
 		free: number;
@@ -58,6 +62,7 @@ declare global {
 		backend: BackendAPI;
 		clientPreferences: ClientPreferencesAPI;
 		clipboard: ClipboardAPI;
+		sessionFs: SessionFsAPI;
 		checkDiskSpace: (driveLetter: string) => Promise<DiskSpaceInfo | null>;
 		workspaceFs: {
 			listChildren: (params: {

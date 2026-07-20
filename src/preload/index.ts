@@ -33,6 +33,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		}
 	},
 
+	sessionFs: {
+		openSessionDirectory: (sessionId: string): Promise<{ opened: true }> => {
+			return ipcRenderer.invoke("session-fs:open-directory", sessionId);
+		}
+	},
+
 	workspaceFs: {
 		listChildren: (params: { workspaceRoot: string; relativePath?: string }): Promise<{ entries: Array<{ name: string; relativePath: string; resourcePath: string; kind: "file" | "folder" }> }> => {
 			return ipcRenderer.invoke("workspace-fs:list-children", params);

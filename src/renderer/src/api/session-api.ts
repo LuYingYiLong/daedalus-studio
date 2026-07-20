@@ -47,6 +47,8 @@ export type ArchiveSessionResult = {
 	metadata: SessionMetadata;
 };
 
+export type RenameSessionResult = SessionMetadata;
+
 export type ArchivedSessionListResult = {
 	archivedSessions: SessionMetadata[];
 };
@@ -145,6 +147,15 @@ export async function archiveSession(sessionId: string): Promise<ArchiveSessionR
 
 	return client.request<ArchiveSessionResult>("session.archive", {
 		sessionId
+	});
+}
+
+export async function renameSession(sessionId: string, title: string): Promise<RenameSessionResult> {
+	const client = await createBackendClient();
+
+	return client.request<RenameSessionResult>("session.rename", {
+		sessionId,
+		title
 	});
 }
 

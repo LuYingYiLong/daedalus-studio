@@ -26,7 +26,11 @@
 	flex: 1;
 	overflow-x: hidden;
 	overflow-y: auto;
-	scrollbar-gutter: stable;
+	scrollbar-width: none;
+}
+
+.workspaceMenuScroller::-webkit-scrollbar {
+	display: none;
 }
 
 .workspaceMenu {
@@ -38,6 +42,7 @@
 .workspaceMenu :global(.ant-menu-submenu-title) {
 	width: 100%;
 	min-width: 0;
+	margin: 4px 0px !important;
 }
 
 .workspaceMenu :global(.ant-menu-title-content) {
@@ -124,4 +129,9 @@
 .archiveButton:focus-visible,
 .archiveButton[aria-disabled="true"] {
 	opacity: 1;
+}
+
+.renameErrorText {
+	display: block;
+	margin-top: 8px;
 }

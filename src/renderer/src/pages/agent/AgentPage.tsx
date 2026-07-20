@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Divider, Dropdown, message as antdMessage, Space, Typography, Popover, Collapse } from "antd";
+import { Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Typography, Popover, Collapse } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import type { AdditionalContextItem, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
@@ -8,6 +8,7 @@ import type { SlashCommandDefinition } from "@/api/command-api";
 import type { ProviderModelSelection } from "@/api/provider-api";
 import type { DeleteWorkspaceResult } from "@/api/workspace-api";
 import type { SkillSummary } from "@/api/skill-api";
+import { fetchSessionOverview, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import MessageList from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
@@ -19,6 +20,7 @@ import styles from "./AgentPage.module.css";
 import { Icon } from "@/assets/icons";
 import ClarificationDialog from "@/features/clarification/ClarificationDialog";
 import PlanApprovalDialog from "@/features/approval/PlanApprovalDialog";
+import MarkdownContent from "@/features/markdown/MarkdownContent";
 
 type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
 
@@ -32,17 +34,9 @@ const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 	{ id: "terminal", label: "Terminal" }
 ];
 
-const summaryItems: CollapseProps["items"] = [
-	{
-		key: "env_info",
-		label: "Env info",
-		children: (
-			<div>
-
-			</div>
-		),
-	}
-];
+const SUMMARY_PREVIEW_LIMIT: number = 3;
+const SUMMARY_SEE_MORE_LIMIT: number = 100;
+const COMMIT_OR_PUSH_PROMPT: string = "Commit or push the current workspace changes.";
 
 function isWorkspaceLaunchTargetId(value: string): value is WorkspaceLaunchTargetId {
 	return value === "file-explorer"
@@ -61,6 +55,28 @@ function getWorkspaceLaunchIcon(targetId: WorkspaceLaunchTargetId): React.ReactN
 		return <Icon name="terminal" />;
 	}
 	return <Icon name="external_link" />;
+}
+
+function formatDiffCount(additions: number, deletions: number): string {
+	return `+${additions} -${deletions}`;
+}
+
+function formatSourceSubtitle(source: SessionOverviewSourceItem): string {
+	const dimensions: string = source.width !== undefined && source.height !== undefined
+		? `${source.width}x${source.height}`
+		: "Unknown size";
+	return `${source.mimeType} · ${dimensions}`;
+}
+
+function formatOverviewDate(value: string): string {
+	if (value.trim().length === 0) {
+		return "";
+	}
+	const date: Date = new Date(value);
+	if (Number.isNaN(date.getTime())) {
+		return value;
+	}
+	return date.toLocaleString();
 }
 
 type AgentPageProps = {
@@ -117,6 +133,7 @@ type AgentPageProps = {
 	onHomeWorkspaceClear: () => void;
 	onSessionSelect: (session: SessionMetadata) => void;
 	onSessionArchive: (session: SessionMetadata) => void;
+	onSessionRename: (session: SessionMetadata) => void;
 	onWorkspaceDelete: (result: DeleteWorkspaceResult) => void;
 	onLoadMoreBefore: () => void;
 	onLoadMoreAfter: () => void;
@@ -202,6 +219,7 @@ function AgentPage({
 	onHomeWorkspaceClear,
 	onSessionSelect,
 	onSessionArchive,
+	onSessionRename,
 	onWorkspaceDelete,
 	onLoadMoreBefore,
 	onLoadMoreAfter,
@@ -235,7 +253,16 @@ function AgentPage({
 	const [workspaceLaunchTargets, setWorkspaceLaunchTargets] = useState<WorkspaceLaunchTarget[]>(FALLBACK_WORKSPACE_LAUNCH_TARGETS);
 	const [selectedLaunchTargetId, setSelectedLaunchTargetId] = useState<WorkspaceLaunchTargetId>("file-explorer");
 	const [isOpeningLaunchTarget, setIsOpeningLaunchTarget] = useState<boolean>(false);
+	const [summaryOpen, setSummaryOpen] = useState<boolean>(false);
+	const [summaryOverview, setSummaryOverview] = useState<SessionOverviewResult | null>(null);
+	const [isSummaryLoading, setIsSummaryLoading] = useState<boolean>(false);
+	const [summaryError, setSummaryError] = useState<string | null>(null);
+	const [plansModalOpen, setPlansModalOpen] = useState<boolean>(false);
+	const [sourcesModalOpen, setSourcesModalOpen] = useState<boolean>(false);
+	const [previewSource, setPreviewSource] = useState<SessionOverviewSourceItem | null>(null);
+	const [previewPlan, setPreviewPlan] = useState<SessionOverviewPlanItem | null>(null);
 	const showWorkspaceLaunchControls: boolean = !isHome && activeWorkspace !== null;
+	const showSummaryButton: boolean = !isHome && activeSessionId !== null;
 	const selectedLaunchTarget: WorkspaceLaunchTarget = useMemo((): WorkspaceLaunchTarget => {
 		return workspaceLaunchTargets.find((target: WorkspaceLaunchTarget): boolean => target.id === selectedLaunchTargetId)
 			?? workspaceLaunchTargets[0]
@@ -250,6 +277,147 @@ function AgentPage({
 			};
 		});
 	}, [workspaceLaunchTargets]);
+	const summaryCollapseItems: NonNullable<CollapseProps["items"]> = useMemo((): NonNullable<CollapseProps["items"]> => {
+		if (summaryOverview === null) {
+			return [];
+		}
+
+		const items: NonNullable<CollapseProps["items"]> = [];
+		if (summaryOverview.envInfo !== null && summaryOverview.envInfo.hasGitRepository) {
+			items.push({
+				key: "env_info",
+				label: "Env info",
+				children: (
+					<div className={styles.summarySection}>
+						<Button
+							type="text"
+							block
+							icon={<Icon name="edit-add-remove" />}
+							className={styles.summaryActionButton}
+						>
+							<span className={styles.diffRow}>
+								<span className={styles.diffLabel}>
+									Diff
+								</span>
+								<span className={styles.diffCount}>
+									{formatDiffCount(summaryOverview.envInfo.additions, summaryOverview.envInfo.deletions)}
+								</span>
+							</span>
+						</Button>
+						<Button
+							type="text"
+							block
+							icon={<Icon name="git-branch" />}
+							className={styles.summaryActionButton}
+						>
+							{summaryOverview.envInfo.branch ?? "Detached HEAD"}
+						</Button>
+						<Button
+							type="text"
+							block
+							icon={<Icon name="git-commit" />}
+							className={styles.summaryActionButton}
+							onClick={(): void => {
+								onMessageChange(COMMIT_OR_PUSH_PROMPT);
+								setSummaryOpen(false);
+							}}
+						>
+							Commit or push
+						</Button>
+					</div>
+				),
+				showArrow: false
+			});
+		}
+
+		if (summaryOverview.plans.total > 0) {
+			items.push({
+				key: "plans",
+				label: "Plans",
+				children: (
+					<div className={styles.planList}>
+						{summaryOverview.plans.items.slice(0, SUMMARY_PREVIEW_LIMIT).map((plan: SessionOverviewPlanItem): React.ReactNode => (
+							<Button
+								key={plan.planId}
+								type="text"
+								block
+								className={styles.summaryActionButton}
+								onClick={(): void => {
+									setPreviewPlan(plan);
+								}}
+							>
+								{plan.title}
+							</Button>
+						))}
+						{summaryOverview.plans.total > SUMMARY_PREVIEW_LIMIT ? (
+							<Button
+								type="text"
+								block
+								icon={<Icon name="external-link" />}
+								className={styles.summaryActionButton}
+								onClick={(): void => {
+									void openPlansModal();
+								}}
+							>
+								See more
+							</Button>
+						) : null}
+					</div>
+				),
+				showArrow: false
+			});
+		}
+
+		if (summaryOverview.sources.total > 0) {
+			items.push({
+				key: "source",
+				label: "Source",
+				children: (
+					<div className={styles.sourceList}>
+						{summaryOverview.sources.items.slice(0, SUMMARY_PREVIEW_LIMIT).map((source: SessionOverviewSourceItem): React.ReactNode => (
+							<Button
+								key={`${source.kind}:${source.id}`}
+								type="text"
+								block
+								className={styles.sourceButton}
+								icon={(
+									<img
+										src={source.thumbnailDataUrl}
+										alt=""
+										className={styles.sourceThumbnail}
+									/>
+								)}
+								onClick={(): void => {
+									setPreviewSource(source);
+								}}
+							>
+								<span className={styles.sourceText}>
+									<span className={styles.summaryItemTitle}>{source.title}</span>
+									<span className={styles.summaryMeta}>{formatSourceSubtitle(source)}</span>
+								</span>
+							</Button>
+						))}
+						{summaryOverview.sources.total > SUMMARY_PREVIEW_LIMIT ? (
+							<Button
+								type="text"
+								block
+								icon={<Icon name="external-link" />}
+								className={styles.summaryActionButton}
+								onClick={(): void => {
+									void openSourcesModal();
+								}}
+							>
+								See more
+							</Button>
+						) : null}
+					</div>
+				),
+				showArrow: false
+			});
+		}
+
+		return items;
+	}, [onMessageChange, summaryOverview]);
 
 	useEffect((): (() => void) | void => {
 		if (!showWorkspaceLaunchControls) {
@@ -286,6 +454,62 @@ function AgentPage({
 			cancelled = true;
 		};
 	}, [showWorkspaceLaunchControls]);
+
+	useEffect((): void => {
+		setSummaryOpen(false);
+		setSummaryOverview(null);
+		setSummaryError(null);
+		setPlansModalOpen(false);
+		setSourcesModalOpen(false);
+		setPreviewSource(null);
+		setPreviewPlan(null);
+	}, [activeSessionId]);
+
+	async function loadSummaryOverview(planLimit: number = SUMMARY_PREVIEW_LIMIT, sourceLimit: number = SUMMARY_PREVIEW_LIMIT): Promise<SessionOverviewResult | null> {
+		if (activeSessionId === null) {
+			return null;
+		}
+
+		setIsSummaryLoading(true);
+		setSummaryError(null);
+		try {
+			const result: SessionOverviewResult = await fetchSessionOverview({
+				sessionId: activeSessionId,
+				planLimit,
+				sourceLimit
+			});
+			setSummaryOverview(result);
+			return result;
+		} catch (error: unknown) {
+			const message: string = error instanceof Error ? error.message : "Failed to load session summary.";
+			console.error("[AgentPage] failed to load session overview", error);
+			setSummaryError(message);
+			return null;
+		} finally {
+			setIsSummaryLoading(false);
+		}
+	}
+
+	function handleSummaryOpenChange(open: boolean): void {
+		setSummaryOpen(open);
+		if (open && !isSummaryLoading) {
+			void loadSummaryOverview();
+		}
+	}
+
+	async function openPlansModal(): Promise<void> {
+		const result: SessionOverviewResult | null = await loadSummaryOverview(SUMMARY_SEE_MORE_LIMIT, SUMMARY_PREVIEW_LIMIT);
+		if (result !== null) {
+			setPlansModalOpen(true);
+		}
+	}
+
+	async function openSourcesModal(): Promise<void> {
+		const result: SessionOverviewResult | null = await loadSummaryOverview(SUMMARY_PREVIEW_LIMIT, SUMMARY_SEE_MORE_LIMIT);
+		if (result !== null) {
+			setSourcesModalOpen(true);
+		}
+	}
 
 	async function openWorkspaceLaunchTarget(targetId: WorkspaceLaunchTargetId): Promise<void> {
 		if (activeWorkspace === null) {
@@ -357,6 +581,7 @@ function AgentPage({
 					onWorkspaceSelect={onWorkspaceSelect}
 					onSessionSelect={onSessionSelect}
 					onSessionArchive={onSessionArchive}
+					onSessionRename={onSessionRename}
 					onNewWorkspaceSession={onNewWorkspaceSession}
 					onWorkspaceDelete={onWorkspaceDelete}
 				/>
@@ -370,37 +595,77 @@ function AgentPage({
 					<Typography.Title level={5} className={styles.chatTitle}>
 						{chatTitle}
 					</Typography.Title>
-					{showWorkspaceLaunchControls ? (
+					{showSummaryButton ? (
 						<div className={styles.topMenuBar}>
-							<Space.Compact size="small" className={styles.workspaceLaunchControls}>
-								<Button
-									loading={isOpeningLaunchTarget}
-									icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
-									onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
-								>
-									Open in {selectedLaunchTarget.label}
-								</Button>
-								<Dropdown
-									menu={{
-										items: workspaceLaunchMenuItems,
-										selectedKeys: [selectedLaunchTarget.id],
-										onClick: handleWorkspaceLaunchMenuClick
-									}}
-									trigger={["click"]}
-								>
+							{showWorkspaceLaunchControls ? (
+								<Space.Compact size="small" className={styles.workspaceLaunchControls}>
 									<Button
-										aria-label="Select workspace launch target"
-										icon={<Icon name="arrow-drop-down" />}
-									/>
-								</Dropdown>
-							</Space.Compact>
+										loading={isOpeningLaunchTarget}
+										icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
+										onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
+									>
+										Open in {selectedLaunchTarget.label}
+									</Button>
+									<Dropdown
+										menu={{
+											items: workspaceLaunchMenuItems,
+											selectedKeys: [selectedLaunchTarget.id],
+											onClick: handleWorkspaceLaunchMenuClick
+										}}
+										trigger={["click"]}
+									>
+										<Button
+											aria-label="Select workspace launch target"
+											icon={<Icon name="arrow-drop-down" />}
+										/>
+									</Dropdown>
+								</Space.Compact>
+							) : null}
 							<Popover
 								trigger={[ "click" ]}
 								placement="bottom"
-								title="Summary"
+								open={summaryOpen}
+								onOpenChange={handleSummaryOpenChange}
+								className={styles.summaryPopver}
 								content={(
 									<div className={styles.summaryPanel}>
-										<Collapse size="small" />
+										{isSummaryLoading && summaryOverview === null ? (
+											<div className={styles.summaryLoading}>
+												<Spin size="small" />
+											</div>
+										) : summaryError !== null ? (
+											<div className={styles.summaryEmpty}>
+												<Typography.Text type="danger">{summaryError}</Typography.Text>
+												<Button
+													type="text"
+													icon={<Icon name="refresh" />}
+													onClick={(): void => {
+														void loadSummaryOverview();
+													}}
+												>
+													Retry
+												</Button>
+											</div>
+										) : summaryCollapseItems.length > 0 ? (
+											summaryCollapseItems.map((item, index): React.ReactNode => (
+												<div key={String(item?.key ?? index)}>
+													{index > 0 ? <Divider size="small"/> : null}
+													<Collapse
+														size="small"
+														bordered={false}
+														items={item === undefined ? [] : [item]}
+														className={styles.summaryCollapse}
+														defaultActiveKey={[String(item?.key ?? "")]}
+													/>
+												</div>
+											))
+										) : (
+											<Empty
+												image={Empty.PRESENTED_IMAGE_SIMPLE}
+												description="No summary yet"
+												className={styles.summaryEmpty}
+											/>
+										)}
 									</div>
 								)}
 							>
@@ -511,6 +776,87 @@ function AgentPage({
 					)}
 				</footer>
 			</section>
+			<Modal
+				title="Plans"
+				open={plansModalOpen}
+				footer={null}
+				onCancel={(): void => setPlansModalOpen(false)}
+				width={640}
+			>
+				<div className={styles.summaryModalList}>
+					{summaryOverview?.plans.items.map((plan: SessionOverviewPlanItem): React.ReactNode => (
+						<Button
+							key={plan.planId}
+							type="text"
+							block
+							className={styles.summaryPlanButton}
+							onClick={(): void => {
+								setPreviewPlan(plan);
+							}}
+						>
+							<span className={styles.summaryPlanButtonContent}>
+								<span className={styles.summaryItemTitle}>{plan.title}</span>
+								<span className={styles.summaryMeta}>
+									{plan.status} · {formatOverviewDate(plan.updatedAt)}
+								</span>
+								<span className={styles.summaryPath}>{plan.planPath}</span>
+							</span>
+						</Button>
+					))}
+				</div>
+			</Modal>
+			<Modal
+				title={previewPlan?.title ?? "Plan"}
+				open={previewPlan !== null}
+				footer={null}
+				onCancel={(): void => setPreviewPlan(null)}
+				width={800}
+			>
+				{previewPlan !== null ? (
+					<div className={`${styles.planPreviewMarkdown} markdown-body`}>
+						<MarkdownContent>{previewPlan.previewMarkdown}</MarkdownContent>
+					</div>
+				) : null}
+			</Modal>
+			<Modal
+				title="Source"
+				open={sourcesModalOpen}
+				footer={null}
+				onCancel={(): void => setSourcesModalOpen(false)}
+				width={640}
+			>
+				<div className={styles.summarySourceGrid}>
+					{summaryOverview?.sources.items.map((source: SessionOverviewSourceItem): React.ReactNode => (
+						<Button
+							key={`${source.kind}:${source.id}`}
+							type="text"
+							className={styles.sourceGridButton}
+							onClick={(): void => setPreviewSource(source)}
+						>
+							<img src={source.thumbnailDataUrl} alt="" className={styles.sourceGridThumbnail} />
+							<span className={styles.sourceGridText}>
+								<span className={styles.summaryItemTitle}>{source.title}</span>
+								<span className={styles.summaryMeta}>{formatSourceSubtitle(source)}</span>
+							</span>
+						</Button>
+					))}
+				</div>
+			</Modal>
+			<Modal
+				title={previewSource?.title ?? "Image source"}
+				open={previewSource !== null}
+				footer={null}
+				onCancel={(): void => setPreviewSource(null)}
+				width={720}
+			>
+				{previewSource !== null ? (
+					<img
+						src={previewSource.thumbnailDataUrl}
+						alt={previewSource.title}
+						className={styles.sourcePreviewImage}
+					/>
+				) : null}
+			</Modal>
 		</div>
 	);
 }

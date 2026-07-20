@@ -64,7 +64,7 @@ function PlanPart({ part }: PlanPartProps): React.JSX.Element {
 				title={part.title}
 				open={modalOpen}
 				width={800}
-				onOk={() => setModalOpen(false)}
+				footer={null}
 				onCancel={() => setModalOpen(false)}
 			>
 				<div className={`${styles.modalMarkdown} markdown-body`}>
