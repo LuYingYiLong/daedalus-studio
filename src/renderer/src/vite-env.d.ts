@@ -35,6 +35,34 @@ declare global {
 		writeText: (text: string) => Promise<{ written: true }>;
 	}
 
+	interface TerminalState {
+		terminalId: string;
+		shell: string;
+		cwd: string;
+		running: boolean;
+	}
+
+	interface TerminalDataEvent {
+		terminalId: string;
+		data: string;
+	}
+
+	interface TerminalExitEvent {
+		terminalId: string;
+		exitCode: number;
+		signal: number | string | null;
+	}
+
+	interface TerminalAPI {
+		create: (params: { terminalId?: string | null; cwd?: string | null; cols: number; rows: number }) => Promise<TerminalState>;
+		write: (params: { terminalId: string; data: string }) => Promise<{ written: true }>;
+		resize: (params: { terminalId: string; cols: number; rows: number }) => Promise<{ resized: true }>;
+		kill: (params: { terminalId: string }) => Promise<{ killed: true }>;
+		getState: (params?: { terminalId?: string | null }) => Promise<TerminalState | null>;
+		onData: (callback: (event: TerminalDataEvent) => void) => () => void;
+		onExit: (callback: (event: TerminalExitEvent) => void) => () => void;
+	}
+
 	interface SessionFsAPI {
 		openSessionDirectory: (sessionId: string) => Promise<{ opened: true }>;
 	}
@@ -64,6 +92,7 @@ declare global {
 		backend: BackendAPI;
 		clientPreferences: ClientPreferencesAPI;
 		clipboard: ClipboardAPI;
+		terminal: TerminalAPI;
 		sessionFs: SessionFsAPI;
 		checkDiskSpace: (driveLetter: string) => Promise<DiskSpaceInfo | null>;
 		workspaceFs: {

@@ -43,9 +43,12 @@
   },
   "dependencies": {
     "@types/highlight.js": "^9.12.4",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "antd": "^6.5.0",
     "highlight.js": "^11.11.1",
     "motion": "^12.42.2",
+    "node-pty": "^1.1.0",
     "react": "^19.2.7",
     "react-diff-view": "^3.3.3",
     "react-dom": "^19.2.7",

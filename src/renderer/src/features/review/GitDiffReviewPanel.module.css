@@ -5,7 +5,6 @@
 	height: 100%;
 	min-width: 0;
 	min-height: 0;
-	border-left: 1px solid var(--ds-border);
 	background: var(--ds-bg);
 	--diff-background-color: var(--ds-bg);
 	--diff-text-color: var(--ds-text-primary);

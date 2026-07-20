@@ -9,6 +9,7 @@ import { registerClipboardIpc } from "./services/clipboard";
 import { clientPreferencesService } from "./services/client-preferences";
 import { WindowLifecycleController } from "./services/window-lifecycle";
 import { registerSystemInfoIpc } from "./services/system-info";
+import { registerTerminalPtyIpc, terminalPtyService } from "./services/terminal-pty";
 import { getWindowThemeColors, resolveWindowTheme, type WindowThemeColors } from "./services/window-theme";
 import type { ClientPreferences } from "./services/client-preferences";
 
@@ -19,6 +20,7 @@ registerSkillFsIpc();
 registerClipboardIpc();
 clientPreferencesService.registerIpc();
 registerSystemInfoIpc();
+registerTerminalPtyIpc();
 
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 
@@ -131,6 +133,7 @@ app.whenReady().then(async () => {
 
 app.on("before-quit", () => {
 	windowLifecycleController.markQuitting();
+	terminalPtyService.dispose();
 });
 
 app.on("window-all-closed", () => {

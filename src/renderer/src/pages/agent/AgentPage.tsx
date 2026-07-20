@@ -21,7 +21,8 @@ import { Icon } from "@/assets/icons";
 import ClarificationDialog from "@/features/clarification/ClarificationDialog";
 import PlanApprovalDialog from "@/features/approval/PlanApprovalDialog";
 import MarkdownContent from "@/features/markdown/MarkdownContent";
-import GitDiffReviewPanel from "@/features/review/GitDiffReviewPanel";
+import ReviewPanelTabs from "@/features/review/ReviewPanelTabs";
+import TerminalPanelTabs from "@/features/terminal/TerminalPanelTabs";
 
 type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
 
@@ -42,6 +43,10 @@ const REVIEW_PANEL_CLOSED_SIZE: number = 0;
 const REVIEW_PANEL_DEFAULT_SIZE: number = 520;
 const REVIEW_PANEL_MAX_SIZE: number = 720;
 const REVIEW_PANEL_CLOSE_THRESHOLD: number = 150;
+const TERMINAL_PANEL_CLOSED_SIZE: number = 0;
+const TERMINAL_PANEL_DEFAULT_SIZE: number = 280;
+const TERMINAL_PANEL_MAX_SIZE: number = 520;
+const TERMINAL_PANEL_CLOSE_THRESHOLD: number = 120;
 
 function isWorkspaceLaunchTargetId(value: string): value is WorkspaceLaunchTargetId {
 	return value === "file-explorer"
@@ -270,9 +275,13 @@ function AgentPage({
 	const [reviewPanelOpen, setReviewPanelOpen] = useState<boolean>(false);
 	const [reviewPanelSize, setReviewPanelSize] = useState<number>(REVIEW_PANEL_DEFAULT_SIZE);
 	const [reviewPanelLastOpenSize, setReviewPanelLastOpenSize] = useState<number>(REVIEW_PANEL_DEFAULT_SIZE);
+	const [terminalPanelOpen, setTerminalPanelOpen] = useState<boolean>(false);
+	const [terminalPanelSize, setTerminalPanelSize] = useState<number>(TERMINAL_PANEL_DEFAULT_SIZE);
+	const [terminalPanelLastOpenSize, setTerminalPanelLastOpenSize] = useState<number>(TERMINAL_PANEL_DEFAULT_SIZE);
 	const showWorkspaceLaunchControls: boolean = !isHome && activeWorkspace !== null;
 	const showSummaryButton: boolean = !isHome && activeSessionId !== null;
 	const showReviewButton: boolean = !isHome && activeWorkspace !== null;
+	const showTerminalButton: boolean = !isHome;
 	const selectedLaunchTarget: WorkspaceLaunchTarget = useMemo((): WorkspaceLaunchTarget => {
 		return workspaceLaunchTargets.find((target: WorkspaceLaunchTarget): boolean => target.id === selectedLaunchTargetId)
 			?? workspaceLaunchTargets[0]
@@ -572,6 +581,23 @@ function AgentPage({
 		openReviewPanel();
 	}
 
+	function openTerminalPanel(): void {
+		setTerminalPanelSize(terminalPanelLastOpenSize);
+		setTerminalPanelOpen(true);
+	}
+
+	function closeTerminalPanel(): void {
+		setTerminalPanelOpen(false);
+	}
+
+	function toggleTerminalPanel(): void {
+		if (terminalPanelOpen) {
+			closeTerminalPanel();
+			return;
+		}
+		openTerminalPanel();
+	}
+
 	function handleReviewResize(sizes: number[]): void {
 		const nextSize: number | undefined = sizes[1];
 		if (nextSize === undefined || !Number.isFinite(nextSize)) {
@@ -605,6 +631,41 @@ function AgentPage({
 		setReviewPanelOpen(true);
 		setReviewPanelSize(validSize);
 		setReviewPanelLastOpenSize(validSize);
+	}
+
+	function handleTerminalResize(sizes: number[]): void {
+		const nextSize: number | undefined = sizes[1];
+		if (nextSize === undefined || !Number.isFinite(nextSize)) {
+			return;
+		}
+
+		const normalizedSize: number = Math.min(TERMINAL_PANEL_MAX_SIZE, Math.max(TERMINAL_PANEL_CLOSED_SIZE, Math.trunc(nextSize)));
+		if (normalizedSize < TERMINAL_PANEL_CLOSE_THRESHOLD) {
+			closeTerminalPanel();
+			setTerminalPanelSize(terminalPanelLastOpenSize);
+			return;
+		}
+
+		setTerminalPanelSize(normalizedSize);
+		setTerminalPanelOpen(true);
+		setTerminalPanelLastOpenSize(normalizedSize);
+	}
+
+	function handleTerminalResizeEnd(sizes: number[]): void {
+		const nextSize: number | undefined = sizes[1];
+		if (nextSize === undefined || !Number.isFinite(nextSize)) {
+			return;
+		}
+		if (nextSize < TERMINAL_PANEL_CLOSE_THRESHOLD) {
+			closeTerminalPanel();
+			setTerminalPanelSize(terminalPanelLastOpenSize);
+			return;
+		}
+
+		const validSize: number = Math.min(TERMINAL_PANEL_MAX_SIZE, Math.max(TERMINAL_PANEL_CLOSE_THRESHOLD, Math.trunc(nextSize)));
+		setTerminalPanelOpen(true);
+		setTerminalPanelSize(validSize);
+		setTerminalPanelLastOpenSize(validSize);
 	}
 
 	function handlePageDragOver(event: React.DragEvent<HTMLDivElement>): void {
@@ -719,7 +780,7 @@ function AgentPage({
 			<Divider vertical size="small" />
 
 			<div className={styles.agentMain}>
-				{showWorkspaceLaunchControls || showSummaryButton || showReviewButton ? (
+				{showWorkspaceLaunchControls || showSummaryButton || showTerminalButton || showReviewButton ? (
 					<div className={styles.floatingActionSlot}>
 						<div className={styles.floatingActions}>
 							{showWorkspaceLaunchControls ? (
@@ -747,6 +808,16 @@ function AgentPage({
 								</Space.Compact>
 							) : null}
 							{showSummaryButton ? renderSummaryButton() : null}
+							{showTerminalButton ? (
+								<Button
+									type={terminalPanelOpen ? "primary" : "text"}
+									shape="circle"
+									aria-label={terminalPanelOpen ? "Close terminal panel" : "Open terminal panel"}
+									aria-pressed={terminalPanelOpen}
+									icon={<Icon name="layout-bottom" />}
+									onClick={toggleTerminalPanel}
+								/>
+							) : null}
 							{showReviewButton ? (
 								<Button
 									type={reviewPanelOpen ? "primary" : "text"}
@@ -761,130 +832,156 @@ function AgentPage({
 					</div>
 				) : null}
 				<Splitter
-					className={styles.agentSplitter}
+					className={styles.agentVerticalSplitter}
+					orientation="vertical"
 					collapsible={{ motion: true }}
-					onResize={handleReviewResize}
-					onResizeEnd={handleReviewResizeEnd}
+					onResize={handleTerminalResize}
+					onResizeEnd={handleTerminalResizeEnd}
 				>
 					<Splitter.Panel min={360}>
-						<section className={styles.chatPanel}>
-							<header className={styles.chatHeader}>
-								<Typography.Title level={5} className={styles.chatTitle}>
-									{chatTitle}
-								</Typography.Title>
-							</header>
+						<Splitter
+							className={styles.agentSplitter}
+							collapsible={{ motion: true }}
+							onResize={handleReviewResize}
+							onResizeEnd={handleReviewResizeEnd}
+						>
+							<Splitter.Panel min={360}>
+								<section className={styles.chatPanel}>
+									<header className={styles.chatHeader}>
+										<Typography.Title level={5} className={styles.chatTitle}>
+											{chatTitle}
+										</Typography.Title>
+									</header>
 
-						<Divider size="small" />
+									<Divider size="small" />
 
-						{isHome ? (
-							<NewSessionHome workspace={homeWorkspace} errorMessage={sessionError} />
-						) : (
-							<MessageList
-								blocks={timelineBlocks}
-								isLoading={isSessionLoading}
-								errorMessage={sessionError}
-								hasMoreBefore={hasMoreBefore}
-								hasMoreAfter={hasMoreAfter}
-								initialScrollToBottomKey={initialScrollToBottomKey}
-								onLoadMoreBefore={onLoadMoreBefore}
-								onLoadMoreAfter={onLoadMoreAfter}
-								retryDisabled={retryDisabled}
-								activeRetryRequestId={activeRetryRequestId}
-								onRetryEditStart={onRetryEditStart}
-								onRetryEditCancel={onRetryEditCancel}
-								onRetryFromUserMessage={onRetryFromUserMessage}
-								onInlineDiffReview={openReviewPanel}
-							/>
-						)}
+									{isHome ? (
+										<NewSessionHome workspace={homeWorkspace} errorMessage={sessionError} />
+									) : (
+										<MessageList
+											blocks={timelineBlocks}
+											isLoading={isSessionLoading}
+											errorMessage={sessionError}
+											hasMoreBefore={hasMoreBefore}
+											hasMoreAfter={hasMoreAfter}
+											initialScrollToBottomKey={initialScrollToBottomKey}
+											onLoadMoreBefore={onLoadMoreBefore}
+											onLoadMoreAfter={onLoadMoreAfter}
+											retryDisabled={retryDisabled}
+											activeRetryRequestId={activeRetryRequestId}
+											onRetryEditStart={onRetryEditStart}
+											onRetryEditCancel={onRetryEditCancel}
+											onRetryFromUserMessage={onRetryFromUserMessage}
+											onInlineDiffReview={openReviewPanel}
+										/>
+									)}
 
-							<footer className={styles.composer}>
-							{!isHome && pendingApproval !== null ? (
-								<ApprovalDialog
-									pendingApproval={pendingApproval}
-									isApproving={isApproving}
-									isRejecting={isRejecting}
-									errorMessage={approvalError}
-									onApprove={onApprovalApprove}
-									onReject={onApprovalReject}
-								/>
-							) : !isHome && pendingPlanClarification !== null ? (
-								<ClarificationDialog
-									planId={pendingPlanClarification.planId}
-									title={pendingPlanClarification.title}
-									question={pendingPlanClarification.question}
-									recommendedReplies={pendingPlanClarification.recommendedReplies}
-									isSubmitting={isPlanClarificationSubmitting}
-									errorMessage={planClarificationError}
-									onSubmit={onPlanClarificationSubmit}
-									onSkip={onPlanClarificationSkip}
-								/>
-							) : !isHome && pendingPlanApproval !== null ? (
-								<PlanApprovalDialog
-									plan={pendingPlanApproval}
-									isApproving={isPlanApproving}
-									isRevising={isPlanRevising}
-									errorMessage={planApprovalError}
-									onApprove={onPlanApprove}
-									onRevise={onPlanRevise}
-								/>
-							) : (
-								<Composer
-									providerModelSelection={providerModelSelection}
-									selectedProviderId={selectedProviderId}
-									selectedModelId={selectedModelId}
-									message={message}
-									contextItems={contextItems}
-									workflowTodoSnapshot={workflowTodoSnapshot}
-									workflowTodoCollapsed={workflowTodoCollapsed}
-									mode={mode}
-									approvalMode={approvalMode}
-									slashCommands={slashCommands}
-									skills={skills}
-									isSending={isSending}
-									isApprovalModeSaving={isApprovalModeSaving}
-									webSearchEnabled={webSearchEnabled}
-									workspaceOptions={workspaceOptions}
-									selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
-									workspaceFooterDisabled={workspaceFooterDisabled}
-									isWorkspaceAdding={isWorkspaceAdding}
-									showContextUsage={!isHome}
-									onMessageChange={onMessageChange}
-									onModeChange={onModeChange}
-									onApprovalModeChange={onApprovalModeChange}
-									onWebSearchEnabledChange={onWebSearchEnabledChange}
-									onProviderModelChange={onProviderModelChange}
-									onAddFiles={onAddFiles}
-									onAddFolder={onAddFolder}
-									onAddImages={onAddImages}
-									onAddContextFiles={onAddContextFiles}
-									onWorkspaceSelect={onHomeWorkspaceSelect}
-									onWorkspaceAdd={onHomeWorkspaceAdd}
-									onWorkspaceClear={onHomeWorkspaceClear}
-									onRemoveContext={onRemoveContext}
-									onPinContext={onPinContext}
-									onClearUnpinnedContext={onClearUnpinnedContext}
-									onCancel={onCancel}
-									onSubmit={onSubmit}
-									onWorkflowTodoDismiss={onWorkflowTodoDismiss}
-									onWorkflowTodoCollapseChange={onWorkflowTodoCollapseChange}
-									onCompletionOpen={onCompletionOpen}
-								/>
-							)}
-							</footer>
-						</section>
+									<footer className={styles.composer}>
+										{!isHome && pendingApproval !== null ? (
+											<ApprovalDialog
+												pendingApproval={pendingApproval}
+												isApproving={isApproving}
+												isRejecting={isRejecting}
+												errorMessage={approvalError}
+												onApprove={onApprovalApprove}
+												onReject={onApprovalReject}
+											/>
+										) : !isHome && pendingPlanClarification !== null ? (
+											<ClarificationDialog
+												planId={pendingPlanClarification.planId}
+												title={pendingPlanClarification.title}
+												question={pendingPlanClarification.question}
+												recommendedReplies={pendingPlanClarification.recommendedReplies}
+												isSubmitting={isPlanClarificationSubmitting}
+												errorMessage={planClarificationError}
+												onSubmit={onPlanClarificationSubmit}
+												onSkip={onPlanClarificationSkip}
+											/>
+										) : !isHome && pendingPlanApproval !== null ? (
+											<PlanApprovalDialog
+												plan={pendingPlanApproval}
+												isApproving={isPlanApproving}
+												isRevising={isPlanRevising}
+												errorMessage={planApprovalError}
+												onApprove={onPlanApprove}
+												onRevise={onPlanRevise}
+											/>
+										) : (
+											<Composer
+												providerModelSelection={providerModelSelection}
+												selectedProviderId={selectedProviderId}
+												selectedModelId={selectedModelId}
+												message={message}
+												contextItems={contextItems}
+												workflowTodoSnapshot={workflowTodoSnapshot}
+												workflowTodoCollapsed={workflowTodoCollapsed}
+												mode={mode}
+												approvalMode={approvalMode}
+												slashCommands={slashCommands}
+												skills={skills}
+												isSending={isSending}
+												isApprovalModeSaving={isApprovalModeSaving}
+												webSearchEnabled={webSearchEnabled}
+												workspaceOptions={workspaceOptions}
+												selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
+												workspaceFooterDisabled={workspaceFooterDisabled}
+												isWorkspaceAdding={isWorkspaceAdding}
+												showContextUsage={!isHome}
+												onMessageChange={onMessageChange}
+												onModeChange={onModeChange}
+												onApprovalModeChange={onApprovalModeChange}
+												onWebSearchEnabledChange={onWebSearchEnabledChange}
+												onProviderModelChange={onProviderModelChange}
+												onAddFiles={onAddFiles}
+												onAddFolder={onAddFolder}
+												onAddImages={onAddImages}
+												onAddContextFiles={onAddContextFiles}
+												onWorkspaceSelect={onHomeWorkspaceSelect}
+												onWorkspaceAdd={onHomeWorkspaceAdd}
+												onWorkspaceClear={onHomeWorkspaceClear}
+												onRemoveContext={onRemoveContext}
+												onPinContext={onPinContext}
+												onClearUnpinnedContext={onClearUnpinnedContext}
+												onCancel={onCancel}
+												onSubmit={onSubmit}
+												onWorkflowTodoDismiss={onWorkflowTodoDismiss}
+												onWorkflowTodoCollapseChange={onWorkflowTodoCollapseChange}
+												onCompletionOpen={onCompletionOpen}
+											/>
+										)}
+									</footer>
+								</section>
+							</Splitter.Panel>
+							{showReviewButton ? (
+								<Splitter.Panel
+									size={reviewPanelOpen ? reviewPanelSize : REVIEW_PANEL_CLOSED_SIZE}
+									min={REVIEW_PANEL_CLOSED_SIZE}
+									max={REVIEW_PANEL_MAX_SIZE}
+									collapsible={{ start: true, showCollapsibleIcon: false }}
+								>
+									{reviewPanelOpen && activeWorkspace !== null ? (
+										<div className={styles.reviewPanelSlot}>
+											<ReviewPanelTabs workspaceId={activeWorkspace.id} onEmpty={closeReviewPanel} />
+										</div>
+									) : null}
+								</Splitter.Panel>
+							) : null}
+						</Splitter>
 					</Splitter.Panel>
-					{showReviewButton ? (
+					{showTerminalButton ? (
 						<Splitter.Panel
-							size={reviewPanelOpen ? reviewPanelSize : REVIEW_PANEL_CLOSED_SIZE}
-							min={REVIEW_PANEL_CLOSED_SIZE}
-							max={REVIEW_PANEL_MAX_SIZE}
+							size={terminalPanelOpen ? terminalPanelSize : TERMINAL_PANEL_CLOSED_SIZE}
+							min={TERMINAL_PANEL_CLOSED_SIZE}
+							max={TERMINAL_PANEL_MAX_SIZE}
 							collapsible={{ start: true, showCollapsibleIcon: false }}
 						>
-							{reviewPanelOpen && activeWorkspace !== null ? (
-								<div className={styles.reviewPanelSlot}>
-									<GitDiffReviewPanel workspaceId={activeWorkspace.id} />
-								</div>
-							) : null}
+							<div className={styles.terminalPanelSlot} aria-hidden={!terminalPanelOpen}>
+								<TerminalPanelTabs
+									cwd={activeWorkspace?.rootPath ?? null}
+									isOpen={terminalPanelOpen}
+									onEmpty={closeTerminalPanel}
+								/>
+							</div>
 						</Splitter.Panel>
 					) : null}
 				</Splitter>

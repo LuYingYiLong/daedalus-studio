@@ -7,6 +7,9 @@ describe("AgentPage git diff review source", () => {
 	const assistantBubbleSource: string = readRepoFile("src", "renderer", "src", "features", "bubble", "AssistantBubble.tsx");
 	const inlineDiffSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "InlineDiffPart.tsx");
 	const reviewPanelSource: string = readRepoFile("src", "renderer", "src", "features", "review", "GitDiffReviewPanel.tsx");
+	const reviewPanelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "review", "ReviewPanelTabs.tsx");
+	const reviewPanelTabsCss: string = readRepoFile("src", "renderer", "src", "features", "review", "ReviewPanelTabs.module.css");
+	const panelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "panel-tabs", "PanelTabs.tsx");
 
 	it("renders the review sidebar inside an Ant Design Splitter", () => {
 		expect(agentSource).toContain("<Splitter");
@@ -15,7 +18,7 @@ describe("AgentPage git diff review source", () => {
 		expect(agentSource).toContain("onResize={handleReviewResize}");
 		expect(agentSource).toContain("onResizeEnd={handleReviewResizeEnd}");
 		expect(agentSource).toContain("<Splitter.Panel");
-		expect(agentSource).toContain("<GitDiffReviewPanel workspaceId={activeWorkspace.id} />");
+		expect(agentSource).toContain("<ReviewPanelTabs workspaceId={activeWorkspace.id} onEmpty={closeReviewPanel} />");
 		expect(agentSource).toContain("REVIEW_PANEL_DEFAULT_SIZE");
 		expect(agentSource).toContain("REVIEW_PANEL_CLOSE_THRESHOLD");
 	});
@@ -42,7 +45,7 @@ describe("AgentPage git diff review source", () => {
 	});
 
 	it("renders workspace launch, summary and review actions in the shared floating slot", () => {
-		expect(agentSource).toContain("showWorkspaceLaunchControls || showSummaryButton || showReviewButton");
+		expect(agentSource).toContain("showWorkspaceLaunchControls || showSummaryButton || showTerminalButton || showReviewButton");
 		expect(agentSource).toContain("{showWorkspaceLaunchControls ? (");
 		expect(agentSource).toContain("className={styles.workspaceLaunchControls}");
 		expect(agentSource).toContain("{showSummaryButton ? renderSummaryButton() : null}");
@@ -52,6 +55,22 @@ describe("AgentPage git diff review source", () => {
 	it("keeps close ownership on the fixed layout-right button", () => {
 		expect(reviewPanelSource).not.toContain("Close review panel");
 		expect(reviewPanelSource).not.toContain("onClose");
+	});
+
+	it("renders the review sidebar through reusable editable tabs with an add dropdown", () => {
+		expect(panelTabsSource).toContain("type=\"editable-card\"");
+		expect(panelTabsSource).toContain("hideAdd={true}");
+		expect(panelTabsSource).toContain("tabBarExtraContent={{");
+		expect(panelTabsSource).toContain("<Dropdown");
+		expect(panelTabsSource).toContain("onEdit={handleEdit}");
+		expect(reviewPanelTabsSource).toContain("PanelTabs");
+		expect(reviewPanelTabsSource).toContain("addItems");
+		expect(reviewPanelTabsSource).toContain("addLabel=\"Add review panel\"");
+		expect(reviewPanelTabsSource).toContain("onEmpty();");
+		expect(reviewPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} />");
+		expect(reviewPanelTabsCss).toContain("padding-top: 40px;");
+		expect(reviewPanelTabsCss).toContain("border-left: 1px solid var(--ds-border);");
+		expect(reviewPanelSource).not.toContain("Tabs");
 	});
 
 	it("resets stale review state when the active session or workspace changes", () => {

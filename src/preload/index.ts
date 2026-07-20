@@ -69,6 +69,34 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		}
 	},
 
+	terminal: {
+		create: (params: { terminalId?: string | null; cwd?: string | null; cols: number; rows: number }): Promise<{ terminalId: string; shell: string; cwd: string; running: boolean }> => {
+			return ipcRenderer.invoke("terminal:create", params);
+		},
+		write: (params: { terminalId: string; data: string }): Promise<{ written: true }> => {
+			return ipcRenderer.invoke("terminal:write", params);
+		},
+		resize: (params: { terminalId: string; cols: number; rows: number }): Promise<{ resized: true }> => {
+			return ipcRenderer.invoke("terminal:resize", params);
+		},
+		kill: (params: { terminalId: string }): Promise<{ killed: true }> => {
+			return ipcRenderer.invoke("terminal:kill", params);
+		},
+		getState: (params?: { terminalId?: string | null }): Promise<{ terminalId: string; shell: string; cwd: string; running: boolean } | null> => {
+			return ipcRenderer.invoke("terminal:get-state", params);
+		},
+		onData: (callback: (event: { terminalId: string; data: string }) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, payload: { terminalId: string; data: string }): void => callback(payload);
+			ipcRenderer.on("terminal:data", handler);
+			return () => { ipcRenderer.removeListener("terminal:data", handler); };
+		},
+		onExit: (callback: (event: { terminalId: string; exitCode: number; signal: number | string | null }) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, payload: { terminalId: string; exitCode: number; signal: number | string | null }): void => callback(payload);
+			ipcRenderer.on("terminal:exit", handler);
+			return () => { ipcRenderer.removeListener("terminal:exit", handler); };
+		}
+	},
+
 	sessionFs: {
 		openSessionDirectory: (sessionId: string): Promise<{ opened: true }> => {
 			return ipcRenderer.invoke("session-fs:open-directory", sessionId);

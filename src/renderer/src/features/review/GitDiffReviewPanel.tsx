@@ -107,7 +107,7 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 						</Typography.Text>
 					) : null}
 				</div>
-				
+
 				<div className={styles.headerActions}>
 					<Button
 						type="text"

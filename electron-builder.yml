@@ -14,6 +14,8 @@ extraResources:
     to: icon.ico
 
 asar: true
+asarUnpack:
+  - node_modules/node-pty/**/*
 
 win:
   icon: build/icon.ico

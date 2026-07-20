@@ -1,0 +1,45 @@
+.panelTabs {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+}
+
+.panelTabs :global(.ant-tabs-nav) {
+	min-height: 34px;
+	margin: 0;
+	padding: 0 8px;
+	background: var(--ds-surface-elevated);
+}
+
+.panelTabs :global(.ant-tabs-nav-wrap) {
+	flex: 0 1 auto;
+	min-width: 0;
+}
+
+.panelTabs :global(.ant-tabs-extra-content) {
+	display: inline-flex;
+	align-items: center;
+	flex: 0 0 auto;
+	margin-inline-start: 4px;
+}
+
+.panelTabs :global(.ant-tabs-tab) {
+	border-radius: var(--ds-radius-sm) var(--ds-radius-sm) 0 0 !important;
+}
+
+.panelTabs :global(.ant-tabs-content-holder),
+.panelTabs :global(.ant-tabs-content),
+.panelTabs :global(.ant-tabs-tabpane) {
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	overflow: hidden;
+}
+
+.addButton {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
