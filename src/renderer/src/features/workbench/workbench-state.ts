@@ -86,6 +86,27 @@ function appendMarkdownPart(parts: TimelineBodyPart[], text: string): TimelineBo
 	return [...nextParts, { type: "markdown", text }];
 }
 
+function appendFinalMarkdownPart(parts: TimelineBodyPart[], text: string): TimelineBodyPart[] {
+	if (text.length === 0) {
+		return parts;
+	}
+
+	const existingContent: string = parts
+		.filter((part: TimelineBodyPart): part is Extract<TimelineBodyPart, { type: "markdown" }> => part.type === "markdown")
+		.map((part: Extract<TimelineBodyPart, { type: "markdown" }>): string => part.text)
+		.join("");
+
+	if (existingContent === text || existingContent.endsWith(text)) {
+		return parts;
+	}
+
+	if (existingContent.length > 0 && text.startsWith(existingContent)) {
+		return appendMarkdownPart(parts, text.slice(existingContent.length));
+	}
+
+	return appendMarkdownPart(parts, text);
+}
+
 function appendThinkingPart(parts: TimelineBodyPart[], text: string, done: boolean): TimelineBodyPart[] {
 	const nextParts: TimelineBodyPart[] = [...parts];
 
@@ -492,7 +513,11 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 				code: "cancelled"
 			}];
 		}
-	} else if (event.event === "agent.message.done" || event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done") {
+	} else if (event.event === "agent.message.done") {
+		nextStatus = undefined;
+		completedAtUtc = nowIso;
+		nextParts = appendFinalMarkdownPart(nextParts, getStringValue(data, "text"));
+	} else if (event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done") {
 		nextStatus = undefined;
 		completedAtUtc = nowIso;
 	} else {

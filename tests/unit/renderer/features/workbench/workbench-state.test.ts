@@ -326,6 +326,70 @@ describe("workbench-state", () => {
 		]);
 	});
 
+	it("renders final summary text from agent.message.done when no delta was streamed", () => {
+		const blocks: TimelineBlock[] = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "request-summary",
+			event: "agent.thinking.delta",
+			data: { text: "process" }
+		});
+		const withSummaryStart: TimelineBlock[] = applyBackendEventToTimeline(blocks, {
+			type: "event",
+			id: "request-summary",
+			event: "agent.summary.started",
+			data: {
+				runId: "run-summary",
+				stepId: "summarize",
+				stepRunId: "phase-run-summarize",
+				title: "总结交付",
+				foldTitle: "总结前的过程"
+			}
+		});
+		const withDone: TimelineBlock[] = applyBackendEventToTimeline(withSummaryStart, {
+			type: "event",
+			id: "request-summary",
+			event: "agent.message.done",
+			data: {
+				requestId: "request-summary",
+				text: "## 交付总结\n\n已完成。"
+			}
+		});
+		const assistant = withDone[0];
+
+		expect(assistant?.type).toBe("assistant");
+		expect(assistant?.type === "assistant" ? assistant.content : "").toBe("## 交付总结\n\n已完成。");
+		expect(assistant?.type === "assistant" ? assistant.bodyParts.map((part) => part.type) : []).toEqual([
+			"thinking",
+			"summary_start",
+			"markdown"
+		]);
+	});
+
+	it("does not duplicate message.done text that already arrived through deltas", () => {
+		const withDelta: TimelineBlock[] = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "request-stream",
+			event: "agent.message.delta",
+			data: {
+				text: "hello"
+			}
+		});
+		const withDone: TimelineBlock[] = applyBackendEventToTimeline(withDelta, {
+			type: "event",
+			id: "request-stream",
+			event: "agent.message.done",
+			data: {
+				requestId: "request-stream",
+				text: "hello"
+			}
+		});
+		const assistant = withDone[0];
+
+		expect(assistant?.type).toBe("assistant");
+		expect(assistant?.type === "assistant" ? assistant.content : "").toBe("hello");
+		expect(assistant?.type === "assistant" ? assistant.bodyParts.filter((part) => part.type === "markdown") : []).toHaveLength(1);
+	});
+
 	it("keeps live plan clarification events out of visible timeline blocks", () => {
 		const blocks: TimelineBlock[] = applyBackendEventToTimeline([], {
 			type: "event",
