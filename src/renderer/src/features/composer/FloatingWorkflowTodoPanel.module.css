@@ -1,0 +1,132 @@
+.panel {
+	position: absolute;
+	left: 50%;
+	bottom: calc(100% + 8px);
+	z-index: 18;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	max-width: calc(100% - 48px);
+	padding: 4px 8px;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-surface-elevated);
+	box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+	transform: translateX(-50%);
+}
+
+.progressTrigger {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
+	padding: 2px 4px;
+	border: 0;
+	border-radius: var(--ds-radius-sm);
+	background: transparent;
+	color: var(--ds-text-primary);
+	cursor: pointer;
+}
+
+.progressTrigger:hover,
+.progressTrigger:focus-visible {
+	background: var(--ds-surface-hover);
+	outline: none;
+}
+
+.phaseText {
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+	color: var(--ds-text-primary);
+}
+
+.diffSummary {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.additions {
+	color: var(--ds-git-addition);
+}
+
+.deletions {
+	color: var(--ds-git-deletion);
+}
+
+.popoverContent {
+	display: grid;
+	gap: 8px;
+	width: min(360px, 72vw);
+	max-width: 100%;
+}
+
+.detailSteps {
+	display: grid;
+	gap: 4px;
+	max-height: min(280px, 48vh);
+	overflow-y: auto;
+	overflow-x: hidden;
+}
+
+.detailStep {
+	display: grid;
+	grid-template-columns: 18px minmax(0, 1fr);
+	align-items: start;
+	gap: 6px;
+	min-width: 0;
+	padding: 2px 0;
+}
+
+.detailIcon {
+	width: 16px;
+	height: 16px;
+	margin-top: 1px;
+}
+
+.detailBody {
+	display: grid;
+	gap: 1px;
+	min-width: 0;
+}
+
+.detailTitle,
+.detailDescription {
+	display: block;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.detailTitle {
+	color: var(--ds-text-primary);
+	font-size: 13px;
+	line-height: 1.35;
+}
+
+.detailDescription {
+	color: var(--ds-text-muted);
+	line-height: 1.3;
+}
+
+.popoverFooter {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	min-width: 0;
+	padding-top: 4px;
+	border-top: 1px solid var(--ds-border-subtle);
+}
+
+.changedFiles {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--ds-text-muted);
+}

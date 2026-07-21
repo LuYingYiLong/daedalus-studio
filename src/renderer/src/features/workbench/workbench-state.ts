@@ -36,6 +36,20 @@ export function applyWorkbenchSnapshot(current: WorkbenchSnapshot | null, next: 
 		return current;
 	}
 
+	const currentRunSequence: number | undefined = current?.activeRun.sequence;
+	const nextRunSequence: number | undefined = next.activeRun.sequence;
+	if (
+		current !== null
+		&& typeof currentRunSequence === "number"
+		&& typeof nextRunSequence === "number"
+		&& nextRunSequence < currentRunSequence
+	) {
+		return {
+			...next,
+			activeRun: current.activeRun
+		};
+	}
+
 	return next;
 }
 
@@ -418,7 +432,10 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 	let nextStatus: TimelineAssistantBlock["status"] = block.status;
 	let completedAtUtc: string = block.completedAtUtc;
 
-	if (event.event === "ai.delta" || event.event === "agent.message.delta") {
+	if (event.event === "agent.run.started") {
+		nextStatus = "running";
+		completedAtUtc = nowIso;
+	} else if (event.event === "ai.delta" || event.event === "agent.message.delta") {
 		nextParts = appendMarkdownPart(nextParts, getStringValue(data, "text"));
 	} else if (event.event === "ai.thinking.delta" || event.event === "agent.thinking.delta") {
 		nextParts = appendThinkingPart(nextParts, getStringValue(data, "text"), false);
@@ -450,7 +467,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 				previewMarkdown: getStringValue(data, "previewMarkdown") || getStringValue(data, "markdown")
 			});
 		}
-	} else if (event.event === "agent.run.error" || event.event === "workflow.error") {
+	} else if (event.event === "agent.run.error" || event.event === "workflow.error" || event.event === "plan.error") {
 		nextStatus = "failed";
 		completedAtUtc = nowIso;
 		const details: string = getStringValue(data, "message") || "Unknown backend error";
@@ -502,7 +519,8 @@ function shouldCreateAssistantBlock(event: BackendEvent): boolean {
 		|| event.event.startsWith("tool.")
 		|| event.event === "ai.status"
 		|| event.event === "plan.generated"
-		|| event.event === "plan.revised";
+		|| event.event === "plan.revised"
+		|| event.event === "plan.error";
 }
 
 function createLiveAssistantBlock(event: BackendEvent): TimelineAssistantBlock {

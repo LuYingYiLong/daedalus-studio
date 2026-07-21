@@ -8,13 +8,6 @@ import {
 } from "@/api/client-preferences-api";
 import styles from "./Titlebar.module.css";
 
-const topBarItems: MenuProps["items"] = [
-	{
-		label: "New session",
-		key: "0"
-	}
-];
-
 function shouldShowUpdateButton(preferences: ClientPreferences, state: AppUpdateState | null): boolean {
 	if (!preferences.autoCheckForUpdates || state === null) {
 		return false;
@@ -144,14 +137,6 @@ function Titlebar(): React.JSX.Element {
 
 	return (
 		<div className={styles.root}>
-			<Dropdown
-				menu={{ items: topBarItems }}
-				trigger={["click"]}
-			>
-				<Space className={styles.menuTrigger}>
-					Files
-				</Space>
-			</Dropdown>
 			<div className={styles.brandCluster}>
 				<p className={styles.brandName}>Daedalus Studio</p>
 				{showUpdateButton ? (

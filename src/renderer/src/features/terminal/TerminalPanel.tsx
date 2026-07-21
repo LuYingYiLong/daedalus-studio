@@ -10,6 +10,7 @@ type TerminalPanelProps = {
 	terminalId: string;
 	cwd: string | null;
 	isOpen: boolean;
+	waitForCwd: boolean;
 };
 
 type TerminalDimensions = {
@@ -61,7 +62,10 @@ function formatShellName(shell: string): string {
 	return shell.split(/[\\/]/u).filter((part: string): boolean => part.length > 0).at(-1) ?? shell;
 }
 
-function getTerminalStateLabel(state: TerminalState | null, isCreating: boolean): string {
+function getTerminalStateLabel(state: TerminalState | null, isCreating: boolean, isWaitingForCwd: boolean): string {
+	if (isWaitingForCwd) {
+		return "Waiting for workspace";
+	}
 	if (isCreating) {
 		return "Starting";
 	}
@@ -71,7 +75,7 @@ function getTerminalStateLabel(state: TerminalState | null, isCreating: boolean)
 	return state.running ? "Running" : "Stopped";
 }
 
-function TerminalPanel({ terminalId, cwd, isOpen }: TerminalPanelProps): React.JSX.Element {
+function TerminalPanel({ terminalId, cwd, isOpen, waitForCwd }: TerminalPanelProps): React.JSX.Element {
 	const hostRef = useRef<HTMLDivElement | null>(null);
 	const terminalRef = useRef<Terminal | null>(null);
 	const fitAddonRef = useRef<FitAddon | null>(null);
@@ -80,6 +84,7 @@ function TerminalPanel({ terminalId, cwd, isOpen }: TerminalPanelProps): React.J
 	const isRestartingRef = useRef<boolean>(false);
 	const cwdRef = useRef<string | null>(cwd);
 	const isOpenRef = useRef<boolean>(isOpen);
+	const waitForCwdRef = useRef<boolean>(waitForCwd);
 	const [terminalState, setTerminalState] = useState<TerminalState | null>(null);
 	const [isCreating, setIsCreating] = useState<boolean>(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -96,6 +101,10 @@ function TerminalPanel({ terminalId, cwd, isOpen }: TerminalPanelProps): React.J
 	useEffect((): void => {
 		isOpenRef.current = isOpen;
 	}, [isOpen]);
+
+	useEffect((): void => {
+		waitForCwdRef.current = waitForCwd;
+	}, [waitForCwd]);
 
 	const fitTerminal = useCallback((notifyPty: boolean): TerminalDimensions => {
 		const terminal: Terminal | null = terminalRef.current;
@@ -151,6 +160,10 @@ function TerminalPanel({ terminalId, cwd, isOpen }: TerminalPanelProps): React.J
 					console.error("[TerminalPanel] failed to resize existing terminal pty", error);
 				});
 				terminalRef.current.focus();
+				return;
+			}
+
+			if (waitForCwdRef.current && cwdRef.current === null) {
 				return;
 			}
 
@@ -310,7 +323,7 @@ function TerminalPanel({ terminalId, cwd, isOpen }: TerminalPanelProps): React.J
 			fitTerminal(true);
 			terminalRef.current?.focus();
 		});
-	}, [ensureTerminal, fitTerminal, isOpen]);
+	}, [cwd, ensureTerminal, fitTerminal, isOpen, waitForCwd]);
 
 	useEffect((): (() => void) | void => {
 		const host: HTMLDivElement | null = hostRef.current;
@@ -341,7 +354,8 @@ function TerminalPanel({ terminalId, cwd, isOpen }: TerminalPanelProps): React.J
 		};
 	}, [fitTerminal, isOpen]);
 
-	const stateLabel: string = getTerminalStateLabel(terminalState, isCreating);
+	const isWaitingForCwd: boolean = waitForCwd && cwd === null && terminalState === null;
+	const stateLabel: string = getTerminalStateLabel(terminalState, isCreating, isWaitingForCwd);
 	const shellLabel: string = terminalState === null ? "PowerShell" : formatShellName(terminalState.shell);
 	const cwdLabel: string = terminalState?.cwd ?? cwd ?? "Home";
 	const canKill: boolean = terminalState !== null && terminalState.running && !isCreating;
@@ -366,7 +380,7 @@ function TerminalPanel({ terminalId, cwd, isOpen }: TerminalPanelProps): React.J
 						type="text"
 						shape="circle"
 						aria-label="Restart terminal"
-						disabled={isCreating}
+						disabled={isCreating || isWaitingForCwd}
 						icon={<Icon name="reload" />}
 						onClick={(): void => {
 							void restartTerminal();

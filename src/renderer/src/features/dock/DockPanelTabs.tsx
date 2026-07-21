@@ -21,6 +21,7 @@ type DockPanelTabsProps = {
 	workspaceId: string | null;
 	cwd: string | null;
 	isOpen: boolean;
+	waitForCwd: boolean;
 	defaultKind: DockPanelKind;
 	activationRequest?: DockPanelActivationRequest | null;
 	onEmpty: () => void;
@@ -88,6 +89,7 @@ function DockPanelTabs({
 	workspaceId,
 	cwd,
 	isOpen,
+	waitForCwd,
 	defaultKind,
 	activationRequest = null,
 	onEmpty
@@ -201,6 +203,7 @@ function DockPanelTabs({
 				terminalId={tab.key}
 				cwd={cwd}
 				isOpen={isOpen && activeKey === tab.key}
+				waitForCwd={waitForCwd}
 			/>
 		);
 	}

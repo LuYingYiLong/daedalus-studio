@@ -116,6 +116,10 @@
 	--ds-danger: #ff4d4f;
 	--ds-warning: #faad14;
 	--ds-success: #52c41a;
+	--ds-git-addition: #3fb950;
+	--ds-git-deletion: #ff7b72;
+	--ds-git-addition-bg: rgb(63 185 80 / 14%);
+	--ds-git-deletion-bg: rgb(255 123 114 / 14%);
 	--ds-space-1: 4px;
 	--ds-space-2: 8px;
 	--ds-space-3: 12px;
@@ -157,6 +161,10 @@
 	--ds-text-secondary: #4f4f4f;
 	--ds-text-muted: #737373;
 	--ds-text-inverse: #ffffff;
+	--ds-git-addition: #1a7f37;
+	--ds-git-deletion: #cf222e;
+	--ds-git-addition-bg: rgb(26 127 55 / 12%);
+	--ds-git-deletion-bg: rgb(207 34 46 / 12%);
 	color-scheme: light;
 }
 

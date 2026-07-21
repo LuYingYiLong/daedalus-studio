@@ -8,6 +8,14 @@ import {
 	mergeTimelineAfter,
 	mergeTimelineBefore
 } from "@/features/workbench/workbench-state";
+import {
+	applyRunStateFromBackendEvent,
+	applyRunStateFromWorkbench,
+	createIdleRunState,
+	createOptimisticRunState,
+	isRunControllerActive,
+	type RunControllerState
+} from "@/features/workbench/run-state";
 
 function createWorkbench(revision: number, text: string): WorkbenchSnapshot {
 	return {
@@ -35,6 +43,69 @@ describe("workbench-state", () => {
 
 		expect(applyWorkbenchSnapshot(current, stale)).toBe(current);
 		expect(applyWorkbenchSnapshot(current, createWorkbench(4, "latest")).composer.text).toBe("latest");
+	});
+
+	it("keeps newer active run state when a later workbench snapshot carries an older run sequence", () => {
+		const current = createWorkbench(4, "draft");
+		current.activeRun = {
+			status: "streaming",
+			requestId: "run-new",
+			sequence: 5
+		};
+		const staleRun = createWorkbench(5, "server text");
+		staleRun.activeRun = {
+			status: "idle",
+			sequence: 4
+		};
+
+		const applied = applyWorkbenchSnapshot(current, staleRun);
+
+		expect(applied.revision).toBe(5);
+		expect(applied.composer.text).toBe("server text");
+		expect(applied.activeRun).toEqual(current.activeRun);
+	});
+
+	it("derives run controls from sequenced backend events and ignores stale workbench state", () => {
+		const idle: RunControllerState = createIdleRunState();
+		const started: RunControllerState = applyRunStateFromBackendEvent(idle, {
+			type: "event",
+			id: "run-a",
+			event: "agent.run.started",
+			data: {
+				requestId: "run-a",
+				status: "streaming",
+				sequence: 3
+			}
+		});
+		const staleWorkbench = createWorkbench(10, "");
+		staleWorkbench.activeRun = {
+			status: "idle",
+			sequence: 2
+		};
+		const afterStaleWorkbench: RunControllerState = applyRunStateFromWorkbench(started, staleWorkbench);
+		const done: RunControllerState = applyRunStateFromBackendEvent(afterStaleWorkbench, {
+			type: "event",
+			id: "run-a",
+			event: "agent.run.done",
+			data: {
+				requestId: "run-a",
+				status: "done",
+				sequence: 3
+			}
+		});
+
+		expect(isRunControllerActive(started)).toBe(true);
+		expect(afterStaleWorkbench.status).toBe("streaming");
+		expect(done.status).toBe("idle");
+		expect(done.sequence).toBe(3);
+	});
+
+	it("optimistic run state keeps empty-draft composer controls stoppable until terminal state", () => {
+		const running: RunControllerState = createOptimisticRunState(createIdleRunState(), "run-a", "2026-07-21T00:00:00.000Z");
+
+		expect(running.status).toBe("streaming");
+		expect(running.requestId).toBe("run-a");
+		expect(isRunControllerActive(running)).toBe(true);
 	});
 
 	it("creates and updates a live assistant block from streaming events", () => {
@@ -155,6 +226,69 @@ describe("workbench-state", () => {
 		}
 		expect(assistant.status).toBe("failed");
 		expect(assistant.bodyParts.filter((part) => part.type === "status" && part.status === "error")).toHaveLength(1);
+	});
+
+	it("marks an existing plan block running again when plan clarification resumes", () => {
+		const withPlan: TimelineBlock[] = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "request-plan",
+			event: "plan.generated",
+			data: {
+				requestId: "request-plan",
+				planId: "plan-a",
+				status: "ready",
+				title: "Plan",
+				previewMarkdown: "Summary"
+			}
+		});
+		const withDone: TimelineBlock[] = applyBackendEventToTimeline(withPlan, {
+			type: "event",
+			id: "request-plan",
+			event: "agent.message.done",
+			data: {
+				requestId: "request-plan"
+			}
+		});
+		const withStartedAgain: TimelineBlock[] = applyBackendEventToTimeline(withDone, {
+			type: "event",
+			id: "request-plan",
+			event: "agent.run.started",
+			data: {
+				runId: "request-plan",
+				requestId: "request-plan",
+				operationRequestId: "plan-clarify-1",
+				planId: "plan-a"
+			}
+		});
+		const assistant = withStartedAgain[0];
+
+		expect(assistant?.type).toBe("assistant");
+		if (assistant?.type !== "assistant") {
+			throw new Error("Expected assistant block");
+		}
+		expect(assistant.status).toBe("running");
+	});
+
+	it("renders historical plan.error events as visible backend errors", () => {
+		const blocks: TimelineBlock[] = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "plan-operation-1",
+			event: "plan.error",
+			data: {
+				code: "plan_error",
+				message: "工具结果总量达到 46034 字符，上限为 48000 字符"
+			}
+		});
+		const assistant = blocks[0];
+
+		expect(assistant?.type).toBe("assistant");
+		if (assistant?.type !== "assistant") {
+			throw new Error("Expected assistant block");
+		}
+		expect(assistant.status).toBe("failed");
+		expect(assistant.bodyParts.some((part) => {
+			return part.type === "status" && part.status === "error" && part.code === "plan_error";
+		})).toBe(true);
 	});
 
 	it("keeps summary_start before summary markdown", () => {

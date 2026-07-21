@@ -423,8 +423,10 @@
 }
 
 .composer {
+	position: relative;
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
+	gap: 0;
 	width: min(100%, 880px);
 	justify-self: center;
 	padding: 8px;

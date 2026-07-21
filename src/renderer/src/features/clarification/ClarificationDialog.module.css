@@ -65,7 +65,6 @@
 
 .replyDescription {
 	overflow: hidden;
-	color: var(--ds-text-secondary);
 	font-size: 12px;
 	text-overflow: ellipsis;
 	white-space: nowrap;

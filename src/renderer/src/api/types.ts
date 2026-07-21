@@ -53,32 +53,39 @@ export type AdditionalContextItem = {
 	data?: unknown;
 };
 
+export type MessageQueueStatus = "pending" | "sending" | "approval" | "failed" | "cancelled" | "rejected";
+
 export type MessageQueueItem = {
-	id: string;
-	text?: string;
-	message?: string;
-	mode?: "agent" | "ask" | "plan";
-	status?: string;
-	createdAt?: string;
-	updatedAt?: string;
-	[key: string]: unknown;
+	id: number;
+	text: string;
+	additionalContext: AdditionalContextItem[];
+	mode: "agent" | "ask" | "plan" | null;
+	provider: string | null;
+	model: string | null;
+	skillRefs: string[];
+	webSearchEnabled: boolean;
+	status: MessageQueueStatus;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type PendingGuide = {
-	id?: string;
-	clientId?: string;
-	text?: string;
-	title?: string;
-	status?: string;
-	[key: string]: unknown;
+	guideId: string;
+	clientGuideId: string;
+	text: string;
+	anchorRequestId: string | null;
+	status: "pending";
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type WorkbenchActiveRun = {
 	status: "idle" | "streaming" | "paused" | "approval" | "cancelling";
 	requestId?: string;
 	startedAt?: string;
-	queueItemId?: string;
+	queueItemId?: number;
 	statusCode?: string;
+	sequence?: number;
 };
 
 export type WorkbenchPendingApproval = {
@@ -271,6 +278,7 @@ export type PlanRecommendedReply = {
 
 export type PlanClarificationState = {
 	planId: string;
+	requestId: string;
 	title: string;
 	question: string;
 	recommendedReplies: PlanRecommendedReply[];
@@ -278,6 +286,7 @@ export type PlanClarificationState = {
 
 export type PlanApprovalState = {
 	planId: string;
+	requestId: string;
 	title: string;
 	status: string;
 	previewMarkdown: string;
@@ -339,7 +348,7 @@ export type SessionOpenResult = {
 	latestAgentSnapshot: unknown | null;
 	latestPlanClarification: PlanClarificationState | null;
 	latestPlanApproval: PlanApprovalState | null;
-	pendingGuides: unknown[];
+	pendingGuides: PendingGuide[];
 	messageQueue: MessageQueueItem[];
 	workbench: WorkbenchSnapshot;
 	workspaceWarning: string | null;

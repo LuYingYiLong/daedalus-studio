@@ -1,7 +1,8 @@
 import { BrowserWindow, ipcMain } from "electron";
 import { execFile } from "node:child_process";
 import { access, stat } from "node:fs/promises";
-import { resolve } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join, resolve } from "node:path";
 import type { IDisposable, IPty, IPtyForkOptions, IWindowsPtyForkOptions } from "node-pty";
 
 export type TerminalCreateParams = {
@@ -76,6 +77,7 @@ const MIN_COLS: number = 10;
 const MIN_ROWS: number = 4;
 const MAX_COLS: number = 500;
 const MAX_ROWS: number = 200;
+const nodeRequire: NodeRequire = createRequire(__filename);
 
 function getEnvValue(env: NodeJS.ProcessEnv, key: string): string | undefined {
 	return env[key] ?? env[key.toUpperCase()] ?? env[key.toLowerCase()];
@@ -95,6 +97,52 @@ async function defaultPathExists(targetPath: string): Promise<boolean> {
 	} catch {
 		return false;
 	}
+}
+
+function resolveNodePtyPackageRoot(): string | null {
+	try {
+		return dirname(nodeRequire.resolve("node-pty/package.json"));
+	} catch {
+		return null;
+	}
+}
+
+function getNodePtyNativeModuleDirectories(
+	packageRoot: string | null,
+	platform: NodeJS.Platform = process.platform,
+	arch: string = process.arch
+): string[] {
+	if (packageRoot === null) {
+		return [];
+	}
+	return [
+		join(packageRoot, "build", "Release"),
+		join(packageRoot, "build", "Debug"),
+		join(packageRoot, "prebuilds", `${platform}-${arch}`)
+	];
+}
+
+export async function shouldUseBundledConptyDll(
+	options: Pick<TerminalPtyServiceOptions, "platform" | "pathExists"> & {
+		arch?: string;
+		nodePtyPackageRoot?: string | null;
+	} = {}
+): Promise<boolean> {
+	const platform: NodeJS.Platform = options.platform ?? process.platform;
+	if (platform !== "win32") {
+		return false;
+	}
+
+	const pathExists: (targetPath: string) => Promise<boolean> = options.pathExists ?? defaultPathExists;
+	const packageRoot: string | null = options.nodePtyPackageRoot ?? resolveNodePtyPackageRoot();
+	for (const nativeModuleDirectory of getNodePtyNativeModuleDirectories(packageRoot, platform, options.arch ?? process.arch)) {
+		if (!await pathExists(join(nativeModuleDirectory, "conpty.node"))) {
+			continue;
+		}
+		return await pathExists(join(nativeModuleDirectory, "conpty", "conpty.dll"));
+	}
+
+	return false;
 }
 
 async function defaultPathIsDirectory(targetPath: string): Promise<boolean> {
@@ -224,6 +272,7 @@ export class TerminalPtyService {
 	private readonly platform: NodeJS.Platform;
 	private readonly env: NodeJS.ProcessEnv;
 	private readonly findOnPath: (command: string) => Promise<string | null>;
+	private readonly pathExists: (targetPath: string) => Promise<boolean>;
 	private readonly pathIsDirectory: (targetPath: string) => Promise<boolean>;
 	private readonly spawnPty: TerminalSpawnPty;
 	private readonly sendEvent: (channel: "terminal:data" | "terminal:exit", payload: TerminalDataEvent | TerminalExitEvent) => void;
@@ -233,6 +282,7 @@ export class TerminalPtyService {
 		this.platform = options.platform ?? process.platform;
 		this.env = options.env ?? process.env;
 		this.findOnPath = options.findOnPath ?? ((command: string): Promise<string | null> => defaultFindOnPath(command, this.platform, this.env));
+		this.pathExists = options.pathExists ?? defaultPathExists;
 		this.pathIsDirectory = options.pathIsDirectory ?? defaultPathIsDirectory;
 		this.spawnPty = options.spawnPty ?? defaultSpawnPty;
 		this.sendEvent = options.sendEvent ?? broadcastTerminalEvent;
@@ -257,6 +307,10 @@ export class TerminalPtyService {
 			pathIsDirectory: this.pathIsDirectory
 		});
 		const args: string[] = getTerminalShellArgs(this.platform);
+		const useConptyDll: boolean = await shouldUseBundledConptyDll({
+			platform: this.platform,
+			pathExists: this.pathExists
+		});
 		const ptyProcess: TerminalPtyProcess = await this.spawnPty(shell, args, {
 			name: "xterm-256color",
 			cols,
@@ -267,7 +321,7 @@ export class TerminalPtyService {
 				TERM: "xterm-256color",
 				COLORTERM: "truecolor"
 			},
-			useConptyDll: this.platform === "win32"
+			useConptyDll
 		});
 
 		const nextTerminal: ActiveTerminal = {

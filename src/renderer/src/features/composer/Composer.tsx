@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Input, Dropdown, Button, Divider, Collapse, Flex, Steps, Tooltip, Popover, Progress, Typography, Spin } from "antd";
-import type { CollapseProps, MenuProps, ProgressProps, StepsProps } from "antd";
+import { Input, Dropdown, Button, Divider, Flex, Tooltip, Popover, Progress, Typography, Spin } from "antd";
+import type { MenuProps, ProgressProps } from "antd";
 import type { TextAreaRef } from "antd/es/input/TextArea";
 import { Icon } from "@/assets/icons";
 import styles from "./Composer.module.css";
@@ -8,11 +8,10 @@ import type { ApprovalMode } from "@/api/approval-api";
 import type { ChatMode } from "@/api/chat-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
 import type { SkillSummary } from "@/api/skill-api";
-import type { AdditionalContextItem, WorkflowTodoSnapshot, WorkflowTodoStep, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, WorkspaceConfig } from "@/api/types";
 import type { ProviderModelInfo, ProviderModelSelection, ProviderModelSelectionProvider } from "@/api/provider-api";
 import { compressSession, estimateContextUsage, type ContextUsageEstimate } from "@/api/context-api";
 import AdditionalContextStrip from "@/features/bubble/AdditionalContextStrip";
-import { getWorkflowTodoSnapshotKey, mapWorkflowTodoStatusToStepStatus } from "./workflow-todo";
 import {
 	createCompletionOptions,
 	getCompletionToken,
@@ -28,8 +27,6 @@ export type ComposerProps = {
 	selectedModelId: string | null;
 	message: string;
 	contextItems?: AdditionalContextItem[];
-	workflowTodoSnapshot?: WorkflowTodoSnapshot | null;
-	workflowTodoCollapsed?: boolean;
 	mode: ChatMode;
 	approvalMode: ApprovalMode;
 	slashCommands?: SlashCommandDefinition[];
@@ -59,8 +56,7 @@ export type ComposerProps = {
 	onClearUnpinnedContext?: () => void;
 	onCancel?: () => void;
 	onSubmit?: (message: string) => void;
-	onWorkflowTodoDismiss?: (snapshot: WorkflowTodoSnapshot) => void;
-	onWorkflowTodoCollapseChange?: (collapsed: boolean) => void;
+	onGuideSubmit?: (message: string) => void;
 	onCompletionOpen?: (trigger: ComposerCompletionTrigger) => void;
 };
 
@@ -308,44 +304,6 @@ function createCompletionSignature(token: ComposerCompletionToken, options: read
 	].join(":");
 }
 
-function createWorkflowTodoStepItems(steps: readonly WorkflowTodoStep[]): NonNullable<StepsProps["items"]> {
-	return steps.map((step: WorkflowTodoStep, index: number) => {
-		const title: string = step.title.trim() || step.text?.trim() || `Step ${index + 1}`;
-		const description: string | undefined = step.text !== undefined && step.text !== title ? step.text : undefined;
-		const status = mapWorkflowTodoStatusToStepStatus(step.status);
-
-		return {
-			key: step.id,
-			icon: <Icon name={getWorkflowTodoIconName(step.status)} className={styles.todoStepIcon} />,
-			title: (
-				<Tooltip title={title}>
-					<span className={styles.todoStepTitle}>{title}</span>
-				</Tooltip>
-			),
-			description: description === undefined
-				? undefined
-				: (
-					<Tooltip title={description}>
-						<span className={styles.todoStepDescription}>{description}</span>
-					</Tooltip>
-				),
-			status
-		};
-	});
-}
-
-function getWorkflowTodoIconName(status: string): string {
-	if (status === "done" || status === "completed" || status === "success") {
-		return "todo_checked";
-	}
-
-	if (status === "failed" || status === "error" || status === "cancelled") {
-		return "todo_failed";
-	}
-
-	return "todo_unchecked";
-}
-
 function getErrorMessage(error: unknown): string {
 	if (error instanceof Error) {
 		return error.message;
@@ -390,8 +348,6 @@ function Composer({
 	selectedModelId,
 	message,
 	contextItems: composerContextItems = EMPTY_CONTEXT_ITEMS,
-	workflowTodoSnapshot = null,
-	workflowTodoCollapsed = false,
 	mode,
 	approvalMode,
 	slashCommands = [],
@@ -420,8 +376,7 @@ function Composer({
 	onPinContext,
 	onCancel,
 	onSubmit,
-	onWorkflowTodoDismiss,
-	onWorkflowTodoCollapseChange,
+	onGuideSubmit,
 	onCompletionOpen
 }: ComposerProps): React.JSX.Element {
 	const rootRef = useRef<HTMLDivElement | null>(null);
@@ -430,15 +385,11 @@ function Composer({
 	const suppressedCompletionValueRef = useRef<string | null>(null);
 	const completionStateSignatureRef = useRef<string>("");
 	const lastSyncedMessageRef = useRef<string>(message);
-	const lastWorkflowTodoKeyRef = useRef<string>("");
-	const dismissedWorkflowTodoKeyRef = useRef<string>("");
 	const [draftMessage, setDraftMessage] = useState<string>(message);
 	const [completionToken, setCompletionToken] = useState<ComposerCompletionToken | null>(null);
 	const [completionOptions, setCompletionOptions] = useState<ComposerCompletionOption[]>([]);
 	const [selectedCompletionIndex, setSelectedCompletionIndex] = useState<number>(0);
 	const [isComposing, setIsComposing] = useState<boolean>(false);
-	const [todoPanelOpen, setTodoPanelOpen] = useState<boolean>(false);
-	const [todoCollapsed, setTodoCollapsed] = useState<boolean>(workflowTodoCollapsed);
 	const [contextUsage, setContextUsage] = useState<ContextUsageEstimate | null>(null);
 	const [isContextUsageLoading, setIsContextUsageLoading] = useState<boolean>(false);
 	const [contextUsageError, setContextUsageError] = useState<string | null>(null);
@@ -521,13 +472,6 @@ function Composer({
 			? "Auto Safe"
 			: "Manual";
 	const hasCompletion: boolean = completionToken !== null && completionOptions.length > 0;
-	const workflowTodoSteps: WorkflowTodoStep[] = workflowTodoSnapshot?.steps ?? [];
-	const hasWorkflowTodo: boolean = workflowTodoSteps.length > 0;
-	const isWorkflowTodoPanelVisible: boolean = todoPanelOpen && hasWorkflowTodo && !hasCompletion;
-	const workflowTodoKey: string = workflowTodoSnapshot === null ? "" : getWorkflowTodoSnapshotKey(workflowTodoSnapshot);
-	const workflowTodoStepItems: NonNullable<StepsProps["items"]> = useMemo((): NonNullable<StepsProps["items"]> => {
-		return createWorkflowTodoStepItems(workflowTodoSteps);
-	}, [workflowTodoSteps]);
 	const contextUsagePercent: number = contextUsage?.percent ?? 0;
 	const contextUsageStrokeColor: ProgressStrokeColor = getContextUsageStrokeColor(contextUsagePercent);
 	const contextUsageStatus: "normal" | "exception" = getContextUsageStatus(contextUsagePercent);
@@ -537,57 +481,11 @@ function Composer({
 		? contextUsage.compressReason ?? "Compression unavailable"
 		: null;
 
-	function closeTodoPanel(markDismissed: boolean): void {
-		setTodoPanelOpen(false);
-		if (markDismissed && workflowTodoKey.length > 0) {
-			dismissedWorkflowTodoKeyRef.current = workflowTodoKey;
-		}
-	}
-
-	function dismissTodoPanel(): void {
-		if (workflowTodoSnapshot === null) {
-			closeTodoPanel(true);
-			return;
-		}
-
-		closeTodoPanel(true);
-		onWorkflowTodoDismiss?.(workflowTodoSnapshot);
-	}
-
-	function handleTodoCollapseChange(activeKey: CollapseProps["activeKey"]): void {
-		const activeKeys: string[] = Array.isArray(activeKey) ? activeKey.map(String) : [String(activeKey)];
-		const nextCollapsed: boolean = !activeKeys.includes("todo");
-		setTodoCollapsed(nextCollapsed);
-		onWorkflowTodoCollapseChange?.(nextCollapsed);
-	}
-
 	useEffect((): void => {
 		if (selectedCompletionIndex >= completionOptions.length) {
 			setSelectedCompletionIndex(Math.max(0, completionOptions.length - 1));
 		}
 	}, [completionOptions.length, selectedCompletionIndex]);
-
-	useEffect((): void => {
-		setTodoCollapsed(workflowTodoCollapsed);
-	}, [workflowTodoCollapsed, workflowTodoKey]);
-
-	useEffect((): void => {
-		if (!hasWorkflowTodo) {
-			lastWorkflowTodoKeyRef.current = "";
-			dismissedWorkflowTodoKeyRef.current = "";
-			setTodoPanelOpen(false);
-			return;
-		}
-
-		if (lastWorkflowTodoKeyRef.current === workflowTodoKey) {
-			return;
-		}
-
-		lastWorkflowTodoKeyRef.current = workflowTodoKey;
-		if (dismissedWorkflowTodoKeyRef.current !== workflowTodoKey) {
-			setTodoPanelOpen(true);
-		}
-	}, [hasWorkflowTodo, workflowTodoKey]);
 
 	useEffect((): void => {
 		const nativeTextArea: HTMLTextAreaElement | null = getNativeTextArea(textAreaRef.current);
@@ -662,25 +560,36 @@ function Composer({
 		onProviderModelChange?.(nextSelectedModel.provider, nextSelectedModel.model);
 	};
 
-	function submitMessage(): void {
-		if (isSending) {
-			onCancel?.();
-			return;
-		}
-
-		const trimmedMessage: string = draftMessage.trim();
-
-		if (trimmedMessage.length === 0) {
-			return;
-		}
-
+	function clearDraftMessage(): void {
 		setDraftMessage("");
 		lastSyncedMessageRef.current = "";
 		suppressedCompletionValueRef.current = null;
 		hideCompletion();
-		setTodoPanelOpen(false);
 		onMessageChange?.("");
+	}
+
+	function submitMessage(): void {
+		const trimmedMessage: string = draftMessage.trim();
+		if (trimmedMessage.length === 0 && isSending) {
+			onCancel?.();
+			return;
+		}
+		if (trimmedMessage.length === 0) {
+			return;
+		}
+
+		clearDraftMessage();
 		onSubmit?.(trimmedMessage);
+	}
+
+	function submitGuideMessage(): void {
+		const trimmedMessage: string = draftMessage.trim();
+		if (trimmedMessage.length === 0) {
+			return;
+		}
+
+		clearDraftMessage();
+		onGuideSubmit?.(trimmedMessage);
 	}
 
 	function hideCompletion(): void {
@@ -769,6 +678,12 @@ function Composer({
 
 	function handleTextAreaKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>): void {
 		if (isComposing || event.nativeEvent.isComposing) {
+			return;
+		}
+
+		if (event.key === "Enter" && event.ctrlKey && !event.shiftKey) {
+			event.preventDefault();
+			submitGuideMessage();
 			return;
 		}
 
@@ -981,7 +896,7 @@ function Composer({
 	);
 
 	return (
-		<div ref={rootRef} className={`${styles.composerRoot} ${isWorkflowTodoPanelVisible ? styles.composerRootWithVisibleTodo : ""}`}>
+		<div ref={rootRef} className={styles.composerRoot}>
 			<input
 				ref={imageInputRef}
 				type="file"
@@ -991,47 +906,7 @@ function Composer({
 				onChange={handleImageInputChange}
 			/>
 			<div className={styles.composerInputWrap}>
-				{isWorkflowTodoPanelVisible ? (
-					<div className={styles.todoPanel}>
-						<Collapse
-							size="small"
-							bordered={false}
-							activeKey={todoCollapsed ? [] : ["todo"]}
-							onChange={handleTodoCollapseChange}
-							className={styles.todoCollapse}
-							items={[{
-								key: "todo",
-								label: workflowTodoSnapshot?.title ?? "Todo",
-								children: (
-									<Flex vertical={true} gap="small" className={styles.todoPanelBody}>
-										<Steps
-											orientation="vertical"
-											size="small"
-											className={styles.todoSteps}
-											current={Math.max(0, workflowTodoSteps.findIndex((step: WorkflowTodoStep): boolean => {
-												return step.status === "running" || step.status === "in_progress";
-											}))}
-											items={workflowTodoStepItems}
-										/>
-									</Flex>
-								),
-								extra: (
-									<Button
-										type="text"
-										size="small"
-										icon={<Icon name="close" />}
-										onClick={(event): void => {
-											event.preventDefault();
-											event.stopPropagation();
-											dismissTodoPanel();
-										}}
-									/>
-								),
-							}]}
-						/>
-					</div>
-				) : null}
-				<div className={`${styles.composerSurface} ${isWorkflowTodoPanelVisible ? styles.composerSurfaceHasTodo : ""}`}>
+				<div className={styles.composerSurface}>
 					{hasCompletion ? (
 						<div className={styles.completionPanel} role="listbox" aria-label="Composer completions">
 							{completionOptions.map((option: ComposerCompletionOption, index: number): React.ReactNode => {
@@ -1132,7 +1007,7 @@ function Composer({
 							<Button
 								type="text"
 								shape="circle"
-								icon={<Icon name={mode} className={styles.composerActionIcon} />}
+								icon={<Icon name={mode === "plan" ? "todo" : mode} className={styles.composerActionIcon} />}
 							/>
 						</Dropdown>
 					</Tooltip>
@@ -1187,11 +1062,11 @@ function Composer({
 						</Dropdown>
 					</Tooltip>
 					
-					<Tooltip title={isSending ? "Stop" : "Send"}>
+					<Tooltip title={isSending && draftMessage.trim().length === 0 ? "Stop" : isSending ? "Queue message" : "Send"}>
 						<Button
 							type="text"
 							shape="circle"
-							icon={<Icon name={isSending ? "stop" : "send"} className={styles.composerSendIcon} />}
+							icon={<Icon name={isSending && draftMessage.trim().length === 0 ? "stop" : "send"} className={styles.composerSendIcon} />}
 							className={styles.composerSendButton}
 							disabled={!isSending && draftMessage.trim().length === 0}
 							onClick={submitMessage}

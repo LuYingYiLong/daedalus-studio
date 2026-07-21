@@ -29,6 +29,10 @@
 | `--ds-text-primary` | 主文字 |
 | `--ds-text-secondary` | 次级文字 |
 | `--ds-text-muted` | 弱提示、meta 信息 |
+| `--ds-git-addition` | Git diff 增加行/增加数量文字，语义为绿色 |
+| `--ds-git-deletion` | Git diff 删除行/删除数量文字，语义为红色 |
+| `--ds-git-addition-bg` | Git diff 增加区域弱背景 |
+| `--ds-git-deletion-bg` | Git diff 删除区域弱背景 |
 | `--ds-radius-sm` | 小圆角，固定为 `4px` |
 | `--ds-radius-lg` | 大控件圆角，固定为 `8px` |
 | `--ds-space-1` | `4px` |
@@ -37,6 +41,8 @@
 | `--ds-space-4` | `16px` |
 
 语义色如 success、warning、danger 可以保留自身语义，但应通过 `--ds-success`、`--ds-warning`、`--ds-danger` 使用。
+
+Git 差异 UI 统一使用 `--ds-git-addition` / `--ds-git-deletion` 及对应背景 token；增加为绿色，删除为红色，不在局部组件硬编码 diff 色值。
 
 ## Ant Design
 
@@ -54,6 +60,7 @@
 - **WorkspaceTree**：列表项高度保持紧凑；图标按钮只在 hover/focus 时显现；菜单项内部 gap 优先 `4px`。
 - **AgentPage**：聊天主体可以居中限制内容宽度，但 Header 应保持横向 `space-between`，不被聊天内容宽度约束。
 - **Composer**：外框使用 `8px`，内部按钮和状态控件使用 `4px`；focus 边框使用 `--ds-accent`；footer 使用统一 surface 层级。
+- **FloatingWorkflowTodoPanel**：浮层本体只显示当前阶段进度和 Git 变更摘要；详细 Todo 列表、失败说明、dismiss 等低频信息放入 Popover。
 - **MessageList**：内容宽度保持稳定，滚动容器可以占满右侧空间；消息正文不应因滚动条位置改变而变窄或跳动。
 - **UserBubble**：发送气泡使用 `--ds-accent` 背景，圆角 `4px`。
 - **AssistantBubble**：正文不使用卡片化背景；未知事件、JSON、工具详情等辅助块使用统一边框和低层级背景。

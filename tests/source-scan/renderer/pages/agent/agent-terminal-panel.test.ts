@@ -69,6 +69,20 @@ describe("AgentPage terminal panel source", () => {
 		expect(terminalPanelSource).toContain("window.electronAPI.terminal.onExit");
 	});
 
+	it("waits for the session workspace cwd before creating a terminal", () => {
+		const waitGuardIndex: number = terminalPanelSource.indexOf("waitForCwdRef.current && cwdRef.current === null");
+		const createIndex: number = terminalPanelSource.indexOf("window.electronAPI.terminal.create");
+
+		expect(agentSource).toContain("const terminalWaitForCwd: boolean = !isHome && isSessionLoading && activeWorkspace === null;");
+		expect(agentSource).toContain("waitForCwd={terminalWaitForCwd}");
+		expect(dockPanelTabsSource).toContain("waitForCwd: boolean;");
+		expect(dockPanelTabsSource).toContain("waitForCwd={waitForCwd}");
+		expect(terminalPanelSource).toContain("Waiting for workspace");
+		expect(waitGuardIndex).toBeGreaterThan(-1);
+		expect(createIndex).toBeGreaterThan(-1);
+		expect(waitGuardIndex).toBeLessThan(createIndex);
+	});
+
 	it("renders dock tabs that can add both terminal and review panels", () => {
 		expect(panelTabsSource).toContain("type=\"editable-card\"");
 		expect(panelTabsSource).toContain("hideAdd={true}");

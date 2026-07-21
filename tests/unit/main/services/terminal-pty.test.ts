@@ -6,6 +6,7 @@ import {
 	TerminalPtyService,
 	resolveDefaultTerminalShell,
 	resolveTerminalCwd,
+	shouldUseBundledConptyDll,
 	type TerminalExitEvent,
 	type TerminalPtyProcess,
 	type TerminalSpawnOptions
@@ -51,6 +52,10 @@ class FakePty implements TerminalPtyProcess {
 	}
 }
 
+function normalizePathForTest(targetPath: string): string {
+	return targetPath.replaceAll("\\", "/");
+}
+
 describe("terminal pty service", () => {
 	it("prefers pwsh.exe on Windows and falls back to powershell.exe", async () => {
 		const calls: string[] = [];
@@ -89,6 +94,33 @@ describe("terminal pty service", () => {
 		})).resolves.toBe(homePath);
 	});
 
+	it("does not force bundled ConPTY when the loaded native module has no sibling DLL", async () => {
+		await expect(shouldUseBundledConptyDll({
+			platform: "win32",
+			arch: "x64",
+			nodePtyPackageRoot: "C:/app/node_modules/node-pty",
+			pathExists: async (targetPath: string): Promise<boolean> => {
+				const normalizedPath: string = normalizePathForTest(targetPath);
+				return normalizedPath.endsWith("/build/Release/conpty.node")
+					|| normalizedPath.endsWith("/prebuilds/win32-x64/conpty.node")
+					|| normalizedPath.endsWith("/prebuilds/win32-x64/conpty/conpty.dll");
+			}
+		})).resolves.toBe(false);
+	});
+
+	it("enables bundled ConPTY only when the selected native module has a sibling DLL", async () => {
+		await expect(shouldUseBundledConptyDll({
+			platform: "win32",
+			arch: "x64",
+			nodePtyPackageRoot: "C:/app/node_modules/node-pty",
+			pathExists: async (targetPath: string): Promise<boolean> => {
+				const normalizedPath: string = normalizePathForTest(targetPath);
+				return normalizedPath.endsWith("/prebuilds/win32-x64/conpty.node")
+					|| normalizedPath.endsWith("/prebuilds/win32-x64/conpty/conpty.dll");
+			}
+		})).resolves.toBe(true);
+	});
+
 	it("creates a singleton PowerShell pty and proxies write and resize", async () => {
 		const workspaceRoot: string = mkdtempSync(join(tmpdir(), "daedalus-studio-terminal-"));
 		const fakePty = new FakePty();
@@ -100,6 +132,7 @@ describe("terminal pty service", () => {
 				HOMEPATH: "/Users/tester"
 			},
 			findOnPath: async (command: string): Promise<string | null> => command === "pwsh.exe" ? "C:/Program Files/PowerShell/7/pwsh.exe" : null,
+			pathExists: async (): Promise<boolean> => false,
 			pathIsDirectory: async (targetPath: string): Promise<boolean> => targetPath === resolve(workspaceRoot),
 			spawnPty(file: string, args: string[], options: TerminalSpawnOptions): TerminalPtyProcess {
 				spawned.push({ file, args, options });
@@ -126,7 +159,7 @@ describe("terminal pty service", () => {
 			cols: 120,
 			rows: 32,
 			cwd: resolve(workspaceRoot),
-			useConptyDll: true
+			useConptyDll: false
 		});
 
 		expect(service.write({ terminalId: "primary", data: "Get-Location\r" })).toEqual({ written: true });

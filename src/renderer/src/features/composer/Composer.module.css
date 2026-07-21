@@ -3,10 +3,6 @@
 	width: 100%;
 }
 
-.composerRootWithVisibleTodo {
-	padding-top: 38px;
-}
-
 .composerInputWrap {
 	position: relative;
 	display: flex;
@@ -15,74 +11,6 @@
 	gap: var(--ds-space-1);
 	min-width: 0;
 	width: 100%;
-}
-
-.todoPanel {
-	position: absolute;
-	left: 0;
-	right: 0;
-	bottom: calc(100%);
-	z-index: 18;
-	max-height: min(360px, 45vh);
-	overflow: hidden;
-}
-
-.todoCollapse {
-	background-color: var(--ds-bg-sunken);
-	border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
-	user-select: none;
-}
-
-.todoCollapse :global(.ant-collapse-header) {
-	align-items: center !important;
-	height: 30px;
-}
-
-.todoCollapse :global(.ant-collapse-content-box) {
-	padding: var(--ds-space-1);
-	max-height: calc(min(360px, 45vh) - 42px);
-	overflow-y: auto;
-}
-
-.todoCollapse :global(.ant-collapse-body) {
-	padding: var(--ds-space-2) var(--ds-space-3) var(--ds-space-2) var(--ds-space-2) !important;
-}
-
-.todoPanelBody {
-	min-width: 0;
-}
-
-.todoSteps {
-	width: 100%;
-}
-
-.todoSteps:global(.ant-steps-vertical) > :global(.ant-steps-item) {
-	min-height: 0;
-	padding-bottom: 4px;
-}
-
-.todoSteps:global(.ant-steps-vertical) > :global(.ant-steps-item:last-child) {
-	padding-bottom: 0;
-}
-
-.todoStepTitle,
-.todoStepDescription {
-	display: block;
-	max-width: min(520px, 70vw);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.todoStepDescription {
-	color: var(--ds-text-muted);
-	font-size: 12px;
-}
-
-.todoStepIcon {
-	width: 16px;
-	height: 16px;
-	vertical-align: -2px;
 }
 
 .composerSurface {
@@ -96,10 +24,6 @@
 	border-radius: var(--ds-radius-lg);
 	background: var(--ds-surface);
 	transition: border-color 0.15s;
-}
-
-.composerSurfaceHasTodo {
-	border-radius: 0 0 var(--ds-radius-lg) var(--ds-radius-lg);
 }
 
 .composerSurface:focus-within {

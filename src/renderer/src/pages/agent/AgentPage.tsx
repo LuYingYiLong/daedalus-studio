@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
-import type { AdditionalContextItem, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode, PendingApproval } from "@/api/approval-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
@@ -12,6 +12,8 @@ import { fetchSessionOverview, type SessionOverviewPlanItem, type SessionOvervie
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import MessageList from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
+import FloatingWorkflowTodoPanel, { type WorkflowFileChangeSummary } from "@/features/composer/FloatingWorkflowTodoPanel";
+import MessageQueuePanel from "@/features/composer/MessageQueuePanel";
 import NewSessionHome from "./NewSessionHome";
 import ApprovalDialog from "@/features/approval/ApprovalDialog";
 import ToolBudgetDialog from "@/features/approval/ToolBudgetDialog";
@@ -71,6 +73,76 @@ function formatDiffCount(additions: number, deletions: number): string {
 	return `+${additions} -${deletions}`;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getRecordString(record: Record<string, unknown>, key: string): string {
+	const value: unknown = record[key];
+	return typeof value === "string" ? value : "";
+}
+
+function getRecordNumber(record: Record<string, unknown>, key: string): number {
+	const value: unknown = record[key];
+	return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function aggregateTimelineFileChanges(blocks: TimelineBlock[]): WorkflowFileChangeSummary {
+	const countedBatchIds: Set<string> = new Set();
+	let additions: number = 0;
+	let deletions: number = 0;
+	let changedFiles: number = 0;
+
+	function addFileChangeRecord(record: Record<string, unknown>): void {
+		const batchId: string = getRecordString(record, "batchId");
+		if (batchId.length > 0) {
+			if (countedBatchIds.has(batchId)) {
+				return;
+			}
+			countedBatchIds.add(batchId);
+		}
+
+		additions += getRecordNumber(record, "additions");
+		deletions += getRecordNumber(record, "deletions");
+		changedFiles += getRecordNumber(record, "editedFileCount");
+	}
+
+	for (const block of blocks) {
+		if (block.type !== "assistant") {
+			continue;
+		}
+
+		for (const part of block.bodyParts) {
+			if (part.type === "inline_diff") {
+				const batchIds: string[] = part.batchIds.filter((batchId: string): boolean => batchId.length > 0);
+				if (batchIds.length > 0 && batchIds.every((batchId: string): boolean => countedBatchIds.has(batchId))) {
+					continue;
+				}
+				additions += part.additions;
+				deletions += part.deletions;
+				changedFiles += part.editedFileCount;
+				for (const batchId of batchIds) {
+					countedBatchIds.add(batchId);
+				}
+				continue;
+			}
+
+			if (part.type !== "tool") {
+				continue;
+			}
+
+			for (const event of part.events) {
+				const fileEditBatch: unknown = event.fileEditBatch;
+				if (isRecord(fileEditBatch)) {
+					addFileChangeRecord(fileEditBatch);
+				}
+			}
+		}
+	}
+
+	return { additions, deletions, changedFiles };
+}
+
 function formatSourceSubtitle(source: SessionOverviewSourceItem): string {
 	const dimensions: string = source.width !== undefined && source.height !== undefined
 		? `${source.width}x${source.height}`
@@ -109,6 +181,8 @@ type AgentPageProps = {
 	selectedModelId: string | null;
 	message: string;
 	contextItems: AdditionalContextItem[];
+	messageQueue: MessageQueueItem[];
+	pendingGuides: PendingGuide[];
 	workflowTodoSnapshot: WorkflowTodoSnapshot | null;
 	workflowTodoCollapsed: boolean;
 	mode: ChatMode;
@@ -179,8 +253,12 @@ type AgentPageProps = {
 	onClearUnpinnedContext: () => void;
 	onCancel: () => void;
 	onSubmit: (message: string) => void;
+	onGuideSubmit: (message: string) => void;
+	onQueueMessageRemove: (queueId: number) => void;
+	onQueueMessageReorder: (queueIds: number[]) => void;
+	onGuideDelete: (guideId: string) => void;
+	onGuideReorder: (guideIds: string[]) => void;
 	onWorkflowTodoDismiss: (snapshot: WorkflowTodoSnapshot) => void;
-	onWorkflowTodoCollapseChange: (collapsed: boolean) => void;
 	onCompletionOpen: (trigger: ComposerCompletionTrigger) => void;
 };
 
@@ -204,6 +282,8 @@ function AgentPage({
 	selectedModelId,
 	message,
 	contextItems,
+	messageQueue,
+	pendingGuides,
 	workflowTodoSnapshot,
 	workflowTodoCollapsed,
 	mode,
@@ -274,8 +354,12 @@ function AgentPage({
 	onClearUnpinnedContext,
 	onCancel,
 	onSubmit,
+	onGuideSubmit,
+	onQueueMessageRemove,
+	onQueueMessageReorder,
+	onGuideDelete,
+	onGuideReorder,
 	onWorkflowTodoDismiss,
-	onWorkflowTodoCollapseChange,
 	onCompletionOpen
 }: AgentPageProps): React.JSX.Element {
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
@@ -302,6 +386,10 @@ function AgentPage({
 	const showSummaryButton: boolean = !isHome && activeSessionId !== null;
 	const showSideDockButton: boolean = !isHome;
 	const showBottomDockButton: boolean = !isHome;
+	const terminalWaitForCwd: boolean = !isHome && isSessionLoading && activeWorkspace === null;
+	const workflowFileChangeSummary: WorkflowFileChangeSummary = useMemo((): WorkflowFileChangeSummary => {
+		return aggregateTimelineFileChanges(timelineBlocks);
+	}, [timelineBlocks]);
 	const selectedLaunchTarget: WorkspaceLaunchTarget = useMemo((): WorkspaceLaunchTarget => {
 		return workspaceLaunchTargets.find((target: WorkspaceLaunchTarget): boolean => target.id === selectedLaunchTargetId)
 			?? workspaceLaunchTargets[0]
@@ -956,47 +1044,63 @@ function AgentPage({
 												onRevise={onPlanRevise}
 											/>
 										) : (
-											<Composer
-												providerModelSelection={providerModelSelection}
-												selectedProviderId={selectedProviderId}
-												selectedModelId={selectedModelId}
-												message={message}
-												contextItems={contextItems}
-												workflowTodoSnapshot={workflowTodoSnapshot}
-												workflowTodoCollapsed={workflowTodoCollapsed}
-												mode={mode}
-												approvalMode={approvalMode}
-												slashCommands={slashCommands}
-												skills={skills}
-												isSending={isSending}
-												isApprovalModeSaving={isApprovalModeSaving}
-												webSearchEnabled={webSearchEnabled}
-												workspaceOptions={workspaceOptions}
-												selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
-												workspaceFooterDisabled={workspaceFooterDisabled}
-												isWorkspaceAdding={isWorkspaceAdding}
-												showContextUsage={!isHome}
-												onMessageChange={onMessageChange}
-												onModeChange={onModeChange}
-												onApprovalModeChange={onApprovalModeChange}
-												onWebSearchEnabledChange={onWebSearchEnabledChange}
-												onProviderModelChange={onProviderModelChange}
-												onAddFiles={onAddFiles}
-												onAddFolder={onAddFolder}
-												onAddImages={onAddImages}
-												onAddContextFiles={onAddContextFiles}
-												onWorkspaceSelect={onHomeWorkspaceSelect}
-												onWorkspaceAdd={onHomeWorkspaceAdd}
-												onWorkspaceClear={onHomeWorkspaceClear}
-												onRemoveContext={onRemoveContext}
-												onPinContext={onPinContext}
-												onClearUnpinnedContext={onClearUnpinnedContext}
-												onCancel={onCancel}
-												onSubmit={onSubmit}
-												onWorkflowTodoDismiss={onWorkflowTodoDismiss}
-												onWorkflowTodoCollapseChange={onWorkflowTodoCollapseChange}
-												onCompletionOpen={onCompletionOpen}
-											/>
+											<>
+												{!isHome && !workflowTodoCollapsed ? (
+													<FloatingWorkflowTodoPanel
+														snapshot={workflowTodoSnapshot}
+														fileChangeSummary={workflowFileChangeSummary}
+														onDismiss={onWorkflowTodoDismiss}
+													/>
+												) : null}
+												{!isHome ? (
+													<MessageQueuePanel
+														messageQueue={messageQueue}
+														pendingGuides={pendingGuides}
+														onQueueRemove={onQueueMessageRemove}
+														onQueueReorder={onQueueMessageReorder}
+														onGuideDelete={onGuideDelete}
+														onGuideReorder={onGuideReorder}
+													/>
+												) : null}
+												<Composer
+													providerModelSelection={providerModelSelection}
+													selectedProviderId={selectedProviderId}
+													selectedModelId={selectedModelId}
+													message={message}
+													contextItems={contextItems}
+													mode={mode}
+													approvalMode={approvalMode}
+													slashCommands={slashCommands}
+													skills={skills}
+													isSending={isSending}
+													isApprovalModeSaving={isApprovalModeSaving}
+													webSearchEnabled={webSearchEnabled}
+													workspaceOptions={workspaceOptions}
+													selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
+													workspaceFooterDisabled={workspaceFooterDisabled}
+													isWorkspaceAdding={isWorkspaceAdding}
+													showContextUsage={!isHome}
+													onMessageChange={onMessageChange}
+													onModeChange={onModeChange}
+													onApprovalModeChange={onApprovalModeChange}
+													onWebSearchEnabledChange={onWebSearchEnabledChange}
+													onProviderModelChange={onProviderModelChange}
+													onAddFiles={onAddFiles}
+													onAddFolder={onAddFolder}
+													onAddImages={onAddImages}
+													onAddContextFiles={onAddContextFiles}
+													onWorkspaceSelect={onHomeWorkspaceSelect}
+													onWorkspaceAdd={onHomeWorkspaceAdd}
+													onWorkspaceClear={onHomeWorkspaceClear}
+													onRemoveContext={onRemoveContext}
+													onPinContext={onPinContext}
+													onClearUnpinnedContext={onClearUnpinnedContext}
+													onCancel={onCancel}
+													onSubmit={onSubmit}
+													onGuideSubmit={onGuideSubmit}
+													onCompletionOpen={onCompletionOpen}
+												/>
+											</>
 										)}
 									</footer>
 								</section>
@@ -1015,6 +1119,7 @@ function AgentPage({
 											workspaceId={activeWorkspace?.id ?? null}
 											cwd={activeWorkspace?.rootPath ?? null}
 											isOpen={sideDockOpen}
+											waitForCwd={terminalWaitForCwd}
 											defaultKind="review"
 											activationRequest={sideDockActivationRequest}
 											onEmpty={closeSideDock}
@@ -1038,6 +1143,7 @@ function AgentPage({
 									workspaceId={activeWorkspace?.id ?? null}
 									cwd={activeWorkspace?.rootPath ?? null}
 									isOpen={bottomDockOpen}
+									waitForCwd={terminalWaitForCwd}
 									defaultKind="terminal"
 									onEmpty={closeBottomDock}
 								/>

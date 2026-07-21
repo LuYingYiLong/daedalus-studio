@@ -3,7 +3,7 @@ import { Input, message as antdMessage, Modal, Typography } from "antd";
 import { useDiskSpaceCheck } from "@/hooks/useDiskSpaceCheck";
 import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
-import type { AdditionalContextItem, PendingToolBudget, PlanApprovalState, PlanClarificationState, PlanRecommendedReply, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, PlanRecommendedReply, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import { checkSessionIntegrity, createSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
@@ -31,7 +31,19 @@ import {
 	mergeTimelineBefore,
 	type TimelinePageState
 } from "@/features/workbench/workbench-state";
+import {
+	applyRunStateFromBackendEvent,
+	applyRunStateFromWorkbench,
+	createIdleRunState,
+	createOptimisticRunState,
+	finishOptimisticRunState,
+	getRunControllerRequestId,
+	isRunControllerActive,
+	type RunControllerState
+} from "@/features/workbench/run-state";
 import { patchWorkbench } from "@/api/workbench-api";
+import { addGuide, deleteGuide, reorderGuides } from "@/api/guide-api";
+import { addQueuedMessage, removeQueuedMessage, reorderQueuedMessages } from "@/api/message-queue-api";
 import { getSessionTitle } from "./session-title";
 import AppNavTabs, { type AppPageKey } from "./AppNavTabs";
 import AgentPage from "@/pages/agent/AgentPage";
@@ -124,8 +136,10 @@ function normalizePlanClarification(value: unknown): PlanClarificationState | nu
 	}
 
 	const title: string = getStringField(value, "title").trim();
+	const requestId: string = getStringField(value, "requestId").trim();
 	return {
 		planId,
+		requestId: requestId.length > 0 ? requestId : planId,
 		title: title.length > 0 ? title : "Plan clarification",
 		question,
 		recommendedReplies: parsePlanRecommendedReplies(value.recommendedReplies)
@@ -153,8 +167,10 @@ function normalizePlanApproval(value: unknown): PlanApprovalState | null {
 	}
 
 	const title: string = getStringField(value, "title").trim();
+	const requestId: string = getStringField(value, "requestId").trim();
 	return {
 		planId,
+		requestId: requestId.length > 0 ? requestId : planId,
 		title: title.length > 0 ? title : "Plan",
 		status,
 		previewMarkdown,
@@ -176,6 +192,25 @@ function getPlanApprovalFromResult(result: PlanResult): PlanApprovalState | null
 
 function getPlanIdFromEvent(event: BackendEvent): string {
 	return isRecord(event.data) ? getStringField(event.data, "planId").trim() : "";
+}
+
+function shouldClearPlanClarificationForEvent(event: BackendEvent, clarification: PlanClarificationState | null): boolean {
+	if (clarification === null || !isRecord(event.data)) {
+		return false;
+	}
+
+	if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.approved" || event.event === "plan.execution.started" || event.event === "plan.error") {
+		const planId: string = getStringField(event.data, "planId").trim();
+		return planId.length === 0 || planId === clarification.planId;
+	}
+
+	if (event.event === "agent.run.error") {
+		const planId: string = getStringField(event.data, "planId").trim();
+		const requestId: string = getStringField(event.data, "requestId").trim();
+		return planId === clarification.planId || requestId === clarification.requestId;
+	}
+
+	return false;
 }
 
 function createContextId(): string {
@@ -342,21 +377,6 @@ function getChatMode(workbench: WorkbenchSnapshot | null): ChatMode {
 	return workbench?.composer.chatMode ?? "ask";
 }
 
-function getActiveRunRequestId(workbench: WorkbenchSnapshot | null): string | null {
-	const activeRun = workbench?.activeRun;
-	if (activeRun === undefined || activeRun.status === "idle") {
-		return null;
-	}
-
-	return activeRun.requestId ?? null;
-}
-
-function getIsSending(workbench: WorkbenchSnapshot | null): boolean {
-	const status = workbench?.activeRun.status;
-
-	return status === "streaming" || status === "approval" || status === "paused" || status === "cancelling";
-}
-
 function getPendingApprovalCount(workbench: WorkbenchSnapshot | null): number {
 	const count = workbench?.pendingApproval?.count;
 	return typeof count === "number" && Number.isFinite(count) ? count : 0;
@@ -505,7 +525,7 @@ function createOptimisticUserBlock(requestId: string, message: string, additiona
 	};
 }
 
-function mergeOptimisticUserBlocks(currentPage: TimelinePageState, nextPage: TimelinePageState): TimelinePageState {
+function mergeOptimisticUserBlocks(currentPage: TimelinePageState, nextPage: TimelinePageState, activeOptimisticRequestId: string | null): TimelinePageState {
 	if (currentPage.sessionId !== null && nextPage.sessionId !== null && currentPage.sessionId !== nextPage.sessionId) {
 		console.warn("[App] ignored timeline refresh for different session", {
 			currentSessionId: currentPage.sessionId,
@@ -515,7 +535,10 @@ function mergeOptimisticUserBlocks(currentPage: TimelinePageState, nextPage: Tim
 	}
 
 	const optimisticUserBlocks: TimelineBlock[] = currentPage.blocks.filter((block: TimelineBlock): boolean => {
-		return block.type === "user" && block.id.startsWith("optimistic:");
+		return activeOptimisticRequestId !== null
+			&& block.type === "user"
+			&& block.id.startsWith("optimistic:")
+			&& block.requestId === activeOptimisticRequestId;
 	});
 	const missingOptimisticUserBlocks: Map<string, TimelineBlock> = new Map(optimisticUserBlocks.filter((optimisticBlock: TimelineBlock): boolean => {
 		return !nextPage.blocks.some((block: TimelineBlock): boolean => {
@@ -607,6 +630,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [fullTrustConfirmationText, setFullTrustConfirmationText] = useState<string>("");
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
 	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] = useState<WorkflowTodoSnapshot | null>(null);
+	const [runState, setRunState] = useState<RunControllerState>(() => createIdleRunState());
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(bootstrapData.clientPreferences ?? DEFAULT_CLIENT_PREFERENCES);
 	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(bootstrapData.generalSettings ?? DEFAULT_GENERAL_SETTINGS);
 	const pendingPatchRef = useRef<WorkbenchPatch>({});
@@ -626,10 +650,14 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	useDiskSpaceCheck();
 
 	useEffect((): void => {
-		if (workbench?.activeRun.status === "idle") {
+		if (runState.status === "idle") {
 			activeChatRequestIdRef.current = null;
 		}
-	}, [workbench?.activeRun.requestId, workbench?.activeRun.status]);
+	}, [runState.status]);
+
+	useEffect((): void => {
+		setRunState((currentState: RunControllerState): RunControllerState => applyRunStateFromWorkbench(currentState, workbench));
+	}, [workbench]);
 
 	useEffect((): void => {
 		setToolBudgetError(null);
@@ -684,6 +712,11 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	function rememberLoadedWorkflowTodo(snapshot: WorkflowTodoSnapshot | null): void {
 		initializedWorkflowTodoKeyRef.current = snapshot === null ? "" : getWorkflowTodoSnapshotKey(snapshot);
+	}
+
+	function clearWorkflowTodoUiState(): void {
+		setWorkflowTodoSnapshot(null);
+		rememberLoadedWorkflowTodo(null);
 	}
 
 	function resetPlanClarificationUiState(): void {
@@ -839,7 +872,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	function applyOptimisticActiveRun(requestId: string, clearComposerText: boolean, clearComposerContext: boolean = false): void {
 		const startedAt: string = new Date().toISOString();
+		const sequence: number = runState.sequence + 1;
 
+		clearWorkflowTodoUiState();
+		setRunState((currentState: RunControllerState): RunControllerState => createOptimisticRunState(currentState, requestId, startedAt));
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 			return currentWorkbench === null
 				? currentWorkbench
@@ -853,7 +889,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					activeRun: {
 						status: "streaming",
 						requestId,
-						startedAt
+						startedAt,
+						sequence
 					}
 				};
 		});
@@ -885,6 +922,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	function finishOptimisticActiveRun(requestId: string): void {
+		setRunState((currentState: RunControllerState): RunControllerState => finishOptimisticRunState(currentState, requestId));
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 			if (currentWorkbench === null || currentWorkbench.activeRun.requestId !== requestId) {
 				return currentWorkbench;
@@ -1035,6 +1073,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						return;
 					}
 
+					setRunState((currentState: RunControllerState): RunControllerState => applyRunStateFromBackendEvent(currentState, event));
+
 					const eventWorkbench: WorkbenchSnapshot | null = getWorkbenchFromEvent(event);
 					if (eventWorkbench !== null) {
 						applyWorkbench(eventWorkbench);
@@ -1045,7 +1085,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						void loadSkills();
 					}
 
-					if (event.event === "workflow.todo.updated" || event.event === "agent.run.snapshot") {
+					if (event.event === "agent.run.started") {
+						clearWorkflowTodoUiState();
+					} else if (event.event === "workflow.todo.updated" || event.event === "agent.run.snapshot") {
 						const snapshot: WorkflowTodoSnapshot | null = normalizeWorkflowTodoSnapshot(event.data);
 						setWorkflowTodoSnapshot(snapshot);
 						applyInitialWorkflowTodoPreference(snapshot);
@@ -1069,13 +1111,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 							setIsPlanRevising(false);
 						}
 					}
-					if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.approved") {
-						const eventPlanId: string = getPlanIdFromEvent(event);
+					if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.approved" || event.event === "plan.execution.started" || event.event === "plan.error" || event.event === "agent.run.error") {
 						setLatestPlanClarification((currentClarification: PlanClarificationState | null): PlanClarificationState | null => {
 							if (currentClarification === null) {
 								return null;
 							}
-							return eventPlanId.length === 0 || eventPlanId === currentClarification.planId ? null : currentClarification;
+							return shouldClearPlanClarificationForEvent(event, currentClarification) ? null : currentClarification;
 						});
 					}
 					if (event.event === "plan.approved" || event.event === "plan.execution.started") {
@@ -1089,7 +1130,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					}
 					if (isRunCancellationEvent(event)) {
 						const cancelledRequestId: string = getBackendEventRequestId(event);
-						finishOptimisticActiveRun(cancelledRequestId);
 						if (activeChatRequestIdRef.current === cancelledRequestId) {
 							activeChatRequestIdRef.current = null;
 						}
@@ -1131,7 +1171,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	async function handleWorkspaceSelect(workspaceId: string): Promise<void> {
 		try {
-			const workspace = await selectWorkspace(workspaceId);
+			const workspace = await selectWorkspace(workspaceId, { sessionId: activeSessionIdRef.current });
 
 			setActiveWorkspace(workspace);
 			console.info("[App] workspace selected", workspace);
@@ -1139,6 +1179,28 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			showTransientError(error instanceof Error ? error.message : "Failed to select workspace");
 			console.error("[App] select workspace failed", error);
 		}
+	}
+
+	function findKnownWorkspace(workspaceId: string): WorkspaceConfig | undefined {
+		return homeWorkspaceOptions.find((workspace: WorkspaceConfig): boolean => workspace.id === workspaceId)
+			?? bootstrapData.workspaceList.workspaces.find((workspace: WorkspaceConfig): boolean => workspace.id === workspaceId)
+			?? (activeWorkspace?.id === workspaceId ? activeWorkspace : undefined)
+			?? (homeDraft.workspace?.id === workspaceId ? homeDraft.workspace : undefined);
+	}
+
+	async function handleWorkspaceRootSelect(workspaceId: string): Promise<void> {
+		if (isNewSessionHome) {
+			await handleHomeWorkspaceSelect(workspaceId);
+			return;
+		}
+
+		const workspace: WorkspaceConfig | undefined = findKnownWorkspace(workspaceId);
+		if (workspace === undefined) {
+			showTransientError("Workspace not found");
+			return;
+		}
+
+		await handleNewWorkspaceSession(workspace);
 	}
 
 	function handleNewSession(): void {
@@ -1191,7 +1253,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		});
 
 		try {
-			const selectedWorkspace = await selectWorkspace(workspace.id);
+			const selectedWorkspace = await selectWorkspace(workspace.id, { sessionId: null });
 			if (navigationVersionRef.current !== navigationVersion || activeSessionIdRef.current !== null) {
 				return;
 			}
@@ -1232,7 +1294,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 
 		try {
-			const workspace = await selectWorkspace(workspaceId);
+			const workspace = await selectWorkspace(workspaceId, { sessionId: null });
 			if (navigationVersionRef.current !== navigationVersion || activeSessionIdRef.current !== null) {
 				return;
 			}
@@ -1274,7 +1336,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				return;
 			}
 
-			const result = await configureEnvironment({ godotProjectPath: directory });
+			const result = await configureEnvironment({ godotProjectPath: directory, sessionId: null });
 			const workspace: WorkspaceConfig | null = result.workspace;
 			if (workspace === null) {
 				throw new Error("Workspace registration did not return a workspace");
@@ -1557,7 +1619,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			return;
 		}
 
-		if (getIsSending(workbench)) {
+		if (isRunControllerActive(runState)) {
 			void messageApi.info("Model changes apply to your next message.");
 		}
 
@@ -1779,7 +1841,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				skillRefs,
 				webSearchEnabled: requestedWebSearchEnabled
 			});
-			finishOptimisticActiveRun(requestId);
 			await refreshLatestTimeline(created.id);
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to start new session";
@@ -1794,6 +1855,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					message
 				}));
 			}
+			setRunState((currentState: RunControllerState): RunControllerState => finishOptimisticRunState(currentState, requestId));
 			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 				return currentWorkbench === null
 					? currentWorkbench
@@ -1851,6 +1913,11 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			return;
 		}
 
+		if (isRunControllerActive(runState)) {
+			await handleQueueMessageSubmit(message);
+			return;
+		}
+
 		const requestId: string = createChatRequestId();
 		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
 		const chatMode: ChatMode = getChatMode(workbench);
@@ -1882,7 +1949,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				skillRefs,
 				webSearchEnabled: requestedWebSearchEnabled
 			});
-			finishOptimisticActiveRun(requestId);
 			await refreshLatestTimeline();
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to send message";
@@ -1890,6 +1956,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			if (submittedComposerTextRef.current?.requestId === requestId) {
 				submittedComposerTextRef.current = null;
 			}
+			setRunState((currentState: RunControllerState): RunControllerState => finishOptimisticRunState(currentState, requestId));
 			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 				return currentWorkbench === null
 					? currentWorkbench
@@ -1931,13 +1998,212 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 	}
 
+	async function handleQueueMessageSubmit(nextMessage: string): Promise<void> {
+		if (activeSessionId === null || workbench === null) {
+			setSessionError("Please open session first before queueing a message");
+			return;
+		}
+		const message: string = nextMessage.trim();
+		if (message.length === 0) {
+			return;
+		}
+
+		const previousWorkbench: WorkbenchSnapshot = workbench;
+		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
+		const chatMode: ChatMode = getChatMode(workbench);
+		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
+		const pendingPatch: WorkbenchPatch = mergePatch(takePendingWorkbenchPatch(), {
+			composer: { text: "" },
+			additionalContextAction: { action: "set", items: [] }
+		});
+
+		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+			return currentWorkbench === null
+				? currentWorkbench
+				: {
+					...currentWorkbench,
+					composer: {
+						...currentWorkbench.composer,
+						text: "",
+						additionalContext: []
+					}
+				};
+		});
+
+		try {
+			await sendWorkbenchPatch(pendingPatch, false);
+			const result = await addQueuedMessage({
+				text: message,
+				mode: chatMode,
+				provider: workbench.composer.provider ?? undefined,
+				model: workbench.composer.model ?? undefined,
+				additionalContext,
+				skillRefs,
+				webSearchEnabled
+			});
+			applyWorkbench(result.workbench);
+			setSessionError(null);
+		} catch (error: unknown) {
+			setWorkbench(previousWorkbench);
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to queue message";
+			setSessionError(errorMessage);
+			console.error("[App] queue message failed", error);
+		}
+	}
+
+	async function handleGuideSubmit(nextMessage: string): Promise<void> {
+		if (isNewSessionHome) {
+			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
+				...currentDraft,
+				message: nextMessage
+			}));
+			void messageApi.info("Guides can be added after a session starts.");
+			return;
+		}
+		if (activeSessionId === null || workbench === null) {
+			setSessionError("Please open session first before adding a guide");
+			return;
+		}
+		const message: string = nextMessage.trim();
+		if (message.length === 0) {
+			return;
+		}
+
+		const previousWorkbench: WorkbenchSnapshot = workbench;
+		const pendingPatch: WorkbenchPatch = mergePatch(takePendingWorkbenchPatch(), {
+			composer: { text: "" }
+		});
+		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+			return currentWorkbench === null
+				? currentWorkbench
+				: {
+					...currentWorkbench,
+					composer: {
+						...currentWorkbench.composer,
+						text: ""
+					}
+				};
+		});
+
+		try {
+			await sendWorkbenchPatch(pendingPatch, false);
+			const result = await addGuide(message, getRunControllerRequestId(runState) ?? undefined);
+			applyWorkbench(result.workbench);
+			setSessionError(null);
+		} catch (error: unknown) {
+			setWorkbench(previousWorkbench);
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to add guide";
+			setSessionError(errorMessage);
+			console.error("[App] add guide failed", error);
+		}
+	}
+
+	async function handleQueueMessageRemove(queueId: number): Promise<void> {
+		if (workbench === null) {
+			return;
+		}
+		const previousWorkbench: WorkbenchSnapshot = workbench;
+		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+			return currentWorkbench === null
+				? currentWorkbench
+				: {
+					...currentWorkbench,
+					messageQueue: currentWorkbench.messageQueue.filter((item: MessageQueueItem): boolean => item.id !== queueId)
+				};
+		});
+		try {
+			const result = await removeQueuedMessage(queueId);
+			applyWorkbench(result.workbench);
+		} catch (error: unknown) {
+			setWorkbench(previousWorkbench);
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to remove queued message";
+			setSessionError(errorMessage);
+			console.error("[App] remove queued message failed", error);
+		}
+	}
+
+	async function handleQueueMessageReorder(queueIds: number[]): Promise<void> {
+		if (workbench === null) {
+			return;
+		}
+		const previousWorkbench: WorkbenchSnapshot = workbench;
+		const pendingItemsById: Map<number, MessageQueueItem> = new Map(
+			workbench.messageQueue
+				.filter((item: MessageQueueItem): boolean => item.status === "pending")
+				.map((item: MessageQueueItem): [number, MessageQueueItem] => [item.id, item])
+		);
+		let pendingIndex: number = 0;
+		const nextPendingItems: MessageQueueItem[] = queueIds.map((queueId: number): MessageQueueItem => pendingItemsById.get(queueId) as MessageQueueItem);
+		setWorkbench({
+			...workbench,
+			messageQueue: workbench.messageQueue.map((item: MessageQueueItem): MessageQueueItem => {
+				if (item.status !== "pending") {
+					return item;
+				}
+				const nextItem: MessageQueueItem = nextPendingItems[pendingIndex] ?? item;
+				pendingIndex += 1;
+				return nextItem;
+			})
+		});
+		try {
+			const result = await reorderQueuedMessages(queueIds);
+			applyWorkbench(result.workbench);
+		} catch (error: unknown) {
+			setWorkbench(previousWorkbench);
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to reorder queued messages";
+			setSessionError(errorMessage);
+			console.error("[App] reorder queued messages failed", error);
+		}
+	}
+
+	async function handleGuideDelete(guideId: string): Promise<void> {
+		if (workbench === null) {
+			return;
+		}
+		const previousWorkbench: WorkbenchSnapshot = workbench;
+		setWorkbench({
+			...workbench,
+			pendingGuides: workbench.pendingGuides.filter((guide: PendingGuide): boolean => guide.guideId !== guideId)
+		});
+		try {
+			const result = await deleteGuide(guideId);
+			applyWorkbench(result.workbench);
+		} catch (error: unknown) {
+			setWorkbench(previousWorkbench);
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to delete guide";
+			setSessionError(errorMessage);
+			console.error("[App] delete guide failed", error);
+		}
+	}
+
+	async function handleGuideReorder(guideIds: string[]): Promise<void> {
+		if (workbench === null) {
+			return;
+		}
+		const previousWorkbench: WorkbenchSnapshot = workbench;
+		const guidesById: Map<string, PendingGuide> = new Map(workbench.pendingGuides.map((guide: PendingGuide): [string, PendingGuide] => [guide.guideId, guide]));
+		setWorkbench({
+			...workbench,
+			pendingGuides: guideIds.map((guideId: string): PendingGuide => guidesById.get(guideId) as PendingGuide)
+		});
+		try {
+			const result = await reorderGuides(guideIds);
+			applyWorkbench(result.workbench);
+		} catch (error: unknown) {
+			setWorkbench(previousWorkbench);
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to reorder guides";
+			setSessionError(errorMessage);
+			console.error("[App] reorder guides failed", error);
+		}
+	}
+
 	async function handleRetryFromUserMessage(payload: RetryUserMessagePayload): Promise<boolean> {
 		if (activeSessionId === null || workbench === null) {
 			setSessionError("请先打开一个会话再重新发送消息");
 			return false;
 		}
 
-		if (getIsSending(workbench) || isSessionLoading) {
+		if (isRunControllerActive(runState) || isSessionLoading) {
 			return false;
 		}
 
@@ -1951,7 +2217,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
 		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
-		const previousTimelinePage: TimelinePageState = timelinePage;
 		const requestedWebSearchEnabled: boolean = webSearchEnabled;
 
 		try {
@@ -1972,12 +2237,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				skillRefs,
 				webSearchEnabled: requestedWebSearchEnabled
 			});
-			finishOptimisticActiveRun(requestId);
 			await refreshLatestTimeline();
 			return true;
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to retry message";
 
+			setRunState((currentState: RunControllerState): RunControllerState => finishOptimisticRunState(currentState, requestId));
 			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 				return currentWorkbench === null
 					? currentWorkbench
@@ -1990,7 +2255,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			});
 			setSessionError(errorMessage);
 			showWebSearchErrorIfRequested(requestedWebSearchEnabled, errorMessage);
-			setTimelinePage(previousTimelinePage);
+			await refreshLatestTimeline().catch((refreshError: unknown): void => {
+				console.error("[App] refresh timeline after retry failure failed", refreshError);
+			});
 			console.error("[App] retry message failed", error);
 			return false;
 		} finally {
@@ -2001,7 +2268,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	async function handleComposerCancel(): Promise<void> {
-		const requestId: string | null = activeChatRequestIdRef.current ?? getActiveRunRequestId(workbench);
+		const requestId: string | null = getRunControllerRequestId(runState);
 		if (requestId === null) {
 			return;
 		}
@@ -2010,7 +2277,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			activeChatRequestIdRef.current = requestId;
 			const result = await cancelChatMessage(requestId);
 			if (result.cancelled) {
-				finishOptimisticActiveRun(result.requestId);
 				if (activeChatRequestIdRef.current === result.requestId) {
 					activeChatRequestIdRef.current = null;
 				}
@@ -2036,8 +2302,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			return;
 		}
 
+		const activeOptimisticRequestId: string | null = activeChatRequestIdRef.current ?? getRunControllerRequestId(runState);
 		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
-			return mergeOptimisticUserBlocks(currentPage, createTimelinePageFromTimelineResult(timeline));
+			return mergeOptimisticUserBlocks(currentPage, createTimelinePageFromTimelineResult(timeline), activeOptimisticRequestId);
 		});
 		setLatestPlanClarification(timeline.latestPlanClarification);
 		setLatestPlanApproval(timeline.latestPlanApproval);
@@ -2092,10 +2359,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setSessionError(message);
 			console.error("[App] dismiss workflow todo failed", error);
 		}
-	}
-
-	function handleWorkflowTodoCollapseChange(collapsed: boolean): void {
-		void persistSessionUiMetadata({ workflowTodoCollapsed: collapsed });
 	}
 
 	const handleLoadMoreBefore = useCallback((): void => {
@@ -2337,13 +2600,15 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const composerMessage: string = isNewSessionHome ? homeDraft.message : workbench?.composer.text ?? "";
 	const composerMode: ChatMode = isNewSessionHome ? homeDraft.chatMode : getChatMode(workbench);
 	const composerContextItems: AdditionalContextItem[] = isNewSessionHome ? [] : workbench?.composer.additionalContext ?? [];
+	const composerMessageQueue: MessageQueueItem[] = isNewSessionHome ? [] : workbench?.messageQueue ?? [];
+	const composerPendingGuides: PendingGuide[] = isNewSessionHome ? [] : workbench?.pendingGuides ?? [];
 	const currentSessionWorkspaceId: string | null = activeSessionMetadata?.workspaceId ?? null;
 	const displayedWorkspace: WorkspaceConfig | null = isNewSessionHome
 		? homeDraft.workspace
 		: currentSessionWorkspaceId === null
 			? null
 			: activeWorkspace;
-	const composerIsSending: boolean = getIsSending(workbench) || isHomeSubmitting;
+	const composerIsSending: boolean = isRunControllerActive(runState) || isHomeSubmitting;
 	const handleWebSearchEnabledChange = (enabled: boolean): void => {
 		setWebSearchEnabled(enabled);
 		if (!isNewSessionHome && activeSessionId !== null) {
@@ -2377,27 +2642,37 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			return;
 		}
 
-		const currentClarificationKey: string = createPlanClarificationKey(clarification);
-		try {
-			setIsPlanClarificationSubmitting(true);
-			setPlanClarificationError(null);
-			setSuppressedPlanClarificationKey(currentClarificationKey);
-			const result: PlanResult = await submitPlanClarification(clarification.planId, trimmedReply);
-			const nextClarification: PlanClarificationState | null = result.status === "clarification_required"
-				? normalizePlanClarification(result)
-				: null;
+	const currentClarificationKey: string = createPlanClarificationKey(clarification);
+	const runRequestId: string = clarification.requestId;
+	try {
+		setIsPlanClarificationSubmitting(true);
+		setPlanClarificationError(null);
+		setSuppressedPlanClarificationKey(currentClarificationKey);
+		activeChatRequestIdRef.current = runRequestId;
+		applyOptimisticActiveRun(runRequestId, false, false);
+		const result: PlanResult = await submitPlanClarification(clarification.planId, trimmedReply);
+		if ((result as unknown as { cancelled?: unknown }).cancelled === true) {
+			return;
+		}
+		const nextClarification: PlanClarificationState | null = result.status === "clarification_required"
+			? normalizePlanClarification(result)
+			: null;
 			setLatestPlanClarification(nextClarification);
 			setLatestPlanApproval(getPlanApprovalFromResult(result));
 			setSuppressedPlanClarificationKey(nextClarification === null ? null : currentClarificationKey);
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to submit clarification";
 			setPlanClarificationError(errorMessage);
-			setSessionError(errorMessage);
-			console.error("[App] submit plan clarification failed", error);
-		} finally {
-			setIsPlanClarificationSubmitting(false);
+		setSessionError(errorMessage);
+		console.error("[App] submit plan clarification failed", error);
+	} finally {
+		finishOptimisticActiveRun(runRequestId);
+		if (activeChatRequestIdRef.current === runRequestId) {
+			activeChatRequestIdRef.current = null;
 		}
+		setIsPlanClarificationSubmitting(false);
 	}
+}
 
 	async function handlePlanApprove(planId: string): Promise<void> {
 		if (latestPlanApproval === null || planId !== latestPlanApproval.planId || isPlanApproving || isPlanRevising) {
@@ -2432,25 +2707,35 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const trimmedFeedback: string = feedback.trim();
 		if (latestPlanApproval === null || planId !== latestPlanApproval.planId || trimmedFeedback.length === 0 || isPlanApproving || isPlanRevising) {
 			return;
-		}
+	}
 
-		try {
-			setIsPlanRevising(true);
-			setPlanApprovalError(null);
-			const result: PlanResult = await revisePlan(planId, trimmedFeedback);
-			const nextPlanApproval: PlanApprovalState | null = getPlanApprovalFromResult(result);
-			setLatestPlanApproval(nextPlanApproval);
-			if (result.status === "clarification_required") {
+	const runRequestId: string = latestPlanApproval.requestId;
+	try {
+		setIsPlanRevising(true);
+		setPlanApprovalError(null);
+		activeChatRequestIdRef.current = runRequestId;
+		applyOptimisticActiveRun(runRequestId, false, false);
+		const result: PlanResult = await revisePlan(planId, trimmedFeedback);
+		if ((result as unknown as { cancelled?: unknown }).cancelled === true) {
+			return;
+		}
+		const nextPlanApproval: PlanApprovalState | null = getPlanApprovalFromResult(result);
+		setLatestPlanApproval(nextPlanApproval);
+		if (result.status === "clarification_required") {
 				setLatestPlanClarification(normalizePlanClarification(result));
 			}
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to revise plan";
-			setPlanApprovalError(errorMessage);
-			console.error("[App] revise plan failed", error);
-		} finally {
-			setIsPlanRevising(false);
+		setPlanApprovalError(errorMessage);
+		console.error("[App] revise plan failed", error);
+	} finally {
+		finishOptimisticActiveRun(runRequestId);
+		if (activeChatRequestIdRef.current === runRequestId) {
+			activeChatRequestIdRef.current = null;
 		}
+		setIsPlanRevising(false);
 	}
+}
 
 	return (
 		<main className={`${styles.shell} ${activePage === "agent" ? styles.agentShell : styles.pageShell}`}>
@@ -2512,6 +2797,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					selectedModelId={selectedModelId}
 					message={composerMessage}
 					contextItems={composerContextItems}
+					messageQueue={composerMessageQueue}
+					pendingGuides={composerPendingGuides}
 					workflowTodoSnapshot={workflowTodoSnapshot}
 					workflowTodoCollapsed={activeSessionMetadata?.workflowTodoCollapsed === true}
 					mode={composerMode}
@@ -2552,7 +2839,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 					}}
 					onWorkspaceSelect={(workspaceId: string): void => {
-						void (isNewSessionHome ? handleHomeWorkspaceSelect(workspaceId) : handleWorkspaceSelect(workspaceId));
+						void handleWorkspaceRootSelect(workspaceId);
 					}}
 					onHomeWorkspaceSelect={(workspaceId: string): void => {
 						void handleHomeWorkspaceSelect(workspaceId);
@@ -2632,10 +2919,24 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					onSubmit={(message: string): void => {
 						void handleComposerSubmit(message);
 					}}
+					onGuideSubmit={(message: string): void => {
+						void handleGuideSubmit(message);
+					}}
+					onQueueMessageRemove={(queueId: number): void => {
+						void handleQueueMessageRemove(queueId);
+					}}
+					onQueueMessageReorder={(queueIds: number[]): void => {
+						void handleQueueMessageReorder(queueIds);
+					}}
+					onGuideDelete={(guideId: string): void => {
+						void handleGuideDelete(guideId);
+					}}
+					onGuideReorder={(guideIds: string[]): void => {
+						void handleGuideReorder(guideIds);
+					}}
 					onWorkflowTodoDismiss={(snapshot: WorkflowTodoSnapshot): void => {
 						void handleWorkflowTodoDismiss(snapshot);
 					}}
-					onWorkflowTodoCollapseChange={handleWorkflowTodoCollapseChange}
 					onCompletionOpen={handleCompletionOpen}
 				/>
 			) : activePage === "settings" ? (
