@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../helpers/repo-paths";
 
 describe("BootSplash", () => {
-	const mainSource: string = readRepoFile("src", "renderer", "src", "main.tsx");
+	const studioThemeRootSource: string = readRepoFile("src", "renderer", "src", "app", "StudioThemeRoot.tsx");
 	const splashSource: string = readRepoFile("src", "renderer", "src", "app", "BootSplash.tsx");
 	const bootstrapSource: string = readRepoFile("src", "renderer", "src", "app", "bootstrap.ts");
 	const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
@@ -12,8 +12,8 @@ describe("BootSplash", () => {
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 
 	it("renders BootSplash before App and passes bootstrap data into App", () => {
-		expect(mainSource).toContain("<BootSplash onReady={handleBootstrapReady} />");
-		expect(mainSource).toContain("<App bootstrapData={bootstrapData} />");
+		expect(studioThemeRootSource).toContain("<BootSplash onReady={handleBootstrapReady} />");
+		expect(studioThemeRootSource).toContain("<App bootstrapData={bootstrapData} />");
 		expect(appSource).toContain("bootstrapData: BootstrapData");
 		expect(appSource).toContain("createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection)");
 		expect(agentSource).toContain("initialWorkspaces={initialWorkspaces}");

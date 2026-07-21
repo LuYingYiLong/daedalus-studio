@@ -879,7 +879,13 @@ function AgentPage({
 			{messageContextHolder}
 			<aside className={styles.workspaceSidebar}>
 				<header className={styles.workspaceHeader}>
-					<Button type="text" block={true} className={styles.createSessionButton} onClick={onNewSession}>
+					<Button
+						type="text"
+						block
+						icon={<Icon name="add" />}
+						className={styles.createSessionButton}
+						onClick={onNewSession}
+					>
 						New session
 					</Button>
 				</header>

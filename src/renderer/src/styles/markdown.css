@@ -134,7 +134,7 @@
 }
 
 .markdown-body th {
-	background: var(--ds-surface-elevated);
+	background: var(--ds-border);
 	font-weight: 650;
 }
 

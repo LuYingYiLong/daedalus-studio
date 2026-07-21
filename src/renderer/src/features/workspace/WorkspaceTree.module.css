@@ -45,13 +45,12 @@
 	width: 100%;
 	min-width: 0;
 	margin: 4px 0px !important;
+	overflow: visible;
 }
 
 .workspaceMenu :global(.ant-menu-title-content) {
 	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	overflow: visible;
 }
 
 .workspaceMenu :global(.ant-menu-item-icon) {
@@ -98,7 +97,7 @@
 
 .sessionMenuItem {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) 22px;
+	grid-template-columns: minmax(0, 1fr) 28px;
 	align-items: center;
 	width: 100%;
 	min-width: 0;
@@ -113,6 +112,10 @@
 .workspaceActionButton,
 .archiveButton {
 	color: var(--ant-color-text-tertiary);
+}
+
+.archiveButton {
+	justify-self: end;
 }
 
 .workspaceMenu :global(.ant-menu-submenu-title:hover) .workspaceActions,

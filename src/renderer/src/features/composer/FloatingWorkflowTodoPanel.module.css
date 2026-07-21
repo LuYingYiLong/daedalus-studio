@@ -11,7 +11,7 @@
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
 	background: var(--ds-surface-elevated);
-	box-shadow: 0 8px 16px #0000000a;
+	box-shadow: 0 8px 16px var(--ds-box-shadow);
 	transform: translateX(-50%);
 	user-select: none;
 }

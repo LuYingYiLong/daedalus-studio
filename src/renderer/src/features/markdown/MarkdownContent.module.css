@@ -31,7 +31,7 @@
 	display: inline-flex;
 	flex: 0 0 auto;
 	align-items: center;
-	gap: 2px;
+	gap: var(--ds-space-1);
 	color: var(--ds-text-muted);
 }
 
