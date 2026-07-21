@@ -58,13 +58,13 @@ function createArchivedSessionMenuItem(session: SessionMetadata, options: Create
 						<Button
 							type="text"
 							size="small"
-							shape="circle"
 							aria-label={`Unarchive ${session.title}`}
-							icon={<Icon name="unarchive" width={16} height={16} />}
 							loading={isRestoring}
 							disabled={options.busySessionId !== null && !isRestoring}
 							onClick={(event: MouseEvent<HTMLElement>): void => options.onRestore(session, event)}
-						/>
+						>
+							Unarchive
+						</Button>
 					</Tooltip>
 					<Popconfirm
 						title="Delete archived session?"
