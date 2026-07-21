@@ -19,7 +19,7 @@ export const appNavItems: AppNavItem[] = [
 	{
 		key: "agent",
 		label: "Agent",
-		icon: "agent"
+		icon: "chat"
 	},
 	{
 		key: "settings",

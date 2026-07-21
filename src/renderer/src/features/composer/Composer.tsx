@@ -1007,7 +1007,7 @@ function Composer({
 							<Button
 								type="text"
 								shape="circle"
-								icon={<Icon name={mode === "plan" ? "todo" : mode} className={styles.composerActionIcon} />}
+								icon={<Icon name={mode === "plan" ? "todo" : mode} />}
 							/>
 						</Dropdown>
 					</Tooltip>
@@ -1027,7 +1027,6 @@ function Composer({
 								icon={(
 									<Icon
 										name={approvalMode === "full-trust" ? "warning" : approvalMode === "auto-safe" ? "shield" : "hand"}
-										className={styles.composerActionIcon}
 									/>
 								)}
 								className={styles.approvalModeButton}
@@ -1066,7 +1065,7 @@ function Composer({
 						<Button
 							type="text"
 							shape="circle"
-							icon={<Icon name={isSending && draftMessage.trim().length === 0 ? "stop" : "send"} className={styles.composerSendIcon} />}
+							icon={<Icon name={isSending && draftMessage.trim().length === 0 ? "stop" : "send"} />}
 							className={styles.composerSendButton}
 							disabled={!isSending && draftMessage.trim().length === 0}
 							onClick={submitMessage}

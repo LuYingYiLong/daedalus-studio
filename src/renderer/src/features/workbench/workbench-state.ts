@@ -25,6 +25,8 @@ export const emptyTimelinePage: TimelinePageState = {
 	hasMoreAfter: false
 };
 
+export const MAX_TIMELINE_WINDOW_BLOCKS: number = 160;
+
 export const initialWorkbenchSessionState: WorkbenchSessionState = {
 	activeSessionId: null,
 	workbench: null,
@@ -619,15 +621,18 @@ export function mergeTimelineBefore(current: TimelinePageState, page: TimelinePa
 	}
 
 	const knownIds: Set<string> = new Set(page.blocks.map((block: TimelineBlock): string => block.id));
+	const mergedBlocks: TimelineBlock[] = [
+		...page.blocks,
+		...current.blocks.filter((block: TimelineBlock): boolean => !knownIds.has(block.id))
+	];
+	const trimmedBlocks: TimelineBlock[] = mergedBlocks.slice(0, MAX_TIMELINE_WINDOW_BLOCKS);
+	const trimmedAfterCount: number = Math.max(0, mergedBlocks.length - trimmedBlocks.length);
 
 	return {
 		...page,
 		sessionId: current.sessionId ?? page.sessionId,
-		blocks: [
-			...page.blocks,
-			...current.blocks.filter((block: TimelineBlock): boolean => !knownIds.has(block.id))
-		],
-		hasMoreAfter: current.hasMoreAfter,
+		blocks: trimmedBlocks,
+		hasMoreAfter: current.hasMoreAfter || trimmedAfterCount > 0,
 		blockCount: Math.max(current.blockCount, page.blockCount)
 	};
 }
@@ -642,16 +647,21 @@ export function mergeTimelineAfter(current: TimelinePageState, page: TimelinePag
 	}
 
 	const knownIds: Set<string> = new Set(current.blocks.map((block: TimelineBlock): string => block.id));
+	const mergedBlocks: TimelineBlock[] = [
+		...current.blocks,
+		...page.blocks.filter((block: TimelineBlock): boolean => !knownIds.has(block.id))
+	];
+	const trimmedBeforeCount: number = Math.max(0, mergedBlocks.length - MAX_TIMELINE_WINDOW_BLOCKS);
+	const trimmedBlocks: TimelineBlock[] = trimmedBeforeCount > 0
+		? mergedBlocks.slice(trimmedBeforeCount)
+		: mergedBlocks;
 
 	return {
 		...page,
 		sessionId: current.sessionId ?? page.sessionId,
-		blockOffset: current.blockOffset,
-		blocks: [
-			...current.blocks,
-			...page.blocks.filter((block: TimelineBlock): boolean => !knownIds.has(block.id))
-		],
-		hasMoreBefore: current.hasMoreBefore,
+		blockOffset: current.blockOffset + trimmedBeforeCount,
+		blocks: trimmedBlocks,
+		hasMoreBefore: current.hasMoreBefore || trimmedBeforeCount > 0,
 		blockCount: Math.max(current.blockCount, page.blockCount)
 	};
 }

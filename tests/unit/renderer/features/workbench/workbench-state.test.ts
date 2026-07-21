@@ -5,6 +5,7 @@ import {
 	applyBackendEventToTimeline,
 	applyWorkbenchSnapshot,
 	createTimelinePageFromTimelineResult,
+	MAX_TIMELINE_WINDOW_BLOCKS,
 	mergeTimelineAfter,
 	mergeTimelineBefore
 } from "@/features/workbench/workbench-state";
@@ -33,6 +34,16 @@ function createWorkbench(revision: number, text: string): WorkbenchSnapshot {
 		pendingToolBudget: null,
 		nextStepHints: { hints: [] },
 		activeSelection: { workspaceId: null }
+	};
+}
+
+function createUserBlock(id: string): TimelineBlock {
+	return {
+		id,
+		type: "user",
+		requestId: id,
+		content: id,
+		sentAtUtc: "2026-01-01T00:00:00.000Z"
 	};
 }
 
@@ -671,5 +682,105 @@ describe("workbench-state", () => {
 
 		expect(mergeTimelineBefore(current, previous).blocks.map((block) => block.id)).toEqual(["a", "b", "c"]);
 		expect(mergeTimelineAfter(current, next).blocks.map((block) => block.id)).toEqual(["b", "c"]);
+	});
+
+	it("trims invisible newer blocks when loading older timeline pages", () => {
+		const currentBlocks: TimelineBlock[] = Array.from(
+			{ length: MAX_TIMELINE_WINDOW_BLOCKS },
+			(_, index: number): TimelineBlock => createUserBlock(`current-${index}`)
+		);
+		const previousBlocks: TimelineBlock[] = Array.from(
+			{ length: 80 },
+			(_, index: number): TimelineBlock => createUserBlock(`previous-${index}`)
+		);
+		const current = createTimelinePageFromTimelineResult({
+			timeline: true,
+			sessionId: "session-a",
+			blockCount: 320,
+			blockOffset: 80,
+			eventCount: 0,
+			limit: MAX_TIMELINE_WINDOW_BLOCKS,
+			hasMoreBefore: true,
+			hasMoreAfter: false,
+			timelineBlocks: currentBlocks,
+			latestWorkflowSnapshot: null,
+			latestAgentSnapshot: null,
+			latestPlanClarification: null,
+			latestPlanApproval: null
+		});
+		const previous = createTimelinePageFromTimelineResult({
+			timeline: true,
+			sessionId: "session-a",
+			blockCount: 320,
+			blockOffset: 0,
+			eventCount: 0,
+			limit: 80,
+			hasMoreBefore: false,
+			hasMoreAfter: true,
+			timelineBlocks: previousBlocks,
+			latestWorkflowSnapshot: null,
+			latestAgentSnapshot: null,
+			latestPlanClarification: null,
+			latestPlanApproval: null
+		});
+
+		const merged = mergeTimelineBefore(current, previous);
+
+		expect(merged.blocks).toHaveLength(MAX_TIMELINE_WINDOW_BLOCKS);
+		expect(merged.blockOffset).toBe(0);
+		expect(merged.hasMoreBefore).toBe(false);
+		expect(merged.hasMoreAfter).toBe(true);
+		expect(merged.blocks[0]?.id).toBe("previous-0");
+		expect(merged.blocks.at(-1)?.id).toBe(`current-${MAX_TIMELINE_WINDOW_BLOCKS - previousBlocks.length - 1}`);
+	});
+
+	it("trims invisible older blocks when loading newer timeline pages", () => {
+		const currentBlocks: TimelineBlock[] = Array.from(
+			{ length: MAX_TIMELINE_WINDOW_BLOCKS },
+			(_, index: number): TimelineBlock => createUserBlock(`current-${index}`)
+		);
+		const nextBlocks: TimelineBlock[] = Array.from(
+			{ length: 80 },
+			(_, index: number): TimelineBlock => createUserBlock(`next-${index}`)
+		);
+		const current = createTimelinePageFromTimelineResult({
+			timeline: true,
+			sessionId: "session-a",
+			blockCount: 320,
+			blockOffset: 0,
+			eventCount: 0,
+			limit: MAX_TIMELINE_WINDOW_BLOCKS,
+			hasMoreBefore: false,
+			hasMoreAfter: true,
+			timelineBlocks: currentBlocks,
+			latestWorkflowSnapshot: null,
+			latestAgentSnapshot: null,
+			latestPlanClarification: null,
+			latestPlanApproval: null
+		});
+		const next = createTimelinePageFromTimelineResult({
+			timeline: true,
+			sessionId: "session-a",
+			blockCount: 320,
+			blockOffset: MAX_TIMELINE_WINDOW_BLOCKS,
+			eventCount: 0,
+			limit: 80,
+			hasMoreBefore: true,
+			hasMoreAfter: false,
+			timelineBlocks: nextBlocks,
+			latestWorkflowSnapshot: null,
+			latestAgentSnapshot: null,
+			latestPlanClarification: null,
+			latestPlanApproval: null
+		});
+
+		const merged = mergeTimelineAfter(current, next);
+
+		expect(merged.blocks).toHaveLength(MAX_TIMELINE_WINDOW_BLOCKS);
+		expect(merged.blockOffset).toBe(80);
+		expect(merged.hasMoreBefore).toBe(true);
+		expect(merged.hasMoreAfter).toBe(false);
+		expect(merged.blocks[0]?.id).toBe("current-80");
+		expect(merged.blocks.at(-1)?.id).toBe("next-79");
 	});
 });

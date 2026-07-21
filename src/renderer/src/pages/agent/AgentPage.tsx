@@ -69,10 +69,6 @@ function getWorkspaceLaunchIcon(targetId: WorkspaceLaunchTargetId): React.ReactN
 	return <Icon name="external_link" />;
 }
 
-function formatDiffCount(additions: number, deletions: number): string {
-	return `+${additions} -${deletions}`;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -426,8 +422,11 @@ function AgentPage({
 								<span className={styles.diffLabel}>
 									Diff
 								</span>
-								<span className={styles.diffCount}>
-									{formatDiffCount(summaryOverview.envInfo.additions, summaryOverview.envInfo.deletions)}
+								<span className={styles.additions}>
+									{`+${summaryOverview.envInfo.additions}`}
+								</span>
+								<span className={styles.deletions}>
+									{`-${summaryOverview.envInfo.deletions}`}
 								</span>
 							</span>
 						</Button>

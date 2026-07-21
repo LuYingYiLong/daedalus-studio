@@ -192,7 +192,8 @@
 
 .diffRow {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
+	grid-template-columns: minmax(0, 1fr) auto auto;
+	gap: 4px;
 	width: 100%;
 }
 
@@ -203,8 +204,12 @@
 	min-width: 0;
 }
 
-.diffCount {
-	display: grid;
+.additions {
+	color: var(--ds-git-addition);
+}
+
+.deletions {
+	color: var(--ds-git-deletion);
 }
 
 .planList {
@@ -224,7 +229,6 @@
 
 .summarySection {
 	display: grid;
-	gap: 4px;
 }
 
 .summaryLoading,
