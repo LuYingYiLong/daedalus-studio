@@ -685,6 +685,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [workbench, setWorkbench] = useState<WorkbenchSnapshot | null>(null);
 	const [sessionError, setSessionError] = useState<string | null>(null);
 	const [isSessionLoading, setIsSessionLoading] = useState(false);
+	const [isTimelineLoadingBefore, setIsTimelineLoadingBefore] = useState<boolean>(false);
+	const [isTimelineLoadingAfter, setIsTimelineLoadingAfter] = useState<boolean>(false);
 	const [providerModelSelection, setProviderModelSelection] = useState<ProviderModelSelection | null>(bootstrapData.providerModelSelection);
 	const [slashCommands, setSlashCommands] = useState<SlashCommandDefinition[]>(() => bootstrapData.slashCommands);
 	const [skills, setSkills] = useState<SkillSummary[]>(() => bootstrapData.skills);
@@ -1497,6 +1499,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setActiveSessionMetadata(session);
 			setActiveWorkspace(null);
 			setTimelinePage(emptyTimelinePage);
+			setIsTimelineLoadingBefore(false);
+			setIsTimelineLoadingAfter(false);
 			setWorkbench(null);
 			setWorkflowTodoSnapshot(null);
 			rememberLoadedWorkflowTodo(null);
@@ -1539,6 +1543,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setActiveSessionId(null);
 		setActiveSessionMetadata(null);
 		setTimelinePage(emptyTimelinePage);
+		setIsTimelineLoadingBefore(false);
+		setIsTimelineLoadingAfter(false);
 		setWorkbench(null);
 		setWorkflowTodoSnapshot(null);
 		rememberLoadedWorkflowTodo(null);
@@ -2494,6 +2500,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 
 		isTimelinePageLoadingRef.current = true;
+		setIsTimelineLoadingBefore(true);
 		const requestedSessionId: string = activeSessionId;
 		void fetchSessionTimelineBefore(activeSessionId, timelinePage.blockOffset)
 			.then((result: SessionTimelineResult): void => {
@@ -2514,6 +2521,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			})
 			.finally((): void => {
 				isTimelinePageLoadingRef.current = false;
+				setIsTimelineLoadingBefore(false);
 			});
 	}, [activeSessionId, timelinePage.blockOffset, timelinePage.hasMoreBefore]);
 
@@ -2523,6 +2531,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 
 		isTimelinePageLoadingRef.current = true;
+		setIsTimelineLoadingAfter(true);
 		const requestedSessionId: string = activeSessionId;
 		void fetchSessionTimelineAfter(activeSessionId, timelinePage.blockOffset + timelinePage.blocks.length)
 			.then((result: SessionTimelineResult): void => {
@@ -2543,6 +2552,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			})
 			.finally((): void => {
 				isTimelinePageLoadingRef.current = false;
+				setIsTimelineLoadingAfter(false);
 			});
 	}, [activeSessionId, timelinePage.blockOffset, timelinePage.blocks.length, timelinePage.hasMoreAfter]);
 
@@ -2920,6 +2930,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					sessionError={sessionError}
 					hasMoreBefore={timelinePage.hasMoreBefore}
 					hasMoreAfter={timelinePage.hasMoreAfter}
+					isLoadingMoreBefore={isTimelineLoadingBefore}
+					isLoadingMoreAfter={isTimelineLoadingAfter}
 					initialScrollToBottomKey={initialScrollToBottomKey}
 					retryDisabled={composerIsSending || isSessionLoading}
 					activeRetryRequestId={activeRetryRequestId}

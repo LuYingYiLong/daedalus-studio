@@ -12,10 +12,24 @@
 	margin: 0 auto;
 }
 
+.messageListContentLoading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 100%;
+}
+
 .loadingIcon {
-	width: 100%;
-	height: 100%;
 	display: flex;
 	justify-content: center;
 	align-items: center;
+}
+
+.pageLoadingIndicator {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 32px;
+	padding: var(--ds-space-1) 0;
+	pointer-events: none;
 }

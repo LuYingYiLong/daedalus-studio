@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Alert, Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip, Checkbox } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
@@ -190,6 +190,8 @@ type AgentPageProps = {
 	sessionError: string | null;
 	hasMoreBefore: boolean;
 	hasMoreAfter: boolean;
+	isLoadingMoreBefore: boolean;
+	isLoadingMoreAfter: boolean;
 	initialScrollToBottomKey: string;
 	retryDisabled: boolean;
 	activeRetryRequestId: string | null;
@@ -291,6 +293,8 @@ function AgentPage({
 	sessionError,
 	hasMoreBefore,
 	hasMoreAfter,
+	isLoadingMoreBefore,
+	isLoadingMoreAfter,
 	initialScrollToBottomKey,
 	retryDisabled,
 	activeRetryRequestId,
@@ -404,8 +408,9 @@ function AgentPage({
 	const [includeUnstagedChanges, setIncludeUnstagedChanges] = useState<boolean>(true);
 	const [commitOperation, setCommitOperation] = useState<CommitOrPushAction | null>(null);
 	const [commitError, setCommitError] = useState<string | null>(null);
-	const [messageListAwayFromBottom, setMessageListAwayFromBottom] = useState<boolean>(false);
 	const messageListRef = useRef<MessageListHandle | null>(null);
+	const scrollToBottomButtonRef = useRef<HTMLButtonElement | null>(null);
+	const scrollToBottomButtonVisibleRef = useRef<boolean>(false);
 	const workspaceForActions: WorkspaceConfig | null = activeWorkspace ?? (isHome ? homeWorkspace : null);
 	const showDockControls: boolean = !isHome || workspaceForActions !== null;
 	const showWorkspaceLaunchControls: boolean = workspaceForActions !== null;
@@ -642,10 +647,6 @@ function AgentPage({
 		setCommitOperation(null);
 	}, [activeSessionId]);
 
-	useEffect((): void => {
-		setMessageListAwayFromBottom(false);
-	}, [activeSessionId, isHome]);
-
 	const loadSummaryOverview = useCallback(async (planLimit: number = SUMMARY_PREVIEW_LIMIT, sourceLimit: number = SUMMARY_PREVIEW_LIMIT): Promise<SessionOverviewResult | null> => {
 		if (activeSessionId === null) {
 			return null;
@@ -793,10 +794,30 @@ function AgentPage({
 		void openWorkspaceLaunchTarget(targetId);
 	};
 
+	const setScrollToBottomButtonVisible = useCallback((visible: boolean): void => {
+		scrollToBottomButtonVisibleRef.current = visible;
+		const button: HTMLButtonElement | null = scrollToBottomButtonRef.current;
+		if (button === null) {
+			return;
+		}
+
+		button.classList.toggle(styles.scrollToBottomButtonHidden, !visible);
+		button.tabIndex = visible ? 0 : -1;
+		button.setAttribute("aria-hidden", visible ? "false" : "true");
+	}, []);
+
+	useLayoutEffect((): void => {
+		setScrollToBottomButtonVisible(scrollToBottomButtonVisibleRef.current);
+	});
+
+	useLayoutEffect((): void => {
+		setScrollToBottomButtonVisible(false);
+	}, [activeSessionId, isHome, setScrollToBottomButtonVisible]);
+
 	const scrollMessageListToBottom = useCallback((): void => {
 		messageListRef.current?.scrollToBottom("smooth");
-		setMessageListAwayFromBottom(false);
-	}, []);
+		setScrollToBottomButtonVisible(false);
+	}, [setScrollToBottomButtonVisible]);
 
 	const requestSideDockKind = useCallback((kind: DockPanelKind): void => {
 		dockActivationRequestIdRef.current += 1;
@@ -1130,6 +1151,8 @@ function AgentPage({
 											errorMessage={sessionError}
 											hasMoreBefore={hasMoreBefore}
 											hasMoreAfter={hasMoreAfter}
+											isLoadingMoreBefore={isLoadingMoreBefore}
+											isLoadingMoreAfter={isLoadingMoreAfter}
 											initialScrollToBottomKey={initialScrollToBottomKey}
 											onLoadMoreBefore={onLoadMoreBefore}
 											onLoadMoreAfter={onLoadMoreAfter}
@@ -1139,27 +1162,25 @@ function AgentPage({
 											onRetryEditCancel={onRetryEditCancel}
 											onRetryFromUserMessage={onRetryFromUserMessage}
 											onInlineDiffReview={openReviewPanel}
-											onAwayFromBottomChange={setMessageListAwayFromBottom}
+											onAwayFromBottomChange={setScrollToBottomButtonVisible}
 										/>
 									)}
 
 									<footer className={styles.composer}>
 										{!isHome ? (
-											<Tooltip title={messageListAwayFromBottom ? "Scroll to bottom" : ""}>
-												<Button
-													type="primary"
-													shape="circle"
-													aria-label="Scroll to bottom"
-													icon={<Icon name="arrow-bottom" />}
-													tabIndex={messageListAwayFromBottom ? 0 : -1}
-													className={[
-														styles.scrollToBottomButton,
-														showWorkflowTodoPanel ? styles.scrollToBottomButtonAboveTodo : "",
-														messageListAwayFromBottom ? "" : styles.scrollToBottomButtonHidden
-													].filter(Boolean).join(" ")}
-													onClick={scrollMessageListToBottom}
-												/>
-											</Tooltip>
+											<Button
+												ref={scrollToBottomButtonRef}
+												shape="circle"
+												title="Scroll to bottom"
+												icon={<Icon name="arrow-bottom" />}
+												tabIndex={-1}
+												className={[
+													styles.scrollToBottomButton,
+													showWorkflowTodoPanel ? styles.scrollToBottomButtonAboveTodo : "",
+													styles.scrollToBottomButtonHidden
+												].filter(Boolean).join(" ")}
+												onClick={scrollMessageListToBottom}
+											/>
 										) : null}
 										{!isHome && pendingApproval !== null ? (
 											<ApprovalDialog

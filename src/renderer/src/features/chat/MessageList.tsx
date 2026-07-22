@@ -17,6 +17,8 @@ export type MessageListProps = {
 	errorMessage?: string | null;
 	hasMoreBefore?: boolean;
 	hasMoreAfter?: boolean;
+	isLoadingMoreBefore?: boolean;
+	isLoadingMoreAfter?: boolean;
 	initialScrollToBottomKey?: string;
 	onLoadMoreBefore?: () => void;
 	onLoadMoreAfter?: () => void;
@@ -109,6 +111,8 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	errorMessage,
 	hasMoreBefore = false,
 	hasMoreAfter = false,
+	isLoadingMoreBefore = false,
+	isLoadingMoreAfter = false,
 	initialScrollToBottomKey = "",
 	onLoadMoreBefore,
 	onLoadMoreAfter,
@@ -136,17 +140,23 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const hasRunningAssistantBlock: boolean = renderableBlocks.some((block: TimelineBlock): boolean => {
 		return block.type === "assistant" && block.status === "running";
 	});
+	const isInitialLoading: boolean = isLoading === true && renderableBlocks.length === 0;
 	const canEditUserMessages: boolean = onRetryFromUserMessage !== undefined && !retryDisabled && !hasRunningAssistantBlock && activeRetryRequestId === null;
 
 	const syncViewportMetrics = useCallback((element: HTMLElement): void => {
 		const nearBottom: boolean = isNearBottom(element);
 		const awayFromBottom: boolean = !nearBottom;
+		const initialScrollPending: boolean = initialScrollToBottomKey.length > 0 && lastInitialScrollKeyRef.current !== initialScrollToBottomKey && isLoading !== true;
+		if (initialScrollPending && awayFromBottom) {
+			autoFollowRef.current = true;
+			return;
+		}
 		autoFollowRef.current = nearBottom;
 		if (awayFromBottomRef.current !== awayFromBottom) {
 			awayFromBottomRef.current = awayFromBottom;
 			onAwayFromBottomChange?.(awayFromBottom);
 		}
-	}, [onAwayFromBottomChange]);
+	}, [initialScrollToBottomKey, isLoading, onAwayFromBottomChange]);
 
 	const scheduleAutoFollowScroll = useCallback((behavior: ScrollBehavior = "auto"): void => {
 		if (!autoFollowRef.current) {
@@ -193,17 +203,17 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 
 		const contentFitsViewport: boolean = element.scrollHeight <= element.clientHeight + LOAD_MORE_THRESHOLD;
 
-		if ((element.scrollTop < LOAD_MORE_THRESHOLD || contentFitsViewport) && hasMoreBefore) {
+		if ((element.scrollTop < LOAD_MORE_THRESHOLD || contentFitsViewport) && hasMoreBefore && !isLoadingMoreBefore) {
 			pendingAnchorRef.current = createElementAnchor(element, queryFirstEntryElement(element));
 			onLoadMoreBefore?.();
 		}
 
 		const distanceFromBottom: number = element.scrollHeight - element.scrollTop - element.clientHeight;
-		if ((distanceFromBottom < LOAD_MORE_THRESHOLD || contentFitsViewport) && hasMoreAfter && nearBottom) {
+		if ((distanceFromBottom < LOAD_MORE_THRESHOLD || contentFitsViewport) && hasMoreAfter && nearBottom && !isLoadingMoreAfter) {
 			pendingAnchorRef.current = createElementAnchor(element, queryLastEntryElement(element));
 			onLoadMoreAfter?.();
 		}
-	}, [hasMoreAfter, hasMoreBefore, onLoadMoreAfter, onLoadMoreBefore, syncViewportMetrics]);
+	}, [hasMoreAfter, hasMoreBefore, isLoadingMoreAfter, isLoadingMoreBefore, onLoadMoreAfter, onLoadMoreBefore, syncViewportMetrics]);
 
 	const scheduleViewportUpdate = useCallback((): void => {
 		if (viewportUpdateFrameRef.current !== null) {
@@ -268,6 +278,9 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		lastInitialScrollKeyRef.current = initialScrollToBottomKey;
 		autoFollowRef.current = true;
 
+		scrollToBottom(element);
+		syncViewportMetrics(element);
+
 		window.requestAnimationFrame((): void => {
 			const currentElement: HTMLElement | null = listRef.current;
 			if (currentElement === null) {
@@ -329,14 +342,19 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 
 	return (
 		<section ref={listRef} className={styles.messageList}>
-			<div className={styles.messageListContent}>
+			<div className={`${styles.messageListContent} ${isInitialLoading ? styles.messageListContentLoading : ""}`}>
 				{errorMessage ? (
 					<Alert description={errorMessage} type="error" showIcon={true} />
 				) : null}
-				{isLoading ? (
+				{isInitialLoading ? (
 					<Spin className={styles.loadingIcon} />
 				) : (
 					<>
+						{isLoadingMoreBefore ? (
+							<div className={styles.pageLoadingIndicator}>
+								<Spin size="small" />
+							</div>
+						) : null}
 						{renderableBlocks.map((block: TimelineBlock): React.ReactNode => {
 							if (block.type === "user") {
 								return (
@@ -372,6 +390,11 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 								/>
 							);
 						})}
+						{isLoadingMoreAfter ? (
+							<div className={styles.pageLoadingIndicator}>
+								<Spin size="small" />
+							</div>
+						) : null}
 					</>
 				)}
 			</div>
