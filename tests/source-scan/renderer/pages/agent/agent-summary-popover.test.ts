@@ -28,4 +28,13 @@ describe("AgentPage summary popover source", () => {
 		expect(source).toContain("setPreviewSource(source)");
 		expect(source).toContain("No summary yet");
 	});
+
+	it("opens review from the diff action and refreshes summary after git actions", () => {
+		expect(source).toContain("const openSummaryDiffReview = useCallback");
+		expect(source).toContain("setSummaryOpen(false);");
+		expect(source).toContain("kind: \"review\"");
+		expect(source).toContain("setSideDockOpen(true);");
+		expect(source).toContain("onClick={openSummaryDiffReview}");
+		expect(source).toContain("await loadSummaryOverview();");
+	});
 });

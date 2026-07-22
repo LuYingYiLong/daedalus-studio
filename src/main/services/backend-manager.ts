@@ -27,7 +27,7 @@ type ProcessManagerConfig = {
 	readonly healthCheckTimeout: number;
 };
 
-type BackendLaunchTarget = {
+export type BackendLaunchTarget = {
 	readonly kind: "bundled" | "managed";
 	readonly cwd: string;
 	readonly entry: string;
@@ -46,15 +46,15 @@ function isInside(parentDir: string, childPath: string): boolean {
 	return resolvedChild === resolvedParent || resolvedChild.startsWith(`${resolvedParent}${sep}`);
 }
 
-function getDaedalusDir(): string {
+export function getDaedalusDir(): string {
 	return join(process.env.USERPROFILE ?? homedir(), ".daedalus");
 }
 
-function getManagedBackendVersionsDir(): string {
+export function getManagedBackendVersionsDir(): string {
 	return join(getDaedalusDir(), "backend", "versions");
 }
 
-function getManagedBackendCurrentPath(): string {
+export function getManagedBackendCurrentPath(): string {
 	return join(getDaedalusDir(), "backend", "current.json");
 }
 
@@ -119,6 +119,12 @@ class BackendManager {
 	async start(mainWindow: BrowserWindow): Promise<void> {
 		this.mainWindow = mainWindow;
 		this.isShuttingDown = false;
+
+		if (this.status === "starting" || this.status === "healthy") {
+			this.startHealthCheck();
+			return;
+		}
+
 		this.setStatus("starting");
 
 		if (!app.isPackaged) {
@@ -160,7 +166,7 @@ class BackendManager {
 		};
 	}
 
-	private resolveBackendLaunchTarget(): BackendLaunchTarget | null {
+	resolveBackendLaunchTarget(): BackendLaunchTarget | null {
 		const managedTarget: BackendLaunchTarget | null = resolveManagedBackendLaunchTarget();
 		if (managedTarget !== null) {
 			logger.info("Managed backend selected", {
@@ -171,6 +177,21 @@ class BackendManager {
 		}
 
 		return this.resolveBundledBackendLaunchTarget();
+	}
+
+	hasLaunchTarget(): boolean {
+		return this.resolveBackendLaunchTarget() !== null;
+	}
+
+	getLaunchTargetInfo(): Pick<BackendLaunchTarget, "kind" | "version"> | null {
+		const launchTarget: BackendLaunchTarget | null = this.resolveBackendLaunchTarget();
+		if (launchTarget === null) {
+			return null;
+		}
+		return {
+			kind: launchTarget.kind,
+			version: launchTarget.version
+		};
 	}
 
 	stop(): void {
@@ -239,6 +260,11 @@ class BackendManager {
 	async restartAndWaitHealthy(): Promise<void> {
 		await this.restart();
 		await this.waitUntilHealthy(RESTART_HEALTH_TIMEOUT);
+	}
+
+	async startAndWaitHealthy(mainWindow: BrowserWindow, timeoutMs: number = RESTART_HEALTH_TIMEOUT): Promise<void> {
+		await this.start(mainWindow);
+		await this.waitUntilHealthy(timeoutMs);
 	}
 
 	async waitUntilHealthy(timeoutMs: number = RESTART_HEALTH_TIMEOUT): Promise<void> {

@@ -27,3 +27,8 @@
 .result {
 	max-width: 640px;
 }
+
+.resultDetails {
+	display: grid;
+	gap: 6px;
+}

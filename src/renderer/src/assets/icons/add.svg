@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
 	<defs>
-		<clipPath id="clipPath_58">
+		<clipPath id="clipPath_97">
 			<rect width="24.000000" height="24.000000" x="0.000000" y="30.000000" fill="currentColor" />
 		</clipPath>
-		<clipPath id="clipPath_59">
+		<clipPath id="clipPath_98">
 			<rect width="20.000000" height="20.000000" x="2.000000" y="32.000000" fill="currentColor" />
 		</clipPath>
 	</defs>
 	<path id="矢量 17" d="M3 12L21 12" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
 	<path id="矢量 18" d="M0 0L18 0" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" transform="matrix(0,1,-1,0,12,3)" />
-	<g id="chat" clip-path="url(#clipPath_58)" customFrame="url(#clipPath_58)">
+	<g id="chat" clip-path="url(#clipPath_97)">
 		<rect id="chat" width="24.000000" height="24.000000" x="0.000000" y="30.000000" />
-		<g id="图标网格" opacity="0" customFrame="url(#clipPath_59)">
+		<g id="图标网格" opacity="0">
 			<rect id="图标网格" width="20.000000" height="20.000000" x="2.000000" y="32.000000" />
 			<g id="视觉基准">
 				<path id="Rectangle 1 (Stroke)" d="M21 33L21 51L3 51L3 33L21 33ZM3.09961 50.9004L20.9004 50.9004L20.9004 33.0996L3.09961 33.0996L3.09961 50.9004Z" fill="currentColor" fill-rule="nonzero" />

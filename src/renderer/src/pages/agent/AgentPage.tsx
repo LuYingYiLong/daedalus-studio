@@ -424,6 +424,20 @@ function AgentPage({
 			};
 		});
 	}, [workspaceLaunchTargets]);
+	const openSummaryDiffReview = useCallback((): void => {
+		setSummaryOpen(false);
+		if (activeWorkspace === null) {
+			return;
+		}
+
+		dockActivationRequestIdRef.current += 1;
+		setSideDockActivationRequest({
+			id: dockActivationRequestIdRef.current,
+			kind: "review"
+		});
+		setSideDockSize(sideDockLastOpenSize);
+		setSideDockOpen(true);
+	}, [activeWorkspace, sideDockLastOpenSize]);
 	const summaryCollapseItems: NonNullable<CollapseProps["items"]> = useMemo((): NonNullable<CollapseProps["items"]> => {
 		if (summaryOverview === null) {
 			return [];
@@ -441,6 +455,7 @@ function AgentPage({
 							block
 							icon={<Icon name="git-diff" />}
 							className={styles.summaryActionButton}
+							onClick={openSummaryDiffReview}
 						>
 							<span className={styles.diffRow}>
 								<span className={styles.diffLabel}>
@@ -566,7 +581,7 @@ function AgentPage({
 		}
 
 		return items;
-	}, [onMessageChange, summaryOverview]);
+	}, [onMessageChange, openSummaryDiffReview, summaryOverview]);
 
 	useEffect((): (() => void) | void => {
 		if (!showWorkspaceLaunchControls) {
@@ -716,7 +731,7 @@ function AgentPage({
 			setCommitOrPushOpen(false);
 			setCommitMessage("");
 			onWorkspaceRefresh();
-			void loadSummaryOverview();
+			await loadSummaryOverview();
 		} catch (error: unknown) {
 			setCommitError(error instanceof Error ? error.message : `Failed to ${getCommitActionLabel(action).toLowerCase()}.`);
 		} finally {

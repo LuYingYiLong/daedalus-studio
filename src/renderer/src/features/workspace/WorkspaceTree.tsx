@@ -175,7 +175,7 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 								size="small"
 								aria-label={`Workspace actions for ${workspace.name}`}
 								className={styles.workspaceActionButton}
-								icon={<Icon name="more" width={16} height={16} />}
+								icon={<Icon name="more-v" width={16} height={16} />}
 								loading={isDeleting}
 								onClick={(event: MouseEvent<HTMLElement>): void => {
 									event.preventDefault();

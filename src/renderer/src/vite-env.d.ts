@@ -17,6 +17,46 @@ declare global {
 		onStatusChanged: (callback: (status: string) => void) => () => void;
 	}
 
+	type BackendBootstrapStatus =
+		| "idle"
+		| "checking"
+		| "installing"
+		| "starting"
+		| "healthy"
+		| "error"
+		| "unsupported";
+
+	type BackendBootstrapPhase =
+		| "detect"
+		| "resolve_latest"
+		| "install"
+		| "write_metadata"
+		| "start"
+		| "health_check"
+		| "ready"
+		| "error";
+
+	interface BackendBootstrapState {
+		status: BackendBootstrapStatus;
+		phase: BackendBootstrapPhase;
+		packaged: boolean;
+		firstRun: boolean;
+		progress: number;
+		backendVersion: string | null;
+		port: number;
+		errorCode: string | null;
+		errorMessage: string | null;
+		suggestedAction: string | null;
+	}
+
+	interface BackendBootstrapAPI {
+		getState: () => Promise<BackendBootstrapState>;
+		prepare: () => Promise<BackendBootstrapState>;
+		repair: () => Promise<BackendBootstrapState>;
+		retryStart: () => Promise<BackendBootstrapState>;
+		onStateChanged: (callback: (state: BackendBootstrapState) => void) => () => void;
+	}
+
 	interface ClientPreferences {
 		autoCheckForUpdates: boolean;
 		minimizeToTrayOnClose: boolean;
@@ -135,6 +175,7 @@ declare global {
 	interface ElectronAPI {
 		versions: ElectronVersions;
 		backend: BackendAPI;
+		backendBootstrap: BackendBootstrapAPI;
 		clientPreferences: ClientPreferencesAPI;
 		clipboard: ClipboardAPI;
 		appUpdate: AppUpdateAPI;

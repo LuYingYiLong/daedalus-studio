@@ -1,10 +1,15 @@
 .page {
 	display: grid;
-	grid-template-rows: auto auto minmax(0, 1fr);
+	align-content: start;
+	gap: 8px;
 	min-width: 0;
 	min-height: 0;
+	height: 100%;
+	max-height: 100%;
 	padding: var(--ds-space-2);
-	overflow: hidden;
+	overflow-x: hidden;
+	overflow-y: auto;
+	scrollbar-gutter: auto;
 }
 
 .header {
@@ -42,10 +47,8 @@
 	display: grid;
 	align-content: start;
 	gap: 8px;
+	min-width: 0;
 	min-height: 0;
-	overflow-x: hidden;
-	overflow-y: auto;
-	padding-top: 8px;
 }
 
 .skillItem {
@@ -55,7 +58,10 @@
 	gap: 12px;
 	min-width: 0;
 	padding: 8px 0;
+	border: 1px solid var(--ds-border);
+	background-color: var(--ds-surface);
 	border-radius: var(--ds-radius-sm);
+	padding: var(--ds-space-2);
 	user-select: none;
 }
 

@@ -33,6 +33,19 @@ type AppUpdateComponentState = {
 	errorMessage: string | null;
 };
 
+type BackendBootstrapState = {
+	status: "idle" | "checking" | "installing" | "starting" | "healthy" | "error" | "unsupported";
+	phase: "detect" | "resolve_latest" | "install" | "write_metadata" | "start" | "health_check" | "ready" | "error";
+	packaged: boolean;
+	firstRun: boolean;
+	progress: number;
+	backendVersion: string | null;
+	port: number;
+	errorCode: string | null;
+	errorMessage: string | null;
+	suggestedAction: string | null;
+};
+
 function getCachedClientPreferences(): ClientPreferences {
 	return ipcRenderer.sendSync("client-preferences:get-cached") as ClientPreferences;
 }
@@ -73,6 +86,26 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			const handler = (_event: Electron.IpcRendererEvent, status: string): void => callback(status);
 			ipcRenderer.on("backend:status-changed", handler);
 			return () => { ipcRenderer.removeListener("backend:status-changed", handler); };
+		}
+	},
+
+	backendBootstrap: {
+		getState: (): Promise<BackendBootstrapState> => {
+			return ipcRenderer.invoke("backend-bootstrap:get-state");
+		},
+		prepare: (): Promise<BackendBootstrapState> => {
+			return ipcRenderer.invoke("backend-bootstrap:prepare");
+		},
+		repair: (): Promise<BackendBootstrapState> => {
+			return ipcRenderer.invoke("backend-bootstrap:repair");
+		},
+		retryStart: (): Promise<BackendBootstrapState> => {
+			return ipcRenderer.invoke("backend-bootstrap:retry-start");
+		},
+		onStateChanged: (callback: (state: BackendBootstrapState) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, payload: BackendBootstrapState): void => callback(payload);
+			ipcRenderer.on("backend-bootstrap:state-changed", handler);
+			return () => { ipcRenderer.removeListener("backend-bootstrap:state-changed", handler); };
 		}
 	},
 

@@ -1,21 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
 	<defs>
-		<clipPath id="clipPath_61">
+		<clipPath id="clipPath_100">
 			<rect width="24.000000" height="24.000000" x="0.000000" y="26.000000" fill="currentColor" />
 		</clipPath>
-		<clipPath id="clipPath_62">
+		<clipPath id="clipPath_101">
 			<rect width="20.000000" height="20.000000" x="2.000000" y="28.000000" fill="currentColor" />
 		</clipPath>
-		<clipPath id="clipPath_63">
+		<clipPath id="clipPath_102">
 			<rect width="24.000000" height="24.000000" x="0.000000" y="26.000000" fill="currentColor" />
 		</clipPath>
-		<clipPath id="clipPath_64">
+		<clipPath id="clipPath_103">
 			<rect width="20.000000" height="20.000000" x="2.000000" y="28.000000" fill="currentColor" />
 		</clipPath>
 	</defs>
-	<g id="close" clip-path="url(#clipPath_61)" customFrame="url(#clipPath_61)">
+	<g id="close" clip-path="url(#clipPath_100)">
 		<rect id="close" width="24.000000" height="24.000000" x="0.000000" y="26.000000" />
-		<g id="图标网格" opacity="0" customFrame="url(#clipPath_62)">
+		<g id="图标网格" opacity="0">
 			<rect id="图标网格" width="20.000000" height="20.000000" x="2.000000" y="28.000000" />
 			<g id="视觉基准">
 				<path id="Rectangle 1 (Stroke)" d="M21 29L21 47L3 47L3 29L21 29ZM3.09961 46.9004L20.9004 46.9004L20.9004 29.0996L3.09961 29.0996L3.09961 46.9004Z" fill="currentColor" fill-rule="nonzero" />
@@ -45,9 +45,9 @@
 	</g>
 	<path id="矢量 19" d="M11 5L7 5C5.89543 5 5 5.89543 5 7L5 17C5 18.1046 5.89543 19 7 19L17 19C18.1046 19 19 18.1046 19 17L19 13" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
 	<path id="矢量 20" d="M12 12L21 3M15 3L21 3L21 9" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
-	<g id="ask" clip-path="url(#clipPath_63)" customFrame="url(#clipPath_63)">
+	<g id="ask" clip-path="url(#clipPath_102)">
 		<rect id="ask" width="24.000000" height="24.000000" x="0.000000" y="26.000000" />
-		<g id="图标网格" opacity="0" customFrame="url(#clipPath_64)">
+		<g id="图标网格" opacity="0">
 			<rect id="图标网格" width="20.000000" height="20.000000" x="2.000000" y="28.000000" />
 			<g id="视觉基准">
 				<path id="Rectangle 1 (Stroke)" d="M21 29L21 47L3 47L3 29L21 29ZM3.09961 46.9004L20.9004 46.9004L20.9004 29.0996L3.09961 29.0996L3.09961 46.9004Z" fill="currentColor" fill-rule="nonzero" />

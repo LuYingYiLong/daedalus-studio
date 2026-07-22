@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
 	<defs>
-		<clipPath id="clipPath_78">
+		<clipPath id="clipPath_117">
 			<rect width="16.000013" height="16.999998" x="4.000000" y="3.000000" fill="currentColor" />
 		</clipPath>
 	</defs>
 	<path id="矢量 25" d="M8 8L16 8M8 12L16 12" stroke="currentColor" stroke-linecap="round" stroke-width="1.750000" />
-	<g id="气泡" customFrame="url(#clipPath_78)">
+	<g id="气泡">
 		<rect id="气泡" width="16.000013" height="16.999998" x="4.000000" y="3.000000" fill="currentColor" fill-opacity="0" />
 		<path id="矢量 23" d="M3.00001 20L3 5C3 3.89543 3.89543 3 5 3L19 3C20.1046 3 21 3.89543 21 5L21 15.1523C21 16.2569 20.1046 17.1523 19 17.1523L7.70566 17.1523C7.29596 17.1523 6.89614 17.2781 6.56028 17.5128L3.00001 20Z" stroke="currentColor" stroke-width="1.750000" />
 	</g>

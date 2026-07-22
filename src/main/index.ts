@@ -2,6 +2,7 @@ import { app, BrowserWindow, nativeTheme, shell } from "electron";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { backendManager } from "./services/backend-manager";
+import { backendBootstrapService } from "./services/backend-bootstrap";
 import { registerWorkspaceFsIpc } from "./services/workspace-fs";
 import { registerSessionFsIpc } from "./services/session-fs";
 import { registerSkillFsIpc } from "./services/skill-fs";
@@ -15,6 +16,7 @@ import { getWindowThemeColors, resolveWindowTheme, type WindowThemeColors } from
 import type { ClientPreferences } from "./services/client-preferences";
 
 backendManager.registerIpc();
+backendBootstrapService.registerIpc();
 registerWorkspaceFsIpc();
 registerSessionFsIpc();
 registerSkillFsIpc();
@@ -95,8 +97,7 @@ function createWindow(): void {
 		mainWindow.webContents.openDevTools({ mode: "detach" });
 	}
 
-	// 启动 backendManager
-	backendManager.start(mainWindow);
+	backendBootstrapService.attachWindow(mainWindow);
 	windowLifecycleController.attachWindow(mainWindow);
 
 	mainWindow.once("ready-to-show", () => {
@@ -125,7 +126,15 @@ app.whenReady().then(async () => {
 		applyWindowThemeToAllWindows();
 	});
 	createWindow();
-	void appUpdateService.checkForUpdatesIfEnabled(preferences.autoCheckForUpdates);
+	let checkedStartupUpdates: boolean = false;
+	const checkStartupUpdates = (state: ReturnType<typeof backendBootstrapService.getState>): void => {
+		if (!checkedStartupUpdates && state.status === "healthy") {
+			checkedStartupUpdates = true;
+			void appUpdateService.checkForUpdatesIfEnabled(preferences.autoCheckForUpdates);
+		}
+	};
+	backendBootstrapService.onDidChangeState(checkStartupUpdates);
+	void backendBootstrapService.prepare().then(checkStartupUpdates);
 
 	app.on("activate", () => {
 		if (BrowserWindow.getAllWindows().length === 0) {
