@@ -456,6 +456,28 @@ function createPreferredHomeDraft(
 	};
 }
 
+function getDisplayedComposerModel(params: {
+	isNewSessionHome: boolean;
+	homeDraft: HomeDraft;
+	workbench: WorkbenchSnapshot | null;
+	activeSessionMetadata: SessionMetadata | null;
+	providerModelSelection: ProviderModelSelection | null;
+}): { providerId: string | null; modelId: string | null } {
+	const fallbackProviderId: string | null = params.providerModelSelection?.activeModel.providerId ?? null;
+	const fallbackModelId: string | null = params.providerModelSelection?.activeModel.modelId ?? null;
+	if (params.isNewSessionHome) {
+		return {
+			providerId: params.homeDraft.providerId ?? fallbackProviderId,
+			modelId: params.homeDraft.modelId ?? fallbackModelId
+		};
+	}
+
+	return {
+		providerId: params.workbench?.composer.provider ?? params.activeSessionMetadata?.provider ?? fallbackProviderId,
+		modelId: params.workbench?.composer.model ?? params.activeSessionMetadata?.model ?? fallbackModelId
+	};
+}
+
 function createWorkspaceFromSessionMetadata(metadata: SessionMetadata, workbench: WorkbenchSnapshot): WorkspaceConfig | null {
 	const metadataWorkspaceId: string | undefined = metadata.workspaceId;
 	const metadataWorkspaceRoot: string | undefined = metadata.workspaceRoot;
@@ -2551,12 +2573,15 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 	}
 
-	const selectedProviderId: string | null = isNewSessionHome
-		? homeDraft.providerId ?? providerModelSelection?.activeModel.providerId ?? null
-		: workbench?.composer.provider ?? providerModelSelection?.activeModel.providerId ?? null;
-	const selectedModelId: string | null = isNewSessionHome
-		? homeDraft.modelId ?? providerModelSelection?.activeModel.modelId ?? null
-		: workbench?.composer.model ?? providerModelSelection?.activeModel.modelId ?? null;
+	const displayedComposerModel = getDisplayedComposerModel({
+		isNewSessionHome,
+		homeDraft,
+		workbench,
+		activeSessionMetadata,
+		providerModelSelection
+	});
+	const selectedProviderId: string | null = displayedComposerModel.providerId;
+	const selectedModelId: string | null = displayedComposerModel.modelId;
 	const timelineBlocks: TimelineBlock[] = timelinePage.blocks;
 	const latestPlanClarificationKey: string | null = latestPlanClarification === null
 		? null

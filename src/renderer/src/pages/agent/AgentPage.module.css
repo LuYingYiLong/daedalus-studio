@@ -364,6 +364,11 @@
 	object-fit: contain;
 }
 
+.commitDialogBody {
+	display: grid;
+	gap: 12px;
+}
+
 .planPreviewMarkdown {
 	max-height: min(70vh, 720px);
 	overflow: auto;

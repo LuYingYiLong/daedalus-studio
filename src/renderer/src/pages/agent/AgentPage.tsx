@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
+import { Alert, Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip, Checkbox } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
@@ -9,6 +9,7 @@ import type { ProviderModelSelection } from "@/api/provider-api";
 import type { DeleteWorkspaceResult } from "@/api/workspace-api";
 import type { SkillSummary } from "@/api/skill-api";
 import { fetchSessionOverview, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
+import { commitOrPushGit, generateGitCommitMessage, type CommitOrPushAction, type CommitOrPushResult, type GenerateGitCommitMessageResult } from "@/api/workspace-git-api";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import MessageList from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
@@ -25,6 +26,7 @@ import ClarificationDialog from "@/features/clarification/ClarificationDialog";
 import PlanApprovalDialog from "@/features/approval/PlanApprovalDialog";
 import MarkdownContent from "@/features/markdown/MarkdownContent";
 import DockPanelTabs, { type DockPanelActivationRequest, type DockPanelKind } from "@/features/dock/DockPanelTabs";
+import TextArea from "antd/es/input/TextArea";
 
 type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
 
@@ -40,7 +42,6 @@ const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 
 const SUMMARY_PREVIEW_LIMIT: number = 3;
 const SUMMARY_SEE_MORE_LIMIT: number = 100;
-const COMMIT_OR_PUSH_PROMPT: string = "Commit or push the current workspace changes.";
 const SIDE_DOCK_CLOSED_SIZE: number = 0;
 const SIDE_DOCK_DEFAULT_SIZE: number = 520;
 const SIDE_DOCK_MAX_SIZE: number = 720;
@@ -49,6 +50,26 @@ const BOTTOM_DOCK_CLOSED_SIZE: number = 0;
 const BOTTOM_DOCK_DEFAULT_SIZE: number = 280;
 const BOTTOM_DOCK_MAX_SIZE: number = 520;
 const BOTTOM_DOCK_CLOSE_THRESHOLD: number = 120;
+
+function getCommitActionLabel(action: CommitOrPushAction): string {
+	if (action === "commit") {
+		return "Commit";
+	}
+	if (action === "commit_and_push") {
+		return "Commit & Push";
+	}
+	return "Push";
+}
+
+function formatCommitActionSuccess(result: CommitOrPushResult): string {
+	if (result.committed && result.pushed) {
+		return `Committed ${result.commitHash ?? "changes"} and pushed.`;
+	}
+	if (result.committed) {
+		return `Committed ${result.commitHash ?? "changes"}.`;
+	}
+	return "Pushed changes.";
+}
 
 function isWorkspaceLaunchTargetId(value: string): value is WorkspaceLaunchTargetId {
 	return value === "file-explorer"
@@ -374,11 +395,17 @@ function AgentPage({
 	const [bottomDockOpen, setBottomDockOpen] = useState<boolean>(false);
 	const [bottomDockSize, setBottomDockSize] = useState<number>(BOTTOM_DOCK_DEFAULT_SIZE);
 	const [bottomDockLastOpenSize, setBottomDockLastOpenSize] = useState<number>(BOTTOM_DOCK_DEFAULT_SIZE);
+	const [commitOrPushOpen, setCommitOrPushOpen] = useState<boolean>(false);
+	const [commitMessage, setCommitMessage] = useState<string>("");
+	const [includeUnstagedChanges, setIncludeUnstagedChanges] = useState<boolean>(true);
+	const [commitOperation, setCommitOperation] = useState<CommitOrPushAction | null>(null);
+	const [commitError, setCommitError] = useState<string | null>(null);
 	const showWorkspaceLaunchControls: boolean = !isHome && activeWorkspace !== null;
 	const showSummaryButton: boolean = !isHome && activeSessionId !== null;
 	const showSideDockButton: boolean = !isHome;
 	const showBottomDockButton: boolean = !isHome;
 	const terminalWaitForCwd: boolean = !isHome && isSessionLoading && activeWorkspace === null;
+	const isCommitOperationRunning: boolean = commitOperation !== null;
 	const workflowFileChangeSummary: WorkflowFileChangeSummary = useMemo((): WorkflowFileChangeSummary => {
 		return aggregateTimelineFileChanges(timelineBlocks);
 	}, [timelineBlocks]);
@@ -440,8 +467,7 @@ function AgentPage({
 							icon={<Icon name="git-commit" />}
 							className={styles.summaryActionButton}
 							onClick={(): void => {
-								onMessageChange(COMMIT_OR_PUSH_PROMPT);
-								setSummaryOpen(false);
+								openCommitOrPushDialog();
 							}}
 						>
 							Commit or push
@@ -586,6 +612,10 @@ function AgentPage({
 		setPreviewSource(null);
 		setPreviewPlan(null);
 		setSideDockOpen(false);
+		setCommitOrPushOpen(false);
+		setCommitMessage("");
+		setCommitError(null);
+		setCommitOperation(null);
 	}, [activeSessionId, activeWorkspace?.id]);
 
 	async function loadSummaryOverview(planLimit: number = SUMMARY_PREVIEW_LIMIT, sourceLimit: number = SUMMARY_PREVIEW_LIMIT): Promise<SessionOverviewResult | null> {
@@ -631,6 +661,65 @@ function AgentPage({
 		const result: SessionOverviewResult | null = await loadSummaryOverview(SUMMARY_PREVIEW_LIMIT, SUMMARY_SEE_MORE_LIMIT);
 		if (result !== null) {
 			setSourcesModalOpen(true);
+		}
+	}
+
+	function openCommitOrPushDialog(): void {
+		setSummaryOpen(false);
+		setCommitError(null);
+		setCommitOrPushOpen(true);
+	}
+
+	function handleCommitDialogCancel(): void {
+		if (isCommitOperationRunning) {
+			return;
+		}
+		setCommitOrPushOpen(false);
+		setCommitError(null);
+	}
+
+	async function generateMessageForCommitAction(): Promise<string> {
+		if (activeWorkspace === null) {
+			throw new Error("Please select a workspace before committing.");
+		}
+
+		const generated: GenerateGitCommitMessageResult = await generateGitCommitMessage({
+			workspaceId: activeWorkspace.id,
+			includeUnstagedChanges
+		});
+		setCommitMessage(generated.message);
+		return generated.message;
+	}
+
+	async function handleCommitOrPushAction(action: CommitOrPushAction): Promise<void> {
+		if (activeWorkspace === null) {
+			setCommitError("Please select a workspace before committing.");
+			return;
+		}
+
+		setCommitOperation(action);
+		setCommitError(null);
+		try {
+			let nextMessage: string | undefined = commitMessage.trim();
+			if (action !== "push" && (nextMessage ?? "").length === 0) {
+				nextMessage = await generateMessageForCommitAction();
+			}
+
+			const result: CommitOrPushResult = await commitOrPushGit({
+				workspaceId: activeWorkspace.id,
+				action,
+				message: action === "push" ? undefined : nextMessage,
+				includeUnstagedChanges
+			});
+			void messageApi.success(formatCommitActionSuccess(result));
+			setCommitOrPushOpen(false);
+			setCommitMessage("");
+			onWorkspaceRefresh();
+			void loadSummaryOverview();
+		} catch (error: unknown) {
+			setCommitError(error instanceof Error ? error.message : `Failed to ${getCommitActionLabel(action).toLowerCase()}.`);
+		} finally {
+			setCommitOperation(null);
 		}
 	}
 
@@ -1231,6 +1320,67 @@ function AgentPage({
 						className={styles.sourcePreviewImage}
 					/>
 				) : null}
+			</Modal>
+			<Modal
+				title="Commit or push"
+				open={commitOrPushOpen}
+				onCancel={handleCommitDialogCancel}
+				footer={(
+					<Space>
+						<Button
+							disabled={isCommitOperationRunning || activeWorkspace === null}
+							loading={commitOperation === "push"}
+							onClick={(): void => {
+								void handleCommitOrPushAction("push");
+							}}
+						>
+							Push
+						</Button>
+						<Button
+							disabled={isCommitOperationRunning || activeWorkspace === null}
+							loading={commitOperation === "commit_and_push"}
+							onClick={(): void => {
+								void handleCommitOrPushAction("commit_and_push");
+							}}
+						>
+							Commit & Push
+						</Button>
+						<Button
+							type="primary"
+							disabled={isCommitOperationRunning || activeWorkspace === null}
+							loading={commitOperation === "commit"}
+							onClick={(): void => {
+								void handleCommitOrPushAction("commit");
+							}}
+						>
+							Commit
+						</Button>
+					</Space>
+				)}
+			>
+				<div className={styles.commitDialogBody}>
+					{commitError !== null ? (
+						<Alert type="error" showIcon={true} description={commitError} />
+					) : null}
+					<TextArea
+						value={commitMessage}
+						disabled={isCommitOperationRunning}
+						autoSize={{ minRows: 3, maxRows: 6 }}
+						placeholder="Leaving it blank will automatically generate the information"
+						onChange={(event: React.ChangeEvent<HTMLTextAreaElement>): void => {
+							setCommitMessage(event.target.value);
+						}}
+					/>
+					<Checkbox
+						checked={includeUnstagedChanges}
+						disabled={isCommitOperationRunning}
+						onChange={(event): void => {
+							setIncludeUnstagedChanges(event.target.checked);
+						}}
+					>
+						Includes unstaged changes
+					</Checkbox>
+				</div>
 			</Modal>
 		</div>
 	);

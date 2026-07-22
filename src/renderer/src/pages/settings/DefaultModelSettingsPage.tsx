@@ -48,6 +48,11 @@ const ROUTING_OPTIONS: RoutingOption[] = [
 		title: "Image generation/edit model",
 		description: "Used by @image-gen and mcp_image_generate for text-to-image or image-to-image tasks. This must be configured explicitly.",
 		filterModel: isImageTaskModel
+	},
+	{
+		key: "gitCommit",
+		title: "Git commit model",
+		description: "Used to generate commit messages from workspace Git diffs. Defaults to the main model when unset."
 	}
 ];
 

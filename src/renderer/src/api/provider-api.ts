@@ -28,6 +28,7 @@ export type ProviderModelRouting = {
 	workflowPlanner: ProviderTaskModelRef | null;
 	sessionTitle: ProviderTaskModelRef | null;
 	imageGeneration: ProviderTaskModelRef | null;
+	gitCommit: ProviderTaskModelRef | null;
 };
 
 export type ProviderModelInfo = {

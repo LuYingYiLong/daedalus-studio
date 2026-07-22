@@ -9,4 +9,12 @@ describe("DefaultModelSettingsPage", () => {
 		expect(pageSource).toContain('suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}');
 		expect(pageSource).not.toContain('removeIcon={<Icon name="clear" />}');
 	});
+
+	it("includes the Git commit model routing option", () => {
+		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "DefaultModelSettingsPage.tsx");
+
+		expect(pageSource).toContain('key: "gitCommit"');
+		expect(pageSource).toContain("Git commit model");
+		expect(pageSource).toContain("Defaults to the main model when unset.");
+	});
 });

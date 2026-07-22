@@ -8,6 +8,8 @@ import styles from "./PersonalizationSettingsPage.module.css";
 function PersonalizationSettingsPage(): React.JSX.Element {
 	const [savedPrompt, setSavedPrompt] = useState<string>("");
 	const [draftPrompt, setDraftPrompt] = useState<string>("");
+	const [savedGitCommitPrompt, setSavedGitCommitPrompt] = useState<string>("");
+	const [draftGitCommitPrompt, setDraftGitCommitPrompt] = useState<string>("");
 	const [updatedAt, setUpdatedAt] = useState<string>("");
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -28,6 +30,8 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 
 				setSavedPrompt(config.prompt);
 				setDraftPrompt(config.prompt);
+				setSavedGitCommitPrompt(config.gitCommitPrompt);
+				setDraftGitCommitPrompt(config.gitCommitPrompt);
 				setUpdatedAt(config.updatedAt);
 			} catch (error: unknown) {
 				if (!cancelled) {
@@ -48,17 +52,22 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 	}, []);
 
 	const isDirty: boolean = useMemo((): boolean => {
-		return draftPrompt !== savedPrompt;
-	}, [draftPrompt, savedPrompt]);
+		return draftPrompt !== savedPrompt || draftGitCommitPrompt !== savedGitCommitPrompt;
+	}, [draftGitCommitPrompt, draftPrompt, savedGitCommitPrompt, savedPrompt]);
 
 	async function handleSave(): Promise<void> {
 		try {
 			setIsSaving(true);
 			setErrorMessage(null);
-			const config: UserPromptConfig = await saveUserPrompt(draftPrompt);
+			const config: UserPromptConfig = await saveUserPrompt({
+				prompt: draftPrompt,
+				gitCommitPrompt: draftGitCommitPrompt
+			});
 
 			setSavedPrompt(config.prompt);
 			setDraftPrompt(config.prompt);
+			setSavedGitCommitPrompt(config.gitCommitPrompt);
+			setDraftGitCommitPrompt(config.gitCommitPrompt);
 			setUpdatedAt(config.updatedAt);
 		} catch (error: unknown) {
 			setErrorMessage(error instanceof Error ? error.message : "Failed to save personalization settings");
@@ -69,6 +78,7 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 
 	function handleCancel(): void {
 		setDraftPrompt(savedPrompt);
+		setDraftGitCommitPrompt(savedGitCommitPrompt);
 		setErrorMessage(null);
 	}
 
@@ -114,6 +124,26 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 							showCount={true}
 							onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
 								setDraftPrompt(event.target.value);
+							}}
+						/>
+
+						<div className={styles.header}>
+							<Typography.Title level={4} className={styles.title}>
+								Git commit prompt
+							</Typography.Title>
+							<Typography.Text type="secondary" className={styles.description}>
+								Custom instructions used only when generating commit messages.
+							</Typography.Text>
+						</div>
+
+						<Input.TextArea
+							className={styles.textarea}
+							value={draftGitCommitPrompt}
+							autoSize={{ minRows: 8, maxRows: 18 }}
+							maxLength={20000}
+							showCount={true}
+							onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
+								setDraftGitCommitPrompt(event.target.value);
 							}}
 						/>
 
