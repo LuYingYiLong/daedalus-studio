@@ -1,4 +1,4 @@
-import { Alert, Card, Select, Slider, Spin, Typography } from "antd";
+import { Alert, Card, Select, Slider, Spin, Switch, Typography } from "antd";
 import type { SelectProps, SliderSingleProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -9,7 +9,7 @@ import {
 } from "@/api/web-search-settings-api";
 import styles from "./SearchSettingsPage.module.css";
 
-type SavingKey = "model" | "maxResults";
+type SavingKey = "enabled" | "model" | "maxResults";
 
 const SEARCH_RESULT_MARKS: SliderSingleProps["marks"] = {
 	0: "0",
@@ -137,6 +137,10 @@ function SearchSettingsPage(): React.JSX.Element {
 		void savePatch("model", decoded);
 	}
 
+	function handleEnabledChange(enabled: boolean): void {
+		void savePatch("enabled", { enabled });
+	}
+
 	function handleMaxResultsChangeComplete(value: number | number[]): void {
 		if (Array.isArray(value)) {
 			return;
@@ -176,9 +180,22 @@ function SearchSettingsPage(): React.JSX.Element {
 						<div className={styles.settingsList}>
 							{[
 								{
+									key: "enabled",
+									title: "Enable web search",
+									description: "Allow every conversation to use the configured web search tool when current information is needed.",
+									action: (
+										<Switch
+											checked={settings.enabled}
+											loading={savingKey === "enabled"}
+											disabled={savingKey !== null}
+											onChange={handleEnabledChange}
+										/>
+									)
+								},
+								{
 									key: "model",
 									title: "Search model",
-									description: "Choose the provider-native search model used when the Composer Search button is active.",
+									description: "Choose the provider-native search model used by the global web search tool.",
 									action: (
 										<Select
 											value={selectedModelValue}
@@ -222,7 +239,7 @@ function SearchSettingsPage(): React.JSX.Element {
 						</div>
 					)}
 
-					{settings !== null && !settings.configured ? (
+					{settings !== null && settings.enabled && !settings.configured ? (
 						<Alert
 							type="info"
 							showIcon={true}

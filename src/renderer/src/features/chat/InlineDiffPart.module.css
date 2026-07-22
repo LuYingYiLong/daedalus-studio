@@ -4,6 +4,10 @@
 	user-select: none;
 }
 
+.diffCard :global(.ant-card-body) {
+	padding: 0px;
+}
+
 .fileList {
 	display: grid;
 	gap: 2px;
@@ -13,14 +17,30 @@
 }
 
 .fileItem {
-	display: grid !important;
-	grid-template-columns: minmax(0, 1fr) auto;
-	gap: var(--ds-space-3);
-	padding: 4px;
+	display: block
+}
+
+.filePathButton {
+	justify-content: flex-start;
+	width: 100%;
+	min-width: 0;
+	text-align: left;
+	height: 40px;
+	border-radius: 0px;
+}
+
+.filePathButton:disabled {
+	color: var(--ant-color-text);
+	cursor: default;
 }
 
 .filePath {
+	display: block;
 	min-width: 0;
+	width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .fileStats {

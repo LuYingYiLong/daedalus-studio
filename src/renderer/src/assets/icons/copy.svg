@@ -1,2 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg class="icon" width="16" height="16" p-id="5419" t="1784569638457" version="1.1" viewBox="0 0 81.92 81.92" xml:space="preserve" xmlns="http://www.w3.org/2000/svg"><g transform="translate(-1.0393)" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="6.4"><rect x="17.468" y="23.051" width="33.794" height="50.549"/><path d="m30.447 8.32h36.083v53.757" stroke-linecap="round"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+	<rect id="矩形 4" width="10.500000" height="14.500000" x="5.750000" y="5.750000" rx="0.750000" stroke="currentColor" stroke-width="1.500000" />
+	<path id="减去顶层" d="M18.5 2L10.5 2C9.67157 2 9 2.67157 9 3.5L9 3.50039L10.5 3.50039L10.5 3.5L18.5 3.5L18.5 3.50039L18.5016 3.50039L18.5016 17C19.3293 16.9991 20 16.3279 20 15.5L20 3.5C20 2.67157 19.3284 2 18.5 2Z" fill="currentColor" fill-rule="evenodd" />
+</svg>

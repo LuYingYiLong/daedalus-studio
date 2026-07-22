@@ -1,5 +1,5 @@
 import { TimelineBodyPart } from "@/api/types";
-import { Button, Card, Typography } from "antd";
+import { Button, Card } from "antd";
 import styles from "./InlineDiffPart.module.css";
 import { Icon } from "@/assets/icons";
 
@@ -37,13 +37,20 @@ function InlineDiffPart({ part, onReview }: InlineDiffPartProps): React.JSX.Elem
 			<ul className={styles.fileList}>
 				{part.editedFiles.map((item, index) => (
 					<li key={`${getFilePath(item)}:${index}`} className={styles.fileItem}>
-						<Typography.Text className={styles.filePath} ellipsis={true}>
-							{getFilePath(item)}
-						</Typography.Text>
-						<span className={styles.fileStats}>
-							<span className={styles.additions}>+{item.additions ?? 0}</span>
-							<span className={styles.deletions}> -{item.deletions ?? 0}</span>
-						</span>
+						<Button
+							type="text"
+							className={styles.filePathButton}
+							disabled={onReview === undefined}
+							title={getFilePath(item)}
+							aria-label={`Open review for ${getFilePath(item)}`}
+							onClick={onReview}
+						>
+							<span className={styles.filePath}>{getFilePath(item)}</span>
+							<span className={styles.fileStats}>
+								<span className={styles.additions}>+{item.additions ?? 0}</span>
+								<span className={styles.deletions}> -{item.deletions ?? 0}</span>
+							</span>
+						</Button>
 					</li>
 				))}
 			</ul>

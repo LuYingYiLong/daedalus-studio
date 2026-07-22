@@ -1,2 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg class="icon" width="16" height="16" p-id="5419" t="1784569638457" version="1.1" viewBox="0 0 81.92 81.92" xml:space="preserve" xmlns="http://www.w3.org/2000/svg"><path d="m8.95 9.33a3.8404 3.8404 0 0 0-3.84 3.84v13.93a3.8404 3.8404 0 0 0 3.84 3.84h64.02a3.8404 3.8404 0 0 0 3.84-3.84v-13.93a3.8404 3.8404 0 0 0-3.84-3.84z" fill="currentColor" stop-color="#000000" stroke-linecap="round" stroke-width=".9984"/><path d="m13.128 28.259v40.487h55.437l0.2263-40.487" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="7.68"/><path d="m30.745 40.96h20.429" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="7.68"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+	<path id="矢量 7(边框)" d="M5.5 17.75L5.5 8L5.5 7.25L4 7.25L4 17.75C4 18.9926 5.00736 20 6.25 20L17.75 20C18.9926 20 20 18.9926 20 17.75L20 8L20 7.25L18.5 7.25L18.5 8L18.5 17.75C18.5 18.1642 18.1642 18.5 17.75 18.5L6.25 18.5C5.83578 18.5 5.5 18.1642 5.5 17.75Z" fill="currentColor" fill-rule="evenodd" />
+	<path id="矢量 8" d="M10 11L14 11" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.500000" />
+	<rect id="矩形 1" width="18.000000" height="5.000000" x="3.000000" y="3.000000" rx="1.500000" fill="currentColor" />
+</svg>

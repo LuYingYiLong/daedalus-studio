@@ -111,6 +111,8 @@ describe("AgentPage git diff review source", () => {
 		expect(assistantBubbleSource).toContain("<InlineDiffPart key={index} part={part} onReview={onInlineDiffReview} />");
 		expect(inlineDiffSource).toContain("onReview?: () => void;");
 		expect(inlineDiffSource).toContain("onClick={onReview}");
+		expect(inlineDiffSource).toContain("className={styles.filePathButton}");
+		expect(inlineDiffSource).toContain("aria-label={`Open review for ${getFilePath(item)}`}");
 	});
 
 	it("renders inline diff files without deprecated Ant Design List", () => {

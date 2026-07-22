@@ -1,2 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg class="icon" width="16" height="16" p-id="5419" t="1784569638457" version="1.1" viewBox="0 0 81.92 81.92" xml:space="preserve" xmlns="http://www.w3.org/2000/svg"><path d="m8.6714 40.96h64.669" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-width="7.2948"/><path d="m40.96 8.5796v64.669" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-width="7.2948"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+	<path id="Vector (Stroke)" d="M21.2308 11.25C21.6556 11.25 22 11.5858 22 12C22 12.4142 21.6556 12.75 21.2308 12.75L2.76923 12.75C2.3444 12.75 2 12.4142 2 12C2 11.5858 2.3444 11.25 2.76923 11.25L21.2308 11.25Z" fill="currentColor" fill-rule="evenodd" />
+	<path id="Vector (Stroke)" d="M11.25 21.2309L11.25 2.77303C11.25 2.3461 11.5858 2 12 2C12.4142 2 12.75 2.3461 12.75 2.77303L12.75 21.2309C12.75 21.6557 12.4142 22 12 22C11.5858 22 11.25 21.6557 11.25 21.2309Z" fill="currentColor" fill-rule="evenodd" />
+</svg>

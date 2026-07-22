@@ -202,7 +202,6 @@ type AgentPageProps = {
 	skills: SkillSummary[];
 	isSending: boolean;
 	isApprovalModeSaving: boolean;
-	webSearchEnabled: boolean;
 	workspaceOptions: WorkspaceConfig[];
 	initialWorkspaces: WorkspaceConfig[];
 	initialSessions: SessionMetadata[];
@@ -238,7 +237,6 @@ type AgentPageProps = {
 	onPlanClarificationSkip: () => void;
 	onPlanApprove: (planId: string) => void;
 	onPlanRevise: (planId: string, feedback: string) => void;
-	onWebSearchEnabledChange: (enabled: boolean) => void;
 	onProviderModelChange: (providerId: string, modelId: string) => void;
 	onAddFiles: () => void;
 	onAddFolder: () => void;
@@ -303,7 +301,6 @@ function AgentPage({
 	skills,
 	isSending,
 	isApprovalModeSaving,
-	webSearchEnabled,
 	workspaceOptions,
 	initialWorkspaces,
 	initialSessions,
@@ -339,7 +336,6 @@ function AgentPage({
 	onPlanClarificationSkip,
 	onPlanApprove,
 	onPlanRevise,
-	onWebSearchEnabledChange,
 	onProviderModelChange,
 	onAddFiles,
 	onAddFolder,
@@ -1079,7 +1075,6 @@ function AgentPage({
 													skills={skills}
 													isSending={isSending}
 													isApprovalModeSaving={isApprovalModeSaving}
-													webSearchEnabled={webSearchEnabled}
 													workspaceOptions={workspaceOptions}
 													selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
 													workspaceFooterDisabled={workspaceFooterDisabled}
@@ -1088,7 +1083,6 @@ function AgentPage({
 													onMessageChange={onMessageChange}
 													onModeChange={onModeChange}
 													onApprovalModeChange={onApprovalModeChange}
-													onWebSearchEnabledChange={onWebSearchEnabledChange}
 													onProviderModelChange={onProviderModelChange}
 													onAddFiles={onAddFiles}
 													onAddFolder={onAddFolder}

@@ -8,7 +8,6 @@ export type QueueMessageInput = {
 	provider?: string;
 	model?: string;
 	skillRefs?: string[];
-	webSearchEnabled?: boolean;
 	additionalContext?: AdditionalContextItem[];
 };
 

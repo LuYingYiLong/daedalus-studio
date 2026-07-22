@@ -129,11 +129,13 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 			items: [
 				{
 					key: "open",
-					label: "Open in Explorer"
+					label: "Open in Explorer",
+					icon: <Icon name="folder-open" />,
 				},
 				{
 					key: "delete",
 					label: "Delete",
+					icon: <Icon name="remove" />,
 					danger: true,
 					disabled: options.deletingWorkspaceId !== null
 				}

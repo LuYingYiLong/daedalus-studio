@@ -33,7 +33,6 @@ export type ComposerProps = {
 	skills?: SkillSummary[];
 	isSending?: boolean;
 	isApprovalModeSaving?: boolean;
-	webSearchEnabled?: boolean;
 	workspaceOptions?: WorkspaceConfig[];
 	selectedWorkspace?: WorkspaceConfig | null;
 	workspaceFooterDisabled?: boolean;
@@ -42,7 +41,6 @@ export type ComposerProps = {
 	onMessageChange?: (message: string) => void;
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
-	onWebSearchEnabledChange?: (enabled: boolean) => void;
 	onProviderModelChange?: (providerId: string, modelId: string) => void;
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onWorkspaceAdd?: () => void;
@@ -354,7 +352,6 @@ function Composer({
 	skills = [],
 	isSending = false,
 	isApprovalModeSaving = false,
-	webSearchEnabled = false,
 	workspaceOptions = [],
 	selectedWorkspace = null,
 	workspaceFooterDisabled = false,
@@ -363,7 +360,6 @@ function Composer({
 	onMessageChange,
 	onModeChange,
 	onApprovalModeChange,
-	onWebSearchEnabledChange,
 	onProviderModelChange,
 	onWorkspaceSelect,
 	onWorkspaceAdd,
@@ -984,17 +980,6 @@ function Composer({
 					</Tooltip>
 					
 					<Divider vertical={true} />
-					
-					<Tooltip title="Search">
-						<Button
-							type="text"
-							shape="circle"
-							className={`${styles.searchButton} ${webSearchEnabled ? styles.searchButtonActive : ""}`}
-							icon={<Icon name="search" />}
-							aria-pressed={webSearchEnabled}
-							onClick={(): void => onWebSearchEnabledChange?.(!webSearchEnabled)}
-						/>
-					</Tooltip>
 					<Tooltip title="Mode">
 						<Dropdown
 							menu={{

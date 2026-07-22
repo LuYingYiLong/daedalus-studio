@@ -28,7 +28,6 @@ export type SessionMetadata = {
 	chatMode?: "agent" | "ask" | "plan";
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
-	webSearchEnabled?: boolean;
 	archivedAt?: string;
 	createdAt: string;
 	updatedAt: string;
@@ -63,7 +62,6 @@ export type MessageQueueItem = {
 	provider: string | null;
 	model: string | null;
 	skillRefs: string[];
-	webSearchEnabled: boolean;
 	status: MessageQueueStatus;
 	createdAt: string;
 	updatedAt: string;

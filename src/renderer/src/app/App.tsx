@@ -624,7 +624,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [isPlanApproving, setIsPlanApproving] = useState<boolean>(false);
 	const [isPlanRevising, setIsPlanRevising] = useState<boolean>(false);
 	const [planApprovalError, setPlanApprovalError] = useState<string | null>(null);
-	const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
 	const [isFullTrustModalOpen, setIsFullTrustModalOpen] = useState<boolean>(false);
 	const [fullTrustConfirmationText, setFullTrustConfirmationText] = useState<string>("");
@@ -1068,7 +1067,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						const metadata: SessionMetadata | null = getBackendEventSessionMetadata(event);
 						if (metadata !== null) {
 							setActiveSessionMetadata(metadata);
-							setWebSearchEnabled(metadata.webSearchEnabled === true);
 						}
 						return;
 					}
@@ -1216,7 +1214,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setTimelinePage(emptyTimelinePage);
 		setWorkbench(null);
 		setWorkflowTodoSnapshot(null);
-		setWebSearchEnabled(false);
 		rememberLoadedWorkflowTodo(null);
 		resetPlanClarificationUiState();
 		resetPlanApprovalUiState();
@@ -1239,7 +1236,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setTimelinePage(emptyTimelinePage);
 		setWorkbench(null);
 		setWorkflowTodoSnapshot(null);
-		setWebSearchEnabled(false);
 		rememberLoadedWorkflowTodo(null);
 		resetPlanClarificationUiState();
 		resetPlanApprovalUiState();
@@ -1401,7 +1397,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setLatestPlanClarification(result.latestPlanClarification);
 			setLatestPlanApproval(result.latestPlanApproval);
 			setActiveSessionMetadata(result.metadata);
-			setWebSearchEnabled(result.metadata.webSearchEnabled === true);
 			setWorkbench(result.workbench);
 			setApprovalModeState(result.metadata.approvalMode ?? "manual");
 			setActiveWorkspace(createWorkspaceFromSessionOpenResult(result));
@@ -1757,14 +1752,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		});
 	}
 
-	function showWebSearchErrorIfRequested(requestedWebSearchEnabled: boolean, errorMessage: string): void {
-		if (!requestedWebSearchEnabled) {
-			return;
-		}
-
-		void messageApi.error(errorMessage);
-	}
-
 	function showTransientError(errorMessage: string): void {
 		void messageApi.error(errorMessage);
 	}
@@ -1796,7 +1783,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const modelId: string | null = homeDraft.modelId ?? providerModelSelection?.activeModel.modelId ?? null;
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
 		let sessionCreated: boolean = false;
-		const requestedWebSearchEnabled: boolean = webSearchEnabled;
 
 		try {
 			setIsHomeSubmitting(true);
@@ -1814,8 +1800,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				provider: providerId ?? undefined,
 				model: modelId ?? undefined,
 				chatMode: homeDraft.chatMode,
-				approvalMode,
-				webSearchEnabled: requestedWebSearchEnabled
+				approvalMode
 			});
 			sessionCreated = true;
 
@@ -1838,8 +1823,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				provider: providerId ?? undefined,
 				model: modelId ?? undefined,
 				additionalContext: created.workbench.composer.additionalContext,
-				skillRefs,
-				webSearchEnabled: requestedWebSearchEnabled
+				skillRefs
 			});
 			await refreshLatestTimeline(created.id);
 		} catch (error: unknown) {
@@ -1871,7 +1855,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					};
 			});
 			setSessionError(errorMessage);
-			showWebSearchErrorIfRequested(requestedWebSearchEnabled, errorMessage);
 			if (sessionCreated && !isBackendRpcErrorMessage(errorMessage)) {
 				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 					return {
@@ -1922,7 +1905,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
 		const chatMode: ChatMode = getChatMode(workbench);
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const requestedWebSearchEnabled: boolean = webSearchEnabled;
 		const pendingPatch: WorkbenchPatch = mergePatch(takePendingWorkbenchPatch(), {
 			additionalContextAction: { action: "set", items: [] }
 		});
@@ -1946,8 +1928,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				provider: workbench.composer.provider ?? undefined,
 				model: workbench.composer.model ?? undefined,
 				additionalContext,
-				skillRefs,
-				webSearchEnabled: requestedWebSearchEnabled
+				skillRefs
 			});
 			await refreshLatestTimeline();
 		} catch (error: unknown) {
@@ -1973,7 +1954,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					};
 			});
 			setSessionError(errorMessage);
-			showWebSearchErrorIfRequested(requestedWebSearchEnabled, errorMessage);
 			if (!isBackendRpcErrorMessage(errorMessage)) {
 				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 					return {
@@ -2038,8 +2018,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				provider: workbench.composer.provider ?? undefined,
 				model: workbench.composer.model ?? undefined,
 				additionalContext,
-				skillRefs,
-				webSearchEnabled
+				skillRefs
 			});
 			applyWorkbench(result.workbench);
 			setSessionError(null);
@@ -2217,7 +2196,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
 		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
-		const requestedWebSearchEnabled: boolean = webSearchEnabled;
 
 		try {
 			setSessionError(null);
@@ -2234,8 +2212,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				model: workbench.composer.model ?? undefined,
 				retryFromRequestId: payload.requestId,
 				additionalContext: payload.additionalContext,
-				skillRefs,
-				webSearchEnabled: requestedWebSearchEnabled
+				skillRefs
 			});
 			await refreshLatestTimeline();
 			return true;
@@ -2254,7 +2231,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					};
 			});
 			setSessionError(errorMessage);
-			showWebSearchErrorIfRequested(requestedWebSearchEnabled, errorMessage);
 			await refreshLatestTimeline().catch((refreshError: unknown): void => {
 				console.error("[App] refresh timeline after retry failure failed", refreshError);
 			});
@@ -2316,7 +2292,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const metadata: SessionMetadata | undefined = sessionList.sessions.find((session: SessionMetadata): boolean => session.id === sessionId);
 		if (metadata !== undefined) {
 			setActiveSessionMetadata(metadata);
-			setWebSearchEnabled(metadata.webSearchEnabled === true);
 			setActiveWorkspace((currentWorkspace: WorkspaceConfig | null): WorkspaceConfig | null => {
 				if (metadata.workspaceId === undefined || metadata.workspaceRoot === undefined) {
 					return null;
@@ -2609,15 +2584,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			? null
 			: activeWorkspace;
 	const composerIsSending: boolean = isRunControllerActive(runState) || isHomeSubmitting;
-	const handleWebSearchEnabledChange = (enabled: boolean): void => {
-		setWebSearchEnabled(enabled);
-		if (!isNewSessionHome && activeSessionId !== null) {
-			void persistSessionUiMetadata({ webSearchEnabled: enabled });
-		}
-		if (composerIsSending) {
-			void messageApi.info("Web search changes apply to your next message.");
-		}
-	};
 
 	useEffect((): void => {
 		if (latestPlanClarificationKey === null && suppressedPlanClarificationKey !== null) {
@@ -2822,7 +2788,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					skills={skills}
 					isSending={composerIsSending}
 					isApprovalModeSaving={isApprovalModeSaving}
-					webSearchEnabled={webSearchEnabled}
 					workspaceOptions={homeWorkspaceOptions}
 					initialWorkspaces={bootstrapData.workspaceList.workspaces}
 					initialSessions={bootstrapData.sessionList.sessions}
@@ -2894,7 +2859,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					onPlanRevise={(planId: string, feedback: string): void => {
 						void handlePlanRevise(planId, feedback);
 					}}
-					onWebSearchEnabledChange={handleWebSearchEnabledChange}
 					onProviderModelChange={(providerId: string, modelId: string): void => {
 						void handleProviderModelChange(providerId, modelId);
 					}}
