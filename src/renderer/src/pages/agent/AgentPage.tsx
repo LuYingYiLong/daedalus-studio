@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Alert, Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip, Checkbox } from "antd";
+import { Alert, Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip, Checkbox, Input } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
@@ -408,6 +408,7 @@ function AgentPage({
 	const [includeUnstagedChanges, setIncludeUnstagedChanges] = useState<boolean>(true);
 	const [commitOperation, setCommitOperation] = useState<CommitOrPushAction | null>(null);
 	const [commitError, setCommitError] = useState<string | null>(null);
+	const [branchOpen, setBranchOpen] = useState<boolean>(false);
 	const messageListRef = useRef<MessageListHandle | null>(null);
 	const scrollToBottomButtonRef = useRef<HTMLButtonElement | null>(null);
 	const scrollToBottomButtonVisibleRef = useRef<boolean>(false);
@@ -487,6 +488,7 @@ function AgentPage({
 							block
 							icon={<Icon name="git-branch" />}
 							className={styles.summaryActionButton}
+							onClick={() => setBranchOpen(true)}
 						>
 							{summaryOverview.envInfo.branch ?? "Detached HEAD"}
 						</Button>
@@ -1469,6 +1471,24 @@ function AgentPage({
 					>
 						Includes unstaged changes
 					</Checkbox>
+				</div>
+			</Modal>
+			<Modal
+				title="Branch"
+				open={branchOpen}
+				onCancel={() => setBranchOpen(false)}
+				footer={null}
+			>
+				<div className={styles.branchDialogBody}>
+					<Input
+						allowClear={true}
+						prefix={<Icon name="search" />}
+						placeholder="Search branch"
+						className={styles.searchBox}
+					/>
+					<div className={styles.branchList}>
+					</div>
+					<Button block>Create and checkout new branch</Button>
 				</div>
 			</Modal>
 		</div>
