@@ -40,7 +40,8 @@ describe("AgentPage git diff review source", () => {
 	});
 
 	it("adds a fixed layout-right top menu button for opening the side dock", () => {
-		expect(agentSource).toContain("const showSideDockButton: boolean = !isHome;");
+		expect(agentSource).toContain("const showDockControls: boolean = !isHome || activeWorkspace !== null;");
+		expect(agentSource).toContain("const showSideDockButton: boolean = showDockControls;");
 		expect(agentSource).toContain("className={styles.floatingActionSlot}");
 		expect(agentSource).toContain("className={styles.floatingActions}");
 		expect(agentSource).not.toContain("Affix");

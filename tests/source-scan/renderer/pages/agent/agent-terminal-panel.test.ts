@@ -46,7 +46,8 @@ describe("AgentPage terminal panel source", () => {
 		const bottomButtonIndex: number = agentSource.indexOf("icon={<Icon name=\"layout-bottom\" />}");
 		const rightButtonIndex: number = agentSource.indexOf("icon={<Icon name=\"layout-right\" />}");
 
-		expect(agentSource).toContain("const showBottomDockButton: boolean = !isHome;");
+		expect(agentSource).toContain("const showDockControls: boolean = !isHome || activeWorkspace !== null;");
+		expect(agentSource).toContain("const showBottomDockButton: boolean = showDockControls;");
 		expect(bottomButtonIndex).toBeGreaterThan(-1);
 		expect(rightButtonIndex).toBeGreaterThan(-1);
 		expect(bottomButtonIndex).toBeLessThan(rightButtonIndex);

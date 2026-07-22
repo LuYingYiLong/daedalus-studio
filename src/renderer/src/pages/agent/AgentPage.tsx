@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip, Checkbox } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
@@ -400,10 +400,11 @@ function AgentPage({
 	const [includeUnstagedChanges, setIncludeUnstagedChanges] = useState<boolean>(true);
 	const [commitOperation, setCommitOperation] = useState<CommitOrPushAction | null>(null);
 	const [commitError, setCommitError] = useState<string | null>(null);
-	const showWorkspaceLaunchControls: boolean = !isHome && activeWorkspace !== null;
+	const showDockControls: boolean = !isHome || activeWorkspace !== null;
+	const showWorkspaceLaunchControls: boolean = activeWorkspace !== null;
 	const showSummaryButton: boolean = !isHome && activeSessionId !== null;
-	const showSideDockButton: boolean = !isHome;
-	const showBottomDockButton: boolean = !isHome;
+	const showSideDockButton: boolean = showDockControls;
+	const showBottomDockButton: boolean = showDockControls;
 	const terminalWaitForCwd: boolean = !isHome && isSessionLoading && activeWorkspace === null;
 	const isCommitOperationRunning: boolean = commitOperation !== null;
 	const workflowFileChangeSummary: WorkflowFileChangeSummary = useMemo((): WorkflowFileChangeSummary => {
@@ -438,7 +439,7 @@ function AgentPage({
 						<Button
 							type="text"
 							block
-							icon={<Icon name="edit-add-remove" />}
+							icon={<Icon name="git-diff" />}
 							className={styles.summaryActionButton}
 						>
 							<span className={styles.diffRow}>
@@ -618,7 +619,7 @@ function AgentPage({
 		setCommitOperation(null);
 	}, [activeSessionId, activeWorkspace?.id]);
 
-	async function loadSummaryOverview(planLimit: number = SUMMARY_PREVIEW_LIMIT, sourceLimit: number = SUMMARY_PREVIEW_LIMIT): Promise<SessionOverviewResult | null> {
+	const loadSummaryOverview = useCallback(async (planLimit: number = SUMMARY_PREVIEW_LIMIT, sourceLimit: number = SUMMARY_PREVIEW_LIMIT): Promise<SessionOverviewResult | null> => {
 		if (activeSessionId === null) {
 			return null;
 		}
@@ -641,14 +642,14 @@ function AgentPage({
 		} finally {
 			setIsSummaryLoading(false);
 		}
-	}
+	}, [activeSessionId]);
 
-	function handleSummaryOpenChange(open: boolean): void {
+	const handleSummaryOpenChange = useCallback((open: boolean): void => {
 		setSummaryOpen(open);
 		if (open && !isSummaryLoading) {
 			void loadSummaryOverview();
 		}
-	}
+	}, [isSummaryLoading, loadSummaryOverview]);
 
 	async function openPlansModal(): Promise<void> {
 		const result: SessionOverviewResult | null = await loadSummaryOverview(SUMMARY_SEE_MORE_LIMIT, SUMMARY_PREVIEW_LIMIT);
@@ -753,57 +754,57 @@ function AgentPage({
 		void openWorkspaceLaunchTarget(targetId);
 	};
 
-	function requestSideDockKind(kind: DockPanelKind): void {
+	const requestSideDockKind = useCallback((kind: DockPanelKind): void => {
 		dockActivationRequestIdRef.current += 1;
 		setSideDockActivationRequest({
 			id: dockActivationRequestIdRef.current,
 			kind
 		});
-	}
+	}, []);
 
-	function openSideDock(kind?: DockPanelKind): void {
+	const openSideDock = useCallback((kind?: DockPanelKind): void => {
 		setSideDockSize(sideDockLastOpenSize);
 		setSideDockOpen(true);
 		if (kind !== undefined) {
 			requestSideDockKind(kind);
 		}
-	}
+	}, [requestSideDockKind, sideDockLastOpenSize]);
 
-	function closeSideDock(): void {
+	const closeSideDock = useCallback((): void => {
 		setSideDockOpen(false);
-	}
+	}, []);
 
-	function toggleSideDock(): void {
+	const toggleSideDock = useCallback((): void => {
 		if (sideDockOpen) {
 			closeSideDock();
 			return;
 		}
 		openSideDock();
-	}
+	}, [closeSideDock, openSideDock, sideDockOpen]);
 
-	function openReviewPanel(): void {
+	const openReviewPanel = useCallback((): void => {
 		if (activeWorkspace === null) {
 			return;
 		}
 		openSideDock("review");
-	}
+	}, [activeWorkspace, openSideDock]);
 
-	function openBottomDock(): void {
+	const openBottomDock = useCallback((): void => {
 		setBottomDockSize(bottomDockLastOpenSize);
 		setBottomDockOpen(true);
-	}
+	}, [bottomDockLastOpenSize]);
 
-	function closeBottomDock(): void {
+	const closeBottomDock = useCallback((): void => {
 		setBottomDockOpen(false);
-	}
+	}, []);
 
-	function toggleBottomDock(): void {
+	const toggleBottomDock = useCallback((): void => {
 		if (bottomDockOpen) {
 			closeBottomDock();
 			return;
 		}
 		openBottomDock();
-	}
+	}, [bottomDockOpen, closeBottomDock, openBottomDock]);
 
 	function handleSideDockResize(sizes: number[]): void {
 		const nextSize: number | undefined = sizes[1];
@@ -894,6 +895,48 @@ function AgentPage({
 		}
 	}
 
+	const summaryPopoverContent: React.ReactNode = useMemo((): React.ReactNode => (
+		<div className={styles.summaryPanel}>
+			{isSummaryLoading && summaryOverview === null ? (
+				<div className={styles.summaryLoading}>
+					<Spin size="small" />
+				</div>
+			) : summaryError !== null ? (
+				<div className={styles.summaryEmpty}>
+					<Typography.Text type="danger">{summaryError}</Typography.Text>
+					<Button
+						type="text"
+						icon={<Icon name="refresh" />}
+						onClick={(): void => {
+							void loadSummaryOverview();
+						}}
+					>
+						Retry
+					</Button>
+				</div>
+			) : summaryCollapseItems.length > 0 ? (
+				summaryCollapseItems.map((item, index): React.ReactNode => (
+					<div key={String(item?.key ?? index)}>
+						{index > 0 ? <Divider size="small" /> : null}
+						<Collapse
+							size="small"
+							bordered={false}
+							items={item === undefined ? [] : [item]}
+							className={styles.summaryCollapse}
+							defaultActiveKey={[String(item?.key ?? "")]}
+						/>
+					</div>
+				))
+			) : (
+				<Empty
+					image={Empty.PRESENTED_IMAGE_SIMPLE}
+					description="No summary yet"
+					className={styles.summaryEmpty}
+				/>
+			)}
+		</div>
+	), [isSummaryLoading, loadSummaryOverview, summaryCollapseItems, summaryError, summaryOverview]);
+
 	function renderSummaryButton(): React.ReactNode {
 		return (
 			<Popover
@@ -902,47 +945,7 @@ function AgentPage({
 				open={summaryOpen}
 				onOpenChange={handleSummaryOpenChange}
 				className={styles.summaryPopver}
-				content={(
-					<div className={styles.summaryPanel}>
-						{isSummaryLoading && summaryOverview === null ? (
-							<div className={styles.summaryLoading}>
-								<Spin size="small" />
-							</div>
-						) : summaryError !== null ? (
-							<div className={styles.summaryEmpty}>
-								<Typography.Text type="danger">{summaryError}</Typography.Text>
-								<Button
-									type="text"
-									icon={<Icon name="refresh" />}
-									onClick={(): void => {
-										void loadSummaryOverview();
-									}}
-								>
-									Retry
-								</Button>
-							</div>
-						) : summaryCollapseItems.length > 0 ? (
-							summaryCollapseItems.map((item, index): React.ReactNode => (
-								<div key={String(item?.key ?? index)}>
-									{index > 0 ? <Divider size="small" /> : null}
-									<Collapse
-										size="small"
-										bordered={false}
-										items={item === undefined ? [] : [item]}
-										className={styles.summaryCollapse}
-										defaultActiveKey={[String(item?.key ?? "")]}
-									/>
-								</div>
-							))
-						) : (
-							<Empty
-								image={Empty.PRESENTED_IMAGE_SIMPLE}
-								description="No summary yet"
-								className={styles.summaryEmpty}
-							/>
-						)}
-					</div>
-				)}
+				content={summaryPopoverContent}
 			>
 				<Button
 					type={summaryOpen ? "primary" : "text"}

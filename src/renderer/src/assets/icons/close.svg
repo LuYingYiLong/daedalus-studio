@@ -1,4 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-	<path id="Vector (Stroke)" d="M19.2308 0C19.6556 0 20 0.335786 20 0.75C20 1.16421 19.6556 1.5 19.2308 1.5L0.769231 1.5C0.344396 1.5 4.44089e-16 1.16421 0 0.75C4.44089e-16 0.335786 0.344396 0 0.769231 0L19.2308 0Z" fill="currentColor" fill-rule="evenodd" transform="matrix(0.707107,0.707107,-0.707107,0.707107,5.45926,4.3986)" />
-	<path id="Vector (Stroke)" d="M0 19.2309L0 0.773034C0 0.346099 0.335786 0 0.75 0C1.16421 0 1.5 0.346099 1.5 0.773034L1.5 19.2309C1.5 19.6557 1.16421 20 0.75 20C0.335786 20 0 19.6557 0 19.2309Z" fill="currentColor" fill-rule="evenodd" transform="matrix(0.707107,0.707107,-0.707107,0.707107,18.5407,4.3986)" />
+	<path id="矢量 15" d="M5.50001 5.5L18.5 18.5M5.5 5.5L18.5 18.5" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path id="矢量 16" d="M0 0L13.0888 13.0888" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" transform="matrix(0,1,-1,0,18.5888,5.41121)" />
 </svg>

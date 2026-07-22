@@ -20,7 +20,7 @@ function PlanPart({ part }: PlanPartProps): React.JSX.Element {
 			<Tooltip title="Open plan">
 				<Button
 					type="text"
-					icon={<Icon name="distraction_free" />}
+					icon={<Icon name="distraction-free" />}
 					onClick={() => setModalOpen(true)}
 				/>
 			</Tooltip>

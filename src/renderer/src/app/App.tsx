@@ -73,6 +73,7 @@ type AppProps = {
 const SUPPORTED_IMAGE_MIME_TYPES: readonly SupportedImageMimeType[] = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 const MAX_IMAGE_ATTACHMENT_BYTES: number = 1024 * 1024;
 const RECENT_CONTEXT_FILE_WINDOW_MS: number = 2000;
+const CONTEXT_SUBTITLE_MAX_CHARS: number = 400;
 const PLAN_CLARIFICATION_SKIP_REPLY: string = "Continue with the current assumptions.";
 const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
 
@@ -242,6 +243,64 @@ function createWorkspacePathContextItem(entry: WorkspacePickedEntry, workspace: 
 			relativePath: entry.relativePath
 		}
 	};
+}
+
+function clipContextLabel(value: string, maxChars: number): string {
+	if (value.length <= maxChars) {
+		return value;
+	}
+
+	return `${value.slice(0, Math.max(0, maxChars - 3))}...`;
+}
+
+function getFileNameFromLocalPath(filePath: string): string {
+	const parts: string[] = filePath.replaceAll("\\", "/").split("/").filter((part: string): boolean => part.length > 0);
+	return parts.at(-1) ?? filePath;
+}
+
+function createExternalFileContextItem(file: File, absolutePath: string): AdditionalContextItem {
+	const data: Record<string, unknown> = {
+		external: true,
+		absolutePath
+	};
+	if (file.type.trim().length > 0) {
+		data.mimeType = file.type;
+	}
+	if (file.size > 0) {
+		data.byteSize = file.size;
+	}
+	if (file.lastModified > 0) {
+		data.lastModified = file.lastModified;
+	}
+
+	return {
+		id: createContextId(),
+		kind: "file",
+		title: clipContextLabel(file.name.trim() || getFileNameFromLocalPath(absolutePath), 200),
+		subtitle: clipContextLabel(absolutePath, CONTEXT_SUBTITLE_MAX_CHARS),
+		source: "manual",
+		resourcePath: absolutePath,
+		summary: "User explicitly dropped this local file from outside the workspace; use the absolute path as the reference for this turn.",
+		data
+	};
+}
+
+function normalizeLocalPathForCompare(filePath: string): string {
+	const normalized: string = filePath.trim().replaceAll("\\", "/");
+	const rootAwarePath: string = /^[A-Za-z]:\/?$/u.test(normalized)
+		? normalized.replace(/\/?$/u, "/")
+		: normalized.length > 1
+			? normalized.replace(/\/+$/u, "")
+			: normalized;
+	return /^[A-Za-z]:\//u.test(rootAwarePath) || rootAwarePath.startsWith("//")
+		? rootAwarePath.toLowerCase()
+		: rootAwarePath;
+}
+
+function isLocalPathInsideWorkspace(filePath: string, workspaceRoot: string): boolean {
+	const normalizedFilePath: string = normalizeLocalPathForCompare(filePath);
+	const normalizedWorkspaceRoot: string = normalizeLocalPathForCompare(workspaceRoot);
+	return normalizedFilePath === normalizedWorkspaceRoot || normalizedFilePath.startsWith(`${normalizedWorkspaceRoot}/`);
 }
 
 function isSupportedImageMimeType(value: string): value is SupportedImageMimeType {
@@ -917,8 +976,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		});
 	}
 
-	function applyOptimisticSend(requestId: string, message: string, additionalContext: AdditionalContextItem[], clearComposerText: boolean = true): void {
-		applyOptimisticActiveRun(requestId, clearComposerText, true);
+	function appendOptimisticUserBlock(requestId: string, message: string, additionalContext: AdditionalContextItem[]): void {
 		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 			const sessionId: string | null = activeSessionIdRef.current;
 			const hasUserBlock: boolean = currentPage.blocks.some((block: TimelineBlock): boolean => {
@@ -940,6 +998,28 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				hasMoreAfter: false
 			};
 		});
+	}
+
+	function applyOptimisticSend(requestId: string, message: string, additionalContext: AdditionalContextItem[], clearComposerText: boolean = true): void {
+		applyOptimisticActiveRun(requestId, clearComposerText, true);
+		appendOptimisticUserBlock(requestId, message, additionalContext);
+	}
+
+	function appendQueuedRunUserBlock(workbenchSnapshot: WorkbenchSnapshot): void {
+		const requestId: string | undefined = workbenchSnapshot.activeRun.requestId;
+		const queueItemId: number | undefined = workbenchSnapshot.activeRun.queueItemId;
+		if (requestId === undefined || queueItemId === undefined) {
+			return;
+		}
+
+		const queueItem: MessageQueueItem | undefined = workbenchSnapshot.messageQueue.find((item: MessageQueueItem): boolean => {
+			return item.id === queueItemId && (item.status === "sending" || item.status === "approval");
+		});
+		if (queueItem === undefined) {
+			return;
+		}
+
+		appendOptimisticUserBlock(requestId, queueItem.text, queueItem.additionalContext);
 	}
 
 	function finishOptimisticActiveRun(requestId: string): void {
@@ -1098,6 +1178,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					const eventWorkbench: WorkbenchSnapshot | null = getWorkbenchFromEvent(event);
 					if (eventWorkbench !== null) {
 						applyWorkbench(eventWorkbench);
+						appendQueuedRunUserBlock(eventWorkbench);
 						return;
 					}
 
@@ -2437,6 +2518,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 				const dataUrl: string = await readFileAsDataUrl(file);
 				const dimensions = await readImageDimensions(dataUrl);
+				const sourcePath: string | null = getLocalPathForFile(file);
 				const result = await saveImageAttachment({
 					sessionId: activeSessionId,
 					mimeType: file.type,
@@ -2444,7 +2526,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					byteSize: file.size,
 					width: dimensions.width,
 					height: dimensions.height,
-					title: file.name
+					title: file.name,
+					sourcePath: sourcePath ?? undefined
 				});
 				patchContext({ action: "addOrReplace", item: result.attachment });
 			}
@@ -2545,26 +2628,34 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				return;
 			}
 
-			const workspace: WorkspaceConfig | null = getContextWorkspace();
-			if (workspace === null) {
-				showTransientError(imageFiles.length > 0 ? "Images added. Select a workspace to add non-image files." : "Please select a workspace before adding files.");
-				return;
-			}
-
-			const paths: string[] = workspaceFiles
-				.map((file: File): string | null => getLocalPathForFile(file))
-				.filter((filePath: string | null): filePath is string => filePath !== null);
-			if (paths.length === 0) {
+			const localFiles: Array<{ file: File; path: string }> = workspaceFiles.flatMap((file: File): Array<{ file: File; path: string }> => {
+				const filePath: string | null = getLocalPathForFile(file);
+				return filePath === null ? [] : [{ file, path: filePath }];
+			});
+			if (localFiles.length === 0) {
 				showTransientError(imageFiles.length > 0 ? "Images added. Dropped files did not expose local paths." : "Dropped files did not expose local paths.");
 				return;
 			}
 
-			const entries: WorkspacePickedEntry[] = await window.electronAPI.workspaceFs.createEntriesFromPaths({
-				workspaceRoot: workspace.rootPath,
-				paths
-			});
-			for (const entry of entries) {
-				patchContext({ action: "addOrReplace", item: createWorkspacePathContextItem(entry, workspace) });
+			const workspace: WorkspaceConfig | null = getContextWorkspace();
+			const workspaceLocalFiles: Array<{ file: File; path: string }> = workspace === null
+				? []
+				: localFiles.filter((fileEntry: { file: File; path: string }): boolean => isLocalPathInsideWorkspace(fileEntry.path, workspace.rootPath));
+			const externalLocalFiles: Array<{ file: File; path: string }> = workspace === null
+				? localFiles
+				: localFiles.filter((fileEntry: { file: File; path: string }): boolean => !isLocalPathInsideWorkspace(fileEntry.path, workspace.rootPath));
+
+			if (workspace !== null && workspaceLocalFiles.length > 0) {
+				const entries: WorkspacePickedEntry[] = await window.electronAPI.workspaceFs.createEntriesFromPaths({
+					workspaceRoot: workspace.rootPath,
+					paths: workspaceLocalFiles.map((fileEntry: { file: File; path: string }): string => fileEntry.path)
+				});
+				for (const entry of entries) {
+					patchContext({ action: "addOrReplace", item: createWorkspacePathContextItem(entry, workspace) });
+				}
+			}
+			for (const fileEntry of externalLocalFiles) {
+				patchContext({ action: "addOrReplace", item: createExternalFileContextItem(fileEntry.file, fileEntry.path) });
 			}
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to add files";

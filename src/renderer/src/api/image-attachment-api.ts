@@ -9,6 +9,7 @@ export type SaveImageAttachmentParams = {
 	width?: number;
 	height?: number;
 	title?: string;
+	sourcePath?: string;
 };
 
 export type SaveImageAttachmentResult = {

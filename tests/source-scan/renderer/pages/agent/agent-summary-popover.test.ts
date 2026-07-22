@@ -12,7 +12,7 @@ describe("AgentPage summary popover source", () => {
 	});
 
 	it("shows the summary action for non-home sessions independently of workspace launch controls", () => {
-		expect(source).toContain("const showWorkspaceLaunchControls: boolean = !isHome && activeWorkspace !== null;");
+		expect(source).toContain("const showWorkspaceLaunchControls: boolean = activeWorkspace !== null;");
 		expect(source).toContain("const showSummaryButton: boolean = !isHome && activeSessionId !== null;");
 		expect(source).toContain("{showWorkspaceLaunchControls ? (");
 		expect(source).toContain("{showSummaryButton ? renderSummaryButton() : null}");

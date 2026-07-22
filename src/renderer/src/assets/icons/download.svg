@@ -1,3 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
-	<path d="M7 1h2v7.2l2.6-2.6L13 7l-5 5-5-5 1.4-1.4L7 8.2V1Zm-4 12h10v2H3v-2Z" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+	<path id="矢量 30" d="M4 15L4 18C4 19.1046 4.89543 20 6 20L18 20C19.1046 20 20 19.1046 20 18L20 15" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path id="矢量 20" d="M0 9L9 0M3 0L9 0L9 6" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" transform="matrix(-0.707107,0.707107,-0.707107,-0.707107,18.364,9.36396)" />
 </svg>

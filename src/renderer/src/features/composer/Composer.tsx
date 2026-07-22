@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Input, Dropdown, Button, Divider, Flex, Tooltip, Popover, Progress, Typography, Spin } from "antd";
 import type { MenuProps, ProgressProps } from "antd";
 import type { TextAreaRef } from "antd/es/input/TextArea";
@@ -125,7 +125,7 @@ const modeItems: MenuProps["items"] = [
 	{
 		key: "plan",
 		label: "Plan",
-		icon: <Icon name="todo" />
+		icon: <Icon name="plan" />
 	},
 ];
 
@@ -391,19 +391,19 @@ function Composer({
 	const [contextUsageError, setContextUsageError] = useState<string | null>(null);
 	const [isCompressingContext, setIsCompressingContext] = useState<boolean>(false);
 
-	const handleModeClick: MenuProps["onClick"] = ({ key }): void => {
+	const handleModeClick: MenuProps["onClick"] = useCallback(({ key }): void => {
 		if (isComposerMode(key)) {
 			onModeChange?.(key);
 		}
-	};
+	}, [onModeChange]);
 
-	const handleApprovalModeClick: MenuProps["onClick"] = ({ key }): void => {
+	const handleApprovalModeClick: MenuProps["onClick"] = useCallback(({ key }): void => {
 		if (isApprovalMode(key)) {
 			onApprovalModeChange?.(key);
 		}
-	};
+	}, [onApprovalModeChange]);
 
-	const handleWorkspaceClick: MenuProps["onClick"] = ({ key }): void => {
+	const handleWorkspaceClick: MenuProps["onClick"] = useCallback(({ key }): void => {
 		const selectedKey: string = String(key);
 		if (selectedKey === NO_WORKSPACE_KEY) {
 			onWorkspaceClear?.();
@@ -418,9 +418,9 @@ function Composer({
 		if (workspaceId !== null) {
 			onWorkspaceSelect?.(workspaceId);
 		}
-	};
+	}, [onWorkspaceAdd, onWorkspaceClear, onWorkspaceSelect]);
 
-	const handleContextItemClick: MenuProps["onClick"] = ({ key }): void => {
+	const handleContextItemClick: MenuProps["onClick"] = useCallback(({ key }): void => {
 		const selectedKey: string = String(key);
 		if (selectedKey === "files") {
 			onAddFiles?.();
@@ -433,7 +433,7 @@ function Composer({
 		if (selectedKey === "images") {
 			imageInputRef.current?.click();
 		}
-	};
+	}, [onAddFiles, onAddFolder]);
 
 	function handleImageInputChange(event: React.ChangeEvent<HTMLInputElement>): void {
 		const files: File[] = Array.from(event.currentTarget.files ?? []);
@@ -467,6 +467,25 @@ function Composer({
 		: approvalMode === "auto-safe"
 			? "Auto Safe"
 			: "Manual";
+	const contextMenu: MenuProps = useMemo((): MenuProps => ({
+		items: contextItems,
+		onClick: handleContextItemClick
+	}), [handleContextItemClick]);
+	const modeMenu: MenuProps = useMemo((): MenuProps => ({
+		items: modeItems,
+		selectedKeys: [mode],
+		onClick: handleModeClick
+	}), [handleModeClick, mode]);
+	const approvalModeMenu: MenuProps = useMemo((): MenuProps => ({
+		items: approvalModeItems,
+		selectedKeys: [approvalMode],
+		onClick: handleApprovalModeClick
+	}), [approvalMode, handleApprovalModeClick]);
+	const workspaceFooterMenu: MenuProps = useMemo((): MenuProps => ({
+		items: workspaceFooterItems,
+		selectedKeys: [selectedWorkspaceKey],
+		onClick: handleWorkspaceClick
+	}), [handleWorkspaceClick, selectedWorkspaceKey, workspaceFooterItems]);
 	const hasCompletion: boolean = completionToken !== null && completionOptions.length > 0;
 	const contextUsagePercent: number = contextUsage?.percent ?? 0;
 	const contextUsageStrokeColor: ProgressStrokeColor = getContextUsageStrokeColor(contextUsagePercent);
@@ -546,7 +565,7 @@ function Composer({
 		};
 	}, [draftMessage, mode, selectedModel?.provider, selectedModel?.model, composerContextItems, showContextUsage]);
 
-	const handleProviderModelClick: MenuProps["onClick"] = ({ key }): void => {
+	const handleProviderModelClick: MenuProps["onClick"] = useCallback(({ key }): void => {
 		const nextSelectedModel: SelectedModel | null = parseModelKey(String(key));
 
 		if (nextSelectedModel === null) {
@@ -554,7 +573,12 @@ function Composer({
 		}
 
 		onProviderModelChange?.(nextSelectedModel.provider, nextSelectedModel.model);
-	};
+	}, [onProviderModelChange]);
+	const providerModelMenu: MenuProps = useMemo((): MenuProps => ({
+		items: providerModelItems,
+		selectedKeys: selectedModelKey === undefined ? [] : [selectedModelKey],
+		onClick: handleProviderModelClick
+	}), [handleProviderModelClick, providerModelItems, selectedModelKey]);
 
 	function clearDraftMessage(): void {
 		setDraftMessage("");
@@ -968,7 +992,7 @@ function Composer({
 					<div className={styles.composerToolbar}>
 					<Tooltip title="Add additional context">
 						<Dropdown
-							menu={{ items: contextItems, onClick: handleContextItemClick }}
+							menu={contextMenu}
 							trigger={["click"]}
 						>
 							<Button
@@ -982,27 +1006,19 @@ function Composer({
 					<Divider vertical={true} />
 					<Tooltip title="Mode">
 						<Dropdown
-							menu={{
-								items: modeItems,
-								selectedKeys: [mode],
-								onClick: handleModeClick,
-							}}
+							menu={modeMenu}
 							trigger={["click"]}
 						>
 							<Button
 								type="text"
 								shape="circle"
-								icon={<Icon name={mode === "plan" ? "todo" : mode} />}
+								icon={<Icon name={mode} />}
 							/>
 						</Dropdown>
 					</Tooltip>
 					<Tooltip title="Approval mode">
 						<Dropdown
-							menu={{
-								items: approvalModeItems,
-								selectedKeys: [approvalMode],
-								onClick: handleApprovalModeClick,
-							}}
+							menu={approvalModeMenu}
 							disabled={isApprovalModeSaving}
 							trigger={["click"]}
 						>
@@ -1028,11 +1044,7 @@ function Composer({
 							disabled={providerModelSelection === null}
 							rootClassName={styles.modelDropdown}
 							autoAdjustOverflow={true}
-							menu={{
-								items: providerModelItems,
-								selectedKeys: selectedModelKey === undefined ? [] : [selectedModelKey],
-								onClick: handleProviderModelClick
-							}}
+							menu={providerModelMenu}
 							trigger={["click"]}
 						>
 							<Button
@@ -1069,11 +1081,7 @@ function Composer({
 				>
 					<Dropdown
 						disabled={workspaceFooterDisabled || isWorkspaceAdding}
-						menu={{
-							items: workspaceFooterItems,
-							selectedKeys: [selectedWorkspaceKey],
-							onClick: handleWorkspaceClick
-						}}
+						menu={workspaceFooterMenu}
 						trigger={["click"]}
 					>
 						<Button
@@ -1114,4 +1122,4 @@ function Composer({
 	);
 }
 
-export default Composer;
+export default memo(Composer);

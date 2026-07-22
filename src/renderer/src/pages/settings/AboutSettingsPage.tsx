@@ -4,6 +4,7 @@ import { createBackendClient } from "@/api/backend-client";
 import type { BackendHealthResult } from "@/app/bootstrap";
 import { Icon } from "@/assets/icons";
 import backendColorfulIconUrl from "@/assets/icons/backend-colorful.svg?url";
+import daedalusColorfulIconUrl from "@/assets/icons/icon-colorful.svg";
 import styles from "./AboutSettingsPage.module.css";
 
 type PackageInfo = {
@@ -158,9 +159,10 @@ function AboutSettingsPage(): React.JSX.Element {
 					<>
 						<Card className={styles.infoCard}>
 							<div className={styles.appHeader}>
-								<Icon
-									name="icon-colorful"
-									className={styles.largeAppIcon}
+								<img
+									src={daedalusColorfulIconUrl}
+									alt=""
+									className={styles.largeIcon}
 								/>
 								<div className={styles.appInfo}>
 									<div className={styles.titleRow}>
@@ -185,7 +187,7 @@ function AboutSettingsPage(): React.JSX.Element {
 								<img
 									src={backendColorfulIconUrl}
 									alt=""
-									className={styles.largeBackendIcon}
+									className={styles.largeIcon}
 								/>
 								<div className={styles.backendInfo}>
 									<div className={styles.titleRow}>

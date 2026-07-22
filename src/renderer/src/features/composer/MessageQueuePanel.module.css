@@ -8,8 +8,9 @@
 	overflow-y: auto;
 	overflow-x: hidden;
 	border: 1px solid var(--ds-border);
-	border-radius: var(--ds-radius-md);
+	border-radius: var(--ds-radius-lg);
 	background: var(--ds-surface-elevated);
+	clip-path: inset(0 round var(--ds-radius-lg));
 }
 
 .group {

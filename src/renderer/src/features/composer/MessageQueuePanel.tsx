@@ -139,6 +139,10 @@ function getQueueMeta(item: MessageQueueItem): string {
 	return `${mode} · ${model}`;
 }
 
+function shouldShowQueueItem(item: MessageQueueItem): boolean {
+	return item.status !== "sending" && item.status !== "approval";
+}
+
 function MessageQueuePanel({
 	messageQueue,
 	pendingGuides,
@@ -152,7 +156,8 @@ function MessageQueuePanel({
 			distance: 8
 		}
 	});
-	const pendingQueueIds: string[] = messageQueue
+	const visibleMessageQueue: MessageQueueItem[] = messageQueue.filter(shouldShowQueueItem);
+	const pendingQueueIds: string[] = visibleMessageQueue
 		.filter((item: MessageQueueItem): boolean => item.status === "pending")
 		.map((item: MessageQueueItem): string => String(item.id));
 	const guideIds: string[] = pendingGuides.map((guide: PendingGuide): string => guide.guideId);
@@ -172,7 +177,7 @@ function MessageQueuePanel({
 		onGuideReorder(moveBefore(guideIds, String(event.active.id), String(event.over.id)));
 	}
 
-	if (messageQueue.length === 0 && pendingGuides.length === 0) {
+	if (visibleMessageQueue.length === 0 && pendingGuides.length === 0) {
 		return null;
 	}
 
@@ -198,12 +203,12 @@ function MessageQueuePanel({
 					</SortableContext>
 				</DndContext>
 			) : null}
-			{messageQueue.length > 0 ? (
+			{visibleMessageQueue.length > 0 ? (
 				<DndContext sensors={[pointerSensor]} collisionDetection={closestCenter} onDragEnd={handleQueueDragEnd}>
 					<SortableContext items={pendingQueueIds} strategy={verticalListSortingStrategy}>
 						<div className={styles.group}>
 							<div className={styles.groupLabel}>Queue</div>
-							{messageQueue.map((item: MessageQueueItem): React.ReactNode => (
+							{visibleMessageQueue.map((item: MessageQueueItem): React.ReactNode => (
 								<SortableQueueRow
 									key={item.id}
 									id={String(item.id)}

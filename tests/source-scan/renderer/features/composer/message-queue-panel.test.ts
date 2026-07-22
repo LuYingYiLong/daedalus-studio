@@ -3,6 +3,7 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("MessageQueuePanel source", () => {
 	const panelSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "MessageQueuePanel.tsx");
+	const panelStyleSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "MessageQueuePanel.module.css");
 	const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
 	const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
 	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "agent", "AgentPage.tsx");
@@ -24,6 +25,12 @@ describe("MessageQueuePanel source", () => {
 		expect(panelSource).toContain("Icon name=\"guide\"");
 	});
 
+	it("keeps the queue panel visibly rounded", () => {
+		expect(panelStyleSource).toContain("border-radius: var(--ds-radius-lg);");
+		expect(panelStyleSource).toContain("clip-path: inset(0 round var(--ds-radius-lg));");
+		expect(panelStyleSource).not.toContain("--ds-radius-md");
+	});
+
 	it("keeps guide and queued message reorder flows separate", () => {
 		expect(panelSource).toContain("function handleQueueDragEnd(event: DragEndEvent): void");
 		expect(panelSource).toContain("function handleGuideDragEnd(event: DragEndEvent): void");
@@ -31,6 +38,9 @@ describe("MessageQueuePanel source", () => {
 		expect(panelSource).toContain("onGuideReorder(moveBefore(guideIds, String(event.active.id), String(event.over.id)))");
 		expect(panelSource).toContain("item.status === \"pending\"");
 		expect(panelSource).toContain("disabled={item.status !== \"pending\"}");
+		expect(panelSource).toContain("function shouldShowQueueItem(item: MessageQueueItem): boolean");
+		expect(panelSource).toContain("item.status !== \"sending\" && item.status !== \"approval\"");
+		expect(panelSource).toContain("visibleMessageQueue.map");
 	});
 
 	it("wires running sends to queue and Ctrl+Enter to guides", () => {
@@ -42,6 +52,8 @@ describe("MessageQueuePanel source", () => {
 		expect(appSource).toContain("async function handleQueueMessageSubmit(nextMessage: string): Promise<void>");
 		expect(appSource).toContain("if (isRunControllerActive(runState))");
 		expect(appSource).toContain("await addQueuedMessage({");
+		expect(appSource).toContain("function appendQueuedRunUserBlock(workbenchSnapshot: WorkbenchSnapshot): void");
+		expect(appSource).toContain("appendQueuedRunUserBlock(eventWorkbench)");
 		expect(appSource).toContain("async function handleGuideSubmit(nextMessage: string): Promise<void>");
 		expect(appSource).toContain("await addGuide(message, getRunControllerRequestId(runState) ?? undefined)");
 		expect(appSource).toContain("const composerIsSending: boolean = isRunControllerActive(runState) || isHomeSubmitting;");
