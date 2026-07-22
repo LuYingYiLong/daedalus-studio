@@ -404,13 +404,17 @@ function AgentPage({
 	const [includeUnstagedChanges, setIncludeUnstagedChanges] = useState<boolean>(true);
 	const [commitOperation, setCommitOperation] = useState<CommitOrPushAction | null>(null);
 	const [commitError, setCommitError] = useState<string | null>(null);
-	const showDockControls: boolean = !isHome || activeWorkspace !== null;
-	const showWorkspaceLaunchControls: boolean = activeWorkspace !== null;
-	const showSummaryButton: boolean = !isHome && activeSessionId !== null;
+	const [messageListAwayFromBottom, setMessageListAwayFromBottom] = useState<boolean>(false);
+	const [scrollToBottomRequest, setScrollToBottomRequest] = useState<number>(0);
+	const workspaceForActions: WorkspaceConfig | null = activeWorkspace ?? (isHome ? homeWorkspace : null);
+	const showDockControls: boolean = !isHome || workspaceForActions !== null;
+	const showWorkspaceLaunchControls: boolean = workspaceForActions !== null;
+	const showSummaryButton: boolean = activeSessionId !== null;
 	const showSideDockButton: boolean = showDockControls;
 	const showBottomDockButton: boolean = showDockControls;
-	const terminalWaitForCwd: boolean = !isHome && isSessionLoading && activeWorkspace === null;
+	const terminalWaitForCwd: boolean = !isHome && isSessionLoading && workspaceForActions === null;
 	const isCommitOperationRunning: boolean = commitOperation !== null;
+	const showWorkflowTodoPanel: boolean = !workflowTodoCollapsed && workflowTodoSnapshot !== null;
 	const workflowFileChangeSummary: WorkflowFileChangeSummary = useMemo((): WorkflowFileChangeSummary => {
 		return aggregateTimelineFileChanges(timelineBlocks);
 	}, [timelineBlocks]);
@@ -430,7 +434,7 @@ function AgentPage({
 	}, [workspaceLaunchTargets]);
 	const openSummaryDiffReview = useCallback((): void => {
 		setSummaryOpen(false);
-		if (activeWorkspace === null) {
+		if (workspaceForActions === null) {
 			return;
 		}
 
@@ -441,7 +445,7 @@ function AgentPage({
 		});
 		setSideDockSize(sideDockLastOpenSize);
 		setSideDockOpen(true);
-	}, [activeWorkspace, sideDockLastOpenSize]);
+	}, [sideDockLastOpenSize, workspaceForActions]);
 	const summaryCollapseItems: NonNullable<CollapseProps["items"]> = useMemo((): NonNullable<CollapseProps["items"]> => {
 		if (summaryOverview === null) {
 			return [];
@@ -636,7 +640,11 @@ function AgentPage({
 		setCommitMessage("");
 		setCommitError(null);
 		setCommitOperation(null);
-	}, [activeSessionId, activeWorkspace?.id]);
+	}, [activeSessionId]);
+
+	useEffect((): void => {
+		setMessageListAwayFromBottom(false);
+	}, [activeSessionId, isHome]);
 
 	const loadSummaryOverview = useCallback(async (planLimit: number = SUMMARY_PREVIEW_LIMIT, sourceLimit: number = SUMMARY_PREVIEW_LIMIT): Promise<SessionOverviewResult | null> => {
 		if (activeSessionId === null) {
@@ -662,6 +670,18 @@ function AgentPage({
 			setIsSummaryLoading(false);
 		}
 	}, [activeSessionId]);
+
+	useEffect((): void => {
+		setSummaryOverview(null);
+		setSummaryError(null);
+		setPlansModalOpen(false);
+		setSourcesModalOpen(false);
+		setPreviewSource(null);
+		setPreviewPlan(null);
+		if (summaryOpen) {
+			void loadSummaryOverview();
+		}
+	}, [activeWorkspace?.id, loadSummaryOverview]);
 
 	const handleSummaryOpenChange = useCallback((open: boolean): void => {
 		setSummaryOpen(open);
@@ -699,12 +719,12 @@ function AgentPage({
 	}
 
 	async function generateMessageForCommitAction(): Promise<string> {
-		if (activeWorkspace === null) {
+		if (workspaceForActions === null) {
 			throw new Error("Please select a workspace before committing.");
 		}
 
 		const generated: GenerateGitCommitMessageResult = await generateGitCommitMessage({
-			workspaceId: activeWorkspace.id,
+			workspaceId: workspaceForActions.id,
 			includeUnstagedChanges
 		});
 		setCommitMessage(generated.message);
@@ -712,7 +732,7 @@ function AgentPage({
 	}
 
 	async function handleCommitOrPushAction(action: CommitOrPushAction): Promise<void> {
-		if (activeWorkspace === null) {
+		if (workspaceForActions === null) {
 			setCommitError("Please select a workspace before committing.");
 			return;
 		}
@@ -726,7 +746,7 @@ function AgentPage({
 			}
 
 			const result: CommitOrPushResult = await commitOrPushGit({
-				workspaceId: activeWorkspace.id,
+				workspaceId: workspaceForActions.id,
 				action,
 				message: action === "push" ? undefined : nextMessage,
 				includeUnstagedChanges
@@ -744,7 +764,7 @@ function AgentPage({
 	}
 
 	async function openWorkspaceLaunchTarget(targetId: WorkspaceLaunchTargetId): Promise<void> {
-		if (activeWorkspace === null) {
+		if (workspaceForActions === null) {
 			return;
 		}
 
@@ -752,7 +772,7 @@ function AgentPage({
 		setIsOpeningLaunchTarget(true);
 		try {
 			await window.electronAPI.workspaceFs.openLaunchTarget({
-				workspaceRoot: activeWorkspace.rootPath,
+				workspaceRoot: workspaceForActions.rootPath,
 				targetId
 			});
 		} catch (error: unknown) {
@@ -772,6 +792,10 @@ function AgentPage({
 
 		void openWorkspaceLaunchTarget(targetId);
 	};
+
+	const scrollMessageListToBottom = useCallback((): void => {
+		setScrollToBottomRequest((currentRequest: number): number => currentRequest + 1);
+	}, []);
 
 	const requestSideDockKind = useCallback((kind: DockPanelKind): void => {
 		dockActivationRequestIdRef.current += 1;
@@ -802,11 +826,11 @@ function AgentPage({
 	}, [closeSideDock, openSideDock, sideDockOpen]);
 
 	const openReviewPanel = useCallback((): void => {
-		if (activeWorkspace === null) {
+		if (workspaceForActions === null) {
 			return;
 		}
 		openSideDock("review");
-	}, [activeWorkspace, openSideDock]);
+	}, [openSideDock, workspaceForActions]);
 
 	const openBottomDock = useCallback((): void => {
 		setBottomDockSize(bottomDockLastOpenSize);
@@ -1113,10 +1137,24 @@ function AgentPage({
 											onRetryEditCancel={onRetryEditCancel}
 											onRetryFromUserMessage={onRetryFromUserMessage}
 											onInlineDiffReview={openReviewPanel}
+											scrollToBottomRequest={scrollToBottomRequest}
+											onAwayFromBottomChange={setMessageListAwayFromBottom}
 										/>
 									)}
 
 									<footer className={styles.composer}>
+										{!isHome && messageListAwayFromBottom ? (
+											<Tooltip title="Scroll to bottom">
+												<Button
+													type="primary"
+													shape="circle"
+													aria-label="Scroll to bottom"
+													icon={<Icon name="arrow-bottom" />}
+													className={`${styles.scrollToBottomButton} ${showWorkflowTodoPanel ? styles.scrollToBottomButtonAboveTodo : ""}`}
+													onClick={scrollMessageListToBottom}
+												/>
+											</Tooltip>
+										) : null}
 										{!isHome && pendingApproval !== null ? (
 											<ApprovalDialog
 												pendingApproval={pendingApproval}
@@ -1157,7 +1195,7 @@ function AgentPage({
 											/>
 										) : (
 											<>
-												{!isHome && !workflowTodoCollapsed ? (
+												{showWorkflowTodoPanel ? (
 													<FloatingWorkflowTodoPanel
 														snapshot={workflowTodoSnapshot}
 														fileChangeSummary={workflowFileChangeSummary}
@@ -1228,8 +1266,8 @@ function AgentPage({
 										<DockPanelTabs
 											dockId="side"
 											placement="side"
-											workspaceId={activeWorkspace?.id ?? null}
-											cwd={activeWorkspace?.rootPath ?? null}
+											workspaceId={workspaceForActions?.id ?? null}
+											cwd={workspaceForActions?.rootPath ?? null}
 											isOpen={sideDockOpen}
 											waitForCwd={terminalWaitForCwd}
 											defaultKind="review"
@@ -1252,8 +1290,8 @@ function AgentPage({
 								<DockPanelTabs
 									dockId="bottom"
 									placement="bottom"
-									workspaceId={activeWorkspace?.id ?? null}
-									cwd={activeWorkspace?.rootPath ?? null}
+									workspaceId={workspaceForActions?.id ?? null}
+									cwd={workspaceForActions?.rootPath ?? null}
 									isOpen={bottomDockOpen}
 									waitForCwd={terminalWaitForCwd}
 									defaultKind="terminal"
@@ -1352,7 +1390,7 @@ function AgentPage({
 				footer={(
 					<Space>
 						<Button
-							disabled={isCommitOperationRunning || activeWorkspace === null}
+							disabled={isCommitOperationRunning || workspaceForActions === null}
 							loading={commitOperation === "push"}
 							onClick={(): void => {
 								void handleCommitOrPushAction("push");
@@ -1361,7 +1399,7 @@ function AgentPage({
 							Push
 						</Button>
 						<Button
-							disabled={isCommitOperationRunning || activeWorkspace === null}
+							disabled={isCommitOperationRunning || workspaceForActions === null}
 							loading={commitOperation === "commit_and_push"}
 							onClick={(): void => {
 								void handleCommitOrPushAction("commit_and_push");
@@ -1371,7 +1409,7 @@ function AgentPage({
 						</Button>
 						<Button
 							type="primary"
-							disabled={isCommitOperationRunning || activeWorkspace === null}
+							disabled={isCommitOperationRunning || workspaceForActions === null}
 							loading={commitOperation === "commit"}
 							onClick={(): void => {
 								void handleCommitOrPushAction("commit");

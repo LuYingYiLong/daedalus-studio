@@ -440,3 +440,16 @@
 	justify-self: center;
 	padding: 8px;
 }
+
+.scrollToBottomButton {
+	position: absolute;
+	left: 50%;
+	bottom: calc(100% + 8px);
+	z-index: 20;
+	box-shadow: 0 8px 16px var(--ds-box-shadow);
+	transform: translateX(-50%);
+}
+
+.scrollToBottomButtonAboveTodo {
+	bottom: calc(100% + 52px);
+}

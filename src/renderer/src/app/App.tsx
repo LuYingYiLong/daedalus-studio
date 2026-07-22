@@ -1191,7 +1191,19 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					} else if (event.event === "workflow.todo.updated" || event.event === "agent.run.snapshot") {
 						const snapshot: WorkflowTodoSnapshot | null = normalizeWorkflowTodoSnapshot(event.data);
 						setWorkflowTodoSnapshot(snapshot);
-						applyInitialWorkflowTodoPreference(snapshot);
+						if (snapshot?.source === "slash") {
+							rememberLoadedWorkflowTodo(snapshot);
+							setActiveSessionMetadata((currentMetadata: SessionMetadata | null): SessionMetadata | null => {
+								return currentMetadata === null
+									? currentMetadata
+									: {
+										...currentMetadata,
+										workflowTodoCollapsed: false
+									};
+							});
+						} else {
+							applyInitialWorkflowTodoPreference(snapshot);
+						}
 					} else if (isWorkflowTodoClearEvent(event)) {
 						setWorkflowTodoSnapshot(null);
 						rememberLoadedWorkflowTodo(null);

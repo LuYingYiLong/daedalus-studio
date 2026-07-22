@@ -26,6 +26,8 @@ export type MessageListProps = {
 	onRetryEditCancel?: (requestId: string) => void;
 	onRetryFromUserMessage?: (payload: RetryUserMessagePayload) => boolean | void | Promise<boolean | void>;
 	onInlineDiffReview?: () => void;
+	scrollToBottomRequest?: number;
+	onAwayFromBottomChange?: (awayFromBottom: boolean) => void;
 };
 
 type ScrollAnchor = {
@@ -111,13 +113,17 @@ function MessageList({
 	onRetryEditStart,
 	onRetryEditCancel,
 	onRetryFromUserMessage,
-	onInlineDiffReview
+	onInlineDiffReview,
+	scrollToBottomRequest = 0,
+	onAwayFromBottomChange
 }: MessageListProps): React.JSX.Element {
 	const listRef = useRef<HTMLElement | null>(null);
 	const pendingAnchorRef = useRef<ScrollAnchor | null>(null);
 	const lastInitialScrollKeyRef = useRef<string>("");
 	const lastBlockCountRef = useRef<number>(0);
 	const autoFollowRef = useRef<boolean>(true);
+	const awayFromBottomRef = useRef<boolean>(false);
+	const lastScrollToBottomRequestRef = useRef<number>(0);
 	const [nowMs, setNowMs] = useState<number>(() => Date.now());
 	const renderableBlocks: TimelineBlock[] = useMemo((): TimelineBlock[] => {
 		return blocks.filter(shouldRenderTimelineBlock);
@@ -128,8 +134,14 @@ function MessageList({
 	const canEditUserMessages: boolean = onRetryFromUserMessage !== undefined && !retryDisabled && !hasRunningAssistantBlock && activeRetryRequestId === null;
 
 	const syncViewportMetrics = useCallback((element: HTMLElement): void => {
-		autoFollowRef.current = isNearBottom(element);
-	}, []);
+		const nearBottom: boolean = isNearBottom(element);
+		const awayFromBottom: boolean = !nearBottom;
+		autoFollowRef.current = nearBottom;
+		if (awayFromBottomRef.current !== awayFromBottom) {
+			awayFromBottomRef.current = awayFromBottom;
+			onAwayFromBottomChange?.(awayFromBottom);
+		}
+	}, [onAwayFromBottomChange]);
 
 	const scheduleAutoFollowScroll = useCallback((behavior: ScrollBehavior = "auto"): void => {
 		if (!autoFollowRef.current) {
@@ -234,6 +246,25 @@ function MessageList({
 			});
 		});
 	}, [initialScrollToBottomKey, isLoading, updateViewport]);
+
+	useEffect((): void => {
+		if (scrollToBottomRequest <= 0 || lastScrollToBottomRequestRef.current === scrollToBottomRequest) {
+			return;
+		}
+
+		lastScrollToBottomRequestRef.current = scrollToBottomRequest;
+		autoFollowRef.current = true;
+
+		window.requestAnimationFrame((): void => {
+			const element: HTMLElement | null = listRef.current;
+			if (element === null) {
+				return;
+			}
+
+			scrollToBottom(element, "smooth");
+			syncViewportMetrics(element);
+		});
+	}, [scrollToBottomRequest, syncViewportMetrics]);
 
 	useEffect((): void => {
 		const element: HTMLElement | null = listRef.current;
