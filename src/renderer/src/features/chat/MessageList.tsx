@@ -5,7 +5,7 @@ import type { RetryUserMessagePayload } from "../bubble/UserBubble";
 import styles from "./MessageList.module.css";
 import { formatElapsedTime, formatShortDateTime } from "@/utils/time-format";
 import { Spin, Alert } from "antd";
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
 	isNearBottomByMetrics,
 	shouldAutoFollowAppend
@@ -28,6 +28,10 @@ export type MessageListProps = {
 	onInlineDiffReview?: () => void;
 	scrollToBottomRequest?: number;
 	onAwayFromBottomChange?: (awayFromBottom: boolean) => void;
+};
+
+export type MessageListHandle = {
+	scrollToBottom: (behavior?: ScrollBehavior) => void;
 };
 
 type ScrollAnchor = {
@@ -99,7 +103,7 @@ function queryLastEntryElement(element: HTMLElement): HTMLElement | null {
 	return entryElements[entryElements.length - 1] ?? null;
 }
 
-function MessageList({
+const MessageList = forwardRef<MessageListHandle, MessageListProps>(function MessageList({
 	blocks,
 	isLoading,
 	errorMessage,
@@ -116,7 +120,7 @@ function MessageList({
 	onInlineDiffReview,
 	scrollToBottomRequest = 0,
 	onAwayFromBottomChange
-}: MessageListProps): React.JSX.Element {
+}: MessageListProps, ref): React.JSX.Element {
 	const listRef = useRef<HTMLElement | null>(null);
 	const pendingAnchorRef = useRef<ScrollAnchor | null>(null);
 	const lastInitialScrollKeyRef = useRef<string>("");
@@ -124,6 +128,7 @@ function MessageList({
 	const autoFollowRef = useRef<boolean>(true);
 	const awayFromBottomRef = useRef<boolean>(false);
 	const lastScrollToBottomRequestRef = useRef<number>(0);
+	const viewportUpdateFrameRef = useRef<number | null>(null);
 	const [nowMs, setNowMs] = useState<number>(() => Date.now());
 	const renderableBlocks: TimelineBlock[] = useMemo((): TimelineBlock[] => {
 		return blocks.filter(shouldRenderTimelineBlock);
@@ -159,6 +164,23 @@ function MessageList({
 		});
 	}, [syncViewportMetrics]);
 
+	const scrollToBottomNow = useCallback((behavior: ScrollBehavior = "auto"): void => {
+		const element: HTMLElement | null = listRef.current;
+		if (element === null) {
+			return;
+		}
+
+		autoFollowRef.current = true;
+		scrollToBottom(element, behavior);
+		syncViewportMetrics(element);
+	}, [syncViewportMetrics]);
+
+	useImperativeHandle(ref, (): MessageListHandle => {
+		return {
+			scrollToBottom: scrollToBottomNow
+		};
+	}, [scrollToBottomNow]);
+
 	const updateViewport = useCallback((): void => {
 		const element: HTMLElement | null = listRef.current;
 
@@ -183,6 +205,17 @@ function MessageList({
 		}
 	}, [hasMoreAfter, hasMoreBefore, onLoadMoreAfter, onLoadMoreBefore, syncViewportMetrics]);
 
+	const scheduleViewportUpdate = useCallback((): void => {
+		if (viewportUpdateFrameRef.current !== null) {
+			return;
+		}
+
+		viewportUpdateFrameRef.current = window.requestAnimationFrame((): void => {
+			viewportUpdateFrameRef.current = null;
+			updateViewport();
+		});
+	}, [updateViewport]);
+
 	useEffect((): (() => void) | void => {
 		const element: HTMLElement | null = listRef.current;
 
@@ -191,14 +224,18 @@ function MessageList({
 		}
 
 		updateViewport();
-		element.addEventListener("scroll", updateViewport, { passive: true });
-		window.addEventListener("resize", updateViewport);
+		element.addEventListener("scroll", scheduleViewportUpdate, { passive: true });
+		window.addEventListener("resize", scheduleViewportUpdate);
 
 		return (): void => {
-			element.removeEventListener("scroll", updateViewport);
-			window.removeEventListener("resize", updateViewport);
+			element.removeEventListener("scroll", scheduleViewportUpdate);
+			window.removeEventListener("resize", scheduleViewportUpdate);
+			if (viewportUpdateFrameRef.current !== null) {
+				window.cancelAnimationFrame(viewportUpdateFrameRef.current);
+				viewportUpdateFrameRef.current = null;
+			}
 		};
-	}, [updateViewport]);
+	}, [scheduleViewportUpdate, updateViewport]);
 
 	useLayoutEffect((): void => {
 		const element: HTMLElement | null = listRef.current;
@@ -255,16 +292,8 @@ function MessageList({
 		lastScrollToBottomRequestRef.current = scrollToBottomRequest;
 		autoFollowRef.current = true;
 
-		window.requestAnimationFrame((): void => {
-			const element: HTMLElement | null = listRef.current;
-			if (element === null) {
-				return;
-			}
-
-			scrollToBottom(element, "smooth");
-			syncViewportMetrics(element);
-		});
-	}, [scrollToBottomRequest, syncViewportMetrics]);
+		scrollToBottomNow("smooth");
+	}, [scrollToBottomNow, scrollToBottomRequest]);
 
 	useEffect((): void => {
 		const element: HTMLElement | null = listRef.current;
@@ -348,6 +377,6 @@ function MessageList({
 			</div>
 		</section>
 	);
-}
+});
 
 export default memo(MessageList);

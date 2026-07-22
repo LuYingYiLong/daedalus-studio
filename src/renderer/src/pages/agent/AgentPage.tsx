@@ -11,7 +11,7 @@ import type { SkillSummary } from "@/api/skill-api";
 import { fetchSessionOverview, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
 import { commitOrPushGit, generateGitCommitMessage, type CommitOrPushAction, type CommitOrPushResult, type GenerateGitCommitMessageResult } from "@/api/workspace-git-api";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
-import MessageList from "@/features/chat/MessageList";
+import MessageList, { type MessageListHandle } from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
 import FloatingWorkflowTodoPanel, { type WorkflowFileChangeSummary } from "@/features/composer/FloatingWorkflowTodoPanel";
 import MessageQueuePanel from "@/features/composer/MessageQueuePanel";
@@ -405,7 +405,7 @@ function AgentPage({
 	const [commitOperation, setCommitOperation] = useState<CommitOrPushAction | null>(null);
 	const [commitError, setCommitError] = useState<string | null>(null);
 	const [messageListAwayFromBottom, setMessageListAwayFromBottom] = useState<boolean>(false);
-	const [scrollToBottomRequest, setScrollToBottomRequest] = useState<number>(0);
+	const messageListRef = useRef<MessageListHandle | null>(null);
 	const workspaceForActions: WorkspaceConfig | null = activeWorkspace ?? (isHome ? homeWorkspace : null);
 	const showDockControls: boolean = !isHome || workspaceForActions !== null;
 	const showWorkspaceLaunchControls: boolean = workspaceForActions !== null;
@@ -794,7 +794,8 @@ function AgentPage({
 	};
 
 	const scrollMessageListToBottom = useCallback((): void => {
-		setScrollToBottomRequest((currentRequest: number): number => currentRequest + 1);
+		messageListRef.current?.scrollToBottom("smooth");
+		setMessageListAwayFromBottom(false);
 	}, []);
 
 	const requestSideDockKind = useCallback((kind: DockPanelKind): void => {
@@ -1123,6 +1124,7 @@ function AgentPage({
 										<NewSessionHome workspace={homeWorkspace} errorMessage={sessionError} />
 									) : (
 										<MessageList
+											ref={messageListRef}
 											blocks={timelineBlocks}
 											isLoading={isSessionLoading}
 											errorMessage={sessionError}
@@ -1137,20 +1139,24 @@ function AgentPage({
 											onRetryEditCancel={onRetryEditCancel}
 											onRetryFromUserMessage={onRetryFromUserMessage}
 											onInlineDiffReview={openReviewPanel}
-											scrollToBottomRequest={scrollToBottomRequest}
 											onAwayFromBottomChange={setMessageListAwayFromBottom}
 										/>
 									)}
 
 									<footer className={styles.composer}>
-										{!isHome && messageListAwayFromBottom ? (
-											<Tooltip title="Scroll to bottom">
+										{!isHome ? (
+											<Tooltip title={messageListAwayFromBottom ? "Scroll to bottom" : ""}>
 												<Button
 													type="primary"
 													shape="circle"
 													aria-label="Scroll to bottom"
 													icon={<Icon name="arrow-bottom" />}
-													className={`${styles.scrollToBottomButton} ${showWorkflowTodoPanel ? styles.scrollToBottomButtonAboveTodo : ""}`}
+													tabIndex={messageListAwayFromBottom ? 0 : -1}
+													className={[
+														styles.scrollToBottomButton,
+														showWorkflowTodoPanel ? styles.scrollToBottomButtonAboveTodo : "",
+														messageListAwayFromBottom ? "" : styles.scrollToBottomButtonHidden
+													].filter(Boolean).join(" ")}
 													onClick={scrollMessageListToBottom}
 												/>
 											</Tooltip>

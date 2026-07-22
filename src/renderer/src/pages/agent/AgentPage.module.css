@@ -446,10 +446,21 @@
 	left: 50%;
 	bottom: calc(100% + 8px);
 	z-index: 20;
+	contain: layout style;
 	box-shadow: 0 8px 16px var(--ds-box-shadow);
 	transform: translateX(-50%);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	will-change: opacity, transform;
 }
 
 .scrollToBottomButtonAboveTodo {
 	bottom: calc(100% + 52px);
+}
+
+.scrollToBottomButtonHidden {
+	opacity: 0;
+	pointer-events: none;
+	transform: translateX(-50%) translateY(6px) scale(0.96);
 }

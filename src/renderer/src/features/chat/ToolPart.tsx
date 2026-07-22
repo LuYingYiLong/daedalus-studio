@@ -3,20 +3,11 @@ import styles from "./ToolPart.module.css"
 import { Icon } from "@/assets/icons";
 import { Collapse, Tag } from "antd";
 import React from "react";
+import { getToolDisplayInfo } from "./tool-display";
 
 export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
 
 type ToolStatus = "running" | "success" | "error" | "approval";
-
-function getToolName(events: Record<string, unknown>[]): string {
-	for (const event of events) {
-		if (typeof event.toolName === "string") {
-			return event.toolName;
-		}
-	}
-
-	return "Tool";
-}
 
 function hasEventType(events: Record<string, unknown>[], eventTypes: string[]): boolean {
 	return events.some((event: Record<string, unknown>): boolean => typeof event.type === "string" && eventTypes.includes(event.type));
@@ -48,7 +39,7 @@ export type ToolPartProps = {
 
 
 function ToolPart({ part }: ToolPartProps): React.JSX.Element {
-	const toolName: string = getToolName(part.events);
+	const toolDisplay = getToolDisplayInfo(part.events);
 	const status = getToolStatus(part.events);
 	const statusText: Record<ToolStatus, string> = {
 		running: "Running",
@@ -67,24 +58,25 @@ function ToolPart({ part }: ToolPartProps): React.JSX.Element {
 			{statusText[status]}
 		</Tag>
 	)
+	const label = (
+		<span className={styles.toolLabel} title={toolDisplay.label}>
+			<span className={styles.toolLabelText}>{toolDisplay.label}</span>
+		</span>
+	);
 	
 	return (
 		<Collapse
 			size="small"
 			bordered={false}
+			
 			className={styles.toolCollapse}
-			expandIcon={(): React.ReactNode => (
-				<Icon
-					name="mcp"
-					style={{
-						width: 16
-					}}
-				/>
+			expandIcon={() => (
+				<Icon name={toolDisplay.iconName} className={styles.toolIcon} />
 			)}
 			items={[
 				{
 					key: "tool",
-					label: toolName,
+					label,
 					children: (
 						<pre className={styles.eventJson}>
 							{JSON.stringify(part.events, null, 2)}

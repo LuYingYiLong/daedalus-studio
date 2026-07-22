@@ -98,7 +98,7 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 			onChange={(nextKeys: string | string[]): void => {
 				setActiveKeys(normalizeActiveKeys(nextKeys));
 			}}
-			expandIcon={(): React.ReactNode => (
+			expandIcon={() => (
 				<Icon name="thinking" className={styles.thinkingIcon} />
 			)}
 			items={[

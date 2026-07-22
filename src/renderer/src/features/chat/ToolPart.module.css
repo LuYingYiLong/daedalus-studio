@@ -6,6 +6,36 @@
 	border-radius: var(--ds-radius-sm);
 }
 
+.toolCollapse :global(.ant-collapse-header) {
+	align-items: center;
+}
+
+.toolCollapse :global(.ant-collapse-header-text) {
+	min-width: 0;
+}
+
+.toolLabel {
+	display: inline-flex;
+	align-items: center;
+	min-width: 0;
+	max-width: 100%;
+	gap: var(--ds-space-1);
+}
+
+.toolIcon {
+	width: 16px;
+	height: 16px;
+	flex: 0 0 auto;
+}
+
+.toolLabelText {
+	min-width: 0;
+	overflow: hidden;
+	color: var(--ds-text-primary);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 .eventJson {
 	max-height: 200px;
 	margin: 0;
