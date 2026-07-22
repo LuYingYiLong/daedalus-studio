@@ -269,7 +269,9 @@ type AgentPageProps = {
 	onCancel: () => void;
 	onSubmit: (message: string) => void;
 	onGuideSubmit: (message: string) => void;
+	activeQueueItemId: number | null;
 	onQueueMessageRemove: (queueId: number) => void;
+	onQueueMessageEdit: (item: MessageQueueItem) => void;
 	onQueueMessageReorder: (queueIds: number[]) => void;
 	onGuideDelete: (guideId: string) => void;
 	onGuideReorder: (guideIds: string[]) => void;
@@ -368,7 +370,9 @@ function AgentPage({
 	onCancel,
 	onSubmit,
 	onGuideSubmit,
+	activeQueueItemId,
 	onQueueMessageRemove,
+	onQueueMessageEdit,
 	onQueueMessageReorder,
 	onGuideDelete,
 	onGuideReorder,
@@ -1164,7 +1168,9 @@ function AgentPage({
 													<MessageQueuePanel
 														messageQueue={messageQueue}
 														pendingGuides={pendingGuides}
+														activeQueueItemId={activeQueueItemId}
 														onQueueRemove={onQueueMessageRemove}
+														onQueueEdit={onQueueMessageEdit}
 														onQueueReorder={onQueueMessageReorder}
 														onGuideDelete={onGuideDelete}
 														onGuideReorder={onGuideReorder}

@@ -3,16 +3,10 @@
 		<clipPath id="clipPath_100">
 			<rect width="24.000000" height="24.000000" x="0.000000" y="26.000000" fill="currentColor" />
 		</clipPath>
-		<clipPath id="clipPath_101">
-			<rect width="20.000000" height="20.000000" x="2.000000" y="28.000000" fill="currentColor" />
-		</clipPath>
 		<clipPath id="clipPath_102">
 			<rect width="24.000000" height="24.000000" x="0.000000" y="26.000000" fill="currentColor" />
 		</clipPath>
-		<clipPath id="clipPath_103">
-			<rect width="20.000000" height="20.000000" x="2.000000" y="28.000000" fill="currentColor" />
-		</clipPath>
-	</defs>
+		</defs>
 	<g id="close" clip-path="url(#clipPath_100)">
 		<rect id="close" width="24.000000" height="24.000000" x="0.000000" y="26.000000" />
 		<g id="图标网格" opacity="0">

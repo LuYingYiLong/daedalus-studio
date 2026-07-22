@@ -10,8 +10,10 @@ import styles from "./MessageQueuePanel.module.css";
 type MessageQueuePanelProps = {
 	messageQueue: MessageQueueItem[];
 	pendingGuides: PendingGuide[];
+	activeQueueItemId?: number | null;
 	onQueueReorder: (queueIds: number[]) => void;
 	onQueueRemove: (queueId: number) => void;
+	onQueueEdit: (item: MessageQueueItem) => void;
 	onGuideReorder: (guideIds: string[]) => void;
 	onGuideDelete: (guideId: string) => void;
 };
@@ -21,8 +23,7 @@ type SortableRowProps = {
 	disabled?: boolean;
 	icon: ReactNode;
 	text: string;
-	meta: string;
-	status?: string;
+	onEdit?: () => void;
 	onRemove: () => void;
 };
 
@@ -42,7 +43,7 @@ function moveBefore<T>(items: T[], activeItem: T, overItem: T): T[] {
 	return nextItems;
 }
 
-function QueueRow({ icon, text, meta, status, onRemove, dragHandle, rowRef, style, isDragging }: SortableRowProps & {
+function QueueRow({ icon, text, onEdit, onRemove, dragHandle, rowRef, style, isDragging }: SortableRowProps & {
 	dragHandle: ReactNode;
 	rowRef?: (node: HTMLDivElement | null) => void;
 	style?: CSSProperties;
@@ -60,18 +61,26 @@ function QueueRow({ icon, text, meta, status, onRemove, dragHandle, rowRef, styl
 				<Tooltip title={text}>
 					<Typography.Text className={styles.itemText}>{text}</Typography.Text>
 				</Tooltip>
-				<div className={styles.itemMeta}>
-					<span>{meta}</span>
-					{status === undefined ? null : <span className={styles.status}>{status}</span>}
-				</div>
 			</div>
+			{onEdit === undefined ? <span aria-hidden={true} /> : (
+				<Tooltip title="Edit">
+					<Button
+						type="text"
+						size="small"
+						shape="circle"
+						icon={<Icon name="pencil" />}
+						className={styles.actionButton}
+						onClick={onEdit}
+					/>
+				</Tooltip>
+			)}
 			<Tooltip title="Remove">
 				<Button
 					type="text"
 					size="small"
 					shape="circle"
 					icon={<Icon name="close" />}
-					className={styles.removeButton}
+					className={styles.actionButton}
 					onClick={onRemove}
 				/>
 			</Tooltip>
@@ -133,21 +142,17 @@ function SortableQueueRow(props: SortableRowProps): React.JSX.Element {
 	);
 }
 
-function getQueueMeta(item: MessageQueueItem): string {
-	const mode: string = item.mode ?? "ask";
-	const model: string = item.model ?? "model";
-	return `${mode} · ${model}`;
-}
-
-function shouldShowQueueItem(item: MessageQueueItem): boolean {
-	return item.status !== "sending" && item.status !== "approval";
+function shouldShowQueueItem(item: MessageQueueItem, activeQueueItemId: number | null | undefined): boolean {
+	return item.id !== activeQueueItemId && item.status !== "sending" && item.status !== "approval";
 }
 
 function MessageQueuePanel({
 	messageQueue,
 	pendingGuides,
+	activeQueueItemId = null,
 	onQueueReorder,
 	onQueueRemove,
+	onQueueEdit,
 	onGuideReorder,
 	onGuideDelete
 }: MessageQueuePanelProps): React.JSX.Element | null {
@@ -156,7 +161,9 @@ function MessageQueuePanel({
 			distance: 8
 		}
 	});
-	const visibleMessageQueue: MessageQueueItem[] = messageQueue.filter(shouldShowQueueItem);
+	const visibleMessageQueue: MessageQueueItem[] = messageQueue.filter((item: MessageQueueItem): boolean => {
+		return shouldShowQueueItem(item, activeQueueItemId);
+	});
 	const pendingQueueIds: string[] = visibleMessageQueue
 		.filter((item: MessageQueueItem): boolean => item.status === "pending")
 		.map((item: MessageQueueItem): string => String(item.id));
@@ -182,7 +189,7 @@ function MessageQueuePanel({
 	}
 
 	return (
-		<div className={styles.panel} aria-label="Message queue">
+		<div className={styles.panel}>
 			{pendingGuides.length > 0 ? (
 				<DndContext sensors={[pointerSensor]} collisionDetection={closestCenter} onDragEnd={handleGuideDragEnd}>
 					<SortableContext items={guideIds} strategy={verticalListSortingStrategy}>
@@ -194,8 +201,6 @@ function MessageQueuePanel({
 									id={guide.guideId}
 									icon={<Icon name="guide" />}
 									text={guide.text}
-									meta="guide"
-									status={guide.status}
 									onRemove={(): void => onGuideDelete(guide.guideId)}
 								/>
 							))}
@@ -215,8 +220,7 @@ function MessageQueuePanel({
 									disabled={item.status !== "pending"}
 									icon={<Icon name="send" />}
 									text={item.text}
-									meta={getQueueMeta(item)}
-									status={item.status}
+									onEdit={(): void => onQueueEdit(item)}
 									onRemove={(): void => onQueueRemove(item.id)}
 								/>
 							))}

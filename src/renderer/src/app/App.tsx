@@ -2093,7 +2093,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 		const previousWorkbench: WorkbenchSnapshot = workbench;
 		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
-		const chatMode: ChatMode = getChatMode(workbench);
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
 		const pendingPatch: WorkbenchPatch = mergePatch(takePendingWorkbenchPatch(), {
 			composer: { text: "" },
@@ -2117,9 +2116,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			await sendWorkbenchPatch(pendingPatch, false);
 			const result = await addQueuedMessage({
 				text: message,
-				mode: chatMode,
-				provider: workbench.composer.provider ?? undefined,
-				model: workbench.composer.model ?? undefined,
 				additionalContext,
 				skillRefs
 			});
@@ -2201,6 +2197,47 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to remove queued message";
 			setSessionError(errorMessage);
 			console.error("[App] remove queued message failed", error);
+		}
+	}
+
+	async function handleQueueMessageEdit(item: MessageQueueItem): Promise<void> {
+		if (workbench === null) {
+			return;
+		}
+
+		const previousWorkbench: WorkbenchSnapshot = workbench;
+		const additionalContext: AdditionalContextItem[] = item.additionalContext ?? [];
+		const pendingPatch: WorkbenchPatch = mergePatch(takePendingWorkbenchPatch(), {
+			composer: {
+				text: item.text,
+				additionalContext
+			}
+		});
+
+		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+			return currentWorkbench === null
+				? currentWorkbench
+				: {
+					...currentWorkbench,
+					composer: {
+						...currentWorkbench.composer,
+						text: item.text,
+						additionalContext
+					},
+					messageQueue: currentWorkbench.messageQueue.filter((queueItem: MessageQueueItem): boolean => queueItem.id !== item.id)
+				};
+		});
+
+		try {
+			await sendWorkbenchPatch(pendingPatch, false);
+			const result = await removeQueuedMessage(item.id);
+			applyWorkbench(result.workbench);
+			setSessionError(null);
+		} catch (error: unknown) {
+			setWorkbench(previousWorkbench);
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to edit queued message";
+			setSessionError(errorMessage);
+			console.error("[App] edit queued message failed", error);
 		}
 	}
 
@@ -3002,8 +3039,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					onGuideSubmit={(message: string): void => {
 						void handleGuideSubmit(message);
 					}}
+					activeQueueItemId={workbench?.activeRun.queueItemId ?? null}
 					onQueueMessageRemove={(queueId: number): void => {
 						void handleQueueMessageRemove(queueId);
+					}}
+					onQueueMessageEdit={(item: MessageQueueItem): void => {
+						void handleQueueMessageEdit(item);
 					}}
 					onQueueMessageReorder={(queueIds: number[]): void => {
 						void handleQueueMessageReorder(queueIds);

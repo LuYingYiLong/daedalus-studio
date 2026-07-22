@@ -1,9 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-	<defs>
-		<clipPath id="clipPath_117">
-			<rect width="16.000013" height="16.999998" x="4.000000" y="3.000000" fill="currentColor" />
-		</clipPath>
-	</defs>
 	<path id="矢量 25" d="M8 8L16 8M8 12L16 12" stroke="currentColor" stroke-linecap="round" stroke-width="1.750000" />
 	<g id="气泡">
 		<rect id="气泡" width="16.000013" height="16.999998" x="4.000000" y="3.000000" fill="currentColor" fill-opacity="0" />
