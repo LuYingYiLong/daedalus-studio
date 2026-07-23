@@ -11,6 +11,8 @@ describe("Windows electron-builder wrapper", () => {
 		expect(scriptSource).toContain("lib\", \"spectre\", \"x64");
 		expect(scriptSource).toContain("lib\", \"spectre\", \"x86");
 		expect(scriptSource).toContain("electron-builder\", \"cli.js");
+		expect(scriptSource).toContain("\"--publish\", \"never\"");
+		expect(scriptSource).toContain("hasExplicitPublishArg");
 		expect(scriptSource).toContain("spawn(process.execPath");
 	});
 });

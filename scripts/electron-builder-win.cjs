@@ -76,7 +76,10 @@ const projectRoot = join(__dirname, "..");
 cleanWinUnpacked(projectRoot);
 
 const electronBuilderCli = join(__dirname, "..", "node_modules", "electron-builder", "cli.js");
-const child = spawn(process.execPath, [electronBuilderCli, "--win", ...process.argv.slice(2)], {
+const userArgs = process.argv.slice(2);
+const hasExplicitPublishArg = userArgs.some((arg) => arg === "--publish" || arg.startsWith("--publish="));
+const publishArgs = hasExplicitPublishArg ? [] : ["--publish", "never"];
+const child = spawn(process.execPath, [electronBuilderCli, "--win", ...publishArgs, ...userArgs], {
 	cwd: projectRoot,
 	env: childEnv,
 	stdio: "inherit",
