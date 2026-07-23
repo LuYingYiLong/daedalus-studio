@@ -1,0 +1,19 @@
+.commitDialogBody {
+	display: grid;
+	gap: 12px;
+}
+
+.branchDialogBody {
+	display: grid;
+	gap: 12px;
+}
+
+.branchList {
+	display: grid;
+	gap: 6px;
+	min-height: 80px;
+}
+
+.searchBox {
+	width: 100%;
+}

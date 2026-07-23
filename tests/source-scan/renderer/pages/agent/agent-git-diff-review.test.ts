@@ -7,6 +7,8 @@ describe("AgentPage git diff review source", () => {
 	const assistantBubbleSource: string = readRepoFile("src", "renderer", "src", "features", "bubble", "AssistantBubble.tsx");
 	const inlineDiffSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "InlineDiffPart.tsx");
 	const reviewPanelSource: string = readRepoFile("src", "renderer", "src", "features", "review", "GitDiffReviewPanel.tsx");
+	const gitActionDialogsSource: string = readRepoFile("src", "renderer", "src", "features", "git", "GitActionDialogs.tsx");
+	const gitActionControllerSource: string = readRepoFile("src", "renderer", "src", "features", "git", "useGitActionDialogController.tsx");
 	const dockPanelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.tsx");
 	const dockPanelTabsCss: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.module.css");
 	const panelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "panel-tabs", "PanelTabs.tsx");
@@ -40,7 +42,7 @@ describe("AgentPage git diff review source", () => {
 	});
 
 	it("adds a fixed layout-right top menu button for opening the side dock", () => {
-		expect(agentSource).toContain("const showDockControls: boolean = !isHome || activeWorkspace !== null;");
+		expect(agentSource).toContain("const showDockControls: boolean = !isHome || workspaceForActions !== null;");
 		expect(agentSource).toContain("const showSideDockButton: boolean = showDockControls;");
 		expect(agentSource).toContain("className={styles.floatingActionSlot}");
 		expect(agentSource).toContain("className={styles.floatingActions}");
@@ -82,6 +84,16 @@ describe("AgentPage git diff review source", () => {
 		expect(reviewPanelSource).not.toContain("Tabs");
 	});
 
+	it("opens shared git action dialogs from the review panel", () => {
+		expect(reviewPanelSource).toContain("useGitActionDialogController");
+		expect(reviewPanelSource).toContain("onCommitSuccess: loadDiff");
+		expect(reviewPanelSource).toContain("onClick={gitActions.openCommitDialog}");
+		expect(reviewPanelSource).toContain("<GitActionDialogs {...gitActions.dialogProps} />");
+		expect(gitActionDialogsSource).toContain("title=\"Commit or push\"");
+		expect(gitActionControllerSource).toContain("commitOrPushGit");
+		expect(gitActionControllerSource).toContain("generateGitCommitMessage");
+	});
+
 	it("uses dnd-kit to reorder dock tabs", () => {
 		expect(packageJsonSource).toContain("\"@dnd-kit/core\"");
 		expect(packageJsonSource).toContain("\"@dnd-kit/sortable\"");
@@ -101,7 +113,7 @@ describe("AgentPage git diff review source", () => {
 
 	it("closes the side dock when the active session or workspace changes", () => {
 		expect(agentSource).toContain("setSideDockOpen(false);");
-		expect(agentSource).toContain("[activeSessionId, activeWorkspace?.id]");
+		expect(agentSource).toContain("[activeSessionId]");
 	});
 
 	it("wires inline diff review actions to the same sidebar callback", () => {

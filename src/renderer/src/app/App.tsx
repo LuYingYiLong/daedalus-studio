@@ -3017,186 +3017,188 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				/>
 			</Modal>
 			<AppNavTabs activePage={activePage} onPageChange={setActivePage} />
-			{activePage === "agent" ? (
-				<AgentPage
-					workspaceRefreshToken={workspaceRefreshToken}
-					isHome={isNewSessionHome}
-					activeSessionId={activeSessionId}
-					activeSessionMetadata={activeSessionMetadata}
-					activeWorkspaceId={isNewSessionHome ? homeDraft.workspaceId : currentSessionWorkspaceId}
-					chatTitle={chatTitle}
-					timelineBlocks={timelineBlocks}
-					isSessionLoading={isSessionLoading}
-					sessionError={sessionError}
-					hasMoreBefore={timelinePage.hasMoreBefore}
-					hasMoreAfter={timelinePage.hasMoreAfter}
-					isLoadingMoreBefore={isTimelineLoadingBefore}
-					isLoadingMoreAfter={isTimelineLoadingAfter}
-					initialScrollToBottomKey={initialScrollToBottomKey}
-					retryDisabled={composerIsSending || isSessionLoading}
-					activeRetryRequestId={activeRetryRequestId}
-					providerModelSelection={providerModelSelection}
-					selectedProviderId={selectedProviderId}
-					selectedModelId={selectedModelId}
-					message={composerMessage}
-					contextItems={composerContextItems}
-					messageQueue={composerMessageQueue}
-					pendingGuides={composerPendingGuides}
-					workflowTodoSnapshot={workflowTodoSnapshot}
-					workflowTodoCollapsed={activeSessionMetadata?.workflowTodoCollapsed === true}
-					mode={composerMode}
-					approvalMode={approvalMode}
-					pendingApproval={pendingApproval}
-					isApproving={isApproving}
-					isRejecting={isRejecting}
-					approvalError={approvalError}
-					pendingToolBudget={pendingToolBudget}
-					isToolBudgetContinuing={isToolBudgetContinuing}
-					isToolBudgetStopping={isToolBudgetStopping}
-					toolBudgetError={toolBudgetError}
-					pendingPlanClarification={pendingPlanClarification}
-					isPlanClarificationSubmitting={isPlanClarificationSubmitting}
-					planClarificationError={planClarificationError}
-					pendingPlanApproval={pendingPlanApproval}
-					isPlanApproving={isPlanApproving}
-					isPlanRevising={isPlanRevising}
-					planApprovalError={planApprovalError}
-					slashCommands={slashCommands}
-					skills={skills}
-					isSending={composerIsSending}
-					isApprovalModeSaving={isApprovalModeSaving}
-					workspaceOptions={homeWorkspaceOptions}
-					initialWorkspaces={bootstrapData.workspaceList.workspaces}
-					initialSessions={bootstrapData.sessionList.sessions}
-					initialActiveWorkspaceId={bootstrapData.workspaceList.active}
-					homeWorkspace={homeDraft.workspace}
-					workspaceFooterDisabled={!isNewSessionHome || isHomeSubmitting}
-					isWorkspaceAdding={isWorkspaceAdding}
-					activeWorkspace={displayedWorkspace}
-					onNewSession={handleNewSession}
-					onNewWorkspaceSession={(workspace: WorkspaceConfig): void => {
-						void handleNewWorkspaceSession(workspace);
-					}}
-					onWorkspaceRefresh={(): void => {
-						setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
-					}}
-					onWorkspaceSelect={(workspaceId: string): void => {
-						void handleWorkspaceRootSelect(workspaceId);
-					}}
-					onHomeWorkspaceSelect={(workspaceId: string): void => {
-						void handleHomeWorkspaceSelect(workspaceId);
-					}}
-					onHomeWorkspaceAdd={(): void => {
-						void handleHomeWorkspaceAdd();
-					}}
-					onHomeWorkspaceClear={handleHomeWorkspaceClear}
-					onSessionSelect={handleSessionSelect}
-					onSessionArchive={handleSessionArchive}
-					onSessionRename={handleSessionRename}
-					onWorkspaceDelete={handleWorkspaceDelete}
-					onLoadMoreBefore={handleLoadMoreBefore}
-					onLoadMoreAfter={handleLoadMoreAfter}
-					onRetryEditStart={(requestId: string): void => {
-						setActiveRetryRequestId(requestId);
-					}}
-					onRetryEditCancel={(requestId: string): void => {
-						setActiveRetryRequestId((currentRequestId: string | null): string | null => {
-							return currentRequestId === requestId ? null : currentRequestId;
-						});
-					}}
-					onRetryFromUserMessage={handleRetryFromUserMessage}
-					onMessageChange={handleComposerTextChange}
-					onModeChange={(mode: ChatMode): void => {
-						void handleModeChange(mode);
-					}}
-					onApprovalModeChange={(mode: ApprovalMode): void => {
-						void handleApprovalModeChange(mode);
-					}}
-					onApprovalApprove={(approvalId: string, consentText?: string): void => {
-						void handleApprovalApprove(approvalId, consentText);
-					}}
-					onApprovalReject={(approvalId: string): void => {
-						void handleApprovalReject(approvalId);
-					}}
-					onToolBudgetContinue={(budgetId: string): void => {
-						void handleToolBudgetContinue(budgetId);
-					}}
-					onToolBudgetStop={(budgetId: string): void => {
-						void handleToolBudgetStop(budgetId);
-					}}
-					onPlanClarificationSubmit={(reply: string): void => {
-						void handlePlanClarificationSubmit(reply);
-					}}
-					onPlanClarificationSkip={(): void => {
-						void handlePlanClarificationSubmit(PLAN_CLARIFICATION_SKIP_REPLY);
-					}}
-					onPlanApprove={(planId: string): void => {
-						void handlePlanApprove(planId);
-					}}
-					onPlanRevise={(planId: string, feedback: string): void => {
-						void handlePlanRevise(planId, feedback);
-					}}
-					onProviderModelChange={(providerId: string, modelId: string): void => {
-						void handleProviderModelChange(providerId, modelId);
-					}}
-					onAddFiles={(): void => {
-						void handleAddWorkspaceContext("files");
-					}}
-					onAddFolder={(): void => {
-						void handleAddWorkspaceContext("folder");
-					}}
-					onAddImages={(files: File[]): void => {
-						void handleAddImageFiles(files);
-					}}
-					onAddContextFiles={(files: File[]): void => {
-						void handleAddContextFiles(files);
-					}}
-					onRemoveContext={(contextId: string): void => patchContext({ action: "remove", contextId })}
-					onPinContext={(contextId: string, pinned: boolean): void => patchContext({ action: "pin", contextId, pinned })}
-					onClearUnpinnedContext={(): void => patchContext({ action: "clearUnpinned" })}
-					onCancel={(): void => {
-						void handleComposerCancel();
-					}}
-					onSubmit={(message: string): void => {
-						void handleComposerSubmit(message);
-					}}
-					onGuideSubmit={(message: string): void => {
-						void handleGuideSubmit(message);
-					}}
-					activeQueueItemId={workbench?.activeRun.queueItemId ?? null}
-					onQueueMessageRemove={(queueId: number): void => {
-						void handleQueueMessageRemove(queueId);
-					}}
-					onQueueMessageEdit={(item: MessageQueueItem): void => {
-						void handleQueueMessageEdit(item);
-					}}
-					onQueueMessageReorder={(queueIds: number[]): void => {
-						void handleQueueMessageReorder(queueIds);
-					}}
-					onGuideDelete={(guideId: string): void => {
-						void handleGuideDelete(guideId);
-					}}
-					onGuideReorder={(guideIds: string[]): void => {
-						void handleGuideReorder(guideIds);
-					}}
-					onWorkflowTodoDismiss={(snapshot: WorkflowTodoSnapshot): void => {
-						void handleWorkflowTodoDismiss(snapshot);
-					}}
-					onCompletionOpen={handleCompletionOpen}
-				/>
-			) : activePage === "settings" ? (
-				<SettingsPage
-					onProviderModelSelectionChange={setProviderModelSelection}
-					clientPreferences={clientPreferences}
-					generalSettings={generalSettings}
-					onClientPreferencesChange={setClientPreferences}
-					onGeneralSettingsChange={setGeneralSettings}
-				/>
-			) : activePage === "drawing" ? (
-				<DrawingPage />
-			) : (
-				<KnowledgePage />
-			)}
+			<div className={styles.pageSurface}>
+				{activePage === "agent" ? (
+					<AgentPage
+						workspaceRefreshToken={workspaceRefreshToken}
+						isHome={isNewSessionHome}
+						activeSessionId={activeSessionId}
+						activeSessionMetadata={activeSessionMetadata}
+						activeWorkspaceId={isNewSessionHome ? homeDraft.workspaceId : currentSessionWorkspaceId}
+						chatTitle={chatTitle}
+						timelineBlocks={timelineBlocks}
+						isSessionLoading={isSessionLoading}
+						sessionError={sessionError}
+						hasMoreBefore={timelinePage.hasMoreBefore}
+						hasMoreAfter={timelinePage.hasMoreAfter}
+						isLoadingMoreBefore={isTimelineLoadingBefore}
+						isLoadingMoreAfter={isTimelineLoadingAfter}
+						initialScrollToBottomKey={initialScrollToBottomKey}
+						retryDisabled={composerIsSending || isSessionLoading}
+						activeRetryRequestId={activeRetryRequestId}
+						providerModelSelection={providerModelSelection}
+						selectedProviderId={selectedProviderId}
+						selectedModelId={selectedModelId}
+						message={composerMessage}
+						contextItems={composerContextItems}
+						messageQueue={composerMessageQueue}
+						pendingGuides={composerPendingGuides}
+						workflowTodoSnapshot={workflowTodoSnapshot}
+						workflowTodoCollapsed={activeSessionMetadata?.workflowTodoCollapsed === true}
+						mode={composerMode}
+						approvalMode={approvalMode}
+						pendingApproval={pendingApproval}
+						isApproving={isApproving}
+						isRejecting={isRejecting}
+						approvalError={approvalError}
+						pendingToolBudget={pendingToolBudget}
+						isToolBudgetContinuing={isToolBudgetContinuing}
+						isToolBudgetStopping={isToolBudgetStopping}
+						toolBudgetError={toolBudgetError}
+						pendingPlanClarification={pendingPlanClarification}
+						isPlanClarificationSubmitting={isPlanClarificationSubmitting}
+						planClarificationError={planClarificationError}
+						pendingPlanApproval={pendingPlanApproval}
+						isPlanApproving={isPlanApproving}
+						isPlanRevising={isPlanRevising}
+						planApprovalError={planApprovalError}
+						slashCommands={slashCommands}
+						skills={skills}
+						isSending={composerIsSending}
+						isApprovalModeSaving={isApprovalModeSaving}
+						workspaceOptions={homeWorkspaceOptions}
+						initialWorkspaces={bootstrapData.workspaceList.workspaces}
+						initialSessions={bootstrapData.sessionList.sessions}
+						initialActiveWorkspaceId={bootstrapData.workspaceList.active}
+						homeWorkspace={homeDraft.workspace}
+						workspaceFooterDisabled={!isNewSessionHome || isHomeSubmitting}
+						isWorkspaceAdding={isWorkspaceAdding}
+						activeWorkspace={displayedWorkspace}
+						onNewSession={handleNewSession}
+						onNewWorkspaceSession={(workspace: WorkspaceConfig): void => {
+							void handleNewWorkspaceSession(workspace);
+						}}
+						onWorkspaceRefresh={(): void => {
+							setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+						}}
+						onWorkspaceSelect={(workspaceId: string): void => {
+							void handleWorkspaceRootSelect(workspaceId);
+						}}
+						onHomeWorkspaceSelect={(workspaceId: string): void => {
+							void handleHomeWorkspaceSelect(workspaceId);
+						}}
+						onHomeWorkspaceAdd={(): void => {
+							void handleHomeWorkspaceAdd();
+						}}
+						onHomeWorkspaceClear={handleHomeWorkspaceClear}
+						onSessionSelect={handleSessionSelect}
+						onSessionArchive={handleSessionArchive}
+						onSessionRename={handleSessionRename}
+						onWorkspaceDelete={handleWorkspaceDelete}
+						onLoadMoreBefore={handleLoadMoreBefore}
+						onLoadMoreAfter={handleLoadMoreAfter}
+						onRetryEditStart={(requestId: string): void => {
+							setActiveRetryRequestId(requestId);
+						}}
+						onRetryEditCancel={(requestId: string): void => {
+							setActiveRetryRequestId((currentRequestId: string | null): string | null => {
+								return currentRequestId === requestId ? null : currentRequestId;
+							});
+						}}
+						onRetryFromUserMessage={handleRetryFromUserMessage}
+						onMessageChange={handleComposerTextChange}
+						onModeChange={(mode: ChatMode): void => {
+							void handleModeChange(mode);
+						}}
+						onApprovalModeChange={(mode: ApprovalMode): void => {
+							void handleApprovalModeChange(mode);
+						}}
+						onApprovalApprove={(approvalId: string, consentText?: string): void => {
+							void handleApprovalApprove(approvalId, consentText);
+						}}
+						onApprovalReject={(approvalId: string): void => {
+							void handleApprovalReject(approvalId);
+						}}
+						onToolBudgetContinue={(budgetId: string): void => {
+							void handleToolBudgetContinue(budgetId);
+						}}
+						onToolBudgetStop={(budgetId: string): void => {
+							void handleToolBudgetStop(budgetId);
+						}}
+						onPlanClarificationSubmit={(reply: string): void => {
+							void handlePlanClarificationSubmit(reply);
+						}}
+						onPlanClarificationSkip={(): void => {
+							void handlePlanClarificationSubmit(PLAN_CLARIFICATION_SKIP_REPLY);
+						}}
+						onPlanApprove={(planId: string): void => {
+							void handlePlanApprove(planId);
+						}}
+						onPlanRevise={(planId: string, feedback: string): void => {
+							void handlePlanRevise(planId, feedback);
+						}}
+						onProviderModelChange={(providerId: string, modelId: string): void => {
+							void handleProviderModelChange(providerId, modelId);
+						}}
+						onAddFiles={(): void => {
+							void handleAddWorkspaceContext("files");
+						}}
+						onAddFolder={(): void => {
+							void handleAddWorkspaceContext("folder");
+						}}
+						onAddImages={(files: File[]): void => {
+							void handleAddImageFiles(files);
+						}}
+						onAddContextFiles={(files: File[]): void => {
+							void handleAddContextFiles(files);
+						}}
+						onRemoveContext={(contextId: string): void => patchContext({ action: "remove", contextId })}
+						onPinContext={(contextId: string, pinned: boolean): void => patchContext({ action: "pin", contextId, pinned })}
+						onClearUnpinnedContext={(): void => patchContext({ action: "clearUnpinned" })}
+						onCancel={(): void => {
+							void handleComposerCancel();
+						}}
+						onSubmit={(message: string): void => {
+							void handleComposerSubmit(message);
+						}}
+						onGuideSubmit={(message: string): void => {
+							void handleGuideSubmit(message);
+						}}
+						activeQueueItemId={workbench?.activeRun.queueItemId ?? null}
+						onQueueMessageRemove={(queueId: number): void => {
+							void handleQueueMessageRemove(queueId);
+						}}
+						onQueueMessageEdit={(item: MessageQueueItem): void => {
+							void handleQueueMessageEdit(item);
+						}}
+						onQueueMessageReorder={(queueIds: number[]): void => {
+							void handleQueueMessageReorder(queueIds);
+						}}
+						onGuideDelete={(guideId: string): void => {
+							void handleGuideDelete(guideId);
+						}}
+						onGuideReorder={(guideIds: string[]): void => {
+							void handleGuideReorder(guideIds);
+						}}
+						onWorkflowTodoDismiss={(snapshot: WorkflowTodoSnapshot): void => {
+							void handleWorkflowTodoDismiss(snapshot);
+						}}
+						onCompletionOpen={handleCompletionOpen}
+					/>
+				) : activePage === "settings" ? (
+					<SettingsPage
+						onProviderModelSelectionChange={setProviderModelSelection}
+						clientPreferences={clientPreferences}
+						generalSettings={generalSettings}
+						onClientPreferencesChange={setClientPreferences}
+						onGeneralSettingsChange={setGeneralSettings}
+					/>
+				) : activePage === "drawing" ? (
+					<DrawingPage />
+				) : (
+					<KnowledgePage />
+				)}
+			</div>
 		</main>
 	);
 }

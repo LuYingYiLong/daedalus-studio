@@ -30,9 +30,19 @@
 	transition: none;
 }
 
-.panelTabs :global(.ant-tabs-content-holder),
-.panelTabs :global(.ant-tabs-content),
-.panelTabs :global(.ant-tabs-tabpane) {
+.panelTabs :global(.ant-tabs-body-holder) {
+	display: grid;
+	grid-template-rows: minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	overflow: hidden;
+}
+
+.tabsBody,
+.tabsContent {
+	display: grid;
+	grid-template-rows: minmax(0, 1fr);
 	min-width: 0;
 	min-height: 0;
 	height: 100%;

@@ -120,6 +120,8 @@
 	--ds-git-deletion: #ff7b72;
 	--ds-git-addition-bg: rgb(63 185 80 / 14%);
 	--ds-git-deletion-bg: rgb(255 123 114 / 14%);
+	--ds-window-glass-tint: rgb(20 20 20 / 62%);
+	--ds-window-glass-highlight: rgb(255 255 255 / 7%);
 	--ds-space-1: 4px;
 	--ds-space-2: 8px;
 	--ds-space-3: 12px;
@@ -133,7 +135,7 @@
 	--ds-font-family-code: "Fira Code", "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
 	color-scheme: dark;
 	font-family: var(--ds-font-family);
-	background: var(--ds-bg);
+	background: transparent;
 	color: var(--ds-text-primary);
 	text-rendering: optimizeLegibility;
 }
@@ -166,6 +168,8 @@
 	--ds-git-addition-bg: rgb(26 127 55 / 12%);
 	--ds-git-deletion-bg: rgb(207 34 46 / 12%);
 	--ds-box-shadow: #0000000f;
+	--ds-window-glass-tint: rgb(245 245 245 / 64%);
+	--ds-window-glass-highlight: rgb(255 255 255 / 58%);
 	color-scheme: light;
 }
 
@@ -178,6 +182,7 @@ body {
 	width: 100%;
 	height: 100%;
 	margin: 0;
+	background: transparent;
 }
 
 #root {
@@ -188,7 +193,7 @@ body {
 	min-width: 320px;
 	min-height: 100vh;
 	margin: 0;
-	background: var(--ds-bg);
+	background: transparent;
 }
 
 body {

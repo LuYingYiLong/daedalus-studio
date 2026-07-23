@@ -39,6 +39,24 @@ type SortableTabNodeProps = HTMLAttributes<HTMLDivElement> & {
 	"data-node-key": string;
 };
 
+const PANEL_TAB_BODY_STYLE: CSSProperties = {
+	display: "grid",
+	gridTemplateRows: "minmax(0, 1fr)",
+	minWidth: 0,
+	minHeight: 0,
+	height: "100%",
+	overflow: "hidden"
+};
+
+const PANEL_TAB_CONTENT_STYLE: CSSProperties = {
+	display: "grid",
+	gridTemplateRows: "minmax(0, 1fr)",
+	minWidth: 0,
+	minHeight: 0,
+	height: "100%",
+	overflow: "hidden"
+};
+
 function joinClassNames(...classNames: Array<string | undefined>): string | undefined {
 	const joined: string = classNames.filter((className): className is string => className !== undefined && className.length > 0).join(" ");
 	return joined.length > 0 ? joined : undefined;
@@ -125,6 +143,14 @@ function PanelTabs({
 			animated={false}
 			items={toTabsItems(items)}
 			className={joinClassNames(styles.panelTabs, className)}
+			classNames={{
+				body: styles.tabsBody,
+				content: styles.tabsContent
+			}}
+			styles={{
+				body: PANEL_TAB_BODY_STYLE,
+				content: PANEL_TAB_CONTENT_STYLE
+			}}
 			onChange={onActiveChange}
 			onEdit={handleEdit}
 			renderTabBar={(tabBarProps, DefaultTabBar): ReactElement => (

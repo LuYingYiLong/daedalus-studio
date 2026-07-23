@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
-import { Alert, Button, Empty, Spin, Typography } from "antd";
+import { Alert, Button, Divider, Empty, Spin, Tooltip, Typography } from "antd";
 import { Decoration, Diff, Hunk, parseDiff, type FileData, type HunkData } from "react-diff-view";
 import { fetchWorkspaceGitDiff, type WorkspaceGitDiffResult } from "@/api/workspace-git-diff-api";
 import { Icon } from "@/assets/icons";
+import GitActionDialogs from "@/features/git/GitActionDialogs";
+import { useGitActionDialogController } from "@/features/git/useGitActionDialogController";
 import styles from "./GitDiffReviewPanel.module.css";
 
 export type GitDiffReviewPanelProps = {
@@ -56,6 +58,10 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const parsedDiff: ParsedDiff = useMemo((): ParsedDiff => parsePatch(diff?.patch ?? ""), [diff?.patch]);
+	const gitActions = useGitActionDialogController({
+		workspaceId,
+		onCommitSuccess: loadDiff
+	});
 
 	async function loadDiff(): Promise<void> {
 		setIsLoading(true);
@@ -99,28 +105,42 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 
 	return (
 		<aside className={styles.panel}>
+			{gitActions.contextHolder}
 			<header className={styles.header}>
 				<div className={styles.titleBlock}>
 					{diff !== null && diff.hasGitRepository ? (
-						<Typography.Text type="secondary" className={styles.meta}>
-							{formatDiffStats(diff)}
-						</Typography.Text>
+						<div>
+							<Typography.Text type="secondary" className={styles.meta}>
+								{formatDiffStats(diff)}
+							</Typography.Text>
+						</div>
 					) : null}
 				</div>
-
-				<div className={styles.headerActions}>
+				<Tooltip title="Commit or push">
 					<Button
 						type="text"
 						shape="circle"
-						aria-label="Refresh git diff"
-						loading={isLoading}
-						icon={<Icon name="refresh" />}
-						onClick={(): void => {
-							void loadDiff();
-						}}
+						disabled={diff !== null && !diff.hasGitRepository}
+						icon={<Icon name="git-commit" />}
+						onClick={gitActions.openCommitDialog}
 					/>
-				</div>
+				</Tooltip>
+				<Tooltip title="Refresh git diff">
+					<div className={styles.headerActions}>
+						<Button
+							type="text"
+							shape="circle"
+							loading={isLoading}
+							icon={<Icon name="reload" />}
+							onClick={(): void => {
+								void loadDiff();
+							}}
+						/>
+					</div>
+				</Tooltip>
 			</header>
+
+			<Divider size="small" />
 
 			<div className={styles.body}>
 				{isLoading && diff === null ? (
@@ -187,6 +207,7 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 					</div>
 				)}
 			</div>
+			<GitActionDialogs {...gitActions.dialogProps} />
 		</aside>
 	);
 }

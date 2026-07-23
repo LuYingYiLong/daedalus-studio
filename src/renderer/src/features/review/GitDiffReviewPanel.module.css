@@ -1,10 +1,11 @@
 .panel {
 	display: grid;
-	grid-template-rows: auto minmax(0, 1fr);
+	grid-template-rows: auto auto minmax(0, 1fr);
 	width: 100%;
 	height: 100%;
 	min-width: 0;
 	min-height: 0;
+	overflow: hidden;
 	background: var(--ds-bg);
 	--diff-background-color: var(--ds-bg);
 	--diff-text-color: var(--ds-text-primary);
@@ -17,14 +18,17 @@
 	--diff-code-delete-edit-background-color: rgb(255 77 79 / 28%);
 }
 
+.panel > :global(.ant-divider-horizontal) {
+	margin: 0;
+}
+
 .header {
-	display: flex;
+	display: grid;
+	width: 100%;
 	align-items: center;
-	justify-content: space-between;
-	gap: var(--ds-space-2);
-	min-width: 0;
-	min-height: 40px;
-	padding: 0 var(--ds-space-2);
+	grid-template-columns: minmax(0, 1fr) auto auto;
+	gap: var(--ds-space-1);
+	padding: var(--ds-space-1) var(--ds-space-2) 0px var(--ds-space-2);
 	user-select: none;
 }
 
@@ -54,7 +58,10 @@
 .body {
 	min-width: 0;
 	min-height: 0;
-	overflow: auto;
+	height: 100%;
+	overflow-x: hidden;
+	overflow-y: auto;
+	overscroll-behavior: contain;
 	padding: var(--ds-space-2);
 }
 

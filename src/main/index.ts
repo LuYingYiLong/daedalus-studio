@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeTheme, shell } from "electron";
+import { app, BrowserWindow, nativeTheme, shell, type BrowserWindowConstructorOptions } from "electron";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { backendManager } from "./services/backend-manager";
@@ -46,9 +46,30 @@ function getCurrentWindowThemeColors(preferences: ClientPreferences): WindowThem
 	return getWindowThemeColors(resolveWindowTheme(preferences.theme, nativeTheme.shouldUseDarkColors));
 }
 
+function getWindowBackgroundColor(colors: WindowThemeColors): string {
+	return process.platform === "win32" || process.platform === "darwin" ? "#00000000" : colors.backgroundColor;
+}
+
+function getNativeWindowMaterialOptions(): Partial<BrowserWindowConstructorOptions> {
+	if (process.platform === "win32") {
+		return {
+			backgroundMaterial: "acrylic"
+		};
+	}
+
+	if (process.platform === "darwin") {
+		return {
+			vibrancy: "under-window",
+			visualEffectState: "active"
+		};
+	}
+
+	return {};
+}
+
 function applyWindowTheme(mainWindow: BrowserWindow, preferences: ClientPreferences): void {
 	const colors: WindowThemeColors = getCurrentWindowThemeColors(preferences);
-	mainWindow.setBackgroundColor(colors.backgroundColor);
+	mainWindow.setBackgroundColor(getWindowBackgroundColor(colors));
 	if (process.platform !== "darwin") {
 		mainWindow.setTitleBarOverlay({
 			color: colors.titleBarOverlayColor,
@@ -72,9 +93,10 @@ function createWindow(): void {
 		height: 760,
 		minWidth: 900,
 		minHeight: 620,
-		backgroundColor: colors.backgroundColor,
+		backgroundColor: getWindowBackgroundColor(colors),
 		icon: getWindowIconPath(),
 		show: false,
+		...getNativeWindowMaterialOptions(),
 		webPreferences: {
 			preload: join(__dirname, "../preload/index.js"),
 			contextIsolation: true,

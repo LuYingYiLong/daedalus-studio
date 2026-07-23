@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Alert, Button, Divider, Dropdown, Empty, Modal, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip, Checkbox, Input } from "antd";
+import { Button, Divider, Dropdown, Empty, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
@@ -9,7 +9,6 @@ import type { ProviderModelSelection } from "@/api/provider-api";
 import type { DeleteWorkspaceResult } from "@/api/workspace-api";
 import type { SkillSummary } from "@/api/skill-api";
 import { fetchSessionOverview, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
-import { commitOrPushGit, generateGitCommitMessage, type CommitOrPushAction, type CommitOrPushResult, type GenerateGitCommitMessageResult } from "@/api/workspace-git-api";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import MessageList, { type MessageListHandle } from "@/features/chat/MessageList";
 import Composer from "@/features/composer/Composer";
@@ -24,9 +23,10 @@ import styles from "./AgentPage.module.css";
 import { Icon } from "@/assets/icons";
 import ClarificationDialog from "@/features/clarification/ClarificationDialog";
 import PlanApprovalDialog from "@/features/approval/PlanApprovalDialog";
-import MarkdownContent from "@/features/markdown/MarkdownContent";
 import DockPanelTabs, { type DockPanelActivationRequest, type DockPanelKind } from "@/features/dock/DockPanelTabs";
-import TextArea from "antd/es/input/TextArea";
+import GitActionDialogs from "@/features/git/GitActionDialogs";
+import { useGitActionDialogController } from "@/features/git/useGitActionDialogController";
+import SessionOverviewDialogs, { formatSourceSubtitle } from "./SessionOverviewDialogs";
 
 type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
 
@@ -50,26 +50,6 @@ const BOTTOM_DOCK_CLOSED_SIZE: number = 0;
 const BOTTOM_DOCK_DEFAULT_SIZE: number = 280;
 const BOTTOM_DOCK_MAX_SIZE: number = 520;
 const BOTTOM_DOCK_CLOSE_THRESHOLD: number = 120;
-
-function getCommitActionLabel(action: CommitOrPushAction): string {
-	if (action === "commit") {
-		return "Commit";
-	}
-	if (action === "commit_and_push") {
-		return "Commit & Push";
-	}
-	return "Push";
-}
-
-function formatCommitActionSuccess(result: CommitOrPushResult): string {
-	if (result.committed && result.pushed) {
-		return `Committed ${result.commitHash ?? "changes"} and pushed.`;
-	}
-	if (result.committed) {
-		return `Committed ${result.commitHash ?? "changes"}.`;
-	}
-	return "Pushed changes.";
-}
 
 function isWorkspaceLaunchTargetId(value: string): value is WorkspaceLaunchTargetId {
 	return value === "file-explorer"
@@ -158,24 +138,6 @@ function aggregateTimelineFileChanges(blocks: TimelineBlock[]): WorkflowFileChan
 	}
 
 	return { additions, deletions, changedFiles };
-}
-
-function formatSourceSubtitle(source: SessionOverviewSourceItem): string {
-	const dimensions: string = source.width !== undefined && source.height !== undefined
-		? `${source.width}x${source.height}`
-		: "Unknown size";
-	return `${source.mimeType} · ${dimensions}`;
-}
-
-function formatOverviewDate(value: string): string {
-	if (value.trim().length === 0) {
-		return "";
-	}
-	const date: Date = new Date(value);
-	if (Number.isNaN(date.getTime())) {
-		return value;
-	}
-	return date.toLocaleString();
 }
 
 type AgentPageProps = {
@@ -403,12 +365,6 @@ function AgentPage({
 	const [bottomDockOpen, setBottomDockOpen] = useState<boolean>(false);
 	const [bottomDockSize, setBottomDockSize] = useState<number>(BOTTOM_DOCK_DEFAULT_SIZE);
 	const [bottomDockLastOpenSize, setBottomDockLastOpenSize] = useState<number>(BOTTOM_DOCK_DEFAULT_SIZE);
-	const [commitOrPushOpen, setCommitOrPushOpen] = useState<boolean>(false);
-	const [commitMessage, setCommitMessage] = useState<string>("");
-	const [includeUnstagedChanges, setIncludeUnstagedChanges] = useState<boolean>(true);
-	const [commitOperation, setCommitOperation] = useState<CommitOrPushAction | null>(null);
-	const [commitError, setCommitError] = useState<string | null>(null);
-	const [branchOpen, setBranchOpen] = useState<boolean>(false);
 	const messageListRef = useRef<MessageListHandle | null>(null);
 	const scrollToBottomButtonRef = useRef<HTMLButtonElement | null>(null);
 	const scrollToBottomButtonVisibleRef = useRef<boolean>(false);
@@ -419,7 +375,6 @@ function AgentPage({
 	const showSideDockButton: boolean = showDockControls;
 	const showBottomDockButton: boolean = showDockControls;
 	const terminalWaitForCwd: boolean = !isHome && isSessionLoading && workspaceForActions === null;
-	const isCommitOperationRunning: boolean = commitOperation !== null;
 	const showWorkflowTodoPanel: boolean = !workflowTodoCollapsed && workflowTodoSnapshot !== null;
 	const workflowFileChangeSummary: WorkflowFileChangeSummary = useMemo((): WorkflowFileChangeSummary => {
 		return aggregateTimelineFileChanges(timelineBlocks);
@@ -488,7 +443,9 @@ function AgentPage({
 							block
 							icon={<Icon name="git-branch" />}
 							className={styles.summaryActionButton}
-							onClick={() => setBranchOpen(true)}
+							onClick={(): void => {
+								gitActions.openBranchDialog();
+							}}
 						>
 							{summaryOverview.envInfo.branch ?? "Detached HEAD"}
 						</Button>
@@ -643,10 +600,6 @@ function AgentPage({
 		setPreviewSource(null);
 		setPreviewPlan(null);
 		setSideDockOpen(false);
-		setCommitOrPushOpen(false);
-		setCommitMessage("");
-		setCommitError(null);
-		setCommitOperation(null);
 	}, [activeSessionId]);
 
 	const loadSummaryOverview = useCallback(async (planLimit: number = SUMMARY_PREVIEW_LIMIT, sourceLimit: number = SUMMARY_PREVIEW_LIMIT): Promise<SessionOverviewResult | null> => {
@@ -693,6 +646,18 @@ function AgentPage({
 		}
 	}, [isSummaryLoading, loadSummaryOverview]);
 
+	const gitActions = useGitActionDialogController({
+		workspaceId: workspaceForActions?.id ?? null,
+		resetKey: activeSessionId,
+		onBeforeCommitOpen: (): void => {
+			setSummaryOpen(false);
+		},
+		onCommitSuccess: async (): Promise<void> => {
+			onWorkspaceRefresh();
+			await loadSummaryOverview();
+		}
+	});
+
 	async function openPlansModal(): Promise<void> {
 		const result: SessionOverviewResult | null = await loadSummaryOverview(SUMMARY_SEE_MORE_LIMIT, SUMMARY_PREVIEW_LIMIT);
 		if (result !== null) {
@@ -708,62 +673,7 @@ function AgentPage({
 	}
 
 	function openCommitOrPushDialog(): void {
-		setSummaryOpen(false);
-		setCommitError(null);
-		setCommitOrPushOpen(true);
-	}
-
-	function handleCommitDialogCancel(): void {
-		if (isCommitOperationRunning) {
-			return;
-		}
-		setCommitOrPushOpen(false);
-		setCommitError(null);
-	}
-
-	async function generateMessageForCommitAction(): Promise<string> {
-		if (workspaceForActions === null) {
-			throw new Error("Please select a workspace before committing.");
-		}
-
-		const generated: GenerateGitCommitMessageResult = await generateGitCommitMessage({
-			workspaceId: workspaceForActions.id,
-			includeUnstagedChanges
-		});
-		setCommitMessage(generated.message);
-		return generated.message;
-	}
-
-	async function handleCommitOrPushAction(action: CommitOrPushAction): Promise<void> {
-		if (workspaceForActions === null) {
-			setCommitError("Please select a workspace before committing.");
-			return;
-		}
-
-		setCommitOperation(action);
-		setCommitError(null);
-		try {
-			let nextMessage: string | undefined = commitMessage.trim();
-			if (action !== "push" && (nextMessage ?? "").length === 0) {
-				nextMessage = await generateMessageForCommitAction();
-			}
-
-			const result: CommitOrPushResult = await commitOrPushGit({
-				workspaceId: workspaceForActions.id,
-				action,
-				message: action === "push" ? undefined : nextMessage,
-				includeUnstagedChanges
-			});
-			void messageApi.success(formatCommitActionSuccess(result));
-			setCommitOrPushOpen(false);
-			setCommitMessage("");
-			onWorkspaceRefresh();
-			await loadSummaryOverview();
-		} catch (error: unknown) {
-			setCommitError(error instanceof Error ? error.message : `Failed to ${getCommitActionLabel(action).toLowerCase()}.`);
-		} finally {
-			setCommitOperation(null);
-		}
+		gitActions.openCommitDialog();
 	}
 
 	async function openWorkspaceLaunchTarget(targetId: WorkspaceLaunchTargetId): Promise<void> {
@@ -1032,6 +942,7 @@ function AgentPage({
 			onDrop={handlePageDrop}
 		>
 			{messageContextHolder}
+			{gitActions.contextHolder}
 			<aside className={styles.workspaceSidebar}>
 				<header className={styles.workspaceHeader}>
 					<Button
@@ -1331,166 +1242,18 @@ function AgentPage({
 					) : null}
 				</Splitter>
 			</div>
-			<Modal
-				title="Plans"
-				open={plansModalOpen}
-				footer={null}
-				onCancel={(): void => setPlansModalOpen(false)}
-				width={640}
-			>
-				<div className={styles.summaryModalList}>
-					{summaryOverview?.plans.items.map((plan: SessionOverviewPlanItem): React.ReactNode => (
-						<Button
-							key={plan.planId}
-							type="text"
-							block
-							className={styles.summaryPlanButton}
-							onClick={(): void => {
-								setPreviewPlan(plan);
-							}}
-						>
-							<span className={styles.summaryPlanButtonContent}>
-								<span className={styles.summaryItemTitle}>{plan.title}</span>
-								<span className={styles.summaryMeta}>
-									{plan.status} · {formatOverviewDate(plan.updatedAt)}
-								</span>
-								<span className={styles.summaryPath}>{plan.planPath}</span>
-							</span>
-						</Button>
-					))}
-				</div>
-			</Modal>
-			<Modal
-				title={previewPlan?.title ?? "Plan"}
-				open={previewPlan !== null}
-				footer={null}
-				onCancel={(): void => setPreviewPlan(null)}
-				width={800}
-			>
-				{previewPlan !== null ? (
-					<div className={`${styles.planPreviewMarkdown} markdown-body`}>
-						<MarkdownContent>{previewPlan.previewMarkdown}</MarkdownContent>
-					</div>
-				) : null}
-			</Modal>
-			<Modal
-				title="Source"
-				open={sourcesModalOpen}
-				footer={null}
-				onCancel={(): void => setSourcesModalOpen(false)}
-				width={640}
-			>
-				<div className={styles.summarySourceGrid}>
-					{summaryOverview?.sources.items.map((source: SessionOverviewSourceItem): React.ReactNode => (
-						<Button
-							key={`${source.kind}:${source.id}`}
-							type="text"
-							className={styles.sourceGridButton}
-							onClick={(): void => setPreviewSource(source)}
-						>
-							<img src={source.thumbnailDataUrl} alt="" className={styles.sourceGridThumbnail} />
-							<span className={styles.sourceGridText}>
-								<span className={styles.summaryItemTitle}>{source.title}</span>
-								<span className={styles.summaryMeta}>{formatSourceSubtitle(source)}</span>
-							</span>
-						</Button>
-					))}
-				</div>
-			</Modal>
-			<Modal
-				title={previewSource?.title ?? "Image source"}
-				open={previewSource !== null}
-				footer={null}
-				onCancel={(): void => setPreviewSource(null)}
-				width={720}
-			>
-				{previewSource !== null ? (
-					<img
-						src={previewSource.thumbnailDataUrl}
-						alt={previewSource.title}
-						className={styles.sourcePreviewImage}
-					/>
-				) : null}
-			</Modal>
-			<Modal
-				title="Commit or push"
-				open={commitOrPushOpen}
-				onCancel={handleCommitDialogCancel}
-				footer={(
-					<Space>
-						<Button
-							disabled={isCommitOperationRunning || workspaceForActions === null}
-							loading={commitOperation === "push"}
-							onClick={(): void => {
-								void handleCommitOrPushAction("push");
-							}}
-						>
-							Push
-						</Button>
-						<Button
-							disabled={isCommitOperationRunning || workspaceForActions === null}
-							loading={commitOperation === "commit_and_push"}
-							onClick={(): void => {
-								void handleCommitOrPushAction("commit_and_push");
-							}}
-						>
-							Commit & Push
-						</Button>
-						<Button
-							type="primary"
-							disabled={isCommitOperationRunning || workspaceForActions === null}
-							loading={commitOperation === "commit"}
-							onClick={(): void => {
-								void handleCommitOrPushAction("commit");
-							}}
-						>
-							Commit
-						</Button>
-					</Space>
-				)}
-			>
-				<div className={styles.commitDialogBody}>
-					{commitError !== null ? (
-						<Alert type="error" showIcon={true} description={commitError} />
-					) : null}
-					<TextArea
-						value={commitMessage}
-						disabled={isCommitOperationRunning}
-						autoSize={{ minRows: 3, maxRows: 6 }}
-						placeholder="Leaving it blank will automatically generate the information"
-						onChange={(event: React.ChangeEvent<HTMLTextAreaElement>): void => {
-							setCommitMessage(event.target.value);
-						}}
-					/>
-					<Checkbox
-						checked={includeUnstagedChanges}
-						disabled={isCommitOperationRunning}
-						onChange={(event): void => {
-							setIncludeUnstagedChanges(event.target.checked);
-						}}
-					>
-						Includes unstaged changes
-					</Checkbox>
-				</div>
-			</Modal>
-			<Modal
-				title="Branch"
-				open={branchOpen}
-				onCancel={() => setBranchOpen(false)}
-				footer={null}
-			>
-				<div className={styles.branchDialogBody}>
-					<Input
-						allowClear={true}
-						prefix={<Icon name="search" />}
-						placeholder="Search branch"
-						className={styles.searchBox}
-					/>
-					<div className={styles.branchList}>
-					</div>
-					<Button block>Create and checkout new branch</Button>
-				</div>
-			</Modal>
+			<SessionOverviewDialogs
+				overview={summaryOverview}
+				plansOpen={plansModalOpen}
+				sourcesOpen={sourcesModalOpen}
+				previewPlan={previewPlan}
+				previewSource={previewSource}
+				onPlansClose={(): void => setPlansModalOpen(false)}
+				onSourcesClose={(): void => setSourcesModalOpen(false)}
+				onPreviewPlanChange={setPreviewPlan}
+				onPreviewSourceChange={setPreviewSource}
+			/>
+			<GitActionDialogs {...gitActions.dialogProps} />
 		</div>
 	);
 }
