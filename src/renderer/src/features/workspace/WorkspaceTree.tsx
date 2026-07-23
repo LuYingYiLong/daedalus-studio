@@ -22,6 +22,7 @@ export type WorkspaceTreeProps = {
 	onSessionSelect?: (session: SessionMetadata) => void;
 	onSessionArchive?: (session: SessionMetadata) => void;
 	onSessionRename?: (session: SessionMetadata) => void;
+	onSessionsChange?: (sessions: SessionMetadata[]) => void;
 	onNewWorkspaceSession?: (workspace: WorkspaceConfig) => void;
 	onWorkspaceDelete?: (result: DeleteWorkspaceResult) => void;
 };
@@ -252,6 +253,7 @@ function WorkspaceTree({
 	onSessionSelect,
 	onSessionArchive,
 	onSessionRename,
+	onSessionsChange,
 	onNewWorkspaceSession,
 	onWorkspaceDelete
 }: WorkspaceTreeProps): React.JSX.Element {
@@ -571,6 +573,10 @@ function WorkspaceTree({
 		});
 	}, [archivingSessionId, deletingWorkspaceId, sessions, workspaces]);
 	const effectiveSelectedMenuKeys: string[] = getSelectedMenuKeys(selectedSessionId, selectedWorkspaceId, selectedMenuKeys);
+
+	useEffect((): void => {
+		onSessionsChange?.(sessions);
+	}, [onSessionsChange, sessions]);
 
 	useEffect((): void => {
 		if (sessionUpdate === null) {

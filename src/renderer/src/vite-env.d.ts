@@ -142,6 +142,17 @@ declare global {
 		clearAttention: () => Promise<{ cleared: true }>;
 	}
 
+	interface TrayRecentSession {
+		id: string;
+		title: string;
+	}
+
+	interface TrayAPI {
+		updateRecentSessions: (sessions: TrayRecentSession[]) => Promise<{ updated: true }>;
+		onNewChat: (callback: () => void) => () => void;
+		onOpenSession: (callback: (sessionId: string) => void) => () => void;
+	}
+
 	interface TerminalState {
 		terminalId: string;
 		shell: string;
@@ -201,6 +212,7 @@ declare global {
 		clientPreferences: ClientPreferencesAPI;
 		clipboard: ClipboardAPI;
 		nativeNotifications: NativeNotificationAPI;
+		tray: TrayAPI;
 		appUpdate: AppUpdateAPI;
 		terminal: TerminalAPI;
 		sessionFs: SessionFsAPI;

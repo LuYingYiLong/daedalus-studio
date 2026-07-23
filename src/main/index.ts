@@ -31,6 +31,7 @@ appUpdateService.registerIpc();
 nativeNotificationService.registerIpc();
 
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
+windowLifecycleController.registerIpc();
 
 function getWindowIconPath(): string | undefined {
 	if (process.platform === "darwin") {

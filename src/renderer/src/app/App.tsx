@@ -676,6 +676,22 @@ function trimTimelineFromRequest(page: TimelinePageState, requestId: string): Ti
 	};
 }
 
+function getSessionSortTime(session: SessionMetadata): number {
+	const updatedTime: number = Date.parse(session.updatedAt);
+	if (Number.isFinite(updatedTime)) {
+		return updatedTime;
+	}
+
+	const createdTime: number = Date.parse(session.createdAt);
+	return Number.isFinite(createdTime) ? createdTime : 0;
+}
+
+function getRecentSessions(sessions: SessionMetadata[]): SessionMetadata[] {
+	return [...sessions]
+		.sort((left: SessionMetadata, right: SessionMetadata): number => getSessionSortTime(right) - getSessionSortTime(left))
+		.slice(0, 3);
+}
+
 function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [activePage, setActivePage] = useState<AppPageKey>("agent");
 	const [settingsInitialPage, setSettingsInitialPage] = useState<SettingsPageKey>("provider");
@@ -688,6 +704,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 	const activeSessionIdRef = useRef<string | null>(null);
 	const [activeSessionMetadata, setActiveSessionMetadata] = useState<SessionMetadata | null>(null);
+	const [recentSessions, setRecentSessions] = useState<SessionMetadata[]>(() => getRecentSessions(bootstrapData.sessionList.sessions));
+	const recentSessionsRef = useRef<SessionMetadata[]>(recentSessions);
 	const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceConfig | null>(null);
 	const [timelinePage, setTimelinePage] = useState<TimelinePageState>(emptyTimelinePage);
 	const [workbench, setWorkbench] = useState<WorkbenchSnapshot | null>(null);
@@ -755,6 +773,57 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			console.error("[App] native notification failed", error);
 		});
 	}
+
+	useEffect((): void => {
+		recentSessionsRef.current = recentSessions;
+		void window.electronAPI.tray.updateRecentSessions(
+			recentSessions.map((session: SessionMetadata): TrayRecentSession => ({
+				id: session.id,
+				title: getSessionTitle(session, session.id)
+			}))
+		).catch((error: unknown): void => {
+			console.error("[App] tray recent session update failed", error);
+		});
+	}, [recentSessions]);
+
+	useEffect((): (() => void) => {
+		const removeNewChatListener: () => void = window.electronAPI.tray.onNewChat((): void => {
+			setActivePage("agent");
+			handleNewSession();
+		});
+		const removeOpenSessionListener: () => void = window.electronAPI.tray.onOpenSession((sessionId: string): void => {
+			void (async (): Promise<void> => {
+				setActivePage("agent");
+				const cachedSession: SessionMetadata | undefined = recentSessionsRef.current.find((session: SessionMetadata): boolean => session.id === sessionId);
+				if (cachedSession !== undefined) {
+					await handleSessionSelect(cachedSession);
+					return;
+				}
+
+				const sessionList = await fetchSessions();
+				setRecentSessions(getRecentSessions(sessionList.sessions));
+				const session: SessionMetadata | undefined = sessionList.sessions.find((item: SessionMetadata): boolean => item.id === sessionId);
+				if (session === undefined) {
+					showTransientError("Session not found");
+					return;
+				}
+
+				await handleSessionSelect(session);
+			})().catch((error: unknown): void => {
+				showTransientError(error instanceof Error ? error.message : "Failed to open session");
+				console.error("[App] tray open session failed", error);
+			});
+		});
+
+		return (): void => {
+			removeNewChatListener();
+			removeOpenSessionListener();
+		};
+	}, []);
+
+	const handleSessionsChange = useCallback((sessions: SessionMetadata[]): void => {
+		setRecentSessions(getRecentSessions(sessions));
+	}, []);
 
 	const clearTimelineStreamBatchTimer = useCallback((): void => {
 		if (timelineStreamBatchTimerRef.current === null) {
@@ -3215,6 +3284,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						onSessionSelect={handleSessionSelect}
 						onSessionArchive={handleSessionArchive}
 						onSessionRename={handleSessionRename}
+						onSessionsChange={handleSessionsChange}
 						onWorkspaceDelete={handleWorkspaceDelete}
 						onLoadMoreBefore={handleLoadMoreBefore}
 						onLoadMoreAfter={handleLoadMoreAfter}

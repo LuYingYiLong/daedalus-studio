@@ -60,6 +60,11 @@ type NativeNotificationResult = {
 	reason?: "foreground" | "deduped" | "unsupported" | "invalid" | "no_window" | "failed";
 };
 
+type TrayRecentSession = {
+	id: string;
+	title: string;
+};
+
 function getCachedClientPreferences(): ClientPreferences {
 	return ipcRenderer.sendSync("client-preferences:get-cached") as ClientPreferences;
 }
@@ -147,6 +152,22 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		},
 		clearAttention: (): Promise<{ cleared: true }> => {
 			return ipcRenderer.invoke("native-notification:clear-attention");
+		}
+	},
+
+	tray: {
+		updateRecentSessions: (sessions: TrayRecentSession[]): Promise<{ updated: true }> => {
+			return ipcRenderer.invoke("tray:update-recent-sessions", sessions);
+		},
+		onNewChat: (callback: () => void): (() => void) => {
+			const handler = (): void => callback();
+			ipcRenderer.on("tray:new-chat", handler);
+			return () => { ipcRenderer.removeListener("tray:new-chat", handler); };
+		},
+		onOpenSession: (callback: (sessionId: string) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, sessionId: string): void => callback(sessionId);
+			ipcRenderer.on("tray:open-session", handler);
+			return () => { ipcRenderer.removeListener("tray:open-session", handler); };
 		}
 	},
 
