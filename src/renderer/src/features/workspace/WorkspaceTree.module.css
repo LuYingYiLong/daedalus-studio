@@ -5,18 +5,8 @@
 	overflow: hidden;
 }
 
-.workspaceStatusRow {
-	min-height: 20px;
-}
-
-.workspaceStatusText,
-.workspaceEmptyText {
-	display: block;
-	font-size: 12px;
-}
-
-.workspaceEmptyText {
-	padding: 8px 0;
+.workspaceEmpty {
+	user-select: none;
 }
 
 .workspaceErrorAlert {

@@ -46,6 +46,20 @@ type BackendBootstrapState = {
 	suggestedAction: string | null;
 };
 
+type NativeNotificationPayload = {
+	kind: "run_completed" | "approval_required" | "clarification_required";
+	sessionId?: string | null;
+	requestId?: string | null;
+	title: string;
+	body: string;
+	dedupeKey: string;
+};
+
+type NativeNotificationResult = {
+	shown: boolean;
+	reason?: "foreground" | "deduped" | "unsupported" | "invalid" | "no_window" | "failed";
+};
+
 function getCachedClientPreferences(): ClientPreferences {
 	return ipcRenderer.sendSync("client-preferences:get-cached") as ClientPreferences;
 }
@@ -124,6 +138,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	clipboard: {
 		writeText: (text: string): Promise<{ written: true }> => {
 			return ipcRenderer.invoke("clipboard:write-text", text);
+		}
+	},
+
+	nativeNotifications: {
+		show: (payload: NativeNotificationPayload): Promise<NativeNotificationResult> => {
+			return ipcRenderer.invoke("native-notification:show", payload);
+		},
+		clearAttention: (): Promise<{ cleared: true }> => {
+			return ipcRenderer.invoke("native-notification:clear-attention");
 		}
 	},
 

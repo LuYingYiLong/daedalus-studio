@@ -259,7 +259,7 @@ function parseWorkspaceKey(key: string): string | null {
 }
 
 function createWorkspaceFooterItems(workspaces: readonly WorkspaceConfig[]): MenuProps["items"] {
-	return [
+	const workspaceItems: MenuProps["items"] = [
 		...workspaces.map((workspace: WorkspaceConfig) => {
 			return {
 				key: createWorkspaceKey(workspace.id),
@@ -272,9 +272,13 @@ function createWorkspaceFooterItems(workspaces: readonly WorkspaceConfig[]): Men
 				icon: <Icon name="folder" />
 			};
 		}),
-		{
+	];
+
+	return [
+		...workspaceItems,
+		...(workspaces.length > 0 ? [{
 			type: "divider" as const
-		},
+		}] : []),
 		{
 			key: NO_WORKSPACE_KEY,
 			label: "No workspace",

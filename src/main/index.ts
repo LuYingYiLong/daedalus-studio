@@ -12,6 +12,7 @@ import { WindowLifecycleController } from "./services/window-lifecycle";
 import { registerSystemInfoIpc } from "./services/system-info";
 import { registerTerminalPtyIpc, terminalPtyService } from "./services/terminal-pty";
 import { appUpdateService } from "./services/app-update";
+import { nativeNotificationService } from "./services/native-notifications";
 import { getWindowThemeColors, resolveWindowTheme, type WindowThemeColors } from "./services/window-theme";
 import type { ClientPreferences } from "./services/client-preferences";
 
@@ -25,6 +26,7 @@ clientPreferencesService.registerIpc();
 registerSystemInfoIpc();
 registerTerminalPtyIpc();
 appUpdateService.registerIpc();
+nativeNotificationService.registerIpc();
 
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 
@@ -99,6 +101,7 @@ function createWindow(): void {
 
 	backendBootstrapService.attachWindow(mainWindow);
 	windowLifecycleController.attachWindow(mainWindow);
+	nativeNotificationService.attachWindow(mainWindow);
 
 	mainWindow.once("ready-to-show", () => {
 		applyWindowTheme(mainWindow, clientPreferencesService.getCachedPreferences());
@@ -118,6 +121,10 @@ function createWindow(): void {
 }
 
 app.whenReady().then(async () => {
+	if (process.platform === "win32") {
+		app.setAppUserModelId("com.luyingyilong.daedalus-studio");
+	}
+
 	const preferences: ClientPreferences = await clientPreferencesService.load();
 	clientPreferencesService.onDidChange((): void => {
 		applyWindowThemeToAllWindows();

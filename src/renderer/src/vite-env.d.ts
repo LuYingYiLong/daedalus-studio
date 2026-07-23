@@ -120,6 +120,27 @@ declare global {
 		writeText: (text: string) => Promise<{ written: true }>;
 	}
 
+	type NativeNotificationKind = "run_completed" | "approval_required" | "clarification_required";
+
+	interface NativeNotificationPayload {
+		kind: NativeNotificationKind;
+		sessionId?: string | null;
+		requestId?: string | null;
+		title: string;
+		body: string;
+		dedupeKey: string;
+	}
+
+	interface NativeNotificationResult {
+		shown: boolean;
+		reason?: "foreground" | "deduped" | "unsupported" | "invalid" | "no_window" | "failed";
+	}
+
+	interface NativeNotificationAPI {
+		show: (payload: NativeNotificationPayload) => Promise<NativeNotificationResult>;
+		clearAttention: () => Promise<{ cleared: true }>;
+	}
+
 	interface TerminalState {
 		terminalId: string;
 		shell: string;
@@ -178,6 +199,7 @@ declare global {
 		backendBootstrap: BackendBootstrapAPI;
 		clientPreferences: ClientPreferencesAPI;
 		clipboard: ClipboardAPI;
+		nativeNotifications: NativeNotificationAPI;
 		appUpdate: AppUpdateAPI;
 		terminal: TerminalAPI;
 		sessionFs: SessionFsAPI;

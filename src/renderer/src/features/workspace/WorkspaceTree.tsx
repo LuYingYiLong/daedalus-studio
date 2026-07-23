@@ -3,7 +3,7 @@ import type { MouseEvent } from "react";
 import { archiveSession, fetchSessions, renameSession } from "@/api/session-api";
 import { deleteWorkspace, fetchWorkspaces } from "@/api/workspace-api";
 import type { DeleteWorkspaceResult } from "@/api/workspace-api";
-import { Alert, Button, Dropdown, Input, Menu, message, Modal, Tooltip, Typography } from "antd";
+import { Alert, Button, Dropdown, Empty, Input, Menu, message, Modal, Tooltip, Typography } from "antd";
 import type { MenuProps } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/api/types";
 import { Icon } from "@/assets/icons";
@@ -618,14 +618,6 @@ function WorkspaceTree({
 		<div className={styles.workspaceTreeRegion}>
 			{messageContextHolder}
 
-			{isWorkspaceLoading ? (
-				<div className={styles.workspaceStatusRow}>
-					<Typography.Text type="secondary" className={styles.workspaceStatusText}>
-						Loading...
-					</Typography.Text>
-				</div>
-			) : null}
-
 			{workspaceError !== null ? (
 				<Alert
 					type="error"
@@ -640,9 +632,11 @@ function WorkspaceTree({
 
 			<div className={styles.workspaceMenuScroller}>
 				{!isWorkspaceLoading && !workspaceError && workspaceMenuItems.length === 0 ? (
-					<Typography.Text type="secondary" className={styles.workspaceEmptyText}>
-						No workspaces
-					</Typography.Text>
+					<Empty
+						image={Empty.PRESENTED_IMAGE_SIMPLE}
+						description="No workspace"
+						className={styles.workspaceEmpty}
+					/>
 				) : (
 					<Menu
 						className={styles.workspaceMenu}

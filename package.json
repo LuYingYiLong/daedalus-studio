@@ -58,5 +58,11 @@
     "react-dom": "^19.2.7",
     "three": "^0.185.1",
     "ws": "^8.21.0"
+  },
+  "allowScripts": {
+    "electron-winstaller@5.4.0": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.1": true,
+    "node-pty@1.1.0": true
   }
 }

@@ -421,6 +421,10 @@ function isRunCancellationEvent(event: BackendEvent): boolean {
 	return event.event === "agent.run.cancelled";
 }
 
+function isRunCompletionEvent(event: BackendEvent): boolean {
+	return event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done";
+}
+
 function mergePatch(left: WorkbenchPatch, right: WorkbenchPatch): WorkbenchPatch {
 	return {
 		...left,
@@ -728,8 +732,21 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const skillsRetryAtRef = useRef<number>(0);
 	const recentContextFileSignaturesRef = useRef<Map<string, number>>(new Map());
 	const initializedWorkflowTodoKeyRef = useRef<string>("");
+	const nativeNotificationDedupeKeysRef = useRef<Set<string>>(new Set());
+	const activeSessionTitleRef = useRef<string>("Daedalus session");
 
 	useDiskSpaceCheck();
+
+	function showNativeTaskNotification(payload: NativeNotificationPayload): void {
+		if (nativeNotificationDedupeKeysRef.current.has(payload.dedupeKey)) {
+			return;
+		}
+
+		nativeNotificationDedupeKeysRef.current.add(payload.dedupeKey);
+		void window.electronAPI.nativeNotifications.show(payload).catch((error: unknown): void => {
+			console.error("[App] native notification failed", error);
+		});
+	}
 
 	useEffect((): void => {
 		if (runState.status === "idle") {
@@ -1257,7 +1274,19 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						};
 					});
 
-					if (event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done") {
+					if (isRunCompletionEvent(event)) {
+						const requestId: string = getBackendEventRequestId(event);
+						const sessionId: string | null = activeSessionIdRef.current;
+						if (sessionId !== null) {
+							showNativeTaskNotification({
+								kind: "run_completed",
+								sessionId,
+								requestId,
+								title: "Daedalus finished",
+								body: `"${activeSessionTitleRef.current}" is ready.`,
+								dedupeKey: `run_completed:${sessionId}:${requestId}`
+							});
+						}
 						void refreshLatestTimeline();
 					}
 				});
@@ -2759,6 +2788,77 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			? null
 			: activeWorkspace;
 	const composerIsSending: boolean = isRunControllerActive(runState) || isHomeSubmitting;
+
+	useEffect((): void => {
+		activeSessionTitleRef.current = chatTitle;
+	}, [chatTitle]);
+
+	useEffect((): void => {
+		nativeNotificationDedupeKeysRef.current.clear();
+		void window.electronAPI.nativeNotifications.clearAttention().catch((error: unknown): void => {
+			console.error("[App] clear native notification attention failed", error);
+		});
+	}, [activeSessionId]);
+
+	useEffect((): void => {
+		if (activeSessionId === null || pendingApproval === null) {
+			return;
+		}
+
+		showNativeTaskNotification({
+			kind: "approval_required",
+			sessionId: activeSessionId,
+			requestId: pendingApproval.requestId,
+			title: "Daedalus needs approval",
+			body: "The assistant is waiting for tool approval.",
+			dedupeKey: `approval_required:${activeSessionId}:tool:${pendingApproval.approvalId}`
+		});
+	}, [activeSessionId, pendingApproval?.approvalId, pendingApproval?.requestId]);
+
+	useEffect((): void => {
+		if (activeSessionId === null || pendingToolBudget === null) {
+			return;
+		}
+
+		showNativeTaskNotification({
+			kind: "approval_required",
+			sessionId: activeSessionId,
+			requestId: pendingToolBudget.requestId,
+			title: "Daedalus needs approval",
+			body: "The assistant needs a tool budget decision.",
+			dedupeKey: `approval_required:${activeSessionId}:tool_budget:${pendingToolBudget.budgetId}`
+		});
+	}, [activeSessionId, pendingToolBudget?.budgetId, pendingToolBudget?.requestId]);
+
+	useEffect((): void => {
+		if (activeSessionId === null || pendingPlanApproval === null) {
+			return;
+		}
+
+		showNativeTaskNotification({
+			kind: "approval_required",
+			sessionId: activeSessionId,
+			requestId: pendingPlanApproval.requestId,
+			title: "Daedalus needs approval",
+			body: "A plan is ready for review.",
+			dedupeKey: `approval_required:${activeSessionId}:plan:${pendingPlanApproval.planId}:${pendingPlanApproval.updatedAt}`
+		});
+	}, [activeSessionId, pendingPlanApproval?.planId, pendingPlanApproval?.requestId, pendingPlanApproval?.updatedAt]);
+
+	useEffect((): void => {
+		if (activeSessionId === null || pendingPlanClarification === null) {
+			return;
+		}
+
+		showNativeTaskNotification({
+			kind: "clarification_required",
+			sessionId: activeSessionId,
+			requestId: pendingPlanClarification.requestId,
+			title: "Daedalus needs clarification",
+			body: "A plan question is waiting for your reply.",
+			dedupeKey: `clarification_required:${activeSessionId}:${pendingPlanClarification.planId}:${pendingPlanClarification.question}`
+		});
+	}, [activeSessionId, pendingPlanClarification?.planId, pendingPlanClarification?.question, pendingPlanClarification?.requestId]);
 
 	useEffect((): void => {
 		if (latestPlanClarificationKey === null && suppressedPlanClarificationKey !== null) {
