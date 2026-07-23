@@ -1,7 +1,7 @@
 import type { TimelineBodyPart } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import { Collapse } from "antd";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import MarkdownContent from "../markdown/MarkdownContent";
 import styles from "./ThinkingPart.module.css";
 
@@ -115,7 +115,7 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 							onWheel={containScrollableWheel}
 						>
 							{part.text.trim().length === 0 ? null : (
-								<MarkdownContent>{part.text}</MarkdownContent>
+								<MarkdownContent streaming={!part.done}>{part.text}</MarkdownContent>
 							)}
 						</div>
 					)
@@ -125,4 +125,4 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 	);
 }
 
-export default ThinkingPart;
+export default memo(ThinkingPart);

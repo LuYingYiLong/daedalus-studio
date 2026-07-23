@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import styles from "./GeneralSettingsPage.module.css";
-import { Alert, Card, Segmented, Spin, Switch, Typography } from "antd";
+import { Alert, Button, Card, Input, Segmented, Spin, Switch, Tag, Tooltip, Typography } from "antd";
+import { Icon } from "@/assets/icons";
 import {
 	fetchClientPreferences,
 	updateClientPreferences,
@@ -19,7 +20,7 @@ type GeneralSettingsPageProps = {
 	onGeneralSettingsChange: (settings: GeneralSettings) => void;
 };
 
-type SettingKey = "autoCheckForUpdates" | "autoExpandTodoList" | "minimizeToTrayOnClose" | "theme";
+type SettingKey = "autoCheckForUpdates" | "autoExpandTodoList" | "godotExecutablePath" | "minimizeToTrayOnClose" | "theme";
 type ThemePreference = ClientPreferences["theme"];
 
 function GeneralSettingsPage({
@@ -97,6 +98,38 @@ function GeneralSettingsPage({
 			setDraftGeneralSettings(previousSettings);
 			onGeneralSettingsChange(previousSettings);
 			setErrorMessage(error instanceof Error ? error.message : "Failed to save general settings");
+		} finally {
+			setSavingKey(null);
+		}
+	}
+
+	async function saveGodotExecutablePath(path: string | null): Promise<void> {
+		try {
+			setSavingKey("godotExecutablePath");
+			setErrorMessage(null);
+			const savedSettings: GeneralSettings = await updateGeneralSettings({ godotExecutablePath: path });
+			setDraftGeneralSettings(savedSettings);
+			onGeneralSettingsChange(savedSettings);
+		} catch (error: unknown) {
+			setErrorMessage(error instanceof Error ? error.message : "Failed to validate the Godot executable");
+		} finally {
+			setSavingKey(null);
+		}
+	}
+
+	async function handleGodotExecutablePick(): Promise<void> {
+		try {
+			setSavingKey("godotExecutablePath");
+			setErrorMessage(null);
+			const path: string | null = await window.electronAPI.pickGodotExecutable();
+			if (path === null) {
+				return;
+			}
+			const savedSettings: GeneralSettings = await updateGeneralSettings({ godotExecutablePath: path });
+			setDraftGeneralSettings(savedSettings);
+			onGeneralSettingsChange(savedSettings);
+		} catch (error: unknown) {
+			setErrorMessage(error instanceof Error ? error.message : "Failed to validate the Godot executable");
 		} finally {
 			setSavingKey(null);
 		}
@@ -209,6 +242,60 @@ function GeneralSettingsPage({
 									}}
 								/>
 							</div>
+						</div>
+					)}
+				</Card>
+
+				<Card title="Godot environment">
+					{isLoading ? (
+						<div className={styles.loading}>
+							<Spin />
+						</div>
+					) : (
+						<div className={styles.godotSetting}>
+							<div className={styles.preferenceMeta}>
+								<div className={styles.godotTitleRow}>
+									<Typography.Text>Godot executable</Typography.Text>
+									<Tag
+										color={draftGeneralSettings.godotExecutableStatus === "ready" ? "success" : undefined}
+									>
+										{draftGeneralSettings.godotExecutableStatus === "ready"
+											? `Godot ${draftGeneralSettings.godotExecutableVersion ?? "ready"}`
+											: draftGeneralSettings.godotExecutableStatus === "unavailable"
+												? "Unavailable"
+												: "Not configured"}
+									</Tag>
+								</div>
+								<Typography.Text type="secondary">
+									Used when a workspace does not provide its own Godot executable path.
+								</Typography.Text>
+							</div>
+							<div className={styles.godotPathRow}>
+								<Input
+									readOnly={true}
+									value={draftGeneralSettings.godotExecutablePath ?? ""}
+									placeholder="Select a Godot executable"
+								/>
+								<Button
+									icon={<Icon name="folder-open" />}
+									loading={savingKey === "godotExecutablePath"}
+									disabled={savingKey !== null && savingKey !== "godotExecutablePath"}
+									onClick={(): void => { void handleGodotExecutablePick(); }}
+								>
+									Browse
+								</Button>
+								<Tooltip title="Clear Godot executable">
+									<Button
+										aria-label="Clear Godot executable"
+										icon={<Icon name="clear" />}
+										disabled={savingKey !== null || draftGeneralSettings.godotExecutablePath === null}
+										onClick={(): void => { void saveGodotExecutablePath(null); }}
+									/>
+								</Tooltip>
+							</div>
+							{draftGeneralSettings.godotExecutableError === null ? null : (
+								<Typography.Text type="danger">{draftGeneralSettings.godotExecutableError}</Typography.Text>
+							)}
 						</div>
 					)}
 				</Card>

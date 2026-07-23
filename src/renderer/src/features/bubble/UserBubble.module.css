@@ -3,6 +3,8 @@
 	flex-direction: column;
 	align-items: flex-end;
 	width: 100%;
+	content-visibility: auto;
+	contain-intrinsic-size: auto 96px;
 }
 
 .root:hover .toolbar {

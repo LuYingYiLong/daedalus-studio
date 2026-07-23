@@ -19,6 +19,7 @@ export type AssistantBubbleProps = {
 	message?: string;
 	elapsedTime?: string;
 	endTime?: string;
+	streaming?: boolean;
 	onInlineDiffReview?: () => void;
 };
 
@@ -52,7 +53,7 @@ function createAssistantCopyText(message?: string, content?: string, bodyParts?:
 		.join("\n\n");
 }
 
-function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, endTime, onInlineDiffReview }: AssistantBubbleProps): React.JSX.Element {
+function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, endTime, streaming = false, onInlineDiffReview }: AssistantBubbleProps): React.JSX.Element {
 	const [copied, setCopied] = React.useState<boolean>(false);
 
 	async function copyMessage(): Promise<void> {
@@ -69,7 +70,7 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 		if (part.type === "markdown") {
 			return (
 				<div key={index} className={`${styles.markdownPart} markdown-body`}>
-					<MarkdownContent>{part.text}</MarkdownContent>
+					<MarkdownContent streaming={streaming}>{part.text}</MarkdownContent>
 				</div>
 			);
 		}
@@ -156,7 +157,7 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 					renderBodyParts(bodyParts)
 				) : (
 					<div className="markdown-body">
-						<MarkdownContent>{message ?? content ?? ""}</MarkdownContent>
+						<MarkdownContent streaming={streaming}>{message ?? content ?? ""}</MarkdownContent>
 					</div>
 				)}
 			</div>
@@ -181,4 +182,4 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 	);
 }
 
-export default AssistantBubble;
+export default React.memo(AssistantBubble);

@@ -154,6 +154,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		getState: (): Promise<AppUpdateState> => {
 			return ipcRenderer.invoke("app-update:get-state");
 		},
+		check: (): Promise<AppUpdateState> => {
+			return ipcRenderer.invoke("app-update:check");
+		},
 		download: (): Promise<AppUpdateState> => {
 			return ipcRenderer.invoke("app-update:download");
 		},
@@ -238,6 +241,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		pickSkillDirectory: (): Promise<string | null> => {
 			return ipcRenderer.invoke("skill-fs:pick-directory");
 		}
+	},
+
+	pickGodotExecutable: (): Promise<string | null> => {
+		return ipcRenderer.invoke("godot-executable:pick");
 	},
 
 	checkDiskSpace: (): Promise<{ drive: string; free: number; total: number } | null> => {

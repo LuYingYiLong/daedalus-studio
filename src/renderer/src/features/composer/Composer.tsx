@@ -32,6 +32,7 @@ export type ComposerProps = {
 	slashCommands?: SlashCommandDefinition[];
 	skills?: SkillSummary[];
 	isSending?: boolean;
+	isCancelling?: boolean;
 	isApprovalModeSaving?: boolean;
 	workspaceOptions?: WorkspaceConfig[];
 	selectedWorkspace?: WorkspaceConfig | null;
@@ -355,6 +356,7 @@ function Composer({
 	slashCommands = [],
 	skills = [],
 	isSending = false,
+	isCancelling = false,
 	isApprovalModeSaving = false,
 	workspaceOptions = [],
 	selectedWorkspace = null,
@@ -595,6 +597,9 @@ function Composer({
 	function submitMessage(): void {
 		const trimmedMessage: string = draftMessage.trim();
 		if (trimmedMessage.length === 0 && isSending) {
+			if (isCancelling) {
+				return;
+			}
 			onCancel?.();
 			return;
 		}
@@ -1062,13 +1067,13 @@ function Composer({
 						</Dropdown>
 					</Tooltip>
 					
-					<Tooltip title={isSending && draftMessage.trim().length === 0 ? "Stop" : isSending ? "Queue message" : "Send"}>
+					<Tooltip title={isCancelling ? "Stopping..." : isSending && draftMessage.trim().length === 0 ? "Stop" : isSending ? "Queue message" : "Send"}>
 						<Button
 							type="text"
 							shape="circle"
 							icon={<Icon name={isSending && draftMessage.trim().length === 0 ? "stop" : "send"} />}
 							className={styles.composerSendButton}
-							disabled={!isSending && draftMessage.trim().length === 0}
+							disabled={isCancelling || (!isSending && draftMessage.trim().length === 0)}
 							onClick={submitMessage}
 						/>
 					</Tooltip>

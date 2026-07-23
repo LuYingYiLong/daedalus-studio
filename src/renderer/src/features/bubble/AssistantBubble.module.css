@@ -4,6 +4,8 @@
     align-items: flex-start;
 	width: 100%;
 	margin-bottom: 8px;
+	content-visibility: auto;
+	contain-intrinsic-size: auto 160px;
 }
 
 .timingRow {

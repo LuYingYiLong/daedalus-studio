@@ -12,7 +12,8 @@ describe("BootSplash", () => {
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 
 	it("renders BootSplash before App and passes bootstrap data into App", () => {
-		expect(studioThemeRootSource).toContain("<AntdApp component={false}>");
+		expect(studioThemeRootSource).toContain("<AntdApp component=\"div\"");
+		expect(studioThemeRootSource).toContain("style={{ display: \"contents\" }}");
 		expect(studioThemeRootSource).toContain("<BootSplash onReady={handleBootstrapReady} />");
 		expect(studioThemeRootSource).toContain("<App bootstrapData={bootstrapData} />");
 		expect(appSource).toContain("bootstrapData: BootstrapData");
@@ -27,6 +28,8 @@ describe("BootSplash", () => {
 		expect(splashSource).toContain("Retry install");
 		expect(splashSource).toContain("Repair backend");
 		expect(splashSource).toContain("Restart backend");
+		expect(splashSource).toContain("marked_backend_missing");
+		expect(splashSource).toContain("Marked backend version is missing");
 		expect(splashSource).toContain("window.electronAPI.backendBootstrap.repair()");
 		expect(splashSource).toContain("window.electronAPI.backendBootstrap.retryStart()");
 		expect(splashSource).not.toContain("Spin");

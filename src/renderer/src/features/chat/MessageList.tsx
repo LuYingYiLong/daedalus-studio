@@ -7,8 +7,10 @@ import { formatElapsedTime, formatShortDateTime } from "@/utils/time-format";
 import { Spin, Alert } from "antd";
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
+	getDistanceFromBottomByMetrics,
 	isNearBottomByMetrics,
-	shouldAutoFollowAppend
+	shouldAutoFollowAppend,
+	shouldAutoFollowViewport
 } from "./message-list-virtual";
 
 export type MessageListProps = {
@@ -41,10 +43,16 @@ type ScrollAnchor = {
 	top: number;
 };
 
-const NEAR_BOTTOM_THRESHOLD: number = 320;
+const AUTO_FOLLOW_PAUSE_THRESHOLD: number = 72;
+const AUTO_FOLLOW_RESUME_THRESHOLD: number = 16;
+const WHEEL_DETACH_DELTA: number = 4;
 const LOAD_MORE_THRESHOLD: number = 320;
 
 function getAssistantMarkdown(block: TimelineAssistantBlock): string {
+	if (block.content.length > 0) {
+		return block.content;
+	}
+
 	const markdown: string = block.bodyParts
 		.filter((part) => part.type === "markdown")
 		.map((part) => part.text)
@@ -65,8 +73,16 @@ export function shouldRenderTimelineBlock(block: TimelineBlock): boolean {
 	return block.content.trim().length > 0 || block.bodyParts.length > 0;
 }
 
-function isNearBottom(element: HTMLElement): boolean {
-	return isNearBottomByMetrics(element.scrollHeight, element.scrollTop, element.clientHeight, NEAR_BOTTOM_THRESHOLD);
+type ViewportMetricsOptions = {
+	preserveAutoFollow?: boolean;
+};
+
+function getDistanceFromBottom(element: HTMLElement): number {
+	return getDistanceFromBottomByMetrics(element.scrollHeight, element.scrollTop, element.clientHeight);
+}
+
+function isNearBottom(element: HTMLElement, threshold: number = AUTO_FOLLOW_RESUME_THRESHOLD): boolean {
+	return isNearBottomByMetrics(element.scrollHeight, element.scrollTop, element.clientHeight, threshold);
 }
 
 function scrollToBottom(element: HTMLElement, behavior: ScrollBehavior = "auto"): void {
@@ -129,6 +145,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const pendingAnchorRef = useRef<ScrollAnchor | null>(null);
 	const lastInitialScrollKeyRef = useRef<string>("");
 	const lastBlockCountRef = useRef<number>(0);
+	const lastViewportBlockCountRef = useRef<number>(0);
 	const autoFollowRef = useRef<boolean>(true);
 	const awayFromBottomRef = useRef<boolean>(false);
 	const lastScrollToBottomRequestRef = useRef<number>(0);
@@ -143,20 +160,41 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const isInitialLoading: boolean = isLoading === true && renderableBlocks.length === 0;
 	const canEditUserMessages: boolean = onRetryFromUserMessage !== undefined && !retryDisabled && !hasRunningAssistantBlock && activeRetryRequestId === null;
 
-	const syncViewportMetrics = useCallback((element: HTMLElement): void => {
-		const nearBottom: boolean = isNearBottom(element);
-		const awayFromBottom: boolean = !nearBottom;
-		const initialScrollPending: boolean = initialScrollToBottomKey.length > 0 && lastInitialScrollKeyRef.current !== initialScrollToBottomKey && isLoading !== true;
-		if (initialScrollPending && awayFromBottom) {
-			autoFollowRef.current = true;
-			return;
-		}
-		autoFollowRef.current = nearBottom;
+	const setAwayFromBottom = useCallback((awayFromBottom: boolean): void => {
 		if (awayFromBottomRef.current !== awayFromBottom) {
 			awayFromBottomRef.current = awayFromBottom;
 			onAwayFromBottomChange?.(awayFromBottom);
 		}
-	}, [initialScrollToBottomKey, isLoading, onAwayFromBottomChange]);
+	}, [onAwayFromBottomChange]);
+
+	const detachAutoFollow = useCallback((): void => {
+		if (!autoFollowRef.current && awayFromBottomRef.current) {
+			return;
+		}
+		autoFollowRef.current = false;
+		setAwayFromBottom(true);
+	}, [setAwayFromBottom]);
+
+	const syncViewportMetrics = useCallback((element: HTMLElement, options: ViewportMetricsOptions = {}): void => {
+		const distanceFromBottom: number = getDistanceFromBottom(element);
+		const initialScrollPending: boolean = initialScrollToBottomKey.length > 0 && lastInitialScrollKeyRef.current !== initialScrollToBottomKey && isLoading !== true;
+		if (initialScrollPending && distanceFromBottom > AUTO_FOLLOW_RESUME_THRESHOLD) {
+			autoFollowRef.current = true;
+			setAwayFromBottom(false);
+			return;
+		}
+		if (options.preserveAutoFollow === true && autoFollowRef.current) {
+			setAwayFromBottom(false);
+			return;
+		}
+		autoFollowRef.current = shouldAutoFollowViewport(
+			autoFollowRef.current,
+			distanceFromBottom,
+			AUTO_FOLLOW_PAUSE_THRESHOLD,
+			AUTO_FOLLOW_RESUME_THRESHOLD
+		);
+		setAwayFromBottom(!autoFollowRef.current);
+	}, [initialScrollToBottomKey, isLoading, setAwayFromBottom]);
 
 	const scheduleAutoFollowScroll = useCallback((behavior: ScrollBehavior = "auto"): void => {
 		if (!autoFollowRef.current) {
@@ -191,15 +229,15 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		};
 	}, [scrollToBottomNow]);
 
-	const updateViewport = useCallback((): void => {
+	const updateViewport = useCallback((options: ViewportMetricsOptions = {}): void => {
 		const element: HTMLElement | null = listRef.current;
 
 		if (element === null) {
 			return;
 		}
 
-		const nearBottom: boolean = isNearBottom(element);
-		syncViewportMetrics(element);
+		const nearLoadMoreAfter: boolean = isNearBottom(element, LOAD_MORE_THRESHOLD);
+		syncViewportMetrics(element, options);
 
 		const contentFitsViewport: boolean = element.scrollHeight <= element.clientHeight + LOAD_MORE_THRESHOLD;
 
@@ -208,12 +246,25 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			onLoadMoreBefore?.();
 		}
 
-		const distanceFromBottom: number = element.scrollHeight - element.scrollTop - element.clientHeight;
-		if ((distanceFromBottom < LOAD_MORE_THRESHOLD || contentFitsViewport) && hasMoreAfter && nearBottom && !isLoadingMoreAfter) {
+		const distanceFromBottom: number = getDistanceFromBottom(element);
+		if ((distanceFromBottom < LOAD_MORE_THRESHOLD || contentFitsViewport) && hasMoreAfter && nearLoadMoreAfter && !isLoadingMoreAfter) {
 			pendingAnchorRef.current = createElementAnchor(element, queryLastEntryElement(element));
 			onLoadMoreAfter?.();
 		}
 	}, [hasMoreAfter, hasMoreBefore, isLoadingMoreAfter, isLoadingMoreBefore, onLoadMoreAfter, onLoadMoreBefore, syncViewportMetrics]);
+
+	const handleWheel = useCallback((event: WheelEvent): void => {
+		if (event.deltaY >= -WHEEL_DETACH_DELTA) {
+			return;
+		}
+
+		const element: HTMLElement | null = listRef.current;
+		if (element === null || element.scrollHeight <= element.clientHeight) {
+			return;
+		}
+
+		detachAutoFollow();
+	}, [detachAutoFollow]);
 
 	const scheduleViewportUpdate = useCallback((): void => {
 		if (viewportUpdateFrameRef.current !== null) {
@@ -235,17 +286,19 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 
 		updateViewport();
 		element.addEventListener("scroll", scheduleViewportUpdate, { passive: true });
+		element.addEventListener("wheel", handleWheel, { passive: true });
 		window.addEventListener("resize", scheduleViewportUpdate);
 
 		return (): void => {
 			element.removeEventListener("scroll", scheduleViewportUpdate);
+			element.removeEventListener("wheel", handleWheel);
 			window.removeEventListener("resize", scheduleViewportUpdate);
 			if (viewportUpdateFrameRef.current !== null) {
 				window.cancelAnimationFrame(viewportUpdateFrameRef.current);
 				viewportUpdateFrameRef.current = null;
 			}
 		};
-	}, [scheduleViewportUpdate, updateViewport]);
+	}, [handleWheel, scheduleViewportUpdate, updateViewport]);
 
 	useLayoutEffect((): void => {
 		const element: HTMLElement | null = listRef.current;
@@ -255,6 +308,9 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			return;
 		}
 
+		const blockCountChanged: boolean = lastViewportBlockCountRef.current !== renderableBlocks.length;
+		lastViewportBlockCountRef.current = renderableBlocks.length;
+
 		if (anchor !== null) {
 			const anchorElement: HTMLElement | null = queryEntryElement(element, anchor.entryId);
 			if (anchorElement !== null) {
@@ -263,9 +319,13 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			}
 
 			pendingAnchorRef.current = null;
+			updateViewport({ preserveAutoFollow: true });
+			return;
 		}
 
-		updateViewport();
+		if (blockCountChanged) {
+			updateViewport();
+		}
 	}, [renderableBlocks, updateViewport]);
 
 	useLayoutEffect((): void => {
@@ -386,6 +446,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 										block.status === "running" ? nowIsoTime : block.completedAtUtc
 									) ?? undefined}
 									endTime={block.status === "running" ? undefined : formatShortDateTime(block.completedAtUtc)}
+									streaming={block.status === "running"}
 									onInlineDiffReview={onInlineDiffReview}
 								/>
 							);

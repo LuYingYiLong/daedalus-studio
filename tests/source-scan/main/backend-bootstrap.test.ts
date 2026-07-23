@@ -28,6 +28,13 @@ describe("backend bootstrap service", () => {
 		expect(managerSource).toContain("startAndWaitHealthy");
 	});
 
+	it("stops startup when the marked managed backend version is missing", () => {
+		expect(serviceSource).toContain("getMarkedBackendMissingError");
+		expect(serviceSource).toContain("marked_backend_missing");
+		expect(serviceSource).toContain("options.forceInstall ? null : await getMarkedBackendMissingError()");
+		expect(serviceSource).toContain("Use Repair backend to reinstall the managed backend.");
+	});
+
 	it("exposes bootstrap IPC without exposing npm or file paths to renderer code", () => {
 		expect(serviceSource).toContain("ipcMain.handle(\"backend-bootstrap:get-state\"");
 		expect(serviceSource).toContain("ipcMain.handle(\"backend-bootstrap:prepare\"");

@@ -1,4 +1,5 @@
 import { BrowserWindow, app, ipcMain } from "electron";
+import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
@@ -139,6 +140,44 @@ async function readCurrentBackend(): Promise<BackendCurrentFile | null> {
 	return readJsonFile<BackendCurrentFile>(getManagedBackendCurrentPath());
 }
 
+function getMarkedBackendMissingMessage(current: BackendCurrentFile): string | null {
+	if (typeof current.version !== "string" || current.version.trim().length === 0) {
+		return "Daedalus Studio has a managed backend marker, but it does not contain a backend version.";
+	}
+	if (typeof current.path !== "string" || current.path.trim().length === 0) {
+		return `Daedalus Studio is configured to use backend ${current.version}, but the installation path is missing.`;
+	}
+
+	let versionDir: string;
+	try {
+		versionDir = assertInside(getManagedBackendVersionsDir(), current.path);
+	} catch {
+		return `Daedalus Studio is configured to use backend ${current.version}, but the marked path is outside the managed backend directory.`;
+	}
+
+	const entryPath: string = join(versionDir, "node_modules", BACKEND_PACKAGE_NAME, "src", "main.ts");
+	if (!existsSync(entryPath)) {
+		return `Daedalus Studio is configured to use backend ${current.version}, but that backend installation was not found.`;
+	}
+	return null;
+}
+
+async function getMarkedBackendMissingError(): Promise<{ version: string | null; message: string } | null> {
+	const current: BackendCurrentFile | null = await readCurrentBackend();
+	if (current === null) {
+		return null;
+	}
+
+	const message: string | null = getMarkedBackendMissingMessage(current);
+	if (message === null) {
+		return null;
+	}
+	return {
+		version: typeof current.version === "string" && current.version.trim().length > 0 ? current.version.trim() : null,
+		message
+	};
+}
+
 function getNpmCommand(): string {
 	return process.platform === "win32" ? "npm.cmd" : "npm";
 }
@@ -229,7 +268,7 @@ function runCommand(command: string, args: readonly string[], options: {
 	});
 }
 
-async function fetchLatestBackendVersion(): Promise<string> {
+export async function fetchLatestManagedBackendVersion(): Promise<string> {
 	const result: CommandResult = await runCommand(getNpmCommand(), ["view", BACKEND_PACKAGE_NAME, "version"], {
 		env: createNpmCommandEnv(),
 		timeoutMs: NPM_VIEW_TIMEOUT_MS
@@ -278,13 +317,49 @@ async function pruneBackendVersions(currentVersion: string, previousVersion: str
 	}
 }
 
-async function installManagedBackendLatest(): Promise<{ version: string; path: string; previousVersion: string | undefined }> {
+export async function cleanupManagedBackendPreviousVersion(currentVersion: string, previousVersion: string | null): Promise<void> {
+	if (previousVersion === null || previousVersion === currentVersion) {
+		return;
+	}
+
+	const current: BackendCurrentFile | null = await readCurrentBackend();
+	if (current === null || current.version !== currentVersion || current.previousVersion !== previousVersion) {
+		return;
+	}
+
+	const versionsDir: string = getManagedBackendVersionsDir();
+	await rm(assertInside(versionsDir, join(versionsDir, previousVersion)), {
+		recursive: true,
+		force: true,
+		maxRetries: 8,
+		retryDelay: 250
+	});
+	await writeJsonFile(getManagedBackendCurrentPath(), {
+		version: current.version,
+		path: current.path,
+		updatedAt: current.updatedAt
+	} satisfies BackendCurrentFile);
+}
+
+function resolveBackendPackageSpec(versionSpec: string): string {
+	if (versionSpec === "latest") {
+		return `${BACKEND_PACKAGE_NAME}@latest`;
+	}
+	if (versionSpec.match(/^\d+\.\d+\.\d+(?:[-+].*)?$/) === null) {
+		throw new Error(`Invalid backend version: ${versionSpec}`);
+	}
+	return `${BACKEND_PACKAGE_NAME}@${versionSpec}`;
+}
+
+export async function installManagedBackendPackage(versionSpec: string = "latest"): Promise<{ version: string; path: string; previousVersion: string | undefined }> {
 	const versionsDir: string = getManagedBackendVersionsDir();
 	await mkdir(versionsDir, { recursive: true });
 
-	const latestVersion: string = await fetchLatestBackendVersion();
-	const packageSpec: string = `${BACKEND_PACKAGE_NAME}@${latestVersion}`;
-	const stagingDir: string = assertInside(versionsDir, join(versionsDir, `${latestVersion}.staging`));
+	const packageSpec: string = resolveBackendPackageSpec(versionSpec);
+	const stagingName: string = versionSpec === "latest"
+		? `${(await fetchLatestManagedBackendVersion())}.staging`
+		: `${versionSpec}.staging`;
+	const stagingDir: string = assertInside(versionsDir, join(versionsDir, stagingName));
 	const previous: BackendCurrentFile | null = await readCurrentBackend();
 
 	await rm(stagingDir, { recursive: true, force: true });
@@ -426,6 +501,18 @@ export class BackendBootstrapService {
 			return await this.startDevelopmentBackend();
 		}
 
+		const markedBackendError: { version: string | null; message: string } | null = options.forceInstall ? null : await getMarkedBackendMissingError();
+		if (markedBackendError !== null) {
+			return this.fail({
+				status: "error",
+				phase: "detect",
+				progress: 100,
+				errorCode: "marked_backend_missing",
+				errorMessage: markedBackendError.message,
+				suggestedAction: "Use Repair backend to reinstall the managed backend."
+			});
+		}
+
 		let launchTarget: Pick<BackendLaunchTarget, "kind" | "version"> | null = backendManager.getLaunchTargetInfo();
 		if (options.forceInstall || (launchTarget === null && !firstRunCompleted)) {
 			const installed = await this.installBackend();
@@ -468,7 +555,7 @@ export class BackendBootstrapService {
 				phase: "install",
 				progress: 25
 			});
-			const result: { version: string; path: string; previousVersion: string | undefined } = await installManagedBackendLatest();
+			const result: { version: string; path: string; previousVersion: string | undefined } = await installManagedBackendPackage();
 			this.updateState({
 				status: "installing",
 				phase: "write_metadata",

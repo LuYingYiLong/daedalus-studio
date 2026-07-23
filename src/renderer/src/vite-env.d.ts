@@ -111,6 +111,7 @@ declare global {
 
 	interface AppUpdateAPI {
 		getState: () => Promise<AppUpdateState>;
+		check: () => Promise<AppUpdateState>;
 		download: () => Promise<AppUpdateState>;
 		acknowledge: () => Promise<AppUpdateState>;
 		onStateChanged: (callback: (state: AppUpdateState) => void) => () => void;
@@ -250,6 +251,7 @@ declare global {
 			pickSkillZip: () => Promise<string | null>;
 			pickSkillDirectory: () => Promise<string | null>;
 		};
+		pickGodotExecutable: () => Promise<string | null>;
 		appInfo: AppInfoAPI;
 	}
 

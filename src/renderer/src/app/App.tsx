@@ -23,10 +23,12 @@ import {
 } from "@/api/approval-api";
 import {
 	applyBackendEventToTimeline,
+	applyBackendEventsToTimeline,
 	applyWorkbenchSnapshot,
 	createTimelinePageFromOpenResult,
 	createTimelinePageFromTimelineResult,
 	emptyTimelinePage,
+	isTimelineStreamingDeltaEvent,
 	mergeTimelineAfter,
 	mergeTimelineBefore,
 	type TimelinePageState
@@ -47,7 +49,7 @@ import { addQueuedMessage, removeQueuedMessage, reorderQueuedMessages } from "@/
 import { getSessionTitle } from "./session-title";
 import AppNavTabs, { type AppPageKey } from "./AppNavTabs";
 import AgentPage from "@/pages/agent/AgentPage";
-import SettingsPage from "@/pages/settings/SettingsPage";
+import SettingsPage, { type SettingsPageKey } from "@/pages/settings/SettingsPage";
 import DrawingPage from "@/pages/drawing/DrawingPage";
 import KnowledgePage from "@/pages/knowledge/KnowledgePage";
 import { extractEnabledSkillRefs, type ComposerCompletionTrigger } from "@/features/composer/composer-completion";
@@ -76,6 +78,7 @@ const RECENT_CONTEXT_FILE_WINDOW_MS: number = 2000;
 const CONTEXT_SUBTITLE_MAX_CHARS: number = 400;
 const PLAN_CLARIFICATION_SKIP_REPLY: string = "Continue with the current assumptions.";
 const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
+const TIMELINE_STREAM_BATCH_MS: number = 50;
 
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -675,6 +678,7 @@ function trimTimelineFromRequest(page: TimelinePageState, requestId: string): Ti
 
 function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [activePage, setActivePage] = useState<AppPageKey>("agent");
+	const [settingsInitialPage, setSettingsInitialPage] = useState<SettingsPageKey>("provider");
 	const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState<number>(0);
 	const [isNewSessionHome, setIsNewSessionHome] = useState<boolean>(true);
 	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() => createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection));
@@ -725,6 +729,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const isTimelinePageLoadingRef = useRef<boolean>(false);
 	const navigationVersionRef = useRef<number>(0);
 	const activeChatRequestIdRef = useRef<string | null>(null);
+	const cancelledChatRequestIdsRef = useRef<Set<string>>(new Set());
 	const submittedComposerTextRef = useRef<{ requestId: string; text: string } | null>(null);
 	const slashCommandsLoadingRef = useRef<boolean>(false);
 	const skillsLoadingRef = useRef<boolean>(false);
@@ -734,6 +739,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const initializedWorkflowTodoKeyRef = useRef<string>("");
 	const nativeNotificationDedupeKeysRef = useRef<Set<string>>(new Set());
 	const activeSessionTitleRef = useRef<string>("Daedalus session");
+	const pendingTimelineEventsRef = useRef<BackendEvent[]>([]);
+	const pendingTimelineSessionIdRef = useRef<string | null>(null);
+	const timelineStreamBatchTimerRef = useRef<number | null>(null);
 
 	useDiskSpaceCheck();
 
@@ -747,6 +755,81 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			console.error("[App] native notification failed", error);
 		});
 	}
+
+	const clearTimelineStreamBatchTimer = useCallback((): void => {
+		if (timelineStreamBatchTimerRef.current === null) {
+			return;
+		}
+
+		window.clearTimeout(timelineStreamBatchTimerRef.current);
+		timelineStreamBatchTimerRef.current = null;
+	}, []);
+
+	const discardPendingTimelineEvents = useCallback((): void => {
+		clearTimelineStreamBatchTimer();
+		pendingTimelineEventsRef.current = [];
+		pendingTimelineSessionIdRef.current = null;
+	}, [clearTimelineStreamBatchTimer]);
+
+	const flushPendingTimelineEvents = useCallback((): void => {
+		clearTimelineStreamBatchTimer();
+
+		const events: BackendEvent[] = pendingTimelineEventsRef.current;
+		const sessionId: string | null = pendingTimelineSessionIdRef.current;
+		pendingTimelineEventsRef.current = [];
+		pendingTimelineSessionIdRef.current = null;
+
+		if (events.length === 0 || sessionId !== activeSessionIdRef.current) {
+			return;
+		}
+
+		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+			if (currentPage.sessionId !== null && currentPage.sessionId !== sessionId) {
+				return currentPage;
+			}
+
+			const blocks: TimelineBlock[] = applyBackendEventsToTimeline(currentPage.blocks, events);
+			return blocks === currentPage.blocks
+				? currentPage
+				: {
+					...currentPage,
+					blocks
+				};
+		});
+	}, [clearTimelineStreamBatchTimer]);
+
+	const enqueueTimelineStreamingEvent = useCallback((event: BackendEvent, sessionId: string | null): void => {
+		if (
+			pendingTimelineEventsRef.current.length > 0
+			&& pendingTimelineSessionIdRef.current !== sessionId
+		) {
+			discardPendingTimelineEvents();
+		}
+
+		pendingTimelineSessionIdRef.current = sessionId;
+		pendingTimelineEventsRef.current.push(event);
+		if (timelineStreamBatchTimerRef.current !== null) {
+			return;
+		}
+
+		timelineStreamBatchTimerRef.current = window.setTimeout(
+			flushPendingTimelineEvents,
+			TIMELINE_STREAM_BATCH_MS
+		);
+	}, [discardPendingTimelineEvents, flushPendingTimelineEvents]);
+
+	useEffect((): (() => void) => {
+		function handleOpenSettings(event: Event): void {
+			const customEvent = event as CustomEvent<{ page?: SettingsPageKey }>;
+			setSettingsInitialPage(customEvent.detail?.page ?? "general");
+			setActivePage("settings");
+		}
+
+		window.addEventListener("daedalus:open-settings", handleOpenSettings);
+		return (): void => {
+			window.removeEventListener("daedalus:open-settings", handleOpenSettings);
+		};
+	}, []);
 
 	useEffect((): void => {
 		if (runState.status === "idle") {
@@ -1098,8 +1181,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}, [sendPendingWorkbenchPatch]);
 
 	useEffect((): void => {
+		discardPendingTimelineEvents();
 		activeSessionIdRef.current = activeSessionId;
-	}, [activeSessionId]);
+	}, [activeSessionId, discardPendingTimelineEvents]);
 
 	useEffect((): void => {
 		if (!isNewSessionHome) {
@@ -1129,8 +1213,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			if (patchTimerRef.current !== null) {
 				window.clearTimeout(patchTimerRef.current);
 			}
+			discardPendingTimelineEvents();
 		};
-	}, []);
+	}, [discardPendingTimelineEvents]);
 
 	useEffect((): void => {
 		async function loadProviderModelSelection(): Promise<void> {
@@ -1267,12 +1352,17 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						}
 					}
 
-					setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
-						return {
-							...currentPage,
-							blocks: applyBackendEventToTimeline(currentPage.blocks, event)
-						};
-					});
+					if (isTimelineStreamingDeltaEvent(event)) {
+						enqueueTimelineStreamingEvent(event, activeSessionId);
+					} else {
+						flushPendingTimelineEvents();
+						setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+							return {
+								...currentPage,
+								blocks: applyBackendEventToTimeline(currentPage.blocks, event)
+							};
+						});
+					}
 
 					if (isRunCompletionEvent(event)) {
 						const requestId: string = getBackendEventRequestId(event);
@@ -1301,7 +1391,13 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			cancelled = true;
 			unsubscribe?.();
 		};
-	}, [applyWorkbench, generalSettings.autoExpandTodoList, loadSkills]);
+	}, [
+		applyWorkbench,
+		enqueueTimelineStreamingEvent,
+		flushPendingTimelineEvents,
+		generalSettings.autoExpandTodoList,
+		loadSkills
+	]);
 
 	useEffect((): void => {
 		if (isNewSessionHome || activeSessionId === null || getPendingApprovalCount(workbench) === 0) {
@@ -1954,6 +2050,11 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			});
 			sessionCreated = true;
 
+			if (cancelledChatRequestIdsRef.current.delete(requestId)) {
+				submittedComposerTextRef.current = null;
+				return;
+			}
+
 			setIsNewSessionHome(false);
 			activeSessionIdRef.current = created.id;
 			setActiveSessionId(created.id);
@@ -2432,20 +2533,38 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	async function handleComposerCancel(): Promise<void> {
 		const requestId: string | null = getRunControllerRequestId(runState);
-		if (requestId === null) {
+		const cancellationRequestId: string | null = requestId ?? activeChatRequestIdRef.current;
+		if (cancellationRequestId === null) {
+			return;
+		}
+		if (runState.status === "cancelling") {
 			return;
 		}
 
+		const wasCreatingSession: boolean = isHomeSubmitting;
+		const previousRunState: RunControllerState = runState;
+		cancelledChatRequestIdsRef.current.add(cancellationRequestId);
+		setRunState((currentState: RunControllerState): RunControllerState => ({
+			...currentState,
+			status: "cancelling",
+			requestId: cancellationRequestId,
+			startedAt: currentState.startedAt ?? new Date().toISOString()
+		}));
 		try {
-			activeChatRequestIdRef.current = requestId;
-			const result = await cancelChatMessage(requestId);
-			if (result.cancelled) {
-				if (activeChatRequestIdRef.current === result.requestId) {
-					activeChatRequestIdRef.current = null;
-				}
+			activeChatRequestIdRef.current = cancellationRequestId;
+			const result = await cancelChatMessage(cancellationRequestId);
+			if (!result.cancelled && !wasCreatingSession) {
+				throw new Error("The backend did not accept the cancellation request.");
 			}
 		} catch (error: unknown) {
 			console.error("[App] cancel chat failed", error);
+			if (!wasCreatingSession) {
+				cancelledChatRequestIdsRef.current.delete(cancellationRequestId);
+				setRunState((currentState: RunControllerState): RunControllerState => (
+					currentState.requestId === cancellationRequestId ? previousRunState : currentState
+				));
+				showTransientError(error instanceof Error ? error.message : "Failed to stop the response");
+			}
 		}
 	}
 
@@ -2788,6 +2907,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			? null
 			: activeWorkspace;
 	const composerIsSending: boolean = isRunControllerActive(runState) || isHomeSubmitting;
+	const composerIsCancelling: boolean = runState.status === "cancelling";
 
 	useEffect((): void => {
 		activeSessionTitleRef.current = chatTitle;
@@ -3065,6 +3185,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						slashCommands={slashCommands}
 						skills={skills}
 						isSending={composerIsSending}
+						isCancelling={composerIsCancelling}
 						isApprovalModeSaving={isApprovalModeSaving}
 						workspaceOptions={homeWorkspaceOptions}
 						initialWorkspaces={bootstrapData.workspaceList.workspaces}
@@ -3187,6 +3308,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					/>
 				) : activePage === "settings" ? (
 					<SettingsPage
+						initialPage={settingsInitialPage}
 						onProviderModelSelectionChange={setProviderModelSelection}
 						clientPreferences={clientPreferences}
 						generalSettings={generalSettings}

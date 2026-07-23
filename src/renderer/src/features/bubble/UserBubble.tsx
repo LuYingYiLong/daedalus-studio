@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import styles from "./UserBubble.module.css";
 import { Button, Input, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
@@ -248,4 +248,4 @@ function UserBubble({
 	);
 }
 
-export default UserBubble;
+export default memo(UserBubble);

@@ -3,8 +3,10 @@ import type { BackendEvent } from "@/api/backend-rpc-client";
 import type { TimelineBlock, WorkbenchSnapshot } from "@/api/types";
 import {
 	applyBackendEventToTimeline,
+	applyBackendEventsToTimeline,
 	applyWorkbenchSnapshot,
 	createTimelinePageFromTimelineResult,
+	isTimelineStreamingDeltaEvent,
 	MAX_TIMELINE_WINDOW_BLOCKS,
 	mergeTimelineAfter,
 	mergeTimelineBefore
@@ -140,6 +142,46 @@ describe("workbench-state", () => {
 		expect(withDelta[0]?.type).toBe("assistant");
 		expect(withDelta[0]?.content).toBe("hello");
 		expect(withDone[0]?.type === "assistant" ? withDone[0].status : "missing").toBeUndefined();
+	});
+
+	it("batches adjacent streaming deltas without changing timeline semantics", () => {
+		const blocks: TimelineBlock[] = applyBackendEventsToTimeline([], [
+			{
+				type: "event",
+				id: "request-batched",
+				event: "agent.message.delta",
+				data: { requestId: "request-batched", text: "long " }
+			},
+			{
+				type: "event",
+				id: "request-batched",
+				event: "agent.message.delta",
+				data: { requestId: "request-batched", text: "answer" }
+			},
+			{
+				type: "event",
+				id: "request-batched",
+				event: "agent.thinking.delta",
+				data: { requestId: "request-batched", text: "checking" }
+			}
+		]);
+
+		expect(isTimelineStreamingDeltaEvent({
+			type: "event",
+			id: "request-batched",
+			event: "agent.message.delta"
+		})).toBe(true);
+		expect(isTimelineStreamingDeltaEvent({
+			type: "event",
+			id: "request-batched",
+			event: "agent.run.done"
+		})).toBe(false);
+		expect(blocks).toHaveLength(1);
+		expect(blocks[0]?.content).toBe("long answer");
+		expect(blocks[0]?.type === "assistant" ? blocks[0].bodyParts : []).toEqual([
+			{ type: "markdown", text: "long answer" },
+			{ type: "thinking", text: "checking", done: false }
+		]);
 	});
 
 	it("creates a running assistant block when an agent run starts", () => {
@@ -538,6 +580,74 @@ describe("workbench-state", () => {
 			type: "image_generation",
 			status: "completed",
 			prompt: "blue castle"
+		});
+	});
+
+	it("marks an in-flight image generation part as cancelled with the run", () => {
+		const withCall = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "request-image-cancel",
+			event: "agent.tool.call",
+			data: {
+				requestId: "request-image-cancel",
+				toolCallId: "tool-image-cancel",
+				toolName: "mcp_image_generate",
+				args: { prompt: "cancel this image" }
+			}
+		});
+		const cancelled = applyBackendEventToTimeline(withCall, {
+			type: "event",
+			id: "request-image-cancel",
+			event: "agent.run.cancelled",
+			data: {
+				requestId: "request-image-cancel"
+			}
+		});
+		const assistant = cancelled[0];
+		const imagePart = assistant?.type === "assistant"
+			? assistant.bodyParts.find((part) => part.type === "image_generation")
+			: undefined;
+
+		expect(imagePart).toMatchObject({
+			type: "image_generation",
+			status: "failed",
+			error: "Image generation was cancelled."
+		});
+	});
+
+	it("renders completed-with-warnings once and offers Godot configuration when executable verification is unavailable", () => {
+		const completed = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "request-warning",
+			event: "agent.run.done",
+			data: {
+				requestId: "request-warning",
+				resultStatus: "completed_with_warnings",
+				verificationStatus: "unverified",
+				warnings: ["Godot executable is unavailable: not found"]
+			}
+		});
+		const repeated = applyBackendEventToTimeline(completed, {
+			type: "event",
+			id: "request-warning",
+			event: "workflow.done",
+			data: {
+				requestId: "request-warning",
+				resultStatus: "completed_with_warnings",
+				verificationStatus: "unverified",
+				warnings: ["Godot executable is unavailable: not found"]
+			}
+		});
+		const assistant = repeated[0];
+		const warningParts = assistant?.type === "assistant"
+			? assistant.bodyParts.filter((part) => part.type === "status" && part.code === "verification_unverified")
+			: [];
+
+		expect(warningParts).toHaveLength(1);
+		expect(warningParts[0]).toMatchObject({
+			status: "warning",
+			actionLabel: "Configure Godot",
+			actionId: "configure_godot"
 		});
 	});
 

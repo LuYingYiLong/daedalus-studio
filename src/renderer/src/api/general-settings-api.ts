@@ -1,18 +1,27 @@
 import { createBackendClient } from "./backend-client";
 
 export type GeneralSettings = {
-	schemaVersion: 1;
+	schemaVersion: 2;
 	autoExpandTodoList: boolean;
+	godotExecutablePath: string | null;
+	godotExecutableVersion: string | null;
+	godotExecutableStatus: "unconfigured" | "ready" | "unavailable";
+	godotExecutableError: string | null;
 	updatedAt: string;
 };
 
 export type GeneralSettingsPatch = {
 	autoExpandTodoList?: boolean;
+	godotExecutablePath?: string | null;
 };
 
 export const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
-	schemaVersion: 1,
+	schemaVersion: 2,
 	autoExpandTodoList: false,
+	godotExecutablePath: null,
+	godotExecutableVersion: null,
+	godotExecutableStatus: "unconfigured",
+	godotExecutableError: null,
 	updatedAt: ""
 };
 

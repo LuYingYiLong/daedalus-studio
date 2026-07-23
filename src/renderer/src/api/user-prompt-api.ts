@@ -6,11 +6,14 @@ export type UserPromptConfig = {
 	updatedAt: string;
 	gitCommitPrompt: string;
 	gitCommitUpdatedAt: string;
+	commandReviewPrompt: string;
+	commandReviewUpdatedAt: string;
 };
 
 export type UserPromptConfigPatch = {
 	prompt?: string;
 	gitCommitPrompt?: string;
+	commandReviewPrompt?: string;
 };
 
 export async function fetchUserPromptConfig(): Promise<UserPromptConfig> {

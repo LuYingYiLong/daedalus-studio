@@ -89,4 +89,4 @@ function ToolPart({ part }: ToolPartProps): React.JSX.Element {
 	);
 }
 
-export default ToolPart;
+export default React.memo(ToolPart);

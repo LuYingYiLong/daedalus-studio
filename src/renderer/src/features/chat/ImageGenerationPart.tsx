@@ -1,5 +1,5 @@
 import { Alert, Dropdown, Image, message, Spin, Typography, type MenuProps } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import type { TimelineBodyPart, TimelineGeneratedImageArtifact } from "@/api/types";
 import { fetchGeneratedImageDataUrl } from "@/api/generated-image-api";
 import { Icon } from "@/assets/icons";
@@ -241,4 +241,4 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 	);
 }
 
-export default ImageGenerationPart;
+export default memo(ImageGenerationPart);

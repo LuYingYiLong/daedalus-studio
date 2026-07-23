@@ -1,5 +1,5 @@
 import { Divider, Menu, MenuProps, Typography } from "antd";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "@/assets/icons";
 import type { ProviderModelSelection } from "@/api/provider-api";
 import ProviderSettingsPage from "./ProviderSettingsPage";
@@ -16,7 +16,7 @@ import type { GeneralSettings } from "@/api/general-settings-api";
 import AboutSettingsPage from "./AboutSettingsPage";
 
 type MenuItem = Required<MenuProps>["items"][number];
-type SettingsPageKey =
+export type SettingsPageKey =
 	| "provider"
 	| "default_model"
 	| "general"
@@ -28,6 +28,7 @@ type SettingsPageKey =
 	| "about";
 
 type SettingsPageProps = {
+	initialPage?: SettingsPageKey;
 	onProviderModelSelectionChange?: (selection: ProviderModelSelection) => void;
 	clientPreferences: ClientPreferences;
 	generalSettings: GeneralSettings;
@@ -94,13 +95,18 @@ function getSettingsPageTitle(key: SettingsPageKey): string {
 }
 
 function SettingsPage({
+	initialPage = "provider",
 	onProviderModelSelectionChange,
 	clientPreferences,
 	generalSettings,
 	onClientPreferencesChange,
 	onGeneralSettingsChange
 }: SettingsPageProps): React.JSX.Element {
-	const [activePage, setActivePage] = useState<SettingsPageKey>("provider");
+	const [activePage, setActivePage] = useState<SettingsPageKey>(initialPage);
+
+	useEffect((): void => {
+		setActivePage(initialPage);
+	}, [initialPage]);
 
 	return (
 		<section className={styles.page}>

@@ -29,6 +29,7 @@ export type ProviderModelRouting = {
 	sessionTitle: ProviderTaskModelRef | null;
 	imageGeneration: ProviderTaskModelRef | null;
 	gitCommit: ProviderTaskModelRef | null;
+	commandReview: ProviderTaskModelRef | null;
 };
 
 export type ProviderModelInfo = {

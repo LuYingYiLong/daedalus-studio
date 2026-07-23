@@ -18,6 +18,12 @@ describe("GeneralSettingsPage", () => {
 		expect(pageSource).toContain("System");
 		expect(pageSource).toContain("updateClientPreferences");
 		expect(pageSource).toContain("updateGeneralSettings");
+		expect(pageSource).toContain("Godot executable");
+		expect(pageSource).toContain("window.electronAPI.pickGodotExecutable()");
+		expect(generalApiSource).toContain("godotExecutablePath: null");
+		expect(generalApiSource).toContain("schemaVersion: 2;");
+		expect(generalApiSource).toContain("godotExecutableVersion: string | null;");
+		expect(generalApiSource).toContain('godotExecutableStatus: "unconfigured" | "ready" | "unavailable";');
 		expect(pageSource).not.toContain("<List");
 		expect(pageSource).not.toContain("List.Item");
 		expect(pageSource).not.toContain(", List,");

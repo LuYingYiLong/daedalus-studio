@@ -8,8 +8,8 @@ import {
 } from "@/api/client-preferences-api";
 import styles from "./Titlebar.module.css";
 
-function shouldShowUpdateButton(preferences: ClientPreferences, state: AppUpdateState | null): boolean {
-	if (!preferences.autoCheckForUpdates || state === null) {
+function shouldShowUpdateButton(state: AppUpdateState | null): boolean {
+	if (state === null) {
 		return false;
 	}
 	const hasKnownUpdate: boolean = state.updateKind !== null
@@ -78,7 +78,7 @@ function Titlebar(): React.JSX.Element {
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(() => getCachedClientPreferences());
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
 	const [updateModalOpen, setUpdateModalOpen] = useState<boolean>(false);
-	const showUpdateButton: boolean = shouldShowUpdateButton(clientPreferences, updateState);
+	const showUpdateButton: boolean = shouldShowUpdateButton(updateState);
 	const updateProgress: number = Math.round(updateState?.progress ?? 0);
 	const isClientRestartState: boolean = updateState?.client.status === "downloaded" || updateState?.client.status === "installing";
 	const clientVersionText: string | null = updateState === null ? null : getComponentVersionText("Client", updateState.client);
@@ -90,6 +90,13 @@ function Titlebar(): React.JSX.Element {
 			if (!cancelled) {
 				setUpdateState(state);
 			}
+			if (!cancelled && clientPreferences.autoCheckForUpdates && (state.status === "idle" || state.status === "not_available" || state.status === "error")) {
+				void window.electronAPI.appUpdate.check().then((nextState: AppUpdateState): void => {
+					if (!cancelled) {
+						setUpdateState(nextState);
+					}
+				});
+			}
 		});
 		const unsubscribe = window.electronAPI.appUpdate.onStateChanged((state: AppUpdateState): void => {
 			setUpdateState(state);
@@ -98,7 +105,7 @@ function Titlebar(): React.JSX.Element {
 			cancelled = true;
 			unsubscribe();
 		};
-	}, []);
+	}, [clientPreferences.autoCheckForUpdates]);
 
 	useEffect((): (() => void) => {
 		function handleClientPreferencesChanged(event: Event): void {

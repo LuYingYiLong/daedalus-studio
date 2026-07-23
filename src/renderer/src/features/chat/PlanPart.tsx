@@ -75,4 +75,4 @@ function PlanPart({ part }: PlanPartProps): React.JSX.Element {
 	);
 }
 
-export default PlanPart;
+export default React.memo(PlanPart);

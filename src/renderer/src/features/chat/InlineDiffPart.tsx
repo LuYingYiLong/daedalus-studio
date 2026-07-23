@@ -2,6 +2,7 @@ import { TimelineBodyPart } from "@/api/types";
 import { Button, Card } from "antd";
 import styles from "./InlineDiffPart.module.css";
 import { Icon } from "@/assets/icons";
+import { memo } from "react";
 
 export type TimelineInlineDiffPart = Extract<TimelineBodyPart, { type: "inline_diff" }>;
 export type InlineDiffPartProps = {
@@ -58,4 +59,4 @@ function InlineDiffPart({ part, onReview }: InlineDiffPartProps): React.JSX.Elem
 	);
 }
 
-export default InlineDiffPart;
+export default memo(InlineDiffPart);

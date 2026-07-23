@@ -94,9 +94,14 @@ class FakeBackendUpdateClient implements BackendUpdateClient {
 	public checkCount: number = 0;
 	public installCount: number = 0;
 	public restartCount: number = 0;
+	public verifyCount: number = 0;
+	public cleanupCount: number = 0;
+	public cleanupArgs: Array<[string, string | null]> = [];
 	public checkResult: BackendUpdateCheckResult = createBackendCheckResult(false);
 	public checkError: Error | null = null;
 	public installError: Error | null = null;
+	public restartError: Error | null = null;
+	public verifyError: Error | null = null;
 
 	public async check(): Promise<BackendUpdateCheckResult> {
 		this.checkCount += 1;
@@ -121,6 +126,21 @@ class FakeBackendUpdateClient implements BackendUpdateClient {
 
 	public async restartAndWaitHealthy(): Promise<void> {
 		this.restartCount += 1;
+		if (this.restartError !== null) {
+			throw this.restartError;
+		}
+	}
+
+	public async verifyInstalledVersion(): Promise<void> {
+		this.verifyCount += 1;
+		if (this.verifyError !== null) {
+			throw this.verifyError;
+		}
+	}
+
+	public async cleanupPreviousVersion(currentVersion: string, previousVersion: string | null): Promise<void> {
+		this.cleanupCount += 1;
+		this.cleanupArgs.push([currentVersion, previousVersion]);
 	}
 }
 
@@ -239,6 +259,9 @@ describe("app update service", () => {
 		});
 		expect(fakeBackend.installCount).toBe(1);
 		expect(fakeBackend.restartCount).toBe(1);
+		expect(fakeBackend.verifyCount).toBe(1);
+		expect(fakeBackend.cleanupCount).toBe(1);
+		expect(fakeBackend.cleanupArgs).toEqual([["1.0.9", "1.0.8"]]);
 		expect(service.acknowledge()).toMatchObject({
 			status: "not_available",
 			updateKind: null
@@ -263,8 +286,37 @@ describe("app update service", () => {
 
 		expect(fakeBackend.installCount).toBe(1);
 		expect(fakeBackend.restartCount).toBe(1);
+		expect(fakeBackend.verifyCount).toBe(1);
+		expect(fakeBackend.cleanupCount).toBe(1);
 		expect(fakeUpdater.downloadCount).toBe(1);
 		expect(service.getState().updateKind).toBe("combined");
+	});
+
+	it("keeps the previous backend when installed backend verification fails", async () => {
+		const fakeUpdater = new FakeAutoUpdater();
+		const fakeBackend = new FakeBackendUpdateClient();
+		fakeBackend.checkResult = createBackendCheckResult(true);
+		fakeBackend.verifyError = new Error("version mismatch");
+		const service = new AppUpdateService({
+			isPackaged: true,
+			currentVersion: "1.0.0",
+			autoUpdater: fakeUpdater,
+			backendUpdateClient: fakeBackend,
+			sendEvent: (): void => {}
+		});
+
+		await service.checkForUpdates();
+		await expect(service.download()).resolves.toMatchObject({
+			status: "error",
+			errorMessage: "version mismatch",
+			backend: {
+				status: "error"
+			}
+		});
+		expect(fakeBackend.installCount).toBe(1);
+		expect(fakeBackend.restartCount).toBe(1);
+		expect(fakeBackend.verifyCount).toBe(1);
+		expect(fakeBackend.cleanupCount).toBe(0);
 	});
 
 	it("does not continue to client download when backend install fails", async () => {

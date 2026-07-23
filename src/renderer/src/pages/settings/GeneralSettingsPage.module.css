@@ -1,6 +1,6 @@
 .page {
 	display: grid;
-	grid-template-rows: auto auto minmax(0, 1fr);
+	grid-template-rows: auto minmax(0, 1fr);
 	min-width: 0;
 	min-height: 0;
 	padding: var(--ds-space-2);
@@ -33,6 +33,10 @@
 .settingsStack {
 	display: grid;
 	gap: var(--ds-space-2);
+	min-height: 0;
+	overflow: auto;
+	padding-right: 2px;
+	align-content: start;
 }
 
 .loading {
@@ -64,4 +68,33 @@
 	display: grid;
 	gap: 2px;
 	min-width: 0;
+}
+
+.godotSetting {
+	display: grid;
+	gap: 10px;
+}
+
+.godotTitleRow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+}
+
+.godotPathRow {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto auto;
+	gap: 8px;
+	align-items: center;
+}
+
+@media (max-width: 720px) {
+	.godotPathRow {
+		grid-template-columns: minmax(0, 1fr) auto;
+	}
+
+	.godotPathRow > :first-child {
+		grid-column: 1 / -1;
+	}
 }

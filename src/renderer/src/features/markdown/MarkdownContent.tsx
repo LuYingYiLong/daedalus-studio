@@ -4,17 +4,43 @@ import remarkGfm from "remark-gfm";
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/utils/clipboard";
 import hljs from "highlight.js";
+import { memo, useEffect, useRef, useState } from "react";
 import styles from "./MarkdownContent.module.css";
 import "highlight.js/styles/github-dark.css";
 
 export type MarkdownContentProps = {
 	children: string;
+	streaming?: boolean;
 };
 
 type CodeBlockProps = {
 	code: string;
 	language: string;
+	highlight: boolean;
 };
+
+const HIGHLIGHT_LANGUAGE_ALIASES: Record<string, string> = {
+	gd: "gdscript",
+	gds: "gdscript",
+	sh: "bash",
+	shell: "bash",
+	ps1: "powershell",
+	plain: "plaintext",
+	text: "plaintext"
+};
+
+function normalizeHighlightLanguage(language: string): string {
+	const normalized: string = language.trim().toLowerCase().replace(/^hljs-/u, "");
+	return HIGHLIGHT_LANGUAGE_ALIASES[normalized] ?? normalized;
+}
+
+function highlightCode(code: string, language: string): string | null {
+	const normalizedLanguage: string = normalizeHighlightLanguage(language);
+	if (hljs.getLanguage(normalizedLanguage) !== undefined) {
+		return hljs.highlight(code, { language: normalizedLanguage }).value;
+	}
+	return null;
+}
 
 function formatLanguageLabel(language: string): string {
 	if (language.length === 0 || language === "text" || language === "plain" || language === "plaintext") {
@@ -51,12 +77,9 @@ function getCodeFileExtension(language: string): string {
 	return extensions[normalized] ?? (normalized.length > 0 ? normalized : "txt");
 }
 
-function CodeBlock({ code, language }: CodeBlockProps): React.JSX.Element {
+function CodeBlock({ code, language, highlight }: CodeBlockProps): React.JSX.Element {
 	const label: string = formatLanguageLabel(language);
-
-	const highlightedCode: string = language.length > 0
-		? hljs.highlight(code, { language: language.replace(/^hljs/u, "") }).value
-		: hljs.highlightAuto(code).value;
+	const highlightedCode: string | null = highlight ? highlightCode(code, language) : null;
 
 	return (
 		<div className={styles.codeBlock}>
@@ -80,42 +103,114 @@ function CodeBlock({ code, language }: CodeBlockProps): React.JSX.Element {
 				</div>
 			</div>
 			<div className={styles.codeScroller}>
-				<code
-					className={styles.code}
-					dangerouslySetInnerHTML={{ __html: highlightedCode }}
-				/>
+				{highlightedCode === null ? (
+					<code className={styles.code}>{code}</code>
+				) : (
+					<code
+						className={styles.code}
+						dangerouslySetInnerHTML={{ __html: highlightedCode }}
+					/>
+				)}
 			</div>
 		</div>
 	);
 }
 
-const markdownComponents: Components = {
-	pre({ children, node: _node, ..._props }): React.JSX.Element {
-		return <>{children}</>;
-	},
-	code({ children, className, node: _node, ...props }): React.JSX.Element {
-		const code: string = String(children).replace(/\n$/u, "");
-		const language: string = /language-([\w-]+)/u.exec(className ?? "")?.[1] ?? "";
-		const isBlock: boolean = language.length > 0 || code.includes("\n");
+const MemoizedCodeBlock = memo(CodeBlock);
+const MARKDOWN_REMARK_PLUGINS = [remarkGfm];
 
-		if (isBlock) {
-			return <CodeBlock code={code} language={language} />;
+function createMarkdownComponents(highlightCodeBlocks: boolean): Components {
+	return {
+		pre({ children, node: _node, ..._props }): React.JSX.Element {
+			return <>{children}</>;
+		},
+		code({ children, className, node: _node, ...props }): React.JSX.Element {
+			const code: string = String(children).replace(/\n$/u, "");
+			const language: string = /language-([\w-]+)/u.exec(className ?? "")?.[1] ?? "";
+			const isBlock: boolean = language.length > 0 || code.includes("\n");
+
+			if (isBlock) {
+				return <MemoizedCodeBlock code={code} language={language} highlight={highlightCodeBlocks} />;
+			}
+
+			return (
+				<code className={className} {...props}>
+					{children}
+				</code>
+			);
 		}
-
-		return (
-			<code className={className} {...props}>
-				{children}
-			</code>
-		);
-	}
-};
-
-function MarkdownContent({ children }: MarkdownContentProps): React.JSX.Element {
-	return (
-		<Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-			{children}
-		</Markdown>
-	);
+	};
 }
 
-export default MarkdownContent;
+const MARKDOWN_COMPONENTS: Components = createMarkdownComponents(true);
+const STREAMING_MARKDOWN_COMPONENTS: Components = createMarkdownComponents(false);
+
+export function getStreamingMarkdownRenderIntervalMs(length: number): number {
+	if (length < 4_000) {
+		return 50;
+	}
+	if (length < 16_000) {
+		return 80;
+	}
+	if (length < 48_000) {
+		return 120;
+	}
+	return 180;
+}
+
+function useStreamingMarkdownSource(source: string, streaming: boolean): string {
+	const [renderedSource, setRenderedSource] = useState<string>(source);
+	const latestSourceRef = useRef<string>(source);
+	const lastRenderedAtRef = useRef<number>(Date.now());
+
+	useEffect((): (() => void) | void => {
+		latestSourceRef.current = source;
+
+		if (!streaming) {
+			lastRenderedAtRef.current = Date.now();
+			setRenderedSource((currentSource: string): string => currentSource === source ? currentSource : source);
+			return;
+		}
+
+		if (source === renderedSource) {
+			return;
+		}
+
+		const intervalMs: number = getStreamingMarkdownRenderIntervalMs(source.length);
+		const elapsedMs: number = Date.now() - lastRenderedAtRef.current;
+		const commitSource = (): void => {
+			lastRenderedAtRef.current = Date.now();
+			setRenderedSource(latestSourceRef.current);
+		};
+		const timeoutId: number = window.setTimeout(commitSource, Math.max(0, intervalMs - elapsedMs));
+
+		return (): void => {
+			window.clearTimeout(timeoutId);
+		};
+	}, [renderedSource, source, streaming]);
+
+	return streaming ? renderedSource : source;
+}
+
+type RenderedMarkdownProps = {
+	source: string;
+	streaming: boolean;
+};
+
+const RenderedMarkdown = memo(function RenderedMarkdown({ source, streaming }: RenderedMarkdownProps): React.JSX.Element {
+	return (
+		<Markdown
+			remarkPlugins={MARKDOWN_REMARK_PLUGINS}
+			components={streaming ? STREAMING_MARKDOWN_COMPONENTS : MARKDOWN_COMPONENTS}
+		>
+			{source}
+		</Markdown>
+	);
+});
+
+function MarkdownContent({ children, streaming = false }: MarkdownContentProps): React.JSX.Element {
+	const renderedSource: string = useStreamingMarkdownSource(children, streaming);
+	return <RenderedMarkdown source={renderedSource} streaming={streaming} />;
+}
+
+export default memo(MarkdownContent);

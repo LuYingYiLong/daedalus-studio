@@ -63,6 +63,9 @@ function getBackendErrorTitle(state: BackendBootstrapState): string {
 	if (state.errorCode === "backend_missing") {
 		return "Daedalus backend is missing or damaged";
 	}
+	if (state.errorCode === "marked_backend_missing") {
+		return "Marked backend version is missing";
+	}
 	if (state.errorCode === "health_failed") {
 		return "Daedalus backend did not start";
 	}
@@ -118,7 +121,7 @@ function BootSplash({ onReady }: BootSplashProps): React.JSX.Element {
 					Retry install
 				</Button>
 			);
-		} else if (backendState?.packaged === true && backendState.errorCode === "backend_missing") {
+		} else if (backendState?.packaged === true && (backendState.errorCode === "backend_missing" || backendState.errorCode === "marked_backend_missing")) {
 			actions.unshift(
 				<Button key="repair-backend" loading={actionKey === "repair"} onClick={(): void => { void runBootstrapAction("repair"); }}>
 					Repair backend

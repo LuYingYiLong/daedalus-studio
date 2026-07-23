@@ -188,6 +188,7 @@ type AgentPageProps = {
 	slashCommands: SlashCommandDefinition[];
 	skills: SkillSummary[];
 	isSending: boolean;
+	isCancelling: boolean;
 	isApprovalModeSaving: boolean;
 	workspaceOptions: WorkspaceConfig[];
 	initialWorkspaces: WorkspaceConfig[];
@@ -291,6 +292,7 @@ function AgentPage({
 	slashCommands,
 	skills,
 	isSending,
+	isCancelling,
 	isApprovalModeSaving,
 	workspaceOptions,
 	initialWorkspaces,
@@ -1171,6 +1173,7 @@ function AgentPage({
 													slashCommands={slashCommands}
 													skills={skills}
 													isSending={isSending}
+													isCancelling={isCancelling}
 													isApprovalModeSaving={isApprovalModeSaving}
 													workspaceOptions={workspaceOptions}
 													selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}

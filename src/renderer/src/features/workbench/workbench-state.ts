@@ -26,6 +26,12 @@ export const emptyTimelinePage: TimelinePageState = {
 };
 
 export const MAX_TIMELINE_WINDOW_BLOCKS: number = 160;
+const TIMELINE_STREAM_DELTA_EVENTS: ReadonlySet<string> = new Set([
+	"ai.delta",
+	"agent.message.delta",
+	"ai.thinking.delta",
+	"agent.thinking.delta"
+]);
 
 export const initialWorkbenchSessionState: WorkbenchSessionState = {
 	activeSessionId: null,
@@ -67,6 +73,56 @@ function getStringValue(record: Record<string, unknown>, key: string): string {
 	const value: unknown = record[key];
 
 	return typeof value === "string" ? value : "";
+}
+
+function getStringArray(record: Record<string, unknown>, key: string): string[] {
+	const value: unknown = record[key];
+	return Array.isArray(value)
+		? value.filter((item: unknown): item is string => typeof item === "string" && item.trim().length > 0)
+		: [];
+}
+
+export function isTimelineStreamingDeltaEvent(event: BackendEvent): boolean {
+	return TIMELINE_STREAM_DELTA_EVENTS.has(event.event);
+}
+
+function getTimelineStreamingEventKey(event: BackendEvent): string {
+	const data: Record<string, unknown> = getEventData(event);
+	const requestId: string = getStringValue(data, "requestId") || event.id;
+	const runId: string = getStringValue(data, "runId");
+	const sessionId: string = getStringValue(data, "sessionId");
+
+	return `${event.event}\u0000${sessionId}\u0000${requestId}\u0000${runId}`;
+}
+
+function coalesceTimelineStreamingEvents(events: readonly BackendEvent[]): BackendEvent[] {
+	const coalescedEvents: BackendEvent[] = [];
+
+	for (const event of events) {
+		const previousEvent: BackendEvent | undefined = coalescedEvents[coalescedEvents.length - 1];
+		if (
+			previousEvent === undefined
+			|| !isTimelineStreamingDeltaEvent(event)
+			|| !isTimelineStreamingDeltaEvent(previousEvent)
+			|| getTimelineStreamingEventKey(previousEvent) !== getTimelineStreamingEventKey(event)
+		) {
+			coalescedEvents.push(event);
+			continue;
+		}
+
+		const previousData: Record<string, unknown> = getEventData(previousEvent);
+		const currentData: Record<string, unknown> = getEventData(event);
+		coalescedEvents[coalescedEvents.length - 1] = {
+			...previousEvent,
+			data: {
+				...previousData,
+				...currentData,
+				text: getStringValue(previousData, "text") + getStringValue(currentData, "text")
+			}
+		};
+	}
+
+	return coalescedEvents;
 }
 
 function appendMarkdownPart(parts: TimelineBodyPart[], text: string): TimelineBodyPart[] {
@@ -504,6 +560,11 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 			}];
 		}
 	} else if (event.event === "agent.run.cancelled") {
+		nextParts = nextParts.map((part: TimelineBodyPart): TimelineBodyPart => {
+			return part.type === "image_generation" && part.status === "running"
+				? { ...part, status: "failed", error: "Image generation was cancelled." }
+				: part;
+		});
 		nextStatus = undefined;
 		completedAtUtc = nowIso;
 		if (!hasStatusCode(nextParts, "cancelled")) {
@@ -522,6 +583,23 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 	} else if (event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done") {
 		nextStatus = undefined;
 		completedAtUtc = nowIso;
+		const warnings: string[] = getStringArray(data, "warnings");
+		if (getStringValue(data, "resultStatus") === "completed_with_warnings"
+			&& warnings.length > 0
+			&& !hasStatusCode(nextParts, "verification_unverified")) {
+			const shouldConfigureGodot: boolean = warnings.some((warning: string): boolean => {
+				return /godot executable|GODOT_EXECUTABLE_PATH|ENOENT|not found/i.test(warning);
+			});
+			nextParts = [...nextParts, {
+				type: "status",
+				status: "warning",
+				title: "Completed, but verification was unavailable",
+				details: warnings.join("\n"),
+				code: "verification_unverified",
+				actionLabel: shouldConfigureGodot ? "Configure Godot" : undefined,
+				actionId: shouldConfigureGodot ? "configure_godot" : undefined
+			}];
+		}
 	} else {
 		return block;
 	}
@@ -547,7 +625,9 @@ function shouldCreateAssistantBlock(event: BackendEvent): boolean {
 		|| event.event === "ai.status"
 		|| event.event === "plan.generated"
 		|| event.event === "plan.revised"
-		|| event.event === "plan.error";
+		|| event.event === "plan.error"
+		|| ((event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done")
+			&& getStringValue(getEventData(event), "resultStatus") === "completed_with_warnings");
 }
 
 function createLiveAssistantBlock(event: BackendEvent): TimelineAssistantBlock {
@@ -587,6 +667,13 @@ export function applyBackendEventToTimeline(blocks: TimelineBlock[], event: Back
 	}
 
 	return [...blocks, createLiveAssistantBlock(canonicalEvent)];
+}
+
+export function applyBackendEventsToTimeline(blocks: TimelineBlock[], events: readonly BackendEvent[]): TimelineBlock[] {
+	return coalesceTimelineStreamingEvents(events).reduce(
+		(currentBlocks: TimelineBlock[], event: BackendEvent): TimelineBlock[] => applyBackendEventToTimeline(currentBlocks, event),
+		blocks
+	);
 }
 
 export function createTimelinePageFromOpenResult(result: SessionOpenResult): TimelinePageState {

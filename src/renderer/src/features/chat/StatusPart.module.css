@@ -3,3 +3,7 @@
 	margin-bottom: 4px;
 	border-radius: var(--ds-radius-sm);
 }
+
+.alert :global(.ant-alert-description) {
+	white-space: pre-wrap;
+}

@@ -3,6 +3,7 @@ import electronUpdater from "electron-updater";
 import type { ProgressInfo, UpdateInfo } from "electron-updater";
 import WebSocket from "ws";
 import { backendManager } from "./backend-manager";
+import { cleanupManagedBackendPreviousVersion, fetchLatestManagedBackendVersion, installManagedBackendPackage } from "./backend-bootstrap";
 
 export type AppUpdateStatus =
 	| "idle"
@@ -60,6 +61,8 @@ export type BackendUpdateClient = {
 	check: () => Promise<BackendUpdateCheckResult>;
 	install: (version: string | null) => Promise<BackendUpdateInstallResult>;
 	restartAndWaitHealthy: () => Promise<void>;
+	verifyInstalledVersion: (version: string) => Promise<void>;
+	cleanupPreviousVersion: (currentVersion: string, previousVersion: string | null) => Promise<void>;
 };
 
 export type AppUpdateServiceOptions = {
@@ -164,6 +167,36 @@ function getErrorMessage(error: Error): string {
 
 function getUnsupportedClientMessage(): string {
 	return "Client updates are only available in packaged builds.";
+}
+
+function parseVersionCore(version: string): [number, number, number] | null {
+	const core: string = version.trim().split(/[+-]/u)[0] ?? "";
+	const match: RegExpMatchArray | null = core.match(/^(\d+)\.(\d+)\.(\d+)$/u);
+	if (match === null) {
+		return null;
+	}
+	return [
+		Number.parseInt(match[1]!, 10),
+		Number.parseInt(match[2]!, 10),
+		Number.parseInt(match[3]!, 10)
+	];
+}
+
+function isVersionNewer(candidateVersion: string, currentVersion: string): boolean {
+	const candidate: [number, number, number] | null = parseVersionCore(candidateVersion);
+	const current: [number, number, number] | null = parseVersionCore(currentVersion);
+	if (candidate === null || current === null) {
+		return false;
+	}
+	for (let index: number = 0; index < candidate.length; index += 1) {
+		if (candidate[index]! > current[index]!) {
+			return true;
+		}
+		if (candidate[index]! < current[index]!) {
+			return false;
+		}
+	}
+	return false;
 }
 
 function createComponentState(status: AppUpdateStatus, currentVersion: string | null, errorMessage: string | null = null): AppUpdateComponentState {
@@ -325,11 +358,36 @@ function requestBackendRpc<TResult>(method: string, params?: unknown): Promise<T
 
 class MainProcessBackendUpdateClient implements BackendUpdateClient {
 	public async check(): Promise<BackendUpdateCheckResult> {
+		const launchTarget = backendManager.getLaunchTargetInfo();
+		if (launchTarget?.kind === "managed" && launchTarget.version !== null) {
+			const currentVersion: string = launchTarget.version;
+			const latestVersion: string = await fetchLatestManagedBackendVersion();
+			return {
+				currentVersion,
+				installedVersion: currentVersion,
+				latestVersion,
+				updateAvailable: isVersionNewer(latestVersion, currentVersion),
+				checkedAt: new Date().toISOString(),
+				errorMessage: null
+			};
+		}
+
 		await backendManager.waitUntilHealthy();
 		return await requestBackendRpc<BackendUpdateCheckResult>("backend.update.check");
 	}
 
 	public async install(version: string | null): Promise<BackendUpdateInstallResult> {
+		const launchTarget = backendManager.getLaunchTargetInfo();
+		if (launchTarget?.kind === "managed") {
+			const installed = await installManagedBackendPackage(version ?? "latest");
+			return {
+				installed: true,
+				version: installed.version,
+				previousVersion: installed.previousVersion ?? null,
+				installedAt: new Date().toISOString()
+			};
+		}
+
 		return await requestBackendRpc<BackendUpdateInstallResult>(
 			"backend.update.install",
 			version === null ? {} : { version }
@@ -338,6 +396,21 @@ class MainProcessBackendUpdateClient implements BackendUpdateClient {
 
 	public async restartAndWaitHealthy(): Promise<void> {
 		await backendManager.restartAndWaitHealthy();
+	}
+
+	public async verifyInstalledVersion(version: string): Promise<void> {
+		const result: BackendUpdateCheckResult = await this.check();
+		if (result.currentVersion !== version && result.installedVersion !== version) {
+			throw new Error(`Backend update verification failed. Expected ${version}, got ${result.currentVersion}.`);
+		}
+	}
+
+	public async cleanupPreviousVersion(currentVersion: string, previousVersion: string | null): Promise<void> {
+		const launchTarget = backendManager.getLaunchTargetInfo();
+		if (launchTarget?.kind !== "managed") {
+			return;
+		}
+		await cleanupManagedBackendPreviousVersion(currentVersion, previousVersion);
 	}
 }
 
@@ -437,6 +510,7 @@ export class AppUpdateService {
 			return;
 		}
 		ipcMain.handle("app-update:get-state", (): AppUpdateState => this.getState());
+		ipcMain.handle("app-update:check", async (): Promise<AppUpdateState> => await this.checkForUpdates());
 		ipcMain.handle("app-update:download", async (): Promise<AppUpdateState> => await this.download());
 		ipcMain.handle("app-update:acknowledge", (): AppUpdateState => this.acknowledge());
 	}
@@ -535,6 +609,8 @@ export class AppUpdateService {
 				errorMessage: null
 			});
 			await this.backendUpdateClient.restartAndWaitHealthy();
+			await this.backendUpdateClient.verifyInstalledVersion(result.version);
+			await this.backendUpdateClient.cleanupPreviousVersion(result.version, result.previousVersion);
 			this.updateBackend({
 				status: "downloaded",
 				currentVersion: result.version,

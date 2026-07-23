@@ -6,6 +6,7 @@ describe("app update source", () => {
 	const builderSource: string = readRepoFile("electron-builder.yml");
 	const mainSource: string = readRepoFile("src", "main", "index.ts");
 	const serviceSource: string = readRepoFile("src", "main", "services", "app-update.ts");
+	const bootstrapSource: string = readRepoFile("src", "main", "services", "backend-bootstrap.ts");
 	const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 	const titlebarSource: string = readRepoFile("src", "renderer", "src", "components", "Titlebar.tsx");
@@ -24,11 +25,21 @@ describe("app update source", () => {
 		expect(mainSource).toContain("appUpdateService.registerIpc();");
 		expect(mainSource).toContain("checkForUpdatesIfEnabled(preferences.autoCheckForUpdates)");
 		expect(serviceSource).toContain("ipcMain.handle(\"app-update:get-state\"");
+		expect(serviceSource).toContain("ipcMain.handle(\"app-update:check\"");
 		expect(serviceSource).toContain("ipcMain.handle(\"app-update:download\"");
 		expect(serviceSource).toContain("ipcMain.handle(\"app-update:acknowledge\"");
 		expect(serviceSource).toContain("backend.update.check");
 		expect(serviceSource).toContain("backend.update.install");
+		expect(serviceSource).toContain("fetchLatestManagedBackendVersion");
+		expect(serviceSource).toContain("installManagedBackendPackage");
+		expect(serviceSource).toContain("cleanupManagedBackendPreviousVersion");
+		expect(serviceSource).toContain("backendManager.getLaunchTargetInfo()");
+		expect(bootstrapSource).toContain("export async function fetchLatestManagedBackendVersion");
+		expect(bootstrapSource).toContain("export async function installManagedBackendPackage");
+		expect(bootstrapSource).toContain("export async function cleanupManagedBackendPreviousVersion");
 		expect(serviceSource).toContain("restartAndWaitHealthy");
+		expect(serviceSource).toContain("verifyInstalledVersion(result.version)");
+		expect(serviceSource).toContain("cleanupPreviousVersion(result.version, result.previousVersion)");
 		expect(serviceSource).toContain("app-update:state-changed");
 		expect(serviceSource).toContain("quitAndInstall(false, true)");
 	});
@@ -36,6 +47,7 @@ describe("app update source", () => {
 	it("exposes appUpdate through preload and renderer types", () => {
 		expect(preloadSource).toContain("appUpdate: {");
 		expect(preloadSource).toContain("ipcRenderer.invoke(\"app-update:get-state\")");
+		expect(preloadSource).toContain("ipcRenderer.invoke(\"app-update:check\")");
 		expect(preloadSource).toContain("ipcRenderer.invoke(\"app-update:download\")");
 		expect(preloadSource).toContain("ipcRenderer.invoke(\"app-update:acknowledge\")");
 		expect(preloadSource).toContain("ipcRenderer.on(\"app-update:state-changed\", handler)");
@@ -48,11 +60,14 @@ describe("app update source", () => {
 
 	it("renders update affordance in the titlebar", () => {
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.getState");
+		expect(titlebarSource).toContain("window.electronAPI.appUpdate.check");
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.onStateChanged");
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.download");
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.acknowledge");
 		expect(titlebarSource).toContain("const hasKnownUpdate: boolean");
 		expect(titlebarSource).toContain("state.updateKind !== null");
+		expect(titlebarSource).toContain("clientPreferences.autoCheckForUpdates");
+		expect(titlebarSource).not.toContain("!preferences.autoCheckForUpdates");
 		expect(titlebarSource).toContain("<Modal");
 		expect(titlebarSource).toContain("mask={{ closable:");
 		expect(titlebarSource).not.toContain("maskClosable");

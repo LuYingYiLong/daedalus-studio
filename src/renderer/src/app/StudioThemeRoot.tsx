@@ -78,7 +78,7 @@ function StudioThemeRoot(): React.JSX.Element {
 
 	return (
 		<ConfigProvider theme={studioTheme}>
-			<AntdApp component={false}>
+			<AntdApp component="div" style={{ display: "contents" }}>
 				<Titlebar />
 				{bootstrapData === null ? <BootSplash onReady={handleBootstrapReady} /> : <App bootstrapData={bootstrapData} />}
 			</AntdApp>

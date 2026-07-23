@@ -4,7 +4,7 @@
 			<rect width="9.499997" height="10.000008" x="3.000000" y="10.000000" fill="currentColor" />
 		</clipPath>
 	</defs>
-	<g id="小铅笔" customFrame="url(#clipPath_8)">
+	<g id="小铅笔">
 		<rect id="小铅笔" width="9.499997" height="10.000008" x="3.000000" y="10.000000" fill="currentColor" fill-opacity="0" />
 		<path id="小铅笔" d="M5.5 20L3 20L3.00001 17.5L8.75225 11.3369C9.4343 10.6061 10.5863 10.5863 11.2931 11.2931C11.9663 11.9663 11.985 13.0518 11.3354 13.7478L5.5 20Z" stroke="currentColor" stroke-width="1.750000" />
 	</g>
