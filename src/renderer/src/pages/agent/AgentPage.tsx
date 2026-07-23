@@ -24,7 +24,9 @@ import { Icon } from "@/assets/icons";
 import ClarificationDialog from "@/features/clarification/ClarificationDialog";
 import PlanApprovalDialog from "@/features/approval/PlanApprovalDialog";
 import DockPanelTabs, { type DockPanelActivationRequest, type DockPanelKind } from "@/features/dock/DockPanelTabs";
-import GitActionDialogs from "@/features/git/GitActionDialogs";
+import BranchActionDialog from "@/features/git/BranchActionDialog";
+import CommitActionDialog from "@/features/git/CommitActionDialog";
+import CreateBranchDialog from "@/features/git/CreateBranchDialog";
 import { useGitActionDialogController } from "@/features/git/useGitActionDialogController";
 import SessionOverviewDialogs, { formatSourceSubtitle } from "./SessionOverviewDialogs";
 
@@ -407,154 +409,6 @@ function AgentPage({
 		setSideDockSize(sideDockLastOpenSize);
 		setSideDockOpen(true);
 	}, [sideDockLastOpenSize, workspaceForActions]);
-	const summaryCollapseItems: NonNullable<CollapseProps["items"]> = useMemo((): NonNullable<CollapseProps["items"]> => {
-		if (summaryOverview === null) {
-			return [];
-		}
-
-		const items: NonNullable<CollapseProps["items"]> = [];
-		if (summaryOverview.envInfo !== null && summaryOverview.envInfo.hasGitRepository) {
-			items.push({
-				key: "env_info",
-				label: "Env info",
-				children: (
-					<div className={styles.summarySection}>
-						<Button
-							type="text"
-							block
-							icon={<Icon name="git-diff" />}
-							className={styles.summaryActionButton}
-							onClick={openSummaryDiffReview}
-						>
-							<span className={styles.diffRow}>
-								<span className={styles.diffLabel}>
-									Diff
-								</span>
-								<span className={styles.additions}>
-									{`+${summaryOverview.envInfo.additions}`}
-								</span>
-								<span className={styles.deletions}>
-									{`-${summaryOverview.envInfo.deletions}`}
-								</span>
-							</span>
-						</Button>
-						<Button
-							type="text"
-							block
-							icon={<Icon name="git-branch" />}
-							className={styles.summaryActionButton}
-							onClick={(): void => {
-								gitActions.openBranchDialog();
-							}}
-						>
-							{summaryOverview.envInfo.branch ?? "Detached HEAD"}
-						</Button>
-						<Button
-							type="text"
-							block
-							icon={<Icon name="git-commit" />}
-							className={styles.summaryActionButton}
-							onClick={(): void => {
-								openCommitOrPushDialog();
-							}}
-						>
-							Commit or push
-						</Button>
-					</div>
-				),
-				showArrow: false
-			});
-		}
-
-		if (summaryOverview.plans.total > 0) {
-			items.push({
-				key: "plans",
-				label: "Plans",
-				children: (
-					<div className={styles.planList}>
-						{summaryOverview.plans.items.slice(0, SUMMARY_PREVIEW_LIMIT).map((plan: SessionOverviewPlanItem): React.ReactNode => (
-							<Button
-								key={plan.planId}
-								type="text"
-								block
-								className={styles.summaryActionButton}
-								onClick={(): void => {
-									setPreviewPlan(plan);
-								}}
-							>
-								{plan.title}
-							</Button>
-						))}
-						{summaryOverview.plans.total > SUMMARY_PREVIEW_LIMIT ? (
-							<Button
-								type="text"
-								block
-								icon={<Icon name="external-link" />}
-								className={styles.summaryActionButton}
-								onClick={(): void => {
-									void openPlansModal();
-								}}
-							>
-								See more
-							</Button>
-						) : null}
-					</div>
-				),
-				showArrow: false
-			});
-		}
-
-		if (summaryOverview.sources.total > 0) {
-			items.push({
-				key: "source",
-				label: "Source",
-				children: (
-					<div className={styles.sourceList}>
-						{summaryOverview.sources.items.slice(0, SUMMARY_PREVIEW_LIMIT).map((source: SessionOverviewSourceItem): React.ReactNode => (
-							<Button
-								key={`${source.kind}:${source.id}`}
-								type="text"
-								block
-								className={styles.sourceButton}
-								icon={(
-									<img
-										src={source.thumbnailDataUrl}
-										alt=""
-										className={styles.sourceThumbnail}
-									/>
-								)}
-								onClick={(): void => {
-									setPreviewSource(source);
-								}}
-							>
-								<span className={styles.sourceText}>
-									<span className={styles.summaryItemTitle}>{source.title}</span>
-									<span className={styles.summaryMeta}>{formatSourceSubtitle(source)}</span>
-								</span>
-							</Button>
-						))}
-						{summaryOverview.sources.total > SUMMARY_PREVIEW_LIMIT ? (
-							<Button
-								type="text"
-								block
-								icon={<Icon name="external-link" />}
-								className={styles.summaryActionButton}
-								onClick={(): void => {
-									void openSourcesModal();
-								}}
-							>
-								See more
-							</Button>
-						) : null}
-					</div>
-				),
-				showArrow: false
-			});
-		}
-
-		return items;
-	}, [onMessageChange, openSummaryDiffReview, summaryOverview]);
-
 	useEffect((): (() => void) | void => {
 		if (!showWorkspaceLaunchControls) {
 			return;
@@ -652,11 +506,166 @@ function AgentPage({
 		onBeforeCommitOpen: (): void => {
 			setSummaryOpen(false);
 		},
+		onBeforeBranchOpen: (): void => {
+			setSummaryOpen(false);
+		},
 		onCommitSuccess: async (): Promise<void> => {
+			onWorkspaceRefresh();
+			await loadSummaryOverview();
+		},
+		onBranchSuccess: async (): Promise<void> => {
 			onWorkspaceRefresh();
 			await loadSummaryOverview();
 		}
 	});
+
+	const summaryCollapseItems: NonNullable<CollapseProps["items"]> = useMemo((): NonNullable<CollapseProps["items"]> => {
+		if (summaryOverview === null) {
+			return [];
+		}
+
+		const items: NonNullable<CollapseProps["items"]> = [];
+		if (summaryOverview.envInfo !== null && summaryOverview.envInfo.hasGitRepository) {
+			items.push({
+				key: "env_info",
+				label: "Env info",
+				children: (
+					<div className={styles.summarySection}>
+						<Button
+							type="text"
+							block
+							icon={<Icon name="git-diff" />}
+							className={styles.summaryActionButton}
+							onClick={openSummaryDiffReview}
+						>
+							<span className={styles.diffRow}>
+								<span className={styles.diffLabel}>
+									Diff
+								</span>
+								<span className={styles.additions}>
+									{`+${summaryOverview.envInfo.additions}`}
+								</span>
+								<span className={styles.deletions}>
+									{`-${summaryOverview.envInfo.deletions}`}
+								</span>
+							</span>
+						</Button>
+						<Button
+							type="text"
+							block
+							icon={<Icon name="git-branch" />}
+							className={styles.summaryActionButton}
+							onClick={(): void => {
+								gitActions.openBranchDialog();
+							}}
+						>
+							{summaryOverview.envInfo.branch ?? "Detached HEAD"}
+						</Button>
+						<Button
+							type="text"
+							block
+							icon={<Icon name="git-commit" />}
+							className={styles.summaryActionButton}
+							onClick={(): void => {
+								gitActions.openCommitDialog();
+							}}
+						>
+							Commit or push
+						</Button>
+					</div>
+				),
+				showArrow: false
+			});
+		}
+
+		if (summaryOverview.plans.total > 0) {
+			items.push({
+				key: "plans",
+				label: "Plans",
+				children: (
+					<div className={styles.planList}>
+						{summaryOverview.plans.items.slice(0, SUMMARY_PREVIEW_LIMIT).map((plan: SessionOverviewPlanItem): React.ReactNode => (
+							<Button
+								key={plan.planId}
+								type="text"
+								block
+								className={styles.summaryActionButton}
+								onClick={(): void => {
+									setPreviewPlan(plan);
+								}}
+							>
+								{plan.title}
+							</Button>
+						))}
+						{summaryOverview.plans.total > SUMMARY_PREVIEW_LIMIT ? (
+							<Button
+								type="text"
+								block
+								icon={<Icon name="external-link" />}
+								className={styles.summaryActionButton}
+								onClick={(): void => {
+									void openPlansModal();
+								}}
+							>
+								See more
+							</Button>
+						) : null}
+					</div>
+				),
+				showArrow: false
+			});
+		}
+
+		if (summaryOverview.sources.total > 0) {
+			items.push({
+				key: "source",
+				label: "Source",
+				children: (
+					<div className={styles.sourceList}>
+						{summaryOverview.sources.items.slice(0, SUMMARY_PREVIEW_LIMIT).map((source: SessionOverviewSourceItem): React.ReactNode => (
+							<Button
+								key={`${source.kind}:${source.id}`}
+								type="text"
+								block
+								className={styles.sourceButton}
+								icon={(
+									<img
+										src={source.thumbnailDataUrl}
+										alt=""
+										className={styles.sourceThumbnail}
+									/>
+								)}
+								onClick={(): void => {
+									setPreviewSource(source);
+								}}
+							>
+								<span className={styles.sourceText}>
+									<span className={styles.summaryItemTitle}>{source.title}</span>
+									<span className={styles.summaryMeta}>{formatSourceSubtitle(source)}</span>
+								</span>
+							</Button>
+						))}
+						{summaryOverview.sources.total > SUMMARY_PREVIEW_LIMIT ? (
+							<Button
+								type="text"
+								block
+								icon={<Icon name="external-link" />}
+								className={styles.summaryActionButton}
+								onClick={(): void => {
+									void openSourcesModal();
+								}}
+							>
+								See more
+							</Button>
+						) : null}
+					</div>
+				),
+				showArrow: false
+			});
+		}
+
+		return items;
+	}, [gitActions.openBranchDialog, gitActions.openCommitDialog, openSummaryDiffReview, summaryOverview]);
 
 	async function openPlansModal(): Promise<void> {
 		const result: SessionOverviewResult | null = await loadSummaryOverview(SUMMARY_SEE_MORE_LIMIT, SUMMARY_PREVIEW_LIMIT);
@@ -670,10 +679,6 @@ function AgentPage({
 		if (result !== null) {
 			setSourcesModalOpen(true);
 		}
-	}
-
-	function openCommitOrPushDialog(): void {
-		gitActions.openCommitDialog();
 	}
 
 	async function openWorkspaceLaunchTarget(targetId: WorkspaceLaunchTargetId): Promise<void> {
@@ -924,13 +929,15 @@ function AgentPage({
 				className={styles.summaryPopver}
 				content={summaryPopoverContent}
 			>
-				<Button
-					type={summaryOpen ? "primary" : "text"}
-					shape="circle"
-					aria-label="Open session summary"
-					aria-pressed={summaryOpen}
-					icon={<Icon name="list-check" />}
-				/>
+				<Tooltip title="Summary">
+					<Button
+						type={summaryOpen ? "primary" : "text"}
+						shape="circle"
+						aria-label="Open session summary"
+						aria-pressed={summaryOpen}
+						icon={<Icon name="list-check" />}
+					/>
+				</Tooltip>
 			</Popover>
 		);
 	}
@@ -942,7 +949,6 @@ function AgentPage({
 			onDrop={handlePageDrop}
 		>
 			{messageContextHolder}
-			{gitActions.contextHolder}
 			<aside className={styles.workspaceSidebar}>
 				<header className={styles.workspaceHeader}>
 					<Button
@@ -1253,7 +1259,9 @@ function AgentPage({
 				onPreviewPlanChange={setPreviewPlan}
 				onPreviewSourceChange={setPreviewSource}
 			/>
-			<GitActionDialogs {...gitActions.dialogProps} />
+			<CommitActionDialog {...gitActions.commitDialogProps} />
+			<BranchActionDialog {...gitActions.branchDialogProps} />
+			<CreateBranchDialog {...gitActions.createBranchDialogProps} />
 		</div>
 	);
 }

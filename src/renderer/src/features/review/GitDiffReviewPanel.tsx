@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
-import { Alert, Button, Divider, Empty, Spin, Tooltip, Typography } from "antd";
+import { Alert, Button, Collapse, Divider, Empty, Spin, Tooltip, Typography } from "antd";
+import type { CollapseProps } from "antd";
 import { Decoration, Diff, Hunk, parseDiff, type FileData, type HunkData } from "react-diff-view";
 import { fetchWorkspaceGitDiff, type WorkspaceGitDiffResult } from "@/api/workspace-git-diff-api";
 import { Icon } from "@/assets/icons";
-import GitActionDialogs from "@/features/git/GitActionDialogs";
+import BranchActionDialog from "@/features/git/BranchActionDialog";
+import CommitActionDialog from "@/features/git/CommitActionDialog";
+import CreateBranchDialog from "@/features/git/CreateBranchDialog";
 import { useGitActionDialogController } from "@/features/git/useGitActionDialogController";
 import styles from "./GitDiffReviewPanel.module.css";
 
@@ -58,9 +61,43 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const parsedDiff: ParsedDiff = useMemo((): ParsedDiff => parsePatch(diff?.patch ?? ""), [diff?.patch]);
+	const diffFileCollapseItems: NonNullable<CollapseProps["items"]> = useMemo((): NonNullable<CollapseProps["items"]> => {
+		return parsedDiff.files.map((file: FileData, fileIndex: number): NonNullable<CollapseProps["items"]>[number] => {
+			const filePath: string = getFilePath(file);
+
+			return {
+				key: `${filePath}:${fileIndex}`,
+				label: (
+					<Typography.Text className={styles.filePath} title={filePath}>
+						{filePath}
+					</Typography.Text>
+				),
+				extra: <span className={styles.fileType}>{file.type}</span>,
+				children: file.isBinary || file.hunks.length === 0 ? (
+					<Typography.Text type="secondary" className={styles.binaryText}>
+						Binary file changed
+					</Typography.Text>
+				) : (
+					<Diff
+						viewType="unified"
+						diffType={file.type}
+						hunks={file.hunks}
+						gutterType="default"
+						className={styles.diffTable}
+					>
+						{(hunks: HunkData[]): ReactElement[] => hunks.flatMap(renderHunk)}
+					</Diff>
+				)
+			};
+		});
+	}, [parsedDiff.files]);
+	const defaultDiffActiveKeys: string[] = useMemo((): string[] => {
+		return diffFileCollapseItems.map((item): string => String(item?.key ?? ""));
+	}, [diffFileCollapseItems]);
 	const gitActions = useGitActionDialogController({
 		workspaceId,
-		onCommitSuccess: loadDiff
+		onCommitSuccess: loadDiff,
+		onBranchSuccess: loadDiff
 	});
 
 	async function loadDiff(): Promise<void> {
@@ -105,7 +142,6 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 
 	return (
 		<aside className={styles.panel}>
-			{gitActions.contextHolder}
 			<header className={styles.header}>
 				<div className={styles.titleBlock}>
 					{diff !== null && diff.hasGitRepository ? (
@@ -178,36 +214,21 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 								<pre className={styles.rawPatch}>{diff.patch}</pre>
 							</>
 						) : (
-							parsedDiff.files.map((file: FileData, fileIndex: number): React.ReactNode => (
-								<section key={`${getFilePath(file)}:${fileIndex}`} className={styles.fileBlock}>
-									<div className={styles.fileHeader}>
-										<Typography.Text className={styles.filePath} title={getFilePath(file)}>
-											{getFilePath(file)}
-										</Typography.Text>
-										<span className={styles.fileType}>{file.type}</span>
-									</div>
-									{file.isBinary || file.hunks.length === 0 ? (
-										<Typography.Text type="secondary" className={styles.binaryText}>
-											Binary file changed
-										</Typography.Text>
-									) : (
-										<Diff
-											viewType="unified"
-											diffType={file.type}
-											hunks={file.hunks}
-											gutterType="default"
-											className={styles.diffTable}
-										>
-											{(hunks: HunkData[]): ReactElement[] => hunks.flatMap(renderHunk)}
-										</Diff>
-									)}
-								</section>
-							))
+							<Collapse
+								key={diff.generatedAt}
+								size="small"
+								bordered={false}
+								defaultActiveKey={defaultDiffActiveKeys}
+								items={diffFileCollapseItems}
+								className={styles.fileCollapse}
+							/>
 						)}
 					</div>
 				)}
 			</div>
-			<GitActionDialogs {...gitActions.dialogProps} />
+			<CommitActionDialog {...gitActions.commitDialogProps} />
+			<BranchActionDialog {...gitActions.branchDialogProps} />
+			<CreateBranchDialog {...gitActions.createBranchDialogProps} />
 		</aside>
 	);
 }

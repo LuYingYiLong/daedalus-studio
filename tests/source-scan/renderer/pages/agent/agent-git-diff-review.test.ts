@@ -7,7 +7,7 @@ describe("AgentPage git diff review source", () => {
 	const assistantBubbleSource: string = readRepoFile("src", "renderer", "src", "features", "bubble", "AssistantBubble.tsx");
 	const inlineDiffSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "InlineDiffPart.tsx");
 	const reviewPanelSource: string = readRepoFile("src", "renderer", "src", "features", "review", "GitDiffReviewPanel.tsx");
-	const gitActionDialogsSource: string = readRepoFile("src", "renderer", "src", "features", "git", "GitActionDialogs.tsx");
+	const commitActionDialogSource: string = readRepoFile("src", "renderer", "src", "features", "git", "CommitActionDialog.tsx");
 	const gitActionControllerSource: string = readRepoFile("src", "renderer", "src", "features", "git", "useGitActionDialogController.tsx");
 	const dockPanelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.tsx");
 	const dockPanelTabsCss: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.module.css");
@@ -88,8 +88,10 @@ describe("AgentPage git diff review source", () => {
 		expect(reviewPanelSource).toContain("useGitActionDialogController");
 		expect(reviewPanelSource).toContain("onCommitSuccess: loadDiff");
 		expect(reviewPanelSource).toContain("onClick={gitActions.openCommitDialog}");
-		expect(reviewPanelSource).toContain("<GitActionDialogs {...gitActions.dialogProps} />");
-		expect(gitActionDialogsSource).toContain("title=\"Commit or push\"");
+		expect(reviewPanelSource).toContain("<CommitActionDialog {...gitActions.commitDialogProps} />");
+		expect(reviewPanelSource).toContain("<BranchActionDialog {...gitActions.branchDialogProps} />");
+		expect(reviewPanelSource).toContain("<CreateBranchDialog {...gitActions.createBranchDialogProps} />");
+		expect(commitActionDialogSource).toContain("title=\"Commit or push\"");
 		expect(gitActionControllerSource).toContain("commitOrPushGit");
 		expect(gitActionControllerSource).toContain("generateGitCommitMessage");
 	});

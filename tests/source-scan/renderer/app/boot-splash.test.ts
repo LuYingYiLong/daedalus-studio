@@ -12,6 +12,7 @@ describe("BootSplash", () => {
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 
 	it("renders BootSplash before App and passes bootstrap data into App", () => {
+		expect(studioThemeRootSource).toContain("<AntdApp component={false}>");
 		expect(studioThemeRootSource).toContain("<BootSplash onReady={handleBootstrapReady} />");
 		expect(studioThemeRootSource).toContain("<App bootstrapData={bootstrapData} />");
 		expect(appSource).toContain("bootstrapData: BootstrapData");

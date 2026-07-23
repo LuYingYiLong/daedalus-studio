@@ -1,0 +1,105 @@
+.commitDialogBody {
+	display: grid;
+	gap: 12px;
+}
+
+.branchDialogBody,
+.createBranchDialogBody {
+	display: grid;
+	gap: 12px;
+}
+
+.branchToolbar {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto auto;
+	gap: 8px;
+	align-items: center;
+}
+
+.branchList {
+	display: grid;
+	gap: 6px;
+	max-height: 280px;
+	min-height: 96px;
+	overflow: auto;
+	padding-right: 2px;
+}
+
+.searchBox {
+	width: 100%;
+}
+
+.branchLoading {
+	display: grid;
+	min-height: 96px;
+	place-items: center;
+}
+
+.branchItem {
+	display: grid;
+	grid-template-columns: 24px minmax(0, 1fr) auto;
+	gap: 8px;
+	align-items: center;
+	width: 100%;
+	min-height: 48px;
+	padding: 8px 10px;
+	border: 1px solid var(--ant-color-border-secondary);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--ant-color-bg-container) 84%, transparent);
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.branchItem:hover {
+	border-color: var(--ant-color-primary-border);
+	background: var(--ant-color-fill-tertiary);
+}
+
+.branchItem:focus-visible {
+	outline: 2px solid var(--ant-color-primary-border);
+	outline-offset: 2px;
+}
+
+.branchItem[data-selected="true"] {
+	border-color: var(--ant-color-primary);
+	background: var(--ant-control-item-bg-active);
+}
+
+.branchItemIcon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--ant-color-text-secondary);
+}
+
+.branchItemMain {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+
+.branchItemTitle {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.branchItemTitle :global(.ant-typography) {
+	min-width: 0;
+	max-width: 100%;
+	margin: 0;
+}
+
+.branchItemMeta {
+	overflow: hidden;
+	color: var(--ant-color-text-tertiary);
+	font-size: 12px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.createBranchHint {
+	font-size: 12px;
+}

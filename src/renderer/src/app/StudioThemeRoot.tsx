@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ConfigProvider, type ThemeConfig } from "antd";
+import { App as AntdApp, ConfigProvider, type ThemeConfig } from "antd";
 import {
 	CLIENT_PREFERENCES_CHANGED_EVENT,
 	fetchClientPreferences,
@@ -78,8 +78,10 @@ function StudioThemeRoot(): React.JSX.Element {
 
 	return (
 		<ConfigProvider theme={studioTheme}>
-			<Titlebar />
-			{bootstrapData === null ? <BootSplash onReady={handleBootstrapReady} /> : <App bootstrapData={bootstrapData} />}
+			<AntdApp component={false}>
+				<Titlebar />
+				{bootstrapData === null ? <BootSplash onReady={handleBootstrapReady} /> : <App bootstrapData={bootstrapData} />}
+			</AntdApp>
 		</ConfigProvider>
 	);
 }
