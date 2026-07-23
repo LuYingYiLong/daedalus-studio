@@ -1053,9 +1053,9 @@ function AgentPage({
 							<Splitter.Panel min={360}>
 								<section className={styles.chatPanel}>
 									<header className={styles.chatHeader}>
-										<Typography.Title level={5} className={styles.chatTitle}>
+										<Typography.Text className={styles.chatText} ellipsis={{ tooltip: chatTitle }}>
 											{chatTitle}
-										</Typography.Title>
+										</Typography.Text>
 									</header>
 
 									<Divider size="small" />

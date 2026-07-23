@@ -26,8 +26,9 @@ describe("MessageQueuePanel source", () => {
 	});
 
 	it("keeps the queue panel visibly rounded", () => {
-		expect(panelStyleSource).toContain("border-radius: var(--ds-radius-lg);");
-		expect(panelStyleSource).toContain("clip-path: inset(0 round var(--ds-radius-lg));");
+		expect(panelStyleSource).toContain("border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;");
+		expect(panelStyleSource).toContain("overflow-y: auto;");
+		expect(panelStyleSource).toContain("overflow-x: hidden;");
 		expect(panelStyleSource).not.toContain("--ds-radius-md");
 	});
 
@@ -38,8 +39,9 @@ describe("MessageQueuePanel source", () => {
 		expect(panelSource).toContain("onGuideReorder(moveBefore(guideIds, String(event.active.id), String(event.over.id)))");
 		expect(panelSource).toContain("item.status === \"pending\"");
 		expect(panelSource).toContain("disabled={item.status !== \"pending\"}");
-		expect(panelSource).toContain("function shouldShowQueueItem(item: MessageQueueItem): boolean");
+		expect(panelSource).toContain("function shouldShowQueueItem(item: MessageQueueItem, activeQueueItemId: number | null | undefined): boolean");
 		expect(panelSource).toContain("item.status !== \"sending\" && item.status !== \"approval\"");
+		expect(panelSource).toContain("item.id !== activeQueueItemId");
 		expect(panelSource).toContain("visibleMessageQueue.map");
 	});
 

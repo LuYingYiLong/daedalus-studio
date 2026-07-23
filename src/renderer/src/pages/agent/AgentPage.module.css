@@ -137,7 +137,17 @@
 	justify-self: stretch;
 	padding: 0px min(460px, calc(42vw + 96px)) 0px 8px;
 	min-height: 40px;
+	min-width: 0;
 	user-select: none;
+}
+
+.chatText {
+	display: block;
+	min-width: 0;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .floatingActionSlot {

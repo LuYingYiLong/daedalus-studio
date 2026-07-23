@@ -18,7 +18,7 @@ describe("AgentPage terminal panel source", () => {
 		expect(agentSource).toContain("<DockPanelTabs");
 		expect(agentSource).toContain("dockId=\"bottom\"");
 		expect(agentSource).toContain("placement=\"bottom\"");
-		expect(agentSource).toContain("cwd={activeWorkspace?.rootPath ?? null}");
+		expect(agentSource).toContain("cwd={workspaceForActions?.rootPath ?? null}");
 		expect(agentSource).toContain("isOpen={bottomDockOpen}");
 		expect(agentSource).toContain("defaultKind=\"terminal\"");
 		expect(agentSource).toContain("onEmpty={closeBottomDock}");
@@ -46,7 +46,7 @@ describe("AgentPage terminal panel source", () => {
 		const bottomButtonIndex: number = agentSource.indexOf("icon={<Icon name=\"layout-bottom\" />}");
 		const rightButtonIndex: number = agentSource.indexOf("icon={<Icon name=\"layout-right\" />}");
 
-		expect(agentSource).toContain("const showDockControls: boolean = !isHome || activeWorkspace !== null;");
+		expect(agentSource).toContain("const showDockControls: boolean = !isHome || workspaceForActions !== null;");
 		expect(agentSource).toContain("const showBottomDockButton: boolean = showDockControls;");
 		expect(bottomButtonIndex).toBeGreaterThan(-1);
 		expect(rightButtonIndex).toBeGreaterThan(-1);
@@ -74,7 +74,7 @@ describe("AgentPage terminal panel source", () => {
 		const waitGuardIndex: number = terminalPanelSource.indexOf("waitForCwdRef.current && cwdRef.current === null");
 		const createIndex: number = terminalPanelSource.indexOf("window.electronAPI.terminal.create");
 
-		expect(agentSource).toContain("const terminalWaitForCwd: boolean = !isHome && isSessionLoading && activeWorkspace === null;");
+		expect(agentSource).toContain("const terminalWaitForCwd: boolean = !isHome && isSessionLoading && workspaceForActions === null;");
 		expect(agentSource).toContain("waitForCwd={terminalWaitForCwd}");
 		expect(dockPanelTabsSource).toContain("waitForCwd: boolean;");
 		expect(dockPanelTabsSource).toContain("waitForCwd={waitForCwd}");

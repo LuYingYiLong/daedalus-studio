@@ -3,7 +3,6 @@
 	flex: 1;
 	min-height: 0;
 	backdrop-filter: blur(28px) saturate(1.16);
-	background: color-mix(in srgb, var(--ds-bg) 50%, transparent);
 }
 
 .agentShell {

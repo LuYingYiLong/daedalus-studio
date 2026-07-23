@@ -26,7 +26,7 @@ describe("AboutSettingsPage", () => {
 		expect(cssSource).toContain("height: 100%;");
 		expect(cssSource).toContain("max-height: 100%;");
 		expect(cssSource).toContain("overflow-y: auto;");
-		expect(cssSource).toContain(".content {\n\tdisplay: grid;");
+		expect(cssSource).toMatch(/\.content\s*{[^}]*display:\s*grid;/);
 		expect(cssSource).toContain("padding: 0 var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);");
 	});
 });

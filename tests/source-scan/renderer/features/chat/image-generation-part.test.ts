@@ -8,7 +8,7 @@ describe("ImageGenerationPart", () => {
 
 		expect(componentSource).toContain('className={styles.modelLabel}');
 		expect(componentSource).toContain('className={styles.prompt}');
-		expect(cssSource).toContain(".modelLabel {\n\tdisplay: block;");
-		expect(cssSource).toContain(".prompt {\n\tdisplay: block;");
+		expect(cssSource).toMatch(/\.modelLabel\s*{[^}]*display:\s*block;/);
+		expect(cssSource).toMatch(/\.prompt\s*{[^}]*display:\s*block;/);
 	});
 });

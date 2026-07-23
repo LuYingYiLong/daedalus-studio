@@ -5,6 +5,8 @@
 	place-items: center;
 	padding: 32px;
 	background: var(--ds-bg);
+	border-radius: var(--ds-space-1);
+	margin: 0px var(--ds-space-1) var(--ds-space-1) var(--ds-space-1);
 }
 
 .panel {

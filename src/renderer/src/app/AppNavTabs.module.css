@@ -2,6 +2,7 @@
 	width: 44px;
 	min-width: 44px;
 	min-height: 0;
+	-webkit-app-region: drag;
 }
 
 .navList {
@@ -27,6 +28,7 @@
 	color: var(--ds-text-primary);
 	cursor: pointer;
 	line-height: 0;
+	-webkit-app-region: none;
 }
 
 .navButton:hover,

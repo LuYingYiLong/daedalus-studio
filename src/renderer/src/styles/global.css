@@ -193,7 +193,7 @@ body {
 	min-width: 320px;
 	min-height: 100vh;
 	margin: 0;
-	background: transparent;
+	background: color-mix(in srgb, var(--ds-bg) 50%, transparent);
 }
 
 body {
