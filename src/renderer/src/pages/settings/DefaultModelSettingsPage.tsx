@@ -1,4 +1,4 @@
-import { Alert, Button, Input, Select, Spin, Typography } from "antd";
+import { Alert, Button, Select, Spin, Typography } from "antd";
 import type { SelectProps } from "antd";
 import { useEffect, useState } from "react";
 import { Icon } from "@/assets/icons";
@@ -12,7 +12,6 @@ import {
 	type ProviderTaskModelRef
 } from "@/api/provider-api";
 import { isImageTaskModel } from "./provider-model-filters";
-import { fetchUserPromptConfig, saveUserPrompt, type UserPromptConfig } from "@/api/user-prompt-api";
 import styles from "./DefaultModelSettingsPage.module.css";
 
 type RoutingKey = keyof ProviderModelRouting;
@@ -109,9 +108,6 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 	const [selection, setSelection] = useState<ProviderModelSelection | null>(null);
 	const [savingKey, setSavingKey] = useState<RoutingKey | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-	const [commandReviewPrompt, setCommandReviewPrompt] = useState<string>("");
-	const [savedCommandReviewPrompt, setSavedCommandReviewPrompt] = useState<string>("");
-	const [isCommandReviewPromptSaving, setIsCommandReviewPromptSaving] = useState<boolean>(false);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
 	useEffect((): (() => void) => {
@@ -121,18 +117,13 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 			try {
 				setIsLoading(true);
 				setErrorMessage(null);
-				const [result, promptConfig]: [ProviderModelSelection, UserPromptConfig] = await Promise.all([
-					fetchProviderModelSelection(),
-					fetchUserPromptConfig()
-				]);
+				const result: ProviderModelSelection = await fetchProviderModelSelection();
 
 				if (cancelled) {
 					return;
 				}
 
 				setSelection(result);
-				setCommandReviewPrompt(promptConfig.commandReviewPrompt);
-				setSavedCommandReviewPrompt(promptConfig.commandReviewPrompt);
 				onSelectionChange?.(result);
 			} catch (error: unknown) {
 				if (!cancelled) {
@@ -180,22 +171,6 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 			setErrorMessage(error instanceof Error ? error.message : "Failed to save model routing");
 		} finally {
 			setSavingKey(null);
-		}
-	}
-
-	async function handleCommandReviewPromptSave(): Promise<void> {
-		try {
-			setIsCommandReviewPromptSaving(true);
-			setErrorMessage(null);
-			const savedConfig: UserPromptConfig = await saveUserPrompt({
-				commandReviewPrompt: commandReviewPrompt.slice(0, 20000)
-			});
-			setCommandReviewPrompt(savedConfig.commandReviewPrompt);
-			setSavedCommandReviewPrompt(savedConfig.commandReviewPrompt);
-		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to save the command review prompt");
-		} finally {
-			setIsCommandReviewPromptSaving(false);
 		}
 	}
 
@@ -267,29 +242,6 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 									suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 								/>
 							</div>
-							{option.key === "commandReview" ? (
-								<div className={styles.promptEditor}>
-									<Typography.Text>Supplemental review preferences</Typography.Text>
-									<Input.TextArea
-										value={commandReviewPrompt}
-										maxLength={20000}
-										showCount={true}
-										autoSize={{ minRows: 4, maxRows: 10 }}
-										placeholder="Add project-specific command review preferences. Fixed safety rules always take precedence."
-										onChange={(event): void => setCommandReviewPrompt(event.target.value)}
-									/>
-									<div className={styles.promptActions}>
-										<Button
-											type="primary"
-											loading={isCommandReviewPromptSaving}
-											disabled={commandReviewPrompt === savedCommandReviewPrompt}
-											onClick={(): void => { void handleCommandReviewPromptSave(); }}
-										>
-											Save prompt
-										</Button>
-									</div>
-								</div>
-							) : null}
 						</article>
 					);
 				})}

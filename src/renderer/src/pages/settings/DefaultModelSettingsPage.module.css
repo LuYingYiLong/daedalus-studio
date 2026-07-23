@@ -52,17 +52,6 @@
 	justify-items: center;
 }
 
-.promptEditor {
-	display: grid;
-	gap: 8px;
-	max-width: 720px;
-}
-
-.promptActions {
-	display: flex;
-	justify-content: flex-end;
-}
-
 @media (max-width: 720px) {
 	.controlRow {
 		grid-template-columns: minmax(0, 1fr);

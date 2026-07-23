@@ -10,6 +10,8 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 	const [draftPrompt, setDraftPrompt] = useState<string>("");
 	const [savedGitCommitPrompt, setSavedGitCommitPrompt] = useState<string>("");
 	const [draftGitCommitPrompt, setDraftGitCommitPrompt] = useState<string>("");
+	const [savedCommandReviewPrompt, setSavedCommandReviewPrompt] = useState<string>("");
+	const [draftCommandReviewPrompt, setDraftCommandReviewPrompt] = useState<string>("");
 	const [updatedAt, setUpdatedAt] = useState<string>("");
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -32,6 +34,8 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 				setDraftPrompt(config.prompt);
 				setSavedGitCommitPrompt(config.gitCommitPrompt);
 				setDraftGitCommitPrompt(config.gitCommitPrompt);
+				setSavedCommandReviewPrompt(config.commandReviewPrompt);
+				setDraftCommandReviewPrompt(config.commandReviewPrompt);
 				setUpdatedAt(config.updatedAt);
 			} catch (error: unknown) {
 				if (!cancelled) {
@@ -52,8 +56,17 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 	}, []);
 
 	const isDirty: boolean = useMemo((): boolean => {
-		return draftPrompt !== savedPrompt || draftGitCommitPrompt !== savedGitCommitPrompt;
-	}, [draftGitCommitPrompt, draftPrompt, savedGitCommitPrompt, savedPrompt]);
+		return draftPrompt !== savedPrompt
+			|| draftGitCommitPrompt !== savedGitCommitPrompt
+			|| draftCommandReviewPrompt !== savedCommandReviewPrompt;
+	}, [
+		draftCommandReviewPrompt,
+		draftGitCommitPrompt,
+		draftPrompt,
+		savedCommandReviewPrompt,
+		savedGitCommitPrompt,
+		savedPrompt
+	]);
 
 	async function handleSave(): Promise<void> {
 		try {
@@ -61,13 +74,16 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 			setErrorMessage(null);
 			const config: UserPromptConfig = await saveUserPrompt({
 				prompt: draftPrompt,
-				gitCommitPrompt: draftGitCommitPrompt
+				gitCommitPrompt: draftGitCommitPrompt,
+				commandReviewPrompt: draftCommandReviewPrompt
 			});
 
 			setSavedPrompt(config.prompt);
 			setDraftPrompt(config.prompt);
 			setSavedGitCommitPrompt(config.gitCommitPrompt);
 			setDraftGitCommitPrompt(config.gitCommitPrompt);
+			setSavedCommandReviewPrompt(config.commandReviewPrompt);
+			setDraftCommandReviewPrompt(config.commandReviewPrompt);
 			setUpdatedAt(config.updatedAt);
 		} catch (error: unknown) {
 			setErrorMessage(error instanceof Error ? error.message : "Failed to save personalization settings");
@@ -79,6 +95,7 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 	function handleCancel(): void {
 		setDraftPrompt(savedPrompt);
 		setDraftGitCommitPrompt(savedGitCommitPrompt);
+		setDraftCommandReviewPrompt(savedCommandReviewPrompt);
 		setErrorMessage(null);
 	}
 
@@ -144,6 +161,27 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 							showCount={true}
 							onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
 								setDraftGitCommitPrompt(event.target.value);
+							}}
+						/>
+
+						<div className={styles.header}>
+							<Typography.Title level={4} className={styles.title}>
+								Supplemental review preferences
+							</Typography.Title>
+							<Typography.Text type="secondary" className={styles.description}>
+								Additional preferences for Auto-safe command review. Fixed safety rules always take precedence.
+							</Typography.Text>
+						</div>
+
+						<Input.TextArea
+							className={styles.textarea}
+							value={draftCommandReviewPrompt}
+							autoSize={{ minRows: 6, maxRows: 14 }}
+							maxLength={20000}
+							showCount={true}
+							placeholder="Add project-specific command review preferences."
+							onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
+								setDraftCommandReviewPrompt(event.target.value);
 							}}
 						/>
 

@@ -75,20 +75,6 @@
 	gap: 10px;
 }
 
-.godotTitleRow {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	min-width: 0;
-}
-
-.godotPathRow {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto auto;
-	gap: 8px;
-	align-items: center;
-}
-
 @media (max-width: 720px) {
 	.godotPathRow {
 		grid-template-columns: minmax(0, 1fr) auto;

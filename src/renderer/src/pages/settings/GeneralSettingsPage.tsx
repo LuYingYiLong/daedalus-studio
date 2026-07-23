@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import styles from "./GeneralSettingsPage.module.css";
-import { Alert, Button, Card, Input, Segmented, Spin, Switch, Tag, Tooltip, Typography } from "antd";
+import { Alert, Button, Card, Input, Segmented, Space, Spin, Switch, Tag, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import {
 	fetchClientPreferences,
@@ -270,7 +270,7 @@ function GeneralSettingsPage({
 									Used when a workspace does not provide its own Godot executable path.
 								</Typography.Text>
 							</div>
-							<div className={styles.godotPathRow}>
+							<Space.Compact>
 								<Input
 									readOnly={true}
 									value={draftGeneralSettings.godotExecutablePath ?? ""}
@@ -292,7 +292,7 @@ function GeneralSettingsPage({
 										onClick={(): void => { void saveGodotExecutablePath(null); }}
 									/>
 								</Tooltip>
-							</div>
+							</Space.Compact>
 							{draftGeneralSettings.godotExecutableError === null ? null : (
 								<Typography.Text type="danger">{draftGeneralSettings.godotExecutableError}</Typography.Text>
 							)}
