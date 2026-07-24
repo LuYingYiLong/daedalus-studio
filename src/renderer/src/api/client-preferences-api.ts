@@ -2,11 +2,14 @@ export type ClientPreferences = {
 	autoCheckForUpdates: boolean;
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
+	language: LanguagePreference;
 	lastComposerModel: {
 		providerId: string;
 		modelId: string;
 	} | null;
 };
+
+export type LanguagePreference = "system" | "en-US" | "zh-CN";
 
 export type ClientPreferencesPatch = Partial<ClientPreferences>;
 
@@ -14,6 +17,7 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	autoCheckForUpdates: true,
 	minimizeToTrayOnClose: false,
 	theme: "system",
+	language: "system",
 	lastComposerModel: null
 };
 

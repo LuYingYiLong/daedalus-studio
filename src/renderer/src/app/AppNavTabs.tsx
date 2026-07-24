@@ -1,12 +1,13 @@
 import { Icon } from "@/assets/icons";
 import { Tooltip } from "antd";
+import { useTranslation } from "react-i18next";
 import styles from "./AppNavTabs.module.css";
 
 export type AppPageKey = "agent" | "settings" | "drawing" | "knowledge";
 
 type AppNavItem = {
 	key: AppPageKey;
-	label: string;
+	labelKey: string;
 	icon: string;
 };
 
@@ -18,22 +19,22 @@ type AppNavTabsProps = {
 export const appNavItems: AppNavItem[] = [
 	{
 		key: "agent",
-		label: "Agent",
+		labelKey: "app.navigation.agent",
 		icon: "chat"
 	},
 	{
 		key: "settings",
-		label: "Settings",
+		labelKey: "app.navigation.settings",
 		icon: "settings"
 	},
 	{
 		key: "drawing",
-		label: "Draw",
+		labelKey: "app.navigation.drawing",
 		icon: "draw"
 	},
 	{
 		key: "knowledge",
-		label: "Knowledge",
+		labelKey: "app.navigation.knowledge",
 		icon: "book"
 	}
 ];
@@ -43,23 +44,28 @@ export function isAppPageKey(key: string): key is AppPageKey {
 }
 
 function AppNavTabs({ activePage, onPageChange }: AppNavTabsProps): React.JSX.Element {
+	const { t } = useTranslation();
+
 	return (
-		<nav className={styles.nav} aria-label="Application navigation">
+		<nav className={styles.nav} aria-label={t("app.navigation.ariaLabel")}>
 			<div className={styles.navList} role="list">
-				{appNavItems.map((item: AppNavItem): React.JSX.Element => (
-					<Tooltip key={item.key} title={item.label} placement="right">
-						<button
-							type="button"
-							className={styles.navButton}
-							data-active={activePage === item.key ? "true" : "false"}
-							aria-label={item.label}
-							aria-current={activePage === item.key ? "page" : undefined}
-							onClick={(): void => onPageChange(item.key)}
-						>
-							<Icon name={item.icon} className={styles.navIcon} />
-						</button>
-					</Tooltip>
-				))}
+				{appNavItems.map((item: AppNavItem): React.JSX.Element => {
+					const label: string = t(item.labelKey);
+					return (
+						<Tooltip key={item.key} title={label} placement="right">
+							<button
+								type="button"
+								className={styles.navButton}
+								data-active={activePage === item.key ? "true" : "false"}
+								aria-label={label}
+								aria-current={activePage === item.key ? "page" : undefined}
+								onClick={(): void => onPageChange(item.key)}
+							>
+								<Icon name={item.icon} className={styles.navIcon} />
+							</button>
+						</Tooltip>
+					);
+				})}
 			</div>
 		</nav>
 	);

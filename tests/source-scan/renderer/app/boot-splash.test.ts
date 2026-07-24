@@ -24,12 +24,12 @@ describe("BootSplash", () => {
 
 	it("uses AntD Result failure actions for startup failures", () => {
 		expect(splashSource).toContain("Result");
-		expect(splashSource).toContain("Retry");
-		expect(splashSource).toContain("Retry install");
-		expect(splashSource).toContain("Repair backend");
-		expect(splashSource).toContain("Restart backend");
+		expect(splashSource).toContain("app.boot.actions.retry");
+		expect(splashSource).toContain("app.boot.actions.retryInstall");
+		expect(splashSource).toContain("app.boot.actions.repairBackend");
+		expect(splashSource).toContain("app.boot.actions.restartBackend");
 		expect(splashSource).toContain("marked_backend_missing");
-		expect(splashSource).toContain("Marked backend version is missing");
+		expect(splashSource).toContain("app.boot.error.markedBackendMissing");
 		expect(splashSource).toContain("window.electronAPI.backendBootstrap.repair()");
 		expect(splashSource).toContain("window.electronAPI.backendBootstrap.retryStart()");
 		expect(splashSource).not.toContain("Spin");

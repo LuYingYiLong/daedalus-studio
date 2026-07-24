@@ -1,6 +1,7 @@
 import { Alert, Button, Select, Spin, Typography } from "antd";
 import type { SelectProps } from "antd";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import {
 	fetchProviderModelSelection,
@@ -22,45 +23,45 @@ type DefaultModelSettingsPageProps = {
 
 type RoutingOption = {
 	key: RoutingKey;
-	title: string;
-	description: string;
+	titleKey: string;
+	descriptionKey: string;
 	filterModel?: (model: ProviderModelInfo) => boolean;
-	placeholder?: string;
+	placeholderKey?: string;
 };
 
 const ROUTING_OPTIONS: RoutingOption[] = [
 	{
 		key: "sessionTitle",
-		title: "Session title model",
-		description: "Used for automatic session renaming and lightweight title generation."
+		titleKey: "settings.defaultModel.routing.sessionTitle.title",
+		descriptionKey: "settings.defaultModel.routing.sessionTitle.description"
 	},
 	{
 		key: "workflowPlanner",
-		title: "Workflow planner model",
-		description: "Used for planning agent workflows before execution."
+		titleKey: "settings.defaultModel.routing.workflowPlanner.title",
+		descriptionKey: "settings.defaultModel.routing.workflowPlanner.description"
 	},
 	{
 		key: "imageRecognition",
-		title: "Image recognition model",
-		description: "Used when the active chat model cannot consume image context directly."
+		titleKey: "settings.defaultModel.routing.imageRecognition.title",
+		descriptionKey: "settings.defaultModel.routing.imageRecognition.description"
 	},
 	{
 		key: "imageGeneration",
-		title: "Image generation/edit model",
-		description: "Used by @image-gen and mcp_image_generate for text-to-image or image-to-image tasks. This must be configured explicitly.",
+		titleKey: "settings.defaultModel.routing.imageGeneration.title",
+		descriptionKey: "settings.defaultModel.routing.imageGeneration.description",
 		filterModel: isImageTaskModel
 	},
 	{
 		key: "gitCommit",
-		title: "Git commit model",
-		description: "Used to generate commit messages from workspace Git diffs. Defaults to the main model when unset."
+		titleKey: "settings.defaultModel.routing.gitCommit.title",
+		descriptionKey: "settings.defaultModel.routing.gitCommit.description"
 	},
 	{
 		key: "commandReview",
-		title: "Command review model",
-		description: "Reviews free terminal commands in Auto-safe mode. When unset, every command asks for your approval.",
+		titleKey: "settings.defaultModel.routing.commandReview.title",
+		descriptionKey: "settings.defaultModel.routing.commandReview.description",
 		filterModel: (model: ProviderModelInfo): boolean => !isImageTaskModel(model),
-		placeholder: "Not configured - always ask me"
+		placeholderKey: "settings.defaultModel.notConfigured"
 	}
 ];
 
@@ -105,6 +106,7 @@ function createModelSelectOptions(selection: ProviderModelSelection | null, filt
 }
 
 function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPageProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const [selection, setSelection] = useState<ProviderModelSelection | null>(null);
 	const [savingKey, setSavingKey] = useState<RoutingKey | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -127,7 +129,7 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 				onSelectionChange?.(result);
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(error instanceof Error ? error.message : "Failed to load default model settings");
+					setErrorMessage(error instanceof Error ? error.message : t("settings.defaultModel.errors.load"));
 				}
 			} finally {
 				if (!cancelled) {
@@ -141,7 +143,7 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 		return (): void => {
 			cancelled = true;
 		};
-	}, [onSelectionChange]);
+	}, [onSelectionChange, t]);
 
 	async function handleRoutingChange(key: RoutingKey, value: string | undefined): Promise<void> {
 		if (selection === null) {
@@ -168,7 +170,7 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 			setSelection(nextSelection);
 			onSelectionChange?.(nextSelection);
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to save model routing");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.defaultModel.errors.save"));
 		} finally {
 			setSavingKey(null);
 		}
@@ -185,7 +187,7 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 	if (selection === null) {
 		return (
 			<section className={styles.page}>
-				<Alert type="error" description={errorMessage ?? "No provider model selection available"} />
+				<Alert type="error" description={errorMessage ?? t("settings.defaultModel.errors.noSelection")} />
 			</section>
 		);
 	}
@@ -219,10 +221,10 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 						<article key={option.key} className={styles.card}>
 							<div className={styles.cardHeader}>
 								<Typography.Title level={4} className={styles.cardTitle}>
-									{option.title}
+									{t(option.titleKey)}
 								</Typography.Title>
 								<Typography.Text type="secondary" className={styles.description}>
-									{option.description}
+									{t(option.descriptionKey)}
 								</Typography.Text>
 							</div>
 							<div className={styles.controlRow}>
@@ -231,7 +233,7 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 									options={createModelSelectOptions(selection, option.filterModel)}
 									value={value}
 									allowClear={{ clearIcon: <Icon name="clear" /> }}
-									placeholder={option.placeholder ?? "Select a model"}
+									placeholder={option.placeholderKey === undefined ? t("settings.defaultModel.selectModel") : t(option.placeholderKey)}
 									showSearch={{
 										optionFilterProp: "label"
 									}}

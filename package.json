@@ -51,11 +51,13 @@
     "antd": "^6.5.0",
     "electron-updater": "^6.8.9",
     "highlight.js": "^11.11.1",
+    "i18next": "^26.3.6",
     "motion": "^12.42.2",
     "node-pty": "^1.1.0",
     "react": "^19.2.7",
     "react-diff-view": "^3.3.3",
     "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.11",
     "three": "^0.185.1",
     "ws": "^8.21.0"
   },

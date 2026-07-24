@@ -2,6 +2,7 @@ import { Alert, Button, Divider, Input, Menu, Space, Spin, Table, Tag, Typograph
 import type { MenuProps, TableProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import {
 	fetchProviderModelSelection,
@@ -16,7 +17,7 @@ import styles from "./ProviderSettingsPage.module.css";
 
 type CapabilityBadge = {
 	key: keyof ProviderModelCapabilities;
-	label: string;
+	labelKey: string;
 	icon: string;
 	color: string;
 };
@@ -26,12 +27,12 @@ type ProviderSettingsPageProps = {
 };
 
 const CAPABILITY_BADGES: CapabilityBadge[] = [
-	{ key: "reasoning", label: "Reasoning", icon: "thinking", color: "blue" },
-	{ key: "tools", label: "Tools", icon: "mcp", color: "orange" },
-	{ key: "webSearch", label: "Search", icon: "search", color: "green" },
-	{ key: "vision", label: "Vision", icon: "show", color: "purple" },
-	{ key: "imageGeneration", label: "Image", icon: "draw", color: "magenta" },
-	{ key: "imageEdit", label: "Edit", icon: "draw", color: "cyan" }
+	{ key: "reasoning", labelKey: "settings.provider.capabilities.reasoning", icon: "thinking", color: "blue" },
+	{ key: "tools", labelKey: "settings.provider.capabilities.tools", icon: "mcp", color: "orange" },
+	{ key: "webSearch", labelKey: "settings.provider.capabilities.webSearch", icon: "search", color: "green" },
+	{ key: "vision", labelKey: "settings.provider.capabilities.vision", icon: "show", color: "purple" },
+	{ key: "imageGeneration", labelKey: "settings.provider.capabilities.imageGeneration", icon: "draw", color: "magenta" },
+	{ key: "imageEdit", labelKey: "settings.provider.capabilities.imageEdit", icon: "draw", color: "cyan" }
 ];
 
 function getModelTokenText(model: ProviderModelInfo): string {
@@ -42,13 +43,13 @@ function getVisibleCapabilities(capabilities: ProviderModelCapabilities): Capabi
 	return CAPABILITY_BADGES.filter((badge: CapabilityBadge): boolean => capabilities[badge.key] === true);
 }
 
-function renderCapabilityTags(capabilities: ProviderModelCapabilities): React.JSX.Element {
+function renderCapabilityTags(capabilities: ProviderModelCapabilities, t: (key: string) => string): React.JSX.Element {
 	return (
 		<span className={styles.capabilities}>
 			{getVisibleCapabilities(capabilities).map((capability: CapabilityBadge): React.JSX.Element => (
 				<Tag key={capability.key} color={capability.color} className={styles.capabilityTag}>
 					<Icon name={capability.icon} width={16} />
-					{capability.label}
+					{t(capability.labelKey)}
 				</Tag>
 			))}
 		</span>
@@ -56,6 +57,7 @@ function renderCapabilityTags(capabilities: ProviderModelCapabilities): React.JS
 }
 
 function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const [selection, setSelection] = useState<ProviderModelSelection | null>(null);
 	const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
 	const [query, setQuery] = useState<string>("");
@@ -87,7 +89,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				});
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(error instanceof Error ? error.message : "Failed to load provider settings");
+					setErrorMessage(error instanceof Error ? error.message : t("settings.provider.errors.load"));
 				}
 			} finally {
 				if (!cancelled) {
@@ -101,7 +103,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 		return (): void => {
 			cancelled = true;
 		};
-	}, []);
+	}, [onSelectionChange, t]);
 
 	const selectedProvider: ProviderModelSelectionProvider | null = useMemo((): ProviderModelSelectionProvider | null => {
 		if (selection === null) {
@@ -145,12 +147,12 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				label: (
 					<span className={styles.providerMenuLabel}>
 						<span className={styles.providerName}>{provider.displayName}</span>
-						{provider.configured ? <Tag color="success" className={styles.providerStatusTag}>ON</Tag> : null}
+						{provider.configured ? <Tag color="success" className={styles.providerStatusTag}>{t("settings.common.on")}</Tag> : null}
 					</span>
 				)
 			};
 		});
-	}, [filteredProviders]);
+	}, [filteredProviders, t]);
 
 	async function reloadSelection(preferredProviderId: string | null = selectedProviderId): Promise<ProviderModelSelection> {
 		const nextSelection: ProviderModelSelection = await fetchProviderModelSelection();
@@ -198,7 +200,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			setDraftApiKey("");
 			setIsApiKeyDirty(false);
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to clear API key");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.provider.errors.clearApiKey"));
 		} finally {
 			setIsSaving(false);
 		}
@@ -215,7 +217,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				setErrorMessage(result.error);
 			}
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to refresh provider models");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.provider.errors.refreshModels"));
 		} finally {
 			setIsRefreshing(false);
 		}
@@ -239,7 +241,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				<div className={styles.detailPane}>
 					<div className={styles.detailContent}>
 						<div className={styles.detailBody}>
-							<Alert type="error" description={errorMessage ?? "No provider settings available"} />
+							<Alert type="error" description={errorMessage ?? t("settings.provider.errors.noSettings")} />
 						</div>
 					</div>
 				</div>
@@ -249,23 +251,23 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 
 	const modelColumns: TableProps<ProviderModelInfo>["columns"] = [
 		{
-			title: "Model",
+			title: t("settings.provider.columns.model"),
 			align: "center",
 			key: "model",
 			render: (_value: unknown, model: ProviderModelInfo): React.JSX.Element => (
 				<span>
 					<span className={styles.modelName}>{model.displayName}</span>
-					<span className={styles.modelMeta}>{model.id} · {getModelTokenText(model)}</span>
+					<span className={styles.modelMeta}>{model.id} - {getModelTokenText(model)}</span>
 				</span>
 			)
 		},
 		{
-			title: "Capabilities",
+			title: t("settings.provider.columns.capabilities"),
 			dataIndex: "capabilities",
 			key: "capabilities",
 			align: "center",
 			width: 360,
-			render: (capabilities: ProviderModelCapabilities): React.JSX.Element => renderCapabilityTags(capabilities)
+			render: (capabilities: ProviderModelCapabilities): React.JSX.Element => renderCapabilityTags(capabilities, t)
 		}
 	];
 
@@ -274,7 +276,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			<aside className={styles.providerListPane}>
 				<Input
 					prefix={<Icon name="search" />}
-					placeholder="Search providers..."
+					placeholder={t("settings.provider.searchPlaceholder")}
 					className={styles.searchBox}
 					value={query}
 					onChange={(event: ChangeEvent<HTMLInputElement>): void => setQuery(event.target.value)}
@@ -290,7 +292,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				/>
 
 				<Button className={styles.addProviderButton} icon={<Icon name="add" />} disabled={true}>
-					Add
+					{t("settings.common.add")}
 				</Button>
 			</aside>
 
@@ -323,12 +325,12 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 
 						<div className={styles.fieldGroup}>
 							<div className={styles.fieldLabelRow}>
-								<Typography.Title className={styles.fieldLabel} level={4}>API Key</Typography.Title>
+								<Typography.Title className={styles.fieldLabel} level={4}>{t("settings.provider.apiKey")}</Typography.Title>
 							</div>
 							<Space.Compact>
 								<Input.Password
 									value={draftApiKey}
-									placeholder={selectedProvider.apiKeyMasked ?? "Enter API key"}
+									placeholder={selectedProvider.apiKeyMasked ?? t("settings.provider.enterApiKey")}
 									onChange={(event: ChangeEvent<HTMLInputElement>): void => {
 										setDraftApiKey(event.target.value);
 										setIsApiKeyDirty(true);
@@ -338,38 +340,39 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 									onClick={(): void => void handleRefreshModels(selectedProvider)}
 									loading={isRefreshing}
 								>
-									Test
+									{t("settings.provider.actions.test")}
 								</Button>
 								<Button
 									color="danger"
 									variant="solid"
 									icon={<Icon name="clear" />}
 									danger={selectedProvider.configured}
+									aria-label={t("settings.provider.actions.clearApiKey")}
 									disabled={isSaving || isRefreshing || (!selectedProvider.configured && draftApiKey.length === 0)}
 									loading={isSaving}
 									onClick={(): void => void handleClearApiKey(selectedProvider)}
 								/>
 							</Space.Compact>
 							<Typography.Text type="secondary" className={styles.fieldHint}>
-								{selectedProvider.apiKeyMasked !== null && !isApiKeyDirty ? `Saved key: ${selectedProvider.apiKeyMasked}` : "Only a newly entered key will be saved."}
+								{selectedProvider.apiKeyMasked !== null && !isApiKeyDirty ? t("settings.provider.savedKey", { key: selectedProvider.apiKeyMasked }) : t("settings.provider.newKeyHint")}
 							</Typography.Text>
 						</div>
 
 						<div className={styles.fieldGroup}>
-							<Typography.Title className={styles.fieldLabel} level={4}>API Base URL</Typography.Title>
+							<Typography.Title className={styles.fieldLabel} level={4}>{t("settings.provider.apiBaseUrl")}</Typography.Title>
 							<Input
 								value={draftBaseUrl}
 								onChange={(event: ChangeEvent<HTMLInputElement>): void => setDraftBaseUrl(event.target.value)}
 							/>
 							<Typography.Text type="secondary" className={styles.fieldHint}>
-								Model list source: {selectedProvider.modelsSource}
-								{selectedProvider.modelsCacheUpdatedAt ? ` · updated ${selectedProvider.modelsCacheUpdatedAt}` : ""}
+								{t("settings.provider.modelListSource", { source: selectedProvider.modelsSource })}
+								{selectedProvider.modelsCacheUpdatedAt ? ` - ${t("settings.provider.updated", { updatedAt: selectedProvider.modelsCacheUpdatedAt })}` : ""}
 							</Typography.Text>
 						</div>
 
 						<div className={styles.modelSectionHeader}>
 							<div className={styles.modelTitle}>
-								<Typography.Title className={styles.fieldLabel} level={4}>Models</Typography.Title>
+								<Typography.Title className={styles.fieldLabel} level={4}>{t("settings.provider.models")}</Typography.Title>
 								<Tag>{selectedProvider.models.length}</Tag>
 							</div>
 							<div className={styles.modelActions}>
@@ -379,7 +382,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 										onClick={(): void => void handleRefreshModels(selectedProvider)}
 										loading={isRefreshing}
 									>
-										Fetch models
+										{t("settings.provider.actions.fetchModels")}
 									</Button>
 									<Button icon={<Icon name="add" />} disabled={true} />
 								</Space.Compact>

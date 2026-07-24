@@ -9,17 +9,20 @@ describe("GeneralSettingsPage", () => {
 		const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 		const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 
-		expect(pageSource).toContain("Auto-expand todo list");
-		expect(pageSource).toContain("Check for updates on startup");
-		expect(pageSource).toContain("Daedalus Studio and backend updates");
-		expect(pageSource).toContain("Minimize to tray on close");
-		expect(pageSource).toContain("Display settings");
-		expect(pageSource).toContain("Theme");
-		expect(pageSource).toContain("System");
+		expect(pageSource).toContain("useTranslation");
+		expect(pageSource).toContain("settings.general.general.autoExpandTodoList.title");
+		expect(pageSource).toContain("settings.general.general.autoCheckForUpdates.title");
+		expect(pageSource).toContain("settings.general.general.minimizeToTrayOnClose.title");
+		expect(pageSource).toContain("settings.general.display.title");
+		expect(pageSource).toContain("settings.general.display.theme.title");
+		expect(pageSource).toContain("settings.general.display.language.title");
+		expect(pageSource).toContain("Select<LanguagePreference>");
+		expect(pageSource).toContain("languageOptions");
 		expect(pageSource).toContain("updateClientPreferences");
 		expect(pageSource).toContain("updateGeneralSettings");
-		expect(pageSource).toContain("Godot executable");
+		expect(pageSource).toContain("settings.general.godot.executable");
 		expect(pageSource).toContain("window.electronAPI.pickGodotExecutable()");
+		expect(apiSource).toContain('language: "system"');
 		expect(generalApiSource).toContain("godotExecutablePath: null");
 		expect(generalApiSource).toContain("schemaVersion: 2;");
 		expect(generalApiSource).toContain("godotExecutableVersion: string | null;");
@@ -35,5 +38,6 @@ describe("GeneralSettingsPage", () => {
 		expect(preloadSource).toContain("client-preferences:update");
 		expect(viteEnvSource).toContain("ClientPreferencesAPI");
 		expect(viteEnvSource).toContain("autoCheckForUpdates: boolean;");
+		expect(viteEnvSource).toContain('language: "system" | "en-US" | "zh-CN";');
 	});
 });

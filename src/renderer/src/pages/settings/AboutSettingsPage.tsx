@@ -1,5 +1,6 @@
 import { Button, Card, Descriptions, Spin, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createBackendClient } from "@/api/backend-client";
 import type { BackendHealthResult } from "@/app/bootstrap";
 import { Icon } from "@/assets/icons";
@@ -41,7 +42,22 @@ function getBackendStatusColor(status: string): string {
 	}
 }
 
-async function loadBackendDetails(): Promise<BackendDetails> {
+function getBackendStatusLabel(status: string, t: (key: string) => string): string {
+	switch (status) {
+		case "healthy":
+			return t("settings.about.backend.status.healthy");
+		case "starting":
+			return t("settings.about.backend.status.starting");
+		case "unhealthy":
+			return t("settings.about.backend.status.unhealthy");
+		case "stopped":
+			return t("settings.about.backend.status.stopped");
+		default:
+			return t("settings.about.backend.status.unknown");
+	}
+}
+
+async function loadBackendDetails(fallbackMessage: string): Promise<BackendDetails> {
 	const status: string = await window.electronAPI.backend.getStatus().catch((): string => "unknown");
 	const port: number | null = await window.electronAPI.backend.getPort().catch((): null => null);
 
@@ -59,12 +75,13 @@ async function loadBackendDetails(): Promise<BackendDetails> {
 			status,
 			port,
 			health: null,
-			errorMessage: getErrorMessage(error, "Failed to load backend details")
+			errorMessage: getErrorMessage(error, fallbackMessage)
 		};
 	}
 }
 
 function AboutSettingsPage(): React.JSX.Element {
+	const { t } = useTranslation();
 	const [packageInfo, setPackageInfo] = useState<PackageInfo | null>(null);
 	const [backendDetails, setBackendDetails] = useState<BackendDetails | null>(null);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -81,7 +98,7 @@ function AboutSettingsPage(): React.JSX.Element {
 
 				const [info, details] = await Promise.all([
 					window.electronAPI.appInfo.getPackageInfo(),
-					loadBackendDetails()
+					loadBackendDetails(t("settings.about.errors.backendDetails"))
 				]);
 
 				if (cancelled) {
@@ -92,7 +109,7 @@ function AboutSettingsPage(): React.JSX.Element {
 				setBackendDetails(details);
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(getErrorMessage(error, "Failed to load application information"));
+					setErrorMessage(getErrorMessage(error, t("settings.about.errors.applicationInfo")));
 				}
 			} finally {
 				if (!cancelled) {
@@ -106,7 +123,7 @@ function AboutSettingsPage(): React.JSX.Element {
 		return (): void => {
 			cancelled = true;
 		};
-	}, []);
+	}, [t]);
 
 	useEffect((): (() => void) => {
 		return window.electronAPI.backend.onStatusChanged((status: string): void => {
@@ -125,7 +142,7 @@ function AboutSettingsPage(): React.JSX.Element {
 	async function handleRefreshBackendDetails(): Promise<void> {
 		try {
 			setIsBackendRefreshing(true);
-			setBackendDetails(await loadBackendDetails());
+			setBackendDetails(await loadBackendDetails(t("settings.about.errors.backendDetails")));
 		} finally {
 			setIsBackendRefreshing(false);
 		}
@@ -135,11 +152,13 @@ function AboutSettingsPage(): React.JSX.Element {
 	const backendStatus: string = backendDetails?.status ?? "unknown";
 	const backendHealth: BackendHealthResult | null = backendDetails?.health ?? null;
 	const backendPort: number | null = backendHealth?.port ?? backendDetails?.port ?? null;
+	const unavailableLabel: string = t("settings.about.unavailable");
+	const backendStatusLabel: string = getBackendStatusLabel(backendStatus, t);
 
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
-				<Typography.Title level={3} className={styles.title}>About</Typography.Title>
+				<Typography.Title level={3} className={styles.title}>{t("settings.about.title")}</Typography.Title>
 			</header>
 
 			<div className={styles.content}>
@@ -195,27 +214,27 @@ function AboutSettingsPage(): React.JSX.Element {
 											Daedalus Backend
 										</Typography.Title>
 										<Tag color={getBackendStatusColor(backendStatus)} className={styles.versionTag}>
-											{backendStatus}
+											{backendStatusLabel}
 										</Tag>
 									</div>
 									<Typography.Text type="secondary" className={styles.description}>
-										Local RPC, workflow, MCP, and Godot integration service.
+										{t("settings.about.backend.description")}
 									</Typography.Text>
 								</div>
 							</div>
 						</Card>
 
-						<Card title="Application Information" className={styles.detailsCard}>
+						<Card title={t("settings.about.applicationInformation")} className={styles.detailsCard}>
 							<Descriptions column={1}>
-								<Descriptions.Item label="Version">
+								<Descriptions.Item label={t("settings.about.fields.version")}>
 									<Typography.Text code>
 										{packageInfo.version}
 									</Typography.Text>
 								</Descriptions.Item>
-								<Descriptions.Item label="License">
+								<Descriptions.Item label={t("settings.about.fields.license")}>
 									<Tag color="green">{packageInfo.license}</Tag>
 								</Descriptions.Item>
-								<Descriptions.Item label="Author">
+								<Descriptions.Item label={t("settings.about.fields.author")}>
 									{packageInfo.author}
 								</Descriptions.Item>
 							</Descriptions>
@@ -224,14 +243,14 @@ function AboutSettingsPage(): React.JSX.Element {
 						<Card
 							title={(
 								<div className={styles.cardTitleRow}>
-									<span>Backend Details</span>
+									<span>{t("settings.about.backend.detailsTitle")}</span>
 									<Button
 										size="small"
 										icon={<Icon name="reload" />}
 										loading={isBackendRefreshing}
 										onClick={(): void => void handleRefreshBackendDetails()}
 									>
-										Refresh
+										{t("settings.about.actions.refresh")}
 									</Button>
 								</div>
 							)}
@@ -243,55 +262,55 @@ function AboutSettingsPage(): React.JSX.Element {
 								</Typography.Paragraph>
 							) : null}
 							<Descriptions column={1}>
-								<Descriptions.Item label="Manager Status">
-									<Tag color={getBackendStatusColor(backendStatus)}>{backendStatus}</Tag>
+								<Descriptions.Item label={t("settings.about.fields.managerStatus")}>
+									<Tag color={getBackendStatusColor(backendStatus)}>{backendStatusLabel}</Tag>
 								</Descriptions.Item>
-								<Descriptions.Item label="Package">
-									{backendHealth?.name ?? "Unavailable"}
+								<Descriptions.Item label={t("settings.about.fields.package")}>
+									{backendHealth?.name ?? unavailableLabel}
 								</Descriptions.Item>
-								<Descriptions.Item label="Version">
+								<Descriptions.Item label={t("settings.about.fields.version")}>
 									<Typography.Text code>
-										{backendHealth?.version ?? "Unavailable"}
+										{backendHealth?.version ?? unavailableLabel}
 									</Typography.Text>
 								</Descriptions.Item>
-								<Descriptions.Item label="Runtime Mode">
-									{backendHealth?.mode ?? "Unavailable"}
+								<Descriptions.Item label={t("settings.about.fields.runtimeMode")}>
+									{backendHealth?.mode ?? unavailableLabel}
 								</Descriptions.Item>
-								<Descriptions.Item label="Port">
+								<Descriptions.Item label={t("settings.about.fields.port")}>
 									<Typography.Text code>
-										{backendPort ?? "Unavailable"}
+										{backendPort ?? unavailableLabel}
 									</Typography.Text>
 								</Descriptions.Item>
-								<Descriptions.Item label="Process ID">
+								<Descriptions.Item label={t("settings.about.fields.processId")}>
 									<Typography.Text code>
-										{backendHealth?.pid ?? "Unavailable"}
+										{backendHealth?.pid ?? unavailableLabel}
 									</Typography.Text>
 								</Descriptions.Item>
-								<Descriptions.Item label="Protocol">
+								<Descriptions.Item label={t("settings.about.fields.protocol")}>
 									{backendHealth?.multiClient ? (
 										<div className={styles.tagGroup}>
 											<Tag color="blue">v{backendHealth.multiClient.protocolVersion}</Tag>
 											<Tag color={backendHealth.multiClient.enabled ? "green" : "default"}>
-												{backendHealth.multiClient.enabled ? "multi-client" : "single-client"}
+												{backendHealth.multiClient.enabled ? t("settings.about.protocol.multiClient") : t("settings.about.protocol.singleClient")}
 											</Tag>
 										</div>
 									) : (
-										"Unavailable"
+										unavailableLabel
 									)}
 								</Descriptions.Item>
-								<Descriptions.Item label="Log Path">
+								<Descriptions.Item label={t("settings.about.fields.logPath")}>
 									{backendHealth?.logPath ? (
 										<Typography.Text code copyable className={styles.pathText}>
 											{backendHealth.logPath}
 										</Typography.Text>
 									) : (
-										"Unavailable"
+										unavailableLabel
 									)}
 								</Descriptions.Item>
 							</Descriptions>
 						</Card>
 
-						<Card title="Source Code" className={styles.githubCard}>
+						<Card title={t("settings.about.sourceCode")} className={styles.githubCard}>
 							<Typography.Paragraph>
 								<Typography.Link
 									href={gitHubUrl}
@@ -304,7 +323,7 @@ function AboutSettingsPage(): React.JSX.Element {
 								</Typography.Link>
 							</Typography.Paragraph>
 							<Typography.Text type="secondary">
-								Visit our GitHub repository for source code, issues, and contributions.
+								{t("settings.about.sourceDescription")}
 							</Typography.Text>
 						</Card>
 					</>

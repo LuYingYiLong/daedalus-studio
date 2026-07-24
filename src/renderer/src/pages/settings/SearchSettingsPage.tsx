@@ -1,6 +1,7 @@
 import { Alert, Card, Select, Slider, Spin, Switch, Typography } from "antd";
 import type { SelectProps, SliderSingleProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
 	fetchWebSearchSettings,
 	updateWebSearchSettings,
@@ -69,6 +70,7 @@ function createModelOptions(settings: WebSearchSettings | null): SelectProps["op
 }
 
 function SearchSettingsPage(): React.JSX.Element {
+	const { t } = useTranslation();
 	const [settings, setSettings] = useState<WebSearchSettings | null>(null);
 	const [draftMaxResults, setDraftMaxResults] = useState<number>(5);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -89,7 +91,7 @@ function SearchSettingsPage(): React.JSX.Element {
 				}
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(error instanceof Error ? error.message : "Failed to load web search settings");
+					setErrorMessage(error instanceof Error ? error.message : t("settings.search.errors.load"));
 				}
 			} finally {
 				if (!cancelled) {
@@ -103,7 +105,7 @@ function SearchSettingsPage(): React.JSX.Element {
 		return (): void => {
 			cancelled = true;
 		};
-	}, []);
+	}, [t]);
 
 	const modelOptions: SelectProps["options"] = useMemo((): SelectProps["options"] => {
 		return createModelOptions(settings);
@@ -123,7 +125,7 @@ function SearchSettingsPage(): React.JSX.Element {
 			if (key === "maxResults" && settings !== null) {
 				setDraftMaxResults(settings.maxResults);
 			}
-			setErrorMessage(error instanceof Error ? error.message : "Failed to save web search settings");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.search.errors.save"));
 		} finally {
 			setSavingKey(null);
 		}
@@ -153,13 +155,13 @@ function SearchSettingsPage(): React.JSX.Element {
 			<header className={styles.header}>
 				<div className={styles.titleRow}>
 					<Typography.Title level={3} className={styles.title}>
-						Search
+						{t("settings.search.title")}
 					</Typography.Title>
 				</div>
 			</header>
 
 			<div className={styles.content}>
-				<Card title="Web search">
+				<Card title={t("settings.search.webSearchTitle")}>
 					{errorMessage !== null ? (
 						<Alert
 							type="warning"
@@ -181,8 +183,8 @@ function SearchSettingsPage(): React.JSX.Element {
 							{[
 								{
 									key: "enabled",
-									title: "Enable web search",
-									description: "Allow every conversation to use the configured web search tool when current information is needed.",
+									title: t("settings.search.enabled.title"),
+									description: t("settings.search.enabled.description"),
 									action: (
 										<Switch
 											checked={settings.enabled}
@@ -194,23 +196,23 @@ function SearchSettingsPage(): React.JSX.Element {
 								},
 								{
 									key: "model",
-									title: "Search model",
-									description: "Choose the provider-native search model used by the global web search tool.",
+									title: t("settings.search.model.title"),
+									description: t("settings.search.model.description"),
 									action: (
 										<Select
 											value={selectedModelValue}
 											options={modelOptions}
 											loading={savingKey === "model"}
 											disabled={savingKey !== null || settings.models.length === 0}
-											placeholder="Select a search model"
+											placeholder={t("settings.search.model.placeholder")}
 											onChange={handleModelChange}
 										/>
 									)
 								},
 								{
 									key: "maxResults",
-									title: "Search result count",
-									description: "Default number of search results returned to the assistant when a search tool call does not override it.",
+									title: t("settings.search.maxResults.title"),
+									description: t("settings.search.maxResults.description"),
 									action: (
 										<div className={styles.sliderControl}>
 											<Slider
@@ -220,7 +222,7 @@ function SearchSettingsPage(): React.JSX.Element {
 												marks={SEARCH_RESULT_MARKS}
 												value={draftMaxResults}
 												disabled={savingKey !== null}
-												tooltip={{ formatter: (value: number | undefined): string => `${value ?? 0} results` }}
+												tooltip={{ formatter: (value: number | undefined): string => t("settings.search.maxResults.tooltip", { count: value ?? 0 }) }}
 												onChange={(value: number): void => setDraftMaxResults(value)}
 												onChangeComplete={handleMaxResultsChangeComplete}
 											/>
@@ -243,7 +245,7 @@ function SearchSettingsPage(): React.JSX.Element {
 						<Alert
 							type="info"
 							showIcon={true}
-							description="Configure the selected provider API key in Provider settings before web search can be used."
+							description={t("settings.search.configureProvider")}
 						/>
 					) : null}
 				</Card>

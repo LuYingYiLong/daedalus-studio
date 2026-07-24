@@ -10,14 +10,14 @@ describe("SearchSettingsPage", () => {
 		const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
 
 		expect(settingsSource).toContain('key: "search"');
-		expect(settingsSource).toContain('label: "Search"');
+		expect(settingsSource).toContain('labelKey: "settings.menu.search"');
 		expect(settingsSource).toContain('icon: <Icon name="search" />');
-		expect(pageSource).toContain("Enable web search");
+		expect(pageSource).toContain("settings.search.enabled.title");
 		expect(pageSource).toContain("<Switch");
 		expect(pageSource).toContain("checked={settings.enabled}");
 		expect(pageSource).toContain("void savePatch(\"enabled\", { enabled });");
-		expect(pageSource).toContain("Search model");
-		expect(pageSource).toContain("Search result count");
+		expect(pageSource).toContain("settings.search.model.title");
+		expect(pageSource).toContain("settings.search.maxResults.title");
 		expect(pageSource).toContain("SEARCH_RESULT_MARKS");
 		expect(pageSource).toContain("onChangeComplete");
 		expect(pageSource).not.toContain("<List");
@@ -26,10 +26,11 @@ describe("SearchSettingsPage", () => {
 		expect(apiSource).toContain("enabled: boolean");
 		expect(apiSource).toContain("enabled?: boolean");
 		expect(apiSource).toContain("maxResults: number");
-		expect(pageSource).toContain("global web search tool");
+		expect(pageSource).toContain("settings.search.model.description");
 		expect(apiSource).toContain('client.request<WebSearchSettings>("webSearchSettings.get")');
 		expect(apiSource).toContain('client.request<WebSearchSettings>("webSearchSettings.update", patch)');
-		expect(providerSource).toContain('{ key: "webSearch", label: "Search", icon: "search"');
+		expect(providerSource).toContain('key: "webSearch"');
+		expect(providerSource).toContain('labelKey: "settings.provider.capabilities.webSearch"');
 		expect(composerSource).toContain('modelBadges.push("Search")');
 		expect(composerSource).not.toContain("webSearchEnabled");
 		expect(composerSource).not.toContain("onWebSearchEnabledChange");

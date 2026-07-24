@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./McpServersSettingsPage.module.css";
 import { Alert, Button, Empty, Form, Input, Modal, Select, Space, Spin, Switch, Tag, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
@@ -33,6 +34,19 @@ function getStatusColor(status: McpRuntimeStatus): string {
 	return "processing";
 }
 
+function getStatusLabel(status: McpRuntimeStatus, t: (key: string) => string): string {
+	switch (status) {
+		case "connected":
+			return t("settings.mcpServers.status.connected");
+		case "failed":
+			return t("settings.mcpServers.status.failed");
+		case "disabled":
+			return t("settings.mcpServers.status.disabled");
+		default:
+			return t("settings.mcpServers.status.starting");
+	}
+}
+
 function getServerSummary(server: CustomMcpServer): string {
 	if (server.transport === "stdio") {
 		return [server.command, ...server.args].filter((part: string | null): part is string => typeof part === "string" && part.length > 0).join(" ");
@@ -40,9 +54,9 @@ function getServerSummary(server: CustomMcpServer): string {
 	return server.url ?? "";
 }
 
-function getSecretSummary(server: CustomMcpServer): string {
+function getSecretSummary(server: CustomMcpServer, noSecretsLabel: string): string {
 	const names: string[] = server.transport === "stdio" ? server.envNames : server.headerNames;
-	return names.length === 0 ? "No secrets" : names.join(", ");
+	return names.length === 0 ? noSecretsLabel : names.join(", ");
 }
 
 function applyConfigResult(result: McpConfigListResult, setServers: (servers: CustomMcpServer[]) => void, setErrorMessage: (message: string | null) => void): void {
@@ -76,6 +90,7 @@ function createEditFormValues(server: CustomMcpServer): McpServerFormValues {
 }
 
 function McpServersSettingsPage(): React.JSX.Element {
+	const { t } = useTranslation();
 	const [form] = Form.useForm<McpServerFormValues>();
 	const [serverModalMode, setServerModalMode] = useState<"add" | "edit" | null>(null);
 	const [editingServer, setEditingServer] = useState<CustomMcpServer | null>(null);
@@ -101,7 +116,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 				}
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(error instanceof Error ? error.message : "Failed to load MCP servers");
+					setErrorMessage(error instanceof Error ? error.message : t("settings.mcpServers.errors.load"));
 				}
 			} finally {
 				if (!cancelled) {
@@ -115,7 +130,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 		return (): void => {
 			cancelled = true;
 		};
-	}, []);
+	}, [t]);
 
 	const filteredServers: CustomMcpServer[] = useMemo((): CustomMcpServer[] => {
 		const normalizedQuery: string = query.trim().toLowerCase();
@@ -181,7 +196,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 			const result = await setMcpServerEnabled(server.id, enabled);
 			applyConfigResult(result, setServers, setErrorMessage);
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to update MCP server");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.mcpServers.errors.update"));
 		} finally {
 			setBusyServerId(null);
 		}
@@ -189,9 +204,9 @@ function McpServersSettingsPage(): React.JSX.Element {
 
 	function confirmDelete(server: CustomMcpServer): void {
 		Modal.confirm({
-			title: "Delete MCP server?",
-			content: `Delete ${server.name} from Daedalus Studio. Stored secrets for this MCP server will also be removed.`,
-			okText: "Delete",
+			title: t("settings.mcpServers.confirm.delete.title"),
+			content: t("settings.mcpServers.confirm.delete.description", { name: server.name }),
+			okText: t("settings.common.delete"),
 			okButtonProps: { danger: true },
 			async onOk(): Promise<void> {
 				try {
@@ -200,7 +215,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 					const result = await removeMcpServer(server.id);
 					applyConfigResult(result, setServers, setErrorMessage);
 				} catch (error: unknown) {
-					setErrorMessage(error instanceof Error ? error.message : "Failed to delete MCP server");
+					setErrorMessage(error instanceof Error ? error.message : t("settings.mcpServers.errors.delete"));
 				} finally {
 					setBusyServerId(null);
 				}
@@ -213,7 +228,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 			<header className={styles.header}>
 				<div className={styles.titleRow}>
 					<Typography.Title level={3} className={styles.title}>
-						MCP Servers
+						{t("settings.mcpServers.title")}
 					</Typography.Title>
 					<Tag>{servers.length}</Tag>
 				</div>
@@ -221,7 +236,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 					<Input
 						allowClear={true}
 						prefix={<Icon name="search" />}
-						placeholder="Search MCP..."
+						placeholder={t("settings.mcpServers.searchPlaceholder")}
 						className={styles.searchBox}
 						value={query}
 						onChange={(event: ChangeEvent<HTMLInputElement>): void => setQuery(event.target.value)}
@@ -230,7 +245,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 						icon={<Icon name="add" />}
 						onClick={openAddModal}
 					>
-						Add
+						{t("settings.common.add")}
 					</Button>
 				</Space.Compact>
 			</header>
@@ -252,7 +267,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 				) : filteredServers.length === 0 ? (
 					<Empty
 						image={<Icon name="empty" />}
-						description={servers.length === 0 ? "No custom MCP servers" : "No matching MCP servers"}
+						description={servers.length === 0 ? t("settings.mcpServers.empty.none") : t("settings.mcpServers.empty.noMatches")}
 					/>
 				) : filteredServers.map((server: CustomMcpServer): React.JSX.Element => {
 					const isBusy: boolean = busyServerId === server.id;
@@ -262,16 +277,16 @@ function McpServersSettingsPage(): React.JSX.Element {
 								<div className={styles.serverTitleRow}>
 									<Typography.Title level={4} className={styles.serverTitle}>{server.name}</Typography.Title>
 									<Tag>{server.transport.toUpperCase()}</Tag>
-									<Tag color={getStatusColor(server.status)}>{server.status}</Tag>
-									{server.enabled ? <Tag color="success">ON</Tag> : <Tag>OFF</Tag>}
+									<Tag color={getStatusColor(server.status)}>{getStatusLabel(server.status, t)}</Tag>
+									{server.enabled ? <Tag color="success">{t("settings.common.on")}</Tag> : <Tag>{t("settings.common.off")}</Tag>}
 								</div>
 								{server.description.length > 0 ? (
 									<Typography.Text type="secondary" className={styles.serverDescription}>{server.description}</Typography.Text>
 								) : null}
 								<Typography.Text className={styles.serverSummary}>{getServerSummary(server)}</Typography.Text>
 								<Typography.Text type="secondary" className={styles.serverMeta}>
-									Tools {server.toolCount} · {getSecretSummary(server)}
-									{server.error !== null ? ` · ${server.error}` : ""}
+									{t("settings.mcpServers.toolCount", { count: server.toolCount })} - {getSecretSummary(server, t("settings.mcpServers.noSecrets"))}
+									{server.error !== null ? ` - ${server.error}` : ""}
 								</Typography.Text>
 							</div>
 							<div className={styles.serverActions}>
@@ -282,7 +297,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 									disabled={busyServerId !== null && !isBusy}
 									onClick={(): void => openEditModal(server)}
 								>
-									Edit
+									{t("settings.common.edit")}
 								</Button>
 								<Button
 									type="text"
@@ -292,9 +307,9 @@ function McpServersSettingsPage(): React.JSX.Element {
 									disabled={busyServerId !== null && !isBusy}
 									onClick={(): void => confirmDelete(server)}
 								>
-									Delete
+									{t("settings.common.delete")}
 								</Button>
-								<Tooltip title={server.enabled ? "Disable" : "Enable"}>
+								<Tooltip title={server.enabled ? t("settings.common.disable") : t("settings.common.enable")}>
 									<Switch
 										checked={server.enabled}
 										loading={isBusy}
@@ -311,14 +326,14 @@ function McpServersSettingsPage(): React.JSX.Element {
 			</div>
 
 			<Modal
-				title={serverModalMode === "edit" ? "Edit MCP server" : "Add MCP server"}
+				title={serverModalMode === "edit" ? t("settings.mcpServers.modal.editTitle") : t("settings.mcpServers.modal.addTitle")}
 				centered={true}
 				open={serverModalMode !== null}
 				onCancel={closeServerModal}
 				onOk={(): void => {
 					void handleSubmitServer();
 				}}
-				okText={serverModalMode === "edit" ? "Save" : "Add"}
+				okText={serverModalMode === "edit" ? t("settings.common.save") : t("settings.common.add")}
 				confirmLoading={isSaving}
 				destroyOnHidden={true}
 			>
@@ -327,13 +342,13 @@ function McpServersSettingsPage(): React.JSX.Element {
 					layout="vertical"
 					initialValues={DEFAULT_FORM_VALUES}
 				>
-					<Form.Item label="Name" name="name" rules={[{ required: true, message: "Name is required" }]}>
-						<Input placeholder="MCP server name" disabled={serverModalMode === "edit"} />
+					<Form.Item label={t("settings.mcpServers.form.name")} name="name" rules={[{ required: true, message: t("settings.mcpServers.form.nameRequired") }]}>
+						<Input placeholder={t("settings.mcpServers.form.namePlaceholder")} disabled={serverModalMode === "edit"} />
 					</Form.Item>
-					<Form.Item label="Description" name="description">
-						<TextArea rows={3} placeholder="MCP server description" />
+					<Form.Item label={t("settings.mcpServers.form.description")} name="description">
+						<TextArea rows={3} placeholder={t("settings.mcpServers.form.descriptionPlaceholder")} />
 					</Form.Item>
-					<Form.Item label="Type" name="transport" rules={[{ required: true }]}>
+					<Form.Item label={t("settings.mcpServers.form.type")} name="transport" rules={[{ required: true }]}>
 						<Select
 							value={transport}
 							onChange={handleTransportChange}
@@ -345,7 +360,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 					</Form.Item>
 					{transport === "stdio" ? (
 						<>
-							<Form.Item label="Command" name="command" rules={[{ required: true, message: "Command is required" }]}>
+							<Form.Item label={t("settings.mcpServers.form.command")} name="command" rules={[{ required: true, message: t("settings.mcpServers.form.commandRequired") }]}>
 								<Input placeholder="npx or uvx" />
 							</Form.Item>
 							<Form.Item label="Args" name="args">
@@ -357,7 +372,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 						</>
 					) : (
 						<>
-							<Form.Item label="URL" name="url" rules={[{ required: true, type: "url", message: "A valid URL is required" }]}>
+							<Form.Item label="URL" name="url" rules={[{ required: true, type: "url", message: t("settings.mcpServers.form.urlRequired") }]}>
 								<Input placeholder="https://mcp.example.com/mcp" />
 							</Form.Item>
 							<Form.Item label="HTTP Header" name="headers">

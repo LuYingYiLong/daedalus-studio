@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, Button, Dropdown, Empty, Input, MenuProps, Modal, Select, Space, Spin, Switch, Tag, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import styles from "./SkillsSettingsPage.module.css";
@@ -14,19 +15,6 @@ import {
 	type SkillSummary
 } from "@/api/skill-api";
 
-const addItems: MenuProps["items"] = [
-	{
-		key: "zip",
-		label: "Install from ZIP",
-		icon: <Icon name="file_zip" />
-	},
-	{
-		key: "folder",
-		label: "Install from folder",
-		icon: <Icon name="folder" />
-	}
-];
-
 type SkillScopeFilter = "all" | Exclude<SkillSource, "builtin">;
 
 type PendingInstall = {
@@ -34,17 +22,6 @@ type PendingInstall = {
 	path: string;
 	source: SkillInstallSource;
 };
-
-const scopeOptions: Array<{ value: SkillScopeFilter; label: string }> = [
-	{ value: "all", label: "All" },
-	{ value: "personal", label: "Personal" },
-	{ value: "project", label: "Project" }
-];
-
-const installScopeOptions: Array<{ value: SkillInstallSource; label: string }> = [
-	{ value: "personal", label: "Personal" },
-	{ value: "project", label: "Project" }
-];
 
 function getSourceColor(source: SkillSource): string {
 	if (source === "project") {
@@ -56,11 +33,23 @@ function getSourceColor(source: SkillSource): string {
 	return "default";
 }
 
+function getSourceLabel(source: SkillSource, t: (key: string) => string): string {
+	switch (source) {
+		case "project":
+			return t("settings.skills.scope.project");
+		case "personal":
+			return t("settings.skills.scope.personal");
+		default:
+			return t("settings.skills.scope.builtin");
+	}
+}
+
 function applySkillResult(result: SkillListResult, setSkills: (skills: SkillSummary[]) => void): void {
 	setSkills(result.skills);
 }
 
 function SkillsSettingsPage(): React.JSX.Element {
+	const { t } = useTranslation();
 	const [skills, setSkills] = useState<SkillSummary[]>([]);
 	const [query, setQuery] = useState<string>("");
 	const [scopeFilter, setScopeFilter] = useState<SkillScopeFilter>("all");
@@ -69,6 +58,27 @@ function SkillsSettingsPage(): React.JSX.Element {
 	const [busyRef, setBusyRef] = useState<string | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [pendingInstall, setPendingInstall] = useState<PendingInstall | null>(null);
+	const addItems: MenuProps["items"] = useMemo((): MenuProps["items"] => [
+		{
+			key: "zip",
+			label: t("settings.skills.actions.installFromZip"),
+			icon: <Icon name="file_zip" />
+		},
+		{
+			key: "folder",
+			label: t("settings.skills.actions.installFromFolder"),
+			icon: <Icon name="folder" />
+		}
+	], [t]);
+	const scopeOptions: Array<{ value: SkillScopeFilter; label: string }> = useMemo((): Array<{ value: SkillScopeFilter; label: string }> => [
+		{ value: "all", label: t("settings.skills.scope.all") },
+		{ value: "personal", label: t("settings.skills.scope.personal") },
+		{ value: "project", label: t("settings.skills.scope.project") }
+	], [t]);
+	const installScopeOptions: Array<{ value: SkillInstallSource; label: string }> = useMemo((): Array<{ value: SkillInstallSource; label: string }> => [
+		{ value: "personal", label: t("settings.skills.scope.personal") },
+		{ value: "project", label: t("settings.skills.scope.project") }
+	], [t]);
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -83,7 +93,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 				}
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(error instanceof Error ? error.message : "Failed to load skills");
+					setErrorMessage(error instanceof Error ? error.message : t("settings.skills.errors.load"));
 				}
 			} finally {
 				if (!cancelled) {
@@ -97,7 +107,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 		return (): void => {
 			cancelled = true;
 		};
-	}, []);
+	}, [t]);
 
 	const customSkills: SkillSummary[] = useMemo((): SkillSummary[] => {
 		return skills.filter((skill: SkillSummary): boolean => skill.source !== "builtin");
@@ -131,7 +141,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 			}
 			setPendingInstall({ kind, path, source: "personal" });
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to select skill source");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.skills.errors.selectSource"));
 		}
 	}
 
@@ -146,7 +156,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 			applySkillResult(result, setSkills);
 			setPendingInstall(null);
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to install skill");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.skills.errors.install"));
 		} finally {
 			setIsSaving(false);
 		}
@@ -159,7 +169,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 			const result: SkillListResult = await setSkillEnabled(skill.ref, enabled);
 			applySkillResult(result, setSkills);
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to update skill");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.skills.errors.update"));
 		} finally {
 			setBusyRef(null);
 		}
@@ -167,9 +177,9 @@ function SkillsSettingsPage(): React.JSX.Element {
 
 	function confirmDelete(skill: SkillSummary): void {
 		Modal.confirm({
-			title: "Delete skill?",
-			content: `Delete ${skill.name} from Daedalus Studio. This removes the personal skill files but does not change any Godot project files.`,
-			okText: "Delete",
+			title: t("settings.skills.confirm.delete.title"),
+			content: t("settings.skills.confirm.delete.description", { name: skill.name }),
+			okText: t("settings.common.delete"),
 			okButtonProps: { danger: true },
 			async onOk(): Promise<void> {
 				try {
@@ -178,7 +188,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 					const result: SkillListResult = await removeSkill(skill.ref);
 					applySkillResult(result, setSkills);
 				} catch (error: unknown) {
-					setErrorMessage(error instanceof Error ? error.message : "Failed to delete skill");
+					setErrorMessage(error instanceof Error ? error.message : t("settings.skills.errors.delete"));
 				} finally {
 					setBusyRef(null);
 				}
@@ -191,7 +201,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 			<header className={styles.header}>
 				<div className={styles.titleRow}>
 					<Typography.Title level={3} className={styles.title}>
-						Skills
+						{t("settings.skills.title")}
 					</Typography.Title>
 					<Tag>{customSkills.length}</Tag>
 				</div>
@@ -199,7 +209,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 					<Input
 						allowClear={true}
 						prefix={<Icon name="search" />}
-						placeholder="Search skill..."
+						placeholder={t("settings.skills.searchPlaceholder")}
 						className={styles.searchBox}
 						value={query}
 						onChange={(event: ChangeEvent<HTMLInputElement>): void => setQuery(event.target.value)}
@@ -219,7 +229,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 						}}
 						trigger={["click"]}
 					>
-						<Button icon={<Icon name="add" />}>Add</Button>
+						<Button icon={<Icon name="add" />}>{t("settings.common.add")}</Button>
 					</Dropdown>
 				</Space.Compact>
 			</header>
@@ -241,7 +251,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 				) : filteredSkills.length === 0 ? (
 					<Empty
 						image={<Icon name="empty" />}
-						description={customSkills.length === 0 ? "No custom skills yet. Ask the agent to create a skill, or install one from ZIP/folder." : "No matching skills"}
+						description={customSkills.length === 0 ? t("settings.skills.empty.none") : t("settings.skills.empty.noMatches")}
 					/>
 				) : filteredSkills.map((skill: SkillSummary): React.JSX.Element => {
 					const isBusy: boolean = busyRef === skill.ref;
@@ -250,9 +260,9 @@ function SkillsSettingsPage(): React.JSX.Element {
 							<div className={styles.skillMain}>
 								<div className={styles.skillTitleRow}>
 									<Typography.Title level={4} className={styles.skillTitle}>{skill.name}</Typography.Title>
-									<Tag color={getSourceColor(skill.source)}>{skill.source}</Tag>
-									{skill.valid ? <Tag color="success">VALID</Tag> : <Tag color="error">INVALID</Tag>}
-									{skill.enabled ? <Tag color="success">ON</Tag> : <Tag>OFF</Tag>}
+									<Tag color={getSourceColor(skill.source)}>{getSourceLabel(skill.source, t)}</Tag>
+									{skill.valid ? <Tag color="success">{t("settings.skills.valid")}</Tag> : <Tag color="error">{t("settings.skills.invalid")}</Tag>}
+									{skill.enabled ? <Tag color="success">{t("settings.common.on")}</Tag> : <Tag>{t("settings.common.off")}</Tag>}
 								</div>
 								{skill.description.length > 0 ? (
 									<Typography.Text type="secondary" className={styles.skillDescription}>{skill.description}</Typography.Text>
@@ -260,11 +270,11 @@ function SkillsSettingsPage(): React.JSX.Element {
 								<Typography.Text className={styles.skillSummary}>{skill.displayPath}</Typography.Text>
 								<Typography.Text type="secondary" className={styles.skillMeta}>
 									{skill.ref}
-									{skill.error !== undefined ? ` · ${skill.error}` : ""}
+									{skill.error !== undefined ? ` - ${skill.error}` : ""}
 								</Typography.Text>
 							</div>
 							<div className={styles.skillActions}>
-								<Tooltip title={skill.enabled ? "Disable" : "Enable"}>
+								<Tooltip title={skill.enabled ? t("settings.common.disable") : t("settings.common.enable")}>
 									<Switch
 										checked={skill.enabled}
 										loading={isBusy}
@@ -283,7 +293,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 										disabled={busyRef !== null && !isBusy}
 										onClick={(): void => confirmDelete(skill)}
 									>
-										Delete
+										{t("settings.common.delete")}
 									</Button>
 								) : null}
 							</div>
@@ -293,9 +303,9 @@ function SkillsSettingsPage(): React.JSX.Element {
 			</div>
 
 			<Modal
-				title={pendingInstall === null ? "Install skill" : `Install from ${pendingInstall.kind === "zip" ? "ZIP" : "folder"}`}
+				title={pendingInstall === null ? t("settings.skills.install.title") : t(pendingInstall.kind === "zip" ? "settings.skills.install.fromZip" : "settings.skills.install.fromFolder")}
 				open={pendingInstall !== null}
-				okText="Install"
+				okText={t("settings.skills.actions.install")}
 				confirmLoading={isSaving}
 				onOk={(): void => {
 					void handleConfirmInstall();
@@ -311,7 +321,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 							onChange={(value: SkillInstallSource): void => setPendingInstall({ ...pendingInstall, source: value })}
 						/>
 						<Typography.Text type="secondary">
-							Project installs require an active workspace. Personal installs are available across workspaces.
+							{t("settings.skills.install.description")}
 						</Typography.Text>
 					</div>
 				) : null}

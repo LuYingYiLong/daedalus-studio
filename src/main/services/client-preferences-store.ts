@@ -5,6 +5,7 @@ export type ClientPreferences = {
 	autoCheckForUpdates: boolean;
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
+	language: "system" | "en-US" | "zh-CN";
 	lastComposerModel: {
 		providerId: string;
 		modelId: string;
@@ -17,6 +18,7 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	autoCheckForUpdates: true,
 	minimizeToTrayOnClose: false,
 	theme: "system",
+	language: "system",
 	lastComposerModel: null
 };
 
@@ -60,6 +62,10 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 		value.theme === "light" || value.theme === "dark" || value.theme === "system"
 			? value.theme
 			: DEFAULT_CLIENT_PREFERENCES.theme;
+	const languagePreference: ClientPreferences["language"] =
+		value.language === "en-US" || value.language === "zh-CN" || value.language === "system"
+			? value.language
+			: DEFAULT_CLIENT_PREFERENCES.language;
 	const lastComposerModel = isRecord(value.lastComposerModel)
 		&& typeof value.lastComposerModel.providerId === "string"
 		&& value.lastComposerModel.providerId.trim().length > 0
@@ -76,13 +82,15 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			autoCheckForUpdates,
 			minimizeToTrayOnClose,
 			theme: themePreference,
+			language: languagePreference,
 			lastComposerModel
 		},
 		normalized: value.autoCheckForUpdates !== autoCheckForUpdates
 			|| value.minimizeToTrayOnClose !== minimizeToTrayOnClose
 			|| value.theme !== themePreference
+			|| value.language !== languagePreference
 			|| JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel)
-			|| Object.keys(value).some((key: string): boolean => key !== "autoCheckForUpdates" && key !== "minimizeToTrayOnClose" && key !== "theme" && key !== "lastComposerModel")
+			|| Object.keys(value).some((key: string): boolean => key !== "autoCheckForUpdates" && key !== "minimizeToTrayOnClose" && key !== "theme" && key !== "language" && key !== "lastComposerModel")
 	};
 }
 
@@ -100,6 +108,9 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	}
 	if (value.theme === "light" || value.theme === "dark" || value.theme === "system") {
 		patch.theme = value.theme;
+	}
+	if (value.language === "en-US" || value.language === "zh-CN" || value.language === "system") {
+		patch.language = value.language;
 	}
 	if (value.lastComposerModel === null) {
 		patch.lastComposerModel = null;

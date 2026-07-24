@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { archiveSession, fetchSessions, renameSession } from "@/api/session-api";
 import { deleteWorkspace, fetchWorkspaces } from "@/api/workspace-api";
 import type { DeleteWorkspaceResult } from "@/api/workspace-api";
@@ -30,8 +31,38 @@ export type WorkspaceTreeProps = {
 type WorkspaceMenuItem = NonNullable<MenuProps["items"]>[number];
 type WorkspaceMenuItems = NonNullable<MenuProps["items"]>;
 
+type WorkspaceTreeLabels = {
+	archiveSession: string;
+	copySessionId: string;
+	delete: string;
+	deleteWorkspaceBody: string;
+	deleteWorkspaceTitle: string;
+	failedArchiveSession: string;
+	failedCopySessionId: string;
+	failedDeleteWorkspace: string;
+	failedLoadWorkspace: string;
+	failedOpenSessionDirectory: string;
+	failedOpenWorkspaceDirectory: string;
+	failedRenameSession: string;
+	newSessionInWorkspace: string;
+	noSessions: string;
+	noWorkspace: string;
+	openInExplorer: string;
+	otherSessions: string;
+	rename: string;
+	renameSession: string;
+	sessionIdCopied: string;
+	sessionTitleCannotBeEmpty: string;
+	sessionTitlePlaceholder: string;
+	sessions: string;
+	archiveSessionAria: (sessionTitle: string) => string;
+	newSessionInWorkspaceAria: (workspaceName: string) => string;
+	workspaceActionsAria: (workspaceName: string) => string;
+};
+
 type CreateSessionMenuItemOptions = {
 	archivingSessionId: string | null;
+	labels: WorkspaceTreeLabels;
 	onArchiveButton: (session: SessionMetadata, event: MouseEvent<HTMLElement>) => void;
 	onRename: (session: SessionMetadata) => void;
 	onArchive: (session: SessionMetadata) => void;
@@ -49,27 +80,28 @@ type CreateWorkspaceMenuItemOptions = CreateSessionMenuItemOptions & {
 
 function createSessionMenuItem(session: SessionMetadata, options: CreateSessionMenuItemOptions): WorkspaceMenuItem {
 	const isArchiving: boolean = options.archivingSessionId === session.id;
+	const labels: WorkspaceTreeLabels = options.labels;
 	const actionMenu: MenuProps = {
 		items: [
 			{
 				key: "rename",
-				label: "Rename session",
+				label: labels.renameSession,
 				icon: <Icon name="pencil" />,
 			},
 			{
 				key: "archive",
-				label: "Archive session",
+				label: labels.archiveSession,
 				icon: <Icon name="archive" />,
 				disabled: options.archivingSessionId !== null,
 			},
 			{
 				key: "open",
-				label: "Open in Explorer",
+				label: labels.openInExplorer,
 				icon: <Icon name="folder-open" />,
 			},
 			{
 				key: "copy",
-				label: "Copy session ID",
+				label: labels.copySessionId,
 				icon: <Icon name="copy" />,
 			}
 		],
@@ -101,12 +133,12 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 			<Dropdown menu={actionMenu} trigger={["contextMenu"]} placement="bottomLeft">
 				<span className={styles.sessionMenuItem}>
 					<span className={styles.sessionTitle}>{session.title}</span>
-					<Tooltip title="Archive session" placement="right">
+					<Tooltip title={labels.archiveSession} placement="right">
 						<Button
 							type="text"
 							shape="circle"
 							size="small"
-							aria-label={`Archive ${session.title}`}
+							aria-label={labels.archiveSessionAria(session.title)}
 							className={styles.archiveButton}
 							icon={<Icon name="archive" />}
 							loading={isArchiving}
@@ -121,6 +153,7 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 
 function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: SessionMetadata[], options: CreateWorkspaceMenuItemOptions): WorkspaceMenuItems {
 	const workspaceIds: Set<string> = new Set(workspaces.map((workspace: WorkspaceConfig): string => workspace.id));
+	const labels: WorkspaceTreeLabels = options.labels;
 	const workspaceItems: WorkspaceMenuItems = workspaces.map((workspace: WorkspaceConfig): WorkspaceMenuItem => {
 		const workspaceSessions: SessionMetadata[] = sessions.filter((session: SessionMetadata): boolean => {
 			return session.workspaceId === workspace.id;
@@ -130,12 +163,12 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 			items: [
 				{
 					key: "open",
-					label: "Open in Explorer",
+					label: labels.openInExplorer,
 					icon: <Icon name="folder-open" />,
 				},
 				{
 					key: "delete",
-					label: "Delete",
+					label: labels.delete,
 					icon: <Icon name="remove" />,
 					danger: true,
 					disabled: options.deletingWorkspaceId !== null
@@ -174,7 +207,7 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 								type="text"
 								shape="circle"
 								size="small"
-								aria-label={`Workspace actions for ${workspace.name}`}
+								aria-label={labels.workspaceActionsAria(workspace.name)}
 								className={styles.workspaceActionButton}
 								icon={<Icon name="more-v" width={16} height={16} />}
 								loading={isDeleting}
@@ -184,12 +217,12 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 								}}
 							/>
 						</Dropdown>
-						<Tooltip title="New session in workspace" placement="right">
+						<Tooltip title={labels.newSessionInWorkspace} placement="right">
 							<Button
 								type="text"
 								shape="circle"
 								size="small"
-								aria-label={`New session in ${workspace.name}`}
+								aria-label={labels.newSessionInWorkspaceAria(workspace.name)}
 								className={styles.workspaceActionButton}
 								icon={<Icon name="add" width={16} height={16} />}
 								onClick={(event: MouseEvent<HTMLElement>): void => options.onNewWorkspaceSession(workspace, event)}
@@ -204,7 +237,7 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 				: [
 					{
 						key: `workspace:${workspace.id}:empty`,
-						label: "No sessions",
+						label: labels.noSessions,
 						disabled: true
 					}
 				]
@@ -222,7 +255,7 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 		...workspaceItems,
 		{
 			key: "session-group:unmatched",
-			label: workspaces.length === 0 ? "Sessions" : "Other sessions",
+			label: workspaces.length === 0 ? labels.sessions : labels.otherSessions,
 			type: "group",
 			children: unmatchedSessions.map((session: SessionMetadata): WorkspaceMenuItem => createSessionMenuItem(session, options))
 		}
@@ -258,6 +291,7 @@ function WorkspaceTree({
 	onWorkspaceDelete
 }: WorkspaceTreeProps): React.JSX.Element {
 	const [messageApi, messageContextHolder] = message.useMessage();
+	const { t } = useTranslation();
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>(() => initialWorkspaces);
 	const [sessions, setSessions] = useState<SessionMetadata[]>(() => initialSessions);
 	const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(initialActiveWorkspaceId);
@@ -273,6 +307,36 @@ function WorkspaceTree({
 	const [renameDraftTitle, setRenameDraftTitle] = useState<string>("");
 	const [renameError, setRenameError] = useState<string | null>(null);
 	const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+	const labels: WorkspaceTreeLabels = useMemo((): WorkspaceTreeLabels => {
+		return {
+			archiveSession: t("workspaceTree.actions.archiveSession"),
+			copySessionId: t("workspaceTree.actions.copySessionId"),
+			delete: t("workspaceTree.actions.delete"),
+			deleteWorkspaceBody: t("workspaceTree.modals.deleteWorkspace.body"),
+			deleteWorkspaceTitle: t("workspaceTree.modals.deleteWorkspace.title"),
+			failedArchiveSession: t("workspaceTree.errors.archiveSession"),
+			failedCopySessionId: t("workspaceTree.errors.copySessionId"),
+			failedDeleteWorkspace: t("workspaceTree.errors.deleteWorkspace"),
+			failedLoadWorkspace: t("workspaceTree.errors.loadWorkspace"),
+			failedOpenSessionDirectory: t("workspaceTree.errors.openSessionDirectory"),
+			failedOpenWorkspaceDirectory: t("workspaceTree.errors.openWorkspaceDirectory"),
+			failedRenameSession: t("workspaceTree.errors.renameSession"),
+			newSessionInWorkspace: t("workspaceTree.actions.newSessionInWorkspace"),
+			noSessions: t("workspaceTree.empty.noSessions"),
+			noWorkspace: t("workspaceTree.empty.noWorkspace"),
+			openInExplorer: t("workspaceTree.actions.openInExplorer"),
+			otherSessions: t("workspaceTree.groups.otherSessions"),
+			rename: t("workspaceTree.actions.rename"),
+			renameSession: t("workspaceTree.actions.renameSession"),
+			sessionIdCopied: t("workspaceTree.messages.sessionIdCopied"),
+			sessionTitleCannotBeEmpty: t("workspaceTree.errors.sessionTitleCannotBeEmpty"),
+			sessionTitlePlaceholder: t("workspaceTree.modals.renameSession.placeholder"),
+			sessions: t("workspaceTree.groups.sessions"),
+			archiveSessionAria: (sessionTitle: string): string => t("workspaceTree.aria.archiveSession", { sessionTitle }),
+			newSessionInWorkspaceAria: (workspaceName: string): string => t("workspaceTree.aria.newSessionInWorkspace", { workspaceName }),
+			workspaceActionsAria: (workspaceName: string): string => t("workspaceTree.aria.workspaceActions", { workspaceName })
+		};
+	}, [t]);
 
 	function showWorkspaceOperationError(error: unknown, fallbackMessage: string): void {
 		const errorMessage: string = error instanceof Error ? error.message : fallbackMessage;
@@ -336,7 +400,7 @@ function WorkspaceTree({
 			});
 			onSessionArchive?.(session);
 		} catch (error: unknown) {
-			showWorkspaceOperationError(error, "Failed to archive session");
+			showWorkspaceOperationError(error, labels.failedArchiveSession);
 		} finally {
 			setArchivingSessionId(null);
 		}
@@ -378,7 +442,7 @@ function WorkspaceTree({
 
 		const nextTitle: string = renameDraftTitle.trim();
 		if (nextTitle.length === 0) {
-			setRenameError("Session title cannot be empty.");
+			setRenameError(labels.sessionTitleCannotBeEmpty);
 			return;
 		}
 
@@ -402,7 +466,7 @@ function WorkspaceTree({
 			setRenameTargetSession(null);
 			setRenameDraftTitle("");
 		} catch (error: unknown) {
-			const errorMessage: string = error instanceof Error ? error.message : "Failed to rename session";
+			const errorMessage: string = error instanceof Error ? error.message : labels.failedRenameSession;
 			setRenameError(errorMessage);
 			void messageApi.error(errorMessage);
 		} finally {
@@ -415,16 +479,16 @@ function WorkspaceTree({
 			setWorkspaceError(null);
 			await window.electronAPI.sessionFs.openSessionDirectory(session.id);
 		} catch (error: unknown) {
-			showWorkspaceOperationError(error, "Failed to open session directory");
+			showWorkspaceOperationError(error, labels.failedOpenSessionDirectory);
 		}
 	}
 
 	async function handleCopySessionId(session: SessionMetadata): Promise<void> {
 		try {
 			await copyTextToClipboard(session.id);
-			void messageApi.success("Session ID copied");
+			void messageApi.success(labels.sessionIdCopied);
 		} catch (error: unknown) {
-			showWorkspaceOperationError(error, "Failed to copy session ID");
+			showWorkspaceOperationError(error, labels.failedCopySessionId);
 		}
 	}
 
@@ -433,7 +497,7 @@ function WorkspaceTree({
 			setWorkspaceError(null);
 			await window.electronAPI.workspaceFs.openWorkspaceDirectory(workspace.rootPath);
 		} catch (error: unknown) {
-			showWorkspaceOperationError(error, "Failed to open workspace directory");
+			showWorkspaceOperationError(error, labels.failedOpenWorkspaceDirectory);
 		}
 	}
 
@@ -477,7 +541,7 @@ function WorkspaceTree({
 			setDeleteTargetWorkspace(null);
 			onWorkspaceDelete?.(result);
 		} catch (error: unknown) {
-			showWorkspaceOperationError(error, "Failed to delete workspace");
+			showWorkspaceOperationError(error, labels.failedDeleteWorkspace);
 		} finally {
 			setDeletingWorkspaceId(null);
 		}
@@ -523,7 +587,7 @@ function WorkspaceTree({
 				}
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setWorkspaceError(error instanceof Error ? error.message : "加载工作区失败");
+					setWorkspaceError(error instanceof Error ? error.message : labels.failedLoadWorkspace);
 				}
 			} finally {
 				if (!cancelled) {
@@ -541,12 +605,13 @@ function WorkspaceTree({
 				window.clearTimeout(retryTimer);
 			}
 		};
-	}, [refreshToken, reloadIndex]);
+	}, [labels.failedLoadWorkspace, refreshToken, reloadIndex]);
 
 	const workspaceMenuItems: WorkspaceMenuItems = useMemo((): WorkspaceMenuItems => {
 		return createWorkspaceMenuItems(workspaces, sessions, {
 			archivingSessionId,
 			deletingWorkspaceId,
+			labels,
 			onWorkspaceFocus: handleWorkspaceFocus,
 			onNewWorkspaceSession: handleNewWorkspaceSession,
 			onArchiveButton: (session: SessionMetadata, event: MouseEvent<HTMLElement>): void => {
@@ -571,7 +636,7 @@ function WorkspaceTree({
 				setDeleteTargetWorkspace(workspace);
 			}
 		});
-	}, [archivingSessionId, deletingWorkspaceId, sessions, workspaces]);
+	}, [archivingSessionId, deletingWorkspaceId, labels, sessions, workspaces]);
 	const effectiveSelectedMenuKeys: string[] = getSelectedMenuKeys(selectedSessionId, selectedWorkspaceId, selectedMenuKeys);
 
 	useEffect((): void => {
@@ -640,7 +705,7 @@ function WorkspaceTree({
 				{!isWorkspaceLoading && !workspaceError && workspaceMenuItems.length === 0 ? (
 					<Empty
 						image={Empty.PRESENTED_IMAGE_SIMPLE}
-						description="No workspace"
+						description={labels.noWorkspace}
 						className={styles.workspaceEmpty}
 					/>
 				) : (
@@ -659,9 +724,9 @@ function WorkspaceTree({
 			</div>
 
 			<Modal
-				title="Delete workspace?"
+				title={labels.deleteWorkspaceTitle}
 				open={deleteTargetWorkspace !== null}
-				okText="Delete"
+				okText={labels.delete}
 				okButtonProps={{ danger: true }}
 				confirmLoading={deletingWorkspaceId !== null}
 				onOk={(): void => {
@@ -673,13 +738,13 @@ function WorkspaceTree({
 					}
 				}}
 			>
-				This will delete the workspace from Daedalus and permanently delete its sessions. It will not delete files from your Godot project folder.
+				{labels.deleteWorkspaceBody}
 			</Modal>
 
 			<Modal
-				title="Rename session"
+				title={labels.renameSession}
 				open={renameTargetSession !== null}
-				okText="Rename"
+				okText={labels.rename}
 				confirmLoading={renamingSessionId !== null}
 				onOk={(): void => {
 					void handleConfirmRenameSession();
@@ -694,7 +759,7 @@ function WorkspaceTree({
 			>
 				<Input
 					value={renameDraftTitle}
-					placeholder="Session title"
+					placeholder={labels.sessionTitlePlaceholder}
 					autoFocus={true}
 					maxLength={120}
 					status={renameError === null ? undefined : "error"}

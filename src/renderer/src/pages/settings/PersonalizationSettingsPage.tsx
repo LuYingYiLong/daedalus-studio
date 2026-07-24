@@ -1,11 +1,13 @@
 import { Alert, Button, Input, Spin, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import { fetchUserPromptConfig, saveUserPrompt, type UserPromptConfig } from "@/api/user-prompt-api";
 import styles from "./PersonalizationSettingsPage.module.css";
 
 function PersonalizationSettingsPage(): React.JSX.Element {
+	const { t } = useTranslation();
 	const [savedPrompt, setSavedPrompt] = useState<string>("");
 	const [draftPrompt, setDraftPrompt] = useState<string>("");
 	const [savedGitCommitPrompt, setSavedGitCommitPrompt] = useState<string>("");
@@ -39,7 +41,7 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 				setUpdatedAt(config.updatedAt);
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(error instanceof Error ? error.message : "Failed to load personalization settings");
+					setErrorMessage(error instanceof Error ? error.message : t("settings.personalization.errors.load"));
 				}
 			} finally {
 				if (!cancelled) {
@@ -53,7 +55,7 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 		return (): void => {
 			cancelled = true;
 		};
-	}, []);
+	}, [t]);
 
 	const isDirty: boolean = useMemo((): boolean => {
 		return draftPrompt !== savedPrompt
@@ -86,7 +88,7 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 			setDraftCommandReviewPrompt(config.commandReviewPrompt);
 			setUpdatedAt(config.updatedAt);
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to save personalization settings");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.personalization.errors.save"));
 		} finally {
 			setIsSaving(false);
 		}
@@ -104,10 +106,10 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 			<article className={styles.card}>
 				<div className={styles.header}>
 					<Typography.Title level={4} className={styles.title}>
-						User prompt
+						{t("settings.personalization.userPrompt.title")}
 					</Typography.Title>
 					<Typography.Text type="secondary" className={styles.description}>
-						Custom instructions appended to new AI requests.
+						{t("settings.personalization.userPrompt.description")}
 					</Typography.Text>
 				</div>
 
@@ -136,7 +138,7 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 						<Input.TextArea
 							className={styles.textarea}
 							value={draftPrompt}
-							autoSize={{ minRows: 8, maxRows: 18 }}
+							autoSize={{ minRows: 6, maxRows: 14 }}
 							maxLength={20000}
 							showCount={true}
 							onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
@@ -146,17 +148,17 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 
 						<div className={styles.header}>
 							<Typography.Title level={4} className={styles.title}>
-								Git commit prompt
+								{t("settings.personalization.gitCommitPrompt.title")}
 							</Typography.Title>
 							<Typography.Text type="secondary" className={styles.description}>
-								Custom instructions used only when generating commit messages.
+								{t("settings.personalization.gitCommitPrompt.description")}
 							</Typography.Text>
 						</div>
 
 						<Input.TextArea
 							className={styles.textarea}
 							value={draftGitCommitPrompt}
-							autoSize={{ minRows: 8, maxRows: 18 }}
+							autoSize={{ minRows: 6, maxRows: 14 }}
 							maxLength={20000}
 							showCount={true}
 							onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
@@ -166,10 +168,10 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 
 						<div className={styles.header}>
 							<Typography.Title level={4} className={styles.title}>
-								Supplemental review preferences
+								{t("settings.personalization.commandReviewPrompt.title")}
 							</Typography.Title>
 							<Typography.Text type="secondary" className={styles.description}>
-								Additional preferences for Auto-safe command review. Fixed safety rules always take precedence.
+								{t("settings.personalization.commandReviewPrompt.description")}
 							</Typography.Text>
 						</div>
 
@@ -179,7 +181,7 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 							autoSize={{ minRows: 6, maxRows: 14 }}
 							maxLength={20000}
 							showCount={true}
-							placeholder="Add project-specific command review preferences."
+							placeholder={t("settings.personalization.commandReviewPrompt.placeholder")}
 							onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
 								setDraftCommandReviewPrompt(event.target.value);
 							}}
@@ -187,10 +189,10 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 
 						<div className={styles.footer}>
 							<Button disabled={!isDirty || isSaving} onClick={handleCancel}>
-								Cancel
+								{t("settings.common.cancel")}
 							</Button>
 							<Button type="primary" disabled={!isDirty} loading={isSaving} onClick={(): void => void handleSave()}>
-								Save
+								{t("settings.common.save")}
 							</Button>
 						</div>
 					</>

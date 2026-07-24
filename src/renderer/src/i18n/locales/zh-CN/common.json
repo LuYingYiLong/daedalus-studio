@@ -1,0 +1,447 @@
+{
+  "app": {
+    "navigation": {
+      "ariaLabel": "应用导航",
+      "agent": "对话",
+      "settings": "设置",
+      "drawing": "绘图",
+      "knowledge": "知识库"
+    },
+    "boot": {
+      "progress": {
+        "starting": "正在启动 Daedalus Studio",
+        "checkingBackend": "正在检查后端",
+        "checkingBackendPackage": "正在检查后端包",
+        "installingBackend": "正在安装后端",
+        "preparingBackend": "正在准备后端",
+        "startingBackend": "正在启动后端",
+        "checkingBackendHealth": "正在检查后端健康状态",
+        "backendReady": "后端已就绪",
+        "backendStartupFailed": "后端启动失败"
+      },
+      "error": {
+        "developmentBackendNotRunning": "开发后端未运行",
+        "installFailed": "无法安装 Daedalus 后端",
+        "backendMissing": "Daedalus 后端缺失或已损坏",
+        "markedBackendMissing": "已标记的后端版本缺失",
+        "healthFailed": "Daedalus 后端未能启动",
+        "studioStartFailed": "Daedalus Studio 无法启动",
+        "bootstrapFailed": "后端启动流程失败。"
+      },
+      "actions": {
+        "retry": "重试",
+        "retryInstall": "重新安装",
+        "repairBackend": "修复后端",
+        "restartBackend": "重启后端"
+      }
+    },
+    "home": {
+      "titleWithoutWorkspace": "想从哪里开始？",
+      "titleWithWorkspace": "要在 {{workspaceName}} 里做什么？",
+      "subtitleWithoutWorkspace": "选择一个 workspace，或直接开始。",
+      "subtitleWithWorkspace": "描述这个 workspace 接下来要处理的任务。"
+    }
+  },
+  "workspaceTree": {
+    "actions": {
+      "rename": "重命名",
+      "renameSession": "重命名会话",
+      "archiveSession": "归档会话",
+      "openInExplorer": "在资源管理器中打开",
+      "copySessionId": "复制会话 ID",
+      "delete": "删除",
+      "newSessionInWorkspace": "在 workspace 中新建会话"
+    },
+    "aria": {
+      "archiveSession": "归档 {{sessionTitle}}",
+      "workspaceActions": "{{workspaceName}} 的 workspace 操作",
+      "newSessionInWorkspace": "在 {{workspaceName}} 中新建会话"
+    },
+    "empty": {
+      "noWorkspace": "暂无 workspace",
+      "noSessions": "暂无会话"
+    },
+    "groups": {
+      "sessions": "会话",
+      "otherSessions": "其他会话"
+    },
+    "messages": {
+      "sessionIdCopied": "已复制会话 ID"
+    },
+    "errors": {
+      "archiveSession": "归档会话失败",
+      "copySessionId": "复制会话 ID 失败",
+      "deleteWorkspace": "删除 workspace 失败",
+      "loadWorkspace": "加载 workspace 失败",
+      "openSessionDirectory": "打开会话目录失败",
+      "openWorkspaceDirectory": "打开 workspace 目录失败",
+      "renameSession": "重命名会话失败",
+      "sessionTitleCannotBeEmpty": "会话标题不能为空。"
+    },
+    "modals": {
+      "deleteWorkspace": {
+        "title": "删除 workspace？",
+        "body": "这会从 Daedalus 删除该 workspace，并永久删除它的会话。Godot 项目文件夹中的文件不会被删除。"
+      },
+      "renameSession": {
+        "placeholder": "会话标题"
+      }
+    }
+  },
+  "settings": {
+    "menu": {
+      "provider": "供应商",
+      "defaultModel": "默认模型",
+      "general": "通用",
+      "search": "搜索",
+      "personalization": "个性化",
+      "mcpServers": "MCP 服务器",
+      "skills": "技能",
+      "archivedSessions": "已归档会话",
+      "about": "关于",
+      "fallbackTitle": "设置",
+      "placeholder": "这个设置区域稍后实现。"
+    },
+    "common": {
+      "add": "添加",
+      "cancel": "取消",
+      "delete": "删除",
+      "disable": "禁用",
+      "edit": "编辑",
+      "enable": "启用",
+      "off": "关闭",
+      "on": "开启",
+      "save": "保存"
+    },
+    "about": {
+      "title": "关于",
+      "unavailable": "不可用",
+      "applicationInformation": "应用信息",
+      "sourceCode": "源代码",
+      "sourceDescription": "访问 GitHub 仓库查看源代码、问题和贡献方式。",
+      "backend": {
+        "description": "本地 RPC、workflow、MCP 和 Godot 集成服务。",
+        "detailsTitle": "后端详情",
+        "status": {
+          "healthy": "正常",
+          "starting": "启动中",
+          "unhealthy": "异常",
+          "stopped": "已停止",
+          "unknown": "未知"
+        }
+      },
+      "actions": {
+        "refresh": "刷新"
+      },
+      "fields": {
+        "author": "作者",
+        "license": "许可证",
+        "logPath": "日志路径",
+        "managerStatus": "管理器状态",
+        "package": "包",
+        "port": "端口",
+        "processId": "进程 ID",
+        "protocol": "协议",
+        "runtimeMode": "运行模式",
+        "version": "版本"
+      },
+      "protocol": {
+        "multiClient": "多客户端",
+        "singleClient": "单客户端"
+      },
+      "errors": {
+        "applicationInfo": "加载应用信息失败",
+        "backendDetails": "加载后端详情失败"
+      }
+    },
+    "archivedSessions": {
+      "title": "已归档会话",
+      "loading": "正在加载已归档会话...",
+      "searchPlaceholder": "搜索会话...",
+      "actions": {
+        "delete": "删除",
+        "deleteAll": "全部删除",
+        "restore": "取消归档"
+      },
+      "aria": {
+        "delete": "删除 {{sessionTitle}}",
+        "restore": "取消归档 {{sessionTitle}}"
+      },
+      "filters": {
+        "all": "全部",
+        "noWorkspace": "无 workspace"
+      },
+      "empty": {
+        "none": "暂无已归档会话",
+        "noMatches": "没有匹配的已归档会话"
+      },
+      "confirm": {
+        "deleteSession": {
+          "title": "删除已归档会话？",
+          "description": "这会永久删除这个已归档会话。"
+        },
+        "deleteAll": {
+          "title": "删除已归档会话？",
+          "description": "这会永久删除当前筛选条件下的 {{count}} 个已归档会话。",
+          "description_other": "这会永久删除当前筛选条件下的 {{count}} 个已归档会话。"
+        }
+      },
+      "errors": {
+        "deleteAll": "删除已归档会话失败",
+        "deleteSession": "删除已归档会话失败",
+        "load": "加载已归档会话失败",
+        "restore": "取消归档会话失败"
+      }
+    },
+    "defaultModel": {
+      "selectModel": "选择模型",
+      "notConfigured": "未配置，始终询问我",
+      "routing": {
+        "sessionTitle": {
+          "title": "会话标题模型",
+          "description": "用于自动重命名会话和轻量标题生成。"
+        },
+        "workflowPlanner": {
+          "title": "Workflow 规划模型",
+          "description": "用于在执行前规划 agent workflow。"
+        },
+        "imageRecognition": {
+          "title": "图像识别模型",
+          "description": "当当前聊天模型不能直接处理图片上下文时使用。"
+        },
+        "imageGeneration": {
+          "title": "图像生成/编辑模型",
+          "description": "用于 @image-gen 和 mcp_image_generate 的文生图或图生图任务。必须显式配置。"
+        },
+        "gitCommit": {
+          "title": "Git commit 模型",
+          "description": "用于根据 workspace 的 Git diff 生成 commit message。未设置时默认使用主模型。"
+        },
+        "commandReview": {
+          "title": "命令审查模型",
+          "description": "在 Auto-safe 模式下审查自由终端命令。未设置时，每条命令都会请求你的审批。"
+        }
+      },
+      "errors": {
+        "load": "加载默认模型设置失败",
+        "noSelection": "没有可用的供应商模型选择",
+        "save": "保存模型路由失败"
+      }
+    },
+    "mcpServers": {
+      "title": "MCP 服务",
+      "searchPlaceholder": "搜索 MCP...",
+      "noSecrets": "无密钥",
+      "toolCount": "{{count}} 个工具",
+      "toolCount_other": "{{count}} 个工具",
+      "empty": {
+        "none": "暂无自定义 MCP 服务",
+        "noMatches": "没有匹配的 MCP 服务"
+      },
+      "status": {
+        "connected": "已连接",
+        "disabled": "已禁用",
+        "failed": "失败",
+        "starting": "启动中"
+      },
+      "confirm": {
+        "delete": {
+          "title": "删除 MCP 服务？",
+          "description": "从 Daedalus Studio 删除 {{name}}。这个 MCP 服务保存的密钥也会被移除。"
+        }
+      },
+      "modal": {
+        "addTitle": "添加 MCP 服务",
+        "editTitle": "编辑 MCP 服务"
+      },
+      "form": {
+        "command": "命令",
+        "commandRequired": "命令不能为空",
+        "description": "描述",
+        "descriptionPlaceholder": "MCP 服务描述",
+        "name": "名称",
+        "namePlaceholder": "MCP 服务名称",
+        "nameRequired": "名称不能为空",
+        "type": "类型",
+        "urlRequired": "请输入有效 URL"
+      },
+      "errors": {
+        "delete": "删除 MCP 服务失败",
+        "load": "加载 MCP 服务失败",
+        "update": "更新 MCP 服务失败"
+      }
+    },
+    "personalization": {
+      "userPrompt": {
+        "title": "用户提示词",
+        "description": "附加到新 AI 请求中的自定义指令。"
+      },
+      "gitCommitPrompt": {
+        "title": "Git commit 提示词",
+        "description": "仅在生成 commit message 时使用的自定义指令。"
+      },
+      "commandReviewPrompt": {
+        "title": "补充审查偏好",
+        "description": "用于 Auto-safe 命令审查的额外偏好。固定安全规则始终优先。",
+        "placeholder": "添加项目相关的命令审查偏好。"
+      },
+      "errors": {
+        "load": "加载个性化设置失败",
+        "save": "保存个性化设置失败"
+      }
+    },
+    "provider": {
+      "apiBaseUrl": "API Base URL",
+      "apiKey": "API Key",
+      "enterApiKey": "输入 API Key",
+      "modelListSource": "模型列表来源：{{source}}",
+      "models": "模型",
+      "newKeyHint": "只会保存新输入的 key。",
+      "savedKey": "已保存 key：{{key}}",
+      "searchPlaceholder": "搜索供应商...",
+      "updated": "更新于 {{updatedAt}}",
+      "actions": {
+        "clearApiKey": "清除 API Key",
+        "fetchModels": "获取模型",
+        "test": "测试"
+      },
+      "capabilities": {
+        "imageEdit": "编辑",
+        "imageGeneration": "图像",
+        "reasoning": "推理",
+        "tools": "工具",
+        "vision": "视觉",
+        "webSearch": "搜索"
+      },
+      "columns": {
+        "capabilities": "能力",
+        "model": "模型"
+      },
+      "errors": {
+        "clearApiKey": "清除 API Key 失败",
+        "load": "加载供应商设置失败",
+        "noSettings": "没有可用的供应商设置",
+        "refreshModels": "刷新供应商模型失败"
+      }
+    },
+    "search": {
+      "title": "搜索",
+      "webSearchTitle": "网页搜索",
+      "configureProvider": "使用网页搜索前，请先在供应商设置中配置所选供应商的 API Key。",
+      "enabled": {
+        "title": "启用网页搜索",
+        "description": "当需要当前信息时，允许每个会话使用已配置的网页搜索工具。"
+      },
+      "model": {
+        "title": "搜索模型",
+        "description": "选择全局网页搜索工具使用的供应商原生搜索模型。",
+        "placeholder": "选择搜索模型"
+      },
+      "maxResults": {
+        "title": "搜索结果数量",
+        "description": "当搜索工具调用没有覆盖数量时，默认返回给助手的搜索结果数。",
+        "tooltip": "{{count}} 条结果",
+        "tooltip_other": "{{count}} 条结果"
+      },
+      "errors": {
+        "load": "加载网页搜索设置失败",
+        "save": "保存网页搜索设置失败"
+      }
+    },
+    "skills": {
+      "title": "技能",
+      "invalid": "无效",
+      "searchPlaceholder": "搜索技能...",
+      "valid": "有效",
+      "actions": {
+        "install": "安装",
+        "installFromFolder": "从文件夹安装",
+        "installFromZip": "从 ZIP 安装"
+      },
+      "confirm": {
+        "delete": {
+          "title": "删除技能？",
+          "description": "从 Daedalus Studio 删除 {{name}}。这会移除个人技能文件，但不会修改任何 Godot 项目文件。"
+        }
+      },
+      "empty": {
+        "none": "暂无自定义技能。可以让 agent 创建一个技能，或从 ZIP/文件夹安装。",
+        "noMatches": "没有匹配的技能"
+      },
+      "errors": {
+        "delete": "删除技能失败",
+        "install": "安装技能失败",
+        "load": "加载技能失败",
+        "selectSource": "选择技能来源失败",
+        "update": "更新技能失败"
+      },
+      "install": {
+        "description": "项目安装需要当前存在活动 workspace。个人安装可在所有 workspace 中使用。",
+        "fromFolder": "从文件夹安装",
+        "fromZip": "从 ZIP 安装",
+        "title": "安装技能"
+      },
+      "scope": {
+        "all": "全部",
+        "builtin": "内置",
+        "personal": "个人",
+        "project": "项目"
+      }
+    },
+    "general": {
+      "title": "通用",
+      "display": {
+        "title": "显示设置",
+        "theme": {
+          "title": "主题",
+          "description": "选择此设备上的 Studio 颜色主题。",
+          "system": "跟随系统",
+          "light": "浅色",
+          "dark": "深色"
+        },
+        "language": {
+          "title": "语言",
+          "description": "选择 Studio 的显示语言。",
+          "placeholder": "选择语言",
+          "system": "跟随系统",
+          "english": "English",
+          "chinese": "中文"
+        }
+      },
+      "godot": {
+        "title": "Godot 环境",
+        "executable": "Godot 可执行文件",
+        "description": "当 workspace 没有提供自己的 Godot 可执行文件路径时使用。",
+        "placeholder": "选择 Godot 可执行文件",
+        "browse": "浏览",
+        "clear": "清除 Godot 可执行文件",
+        "status": {
+          "ready": "Godot {{version}}",
+          "readyFallback": "可用",
+          "unavailable": "不可用",
+          "unconfigured": "未配置"
+        }
+      },
+      "general": {
+        "title": "常规设置",
+        "autoExpandTodoList": {
+          "title": "自动展开待办列表",
+          "description": "当会话创建新的待办列表时，自动展开 workflow 待办列表。"
+        },
+        "autoCheckForUpdates": {
+          "title": "启动时检查更新",
+          "description": "应用启动时检查 Daedalus Studio 和后端更新。"
+        },
+        "minimizeToTrayOnClose": {
+          "title": "关闭时最小化到托盘",
+          "description": "点击窗口关闭按钮时，将 Daedalus Studio 隐藏到系统托盘。"
+        }
+      },
+      "errors": {
+        "load": "加载通用设置失败",
+        "save": "保存通用设置失败",
+        "godotExecutable": "验证 Godot 可执行文件失败"
+      }
+    }
+  }
+}

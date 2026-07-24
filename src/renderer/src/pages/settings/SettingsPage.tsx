@@ -1,5 +1,6 @@
 import { Divider, Menu, MenuProps, Typography } from "antd";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { ProviderModelSelection } from "@/api/provider-api";
 import ProviderSettingsPage from "./ProviderSettingsPage";
@@ -36,62 +37,71 @@ type SettingsPageProps = {
 	onGeneralSettingsChange: (settings: GeneralSettings) => void;
 };
 
-const items: MenuItem[] = [
+type SettingsMenuItemConfig = {
+	key: SettingsPageKey;
+	labelKey: string;
+	icon: React.ReactNode;
+};
+
+const menuItemConfigs: SettingsMenuItemConfig[] = [
 	{
 		key: "provider",
-		label: "Provider",
+		labelKey: "settings.menu.provider",
 		icon: <Icon name="cloud" />,
 	},
 	{
 		key: "default_model",
-		label: "Default model",
+		labelKey: "settings.menu.defaultModel",
 		icon: <Icon name="instance" />,
 	},
 	{
 		key: "general",
-		label: "General",
+		labelKey: "settings.menu.general",
 		icon: <Icon name="equalizer" />,
 	},
 	{
 		key: "search",
-		label: "Search",
+		labelKey: "settings.menu.search",
 		icon: <Icon name="search" />,
 	},
 	{
 		key: "personalization",
-		label: "Personalization",
+		labelKey: "settings.menu.personalization",
 		icon: <Icon name="magic" />,
 	},
 	{
 		key: "mcp_servers",
-		label: "MCP Servers",
+		labelKey: "settings.menu.mcpServers",
 		icon: <Icon name="mcp" />,
 	},
 	{
 		key: "skills",
-		label: "Skills",
+		labelKey: "settings.menu.skills",
 		icon: <Icon name="skill" />,
 	},
 	{
 		key: "archived_sessions",
-		label: "Archived sessions",
+		labelKey: "settings.menu.archivedSessions",
 		icon: <Icon name="archive" />,
 	},
 	{
 		key: "about",
-		label: "About",
+		labelKey: "settings.menu.about",
 		icon: <Icon name="info" />,
 	}
-]
+];
 
-function getSettingsPageTitle(key: SettingsPageKey): string {
-	const item = items.find((menuItem: MenuItem): boolean => {
-		return menuItem !== null && "key" in menuItem && menuItem.key === key;
-	});
+function createSettingsMenuItems(t: (key: string) => string): MenuItem[] {
+	return menuItemConfigs.map((item: SettingsMenuItemConfig): MenuItem => ({
+		key: item.key,
+		label: t(item.labelKey),
+		icon: item.icon
+	}));
+}
 
-	return typeof item === "object" && item !== null && "label" in item && typeof item.label === "string"
-		? item.label
-		: "Settings";
+function getSettingsPageTitle(key: SettingsPageKey, t: (key: string) => string): string {
+	const item = menuItemConfigs.find((menuItem: SettingsMenuItemConfig): boolean => menuItem.key === key);
+	return item === undefined ? t("settings.menu.fallbackTitle") : t(item.labelKey);
 }
 
 function SettingsPage({
@@ -102,7 +112,9 @@ function SettingsPage({
 	onClientPreferencesChange,
 	onGeneralSettingsChange
 }: SettingsPageProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const [activePage, setActivePage] = useState<SettingsPageKey>(initialPage);
+	const items: MenuItem[] = createSettingsMenuItems(t);
 
 	useEffect((): void => {
 		setActivePage(initialPage);
@@ -153,10 +165,10 @@ function SettingsPage({
 							<Icon name="settings" className={styles.placeholderIcon} />
 							<div>
 								<Typography.Title level={3} className={styles.placeholderTitle}>
-									{getSettingsPageTitle(activePage)}
+									{getSettingsPageTitle(activePage, t)}
 								</Typography.Title>
 								<Typography.Text type="secondary">
-									This settings section will be implemented later.
+									{t("settings.menu.placeholder")}
 								</Typography.Text>
 							</div>
 						</div>

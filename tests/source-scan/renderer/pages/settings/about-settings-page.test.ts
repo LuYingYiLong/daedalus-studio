@@ -12,10 +12,10 @@ describe("AboutSettingsPage", () => {
 		expect(pageSource).toContain("src={backendColorfulIconUrl}");
 		expect(pageSource).not.toContain('name="backend-colorful"');
 		expect(pageSource).toContain('"backend.health"');
-		expect(pageSource).toContain("Backend Details");
-		expect(pageSource).toContain("Manager Status");
-		expect(pageSource).toContain("Runtime Mode");
-		expect(pageSource).toContain("Log Path");
+		expect(pageSource).toContain("settings.about.backend.detailsTitle");
+		expect(pageSource).toContain("settings.about.fields.managerStatus");
+		expect(pageSource).toContain("settings.about.fields.runtimeMode");
+		expect(pageSource).toContain("settings.about.fields.logPath");
 		expect(pageSource).toContain("handleRefreshBackendDetails");
 		expect(pageSource).not.toContain('tone="native"');
 		expect(iconSource).not.toContain("NATIVE_COLOR_ICON_NAMES");

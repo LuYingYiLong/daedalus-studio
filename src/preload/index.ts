@@ -4,6 +4,7 @@ type ClientPreferences = {
 	autoCheckForUpdates: boolean;
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
+	language: "system" | "en-US" | "zh-CN";
 	lastComposerModel: {
 		providerId: string;
 		modelId: string;
@@ -129,13 +130,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	},
 
 	clientPreferences: {
-		getCached: (): { autoCheckForUpdates: boolean; minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null } => {
+		getCached: (): ClientPreferences => {
 			return initialClientPreferences;
 		},
-		get: (): Promise<{ autoCheckForUpdates: boolean; minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null }> => {
+		get: (): Promise<ClientPreferences> => {
 			return ipcRenderer.invoke("client-preferences:get");
 		},
-		update: (patch: Partial<{ autoCheckForUpdates: boolean; minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null }>): Promise<{ autoCheckForUpdates: boolean; minimizeToTrayOnClose: boolean; theme: "system" | "light" | "dark"; lastComposerModel: { providerId: string; modelId: string } | null }> => {
+		update: (patch: Partial<ClientPreferences>): Promise<ClientPreferences> => {
 			return ipcRenderer.invoke("client-preferences:update", patch);
 		}
 	},

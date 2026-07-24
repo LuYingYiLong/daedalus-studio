@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./GeneralSettingsPage.module.css";
-import { Alert, Button, Card, Input, Segmented, Space, Spin, Switch, Tag, Tooltip, Typography } from "antd";
+import { Alert, Button, Card, Input, Segmented, Select, Space, Spin, Switch, Tag, Tooltip, Typography } from "antd";
+import type { SelectProps } from "antd";
 import { Icon } from "@/assets/icons";
 import {
 	fetchClientPreferences,
 	updateClientPreferences,
-	type ClientPreferences
+	type ClientPreferences,
+	type LanguagePreference
 } from "@/api/client-preferences-api";
 import {
 	fetchGeneralSettings,
@@ -20,7 +23,7 @@ type GeneralSettingsPageProps = {
 	onGeneralSettingsChange: (settings: GeneralSettings) => void;
 };
 
-type SettingKey = "autoCheckForUpdates" | "autoExpandTodoList" | "godotExecutablePath" | "minimizeToTrayOnClose" | "theme";
+type SettingKey = "autoCheckForUpdates" | "autoExpandTodoList" | "godotExecutablePath" | "language" | "minimizeToTrayOnClose" | "theme";
 type ThemePreference = ClientPreferences["theme"];
 
 function GeneralSettingsPage({
@@ -29,6 +32,12 @@ function GeneralSettingsPage({
 	onClientPreferencesChange,
 	onGeneralSettingsChange
 }: GeneralSettingsPageProps): React.JSX.Element {
+	const { t } = useTranslation();
+	const languageOptions: SelectProps<LanguagePreference>["options"] = [
+		{ label: t("settings.general.display.language.system"), value: "system" },
+		{ label: t("settings.general.display.language.english"), value: "en-US" },
+		{ label: t("settings.general.display.language.chinese"), value: "zh-CN" }
+	];
 	const [draftClientPreferences, setDraftClientPreferences] = useState<ClientPreferences>(clientPreferences);
 	const [draftGeneralSettings, setDraftGeneralSettings] = useState<GeneralSettings>(generalSettings);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -63,7 +72,7 @@ function GeneralSettingsPage({
 				onGeneralSettingsChange(loadedGeneralSettings);
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(error instanceof Error ? error.message : "Failed to load general settings");
+					setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.load"));
 				}
 			} finally {
 				if (!cancelled) {
@@ -77,7 +86,7 @@ function GeneralSettingsPage({
 		return (): void => {
 			cancelled = true;
 		};
-	}, [onClientPreferencesChange, onGeneralSettingsChange]);
+	}, [onClientPreferencesChange, onGeneralSettingsChange, t]);
 
 	async function handleAutoExpandTodoListChange(checked: boolean): Promise<void> {
 		const previousSettings: GeneralSettings = draftGeneralSettings;
@@ -97,7 +106,7 @@ function GeneralSettingsPage({
 		} catch (error: unknown) {
 			setDraftGeneralSettings(previousSettings);
 			onGeneralSettingsChange(previousSettings);
-			setErrorMessage(error instanceof Error ? error.message : "Failed to save general settings");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
 		} finally {
 			setSavingKey(null);
 		}
@@ -111,7 +120,7 @@ function GeneralSettingsPage({
 			setDraftGeneralSettings(savedSettings);
 			onGeneralSettingsChange(savedSettings);
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to validate the Godot executable");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.godotExecutable"));
 		} finally {
 			setSavingKey(null);
 		}
@@ -129,7 +138,7 @@ function GeneralSettingsPage({
 			setDraftGeneralSettings(savedSettings);
 			onGeneralSettingsChange(savedSettings);
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to validate the Godot executable");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.godotExecutable"));
 		} finally {
 			setSavingKey(null);
 		}
@@ -161,7 +170,7 @@ function GeneralSettingsPage({
 		} catch (error: unknown) {
 			setDraftClientPreferences(previousPreferences);
 			onClientPreferencesChange(previousPreferences);
-			setErrorMessage(error instanceof Error ? error.message : "Failed to save general settings");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
 		} finally {
 			setSavingKey(null);
 		}
@@ -185,7 +194,31 @@ function GeneralSettingsPage({
 		} catch (error: unknown) {
 			setDraftClientPreferences(previousPreferences);
 			onClientPreferencesChange(previousPreferences);
-			setErrorMessage(error instanceof Error ? error.message : "Failed to save general settings");
+			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
+		} finally {
+			setSavingKey(null);
+		}
+	}
+
+	async function handleLanguageChange(languagePreference: LanguagePreference): Promise<void> {
+		const previousPreferences: ClientPreferences = draftClientPreferences;
+		const optimisticPreferences: ClientPreferences = {
+			...previousPreferences,
+			language: languagePreference
+		};
+
+		try {
+			setSavingKey("language");
+			setErrorMessage(null);
+			setDraftClientPreferences(optimisticPreferences);
+			onClientPreferencesChange(optimisticPreferences);
+			const savedPreferences: ClientPreferences = await updateClientPreferences({ language: languagePreference });
+			setDraftClientPreferences(savedPreferences);
+			onClientPreferencesChange(savedPreferences);
+		} catch (error: unknown) {
+			setDraftClientPreferences(previousPreferences);
+			onClientPreferencesChange(previousPreferences);
+			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
 		} finally {
 			setSavingKey(null);
 		}
@@ -196,14 +229,14 @@ function GeneralSettingsPage({
 			<header className={styles.header}>
 				<div className={styles.titleRow}>
 					<Typography.Title level={3} className={styles.title}>
-						General
+						{t("settings.general.title")}
 					</Typography.Title>
 				</div>
 			</header>
 
 			<div className={styles.settingsStack}>
 				<Card
-					title="Display settings"
+					title={t("settings.general.display.title")}
 				>
 					{errorMessage !== null ? (
 						<Alert
@@ -225,20 +258,36 @@ function GeneralSettingsPage({
 						<div className={styles.preferenceList}>
 							<div className={styles.preferenceItem}>
 								<div className={styles.preferenceMeta}>
-									<Typography.Text>Theme</Typography.Text>
-									<Typography.Text type="secondary">Choose the Studio color theme for this device.</Typography.Text>
+									<Typography.Text>{t("settings.general.display.theme.title")}</Typography.Text>
+									<Typography.Text type="secondary">{t("settings.general.display.theme.description")}</Typography.Text>
 								</div>
 								<Segmented
 									className={styles.themeControl}
 									value={draftClientPreferences.theme}
 									disabled={savingKey !== null && savingKey !== "theme"}
 									options={[
-										{ label: "System", value: "system" },
-										{ label: "Light", value: "light" },
-										{ label: "Dark", value: "dark" }
+										{ label: t("settings.general.display.theme.system"), value: "system" },
+										{ label: t("settings.general.display.theme.light"), value: "light" },
+										{ label: t("settings.general.display.theme.dark"), value: "dark" }
 									]}
 									onChange={(value: string | number): void => {
 										void handleThemeChange(value as ThemePreference);
+									}}
+								/>
+							</div>
+							<div className={styles.preferenceItem}>
+								<div className={styles.preferenceMeta}>
+									<Typography.Text>{t("settings.general.display.language.title")}</Typography.Text>
+									<Typography.Text type="secondary">{t("settings.general.display.language.description")}</Typography.Text>
+								</div>
+								<Select<LanguagePreference>
+									className={styles.preferenceControl}
+									value={draftClientPreferences.language}
+									disabled={savingKey !== null && savingKey !== "language"}
+									options={languageOptions}
+									placeholder={t("settings.general.display.language.placeholder")}
+									onChange={(value: LanguagePreference): void => {
+										void handleLanguageChange(value);
 									}}
 								/>
 							</div>
@@ -246,7 +295,7 @@ function GeneralSettingsPage({
 					)}
 				</Card>
 
-				<Card title="Godot environment">
+				<Card title={t("settings.general.godot.title")}>
 					{isLoading ? (
 						<div className={styles.loading}>
 							<Spin />
@@ -255,26 +304,26 @@ function GeneralSettingsPage({
 						<div className={styles.godotSetting}>
 							<div className={styles.preferenceMeta}>
 								<div className={styles.godotTitleRow}>
-									<Typography.Text>Godot executable</Typography.Text>
+									<Typography.Text>{t("settings.general.godot.executable")}</Typography.Text>
 									<Tag
 										color={draftGeneralSettings.godotExecutableStatus === "ready" ? "success" : undefined}
 									>
 										{draftGeneralSettings.godotExecutableStatus === "ready"
-											? `Godot ${draftGeneralSettings.godotExecutableVersion ?? "ready"}`
+											? t("settings.general.godot.status.ready", { version: draftGeneralSettings.godotExecutableVersion ?? t("settings.general.godot.status.readyFallback") })
 											: draftGeneralSettings.godotExecutableStatus === "unavailable"
-												? "Unavailable"
-												: "Not configured"}
+												? t("settings.general.godot.status.unavailable")
+												: t("settings.general.godot.status.unconfigured")}
 									</Tag>
 								</div>
 								<Typography.Text type="secondary">
-									Used when a workspace does not provide its own Godot executable path.
+									{t("settings.general.godot.description")}
 								</Typography.Text>
 							</div>
 							<Space.Compact>
 								<Input
 									readOnly={true}
 									value={draftGeneralSettings.godotExecutablePath ?? ""}
-									placeholder="Select a Godot executable"
+									placeholder={t("settings.general.godot.placeholder")}
 								/>
 								<Button
 									icon={<Icon name="folder-open" />}
@@ -282,11 +331,11 @@ function GeneralSettingsPage({
 									disabled={savingKey !== null && savingKey !== "godotExecutablePath"}
 									onClick={(): void => { void handleGodotExecutablePick(); }}
 								>
-									Browse
+									{t("settings.general.godot.browse")}
 								</Button>
-								<Tooltip title="Clear Godot executable">
+								<Tooltip title={t("settings.general.godot.clear")}>
 									<Button
-										aria-label="Clear Godot executable"
+										aria-label={t("settings.general.godot.clear")}
 										icon={<Icon name="clear" />}
 										disabled={savingKey !== null || draftGeneralSettings.godotExecutablePath === null}
 										onClick={(): void => { void saveGodotExecutablePath(null); }}
@@ -301,7 +350,7 @@ function GeneralSettingsPage({
 				</Card>
 
 				<Card
-					title="General settings"
+					title={t("settings.general.general.title")}
 				>
 					{isLoading ? (
 						<div className={styles.loading}>
@@ -312,22 +361,22 @@ function GeneralSettingsPage({
 							{[
 								{
 									key: "autoExpandTodoList" as const,
-									title: "Auto-expand todo list",
-									description: "Expand the workflow todo list when a session creates a new todo list.",
+									title: t("settings.general.general.autoExpandTodoList.title"),
+									description: t("settings.general.general.autoExpandTodoList.description"),
 									checked: draftGeneralSettings.autoExpandTodoList,
 									onChange: handleAutoExpandTodoListChange
 								},
 								{
 									key: "autoCheckForUpdates" as const,
-									title: "Check for updates on startup",
-									description: "Check for Daedalus Studio and backend updates when the app starts.",
+									title: t("settings.general.general.autoCheckForUpdates.title"),
+									description: t("settings.general.general.autoCheckForUpdates.description"),
 									checked: draftClientPreferences.autoCheckForUpdates,
 									onChange: handleAutoCheckForUpdatesChange
 								},
 								{
 									key: "minimizeToTrayOnClose" as const,
-									title: "Minimize to tray on close",
-									description: "Hide Daedalus Studio to the system tray when the window close button is clicked.",
+									title: t("settings.general.general.minimizeToTrayOnClose.title"),
+									description: t("settings.general.general.minimizeToTrayOnClose.description"),
 									checked: draftClientPreferences.minimizeToTrayOnClose,
 									onChange: handleMinimizeToTrayChange
 								}

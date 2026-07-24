@@ -1,4 +1,5 @@
 import { Alert, Typography } from "antd";
+import { useTranslation } from "react-i18next";
 import type { WorkspaceConfig } from "@/api/types";
 import styles from "./AgentPage.module.css";
 
@@ -8,12 +9,13 @@ type NewSessionHomeProps = {
 };
 
 function NewSessionHome({ workspace, errorMessage }: NewSessionHomeProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const title: string = workspace === null
-		? "What would you like to work on?"
-		: `What should we work on for ${workspace.name}?`;
+		? t("app.home.titleWithoutWorkspace")
+		: t("app.home.titleWithWorkspace", { workspaceName: workspace.name });
 	const subtitle: string = workspace === null
-		? "Choose a workspace or start without one."
-		: "Describe the next task for this workspace.";
+		? t("app.home.subtitleWithoutWorkspace")
+		: t("app.home.subtitleWithWorkspace");
 
 	return (
 		<div className={styles.homePanel}>

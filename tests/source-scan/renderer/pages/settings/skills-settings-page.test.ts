@@ -7,7 +7,7 @@ describe("SkillsSettingsPage", () => {
 		expect(source).toContain('skill.source !== "builtin"');
 		expect(source).toContain('value: "personal"');
 		expect(source).toContain('value: "project"');
-		expect(source).toContain("No custom skills yet. Ask the agent to create a skill");
+		expect(source).toContain("settings.skills.empty.none");
 	});
 
 	it("wires ZIP and folder install actions through skillFs and skill.install", () => {

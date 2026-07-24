@@ -61,6 +61,7 @@ declare global {
 		autoCheckForUpdates: boolean;
 		minimizeToTrayOnClose: boolean;
 		theme: "system" | "light" | "dark";
+		language: "system" | "en-US" | "zh-CN";
 		lastComposerModel: {
 			providerId: string;
 			modelId: string;

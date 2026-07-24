@@ -1,0 +1,447 @@
+{
+  "app": {
+    "navigation": {
+      "ariaLabel": "Application navigation",
+      "agent": "Agent",
+      "settings": "Settings",
+      "drawing": "Draw",
+      "knowledge": "Knowledge"
+    },
+    "boot": {
+      "progress": {
+        "starting": "Starting Daedalus Studio",
+        "checkingBackend": "Checking backend",
+        "checkingBackendPackage": "Checking backend package",
+        "installingBackend": "Installing backend",
+        "preparingBackend": "Preparing backend",
+        "startingBackend": "Starting backend",
+        "checkingBackendHealth": "Checking backend health",
+        "backendReady": "Backend ready",
+        "backendStartupFailed": "Backend startup failed"
+      },
+      "error": {
+        "developmentBackendNotRunning": "Development backend is not running",
+        "installFailed": "Daedalus backend could not be installed",
+        "backendMissing": "Daedalus backend is missing or damaged",
+        "markedBackendMissing": "Marked backend version is missing",
+        "healthFailed": "Daedalus backend did not start",
+        "studioStartFailed": "Daedalus Studio could not start",
+        "bootstrapFailed": "Backend bootstrap failed."
+      },
+      "actions": {
+        "retry": "Retry",
+        "retryInstall": "Retry install",
+        "repairBackend": "Repair backend",
+        "restartBackend": "Restart backend"
+      }
+    },
+    "home": {
+      "titleWithoutWorkspace": "What would you like to work on?",
+      "titleWithWorkspace": "What should we work on for {{workspaceName}}?",
+      "subtitleWithoutWorkspace": "Choose a workspace or start without one.",
+      "subtitleWithWorkspace": "Describe the next task for this workspace."
+    }
+  },
+  "workspaceTree": {
+    "actions": {
+      "rename": "Rename",
+      "renameSession": "Rename session",
+      "archiveSession": "Archive session",
+      "openInExplorer": "Open in Explorer",
+      "copySessionId": "Copy session ID",
+      "delete": "Delete",
+      "newSessionInWorkspace": "New session in workspace"
+    },
+    "aria": {
+      "archiveSession": "Archive {{sessionTitle}}",
+      "workspaceActions": "Workspace actions for {{workspaceName}}",
+      "newSessionInWorkspace": "New session in {{workspaceName}}"
+    },
+    "empty": {
+      "noWorkspace": "No workspace",
+      "noSessions": "No sessions"
+    },
+    "groups": {
+      "sessions": "Sessions",
+      "otherSessions": "Other sessions"
+    },
+    "messages": {
+      "sessionIdCopied": "Session ID copied"
+    },
+    "errors": {
+      "archiveSession": "Failed to archive session",
+      "copySessionId": "Failed to copy session ID",
+      "deleteWorkspace": "Failed to delete workspace",
+      "loadWorkspace": "Failed to load workspace",
+      "openSessionDirectory": "Failed to open session directory",
+      "openWorkspaceDirectory": "Failed to open workspace directory",
+      "renameSession": "Failed to rename session",
+      "sessionTitleCannotBeEmpty": "Session title cannot be empty."
+    },
+    "modals": {
+      "deleteWorkspace": {
+        "title": "Delete workspace?",
+        "body": "This will delete the workspace from Daedalus and permanently delete its sessions. It will not delete files from your Godot project folder."
+      },
+      "renameSession": {
+        "placeholder": "Session title"
+      }
+    }
+  },
+  "settings": {
+    "menu": {
+      "provider": "Provider",
+      "defaultModel": "Default model",
+      "general": "General",
+      "search": "Search",
+      "personalization": "Personalization",
+      "mcpServers": "MCP Servers",
+      "skills": "Skills",
+      "archivedSessions": "Archived sessions",
+      "about": "About",
+      "fallbackTitle": "Settings",
+      "placeholder": "This settings section will be implemented later."
+    },
+    "common": {
+      "add": "Add",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "disable": "Disable",
+      "edit": "Edit",
+      "enable": "Enable",
+      "off": "OFF",
+      "on": "ON",
+      "save": "Save"
+    },
+    "about": {
+      "title": "About",
+      "unavailable": "Unavailable",
+      "applicationInformation": "Application Information",
+      "sourceCode": "Source Code",
+      "sourceDescription": "Visit our GitHub repository for source code, issues, and contributions.",
+      "backend": {
+        "description": "Local RPC, workflow, MCP, and Godot integration service.",
+        "detailsTitle": "Backend Details",
+        "status": {
+          "healthy": "Healthy",
+          "starting": "Starting",
+          "unhealthy": "Unhealthy",
+          "stopped": "Stopped",
+          "unknown": "Unknown"
+        }
+      },
+      "actions": {
+        "refresh": "Refresh"
+      },
+      "fields": {
+        "author": "Author",
+        "license": "License",
+        "logPath": "Log Path",
+        "managerStatus": "Manager Status",
+        "package": "Package",
+        "port": "Port",
+        "processId": "Process ID",
+        "protocol": "Protocol",
+        "runtimeMode": "Runtime Mode",
+        "version": "Version"
+      },
+      "protocol": {
+        "multiClient": "multi-client",
+        "singleClient": "single-client"
+      },
+      "errors": {
+        "applicationInfo": "Failed to load application information",
+        "backendDetails": "Failed to load backend details"
+      }
+    },
+    "archivedSessions": {
+      "title": "Archived sessions",
+      "loading": "Loading archived sessions...",
+      "searchPlaceholder": "Search session...",
+      "actions": {
+        "delete": "Delete",
+        "deleteAll": "Delete all",
+        "restore": "Unarchive"
+      },
+      "aria": {
+        "delete": "Delete {{sessionTitle}}",
+        "restore": "Unarchive {{sessionTitle}}"
+      },
+      "filters": {
+        "all": "All",
+        "noWorkspace": "No workspace"
+      },
+      "empty": {
+        "none": "No archived sessions",
+        "noMatches": "No matching archived sessions"
+      },
+      "confirm": {
+        "deleteSession": {
+          "title": "Delete archived session?",
+          "description": "This permanently deletes this archived session."
+        },
+        "deleteAll": {
+          "title": "Delete archived sessions?",
+          "description": "This will permanently delete {{count}} archived session matching the current filter.",
+          "description_other": "This will permanently delete {{count}} archived sessions matching the current filter."
+        }
+      },
+      "errors": {
+        "deleteAll": "Failed to delete archived sessions",
+        "deleteSession": "Failed to delete archived session",
+        "load": "Failed to load archived sessions",
+        "restore": "Failed to unarchive session"
+      }
+    },
+    "defaultModel": {
+      "selectModel": "Select a model",
+      "notConfigured": "Not configured - always ask me",
+      "routing": {
+        "sessionTitle": {
+          "title": "Session title model",
+          "description": "Used for automatic session renaming and lightweight title generation."
+        },
+        "workflowPlanner": {
+          "title": "Workflow planner model",
+          "description": "Used for planning agent workflows before execution."
+        },
+        "imageRecognition": {
+          "title": "Image recognition model",
+          "description": "Used when the active chat model cannot consume image context directly."
+        },
+        "imageGeneration": {
+          "title": "Image generation/edit model",
+          "description": "Used by @image-gen and mcp_image_generate for text-to-image or image-to-image tasks. This must be configured explicitly."
+        },
+        "gitCommit": {
+          "title": "Git commit model",
+          "description": "Used to generate commit messages from workspace Git diffs. Defaults to the main model when unset."
+        },
+        "commandReview": {
+          "title": "Command review model",
+          "description": "Reviews free terminal commands in Auto-safe mode. When unset, every command asks for your approval."
+        }
+      },
+      "errors": {
+        "load": "Failed to load default model settings",
+        "noSelection": "No provider model selection available",
+        "save": "Failed to save model routing"
+      }
+    },
+    "mcpServers": {
+      "title": "MCP Servers",
+      "searchPlaceholder": "Search MCP...",
+      "noSecrets": "No secrets",
+      "toolCount": "{{count}} tool",
+      "toolCount_other": "{{count}} tools",
+      "empty": {
+        "none": "No custom MCP servers",
+        "noMatches": "No matching MCP servers"
+      },
+      "status": {
+        "connected": "Connected",
+        "disabled": "Disabled",
+        "failed": "Failed",
+        "starting": "Starting"
+      },
+      "confirm": {
+        "delete": {
+          "title": "Delete MCP server?",
+          "description": "Delete {{name}} from Daedalus Studio. Stored secrets for this MCP server will also be removed."
+        }
+      },
+      "modal": {
+        "addTitle": "Add MCP server",
+        "editTitle": "Edit MCP server"
+      },
+      "form": {
+        "command": "Command",
+        "commandRequired": "Command is required",
+        "description": "Description",
+        "descriptionPlaceholder": "MCP server description",
+        "name": "Name",
+        "namePlaceholder": "MCP server name",
+        "nameRequired": "Name is required",
+        "type": "Type",
+        "urlRequired": "A valid URL is required"
+      },
+      "errors": {
+        "delete": "Failed to delete MCP server",
+        "load": "Failed to load MCP servers",
+        "update": "Failed to update MCP server"
+      }
+    },
+    "personalization": {
+      "userPrompt": {
+        "title": "User prompt",
+        "description": "Custom instructions appended to new AI requests."
+      },
+      "gitCommitPrompt": {
+        "title": "Git commit prompt",
+        "description": "Custom instructions used only when generating commit messages."
+      },
+      "commandReviewPrompt": {
+        "title": "Supplemental review preferences",
+        "description": "Additional preferences for Auto-safe command review. Fixed safety rules always take precedence.",
+        "placeholder": "Add project-specific command review preferences."
+      },
+      "errors": {
+        "load": "Failed to load personalization settings",
+        "save": "Failed to save personalization settings"
+      }
+    },
+    "provider": {
+      "apiBaseUrl": "API Base URL",
+      "apiKey": "API Key",
+      "enterApiKey": "Enter API key",
+      "modelListSource": "Model list source: {{source}}",
+      "models": "Models",
+      "newKeyHint": "Only a newly entered key will be saved.",
+      "savedKey": "Saved key: {{key}}",
+      "searchPlaceholder": "Search providers...",
+      "updated": "updated {{updatedAt}}",
+      "actions": {
+        "clearApiKey": "Clear API key",
+        "fetchModels": "Fetch models",
+        "test": "Test"
+      },
+      "capabilities": {
+        "imageEdit": "Edit",
+        "imageGeneration": "Image",
+        "reasoning": "Reasoning",
+        "tools": "Tools",
+        "vision": "Vision",
+        "webSearch": "Search"
+      },
+      "columns": {
+        "capabilities": "Capabilities",
+        "model": "Model"
+      },
+      "errors": {
+        "clearApiKey": "Failed to clear API key",
+        "load": "Failed to load provider settings",
+        "noSettings": "No provider settings available",
+        "refreshModels": "Failed to refresh provider models"
+      }
+    },
+    "search": {
+      "title": "Search",
+      "webSearchTitle": "Web search",
+      "configureProvider": "Configure the selected provider API key in Provider settings before web search can be used.",
+      "enabled": {
+        "title": "Enable web search",
+        "description": "Allow every conversation to use the configured web search tool when current information is needed."
+      },
+      "model": {
+        "title": "Search model",
+        "description": "Choose the provider-native search model used by the global web search tool.",
+        "placeholder": "Select a search model"
+      },
+      "maxResults": {
+        "title": "Search result count",
+        "description": "Default number of search results returned to the assistant when a search tool call does not override it.",
+        "tooltip": "{{count}} result",
+        "tooltip_other": "{{count}} results"
+      },
+      "errors": {
+        "load": "Failed to load web search settings",
+        "save": "Failed to save web search settings"
+      }
+    },
+    "skills": {
+      "title": "Skills",
+      "invalid": "INVALID",
+      "searchPlaceholder": "Search skill...",
+      "valid": "VALID",
+      "actions": {
+        "install": "Install",
+        "installFromFolder": "Install from folder",
+        "installFromZip": "Install from ZIP"
+      },
+      "confirm": {
+        "delete": {
+          "title": "Delete skill?",
+          "description": "Delete {{name}} from Daedalus Studio. This removes the personal skill files but does not change any Godot project files."
+        }
+      },
+      "empty": {
+        "none": "No custom skills yet. Ask the agent to create a skill, or install one from ZIP/folder.",
+        "noMatches": "No matching skills"
+      },
+      "errors": {
+        "delete": "Failed to delete skill",
+        "install": "Failed to install skill",
+        "load": "Failed to load skills",
+        "selectSource": "Failed to select skill source",
+        "update": "Failed to update skill"
+      },
+      "install": {
+        "description": "Project installs require an active workspace. Personal installs are available across workspaces.",
+        "fromFolder": "Install from folder",
+        "fromZip": "Install from ZIP",
+        "title": "Install skill"
+      },
+      "scope": {
+        "all": "All",
+        "builtin": "Built-in",
+        "personal": "Personal",
+        "project": "Project"
+      }
+    },
+    "general": {
+      "title": "General",
+      "display": {
+        "title": "Display settings",
+        "theme": {
+          "title": "Theme",
+          "description": "Choose the Studio color theme for this device.",
+          "system": "System",
+          "light": "Light",
+          "dark": "Dark"
+        },
+        "language": {
+          "title": "Language",
+          "description": "Choose the Studio display language.",
+          "placeholder": "Select a language",
+          "system": "System default",
+          "english": "English",
+          "chinese": "中文"
+        }
+      },
+      "godot": {
+        "title": "Godot environment",
+        "executable": "Godot executable",
+        "description": "Used when a workspace does not provide its own Godot executable path.",
+        "placeholder": "Select a Godot executable",
+        "browse": "Browse",
+        "clear": "Clear Godot executable",
+        "status": {
+          "ready": "Godot {{version}}",
+          "readyFallback": "ready",
+          "unavailable": "Unavailable",
+          "unconfigured": "Not configured"
+        }
+      },
+      "general": {
+        "title": "General settings",
+        "autoExpandTodoList": {
+          "title": "Auto-expand todo list",
+          "description": "Expand the workflow todo list when a session creates a new todo list."
+        },
+        "autoCheckForUpdates": {
+          "title": "Check for updates on startup",
+          "description": "Check for Daedalus Studio and backend updates when the app starts."
+        },
+        "minimizeToTrayOnClose": {
+          "title": "Minimize to tray on close",
+          "description": "Hide Daedalus Studio to the system tray when the window close button is clicked."
+        }
+      },
+      "errors": {
+        "load": "Failed to load general settings",
+        "save": "Failed to save general settings",
+        "godotExecutable": "Failed to validate the Godot executable"
+      }
+    }
+  }
+}

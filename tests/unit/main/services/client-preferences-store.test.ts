@@ -59,6 +59,7 @@ describe("client preferences store", () => {
 				autoCheckForUpdates: true,
 				minimizeToTrayOnClose: false,
 				theme: "system",
+				language: "system",
 				lastComposerModel: {
 					providerId: "minimax",
 					modelId: "MiniMax-M3"
@@ -82,6 +83,7 @@ describe("client preferences store", () => {
 			autoCheckForUpdates: true,
 			minimizeToTrayOnClose: true,
 			theme: "system",
+			language: "system",
 			lastComposerModel: null
 		});
 		expect(memory.writes.at(-1)).toBe(`${JSON.stringify(nextPreferences, null, 2)}\n`);
@@ -111,6 +113,16 @@ describe("client preferences store", () => {
 		}, memory.io);
 
 		expect(nextPreferences.theme).toBe("dark");
+	});
+
+	it("updates the language preference", async () => {
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+
+		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
+			language: "zh-CN"
+		}, memory.io);
+
+		expect(nextPreferences.language).toBe("zh-CN");
 	});
 
 	it("updates the startup update check preference", async () => {

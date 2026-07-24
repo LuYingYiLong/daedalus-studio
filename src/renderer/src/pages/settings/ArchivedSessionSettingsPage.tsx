@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Button, Empty, Input, Menu, Modal, Popconfirm, Select, Space, Tag, Tooltip, Typography } from "antd";
 import type { MenuProps } from "antd";
 import { deleteArchivedSession, fetchArchivedSessions, restoreArchivedSession } from "@/api/session-api";
@@ -15,13 +16,29 @@ type ArchivedSessionMenuItem = NonNullable<MenuProps["items"]>[number];
 type ArchivedSessionMenuItems = NonNullable<MenuProps["items"]>;
 type SessionAction = "restore" | "delete";
 
+type ArchivedSessionLabels = {
+	all: string;
+	delete: string;
+	deleteAll: string;
+	deleteConfirmDescription: string;
+	deleteConfirmTitle: string;
+	failedDeleteAll: string;
+	failedDeleteSession: string;
+	failedLoad: string;
+	failedRestore: string;
+	noWorkspace: string;
+	restore: string;
+	deleteAria: (sessionTitle: string) => string;
+	restoreAria: (sessionTitle: string) => string;
+};
+
 function getWorkspaceFilterKey(session: SessionMetadata): string {
 	return session.workspaceId ?? UNKNOWN_WORKSPACE_KEY;
 }
 
-function getWorkspaceLabel(session: SessionMetadata, workspacesById: Map<string, WorkspaceConfig>): string {
+function getWorkspaceLabel(session: SessionMetadata, workspacesById: Map<string, WorkspaceConfig>, noWorkspaceLabel: string): string {
 	if (session.workspaceId === undefined) {
-		return "No workspace";
+		return noWorkspaceLabel;
 	}
 
 	return session.workspaceName ?? workspacesById.get(session.workspaceId)?.name ?? session.workspaceId;
@@ -35,6 +52,7 @@ type CreateArchivedSessionMenuItemOptions = {
 	workspacesById: Map<string, WorkspaceConfig>;
 	busySessionId: string | null;
 	busyAction: SessionAction | null;
+	labels: ArchivedSessionLabels;
 	onRestore: (session: SessionMetadata, event: MouseEvent<HTMLElement>) => void;
 	onDelete: (session: SessionMetadata, event?: MouseEvent<HTMLElement>) => void;
 };
@@ -50,26 +68,26 @@ function createArchivedSessionMenuItem(session: SessionMetadata, options: Create
 				<span className={styles.sessionText}>
 					<span className={styles.sessionTitle}>{session.title}</span>
 					<span className={styles.sessionMeta}>
-						{getWorkspaceLabel(session, options.workspacesById)} · {formatArchivedAt(session)}
+						{getWorkspaceLabel(session, options.workspacesById, options.labels.noWorkspace)} - {formatArchivedAt(session)}
 					</span>
 				</span>
 				<span className={styles.sessionActions}>
-					<Tooltip title="Unarchive session" placement="top">
+					<Tooltip title={options.labels.restore} placement="top">
 						<Button
 							type="text"
 							size="small"
-							aria-label={`Unarchive ${session.title}`}
+							aria-label={options.labels.restoreAria(session.title)}
 							loading={isRestoring}
 							disabled={options.busySessionId !== null && !isRestoring}
 							onClick={(event: MouseEvent<HTMLElement>): void => options.onRestore(session, event)}
 						>
-							Unarchive
+							{options.labels.restore}
 						</Button>
 					</Tooltip>
 					<Popconfirm
-						title="Delete archived session?"
-						description="This permanently deletes this archived session."
-						okText="Delete"
+						title={options.labels.deleteConfirmTitle}
+						description={options.labels.deleteConfirmDescription}
+						okText={options.labels.delete}
 						okButtonProps={{ danger: true, loading: isDeleting }}
 						onConfirm={(): void => options.onDelete(session)}
 					>
@@ -78,7 +96,7 @@ function createArchivedSessionMenuItem(session: SessionMetadata, options: Create
 							size="small"
 							shape="circle"
 							danger={true}
-							aria-label={`Delete ${session.title}`}
+							aria-label={options.labels.deleteAria(session.title)}
 							icon={<Icon name="remove" width={16} height={16}/>}
 							loading={isDeleting}
 							disabled={options.busySessionId !== null && !isDeleting}
@@ -95,6 +113,7 @@ function createArchivedSessionMenuItem(session: SessionMetadata, options: Create
 }
 
 function ArchivedSessionSettingsPage(): React.JSX.Element {
+	const { t } = useTranslation();
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([]);
 	const [archivedSessions, setArchivedSessions] = useState<SessionMetadata[]>([]);
 	const [workspaceFilter, setWorkspaceFilter] = useState<string>(ALL_WORKSPACES_KEY);
@@ -105,6 +124,23 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 	const [busyAction, setBusyAction] = useState<SessionAction | null>(null);
 	const [deleteAllOpen, setDeleteAllOpen] = useState<boolean>(false);
 	const [isDeletingAll, setIsDeletingAll] = useState<boolean>(false);
+	const labels: ArchivedSessionLabels = useMemo((): ArchivedSessionLabels => {
+		return {
+			all: t("settings.archivedSessions.filters.all"),
+			delete: t("settings.archivedSessions.actions.delete"),
+			deleteAll: t("settings.archivedSessions.actions.deleteAll"),
+			deleteConfirmDescription: t("settings.archivedSessions.confirm.deleteSession.description"),
+			deleteConfirmTitle: t("settings.archivedSessions.confirm.deleteSession.title"),
+			failedDeleteAll: t("settings.archivedSessions.errors.deleteAll"),
+			failedDeleteSession: t("settings.archivedSessions.errors.deleteSession"),
+			failedLoad: t("settings.archivedSessions.errors.load"),
+			failedRestore: t("settings.archivedSessions.errors.restore"),
+			noWorkspace: t("settings.archivedSessions.filters.noWorkspace"),
+			restore: t("settings.archivedSessions.actions.restore"),
+			deleteAria: (sessionTitle: string): string => t("settings.archivedSessions.aria.delete", { sessionTitle }),
+			restoreAria: (sessionTitle: string): string => t("settings.archivedSessions.aria.restore", { sessionTitle })
+		};
+	}, [t]);
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -127,7 +163,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 				setArchivedSessions(archivedList.archivedSessions);
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(error instanceof Error ? error.message : "Failed to load archived sessions");
+					setErrorMessage(error instanceof Error ? error.message : labels.failedLoad);
 				}
 			} finally {
 				if (!cancelled) {
@@ -141,7 +177,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 		return (): void => {
 			cancelled = true;
 		};
-	}, []);
+	}, [labels.failedLoad]);
 
 	const workspacesById: Map<string, WorkspaceConfig> = useMemo((): Map<string, WorkspaceConfig> => {
 		return new Map(workspaces.map((workspace: WorkspaceConfig): [string, WorkspaceConfig] => [workspace.id, workspace]));
@@ -149,7 +185,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 
 	const workspaceOptions = useMemo((): Array<{ label: string; value: string }> => {
 		const options: Array<{ label: string; value: string }> = [
-			{ label: "All", value: ALL_WORKSPACES_KEY }
+			{ label: labels.all, value: ALL_WORKSPACES_KEY }
 		];
 		const seenWorkspaceIds: Set<string> = new Set<string>();
 
@@ -168,11 +204,11 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 		}
 
 		if (archivedSessions.some((session: SessionMetadata): boolean => session.workspaceId === undefined)) {
-			options.push({ label: "No workspace", value: UNKNOWN_WORKSPACE_KEY });
+			options.push({ label: labels.noWorkspace, value: UNKNOWN_WORKSPACE_KEY });
 		}
 
 		return options;
-	}, [archivedSessions, workspacesById]);
+	}, [archivedSessions, labels.all, labels.noWorkspace, workspacesById]);
 
 	const filteredSessions: SessionMetadata[] = useMemo((): SessionMetadata[] => {
 		const normalizedSearch: string = searchText.trim().toLowerCase();
@@ -195,6 +231,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 				workspacesById,
 				busySessionId,
 				busyAction,
+				labels,
 				onRestore: (targetSession: SessionMetadata, event: MouseEvent<HTMLElement>): void => {
 					void handleRestoreSession(targetSession, event);
 				},
@@ -203,7 +240,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 				}
 			});
 		});
-	}, [busyAction, busySessionId, filteredSessions, workspacesById]);
+	}, [busyAction, busySessionId, filteredSessions, labels, workspacesById]);
 
 	async function handleRestoreSession(session: SessionMetadata, event: MouseEvent<HTMLElement>): Promise<void> {
 		event.preventDefault();
@@ -222,7 +259,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 				return currentSessions.filter((currentSession: SessionMetadata): boolean => currentSession.id !== session.id);
 			});
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to unarchive session");
+			setErrorMessage(error instanceof Error ? error.message : labels.failedRestore);
 		} finally {
 			setBusySessionId(null);
 			setBusyAction(null);
@@ -246,7 +283,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 				return currentSessions.filter((currentSession: SessionMetadata): boolean => currentSession.id !== session.id);
 			});
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to delete archived session");
+			setErrorMessage(error instanceof Error ? error.message : labels.failedDeleteSession);
 		} finally {
 			setBusySessionId(null);
 			setBusyAction(null);
@@ -272,7 +309,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 			});
 			setDeleteAllOpen(false);
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to delete archived sessions");
+			setErrorMessage(error instanceof Error ? error.message : labels.failedDeleteAll);
 		} finally {
 			setIsDeletingAll(false);
 		}
@@ -283,7 +320,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 			<header className={styles.header}>
 				<div className={styles.titleRow}>
 					<Typography.Title level={3} className={styles.title}>
-						Archived sessions
+						{t("settings.archivedSessions.title")}
 					</Typography.Title>
 					<Tag>{archivedSessions.length}</Tag>
 				</div>
@@ -291,7 +328,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 					<Input
 						allowClear={true}
 						prefix={<Icon name="search" />}
-						placeholder="Search session..."
+						placeholder={t("settings.archivedSessions.searchPlaceholder")}
 						value={searchText}
 						className={styles.searchBox}
 						onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setSearchText(event.target.value)}
@@ -309,7 +346,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 						disabled={filteredSessions.length === 0 || isLoading || busySessionId !== null}
 						onClick={(): void => setDeleteAllOpen(true)}
 					>
-						Delete all
+						{labels.deleteAll}
 					</Button>
 				</Space.Compact>
 			</header>
@@ -323,12 +360,12 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 			<div className={styles.menuScroller}>
 				{isLoading ? (
 					<Typography.Text type="secondary" className={styles.emptyText}>
-						Loading archived sessions...
+						{t("settings.archivedSessions.loading")}
 					</Typography.Text>
 				) : filteredSessions.length === 0 ? (
 					<Empty
 						image={<Icon name="empty" />}
-						description={archivedSessions.length === 0 ? "No archived sessions" : "No matching archived sessions"}
+						description={archivedSessions.length === 0 ? t("settings.archivedSessions.empty.none") : t("settings.archivedSessions.empty.noMatches")}
 					/>
 				) : (
 					<Menu
@@ -342,9 +379,9 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 			</div>
 
 			<Modal
-				title="Delete archived sessions?"
+				title={t("settings.archivedSessions.confirm.deleteAll.title")}
 				open={deleteAllOpen}
-				okText="Delete all"
+				okText={labels.deleteAll}
 				okButtonProps={{ danger: true }}
 				confirmLoading={isDeletingAll}
 				onOk={(): void => {
@@ -352,7 +389,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 				}}
 				onCancel={(): void => setDeleteAllOpen(false)}
 			>
-				This will permanently delete {filteredSessions.length} archived session{filteredSessions.length === 1 ? "" : "s"} matching the current filter.
+				{t("settings.archivedSessions.confirm.deleteAll.description", { count: filteredSessions.length })}
 			</Modal>
 		</section>
 	);

@@ -70,12 +70,24 @@
 	min-width: 0;
 }
 
+.preferenceControl {
+	width: 220px;
+}
+
 .godotSetting {
 	display: grid;
 	gap: 10px;
 }
 
 @media (max-width: 720px) {
+	.preferenceItem {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.preferenceControl {
+		width: 100%;
+	}
+
 	.godotPathRow {
 		grid-template-columns: minmax(0, 1fr) auto;
 	}
