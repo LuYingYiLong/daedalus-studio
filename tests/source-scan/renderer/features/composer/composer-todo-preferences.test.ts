@@ -10,7 +10,8 @@ describe("Composer todo preferences", () => {
 		expect(composerSource).not.toContain("autoExpandWorkflowTodo");
 		expect(composerSource).not.toContain("dismissedWorkflowTodoKeyRef");
 		expect(composerSource).not.toContain("setTodoPanelOpen");
-		expect(appSource).toContain("const workflowTodoCollapsed: boolean = !generalSettings.autoExpandTodoList;");
+		expect(appSource).toContain("const workflowTodoCollapsed: boolean = workflowTodoIsActive ? false : !generalSettings.autoExpandTodoList;");
+		expect(appSource).toContain("expandedActiveWorkflowTodoKeyRef.current = workflowTodoKey;");
 		expect(appSource).toContain("saveSessionUiMetadata({ workflowTodoCollapsed })");
 		expect(appSource).toContain("workflowTodoCollapsed={activeSessionMetadata?.workflowTodoCollapsed === true}");
 		expect(agentSource).toContain("<FloatingWorkflowTodoPanel");

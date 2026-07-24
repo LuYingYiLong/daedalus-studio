@@ -30,9 +30,11 @@ describe("Composer workflow todo visibility", () => {
 		expect(globalCss).toContain("--ds-git-deletion");
 		expect(designDoc).toContain("`--ds-git-addition`");
 		expect(designDoc).toContain("Git 差异 UI 统一使用");
-		expect(appSource).toContain("function clearWorkflowTodoUiState()");
+		expect(appSource).toContain("function clearWorkflowTodoUiState(options: { preservePlanSnapshot?: boolean } = {})");
 		expect(appSource).toContain('if (event.event === "agent.run.started")');
-		expect(appSource).toContain("clearWorkflowTodoUiState();");
+		expect(appSource).toContain("clearWorkflowTodoUiState({ preservePlanSnapshot: true });");
+		expect(appSource).toContain('event.event === "plan.execution.started"');
+		expect(appSource).toContain("expandWorkflowTodoPanel();");
 		expect(appSource).toContain('event.event === "workflow.todo.updated" || event.event === "agent.run.snapshot"');
 	});
 });
