@@ -7,9 +7,9 @@ describe("ToolBudgetDialog source", () => {
 	it("shows budget details and continue/stop actions", () => {
 		expect(source).toContain("ToolBudgetDialogProps");
 		expect(source).toContain("pendingToolBudget.additionalSteps");
-		expect(source).toContain("工具调用达到上限");
-		expect(source).toContain(">继续<");
-		expect(source).toContain(">否，结束并总结<");
+		expect(source).toContain('t("approval.toolBudget.title")');
+		expect(source).toContain('t("approval.toolBudget.actions.continue")');
+		expect(source).toContain('t("approval.toolBudget.actions.stop")');
 		expect(source).toContain("onContinue?.(pendingToolBudget.budgetId)");
 		expect(source).toContain("onStop?.(pendingToolBudget.budgetId)");
 	});

@@ -17,6 +17,11 @@ files:
 extraResources:
   - from: build/icon.ico
     to: icon.ico
+  - from: build/backend-bootstrap
+    to: backend-bootstrap
+    filter:
+      - daedalus-backend.exe
+      - backend-manifest.json
 
 asar: true
 asarUnpack:

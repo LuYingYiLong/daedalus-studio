@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Input, Space, Typography } from "antd";
+import { useTranslation } from "react-i18next";
 import type { PlanApprovalState } from "@/api/types";
 import styles from "./PlanApprovalDialog.module.css";
 
@@ -20,6 +21,7 @@ function PlanApprovalDialog({
 	onApprove,
 	onRevise
 }: PlanApprovalDialogProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const [revisionFeedback, setRevisionFeedback] = useState<string>("");
 
 	useEffect((): void => {
@@ -30,14 +32,14 @@ function PlanApprovalDialog({
 	const isBusy: boolean = isApproving || isRevising;
 
 	return (
-		<section className={styles.planApprovalDialog} aria-label="Plan approval">
+		<section className={styles.planApprovalDialog} aria-label={t("approval.plan.aria")}>
 			<header className={styles.header}>
 				<div className={styles.heading}>
 					<Typography.Title level={4} className={styles.title}>
-						Approve plan?
+						{t("approval.plan.title")}
 					</Typography.Title>
 					<Typography.Text type="secondary" className={styles.subtitle}>
-						Review the plan above, then approve it or ask for changes.
+						{t("approval.plan.subtitle")}
 					</Typography.Text>
 				</div>
 			</header>
@@ -51,12 +53,12 @@ function PlanApprovalDialog({
 					className={styles.approveActionButton}
 					onClick={(): void => onApprove(plan.planId)}
 				>
-					Approve and Execute
+					{t("approval.plan.actions.approveAndExecute")}
 				</Button>
 				<Space.Compact className={styles.revisionRow}>
 					<Input
 						value={revisionFeedback}
-						placeholder="Tell the assistant how to change the plan"
+						placeholder={t("approval.plan.revisionPlaceholder")}
 						className={styles.revisionInput}
 						disabled={isBusy}
 						onChange={(event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -68,7 +70,7 @@ function PlanApprovalDialog({
 						disabled={isBusy || trimmedFeedback.length === 0}
 						onClick={(): void => onRevise(plan.planId, trimmedFeedback)}
 					>
-						Revise
+						{t("approval.plan.actions.revise")}
 					</Button>
 				</Space.Compact>
 			</div>

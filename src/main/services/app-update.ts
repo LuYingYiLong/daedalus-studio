@@ -1,9 +1,17 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import electronUpdater from "electron-updater";
 import type { ProgressInfo, UpdateInfo } from "electron-updater";
-import WebSocket from "ws";
 import { backendManager } from "./backend-manager";
-import { cleanupManagedBackendPreviousVersion, fetchLatestManagedBackendVersion, installManagedBackendPackage } from "./backend-bootstrap";
+import { compareSemanticVersions } from "./backend-binary-manifest";
+import {
+	activateBackendCandidate,
+	commitBackendCandidate,
+	fetchBackendReleaseManifest,
+	inspectCurrentBackend,
+	removeLegacyManagedBackends,
+	rollbackBackendCandidate,
+	stageBackendRelease
+} from "./backend-binary-store";
 
 export type AppUpdateStatus =
 	| "idle"
@@ -63,6 +71,7 @@ export type BackendUpdateClient = {
 	restartAndWaitHealthy: () => Promise<void>;
 	verifyInstalledVersion: (version: string) => Promise<void>;
 	cleanupPreviousVersion: (currentVersion: string, previousVersion: string | null) => Promise<void>;
+	rollbackFailedInstall: () => Promise<void>;
 };
 
 export type AppUpdateServiceOptions = {
@@ -72,7 +81,7 @@ export type AppUpdateServiceOptions = {
 	backendUpdateClient?: BackendUpdateClient;
 	sendEvent?: (channel: "app-update:state-changed", payload: AppUpdateState) => void;
 	installDelayMs?: number;
-	beforeClientInstall?: () => void;
+	beforeClientInstall?: () => void | Promise<void>;
 };
 
 type AppUpdateEventName =
@@ -102,23 +111,6 @@ type AppUpdaterLike = {
 	quitAndInstall: (isSilent: boolean, isForceRunAfter: boolean) => void;
 	on: (eventName: AppUpdateEventName, handler: (...args: unknown[]) => void) => unknown;
 };
-
-type BackendRpcResponse<TResult> =
-	| {
-		type: "response";
-		id: string;
-		ok: true;
-		result: TResult;
-	}
-	| {
-		type: "response";
-		id: string;
-		ok: false;
-		error: {
-			code: string;
-			message: string;
-		};
-	};
 
 function createNoopAutoUpdater(): AppUpdaterLike {
 	return {
@@ -170,34 +162,12 @@ function getUnsupportedClientMessage(): string {
 	return "Client updates are only available in packaged builds.";
 }
 
-function parseVersionCore(version: string): [number, number, number] | null {
-	const core: string = version.trim().split(/[+-]/u)[0] ?? "";
-	const match: RegExpMatchArray | null = core.match(/^(\d+)\.(\d+)\.(\d+)$/u);
-	if (match === null) {
-		return null;
-	}
-	return [
-		Number.parseInt(match[1]!, 10),
-		Number.parseInt(match[2]!, 10),
-		Number.parseInt(match[3]!, 10)
-	];
-}
-
 function isVersionNewer(candidateVersion: string, currentVersion: string): boolean {
-	const candidate: [number, number, number] | null = parseVersionCore(candidateVersion);
-	const current: [number, number, number] | null = parseVersionCore(currentVersion);
-	if (candidate === null || current === null) {
+	try {
+		return compareSemanticVersions(candidateVersion, currentVersion) > 0;
+	} catch {
 		return false;
 	}
-	for (let index: number = 0; index < candidate.length; index += 1) {
-		if (candidate[index]! > current[index]!) {
-			return true;
-		}
-		if (candidate[index]! < current[index]!) {
-			return false;
-		}
-	}
-	return false;
 }
 
 function createComponentState(status: AppUpdateStatus, currentVersion: string | null, errorMessage: string | null = null): AppUpdateComponentState {
@@ -305,94 +275,33 @@ function broadcastAppUpdateEvent(channel: "app-update:state-changed", payload: A
 	}
 }
 
-function isBackendRpcResponse<TResult>(value: unknown, id: string): value is BackendRpcResponse<TResult> {
-	return typeof value === "object"
-		&& value !== null
-		&& (value as { type?: unknown }).type === "response"
-		&& (value as { id?: unknown }).id === id
-		&& typeof (value as { ok?: unknown }).ok === "boolean";
-}
-
-function requestBackendRpc<TResult>(method: string, params?: unknown): Promise<TResult> {
-	return new Promise((resolve, reject): void => {
-		const requestId: string = `studio-update-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-		const ws = new WebSocket(`ws://localhost:${backendManager.getPort()}`);
-		const timeout: ReturnType<typeof setTimeout> = setTimeout((): void => {
-			ws.close();
-			reject(new Error(`Timed out waiting for ${method}.`));
-		}, 30000);
-
-		ws.on("open", (): void => {
-			ws.send(JSON.stringify({
-				protocolVersion: 2,
-				type: "request",
-				id: requestId,
-				method,
-				...(params === undefined ? {} : { params })
-			}));
-		});
-		ws.on("message", (data: WebSocket.RawData): void => {
-			try {
-				const parsed: unknown = JSON.parse(data.toString());
-				if (!isBackendRpcResponse<TResult>(parsed, requestId)) {
-					return;
-				}
-				clearTimeout(timeout);
-				ws.close();
-				if (parsed.ok) {
-					resolve(parsed.result);
-					return;
-				}
-				reject(new Error(parsed.error.message));
-			} catch (error: unknown) {
-				clearTimeout(timeout);
-				ws.close();
-				reject(error instanceof Error ? error : new Error(`Failed to parse ${method} response.`));
-			}
-		});
-		ws.on("error", (error: Error): void => {
-			clearTimeout(timeout);
-			reject(error);
-		});
-	});
-}
-
 class MainProcessBackendUpdateClient implements BackendUpdateClient {
 	public async check(): Promise<BackendUpdateCheckResult> {
 		const launchTarget = backendManager.getLaunchTargetInfo();
-		if (launchTarget?.kind === "managed" && launchTarget.version !== null) {
-			const currentVersion: string = launchTarget.version;
-			const latestVersion: string = await fetchLatestManagedBackendVersion();
-			return {
-				currentVersion,
-				installedVersion: currentVersion,
-				latestVersion,
-				updateAvailable: isVersionNewer(latestVersion, currentVersion),
-				checkedAt: new Date().toISOString(),
-				errorMessage: null
-			};
+		if (launchTarget === null) {
+			throw new Error("Cannot check backend updates before a verified backend is selected.");
 		}
-
-		await backendManager.waitUntilHealthy();
-		return await requestBackendRpc<BackendUpdateCheckResult>("backend.update.check");
+		const latest = await fetchBackendReleaseManifest();
+		return {
+			currentVersion: launchTarget.version,
+			installedVersion: launchTarget.version,
+			latestVersion: latest.version,
+			updateAvailable: isVersionNewer(latest.version, launchTarget.version),
+			checkedAt: new Date().toISOString(),
+			errorMessage: null
+		};
 	}
 
 	public async install(version: string | null): Promise<BackendUpdateInstallResult> {
-		const launchTarget = backendManager.getLaunchTargetInfo();
-		if (launchTarget?.kind === "managed") {
-			const installed = await installManagedBackendPackage(version ?? "latest");
-			return {
-				installed: true,
-				version: installed.version,
-				previousVersion: installed.previousVersion ?? null,
-				installedAt: new Date().toISOString()
-			};
-		}
-
-		return await requestBackendRpc<BackendUpdateInstallResult>(
-			"backend.update.install",
-			version === null ? {} : { version }
-		);
+		const previousVersion: string | null = backendManager.getLaunchTargetInfo()?.version ?? null;
+		const installed = await stageBackendRelease(version);
+		await activateBackendCandidate(installed);
+		return {
+			installed: true,
+			version: installed.version,
+			previousVersion,
+			installedAt: new Date().toISOString()
+		};
 	}
 
 	public async restartAndWaitHealthy(): Promise<void> {
@@ -400,18 +309,24 @@ class MainProcessBackendUpdateClient implements BackendUpdateClient {
 	}
 
 	public async verifyInstalledVersion(version: string): Promise<void> {
-		const result: BackendUpdateCheckResult = await this.check();
-		if (result.currentVersion !== version && result.installedVersion !== version) {
-			throw new Error(`Backend update verification failed. Expected ${version}, got ${result.currentVersion}.`);
+		const installed = await inspectCurrentBackend();
+		const launchTarget = backendManager.getLaunchTargetInfo();
+		if (installed?.version !== version || launchTarget?.version !== version) {
+			throw new Error(
+				`Backend update verification failed. Expected ${version}, got ${installed?.version ?? "none"}.`
+			);
 		}
 	}
 
-	public async cleanupPreviousVersion(currentVersion: string, previousVersion: string | null): Promise<void> {
-		const launchTarget = backendManager.getLaunchTargetInfo();
-		if (launchTarget?.kind !== "managed") {
-			return;
-		}
-		await cleanupManagedBackendPreviousVersion(currentVersion, previousVersion);
+	public async cleanupPreviousVersion(currentVersion: string, _previousVersion: string | null): Promise<void> {
+		await commitBackendCandidate(currentVersion);
+		await removeLegacyManagedBackends();
+	}
+
+	public async rollbackFailedInstall(): Promise<void> {
+		await backendManager.stopAndWait();
+		await rollbackBackendCandidate();
+		await backendManager.restartAndWaitHealthy();
 	}
 }
 
@@ -421,7 +336,7 @@ export class AppUpdateService {
 	private readonly backendUpdateClient: BackendUpdateClient;
 	private readonly sendEvent: (channel: "app-update:state-changed", payload: AppUpdateState) => void;
 	private readonly installDelayMs: number;
-	private beforeClientInstall: () => void;
+	private beforeClientInstall: () => void | Promise<void>;
 	private state: AppUpdateState;
 	private checkPromise: Promise<void> | null = null;
 	private downloadPromise: Promise<AppUpdateState> | null = null;
@@ -504,7 +419,7 @@ export class AppUpdateService {
 		return this.getState();
 	}
 
-	public setBeforeClientInstall(handler: () => void): void {
+	public setBeforeClientInstall(handler: () => void | Promise<void>): void {
 		this.beforeClientInstall = handler;
 	}
 
@@ -606,8 +521,12 @@ export class AppUpdateService {
 			progress: 0,
 			errorMessage: null
 		});
+		let candidateActivated: boolean = false;
 		try {
-			const result: BackendUpdateInstallResult = await this.backendUpdateClient.install(this.state.backend.availableVersion);
+			const result: BackendUpdateInstallResult = await this.backendUpdateClient.install(
+				this.state.backend.availableVersion
+			);
+			candidateActivated = true;
 			this.updateBackend({
 				status: "installing",
 				currentVersion: result.version,
@@ -626,10 +545,22 @@ export class AppUpdateService {
 				errorMessage: null
 			});
 		} catch (error: unknown) {
+			let errorMessage: string = error instanceof Error
+				? error.message
+				: "Backend update install failed.";
+			if (candidateActivated) {
+				try {
+					await this.backendUpdateClient.rollbackFailedInstall();
+				} catch (rollbackError: unknown) {
+					errorMessage = `${errorMessage} Rollback also failed: ${
+						rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
+					}`;
+				}
+			}
 			this.updateBackend({
 				status: "error",
 				progress: null,
-				errorMessage: error instanceof Error ? error.message : "Backend update install failed."
+				errorMessage
 			});
 		}
 	}
@@ -701,14 +632,14 @@ export class AppUpdateService {
 				progress: 100,
 				errorMessage: null
 			});
-			setTimeout((): void => {
+			setTimeout(async (): Promise<void> => {
 				this.updateClient({
 					status: "installing",
 					progress: 100,
 					errorMessage: null
 				});
 				try {
-					this.beforeClientInstall();
+					await this.beforeClientInstall();
 				} catch (error: unknown) {
 					console.error("[AppUpdateService] before client install hook failed", error);
 				}

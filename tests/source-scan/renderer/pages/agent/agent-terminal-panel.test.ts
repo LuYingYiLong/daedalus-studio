@@ -27,7 +27,7 @@ describe("AgentPage terminal panel source", () => {
 	it("keeps side defaulting to review and bottom defaulting to terminal", () => {
 		expect(agentSource).toContain("defaultKind=\"review\"");
 		expect(agentSource).toContain("defaultKind=\"terminal\"");
-		expect(dockPanelTabsSource).toContain("return [createDockTab(dockId, defaultKind, 1)];");
+		expect(dockPanelTabsSource).toContain("return [createDockTab(dockId, defaultKind, 1, t)];");
 		expect(dockPanelTabsSource).not.toContain("getDefaultAvailableKind");
 	});
 
@@ -78,7 +78,7 @@ describe("AgentPage terminal panel source", () => {
 		expect(agentSource).toContain("waitForCwd={terminalWaitForCwd}");
 		expect(dockPanelTabsSource).toContain("waitForCwd: boolean;");
 		expect(dockPanelTabsSource).toContain("waitForCwd={waitForCwd}");
-		expect(terminalPanelSource).toContain("Waiting for workspace");
+		expect(terminalPanelSource).toContain('t("terminal.status.waitingForWorkspace")');
 		expect(waitGuardIndex).toBeGreaterThan(-1);
 		expect(createIndex).toBeGreaterThan(-1);
 		expect(waitGuardIndex).toBeLessThan(createIndex);
@@ -90,8 +90,8 @@ describe("AgentPage terminal panel source", () => {
 		expect(panelTabsSource).toContain("tabBarExtraContent={{");
 		expect(panelTabsSource).toContain("<Dropdown");
 		expect(dockPanelTabsSource).toContain("PanelTabs");
-		expect(dockPanelTabsSource).toContain("Review panel");
-		expect(dockPanelTabsSource).toContain("Terminal panel");
+		expect(dockPanelTabsSource).toContain('t("dock.add.reviewPanel")');
+		expect(dockPanelTabsSource).toContain('t("dock.add.terminalPanel")');
 		expect(dockPanelTabsSource).toContain("forceRender: tab.kind === \"terminal\"");
 		expect(dockPanelTabsSource).toContain("window.electronAPI.terminal.kill({ terminalId: targetKey })");
 		expect(dockPanelTabsSource).toContain("onEmpty();");

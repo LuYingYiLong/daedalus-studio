@@ -78,6 +78,7 @@ web_modules/
 .next
 out
 release/
+build/backend-bootstrap/
 
 # Nuxt.js build / generate output
 .nuxt

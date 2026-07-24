@@ -1,5 +1,6 @@
 import { Alert, Dropdown, Image, message, Spin, Typography, type MenuProps } from "antd";
 import { memo, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { TimelineBodyPart, TimelineGeneratedImageArtifact } from "@/api/types";
 import { fetchGeneratedImageDataUrl } from "@/api/generated-image-api";
 import { Icon } from "@/assets/icons";
@@ -39,6 +40,7 @@ function downloadImage(image: LoadedImage): void {
 }
 
 function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): React.JSX.Element {
+	const { t } = useTranslation();
 	const [messageApi, contextHolder] = message.useMessage();
 	const artifacts: TimelineGeneratedImageArtifact[] = useMemo((): TimelineGeneratedImageArtifact[] => getArtifacts(part), [part]);
 	const [loadedImages, setLoadedImages] = useState<LoadedImage[]>([]);
@@ -69,7 +71,7 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 				}
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(error instanceof Error ? error.message : "Failed to load generated image");
+					setErrorMessage(error instanceof Error ? error.message : t("chat.imageGeneration.errors.load"));
 				}
 			}
 		}
@@ -84,19 +86,19 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 	const previewItems: string[] = loadedImages.map((image: LoadedImage): string => image.dataUrl);
 	const modelLabel: string = part.provider !== undefined && part.model !== undefined
 		? `${part.provider} / ${part.model}`
-		: "Image generation";
+		: t("chat.imageGeneration.modelFallback");
 
 	function createImageContextMenu(image: LoadedImage): MenuProps {
 		return {
 			items: [
 				{
 					key: "copy-image",
-					label: "Copy image",
+					label: t("chat.imageGeneration.actions.copyImage"),
 					icon: <Icon name="copy" />
 				},
 				{
 					key: "save-image",
-					label: "Save image",
+					label: t("chat.imageGeneration.actions.saveImage"),
 					icon: <Icon name="download" />
 				}
 			],
@@ -105,10 +107,10 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 				if (info.key === "copy-image") {
 					void copyImage(image.dataUrl)
 						.then((): void => {
-							void messageApi.success("Image copied");
+							void messageApi.success(t("chat.imageGeneration.messages.copied"));
 						})
 						.catch((error: unknown): void => {
-							void messageApi.error(error instanceof Error ? error.message : "Failed to copy image");
+							void messageApi.error(error instanceof Error ? error.message : t("chat.imageGeneration.errors.copy"));
 						});
 					return;
 				}
@@ -125,11 +127,11 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 			<section className={styles.root}>
 				<div className={styles.header}>
 					<div className={styles.title}>
-						<Typography.Title level={4} className={styles.title}>Generating images</Typography.Title>
+						<Typography.Title level={4} className={styles.title}>{t("chat.imageGeneration.generating")}</Typography.Title>
 						<Typography.Text
 							copyable={{
 								icon: [<Icon name="copy" />],
-								tooltips: ['Copy', 'Copied'],
+								tooltips: [t("chat.common.copy"), t("chat.common.copied")],
 							}}
 							className={styles.prompt}
 						>
@@ -149,8 +151,8 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 					className={styles.alert}
 					type="error"
 					showIcon={true}
-					title="Image generation failed"
-					description={part.error ?? "Unknown error"}
+					title={t("chat.imageGeneration.failed")}
+					description={part.error ?? t("chat.imageGeneration.errors.unknown")}
 				/>
 			</section>
 		);
@@ -161,12 +163,12 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 			{contextHolder}
 			<div className={styles.header}>
 				<div className={styles.title}>
-					<Typography.Title level={4} className={styles.title}>Generated images</Typography.Title>
+					<Typography.Title level={4} className={styles.title}>{t("chat.imageGeneration.generated")}</Typography.Title>
 					<Typography.Text type="secondary" className={styles.modelLabel}>{modelLabel}</Typography.Text>
 					<Typography.Text
 						copyable={{
 							icon: [<Icon name="copy" />, <Icon name="check" />],
-							tooltips: ["Copy", "Copied"],
+							tooltips: [t("chat.common.copy"), t("chat.common.copied")],
 						}}
 						className={styles.prompt}
 					>
@@ -175,7 +177,7 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 				</div>
 			</div>
 			{errorMessage !== null ? (
-				<Alert type="warning" showIcon={true} title="Image preview unavailable" description={errorMessage} />
+				<Alert type="warning" showIcon={true} title={t("chat.imageGeneration.previewUnavailable")} description={errorMessage} />
 			) : null}
 			<Image.PreviewGroup
 				items={previewItems}
@@ -216,7 +218,7 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 										src={loadedImage.dataUrl}
 										alt={artifact.prompt}
 										fallback={FALLBACK_IMAGE}
-										placeholder={<div className={styles.placeholder}>Loading</div>}
+										placeholder={<div className={styles.placeholder}>{t("chat.imageGeneration.loading")}</div>}
 										preview={false}
 									/>
 								)}

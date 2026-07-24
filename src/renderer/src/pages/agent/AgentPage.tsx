@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button, Divider, Dropdown, Empty, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
+import { useTranslation } from "react-i18next";
 import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode, PendingApproval } from "@/api/approval-api";
@@ -353,6 +354,7 @@ function AgentPage({
 	onWorkflowTodoDismiss,
 	onCompletionOpen
 }: AgentPageProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
 	const [workspaceLaunchTargets, setWorkspaceLaunchTargets] = useState<WorkspaceLaunchTarget[]>(FALLBACK_WORKSPACE_LAUNCH_TARGETS);
 	const [selectedLaunchTargetId, setSelectedLaunchTargetId] = useState<WorkspaceLaunchTargetId>("file-explorer");
@@ -478,7 +480,7 @@ function AgentPage({
 			setSummaryOverview(result);
 			return result;
 		} catch (error: unknown) {
-			const message: string = error instanceof Error ? error.message : "Failed to load session summary.";
+			const message: string = error instanceof Error ? error.message : t("agentPage.summary.errors.load");
 			console.error("[AgentPage] failed to load session overview", error);
 			setSummaryError(message);
 			return null;
@@ -534,7 +536,7 @@ function AgentPage({
 		if (summaryOverview.envInfo !== null && summaryOverview.envInfo.hasGitRepository) {
 			items.push({
 				key: "env_info",
-				label: "Env info",
+				label: t("agentPage.summary.sections.envInfo"),
 				children: (
 					<div className={styles.summarySection}>
 						<Button
@@ -546,7 +548,7 @@ function AgentPage({
 						>
 							<span className={styles.diffRow}>
 								<span className={styles.diffLabel}>
-									Diff
+									{t("agentPage.summary.actions.diff")}
 								</span>
 								<span className={styles.additions}>
 									{`+${summaryOverview.envInfo.additions}`}
@@ -565,7 +567,7 @@ function AgentPage({
 								gitActions.openBranchDialog();
 							}}
 						>
-							{summaryOverview.envInfo.branch ?? "Detached HEAD"}
+							{summaryOverview.envInfo.branch ?? t("agentPage.summary.detachedHead")}
 						</Button>
 						<Button
 							type="text"
@@ -576,7 +578,7 @@ function AgentPage({
 								gitActions.openCommitDialog();
 							}}
 						>
-							Commit or push
+							{t("agentPage.summary.actions.commitOrPush")}
 						</Button>
 					</div>
 				),
@@ -587,7 +589,7 @@ function AgentPage({
 		if (summaryOverview.plans.total > 0) {
 			items.push({
 				key: "plans",
-				label: "Plans",
+				label: t("agentPage.summary.sections.plans"),
 				children: (
 					<div className={styles.planList}>
 						{summaryOverview.plans.items.slice(0, SUMMARY_PREVIEW_LIMIT).map((plan: SessionOverviewPlanItem): React.ReactNode => (
@@ -613,7 +615,7 @@ function AgentPage({
 									void openPlansModal();
 								}}
 							>
-								See more
+								{t("agentPage.summary.actions.seeMore")}
 							</Button>
 						) : null}
 					</div>
@@ -625,7 +627,7 @@ function AgentPage({
 		if (summaryOverview.sources.total > 0) {
 			items.push({
 				key: "source",
-				label: "Source",
+				label: t("agentPage.summary.sections.source"),
 				children: (
 					<div className={styles.sourceList}>
 						{summaryOverview.sources.items.slice(0, SUMMARY_PREVIEW_LIMIT).map((source: SessionOverviewSourceItem): React.ReactNode => (
@@ -647,7 +649,7 @@ function AgentPage({
 							>
 								<span className={styles.sourceText}>
 									<span className={styles.summaryItemTitle}>{source.title}</span>
-									<span className={styles.summaryMeta}>{formatSourceSubtitle(source)}</span>
+									<span className={styles.summaryMeta}>{formatSourceSubtitle(source, t)}</span>
 								</span>
 							</Button>
 						))}
@@ -661,7 +663,7 @@ function AgentPage({
 									void openSourcesModal();
 								}}
 							>
-								See more
+								{t("agentPage.summary.actions.seeMore")}
 							</Button>
 						) : null}
 					</div>
@@ -671,7 +673,7 @@ function AgentPage({
 		}
 
 		return items;
-	}, [gitActions.openBranchDialog, gitActions.openCommitDialog, openSummaryDiffReview, summaryOverview]);
+	}, [gitActions.openBranchDialog, gitActions.openCommitDialog, openSummaryDiffReview, summaryOverview, t]);
 
 	async function openPlansModal(): Promise<void> {
 		const result: SessionOverviewResult | null = await loadSummaryOverview(SUMMARY_SEE_MORE_LIMIT, SUMMARY_PREVIEW_LIMIT);
@@ -700,7 +702,7 @@ function AgentPage({
 				targetId
 			});
 		} catch (error: unknown) {
-			const message: string = error instanceof Error ? error.message : "Failed to open workspace.";
+			const message: string = error instanceof Error ? error.message : t("agentPage.workspaceLaunch.errors.open");
 			console.error("[AgentPage] failed to open workspace launch target", error);
 			void messageApi.error(message);
 		} finally {
@@ -899,7 +901,7 @@ function AgentPage({
 							void loadSummaryOverview();
 						}}
 					>
-						Retry
+						{t("agentPage.summary.actions.retry")}
 					</Button>
 				</div>
 			) : summaryCollapseItems.length > 0 ? (
@@ -918,12 +920,12 @@ function AgentPage({
 			) : (
 				<Empty
 					image={Empty.PRESENTED_IMAGE_SIMPLE}
-					description="No summary yet"
+					description={t("agentPage.summary.empty")}
 					className={styles.summaryEmpty}
 				/>
 			)}
 		</div>
-	), [isSummaryLoading, loadSummaryOverview, summaryCollapseItems, summaryError, summaryOverview]);
+	), [isSummaryLoading, loadSummaryOverview, summaryCollapseItems, summaryError, summaryOverview, t]);
 
 	function renderSummaryButton(): React.ReactNode {
 		return (
@@ -935,11 +937,11 @@ function AgentPage({
 				className={styles.summaryPopver}
 				content={summaryPopoverContent}
 			>
-				<Tooltip title="Summary">
+				<Tooltip title={t("agentPage.summary.tooltip")}>
 					<Button
 						type={summaryOpen ? "primary" : "text"}
 						shape="circle"
-						aria-label="Open session summary"
+						aria-label={t("agentPage.summary.aria.open")}
 						aria-pressed={summaryOpen}
 						icon={<Icon name="list-check" />}
 					/>
@@ -964,7 +966,7 @@ function AgentPage({
 						className={styles.createSessionButton}
 						onClick={onNewSession}
 					>
-						New session
+						{t("agentPage.actions.newSession")}
 					</Button>
 				</header>
 
@@ -1001,7 +1003,7 @@ function AgentPage({
 										icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
 										onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
 									>
-										Open in {selectedLaunchTarget.label}
+										{t("agentPage.workspaceLaunch.openIn", { target: selectedLaunchTarget.label })}
 									</Button>
 									<Dropdown
 										menu={{
@@ -1012,7 +1014,7 @@ function AgentPage({
 										trigger={["click"]}
 									>
 										<Button
-											aria-label="Select workspace launch target"
+											aria-label={t("agentPage.workspaceLaunch.aria.selectTarget")}
 											icon={<Icon name="arrow-down" />}
 										/>
 									</Dropdown>
@@ -1020,7 +1022,7 @@ function AgentPage({
 							) : null}
 							{showSummaryButton ? renderSummaryButton() : null}
 							{showBottomDockButton ? (
-								<Tooltip title={bottomDockOpen ? "Close bottom panel" : "Open bottom panel"}>
+								<Tooltip title={bottomDockOpen ? t("agentPage.dock.closeBottom") : t("agentPage.dock.openBottom")}>
 									<Button
 										type={bottomDockOpen ? "primary" : "text"}
 										shape="circle"
@@ -1031,7 +1033,7 @@ function AgentPage({
 								</Tooltip>
 							) : null}
 							{showSideDockButton ? (
-								<Tooltip title={sideDockOpen ? "Close sidebar" : "Open sidebar"}>
+								<Tooltip title={sideDockOpen ? t("agentPage.dock.closeSidebar") : t("agentPage.dock.openSidebar")}>
 									<Button
 										type={sideDockOpen ? "primary" : "text"}
 										shape="circle"
@@ -1098,7 +1100,7 @@ function AgentPage({
 											<Button
 												ref={scrollToBottomButtonRef}
 												shape="circle"
-												title="Scroll to bottom"
+												title={t("agentPage.actions.scrollToBottom")}
 												icon={<Icon name="arrow-bottom" />}
 												tabIndex={-1}
 												className={[

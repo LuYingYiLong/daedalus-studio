@@ -53,7 +53,7 @@ describe("BackendManager", () => {
 
 			const getStatus = vi.fn().mockResolvedValue("stopped");
 
-			expect(getStatus()).resolves.toBe("stopped");
+			await expect(getStatus()).resolves.toBe("stopped");
 		});
 	});
 
@@ -87,7 +87,9 @@ describe("BackendManager", () => {
 			const { backendManager } = await import("@main/services/backend-manager");
 
 			(backendManager as any).process = mockProcess;
-			backendManager.stop();
+			vi.spyOn(backendManager as any, "requestGracefulShutdown").mockResolvedValue(undefined);
+			vi.spyOn(backendManager as any, "waitForProcessExit").mockResolvedValue(false);
+			await backendManager.stopAndWait();
 
 			expect(mockProcess.kill).toHaveBeenCalled();
 		});

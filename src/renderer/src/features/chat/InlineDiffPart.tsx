@@ -3,6 +3,7 @@ import { Button, Card } from "antd";
 import styles from "./InlineDiffPart.module.css";
 import { Icon } from "@/assets/icons";
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 
 export type TimelineInlineDiffPart = Extract<TimelineBodyPart, { type: "inline_diff" }>;
 export type InlineDiffPartProps = {
@@ -10,50 +11,54 @@ export type InlineDiffPartProps = {
 	onReview?: () => void;
 };
 
-function getFilePath(item: TimelineInlineDiffPart["editedFiles"][number]): string {
-	return item.displayPath ?? item.path ?? item.absolutePath ?? "Unknown file";
+function getFilePath(item: TimelineInlineDiffPart["editedFiles"][number], unknownFileLabel: string): string {
+	return item.displayPath ?? item.path ?? item.absolutePath ?? unknownFileLabel;
 }
 
 function InlineDiffPart({ part, onReview }: InlineDiffPartProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const extra: React.ReactNode = (
 		<div>
 			<Button
 				type="text"
 				icon={<Icon name="undo" />}
-			>Undo</Button>
+			>{t("chat.inlineDiff.actions.undo")}</Button>
 			<Button
 				type="text"
 				icon={<Icon name="layout-right" />}
 				onClick={onReview}
-			>Review</Button>
+			>{t("chat.inlineDiff.actions.review")}</Button>
 		</div>
 	);
 
 	return (
 		<Card
-			title={`Edited ${part.editedFileCount} files`}
+			title={t("chat.inlineDiff.title", { count: part.editedFileCount })}
 			className={styles.diffCard}
 			extra={extra}
 		>
 			<ul className={styles.fileList}>
-				{part.editedFiles.map((item, index) => (
-					<li key={`${getFilePath(item)}:${index}`} className={styles.fileItem}>
+				{part.editedFiles.map((item, index) => {
+					const filePath: string = getFilePath(item, t("chat.inlineDiff.unknownFile"));
+					return (
+					<li key={`${filePath}:${index}`} className={styles.fileItem}>
 						<Button
 							type="text"
 							className={styles.filePathButton}
 							disabled={onReview === undefined}
-							title={getFilePath(item)}
-							aria-label={`Open review for ${getFilePath(item)}`}
+							title={filePath}
+							aria-label={t("chat.inlineDiff.openReviewAria", { filePath })}
 							onClick={onReview}
 						>
-							<span className={styles.filePath}>{getFilePath(item)}</span>
+							<span className={styles.filePath}>{filePath}</span>
 							<span className={styles.fileStats}>
 								<span className={styles.additions}>+{item.additions ?? 0}</span>
 								<span className={styles.deletions}> -{item.deletions ?? 0}</span>
 							</span>
 						</Button>
 					</li>
-				))}
+				);
+				})}
 			</ul>
 		</Card>
 	);

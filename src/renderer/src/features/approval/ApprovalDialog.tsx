@@ -2,6 +2,7 @@ import { Alert, Button, Input, theme, Typography } from "antd";
 import styles from "./ApprovalDialog.module.css";
 import React, { useEffect, useState } from "react";
 import { PendingApproval } from "@/api/approval-api";
+import { useTranslation } from "react-i18next";
 
 export type ApprovalDialogProps = {
 	pendingApproval: PendingApproval | null;
@@ -20,6 +21,7 @@ function ApprovalDialog({
 	onApprove,
 	onReject
 }: ApprovalDialogProps): React.JSX.Element | null {
+	const { t } = useTranslation();
 	const { token } = theme.useToken();
 	const [consentText, setConsentText] = useState<string>("");
 
@@ -43,10 +45,10 @@ function ApprovalDialog({
 			<header className={styles.header}>
 				<div className={styles.titleGroup}>
 					<Typography.Title level={4} className={styles.title}>
-						Approve tool execution?
+						{t("approval.tool.title")}
 					</Typography.Title>
 					<Typography.Text type="secondary" className={styles.subtitle}>
-						The assistant is waiting for approval before it continues.
+						{t("approval.tool.subtitle")}
 					</Typography.Text>
 				</div>
 			</header>
@@ -81,7 +83,7 @@ function ApprovalDialog({
 						{requiredConsent.prompt}
 					</Typography.Text>
 					<Typography.Text type="secondary" className={styles.consentHint}>
-						Type <Typography.Text code>{requiredConsent.expectedText}</Typography.Text> to approve this cross-workspace action.
+						{t("approval.tool.consentPrefix")} <Typography.Text code>{requiredConsent.expectedText}</Typography.Text> {t("approval.tool.consentSuffix")}
 					</Typography.Text>
 					<Input
 						className={styles.consentInput}
@@ -106,7 +108,7 @@ function ApprovalDialog({
 					onClick={(): void => {
 						onApprove?.(pendingApproval.approvalId, requiredConsent === undefined ? undefined : consentText);
 					}}
-				>Approve</Button>
+				>{t("approval.tool.actions.approve")}</Button>
 				<Button
 					danger={true}
 					block
@@ -117,7 +119,7 @@ function ApprovalDialog({
 					onClick={(): void => {
 						onReject?.(pendingApproval.approvalId);
 					}}
-				>Reject</Button>
+				>{t("approval.tool.actions.reject")}</Button>
 			</footer>
 		</div>
 	);

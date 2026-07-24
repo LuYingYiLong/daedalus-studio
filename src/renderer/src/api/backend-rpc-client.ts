@@ -46,12 +46,14 @@ type ClientConfig = {
 	readonly enableReconnect: boolean;
 	readonly reconnectConfig: ReconnectConfig;
 	readonly connectionTimeout: number;
+	readonly authProtocol: string | null;
 };
 
 const DEFAULT_CLIENT_CONFIG: ClientConfig = {
 	enableReconnect: true,
 	reconnectConfig: DEFAULT_RECONNECT_CONFIG,
-	connectionTimeout: 10000
+	connectionTimeout: 10000,
+	authProtocol: null
 };
 
 function createRequestParams(method: string, params: unknown): unknown {
@@ -134,7 +136,9 @@ export class BackendRpcClient {
 
 	private createConnection(): Promise<void> {
 		return new Promise((resolve, reject): void => {
-			const socket: WebSocket = new WebSocket(this.url);
+			const socket: WebSocket = this.config.authProtocol === null
+				? new WebSocket(this.url)
+				: new WebSocket(this.url, this.config.authProtocol);
 			this.socket = socket;
 			this.connectResolve = resolve;
 			this.connectReject = reject;

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Typography } from "antd";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
@@ -62,20 +64,21 @@ function formatShellName(shell: string): string {
 	return shell.split(/[\\/]/u).filter((part: string): boolean => part.length > 0).at(-1) ?? shell;
 }
 
-function getTerminalStateLabel(state: TerminalState | null, isCreating: boolean, isWaitingForCwd: boolean): string {
+function getTerminalStateLabel(state: TerminalState | null, isCreating: boolean, isWaitingForCwd: boolean, t: TFunction<"common">): string {
 	if (isWaitingForCwd) {
-		return "Waiting for workspace";
+		return t("terminal.status.waitingForWorkspace");
 	}
 	if (isCreating) {
-		return "Starting";
+		return t("terminal.status.starting");
 	}
 	if (state === null) {
-		return "Not started";
+		return t("terminal.status.notStarted");
 	}
-	return state.running ? "Running" : "Stopped";
+	return state.running ? t("terminal.status.running") : t("terminal.status.stopped");
 }
 
 function TerminalPanel({ terminalId, cwd, isOpen, waitForCwd }: TerminalPanelProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const hostRef = useRef<HTMLDivElement | null>(null);
 	const terminalRef = useRef<Terminal | null>(null);
 	const fitAddonRef = useRef<FitAddon | null>(null);
@@ -176,13 +179,13 @@ function TerminalPanel({ terminalId, cwd, isOpen, waitForCwd }: TerminalPanelPro
 			syncTerminalState(nextState);
 			terminalRef.current.focus();
 		} catch (error: unknown) {
-			const message: string = error instanceof Error ? error.message : "Failed to start terminal.";
+			const message: string = error instanceof Error ? error.message : t("terminal.errors.start");
 			console.error("[TerminalPanel] failed to create terminal", error);
 			setErrorMessage(message);
 		} finally {
 			setIsCreating(false);
 		}
-	}, [fitTerminal, syncTerminalState, terminalId]);
+	}, [fitTerminal, syncTerminalState, terminalId, t]);
 
 	const killTerminal = useCallback(async (): Promise<void> => {
 		const state: TerminalState | null = terminalStateRef.current;
@@ -195,11 +198,11 @@ function TerminalPanel({ terminalId, cwd, isOpen, waitForCwd }: TerminalPanelPro
 			await window.electronAPI.terminal.kill({ terminalId: state.terminalId });
 			syncTerminalState({ ...state, running: false });
 		} catch (error: unknown) {
-			const message: string = error instanceof Error ? error.message : "Failed to stop terminal.";
+			const message: string = error instanceof Error ? error.message : t("terminal.errors.stop");
 			console.error("[TerminalPanel] failed to kill terminal", error);
 			setErrorMessage(message);
 		}
-	}, [syncTerminalState]);
+	}, [syncTerminalState, t]);
 
 	const restartTerminal = useCallback(async (): Promise<void> => {
 		const terminal: Terminal | null = terminalRef.current;
@@ -214,13 +217,13 @@ function TerminalPanel({ terminalId, cwd, isOpen, waitForCwd }: TerminalPanelPro
 			syncTerminalState(null);
 			await ensureTerminal();
 		} catch (error: unknown) {
-			const message: string = error instanceof Error ? error.message : "Failed to restart terminal.";
+			const message: string = error instanceof Error ? error.message : t("terminal.errors.restart");
 			console.error("[TerminalPanel] failed to restart terminal", error);
 			setErrorMessage(message);
 		} finally {
 			isRestartingRef.current = false;
 		}
-	}, [ensureTerminal, syncTerminalState]);
+	}, [ensureTerminal, syncTerminalState, t]);
 
 	useEffect((): (() => void) | void => {
 		const host: HTMLDivElement | null = hostRef.current;
@@ -355,9 +358,9 @@ function TerminalPanel({ terminalId, cwd, isOpen, waitForCwd }: TerminalPanelPro
 	}, [fitTerminal, isOpen]);
 
 	const isWaitingForCwd: boolean = waitForCwd && cwd === null && terminalState === null;
-	const stateLabel: string = getTerminalStateLabel(terminalState, isCreating, isWaitingForCwd);
+	const stateLabel: string = getTerminalStateLabel(terminalState, isCreating, isWaitingForCwd, t);
 	const shellLabel: string = terminalState === null ? "PowerShell" : formatShellName(terminalState.shell);
-	const cwdLabel: string = terminalState?.cwd ?? cwd ?? "Home";
+	const cwdLabel: string = terminalState?.cwd ?? cwd ?? t("terminal.home");
 	const canKill: boolean = terminalState !== null && terminalState.running && !isCreating;
 
 	return (
@@ -379,7 +382,7 @@ function TerminalPanel({ terminalId, cwd, isOpen, waitForCwd }: TerminalPanelPro
 					<Button
 						type="text"
 						shape="circle"
-						aria-label="Restart terminal"
+						aria-label={t("terminal.actions.restart")}
 						disabled={isCreating || isWaitingForCwd}
 						icon={<Icon name="reload" />}
 						onClick={(): void => {
@@ -389,7 +392,7 @@ function TerminalPanel({ terminalId, cwd, isOpen, waitForCwd }: TerminalPanelPro
 					<Button
 						type="text"
 						shape="circle"
-						aria-label="Stop terminal"
+						aria-label={t("terminal.actions.stop")}
 						disabled={!canKill}
 						icon={<Icon name="stop" />}
 						onClick={(): void => {

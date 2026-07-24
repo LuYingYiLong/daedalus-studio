@@ -21,8 +21,8 @@ describe("AgentPage git commit dialog source", () => {
 		expect(gitActionControllerSource).toContain("AntdApp.useApp()");
 		expect(gitActionControllerSource).not.toContain("contextHolder");
 		expect(agentSource).not.toContain("gitActions.contextHolder");
-		expect(commitActionDialogSource).toContain("Commit & Push");
-		expect(commitActionDialogSource).toContain("Includes unstaged changes");
+		expect(commitActionDialogSource).toContain('t("git.commit.actions.commitAndPush")');
+		expect(commitActionDialogSource).toContain('t("git.commit.includeUnstaged")');
 		expect(commitActionDialogSource).toContain("loading={commitOperation === \"commit\"}");
 		expect(commitActionDialogSource).toContain("loading={commitOperation === \"commit_and_push\"}");
 		expect(commitActionDialogSource).toContain("loading={commitOperation === \"push\"}");
@@ -34,13 +34,13 @@ describe("AgentPage git commit dialog source", () => {
 		expect(gitActionControllerSource).toContain("listWorkspaceGitBranches");
 		expect(gitActionControllerSource).toContain("checkoutWorkspaceGitBranch");
 		expect(gitActionControllerSource).toContain("createWorkspaceGitBranch");
-		expect(branchActionDialogSource).toContain("Create & Checkout");
+		expect(branchActionDialogSource).toContain('t("git.branch.actions.createAndCheckout")');
 		expect(branchActionDialogSource).toContain("footer={null}");
 		expect(gitActionControllerSource).toContain("createBranchDialogProps");
 		expect(branchActionDialogSource).toContain("onCreateBranchOpen");
 		expect(gitActionControllerSource).toContain("onRefresh:");
-		expect(branchActionDialogSource).toContain("No branches found");
-		expect(createBranchDialogSource).toContain("okText=\"Create & Checkout\"");
+		expect(branchActionDialogSource).toContain('description={t("git.branch.empty")}');
+		expect(createBranchDialogSource).toContain('okText={t("git.branch.actions.createAndCheckout")}');
 		expect(gitActionControllerSource).toContain("onBeforeBranchOpen");
 		expect(agentSource).toContain("onBeforeBranchOpen");
 	});

@@ -3,6 +3,7 @@ import styles from "./ToolPart.module.css"
 import { Icon } from "@/assets/icons";
 import { Collapse, Tag } from "antd";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { getToolDisplayInfo } from "./tool-display";
 
 export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
@@ -39,13 +40,14 @@ export type ToolPartProps = {
 
 
 function ToolPart({ part }: ToolPartProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const toolDisplay = getToolDisplayInfo(part.events);
 	const status = getToolStatus(part.events);
 	const statusText: Record<ToolStatus, string> = {
-		running: "Running",
-		success: "Done",
-		error: "Failed",
-		approval: "Approval required",
+		running: t("chat.tool.status.running"),
+		success: t("chat.tool.status.done"),
+		error: t("chat.tool.status.failed"),
+		approval: t("chat.tool.status.approvalRequired"),
 	}
 	const statusColor: Record<ToolStatus, string> = {
 		running: "lime",

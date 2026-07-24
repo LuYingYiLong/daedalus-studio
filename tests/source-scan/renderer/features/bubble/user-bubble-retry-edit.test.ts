@@ -18,7 +18,7 @@ describe("UserBubble retry editing", () => {
 		expect(messageListSource).toContain("const canEditUserMessages: boolean = onRetryFromUserMessage !== undefined && !retryDisabled && !hasRunningAssistantBlock && activeRetryRequestId === null;");
 		expect(messageListSource).toContain("showEditButton={canEditUserMessages}");
 		expect(userBubbleSource).toContain("const canShowEditButton: boolean = showEditButton === true && !isRetryEditing;");
-		expect(userBubbleSource).toContain("aria-label=\"Edit and resend user message\"");
+		expect(userBubbleSource).toContain('aria-label={t("chat.user.editAndResendAria")}');
 		expect(userBubbleSource).toContain("onClick={beginRetryEdit}");
 		expect(userBubbleSource).toContain("onDoubleClick={(): void => {");
 		expect(userBubbleSource).toContain("beginRetryEdit();");

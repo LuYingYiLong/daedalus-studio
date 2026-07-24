@@ -62,7 +62,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 		{
 			key: "zip",
 			label: t("settings.skills.actions.installFromZip"),
-			icon: <Icon name="file_zip" />
+			icon: <Icon name="file-zip" />
 		},
 		{
 			key: "folder",

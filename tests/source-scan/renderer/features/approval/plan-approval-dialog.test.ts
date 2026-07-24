@@ -6,10 +6,10 @@ describe("PlanApprovalDialog source", () => {
 
 	it("renders approve and revise actions from controlled plan props", () => {
 		expect(source).toContain("PlanApprovalDialogProps");
-		expect(source).toContain("Approve and Execute");
+		expect(source).toContain('t("approval.plan.actions.approveAndExecute")');
 		expect(source).toContain("onApprove(plan.planId)");
 		expect(source).toContain("onRevise(plan.planId, trimmedFeedback)");
-		expect(source).toContain("Tell the assistant how to change the plan");
+		expect(source).toContain('placeholder={t("approval.plan.revisionPlaceholder")}');
 		expect(source).toContain("errorMessage");
 		expect(source).not.toContain("<Button>Skip</Button>");
 	});

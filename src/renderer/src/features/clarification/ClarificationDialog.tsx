@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Input, Space, Typography } from "antd";
+import { useTranslation } from "react-i18next";
 import type { PlanRecommendedReply } from "@/api/types";
 import styles from "./ClarificationDialog.module.css";
 
@@ -24,6 +25,7 @@ function ClarificationDialog({
 	onSubmit,
 	onSkip
 }: ClarificationDialogProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const [customReply, setCustomReply] = useState<string>("");
 
 	useEffect((): void => {
@@ -33,11 +35,11 @@ function ClarificationDialog({
 	const trimmedReply: string = customReply.trim();
 
 	return (
-		<section className={styles.clarificationDialog} aria-label="Plan clarification">
+		<section className={styles.clarificationDialog} aria-label={t("clarification.aria")}>
 			<header className={styles.header}>
 				<div className={styles.heading}>
 					<Typography.Title level={4} className={styles.title}>
-						Clarification needed
+						{t("clarification.title")}
 					</Typography.Title>
 				</div>
 			</header>
@@ -59,7 +61,7 @@ function ClarificationDialog({
 						>
 							<span className={styles.replyContent}>
 								<span className={styles.replyLabel}>
-									{reply.label}{index === 0 ? " (Recommended)" : ""}
+									{reply.label}{index === 0 ? ` ${t("clarification.recommendedSuffix")}` : ""}
 								</span>
 								{reply.description ? (
 									<span className={styles.replyDescription}>{reply.description}</span>
@@ -73,7 +75,7 @@ function ClarificationDialog({
 			<Space.Compact className={styles.customReplyRow}>
 				<Input
 					value={customReply}
-					placeholder="Tell the assistant how to proceed"
+					placeholder={t("clarification.placeholder")}
 					className={styles.customReplyInput}
 					disabled={isSubmitting}
 					onChange={(event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -81,7 +83,7 @@ function ClarificationDialog({
 					}}
 				/>
 				<Button disabled={isSubmitting} onClick={onSkip}>
-					Skip
+					{t("clarification.actions.skip")}
 				</Button>
 				<Button
 					type="primary"
@@ -89,7 +91,7 @@ function ClarificationDialog({
 					disabled={trimmedReply.length === 0}
 					onClick={(): void => onSubmit(trimmedReply)}
 				>
-					Submit
+					{t("clarification.actions.submit")}
 				</Button>
 			</Space.Compact>
 

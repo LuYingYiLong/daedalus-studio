@@ -2,6 +2,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Input, Dropdown, Button, Divider, Flex, Tooltip, Popover, Progress, Typography, Spin } from "antd";
 import type { MenuProps, ProgressProps } from "antd";
 import type { TextAreaRef } from "antd/es/input/TextArea";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import styles from "./Composer.module.css";
 import type { ApprovalMode } from "@/api/approval-api";
@@ -79,60 +81,66 @@ const CONTEXT_USAGE_DANGER_STROKE: ProgressStrokeColor = {
 	"100%": "var(--ds-danger)",
 };
 
-const contextItems: MenuProps["items"] = [
-	{
-		key: "files",
-		label: "Add files",
-	},
-	{
-		key: "folder",
-		label: "Add folder",
-	},
-	{
-		key: "images",
-		label: "Add images",
-	},
-];
-
-const approvalModeItems: MenuProps["items"] = [
-	{
-		key: "manual",
-		label: "Manual",
-		icon: <Icon name="hand" />,
-	},
-	{
-		key: "auto-safe",
-		label: "Auto-safe",
-		icon: <Icon name="shield" />,
-	},
-	{
-		key: "full-trust",
-		label: "Full Trust",
-		icon: <Icon name="warning" />,
-	},
-];
-
-const modeItems: MenuProps["items"] = [
-	{
-		key: "ask",
-		label: "Ask",
-		icon: <Icon name="ask" />
-	},
-	{
-		key: "agent",
-		label: "Agent",
-		icon: <Icon name="agent" />
-	},
-	{
-		key: "plan",
-		label: "Plan",
-		icon: <Icon name="plan" />
-	},
-];
-
 const NO_WORKSPACE_KEY: string = "workspace:none";
 const ADD_WORKSPACE_KEY: string = "workspace:add";
 const EMPTY_CONTEXT_ITEMS: AdditionalContextItem[] = [];
+
+function createContextItems(t: TFunction<"common">): MenuProps["items"] {
+	return [
+		{
+			key: "files",
+			label: t("composer.context.addFiles"),
+		},
+		{
+			key: "folder",
+			label: t("composer.context.addFolder"),
+		},
+		{
+			key: "images",
+			label: t("composer.context.addImages"),
+		},
+	];
+}
+
+function createApprovalModeItems(t: TFunction<"common">): MenuProps["items"] {
+	return [
+		{
+			key: "manual",
+			label: t("composer.approvalMode.manual"),
+			icon: <Icon name="hand" />,
+		},
+		{
+			key: "auto-safe",
+			label: t("composer.approvalMode.autoSafe"),
+			icon: <Icon name="shield" />,
+		},
+		{
+			key: "full-trust",
+			label: t("composer.approvalMode.fullTrust"),
+			icon: <Icon name="warning" />,
+		},
+	];
+}
+
+function createModeItems(t: TFunction<"common">): MenuProps["items"] {
+	return [
+		{
+			key: "ask",
+			label: t("composer.mode.ask"),
+			icon: <Icon name="ask" />
+		},
+		{
+			key: "agent",
+			label: t("composer.mode.agent"),
+			icon: <Icon name="agent" />
+		},
+		{
+			key: "plan",
+			label: t("composer.mode.plan"),
+			icon: <Icon name="plan" />
+		},
+	];
+}
 
 function isComposerMode(value: string): value is ChatMode {
 	return value === "ask" || value === "agent" || value === "plan";
@@ -188,18 +196,18 @@ function findSelectedModel(selection: ProviderModelSelection | null, selectedMod
 	}) ?? null;
 }
 
-function getSelectedModelLabel(selection: ProviderModelSelection | null, selectedModel: SelectedModel | null): string {
+function getSelectedModelLabel(selection: ProviderModelSelection | null, selectedModel: SelectedModel | null, t: TFunction<"common">): string {
 	const selectedProvider: ProviderModelSelectionProvider | null = findSelectedProvider(selection, selectedModel);
 	const selectedModelInfo: ProviderModelInfo | null = findSelectedModel(selection, selectedModel);
 
 	if (selectedProvider === null || selectedModel === null) {
-		return "Model";
+		return t("composer.model.fallback");
 	}
 
 	return `${selectedProvider.displayName} / ${selectedModelInfo?.displayName ?? selectedModel.model}`;
 }
 
-function createProviderModelItems(selection: ProviderModelSelection | null): MenuProps["items"] {
+function createProviderModelItems(selection: ProviderModelSelection | null, t: TFunction<"common">): MenuProps["items"] {
 	if (selection === null) {
 		return [];
 	}
@@ -209,26 +217,26 @@ function createProviderModelItems(selection: ProviderModelSelection | null): Men
 			key: `provider:${provider.provider}`,
 			popupClassName: styles.modelSubmenuPopup,
 			label: (
-				<span className={styles.providerGroupLabel}>
-					<span>{provider.displayName}</span>
-					{provider.configured ? null : (
-						<span className={styles.providerMutedText}>Not configured</span>
-					)}
-				</span>
+					<span className={styles.providerGroupLabel}>
+						<span>{provider.displayName}</span>
+						{provider.configured ? null : (
+							<span className={styles.providerMutedText}>{t("composer.model.notConfigured")}</span>
+						)}
+					</span>
 			),
 			children: provider.models.map((model: ProviderModelInfo) => {
 				const modelBadges: string[] = [];
 
 				if (model.capabilities.reasoning) {
-					modelBadges.push("Reasoning");
+					modelBadges.push(t("composer.model.capabilities.reasoning"));
 				}
 
 				if (model.capabilities.imageInput) {
-					modelBadges.push("Vision");
+					modelBadges.push(t("composer.model.capabilities.vision"));
 				}
 
 				if (model.capabilities.webSearch) {
-					modelBadges.push("Search");
+					modelBadges.push(t("composer.model.capabilities.search"));
 				}
 
 				return {
@@ -259,7 +267,7 @@ function parseWorkspaceKey(key: string): string | null {
 	return key.slice("workspace:".length);
 }
 
-function createWorkspaceFooterItems(workspaces: readonly WorkspaceConfig[]): MenuProps["items"] {
+function createWorkspaceFooterItems(workspaces: readonly WorkspaceConfig[], t: TFunction<"common">): MenuProps["items"] {
 	const workspaceItems: MenuProps["items"] = [
 		...workspaces.map((workspace: WorkspaceConfig) => {
 			return {
@@ -282,12 +290,12 @@ function createWorkspaceFooterItems(workspaces: readonly WorkspaceConfig[]): Men
 		}] : []),
 		{
 			key: NO_WORKSPACE_KEY,
-			label: "No workspace",
+			label: t("composer.workspace.noWorkspace"),
 			icon: <Icon name="close" />
 		},
 		{
 			key: ADD_WORKSPACE_KEY,
-			label: "Add workspace...",
+			label: t("composer.workspace.addWorkspace"),
 			icon: <Icon name="add" />
 		}
 	];
@@ -307,11 +315,11 @@ function createCompletionSignature(token: ComposerCompletionToken, options: read
 	].join(":");
 }
 
-function getErrorMessage(error: unknown): string {
+function getErrorMessage(error: unknown, t: TFunction<"common">): string {
 	if (error instanceof Error) {
 		return error.message;
 	}
-	return "Context estimate failed";
+	return t("composer.contextUsage.errors.estimate");
 }
 
 function formatTokenCount(tokens: number): string {
@@ -381,6 +389,7 @@ function Composer({
 	onGuideSubmit,
 	onCompletionOpen
 }: ComposerProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const rootRef = useRef<HTMLDivElement | null>(null);
 	const textAreaRef = useRef<TextAreaRef | null>(null);
 	const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -451,11 +460,11 @@ function Composer({
 	}
 
 	const providerModelItems: MenuProps["items"] = useMemo((): MenuProps["items"] => {
-		return createProviderModelItems(providerModelSelection);
-	}, [providerModelSelection]);
+		return createProviderModelItems(providerModelSelection, t);
+	}, [providerModelSelection, t]);
 	const workspaceFooterItems: MenuProps["items"] = useMemo((): MenuProps["items"] => {
-		return createWorkspaceFooterItems(workspaceOptions);
-	}, [workspaceOptions]);
+		return createWorkspaceFooterItems(workspaceOptions, t);
+	}, [workspaceOptions, t]);
 	const selectedModel: SelectedModel | null = selectedProviderId === null || selectedModelId === null
 		? null
 		: {
@@ -465,28 +474,28 @@ function Composer({
 	const selectedModelKey: string | undefined = selectedModel === null
 		? undefined
 		: createModelKey(selectedModel.provider, selectedModel.model);
-	const selectedModelLabel: string = getSelectedModelLabel(providerModelSelection, selectedModel);
+	const selectedModelLabel: string = getSelectedModelLabel(providerModelSelection, selectedModel, t);
 	const selectedWorkspaceKey: string = selectedWorkspace === null ? NO_WORKSPACE_KEY : createWorkspaceKey(selectedWorkspace.id);
-	const selectedWorkspaceLabel: string = selectedWorkspace?.name ?? "No workspace";
+	const selectedWorkspaceLabel: string = selectedWorkspace?.name ?? t("composer.workspace.noWorkspace");
 	const approvalModeLabel: string = approvalMode === "full-trust"
-		? "Full Trust"
+		? t("composer.approvalMode.fullTrust")
 		: approvalMode === "auto-safe"
-			? "Auto Safe"
-			: "Manual";
+			? t("composer.approvalMode.autoSafe")
+			: t("composer.approvalMode.manual");
 	const contextMenu: MenuProps = useMemo((): MenuProps => ({
-		items: contextItems,
+		items: createContextItems(t),
 		onClick: handleContextItemClick
-	}), [handleContextItemClick]);
+	}), [handleContextItemClick, t]);
 	const modeMenu: MenuProps = useMemo((): MenuProps => ({
-		items: modeItems,
+		items: createModeItems(t),
 		selectedKeys: [mode],
 		onClick: handleModeClick
-	}), [handleModeClick, mode]);
+	}), [handleModeClick, mode, t]);
 	const approvalModeMenu: MenuProps = useMemo((): MenuProps => ({
-		items: approvalModeItems,
+		items: createApprovalModeItems(t),
 		selectedKeys: [approvalMode],
 		onClick: handleApprovalModeClick
-	}), [approvalMode, handleApprovalModeClick]);
+	}), [approvalMode, handleApprovalModeClick, t]);
 	const workspaceFooterMenu: MenuProps = useMemo((): MenuProps => ({
 		items: workspaceFooterItems,
 		selectedKeys: [selectedWorkspaceKey],
@@ -497,9 +506,9 @@ function Composer({
 	const contextUsageStrokeColor: ProgressStrokeColor = getContextUsageStrokeColor(contextUsagePercent);
 	const contextUsageStatus: "normal" | "exception" = getContextUsageStatus(contextUsagePercent);
 	const compressDisabledReason: string | null = isSending
-		? "A message is being sent"
+		? t("composer.contextUsage.compressDisabled.sending")
 		: contextUsage?.canCompress === false
-		? contextUsage.compressReason ?? "Compression unavailable"
+		? contextUsage.compressReason ?? t("composer.contextUsage.compressDisabled.unavailable")
 		: null;
 
 	useEffect((): void => {
@@ -557,7 +566,7 @@ function Composer({
 				if (cancelled) {
 					return;
 				}
-				setContextUsageError(getErrorMessage(error));
+				setContextUsageError(getErrorMessage(error, t));
 			}).finally((): void => {
 				if (!cancelled) {
 					setIsContextUsageLoading(false);
@@ -569,7 +578,7 @@ function Composer({
 			cancelled = true;
 			window.clearTimeout(timer);
 		};
-	}, [draftMessage, mode, selectedModel?.provider, selectedModel?.model, composerContextItems, showContextUsage]);
+	}, [draftMessage, mode, selectedModel?.provider, selectedModel?.model, composerContextItems, showContextUsage, t]);
 
 	const handleProviderModelClick: MenuProps["onClick"] = useCallback(({ key }): void => {
 		const nextSelectedModel: SelectedModel | null = parseModelKey(String(key));
@@ -826,7 +835,7 @@ function Composer({
 			});
 			setContextUsage(usage);
 		} catch (error: unknown) {
-			setContextUsageError(getErrorMessage(error));
+			setContextUsageError(getErrorMessage(error, t));
 		} finally {
 			setIsContextUsageLoading(false);
 		}
@@ -842,7 +851,7 @@ function Composer({
 			}
 			await refreshContextUsage();
 		} catch (error: unknown) {
-			setContextUsageError(getErrorMessage(error));
+			setContextUsageError(getErrorMessage(error, t));
 		} finally {
 			setIsCompressingContext(false);
 		}
@@ -853,12 +862,12 @@ function Composer({
 			{contextUsageError === null ? (
 				<>
 					<Spin size="small" />
-					<Typography.Text type="secondary">Estimating context...</Typography.Text>
+					<Typography.Text type="secondary">{t("composer.contextUsage.estimating")}</Typography.Text>
 				</>
 			) : (
 				<>
 					<Typography.Text type="danger">{contextUsageError}</Typography.Text>
-					<Button size="small" onClick={(): void => { void refreshContextUsage(); }}>Retry</Button>
+					<Button size="small" onClick={(): void => { void refreshContextUsage(); }}>{t("composer.contextUsage.retry")}</Button>
 				</>
 			)}
 		</div>
@@ -867,14 +876,21 @@ function Composer({
 			<div className={styles.contextUsageHeader}>
 				<div className={styles.contextUsageTitleRow}>
 					<Typography.Text strong>
-						{formatTokenCount(contextUsage.usedTokens)} / {formatTokenCount(contextUsage.contextWindowTokens)} tokens
+						{t("composer.contextUsage.usedTokens", {
+							used: formatTokenCount(contextUsage.usedTokens),
+							total: formatTokenCount(contextUsage.contextWindowTokens)
+						})}
 					</Typography.Text>
 					<Typography.Text type={contextUsage.percent >= 90 ? "danger" : "secondary"}>
 						{contextUsage.percent.toFixed(1)}%
 					</Typography.Text>
 				</div>
 				<Typography.Text type="secondary" className={styles.contextUsageMeta}>
-					{contextUsage.modelLabel} · {formatTokenCount(contextUsage.availableTokens)} available · {contextUsage.estimationSource}
+					{t("composer.contextUsage.meta", {
+						model: contextUsage.modelLabel,
+						available: formatTokenCount(contextUsage.availableTokens),
+						source: contextUsage.estimationSource
+					})}
 				</Typography.Text>
 			</div>
 			<Progress
@@ -886,23 +902,27 @@ function Composer({
 			/>
 			<div className={styles.contextUsageBreakdown}>
 				<div className={styles.contextUsageRow}>
-					<span>System & tools</span>
+					<span>{t("composer.contextUsage.breakdown.systemAndTools")}</span>
 					<span>{formatTokenCount(contextUsage.systemAndContextTokens)}</span>
 				</div>
 				<div className={styles.contextUsageRow}>
-					<span>History{contextUsage.summaryActive ? " (summary)" : ""}</span>
+					<span>
+						{contextUsage.summaryActive
+							? t("composer.contextUsage.breakdown.historyWithSummary")
+							: t("composer.contextUsage.breakdown.history")}
+					</span>
 					<span>{formatTokenCount(contextUsage.historyTokens)}</span>
 				</div>
 				<div className={styles.contextUsageRow}>
-					<span>Current message</span>
+					<span>{t("composer.contextUsage.breakdown.currentMessage")}</span>
 					<span>{formatTokenCount(contextUsage.currentMessageTokens)}</span>
 				</div>
 				<div className={styles.contextUsageRow}>
-					<span>Reserved output</span>
+					<span>{t("composer.contextUsage.breakdown.reservedOutput")}</span>
 					<span>{formatTokenCount(contextUsage.outputReserveTokens)}</span>
 				</div>
 				<div className={styles.contextUsageRow}>
-					<span>Safety margin</span>
+					<span>{t("composer.contextUsage.breakdown.safetyMargin")}</span>
 					<span>{formatTokenCount(contextUsage.safetyMarginTokens)}</span>
 				</div>
 			</div>
@@ -917,7 +937,7 @@ function Composer({
 						disabled={isCompressingContext || isSending || !contextUsage.canCompress}
 						onClick={(): void => { void handleCompressContext(); }}
 					>
-						Compress chat
+						{t("composer.contextUsage.compress")}
 					</Button>
 				</span>
 			</Tooltip>
@@ -982,7 +1002,7 @@ function Composer({
 						ref={textAreaRef}
 						value={draftMessage}
 						autoSize={{ minRows: 4, maxRows: 12 }}
-						placeholder="What can I say?"
+						placeholder={t("composer.placeholder")}
 						className={styles.composerTextArea}
 						onChange={handleTextAreaChange}
 						onKeyDown={handleTextAreaKeyDown}
@@ -999,7 +1019,7 @@ function Composer({
 						}}
 					/>
 					<div className={styles.composerToolbar}>
-					<Tooltip title="Add additional context">
+					<Tooltip title={t("composer.tooltips.addContext")}>
 						<Dropdown
 							menu={contextMenu}
 							trigger={["click"]}
@@ -1013,7 +1033,7 @@ function Composer({
 					</Tooltip>
 					
 					<Divider vertical={true} />
-					<Tooltip title="Mode">
+					<Tooltip title={t("composer.tooltips.mode")}>
 						<Dropdown
 							menu={modeMenu}
 							trigger={["click"]}
@@ -1025,7 +1045,7 @@ function Composer({
 							/>
 						</Dropdown>
 					</Tooltip>
-					<Tooltip title="Approval mode">
+					<Tooltip title={t("composer.tooltips.approvalMode")}>
 						<Dropdown
 							menu={approvalModeMenu}
 							disabled={isApprovalModeSaving}
@@ -1048,7 +1068,7 @@ function Composer({
 
 					<Divider vertical={true} />
 					
-					<Tooltip title="Model">
+					<Tooltip title={t("composer.tooltips.model")}>
 						<Dropdown
 							disabled={providerModelSelection === null}
 							rootClassName={styles.modelDropdown}
@@ -1067,7 +1087,15 @@ function Composer({
 						</Dropdown>
 					</Tooltip>
 					
-					<Tooltip title={isCancelling ? "Stopping..." : isSending && draftMessage.trim().length === 0 ? "Stop" : isSending ? "Queue message" : "Send"}>
+					<Tooltip title={
+						isCancelling
+							? t("composer.send.stopping")
+							: isSending && draftMessage.trim().length === 0
+								? t("composer.send.stop")
+								: isSending
+									? t("composer.send.queue")
+									: t("composer.send.send")
+					}>
 						<Button
 							type="text"
 							shape="circle"
@@ -1106,12 +1134,12 @@ function Composer({
 					</Dropdown>
 					{showContextUsage ? (
 						<Popover
-							title="Context usage"
+							title={t("composer.contextUsage.title")}
 							content={contextUsageContent}
 							trigger="click"
 						>
 							<span className={styles.contextUsageAnchor}>
-								<button type="button" className={styles.contextUsageButton} aria-label="Context usage">
+								<button type="button" className={styles.contextUsageButton} aria-label={t("composer.contextUsage.title")}>
 									<span className={styles.contextUsageButtonText}>{Math.round(contextUsagePercent)}%</span>
 									<Progress
 										type="circle"

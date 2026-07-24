@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Empty } from "antd";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 import PanelTabs, { type PanelTabsAddItem, type PanelTabsItem } from "@/features/panel-tabs/PanelTabs";
 import { Icon } from "@/assets/icons";
 import GitDiffReviewPanel from "@/features/review/GitDiffReviewPanel";
@@ -37,19 +39,19 @@ type DockTab = {
 const ADD_REVIEW_KEY: DockPanelKind = "review";
 const ADD_TERMINAL_KEY: DockPanelKind = "terminal";
 
-function getPanelTitle(kind: DockPanelKind, index: number): string {
+function getPanelTitle(kind: DockPanelKind, index: number, t: TFunction<"common">): string {
 	if (kind === "review") {
-		return index === 1 ? "Changes" : `Changes ${index}`;
+		return index === 1 ? t("dock.tabs.changes") : t("dock.tabs.changesIndexed", { index });
 	}
-	return index === 1 ? "Terminal" : `Terminal ${index}`;
+	return index === 1 ? t("dock.tabs.terminal") : t("dock.tabs.terminalIndexed", { index });
 }
 
-function createDockTab(dockId: string, kind: DockPanelKind, index: number): DockTab {
+function createDockTab(dockId: string, kind: DockPanelKind, index: number, t: TFunction<"common">): DockTab {
 	return {
 		key: `${dockId}:${kind}:${index}`,
 		kind,
 		index,
-		title: getPanelTitle(kind, index)
+		title: getPanelTitle(kind, index, t)
 	};
 }
 
@@ -94,25 +96,26 @@ function DockPanelTabs({
 	activationRequest = null,
 	onEmpty
 }: DockPanelTabsProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const handledActivationIdRef = useRef<number | null>(null);
 	const [tabs, setTabs] = useState<DockTab[]>(() => {
-		return [createDockTab(dockId, defaultKind, 1)];
+		return [createDockTab(dockId, defaultKind, 1, t)];
 	});
 	const [activeKey, setActiveKey] = useState<string>(() => tabs[0]?.key ?? "");
 	const canOpenReview: boolean = workspaceId !== null;
 	const addItems: PanelTabsAddItem[] = useMemo((): PanelTabsAddItem[] => [
 		{
 			key: ADD_REVIEW_KEY,
-			label: "Review panel",
+			label: t("dock.add.reviewPanel"),
 			icon: <Icon name="edit-add-remove" />,
 			disabled: !canOpenReview
 		},
 		{
 			key: ADD_TERMINAL_KEY,
-			label: "Terminal panel",
+			label: t("dock.add.terminalPanel"),
 			icon: <Icon name="terminal" />
 		}
-	], [canOpenReview]);
+	], [canOpenReview, t]);
 
 	const addPanelTab = useCallback((kind: DockPanelKind): void => {
 		if (kind === "review" && workspaceId === null) {
@@ -120,11 +123,11 @@ function DockPanelTabs({
 		}
 
 		setTabs((currentTabs: DockTab[]): DockTab[] => {
-			const nextTab: DockTab = createDockTab(dockId, kind, getNextIndex(currentTabs, kind));
+			const nextTab: DockTab = createDockTab(dockId, kind, getNextIndex(currentTabs, kind), t);
 			setActiveKey(nextTab.key);
 			return [...currentTabs, nextTab];
 		});
-	}, [dockId, workspaceId]);
+	}, [dockId, workspaceId, t]);
 
 	const ensurePanelTab = useCallback((kind: DockPanelKind): void => {
 		setTabs((currentTabs: DockTab[]): DockTab[] => {
@@ -134,11 +137,11 @@ function DockPanelTabs({
 				return currentTabs;
 			}
 
-			const nextTab: DockTab = createDockTab(dockId, kind, getNextIndex(currentTabs, kind));
+			const nextTab: DockTab = createDockTab(dockId, kind, getNextIndex(currentTabs, kind), t);
 			setActiveKey(nextTab.key);
 			return [...currentTabs, nextTab];
 		});
-	}, [dockId]);
+	}, [dockId, t]);
 
 	useEffect((): void => {
 		if (activationRequest === null || handledActivationIdRef.current === activationRequest.id) {
@@ -193,7 +196,7 @@ function DockPanelTabs({
 	function renderTabContent(tab: DockTab): React.ReactNode {
 		if (tab.kind === "review") {
 			if (workspaceId === null) {
-				return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No workspace selected" />;
+				return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("dock.empty.noWorkspaceSelected")} />;
 			}
 			return isOpen ? <GitDiffReviewPanel workspaceId={workspaceId} /> : null;
 		}
@@ -213,7 +216,7 @@ function DockPanelTabs({
 		label: (
 			<span className={styles.tabLabel}>
 				<Icon name={getTabIconName(tab.kind)} />
-				{tab.title}
+				{getPanelTitle(tab.kind, tab.index, t)}
 			</span>
 		),
 		forceRender: tab.kind === "terminal",
@@ -226,7 +229,7 @@ function DockPanelTabs({
 				activeKey={activeKey}
 				items={panelItems}
 				addItems={addItems}
-				addLabel="Add panel"
+				addLabel={t("dock.add.label")}
 				className={styles.tabs}
 				onActiveChange={setActiveKey}
 				onAdd={handleAdd}

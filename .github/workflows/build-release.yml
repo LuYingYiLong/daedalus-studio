@@ -53,6 +53,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Resolve fixed backend bootstrap version
+        shell: pwsh
+        run: |
+          $package = Get-Content -LiteralPath "package.json" -Raw | ConvertFrom-Json
+          if ($package.backendBootstrapVersion -notmatch "^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$") {
+            throw "package.json must contain a fixed backendBootstrapVersion."
+          }
+          "BACKEND_BOOTSTRAP_VERSION=$($package.backendBootstrapVersion)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Download and verify backend bootstrap
+        run: npm run prepare:backend-bootstrap
+
       - name: Run tests
         run: npm test
 
@@ -62,6 +74,48 @@ jobs:
       - name: List release files
         shell: pwsh
         run: Get-ChildItem -Path release -File | Format-Table Name, Length
+
+      - name: Verify packaged backend bootstrap
+        shell: pwsh
+        run: |
+          $backendDir = Join-Path "release" "win-unpacked\resources\backend-bootstrap"
+          $manifestPath = Join-Path $backendDir "backend-manifest.json"
+          $executablePath = Join-Path $backendDir "daedalus-backend.exe"
+          if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+            throw "Packaged backend manifest is missing."
+          }
+          if (-not (Test-Path -LiteralPath $executablePath -PathType Leaf)) {
+            throw "Packaged backend executable is missing."
+          }
+          $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+          if ($manifest.version -ne $env:BACKEND_BOOTSTRAP_VERSION) {
+            throw "Packaged backend version $($manifest.version) does not match $env:BACKEND_BOOTSTRAP_VERSION."
+          }
+          if ((Get-FileHash -LiteralPath $executablePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $manifest.executable.sha256) {
+            throw "Packaged backend executable SHA-256 verification failed."
+          }
+          $files = @(Get-ChildItem -LiteralPath $backendDir -File)
+          if ($files.Count -ne 2) {
+            throw "Packaged backend bootstrap must contain exactly the EXE and manifest."
+          }
+          $selfTestJson = & $executablePath self-test --json
+          if ($LASTEXITCODE -ne 0) {
+            throw "Packaged backend self-test failed."
+          }
+          $selfTest = $selfTestJson | ConvertFrom-Json
+          $passedChecks = @($selfTest.checks | Where-Object { $_.ok -eq $true } | ForEach-Object { $_.name })
+          if (
+            $selfTest.ok -ne $true `
+            -or $selfTest.build.version -ne $manifest.version `
+            -or $selfTest.build.buildId -ne $manifest.buildId `
+            -or $selfTest.build.runtimeNodeVersion -ne $manifest.nodeVersion `
+            -or $selfTest.build.protocolVersion -ne $manifest.protocolVersion `
+            -or "runtime-assets" -notin $passedChecks `
+            -or "sqlite" -notin $passedChecks `
+            -or "secret-store" -notin $passedChecks
+          ) {
+            throw "Packaged backend self-test identity or required checks did not match the manifest."
+          }
 
       - name: Verify updater metadata
         shell: pwsh

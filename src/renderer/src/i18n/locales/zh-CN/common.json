@@ -88,6 +88,383 @@
       }
     }
   },
+  "agentPage": {
+    "actions": {
+      "newSession": "新建会话",
+      "scrollToBottom": "滚动到底部"
+    },
+    "workspaceLaunch": {
+      "openIn": "在 {{target}} 中打开",
+      "aria": {
+        "selectTarget": "选择 workspace 打开方式"
+      },
+      "errors": {
+        "open": "打开 workspace 失败。"
+      }
+    },
+    "dock": {
+      "openBottom": "打开底部面板",
+      "closeBottom": "关闭底部面板",
+      "openSidebar": "打开侧边栏",
+      "closeSidebar": "关闭侧边栏"
+    },
+    "summary": {
+      "tooltip": "摘要",
+      "empty": "暂无摘要",
+      "detachedHead": "游离 HEAD",
+      "unknownSize": "未知尺寸",
+      "sourceSubtitle": "{{mimeType}} / {{dimensions}}",
+      "fallbackPlanTitle": "计划",
+      "fallbackImageSourceTitle": "图片来源",
+      "aria": {
+        "open": "打开会话摘要"
+      },
+      "sections": {
+        "envInfo": "环境信息",
+        "plans": "计划",
+        "source": "来源"
+      },
+      "actions": {
+        "diff": "变更",
+        "commitOrPush": "提交或推送",
+        "seeMore": "查看更多",
+        "retry": "重试"
+      },
+      "errors": {
+        "load": "加载会话摘要失败。"
+      }
+    }
+  },
+  "composer": {
+    "placeholder": "想让我做什么？",
+    "context": {
+      "addFiles": "添加文件",
+      "addFolder": "添加文件夹",
+      "addImages": "添加图片"
+    },
+    "mode": {
+      "ask": "问答",
+      "agent": "Agent",
+      "plan": "计划"
+    },
+    "approvalMode": {
+      "manual": "手动",
+      "autoSafe": "自动安全",
+      "fullTrust": "完全信任"
+    },
+    "model": {
+      "fallback": "模型",
+      "notConfigured": "未配置",
+      "capabilities": {
+        "reasoning": "推理",
+        "vision": "视觉",
+        "search": "搜索"
+      }
+    },
+    "workspace": {
+      "noWorkspace": "无 workspace",
+      "addWorkspace": "添加 workspace..."
+    },
+    "tooltips": {
+      "addContext": "添加附加上下文",
+      "mode": "模式",
+      "approvalMode": "审批模式",
+      "model": "模型"
+    },
+    "send": {
+      "send": "发送",
+      "stop": "停止",
+      "stopping": "正在停止...",
+      "queue": "加入队列"
+    },
+    "contextUsage": {
+      "title": "上下文用量",
+      "estimating": "正在估算上下文...",
+      "retry": "重试",
+      "usedTokens": "{{used}} / {{total}} tokens",
+      "meta": "{{model}} / 可用 {{available}} / {{source}}",
+      "compress": "压缩聊天",
+      "breakdown": {
+        "systemAndTools": "系统与工具",
+        "history": "历史记录",
+        "historyWithSummary": "历史记录（摘要）",
+        "currentMessage": "当前消息",
+        "reservedOutput": "预留输出",
+        "safetyMargin": "安全余量"
+      },
+      "compressDisabled": {
+        "sending": "正在发送消息",
+        "unavailable": "暂不可压缩"
+      },
+      "errors": {
+        "estimate": "上下文估算失败"
+      }
+    }
+  },
+  "messageQueue": {
+    "groups": {
+      "guides": "引导",
+      "queue": "队列"
+    },
+    "actions": {
+      "edit": "编辑",
+      "remove": "移除",
+      "dragToReorder": "拖动排序"
+    }
+  },
+  "workflowTodo": {
+    "titleFallback": "待办",
+    "stepFallback": "步骤 {{index}}",
+    "changedFiles": "{{count}} 个文件",
+    "changedFiles_other": "{{count}} 个文件",
+    "dismiss": "关闭",
+    "aria": {
+      "progress": "Workflow 进度",
+      "fileChanges": "文件变更"
+    }
+  },
+  "approval": {
+    "tool": {
+      "title": "批准工具执行？",
+      "subtitle": "助手正在等待你的批准后继续。",
+      "consentPrefix": "输入",
+      "consentSuffix": "以批准这次跨 workspace 操作。",
+      "actions": {
+        "approve": "批准",
+        "reject": "拒绝"
+      }
+    },
+    "toolBudget": {
+      "title": "工具预算已达到上限",
+      "subtitle": "模型需要更多工具预算才能继续执行。",
+      "limitKind": {
+        "steps": "工具调用次数",
+        "toolResultChars": "工具结果总量"
+      },
+      "fields": {
+        "triggeredLimit": "触发上限",
+        "usedSteps": "已用步骤",
+        "toolResultChars": "工具结果字符",
+        "additionalSteps": "继续追加"
+      },
+      "additionalStepsValue": "+{{formatted}} 步",
+      "additionalStepsValue_other": "+{{formatted}} 步",
+      "actions": {
+        "continue": "继续",
+        "stop": "否，结束并总结"
+      }
+    },
+    "plan": {
+      "aria": "计划审批",
+      "title": "批准计划？",
+      "subtitle": "查看上方计划后，可以批准执行或要求修改。",
+      "revisionPlaceholder": "告诉助手如何修改计划",
+      "actions": {
+        "approveAndExecute": "批准并执行",
+        "revise": "修改"
+      }
+    }
+  },
+  "clarification": {
+    "aria": "计划澄清",
+    "title": "需要澄清",
+    "recommendedSuffix": "（推荐）",
+    "placeholder": "告诉助手接下来怎么做",
+    "actions": {
+      "skip": "跳过",
+      "submit": "提交"
+    }
+  },
+  "dock": {
+    "tabs": {
+      "changes": "变更",
+      "changesIndexed": "变更 {{index}}",
+      "terminal": "终端",
+      "terminalIndexed": "终端 {{index}}"
+    },
+    "add": {
+      "label": "添加面板",
+      "reviewPanel": "变更审阅面板",
+      "terminalPanel": "终端面板"
+    },
+    "empty": {
+      "noWorkspaceSelected": "未选择 workspace"
+    }
+  },
+  "git": {
+    "detachedHead": "游离 HEAD",
+    "actions": {
+      "refresh": "刷新"
+    },
+    "commit": {
+      "title": "提交或推送",
+      "messagePlaceholder": "留空会自动生成提交信息",
+      "includeUnstaged": "包含未暂存变更",
+      "actions": {
+        "commit": "提交",
+        "push": "推送",
+        "commitAndPush": "提交并推送"
+      },
+      "messages": {
+        "changes": "变更",
+        "committedAndPushed": "已提交 {{target}} 并推送。",
+        "committed": "已提交 {{target}}。",
+        "pushed": "已推送变更。"
+      },
+      "errors": {
+        "selectWorkspace": "请先选择 workspace 再提交。",
+        "actionFailed": "{{action}} 失败。"
+      }
+    },
+    "branch": {
+      "title": "分支",
+      "searchPlaceholder": "搜索分支",
+      "empty": "没有找到分支",
+      "actions": {
+        "createAndCheckout": "创建并切换",
+        "checkout": "切换"
+      },
+      "tags": {
+        "current": "当前",
+        "remote": "远程"
+      },
+      "messages": {
+        "switched": "已切换到 {{branch}}。",
+        "createdAndSwitched": "已创建并切换到 {{branch}}。"
+      },
+      "errors": {
+        "selectWorkspaceBeforeSwitching": "请先选择 workspace 再切换分支。",
+        "selectWorkspaceBeforeCreating": "请先选择 workspace 再创建分支。",
+        "notGitRepository": "当前 workspace 不是 Git 仓库。",
+        "load": "加载分支失败。",
+        "selectBranch": "请选择一个分支。",
+        "switch": "切换分支失败。",
+        "enterBranchName": "请输入分支名称。",
+        "create": "创建分支失败。"
+      }
+    },
+    "createBranch": {
+      "title": "创建分支",
+      "namePlaceholder": "新分支名称",
+      "startPointPlaceholder": "起点，可选",
+      "hint": "留空起点时会从当前 HEAD 创建。"
+    }
+  },
+  "review": {
+    "unknownFile": "未知文件",
+    "binaryFileChanged": "二进制文件已变更",
+    "diffStats": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
+    "diffStats_other": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
+    "actions": {
+      "refreshDiff": "刷新 Git diff"
+    },
+    "empty": {
+      "diffUnavailable": "Diff 不可用",
+      "noDiffLoaded": "尚未加载 diff",
+      "noGitRepository": "不是 Git 仓库",
+      "noWorkspaceChanges": "workspace 暂无变更"
+    },
+    "notices": {
+      "diffTruncated": {
+        "title": "Diff 已截断",
+        "description": "补丁太大，无法完整显示。"
+      },
+      "diffParseFailed": "Diff 解析失败"
+    },
+    "errors": {
+      "loadDiff": "加载 Git diff 失败。",
+      "parseDiff": "解析 diff 失败。"
+    }
+  },
+  "terminal": {
+    "home": "主目录",
+    "status": {
+      "waitingForWorkspace": "等待 workspace",
+      "starting": "正在启动",
+      "notStarted": "未启动",
+      "running": "运行中",
+      "stopped": "已停止"
+    },
+    "actions": {
+      "restart": "重启终端",
+      "stop": "停止终端"
+    },
+    "errors": {
+      "start": "启动终端失败。",
+      "stop": "停止终端失败。",
+      "restart": "重启终端失败。"
+    }
+  },
+  "chat": {
+    "common": {
+      "copy": "复制",
+      "copied": "已复制"
+    },
+    "assistant": {
+      "process": "过程",
+      "copyAria": "复制助手消息"
+    },
+    "user": {
+      "copyAria": "复制用户消息",
+      "editAndResendAria": "编辑并重新发送用户消息",
+      "actions": {
+        "cancel": "取消",
+        "send": "发送",
+        "editAndResend": "编辑并重新发送"
+      }
+    },
+    "contextStrip": {
+      "aria": "消息上下文",
+      "pinned": "已固定"
+    },
+    "tool": {
+      "status": {
+        "running": "运行中",
+        "done": "完成",
+        "failed": "失败",
+        "approvalRequired": "需要批准"
+      }
+    },
+    "plan": {
+      "open": "打开计划"
+    },
+    "thinking": {
+      "label": "思考中",
+      "labelDot": "思考中.",
+      "labelDotDot": "思考中..",
+      "labelDotDotDot": "思考中..."
+    },
+    "inlineDiff": {
+      "title": "已编辑 {{count}} 个文件",
+      "title_other": "已编辑 {{count}} 个文件",
+      "unknownFile": "未知文件",
+      "openReviewAria": "打开 {{filePath}} 的审阅",
+      "actions": {
+        "undo": "撤销",
+        "review": "审阅"
+      }
+    },
+    "imageGeneration": {
+      "modelFallback": "图像生成",
+      "generating": "正在生成图片",
+      "generated": "已生成图片",
+      "failed": "图像生成失败",
+      "previewUnavailable": "图片预览不可用",
+      "loading": "加载中",
+      "actions": {
+        "copyImage": "复制图片",
+        "saveImage": "保存图片"
+      },
+      "messages": {
+        "copied": "图片已复制"
+      },
+      "errors": {
+        "load": "加载生成图片失败",
+        "copy": "复制图片失败",
+        "unknown": "未知错误"
+      }
+    }
+  },
   "settings": {
     "menu": {
       "provider": "供应商",

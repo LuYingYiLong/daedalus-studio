@@ -2,6 +2,7 @@ import type { TimelineBodyPart } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import { Collapse } from "antd";
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import MarkdownContent from "../markdown/MarkdownContent";
 import styles from "./ThinkingPart.module.css";
 
@@ -11,7 +12,6 @@ export type ThinkingPartProps = {
 	part: TimelineThinkingPart;
 };
 
-const ACTIVE_THINKING_LABELS: readonly string[] = ["Thinking", "Thinking.", "Thinking..", "Thinking..."];
 const THINKING_SCROLL_BOTTOM_THRESHOLD: number = 24;
 
 function normalizeActiveKeys(nextKeys: string | string[]): string[] {
@@ -45,10 +45,17 @@ function containScrollableWheel(event: React.WheelEvent<HTMLDivElement>): void {
 }
 
 function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
+	const { t } = useTranslation();
 	const contentRef = useRef<HTMLDivElement | null>(null);
 	const autoFollowRef = useRef<boolean>(true);
 	const [activeKeys, setActiveKeys] = useState<string[]>(() => part.done ? [] : ["thinking"]);
 	const [labelIndex, setLabelIndex] = useState<number>(0);
+	const activeThinkingLabels: readonly string[] = [
+		t("chat.thinking.label"),
+		t("chat.thinking.labelDot"),
+		t("chat.thinking.labelDotDot"),
+		t("chat.thinking.labelDotDotDot")
+	];
 
 	useEffect((): void => {
 		if (part.done) {
@@ -63,12 +70,12 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 		}
 
 		const intervalId: number = window.setInterval((): void => {
-			setLabelIndex((currentIndex: number): number => (currentIndex + 1) % ACTIVE_THINKING_LABELS.length);
+			setLabelIndex((currentIndex: number): number => (currentIndex + 1) % activeThinkingLabels.length);
 		}, 500);
 		return (): void => {
 			window.clearInterval(intervalId);
 		};
-	}, [part.done]);
+	}, [activeThinkingLabels.length, part.done]);
 
 	useLayoutEffect((): void => {
 		const element: HTMLDivElement | null = contentRef.current;
@@ -104,7 +111,7 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 			items={[
 				{
 					key: "thinking",
-					label: part.done ? "Thinking" : ACTIVE_THINKING_LABELS[labelIndex],
+					label: part.done ? t("chat.thinking.label") : activeThinkingLabels[labelIndex],
 					children: (
 						<div
 							ref={contentRef}

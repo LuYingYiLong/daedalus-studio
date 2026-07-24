@@ -72,9 +72,9 @@ describe("AgentPage git diff review source", () => {
 		expect(panelTabsSource).toContain("<Dropdown");
 		expect(panelTabsSource).toContain("onEdit={handleEdit}");
 		expect(dockPanelTabsSource).toContain("PanelTabs");
-		expect(dockPanelTabsSource).toContain("Review panel");
-		expect(dockPanelTabsSource).toContain("Terminal panel");
-		expect(dockPanelTabsSource).toContain("return [createDockTab(dockId, defaultKind, 1)];");
+		expect(dockPanelTabsSource).toContain('t("dock.add.reviewPanel")');
+		expect(dockPanelTabsSource).toContain('t("dock.add.terminalPanel")');
+		expect(dockPanelTabsSource).toContain("return [createDockTab(dockId, defaultKind, 1, t)];");
 		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} />");
 		expect(dockPanelTabsSource).toContain("<TerminalPanel");
 		expect(dockPanelTabsSource).toContain("terminalId={tab.key}");
@@ -91,7 +91,7 @@ describe("AgentPage git diff review source", () => {
 		expect(reviewPanelSource).toContain("<CommitActionDialog {...gitActions.commitDialogProps} />");
 		expect(reviewPanelSource).toContain("<BranchActionDialog {...gitActions.branchDialogProps} />");
 		expect(reviewPanelSource).toContain("<CreateBranchDialog {...gitActions.createBranchDialogProps} />");
-		expect(commitActionDialogSource).toContain("title=\"Commit or push\"");
+		expect(commitActionDialogSource).toContain('title={t("git.commit.title")}');
 		expect(gitActionControllerSource).toContain("commitOrPushGit");
 		expect(gitActionControllerSource).toContain("generateGitCommitMessage");
 	});
@@ -127,7 +127,7 @@ describe("AgentPage git diff review source", () => {
 		expect(inlineDiffSource).toContain("onReview?: () => void;");
 		expect(inlineDiffSource).toContain("onClick={onReview}");
 		expect(inlineDiffSource).toContain("className={styles.filePathButton}");
-		expect(inlineDiffSource).toContain("aria-label={`Open review for ${getFilePath(item)}`}");
+		expect(inlineDiffSource).toContain('aria-label={t("chat.inlineDiff.openReviewAria", { filePath })}');
 	});
 
 	it("renders inline diff files without deprecated Ant Design List", () => {
@@ -135,6 +135,6 @@ describe("AgentPage git diff review source", () => {
 		expect(inlineDiffSource).not.toContain("List.Item");
 		expect(inlineDiffSource).not.toContain(", List,");
 		expect(inlineDiffSource).toContain("<ul className={styles.fileList}>");
-		expect(inlineDiffSource).toContain("<li key={`${getFilePath(item)}:${index}`} className={styles.fileItem}>");
+		expect(inlineDiffSource).toContain("<li key={`${filePath}:${index}`} className={styles.fileItem}>");
 	});
 });

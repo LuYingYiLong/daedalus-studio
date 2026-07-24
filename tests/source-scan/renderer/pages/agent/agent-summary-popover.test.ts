@@ -26,7 +26,7 @@ describe("AgentPage summary popover source", () => {
 		expect(source).toContain("openPlansModal");
 		expect(source).toContain("openSourcesModal");
 		expect(source).toContain("setPreviewSource(source)");
-		expect(source).toContain("No summary yet");
+		expect(source).toContain('description={t("agentPage.summary.empty")}');
 	});
 
 	it("opens review from the diff action and refreshes summary after git actions", () => {

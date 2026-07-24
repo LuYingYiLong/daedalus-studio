@@ -31,7 +31,7 @@ describe("SearchSettingsPage", () => {
 		expect(apiSource).toContain('client.request<WebSearchSettings>("webSearchSettings.update", patch)');
 		expect(providerSource).toContain('key: "webSearch"');
 		expect(providerSource).toContain('labelKey: "settings.provider.capabilities.webSearch"');
-		expect(composerSource).toContain('modelBadges.push("Search")');
+		expect(composerSource).toContain('modelBadges.push(t("composer.model.capabilities.search"))');
 		expect(composerSource).not.toContain("webSearchEnabled");
 		expect(composerSource).not.toContain("onWebSearchEnabledChange");
 		expect(composerSource).not.toContain("searchButton");

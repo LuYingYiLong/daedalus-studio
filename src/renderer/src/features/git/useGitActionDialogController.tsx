@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { App as AntdApp } from "antd";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 import {
 	checkoutWorkspaceGitBranch,
 	commitOrPushGit,
@@ -37,24 +39,24 @@ type GitActionDialogController = {
 	closeBranchDialog: () => void;
 };
 
-function getCommitActionLabel(action: CommitOrPushAction): string {
+function getCommitActionLabel(action: CommitOrPushAction, t: TFunction<"common">): string {
 	if (action === "commit") {
-		return "Commit";
+		return t("git.commit.actions.commit");
 	}
 	if (action === "commit_and_push") {
-		return "Commit & Push";
+		return t("git.commit.actions.commitAndPush");
 	}
-	return "Push";
+	return t("git.commit.actions.push");
 }
 
-function formatCommitActionSuccess(result: CommitOrPushResult): string {
+function formatCommitActionSuccess(result: CommitOrPushResult, t: TFunction<"common">): string {
 	if (result.committed && result.pushed) {
-		return `Committed ${result.commitHash ?? "changes"} and pushed.`;
+		return t("git.commit.messages.committedAndPushed", { target: result.commitHash ?? t("git.commit.messages.changes") });
 	}
 	if (result.committed) {
-		return `Committed ${result.commitHash ?? "changes"}.`;
+		return t("git.commit.messages.committed", { target: result.commitHash ?? t("git.commit.messages.changes") });
 	}
-	return "Pushed changes.";
+	return t("git.commit.messages.pushed");
 }
 
 export function useGitActionDialogController({
@@ -65,6 +67,7 @@ export function useGitActionDialogController({
 	onBeforeCommitOpen,
 	onBeforeBranchOpen
 }: UseGitActionDialogControllerOptions): GitActionDialogController {
+	const { t } = useTranslation();
 	const { message: messageApi } = AntdApp.useApp();
 	const [commitOpen, setCommitOpen] = useState<boolean>(false);
 	const [branchOpen, setBranchOpen] = useState<boolean>(false);
@@ -117,7 +120,7 @@ export function useGitActionDialogController({
 
 	const loadBranches = useCallback(async (): Promise<void> => {
 		if (workspaceId === null) {
-			setBranchError("Please select a workspace before switching branches.");
+			setBranchError(t("git.branch.errors.selectWorkspaceBeforeSwitching"));
 			setBranches([]);
 			setSelectedBranchName(null);
 			return;
@@ -135,16 +138,16 @@ export function useGitActionDialogController({
 				return result.currentBranch ?? result.branches[0]?.name ?? null;
 			});
 			if (!result.hasGitRepository) {
-				setBranchError("Workspace is not a Git repository.");
+				setBranchError(t("git.branch.errors.notGitRepository"));
 			}
 		} catch (error: unknown) {
-			setBranchError(error instanceof Error ? error.message : "Failed to load branches.");
+			setBranchError(error instanceof Error ? error.message : t("git.branch.errors.load"));
 			setBranches([]);
 			setSelectedBranchName(null);
 		} finally {
 			setIsBranchesLoading(false);
 		}
-	}, [workspaceId]);
+	}, [t, workspaceId]);
 
 	const openBranchDialog = useCallback((): void => {
 		onBeforeBranchOpen?.();
@@ -177,7 +180,7 @@ export function useGitActionDialogController({
 
 	const generateMessageForCommitAction = useCallback(async (): Promise<string> => {
 		if (workspaceId === null) {
-			throw new Error("Please select a workspace before committing.");
+			throw new Error(t("git.commit.errors.selectWorkspace"));
 		}
 
 		const generated: GenerateGitCommitMessageResult = await generateGitCommitMessage({
@@ -186,11 +189,11 @@ export function useGitActionDialogController({
 		});
 		setCommitMessage(generated.message);
 		return generated.message;
-	}, [includeUnstagedChanges, workspaceId]);
+	}, [includeUnstagedChanges, t, workspaceId]);
 
 	const handleCommitAction = useCallback(async (action: CommitOrPushAction): Promise<void> => {
 		if (workspaceId === null) {
-			setCommitError("Please select a workspace before committing.");
+			setCommitError(t("git.commit.errors.selectWorkspace"));
 			return;
 		}
 
@@ -208,12 +211,12 @@ export function useGitActionDialogController({
 				message: action === "push" ? undefined : nextMessage,
 				includeUnstagedChanges
 			});
-			void messageApi.success(formatCommitActionSuccess(result));
+			void messageApi.success(formatCommitActionSuccess(result, t));
 			setCommitOpen(false);
 			setCommitMessage("");
 			await onCommitSuccess?.(result);
 		} catch (error: unknown) {
-			setCommitError(error instanceof Error ? error.message : `Failed to ${getCommitActionLabel(action).toLowerCase()}.`);
+			setCommitError(error instanceof Error ? error.message : t("git.commit.errors.actionFailed", { action: getCommitActionLabel(action, t).toLowerCase() }));
 		} finally {
 			setCommitOperation(null);
 		}
@@ -223,17 +226,18 @@ export function useGitActionDialogController({
 		includeUnstagedChanges,
 		messageApi,
 		onCommitSuccess,
+		t,
 		workspaceId
 	]);
 
 	const handleBranchCheckout = useCallback(async (branchNameOverride?: string): Promise<void> => {
 		if (workspaceId === null) {
-			setBranchError("Please select a workspace before switching branches.");
+			setBranchError(t("git.branch.errors.selectWorkspaceBeforeSwitching"));
 			return;
 		}
 		const branchName: string | null = branchNameOverride ?? selectedBranchName;
 		if (branchName === null) {
-			setBranchError("Please select a branch.");
+			setBranchError(t("git.branch.errors.selectBranch"));
 			return;
 		}
 
@@ -245,24 +249,24 @@ export function useGitActionDialogController({
 				workspaceId,
 				branchName
 			});
-			void messageApi.success(`Switched to ${result.branch}.`);
+			void messageApi.success(t("git.branch.messages.switched", { branch: result.branch }));
 			setBranchOpen(false);
 			await onBranchSuccess?.(result);
 		} catch (error: unknown) {
-			setBranchError(error instanceof Error ? error.message : "Failed to switch branch.");
+			setBranchError(error instanceof Error ? error.message : t("git.branch.errors.switch"));
 		} finally {
 			setBranchOperation(null);
 		}
-	}, [messageApi, onBranchSuccess, selectedBranchName, workspaceId]);
+	}, [messageApi, onBranchSuccess, selectedBranchName, t, workspaceId]);
 
 	const handleBranchCreate = useCallback(async (): Promise<void> => {
 		if (workspaceId === null) {
-			setBranchError("Please select a workspace before creating branches.");
+			setBranchError(t("git.branch.errors.selectWorkspaceBeforeCreating"));
 			return;
 		}
 		const branchName: string = newBranchName.trim();
 		if (branchName.length === 0) {
-			setBranchError("Please enter a branch name.");
+			setBranchError(t("git.branch.errors.enterBranchName"));
 			return;
 		}
 
@@ -274,7 +278,7 @@ export function useGitActionDialogController({
 				branchName,
 				startPoint: newBranchStartPoint.trim().length > 0 ? newBranchStartPoint.trim() : undefined
 			});
-			void messageApi.success(`Created and switched to ${result.branch}.`);
+			void messageApi.success(t("git.branch.messages.createdAndSwitched", { branch: result.branch }));
 			setNewBranchName("");
 			setNewBranchStartPoint("");
 			setSelectedBranchName(result.branch);
@@ -283,11 +287,11 @@ export function useGitActionDialogController({
 			setBranchOpen(false);
 			await onBranchSuccess?.(result);
 		} catch (error: unknown) {
-			setBranchError(error instanceof Error ? error.message : "Failed to create branch.");
+			setBranchError(error instanceof Error ? error.message : t("git.branch.errors.create"));
 		} finally {
 			setBranchOperation(null);
 		}
-	}, [loadBranches, messageApi, newBranchName, newBranchStartPoint, onBranchSuccess, workspaceId]);
+	}, [loadBranches, messageApi, newBranchName, newBranchStartPoint, onBranchSuccess, t, workspaceId]);
 
 	const commitDialogProps: CommitActionDialogProps = useMemo((): CommitActionDialogProps => {
 		return {

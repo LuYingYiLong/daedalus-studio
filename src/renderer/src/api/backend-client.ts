@@ -37,10 +37,12 @@ async function connectBackendClient(): Promise<BackendRpcClient> {
 		throw new Error("当前环境没有暴露 electronAPI.backend");
 	}
 
-	const port: number = await window.electronAPI.backend.getPort();
-	const client: BackendRpcClient = new BackendRpcClient(`ws://localhost:${port}`);
+	const connection = await window.electronAPI.backend.getConnectionInfo();
+	const client: BackendRpcClient = new BackendRpcClient(`ws://127.0.0.1:${connection.port}`, {
+		authProtocol: connection.authProtocol
+	});
 
-	console.info("[Daedalus backend] connecting", { port });
+	console.info("[Daedalus backend] connecting", { port: connection.port });
 	await client.connect();
 	await client.request<ClientHelloResult>("client.hello", {
 		clientType: "studio",

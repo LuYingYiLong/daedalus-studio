@@ -2,6 +2,7 @@ import { TimelineBodyPart } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import { Button, Card, Modal, Tooltip } from "antd";
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./PlanPart.module.css"
 import { copyTextToClipboard } from "@/utils/clipboard";
 import MarkdownContent from "../markdown/MarkdownContent";
@@ -12,19 +13,20 @@ export type PlanPartProps = {
 }
 
 function PlanPart({ part }: PlanPartProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const [modalOpen, setModalOpen] = useState<boolean>(false);
 	const [copied, setCopied] = useState<boolean>(false);
 
 	const extra: React.ReactNode = (
 		<div>
-			<Tooltip title="Open plan">
+			<Tooltip title={t("chat.plan.open")}>
 				<Button
 					type="text"
 					icon={<Icon name="distraction-free" />}
 					onClick={() => setModalOpen(true)}
 				/>
 			</Tooltip>
-			<Tooltip title={copied ? "Copied" : "Copy"}>
+			<Tooltip title={copied ? t("chat.common.copied") : t("chat.common.copy")}>
 				<Button
 					type="text"
 					icon={<Icon name="copy" />}

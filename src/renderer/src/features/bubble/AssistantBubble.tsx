@@ -3,6 +3,7 @@ import { Button, Collapse, Divider, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import { TimelineBodyPart } from "@/api/types";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import ToolPart from "../chat/ToolPart";
 import StatusPart from "../chat/StatusPart";
 import PlanPart from "../chat/PlanPart";
@@ -54,6 +55,7 @@ function createAssistantCopyText(message?: string, content?: string, bodyParts?:
 }
 
 function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, endTime, streaming = false, onInlineDiffReview }: AssistantBubbleProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const [copied, setCopied] = React.useState<boolean>(false);
 
 	async function copyMessage(): Promise<void> {
@@ -133,7 +135,7 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 						items={[
 							{
 								key: summaryStartPart.stepRunId || "summary-process",
-								label: summaryStartPart.foldTitle || "Process",
+								label: summaryStartPart.foldTitle || t("chat.assistant.process"),
 								children: foldedChildren
 							}
 						]}
@@ -162,12 +164,12 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 				)}
 			</div>
 			<div className={styles.toolbar}>
-				<Tooltip title={copied ? "Copied" : "Copy"}>
+				<Tooltip title={copied ? t("chat.common.copied") : t("chat.common.copy")}>
 					<Button
 						type="text"
 						size="small"
 						shape="circle"
-						aria-label="Copy assistant message"
+						aria-label={t("chat.assistant.copyAria")}
 						icon={<Icon name="copy" />}
 						onClick={(): void => {
 							void copyMessage();

@@ -1,5 +1,6 @@
 import type { ChangeEvent, JSX } from "react";
 import { Alert, Button, Checkbox, Input, Modal, Space } from "antd";
+import { useTranslation } from "react-i18next";
 import type { CommitOrPushAction } from "@/api/workspace-git-api";
 import styles from "./GitActionDialog.module.css";
 
@@ -28,11 +29,12 @@ function CommitActionDialog({
 	onIncludeUnstagedChangesChange,
 	onCommitAction
 }: CommitActionDialogProps): JSX.Element {
+	const { t } = useTranslation();
 	const isCommitOperationRunning: boolean = commitOperation !== null;
 
 	return (
 		<Modal
-			title="Commit or push"
+			title={t("git.commit.title")}
 			open={open}
 			onCancel={onCancel}
 			footer={(
@@ -42,14 +44,14 @@ function CommitActionDialog({
 						loading={commitOperation === "push"}
 						onClick={(): void => onCommitAction("push")}
 					>
-						Push
+						{t("git.commit.actions.push")}
 					</Button>
 					<Button
 						disabled={isCommitOperationRunning || !hasWorkspace}
 						loading={commitOperation === "commit_and_push"}
 						onClick={(): void => onCommitAction("commit_and_push")}
 					>
-						Commit & Push
+						{t("git.commit.actions.commitAndPush")}
 					</Button>
 					<Button
 						type="primary"
@@ -57,7 +59,7 @@ function CommitActionDialog({
 						loading={commitOperation === "commit"}
 						onClick={(): void => onCommitAction("commit")}
 					>
-						Commit
+						{t("git.commit.actions.commit")}
 					</Button>
 				</Space>
 			)}
@@ -70,7 +72,7 @@ function CommitActionDialog({
 					value={commitMessage}
 					disabled={isCommitOperationRunning}
 					autoSize={{ minRows: 3, maxRows: 6 }}
-					placeholder="Leaving it blank will automatically generate the information"
+					placeholder={t("git.commit.messagePlaceholder")}
 					onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
 						onCommitMessageChange(event.target.value);
 					}}
@@ -82,7 +84,7 @@ function CommitActionDialog({
 						onIncludeUnstagedChangesChange(event.target.checked);
 					}}
 				>
-					Includes unstaged changes
+					{t("git.commit.includeUnstaged")}
 				</Checkbox>
 			</div>
 		</Modal>

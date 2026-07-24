@@ -3,18 +3,20 @@ import { readRepoFile } from "../../helpers/repo-paths";
 
 describe("backend bootstrap service", () => {
 	const serviceSource: string = readRepoFile("src", "main", "services", "backend-bootstrap.ts");
+	const storeSource: string = readRepoFile("src", "main", "services", "backend-binary-store.ts");
 	const managerSource: string = readRepoFile("src", "main", "services", "backend-manager.ts");
 	const mainSource: string = readRepoFile("src", "main", "index.ts");
 	const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 
 	it("installs a managed backend during packaged first-run bootstrap", () => {
-		expect(serviceSource).toContain("BACKEND_PACKAGE_NAME: string = \"daedalus-backend\"");
-		expect(serviceSource).toContain("npm_config_dry_run");
-		expect(serviceSource).toContain("[\"view\", BACKEND_PACKAGE_NAME, \"version\"]");
-		expect(serviceSource).toContain("[\"install\", \"--prefix\", stagingDir, \"--prefer-online\", packageSpec]");
+		expect(serviceSource).toContain("stageBundledBackend()");
+		expect(serviceSource).toContain("activateBackendCandidate(installed)");
+		expect(serviceSource).toContain("commitBackendCandidate(version)");
+		expect(storeSource).toContain("runBackendSelfTest(installed)");
 		expect(serviceSource).toContain("getManagedBackendCurrentPath()");
 		expect(serviceSource).toContain("backendBootstrapCompleted");
+		expect(serviceSource).not.toContain("npm_config_dry_run");
 	});
 
 	it("moves backend startup orchestration behind bootstrap service", () => {
@@ -29,10 +31,9 @@ describe("backend bootstrap service", () => {
 	});
 
 	it("stops startup when the marked managed backend version is missing", () => {
-		expect(serviceSource).toContain("getMarkedBackendMissingError");
+		expect(serviceSource).toContain("inspectCurrentBackend()");
 		expect(serviceSource).toContain("marked_backend_missing");
-		expect(serviceSource).toContain("options.forceInstall ? null : await getMarkedBackendMissingError()");
-		expect(serviceSource).toContain("Use Repair backend to reinstall the managed backend.");
+		expect(serviceSource).toContain("Use Repair backend to restore the verified backend bundled with Daedalus Studio.");
 	});
 
 	it("exposes bootstrap IPC without exposing npm or file paths to renderer code", () => {

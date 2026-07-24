@@ -1,5 +1,6 @@
 import type { ChangeEvent, JSX, KeyboardEvent } from "react";
 import { Alert, Button, Empty, Input, Modal, Spin, Tag, Typography } from "antd";
+import { useTranslation } from "react-i18next";
 import type { WorkspaceGitBranchItem } from "@/api/workspace-git-api";
 import { Icon } from "@/assets/icons";
 import styles from "./GitActionDialog.module.css";
@@ -50,12 +51,13 @@ function BranchActionDialog({
 	onBranchSelect,
 	onBranchCheckout
 }: BranchActionDialogProps): JSX.Element {
+	const { t } = useTranslation();
 	const isBranchOperationRunning: boolean = branchOperation !== null;
 	const visibleBranches: WorkspaceGitBranchItem[] = filterBranches(branches, branchSearch);
 
 	return (
 		<Modal
-			title="Branch"
+			title={t("git.branch.title")}
 			open={open}
 			onCancel={onClose}
 			footer={null}
@@ -69,7 +71,7 @@ function BranchActionDialog({
 						allowClear={true}
 						value={branchSearch}
 						prefix={<Icon name="search" />}
-						placeholder="Search branch"
+						placeholder={t("git.branch.searchPlaceholder")}
 						className={styles.searchBox}
 						disabled={isBranchesLoading || isBranchOperationRunning}
 						onChange={(event: ChangeEvent<HTMLInputElement>): void => {
@@ -82,7 +84,7 @@ function BranchActionDialog({
 						loading={isBranchesLoading}
 						onClick={onRefresh}
 					>
-						Refresh
+						{t("git.actions.refresh")}
 					</Button>
 					<Button
 						type="primary"
@@ -90,7 +92,7 @@ function BranchActionDialog({
 						disabled={isBranchOperationRunning || !hasWorkspace}
 						onClick={onCreateBranchOpen}
 					>
-						Create & Checkout
+						{t("git.branch.actions.createAndCheckout")}
 					</Button>
 				</div>
 				<div className={styles.branchList}>
@@ -121,8 +123,8 @@ function BranchActionDialog({
 								<span className={styles.branchItemMain}>
 									<span className={styles.branchItemTitle}>
 										<Typography.Text ellipsis={true}>{branch.name}</Typography.Text>
-										{branch.current ? <Tag color="success">Current</Tag> : null}
-										{branch.remote ? <Tag>Remote</Tag> : null}
+										{branch.current ? <Tag color="success">{t("git.branch.tags.current")}</Tag> : null}
+										{branch.remote ? <Tag>{t("git.branch.tags.remote")}</Tag> : null}
 									</span>
 									<span className={styles.branchItemMeta}>
 										{branch.upstream ?? branch.lastCommit ?? branch.fullName}
@@ -138,12 +140,12 @@ function BranchActionDialog({
 										onBranchCheckout(branch.name);
 									}}
 								>
-									Checkout
+									{t("git.branch.actions.checkout")}
 								</Button>
 							</div>
 						))
 					) : (
-						<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No branches found" />
+						<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("git.branch.empty")} />
 					)}
 				</div>
 			</div>

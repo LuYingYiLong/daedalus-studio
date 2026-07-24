@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import styles from "./UserBubble.module.css";
 import { Button, Input, Tooltip, Typography } from "antd";
+import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { AdditionalContextItem } from "@/api/types";
 import AdditionalContextStrip from "./AdditionalContextStrip";
@@ -49,6 +50,7 @@ function UserBubble({
 	onRetryEditCancel,
 	onRetryFromUserMessage
 }: UserBubbleProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const [draftText, setDraftText] = useState<string>(message);
 	const [draftContext, setDraftContext] = useState<AdditionalContextItem[]>(() => cloneContextItems(additionalContext));
 	const [isSubmittingRetry, setIsSubmittingRetry] = useState<boolean>(false);
@@ -185,7 +187,7 @@ function UserBubble({
 								onClick={cancelRetryEdit}
 								disabled={isSubmittingRetry}
 							>
-								Cancel
+								{t("chat.user.actions.cancel")}
 							</Button>
 							<Button
 								type="primary"
@@ -196,7 +198,7 @@ function UserBubble({
 									void submitRetryEdit();
 								}}
 							>
-								Send
+								{t("chat.user.actions.send")}
 							</Button>
 						</div>
 					</div>
@@ -218,12 +220,12 @@ function UserBubble({
 				{sentTime ? (
 					<Typography.Text type="secondary">{sentTime}</Typography.Text>
 				) : null}
-				<Tooltip title={copied ? "Copied" : "Copy"}>
+				<Tooltip title={copied ? t("chat.common.copied") : t("chat.common.copy")}>
 					<Button
 						type="text"
 						size="small"
 						shape="circle"
-						aria-label="Copy user message"
+						aria-label={t("chat.user.copyAria")}
 						icon={<Icon name="copy" />}
 						onClick={(): void => {
 							void copyMessage();
@@ -231,12 +233,12 @@ function UserBubble({
 					/>
 				</Tooltip>
 				{canShowEditButton ? (
-					<Tooltip title="Edit and resend">
+					<Tooltip title={t("chat.user.actions.editAndResend")}>
 						<Button
 							type="text"
 							size="small"
 							shape="circle"
-							aria-label="Edit and resend user message"
+							aria-label={t("chat.user.editAndResendAria")}
 							icon={<Icon name="pencil" />}
 							disabled={disabled || isSubmittingRetry}
 							onClick={beginRetryEdit}

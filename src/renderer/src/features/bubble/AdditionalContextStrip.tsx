@@ -1,6 +1,7 @@
 import type { AdditionalContextItem } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import { Tooltip } from "antd";
+import { useTranslation } from "react-i18next";
 import styles from "./AdditionalContextStrip.module.css";
 import { summarizeAdditionalContextItem } from "./additional-context-display";
 
@@ -21,6 +22,7 @@ function AdditionalContextStrip({
 	onTogglePin,
 	onRemove
 }: AdditionalContextStripProps): React.JSX.Element | null {
+	const { t } = useTranslation();
 	if (items.length === 0) {
 		return null;
 	}
@@ -32,7 +34,7 @@ function AdditionalContextStrip({
 	].filter(Boolean).join(" ");
 
 	return (
-		<div className={stripClassName} aria-label="Message context">
+		<div className={stripClassName} aria-label={t("chat.contextStrip.aria")}>
 			{items.map((item: AdditionalContextItem): React.ReactNode => {
 				const display = summarizeAdditionalContextItem(item);
 				const nextPinned: boolean = item.pinned !== true;
@@ -71,7 +73,7 @@ function AdditionalContextStrip({
 								<span className={styles.contextTitle}>{display.title}</span>
 								<span className={styles.contextMeta}>{display.meta}</span>
 							</span>
-							{item.pinned === true ? <Icon name="pin" className={styles.pinIcon} aria-label="Pinned" /> : null}
+							{item.pinned === true ? <Icon name="pin" className={styles.pinIcon} aria-label={t("chat.contextStrip.pinned")} /> : null}
 						</span>
 					</Tooltip>
 				);

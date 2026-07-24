@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { Alert, Button, Collapse, Divider, Empty, Spin, Tooltip, Typography } from "antd";
 import type { CollapseProps } from "antd";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 import { Decoration, Diff, Hunk, parseDiff, type FileData, type HunkData } from "react-diff-view";
 import { fetchWorkspaceGitDiff, type WorkspaceGitDiffResult } from "@/api/workspace-git-diff-api";
 import { Icon } from "@/assets/icons";
@@ -24,11 +26,11 @@ function formatDiffStats(diff: WorkspaceGitDiffResult): string {
 	return `${branchText} · ${diff.changedFiles} files · +${diff.additions} -${diff.deletions}`;
 }
 
-function getFilePath(file: FileData): string {
-	return file.newPath || file.oldPath || "Unknown file";
+function getFilePath(file: FileData, t: TFunction<"common">): string {
+	return file.newPath || file.oldPath || t("review.unknownFile");
 }
 
-function parsePatch(patch: string): ParsedDiff {
+function parsePatch(patch: string, t: TFunction<"common">): ParsedDiff {
 	if (patch.trim().length === 0) {
 		return { files: [], errorMessage: null };
 	}
@@ -41,7 +43,7 @@ function parsePatch(patch: string): ParsedDiff {
 	} catch (error: unknown) {
 		return {
 			files: [],
-			errorMessage: error instanceof Error ? error.message : "Failed to parse diff."
+			errorMessage: error instanceof Error ? error.message : t("review.errors.parseDiff")
 		};
 	}
 }
@@ -57,13 +59,14 @@ function renderHunk(hunk: HunkData, index: number): ReactElement[] {
 }
 
 function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElement {
+	const { t } = useTranslation();
 	const [diff, setDiff] = useState<WorkspaceGitDiffResult | null>(null);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-	const parsedDiff: ParsedDiff = useMemo((): ParsedDiff => parsePatch(diff?.patch ?? ""), [diff?.patch]);
+	const parsedDiff: ParsedDiff = useMemo((): ParsedDiff => parsePatch(diff?.patch ?? "", t), [diff?.patch, t]);
 	const diffFileCollapseItems: NonNullable<CollapseProps["items"]> = useMemo((): NonNullable<CollapseProps["items"]> => {
 		return parsedDiff.files.map((file: FileData, fileIndex: number): NonNullable<CollapseProps["items"]>[number] => {
-			const filePath: string = getFilePath(file);
+			const filePath: string = getFilePath(file, t);
 
 			return {
 				key: `${filePath}:${fileIndex}`,
@@ -75,7 +78,7 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 				extra: <span className={styles.fileType}>{file.type}</span>,
 				children: file.isBinary || file.hunks.length === 0 ? (
 					<Typography.Text type="secondary" className={styles.binaryText}>
-						Binary file changed
+						{t("review.binaryFileChanged")}
 					</Typography.Text>
 				) : (
 					<Diff
@@ -90,7 +93,7 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 				)
 			};
 		});
-	}, [parsedDiff.files]);
+	}, [parsedDiff.files, t]);
 	const defaultDiffActiveKeys: string[] = useMemo((): string[] => {
 		return diffFileCollapseItems.map((item): string => String(item?.key ?? ""));
 	}, [diffFileCollapseItems]);
@@ -107,7 +110,7 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 			const result: WorkspaceGitDiffResult = await fetchWorkspaceGitDiff({ workspaceId });
 			setDiff(result);
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : "Failed to load git diff.");
+			setErrorMessage(error instanceof Error ? error.message : t("review.errors.loadDiff"));
 		} finally {
 			setIsLoading(false);
 		}
@@ -126,7 +129,7 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 			})
 			.catch((error: unknown): void => {
 				if (!cancelled) {
-					setErrorMessage(error instanceof Error ? error.message : "Failed to load git diff.");
+					setErrorMessage(error instanceof Error ? error.message : t("review.errors.loadDiff"));
 				}
 			})
 			.finally((): void => {
@@ -138,7 +141,7 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 		return (): void => {
 			cancelled = true;
 		};
-	}, [workspaceId]);
+	}, [workspaceId, t]);
 
 	return (
 		<aside className={styles.panel}>
@@ -147,12 +150,17 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 					{diff !== null && diff.hasGitRepository ? (
 						<div>
 							<Typography.Text type="secondary" className={styles.meta}>
-								{formatDiffStats(diff)}
+								{t("review.diffStats", {
+									branch: diff.branch ?? t("git.detachedHead"),
+									count: diff.changedFiles,
+									additions: diff.additions,
+									deletions: diff.deletions
+								})}
 							</Typography.Text>
 						</div>
 					) : null}
 				</div>
-				<Tooltip title="Commit or push">
+				<Tooltip title={t("git.commit.title")}>
 					<Button
 						type="text"
 						shape="circle"
@@ -161,7 +169,7 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 						onClick={gitActions.openCommitDialog}
 					/>
 				</Tooltip>
-				<Tooltip title="Refresh git diff">
+				<Tooltip title={t("review.actions.refreshDiff")}>
 					<div className={styles.headerActions}>
 						<Button
 							type="text"
@@ -184,21 +192,21 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 						<Spin />
 					</div>
 				) : errorMessage !== null ? (
-					<Alert type="error" showIcon={true} title="Diff unavailable" description={errorMessage} />
+					<Alert type="error" showIcon={true} title={t("review.empty.diffUnavailable")} description={errorMessage} />
 				) : diff === null ? (
-					<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No diff loaded" />
+					<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("review.empty.noDiffLoaded")} />
 				) : !diff.hasGitRepository ? (
-					<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No Git repository" />
+					<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("review.empty.noGitRepository")} />
 				) : diff.patch.trim().length === 0 ? (
-					<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No workspace changes" />
+					<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("review.empty.noWorkspaceChanges")} />
 				) : (
 					<div className={styles.diffContent}>
 						{diff.truncated ? (
 							<Alert
 								type="warning"
 								showIcon={true}
-								title="Diff truncated"
-								description="The patch is too large to show completely."
+								title={t("review.notices.diffTruncated.title")}
+								description={t("review.notices.diffTruncated.description")}
 								className={styles.notice}
 							/>
 						) : null}
@@ -207,7 +215,7 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 								<Alert
 									type="warning"
 									showIcon={true}
-									title="Diff parse failed"
+									title={t("review.notices.diffParseFailed")}
 									description={parsedDiff.errorMessage}
 									className={styles.notice}
 								/>

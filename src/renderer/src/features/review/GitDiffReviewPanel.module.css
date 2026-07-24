@@ -74,7 +74,6 @@
 
 .diffContent {
 	display: grid;
-	gap: var(--ds-space-2);
 	min-width: 0;
 }
 
@@ -84,7 +83,6 @@
 
 .fileCollapse {
 	display: grid;
-	gap: var(--ds-space-2);
 	min-width: 0;
 	background: transparent;
 }
@@ -92,9 +90,6 @@
 .fileCollapse :global(.ant-collapse-item) {
 	min-width: 0;
 	overflow: hidden;
-	border: 1px solid var(--ds-border);
-	border-radius: var(--ds-radius-sm);
-	background: var(--ds-surface);
 }
 
 .fileCollapse :global(.ant-collapse-header) {

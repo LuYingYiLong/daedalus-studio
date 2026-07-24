@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+	<defs>
+		<clipPath id="clipPath_3">
+			<rect width="14.000000" height="18.000000" x="5.000000" y="3.000000" fill="currentColor" />
+		</clipPath>
+	</defs>
+	<g id="文件" customFrame="url(#clipPath_3)">
+		<rect id="文件" width="14.000000" height="18.000000" x="5.000000" y="3.000000" />
+		<path id="矢量 37" d="M14 4L14 8L18 8" stroke="currentColor" stroke-linecap="square" stroke-width="1.750000" />
+		<path id="矢量 38" d="M5 19C5 20.1046 5.89543 21 7 21L17 21C18.1046 21 19 20.1046 19 19L19 7.82843C19 7.29799 18.7893 6.78929 18.4142 6.41421L15.5858 3.58579C15.2107 3.21071 14.702 3 14.1716 3L7 3C5.89543 3 5 3.89543 5 5L5 19Z" stroke="currentColor" stroke-width="1.750000" />
+	</g>
+	<path id="矢量 76" d="M10 5L10 3L8 3L8 5L10 5ZM10 7L12 7L12 5L10 5L10 7ZM10 9L8 9L8 7L10 7L10 9ZM10 9L12 9L12 11L10 11L10 9ZM10 11L10 13L12 13L12 17L8 17L8 11L10 11Z" fill="currentColor" fill-rule="evenodd" />
+</svg>

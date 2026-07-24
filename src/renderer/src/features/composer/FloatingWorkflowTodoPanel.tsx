@@ -1,4 +1,6 @@
 import { Button, Popover, Progress, Typography } from "antd";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { WorkflowTodoSnapshot, WorkflowTodoStep } from "@/api/types";
 import styles from "./FloatingWorkflowTodoPanel.module.css";
@@ -25,8 +27,8 @@ function getWorkflowTodoIconName(status: string): string {
 	return "status-unchecked";
 }
 
-function getStepTitle(step: WorkflowTodoStep, index: number): string {
-	return step.title.trim() || step.text?.trim() || `Step ${index + 1}`;
+function getStepTitle(step: WorkflowTodoStep, index: number, t: TFunction<"common">): string {
+	return step.title.trim() || step.text?.trim() || t("workflowTodo.stepFallback", { index: index + 1 });
 }
 
 function isRunningStep(status: string): boolean {
@@ -62,6 +64,7 @@ function getProgressStatus(steps: WorkflowTodoStep[]): "normal" | "exception" | 
 }
 
 function FloatingWorkflowTodoPanel({ snapshot, fileChangeSummary, onDismiss }: FloatingWorkflowTodoPanelProps): React.JSX.Element | null {
+	const { t } = useTranslation();
 	const steps: WorkflowTodoStep[] = snapshot?.steps ?? [];
 	if (snapshot === null || steps.length === 0) {
 		return null;
@@ -73,7 +76,7 @@ function FloatingWorkflowTodoPanel({ snapshot, fileChangeSummary, onDismiss }: F
 		<div className={styles.popoverContent}>
 			<div className={styles.detailSteps}>
 				{steps.map((step: WorkflowTodoStep, index: number): React.ReactNode => {
-					const title: string = getStepTitle(step, index);
+					const title: string = getStepTitle(step, index, t);
 					const description: string | undefined = step.text !== undefined && step.text !== title ? step.text : undefined;
 					return (
 						<div key={step.id} className={styles.detailStep}>
@@ -89,25 +92,27 @@ function FloatingWorkflowTodoPanel({ snapshot, fileChangeSummary, onDismiss }: F
 				})}
 			</div>
 			<div className={styles.popoverFooter}>
-				<span className={styles.changedFiles}>{fileChangeSummary.changedFiles} files</span>
+				<span className={styles.changedFiles}>
+					{t("workflowTodo.changedFiles", { count: fileChangeSummary.changedFiles })}
+				</span>
 				<Button
 					type="text"
 					size="small"
 					icon={<Icon name="close" />}
 					onClick={(): void => onDismiss(snapshot)}
 				>
-					Dismiss
+					{t("workflowTodo.dismiss")}
 				</Button>
 			</div>
 		</div>
 	);
 
 	return (
-		<div className={styles.panel} aria-label="Workflow progress">
+		<div className={styles.panel} aria-label={t("workflowTodo.aria.progress")}>
 			<Popover
 				trigger="hover"
 				placement="top"
-				title={snapshot.title ?? "Todo"}
+				title={snapshot.title ?? t("workflowTodo.titleFallback")}
 				content={popoverContent}
 			>
 				<button type="button" className={styles.progressTrigger}>
@@ -122,7 +127,7 @@ function FloatingWorkflowTodoPanel({ snapshot, fileChangeSummary, onDismiss }: F
 					<Typography.Text className={styles.phaseText}>{currentStepNumber}/{steps.length}</Typography.Text>
 				</button>
 			</Popover>
-			<span className={styles.diffSummary} aria-label="File changes">
+			<span className={styles.diffSummary} aria-label={t("workflowTodo.aria.fileChanges")}>
 				<span className={styles.additions}>+{fileChangeSummary.additions}</span>
 				<span className={styles.deletions}>-{fileChangeSummary.deletions}</span>
 			</span>

@@ -1,14 +1,16 @@
 import type { JSX } from "react";
 import { Button, Modal } from "antd";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 import type { SessionOverviewPlanItem, SessionOverviewResult, SessionOverviewSourceItem } from "@/api/session-overview-api";
 import MarkdownContent from "@/features/markdown/MarkdownContent";
 import styles from "./AgentPage.module.css";
 
-export function formatSourceSubtitle(source: SessionOverviewSourceItem): string {
+export function formatSourceSubtitle(source: SessionOverviewSourceItem, t: TFunction<"common">): string {
 	const dimensions: string = source.width !== undefined && source.height !== undefined
 		? `${source.width}x${source.height}`
-		: "Unknown size";
-	return `${source.mimeType} · ${dimensions}`;
+		: t("agentPage.summary.unknownSize");
+	return t("agentPage.summary.sourceSubtitle", { mimeType: source.mimeType, dimensions });
 }
 
 function formatOverviewDate(value: string): string {
@@ -45,10 +47,12 @@ function SessionOverviewDialogs({
 	onPreviewPlanChange,
 	onPreviewSourceChange
 }: SessionOverviewDialogsProps): JSX.Element {
+	const { t } = useTranslation();
+
 	return (
 		<>
 			<Modal
-				title="Plans"
+				title={t("agentPage.summary.sections.plans")}
 				open={plansOpen}
 				footer={null}
 				onCancel={onPlansClose}
@@ -68,7 +72,7 @@ function SessionOverviewDialogs({
 							<span className={styles.summaryPlanButtonContent}>
 								<span className={styles.summaryItemTitle}>{plan.title}</span>
 								<span className={styles.summaryMeta}>
-									{plan.status} · {formatOverviewDate(plan.updatedAt)}
+									{plan.status} / {formatOverviewDate(plan.updatedAt)}
 								</span>
 								<span className={styles.summaryPath}>{plan.planPath}</span>
 							</span>
@@ -77,7 +81,7 @@ function SessionOverviewDialogs({
 				</div>
 			</Modal>
 			<Modal
-				title={previewPlan?.title ?? "Plan"}
+				title={previewPlan?.title ?? t("agentPage.summary.fallbackPlanTitle")}
 				open={previewPlan !== null}
 				footer={null}
 				onCancel={(): void => onPreviewPlanChange(null)}
@@ -90,7 +94,7 @@ function SessionOverviewDialogs({
 				) : null}
 			</Modal>
 			<Modal
-				title="Source"
+				title={t("agentPage.summary.sections.source")}
 				open={sourcesOpen}
 				footer={null}
 				onCancel={onSourcesClose}
@@ -107,14 +111,14 @@ function SessionOverviewDialogs({
 							<img src={source.thumbnailDataUrl} alt="" className={styles.sourceGridThumbnail} />
 							<span className={styles.sourceGridText}>
 								<span className={styles.summaryItemTitle}>{source.title}</span>
-								<span className={styles.summaryMeta}>{formatSourceSubtitle(source)}</span>
+								<span className={styles.summaryMeta}>{formatSourceSubtitle(source, t)}</span>
 							</span>
 						</Button>
 					))}
 				</div>
 			</Modal>
 			<Modal
-				title={previewSource?.title ?? "Image source"}
+				title={previewSource?.title ?? t("agentPage.summary.fallbackImageSourceTitle")}
 				open={previewSource !== null}
 				footer={null}
 				onCancel={(): void => onPreviewSourceChange(null)}

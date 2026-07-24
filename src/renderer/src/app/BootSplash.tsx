@@ -37,11 +37,13 @@ function getErrorMessage(error: unknown): string {
 function getBackendBootstrapProgress(state: BackendBootstrapState, t: Translate): BootstrapProgress {
 	const labelByPhase: Record<BackendBootstrapPhase, string> = {
 		detect: t("app.boot.progress.checkingBackend"),
-		resolve_latest: t("app.boot.progress.checkingBackendPackage"),
+		recover: t("app.boot.progress.checkingBackend"),
 		install: t("app.boot.progress.installingBackend"),
+		verify: t("app.boot.progress.checkingBackendHealth"),
 		write_metadata: t("app.boot.progress.preparingBackend"),
 		start: t("app.boot.progress.startingBackend"),
 		health_check: t("app.boot.progress.checkingBackendHealth"),
+		rollback: t("app.boot.progress.preparingBackend"),
 		ready: t("app.boot.progress.backendReady"),
 		error: t("app.boot.progress.backendStartupFailed")
 	};

@@ -11,6 +11,10 @@ declare global {
 
 	interface BackendAPI {
 		getPort: () => Promise<number>;
+		getConnectionInfo: () => Promise<{
+			port: number;
+			authProtocol: string | null;
+		}>;
 		getStatus: () => Promise<string>;
 		healthCheck: () => Promise<boolean>;
 		restart: () => Promise<void>;
@@ -28,11 +32,13 @@ declare global {
 
 	type BackendBootstrapPhase =
 		| "detect"
-		| "resolve_latest"
+		| "recover"
 		| "install"
+		| "verify"
 		| "write_metadata"
 		| "start"
 		| "health_check"
+		| "rollback"
 		| "ready"
 		| "error";
 

@@ -98,6 +98,7 @@ class FakeBackendUpdateClient implements BackendUpdateClient {
 	public restartCount: number = 0;
 	public verifyCount: number = 0;
 	public cleanupCount: number = 0;
+	public rollbackCount: number = 0;
 	public cleanupArgs: Array<[string, string | null]> = [];
 	public checkResult: BackendUpdateCheckResult = createBackendCheckResult(false);
 	public checkError: Error | null = null;
@@ -143,6 +144,10 @@ class FakeBackendUpdateClient implements BackendUpdateClient {
 	public async cleanupPreviousVersion(currentVersion: string, previousVersion: string | null): Promise<void> {
 		this.cleanupCount += 1;
 		this.cleanupArgs.push([currentVersion, previousVersion]);
+	}
+
+	public async rollbackFailedInstall(): Promise<void> {
+		this.rollbackCount += 1;
 	}
 }
 
@@ -228,7 +233,7 @@ describe("app update service", () => {
 			expect(fakeUpdater.downloadCount).toBe(1);
 			expect(events.some((state: AppUpdateState): boolean => state.status === "downloading" && state.progress === 42)).toBe(true);
 
-			vi.advanceTimersByTime(1);
+			await vi.advanceTimersByTimeAsync(1);
 			expect(service.getState().status).toBe("installing");
 			expect(beforeClientInstall).toHaveBeenCalledTimes(1);
 			expect(fakeUpdater.installEvents).toEqual(["beforeClientInstall", "quitAndInstall"]);
@@ -325,6 +330,7 @@ describe("app update service", () => {
 		expect(fakeBackend.restartCount).toBe(1);
 		expect(fakeBackend.verifyCount).toBe(1);
 		expect(fakeBackend.cleanupCount).toBe(0);
+		expect(fakeBackend.rollbackCount).toBe(1);
 	});
 
 	it("does not continue to client download when backend install fails", async () => {

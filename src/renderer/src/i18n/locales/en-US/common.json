@@ -88,6 +88,383 @@
       }
     }
   },
+  "agentPage": {
+    "actions": {
+      "newSession": "New session",
+      "scrollToBottom": "Scroll to bottom"
+    },
+    "workspaceLaunch": {
+      "openIn": "Open in {{target}}",
+      "aria": {
+        "selectTarget": "Select workspace launch target"
+      },
+      "errors": {
+        "open": "Failed to open workspace."
+      }
+    },
+    "dock": {
+      "openBottom": "Open bottom panel",
+      "closeBottom": "Close bottom panel",
+      "openSidebar": "Open sidebar",
+      "closeSidebar": "Close sidebar"
+    },
+    "summary": {
+      "tooltip": "Summary",
+      "empty": "No summary yet",
+      "detachedHead": "Detached HEAD",
+      "unknownSize": "Unknown size",
+      "sourceSubtitle": "{{mimeType}} / {{dimensions}}",
+      "fallbackPlanTitle": "Plan",
+      "fallbackImageSourceTitle": "Image source",
+      "aria": {
+        "open": "Open session summary"
+      },
+      "sections": {
+        "envInfo": "Env info",
+        "plans": "Plans",
+        "source": "Source"
+      },
+      "actions": {
+        "diff": "Diff",
+        "commitOrPush": "Commit or push",
+        "seeMore": "See more",
+        "retry": "Retry"
+      },
+      "errors": {
+        "load": "Failed to load session summary."
+      }
+    }
+  },
+  "composer": {
+    "placeholder": "What can I say?",
+    "context": {
+      "addFiles": "Add files",
+      "addFolder": "Add folder",
+      "addImages": "Add images"
+    },
+    "mode": {
+      "ask": "Ask",
+      "agent": "Agent",
+      "plan": "Plan"
+    },
+    "approvalMode": {
+      "manual": "Manual",
+      "autoSafe": "Auto-safe",
+      "fullTrust": "Full Trust"
+    },
+    "model": {
+      "fallback": "Model",
+      "notConfigured": "Not configured",
+      "capabilities": {
+        "reasoning": "Reasoning",
+        "vision": "Vision",
+        "search": "Search"
+      }
+    },
+    "workspace": {
+      "noWorkspace": "No workspace",
+      "addWorkspace": "Add workspace..."
+    },
+    "tooltips": {
+      "addContext": "Add additional context",
+      "mode": "Mode",
+      "approvalMode": "Approval mode",
+      "model": "Model"
+    },
+    "send": {
+      "send": "Send",
+      "stop": "Stop",
+      "stopping": "Stopping...",
+      "queue": "Queue message"
+    },
+    "contextUsage": {
+      "title": "Context usage",
+      "estimating": "Estimating context...",
+      "retry": "Retry",
+      "usedTokens": "{{used}} / {{total}} tokens",
+      "meta": "{{model}} / {{available}} available / {{source}}",
+      "compress": "Compress chat",
+      "breakdown": {
+        "systemAndTools": "System & tools",
+        "history": "History",
+        "historyWithSummary": "History (summary)",
+        "currentMessage": "Current message",
+        "reservedOutput": "Reserved output",
+        "safetyMargin": "Safety margin"
+      },
+      "compressDisabled": {
+        "sending": "A message is being sent",
+        "unavailable": "Compression unavailable"
+      },
+      "errors": {
+        "estimate": "Context estimate failed"
+      }
+    }
+  },
+  "messageQueue": {
+    "groups": {
+      "guides": "Guides",
+      "queue": "Queue"
+    },
+    "actions": {
+      "edit": "Edit",
+      "remove": "Remove",
+      "dragToReorder": "Drag to reorder"
+    }
+  },
+  "workflowTodo": {
+    "titleFallback": "Todo",
+    "stepFallback": "Step {{index}}",
+    "changedFiles": "{{count}} file",
+    "changedFiles_other": "{{count}} files",
+    "dismiss": "Dismiss",
+    "aria": {
+      "progress": "Workflow progress",
+      "fileChanges": "File changes"
+    }
+  },
+  "approval": {
+    "tool": {
+      "title": "Approve tool execution?",
+      "subtitle": "The assistant is waiting for approval before it continues.",
+      "consentPrefix": "Type",
+      "consentSuffix": "to approve this cross-workspace action.",
+      "actions": {
+        "approve": "Approve",
+        "reject": "Reject"
+      }
+    },
+    "toolBudget": {
+      "title": "Tool budget reached",
+      "subtitle": "The model needs more tool budget to continue.",
+      "limitKind": {
+        "steps": "Tool call count",
+        "toolResultChars": "Tool result total"
+      },
+      "fields": {
+        "triggeredLimit": "Triggered limit",
+        "usedSteps": "Used steps",
+        "toolResultChars": "Tool result characters",
+        "additionalSteps": "Additional steps"
+      },
+      "additionalStepsValue": "+{{formatted}} step",
+      "additionalStepsValue_other": "+{{formatted}} steps",
+      "actions": {
+        "continue": "Continue",
+        "stop": "No, stop and summarize"
+      }
+    },
+    "plan": {
+      "aria": "Plan approval",
+      "title": "Approve plan?",
+      "subtitle": "Review the plan above, then approve it or ask for changes.",
+      "revisionPlaceholder": "Tell the assistant how to change the plan",
+      "actions": {
+        "approveAndExecute": "Approve and Execute",
+        "revise": "Revise"
+      }
+    }
+  },
+  "clarification": {
+    "aria": "Plan clarification",
+    "title": "Clarification needed",
+    "recommendedSuffix": "(Recommended)",
+    "placeholder": "Tell the assistant how to proceed",
+    "actions": {
+      "skip": "Skip",
+      "submit": "Submit"
+    }
+  },
+  "dock": {
+    "tabs": {
+      "changes": "Changes",
+      "changesIndexed": "Changes {{index}}",
+      "terminal": "Terminal",
+      "terminalIndexed": "Terminal {{index}}"
+    },
+    "add": {
+      "label": "Add panel",
+      "reviewPanel": "Review panel",
+      "terminalPanel": "Terminal panel"
+    },
+    "empty": {
+      "noWorkspaceSelected": "No workspace selected"
+    }
+  },
+  "git": {
+    "detachedHead": "Detached HEAD",
+    "actions": {
+      "refresh": "Refresh"
+    },
+    "commit": {
+      "title": "Commit or push",
+      "messagePlaceholder": "Leaving it blank will automatically generate the information",
+      "includeUnstaged": "Includes unstaged changes",
+      "actions": {
+        "commit": "Commit",
+        "push": "Push",
+        "commitAndPush": "Commit & Push"
+      },
+      "messages": {
+        "changes": "changes",
+        "committedAndPushed": "Committed {{target}} and pushed.",
+        "committed": "Committed {{target}}.",
+        "pushed": "Pushed changes."
+      },
+      "errors": {
+        "selectWorkspace": "Please select a workspace before committing.",
+        "actionFailed": "Failed to {{action}}."
+      }
+    },
+    "branch": {
+      "title": "Branch",
+      "searchPlaceholder": "Search branch",
+      "empty": "No branches found",
+      "actions": {
+        "createAndCheckout": "Create & Checkout",
+        "checkout": "Checkout"
+      },
+      "tags": {
+        "current": "Current",
+        "remote": "Remote"
+      },
+      "messages": {
+        "switched": "Switched to {{branch}}.",
+        "createdAndSwitched": "Created and switched to {{branch}}."
+      },
+      "errors": {
+        "selectWorkspaceBeforeSwitching": "Please select a workspace before switching branches.",
+        "selectWorkspaceBeforeCreating": "Please select a workspace before creating branches.",
+        "notGitRepository": "Workspace is not a Git repository.",
+        "load": "Failed to load branches.",
+        "selectBranch": "Please select a branch.",
+        "switch": "Failed to switch branch.",
+        "enterBranchName": "Please enter a branch name.",
+        "create": "Failed to create branch."
+      }
+    },
+    "createBranch": {
+      "title": "Create branch",
+      "namePlaceholder": "New branch name",
+      "startPointPlaceholder": "Start point, optional",
+      "hint": "Leave start point empty to create from the current HEAD."
+    }
+  },
+  "review": {
+    "unknownFile": "Unknown file",
+    "binaryFileChanged": "Binary file changed",
+    "diffStats": "{{branch}} / {{count}} file / +{{additions}} -{{deletions}}",
+    "diffStats_other": "{{branch}} / {{count}} files / +{{additions}} -{{deletions}}",
+    "actions": {
+      "refreshDiff": "Refresh git diff"
+    },
+    "empty": {
+      "diffUnavailable": "Diff unavailable",
+      "noDiffLoaded": "No diff loaded",
+      "noGitRepository": "No Git repository",
+      "noWorkspaceChanges": "No workspace changes"
+    },
+    "notices": {
+      "diffTruncated": {
+        "title": "Diff truncated",
+        "description": "The patch is too large to show completely."
+      },
+      "diffParseFailed": "Diff parse failed"
+    },
+    "errors": {
+      "loadDiff": "Failed to load git diff.",
+      "parseDiff": "Failed to parse diff."
+    }
+  },
+  "terminal": {
+    "home": "Home",
+    "status": {
+      "waitingForWorkspace": "Waiting for workspace",
+      "starting": "Starting",
+      "notStarted": "Not started",
+      "running": "Running",
+      "stopped": "Stopped"
+    },
+    "actions": {
+      "restart": "Restart terminal",
+      "stop": "Stop terminal"
+    },
+    "errors": {
+      "start": "Failed to start terminal.",
+      "stop": "Failed to stop terminal.",
+      "restart": "Failed to restart terminal."
+    }
+  },
+  "chat": {
+    "common": {
+      "copy": "Copy",
+      "copied": "Copied"
+    },
+    "assistant": {
+      "process": "Process",
+      "copyAria": "Copy assistant message"
+    },
+    "user": {
+      "copyAria": "Copy user message",
+      "editAndResendAria": "Edit and resend user message",
+      "actions": {
+        "cancel": "Cancel",
+        "send": "Send",
+        "editAndResend": "Edit and resend"
+      }
+    },
+    "contextStrip": {
+      "aria": "Message context",
+      "pinned": "Pinned"
+    },
+    "tool": {
+      "status": {
+        "running": "Running",
+        "done": "Done",
+        "failed": "Failed",
+        "approvalRequired": "Approval required"
+      }
+    },
+    "plan": {
+      "open": "Open plan"
+    },
+    "thinking": {
+      "label": "Thinking",
+      "labelDot": "Thinking.",
+      "labelDotDot": "Thinking..",
+      "labelDotDotDot": "Thinking..."
+    },
+    "inlineDiff": {
+      "title": "Edited {{count}} file",
+      "title_other": "Edited {{count}} files",
+      "unknownFile": "Unknown file",
+      "openReviewAria": "Open review for {{filePath}}",
+      "actions": {
+        "undo": "Undo",
+        "review": "Review"
+      }
+    },
+    "imageGeneration": {
+      "modelFallback": "Image generation",
+      "generating": "Generating images",
+      "generated": "Generated images",
+      "failed": "Image generation failed",
+      "previewUnavailable": "Image preview unavailable",
+      "loading": "Loading",
+      "actions": {
+        "copyImage": "Copy image",
+        "saveImage": "Save image"
+      },
+      "messages": {
+        "copied": "Image copied"
+      },
+      "errors": {
+        "load": "Failed to load generated image",
+        "copy": "Failed to copy image",
+        "unknown": "Unknown error"
+      }
+    }
+  },
   "settings": {
     "menu": {
       "provider": "Provider",

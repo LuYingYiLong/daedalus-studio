@@ -16,8 +16,10 @@ export async function probeBackendWorkspaceAndSessions(): Promise<void> {
 		return;
 	}
 
-	const port: number = await window.electronAPI.backend.getPort();
-	const client: BackendRpcClient = new BackendRpcClient(`ws://localhost:${port}`);
+	const connection = await window.electronAPI.backend.getConnectionInfo();
+	const client: BackendRpcClient = new BackendRpcClient(`ws://127.0.0.1:${connection.port}`, {
+		authProtocol: connection.authProtocol
+	});
 
 	try {
 		await client.connect();

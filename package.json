@@ -4,6 +4,7 @@
   "description": "Standalone workbench for AI-assisted Godot development",
   "license": "GPL-3.0-only",
   "author": "LuYingYiLong",
+  "backendBootstrapVersion": "1.1.2",
   "main": "out/main/index.js",
   "config": {
     "electron_mirror": "https://npmmirror.com/mirrors/electron/"
@@ -13,8 +14,9 @@
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && node scripts/electron-vite.cjs build",
     "pack": "npm run pack:win",
-    "pack:win": "npm run build && node scripts/electron-builder-win.cjs --dir",
-    "build:win": "npm run build && node scripts/electron-builder-win.cjs",
+    "prepare:backend-bootstrap": "node scripts/prepare-backend-bootstrap.cjs",
+    "pack:win": "npm run build && npm run prepare:backend-bootstrap && node scripts/electron-builder-win.cjs --dir",
+    "build:win": "npm run build && npm run prepare:backend-bootstrap && node scripts/electron-builder-win.cjs",
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
     "dist": "npm run build:win",

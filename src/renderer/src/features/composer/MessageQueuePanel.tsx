@@ -3,6 +3,7 @@ import { closestCenter, DndContext, PointerSensor, useSensor, type DragEndEvent 
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button, Tooltip, Typography } from "antd";
+import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { MessageQueueItem, PendingGuide } from "@/api/types";
 import styles from "./MessageQueuePanel.module.css";
@@ -23,6 +24,9 @@ type SortableRowProps = {
 	disabled?: boolean;
 	icon: ReactNode;
 	text: string;
+	editLabel: string;
+	removeLabel: string;
+	dragLabel: string;
 	onEdit?: () => void;
 	onRemove: () => void;
 };
@@ -43,7 +47,7 @@ function moveBefore<T>(items: T[], activeItem: T, overItem: T): T[] {
 	return nextItems;
 }
 
-function QueueRow({ icon, text, onEdit, onRemove, dragHandle, rowRef, style, isDragging }: SortableRowProps & {
+function QueueRow({ icon, text, editLabel, removeLabel, onEdit, onRemove, dragHandle, rowRef, style, isDragging }: SortableRowProps & {
 	dragHandle: ReactNode;
 	rowRef?: (node: HTMLDivElement | null) => void;
 	style?: CSSProperties;
@@ -63,7 +67,7 @@ function QueueRow({ icon, text, onEdit, onRemove, dragHandle, rowRef, style, isD
 				</Tooltip>
 			</div>
 			{onEdit === undefined ? <span aria-hidden={true} /> : (
-				<Tooltip title="Edit">
+				<Tooltip title={editLabel}>
 					<Button
 						type="text"
 						size="small"
@@ -74,7 +78,7 @@ function QueueRow({ icon, text, onEdit, onRemove, dragHandle, rowRef, style, isD
 					/>
 				</Tooltip>
 			)}
-			<Tooltip title="Remove">
+			<Tooltip title={removeLabel}>
 				<Button
 					type="text"
 					size="small"
@@ -131,7 +135,7 @@ function SortableQueueRow(props: SortableRowProps): React.JSX.Element {
 					ref={setActivatorNodeRef}
 					type="button"
 					className={styles.dragHandle}
-					aria-label="Drag to reorder"
+					aria-label={props.dragLabel}
 					{...attributes}
 					{...listeners}
 				>
@@ -156,6 +160,7 @@ function MessageQueuePanel({
 	onGuideReorder,
 	onGuideDelete
 }: MessageQueuePanelProps): React.JSX.Element | null {
+	const { t } = useTranslation();
 	const pointerSensor = useSensor(PointerSensor, {
 		activationConstraint: {
 			distance: 8
@@ -194,13 +199,16 @@ function MessageQueuePanel({
 				<DndContext sensors={[pointerSensor]} collisionDetection={closestCenter} onDragEnd={handleGuideDragEnd}>
 					<SortableContext items={guideIds} strategy={verticalListSortingStrategy}>
 						<div className={styles.group}>
-							<div className={styles.groupLabel}>Guides</div>
+							<div className={styles.groupLabel}>{t("messageQueue.groups.guides")}</div>
 							{pendingGuides.map((guide: PendingGuide): React.ReactNode => (
 								<SortableQueueRow
 									key={guide.guideId}
 									id={guide.guideId}
 									icon={<Icon name="guide" />}
 									text={guide.text}
+									editLabel={t("messageQueue.actions.edit")}
+									removeLabel={t("messageQueue.actions.remove")}
+									dragLabel={t("messageQueue.actions.dragToReorder")}
 									onRemove={(): void => onGuideDelete(guide.guideId)}
 								/>
 							))}
@@ -212,7 +220,7 @@ function MessageQueuePanel({
 				<DndContext sensors={[pointerSensor]} collisionDetection={closestCenter} onDragEnd={handleQueueDragEnd}>
 					<SortableContext items={pendingQueueIds} strategy={verticalListSortingStrategy}>
 						<div className={styles.group}>
-							<div className={styles.groupLabel}>Queue</div>
+							<div className={styles.groupLabel}>{t("messageQueue.groups.queue")}</div>
 							{visibleMessageQueue.map((item: MessageQueueItem): React.ReactNode => (
 								<SortableQueueRow
 									key={item.id}
@@ -220,6 +228,9 @@ function MessageQueuePanel({
 									disabled={item.status !== "pending"}
 									icon={<Icon name="send" />}
 									text={item.text}
+									editLabel={t("messageQueue.actions.edit")}
+									removeLabel={t("messageQueue.actions.remove")}
+									dragLabel={t("messageQueue.actions.dragToReorder")}
 									onEdit={(): void => onQueueEdit(item)}
 									onRemove={(): void => onQueueRemove(item.id)}
 								/>

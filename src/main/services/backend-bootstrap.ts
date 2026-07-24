@@ -1,23 +1,30 @@
 import { BrowserWindow, app, ipcMain } from "electron";
 import { existsSync } from "node:fs";
-import { spawn } from "node:child_process";
-import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve, sep } from "node:path";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import {
-	backendManager,
+	activateBackendCandidate,
+	commitBackendCandidate,
+	getBackendPendingUpdatePath,
 	getDaedalusDir,
 	getManagedBackendCurrentPath,
-	getManagedBackendVersionsDir,
+	hasLegacyBackendMarker,
+	inspectCurrentBackend,
+	readCurrentBackendFile,
+	readPendingBackendUpdate,
+	removeLegacyManagedBackends,
+	rollbackBackendCandidate,
+	stageBundledBackend,
+	type BackendCurrentFileV2,
+	type InstalledBackendBinary
+} from "./backend-binary-store";
+import {
+	backendManager,
 	type BackendLaunchTarget
 } from "./backend-manager";
 import { createLogger } from "./logger";
 
 const logger = createLogger("backend-bootstrap");
-
-const BACKEND_PACKAGE_NAME: string = "daedalus-backend";
-const INSTALL_TIMEOUT_MS: number = 120000;
-const NPM_VIEW_TIMEOUT_MS: number = 20000;
-const MAX_BACKEND_VERSIONS: number = 3;
 
 export type BackendBootstrapStatus =
 	| "idle"
@@ -30,11 +37,13 @@ export type BackendBootstrapStatus =
 
 export type BackendBootstrapPhase =
 	| "detect"
-	| "resolve_latest"
+	| "recover"
 	| "install"
+	| "verify"
 	| "write_metadata"
 	| "start"
 	| "health_check"
+	| "rollback"
 	| "ready"
 	| "error";
 
@@ -51,24 +60,10 @@ export type BackendBootstrapState = {
 	suggestedAction: string | null;
 };
 
-type BackendCurrentFile = {
-	version: string;
-	path: string;
-	previousVersion?: string;
-	updatedAt: string;
-};
-
 type BackendBootstrapMarker = {
 	backendBootstrapCompleted?: unknown;
 	backendBootstrapCompletedAt?: unknown;
 	backendVersion?: unknown;
-};
-
-type CommandResult = {
-	exitCode: number;
-	stdout: string;
-	stderr: string;
-	timedOut: boolean;
 };
 
 type RunPrepareOptions = {
@@ -94,310 +89,41 @@ function getBootstrapMarkerPath(): string {
 	return join(getDaedalusDir(), "client", "bootstrap.json");
 }
 
-function assertInside(parentDir: string, childPath: string): string {
-	const resolvedParent: string = resolve(parentDir);
-	const resolvedChild: string = resolve(childPath);
-	if (resolvedChild !== resolvedParent && !resolvedChild.startsWith(`${resolvedParent}${sep}`)) {
-		throw new Error(`Refusing to operate outside managed directory: ${resolvedChild}`);
-	}
-	return resolvedChild;
-}
-
-async function readJsonFile<T>(filePath: string): Promise<T | null> {
+async function readJsonFile<TValue>(filePath: string): Promise<TValue | null> {
 	try {
-		const text: string = await readFile(filePath, "utf8");
-		return JSON.parse(text) as T;
+		return JSON.parse(await readFile(filePath, "utf8")) as TValue;
 	} catch {
 		return null;
 	}
 }
 
-async function writeJsonFile(filePath: string, value: unknown): Promise<void> {
+async function writeJsonFileAtomic(filePath: string, value: unknown): Promise<void> {
 	await mkdir(dirname(filePath), { recursive: true });
 	const tempPath: string = `${filePath}.${process.pid}.${Date.now()}.tmp`;
 	await writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 	await rename(tempPath, filePath);
 }
 
-async function readBootstrapMarker(): Promise<BackendBootstrapMarker | null> {
-	return readJsonFile<BackendBootstrapMarker>(getBootstrapMarkerPath());
-}
-
 async function hasCompletedBackendBootstrap(): Promise<boolean> {
-	const marker: BackendBootstrapMarker | null = await readBootstrapMarker();
+	const marker: BackendBootstrapMarker | null = await readJsonFile<BackendBootstrapMarker>(
+		getBootstrapMarkerPath()
+	);
 	return marker?.backendBootstrapCompleted === true;
 }
 
-async function writeCompletedBackendBootstrap(version: string | null): Promise<void> {
-	await writeJsonFile(getBootstrapMarkerPath(), {
+async function writeCompletedBackendBootstrap(version: string): Promise<void> {
+	await writeJsonFileAtomic(getBootstrapMarkerPath(), {
 		backendBootstrapCompleted: true,
 		backendBootstrapCompletedAt: new Date().toISOString(),
 		backendVersion: version
 	});
 }
 
-async function readCurrentBackend(): Promise<BackendCurrentFile | null> {
-	return readJsonFile<BackendCurrentFile>(getManagedBackendCurrentPath());
-}
-
-function getMarkedBackendMissingMessage(current: BackendCurrentFile): string | null {
-	if (typeof current.version !== "string" || current.version.trim().length === 0) {
-		return "Daedalus Studio has a managed backend marker, but it does not contain a backend version.";
-	}
-	if (typeof current.path !== "string" || current.path.trim().length === 0) {
-		return `Daedalus Studio is configured to use backend ${current.version}, but the installation path is missing.`;
-	}
-
-	let versionDir: string;
-	try {
-		versionDir = assertInside(getManagedBackendVersionsDir(), current.path);
-	} catch {
-		return `Daedalus Studio is configured to use backend ${current.version}, but the marked path is outside the managed backend directory.`;
-	}
-
-	const entryPath: string = join(versionDir, "node_modules", BACKEND_PACKAGE_NAME, "src", "main.ts");
-	if (!existsSync(entryPath)) {
-		return `Daedalus Studio is configured to use backend ${current.version}, but that backend installation was not found.`;
-	}
-	return null;
-}
-
-async function getMarkedBackendMissingError(): Promise<{ version: string | null; message: string } | null> {
-	const current: BackendCurrentFile | null = await readCurrentBackend();
-	if (current === null) {
-		return null;
-	}
-
-	const message: string | null = getMarkedBackendMissingMessage(current);
-	if (message === null) {
-		return null;
-	}
-	return {
-		version: typeof current.version === "string" && current.version.trim().length > 0 ? current.version.trim() : null,
-		message
-	};
-}
-
-function getNpmCommand(): string {
-	return process.platform === "win32" ? "npm.cmd" : "npm";
-}
-
-function createNpmCommandEnv(): NodeJS.ProcessEnv {
-	const env: NodeJS.ProcessEnv = { ...process.env };
-	for (const key of Object.keys(env)) {
-		if (key.toLowerCase() === "npm_config_dry_run") {
-			delete env[key];
-		}
-	}
-	env.npm_config_dry_run = "false";
-	return env;
-}
-
-function buildInvocation(command: string, args: readonly string[]): { command: string; args: string[] } {
-	if (process.platform !== "win32" || (!command.endsWith(".cmd") && !command.endsWith(".bat"))) {
-		return { command, args: [...args] };
-	}
-
-	const comspec: string = process.env.COMSPEC ?? "cmd.exe";
-	const commandLine: string = [command, ...args].map(quoteWindowsCommandPart).join(" ");
-	return { command: comspec, args: ["/d", "/s", "/c", commandLine] };
-}
-
-function quoteWindowsCommandPart(value: string): string {
-	if (!/[ \t&()^"]/u.test(value)) {
-		return value;
-	}
-	return `"${value.replaceAll("\"", "\\\"")}"`;
-}
-
-function runCommand(command: string, args: readonly string[], options: {
-	cwd?: string;
-	env?: NodeJS.ProcessEnv;
-	timeoutMs?: number;
-} = {}): Promise<CommandResult> {
-	return new Promise<CommandResult>((resolveCommand): void => {
-		const invocation = buildInvocation(command, args);
-		const child = spawn(invocation.command, invocation.args, {
-			cwd: options.cwd,
-			env: options.env ?? process.env,
-			windowsHide: true,
-			stdio: ["ignore", "pipe", "pipe"]
-		});
-		let stdout: string = "";
-		let stderr: string = "";
-		let settled: boolean = false;
-		let timedOut: boolean = false;
-		const timeout = options.timeoutMs === undefined
-			? null
-			: setTimeout((): void => {
-				if (settled) {
-					return;
-				}
-				timedOut = true;
-				child.kill("SIGTERM");
-			}, options.timeoutMs);
-
-		child.stdout.setEncoding("utf8");
-		child.stderr.setEncoding("utf8");
-		child.stdout.on("data", (chunk: string): void => {
-			stdout += chunk;
-		});
-		child.stderr.on("data", (chunk: string): void => {
-			stderr += chunk;
-		});
-		child.on("error", (error: Error): void => {
-			if (settled) {
-				return;
-			}
-			settled = true;
-			if (timeout !== null) {
-				clearTimeout(timeout);
-			}
-			resolveCommand({ exitCode: 1, stdout, stderr: `${stderr}${error.message}`, timedOut });
-		});
-		child.on("exit", (code: number | null): void => {
-			if (settled) {
-				return;
-			}
-			settled = true;
-			if (timeout !== null) {
-				clearTimeout(timeout);
-			}
-			resolveCommand({ exitCode: code ?? 1, stdout, stderr, timedOut });
-		});
-	});
-}
-
-export async function fetchLatestManagedBackendVersion(): Promise<string> {
-	const result: CommandResult = await runCommand(getNpmCommand(), ["view", BACKEND_PACKAGE_NAME, "version"], {
-		env: createNpmCommandEnv(),
-		timeoutMs: NPM_VIEW_TIMEOUT_MS
-	});
-	if (result.exitCode !== 0) {
-		throw new Error(result.timedOut
-			? "Timed out reading latest backend version from npm."
-			: result.stderr.trim() || result.stdout.trim() || "Could not read latest backend version from npm.");
-	}
-
-	const version: string = result.stdout.trim().split(/\s+/)[0] ?? "";
-	if (version.length === 0) {
-		throw new Error("npm returned an empty backend version.");
-	}
-	return version;
-}
-
-async function readInstalledBackendVersion(versionDir: string): Promise<string> {
-	const manifestText: string = await readFile(join(versionDir, "node_modules", BACKEND_PACKAGE_NAME, "package.json"), "utf8");
-	const manifest = JSON.parse(manifestText) as { version?: unknown };
-	if (typeof manifest.version !== "string" || manifest.version.trim().length === 0) {
-		throw new Error("Installed backend package has no version.");
-	}
-	return manifest.version.trim();
-}
-
-async function pruneBackendVersions(currentVersion: string, previousVersion: string | undefined): Promise<void> {
-	const versionsDir: string = getManagedBackendVersionsDir();
-	const entries = await readdir(versionsDir, { withFileTypes: true }).catch(() => []);
-	const keep: Set<string> = new Set([currentVersion, ...(previousVersion === undefined ? [] : [previousVersion])]);
-	const versions: string[] = entries
-		.filter((entry): boolean => entry.isDirectory() && !entry.name.endsWith(".staging"))
-		.map((entry): string => entry.name)
-		.sort()
-		.reverse();
-
-	for (const version of versions) {
-		if (keep.has(version)) {
-			continue;
-		}
-		if (keep.size < MAX_BACKEND_VERSIONS) {
-			keep.add(version);
-			continue;
-		}
-		await rm(assertInside(versionsDir, join(versionsDir, version)), { recursive: true, force: true });
-	}
-}
-
-export async function cleanupManagedBackendPreviousVersion(currentVersion: string, previousVersion: string | null): Promise<void> {
-	if (previousVersion === null || previousVersion === currentVersion) {
-		return;
-	}
-
-	const current: BackendCurrentFile | null = await readCurrentBackend();
-	if (current === null || current.version !== currentVersion || current.previousVersion !== previousVersion) {
-		return;
-	}
-
-	const versionsDir: string = getManagedBackendVersionsDir();
-	await rm(assertInside(versionsDir, join(versionsDir, previousVersion)), {
-		recursive: true,
-		force: true,
-		maxRetries: 8,
-		retryDelay: 250
-	});
-	await writeJsonFile(getManagedBackendCurrentPath(), {
-		version: current.version,
-		path: current.path,
-		updatedAt: current.updatedAt
-	} satisfies BackendCurrentFile);
-}
-
-function resolveBackendPackageSpec(versionSpec: string): string {
-	if (versionSpec === "latest") {
-		return `${BACKEND_PACKAGE_NAME}@latest`;
-	}
-	if (versionSpec.match(/^\d+\.\d+\.\d+(?:[-+].*)?$/) === null) {
-		throw new Error(`Invalid backend version: ${versionSpec}`);
-	}
-	return `${BACKEND_PACKAGE_NAME}@${versionSpec}`;
-}
-
-export async function installManagedBackendPackage(versionSpec: string = "latest"): Promise<{ version: string; path: string; previousVersion: string | undefined }> {
-	const versionsDir: string = getManagedBackendVersionsDir();
-	await mkdir(versionsDir, { recursive: true });
-
-	const packageSpec: string = resolveBackendPackageSpec(versionSpec);
-	const stagingName: string = versionSpec === "latest"
-		? `${(await fetchLatestManagedBackendVersion())}.staging`
-		: `${versionSpec}.staging`;
-	const stagingDir: string = assertInside(versionsDir, join(versionsDir, stagingName));
-	const previous: BackendCurrentFile | null = await readCurrentBackend();
-
-	await rm(stagingDir, { recursive: true, force: true });
-	await mkdir(stagingDir, { recursive: true });
-
-	const installResult: CommandResult = await runCommand(getNpmCommand(), ["install", "--prefix", stagingDir, "--prefer-online", packageSpec], {
-		env: createNpmCommandEnv(),
-		timeoutMs: INSTALL_TIMEOUT_MS
-	});
-	if (installResult.exitCode !== 0) {
-		await rm(stagingDir, { recursive: true, force: true });
-		throw new Error(installResult.timedOut
-			? `Timed out installing ${packageSpec}.`
-			: installResult.stderr.trim() || installResult.stdout.trim() || `Failed to install ${packageSpec}.`);
-	}
-
-	const installedVersion: string = await readInstalledBackendVersion(stagingDir);
-	const versionDir: string = assertInside(versionsDir, join(versionsDir, installedVersion));
-	await rm(versionDir, { recursive: true, force: true });
-	await rename(stagingDir, versionDir);
-
-	const current: BackendCurrentFile = {
-		version: installedVersion,
-		path: versionDir,
-		...(previous === null ? {} : { previousVersion: previous.version }),
-		updatedAt: new Date().toISOString()
-	};
-	await writeJsonFile(getManagedBackendCurrentPath(), current);
-	await pruneBackendVersions(installedVersion, previous?.version);
-	return { version: installedVersion, path: versionDir, previousVersion: previous?.version };
-}
-
 function broadcastBackendBootstrapEvent(payload: BackendBootstrapState): void {
 	for (const browserWindow of BrowserWindow?.getAllWindows?.() ?? []) {
-		if (browserWindow.isDestroyed()) {
-			continue;
+		if (!browserWindow.isDestroyed()) {
+			browserWindow.webContents.send("backend-bootstrap:state-changed", payload);
 		}
-		browserWindow.webContents.send("backend-bootstrap:state-changed", payload);
 	}
 }
 
@@ -412,22 +138,22 @@ export class BackendBootstrapService {
 	private initialized: boolean = false;
 	private readonly stateListeners: Set<(state: BackendBootstrapState) => void> = new Set();
 
-	attachWindow(mainWindow: BrowserWindow): void {
+	public attachWindow(mainWindow: BrowserWindow): void {
 		this.mainWindow = mainWindow;
 	}
 
-	getState(): BackendBootstrapState {
+	public getState(): BackendBootstrapState {
 		return { ...this.state };
 	}
 
-	onDidChangeState(listener: (state: BackendBootstrapState) => void): () => void {
+	public onDidChangeState(listener: (state: BackendBootstrapState) => void): () => void {
 		this.stateListeners.add(listener);
 		return (): void => {
 			this.stateListeners.delete(listener);
 		};
 	}
 
-	registerIpc(): void {
+	public registerIpc(): void {
 		if (this.initialized) {
 			return;
 		}
@@ -441,41 +167,27 @@ export class BackendBootstrapService {
 		ipcMain.handle("backend-bootstrap:retry-start", async (): Promise<BackendBootstrapState> => await this.retryStart());
 	}
 
-	async prepare(): Promise<BackendBootstrapState> {
-		if (this.state.status === "healthy") {
-			return this.getState();
-		}
-		if (this.preparePromise !== null) {
-			return await this.preparePromise;
-		}
-
-		this.preparePromise = this.runAndCaptureErrors((): Promise<BackendBootstrapState> => this.runPrepare({ forceInstall: false }));
-		try {
-			return await this.preparePromise;
-		} finally {
-			this.preparePromise = null;
-		}
+	public async prepare(): Promise<BackendBootstrapState> {
+		return await this.runExclusive((): Promise<BackendBootstrapState> =>
+			this.runPrepare({ forceInstall: false })
+		);
 	}
 
-	async repair(): Promise<BackendBootstrapState> {
-		if (this.preparePromise !== null) {
-			return await this.preparePromise;
-		}
-
-		this.preparePromise = this.runAndCaptureErrors((): Promise<BackendBootstrapState> => this.runPrepare({ forceInstall: true }));
-		try {
-			return await this.preparePromise;
-		} finally {
-			this.preparePromise = null;
-		}
+	public async repair(): Promise<BackendBootstrapState> {
+		return await this.runExclusive((): Promise<BackendBootstrapState> =>
+			this.runPrepare({ forceInstall: true })
+		);
 	}
 
-	async retryStart(): Promise<BackendBootstrapState> {
+	public async retryStart(): Promise<BackendBootstrapState> {
+		return await this.runExclusive((): Promise<BackendBootstrapState> => this.runStartOnly());
+	}
+
+	private async runExclusive(task: () => Promise<BackendBootstrapState>): Promise<BackendBootstrapState> {
 		if (this.preparePromise !== null) {
 			return await this.preparePromise;
 		}
-
-		this.preparePromise = this.runAndCaptureErrors((): Promise<BackendBootstrapState> => this.runStartOnly());
+		this.preparePromise = this.runAndCaptureErrors(task);
 		try {
 			return await this.preparePromise;
 		} finally {
@@ -484,6 +196,9 @@ export class BackendBootstrapService {
 	}
 
 	private async runPrepare(options: RunPrepareOptions): Promise<BackendBootstrapState> {
+		if (this.state.status === "healthy" && !options.forceInstall) {
+			return this.getState();
+		}
 		const packaged: boolean = app?.isPackaged === true;
 		const firstRunCompleted: boolean = await hasCompletedBackendBootstrap();
 		this.updateState({
@@ -496,89 +211,172 @@ export class BackendBootstrapService {
 			errorMessage: null,
 			suggestedAction: null
 		});
-
 		if (!packaged) {
 			return await this.startDevelopmentBackend();
 		}
 
-		const markedBackendError: { version: string | null; message: string } | null = options.forceInstall ? null : await getMarkedBackendMissingError();
-		if (markedBackendError !== null) {
+		if (options.forceInstall) {
+			await backendManager.stopAndWait();
+			await rollbackBackendCandidate();
+			return await this.installBundledAndStart();
+		}
+
+		const pendingUpdate = await readPendingBackendUpdate();
+		if (existsSync(getBackendPendingUpdatePath()) && pendingUpdate === null) {
+			return this.fail({
+				status: "error",
+				phase: "recover",
+				progress: 100,
+				errorCode: "pending_backend_update_invalid",
+				errorMessage: "The pending backend update transaction is damaged.",
+				suggestedAction: "Use Repair backend to restore the bundled backend."
+			});
+		}
+		if (pendingUpdate !== null) {
+			const recovered: BackendBootstrapState | null = await this.recoverPendingUpdate();
+			if (recovered !== null) {
+				return recovered;
+			}
+		}
+
+		const currentMarkerExists: boolean = existsSync(getManagedBackendCurrentPath());
+		const current: BackendCurrentFileV2 | null = await readCurrentBackendFile();
+		if (current !== null) {
+			try {
+				await inspectCurrentBackend();
+			} catch (error: unknown) {
+				return this.fail({
+					status: "error",
+					phase: "detect",
+					progress: 100,
+					errorCode: "marked_backend_missing",
+					errorMessage: getErrorMessage(error),
+					suggestedAction: "Use Repair backend to restore the verified backend bundled with Daedalus Studio."
+				});
+			}
+			return await this.startAndCommitCurrent(current.version, false);
+		}
+
+		if (currentMarkerExists && !(await hasLegacyBackendMarker())) {
 			return this.fail({
 				status: "error",
 				phase: "detect",
 				progress: 100,
-				errorCode: "marked_backend_missing",
-				errorMessage: markedBackendError.message,
-				suggestedAction: "Use Repair backend to reinstall the managed backend."
+				errorCode: "backend_marker_invalid",
+				errorMessage: "The managed backend state file is invalid.",
+				suggestedAction: "Use Repair backend to restore the bundled backend."
 			});
 		}
 
-		let launchTarget: Pick<BackendLaunchTarget, "kind" | "version"> | null = backendManager.getLaunchTargetInfo();
-		if (options.forceInstall || (launchTarget === null && !firstRunCompleted)) {
-			const installed = await this.installBackend();
-			launchTarget = { kind: "managed", version: installed.version };
-			await writeCompletedBackendBootstrap(installed.version);
-			backendManager.stop();
-		}
-
-		if (launchTarget === null) {
-			return this.fail({
-				status: "error",
-				phase: "detect",
-				progress: 100,
-				errorCode: "backend_missing",
-				errorMessage: "Daedalus backend is missing or damaged.",
-				suggestedAction: "Use Repair backend to install a fresh managed backend."
-			});
-		}
-
-		const startState: BackendBootstrapState = await this.startPackagedBackend();
-		if (startState.status === "healthy" && !firstRunCompleted) {
-			await writeCompletedBackendBootstrap(startState.backendVersion ?? launchTarget.version);
-		}
-		return startState;
+		// Legacy npm markers are recognized only so they can be replaced; their TypeScript entry is never executed.
+		return await this.installBundledAndStart();
 	}
 
-	private async installBackend(): Promise<{ version: string }> {
+	private async recoverPendingUpdate(): Promise<BackendBootstrapState | null> {
 		this.updateState({
 			status: "checking",
-			phase: "resolve_latest",
+			phase: "recover",
 			progress: 15,
 			errorCode: null,
 			errorMessage: null,
 			suggestedAction: null
 		});
-
+		const pending = await readPendingBackendUpdate();
+		const current: BackendCurrentFileV2 | null = await readCurrentBackendFile();
+		if (pending !== null && current?.version === pending.candidate.version) {
+			try {
+				await inspectCurrentBackend();
+				return await this.startAndCommitCurrent(current.version, true);
+			} catch (error: unknown) {
+				logger.warn("Pending backend candidate failed recovery.", {
+					message: getErrorMessage(error),
+					version: current.version
+				});
+			}
+		}
+		await backendManager.stopAndWait();
+		this.updateState({
+			status: "checking",
+			phase: "rollback",
+			progress: 30
+		});
+		const previous: BackendCurrentFileV2 | null = await rollbackBackendCandidate();
+		if (previous === null) {
+			return null;
+		}
 		try {
-			this.updateState({
-				status: "installing",
-				phase: "install",
-				progress: 25
-			});
-			const result: { version: string; path: string; previousVersion: string | undefined } = await installManagedBackendPackage();
-			this.updateState({
-				status: "installing",
-				phase: "write_metadata",
-				progress: 60,
-				backendVersion: result.version
-			});
-			return { version: result.version };
+			await inspectCurrentBackend();
+			return await this.startCurrent(previous.version);
 		} catch (error: unknown) {
-			logger.error("Failed to install managed backend", error instanceof Error ? error : undefined);
-			return this.rejectAfterFailure(error, {
-				status: "error",
-				phase: "install",
-				progress: 100,
-				errorCode: "install_failed",
-				errorMessage: getErrorMessage(error),
-				suggestedAction: "Check your npm registry or network access, then retry install."
+			logger.error("Previous backend also failed after rollback.", error as Error);
+			return null;
+		}
+	}
+
+	private async installBundledAndStart(): Promise<BackendBootstrapState> {
+		this.updateState({
+			status: "installing",
+			phase: "install",
+			progress: 20,
+			errorCode: null,
+			errorMessage: null,
+			suggestedAction: null
+		});
+		const installed: InstalledBackendBinary = await stageBundledBackend();
+		this.updateState({
+			status: "installing",
+			phase: "verify",
+			progress: 50,
+			backendVersion: installed.version
+		});
+		await activateBackendCandidate(installed);
+		this.updateState({
+			status: "installing",
+			phase: "write_metadata",
+			progress: 60
+		});
+		return await this.startAndCommitCurrent(installed.version, true);
+	}
+
+	private async startAndCommitCurrent(
+		version: string,
+		hasPendingTransaction: boolean
+	): Promise<BackendBootstrapState> {
+		try {
+			const state: BackendBootstrapState = await this.startCurrent(version);
+			if (hasPendingTransaction) {
+				await commitBackendCandidate(version);
+			}
+			await removeLegacyManagedBackends();
+			await writeCompletedBackendBootstrap(version);
+			return state;
+		} catch (error: unknown) {
+			if (!hasPendingTransaction) {
+				throw error;
+			}
+			await backendManager.stopAndWait();
+			this.updateState({
+				status: "checking",
+				phase: "rollback",
+				progress: 90
 			});
+			const previous: BackendCurrentFileV2 | null = await rollbackBackendCandidate();
+			if (previous !== null) {
+				try {
+					return await this.startCurrent(previous.version);
+				} catch (rollbackError: unknown) {
+					throw new Error(
+						`Backend ${version} failed and rollback to ${previous.version} also failed: ${getErrorMessage(rollbackError)}`
+					);
+				}
+			}
+			throw error;
 		}
 	}
 
 	private async startDevelopmentBackend(): Promise<BackendBootstrapState> {
 		try {
-			return await this.startBackend();
+			return await this.startCurrent(null);
 		} catch {
 			return this.fail({
 				status: "unsupported",
@@ -586,37 +384,18 @@ export class BackendBootstrapService {
 				progress: 100,
 				errorCode: "dev_backend_unavailable",
 				errorMessage: `Development backend did not become healthy on port ${backendManager.getPort()}.`,
-				suggestedAction: "Run `npm run dev` in D:\\godot-daedalus_backend, then retry."
+				suggestedAction: "Run `npm run dev` in the daedalus-backend repository, then retry."
 			});
 		}
 	}
 
-	private async startPackagedBackend(): Promise<BackendBootstrapState> {
-		try {
-			return await this.startBackend();
-		} catch (error: unknown) {
-			return this.fail({
-				status: "error",
-				phase: "health_check",
-				progress: 100,
-				errorCode: "health_failed",
-				errorMessage: getErrorMessage(error),
-				suggestedAction: "Restart backend, or repair the managed backend installation."
-			});
-		}
-	}
-
-	private async runStartOnly(): Promise<BackendBootstrapState> {
-		backendManager.stop();
-		return app?.isPackaged === true ? await this.startPackagedBackend() : await this.startDevelopmentBackend();
-	}
-
-	private async startBackend(): Promise<BackendBootstrapState> {
+	private async startCurrent(version: string | null): Promise<BackendBootstrapState> {
 		const mainWindow: BrowserWindow = this.requireMainWindow();
 		this.updateState({
 			status: "starting",
 			phase: "start",
 			progress: Math.max(this.state.progress, 65),
+			backendVersion: version,
 			errorCode: null,
 			errorMessage: null,
 			suggestedAction: null
@@ -628,17 +407,64 @@ export class BackendBootstrapService {
 			progress: 75
 		});
 		await backendManager.waitUntilHealthy();
-		const launchTarget: Pick<BackendLaunchTarget, "kind" | "version"> | null = app?.isPackaged === true ? backendManager.getLaunchTargetInfo() : null;
+		await new Promise((resolveWait): void => {
+			setTimeout(resolveWait, 500);
+		});
+		await backendManager.waitUntilHealthy(5000);
+		const launchTarget: Pick<BackendLaunchTarget, "kind" | "version"> | null =
+			app?.isPackaged === true ? backendManager.getLaunchTargetInfo() : null;
 		this.updateState({
 			status: "healthy",
 			phase: "ready",
 			progress: 100,
-			backendVersion: app?.isPackaged === true ? launchTarget?.version ?? this.state.backendVersion : null,
+			backendVersion: app?.isPackaged === true
+				? launchTarget?.version ?? version
+				: null,
 			errorCode: null,
 			errorMessage: null,
 			suggestedAction: null
 		});
 		return this.getState();
+	}
+
+	private async runStartOnly(): Promise<BackendBootstrapState> {
+		await backendManager.stopAndWait();
+		if (app?.isPackaged === true) {
+			const current: BackendCurrentFileV2 | null = await readCurrentBackendFile();
+			if (current === null) {
+				return this.fail({
+					status: "error",
+					phase: "detect",
+					progress: 100,
+					errorCode: "backend_missing",
+					errorMessage: "No active verified backend binary is installed.",
+					suggestedAction: "Use Repair backend to restore the bundled backend."
+				});
+			}
+			try {
+				await inspectCurrentBackend();
+			} catch (error: unknown) {
+				return this.fail({
+					status: "error",
+					phase: "detect",
+					progress: 100,
+					errorCode: "marked_backend_missing",
+					errorMessage: getErrorMessage(error),
+					suggestedAction: "Use Repair backend to restore the bundled backend."
+				});
+			}
+		}
+		if (app?.isPackaged === true && backendManager.getLaunchTargetInfo() === null) {
+			return this.fail({
+				status: "error",
+				phase: "detect",
+				progress: 100,
+				errorCode: "backend_missing",
+				errorMessage: "No verified backend binary is available.",
+				suggestedAction: "Use Repair backend to restore the bundled backend."
+			});
+		}
+		return await this.startCurrent(backendManager.getLaunchTargetInfo()?.version ?? null);
 	}
 
 	private requireMainWindow(): BrowserWindow {
@@ -663,15 +489,13 @@ export class BackendBootstrapService {
 		return this.getState();
 	}
 
-	private rejectAfterFailure<T>(error: unknown, patch: Parameters<BackendBootstrapService["fail"]>[0]): Promise<T> {
-		this.fail(patch);
-		return Promise.reject(error);
-	}
-
-	private async runAndCaptureErrors(task: () => Promise<BackendBootstrapState>): Promise<BackendBootstrapState> {
+	private async runAndCaptureErrors(
+		task: () => Promise<BackendBootstrapState>
+	): Promise<BackendBootstrapState> {
 		try {
 			return await task();
 		} catch (error: unknown) {
+			logger.error("Backend bootstrap failed.", error as Error);
 			if (this.state.status === "error" || this.state.status === "unsupported") {
 				return this.getState();
 			}
@@ -682,8 +506,8 @@ export class BackendBootstrapService {
 				errorCode: "bootstrap_failed",
 				errorMessage: getErrorMessage(error),
 				suggestedAction: app?.isPackaged === true
-					? "Retry startup or repair the managed backend installation."
-					: "Run `npm run dev` in D:\\godot-daedalus_backend, then retry."
+					? "Retry startup or repair the verified backend installation."
+					: "Start daedalus-backend in development mode, then retry."
 			});
 		}
 	}

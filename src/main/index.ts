@@ -34,8 +34,10 @@ configureAppIdentity();
 
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 windowLifecycleController.registerIpc();
-appUpdateService.setBeforeClientInstall((): void => {
+appUpdateService.setBeforeClientInstall(async (): Promise<void> => {
 	windowLifecycleController.markQuitting();
+	terminalPtyService.dispose();
+	await backendManager.stopAndWait();
 });
 
 function getWindowIconPath(): string | undefined {
@@ -173,9 +175,24 @@ app.whenReady().then(async () => {
 	});
 });
 
-app.on("before-quit", () => {
+let shutdownInProgress: boolean = false;
+let shutdownComplete: boolean = false;
+
+app.on("before-quit", (event) => {
 	windowLifecycleController.markQuitting();
 	terminalPtyService.dispose();
+	if (shutdownComplete) {
+		return;
+	}
+	event.preventDefault();
+	if (shutdownInProgress) {
+		return;
+	}
+	shutdownInProgress = true;
+	void backendManager.stopAndWait().finally((): void => {
+		shutdownComplete = true;
+		app.quit();
+	});
 });
 
 app.on("window-all-closed", () => {

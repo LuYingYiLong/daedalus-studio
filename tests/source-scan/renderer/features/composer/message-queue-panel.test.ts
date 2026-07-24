@@ -50,7 +50,7 @@ describe("MessageQueuePanel source", () => {
 		expect(composerSource).toContain("function submitGuideMessage(): void");
 		expect(composerSource).toContain("event.ctrlKey && !event.shiftKey");
 		expect(composerSource).toContain("submitGuideMessage();");
-		expect(composerSource).toContain("\"Queue message\"");
+		expect(composerSource).toContain('t("composer.send.queue")');
 		expect(appSource).toContain("async function handleQueueMessageSubmit(nextMessage: string): Promise<void>");
 		expect(appSource).toContain("if (isRunControllerActive(runState))");
 		expect(appSource).toContain("await addQueuedMessage({");

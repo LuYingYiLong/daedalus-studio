@@ -1,5 +1,7 @@
 import React from "react";
 import { Alert, Button, theme, Typography } from "antd";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 import type { PendingToolBudget } from "@/api/types";
 import styles from "./ToolBudgetDialog.module.css";
 
@@ -16,8 +18,8 @@ function formatNumber(value: number): string {
 	return new Intl.NumberFormat().format(value);
 }
 
-function getLimitLabel(limitKind: PendingToolBudget["limitKind"]): string {
-	return limitKind === "steps" ? "工具调用次数" : "工具结果总量";
+function getLimitLabel(limitKind: PendingToolBudget["limitKind"], t: TFunction<"common">): string {
+	return limitKind === "steps" ? t("approval.toolBudget.limitKind.steps") : t("approval.toolBudget.limitKind.toolResultChars");
 }
 
 function ToolBudgetDialog({
@@ -28,6 +30,7 @@ function ToolBudgetDialog({
 	onContinue,
 	onStop
 }: ToolBudgetDialogProps): React.JSX.Element | null {
+	const { t } = useTranslation();
 	const { token } = theme.useToken();
 	if (pendingToolBudget === null) {
 		return null;
@@ -42,34 +45,37 @@ function ToolBudgetDialog({
 		<div className={styles.toolBudgetDialog}>
 			<header className={styles.header}>
 				<Typography.Title level={4} className={styles.title}>
-					工具调用达到上限
+					{t("approval.toolBudget.title")}
 				</Typography.Title>
 				<Typography.Text type="secondary">
-					模型需要更多工具预算才能继续执行。
+					{t("approval.toolBudget.subtitle")}
 				</Typography.Text>
 			</header>
 
 			<div className={styles.details}>
 				<div className={styles.detailItem}>
-					<Typography.Text type="secondary">触发上限</Typography.Text>
-					<Typography.Text className={styles.detailValue}>{getLimitLabel(pendingToolBudget.limitKind)}</Typography.Text>
+					<Typography.Text type="secondary">{t("approval.toolBudget.fields.triggeredLimit")}</Typography.Text>
+					<Typography.Text className={styles.detailValue}>{getLimitLabel(pendingToolBudget.limitKind, t)}</Typography.Text>
 				</div>
 				<div className={styles.detailItem}>
-					<Typography.Text type="secondary">已用 step</Typography.Text>
+					<Typography.Text type="secondary">{t("approval.toolBudget.fields.usedSteps")}</Typography.Text>
 					<Typography.Text className={styles.detailValue}>
 						{formatNumber(pendingToolBudget.usedSteps)} / {formatNumber(pendingToolBudget.maxSteps)}
 					</Typography.Text>
 				</div>
 				<div className={styles.detailItem}>
-					<Typography.Text type="secondary">工具结果字符</Typography.Text>
+					<Typography.Text type="secondary">{t("approval.toolBudget.fields.toolResultChars")}</Typography.Text>
 					<Typography.Text className={styles.detailValue}>
 						{formatNumber(pendingToolBudget.totalToolResultChars)} / {formatNumber(pendingToolBudget.toolResultCharLimit)}
 					</Typography.Text>
 				</div>
 				<div className={styles.detailItem}>
-					<Typography.Text type="secondary">继续追加</Typography.Text>
+					<Typography.Text type="secondary">{t("approval.toolBudget.fields.additionalSteps")}</Typography.Text>
 					<Typography.Text className={styles.detailValue}>
-						+{formatNumber(pendingToolBudget.additionalSteps)} step
+						{t("approval.toolBudget.additionalStepsValue", {
+							count: pendingToolBudget.additionalSteps,
+							formatted: formatNumber(pendingToolBudget.additionalSteps)
+						})}
 					</Typography.Text>
 				</div>
 			</div>
@@ -96,7 +102,7 @@ function ToolBudgetDialog({
 					onClick={(): void => {
 						onContinue?.(pendingToolBudget.budgetId);
 					}}
-				>继续</Button>
+				>{t("approval.toolBudget.actions.continue")}</Button>
 				<Button
 					danger={true}
 					disabled={isBusy}
@@ -105,7 +111,7 @@ function ToolBudgetDialog({
 					onClick={(): void => {
 						onStop?.(pendingToolBudget.budgetId);
 					}}
-				>否，结束并总结</Button>
+				>{t("approval.toolBudget.actions.stop")}</Button>
 			</footer>
 		</div>
 	);
