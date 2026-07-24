@@ -52,6 +52,7 @@ class FakeAutoUpdater {
 	public checkCount: number = 0;
 	public downloadCount: number = 0;
 	public quitAndInstallArgs: Array<[boolean, boolean]> = [];
+	public installEvents: string[] = [];
 	private readonly handlers: Map<FakeUpdaterEventName, Array<(...args: unknown[]) => void>> = new Map();
 
 	public on(eventName: FakeUpdaterEventName, handler: (...args: unknown[]) => void): this {
@@ -80,6 +81,7 @@ class FakeAutoUpdater {
 	}
 
 	public quitAndInstall(isSilent: boolean, isForceRunAfter: boolean): void {
+		this.installEvents.push("quitAndInstall");
 		this.quitAndInstallArgs.push([isSilent, isForceRunAfter]);
 	}
 
@@ -196,12 +198,16 @@ describe("app update service", () => {
 			const fakeUpdater = new FakeAutoUpdater();
 			const fakeBackend = new FakeBackendUpdateClient();
 			const events: AppUpdateState[] = [];
+			const beforeClientInstall = vi.fn((): void => {
+				fakeUpdater.installEvents.push("beforeClientInstall");
+			});
 			const service = new AppUpdateService({
 				isPackaged: true,
 				currentVersion: "1.0.0",
 				autoUpdater: fakeUpdater,
 				backendUpdateClient: fakeBackend,
 				installDelayMs: 1,
+				beforeClientInstall,
 				sendEvent: (_channel, state): void => {
 					events.push(state);
 				}
@@ -224,6 +230,8 @@ describe("app update service", () => {
 
 			vi.advanceTimersByTime(1);
 			expect(service.getState().status).toBe("installing");
+			expect(beforeClientInstall).toHaveBeenCalledTimes(1);
+			expect(fakeUpdater.installEvents).toEqual(["beforeClientInstall", "quitAndInstall"]);
 			expect(fakeUpdater.quitAndInstallArgs).toEqual([[false, true]]);
 		} finally {
 			vi.useRealTimers();

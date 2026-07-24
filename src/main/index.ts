@@ -34,6 +34,9 @@ configureAppIdentity();
 
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 windowLifecycleController.registerIpc();
+appUpdateService.setBeforeClientInstall((): void => {
+	windowLifecycleController.markQuitting();
+});
 
 function getWindowIconPath(): string | undefined {
 	if (process.platform === "darwin") {

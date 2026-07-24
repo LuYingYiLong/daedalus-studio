@@ -33,6 +33,7 @@ mac:
   icon: build/icon.svg
 
 nsis:
+  artifactName: "Daedalus-Studio-Setup-${version}.${ext}"
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true

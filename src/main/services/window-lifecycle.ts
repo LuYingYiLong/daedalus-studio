@@ -91,6 +91,7 @@ export class WindowLifecycleController {
 
 	markQuitting(): void {
 		this.isQuitting = true;
+		this.destroyTray();
 	}
 
 	quit(): void {

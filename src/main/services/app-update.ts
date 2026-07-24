@@ -72,6 +72,7 @@ export type AppUpdateServiceOptions = {
 	backendUpdateClient?: BackendUpdateClient;
 	sendEvent?: (channel: "app-update:state-changed", payload: AppUpdateState) => void;
 	installDelayMs?: number;
+	beforeClientInstall?: () => void;
 };
 
 type AppUpdateEventName =
@@ -420,6 +421,7 @@ export class AppUpdateService {
 	private readonly backendUpdateClient: BackendUpdateClient;
 	private readonly sendEvent: (channel: "app-update:state-changed", payload: AppUpdateState) => void;
 	private readonly installDelayMs: number;
+	private beforeClientInstall: () => void;
 	private state: AppUpdateState;
 	private checkPromise: Promise<void> | null = null;
 	private downloadPromise: Promise<AppUpdateState> | null = null;
@@ -433,6 +435,7 @@ export class AppUpdateService {
 		this.backendUpdateClient = options.backendUpdateClient ?? new MainProcessBackendUpdateClient();
 		this.sendEvent = options.sendEvent ?? broadcastAppUpdateEvent;
 		this.installDelayMs = options.installDelayMs ?? 1200;
+		this.beforeClientInstall = options.beforeClientInstall ?? ((): void => {});
 		this.state = createState(
 			createComponentState(this.isPackaged ? "idle" : "unsupported", options.currentVersion ?? getDefaultCurrentVersion(), this.isPackaged ? null : getUnsupportedClientMessage()),
 			createComponentState("idle", null)
@@ -499,6 +502,10 @@ export class AppUpdateService {
 			});
 		}
 		return this.getState();
+	}
+
+	public setBeforeClientInstall(handler: () => void): void {
+		this.beforeClientInstall = handler;
 	}
 
 	public registerIpc(): void {
@@ -700,6 +707,11 @@ export class AppUpdateService {
 					progress: 100,
 					errorMessage: null
 				});
+				try {
+					this.beforeClientInstall();
+				} catch (error: unknown) {
+					console.error("[AppUpdateService] before client install hook failed", error);
+				}
 				this.autoUpdater.quitAndInstall(false, true);
 			}, this.installDelayMs);
 		});

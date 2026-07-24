@@ -63,6 +63,31 @@ jobs:
         shell: pwsh
         run: Get-ChildItem -Path release -File | Format-Table Name, Length
 
+      - name: Verify updater metadata
+        shell: pwsh
+        run: |
+          $latestPath = Join-Path "release" "latest.yml"
+          $latestContent = Get-Content -LiteralPath $latestPath -Raw
+          $pathMatch = [regex]::Match($latestContent, "(?m)^path:\s*(.+?)\s*$")
+          if (-not $pathMatch.Success) {
+            throw "latest.yml does not contain a path entry."
+          }
+          $installerName = $pathMatch.Groups[1].Value.Trim()
+          $installerName = $installerName -replace '^[''\"]|[''\"]$', ''
+          if ($installerName -match "\s") {
+            throw "Installer asset names must not contain whitespace because GitHub rewrites those names: $installerName"
+          }
+          if ($installerName -notmatch "^Daedalus-Studio-Setup-\d+\.\d+\.\d+\.exe$") {
+            throw "Unexpected installer asset name in latest.yml: $installerName"
+          }
+          $installerPath = Join-Path "release" $installerName
+          if (-not (Test-Path -LiteralPath $installerPath -PathType Leaf)) {
+            throw "latest.yml points to a missing installer: $installerName"
+          }
+          $blockmapPath = "$installerPath.blockmap"
+          if (-not (Test-Path -LiteralPath $blockmapPath -PathType Leaf)) {
+            throw "Missing installer blockmap: $installerName.blockmap"
+          }
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -81,6 +106,7 @@ jobs:
           name: Daedalus Studio ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag_name }}
           draft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
           prerelease: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
+          overwrite_files: true
           files: |
             release/*.exe
             release/*.blockmap

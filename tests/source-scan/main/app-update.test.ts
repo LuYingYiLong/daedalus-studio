@@ -4,8 +4,10 @@ import { readRepoFile } from "../../helpers/repo-paths";
 describe("app update source", () => {
 	const packageSource: string = readRepoFile("package.json");
 	const builderSource: string = readRepoFile("electron-builder.yml");
+	const releaseWorkflowSource: string = readRepoFile(".github", "workflows", "build-release.yml");
 	const mainSource: string = readRepoFile("src", "main", "index.ts");
 	const serviceSource: string = readRepoFile("src", "main", "services", "app-update.ts");
+	const windowLifecycleSource: string = readRepoFile("src", "main", "services", "window-lifecycle.ts");
 	const bootstrapSource: string = readRepoFile("src", "main", "services", "backend-bootstrap.ts");
 	const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
@@ -17,6 +19,11 @@ describe("app update source", () => {
 		expect(builderSource).toContain("provider: github");
 		expect(builderSource).toContain("owner: LuYingYiLong");
 		expect(builderSource).toContain("repo: daedalus-studio");
+		expect(builderSource).toContain("artifactName: \"Daedalus-Studio-Setup-${version}.${ext}\"");
+		expect(releaseWorkflowSource).toContain("Verify updater metadata");
+		expect(releaseWorkflowSource).toContain("latest.yml points to a missing installer");
+		expect(releaseWorkflowSource).toContain("Installer asset names must not contain whitespace");
+		expect(releaseWorkflowSource).toContain("overwrite_files: true");
 		expect(serviceSource).toContain("autoDownload = false");
 		expect(serviceSource).toContain("allowPrerelease = false");
 	});
@@ -41,7 +48,12 @@ describe("app update source", () => {
 		expect(serviceSource).toContain("verifyInstalledVersion(result.version)");
 		expect(serviceSource).toContain("cleanupPreviousVersion(result.version, result.previousVersion)");
 		expect(serviceSource).toContain("app-update:state-changed");
+		expect(serviceSource).toContain("this.beforeClientInstall()");
 		expect(serviceSource).toContain("quitAndInstall(false, true)");
+		expect(mainSource).toContain("appUpdateService.setBeforeClientInstall");
+		expect(mainSource).toContain("windowLifecycleController.markQuitting()");
+		expect(windowLifecycleSource).toContain("markQuitting(): void");
+		expect(windowLifecycleSource).toContain("this.destroyTray();");
 	});
 
 	it("exposes appUpdate through preload and renderer types", () => {

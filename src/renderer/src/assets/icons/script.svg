@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
 	<defs>
-		<clipPath id="clipPath_5">
+		<clipPath id="clipPath_17">
 			<rect width="19.000000" height="19.000000" x="2.000000" y="3.000000" fill="currentColor" />
 		</clipPath>
 	</defs>
-	<g id="script 1" clip-path="url(#clipPath_5)" customFrame="url(#clipPath_5)">
+	<g id="script 1" clip-path="url(#clipPath_17)" customFrame="url(#clipPath_17)">
 		<rect id="script 1" width="19.000000" height="19.000000" x="2.000000" y="3.000000" />
-		<path id="矢量 64" d="M8.00001 8.5L12 8.5L17 8.5L20 8.5L20 6C20 4.89543 19.1046 4 18 4L10 4C8.89543 4 8 4.89543 8 6L8.00001 8.5L8 15.5C8 15.5 8 17 8 18C8 20 6 20 6 20M8 15.5L4 15.5L4 18C4 19.1046 4.89543 20 6 20L15 20C16.1046 20 17 19.1046 17 18L17 8.5M10 4C10 4 12 4 12 6C12 7.5 12 8.5 12 8.5" stroke="currentColor" stroke-width="1.750000" />
+		<path id="矢量 64" d="M10 4C10 4 12 4 12 6C12 7.5 12 8.5 12 8.5L17 8.5L20 8.5L20 6C20 4.89543 19.1046 4 18 4L10 4C8.89543 4 8 4.89543 8 6L8.00001 8.5L8 15.5C8 15.5 8 17 8 18C8 20 6 20 6 20M8 15.5L4 15.5L4 18C4 19.1046 4.89543 20 6 20L15 20C16.1046 20 17 19.1046 17 18L17 8.5" stroke="currentColor" stroke-width="1.750000" />
 	</g>
 </svg>
