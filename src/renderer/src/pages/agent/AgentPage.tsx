@@ -194,6 +194,7 @@ type AgentPageProps = {
 	initialWorkspaces: WorkspaceConfig[];
 	initialSessions: SessionMetadata[];
 	initialActiveWorkspaceId: string | null;
+	runningSessionIds: readonly string[];
 	homeWorkspace: WorkspaceConfig | null;
 	workspaceFooterDisabled: boolean;
 	isWorkspaceAdding: boolean;
@@ -299,6 +300,7 @@ function AgentPage({
 	initialWorkspaces,
 	initialSessions,
 	initialActiveWorkspaceId,
+	runningSessionIds,
 	homeWorkspace,
 	workspaceFooterDisabled,
 	isWorkspaceAdding,
@@ -973,6 +975,7 @@ function AgentPage({
 					initialWorkspaces={initialWorkspaces}
 					initialSessions={initialSessions}
 					initialActiveWorkspaceId={initialActiveWorkspaceId}
+					runningSessionIds={runningSessionIds}
 					sessionUpdate={activeSessionMetadata}
 					onWorkspaceSelect={onWorkspaceSelect}
 					onSessionSelect={onSessionSelect}

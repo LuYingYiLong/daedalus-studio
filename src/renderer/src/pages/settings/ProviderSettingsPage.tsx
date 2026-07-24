@@ -30,7 +30,7 @@ const CAPABILITY_BADGES: CapabilityBadge[] = [
 	{ key: "reasoning", labelKey: "settings.provider.capabilities.reasoning", icon: "thinking", color: "blue" },
 	{ key: "tools", labelKey: "settings.provider.capabilities.tools", icon: "mcp", color: "orange" },
 	{ key: "webSearch", labelKey: "settings.provider.capabilities.webSearch", icon: "search", color: "green" },
-	{ key: "vision", labelKey: "settings.provider.capabilities.vision", icon: "show", color: "purple" },
+	{ key: "vision", labelKey: "settings.provider.capabilities.vision", icon: "vision", color: "purple" },
 	{ key: "imageGeneration", labelKey: "settings.provider.capabilities.imageGeneration", icon: "draw", color: "magenta" },
 	{ key: "imageEdit", labelKey: "settings.provider.capabilities.imageEdit", icon: "draw", color: "cyan" }
 ];

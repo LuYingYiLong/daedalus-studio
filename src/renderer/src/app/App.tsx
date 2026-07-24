@@ -53,7 +53,7 @@ import SettingsPage, { type SettingsPageKey } from "@/pages/settings/SettingsPag
 import DrawingPage from "@/pages/drawing/DrawingPage";
 import KnowledgePage from "@/pages/knowledge/KnowledgePage";
 import { extractEnabledSkillRefs, type ComposerCompletionTrigger } from "@/features/composer/composer-completion";
-import { getWorkflowTodoSnapshotKey, isWorkflowTodoClearEvent, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
+import { createWorkflowTodoSnapshotFromPlanData, getWorkflowTodoSnapshotKey, isWorkflowTodoActive, isWorkflowTodoClearEvent, markWorkflowTodoCompleted, markWorkflowTodoExecuting, markWorkflowTodoFailed, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
 import { saveImageAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
 import { DEFAULT_CLIENT_PREFERENCES, fetchClientPreferences, updateClientPreferences, type ClientPreferences } from "@/api/client-preferences-api";
 import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
@@ -749,13 +749,16 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const activeChatRequestIdRef = useRef<string | null>(null);
 	const cancelledChatRequestIdsRef = useRef<Set<string>>(new Set());
 	const submittedComposerTextRef = useRef<{ requestId: string; text: string } | null>(null);
+	const loadingComposerDraftRef = useRef<{ sessionId: string; text: string } | null>(null);
 	const slashCommandsLoadingRef = useRef<boolean>(false);
 	const skillsLoadingRef = useRef<boolean>(false);
 	const slashCommandsRetryAtRef = useRef<number>(0);
 	const skillsRetryAtRef = useRef<number>(0);
 	const recentContextFileSignaturesRef = useRef<Map<string, number>>(new Map());
 	const initializedWorkflowTodoKeyRef = useRef<string>("");
+	const expandedActiveWorkflowTodoKeyRef = useRef<string>("");
 	const nativeNotificationDedupeKeysRef = useRef<Set<string>>(new Set());
+	const pendingUserActionRequestIdsRef = useRef<Set<string>>(new Set());
 	const activeSessionTitleRef = useRef<string>("Daedalus session");
 	const pendingTimelineEventsRef = useRef<BackendEvent[]>([]);
 	const pendingTimelineSessionIdRef = useRef<string | null>(null);
@@ -963,11 +966,45 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	function rememberLoadedWorkflowTodo(snapshot: WorkflowTodoSnapshot | null): void {
 		initializedWorkflowTodoKeyRef.current = snapshot === null ? "" : getWorkflowTodoSnapshotKey(snapshot);
+		if (snapshot === null) {
+			expandedActiveWorkflowTodoKeyRef.current = "";
+		}
 	}
 
-	function clearWorkflowTodoUiState(): void {
+	function clearWorkflowTodoUiState(options: { preservePlanSnapshot?: boolean } = {}): void {
+		if (options.preservePlanSnapshot === true) {
+			setWorkflowTodoSnapshot((currentSnapshot: WorkflowTodoSnapshot | null): WorkflowTodoSnapshot | null => {
+				if (currentSnapshot?.source === "plan") {
+					return currentSnapshot;
+				}
+
+				rememberLoadedWorkflowTodo(null);
+				return null;
+			});
+			return;
+		}
+
 		setWorkflowTodoSnapshot(null);
 		rememberLoadedWorkflowTodo(null);
+	}
+
+	function expandWorkflowTodoPanel(): void {
+		setActiveSessionMetadata((currentMetadata: SessionMetadata | null): SessionMetadata | null => {
+			return currentMetadata === null
+				? currentMetadata
+				: {
+					...currentMetadata,
+					workflowTodoCollapsed: false
+				};
+		});
+	}
+
+	function showWorkflowTodo(snapshot: WorkflowTodoSnapshot | null, forceExpand: boolean = false): void {
+		setWorkflowTodoSnapshot(snapshot);
+		rememberLoadedWorkflowTodo(snapshot);
+		if (snapshot !== null && forceExpand) {
+			expandWorkflowTodoPanel();
+		}
 	}
 
 	function resetPlanClarificationUiState(): void {
@@ -991,12 +1028,18 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 
 		const workflowTodoKey: string = getWorkflowTodoSnapshotKey(snapshot);
+		const workflowTodoIsActive: boolean = isWorkflowTodoActive(snapshot);
 		if (initializedWorkflowTodoKeyRef.current === workflowTodoKey) {
-			return;
+			if (!workflowTodoIsActive || expandedActiveWorkflowTodoKeyRef.current === workflowTodoKey) {
+				return;
+			}
 		}
 
 		initializedWorkflowTodoKeyRef.current = workflowTodoKey;
-		const workflowTodoCollapsed: boolean = !generalSettings.autoExpandTodoList;
+		if (workflowTodoIsActive) {
+			expandedActiveWorkflowTodoKeyRef.current = workflowTodoKey;
+		}
+		const workflowTodoCollapsed: boolean = workflowTodoIsActive ? false : !generalSettings.autoExpandTodoList;
 		setActiveSessionMetadata((currentMetadata: SessionMetadata | null): SessionMetadata | null => {
 			return currentMetadata === null
 				? currentMetadata
@@ -1121,11 +1164,11 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		await sendWorkbenchPatch(takePendingWorkbenchPatch());
 	}, [sendWorkbenchPatch, takePendingWorkbenchPatch]);
 
-	function applyOptimisticActiveRun(requestId: string, clearComposerText: boolean, clearComposerContext: boolean = false): void {
+	function applyOptimisticActiveRun(requestId: string, clearComposerText: boolean, clearComposerContext: boolean = false, preserveWorkflowTodo: boolean = false): void {
 		const startedAt: string = new Date().toISOString();
 		const sequence: number = runState.sequence + 1;
 
-		clearWorkflowTodoUiState();
+		clearWorkflowTodoUiState({ preservePlanSnapshot: preserveWorkflowTodo });
 		setRunState((currentState: RunControllerState): RunControllerState => createOptimisticRunState(currentState, requestId, startedAt));
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 			return currentWorkbench === null
@@ -1171,8 +1214,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		});
 	}
 
-	function applyOptimisticSend(requestId: string, message: string, additionalContext: AdditionalContextItem[], clearComposerText: boolean = true): void {
-		applyOptimisticActiveRun(requestId, clearComposerText, true);
+	function applyOptimisticSend(requestId: string, message: string, additionalContext: AdditionalContextItem[], clearComposerText: boolean = true, preserveWorkflowTodo: boolean = false): void {
+		applyOptimisticActiveRun(requestId, clearComposerText, true, preserveWorkflowTodo);
 		appendOptimisticUserBlock(requestId, message, additionalContext);
 	}
 
@@ -1360,7 +1403,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					}
 
 					if (event.event === "agent.run.started") {
-						clearWorkflowTodoUiState();
+						clearWorkflowTodoUiState({ preservePlanSnapshot: true });
 					} else if (event.event === "workflow.todo.updated" || event.event === "agent.run.snapshot") {
 						const snapshot: WorkflowTodoSnapshot | null = normalizeWorkflowTodoSnapshot(event.data);
 						setWorkflowTodoSnapshot(snapshot);
@@ -1377,6 +1420,23 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						} else {
 							applyInitialWorkflowTodoPreference(snapshot);
 						}
+					} else if (event.event === "plan.generated" || event.event === "plan.revised") {
+						const planTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromPlanData(event.data);
+						if (planTodo !== null) {
+							showWorkflowTodo(planTodo);
+						}
+					} else if (event.event === "plan.execution.started") {
+						const planTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromPlanData(event.data, true);
+						setWorkflowTodoSnapshot((currentSnapshot: WorkflowTodoSnapshot | null): WorkflowTodoSnapshot | null => {
+							const nextSnapshot: WorkflowTodoSnapshot | null = planTodo ?? (currentSnapshot === null ? null : markWorkflowTodoExecuting(currentSnapshot));
+							rememberLoadedWorkflowTodo(nextSnapshot);
+							return nextSnapshot;
+						});
+						expandWorkflowTodoPanel();
+					} else if (event.event === "agent.run.error" || event.event === "workflow.error" || event.event === "plan.error") {
+						setWorkflowTodoSnapshot((currentSnapshot: WorkflowTodoSnapshot | null): WorkflowTodoSnapshot | null => {
+							return currentSnapshot?.source === "plan" ? markWorkflowTodoFailed(currentSnapshot) : currentSnapshot;
+						});
 					} else if (isWorkflowTodoClearEvent(event)) {
 						setWorkflowTodoSnapshot(null);
 						rememberLoadedWorkflowTodo(null);
@@ -1395,6 +1455,17 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 							setPlanApprovalError(null);
 							setIsPlanApproving(false);
 							setIsPlanRevising(false);
+							if (activeSessionId !== null) {
+								pendingUserActionRequestIdsRef.current.add(eventPlanApproval.requestId);
+								showNativeTaskNotification({
+									kind: "approval_required",
+									sessionId: activeSessionId,
+									requestId: eventPlanApproval.requestId,
+									title: "Daedalus needs approval",
+									body: "A plan is ready for review.",
+									dedupeKey: `approval_required:${activeSessionId}:plan:${eventPlanApproval.planId}:${eventPlanApproval.updatedAt}`
+								});
+							}
 						}
 					}
 					if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.approved" || event.event === "plan.execution.started" || event.event === "plan.error" || event.event === "agent.run.error") {
@@ -1434,9 +1505,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					}
 
 					if (isRunCompletionEvent(event)) {
+						setWorkflowTodoSnapshot((currentSnapshot: WorkflowTodoSnapshot | null): WorkflowTodoSnapshot | null => {
+							return currentSnapshot?.source === "plan" ? markWorkflowTodoCompleted(currentSnapshot) : currentSnapshot;
+						});
 						const requestId: string = getBackendEventRequestId(event);
 						const sessionId: string | null = activeSessionIdRef.current;
-						if (sessionId !== null) {
+						if (sessionId !== null && !pendingUserActionRequestIdsRef.current.has(requestId)) {
 							showNativeTaskNotification({
 								kind: "run_completed",
 								sessionId,
@@ -1516,6 +1590,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		navigationVersionRef.current += 1;
 		takePendingWorkbenchPatch();
 		submittedComposerTextRef.current = null;
+		loadingComposerDraftRef.current = null;
 		setIsNewSessionHome(true);
 		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection));
 		activeSessionIdRef.current = null;
@@ -1538,6 +1613,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		navigationVersionRef.current = navigationVersion;
 		takePendingWorkbenchPatch();
 		submittedComposerTextRef.current = null;
+		loadingComposerDraftRef.current = null;
 		setIsNewSessionHome(true);
 		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection, workspace));
 		activeSessionIdRef.current = null;
@@ -1681,6 +1757,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	async function handleSessionSelect(session: SessionMetadata): Promise<void> {
 		const navigationVersion: number = navigationVersionRef.current + 1;
 		navigationVersionRef.current = navigationVersion;
+		loadingComposerDraftRef.current = null;
 		const sessionId: string = session.id;
 		console.info("[App] session selected", { sessionId });
 
@@ -1710,12 +1787,28 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setLatestPlanClarification(result.latestPlanClarification);
 			setLatestPlanApproval(result.latestPlanApproval);
 			setActiveSessionMetadata(result.metadata);
-			setWorkbench(result.workbench);
+			const loadingComposerDraft = loadingComposerDraftRef.current as { sessionId: string; text: string } | null;
+			const openedWorkbench: WorkbenchSnapshot = loadingComposerDraft?.sessionId === sessionId
+				? {
+					...result.workbench,
+					composer: {
+						...result.workbench.composer,
+						text: loadingComposerDraft.text
+					}
+				}
+				: result.workbench;
+			setWorkbench(openedWorkbench);
+			if (loadingComposerDraft?.sessionId === sessionId) {
+				queueWorkbenchPatch({ composer: { text: loadingComposerDraft.text } });
+			}
 			setApprovalModeState(result.metadata.approvalMode ?? "manual");
 			setActiveWorkspace(createWorkspaceFromSessionOpenResult(result));
 			const workflowTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromTimelineResult(result);
 			setWorkflowTodoSnapshot(workflowTodo);
 			rememberLoadedWorkflowTodo(workflowTodo);
+			if (workflowTodo !== null && isWorkflowTodoActive(workflowTodo)) {
+				expandWorkflowTodoPanel();
+			}
 
 			if (result.workspaceWarning) {
 				console.warn("[App] session workspace warning", result.workspaceWarning);
@@ -1733,6 +1826,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	function resetToNewSessionHome(): void {
 		navigationVersionRef.current += 1;
+		loadingComposerDraftRef.current = null;
 		activeSessionIdRef.current = null;
 		setActiveSessionId(null);
 		setActiveSessionMetadata(null);
@@ -2076,6 +2170,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			submittedComposerTextRef.current = null;
 		}
 
+		if (!isNewSessionHome && activeSessionIdRef.current !== null) {
+			loadingComposerDraftRef.current = nextText.length === 0
+				? null
+				: { sessionId: activeSessionIdRef.current, text: nextText };
+		}
+
 		if (isNewSessionHome) {
 			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
 				...currentDraft,
@@ -2084,6 +2184,17 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			return;
 		}
 
+		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+			return currentWorkbench === null
+				? currentWorkbench
+				: {
+					...currentWorkbench,
+					composer: {
+						...currentWorkbench.composer,
+						text: nextText
+					}
+				};
+		});
 		queueWorkbenchPatch({ composer: { text: nextText } });
 	}
 
@@ -2205,6 +2316,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			await handleHomeComposerSubmit(nextMessage);
 			return;
 		}
+
+		loadingComposerDraftRef.current = null;
 
 		if (activeSessionId === null || workbench === null) {
 			setSessionError("Please open session first before sending a message");
@@ -2662,6 +2775,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const workflowTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromTimelineResult(timeline);
 		setWorkflowTodoSnapshot(workflowTodo);
 		rememberLoadedWorkflowTodo(workflowTodo);
+		if (workflowTodo !== null && isWorkflowTodoActive(workflowTodo)) {
+			expandWorkflowTodoPanel();
+		}
 
 		const sessionList = await fetchSessions();
 		const metadata: SessionMetadata | undefined = sessionList.sessions.find((session: SessionMetadata): boolean => session.id === sessionId);
@@ -2964,7 +3080,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const pendingToolBudget: PendingToolBudget | null = isNewSessionHome ? null : workbench?.pendingToolBudget ?? null;
 	const chatTitle: string = isNewSessionHome ? "New session" : getSessionTitle(activeSessionMetadata, activeSessionId);
 	const initialScrollToBottomKey: string = activeSessionId === null ? "" : `${activeSessionId}:${timelinePage.blockCount}`;
-	const composerMessage: string = isNewSessionHome ? homeDraft.message : workbench?.composer.text ?? "";
+	const loadingComposerDraft = !isNewSessionHome && activeSessionId !== null && loadingComposerDraftRef.current?.sessionId === activeSessionId
+		? loadingComposerDraftRef.current.text
+		: null;
+	const composerMessage: string = isNewSessionHome ? homeDraft.message : loadingComposerDraft ?? workbench?.composer.text ?? "";
 	const composerMode: ChatMode = isNewSessionHome ? homeDraft.chatMode : getChatMode(workbench);
 	const composerContextItems: AdditionalContextItem[] = isNewSessionHome ? [] : workbench?.composer.additionalContext ?? [];
 	const composerMessageQueue: MessageQueueItem[] = isNewSessionHome ? [] : workbench?.messageQueue ?? [];
@@ -2977,6 +3096,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			: activeWorkspace;
 	const composerIsSending: boolean = isRunControllerActive(runState) || isHomeSubmitting;
 	const composerIsCancelling: boolean = runState.status === "cancelling";
+	const runningSessionIds: string[] = activeSessionId !== null && composerIsSending ? [activeSessionId] : [];
 
 	useEffect((): void => {
 		activeSessionTitleRef.current = chatTitle;
@@ -2984,6 +3104,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	useEffect((): void => {
 		nativeNotificationDedupeKeysRef.current.clear();
+		pendingUserActionRequestIdsRef.current.clear();
 		void window.electronAPI.nativeNotifications.clearAttention().catch((error: unknown): void => {
 			console.error("[App] clear native notification attention failed", error);
 		});
@@ -3112,6 +3233,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		try {
 			setIsPlanApproving(true);
 			setPlanApprovalError(null);
+			const planTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromPlanData(latestPlanApproval, true);
+			if (planTodo !== null) {
+				showWorkflowTodo(planTodo, true);
+			}
 			const result = await approvePlan(planId);
 			setWorkbench(result.workbench);
 			setActiveSessionMetadata((currentMetadata: SessionMetadata | null): SessionMetadata | null => (
@@ -3120,7 +3245,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					: { ...currentMetadata, chatMode: result.chatMode }
 			));
 			activeChatRequestIdRef.current = result.executionRequestId;
-			applyOptimisticSend(result.executionRequestId, "执行计划。", []);
+			applyOptimisticSend(result.executionRequestId, "执行计划。", [], true, true);
 			setLatestPlanApproval((currentPlanApproval: PlanApprovalState | null): PlanApprovalState | null => {
 				return currentPlanApproval?.planId === planId ? null : currentPlanApproval;
 			});
@@ -3260,6 +3385,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						initialWorkspaces={bootstrapData.workspaceList.workspaces}
 						initialSessions={bootstrapData.sessionList.sessions}
 						initialActiveWorkspaceId={bootstrapData.workspaceList.active}
+						runningSessionIds={runningSessionIds}
 						homeWorkspace={homeDraft.workspace}
 						workspaceFooterDisabled={!isNewSessionHome || isHomeSubmitting}
 						isWorkspaceAdding={isWorkspaceAdding}

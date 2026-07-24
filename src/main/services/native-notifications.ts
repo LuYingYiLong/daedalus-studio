@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, nativeImage, Notification } from "electron";
+import { APP_NAME, getAppIconImage } from "./app-identity";
 
 export type NativeNotificationKind = "run_completed" | "approval_required" | "clarification_required";
 
@@ -88,10 +89,13 @@ export class NativeNotificationService {
 		}
 
 		try {
+			const icon = getAppIconImage();
 			const notification = new Notification({
 				title: payload.title.trim(),
+				subtitle: APP_NAME,
 				body: payload.body.trim(),
-				silent: false
+				silent: false,
+				...(icon === null ? {} : { icon })
 			});
 			notification.on("click", (): void => {
 				this.showWindow(mainWindow);

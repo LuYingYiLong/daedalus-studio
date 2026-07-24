@@ -1,6 +1,8 @@
 import type { BackendEvent } from "@/api/backend-rpc-client";
 import type { WorkflowTodoSnapshot, WorkflowTodoStatus, WorkflowTodoStep } from "@/api/types";
 
+const PLAN_TODO_MAX_STEPS: number = 12;
+
 export type WorkflowStepUiStatus = "wait" | "process" | "finish" | "error";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -127,4 +129,152 @@ export function mapWorkflowTodoStatusToStepStatus(status: WorkflowTodoStatus): W
 
 export function isWorkflowTodoClearEvent(event: BackendEvent): boolean {
 	return event.event === "workflow.todo.dismissed";
+}
+
+function getPlanMarkdownFromRecord(record: Record<string, unknown>): string {
+	const previewMarkdown: string = getStringValue(record, "previewMarkdown")?.trim() ?? "";
+	if (previewMarkdown.length > 0) {
+		return previewMarkdown;
+	}
+
+	return getStringValue(record, "markdown")?.trim() ?? "";
+}
+
+function stripMarkdownInline(value: string): string {
+	return value
+		.replace(/`([^`]+)`/gu, "$1")
+		.replace(/\*\*([^*]+)\*\*/gu, "$1")
+		.replace(/__([^_]+)__/gu, "$1")
+		.replace(/\[([^\]]+)\]\([^)]*\)/gu, "$1")
+		.replace(/[\t ]+/gu, " ")
+		.trim();
+}
+
+function extractPlanTodoSteps(markdown: string): WorkflowTodoStep[] {
+	const steps: WorkflowTodoStep[] = [];
+	const lines: string[] = markdown.split(/\r?\n/u);
+
+	for (const line of lines) {
+		const trimmedLine: string = line.trim();
+		if (trimmedLine.length === 0 || trimmedLine.startsWith("#") || /^[-*_]{3,}$/u.test(trimmedLine)) {
+			continue;
+		}
+
+		const checkboxMatch: RegExpMatchArray | null = trimmedLine.match(/^[-*+]\s+\[([ xX])\]\s+(.+)$/u);
+		const numberedMatch: RegExpMatchArray | null = checkboxMatch === null
+			? trimmedLine.match(/^\d+[.)]\s+(.+)$/u)
+			: null;
+		const bulletMatch: RegExpMatchArray | null = checkboxMatch === null && numberedMatch === null
+			? trimmedLine.match(/^[-*+]\s+(.+)$/u)
+			: null;
+
+		const rawTitle: string = checkboxMatch?.[2] ?? numberedMatch?.[1] ?? bulletMatch?.[1] ?? "";
+		const title: string = stripMarkdownInline(rawTitle);
+		if (title.length === 0 || title.endsWith(":")) {
+			continue;
+		}
+
+		steps.push({
+			id: `plan-step-${steps.length + 1}`,
+			title,
+			status: checkboxMatch?.[1].toLowerCase() === "x" ? "done" : "pending"
+		});
+		if (steps.length >= PLAN_TODO_MAX_STEPS) {
+			break;
+		}
+	}
+
+	return steps;
+}
+
+export function createWorkflowTodoSnapshotFromPlanData(value: unknown, running: boolean = false): WorkflowTodoSnapshot | null {
+	if (!isRecord(value)) {
+		return null;
+	}
+
+	const planId: string = getStringValue(value, "planId")?.trim() ?? "";
+	const markdown: string = getPlanMarkdownFromRecord(value);
+	if (planId.length === 0 || markdown.length === 0) {
+		return null;
+	}
+
+	const steps: WorkflowTodoStep[] = extractPlanTodoSteps(markdown);
+	if (steps.length === 0) {
+		return null;
+	}
+
+	const normalizedSteps: WorkflowTodoStep[] = running
+		? steps.map((step: WorkflowTodoStep, index: number): WorkflowTodoStep => ({
+			...step,
+			status: index === 0 ? "running" : step.status
+		}))
+		: steps;
+	const title: string = getStringValue(value, "title")?.trim() ?? "";
+	const revisionSource: string = getStringValue(value, "updatedAt")?.trim() ?? "";
+	const parsedRevision: number = Date.parse(revisionSource);
+
+	return {
+		workflowId: planId,
+		title: title.length > 0 ? title : "Plan",
+		source: "plan",
+		revision: Number.isFinite(parsedRevision) ? parsedRevision : undefined,
+		steps: normalizedSteps,
+		todos: normalizedSteps
+	};
+}
+
+export function isWorkflowTodoActive(snapshot: WorkflowTodoSnapshot): boolean {
+	return snapshot.steps.some((step: WorkflowTodoStep): boolean => {
+		return step.status === "running" || step.status === "in_progress" || step.status === "paused";
+	});
+}
+
+export function markWorkflowTodoExecuting(snapshot: WorkflowTodoSnapshot): WorkflowTodoSnapshot {
+	const firstPendingIndex: number = snapshot.steps.findIndex((step: WorkflowTodoStep): boolean => {
+		return step.status !== "done" && step.status !== "completed" && step.status !== "success";
+	});
+	const runningIndex: number = firstPendingIndex >= 0 ? firstPendingIndex : Math.max(0, snapshot.steps.length - 1);
+
+	return {
+		...snapshot,
+		source: snapshot.source ?? "plan",
+		revision: (snapshot.revision ?? 0) + 1,
+		steps: snapshot.steps.map((step: WorkflowTodoStep, index: number): WorkflowTodoStep => ({
+			...step,
+			status: index === runningIndex ? "running" : step.status
+		})),
+		todos: snapshot.todos.map((step: WorkflowTodoStep, index: number): WorkflowTodoStep => ({
+			...step,
+			status: index === runningIndex ? "running" : step.status
+		}))
+	};
+}
+
+export function markWorkflowTodoCompleted(snapshot: WorkflowTodoSnapshot): WorkflowTodoSnapshot {
+	return {
+		...snapshot,
+		revision: (snapshot.revision ?? 0) + 1,
+		steps: snapshot.steps.map((step: WorkflowTodoStep): WorkflowTodoStep => ({ ...step, status: "done" })),
+		todos: snapshot.todos.map((step: WorkflowTodoStep): WorkflowTodoStep => ({ ...step, status: "done" }))
+	};
+}
+
+export function markWorkflowTodoFailed(snapshot: WorkflowTodoSnapshot): WorkflowTodoSnapshot {
+	const failingIndex: number = snapshot.steps.findIndex((step: WorkflowTodoStep): boolean => {
+		return step.status === "running" || step.status === "in_progress";
+	});
+	const targetIndex: number = failingIndex >= 0 ? failingIndex : Math.max(0, snapshot.steps.length - 1);
+
+	return {
+		...snapshot,
+		revision: (snapshot.revision ?? 0) + 1,
+		steps: snapshot.steps.map((step: WorkflowTodoStep, index: number): WorkflowTodoStep => ({
+			...step,
+			status: index === targetIndex ? "failed" : step.status
+		})),
+		todos: snapshot.todos.map((step: WorkflowTodoStep, index: number): WorkflowTodoStep => ({
+			...step,
+			status: index === targetIndex ? "failed" : step.status
+		}))
+	};
 }

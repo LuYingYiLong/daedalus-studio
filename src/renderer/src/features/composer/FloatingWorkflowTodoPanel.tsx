@@ -17,12 +17,12 @@ export type FloatingWorkflowTodoPanelProps = {
 
 function getWorkflowTodoIconName(status: string): string {
 	if (status === "done" || status === "completed" || status === "success") {
-		return "todo_checked";
+		return "status-success";
 	}
 	if (status === "failed" || status === "error" || status === "cancelled") {
-		return "todo_failed";
+		return "status-failed";
 	}
-	return "todo_unchecked";
+	return "status-unchecked";
 }
 
 function getStepTitle(step: WorkflowTodoStep, index: number): string {

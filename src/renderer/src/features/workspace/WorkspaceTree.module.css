@@ -108,6 +108,20 @@
 	justify-self: end;
 }
 
+.sessionRunIndicator {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	justify-self: end;
+	width: 28px;
+	height: 28px;
+	color: var(--ant-color-primary);
+}
+
+.sessionRunIndicator :global(.ant-spin) {
+	font-size: 12px;
+}
+
 .workspaceMenu :global(.ant-menu-submenu-title:hover) .workspaceActions,
 .workspaceMenu :global(.ant-menu-submenu-title:focus-within) .workspaceActions {
 	opacity: 1;

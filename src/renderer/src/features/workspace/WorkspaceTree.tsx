@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { archiveSession, fetchSessions, renameSession } from "@/api/session-api";
 import { deleteWorkspace, fetchWorkspaces } from "@/api/workspace-api";
 import type { DeleteWorkspaceResult } from "@/api/workspace-api";
-import { Alert, Button, Dropdown, Empty, Input, Menu, message, Modal, Tooltip, Typography } from "antd";
+import { Alert, Button, Dropdown, Empty, Input, Menu, message, Modal, Spin, Tooltip, Typography } from "antd";
 import type { MenuProps } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/api/types";
 import { Icon } from "@/assets/icons";
@@ -19,6 +19,7 @@ export type WorkspaceTreeProps = {
 	initialSessions?: SessionMetadata[];
 	initialActiveWorkspaceId?: string | null;
 	sessionUpdate?: SessionMetadata | null;
+	runningSessionIds?: readonly string[];
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onSessionSelect?: (session: SessionMetadata) => void;
 	onSessionArchive?: (session: SessionMetadata) => void;
@@ -55,6 +56,7 @@ type WorkspaceTreeLabels = {
 	sessionTitleCannotBeEmpty: string;
 	sessionTitlePlaceholder: string;
 	sessions: string;
+	assistantRunning: string;
 	archiveSessionAria: (sessionTitle: string) => string;
 	newSessionInWorkspaceAria: (workspaceName: string) => string;
 	workspaceActionsAria: (workspaceName: string) => string;
@@ -62,6 +64,7 @@ type WorkspaceTreeLabels = {
 
 type CreateSessionMenuItemOptions = {
 	archivingSessionId: string | null;
+	runningSessionIds: ReadonlySet<string>;
 	labels: WorkspaceTreeLabels;
 	onArchiveButton: (session: SessionMetadata, event: MouseEvent<HTMLElement>) => void;
 	onRename: (session: SessionMetadata) => void;
@@ -80,6 +83,7 @@ type CreateWorkspaceMenuItemOptions = CreateSessionMenuItemOptions & {
 
 function createSessionMenuItem(session: SessionMetadata, options: CreateSessionMenuItemOptions): WorkspaceMenuItem {
 	const isArchiving: boolean = options.archivingSessionId === session.id;
+	const isRunning: boolean = options.runningSessionIds.has(session.id);
 	const labels: WorkspaceTreeLabels = options.labels;
 	const actionMenu: MenuProps = {
 		items: [
@@ -133,18 +137,26 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 			<Dropdown menu={actionMenu} trigger={["contextMenu"]} placement="bottomLeft">
 				<span className={styles.sessionMenuItem}>
 					<span className={styles.sessionTitle}>{session.title}</span>
-					<Tooltip title={labels.archiveSession} placement="right">
-						<Button
-							type="text"
-							shape="circle"
-							size="small"
-							aria-label={labels.archiveSessionAria(session.title)}
-							className={styles.archiveButton}
-							icon={<Icon name="archive" />}
-							loading={isArchiving}
-							onClick={(event: MouseEvent<HTMLElement>): void => options.onArchiveButton(session, event)}
-						/>
-					</Tooltip>
+					{isRunning ? (
+						<Tooltip title={labels.assistantRunning} placement="right">
+							<span className={styles.sessionRunIndicator} aria-label={labels.assistantRunning}>
+								<Spin size="small" />
+							</span>
+						</Tooltip>
+					) : (
+						<Tooltip title={labels.archiveSession} placement="right">
+							<Button
+								type="text"
+								shape="circle"
+								size="small"
+								aria-label={labels.archiveSessionAria(session.title)}
+								className={styles.archiveButton}
+								icon={<Icon name="archive" />}
+								loading={isArchiving}
+								onClick={(event: MouseEvent<HTMLElement>): void => options.onArchiveButton(session, event)}
+							/>
+						</Tooltip>
+					)}
 				</span>
 			</Dropdown>
 		)
@@ -282,6 +294,7 @@ function WorkspaceTree({
 	initialSessions = [],
 	initialActiveWorkspaceId = null,
 	sessionUpdate = null,
+	runningSessionIds = [],
 	onWorkspaceSelect,
 	onSessionSelect,
 	onSessionArchive,
@@ -307,6 +320,7 @@ function WorkspaceTree({
 	const [renameDraftTitle, setRenameDraftTitle] = useState<string>("");
 	const [renameError, setRenameError] = useState<string | null>(null);
 	const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+	const runningSessionIdSet: ReadonlySet<string> = useMemo((): ReadonlySet<string> => new Set(runningSessionIds), [runningSessionIds]);
 	const labels: WorkspaceTreeLabels = useMemo((): WorkspaceTreeLabels => {
 		return {
 			archiveSession: t("workspaceTree.actions.archiveSession"),
@@ -334,6 +348,7 @@ function WorkspaceTree({
 			sessions: t("workspaceTree.groups.sessions"),
 			archiveSessionAria: (sessionTitle: string): string => t("workspaceTree.aria.archiveSession", { sessionTitle }),
 			newSessionInWorkspaceAria: (workspaceName: string): string => t("workspaceTree.aria.newSessionInWorkspace", { workspaceName }),
+			assistantRunning: t("workspaceTree.status.assistantRunning", { defaultValue: "Assistant is responding" }),
 			workspaceActionsAria: (workspaceName: string): string => t("workspaceTree.aria.workspaceActions", { workspaceName })
 		};
 	}, [t]);
@@ -610,6 +625,7 @@ function WorkspaceTree({
 	const workspaceMenuItems: WorkspaceMenuItems = useMemo((): WorkspaceMenuItems => {
 		return createWorkspaceMenuItems(workspaces, sessions, {
 			archivingSessionId,
+			runningSessionIds: runningSessionIdSet,
 			deletingWorkspaceId,
 			labels,
 			onWorkspaceFocus: handleWorkspaceFocus,
@@ -636,7 +652,7 @@ function WorkspaceTree({
 				setDeleteTargetWorkspace(workspace);
 			}
 		});
-	}, [archivingSessionId, deletingWorkspaceId, labels, sessions, workspaces]);
+	}, [archivingSessionId, deletingWorkspaceId, labels, runningSessionIdSet, sessions, workspaces]);
 	const effectiveSelectedMenuKeys: string[] = getSelectedMenuKeys(selectedSessionId, selectedWorkspaceId, selectedMenuKeys);
 
 	useEffect((): void => {

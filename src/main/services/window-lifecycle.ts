@@ -1,7 +1,6 @@
 import { app, BrowserWindow, ipcMain, Menu, nativeImage, Tray, type MenuItemConstructorOptions } from "electron";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import type { ClientPreferences } from "./client-preferences-store";
+import { APP_NAME, getAppIconImage } from "./app-identity";
 
 type ClientPreferencesReader = {
 	getCachedPreferences(): ClientPreferences;
@@ -57,15 +56,7 @@ function normalizeTrayRecentSessions(value: unknown): TrayRecentSession[] {
 }
 
 function getTrayIcon(): Electron.NativeImage {
-	const iconPath: string = app.isPackaged
-		? join(process.resourcesPath, "icon.ico")
-		: join(app.getAppPath(), "build/icon.ico");
-
-	if (existsSync(iconPath)) {
-		return nativeImage.createFromPath(iconPath);
-	}
-
-	return nativeImage.createFromDataURL(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(TRAY_ICON_SVG)}`);
+	return getAppIconImage() ?? nativeImage.createFromDataURL(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(TRAY_ICON_SVG)}`);
 }
 
 export class WindowLifecycleController {
@@ -86,6 +77,7 @@ export class WindowLifecycleController {
 
 	attachWindow(mainWindow: BrowserWindow): void {
 		this.mainWindow = mainWindow;
+		this.syncTrayWithPreferences();
 		mainWindow.on("close", (event): void => {
 			if (!shouldMinimizeToTrayOnClose(this.preferencesReader.getCachedPreferences(), this.isQuitting)) {
 				return;
@@ -106,13 +98,32 @@ export class WindowLifecycleController {
 		app.quit();
 	}
 
+	syncTrayWithPreferences(): void {
+		const mainWindow = this.mainWindow;
+		if (mainWindow !== null && this.preferencesReader.getCachedPreferences().minimizeToTrayOnClose) {
+			this.ensureTray(mainWindow);
+			return;
+		}
+
+		this.destroyTray();
+	}
+
+	private destroyTray(): void {
+		if (this.tray === null) {
+			return;
+		}
+
+		this.tray.destroy();
+		this.tray = null;
+	}
+
 	private ensureTray(mainWindow: BrowserWindow): void {
 		if (this.tray !== null) {
 			return;
 		}
 
 		this.tray = new Tray(getTrayIcon());
-		this.tray.setToolTip("Daedalus Studio");
+		this.tray.setToolTip(APP_NAME);
 		this.updateTrayMenu();
 		this.tray.on("click", (): void => this.showWindow(mainWindow));
 	}

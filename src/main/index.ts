@@ -1,5 +1,4 @@
 import { app, BrowserWindow, nativeTheme, shell, type BrowserWindowConstructorOptions } from "electron";
-import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { backendManager } from "./services/backend-manager";
 import { backendBootstrapService } from "./services/backend-bootstrap";
@@ -16,6 +15,7 @@ import { appUpdateService } from "./services/app-update";
 import { nativeNotificationService } from "./services/native-notifications";
 import { getWindowThemeColors, resolveWindowTheme, type WindowThemeColors } from "./services/window-theme";
 import type { ClientPreferences } from "./services/client-preferences";
+import { configureAppIdentity, getAppIconPath } from "./services/app-identity";
 
 backendManager.registerIpc();
 backendBootstrapService.registerIpc();
@@ -30,6 +30,8 @@ registerTerminalPtyIpc();
 appUpdateService.registerIpc();
 nativeNotificationService.registerIpc();
 
+configureAppIdentity();
+
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 windowLifecycleController.registerIpc();
 
@@ -38,11 +40,7 @@ function getWindowIconPath(): string | undefined {
 		return undefined;
 	}
 
-	const iconPath: string = app.isPackaged
-		? join(process.resourcesPath, "icon.ico")
-		: join(app.getAppPath(), "build/icon.ico");
-
-	return existsSync(iconPath) ? iconPath : undefined;
+	return getAppIconPath() ?? undefined;
 }
 
 function getCurrentWindowThemeColors(preferences: ClientPreferences): WindowThemeColors {
@@ -146,13 +144,10 @@ function createWindow(): void {
 }
 
 app.whenReady().then(async () => {
-	if (process.platform === "win32") {
-		app.setAppUserModelId("com.luyingyilong.daedalus-studio");
-	}
-
 	const preferences: ClientPreferences = await clientPreferencesService.load();
 	clientPreferencesService.onDidChange((): void => {
 		applyWindowThemeToAllWindows();
+		windowLifecycleController.syncTrayWithPreferences();
 	});
 	nativeTheme.on("updated", (): void => {
 		applyWindowThemeToAllWindows();
