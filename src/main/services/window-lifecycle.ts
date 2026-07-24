@@ -1,4 +1,6 @@
 import { app, BrowserWindow, ipcMain, Menu, nativeImage, Tray, type MenuItemConstructorOptions } from "electron";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { ClientPreferences } from "./client-preferences-store";
 
 type ClientPreferencesReader = {
@@ -54,6 +56,18 @@ function normalizeTrayRecentSessions(value: unknown): TrayRecentSession[] {
 	return sessions;
 }
 
+function getTrayIcon(): Electron.NativeImage {
+	const iconPath: string = app.isPackaged
+		? join(process.resourcesPath, "icon.ico")
+		: join(app.getAppPath(), "build/icon.ico");
+
+	if (existsSync(iconPath)) {
+		return nativeImage.createFromPath(iconPath);
+	}
+
+	return nativeImage.createFromDataURL(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(TRAY_ICON_SVG)}`);
+}
+
 export class WindowLifecycleController {
 	private tray: Tray | null = null;
 	private isQuitting: boolean = false;
@@ -97,8 +111,7 @@ export class WindowLifecycleController {
 			return;
 		}
 
-		const icon = nativeImage.createFromDataURL(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(TRAY_ICON_SVG)}`);
-		this.tray = new Tray(icon);
+		this.tray = new Tray(getTrayIcon());
 		this.tray.setToolTip("Daedalus Studio");
 		this.updateTrayMenu();
 		this.tray.on("click", (): void => this.showWindow(mainWindow));
