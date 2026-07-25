@@ -471,6 +471,7 @@
       "defaultModel": "默认模型",
       "general": "通用",
       "search": "搜索",
+      "statistics": "统计",
       "personalization": "个性化",
       "mcpServers": "MCP 服务器",
       "skills": "技能",
@@ -723,6 +724,48 @@
       "errors": {
         "load": "加载网页搜索设置失败",
         "save": "保存网页搜索设置失败"
+      }
+    },
+    "statistics": {
+      "title": "统计",
+      "actions": {
+        "refresh": "刷新"
+      },
+      "range": {
+        "last7Days": "近 7 天",
+        "last30Days": "近 30 天",
+        "last90Days": "近 90 天",
+        "all": "全部时间"
+      },
+      "metrics": {
+        "requests": "LLM 请求",
+        "successRate": "成功率",
+        "tokens": "Token 用量",
+        "tokensSuffix": "tokens",
+        "cacheHitRate": "缓存命中率",
+        "avgDuration": "平均耗时",
+        "avgFirstToken": "首 token 平均耗时",
+        "tokenActivity": "Token 活动"
+      },
+      "charts": {
+        "requestsTrend": "请求趋势",
+        "tokensTrend": "Token 趋势",
+        "providerShare": "Provider token 占比",
+        "modelTokens": "模型 token 用量"
+      },
+      "empty": {
+        "noUsage": "暂无用量数据"
+      },
+      "unavailable": {
+        "title": "用量统计不可用",
+        "description": "后端无法打开用量统计数据库。"
+      },
+      "errors": {
+        "load": "加载统计失败"
+      },
+      "heatmap": {
+        "title": "Token 活动",
+        "tooltip": "{{date}}：{{tokens}} tokens"
       }
     },
     "skills": {

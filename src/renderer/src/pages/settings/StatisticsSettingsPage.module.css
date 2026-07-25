@@ -1,0 +1,188 @@
+.page {
+	display: grid;
+	align-content: start;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	max-height: 100%;
+	overflow-x: hidden;
+	overflow-y: auto;
+	scrollbar-gutter: auto;
+	user-select: none;
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ds-space-2);
+	padding: var(--ds-space-2) var(--ds-space-2) 0 var(--ds-space-2);
+}
+
+.titleBlock {
+	display: grid;
+	gap: 4px;
+	min-width: 0;
+}
+
+.title {
+	margin: 0 !important;
+}
+
+.subtitle {
+	max-width: 720px;
+}
+
+.actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex: 0 0 auto;
+}
+
+.actions :global(.ant-segmented) {
+	max-width: 100%;
+}
+
+.content {
+	display: grid;
+	align-content: start;
+	gap: var(--ds-space-2);
+	min-width: 0;
+	min-height: 0;
+	padding: var(--ds-space-2);
+}
+
+.loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 220px;
+}
+
+.metricGrid {
+	display: grid;
+	grid-template-columns: repeat(5, minmax(0, 1fr) auto);
+	gap: var(--ds-space-2);
+	border: 1px solid var(--ds-border);
+	background: var(--ds-surface);
+	border-radius: var(--ds-space-2);
+	padding: var(--ds-space-2);
+}
+
+.divider {
+	height: 100%;
+}
+
+.metricCard :global(.ant-statistic-title) {
+	margin-bottom: 6px;
+}
+
+.heatmapCard {
+	min-width: 0;
+}
+
+.heatmapScroller {
+	width: 100%;
+	min-width: 0;
+	overflow-x: auto;
+	padding-bottom: 4px;
+}
+
+.heatmapGrid {
+	display: grid;
+	grid-auto-flow: column;
+	grid-template-rows: repeat(7, 12px);
+	grid-auto-columns: 12px;
+	gap: 4px;
+	width: max-content;
+	min-width: 100%;
+	align-items: center;
+}
+
+.heatmapCell {
+	display: block;
+	width: 12px;
+	height: 12px;
+	border: 1px solid color-mix(in srgb, var(--ds-border) 80%, transparent);
+	border-radius: 3px;
+	background: color-mix(in srgb, var(--ds-text-secondary) 8%, transparent);
+}
+
+.heatmapCell[data-level="1"] {
+	background: color-mix(in srgb, #39d353 24%, var(--ds-surface));
+	border-color: color-mix(in srgb, #39d353 34%, var(--ds-border));
+}
+
+.heatmapCell[data-level="2"] {
+	background: color-mix(in srgb, #39d353 46%, var(--ds-surface));
+	border-color: color-mix(in srgb, #39d353 56%, var(--ds-border));
+}
+
+.heatmapCell[data-level="3"] {
+	background: color-mix(in srgb, #26a641 74%, var(--ds-surface));
+	border-color: color-mix(in srgb, #26a641 82%, var(--ds-border));
+}
+
+.heatmapCell[data-level="4"] {
+	background: #216e39;
+	border-color: #216e39;
+}
+
+.heatmapLegend {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 5px;
+	margin-top: 10px;
+}
+
+.chartGrid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--ds-space-2);
+	min-width: 0;
+}
+
+.chartCard {
+	min-width: 0;
+}
+
+.chartBody {
+	min-width: 0;
+	height: 280px;
+}
+
+.emptyChart {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	min-height: 220px;
+}
+
+@media (max-width: 1180px) {
+	.metricGrid,
+	.chartGrid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 760px) {
+	.header {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.actions {
+		justify-content: flex-start;
+	}
+
+	.metricGrid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.chartGrid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

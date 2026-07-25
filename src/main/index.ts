@@ -95,7 +95,7 @@ function applyWindowThemeToAllWindows(): void {
 function createWindow(): void {
 	const colors: WindowThemeColors = getCurrentWindowThemeColors(clientPreferencesService.getCachedPreferences());
 	const mainWindow: BrowserWindow = new BrowserWindow({
-		width: 1200,
+		width: 1300,
 		height: 760,
 		minWidth: 900,
 		minHeight: 620,

@@ -20,5 +20,5 @@
 	margin: 0 var(--ds-space-1) var(--ds-space-1) 0;
 	overflow: hidden;
 	background: var(--ds-bg);
-	border-radius: var(--ds-space-1);
+	border-radius: var(--ds-space-2);
 }

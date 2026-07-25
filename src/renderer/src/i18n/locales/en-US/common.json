@@ -471,6 +471,7 @@
       "defaultModel": "Default model",
       "general": "General",
       "search": "Search",
+      "statistics": "Statistics",
       "personalization": "Personalization",
       "mcpServers": "MCP Servers",
       "skills": "Skills",
@@ -723,6 +724,48 @@
       "errors": {
         "load": "Failed to load web search settings",
         "save": "Failed to save web search settings"
+      }
+    },
+    "statistics": {
+      "title": "Statistics",
+      "actions": {
+        "refresh": "Refresh"
+      },
+      "range": {
+        "last7Days": "Last 7 days",
+        "last30Days": "Last 30 days",
+        "last90Days": "Last 90 days",
+        "all": "All time"
+      },
+      "metrics": {
+        "requests": "LLM requests",
+        "successRate": "Success rate",
+        "tokens": "Tokens",
+        "tokensSuffix": "tokens",
+        "cacheHitRate": "Cache hit rate",
+        "avgDuration": "Avg. duration",
+        "avgFirstToken": "Avg. first token",
+        "tokenActivity": "Token activity"
+      },
+      "charts": {
+        "requestsTrend": "Request trend",
+        "tokensTrend": "Token trend",
+        "providerShare": "Provider token share",
+        "modelTokens": "Model token usage"
+      },
+      "empty": {
+        "noUsage": "No usage data yet"
+      },
+      "unavailable": {
+        "title": "Usage metrics are unavailable",
+        "description": "The backend usage metrics database could not be opened."
+      },
+      "errors": {
+        "load": "Failed to load statistics"
+      },
+      "heatmap": {
+        "title": "Token activity",
+        "tooltip": "{{date}}: {{tokens}} tokens"
       }
     },
     "skills": {

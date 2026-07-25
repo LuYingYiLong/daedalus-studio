@@ -12,6 +12,7 @@ import McpServersSettingsPage from "./McpServersSettingsPage";
 import SkillsSettingsPage from "./SkillsSettingsPage";
 import GeneralSettingsPage from "./GeneralSettingsPage";
 import SearchSettingsPage from "./SearchSettingsPage";
+import StatisticsSettingsPage from "./StatisticsSettingsPage";
 import type { ClientPreferences } from "@/api/client-preferences-api";
 import type { GeneralSettings } from "@/api/general-settings-api";
 import AboutSettingsPage from "./AboutSettingsPage";
@@ -22,6 +23,7 @@ export type SettingsPageKey =
 	| "default_model"
 	| "general"
 	| "search"
+	| "statistics"
 	| "personalization"
 	| "mcp_servers"
 	| "skills"
@@ -63,6 +65,11 @@ const menuItemConfigs: SettingsMenuItemConfig[] = [
 		key: "search",
 		labelKey: "settings.menu.search",
 		icon: <Icon name="search" />,
+	},
+	{
+		key: "statistics",
+		labelKey: "settings.menu.statistics",
+		icon: <Icon name="statistics" />,
 	},
 	{
 		key: "personalization",
@@ -149,6 +156,8 @@ function SettingsPage({
 					/>
 				) : activePage === "search" ? (
 					<SearchSettingsPage />
+				) : activePage === "statistics" ? (
+					<StatisticsSettingsPage />
 				) : activePage === "personalization" ? (
 					<PersonalizationSettingsPage />
 				) : activePage === "mcp_servers" ? (
