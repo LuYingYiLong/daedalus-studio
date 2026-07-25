@@ -1,10 +1,10 @@
 {
   "name": "daedalus-studio",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Standalone workbench for AI-assisted Godot development",
   "license": "GPL-3.0-only",
   "author": "LuYingYiLong",
-  "backendBootstrapVersion": "1.1.2",
+  "backendBootstrapVersion": "1.1.3",
   "main": "out/main/index.js",
   "config": {
     "electron_mirror": "https://npmmirror.com/mirrors/electron/"
