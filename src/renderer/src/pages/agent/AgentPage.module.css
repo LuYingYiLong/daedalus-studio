@@ -54,6 +54,9 @@
 }
 
 .chatPanel {
+	--agent-chat-content-width: 880px;
+	--agent-chat-side-padding: 8px;
+
 	position: relative;
 	display: grid;
 	grid-template-rows: auto auto minmax(0, 1fr) auto;
@@ -445,9 +448,10 @@
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
 	gap: 0;
-	width: min(100%, 880px);
+	box-sizing: border-box;
+	width: min(100%, calc(var(--agent-chat-content-width) + var(--agent-chat-side-padding) * 2));
 	justify-self: center;
-	padding: 8px;
+	padding: 0px 0px var(--agent-chat-side-padding) 0px;
 }
 
 .scrollToBottomButton {

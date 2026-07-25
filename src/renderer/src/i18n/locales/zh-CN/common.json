@@ -766,6 +766,10 @@
       "heatmap": {
         "title": "Token 活动",
         "tooltip": "{{date}}：{{tokens}} tokens"
+      },
+      "cacheSegments": {
+        "hit": "缓存命中 token",
+        "miss": "未命中 token"
       }
     },
     "skills": {

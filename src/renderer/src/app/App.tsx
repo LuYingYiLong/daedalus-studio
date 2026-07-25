@@ -76,8 +76,20 @@ const SUPPORTED_IMAGE_MIME_TYPES: readonly SupportedImageMimeType[] = ["image/pn
 const MAX_IMAGE_ATTACHMENT_BYTES: number = 1024 * 1024;
 const RECENT_CONTEXT_FILE_WINDOW_MS: number = 2000;
 const CONTEXT_SUBTITLE_MAX_CHARS: number = 400;
+const COMPOSER_TEXT_SYNC_DEBOUNCE_MS: number = 320;
 const PLAN_CLARIFICATION_SKIP_REPLY: string = "Continue with the current assumptions.";
 const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
+
+type PendingComposerTextSync =
+	| {
+		scope: "home";
+		text: string;
+	}
+	| {
+		scope: "session";
+		sessionId: string;
+		text: string;
+	};
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -548,6 +560,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const cancelledChatRequestIdsRef = useRef<Set<string>>(new Set());
 	const submittedComposerTextRef = useRef<{ requestId: string; text: string } | null>(null);
 	const loadingComposerDraftRef = useRef<{ sessionId: string; text: string } | null>(null);
+	const pendingComposerTextSyncRef = useRef<PendingComposerTextSync | null>(null);
+	const composerTextSyncTimerRef = useRef<number | null>(null);
 	const slashCommandsLoadingRef = useRef<boolean>(false);
 	const skillsLoadingRef = useRef<boolean>(false);
 	const slashCommandsRetryAtRef = useRef<number>(0);
@@ -580,7 +594,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	useEffect((): (() => void) => {
 		const removeNewChatListener: () => void = window.electronAPI.tray.onNewChat((): void => {
 			setActivePage("agent");
-			handleNewSession();
+			void handleNewSession();
 		});
 		const removeOpenSessionListener: () => void = window.electronAPI.tray.onOpenSession((sessionId: string): void => {
 			void (async (): Promise<void> => {
@@ -858,9 +872,74 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const {
 		takePendingWorkbenchPatch,
 		sendWorkbenchPatch,
-		sendPendingWorkbenchPatch,
 		queueWorkbenchPatch
 	} = useWorkbenchPatchQueue(applyWorkbench);
+
+	function clearComposerTextSyncTimer(): void {
+		if (composerTextSyncTimerRef.current !== null) {
+			window.clearTimeout(composerTextSyncTimerRef.current);
+			composerTextSyncTimerRef.current = null;
+		}
+	}
+
+	function discardPendingComposerTextSync(): void {
+		clearComposerTextSyncTimer();
+		pendingComposerTextSyncRef.current = null;
+	}
+
+	function flushPendingComposerTextSync(): void {
+		clearComposerTextSyncTimer();
+		const pendingTextSync: PendingComposerTextSync | null = pendingComposerTextSyncRef.current;
+		pendingComposerTextSyncRef.current = null;
+		if (pendingTextSync === null) {
+			return;
+		}
+
+		if (pendingTextSync.scope === "home") {
+			if (activeSessionIdRef.current !== null) {
+				return;
+			}
+			setHomeDraft((currentDraft: HomeDraft): HomeDraft => {
+				return currentDraft.message === pendingTextSync.text
+					? currentDraft
+					: {
+						...currentDraft,
+						message: pendingTextSync.text
+					};
+			});
+			return;
+		}
+
+		if (activeSessionIdRef.current !== pendingTextSync.sessionId) {
+			return;
+		}
+
+		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+			if (currentWorkbench === null || currentWorkbench.composer.text === pendingTextSync.text) {
+				return currentWorkbench;
+			}
+
+			return {
+				...currentWorkbench,
+				composer: {
+					...currentWorkbench.composer,
+					text: pendingTextSync.text
+				}
+			};
+		});
+		queueWorkbenchPatch({ composer: { text: pendingTextSync.text } });
+	}
+
+	function takePendingWorkbenchPatchWithComposerText(): WorkbenchPatch {
+		flushPendingComposerTextSync();
+		return takePendingWorkbenchPatch();
+	}
+
+	useEffect((): (() => void) => {
+		return (): void => {
+			clearComposerTextSyncTimer();
+		};
+	}, []);
 
 	function applyOptimisticActiveRun(requestId: string, clearComposerText: boolean, clearComposerContext: boolean = false, preserveWorkflowTodo: boolean = false): void {
 		const startedAt: string = new Date().toISOString();
@@ -1110,9 +1189,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		await handleNewWorkspaceSession(workspace);
 	}
 
-	function handleNewSession(): void {
+	async function handleNewSession(): Promise<void> {
 		navigationVersionRef.current += 1;
-		takePendingWorkbenchPatch();
+		await persistPendingWorkbenchPatchBeforeNavigation();
 		submittedComposerTextRef.current = null;
 		loadingComposerDraftRef.current = null;
 		setIsNewSessionHome(true);
@@ -1135,7 +1214,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	async function handleNewWorkspaceSession(workspace: WorkspaceConfig): Promise<void> {
 		const navigationVersion: number = navigationVersionRef.current + 1;
 		navigationVersionRef.current = navigationVersion;
-		takePendingWorkbenchPatch();
+		await persistPendingWorkbenchPatchBeforeNavigation();
 		submittedComposerTextRef.current = null;
 		loadingComposerDraftRef.current = null;
 		setIsNewSessionHome(true);
@@ -1281,6 +1360,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	async function handleSessionSelect(session: SessionMetadata): Promise<void> {
 		const navigationVersion: number = navigationVersionRef.current + 1;
 		navigationVersionRef.current = navigationVersion;
+		await persistPendingWorkbenchPatchBeforeNavigation();
 		loadingComposerDraftRef.current = null;
 		const sessionId: string = session.id;
 		console.info("[App] session selected", { sessionId });
@@ -1350,6 +1430,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	function resetToNewSessionHome(): void {
 		navigationVersionRef.current += 1;
+		discardPendingComposerTextSync();
+		takePendingWorkbenchPatch();
 		loadingComposerDraftRef.current = null;
 		activeSessionIdRef.current = null;
 		setActiveSessionId(null);
@@ -1698,28 +1780,35 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			loadingComposerDraftRef.current = nextText.length === 0
 				? null
 				: { sessionId: activeSessionIdRef.current, text: nextText };
+			pendingComposerTextSyncRef.current = {
+				scope: "session",
+				sessionId: activeSessionIdRef.current,
+				text: nextText
+			};
+		} else {
+			pendingComposerTextSyncRef.current = {
+				scope: "home",
+				text: nextText
+			};
 		}
 
-		if (isNewSessionHome) {
-			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
-				...currentDraft,
-				message: nextText
-			}));
+		clearComposerTextSyncTimer();
+		composerTextSyncTimerRef.current = window.setTimeout((): void => {
+			flushPendingComposerTextSync();
+		}, COMPOSER_TEXT_SYNC_DEBOUNCE_MS);
+	}
+
+	async function persistPendingWorkbenchPatchBeforeNavigation(): Promise<void> {
+		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatchWithComposerText();
+		if (Object.keys(pendingPatch).length === 0) {
 			return;
 		}
 
-		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
-			return currentWorkbench === null
-				? currentWorkbench
-				: {
-					...currentWorkbench,
-					composer: {
-						...currentWorkbench.composer,
-						text: nextText
-					}
-				};
-		});
-		queueWorkbenchPatch({ composer: { text: nextText } });
+		try {
+			await sendWorkbenchPatch(pendingPatch, false);
+		} catch (error: unknown) {
+			console.warn("[App] persist pending workbench patch before navigation failed", error);
+		}
 	}
 
 	async function handleHomeComposerSubmit(nextMessage: string): Promise<void> {
@@ -1862,7 +1951,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
 		const chatMode: ChatMode = getChatMode(workbench);
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatch(), {
+		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatchWithComposerText(), {
 			additionalContextAction: { action: "set", items: [] }
 		});
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
@@ -1948,7 +2037,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const previousWorkbench: WorkbenchSnapshot = workbench;
 		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatch(), {
+		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatchWithComposerText(), {
 			composer: { text: "" },
 			additionalContextAction: { action: "set", items: [] }
 		});
@@ -2002,7 +2091,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 
 		const previousWorkbench: WorkbenchSnapshot = workbench;
-		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatch(), {
+		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatchWithComposerText(), {
 			composer: { text: "" }
 		});
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
@@ -2061,7 +2150,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 		const previousWorkbench: WorkbenchSnapshot = workbench;
 		const additionalContext: AdditionalContextItem[] = item.additionalContext ?? [];
-		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatch(), {
+		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatchWithComposerText(), {
 			composer: {
 				text: item.text,
 				additionalContext
@@ -2188,7 +2277,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const requestId: string = createChatRequestId();
 		const chatMode: ChatMode = getChatMode(workbench);
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
+		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatchWithComposerText();
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
 
 		try {
@@ -2414,6 +2503,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}, [activeSessionId, timelinePage.blockOffset, timelinePage.blocks.length, timelinePage.hasMoreAfter]);
 
 	function patchContext(action: NonNullable<WorkbenchPatch["additionalContextAction"]>): void {
+		flushPendingComposerTextSync();
 		queueWorkbenchPatch({ additionalContextAction: action }, true);
 	}
 

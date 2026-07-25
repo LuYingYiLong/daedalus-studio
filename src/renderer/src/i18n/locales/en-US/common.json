@@ -766,6 +766,10 @@
       "heatmap": {
         "title": "Token activity",
         "tooltip": "{{date}}: {{tokens}} tokens"
+      },
+      "cacheSegments": {
+        "hit": "Cache hit tokens",
+        "miss": "Non-cache tokens"
       }
     },
     "skills": {

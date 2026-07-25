@@ -53,6 +53,12 @@
 	padding: var(--ds-space-2);
 }
 
+.content::after {
+	content: "";
+	display: block;
+	height: 0.1px;
+}
+
 .loading {
 	display: flex;
 	align-items: center;

@@ -2,12 +2,12 @@
 	min-height: 0;
 	overflow-x: hidden;
 	overflow-y: auto;
-	padding: 8px;
+	padding: var(--agent-chat-side-padding, 8px);
 	scrollbar-gutter: stable;
 }
 
 .messageListContent {
-	width: min(100%, 880px);
+	width: min(100%, var(--agent-chat-content-width, 880px));
 	min-width: 0;
 	margin: 0 auto;
 }

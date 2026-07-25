@@ -524,7 +524,7 @@ function Composer({
 		}
 
 		refreshCompletion(draftMessage, nativeTextArea.selectionStart);
-	}, [draftMessage, slashCommands, skills]);
+	}, [slashCommands, skills]);
 
 	useEffect((): void => {
 		const nativeTextArea: HTMLTextAreaElement | null = getNativeTextArea(textAreaRef.current);

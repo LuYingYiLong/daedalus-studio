@@ -23,6 +23,14 @@ type DistributionRow = {
 	value: number;
 };
 
+type ModelTokenSegmentRow = {
+	key: string;
+	label: string;
+	segment: string;
+	value: number;
+	tokens: number;
+};
+
 type TokenHeatmapCell = {
 	key: string;
 	dateLabel: string;
@@ -113,6 +121,34 @@ function toTopGroupRows(groups: UsageMetricsGroupSummary[], limit: number): Dist
 			label: group.key || "unknown",
 			value: group.realTotalTokens
 		}));
+}
+
+function toModelTokenSegmentRows(groups: UsageMetricsGroupSummary[], limit: number, labels: { hit: string; miss: string }): ModelTokenSegmentRow[] {
+	return groups
+		.filter((group: UsageMetricsGroupSummary): boolean => group.realTotalTokens > 0)
+		.slice(0, limit)
+		.flatMap((group: UsageMetricsGroupSummary): ModelTokenSegmentRow[] => {
+			const modelLabel: string = group.key || "unknown";
+			const hitTokens: number = Math.max(0, group.cacheReadTokens);
+			const missTokens: number = Math.max(0, group.realTotalTokens - hitTokens);
+			const totalTokens: number = Math.max(1, hitTokens + missTokens);
+			return [
+				{
+					key: `${modelLabel}:miss`,
+					label: modelLabel,
+					segment: labels.miss,
+					value: missTokens / totalTokens,
+					tokens: missTokens
+				},
+				{
+					key: `${modelLabel}:hit`,
+					label: modelLabel,
+					segment: labels.hit,
+					value: hitTokens / totalTokens,
+					tokens: hitTokens
+				}
+			];
+		});
 }
 
 function toDateKey(date: Date): string {
@@ -212,9 +248,12 @@ function StatisticsSettingsPage(): React.JSX.Element {
 	const providerRows: DistributionRow[] = useMemo((): DistributionRow[] => {
 		return toTopGroupRows(summary?.byProvider ?? [], 8);
 	}, [summary?.byProvider]);
-	const modelRows: DistributionRow[] = useMemo((): DistributionRow[] => {
-		return toTopGroupRows(summary?.byModel ?? [], 10);
-	}, [summary?.byModel]);
+	const modelRows: ModelTokenSegmentRow[] = useMemo((): ModelTokenSegmentRow[] => {
+		return toModelTokenSegmentRows(summary?.byModel ?? [], 10, {
+			hit: t("settings.statistics.cacheSegments.hit"),
+			miss: t("settings.statistics.cacheSegments.miss")
+		});
+	}, [summary?.byModel, t]);
 	const requestTrendData = useMemo((): Array<{ bucket: string; requests: number }> => {
 		return (data?.trends ?? []).map((point: UsageMetricsTrendPoint) => ({
 			bucket: formatBucket(point.bucket),
@@ -381,8 +420,20 @@ function StatisticsSettingsPage(): React.JSX.Element {
 											yField="value"
 											height={260}
 											autoFit
-											colorField="label"
-											axis={{ x: { labelAutoRotate: true } }}
+											colorField="segment"
+											stack
+											axis={{
+												x: { labelAutoRotate: true },
+												y: { labelFormatter: ".0%" }
+											}}
+											tooltip={{
+												items: [
+													(d: ModelTokenSegmentRow): { name: string; value: string } => ({
+														name: d.segment,
+														value: `${formatPercent(d.value)} / ${formatInteger(d.tokens)} ${t("settings.statistics.metrics.tokensSuffix")}`
+													})
+												]
+											}}
 										/>
 									) : <ChartEmpty description={t("settings.statistics.empty.noUsage")} />}
 								</div>
