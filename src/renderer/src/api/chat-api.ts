@@ -16,6 +16,8 @@ export type SendChatMessageParams = {
 
 export type CancelChatMessageResult = {
 	cancelled: boolean;
+	cancellationRequested?: boolean;
+	alreadyFinished?: boolean;
 	requestId: string;
 };
 

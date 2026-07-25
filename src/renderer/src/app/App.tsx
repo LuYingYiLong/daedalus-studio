@@ -2332,7 +2332,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		if (cancellationRequestId === null) {
 			return;
 		}
-		if (runState.status === "cancelling") {
+		if (runState.status === "cancelling" || cancelledChatRequestIdsRef.current.has(cancellationRequestId)) {
 			return;
 		}
 
@@ -2348,7 +2348,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		try {
 			activeChatRequestIdRef.current = cancellationRequestId;
 			const result = await cancelChatMessage(cancellationRequestId);
-			if (!result.cancelled && !wasCreatingSession) {
+			if (!result.cancelled && !result.alreadyFinished && !wasCreatingSession) {
 				throw new Error("The backend did not accept the cancellation request.");
 			}
 		} catch (error: unknown) {
