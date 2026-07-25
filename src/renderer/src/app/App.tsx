@@ -3,16 +3,17 @@ import { useLatest } from "ahooks";
 import { Input, message as antdMessage, Modal, Typography } from "antd";
 import { useDiskSpaceCheck } from "@/shared/hooks/useDiskSpaceCheck";
 import useNativeTaskNotifications from "./hooks/useNativeTaskNotifications";
+import useBackendEventStream from "./hooks/useBackendEventStream";
+import useTimelineStreamBuffer from "./hooks/useTimelineStreamBuffer";
 import useWorkbenchPatchQueue, { mergeWorkbenchPatch } from "./hooks/useWorkbenchPatchQueue";
 import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
-import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, PlanRecommendedReply, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import { checkSessionIntegrity, createSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/chat/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import type { ProviderModelSelectionProvider } from "@/api/provider-api";
-import { createBackendClient } from "@/shared/api/transport/backend-client";
-import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
+import { getPlanApprovalFromResult, normalizePlanClarification } from "./backend-event-state";
 import { cancelChatMessage, continueToolBudget, sendChatMessage, stopToolBudget, type ChatMode } from "@/api/chat-api";
 import { fetchSlashCommands, type SlashCommandDefinition } from "@/api/command-api";
 import { fetchSkills, type SkillSummary } from "@/api/skill-api";
@@ -26,18 +27,15 @@ import {
 } from "@/api/approval-api";
 import {
 	applyBackendEventToTimeline,
-	applyBackendEventsToTimeline,
 	applyWorkbenchSnapshot,
 	createTimelinePageFromOpenResult,
 	createTimelinePageFromTimelineResult,
 	emptyTimelinePage,
-	isTimelineStreamingDeltaEvent,
 	mergeTimelineAfter,
 	mergeTimelineBefore,
 	type TimelinePageState
 } from "@/features/workbench/workbench-state";
 import {
-	applyRunStateFromBackendEvent,
 	applyRunStateFromWorkbench,
 	createIdleRunState,
 	createOptimisticRunState,
@@ -55,7 +53,7 @@ import SettingsPage, { type SettingsPageKey } from "@/pages/settings/SettingsPag
 import DrawingPage from "@/pages/drawing/DrawingPage";
 import KnowledgePage from "@/pages/knowledge/KnowledgePage";
 import { extractEnabledSkillRefs, type ComposerCompletionTrigger } from "@/features/composer/composer-completion";
-import { createWorkflowTodoSnapshotFromPlanData, getWorkflowTodoSnapshotKey, isWorkflowTodoActive, isWorkflowTodoClearEvent, markWorkflowTodoCompleted, markWorkflowTodoExecuting, markWorkflowTodoFailed, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
+import { createWorkflowTodoSnapshotFromPlanData, getWorkflowTodoSnapshotKey, isWorkflowTodoActive, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
 import { saveImageAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
 import { DEFAULT_CLIENT_PREFERENCES, fetchClientPreferences, updateClientPreferences, type ClientPreferences } from "@/api/client-preferences-api";
 import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
@@ -80,8 +78,6 @@ const RECENT_CONTEXT_FILE_WINDOW_MS: number = 2000;
 const CONTEXT_SUBTITLE_MAX_CHARS: number = 400;
 const PLAN_CLARIFICATION_SKIP_REPLY: string = "Continue with the current assumptions.";
 const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
-const TIMELINE_STREAM_BATCH_MS: number = 50;
-
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -96,127 +92,6 @@ function createPlanApprovalKey(plan: PlanApprovalState): string {
 
 function isBackendRpcErrorMessage(message: string): boolean {
 	return /^[a-z][a-z0-9_]*: /u.test(message);
-}
-
-function getStringField(record: Record<string, unknown>, key: string): string {
-	const value: unknown = record[key];
-	return typeof value === "string" ? value : "";
-}
-
-function parsePlanRecommendedReplies(value: unknown): PlanRecommendedReply[] {
-	if (!Array.isArray(value)) {
-		return [];
-	}
-
-	const replies: PlanRecommendedReply[] = [];
-	for (const item of value.slice(0, 3)) {
-		if (!isRecord(item)) {
-			continue;
-		}
-
-		const label: string = getStringField(item, "label").trim();
-		const text: string = getStringField(item, "text").trim();
-		const description: string = getStringField(item, "description").trim();
-		if (label.length === 0 || text.length === 0) {
-			continue;
-		}
-
-		replies.push({
-			label,
-			text,
-			description: description.length > 0 ? description : undefined
-		});
-	}
-	return replies;
-}
-
-function normalizePlanClarification(value: unknown): PlanClarificationState | null {
-	if (!isRecord(value)) {
-		return null;
-	}
-
-	const planId: string = getStringField(value, "planId").trim();
-	const question: string = getStringField(value, "question").trim();
-	if (planId.length === 0 || question.length === 0) {
-		return null;
-	}
-
-	const title: string = getStringField(value, "title").trim();
-	const requestId: string = getStringField(value, "requestId").trim();
-	return {
-		planId,
-		requestId: requestId.length > 0 ? requestId : planId,
-		title: title.length > 0 ? title : "Plan clarification",
-		question,
-		recommendedReplies: parsePlanRecommendedReplies(value.recommendedReplies)
-	};
-}
-
-function getPlanClarificationFromEvent(event: BackendEvent): PlanClarificationState | null {
-	if (event.event !== "plan.clarification.required") {
-		return null;
-	}
-
-	return normalizePlanClarification(event.data);
-}
-
-function normalizePlanApproval(value: unknown): PlanApprovalState | null {
-	if (!isRecord(value)) {
-		return null;
-	}
-
-	const planId: string = getStringField(value, "planId").trim();
-	const status: string = getStringField(value, "status").trim();
-	const previewMarkdown: string = getStringField(value, "previewMarkdown").trim();
-	if (planId.length === 0 || status !== "ready") {
-		return null;
-	}
-
-	const title: string = getStringField(value, "title").trim();
-	const requestId: string = getStringField(value, "requestId").trim();
-	return {
-		planId,
-		requestId: requestId.length > 0 ? requestId : planId,
-		title: title.length > 0 ? title : "Plan",
-		status,
-		previewMarkdown,
-		updatedAt: getStringField(value, "updatedAt").trim()
-	};
-}
-
-function getPlanApprovalFromEvent(event: BackendEvent): PlanApprovalState | null {
-	if (event.event !== "plan.generated" && event.event !== "plan.revised") {
-		return null;
-	}
-
-	return normalizePlanApproval(event.data);
-}
-
-function getPlanApprovalFromResult(result: PlanResult): PlanApprovalState | null {
-	return normalizePlanApproval(result);
-}
-
-function getPlanIdFromEvent(event: BackendEvent): string {
-	return isRecord(event.data) ? getStringField(event.data, "planId").trim() : "";
-}
-
-function shouldClearPlanClarificationForEvent(event: BackendEvent, clarification: PlanClarificationState | null): boolean {
-	if (clarification === null || !isRecord(event.data)) {
-		return false;
-	}
-
-	if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.approved" || event.event === "plan.execution.started" || event.event === "plan.error") {
-		const planId: string = getStringField(event.data, "planId").trim();
-		return planId.length === 0 || planId === clarification.planId;
-	}
-
-	if (event.event === "agent.run.error") {
-		const planId: string = getStringField(event.data, "planId").trim();
-		const requestId: string = getStringField(event.data, "requestId").trim();
-		return planId === clarification.planId || requestId === clarification.requestId;
-	}
-
-	return false;
 }
 
 function createContextId(): string {
@@ -363,71 +238,6 @@ function readImageDimensions(dataUrl: string): Promise<{ width?: number; height?
 		};
 		image.src = dataUrl;
 	});
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function getBackendEventSessionId(event: BackendEvent): string | null {
-	if (!isRecord(event.data)) {
-		return null;
-	}
-
-	return typeof event.data.sessionId === "string" ? event.data.sessionId : null;
-}
-
-function isSessionScopedBackendEvent(event: BackendEvent): boolean {
-	return event.event.startsWith("agent.")
-		|| event.event.startsWith("ai.")
-		|| event.event.startsWith("tool.")
-		|| event.event.startsWith("terminal.")
-		|| event.event.startsWith("workflow.")
-		|| event.event.startsWith("plan.")
-		|| event.event.startsWith("guide.")
-		|| event.event === "session.workbench.updated"
-		|| event.event === "session.renamed"
-		|| event.event === "message.queue.updated";
-}
-
-function getBackendEventSessionMetadata(event: BackendEvent): SessionMetadata | null {
-	if (!isRecord(event.data) || !isRecord(event.data.metadata)) {
-		return null;
-	}
-
-	const metadata: Record<string, unknown> = event.data.metadata;
-	return typeof metadata.id === "string" && typeof metadata.title === "string"
-		? metadata as SessionMetadata
-		: null;
-}
-
-function getWorkbenchFromEvent(event: BackendEvent): WorkbenchSnapshot | null {
-	if (event.event !== "session.workbench.updated" || !isRecord(event.data)) {
-		return null;
-	}
-
-	const workbench: unknown = event.data.workbench;
-	if (!isRecord(workbench) || typeof workbench.revision !== "number") {
-		return null;
-	}
-
-	return workbench as WorkbenchSnapshot;
-}
-
-function getBackendEventRequestId(event: BackendEvent): string {
-	if (isRecord(event.data) && typeof event.data.requestId === "string" && event.data.requestId.length > 0) {
-		return event.data.requestId;
-	}
-
-	return event.id;
-}
-
-function isRunCancellationEvent(event: BackendEvent): boolean {
-	return event.event === "agent.run.cancelled";
-}
-
-function isRunCompletionEvent(event: BackendEvent): boolean {
-	return event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done";
 }
 
 function getChatMode(workbench: WorkbenchSnapshot | null): ChatMode {
@@ -747,12 +557,14 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const expandedActiveWorkflowTodoKeyRef = useRef<string>("");
 	const pendingUserActionRequestIdsRef = useRef<Set<string>>(new Set());
 	const activeSessionTitleRef = useRef<string>("Daedalus session");
-	const pendingTimelineEventsRef = useRef<BackendEvent[]>([]);
-	const pendingTimelineSessionIdRef = useRef<string | null>(null);
-	const timelineStreamBatchTimerRef = useRef<number | null>(null);
 
 	useDiskSpaceCheck();
 	const { showNativeTaskNotification, clearNativeTaskNotificationAttention } = useNativeTaskNotifications();
+	const {
+		discardPendingTimelineEvents,
+		flushPendingTimelineEvents,
+		enqueueTimelineStreamingEvent
+	} = useTimelineStreamBuffer({ activeSessionIdRef, setTimelinePage });
 
 	useEffect((): void => {
 		void window.electronAPI.tray.updateRecentSessions(
@@ -803,68 +615,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const handleSessionsChange = useCallback((sessions: SessionMetadata[]): void => {
 		setRecentSessions(getRecentSessions(sessions));
 	}, []);
-
-	const clearTimelineStreamBatchTimer = useCallback((): void => {
-		if (timelineStreamBatchTimerRef.current === null) {
-			return;
-		}
-
-		window.clearTimeout(timelineStreamBatchTimerRef.current);
-		timelineStreamBatchTimerRef.current = null;
-	}, []);
-
-	const discardPendingTimelineEvents = useCallback((): void => {
-		clearTimelineStreamBatchTimer();
-		pendingTimelineEventsRef.current = [];
-		pendingTimelineSessionIdRef.current = null;
-	}, [clearTimelineStreamBatchTimer]);
-
-	const flushPendingTimelineEvents = useCallback((): void => {
-		clearTimelineStreamBatchTimer();
-
-		const events: BackendEvent[] = pendingTimelineEventsRef.current;
-		const sessionId: string | null = pendingTimelineSessionIdRef.current;
-		pendingTimelineEventsRef.current = [];
-		pendingTimelineSessionIdRef.current = null;
-
-		if (events.length === 0 || sessionId !== activeSessionIdRef.current) {
-			return;
-		}
-
-		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
-			if (currentPage.sessionId !== null && currentPage.sessionId !== sessionId) {
-				return currentPage;
-			}
-
-			const blocks: TimelineBlock[] = applyBackendEventsToTimeline(currentPage.blocks, events);
-			return blocks === currentPage.blocks
-				? currentPage
-				: {
-					...currentPage,
-					blocks
-				};
-		});
-	}, [clearTimelineStreamBatchTimer]);
-
-	const enqueueTimelineStreamingEvent = useCallback((event: BackendEvent, sessionId: string | null): void => {
-		if (
-			pendingTimelineEventsRef.current.length > 0
-			&& pendingTimelineSessionIdRef.current !== sessionId
-		) {
-			discardPendingTimelineEvents();
-		}
-
-		pendingTimelineSessionIdRef.current = sessionId;
-		pendingTimelineEventsRef.current.push(event);
-		if (timelineStreamBatchTimerRef.current !== null) {
-			return;
-		}
-
-		timelineStreamBatchTimerRef.current = window.setTimeout(
-			flushPendingTimelineEvents,
-			TIMELINE_STREAM_BATCH_MS
-		);
-	}, [discardPendingTimelineEvents, flushPendingTimelineEvents]);
 
 	useEffect((): (() => void) => {
 		function handleOpenSettings(event: Event): void {
@@ -1286,185 +1036,35 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		void loadSkills();
 	}, [activeSessionId, activeWorkspace?.id, homeDraft.workspace?.id, loadSkills]);
 
-	useEffect((): (() => void) => {
-		let cancelled: boolean = false;
-		let unsubscribe: (() => void) | null = null;
-
-		async function subscribeBackendEvents(): Promise<void> {
-			try {
-				const client = await createBackendClient();
-
-				if (cancelled) {
-					return;
-				}
-
-				unsubscribe = client.addEventListener((event: BackendEvent): void => {
-					const eventSessionId: string | null = getBackendEventSessionId(event);
-					const activeSessionId: string | null = activeSessionIdRef.current;
-					if (isSessionScopedBackendEvent(event) && (eventSessionId === null || eventSessionId !== activeSessionId)) {
-						return;
-					}
-
-					if (event.event === "session.renamed") {
-						const metadata: SessionMetadata | null = getBackendEventSessionMetadata(event);
-						if (metadata !== null) {
-							setActiveSessionMetadata(metadata);
-						}
-						return;
-					}
-
-					setRunState((currentState: RunControllerState): RunControllerState => applyRunStateFromBackendEvent(currentState, event));
-
-					const eventWorkbench: WorkbenchSnapshot | null = getWorkbenchFromEvent(event);
-					if (eventWorkbench !== null) {
-						applyWorkbench(eventWorkbench);
-						appendQueuedRunUserBlock(eventWorkbench);
-						return;
-					}
-
-					if (event.event === "skill.catalog.changed") {
-						void loadSkills();
-					}
-
-					if (event.event === "agent.run.started") {
-						clearWorkflowTodoUiState({ preservePlanSnapshot: true });
-					} else if (event.event === "workflow.todo.updated" || event.event === "agent.run.snapshot") {
-						const snapshot: WorkflowTodoSnapshot | null = normalizeWorkflowTodoSnapshot(event.data);
-						setWorkflowTodoSnapshot(snapshot);
-						if (snapshot?.source === "slash") {
-							rememberLoadedWorkflowTodo(snapshot);
-							setActiveSessionMetadata((currentMetadata: SessionMetadata | null): SessionMetadata | null => {
-								return currentMetadata === null
-									? currentMetadata
-									: {
-										...currentMetadata,
-										workflowTodoCollapsed: false
-									};
-							});
-						} else {
-							applyInitialWorkflowTodoPreference(snapshot);
-						}
-					} else if (event.event === "plan.generated" || event.event === "plan.revised") {
-						const planTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromPlanData(event.data);
-						if (planTodo !== null) {
-							showWorkflowTodo(planTodo);
-						}
-					} else if (event.event === "plan.execution.started") {
-						const planTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromPlanData(event.data, true);
-						setWorkflowTodoSnapshot((currentSnapshot: WorkflowTodoSnapshot | null): WorkflowTodoSnapshot | null => {
-							const nextSnapshot: WorkflowTodoSnapshot | null = planTodo ?? (currentSnapshot === null ? null : markWorkflowTodoExecuting(currentSnapshot));
-							rememberLoadedWorkflowTodo(nextSnapshot);
-							return nextSnapshot;
-						});
-						expandWorkflowTodoPanel();
-					} else if (event.event === "agent.run.error" || event.event === "workflow.error" || event.event === "plan.error") {
-						setWorkflowTodoSnapshot((currentSnapshot: WorkflowTodoSnapshot | null): WorkflowTodoSnapshot | null => {
-							return currentSnapshot?.source === "plan" ? markWorkflowTodoFailed(currentSnapshot) : currentSnapshot;
-						});
-					} else if (isWorkflowTodoClearEvent(event)) {
-						setWorkflowTodoSnapshot(null);
-						rememberLoadedWorkflowTodo(null);
-					}
-
-					const eventPlanClarification: PlanClarificationState | null = getPlanClarificationFromEvent(event);
-					if (eventPlanClarification !== null) {
-						setLatestPlanClarification(eventPlanClarification);
-						setLatestPlanApproval(null);
-						setPlanClarificationError(null);
-						setIsPlanClarificationSubmitting(false);
-					} else {
-						const eventPlanApproval: PlanApprovalState | null = getPlanApprovalFromEvent(event);
-						if (eventPlanApproval !== null) {
-							setLatestPlanApproval(eventPlanApproval);
-							setPlanApprovalError(null);
-							setIsPlanApproving(false);
-							setIsPlanRevising(false);
-							if (activeSessionId !== null) {
-								pendingUserActionRequestIdsRef.current.add(eventPlanApproval.requestId);
-								showNativeTaskNotification({
-									kind: "approval_required",
-									sessionId: activeSessionId,
-									requestId: eventPlanApproval.requestId,
-									title: "Daedalus needs approval",
-									body: "A plan is ready for review.",
-									dedupeKey: `approval_required:${activeSessionId}:plan:${eventPlanApproval.planId}:${eventPlanApproval.updatedAt}`
-								});
-							}
-						}
-					}
-					if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.approved" || event.event === "plan.execution.started" || event.event === "plan.error" || event.event === "agent.run.error") {
-						setLatestPlanClarification((currentClarification: PlanClarificationState | null): PlanClarificationState | null => {
-							if (currentClarification === null) {
-								return null;
-							}
-							return shouldClearPlanClarificationForEvent(event, currentClarification) ? null : currentClarification;
-						});
-					}
-					if (event.event === "plan.approved" || event.event === "plan.execution.started") {
-						const eventPlanId: string = getPlanIdFromEvent(event);
-						setLatestPlanApproval((currentPlanApproval: PlanApprovalState | null): PlanApprovalState | null => {
-							if (currentPlanApproval === null) {
-								return null;
-							}
-							return eventPlanId.length === 0 || eventPlanId === currentPlanApproval.planId ? null : currentPlanApproval;
-						});
-					}
-					if (isRunCancellationEvent(event)) {
-						const cancelledRequestId: string = getBackendEventRequestId(event);
-						if (activeChatRequestIdRef.current === cancelledRequestId) {
-							activeChatRequestIdRef.current = null;
-						}
-					}
-
-					if (isTimelineStreamingDeltaEvent(event)) {
-						enqueueTimelineStreamingEvent(event, activeSessionId);
-					} else {
-						flushPendingTimelineEvents();
-						setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
-							return {
-								...currentPage,
-								blocks: applyBackendEventToTimeline(currentPage.blocks, event)
-							};
-						});
-					}
-
-					if (isRunCompletionEvent(event)) {
-						setWorkflowTodoSnapshot((currentSnapshot: WorkflowTodoSnapshot | null): WorkflowTodoSnapshot | null => {
-							return currentSnapshot?.source === "plan" ? markWorkflowTodoCompleted(currentSnapshot) : currentSnapshot;
-						});
-						const requestId: string = getBackendEventRequestId(event);
-						const sessionId: string | null = activeSessionIdRef.current;
-						if (sessionId !== null && !pendingUserActionRequestIdsRef.current.has(requestId)) {
-							showNativeTaskNotification({
-								kind: "run_completed",
-								sessionId,
-								requestId,
-								title: "Daedalus finished",
-								body: `"${activeSessionTitleRef.current}" is ready.`,
-								dedupeKey: `run_completed:${sessionId}:${requestId}`
-							});
-						}
-						void refreshLatestTimeline();
-					}
-				});
-			} catch (error: unknown) {
-				console.error("[App] subscribe backend events failed", error);
-			}
-		}
-
-		void subscribeBackendEvents();
-
-		return (): void => {
-			cancelled = true;
-			unsubscribe?.();
-		};
-	}, [
+	useBackendEventStream({
+		activeSessionIdRef,
+		activeChatRequestIdRef,
+		pendingUserActionRequestIdsRef,
+		activeSessionTitleRef,
 		applyWorkbench,
+		appendQueuedRunUserBlock,
+		loadSkills,
+		clearWorkflowTodoUiState,
+		rememberLoadedWorkflowTodo,
+		applyInitialWorkflowTodoPreference,
+		showWorkflowTodo,
+		expandWorkflowTodoPanel,
 		enqueueTimelineStreamingEvent,
 		flushPendingTimelineEvents,
-		generalSettings.autoExpandTodoList,
-		loadSkills
-	]);
+		refreshLatestTimeline,
+		showNativeTaskNotification,
+		setActiveSessionMetadata,
+		setRunState,
+		setTimelinePage,
+		setWorkflowTodoSnapshot,
+		setLatestPlanClarification,
+		setLatestPlanApproval,
+		setPlanClarificationError,
+		setIsPlanClarificationSubmitting,
+		setPlanApprovalError,
+		setIsPlanApproving,
+		setIsPlanRevising
+	});
 
 	useEffect((): void => {
 		if (isNewSessionHome || activeSessionId === null || getPendingApprovalCount(workbench) === 0) {

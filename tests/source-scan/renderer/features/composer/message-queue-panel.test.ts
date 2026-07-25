@@ -6,6 +6,7 @@ describe("MessageQueuePanel source", () => {
 	const panelStyleSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "MessageQueuePanel.module.css");
 	const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
 	const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+	const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
 	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "agent", "AgentPage.tsx");
 	const queueApiSource: string = readRepoFile("src", "renderer", "src", "api", "message-queue-api.ts");
 	const guideApiSource: string = readRepoFile("src", "renderer", "src", "api", "guide-api.ts");
@@ -55,7 +56,7 @@ describe("MessageQueuePanel source", () => {
 		expect(appSource).toContain("if (isRunControllerActive(runState))");
 		expect(appSource).toContain("await addQueuedMessage({");
 		expect(appSource).toContain("function appendQueuedRunUserBlock(workbenchSnapshot: WorkbenchSnapshot): void");
-		expect(appSource).toContain("appendQueuedRunUserBlock(eventWorkbench)");
+		expect(backendEventStreamSource).toContain("appendQueuedRunUserBlock(eventWorkbench)");
 		expect(appSource).toContain("async function handleGuideSubmit(nextMessage: string): Promise<void>");
 		expect(appSource).toContain("await addGuide(message, getRunControllerRequestId(runState) ?? undefined)");
 		expect(appSource).toContain("const composerIsSending: boolean = isRunControllerActive(runState) || isHomeSubmitting;");

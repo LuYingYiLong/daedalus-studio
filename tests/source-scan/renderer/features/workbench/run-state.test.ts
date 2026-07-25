@@ -4,10 +4,11 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 describe("Run state source", () => {
 	it("centralizes Composer run controls through run-state helpers", () => {
 		const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
 		const runStateSource: string = readRepoFile("src", "renderer", "src", "features", "workbench", "run-state.ts");
 
 		expect(appSource).toContain("useState<RunControllerState>(() => createIdleRunState())");
-		expect(appSource).toContain("applyRunStateFromBackendEvent(currentState, event)");
+		expect(backendEventStreamSource).toContain("applyRunStateFromBackendEvent(currentState, event)");
 		expect(appSource).toContain("applyRunStateFromWorkbench(currentState, workbench)");
 		expect(appSource).toContain("const composerIsSending: boolean = isRunControllerActive(runState) || isHomeSubmitting;");
 		expect(appSource).toContain("const requestId: string | null = getRunControllerRequestId(runState);");

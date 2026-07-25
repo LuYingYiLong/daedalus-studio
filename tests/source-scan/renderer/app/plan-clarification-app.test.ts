@@ -3,6 +3,8 @@ import { readRepoFile } from "../../../helpers/repo-paths";
 
 describe("App plan clarification source", () => {
 	const source: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+	const backendEventStateSource: string = readRepoFile("src", "renderer", "src", "app", "backend-event-state.ts");
+	const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
 
 	it("updates local clarification and approval state from plan.clarify results", () => {
 		expect(source).toContain("const result: PlanResult = await submitPlanClarification");
@@ -22,7 +24,7 @@ describe("App plan clarification source", () => {
 	});
 
 	it("marks plan clarification and revision operations as cancellable active runs", () => {
-		expect(source).toContain("requestId: requestId.length > 0 ? requestId : planId");
+		expect(backendEventStateSource).toContain("requestId: requestId.length > 0 ? requestId : planId");
 		expect(source).toContain("const runRequestId: string = clarification.requestId;");
 		expect(source).toContain("activeChatRequestIdRef.current = runRequestId;");
 		expect(source).toContain("applyOptimisticActiveRun(runRequestId, false, false);");
@@ -31,10 +33,10 @@ describe("App plan clarification source", () => {
 	});
 
 	it("clears stale plan clarification state when a plan operation fails", () => {
-		expect(source).toContain("function shouldClearPlanClarificationForEvent");
-		expect(source).toContain("event.event === \"plan.error\"");
-		expect(source).toContain("event.event === \"agent.run.error\"");
-		expect(source).toContain("shouldClearPlanClarificationForEvent(event, currentClarification) ? null : currentClarification");
+		expect(backendEventStateSource).toContain("function shouldClearPlanClarificationForEvent");
+		expect(backendEventStateSource).toContain("event.event === \"plan.error\"");
+		expect(backendEventStateSource).toContain("event.event === \"agent.run.error\"");
+		expect(backendEventStreamSource).toContain("shouldClearPlanClarificationForEvent(event, currentClarification) ? null : currentClarification");
 	});
 
 	it("does not append duplicate frontend timeline errors for backend RPC failures", () => {

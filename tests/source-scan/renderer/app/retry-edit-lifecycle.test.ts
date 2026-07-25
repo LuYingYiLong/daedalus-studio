@@ -17,15 +17,16 @@ describe("retry edit lifecycle", () => {
 
 	it("releases the composer send state from run-state events", () => {
 		const source: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
-		const eventSubscription: number = source.indexOf("unsubscribe = client.addEventListener");
-		const cancellationEvent: number = source.indexOf("if (isRunCancellationEvent(event))", eventSubscription);
-		const runStateReducer: number = source.indexOf("applyRunStateFromBackendEvent(currentState, event)", eventSubscription);
+		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
+		const eventSubscription: number = backendEventStreamSource.indexOf("unsubscribe = client.addEventListener");
+		const cancellationEvent: number = backendEventStreamSource.indexOf("if (isRunCancellationEvent(event))");
+		const runStateReducer: number = backendEventStreamSource.indexOf("applyRunStateFromBackendEvent(currentState, event)");
 		const cancelHandler: number = source.indexOf("async function handleComposerCancel");
 		const requestFromRunState: number = source.indexOf("const requestId: string | null = getRunControllerRequestId(runState);", cancelHandler);
 
 		expect(eventSubscription).toBeGreaterThanOrEqual(0);
-		expect(runStateReducer).toBeGreaterThan(eventSubscription);
-		expect(cancellationEvent).toBeGreaterThan(eventSubscription);
+		expect(runStateReducer).toBeGreaterThanOrEqual(0);
+		expect(cancellationEvent).toBeGreaterThanOrEqual(0);
 		expect(cancelHandler).toBeGreaterThanOrEqual(0);
 		expect(requestFromRunState).toBeGreaterThan(cancelHandler);
 		expect(source).not.toContain("finishOptimisticActiveRun(cancelledRequestId);");

@@ -5,6 +5,7 @@ describe("Composer workflow todo visibility", () => {
 	it("keeps workflow todos out of Composer and renders the floating panel from snapshots", () => {
 		const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
 		const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
 		const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "agent", "AgentPage.tsx");
 		const floatingTodoSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "FloatingWorkflowTodoPanel.tsx");
 		const globalCss: string = readRepoFile("src", "renderer", "src", "styles", "global.css");
@@ -31,10 +32,10 @@ describe("Composer workflow todo visibility", () => {
 		expect(designDoc).toContain("`--ds-git-addition`");
 		expect(designDoc).toContain("Git 差异 UI 统一使用");
 		expect(appSource).toContain("function clearWorkflowTodoUiState(options: { preservePlanSnapshot?: boolean } = {})");
-		expect(appSource).toContain('if (event.event === "agent.run.started")');
-		expect(appSource).toContain("clearWorkflowTodoUiState({ preservePlanSnapshot: true });");
-		expect(appSource).toContain('event.event === "plan.execution.started"');
-		expect(appSource).toContain("expandWorkflowTodoPanel();");
-		expect(appSource).toContain('event.event === "workflow.todo.updated" || event.event === "agent.run.snapshot"');
+		expect(backendEventStreamSource).toContain('if (event.event === "agent.run.started")');
+		expect(backendEventStreamSource).toContain("clearWorkflowTodoUiState({ preservePlanSnapshot: true });");
+		expect(backendEventStreamSource).toContain('event.event === "plan.execution.started"');
+		expect(backendEventStreamSource).toContain("expandWorkflowTodoPanel();");
+		expect(backendEventStreamSource).toContain('event.event === "workflow.todo.updated" || event.event === "agent.run.snapshot"');
 	});
 });
