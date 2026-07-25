@@ -56,6 +56,7 @@
 .chatPanel {
 	--agent-chat-content-width: 880px;
 	--agent-chat-side-padding: 8px;
+	--agent-chat-surface-width: calc(var(--agent-chat-content-width) + var(--agent-chat-side-padding) * 2);
 
 	position: relative;
 	display: grid;
@@ -376,6 +377,38 @@
 	object-fit: contain;
 }
 
+.godotSceneModalBody {
+	display: grid;
+	gap: 8px;
+}
+
+.godotSceneLoading {
+	display: grid;
+	place-items: center;
+	min-height: 180px;
+}
+
+.godotSceneList {
+	display: grid;
+	gap: 4px;
+	max-height: min(520px, 62vh);
+	overflow-y: auto;
+}
+
+.godotSceneButton {
+	justify-content: flex-start;
+	height: auto;
+	min-height: 44px;
+	padding: 6px 8px;
+}
+
+.godotSceneText {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+	text-align: left;
+}
+
 .commitDialogBody {
 	display: grid;
 	gap: 12px;
@@ -449,7 +482,7 @@
 	grid-template-columns: minmax(0, 1fr);
 	gap: 0;
 	box-sizing: border-box;
-	width: min(100%, calc(var(--agent-chat-content-width) + var(--agent-chat-side-padding) * 2));
+	width: min(100%, var(--agent-chat-surface-width));
 	justify-self: center;
 	padding: 0px 0px var(--agent-chat-side-padding) 0px;
 }

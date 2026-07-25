@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Button, Divider, Dropdown, Empty, message as antdMessage, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
+import { Button, Divider, Dropdown, Empty, Input, message as antdMessage, Modal, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
@@ -31,11 +31,17 @@ import CreateBranchDialog from "@/features/git/CreateBranchDialog";
 import { useGitActionDialogController } from "@/features/git/useGitActionDialogController";
 import SessionOverviewDialogs, { formatSourceSubtitle } from "./SessionOverviewDialogs";
 
-type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
+type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot";
 
 type WorkspaceLaunchTarget = {
 	id: WorkspaceLaunchTargetId;
 	label: string;
+};
+
+type GodotSceneFile = {
+	relativePath: string;
+	resourcePath: string;
+	name: string;
 };
 
 const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
@@ -43,6 +49,7 @@ const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 	{ id: "terminal", label: "Terminal" }
 ];
 
+const MAX_GODOT_SCENE_FILES: number = 500;
 const SUMMARY_PREVIEW_LIMIT: number = 3;
 const SUMMARY_SEE_MORE_LIMIT: number = 100;
 const SIDE_DOCK_CLOSED_SIZE: number = 0;
@@ -60,17 +67,29 @@ function isWorkspaceLaunchTargetId(value: string): value is WorkspaceLaunchTarge
 		|| value === "vscode"
 		|| value === "visual-studio"
 		|| value === "github-desktop"
-		|| value === "git-bash";
+		|| value === "git-bash"
+		|| value === "godot";
 }
 
 function getWorkspaceLaunchIcon(targetId: WorkspaceLaunchTargetId): React.ReactNode {
 	if (targetId === "file-explorer") {
 		return <Icon name="folder" />;
 	}
-	if (targetId === "terminal" || targetId === "git-bash") {
+	if (targetId === "terminal") {
 		return <Icon name="terminal" />;
 	}
-	return <Icon name="external_link" />;
+	if (targetId === "git-bash") {
+		return <Icon name="git-bash" />;
+	}
+	if (targetId === "godot") {
+		return <Icon name="godot" />;
+	}
+	return <Icon name="external-link" />;
+}
+
+function isGodotScenePath(relativePath: string): boolean {
+	const normalizedPath: string = relativePath.toLowerCase();
+	return normalizedPath.endsWith(".tscn") || normalizedPath.endsWith(".scn");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -200,6 +219,7 @@ type AgentPageProps = {
 	workspaceFooterDisabled: boolean;
 	isWorkspaceAdding: boolean;
 	activeWorkspace: WorkspaceConfig | null;
+	godotLaunchExecutablePath: string | null;
 	onNewSession: () => void;
 	onNewWorkspaceSession: (workspace: WorkspaceConfig) => void;
 	onWorkspaceRefresh: () => void;
@@ -306,6 +326,7 @@ function AgentPage({
 	workspaceFooterDisabled,
 	isWorkspaceAdding,
 	activeWorkspace,
+	godotLaunchExecutablePath,
 	onNewSession,
 	onNewWorkspaceSession,
 	onWorkspaceRefresh,
@@ -367,6 +388,11 @@ function AgentPage({
 	const [sourcesModalOpen, setSourcesModalOpen] = useState<boolean>(false);
 	const [previewSource, setPreviewSource] = useState<SessionOverviewSourceItem | null>(null);
 	const [previewPlan, setPreviewPlan] = useState<SessionOverviewPlanItem | null>(null);
+	const [isGodotProject, setIsGodotProject] = useState<boolean>(false);
+	const [isGodotSceneModalOpen, setIsGodotSceneModalOpen] = useState<boolean>(false);
+	const [godotSceneFiles, setGodotSceneFiles] = useState<GodotSceneFile[]>([]);
+	const [isGodotSceneLoading, setIsGodotSceneLoading] = useState<boolean>(false);
+	const [godotSceneSearch, setGodotSceneSearch] = useState<string>("");
 	const dockActivationRequestIdRef = useRef<number>(0);
 	const [sideDockActivationRequest, setSideDockActivationRequest] = useState<DockPanelActivationRequest | null>(null);
 	const [sideDockOpen, setSideDockOpen] = useState<boolean>(false);
@@ -386,6 +412,19 @@ function AgentPage({
 	const showBottomDockButton: boolean = showDockControls;
 	const terminalWaitForCwd: boolean = !isHome && isSessionLoading && workspaceForActions === null;
 	const showWorkflowTodoPanel: boolean = !workflowTodoCollapsed && workflowTodoSnapshot !== null;
+	const effectiveGodotLaunchExecutablePath: string | null = godotLaunchExecutablePath?.trim()
+		? godotLaunchExecutablePath.trim()
+		: null;
+	const showGodotSummaryActions: boolean = workspaceForActions !== null && effectiveGodotLaunchExecutablePath !== null && isGodotProject;
+	const filteredGodotSceneFiles: GodotSceneFile[] = useMemo((): GodotSceneFile[] => {
+		const query: string = godotSceneSearch.trim().toLowerCase();
+		if (query.length === 0) {
+			return godotSceneFiles;
+		}
+		return godotSceneFiles.filter((scene: GodotSceneFile): boolean => {
+			return scene.relativePath.toLowerCase().includes(query) || scene.name.toLowerCase().includes(query);
+		});
+	}, [godotSceneFiles, godotSceneSearch]);
 	const workflowFileChangeSummary: WorkflowFileChangeSummary = useMemo((): WorkflowFileChangeSummary => {
 		return aggregateTimelineFileChanges(timelineBlocks);
 	}, [timelineBlocks]);
@@ -423,7 +462,9 @@ function AgentPage({
 		}
 
 		let cancelled: boolean = false;
-		window.electronAPI.workspaceFs.listLaunchTargets()
+		window.electronAPI.workspaceFs.listLaunchTargets({
+			godotExecutablePath: effectiveGodotLaunchExecutablePath
+		})
 			.then((targets: WorkspaceLaunchTarget[]): void => {
 				if (cancelled) {
 					return;
@@ -451,7 +492,34 @@ function AgentPage({
 		return (): void => {
 			cancelled = true;
 		};
-	}, [showWorkspaceLaunchControls]);
+	}, [effectiveGodotLaunchExecutablePath, showWorkspaceLaunchControls]);
+
+	useEffect((): (() => void) | void => {
+		if (workspaceForActions === null || effectiveGodotLaunchExecutablePath === null) {
+			setIsGodotProject(false);
+			return;
+		}
+
+		let cancelled: boolean = false;
+		window.electronAPI.workspaceFs.listChildren({
+			workspaceRoot: workspaceForActions.rootPath,
+			relativePath: ""
+		}).then((result): void => {
+			if (cancelled) {
+				return;
+			}
+			setIsGodotProject(result.entries.some((entry): boolean => entry.kind === "file" && entry.name === "project.godot"));
+		}).catch((error: unknown): void => {
+			console.error("[AgentPage] failed to detect Godot project", error);
+			if (!cancelled) {
+				setIsGodotProject(false);
+			}
+		});
+
+		return (): void => {
+			cancelled = true;
+		};
+	}, [effectiveGodotLaunchExecutablePath, workspaceForActions]);
 
 	useEffect((): void => {
 		setSummaryOpen(false);
@@ -459,6 +527,8 @@ function AgentPage({
 		setSummaryError(null);
 		setPlansModalOpen(false);
 		setSourcesModalOpen(false);
+		setIsGodotSceneModalOpen(false);
+		setGodotSceneSearch("");
 		setPreviewSource(null);
 		setPreviewPlan(null);
 		setSideDockOpen(false);
@@ -494,6 +564,8 @@ function AgentPage({
 		setSummaryError(null);
 		setPlansModalOpen(false);
 		setSourcesModalOpen(false);
+		setIsGodotSceneModalOpen(false);
+		setGodotSceneSearch("");
 		setPreviewSource(null);
 		setPreviewPlan(null);
 		if (summaryOpen) {
@@ -526,6 +598,85 @@ function AgentPage({
 			await loadSummaryOverview();
 		}
 	});
+
+	const loadGodotSceneFiles = useCallback(async (): Promise<void> => {
+		if (workspaceForActions === null) {
+			setGodotSceneFiles([]);
+			return;
+		}
+
+		const workspaceRoot: string = workspaceForActions.rootPath;
+		setIsGodotSceneLoading(true);
+		try {
+			const scenes: GodotSceneFile[] = [];
+			async function scan(relativePath: string): Promise<void> {
+				if (scenes.length >= MAX_GODOT_SCENE_FILES) {
+					return;
+				}
+
+				const result = await window.electronAPI.workspaceFs.listChildren({
+					workspaceRoot,
+					relativePath
+				});
+				const entries = [...result.entries].sort((left, right): number => {
+					if (left.kind !== right.kind) {
+						return left.kind === "folder" ? -1 : 1;
+					}
+					return left.relativePath.localeCompare(right.relativePath);
+				});
+
+				for (const entry of entries) {
+					if (scenes.length >= MAX_GODOT_SCENE_FILES) {
+						return;
+					}
+					if (entry.kind === "folder") {
+						if (entry.name === ".godot") {
+							continue;
+						}
+						await scan(entry.relativePath);
+						continue;
+					}
+					if (isGodotScenePath(entry.relativePath)) {
+						scenes.push({
+							name: entry.name,
+							relativePath: entry.relativePath,
+							resourcePath: entry.resourcePath
+						});
+					}
+				}
+			}
+
+			await scan("");
+			setGodotSceneFiles(scenes);
+		} catch (error: unknown) {
+			const message: string = error instanceof Error ? error.message : t("agentPage.summary.godot.errors.loadScenes");
+			console.error("[AgentPage] failed to load Godot scenes", error);
+			void messageApi.error(message);
+			setGodotSceneFiles([]);
+		} finally {
+			setIsGodotSceneLoading(false);
+		}
+	}, [messageApi, t, workspaceForActions]);
+
+	const openGodotSceneModal = useCallback((): void => {
+		setSummaryOpen(false);
+		setGodotSceneSearch("");
+		setIsGodotSceneModalOpen(true);
+		void loadGodotSceneFiles();
+	}, [loadGodotSceneFiles]);
+
+	const runGodotProject = useCallback((): void => {
+		setSummaryOpen(false);
+		void openWorkspaceLaunchTarget("godot", { godotRunMode: "project" });
+	}, [openWorkspaceLaunchTarget]);
+
+	const runGodotScene = useCallback((scene: GodotSceneFile): void => {
+		setIsGodotSceneModalOpen(false);
+		void openWorkspaceLaunchTarget("godot", {
+			godotRunMode: "scene",
+			godotScenePath: scene.relativePath
+		});
+	}, [openWorkspaceLaunchTarget]);
 
 	const summaryCollapseItems: NonNullable<CollapseProps["items"]> = useMemo((): NonNullable<CollapseProps["items"]> => {
 		if (summaryOverview === null) {
@@ -579,6 +730,36 @@ function AgentPage({
 							}}
 						>
 							{t("agentPage.summary.actions.commitOrPush")}
+						</Button>
+					</div>
+				),
+				showArrow: false
+			});
+		}
+
+		if (showGodotSummaryActions) {
+			items.push({
+				key: "godot",
+				label: t("agentPage.summary.sections.godot"),
+				children: (
+					<div className={styles.summarySection}>
+						<Button
+							type="text"
+							block
+							icon={<Icon name="play" />}
+							className={styles.summaryActionButton}
+							onClick={runGodotProject}
+						>
+							{t("agentPage.summary.godot.runProject")}
+						</Button>
+						<Button
+							type="text"
+							block
+							icon={<Icon name="scene" />}
+							className={styles.summaryActionButton}
+							onClick={openGodotSceneModal}
+						>
+							{t("agentPage.summary.godot.runScene")}
 						</Button>
 					</div>
 				),
@@ -673,7 +854,7 @@ function AgentPage({
 		}
 
 		return items;
-	}, [gitActions.openBranchDialog, gitActions.openCommitDialog, openSummaryDiffReview, summaryOverview, t]);
+	}, [gitActions.openBranchDialog, gitActions.openCommitDialog, openGodotSceneModal, openSummaryDiffReview, runGodotProject, showGodotSummaryActions, summaryOverview, t]);
 
 	async function openPlansModal(): Promise<void> {
 		const result: SessionOverviewResult | null = await loadSummaryOverview(SUMMARY_SEE_MORE_LIMIT, SUMMARY_PREVIEW_LIMIT);
@@ -689,7 +870,10 @@ function AgentPage({
 		}
 	}
 
-	async function openWorkspaceLaunchTarget(targetId: WorkspaceLaunchTargetId): Promise<void> {
+	async function openWorkspaceLaunchTarget(
+		targetId: WorkspaceLaunchTargetId,
+		options: { godotRunMode?: "editor" | "project" | "scene"; godotScenePath?: string } = {}
+	): Promise<void> {
 		if (workspaceForActions === null) {
 			return;
 		}
@@ -699,7 +883,10 @@ function AgentPage({
 		try {
 			await window.electronAPI.workspaceFs.openLaunchTarget({
 				workspaceRoot: workspaceForActions.rootPath,
-				targetId
+				targetId,
+				godotExecutablePath: targetId === "godot" ? effectiveGodotLaunchExecutablePath : undefined,
+				godotRunMode: targetId === "godot" ? options.godotRunMode : undefined,
+				godotScenePath: targetId === "godot" ? options.godotScenePath : undefined
 			});
 		} catch (error: unknown) {
 			const message: string = error instanceof Error ? error.message : t("agentPage.workspaceLaunch.errors.open");
@@ -1270,6 +1457,51 @@ function AgentPage({
 				onPreviewPlanChange={setPreviewPlan}
 				onPreviewSourceChange={setPreviewSource}
 			/>
+			<Modal
+				open={isGodotSceneModalOpen}
+				title={t("agentPage.summary.godot.sceneModal.title")}
+				footer={null}
+				width={720}
+				onCancel={(): void => setIsGodotSceneModalOpen(false)}
+			>
+				<div className={styles.godotSceneModalBody}>
+					<Input.Search
+						allowClear
+						value={godotSceneSearch}
+						placeholder={t("agentPage.summary.godot.sceneModal.searchPlaceholder")}
+						onChange={(event: React.ChangeEvent<HTMLInputElement>): void => {
+							setGodotSceneSearch(event.target.value);
+						}}
+					/>
+					{isGodotSceneLoading ? (
+						<div className={styles.godotSceneLoading}>
+							<Spin />
+						</div>
+					) : filteredGodotSceneFiles.length > 0 ? (
+						<div className={styles.godotSceneList}>
+							{filteredGodotSceneFiles.map((scene: GodotSceneFile): React.ReactNode => (
+								<Button
+									key={scene.relativePath}
+									type="text"
+									block
+									className={styles.godotSceneButton}
+									onClick={(): void => runGodotScene(scene)}
+								>
+									<span className={styles.godotSceneText}>
+										<span className={styles.summaryItemTitle}>{scene.name}</span>
+										<span className={styles.summaryMeta}>{scene.resourcePath}</span>
+									</span>
+								</Button>
+							))}
+						</div>
+					) : (
+						<Empty
+							image={Empty.PRESENTED_IMAGE_SIMPLE}
+							description={t("agentPage.summary.godot.sceneModal.empty")}
+						/>
+					)}
+				</div>
+			</Modal>
 			<CommitActionDialog {...gitActions.commitDialogProps} />
 			<BranchActionDialog {...gitActions.branchDialogProps} />
 			<CreateBranchDialog {...gitActions.createBranchDialogProps} />

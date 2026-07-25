@@ -1,7 +1,7 @@
 import { BrowserWindow, dialog, ipcMain, shell } from "electron";
-import { access, readdir, stat } from "node:fs/promises";
+import { access, readFile, readdir, stat } from "node:fs/promises";
 import { execFile, spawn } from "node:child_process";
-import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export type WorkspaceFsEntry = {
 	name: string;
@@ -31,7 +31,7 @@ export type WorkspaceFsCreateEntriesFromPathsParams = {
 export type WorkspaceFsOpenDirectoryResult = {
 	opened: true;
 };
-export type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
+export type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot";
 export type WorkspaceLaunchTarget = {
 	id: WorkspaceLaunchTargetId;
 	label: string;
@@ -48,6 +48,9 @@ type ResolvedWorkspaceLaunchTarget = WorkspaceLaunchTarget & {
 export type WorkspaceLaunchDetectionOptions = {
 	platform?: NodeJS.Platform | undefined;
 	env?: NodeJS.ProcessEnv | undefined;
+	godotExecutablePath?: string | null | undefined;
+	godotRunMode?: "editor" | "project" | "scene" | undefined;
+	godotScenePath?: string | undefined;
 	pathExists?: ((path: string) => Promise<boolean>) | undefined;
 	findOnPath?: ((command: string) => Promise<string | null>) | undefined;
 	readDirectory?: typeof readdir | undefined;
@@ -60,7 +63,7 @@ const BASE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 	{ id: "file-explorer", label: "File Explorer" },
 	{ id: "terminal", label: "Terminal" }
 ];
-const OPTIONAL_LAUNCH_TARGET_IDS: WorkspaceLaunchTargetId[] = ["vscode", "visual-studio", "github-desktop", "git-bash"];
+const OPTIONAL_LAUNCH_TARGET_IDS: WorkspaceLaunchTargetId[] = ["vscode", "visual-studio", "github-desktop", "git-bash", "godot"];
 
 function isPathInside(root: string, target: string): boolean {
 	const relativePath: string = relative(root, target);
@@ -86,6 +89,69 @@ function assertInsideWorkspace(workspaceRoot: string, relativePath: string | und
 
 function toResourcePath(relativePath: string): string {
 	return relativePath.length === 0 ? "res://" : `res://${relativePath}`;
+}
+
+function resolveGodotSceneCliPath(workspaceRoot: string, scenePath: string | undefined): string {
+	if (scenePath === undefined || scenePath.trim().length === 0) {
+		throw new Error("Godot scene path is required.");
+	}
+
+	const root: string = resolve(workspaceRoot);
+	const normalizedScenePath: string = scenePath.startsWith("res://") ? scenePath.slice("res://".length) : scenePath;
+	const target: string = resolve(root, normalizedScenePath);
+	if (!isPathInside(root, target)) {
+		throw new Error("Godot scene path is outside workspace root.");
+	}
+
+	const extension: string = extname(target).toLowerCase();
+	if (extension !== ".tscn" && extension !== ".scn") {
+		throw new Error("Godot scene path must point to a .tscn or .scn file.");
+	}
+
+	const relativeScenePath: string = relative(root, target).replaceAll("\\", "/");
+	return relativeScenePath;
+}
+
+async function readGodotMainSceneCliPath(workspaceRoot: string): Promise<string | null> {
+	const root: string = resolve(workspaceRoot);
+	const projectPath: string = join(root, "project.godot");
+	let content: string;
+	try {
+		content = await readFile(projectPath, "utf8");
+	} catch {
+		return null;
+	}
+
+	let section = "";
+	let mainScenePath: string | null = null;
+	for (const line of content.split(/\r?\n/)) {
+		const sectionMatch: RegExpMatchArray | null = line.match(/^\s*\[([^\]]+)\]\s*$/);
+		if (sectionMatch !== null) {
+			section = sectionMatch[1] ?? "";
+			continue;
+		}
+
+		const settingMatch: RegExpMatchArray | null = line.match(/^\s*([^=]+?)\s*=\s*"([^"]+)"\s*$/);
+		if (settingMatch === null) {
+			continue;
+		}
+
+		const key: string = (settingMatch[1] ?? "").trim();
+		if ((section === "application" && key === "run/main_scene") || key === "application/run/main_scene") {
+			mainScenePath = settingMatch[2] ?? "";
+			break;
+		}
+	}
+
+	if (mainScenePath === null || !mainScenePath.startsWith("res://")) {
+		return null;
+	}
+
+	try {
+		return resolveGodotSceneCliPath(root, mainScenePath);
+	} catch {
+		return null;
+	}
 }
 
 function getEnvValue(env: NodeJS.ProcessEnv, key: string): string | undefined {
@@ -226,6 +292,14 @@ async function resolveWorkspaceLaunchTarget(targetId: WorkspaceLaunchTargetId, o
 			await findOnPath("git-bash.exe")
 		]), pathExists);
 		return gitBashPath === null ? null : { id: "git-bash", label: "Git Bash", command: gitBashPath, args: [] };
+	}
+	if (targetId === "godot") {
+		const godotExecutablePath: string = options.godotExecutablePath?.trim() ?? "";
+		const godotExecutableExists: boolean = godotExecutablePath.length > 0 && await pathExists(godotExecutablePath);
+		if (!godotExecutableExists) {
+			return null;
+		}
+		return { id: "godot", label: "Godot", command: godotExecutablePath, args: [] };
 	}
 
 	return null;
@@ -424,6 +498,10 @@ export async function openWorkspaceLaunchTarget(
 	const spawnProcess = options.spawnProcess ?? ((command: string, args: string[], spawnOptions: { cwd: string; detached: true; stdio: "ignore"; windowsHide: false; shell?: boolean | undefined }) => {
 		return spawn(command, args, spawnOptions) as { unref(): void };
 	});
+	const godotRunMode: "editor" | "project" | "scene" = options.godotRunMode ?? "editor";
+	const godotProjectScenePath: string | null = target.id === "godot" && godotRunMode === "project"
+		? await readGodotMainSceneCliPath(root)
+		: null;
 	const args: string[] = target.id === "terminal"
 		? target.args?.[0] === "-d"
 			? ["-d", root]
@@ -432,7 +510,15 @@ export async function openWorkspaceLaunchTarget(
 				: target.args ?? []
 		: target.id === "git-bash"
 			? [`--cd=${root}`]
-			: [...(target.args ?? []), root];
+		: target.id === "godot"
+			? godotRunMode === "scene"
+				? ["--path", root, resolveGodotSceneCliPath(root, options.godotScenePath)]
+				: godotRunMode === "project"
+					? godotProjectScenePath === null
+						? ["--path", root]
+						: ["--path", root, godotProjectScenePath]
+					: ["--editor", "--path", root]
+				: [...(target.args ?? []), root];
 	const child = spawnProcess(target.command, args, {
 		cwd: root,
 		detached: true,
@@ -464,10 +550,16 @@ export function registerWorkspaceFsIpc(): void {
 	ipcMain.handle("workspace-fs:open-directory", async (_event, workspaceRoot: string): Promise<WorkspaceFsOpenDirectoryResult> => {
 		return openWorkspaceDirectory(workspaceRoot);
 	});
-	ipcMain.handle("workspace-fs:list-launch-targets", async (): Promise<WorkspaceLaunchTarget[]> => {
-		return listWorkspaceLaunchTargets();
+	ipcMain.handle("workspace-fs:list-launch-targets", async (_event, params?: { godotExecutablePath?: string | null }): Promise<WorkspaceLaunchTarget[]> => {
+		return listWorkspaceLaunchTargets({
+			godotExecutablePath: params?.godotExecutablePath
+		});
 	});
-	ipcMain.handle("workspace-fs:open-launch-target", async (_event, params: { workspaceRoot: string; targetId: WorkspaceLaunchTargetId }): Promise<WorkspaceLaunchTargetResult> => {
-		return openWorkspaceLaunchTarget(params.workspaceRoot, params.targetId);
+	ipcMain.handle("workspace-fs:open-launch-target", async (_event, params: { workspaceRoot: string; targetId: WorkspaceLaunchTargetId; godotExecutablePath?: string | null; godotRunMode?: "editor" | "project" | "scene"; godotScenePath?: string }): Promise<WorkspaceLaunchTargetResult> => {
+		return openWorkspaceLaunchTarget(params.workspaceRoot, params.targetId, {
+			godotExecutablePath: params.godotExecutablePath,
+			godotRunMode: params.godotRunMode,
+			godotScenePath: params.godotScenePath
+		});
 	});
 }

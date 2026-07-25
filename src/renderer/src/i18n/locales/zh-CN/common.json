@@ -121,8 +121,21 @@
       },
       "sections": {
         "envInfo": "环境信息",
+        "godot": "Godot",
         "plans": "计划",
         "source": "来源"
+      },
+      "godot": {
+        "runProject": "运行项目",
+        "runScene": "运行特定场景...",
+        "sceneModal": {
+          "title": "运行 Godot 场景",
+          "searchPlaceholder": "搜索场景",
+          "empty": "没有找到场景文件"
+        },
+        "errors": {
+          "loadScenes": "加载 Godot 场景失败"
+        }
       },
       "actions": {
         "diff": "变更",

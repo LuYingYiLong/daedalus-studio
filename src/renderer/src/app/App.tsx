@@ -2708,6 +2708,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		: currentSessionWorkspaceId === null
 			? null
 			: activeWorkspace;
+	const godotLaunchExecutablePath: string | null = displayedWorkspace?.godotExecutablePath
+		?? activeSessionMetadata?.godotExecutablePath
+		?? (generalSettings.godotExecutableStatus === "ready" ? generalSettings.godotExecutablePath : null);
 	const composerIsSending: boolean = isRunControllerActive(runState) || isHomeSubmitting;
 	const composerIsCancelling: boolean = runState.status === "cancelling";
 	const runningSessionIds: string[] = activeSessionId !== null && composerIsSending ? [activeSessionId] : [];
@@ -3001,6 +3004,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						workspaceFooterDisabled={!isNewSessionHome || isHomeSubmitting}
 						isWorkspaceAdding={isWorkspaceAdding}
 						activeWorkspace={displayedWorkspace}
+						godotLaunchExecutablePath={godotLaunchExecutablePath}
 						onNewSession={handleNewSession}
 						onNewWorkspaceSession={(workspace: WorkspaceConfig): void => {
 							void handleNewWorkspaceSession(workspace);

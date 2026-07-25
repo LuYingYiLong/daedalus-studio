@@ -133,9 +133,11 @@ describe("workspace-fs", () => {
 	it("lists default and detected workspace launch targets", async () => {
 		const localAppData: string = "C:/Users/test/AppData/Local";
 		const programFiles: string = "C:/Program Files";
+		const godotPath: string = "C:/Program Files/Godot/Godot.exe";
 		const existingPaths: Set<string> = new Set([
 			join(localAppData, "Programs", "Microsoft VS Code", "Code.exe"),
-			join(programFiles, "Git", "git-bash.exe")
+			join(programFiles, "Git", "git-bash.exe"),
+			godotPath
 		]);
 
 		const targets = await listWorkspaceLaunchTargets({
@@ -144,6 +146,7 @@ describe("workspace-fs", () => {
 				LOCALAPPDATA: localAppData,
 				ProgramFiles: programFiles
 			},
+			godotExecutablePath: godotPath,
 			pathExists: async (targetPath: string): Promise<boolean> => existingPaths.has(targetPath),
 			findOnPath: async (): Promise<string | null> => null
 		});
@@ -152,8 +155,99 @@ describe("workspace-fs", () => {
 			"file-explorer",
 			"terminal",
 			"vscode",
-			"git-bash"
+			"git-bash",
+			"godot"
 		]);
+	});
+
+	it("opens Godot editor with the workspace root as project path", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const godotPath: string = "C:/Program Files/Godot/Godot.exe";
+		const spawned: Array<{ command: string; args: string[]; cwd: string }> = [];
+
+		await expect(openWorkspaceLaunchTarget(root, "godot", {
+			godotExecutablePath: godotPath,
+			pathExists: async (targetPath: string): Promise<boolean> => targetPath === godotPath,
+			spawnProcess(command, args, options): { unref(): void } {
+				spawned.push({ command, args, cwd: options.cwd });
+				return { unref(): void {} };
+			}
+		})).resolves.toEqual({ opened: true, targetId: "godot" });
+
+		expect(spawned).toEqual([{
+			command: godotPath,
+			args: ["--editor", "--path", resolve(root)],
+			cwd: resolve(root)
+		}]);
+	});
+
+	it("runs a Godot project without opening the editor", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const godotPath: string = "C:/Program Files/Godot/Godot.exe";
+		const spawned: Array<{ command: string; args: string[]; cwd: string }> = [];
+
+		await expect(openWorkspaceLaunchTarget(root, "godot", {
+			godotExecutablePath: godotPath,
+			godotRunMode: "project",
+			pathExists: async (targetPath: string): Promise<boolean> => targetPath === godotPath,
+			spawnProcess(command, args, options): { unref(): void } {
+				spawned.push({ command, args, cwd: options.cwd });
+				return { unref(): void {} };
+			}
+		})).resolves.toEqual({ opened: true, targetId: "godot" });
+
+		expect(spawned).toEqual([{
+			command: godotPath,
+			args: ["--path", resolve(root)],
+			cwd: resolve(root)
+		}]);
+	});
+
+	it("runs a Godot project through its configured main scene", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		await mkdir(join(root, "scenes"));
+		await writeFile(join(root, "project.godot"), "config_version=5\n\n[application]\nconfig/name=\"Game\"\nrun/main_scene=\"res://scenes/Main.tscn\"\n", "utf8");
+		const godotPath: string = "C:/Program Files/Godot/Godot.exe";
+		const spawned: Array<{ command: string; args: string[]; cwd: string }> = [];
+
+		await expect(openWorkspaceLaunchTarget(root, "godot", {
+			godotExecutablePath: godotPath,
+			godotRunMode: "project",
+			pathExists: async (targetPath: string): Promise<boolean> => targetPath === godotPath,
+			spawnProcess(command, args, options): { unref(): void } {
+				spawned.push({ command, args, cwd: options.cwd });
+				return { unref(): void {} };
+			}
+		})).resolves.toEqual({ opened: true, targetId: "godot" });
+
+		expect(spawned).toEqual([{
+			command: godotPath,
+			args: ["--path", resolve(root), "scenes/Main.tscn"],
+			cwd: resolve(root)
+		}]);
+	});
+
+	it("runs a specific Godot scene with a project-relative scene path", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const godotPath: string = "C:/Program Files/Godot/Godot.exe";
+		const spawned: Array<{ command: string; args: string[]; cwd: string }> = [];
+
+		await expect(openWorkspaceLaunchTarget(root, "godot", {
+			godotExecutablePath: godotPath,
+			godotRunMode: "scene",
+			godotScenePath: "scenes/Main.tscn",
+			pathExists: async (targetPath: string): Promise<boolean> => targetPath === godotPath,
+			spawnProcess(command, args, options): { unref(): void } {
+				spawned.push({ command, args, cwd: options.cwd });
+				return { unref(): void {} };
+			}
+		})).resolves.toEqual({ opened: true, targetId: "godot" });
+
+		expect(spawned).toEqual([{
+			command: godotPath,
+			args: ["--path", resolve(root), "scenes/Main.tscn"],
+			cwd: resolve(root)
+		}]);
 	});
 
 	it("opens Git Bash in the workspace root", async () => {

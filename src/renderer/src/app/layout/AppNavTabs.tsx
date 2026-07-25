@@ -27,16 +27,16 @@ export const appNavItems: AppNavItem[] = [
 		labelKey: "app.navigation.settings",
 		icon: "settings"
 	},
-	{
-		key: "drawing",
-		labelKey: "app.navigation.drawing",
-		icon: "draw"
-	},
-	{
-		key: "knowledge",
-		labelKey: "app.navigation.knowledge",
-		icon: "book"
-	}
+	// {
+	// 	key: "drawing",
+	// 	labelKey: "app.navigation.drawing",
+	// 	icon: "draw"
+	// },
+	// {
+	// 	key: "knowledge",
+	// 	labelKey: "app.navigation.knowledge",
+	// 	icon: "book"
+	// }
 ];
 
 export function isAppPageKey(key: string): key is AppPageKey {

@@ -210,7 +210,7 @@ declare global {
 		getPackageInfo: () => Promise<PackageInfo>;
 	}
 
-	type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash";
+	type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot";
 
 	interface ElectronAPI {
 		versions: ElectronVersions;
@@ -257,13 +257,18 @@ declare global {
 				kind: "file" | "folder";
 			}>>;
 			openWorkspaceDirectory: (workspaceRoot: string) => Promise<{ opened: true }>;
-			listLaunchTargets: () => Promise<Array<{
+			listLaunchTargets: (params?: {
+				godotExecutablePath?: string | null;
+			}) => Promise<Array<{
 				id: WorkspaceLaunchTargetId;
 				label: string;
 			}>>;
 			openLaunchTarget: (params: {
 				workspaceRoot: string;
 				targetId: WorkspaceLaunchTargetId;
+				godotExecutablePath?: string | null;
+				godotRunMode?: "editor" | "project" | "scene";
+				godotScenePath?: string;
 			}) => Promise<{ opened: true; targetId: WorkspaceLaunchTargetId }>;
 		};
 		skillFs: {

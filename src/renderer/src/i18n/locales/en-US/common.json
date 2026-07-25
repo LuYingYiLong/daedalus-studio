@@ -119,13 +119,26 @@
       "aria": {
         "open": "Open session summary"
       },
-      "sections": {
-        "envInfo": "Env info",
-        "plans": "Plans",
-        "source": "Source"
-      },
-      "actions": {
-        "diff": "Diff",
+        "sections": {
+          "envInfo": "Env info",
+          "godot": "Godot",
+          "plans": "Plans",
+          "source": "Source"
+        },
+        "godot": {
+          "runProject": "Run project",
+          "runScene": "Run scene...",
+          "sceneModal": {
+            "title": "Run Godot scene",
+            "searchPlaceholder": "Search scenes",
+            "empty": "No scene files found"
+          },
+          "errors": {
+            "loadScenes": "Failed to load Godot scenes"
+          }
+        },
+        "actions": {
+          "diff": "Diff",
         "commitOrPush": "Commit or push",
         "seeMore": "See more",
         "retry": "Retry"
