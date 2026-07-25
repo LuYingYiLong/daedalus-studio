@@ -1,5 +1,5 @@
-import { type CSSProperties, type ReactNode } from "react";
-import { closestCenter, DndContext, PointerSensor, useSensor, type DragEndEvent } from "@dnd-kit/core";
+import { type CSSProperties, type ReactNode, useState } from "react";
+import { closestCenter, DndContext, PointerSensor, useSensor, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button, Tooltip, Typography } from "antd";
@@ -27,6 +27,7 @@ type SortableRowProps = {
 	editLabel: string;
 	removeLabel: string;
 	dragLabel: string;
+	tooltipsDisabled?: boolean;
 	onEdit?: () => void;
 	onRemove: () => void;
 };
@@ -47,12 +48,13 @@ function moveBefore<T>(items: T[], activeItem: T, overItem: T): T[] {
 	return nextItems;
 }
 
-function QueueRow({ icon, text, editLabel, removeLabel, onEdit, onRemove, dragHandle, rowRef, style, isDragging }: SortableRowProps & {
+function QueueRow({ icon, text, editLabel, removeLabel, tooltipsDisabled, onEdit, onRemove, dragHandle, rowRef, style, isDragging }: SortableRowProps & {
 	dragHandle: ReactNode;
 	rowRef?: (node: HTMLDivElement | null) => void;
 	style?: CSSProperties;
 	isDragging?: boolean;
 }): React.JSX.Element {
+	const tooltipOpen: false | undefined = tooltipsDisabled === true || isDragging === true ? false : undefined;
 	return (
 		<div
 			ref={rowRef}
@@ -62,12 +64,12 @@ function QueueRow({ icon, text, editLabel, removeLabel, onEdit, onRemove, dragHa
 			{dragHandle}
 			<span className={styles.kindIcon}>{icon}</span>
 			<div className={styles.itemBody}>
-				<Tooltip title={text}>
+				<Tooltip title={text} open={tooltipOpen}>
 					<Typography.Text className={styles.itemText}>{text}</Typography.Text>
 				</Tooltip>
 			</div>
 			{onEdit === undefined ? <span aria-hidden={true} /> : (
-				<Tooltip title={editLabel}>
+				<Tooltip title={editLabel} open={tooltipOpen}>
 					<Button
 						type="text"
 						size="small"
@@ -78,7 +80,7 @@ function QueueRow({ icon, text, editLabel, removeLabel, onEdit, onRemove, dragHa
 					/>
 				</Tooltip>
 			)}
-			<Tooltip title={removeLabel}>
+			<Tooltip title={removeLabel} open={tooltipOpen}>
 				<Button
 					type="text"
 					size="small"
@@ -161,6 +163,7 @@ function MessageQueuePanel({
 	onGuideDelete
 }: MessageQueuePanelProps): React.JSX.Element | null {
 	const { t } = useTranslation();
+	const [activeDragId, setActiveDragId] = useState<string | null>(null);
 	const pointerSensor = useSensor(PointerSensor, {
 		activationConstraint: {
 			distance: 8
@@ -174,7 +177,16 @@ function MessageQueuePanel({
 		.map((item: MessageQueueItem): string => String(item.id));
 	const guideIds: string[] = pendingGuides.map((guide: PendingGuide): string => guide.guideId);
 
+	function handleDragStart(event: DragStartEvent): void {
+		setActiveDragId(String(event.active.id));
+	}
+
+	function handleDragCancel(): void {
+		setActiveDragId(null);
+	}
+
 	function handleQueueDragEnd(event: DragEndEvent): void {
+		setActiveDragId(null);
 		if (event.over === null || event.active.id === event.over.id) {
 			return;
 		}
@@ -183,6 +195,7 @@ function MessageQueuePanel({
 	}
 
 	function handleGuideDragEnd(event: DragEndEvent): void {
+		setActiveDragId(null);
 		if (event.over === null || event.active.id === event.over.id) {
 			return;
 		}
@@ -196,7 +209,7 @@ function MessageQueuePanel({
 	return (
 		<div className={styles.panel}>
 			{pendingGuides.length > 0 ? (
-				<DndContext sensors={[pointerSensor]} collisionDetection={closestCenter} onDragEnd={handleGuideDragEnd}>
+				<DndContext sensors={[pointerSensor]} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragCancel={handleDragCancel} onDragEnd={handleGuideDragEnd}>
 					<SortableContext items={guideIds} strategy={verticalListSortingStrategy}>
 						<div className={styles.group}>
 							<div className={styles.groupLabel}>{t("messageQueue.groups.guides")}</div>
@@ -209,6 +222,7 @@ function MessageQueuePanel({
 									editLabel={t("messageQueue.actions.edit")}
 									removeLabel={t("messageQueue.actions.remove")}
 									dragLabel={t("messageQueue.actions.dragToReorder")}
+									tooltipsDisabled={activeDragId !== null}
 									onRemove={(): void => onGuideDelete(guide.guideId)}
 								/>
 							))}
@@ -217,7 +231,7 @@ function MessageQueuePanel({
 				</DndContext>
 			) : null}
 			{visibleMessageQueue.length > 0 ? (
-				<DndContext sensors={[pointerSensor]} collisionDetection={closestCenter} onDragEnd={handleQueueDragEnd}>
+				<DndContext sensors={[pointerSensor]} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragCancel={handleDragCancel} onDragEnd={handleQueueDragEnd}>
 					<SortableContext items={pendingQueueIds} strategy={verticalListSortingStrategy}>
 						<div className={styles.group}>
 							<div className={styles.groupLabel}>{t("messageQueue.groups.queue")}</div>
@@ -231,6 +245,7 @@ function MessageQueuePanel({
 									editLabel={t("messageQueue.actions.edit")}
 									removeLabel={t("messageQueue.actions.remove")}
 									dragLabel={t("messageQueue.actions.dragToReorder")}
+									tooltipsDisabled={activeDragId !== null}
 									onEdit={(): void => onQueueEdit(item)}
 									onRemove={(): void => onQueueRemove(item.id)}
 								/>

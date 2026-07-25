@@ -10,7 +10,6 @@
 	overflow: hidden;
 	user-select: none;
 	-webkit-app-region: drag;
-	background: color-mix(in srgb, var(--ds-bg) 40%, transparent);
 }
 
 .brandCluster {

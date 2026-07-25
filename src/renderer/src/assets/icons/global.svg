@@ -4,7 +4,7 @@
 			<rect width="24.000000" height="24.000000" x="0.000000" y="0.000000" fill="currentColor" />
 		</clipPath>
 	</defs>
-	<g id="global 1" clip-path="url(#clipPath_14)" customFrame="url(#clipPath_14)">
+	<g id="global 1" clip-path="url(#clipPath_14)">
 		<rect id="global 1" width="24.000000" height="24.000000" x="0.000000" y="0.000000" />
 		<circle id="椭圆 15" cx="12" cy="12" r="9.125" stroke="currentColor" stroke-width="1.750000" />
 		<path id="矢量 71" d="M8 12C8 18 12 21 12 21C12 21 16 18 16 12C16 5.99999 12 3 12 3C12 3 8 6.00001 8 12Z" stroke="currentColor" stroke-width="1.750000" />

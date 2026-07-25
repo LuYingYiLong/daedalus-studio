@@ -2,7 +2,6 @@
 	display: grid;
 	flex: 1;
 	min-height: 0;
-	backdrop-filter: blur(28px) saturate(1.16);
 }
 
 .agentShell {

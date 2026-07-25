@@ -20,6 +20,7 @@ import {
 	type ResolvedTheme,
 	type ThemePreference
 } from "@/styles/studio-theme";
+import styles from "./StudioThemeRoot.module.css";
 
 const PREFERS_LIGHT_SCHEME_QUERY = "(prefers-color-scheme: light)";
 
@@ -92,7 +93,7 @@ function StudioThemeRoot(): React.JSX.Element {
 
 	return (
 		<ConfigProvider theme={studioTheme} locale={antdLocale}>
-			<AntdApp component="div" style={{ display: "contents" }}>
+			<AntdApp component="div" className={styles.root}>
 				<Titlebar />
 				{bootstrapData === null ? <BootSplash onReady={handleBootstrapReady} /> : <App bootstrapData={bootstrapData} />}
 			</AntdApp>
