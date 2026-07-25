@@ -2,7 +2,7 @@ import { Button, Tooltip } from "antd";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Icon } from "@/assets/icons";
-import { copyTextToClipboard } from "@/utils/clipboard";
+import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import hljs from "highlight.js";
 import { memo, useEffect, useRef, useState } from "react";
 import styles from "./MarkdownContent.module.css";

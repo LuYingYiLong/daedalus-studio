@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ProviderModelInfo } from "@/api/provider-api";
-import { isImageTaskModel } from "@/pages/settings/provider-model-filters";
+import { isImageTaskModel } from "@/features/settings/lib/provider-model-filters";
 
 function createModel(capabilities: ProviderModelInfo["capabilities"]): ProviderModelInfo {
 	return {

@@ -1,4 +1,4 @@
-import { createBackendClient } from "@/api/backend-client";
+import { createBackendClient } from "@/shared/api/transport/backend-client";
 import { fetchClientPreferences, type ClientPreferences } from "@/api/client-preferences-api";
 import { fetchGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";

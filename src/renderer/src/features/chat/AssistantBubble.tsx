@@ -4,13 +4,13 @@ import { Icon } from "@/assets/icons";
 import { TimelineBodyPart } from "@/api/types";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import ToolPart from "../chat/ToolPart";
-import StatusPart from "../chat/StatusPart";
-import PlanPart from "../chat/PlanPart";
-import InlineDiffPart from "../chat/InlineDiffPart";
-import ThinkingPart from "../chat/ThinkingPart";
-import ImageGenerationPart from "../chat/ImageGenerationPart";
-import { copyTextToClipboard } from "@/utils/clipboard";
+import ToolPart from "./ToolPart";
+import StatusPart from "./StatusPart";
+import PlanPart from "./PlanPart";
+import InlineDiffPart from "./InlineDiffPart";
+import ThinkingPart from "./ThinkingPart";
+import ImageGenerationPart from "./ImageGenerationPart";
+import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import MarkdownContent from "../markdown/MarkdownContent";
 
 export type AssistantBubbleProps = {

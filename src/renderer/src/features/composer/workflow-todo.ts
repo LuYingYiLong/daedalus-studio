@@ -1,4 +1,4 @@
-import type { BackendEvent } from "@/api/backend-rpc-client";
+import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
 import type { WorkflowTodoSnapshot, WorkflowTodoStatus, WorkflowTodoStep } from "@/api/types";
 
 const PLAN_TODO_MAX_STEPS: number = 12;

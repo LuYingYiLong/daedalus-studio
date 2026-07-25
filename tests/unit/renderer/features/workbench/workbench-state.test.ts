@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BackendEvent } from "@/api/backend-rpc-client";
+import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
 import type { TimelineBlock, WorkbenchSnapshot } from "@/api/types";
 import {
 	applyBackendEventToTimeline,

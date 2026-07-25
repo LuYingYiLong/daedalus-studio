@@ -1,4 +1,4 @@
-import type { BackendEvent } from "@/api/backend-rpc-client";
+import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
 import type { WorkbenchActiveRun, WorkbenchSnapshot } from "@/api/types";
 
 export type RunControllerStatus = WorkbenchActiveRun["status"];

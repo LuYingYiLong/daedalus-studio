@@ -1,5 +1,5 @@
-import { BackendRpcClient } from "./backend-rpc-client";
-import type { ClientHelloResult } from "./types";
+import { BackendRpcClient } from "@/shared/api/transport/backend-rpc-client";
+import type { ClientHelloResult } from "@/api/types";
 
 const studioCapabilities: Record<string, boolean> = {
 	sessionSubscribe: true,

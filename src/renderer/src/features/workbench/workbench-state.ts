@@ -1,4 +1,4 @@
-import type { BackendEvent } from "@/api/backend-rpc-client";
+import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
 import type { SessionOpenResult, SessionTimelineResult, TimelineAssistantBlock, TimelineBlock, TimelineBodyPart, WorkbenchSnapshot } from "@/api/types";
 
 export type TimelinePageState = {
@@ -554,7 +554,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 			nextParts = [...nextParts, {
 				type: "status",
 				status: "error",
-				title: "后端返回错误",
+				title: "鍚庣杩斿洖閿欒",
 				details,
 				code: getStringValue(data, "code") || "agent_run_error"
 			}];
@@ -571,8 +571,8 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 			nextParts = [...nextParts, {
 				type: "status",
 				status: "info",
-				title: "已停止",
-				details: getStringValue(data, "reason") || "用户停止了本次响应",
+                title: "Stopped",
+                details: getStringValue(data, "reason") || "The response was stopped by the user.",
 				code: "cancelled"
 			}];
 		}

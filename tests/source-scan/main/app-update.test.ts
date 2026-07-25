@@ -12,8 +12,8 @@ describe("app update source", () => {
 	const bootstrapSource: string = readRepoFile("src", "main", "services", "backend-bootstrap.ts");
 	const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
-	const titlebarSource: string = readRepoFile("src", "renderer", "src", "components", "Titlebar.tsx");
-	const titlebarCss: string = readRepoFile("src", "renderer", "src", "components", "Titlebar.module.css");
+	const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.tsx");
+	const titlebarCss: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.module.css");
 
 	it("configures electron-updater and GitHub publishing", () => {
 		expect(packageSource).toContain("\"electron-updater\"");

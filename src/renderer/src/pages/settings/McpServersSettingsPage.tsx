@@ -15,7 +15,7 @@ import {
 	type McpRuntimeStatus,
 	type McpTransport
 } from "@/api/mcp-api";
-import { createMcpServerAddPayload, createMcpServerUpdatePayload, type McpServerFormValues } from "./mcp-form-utils";
+import { createMcpServerAddPayload, createMcpServerUpdatePayload, type McpServerFormValues } from "@/features/settings/lib/mcp-form-utils";
 
 const DEFAULT_FORM_VALUES: McpServerFormValues = {
 	transport: "stdio"

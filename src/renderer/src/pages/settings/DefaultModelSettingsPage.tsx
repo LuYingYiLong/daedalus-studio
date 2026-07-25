@@ -12,7 +12,7 @@ import {
 	type ProviderModelSelectionProvider,
 	type ProviderTaskModelRef
 } from "@/api/provider-api";
-import { isImageTaskModel } from "./provider-model-filters";
+import { isImageTaskModel } from "@/features/settings/lib/provider-model-filters";
 import styles from "./DefaultModelSettingsPage.module.css";
 
 type RoutingKey = keyof ProviderModelRouting;

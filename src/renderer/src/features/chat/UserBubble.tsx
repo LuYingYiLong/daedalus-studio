@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { AdditionalContextItem } from "@/api/types";
 import AdditionalContextStrip from "./AdditionalContextStrip";
-import { copyTextToClipboard } from "@/utils/clipboard";
+import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import MarkdownContent from "../markdown/MarkdownContent";
 
 export type RetryUserMessagePayload = {

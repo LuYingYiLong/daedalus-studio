@@ -1,11 +1,12 @@
 import { TimelineAssistantBlock, TimelineBlock } from "@/api/types";
-import AssistantBubble from "../bubble/AssistantBubble";
-import UserBubble from "../bubble/UserBubble";
-import type { RetryUserMessagePayload } from "../bubble/UserBubble";
+import AssistantBubble from "./AssistantBubble";
+import UserBubble from "./UserBubble";
+import type { RetryUserMessagePayload } from "./UserBubble";
 import styles from "./MessageList.module.css";
-import { formatElapsedTime, formatShortDateTime } from "@/utils/time-format";
+import { formatElapsedTime, formatShortDateTime } from "@/shared/lib/time-format";
 import { Spin, Alert } from "antd";
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useThrottleFn } from "ahooks";
 import {
 	getDistanceFromBottomByMetrics,
 	isNearBottomByMetrics,
@@ -266,7 +267,10 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		detachAutoFollow();
 	}, [detachAutoFollow]);
 
-	const scheduleViewportUpdate = useCallback((): void => {
+	const {
+		run: scheduleViewportUpdate,
+		cancel: cancelScheduledViewportUpdate
+	} = useThrottleFn((): void => {
 		if (viewportUpdateFrameRef.current !== null) {
 			return;
 		}
@@ -275,7 +279,11 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			viewportUpdateFrameRef.current = null;
 			updateViewport();
 		});
-	}, [updateViewport]);
+	}, {
+		wait: 50,
+		leading: true,
+		trailing: true
+	});
 
 	useEffect((): (() => void) | void => {
 		const element: HTMLElement | null = listRef.current;
@@ -293,12 +301,13 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			element.removeEventListener("scroll", scheduleViewportUpdate);
 			element.removeEventListener("wheel", handleWheel);
 			window.removeEventListener("resize", scheduleViewportUpdate);
+			cancelScheduledViewportUpdate();
 			if (viewportUpdateFrameRef.current !== null) {
 				window.cancelAnimationFrame(viewportUpdateFrameRef.current);
 				viewportUpdateFrameRef.current = null;
 			}
 		};
-	}, [handleWheel, scheduleViewportUpdate, updateViewport]);
+	}, [cancelScheduledViewportUpdate, handleWheel, scheduleViewportUpdate, updateViewport]);
 
 	useLayoutEffect((): void => {
 		const element: HTMLElement | null = listRef.current;

@@ -1,4 +1,4 @@
-import { createBackendClient } from "./backend-client";
+import { createBackendClient } from "@/shared/api/transport/backend-client";
 
 export type McpTransport = "stdio" | "http";
 export type McpPlanAccess = "disabled" | "read";

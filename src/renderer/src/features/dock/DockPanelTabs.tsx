@@ -4,7 +4,7 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import PanelTabs, { type PanelTabsAddItem, type PanelTabsItem } from "@/features/panel-tabs/PanelTabs";
 import { Icon } from "@/assets/icons";
-import GitDiffReviewPanel from "@/features/review/GitDiffReviewPanel";
+import GitDiffReviewPanel from "@/features/git/review/GitDiffReviewPanel";
 import TerminalPanel from "@/features/terminal/TerminalPanel";
 import styles from "./DockPanelTabs.module.css";
 

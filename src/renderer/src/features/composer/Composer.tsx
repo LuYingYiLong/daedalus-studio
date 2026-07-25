@@ -13,7 +13,7 @@ import type { SkillSummary } from "@/api/skill-api";
 import type { AdditionalContextItem, WorkspaceConfig } from "@/api/types";
 import type { ProviderModelInfo, ProviderModelSelection, ProviderModelSelectionProvider } from "@/api/provider-api";
 import { compressSession, estimateContextUsage, type ContextUsageEstimate } from "@/api/context-api";
-import AdditionalContextStrip from "@/features/bubble/AdditionalContextStrip";
+import AdditionalContextStrip from "@/features/chat/AdditionalContextStrip";
 import {
 	createCompletionOptions,
 	getCompletionToken,

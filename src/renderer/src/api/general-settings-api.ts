@@ -1,4 +1,4 @@
-import { createBackendClient } from "./backend-client";
+import { createBackendClient } from "@/shared/api/transport/backend-client";
 
 export type GeneralSettings = {
 	schemaVersion: 2;

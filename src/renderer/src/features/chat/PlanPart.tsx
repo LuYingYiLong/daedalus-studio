@@ -4,7 +4,7 @@ import { Button, Card, Modal, Tooltip } from "antd";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import styles from "./PlanPart.module.css"
-import { copyTextToClipboard } from "@/utils/clipboard";
+import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import MarkdownContent from "../markdown/MarkdownContent";
 
 export type TimelinePlanPart = Extract<TimelineBodyPart, { type: "plan" }>;

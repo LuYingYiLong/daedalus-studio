@@ -8,7 +8,7 @@ import { Alert, Button, Dropdown, Empty, Input, Menu, message, Modal, Spin, Tool
 import type { MenuProps } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/api/types";
 import { Icon } from "@/assets/icons";
-import { copyTextToClipboard } from "@/utils/clipboard";
+import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import styles from "./WorkspaceTree.module.css";
 
 export type WorkspaceTreeProps = {

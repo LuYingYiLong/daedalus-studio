@@ -19,7 +19,7 @@ import NewSessionHome from "./NewSessionHome";
 import ApprovalDialog from "@/features/approval/ApprovalDialog";
 import ToolBudgetDialog from "@/features/approval/ToolBudgetDialog";
 import type { ComposerCompletionTrigger } from "@/features/composer/composer-completion";
-import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
+import type { RetryUserMessagePayload } from "@/features/chat/UserBubble";
 import styles from "./AgentPage.module.css";
 import { Icon } from "@/assets/icons";
 import ClarificationDialog from "@/features/clarification/ClarificationDialog";

@@ -4,9 +4,9 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 describe("AgentPage git diff review source", () => {
 	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "agent", "AgentPage.tsx");
 	const messageListSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "MessageList.tsx");
-	const assistantBubbleSource: string = readRepoFile("src", "renderer", "src", "features", "bubble", "AssistantBubble.tsx");
+	const assistantBubbleSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "AssistantBubble.tsx");
 	const inlineDiffSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "InlineDiffPart.tsx");
-	const reviewPanelSource: string = readRepoFile("src", "renderer", "src", "features", "review", "GitDiffReviewPanel.tsx");
+	const reviewPanelSource: string = readRepoFile("src", "renderer", "src", "features", "git", "review", "GitDiffReviewPanel.tsx");
 	const commitActionDialogSource: string = readRepoFile("src", "renderer", "src", "features", "git", "CommitActionDialog.tsx");
 	const gitActionControllerSource: string = readRepoFile("src", "renderer", "src", "features", "git", "useGitActionDialogController.tsx");
 	const dockPanelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.tsx");

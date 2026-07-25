@@ -1,7 +1,8 @@
 import { Button, Card, Descriptions, Spin, Tag, Typography } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useRequest } from "ahooks";
 import { useTranslation } from "react-i18next";
-import { createBackendClient } from "@/api/backend-client";
+import { createBackendClient } from "@/shared/api/transport/backend-client";
 import type { BackendHealthResult } from "@/app/bootstrap";
 import { Icon } from "@/assets/icons";
 import backendColorfulIconUrl from "@/assets/icons/backend-colorful.svg?url";
@@ -21,6 +22,11 @@ type BackendDetails = {
 	port: number | null;
 	health: BackendHealthResult | null;
 	errorMessage: string | null;
+};
+
+type AboutSettingsData = {
+	packageInfo: PackageInfo;
+	backendDetails: BackendDetails;
 };
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -82,73 +88,65 @@ async function loadBackendDetails(fallbackMessage: string): Promise<BackendDetai
 
 function AboutSettingsPage(): React.JSX.Element {
 	const { t } = useTranslation();
-	const [packageInfo, setPackageInfo] = useState<PackageInfo | null>(null);
-	const [backendDetails, setBackendDetails] = useState<BackendDetails | null>(null);
-	const [isLoading, setIsLoading] = useState<boolean>(true);
-	const [isBackendRefreshing, setIsBackendRefreshing] = useState<boolean>(false);
-	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-	useEffect((): (() => void) => {
-		let cancelled: boolean = false;
-
-		async function loadPackageInfo(): Promise<void> {
-			try {
-				setIsLoading(true);
-				setErrorMessage(null);
-
-				const [info, details] = await Promise.all([
-					window.electronAPI.appInfo.getPackageInfo(),
-					loadBackendDetails(t("settings.about.errors.backendDetails"))
-				]);
-
-				if (cancelled) {
-					return;
-				}
-
-				setPackageInfo(info);
-				setBackendDetails(details);
-			} catch (error: unknown) {
-				if (!cancelled) {
-					setErrorMessage(getErrorMessage(error, t("settings.about.errors.applicationInfo")));
-				}
-			} finally {
-				if (!cancelled) {
-					setIsLoading(false);
-				}
-			}
-		}
-
-		void loadPackageInfo();
-
-		return (): void => {
-			cancelled = true;
+	const {
+		data,
+		loading: isLoading,
+		error,
+		mutate
+	} = useRequest(async (): Promise<AboutSettingsData> => {
+		const [info, details] = await Promise.all([
+			window.electronAPI.appInfo.getPackageInfo(),
+			loadBackendDetails(t("settings.about.errors.backendDetails"))
+		]);
+		return {
+			packageInfo: info,
+			backendDetails: details
 		};
-	}, [t]);
+	}, {
+		refreshDeps: [t]
+	});
 
-	useEffect((): (() => void) => {
-		return window.electronAPI.backend.onStatusChanged((status: string): void => {
-			setBackendDetails((current: BackendDetails | null): BackendDetails | null => {
-				if (current === null) {
+	const {
+		loading: isBackendRefreshing,
+		run: refreshBackendDetails
+	} = useRequest(async (): Promise<BackendDetails> => {
+		return loadBackendDetails(t("settings.about.errors.backendDetails"));
+	}, {
+		manual: true,
+		onSuccess: (details: BackendDetails): void => {
+			mutate((current: AboutSettingsData | undefined): AboutSettingsData | undefined => {
+				if (current === undefined) {
 					return current;
 				}
 				return {
 					...current,
-					status
+					backendDetails: details
+				};
+			});
+		}
+	});
+
+	useEffect((): (() => void) => {
+		return window.electronAPI.backend.onStatusChanged((status: string): void => {
+			mutate((current: AboutSettingsData | undefined): AboutSettingsData | undefined => {
+				if (current === undefined) {
+					return current;
+				}
+				return {
+					...current,
+					backendDetails: {
+						...current.backendDetails,
+						status
+					}
 				};
 			});
 		});
-	}, []);
-
-	async function handleRefreshBackendDetails(): Promise<void> {
-		try {
-			setIsBackendRefreshing(true);
-			setBackendDetails(await loadBackendDetails(t("settings.about.errors.backendDetails")));
-		} finally {
-			setIsBackendRefreshing(false);
-		}
-	}
+	}, [mutate]);
 
 	const gitHubUrl = "https://github.com/LuYingYiLong/daedalus-studio";
+	const packageInfo: PackageInfo | null = data?.packageInfo ?? null;
+	const backendDetails: BackendDetails | null = data?.backendDetails ?? null;
+	const errorMessage: string | null = error === undefined ? null : getErrorMessage(error, t("settings.about.errors.applicationInfo"));
 	const backendStatus: string = backendDetails?.status ?? "unknown";
 	const backendHealth: BackendHealthResult | null = backendDetails?.health ?? null;
 	const backendPort: number | null = backendHealth?.port ?? backendDetails?.port ?? null;
@@ -248,7 +246,7 @@ function AboutSettingsPage(): React.JSX.Element {
 										size="small"
 										icon={<Icon name="reload" />}
 										loading={isBackendRefreshing}
-										onClick={(): void => void handleRefreshBackendDetails()}
+										onClick={(): void => refreshBackendDetails()}
 									>
 										{t("settings.about.actions.refresh")}
 									</Button>

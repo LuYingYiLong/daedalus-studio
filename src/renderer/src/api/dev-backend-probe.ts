@@ -1,4 +1,4 @@
-import { BackendRpcClient } from "./backend-rpc-client";
+import { BackendRpcClient } from "@/shared/api/transport/backend-rpc-client";
 import type { ClientHelloResult, SessionListResult, WorkspaceListResult } from "./types";
 
 const studioCapabilities: Record<string, boolean> = {
@@ -42,7 +42,7 @@ export async function probeBackendWorkspaceAndSessions(): Promise<void> {
 		console.log("sessions", sessionList.sessions);
 		console.groupEnd();
 	} catch (error: unknown) {
-		console.error("[Daedalus backend] 获取工作区/会话失败", error);
+		console.error("[Daedalus backend] 获取工作�?会话失败", error);
 	} finally {
 		client.close();
 	}

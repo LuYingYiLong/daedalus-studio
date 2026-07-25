@@ -1,4 +1,4 @@
-import { createBackendClient } from "./backend-client";
+import { createBackendClient } from "@/shared/api/transport/backend-client";
 import type { WorkspaceConfig, WorkspaceListResult } from "./types";
 
 export type ConfigureEnvironmentParams = {

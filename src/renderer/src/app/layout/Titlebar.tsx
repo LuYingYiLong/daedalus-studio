@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useEventListener, useMemoizedFn } from "ahooks";
 import type { MenuProps } from "antd";
 import { Alert, Button, Dropdown, Modal, Progress, Space, Typography } from "antd";
 import {
@@ -107,27 +108,22 @@ function Titlebar(): React.JSX.Element {
 		};
 	}, [clientPreferences.autoCheckForUpdates]);
 
-	useEffect((): (() => void) => {
-		function handleClientPreferencesChanged(event: Event): void {
-			const preferences: ClientPreferences | undefined = (event as CustomEvent<ClientPreferences>).detail;
-			if (preferences !== undefined) {
-				setClientPreferences(preferences);
-			}
+	const handleClientPreferencesChanged = useMemoizedFn((event: Event): void => {
+		const preferences: ClientPreferences | undefined = (event as CustomEvent<ClientPreferences>).detail;
+		if (preferences !== undefined) {
+			setClientPreferences(preferences);
 		}
+	});
 
-		window.addEventListener(CLIENT_PREFERENCES_CHANGED_EVENT, handleClientPreferencesChanged);
-		return (): void => {
-			window.removeEventListener(CLIENT_PREFERENCES_CHANGED_EVENT, handleClientPreferencesChanged);
-		};
-	}, []);
+	useEventListener(CLIENT_PREFERENCES_CHANGED_EVENT, handleClientPreferencesChanged);
 
-	async function startDownload(): Promise<void> {
+	const startDownload = useMemoizedFn(async (): Promise<void> => {
 		if (updateState?.status !== "available" && updateState?.status !== "error") {
 			return;
 		}
 		const nextState: AppUpdateState = await window.electronAPI.appUpdate.download();
 		setUpdateState(nextState);
-	}
+	});
 
 	function handleUpdateClick(): void {
 		setUpdateModalOpen(true);

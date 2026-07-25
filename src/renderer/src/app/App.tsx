@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLatest } from "ahooks";
 import { Input, message as antdMessage, Modal, Typography } from "antd";
-import { useDiskSpaceCheck } from "@/hooks/useDiskSpaceCheck";
+import { useDiskSpaceCheck } from "@/shared/hooks/useDiskSpaceCheck";
+import useNativeTaskNotifications from "./hooks/useNativeTaskNotifications";
+import useWorkbenchPatchQueue, { mergeWorkbenchPatch } from "./hooks/useWorkbenchPatchQueue";
 import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
-import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, PlanRecommendedReply, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, PlanRecommendedReply, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import { checkSessionIntegrity, createSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
-import type { RetryUserMessagePayload } from "@/features/bubble/UserBubble";
+import type { RetryUserMessagePayload } from "@/features/chat/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import type { ProviderModelSelectionProvider } from "@/api/provider-api";
-import { createBackendClient } from "@/api/backend-client";
-import type { BackendEvent } from "@/api/backend-rpc-client";
+import { createBackendClient } from "@/shared/api/transport/backend-client";
+import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
 import { cancelChatMessage, continueToolBudget, sendChatMessage, stopToolBudget, type ChatMode } from "@/api/chat-api";
 import { fetchSlashCommands, type SlashCommandDefinition } from "@/api/command-api";
 import { fetchSkills, type SkillSummary } from "@/api/skill-api";
@@ -43,11 +46,10 @@ import {
 	isRunControllerActive,
 	type RunControllerState
 } from "@/features/workbench/run-state";
-import { patchWorkbench } from "@/api/workbench-api";
 import { addGuide, deleteGuide, reorderGuides } from "@/api/guide-api";
 import { addQueuedMessage, removeQueuedMessage, reorderQueuedMessages } from "@/api/message-queue-api";
 import { getSessionTitle } from "./session-title";
-import AppNavTabs, { type AppPageKey } from "./AppNavTabs";
+import AppNavTabs, { type AppPageKey } from "./layout/AppNavTabs";
 import AgentPage from "@/pages/agent/AgentPage";
 import SettingsPage, { type SettingsPageKey } from "@/pages/settings/SettingsPage";
 import DrawingPage from "@/pages/drawing/DrawingPage";
@@ -428,17 +430,6 @@ function isRunCompletionEvent(event: BackendEvent): boolean {
 	return event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done";
 }
 
-function mergePatch(left: WorkbenchPatch, right: WorkbenchPatch): WorkbenchPatch {
-	return {
-		...left,
-		...right,
-		composer: {
-			...left.composer,
-			...right.composer
-		}
-	};
-}
-
 function getChatMode(workbench: WorkbenchSnapshot | null): ChatMode {
 	return workbench?.composer.chatMode ?? "ask";
 }
@@ -705,7 +696,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const activeSessionIdRef = useRef<string | null>(null);
 	const [activeSessionMetadata, setActiveSessionMetadata] = useState<SessionMetadata | null>(null);
 	const [recentSessions, setRecentSessions] = useState<SessionMetadata[]>(() => getRecentSessions(bootstrapData.sessionList.sessions));
-	const recentSessionsRef = useRef<SessionMetadata[]>(recentSessions);
+	const recentSessionsRef = useLatest(recentSessions);
 	const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceConfig | null>(null);
 	const [timelinePage, setTimelinePage] = useState<TimelinePageState>(emptyTimelinePage);
 	const [workbench, setWorkbench] = useState<WorkbenchSnapshot | null>(null);
@@ -741,9 +732,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [runState, setRunState] = useState<RunControllerState>(() => createIdleRunState());
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(bootstrapData.clientPreferences ?? DEFAULT_CLIENT_PREFERENCES);
 	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(bootstrapData.generalSettings ?? DEFAULT_GENERAL_SETTINGS);
-	const pendingPatchRef = useRef<WorkbenchPatch>({});
-	const patchTimerRef = useRef<number | null>(null);
-	const patchSequenceRef = useRef<number>(0);
 	const isTimelinePageLoadingRef = useRef<boolean>(false);
 	const navigationVersionRef = useRef<number>(0);
 	const activeChatRequestIdRef = useRef<string | null>(null);
@@ -757,7 +745,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const recentContextFileSignaturesRef = useRef<Map<string, number>>(new Map());
 	const initializedWorkflowTodoKeyRef = useRef<string>("");
 	const expandedActiveWorkflowTodoKeyRef = useRef<string>("");
-	const nativeNotificationDedupeKeysRef = useRef<Set<string>>(new Set());
 	const pendingUserActionRequestIdsRef = useRef<Set<string>>(new Set());
 	const activeSessionTitleRef = useRef<string>("Daedalus session");
 	const pendingTimelineEventsRef = useRef<BackendEvent[]>([]);
@@ -765,20 +752,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const timelineStreamBatchTimerRef = useRef<number | null>(null);
 
 	useDiskSpaceCheck();
-
-	function showNativeTaskNotification(payload: NativeNotificationPayload): void {
-		if (nativeNotificationDedupeKeysRef.current.has(payload.dedupeKey)) {
-			return;
-		}
-
-		nativeNotificationDedupeKeysRef.current.add(payload.dedupeKey);
-		void window.electronAPI.nativeNotifications.show(payload).catch((error: unknown): void => {
-			console.error("[App] native notification failed", error);
-		});
-	}
+	const { showNativeTaskNotification, clearNativeTaskNotificationAttention } = useNativeTaskNotifications();
 
 	useEffect((): void => {
-		recentSessionsRef.current = recentSessions;
 		void window.electronAPI.tray.updateRecentSessions(
 			recentSessions.map((session: SessionMetadata): TrayRecentSession => ({
 				id: session.id,
@@ -1129,40 +1105,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		});
 	}, []);
 
-	const takePendingWorkbenchPatch = useCallback((): WorkbenchPatch => {
-		if (patchTimerRef.current !== null) {
-			window.clearTimeout(patchTimerRef.current);
-			patchTimerRef.current = null;
-		}
-
-		const pendingPatch: WorkbenchPatch = pendingPatchRef.current;
-		pendingPatchRef.current = {};
-
-		return pendingPatch;
-	}, []);
-
-	const sendWorkbenchPatch = useCallback(async (patch: WorkbenchPatch, applyResult: boolean = true): Promise<WorkbenchPatchResult | null> => {
-		const pendingPatch: WorkbenchPatch = patch;
-
-		if (Object.keys(pendingPatch).length === 0) {
-			return null;
-		}
-
-		const result = await patchWorkbench({
-			...pendingPatch,
-			clientSequence: patchSequenceRef.current += 1
-		});
-
-		if (applyResult) {
-			applyWorkbench(result.workbench);
-		}
-
-		return result;
-	}, [applyWorkbench]);
-
-	const sendPendingWorkbenchPatch = useCallback(async (): Promise<void> => {
-		await sendWorkbenchPatch(takePendingWorkbenchPatch());
-	}, [sendWorkbenchPatch, takePendingWorkbenchPatch]);
+	const {
+		takePendingWorkbenchPatch,
+		sendWorkbenchPatch,
+		sendPendingWorkbenchPatch,
+		queueWorkbenchPatch
+	} = useWorkbenchPatchQueue(applyWorkbench);
 
 	function applyOptimisticActiveRun(requestId: string, clearComposerText: boolean, clearComposerContext: boolean = false, preserveWorkflowTodo: boolean = false): void {
 		const startedAt: string = new Date().toISOString();
@@ -1271,27 +1219,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		});
 	}
 
-	const queueWorkbenchPatch = useCallback((patch: WorkbenchPatch, immediate: boolean = false): void => {
-		pendingPatchRef.current = mergePatch(pendingPatchRef.current, patch);
-
-		if (immediate) {
-			void sendPendingWorkbenchPatch().catch((error: unknown): void => {
-				console.error("[App] workbench patch failed", error);
-			});
-			return;
-		}
-
-		if (patchTimerRef.current !== null) {
-			window.clearTimeout(patchTimerRef.current);
-		}
-
-		patchTimerRef.current = window.setTimeout((): void => {
-			void sendPendingWorkbenchPatch().catch((error: unknown): void => {
-				console.error("[App] workbench patch failed", error);
-			});
-		}, 220);
-	}, [sendPendingWorkbenchPatch]);
-
 	useEffect((): void => {
 		discardPendingTimelineEvents();
 		activeSessionIdRef.current = activeSessionId;
@@ -1322,9 +1249,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	useEffect((): (() => void) => {
 		return (): void => {
-			if (patchTimerRef.current !== null) {
-				window.clearTimeout(patchTimerRef.current);
-			}
 			discardPendingTimelineEvents();
 		};
 	}, [discardPendingTimelineEvents]);
@@ -2338,7 +2262,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
 		const chatMode: ChatMode = getChatMode(workbench);
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const pendingPatch: WorkbenchPatch = mergePatch(takePendingWorkbenchPatch(), {
+		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatch(), {
 			additionalContextAction: { action: "set", items: [] }
 		});
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
@@ -2424,7 +2348,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const previousWorkbench: WorkbenchSnapshot = workbench;
 		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const pendingPatch: WorkbenchPatch = mergePatch(takePendingWorkbenchPatch(), {
+		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatch(), {
 			composer: { text: "" },
 			additionalContextAction: { action: "set", items: [] }
 		});
@@ -2478,7 +2402,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 
 		const previousWorkbench: WorkbenchSnapshot = workbench;
-		const pendingPatch: WorkbenchPatch = mergePatch(takePendingWorkbenchPatch(), {
+		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatch(), {
 			composer: { text: "" }
 		});
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
@@ -2537,7 +2461,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 		const previousWorkbench: WorkbenchSnapshot = workbench;
 		const additionalContext: AdditionalContextItem[] = item.additionalContext ?? [];
-		const pendingPatch: WorkbenchPatch = mergePatch(takePendingWorkbenchPatch(), {
+		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatch(), {
 			composer: {
 				text: item.text,
 				additionalContext
@@ -3103,12 +3027,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}, [chatTitle]);
 
 	useEffect((): void => {
-		nativeNotificationDedupeKeysRef.current.clear();
 		pendingUserActionRequestIdsRef.current.clear();
-		void window.electronAPI.nativeNotifications.clearAttention().catch((error: unknown): void => {
-			console.error("[App] clear native notification attention failed", error);
-		});
-	}, [activeSessionId]);
+		clearNativeTaskNotificationAttention();
+	}, [activeSessionId, clearNativeTaskNotificationAttention]);
 
 	useEffect((): void => {
 		if (activeSessionId === null || pendingApproval === null) {

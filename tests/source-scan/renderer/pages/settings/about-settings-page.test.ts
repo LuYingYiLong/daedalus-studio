@@ -16,7 +16,8 @@ describe("AboutSettingsPage", () => {
 		expect(pageSource).toContain("settings.about.fields.managerStatus");
 		expect(pageSource).toContain("settings.about.fields.runtimeMode");
 		expect(pageSource).toContain("settings.about.fields.logPath");
-		expect(pageSource).toContain("handleRefreshBackendDetails");
+		expect(pageSource).toContain("refreshBackendDetails");
+		expect(pageSource).toContain("useRequest");
 		expect(pageSource).not.toContain('tone="native"');
 		expect(iconSource).not.toContain("NATIVE_COLOR_ICON_NAMES");
 		expect(iconSource).not.toContain("data-tone");

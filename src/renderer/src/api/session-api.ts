@@ -1,4 +1,4 @@
-import { createBackendClient } from "./backend-client";
+import { createBackendClient } from "@/shared/api/transport/backend-client";
 import type { SessionListResult, SessionMetadata, SessionOpenResult, SessionTimelineResult, WorkbenchSnapshot } from "./types";
 import type { ChatMode } from "./chat-api";
 
