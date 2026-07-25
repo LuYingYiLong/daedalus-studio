@@ -369,7 +369,9 @@
     "diffStats": "{{branch}} / {{count}} file / +{{additions}} -{{deletions}}",
     "diffStats_other": "{{branch}} / {{count}} files / +{{additions}} -{{deletions}}",
     "actions": {
-      "refreshDiff": "Refresh git diff"
+      "refreshDiff": "Refresh git diff",
+      "expandAllDiffs": "Expand all diffs",
+      "collapseAllDiffs": "Collapse all diffs"
     },
     "empty": {
       "diffUnavailable": "Diff unavailable",

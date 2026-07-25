@@ -369,7 +369,9 @@
     "diffStats": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
     "diffStats_other": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
     "actions": {
-      "refreshDiff": "刷新 Git diff"
+      "refreshDiff": "刷新 Git diff",
+      "expandAllDiffs": "展开全部差异",
+      "collapseAllDiffs": "折叠全部差异"
     },
     "empty": {
       "diffUnavailable": "Diff 不可用",

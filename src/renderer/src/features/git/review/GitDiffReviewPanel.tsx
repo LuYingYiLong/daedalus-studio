@@ -63,6 +63,7 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 	const [diff, setDiff] = useState<WorkspaceGitDiffResult | null>(null);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+	const [expandedDiffKeys, setExpandedDiffKeys] = useState<string[]>([]);
 	const parsedDiff: ParsedDiff = useMemo((): ParsedDiff => parsePatch(diff?.patch ?? "", t), [diff?.patch, t]);
 	const diffFileCollapseItems: NonNullable<CollapseProps["items"]> = useMemo((): NonNullable<CollapseProps["items"]> => {
 		return parsedDiff.files.map((file: FileData, fileIndex: number): NonNullable<CollapseProps["items"]>[number] => {
@@ -94,9 +95,17 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 			};
 		});
 	}, [parsedDiff.files, t]);
-	const defaultDiffActiveKeys: string[] = useMemo((): string[] => {
+	const diffFileKeys: string[] = useMemo((): string[] => {
 		return diffFileCollapseItems.map((item): string => String(item?.key ?? ""));
 	}, [diffFileCollapseItems]);
+	const areAllDiffsExpanded: boolean = diffFileKeys.length > 0
+		&& diffFileKeys.every((key: string): boolean => expandedDiffKeys.includes(key));
+	const handleDiffCollapseChange: NonNullable<CollapseProps["onChange"]> = (keys): void => {
+		setExpandedDiffKeys((Array.isArray(keys) ? keys : [keys]).map(String));
+	};
+	const toggleAllDiffs = (): void => {
+		setExpandedDiffKeys(areAllDiffsExpanded ? [] : diffFileKeys);
+	};
 	const gitActions = useGitActionDialogController({
 		workspaceId,
 		onCommitSuccess: loadDiff,
@@ -143,6 +152,10 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 		};
 	}, [workspaceId, t]);
 
+	useEffect((): void => {
+		setExpandedDiffKeys(diffFileKeys);
+	}, [diffFileKeys]);
+
 	return (
 		<aside className={styles.panel}>
 			<header className={styles.header}>
@@ -169,8 +182,17 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 						onClick={gitActions.openCommitDialog}
 					/>
 				</Tooltip>
-				<Tooltip title={t("review.actions.refreshDiff")}>
-					<div className={styles.headerActions}>
+				<div className={styles.headerActions}>
+					<Tooltip title={t(areAllDiffsExpanded ? "review.actions.collapseAllDiffs" : "review.actions.expandAllDiffs")}>
+						<Button
+							type="text"
+							shape="circle"
+							disabled={diffFileKeys.length === 0}
+							icon={<Icon name={areAllDiffsExpanded ? "fold" : "unfold"} />}
+							onClick={toggleAllDiffs}
+						/>
+					</Tooltip>
+					<Tooltip title={t("review.actions.refreshDiff")}>
 						<Button
 							type="text"
 							shape="circle"
@@ -180,8 +202,8 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 								void loadDiff();
 							}}
 						/>
-					</div>
-				</Tooltip>
+					</Tooltip>
+				</div>
 			</header>
 
 			<Divider size="small" />
@@ -226,7 +248,8 @@ function GitDiffReviewPanel({ workspaceId }: GitDiffReviewPanelProps): ReactElem
 								key={diff.generatedAt}
 								size="small"
 								bordered={false}
-								defaultActiveKey={defaultDiffActiveKeys}
+								activeKey={expandedDiffKeys}
+								onChange={handleDiffCollapseChange}
 								items={diffFileCollapseItems}
 								className={styles.fileCollapse}
 							/>

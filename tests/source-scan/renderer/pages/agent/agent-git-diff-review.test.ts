@@ -96,6 +96,15 @@ describe("AgentPage git diff review source", () => {
 		expect(gitActionControllerSource).toContain("generateGitCommitMessage");
 	});
 
+	it("supports expanding and collapsing every parsed diff file", () => {
+		expect(reviewPanelSource).toContain("const [expandedDiffKeys, setExpandedDiffKeys] = useState<string[]>([]);");
+		expect(reviewPanelSource).toContain("const areAllDiffsExpanded: boolean = diffFileKeys.length > 0");
+		expect(reviewPanelSource).toContain("setExpandedDiffKeys(areAllDiffsExpanded ? [] : diffFileKeys);");
+		expect(reviewPanelSource).toContain('name={areAllDiffsExpanded ? "fold" : "unfold"}');
+		expect(reviewPanelSource).toContain('activeKey={expandedDiffKeys}');
+		expect(reviewPanelSource).toContain('onChange={handleDiffCollapseChange}');
+	});
+
 	it("uses dnd-kit to reorder dock tabs", () => {
 		expect(packageJsonSource).toContain("\"@dnd-kit/core\"");
 		expect(packageJsonSource).toContain("\"@dnd-kit/sortable\"");
