@@ -148,7 +148,9 @@ function createTokenHeatmapCells(points: UsageMetricsTrendPoint[], range: TimeRa
 		? pointDates.reduce((earliest: Date, date: Date): Date => date < earliest ? date : earliest, pointDates[0]!)
 		: addDays(today, -29);
 	const rangeStart: Date = rangeDays === null ? firstPointDate : addDays(today, -(rangeDays - 1));
-	const gridStart: Date = addDays(rangeStart, -rangeStart.getUTCDay());
+	const minimumDisplayStart: Date = addDays(today, -363);
+	const displayStart: Date = rangeStart > minimumDisplayStart ? minimumDisplayStart : rangeStart;
+	const gridStart: Date = addDays(displayStart, -displayStart.getUTCDay());
 	const gridEnd: Date = addDays(today, 6 - today.getUTCDay());
 	const values: number[] = Array.from(tokenByDate.values()).filter((value: number): boolean => value > 0);
 	const maxTokens: number = values.length > 0 ? Math.max(...values) : 0;
@@ -228,6 +230,7 @@ function StatisticsSettingsPage(): React.JSX.Element {
 	const tokenHeatmapCells: TokenHeatmapCell[] = useMemo((): TokenHeatmapCell[] => {
 		return createTokenHeatmapCells(data?.trends ?? [], range);
 	}, [data?.trends, range]);
+	const tokenHeatmapColumnCount: number = Math.max(1, Math.ceil(tokenHeatmapCells.length / 7));
 	const heatmapHasActivity: boolean = tokenHeatmapCells.some((cell: TokenHeatmapCell): boolean => cell.tokens > 0);
 
 	return (
@@ -267,22 +270,42 @@ function StatisticsSettingsPage(): React.JSX.Element {
 				) : summary !== null ? (
 					<>
 						<div className={styles.metricGrid}>
-							<Statistic title={t("settings.statistics.metrics.requests")} value={summary.requests} formatter={(value): string => formatInteger(Number(value))} />
+							<Statistic
+								title={t("settings.statistics.metrics.requests")}
+								value={summary.requests}
+								formatter={(value): string => formatInteger(Number(value))}
+							/>
 							<Divider vertical className={styles.divider} />
-							<Statistic title={t("settings.statistics.metrics.tokens")} value={formatCompact(summary.realTotalTokens)} suffix={t("settings.statistics.metrics.tokensSuffix")} />
+							<Statistic
+								title={t("settings.statistics.metrics.tokens")}
+								value={formatCompact(summary.realTotalTokens)}
+								suffix={t("settings.statistics.metrics.tokensSuffix")}
+							/>
 							<Divider vertical className={styles.divider} />
-							<Statistic title={t("settings.statistics.metrics.cacheHitRate")} value={formatPercent(summary.cacheHitRate)} />
+							<Statistic
+								title={t("settings.statistics.metrics.cacheHitRate")}
+								value={formatPercent(summary.cacheHitRate)}
+							/>
 							<Divider vertical className={styles.divider} />
-							<Statistic title={t("settings.statistics.metrics.avgDuration")} value={formatDuration(averageDurationMs)} />
+							<Statistic
+								title={t("settings.statistics.metrics.avgDuration")}
+								value={formatDuration(averageDurationMs)}
+							/>
 							<Divider vertical className={styles.divider} />
-							<Statistic title={t("settings.statistics.metrics.avgFirstToken")} value={formatDuration(averageFirstTokenMs)} />
+							<Statistic
+								title={t("settings.statistics.metrics.avgFirstToken")}
+								value={formatDuration(averageFirstTokenMs)}
+							/>
 						</div>
 
 						<Card title={t("settings.statistics.heatmap.title")} className={styles.heatmapCard}>
 							{heatmapHasActivity ? (
 								<>
 									<div className={styles.heatmapScroller}>
-										<div className={styles.heatmapGrid}>
+										<div
+											className={styles.heatmapGrid}
+											style={{ gridTemplateColumns: `repeat(${tokenHeatmapColumnCount}, minmax(0, 1fr))` }}
+										>
 											{tokenHeatmapCells.map((cell: TokenHeatmapCell): React.JSX.Element => (
 												<Tooltip
 													key={cell.key}
@@ -304,7 +327,15 @@ function StatisticsSettingsPage(): React.JSX.Element {
 							<Card title={t("settings.statistics.charts.requestsTrend")} className={styles.chartCard}>
 								<div className={styles.chartBody}>
 									{requestTrendData.length > 0 ? (
-										<Column data={requestTrendData} xField="bucket" yField="requests" height={260} autoFit colorField="bucket" axis={{ x: { labelAutoRotate: false } }} />
+										<Column
+											data={requestTrendData}
+											xField="bucket"
+											yField="requests"
+											height={260}
+											autoFit
+											colorField="bucket"
+											axis={{ x: { labelAutoRotate: false } }}
+										/>
 									) : <ChartEmpty description={t("settings.statistics.empty.noUsage")} />}
 								</div>
 							</Card>
@@ -312,7 +343,15 @@ function StatisticsSettingsPage(): React.JSX.Element {
 							<Card title={t("settings.statistics.charts.tokensTrend")} className={styles.chartCard}>
 								<div className={styles.chartBody}>
 									{tokenTrendData.length > 0 ? (
-										<Line data={tokenTrendData} xField="bucket" yField="tokens" height={260} autoFit style={{ lineWidth: 2 }} />
+										<Line
+											data={tokenTrendData}
+											xField="bucket"
+											yField="tokens"
+											height={260}
+											autoFit
+											shapeField="smooth"
+											style={{ lineWidth: 2 }}
+										/>
 									) : <ChartEmpty description={t("settings.statistics.empty.noUsage")} />}
 								</div>
 							</Card>
@@ -320,7 +359,15 @@ function StatisticsSettingsPage(): React.JSX.Element {
 							<Card title={t("settings.statistics.charts.providerShare")} className={styles.chartCard}>
 								<div className={styles.chartBody}>
 									{providerRows.length > 0 ? (
-										<Pie data={providerRows} angleField="value" colorField="label" height={260} autoFit innerRadius={0.58} legend={{ color: { position: "right" } }} />
+										<Pie
+											data={providerRows}
+											angleField="value"
+											colorField="label"
+											height={260}
+											autoFit
+											innerRadius={0.58}
+											legend={{ color: { position: "right" } }}
+										/>
 									) : <ChartEmpty description={t("settings.statistics.empty.noUsage")} />}
 								</div>
 							</Card>
@@ -328,7 +375,15 @@ function StatisticsSettingsPage(): React.JSX.Element {
 							<Card title={t("settings.statistics.charts.modelTokens")} className={styles.chartCard}>
 								<div className={styles.chartBody}>
 									{modelRows.length > 0 ? (
-										<Column data={modelRows} xField="label" yField="value" height={260} autoFit colorField="label" axis={{ x: { labelAutoRotate: true } }} />
+										<Column
+											data={modelRows}
+											xField="label"
+											yField="value"
+											height={260}
+											autoFit
+											colorField="label"
+											axis={{ x: { labelAutoRotate: true } }}
+										/>
 									) : <ChartEmpty description={t("settings.statistics.empty.noUsage")} />}
 								</div>
 							</Card>

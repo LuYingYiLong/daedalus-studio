@@ -86,26 +86,29 @@
 	width: 100%;
 	min-width: 0;
 	overflow-x: auto;
-	padding-bottom: 4px;
+	overflow-y: hidden;
+	padding: 2px 0 4px 0;
 }
 
 .heatmapGrid {
 	display: grid;
 	grid-auto-flow: column;
-	grid-template-rows: repeat(7, 12px);
-	grid-auto-columns: 12px;
-	gap: 4px;
-	width: max-content;
-	min-width: 100%;
-	align-items: center;
+	grid-template-rows: repeat(7, auto);
+	gap: var(--ds-space-1);
+	width: 100%;
+	min-width: 320px;
+	align-items: start;
 }
 
 .heatmapCell {
 	display: block;
-	width: 12px;
-	height: 12px;
+	width: 100%;
+	height: auto;
+	min-width: 8px;
+	min-height: 8px;
+	aspect-ratio: 1 / 1;
 	border: 1px solid color-mix(in srgb, var(--ds-border) 80%, transparent);
-	border-radius: 3px;
+	border-radius: var(--ds-space-1);
 	background: color-mix(in srgb, var(--ds-text-secondary) 8%, transparent);
 }
 
