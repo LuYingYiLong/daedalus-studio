@@ -622,7 +622,10 @@ class BackendManager {
 			logger.debug("Status changed", { from: this.status, to: status });
 		}
 		this.status = status;
-		this.mainWindow?.webContents.send("backend:status-changed", status);
+		const mainWindow: BrowserWindow | null = this.mainWindow;
+		if (mainWindow !== null && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+			mainWindow.webContents.send("backend:status-changed", status);
+		}
 		for (const listener of this.statusListeners) {
 			listener(status);
 		}

@@ -9,7 +9,9 @@ describe("BackendManager", () => {
 		vi.clearAllMocks();
 
 		mockMainWindow = {
+			isDestroyed: vi.fn(() => false),
 			webContents: {
+				isDestroyed: vi.fn(() => false),
 				send: vi.fn()
 			}
 		};
@@ -67,6 +69,16 @@ describe("BackendManager", () => {
 				"backend:status-changed",
 				expect.any(String)
 			);
+		});
+
+		it("skips renderer status events after the window is destroyed", async () => {
+			const { backendManager } = await import("@main/services/backend-manager");
+			mockMainWindow.isDestroyed.mockReturnValue(true);
+			(backendManager as any).mainWindow = mockMainWindow;
+
+			(backendManager as any).setStatus("healthy");
+
+			expect(mockMainWindow.webContents.send).not.toHaveBeenCalled();
 		});
 	});
 

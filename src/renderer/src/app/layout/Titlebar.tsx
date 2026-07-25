@@ -13,6 +13,9 @@ function shouldShowUpdateButton(state: AppUpdateState | null): boolean {
 	if (state === null) {
 		return false;
 	}
+	if (state.status === "error") {
+		return true;
+	}
 	const hasKnownUpdate: boolean = state.updateKind !== null
 		|| state.client.availableVersion !== null
 		|| state.backend.availableVersion !== null;
@@ -22,8 +25,7 @@ function shouldShowUpdateButton(state: AppUpdateState | null): boolean {
 	return state.status === "available"
 		|| state.status === "downloading"
 		|| state.status === "downloaded"
-		|| state.status === "installing"
-		|| state.status === "error";
+		|| state.status === "installing";
 }
 
 function getUpdateButtonLabel(state: AppUpdateState | null): string {

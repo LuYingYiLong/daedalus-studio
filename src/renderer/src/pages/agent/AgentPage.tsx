@@ -29,7 +29,11 @@ import BranchActionDialog from "@/features/git/BranchActionDialog";
 import CommitActionDialog from "@/features/git/CommitActionDialog";
 import CreateBranchDialog from "@/features/git/CreateBranchDialog";
 import { useGitActionDialogController } from "@/features/git/useGitActionDialogController";
-import SessionOverviewDialogs, { formatSourceSubtitle } from "./SessionOverviewDialogs";
+import SessionPlansDialog from "./SessionPlansDialog";
+import SessionPlanPreviewDialog from "./SessionPlanPreviewDialog";
+import SessionSourcesDialog from "./SessionSourcesDialog";
+import SessionSourcePreviewDialog from "./SessionSourcePreviewDialog";
+import { formatSourceSubtitle } from "./session-overview-formatters";
 
 type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot";
 
@@ -780,6 +784,7 @@ function AgentPage({
 								block
 								className={styles.summaryActionButton}
 								onClick={(): void => {
+									setSummaryOpen(false);
 									setPreviewPlan(plan);
 								}}
 							>
@@ -825,6 +830,7 @@ function AgentPage({
 									/>
 								)}
 								onClick={(): void => {
+									setSummaryOpen(false);
 									setPreviewSource(source);
 								}}
 							>
@@ -1446,16 +1452,25 @@ function AgentPage({
 					) : null}
 				</Splitter>
 			</div>
-			<SessionOverviewDialogs
+			<SessionPlansDialog
 				overview={summaryOverview}
-				plansOpen={plansModalOpen}
-				sourcesOpen={sourcesModalOpen}
-				previewPlan={previewPlan}
-				previewSource={previewSource}
-				onPlansClose={(): void => setPlansModalOpen(false)}
-				onSourcesClose={(): void => setSourcesModalOpen(false)}
-				onPreviewPlanChange={setPreviewPlan}
-				onPreviewSourceChange={setPreviewSource}
+				open={plansModalOpen}
+				onClose={(): void => setPlansModalOpen(false)}
+				onPlanSelect={setPreviewPlan}
+			/>
+			<SessionPlanPreviewDialog
+				plan={previewPlan}
+				onClose={(): void => setPreviewPlan(null)}
+			/>
+			<SessionSourcesDialog
+				overview={summaryOverview}
+				open={sourcesModalOpen}
+				onClose={(): void => setSourcesModalOpen(false)}
+				onSourceSelect={setPreviewSource}
+			/>
+			<SessionSourcePreviewDialog
+				source={previewSource}
+				onClose={(): void => setPreviewSource(null)}
 			/>
 			<Modal
 				open={isGodotSceneModalOpen}

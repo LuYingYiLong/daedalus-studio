@@ -82,6 +82,7 @@ describe("app update source", () => {
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.download");
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.acknowledge");
 		expect(titlebarSource).toContain("const hasKnownUpdate: boolean");
+		expect(titlebarSource).toContain('if (state.status === "error")');
 		expect(titlebarSource).toContain("state.updateKind !== null");
 		expect(titlebarSource).toContain("clientPreferences.autoCheckForUpdates");
 		expect(titlebarSource).not.toContain("!preferences.autoCheckForUpdates");
@@ -94,5 +95,6 @@ describe("app update source", () => {
 		expect(titlebarCss).toContain("-webkit-app-region: no-drag;");
 		expect(titlebarCss).toContain(".brandCluster");
 		expect(titlebarCss).toContain(".updateButton");
+		expect(serviceSource).toContain("browserWindow.webContents.isDestroyed()");
 	});
 });

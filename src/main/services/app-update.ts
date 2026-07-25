@@ -268,7 +268,7 @@ function createState(client: AppUpdateComponentState, backend: AppUpdateComponen
 
 function broadcastAppUpdateEvent(channel: "app-update:state-changed", payload: AppUpdateState): void {
 	for (const browserWindow of BrowserWindow?.getAllWindows?.() ?? []) {
-		if (browserWindow.isDestroyed()) {
+		if (browserWindow.isDestroyed() || browserWindow.webContents.isDestroyed()) {
 			continue;
 		}
 		browserWindow.webContents.send(channel, payload);
