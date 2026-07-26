@@ -237,6 +237,7 @@ type AgentPageProps = {
 	onSessionRename: (session: SessionMetadata) => void;
 	onSessionsChange: (sessions: SessionMetadata[]) => void;
 	onWorkspaceDelete: (result: DeleteWorkspaceResult) => void;
+	onWorkspaceUpdate: (workspace: WorkspaceConfig) => void;
 	onLoadMoreBefore: () => void;
 	onLoadMoreAfter: () => void;
 	onRetryEditStart: (requestId: string) => void;
@@ -347,6 +348,7 @@ function AgentPage({
 	onSessionRename,
 	onSessionsChange,
 	onWorkspaceDelete,
+	onWorkspaceUpdate,
 	onLoadMoreBefore,
 	onLoadMoreAfter,
 	onRetryEditStart,
@@ -1185,6 +1187,7 @@ function AgentPage({
 					onSessionsChange={onSessionsChange}
 					onNewWorkspaceSession={onNewWorkspaceSession}
 					onWorkspaceDelete={onWorkspaceDelete}
+					onWorkspaceUpdate={onWorkspaceUpdate}
 				/>
 
 			</aside>

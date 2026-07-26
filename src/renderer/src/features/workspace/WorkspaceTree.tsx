@@ -9,6 +9,9 @@ import type { MenuProps } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
+import DeleteWorkspaceDialog from "./DeleteWorkspaceDialog";
+import WorkspaceProjectDialog from "./WorkspaceProjectDialog";
+import { WorkspaceIconView } from "./workspace-appearance";
 import styles from "./WorkspaceTree.module.css";
 
 export type WorkspaceTreeProps = {
@@ -27,6 +30,7 @@ export type WorkspaceTreeProps = {
 	onSessionsChange?: (sessions: SessionMetadata[]) => void;
 	onNewWorkspaceSession?: (workspace: WorkspaceConfig) => void;
 	onWorkspaceDelete?: (result: DeleteWorkspaceResult) => void;
+	onWorkspaceUpdate?: (workspace: WorkspaceConfig) => void;
 };
 
 type WorkspaceMenuItem = NonNullable<MenuProps["items"]>[number];
@@ -36,6 +40,7 @@ type WorkspaceTreeLabels = {
 	archiveSession: string;
 	copySessionId: string;
 	delete: string;
+	editProject: string;
 	deleteWorkspaceBody: string;
 	deleteWorkspaceTitle: string;
 	failedArchiveSession: string;
@@ -62,6 +67,10 @@ type WorkspaceTreeLabels = {
 	workspaceActionsAria: (workspaceName: string) => string;
 };
 
+function filterVisibleSessions(sessions: SessionMetadata[]): SessionMetadata[] {
+	return sessions.filter((session: SessionMetadata): boolean => session.temporary !== true);
+}
+
 type CreateSessionMenuItemOptions = {
 	archivingSessionId: string | null;
 	runningSessionIds: ReadonlySet<string>;
@@ -78,6 +87,7 @@ type CreateWorkspaceMenuItemOptions = CreateSessionMenuItemOptions & {
 	onWorkspaceFocus: (workspace: WorkspaceConfig, event: MouseEvent<HTMLElement>) => void;
 	onNewWorkspaceSession: (workspace: WorkspaceConfig, event: MouseEvent<HTMLElement>) => void;
 	onOpenWorkspaceInExplorer: (workspace: WorkspaceConfig) => void;
+	onEditWorkspace: (workspace: WorkspaceConfig) => void;
 	onDeleteWorkspace: (workspace: WorkspaceConfig) => void;
 };
 
@@ -174,6 +184,11 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 		const actionMenu: MenuProps = {
 			items: [
 				{
+					key: "edit",
+					label: labels.editProject,
+					icon: <Icon name="folder-edit" />,
+				},
+				{
 					key: "open",
 					label: labels.openInExplorer,
 					icon: <Icon name="folder-open" />,
@@ -190,6 +205,10 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 				domEvent.preventDefault();
 				domEvent.stopPropagation();
 
+				if (key === "edit") {
+					options.onEditWorkspace(workspace);
+					return;
+				}
 				if (key === "open") {
 					options.onOpenWorkspaceInExplorer(workspace);
 					return;
@@ -243,7 +262,7 @@ function createWorkspaceMenuItems(workspaces: WorkspaceConfig[], sessions: Sessi
 					</span>
 				</span>
 			),
-			icon: <Icon name="folder" />,
+			icon: <WorkspaceIconView workspace={workspace} />,
 			children: workspaceSessions.length > 0
 				? workspaceSessions.map((session: SessionMetadata): WorkspaceMenuItem => createSessionMenuItem(session, options))
 				: [
@@ -301,12 +320,13 @@ function WorkspaceTree({
 	onSessionRename,
 	onSessionsChange,
 	onNewWorkspaceSession,
-	onWorkspaceDelete
+	onWorkspaceDelete,
+	onWorkspaceUpdate
 }: WorkspaceTreeProps): React.JSX.Element {
 	const [messageApi, messageContextHolder] = message.useMessage();
 	const { t } = useTranslation();
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>(() => initialWorkspaces);
-	const [sessions, setSessions] = useState<SessionMetadata[]>(() => initialSessions);
+	const [sessions, setSessions] = useState<SessionMetadata[]>(() => filterVisibleSessions(initialSessions));
 	const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(initialActiveWorkspaceId);
 	const [openWorkspaceKeys, setOpenWorkspaceKeys] = useState<string[]>(() => initialWorkspaces.map((workspace: WorkspaceConfig): string => `workspace:${workspace.id}`));
 	const [selectedMenuKeys, setSelectedMenuKeys] = useState<string[]>([]);
@@ -315,6 +335,7 @@ function WorkspaceTree({
 	const [reloadIndex, setReloadIndex] = useState<number>(0);
 	const [archivingSessionId, setArchivingSessionId] = useState<string | null>(null);
 	const [deleteTargetWorkspace, setDeleteTargetWorkspace] = useState<WorkspaceConfig | null>(null);
+	const [editTargetWorkspace, setEditTargetWorkspace] = useState<WorkspaceConfig | null>(null);
 	const [deletingWorkspaceId, setDeletingWorkspaceId] = useState<string | null>(null);
 	const [renameTargetSession, setRenameTargetSession] = useState<SessionMetadata | null>(null);
 	const [renameDraftTitle, setRenameDraftTitle] = useState<string>("");
@@ -326,6 +347,7 @@ function WorkspaceTree({
 			archiveSession: t("workspaceTree.actions.archiveSession"),
 			copySessionId: t("workspaceTree.actions.copySessionId"),
 			delete: t("workspaceTree.actions.delete"),
+			editProject: t("workspaceTree.actions.editProject", { defaultValue: "Edit project" }),
 			deleteWorkspaceBody: t("workspaceTree.modals.deleteWorkspace.body"),
 			deleteWorkspaceTitle: t("workspaceTree.modals.deleteWorkspace.title"),
 			failedArchiveSession: t("workspaceTree.errors.archiveSession"),
@@ -528,12 +550,30 @@ function WorkspaceTree({
 			setWorkspaceError(null);
 			const result: DeleteWorkspaceResult = await deleteWorkspace(workspace.id);
 			const deletedSessionIds: Set<string> = new Set(result.deletedSessionIds);
+			const movedBySessionId: Map<string, string> = new Map(
+				result.movedSessions.map((move): [string, string] => [move.sessionId, move.workspaceId])
+			);
 
 			setWorkspaces((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
 				return currentWorkspaces.filter((currentWorkspace: WorkspaceConfig): boolean => currentWorkspace.id !== workspace.id);
 			});
 			setSessions((currentSessions: SessionMetadata[]): SessionMetadata[] => {
-				return currentSessions.filter((session: SessionMetadata): boolean => !deletedSessionIds.has(session.id));
+				return currentSessions
+					.filter((session: SessionMetadata): boolean => !deletedSessionIds.has(session.id))
+					.map((session: SessionMetadata): SessionMetadata => {
+						const destinationId: string | undefined = movedBySessionId.get(session.id);
+						const destination: WorkspaceConfig | undefined = destinationId === undefined
+							? undefined
+							: workspaces.find((candidate): boolean => candidate.id === destinationId);
+						return destination === undefined
+							? session
+							: {
+								...session,
+								workspaceId: destination.id,
+								workspaceName: destination.name,
+								workspaceRoot: destination.rootPath
+							};
+					});
 			});
 			setOpenWorkspaceKeys((currentKeys: string[]): string[] => {
 				return currentKeys.filter((key: string): boolean => key !== `workspace:${workspace.id}`);
@@ -554,6 +594,7 @@ function WorkspaceTree({
 				return currentWorkspaceId === workspace.id ? null : currentWorkspaceId;
 			});
 			setDeleteTargetWorkspace(null);
+			setEditTargetWorkspace(null);
 			onWorkspaceDelete?.(result);
 		} catch (error: unknown) {
 			showWorkspaceOperationError(error, labels.failedDeleteWorkspace);
@@ -589,7 +630,7 @@ function WorkspaceTree({
 				});
 
 				setWorkspaces(workspaceList.workspaces);
-				setSessions(sessionList.sessions);
+				setSessions(filterVisibleSessions(sessionList.sessions));
 				setActiveWorkspaceId(workspaceList.active);
 				setOpenWorkspaceKeys(workspaceList.workspaces.map((workspace: WorkspaceConfig): string => {
 					return `workspace:${workspace.id}`;
@@ -648,6 +689,9 @@ function WorkspaceTree({
 			onOpenWorkspaceInExplorer: (workspace: WorkspaceConfig): void => {
 				void handleOpenWorkspaceInExplorer(workspace);
 			},
+			onEditWorkspace: (workspace: WorkspaceConfig): void => {
+				setEditTargetWorkspace(workspace);
+			},
 			onDeleteWorkspace: (workspace: WorkspaceConfig): void => {
 				setDeleteTargetWorkspace(workspace);
 			}
@@ -665,6 +709,9 @@ function WorkspaceTree({
 		}
 
 		setSessions((currentSessions: SessionMetadata[]): SessionMetadata[] => {
+			if (sessionUpdate.temporary === true) {
+				return currentSessions.filter((session: SessionMetadata): boolean => session.id !== sessionUpdate.id);
+			}
 			const existingIndex: number = currentSessions.findIndex((session: SessionMetadata): boolean => session.id === sessionUpdate.id);
 			if (existingIndex < 0) {
 				return [sessionUpdate, ...currentSessions];
@@ -739,13 +786,36 @@ function WorkspaceTree({
 				)}
 			</div>
 
-			<Modal
-				title={labels.deleteWorkspaceTitle}
+			<WorkspaceProjectDialog
+				open={editTargetWorkspace !== null}
+				workspace={editTargetWorkspace}
+				onCancel={(): void => setEditTargetWorkspace(null)}
+				onSaved={(updatedWorkspace: WorkspaceConfig): void => {
+					setWorkspaces((currentWorkspaces): WorkspaceConfig[] => currentWorkspaces.map(
+						(currentWorkspace): WorkspaceConfig => currentWorkspace.id === updatedWorkspace.id
+							? updatedWorkspace
+							: currentWorkspace
+					));
+					setSessions((currentSessions): SessionMetadata[] => currentSessions.map(
+						(currentSession): SessionMetadata => currentSession.workspaceId === updatedWorkspace.id
+							? {
+								...currentSession,
+								workspaceName: updatedWorkspace.name,
+								workspaceRoot: updatedWorkspace.rootPath
+							}
+							: currentSession
+					));
+					setEditTargetWorkspace(null);
+					onWorkspaceUpdate?.(updatedWorkspace);
+				}}
+				onRequestDelete={(workspace: WorkspaceConfig): void => setDeleteTargetWorkspace(workspace)}
+			/>
+
+			<DeleteWorkspaceDialog
 				open={deleteTargetWorkspace !== null}
-				okText={labels.delete}
-				okButtonProps={{ danger: true }}
-				confirmLoading={deletingWorkspaceId !== null}
-				onOk={(): void => {
+				workspace={deleteTargetWorkspace}
+				loading={deletingWorkspaceId !== null}
+				onConfirm={(): void => {
 					void handleConfirmDeleteWorkspace();
 				}}
 				onCancel={(): void => {
@@ -753,9 +823,7 @@ function WorkspaceTree({
 						setDeleteTargetWorkspace(null);
 					}
 				}}
-			>
-				{labels.deleteWorkspaceBody}
-			</Modal>
+			/>
 
 			<Modal
 				title={labels.renameSession}

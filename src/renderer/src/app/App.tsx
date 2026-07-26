@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLatest } from "ahooks";
 import { Input, message as antdMessage, Modal, Typography } from "antd";
 import { useDiskSpaceCheck } from "@/shared/hooks/useDiskSpaceCheck";
+import { onBackendReconnected } from "@/shared/api/transport/backend-client";
 import useNativeTaskNotifications from "./hooks/useNativeTaskNotifications";
 import useBackendEventStream from "./hooks/useBackendEventStream";
 import useTimelineStreamBuffer from "./hooks/useTimelineStreamBuffer";
@@ -9,7 +10,7 @@ import useWorkbenchPatchQueue, { mergeWorkbenchPatch } from "./hooks/useWorkbenc
 import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
-import { checkSessionIntegrity, createSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
+import { checkSessionIntegrity, createSession, deleteSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/chat/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import type { ProviderModelSelectionProvider } from "@/api/provider-api";
@@ -344,7 +345,7 @@ function getDisplayedComposerModel(params: {
 }): { providerId: string | null; modelId: string | null } {
 	const fallbackProviderId: string | null = params.providerModelSelection?.activeModel.providerId ?? null;
 	const fallbackModelId: string | null = params.providerModelSelection?.activeModel.modelId ?? null;
-	if (params.isNewSessionHome) {
+	if (params.isNewSessionHome && params.workbench === null) {
 		return {
 			providerId: params.homeDraft.providerId ?? fallbackProviderId,
 			modelId: params.homeDraft.modelId ?? fallbackModelId
@@ -357,29 +358,57 @@ function getDisplayedComposerModel(params: {
 	};
 }
 
+function createSingleSourceWorkspaceSnapshot(params: {
+	id: string;
+	name: string;
+	rootPath: string;
+	kind?: "godot";
+	godotExecutablePath?: string;
+}): WorkspaceConfig {
+	const primarySourceFolderId = "primary";
+	return {
+		id: params.id,
+		name: params.name,
+		kind: params.kind ?? "godot",
+		rootPath: params.rootPath,
+		icon: 0,
+		color: 0,
+		sourceFolders: [{
+			id: primarySourceFolderId,
+			path: params.rootPath,
+			capabilities: {
+				git: false,
+				godot: (params.kind ?? "godot") === "godot"
+			}
+		}],
+		primarySourceFolderId,
+		godotExecutablePath: params.godotExecutablePath
+	};
+}
+
 function createWorkspaceFromSessionMetadata(metadata: SessionMetadata, workbench: WorkbenchSnapshot): WorkspaceConfig | null {
 	const metadataWorkspaceId: string | undefined = metadata.workspaceId;
 	const metadataWorkspaceRoot: string | undefined = metadata.workspaceRoot;
 	if (metadataWorkspaceId !== undefined && metadataWorkspaceRoot !== undefined) {
-		return {
+		return createSingleSourceWorkspaceSnapshot({
 			id: metadataWorkspaceId,
 			name: metadata.workspaceName ?? metadata.title,
 			kind: metadata.workspaceKind ?? "godot",
 			rootPath: metadataWorkspaceRoot,
 			godotExecutablePath: metadata.godotExecutablePath
-		};
+		});
 	}
 
 	const selection = workbench.activeSelection;
 	if (typeof selection.workspaceId === "string" && typeof selection.workspaceRoot === "string") {
-		return {
+		return createSingleSourceWorkspaceSnapshot({
 			id: selection.workspaceId,
 			name: typeof selection.workspaceName === "string" && selection.workspaceName.length > 0
 				? selection.workspaceName
 				: metadata.title,
 			kind: "godot",
 			rootPath: selection.workspaceRoot
-		};
+		});
 	}
 
 	return null;
@@ -518,6 +547,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [isHomeSubmitting, setIsHomeSubmitting] = useState<boolean>(false);
 	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 	const activeSessionIdRef = useRef<string | null>(null);
+	const temporaryDraftSessionIdRef = useRef<string | null>(null);
+	const temporarySessionCreationRef = useRef<Promise<void> | null>(null);
 	const [activeSessionMetadata, setActiveSessionMetadata] = useState<SessionMetadata | null>(null);
 	const [recentSessions, setRecentSessions] = useState<SessionMetadata[]>(() => getRecentSessions(bootstrapData.sessionList.sessions));
 	const recentSessionsRef = useLatest(recentSessions);
@@ -1103,7 +1134,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}, [loadSlashCommands]);
 
 	useEffect((): void => {
-		if (isNewSessionHome) {
+		if (isNewSessionHome && activeSessionId === null) {
 			void loadHomeWorkspaces();
 		}
 	}, [isNewSessionHome, loadHomeWorkspaces, workspaceRefreshToken]);
@@ -1146,6 +1177,31 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setIsPlanApproving,
 		setIsPlanRevising
 	});
+
+	useEffect((): (() => void) => {
+		return onBackendReconnected((): void => {
+			discardPendingComposerTextSync();
+			takePendingWorkbenchPatch();
+			loadingComposerDraftRef.current = null;
+			const sessionId: string | null = activeSessionIdRef.current;
+			if (activeSessionMetadata?.temporary === true) {
+				temporaryDraftSessionIdRef.current = null;
+				activeSessionIdRef.current = null;
+				setActiveSessionId(null);
+				setActiveSessionMetadata(null);
+				setWorkbench(null);
+				setTimelinePage(emptyTimelinePage);
+				setIsNewSessionHome(true);
+				void createTemporarySession().catch((error: unknown): void => {
+					setSessionError(error instanceof Error ? error.message : "Failed to restore New session");
+				});
+				return;
+			}
+			if (sessionId !== null) {
+				void handleSessionSelect({ id: sessionId } as SessionMetadata);
+			}
+		});
+	}, [activeSessionId, activeSessionMetadata?.temporary]);
 
 	useEffect((): void => {
 		if (isNewSessionHome || activeSessionId === null || getPendingApprovalCount(workbench) === 0) {
@@ -1191,16 +1247,89 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		await handleNewWorkspaceSession(workspace);
 	}
 
+	async function createTemporarySession(workspace: WorkspaceConfig | null = null): Promise<void> {
+		if (temporarySessionCreationRef.current !== null) {
+			return temporarySessionCreationRef.current;
+		}
+		const draft: HomeDraft = createPreferredHomeDraft(clientPreferences, providerModelSelection, workspace);
+		const createOperation: Promise<void> = (async (): Promise<void> => {
+			const created = await createSession({
+				title: "New session",
+				temporary: true,
+				workspaceId: draft.workspaceId,
+				provider: draft.providerId ?? undefined,
+				model: draft.modelId ?? undefined,
+				chatMode: draft.chatMode,
+				approvalMode
+			});
+			temporaryDraftSessionIdRef.current = created.id;
+			activeSessionIdRef.current = created.id;
+			setActiveSessionId(created.id);
+			setActiveSessionMetadata(created);
+			setActiveWorkspace(createWorkspaceFromSessionMetadata(created, created.workbench));
+			setWorkbench(created.workbench);
+			setHomeDraft(draft);
+			setTimelinePage(emptyTimelinePage);
+			setIsNewSessionHome(true);
+			setSessionError(null);
+		})();
+		temporarySessionCreationRef.current = createOperation;
+		try {
+			await createOperation;
+		} finally {
+			temporarySessionCreationRef.current = null;
+		}
+	}
+
+	async function discardTemporarySessionIfEmpty(): Promise<void> {
+		if (activeSessionMetadata?.temporary !== true || activeSessionId === null) {
+			return;
+		}
+		const pendingText: string = pendingComposerTextSyncRef.current?.scope === "session"
+			&& pendingComposerTextSyncRef.current.sessionId === activeSessionId
+			? pendingComposerTextSyncRef.current.text
+			: "";
+		const hasDraft: boolean = pendingText.trim().length > 0
+			|| (workbench?.composer.text.trim().length ?? 0) > 0
+			|| (workbench?.composer.additionalContext.length ?? 0) > 0;
+		if (hasDraft) {
+			temporaryDraftSessionIdRef.current = activeSessionId;
+			return;
+		}
+		const temporaryId: string = activeSessionId;
+		temporaryDraftSessionIdRef.current = null;
+		await deleteSession(temporaryId).catch((error: unknown): void => {
+			console.warn("[App] delete empty temporary session failed", error);
+		});
+	}
+
 	async function handleNewSession(): Promise<void> {
+		if (activeSessionMetadata?.temporary === true) {
+			const temporaryId: string | null = activeSessionId;
+			temporaryDraftSessionIdRef.current = null;
+			if (temporaryId !== null) {
+				await deleteSession(temporaryId).catch((error: unknown): void => {
+					console.warn("[App] discard temporary session failed", error);
+				});
+			}
+			activeSessionIdRef.current = null;
+			setActiveSessionId(null);
+			setActiveSessionMetadata(null);
+			setWorkbench(null);
+			await createTemporarySession();
+			return;
+		}
+		if (temporaryDraftSessionIdRef.current !== null) {
+			await handleSessionSelect({ id: temporaryDraftSessionIdRef.current } as SessionMetadata);
+			setIsNewSessionHome(true);
+			return;
+		}
 		navigationVersionRef.current += 1;
 		await persistPendingWorkbenchPatchBeforeNavigation();
 		submittedComposerTextRef.current = null;
 		loadingComposerDraftRef.current = null;
 		setIsNewSessionHome(true);
 		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection));
-		activeSessionIdRef.current = null;
-		setActiveSessionId(null);
-		setActiveSessionMetadata(null);
 		setActiveWorkspace(null);
 		setTimelinePage(emptyTimelinePage);
 		setWorkbench(null);
@@ -1210,29 +1339,29 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		resetPlanApprovalUiState();
 		setActiveRetryRequestId(null);
 		setSessionError(null);
+		await createTemporarySession();
 		void loadHomeWorkspaces();
 	}
 
+	useEffect((): void => {
+		void createTemporarySession().catch((error: unknown): void => {
+			setSessionError(error instanceof Error ? error.message : "Failed to create a temporary session");
+		});
+	}, []);
+
 	async function handleNewWorkspaceSession(workspace: WorkspaceConfig): Promise<void> {
-		const navigationVersion: number = navigationVersionRef.current + 1;
-		navigationVersionRef.current = navigationVersion;
-		await persistPendingWorkbenchPatchBeforeNavigation();
-		submittedComposerTextRef.current = null;
-		loadingComposerDraftRef.current = null;
-		setIsNewSessionHome(true);
-		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection, workspace));
+		if (activeSessionMetadata?.temporary === true && activeSessionId !== null) {
+			await deleteSession(activeSessionId).catch((error: unknown): void => {
+				console.warn("[App] discard temporary session failed", error);
+			});
+		}
+		temporaryDraftSessionIdRef.current = null;
 		activeSessionIdRef.current = null;
 		setActiveSessionId(null);
 		setActiveSessionMetadata(null);
-		setActiveWorkspace(workspace);
-		setTimelinePage(emptyTimelinePage);
 		setWorkbench(null);
-		setWorkflowTodoSnapshot(null);
-		rememberLoadedWorkflowTodo(null);
-		resetPlanClarificationUiState();
-		resetPlanApprovalUiState();
-		setActiveRetryRequestId(null);
-		setSessionError(null);
+		setActiveWorkspace(workspace);
+		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection, workspace));
 		setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
 			if (currentWorkspaces.some((currentWorkspace: WorkspaceConfig): boolean => currentWorkspace.id === workspace.id)) {
 				return currentWorkspaces;
@@ -1240,31 +1369,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			return [...currentWorkspaces, workspace];
 		});
 
-		try {
-			const selectedWorkspace = await selectWorkspace(workspace.id, { sessionId: null });
-			if (navigationVersionRef.current !== navigationVersion || activeSessionIdRef.current !== null) {
-				return;
-			}
-
-			setActiveWorkspace(selectedWorkspace);
-			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
-				...currentDraft,
-				workspaceId: selectedWorkspace.id,
-				workspace: selectedWorkspace
-			}));
-			setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
-				const existingIndex: number = currentWorkspaces.findIndex((currentWorkspace: WorkspaceConfig): boolean => currentWorkspace.id === selectedWorkspace.id);
-				if (existingIndex < 0) {
-					return [...currentWorkspaces, selectedWorkspace];
-				}
-				const nextWorkspaces: WorkspaceConfig[] = [...currentWorkspaces];
-				nextWorkspaces[existingIndex] = selectedWorkspace;
-				return nextWorkspaces;
-			});
-		} catch (error: unknown) {
-			showTransientError(error instanceof Error ? error.message : "Failed to select workspace");
-			console.error("[App] select workspace for new session failed", error);
-		}
+		await createTemporarySession(workspace);
 	}
 
 	async function handleHomeWorkspaceSelect(workspaceId: string): Promise<void> {
@@ -1282,8 +1387,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 
 		try {
-			const workspace = await selectWorkspace(workspaceId, { sessionId: null });
-			if (navigationVersionRef.current !== navigationVersion || activeSessionIdRef.current !== null) {
+			const workspace = await selectWorkspace(workspaceId, { sessionId: activeSessionIdRef.current });
+			if (navigationVersionRef.current !== navigationVersion) {
 				return;
 			}
 
@@ -1293,6 +1398,18 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				workspace
 			}));
 			setActiveWorkspace(workspace);
+			setActiveSessionMetadata((metadata: SessionMetadata | null): SessionMetadata | null => {
+				return metadata === null
+					? metadata
+					: {
+						...metadata,
+						workspaceId: workspace.id,
+						workspaceName: workspace.name,
+						workspaceKind: workspace.kind,
+						workspaceRoot: workspace.rootPath,
+						godotExecutablePath: workspace.godotExecutablePath
+					};
+			});
 			setSessionError(null);
 		} catch (error: unknown) {
 			showTransientError(error instanceof Error ? error.message : "Failed to select workspace");
@@ -1362,6 +1479,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	async function handleSessionSelect(session: SessionMetadata): Promise<void> {
 		const navigationVersion: number = navigationVersionRef.current + 1;
 		navigationVersionRef.current = navigationVersion;
+		await discardTemporarySessionIfEmpty();
 		await persistPendingWorkbenchPatchBeforeNavigation();
 		loadingComposerDraftRef.current = null;
 		const sessionId: string = session.id;
@@ -1483,6 +1601,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	function handleWorkspaceDelete(result: DeleteWorkspaceResult): void {
+		const activeMove = activeSessionId === null
+			? undefined
+			: result.movedSessions.find((move): boolean => move.sessionId === activeSessionId);
 		setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
 			return currentWorkspaces.filter((workspace: WorkspaceConfig): boolean => workspace.id !== result.workspaceId);
 		});
@@ -1503,9 +1624,51 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 		const activeSessionDeleted: boolean = activeSessionId !== null && result.deletedSessionIds.includes(activeSessionId);
 		const activeWorkspaceDeleted: boolean = activeSessionMetadata?.workspaceId === result.workspaceId;
-		if (activeSessionDeleted || activeWorkspaceDeleted) {
+		if (activeMove !== undefined) {
+			void fetchWorkspaces().then((workspaceList): void => {
+				const destination: WorkspaceConfig | undefined = workspaceList.workspaces.find(
+					(workspace): boolean => workspace.id === activeMove.workspaceId
+				);
+				if (destination === undefined) {
+					resetToNewSessionHome();
+					return;
+				}
+				setHomeWorkspaceOptions(workspaceList.workspaces);
+				setActiveWorkspace(destination);
+				setActiveSessionMetadata((metadata): SessionMetadata | null => metadata === null
+					? null
+					: {
+						...metadata,
+						workspaceId: destination.id,
+						workspaceName: destination.name,
+						workspaceKind: destination.kind,
+						workspaceRoot: destination.rootPath,
+						godotExecutablePath: destination.godotExecutablePath
+					});
+			}).catch((): void => resetToNewSessionHome());
+		} else if (activeSessionDeleted || activeWorkspaceDeleted) {
 			resetToNewSessionHome();
 		}
+	}
+
+	function handleWorkspaceUpdate(workspace: WorkspaceConfig): void {
+		setHomeWorkspaceOptions((currentWorkspaces): WorkspaceConfig[] => currentWorkspaces.map(
+			(currentWorkspace): WorkspaceConfig => currentWorkspace.id === workspace.id ? workspace : currentWorkspace
+		));
+		setHomeDraft((currentDraft): HomeDraft => currentDraft.workspaceId === workspace.id
+			? { ...currentDraft, workspace }
+			: currentDraft);
+		setActiveWorkspace((currentWorkspace): WorkspaceConfig | null => currentWorkspace?.id === workspace.id
+			? workspace
+			: currentWorkspace);
+		setActiveSessionMetadata((metadata): SessionMetadata | null => metadata?.workspaceId === workspace.id
+			? {
+				...metadata,
+				workspaceName: workspace.name,
+				workspaceRoot: workspace.rootPath,
+				godotExecutablePath: workspace.godotExecutablePath
+			}
+			: metadata);
 	}
 
 	async function persistSessionUiMetadata(params: SaveSessionUiMetadataParams): Promise<void> {
@@ -1533,7 +1696,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	async function handleModeChange(nextMode: ChatMode): Promise<void> {
-		if (isNewSessionHome) {
+		if (isNewSessionHome && activeSessionId === null) {
 			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
 				...currentDraft,
 				chatMode: nextMode
@@ -1613,7 +1776,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	async function handleProviderModelChange(providerId: string, modelId: string): Promise<void> {
-		if (isNewSessionHome) {
+		if (isNewSessionHome && activeSessionId === null) {
 			if (isHomeSubmitting) {
 				void messageApi.info("Model changes apply to your next message.");
 			}
@@ -1778,7 +1941,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			submittedComposerTextRef.current = null;
 		}
 
-		if (!isNewSessionHome && activeSessionIdRef.current !== null) {
+		if (activeSessionIdRef.current !== null) {
 			loadingComposerDraftRef.current = nextText.length === 0
 				? null
 				: { sessionId: activeSessionIdRef.current, text: nextText };
@@ -1927,9 +2090,16 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	async function handleComposerSubmit(nextMessage: string): Promise<void> {
-		if (isNewSessionHome) {
+		if (isNewSessionHome && activeSessionId === null) {
 			await handleHomeComposerSubmit(nextMessage);
 			return;
+		}
+		if (isNewSessionHome) {
+			setIsNewSessionHome(false);
+			temporaryDraftSessionIdRef.current = null;
+			setActiveSessionMetadata((metadata: SessionMetadata | null): SessionMetadata | null => {
+				return metadata?.temporary === true ? { ...metadata, temporary: false } : metadata;
+			});
 		}
 
 		loadingComposerDraftRef.current = null;
@@ -2075,7 +2245,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	async function handleGuideSubmit(nextMessage: string): Promise<void> {
-		if (isNewSessionHome) {
+		if (isNewSessionHome && activeSessionId === null) {
 			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
 				...currentDraft,
 				message: nextMessage
@@ -2406,13 +2576,13 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					return currentWorkspace;
 				}
 
-				return {
+				return createSingleSourceWorkspaceSnapshot({
 					id: metadata.workspaceId,
 					name: metadata.workspaceName ?? metadata.title,
 					kind: metadata.workspaceKind ?? "godot",
 					rootPath: metadata.workspaceRoot,
 					godotExecutablePath: metadata.godotExecutablePath
-				};
+				});
 			});
 		}
 	}
@@ -2510,7 +2680,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	async function handleAddImageFiles(files: File[]): Promise<void> {
-		if (activeSessionId === null || isNewSessionHome) {
+		if (activeSessionId === null) {
 			showTransientError("Please open a session before adding images.");
 			return;
 		}
@@ -2547,7 +2717,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	function handleAddPastedTextAttachment(content: string): boolean {
-		if (activeSessionId === null || isNewSessionHome) {
+		if (activeSessionId === null) {
 			return false;
 		}
 
@@ -2572,19 +2742,19 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			return activeWorkspace;
 		}
 		if (activeSessionMetadata?.workspaceId !== undefined && activeSessionMetadata.workspaceRoot !== undefined) {
-			return {
+			return createSingleSourceWorkspaceSnapshot({
 				id: activeSessionMetadata.workspaceId,
 				name: activeSessionMetadata.workspaceName ?? activeSessionMetadata.workspaceId,
 				kind: activeSessionMetadata.workspaceKind ?? "godot",
 				rootPath: activeSessionMetadata.workspaceRoot,
 				godotExecutablePath: activeSessionMetadata.godotExecutablePath
-			};
+			});
 		}
 		return null;
 	}
 
 	async function handleAddWorkspaceContext(kind: "files" | "folder"): Promise<void> {
-		if (activeSessionId === null || isNewSessionHome) {
+		if (activeSessionId === null) {
 			showTransientError("Please open a session before adding files or folders.");
 			return;
 		}
@@ -2633,7 +2803,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		if (nextFiles.length === 0) {
 			return;
 		}
-		if (activeSessionId === null || isNewSessionHome) {
+		if (activeSessionId === null) {
 			showTransientError("Please open a session before adding files.");
 			return;
 		}
@@ -2714,19 +2884,19 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		? null
 		: createPlanApprovalKey(latestPlanApproval);
 	const pendingPlanApproval: PlanApprovalState | null = latestPlanApproval;
-	const pendingToolBudget: PendingToolBudget | null = isNewSessionHome ? null : workbench?.pendingToolBudget ?? null;
+	const pendingToolBudget: PendingToolBudget | null = workbench?.pendingToolBudget ?? null;
 	const chatTitle: string = isNewSessionHome ? "New session" : getSessionTitle(activeSessionMetadata, activeSessionId);
 	const initialScrollToBottomKey: string = activeSessionId === null ? "" : `${activeSessionId}:${timelinePage.blockCount}`;
-	const loadingComposerDraft = !isNewSessionHome && activeSessionId !== null && loadingComposerDraftRef.current?.sessionId === activeSessionId
+	const loadingComposerDraft = activeSessionId !== null && loadingComposerDraftRef.current?.sessionId === activeSessionId
 		? loadingComposerDraftRef.current.text
 		: null;
-	const composerMessage: string = isNewSessionHome ? homeDraft.message : loadingComposerDraft ?? workbench?.composer.text ?? "";
-	const composerMode: ChatMode = isNewSessionHome ? homeDraft.chatMode : getChatMode(workbench);
-	const composerContextItems: AdditionalContextItem[] = isNewSessionHome ? [] : workbench?.composer.additionalContext ?? [];
-	const composerMessageQueue: MessageQueueItem[] = isNewSessionHome ? [] : workbench?.messageQueue ?? [];
-	const composerPendingGuides: PendingGuide[] = isNewSessionHome ? [] : workbench?.pendingGuides ?? [];
+	const composerMessage: string = activeSessionId === null ? homeDraft.message : loadingComposerDraft ?? workbench?.composer.text ?? "";
+	const composerMode: ChatMode = activeSessionId === null ? homeDraft.chatMode : getChatMode(workbench);
+	const composerContextItems: AdditionalContextItem[] = activeSessionId === null ? [] : workbench?.composer.additionalContext ?? [];
+	const composerMessageQueue: MessageQueueItem[] = activeSessionId === null ? [] : workbench?.messageQueue ?? [];
+	const composerPendingGuides: PendingGuide[] = activeSessionId === null ? [] : workbench?.pendingGuides ?? [];
 	const currentSessionWorkspaceId: string | null = activeSessionMetadata?.workspaceId ?? null;
-	const displayedWorkspace: WorkspaceConfig | null = isNewSessionHome
+	const displayedWorkspace: WorkspaceConfig | null = activeSessionId === null
 		? homeDraft.workspace
 		: currentSessionWorkspaceId === null
 			? null
@@ -2975,7 +3145,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						isHome={isNewSessionHome}
 						activeSessionId={activeSessionId}
 						activeSessionMetadata={activeSessionMetadata}
-						activeWorkspaceId={isNewSessionHome ? homeDraft.workspaceId : currentSessionWorkspaceId}
+						activeWorkspaceId={activeSessionId === null ? homeDraft.workspaceId : currentSessionWorkspaceId}
 						chatTitle={chatTitle}
 						timelineBlocks={timelineBlocks}
 						isSessionLoading={isSessionLoading}
@@ -3025,7 +3195,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						initialActiveWorkspaceId={bootstrapData.workspaceList.active}
 						runningSessionIds={runningSessionIds}
 						homeWorkspace={homeDraft.workspace}
-						workspaceFooterDisabled={!isNewSessionHome || isHomeSubmitting}
+						workspaceFooterDisabled={isHomeSubmitting}
 						isWorkspaceAdding={isWorkspaceAdding}
 						activeWorkspace={displayedWorkspace}
 						godotLaunchExecutablePath={godotLaunchExecutablePath}
@@ -3051,6 +3221,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						onSessionRename={handleSessionRename}
 						onSessionsChange={handleSessionsChange}
 						onWorkspaceDelete={handleWorkspaceDelete}
+						onWorkspaceUpdate={handleWorkspaceUpdate}
 						onLoadMoreBefore={handleLoadMoreBefore}
 						onLoadMoreAfter={handleLoadMoreAfter}
 						onRetryEditStart={(requestId: string): void => {

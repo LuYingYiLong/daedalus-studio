@@ -2,6 +2,7 @@ import { createBackendClient } from "@/shared/api/transport/backend-client";
 
 export type GenerateGitCommitMessageParams = {
 	workspaceId: string;
+	sourceFolderId?: string | undefined;
 	includeUnstagedChanges: boolean;
 	provider?: string | undefined;
 	model?: string | undefined;
@@ -21,6 +22,7 @@ export type CommitOrPushAction = "commit" | "push" | "commit_and_push";
 
 export type CommitOrPushParams = {
 	workspaceId: string;
+	sourceFolderId?: string | undefined;
 	action: CommitOrPushAction;
 	message?: string | undefined;
 	includeUnstagedChanges: boolean;
@@ -75,7 +77,10 @@ export async function commitOrPushGit(params: CommitOrPushParams): Promise<Commi
 	return client.request<CommitOrPushResult>("workspace.git.commitOrPush", params);
 }
 
-export async function listWorkspaceGitBranches(params: { workspaceId: string }): Promise<WorkspaceGitBranchesResult> {
+export async function listWorkspaceGitBranches(params: {
+	workspaceId: string;
+	sourceFolderId?: string | undefined;
+}): Promise<WorkspaceGitBranchesResult> {
 	const client = await createBackendClient();
 
 	return client.request<WorkspaceGitBranchesResult>("workspace.git.branches.list", params);
@@ -83,6 +88,7 @@ export async function listWorkspaceGitBranches(params: { workspaceId: string }):
 
 export async function checkoutWorkspaceGitBranch(params: {
 	workspaceId: string;
+	sourceFolderId?: string | undefined;
 	branchName: string;
 }): Promise<WorkspaceGitBranchOperationResult> {
 	const client = await createBackendClient();
@@ -92,6 +98,7 @@ export async function checkoutWorkspaceGitBranch(params: {
 
 export async function createWorkspaceGitBranch(params: {
 	workspaceId: string;
+	sourceFolderId?: string | undefined;
 	branchName: string;
 	startPoint?: string | undefined;
 }): Promise<WorkspaceGitBranchOperationResult> {

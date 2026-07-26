@@ -43,7 +43,25 @@
     }
   },
   "workspaceTree": {
+    "projectEditor": {
+      "appearance": "项目外观",
+      "icon": "图标",
+      "color": "颜色",
+      "namePlaceholder": "项目名称",
+      "sourceFolders": "源文件夹",
+      "addFolder": "添加文件夹",
+      "addFailed": "添加源文件夹失败。",
+      "duplicateFolder": "该源文件夹已在项目中。",
+      "nameRequired": "项目名称不能为空。",
+      "saveFailed": "保存项目失败。",
+      "makePrimary": "设为主文件夹",
+      "removeFolder": "移除源文件夹",
+      "primary": "主要",
+      "cancel": "取消",
+      "confirm": "确定"
+    },
     "actions": {
+      "editProject": "编辑项目",
       "rename": "重命名",
       "renameSession": "重命名会话",
       "archiveSession": "归档会话",
@@ -80,6 +98,7 @@
     },
     "modals": {
       "deleteWorkspace": {
+        "sessionPolicy": "会话会尽量迁移到匹配的其他项目；无法匹配的会话将被永久删除。",
         "title": "删除 workspace？",
         "body": "这会从 Daedalus 删除该 workspace，并永久删除它的会话。Godot 项目文件夹中的文件不会被删除。"
       },

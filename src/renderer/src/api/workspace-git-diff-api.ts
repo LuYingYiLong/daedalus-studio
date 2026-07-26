@@ -51,6 +51,7 @@ export type WorkspaceGitDiffFileResult = {
 
 export type FetchWorkspaceGitDiffParams = {
 	workspaceId: string;
+	sourceFolderId?: string | undefined;
 };
 
 export async function fetchWorkspaceGitDiff(params: FetchWorkspaceGitDiffParams): Promise<WorkspaceGitDiffResult> {

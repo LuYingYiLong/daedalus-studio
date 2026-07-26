@@ -43,7 +43,25 @@
     }
   },
   "workspaceTree": {
+    "projectEditor": {
+      "appearance": "Project appearance",
+      "icon": "Icon",
+      "color": "Color",
+      "namePlaceholder": "Project name",
+      "sourceFolders": "Source folders",
+      "addFolder": "Add folder",
+      "addFailed": "Failed to add source folder.",
+      "duplicateFolder": "This source folder is already in the project.",
+      "nameRequired": "Project name cannot be empty.",
+      "saveFailed": "Failed to save project.",
+      "makePrimary": "Make primary",
+      "removeFolder": "Remove source folder",
+      "primary": "Primary",
+      "cancel": "Cancel",
+      "confirm": "OK"
+    },
     "actions": {
+      "editProject": "Edit project",
       "rename": "Rename",
       "renameSession": "Rename session",
       "archiveSession": "Archive session",
@@ -81,7 +99,8 @@
     "modals": {
       "deleteWorkspace": {
         "title": "Delete workspace?",
-        "body": "This will delete the workspace from Daedalus and permanently delete its sessions. It will not delete files from your Godot project folder."
+        "body": "Delete {{workspaceName}} from Daedalus? Project files will not be deleted.",
+        "sessionPolicy": "Sessions are moved to another matching project when possible. Unmatched sessions are permanently deleted."
       },
       "renameSession": {
         "placeholder": "Session title"

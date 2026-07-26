@@ -4,6 +4,7 @@ import type { ChatMode } from "./chat-api";
 
 export type CreateSessionParams = {
 	title: string;
+	temporary?: boolean;
 	workspaceId?: string | null;
 	provider?: string;
 	model?: string;
@@ -58,6 +59,11 @@ export type RestoreArchivedSessionResult = {
 
 export type DeleteArchivedSessionResult = {
 	deletedArchived: true;
+	sessionId: string;
+};
+
+export type DeleteSessionResult = {
+	deleted: true;
 	sessionId: string;
 };
 
@@ -201,4 +207,10 @@ export async function deleteArchivedSession(sessionId: string): Promise<DeleteAr
 	return client.request<DeleteArchivedSessionResult>("session.archived.delete", {
 		sessionId
 	});
+}
+
+export async function deleteSession(sessionId: string): Promise<DeleteSessionResult> {
+	const client = await createBackendClient();
+
+	return client.request<DeleteSessionResult>("session.delete", { sessionId });
 }

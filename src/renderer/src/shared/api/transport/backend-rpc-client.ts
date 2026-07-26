@@ -40,6 +40,12 @@ type PendingRequest = {
 
 type BackendEventListener = (event: BackendEvent) => void;
 
+export type BackendConnectionEvent = {
+	reconnected: boolean;
+};
+
+type BackendConnectionListener = (event: BackendConnectionEvent) => void;
+
 type ConnectionState = "disconnected" | "connecting" | "connected" | "reconnecting";
 
 type ClientConfig = {
@@ -89,6 +95,8 @@ export class BackendRpcClient {
 	private requestIndex: number = 0;
 	private readonly pendingRequests: Map<string, PendingRequest> = new Map();
 	private readonly eventListeners: Set<BackendEventListener> = new Set();
+	private readonly connectionListeners: Set<BackendConnectionListener> = new Set();
+	private hasConnectedOnce: boolean = false;
 	private state: ConnectionState = "disconnected";
 	private reconnectManager: ReconnectionManager | null = null;
 	private manualClose: boolean = false;
@@ -162,6 +170,8 @@ export class BackendRpcClient {
 			this.connectionTimer = null;
 		}
 
+		const reconnected: boolean = this.hasConnectedOnce;
+		this.hasConnectedOnce = true;
 		this.state = "connected";
 		this.reconnectManager?.reset();
 
@@ -171,6 +181,9 @@ export class BackendRpcClient {
 			this.connectResolve();
 			this.connectResolve = null;
 			this.connectReject = null;
+		}
+		for (const listener of this.connectionListeners) {
+			listener({ reconnected });
 		}
 	};
 
@@ -278,6 +291,13 @@ export class BackendRpcClient {
 
 		return (): void => {
 			this.eventListeners.delete(listener);
+		};
+	}
+
+	addConnectionListener(listener: BackendConnectionListener): () => void {
+		this.connectionListeners.add(listener);
+		return (): void => {
+			this.connectionListeners.delete(listener);
 		};
 	}
 

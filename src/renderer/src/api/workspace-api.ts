@@ -1,5 +1,5 @@
 import { createBackendClient } from "@/shared/api/transport/backend-client";
-import type { WorkspaceConfig, WorkspaceListResult } from "./types";
+import type { WorkspaceColor, WorkspaceConfig, WorkspaceIcon, WorkspaceListResult } from "./types";
 
 export type ConfigureEnvironmentParams = {
 	godotProjectPath: string;
@@ -18,8 +18,22 @@ export type ConfigureEnvironmentResult = {
 export type DeleteWorkspaceResult = {
 	deleted: true;
 	workspaceId: string;
+	movedSessions: Array<{
+		sessionId: string;
+		archived: boolean;
+		workspaceId: string;
+	}>;
 	deletedSessionIds: string[];
 	deletedArchivedSessionIds: string[];
+};
+
+export type UpdateWorkspaceParams = {
+	workspaceId: string;
+	name: string;
+	icon: WorkspaceIcon;
+	color: WorkspaceColor;
+	sourceFolders: Array<{ id?: string; path: string }>;
+	primarySourceFolderId: string;
 };
 
 export type SelectWorkspaceOptions = {
@@ -54,4 +68,10 @@ export async function deleteWorkspace(workspaceId: string): Promise<DeleteWorksp
 	return client.request<DeleteWorkspaceResult>("workspace.delete", {
 		workspaceId
 	});
+}
+
+export async function updateWorkspace(params: UpdateWorkspaceParams): Promise<WorkspaceConfig> {
+	const client = await createBackendClient();
+	const result = await client.request<{ workspace: WorkspaceConfig }>("workspace.update", params);
+	return result.workspace;
 }

@@ -1,0 +1,51 @@
+.modal {
+	display: grid;
+	gap: 8px;
+	user-select: none;
+}
+
+.appearancePicker {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 8px;
+	user-select: none;
+}
+
+.optionGrid {
+	display: grid;
+	grid-template-columns: repeat(4, 32px);
+	gap: 6px;
+}
+
+.colorButton {
+	width: 28px;
+	height: 28px;
+}
+
+.colorSwatch {
+	width: 16px;
+	height: 16px;
+	border: 1px solid var(--ant-color-border);
+	border-radius: 50%;
+}
+
+.sectionTitle {
+	margin: 0px !important;
+}
+
+.sourceList {
+	max-height: min(420px, 55vh);
+	overflow-y: auto;
+}
+
+.sourceList :global(.ant-list-item) {
+	min-height: 56px;
+}
+
+.sourceList :global(.ant-list-item-meta) {
+	min-width: 0;
+}
+
+.sourceList :global(.ant-list-item-meta-content) {
+	min-width: 0;
+}

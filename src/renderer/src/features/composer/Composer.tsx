@@ -14,6 +14,7 @@ import type { AdditionalContextItem, WorkspaceConfig } from "@/api/types";
 import type { ProviderModelInfo, ProviderModelSelection, ProviderModelSelectionProvider } from "@/api/provider-api";
 import { compressSession, estimateContextUsage, type ContextUsageEstimate } from "@/api/context-api";
 import AdditionalContextStrip from "@/features/chat/AdditionalContextStrip";
+import { WorkspaceIconView } from "@/features/workspace/workspace-appearance";
 import {
 	createCompletionOptions,
 	getCompletionToken,
@@ -280,7 +281,7 @@ function createWorkspaceFooterItems(workspaces: readonly WorkspaceConfig[], t: T
 						<span className={styles.workspaceMenuPath}>{workspace.rootPath}</span>
 					</span>
 				),
-				icon: <Icon name="folder" />
+				icon: <WorkspaceIconView workspace={workspace} />
 			};
 		}),
 	];
@@ -1139,7 +1140,9 @@ function Composer({
 							size="small"
 							loading={isWorkspaceAdding}
 							disabled={workspaceFooterDisabled || isWorkspaceAdding}
-							icon={<Icon name={selectedWorkspace === null ? "close" : "folder"} />}
+							icon={selectedWorkspace === null
+								? <Icon name="close" />
+								: <WorkspaceIconView workspace={selectedWorkspace} />}
 							className={styles.workspaceFooterButton}
 						>
 							<span className={styles.workspaceFooterText}>{selectedWorkspaceLabel}</span>

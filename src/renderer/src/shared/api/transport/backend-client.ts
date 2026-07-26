@@ -12,6 +12,22 @@ const studioCapabilities: Record<string, boolean> = {
 
 let backendClient: BackendRpcClient | null = null;
 let backendClientPromise: Promise<BackendRpcClient> | null = null;
+const backendReconnectListeners: Set<() => void> = new Set();
+
+async function sendStudioHello(client: BackendRpcClient): Promise<void> {
+	await client.request<ClientHelloResult>("client.hello", {
+		clientType: "studio",
+		clientName: "Daedalus Studio",
+		capabilities: studioCapabilities
+	});
+}
+
+export function onBackendReconnected(listener: () => void): () => void {
+	backendReconnectListeners.add(listener);
+	return (): void => {
+		backendReconnectListeners.delete(listener);
+	};
+}
 
 export async function createBackendClient(): Promise<BackendRpcClient> {
 	if (backendClient?.isOpen()) {
@@ -43,12 +59,20 @@ async function connectBackendClient(): Promise<BackendRpcClient> {
 	});
 
 	console.info("[Daedalus backend] connecting", { port: connection.port });
-	await client.connect();
-	await client.request<ClientHelloResult>("client.hello", {
-		clientType: "studio",
-		clientName: "Daedalus Studio",
-		capabilities: studioCapabilities
+	client.addConnectionListener(({ reconnected }): void => {
+		if (!reconnected) {
+			return;
+		}
+		void sendStudioHello(client).then((): void => {
+			for (const listener of backendReconnectListeners) {
+				listener();
+			}
+		}).catch((error: unknown): void => {
+			console.error("[Daedalus backend] reconnect hello failed", error);
+		});
 	});
+	await client.connect();
+	await sendStudioHello(client);
 
 	return client;
 }

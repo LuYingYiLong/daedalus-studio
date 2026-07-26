@@ -65,9 +65,9 @@ export function getAdditionalContextIconName(item: AdditionalContextItem): strin
 		case "ts":
 			return "typescript";
 		case "tsx":
+		case "jsx":
 			return "react";
 		case "js":
-		case "jsx":
 			return "javascript";
 		case "css":
 			return "css";
@@ -77,6 +77,32 @@ export function getAdditionalContextIconName(item: AdditionalContextItem): strin
 		case "txt":
 		case "md":
 			return "txt";
+		case "php":
+			return "php";
+		case "cs":
+			return "csharp";
+		case "cpp":
+		case "cc":
+		case "cxx":
+		case "hpp":
+		case "hh":
+			return "cpp";
+		case "c":
+		case "h":
+			return "c";
+		case "go":
+			return "go";
+		case "kt":
+			return "kotlin";
+		case "rb":
+			return "ruby";
+		case "vue":
+			return "vue";
+		case "sh":
+		case "pash":
+		case "zsh":
+		case "ps1":
+			return "shell";
 		default:
 			return item.kind === "script" || item.kind === "script_selection" ? "script" : "file";
 	}
