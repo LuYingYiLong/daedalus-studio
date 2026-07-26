@@ -6,6 +6,7 @@ import PanelTabs, { type PanelTabsAddItem, type PanelTabsItem } from "@/features
 import { Icon } from "@/assets/icons";
 import GitDiffReviewPanel from "@/features/git/review/GitDiffReviewPanel";
 import TerminalPanel from "@/features/terminal/TerminalPanel";
+import type { AdditionalContextItem } from "@/api/types";
 import styles from "./DockPanelTabs.module.css";
 
 export type DockPanelKind = "review" | "terminal";
@@ -26,6 +27,9 @@ type DockPanelTabsProps = {
 	waitForCwd: boolean;
 	defaultKind: DockPanelKind;
 	activationRequest?: DockPanelActivationRequest | null;
+	contextItems: AdditionalContextItem[];
+	onAddContext: (item: AdditionalContextItem) => void;
+	onRemoveContext: (contextId: string) => void;
 	onEmpty: () => void;
 };
 
@@ -94,6 +98,9 @@ function DockPanelTabs({
 	waitForCwd,
 	defaultKind,
 	activationRequest = null,
+	contextItems,
+	onAddContext,
+	onRemoveContext,
 	onEmpty
 }: DockPanelTabsProps): React.JSX.Element {
 	const { t } = useTranslation();
@@ -198,7 +205,7 @@ function DockPanelTabs({
 			if (workspaceId === null) {
 				return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("dock.empty.noWorkspaceSelected")} />;
 			}
-			return isOpen ? <GitDiffReviewPanel workspaceId={workspaceId} /> : null;
+			return isOpen ? <GitDiffReviewPanel workspaceId={workspaceId} contextItems={contextItems} onAddContext={onAddContext} onRemoveContext={onRemoveContext} /> : null;
 		}
 
 		return (

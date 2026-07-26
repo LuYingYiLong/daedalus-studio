@@ -368,10 +368,11 @@
     "binaryFileChanged": "二进制文件已变更",
     "diffStats": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
     "diffStats_other": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
-    "actions": {
-      "refreshDiff": "刷新 Git diff",
-      "expandAllDiffs": "展开全部差异",
-      "collapseAllDiffs": "折叠全部差异"
+      "actions": {
+        "refreshDiff": "刷新 Git diff",
+        "expandAllDiffs": "展开小型差异",
+        "collapseAllDiffs": "折叠小型差异",
+        "loadMoreFiles": "加载更多文件"
     },
     "empty": {
       "diffUnavailable": "Diff 不可用",
@@ -379,16 +380,35 @@
       "noGitRepository": "不是 Git 仓库",
       "noWorkspaceChanges": "workspace 暂无变更"
     },
-    "notices": {
-      "diffTruncated": {
+      "notices": {
+		"lazyLoading": {
+		  "title": "按需加载差异",
+		  "description": "优先打开较小的文本文件。大文件保持折叠，仅在手动打开时请求。"
+		},
+        "diffTruncated": {
         "title": "Diff 已截断",
         "description": "补丁太大，无法完整显示。"
+        },
+        "diffParseFailed": "Diff 解析失败"
       },
-      "diffParseFailed": "Diff 解析失败"
-    },
-    "errors": {
-      "loadDiff": "加载 Git diff 失败。",
-      "parseDiff": "解析 diff 失败。"
+	  "loadingFile": "正在加载文件差异",
+	  "fileTooLarge": {
+		"title": "文件差异过大，无法渲染",
+		"description": "为保持审阅面板流畅，未加载该文件预览。"
+	  },
+	  "commentDialog": {
+		"title": "请求更改",
+		"open": "请求更改此行",
+		"target": "{{path}}，第 {{line}} 行",
+		"label": "需要如何更改？",
+		"required": "请输入请求更改的内容。",
+		"submit": "添加评论",
+		"contextMeta": "第 {{line}} 行审阅评论"
+	  },
+      "errors": {
+        "loadDiff": "加载 Git diff 失败。",
+		"loadFile": "加载文件差异失败。",
+        "parseDiff": "解析 diff 失败。"
     }
   },
   "terminal": {

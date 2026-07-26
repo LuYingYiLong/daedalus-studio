@@ -96,7 +96,7 @@ describe("AgentPage terminal panel source", () => {
 		expect(dockPanelTabsSource).toContain("window.electronAPI.terminal.kill({ terminalId: targetKey })");
 		expect(dockPanelTabsSource).toContain("onEmpty();");
 		expect(dockPanelTabsSource).toContain("terminalId={tab.key}");
-		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} />");
+		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} contextItems={contextItems}");
 		expect(dockPanelTabsSource).toContain("onReorder={reorderDockTab}");
 		expect(terminalPanelSource).not.toContain("Tabs");
 	});

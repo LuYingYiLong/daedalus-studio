@@ -25,10 +25,11 @@
 .header {
 	display: grid;
 	width: 100%;
+	min-height: 32px;
 	align-items: center;
 	grid-template-columns: minmax(0, 1fr) auto auto;
 	gap: var(--ds-space-1);
-	padding: var(--ds-space-1) var(--ds-space-2) 0px var(--ds-space-2);
+	padding: 0 var(--ds-space-2);
 	user-select: none;
 }
 
@@ -77,10 +78,6 @@
 	min-width: 0;
 }
 
-.notice {
-	margin-bottom: var(--ds-space-1);
-}
-
 .fileCollapse {
 	display: grid;
 	min-width: 0;
@@ -96,9 +93,8 @@
 	display: grid;
 	grid-template-columns: auto minmax(0, 1fr) auto;
 	align-items: center;
+	min-height: 32px;
 	min-width: 0;
-	padding: 6px var(--ds-space-2);
-	background: var(--ds-surface-elevated);
 }
 
 .fileCollapse :global(.ant-collapse-header-text) {
@@ -121,12 +117,31 @@
 }
 
 .fileType {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--ds-space-1);
 	color: var(--ds-text-muted);
 	font-size: 11px;
+	line-height: 1;
 	text-transform: uppercase;
 }
 
+.additions {
+	color: var(--ds-git-addition);
+}
+
+.deletions {
+	color: var(--ds-git-deletion);
+}
+
 .binaryText {
+	padding: var(--ds-space-2);
+}
+
+.fileState {
+	display: flex;
+	align-items: center;
+	gap: var(--ds-space-1);
 	padding: var(--ds-space-2);
 }
 
@@ -137,11 +152,41 @@
 }
 
 .diffTable :global(.diff-gutter) {
+	position: relative;
 	width: 48px;
 	min-width: 48px;
 	padding: 0 8px;
 	color: var(--ds-text-muted);
 	user-select: none;
+}
+
+.addCommentButton {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	z-index: 1;
+	padding: 0;
+	transform: translate(-50%, -50%);
+}
+
+.reviewComments {
+	display: grid;
+	gap: 4px;
+	padding: 4px 8px 6px 56px;
+	background: var(--ds-surface-sunken);
+}
+
+.reviewComment {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--ds-space-1);
+	padding: 4px 6px;
+	border-left: 2px solid var(--ds-accent);
+	background: var(--ds-surface-elevated);
+	color: var(--ds-text-secondary);
+	font-size: 12px;
+	line-height: 1.45;
 }
 
 .diffTable :global(.diff-code) {

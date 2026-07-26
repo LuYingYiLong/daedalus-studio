@@ -368,10 +368,11 @@
     "binaryFileChanged": "Binary file changed",
     "diffStats": "{{branch}} / {{count}} file / +{{additions}} -{{deletions}}",
     "diffStats_other": "{{branch}} / {{count}} files / +{{additions}} -{{deletions}}",
-    "actions": {
-      "refreshDiff": "Refresh git diff",
-      "expandAllDiffs": "Expand all diffs",
-      "collapseAllDiffs": "Collapse all diffs"
+      "actions": {
+        "refreshDiff": "Refresh git diff",
+        "expandAllDiffs": "Expand small diffs",
+        "collapseAllDiffs": "Collapse small diffs",
+        "loadMoreFiles": "Load more files"
     },
     "empty": {
       "diffUnavailable": "Diff unavailable",
@@ -379,16 +380,35 @@
       "noGitRepository": "No Git repository",
       "noWorkspaceChanges": "No workspace changes"
     },
-    "notices": {
-      "diffTruncated": {
+      "notices": {
+		"lazyLoading": {
+		  "title": "Diffs load on demand",
+		  "description": "Small text files open first. Large files stay collapsed and are only requested when you open them."
+		},
+        "diffTruncated": {
         "title": "Diff truncated",
         "description": "The patch is too large to show completely."
+        },
+        "diffParseFailed": "Diff parse failed"
       },
-      "diffParseFailed": "Diff parse failed"
-    },
-    "errors": {
-      "loadDiff": "Failed to load git diff.",
-      "parseDiff": "Failed to parse diff."
+	  "loadingFile": "Loading file diff",
+	  "fileTooLarge": {
+		"title": "File diff is too large to render",
+		"description": "This preview was not loaded so the review panel stays responsive."
+	  },
+	  "commentDialog": {
+		"title": "Request changes",
+		"open": "Request changes on this line",
+		"target": "{{path}}, line {{line}}",
+		"label": "What should change?",
+		"required": "Enter the requested change.",
+		"submit": "Add comment",
+		"contextMeta": "Review comment on line {{line}}"
+	  },
+      "errors": {
+        "loadDiff": "Failed to load git diff.",
+		"loadFile": "Failed to load file diff.",
+        "parseDiff": "Failed to parse diff."
     }
   },
   "terminal": {

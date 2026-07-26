@@ -117,6 +117,10 @@ function getIconName(item: AdditionalContextItem): string {
 		return "file";
 	}
 
+	if (item.kind === "git_diff_comment") {
+		return "git-diff";
+	}
+
 	if (item.kind === "editor_selection") {
 		return "read";
 	}
@@ -151,6 +155,12 @@ function getMeta(item: AdditionalContextItem): string {
 		if (width > 0 && height > 0) {
 			return `${width}x${height}`;
 		}
+	}
+
+	if (item.kind === "git_diff_comment") {
+		const data: Record<string, unknown> = getDataRecord(item);
+		const line: number = typeof data.newLine === "number" ? data.newLine : typeof data.oldLine === "number" ? data.oldLine : 0;
+		return line > 0 ? `Line ${line}` : "Review comment";
 	}
 
 	return item.kind.replaceAll("_", " ");

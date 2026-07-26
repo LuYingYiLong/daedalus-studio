@@ -1952,7 +1952,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const chatMode: ChatMode = getChatMode(workbench);
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
 		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatchWithComposerText(), {
-			additionalContextAction: { action: "set", items: [] }
+			additionalContextAction: { action: "clearUnpinned" }
 		});
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
 
@@ -2039,7 +2039,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
 		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatchWithComposerText(), {
 			composer: { text: "" },
-			additionalContextAction: { action: "set", items: [] }
+			additionalContextAction: { action: "clearUnpinned" }
 		});
 
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
@@ -2050,7 +2050,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					composer: {
 						...currentWorkbench.composer,
 						text: "",
-						additionalContext: []
+						additionalContext: currentWorkbench.composer.additionalContext.filter((item: AdditionalContextItem): boolean => item.pinned === true)
 					}
 				};
 		});
@@ -3084,6 +3084,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						onAddContextFiles={(files: File[]): void => {
 							void handleAddContextFiles(files);
 						}}
+						onAddContext={(item: AdditionalContextItem): void => patchContext({ action: "addOrReplace", item })}
 						onRemoveContext={(contextId: string): void => patchContext({ action: "remove", contextId })}
 						onPinContext={(contextId: string, pinned: boolean): void => patchContext({ action: "pin", contextId, pinned })}
 						onClearUnpinnedContext={(): void => patchContext({ action: "clearUnpinned" })}

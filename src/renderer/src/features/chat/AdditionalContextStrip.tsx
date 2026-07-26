@@ -38,6 +38,7 @@ function AdditionalContextStrip({
 			{items.map((item: AdditionalContextItem): React.ReactNode => {
 				const display = summarizeAdditionalContextItem(item);
 				const nextPinned: boolean = item.pinned !== true;
+				const canTogglePin: boolean = interactive && item.kind !== "git_diff_comment";
 
 				return (
 					<Tooltip
@@ -46,14 +47,14 @@ function AdditionalContextStrip({
 						placement="top"
 					>
 						<span
-							className={`${styles.contextChip} ${interactive ? styles.interactiveChip : ""}`}
-							role={interactive ? "button" : undefined}
-							tabIndex={interactive ? 0 : undefined}
-							onClick={interactive ? (event: React.MouseEvent<HTMLSpanElement>): void => {
+							className={`${styles.contextChip} ${canTogglePin ? styles.interactiveChip : ""}`}
+							role={canTogglePin ? "button" : undefined}
+							tabIndex={canTogglePin ? 0 : undefined}
+							onClick={canTogglePin ? (event: React.MouseEvent<HTMLSpanElement>): void => {
 								event.stopPropagation();
 								onTogglePin?.(item.id, nextPinned);
 							} : undefined}
-							onKeyDown={interactive ? (event: React.KeyboardEvent<HTMLSpanElement>): void => {
+							onKeyDown={canTogglePin ? (event: React.KeyboardEvent<HTMLSpanElement>): void => {
 								if (event.key !== "Enter" && event.key !== " ") {
 									return;
 								}

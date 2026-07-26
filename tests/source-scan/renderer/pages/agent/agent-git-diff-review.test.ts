@@ -75,7 +75,7 @@ describe("AgentPage git diff review source", () => {
 		expect(dockPanelTabsSource).toContain('t("dock.add.reviewPanel")');
 		expect(dockPanelTabsSource).toContain('t("dock.add.terminalPanel")');
 		expect(dockPanelTabsSource).toContain("return [createDockTab(dockId, defaultKind, 1, t)];");
-		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} />");
+		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} contextItems={contextItems}");
 		expect(dockPanelTabsSource).toContain("<TerminalPanel");
 		expect(dockPanelTabsSource).toContain("terminalId={tab.key}");
 		expect(dockPanelTabsSource).toContain("window.electronAPI.terminal.kill({ terminalId: targetKey })");
@@ -86,7 +86,7 @@ describe("AgentPage git diff review source", () => {
 
 	it("opens shared git action dialogs from the review panel", () => {
 		expect(reviewPanelSource).toContain("useGitActionDialogController");
-		expect(reviewPanelSource).toContain("onCommitSuccess: loadDiff");
+		expect(reviewPanelSource).toContain("onCommitSuccess: (): void => { void loadSummary(true); }");
 		expect(reviewPanelSource).toContain("onClick={gitActions.openCommitDialog}");
 		expect(reviewPanelSource).toContain("<CommitActionDialog {...gitActions.commitDialogProps} />");
 		expect(reviewPanelSource).toContain("<BranchActionDialog {...gitActions.branchDialogProps} />");
@@ -96,13 +96,23 @@ describe("AgentPage git diff review source", () => {
 		expect(gitActionControllerSource).toContain("generateGitCommitMessage");
 	});
 
-	it("supports expanding and collapsing every parsed diff file", () => {
-		expect(reviewPanelSource).toContain("const [expandedDiffKeys, setExpandedDiffKeys] = useState<string[]>([]);");
-		expect(reviewPanelSource).toContain("const areAllDiffsExpanded: boolean = diffFileKeys.length > 0");
-		expect(reviewPanelSource).toContain("setExpandedDiffKeys(areAllDiffsExpanded ? [] : diffFileKeys);");
-		expect(reviewPanelSource).toContain('name={areAllDiffsExpanded ? "fold" : "unfold"}');
-		expect(reviewPanelSource).toContain('activeKey={expandedDiffKeys}');
-		expect(reviewPanelSource).toContain('onChange={handleDiffCollapseChange}');
+	it("loads small diff files on demand and keeps large file previews bounded", () => {
+		expect(reviewPanelSource).toContain("fetchWorkspaceGitDiffSummary");
+		expect(reviewPanelSource).toContain("fetchWorkspaceGitDiffFile");
+		expect(reviewPanelSource).toContain("const [expandedKeys, setExpandedKeys] = useState<string[]>([]);");
+		expect(reviewPanelSource).toContain("file.canAutoExpand");
+		expect(reviewPanelSource).toContain("slice(0, 3)");
+		expect(reviewPanelSource).toContain("tooLargeToRender");
+		expect(reviewPanelSource).toContain('activeKey={expandedKeys}');
+		expect(reviewPanelSource).toContain('onChange={handleCollapseChange}');
+	});
+
+	it("adds local line comments to Composer context", () => {
+		expect(reviewPanelSource).toContain("renderGutter");
+		expect(reviewPanelSource).toContain('kind: "git_diff_comment"');
+		expect(reviewPanelSource).toContain("onAddContext({");
+		expect(reviewPanelSource).toContain("onRemoveContext(item.id)");
+		expect(reviewPanelSource).toContain("<GitDiffReviewCommentDialog");
 	});
 
 	it("uses dnd-kit to reorder dock tabs", () => {

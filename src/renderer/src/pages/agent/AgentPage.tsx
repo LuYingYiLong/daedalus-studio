@@ -257,6 +257,7 @@ type AgentPageProps = {
 	onAddFolder: () => void;
 	onAddImages: (files: File[]) => void;
 	onAddContextFiles: (files: File[]) => void;
+	onAddContext: (item: AdditionalContextItem) => void;
 	onRemoveContext: (contextId: string) => void;
 	onPinContext: (contextId: string, pinned: boolean) => void;
 	onClearUnpinnedContext: () => void;
@@ -364,6 +365,7 @@ function AgentPage({
 	onAddFolder,
 	onAddImages,
 	onAddContextFiles,
+	onAddContext,
 	onRemoveContext,
 	onPinContext,
 	onClearUnpinnedContext,
@@ -1418,6 +1420,9 @@ function AgentPage({
 											placement="side"
 											workspaceId={workspaceForActions?.id ?? null}
 											cwd={workspaceForActions?.rootPath ?? null}
+											contextItems={contextItems}
+											onAddContext={onAddContext}
+											onRemoveContext={onRemoveContext}
 											isOpen={sideDockOpen}
 											waitForCwd={terminalWaitForCwd}
 											defaultKind="review"
@@ -1442,6 +1447,9 @@ function AgentPage({
 									placement="bottom"
 									workspaceId={workspaceForActions?.id ?? null}
 									cwd={workspaceForActions?.rootPath ?? null}
+									contextItems={contextItems}
+									onAddContext={onAddContext}
+									onRemoveContext={onRemoveContext}
 									isOpen={bottomDockOpen}
 									waitForCwd={terminalWaitForCwd}
 									defaultKind="terminal"

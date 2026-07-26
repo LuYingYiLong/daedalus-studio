@@ -39,7 +39,7 @@ export type SessionListResult = {
 
 export type AdditionalContextItem = {
 	id: string;
-	kind: "editor_selection" | "scene" | "node" | "file" | "folder" | "script" | "script_selection" | "filesystem_selection" | "image";
+	kind: "editor_selection" | "scene" | "node" | "file" | "folder" | "script" | "script_selection" | "filesystem_selection" | "image" | "git_diff_comment";
 	title: string;
 	subtitle?: string;
 	pinned?: boolean;
