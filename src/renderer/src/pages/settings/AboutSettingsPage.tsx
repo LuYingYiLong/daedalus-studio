@@ -1,5 +1,5 @@
 import { Button, Card, Descriptions, Spin, Tag, Typography } from "antd";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRequest } from "ahooks";
 import { useTranslation } from "react-i18next";
 import { createBackendClient } from "@/shared/api/transport/backend-client";
@@ -7,6 +7,7 @@ import type { BackendHealthResult } from "@/app/bootstrap";
 import { Icon } from "@/assets/icons";
 import backendColorfulIconUrl from "@/assets/icons/backend-colorful.svg?url";
 import daedalusColorfulIconUrl from "@/assets/icons/icon-colorful.svg";
+import AppUpdateDialog from "@/features/app-update/AppUpdateDialog";
 import styles from "./AboutSettingsPage.module.css";
 
 type PackageInfo = {
@@ -88,6 +89,8 @@ async function loadBackendDetails(fallbackMessage: string): Promise<BackendDetai
 
 function AboutSettingsPage(): React.JSX.Element {
 	const { t } = useTranslation();
+	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
+	const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState<boolean>(false);
 	const {
 		data,
 		loading: isLoading,
@@ -143,6 +146,32 @@ function AboutSettingsPage(): React.JSX.Element {
 		});
 	}, [mutate]);
 
+	useEffect((): (() => void) => {
+		void window.electronAPI.appUpdate.getState().then(setUpdateState);
+		return window.electronAPI.appUpdate.onStateChanged(setUpdateState);
+	}, []);
+
+	const {
+		loading: isCheckingUpdates,
+		run: checkForUpdates
+	} = useRequest(async (): Promise<void> => {
+		setIsUpdateDialogOpen(true);
+		const nextState: AppUpdateState = await window.electronAPI.appUpdate.check();
+		setUpdateState(nextState);
+	}, { manual: true });
+
+	async function startUpdateDownload(): Promise<void> {
+		const nextState: AppUpdateState = await window.electronAPI.appUpdate.download();
+		setUpdateState(nextState);
+	}
+
+	async function closeUpdateDialog(): Promise<void> {
+		setIsUpdateDialogOpen(false);
+		if (updateState?.updateKind === "backend" && updateState.backend.status === "downloaded") {
+			setUpdateState(await window.electronAPI.appUpdate.acknowledge());
+		}
+	}
+
 	const gitHubUrl = "https://github.com/LuYingYiLong/daedalus-studio";
 	const packageInfo: PackageInfo | null = data?.packageInfo ?? null;
 	const backendDetails: BackendDetails | null = data?.backendDetails ?? null;
@@ -157,6 +186,9 @@ function AboutSettingsPage(): React.JSX.Element {
 		<section className={styles.page}>
 			<header className={styles.header}>
 				<Typography.Title level={3} className={styles.title}>{t("settings.about.title")}</Typography.Title>
+				<Button icon={<Icon name="reload" />} loading={isCheckingUpdates} onClick={(): void => checkForUpdates()}>
+					{t("settings.about.actions.checkForUpdates")}
+				</Button>
 			</header>
 
 			<div className={styles.content}>
@@ -327,6 +359,7 @@ function AboutSettingsPage(): React.JSX.Element {
 					</>
 				) : null}
 			</div>
+			<AppUpdateDialog open={isUpdateDialogOpen} state={updateState} onClose={closeUpdateDialog} onDownload={startUpdateDownload} />
 		</section>
 	);
 }

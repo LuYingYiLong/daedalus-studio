@@ -14,6 +14,8 @@ describe("app update source", () => {
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 	const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.tsx");
 	const titlebarCss: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.module.css");
+	const updateDialogSource: string = readRepoFile("src", "renderer", "src", "features", "app-update", "AppUpdateDialog.tsx");
+	const aboutSettingsSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "AboutSettingsPage.tsx");
 
 	it("configures electron-updater and GitHub publishing", () => {
 		expect(packageSource).toContain("\"electron-updater\"");
@@ -75,7 +77,7 @@ describe("app update source", () => {
 		expect(viteEnvSource).toContain("appUpdate: AppUpdateAPI;");
 	});
 
-	it("renders update affordance in the titlebar", () => {
+	it("shares the update dialog between the titlebar and About settings", () => {
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.getState");
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.check");
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.onStateChanged");
@@ -86,12 +88,16 @@ describe("app update source", () => {
 		expect(titlebarSource).toContain("state.updateKind !== null");
 		expect(titlebarSource).toContain("clientPreferences.autoCheckForUpdates");
 		expect(titlebarSource).not.toContain("!preferences.autoCheckForUpdates");
-		expect(titlebarSource).toContain("<Modal");
-		expect(titlebarSource).toContain("mask={{ closable:");
-		expect(titlebarSource).not.toContain("maskClosable");
+		expect(titlebarSource).toContain("<AppUpdateDialog");
 		expect(titlebarSource).toContain("Update");
-		expect(titlebarSource).toContain("Backend");
-		expect(titlebarSource).toContain("Restarting to install");
+		expect(updateDialogSource).toContain("<Modal");
+		expect(updateDialogSource).toContain("mask={{ closable:");
+		expect(updateDialogSource).not.toContain("maskClosable");
+		expect(updateDialogSource).toContain("appUpdate.components.backend");
+		expect(updateDialogSource).toContain("appUpdate.status.restarting");
+		expect(aboutSettingsSource).toContain("<AppUpdateDialog");
+		expect(aboutSettingsSource).toContain("window.electronAPI.appUpdate.check()");
+		expect(aboutSettingsSource).toContain("settings.about.actions.checkForUpdates");
 		expect(titlebarCss).toContain("-webkit-app-region: no-drag;");
 		expect(titlebarCss).toContain(".brandCluster");
 		expect(titlebarCss).toContain(".updateButton");

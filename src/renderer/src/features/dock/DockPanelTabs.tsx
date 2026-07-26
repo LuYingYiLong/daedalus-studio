@@ -70,7 +70,7 @@ function isTerminalTabKey(tabKey: string): boolean {
 }
 
 function getTabIconName(kind: DockPanelKind): string {
-	return kind === "review" ? "edit-add-remove" : "terminal";
+	return kind === "review" ? "git-diff" : "terminal";
 }
 
 function reorderTabs(tabs: DockTab[], sourceKey: string, targetKey: string): DockTab[] {
@@ -114,7 +114,7 @@ function DockPanelTabs({
 		{
 			key: ADD_REVIEW_KEY,
 			label: t("dock.add.reviewPanel"),
-			icon: <Icon name="edit-add-remove" />,
+			icon: <Icon name="git-diff" />,
 			disabled: !canOpenReview
 		},
 		{

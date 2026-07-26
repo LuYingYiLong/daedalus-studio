@@ -12,8 +12,10 @@
 }
 
 .header {
-	display: grid;
-	gap: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ds-space-2);
 	padding: var(--ds-space-2) var(--ds-space-2) 0 var(--ds-space-2);
 }
 

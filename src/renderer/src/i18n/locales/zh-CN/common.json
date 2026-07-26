@@ -544,7 +544,8 @@
         }
       },
       "actions": {
-        "refresh": "刷新"
+        "refresh": "刷新",
+        "checkForUpdates": "检查更新"
       },
       "fields": {
         "author": "作者",
@@ -901,6 +902,35 @@
         "save": "保存通用设置失败",
         "godotExecutable": "验证 Godot 可执行文件失败"
       }
+    }
+  },
+  "appUpdate": {
+    "title": "Daedalus Studio 更新",
+    "summary": {
+      "client": "有可用的 Daedalus Studio 更新。",
+      "backend": "有可用的 Daedalus 后端更新。",
+      "combined": "Daedalus Studio 和后端都有可用更新。",
+      "notAvailable": "Daedalus Studio 已是最新版本。",
+      "unsupported": "当前安装方式不支持更新。"
+    },
+    "components": {
+      "client": "客户端",
+      "backend": "后端"
+    },
+    "status": {
+      "checking": "正在检查更新...",
+      "downloading": "正在下载更新...",
+      "installingBackend": "正在安装后端更新...",
+      "backendUpdated": "后端已更新。关闭此对话框以继续。",
+      "restarting": "正在重启以安装...",
+      "failed": "更新失败",
+      "ready": "更新已就绪。"
+    },
+    "actions": {
+      "retry": "重试"
+    },
+    "errors": {
+      "download": "下载更新失败。"
     }
   }
 }

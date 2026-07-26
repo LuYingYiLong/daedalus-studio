@@ -1,0 +1,4 @@
+.content {
+	display: grid;
+	gap: var(--ds-space-2);
+}

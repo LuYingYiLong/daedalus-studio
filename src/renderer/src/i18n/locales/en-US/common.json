@@ -544,7 +544,8 @@
         }
       },
       "actions": {
-        "refresh": "Refresh"
+        "refresh": "Refresh",
+        "checkForUpdates": "Check for updates"
       },
       "fields": {
         "author": "Author",
@@ -901,6 +902,35 @@
         "save": "Failed to save general settings",
         "godotExecutable": "Failed to validate the Godot executable"
       }
+    }
+  },
+  "appUpdate": {
+    "title": "Daedalus Studio update",
+    "summary": {
+      "client": "A Daedalus Studio update is available.",
+      "backend": "A Daedalus backend update is available.",
+      "combined": "Daedalus Studio and the backend both have updates.",
+      "notAvailable": "Daedalus Studio is up to date.",
+      "unsupported": "Updates are not available for this installation."
+    },
+    "components": {
+      "client": "Client",
+      "backend": "Backend"
+    },
+    "status": {
+      "checking": "Checking for updates...",
+      "downloading": "Downloading update...",
+      "installingBackend": "Installing backend update...",
+      "backendUpdated": "Backend updated. Close this dialog to continue.",
+      "restarting": "Restarting to install...",
+      "failed": "Update failed",
+      "ready": "Update is ready."
+    },
+    "actions": {
+      "retry": "Retry"
+    },
+    "errors": {
+      "download": "Failed to download update."
     }
   }
 }

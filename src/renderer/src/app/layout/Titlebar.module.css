@@ -43,11 +43,6 @@
 	-webkit-app-region: no-drag;
 }
 
-.updateModalBody {
-	display: grid;
-	gap: 8px;
-}
-
 .menuTrigger {
 	margin-left: var(--ds-space-3);
 	line-height: 36px;
