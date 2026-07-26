@@ -228,7 +228,6 @@ type AgentPageProps = {
 	onNewSession: () => void;
 	onNewWorkspaceSession: (workspace: WorkspaceConfig) => void;
 	onWorkspaceRefresh: () => void;
-	onWorkspaceSelect: (workspaceId: string) => void;
 	onHomeWorkspaceSelect: (workspaceId: string) => void;
 	onHomeWorkspaceAdd: () => void;
 	onHomeWorkspaceClear: () => void;
@@ -339,7 +338,6 @@ function AgentPage({
 	onNewSession,
 	onNewWorkspaceSession,
 	onWorkspaceRefresh,
-	onWorkspaceSelect,
 	onHomeWorkspaceSelect,
 	onHomeWorkspaceAdd,
 	onHomeWorkspaceClear,
@@ -1180,7 +1178,6 @@ function AgentPage({
 					initialActiveWorkspaceId={initialActiveWorkspaceId}
 					runningSessionIds={runningSessionIds}
 					sessionUpdate={activeSessionMetadata}
-					onWorkspaceSelect={onWorkspaceSelect}
 					onSessionSelect={onSessionSelect}
 					onSessionArchive={onSessionArchive}
 					onSessionRename={onSessionRename}

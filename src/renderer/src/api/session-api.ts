@@ -48,6 +48,8 @@ export type ArchiveSessionResult = {
 
 export type RenameSessionResult = SessionMetadata;
 
+export type SetSessionPinnedResult = SessionMetadata;
+
 export type ArchivedSessionListResult = {
 	archivedSessions: SessionMetadata[];
 };
@@ -207,6 +209,12 @@ export async function deleteArchivedSession(sessionId: string): Promise<DeleteAr
 	return client.request<DeleteArchivedSessionResult>("session.archived.delete", {
 		sessionId
 	});
+}
+
+export async function setSessionPinned(sessionId: string, pinned: boolean): Promise<SetSessionPinnedResult> {
+	const client = await createBackendClient();
+
+	return client.request<SetSessionPinnedResult>("session.pin.set", { sessionId, pinned });
 }
 
 export async function deleteSession(sessionId: string): Promise<DeleteSessionResult> {

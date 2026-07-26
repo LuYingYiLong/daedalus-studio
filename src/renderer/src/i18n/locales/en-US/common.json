@@ -64,6 +64,8 @@
       "editProject": "Edit project",
       "rename": "Rename",
       "renameSession": "Rename session",
+      "pinSession": "Pin session",
+      "unpinSession": "Unpin session",
       "archiveSession": "Archive session",
       "openInExplorer": "Open in Explorer",
       "copySessionId": "Copy session ID",
@@ -72,16 +74,22 @@
     },
     "aria": {
       "archiveSession": "Archive {{sessionTitle}}",
+      "pinSession": "Pin {{sessionTitle}}",
+      "unpinSession": "Unpin {{sessionTitle}}",
       "workspaceActions": "Workspace actions for {{workspaceName}}",
       "newSessionInWorkspace": "New session in {{workspaceName}}"
     },
     "empty": {
       "noWorkspace": "No workspace",
-      "noSessions": "No sessions"
+      "noSessions": "No sessions",
+      "noPinnedSessions": "No pinned sessions",
+      "noProjects": "No projects",
+      "noRecentSessions": "No recent sessions"
     },
     "groups": {
-      "sessions": "Sessions",
-      "otherSessions": "Other sessions"
+      "pinned": "Pinned",
+      "projects": "Projects",
+      "recent": "Recent"
     },
     "messages": {
       "sessionIdCopied": "Session ID copied"
@@ -93,6 +101,7 @@
       "loadWorkspace": "Failed to load workspace",
       "openSessionDirectory": "Failed to open session directory",
       "openWorkspaceDirectory": "Failed to open workspace directory",
+      "pinSession": "Failed to update pinned session",
       "renameSession": "Failed to rename session",
       "sessionTitleCannotBeEmpty": "Session title cannot be empty."
     },

@@ -64,6 +64,8 @@
       "editProject": "编辑项目",
       "rename": "重命名",
       "renameSession": "重命名会话",
+      "pinSession": "置顶会话",
+      "unpinSession": "取消置顶会话",
       "archiveSession": "归档会话",
       "openInExplorer": "在资源管理器中打开",
       "copySessionId": "复制会话 ID",
@@ -72,16 +74,22 @@
     },
     "aria": {
       "archiveSession": "归档 {{sessionTitle}}",
+      "pinSession": "置顶 {{sessionTitle}}",
+      "unpinSession": "取消置顶 {{sessionTitle}}",
       "workspaceActions": "{{workspaceName}} 的 workspace 操作",
       "newSessionInWorkspace": "在 {{workspaceName}} 中新建会话"
     },
     "empty": {
       "noWorkspace": "暂无 workspace",
-      "noSessions": "暂无会话"
+      "noSessions": "暂无会话",
+      "noPinnedSessions": "暂无置顶会话",
+      "noProjects": "暂无项目",
+      "noRecentSessions": "暂无最近会话"
     },
     "groups": {
-      "sessions": "会话",
-      "otherSessions": "其他会话"
+      "pinned": "置顶",
+      "projects": "项目",
+      "recent": "最近"
     },
     "messages": {
       "sessionIdCopied": "已复制会话 ID"
@@ -93,6 +101,7 @@
       "loadWorkspace": "加载 workspace 失败",
       "openSessionDirectory": "打开会话目录失败",
       "openWorkspaceDirectory": "打开 workspace 目录失败",
+      "pinSession": "更新置顶会话失败",
       "renameSession": "重命名会话失败",
       "sessionTitleCannotBeEmpty": "会话标题不能为空。"
     },

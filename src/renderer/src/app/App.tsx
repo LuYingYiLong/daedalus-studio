@@ -1225,28 +1225,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 	}
 
-	function findKnownWorkspace(workspaceId: string): WorkspaceConfig | undefined {
-		return homeWorkspaceOptions.find((workspace: WorkspaceConfig): boolean => workspace.id === workspaceId)
-			?? bootstrapData.workspaceList.workspaces.find((workspace: WorkspaceConfig): boolean => workspace.id === workspaceId)
-			?? (activeWorkspace?.id === workspaceId ? activeWorkspace : undefined)
-			?? (homeDraft.workspace?.id === workspaceId ? homeDraft.workspace : undefined);
-	}
-
-	async function handleWorkspaceRootSelect(workspaceId: string): Promise<void> {
-		if (isNewSessionHome) {
-			await handleHomeWorkspaceSelect(workspaceId);
-			return;
-		}
-
-		const workspace: WorkspaceConfig | undefined = findKnownWorkspace(workspaceId);
-		if (workspace === undefined) {
-			showTransientError("Workspace not found");
-			return;
-		}
-
-		await handleNewWorkspaceSession(workspace);
-	}
-
 	async function createTemporarySession(workspace: WorkspaceConfig | null = null): Promise<void> {
 		if (temporarySessionCreationRef.current !== null) {
 			return temporarySessionCreationRef.current;
@@ -3205,9 +3183,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						}}
 						onWorkspaceRefresh={(): void => {
 							setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
-						}}
-						onWorkspaceSelect={(workspaceId: string): void => {
-							void handleWorkspaceRootSelect(workspaceId);
 						}}
 						onHomeWorkspaceSelect={(workspaceId: string): void => {
 							void handleHomeWorkspaceSelect(workspaceId);
