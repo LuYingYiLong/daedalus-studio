@@ -35,6 +35,7 @@ export type ComposerProps = {
 	skills?: SkillSummary[];
 	isSending?: boolean;
 	isCancelling?: boolean;
+	isAddingTextAttachment?: boolean;
 	isApprovalModeSaving?: boolean;
 	workspaceOptions?: WorkspaceConfig[];
 	selectedWorkspace?: WorkspaceConfig | null;
@@ -52,6 +53,7 @@ export type ComposerProps = {
 	onAddFolder?: () => void;
 	onAddImages?: (files: File[]) => void;
 	onAddContextFiles?: (files: File[]) => void;
+	onAddPastedTextAttachment?: (text: string) => boolean;
 	onRemoveContext?: (contextId: string) => void;
 	onPinContext?: (contextId: string, pinned: boolean) => void;
 	onClearUnpinnedContext?: () => void;
@@ -365,6 +367,7 @@ function Composer({
 	skills = [],
 	isSending = false,
 	isCancelling = false,
+	isAddingTextAttachment = false,
 	isApprovalModeSaving = false,
 	workspaceOptions = [],
 	selectedWorkspace = null,
@@ -382,6 +385,7 @@ function Composer({
 	onAddFolder,
 	onAddImages,
 	onAddContextFiles,
+	onAddPastedTextAttachment,
 	onRemoveContext,
 	onPinContext,
 	onCancel,
@@ -604,6 +608,9 @@ function Composer({
 	}
 
 	function submitMessage(): void {
+		if (isAddingTextAttachment) {
+			return;
+		}
 		const trimmedMessage: string = draftMessage.trim();
 		if (trimmedMessage.length === 0 && isSending) {
 			if (isCancelling) {
@@ -800,6 +807,12 @@ function Composer({
 		}
 
 		if (addContextFiles(files)) {
+			event.preventDefault();
+			return;
+		}
+
+		const text: string = event.clipboardData.getData("text/plain");
+		if (text.trim().length > 100 && onAddPastedTextAttachment?.(text) === true) {
 			event.preventDefault();
 		}
 	}
@@ -1001,7 +1014,7 @@ function Composer({
 					<Input.TextArea
 						ref={textAreaRef}
 						value={draftMessage}
-						autoSize={{ minRows: 4, maxRows: 12 }}
+						autoSize={{ minRows: 4, maxRows: 4 }}
 						placeholder={t("composer.placeholder")}
 						className={styles.composerTextArea}
 						onChange={handleTextAreaChange}
@@ -1101,7 +1114,7 @@ function Composer({
 							shape="circle"
 							icon={<Icon name={isSending && draftMessage.trim().length === 0 ? "stop" : "send"} />}
 							className={styles.composerSendButton}
-							disabled={isCancelling || (!isSending && draftMessage.trim().length === 0)}
+							disabled={isCancelling || isAddingTextAttachment || (!isSending && draftMessage.trim().length === 0)}
 							onClick={submitMessage}
 						/>
 					</Tooltip>

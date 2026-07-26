@@ -1,7 +1,6 @@
 .alert {
 	margin-top: 4px;
 	margin-bottom: 4px;
-	border-radius: var(--ds-radius-sm);
 }
 
 .alert :global(.ant-alert-description) {

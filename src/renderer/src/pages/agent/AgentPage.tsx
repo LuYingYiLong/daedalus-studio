@@ -213,6 +213,7 @@ type AgentPageProps = {
 	skills: SkillSummary[];
 	isSending: boolean;
 	isCancelling: boolean;
+	isAddingTextAttachment: boolean;
 	isApprovalModeSaving: boolean;
 	workspaceOptions: WorkspaceConfig[];
 	initialWorkspaces: WorkspaceConfig[];
@@ -256,6 +257,7 @@ type AgentPageProps = {
 	onAddFiles: () => void;
 	onAddFolder: () => void;
 	onAddImages: (files: File[]) => void;
+	onAddPastedTextAttachment: (text: string) => boolean;
 	onAddContextFiles: (files: File[]) => void;
 	onAddContext: (item: AdditionalContextItem) => void;
 	onRemoveContext: (contextId: string) => void;
@@ -321,6 +323,7 @@ function AgentPage({
 	skills,
 	isSending,
 	isCancelling,
+	isAddingTextAttachment,
 	isApprovalModeSaving,
 	workspaceOptions,
 	initialWorkspaces,
@@ -364,6 +367,7 @@ function AgentPage({
 	onAddFiles,
 	onAddFolder,
 	onAddImages,
+	onAddPastedTextAttachment,
 	onAddContextFiles,
 	onAddContext,
 	onRemoveContext,
@@ -824,13 +828,13 @@ function AgentPage({
 								type="text"
 								block
 								className={styles.sourceButton}
-								icon={(
+								icon={source.thumbnailDataUrl !== undefined ? (
 									<img
 										src={source.thumbnailDataUrl}
 										alt=""
 										className={styles.sourceThumbnail}
 									/>
-								)}
+								) : <Icon name="txt" className={styles.sourceTextIcon} />}
 								onClick={(): void => {
 									setSummaryOpen(false);
 									setPreviewSource(source);
@@ -1192,7 +1196,7 @@ function AgentPage({
 					<div className={styles.floatingActionSlot}>
 						<div className={styles.floatingActions}>
 							{showWorkspaceLaunchControls ? (
-								<Space.Compact size="small" className={styles.workspaceLaunchControls}>
+								<Space.Compact className={styles.workspaceLaunchControls}>
 									<Button
 										loading={isOpeningLaunchTarget}
 										icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
@@ -1375,9 +1379,10 @@ function AgentPage({
 													approvalMode={approvalMode}
 													slashCommands={slashCommands}
 													skills={skills}
-													isSending={isSending}
-													isCancelling={isCancelling}
-													isApprovalModeSaving={isApprovalModeSaving}
+											isSending={isSending}
+											isCancelling={isCancelling}
+											isAddingTextAttachment={isAddingTextAttachment}
+											isApprovalModeSaving={isApprovalModeSaving}
 													workspaceOptions={workspaceOptions}
 													selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
 													workspaceFooterDisabled={workspaceFooterDisabled}
@@ -1389,8 +1394,9 @@ function AgentPage({
 													onProviderModelChange={onProviderModelChange}
 													onAddFiles={onAddFiles}
 													onAddFolder={onAddFolder}
-													onAddImages={onAddImages}
-													onAddContextFiles={onAddContextFiles}
+											onAddImages={onAddImages}
+											onAddPastedTextAttachment={onAddPastedTextAttachment}
+											onAddContextFiles={onAddContextFiles}
 													onWorkspaceSelect={onHomeWorkspaceSelect}
 													onWorkspaceAdd={onHomeWorkspaceAdd}
 													onWorkspaceClear={onHomeWorkspaceClear}

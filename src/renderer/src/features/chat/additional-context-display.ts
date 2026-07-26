@@ -1,4 +1,5 @@
 import type { AdditionalContextItem } from "@/api/types";
+import { getAdditionalContextIconName } from "./additional-context-icon";
 
 export type AdditionalContextDisplay = {
 	iconName: string;
@@ -11,8 +12,6 @@ type SelectedPath = {
 	kind?: string;
 	resourcePath?: string;
 };
-
-const SCRIPT_EXTENSIONS: Set<string> = new Set(["gd", "cs", "shader", "gdshader", "glsl", "hlsl", "ts", "tsx", "js", "jsx", "py"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -46,16 +45,6 @@ function getSelectedPaths(item: AdditionalContextItem): SelectedPath[] {
 	});
 }
 
-function isScriptPath(resourcePath: string): boolean {
-	const extensionIndex: number = resourcePath.lastIndexOf(".");
-
-	if (extensionIndex < 0) {
-		return false;
-	}
-
-	return SCRIPT_EXTENSIONS.has(resourcePath.slice(extensionIndex + 1).toLowerCase());
-}
-
 function getFilesystemSelectionMeta(item: AdditionalContextItem): string {
 	const selectedPaths: SelectedPath[] = getSelectedPaths(item);
 
@@ -76,56 +65,6 @@ function getFilesystemSelectionMeta(item: AdditionalContextItem): string {
 	}
 
 	return parts.length > 0 ? parts.join(" · ") : `${selectedPaths.length} selected`;
-}
-
-function getIconName(item: AdditionalContextItem): string {
-	if (item.kind === "folder") {
-		return "folder";
-	}
-
-	if (item.kind === "script" || item.kind === "script_selection") {
-		return "script";
-	}
-
-	if (item.kind === "file") {
-		return item.resourcePath !== undefined && isScriptPath(item.resourcePath) ? "script" : "file";
-	}
-
-	if (item.kind === "filesystem_selection") {
-		const selectedPaths: SelectedPath[] = getSelectedPaths(item);
-		const hasFolder: boolean = selectedPaths.some((selectedPath: SelectedPath): boolean => selectedPath.kind === "folder");
-		const onlyScripts: boolean = selectedPaths.length > 0 && selectedPaths.every((selectedPath: SelectedPath): boolean => {
-			return selectedPath.kind === "file" && selectedPath.resourcePath !== undefined && isScriptPath(selectedPath.resourcePath);
-		});
-
-		if (hasFolder) {
-			return "folder_browse";
-		}
-
-		return onlyScripts ? "script" : "file_browse";
-	}
-
-	if (item.kind === "scene") {
-		return "scene_edit";
-	}
-
-	if (item.kind === "node") {
-		return "node";
-	}
-
-	if (item.kind === "image") {
-		return "file";
-	}
-
-	if (item.kind === "git_diff_comment") {
-		return "git-diff";
-	}
-
-	if (item.kind === "editor_selection") {
-		return "read";
-	}
-
-	return "add";
 }
 
 function getMeta(item: AdditionalContextItem): string {
@@ -155,6 +94,12 @@ function getMeta(item: AdditionalContextItem): string {
 		if (width > 0 && height > 0) {
 			return `${width}x${height}`;
 		}
+	}
+
+	if (item.kind === "text_attachment") {
+		const data: Record<string, unknown> = getDataRecord(item);
+		const byteSize: number = typeof data.byteSize === "number" ? data.byteSize : 0;
+		return byteSize > 0 ? `${Math.ceil(byteSize / 1024)} KiB` : "Text attachment";
 	}
 
 	if (item.kind === "git_diff_comment") {
@@ -204,7 +149,7 @@ export function summarizeAdditionalContextItem(item: AdditionalContextItem): Add
 	const lines: string[] = getTooltipLines(item, meta);
 
 	return {
-		iconName: getIconName(item),
+		iconName: getAdditionalContextIconName(item),
 		title: item.title || "Context",
 		meta,
 		tooltip: lines.join("\n")

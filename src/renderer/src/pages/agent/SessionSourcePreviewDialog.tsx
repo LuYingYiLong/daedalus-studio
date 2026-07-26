@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { Modal } from "antd";
 import { useTranslation } from "react-i18next";
 import type { SessionOverviewSourceItem } from "@/api/session-overview-api";
+import MarkdownContent from "@/features/markdown/MarkdownContent";
 import styles from "./AgentPage.module.css";
 
 type SessionSourcePreviewDialogProps = {
@@ -21,11 +22,17 @@ export default function SessionSourcePreviewDialog({ source, onClose }: SessionS
 			width={720}
 		>
 			{source !== null ? (
-				<img
-					src={source.thumbnailDataUrl}
-					alt={source.title}
-					className={styles.sourcePreviewImage}
-				/>
+				source.thumbnailDataUrl !== undefined ? (
+					<img
+						src={source.thumbnailDataUrl}
+						alt={source.title}
+						className={styles.sourcePreviewImage}
+					/>
+				) : (
+					<div className={`${styles.sourcePreviewText} markdown-body`}>
+						<MarkdownContent>{source.textPreview ?? ""}</MarkdownContent>
+					</div>
+				)
 			) : null}
 		</Modal>
 	);

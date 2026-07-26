@@ -52,8 +52,8 @@
 
 .contextIcon {
 	flex: 0 0 auto;
-	width: 15px;
-	height: 15px;
+	width: 18px !important;
+	height: 18px !important;
 	color: var(--ds-text-secondary);
 }
 

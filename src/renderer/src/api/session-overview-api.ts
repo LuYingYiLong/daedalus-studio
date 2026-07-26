@@ -19,14 +19,15 @@ export type SessionOverviewPlanItem = {
 
 export type SessionOverviewSourceItem = {
 	id: string;
-	kind: "image_attachment" | "generated_image";
+	kind: "image_attachment" | "generated_image" | "text_attachment";
 	title: string;
 	mimeType: string;
 	createdAt: string;
 	width?: number;
 	height?: number;
 	byteSize: number;
-	thumbnailDataUrl: string;
+	thumbnailDataUrl?: string;
+	textPreview?: string;
 };
 
 export type SessionOverviewResult = {

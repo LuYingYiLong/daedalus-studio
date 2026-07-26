@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import { Button, Modal } from "antd";
 import { useTranslation } from "react-i18next";
+import { Icon } from "@/assets/icons";
 import type { SessionOverviewResult, SessionOverviewSourceItem } from "@/api/session-overview-api";
 import { formatSourceSubtitle } from "./session-overview-formatters";
 import styles from "./AgentPage.module.css";
@@ -31,7 +32,11 @@ export default function SessionSourcesDialog({ overview, open, onClose, onSource
 						className={styles.sourceGridButton}
 						onClick={(): void => onSourceSelect(source)}
 					>
-						<img src={source.thumbnailDataUrl} alt="" className={styles.sourceGridThumbnail} />
+						{source.thumbnailDataUrl !== undefined ? (
+							<img src={source.thumbnailDataUrl} alt="" className={styles.sourceGridThumbnail} />
+						) : (
+							<span className={styles.sourceGridTextIcon}><Icon name="txt" /></span>
+						)}
 						<span className={styles.sourceGridText}>
 							<span className={styles.summaryItemTitle}>{source.title}</span>
 							<span className={styles.summaryMeta}>{formatSourceSubtitle(source, t)}</span>

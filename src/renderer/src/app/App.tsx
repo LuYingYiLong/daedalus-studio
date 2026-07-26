@@ -54,7 +54,7 @@ import DrawingPage from "@/pages/drawing/DrawingPage";
 import KnowledgePage from "@/pages/knowledge/KnowledgePage";
 import { extractEnabledSkillRefs, type ComposerCompletionTrigger } from "@/features/composer/composer-completion";
 import { createWorkflowTodoSnapshotFromPlanData, getWorkflowTodoSnapshotKey, isWorkflowTodoActive, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
-import { saveImageAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
+import { saveImageAttachment, saveTextAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
 import { DEFAULT_CLIENT_PREFERENCES, fetchClientPreferences, updateClientPreferences, type ClientPreferences } from "@/api/client-preferences-api";
 import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
 import { approvePlan, revisePlan, submitPlanClarification, type PlanResult } from "@/api/plan-api";
@@ -513,6 +513,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() => createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection));
 	const [homeWorkspaceOptions, setHomeWorkspaceOptions] = useState<WorkspaceConfig[]>(() => bootstrapData.workspaceList.workspaces);
 	const [isWorkspaceAdding, setIsWorkspaceAdding] = useState<boolean>(false);
+  const [pendingTextAttachmentCount, setPendingTextAttachmentCount] = useState<number>(0);
+  const isAddingTextAttachment: boolean = pendingTextAttachmentCount > 0;
 	const [isHomeSubmitting, setIsHomeSubmitting] = useState<boolean>(false);
 	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 	const activeSessionIdRef = useRef<string | null>(null);
@@ -2544,6 +2546,27 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 	}
 
+	function handleAddPastedTextAttachment(content: string): boolean {
+		if (activeSessionId === null || isNewSessionHome) {
+			return false;
+		}
+
+    setPendingTextAttachmentCount((count) => count + 1);
+		void saveTextAttachment({ sessionId: activeSessionId, content })
+			.then((result): void => {
+				patchContext({ action: "addOrReplace", item: result.attachment });
+			})
+			.catch((error: unknown): void => {
+				const errorMessage: string = error instanceof Error ? error.message : "Failed to save pasted text";
+				showTransientError(errorMessage);
+				console.error("[App] save pasted text attachment failed", error);
+			})
+			.finally((): void => {
+        setPendingTextAttachmentCount((count) => Math.max(0, count - 1));
+			});
+		return true;
+	}
+
 	function getContextWorkspace(): WorkspaceConfig | null {
 		if (activeWorkspace !== null) {
 			return activeWorkspace;
@@ -2994,6 +3017,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						skills={skills}
 						isSending={composerIsSending}
 						isCancelling={composerIsCancelling}
+						isAddingTextAttachment={isAddingTextAttachment}
 						isApprovalModeSaving={isApprovalModeSaving}
 						workspaceOptions={homeWorkspaceOptions}
 						initialWorkspaces={bootstrapData.workspaceList.workspaces}
@@ -3081,6 +3105,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						onAddImages={(files: File[]): void => {
 							void handleAddImageFiles(files);
 						}}
+						onAddPastedTextAttachment={handleAddPastedTextAttachment}
 						onAddContextFiles={(files: File[]): void => {
 							void handleAddContextFiles(files);
 						}}

@@ -106,6 +106,7 @@
 	background: transparent;
 	box-shadow: none;
 	resize: none;
+	border-radius: 0px;
 }
 
 .composerTextArea:focus,

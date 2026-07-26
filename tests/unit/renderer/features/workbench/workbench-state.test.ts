@@ -615,7 +615,7 @@ describe("workbench-state", () => {
 		});
 	});
 
-	it("renders completed-with-warnings once and offers Godot configuration when executable verification is unavailable", () => {
+	it("leaves completed-with-warnings details to the assistant summary", () => {
 		const completed = applyBackendEventToTimeline([], {
 			type: "event",
 			id: "request-warning",
@@ -643,12 +643,7 @@ describe("workbench-state", () => {
 			? assistant.bodyParts.filter((part) => part.type === "status" && part.code === "verification_unverified")
 			: [];
 
-		expect(warningParts).toHaveLength(1);
-		expect(warningParts[0]).toMatchObject({
-			status: "warning",
-			actionLabel: "Configure Godot",
-			actionId: "configure_godot"
-		});
+		expect(warningParts).toHaveLength(0);
 	});
 
 	it("merges approval continuation events by run id when rpc ids differ", () => {

@@ -4,6 +4,7 @@ import { Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 import styles from "./AdditionalContextStrip.module.css";
 import { summarizeAdditionalContextItem } from "./additional-context-display";
+import { AdditionalContextIcon } from "./additional-context-icon";
 
 export type AdditionalContextStripProps = {
 	items: AdditionalContextItem[];
@@ -69,7 +70,7 @@ function AdditionalContextStrip({
 								onRemove?.(item.id);
 							} : undefined}
 						>
-							<Icon name={display.iconName} className={styles.contextIcon} />
+							<AdditionalContextIcon item={item} className={styles.contextIcon} />
 							<span className={styles.contextText}>
 								<span className={styles.contextTitle}>{display.title}</span>
 								<span className={styles.contextMeta}>{display.meta}</span>

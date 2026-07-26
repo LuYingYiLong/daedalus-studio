@@ -320,6 +320,12 @@
 	object-fit: cover;
 }
 
+.sourceTextIcon {
+	width: 32px;
+	height: 32px;
+	color: var(--ds-text-secondary);
+}
+
 .sourceText {
 	display: grid;
 	gap: 2px;
@@ -360,6 +366,21 @@
 	object-fit: cover;
 }
 
+.sourceGridTextIcon {
+	display: grid;
+	place-items: center;
+	width: 100%;
+	aspect-ratio: 1 / 1;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-sm);
+	color: var(--ds-text-secondary);
+}
+
+.sourceGridTextIcon :global(.daedalus-icon) {
+	width: 36px;
+	height: 36px;
+}
+
 .sourceGridText {
 	display: grid;
 	gap: 2px;
@@ -375,6 +396,18 @@
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-sm);
 	object-fit: contain;
+}
+
+.sourcePreviewText {
+	max-height: min(70vh, 720px);
+	margin: 0;
+	padding: 12px;
+	overflow: auto;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-sm);
+	background: var(--ds-surface-muted);
+	color: var(--ds-text-primary);
+	word-break: break-word;
 }
 
 .godotSceneModalBody {

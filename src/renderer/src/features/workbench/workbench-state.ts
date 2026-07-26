@@ -75,13 +75,6 @@ function getStringValue(record: Record<string, unknown>, key: string): string {
 	return typeof value === "string" ? value : "";
 }
 
-function getStringArray(record: Record<string, unknown>, key: string): string[] {
-	const value: unknown = record[key];
-	return Array.isArray(value)
-		? value.filter((item: unknown): item is string => typeof item === "string" && item.trim().length > 0)
-		: [];
-}
-
 export function isTimelineStreamingDeltaEvent(event: BackendEvent): boolean {
 	return TIMELINE_STREAM_DELTA_EVENTS.has(event.event);
 }
@@ -583,23 +576,6 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 	} else if (event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done") {
 		nextStatus = undefined;
 		completedAtUtc = nowIso;
-		const warnings: string[] = getStringArray(data, "warnings");
-		if (getStringValue(data, "resultStatus") === "completed_with_warnings"
-			&& warnings.length > 0
-			&& !hasStatusCode(nextParts, "verification_unverified")) {
-			const shouldConfigureGodot: boolean = warnings.some((warning: string): boolean => {
-				return /godot executable|GODOT_EXECUTABLE_PATH|ENOENT|not found/i.test(warning);
-			});
-			nextParts = [...nextParts, {
-				type: "status",
-				status: "warning",
-				title: "Completed, but verification was unavailable",
-				details: warnings.join("\n"),
-				code: "verification_unverified",
-				actionLabel: shouldConfigureGodot ? "Configure Godot" : undefined,
-				actionId: shouldConfigureGodot ? "configure_godot" : undefined
-			}];
-		}
 	} else {
 		return block;
 	}
@@ -625,9 +601,7 @@ function shouldCreateAssistantBlock(event: BackendEvent): boolean {
 		|| event.event === "ai.status"
 		|| event.event === "plan.generated"
 		|| event.event === "plan.revised"
-		|| event.event === "plan.error"
-		|| ((event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done")
-			&& getStringValue(getEventData(event), "resultStatus") === "completed_with_warnings");
+		|| event.event === "plan.error";
 }
 
 function createLiveAssistantBlock(event: BackendEvent): TimelineAssistantBlock {
