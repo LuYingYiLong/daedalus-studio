@@ -222,10 +222,10 @@ type AgentPageProps = {
 	runningSessionIds: readonly string[];
 	homeWorkspace: WorkspaceConfig | null;
 	workspaceFooterDisabled: boolean;
-	isWorkspaceAdding: boolean;
 	activeWorkspace: WorkspaceConfig | null;
 	godotLaunchExecutablePath: string | null;
 	onNewSession: () => void;
+	onNewUnboundSession: () => void;
 	onNewWorkspaceSession: (workspace: WorkspaceConfig) => void;
 	onWorkspaceRefresh: () => void;
 	onHomeWorkspaceSelect: (workspaceId: string) => void;
@@ -332,10 +332,10 @@ function AgentPage({
 	runningSessionIds,
 	homeWorkspace,
 	workspaceFooterDisabled,
-	isWorkspaceAdding,
 	activeWorkspace,
 	godotLaunchExecutablePath,
 	onNewSession,
+	onNewUnboundSession,
 	onNewWorkspaceSession,
 	onWorkspaceRefresh,
 	onHomeWorkspaceSelect,
@@ -1178,6 +1178,7 @@ function AgentPage({
 					initialActiveWorkspaceId={initialActiveWorkspaceId}
 					runningSessionIds={runningSessionIds}
 					sessionUpdate={activeSessionMetadata}
+					onNewSession={onNewUnboundSession}
 					onSessionSelect={onSessionSelect}
 					onSessionArchive={onSessionArchive}
 					onSessionRename={onSessionRename}
@@ -1383,11 +1384,10 @@ function AgentPage({
 											isCancelling={isCancelling}
 											isAddingTextAttachment={isAddingTextAttachment}
 											isApprovalModeSaving={isApprovalModeSaving}
-													workspaceOptions={workspaceOptions}
-													selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
-													workspaceFooterDisabled={workspaceFooterDisabled}
-													isWorkspaceAdding={isWorkspaceAdding}
-													showContextUsage={!isHome}
+											workspaceOptions={workspaceOptions}
+											selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
+											workspaceFooterDisabled={workspaceFooterDisabled}
+											showContextUsage={!isHome}
 													onMessageChange={onMessageChange}
 													onModeChange={onModeChange}
 													onApprovalModeChange={onApprovalModeChange}

@@ -34,12 +34,29 @@
 	border-block-end: 0;
 }
 
+.workspaceTreeCollapse :global(.ant-collapse-expand-icon) {
+	margin-right: 0px !important;
+	width: 20px;
+}
+
 .workspaceTreeCollapse :global(.ant-collapse-header) {
 	padding-left: var(--ds-space-2);
 }
 
 .workspaceTreeCollapse :global(.ant-collapse-body) {
 	padding: 0px 0px 0px 16px !important;
+}
+
+.sectionAddButton {
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease;
+}
+
+.workspaceTreeCollapse :global(.ant-collapse-header:hover) .sectionAddButton,
+.workspaceTreeCollapse :global(.ant-collapse-header:focus-within) .sectionAddButton {
+	opacity: 1;
+	pointer-events: auto;
 }
 
 .collapseExpandIcon {

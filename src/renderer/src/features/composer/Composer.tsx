@@ -41,7 +41,6 @@ export type ComposerProps = {
 	workspaceOptions?: WorkspaceConfig[];
 	selectedWorkspace?: WorkspaceConfig | null;
 	workspaceFooterDisabled?: boolean;
-	isWorkspaceAdding?: boolean;
 	showContextUsage?: boolean;
 	onMessageChange?: (message: string) => void;
 	onModeChange?: (mode: ChatMode) => void;
@@ -373,7 +372,6 @@ function Composer({
 	workspaceOptions = [],
 	selectedWorkspace = null,
 	workspaceFooterDisabled = false,
-	isWorkspaceAdding = false,
 	showContextUsage = true,
 	onMessageChange,
 	onModeChange,
@@ -1131,15 +1129,14 @@ function Composer({
 					className={styles.workspaceFooterRow}
 				>
 					<Dropdown
-						disabled={workspaceFooterDisabled || isWorkspaceAdding}
+						disabled={workspaceFooterDisabled}
 						menu={workspaceFooterMenu}
 						trigger={["click"]}
 					>
 						<Button
 							type="text"
 							size="small"
-							loading={isWorkspaceAdding}
-							disabled={workspaceFooterDisabled || isWorkspaceAdding}
+							disabled={workspaceFooterDisabled}
 							icon={selectedWorkspace === null
 								? <Icon name="close" />
 								: <WorkspaceIconView workspace={selectedWorkspace} />}

@@ -27,6 +27,7 @@ export type WorkspaceTreeProps = {
 	onSessionArchive?: (session: SessionMetadata) => void;
 	onSessionRename?: (session: SessionMetadata) => void;
 	onSessionsChange?: (sessions: SessionMetadata[]) => void;
+	onNewSession?: () => void;
 	onNewWorkspaceSession?: (workspace: WorkspaceConfig) => void;
 	onWorkspaceDelete?: (result: DeleteWorkspaceResult) => void;
 	onWorkspaceUpdate?: (workspace: WorkspaceConfig) => void;
@@ -50,7 +51,9 @@ type WorkspaceTreeLabels = {
 	failedOpenWorkspaceDirectory: string;
 	failedPinSession: string;
 	failedRenameSession: string;
+	newSession: string;
 	newSessionInWorkspace: string;
+	newProject: string;
 	noPinnedSessions: string;
 	noProjects: string;
 	noRecentSessions: string;
@@ -335,6 +338,7 @@ function WorkspaceTree({
 	onSessionArchive,
 	onSessionRename,
 	onSessionsChange,
+	onNewSession,
 	onNewWorkspaceSession,
 	onWorkspaceDelete,
 	onWorkspaceUpdate
@@ -352,6 +356,7 @@ function WorkspaceTree({
 	const [archivingSessionId, setArchivingSessionId] = useState<string | null>(null);
 	const [pinningSessionId, setPinningSessionId] = useState<string | null>(null);
 	const [openSectionKeys, setOpenSectionKeys] = useState<string[]>(["pinned", "projects", "recent"]);
+	const [isCreateProjectOpen, setIsCreateProjectOpen] = useState<boolean>(false);
 	const [deleteTargetWorkspace, setDeleteTargetWorkspace] = useState<WorkspaceConfig | null>(null);
 	const [editTargetWorkspace, setEditTargetWorkspace] = useState<WorkspaceConfig | null>(null);
 	const [deletingWorkspaceId, setDeletingWorkspaceId] = useState<string | null>(null);
@@ -376,7 +381,9 @@ function WorkspaceTree({
 			failedOpenWorkspaceDirectory: t("workspaceTree.errors.openWorkspaceDirectory"),
 			failedPinSession: t("workspaceTree.errors.pinSession"),
 			failedRenameSession: t("workspaceTree.errors.renameSession"),
+			newSession: t("agentPage.actions.newSession"),
 			newSessionInWorkspace: t("workspaceTree.actions.newSessionInWorkspace"),
+			newProject: t("workspaceTree.actions.newProject"),
 			noPinnedSessions: t("workspaceTree.empty.noPinnedSessions"),
 			noProjects: t("workspaceTree.empty.noProjects"),
 			noRecentSessions: t("workspaceTree.empty.noRecentSessions"),
@@ -783,15 +790,49 @@ function WorkspaceTree({
 			{
 				key: "projects",
 				label: labels.projects,
+				extra: (
+					<Tooltip title={labels.newProject}>
+						<Button
+							type="text"
+							shape="circle"
+							size="small"
+							className={styles.sectionAddButton}
+							icon={<Icon name="add" />}
+							aria-label={labels.newProject}
+							onClick={(event: MouseEvent<HTMLElement>): void => {
+								event.preventDefault();
+								event.stopPropagation();
+								setIsCreateProjectOpen(true);
+							}}
+						/>
+					</Tooltip>
+				),
 				children: <Menu className={styles.workspaceMenu} inlineIndent={8} mode="inline" expandIcon={(): null => null} items={projectMenuItems} openKeys={openWorkspaceKeys} selectedKeys={effectiveSelectedMenuKeys} onOpenChange={handleOpenChange} onClick={handleMenuClick} />
 			},
 			{
 				key: "recent",
 				label: labels.recent,
+				extra: (
+					<Tooltip title={labels.newSession}>
+						<Button
+							type="text"
+							shape="circle"
+							size="small"
+							className={styles.sectionAddButton}
+							icon={<Icon name="add" />}
+							aria-label={labels.newSession}
+							onClick={(event: MouseEvent<HTMLElement>): void => {
+								event.preventDefault();
+								event.stopPropagation();
+								onNewSession?.();
+							}}
+						/>
+					</Tooltip>
+				),
 				children: <Menu className={styles.workspaceMenu} mode="inline" items={recentMenuItems} selectedKeys={effectiveSelectedMenuKeys} onClick={handleMenuClick} />
 			}
 		];
-	}, [effectiveSelectedMenuKeys, labels.pinned, labels.projects, labels.recent, pinnedMenuItems, projectMenuItems, recentMenuItems]);
+	}, [effectiveSelectedMenuKeys, labels.newProject, labels.newSession, labels.pinned, labels.projects, labels.recent, onNewSession, pinnedMenuItems, projectMenuItems, recentMenuItems]);
 
 	useEffect((): void => {
 		onSessionsChange?.(sessions);
@@ -913,6 +954,25 @@ function WorkspaceTree({
 					onWorkspaceUpdate?.(updatedWorkspace);
 				}}
 				onRequestDelete={(workspace: WorkspaceConfig): void => setDeleteTargetWorkspace(workspace)}
+			/>
+
+			<WorkspaceProjectDialog
+				open={isCreateProjectOpen}
+				workspace={null}
+				onCancel={(): void => setIsCreateProjectOpen(false)}
+				onSaved={(createdWorkspace: WorkspaceConfig): void => {
+					setWorkspaces((currentWorkspaces): WorkspaceConfig[] => currentWorkspaces.some(
+						(workspace: WorkspaceConfig): boolean => workspace.id === createdWorkspace.id
+					)
+						? currentWorkspaces.map((workspace: WorkspaceConfig): WorkspaceConfig => workspace.id === createdWorkspace.id ? createdWorkspace : workspace)
+						: [...currentWorkspaces, createdWorkspace]);
+					setOpenWorkspaceKeys((currentKeys: string[]): string[] => currentKeys.includes(`workspace:${createdWorkspace.id}`)
+						? currentKeys
+						: [...currentKeys, `workspace:${createdWorkspace.id}`]);
+					setOpenSectionKeys((currentKeys: string[]): string[] => currentKeys.includes("projects") ? currentKeys : [...currentKeys, "projects"]);
+					setIsCreateProjectOpen(false);
+					onWorkspaceUpdate?.(createdWorkspace);
+				}}
 			/>
 
 			<DeleteWorkspaceDialog

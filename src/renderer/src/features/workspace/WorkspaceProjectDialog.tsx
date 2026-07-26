@@ -18,7 +18,7 @@ import type {
 	WorkspaceIcon,
 	WorkspaceSourceFolder
 } from "@/api/types";
-import { updateWorkspace } from "@/api/workspace-api";
+import { configureEnvironment, updateWorkspace } from "@/api/workspace-api";
 import { Icon } from "@/assets/icons";
 import {
 	getWorkspaceIconStyle,
@@ -41,7 +41,7 @@ export type WorkspaceProjectDialogProps = {
 	workspace: WorkspaceConfig | null;
 	onCancel: () => void;
 	onSaved: (workspace: WorkspaceConfig) => void;
-	onRequestDelete: (workspace: WorkspaceConfig) => void;
+	onRequestDelete?: (workspace: WorkspaceConfig) => void;
 };
 
 const ICON_OPTIONS: WorkspaceIcon[] = [0, 1, 2, 3, 4, 5, 6];
@@ -57,6 +57,16 @@ function createDraft(workspace: WorkspaceConfig): WorkspaceProjectDraft {
 			capabilities: { ...source.capabilities }
 		})),
 		primarySourceFolderId: workspace.primarySourceFolderId
+	};
+}
+
+function createEmptyDraft(): WorkspaceProjectDraft {
+	return {
+		name: "",
+		icon: 0,
+		color: 0,
+		sourceFolders: [],
+		primarySourceFolderId: ""
 	};
 }
 
@@ -87,8 +97,8 @@ export default function WorkspaceProjectDialog({
 	const [appearanceOpen, setAppearanceOpen] = useState<boolean>(false);
 
 	useEffect((): void => {
-		if (open && workspace !== null) {
-			setDraft(createDraft(workspace));
+		if (open) {
+			setDraft(workspace === null ? createEmptyDraft() : createDraft(workspace));
 			setError(null);
 			setAppearanceOpen(false);
 		}
@@ -158,9 +168,17 @@ export default function WorkspaceProjectDialog({
 				setError(t("workspaceTree.projectEditor.duplicateFolder", { defaultValue: "This source folder is already in the project." }));
 				return;
 			}
-			setDraft((current): WorkspaceProjectDraft | null => current === null
-				? null
-				: { ...current, sourceFolders: [...current.sourceFolders, createClientSourceFolder(selectedPath)] });
+			setDraft((current): WorkspaceProjectDraft | null => {
+				if (current === null) {
+					return null;
+				}
+				const sourceFolder: WorkspaceSourceFolder = createClientSourceFolder(selectedPath);
+				return {
+					...current,
+					sourceFolders: [...current.sourceFolders, sourceFolder],
+					primarySourceFolderId: current.primarySourceFolderId || sourceFolder.id
+				};
+			});
 			setError(null);
 		} catch (addError: unknown) {
 			setError(addError instanceof Error ? addError.message : t("workspaceTree.projectEditor.addFailed", { defaultValue: "Failed to add source folder." }));
@@ -170,18 +188,41 @@ export default function WorkspaceProjectDialog({
 	}
 
 	async function handleSave(): Promise<void> {
-		if (workspace === null || draft === null || saving) {
+		if (draft === null || saving) {
 			return;
 		}
 		if (draft.name.trim().length === 0) {
 			setError(t("workspaceTree.projectEditor.nameRequired", { defaultValue: "Project name cannot be empty." }));
 			return;
 		}
+		if (draft.sourceFolders.length === 0 || draft.primarySourceFolderId.length === 0) {
+			setError(t("workspaceTree.projectEditor.sourceFolderRequired", { defaultValue: "Add a source folder before saving." }));
+			return;
+		}
 		try {
 			setSaving(true);
 			setError(null);
+			const primarySourceFolder: WorkspaceSourceFolder | undefined = draft.sourceFolders.find(
+				(source: WorkspaceSourceFolder): boolean => source.id === draft.primarySourceFolderId
+			);
+			if (primarySourceFolder === undefined) {
+				throw new Error("The primary source folder must belong to the project.");
+			}
+			let workspaceToSave: WorkspaceConfig;
+			if (workspace === null) {
+				const configured = await configureEnvironment({
+					godotProjectPath: primarySourceFolder.path,
+					sessionId: null
+				});
+				if (configured.workspace === null) {
+					throw new Error("Workspace registration did not return a workspace");
+				}
+				workspaceToSave = configured.workspace;
+			} else {
+				workspaceToSave = workspace;
+			}
 			const updated: WorkspaceConfig = await updateWorkspace({
-				workspaceId: workspace.id,
+				workspaceId: workspaceToSave.id,
 				name: draft.name,
 				icon: draft.icon,
 				color: draft.color,
@@ -200,7 +241,7 @@ export default function WorkspaceProjectDialog({
 		<Modal
 			width={680}
 			open={open}
-			title={t("workspaceTree.actions.editProject")}
+			title={workspace === null ? t("workspaceTree.actions.newProject") : t("workspaceTree.actions.editProject")}
 			confirmLoading={saving}
 			okText={t("workspaceTree.projectEditor.confirm")}
 			cancelText={t("workspaceTree.projectEditor.cancel")}
@@ -212,18 +253,16 @@ export default function WorkspaceProjectDialog({
 			}}
 			footer={(_, { OkBtn, CancelBtn }): React.JSX.Element => (
 				<Flex justify="space-between" align="center">
-					<Button
-						danger
-						type="text"
-						disabled={workspace === null || saving}
-						onClick={(): void => {
-							if (workspace !== null) {
-								onRequestDelete(workspace);
-							}
-						}}
-					>
-						{t("workspaceTree.actions.delete")}
-					</Button>
+					{workspace === null ? <span /> : (
+						<Button
+							danger
+							type="text"
+							disabled={saving}
+							onClick={(): void => onRequestDelete?.(workspace)}
+						>
+							{t("workspaceTree.actions.delete")}
+						</Button>
+					)}
 					<Space>
 						<CancelBtn />
 						<OkBtn />

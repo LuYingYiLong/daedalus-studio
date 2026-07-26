@@ -7,7 +7,7 @@ import useNativeTaskNotifications from "./hooks/useNativeTaskNotifications";
 import useBackendEventStream from "./hooks/useBackendEventStream";
 import useTimelineStreamBuffer from "./hooks/useTimelineStreamBuffer";
 import useWorkbenchPatchQueue, { mergeWorkbenchPatch } from "./hooks/useWorkbenchPatchQueue";
-import { configureEnvironment, fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
+import { fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import { checkSessionIntegrity, createSession, deleteSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
@@ -50,6 +50,7 @@ import { addQueuedMessage, removeQueuedMessage, reorderQueuedMessages } from "@/
 import { getSessionTitle } from "./session-title";
 import AppNavTabs, { type AppPageKey } from "./layout/AppNavTabs";
 import AgentPage from "@/pages/agent/AgentPage";
+import WorkspaceProjectDialog from "@/features/workspace/WorkspaceProjectDialog";
 import SettingsPage, { type SettingsPageKey } from "@/pages/settings/SettingsPage";
 import DrawingPage from "@/pages/drawing/DrawingPage";
 import KnowledgePage from "@/pages/knowledge/KnowledgePage";
@@ -541,7 +542,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [isNewSessionHome, setIsNewSessionHome] = useState<boolean>(true);
 	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() => createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection));
 	const [homeWorkspaceOptions, setHomeWorkspaceOptions] = useState<WorkspaceConfig[]>(() => bootstrapData.workspaceList.workspaces);
-	const [isWorkspaceAdding, setIsWorkspaceAdding] = useState<boolean>(false);
+	const [isWorkspaceProjectDialogOpen, setIsWorkspaceProjectDialogOpen] = useState<boolean>(false);
   const [pendingTextAttachmentCount, setPendingTextAttachmentCount] = useState<number>(0);
   const isAddingTextAttachment: boolean = pendingTextAttachmentCount > 0;
 	const [isHomeSubmitting, setIsHomeSubmitting] = useState<boolean>(false);
@@ -1281,7 +1282,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		});
 	}
 
-	async function handleNewSession(): Promise<void> {
+	async function handleNewSession(options: { restoreTemporaryDraft?: boolean } = {}): Promise<void> {
 		if (activeSessionMetadata?.temporary === true) {
 			const temporaryId: string | null = activeSessionId;
 			temporaryDraftSessionIdRef.current = null;
@@ -1297,10 +1298,17 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			await createTemporarySession();
 			return;
 		}
-		if (temporaryDraftSessionIdRef.current !== null) {
+		if (temporaryDraftSessionIdRef.current !== null && options.restoreTemporaryDraft !== false) {
 			await handleSessionSelect({ id: temporaryDraftSessionIdRef.current } as SessionMetadata);
 			setIsNewSessionHome(true);
 			return;
+		}
+		if (temporaryDraftSessionIdRef.current !== null) {
+			const temporaryId: string = temporaryDraftSessionIdRef.current;
+			temporaryDraftSessionIdRef.current = null;
+			await deleteSession(temporaryId).catch((error: unknown): void => {
+				console.warn("[App] discard temporary session failed", error);
+			});
 		}
 		navigationVersionRef.current += 1;
 		await persistPendingWorkbenchPatchBeforeNavigation();
@@ -1405,53 +1413,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setActiveWorkspace(null);
 	}
 
-	async function handleHomeWorkspaceAdd(): Promise<void> {
-		if (isWorkspaceAdding) {
-			return;
-		}
-
-		const navigationVersion: number = navigationVersionRef.current + 1;
-		navigationVersionRef.current = navigationVersion;
-		try {
-			setIsWorkspaceAdding(true);
-			const directory: string | null = await window.electronAPI.workspaceFs.pickWorkspaceDirectory();
-			if (directory === null) {
-				return;
-			}
-
-			const result = await configureEnvironment({ godotProjectPath: directory, sessionId: null });
-			const workspace: WorkspaceConfig | null = result.workspace;
-			if (workspace === null) {
-				throw new Error("Workspace registration did not return a workspace");
-			}
-			if (navigationVersionRef.current !== navigationVersion || activeSessionIdRef.current !== null) {
-				return;
-			}
-
-			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
-				...currentDraft,
-				workspaceId: workspace.id,
-				workspace
-			}));
-			setActiveWorkspace(workspace);
-			setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
-				const existingIndex: number = currentWorkspaces.findIndex((currentWorkspace: WorkspaceConfig): boolean => currentWorkspace.id === workspace.id);
-				if (existingIndex < 0) {
-					return [...currentWorkspaces, workspace];
-				}
-
-				const nextWorkspaces: WorkspaceConfig[] = [...currentWorkspaces];
-				nextWorkspaces[existingIndex] = workspace;
-				return nextWorkspaces;
-			});
-			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
-			setSessionError(null);
-		} catch (error: unknown) {
-			showTransientError(error instanceof Error ? error.message : "Failed to add workspace");
-			console.error("[App] add home workspace failed", error);
-		} finally {
-			setIsWorkspaceAdding(false);
-		}
+	function handleHomeWorkspaceAdd(): void {
+		setIsWorkspaceProjectDialogOpen(true);
 	}
 
 	async function handleSessionSelect(session: SessionMetadata): Promise<void> {
@@ -1630,9 +1593,17 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	function handleWorkspaceUpdate(workspace: WorkspaceConfig): void {
-		setHomeWorkspaceOptions((currentWorkspaces): WorkspaceConfig[] => currentWorkspaces.map(
-			(currentWorkspace): WorkspaceConfig => currentWorkspace.id === workspace.id ? workspace : currentWorkspace
-		));
+		setHomeWorkspaceOptions((currentWorkspaces): WorkspaceConfig[] => {
+			const existingIndex: number = currentWorkspaces.findIndex(
+				(currentWorkspace: WorkspaceConfig): boolean => currentWorkspace.id === workspace.id
+			);
+			if (existingIndex < 0) {
+				return [...currentWorkspaces, workspace];
+			}
+			return currentWorkspaces.map(
+				(currentWorkspace: WorkspaceConfig): WorkspaceConfig => currentWorkspace.id === workspace.id ? workspace : currentWorkspace
+			);
+		});
 		setHomeDraft((currentDraft): HomeDraft => currentDraft.workspaceId === workspace.id
 			? { ...currentDraft, workspace }
 			: currentDraft);
@@ -1647,6 +1618,15 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				godotExecutablePath: workspace.godotExecutablePath
 			}
 			: metadata);
+	}
+
+	function handleWorkspaceProjectCreated(workspace: WorkspaceConfig): void {
+		handleWorkspaceUpdate(workspace);
+		setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		setIsWorkspaceProjectDialogOpen(false);
+		if (isNewSessionHome) {
+			void handleHomeWorkspaceSelect(workspace.id);
+		}
 	}
 
 	async function persistSessionUiMetadata(params: SaveSessionUiMetadataParams): Promise<void> {
@@ -3174,10 +3154,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						runningSessionIds={runningSessionIds}
 						homeWorkspace={homeDraft.workspace}
 						workspaceFooterDisabled={isHomeSubmitting}
-						isWorkspaceAdding={isWorkspaceAdding}
 						activeWorkspace={displayedWorkspace}
 						godotLaunchExecutablePath={godotLaunchExecutablePath}
 						onNewSession={handleNewSession}
+						onNewUnboundSession={(): void => {
+							void handleNewSession({ restoreTemporaryDraft: false });
+						}}
 						onNewWorkspaceSession={(workspace: WorkspaceConfig): void => {
 							void handleNewWorkspaceSession(workspace);
 						}}
@@ -3187,9 +3169,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						onHomeWorkspaceSelect={(workspaceId: string): void => {
 							void handleHomeWorkspaceSelect(workspaceId);
 						}}
-						onHomeWorkspaceAdd={(): void => {
-							void handleHomeWorkspaceAdd();
-						}}
+						onHomeWorkspaceAdd={handleHomeWorkspaceAdd}
 						onHomeWorkspaceClear={handleHomeWorkspaceClear}
 						onSessionSelect={handleSessionSelect}
 						onSessionArchive={handleSessionArchive}
@@ -3304,6 +3284,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					<KnowledgePage />
 				)}
 			</div>
+			<WorkspaceProjectDialog
+				open={isWorkspaceProjectDialogOpen}
+				workspace={null}
+				onCancel={(): void => setIsWorkspaceProjectDialogOpen(false)}
+				onSaved={handleWorkspaceProjectCreated}
+			/>
 		</main>
 	);
 }

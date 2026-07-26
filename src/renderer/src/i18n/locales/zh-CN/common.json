@@ -53,6 +53,7 @@
       "addFailed": "添加源文件夹失败。",
       "duplicateFolder": "该源文件夹已在项目中。",
       "nameRequired": "项目名称不能为空。",
+      "sourceFolderRequired": "请先添加一个源文件夹。",
       "saveFailed": "保存项目失败。",
       "makePrimary": "设为主文件夹",
       "removeFolder": "移除源文件夹",
@@ -62,6 +63,7 @@
     },
     "actions": {
       "editProject": "编辑项目",
+      "newProject": "新建项目",
       "rename": "重命名",
       "renameSession": "重命名会话",
       "pinSession": "置顶会话",

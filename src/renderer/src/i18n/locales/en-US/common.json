@@ -53,6 +53,7 @@
       "addFailed": "Failed to add source folder.",
       "duplicateFolder": "This source folder is already in the project.",
       "nameRequired": "Project name cannot be empty.",
+      "sourceFolderRequired": "Add a source folder before saving.",
       "saveFailed": "Failed to save project.",
       "makePrimary": "Make primary",
       "removeFolder": "Remove source folder",
@@ -62,6 +63,7 @@
     },
     "actions": {
       "editProject": "Edit project",
+      "newProject": "New project",
       "rename": "Rename",
       "renameSession": "Rename session",
       "pinSession": "Pin session",
