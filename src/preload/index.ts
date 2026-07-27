@@ -268,6 +268,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		}
 	},
 
+	skillCli: {
+		listGlobalCodexSkills: (): Promise<Array<{ name: string; path: string; slug: string }>> => {
+			return ipcRenderer.invoke("skills-cli:list-global-codex");
+		}
+	},
+
 	pickGodotExecutable: (): Promise<string | null> => {
 		return ipcRenderer.invoke("godot-executable:pick");
 	},

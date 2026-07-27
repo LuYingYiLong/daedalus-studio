@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Button, Dropdown, Empty, Input, MenuProps, Modal, Select, Space, Spin, Switch, Tag, Tooltip, Typography } from "antd";
+import { Alert, Button, Checkbox, Dropdown, Empty, Input, MenuProps, Modal, Select, Space, Spin, Switch, Tag, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import styles from "./SkillsSettingsPage.module.css";
 import {
@@ -21,6 +21,18 @@ type PendingInstall = {
 	kind: SkillInstallKind;
 	path: string;
 	source: SkillInstallSource;
+};
+
+type NpxSkillCandidate = {
+	name: string;
+	path: string;
+	slug: string;
+};
+
+type NpxImportSummary = {
+	installed: number;
+	skipped: number;
+	failed: Array<{ name: string; message: string }>;
 };
 
 function getSourceColor(source: SkillSource): string {
@@ -58,7 +70,20 @@ function SkillsSettingsPage(): React.JSX.Element {
 	const [busyRef, setBusyRef] = useState<string | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [pendingInstall, setPendingInstall] = useState<PendingInstall | null>(null);
+	const [npxImportOpen, setNpxImportOpen] = useState<boolean>(false);
+	const [npxCandidates, setNpxCandidates] = useState<NpxSkillCandidate[] | null>(null);
+	const [npxSelectedPaths, setNpxSelectedPaths] = useState<string[]>([]);
+	const [npxTargetSource, setNpxTargetSource] = useState<SkillInstallSource>("personal");
+	const [isNpxLoading, setIsNpxLoading] = useState<boolean>(false);
+	const [isNpxImporting, setIsNpxImporting] = useState<boolean>(false);
+	const [npxImportError, setNpxImportError] = useState<string | null>(null);
+	const [npxImportSummary, setNpxImportSummary] = useState<NpxImportSummary | null>(null);
 	const addItems: MenuProps["items"] = useMemo((): MenuProps["items"] => [
+		{
+			key: "npx",
+			label: t("settings.skills.actions.importFromNpx"),
+			icon: <Icon name="download" />
+		},
 		{
 			key: "zip",
 			label: t("settings.skills.actions.installFromZip"),
@@ -130,6 +155,16 @@ function SkillsSettingsPage(): React.JSX.Element {
 		});
 	}, [customSkills, query, scopeFilter]);
 
+	const importableNpxCandidates: NpxSkillCandidate[] = useMemo((): NpxSkillCandidate[] => {
+		return (npxCandidates ?? []).filter((candidate: NpxSkillCandidate): boolean => {
+			return !skills.some((skill: SkillSummary): boolean => skill.source === npxTargetSource && skill.slug === candidate.slug);
+		});
+	}, [npxCandidates, npxTargetSource, skills]);
+	const selectedNpxCandidates: NpxSkillCandidate[] = useMemo((): NpxSkillCandidate[] => {
+		const selectedPaths = new Set<string>(npxSelectedPaths);
+		return importableNpxCandidates.filter((candidate: NpxSkillCandidate): boolean => selectedPaths.has(candidate.path));
+	}, [importableNpxCandidates, npxSelectedPaths]);
+
 	async function openInstallDialog(kind: SkillInstallKind): Promise<void> {
 		try {
 			setErrorMessage(null);
@@ -142,6 +177,82 @@ function SkillsSettingsPage(): React.JSX.Element {
 			setPendingInstall({ kind, path, source: "personal" });
 		} catch (error: unknown) {
 			setErrorMessage(error instanceof Error ? error.message : t("settings.skills.errors.selectSource"));
+		}
+	}
+
+	async function openNpxImportDialog(): Promise<void> {
+		setErrorMessage(null);
+		setNpxImportOpen(true);
+		setNpxCandidates(null);
+		setNpxSelectedPaths([]);
+		setNpxTargetSource("personal");
+		setNpxImportError(null);
+		setNpxImportSummary(null);
+		setIsNpxLoading(true);
+		try {
+			const candidates: NpxSkillCandidate[] = await window.electronAPI.skillCli.listGlobalCodexSkills();
+			setNpxCandidates(candidates);
+			setNpxSelectedPaths(candidates.filter((candidate: NpxSkillCandidate): boolean => {
+				return !skills.some((skill: SkillSummary): boolean => skill.source === "personal" && skill.slug === candidate.slug);
+			}).map((candidate: NpxSkillCandidate): string => candidate.path));
+		} catch (error: unknown) {
+			setNpxImportError(error instanceof Error ? error.message : t("settings.skills.errors.npxDiscover"));
+		} finally {
+			setIsNpxLoading(false);
+		}
+	}
+
+	function closeNpxImportDialog(): void {
+		if (isNpxLoading || isNpxImporting) {
+			return;
+		}
+		setNpxImportOpen(false);
+	}
+
+	function toggleNpxCandidate(path: string, checked: boolean): void {
+		setNpxSelectedPaths((current: string[]): string[] => {
+			return checked
+				? [...new Set([...current, path])]
+				: current.filter((candidatePath: string): boolean => candidatePath !== path);
+		});
+	}
+
+	function toggleAllNpxCandidates(checked: boolean): void {
+		setNpxSelectedPaths(checked ? importableNpxCandidates.map((candidate: NpxSkillCandidate): string => candidate.path) : []);
+	}
+
+	async function handleConfirmNpxImport(): Promise<void> {
+		if (selectedNpxCandidates.length === 0) {
+			return;
+		}
+		setIsNpxImporting(true);
+		setNpxImportError(null);
+		const summary: NpxImportSummary = {
+			installed: 0,
+			skipped: (npxCandidates?.length ?? 0) - importableNpxCandidates.length,
+			failed: []
+		};
+		try {
+			for (const candidate of selectedNpxCandidates) {
+				try {
+					const result: SkillListResult = await installSkill({
+						source: npxTargetSource,
+						kind: "folder",
+						path: candidate.path
+					});
+					applySkillResult(result, setSkills);
+					summary.installed += 1;
+				} catch (error: unknown) {
+					summary.failed.push({
+						name: candidate.name,
+						message: error instanceof Error ? error.message : t("settings.skills.errors.install")
+					});
+				}
+			}
+			setNpxSelectedPaths([]);
+			setNpxImportSummary(summary);
+		} finally {
+			setIsNpxImporting(false);
 		}
 	}
 
@@ -224,6 +335,10 @@ function SkillsSettingsPage(): React.JSX.Element {
 						menu={{
 							items: addItems,
 							onClick: ({ key }): void => {
+								if (key === "npx") {
+									void openNpxImportDialog();
+									return;
+								}
 								void openInstallDialog(key as SkillInstallKind);
 							}
 						}}
@@ -325,6 +440,79 @@ function SkillsSettingsPage(): React.JSX.Element {
 						</Typography.Text>
 					</div>
 				) : null}
+			</Modal>
+
+			<Modal
+				title={t("settings.skills.npx.title")}
+				open={npxImportOpen}
+				okText={t("settings.skills.actions.importSelected")}
+				okButtonProps={{ disabled: selectedNpxCandidates.length === 0 || isNpxLoading || npxImportError !== null }}
+				confirmLoading={isNpxImporting}
+				onOk={(): void => {
+					void handleConfirmNpxImport();
+				}}
+				onCancel={closeNpxImportDialog}
+			>
+				<div className={styles.npxImportForm}>
+					<Typography.Text type="secondary">{t("settings.skills.npx.description")}</Typography.Text>
+					{isNpxLoading ? <Spin /> : null}
+					{npxImportError !== null ? <Alert type="warning" showIcon={true} description={npxImportError} /> : null}
+					{npxImportSummary !== null ? (
+						<Alert
+							type={npxImportSummary.failed.length === 0 ? "success" : "warning"}
+							showIcon={true}
+							message={t("settings.skills.npx.summary", {
+								installed: npxImportSummary.installed,
+								skipped: npxImportSummary.skipped,
+								failed: npxImportSummary.failed.length
+							})}
+							description={npxImportSummary.failed.length > 0 ? npxImportSummary.failed.map((failure): string => `${failure.name}: ${failure.message}`).join("\n") : undefined}
+						/>
+					) : null}
+					{npxCandidates !== null && npxCandidates.length === 0 ? (
+						<Empty image={<Icon name="empty" />} description={t("settings.skills.npx.empty")} />
+					) : null}
+					{npxCandidates !== null && npxCandidates.length > 0 ? (
+						<>
+							<Select
+								value={npxTargetSource}
+								options={installScopeOptions}
+								disabled={isNpxImporting}
+								onChange={(value: SkillInstallSource): void => {
+									setNpxTargetSource(value);
+									setNpxImportSummary(null);
+								}}
+							/>
+							<Checkbox
+								checked={importableNpxCandidates.length > 0 && selectedNpxCandidates.length === importableNpxCandidates.length}
+								indeterminate={selectedNpxCandidates.length > 0 && selectedNpxCandidates.length < importableNpxCandidates.length}
+								disabled={importableNpxCandidates.length === 0 || isNpxImporting}
+								onChange={(event): void => toggleAllNpxCandidates(event.target.checked)}
+							>
+								{t("settings.skills.npx.selectAll")}
+							</Checkbox>
+							<div className={styles.npxSkillList}>
+								{npxCandidates.map((candidate: NpxSkillCandidate): React.JSX.Element => {
+									const alreadyInstalled: boolean = !importableNpxCandidates.some((item: NpxSkillCandidate): boolean => item.path === candidate.path);
+									return (
+										<div key={candidate.path} className={styles.npxSkillItem}>
+											<Checkbox
+												checked={npxSelectedPaths.includes(candidate.path) && !alreadyInstalled}
+												disabled={alreadyInstalled || isNpxImporting}
+												onChange={(event): void => toggleNpxCandidate(candidate.path, event.target.checked)}
+											/>
+											<div className={styles.npxSkillMain}>
+												<Typography.Text strong={true}>{candidate.name}</Typography.Text>
+												<Typography.Text className={styles.skillSummary}>{candidate.path}</Typography.Text>
+											</div>
+											{alreadyInstalled ? <Tag>{t("settings.skills.npx.alreadyInstalled")}</Tag> : null}
+										</div>
+									);
+								})}
+							</div>
+						</>
+					) : null}
+				</div>
 			</Modal>
 		</section>
 	);

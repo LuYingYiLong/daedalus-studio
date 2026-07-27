@@ -846,6 +846,8 @@
       "searchPlaceholder": "Search skill...",
       "valid": "VALID",
       "actions": {
+        "importFromNpx": "Import from npx skills",
+        "importSelected": "Import selected",
         "install": "Install",
         "installFromFolder": "Install from folder",
         "installFromZip": "Install from ZIP"
@@ -863,6 +865,7 @@
       "errors": {
         "delete": "Failed to delete skill",
         "install": "Failed to install skill",
+        "npxDiscover": "Failed to find local Codex skills",
         "load": "Failed to load skills",
         "selectSource": "Failed to select skill source",
         "update": "Failed to update skill"
@@ -872,6 +875,14 @@
         "fromFolder": "Install from folder",
         "fromZip": "Install from ZIP",
         "title": "Install skill"
+      },
+      "npx": {
+        "title": "Import global Codex skills",
+        "description": "Only locally available Skills CLI entries are listed. Daedalus Studio does not download packages or execute skill instructions.",
+        "empty": "No global Codex skills were found.",
+        "selectAll": "Select all available skills",
+        "alreadyInstalled": "Already installed",
+        "summary": "Imported {{installed}}, skipped {{skipped}}, failed {{failed}}."
       },
       "scope": {
         "all": "All",

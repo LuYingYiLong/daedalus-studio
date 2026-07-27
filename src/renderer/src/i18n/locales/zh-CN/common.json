@@ -846,6 +846,8 @@
       "searchPlaceholder": "搜索技能...",
       "valid": "有效",
       "actions": {
+        "importFromNpx": "从 npx skills 导入",
+        "importSelected": "导入所选",
         "install": "安装",
         "installFromFolder": "从文件夹安装",
         "installFromZip": "从 ZIP 安装"
@@ -863,6 +865,7 @@
       "errors": {
         "delete": "删除技能失败",
         "install": "安装技能失败",
+        "npxDiscover": "查找本地 Codex Skill 失败",
         "load": "加载技能失败",
         "selectSource": "选择技能来源失败",
         "update": "更新技能失败"
@@ -872,6 +875,14 @@
         "fromFolder": "从文件夹安装",
         "fromZip": "从 ZIP 安装",
         "title": "安装技能"
+      },
+      "npx": {
+        "title": "导入全局 Codex Skill",
+        "description": "仅列出本机可用的 Skills CLI 条目。Daedalus Studio 不会下载包，也不会执行 Skill 指令。",
+        "empty": "未找到全局 Codex Skill。",
+        "selectAll": "选择全部可导入 Skill",
+        "alreadyInstalled": "已安装",
+        "summary": "已导入 {{installed}} 个，跳过 {{skipped}} 个，失败 {{failed}} 个。"
       },
       "scope": {
         "all": "全部",

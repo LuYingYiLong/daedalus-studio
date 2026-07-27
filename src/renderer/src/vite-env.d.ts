@@ -275,6 +275,9 @@ declare global {
 			pickSkillZip: () => Promise<string | null>;
 			pickSkillDirectory: () => Promise<string | null>;
 		};
+		skillCli: {
+			listGlobalCodexSkills: () => Promise<Array<{ name: string; path: string; slug: string }>>;
+		};
 		pickGodotExecutable: () => Promise<string | null>;
 		appInfo: AppInfoAPI;
 	}

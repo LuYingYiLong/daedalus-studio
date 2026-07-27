@@ -110,3 +110,32 @@
 	display: grid;
 	gap: 12px;
 }
+
+.npxImportForm {
+	display: grid;
+	gap: 12px;
+}
+
+.npxSkillList {
+	display: grid;
+	gap: 4px;
+	max-height: min(320px, 44vh);
+	overflow-y: auto;
+}
+
+.npxSkillItem {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	padding: 6px 8px;
+	border: 1px solid var(--ds-border-subtle);
+	border-radius: var(--ds-radius-sm);
+}
+
+.npxSkillMain {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
