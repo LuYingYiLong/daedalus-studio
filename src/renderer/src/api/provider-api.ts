@@ -51,11 +51,17 @@ export type ProviderModelCapabilities = {
 	imageInput?: boolean | undefined;
 	videoInput?: boolean | undefined;
 	reasoning?: boolean | undefined;
+	reasoningEfforts?: ProviderReasoningEffortOption[] | undefined;
 	tools?: boolean | undefined;
 	webSearch?: boolean | undefined;
 	vision?: boolean | undefined;
 	imageGeneration?: boolean | undefined;
 	imageEdit?: boolean | undefined;
+};
+
+export type ProviderReasoningEffortOption = {
+	id: string;
+	fallback: "low" | "medium" | "high" | "max";
 };
 
 export type ProviderModelSelectionProvider = {

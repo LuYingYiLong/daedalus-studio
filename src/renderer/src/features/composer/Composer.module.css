@@ -399,3 +399,15 @@
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
+
+.reasoningEffortButton {
+	height: 28px;
+	max-width: 104px;
+	padding: 0 8px;
+}
+
+.reasoningEffortButton span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}

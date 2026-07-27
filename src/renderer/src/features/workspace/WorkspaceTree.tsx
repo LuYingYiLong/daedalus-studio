@@ -167,6 +167,7 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 
 	return {
 		key: `session:${session.id}`,
+		className: styles.sessionMenuEntry,
 		label: (
 			<Dropdown menu={actionMenu} trigger={["contextMenu"]}>
 				<span className={styles.sessionMenuItem}>
@@ -318,7 +319,7 @@ function createProjectMenuItems(workspaces: WorkspaceConfig[], sessions: Session
 					{
 						key: `workspace:${workspace.id}:empty`,
 						label: labels.noSessions,
-						disabled: true
+						disabled: true,
 					}
 				]
 		};
@@ -805,7 +806,12 @@ function WorkspaceTree({
 			{
 				key: "pinned",
 				label: labels.pinned,
-				children: <Menu className={styles.workspaceMenu} mode="inline" items={pinnedMenuItems} selectedKeys={effectiveSelectedMenuKeys} onClick={handleMenuClick} />
+				children: <Menu
+					className={styles.workspaceMenu}
+					mode="inline" items={pinnedMenuItems}
+					selectedKeys={effectiveSelectedMenuKeys}
+					onClick={handleMenuClick}
+				/>
 			},
 			{
 				key: "projects",
@@ -827,7 +833,15 @@ function WorkspaceTree({
 						/>
 					</Tooltip>
 				),
-				children: <Menu className={styles.workspaceMenu} inlineIndent={8} mode="inline" expandIcon={(): null => null} items={projectMenuItems} openKeys={openWorkspaceKeys} selectedKeys={effectiveSelectedMenuKeys} onOpenChange={handleOpenChange} onClick={handleMenuClick} />
+				children: <Menu
+					className={styles.workspaceMenu}
+					inlineIndent={8} mode="inline" expandIcon={(): null => null}
+					items={projectMenuItems}
+					openKeys={openWorkspaceKeys}
+					selectedKeys={effectiveSelectedMenuKeys}
+					onOpenChange={handleOpenChange}
+					onClick={handleMenuClick}
+				/>
 			},
 			{
 				key: "recent",
@@ -849,7 +863,12 @@ function WorkspaceTree({
 						/>
 					</Tooltip>
 				),
-				children: <Menu className={styles.workspaceMenu} mode="inline" items={recentMenuItems} selectedKeys={effectiveSelectedMenuKeys} onClick={handleMenuClick} />
+				children: <Menu
+					className={styles.workspaceMenu}
+					mode="inline" items={recentMenuItems}
+					selectedKeys={effectiveSelectedMenuKeys}
+					onClick={handleMenuClick}
+				/>
 			}
 		];
 	}, [effectiveSelectedMenuKeys, labels.newProject, labels.newSession, labels.pinned, labels.projects, labels.recent, onNewSession, pinnedMenuItems, projectMenuItems, recentMenuItems]);

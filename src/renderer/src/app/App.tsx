@@ -13,7 +13,7 @@ import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingTool
 import { checkSessionIntegrity, createSession, deleteSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, fetchSessionTimelineIndex, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/chat/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
-import type { ProviderModelSelectionProvider } from "@/api/provider-api";
+import type { ProviderModelInfo, ProviderModelSelectionProvider, ProviderReasoningEffortOption } from "@/api/provider-api";
 import { getPlanApprovalFromResult, normalizePlanClarification } from "./backend-event-state";
 import { cancelChatMessage, continueToolBudget, sendChatMessage, stopToolBudget, type ChatMode } from "@/api/chat-api";
 import { fetchSlashCommands, type SlashCommandDefinition } from "@/api/command-api";
@@ -270,6 +270,7 @@ type HomeDraft = {
 	chatMode: ChatMode;
 	providerId: string | null;
 	modelId: string | null;
+	reasoningEffort: string;
 };
 
 function createHomeDraft(): HomeDraft {
@@ -279,7 +280,8 @@ function createHomeDraft(): HomeDraft {
 		workspace: null,
 		chatMode: "agent",
 		providerId: null,
-		modelId: null
+		modelId: null,
+		reasoningEffort: "medium"
 	};
 }
 
@@ -335,6 +337,53 @@ function createPreferredHomeDraft(
 		providerId: preferredModel.providerId,
 		modelId: preferredModel.modelId
 	};
+}
+
+function findProviderModel(
+	selection: ProviderModelSelection | null,
+	providerId: string | null,
+	modelId: string | null
+): ProviderModelInfo | null {
+	if (selection === null || providerId === null || modelId === null) {
+		return null;
+	}
+
+	const provider: ProviderModelSelectionProvider | undefined = selection.providers.find((item: ProviderModelSelectionProvider): boolean => {
+		return item.provider === providerId;
+	});
+	return provider?.models.find((model: ProviderModelInfo): boolean => model.id === modelId) ?? null;
+}
+
+function resolveReasoningEffortForComposerModelChange(params: {
+	selection: ProviderModelSelection | null;
+	previousProviderId: string | null;
+	previousModelId: string | null;
+	previousEffort: string;
+	nextProviderId: string;
+	nextModelId: string;
+}): string {
+	const previousModel: ProviderModelInfo | null = findProviderModel(
+		params.selection,
+		params.previousProviderId,
+		params.previousModelId
+	);
+	const previousOption: ProviderReasoningEffortOption | undefined = previousModel?.capabilities.reasoningEfforts?.find(
+		(option: ProviderReasoningEffortOption): boolean => option.id === params.previousEffort
+	);
+	const targetFallback: ProviderReasoningEffortOption["fallback"] = previousOption?.fallback
+		?? (params.previousEffort === "low" || params.previousEffort === "medium" || params.previousEffort === "high" || params.previousEffort === "max"
+			? params.previousEffort
+			: "medium");
+	const nextOptions: ProviderReasoningEffortOption[] = findProviderModel(
+		params.selection,
+		params.nextProviderId,
+		params.nextModelId
+	)?.capabilities.reasoningEfforts ?? [];
+	return nextOptions.find((option: ProviderReasoningEffortOption): boolean => option.id === targetFallback)?.id
+		?? nextOptions.find((option: ProviderReasoningEffortOption): boolean => option.fallback === targetFallback)?.id
+		?? nextOptions.find((option: ProviderReasoningEffortOption): boolean => option.id === "medium")?.id
+		?? nextOptions[0]?.id
+		?? "medium";
 }
 
 function getDisplayedComposerModel(params: {
@@ -1239,6 +1288,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				workspaceId: draft.workspaceId,
 				provider: draft.providerId ?? undefined,
 				model: draft.modelId ?? undefined,
+				reasoningEffort: draft.reasoningEffort,
 				chatMode: draft.chatMode,
 				approvalMode
 			});
@@ -1742,7 +1792,15 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
 				...currentDraft,
 				providerId,
-				modelId
+				modelId,
+				reasoningEffort: resolveReasoningEffortForComposerModelChange({
+					selection: providerModelSelection,
+					previousProviderId: currentDraft.providerId,
+					previousModelId: currentDraft.modelId,
+					previousEffort: currentDraft.reasoningEffort,
+					nextProviderId: providerId,
+					nextModelId: modelId
+				})
 			}));
 			persistLastComposerModel(providerId, modelId);
 			return;
@@ -1787,6 +1845,30 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setSessionError(message);
 			console.error("[App] save session model failed", error);
 		}
+	}
+
+	async function handleReasoningEffortChange(nextEffort: string): Promise<void> {
+		if (isNewSessionHome && activeSessionId === null) {
+			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
+				...currentDraft,
+				reasoningEffort: nextEffort
+			}));
+			return;
+		}
+
+		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+			return currentWorkbench === null
+				? currentWorkbench
+				: {
+					...currentWorkbench,
+					composer: {
+						...currentWorkbench.composer,
+						reasoningEffort: nextEffort
+					}
+				};
+		});
+		queueWorkbenchPatch({ composer: { reasoningEffort: nextEffort } }, true);
+		await persistSessionUiMetadata({ reasoningEffort: nextEffort });
 	}
 
 	async function handleApprovalApprove(approvalId: string, consentText?: string): Promise<void> {
@@ -1962,6 +2044,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				workspaceId: homeDraft.workspaceId,
 				provider: providerId ?? undefined,
 				model: modelId ?? undefined,
+				reasoningEffort: homeDraft.reasoningEffort,
 				chatMode: homeDraft.chatMode,
 				approvalMode
 			});
@@ -1990,6 +2073,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				mode: created.workbench.composer.chatMode ?? homeDraft.chatMode,
 				provider: providerId ?? undefined,
 				model: modelId ?? undefined,
+				reasoningEffort: created.workbench.composer.reasoningEffort ?? undefined,
 				additionalContext: created.workbench.composer.additionalContext,
 				skillRefs
 			});
@@ -2104,6 +2188,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				mode: chatMode,
 				provider: workbench.composer.provider ?? undefined,
 				model: workbench.composer.model ?? undefined,
+				reasoningEffort: workbench.composer.reasoningEffort ?? undefined,
 				additionalContext,
 				skillRefs
 			});
@@ -2191,6 +2276,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			const result = await addQueuedMessage({
 				text: message,
 				additionalContext,
+				mode: getChatMode(workbench),
+				provider: workbench.composer.provider,
+				model: workbench.composer.model,
+				reasoningEffort: workbench.composer.reasoningEffort ?? undefined,
 				skillRefs
 			});
 			applyWorkbench(result.workbench);
@@ -2424,6 +2513,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				mode: chatMode,
 				provider: workbench.composer.provider ?? undefined,
 				model: workbench.composer.model ?? undefined,
+				reasoningEffort: workbench.composer.reasoningEffort ?? undefined,
 				retryFromRequestId: payload.requestId,
 				additionalContext: payload.additionalContext,
 				skillRefs
@@ -2870,6 +2960,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		: null;
 	const composerMessage: string = activeSessionId === null ? homeDraft.message : loadingComposerDraft ?? workbench?.composer.text ?? "";
 	const composerMode: ChatMode = activeSessionId === null ? homeDraft.chatMode : getChatMode(workbench);
+	const composerReasoningEffort: string | null = activeSessionId === null
+		? homeDraft.reasoningEffort
+		: workbench?.composer.reasoningEffort ?? activeSessionMetadata?.reasoningEffort ?? null;
 	const composerContextItems: AdditionalContextItem[] = activeSessionId === null ? [] : workbench?.composer.additionalContext ?? [];
 	const composerMessageQueue: MessageQueueItem[] = activeSessionId === null ? [] : workbench?.messageQueue ?? [];
 	const composerPendingGuides: PendingGuide[] = activeSessionId === null ? [] : workbench?.pendingGuides ?? [];
@@ -3162,6 +3255,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						providerModelSelection={providerModelSelection}
 						selectedProviderId={selectedProviderId}
 						selectedModelId={selectedModelId}
+						reasoningEffort={composerReasoningEffort}
 						message={composerMessage}
 						contextItems={composerContextItems}
 						messageQueue={composerMessageQueue}
@@ -3266,6 +3360,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						}}
 						onProviderModelChange={(providerId: string, modelId: string): void => {
 							void handleProviderModelChange(providerId, modelId);
+						}}
+						onReasoningEffortChange={(effort: string): void => {
+							void handleReasoningEffortChange(effort);
 						}}
 						onAddFiles={(): void => {
 							void handleAddWorkspaceContext("files");

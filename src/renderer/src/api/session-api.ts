@@ -8,6 +8,7 @@ export type CreateSessionParams = {
 	workspaceId?: string | null;
 	provider?: string;
 	model?: string;
+	reasoningEffort?: string;
 	chatMode?: ChatMode;
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
@@ -16,6 +17,7 @@ export type CreateSessionParams = {
 export type SaveSessionUiMetadataParams = {
 	provider?: string;
 	model?: string;
+	reasoningEffort?: string;
 	chatMode?: ChatMode;
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;

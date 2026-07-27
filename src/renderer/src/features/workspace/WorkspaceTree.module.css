@@ -44,7 +44,7 @@
 }
 
 .workspaceTreeCollapse :global(.ant-collapse-body) {
-	padding: 0px 0px 0px 16px !important;
+	padding: 0px !important;
 }
 
 .sectionAddButton {
@@ -80,6 +80,10 @@
 	margin: 4px 0px !important;
 	padding: 0px 0px 0px 8px !important;
 	overflow: visible;
+}
+
+.workspaceMenu :global(.ant-menu-item).sessionMenuEntry {
+	padding-left: 26px !important;
 }
 
 .workspaceMenu :global(.ant-menu-title-content) {

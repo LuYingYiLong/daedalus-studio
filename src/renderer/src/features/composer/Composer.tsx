@@ -11,7 +11,7 @@ import type { ChatMode } from "@/api/chat-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
 import type { SkillSummary } from "@/api/skill-api";
 import type { AdditionalContextItem, WorkspaceConfig } from "@/api/types";
-import type { ProviderModelInfo, ProviderModelSelection, ProviderModelSelectionProvider } from "@/api/provider-api";
+import type { ProviderModelInfo, ProviderModelSelection, ProviderModelSelectionProvider, ProviderReasoningEffortOption } from "@/api/provider-api";
 import { compressSession, estimateContextUsage, type ContextUsageEstimate } from "@/api/context-api";
 import AdditionalContextStrip from "@/features/chat/AdditionalContextStrip";
 import { WorkspaceIconView } from "@/features/workspace/workspace-appearance";
@@ -28,6 +28,7 @@ export type ComposerProps = {
 	providerModelSelection: ProviderModelSelection | null;
 	selectedProviderId: string | null;
 	selectedModelId: string | null;
+	reasoningEffort?: string | null;
 	message: string;
 	contextItems?: AdditionalContextItem[];
 	mode: ChatMode;
@@ -46,6 +47,7 @@ export type ComposerProps = {
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
 	onProviderModelChange?: (providerId: string, modelId: string) => void;
+	onReasoningEffortChange?: (effort: string) => void;
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onWorkspaceAdd?: () => void;
 	onWorkspaceClear?: () => void;
@@ -209,6 +211,21 @@ function getSelectedModelLabel(selection: ProviderModelSelection | null, selecte
 	return `${selectedProvider.displayName} / ${selectedModelInfo?.displayName ?? selectedModel.model}`;
 }
 
+function getReasoningEffortLabel(effort: string, t: TFunction<"common">): string {
+	const key: string = `composer.reasoning.efforts.${effort}`;
+	return t(key, { defaultValue: effort });
+}
+
+function resolveDisplayedReasoningEffort(options: readonly ProviderReasoningEffortOption[], requested: string | null | undefined): string | null {
+	if (options.length === 0) {
+		return null;
+	}
+	if (requested !== undefined && requested !== null && options.some((option: ProviderReasoningEffortOption): boolean => option.id === requested)) {
+		return requested;
+	}
+	return options.find((option: ProviderReasoningEffortOption): boolean => option.id === "medium")?.id ?? options[0]?.id ?? null;
+}
+
 function createProviderModelItems(selection: ProviderModelSelection | null, t: TFunction<"common">): MenuProps["items"] {
 	if (selection === null) {
 		return [];
@@ -219,12 +236,12 @@ function createProviderModelItems(selection: ProviderModelSelection | null, t: T
 			key: `provider:${provider.provider}`,
 			popupClassName: styles.modelSubmenuPopup,
 			label: (
-					<span className={styles.providerGroupLabel}>
-						<span>{provider.displayName}</span>
-						{provider.configured ? null : (
-							<span className={styles.providerMutedText}>{t("composer.model.notConfigured")}</span>
-						)}
-					</span>
+				<span className={styles.providerGroupLabel}>
+					<span>{provider.displayName}</span>
+					{provider.configured ? null : (
+						<span className={styles.providerMutedText}>{t("composer.model.notConfigured")}</span>
+					)}
+				</span>
 			),
 			children: provider.models.map((model: ProviderModelInfo) => {
 				const modelBadges: string[] = [];
@@ -358,6 +375,7 @@ function Composer({
 	providerModelSelection,
 	selectedProviderId,
 	selectedModelId,
+	reasoningEffort,
 	message,
 	contextItems: composerContextItems = EMPTY_CONTEXT_ITEMS,
 	mode,
@@ -376,6 +394,7 @@ function Composer({
 	onModeChange,
 	onApprovalModeChange,
 	onProviderModelChange,
+	onReasoningEffortChange,
 	onWorkspaceSelect,
 	onWorkspaceAdd,
 	onWorkspaceClear,
@@ -477,6 +496,10 @@ function Composer({
 		? undefined
 		: createModelKey(selectedModel.provider, selectedModel.model);
 	const selectedModelLabel: string = getSelectedModelLabel(providerModelSelection, selectedModel, t);
+	const selectedModelInfo: ProviderModelInfo | null = findSelectedModel(providerModelSelection, selectedModel);
+	const reasoningEffortOptions: readonly ProviderReasoningEffortOption[] = selectedModelInfo?.capabilities.reasoningEfforts ?? [];
+	const displayedReasoningEffort: string | null = resolveDisplayedReasoningEffort(reasoningEffortOptions, reasoningEffort);
+	const displayedReasoningEffortLabel: string = displayedReasoningEffort === null ? "" : getReasoningEffortLabel(displayedReasoningEffort, t);
 	const selectedWorkspaceKey: string = selectedWorkspace === null ? NO_WORKSPACE_KEY : createWorkspaceKey(selectedWorkspace.id);
 	const selectedWorkspaceLabel: string = selectedWorkspace?.name ?? t("composer.workspace.noWorkspace");
 	const approvalModeLabel: string = approvalMode === "full-trust"
@@ -498,6 +521,16 @@ function Composer({
 		selectedKeys: [approvalMode],
 		onClick: handleApprovalModeClick
 	}), [approvalMode, handleApprovalModeClick, t]);
+	const reasoningEffortMenu: MenuProps = useMemo((): MenuProps => ({
+		items: reasoningEffortOptions.map((option: ProviderReasoningEffortOption) => ({
+			key: option.id,
+			label: getReasoningEffortLabel(option.id, t)
+		})),
+		selectedKeys: displayedReasoningEffort === null ? [] : [displayedReasoningEffort],
+		onClick: ({ key }): void => {
+			onReasoningEffortChange?.(String(key));
+		}
+	}), [displayedReasoningEffort, onReasoningEffortChange, reasoningEffortOptions, t]);
 	const workspaceFooterMenu: MenuProps = useMemo((): MenuProps => ({
 		items: workspaceFooterItems,
 		selectedKeys: [selectedWorkspaceKey],
@@ -510,8 +543,8 @@ function Composer({
 	const compressDisabledReason: string | null = isSending
 		? t("composer.contextUsage.compressDisabled.sending")
 		: contextUsage?.canCompress === false
-		? contextUsage.compressReason ?? t("composer.contextUsage.compressDisabled.unavailable")
-		: null;
+			? contextUsage.compressReason ?? t("composer.contextUsage.compressDisabled.unavailable")
+			: null;
 
 	useEffect((): void => {
 		if (selectedCompletionIndex >= completionOptions.length) {
@@ -546,7 +579,7 @@ function Composer({
 			setIsContextUsageLoading(false);
 			setContextUsage(null);
 			setContextUsageError(null);
-			return (): void => {};
+			return (): void => { };
 		}
 
 		let cancelled: boolean = false;
@@ -1030,96 +1063,107 @@ function Composer({
 						}}
 					/>
 					<div className={styles.composerToolbar}>
-					<Tooltip title={t("composer.tooltips.addContext")}>
-						<Dropdown
-							menu={contextMenu}
-							trigger={["click"]}
-						>
-							<Button
-								type="text"
-								shape="circle"
-								icon={<Icon name="add" className={styles.composerActionIcon} />}
-							/>
-						</Dropdown>
-					</Tooltip>
-					
-					<Divider vertical={true} />
-					<Tooltip title={t("composer.tooltips.mode")}>
-						<Dropdown
-							menu={modeMenu}
-							trigger={["click"]}
-						>
-							<Button
-								type="text"
-								shape="circle"
-								icon={<Icon name={mode} />}
-							/>
-						</Dropdown>
-					</Tooltip>
-					<Tooltip title={t("composer.tooltips.approvalMode")}>
-						<Dropdown
-							menu={approvalModeMenu}
-							disabled={isApprovalModeSaving}
-							trigger={["click"]}
-						>
-							<Button
-								type="text"
-								loading={isApprovalModeSaving}
-								icon={(
-									<Icon
-										name={approvalMode === "full-trust" ? "warning" : approvalMode === "auto-safe" ? "shield" : "hand"}
-									/>
-								)}
-								className={styles.approvalModeButton}
+						<Tooltip title={t("composer.tooltips.addContext")}>
+							<Dropdown
+								menu={contextMenu}
+								trigger={["click"]}
 							>
-								<span className={styles.approvalModeText}>{approvalModeLabel}</span>
-							</Button>
-						</Dropdown>
-					</Tooltip>	
+								<Button
+									type="text"
+									shape="circle"
+									icon={<Icon name="add" className={styles.composerActionIcon} />}
+								/>
+							</Dropdown>
+						</Tooltip>
 
-					<Divider vertical={true} />
-					
-					<Tooltip title={t("composer.tooltips.model")}>
-						<Dropdown
-							disabled={providerModelSelection === null}
-							rootClassName={styles.modelDropdown}
-							autoAdjustOverflow={true}
-							menu={providerModelMenu}
-							trigger={["click"]}
-						>
+						<Divider vertical={true} />
+
+						<Tooltip title={t("composer.tooltips.mode")}>
+							<Dropdown
+								menu={modeMenu}
+								trigger={["click"]}
+							>
+								<Button
+									type="text"
+									shape="circle"
+									icon={<Icon name={mode} />}
+								/>
+							</Dropdown>
+						</Tooltip>
+						<Tooltip title={t("composer.tooltips.approvalMode")}>
+							<Dropdown
+								menu={approvalModeMenu}
+								disabled={isApprovalModeSaving}
+								trigger={["click"]}
+							>
+								<Button
+									type="text"
+									loading={isApprovalModeSaving}
+									icon={(
+										<Icon
+											name={approvalMode === "full-trust" ? "warning" : approvalMode === "auto-safe" ? "shield" : "hand"}
+										/>
+									)}
+									className={styles.approvalModeButton}
+								>
+									<span className={styles.approvalModeText}>{approvalModeLabel}</span>
+								</Button>
+							</Dropdown>
+						</Tooltip>
+
+						<Divider vertical={true} />
+
+						<Tooltip title={t("composer.tooltips.model")}>
+							<Dropdown
+								disabled={providerModelSelection === null}
+								rootClassName={styles.modelDropdown}
+								autoAdjustOverflow={true}
+								menu={providerModelMenu}
+								trigger={["click"]}
+							>
+								<Button
+									type="text"
+									className={styles.modelButton}
+								>
+									<span className={styles.modelButtonContent}>
+										<span className={styles.modelButtonText}>{selectedModelLabel}</span>
+									</span>
+								</Button>
+							</Dropdown>
+						</Tooltip>
+
+						{displayedReasoningEffort === null ? null : (
+							<Tooltip title={t("composer.tooltips.reasoningEffort")}>
+								<Dropdown menu={reasoningEffortMenu} trigger={["click"]}>
+									<Button type="text" className={styles.reasoningEffortButton} icon={<Icon name="brain" />}>
+										<span>{displayedReasoningEffortLabel}</span>
+									</Button>
+								</Dropdown>
+							</Tooltip>
+						)}
+
+						<Tooltip title={
+							isCancelling
+								? t("composer.send.stopping")
+								: isSending && draftMessage.trim().length === 0
+									? t("composer.send.stop")
+									: isSending
+										? t("composer.send.queue")
+										: t("composer.send.send")
+						}>
 							<Button
 								type="text"
-								className={styles.modelButton}
-							>
-								<span className={styles.modelButtonContent}>
-									<span className={styles.modelButtonText}>{selectedModelLabel}</span>
-								</span>
-							</Button>
-						</Dropdown>
-					</Tooltip>
-					
-					<Tooltip title={
-						isCancelling
-							? t("composer.send.stopping")
-							: isSending && draftMessage.trim().length === 0
-								? t("composer.send.stop")
-								: isSending
-									? t("composer.send.queue")
-									: t("composer.send.send")
-					}>
-						<Button
-							type="text"
-							shape="circle"
-							icon={<Icon name={isSending && draftMessage.trim().length === 0 ? "stop" : "send"} />}
-							className={styles.composerSendButton}
-							disabled={isCancelling || isAddingTextAttachment || (!isSending && draftMessage.trim().length === 0)}
-							onClick={submitMessage}
-						/>
-					</Tooltip>
+								shape="circle"
+								icon={<Icon name={isSending && draftMessage.trim().length === 0 ? "stop" : "send"} />}
+								className={styles.composerSendButton}
+								disabled={isCancelling || isAddingTextAttachment || (!isSending && draftMessage.trim().length === 0)}
+								onClick={submitMessage}
+							/>
+						</Tooltip>
 					</div>
 				</div>
 			</div>
-			
+
 			<footer className={styles.footer}>
 				<Flex
 					align="start"

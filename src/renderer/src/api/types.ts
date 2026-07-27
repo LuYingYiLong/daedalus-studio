@@ -43,6 +43,7 @@ export type SessionMetadata = {
 	activeSkillId?: string;
 	provider?: string;
 	model?: string;
+	reasoningEffort?: string;
 	chatMode?: "agent" | "ask" | "plan";
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
@@ -79,6 +80,7 @@ export type MessageQueueItem = {
 	mode: "agent" | "ask" | "plan" | null;
 	provider: string | null;
 	model: string | null;
+	reasoningEffort?: string | null;
 	skillRefs: string[];
 	status: MessageQueueStatus;
 	createdAt: string;
@@ -169,6 +171,7 @@ export type WorkbenchSnapshot = {
 		provider?: string;
 		providerDisplayName?: string;
 		model?: string;
+		reasoningEffort?: string | null;
 		additionalContext: AdditionalContextItem[];
 		updatedAt?: string;
 	};
@@ -198,6 +201,7 @@ export type WorkbenchPatch = {
 		chatMode?: "agent" | "ask" | "plan";
 		provider?: string;
 		model?: string;
+		reasoningEffort?: string;
 		additionalContext?: AdditionalContextItem[];
 	};
 	additionalContextAction?:

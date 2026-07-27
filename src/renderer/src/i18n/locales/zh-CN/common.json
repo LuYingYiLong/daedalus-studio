@@ -208,6 +208,15 @@
         "search": "搜索"
       }
     },
+    "reasoning": {
+      "efforts": {
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "xhigh": "极高",
+        "max": "最大"
+      }
+    },
     "workspace": {
       "noWorkspace": "无 workspace",
       "addWorkspace": "添加 workspace..."
@@ -216,7 +225,8 @@
       "addContext": "添加附加上下文",
       "mode": "模式",
       "approvalMode": "审批模式",
-      "model": "模型"
+      "model": "模型",
+      "reasoningEffort": "推理强度"
     },
     "send": {
       "send": "发送",

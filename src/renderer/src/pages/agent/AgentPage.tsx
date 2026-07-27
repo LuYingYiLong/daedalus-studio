@@ -188,6 +188,7 @@ type AgentPageProps = {
 	providerModelSelection: ProviderModelSelection | null;
 	selectedProviderId: string | null;
 	selectedModelId: string | null;
+	reasoningEffort: string | null;
 	message: string;
 	contextItems: AdditionalContextItem[];
 	messageQueue: MessageQueueItem[];
@@ -257,6 +258,7 @@ type AgentPageProps = {
 	onPlanApprove: (planId: string) => void;
 	onPlanRevise: (planId: string, feedback: string) => void;
 	onProviderModelChange: (providerId: string, modelId: string) => void;
+	onReasoningEffortChange: (effort: string) => void;
 	onAddFiles: () => void;
 	onAddFolder: () => void;
 	onAddImages: (files: File[]) => void;
@@ -300,6 +302,7 @@ function AgentPage({
 	providerModelSelection,
 	selectedProviderId,
 	selectedModelId,
+	reasoningEffort,
 	message,
 	contextItems,
 	messageQueue,
@@ -369,6 +372,7 @@ function AgentPage({
 	onPlanApprove,
 	onPlanRevise,
 	onProviderModelChange,
+	onReasoningEffortChange,
 	onAddFiles,
 	onAddFolder,
 	onAddImages,
@@ -1416,8 +1420,9 @@ function AgentPage({
 												) : null}
 												<Composer
 													providerModelSelection={providerModelSelection}
-													selectedProviderId={selectedProviderId}
-													selectedModelId={selectedModelId}
+											selectedProviderId={selectedProviderId}
+											selectedModelId={selectedModelId}
+											reasoningEffort={reasoningEffort}
 													message={message}
 													contextItems={contextItems}
 													mode={mode}
@@ -1435,7 +1440,8 @@ function AgentPage({
 													onMessageChange={onMessageChange}
 													onModeChange={onModeChange}
 													onApprovalModeChange={onApprovalModeChange}
-													onProviderModelChange={onProviderModelChange}
+											onProviderModelChange={onProviderModelChange}
+											onReasoningEffortChange={onReasoningEffortChange}
 													onAddFiles={onAddFiles}
 													onAddFolder={onAddFolder}
 											onAddImages={onAddImages}

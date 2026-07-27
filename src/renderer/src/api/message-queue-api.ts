@@ -7,6 +7,7 @@ export type QueueMessageInput = {
 	mode?: ChatMode;
 	provider?: string;
 	model?: string;
+	reasoningEffort?: string;
 	skillRefs?: string[];
 	additionalContext?: AdditionalContextItem[];
 };

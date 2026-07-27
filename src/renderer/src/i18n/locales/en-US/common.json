@@ -208,6 +208,15 @@
         "search": "Search"
       }
     },
+    "reasoning": {
+      "efforts": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "xhigh": "Extra high",
+        "max": "Max"
+      }
+    },
     "workspace": {
       "noWorkspace": "No workspace",
       "addWorkspace": "Add workspace..."
@@ -216,7 +225,8 @@
       "addContext": "Add additional context",
       "mode": "Mode",
       "approvalMode": "Approval mode",
-      "model": "Model"
+      "model": "Model",
+      "reasoningEffort": "Reasoning effort"
     },
     "send": {
       "send": "Send",
