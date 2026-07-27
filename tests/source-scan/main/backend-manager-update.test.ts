@@ -15,9 +15,13 @@ describe("backend manager update support", () => {
 		expect(source).not.toContain("node_modules");
 	});
 
-	it("runs the backend executable directly with authenticated health checks", () => {
+	it("acquires the shared runtime and uses its authenticated health connection", () => {
 		expect(source).toContain("spawn(launchTarget.executablePath");
-		expect(source).toContain("DAEDALUS_BACKEND_AUTH_TOKEN");
+		expect(source).toContain("\"runtime\"");
+		expect(source).toContain("\"acquire\"");
+		expect(source).toContain("\"--client\"");
+		expect(source).toContain("record.authProtocol");
+		expect(source).not.toContain("DAEDALUS_BACKEND_AUTH_TOKEN");
 		expect(source).toContain("backend.health");
 		expect(source).not.toContain("ELECTRON_RUN_AS_NODE");
 		expect(source).toContain("restartAndWaitHealthy");

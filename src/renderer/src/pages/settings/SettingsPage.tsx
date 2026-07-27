@@ -16,6 +16,7 @@ import StatisticsSettingsPage from "./StatisticsSettingsPage";
 import type { ClientPreferences } from "@/api/client-preferences-api";
 import type { GeneralSettings } from "@/api/general-settings-api";
 import AboutSettingsPage from "./AboutSettingsPage";
+import GodotProjectsSettingsPage from "./GodotProjectsSettingsPage";
 
 type MenuItem = Required<MenuProps>["items"][number];
 export type SettingsPageKey =
@@ -27,6 +28,7 @@ export type SettingsPageKey =
 	| "personalization"
 	| "mcp_servers"
 	| "skills"
+	| "godot_projects"
 	| "archived_sessions"
 	| "about";
 
@@ -85,6 +87,11 @@ const menuItemConfigs: SettingsMenuItemConfig[] = [
 		key: "skills",
 		labelKey: "settings.menu.skills",
 		icon: <Icon name="skill" />,
+	},
+	{
+		key: "godot_projects",
+		labelKey: "settings.menu.godotProjects",
+		icon: <Icon name="godot" />,
 	},
 	{
 		key: "archived_sessions",
@@ -164,6 +171,8 @@ function SettingsPage({
 					<McpServersSettingsPage />
 				) : activePage === "skills" ? (
 					<SkillsSettingsPage />
+				) : activePage === "godot_projects" ? (
+					<GodotProjectsSettingsPage />
 				) : activePage === "archived_sessions" ? (
 					<ArchivedSessionSettingsPage />
 				) : activePage === "about" ? (

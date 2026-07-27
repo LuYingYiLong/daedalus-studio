@@ -1,9 +1,9 @@
-import { lstat, mkdir, realpath } from "node:fs/promises";
+import { lstat, mkdir, realpath, writeFile } from "node:fs/promises";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { listGlobalCodexSkills } from "@main/services/skills-cli";
+import { listGlobalCodexSkills, resolveSkillsCliInvocation } from "@main/services/skills-cli";
 
 type CommandResult = {
 	exitCode: number;
@@ -24,6 +24,30 @@ function createDependencies(result: CommandResult, onRun?: (command: string, arg
 }
 
 describe("skills-cli", () => {
+	it("runs the Windows npx CLI through its adjacent Node runtime without a command shell", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-skills-cli-node-"));
+		const npmBinDirectory: string = join(root, "node_modules", "npm", "bin");
+		const nodePath: string = join(root, "node.exe");
+		const npxCliPath: string = join(npmBinDirectory, "npx-cli.js");
+		await mkdir(npmBinDirectory, { recursive: true });
+		await Promise.all([
+			writeFile(join(root, "npx.cmd"), "@echo off\r\n"),
+			writeFile(nodePath, "node"),
+			writeFile(npxCliPath, "cli")
+		]);
+
+		const invocation = await resolveSkillsCliInvocation(
+			"npx.cmd",
+			["--no-install", "skills", "list"],
+			{ platform: "win32", pathEnvironment: root }
+		);
+
+		expect(invocation).toEqual({
+			command: nodePath,
+			args: [npxCliPath, "--no-install", "skills", "list"]
+		});
+	});
+
 	it("runs the local Skills CLI with the Codex global JSON list arguments", async () => {
 		const root: string = mkdtempSync(join(tmpdir(), "daedalus-skills-cli-"));
 		const skillPath: string = join(root, "review-godot");

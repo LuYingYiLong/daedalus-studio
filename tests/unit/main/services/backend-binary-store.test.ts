@@ -47,6 +47,8 @@ async function createInstalledBackend(version: string): Promise<InstalledBackend
 			arch: "x64",
 			nodeVersion: "24.18.0",
 			protocolVersion: 2,
+			minPluginProtocolVersion: 1,
+			maxPluginProtocolVersion: 1,
 			minStudioVersion: "1.0.1",
 			publishedAt: "2026-07-24T12:00:00.000Z",
 			authenticode: "unsigned",

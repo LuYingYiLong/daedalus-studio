@@ -1,5 +1,4 @@
 import { app, BrowserWindow, ipcMain } from "electron";
-import { randomBytes } from "node:crypto";
 import { ChildProcess, spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
@@ -33,6 +32,8 @@ const RESTART_HEALTH_TIMEOUT: number = 20000;
 const RESTART_HEALTH_POLL_INTERVAL: number = 500;
 const GRACEFUL_SHUTDOWN_TIMEOUT: number = 5000;
 const AUTH_PROTOCOL_PREFIX: string = "daedalus-auth.";
+const RUNTIME_ACQUIRE_TIMEOUT: number = 15_000;
+const MAX_RUNTIME_ACQUIRE_OUTPUT_BYTES: number = 64 * 1024;
 
 type ProcessManagerConfig = {
 	readonly maxRestartAttempts: number;
@@ -69,6 +70,12 @@ type BackendHealthResult = {
 	};
 	multiClient?: {
 		protocolVersion?: unknown;
+	};
+	clients?: {
+		total?: unknown;
+		byType?: {
+			godot_plugin?: unknown;
+		};
 	};
 };
 
@@ -224,10 +231,6 @@ class BackendManager {
 	public async start(mainWindow: BrowserWindow): Promise<void> {
 		this.mainWindow = mainWindow;
 		this.isShuttingDown = false;
-		if (app?.isPackaged === true && this.authToken === null) {
-			this.authToken = randomBytes(32).toString("base64url");
-			this.connectionId = randomBytes(32).toString("base64url");
-		}
 
 		if (this.status === "starting" || this.status === "healthy") {
 			this.startHealthCheck();
@@ -282,6 +285,10 @@ class BackendManager {
 		this.restartAttempts = 0;
 		const processToStop: ChildProcess | null = this.process;
 		if (processToStop === null) {
+			await this.requestGracefulShutdown().catch((): void => {});
+			this.authToken = null;
+			this.connectionId = null;
+			this.activeTarget = null;
 			this.setStatus("stopped");
 			return;
 		}
@@ -297,6 +304,19 @@ class BackendManager {
 			this.process = null;
 		}
 		this.activeTarget = null;
+		this.authToken = null;
+		this.connectionId = null;
+		this.setStatus("stopped");
+	}
+
+	public detach(): void {
+		this.isShuttingDown = true;
+		this.stopHealthCheck();
+		this.clearRestartTimer();
+		this.process = null;
+		this.activeTarget = null;
+		this.authToken = null;
+		this.connectionId = null;
 		this.setStatus("stopped");
 	}
 
@@ -313,6 +333,12 @@ class BackendManager {
 
 	public getStatus(): BackendStatus {
 		return this.status;
+	}
+
+	public async getConnectedGodotClientCount(): Promise<number> {
+		const health: BackendHealthResult = await this.requestRpc<BackendHealthResult>("backend.health");
+		const count: unknown = health.clients?.byType?.godot_plugin;
+		return typeof count === "number" && Number.isSafeInteger(count) && count > 0 ? count : 0;
 	}
 
 	public onDidChangeStatus(listener: (status: BackendStatus) => void): () => void {
@@ -387,10 +413,7 @@ class BackendManager {
 		) {
 			throw new Error("Backend launch target changed after it was selected.");
 		}
-		if (this.authToken !== null && this.connectionId === null) {
-			throw new Error("Backend runtime connection ID is unavailable.");
-		}
-		logger.info("Starting backend binary", {
+		logger.info("Acquiring shared backend runtime", {
 			kind: launchTarget.kind,
 			cwd: launchTarget.cwd,
 			executablePath: launchTarget.executablePath,
@@ -398,50 +421,88 @@ class BackendManager {
 			protocolVersion: launchTarget.protocolVersion,
 			port: this.port
 		});
-		this.activeTarget = launchTarget;
-		const child: ChildProcess = spawn(launchTarget.executablePath, launchTarget.args, {
+		const child: ChildProcess = spawn(launchTarget.executablePath, [
+			"runtime",
+			"acquire",
+			"--client",
+			"studio",
+			"--json"
+		], {
 			cwd: launchTarget.cwd,
-			env: {
-				...process.env,
-				PORT: String(this.port),
-				...(this.authToken === null
-					? {}
-					: {
-						DAEDALUS_BACKEND_AUTH_TOKEN: this.authToken,
-						DAEDALUS_BACKEND_CONNECTION_ID: this.connectionId!,
-						DAEDALUS_STUDIO_PID: String(process.pid)
-					})
-			},
+			env: { ...process.env },
 			windowsHide: true,
 			stdio: "pipe"
 		});
-		this.process = child;
-		child.stdout?.on("data", (data: Buffer): void => {
-			logger.info(data.toString().trim());
+		const output: { stdout: string; stderr: string } = await new Promise((resolveAcquire, rejectAcquire): void => {
+			let stdout: string = "";
+			let stderr: string = "";
+			let settled: boolean = false;
+			const timeout: ReturnType<typeof setTimeout> = setTimeout((): void => {
+				child.kill();
+				finish(new Error("Timed out acquiring the shared backend runtime."));
+			}, RUNTIME_ACQUIRE_TIMEOUT);
+			const finish = (error: Error | null): void => {
+				if (settled) {
+					return;
+				}
+				settled = true;
+				clearTimeout(timeout);
+				if (error !== null) {
+					rejectAcquire(error);
+				} else {
+					resolveAcquire({ stdout, stderr });
+				}
+			};
+			const append = (current: string, data: Buffer): string => {
+				const next: string = current + data.toString("utf8");
+				if (Buffer.byteLength(next, "utf8") > MAX_RUNTIME_ACQUIRE_OUTPUT_BYTES) {
+					child.kill();
+					finish(new Error("Shared runtime command produced too much output."));
+				}
+				return next;
+			};
+			child.stdout?.on("data", (data: Buffer): void => {
+				stdout = append(stdout, data);
+			});
+			child.stderr?.on("data", (data: Buffer): void => {
+				stderr = append(stderr, data);
+			});
+			child.once("error", (error: Error): void => finish(error));
+			child.once("exit", (code: number | null): void => {
+				finish(code === 0
+					? null
+					: new Error(stderr.trim() || `Shared runtime command exited with code ${code}.`)
+				);
+			});
 		});
-		child.stderr?.on("data", (data: Buffer): void => {
-			logger.error("Backend error output", undefined, { output: data.toString().trim() });
-		});
-		child.on("exit", (code: number | null): void => {
-			logger.info("Backend process exited", { code });
-			if (this.process === child) {
-				this.process = null;
-			}
-			if (this.isShuttingDown) {
-				this.setStatus("stopped");
-				return;
-			}
-			this.handleProcessCrash();
-		});
-		child.on("error", (error: Error): void => {
-			logger.error("Backend process error", error);
-			if (this.process === child) {
-				this.process = null;
-			}
-			if (!this.isShuttingDown) {
-				this.handleProcessCrash();
-			}
-		});
+		const result: unknown = JSON.parse(output.stdout.trim()) as unknown;
+		if (typeof result !== "object" || result === null || Array.isArray(result)) {
+			throw new Error("Shared runtime command returned an invalid response.");
+		}
+		const record = result as {
+			ok?: unknown;
+			authProtocol?: unknown;
+			connection?: {
+				connectionId?: unknown;
+				port?: unknown;
+				version?: unknown;
+				buildId?: unknown;
+			};
+		};
+		if (
+			record.ok !== true
+			|| typeof record.authProtocol !== "string"
+			|| !record.authProtocol.startsWith(AUTH_PROTOCOL_PREFIX)
+			|| typeof record.connection?.connectionId !== "string"
+			|| record.connection.port !== this.port
+			|| record.connection.version !== launchTarget.version
+			|| record.connection.buildId !== launchTarget.buildId
+		) {
+			throw new Error("Shared runtime identity does not match the selected backend.");
+		}
+		this.authToken = record.authProtocol.slice(AUTH_PROTOCOL_PREFIX.length);
+		this.connectionId = record.connection.connectionId;
+		this.activeTarget = launchTarget;
 	}
 
 	private handleProcessCrash(): void {
@@ -494,7 +555,11 @@ class BackendManager {
 				this.setStatus("healthy");
 				this.restartAttempts = 0;
 			} else {
+				const wasHealthy: boolean = this.status === "healthy";
 				this.setStatus("unhealthy");
+				if (wasHealthy && !this.isShuttingDown) {
+					this.handleProcessCrash();
+				}
 			}
 		}, this.config.healthCheckInterval);
 	}
@@ -588,7 +653,7 @@ class BackendManager {
 	}
 
 	private async requestGracefulShutdown(): Promise<void> {
-		if (this.process === null) {
+		if (this.authToken === null) {
 			return;
 		}
 		await this.requestRpc("backend.shutdown", 2000);

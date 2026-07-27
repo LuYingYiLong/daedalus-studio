@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { lstat, realpath } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { delimiter, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { app, ipcMain } from "electron";
 
 const SKILLS_CLI_TIMEOUT_MS: number = 10_000;
@@ -33,6 +33,11 @@ type SkillsCliListEntry = {
 	agents: string[];
 };
 
+type SkillsCliInvocation = {
+	command: string;
+	args: readonly string[];
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -44,6 +49,47 @@ function isInsideRoot(rootPath: string, candidatePath: string): boolean {
 
 function getNpxCommand(platform: NodeJS.Platform = process.platform): string {
 	return platform === "win32" ? "npx.cmd" : "npx";
+}
+
+function getPathEnvironment(environment: NodeJS.ProcessEnv): string {
+	const pathKey: string | undefined = Object.keys(environment).find((key: string): boolean => key.toLowerCase() === "path");
+	return pathKey === undefined ? "" : environment[pathKey] ?? "";
+}
+
+export async function resolveSkillsCliInvocation(
+	command: string,
+	args: readonly string[],
+	options: { platform?: NodeJS.Platform; pathEnvironment?: string } = {}
+): Promise<SkillsCliInvocation> {
+	const platform: NodeJS.Platform = options.platform ?? process.platform;
+	if (platform !== "win32" || command.toLowerCase() !== "npx.cmd") {
+		return { command, args };
+	}
+
+	const pathEnvironment: string = options.pathEnvironment ?? getPathEnvironment(process.env);
+	const candidatePaths: string[] = pathEnvironment
+		.split(delimiter)
+		.map((segment: string): string => segment.trim())
+		.filter((segment: string): boolean => segment.length > 0)
+		.map((segment: string): string => join(segment, "npx.cmd"));
+	for (const candidatePath of candidatePaths) {
+		try {
+			const npxStats = await lstat(candidatePath);
+			if (!npxStats.isFile()) {
+				continue;
+			}
+			const nodePath: string = join(dirname(candidatePath), "node.exe");
+			const npxCliPath: string = join(dirname(candidatePath), "node_modules", "npm", "bin", "npx-cli.js");
+			const [nodeStats, npxCliStats] = await Promise.all([lstat(nodePath), lstat(npxCliPath)]);
+			if (nodeStats.isFile() && npxCliStats.isFile()) {
+				return { command: nodePath, args: [npxCliPath, ...args] };
+			}
+		} catch {
+			// Try the next PATH entry. npm's Windows shim lives beside node.exe.
+		}
+	}
+
+	throw new Error("Unable to locate the Node runtime required to run the locally installed Skills CLI.");
 }
 
 function clipOutput(value: string): string {
@@ -79,8 +125,9 @@ function parseSkillsCliList(value: string): SkillsCliListEntry[] {
 }
 
 async function runSkillsCliCommand(command: string, args: readonly string[], cwd: string): Promise<SkillsCliCommandResult> {
+	const invocation: SkillsCliInvocation = await resolveSkillsCliInvocation(command, args);
 	return await new Promise<SkillsCliCommandResult>((resolveResult): void => {
-		const child: ChildProcess = spawn(command, [...args], {
+		const child: ChildProcess = spawn(invocation.command, [...invocation.args], {
 			cwd,
 			env: process.env,
 			windowsHide: true,

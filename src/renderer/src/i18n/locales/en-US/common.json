@@ -542,6 +542,7 @@
       "personalization": "Personalization",
       "mcpServers": "MCP Servers",
       "skills": "Skills",
+      "godotProjects": "Godot projects",
       "archivedSessions": "Archived sessions",
       "about": "About",
       "fallbackTitle": "Settings",
@@ -557,6 +558,40 @@
       "off": "OFF",
       "on": "ON",
       "save": "Save"
+    },
+    "godotProjects": {
+      "title": "Godot projects",
+      "empty": "No Godot projects were found.",
+      "bundleReady": "Bundled plugin {{version}} is bound to Studio {{studioVersion}}.",
+      "actionCompleted": "Godot project updated.",
+      "confirmRepair": "Replace the installed plugin with the bundled version?",
+      "confirmUninstall": "Uninstall Godot Daedalus from this project?",
+      "columns": {
+        "project": "Project",
+        "godot": "Godot",
+        "plugin": "Plugin",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "actions": {
+        "add": "Add project",
+        "scan": "Rescan",
+        "install": "Install",
+        "upgrade": "Upgrade",
+        "upgradeAll": "Upgrade all",
+        "repair": "Repair",
+        "uninstall": "Uninstall",
+        "retryPending": "Retry pending"
+      },
+      "status": {
+        "not_installed": "Not installed",
+        "current": "Current",
+        "outdated": "Outdated",
+        "disabled": "Disabled",
+        "modified": "Modified",
+        "pending": "Pending",
+        "failed": "Failed"
+      }
     },
     "about": {
       "title": "About",

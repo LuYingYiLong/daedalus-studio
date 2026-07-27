@@ -22,6 +22,11 @@ extraResources:
     filter:
       - daedalus-backend.exe
       - backend-manifest.json
+  - from: build/godot-plugin
+    to: godot-plugin
+    filter:
+      - godot-daedalus-plugin-v*.zip
+      - plugin-manifest.json
 
 asar: true
 asarUnpack:

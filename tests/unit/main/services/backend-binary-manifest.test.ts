@@ -19,6 +19,8 @@ function createPayloadManifest(
 		arch: "x64",
 		nodeVersion: "24.18.0",
 		protocolVersion: 2,
+		minPluginProtocolVersion: 1,
+		maxPluginProtocolVersion: 1,
 		minStudioVersion: "1.0.1",
 		publishedAt: "2026-07-24T12:00:00.000Z",
 		authenticode: "unsigned",
@@ -79,6 +81,13 @@ describe("backend binary manifest", () => {
 			createPayloadManifest({ protocolVersion: 3 }),
 			"1.1.0"
 		)).toThrow(/protocol/u);
+		expect(() => assertBackendManifestCompatible(
+			createPayloadManifest({
+				minPluginProtocolVersion: 2,
+				maxPluginProtocolVersion: 2
+			}),
+			"1.1.0"
+		)).toThrow(/Godot plugin protocol/u);
 	});
 
 	it("compares versions and detects payload identity drift", () => {

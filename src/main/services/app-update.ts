@@ -293,6 +293,14 @@ class MainProcessBackendUpdateClient implements BackendUpdateClient {
 	}
 
 	public async install(version: string | null): Promise<BackendUpdateInstallResult> {
+		const connectedGodotClients: number = await backendManager.getConnectedGodotClientCount();
+		if (connectedGodotClients > 0) {
+			throw new Error(
+				`Backend update deferred because ${connectedGodotClients} Godot editor client${
+					connectedGodotClients === 1 ? " is" : "s are"
+				} still connected. Close Godot and retry the update.`
+			);
+		}
 		const previousVersion: string | null = backendManager.getLaunchTargetInfo()?.version ?? null;
 		const installed = await stageBackendRelease(version);
 		await activateBackendCandidate(installed);

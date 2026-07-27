@@ -17,6 +17,7 @@ import { nativeNotificationService } from "./services/native-notifications";
 import { getWindowThemeColors, resolveWindowTheme, type WindowThemeColors } from "./services/window-theme";
 import type { ClientPreferences } from "./services/client-preferences";
 import { configureAppIdentity, getAppIconPath } from "./services/app-identity";
+import { godotProjectsService } from "./services/godot-projects";
 
 backendManager.registerIpc();
 backendBootstrapService.registerIpc();
@@ -31,6 +32,7 @@ registerSystemInfoIpc();
 registerTerminalPtyIpc();
 appUpdateService.registerIpc();
 nativeNotificationService.registerIpc();
+godotProjectsService.registerIpc();
 
 configureAppIdentity();
 
@@ -39,7 +41,7 @@ windowLifecycleController.registerIpc();
 appUpdateService.setBeforeClientInstall(async (): Promise<void> => {
 	windowLifecycleController.markQuitting();
 	terminalPtyService.dispose();
-	await backendManager.stopAndWait();
+	backendManager.detach();
 });
 
 function getWindowIconPath(): string | undefined {
@@ -169,6 +171,7 @@ app.whenReady().then(async () => {
 	};
 	backendBootstrapService.onDidChangeState(checkStartupUpdates);
 	void backendBootstrapService.prepare().then(checkStartupUpdates);
+	void godotProjectsService.startupMaintenance();
 
 	app.on("activate", () => {
 		if (BrowserWindow.getAllWindows().length === 0) {
@@ -177,24 +180,10 @@ app.whenReady().then(async () => {
 	});
 });
 
-let shutdownInProgress: boolean = false;
-let shutdownComplete: boolean = false;
-
-app.on("before-quit", (event) => {
+app.on("before-quit", () => {
 	windowLifecycleController.markQuitting();
 	terminalPtyService.dispose();
-	if (shutdownComplete) {
-		return;
-	}
-	event.preventDefault();
-	if (shutdownInProgress) {
-		return;
-	}
-	shutdownInProgress = true;
-	void backendManager.stopAndWait().finally((): void => {
-		shutdownComplete = true;
-		app.quit();
-	});
+	backendManager.detach();
 });
 
 app.on("window-all-closed", () => {

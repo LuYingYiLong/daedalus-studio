@@ -66,6 +66,35 @@ type TrayRecentSession = {
 	title: string;
 };
 
+type GodotProjectPluginStatus =
+	| "not_installed"
+	| "current"
+	| "outdated"
+	| "disabled"
+	| "modified"
+	| "pending"
+	| "failed";
+
+type GodotProjectScanResult = {
+	projects: Array<{
+		id: string;
+		name: string;
+		path: string;
+		godotVersion: string | null;
+		pluginVersion: string | null;
+		bundledPluginVersion: string | null;
+		enabled: boolean;
+		status: GodotProjectPluginStatus;
+		errorMessage: string | null;
+	}>;
+	plugin: {
+		available: boolean;
+		version: string | null;
+		studioVersion: string | null;
+		errorMessage: string | null;
+	};
+};
+
 function getCachedClientPreferences(): ClientPreferences {
 	return ipcRenderer.sendSync("client-preferences:get-cached") as ClientPreferences;
 }
@@ -266,6 +295,21 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		pickSkillDirectory: (): Promise<string | null> => {
 			return ipcRenderer.invoke("skill-fs:pick-directory");
 		}
+	},
+
+	godotProjects: {
+		scan: (): Promise<GodotProjectScanResult> => ipcRenderer.invoke("godot-projects:scan"),
+		add: (): Promise<GodotProjectScanResult> => ipcRenderer.invoke("godot-projects:add"),
+		install: (projectPath: string): Promise<GodotProjectScanResult> =>
+			ipcRenderer.invoke("godot-projects:install", projectPath),
+		repair: (projectPath: string): Promise<GodotProjectScanResult> =>
+			ipcRenderer.invoke("godot-projects:repair", projectPath),
+		uninstall: (projectPath: string): Promise<GodotProjectScanResult> =>
+			ipcRenderer.invoke("godot-projects:uninstall", projectPath),
+		setEnabled: (projectPath: string, enabled: boolean): Promise<GodotProjectScanResult> =>
+			ipcRenderer.invoke("godot-projects:set-enabled", projectPath, enabled),
+		upgradeAll: (): Promise<GodotProjectScanResult> => ipcRenderer.invoke("godot-projects:upgrade-all"),
+		retryPending: (): Promise<GodotProjectScanResult> => ipcRenderer.invoke("godot-projects:retry-pending")
 	},
 
 	skillCli: {

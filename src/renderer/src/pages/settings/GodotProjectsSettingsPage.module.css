@@ -1,0 +1,31 @@
+.page {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ds-space-3);
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	padding: var(--ds-space-2);
+	overflow: hidden;
+	user-select: none;
+}
+
+.header {
+	flex: 0 0 auto;
+}
+
+.title {
+	margin: 0 !important;
+}
+
+.tableRegion {
+	min-width: 0;
+	min-height: 0;
+	overflow: auto;
+}
+
+.projectCell {
+	display: grid;
+	min-width: 0;
+	gap: 2px;
+}

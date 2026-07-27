@@ -79,6 +79,7 @@ web_modules/
 out
 release/
 build/backend-bootstrap/
+build/godot-plugin/
 
 # Nuxt.js build / generate output
 .nuxt

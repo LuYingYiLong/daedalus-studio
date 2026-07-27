@@ -123,8 +123,6 @@ export function createStudioTheme(resolvedTheme: ResolvedTheme): ThemeConfig {
 				itemMarginBottom: 4
 			},
 			Table: {
-				headerBorderRadius: 4,
-				borderRadius: 4,
 				cellPaddingBlock: 8,
 				cellPaddingInline: 8
 			},

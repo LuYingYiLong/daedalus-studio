@@ -212,6 +212,48 @@ declare global {
 
 	type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot";
 
+	type GodotProjectPluginStatus =
+		| "not_installed"
+		| "current"
+		| "outdated"
+		| "disabled"
+		| "modified"
+		| "pending"
+		| "failed";
+
+	interface GodotProjectInfo {
+		id: string;
+		name: string;
+		path: string;
+		godotVersion: string | null;
+		pluginVersion: string | null;
+		bundledPluginVersion: string | null;
+		enabled: boolean;
+		status: GodotProjectPluginStatus;
+		errorMessage: string | null;
+	}
+
+	interface GodotProjectScanResult {
+		projects: GodotProjectInfo[];
+		plugin: {
+			available: boolean;
+			version: string | null;
+			studioVersion: string | null;
+			errorMessage: string | null;
+		};
+	}
+
+	interface GodotProjectsAPI {
+		scan: () => Promise<GodotProjectScanResult>;
+		add: () => Promise<GodotProjectScanResult>;
+		install: (projectPath: string) => Promise<GodotProjectScanResult>;
+		repair: (projectPath: string) => Promise<GodotProjectScanResult>;
+		uninstall: (projectPath: string) => Promise<GodotProjectScanResult>;
+		setEnabled: (projectPath: string, enabled: boolean) => Promise<GodotProjectScanResult>;
+		upgradeAll: () => Promise<GodotProjectScanResult>;
+		retryPending: () => Promise<GodotProjectScanResult>;
+	}
+
 	interface ElectronAPI {
 		versions: ElectronVersions;
 		backend: BackendAPI;
@@ -275,6 +317,7 @@ declare global {
 			pickSkillZip: () => Promise<string | null>;
 			pickSkillDirectory: () => Promise<string | null>;
 		};
+		godotProjects: GodotProjectsAPI;
 		skillCli: {
 			listGlobalCodexSkills: () => Promise<Array<{ name: string; path: string; slug: string }>>;
 		};

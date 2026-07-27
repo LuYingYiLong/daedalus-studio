@@ -24,6 +24,7 @@ const releaseBaseUrl = "https://github.com/LuYingYiLong/daedalus-backend/release
 const maxArchiveBytes = 256 * 1024 * 1024;
 const expectedNodeVersion = "24.18.0";
 const expectedProtocolVersion = 2;
+const expectedPluginProtocolVersion = 1;
 
 function fail(message) {
 	throw new Error(`[prepare-backend-bootstrap] ${message}`);
@@ -57,6 +58,10 @@ function assertPayloadManifest(manifest) {
 		|| manifest.arch !== "x64"
 		|| manifest.nodeVersion !== expectedNodeVersion
 		|| manifest.protocolVersion !== expectedProtocolVersion
+		|| !Number.isSafeInteger(manifest.minPluginProtocolVersion)
+		|| !Number.isSafeInteger(manifest.maxPluginProtocolVersion)
+		|| manifest.minPluginProtocolVersion > expectedPluginProtocolVersion
+		|| manifest.maxPluginProtocolVersion < expectedPluginProtocolVersion
 		|| typeof manifest.minStudioVersion !== "string"
 		|| compareVersions(packageJson.version, manifest.minStudioVersion) < 0
 		|| typeof manifest.publishedAt !== "string"
@@ -79,6 +84,8 @@ function payloadManifestFieldsMatch(left, right) {
 		&& left.arch === right.arch
 		&& left.nodeVersion === right.nodeVersion
 		&& left.protocolVersion === right.protocolVersion
+		&& left.minPluginProtocolVersion === right.minPluginProtocolVersion
+		&& left.maxPluginProtocolVersion === right.maxPluginProtocolVersion
 		&& left.minStudioVersion === right.minStudioVersion
 		&& left.publishedAt === right.publishedAt
 		&& left.authenticode === right.authenticode

@@ -53,17 +53,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Resolve fixed backend bootstrap version
+      - name: Resolve fixed bundled versions
         shell: pwsh
         run: |
           $package = Get-Content -LiteralPath "package.json" -Raw | ConvertFrom-Json
           if ($package.backendBootstrapVersion -notmatch "^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$") {
             throw "package.json must contain a fixed backendBootstrapVersion."
           }
+          if ($package.godotPluginVersion -notmatch "^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$") {
+            throw "package.json must contain a fixed godotPluginVersion."
+          }
           "BACKEND_BOOTSTRAP_VERSION=$($package.backendBootstrapVersion)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "GODOT_PLUGIN_VERSION=$($package.godotPluginVersion)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Download and verify backend bootstrap
         run: npm run prepare:backend-bootstrap
+
+      - name: Download and verify Godot plugin
+        run: npm run prepare:godot-plugin
 
       - name: Run tests
         run: npm test
@@ -94,6 +101,12 @@ jobs:
           if ((Get-FileHash -LiteralPath $executablePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $manifest.executable.sha256) {
             throw "Packaged backend executable SHA-256 verification failed."
           }
+          if (
+            $manifest.minPluginProtocolVersion -ne 1 `
+            -or $manifest.maxPluginProtocolVersion -ne 1
+          ) {
+            throw "Packaged backend does not support the bundled Godot plugin protocol."
+          }
           $files = @(Get-ChildItem -LiteralPath $backendDir -File)
           if ($files.Count -ne 2) {
             throw "Packaged backend bootstrap must contain exactly the EXE and manifest."
@@ -115,6 +128,29 @@ jobs:
             -or "secret-store" -notin $passedChecks
           ) {
             throw "Packaged backend self-test identity or required checks did not match the manifest."
+          }
+
+      - name: Verify packaged Godot plugin
+        shell: pwsh
+        run: |
+          $pluginDir = Join-Path "release" "win-unpacked\resources\godot-plugin"
+          $manifestPath = Join-Path $pluginDir "plugin-manifest.json"
+          if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+            throw "Packaged Godot plugin manifest is missing."
+          }
+          $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+          $archivePath = Join-Path $pluginDir $manifest.archive.fileName
+          if ($manifest.pluginVersion -ne $env:GODOT_PLUGIN_VERSION) {
+            throw "Packaged Godot plugin version does not match package.json."
+          }
+          if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf)) {
+            throw "Packaged Godot plugin archive is missing."
+          }
+          if ((Get-Item -LiteralPath $archivePath).Length -ne $manifest.archive.size) {
+            throw "Packaged Godot plugin archive size verification failed."
+          }
+          if ((Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $manifest.archive.sha256) {
+            throw "Packaged Godot plugin archive SHA-256 verification failed."
           }
 
       - name: Verify updater metadata
