@@ -4,7 +4,7 @@ vi.mock("electron", (): object => ({
 	app: {
 		getPath: (): string => "C:\\temp",
 		getAppPath: (): string => "C:\\repo",
-		getVersion: (): string => "1.0.3",
+		getVersion: (): string => "1.0.4",
 		isPackaged: false
 	},
 	BrowserWindow: {
@@ -23,6 +23,7 @@ vi.mock("electron", (): object => ({
 
 import {
 	inspectZipEntries,
+	isGodotProcessName,
 	updateEditorPluginEnabled
 } from "@main/services/godot-projects";
 
@@ -95,5 +96,14 @@ describe("Godot project plugin management", () => {
 		expect(() => inspectZipEntries(
 			createCentralDirectoryOnlyZip("C:/outside.txt")
 		)).toThrow(/unsafe path/u);
+	});
+
+	it("recognizes Godot editor process names without treating unrelated processes as Godot", () => {
+		expect(isGodotProcessName("Godot_v4.4-stable_win64.exe")).toBe(true);
+		expect(isGodotProcessName("Godot.exe")).toBe(true);
+		expect(isGodotProcessName("godot4.exe")).toBe(true);
+		expect(isGodotProcessName("godot-helper.exe")).toBe(true);
+		expect(isGodotProcessName("notgodot.exe")).toBe(false);
+		expect(isGodotProcessName("godotized.exe")).toBe(false);
 	});
 });

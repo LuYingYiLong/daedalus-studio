@@ -219,6 +219,7 @@ declare global {
 		| "disabled"
 		| "modified"
 		| "pending"
+		| "pending_restart"
 		| "failed";
 
 	interface GodotProjectInfo {

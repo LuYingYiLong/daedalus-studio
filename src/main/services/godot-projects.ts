@@ -1,6 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { execFile } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import {
+	cp,
 	mkdir,
 	readFile,
 	realpath,
@@ -15,10 +17,11 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 
 const PLUGIN_RESOURCE_PATH: string = "res://addons/godot_daedalus/plugin.cfg";
 const PLUGIN_RELATIVE_ROOT: string = "addons/godot_daedalus";
-const PROJECT_STATE_SCHEMA_VERSION: 1 = 1;
+const PROJECT_STATE_SCHEMA_VERSION: 2 = 2;
 const MAX_ARCHIVE_BYTES: number = 64 * 1024 * 1024;
 const MAX_FILE_COUNT: number = 2_000;
 const MAX_EXTRACTED_BYTES: number = 128 * 1024 * 1024;
+const PENDING_OPERATION_RETRY_MS: number = 5_000;
 
 export type GodotProjectPluginStatus =
 	| "not_installed"
@@ -27,6 +30,7 @@ export type GodotProjectPluginStatus =
 	| "disabled"
 	| "modified"
 	| "pending"
+	| "pending_restart"
 	| "failed";
 
 export type GodotProjectInfo = {
@@ -80,10 +84,20 @@ type InstalledIntegrityManifest = {
 	files: PluginFileManifest[];
 };
 
+type PendingPluginOperation = {
+	kind: "install_or_upgrade" | "uninstall" | "set_enabled";
+	createdAt: string;
+	allowModified?: boolean;
+	enabled?: boolean;
+	pluginVersion?: string;
+	stagedPluginPath?: string;
+};
+
 type ProjectState = {
-	schemaVersion: 1;
+	schemaVersion: 2;
 	manualProjectPaths: string[];
 	pendingErrors: Record<string, string>;
+	pendingOperations: Record<string, PendingPluginOperation>;
 };
 
 type ZipEntry = {
@@ -411,16 +425,87 @@ function compareVersions(left: string, right: string): number {
 	return 0;
 }
 
+function parsePendingOperations(value: unknown): Record<string, PendingPluginOperation> {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		return {};
+	}
+	const operations: Record<string, PendingPluginOperation> = {};
+	for (const [projectPath, candidate] of Object.entries(value)) {
+		if (!isAbsolute(projectPath) || typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) {
+			continue;
+		}
+		const record: Record<string, unknown> = candidate as Record<string, unknown>;
+		const kind: unknown = record.kind;
+		if (
+			(kind !== "install_or_upgrade" && kind !== "uninstall" && kind !== "set_enabled")
+			|| typeof record.createdAt !== "string"
+		) {
+			continue;
+		}
+		if (kind === "install_or_upgrade" && (typeof record.stagedPluginPath !== "string" || !isAbsolute(record.stagedPluginPath))) {
+			continue;
+		}
+		if (kind === "set_enabled" && typeof record.enabled !== "boolean") {
+			continue;
+		}
+		operations[projectPath] = {
+			kind,
+			createdAt: record.createdAt,
+			...(typeof record.allowModified === "boolean" ? { allowModified: record.allowModified } : {}),
+			...(typeof record.enabled === "boolean" ? { enabled: record.enabled } : {}),
+			...(typeof record.pluginVersion === "string" ? { pluginVersion: record.pluginVersion } : {}),
+			...(typeof record.stagedPluginPath === "string" ? { stagedPluginPath: record.stagedPluginPath } : {})
+		};
+	}
+	return operations;
+}
+
+export function isGodotProcessName(name: string): boolean {
+	return /^godot(?:[_.-]|\d|\.exe$)/iu.test(name.trim());
+}
+
+async function isGodotEditorRunning(): Promise<boolean> {
+	if (process.platform !== "win32") {
+		return false;
+	}
+	return await new Promise<boolean>((resolveRunning): void => {
+		execFile(
+			"tasklist.exe",
+			["/FO", "CSV", "/NH"],
+			{ windowsHide: true, maxBuffer: 512 * 1024 },
+			(error: Error | null, stdout: string): void => {
+				if (error !== null) {
+					// An unknown editor state must never permit an in-place plugin replacement.
+					resolveRunning(true);
+					return;
+				}
+				const rows: string[] = stdout.split(/\r?\n/u);
+				resolveRunning(rows.some((row: string): boolean => {
+					const match: RegExpMatchArray | null = row.match(/^"([^"]+)"(?:,|$)/u);
+					return match !== null && isGodotProcessName(match[1] ?? "");
+				}));
+			}
+		);
+	});
+}
+
 class GodotProjectsService {
 	private state: ProjectState = {
 		schemaVersion: PROJECT_STATE_SCHEMA_VERSION,
 		manualProjectPaths: [],
-		pendingErrors: {}
+		pendingErrors: {},
+		pendingOperations: {}
 	};
 	private loaded: boolean = false;
+	private pendingOperationTimer: NodeJS.Timeout | undefined;
+	private pendingOperationRun: Promise<void> | undefined;
 
 	private getStatePath(): string {
 		return join(app.getPath("userData"), "godot-projects.json");
+	}
+
+	private getPluginStagingRoot(): string {
+		return join(app.getPath("userData"), "godot-plugin-staging");
 	}
 
 	private getBundleRoot(): string {
@@ -437,9 +522,9 @@ class GodotProjectsService {
 		try {
 			const value: unknown = JSON.parse(await readFile(this.getStatePath(), "utf8")) as unknown;
 			const record: Record<string, unknown> = requireRecord(value, "Godot projects state");
-			if (record.schemaVersion === 1 && Array.isArray(record.manualProjectPaths)) {
+			if ((record.schemaVersion === 1 || record.schemaVersion === 2) && Array.isArray(record.manualProjectPaths)) {
 				this.state = {
-					schemaVersion: 1,
+					schemaVersion: PROJECT_STATE_SCHEMA_VERSION,
 					manualProjectPaths: record.manualProjectPaths.filter(
 						(item: unknown): item is string => typeof item === "string" && isAbsolute(item)
 					),
@@ -447,12 +532,14 @@ class GodotProjectsService {
 						&& record.pendingErrors !== null
 						&& !Array.isArray(record.pendingErrors)
 						? record.pendingErrors as Record<string, string>
-						: {}
+						: {},
+					pendingOperations: parsePendingOperations(record.pendingOperations)
 				};
 			}
 		} catch {
 			// A missing or invalid state file starts with an empty discovery state.
 		}
+		this.syncPendingOperationRetry();
 	}
 
 	private async saveState(): Promise<void> {
@@ -461,6 +548,31 @@ class GodotProjectsService {
 		const temporaryPath: string = `${statePath}.${process.pid}.tmp`;
 		await writeFile(temporaryPath, `${JSON.stringify(this.state, null, 2)}\n`, "utf8");
 		await rename(temporaryPath, statePath);
+		this.syncPendingOperationRetry();
+	}
+
+	private syncPendingOperationRetry(): void {
+		if (Object.keys(this.state.pendingOperations).length === 0) {
+			if (this.pendingOperationTimer !== undefined) {
+				clearInterval(this.pendingOperationTimer);
+				this.pendingOperationTimer = undefined;
+			}
+			return;
+		}
+		if (this.pendingOperationTimer !== undefined) {
+			return;
+		}
+		this.pendingOperationTimer = setInterval((): void => {
+			if (this.pendingOperationRun !== undefined) {
+				return;
+			}
+			this.pendingOperationRun = this.applyPendingOperations()
+				.catch((): void => {})
+				.finally((): void => {
+					this.pendingOperationRun = undefined;
+				});
+		}, PENDING_OPERATION_RETRY_MS);
+		this.pendingOperationTimer.unref();
 	}
 
 	private async loadPackage(): Promise<{
@@ -587,17 +699,15 @@ class GodotProjectsService {
 		return Array.from(normalizedByKey.values());
 	}
 
-	private async verifyInstalledFiles(
-		projectPath: string,
-		manifest: PluginPackageManifest
-	): Promise<boolean> {
+	private async verifyPluginFiles(pluginRoot: string, manifest: PluginPackageManifest): Promise<boolean> {
+		const resolvedPluginRoot: string = resolve(pluginRoot);
 		for (const file of manifest.files) {
 			const relativePluginPath: string = relative(
 				PLUGIN_RELATIVE_ROOT,
 				file.path
 			);
-			const installedPath: string = resolve(projectPath, PLUGIN_RELATIVE_ROOT, relativePluginPath);
-			if (!isInside(resolve(projectPath, PLUGIN_RELATIVE_ROOT), installedPath)) {
+			const installedPath: string = resolve(resolvedPluginRoot, relativePluginPath);
+			if (!isInside(resolvedPluginRoot, installedPath)) {
 				return false;
 			}
 			try {
@@ -610,6 +720,58 @@ class GodotProjectsService {
 			}
 		}
 		return true;
+	}
+
+	private async verifyInstalledFiles(
+		projectPath: string,
+		manifest: PluginPackageManifest
+	): Promise<boolean> {
+		return await this.verifyPluginFiles(join(projectPath, PLUGIN_RELATIVE_ROOT), manifest);
+	}
+
+	private async stagePluginPackage(
+		pluginPackage: { manifest: PluginPackageManifest; archive: Buffer }
+	): Promise<string> {
+		const stagingRoot: string = this.getPluginStagingRoot();
+		const operationRoot: string = join(
+			stagingRoot,
+			`${pluginPackage.manifest.pluginVersion}-${process.pid}-${randomBytes(6).toString("hex")}`
+		);
+		const stagedPluginPath: string = join(operationRoot, PLUGIN_RELATIVE_ROOT);
+		try {
+			await mkdir(operationRoot, { recursive: true });
+			await extractZip(pluginPackage.archive, operationRoot);
+			if (!existsSync(join(stagedPluginPath, "plugin.cfg")) || !await this.verifyPluginFiles(stagedPluginPath, pluginPackage.manifest)) {
+				throw new Error("Staged Godot plugin failed integrity verification.");
+			}
+			return stagedPluginPath;
+		} catch (error: unknown) {
+			await rm(operationRoot, { recursive: true, force: true }).catch((): void => {});
+			throw error;
+		}
+	}
+
+	private async removeStagedPlugin(stagedPluginPath: string | undefined): Promise<void> {
+		if (stagedPluginPath === undefined) {
+			return;
+		}
+		const stagingRoot: string = resolve(this.getPluginStagingRoot());
+		const operationRoot: string = dirname(dirname(resolve(stagedPluginPath)));
+		if (!isInside(stagingRoot, operationRoot) || operationRoot === stagingRoot) {
+			return;
+		}
+		await rm(operationRoot, { recursive: true, force: true }).catch((): void => {});
+	}
+
+	private async replacePendingOperation(
+		projectPath: string,
+		operation: PendingPluginOperation
+	): Promise<void> {
+		const previous: PendingPluginOperation | undefined = this.state.pendingOperations[projectPath];
+		this.state.pendingOperations[projectPath] = operation;
+		delete this.state.pendingErrors[projectPath];
+		await this.saveState();
+		await this.removeStagedPlugin(previous?.stagedPluginPath);
 	}
 
 	private async verifyInstalledVersionIntegrity(
@@ -672,7 +834,10 @@ class GodotProjectsService {
 				status = "modified";
 			}
 		}
-		if (this.state.pendingErrors[projectPath] !== undefined && status !== "modified") {
+		if (this.state.pendingOperations[projectPath] !== undefined) {
+			status = "pending_restart";
+			errorMessage = null;
+		} else if (this.state.pendingErrors[projectPath] !== undefined && status !== "modified") {
 			status = "pending";
 		}
 		return {
@@ -747,6 +912,70 @@ class GodotProjectsService {
 		await rename(temporaryPath, projectFile);
 	}
 
+	private async applyInstallOrUpgrade(
+		projectPath: string,
+		pluginPackage: { manifest: PluginPackageManifest; archive: Buffer },
+		enabled: boolean,
+		externalStagedPluginPath?: string
+	): Promise<void> {
+		const projectFile: string = join(projectPath, "project.godot");
+		const originalProjectText: string = await readFile(projectFile, "utf8");
+		const addonsRoot: string = join(projectPath, "addons");
+		const operationId: string = `${process.pid}-${randomBytes(6).toString("hex")}`;
+		const stagingRoot: string = join(addonsRoot, `.godot_daedalus.staging-${operationId}`);
+		const stagedPlugin: string = join(stagingRoot, PLUGIN_RELATIVE_ROOT);
+		const targetPlugin: string = join(projectPath, PLUGIN_RELATIVE_ROOT);
+		const backupPlugin: string = join(addonsRoot, `.godot_daedalus.backup-${operationId}`);
+		let movedOriginal: boolean = false;
+		let installedCandidate: boolean = false;
+		let projectFileUpdated: boolean = false;
+		try {
+			await mkdir(stagingRoot, { recursive: true });
+			if (externalStagedPluginPath === undefined) {
+				await extractZip(pluginPackage.archive, stagingRoot);
+			} else {
+				const stagingBase: string = await realpath(this.getPluginStagingRoot());
+				const source: string = await realpath(externalStagedPluginPath);
+				if (!isInside(stagingBase, source) || basename(source) !== "godot_daedalus") {
+					throw new Error("Staged Godot plugin is outside the managed staging directory.");
+				}
+				await cp(source, stagedPlugin, { recursive: true, errorOnExist: true, force: false });
+			}
+			if (!existsSync(join(stagedPlugin, "plugin.cfg")) || !await this.verifyPluginFiles(stagedPlugin, pluginPackage.manifest)) {
+				throw new Error("Plugin package failed integrity verification before installation.");
+			}
+			await mkdir(addonsRoot, { recursive: true });
+			if (existsSync(targetPlugin)) {
+				await rename(targetPlugin, backupPlugin);
+				movedOriginal = true;
+			}
+			await rename(stagedPlugin, targetPlugin);
+			installedCandidate = true;
+			if (await readFile(projectFile, "utf8") !== originalProjectText) {
+				throw new Error("project.godot changed while the plugin update was being prepared.");
+			}
+			await this.writeProjectFileAtomic(
+				projectFile,
+				updateEditorPluginEnabled(originalProjectText, PLUGIN_RESOURCE_PATH, enabled)
+			);
+			projectFileUpdated = true;
+			await rm(backupPlugin, { recursive: true, force: true });
+		} catch (error: unknown) {
+			if (installedCandidate) {
+				await rm(targetPlugin, { recursive: true, force: true }).catch((): void => {});
+			}
+			if (movedOriginal) {
+				await rename(backupPlugin, targetPlugin).catch((): void => {});
+			}
+			if (projectFileUpdated) {
+				await this.writeProjectFileAtomic(projectFile, originalProjectText).catch((): void => {});
+			}
+			throw error;
+		} finally {
+			await rm(stagingRoot, { recursive: true, force: true }).catch((): void => {});
+		}
+	}
+
 	private async installOrUpgrade(projectPathInput: string, allowModified: boolean): Promise<GodotProjectScanResult> {
 		const projectPath: string | null = await this.normalizeProjectPath(projectPathInput);
 		if (projectPath === null) {
@@ -765,66 +994,38 @@ class GodotProjectsService {
 				`Godot ${pluginPackage.manifest.minGodotVersion} or newer is required for this plugin.`
 			);
 		}
-		const projectFile: string = join(projectPath, "project.godot");
-		const originalProjectText: string = await readFile(projectFile, "utf8");
-		const wasEnabled: boolean = current.pluginVersion === null ? true : current.enabled;
-		const addonsRoot: string = join(projectPath, "addons");
-		const operationId: string = `${process.pid}-${randomBytes(6).toString("hex")}`;
-		const stagingRoot: string = join(addonsRoot, `.godot_daedalus.staging-${operationId}`);
-		const stagedPlugin: string = join(stagingRoot, PLUGIN_RELATIVE_ROOT);
-		const targetPlugin: string = join(projectPath, PLUGIN_RELATIVE_ROOT);
-		const backupPlugin: string = join(addonsRoot, `.godot_daedalus.backup-${operationId}`);
-		let movedOriginal: boolean = false;
-		let installedCandidate: boolean = false;
-		let projectFileUpdated: boolean = false;
+		const enabled: boolean = current.pluginVersion === null ? true : current.enabled;
+		if (await isGodotEditorRunning()) {
+			const stagedPluginPath: string = await this.stagePluginPackage(pluginPackage);
+			await this.replacePendingOperation(projectPath, {
+				kind: "install_or_upgrade",
+				createdAt: new Date().toISOString(),
+				allowModified,
+				enabled,
+				pluginVersion: pluginPackage.manifest.pluginVersion,
+				stagedPluginPath
+			});
+			return await this.scan();
+		}
 		try {
-			await mkdir(stagingRoot, { recursive: true });
-			await extractZip(pluginPackage.archive, stagingRoot);
-			if (!existsSync(join(stagedPlugin, "plugin.cfg"))) {
-				throw new Error("Plugin package does not contain plugin.cfg.");
-			}
-			for (const file of pluginPackage.manifest.files) {
-				const stagedPath: string = resolve(stagingRoot, file.path);
-				const content: Buffer = await readFile(stagedPath);
-				if (content.length !== file.size || sha256(content) !== file.sha256) {
-					throw new Error(`Plugin package file failed verification: ${file.path}`);
-				}
-			}
-			await mkdir(addonsRoot, { recursive: true });
-			if (existsSync(targetPlugin)) {
-				await rename(targetPlugin, backupPlugin);
-				movedOriginal = true;
-			}
-			await rename(stagedPlugin, targetPlugin);
-			installedCandidate = true;
-			if (await readFile(projectFile, "utf8") !== originalProjectText) {
-				throw new Error("project.godot changed while the plugin update was being prepared.");
-			}
-			await this.writeProjectFileAtomic(
-				projectFile,
-				updateEditorPluginEnabled(originalProjectText, PLUGIN_RESOURCE_PATH, wasEnabled)
-			);
-			projectFileUpdated = true;
-			await rm(backupPlugin, { recursive: true, force: true });
+			await this.applyInstallOrUpgrade(projectPath, pluginPackage, enabled);
 			delete this.state.pendingErrors[projectPath];
 			await this.saveState();
 		} catch (error: unknown) {
-			if (installedCandidate) {
-				await rm(targetPlugin, { recursive: true, force: true }).catch((): void => {});
-			}
-			if (movedOriginal) {
-				await rename(backupPlugin, targetPlugin).catch((): void => {});
-			}
-			if (projectFileUpdated) {
-				await this.writeProjectFileAtomic(projectFile, originalProjectText).catch((): void => {});
-			}
 			this.state.pendingErrors[projectPath] = error instanceof Error ? error.message : String(error);
 			await this.saveState().catch((): void => {});
 			throw error;
-		} finally {
-			await rm(stagingRoot, { recursive: true, force: true }).catch((): void => {});
 		}
 		return await this.scan();
+	}
+
+	private async applySetEnabled(projectPath: string, enabled: boolean): Promise<void> {
+		const projectFile: string = join(projectPath, "project.godot");
+		const original: string = await readFile(projectFile, "utf8");
+		await this.writeProjectFileAtomic(
+			projectFile,
+			updateEditorPluginEnabled(original, PLUGIN_RESOURCE_PATH, enabled)
+		);
 	}
 
 	public async setEnabled(projectPathInput: string, enabled: boolean): Promise<GodotProjectScanResult> {
@@ -832,25 +1033,26 @@ class GodotProjectsService {
 		if (projectPath === null || !existsSync(join(projectPath, PLUGIN_RELATIVE_ROOT, "plugin.cfg"))) {
 			throw new Error("Godot Daedalus is not installed in this project.");
 		}
-		const projectFile: string = join(projectPath, "project.godot");
-		const original: string = await readFile(projectFile, "utf8");
-		await this.writeProjectFileAtomic(
-			projectFile,
-			updateEditorPluginEnabled(original, PLUGIN_RESOURCE_PATH, enabled)
-		);
+		if (await isGodotEditorRunning()) {
+			await this.replacePendingOperation(projectPath, {
+				kind: "set_enabled",
+				createdAt: new Date().toISOString(),
+				enabled
+			});
+			return await this.scan();
+		}
+		await this.applySetEnabled(projectPath, enabled);
+		delete this.state.pendingErrors[projectPath];
+		await this.saveState();
 		return await this.scan();
 	}
 
-	public async uninstall(projectPathInput: string): Promise<GodotProjectScanResult> {
-		const projectPath: string | null = await this.normalizeProjectPath(projectPathInput);
-		if (projectPath === null) {
-			throw new Error("Godot project is unavailable.");
-		}
+	private async applyUninstall(projectPath: string): Promise<void> {
 		const projectFile: string = join(projectPath, "project.godot");
 		const original: string = await readFile(projectFile, "utf8");
 		const targetPlugin: string = join(projectPath, PLUGIN_RELATIVE_ROOT);
 		if (!existsSync(targetPlugin)) {
-			return await this.scan();
+			return;
 		}
 		const trashPlugin: string = join(
 			projectPath,
@@ -871,8 +1073,6 @@ class GodotProjectsService {
 			);
 			projectFileUpdated = true;
 			await rm(trashPlugin, { recursive: true, force: true });
-			delete this.state.pendingErrors[projectPath];
-			await this.saveState();
 		} catch (error: unknown) {
 			if (moved) {
 				await rename(trashPlugin, targetPlugin).catch((): void => {});
@@ -880,6 +1080,30 @@ class GodotProjectsService {
 			if (projectFileUpdated) {
 				await this.writeProjectFileAtomic(projectFile, original).catch((): void => {});
 			}
+			throw error;
+		}
+	}
+
+	public async uninstall(projectPathInput: string): Promise<GodotProjectScanResult> {
+		const projectPath: string | null = await this.normalizeProjectPath(projectPathInput);
+		if (projectPath === null) {
+			throw new Error("Godot project is unavailable.");
+		}
+		if (!existsSync(join(projectPath, PLUGIN_RELATIVE_ROOT))) {
+			return await this.scan();
+		}
+		if (await isGodotEditorRunning()) {
+			await this.replacePendingOperation(projectPath, {
+				kind: "uninstall",
+				createdAt: new Date().toISOString()
+			});
+			return await this.scan();
+		}
+		try {
+			await this.applyUninstall(projectPath);
+			delete this.state.pendingErrors[projectPath];
+			await this.saveState();
+		} catch (error: unknown) {
 			this.state.pendingErrors[projectPath] = error instanceof Error ? error.message : String(error);
 			await this.saveState().catch((): void => {});
 			throw error;
@@ -902,8 +1126,60 @@ class GodotProjectsService {
 		return await this.scan();
 	}
 
+	private async applyPendingOperations(): Promise<void> {
+		await this.loadState();
+		const pendingEntries: Array<[string, PendingPluginOperation]> = Object.entries(this.state.pendingOperations);
+		if (pendingEntries.length === 0 || await isGodotEditorRunning()) {
+			return;
+		}
+		for (const [storedProjectPath, operation] of pendingEntries) {
+			const projectPath: string | null = await this.normalizeProjectPath(storedProjectPath);
+			if (projectPath === null) {
+				await this.removeStagedPlugin(operation.stagedPluginPath);
+				delete this.state.pendingOperations[storedProjectPath];
+				this.state.pendingErrors[storedProjectPath] = "Godot project is unavailable.";
+				continue;
+			}
+			try {
+				switch (operation.kind) {
+					case "install_or_upgrade": {
+						const pluginPackage = await this.loadPackage();
+						if (operation.pluginVersion !== pluginPackage.manifest.pluginVersion) {
+							await this.removeStagedPlugin(operation.stagedPluginPath);
+							const replacementStagedPluginPath: string = await this.stagePluginPackage(pluginPackage);
+							operation.pluginVersion = pluginPackage.manifest.pluginVersion;
+							operation.stagedPluginPath = replacementStagedPluginPath;
+						}
+						await this.applyInstallOrUpgrade(
+							projectPath,
+							pluginPackage,
+							operation.enabled ?? true,
+							operation.stagedPluginPath
+						);
+						break;
+					}
+					case "set_enabled":
+						await this.applySetEnabled(projectPath, operation.enabled ?? true);
+						break;
+					case "uninstall":
+						await this.applyUninstall(projectPath);
+						break;
+				}
+				await this.removeStagedPlugin(operation.stagedPluginPath);
+				delete this.state.pendingOperations[storedProjectPath];
+				delete this.state.pendingErrors[storedProjectPath];
+			} catch (error: unknown) {
+				this.state.pendingErrors[storedProjectPath] = error instanceof Error ? error.message : String(error);
+			}
+		}
+		await this.saveState();
+	}
+
 	public async retryPending(): Promise<GodotProjectScanResult> {
-		const pendingPaths: string[] = Object.keys(this.state.pendingErrors);
+		await this.loadState();
+		await this.applyPendingOperations();
+		const pendingPaths: string[] = Object.keys(this.state.pendingErrors)
+			.filter((projectPath: string): boolean => this.state.pendingOperations[projectPath] === undefined);
 		for (const projectPath of pendingPaths) {
 			try {
 				await this.installOrUpgrade(projectPath, false);
@@ -916,6 +1192,7 @@ class GodotProjectsService {
 
 	public async startupMaintenance(): Promise<void> {
 		await this.loadState();
+		await this.applyPendingOperations();
 		await this.upgradeAll().catch((): GodotProjectScanResult | undefined => undefined);
 	}
 

@@ -73,6 +73,7 @@ type GodotProjectPluginStatus =
 	| "disabled"
 	| "modified"
 	| "pending"
+	| "pending_restart"
 	| "failed";
 
 type GodotProjectScanResult = {

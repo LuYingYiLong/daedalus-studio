@@ -11,7 +11,7 @@ import {
 	Typography,
 	type TableProps
 } from "antd";
-import { useRequest } from "ahooks";
+import { useInterval, useRequest } from "ahooks";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
@@ -36,6 +36,7 @@ function statusColor(status: GodotProjectPluginStatus): string {
 			return "processing";
 		case "modified":
 		case "pending":
+		case "pending_restart":
 			return "warning";
 		case "failed":
 			return "error";
@@ -99,9 +100,17 @@ function GodotProjectsSettingsPage(): React.JSX.Element {
 					break;
 			}
 			setResult(next);
-			void message.success(t("settings.godotProjects.actionCompleted", {
-				defaultValue: "Godot project updated."
-			}));
+			const operationQueued: boolean = next.projects.some((item: GodotProjectInfo): boolean =>
+				item.status === "pending_restart" && (project === null || item.id === project.id)
+			);
+			void message.success(t(
+				operationQueued ? "settings.godotProjects.operationQueued" : "settings.godotProjects.actionCompleted",
+				{
+					defaultValue: operationQueued
+						? "Plugin change is staged. Close Godot and Studio will apply it automatically."
+						: "Godot project updated."
+				}
+			));
 		} catch (actionError: unknown) {
 			void message.error(actionError instanceof Error ? actionError.message : String(actionError));
 		} finally {
@@ -201,7 +210,16 @@ function GodotProjectsSettingsPage(): React.JSX.Element {
 		}
 	];
 
-	const hasPending: boolean = result?.projects.some((project: GodotProjectInfo): boolean => project.status === "pending") ?? false;
+	const hasPending: boolean = result?.projects.some((project: GodotProjectInfo): boolean =>
+		project.status === "pending" || project.status === "pending_restart"
+	) ?? false;
+	const hasPendingRestart: boolean = result?.projects.some((project: GodotProjectInfo): boolean =>
+		project.status === "pending_restart"
+	) ?? false;
+
+	useInterval((): void => {
+		void window.electronAPI.godotProjects.scan().then(setResult).catch((): void => {});
+	}, hasPendingRestart ? 5_000 : undefined);
 
 	return (
 		<section className={styles.page}>
@@ -231,6 +249,18 @@ function GodotProjectsSettingsPage(): React.JSX.Element {
 
 			{error !== undefined ? <Alert showIcon type="error" message={error.message} /> : null}
 			{result?.plugin.errorMessage ? <Alert showIcon type="error" message={result.plugin.errorMessage} /> : null}
+			{hasPendingRestart ? (
+				<Alert
+					showIcon
+					type="warning"
+					message={t("settings.godotProjects.pendingRestart", {
+						defaultValue: "Plugin changes are waiting for Godot to close."
+					})}
+					description={t("settings.godotProjects.pendingRestartDescription", {
+						defaultValue: "Studio has staged the plugin safely and will apply it automatically after all Godot editors have exited."
+					})}
+				/>
+			) : null}
 			{result?.plugin.available ? (
 				<Alert
 					showIcon

@@ -115,8 +115,7 @@ function createZip(entries) {
 
 function shouldInclude(relativePath) {
 	const normalized = relativePath.replaceAll("\\", "/");
-	return !normalized.endsWith(".import")
-		&& !normalized.startsWith("tests/")
+	return !normalized.startsWith("tests/")
 		&& normalized !== "AGENTS.md"
 		&& normalized !== "daedalus-integrity.json"
 		&& normalized !== "assets/icons/normalize_daedalus_icons.py"
@@ -143,6 +142,103 @@ async function collectFiles(directory) {
 		}
 	}
 	return entries.sort((left, right) => left.path.localeCompare(right.path));
+}
+
+function buildGodotUidPaths(entries) {
+	const pathByUid = new Map();
+	const uidByPath = new Map();
+	const register = (uid, resourcePath) => {
+		if (!uid || !resourcePath || pathByUid.has(uid)) {
+			return;
+		}
+		pathByUid.set(uid, resourcePath);
+		uidByPath.set(resourcePath, uid);
+	};
+
+	for (const entry of entries) {
+		const relativePath = entry.path.replace("addons/godot_daedalus/", "");
+		const resourcePath = `res://addons/godot_daedalus/${relativePath}`;
+		const content = entry.content.toString("utf8");
+		if (entry.path.endsWith(".uid")) {
+			register(content.trim(), resourcePath.slice(0, -4));
+			continue;
+		}
+		if (entry.path.endsWith(".tscn") || entry.path.endsWith(".tres")) {
+			register(content.match(/^\[(?:gd_scene|gd_resource).*?uid="(uid:\/\/[^"]+)"/mu)?.[1], resourcePath);
+			for (const line of content.split(/\r?\n/u)) {
+				if (!line.startsWith("[ext_resource")) {
+					continue;
+				}
+				register(
+					line.match(/\buid="(uid:\/\/[^"]+)"/u)?.[1],
+					line.match(/\bpath="([^"]+)"/u)?.[1]
+				);
+			}
+		}
+	}
+
+	return { pathByUid, uidByPath };
+}
+
+function normalizeGodotResourceReferences(entries) {
+	const { pathByUid, uidByPath } = buildGodotUidPaths(entries);
+	const normalizedImports = entries.map((entry) => {
+		if (!entry.path.endsWith(".import")) {
+			return entry;
+		}
+		const content = entry.content.toString("utf8");
+		const sourcePath = content.match(/^source_file="([^"]+)"/mu)?.[1];
+		const expectedUid = sourcePath === undefined ? undefined : uidByPath.get(sourcePath);
+		const normalizedUid = expectedUid === undefined
+			? content
+			: content.replace(/^uid="uid:\/\/[^"]+"/mu, `uid="${expectedUid}"`);
+		const normalized = normalizedUid
+			// Preserve the importer for static SVG/TTF preloads, but never ship stale cache.
+			.replace(/^path="[^"]+"\r?\n/mu, "")
+			.replace(/^metadata=\{[\s\S]*?^\}\r?\n?/mu, "")
+			.replace(/^dest_files=\[[^\r\n]*\]\r?\n/mu, "");
+		return { ...entry, content: Buffer.from(normalized, "utf8") };
+	});
+	const portableSceneResources = normalizedImports.map((entry) => {
+		if (!entry.path.endsWith(".tscn") && !entry.path.endsWith(".tres")) {
+			return entry;
+		}
+		const normalized = entry.content
+			.toString("utf8")
+			.replace(/(\[ext_resource[^\r\n]*?)\suid="uid:\/\/[^"]+"/gu, "$1");
+		return { ...entry, content: Buffer.from(normalized, "utf8") };
+	});
+
+	const unresolvedUids = new Set();
+	const normalizedEntries = portableSceneResources.map((entry) => {
+		if (!entry.path.endsWith(".gd")) {
+			return entry;
+		}
+		const normalized = entry.content.toString("utf8").replace(/preload\("(uid:\/\/[^"]+)"\)/gu, (match, uid) => {
+			const resourcePath = pathByUid.get(uid);
+			if (resourcePath === undefined) {
+				unresolvedUids.add(uid);
+				return match;
+			}
+			return `preload("${resourcePath}")`;
+		});
+		return { ...entry, content: Buffer.from(normalized, "utf8") };
+	});
+
+	if (unresolvedUids.size > 0) {
+		throw new Error(`Plugin contains UID-only preloads without a packaged resource path: ${[...unresolvedUids].sort().join(", ")}.`);
+	}
+	for (const entry of normalizedEntries) {
+		const content = entry.content.toString("utf8");
+		if ((entry.path.endsWith(".tscn") || entry.path.endsWith(".tres")) && /\[ext_resource[^\r\n]*\suid="uid:\/\//u.test(content)) {
+			throw new Error(`Plugin scene resource still has a UID-based external dependency: ${entry.path}.`);
+		}
+		if (entry.path.endsWith(".gd") && /preload\("uid:\/\//u.test(content)) {
+			throw new Error(`Plugin script still has a UID-only preload: ${entry.path}.`);
+		}
+	}
+
+	return normalizedEntries;
 }
 
 function readSourceCommit() {
@@ -231,7 +327,7 @@ async function main() {
 			`Plugin source version ${pluginVersion || "unknown"} does not match package.json godotPluginVersion ${packageManifest.godotPluginVersion}.`
 		);
 	}
-	const files = await collectFiles(sourceRoot);
+	const files = normalizeGodotResourceReferences(await collectFiles(sourceRoot));
 	if (!files.some((entry) => entry.path === "addons/godot_daedalus/plugin.cfg")) {
 		throw new Error("Godot plugin source does not contain plugin.cfg.");
 	}

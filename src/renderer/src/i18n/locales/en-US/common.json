@@ -564,6 +564,9 @@
       "empty": "No Godot projects were found.",
       "bundleReady": "Bundled plugin {{version}} is bound to Studio {{studioVersion}}.",
       "actionCompleted": "Godot project updated.",
+      "operationQueued": "Plugin change is staged. Close Godot and Studio will apply it automatically.",
+      "pendingRestart": "Plugin changes are waiting for Godot to close.",
+      "pendingRestartDescription": "Studio has staged the plugin safely and will apply it automatically after all Godot editors have exited.",
       "confirmRepair": "Replace the installed plugin with the bundled version?",
       "confirmUninstall": "Uninstall Godot Daedalus from this project?",
       "columns": {
@@ -590,6 +593,7 @@
         "disabled": "Disabled",
         "modified": "Modified",
         "pending": "Pending",
+        "pending_restart": "Waiting for Godot",
         "failed": "Failed"
       }
     },

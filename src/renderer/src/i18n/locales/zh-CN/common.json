@@ -564,6 +564,9 @@
       "empty": "没有发现 Godot 项目。",
       "bundleReady": "内置插件 {{version}} 已绑定到 Studio {{studioVersion}}。",
       "actionCompleted": "Godot 项目已更新。",
+      "operationQueued": "插件变更已安全暂存。关闭 Godot 后，Studio 会自动应用。",
+      "pendingRestart": "插件变更正等待 Godot 关闭。",
+      "pendingRestartDescription": "Studio 已安全暂存插件；所有 Godot 编辑器退出后将自动应用变更。",
       "confirmRepair": "要使用内置版本替换当前安装的插件吗？",
       "confirmUninstall": "要从该项目卸载 Godot Daedalus 吗？",
       "columns": {
@@ -590,6 +593,7 @@
         "disabled": "已禁用",
         "modified": "已修改",
         "pending": "待处理",
+        "pending_restart": "等待 Godot 关闭",
         "failed": "失败"
       }
     },

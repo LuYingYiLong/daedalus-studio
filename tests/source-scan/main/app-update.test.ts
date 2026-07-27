@@ -31,6 +31,11 @@ describe("app update source", () => {
 		expect(serviceSource).toContain("allowPrerelease = false");
 	});
 
+	it("does not enable client updates for unpacked builds without update metadata", () => {
+		expect(serviceSource).toContain("app-update.yml");
+		expect(serviceSource).toContain("existsSync(join(process.resourcesPath, \"app-update.yml\"))");
+	});
+
 	it("registers main-process app update IPC and startup check", () => {
 		expect(mainSource).toContain("appUpdateService.registerIpc();");
 		expect(mainSource).toContain("checkForUpdatesIfEnabled(preferences.autoCheckForUpdates)");

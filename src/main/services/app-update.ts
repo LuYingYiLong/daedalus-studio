@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import electronUpdater from "electron-updater";
 import type { ProgressInfo, UpdateInfo } from "electron-updater";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { backendManager } from "./backend-manager";
 import { compareSemanticVersions } from "./backend-binary-manifest";
 import {
@@ -130,7 +132,10 @@ function createNoopAutoUpdater(): AppUpdaterLike {
 }
 
 function getDefaultIsPackaged(): boolean {
-	return app?.isPackaged === true;
+	if (app?.isPackaged !== true || typeof process.resourcesPath !== "string") {
+		return false;
+	}
+	return existsSync(join(process.resourcesPath, "app-update.yml"));
 }
 
 function getDefaultCurrentVersion(): string {
@@ -159,7 +164,7 @@ function getErrorMessage(error: Error): string {
 }
 
 function getUnsupportedClientMessage(): string {
-	return "Client updates are only available in packaged builds.";
+	return "Client updates are only available in installed builds that include update metadata.";
 }
 
 function isVersionNewer(candidateVersion: string, currentVersion: string): boolean {
