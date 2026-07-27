@@ -31,10 +31,6 @@ function getStepTitle(step: WorkflowTodoStep, index: number, t: TFunction<"commo
 	return step.title.trim() || step.text?.trim() || t("workflowTodo.stepFallback", { index: index + 1 });
 }
 
-function isRunningStep(status: string): boolean {
-	return status === "running" || status === "in_progress" || status === "paused";
-}
-
 function isDoneStep(status: string): boolean {
 	return status === "done" || status === "completed" || status === "success";
 }
@@ -43,24 +39,12 @@ function isFailedStep(status: string): boolean {
 	return status === "failed" || status === "error" || status === "cancelled";
 }
 
-function getCurrentStepNumber(steps: WorkflowTodoStep[]): number {
-	const runningIndex: number = steps.findIndex((step: WorkflowTodoStep): boolean => isRunningStep(step.status));
-	if (runningIndex >= 0) {
-		return runningIndex + 1;
-	}
-
-	const firstPendingIndex: number = steps.findIndex((step: WorkflowTodoStep): boolean => !isDoneStep(step.status));
-	return firstPendingIndex >= 0 ? firstPendingIndex + 1 : steps.length;
+function isFinishedStep(status: string): boolean {
+	return isDoneStep(status) || isFailedStep(status);
 }
 
-function getProgressStatus(steps: WorkflowTodoStep[]): "normal" | "exception" | "success" {
-	if (steps.some((step: WorkflowTodoStep): boolean => isFailedStep(step.status))) {
-		return "exception";
-	}
-	if (steps.every((step: WorkflowTodoStep): boolean => isDoneStep(step.status))) {
-		return "success";
-	}
-	return "normal";
+function getFinishedStepCount(steps: WorkflowTodoStep[]): number {
+	return steps.filter((step: WorkflowTodoStep): boolean => isFinishedStep(step.status)).length;
 }
 
 function FloatingWorkflowTodoPanel({ snapshot, fileChangeSummary, onDismiss }: FloatingWorkflowTodoPanelProps): React.JSX.Element | null {
@@ -70,8 +54,8 @@ function FloatingWorkflowTodoPanel({ snapshot, fileChangeSummary, onDismiss }: F
 		return null;
 	}
 
-	const currentStepNumber: number = getCurrentStepNumber(steps);
-	const percent: number = Math.max(0, Math.min(100, Math.round((currentStepNumber / steps.length) * 100)));
+	const finishedStepCount: number = getFinishedStepCount(steps);
+	const percent: number = Math.max(0, Math.min(100, Math.round((finishedStepCount / steps.length) * 100)));
 	const popoverContent: React.JSX.Element = (
 		<div className={styles.popoverContent}>
 			<div className={styles.detailSteps}>
@@ -121,10 +105,10 @@ function FloatingWorkflowTodoPanel({ snapshot, fileChangeSummary, onDismiss }: F
 						size={14}
 						percent={percent}
 						showInfo={false}
-						status={getProgressStatus(steps)}
+						strokeColor="var(--ds-accent)"
 						strokeWidth={10}
 					/>
-					<Typography.Text className={styles.phaseText}>{currentStepNumber}/{steps.length}</Typography.Text>
+					<Typography.Text className={styles.phaseText}>{finishedStepCount}/{steps.length}</Typography.Text>
 				</button>
 			</Popover>
 			<span className={styles.diffSummary} aria-label={t("workflowTodo.aria.fileChanges")}>
