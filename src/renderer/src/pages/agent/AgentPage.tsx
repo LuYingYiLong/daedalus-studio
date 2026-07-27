@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Button, Divider, Dropdown, Empty, Input, message as antdMessage, Modal, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
-import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, SessionTimelineNavigationEntry, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode, PendingApproval } from "@/api/approval-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
@@ -12,6 +12,7 @@ import type { SkillSummary } from "@/api/skill-api";
 import { fetchSessionOverview, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import MessageList, { type MessageListHandle } from "@/features/chat/MessageList";
+import ConversationAnchorNavigator from "@/features/chat/ConversationAnchorNavigator";
 import Composer from "@/features/composer/Composer";
 import FloatingWorkflowTodoPanel, { type WorkflowFileChangeSummary } from "@/features/composer/FloatingWorkflowTodoPanel";
 import MessageQueuePanel from "@/features/composer/MessageQueuePanel";
@@ -174,6 +175,7 @@ type AgentPageProps = {
 	activeWorkspaceId: string | null;
 	chatTitle: string;
 	timelineBlocks: TimelineBlock[];
+	timelineNavigationEntries: SessionTimelineNavigationEntry[];
 	isSessionLoading: boolean;
 	sessionError: string | null;
 	hasMoreBefore: boolean;
@@ -239,6 +241,7 @@ type AgentPageProps = {
 	onWorkspaceUpdate: (workspace: WorkspaceConfig) => void;
 	onLoadMoreBefore: () => void;
 	onLoadMoreAfter: () => void;
+	onTimelineNavigationLoadEntry: (entry: SessionTimelineNavigationEntry) => Promise<void>;
 	onRetryEditStart: (requestId: string) => void;
 	onRetryEditCancel: (requestId: string) => void;
 	onRetryFromUserMessage: (payload: RetryUserMessagePayload) => Promise<boolean>;
@@ -284,6 +287,7 @@ function AgentPage({
 	activeWorkspaceId,
 	chatTitle,
 	timelineBlocks,
+	timelineNavigationEntries,
 	isSessionLoading,
 	sessionError,
 	hasMoreBefore,
@@ -349,6 +353,7 @@ function AgentPage({
 	onWorkspaceUpdate,
 	onLoadMoreBefore,
 	onLoadMoreAfter,
+	onTimelineNavigationLoadEntry,
 	onRetryEditStart,
 	onRetryEditCancel,
 	onRetryFromUserMessage,
@@ -412,6 +417,9 @@ function AgentPage({
 	const [bottomDockSize, setBottomDockSize] = useState<number>(BOTTOM_DOCK_DEFAULT_SIZE);
 	const [bottomDockLastOpenSize, setBottomDockLastOpenSize] = useState<number>(BOTTOM_DOCK_DEFAULT_SIZE);
 	const messageListRef = useRef<MessageListHandle | null>(null);
+	const [messageScrollContainer, setMessageScrollContainer] = useState<HTMLElement | null>(null);
+	const [activeTimelineEntryId, setActiveTimelineEntryId] = useState<string | null>(null);
+	const [pendingTimelineEntryId, setPendingTimelineEntryId] = useState<string | null>(null);
 	const scrollToBottomButtonRef = useRef<HTMLButtonElement | null>(null);
 	const scrollToBottomButtonVisibleRef = useRef<boolean>(false);
 	const workspaceForActions: WorkspaceConfig | null = activeWorkspace ?? (isHome ? homeWorkspace : null);
@@ -426,6 +434,22 @@ function AgentPage({
 		? godotLaunchExecutablePath.trim()
 		: null;
 	const showGodotSummaryActions: boolean = workspaceForActions !== null && effectiveGodotLaunchExecutablePath !== null && isGodotProject;
+
+	useEffect((): void => {
+		setActiveTimelineEntryId(null);
+		setPendingTimelineEntryId(null);
+	}, [activeSessionId]);
+
+	useEffect((): void => {
+		if (pendingTimelineEntryId === null || !timelineBlocks.some((block: TimelineBlock): boolean => block.id === pendingTimelineEntryId)) {
+			return;
+		}
+		window.requestAnimationFrame((): void => {
+			if (messageListRef.current?.scrollToEntry(pendingTimelineEntryId, "smooth") === true) {
+				setPendingTimelineEntryId(null);
+			}
+		});
+	}, [pendingTimelineEntryId, timelineBlocks]);
 	const filteredGodotSceneFiles: GodotSceneFile[] = useMemo((): GodotSceneFile[] => {
 		const query: string = godotSceneSearch.trim().toLowerCase();
 		if (query.length === 0) {
@@ -943,6 +967,14 @@ function AgentPage({
 		setScrollToBottomButtonVisible(false);
 	}, [setScrollToBottomButtonVisible]);
 
+	const handleTimelineNavigate = useCallback((entry: SessionTimelineNavigationEntry): void => {
+		if (messageListRef.current?.scrollToEntry(entry.entryId, "smooth") === true) {
+			return;
+		}
+		setPendingTimelineEntryId(entry.entryId);
+		void onTimelineNavigationLoadEntry(entry);
+	}, [onTimelineNavigationLoadEntry]);
+
 	const requestSideDockKind = useCallback((kind: DockPanelKind): void => {
 		dockActivationRequestIdRef.current += 1;
 		setSideDockActivationRequest({
@@ -1270,30 +1302,42 @@ function AgentPage({
 
 									<Divider size="small" />
 
-									{isHome ? (
-										<NewSessionHome workspace={homeWorkspace} errorMessage={sessionError} />
-									) : (
-										<MessageList
-											ref={messageListRef}
-											blocks={timelineBlocks}
-											isLoading={isSessionLoading}
-											errorMessage={sessionError}
-											hasMoreBefore={hasMoreBefore}
-											hasMoreAfter={hasMoreAfter}
-											isLoadingMoreBefore={isLoadingMoreBefore}
-											isLoadingMoreAfter={isLoadingMoreAfter}
-											initialScrollToBottomKey={initialScrollToBottomKey}
-											onLoadMoreBefore={onLoadMoreBefore}
-											onLoadMoreAfter={onLoadMoreAfter}
-											retryDisabled={retryDisabled}
-											activeRetryRequestId={activeRetryRequestId}
-											onRetryEditStart={onRetryEditStart}
-											onRetryEditCancel={onRetryEditCancel}
-											onRetryFromUserMessage={onRetryFromUserMessage}
-											onInlineDiffReview={openReviewPanel}
-											onAwayFromBottomChange={setScrollToBottomButtonVisible}
-										/>
-									)}
+									<div className={styles.chatBody}>
+										{isHome ? (
+											<NewSessionHome workspace={homeWorkspace} errorMessage={sessionError} />
+										) : (
+											<>
+												<MessageList
+													ref={messageListRef}
+													blocks={timelineBlocks}
+													isLoading={isSessionLoading}
+													errorMessage={sessionError}
+													hasMoreBefore={hasMoreBefore}
+													hasMoreAfter={hasMoreAfter}
+													isLoadingMoreBefore={isLoadingMoreBefore}
+													isLoadingMoreAfter={isLoadingMoreAfter}
+													initialScrollToBottomKey={initialScrollToBottomKey}
+													onLoadMoreBefore={onLoadMoreBefore}
+													onLoadMoreAfter={onLoadMoreAfter}
+													retryDisabled={retryDisabled}
+													activeRetryRequestId={activeRetryRequestId}
+													onRetryEditStart={onRetryEditStart}
+													onRetryEditCancel={onRetryEditCancel}
+													onRetryFromUserMessage={onRetryFromUserMessage}
+													onInlineDiffReview={openReviewPanel}
+													onAwayFromBottomChange={setScrollToBottomButtonVisible}
+													onActiveUserEntryChange={setActiveTimelineEntryId}
+													onScrollContainerReady={setMessageScrollContainer}
+												/>
+												<ConversationAnchorNavigator
+													entries={timelineNavigationEntries}
+													activeEntryId={activeTimelineEntryId}
+													scrollContainer={messageScrollContainer}
+													onNavigate={handleTimelineNavigate}
+												/>
+											</>
+										)}
+									</div>
 
 									<footer className={styles.composer}>
 										{!isHome ? (

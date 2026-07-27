@@ -9,8 +9,8 @@ import useTimelineStreamBuffer from "./hooks/useTimelineStreamBuffer";
 import useWorkbenchPatchQueue, { mergeWorkbenchPatch } from "./hooks/useWorkbenchPatchQueue";
 import { fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
-import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, SessionOpenResult, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
-import { checkSessionIntegrity, createSession, deleteSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
+import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, SessionOpenResult, SessionTimelineNavigationEntry, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import { checkSessionIntegrity, createSession, deleteSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, fetchSessionTimelineIndex, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/chat/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import type { ProviderModelSelectionProvider } from "@/api/provider-api";
@@ -555,6 +555,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const recentSessionsRef = useLatest(recentSessions);
 	const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceConfig | null>(null);
 	const [timelinePage, setTimelinePage] = useState<TimelinePageState>(emptyTimelinePage);
+	const [timelineNavigationEntries, setTimelineNavigationEntries] = useState<SessionTimelineNavigationEntry[]>([]);
 	const [workbench, setWorkbench] = useState<WorkbenchSnapshot | null>(null);
 	const [sessionError, setSessionError] = useState<string | null>(null);
 	const [isSessionLoading, setIsSessionLoading] = useState(false);
@@ -2632,6 +2633,25 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			});
 	}, [activeSessionId, timelinePage.blockOffset, timelinePage.blocks.length, timelinePage.hasMoreAfter]);
 
+	const handleTimelineNavigationLoadEntry = useCallback(async (entry: SessionTimelineNavigationEntry): Promise<void> => {
+		if (activeSessionId === null || entry.blockOffset < 0) {
+			return;
+		}
+		const sessionId: string = activeSessionId;
+		const pageStart: number = Math.max(0, entry.blockOffset - 40);
+		try {
+			const result: SessionTimelineResult = await fetchSessionTimelineAfter(sessionId, pageStart, 100);
+			if (activeSessionIdRef.current !== sessionId || result.sessionId !== sessionId) {
+				return;
+			}
+			setTimelinePage(createTimelinePageFromTimelineResult(result));
+		} catch (error: unknown) {
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to load conversation turn";
+			setSessionError(errorMessage);
+			console.error("[App] load timeline navigation entry failed", error);
+		}
+	}, [activeSessionId]);
+
 	function patchContext(action: NonNullable<WorkbenchPatch["additionalContextAction"]>): void {
 		flushPendingComposerTextSync();
 		queueWorkbenchPatch({ additionalContextAction: action }, true);
@@ -2870,6 +2890,29 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		activeSessionTitleRef.current = chatTitle;
 	}, [chatTitle]);
 
+	useEffect((): (() => void) | void => {
+		if (activeSessionId === null) {
+			setTimelineNavigationEntries([]);
+			return;
+		}
+		let cancelled: boolean = false;
+		const sessionId: string = activeSessionId;
+		void fetchSessionTimelineIndex(sessionId)
+			.then((result) => {
+				if (!cancelled && activeSessionIdRef.current === sessionId && result.sessionId === sessionId) {
+					setTimelineNavigationEntries(result.entries);
+				}
+			})
+			.catch((error: unknown): void => {
+				if (!cancelled) {
+					console.warn("[App] load timeline navigation index failed", error);
+				}
+			});
+		return (): void => {
+			cancelled = true;
+		};
+	}, [activeSessionId, timelinePage.blockCount]);
+
 	useEffect((): void => {
 		pendingUserActionRequestIdsRef.current.clear();
 		clearNativeTaskNotificationAttention();
@@ -3106,6 +3149,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						activeWorkspaceId={activeSessionId === null ? homeDraft.workspaceId : currentSessionWorkspaceId}
 						chatTitle={chatTitle}
 						timelineBlocks={timelineBlocks}
+						timelineNavigationEntries={timelineNavigationEntries}
 						isSessionLoading={isSessionLoading}
 						sessionError={sessionError}
 						hasMoreBefore={timelinePage.hasMoreBefore}
@@ -3179,6 +3223,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						onWorkspaceUpdate={handleWorkspaceUpdate}
 						onLoadMoreBefore={handleLoadMoreBefore}
 						onLoadMoreAfter={handleLoadMoreAfter}
+						onTimelineNavigationLoadEntry={handleTimelineNavigationLoadEntry}
 						onRetryEditStart={(requestId: string): void => {
 							setActiveRetryRequestId(requestId);
 						}}

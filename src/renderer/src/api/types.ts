@@ -350,6 +350,21 @@ export type TimelineBodyPart =
 
 export type TimelineBlock = TimelineUserBlock | TimelineAssistantBlock;
 
+export type SessionTimelineNavigationEntry = {
+	entryId: string;
+	requestId: string;
+	blockOffset: number;
+	sentAtUtc: string;
+	preview: string;
+};
+
+export type SessionTimelineNavigationIndexResult = {
+	timelineIndex: true;
+	sessionId: string;
+	blockCount: number;
+	entries: SessionTimelineNavigationEntry[];
+};
+
 export type SessionOpenResult = {
 	opened: true;
 	metadata: SessionMetadata;

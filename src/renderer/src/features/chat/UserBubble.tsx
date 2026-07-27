@@ -143,7 +143,7 @@ function UserBubble({
 	const canShowEditButton: boolean = showEditButton === true && !isRetryEditing;
 
 	return (
-		<article className={styles.root} data-entry-id={entryId}>
+		<article id={entryId} className={styles.root} data-entry-id={entryId} data-entry-kind="user">
 			<div className={styles.bubbleStack}>
 				{isRetryEditing ? (
 					<div className={styles.retryComposer}>

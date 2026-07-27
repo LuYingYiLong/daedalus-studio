@@ -38,10 +38,13 @@ export type MessageListProps = {
 	onInlineDiffReview?: () => void;
 	scrollToBottomRequest?: number;
 	onAwayFromBottomChange?: (awayFromBottom: boolean) => void;
+	onActiveUserEntryChange?: (entryId: string | null) => void;
+	onScrollContainerReady?: (element: HTMLElement | null) => void;
 };
 
 export type MessageListHandle = {
 	scrollToBottom: (behavior?: ScrollBehavior) => void;
+	scrollToEntry: (entryId: string, behavior?: ScrollBehavior) => boolean;
 };
 
 type ScrollAnchor = {
@@ -127,6 +130,28 @@ function queryLastEntryElement(element: HTMLElement): HTMLElement | null {
 	return entryElements[entryElements.length - 1] ?? null;
 }
 
+function getActiveUserEntryId(element: HTMLElement): string | null {
+	const targetTop: number = element.getBoundingClientRect().top + Math.min(56, element.clientHeight * 0.2);
+	const entries: NodeListOf<HTMLElement> = element.querySelectorAll('[data-entry-kind="user"][data-entry-id]');
+	let activeEntryId: string | null = null;
+	for (const entry of entries) {
+		const bounds: DOMRect = entry.getBoundingClientRect();
+		const entryId: string | null = entry.getAttribute("data-entry-id");
+		if (entryId === null) {
+			continue;
+		}
+		if (bounds.top <= targetTop) {
+			activeEntryId = entryId;
+			continue;
+		}
+		if (activeEntryId === null && bounds.bottom >= targetTop) {
+			return entryId;
+		}
+		break;
+	}
+	return activeEntryId;
+}
+
 function isNodeInside(element: HTMLElement, node: Node | null): boolean {
 	if (node === null) {
 		return false;
@@ -171,7 +196,9 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	onRetryFromUserMessage,
 	onInlineDiffReview,
 	scrollToBottomRequest = 0,
-	onAwayFromBottomChange
+	onAwayFromBottomChange,
+	onActiveUserEntryChange,
+	onScrollContainerReady
 }: MessageListProps, ref): React.JSX.Element {
 	const { t } = useTranslation();
 	const [messageApi, messageContextHolder] = message.useMessage();
@@ -183,6 +210,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const lastViewportBlockCountRef = useRef<number>(0);
 	const autoFollowRef = useRef<boolean>(true);
 	const awayFromBottomRef = useRef<boolean>(false);
+	const activeUserEntryIdRef = useRef<string | null>(null);
 	const lastScrollToBottomRequestRef = useRef<number>(0);
 	const viewportUpdateFrameRef = useRef<number | null>(null);
 	const [nowMs, setNowMs] = useState<number>(() => Date.now());
@@ -331,11 +359,25 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		syncViewportMetrics(element);
 	}, [syncViewportMetrics]);
 
+	const scrollToEntry = useCallback((entryId: string, behavior: ScrollBehavior = "smooth"): boolean => {
+		const element: HTMLElement | null = listRef.current;
+		const target: HTMLElement | null = element === null ? null : queryEntryElement(element, entryId);
+		if (element === null || target === null) {
+			return false;
+		}
+		autoFollowRef.current = false;
+		setAwayFromBottom(true);
+		const targetTop: number = target.getBoundingClientRect().top - element.getBoundingClientRect().top + element.scrollTop;
+		element.scrollTo({ top: Math.max(0, targetTop - Math.min(48, element.clientHeight * 0.18)), behavior });
+		return true;
+	}, [setAwayFromBottom]);
+
 	useImperativeHandle(ref, (): MessageListHandle => {
 		return {
-			scrollToBottom: scrollToBottomNow
+			scrollToBottom: scrollToBottomNow,
+			scrollToEntry
 		};
-	}, [scrollToBottomNow]);
+	}, [scrollToBottomNow, scrollToEntry]);
 
 	const updateViewport = useCallback((options: ViewportMetricsOptions = {}): void => {
 		const element: HTMLElement | null = listRef.current;
@@ -346,6 +388,11 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 
 		const nearLoadMoreAfter: boolean = isNearBottom(element, LOAD_MORE_THRESHOLD);
 		syncViewportMetrics(element, options);
+		const activeUserEntryId: string | null = getActiveUserEntryId(element);
+		if (activeUserEntryIdRef.current !== activeUserEntryId) {
+			activeUserEntryIdRef.current = activeUserEntryId;
+			onActiveUserEntryChange?.(activeUserEntryId);
+		}
 
 		const contentFitsViewport: boolean = element.scrollHeight <= element.clientHeight + LOAD_MORE_THRESHOLD;
 
@@ -359,7 +406,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			pendingAnchorRef.current = createElementAnchor(element, queryLastEntryElement(element));
 			onLoadMoreAfter?.();
 		}
-	}, [hasMoreAfter, hasMoreBefore, isLoadingMoreAfter, isLoadingMoreBefore, onLoadMoreAfter, onLoadMoreBefore, syncViewportMetrics]);
+	}, [hasMoreAfter, hasMoreBefore, isLoadingMoreAfter, isLoadingMoreBefore, onActiveUserEntryChange, onLoadMoreAfter, onLoadMoreBefore, syncViewportMetrics]);
 
 	const handleWheel = useCallback((event: WheelEvent): void => {
 		if (event.deltaY >= -WHEEL_DETACH_DELTA) {
@@ -415,6 +462,13 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			}
 		};
 	}, [cancelScheduledViewportUpdate, handleWheel, scheduleViewportUpdate, updateViewport]);
+
+	useEffect((): (() => void) => {
+		onScrollContainerReady?.(listRef.current);
+		return (): void => {
+			onScrollContainerReady?.(null);
+		};
+	}, [onScrollContainerReady]);
 
 	useLayoutEffect((): void => {
 		const element: HTMLElement | null = listRef.current;

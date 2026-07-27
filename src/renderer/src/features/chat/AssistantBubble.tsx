@@ -147,7 +147,7 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 	}
 
 	return (
-		<article className={styles.root} data-entry-id={entryId}>
+		<article id={entryId} className={styles.root} data-entry-id={entryId} data-entry-kind="assistant">
 			{elapsedTime !== undefined ? (
 				<div className={styles.timingRow}>
 					<Typography.Text type="secondary">{elapsedTime}</Typography.Text>

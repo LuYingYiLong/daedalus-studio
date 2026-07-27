@@ -123,6 +123,10 @@
       "newSession": "New session",
       "scrollToBottom": "Scroll to bottom"
     },
+    "conversationNavigator": {
+      "ariaLabel": "Conversation turns",
+      "emptyMessage": "User message"
+    },
     "workspaceLaunch": {
       "openIn": "Open in {{target}}",
       "aria": {

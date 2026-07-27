@@ -1,5 +1,5 @@
 import { createBackendClient } from "@/shared/api/transport/backend-client";
-import type { SessionListResult, SessionMetadata, SessionOpenResult, SessionTimelineResult, WorkbenchSnapshot } from "./types";
+import type { SessionListResult, SessionMetadata, SessionOpenResult, SessionTimelineNavigationIndexResult, SessionTimelineResult, WorkbenchSnapshot } from "./types";
 import type { ChatMode } from "./chat-api";
 
 export type CreateSessionParams = {
@@ -209,6 +209,12 @@ export async function deleteArchivedSession(sessionId: string): Promise<DeleteAr
 	return client.request<DeleteArchivedSessionResult>("session.archived.delete", {
 		sessionId
 	});
+}
+
+export async function fetchSessionTimelineIndex(sessionId: string): Promise<SessionTimelineNavigationIndexResult> {
+	const client = await createBackendClient();
+
+	return client.request<SessionTimelineNavigationIndexResult>("session.timeline.index", { sessionId });
 }
 
 export async function setSessionPinned(sessionId: string, pinned: boolean): Promise<SetSessionPinnedResult> {

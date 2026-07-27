@@ -123,6 +123,10 @@
       "newSession": "新建会话",
       "scrollToBottom": "滚动到底部"
     },
+    "conversationNavigator": {
+      "ariaLabel": "\u5bf9\u8bdd\u8f6e\u6b21",
+      "emptyMessage": "\u7528\u6237\u6d88\u606f"
+    },
     "workspaceLaunch": {
       "openIn": "在 {{target}} 中打开",
       "aria": {
