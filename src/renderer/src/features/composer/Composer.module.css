@@ -382,11 +382,6 @@
 	padding: 0 8px;
 }
 
-.workspaceFooterButton svg {
-	width: 14px;
-	height: 14px;
-}
-
 .workspaceFooterText {
 	display: block;
 	min-width: 0;
@@ -396,21 +391,11 @@
 }
 
 .workspaceMenuItem {
-	display: grid;
-	gap: 2px;
-	min-width: 220px;
-	max-width: 420px;
+	margin-left: var(--ds-space-1);
 }
 
-.workspaceMenuName,
-.workspaceMenuPath {
+.workspaceMenuName {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-
-.workspaceMenuPath {
-	color: var(--ds-text-muted);
-	font-size: 11px;
-	line-height: 1.2;
 }

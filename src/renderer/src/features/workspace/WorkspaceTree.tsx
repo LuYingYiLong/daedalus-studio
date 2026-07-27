@@ -88,6 +88,7 @@ type CreateSessionMenuItemOptions = {
 	labels: WorkspaceTreeLabels;
 	onArchiveButton: (session: SessionMetadata, event: MouseEvent<HTMLElement>) => void;
 	onPinButton: (session: SessionMetadata, event: MouseEvent<HTMLElement>) => void;
+	onPin: (session: SessionMetadata) => void;
 	onRename: (session: SessionMetadata) => void;
 	onArchive: (session: SessionMetadata) => void;
 	onOpenSessionInExplorer: (session: SessionMetadata) => void;
@@ -110,6 +111,12 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 	const labels: WorkspaceTreeLabels = options.labels;
 	const actionMenu: MenuProps = {
 		items: [
+			{
+				key: "pin",
+				label: isPinned ? labels.unpinSession : labels.pinSession,
+				icon: <Icon name={isPinned ? "pinned" : "pin"} />,
+				disabled: isPinning || options.pinningSessionId !== null
+			},
 			{
 				key: "rename",
 				label: labels.renameSession,
@@ -136,6 +143,10 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 			domEvent.preventDefault();
 			domEvent.stopPropagation();
 
+			if (key === "pin") {
+				options.onPin(session);
+				return;
+			}
 			if (key === "rename") {
 				options.onRename(session);
 				return;
@@ -261,42 +272,44 @@ function createProjectMenuItems(workspaces: WorkspaceConfig[], sessions: Session
 		return {
 			key: `workspace:${workspace.id}`,
 			label: (
-				<span className={styles.workspaceMenuItem}>
-					<span className={styles.workspaceTitle}>{workspace.name}</span>
-					<span
-						className={styles.workspaceActions}
-						onMouseDown={(event: MouseEvent<HTMLElement>): void => {
-							event.stopPropagation();
-						}}
-					>
-						<Dropdown menu={actionMenu} trigger={["click"]}>
-							<Button
-								type="text"
-								shape="circle"
-								size="small"
-								aria-label={labels.workspaceActionsAria(workspace.name)}
-								className={styles.workspaceActionButton}
-								icon={<Icon name="more-v" width={16} height={16} />}
-								loading={isDeleting}
-								onClick={(event: MouseEvent<HTMLElement>): void => {
-									event.preventDefault();
-									event.stopPropagation();
-								}}
-							/>
-						</Dropdown>
-						<Tooltip title={labels.newSessionInWorkspace}>
-							<Button
-								type="text"
-								shape="circle"
-								size="small"
-								aria-label={labels.newSessionInWorkspaceAria(workspace.name)}
-								className={styles.workspaceActionButton}
-								icon={<Icon name="add" width={16} height={16} />}
-								onClick={(event: MouseEvent<HTMLElement>): void => options.onNewWorkspaceSession(workspace, event)}
-							/>
-						</Tooltip>
+				<Dropdown menu={actionMenu} trigger={["contextMenu"]}>
+					<span className={styles.workspaceMenuItem}>
+						<span className={styles.workspaceTitle}>{workspace.name}</span>
+						<span
+							className={styles.workspaceActions}
+							onMouseDown={(event: MouseEvent<HTMLElement>): void => {
+								event.stopPropagation();
+							}}
+						>
+							<Dropdown menu={actionMenu} trigger={["click"]}>
+								<Button
+									type="text"
+									shape="circle"
+									size="small"
+									aria-label={labels.workspaceActionsAria(workspace.name)}
+									className={styles.workspaceActionButton}
+									icon={<Icon name="more-v" width={16} height={16} />}
+									loading={isDeleting}
+									onClick={(event: MouseEvent<HTMLElement>): void => {
+										event.preventDefault();
+										event.stopPropagation();
+									}}
+								/>
+							</Dropdown>
+							<Tooltip title={labels.newSessionInWorkspace}>
+								<Button
+									type="text"
+									shape="circle"
+									size="small"
+									aria-label={labels.newSessionInWorkspaceAria(workspace.name)}
+									className={styles.workspaceActionButton}
+									icon={<Icon name="add" width={16} height={16} />}
+									onClick={(event: MouseEvent<HTMLElement>): void => options.onNewWorkspaceSession(workspace, event)}
+								/>
+							</Tooltip>
+						</span>
 					</span>
-				</span>
+				</Dropdown>
 			),
 			icon: <WorkspaceIconView workspace={workspace} />,
 			children: workspaceSessions.length > 0
@@ -472,9 +485,7 @@ function WorkspaceTree({
 		await handleArchiveSessionAction(session);
 	}
 
-	async function handlePinSession(session: SessionMetadata, event: MouseEvent<HTMLElement>): Promise<void> {
-		event.preventDefault();
-		event.stopPropagation();
+	async function handlePinSessionAction(session: SessionMetadata): Promise<void> {
 		if (pinningSessionId !== null) {
 			return;
 		}
@@ -497,6 +508,12 @@ function WorkspaceTree({
 		} finally {
 			setPinningSessionId(null);
 		}
+	}
+
+	async function handlePinSession(session: SessionMetadata, event: MouseEvent<HTMLElement>): Promise<void> {
+		event.preventDefault();
+		event.stopPropagation();
+		await handlePinSessionAction(session);
 	}
 
 	function handleNewWorkspaceSession(workspace: WorkspaceConfig, event: MouseEvent<HTMLElement>): void {
@@ -710,6 +727,9 @@ function WorkspaceTree({
 			labels,
 			onArchiveButton: (session: SessionMetadata, event: MouseEvent<HTMLElement>): void => {
 				void handleArchiveSession(session, event);
+			},
+			onPin: (session: SessionMetadata): void => {
+				void handlePinSessionAction(session);
 			},
 			onPinButton: (session: SessionMetadata, event: MouseEvent<HTMLElement>): void => {
 				void handlePinSession(session, event);

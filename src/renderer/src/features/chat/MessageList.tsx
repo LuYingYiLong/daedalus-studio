@@ -1,12 +1,17 @@
 import { TimelineAssistantBlock, TimelineBlock } from "@/api/types";
+import { Icon } from "@/assets/icons";
+import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import AssistantBubble from "./AssistantBubble";
 import UserBubble from "./UserBubble";
 import type { RetryUserMessagePayload } from "./UserBubble";
 import styles from "./MessageList.module.css";
 import { formatElapsedTime, formatShortDateTime } from "@/shared/lib/time-format";
-import { Spin, Alert } from "antd";
+import { Spin, Alert, Dropdown, message } from "antd";
+import type { MenuProps } from "antd";
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useThrottleFn } from "ahooks";
+import { useTranslation } from "react-i18next";
 import {
 	getDistanceFromBottomByMetrics,
 	isNearBottomByMetrics,
@@ -122,6 +127,32 @@ function queryLastEntryElement(element: HTMLElement): HTMLElement | null {
 	return entryElements[entryElements.length - 1] ?? null;
 }
 
+function isNodeInside(element: HTMLElement, node: Node | null): boolean {
+	if (node === null) {
+		return false;
+	}
+
+	const target: Element | null = node.nodeType === Node.ELEMENT_NODE
+		? node as Element
+		: node.parentElement;
+	return target !== null && element.contains(target);
+}
+
+function getSelectedTextInside(element: HTMLElement): string {
+	const selection: Selection | null = window.getSelection();
+	if (
+		selection === null
+		|| selection.isCollapsed
+		|| !isNodeInside(element, selection.anchorNode)
+		|| !isNodeInside(element, selection.focusNode)
+	) {
+		return "";
+	}
+
+	const selectedText: string = selection.toString();
+	return selectedText.trim().length > 0 ? selectedText : "";
+}
+
 const MessageList = forwardRef<MessageListHandle, MessageListProps>(function MessageList({
 	blocks,
 	isLoading,
@@ -142,7 +173,10 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	scrollToBottomRequest = 0,
 	onAwayFromBottomChange
 }: MessageListProps, ref): React.JSX.Element {
+	const { t } = useTranslation();
+	const [messageApi, messageContextHolder] = message.useMessage();
 	const listRef = useRef<HTMLElement | null>(null);
+	const contentRef = useRef<HTMLDivElement | null>(null);
 	const pendingAnchorRef = useRef<ScrollAnchor | null>(null);
 	const lastInitialScrollKeyRef = useRef<string>("");
 	const lastBlockCountRef = useRef<number>(0);
@@ -152,6 +186,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const lastScrollToBottomRequestRef = useRef<number>(0);
 	const viewportUpdateFrameRef = useRef<number | null>(null);
 	const [nowMs, setNowMs] = useState<number>(() => Date.now());
+	const [contextMenuSelection, setContextMenuSelection] = useState<string>("");
 	const renderableBlocks: TimelineBlock[] = useMemo((): TimelineBlock[] => {
 		return blocks.filter(shouldRenderTimelineBlock);
 	}, [blocks]);
@@ -160,6 +195,78 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	});
 	const isInitialLoading: boolean = isLoading === true && renderableBlocks.length === 0;
 	const canEditUserMessages: boolean = onRetryFromUserMessage !== undefined && !retryDisabled && !hasRunningAssistantBlock && activeRetryRequestId === null;
+
+	const selectAllMessageText = useCallback((): void => {
+		const content: HTMLDivElement | null = contentRef.current;
+		const selection: Selection | null = window.getSelection();
+		if (content === null || selection === null) {
+			return;
+		}
+
+		const range: Range = document.createRange();
+		range.selectNodeContents(content);
+		selection.removeAllRanges();
+		selection.addRange(range);
+		setContextMenuSelection(selection.toString());
+	}, []);
+
+	const copyContextMenuSelection = useCallback((): void => {
+		if (contextMenuSelection.length === 0) {
+			return;
+		}
+
+		void copyTextToClipboard(contextMenuSelection)
+			.then((): void => {
+				void messageApi.success(t("chat.common.copied"));
+			})
+			.catch((error: unknown): void => {
+				console.error("[MessageList] copy selected text failed", error);
+				void messageApi.error(t("chat.common.copyFailed"));
+			});
+	}, [contextMenuSelection, messageApi, t]);
+
+	const messageContextMenu: MenuProps = useMemo((): MenuProps => {
+		const hasSelection: boolean = contextMenuSelection.length > 0;
+		return {
+			items: [
+				{
+					key: "select-all",
+					label: t("chat.common.selectAll"),
+				},
+				...(hasSelection ? [
+					{
+						type: "divider" as const
+					},
+					{
+						key: "copy",
+						label: t("chat.common.copy"),
+					}
+				] : [])
+			],
+			onClick: ({ key, domEvent }): void => {
+				domEvent.preventDefault();
+				domEvent.stopPropagation();
+				if (key === "select-all") {
+					selectAllMessageText();
+					return;
+				}
+				if (key === "copy") {
+					copyContextMenuSelection();
+				}
+			}
+		};
+	}, [contextMenuSelection.length, copyContextMenuSelection, selectAllMessageText, t]);
+
+	const handleContextMenuCapture = useCallback((): void => {
+		const content: HTMLDivElement | null = contentRef.current;
+		if (content === null) {
+			return;
+		}
+
+		flushSync((): void => {
+			setContextMenuSelection(getSelectedTextInside(content));
+		});
+	}, []);
 
 	const setAwayFromBottom = useCallback((awayFromBottom: boolean): void => {
 		if (awayFromBottomRef.current !== awayFromBottom) {
@@ -410,8 +517,11 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const nowIsoTime: string = new Date(nowMs).toISOString();
 
 	return (
-		<section ref={listRef} className={styles.messageList}>
-			<div className={`${styles.messageListContent} ${isInitialLoading ? styles.messageListContentLoading : ""}`}>
+		<>
+			{messageContextHolder}
+			<Dropdown menu={messageContextMenu} trigger={["contextMenu"]}>
+				<section ref={listRef} className={styles.messageList} onContextMenuCapture={handleContextMenuCapture}>
+					<div ref={contentRef} className={`${styles.messageListContent} ${isInitialLoading ? styles.messageListContentLoading : ""}`}>
 				{errorMessage ? (
 					<Alert description={errorMessage} type="error" showIcon={true} />
 				) : null}
@@ -467,8 +577,10 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 						) : null}
 					</>
 				)}
-			</div>
-		</section>
+					</div>
+				</section>
+			</Dropdown>
+		</>
 	);
 });
 

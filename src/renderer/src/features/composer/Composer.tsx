@@ -277,7 +277,6 @@ function createWorkspaceFooterItems(workspaces: readonly WorkspaceConfig[], t: T
 				label: (
 					<span className={styles.workspaceMenuItem}>
 						<span className={styles.workspaceMenuName}>{workspace.name}</span>
-						<span className={styles.workspaceMenuPath}>{workspace.rootPath}</span>
 					</span>
 				),
 				icon: <WorkspaceIconView workspace={workspace} />

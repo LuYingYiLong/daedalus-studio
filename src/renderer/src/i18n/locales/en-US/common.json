@@ -463,7 +463,9 @@
   "chat": {
     "common": {
       "copy": "Copy",
-      "copied": "Copied"
+      "copied": "Copied",
+      "copyFailed": "Failed to copy selected text.",
+      "selectAll": "Select all"
     },
     "assistant": {
       "process": "Process",
