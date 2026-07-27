@@ -36,6 +36,12 @@ describe("backend bootstrap service", () => {
 		expect(serviceSource).toContain("Use Repair backend to restore the verified backend bundled with Daedalus Studio.");
 	});
 
+	it("replaces pre-shared-runtime managed backends with the verified bundled version", () => {
+		expect(serviceSource).toContain("lacksSharedRuntimeCompatibilityMetadata");
+		expect(serviceSource).toContain("Replacing a managed backend that predates shared runtime support.");
+		expect(serviceSource).toContain("return await this.installBundledAndStart();");
+	});
+
 	it("exposes bootstrap IPC without exposing npm or file paths to renderer code", () => {
 		expect(serviceSource).toContain("ipcMain.handle(\"backend-bootstrap:get-state\"");
 		expect(serviceSource).toContain("ipcMain.handle(\"backend-bootstrap:prepare\"");

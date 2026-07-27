@@ -97,6 +97,18 @@ async function readJsonFile<TValue>(filePath: string): Promise<TValue | null> {
 	}
 }
 
+async function lacksSharedRuntimeCompatibilityMetadata(
+	current: BackendCurrentFileV2
+): Promise<boolean> {
+	const manifest: unknown | null = await readJsonFile<unknown>(current.manifestPath);
+	if (typeof manifest !== "object" || manifest === null || Array.isArray(manifest)) {
+		return false;
+	}
+	const record: Record<string, unknown> = manifest as Record<string, unknown>;
+	return !Number.isSafeInteger(record.minPluginProtocolVersion)
+		|| !Number.isSafeInteger(record.maxPluginProtocolVersion);
+}
+
 async function writeJsonFileAtomic(filePath: string, value: unknown): Promise<void> {
 	await mkdir(dirname(filePath), { recursive: true });
 	const tempPath: string = `${filePath}.${process.pid}.${Date.now()}.tmp`;
@@ -245,6 +257,12 @@ export class BackendBootstrapService {
 			try {
 				await inspectCurrentBackend();
 			} catch (error: unknown) {
+				if (await lacksSharedRuntimeCompatibilityMetadata(current)) {
+					logger.info("Replacing a managed backend that predates shared runtime support.", {
+						version: current.version
+					});
+					return await this.installBundledAndStart();
+				}
 				return this.fail({
 					status: "error",
 					phase: "detect",
