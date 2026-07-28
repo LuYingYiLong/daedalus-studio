@@ -3268,7 +3268,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						initialActiveWorkspaceId={bootstrapData.workspaceList.active}
 						runningSessionIds={runningSessionIds}
 						homeWorkspace={homeDraft.workspace}
-						workspaceFooterDisabled={isHomeSubmitting}
+						workspaceFooterDisabled={isHomeSubmitting || activeSessionId !== null || isSessionLoading}
 						activeWorkspace={displayedWorkspace}
 						godotLaunchExecutablePath={godotLaunchExecutablePath}
 						onNewSession={handleNewSession}

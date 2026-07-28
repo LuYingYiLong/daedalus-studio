@@ -12,6 +12,7 @@ describe("HomePage git diff review source", () => {
 	const dockPanelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.tsx");
 	const dockPanelTabsCss: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.module.css");
 	const panelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "panel-tabs", "PanelTabs.tsx");
+	const panelTabsCss: string = readRepoFile("src", "renderer", "src", "features", "panel-tabs", "PanelTabs.module.css");
 	const packageJsonSource: string = readRepoFile("package.json");
 
 	it("renders the side dock inside an Ant Design Splitter", () => {
@@ -82,6 +83,13 @@ describe("HomePage git diff review source", () => {
 		expect(dockPanelTabsCss).toContain("padding-top: 40px;");
 		expect(dockPanelTabsCss).toContain("border-left: 1px solid var(--ds-border);");
 		expect(reviewPanelSource).not.toContain("Tabs");
+	});
+
+	it("keeps force-rendered dock panes hidden until their tab is active", () => {
+		expect(dockPanelTabsSource).toContain("forceRender: tab.kind === \"terminal\"");
+		expect(panelTabsSource).not.toContain('const PANEL_TAB_CONTENT_STYLE: CSSProperties = {\n\tdisplay:');
+		expect(panelTabsCss).toContain(".tabsContent:global(.ant-tabs-content-hidden)");
+		expect(panelTabsCss).toContain("display: none !important;");
 	});
 
 	it("opens shared git action dialogs from the review panel", () => {

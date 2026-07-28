@@ -58,8 +58,6 @@
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
-	background-color: var(--ds-bg);
-	border-radius: var(--ds-space-2);
 }
 
 .agentMain {
@@ -69,6 +67,8 @@
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
+	background-color: var(--ds-bg);
+	border-radius: var(--ds-space-2);
 }
 
 .agentSplitter {
@@ -85,6 +85,15 @@
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
+}
+
+.splitterDragger::before {
+	background: transparent !important;
+}
+
+.splitterDragger:hover::before,
+.splitterDraggerActive::before {
+	background: transparent !important;
 }
 
 .agentVerticalSplitter > :global(.ant-splitter-bar) {

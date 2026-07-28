@@ -440,6 +440,10 @@ function Composer({
 	}, [onApprovalModeChange]);
 
 	const handleWorkspaceClick: MenuProps["onClick"] = useCallback(({ key }): void => {
+		if (workspaceFooterDisabled) {
+			return;
+		}
+
 		const selectedKey: string = String(key);
 		if (selectedKey === NO_WORKSPACE_KEY) {
 			onWorkspaceClear?.();
@@ -454,7 +458,7 @@ function Composer({
 		if (workspaceId !== null) {
 			onWorkspaceSelect?.(workspaceId);
 		}
-	}, [onWorkspaceAdd, onWorkspaceClear, onWorkspaceSelect]);
+	}, [onWorkspaceAdd, onWorkspaceClear, onWorkspaceSelect, workspaceFooterDisabled]);
 
 	const handleContextItemClick: MenuProps["onClick"] = useCallback(({ key }): void => {
 		const selectedKey: string = String(key);

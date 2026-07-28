@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button, Divider, Dropdown, Empty, Input, message as antdMessage, Modal, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
-import type { CollapseProps, MenuProps } from "antd";
+import type { CollapseProps, MenuProps, SplitterProps } from "antd";
 import { useTranslation } from "react-i18next";
 import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, SessionTimelineNavigationEntry, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
@@ -57,6 +57,12 @@ const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 const MAX_GODOT_SCENE_FILES: number = 500;
 const SUMMARY_PREVIEW_LIMIT: number = 3;
 const SUMMARY_SEE_MORE_LIMIT: number = 100;
+const SPLITTER_CLASS_NAMES: SplitterProps["classNames"] = {
+	dragger: {
+		default: styles.splitterDragger,
+		active: styles.splitterDraggerActive
+	}
+};
 const SIDE_DOCK_CLOSED_SIZE: number = 0;
 const SIDE_DOCK_DEFAULT_SIZE: number = 520;
 const SIDE_DOCK_MAX_SIZE: number = 720;
@@ -1294,6 +1300,8 @@ function HomePage({
 				) : null}
 				<Splitter
 					className={styles.agentVerticalSplitter}
+					classNames={SPLITTER_CLASS_NAMES}
+					draggerIcon={null}
 					orientation="vertical"
 					collapsible={{ motion: true }}
 					onResize={handleBottomDockResize}
@@ -1302,6 +1310,8 @@ function HomePage({
 					<Splitter.Panel min={360}>
 						<Splitter
 							className={styles.agentSplitter}
+							classNames={SPLITTER_CLASS_NAMES}
+							draggerIcon={null}
 							collapsible={{ motion: true }}
 							onResize={handleSideDockResize}
 							onResizeEnd={handleSideDockResizeEnd}
@@ -1457,9 +1467,9 @@ function HomePage({
 											onAddImages={onAddImages}
 											onAddPastedTextAttachment={onAddPastedTextAttachment}
 											onAddContextFiles={onAddContextFiles}
-													onWorkspaceSelect={onHomeWorkspaceSelect}
-													onWorkspaceAdd={onHomeWorkspaceAdd}
-													onWorkspaceClear={onHomeWorkspaceClear}
+								onWorkspaceSelect={isHome ? onHomeWorkspaceSelect : undefined}
+								onWorkspaceAdd={isHome ? onHomeWorkspaceAdd : undefined}
+								onWorkspaceClear={isHome ? onHomeWorkspaceClear : undefined}
 													onRemoveContext={onRemoveContext}
 													onPinContext={onPinContext}
 													onClearUnpinnedContext={onClearUnpinnedContext}

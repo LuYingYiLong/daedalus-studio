@@ -49,8 +49,6 @@ const PANEL_TAB_BODY_STYLE: CSSProperties = {
 };
 
 const PANEL_TAB_CONTENT_STYLE: CSSProperties = {
-	display: "grid",
-	gridTemplateRows: "minmax(0, 1fr)",
 	minWidth: 0,
 	minHeight: 0,
 	height: "100%",

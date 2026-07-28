@@ -39,14 +39,24 @@
 	overflow: hidden;
 }
 
-.tabsBody,
-.tabsContent {
+.tabsBody {
 	display: grid;
 	grid-template-rows: minmax(0, 1fr);
 	min-width: 0;
 	min-height: 0;
 	height: 100%;
 	overflow: hidden;
+}
+
+.tabsContent {
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	overflow: hidden;
+}
+
+.tabsContent:global(.ant-tabs-content-hidden) {
+	display: none !important;
 }
 
 .addButton {
