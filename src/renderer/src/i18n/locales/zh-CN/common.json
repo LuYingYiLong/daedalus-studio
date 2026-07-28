@@ -793,7 +793,26 @@
       "savedKey": "已保存 key：{{key}}",
       "searchPlaceholder": "搜索供应商...",
       "updated": "更新于 {{updatedAt}}",
+      "dialogs": {
+        "addProviderTitle": "添加供应商",
+        "addModelTitle": "添加模型",
+        "editModelTitle": "编辑模型"
+      },
+      "fields": {
+        "providerName": "供应商名称",
+        "providerType": "供应商类型",
+        "modelId": "模型 ID",
+        "modelName": "模型名称",
+        "modelTypes": "模型类型"
+      },
+      "validation": {
+        "providerName": "请输入 1–80 个字符的供应商名称",
+        "providerType": "请选择供应商类型",
+        "modelId": "请输入 1–200 个字符的模型 ID",
+        "modelName": "请输入 1–120 个字符的模型名称"
+      },
       "actions": {
+        "addModel": "添加模型",
         "clearApiKey": "清除 API Key",
         "fetchModels": "获取模型",
         "test": "测试"
@@ -811,10 +830,15 @@
         "model": "模型"
       },
       "errors": {
+        "addProvider": "添加供应商失败",
         "clearApiKey": "清除 API Key 失败",
         "load": "加载供应商设置失败",
+        "modelIdConflict": "该供应商中已存在相同的模型 ID",
+        "modelNotFound": "这个模型已不在当前模型列表中，请刷新后重试",
         "noSettings": "没有可用的供应商设置",
-        "refreshModels": "刷新供应商模型失败"
+        "providerNameConflict": "已存在同名供应商",
+        "refreshModels": "刷新供应商模型失败",
+        "saveModel": "保存模型失败"
       }
     },
     "search": {

@@ -1,13 +1,18 @@
-import { Alert, Button, Divider, Input, Menu, Space, Spin, Table, Tag, Typography } from "antd";
+import { Alert, Button, Divider, Form, Input, Menu, Modal, Select, Space, Spin, Table, Tag, Typography } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import {
+	addCustomProvider,
+	addProviderModel,
 	fetchProviderModelSelection,
 	listProviderModels,
 	saveProviderConfig,
+	updateProviderModel,
+	type CustomProviderType,
+	type EditableModelCapabilities,
 	type ProviderModelCapabilities,
 	type ProviderModelInfo,
 	type ProviderModelSelection,
@@ -26,21 +31,69 @@ type ProviderSettingsPageProps = {
 	onSelectionChange?: (selection: ProviderModelSelection) => void;
 };
 
-const CAPABILITY_BADGES: CapabilityBadge[] = [
-	{ key: "reasoning", labelKey: "settings.provider.capabilities.reasoning", icon: "thinking", color: "blue" },
-	{ key: "tools", labelKey: "settings.provider.capabilities.tools", icon: "mcp", color: "orange" },
-	{ key: "webSearch", labelKey: "settings.provider.capabilities.webSearch", icon: "search", color: "green" },
-	{ key: "vision", labelKey: "settings.provider.capabilities.vision", icon: "vision", color: "purple" },
-	{ key: "imageGeneration", labelKey: "settings.provider.capabilities.imageGeneration", icon: "draw", color: "magenta" },
-	{ key: "imageEdit", labelKey: "settings.provider.capabilities.imageEdit", icon: "draw", color: "cyan" }
-];
+type AddProviderFormValues = {
+	displayName: string;
+	providerType: CustomProviderType;
+};
 
-function getModelTokenText(model: ProviderModelInfo): string {
-	return `${model.contextWindowTokens.toLocaleString()} ctx / ${model.maxOutputTokens.toLocaleString()} out`;
-}
+type ModelFormValues = {
+	id: string;
+	displayName: string;
+	capabilities: Array<keyof EditableModelCapabilities>;
+};
+
+const CAPABILITY_BADGES: CapabilityBadge[] = [
+	{ key: "vision", labelKey: "settings.provider.capabilities.vision", icon: "vision", color: "purple" },
+	{ key: "webSearch", labelKey: "settings.provider.capabilities.webSearch", icon: "search", color: "green" },
+	{ key: "reasoning", labelKey: "settings.provider.capabilities.reasoning", icon: "thinking", color: "blue" },
+	{ key: "tools", labelKey: "settings.provider.capabilities.tools", icon: "mcp", color: "orange" }
+];
 
 function getVisibleCapabilities(capabilities: ProviderModelCapabilities): CapabilityBadge[] {
 	return CAPABILITY_BADGES.filter((badge: CapabilityBadge): boolean => capabilities[badge.key] === true);
+}
+
+function getEditableCapabilities(capabilities: ProviderModelCapabilities): Array<keyof EditableModelCapabilities> {
+	const values: Array<keyof EditableModelCapabilities> = [];
+	if (capabilities.vision === true || capabilities.imageInput === true) {
+		values.push("vision");
+	}
+	for (const key of ["webSearch", "reasoning", "tools"] as const) {
+		if (capabilities[key] === true) {
+			values.push(key);
+		}
+	}
+	return values;
+}
+
+function toEditableCapabilities(values: Array<keyof EditableModelCapabilities>): EditableModelCapabilities {
+	const selected: Set<keyof EditableModelCapabilities> = new Set(values);
+	return {
+		vision: selected.has("vision"),
+		webSearch: selected.has("webSearch"),
+		reasoning: selected.has("reasoning"),
+		tools: selected.has("tools")
+	};
+}
+
+function getCustomizationErrorMessage(
+	error: unknown,
+	fallbackKey: string,
+	t: (key: string) => string
+): string | null {
+	if (!(error instanceof Error)) {
+		return null;
+	}
+	if (error.message.startsWith("provider_name_conflict:")) {
+		return t("settings.provider.errors.providerNameConflict");
+	}
+	if (error.message.startsWith("provider_model_exists:")) {
+		return t("settings.provider.errors.modelIdConflict");
+	}
+	if (error.message.startsWith("provider_model_not_found:")) {
+		return t("settings.provider.errors.modelNotFound");
+	}
+	return error.message.length > 0 ? `${t(fallbackKey)}: ${error.message}` : t(fallbackKey);
 }
 
 function renderCapabilityTags(capabilities: ProviderModelCapabilities, t: (key: string) => string): React.JSX.Element {
@@ -68,6 +121,13 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+	const [isAddProviderOpen, setIsAddProviderOpen] = useState<boolean>(false);
+	const [modelDialogMode, setModelDialogMode] = useState<"add" | "edit" | null>(null);
+	const [editingModel, setEditingModel] = useState<ProviderModelInfo | null>(null);
+	const [dialogError, setDialogError] = useState<string | null>(null);
+	const [isDialogSaving, setIsDialogSaving] = useState<boolean>(false);
+	const [providerForm] = Form.useForm<AddProviderFormValues>();
+	const [modelForm] = Form.useForm<ModelFormValues>();
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -163,12 +223,15 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 	}
 
 	function createSavePayload(provider: ProviderModelSelectionProvider, modelId?: string): Parameters<typeof saveProviderConfig>[0] {
+		const resolvedModel: string | null = modelId ?? provider.selectedModel ?? provider.defaultModel;
 		const payload: Parameters<typeof saveProviderConfig>[0] = {
 			provider: provider.provider,
 			baseUrl: draftBaseUrl.trim().length > 0 ? draftBaseUrl.trim() : null,
-			model: modelId ?? provider.selectedModel ?? provider.defaultModel,
-			activate: true
+			activate: resolvedModel !== null
 		};
+		if (resolvedModel !== null) {
+			payload.model = resolvedModel;
+		}
 
 		if (isApiKeyDirty && draftApiKey.trim().length > 0) {
 			payload.apiKey = draftApiKey.trim();
@@ -187,13 +250,17 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 		try {
 			setIsSaving(true);
 			setErrorMessage(null);
-			const nextSelection: ProviderModelSelection = await saveProviderConfig({
+			const resolvedModel: string | null = provider.selectedModel ?? provider.defaultModel;
+			const payload: Parameters<typeof saveProviderConfig>[0] = {
 				provider: provider.provider,
 				apiKey: null,
 				baseUrl: draftBaseUrl.trim().length > 0 ? draftBaseUrl.trim() : null,
-				model: provider.selectedModel ?? provider.defaultModel,
-				activate: provider.selected
-			});
+				activate: provider.selected && resolvedModel !== null
+			};
+			if (resolvedModel !== null) {
+				payload.model = resolvedModel;
+			}
+			const nextSelection: ProviderModelSelection = await saveProviderConfig(payload);
 			setSelection(nextSelection);
 			onSelectionChange?.(nextSelection);
 			setSelectedProviderId(provider.provider);
@@ -220,6 +287,103 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			setErrorMessage(error instanceof Error ? error.message : t("settings.provider.errors.refreshModels"));
 		} finally {
 			setIsRefreshing(false);
+		}
+	}
+
+	function openAddProviderDialog(): void {
+		setDialogError(null);
+		providerForm.setFieldsValue({
+			displayName: "",
+			providerType: "openai"
+		});
+		setIsAddProviderOpen(true);
+	}
+
+	function openAddModelDialog(): void {
+		setDialogError(null);
+		setEditingModel(null);
+		setModelDialogMode("add");
+	}
+
+	function openEditModelDialog(model: ProviderModelInfo): void {
+		setDialogError(null);
+		setEditingModel(model);
+		setModelDialogMode("edit");
+	}
+
+	function handleModelDialogOpenChange(open: boolean): void {
+		if (!open) {
+			return;
+		}
+
+		if (modelDialogMode === "edit" && editingModel !== null) {
+			modelForm.setFieldsValue({
+				id: editingModel.id,
+				displayName: editingModel.displayName,
+				capabilities: getEditableCapabilities(editingModel.capabilities)
+			});
+			return;
+		}
+
+		modelForm.setFieldsValue({
+			id: "",
+			displayName: "",
+			capabilities: []
+		});
+	}
+
+	async function handleAddProvider(): Promise<void> {
+		try {
+			const values: AddProviderFormValues = await providerForm.validateFields();
+			setIsDialogSaving(true);
+			setDialogError(null);
+			const result = await addCustomProvider(values);
+			setSelection(result.selection);
+			onSelectionChange?.(result.selection);
+			setSelectedProviderId(result.providerId);
+			setIsAddProviderOpen(false);
+		} catch (error: unknown) {
+			const message: string | null = getCustomizationErrorMessage(error, "settings.provider.errors.addProvider", t);
+			if (message !== null) {
+				setDialogError(message);
+			}
+		} finally {
+			setIsDialogSaving(false);
+		}
+	}
+
+	async function handleSaveModel(): Promise<void> {
+		if (selectedProvider === null || modelDialogMode === null) {
+			return;
+		}
+		try {
+			const values: ModelFormValues = await modelForm.validateFields();
+			setIsDialogSaving(true);
+			setDialogError(null);
+			const nextSelection: ProviderModelSelection = modelDialogMode === "add"
+				? await addProviderModel({
+					provider: selectedProvider.provider,
+					id: values.id,
+					displayName: values.displayName
+				})
+				: await updateProviderModel({
+					provider: selectedProvider.provider,
+					id: editingModel?.id ?? values.id,
+					displayName: values.displayName,
+					capabilities: toEditableCapabilities(values.capabilities)
+				});
+			setSelection(nextSelection);
+			onSelectionChange?.(nextSelection);
+			setSelectedProviderId(selectedProvider.provider);
+			setModelDialogMode(null);
+			setEditingModel(null);
+		} catch (error: unknown) {
+			const message: string | null = getCustomizationErrorMessage(error, "settings.provider.errors.saveModel", t);
+			if (message !== null) {
+				setDialogError(message);
+			}
+		} finally {
+			setIsDialogSaving(false);
 		}
 	}
 
@@ -255,10 +419,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			align: "center",
 			key: "model",
 			render: (_value: unknown, model: ProviderModelInfo): React.JSX.Element => (
-				<span>
-					<span className={styles.modelName}>{model.displayName}</span>
-					<span className={styles.modelMeta}>{model.id} - {getModelTokenText(model)}</span>
-				</span>
+				<span className={styles.modelName}>{model.displayName}</span>
 			)
 		},
 		{
@@ -291,7 +452,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 					onClick={({ key }): void => setSelectedProviderId(String(key))}
 				/>
 
-				<Button className={styles.addProviderButton} icon={<Icon name="add" />} disabled={true}>
+				<Button className={styles.addProviderButton} icon={<Icon name="add" />} onClick={openAddProviderDialog}>
 					{t("settings.common.add")}
 				</Button>
 			</aside>
@@ -384,7 +545,11 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 									>
 										{t("settings.provider.actions.fetchModels")}
 									</Button>
-									<Button icon={<Icon name="add" />} disabled={true} />
+									<Button
+										icon={<Icon name="add" />}
+										aria-label={t("settings.provider.actions.addModel")}
+										onClick={openAddModelDialog}
+									/>
 								</Space.Compact>
 							</div>
 						</div>
@@ -398,11 +563,133 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 								rowKey="id"
 								size="small"
 								scroll={{ x: true }}
+								onRow={(model: ProviderModelInfo): React.HTMLAttributes<HTMLTableRowElement> => ({
+									className: styles.editableModelRow,
+									role: "button",
+									tabIndex: 0,
+									onClick: (): void => openEditModelDialog(model),
+									onKeyDown: (event: KeyboardEvent<HTMLTableRowElement>): void => {
+										if (event.key === "Enter" || event.key === " ") {
+											event.preventDefault();
+											openEditModelDialog(model);
+										}
+									}
+								})}
 							/>
 						</div>
 					</div>
 				</div>
 			</section>
+
+			<Modal
+				open={isAddProviderOpen}
+				title={t("settings.provider.dialogs.addProviderTitle")}
+				okText={t("settings.common.add")}
+				cancelText={t("settings.common.cancel")}
+				confirmLoading={isDialogSaving}
+				destroyOnHidden={true}
+				onCancel={(): void => {
+					setIsAddProviderOpen(false);
+					setDialogError(null);
+				}}
+				onOk={(): void => void handleAddProvider()}
+			>
+				{dialogError !== null ? <Alert className={styles.dialogAlert} type="error" showIcon={true} description={dialogError} /> : null}
+				<Form<AddProviderFormValues>
+					form={providerForm}
+					layout="vertical"
+					preserve={false}
+					initialValues={{ providerType: "openai" }}
+				>
+					<Form.Item
+						name="displayName"
+						label={t("settings.provider.fields.providerName")}
+						rules={[{
+							required: true,
+							whitespace: true,
+							max: 80,
+							message: t("settings.provider.validation.providerName")
+						}]}
+					>
+						<Input autoFocus={true} maxLength={80} />
+					</Form.Item>
+					<Form.Item
+						name="providerType"
+						label={t("settings.provider.fields.providerType")}
+						rules={[{ required: true, message: t("settings.provider.validation.providerType") }]}
+					>
+						<Select
+							options={[
+								{ value: "openai", label: "OpenAI" },
+								{ value: "openai-responses", label: "OpenAI-Response" },
+								{ value: "anthropic", label: "Anthropic" }
+							]}
+						/>
+					</Form.Item>
+				</Form>
+			</Modal>
+
+			<Modal
+				open={modelDialogMode !== null}
+				title={modelDialogMode === "edit"
+					? t("settings.provider.dialogs.editModelTitle")
+					: t("settings.provider.dialogs.addModelTitle")}
+				okText={modelDialogMode === "edit" ? t("settings.common.save") : t("settings.common.add")}
+				cancelText={t("settings.common.cancel")}
+				confirmLoading={isDialogSaving}
+				destroyOnHidden={true}
+				afterOpenChange={handleModelDialogOpenChange}
+				onCancel={(): void => {
+					setModelDialogMode(null);
+					setEditingModel(null);
+					setDialogError(null);
+				}}
+				onOk={(): void => void handleSaveModel()}
+			>
+				{dialogError !== null ? <Alert className={styles.dialogAlert} type="error" showIcon={true} description={dialogError} /> : null}
+				<Form<ModelFormValues>
+					form={modelForm}
+					layout="vertical"
+					preserve={false}
+					initialValues={{ capabilities: [] }}
+				>
+					<Form.Item
+						name="id"
+						label={t("settings.provider.fields.modelId")}
+						rules={[{
+							required: true,
+							whitespace: true,
+							max: 200,
+							message: t("settings.provider.validation.modelId")
+						}]}
+					>
+						<Input autoFocus={modelDialogMode === "add"} readOnly={modelDialogMode === "edit"} maxLength={200} />
+					</Form.Item>
+					<Form.Item
+						name="displayName"
+						label={t("settings.provider.fields.modelName")}
+						rules={[{
+							required: true,
+							whitespace: true,
+							max: 120,
+							message: t("settings.provider.validation.modelName")
+						}]}
+					>
+						<Input autoFocus={modelDialogMode === "edit"} maxLength={120} />
+					</Form.Item>
+					{modelDialogMode === "edit" ? (
+						<Form.Item name="capabilities" label={t("settings.provider.fields.modelTypes")}>
+							<Select
+								mode="multiple"
+								options={CAPABILITY_BADGES.map((capability: CapabilityBadge) => ({
+									value: capability.key,
+									label: t(capability.labelKey)
+								}))}
+							/>
+						</Form.Item>
+					) : null}
+				</Form>
+			</Modal>
 		</section>
 	);
 }

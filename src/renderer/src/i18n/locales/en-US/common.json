@@ -793,7 +793,26 @@
       "savedKey": "Saved key: {{key}}",
       "searchPlaceholder": "Search providers...",
       "updated": "updated {{updatedAt}}",
+      "dialogs": {
+        "addProviderTitle": "Add provider",
+        "addModelTitle": "Add model",
+        "editModelTitle": "Edit model"
+      },
+      "fields": {
+        "providerName": "Provider name",
+        "providerType": "Provider type",
+        "modelId": "Model ID",
+        "modelName": "Model name",
+        "modelTypes": "Model types"
+      },
+      "validation": {
+        "providerName": "Enter a provider name between 1 and 80 characters",
+        "providerType": "Select a provider type",
+        "modelId": "Enter a model ID between 1 and 200 characters",
+        "modelName": "Enter a model name between 1 and 120 characters"
+      },
       "actions": {
+        "addModel": "Add model",
         "clearApiKey": "Clear API key",
         "fetchModels": "Fetch models",
         "test": "Test"
@@ -811,10 +830,15 @@
         "model": "Model"
       },
       "errors": {
+        "addProvider": "Failed to add provider",
         "clearApiKey": "Failed to clear API key",
         "load": "Failed to load provider settings",
+        "modelIdConflict": "A model with this ID already exists for the provider",
+        "modelNotFound": "This model is no longer in the current model list. Refresh and try again",
         "noSettings": "No provider settings available",
-        "refreshModels": "Failed to refresh provider models"
+        "providerNameConflict": "A provider with this name already exists",
+        "refreshModels": "Failed to refresh provider models",
+        "saveModel": "Failed to save model"
       }
     },
     "search": {

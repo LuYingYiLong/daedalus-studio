@@ -71,12 +71,24 @@ export type ProviderModelSelectionProvider = {
 	selected: boolean;
 	selectedModel: string | null;
 	selectedModelDisplayName: string | null;
-	defaultModel: string;
+	defaultModel: string | null;
 	baseUrl: string;
+	custom: boolean;
+	providerType: CustomProviderType | null;
+	ready: boolean;
 	apiKeyMasked: string | null;
 	models: ProviderModelInfo[];
 	modelsSource: "cache" | "fallback";
 	modelsCacheUpdatedAt?: string | null;
+};
+
+export type CustomProviderType = "openai" | "openai-responses" | "anthropic";
+
+export type EditableModelCapabilities = {
+	vision: boolean;
+	webSearch: boolean;
+	reasoning: boolean;
+	tools: boolean;
 };
 
 export type SaveProviderModelSelectionParams = {
@@ -132,4 +144,31 @@ export async function listProviderModels(provider: string, refresh: boolean = fa
 		provider,
 		refresh
 	});
+}
+
+export async function addCustomProvider(params: {
+	displayName: string;
+	providerType: CustomProviderType;
+}): Promise<{ providerId: string; selection: ProviderModelSelection }> {
+	const client = await createBackendClient();
+	return client.request("provider.custom.add", params);
+}
+
+export async function addProviderModel(params: {
+	provider: string;
+	id: string;
+	displayName: string;
+}): Promise<ProviderModelSelection> {
+	const client = await createBackendClient();
+	return client.request("provider.model.add", params);
+}
+
+export async function updateProviderModel(params: {
+	provider: string;
+	id: string;
+	displayName: string;
+	capabilities: EditableModelCapabilities;
+}): Promise<ProviderModelSelection> {
+	const client = await createBackendClient();
+	return client.request("provider.model.update", params);
 }

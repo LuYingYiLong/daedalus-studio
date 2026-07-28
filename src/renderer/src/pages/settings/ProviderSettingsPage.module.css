@@ -150,11 +150,13 @@
 	white-space: nowrap;
 }
 
-.modelMeta {
-	display: block;
-	margin-top: 2px;
-	font-size: 12px;
-	color: var(--ant-color-text-tertiary);
+.editableModelRow {
+	cursor: pointer;
+}
+
+.editableModelRow:focus-visible > td {
+	outline: 2px solid var(--ant-color-primary);
+	outline-offset: -2px;
 }
 
 .capabilities {
@@ -171,4 +173,8 @@
 	gap: 4px;
 	margin-inline-end: 0;
 	border-radius: var(--ds-radius-sm);
+}
+
+.dialogAlert {
+	margin-bottom: var(--ds-space-3);
 }
