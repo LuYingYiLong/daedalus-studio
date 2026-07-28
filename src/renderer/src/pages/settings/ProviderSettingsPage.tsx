@@ -145,7 +145,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				setSelection(result);
 				onSelectionChange?.(result);
 				setSelectedProviderId((currentProviderId: string | null): string => {
-					return currentProviderId ?? result.activeModel.providerId;
+					return currentProviderId ?? result.providers[0]?.provider ?? result.activeModel.providerId;
 				});
 			} catch (error: unknown) {
 				if (!cancelled) {
@@ -302,34 +302,23 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 	function openAddModelDialog(): void {
 		setDialogError(null);
 		setEditingModel(null);
+		modelForm.setFieldsValue({
+			id: "",
+			displayName: "",
+			capabilities: []
+		});
 		setModelDialogMode("add");
 	}
 
 	function openEditModelDialog(model: ProviderModelInfo): void {
 		setDialogError(null);
 		setEditingModel(model);
-		setModelDialogMode("edit");
-	}
-
-	function handleModelDialogOpenChange(open: boolean): void {
-		if (!open) {
-			return;
-		}
-
-		if (modelDialogMode === "edit" && editingModel !== null) {
-			modelForm.setFieldsValue({
-				id: editingModel.id,
-				displayName: editingModel.displayName,
-				capabilities: getEditableCapabilities(editingModel.capabilities)
-			});
-			return;
-		}
-
 		modelForm.setFieldsValue({
-			id: "",
-			displayName: "",
-			capabilities: []
+			id: model.id,
+			displayName: model.displayName,
+			capabilities: getEditableCapabilities(model.capabilities)
 		});
+		setModelDialogMode("edit");
 	}
 
 	async function handleAddProvider(): Promise<void> {
@@ -637,8 +626,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				okText={modelDialogMode === "edit" ? t("settings.common.save") : t("settings.common.add")}
 				cancelText={t("settings.common.cancel")}
 				confirmLoading={isDialogSaving}
-				destroyOnHidden={true}
-				afterOpenChange={handleModelDialogOpenChange}
+				forceRender={true}
 				onCancel={(): void => {
 					setModelDialogMode(null);
 					setEditingModel(null);

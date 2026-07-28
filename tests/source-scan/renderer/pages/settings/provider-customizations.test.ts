@@ -14,11 +14,11 @@ describe("Provider customizations", () => {
 		expect(pageSource).toContain('mode="multiple"');
 		expect(pageSource).toContain("readOnly={modelDialogMode === \"edit\"}");
 		expect(pageSource).toContain("onRow={(model: ProviderModelInfo)");
-		expect(pageSource).toContain("afterOpenChange={handleModelDialogOpenChange}");
-		expect(pageSource).toContain('if (modelDialogMode === "edit" && editingModel !== null)');
-		expect(pageSource).toContain("id: editingModel.id");
-		expect(pageSource).toContain("displayName: editingModel.displayName");
-		expect(pageSource).toContain("getEditableCapabilities(editingModel.capabilities)");
+		expect(pageSource).toContain("forceRender={true}");
+		expect(pageSource).toContain("result.providers[0]?.provider ?? result.activeModel.providerId");
+		expect(pageSource).toContain("id: model.id");
+		expect(pageSource).toContain("displayName: model.displayName");
+		expect(pageSource).toContain("getEditableCapabilities(model.capabilities)");
 		expect(pageSource).not.toContain("getModelTokenText");
 		expect(pageSource).not.toContain("model.contextWindowTokens");
 		expect(pageSource).not.toContain("model.maxOutputTokens");
