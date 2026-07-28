@@ -1,11 +1,14 @@
 .diffCard {
 	width: 100%;
+	min-width: 0;
 	margin: 4px 0;
+	overflow: hidden;
 	user-select: none;
 }
 
 .diffCard :global(.ant-card-body) {
 	padding: 0px;
+	overflow: hidden;
 }
 
 .fileList {
@@ -17,16 +20,19 @@
 }
 
 .fileItem {
-	display: block
+	display: block;
+	min-width: 0;
 }
 
 .filePathButton {
 	justify-content: flex-start;
 	width: 100%;
+	max-width: 100%;
 	min-width: 0;
 	text-align: left;
 	height: 40px;
 	border-radius: 0px;
+	overflow: hidden;
 }
 
 .filePathButton:disabled {
@@ -36,14 +42,15 @@
 
 .filePath {
 	display: block;
+	flex: 1 1 auto;
 	min-width: 0;
-	width: 100%;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
 .fileStats {
+	flex: 0 0 auto;
 	white-space: nowrap;
 	font-variant-numeric: tabular-nums;
 }
