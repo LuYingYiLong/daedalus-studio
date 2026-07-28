@@ -338,6 +338,19 @@ function parseGodotVersion(projectText: string): string | null {
 	return version?.[1] ?? null;
 }
 
+export function getGodotVersionCompatibilityError(
+	godotVersion: string | null,
+	minGodotVersion: string
+): string | null {
+	if (godotVersion === null) {
+		return `Cannot determine this project's Godot version. Open and save it with Godot ${minGodotVersion} or newer before installing the plugin.`;
+	}
+	if (compareVersions(godotVersion, minGodotVersion) < 0) {
+		return `Godot ${minGodotVersion} or newer is required for this plugin; this project targets Godot ${godotVersion}.`;
+	}
+	return null;
+}
+
 type ProjectSection = {
 	start: number;
 	end: number;
@@ -986,13 +999,12 @@ class GodotProjectsService {
 		if (current.status === "modified" && !allowModified) {
 			throw new Error("Installed plugin files were modified. Use Repair to replace them.");
 		}
-		if (
-			current.godotVersion !== null
-			&& compareVersions(current.godotVersion, pluginPackage.manifest.minGodotVersion) < 0
-		) {
-			throw new Error(
-				`Godot ${pluginPackage.manifest.minGodotVersion} or newer is required for this plugin.`
-			);
+		const versionCompatibilityError: string | null = getGodotVersionCompatibilityError(
+			current.godotVersion,
+			pluginPackage.manifest.minGodotVersion
+		);
+		if (versionCompatibilityError !== null) {
+			throw new Error(versionCompatibilityError);
 		}
 		const enabled: boolean = current.pluginVersion === null ? true : current.enabled;
 		if (await isGodotEditorRunning()) {

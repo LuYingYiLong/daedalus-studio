@@ -334,7 +334,7 @@ async function main() {
 	const integrityContent = Buffer.from(`${JSON.stringify({
 		schemaVersion: 1,
 		pluginVersion,
-		pluginProtocolVersion: 1,
+		pluginProtocolVersion: 2,
 		files: files.map((entry) => ({
 			path: entry.path,
 			size: entry.content.length,
@@ -350,9 +350,9 @@ async function main() {
 	const manifest = {
 		schemaVersion: 1,
 		pluginVersion,
-		pluginProtocolVersion: 1,
+		pluginProtocolVersion: 2,
 		studioVersion: packageManifest.version,
-		minGodotVersion: "4.4.0",
+		minGodotVersion: "4.7.0",
 		sourceCommit: readSourceCommit(),
 		sourceTag: `v${pluginVersion}`,
 		publishedAt: new Date().toISOString(),

@@ -22,6 +22,7 @@ vi.mock("electron", (): object => ({
 }));
 
 import {
+	getGodotVersionCompatibilityError,
 	inspectZipEntries,
 	isGodotProcessName,
 	updateEditorPluginEnabled
@@ -105,5 +106,12 @@ describe("Godot project plugin management", () => {
 		expect(isGodotProcessName("godot-helper.exe")).toBe(true);
 		expect(isGodotProcessName("notgodot.exe")).toBe(false);
 		expect(isGodotProcessName("godotized.exe")).toBe(false);
+	});
+
+	it("blocks plugin installation below Godot 4.7 and when the project version is unknown", () => {
+		expect(getGodotVersionCompatibilityError("4.7", "4.7.0")).toBeNull();
+		expect(getGodotVersionCompatibilityError("4.7.1", "4.7.0")).toBeNull();
+		expect(getGodotVersionCompatibilityError("4.6.1", "4.7.0")).toContain("targets Godot 4.6.1");
+		expect(getGodotVersionCompatibilityError(null, "4.7.0")).toContain("Cannot determine");
 	});
 });
