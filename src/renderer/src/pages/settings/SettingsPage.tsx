@@ -32,6 +32,10 @@ export type SettingsPageKey =
 	| "archived_sessions"
 	| "about";
 
+export function isSettingsPageKey(value: string): value is SettingsPageKey {
+	return menuItemConfigs.some((item: SettingsMenuItemConfig): boolean => item.key === value);
+}
+
 type SettingsPageProps = {
 	initialPage?: SettingsPageKey;
 	onProviderModelSelectionChange?: (selection: ProviderModelSelection) => void;

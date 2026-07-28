@@ -5,6 +5,7 @@ import zhCN from "antd/locale/zh_CN";
 import i18n from "@/i18n";
 import Titlebar from "@/app/layout/Titlebar";
 import App from "./App";
+import SettingsWindow from "./SettingsWindow";
 import BootSplash from "./BootSplash";
 import type { BootstrapData } from "./bootstrap";
 import useClientPreferencesController from "./hooks/useClientPreferencesController";
@@ -16,6 +17,7 @@ function StudioThemeRoot(): React.JSX.Element {
 	const { resolvedTheme, resolvedLanguage } = useClientPreferencesController();
 	const studioTheme: ThemeConfig = useMemo((): ThemeConfig => createStudioTheme(resolvedTheme), [resolvedTheme]);
 	const antdLocale = resolvedLanguage === "zh-CN" ? zhCN : enUS;
+	const isSettingsWindow: boolean = new URLSearchParams(window.location.search).get("view") === "settings";
 	const handleBootstrapReady = useCallback((data: BootstrapData): void => {
 		setBootstrapData(data);
 	}, []);
@@ -33,7 +35,9 @@ function StudioThemeRoot(): React.JSX.Element {
 		<ConfigProvider theme={studioTheme} locale={antdLocale}>
 			<AntdApp component="div" className={styles.root}>
 				<Titlebar />
-				{bootstrapData === null ? <BootSplash onReady={handleBootstrapReady} /> : <App bootstrapData={bootstrapData} />}
+				{bootstrapData === null ? <BootSplash onReady={handleBootstrapReady} /> : (
+					isSettingsWindow ? <SettingsWindow bootstrapData={bootstrapData} /> : <App bootstrapData={bootstrapData} />
+				)}
 			</AntdApp>
 		</ConfigProvider>
 	);

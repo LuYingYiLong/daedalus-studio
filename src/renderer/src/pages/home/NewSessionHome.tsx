@@ -1,7 +1,7 @@
 import { Alert, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import type { WorkspaceConfig } from "@/api/types";
-import styles from "./AgentPage.module.css";
+import styles from "./HomePage.module.css";
 
 type NewSessionHomeProps = {
 	workspace: WorkspaceConfig | null;

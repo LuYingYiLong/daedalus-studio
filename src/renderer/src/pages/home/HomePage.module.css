@@ -1,6 +1,6 @@
 .page {
 	display: grid;
-	grid-template-columns: 260px auto minmax(0, 1fr);
+	grid-template-columns: 260px minmax(0, 1fr);
 	width: 100%;
 	min-width: 0;
 	min-height: 0;
@@ -17,12 +17,12 @@
 
 .workspaceSidebar {
 	display: grid;
-	grid-template-rows: auto auto minmax(0, 1fr);
+	grid-template-rows: auto minmax(0, 1fr) auto;
 	width: 260px;
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
-	padding: var(--ds-space-2);
+	padding: 0px var(--ds-space-2);
 }
 
 .workspaceTitleRow {
@@ -65,6 +65,8 @@
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
+	background-color: var(--ds-bg);
+	border-radius: var(--ds-space-2);
 }
 
 .agentMain {

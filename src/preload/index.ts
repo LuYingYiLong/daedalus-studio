@@ -205,6 +205,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		}
 	},
 
+	windowControl: {
+		openSettings: (page?: string): Promise<void> => ipcRenderer.invoke("window:open-settings", page),
+		onSettingsPageRequested: (callback: (page: string) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, page: string): void => callback(page);
+			ipcRenderer.on("window:open-settings", handler);
+			return () => { ipcRenderer.removeListener("window:open-settings", handler); };
+		}
+	},
+
 	appUpdate: {
 		getState: (): Promise<AppUpdateState> => {
 			return ipcRenderer.invoke("app-update:get-state");

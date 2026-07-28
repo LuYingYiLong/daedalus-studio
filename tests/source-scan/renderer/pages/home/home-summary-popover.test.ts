@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
-describe("AgentPage summary popover source", () => {
-	const source: string = readRepoFile("src", "renderer", "src", "pages", "agent", "AgentPage.tsx");
+describe("HomePage summary popover source", () => {
+	const source: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 	const apiSource: string = readRepoFile("src", "renderer", "src", "api", "session-overview-api.ts");
 
 	it("uses session overview RPC for dynamic summary content", () => {

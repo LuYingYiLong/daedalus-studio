@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
-describe("AgentPage approval layout source", () => {
-	const source: string = readRepoFile("src", "renderer", "src", "pages", "agent", "AgentPage.tsx");
+describe("HomePage approval layout source", () => {
+	const source: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 
 	it("renders approval panel in the composer slot instead of an overlay", () => {
 		expect(source).toContain("pendingApproval !== null ? (");

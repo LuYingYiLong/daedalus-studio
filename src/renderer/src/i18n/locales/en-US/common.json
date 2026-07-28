@@ -1,12 +1,5 @@
 {
   "app": {
-    "navigation": {
-      "ariaLabel": "Application navigation",
-      "agent": "Agent",
-      "settings": "Settings",
-      "drawing": "Draw",
-      "knowledge": "Knowledge"
-    },
     "boot": {
       "progress": {
         "starting": "Starting Daedalus Studio",
@@ -121,6 +114,7 @@
   "agentPage": {
     "actions": {
       "newSession": "New session",
+      "openSettings": "Open settings",
       "scrollToBottom": "Scroll to bottom"
     },
     "conversationNavigator": {

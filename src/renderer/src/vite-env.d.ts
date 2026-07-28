@@ -160,6 +160,11 @@ declare global {
 		onOpenSession: (callback: (sessionId: string) => void) => () => void;
 	}
 
+	interface WindowControlAPI {
+		openSettings: (page?: string) => Promise<void>;
+		onSettingsPageRequested: (callback: (page: string) => void) => () => void;
+	}
+
 	interface TerminalState {
 		terminalId: string;
 		shell: string;
@@ -263,6 +268,7 @@ declare global {
 		clipboard: ClipboardAPI;
 		nativeNotifications: NativeNotificationAPI;
 		tray: TrayAPI;
+		windowControl: WindowControlAPI;
 		appUpdate: AppUpdateAPI;
 		terminal: TerminalAPI;
 		sessionFs: SessionFsAPI;

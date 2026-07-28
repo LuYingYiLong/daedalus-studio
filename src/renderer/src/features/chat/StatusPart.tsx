@@ -27,9 +27,7 @@ function getAlertType(status: string): AlertProps["type"] {
 
 function handleStatusAction(actionId: string | undefined): void {
 	if (actionId === "configure_godot") {
-		window.dispatchEvent(new CustomEvent("daedalus:open-settings", {
-			detail: { page: "general" }
-		}));
+		void window.electronAPI.windowControl.openSettings("general");
 	}
 }
 

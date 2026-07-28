@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeTheme, shell, type BrowserWindowConstructorOptions } from "electron";
+import { app, BrowserWindow, ipcMain, nativeTheme, shell, type BrowserWindowConstructorOptions } from "electron";
 import { join } from "node:path";
 import { backendManager } from "./services/backend-manager";
 import { backendBootstrapService } from "./services/backend-bootstrap";
@@ -37,6 +37,21 @@ godotProjectsService.registerIpc();
 configureAppIdentity();
 
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
+let mainWindow: BrowserWindow | null = null;
+let settingsWindow: BrowserWindow | null = null;
+const SETTINGS_PAGE_KEYS: readonly string[] = [
+	"provider",
+	"default_model",
+	"general",
+	"search",
+	"statistics",
+	"personalization",
+	"mcp_servers",
+	"skills",
+	"godot_projects",
+	"archived_sessions",
+	"about"
+];
 windowLifecycleController.registerIpc();
 appUpdateService.setBeforeClientInstall(async (): Promise<void> => {
 	windowLifecycleController.markQuitting();
@@ -96,9 +111,82 @@ function applyWindowThemeToAllWindows(): void {
 	}
 }
 
+function isSettingsPageKey(value: unknown): value is string {
+	return typeof value === "string" && SETTINGS_PAGE_KEYS.includes(value);
+}
+
+function loadRendererWindow(browserWindow: BrowserWindow, view: "main" | "settings", settingsPage?: string): void {
+	if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
+		const rendererUrl: URL = new URL(process.env.ELECTRON_RENDERER_URL);
+		rendererUrl.searchParams.set("view", view);
+		if (settingsPage !== undefined) {
+			rendererUrl.searchParams.set("page", settingsPage);
+		}
+		void browserWindow.loadURL(rendererUrl.toString());
+		return;
+	}
+
+	void browserWindow.loadFile(join(__dirname, "../renderer/index.html"), {
+		query: settingsPage === undefined ? { view } : { view, page: settingsPage }
+	});
+}
+
+function openSettingsWindow(page: string = "provider"): void {
+	if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
+		if (settingsWindow.isMinimized()) {
+			settingsWindow.restore();
+		}
+		settingsWindow.show();
+		settingsWindow.focus();
+		settingsWindow.webContents.send("window:open-settings", page);
+		return;
+	}
+
+	const colors: WindowThemeColors = getCurrentWindowThemeColors(clientPreferencesService.getCachedPreferences());
+	settingsWindow = new BrowserWindow({
+		width: 1080,
+		height: 760,
+		minWidth: 820,
+		minHeight: 580,
+		parent: mainWindow ?? undefined,
+		backgroundColor: getWindowBackgroundColor(colors),
+		icon: getWindowIconPath(),
+		show: false,
+		...getNativeWindowMaterialOptions(),
+		webPreferences: {
+			preload: join(__dirname, "../preload/index.js"),
+			contextIsolation: true,
+			nodeIntegration: false,
+			sandbox: false
+		},
+		titleBarStyle: "hidden",
+		...(process.platform !== "darwin" ? {
+			titleBarOverlay: {
+				color: colors.titleBarOverlayColor,
+				symbolColor: colors.symbolColor,
+				height: 36
+			}
+		} : {})
+	});
+	applyWindowTheme(settingsWindow, clientPreferencesService.getCachedPreferences());
+	settingsWindow.once("ready-to-show", () => settingsWindow?.show());
+	settingsWindow.webContents.setWindowOpenHandler(({ url }) => {
+		void shell.openExternal(url);
+		return { action: "deny" };
+	});
+	settingsWindow.on("closed", () => {
+		settingsWindow = null;
+	});
+	loadRendererWindow(settingsWindow, "settings", page);
+}
+
+ipcMain.handle("window:open-settings", (_event, page?: unknown): void => {
+	openSettingsWindow(isSettingsPageKey(page) ? page : "provider");
+});
+
 function createWindow(): void {
 	const colors: WindowThemeColors = getCurrentWindowThemeColors(clientPreferencesService.getCachedPreferences());
-	const mainWindow: BrowserWindow = new BrowserWindow({
+	mainWindow = new BrowserWindow({
 		width: 1300,
 		height: 760,
 		minWidth: 900,
@@ -136,6 +224,9 @@ function createWindow(): void {
 	nativeNotificationService.attachWindow(mainWindow);
 
 	mainWindow.once("ready-to-show", () => {
+		if (mainWindow === null) {
+			return;
+		}
 		applyWindowTheme(mainWindow, clientPreferencesService.getCachedPreferences());
 		mainWindow.show();
 	});
@@ -145,11 +236,13 @@ function createWindow(): void {
 		return { action: "deny" };
 	});
 
-	if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
-		void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
-	} else {
-		void mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
-	}
+	mainWindow.on("closed", () => {
+		mainWindow = null;
+		if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
+			settingsWindow.close();
+		}
+	});
+	loadRendererWindow(mainWindow, "main");
 }
 
 app.whenReady().then(async () => {

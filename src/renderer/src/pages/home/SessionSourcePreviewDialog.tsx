@@ -3,7 +3,7 @@ import { Modal } from "antd";
 import { useTranslation } from "react-i18next";
 import type { SessionOverviewSourceItem } from "@/api/session-overview-api";
 import MarkdownContent from "@/features/markdown/MarkdownContent";
-import styles from "./AgentPage.module.css";
+import styles from "./HomePage.module.css";
 
 type SessionSourcePreviewDialogProps = {
 	source: SessionOverviewSourceItem | null;

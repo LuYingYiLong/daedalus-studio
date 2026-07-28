@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { SessionOverviewResult, SessionOverviewSourceItem } from "@/api/session-overview-api";
 import { formatSourceSubtitle } from "./session-overview-formatters";
-import styles from "./AgentPage.module.css";
+import styles from "./HomePage.module.css";
 
 type SessionSourcesDialogProps = {
 	overview: SessionOverviewResult | null;

@@ -2,7 +2,7 @@ import type { JSX } from "react";
 import { Button, Modal } from "antd";
 import { useTranslation } from "react-i18next";
 import type { SessionOverviewPlanItem, SessionOverviewResult } from "@/api/session-overview-api";
-import styles from "./AgentPage.module.css";
+import styles from "./HomePage.module.css";
 
 type SessionPlansDialogProps = {
 	overview: SessionOverviewResult | null;

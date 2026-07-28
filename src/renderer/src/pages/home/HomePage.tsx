@@ -21,7 +21,7 @@ import ApprovalDialog from "@/features/approval/ApprovalDialog";
 import ToolBudgetDialog from "@/features/approval/ToolBudgetDialog";
 import type { ComposerCompletionTrigger } from "@/features/composer/composer-completion";
 import type { RetryUserMessagePayload } from "@/features/chat/UserBubble";
-import styles from "./AgentPage.module.css";
+import styles from "./HomePage.module.css";
 import { Icon } from "@/assets/icons";
 import ClarificationDialog from "@/features/clarification/ClarificationDialog";
 import PlanApprovalDialog from "@/features/approval/PlanApprovalDialog";
@@ -167,7 +167,7 @@ function aggregateTimelineFileChanges(blocks: TimelineBlock[]): WorkflowFileChan
 	return { additions, deletions, changedFiles };
 }
 
-type AgentPageProps = {
+type HomePageProps = {
 	workspaceRefreshToken: number;
 	isHome: boolean;
 	activeSessionId: string | null;
@@ -281,7 +281,7 @@ type AgentPageProps = {
 	onCompletionOpen: (trigger: ComposerCompletionTrigger) => void;
 };
 
-function AgentPage({
+function HomePage({
 	workspaceRefreshToken,
 	isHome,
 	activeSessionId,
@@ -393,7 +393,7 @@ function AgentPage({
 	onGuideReorder,
 	onWorkflowTodoDismiss,
 	onCompletionOpen
-}: AgentPageProps): React.JSX.Element {
+}: HomePageProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
 	const [workspaceLaunchTargets, setWorkspaceLaunchTargets] = useState<WorkspaceLaunchTarget[]>(FALLBACK_WORKSPACE_LAUNCH_TARGETS);
@@ -520,7 +520,7 @@ function AgentPage({
 				});
 			})
 			.catch((error: unknown): void => {
-				console.error("[AgentPage] failed to list workspace launch targets", error);
+			console.error("[HomePage] failed to list workspace launch targets", error);
 				if (!cancelled) {
 					setWorkspaceLaunchTargets(FALLBACK_WORKSPACE_LAUNCH_TARGETS);
 					setSelectedLaunchTargetId("file-explorer");
@@ -548,7 +548,7 @@ function AgentPage({
 			}
 			setIsGodotProject(result.entries.some((entry): boolean => entry.kind === "file" && entry.name === "project.godot"));
 		}).catch((error: unknown): void => {
-			console.error("[AgentPage] failed to detect Godot project", error);
+		console.error("[HomePage] failed to detect Godot project", error);
 			if (!cancelled) {
 				setIsGodotProject(false);
 			}
@@ -589,7 +589,7 @@ function AgentPage({
 			return result;
 		} catch (error: unknown) {
 			const message: string = error instanceof Error ? error.message : t("agentPage.summary.errors.load");
-			console.error("[AgentPage] failed to load session overview", error);
+			console.error("[HomePage] failed to load session overview", error);
 			setSummaryError(message);
 			return null;
 		} finally {
@@ -688,7 +688,7 @@ function AgentPage({
 			setGodotSceneFiles(scenes);
 		} catch (error: unknown) {
 			const message: string = error instanceof Error ? error.message : t("agentPage.summary.godot.errors.loadScenes");
-			console.error("[AgentPage] failed to load Godot scenes", error);
+			console.error("[HomePage] failed to load Godot scenes", error);
 			void messageApi.error(message);
 			setGodotSceneFiles([]);
 		} finally {
@@ -930,7 +930,7 @@ function AgentPage({
 			});
 		} catch (error: unknown) {
 			const message: string = error instanceof Error ? error.message : t("agentPage.workspaceLaunch.errors.open");
-			console.error("[AgentPage] failed to open workspace launch target", error);
+			console.error("[HomePage] failed to open workspace launch target", error);
 			void messageApi.error(message);
 		} finally {
 			setIsOpeningLaunchTarget(false);
@@ -1204,7 +1204,6 @@ function AgentPage({
 						{t("agentPage.actions.newSession")}
 					</Button>
 				</header>
-
 				<WorkspaceTree
 					refreshToken={workspaceRefreshToken}
 					selectedSessionId={activeSessionId}
@@ -1223,10 +1222,18 @@ function AgentPage({
 					onWorkspaceDelete={onWorkspaceDelete}
 					onWorkspaceUpdate={onWorkspaceUpdate}
 				/>
-
+				<footer className={styles.workspaceFooter}>
+					<Button
+						icon={<Icon name="settings" />}
+						type="text"
+						block
+						aria-label={t("agentPage.actions.openSettings")}
+						onClick={(): void => {
+							void window.electronAPI.windowControl.openSettings();
+						}}
+					/>
+				</footer>
 			</aside>
-
-			<Divider vertical size="small" />
 
 			<div className={styles.agentMain}>
 				{showWorkspaceLaunchControls || showSummaryButton || showBottomDockButton || showSideDockButton ? (
@@ -1588,4 +1595,4 @@ function AgentPage({
 	);
 }
 
-export default AgentPage;
+export default HomePage;

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
-describe("AgentPage git diff review source", () => {
-	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "agent", "AgentPage.tsx");
+describe("HomePage git diff review source", () => {
+	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 	const messageListSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "MessageList.tsx");
 	const assistantBubbleSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "AssistantBubble.tsx");
 	const inlineDiffSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "InlineDiffPart.tsx");

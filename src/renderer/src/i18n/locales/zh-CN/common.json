@@ -1,12 +1,5 @@
 {
   "app": {
-    "navigation": {
-      "ariaLabel": "应用导航",
-      "agent": "对话",
-      "settings": "设置",
-      "drawing": "绘图",
-      "knowledge": "知识库"
-    },
     "boot": {
       "progress": {
         "starting": "正在启动 Daedalus Studio",
@@ -121,6 +114,7 @@
   "agentPage": {
     "actions": {
       "newSession": "新建会话",
+      "openSettings": "打开设置",
       "scrollToBottom": "滚动到底部"
     },
     "conversationNavigator": {

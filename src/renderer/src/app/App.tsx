@@ -48,12 +48,8 @@ import {
 import { addGuide, deleteGuide, reorderGuides } from "@/api/guide-api";
 import { addQueuedMessage, removeQueuedMessage, reorderQueuedMessages } from "@/api/message-queue-api";
 import { getSessionTitle } from "./session-title";
-import AppNavTabs, { type AppPageKey } from "./layout/AppNavTabs";
-import AgentPage from "@/pages/agent/AgentPage";
+import HomePage from "@/pages/home/HomePage";
 import WorkspaceProjectDialog from "@/features/workspace/WorkspaceProjectDialog";
-import SettingsPage, { type SettingsPageKey } from "@/pages/settings/SettingsPage";
-import DrawingPage from "@/pages/drawing/DrawingPage";
-import KnowledgePage from "@/pages/knowledge/KnowledgePage";
 import { extractEnabledSkillRefs, type ComposerCompletionTrigger } from "@/features/composer/composer-completion";
 import { createWorkflowTodoSnapshotFromPlanData, getWorkflowTodoSnapshotKey, isWorkflowTodoActive, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
 import { saveImageAttachment, saveTextAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
@@ -585,8 +581,6 @@ function getRecentSessions(sessions: SessionMetadata[]): SessionMetadata[] {
 }
 
 function App({ bootstrapData }: AppProps): React.JSX.Element {
-	const [activePage, setActivePage] = useState<AppPageKey>("agent");
-	const [settingsInitialPage, setSettingsInitialPage] = useState<SettingsPageKey>("provider");
 	const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState<number>(0);
 	const [isNewSessionHome, setIsNewSessionHome] = useState<boolean>(true);
 	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() => createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection));
@@ -677,12 +671,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	useEffect((): (() => void) => {
 		const removeNewChatListener: () => void = window.electronAPI.tray.onNewChat((): void => {
-			setActivePage("agent");
 			void handleNewSession();
 		});
 		const removeOpenSessionListener: () => void = window.electronAPI.tray.onOpenSession((sessionId: string): void => {
 			void (async (): Promise<void> => {
-				setActivePage("agent");
 				const cachedSession: SessionMetadata | undefined = recentSessionsRef.current.find((session: SessionMetadata): boolean => session.id === sessionId);
 				if (cachedSession !== undefined) {
 					await handleSessionSelect(cachedSession);
@@ -712,19 +704,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	const handleSessionsChange = useCallback((sessions: SessionMetadata[]): void => {
 		setRecentSessions(getRecentSessions(sessions));
-	}, []);
-
-	useEffect((): (() => void) => {
-		function handleOpenSettings(event: Event): void {
-			const customEvent = event as CustomEvent<{ page?: SettingsPageKey }>;
-			setSettingsInitialPage(customEvent.detail?.page ?? "general");
-			setActivePage("settings");
-		}
-
-		window.addEventListener("daedalus:open-settings", handleOpenSettings);
-		return (): void => {
-			window.removeEventListener("daedalus:open-settings", handleOpenSettings);
-		};
 	}, []);
 
 	useEffect((): void => {
@@ -3194,7 +3173,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 }
 
 	return (
-		<main className={`${styles.shell} ${activePage === "agent" ? styles.agentShell : styles.pageShell}`}>
+		<main className={styles.shell}>
 			{messageContextHolder}
 			<Modal
 				open={isFullTrustModalOpen}
@@ -3231,10 +3210,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					}}
 				/>
 			</Modal>
-			<AppNavTabs activePage={activePage} onPageChange={setActivePage} />
 			<div className={styles.pageSurface}>
-				{activePage === "agent" ? (
-					<AgentPage
+				<HomePage
 						workspaceRefreshToken={workspaceRefreshToken}
 						isHome={isNewSessionHome}
 						activeSessionId={activeSessionId}
@@ -3410,21 +3387,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 							void handleWorkflowTodoDismiss(snapshot);
 						}}
 						onCompletionOpen={handleCompletionOpen}
-					/>
-				) : activePage === "settings" ? (
-					<SettingsPage
-						initialPage={settingsInitialPage}
-						onProviderModelSelectionChange={setProviderModelSelection}
-						clientPreferences={clientPreferences}
-						generalSettings={generalSettings}
-						onClientPreferencesChange={setClientPreferences}
-						onGeneralSettingsChange={setGeneralSettings}
-					/>
-				) : activePage === "drawing" ? (
-					<DrawingPage />
-				) : (
-					<KnowledgePage />
-				)}
+				/>
 			</div>
 			<WorkspaceProjectDialog
 				open={isWorkspaceProjectDialogOpen}

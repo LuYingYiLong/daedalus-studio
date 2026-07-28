@@ -4,8 +4,8 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 describe("ConversationAnchorNavigator source", () => {
 	const navigatorSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "ConversationAnchorNavigator.tsx");
 	const navigatorStyles: string = readRepoFile("src", "renderer", "src", "features", "chat", "ConversationAnchorNavigator.module.css");
-	const agentPageSource: string = readRepoFile("src", "renderer", "src", "pages", "agent", "AgentPage.tsx");
-	const agentPageStyles: string = readRepoFile("src", "renderer", "src", "pages", "agent", "AgentPage.module.css");
+	const homePageSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
+	const homePageStyles: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.module.css").replace(/\r\n/g, "\n");
 	const messageListSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "MessageList.tsx");
 
 	it("uses Anchor and Tooltip for every indexed user turn", () => {
@@ -25,11 +25,11 @@ describe("ConversationAnchorNavigator source", () => {
 		expect(navigatorStyles).toContain("tickNeighborOne");
 	});
 
-	it("connects viewport detection and unloaded turn navigation through AgentPage", () => {
+	it("connects viewport detection and unloaded turn navigation through HomePage", () => {
 		expect(messageListSource).toContain("scrollToEntry");
 		expect(messageListSource).toContain("onActiveUserEntryChange");
-		expect(agentPageSource).toContain("ConversationAnchorNavigator");
-		expect(agentPageSource).toContain("onTimelineNavigationLoadEntry");
-		expect(agentPageStyles).toContain(".chatBody {\n\tposition: relative;\n\tdisplay: grid;");
+		expect(homePageSource).toContain("ConversationAnchorNavigator");
+		expect(homePageSource).toContain("onTimelineNavigationLoadEntry");
+		expect(homePageStyles).toContain(".chatBody {\n\tposition: relative;\n\tdisplay: grid;");
 	});
 });

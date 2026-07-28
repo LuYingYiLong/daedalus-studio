@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
-describe("AgentPage git commit dialog source", () => {
-	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "agent", "AgentPage.tsx");
+describe("HomePage git commit dialog source", () => {
+	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 	const commitActionDialogSource: string = readRepoFile("src", "renderer", "src", "features", "git", "CommitActionDialog.tsx");
 	const branchActionDialogSource: string = readRepoFile("src", "renderer", "src", "features", "git", "BranchActionDialog.tsx");
 	const createBranchDialogSource: string = readRepoFile("src", "renderer", "src", "features", "git", "CreateBranchDialog.tsx");

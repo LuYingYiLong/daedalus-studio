@@ -7,7 +7,7 @@ describe("MessageQueuePanel source", () => {
 	const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
 	const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
 	const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
-	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "agent", "AgentPage.tsx");
+	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 	const queueApiSource: string = readRepoFile("src", "renderer", "src", "api", "message-queue-api.ts");
 	const guideApiSource: string = readRepoFile("src", "renderer", "src", "api", "guide-api.ts");
 	const packageJsonSource: string = readRepoFile("package.json");
@@ -63,7 +63,7 @@ describe("MessageQueuePanel source", () => {
 		expect(appSource).toContain("getRunControllerRequestId(runState)");
 	});
 
-	it("passes workbench queue state through AgentPage and API wrappers", () => {
+	it("passes workbench queue state through HomePage and API wrappers", () => {
 		expect(agentSource).toContain("<MessageQueuePanel");
 		expect(agentSource).toContain("messageQueue={messageQueue}");
 		expect(agentSource).toContain("pendingGuides={pendingGuides}");

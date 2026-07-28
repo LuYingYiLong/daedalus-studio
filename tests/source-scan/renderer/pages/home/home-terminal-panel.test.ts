@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
-describe("AgentPage terminal panel source", () => {
-	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "agent", "AgentPage.tsx");
+describe("HomePage terminal panel source", () => {
+	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 	const terminalPanelSource: string = readRepoFile("src", "renderer", "src", "features", "terminal", "TerminalPanel.tsx");
 	const dockPanelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.tsx");
 	const panelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "panel-tabs", "PanelTabs.tsx");
