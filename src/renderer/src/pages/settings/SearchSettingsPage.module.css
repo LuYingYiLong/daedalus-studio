@@ -39,6 +39,10 @@
 	margin-bottom: 12px;
 }
 
+.providerNotice {
+	margin-top: 12px;
+}
+
 .loading {
 	display: flex;
 	align-items: center;

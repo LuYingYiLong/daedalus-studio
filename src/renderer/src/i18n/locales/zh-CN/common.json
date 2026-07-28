@@ -836,6 +836,12 @@
         "tooltip": "{{count}} 条结果",
         "tooltip_other": "{{count}} 条结果"
       },
+      "maxKeywords": {
+        "title": "搜索广度",
+        "description": "限制一次联网搜索最多生成的搜索关键词数；更高的数值可能提高召回率。",
+        "tooltip": "最多 {{count}} 个关键词",
+        "billingNotice": "所选供应商可能按搜索关键词调用次数额外计费。使用前请在供应商控制台开通联网搜索服务并确认定价。"
+      },
       "errors": {
         "load": "加载网页搜索设置失败",
         "save": "保存网页搜索设置失败"

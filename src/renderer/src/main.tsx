@@ -14,6 +14,9 @@ if (!rootElement) {
 }
 
 const isSettingsWindow: boolean = new URLSearchParams(window.location.search).get("view") === "settings";
+if (isSettingsWindow) {
+	document.title = "Settings";
+}
 
 createRoot(rootElement).render(
 	<StrictMode>

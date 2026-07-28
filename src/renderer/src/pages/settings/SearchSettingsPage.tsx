@@ -10,7 +10,7 @@ import {
 } from "@/api/web-search-settings-api";
 import styles from "./SearchSettingsPage.module.css";
 
-type SavingKey = "enabled" | "model" | "maxResults";
+type SavingKey = "enabled" | "model" | "maxResults" | "maxKeywords";
 
 const SEARCH_RESULT_MARKS: SliderSingleProps["marks"] = {
 	0: "0",
@@ -19,6 +19,12 @@ const SEARCH_RESULT_MARKS: SliderSingleProps["marks"] = {
 	20: "20",
 	50: "50",
 	100: "100"
+};
+
+const SEARCH_KEYWORD_MARKS: SliderSingleProps["marks"] = {
+	1: "1",
+	2: "2",
+	3: "3"
 };
 
 function encodeModelValue(option: WebSearchModelOption): string {
@@ -73,6 +79,7 @@ function SearchSettingsPage(): React.JSX.Element {
 	const { t } = useTranslation();
 	const [settings, setSettings] = useState<WebSearchSettings | null>(null);
 	const [draftMaxResults, setDraftMaxResults] = useState<number>(5);
+	const [draftMaxKeywords, setDraftMaxKeywords] = useState<number>(1);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [savingKey, setSavingKey] = useState<SavingKey | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -88,6 +95,7 @@ function SearchSettingsPage(): React.JSX.Element {
 				if (!cancelled) {
 					setSettings(loadedSettings);
 					setDraftMaxResults(loadedSettings.maxResults);
+					setDraftMaxKeywords(loadedSettings.maxKeywords);
 				}
 			} catch (error: unknown) {
 				if (!cancelled) {
@@ -111,6 +119,10 @@ function SearchSettingsPage(): React.JSX.Element {
 		return createModelOptions(settings);
 	}, [settings]);
 	const selectedModelValue: string | undefined = getSelectedModelValue(settings);
+	const selectedModelOption: WebSearchModelOption | undefined = settings?.models.find((option: WebSearchModelOption): boolean => {
+		return option.provider === settings.provider && option.model === settings.model;
+	});
+	const maxKeywordsConfig = selectedModelOption?.searchOptions?.maxKeywords;
 
 	async function savePatch(key: SavingKey, patch: Parameters<typeof updateWebSearchSettings>[0]): Promise<void> {
 		try {
@@ -121,9 +133,15 @@ function SearchSettingsPage(): React.JSX.Element {
 			if (key === "maxResults") {
 				setDraftMaxResults(savedSettings.maxResults);
 			}
+			if (key === "maxKeywords") {
+				setDraftMaxKeywords(savedSettings.maxKeywords);
+			}
 		} catch (error: unknown) {
 			if (key === "maxResults" && settings !== null) {
 				setDraftMaxResults(settings.maxResults);
+			}
+			if (key === "maxKeywords" && settings !== null) {
+				setDraftMaxKeywords(settings.maxKeywords);
 			}
 			setErrorMessage(error instanceof Error ? error.message : t("settings.search.errors.save"));
 		} finally {
@@ -148,6 +166,13 @@ function SearchSettingsPage(): React.JSX.Element {
 			return;
 		}
 		void savePatch("maxResults", { maxResults: value });
+	}
+
+	function handleMaxKeywordsChangeComplete(value: number | number[]): void {
+		if (Array.isArray(value)) {
+			return;
+		}
+		void savePatch("maxKeywords", { maxKeywords: value });
 	}
 
 	return (
@@ -238,8 +263,38 @@ function SearchSettingsPage(): React.JSX.Element {
 									{item.action}
 								</div>
 							))}
+							{maxKeywordsConfig !== undefined ? (
+								<div className={styles.settingsItem}>
+									<div className={styles.settingsMeta}>
+										<Typography.Text>{t("settings.search.maxKeywords.title")}</Typography.Text>
+										<Typography.Text type="secondary">{t("settings.search.maxKeywords.description")}</Typography.Text>
+									</div>
+									<div className={styles.sliderControl}>
+										<Slider
+											min={maxKeywordsConfig.min}
+											max={maxKeywordsConfig.max}
+											step={1}
+											marks={SEARCH_KEYWORD_MARKS}
+											value={draftMaxKeywords}
+											disabled={savingKey !== null}
+											tooltip={{ formatter: (value: number | undefined): string => t("settings.search.maxKeywords.tooltip", { count: value ?? 1 }) }}
+											onChange={(value: number): void => setDraftMaxKeywords(value)}
+											onChangeComplete={handleMaxKeywordsChangeComplete}
+										/>
+									</div>
+								</div>
+							) : null}
 						</div>
 					)}
+
+					{maxKeywordsConfig?.chargedPerUnit === true ? (
+						<Alert
+							type="warning"
+							showIcon={true}
+							description={t("settings.search.maxKeywords.billingNotice")}
+							className={styles.providerNotice}
+						/>
+					) : null}
 
 					{settings !== null && settings.enabled && !settings.configured ? (
 						<Alert

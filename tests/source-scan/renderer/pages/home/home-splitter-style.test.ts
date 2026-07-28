@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("HomePage Splitter styling", () => {
-	it("uses Splitter semantic dragger states for the hover and active divider treatment", () => {
+	it("keeps the semantic dragger states without restoring a visible dashed divider", () => {
 		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 		const cssSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.module.css");
 
@@ -11,9 +11,8 @@ describe("HomePage Splitter styling", () => {
 		expect(pageSource).toContain("active: styles.splitterDraggerActive");
 		expect(cssSource).toContain(".splitterDragger::before");
 		expect(cssSource).toContain("background: transparent !important;");
-		expect(cssSource).toContain("border: 1px dashed var(--ds-border);");
 		expect(cssSource).toContain(".splitterDragger:hover::before,");
 		expect(cssSource).toContain(".splitterDraggerActive::before");
-		expect(cssSource).toContain("border-color: var(--ds-accent);");
+		expect(cssSource).not.toContain("border: 1px dashed");
 	});
 });

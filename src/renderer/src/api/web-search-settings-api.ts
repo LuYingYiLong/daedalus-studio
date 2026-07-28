@@ -10,14 +10,23 @@ export type WebSearchModelOption = {
 	baseUrl: string;
 	contextWindowTokens: number;
 	maxOutputTokens: number;
+	searchOptions?: {
+		maxKeywords?: {
+			min: number;
+			max: number;
+			defaultValue: number;
+			chargedPerUnit: boolean;
+		};
+	};
 };
 
 export type WebSearchSettings = {
-	schemaVersion: 1;
+	schemaVersion: 2;
 	enabled: boolean;
 	provider: string;
 	model: string;
 	maxResults: number;
+	maxKeywords: number;
 	updatedAt: string;
 	available: boolean;
 	configured: boolean;
@@ -31,6 +40,7 @@ export type WebSearchSettingsPatch = {
 	provider?: string;
 	model?: string;
 	maxResults?: number;
+	maxKeywords?: number;
 };
 
 export async function fetchWebSearchSettings(): Promise<WebSearchSettings> {

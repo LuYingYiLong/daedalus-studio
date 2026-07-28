@@ -836,6 +836,12 @@
         "tooltip": "{{count}} result",
         "tooltip_other": "{{count}} results"
       },
+      "maxKeywords": {
+        "title": "Search breadth",
+        "description": "Limit how many search keywords a single web search may generate. Higher values can improve recall.",
+        "tooltip": "Up to {{count}} keywords",
+        "billingNotice": "The selected provider may charge for each search keyword. Enable web search in the provider console and review its pricing before use."
+      },
       "errors": {
         "load": "Failed to load web search settings",
         "save": "Failed to save web search settings"

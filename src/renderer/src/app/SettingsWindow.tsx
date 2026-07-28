@@ -74,7 +74,7 @@ function getInitialSettingsPage(): SettingsPageKey {
 }
 
 function SettingsWindow(): React.JSX.Element {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const [activePage, setActivePage] = useState<SettingsPageKey>(getInitialSettingsPage);
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(DEFAULT_CLIENT_PREFERENCES);
 	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(DEFAULT_GENERAL_SETTINGS);
@@ -87,6 +87,10 @@ function SettingsWindow(): React.JSX.Element {
 			}
 		});
 	}, []);
+
+	useEffect((): void => {
+		document.title = t("settings.menu.fallbackTitle");
+	}, [i18n.resolvedLanguage, t]);
 
 	return (
 		<main className={styles.surface}>
