@@ -148,7 +148,6 @@ function openSettingsWindow(page: string = "provider"): void {
 		height: 760,
 		minWidth: 820,
 		minHeight: 580,
-		parent: mainWindow ?? undefined,
 		backgroundColor: getWindowBackgroundColor(colors),
 		icon: getWindowIconPath(),
 		show: false,
@@ -238,9 +237,6 @@ function createWindow(): void {
 
 	mainWindow.on("closed", () => {
 		mainWindow = null;
-		if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
-			settingsWindow.close();
-		}
 	});
 	loadRendererWindow(mainWindow, "main");
 }

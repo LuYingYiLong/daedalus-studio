@@ -4,7 +4,7 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 describe("SearchSettingsPage", () => {
 	it("renders web search settings backed by backend RPC", () => {
 		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "SearchSettingsPage.tsx");
-		const settingsSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "SettingsPage.tsx");
+		const settingsSource: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindow.tsx");
 		const apiSource: string = readRepoFile("src", "renderer", "src", "api", "web-search-settings-api.ts");
 		const providerSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "ProviderSettingsPage.tsx");
 		const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");

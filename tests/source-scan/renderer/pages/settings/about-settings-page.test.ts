@@ -5,7 +5,7 @@ describe("AboutSettingsPage", () => {
 	it("shows backend details with the colorful backend icon", () => {
 		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "AboutSettingsPage.tsx");
 		const cssSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "AboutSettingsPage.module.css");
-		const settingsCssSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "SettingsPage.module.css");
+		const settingsCssSource: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindow.module.css");
 		const iconSource: string = readRepoFile("src", "renderer", "src", "assets", "icons", "index.tsx");
 
 		expect(pageSource).toContain('backend-colorful.svg?url');
