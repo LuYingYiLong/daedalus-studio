@@ -1,7 +1,7 @@
-import { Divider, Menu, type MenuProps, Typography } from "antd";
+import { Menu, type MenuProps, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { BootstrapData } from "./bootstrap";
+import type { SettingsBootstrapData } from "./bootstrap";
 import type { ProviderModelSelection } from "@/api/provider-api";
 import type { ClientPreferences } from "@/api/client-preferences-api";
 import type { GeneralSettings } from "@/api/general-settings-api";
@@ -34,7 +34,7 @@ type SettingsPageKey =
 	| "about";
 
 type SettingsWindowProps = {
-	bootstrapData: BootstrapData;
+	bootstrapData: SettingsBootstrapData;
 };
 
 type SettingsMenuItemConfig = {
@@ -99,7 +99,7 @@ function SettingsWindow({ bootstrapData }: SettingsWindowProps): React.JSX.Eleme
 		<main className={styles.surface}>
 			<aside className={styles.settingsSideBar}>
 				<Menu
-					className="daedalus-compact-menu daedalus-compact-menu-flush"
+					className={`${styles.settingsMenu} "daedalus-compact-menu daedalus-compact-menu-flush"`}
 					inlineIndent={8}
 					mode="inline"
 					items={items}
@@ -112,9 +112,8 @@ function SettingsWindow({ bootstrapData }: SettingsWindowProps): React.JSX.Eleme
 				/>
 			</aside>
 
-			<Divider vertical size="small" className={styles.divider} />
-
 			<div className={styles.activePage}>
+				<header className={styles.activeHeader} />
 				{activePage === "provider" ? (
 					<ProviderSettingsPage onSelectionChange={setProviderModelSelection} />
 				) : activePage === "default_model" ? (

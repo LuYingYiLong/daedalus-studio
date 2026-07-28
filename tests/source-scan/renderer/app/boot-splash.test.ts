@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../helpers/repo-paths";
 
 describe("BootSplash", () => {
-	const studioThemeRootSource: string = readRepoFile("src", "renderer", "src", "app", "StudioThemeRoot.tsx");
+	const windowProvidersSource: string = readRepoFile("src", "renderer", "src", "app", "WindowProviders.tsx");
+	const mainWindowRootSource: string = readRepoFile("src", "renderer", "src", "app", "MainWindowRoot.tsx");
+	const settingsWindowRootSource: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindowRoot.tsx");
 	const splashSource: string = readRepoFile("src", "renderer", "src", "app", "BootSplash.tsx");
 	const bootstrapSource: string = readRepoFile("src", "renderer", "src", "app", "bootstrap.ts");
 	const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
@@ -12,10 +14,13 @@ describe("BootSplash", () => {
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 
 	it("renders BootSplash before App and passes bootstrap data into App", () => {
-		expect(studioThemeRootSource).toContain("<AntdApp component=\"div\"");
-		expect(studioThemeRootSource).toContain("className={styles.root}");
-		expect(studioThemeRootSource).toContain("<BootSplash onReady={handleBootstrapReady} />");
-		expect(studioThemeRootSource).toContain("<App bootstrapData={bootstrapData} />");
+		expect(windowProvidersSource).toContain("<AntdApp component=\"div\"");
+		expect(windowProvidersSource).toContain("className={styles.root}");
+		expect(mainWindowRootSource).toContain("<MainTitlebar />");
+		expect(mainWindowRootSource).toContain("<BootSplash loadData={loadBootstrapData} onReady={handleBootstrapReady} />");
+		expect(mainWindowRootSource).toContain("<App bootstrapData={bootstrapData} />");
+		expect(settingsWindowRootSource).toContain("<SettingsTitlebar />");
+		expect(settingsWindowRootSource).toContain("<BootSplash loadData={loadSettingsBootstrapData} onReady={handleBootstrapReady} />");
 		expect(appSource).toContain("bootstrapData: BootstrapData");
 		expect(appSource).toContain("createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection)");
 		expect(agentSource).toContain("initialWorkspaces={initialWorkspaces}");
@@ -47,6 +52,7 @@ describe("BootSplash", () => {
 		expect(bootstrapSource).toContain("fetchSessions()");
 		expect(bootstrapSource).toContain("fetchSlashCommands()");
 		expect(bootstrapSource).toContain("fetchSkills()");
+		expect(bootstrapSource).toContain("export async function loadSettingsBootstrapData");
 	});
 
 	it("exposes backend bootstrap through preload and renderer types", () => {

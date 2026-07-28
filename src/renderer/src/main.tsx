@@ -1,6 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import StudioThemeRoot from "./app/StudioThemeRoot";
+import MainWindowRoot from "./app/MainWindowRoot";
+import SettingsWindowRoot from "./app/SettingsWindowRoot";
+import WindowProviders from "./app/WindowProviders";
 import "react-diff-view/style/index.css";
 import "./styles/global.css";
 import "./styles/markdown.css";
@@ -11,8 +13,12 @@ if (!rootElement) {
 	throw new Error("Root element not found");
 }
 
+const isSettingsWindow: boolean = new URLSearchParams(window.location.search).get("view") === "settings";
+
 createRoot(rootElement).render(
 	<StrictMode>
-		<StudioThemeRoot />
+		<WindowProviders>
+			{isSettingsWindow ? <SettingsWindowRoot /> : <MainWindowRoot />}
+		</WindowProviders>
 	</StrictMode>
 );

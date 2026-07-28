@@ -25,28 +25,21 @@
 	padding: 0px var(--ds-space-2);
 }
 
-.workspaceTitleRow {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 8px;
-	padding: 0px 8px 0px 8px;
+.workspaceHeader {
+	padding-bottom: var(--ds-space-2);
+}
+
+.workspaceFooter {
+	padding: var(--ds-space-2) 0px;
+}
+
+.openSettingsButton {
+	justify-content: flex-start;
 }
 
 .workspaceTitle {
 	margin: 0;
 	user-select: none;
-}
-
-.workspaceRefreshButton {
-	width: 26px;
-	height: 26px;
-	padding: 0;
-}
-
-.workspaceRefreshButton svg {
-	width: 14px;
-	height: 14px;
 }
 
 .createSessionButton {

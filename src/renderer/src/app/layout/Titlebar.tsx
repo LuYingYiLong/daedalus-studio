@@ -42,7 +42,7 @@ function getUpdateButtonLabel(state: AppUpdateState | null): string {
 	return "Update";
 }
 
-function Titlebar(): React.JSX.Element {
+function MainTitlebar(): React.JSX.Element {
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(() => getCachedClientPreferences());
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
 	const [updateModalOpen, setUpdateModalOpen] = useState<boolean>(false);
@@ -122,4 +122,4 @@ function Titlebar(): React.JSX.Element {
 	);
 }
 
-export default Titlebar;
+export default MainTitlebar;

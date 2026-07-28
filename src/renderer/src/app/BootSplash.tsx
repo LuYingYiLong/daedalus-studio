@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Progress, Result, Typography } from "antd";
 import { useTranslation } from "react-i18next";
-import { loadBootstrapData, type BootstrapData, type BootstrapProgress } from "./bootstrap";
+import type { BootstrapProgress } from "./bootstrap";
 import styles from "./BootSplash.module.css";
 
-type BootSplashProps = {
-	onReady: (data: BootstrapData) => void;
+type BootSplashProps<TBootstrapData> = {
+	loadData: (onProgress: (progress: BootstrapProgress) => void) => Promise<TBootstrapData>;
+	onReady: (data: TBootstrapData) => void;
 };
 
 type BootstrapState =
@@ -89,7 +90,7 @@ function createBackendErrorState(backendState: BackendBootstrapState, t: Transla
 	};
 }
 
-function BootSplash({ onReady }: BootSplashProps): React.JSX.Element {
+function BootSplash<TBootstrapData>({ loadData, onReady }: BootSplashProps<TBootstrapData>): React.JSX.Element {
 	const { t } = useTranslation();
 	const [runId, setRunId] = useState<number>(0);
 	const [actionKey, setActionKey] = useState<string | null>(null);
@@ -177,7 +178,7 @@ function BootSplash({ onReady }: BootSplashProps): React.JSX.Element {
 				setState(createBackendErrorState(backendState, t));
 				return;
 			}
-			const data: BootstrapData = await loadBootstrapData((progress: BootstrapProgress): void => {
+			const data: TBootstrapData = await loadData((progress: BootstrapProgress): void => {
 				if (cancelled) {
 					return;
 				}
@@ -207,7 +208,7 @@ function BootSplash({ onReady }: BootSplashProps): React.JSX.Element {
 			cancelled = true;
 			unsubscribe();
 		};
-	}, [onReady, runId, t]);
+	}, [loadData, onReady, runId, t]);
 
 	if (state.status === "error") {
 		return (

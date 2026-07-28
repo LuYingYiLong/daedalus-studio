@@ -1227,11 +1227,14 @@ function HomePage({
 						icon={<Icon name="settings" />}
 						type="text"
 						block
+						className={styles.openSettingsButton}
 						aria-label={t("agentPage.actions.openSettings")}
 						onClick={(): void => {
 							void window.electronAPI.windowControl.openSettings();
 						}}
-					/>
+					>
+						{t("agentPage.actions.openSettings")}
+					</Button>
 				</footer>
 			</aside>
 

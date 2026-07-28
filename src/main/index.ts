@@ -145,7 +145,7 @@ function openSettingsWindow(page: string = "provider"): void {
 	const colors: WindowThemeColors = getCurrentWindowThemeColors(clientPreferencesService.getCachedPreferences());
 	settingsWindow = new BrowserWindow({
 		width: 1080,
-		height: 760,
+		height: 648,
 		minWidth: 820,
 		minHeight: 580,
 		backgroundColor: getWindowBackgroundColor(colors),

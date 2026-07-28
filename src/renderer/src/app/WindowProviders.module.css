@@ -7,5 +7,4 @@
 	min-height: 100vh;
 	overflow: hidden;
 	background: var(--ds-window-glass-tint);
-	/* backdrop-filter: blur(28px) saturate(1.16); */
 }

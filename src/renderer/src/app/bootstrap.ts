@@ -32,6 +32,12 @@ export type BootstrapData = {
 	skills: SkillSummary[];
 };
 
+export type SettingsBootstrapData = Pick<BootstrapData,
+	"clientPreferences"
+	| "generalSettings"
+	| "providerModelSelection"
+>;
+
 export type BootstrapProgress = {
 	label: string;
 	percent: number;
@@ -58,6 +64,29 @@ async function waitForBackendReady(onProgress: (progress: BootstrapProgress) => 
 	throw new Error("Backend did not become ready in time.");
 }
 
+async function loadSettingsBootstrapDataAfterBackendReady(
+	onProgress: (progress: BootstrapProgress) => void
+): Promise<SettingsBootstrapData> {
+	onProgress({ label: "Loading preferences", percent: 40 });
+	const [clientPreferences, generalSettings, providerModelSelection]: [ClientPreferences, GeneralSettings, ProviderModelSelection] = await Promise.all([
+		fetchClientPreferences(),
+		fetchGeneralSettings(),
+		fetchProviderModelSelection()
+	]);
+	return {
+		clientPreferences,
+		generalSettings,
+		providerModelSelection
+	};
+}
+
+export async function loadSettingsBootstrapData(onProgress: (progress: BootstrapProgress) => void): Promise<SettingsBootstrapData> {
+	await waitForBackendReady(onProgress);
+	const settingsData: SettingsBootstrapData = await loadSettingsBootstrapDataAfterBackendReady(onProgress);
+	onProgress({ label: "Ready", percent: 100 });
+	return settingsData;
+}
+
 export async function loadBootstrapData(onProgress: (progress: BootstrapProgress) => void): Promise<BootstrapData> {
 	await waitForBackendReady(onProgress);
 
@@ -65,15 +94,10 @@ export async function loadBootstrapData(onProgress: (progress: BootstrapProgress
 	const client = await createBackendClient();
 	const backendHealth: BackendHealthResult = await client.request<BackendHealthResult>("backend.health");
 
-	onProgress({ label: "Loading preferences", percent: 40 });
-	const [clientPreferences, generalSettings]: [ClientPreferences, GeneralSettings] = await Promise.all([
-		fetchClientPreferences(),
-		fetchGeneralSettings()
-	]);
+	const settingsData: SettingsBootstrapData = await loadSettingsBootstrapDataAfterBackendReady(onProgress);
 
 	onProgress({ label: "Loading workspace data", percent: 60 });
-	const [providerModelSelection, workspaceList, sessionList]: [ProviderModelSelection, WorkspaceListResult, SessionListResult] = await Promise.all([
-		fetchProviderModelSelection(),
+	const [workspaceList, sessionList]: [WorkspaceListResult, SessionListResult] = await Promise.all([
 		fetchWorkspaces(),
 		fetchSessions()
 	]);
@@ -87,9 +111,7 @@ export async function loadBootstrapData(onProgress: (progress: BootstrapProgress
 	onProgress({ label: "Ready", percent: 100 });
 	return {
 		backendHealth,
-		clientPreferences,
-		generalSettings,
-		providerModelSelection,
+		...settingsData,
 		workspaceList,
 		sessionList,
 		slashCommands,
