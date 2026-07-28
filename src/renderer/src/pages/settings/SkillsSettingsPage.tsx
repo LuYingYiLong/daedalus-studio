@@ -365,7 +365,6 @@ function SkillsSettingsPage(): React.JSX.Element {
 					<Spin />
 				) : filteredSkills.length === 0 ? (
 					<Empty
-						image={<Icon name="empty" />}
 						description={customSkills.length === 0 ? t("settings.skills.empty.none") : t("settings.skills.empty.noMatches")}
 					/>
 				) : filteredSkills.map((skill: SkillSummary): React.JSX.Element => {

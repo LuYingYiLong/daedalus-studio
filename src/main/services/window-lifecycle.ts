@@ -11,6 +11,13 @@ export type TrayRecentSession = {
 	title: string;
 };
 
+export type TrayMenuLabels = {
+	exit: string;
+	newChat: string;
+	recent: string;
+	untitledSession: string;
+};
+
 const TRAY_ICON_SVG: string = [
 	"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 32 32\">",
 	"<circle cx=\"16\" cy=\"16\" r=\"15\" fill=\"#f2f2f2\"/>",
@@ -21,6 +28,24 @@ const TRAY_ICON_SVG: string = [
 
 export function shouldMinimizeToTrayOnClose(preferences: ClientPreferences, isQuitting: boolean): boolean {
 	return preferences.minimizeToTrayOnClose && !isQuitting;
+}
+
+export function getTrayMenuLabels(language: ClientPreferences["language"], systemLocale: string): TrayMenuLabels {
+	const useChinese: boolean = language === "zh-CN"
+		|| (language === "system" && systemLocale.toLowerCase().startsWith("zh"));
+	return useChinese
+		? {
+			exit: "退出",
+			newChat: "新建聊天",
+			recent: "最近会话",
+			untitledSession: "未命名会话"
+		}
+		: {
+			exit: "Exit",
+			newChat: "New chat",
+			recent: "Recent",
+			untitledSession: "Untitled session"
+		};
 }
 
 function normalizeTrayRecentSessions(value: unknown): TrayRecentSession[] {
@@ -45,7 +70,7 @@ function normalizeTrayRecentSessions(value: unknown): TrayRecentSession[] {
 		seenIds.add(id);
 		sessions.push({
 			id,
-			title: title.length === 0 ? "Untitled session" : title
+			title
 		});
 		if (sessions.length >= 3) {
 			break;
@@ -103,6 +128,7 @@ export class WindowLifecycleController {
 		const mainWindow = this.mainWindow;
 		if (mainWindow !== null && this.preferencesReader.getCachedPreferences().minimizeToTrayOnClose) {
 			this.ensureTray(mainWindow);
+			this.updateTrayMenu();
 			return;
 		}
 
@@ -134,15 +160,19 @@ export class WindowLifecycleController {
 			return;
 		}
 
+		const labels: TrayMenuLabels = getTrayMenuLabels(
+			this.preferencesReader.getCachedPreferences().language,
+			app.getLocale()
+		);
 		const template: MenuItemConstructorOptions[] = [];
 		if (this.recentSessions.length > 0) {
 			template.push({
-				label: "Recent",
+				label: labels.recent,
 				enabled: false
 			});
 			for (const session of this.recentSessions) {
 				template.push({
-					label: session.title,
+					label: session.title.length > 0 ? session.title : labels.untitledSession,
 					click: (): void => this.sendTrayCommand("tray:open-session", session.id)
 				});
 			}
@@ -151,12 +181,12 @@ export class WindowLifecycleController {
 
 		template.push(
 			{
-				label: "New chat",
+				label: labels.newChat,
 				click: (): void => this.sendTrayCommand("tray:new-chat")
 			},
 			{ type: "separator" },
 			{
-				label: "Exit",
+				label: labels.exit,
 				click: (): void => this.quit()
 			}
 		);

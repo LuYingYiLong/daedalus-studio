@@ -364,7 +364,6 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 					</Typography.Text>
 				) : filteredSessions.length === 0 ? (
 					<Empty
-						image={<Icon name="empty" />}
 						description={archivedSessions.length === 0 ? t("settings.archivedSessions.empty.none") : t("settings.archivedSessions.empty.noMatches")}
 					/>
 				) : (

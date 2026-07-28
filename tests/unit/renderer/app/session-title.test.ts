@@ -18,6 +18,11 @@ describe("getSessionTitle", () => {
 
 	it("falls back to id and default title", () => {
 		expect(getSessionTitle(createSessionMetadata("  "), "session-a")).toBe("session-a");
+		const metadataWithoutTitle: SessionMetadata = {
+			...createSessionMetadata("placeholder"),
+			title: undefined
+		} as unknown as SessionMetadata;
+		expect(getSessionTitle(metadataWithoutTitle, "session-a")).toBe("session-a");
 		expect(getSessionTitle(null, null)).toBe("Session");
 	});
 });

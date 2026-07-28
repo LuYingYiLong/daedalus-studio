@@ -42,12 +42,6 @@
 	scrollbar-gutter: auto;
 }
 
-.content::after {
-	content: "";
-	display: block;
-	height: 0.1px;
-}
-
 .loading {
 	display: flex;
 	align-items: center;

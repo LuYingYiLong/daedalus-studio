@@ -4,7 +4,7 @@ import { readRepoFile } from "../../../helpers/repo-paths";
 describe("BootSplash", () => {
 	const windowProvidersSource: string = readRepoFile("src", "renderer", "src", "app", "WindowProviders.tsx");
 	const mainWindowRootSource: string = readRepoFile("src", "renderer", "src", "app", "MainWindowRoot.tsx");
-	const settingsWindowRootSource: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindowRoot.tsx");
+	const settingsWindowSource: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindow.tsx");
 	const splashSource: string = readRepoFile("src", "renderer", "src", "app", "BootSplash.tsx");
 	const bootstrapSource: string = readRepoFile("src", "renderer", "src", "app", "bootstrap.ts");
 	const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
@@ -19,7 +19,9 @@ describe("BootSplash", () => {
 		expect(mainWindowRootSource).toContain("<MainTitlebar />");
 		expect(mainWindowRootSource).toContain("<BootSplash loadData={loadBootstrapData} onReady={handleBootstrapReady} />");
 		expect(mainWindowRootSource).toContain("<App bootstrapData={bootstrapData} />");
-		expect(settingsWindowRootSource).toContain("<BootSplash loadData={loadSettingsBootstrapData} onReady={handleBootstrapReady} />");
+		expect(settingsWindowSource).toContain("DEFAULT_CLIENT_PREFERENCES");
+		expect(settingsWindowSource).toContain("DEFAULT_GENERAL_SETTINGS");
+		expect(settingsWindowSource).not.toContain("bootstrapData");
 		expect(appSource).toContain("bootstrapData: BootstrapData");
 		expect(appSource).toContain("createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection)");
 		expect(agentSource).toContain("initialWorkspaces={initialWorkspaces}");
@@ -51,7 +53,7 @@ describe("BootSplash", () => {
 		expect(bootstrapSource).toContain("fetchSessions()");
 		expect(bootstrapSource).toContain("fetchSlashCommands()");
 		expect(bootstrapSource).toContain("fetchSkills()");
-		expect(bootstrapSource).toContain("export async function loadSettingsBootstrapData");
+		expect(bootstrapSource).not.toContain("loadSettingsBootstrapData");
 	});
 
 	it("exposes backend bootstrap through preload and renderer types", () => {

@@ -132,6 +132,10 @@ function loadRendererWindow(browserWindow: BrowserWindow, view: "main" | "settin
 }
 
 function openSettingsWindow(page: string = "provider"): void {
+	if (mainWindow === null || mainWindow.isDestroyed()) {
+		return;
+	}
+
 	if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
 		if (settingsWindow.isMinimized()) {
 			settingsWindow.restore();
@@ -148,6 +152,7 @@ function openSettingsWindow(page: string = "provider"): void {
 		height: 648,
 		minWidth: 820,
 		minHeight: 580,
+		parent: mainWindow,
 		backgroundColor: getWindowBackgroundColor(colors),
 		icon: getWindowIconPath(),
 		show: false,
@@ -237,6 +242,9 @@ function createWindow(): void {
 
 	mainWindow.on("closed", () => {
 		mainWindow = null;
+		if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
+			settingsWindow.close();
+		}
 	});
 	loadRendererWindow(mainWindow, "main");
 }

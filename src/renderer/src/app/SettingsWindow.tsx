@@ -1,10 +1,8 @@
 import { Menu, type MenuProps, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { SettingsBootstrapData } from "./bootstrap";
-import type { ProviderModelSelection } from "@/api/provider-api";
-import type { ClientPreferences } from "@/api/client-preferences-api";
-import type { GeneralSettings } from "@/api/general-settings-api";
+import { DEFAULT_CLIENT_PREFERENCES, type ClientPreferences } from "@/api/client-preferences-api";
+import { DEFAULT_GENERAL_SETTINGS, type GeneralSettings } from "@/api/general-settings-api";
 import { Icon } from "@/assets/icons";
 import ProviderSettingsPage from "@/pages/settings/ProviderSettingsPage";
 import DefaultModelSettingsPage from "@/pages/settings/DefaultModelSettingsPage";
@@ -32,10 +30,6 @@ type SettingsPageKey =
 	| "godot_projects"
 	| "archived_sessions"
 	| "about";
-
-type SettingsWindowProps = {
-	bootstrapData: SettingsBootstrapData;
-};
 
 type SettingsMenuItemConfig = {
 	key: SettingsPageKey;
@@ -79,12 +73,11 @@ function getInitialSettingsPage(): SettingsPageKey {
 	return page !== null && isSettingsPageKey(page) ? page : "provider";
 }
 
-function SettingsWindow({ bootstrapData }: SettingsWindowProps): React.JSX.Element {
+function SettingsWindow(): React.JSX.Element {
 	const { t } = useTranslation();
 	const [activePage, setActivePage] = useState<SettingsPageKey>(getInitialSettingsPage);
-	const [providerModelSelection, setProviderModelSelection] = useState<ProviderModelSelection>(bootstrapData.providerModelSelection);
-	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(bootstrapData.clientPreferences);
-	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(bootstrapData.generalSettings);
+	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(DEFAULT_CLIENT_PREFERENCES);
+	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(DEFAULT_GENERAL_SETTINGS);
 	const items: MenuItem[] = createSettingsMenuItems(t);
 
 	useEffect((): (() => void) => {
@@ -115,9 +108,9 @@ function SettingsWindow({ bootstrapData }: SettingsWindowProps): React.JSX.Eleme
 			<div className={styles.activePage}>
 				<header className={styles.activeHeader} />
 				{activePage === "provider" ? (
-					<ProviderSettingsPage onSelectionChange={setProviderModelSelection} />
+					<ProviderSettingsPage />
 				) : activePage === "default_model" ? (
-					<DefaultModelSettingsPage onSelectionChange={setProviderModelSelection} />
+					<DefaultModelSettingsPage />
 				) : activePage === "general" ? (
 					<GeneralSettingsPage
 						clientPreferences={clientPreferences}

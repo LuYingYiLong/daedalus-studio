@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import MainWindowRoot from "./app/MainWindowRoot";
-import SettingsWindowRoot from "./app/SettingsWindowRoot";
+import SettingsWindow from "./app/SettingsWindow";
 import WindowProviders from "./app/WindowProviders";
 import "react-diff-view/style/index.css";
 import "./styles/global.css";
@@ -18,7 +18,7 @@ const isSettingsWindow: boolean = new URLSearchParams(window.location.search).ge
 createRoot(rootElement).render(
 	<StrictMode>
 		<WindowProviders>
-			{isSettingsWindow ? <SettingsWindowRoot /> : <MainWindowRoot />}
+			{isSettingsWindow ? <SettingsWindow /> : <MainWindowRoot />}
 		</WindowProviders>
 	</StrictMode>
 );

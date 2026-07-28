@@ -266,7 +266,6 @@ function McpServersSettingsPage(): React.JSX.Element {
 					<Spin />
 				) : filteredServers.length === 0 ? (
 					<Empty
-						image={<Icon name="empty" />}
 						description={servers.length === 0 ? t("settings.mcpServers.empty.none") : t("settings.mcpServers.empty.noMatches")}
 					/>
 				) : filteredServers.map((server: CustomMcpServer): React.JSX.Element => {
