@@ -66,6 +66,22 @@ type TrayRecentSession = {
 	title: string;
 };
 
+type DockLayoutPreferences = {
+	open: boolean;
+	size: number;
+	tabs: Array<{
+		key: string;
+		kind: "review" | "terminal";
+		index: number;
+	}>;
+	activeTabKey: string | null;
+};
+
+type SessionLayoutPreferences = {
+	side: DockLayoutPreferences;
+	bottom: DockLayoutPreferences;
+};
+
 type GodotProjectPluginStatus =
 	| "not_installed"
 	| "current"
@@ -265,6 +281,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	sessionFs: {
 		openSessionDirectory: (sessionId: string): Promise<{ opened: true }> => {
 			return ipcRenderer.invoke("session-fs:open-directory", sessionId);
+		}
+	},
+
+	sessionLayout: {
+		getAll: (): Promise<Record<string, SessionLayoutPreferences>> => {
+			return ipcRenderer.invoke("session-layout:get-all");
+		},
+		save: (payload: { sessionId: string; layout: SessionLayoutPreferences }): Promise<SessionLayoutPreferences> => {
+			return ipcRenderer.invoke("session-layout:save", payload);
+		},
+		remove: (payload: { sessionIds: string[] }): Promise<{ removed: number }> => {
+			return ipcRenderer.invoke("session-layout:remove", payload);
 		}
 	},
 

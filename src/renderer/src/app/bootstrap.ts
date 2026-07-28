@@ -7,6 +7,7 @@ import { fetchSessions } from "@/api/session-api";
 import { fetchSlashCommands, type SlashCommandDefinition } from "@/api/command-api";
 import { fetchSkills, type SkillSummary } from "@/api/skill-api";
 import type { SessionListResult, WorkspaceListResult } from "@/api/types";
+import type { SessionLayoutMap } from "@/features/dock/session-layout";
 
 export type BackendHealthResult = {
 	name: string;
@@ -30,6 +31,7 @@ export type BootstrapData = {
 	sessionList: SessionListResult;
 	slashCommands: SlashCommandDefinition[];
 	skills: SkillSummary[];
+	sessionLayouts: SessionLayoutMap;
 };
 
 type InitialSettingsData = Pick<BootstrapData,
@@ -90,9 +92,10 @@ export async function loadBootstrapData(onProgress: (progress: BootstrapProgress
 	const settingsData: InitialSettingsData = await loadInitialSettingsData(onProgress);
 
 	onProgress({ label: "Loading workspace data", percent: 60 });
-	const [workspaceList, sessionList]: [WorkspaceListResult, SessionListResult] = await Promise.all([
+	const [workspaceList, sessionList, sessionLayouts]: [WorkspaceListResult, SessionListResult, SessionLayoutMap] = await Promise.all([
 		fetchWorkspaces(),
-		fetchSessions()
+		fetchSessions(),
+		window.electronAPI.sessionLayout.getAll()
 	]);
 
 	onProgress({ label: "Loading commands and skills", percent: 85 });
@@ -107,6 +110,7 @@ export async function loadBootstrapData(onProgress: (progress: BootstrapProgress
 		...settingsData,
 		workspaceList,
 		sessionList,
+		sessionLayouts,
 		slashCommands,
 		skills: skillList.skills
 	};

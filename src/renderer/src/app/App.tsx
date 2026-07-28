@@ -57,6 +57,11 @@ import { DEFAULT_CLIENT_PREFERENCES, fetchClientPreferences, updateClientPrefere
 import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
 import { approvePlan, revisePlan, submitPlanClarification, type PlanResult } from "@/api/plan-api";
 import type { BootstrapData } from "./bootstrap";
+import {
+	createDefaultSessionLayout,
+	type SessionLayoutMap,
+	type SessionLayoutPreferences
+} from "@/features/dock/session-layout";
 
 type SupportedImageMimeType = SaveImageAttachmentParams["mimeType"];
 type WorkspacePickedEntry = {
@@ -77,6 +82,7 @@ const CONTEXT_SUBTITLE_MAX_CHARS: number = 400;
 const COMPOSER_TEXT_SYNC_DEBOUNCE_MS: number = 320;
 const PLAN_CLARIFICATION_SKIP_REPLY: string = "Continue with the current assumptions.";
 const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
+const DEFAULT_SESSION_LAYOUT: SessionLayoutPreferences = createDefaultSessionLayout();
 
 type PendingComposerTextSync =
 	| {
@@ -590,6 +596,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
   const isAddingTextAttachment: boolean = pendingTextAttachmentCount > 0;
 	const [isHomeSubmitting, setIsHomeSubmitting] = useState<boolean>(false);
 	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+	const [sessionLayouts, setSessionLayouts] = useState<SessionLayoutMap>(() => bootstrapData.sessionLayouts);
+	const [temporarySessionLayout, setTemporarySessionLayout] = useState<SessionLayoutPreferences>(
+		() => createDefaultSessionLayout()
+	);
 	const activeSessionIdRef = useRef<string | null>(null);
 	const temporaryDraftSessionIdRef = useRef<string | null>(null);
 	const temporarySessionCreationRef = useRef<Promise<void> | null>(null);
@@ -649,6 +659,51 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const expandedActiveWorkflowTodoKeyRef = useRef<string>("");
 	const pendingUserActionRequestIdsRef = useRef<Set<string>>(new Set());
 	const activeSessionTitleRef = useRef<string>("Daedalus session");
+	const activeSessionLayout: SessionLayoutPreferences = activeSessionId === null
+		? temporarySessionLayout
+		: sessionLayouts[activeSessionId] ?? DEFAULT_SESSION_LAYOUT;
+
+	const handleSessionLayoutChange = useCallback((
+		layout: SessionLayoutPreferences,
+		options: { persist?: boolean } = {}
+	): void => {
+		const sessionId: string | null = activeSessionId;
+		if (sessionId === null) {
+			setTemporarySessionLayout(layout);
+			return;
+		}
+
+		setSessionLayouts((currentLayouts: SessionLayoutMap): SessionLayoutMap => ({
+			...currentLayouts,
+			[sessionId]: layout
+		}));
+		if (options.persist === false) {
+			return;
+		}
+		void window.electronAPI.sessionLayout.save({ sessionId, layout }).catch((error: unknown): void => {
+			console.error("[App] save session layout failed", error);
+		});
+	}, [activeSessionId]);
+
+	const removeStoredSessionLayouts = useCallback((sessionIds: string[]): void => {
+		if (sessionIds.length === 0) {
+			return;
+		}
+		const removedIds: Set<string> = new Set(sessionIds);
+		setSessionLayouts((currentLayouts: SessionLayoutMap): SessionLayoutMap => {
+			return Object.fromEntries(
+				Object.entries(currentLayouts).filter(([sessionId]): boolean => !removedIds.has(sessionId))
+			);
+		});
+		void window.electronAPI.sessionLayout.remove({ sessionIds: [...removedIds] }).catch((error: unknown): void => {
+			console.error("[App] remove session layouts failed", error);
+		});
+	}, []);
+
+	const deleteSessionWithLayout = useCallback(async (sessionId: string): Promise<void> => {
+		await deleteSession(sessionId);
+		removeStoredSessionLayouts([sessionId]);
+	}, [removeStoredSessionLayouts]);
 
 	useDiskSpaceCheck();
 	const { showNativeTaskNotification, clearNativeTaskNotificationAttention } = useNativeTaskNotifications();
@@ -1307,7 +1362,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 		const temporaryId: string = activeSessionId;
 		temporaryDraftSessionIdRef.current = null;
-		await deleteSession(temporaryId).catch((error: unknown): void => {
+		await deleteSessionWithLayout(temporaryId).catch((error: unknown): void => {
 			console.warn("[App] delete empty temporary session failed", error);
 		});
 	}
@@ -1317,7 +1372,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			const temporaryId: string | null = activeSessionId;
 			temporaryDraftSessionIdRef.current = null;
 			if (temporaryId !== null) {
-				await deleteSession(temporaryId).catch((error: unknown): void => {
+				await deleteSessionWithLayout(temporaryId).catch((error: unknown): void => {
 					console.warn("[App] discard temporary session failed", error);
 				});
 			}
@@ -1336,7 +1391,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		if (temporaryDraftSessionIdRef.current !== null) {
 			const temporaryId: string = temporaryDraftSessionIdRef.current;
 			temporaryDraftSessionIdRef.current = null;
-			await deleteSession(temporaryId).catch((error: unknown): void => {
+			await deleteSessionWithLayout(temporaryId).catch((error: unknown): void => {
 				console.warn("[App] discard temporary session failed", error);
 			});
 		}
@@ -1367,7 +1422,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	async function handleNewWorkspaceSession(workspace: WorkspaceConfig): Promise<void> {
 		if (activeSessionMetadata?.temporary === true && activeSessionId !== null) {
-			await deleteSession(activeSessionId).catch((error: unknown): void => {
+			await deleteSessionWithLayout(activeSessionId).catch((error: unknown): void => {
 				console.warn("[App] discard temporary session failed", error);
 			});
 		}
@@ -1572,6 +1627,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	function handleWorkspaceDelete(result: DeleteWorkspaceResult): void {
+		removeStoredSessionLayouts([
+			...result.deletedSessionIds,
+			...result.deletedArchivedSessionIds
+		]);
 		const activeMove = activeSessionId === null
 			? undefined
 			: result.movedSessions.find((move): boolean => move.sessionId === activeSessionId);
@@ -3215,6 +3274,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						workspaceRefreshToken={workspaceRefreshToken}
 						isHome={isNewSessionHome}
 						activeSessionId={activeSessionId}
+						sessionLayout={activeSessionLayout}
+						onSessionLayoutChange={handleSessionLayoutChange}
 						activeSessionMetadata={activeSessionMetadata}
 						activeWorkspaceId={activeSessionId === null ? homeDraft.workspaceId : currentSessionWorkspaceId}
 						chatTitle={chatTitle}

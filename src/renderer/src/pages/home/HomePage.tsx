@@ -26,6 +26,11 @@ import { Icon } from "@/assets/icons";
 import ClarificationDialog from "@/features/clarification/ClarificationDialog";
 import PlanApprovalDialog from "@/features/approval/PlanApprovalDialog";
 import DockPanelTabs, { type DockPanelActivationRequest, type DockPanelKind } from "@/features/dock/DockPanelTabs";
+import {
+	listTerminalRuntimeIds,
+	type DockLayoutPreferences,
+	type SessionLayoutPreferences
+} from "@/features/dock/session-layout";
 import BranchActionDialog from "@/features/git/BranchActionDialog";
 import CommitActionDialog from "@/features/git/CommitActionDialog";
 import CreateBranchDialog from "@/features/git/CreateBranchDialog";
@@ -177,6 +182,11 @@ type HomePageProps = {
 	workspaceRefreshToken: number;
 	isHome: boolean;
 	activeSessionId: string | null;
+	sessionLayout: SessionLayoutPreferences;
+	onSessionLayoutChange: (
+		layout: SessionLayoutPreferences,
+		options?: { persist?: boolean }
+	) => void;
 	activeSessionMetadata: SessionMetadata | null;
 	activeWorkspaceId: string | null;
 	chatTitle: string;
@@ -291,6 +301,8 @@ function HomePage({
 	workspaceRefreshToken,
 	isHome,
 	activeSessionId,
+	sessionLayout,
+	onSessionLayoutChange,
 	activeSessionMetadata,
 	activeWorkspaceId,
 	chatTitle,
@@ -420,12 +432,13 @@ function HomePage({
 	const [godotSceneSearch, setGodotSceneSearch] = useState<string>("");
 	const dockActivationRequestIdRef = useRef<number>(0);
 	const [sideDockActivationRequest, setSideDockActivationRequest] = useState<DockPanelActivationRequest | null>(null);
-	const [sideDockOpen, setSideDockOpen] = useState<boolean>(false);
-	const [sideDockSize, setSideDockSize] = useState<number>(SIDE_DOCK_DEFAULT_SIZE);
-	const [sideDockLastOpenSize, setSideDockLastOpenSize] = useState<number>(SIDE_DOCK_DEFAULT_SIZE);
-	const [bottomDockOpen, setBottomDockOpen] = useState<boolean>(false);
-	const [bottomDockSize, setBottomDockSize] = useState<number>(BOTTOM_DOCK_DEFAULT_SIZE);
-	const [bottomDockLastOpenSize, setBottomDockLastOpenSize] = useState<number>(BOTTOM_DOCK_DEFAULT_SIZE);
+	const previousSessionLayoutRef = useRef<{
+		sessionId: string | null;
+		layout: SessionLayoutPreferences;
+	}>({
+		sessionId: activeSessionId,
+		layout: sessionLayout
+	});
 	const messageListRef = useRef<MessageListHandle | null>(null);
 	const [messageScrollContainer, setMessageScrollContainer] = useState<HTMLElement | null>(null);
 	const [activeTimelineEntryId, setActiveTimelineEntryId] = useState<string | null>(null);
@@ -444,6 +457,45 @@ function HomePage({
 		? godotLaunchExecutablePath.trim()
 		: null;
 	const showGodotSummaryActions: boolean = workspaceForActions !== null && effectiveGodotLaunchExecutablePath !== null && isGodotProject;
+	const sideDockOpen: boolean = sessionLayout.side.open;
+	const sideDockSize: number = sessionLayout.side.size;
+	const bottomDockOpen: boolean = sessionLayout.bottom.open;
+	const bottomDockSize: number = sessionLayout.bottom.size;
+
+	const updateSideDock = useCallback((
+		nextSideLayout: DockLayoutPreferences,
+		persist: boolean = true
+	): void => {
+		onSessionLayoutChange({
+			...sessionLayout,
+			side: nextSideLayout
+		}, { persist });
+	}, [onSessionLayoutChange, sessionLayout]);
+
+	const updateBottomDock = useCallback((
+		nextBottomLayout: DockLayoutPreferences,
+		persist: boolean = true
+	): void => {
+		onSessionLayoutChange({
+			...sessionLayout,
+			bottom: nextBottomLayout
+		}, { persist });
+	}, [onSessionLayoutChange, sessionLayout]);
+
+	useLayoutEffect((): void => {
+		const previous = previousSessionLayoutRef.current;
+		if (previous.sessionId !== activeSessionId) {
+			for (const terminalId of listTerminalRuntimeIds(previous.sessionId, previous.layout)) {
+				void window.electronAPI.terminal.kill({ terminalId }).catch((error: unknown): void => {
+					console.error("[HomePage] failed to stop previous session terminal", error);
+				});
+			}
+		}
+		previousSessionLayoutRef.current = {
+			sessionId: activeSessionId,
+			layout: sessionLayout
+		};
+	}, [activeSessionId, sessionLayout]);
 
 	useEffect((): void => {
 		setActiveTimelineEntryId(null);
@@ -497,9 +549,8 @@ function HomePage({
 			id: dockActivationRequestIdRef.current,
 			kind: "review"
 		});
-		setSideDockSize(sideDockLastOpenSize);
-		setSideDockOpen(true);
-	}, [sideDockLastOpenSize, workspaceForActions]);
+		updateSideDock({ ...sessionLayout.side, open: true });
+	}, [sessionLayout.side, updateSideDock, workspaceForActions]);
 	useEffect((): (() => void) | void => {
 		if (!showWorkspaceLaunchControls) {
 			return;
@@ -575,7 +626,6 @@ function HomePage({
 		setGodotSceneSearch("");
 		setPreviewSource(null);
 		setPreviewPlan(null);
-		setSideDockOpen(false);
 	}, [activeSessionId]);
 
 	const loadSummaryOverview = useCallback(async (planLimit: number = SUMMARY_PREVIEW_LIMIT, sourceLimit: number = SUMMARY_PREVIEW_LIMIT): Promise<SessionOverviewResult | null> => {
@@ -994,16 +1044,15 @@ function HomePage({
 	}, []);
 
 	const openSideDock = useCallback((kind?: DockPanelKind): void => {
-		setSideDockSize(sideDockLastOpenSize);
-		setSideDockOpen(true);
+		updateSideDock({ ...sessionLayout.side, open: true });
 		if (kind !== undefined) {
 			requestSideDockKind(kind);
 		}
-	}, [requestSideDockKind, sideDockLastOpenSize]);
+	}, [requestSideDockKind, sessionLayout.side, updateSideDock]);
 
 	const closeSideDock = useCallback((): void => {
-		setSideDockOpen(false);
-	}, []);
+		updateSideDock({ ...sessionLayout.side, open: false });
+	}, [sessionLayout.side, updateSideDock]);
 
 	const toggleSideDock = useCallback((): void => {
 		if (sideDockOpen) {
@@ -1021,13 +1070,12 @@ function HomePage({
 	}, [openSideDock, workspaceForActions]);
 
 	const openBottomDock = useCallback((): void => {
-		setBottomDockSize(bottomDockLastOpenSize);
-		setBottomDockOpen(true);
-	}, [bottomDockLastOpenSize]);
+		updateBottomDock({ ...sessionLayout.bottom, open: true });
+	}, [sessionLayout.bottom, updateBottomDock]);
 
 	const closeBottomDock = useCallback((): void => {
-		setBottomDockOpen(false);
-	}, []);
+		updateBottomDock({ ...sessionLayout.bottom, open: false });
+	}, [sessionLayout.bottom, updateBottomDock]);
 
 	const toggleBottomDock = useCallback((): void => {
 		if (bottomDockOpen) {
@@ -1045,14 +1093,15 @@ function HomePage({
 
 		const normalizedSize: number = Math.min(SIDE_DOCK_MAX_SIZE, Math.max(SIDE_DOCK_CLOSED_SIZE, Math.trunc(nextSize)));
 		if (normalizedSize < SIDE_DOCK_CLOSE_THRESHOLD) {
-			closeSideDock();
-			setSideDockSize(sideDockLastOpenSize);
+			updateSideDock({ ...sessionLayout.side, open: false }, false);
 			return;
 		}
 
-		setSideDockSize(normalizedSize);
-		setSideDockOpen(true);
-		setSideDockLastOpenSize(normalizedSize);
+		updateSideDock({
+			...sessionLayout.side,
+			open: true,
+			size: normalizedSize
+		}, false);
 	}
 
 	function handleSideDockResizeEnd(sizes: number[]): void {
@@ -1061,15 +1110,16 @@ function HomePage({
 			return;
 		}
 		if (nextSize < SIDE_DOCK_CLOSE_THRESHOLD) {
-			closeSideDock();
-			setSideDockSize(sideDockLastOpenSize);
+			updateSideDock({ ...sessionLayout.side, open: false });
 			return;
 		}
 
 		const validSize: number = Math.min(SIDE_DOCK_MAX_SIZE, Math.max(SIDE_DOCK_CLOSE_THRESHOLD, Math.trunc(nextSize)));
-		setSideDockOpen(true);
-		setSideDockSize(validSize);
-		setSideDockLastOpenSize(validSize);
+		updateSideDock({
+			...sessionLayout.side,
+			open: true,
+			size: validSize
+		});
 	}
 
 	function handleBottomDockResize(sizes: number[]): void {
@@ -1080,14 +1130,15 @@ function HomePage({
 
 		const normalizedSize: number = Math.min(BOTTOM_DOCK_MAX_SIZE, Math.max(BOTTOM_DOCK_CLOSED_SIZE, Math.trunc(nextSize)));
 		if (normalizedSize < BOTTOM_DOCK_CLOSE_THRESHOLD) {
-			closeBottomDock();
-			setBottomDockSize(bottomDockLastOpenSize);
+			updateBottomDock({ ...sessionLayout.bottom, open: false }, false);
 			return;
 		}
 
-		setBottomDockSize(normalizedSize);
-		setBottomDockOpen(true);
-		setBottomDockLastOpenSize(normalizedSize);
+		updateBottomDock({
+			...sessionLayout.bottom,
+			open: true,
+			size: normalizedSize
+		}, false);
 	}
 
 	function handleBottomDockResizeEnd(sizes: number[]): void {
@@ -1096,15 +1147,16 @@ function HomePage({
 			return;
 		}
 		if (nextSize < BOTTOM_DOCK_CLOSE_THRESHOLD) {
-			closeBottomDock();
-			setBottomDockSize(bottomDockLastOpenSize);
+			updateBottomDock({ ...sessionLayout.bottom, open: false });
 			return;
 		}
 
 		const validSize: number = Math.min(BOTTOM_DOCK_MAX_SIZE, Math.max(BOTTOM_DOCK_CLOSE_THRESHOLD, Math.trunc(nextSize)));
-		setBottomDockOpen(true);
-		setBottomDockSize(validSize);
-		setBottomDockLastOpenSize(validSize);
+		updateBottomDock({
+			...sessionLayout.bottom,
+			open: true,
+			size: validSize
+		});
 	}
 
 	function handlePageDragOver(event: React.DragEvent<HTMLDivElement>): void {
@@ -1494,6 +1546,7 @@ function HomePage({
 										<DockPanelTabs
 											dockId="side"
 											placement="side"
+											sessionId={activeSessionId}
 											workspaceId={workspaceForActions?.id ?? null}
 											cwd={workspaceForActions?.rootPath ?? null}
 											contextItems={contextItems}
@@ -1502,8 +1555,9 @@ function HomePage({
 											isOpen={sideDockOpen}
 											waitForCwd={terminalWaitForCwd}
 											defaultKind="review"
+											layout={sessionLayout.side}
 											activationRequest={sideDockActivationRequest}
-											onEmpty={closeSideDock}
+											onLayoutChange={updateSideDock}
 										/>
 									</div>
 								</Splitter.Panel>
@@ -1521,6 +1575,7 @@ function HomePage({
 								<DockPanelTabs
 									dockId="bottom"
 									placement="bottom"
+									sessionId={activeSessionId}
 									workspaceId={workspaceForActions?.id ?? null}
 									cwd={workspaceForActions?.rootPath ?? null}
 									contextItems={contextItems}
@@ -1529,7 +1584,8 @@ function HomePage({
 									isOpen={bottomDockOpen}
 									waitForCwd={terminalWaitForCwd}
 									defaultKind="terminal"
-									onEmpty={closeBottomDock}
+									layout={sessionLayout.bottom}
+									onLayoutChange={updateBottomDock}
 								/>
 							</div>
 						</Splitter.Panel>

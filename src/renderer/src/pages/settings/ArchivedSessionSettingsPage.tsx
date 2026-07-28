@@ -279,6 +279,9 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 			setBusyAction("delete");
 			setErrorMessage(null);
 			await deleteArchivedSession(session.id);
+			void window.electronAPI.sessionLayout.remove({ sessionIds: [session.id] }).catch((error: unknown): void => {
+				console.error("[ArchivedSessionSettingsPage] remove session layout failed", error);
+			});
 			setArchivedSessions((currentSessions: SessionMetadata[]): SessionMetadata[] => {
 				return currentSessions.filter((currentSession: SessionMetadata): boolean => currentSession.id !== session.id);
 			});
@@ -302,6 +305,9 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 			setIsDeletingAll(true);
 			setErrorMessage(null);
 			await Promise.all(sessionIds.map((sessionId: string): Promise<unknown> => deleteArchivedSession(sessionId)));
+			void window.electronAPI.sessionLayout.remove({ sessionIds }).catch((error: unknown): void => {
+				console.error("[ArchivedSessionSettingsPage] remove session layouts failed", error);
+			});
 			setArchivedSessions((currentSessions: SessionMetadata[]): SessionMetadata[] => {
 				const deletedIds: Set<string> = new Set(sessionIds);
 

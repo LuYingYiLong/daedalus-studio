@@ -26,7 +26,8 @@ describe("HomePage git diff review source", () => {
 		expect(agentSource).toContain("dockId=\"side\"");
 		expect(agentSource).toContain("placement=\"side\"");
 		expect(agentSource).toContain("defaultKind=\"review\"");
-		expect(agentSource).toContain("onEmpty={closeSideDock}");
+		expect(agentSource).toContain("layout={sessionLayout.side}");
+		expect(agentSource).toContain("onLayoutChange={updateSideDock}");
 		expect(agentSource).toContain("SIDE_DOCK_DEFAULT_SIZE");
 		expect(agentSource).toContain("SIDE_DOCK_CLOSE_THRESHOLD");
 	});
@@ -39,7 +40,7 @@ describe("HomePage git diff review source", () => {
 		expect(resizeStart).toBeGreaterThan(-1);
 		expect(resizeEnd).toBeGreaterThan(resizeStart);
 		expect(resizeSource).toContain("normalizedSize < SIDE_DOCK_CLOSE_THRESHOLD");
-		expect(resizeSource).toContain("closeSideDock();");
+		expect(resizeSource).toContain("updateSideDock({ ...sessionLayout.side, open: false }, false);");
 	});
 
 	it("adds a fixed layout-right top menu button for opening the side dock", () => {
@@ -75,11 +76,11 @@ describe("HomePage git diff review source", () => {
 		expect(dockPanelTabsSource).toContain("PanelTabs");
 		expect(dockPanelTabsSource).toContain('t("dock.add.reviewPanel")');
 		expect(dockPanelTabsSource).toContain('t("dock.add.terminalPanel")');
-		expect(dockPanelTabsSource).toContain("return [createDockTab(dockId, defaultKind, 1, t)];");
+		expect(dockPanelTabsSource).toContain("ensurePanelTab(defaultKind)");
 		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} contextItems={contextItems}");
 		expect(dockPanelTabsSource).toContain("<TerminalPanel");
-		expect(dockPanelTabsSource).toContain("terminalId={tab.key}");
-		expect(dockPanelTabsSource).toContain("window.electronAPI.terminal.kill({ terminalId: targetKey })");
+		expect(dockPanelTabsSource).toContain("terminalId={createTerminalRuntimeId(sessionId, tab.key)}");
+		expect(dockPanelTabsSource).toContain("createTerminalRuntimeId(sessionId, targetKey)");
 		expect(dockPanelTabsCss).toContain("padding-top: 40px;");
 		expect(dockPanelTabsCss).toContain("border-left: 1px solid var(--ds-border);");
 		expect(reviewPanelSource).not.toContain("Tabs");
@@ -136,13 +137,13 @@ describe("HomePage git diff review source", () => {
 		expect(panelTabsSource).toContain("<DndContext");
 		expect(panelTabsSource).toContain("<SortableContext");
 		expect(panelTabsSource).toContain("onReorder?.(String(event.active.id), String(event.over.id));");
-		expect(dockPanelTabsSource).toContain("function reorderTabs");
-		expect(dockPanelTabsSource).toContain("onReorder={reorderDockTab}");
+		expect(dockPanelTabsSource).toContain("function reorderDockTabs");
+		expect(dockPanelTabsSource).toContain("tabs: reorderDockTabs(layout.tabs, sourceKey, targetKey)");
 	});
 
-	it("closes the side dock when the active session or workspace changes", () => {
-		expect(agentSource).toContain("setSideDockOpen(false);");
-		expect(agentSource).toContain("[activeSessionId]");
+	it("keeps the selected session dock layout when the active session changes", () => {
+		expect(agentSource).not.toContain("setSideDockOpen(false);");
+		expect(agentSource).toContain("sessionLayout: SessionLayoutPreferences;");
 	});
 
 	it("wires inline diff review actions to the same sidebar callback", () => {

@@ -33,7 +33,7 @@ describe("HomePage summary popover source", () => {
 		expect(source).toContain("const openSummaryDiffReview = useCallback");
 		expect(source).toContain("setSummaryOpen(false);");
 		expect(source).toContain("kind: \"review\"");
-		expect(source).toContain("setSideDockOpen(true);");
+		expect(source).toContain("updateSideDock({ ...sessionLayout.side, open: true });");
 		expect(source).toContain("onClick={openSummaryDiffReview}");
 		expect(source).toContain("await loadSummaryOverview();");
 	});

@@ -197,6 +197,35 @@ declare global {
 		openSessionDirectory: (sessionId: string) => Promise<{ opened: true }>;
 	}
 
+	type DockTabKind = "review" | "terminal";
+
+	interface DockTabPreferences {
+		key: string;
+		kind: DockTabKind;
+		index: number;
+	}
+
+	interface DockLayoutPreferences {
+		open: boolean;
+		size: number;
+		tabs: DockTabPreferences[];
+		activeTabKey: string | null;
+	}
+
+	interface SessionLayoutPreferences {
+		side: DockLayoutPreferences;
+		bottom: DockLayoutPreferences;
+	}
+
+	interface SessionLayoutAPI {
+		getAll: () => Promise<Record<string, SessionLayoutPreferences>>;
+		save: (payload: {
+			sessionId: string;
+			layout: SessionLayoutPreferences;
+		}) => Promise<SessionLayoutPreferences>;
+		remove: (payload: { sessionIds: string[] }) => Promise<{ removed: number }>;
+	}
+
 	interface DiskSpaceInfo {
 		drive: string;
 		free: number;
@@ -272,6 +301,7 @@ declare global {
 		appUpdate: AppUpdateAPI;
 		terminal: TerminalAPI;
 		sessionFs: SessionFsAPI;
+		sessionLayout: SessionLayoutAPI;
 		checkDiskSpace: () => Promise<DiskSpaceInfo | null>;
 		workspaceFs: {
 			listChildren: (params: {

@@ -21,13 +21,14 @@ describe("HomePage terminal panel source", () => {
 		expect(agentSource).toContain("cwd={workspaceForActions?.rootPath ?? null}");
 		expect(agentSource).toContain("isOpen={bottomDockOpen}");
 		expect(agentSource).toContain("defaultKind=\"terminal\"");
-		expect(agentSource).toContain("onEmpty={closeBottomDock}");
+		expect(agentSource).toContain("layout={sessionLayout.bottom}");
+		expect(agentSource).toContain("onLayoutChange={updateBottomDock}");
 	});
 
 	it("keeps side defaulting to review and bottom defaulting to terminal", () => {
 		expect(agentSource).toContain("defaultKind=\"review\"");
 		expect(agentSource).toContain("defaultKind=\"terminal\"");
-		expect(dockPanelTabsSource).toContain("return [createDockTab(dockId, defaultKind, 1, t)];");
+		expect(dockPanelTabsSource).toContain("ensurePanelTab(defaultKind)");
 		expect(dockPanelTabsSource).not.toContain("getDefaultAvailableKind");
 	});
 
@@ -39,7 +40,7 @@ describe("HomePage terminal panel source", () => {
 		expect(resizeStart).toBeGreaterThan(-1);
 		expect(resizeEnd).toBeGreaterThan(resizeStart);
 		expect(resizeSource).toContain("normalizedSize < BOTTOM_DOCK_CLOSE_THRESHOLD");
-		expect(resizeSource).toContain("closeBottomDock();");
+		expect(resizeSource).toContain("updateBottomDock({ ...sessionLayout.bottom, open: false }, false);");
 	});
 
 	it("places layout-bottom before layout-right and uses it as the panel switch", () => {
@@ -93,11 +94,11 @@ describe("HomePage terminal panel source", () => {
 		expect(dockPanelTabsSource).toContain('t("dock.add.reviewPanel")');
 		expect(dockPanelTabsSource).toContain('t("dock.add.terminalPanel")');
 		expect(dockPanelTabsSource).toContain("forceRender: tab.kind === \"terminal\"");
-		expect(dockPanelTabsSource).toContain("window.electronAPI.terminal.kill({ terminalId: targetKey })");
-		expect(dockPanelTabsSource).toContain("onEmpty();");
-		expect(dockPanelTabsSource).toContain("terminalId={tab.key}");
+		expect(dockPanelTabsSource).toContain("createTerminalRuntimeId(sessionId, targetKey)");
+		expect(dockPanelTabsSource).toContain("open: nextTabs.length > 0 && layout.open");
+		expect(dockPanelTabsSource).toContain("terminalId={createTerminalRuntimeId(sessionId, tab.key)}");
 		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} contextItems={contextItems}");
-		expect(dockPanelTabsSource).toContain("onReorder={reorderDockTab}");
+		expect(dockPanelTabsSource).toContain("tabs: reorderDockTabs(layout.tabs, sourceKey, targetKey)");
 		expect(terminalPanelSource).not.toContain("Tabs");
 	});
 

@@ -18,6 +18,7 @@ import { getWindowThemeColors, resolveWindowTheme, type WindowThemeColors } from
 import type { ClientPreferences } from "./services/client-preferences";
 import { configureAppIdentity, getAppIconPath } from "./services/app-identity";
 import { godotProjectsService } from "./services/godot-projects";
+import { sessionLayoutService } from "./services/session-layout";
 
 backendManager.registerIpc();
 backendBootstrapService.registerIpc();
@@ -33,6 +34,7 @@ registerTerminalPtyIpc();
 appUpdateService.registerIpc();
 nativeNotificationService.registerIpc();
 godotProjectsService.registerIpc();
+sessionLayoutService.registerIpc();
 
 configureAppIdentity();
 
@@ -245,6 +247,7 @@ function createWindow(): void {
 		if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
 			settingsWindow.close();
 		}
+		windowLifecycleController.quit();
 	});
 	loadRendererWindow(mainWindow, "main");
 }
