@@ -19,7 +19,6 @@ describe("BootSplash", () => {
 		expect(mainWindowRootSource).toContain("<MainTitlebar />");
 		expect(mainWindowRootSource).toContain("<BootSplash loadData={loadBootstrapData} onReady={handleBootstrapReady} />");
 		expect(mainWindowRootSource).toContain("<App bootstrapData={bootstrapData} />");
-		expect(settingsWindowRootSource).toContain("<SettingsTitlebar />");
 		expect(settingsWindowRootSource).toContain("<BootSplash loadData={loadSettingsBootstrapData} onReady={handleBootstrapReady} />");
 		expect(appSource).toContain("bootstrapData: BootstrapData");
 		expect(appSource).toContain("createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection)");

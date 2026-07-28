@@ -3,7 +3,7 @@
 	min-height: 0;
 	padding: 0px 8px;
 	overflow: auto;
-	padding: var(--ds-space-2);
+	padding: 0px var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);
 }
 
 .cards {

@@ -3,7 +3,7 @@
 	grid-template-rows: auto minmax(0, 1fr);
 	min-width: 0;
 	min-height: 0;
-	padding: var(--ds-space-2);
+	padding: 0px 0px var(--ds-space-2) var(--ds-space-2);
 	overflow: hidden;
 	user-select: none;
 }
@@ -11,6 +11,7 @@
 .header {
 	display: grid;
 	gap: 8px;
+	padding-right: var(--ds-space-2);
 }
 
 .titleRow {
@@ -34,8 +35,9 @@
 	display: grid;
 	gap: var(--ds-space-2);
 	min-height: 0;
-	overflow: auto;
-	padding-right: 2px;
+	padding-right: var(--ds-space-2);
+	overflow-x: hidden;
+	overflow-y: auto;
 	align-content: start;
 }
 

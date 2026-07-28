@@ -5,7 +5,7 @@
 	min-width: 0;
 	min-height: 0;
 	height: 100%;
-	padding: var(--ds-space-2);
+	padding: 0px var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);
 	overflow: hidden;
 	user-select: none;
 }

@@ -39,12 +39,18 @@
 
 .activePage {
 	display: grid;
+	grid-template-rows: 36px minmax(0, 1fr);
 	width: 100%;
 	min-width: 0;
 	min-height: 0;
 	height: 100%;
 	overflow: hidden;
 	background: var(--ds-bg);
+}
+
+.activePage > * {
+	min-width: 0;
+	min-height: 0;
 }
 
 .activeHeader {

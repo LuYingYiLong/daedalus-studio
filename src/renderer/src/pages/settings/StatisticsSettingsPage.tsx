@@ -275,8 +275,13 @@ function StatisticsSettingsPage(): React.JSX.Element {
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
-				<div className={styles.titleBlock}>
-					<Typography.Title level={3} className={styles.title}>{t("settings.statistics.title")}</Typography.Title>
+				<div className={styles.titleRow}>
+					<Typography.Title
+						level={3}
+						className={styles.title}
+					>
+						{t("settings.statistics.title")}
+					</Typography.Title>
 				</div>
 				<div className={styles.actions}>
 					<Segmented<TimeRangeKey>

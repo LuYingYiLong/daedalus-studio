@@ -3,7 +3,7 @@
 	grid-template-rows: auto auto minmax(0, 1fr);
 	min-width: 0;
 	min-height: 0;
-	padding: var(--ds-space-2);
+	padding: 0px var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);
 	overflow: hidden;
 }
 

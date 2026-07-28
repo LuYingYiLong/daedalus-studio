@@ -5,9 +5,6 @@
 	min-height: 0;
 	height: 100%;
 	max-height: 100%;
-	overflow-x: hidden;
-	overflow-y: auto;
-	scrollbar-gutter: auto;
 	user-select: none;
 }
 
@@ -16,27 +13,16 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--ds-space-2);
-	padding: var(--ds-space-2) var(--ds-space-2) 0 var(--ds-space-2);
-}
-
-.titleBlock {
-	display: grid;
-	gap: 4px;
-	min-width: 0;
+	padding: 0px var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);
 }
 
 .title {
 	margin: 0 !important;
 }
 
-.subtitle {
-	max-width: 720px;
-}
-
 .actions {
 	display: flex;
 	align-items: center;
-	gap: 8px;
 	flex: 0 0 auto;
 }
 
@@ -50,7 +36,10 @@
 	gap: var(--ds-space-2);
 	min-width: 0;
 	min-height: 0;
-	padding: var(--ds-space-2);
+	padding: 0 var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);
+	overflow-x: hidden;
+	overflow-y: auto;
+	scrollbar-gutter: auto;
 }
 
 .content::after {
