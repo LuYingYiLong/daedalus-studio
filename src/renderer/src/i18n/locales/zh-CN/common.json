@@ -601,6 +601,7 @@
       "status": {
         "not_installed": "未安装",
         "current": "已是最新",
+        "development": "开发源码",
         "outdated": "可升级",
         "disabled": "已禁用",
         "modified": "已修改",

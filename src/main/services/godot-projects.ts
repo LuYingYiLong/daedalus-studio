@@ -26,6 +26,7 @@ const PENDING_OPERATION_RETRY_MS: number = 5_000;
 export type GodotProjectPluginStatus =
 	| "not_installed"
 	| "current"
+	| "development"
 	| "outdated"
 	| "disabled"
 	| "modified"
@@ -117,6 +118,29 @@ function isInside(parentPath: string, childPath: string): boolean {
 	const parent: string = resolve(parentPath);
 	const child: string = resolve(childPath);
 	return child === parent || child.startsWith(`${parent}${sep}`);
+}
+
+function normalizeComparablePath(value: string): string {
+	const normalized: string = resolve(value);
+	return process.platform === "win32" ? normalized.toLocaleLowerCase("en-US") : normalized;
+}
+
+export function isDevelopmentPluginSourceProject(
+	projectPath: string,
+	appPath: string,
+	configuredSource: string | undefined = process.env.GODOT_DAEDALUS_PLUGIN_SOURCE
+): boolean {
+	const explicitSource: string | null = configuredSource?.trim() || null;
+	const sourceRoot: string = resolve(
+		explicitSource
+			?? join(appPath, "..", "godot_projects", "godot-daedalus", PLUGIN_RELATIVE_ROOT)
+	);
+	return normalizeComparablePath(join(projectPath, PLUGIN_RELATIVE_ROOT))
+		=== normalizeComparablePath(sourceRoot);
+}
+
+export function isGodotManagedPluginFile(path: string): boolean {
+	return path.startsWith(`${PLUGIN_RELATIVE_ROOT}/`) && path.endsWith(".import");
 }
 
 function validateArchivePath(value: string): string {
@@ -712,9 +736,16 @@ class GodotProjectsService {
 		return Array.from(normalizedByKey.values());
 	}
 
-	private async verifyPluginFiles(pluginRoot: string, manifest: PluginPackageManifest): Promise<boolean> {
+	private async verifyPluginFiles(
+		pluginRoot: string,
+		manifest: PluginPackageManifest,
+		ignoreGodotManagedFiles: boolean = false
+	): Promise<boolean> {
 		const resolvedPluginRoot: string = resolve(pluginRoot);
 		for (const file of manifest.files) {
+			if (ignoreGodotManagedFiles && isGodotManagedPluginFile(file.path)) {
+				continue;
+			}
 			const relativePluginPath: string = relative(
 				PLUGIN_RELATIVE_ROOT,
 				file.path
@@ -739,7 +770,11 @@ class GodotProjectsService {
 		projectPath: string,
 		manifest: PluginPackageManifest
 	): Promise<boolean> {
-		return await this.verifyPluginFiles(join(projectPath, PLUGIN_RELATIVE_ROOT), manifest);
+		return await this.verifyPluginFiles(
+			join(projectPath, PLUGIN_RELATIVE_ROOT),
+			manifest,
+			true
+		);
 	}
 
 	private async stagePluginPackage(
@@ -802,6 +837,9 @@ class GodotProjectsService {
 				return false;
 			}
 			for (const file of integrity.files) {
+				if (isGodotManagedPluginFile(file.path)) {
+					continue;
+				}
 				const installedPath: string = resolve(projectPath, file.path);
 				if (!isInside(resolve(projectPath, PLUGIN_RELATIVE_ROOT), installedPath)) {
 					return false;
@@ -831,10 +869,17 @@ class GodotProjectsService {
 			pluginVersion = null;
 		}
 		const enabled: boolean = readEnabledPlugins(projectText).includes(PLUGIN_RESOURCE_PATH);
+		const developmentSource: boolean = !app.isPackaged && isDevelopmentPluginSourceProject(
+			projectPath,
+			app.getAppPath()
+		);
 		let status: GodotProjectPluginStatus = "not_installed";
 		let errorMessage: string | null = this.state.pendingErrors[projectPath] ?? packageError;
 		if (pluginVersion !== null) {
-			if (pluginPackage === null) {
+			if (developmentSource) {
+				status = enabled ? "development" : "disabled";
+				errorMessage = this.state.pendingErrors[projectPath] ?? null;
+			} else if (pluginPackage === null) {
 				status = "failed";
 			} else if (compareVersions(pluginVersion, pluginPackage.manifest.pluginVersion) < 0) {
 				status = await this.verifyInstalledVersionIntegrity(projectPath, pluginVersion)
@@ -994,6 +1039,9 @@ class GodotProjectsService {
 		if (projectPath === null) {
 			throw new Error("Godot project is unavailable.");
 		}
+		if (!app.isPackaged && isDevelopmentPluginSourceProject(projectPath, app.getAppPath())) {
+			throw new Error("The local Godot-Daedalus development source cannot be replaced by the bundled plugin.");
+		}
 		const pluginPackage = await this.loadPackage();
 		const current: GodotProjectInfo = await this.inspectProject(projectPath, pluginPackage, null);
 		if (current.status === "modified" && !allowModified) {
@@ -1101,6 +1149,9 @@ class GodotProjectsService {
 		if (projectPath === null) {
 			throw new Error("Godot project is unavailable.");
 		}
+		if (!app.isPackaged && isDevelopmentPluginSourceProject(projectPath, app.getAppPath())) {
+			throw new Error("The local Godot-Daedalus development source cannot be uninstalled by Studio.");
+		}
 		if (!existsSync(join(projectPath, PLUGIN_RELATIVE_ROOT))) {
 			return await this.scan();
 		}
@@ -1150,6 +1201,16 @@ class GodotProjectsService {
 				await this.removeStagedPlugin(operation.stagedPluginPath);
 				delete this.state.pendingOperations[storedProjectPath];
 				this.state.pendingErrors[storedProjectPath] = "Godot project is unavailable.";
+				continue;
+			}
+			if (
+				!app.isPackaged
+				&& operation.kind !== "set_enabled"
+				&& isDevelopmentPluginSourceProject(projectPath, app.getAppPath())
+			) {
+				await this.removeStagedPlugin(operation.stagedPluginPath);
+				delete this.state.pendingOperations[storedProjectPath];
+				delete this.state.pendingErrors[storedProjectPath];
 				continue;
 			}
 			try {

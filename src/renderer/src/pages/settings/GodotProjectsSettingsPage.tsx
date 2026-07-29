@@ -32,6 +32,8 @@ function statusColor(status: GodotProjectPluginStatus): string {
 	switch (status) {
 		case "current":
 			return "success";
+		case "development":
+			return "processing";
 		case "outdated":
 			return "processing";
 		case "modified":
@@ -195,7 +197,7 @@ function GodotProjectsSettingsPage(): React.JSX.Element {
 							{project.enabled ? t("settings.common.disable") : t("settings.common.enable")}
 						</Button>
 					) : null}
-					{project.pluginVersion !== null ? (
+					{project.pluginVersion !== null && project.status !== "development" ? (
 						<Popconfirm
 							title={t("settings.godotProjects.confirmUninstall", { defaultValue: "Uninstall Godot Daedalus from this project?" })}
 							onConfirm={(): void => { void runAction("uninstall", project); }}

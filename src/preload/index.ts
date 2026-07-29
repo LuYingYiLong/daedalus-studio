@@ -89,6 +89,7 @@ type SessionLayoutPreferences = {
 type GodotProjectPluginStatus =
 	| "not_installed"
 	| "current"
+	| "development"
 	| "outdated"
 	| "disabled"
 	| "modified"

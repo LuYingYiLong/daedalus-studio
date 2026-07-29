@@ -24,6 +24,8 @@ vi.mock("electron", (): object => ({
 import {
 	getGodotVersionCompatibilityError,
 	inspectZipEntries,
+	isDevelopmentPluginSourceProject,
+	isGodotManagedPluginFile,
 	isGodotProcessName,
 	updateEditorPluginEnabled
 } from "@main/services/godot-projects";
@@ -113,5 +115,40 @@ describe("Godot project plugin management", () => {
 		expect(getGodotVersionCompatibilityError("4.7.1", "4.7.0")).toBeNull();
 		expect(getGodotVersionCompatibilityError("4.6.1", "4.7.0")).toContain("targets Godot 4.6.1");
 		expect(getGodotVersionCompatibilityError(null, "4.7.0")).toContain("Cannot determine");
+	});
+
+	it("recognizes the local Godot-Daedalus source project in development", () => {
+		expect(isDevelopmentPluginSourceProject(
+			"C:\\repo-parent\\godot_projects\\godot-daedalus",
+			"C:\\repo-parent\\daedalus-studio",
+			undefined
+		)).toBe(true);
+		expect(isDevelopmentPluginSourceProject(
+			"C:\\projects\\custom-daedalus",
+			"C:\\repo-parent\\daedalus-studio",
+			"C:\\projects\\custom-daedalus\\addons\\godot_daedalus"
+		)).toBe(true);
+		expect(isDevelopmentPluginSourceProject(
+			"C:\\repo-parent\\godot_projects\\godot-daedalus",
+			"C:\\repo-parent\\daedalus-studio",
+			" "
+		)).toBe(true);
+		expect(isDevelopmentPluginSourceProject(
+			"C:\\projects\\game",
+			"C:\\repo-parent\\daedalus-studio",
+			undefined
+		)).toBe(false);
+	});
+
+	it("treats Godot import metadata as mutable after installation", () => {
+		expect(isGodotManagedPluginFile(
+			"addons/godot_daedalus/assets/icons/add.svg.import"
+		)).toBe(true);
+		expect(isGodotManagedPluginFile(
+			"addons/godot_daedalus/scripts/main.gd"
+		)).toBe(false);
+		expect(isGodotManagedPluginFile(
+			"addons/other_plugin/icon.svg.import"
+		)).toBe(false);
 	});
 });

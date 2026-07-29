@@ -601,6 +601,7 @@
       "status": {
         "not_installed": "Not installed",
         "current": "Current",
+        "development": "Development source",
         "outdated": "Outdated",
         "disabled": "Disabled",
         "modified": "Modified",

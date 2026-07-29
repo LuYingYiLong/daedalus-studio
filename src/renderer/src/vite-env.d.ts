@@ -253,6 +253,7 @@ declare global {
 	type GodotProjectPluginStatus =
 		| "not_installed"
 		| "current"
+		| "development"
 		| "outdated"
 		| "disabled"
 		| "modified"
