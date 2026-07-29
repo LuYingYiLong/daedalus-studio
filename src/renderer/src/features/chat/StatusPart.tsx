@@ -28,6 +28,15 @@ function getAlertType(status: string): AlertProps["type"] {
 function handleStatusAction(actionId: string | undefined): void {
 	if (actionId === "configure_godot") {
 		void window.electronAPI.windowControl.openSettings("general");
+		return;
+	}
+	if (actionId?.startsWith("retry_agent_run:")) {
+		const runId: string = actionId.slice("retry_agent_run:".length);
+		if (runId.length > 0) {
+			window.dispatchEvent(new CustomEvent("daedalus:retry-agent-run", {
+				detail: { runId }
+			}));
+		}
 	}
 }
 

@@ -162,6 +162,57 @@ export type WorkflowTodoSnapshot = {
 	activePhaseRunId?: string;
 };
 
+export type AgentRunStage =
+	| "routing"
+	| "probing"
+	| "executing"
+	| "verifying"
+	| "awaiting_approval"
+	| "awaiting_tool_budget"
+	| "interrupted"
+	| "finalizing"
+	| "completed"
+	| "failed"
+	| "cancelled";
+
+export type AgentRunState = {
+	schemaVersion: 1;
+	runId: string;
+	sessionId: string;
+	requestId: string;
+	rootRequestId: string;
+	retryOfRunId?: string;
+	revision: number;
+	intent: "answer" | "inspect" | "mutate";
+	scope: "bounded" | "unknown" | "complex";
+	lane: "direct" | "read" | "probe" | "lightweight" | "workflow";
+	stage: AgentRunStage;
+	title: string;
+	planId: string | null;
+	todo: WorkflowTodoSnapshot | null;
+	pause: {
+		kind: "approval" | "tool_budget";
+		id: string;
+		toolName?: string;
+		reason: string;
+	} | null;
+	verificationStatus: "verified" | "unverified" | "failed" | null;
+	warnings: string[];
+	terminal: {
+		resultStatus: "completed" | "completed_with_warnings" | "failed" | "cancelled";
+		message?: string;
+		completedAt: string;
+	} | null;
+	checkpoint: {
+		successfulWriteFingerprints: string[];
+		evidence: unknown[];
+		lastWriteAt?: string;
+	};
+	interruptedReason?: string;
+	createdAt: string;
+	updatedAt: string;
+};
+
 export type WorkbenchSnapshot = {
 	revision: number;
 	sessionId: string | null;
@@ -386,6 +437,8 @@ export type SessionOpenResult = {
 	pendingGuides: PendingGuide[];
 	messageQueue: MessageQueueItem[];
 	workbench: WorkbenchSnapshot;
+	agentRuns: AgentRunState[];
+	activeAgentRun: AgentRunState | null;
 	workspaceWarning: string | null;
 };
 

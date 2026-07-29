@@ -31,6 +31,11 @@ export type ToolBudgetDecisionResult = {
 	workbench?: unknown;
 };
 
+export type RetryAgentRunResult = {
+	text?: string;
+	context?: unknown;
+};
+
 export async function sendChatMessage(params: SendChatMessageParams): Promise<unknown> {
 	const client = await createBackendClient();
 
@@ -71,4 +76,9 @@ export async function stopToolBudget(budgetId: string): Promise<ToolBudgetDecisi
 	return client.request<ToolBudgetDecisionResult>("ai.toolBudget.stop", {
 		budgetId
 	});
+}
+
+export async function retryAgentRun(runId: string): Promise<RetryAgentRunResult> {
+	const client = await createBackendClient();
+	return client.request<RetryAgentRunResult>("agent.run.retry", { runId });
 }

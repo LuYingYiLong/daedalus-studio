@@ -15,19 +15,19 @@ function hasEventType(events: Record<string, unknown>[], eventTypes: string[]): 
 }
 
 function getToolStatus(events: Record<string, unknown>[]): ToolStatus {
-	if (hasEventType(events, ["agent.tool.error", "tool.error"])) {
+	if (hasEventType(events, ["tool.error"])) {
 		return "error";
 	}
 
-	if (hasEventType(events, ["agent.tool.result", "tool.result"])) {
+	if (hasEventType(events, ["tool.result"])) {
 		return "success";
 	}
 
-	if (hasEventType(events, ["agent.tool.approved", "tool.approved", "agent.tool.call", "tool.call", "agent.tool.progress", "tool.progress"])) {
+	if (hasEventType(events, ["tool.approved", "tool.call", "tool.progress"])) {
 		return "running";
 	}
 
-	if (hasEventType(events, ["agent.tool.approval_required", "tool.approval_required"])) {
+	if (hasEventType(events, ["tool.approval_required"])) {
 		return "approval";
 	}
 

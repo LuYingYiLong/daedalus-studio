@@ -1,6 +1,6 @@
 export const BACKEND_BINARY_MANIFEST_SCHEMA_VERSION: 1 = 1;
-export const BACKEND_PROTOCOL_VERSION: number = 2;
-export const GODOT_PLUGIN_PROTOCOL_VERSION: number = 1;
+export const BACKEND_PROTOCOL_VERSION: number = 3;
+export const GODOT_PLUGIN_PROTOCOL_VERSION: number = 3;
 
 const SHA256_PATTERN: RegExp = /^[a-f0-9]{64}$/u;
 const VERSION_PATTERN: RegExp = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;

@@ -14,8 +14,10 @@ describe("Run state source", () => {
 		expect(appSource).toContain("const requestId: string | null = getRunControllerRequestId(runState);");
 		expect(appSource).not.toContain("function getIsSending(");
 		expect(appSource).not.toContain("function getActiveRunRequestId(");
-		expect(runStateSource).toContain("agent.run.tool_budget_required");
-		expect(runStateSource).toContain("agent.run.cancelled");
-		expect(runStateSource).toContain("next.sequence < current.sequence");
+		expect(runStateSource).toContain('event.event !== "agent.run.state"');
+		expect(runStateSource).toContain("sequence < current.sequence");
+		expect(runStateSource).toContain("run.revision <= current.agentRun.revision");
+		expect(runStateSource).toContain('run.stage === "awaiting_approval" || run.stage === "awaiting_tool_budget"');
+		expect(runStateSource).toContain('run.stage === "interrupted" || TERMINAL_RUN_STAGES.has(run.stage)');
 	});
 });

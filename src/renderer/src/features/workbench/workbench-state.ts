@@ -27,9 +27,7 @@ export const emptyTimelinePage: TimelinePageState = {
 
 export const MAX_TIMELINE_WINDOW_BLOCKS: number = 160;
 const TIMELINE_STREAM_DELTA_EVENTS: ReadonlySet<string> = new Set([
-	"ai.delta",
 	"agent.message.delta",
-	"ai.thinking.delta",
 	"agent.thinking.delta"
 ]);
 
@@ -69,6 +67,14 @@ function getEventData(event: BackendEvent): Record<string, unknown> {
 	return isRecord(event.data) ? event.data : {};
 }
 
+function getTransportRequestId(event: BackendEvent): string {
+	return event.requestId ?? event.id ?? "";
+}
+
+function getTransportEventId(event: BackendEvent): string {
+	return event.eventId ?? event.id ?? getTransportRequestId(event);
+}
+
 function getStringValue(record: Record<string, unknown>, key: string): string {
 	const value: unknown = record[key];
 
@@ -81,7 +87,7 @@ export function isTimelineStreamingDeltaEvent(event: BackendEvent): boolean {
 
 function getTimelineStreamingEventKey(event: BackendEvent): string {
 	const data: Record<string, unknown> = getEventData(event);
-	const requestId: string = getStringValue(data, "requestId") || event.id;
+	const requestId: string = getTransportRequestId(event);
 	const runId: string = getStringValue(data, "runId");
 	const sessionId: string = getStringValue(data, "sessionId");
 
@@ -183,7 +189,7 @@ function appendToolPart(parts: TimelineBodyPart[], event: BackendEvent): Timelin
 	const data: Record<string, unknown> = getEventData(event);
 	const toolCallId: string = getStringValue(data, "toolCallId")
 		|| getStringValue(data, "approvalId")
-		|| `${getStringValue(data, "toolName") || "tool"}:${event.id}`;
+		|| `${getStringValue(data, "toolName") || "tool"}:${getTransportEventId(event)}`;
 	const normalizedEvent: Record<string, unknown> = {
 		...data,
 		type: event.event.startsWith("agent.tool.") ? event.event.replace("agent.tool.", "tool.") : event.event
@@ -232,7 +238,7 @@ function toolPartMatchesEvent(part: Extract<TimelineBodyPart, { type: "tool" }>,
 function getToolCallKey(data: Record<string, unknown>, event: BackendEvent): string {
 	return getStringValue(data, "toolCallId")
 		|| getStringValue(data, "approvalId")
-		|| `${getStringValue(data, "toolName") || "tool"}:${event.id}`;
+		|| `${getStringValue(data, "toolName") || "tool"}:${getTransportEventId(event)}`;
 }
 
 function getImageGenerationPrompt(data: Record<string, unknown>): string {
@@ -256,14 +262,14 @@ function appendImageGenerationPart(parts: TimelineBodyPart[], event: BackendEven
 	const toolCallId: string = getToolCallKey(data, event);
 	let nextPart: Extract<TimelineBodyPart, { type: "image_generation" }> | null = null;
 
-	if (event.event === "agent.tool.call" || event.event === "tool.call") {
+	if (event.event === "agent.tool.call") {
 		nextPart = {
 			type: "image_generation",
 			status: "running",
 			toolCallId,
 			prompt: getImageGenerationPrompt(data)
 		};
-	} else if (event.event === "agent.tool.result" || event.event === "tool.result") {
+	} else if (event.event === "agent.tool.result") {
 		const imageGeneration: unknown = data.imageGeneration;
 		if (!isRecord(imageGeneration)) {
 			return parts;
@@ -280,7 +286,7 @@ function appendImageGenerationPart(parts: TimelineBodyPart[], event: BackendEven
 				? artifactsValue.filter(isRecord) as Extract<TimelineBodyPart, { type: "image_generation" }>["artifacts"]
 				: []
 		};
-	} else if (event.event === "agent.tool.error" || event.event === "tool.error") {
+	} else if (event.event === "agent.tool.error") {
 		nextPart = {
 			type: "image_generation",
 			status: "failed",
@@ -377,7 +383,7 @@ function getCanonicalEventRequestId(event: BackendEvent): string {
 
 	if (event.event === "plan.execution.started") {
 		const executionRequestId: string = getStringValue(data, "executionRequestId");
-		return executionRequestId.length > 0 ? executionRequestId : event.id;
+		return executionRequestId.length > 0 ? executionRequestId : getTransportRequestId(event);
 	}
 
 	const requestId: string = getStringValue(data, "requestId");
@@ -389,7 +395,7 @@ function getCanonicalEventRequestId(event: BackendEvent): string {
 		}
 	}
 
-	return event.id;
+	return getTransportRequestId(event);
 }
 
 function assistantBlockHasPlanId(block: TimelineAssistantBlock, planId: string): boolean {
@@ -431,7 +437,7 @@ function getExistingPlanRequestId(blocks: TimelineBlock[], planId: string): stri
 
 function getCanonicalEventRequestIdForTimeline(blocks: TimelineBlock[], event: BackendEvent): string {
 	const requestId: string = getCanonicalEventRequestId(event);
-	if (requestId !== event.id) {
+	if (requestId !== getTransportRequestId(event)) {
 		return requestId;
 	}
 
@@ -445,18 +451,15 @@ function getCanonicalEventRequestIdForTimeline(blocks: TimelineBlock[], event: B
 
 function rewriteEventForTimeline(blocks: TimelineBlock[], event: BackendEvent): BackendEvent {
 	const requestId: string = getCanonicalEventRequestIdForTimeline(blocks, event);
-	if (requestId === event.id) {
+	if (requestId === getTransportRequestId(event)) {
 		return event;
 	}
 
 	const data: Record<string, unknown> = getEventData(event);
 	return {
 		...event,
-		id: requestId,
-		data: {
-			...data,
-			requestId
-		}
+		requestId,
+		data
 	};
 }
 
@@ -484,8 +487,19 @@ function hasErrorStatusDetails(parts: readonly TimelineBodyPart[], details: stri
 	});
 }
 
+function failRunningImageGenerationParts(
+	parts: readonly TimelineBodyPart[],
+	error: string
+): TimelineBodyPart[] {
+	return parts.map((part: TimelineBodyPart): TimelineBodyPart => {
+		return part.type === "image_generation" && part.status === "running"
+			? { ...part, status: "failed", error }
+			: part;
+	});
+}
+
 function assistantBlockMatchesEvent(block: TimelineAssistantBlock, event: BackendEvent): boolean {
-	if (block.requestId === event.id || block.requestId === getCanonicalEventRequestId(event)) {
+	if (block.requestId === getTransportRequestId(event) || block.requestId === getCanonicalEventRequestId(event)) {
 		return true;
 	}
 
@@ -504,18 +518,67 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 	let nextStatus: TimelineAssistantBlock["status"] = block.status;
 	let completedAtUtc: string = block.completedAtUtc;
 
-	if (event.event === "agent.run.started") {
-		nextStatus = "running";
-		completedAtUtc = nowIso;
-	} else if (event.event === "ai.delta" || event.event === "agent.message.delta") {
+	if (event.event === "agent.run.state") {
+		const stage: string = getStringValue(data, "stage");
+		const terminal: Record<string, unknown> = isRecord(data.terminal) ? data.terminal : {};
+		if (stage === "failed") {
+			nextStatus = "failed";
+			completedAtUtc = getStringValue(terminal, "completedAt") || nowIso;
+			const details: string = getStringValue(terminal, "message") || "Unknown backend error";
+			nextParts = failRunningImageGenerationParts(nextParts, details);
+			if (!hasErrorStatusDetails(nextParts, details)) {
+				nextParts = [...nextParts, {
+					type: "status",
+					status: "error",
+					title: "Run failed",
+					details,
+					code: "agent_run_error"
+				}];
+			}
+		} else if (stage === "cancelled") {
+			nextStatus = undefined;
+			completedAtUtc = getStringValue(terminal, "completedAt") || nowIso;
+			nextParts = failRunningImageGenerationParts(nextParts, "Image generation was cancelled.");
+			if (!hasStatusCode(nextParts, "cancelled")) {
+				nextParts = [...nextParts, {
+					type: "status",
+					status: "info",
+					title: "Stopped",
+					details: getStringValue(terminal, "message") || "The response was stopped by the user.",
+					code: "cancelled"
+				}];
+			}
+		} else if (stage === "completed") {
+			nextStatus = undefined;
+			completedAtUtc = getStringValue(terminal, "completedAt") || nowIso;
+		} else if (stage === "interrupted") {
+			nextStatus = undefined;
+			completedAtUtc = nowIso;
+			nextParts = failRunningImageGenerationParts(nextParts, "Image generation was interrupted.");
+			if (!hasStatusCode(nextParts, "agent_run_interrupted")) {
+				nextParts = [...nextParts, {
+					type: "status",
+					status: "warning",
+					title: "Run interrupted",
+					details: "The backend stopped before this run reached a terminal state. Retry from its safe checkpoint.",
+					code: "agent_run_interrupted",
+					actionLabel: "Retry from checkpoint",
+					actionId: `retry_agent_run:${getStringValue(data, "runId")}`
+				}];
+			}
+		} else {
+			nextStatus = "running";
+			completedAtUtc = nowIso;
+		}
+	} else if (event.event === "agent.message.delta") {
 		nextParts = appendMarkdownPart(nextParts, getStringValue(data, "text"));
-	} else if (event.event === "ai.thinking.delta" || event.event === "agent.thinking.delta") {
+	} else if (event.event === "agent.thinking.delta") {
 		nextParts = appendThinkingPart(nextParts, getStringValue(data, "text"), false);
-	} else if (event.event === "ai.thinking.done" || event.event === "agent.thinking.done") {
+	} else if (event.event === "agent.thinking.done") {
 		nextParts = appendThinkingPart(nextParts, "", true);
 	} else if (event.event === "agent.summary.started") {
 		nextParts = appendSummaryStartPart(nextParts, event);
-	} else if (event.event === "ai.status") {
+	} else if (event.event === "agent.status") {
 		const title: string = getStringValue(data, "title") || getStringValue(data, "stage");
 		const details: string = getStringValue(data, "details") || getStringValue(data, "detail") || getStringValue(data, "message");
 		nextParts = [...nextParts, {
@@ -525,7 +588,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 			details,
 			code: getStringValue(data, "code")
 		}];
-	} else if (event.event.startsWith("agent.tool.") || event.event.startsWith("tool.")) {
+	} else if (event.event.startsWith("agent.tool.")) {
 		nextParts = appendImageGenerationPart(appendToolPart(nextParts, event), event);
 	} else if (event.event === "plan.generated" || event.event === "plan.revised") {
 		const planId: string = getStringValue(data, "planId");
@@ -539,7 +602,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 				previewMarkdown: getStringValue(data, "previewMarkdown") || getStringValue(data, "markdown")
 			});
 		}
-	} else if (event.event === "agent.run.error" || event.event === "workflow.error" || event.event === "plan.error") {
+	} else if (event.event === "plan.error") {
 		nextStatus = "failed";
 		completedAtUtc = nowIso;
 		const details: string = getStringValue(data, "message") || "Unknown backend error";
@@ -552,30 +615,10 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 				code: getStringValue(data, "code") || "agent_run_error"
 			}];
 		}
-	} else if (event.event === "agent.run.cancelled") {
-		nextParts = nextParts.map((part: TimelineBodyPart): TimelineBodyPart => {
-			return part.type === "image_generation" && part.status === "running"
-				? { ...part, status: "failed", error: "Image generation was cancelled." }
-				: part;
-		});
-		nextStatus = undefined;
-		completedAtUtc = nowIso;
-		if (!hasStatusCode(nextParts, "cancelled")) {
-			nextParts = [...nextParts, {
-				type: "status",
-				status: "info",
-                title: "Stopped",
-                details: getStringValue(data, "reason") || "The response was stopped by the user.",
-				code: "cancelled"
-			}];
-		}
 	} else if (event.event === "agent.message.done") {
 		nextStatus = undefined;
 		completedAtUtc = nowIso;
 		nextParts = appendFinalMarkdownPart(nextParts, getStringValue(data, "text"));
-	} else if (event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done") {
-		nextStatus = undefined;
-		completedAtUtc = nowIso;
 	} else {
 		return block;
 	}
@@ -590,15 +633,12 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 }
 
 function shouldCreateAssistantBlock(event: BackendEvent): boolean {
-	return event.event === "agent.run.started"
-		|| event.event === "ai.delta"
+	return event.event === "agent.run.state"
 		|| event.event === "agent.message.delta"
-		|| event.event === "ai.thinking.delta"
 		|| event.event === "agent.thinking.delta"
 		|| event.event === "agent.summary.started"
 		|| event.event.startsWith("agent.tool.")
-		|| event.event.startsWith("tool.")
-		|| event.event === "ai.status"
+		|| event.event === "agent.status"
 		|| event.event === "plan.generated"
 		|| event.event === "plan.revised"
 		|| event.event === "plan.error";

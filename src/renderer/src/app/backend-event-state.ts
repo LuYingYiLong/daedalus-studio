@@ -118,29 +118,23 @@ export function shouldClearPlanClarificationForEvent(event: BackendEvent, clarif
 		return planId.length === 0 || planId === clarification.planId;
 	}
 
-	if (event.event === "agent.run.error") {
+	if (event.event === "agent.run.state") {
 		const planId: string = getStringField(event.data, "planId").trim();
-		const requestId: string = getStringField(event.data, "requestId").trim();
-		return planId === clarification.planId || requestId === clarification.requestId;
+		const stage: string = getStringField(event.data, "stage").trim();
+		return (stage === "failed" || stage === "cancelled")
+			&& (planId === clarification.planId || event.requestId === clarification.requestId);
 	}
 
 	return false;
 }
 
 export function getBackendEventSessionId(event: BackendEvent): string | null {
-	if (!isRecord(event.data)) {
-		return null;
-	}
-
-	return typeof event.data.sessionId === "string" ? event.data.sessionId : null;
+	return typeof event.sessionId === "string" && event.sessionId.length > 0 ? event.sessionId : null;
 }
 
 export function isSessionScopedBackendEvent(event: BackendEvent): boolean {
 	return event.event.startsWith("agent.")
-		|| event.event.startsWith("ai.")
-		|| event.event.startsWith("tool.")
 		|| event.event.startsWith("terminal.")
-		|| event.event.startsWith("workflow.")
 		|| event.event.startsWith("plan.")
 		|| event.event.startsWith("guide.")
 		|| event.event === "session.workbench.updated"
@@ -173,17 +167,21 @@ export function getWorkbenchFromEvent(event: BackendEvent): WorkbenchSnapshot | 
 }
 
 export function getBackendEventRequestId(event: BackendEvent): string {
-	if (isRecord(event.data) && typeof event.data.requestId === "string" && event.data.requestId.length > 0) {
-		return event.data.requestId;
-	}
-
-	return event.id;
+	return event.requestId ?? event.id ?? "";
 }
 
 export function isRunCancellationEvent(event: BackendEvent): boolean {
-	return event.event === "agent.run.cancelled";
+	return event.event === "agent.run.state"
+		&& isRecord(event.data)
+		&& event.data.stage === "cancelled";
 }
 
 export function isRunCompletionEvent(event: BackendEvent): boolean {
-	return event.event === "agent.run.done" || event.event === "workflow.done" || event.event === "ai.done";
+	return event.event === "agent.run.state"
+		&& isRecord(event.data)
+		&& (
+			event.data.stage === "completed"
+			|| event.data.stage === "failed"
+			|| event.data.stage === "cancelled"
+		);
 }

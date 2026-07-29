@@ -35,7 +35,8 @@ describe("App plan clarification source", () => {
 	it("clears stale plan clarification state when a plan operation fails", () => {
 		expect(backendEventStateSource).toContain("function shouldClearPlanClarificationForEvent");
 		expect(backendEventStateSource).toContain("event.event === \"plan.error\"");
-		expect(backendEventStateSource).toContain("event.event === \"agent.run.error\"");
+		expect(backendEventStateSource).toContain("event.event === \"agent.run.state\"");
+		expect(backendEventStateSource).toContain('stage === "failed" || stage === "cancelled"');
 		expect(backendEventStreamSource).toContain("shouldClearPlanClarificationForEvent(event, currentClarification) ? null : currentClarification");
 	});
 

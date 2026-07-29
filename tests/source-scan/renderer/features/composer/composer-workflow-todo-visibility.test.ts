@@ -32,10 +32,11 @@ describe("Composer workflow todo visibility", () => {
 		expect(designDoc).toContain("`--ds-git-addition`");
 		expect(designDoc).toContain("Git 差异 UI 统一使用");
 		expect(appSource).toContain("function clearWorkflowTodoUiState(options: { preservePlanSnapshot?: boolean } = {})");
-		expect(backendEventStreamSource).toContain('if (event.event === "agent.run.started")');
-		expect(backendEventStreamSource).toContain("clearWorkflowTodoUiState({ preservePlanSnapshot: true });");
+		expect(backendEventStreamSource).toContain('if (event.event === "agent.run.state")');
+		expect(backendEventStreamSource).toContain("normalizeWorkflowTodoSnapshot(runData?.todo)");
 		expect(backendEventStreamSource).toContain('event.event === "plan.execution.started"');
 		expect(backendEventStreamSource).toContain("expandWorkflowTodoPanel();");
-		expect(backendEventStreamSource).toContain('event.event === "workflow.todo.updated" || event.event === "agent.run.snapshot"');
+		expect(backendEventStreamSource).not.toContain('event.event === "workflow.todo.updated"');
+		expect(backendEventStreamSource).not.toContain('event.event === "agent.run.snapshot"');
 	});
 });

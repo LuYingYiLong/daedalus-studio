@@ -3,6 +3,7 @@ import { useEventListener, useLatest } from "ahooks";
 import { Input, message as antdMessage, Modal, Typography } from "antd";
 import { useDiskSpaceCheck } from "@/shared/hooks/useDiskSpaceCheck";
 import { onBackendReconnected } from "@/shared/api/transport/backend-client";
+import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
 import useNativeTaskNotifications from "./hooks/useNativeTaskNotifications";
 import useBackendEventStream from "./hooks/useBackendEventStream";
 import useTimelineStreamBuffer from "./hooks/useTimelineStreamBuffer";
@@ -15,7 +16,7 @@ import type { RetryUserMessagePayload } from "@/features/chat/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import type { ProviderModelInfo, ProviderModelSelectionProvider, ProviderReasoningEffortOption } from "@/api/provider-api";
 import { getPlanApprovalFromResult, normalizePlanClarification } from "./backend-event-state";
-import { cancelChatMessage, continueToolBudget, sendChatMessage, stopToolBudget, type ChatMode } from "@/api/chat-api";
+import { cancelChatMessage, continueToolBudget, retryAgentRun, sendChatMessage, stopToolBudget, type ChatMode } from "@/api/chat-api";
 import { fetchSlashCommands, type SlashCommandDefinition } from "@/api/command-api";
 import { fetchSkills, type SkillSummary } from "@/api/skill-api";
 import {
@@ -38,6 +39,7 @@ import {
 } from "@/features/workbench/workbench-state";
 import {
 	applyRunStateFromWorkbench,
+	applyAgentRunState,
 	createIdleRunState,
 	createOptimisticRunState,
 	finishOptimisticRunState,
@@ -78,6 +80,31 @@ type WorkspacePickedEntry = {
 	resourcePath: string;
 	kind: "file" | "folder";
 };
+
+function createFrontendFailedRunEvent(requestId: string, sessionId: string, message: string): BackendEvent {
+	const createdAt: string = new Date().toISOString();
+	return {
+		protocolVersion: 3,
+		type: "event",
+		eventId: `frontend-${requestId}`,
+		event: "agent.run.state",
+		sessionId,
+		requestId,
+		runId: requestId,
+		sequence: Date.now() * 1000,
+		createdAt,
+		data: {
+			runId: requestId,
+			requestId,
+			stage: "failed",
+			terminal: {
+				resultStatus: "failed",
+				message,
+				completedAt: createdAt
+			}
+		}
+	};
+}
 
 type AppProps = {
 	bootstrapData: BootstrapData;
@@ -678,6 +705,19 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			clientPreferencesRef.current = preferences;
 			setClientPreferences(preferences);
 		}
+	});
+
+	useEventListener("daedalus:retry-agent-run", (event: Event): void => {
+		const detail: unknown = (event as CustomEvent<unknown>).detail;
+		if (
+			typeof detail !== "object"
+			|| detail === null
+			|| !("runId" in detail)
+			|| typeof (detail as { runId?: unknown }).runId !== "string"
+		) {
+			return;
+		}
+		void handleInterruptedRunRetry((detail as { runId: string }).runId);
 	});
 
 	const handleWorkspaceSidebarChange = useCallback((
@@ -1419,6 +1459,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setActiveSessionId(null);
 			setActiveSessionMetadata(null);
 			setWorkbench(null);
+			setRunState(createIdleRunState());
 			await createTemporarySession();
 			return;
 		}
@@ -1587,6 +1628,11 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				}
 				: result.workbench;
 			setWorkbench(openedWorkbench);
+			setRunState((currentState: RunControllerState): RunControllerState => (
+				result.activeAgentRun === null
+					? createIdleRunState(currentState.sequence)
+					: applyAgentRunState(currentState, result.activeAgentRun)
+			));
 			if (loadingComposerDraft?.sessionId === sessionId) {
 				queueWorkbenchPatch({ composer: { text: loadingComposerDraft.text } });
 			}
@@ -2188,15 +2234,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 					return {
 						...currentPage,
-						blocks: applyBackendEventToTimeline(currentPage.blocks, {
-							type: "event",
-							id: requestId,
-							event: "agent.run.error",
-							data: {
-								code: "frontend_send_error",
-								message: errorMessage
-							}
-						})
+						blocks: applyBackendEventToTimeline(
+							currentPage.blocks,
+							createFrontendFailedRunEvent(requestId, currentPage.sessionId ?? activeSessionIdRef.current ?? "", errorMessage)
+						)
 					};
 				});
 			}
@@ -2297,15 +2338,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
 					return {
 						...currentPage,
-						blocks: applyBackendEventToTimeline(currentPage.blocks, {
-							type: "event",
-							id: requestId,
-							event: "agent.run.error",
-							data: {
-								code: "frontend_send_error",
-								message: errorMessage
-							}
-						})
+						blocks: applyBackendEventToTimeline(
+							currentPage.blocks,
+							createFrontendFailedRunEvent(requestId, currentPage.sessionId ?? activeSessionId ?? "", errorMessage)
+						)
 					};
 				});
 			}
@@ -2621,6 +2657,25 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			if (activeChatRequestIdRef.current === requestId) {
 				activeChatRequestIdRef.current = null;
 			}
+		}
+	}
+
+	async function handleInterruptedRunRetry(runId: string): Promise<void> {
+		if (
+			activeSessionIdRef.current === null
+			|| isSessionLoading
+			|| isRunControllerActive(runState)
+		) {
+			return;
+		}
+		try {
+			setSessionError(null);
+			await retryAgentRun(runId);
+			await refreshLatestTimeline();
+		} catch (error: unknown) {
+			const message: string = error instanceof Error ? error.message : "Failed to retry interrupted run";
+			setSessionError(message);
+			console.error("[App] retry interrupted run failed", error);
 		}
 	}
 

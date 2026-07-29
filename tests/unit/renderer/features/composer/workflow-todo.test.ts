@@ -64,7 +64,7 @@ describe("workflow-todo", () => {
 		const doneEvent: BackendEvent = { type: "event", id: "run-a", event: "workflow.done", data: {} };
 		const errorEvent: BackendEvent = { type: "event", id: "run-a", event: "agent.run.error", data: {} };
 		const workflowErrorEvent: BackendEvent = { type: "event", id: "run-a", event: "workflow.error", data: {} };
-		const dismissEvent: BackendEvent = { type: "event", id: "run-a", event: "workflow.todo.dismissed", data: {} };
+		const dismissEvent: BackendEvent = { type: "event", id: "run-a", event: "agent.todo.dismissed", data: {} };
 		const cancelEvent: BackendEvent = { type: "event", id: "run-a", event: "agent.run.cancelled", data: {} };
 		const snapshotEvent: BackendEvent = { type: "event", id: "run-a", event: "agent.run.snapshot", data: {} };
 

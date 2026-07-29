@@ -2,7 +2,7 @@ import type { ReconnectConfig } from "./reconnection-strategy";
 import { ReconnectionManager, DEFAULT_RECONNECT_CONFIG } from "./reconnection-strategy";
 
 type BackendRequest = {
-	protocolVersion: 2;
+	protocolVersion: 3;
 	type: "request";
 	id: string;
 	method: string;
@@ -27,9 +27,17 @@ type BackendResponse =
 	};
 
 export type BackendEvent = {
+	protocolVersion?: 3;
 	type: "event";
-	id: string;
+	eventId?: string;
+	/** Synthetic test/timeline events only. Runtime transport requires eventId/requestId/runId/sequence/createdAt. */
+	id?: string;
 	event: string;
+	sessionId?: string;
+	requestId?: string;
+	runId?: string;
+	sequence?: number;
+	createdAt?: string;
 	data?: unknown;
 };
 
@@ -69,7 +77,7 @@ function createRequestParams(method: string, params: unknown): unknown {
 
 	return {
 		...(typeof params === "object" && params !== null && !Array.isArray(params) ? params : {}),
-		protocolVersion: 2
+		protocolVersion: 3
 	};
 }
 
@@ -84,8 +92,15 @@ function isBackendResponse(message: unknown): message is BackendResponse {
 function isBackendEvent(message: unknown): message is BackendEvent {
 	return typeof message === "object"
 		&& message !== null
+		&& (message as { protocolVersion?: unknown }).protocolVersion === 3
 		&& (message as { type?: unknown }).type === "event"
-		&& typeof (message as { event?: unknown }).event === "string";
+		&& typeof (message as { eventId?: unknown }).eventId === "string"
+		&& typeof (message as { event?: unknown }).event === "string"
+		&& typeof (message as { sessionId?: unknown }).sessionId === "string"
+		&& typeof (message as { requestId?: unknown }).requestId === "string"
+		&& typeof (message as { runId?: unknown }).runId === "string"
+		&& typeof (message as { sequence?: unknown }).sequence === "number"
+		&& typeof (message as { createdAt?: unknown }).createdAt === "string";
 }
 
 export class BackendRpcClient {
@@ -265,7 +280,7 @@ export class BackendRpcClient {
 		}
 
 		const request: BackendRequest = {
-			protocolVersion: 2,
+			protocolVersion: 3,
 			type: "request",
 			id,
 			method

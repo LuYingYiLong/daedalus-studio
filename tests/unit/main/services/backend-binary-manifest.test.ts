@@ -18,9 +18,9 @@ function createPayloadManifest(
 		platform: "win32",
 		arch: "x64",
 		nodeVersion: "24.18.0",
-		protocolVersion: 2,
-		minPluginProtocolVersion: 1,
-		maxPluginProtocolVersion: 1,
+		protocolVersion: 3,
+		minPluginProtocolVersion: 3,
+		maxPluginProtocolVersion: 3,
 		minStudioVersion: "1.0.1",
 		publishedAt: "2026-07-24T12:00:00.000Z",
 		authenticode: "unsigned",
@@ -78,7 +78,7 @@ describe("backend binary manifest", () => {
 			"1.0.1"
 		)).toThrow(/requires Daedalus Studio/u);
 		expect(() => assertBackendManifestCompatible(
-			createPayloadManifest({ protocolVersion: 3 }),
+			createPayloadManifest({ protocolVersion: 2 }),
 			"1.1.0"
 		)).toThrow(/protocol/u);
 		expect(() => assertBackendManifestCompatible(

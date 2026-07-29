@@ -49,6 +49,64 @@ function createUserBlock(id: string): TimelineBlock {
 	};
 }
 
+function createAgentRunEvent(
+	runId: string,
+	stage: "executing" | "completed" | "failed" | "cancelled" | "interrupted",
+	revision: number = 1,
+	options: {
+		message?: string;
+		verificationStatus?: "verified" | "unverified" | "failed" | null;
+		warnings?: string[];
+		resultStatus?: "completed" | "completed_with_warnings" | "failed" | "cancelled";
+	} = {}
+): BackendEvent {
+	const terminal = stage === "completed" || stage === "failed" || stage === "cancelled"
+		? {
+			resultStatus: options.resultStatus
+				?? (stage === "completed" ? "completed" : stage),
+			message: options.message,
+			completedAt: "2026-07-29T00:00:00.000Z"
+		}
+		: null;
+
+	return {
+		protocolVersion: 3,
+		type: "event",
+		eventId: `event:${runId}:${revision}:${stage}`,
+		event: "agent.run.state",
+		sessionId: "session-a",
+		requestId: runId,
+		runId,
+		sequence: revision,
+		createdAt: "2026-07-29T00:00:00.000Z",
+		data: {
+			schemaVersion: 1,
+			runId,
+			sessionId: "session-a",
+			requestId: runId,
+			rootRequestId: runId,
+			revision,
+			intent: "mutate",
+			scope: "bounded",
+			lane: "lightweight",
+			stage,
+			title: "Test run",
+			planId: null,
+			todo: null,
+			pause: null,
+			verificationStatus: options.verificationStatus ?? null,
+			warnings: options.warnings ?? [],
+			terminal,
+			checkpoint: {
+				successfulWriteFingerprints: [],
+				evidence: []
+			},
+			createdAt: "2026-07-29T00:00:00.000Z",
+			updatedAt: "2026-07-29T00:00:00.000Z"
+		}
+	};
+}
+
 describe("workbench-state", () => {
 	it("ignores older workbench revisions", () => {
 		const current = createWorkbench(3, "new");
@@ -80,37 +138,39 @@ describe("workbench-state", () => {
 
 	it("derives run controls from sequenced backend events and ignores stale workbench state", () => {
 		const idle: RunControllerState = createIdleRunState();
-		const started: RunControllerState = applyRunStateFromBackendEvent(idle, {
-			type: "event",
-			id: "run-a",
-			event: "agent.run.started",
-			data: {
-				requestId: "run-a",
-				status: "streaming",
-				sequence: 3
-			}
-		});
+		const started: RunControllerState = applyRunStateFromBackendEvent(
+			idle,
+			createAgentRunEvent("run-a", "executing", 3)
+		);
 		const staleWorkbench = createWorkbench(10, "");
 		staleWorkbench.activeRun = {
 			status: "idle",
 			sequence: 2
 		};
 		const afterStaleWorkbench: RunControllerState = applyRunStateFromWorkbench(started, staleWorkbench);
-		const done: RunControllerState = applyRunStateFromBackendEvent(afterStaleWorkbench, {
-			type: "event",
-			id: "run-a",
-			event: "agent.run.done",
-			data: {
-				requestId: "run-a",
-				status: "done",
-				sequence: 3
-			}
-		});
+		const done: RunControllerState = applyRunStateFromBackendEvent(
+			afterStaleWorkbench,
+			createAgentRunEvent("run-a", "completed", 4)
+		);
 
 		expect(isRunControllerActive(started)).toBe(true);
 		expect(afterStaleWorkbench.status).toBe("streaming");
 		expect(done.status).toBe("idle");
-		expect(done.sequence).toBe(3);
+		expect(done.sequence).toBe(4);
+	});
+
+	it("ignores an out-of-order state event from a different run", () => {
+		const current: RunControllerState = applyRunStateFromBackendEvent(
+			createIdleRunState(),
+			createAgentRunEvent("run-new", "executing", 5)
+		);
+		const applied: RunControllerState = applyRunStateFromBackendEvent(
+			current,
+			createAgentRunEvent("run-old", "interrupted", 2)
+		);
+
+		expect(applied).toBe(current);
+		expect(applied.agentRun?.runId).toBe("run-new");
 	});
 
 	it("optimistic run state keeps empty-draft composer controls stoppable until terminal state", () => {
@@ -128,12 +188,7 @@ describe("workbench-state", () => {
 			event: "agent.message.delta",
 			data: { text: "hello" }
 		};
-		const done: BackendEvent = {
-			type: "event",
-			id: "request-a",
-			event: "agent.run.done",
-			data: {}
-		};
+		const done: BackendEvent = createAgentRunEvent("request-a", "completed", 2);
 
 		const withDelta: TimelineBlock[] = applyBackendEventToTimeline([], delta);
 		const withDone: TimelineBlock[] = applyBackendEventToTimeline(withDelta, done);
@@ -174,7 +229,7 @@ describe("workbench-state", () => {
 		expect(isTimelineStreamingDeltaEvent({
 			type: "event",
 			id: "request-batched",
-			event: "agent.run.done"
+			event: "agent.run.state"
 		})).toBe(false);
 		expect(blocks).toHaveLength(1);
 		expect(blocks[0]?.content).toBe("long answer");
@@ -185,15 +240,10 @@ describe("workbench-state", () => {
 	});
 
 	it("creates a running assistant block when an agent run starts", () => {
-		const blocks: TimelineBlock[] = applyBackendEventToTimeline([], {
-			type: "event",
-			id: "request-started",
-			event: "agent.run.started",
-			data: {
-				runId: "request-started",
-				requestId: "request-started"
-			}
-		});
+		const blocks: TimelineBlock[] = applyBackendEventToTimeline(
+			[],
+			createAgentRunEvent("request-started", "executing")
+		);
 
 		expect(blocks).toHaveLength(1);
 		expect(blocks[0]?.type).toBe("assistant");
@@ -206,31 +256,18 @@ describe("workbench-state", () => {
 	});
 
 	it("deduplicates repeated cancellation events in the assistant block", () => {
-		const started: TimelineBlock[] = applyBackendEventToTimeline([], {
-			type: "event",
-			id: "request-cancelled",
-			event: "agent.run.started",
-			data: {
-				runId: "request-cancelled",
-				requestId: "request-cancelled"
-			}
-		});
-		const withAgentCancel: TimelineBlock[] = applyBackendEventToTimeline(started, {
-			type: "event",
-			id: "request-cancelled",
-			event: "agent.run.cancelled",
-			data: {
-				requestId: "request-cancelled"
-			}
-		});
-		const withRepeatedCancel: TimelineBlock[] = applyBackendEventToTimeline(withAgentCancel, {
-			type: "event",
-			id: "request-cancelled",
-			event: "agent.run.cancelled",
-			data: {
-				requestId: "request-cancelled"
-			}
-		});
+		const started: TimelineBlock[] = applyBackendEventToTimeline(
+			[],
+			createAgentRunEvent("request-cancelled", "executing")
+		);
+		const withAgentCancel: TimelineBlock[] = applyBackendEventToTimeline(
+			started,
+			createAgentRunEvent("request-cancelled", "cancelled", 2)
+		);
+		const withRepeatedCancel: TimelineBlock[] = applyBackendEventToTimeline(
+			withAgentCancel,
+			createAgentRunEvent("request-cancelled", "cancelled", 2)
+		);
 		const assistant = withRepeatedCancel[0];
 
 		expect(assistant?.type).toBe("assistant");
@@ -242,35 +279,22 @@ describe("workbench-state", () => {
 	});
 
 	it("deduplicates repeated terminal errors in the assistant block", () => {
-		const started: TimelineBlock[] = applyBackendEventToTimeline([], {
-			type: "event",
-			id: "request-error",
-			event: "agent.run.started",
-			data: {
-				runId: "request-error",
-				requestId: "request-error"
-			}
-		});
-		const withWorkflowError: TimelineBlock[] = applyBackendEventToTimeline(started, {
-			type: "event",
-			id: "request-error",
-			event: "agent.run.error",
-			data: {
-				runId: "workflow-a",
-				code: "agent_run_error",
+		const started: TimelineBlock[] = applyBackendEventToTimeline(
+			[],
+			createAgentRunEvent("request-error", "executing")
+		);
+		const withWorkflowError: TimelineBlock[] = applyBackendEventToTimeline(
+			started,
+			createAgentRunEvent("request-error", "failed", 2, {
 				message: "oldText not found in file"
-			}
-		});
-		const withProviderError: TimelineBlock[] = applyBackendEventToTimeline(withWorkflowError, {
-			type: "event",
-			id: "request-error",
-			event: "agent.run.error",
-			data: {
-				runId: "request-error",
-				code: "provider_error",
+			})
+		);
+		const withProviderError: TimelineBlock[] = applyBackendEventToTimeline(
+			withWorkflowError,
+			createAgentRunEvent("request-error", "failed", 2, {
 				message: "oldText not found in file"
-			}
-		});
+			})
+		);
 		const assistant = withProviderError[0];
 
 		expect(assistant?.type).toBe("assistant");
@@ -302,17 +326,10 @@ describe("workbench-state", () => {
 				requestId: "request-plan"
 			}
 		});
-		const withStartedAgain: TimelineBlock[] = applyBackendEventToTimeline(withDone, {
-			type: "event",
-			id: "request-plan",
-			event: "agent.run.started",
-			data: {
-				runId: "request-plan",
-				requestId: "request-plan",
-				operationRequestId: "plan-clarify-1",
-				planId: "plan-a"
-			}
-		});
+		const withStartedAgain: TimelineBlock[] = applyBackendEventToTimeline(
+			withDone,
+			createAgentRunEvent("request-plan", "executing", 2)
+		);
 		const assistant = withStartedAgain[0];
 
 		expect(assistant?.type).toBe("assistant");
@@ -595,14 +612,10 @@ describe("workbench-state", () => {
 				args: { prompt: "cancel this image" }
 			}
 		});
-		const cancelled = applyBackendEventToTimeline(withCall, {
-			type: "event",
-			id: "request-image-cancel",
-			event: "agent.run.cancelled",
-			data: {
-				requestId: "request-image-cancel"
-			}
-		});
+		const cancelled = applyBackendEventToTimeline(
+			withCall,
+			createAgentRunEvent("request-image-cancel", "cancelled", 2)
+		);
 		const assistant = cancelled[0];
 		const imagePart = assistant?.type === "assistant"
 			? assistant.bodyParts.find((part) => part.type === "image_generation")
@@ -616,28 +629,13 @@ describe("workbench-state", () => {
 	});
 
 	it("leaves completed-with-warnings details to the assistant summary", () => {
-		const completed = applyBackendEventToTimeline([], {
-			type: "event",
-			id: "request-warning",
-			event: "agent.run.done",
-			data: {
-				requestId: "request-warning",
-				resultStatus: "completed_with_warnings",
-				verificationStatus: "unverified",
-				warnings: ["Godot executable is unavailable: not found"]
-			}
+		const completedEvent: BackendEvent = createAgentRunEvent("request-warning", "completed", 2, {
+			resultStatus: "completed_with_warnings",
+			verificationStatus: "unverified",
+			warnings: ["Godot executable is unavailable: not found"]
 		});
-		const repeated = applyBackendEventToTimeline(completed, {
-			type: "event",
-			id: "request-warning",
-			event: "workflow.done",
-			data: {
-				requestId: "request-warning",
-				resultStatus: "completed_with_warnings",
-				verificationStatus: "unverified",
-				warnings: ["Godot executable is unavailable: not found"]
-			}
-		});
+		const completed = applyBackendEventToTimeline([], completedEvent);
+		const repeated = applyBackendEventToTimeline(completed, completedEvent);
 		const assistant = repeated[0];
 		const warningParts = assistant?.type === "assistant"
 			? assistant.bodyParts.filter((part) => part.type === "status" && part.code === "verification_unverified")

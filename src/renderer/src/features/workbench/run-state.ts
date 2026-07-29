@@ -1,5 +1,5 @@
+import type { AgentRunState, WorkbenchActiveRun, WorkbenchSnapshot } from "@/api/types";
 import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
-import type { WorkbenchActiveRun, WorkbenchSnapshot } from "@/api/types";
 
 export type RunControllerStatus = WorkbenchActiveRun["status"];
 
@@ -10,18 +10,21 @@ export type RunControllerState = {
 	queueItemId: number | null;
 	statusCode: string | null;
 	sequence: number;
+	agentRun: AgentRunState | null;
 };
 
 const ACTIVE_RUN_STATUSES: readonly RunControllerStatus[] = ["streaming", "approval", "paused", "cancelling"];
+const TERMINAL_RUN_STAGES: ReadonlySet<AgentRunState["stage"]> = new Set(["completed", "failed", "cancelled"]);
 
-export function createIdleRunState(sequence: number = 0): RunControllerState {
+export function createIdleRunState(sequence: number = 0, agentRun: AgentRunState | null = null): RunControllerState {
 	return {
 		status: "idle",
 		requestId: null,
 		startedAt: null,
 		queueItemId: null,
 		statusCode: null,
-		sequence
+		sequence,
+		agentRun
 	};
 }
 
@@ -29,28 +32,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function getStringValue(record: Record<string, unknown>, key: string): string {
-	const value: unknown = record[key];
-	return typeof value === "string" ? value : "";
-}
-
-function getNumberValue(record: Record<string, unknown>, key: string): number | null {
-	const value: unknown = record[key];
-	return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function getEventData(event: BackendEvent): Record<string, unknown> {
-	return isRecord(event.data) ? event.data : {};
-}
-
-function shouldApplySequencedState(current: RunControllerState, nextSequence: number | null, requestId: string | null): boolean {
-	if (nextSequence !== null) {
-		return nextSequence >= current.sequence;
+function isAgentRunState(value: unknown): value is AgentRunState {
+	if (!isRecord(value)) {
+		return false;
 	}
-	if (requestId !== null && current.requestId !== null) {
-		return requestId === current.requestId;
-	}
-	return current.status === "idle";
+	return value.schemaVersion === 1
+		&& typeof value.runId === "string"
+		&& typeof value.requestId === "string"
+		&& typeof value.revision === "number"
+		&& typeof value.stage === "string"
+		&& typeof value.lane === "string";
 }
 
 function normalizeWorkbenchActiveRun(activeRun: WorkbenchActiveRun, fallbackSequence: number): RunControllerState {
@@ -60,28 +51,62 @@ function normalizeWorkbenchActiveRun(activeRun: WorkbenchActiveRun, fallbackSequ
 	if (activeRun.status === "idle") {
 		return createIdleRunState(sequence);
 	}
-
 	return {
 		status: activeRun.status,
 		requestId: activeRun.requestId ?? null,
 		startedAt: activeRun.startedAt ?? null,
 		queueItemId: activeRun.queueItemId ?? null,
 		statusCode: activeRun.statusCode ?? null,
-		sequence
+		sequence,
+		agentRun: null
 	};
 }
 
 export function applyRunStateFromWorkbench(current: RunControllerState, workbench: WorkbenchSnapshot | null): RunControllerState {
+	if (current.agentRun !== null) {
+		return current;
+	}
 	if (workbench === null) {
 		return createIdleRunState(current.sequence);
 	}
-
 	const next: RunControllerState = normalizeWorkbenchActiveRun(workbench.activeRun, workbench.revision);
-	if (next.sequence < current.sequence) {
+	return next.sequence < current.sequence ? current : next;
+}
+
+export function applyAgentRunState(
+	current: RunControllerState,
+	run: AgentRunState,
+	sequence: number = current.sequence + 1
+): RunControllerState {
+	if (sequence < current.sequence) {
 		return current;
 	}
-
-	return next;
+	if (current.agentRun?.runId === run.runId && run.revision <= current.agentRun.revision) {
+		return current;
+	}
+	if (run.stage === "interrupted" || TERMINAL_RUN_STAGES.has(run.stage)) {
+		return createIdleRunState(sequence, run);
+	}
+	if (run.stage === "awaiting_approval" || run.stage === "awaiting_tool_budget") {
+		return {
+			status: "paused",
+			requestId: run.requestId,
+			startedAt: run.createdAt,
+			queueItemId: null,
+			statusCode: run.stage === "awaiting_tool_budget" ? "tool_budget" : "approval_required",
+			sequence,
+			agentRun: run
+		};
+	}
+	return {
+		status: "streaming",
+		requestId: run.requestId,
+		startedAt: run.createdAt,
+		queueItemId: null,
+		statusCode: run.stage,
+		sequence,
+		agentRun: run
+	};
 }
 
 export function createOptimisticRunState(current: RunControllerState, requestId: string, startedAt: string = new Date().toISOString()): RunControllerState {
@@ -91,7 +116,8 @@ export function createOptimisticRunState(current: RunControllerState, requestId:
 		startedAt,
 		queueItemId: null,
 		statusCode: null,
-		sequence: current.sequence + 1
+		sequence: current.sequence + 1,
+		agentRun: null
 	};
 }
 
@@ -99,46 +125,14 @@ export function finishOptimisticRunState(current: RunControllerState, requestId:
 	if (current.requestId !== null && current.requestId !== requestId) {
 		return current;
 	}
-
-	return createIdleRunState(current.sequence + 1);
+	return createIdleRunState(current.sequence + 1, current.agentRun);
 }
 
 export function applyRunStateFromBackendEvent(current: RunControllerState, event: BackendEvent): RunControllerState {
-	const data: Record<string, unknown> = getEventData(event);
-	const requestId: string = getStringValue(data, "requestId") || event.id;
-	const normalizedRequestId: string | null = requestId.length > 0 ? requestId : null;
-	const sequence: number | null = getNumberValue(data, "sequence");
-	if (!shouldApplySequencedState(current, sequence, normalizedRequestId)) {
+	if (event.event !== "agent.run.state" || !isAgentRunState(event.data)) {
 		return current;
 	}
-
-	if (event.event === "agent.run.started") {
-		return {
-			status: "streaming",
-			requestId: normalizedRequestId,
-			startedAt: getStringValue(data, "startedAt") || null,
-			queueItemId: getNumberValue(data, "queueItemId"),
-			statusCode: getStringValue(data, "statusCode") || null,
-			sequence: sequence ?? current.sequence + 1
-		};
-	}
-
-	if (event.event === "agent.run.paused" || event.event === "agent.run.tool_budget_required") {
-		return {
-			status: "paused",
-			requestId: normalizedRequestId,
-			startedAt: current.requestId === normalizedRequestId ? current.startedAt : null,
-			queueItemId: current.requestId === normalizedRequestId ? current.queueItemId : null,
-			statusCode: getStringValue(data, "statusCode") || (event.event === "agent.run.tool_budget_required" ? "tool_budget" : getStringValue(data, "reason") || null),
-			sequence: sequence ?? current.sequence + 1
-		};
-	}
-
-	if (event.event === "agent.run.done" || event.event === "agent.run.error" || event.event === "agent.run.cancelled" || event.event === "workflow.done" || event.event === "ai.done") {
-		return createIdleRunState(sequence ?? current.sequence + 1);
-	}
-
-	return current;
+	return applyAgentRunState(current, event.data, event.sequence);
 }
 
 export function isRunControllerActive(state: RunControllerState): boolean {

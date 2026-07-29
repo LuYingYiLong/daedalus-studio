@@ -24,3 +24,8 @@
 .thinkingContent::-webkit-scrollbar {
 	display: none;
 }
+
+.thinkingBody {
+	display: flow-root;
+	min-width: 0;
+}

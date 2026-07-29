@@ -90,12 +90,16 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 			void params.loadSkills();
 		}
 
-		if (event.event === "agent.run.started") {
-			params.clearWorkflowTodoUiState({ preservePlanSnapshot: true });
-		} else if (event.event === "workflow.todo.updated" || event.event === "agent.run.snapshot") {
-			const snapshot: WorkflowTodoSnapshot | null = normalizeWorkflowTodoSnapshot(event.data);
+		if (event.event === "agent.run.state") {
+			const runData: Record<string, unknown> | null =
+				typeof event.data === "object" && event.data !== null && !Array.isArray(event.data)
+					? event.data as Record<string, unknown>
+					: null;
+			const snapshot: WorkflowTodoSnapshot | null = normalizeWorkflowTodoSnapshot(runData?.todo);
 			params.setWorkflowTodoSnapshot(snapshot);
-			if (snapshot?.source === "slash") {
+			if (snapshot === null) {
+				params.rememberLoadedWorkflowTodo(null);
+			} else if (snapshot.source === "slash") {
 				params.rememberLoadedWorkflowTodo(snapshot);
 				params.setActiveSessionMetadata((currentMetadata: SessionMetadata | null): SessionMetadata | null => {
 					return currentMetadata === null
@@ -121,7 +125,7 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 				return nextSnapshot;
 			});
 			params.expandWorkflowTodoPanel();
-		} else if (event.event === "agent.run.error" || event.event === "workflow.error" || event.event === "plan.error") {
+		} else if (event.event === "plan.error") {
 			params.setWorkflowTodoSnapshot((currentSnapshot: WorkflowTodoSnapshot | null): WorkflowTodoSnapshot | null => {
 				return currentSnapshot?.source === "plan" ? markWorkflowTodoFailed(currentSnapshot) : currentSnapshot;
 			});
@@ -157,7 +161,7 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 			}
 		}
 
-		if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.approved" || event.event === "plan.execution.started" || event.event === "plan.error" || event.event === "agent.run.error") {
+		if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.approved" || event.event === "plan.execution.started" || event.event === "plan.error" || event.event === "agent.run.state") {
 			params.setLatestPlanClarification((currentClarification: PlanClarificationState | null): PlanClarificationState | null => {
 				if (currentClarification === null) {
 					return null;

@@ -128,7 +128,7 @@ export function mapWorkflowTodoStatusToStepStatus(status: WorkflowTodoStatus): W
 }
 
 export function isWorkflowTodoClearEvent(event: BackendEvent): boolean {
-	return event.event === "workflow.todo.dismissed";
+	return event.event === "agent.todo.dismissed";
 }
 
 function getPlanMarkdownFromRecord(record: Record<string, unknown>): string {

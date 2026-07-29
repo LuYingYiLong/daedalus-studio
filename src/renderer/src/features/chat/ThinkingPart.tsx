@@ -1,7 +1,7 @@
 import type { TimelineBodyPart } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import { Collapse } from "antd";
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import MarkdownContent from "../markdown/MarkdownContent";
 import styles from "./ThinkingPart.module.css";
@@ -47,7 +47,11 @@ function containScrollableWheel(event: React.WheelEvent<HTMLDivElement>): void {
 function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const contentRef = useRef<HTMLDivElement | null>(null);
+	const bodyRef = useRef<HTMLDivElement | null>(null);
 	const autoFollowRef = useRef<boolean>(true);
+	const autoFollowFrameRef = useRef<number | null>(null);
+	const userScrollFrameRef = useRef<number | null>(null);
+	const touchYRef = useRef<number | null>(null);
 	const [activeKeys, setActiveKeys] = useState<string[]>(() => part.done ? [] : ["thinking"]);
 	const [labelIndex, setLabelIndex] = useState<number>(0);
 	const activeThinkingLabels: readonly string[] = [
@@ -56,6 +60,43 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 		t("chat.thinking.labelDotDot"),
 		t("chat.thinking.labelDotDotDot")
 	];
+
+	const cancelAutoFollowFrame = useCallback((): void => {
+		if (autoFollowFrameRef.current !== null) {
+			window.cancelAnimationFrame(autoFollowFrameRef.current);
+			autoFollowFrameRef.current = null;
+		}
+	}, []);
+
+	const scheduleAutoFollowScroll = useCallback((): void => {
+		if (!autoFollowRef.current) {
+			return;
+		}
+
+		cancelAutoFollowFrame();
+		autoFollowFrameRef.current = window.requestAnimationFrame((): void => {
+			autoFollowFrameRef.current = null;
+			const element: HTMLDivElement | null = contentRef.current;
+			if (element !== null && autoFollowRef.current) {
+				scrollToThinkingBottom(element);
+			}
+		});
+	}, [cancelAutoFollowFrame]);
+
+	const scheduleUserScrollStateSync = useCallback((): void => {
+		if (userScrollFrameRef.current !== null) {
+			window.cancelAnimationFrame(userScrollFrameRef.current);
+		}
+
+		userScrollFrameRef.current = window.requestAnimationFrame((): void => {
+			userScrollFrameRef.current = null;
+			const element: HTMLDivElement | null = contentRef.current;
+			if (element !== null && isNearScrollBottom(element)) {
+				autoFollowRef.current = true;
+				scheduleAutoFollowScroll();
+			}
+		});
+	}, [scheduleAutoFollowScroll]);
 
 	useEffect((): void => {
 		if (part.done) {
@@ -77,20 +118,34 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 		};
 	}, [activeThinkingLabels.length, part.done]);
 
-	useLayoutEffect((): void => {
-		const element: HTMLDivElement | null = contentRef.current;
+	useLayoutEffect((): (() => void) => {
+		const bodyElement: HTMLDivElement | null = bodyRef.current;
+		let resizeObserver: ResizeObserver | null = null;
 
-		if (element === null || !autoFollowRef.current) {
-			return;
+		if (bodyElement !== null && typeof ResizeObserver !== "undefined") {
+			resizeObserver = new ResizeObserver((): void => {
+				scheduleAutoFollowScroll();
+			});
+			resizeObserver.observe(bodyElement);
 		}
 
-		window.requestAnimationFrame((): void => {
-			const currentElement: HTMLDivElement | null = contentRef.current;
-			if (currentElement !== null && autoFollowRef.current) {
-				scrollToThinkingBottom(currentElement);
+		scheduleAutoFollowScroll();
+
+		return (): void => {
+			resizeObserver?.disconnect();
+			cancelAutoFollowFrame();
+			if (userScrollFrameRef.current !== null) {
+				window.cancelAnimationFrame(userScrollFrameRef.current);
+				userScrollFrameRef.current = null;
 			}
-		});
-	}, [part.text]);
+		};
+	}, [cancelAutoFollowFrame, scheduleAutoFollowScroll]);
+
+	useLayoutEffect((): void => {
+		if (activeKeys.includes("thinking")) {
+			scheduleAutoFollowScroll();
+		}
+	}, [activeKeys, part.text, scheduleAutoFollowScroll]);
 
 	if (part.done && part.text.trim().length === 0) {
 		return null;
@@ -103,7 +158,11 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 			className={styles.thinkingCollapse}
 			activeKey={activeKeys}
 			onChange={(nextKeys: string | string[]): void => {
-				setActiveKeys(normalizeActiveKeys(nextKeys));
+				const normalizedKeys: string[] = normalizeActiveKeys(nextKeys);
+				if (normalizedKeys.includes("thinking")) {
+					autoFollowRef.current = true;
+				}
+				setActiveKeys(normalizedKeys);
 			}}
 			expandIcon={() => (
 				<Icon name="thinking" className={styles.thinkingIcon} />
@@ -116,14 +175,46 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 						<div
 							ref={contentRef}
 							className={`${styles.thinkingContent} markdown-body`}
-							onScroll={(event: React.UIEvent<HTMLDivElement>): void => {
-								autoFollowRef.current = isNearScrollBottom(event.currentTarget);
+							onTouchStart={(event: React.TouchEvent<HTMLDivElement>): void => {
+								touchYRef.current = event.touches[0]?.clientY ?? null;
 							}}
-							onWheel={containScrollableWheel}
+							onTouchMove={(event: React.TouchEvent<HTMLDivElement>): void => {
+								const currentY: number | undefined = event.touches[0]?.clientY;
+								const previousY: number | null = touchYRef.current;
+								if (currentY === undefined || previousY === null) {
+									return;
+								}
+
+								if (currentY > previousY) {
+									autoFollowRef.current = false;
+									cancelAutoFollowFrame();
+								} else if (currentY < previousY) {
+									scheduleUserScrollStateSync();
+								}
+								touchYRef.current = currentY;
+							}}
+							onTouchEnd={(): void => {
+								touchYRef.current = null;
+								scheduleUserScrollStateSync();
+							}}
+							onWheel={(event: React.WheelEvent<HTMLDivElement>): void => {
+								const element: HTMLDivElement = event.currentTarget;
+								if (element.scrollHeight > element.clientHeight) {
+									if (event.deltaY < 0) {
+										autoFollowRef.current = false;
+										cancelAutoFollowFrame();
+									} else if (event.deltaY > 0) {
+										scheduleUserScrollStateSync();
+									}
+								}
+								containScrollableWheel(event);
+							}}
 						>
-							{part.text.trim().length === 0 ? null : (
-								<MarkdownContent streaming={!part.done}>{part.text}</MarkdownContent>
-							)}
+							<div ref={bodyRef} className={styles.thinkingBody}>
+								{part.text.trim().length === 0 ? null : (
+									<MarkdownContent streaming={!part.done}>{part.text}</MarkdownContent>
+								)}
+							</div>
 						</div>
 					)
 				}

@@ -78,6 +78,19 @@ describe("BackendRpcClient", () => {
 		mockWebSocketInstance._trigger("close");
 	};
 
+	const createEvent = (event: string, data: unknown = {}): Record<string, unknown> => ({
+		protocolVersion: 3,
+		type: "event",
+		eventId: "event-1",
+		event,
+		sessionId: "session-a",
+		requestId: "request-a",
+		runId: "run-a",
+		sequence: 1,
+		createdAt: "2026-07-29T00:00:00.000Z",
+		data
+	});
+
 	const simulateError = (): void => {
 		mockWebSocketInstance._trigger("error");
 	};
@@ -184,12 +197,7 @@ describe("BackendRpcClient", () => {
 			const eventListener = vi.fn();
 			client.addEventListener(eventListener);
 
-			simulateMessage({
-				type: "event",
-				id: "event-1",
-				event: "test.event",
-				data: { value: "test" }
-			});
+			simulateMessage(createEvent("test.event", { value: "test" }));
 
 			expect(eventListener).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -205,12 +213,7 @@ describe("BackendRpcClient", () => {
 
 			remove();
 
-			simulateMessage({
-				type: "event",
-				id: "event-1",
-				event: "test.event",
-				data: {}
-			});
+			simulateMessage(createEvent("test.event"));
 
 			expect(eventListener).not.toHaveBeenCalled();
 		});
@@ -222,15 +225,29 @@ describe("BackendRpcClient", () => {
 			client.addEventListener(listener1);
 			client.addEventListener(listener2);
 
-			simulateMessage({
-				type: "event",
-				id: "event-1",
-				event: "test.event",
-				data: {}
-			});
+			simulateMessage(createEvent("test.event"));
 
 			expect(listener1).toHaveBeenCalled();
 			expect(listener2).toHaveBeenCalled();
+		});
+
+		it("应拒绝缺少 v3 协议字段的旧事件 envelope", () => {
+			const eventListener = vi.fn();
+			client.addEventListener(eventListener);
+
+			simulateMessage({
+				type: "event",
+				eventId: "legacy-event",
+				event: "test.event",
+				sessionId: "session-a",
+				requestId: "request-a",
+				runId: "run-a",
+				sequence: 1,
+				createdAt: "2026-07-29T00:00:00.000Z",
+				data: {}
+			});
+
+			expect(eventListener).not.toHaveBeenCalled();
 		});
 	});
 
@@ -245,7 +262,7 @@ describe("BackendRpcClient", () => {
 			void client.request("client.hello", { clientType: "test" }).catch(() => undefined);
 
 			const sentData = JSON.parse(mockWebSocketInstance.send.mock.calls[0][0]);
-			expect(sentData.params).toHaveProperty("protocolVersion", 2);
+			expect(sentData.params).toHaveProperty("protocolVersion", 3);
 		});
 
 		it("其他方法不应添加 protocolVersion", () => {
