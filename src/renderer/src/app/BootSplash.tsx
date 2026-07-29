@@ -158,7 +158,11 @@ function BootSplash<TBootstrapData>({ loadData, onReady }: BootSplashProps<TBoot
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
 		const unsubscribe = window.electronAPI.backendBootstrap.onStateChanged((backendState: BackendBootstrapState): void => {
-			if (cancelled || backendState.status === "error" || backendState.status === "unsupported") {
+			if (cancelled) {
+				return;
+			}
+			if (backendState.status === "error" || backendState.status === "unsupported") {
+				setState(createBackendErrorState(backendState, t));
 				return;
 			}
 			setState({

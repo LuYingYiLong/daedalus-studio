@@ -22,6 +22,7 @@ import {
 	backendManager,
 	type BackendLaunchTarget
 } from "./backend-manager";
+import { BackendManifestCompatibilityError } from "./backend-binary-manifest";
 import { createLogger } from "./logger";
 
 const logger = createLogger("backend-bootstrap");
@@ -257,10 +258,15 @@ export class BackendBootstrapService {
 			try {
 				await inspectCurrentBackend();
 			} catch (error: unknown) {
-				if (await lacksSharedRuntimeCompatibilityMetadata(current)) {
-					logger.info("Replacing a managed backend that predates shared runtime support.", {
-						version: current.version
+				if (
+					error instanceof BackendManifestCompatibilityError
+					|| await lacksSharedRuntimeCompatibilityMetadata(current)
+				) {
+					logger.info("Replacing an incompatible managed backend with the bundled backend.", {
+						version: current.version,
+						reason: getErrorMessage(error)
 					});
+					await backendManager.stopAndWait();
 					return await this.installBundledAndStart();
 				}
 				return this.fail({

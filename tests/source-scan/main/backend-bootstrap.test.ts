@@ -36,9 +36,11 @@ describe("backend bootstrap service", () => {
 		expect(serviceSource).toContain("Use Repair backend to restore the verified backend bundled with Daedalus Studio.");
 	});
 
-	it("replaces pre-shared-runtime managed backends with the verified bundled version", () => {
+	it("replaces incompatible managed backends with the verified bundled version", () => {
+		expect(serviceSource).toContain("error instanceof BackendManifestCompatibilityError");
 		expect(serviceSource).toContain("lacksSharedRuntimeCompatibilityMetadata");
-		expect(serviceSource).toContain("Replacing a managed backend that predates shared runtime support.");
+		expect(serviceSource).toContain("Replacing an incompatible managed backend with the bundled backend.");
+		expect(serviceSource).toContain("await backendManager.stopAndWait();");
 		expect(serviceSource).toContain("return await this.installBundledAndStart();");
 	});
 

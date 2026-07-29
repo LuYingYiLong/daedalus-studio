@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	BackendManifestCompatibilityError,
 	assertBackendManifestCompatible,
 	compareSemanticVersions,
 	parseBackendPayloadManifest,
@@ -73,21 +74,27 @@ describe("backend binary manifest", () => {
 
 	it("enforces Studio and protocol compatibility", () => {
 		expect(() => assertBackendManifestCompatible(createPayloadManifest(), "1.0.1")).not.toThrow();
-		expect(() => assertBackendManifestCompatible(
+		const incompatibleStudio = (): void => assertBackendManifestCompatible(
 			createPayloadManifest({ minStudioVersion: "1.1.0" }),
 			"1.0.1"
-		)).toThrow(/requires Daedalus Studio/u);
-		expect(() => assertBackendManifestCompatible(
+		);
+		const incompatibleBackendProtocol = (): void => assertBackendManifestCompatible(
 			createPayloadManifest({ protocolVersion: 2 }),
 			"1.1.0"
-		)).toThrow(/protocol/u);
-		expect(() => assertBackendManifestCompatible(
+		);
+		const incompatiblePluginProtocol = (): void => assertBackendManifestCompatible(
 			createPayloadManifest({
 				minPluginProtocolVersion: 2,
 				maxPluginProtocolVersion: 2
 			}),
 			"1.1.0"
-		)).toThrow(/Godot plugin protocol/u);
+		);
+		expect(incompatibleStudio).toThrow(BackendManifestCompatibilityError);
+		expect(incompatibleStudio).toThrow(/requires Daedalus Studio/u);
+		expect(incompatibleBackendProtocol).toThrow(BackendManifestCompatibilityError);
+		expect(incompatibleBackendProtocol).toThrow(/protocol/u);
+		expect(incompatiblePluginProtocol).toThrow(BackendManifestCompatibilityError);
+		expect(incompatiblePluginProtocol).toThrow(/Godot plugin protocol/u);
 	});
 
 	it("compares versions and detects payload identity drift", () => {

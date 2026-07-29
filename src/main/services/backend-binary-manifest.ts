@@ -40,6 +40,13 @@ export type BackendReleaseManifestV1 = BackendPayloadManifestV1 & {
 	payloadManifestSha256: string;
 };
 
+export class BackendManifestCompatibilityError extends Error {
+	public constructor(message: string) {
+		super(message);
+		this.name = "BackendManifestCompatibilityError";
+	}
+}
+
 function requireRecord(value: unknown, label: string): Record<string, unknown> {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) {
 		throw new Error(`${label} must be a JSON object.`);
@@ -173,12 +180,12 @@ export function assertBackendManifestCompatible(
 	studioVersion: string
 ): void {
 	if (manifest.protocolVersion !== BACKEND_PROTOCOL_VERSION) {
-		throw new Error(
+		throw new BackendManifestCompatibilityError(
 			`Backend protocol ${manifest.protocolVersion} is incompatible with Studio protocol ${BACKEND_PROTOCOL_VERSION}.`
 		);
 	}
 	if (compareSemanticVersions(studioVersion, manifest.minStudioVersion) < 0) {
-		throw new Error(
+		throw new BackendManifestCompatibilityError(
 			`Backend ${manifest.version} requires Daedalus Studio ${manifest.minStudioVersion} or newer.`
 		);
 	}
@@ -186,7 +193,7 @@ export function assertBackendManifestCompatible(
 		manifest.minPluginProtocolVersion > GODOT_PLUGIN_PROTOCOL_VERSION
 		|| manifest.maxPluginProtocolVersion < GODOT_PLUGIN_PROTOCOL_VERSION
 	) {
-		throw new Error(
+		throw new BackendManifestCompatibilityError(
 			`Backend ${manifest.version} does not support bundled Godot plugin protocol ${GODOT_PLUGIN_PROTOCOL_VERSION}.`
 		);
 	}
