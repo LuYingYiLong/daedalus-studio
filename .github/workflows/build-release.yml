@@ -63,8 +63,30 @@ jobs:
           if ($package.godotPluginVersion -notmatch "^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$") {
             throw "package.json must contain a fixed godotPluginVersion."
           }
+          $backendProtocolVersion = 0
+          if (
+            -not [int]::TryParse(
+              [string]$package.backendProtocolVersion,
+              [ref]$backendProtocolVersion
+            ) `
+            -or $backendProtocolVersion -le 0
+          ) {
+            throw "package.json must contain a positive integer backendProtocolVersion."
+          }
+          $godotPluginProtocolVersion = 0
+          if (
+            -not [int]::TryParse(
+              [string]$package.godotPluginProtocolVersion,
+              [ref]$godotPluginProtocolVersion
+            ) `
+            -or $godotPluginProtocolVersion -le 0
+          ) {
+            throw "package.json must contain a positive integer godotPluginProtocolVersion."
+          }
           "BACKEND_BOOTSTRAP_VERSION=$($package.backendBootstrapVersion)" | Out-File -FilePath $env:GITHUB_ENV -Append
           "GODOT_PLUGIN_VERSION=$($package.godotPluginVersion)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "BACKEND_PROTOCOL_VERSION=$backendProtocolVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "GODOT_PLUGIN_PROTOCOL_VERSION=$godotPluginProtocolVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Download and verify backend bootstrap
         run: npm run prepare:backend-bootstrap
@@ -98,14 +120,19 @@ jobs:
           if ($manifest.version -ne $env:BACKEND_BOOTSTRAP_VERSION) {
             throw "Packaged backend version $($manifest.version) does not match $env:BACKEND_BOOTSTRAP_VERSION."
           }
+          $expectedBackendProtocolVersion = [int]$env:BACKEND_PROTOCOL_VERSION
+          if ($manifest.protocolVersion -ne $expectedBackendProtocolVersion) {
+            throw "Packaged backend protocol $($manifest.protocolVersion) does not match $expectedBackendProtocolVersion."
+          }
           if ((Get-FileHash -LiteralPath $executablePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $manifest.executable.sha256) {
             throw "Packaged backend executable SHA-256 verification failed."
           }
+          $expectedPluginProtocolVersion = [int]$env:GODOT_PLUGIN_PROTOCOL_VERSION
           if (
-            $manifest.minPluginProtocolVersion -ne 1 `
-            -or $manifest.maxPluginProtocolVersion -ne 1
+            $manifest.minPluginProtocolVersion -gt $expectedPluginProtocolVersion `
+            -or $manifest.maxPluginProtocolVersion -lt $expectedPluginProtocolVersion
           ) {
-            throw "Packaged backend does not support the bundled Godot plugin protocol."
+            throw "Packaged backend does not support bundled Godot plugin protocol $expectedPluginProtocolVersion."
           }
           $files = @(Get-ChildItem -LiteralPath $backendDir -File)
           if ($files.Count -ne 2) {
@@ -142,6 +169,10 @@ jobs:
           $archivePath = Join-Path $pluginDir $manifest.archive.fileName
           if ($manifest.pluginVersion -ne $env:GODOT_PLUGIN_VERSION) {
             throw "Packaged Godot plugin version does not match package.json."
+          }
+          $expectedPluginProtocolVersion = [int]$env:GODOT_PLUGIN_PROTOCOL_VERSION
+          if ($manifest.pluginProtocolVersion -ne $expectedPluginProtocolVersion) {
+            throw "Packaged Godot plugin protocol $($manifest.pluginProtocolVersion) does not match $expectedPluginProtocolVersion."
           }
           if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf)) {
             throw "Packaged Godot plugin archive is missing."
