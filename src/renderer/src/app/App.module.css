@@ -11,3 +11,16 @@
 	margin: 0 var(--ds-space-1) var(--ds-space-1) var(--ds-space-1);
 	overflow: hidden;
 }
+
+.spinner {
+  /* 设置旋转的基点为中心，避免围绕左上角转 */
+  transform-origin: center center;
+  animation: spin 2s linear infinite;
+  min-width: 22px;
+  min-height: 22px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

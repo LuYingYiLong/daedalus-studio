@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { archiveSession, fetchSessions, renameSession, setSessionPinned } from "@/api/session-api";
 import { deleteWorkspace, fetchWorkspaces } from "@/api/workspace-api";
 import type { DeleteWorkspaceResult } from "@/api/workspace-api";
-import { Alert, Button, Collapse, Dropdown, Input, Menu, message, Modal, Spin, Tooltip, Typography } from "antd";
+import { Alert, Badge, Button, Collapse, Dropdown, Input, Menu, message, Modal, Spin, Tooltip, Typography } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/api/types";
 import { Icon } from "@/assets/icons";
@@ -23,6 +23,7 @@ export type WorkspaceTreeProps = {
 	initialActiveWorkspaceId?: string | null;
 	sessionUpdate?: SessionMetadata | null;
 	runningSessionIds?: readonly string[];
+	unreadSessionIds?: readonly string[];
 	onSessionSelect?: (session: SessionMetadata) => void;
 	onSessionArchive?: (session: SessionMetadata) => void;
 	onSessionRename?: (session: SessionMetadata) => void;
@@ -71,6 +72,7 @@ type WorkspaceTreeLabels = {
 	sessionTitlePlaceholder: string;
 	unpinSession: string;
 	assistantRunning: string;
+	unreadResponse: string;
 	archiveSessionAria: (sessionTitle: string) => string;
 	pinSessionAria: (sessionTitle: string, pinned: boolean) => string;
 	newSessionInWorkspaceAria: (workspaceName: string) => string;
@@ -85,6 +87,7 @@ type CreateSessionMenuItemOptions = {
 	archivingSessionId: string | null;
 	pinningSessionId: string | null;
 	runningSessionIds: ReadonlySet<string>;
+	unreadSessionIds: ReadonlySet<string>;
 	labels: WorkspaceTreeLabels;
 	onArchiveButton: (session: SessionMetadata, event: MouseEvent<HTMLElement>) => void;
 	onPinButton: (session: SessionMetadata, event: MouseEvent<HTMLElement>) => void;
@@ -107,6 +110,7 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 	const isArchiving: boolean = options.archivingSessionId === session.id;
 	const isPinning: boolean = options.pinningSessionId === session.id;
 	const isRunning: boolean = options.runningSessionIds.has(session.id);
+	const isUnread: boolean = options.unreadSessionIds.has(session.id);
 	const isPinned: boolean = session.pinned === true;
 	const labels: WorkspaceTreeLabels = options.labels;
 	const actionMenu: MenuProps = {
@@ -171,7 +175,20 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 		label: (
 			<Dropdown menu={actionMenu} trigger={["contextMenu"]}>
 				<span className={styles.sessionMenuItem}>
-					<span className={styles.sessionTitle}>{session.title}</span>
+					<Badge
+						dot={isUnread}
+						color="var(--ant-color-primary)"
+						offset={[-2, 4]}
+						title={isUnread ? labels.unreadResponse : undefined}
+						className={styles.sessionTitleBadge}
+					>
+						<span
+							className={styles.sessionTitle}
+							aria-label={isUnread ? `${session.title}, ${labels.unreadResponse}` : undefined}
+						>
+							{session.title}
+						</span>
+					</Badge>
 					<Tooltip title={isPinned ? labels.unpinSession : labels.pinSession}>
 						<Button
 							type="text"
@@ -348,6 +365,7 @@ function WorkspaceTree({
 	initialActiveWorkspaceId = null,
 	sessionUpdate = null,
 	runningSessionIds = [],
+	unreadSessionIds = [],
 	onSessionSelect,
 	onSessionArchive,
 	onSessionRename,
@@ -379,6 +397,7 @@ function WorkspaceTree({
 	const [renameError, setRenameError] = useState<string | null>(null);
 	const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
 	const runningSessionIdSet: ReadonlySet<string> = useMemo((): ReadonlySet<string> => new Set(runningSessionIds), [runningSessionIds]);
+	const unreadSessionIdSet: ReadonlySet<string> = useMemo((): ReadonlySet<string> => new Set(unreadSessionIds), [unreadSessionIds]);
 	const labels: WorkspaceTreeLabels = useMemo((): WorkspaceTreeLabels => {
 		return {
 			archiveSession: t("workspaceTree.actions.archiveSession"),
@@ -421,6 +440,7 @@ function WorkspaceTree({
 			),
 			newSessionInWorkspaceAria: (workspaceName: string): string => t("workspaceTree.aria.newSessionInWorkspace", { workspaceName }),
 			assistantRunning: t("workspaceTree.status.assistantRunning", { defaultValue: "Assistant is responding" }),
+			unreadResponse: t("workspaceTree.status.unreadResponse", { defaultValue: "Unread assistant response" }),
 			workspaceActionsAria: (workspaceName: string): string => t("workspaceTree.aria.workspaceActions", { workspaceName })
 		};
 	}, [t]);
@@ -725,6 +745,7 @@ function WorkspaceTree({
 			archivingSessionId,
 			pinningSessionId,
 			runningSessionIds: runningSessionIdSet,
+			unreadSessionIds: unreadSessionIdSet,
 			labels,
 			onArchiveButton: (session: SessionMetadata, event: MouseEvent<HTMLElement>): void => {
 				void handleArchiveSession(session, event);
@@ -748,7 +769,7 @@ function WorkspaceTree({
 				void handleCopySessionId(session);
 			}
 		};
-	}, [archivingSessionId, labels, pinningSessionId, runningSessionIdSet]);
+	}, [archivingSessionId, labels, pinningSessionId, runningSessionIdSet, unreadSessionIdSet]);
 	const sessionGroups = useMemo((): {
 		pinnedSessions: SessionMetadata[];
 		projectSessions: SessionMetadata[];

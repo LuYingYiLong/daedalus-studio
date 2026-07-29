@@ -36,6 +36,7 @@ export type BackendEventStreamParams = {
 	activeChatRequestIdRef: RefValue<string | null>;
 	pendingUserActionRequestIdsRef: RefValue<Set<string>>;
 	activeSessionTitleRef: RefValue<string>;
+	onEventObserved?: (event: BackendEvent) => void;
 	applyWorkbench: (nextWorkbench: WorkbenchSnapshot) => void;
 	appendQueuedRunUserBlock: (workbenchSnapshot: WorkbenchSnapshot) => void;
 	loadSkills: () => Promise<void>;
@@ -63,6 +64,7 @@ export type BackendEventStreamParams = {
 
 function useBackendEventStream(params: BackendEventStreamParams): void {
 	const handleBackendEvent = useMemoizedFn((event: BackendEvent): void => {
+		params.onEventObserved?.(event);
 		const eventSessionId: string | null = getBackendEventSessionId(event);
 		const activeSessionId: string | null = params.activeSessionIdRef.current;
 		if (isSessionScopedBackendEvent(event) && (eventSessionId === null || eventSessionId !== activeSessionId)) {

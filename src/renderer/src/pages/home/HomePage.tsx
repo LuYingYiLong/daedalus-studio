@@ -248,6 +248,7 @@ type HomePageProps = {
 	initialSessions: SessionMetadata[];
 	initialActiveWorkspaceId: string | null;
 	runningSessionIds: readonly string[];
+	unreadSessionIds: readonly string[];
 	homeWorkspace: WorkspaceConfig | null;
 	workspaceFooterDisabled: boolean;
 	activeWorkspace: WorkspaceConfig | null;
@@ -366,6 +367,7 @@ function HomePage({
 	initialSessions,
 	initialActiveWorkspaceId,
 	runningSessionIds,
+	unreadSessionIds,
 	homeWorkspace,
 	workspaceFooterDisabled,
 	activeWorkspace,
@@ -1337,6 +1339,7 @@ function HomePage({
 							initialSessions={initialSessions}
 							initialActiveWorkspaceId={initialActiveWorkspaceId}
 							runningSessionIds={runningSessionIds}
+							unreadSessionIds={unreadSessionIds}
 							sessionUpdate={activeSessionMetadata}
 							onNewSession={onNewUnboundSession}
 							onSessionSelect={onSessionSelect}

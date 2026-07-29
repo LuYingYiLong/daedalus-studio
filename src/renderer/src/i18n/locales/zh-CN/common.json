@@ -86,6 +86,10 @@
       "projects": "项目",
       "recent": "最近"
     },
+    "status": {
+      "assistantRunning": "助手正在响应",
+      "unreadResponse": "未读助手响应"
+    },
     "messages": {
       "sessionIdCopied": "已复制会话 ID"
     },

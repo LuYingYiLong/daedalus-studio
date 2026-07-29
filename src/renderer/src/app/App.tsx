@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useEventListener, useLatest } from "ahooks";
-import { Input, message as antdMessage, Modal, Typography } from "antd";
+import { Input, message as antdMessage, Modal, Typography, Spin } from "antd";
 import { useDiskSpaceCheck } from "@/shared/hooks/useDiskSpaceCheck";
 import { onBackendReconnected } from "@/shared/api/transport/backend-client";
 import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
@@ -72,6 +72,13 @@ import {
 	type SessionLayoutMap,
 	type SessionLayoutPreferences
 } from "@/features/dock/session-layout";
+import {
+	applyResponseFinished,
+	getUnreadResponseSessionId,
+	markActiveSessionRead,
+	removeUnreadSessions
+} from "@/features/workspace/session-unread";
+import { Icon } from "@/assets/icons";
 
 type SupportedImageMimeType = SaveImageAttachmentParams["mimeType"];
 type WorkspacePickedEntry = {
@@ -80,6 +87,8 @@ type WorkspacePickedEntry = {
 	resourcePath: string;
 	kind: "file" | "folder";
 };
+
+Spin.setDefaultIndicator(<Icon name="spin-indicator" className={styles.spinner} />)
 
 function createFrontendFailedRunEvent(requestId: string, sessionId: string, message: string): BackendEvent {
 	const createdAt: string = new Date().toISOString();
@@ -675,6 +684,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
 	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] = useState<WorkflowTodoSnapshot | null>(null);
 	const [runState, setRunState] = useState<RunControllerState>(() => createIdleRunState());
+	const [unreadSessionIds, setUnreadSessionIds] = useState<ReadonlySet<string>>(() => new Set<string>());
+	const windowFocusedRef = useRef<boolean>(document.hasFocus());
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(bootstrapData.clientPreferences ?? DEFAULT_CLIENT_PREFERENCES);
 	const clientPreferencesRef = useLatest(clientPreferences);
 	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(bootstrapData.generalSettings ?? DEFAULT_GENERAL_SETTINGS);
@@ -782,6 +793,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const deleteSessionWithLayout = useCallback(async (sessionId: string): Promise<void> => {
 		await deleteSession(sessionId);
 		removeStoredSessionLayouts([sessionId]);
+		setUnreadSessionIds((currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
+			return removeUnreadSessions(currentSessionIds, [sessionId]);
+		});
 	}, [removeStoredSessionLayouts]);
 
 	useDiskSpaceCheck();
@@ -1303,6 +1317,52 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 	}, [isNewSessionHome, loadHomeWorkspaces, workspaceRefreshToken]);
 
+	useEffect((): (() => void) => {
+		const handleWindowFocus = (): void => {
+			windowFocusedRef.current = true;
+			setUnreadSessionIds((currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
+				return markActiveSessionRead(currentSessionIds, activeSessionIdRef.current, true);
+			});
+		};
+		const handleWindowBlur = (): void => {
+			windowFocusedRef.current = false;
+		};
+
+		window.addEventListener("focus", handleWindowFocus);
+		window.addEventListener("blur", handleWindowBlur);
+		if (document.hasFocus()) {
+			handleWindowFocus();
+		} else {
+			handleWindowBlur();
+		}
+
+		return (): void => {
+			window.removeEventListener("focus", handleWindowFocus);
+			window.removeEventListener("blur", handleWindowBlur);
+		};
+	}, []);
+
+	useEffect((): void => {
+		setUnreadSessionIds((currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
+			return markActiveSessionRead(currentSessionIds, activeSessionId, windowFocusedRef.current);
+		});
+	}, [activeSessionId]);
+
+	const handleBackendEventObserved = useCallback((event: BackendEvent): void => {
+		const responseSessionId: string | null = getUnreadResponseSessionId(event);
+		if (responseSessionId === null) {
+			return;
+		}
+
+		setUnreadSessionIds((currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
+			return applyResponseFinished(currentSessionIds, {
+				sessionId: responseSessionId,
+				activeSessionId: activeSessionIdRef.current,
+				windowFocused: windowFocusedRef.current
+			});
+		});
+	}, []);
+
 	useEffect((): void => {
 		if (activeSessionId === null && activeWorkspace === null && homeDraft.workspace === null) {
 			setSkills([]);
@@ -1317,6 +1377,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		activeChatRequestIdRef,
 		pendingUserActionRequestIdsRef,
 		activeSessionTitleRef,
+		onEventObserved: handleBackendEventObserved,
 		applyWorkbench,
 		appendQueuedRunUserBlock,
 		loadSkills,
@@ -1683,6 +1744,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	function handleSessionArchive(session: SessionMetadata): void {
+		setUnreadSessionIds((currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
+			return removeUnreadSessions(currentSessionIds, [session.id]);
+		});
 		if (session.id !== activeSessionId) {
 			return;
 		}
@@ -1712,6 +1776,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	function handleWorkspaceDelete(result: DeleteWorkspaceResult): void {
+		setUnreadSessionIds((currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
+			return removeUnreadSessions(currentSessionIds, [
+				...result.deletedSessionIds,
+				...result.deletedArchivedSessionIds
+			]);
+		});
 		removeStoredSessionLayouts([
 			...result.deletedSessionIds,
 			...result.deletedArchivedSessionIds
@@ -3424,6 +3494,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						initialSessions={bootstrapData.sessionList.sessions}
 						initialActiveWorkspaceId={bootstrapData.workspaceList.active}
 						runningSessionIds={runningSessionIds}
+						unreadSessionIds={[...unreadSessionIds]}
 						homeWorkspace={homeDraft.workspace}
 						workspaceFooterDisabled={isHomeSubmitting || activeSessionId !== null || isSessionLoading}
 						activeWorkspace={displayedWorkspace}
