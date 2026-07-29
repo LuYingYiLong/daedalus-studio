@@ -327,6 +327,18 @@ async function main() {
 			`Plugin source version ${pluginVersion || "unknown"} does not match package.json godotPluginVersion ${packageManifest.godotPluginVersion}.`
 		);
 	}
+	const pluginMetadata = JSON.parse(await readFile(join(sourceRoot, "daedalus-plugin.json"), "utf8"));
+	if (
+		pluginMetadata.pluginVersion !== pluginVersion
+		|| pluginMetadata.studioVersion !== packageManifest.version
+		|| !Number.isInteger(pluginMetadata.pluginProtocolVersion)
+		|| pluginMetadata.pluginProtocolVersion < 1
+	) {
+		throw new Error(
+			"Plugin metadata does not match the Studio package manifest or contains an invalid protocol version."
+		);
+	}
+	const pluginProtocolVersion = pluginMetadata.pluginProtocolVersion;
 	const files = normalizeGodotResourceReferences(await collectFiles(sourceRoot));
 	if (!files.some((entry) => entry.path === "addons/godot_daedalus/plugin.cfg")) {
 		throw new Error("Godot plugin source does not contain plugin.cfg.");
@@ -334,7 +346,7 @@ async function main() {
 	const integrityContent = Buffer.from(`${JSON.stringify({
 		schemaVersion: 1,
 		pluginVersion,
-		pluginProtocolVersion: 2,
+		pluginProtocolVersion,
 		files: files.map((entry) => ({
 			path: entry.path,
 			size: entry.content.length,
@@ -350,7 +362,7 @@ async function main() {
 	const manifest = {
 		schemaVersion: 1,
 		pluginVersion,
-		pluginProtocolVersion: 2,
+		pluginProtocolVersion,
 		studioVersion: packageManifest.version,
 		minGodotVersion: "4.7.0",
 		sourceCommit: readSourceCommit(),
