@@ -5,6 +5,10 @@ type ClientPreferences = {
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
 	language: "system" | "en-US" | "zh-CN";
+	workspaceSidebar: {
+		open: boolean;
+		size: number;
+	};
 	lastComposerModel: {
 		providerId: string;
 		modelId: string;

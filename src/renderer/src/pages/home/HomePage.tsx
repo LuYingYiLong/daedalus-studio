@@ -9,6 +9,7 @@ import type { SlashCommandDefinition } from "@/api/command-api";
 import type { ProviderModelSelection } from "@/api/provider-api";
 import type { DeleteWorkspaceResult } from "@/api/workspace-api";
 import type { SkillSummary } from "@/api/skill-api";
+import type { WorkspaceSidebarPreferences } from "@/api/client-preferences-api";
 import { fetchSessionOverview, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import MessageList, { type MessageListHandle } from "@/features/chat/MessageList";
@@ -68,6 +69,9 @@ const SPLITTER_CLASS_NAMES: SplitterProps["classNames"] = {
 		active: styles.splitterDraggerActive
 	}
 };
+const WORKSPACE_SIDEBAR_CLOSED_SIZE: number = 0;
+const WORKSPACE_SIDEBAR_MAX_SIZE: number = 720;
+const WORKSPACE_SIDEBAR_CLOSE_THRESHOLD: number = 150;
 const SIDE_DOCK_CLOSED_SIZE: number = 0;
 const SIDE_DOCK_DEFAULT_SIZE: number = 520;
 const SIDE_DOCK_MAX_SIZE: number = 720;
@@ -182,6 +186,11 @@ type HomePageProps = {
 	workspaceRefreshToken: number;
 	isHome: boolean;
 	activeSessionId: string | null;
+	workspaceSidebar: WorkspaceSidebarPreferences;
+	onWorkspaceSidebarChange: (
+		workspaceSidebar: WorkspaceSidebarPreferences,
+		options?: { persist?: boolean }
+	) => void;
 	sessionLayout: SessionLayoutPreferences;
 	onSessionLayoutChange: (
 		layout: SessionLayoutPreferences,
@@ -301,6 +310,8 @@ function HomePage({
 	workspaceRefreshToken,
 	isHome,
 	activeSessionId,
+	workspaceSidebar,
+	onWorkspaceSidebarChange,
 	sessionLayout,
 	onSessionLayoutChange,
 	activeSessionMetadata,
@@ -457,6 +468,8 @@ function HomePage({
 		? godotLaunchExecutablePath.trim()
 		: null;
 	const showGodotSummaryActions: boolean = workspaceForActions !== null && effectiveGodotLaunchExecutablePath !== null && isGodotProject;
+	const workspaceSidebarOpen: boolean = workspaceSidebar.open;
+	const workspaceSidebarSize: number = workspaceSidebar.size;
 	const sideDockOpen: boolean = sessionLayout.side.open;
 	const sideDockSize: number = sessionLayout.side.size;
 	const bottomDockOpen: boolean = sessionLayout.bottom.open;
@@ -1085,6 +1098,46 @@ function HomePage({
 		openBottomDock();
 	}, [bottomDockOpen, closeBottomDock, openBottomDock]);
 
+	function handleWorkspaceSidebarResize(sizes: number[]): void {
+		const nextSize: number | undefined = sizes[0];
+		if (nextSize === undefined || !Number.isFinite(nextSize)) {
+			return;
+		}
+
+		const normalizedSize: number = Math.min(
+			WORKSPACE_SIDEBAR_MAX_SIZE,
+			Math.max(WORKSPACE_SIDEBAR_CLOSED_SIZE, Math.trunc(nextSize))
+		);
+		if (normalizedSize < WORKSPACE_SIDEBAR_CLOSE_THRESHOLD) {
+			onWorkspaceSidebarChange({ ...workspaceSidebar, open: false }, { persist: false });
+			return;
+		}
+
+		onWorkspaceSidebarChange({
+			open: true,
+			size: normalizedSize
+		}, { persist: false });
+	}
+
+	function handleWorkspaceSidebarResizeEnd(sizes: number[]): void {
+		const nextSize: number | undefined = sizes[0];
+		if (nextSize === undefined || !Number.isFinite(nextSize)) {
+			return;
+		}
+		if (nextSize < WORKSPACE_SIDEBAR_CLOSE_THRESHOLD) {
+			onWorkspaceSidebarChange({ ...workspaceSidebar, open: false });
+			return;
+		}
+
+		onWorkspaceSidebarChange({
+			open: true,
+			size: Math.min(
+				WORKSPACE_SIDEBAR_MAX_SIZE,
+				Math.max(WORKSPACE_SIDEBAR_CLOSE_THRESHOLD, Math.trunc(nextSize))
+			)
+		});
+	}
+
 	function handleSideDockResize(sizes: number[]): void {
 		const nextSize: number | undefined = sizes[1];
 		if (nextSize === undefined || !Number.isFinite(nextSize)) {
@@ -1232,7 +1285,7 @@ function HomePage({
 			>
 				<Tooltip title={t("agentPage.summary.tooltip")}>
 					<Button
-						type={summaryOpen ? "primary" : "text"}
+						type="text"
 						shape="circle"
 						aria-label={t("agentPage.summary.aria.open")}
 						aria-pressed={summaryOpen}
@@ -1250,53 +1303,69 @@ function HomePage({
 			onDrop={handlePageDrop}
 		>
 			{messageContextHolder}
-			<aside className={styles.workspaceSidebar}>
-				<header className={styles.workspaceHeader}>
-					<Button
-						type="text"
-						block
-						icon={<Icon name="add" />}
-						className={styles.createSessionButton}
-						onClick={onNewSession}
-					>
-						{t("agentPage.actions.newSession")}
-					</Button>
-				</header>
-				<WorkspaceTree
-					refreshToken={workspaceRefreshToken}
-					selectedSessionId={activeSessionId}
-					selectedWorkspaceId={activeWorkspaceId}
-					initialWorkspaces={initialWorkspaces}
-					initialSessions={initialSessions}
-					initialActiveWorkspaceId={initialActiveWorkspaceId}
-					runningSessionIds={runningSessionIds}
-					sessionUpdate={activeSessionMetadata}
-					onNewSession={onNewUnboundSession}
-					onSessionSelect={onSessionSelect}
-					onSessionArchive={onSessionArchive}
-					onSessionRename={onSessionRename}
-					onSessionsChange={onSessionsChange}
-					onNewWorkspaceSession={onNewWorkspaceSession}
-					onWorkspaceDelete={onWorkspaceDelete}
-					onWorkspaceUpdate={onWorkspaceUpdate}
-				/>
-				<footer className={styles.workspaceFooter}>
-					<Button
-						icon={<Icon name="settings" />}
-						type="text"
-						block
-						className={styles.openSettingsButton}
-						aria-label={t("agentPage.actions.openSettings")}
-						onClick={(): void => {
-							void window.electronAPI.windowControl.openSettings();
-						}}
-					>
-						{t("agentPage.actions.openSettings")}
-					</Button>
-				</footer>
-			</aside>
+			<Splitter
+				className={styles.workspaceSplitter}
+				classNames={SPLITTER_CLASS_NAMES}
+				draggerIcon={null}
+				collapsible={{ motion: true }}
+				onResize={handleWorkspaceSidebarResize}
+				onResizeEnd={handleWorkspaceSidebarResizeEnd}
+			>
+				<Splitter.Panel
+					size={workspaceSidebarOpen ? workspaceSidebarSize : WORKSPACE_SIDEBAR_CLOSED_SIZE}
+					min={WORKSPACE_SIDEBAR_CLOSED_SIZE}
+					max={WORKSPACE_SIDEBAR_MAX_SIZE}
+					collapsible={{ end: true, showCollapsibleIcon: false }}
+				>
+					<aside className={styles.workspaceSidebar} aria-hidden={!workspaceSidebarOpen}>
+						<header className={styles.workspaceHeader}>
+							<Button
+								type="text"
+								block
+								icon={<Icon name="add" />}
+								className={styles.createSessionButton}
+								onClick={onNewSession}
+							>
+								{t("agentPage.actions.newSession")}
+							</Button>
+						</header>
+						<WorkspaceTree
+							refreshToken={workspaceRefreshToken}
+							selectedSessionId={activeSessionId}
+							selectedWorkspaceId={activeWorkspaceId}
+							initialWorkspaces={initialWorkspaces}
+							initialSessions={initialSessions}
+							initialActiveWorkspaceId={initialActiveWorkspaceId}
+							runningSessionIds={runningSessionIds}
+							sessionUpdate={activeSessionMetadata}
+							onNewSession={onNewUnboundSession}
+							onSessionSelect={onSessionSelect}
+							onSessionArchive={onSessionArchive}
+							onSessionRename={onSessionRename}
+							onSessionsChange={onSessionsChange}
+							onNewWorkspaceSession={onNewWorkspaceSession}
+							onWorkspaceDelete={onWorkspaceDelete}
+							onWorkspaceUpdate={onWorkspaceUpdate}
+						/>
+						<footer className={styles.workspaceFooter}>
+							<Button
+								icon={<Icon name="settings" />}
+								type="text"
+								block
+								className={styles.openSettingsButton}
+								aria-label={t("agentPage.actions.openSettings")}
+								onClick={(): void => {
+									void window.electronAPI.windowControl.openSettings();
+								}}
+							>
+								{t("agentPage.actions.openSettings")}
+							</Button>
+						</footer>
+					</aside>
+				</Splitter.Panel>
 
-			<div className={styles.agentMain}>
+				<Splitter.Panel min={360}>
+					<div className={styles.agentMain}>
 				{showWorkspaceLaunchControls || showSummaryButton || showBottomDockButton || showSideDockButton ? (
 					<div className={styles.floatingActionSlot}>
 						<div className={styles.floatingActions}>
@@ -1328,10 +1397,10 @@ function HomePage({
 							{showBottomDockButton ? (
 								<Tooltip title={bottomDockOpen ? t("agentPage.dock.closeBottom") : t("agentPage.dock.openBottom")}>
 									<Button
-										type={bottomDockOpen ? "primary" : "text"}
+										type="text"
 										shape="circle"
 										aria-pressed={bottomDockOpen}
-										icon={<Icon name="layout-bottom" />}
+										icon={<Icon name={bottomDockOpen ? "layout-bottom-toggled" : "layout-bottom"} />}
 										onClick={toggleBottomDock}
 									/>
 								</Tooltip>
@@ -1339,10 +1408,10 @@ function HomePage({
 							{showSideDockButton ? (
 								<Tooltip title={sideDockOpen ? t("agentPage.dock.closeSidebar") : t("agentPage.dock.openSidebar")}>
 									<Button
-										type={sideDockOpen ? "primary" : "text"}
+										type="text"
 										shape="circle"
 										aria-pressed={sideDockOpen}
-										icon={<Icon name="layout-right" />}
+										icon={<Icon name={sideDockOpen ? "layout-right-toggled" : "layout-right"} />}
 										onClick={toggleSideDock}
 									/>
 								</Tooltip>
@@ -1591,7 +1660,9 @@ function HomePage({
 						</Splitter.Panel>
 					) : null}
 				</Splitter>
-			</div>
+					</div>
+				</Splitter.Panel>
+			</Splitter>
 			<SessionPlansDialog
 				overview={summaryOverview}
 				open={plansModalOpen}

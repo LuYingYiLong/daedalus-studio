@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLatest } from "ahooks";
+import { useEventListener, useLatest } from "ahooks";
 import { Input, message as antdMessage, Modal, Typography } from "antd";
 import { useDiskSpaceCheck } from "@/shared/hooks/useDiskSpaceCheck";
 import { onBackendReconnected } from "@/shared/api/transport/backend-client";
@@ -53,7 +53,15 @@ import WorkspaceProjectDialog from "@/features/workspace/WorkspaceProjectDialog"
 import { extractEnabledSkillRefs, type ComposerCompletionTrigger } from "@/features/composer/composer-completion";
 import { createWorkflowTodoSnapshotFromPlanData, getWorkflowTodoSnapshotKey, isWorkflowTodoActive, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
 import { saveImageAttachment, saveTextAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
-import { DEFAULT_CLIENT_PREFERENCES, fetchClientPreferences, updateClientPreferences, type ClientPreferences } from "@/api/client-preferences-api";
+import {
+	CLIENT_PREFERENCES_CHANGED_EVENT,
+	DEFAULT_CLIENT_PREFERENCES,
+	dispatchClientPreferencesChanged,
+	fetchClientPreferences,
+	updateClientPreferences,
+	type ClientPreferences,
+	type WorkspaceSidebarPreferences
+} from "@/api/client-preferences-api";
 import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
 import { approvePlan, revisePlan, submitPlanClarification, type PlanResult } from "@/api/plan-api";
 import type { BootstrapData } from "./bootstrap";
@@ -641,6 +649,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] = useState<WorkflowTodoSnapshot | null>(null);
 	const [runState, setRunState] = useState<RunControllerState>(() => createIdleRunState());
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(bootstrapData.clientPreferences ?? DEFAULT_CLIENT_PREFERENCES);
+	const clientPreferencesRef = useLatest(clientPreferences);
 	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(bootstrapData.generalSettings ?? DEFAULT_GENERAL_SETTINGS);
 	const isTimelinePageLoadingRef = useRef<boolean>(false);
 	const navigationVersionRef = useRef<number>(0);
@@ -662,6 +671,36 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const activeSessionLayout: SessionLayoutPreferences = activeSessionId === null
 		? temporarySessionLayout
 		: sessionLayouts[activeSessionId] ?? DEFAULT_SESSION_LAYOUT;
+
+	useEventListener(CLIENT_PREFERENCES_CHANGED_EVENT, (event: Event): void => {
+		const preferences: ClientPreferences | undefined = (event as CustomEvent<ClientPreferences>).detail;
+		if (preferences !== undefined) {
+			clientPreferencesRef.current = preferences;
+			setClientPreferences(preferences);
+		}
+	});
+
+	const handleWorkspaceSidebarChange = useCallback((
+		workspaceSidebar: WorkspaceSidebarPreferences,
+		options: { persist?: boolean } = {}
+	): void => {
+		const nextPreferences: ClientPreferences = {
+			...clientPreferencesRef.current,
+			workspaceSidebar
+		};
+		clientPreferencesRef.current = nextPreferences;
+		setClientPreferences(nextPreferences);
+		dispatchClientPreferencesChanged(nextPreferences);
+		if (options.persist === false) {
+			return;
+		}
+		void updateClientPreferences({ workspaceSidebar }).then((savedPreferences: ClientPreferences): void => {
+			clientPreferencesRef.current = savedPreferences;
+			setClientPreferences(savedPreferences);
+		}).catch((error: unknown): void => {
+			console.error("[App] save workspace sidebar preference failed", error);
+		});
+	}, [clientPreferencesRef]);
 
 	const handleSessionLayoutChange = useCallback((
 		layout: SessionLayoutPreferences,
@@ -3274,6 +3313,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						workspaceRefreshToken={workspaceRefreshToken}
 						isHome={isNewSessionHome}
 						activeSessionId={activeSessionId}
+						workspaceSidebar={clientPreferences.workspaceSidebar}
+						onWorkspaceSidebarChange={handleWorkspaceSidebarChange}
 						sessionLayout={activeSessionLayout}
 						onSessionLayoutChange={handleSessionLayoutChange}
 						activeSessionMetadata={activeSessionMetadata}

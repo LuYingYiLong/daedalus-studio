@@ -1,19 +1,24 @@
-import { Alert, Button, Divider, Form, Input, Menu, Modal, Select, Space, Spin, Table, Tag, Typography } from "antd";
+import { Alert, App, Button, Divider, Empty, Flex, Form, Input, Menu, Modal, Select, Space, Spin, Table, Tag, Tooltip, Typography } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useEffect, useMemo, useState } from "react";
-import type { ChangeEvent, KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent, Key, KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import {
 	addCustomProvider,
 	addProviderModel,
+	discoverProviderModels,
 	fetchProviderModelSelection,
-	listProviderModels,
 	saveProviderConfig,
+	syncProviderModels,
 	updateProviderModel,
 	type CustomProviderType,
+	type DiscoveredProviderModel,
 	type EditableModelCapabilities,
+	type ManagedProviderModel,
 	type ProviderModelCapabilities,
+	type ProviderModelRemovalGuard,
+	type ProviderModelsDiscoverResult,
 	type ProviderModelInfo,
 	type ProviderModelSelection,
 	type ProviderModelSelectionProvider
@@ -109,8 +114,35 @@ function renderCapabilityTags(capabilities: ProviderModelCapabilities, t: (key: 
 	);
 }
 
+function mergeManagedModels(
+	previousModels: readonly ManagedProviderModel[],
+	managedModels: readonly ManagedProviderModel[],
+	remoteModels: readonly DiscoveredProviderModel[],
+	preservePrevious: boolean
+): ManagedProviderModel[] {
+	const modelsById: Map<string, ManagedProviderModel> = new Map();
+	if (preservePrevious) {
+		for (const model of previousModels) {
+			modelsById.set(model.id, model);
+		}
+	}
+	for (const model of managedModels) {
+		modelsById.set(model.id, model);
+	}
+	for (const model of remoteModels) {
+		const existing: ManagedProviderModel | undefined = modelsById.get(model.id);
+		modelsById.set(model.id, {
+			...model,
+			enabled: existing?.enabled ?? false,
+			removalGuards: existing?.removalGuards ?? []
+		});
+	}
+	return [...modelsById.values()];
+}
+
 function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps): React.JSX.Element {
 	const { t } = useTranslation();
+	const { message, modal } = App.useApp();
 	const [selection, setSelection] = useState<ProviderModelSelection | null>(null);
 	const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
 	const [query, setQuery] = useState<string>("");
@@ -119,13 +151,25 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 	const [isApiKeyDirty, setIsApiKeyDirty] = useState<boolean>(false);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
-	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+	const [isTesting, setIsTesting] = useState<boolean>(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [isAddProviderOpen, setIsAddProviderOpen] = useState<boolean>(false);
 	const [modelDialogMode, setModelDialogMode] = useState<"add" | "edit" | null>(null);
 	const [editingModel, setEditingModel] = useState<ProviderModelInfo | null>(null);
 	const [dialogError, setDialogError] = useState<string | null>(null);
 	const [isDialogSaving, setIsDialogSaving] = useState<boolean>(false);
+	const [isDiscoveryOpen, setIsDiscoveryOpen] = useState<boolean>(false);
+	const [discoveryProvider, setDiscoveryProvider] = useState<ProviderModelSelectionProvider | null>(null);
+	const [discoveryQuery, setDiscoveryQuery] = useState<string>("");
+	const [discoveredModels, setDiscoveredModels] = useState<ManagedProviderModel[]>([]);
+	const [latestRemoteModels, setLatestRemoteModels] = useState<DiscoveredProviderModel[]>([]);
+	const [selectedDiscoveredModelIds, setSelectedDiscoveredModelIds] = useState<Key[]>([]);
+	const [initialEnabledModelIds, setInitialEnabledModelIds] = useState<Set<string>>(new Set());
+	const [discoverySource, setDiscoverySource] = useState<ProviderModelsDiscoverResult["source"] | null>(null);
+	const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+	const [isDiscovering, setIsDiscovering] = useState<boolean>(false);
+	const [isImporting, setIsImporting] = useState<boolean>(false);
+	const discoveryRequestIdRef = useRef<number>(0);
 	const [providerForm] = Form.useForm<AddProviderFormValues>();
 	const [modelForm] = Form.useForm<ModelFormValues>();
 
@@ -214,29 +258,28 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 		});
 	}, [filteredProviders, t]);
 
-	async function reloadSelection(preferredProviderId: string | null = selectedProviderId): Promise<ProviderModelSelection> {
-		const nextSelection: ProviderModelSelection = await fetchProviderModelSelection();
-		setSelection(nextSelection);
-		onSelectionChange?.(nextSelection);
-		setSelectedProviderId(preferredProviderId ?? nextSelection.activeModel.providerId);
-		return nextSelection;
+	function createDiscoveryParams(provider: ProviderModelSelectionProvider): Parameters<typeof discoverProviderModels>[0] {
+		const params: Parameters<typeof discoverProviderModels>[0] = {
+			provider: provider.provider
+		};
+		const apiKey: string = draftApiKey.trim();
+		const baseUrl: string = draftBaseUrl.trim();
+		if (isApiKeyDirty && apiKey.length > 0) {
+			params.apiKey = apiKey;
+		}
+		params.baseUrl = baseUrl.length > 0 ? baseUrl : null;
+		return params;
 	}
 
-	function createSavePayload(provider: ProviderModelSelectionProvider, modelId?: string): Parameters<typeof saveProviderConfig>[0] {
-		const resolvedModel: string | null = modelId ?? provider.selectedModel ?? provider.defaultModel;
+	function createCredentialSavePayload(provider: ProviderModelSelectionProvider): Parameters<typeof saveProviderConfig>[0] {
 		const payload: Parameters<typeof saveProviderConfig>[0] = {
 			provider: provider.provider,
 			baseUrl: draftBaseUrl.trim().length > 0 ? draftBaseUrl.trim() : null,
-			activate: resolvedModel !== null
+			activate: false
 		};
-		if (resolvedModel !== null) {
-			payload.model = resolvedModel;
-		}
-
 		if (isApiKeyDirty && draftApiKey.trim().length > 0) {
 			payload.apiKey = draftApiKey.trim();
 		}
-
 		return payload;
 	}
 
@@ -273,20 +316,211 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 		}
 	}
 
-	async function handleRefreshModels(provider: ProviderModelSelectionProvider): Promise<void> {
+	async function handleTestProvider(provider: ProviderModelSelectionProvider): Promise<void> {
 		try {
-			setIsRefreshing(true);
+			setIsTesting(true);
 			setErrorMessage(null);
-			await saveProviderConfig(createSavePayload(provider));
-			const result = await listProviderModels(provider.provider, true);
-			await reloadSelection(provider.provider);
-			if (result.error !== undefined) {
-				setErrorMessage(result.error);
+			const result: ProviderModelsDiscoverResult = await discoverProviderModels(createDiscoveryParams(provider));
+			if (result.source !== "api" || result.error !== undefined) {
+				throw new Error(result.error ?? t("settings.provider.errors.testConnection"));
 			}
+			const nextSelection: ProviderModelSelection = await saveProviderConfig(createCredentialSavePayload(provider));
+			setSelection(nextSelection);
+			onSelectionChange?.(nextSelection);
+			setSelectedProviderId(provider.provider);
+			setDraftApiKey("");
+			setIsApiKeyDirty(false);
+			void message.success(t("settings.provider.messages.testSuccess"));
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : t("settings.provider.errors.refreshModels"));
+			setErrorMessage(error instanceof Error ? error.message : t("settings.provider.errors.testConnection"));
 		} finally {
-			setIsRefreshing(false);
+			setIsTesting(false);
+		}
+	}
+
+	async function loadDiscoveredModels(
+		provider: ProviderModelSelectionProvider,
+		preserveSelection: boolean
+	): Promise<void> {
+		const requestId: number = discoveryRequestIdRef.current + 1;
+		discoveryRequestIdRef.current = requestId;
+		setIsDiscovering(true);
+		setDiscoveryError(null);
+		try {
+			const result: ProviderModelsDiscoverResult = await discoverProviderModels(createDiscoveryParams(provider));
+			if (discoveryRequestIdRef.current !== requestId) {
+				return;
+			}
+			setLatestRemoteModels((currentModels: DiscoveredProviderModel[]): DiscoveredProviderModel[] => {
+				if (!preserveSelection) {
+					return result.models;
+				}
+				const modelsById: Map<string, DiscoveredProviderModel> = new Map(
+					currentModels.map((model: DiscoveredProviderModel): [string, DiscoveredProviderModel] => [model.id, model])
+				);
+				for (const model of result.models) {
+					modelsById.set(model.id, model);
+				}
+				return [...modelsById.values()];
+			});
+			setDiscoveredModels((currentModels: ManagedProviderModel[]): ManagedProviderModel[] => {
+				const nextModels: ManagedProviderModel[] = mergeManagedModels(
+					currentModels,
+					result.managedModels,
+					result.models,
+					preserveSelection
+				);
+				const availableIds: Set<string> = new Set(nextModels.map((model: ManagedProviderModel): string => model.id));
+				const guardedIds: Set<string> = new Set(
+					nextModels
+						.filter((model: ManagedProviderModel): boolean => model.removalGuards.length > 0)
+						.map((model: ManagedProviderModel): string => model.id)
+				);
+				setSelectedDiscoveredModelIds((currentIds: Key[]): Key[] => {
+					const nextIds: Set<string> = preserveSelection
+						? new Set(
+							currentIds
+								.map((currentId: Key): string => String(currentId))
+								.filter((modelId: string): boolean => availableIds.has(modelId))
+						)
+						: new Set(
+							result.managedModels
+								.filter((model: ManagedProviderModel): boolean => model.enabled)
+								.map((model: ManagedProviderModel): string => model.id)
+						);
+					for (const modelId of guardedIds) {
+						nextIds.add(modelId);
+					}
+					return [...nextIds];
+				});
+				if (!preserveSelection) {
+					setInitialEnabledModelIds(new Set(
+						result.managedModels
+							.filter((model: ManagedProviderModel): boolean => model.enabled)
+							.map((model: ManagedProviderModel): string => model.id)
+					));
+				}
+				return nextModels;
+			});
+			setDiscoverySource(result.source);
+			setDiscoveryError(result.error ?? null);
+		} catch (error: unknown) {
+			if (discoveryRequestIdRef.current === requestId) {
+				if (!preserveSelection) {
+					setDiscoveredModels([]);
+					setLatestRemoteModels([]);
+					setSelectedDiscoveredModelIds([]);
+					setInitialEnabledModelIds(new Set());
+				}
+				setDiscoverySource(null);
+				setDiscoveryError(error instanceof Error ? error.message : t("settings.provider.errors.discoverModels"));
+			}
+		} finally {
+			if (discoveryRequestIdRef.current === requestId) {
+				setIsDiscovering(false);
+			}
+		}
+	}
+
+	function openDiscoveryDialog(provider: ProviderModelSelectionProvider): void {
+		setDiscoveryProvider(provider);
+		setDiscoveryQuery("");
+		setDiscoveredModels([]);
+		setLatestRemoteModels([]);
+		setSelectedDiscoveredModelIds([]);
+		setInitialEnabledModelIds(new Set());
+		setDiscoverySource(null);
+		setDiscoveryError(null);
+		setIsDiscoveryOpen(true);
+		setIsDiscovering(true);
+		void loadDiscoveredModels(provider, false);
+	}
+
+	function closeDiscoveryDialog(): void {
+		discoveryRequestIdRef.current += 1;
+		setIsDiscoveryOpen(false);
+		setIsDiscovering(false);
+		setIsImporting(false);
+	}
+
+	function getRemovalGuardMessage(guard: ProviderModelRemovalGuard): string {
+		switch (guard.kind) {
+			case "activeModel":
+				return t("settings.provider.discovery.guards.activeModel");
+			case "providerSelection":
+				return t("settings.provider.discovery.guards.providerSelection");
+			case "taskRouting":
+				return t("settings.provider.discovery.guards.taskRouting", { task: guard.task });
+			case "webSearch":
+				return t("settings.provider.discovery.guards.webSearch");
+		}
+	}
+
+	async function handleSyncDiscoveredModels(): Promise<void> {
+		if (discoveryProvider === null) {
+			return;
+		}
+		const selectedIds: Set<string> = new Set(selectedDiscoveredModelIds.map((id: Key): string => String(id)));
+		const upsertModels: DiscoveredProviderModel[] = latestRemoteModels.filter((model: DiscoveredProviderModel): boolean => {
+			return selectedIds.has(model.id);
+		});
+		const enableModelIds: string[] = [...selectedIds].filter((modelId: string): boolean => !initialEnabledModelIds.has(modelId));
+		const removeModelIds: string[] = [...initialEnabledModelIds].filter((modelId: string): boolean => !selectedIds.has(modelId));
+		if (removeModelIds.length > 0) {
+			const removedModels: ManagedProviderModel[] = discoveredModels.filter((model: ManagedProviderModel): boolean => {
+				return removeModelIds.includes(model.id);
+			});
+			const confirmed: boolean = await modal.confirm({
+				title: t("settings.provider.discovery.removeConfirmTitle"),
+				content: (
+					<div>
+						<Typography.Paragraph>
+							{t("settings.provider.discovery.removeConfirmDescription", { count: removedModels.length })}
+						</Typography.Paragraph>
+						<ul>
+							{removedModels.map((model: ManagedProviderModel): React.JSX.Element => (
+								<li key={model.id}>{model.displayName} ({model.id})</li>
+							))}
+						</ul>
+					</div>
+				),
+				okText: t("settings.provider.actions.removeModels"),
+				okButtonProps: { danger: true },
+				cancelText: t("settings.common.cancel")
+			});
+			if (!confirmed) {
+				return;
+			}
+		}
+
+		try {
+			setIsImporting(true);
+			setDiscoveryError(null);
+			if (discoverySource === "api") {
+				await saveProviderConfig(createCredentialSavePayload(discoveryProvider));
+			}
+			const nextSelection: ProviderModelSelection = await syncProviderModels({
+				provider: discoveryProvider.provider,
+				upsertModels,
+				enableModelIds,
+				removeModelIds
+			});
+			setSelection(nextSelection);
+			onSelectionChange?.(nextSelection);
+			setSelectedProviderId(discoveryProvider.provider);
+			if (discoverySource === "api") {
+				setDraftApiKey("");
+				setIsApiKeyDirty(false);
+			}
+			closeDiscoveryDialog();
+			void message.success(t("settings.provider.messages.syncSuccess", {
+				enabled: enableModelIds.length,
+				removed: removeModelIds.length
+			}));
+		} catch (error: unknown) {
+			setDiscoveryError(error instanceof Error ? error.message : t("settings.provider.errors.syncModels"));
+		} finally {
+			setIsImporting(false);
 		}
 	}
 
@@ -420,6 +654,52 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			render: (capabilities: ProviderModelCapabilities): React.JSX.Element => renderCapabilityTags(capabilities, t)
 		}
 	];
+	const normalizedDiscoveryQuery: string = discoveryQuery.trim().toLowerCase();
+	const filteredDiscoveredModels: ManagedProviderModel[] = normalizedDiscoveryQuery.length === 0
+		? discoveredModels
+		: discoveredModels.filter((model: ManagedProviderModel): boolean => {
+			return model.id.toLowerCase().includes(normalizedDiscoveryQuery)
+				|| model.displayName.toLowerCase().includes(normalizedDiscoveryQuery);
+		});
+	const discoveryColumns: TableProps<ManagedProviderModel>["columns"] = [
+		{
+			title: t("settings.provider.fields.modelId"),
+			dataIndex: "id",
+			key: "id",
+			width: 240,
+			ellipsis: true,
+			render: (modelId: string, model: ManagedProviderModel): React.JSX.Element => {
+				const guardMessage: string | null = model.removalGuards[0] === undefined
+					? null
+					: getRemovalGuardMessage(model.removalGuards[0]);
+				const content: React.JSX.Element = <span>{modelId}</span>;
+				return guardMessage === null ? content : <Tooltip title={guardMessage}>{content}</Tooltip>;
+			}
+		},
+		{
+			title: t("settings.provider.fields.modelName"),
+			dataIndex: "displayName",
+			key: "displayName",
+			ellipsis: true
+		},
+		{
+			title: t("settings.provider.columns.capabilities"),
+			dataIndex: "capabilities",
+			key: "capabilities",
+			align: "center",
+			width: 320,
+			render: (capabilities: ProviderModelCapabilities): React.JSX.Element => renderCapabilityTags(capabilities, t)
+		}
+	];
+	const selectedDiscoveryIds: Set<string> = new Set(selectedDiscoveredModelIds.map((key: Key): string => String(key)));
+	const selectionChanged: boolean = (
+		selectedDiscoveryIds.size !== initialEnabledModelIds.size
+		|| [...selectedDiscoveryIds].some((modelId: string): boolean => !initialEnabledModelIds.has(modelId))
+	);
+	const hasSelectedRemoteModels: boolean = latestRemoteModels.some((model: DiscoveredProviderModel): boolean => {
+		return selectedDiscoveryIds.has(model.id);
+	});
+	const canApplyDiscoveryChanges: boolean = selectionChanged || hasSelectedRemoteModels;
 
 	return (
 		<section className={styles.page}>
@@ -487,8 +767,8 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 									}}
 								/>
 								<Button
-									onClick={(): void => void handleRefreshModels(selectedProvider)}
-									loading={isRefreshing}
+									onClick={(): void => void handleTestProvider(selectedProvider)}
+									loading={isTesting}
 								>
 									{t("settings.provider.actions.test")}
 								</Button>
@@ -498,7 +778,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 									icon={<Icon name="clear" />}
 									danger={selectedProvider.configured}
 									aria-label={t("settings.provider.actions.clearApiKey")}
-									disabled={isSaving || isRefreshing || (!selectedProvider.configured && draftApiKey.length === 0)}
+									disabled={isSaving || isTesting || (!selectedProvider.configured && draftApiKey.length === 0)}
 									loading={isSaving}
 									onClick={(): void => void handleClearApiKey(selectedProvider)}
 								/>
@@ -529,8 +809,8 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 								<Space.Compact>
 									<Button
 										icon={<Icon name="reload" />}
-										onClick={(): void => void handleRefreshModels(selectedProvider)}
-										loading={isRefreshing}
+										onClick={(): void => openDiscoveryDialog(selectedProvider)}
+										disabled={isTesting}
 									>
 										{t("settings.provider.actions.fetchModels")}
 									</Button>
@@ -569,6 +849,103 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 					</div>
 				</div>
 			</section>
+
+			<Modal
+				open={isDiscoveryOpen}
+				title={t("settings.provider.dialogs.discoverModelsTitle", {
+					provider: discoveryProvider?.displayName ?? selectedProvider.displayName
+				})}
+				okText={t("settings.provider.actions.applyModelChanges")}
+				cancelText={t("settings.common.cancel")}
+				confirmLoading={isImporting}
+				okButtonProps={{
+					disabled: isDiscovering || !canApplyDiscoveryChanges
+				}}
+				cancelButtonProps={{ disabled: isImporting }}
+				closable={!isImporting}
+				keyboard={!isImporting}
+				mask={{ closable: !isImporting }}
+				width={900}
+				destroyOnHidden={true}
+				onCancel={closeDiscoveryDialog}
+				onOk={(): void => void handleSyncDiscoveredModels()}
+			>
+				<div className={styles.discoveryDialog}>
+					<Flex className={styles.discoveryHeader} gap="small">
+						<Input
+							prefix={<Icon name="search" />}
+							placeholder={t("settings.provider.discovery.searchPlaceholder")}
+							value={discoveryQuery}
+							allowClear={true}
+							onChange={(event: ChangeEvent<HTMLInputElement>): void => setDiscoveryQuery(event.target.value)}
+						/>
+						<Tooltip title={t("settings.provider.actions.reloadModels")}>
+							<Button
+								icon={<Icon name="reload" />}
+								aria-label={t("settings.provider.actions.reloadModels")}
+								loading={isDiscovering}
+								disabled={isImporting || discoveryProvider === null}
+								onClick={(): void => {
+									if (discoveryProvider !== null) {
+										void loadDiscoveredModels(discoveryProvider, true);
+									}
+								}}
+							/>
+						</Tooltip>
+					</Flex>
+
+					{discoveryError !== null ? (
+						<Alert
+							type={discoveredModels.length > 0 ? "warning" : "error"}
+							showIcon={true}
+							description={discoveryError}
+						/>
+					) : null}
+
+					<Table<ManagedProviderModel>
+						className={styles.discoveryTable}
+						columns={discoveryColumns}
+						dataSource={filteredDiscoveredModels}
+						rowKey="id"
+						size="small"
+						pagination={false}
+						loading={isDiscovering}
+						scroll={{ x: 760, y: 420 }}
+						rowSelection={{
+							selectedRowKeys: selectedDiscoveredModelIds,
+							preserveSelectedRowKeys: true,
+							getCheckboxProps: (model: ManagedProviderModel) => ({
+								disabled: model.removalGuards.length > 0,
+								title: model.removalGuards[0] === undefined
+									? undefined
+									: getRemovalGuardMessage(model.removalGuards[0]),
+								"aria-label": model.removalGuards[0] === undefined
+									? t("settings.provider.discovery.selectModel", { model: model.displayName })
+									: getRemovalGuardMessage(model.removalGuards[0])
+							}),
+							onChange: (keys: Key[]): void => {
+								const nextIds: Set<string> = new Set(
+									discoveredModels
+										.filter((model: ManagedProviderModel): boolean => model.removalGuards.length > 0)
+										.map((model: ManagedProviderModel): string => model.id)
+								);
+								for (const key of keys) {
+									nextIds.add(String(key));
+								}
+								setSelectedDiscoveredModelIds([...nextIds]);
+							}
+						}}
+						locale={{
+							emptyText: (
+								<Empty
+									image={Empty.PRESENTED_IMAGE_SIMPLE}
+									description={discoveryError ?? t("settings.provider.discovery.empty")}
+								/>
+							)
+						}}
+					/>
+				</div>
+			</Modal>
 
 			<Modal
 				open={isAddProviderOpen}
@@ -665,17 +1042,19 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 					>
 						<Input autoFocus={modelDialogMode === "edit"} maxLength={120} />
 					</Form.Item>
-					{modelDialogMode === "edit" ? (
-						<Form.Item name="capabilities" label={t("settings.provider.fields.modelTypes")}>
-							<Select
-								mode="multiple"
-								options={CAPABILITY_BADGES.map((capability: CapabilityBadge) => ({
-									value: capability.key,
-									label: t(capability.labelKey)
-								}))}
-							/>
-						</Form.Item>
-					) : null}
+					<Form.Item
+						name="capabilities"
+						label={t("settings.provider.fields.modelTypes")}
+						hidden={modelDialogMode !== "edit"}
+					>
+						<Select
+							mode="multiple"
+							options={CAPABILITY_BADGES.map((capability: CapabilityBadge) => ({
+								value: capability.key,
+								label: t(capability.labelKey)
+							}))}
+						/>
+					</Form.Item>
 				</Form>
 			</Modal>
 		</section>

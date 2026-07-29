@@ -19,8 +19,32 @@ describe("Provider customizations", () => {
 		expect(pageSource).toContain("id: model.id");
 		expect(pageSource).toContain("displayName: model.displayName");
 		expect(pageSource).toContain("getEditableCapabilities(model.capabilities)");
+		expect(pageSource).toContain('name="capabilities"');
+		expect(pageSource).toContain('hidden={modelDialogMode !== "edit"}');
 		expect(pageSource).not.toContain("getModelTokenText");
 		expect(pageSource).not.toContain("model.contextWindowTokens");
 		expect(pageSource).not.toContain("model.maxOutputTokens");
+	});
+
+	it("discovers models during the modal transition and synchronizes a controlled selection", () => {
+		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "ProviderSettingsPage.tsx");
+		const apiSource: string = readRepoFile("src", "renderer", "src", "api", "provider-api.ts");
+
+		expect(apiSource).toContain('"provider.models.discover"');
+		expect(apiSource).toContain('"provider.models.import"');
+		expect(apiSource).toContain('"provider.models.sync"');
+		expect(pageSource).toContain("setIsDiscoveryOpen(true)");
+		expect(pageSource).toContain("void loadDiscoveredModels(provider, false)");
+		expect(pageSource).not.toContain("afterOpenChange");
+		expect(pageSource).toContain("preserveSelectedRowKeys: true");
+		expect(pageSource).toContain("disabled: model.removalGuards.length > 0");
+		expect(pageSource).toContain("selectedRowKeys: selectedDiscoveredModelIds");
+		expect(pageSource).toContain("confirmLoading={isImporting}");
+		expect(pageSource).toContain("removeModelIds");
+		expect(pageSource).toContain("enableModelIds");
+		expect(pageSource).toContain("await modal.confirm");
+		expect(pageSource).toContain("activate: false");
+		expect(pageSource).toContain('result.source !== "api"');
+		expect(pageSource).not.toContain("handleRefreshModels");
 	});
 });

@@ -12,6 +12,13 @@
 	-webkit-app-region: drag;
 }
 
+.workspaceSidebarButton {
+	position: relative;
+	z-index: 1;
+	margin-left: var(--ds-space-2);
+	-webkit-app-region: no-drag;
+}
+
 .brandCluster {
 	position: absolute;
 	left: 50%;

@@ -178,3 +178,22 @@
 .dialogAlert {
 	margin-bottom: var(--ds-space-3);
 }
+
+.discoveryDialog {
+	display: grid;
+	gap: var(--ds-space-3);
+	min-width: 0;
+}
+
+.discoveryHeader {
+	min-width: 0;
+}
+
+.discoveryHeader > :first-child {
+	min-width: 0;
+	flex: 1;
+}
+
+.discoveryTable {
+	min-width: 0;
+}

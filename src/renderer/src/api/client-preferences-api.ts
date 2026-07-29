@@ -3,6 +3,7 @@ export type ClientPreferences = {
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
 	language: LanguagePreference;
+	workspaceSidebar: WorkspaceSidebarPreferences;
 	lastComposerModel: {
 		providerId: string;
 		modelId: string;
@@ -11,6 +12,11 @@ export type ClientPreferences = {
 
 export type LanguagePreference = "system" | "en-US" | "zh-CN";
 
+export type WorkspaceSidebarPreferences = {
+	open: boolean;
+	size: number;
+};
+
 export type ClientPreferencesPatch = Partial<ClientPreferences>;
 
 export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
@@ -18,6 +24,10 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	minimizeToTrayOnClose: false,
 	theme: "system",
 	language: "system",
+	workspaceSidebar: {
+		open: true,
+		size: 260
+	},
 	lastComposerModel: null
 };
 
@@ -34,10 +44,14 @@ export function getCachedClientPreferences(): ClientPreferences {
 	return window.electronAPI.clientPreferences.getCached();
 }
 
-export async function updateClientPreferences(patch: ClientPreferencesPatch): Promise<ClientPreferences> {
-	const preferences: ClientPreferences = await window.electronAPI.clientPreferences.update(patch);
+export function dispatchClientPreferencesChanged(preferences: ClientPreferences): void {
 	window.dispatchEvent(new CustomEvent<ClientPreferences>(CLIENT_PREFERENCES_CHANGED_EVENT, {
 		detail: preferences
 	}));
+}
+
+export async function updateClientPreferences(patch: ClientPreferencesPatch): Promise<ClientPreferences> {
+	const preferences: ClientPreferences = await window.electronAPI.clientPreferences.update(patch);
+	dispatchClientPreferencesChanged(preferences);
 	return preferences;
 }

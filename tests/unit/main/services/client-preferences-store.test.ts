@@ -60,6 +60,10 @@ describe("client preferences store", () => {
 				minimizeToTrayOnClose: false,
 				theme: "system",
 				language: "system",
+				workspaceSidebar: {
+					open: true,
+					size: 260
+				},
 				lastComposerModel: {
 					providerId: "minimax",
 					modelId: "MiniMax-M3"
@@ -84,6 +88,10 @@ describe("client preferences store", () => {
 			minimizeToTrayOnClose: true,
 			theme: "system",
 			language: "system",
+			workspaceSidebar: {
+				open: true,
+				size: 260
+			},
 			lastComposerModel: null
 		});
 		expect(memory.writes.at(-1)).toBe(`${JSON.stringify(nextPreferences, null, 2)}\n`);
@@ -133,5 +141,22 @@ describe("client preferences store", () => {
 		}, memory.io);
 
 		expect(nextPreferences.autoCheckForUpdates).toBe(false);
+	});
+
+	it("normalizes and persists the global workspace sidebar layout", async () => {
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+
+		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
+			workspaceSidebar: {
+				open: false,
+				size: 900
+			}
+		}, memory.io);
+
+		expect(nextPreferences.workspaceSidebar).toEqual({
+			open: false,
+			size: 720
+		});
+		expect(memory.writes.at(-1)).toBe(`${JSON.stringify(nextPreferences, null, 2)}\n`);
 	});
 });

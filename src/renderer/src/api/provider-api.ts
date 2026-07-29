@@ -105,6 +105,29 @@ export type ProviderModelsListResult = {
 	error?: string | undefined;
 };
 
+export type DiscoveredProviderModel = Omit<ProviderModelInfo, "provider" | "endpointType">;
+
+export type ProviderTaskModelKind = keyof ProviderModelRouting;
+
+export type ProviderModelRemovalGuard =
+	| { kind: "activeModel" }
+	| { kind: "providerSelection" }
+	| { kind: "taskRouting"; task: ProviderTaskModelKind }
+	| { kind: "webSearch" };
+
+export type ManagedProviderModel = DiscoveredProviderModel & {
+	enabled: boolean;
+	removalGuards: ProviderModelRemovalGuard[];
+};
+
+export type ProviderModelsDiscoverResult = {
+	provider: string;
+	models: DiscoveredProviderModel[];
+	managedModels: ManagedProviderModel[];
+	source: "api" | "fallback";
+	error?: string | undefined;
+};
+
 export type SaveProviderConfigParams = {
 	provider: string;
 	apiKey?: string | null | undefined;
@@ -144,6 +167,33 @@ export async function listProviderModels(provider: string, refresh: boolean = fa
 		provider,
 		refresh
 	});
+}
+
+export async function discoverProviderModels(params: {
+	provider: string;
+	apiKey?: string | undefined;
+	baseUrl?: string | null | undefined;
+}): Promise<ProviderModelsDiscoverResult> {
+	const client = await createBackendClient();
+	return client.request<ProviderModelsDiscoverResult>("provider.models.discover", params);
+}
+
+export async function importProviderModels(params: {
+	provider: string;
+	models: DiscoveredProviderModel[];
+}): Promise<ProviderModelSelection> {
+	const client = await createBackendClient();
+	return client.request<ProviderModelSelection>("provider.models.import", params);
+}
+
+export async function syncProviderModels(params: {
+	provider: string;
+	upsertModels: DiscoveredProviderModel[];
+	enableModelIds: string[];
+	removeModelIds: string[];
+}): Promise<ProviderModelSelection> {
+	const client = await createBackendClient();
+	return client.request<ProviderModelSelection>("provider.models.sync", params);
 }
 
 export async function addCustomProvider(params: {

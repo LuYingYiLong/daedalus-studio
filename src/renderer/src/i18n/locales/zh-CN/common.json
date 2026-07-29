@@ -136,6 +136,10 @@
       "openSidebar": "打开侧边栏",
       "closeSidebar": "关闭侧边栏"
     },
+    "workspaceSidebar": {
+      "open": "展开工作区边栏",
+      "close": "收起工作区边栏"
+    },
     "summary": {
       "tooltip": "摘要",
       "empty": "暂无摘要",
@@ -796,7 +800,8 @@
       "dialogs": {
         "addProviderTitle": "添加供应商",
         "addModelTitle": "添加模型",
-        "editModelTitle": "编辑模型"
+        "editModelTitle": "编辑模型",
+        "discoverModelsTitle": "{{provider}}模型"
       },
       "fields": {
         "providerName": "供应商名称",
@@ -815,7 +820,25 @@
         "addModel": "添加模型",
         "clearApiKey": "清除 API Key",
         "fetchModels": "获取模型",
+        "importModels": "导入模型",
+        "applyModelChanges": "应用更改",
+        "removeModels": "删除模型",
+        "reloadModels": "重新获取模型",
         "test": "测试"
+      },
+      "discovery": {
+        "searchPlaceholder": "搜索模型 ID 或名称...",
+        "empty": "没有可管理的模型",
+        "alreadyImported": "{{model}} 已导入",
+        "selectModel": "选择 {{model}}",
+        "removeConfirmTitle": "删除所选模型？",
+        "removeConfirmDescription": "将从可用模型列表中删除 {{count}} 个模型。以后重新选择时会恢复原来的名称和能力覆盖。",
+        "guards": {
+          "activeModel": "该模型是当前默认模型，请先在默认模型设置中切换。",
+          "providerSelection": "该模型是此供应商当前保存的模型，请先切换供应商模型。",
+          "taskRouting": "该模型正被任务路由 {{task}} 使用，请先在默认模型设置中更换。",
+          "webSearch": "该模型正被联网搜索使用，请先在搜索设置中更换。"
+        }
       },
       "capabilities": {
         "imageEdit": "编辑",
@@ -837,8 +860,17 @@
         "modelNotFound": "这个模型已不在当前模型列表中，请刷新后重试",
         "noSettings": "没有可用的供应商设置",
         "providerNameConflict": "已存在同名供应商",
+        "discoverModels": "获取供应商模型失败",
+        "importModels": "导入供应商模型失败",
+        "syncModels": "应用供应商模型更改失败",
         "refreshModels": "刷新供应商模型失败",
-        "saveModel": "保存模型失败"
+        "saveModel": "保存模型失败",
+        "testConnection": "供应商连接测试失败"
+      },
+      "messages": {
+        "testSuccess": "供应商连接测试成功",
+        "importSuccess": "已导入 {{count}} 个模型",
+        "syncSuccess": "模型更改已应用：启用 {{enabled}} 个，删除 {{removed}} 个"
       }
     },
     "search": {

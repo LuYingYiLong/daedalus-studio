@@ -1,6 +1,4 @@
 .page {
-	display: grid;
-	grid-template-columns: 260px minmax(0, 1fr);
 	width: 100%;
 	min-width: 0;
 	min-height: 0;
@@ -8,17 +6,29 @@
 	overflow: hidden;
 }
 
-.page > :global(.ant-divider-vertical) {
-	align-self: stretch;
-	height: auto;
-	margin: 0;
-	border-inline-start-color: var(--ds-border);
+.workspaceSplitter {
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.workspaceSplitter > :global(.ant-splitter-bar) {
+	z-index: 16;
+}
+
+.workspaceSplitter > :global(.ant-splitter-panel) {
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
 }
 
 .workspaceSidebar {
 	display: grid;
 	grid-template-rows: auto minmax(0, 1fr) auto;
-	width: 260px;
+	width: 100%;
+	height: 100%;
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;

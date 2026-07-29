@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { useEventListener, useMemoizedFn } from "ahooks";
-import type { MenuProps } from "antd";
-import { Button, Dropdown } from "antd";
+import { Button, Tooltip } from "antd";
+import { useTranslation } from "react-i18next";
 import {
 	CLIENT_PREFERENCES_CHANGED_EVENT,
+	dispatchClientPreferencesChanged,
 	getCachedClientPreferences,
+	updateClientPreferences,
 	type ClientPreferences
 } from "@/api/client-preferences-api";
+import { Icon } from "@/assets/icons";
 import AppUpdateDialog from "@/features/app-update/AppUpdateDialog";
 import styles from "./Titlebar.module.css";
 
@@ -43,6 +46,7 @@ function getUpdateButtonLabel(state: AppUpdateState | null): string {
 }
 
 function MainTitlebar(): React.JSX.Element {
+	const { t } = useTranslation();
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(() => getCachedClientPreferences());
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
 	const [updateModalOpen, setUpdateModalOpen] = useState<boolean>(false);
@@ -101,8 +105,48 @@ function MainTitlebar(): React.JSX.Element {
 		}
 	}
 
+	const toggleWorkspaceSidebar = useMemoizedFn(async (): Promise<void> => {
+		const nextWorkspaceSidebar: ClientPreferences["workspaceSidebar"] = {
+			...clientPreferences.workspaceSidebar,
+			open: !clientPreferences.workspaceSidebar.open
+		};
+		const optimisticPreferences: ClientPreferences = {
+			...clientPreferences,
+			workspaceSidebar: nextWorkspaceSidebar
+		};
+		setClientPreferences(optimisticPreferences);
+		dispatchClientPreferencesChanged(optimisticPreferences);
+		try {
+			const savedPreferences: ClientPreferences = await updateClientPreferences({
+				workspaceSidebar: nextWorkspaceSidebar
+			});
+			setClientPreferences(savedPreferences);
+		} catch (error: unknown) {
+			console.error("[Titlebar] update workspace sidebar failed", error);
+			setClientPreferences(clientPreferences);
+			dispatchClientPreferencesChanged(clientPreferences);
+		}
+	});
+
+	const workspaceSidebarLabel: string = clientPreferences.workspaceSidebar.open
+		? t("agentPage.workspaceSidebar.close")
+		: t("agentPage.workspaceSidebar.open");
+
 	return (
 		<div className={styles.root}>
+			<Tooltip title={workspaceSidebarLabel}>
+				<Button
+					type="text"
+					shape="circle"
+					className={styles.workspaceSidebarButton}
+					aria-label={workspaceSidebarLabel}
+					aria-pressed={clientPreferences.workspaceSidebar.open}
+					icon={<Icon name={clientPreferences.workspaceSidebar.open ? "layout-left-toggled" : "layout-left"} />}
+					onClick={(): void => {
+						void toggleWorkspaceSidebar();
+					}}
+				/>
+			</Tooltip>
 			<div className={styles.brandCluster}>
 				<p className={styles.brandName}>Daedalus Studio</p>
 				{showUpdateButton ? (

@@ -43,13 +43,13 @@ describe("HomePage git diff review source", () => {
 		expect(resizeSource).toContain("updateSideDock({ ...sessionLayout.side, open: false }, false);");
 	});
 
-	it("adds a fixed layout-right top menu button for opening the side dock", () => {
+	it("adds a fixed state-aware layout-right top menu button for the side dock", () => {
 		expect(agentSource).toContain("const showDockControls: boolean = !isHome || workspaceForActions !== null;");
 		expect(agentSource).toContain("const showSideDockButton: boolean = showDockControls;");
 		expect(agentSource).toContain("className={styles.floatingActionSlot}");
 		expect(agentSource).toContain("className={styles.floatingActions}");
 		expect(agentSource).not.toContain("Affix");
-		expect(agentSource).toContain("icon={<Icon name=\"layout-right\" />}");
+		expect(agentSource).toContain('icon={<Icon name={sideDockOpen ? "layout-right-toggled" : "layout-right"} />}');
 		expect(agentSource).toContain("onClick={toggleSideDock}");
 		expect(agentSource).toContain("aria-pressed={sideDockOpen}");
 	});

@@ -136,6 +136,10 @@
       "openSidebar": "Open sidebar",
       "closeSidebar": "Close sidebar"
     },
+    "workspaceSidebar": {
+      "open": "Show workspace sidebar",
+      "close": "Hide workspace sidebar"
+    },
     "summary": {
       "tooltip": "Summary",
       "empty": "No summary yet",
@@ -796,7 +800,8 @@
       "dialogs": {
         "addProviderTitle": "Add provider",
         "addModelTitle": "Add model",
-        "editModelTitle": "Edit model"
+        "editModelTitle": "Edit model",
+        "discoverModelsTitle": "{{provider}} Models"
       },
       "fields": {
         "providerName": "Provider name",
@@ -815,7 +820,25 @@
         "addModel": "Add model",
         "clearApiKey": "Clear API key",
         "fetchModels": "Fetch models",
+        "importModels": "Import models",
+        "applyModelChanges": "Apply changes",
+        "removeModels": "Remove models",
+        "reloadModels": "Reload models",
         "test": "Test"
+      },
+      "discovery": {
+        "searchPlaceholder": "Search model ID or name...",
+        "empty": "No models available to manage",
+        "alreadyImported": "{{model}} is already imported",
+        "selectModel": "Select {{model}}",
+        "removeConfirmTitle": "Remove selected models?",
+        "removeConfirmDescription": "{{count}} models will be removed from the available model list. Selecting them again later will restore their local names and capability overrides.",
+        "guards": {
+          "activeModel": "This is the active default model. Choose another model in Default Model settings first.",
+          "providerSelection": "This is the provider's saved model. Choose another provider model first.",
+          "taskRouting": "This model is used by the {{task}} task route. Change it in Default Model settings first.",
+          "webSearch": "This model is used by Web Search. Change it in Search settings first."
+        }
       },
       "capabilities": {
         "imageEdit": "Edit",
@@ -837,8 +860,17 @@
         "modelNotFound": "This model is no longer in the current model list. Refresh and try again",
         "noSettings": "No provider settings available",
         "providerNameConflict": "A provider with this name already exists",
+        "discoverModels": "Failed to discover provider models",
+        "importModels": "Failed to import provider models",
+        "syncModels": "Failed to apply provider model changes",
         "refreshModels": "Failed to refresh provider models",
-        "saveModel": "Failed to save model"
+        "saveModel": "Failed to save model",
+        "testConnection": "Provider connection test failed"
+      },
+      "messages": {
+        "testSuccess": "Provider connection test succeeded",
+        "importSuccess": "Imported {{count}} models",
+        "syncSuccess": "Model changes applied: {{enabled}} enabled, {{removed}} removed"
       }
     },
     "search": {

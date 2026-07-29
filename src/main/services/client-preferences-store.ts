@@ -6,6 +6,10 @@ export type ClientPreferences = {
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
 	language: "system" | "en-US" | "zh-CN";
+	workspaceSidebar: {
+		open: boolean;
+		size: number;
+	};
 	lastComposerModel: {
 		providerId: string;
 		modelId: string;
@@ -19,6 +23,10 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	minimizeToTrayOnClose: false,
 	theme: "system",
 	language: "system",
+	workspaceSidebar: {
+		open: true,
+		size: 260
+	},
 	lastComposerModel: null
 };
 
@@ -44,6 +52,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function normalizeWorkspaceSidebar(value: unknown): ClientPreferences["workspaceSidebar"] {
+	if (!isRecord(value)) {
+		return { ...DEFAULT_CLIENT_PREFERENCES.workspaceSidebar };
+	}
+
+	const open: boolean = typeof value.open === "boolean"
+		? value.open
+		: DEFAULT_CLIENT_PREFERENCES.workspaceSidebar.open;
+	const size: number = typeof value.size === "number" && Number.isFinite(value.size)
+		? Math.min(720, Math.max(150, Math.trunc(value.size)))
+		: DEFAULT_CLIENT_PREFERENCES.workspaceSidebar.size;
+	return { open, size };
+}
+
 export function normalizeClientPreferences(value: unknown): { preferences: ClientPreferences; normalized: boolean } {
 	if (!isRecord(value)) {
 		return {
@@ -66,6 +88,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 		value.language === "en-US" || value.language === "zh-CN" || value.language === "system"
 			? value.language
 			: DEFAULT_CLIENT_PREFERENCES.language;
+	const workspaceSidebar: ClientPreferences["workspaceSidebar"] = normalizeWorkspaceSidebar(value.workspaceSidebar);
 	const lastComposerModel = isRecord(value.lastComposerModel)
 		&& typeof value.lastComposerModel.providerId === "string"
 		&& value.lastComposerModel.providerId.trim().length > 0
@@ -83,14 +106,16 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			minimizeToTrayOnClose,
 			theme: themePreference,
 			language: languagePreference,
+			workspaceSidebar,
 			lastComposerModel
 		},
 		normalized: value.autoCheckForUpdates !== autoCheckForUpdates
 			|| value.minimizeToTrayOnClose !== minimizeToTrayOnClose
 			|| value.theme !== themePreference
 			|| value.language !== languagePreference
+			|| JSON.stringify(value.workspaceSidebar ?? null) !== JSON.stringify(workspaceSidebar)
 			|| JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel)
-			|| Object.keys(value).some((key: string): boolean => key !== "autoCheckForUpdates" && key !== "minimizeToTrayOnClose" && key !== "theme" && key !== "language" && key !== "lastComposerModel")
+			|| Object.keys(value).some((key: string): boolean => key !== "autoCheckForUpdates" && key !== "minimizeToTrayOnClose" && key !== "theme" && key !== "language" && key !== "workspaceSidebar" && key !== "lastComposerModel")
 	};
 }
 
@@ -111,6 +136,14 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	}
 	if (value.language === "en-US" || value.language === "zh-CN" || value.language === "system") {
 		patch.language = value.language;
+	}
+	if (
+		isRecord(value.workspaceSidebar)
+		&& typeof value.workspaceSidebar.open === "boolean"
+		&& typeof value.workspaceSidebar.size === "number"
+		&& Number.isFinite(value.workspaceSidebar.size)
+	) {
+		patch.workspaceSidebar = normalizeWorkspaceSidebar(value.workspaceSidebar);
 	}
 	if (value.lastComposerModel === null) {
 		patch.lastComposerModel = null;
@@ -160,9 +193,10 @@ export async function updateClientPreferencesFile(
 	io: ClientPreferencesStoreIo = DEFAULT_IO
 ): Promise<ClientPreferences> {
 	const loaded = await loadClientPreferencesFile(filePath, io);
+	const normalizedPatch: ClientPreferencesPatch = normalizeClientPreferencesPatch(patch);
 	const nextPreferences: ClientPreferences = {
 		...loaded.preferences,
-		...patch
+		...normalizedPatch
 	};
 	await saveClientPreferencesFile(filePath, nextPreferences, io);
 	return nextPreferences;
