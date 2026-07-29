@@ -23,12 +23,26 @@ const releaseManifestName = "daedalus-backend-win32-x64.json";
 const releaseBaseUrl = "https://github.com/LuYingYiLong/daedalus-backend/releases";
 const maxArchiveBytes = 256 * 1024 * 1024;
 const expectedNodeVersion = "24.18.0";
-const expectedProtocolVersion = 2;
-const expectedPluginProtocolVersion = 1;
 
 function fail(message) {
 	throw new Error(`[prepare-backend-bootstrap] ${message}`);
 }
+
+function assertProtocolVersion(value, fieldName) {
+	if (!Number.isSafeInteger(value) || value <= 0) {
+		fail(`package.json ${fieldName} must be a positive integer.`);
+	}
+	return value;
+}
+
+const expectedProtocolVersion = assertProtocolVersion(
+	packageJson.backendProtocolVersion,
+	"backendProtocolVersion"
+);
+const expectedPluginProtocolVersion = assertProtocolVersion(
+	packageJson.godotPluginProtocolVersion,
+	"godotPluginProtocolVersion"
+);
 
 function assertVersion(value) {
 	if (typeof value !== "string" || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(value)) {

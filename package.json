@@ -6,6 +6,8 @@
   "author": "LuYingYiLong",
   "backendBootstrapVersion": "1.1.6",
   "godotPluginVersion": "1.3.1",
+  "backendProtocolVersion": 3,
+  "godotPluginProtocolVersion": 3,
   "main": "out/main/index.js",
   "config": {
     "electron_mirror": "https://npmmirror.com/mirrors/electron/"

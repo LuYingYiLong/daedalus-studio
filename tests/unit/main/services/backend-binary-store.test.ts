@@ -46,9 +46,9 @@ async function createInstalledBackend(version: string): Promise<InstalledBackend
 			platform: "win32",
 			arch: "x64",
 			nodeVersion: "24.18.0",
-			protocolVersion: 2,
-			minPluginProtocolVersion: 1,
-			maxPluginProtocolVersion: 1,
+			protocolVersion: 3,
+			minPluginProtocolVersion: 3,
+			maxPluginProtocolVersion: 3,
 			minStudioVersion: "1.0.1",
 			publishedAt: "2026-07-24T12:00:00.000Z",
 			authenticode: "unsigned",
@@ -121,7 +121,7 @@ describe("backend binary update transactions", () => {
 			schemaVersion: 2,
 			distribution: "binary",
 			version: "1.1.2",
-			protocolVersion: 2
+			protocolVersion: 3
 		});
 
 		await commitBackendCandidate("1.1.2");
