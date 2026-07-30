@@ -348,9 +348,6 @@ function DocumentationSettingsPage(): React.JSX.Element {
 												Godot {document.branch}
 											</Typography.Title>
 											<Tag color="blue">{document.branch}</Tag>
-											<Typography.Text type="secondary" className={styles.commit}>
-												{document.commitSha.slice(0, 8)}
-											</Typography.Text>
 										</div>
 										<Typography.Text type="secondary" className={styles.documentMeta}>
 											{t("settings.documentation.item.stats", {
