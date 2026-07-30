@@ -936,7 +936,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 							}
 						}}
 						locale={{
-							emptyText: (
+							emptyText: isDiscovering ? null : (
 								<Empty
 									image={Empty.PRESENTED_IMAGE_SIMPLE}
 									description={discoveryError ?? t("settings.provider.discovery.empty")}

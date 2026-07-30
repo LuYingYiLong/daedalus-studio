@@ -40,6 +40,7 @@ describe("Provider customizations", () => {
 		expect(pageSource).toContain("disabled: model.removalGuards.length > 0");
 		expect(pageSource).toContain("selectedRowKeys: selectedDiscoveredModelIds");
 		expect(pageSource).toContain("confirmLoading={isImporting}");
+		expect(pageSource).toContain("emptyText: isDiscovering ? null :");
 		expect(pageSource).toContain("removeModelIds");
 		expect(pageSource).toContain("enableModelIds");
 		expect(pageSource).toContain("await modal.confirm");

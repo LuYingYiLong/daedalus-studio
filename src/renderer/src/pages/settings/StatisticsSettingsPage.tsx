@@ -1,5 +1,5 @@
 import { Column, Line, Pie } from "@ant-design/charts";
-import { Alert, Card, Divider, Empty, Segmented, Spin, Statistic, Tooltip, Typography } from "antd";
+import { Alert, Card, Empty, Segmented, Spin, Statistic, Tooltip, Typography } from "antd";
 import { useMemo, useState } from "react";
 import { useRequest } from "ahooks";
 import { useTranslation } from "react-i18next";
@@ -14,6 +14,14 @@ import {
 	type UsageMetricsTrendPoint
 } from "@/api/usage-metrics-api";
 import styles from "./StatisticsSettingsPage.module.css";
+
+const METRIC_CLASS_NAMES = {
+	root: styles.metricCard,
+	title: styles.metricTitle,
+	content: styles.metricContent,
+	value: styles.metricValue,
+	suffix: styles.metricSuffix
+};
 
 type TimeRangeKey = "7d" | "30d" | "90d" | "all";
 
@@ -299,10 +307,10 @@ function StatisticsSettingsPage(): React.JSX.Element {
 
 			<div className={styles.content}>
 				{error !== undefined ? (
-					<Alert type="error" showIcon message={t("settings.statistics.errors.load")} description={error instanceof Error ? error.message : String(error)} />
-				) : null}
+					<Alert type="error" showIcon title={t("settings.statistics.errors.load")} description={error instanceof Error ? error.message : String(error)} />
+				) : null}title
 				{summary !== null && !summary.available ? (
-					<Alert type="warning" showIcon message={t("settings.statistics.unavailable.title")} description={summary.errorMessage ?? t("settings.statistics.unavailable.description")} />
+					<Alert type="warning" showIcon title={t("settings.statistics.unavailable.title")} description={summary.errorMessage ?? t("settings.statistics.unavailable.description")} />
 				) : null}
 
 				{isLoading && data === undefined ? (
@@ -315,28 +323,29 @@ function StatisticsSettingsPage(): React.JSX.Element {
 					<>
 						<div className={styles.metricGrid}>
 							<Statistic
+								classNames={METRIC_CLASS_NAMES}
 								title={t("settings.statistics.metrics.requests")}
 								value={summary.requests}
 								formatter={(value): string => formatInteger(Number(value))}
 							/>
-							<Divider vertical className={styles.divider} />
 							<Statistic
+								classNames={METRIC_CLASS_NAMES}
 								title={t("settings.statistics.metrics.tokens")}
 								value={formatCompact(summary.realTotalTokens)}
 								suffix={t("settings.statistics.metrics.tokensSuffix")}
 							/>
-							<Divider vertical className={styles.divider} />
 							<Statistic
+								classNames={METRIC_CLASS_NAMES}
 								title={t("settings.statistics.metrics.cacheHitRate")}
 								value={formatPercent(summary.cacheHitRate)}
 							/>
-							<Divider vertical className={styles.divider} />
 							<Statistic
+								classNames={METRIC_CLASS_NAMES}
 								title={t("settings.statistics.metrics.avgDuration")}
 								value={formatDuration(averageDurationMs)}
 							/>
-							<Divider vertical className={styles.divider} />
 							<Statistic
+								classNames={METRIC_CLASS_NAMES}
 								title={t("settings.statistics.metrics.avgFirstToken")}
 								value={formatDuration(averageFirstTokenMs)}
 							/>

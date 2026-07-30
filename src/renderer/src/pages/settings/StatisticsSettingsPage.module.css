@@ -31,6 +31,7 @@
 }
 
 .content {
+	container-type: inline-size;
 	display: grid;
 	align-content: start;
 	gap: var(--ds-space-2);
@@ -51,20 +52,64 @@
 
 .metricGrid {
 	display: grid;
-	grid-template-columns: repeat(5, minmax(0, 1fr) auto);
-	gap: var(--ds-space-2);
+	grid-template-columns: repeat(5, minmax(0, 1fr));
 	border: 1px solid var(--ds-border);
 	background: var(--ds-surface);
 	border-radius: var(--ds-space-2);
 	padding: var(--ds-space-2);
 }
 
-.divider {
-	height: 100%;
+.metricCard {
+	min-width: 0;
+	padding-inline: clamp(6px, 1.25cqi, 16px);
 }
 
-.metricCard :global(.ant-statistic-title) {
+.metricCard + .metricCard {
+	border-inline-start: 1px solid var(--ds-border);
+}
+
+.metricTitle {
 	margin-bottom: 6px;
+	overflow: hidden;
+	font-size: clamp(11px, 1.4cqi, 14px);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.metricContent {
+	display: flex;
+	align-items: baseline;
+	min-width: 0;
+	overflow: hidden;
+	font-size: clamp(16px, 2.6cqi, 28px);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.metricValue {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.metricSuffix {
+	flex: 0 0 auto;
+	font-size: 0.55em;
+}
+
+@container (max-width: 650px) {
+	.metricCard {
+		padding-inline: 6px;
+	}
+
+	.metricTitle {
+		margin-bottom: 3px;
+	}
+
+	.metricSuffix {
+		display: none;
+	}
 }
 
 .heatmapCard {
@@ -154,7 +199,6 @@
 }
 
 @media (max-width: 1180px) {
-	.metricGrid,
 	.chartGrid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -168,10 +212,6 @@
 
 	.actions {
 		justify-content: flex-start;
-	}
-
-	.metricGrid {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 
 	.chartGrid {

@@ -38,6 +38,7 @@ sessionLayoutService.registerIpc();
 
 configureAppIdentity();
 
+const hasSingleInstanceLock: boolean = app.requestSingleInstanceLock();
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
@@ -171,6 +172,13 @@ function requestRendererWindowReveal(browserWindow: BrowserWindow): void {
 		}
 	}, RENDERER_READY_FALLBACK_MS);
 	rendererReadyFallbackTimers.set(browserWindow.id, fallbackTimer);
+}
+
+function activateMainWindow(): void {
+	if (mainWindow === null || mainWindow.isDestroyed()) {
+		return;
+	}
+	requestRendererWindowReveal(mainWindow);
 }
 
 function markRendererWindowReady(browserWindow: BrowserWindow): void {
@@ -397,44 +405,54 @@ function createWindow(): void {
 	loadRendererWindow(mainWindow, "main");
 }
 
-app.whenReady().then(async () => {
-	const preferences: ClientPreferences = await clientPreferencesService.load();
-	clientPreferencesService.onDidChange((nextPreferences: ClientPreferences): void => {
-		applyWindowThemeToAllWindows();
-		broadcastClientPreferencesChanged(nextPreferences);
-		windowLifecycleController.syncTrayWithPreferences();
+if (!hasSingleInstanceLock) {
+	app.quit();
+} else {
+	app.on("second-instance", (): void => {
+		activateMainWindow();
 	});
-	nativeTheme.on("updated", (): void => {
-		applyWindowThemeToAllWindows();
+
+	void app.whenReady().then(async (): Promise<void> => {
+		const preferences: ClientPreferences = await clientPreferencesService.load();
+		clientPreferencesService.onDidChange((nextPreferences: ClientPreferences): void => {
+			applyWindowThemeToAllWindows();
+			broadcastClientPreferencesChanged(nextPreferences);
+			windowLifecycleController.syncTrayWithPreferences();
+		});
+		nativeTheme.on("updated", (): void => {
+			applyWindowThemeToAllWindows();
+		});
+		createWindow();
+		let checkedStartupUpdates: boolean = false;
+		const checkStartupUpdates = (state: ReturnType<typeof backendBootstrapService.getState>): void => {
+			if (!checkedStartupUpdates && state.status === "healthy") {
+				checkedStartupUpdates = true;
+				void appUpdateService.checkForUpdatesIfEnabled(preferences.autoCheckForUpdates);
+			}
+		};
+		backendBootstrapService.onDidChangeState(checkStartupUpdates);
+		void backendBootstrapService.prepare().then(checkStartupUpdates);
+		void godotProjectsService.startupMaintenance();
+
+		app.on("activate", () => {
+			if (BrowserWindow.getAllWindows().length === 0) {
+				createWindow();
+				return;
+			}
+			activateMainWindow();
+		});
 	});
-	createWindow();
-	let checkedStartupUpdates: boolean = false;
-	const checkStartupUpdates = (state: ReturnType<typeof backendBootstrapService.getState>): void => {
-		if (!checkedStartupUpdates && state.status === "healthy") {
-			checkedStartupUpdates = true;
-			void appUpdateService.checkForUpdatesIfEnabled(preferences.autoCheckForUpdates);
+
+	app.on("before-quit", () => {
+		allowSettingsWindowClose = true;
+		windowLifecycleController.markQuitting();
+		terminalPtyService.dispose();
+		backendManager.detach();
+	});
+
+	app.on("window-all-closed", () => {
+		if (process.platform !== "darwin") {
+			app.quit();
 		}
-	};
-	backendBootstrapService.onDidChangeState(checkStartupUpdates);
-	void backendBootstrapService.prepare().then(checkStartupUpdates);
-	void godotProjectsService.startupMaintenance();
-
-	app.on("activate", () => {
-		if (BrowserWindow.getAllWindows().length === 0) {
-			createWindow();
-		}
 	});
-});
-
-app.on("before-quit", () => {
-	allowSettingsWindowClose = true;
-	windowLifecycleController.markQuitting();
-	terminalPtyService.dispose();
-	backendManager.detach();
-});
-
-app.on("window-all-closed", () => {
-	if (process.platform !== "darwin") {
-		app.quit();
-	}
-});
+}
