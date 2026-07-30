@@ -47,9 +47,9 @@ const rendererShellReadyWindows: WeakSet<BrowserWindow> = new WeakSet();
 const rendererRevealRequestedWindows: WeakSet<BrowserWindow> = new WeakSet();
 const rendererReadyFallbackTimers: Map<number, ReturnType<typeof setTimeout>> = new Map();
 const RENDERER_READY_FALLBACK_MS: number = 3_500;
-const SETTINGS_WINDOW_PREWARM_DELAY_MS: number = 750;
+const SETTINGS_WINDOW_PREWARM_DELAY_MS: number = 100;
 let settingsWindowPrewarmTimer: ReturnType<typeof setTimeout> | null = null;
-let allowSettingsWindowClose: boolean = false;
+let isAppQuitting: boolean = false;
 let pendingSettingsPage: string = "provider";
 const SETTINGS_PAGE_KEYS: readonly string[] = [
 	"provider",
@@ -67,6 +67,8 @@ const SETTINGS_PAGE_KEYS: readonly string[] = [
 ];
 windowLifecycleController.registerIpc();
 appUpdateService.setBeforeClientInstall(async (): Promise<void> => {
+	isAppQuitting = true;
+	cancelSettingsWindowPrewarm();
 	windowLifecycleController.markQuitting();
 	terminalPtyService.dispose();
 	backendManager.detach();
@@ -250,6 +252,7 @@ function loadRendererWindow(browserWindow: BrowserWindow, view: "main" | "settin
 }
 
 function createSettingsWindow(page: string): BrowserWindow | null {
+	cancelSettingsWindowPrewarm();
 	if (mainWindow === null || mainWindow.isDestroyed()) {
 		return null;
 	}
@@ -295,21 +298,9 @@ function createSettingsWindow(page: string): BrowserWindow | null {
 		void shell.openExternal(url);
 		return { action: "deny" };
 	});
-	settingsWindow.on("close", (event): void => {
-		if (
-			!allowSettingsWindowClose
-			&& mainWindow !== null
-			&& !mainWindow.isDestroyed()
-		) {
-			event.preventDefault();
-			if (settingsWindow !== null) {
-				rendererRevealRequestedWindows.delete(settingsWindow);
-			}
-			settingsWindow?.hide();
-		}
-	});
 	settingsWindow.on("closed", () => {
 		settingsWindow = null;
+		scheduleSettingsWindowPrewarm();
 	});
 	loadRendererWindow(settingsWindow, "settings", page);
 	return settingsWindow;
@@ -322,9 +313,20 @@ function openSettingsWindow(page: string = "provider"): void {
 	}
 }
 
+function cancelSettingsWindowPrewarm(): void {
+	if (settingsWindowPrewarmTimer === null) {
+		return;
+	}
+	clearTimeout(settingsWindowPrewarmTimer);
+	settingsWindowPrewarmTimer = null;
+}
+
 function scheduleSettingsWindowPrewarm(): void {
 	if (
-		settingsWindowPrewarmTimer !== null
+		isAppQuitting
+		|| settingsWindowPrewarmTimer !== null
+		|| mainWindow === null
+		|| mainWindow.isDestroyed()
 		|| (settingsWindow !== null && !settingsWindow.isDestroyed())
 	) {
 		return;
@@ -332,7 +334,8 @@ function scheduleSettingsWindowPrewarm(): void {
 	settingsWindowPrewarmTimer = setTimeout((): void => {
 		settingsWindowPrewarmTimer = null;
 		if (
-			mainWindow !== null
+			!isAppQuitting
+			&& mainWindow !== null
 			&& !mainWindow.isDestroyed()
 			&& (settingsWindow === null || settingsWindow.isDestroyed())
 		) {
@@ -393,12 +396,8 @@ function createWindow(): void {
 
 	mainWindow.on("closed", () => {
 		mainWindow = null;
-		if (settingsWindowPrewarmTimer !== null) {
-			clearTimeout(settingsWindowPrewarmTimer);
-			settingsWindowPrewarmTimer = null;
-		}
+		cancelSettingsWindowPrewarm();
 		if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
-			allowSettingsWindowClose = true;
 			settingsWindow.close();
 		}
 		windowLifecycleController.quit();
@@ -445,7 +444,8 @@ if (!hasSingleInstanceLock) {
 	});
 
 	app.on("before-quit", () => {
-		allowSettingsWindowClose = true;
+		isAppQuitting = true;
+		cancelSettingsWindowPrewarm();
 		windowLifecycleController.markQuitting();
 		terminalPtyService.dispose();
 		backendManager.detach();

@@ -21,14 +21,21 @@ describe("settings window lifecycle", () => {
 		expect(settingsWindowSource).toContain('document.title = t("settings.menu.fallbackTitle");');
 	});
 
-	it("prewarms and reuses the hidden settings renderer while the main window remains alive", () => {
+	it("prewarms a fresh hidden settings window after startup and each real close", () => {
 		const mainSource: string = readRepoFile("src", "main", "index.ts");
 
+		expect(mainSource).toContain("function openSettingsWindow(page: string");
+		expect(mainSource).toContain("createSettingsWindow(page)");
+		expect(mainSource).toContain('settingsWindow.on("closed"');
+		expect(mainSource).toContain("settingsWindow = null");
 		expect(mainSource).toContain("scheduleSettingsWindowPrewarm()");
+		expect(mainSource).toContain("SETTINGS_WINDOW_PREWARM_DELAY_MS");
 		expect(mainSource).toContain('createSettingsWindow("provider")');
-		expect(mainSource).toContain("event.preventDefault()");
-		expect(mainSource).toContain("settingsWindow?.hide()");
-		expect(mainSource).toContain("allowSettingsWindowClose = true");
+		expect(mainSource).toContain("cancelSettingsWindowPrewarm()");
+		expect(mainSource).toContain("isAppQuitting");
+		expect(mainSource).not.toContain("settingsWindow?.hide()");
+		expect(mainSource).not.toContain("allowSettingsWindowClose");
+		expect(mainSource).not.toContain("event.preventDefault()");
 	});
 
 	it("shows a lightweight settings shell immediately and swaps in content after critical fonts load", () => {

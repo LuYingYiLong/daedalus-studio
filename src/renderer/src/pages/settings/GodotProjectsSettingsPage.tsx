@@ -240,11 +240,11 @@ function GodotProjectsSettingsPage(): React.JSX.Element {
 					<Button loading={actionLoading("upgrade-all")} onClick={(): void => { void runAction("upgrade-all"); }}>
 						{t("settings.godotProjects.actions.upgradeAll", { defaultValue: "Upgrade all" })}
 					</Button>
-					<Button icon={<Icon name="add" />} type="primary" loading={actionLoading("add")} onClick={(): void => { void runAction("add"); }}>
-						{t("settings.godotProjects.actions.add", { defaultValue: "Add project" })}
-					</Button>
 					<Button loading={actionLoading("scan")} onClick={(): void => { void runAction("scan"); }}>
 						{t("settings.godotProjects.actions.scan", { defaultValue: "Rescan" })}
+					</Button>
+					<Button icon={<Icon name="add" />} type="primary" loading={actionLoading("add")} onClick={(): void => { void runAction("add"); }}>
+						{t("settings.godotProjects.actions.add", { defaultValue: "Add project" })}
 					</Button>
 				</Space>
 			</Flex>
@@ -255,7 +255,7 @@ function GodotProjectsSettingsPage(): React.JSX.Element {
 				<Alert
 					showIcon
 					type="warning"
-					message={t("settings.godotProjects.pendingRestart", {
+					title={t("settings.godotProjects.pendingRestart", {
 						defaultValue: "Plugin changes are waiting for Godot to close."
 					})}
 					description={t("settings.godotProjects.pendingRestartDescription", {
@@ -267,7 +267,7 @@ function GodotProjectsSettingsPage(): React.JSX.Element {
 				<Alert
 					showIcon
 					type="info"
-					message={t("settings.godotProjects.bundleReady", {
+					title={t("settings.godotProjects.bundleReady", {
 						defaultValue: "Bundled plugin {{version}} is bound to Studio {{studioVersion}}.",
 						version: result.plugin.version,
 						studioVersion: result.plugin.studioVersion
