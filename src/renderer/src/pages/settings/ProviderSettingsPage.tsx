@@ -726,8 +726,6 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				</Button>
 			</aside>
 
-			<Divider vertical size="small" className={styles.divider} />
-
 			<section className={styles.detailPane}>
 				<div className={styles.detailContent}>
 					<header className={styles.detailHeader}>

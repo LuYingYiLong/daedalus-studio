@@ -1,0 +1,137 @@
+.page {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	gap: var(--ds-space-3);
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	padding: 0 var(--ds-space-2) var(--ds-space-2);
+	overflow: hidden;
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ds-space-3);
+	min-width: 0;
+	user-select: none;
+}
+
+.titleRow,
+.headerActions,
+.documentTitleRow,
+.documentActions,
+.sourceRow {
+	display: flex;
+	align-items: center;
+	gap: var(--ds-space-2);
+	min-width: 0;
+}
+
+.title,
+.documentTitle {
+	margin: 0 !important;
+}
+
+.body {
+	min-width: 0;
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
+.centerState {
+	display: grid;
+	place-items: center;
+	min-height: 220px;
+}
+
+.documentList {
+	display: grid;
+	align-content: start;
+	gap: var(--ds-space-2);
+	min-width: 0;
+}
+
+.documentItem {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--ds-space-3);
+	min-width: 0;
+	padding: var(--ds-space-3);
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-surface);
+	user-select: none;
+}
+
+.documentMain {
+	display: grid;
+	gap: 4px;
+	min-width: 0;
+}
+
+.commit,
+.documentMeta,
+.sourceRow {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.commit {
+	font-family: var(--ant-font-family-code);
+	font-size: 12px;
+}
+
+.documentMeta {
+	display: block;
+}
+
+.modalIntro,
+.progressBody {
+	display: grid;
+	gap: var(--ds-space-3);
+}
+
+.branchRow {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: var(--ds-space-2);
+	align-items: end;
+}
+
+.branchField {
+	margin-bottom: 0 !important;
+}
+
+.progressHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ds-space-2);
+}
+
+.progressMessage {
+	min-height: 22px;
+}
+
+.modal {
+	user-select: none;
+}
+
+@media (max-width: 760px) {
+	.header,
+	.documentItem {
+		align-items: stretch;
+		grid-template-columns: 1fr;
+		flex-direction: column;
+	}
+
+	.headerActions,
+	.documentActions {
+		justify-content: flex-end;
+	}
+}

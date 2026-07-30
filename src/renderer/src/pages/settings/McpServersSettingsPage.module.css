@@ -55,7 +55,7 @@
 	min-width: 0;
 	padding: var(--ds-space-2);
 	background-color: var(--ds-surface);
-	border-radius: var(--ds-radius-sm);
+	border-radius: var(--ds-radius-lg);
 	border: 1px solid var(--ds-border);
 	user-select: none;
 }

@@ -15,6 +15,7 @@ import SearchSettingsPage from "@/pages/settings/SearchSettingsPage";
 import StatisticsSettingsPage from "@/pages/settings/StatisticsSettingsPage";
 import AboutSettingsPage from "@/pages/settings/AboutSettingsPage";
 import GodotProjectsSettingsPage from "@/pages/settings/GodotProjectsSettingsPage";
+import DocumentationSettingsPage from "@/pages/settings/DocumentationSettingsPage";
 import styles from "./SettingsWindow.module.css";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -27,6 +28,7 @@ type SettingsPageKey =
 	| "personalization"
 	| "mcp_servers"
 	| "skills"
+	| "documentation"
 	| "godot_projects"
 	| "archived_sessions"
 	| "about";
@@ -46,6 +48,7 @@ const menuItemConfigs: SettingsMenuItemConfig[] = [
 	{ key: "personalization", labelKey: "settings.menu.personalization", icon: <Icon name="magic" /> },
 	{ key: "mcp_servers", labelKey: "settings.menu.mcpServers", icon: <Icon name="mcp" /> },
 	{ key: "skills", labelKey: "settings.menu.skills", icon: <Icon name="skill" /> },
+	{ key: "documentation", labelKey: "settings.menu.documentation", icon: <Icon name="book" /> },
 	{ key: "godot_projects", labelKey: "settings.menu.godotProjects", icon: <Icon name="godot" /> },
 	{ key: "archived_sessions", labelKey: "settings.menu.archivedSessions", icon: <Icon name="archive" /> },
 	{ key: "about", labelKey: "settings.menu.about", icon: <Icon name="info" /> }
@@ -132,6 +135,8 @@ function SettingsWindow(): React.JSX.Element {
 					<McpServersSettingsPage />
 				) : activePage === "skills" ? (
 					<SkillsSettingsPage />
+				) : activePage === "documentation" ? (
+					<DocumentationSettingsPage />
 				) : activePage === "godot_projects" ? (
 					<GodotProjectsSettingsPage />
 				) : activePage === "archived_sessions" ? (

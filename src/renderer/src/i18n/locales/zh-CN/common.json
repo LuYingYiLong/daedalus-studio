@@ -559,6 +559,7 @@
       "personalization": "个性化",
       "mcpServers": "MCP 服务器",
       "skills": "技能",
+      "documentation": "文档",
       "godotProjects": "Godot 项目",
       "archivedSessions": "已归档会话",
       "about": "关于",
@@ -574,7 +575,75 @@
       "enable": "启用",
       "off": "关闭",
       "on": "开启",
-      "save": "保存"
+      "save": "保存",
+      "close": "关闭",
+      "update": "更新"
+    },
+    "documentation": {
+      "title": "文档",
+      "enabled": "启用文档查询",
+      "add": "添加文档",
+      "empty": "尚未安装 Godot 离线文档。",
+      "item": {
+        "stats": "{{documents}} 个文档 · {{chunks}} 个分块 · {{classes}} 个类 · {{size}}",
+        "updated": "更新于 {{date}}",
+        "licenses": "手册：CC BY 3.0 · 类参考：MIT"
+      },
+      "modal": {
+        "title": "添加 Godot 文档",
+        "sourceTitle": "Godot 官方文档",
+        "sourceDescription": "Daedalus 将从 godotengine/godot-docs 下载所选分支，并在本机建立全文索引。Studio 安装包不包含文档。",
+        "branch": "文档分支",
+        "branchRequired": "请选择文档分支。",
+        "branchPlaceholder": "选择或搜索分支",
+        "installed": "已安装",
+        "refresh": "刷新分支",
+        "notice": "下载内容会固定到不可变 commit。磁盘占用取决于所选分支和生成的 SQLite 索引。",
+        "download": "下载并建立索引"
+      },
+      "progress": {
+        "title": "Godot {{branch}} 文档",
+        "cancel": "取消操作",
+        "retrying": "连接中断，正在重新下载文档…",
+        "stage": {
+          "resolving": "解析分支",
+          "downloading": "正在下载",
+          "extracting": "正在解压",
+          "indexing": "正在索引",
+          "finalizing": "正在完成",
+          "completed": "已完成",
+          "failed": "失败",
+          "cancelled": "已取消"
+        },
+        "message": {
+          "resolving": "正在把所选分支解析为不可变 commit…",
+          "downloading": "正在从 Godot 官方文档仓库下载…",
+          "extracting": "正在校验并解压文档压缩包…",
+          "indexing": "正在建立本地符号和全文搜索索引…",
+          "finalizing": "正在启用新的文档 generation…",
+          "completed": "文档索引已可使用。",
+          "failed": "文档操作失败。",
+          "cancelled": "文档操作已取消。"
+        }
+      },
+      "remove": {
+        "title": "删除文档？",
+        "description": "将从此设备删除 Godot {{branch}} 文档。"
+      },
+      "messages": {
+        "ready": "Godot 文档已可使用。",
+        "upToDate": "该文档已经是最新版本。",
+        "removed": "已删除 Godot {{branch}} 文档。"
+      },
+      "errors": {
+        "load": "加载文档设置失败。",
+        "branches": "加载官方文档分支失败。",
+        "job": "读取文档任务进度失败。",
+        "update": "更新文档失败。",
+        "cancel": "取消文档操作失败。",
+        "toggle": "更新文档查询开关失败。",
+        "remove": "删除文档失败。"
+      }
     },
     "godotProjects": {
       "title": "Godot 项目",

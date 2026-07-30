@@ -32,6 +32,7 @@ const TOOL_DISPLAY_TEMPLATES: Record<string, ToolDisplayTemplate> = {
 
 	mcp_godot_get_runtime_status: { label: "Check Godot runtime", iconName: "status-success" },
 	mcp_godot_get_godot_version: { label: "Check Godot version", iconName: "info" },
+	mcp_godot_search_documentation: { label: "Search Godot documentation", iconName: "book", target: "query" },
 	mcp_godot_launch_editor: { label: "Launch Godot editor", iconName: "external-link" },
 	mcp_godot_run_project: { label: "Run Godot project", iconName: "send" },
 	mcp_godot_stop_project: { label: "Stop Godot project", iconName: "stop" },

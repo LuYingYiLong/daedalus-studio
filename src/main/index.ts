@@ -60,6 +60,7 @@ const SETTINGS_PAGE_KEYS: readonly string[] = [
 	"personalization",
 	"mcp_servers",
 	"skills",
+	"documentation",
 	"godot_projects",
 	"archived_sessions",
 	"about"

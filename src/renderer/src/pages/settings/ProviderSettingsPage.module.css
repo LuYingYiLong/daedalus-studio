@@ -1,6 +1,6 @@
 .page {
 	display: grid;
-	grid-template-columns: 260px auto minmax(0, 1fr);
+	grid-template-columns: 260px minmax(0, 1fr);
 	grid-template-rows: minmax(0, 1fr);
 	min-width: 0;
 	min-height: 0;
@@ -26,13 +26,6 @@
 	bottom: 0;
 	width: 1px;
 	pointer-events: none;
-}
-
-.divider {
-	align-self: stretch;
-	height: auto;
-	margin: 0;
-	border-inline-start-color: var(--ds-border);
 }
 
 .providerMenu {

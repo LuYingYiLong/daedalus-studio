@@ -60,7 +60,7 @@
 	padding: 8px 0;
 	border: 1px solid var(--ds-border);
 	background-color: var(--ds-surface);
-	border-radius: var(--ds-radius-sm);
+	border-radius: var(--ds-radius-lg);
 	padding: var(--ds-space-2);
 	user-select: none;
 }
