@@ -26,6 +26,84 @@
 	user-select: none;
 }
 
+.projectTree {
+	background: transparent !important;
+	user-select: none;
+}
+
+.projectTreeItem {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	min-width: 0;
+	min-height: 28px;
+	margin: 4px 0;
+	padding-block: 0 !important;
+	padding-inline: 8px 0 !important;
+	border-radius: var(--ant-border-radius);
+	transition: background-color var(--ant-motion-duration-mid);
+}
+
+.projectTreeItem:hover {
+	background: var(--ant-control-item-bg-hover);
+}
+
+.projectTreeItem:global(.ant-tree-treenode-selected) {
+	background: var(--ds-accent-muted);
+}
+
+.projectTreeItem :global(.ant-tree-node-content-wrapper) {
+	display: flex;
+	flex: 1;
+	align-items: center;
+	min-width: 0;
+	min-height: 28px;
+	padding: 0 !important;
+	background: transparent !important;
+}
+
+.projectTreeTitle {
+	flex: 1;
+	min-width: 0;
+	overflow: visible;
+}
+
+.projectTreeIcon {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	margin-inline-end: 4px;
+}
+
+.projectTreeSwitcher {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 20px !important;
+	min-width: 20px !important;
+	margin-inline-end: 4px;
+}
+
+.projectTreeItem:global(.ant-tree-treenode-leaf) .projectTreeSwitcher {
+	width: 0 !important;
+	min-width: 0 !important;
+	margin-inline-end: 0;
+}
+
+.treeExpandIcon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transform: rotate(-90deg);
+	transform-origin: center;
+	transition: transform var(--ant-motion-duration-mid) var(--ant-motion-ease-in-out);
+}
+
+.treeExpandIconActive {
+	transform: rotate(0deg);
+}
+
 .workspaceTreeCollapse {
 	user-select: none;
 }
@@ -176,7 +254,9 @@
 }
 
 .workspaceMenu :global(.ant-menu-submenu-title:hover) .workspaceActions,
-.workspaceMenu :global(.ant-menu-submenu-title:focus-within) .workspaceActions {
+.workspaceMenu :global(.ant-menu-submenu-title:focus-within) .workspaceActions,
+.projectTreeItem:hover .workspaceActions,
+.projectTreeItem:focus-within .workspaceActions {
 	opacity: 1;
 	pointer-events: auto;
 	visibility: visible;

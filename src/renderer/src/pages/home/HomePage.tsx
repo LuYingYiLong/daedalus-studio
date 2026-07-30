@@ -7,7 +7,7 @@ import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode, PendingApproval } from "@/api/approval-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
 import type { ProviderModelSelection } from "@/api/provider-api";
-import type { DeleteWorkspaceResult } from "@/api/workspace-api";
+import type { DeleteWorkspaceResult, WorkspaceTreeOrderPreferences } from "@/api/workspace-api";
 import type { SkillSummary } from "@/api/skill-api";
 import type { WorkspaceSidebarPreferences } from "@/api/client-preferences-api";
 import { fetchSessionOverview, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
@@ -247,6 +247,7 @@ type HomePageProps = {
 	initialWorkspaces: WorkspaceConfig[];
 	initialSessions: SessionMetadata[];
 	initialActiveWorkspaceId: string | null;
+	initialWorkspaceTreeOrder: WorkspaceTreeOrderPreferences;
 	runningSessionIds: readonly string[];
 	unreadSessionIds: readonly string[];
 	homeWorkspace: WorkspaceConfig | null;
@@ -366,6 +367,7 @@ function HomePage({
 	initialWorkspaces,
 	initialSessions,
 	initialActiveWorkspaceId,
+	initialWorkspaceTreeOrder,
 	runningSessionIds,
 	unreadSessionIds,
 	homeWorkspace,
@@ -1338,6 +1340,7 @@ function HomePage({
 							initialWorkspaces={initialWorkspaces}
 							initialSessions={initialSessions}
 							initialActiveWorkspaceId={initialActiveWorkspaceId}
+							initialWorkspaceTreeOrder={initialWorkspaceTreeOrder}
 							runningSessionIds={runningSessionIds}
 							unreadSessionIds={unreadSessionIds}
 							sessionUpdate={activeSessionMetadata}

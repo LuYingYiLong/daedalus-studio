@@ -3512,6 +3512,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						initialWorkspaces={bootstrapData.workspaceList.workspaces}
 						initialSessions={bootstrapData.sessionList.sessions}
 						initialActiveWorkspaceId={bootstrapData.workspaceList.active}
+						initialWorkspaceTreeOrder={bootstrapData.workspaceTreeOrder}
 						runningSessionIds={runningSessionIds}
 						unreadSessionIds={[...unreadSessionIds]}
 						homeWorkspace={homeDraft.workspace}

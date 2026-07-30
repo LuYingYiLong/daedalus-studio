@@ -7,6 +7,7 @@ type StudioThemeColors = {
 	accent: string;
 	accentHover: string;
 	accentActive: string;
+	accentMuted: string;
 	bg: string;
 	surface: string;
 	surfaceElevated: string;
@@ -22,6 +23,7 @@ const studioThemeColors: Record<ResolvedTheme, StudioThemeColors> = {
 		accent: "#478cbf",
 		accentHover: "#5aa0d2",
 		accentActive: "#386f98",
+		accentMuted: "rgb(71 140 191 / 24%)",
 		bg: "#141414",
 		surface: "#1b1b1b",
 		surfaceElevated: "#1f1f1f",
@@ -35,6 +37,7 @@ const studioThemeColors: Record<ResolvedTheme, StudioThemeColors> = {
 		accent: "#478cbf",
 		accentHover: "#5aa0d2",
 		accentActive: "#386f98",
+		accentMuted: "rgb(71 140 191 / 18%)",
 		bg: "#f5f5f5",
 		surface: "#ffffff",
 		surfaceElevated: "#ffffff",
@@ -100,19 +103,20 @@ export function createStudioTheme(resolvedTheme: ResolvedTheme): ThemeConfig {
 				primaryShadow: "none"
 			},
 			Tree: {
-				indentSize: 16
+				indentSize: 24,
+				nodeSelectedBg: dsColors.accentMuted
 			},
 			Menu: {
 				darkItemBg: "transparent",
 				darkItemHoverBg: dsColors.surfaceHover,
-				darkItemSelectedBg: "rgb(71 140 191 / 24%)",
+				darkItemSelectedBg: dsColors.accentMuted,
 				darkItemSelectedColor: dsColors.textPrimary,
 				itemBg: "transparent",
 				itemBorderRadius: 4,
 				itemHeight: 28,
 				itemHoverBg: dsColors.surfaceHover,
 				itemPaddingInline: 8,
-				itemSelectedBg: "rgb(71 140 191 / 18%)",
+				itemSelectedBg: dsColors.accentMuted,
 				subMenuItemBg: "transparent"
 			},
 			Alert: {

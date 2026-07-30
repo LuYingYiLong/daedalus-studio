@@ -52,6 +52,7 @@ describe("BootSplash", () => {
 		expect(bootstrapSource).toContain("fetchProviderModelSelection()");
 		expect(bootstrapSource).toContain("fetchWorkspaces()");
 		expect(bootstrapSource).toContain("fetchSessions()");
+		expect(bootstrapSource).toContain("fetchWorkspaceTreeOrder()");
 		expect(bootstrapSource).toContain("fetchSlashCommands()");
 		expect(bootstrapSource).toContain("fetchSkills()");
 		expect(bootstrapSource).not.toContain("loadSettingsBootstrapData");

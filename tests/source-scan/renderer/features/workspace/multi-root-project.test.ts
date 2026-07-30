@@ -44,6 +44,12 @@ describe("multi-root workspace projects", () => {
 
 	it("uses project names and appearance in the tree and Composer", () => {
 		expect(treeSource).toContain("<WorkspaceIconView workspace={workspace} />");
+		expect(treeSource).toContain("switcherIcon={(nodeProps) =>");
+		expect(treeSource).not.toContain("icon: <WorkspaceIconView");
+		expect(treeSource).toContain("<Tree<ProjectTreeNode>");
+		expect(treeSource).toContain("icon: false");
+		expect(treeSource).toContain("allowDrop={allowProjectDrop}");
+		expect(treeSource).toContain("onDrop={handleProjectDrop}");
 		expect(composerSource).toContain("<WorkspaceIconView workspace={workspace}");
 		expect(composerSource).toContain("workspace.name");
 	});

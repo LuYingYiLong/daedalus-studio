@@ -1,0 +1,112 @@
+import { describe, expect, it } from "vitest";
+import type { SessionMetadata, WorkspaceConfig } from "../../../../../src/renderer/src/api/types";
+import type { WorkspaceTreeOrderPreferences } from "../../../../../src/renderer/src/api/workspace-api";
+import {
+	canDropWorkspaceTreeNode,
+	moveSessionInTreeOrder,
+	moveWorkspaceInTreeOrder,
+	reconcileWorkspaceTreeOrder,
+	sortWorkspacesByTreeOrder,
+	sortWorkspaceSessionsByTreeOrder
+} from "../../../../../src/renderer/src/features/workspace/workspace-tree-order";
+
+const WORKSPACES: WorkspaceConfig[] = [
+	{ id: "workspace-a", name: "A", kind: "godot", rootPath: "D:/A", icon: 0, color: 0, sourceFolders: [], primarySourceFolderId: "" },
+	{ id: "workspace-b", name: "B", kind: "godot", rootPath: "D:/B", icon: 0, color: 0, sourceFolders: [], primarySourceFolderId: "" }
+];
+const SESSIONS: SessionMetadata[] = [
+	{ id: "session-a-new", title: "A new", workspaceId: "workspace-a", createdAt: "", updatedAt: "" },
+	{ id: "session-b", title: "B", workspaceId: "workspace-b", createdAt: "", updatedAt: "" },
+	{ id: "session-a-old", title: "A old", workspaceId: "workspace-a", createdAt: "", updatedAt: "" },
+	{ id: "session-pinned", title: "Pinned", workspaceId: "workspace-a", pinned: true, createdAt: "", updatedAt: "" }
+];
+
+function order(overrides: Partial<WorkspaceTreeOrderPreferences> = {}): WorkspaceTreeOrderPreferences {
+	return {
+		schemaVersion: 1,
+		workspaceIds: ["workspace-a", "workspace-b"],
+		sessionIdsByWorkspace: {
+			"workspace-a": ["session-a-new", "session-a-old"],
+			"workspace-b": ["session-b"]
+		},
+		updatedAt: "2026-07-30T00:00:00.000Z",
+		...overrides
+	};
+}
+
+describe("workspace tree order", (): void => {
+	it("keeps saved positions and inserts newly visible entries first", (): void => {
+		const result = reconcileWorkspaceTreeOrder(order({
+			workspaceIds: ["workspace-b", "workspace-a"],
+			sessionIdsByWorkspace: {
+				"workspace-a": ["session-a-old"],
+				"workspace-b": ["session-b"]
+			}
+		}), [...WORKSPACES, {
+			id: "workspace-c",
+			name: "C",
+			kind: "godot",
+			rootPath: "D:/C",
+			icon: 0,
+			color: 0,
+			sourceFolders: [],
+			primarySourceFolderId: ""
+		}], SESSIONS);
+
+		expect(result.workspaceIds).toEqual(["workspace-c", "workspace-b", "workspace-a"]);
+		expect(result.sessionIdsByWorkspace["workspace-a"]).toEqual(["session-a-new", "session-a-old"]);
+		expect(result.sessionIdsByWorkspace["workspace-c"]).toEqual([]);
+	});
+
+	it("moves workspaces and sessions only in their own order arrays", (): void => {
+		const workspaceResult = moveWorkspaceInTreeOrder(order(), "workspace-b", "workspace-a", "before");
+		expect(workspaceResult.workspaceIds).toEqual(["workspace-b", "workspace-a"]);
+
+		const sessionResult = moveSessionInTreeOrder(order(), "workspace-a", "session-a-old", "session-a-new", "before");
+		expect(sessionResult.sessionIdsByWorkspace["workspace-a"]).toEqual(["session-a-old", "session-a-new"]);
+		expect(sessionResult.sessionIdsByWorkspace["workspace-b"]).toEqual(["session-b"]);
+	});
+
+	it("only allows root workspace gaps and same-workspace session gaps", (): void => {
+		const preferences = order();
+		expect(canDropWorkspaceTreeNode(
+			{ kind: "workspace", workspaceId: "workspace-a" },
+			{ kind: "workspace", workspaceId: "workspace-b" },
+			true,
+			preferences
+		)).toBe(true);
+		expect(canDropWorkspaceTreeNode(
+			{ kind: "workspace", workspaceId: "workspace-a" },
+			{ kind: "session", workspaceId: "workspace-a" },
+			true,
+			preferences
+		)).toBe(false);
+		expect(canDropWorkspaceTreeNode(
+			{ kind: "session", workspaceId: "workspace-a" },
+			{ kind: "session", workspaceId: "workspace-b" },
+			true,
+			preferences
+		)).toBe(false);
+		expect(canDropWorkspaceTreeNode(
+			{ kind: "session", workspaceId: "workspace-a" },
+			{ kind: "session", workspaceId: "workspace-a" },
+			false,
+			preferences
+		)).toBe(false);
+	});
+
+	it("sorts render data without changing the source business order", (): void => {
+		const preferences = order({
+			workspaceIds: ["workspace-b", "workspace-a"],
+			sessionIdsByWorkspace: {
+				"workspace-a": ["session-a-old", "session-a-new"],
+				"workspace-b": ["session-b"]
+			}
+		});
+		expect(sortWorkspacesByTreeOrder(WORKSPACES, preferences).map((workspace): string => workspace.id))
+			.toEqual(["workspace-b", "workspace-a"]);
+		expect(sortWorkspaceSessionsByTreeOrder(SESSIONS, "workspace-a", preferences).map((session): string => session.id))
+			.toEqual(["session-a-old", "session-a-new"]);
+		expect(WORKSPACES.map((workspace): string => workspace.id)).toEqual(["workspace-a", "workspace-b"]);
+	});
+});

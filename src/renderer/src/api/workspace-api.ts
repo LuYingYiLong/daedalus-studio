@@ -40,10 +40,34 @@ export type SelectWorkspaceOptions = {
 	sessionId?: string | null;
 };
 
+export type WorkspaceTreeOrderPreferences = {
+	schemaVersion: 1;
+	workspaceIds: string[];
+	sessionIdsByWorkspace: Record<string, string[]>;
+	updatedAt: string;
+};
+
+export type WorkspaceTreeOrderUpdate = Pick<
+	WorkspaceTreeOrderPreferences,
+	"workspaceIds" | "sessionIdsByWorkspace"
+>;
+
 export async function fetchWorkspaces(): Promise<WorkspaceListResult> {
 	const client = await createBackendClient();
 
 	return client.request<WorkspaceListResult>("workspace.list");
+}
+
+export async function fetchWorkspaceTreeOrder(): Promise<WorkspaceTreeOrderPreferences> {
+	const client = await createBackendClient();
+	return client.request<WorkspaceTreeOrderPreferences>("workspace.tree.order.get");
+}
+
+export async function updateWorkspaceTreeOrder(
+	order: WorkspaceTreeOrderUpdate
+): Promise<WorkspaceTreeOrderPreferences> {
+	const client = await createBackendClient();
+	return client.request<WorkspaceTreeOrderPreferences>("workspace.tree.order.update", order);
 }
 
 export async function selectWorkspace(workspaceId: string, options: SelectWorkspaceOptions = {}): Promise<WorkspaceConfig> {

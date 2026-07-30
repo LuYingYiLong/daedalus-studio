@@ -2,7 +2,11 @@ import { createBackendClient } from "@/shared/api/transport/backend-client";
 import { fetchClientPreferences, type ClientPreferences } from "@/api/client-preferences-api";
 import { fetchGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
-import { fetchWorkspaces } from "@/api/workspace-api";
+import {
+	fetchWorkspaces,
+	fetchWorkspaceTreeOrder,
+	type WorkspaceTreeOrderPreferences
+} from "@/api/workspace-api";
 import { fetchSessions } from "@/api/session-api";
 import { fetchSlashCommands, type SlashCommandDefinition } from "@/api/command-api";
 import { fetchSkills, type SkillSummary } from "@/api/skill-api";
@@ -32,6 +36,7 @@ export type BootstrapData = {
 	slashCommands: SlashCommandDefinition[];
 	skills: SkillSummary[];
 	sessionLayouts: SessionLayoutMap;
+	workspaceTreeOrder: WorkspaceTreeOrderPreferences;
 };
 
 type InitialSettingsData = Pick<BootstrapData,
@@ -92,10 +97,16 @@ export async function loadBootstrapData(onProgress: (progress: BootstrapProgress
 	const settingsData: InitialSettingsData = await loadInitialSettingsData(onProgress);
 
 	onProgress({ label: "Loading workspace data", percent: 60 });
-	const [workspaceList, sessionList, sessionLayouts]: [WorkspaceListResult, SessionListResult, SessionLayoutMap] = await Promise.all([
+	const [workspaceList, sessionList, sessionLayouts, workspaceTreeOrder]: [
+		WorkspaceListResult,
+		SessionListResult,
+		SessionLayoutMap,
+		WorkspaceTreeOrderPreferences
+	] = await Promise.all([
 		fetchWorkspaces(),
 		fetchSessions(),
-		window.electronAPI.sessionLayout.getAll()
+		window.electronAPI.sessionLayout.getAll(),
+		fetchWorkspaceTreeOrder()
 	]);
 
 	onProgress({ label: "Loading commands and skills", percent: 85 });
@@ -111,6 +122,7 @@ export async function loadBootstrapData(onProgress: (progress: BootstrapProgress
 		workspaceList,
 		sessionList,
 		sessionLayouts,
+		workspaceTreeOrder,
 		slashCommands,
 		skills: skillList.skills
 	};

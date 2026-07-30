@@ -102,6 +102,7 @@
       "openWorkspaceDirectory": "Failed to open workspace directory",
       "pinSession": "Failed to update pinned session",
       "renameSession": "Failed to rename session",
+      "saveOrder": "Failed to save workspace order",
       "sessionTitleCannotBeEmpty": "Session title cannot be empty."
     },
     "modals": {

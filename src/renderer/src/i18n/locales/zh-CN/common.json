@@ -102,6 +102,7 @@
       "openWorkspaceDirectory": "打开 workspace 目录失败",
       "pinSession": "更新置顶会话失败",
       "renameSession": "重命名会话失败",
+      "saveOrder": "保存 workspace 排序失败",
       "sessionTitleCannotBeEmpty": "会话标题不能为空。"
     },
     "modals": {

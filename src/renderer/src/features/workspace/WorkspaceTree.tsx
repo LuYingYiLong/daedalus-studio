@@ -1,17 +1,33 @@
-import { useEffect, useMemo, useState } from "react";
-import type { MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Key, MouseEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { archiveSession, fetchSessions, renameSession, setSessionPinned } from "@/api/session-api";
-import { deleteWorkspace, fetchWorkspaces } from "@/api/workspace-api";
-import type { DeleteWorkspaceResult } from "@/api/workspace-api";
-import { Alert, Badge, Button, Collapse, Dropdown, Input, Menu, message, Modal, Spin, Tooltip, Typography } from "antd";
-import type { CollapseProps, MenuProps } from "antd";
+import {
+	deleteWorkspace,
+	fetchWorkspaces,
+	fetchWorkspaceTreeOrder,
+	updateWorkspaceTreeOrder
+} from "@/api/workspace-api";
+import type { DeleteWorkspaceResult, WorkspaceTreeOrderPreferences } from "@/api/workspace-api";
+import { Alert, Badge, Button, Collapse, ConfigProvider, Dropdown, Input, Menu, message, Modal, Spin, Tooltip, Tree, Typography } from "antd";
+import type { CollapseProps, MenuProps, TreeDataNode, TreeProps } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import DeleteWorkspaceDialog from "./DeleteWorkspaceDialog";
 import WorkspaceProjectDialog from "./WorkspaceProjectDialog";
 import { WorkspaceIconView } from "./workspace-appearance";
+import {
+	areWorkspaceTreeOrdersEqual,
+	canDropWorkspaceTreeNode,
+	createEmptyWorkspaceTreeOrder,
+	moveSessionInTreeOrder,
+	moveWorkspaceInTreeOrder,
+	reconcileWorkspaceTreeOrder,
+	sortWorkspacesByTreeOrder,
+	sortWorkspaceSessionsByTreeOrder,
+	type WorkspaceTreeDropPlacement
+} from "./workspace-tree-order";
 import styles from "./WorkspaceTree.module.css";
 
 export type WorkspaceTreeProps = {
@@ -21,6 +37,7 @@ export type WorkspaceTreeProps = {
 	initialWorkspaces?: WorkspaceConfig[];
 	initialSessions?: SessionMetadata[];
 	initialActiveWorkspaceId?: string | null;
+	initialWorkspaceTreeOrder?: WorkspaceTreeOrderPreferences;
 	sessionUpdate?: SessionMetadata | null;
 	runningSessionIds?: readonly string[];
 	unreadSessionIds?: readonly string[];
@@ -36,6 +53,19 @@ export type WorkspaceTreeProps = {
 
 type WorkspaceMenuItem = NonNullable<MenuProps["items"]>[number];
 type WorkspaceMenuItems = NonNullable<MenuProps["items"]>;
+type ProjectTreeNode = TreeDataNode & {
+	kind: "workspace" | "session" | "empty";
+	workspace?: WorkspaceConfig;
+	workspaceId?: string;
+	sessionId?: string;
+	children?: ProjectTreeNode[];
+};
+
+type RenderableWorkspaceMenuItem = {
+	key: Key;
+	label?: ReactNode;
+	className?: string;
+};
 
 type WorkspaceTreeLabels = {
 	archiveSession: string;
@@ -52,6 +82,7 @@ type WorkspaceTreeLabels = {
 	failedOpenWorkspaceDirectory: string;
 	failedPinSession: string;
 	failedRenameSession: string;
+	failedSaveOrder: string;
 	newSession: string;
 	newSessionInWorkspace: string;
 	newProject: string;
@@ -198,6 +229,12 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 							className={styles.pinButton}
 							icon={<Icon name={isPinned ? "pinned" : "pin"} />}
 							loading={isPinning}
+							draggable={false}
+							onMouseDown={(event): void => event.stopPropagation()}
+							onDragStart={(event): void => {
+								event.preventDefault();
+								event.stopPropagation();
+							}}
 							onClick={(event: MouseEvent<HTMLElement>): void => options.onPinButton(session, event)}
 						/>
 					</Tooltip>
@@ -217,6 +254,12 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 								className={styles.archiveButton}
 								icon={<Icon name="archive" />}
 								loading={isArchiving}
+								draggable={false}
+								onMouseDown={(event): void => event.stopPropagation()}
+								onDragStart={(event): void => {
+									event.preventDefault();
+									event.stopPropagation();
+								}}
 								onClick={(event: MouseEvent<HTMLElement>): void => options.onArchiveButton(session, event)}
 							/>
 						</Tooltip>
@@ -238,13 +281,37 @@ function createSessionMenuItems(
 		: [{ key: emptyKey, label: emptyLabel, disabled: true }];
 }
 
-function createProjectMenuItems(workspaces: WorkspaceConfig[], sessions: SessionMetadata[], options: CreateWorkspaceMenuItemOptions): WorkspaceMenuItems {
+function createSessionTreeNode(
+	session: SessionMetadata,
+	workspaceId: string,
+	options: CreateSessionMenuItemOptions
+): ProjectTreeNode {
+	const menuItem: RenderableWorkspaceMenuItem = createSessionMenuItem(session, options) as RenderableWorkspaceMenuItem;
+	return {
+		key: menuItem.key,
+		title: menuItem.label,
+		className: menuItem.className,
+		kind: "session",
+		workspaceId,
+		sessionId: session.id,
+		isLeaf: true
+	};
+}
+
+function createProjectTreeData(workspaces: WorkspaceConfig[], sessions: SessionMetadata[], options: CreateWorkspaceMenuItemOptions): ProjectTreeNode[] {
 	const labels: WorkspaceTreeLabels = options.labels;
 	if (workspaces.length === 0) {
-		return [{ key: "projects:empty", label: labels.noProjects, disabled: true }];
+		return [{
+			key: "projects:empty",
+			title: labels.noProjects,
+			disabled: true,
+			selectable: false,
+			kind: "empty",
+			isLeaf: true
+		}];
 	}
 
-	const workspaceItems: WorkspaceMenuItems = workspaces.map((workspace: WorkspaceConfig): WorkspaceMenuItem => {
+	return workspaces.map((workspace: WorkspaceConfig): ProjectTreeNode => {
 		const workspaceSessions: SessionMetadata[] = sessions.filter((session: SessionMetadata): boolean => {
 			return session.workspaceId === workspace.id;
 		});
@@ -289,13 +356,21 @@ function createProjectMenuItems(workspaces: WorkspaceConfig[], sessions: Session
 
 		return {
 			key: `workspace:${workspace.id}`,
-			label: (
+			title: (
 				<Dropdown menu={actionMenu} trigger={["contextMenu"]}>
 					<span className={styles.workspaceMenuItem}>
 						<span className={styles.workspaceTitle}>{workspace.name}</span>
 						<span
 							className={styles.workspaceActions}
+							draggable={false}
 							onMouseDown={(event: MouseEvent<HTMLElement>): void => {
+								event.stopPropagation();
+							}}
+							onPointerDown={(event): void => {
+								event.stopPropagation();
+							}}
+							onDragStart={(event): void => {
+								event.preventDefault();
 								event.stopPropagation();
 							}}
 						>
@@ -329,19 +404,24 @@ function createProjectMenuItems(workspaces: WorkspaceConfig[], sessions: Session
 					</span>
 				</Dropdown>
 			),
-			icon: <WorkspaceIconView workspace={workspace} />,
+			kind: "workspace",
+			workspace,
+			workspaceId: workspace.id,
 			children: workspaceSessions.length > 0
-				? workspaceSessions.map((session: SessionMetadata): WorkspaceMenuItem => createSessionMenuItem(session, options))
+				? workspaceSessions.map((session: SessionMetadata): ProjectTreeNode => createSessionTreeNode(session, workspace.id, options))
 				: [
 					{
 						key: `workspace:${workspace.id}:empty`,
-						label: labels.noSessions,
+						title: labels.noSessions,
 						disabled: true,
+						selectable: false,
+						kind: "empty",
+						workspaceId: workspace.id,
+						isLeaf: true
 					}
 				]
 		};
 	});
-	return workspaceItems;
 }
 
 function getSelectedMenuKeys(selectedSessionId: string | null, selectedWorkspaceId: string | null, fallbackKeys: string[]): string[] {
@@ -363,6 +443,7 @@ function WorkspaceTree({
 	initialWorkspaces = [],
 	initialSessions = [],
 	initialActiveWorkspaceId = null,
+	initialWorkspaceTreeOrder = createEmptyWorkspaceTreeOrder(),
 	sessionUpdate = null,
 	runningSessionIds = [],
 	unreadSessionIds = [],
@@ -379,6 +460,9 @@ function WorkspaceTree({
 	const { t } = useTranslation();
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>(() => initialWorkspaces);
 	const [sessions, setSessions] = useState<SessionMetadata[]>(() => filterVisibleSessions(initialSessions));
+	const [workspaceTreeOrder, setWorkspaceTreeOrder] = useState<WorkspaceTreeOrderPreferences>(() => {
+		return reconcileWorkspaceTreeOrder(initialWorkspaceTreeOrder, initialWorkspaces, filterVisibleSessions(initialSessions));
+	});
 	const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(initialActiveWorkspaceId);
 	const [openWorkspaceKeys, setOpenWorkspaceKeys] = useState<string[]>(() => initialWorkspaces.map((workspace: WorkspaceConfig): string => `workspace:${workspace.id}`));
 	const [selectedMenuKeys, setSelectedMenuKeys] = useState<string[]>([]);
@@ -396,6 +480,12 @@ function WorkspaceTree({
 	const [renameDraftTitle, setRenameDraftTitle] = useState<string>("");
 	const [renameError, setRenameError] = useState<string | null>(null);
 	const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+	const workspaceTreeOrderRef = useRef<WorkspaceTreeOrderPreferences>(workspaceTreeOrder);
+	const workspacesRef = useRef<WorkspaceConfig[]>(workspaces);
+	const sessionsRef = useRef<SessionMetadata[]>(sessions);
+	const orderSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
+	const orderSaveRevisionRef = useRef<number>(0);
+	const isMountedRef = useRef<boolean>(true);
 	const runningSessionIdSet: ReadonlySet<string> = useMemo((): ReadonlySet<string> => new Set(runningSessionIds), [runningSessionIds]);
 	const unreadSessionIdSet: ReadonlySet<string> = useMemo((): ReadonlySet<string> => new Set(unreadSessionIds), [unreadSessionIds]);
 	const labels: WorkspaceTreeLabels = useMemo((): WorkspaceTreeLabels => {
@@ -414,6 +504,7 @@ function WorkspaceTree({
 			failedOpenWorkspaceDirectory: t("workspaceTree.errors.openWorkspaceDirectory"),
 			failedPinSession: t("workspaceTree.errors.pinSession"),
 			failedRenameSession: t("workspaceTree.errors.renameSession"),
+			failedSaveOrder: t("workspaceTree.errors.saveOrder", { defaultValue: "Failed to save workspace order" }),
 			newSession: t("agentPage.actions.newSession"),
 			newSessionInWorkspace: t("workspaceTree.actions.newSessionInWorkspace"),
 			newProject: t("workspaceTree.actions.newProject"),
@@ -445,10 +536,67 @@ function WorkspaceTree({
 		};
 	}, [t]);
 
+	workspaceTreeOrderRef.current = workspaceTreeOrder;
+	workspacesRef.current = workspaces;
+	sessionsRef.current = sessions;
+
 	function showWorkspaceOperationError(error: unknown, fallbackMessage: string): void {
 		const errorMessage: string = error instanceof Error ? error.message : fallbackMessage;
 		console.error(`[WorkspaceTree] ${fallbackMessage}`, error);
 		void messageApi.error(errorMessage);
+	}
+
+	function setCanonicalWorkspaceTreeOrder(nextOrder: WorkspaceTreeOrderPreferences): void {
+		workspaceTreeOrderRef.current = nextOrder;
+		setWorkspaceTreeOrder(nextOrder);
+	}
+
+	function persistWorkspaceTreeOrder(nextOrder: WorkspaceTreeOrderPreferences): void {
+		if (areWorkspaceTreeOrdersEqual(workspaceTreeOrderRef.current, nextOrder)) {
+			return;
+		}
+		setCanonicalWorkspaceTreeOrder(nextOrder);
+		const revision: number = orderSaveRevisionRef.current + 1;
+		orderSaveRevisionRef.current = revision;
+		const payload = {
+			workspaceIds: [...nextOrder.workspaceIds],
+			sessionIdsByWorkspace: Object.fromEntries(
+				Object.entries(nextOrder.sessionIdsByWorkspace).map(
+					([workspaceId, sessionIds]): [string, string[]] => [workspaceId, [...sessionIds]]
+				)
+			)
+		};
+
+		orderSaveQueueRef.current = orderSaveQueueRef.current.then(async (): Promise<void> => {
+			try {
+				const savedOrder: WorkspaceTreeOrderPreferences = await updateWorkspaceTreeOrder(payload);
+				if (!isMountedRef.current || revision !== orderSaveRevisionRef.current) {
+					return;
+				}
+				setCanonicalWorkspaceTreeOrder(reconcileWorkspaceTreeOrder(
+					savedOrder,
+					workspacesRef.current,
+					sessionsRef.current
+				));
+			} catch (error: unknown) {
+				if (!isMountedRef.current || revision !== orderSaveRevisionRef.current) {
+					return;
+				}
+				try {
+					const storedOrder: WorkspaceTreeOrderPreferences = await fetchWorkspaceTreeOrder();
+					if (isMountedRef.current && revision === orderSaveRevisionRef.current) {
+						setCanonicalWorkspaceTreeOrder(reconcileWorkspaceTreeOrder(
+							storedOrder,
+							workspacesRef.current,
+							sessionsRef.current
+						));
+					}
+				} catch (reloadError: unknown) {
+					console.error("[WorkspaceTree] reload workspace order failed", reloadError);
+				}
+				showWorkspaceOperationError(error, labels.failedSaveOrder);
+			}
+		});
 	}
 
 	const handleMenuClick: MenuProps["onClick"] = ({ key }): void => {
@@ -468,10 +616,6 @@ function WorkspaceTree({
 				onSessionSelect?.(session);
 			}
 		}
-	};
-
-	const handleOpenChange: MenuProps["onOpenChange"] = (keys: string[]): void => {
-		setOpenWorkspaceKeys(keys);
 	};
 
 	const handleSectionChange: NonNullable<CollapseProps["onChange"]> = (keys): void => {
@@ -681,6 +825,13 @@ function WorkspaceTree({
 	}
 
 	useEffect((): (() => void) => {
+		isMountedRef.current = true;
+		return (): void => {
+			isMountedRef.current = false;
+		};
+	}, []);
+
+	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
 		let retryTimer: number | null = null;
 
@@ -689,9 +840,10 @@ function WorkspaceTree({
 				setIsWorkspaceLoading(true);
 				setWorkspaceError(null);
 
-				const [workspaceList, sessionList] = await Promise.all([
+				const [workspaceList, sessionList, storedOrder] = await Promise.all([
 					fetchWorkspaces(),
-					fetchSessions()
+					fetchSessions(),
+					fetchWorkspaceTreeOrder()
 				]);
 
 				if (cancelled) {
@@ -706,8 +858,18 @@ function WorkspaceTree({
 					sessions: sessionList.sessions
 				});
 
+				const visibleSessions: SessionMetadata[] = filterVisibleSessions(sessionList.sessions);
+				const reconciledOrder: WorkspaceTreeOrderPreferences = reconcileWorkspaceTreeOrder(
+					storedOrder,
+					workspaceList.workspaces,
+					visibleSessions
+				);
+				workspacesRef.current = workspaceList.workspaces;
+				sessionsRef.current = visibleSessions;
+				workspaceTreeOrderRef.current = reconciledOrder;
 				setWorkspaces(workspaceList.workspaces);
-				setSessions(filterVisibleSessions(sessionList.sessions));
+				setSessions(visibleSessions);
+				setWorkspaceTreeOrder(reconciledOrder);
 				setActiveWorkspaceId(workspaceList.active);
 				setOpenWorkspaceKeys(workspaceList.workspaces.map((workspace: WorkspaceConfig): string => {
 					return `workspace:${workspace.id}`;
@@ -739,6 +901,17 @@ function WorkspaceTree({
 			}
 		};
 	}, [labels.failedLoadWorkspace, refreshToken, reloadIndex]);
+
+	useEffect((): void => {
+		const reconciledOrder: WorkspaceTreeOrderPreferences = reconcileWorkspaceTreeOrder(
+			workspaceTreeOrderRef.current,
+			workspaces,
+			sessions
+		);
+		if (!areWorkspaceTreeOrdersEqual(workspaceTreeOrderRef.current, reconciledOrder)) {
+			persistWorkspaceTreeOrder(reconciledOrder);
+		}
+	}, [sessions, workspaces]);
 
 	const sessionMenuOptions: CreateSessionMenuItemOptions = useMemo((): CreateSessionMenuItemOptions => {
 		return {
@@ -799,8 +972,24 @@ function WorkspaceTree({
 			recentSessions: SessionMetadata[];
 		});
 	}, [sessions, workspaces]);
-	const projectMenuItems: WorkspaceMenuItems = useMemo((): WorkspaceMenuItems => {
-		return createProjectMenuItems(workspaces, sessionGroups.projectSessions, {
+	const effectiveWorkspaceTreeOrder: WorkspaceTreeOrderPreferences = useMemo(
+		(): WorkspaceTreeOrderPreferences => reconcileWorkspaceTreeOrder(workspaceTreeOrder, workspaces, sessions),
+		[sessions, workspaceTreeOrder, workspaces]
+	);
+	const orderedWorkspaces: WorkspaceConfig[] = useMemo((): WorkspaceConfig[] => {
+		return sortWorkspacesByTreeOrder(workspaces, effectiveWorkspaceTreeOrder);
+	}, [effectiveWorkspaceTreeOrder, workspaces]);
+	const orderedProjectSessions: SessionMetadata[] = useMemo((): SessionMetadata[] => {
+		return orderedWorkspaces.flatMap((workspace: WorkspaceConfig): SessionMetadata[] => {
+			return sortWorkspaceSessionsByTreeOrder(
+				sessionGroups.projectSessions,
+				workspace.id,
+				effectiveWorkspaceTreeOrder
+			);
+		});
+	}, [effectiveWorkspaceTreeOrder, orderedWorkspaces, sessionGroups.projectSessions]);
+	const projectTreeData: ProjectTreeNode[] = useMemo((): ProjectTreeNode[] => {
+		return createProjectTreeData(orderedWorkspaces, orderedProjectSessions, {
 			...sessionMenuOptions,
 			deletingWorkspaceId,
 			onNewWorkspaceSession: handleNewWorkspaceSession,
@@ -814,7 +1003,7 @@ function WorkspaceTree({
 				setDeleteTargetWorkspace(workspace);
 			}
 		});
-	}, [deletingWorkspaceId, sessionGroups.projectSessions, sessionMenuOptions, workspaces]);
+	}, [deletingWorkspaceId, orderedProjectSessions, orderedWorkspaces, sessionMenuOptions]);
 	const pinnedMenuItems: WorkspaceMenuItems = useMemo((): WorkspaceMenuItems => {
 		return createSessionMenuItems(sessionGroups.pinnedSessions, "pinned:empty", labels.noPinnedSessions, sessionMenuOptions);
 	}, [labels.noPinnedSessions, sessionGroups.pinnedSessions, sessionMenuOptions]);
@@ -822,77 +1011,189 @@ function WorkspaceTree({
 		return createSessionMenuItems(sessionGroups.recentSessions, "recent:empty", labels.noRecentSessions, sessionMenuOptions);
 	}, [labels.noRecentSessions, sessionGroups.recentSessions, sessionMenuOptions]);
 	const effectiveSelectedMenuKeys: string[] = getSelectedMenuKeys(selectedSessionId, selectedWorkspaceId, selectedMenuKeys);
-	const sectionItems: CollapseProps["items"] = useMemo((): CollapseProps["items"] => {
-		return [
-			{
-				key: "pinned",
-				label: labels.pinned,
-				children: <Menu
-					className={styles.workspaceMenu}
-					mode="inline" items={pinnedMenuItems}
-					selectedKeys={effectiveSelectedMenuKeys}
-					onClick={handleMenuClick}
-				/>
-			},
-			{
-				key: "projects",
-				label: labels.projects,
-				extra: (
-					<Tooltip title={labels.newProject}>
-						<Button
-							type="text"
-							shape="circle"
-							size="small"
-							className={styles.sectionAddButton}
-							icon={<Icon name="add" />}
-							aria-label={labels.newProject}
-							onClick={(event: MouseEvent<HTMLElement>): void => {
-								event.preventDefault();
-								event.stopPropagation();
-								setIsCreateProjectOpen(true);
-							}}
-						/>
-					</Tooltip>
-				),
-				children: <Menu
-					className={styles.workspaceMenu}
-					inlineIndent={8} mode="inline" expandIcon={(): null => null}
-					items={projectMenuItems}
-					openKeys={openWorkspaceKeys}
-					selectedKeys={effectiveSelectedMenuKeys}
-					onOpenChange={handleOpenChange}
-					onClick={handleMenuClick}
-				/>
-			},
-			{
-				key: "recent",
-				label: labels.recent,
-				extra: (
-					<Tooltip title={labels.newSession}>
-						<Button
-							type="text"
-							shape="circle"
-							size="small"
-							className={styles.sectionAddButton}
-							icon={<Icon name="add" />}
-							aria-label={labels.newSession}
-							onClick={(event: MouseEvent<HTMLElement>): void => {
-								event.preventDefault();
-								event.stopPropagation();
-								onNewSession?.();
-							}}
-						/>
-					</Tooltip>
-				),
-				children: <Menu
-					className={styles.workspaceMenu}
-					mode="inline" items={recentMenuItems}
-					selectedKeys={effectiveSelectedMenuKeys}
-					onClick={handleMenuClick}
-				/>
+	const handleProjectTreeExpand: NonNullable<TreeProps<ProjectTreeNode>["onExpand"]> = (expandedKeys): void => {
+		setOpenWorkspaceKeys(expandedKeys.map((key: Key): string => String(key)));
+	};
+	const handleProjectTreeSelect: NonNullable<TreeProps<ProjectTreeNode>["onSelect"]> = (_selectedKeys, info): void => {
+		const node: ProjectTreeNode = info.node;
+		const selectedKey: string = String(node.key);
+		if (node.kind === "empty") {
+			return;
+		}
+		setSelectedMenuKeys([selectedKey]);
+		if (node.kind === "workspace") {
+			setOpenWorkspaceKeys((currentKeys: string[]): string[] => {
+				return currentKeys.includes(selectedKey)
+					? currentKeys.filter((key: string): boolean => key !== selectedKey)
+					: [...currentKeys, selectedKey];
+			});
+			return;
+		}
+		if (node.sessionId !== undefined) {
+			const selectedSession: SessionMetadata | undefined = sessions.find(
+				(session: SessionMetadata): boolean => session.id === node.sessionId
+			);
+			if (selectedSession !== undefined) {
+				onSessionSelect?.(selectedSession);
 			}
-		];
-	}, [effectiveSelectedMenuKeys, labels.newProject, labels.newSession, labels.pinned, labels.projects, labels.recent, onNewSession, pinnedMenuItems, projectMenuItems, recentMenuItems]);
+		}
+	};
+	const canDropProjectNode = (
+		dragNode: ProjectTreeNode,
+		dropNode: ProjectTreeNode,
+		dropToGap: boolean
+	): boolean => canDropWorkspaceTreeNode(
+		dragNode,
+		dropNode,
+		dropToGap,
+		effectiveWorkspaceTreeOrder
+	);
+	const allowProjectDrop: NonNullable<TreeProps<ProjectTreeNode>["allowDrop"]> = ({
+		dragNode,
+		dropNode,
+		dropPosition
+	}): boolean => canDropProjectNode(dragNode, dropNode, dropPosition !== 0);
+	const handleProjectDrop: NonNullable<TreeProps<ProjectTreeNode>["onDrop"]> = (info): void => {
+		const dragNode: ProjectTreeNode = info.dragNode;
+		const dropNode: ProjectTreeNode = info.node;
+		if (!canDropProjectNode(dragNode, dropNode, info.dropToGap === true)) {
+			return;
+		}
+		const targetPosition: number = Number.parseInt(
+			(info.node as ProjectTreeNode & { pos: string }).pos.split("-").at(-1) ?? "0",
+			10
+		);
+		const relativeDropPosition: number = info.dropPosition - targetPosition;
+		const placement: WorkspaceTreeDropPlacement = relativeDropPosition < 0 ? "before" : "after";
+		if (
+			dragNode.kind === "workspace"
+			&& dropNode.kind === "workspace"
+			&& dragNode.workspaceId !== undefined
+			&& dropNode.workspaceId !== undefined
+		) {
+			persistWorkspaceTreeOrder(moveWorkspaceInTreeOrder(
+				workspaceTreeOrderRef.current,
+				dragNode.workspaceId,
+				dropNode.workspaceId,
+				placement
+			));
+			return;
+		}
+		if (
+			dragNode.kind === "session"
+			&& dropNode.kind === "session"
+			&& dragNode.workspaceId !== undefined
+			&& dragNode.workspaceId === dropNode.workspaceId
+			&& dragNode.sessionId !== undefined
+			&& dropNode.sessionId !== undefined
+		) {
+			persistWorkspaceTreeOrder(moveSessionInTreeOrder(
+				workspaceTreeOrderRef.current,
+				dragNode.workspaceId,
+				dragNode.sessionId,
+				dropNode.sessionId,
+				placement
+			));
+		}
+	};
+	const sectionItems: CollapseProps["items"] = [
+		{
+			key: "pinned",
+			label: labels.pinned,
+			children: <Menu
+				className={styles.workspaceMenu}
+				mode="inline" items={pinnedMenuItems}
+				selectedKeys={effectiveSelectedMenuKeys}
+				onClick={handleMenuClick}
+			/>
+		},
+		{
+			key: "projects",
+			label: labels.projects,
+			extra: (
+				<Tooltip title={labels.newProject}>
+					<Button
+						type="text"
+						shape="circle"
+						size="small"
+						className={styles.sectionAddButton}
+						icon={<Icon name="add" />}
+						aria-label={labels.newProject}
+						onClick={(event: MouseEvent<HTMLElement>): void => {
+							event.preventDefault();
+							event.stopPropagation();
+							setIsCreateProjectOpen(true);
+						}}
+					/>
+				</Tooltip>
+			),
+			children: (
+				<Tree<ProjectTreeNode>
+					blockNode
+					virtual={false}
+					classNames={{
+						root: styles.projectTree,
+						item: styles.projectTreeItem,
+						itemTitle: styles.projectTreeTitle,
+						itemSwitcher: styles.projectTreeSwitcher
+					}}
+					treeData={projectTreeData}
+					expandedKeys={openWorkspaceKeys}
+					selectedKeys={effectiveSelectedMenuKeys}
+					draggable={{
+						icon: false,
+						nodeDraggable: (node: TreeDataNode): boolean => {
+							const projectNode: ProjectTreeNode = node as ProjectTreeNode;
+							if (projectNode.kind === "workspace") {
+								return effectiveWorkspaceTreeOrder.workspaceIds.length > 1;
+							}
+							if (projectNode.kind === "session" && projectNode.workspaceId !== undefined) {
+								return (effectiveWorkspaceTreeOrder.sessionIdsByWorkspace[projectNode.workspaceId]?.length ?? 0) > 1;
+							}
+							return false;
+						}
+					}}
+					allowDrop={allowProjectDrop}
+					onExpand={handleProjectTreeExpand}
+					onSelect={handleProjectTreeSelect}
+					onDrop={handleProjectDrop}
+					switcherIcon={(nodeProps) => {
+						const workspace: WorkspaceConfig | undefined = (
+							nodeProps as { workspace?: WorkspaceConfig }
+						).workspace;
+						return workspace === undefined ? null : <WorkspaceIconView workspace={workspace} />;
+					}}
+				/>
+			)
+		},
+		{
+			key: "recent",
+			label: labels.recent,
+			extra: (
+				<Tooltip title={labels.newSession}>
+					<Button
+						type="text"
+						shape="circle"
+						size="small"
+						className={styles.sectionAddButton}
+						icon={<Icon name="add" />}
+						aria-label={labels.newSession}
+						onClick={(event: MouseEvent<HTMLElement>): void => {
+							event.preventDefault();
+							event.stopPropagation();
+							onNewSession?.();
+						}}
+					/>
+				</Tooltip>
+			),
+			children: <Menu
+				className={styles.workspaceMenu}
+				mode="inline" items={recentMenuItems}
+				selectedKeys={effectiveSelectedMenuKeys}
+				onClick={handleMenuClick}
+			/>
+		}
+	];
 
 	useEffect((): void => {
 		onSessionsChange?.(sessions);
