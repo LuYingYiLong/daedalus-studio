@@ -17,6 +17,7 @@ describe("SearchSettingsPage", () => {
 		expect(pageSource).toContain("checked={settings.enabled}");
 		expect(pageSource).toContain("void savePatch(\"enabled\", { enabled });");
 		expect(pageSource).toContain("settings.search.model.title");
+		expect(pageSource).toContain("`${option.providerDisplayName}/${option.modelDisplayName}`");
 		expect(pageSource).toContain("settings.search.maxResults.title");
 		expect(pageSource).toContain("SEARCH_RESULT_MARKS");
 		expect(pageSource).toContain("onChangeComplete");

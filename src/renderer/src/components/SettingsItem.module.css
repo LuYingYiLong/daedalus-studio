@@ -1,0 +1,23 @@
+.item {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: var(--ds-space-3);
+	align-items: center;
+	padding: var(--ds-space-2) 0;
+}
+
+.item + .item {
+	border-top: 1px solid var(--ds-border-subtle);
+}
+
+.meta {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+
+@media (max-width: 720px) {
+	.item {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

@@ -31,6 +31,10 @@ describe("GeneralSettingsPage", () => {
 		expect(pageSource).toContain("updateClientPreferences");
 		expect(pageSource).toContain("updateGeneralSettings");
 		expect(pageSource).toContain("settings.general.godot.executable");
+		expect(pageSource).toContain("draftGeneralSettings.godotExecutablePath?.trim()");
+		expect(pageSource).toContain("<SettingsItem");
+		expect(pageSource).not.toContain("<Input");
+		expect(pageSource).not.toContain("<Tag");
 		expect(pageSource).toContain("window.electronAPI.pickGodotExecutable()");
 		expect(apiSource).toContain('language: "system"');
 		expect(generalApiSource).toContain("godotExecutablePath: null");

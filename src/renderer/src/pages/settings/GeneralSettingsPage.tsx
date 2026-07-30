@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import styles from "./GeneralSettingsPage.module.css";
-import { Alert, Button, Card, Input, Segmented, Select, Space, Spin, Switch, Tag, Tooltip, Typography } from "antd";
+import { Alert, Button, Card, Segmented, Select, Space, Spin, Switch, Tooltip, Typography } from "antd";
 import type { SelectProps } from "antd";
 import { Icon } from "@/assets/icons";
+import SettingsItem from "@/components/SettingsItem";
 import {
 	fetchClientPreferences,
 	updateClientPreferences,
@@ -256,11 +257,10 @@ function GeneralSettingsPage({
 						</div>
 					) : (
 						<div className={styles.preferenceList}>
-							<div className={styles.preferenceItem}>
-								<div className={styles.preferenceMeta}>
-									<Typography.Text>{t("settings.general.display.theme.title")}</Typography.Text>
-									<Typography.Text type="secondary">{t("settings.general.display.theme.description")}</Typography.Text>
-								</div>
+							<SettingsItem
+								title={t("settings.general.display.theme.title")}
+								description={t("settings.general.display.theme.description")}
+							>
 								<Segmented
 									className={styles.themeControl}
 									value={draftClientPreferences.theme}
@@ -274,12 +274,11 @@ function GeneralSettingsPage({
 										void handleThemeChange(value as ThemePreference);
 									}}
 								/>
-							</div>
-							<div className={styles.preferenceItem}>
-								<div className={styles.preferenceMeta}>
-									<Typography.Text>{t("settings.general.display.language.title")}</Typography.Text>
-									<Typography.Text type="secondary">{t("settings.general.display.language.description")}</Typography.Text>
-								</div>
+							</SettingsItem>
+							<SettingsItem
+								title={t("settings.general.display.language.title")}
+								description={t("settings.general.display.language.description")}
+							>
 								<Select<LanguagePreference>
 									className={styles.preferenceControl}
 									value={draftClientPreferences.language}
@@ -290,7 +289,7 @@ function GeneralSettingsPage({
 										void handleLanguageChange(value);
 									}}
 								/>
-							</div>
+							</SettingsItem>
 						</div>
 					)}
 				</Card>
@@ -301,50 +300,30 @@ function GeneralSettingsPage({
 							<Spin />
 						</div>
 					) : (
-						<div className={styles.godotSetting}>
-							<div className={styles.preferenceMeta}>
-								<div className={styles.godotTitleRow}>
-									<Typography.Text>{t("settings.general.godot.executable")}</Typography.Text>
-									<Tag
-										color={draftGeneralSettings.godotExecutableStatus === "ready" ? "success" : undefined}
-									>
-										{draftGeneralSettings.godotExecutableStatus === "ready"
-											? t("settings.general.godot.status.ready", { version: draftGeneralSettings.godotExecutableVersion ?? t("settings.general.godot.status.readyFallback") })
-											: draftGeneralSettings.godotExecutableStatus === "unavailable"
-												? t("settings.general.godot.status.unavailable")
-												: t("settings.general.godot.status.unconfigured")}
-									</Tag>
-								</div>
-								<Typography.Text type="secondary">
-									{t("settings.general.godot.description")}
-								</Typography.Text>
-							</div>
-							<Space.Compact>
-								<Input
-									readOnly={true}
-									value={draftGeneralSettings.godotExecutablePath ?? ""}
-									placeholder={t("settings.general.godot.placeholder")}
-								/>
-								<Button
-									icon={<Icon name="folder-open" />}
-									loading={savingKey === "godotExecutablePath"}
-									disabled={savingKey !== null && savingKey !== "godotExecutablePath"}
-									onClick={(): void => { void handleGodotExecutablePick(); }}
-								>
-									{t("settings.general.godot.browse")}
-								</Button>
-								<Tooltip title={t("settings.general.godot.clear")}>
+						<div className={styles.preferenceList}>
+							<SettingsItem
+								title={t("settings.general.godot.executable")}
+								description={draftGeneralSettings.godotExecutablePath?.trim() || t("settings.general.godot.placeholder")}
+							>
+								<Space.Compact>
 									<Button
-										aria-label={t("settings.general.godot.clear")}
-										icon={<Icon name="clear" />}
-										disabled={savingKey !== null || draftGeneralSettings.godotExecutablePath === null}
-										onClick={(): void => { void saveGodotExecutablePath(null); }}
-									/>
-								</Tooltip>
-							</Space.Compact>
-							{draftGeneralSettings.godotExecutableError === null ? null : (
-								<Typography.Text type="danger">{draftGeneralSettings.godotExecutableError}</Typography.Text>
-							)}
+										icon={<Icon name="folder-open" />}
+										loading={savingKey === "godotExecutablePath"}
+										disabled={savingKey !== null && savingKey !== "godotExecutablePath"}
+										onClick={(): void => { void handleGodotExecutablePick(); }}
+									>
+										{t("settings.general.godot.browse")}
+									</Button>
+									<Tooltip title={t("settings.general.godot.clear")}>
+										<Button
+											aria-label={t("settings.general.godot.clear")}
+											icon={<Icon name="clear" />}
+											disabled={savingKey !== null || draftGeneralSettings.godotExecutablePath === null}
+											onClick={(): void => { void saveGodotExecutablePath(null); }}
+										/>
+									</Tooltip>
+								</Space.Compact>
+							</SettingsItem>
 						</div>
 					)}
 				</Card>
@@ -381,11 +360,11 @@ function GeneralSettingsPage({
 									onChange: handleMinimizeToTrayChange
 								}
 							].map((item): React.JSX.Element => (
-								<div key={item.key} className={styles.preferenceItem}>
-									<div className={styles.preferenceMeta}>
-										<Typography.Text>{item.title}</Typography.Text>
-										<Typography.Text type="secondary">{item.description}</Typography.Text>
-									</div>
+								<SettingsItem
+									key={item.key}
+									title={item.title}
+									description={item.description}
+								>
 									<Switch
 										checked={item.checked}
 										loading={savingKey === item.key}
@@ -394,7 +373,7 @@ function GeneralSettingsPage({
 											void item.onChange(checked);
 										}}
 									/>
-								</div>
+								</SettingsItem>
 							))}
 						</div>
 					)}

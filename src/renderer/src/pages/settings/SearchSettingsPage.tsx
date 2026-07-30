@@ -8,6 +8,7 @@ import {
 	type WebSearchModelOption,
 	type WebSearchSettings
 } from "@/api/web-search-settings-api";
+import SettingsItem from "@/components/SettingsItem";
 import styles from "./SearchSettingsPage.module.css";
 
 type SavingKey = "enabled" | "model" | "maxResults" | "maxKeywords";
@@ -68,7 +69,7 @@ function createModelOptions(settings: WebSearchSettings | null): SelectProps["op
 		};
 		group.options.push({
 			value: encodeModelValue(option),
-			label: `${option.modelDisplayName} / ${option.model}`
+			label: `${option.providerDisplayName}/${option.modelDisplayName}`
 		});
 		groups.set(groupKey, group);
 	}
@@ -255,20 +256,19 @@ function SearchSettingsPage(): React.JSX.Element {
 									)
 								}
 							].map((item): React.JSX.Element => (
-								<div key={item.key} className={styles.settingsItem}>
-									<div className={styles.settingsMeta}>
-										<Typography.Text>{item.title}</Typography.Text>
-										<Typography.Text type="secondary">{item.description}</Typography.Text>
-									</div>
+								<SettingsItem
+									key={item.key}
+									title={item.title}
+									description={item.description}
+								>
 									{item.action}
-								</div>
+								</SettingsItem>
 							))}
 							{maxKeywordsConfig !== undefined ? (
-								<div className={styles.settingsItem}>
-									<div className={styles.settingsMeta}>
-										<Typography.Text>{t("settings.search.maxKeywords.title")}</Typography.Text>
-										<Typography.Text type="secondary">{t("settings.search.maxKeywords.description")}</Typography.Text>
-									</div>
+								<SettingsItem
+									title={t("settings.search.maxKeywords.title")}
+									description={t("settings.search.maxKeywords.description")}
+								>
 									<div className={styles.sliderControl}>
 										<Slider
 											min={maxKeywordsConfig.min}
@@ -282,7 +282,7 @@ function SearchSettingsPage(): React.JSX.Element {
 											onChangeComplete={handleMaxKeywordsChangeComplete}
 										/>
 									</div>
-								</div>
+								</SettingsItem>
 							) : null}
 						</div>
 					)}
