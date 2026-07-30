@@ -47,9 +47,14 @@ describe("multi-root workspace projects", () => {
 		expect(treeSource).toContain("switcherIcon={(nodeProps) =>");
 		expect(treeSource).not.toContain("icon: <WorkspaceIconView");
 		expect(treeSource).toContain("<Tree<ProjectTreeNode>");
+		expect(treeSource.match(/<Tree<ProjectTreeNode>/gu)).toHaveLength(3);
+		expect(treeSource).not.toContain("<Menu");
 		expect(treeSource).toContain("icon: false");
-		expect(treeSource).toContain("allowDrop={allowProjectDrop}");
-		expect(treeSource).toContain("onDrop={handleProjectDrop}");
+		expect(treeSource).toContain("allowDrop={allowTreeDrop}");
+		expect(treeSource).toContain("onDrop={handleTreeDrop}");
+		expect(treeSource).toContain("pinnedSessionIds:");
+		expect(treeSource).toContain("recentSessionIds:");
+		expect(treeSource).toContain("expandedSectionKeys:");
 		expect(composerSource).toContain("<WorkspaceIconView workspace={workspace}");
 		expect(composerSource).toContain("workspace.name");
 	});

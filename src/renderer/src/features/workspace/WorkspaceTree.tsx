@@ -8,8 +8,12 @@ import {
 	fetchWorkspaceTreeOrder,
 	updateWorkspaceTreeOrder
 } from "@/api/workspace-api";
-import type { DeleteWorkspaceResult, WorkspaceTreeOrderPreferences } from "@/api/workspace-api";
-import { Alert, Badge, Button, Collapse, ConfigProvider, Dropdown, Input, Menu, message, Modal, Spin, Tooltip, Tree, Typography } from "antd";
+import type {
+	DeleteWorkspaceResult,
+	WorkspaceTreeOrderPreferences,
+	WorkspaceTreeSectionKey
+} from "@/api/workspace-api";
+import { Alert, Badge, Button, Collapse, Dropdown, Input, message, Modal, Spin, Tooltip, Tree, Typography } from "antd";
 import type { CollapseProps, MenuProps, TreeDataNode, TreeProps } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/api/types";
 import { Icon } from "@/assets/icons";
@@ -21,9 +25,11 @@ import {
 	areWorkspaceTreeOrdersEqual,
 	canDropWorkspaceTreeNode,
 	createEmptyWorkspaceTreeOrder,
+	moveSectionSessionInTreeOrder,
 	moveSessionInTreeOrder,
 	moveWorkspaceInTreeOrder,
 	reconcileWorkspaceTreeOrder,
+	sortSessionsByTreeOrder,
 	sortWorkspacesByTreeOrder,
 	sortWorkspaceSessionsByTreeOrder,
 	type WorkspaceTreeDropPlacement
@@ -51,20 +57,18 @@ export type WorkspaceTreeProps = {
 	onWorkspaceUpdate?: (workspace: WorkspaceConfig) => void;
 };
 
-type WorkspaceMenuItem = NonNullable<MenuProps["items"]>[number];
-type WorkspaceMenuItems = NonNullable<MenuProps["items"]>;
 type ProjectTreeNode = TreeDataNode & {
 	kind: "workspace" | "session" | "empty";
+	sectionKey?: WorkspaceTreeSectionKey;
 	workspace?: WorkspaceConfig;
 	workspaceId?: string;
 	sessionId?: string;
 	children?: ProjectTreeNode[];
 };
 
-type RenderableWorkspaceMenuItem = {
+type SessionTreePresentation = {
 	key: Key;
 	label?: ReactNode;
-	className?: string;
 };
 
 type WorkspaceTreeLabels = {
@@ -137,7 +141,10 @@ type CreateWorkspaceMenuItemOptions = CreateSessionMenuItemOptions & {
 	onDeleteWorkspace: (workspace: WorkspaceConfig) => void;
 };
 
-function createSessionMenuItem(session: SessionMetadata, options: CreateSessionMenuItemOptions): WorkspaceMenuItem {
+function createSessionTreePresentation(
+	session: SessionMetadata,
+	options: CreateSessionMenuItemOptions
+): SessionTreePresentation {
 	const isArchiving: boolean = options.archivingSessionId === session.id;
 	const isPinning: boolean = options.pinningSessionId === session.id;
 	const isRunning: boolean = options.runningSessionIds.has(session.id);
@@ -202,7 +209,6 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 
 	return {
 		key: `session:${session.id}`,
-		className: styles.sessionMenuEntry,
 		label: (
 			<Dropdown menu={actionMenu} trigger={["contextMenu"]}>
 				<span className={styles.sessionMenuItem}>
@@ -270,32 +276,44 @@ function createSessionMenuItem(session: SessionMetadata, options: CreateSessionM
 	};
 }
 
-function createSessionMenuItems(
-	sessions: SessionMetadata[],
-	emptyKey: string,
-	emptyLabel: string,
-	options: CreateSessionMenuItemOptions
-): WorkspaceMenuItems {
-	return sessions.length > 0
-		? sessions.map((session: SessionMetadata): WorkspaceMenuItem => createSessionMenuItem(session, options))
-		: [{ key: emptyKey, label: emptyLabel, disabled: true }];
-}
-
 function createSessionTreeNode(
 	session: SessionMetadata,
-	workspaceId: string,
+	sectionKey: WorkspaceTreeSectionKey,
+	workspaceId: string | undefined,
 	options: CreateSessionMenuItemOptions
 ): ProjectTreeNode {
-	const menuItem: RenderableWorkspaceMenuItem = createSessionMenuItem(session, options) as RenderableWorkspaceMenuItem;
+	const presentation: SessionTreePresentation = createSessionTreePresentation(session, options);
 	return {
-		key: menuItem.key,
-		title: menuItem.label,
-		className: menuItem.className,
+		key: presentation.key,
+		title: presentation.label,
 		kind: "session",
+		sectionKey,
 		workspaceId,
 		sessionId: session.id,
 		isLeaf: true
 	};
+}
+
+function createSessionTreeData(
+	sessions: SessionMetadata[],
+	sectionKey: Exclude<WorkspaceTreeSectionKey, "projects">,
+	emptyKey: string,
+	emptyLabel: string,
+	options: CreateSessionMenuItemOptions
+): ProjectTreeNode[] {
+	return sessions.length > 0
+		? sessions.map((session: SessionMetadata): ProjectTreeNode => {
+			return createSessionTreeNode(session, sectionKey, undefined, options);
+		})
+		: [{
+			key: emptyKey,
+			title: emptyLabel,
+			disabled: true,
+			selectable: false,
+			kind: "empty",
+			sectionKey,
+			isLeaf: true
+		}];
 }
 
 function createProjectTreeData(workspaces: WorkspaceConfig[], sessions: SessionMetadata[], options: CreateWorkspaceMenuItemOptions): ProjectTreeNode[] {
@@ -408,7 +426,9 @@ function createProjectTreeData(workspaces: WorkspaceConfig[], sessions: SessionM
 			workspace,
 			workspaceId: workspace.id,
 			children: workspaceSessions.length > 0
-				? workspaceSessions.map((session: SessionMetadata): ProjectTreeNode => createSessionTreeNode(session, workspace.id, options))
+				? workspaceSessions.map((session: SessionMetadata): ProjectTreeNode => {
+					return createSessionTreeNode(session, "projects", workspace.id, options);
+				})
 				: [
 					{
 						key: `workspace:${workspace.id}:empty`,
@@ -416,6 +436,7 @@ function createProjectTreeData(workspaces: WorkspaceConfig[], sessions: SessionM
 						disabled: true,
 						selectable: false,
 						kind: "empty",
+						sectionKey: "projects",
 						workspaceId: workspace.id,
 						isLeaf: true
 					}
@@ -471,7 +492,6 @@ function WorkspaceTree({
 	const [reloadIndex, setReloadIndex] = useState<number>(0);
 	const [archivingSessionId, setArchivingSessionId] = useState<string | null>(null);
 	const [pinningSessionId, setPinningSessionId] = useState<string | null>(null);
-	const [openSectionKeys, setOpenSectionKeys] = useState<string[]>(["pinned", "projects", "recent"]);
 	const [isCreateProjectOpen, setIsCreateProjectOpen] = useState<boolean>(false);
 	const [deleteTargetWorkspace, setDeleteTargetWorkspace] = useState<WorkspaceConfig | null>(null);
 	const [editTargetWorkspace, setEditTargetWorkspace] = useState<WorkspaceConfig | null>(null);
@@ -564,7 +584,10 @@ function WorkspaceTree({
 				Object.entries(nextOrder.sessionIdsByWorkspace).map(
 					([workspaceId, sessionIds]): [string, string[]] => [workspaceId, [...sessionIds]]
 				)
-			)
+			),
+			pinnedSessionIds: [...nextOrder.pinnedSessionIds],
+			recentSessionIds: [...nextOrder.recentSessionIds],
+			expandedSectionKeys: [...nextOrder.expandedSectionKeys]
 		};
 
 		orderSaveQueueRef.current = orderSaveQueueRef.current.then(async (): Promise<void> => {
@@ -599,28 +622,29 @@ function WorkspaceTree({
 		});
 	}
 
-	const handleMenuClick: MenuProps["onClick"] = ({ key }): void => {
-		const selectedKey: string = String(key);
+	const handleSectionChange: NonNullable<CollapseProps["onChange"]> = (keys): void => {
+		const candidateKeys: string[] = (Array.isArray(keys) ? keys : [keys]).map(String);
+		const expandedSectionKeys: WorkspaceTreeSectionKey[] = candidateKeys.filter(
+			(key: string): key is WorkspaceTreeSectionKey => {
+				return key === "pinned" || key === "projects" || key === "recent";
+			}
+		);
+		persistWorkspaceTreeOrder({
+			...workspaceTreeOrderRef.current,
+			expandedSectionKeys
+		});
+	};
 
-		setSelectedMenuKeys([selectedKey]);
-
-		if (selectedKey.startsWith("workspace:")) {
+	function ensureSectionOpen(sectionKey: WorkspaceTreeSectionKey): void {
+		const currentOrder: WorkspaceTreeOrderPreferences = workspaceTreeOrderRef.current;
+		if (currentOrder.expandedSectionKeys.includes(sectionKey)) {
 			return;
 		}
-
-		if (selectedKey.startsWith("session:")) {
-			const sessionId: string = selectedKey.slice("session:".length);
-			const session: SessionMetadata | undefined = sessions.find((item: SessionMetadata): boolean => item.id === sessionId);
-
-			if (session !== undefined) {
-				onSessionSelect?.(session);
-			}
-		}
-	};
-
-	const handleSectionChange: NonNullable<CollapseProps["onChange"]> = (keys): void => {
-		setOpenSectionKeys(Array.isArray(keys) ? keys : [keys]);
-	};
+		persistWorkspaceTreeOrder({
+			...currentOrder,
+			expandedSectionKeys: [...currentOrder.expandedSectionKeys, sectionKey]
+		});
+	}
 
 	async function handleArchiveSessionAction(session: SessionMetadata): Promise<void> {
 		if (archivingSessionId !== null) {
@@ -662,12 +686,12 @@ function WorkspaceTree({
 			setSessions((currentSessions: SessionMetadata[]): SessionMetadata[] => currentSessions.map(
 				(currentSession: SessionMetadata): SessionMetadata => currentSession.id === metadata.id ? metadata : currentSession
 			));
-			const targetSection: string = metadata.pinned === true
+			const targetSection: WorkspaceTreeSectionKey = metadata.pinned === true
 				? "pinned"
 				: metadata.workspaceId !== undefined && workspaces.some((workspace: WorkspaceConfig): boolean => workspace.id === metadata.workspaceId)
 					? "projects"
 					: "recent";
-			setOpenSectionKeys((currentKeys: string[]): string[] => currentKeys.includes(targetSection) ? currentKeys : [...currentKeys, targetSection]);
+			ensureSectionOpen(targetSection);
 		} catch (error: unknown) {
 			showWorkspaceOperationError(error, labels.failedPinSession);
 		} finally {
@@ -979,6 +1003,12 @@ function WorkspaceTree({
 	const orderedWorkspaces: WorkspaceConfig[] = useMemo((): WorkspaceConfig[] => {
 		return sortWorkspacesByTreeOrder(workspaces, effectiveWorkspaceTreeOrder);
 	}, [effectiveWorkspaceTreeOrder, workspaces]);
+	const orderedPinnedSessions: SessionMetadata[] = useMemo((): SessionMetadata[] => {
+		return sortSessionsByTreeOrder(
+			sessionGroups.pinnedSessions,
+			effectiveWorkspaceTreeOrder.pinnedSessionIds
+		);
+	}, [effectiveWorkspaceTreeOrder.pinnedSessionIds, sessionGroups.pinnedSessions]);
 	const orderedProjectSessions: SessionMetadata[] = useMemo((): SessionMetadata[] => {
 		return orderedWorkspaces.flatMap((workspace: WorkspaceConfig): SessionMetadata[] => {
 			return sortWorkspaceSessionsByTreeOrder(
@@ -988,6 +1018,21 @@ function WorkspaceTree({
 			);
 		});
 	}, [effectiveWorkspaceTreeOrder, orderedWorkspaces, sessionGroups.projectSessions]);
+	const orderedRecentSessions: SessionMetadata[] = useMemo((): SessionMetadata[] => {
+		return sortSessionsByTreeOrder(
+			sessionGroups.recentSessions,
+			effectiveWorkspaceTreeOrder.recentSessionIds
+		);
+	}, [effectiveWorkspaceTreeOrder.recentSessionIds, sessionGroups.recentSessions]);
+	const pinnedTreeData: ProjectTreeNode[] = useMemo((): ProjectTreeNode[] => {
+		return createSessionTreeData(
+			orderedPinnedSessions,
+			"pinned",
+			"pinned:empty",
+			labels.noPinnedSessions,
+			sessionMenuOptions
+		);
+	}, [labels.noPinnedSessions, orderedPinnedSessions, sessionMenuOptions]);
 	const projectTreeData: ProjectTreeNode[] = useMemo((): ProjectTreeNode[] => {
 		return createProjectTreeData(orderedWorkspaces, orderedProjectSessions, {
 			...sessionMenuOptions,
@@ -1004,13 +1049,17 @@ function WorkspaceTree({
 			}
 		});
 	}, [deletingWorkspaceId, orderedProjectSessions, orderedWorkspaces, sessionMenuOptions]);
-	const pinnedMenuItems: WorkspaceMenuItems = useMemo((): WorkspaceMenuItems => {
-		return createSessionMenuItems(sessionGroups.pinnedSessions, "pinned:empty", labels.noPinnedSessions, sessionMenuOptions);
-	}, [labels.noPinnedSessions, sessionGroups.pinnedSessions, sessionMenuOptions]);
-	const recentMenuItems: WorkspaceMenuItems = useMemo((): WorkspaceMenuItems => {
-		return createSessionMenuItems(sessionGroups.recentSessions, "recent:empty", labels.noRecentSessions, sessionMenuOptions);
-	}, [labels.noRecentSessions, sessionGroups.recentSessions, sessionMenuOptions]);
+	const recentTreeData: ProjectTreeNode[] = useMemo((): ProjectTreeNode[] => {
+		return createSessionTreeData(
+			orderedRecentSessions,
+			"recent",
+			"recent:empty",
+			labels.noRecentSessions,
+			sessionMenuOptions
+		);
+	}, [labels.noRecentSessions, orderedRecentSessions, sessionMenuOptions]);
 	const effectiveSelectedMenuKeys: string[] = getSelectedMenuKeys(selectedSessionId, selectedWorkspaceId, selectedMenuKeys);
+	const openSectionKeys: WorkspaceTreeSectionKey[] = effectiveWorkspaceTreeOrder.expandedSectionKeys;
 	const handleProjectTreeExpand: NonNullable<TreeProps<ProjectTreeNode>["onExpand"]> = (expandedKeys): void => {
 		setOpenWorkspaceKeys(expandedKeys.map((key: Key): string => String(key)));
 	};
@@ -1038,7 +1087,7 @@ function WorkspaceTree({
 			}
 		}
 	};
-	const canDropProjectNode = (
+	const canDropTreeNode = (
 		dragNode: ProjectTreeNode,
 		dropNode: ProjectTreeNode,
 		dropToGap: boolean
@@ -1048,15 +1097,15 @@ function WorkspaceTree({
 		dropToGap,
 		effectiveWorkspaceTreeOrder
 	);
-	const allowProjectDrop: NonNullable<TreeProps<ProjectTreeNode>["allowDrop"]> = ({
+	const allowTreeDrop: NonNullable<TreeProps<ProjectTreeNode>["allowDrop"]> = ({
 		dragNode,
 		dropNode,
 		dropPosition
-	}): boolean => canDropProjectNode(dragNode, dropNode, dropPosition !== 0);
-	const handleProjectDrop: NonNullable<TreeProps<ProjectTreeNode>["onDrop"]> = (info): void => {
+	}): boolean => canDropTreeNode(dragNode, dropNode, dropPosition !== 0);
+	const handleTreeDrop: NonNullable<TreeProps<ProjectTreeNode>["onDrop"]> = (info): void => {
 		const dragNode: ProjectTreeNode = info.dragNode;
 		const dropNode: ProjectTreeNode = info.node;
-		if (!canDropProjectNode(dragNode, dropNode, info.dropToGap === true)) {
+		if (!canDropTreeNode(dragNode, dropNode, info.dropToGap === true)) {
 			return;
 		}
 		const targetPosition: number = Number.parseInt(
@@ -1082,6 +1131,8 @@ function WorkspaceTree({
 		if (
 			dragNode.kind === "session"
 			&& dropNode.kind === "session"
+			&& dragNode.sectionKey === "projects"
+			&& dropNode.sectionKey === "projects"
 			&& dragNode.workspaceId !== undefined
 			&& dragNode.workspaceId === dropNode.workspaceId
 			&& dragNode.sessionId !== undefined
@@ -1094,17 +1145,65 @@ function WorkspaceTree({
 				dropNode.sessionId,
 				placement
 			));
+			return;
 		}
+		if (
+			dragNode.kind === "session"
+			&& dropNode.kind === "session"
+			&& dragNode.sectionKey !== undefined
+			&& dragNode.sectionKey !== "projects"
+			&& dragNode.sectionKey === dropNode.sectionKey
+			&& dragNode.sessionId !== undefined
+			&& dropNode.sessionId !== undefined
+		) {
+			persistWorkspaceTreeOrder(moveSectionSessionInTreeOrder(
+				workspaceTreeOrderRef.current,
+				dragNode.sectionKey,
+				dragNode.sessionId,
+				dropNode.sessionId,
+				placement
+			));
+		}
+	};
+	const isTreeNodeDraggable = (node: TreeDataNode): boolean => {
+		const treeNode: ProjectTreeNode = node as ProjectTreeNode;
+		if (treeNode.kind === "workspace") {
+			return effectiveWorkspaceTreeOrder.workspaceIds.length > 1;
+		}
+		if (treeNode.kind !== "session" || treeNode.sectionKey === undefined) {
+			return false;
+		}
+		if (treeNode.sectionKey === "pinned") {
+			return effectiveWorkspaceTreeOrder.pinnedSessionIds.length > 1;
+		}
+		if (treeNode.sectionKey === "recent") {
+			return effectiveWorkspaceTreeOrder.recentSessionIds.length > 1;
+		}
+		return treeNode.workspaceId !== undefined
+			&& (effectiveWorkspaceTreeOrder.sessionIdsByWorkspace[treeNode.workspaceId]?.length ?? 0) > 1;
 	};
 	const sectionItems: CollapseProps["items"] = [
 		{
 			key: "pinned",
 			label: labels.pinned,
-			children: <Menu
-				className={styles.workspaceMenu}
-				mode="inline" items={pinnedMenuItems}
+			children: <Tree<ProjectTreeNode>
+				blockNode
+				virtual={false}
+				classNames={{
+					root: styles.projectTree,
+					item: `${styles.projectTreeItem} ${styles.treeItemPaddingLeft}`,
+					itemTitle: styles.projectTreeTitle,
+					itemSwitcher: styles.projectTreeSwitcher
+				}}
+				treeData={pinnedTreeData}
 				selectedKeys={effectiveSelectedMenuKeys}
-				onClick={handleMenuClick}
+				draggable={{
+					icon: false,
+					nodeDraggable: isTreeNodeDraggable
+				}}
+				allowDrop={allowTreeDrop}
+				onSelect={handleProjectTreeSelect}
+				onDrop={handleTreeDrop}
 			/>
 		},
 		{
@@ -1139,24 +1238,15 @@ function WorkspaceTree({
 					}}
 					treeData={projectTreeData}
 					expandedKeys={openWorkspaceKeys}
-					selectedKeys={effectiveSelectedMenuKeys}
-					draggable={{
-						icon: false,
-						nodeDraggable: (node: TreeDataNode): boolean => {
-							const projectNode: ProjectTreeNode = node as ProjectTreeNode;
-							if (projectNode.kind === "workspace") {
-								return effectiveWorkspaceTreeOrder.workspaceIds.length > 1;
-							}
-							if (projectNode.kind === "session" && projectNode.workspaceId !== undefined) {
-								return (effectiveWorkspaceTreeOrder.sessionIdsByWorkspace[projectNode.workspaceId]?.length ?? 0) > 1;
-							}
-							return false;
-						}
-					}}
-					allowDrop={allowProjectDrop}
-					onExpand={handleProjectTreeExpand}
-					onSelect={handleProjectTreeSelect}
-					onDrop={handleProjectDrop}
+						selectedKeys={effectiveSelectedMenuKeys}
+						draggable={{
+							icon: false,
+							nodeDraggable: isTreeNodeDraggable
+						}}
+						allowDrop={allowTreeDrop}
+						onExpand={handleProjectTreeExpand}
+						onSelect={handleProjectTreeSelect}
+						onDrop={handleTreeDrop}
 					switcherIcon={(nodeProps) => {
 						const workspace: WorkspaceConfig | undefined = (
 							nodeProps as { workspace?: WorkspaceConfig }
@@ -1181,16 +1271,30 @@ function WorkspaceTree({
 						onClick={(event: MouseEvent<HTMLElement>): void => {
 							event.preventDefault();
 							event.stopPropagation();
+							ensureSectionOpen("recent");
 							onNewSession?.();
 						}}
 					/>
 				</Tooltip>
 			),
-			children: <Menu
-				className={styles.workspaceMenu}
-				mode="inline" items={recentMenuItems}
+			children: <Tree<ProjectTreeNode>
+				blockNode
+				virtual={false}
+				classNames={{
+					root: styles.projectTree,
+					item: `${styles.projectTreeItem} ${styles.treeItemPaddingLeft}`,
+					itemTitle: styles.projectTreeTitle,
+					itemSwitcher: styles.projectTreeSwitcher
+				}}
+				treeData={recentTreeData}
 				selectedKeys={effectiveSelectedMenuKeys}
-				onClick={handleMenuClick}
+				draggable={{
+					icon: false,
+					nodeDraggable: isTreeNodeDraggable
+				}}
+				allowDrop={allowTreeDrop}
+				onSelect={handleProjectTreeSelect}
+				onDrop={handleTreeDrop}
 			/>
 		}
 	];
@@ -1243,20 +1347,6 @@ function WorkspaceTree({
 			return currentKeys.includes(workspaceKey) ? currentKeys : [...currentKeys, workspaceKey];
 		});
 	}, [selectedSessionId, sessions]);
-
-	useEffect((): void => {
-		if (selectedSessionId === null) {
-			return;
-		}
-
-		const selectedSession: SessionMetadata | undefined = sessions.find((session: SessionMetadata): boolean => session.id === selectedSessionId);
-		const sectionKey: string = selectedSession?.pinned === true
-			? "pinned"
-			: selectedSession?.workspaceId !== undefined && workspaces.some((workspace: WorkspaceConfig): boolean => workspace.id === selectedSession.workspaceId)
-				? "projects"
-				: "recent";
-		setOpenSectionKeys((currentKeys: string[]): string[] => currentKeys.includes(sectionKey) ? currentKeys : [...currentKeys, sectionKey]);
-	}, [selectedSessionId, sessions, workspaces]);
 
 	return (
 		<div className={styles.workspaceTreeRegion}>
@@ -1330,7 +1420,7 @@ function WorkspaceTree({
 					setOpenWorkspaceKeys((currentKeys: string[]): string[] => currentKeys.includes(`workspace:${createdWorkspace.id}`)
 						? currentKeys
 						: [...currentKeys, `workspace:${createdWorkspace.id}`]);
-					setOpenSectionKeys((currentKeys: string[]): string[] => currentKeys.includes("projects") ? currentKeys : [...currentKeys, "projects"]);
+					ensureSectionOpen("projects");
 					setIsCreateProjectOpen(false);
 					onWorkspaceUpdate?.(createdWorkspace);
 				}}

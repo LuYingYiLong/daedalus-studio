@@ -41,15 +41,24 @@ export type SelectWorkspaceOptions = {
 };
 
 export type WorkspaceTreeOrderPreferences = {
-	schemaVersion: 1;
+	schemaVersion: 2;
 	workspaceIds: string[];
 	sessionIdsByWorkspace: Record<string, string[]>;
+	pinnedSessionIds: string[];
+	recentSessionIds: string[];
+	expandedSectionKeys: WorkspaceTreeSectionKey[];
 	updatedAt: string;
 };
 
+export type WorkspaceTreeSectionKey = "pinned" | "projects" | "recent";
+
 export type WorkspaceTreeOrderUpdate = Pick<
 	WorkspaceTreeOrderPreferences,
-	"workspaceIds" | "sessionIdsByWorkspace"
+	"workspaceIds"
+	| "sessionIdsByWorkspace"
+	| "pinnedSessionIds"
+	| "recentSessionIds"
+	| "expandedSectionKeys"
 >;
 
 export async function fetchWorkspaces(): Promise<WorkspaceListResult> {

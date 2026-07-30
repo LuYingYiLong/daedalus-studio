@@ -1,17 +1,26 @@
 import type { SessionMetadata, WorkspaceConfig } from "@/api/types";
-import type { WorkspaceTreeOrderPreferences } from "@/api/workspace-api";
+import type {
+	WorkspaceTreeOrderPreferences,
+	WorkspaceTreeSectionKey
+} from "@/api/workspace-api";
 
 export type WorkspaceTreeDropPlacement = "before" | "after";
 export type WorkspaceTreeSortableNode = {
 	kind: "workspace" | "session" | "empty";
+	sectionKey?: WorkspaceTreeSectionKey | undefined;
 	workspaceId?: string | undefined;
 };
 
+const WORKSPACE_TREE_SECTION_KEYS: readonly WorkspaceTreeSectionKey[] = ["pinned", "projects", "recent"];
+
 export function createEmptyWorkspaceTreeOrder(): WorkspaceTreeOrderPreferences {
 	return {
-		schemaVersion: 1,
+		schemaVersion: 2,
 		workspaceIds: [],
 		sessionIdsByWorkspace: {},
+		pinnedSessionIds: [],
+		recentSessionIds: [],
+		expandedSectionKeys: [...WORKSPACE_TREE_SECTION_KEYS],
 		updatedAt: new Date(0).toISOString()
 	};
 }
@@ -36,6 +45,22 @@ export function reconcileWorkspaceTreeOrder(
 		preferences.workspaceIds
 	);
 	const workspaceIdSet: ReadonlySet<string> = new Set(workspaceIds);
+	const pinnedSessionIds: string[] = mergeSavedOrder(
+		sessions
+			.filter((session: SessionMetadata): boolean => session.temporary !== true && session.pinned === true)
+			.map((session: SessionMetadata): string => session.id),
+		preferences.pinnedSessionIds
+	);
+	const recentSessionIds: string[] = mergeSavedOrder(
+		sessions
+			.filter((session: SessionMetadata): boolean => {
+				return session.temporary !== true
+					&& session.pinned !== true
+					&& (session.workspaceId === undefined || !workspaceIdSet.has(session.workspaceId));
+			})
+			.map((session: SessionMetadata): string => session.id),
+		preferences.recentSessionIds
+	);
 	const currentSessionIdsByWorkspace: Record<string, string[]> = Object.fromEntries(
 		workspaceIds.map((workspaceId: string): [string, string[]] => [workspaceId, []])
 	);
@@ -60,9 +85,14 @@ export function reconcileWorkspaceTreeOrder(
 	}
 
 	return {
-		schemaVersion: 1,
+		schemaVersion: 2,
 		workspaceIds,
 		sessionIdsByWorkspace,
+		pinnedSessionIds,
+		recentSessionIds,
+		expandedSectionKeys: preferences.expandedSectionKeys.filter(
+			(sectionKey: WorkspaceTreeSectionKey): boolean => WORKSPACE_TREE_SECTION_KEYS.includes(sectionKey)
+		),
 		updatedAt: preferences.updatedAt
 	};
 }
@@ -73,10 +103,16 @@ export function areWorkspaceTreeOrdersEqual(
 ): boolean {
 	return JSON.stringify({
 		workspaceIds: left.workspaceIds,
-		sessionIdsByWorkspace: left.sessionIdsByWorkspace
+		sessionIdsByWorkspace: left.sessionIdsByWorkspace,
+		pinnedSessionIds: left.pinnedSessionIds,
+		recentSessionIds: left.recentSessionIds,
+		expandedSectionKeys: left.expandedSectionKeys
 	}) === JSON.stringify({
 		workspaceIds: right.workspaceIds,
-		sessionIdsByWorkspace: right.sessionIdsByWorkspace
+		sessionIdsByWorkspace: right.sessionIdsByWorkspace,
+		pinnedSessionIds: right.pinnedSessionIds,
+		recentSessionIds: right.recentSessionIds,
+		expandedSectionKeys: right.expandedSectionKeys
 	});
 }
 
@@ -94,9 +130,21 @@ export function canDropWorkspaceTreeNode(
 			&& dropNode.kind === "workspace"
 			&& preferences.workspaceIds.length > 1;
 	}
-	return dragNode.kind === "session"
-		&& dropNode.kind === "session"
-		&& dragNode.workspaceId === dropNode.workspaceId
+	if (
+		dragNode.kind !== "session"
+		|| dropNode.kind !== "session"
+		|| dragNode.sectionKey === undefined
+		|| dragNode.sectionKey !== dropNode.sectionKey
+	) {
+		return false;
+	}
+	if (dragNode.sectionKey === "pinned") {
+		return preferences.pinnedSessionIds.length > 1;
+	}
+	if (dragNode.sectionKey === "recent") {
+		return preferences.recentSessionIds.length > 1;
+	}
+	return dragNode.workspaceId === dropNode.workspaceId
 		&& dragNode.workspaceId !== undefined
 		&& (preferences.sessionIdsByWorkspace[dragNode.workspaceId]?.length ?? 0) > 1;
 }
@@ -154,6 +202,40 @@ export function moveSessionInTreeOrder(
 	};
 }
 
+export function moveSectionSessionInTreeOrder(
+	preferences: WorkspaceTreeOrderPreferences,
+	sectionKey: Exclude<WorkspaceTreeSectionKey, "projects">,
+	draggedSessionId: string,
+	targetSessionId: string,
+	placement: WorkspaceTreeDropPlacement
+): WorkspaceTreeOrderPreferences {
+	const orderKey: "pinnedSessionIds" | "recentSessionIds" = sectionKey === "pinned"
+		? "pinnedSessionIds"
+		: "recentSessionIds";
+	return {
+		...preferences,
+		[orderKey]: moveId(
+			preferences[orderKey],
+			draggedSessionId,
+			targetSessionId,
+			placement
+		)
+	};
+}
+
+export function sortSessionsByTreeOrder(
+	sessions: readonly SessionMetadata[],
+	sessionIds: readonly string[]
+): SessionMetadata[] {
+	const byId: ReadonlyMap<string, SessionMetadata> = new Map(
+		sessions.map((session: SessionMetadata): [string, SessionMetadata] => [session.id, session])
+	);
+	return sessionIds.flatMap((sessionId: string): SessionMetadata[] => {
+		const session: SessionMetadata | undefined = byId.get(sessionId);
+		return session === undefined ? [] : [session];
+	});
+}
+
 export function sortWorkspacesByTreeOrder(
 	workspaces: readonly WorkspaceConfig[],
 	preferences: WorkspaceTreeOrderPreferences
@@ -172,15 +254,8 @@ export function sortWorkspaceSessionsByTreeOrder(
 	workspaceId: string,
 	preferences: WorkspaceTreeOrderPreferences
 ): SessionMetadata[] {
-	const byId: ReadonlyMap<string, SessionMetadata> = new Map(
-		sessions
-			.filter((session: SessionMetadata): boolean => session.workspaceId === workspaceId)
-			.map((session: SessionMetadata): [string, SessionMetadata] => [session.id, session])
-	);
-	return (preferences.sessionIdsByWorkspace[workspaceId] ?? []).flatMap(
-		(sessionId: string): SessionMetadata[] => {
-			const session: SessionMetadata | undefined = byId.get(sessionId);
-			return session === undefined ? [] : [session];
-		}
+	return sortSessionsByTreeOrder(
+		sessions.filter((session: SessionMetadata): boolean => session.workspaceId === workspaceId),
+		preferences.sessionIdsByWorkspace[workspaceId] ?? []
 	);
 }

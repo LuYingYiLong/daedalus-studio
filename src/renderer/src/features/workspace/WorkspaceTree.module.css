@@ -21,11 +21,6 @@
 	display: none;
 }
 
-.workspaceMenu {
-	border-inline-end: 0 !important;
-	user-select: none;
-}
-
 .projectTree {
 	background: transparent !important;
 	user-select: none;
@@ -68,13 +63,6 @@
 	overflow: visible;
 }
 
-.projectTreeIcon {
-	display: inline-flex;
-	flex: none;
-	align-items: center;
-	margin-inline-end: 4px;
-}
-
 .projectTreeSwitcher {
 	display: inline-flex;
 	flex: none;
@@ -89,19 +77,6 @@
 	width: 0 !important;
 	min-width: 0 !important;
 	margin-inline-end: 0;
-}
-
-.treeExpandIcon {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	transform: rotate(-90deg);
-	transform-origin: center;
-	transition: transform var(--ant-motion-duration-mid) var(--ant-motion-ease-in-out);
-}
-
-.treeExpandIconActive {
-	transform: rotate(0deg);
 }
 
 .workspaceTreeCollapse {
@@ -148,29 +123,6 @@
 
 .collapseExpandIconActive {
   transform: rotate(0deg);
-}
-
-.workspaceMenu :global(.ant-menu-item),
-.workspaceMenu :global(.ant-menu-submenu-title) {
-	gap: 4px;
-	width: 100%;
-	min-width: 0;
-	margin: 4px 0px !important;
-	padding: 0px 0px 0px 8px !important;
-	overflow: visible;
-}
-
-.workspaceMenu :global(.ant-menu-item).sessionMenuEntry {
-	padding-left: 26px !important;
-}
-
-.workspaceMenu :global(.ant-menu-title-content) {
-	min-width: 0;
-	overflow: visible;
-}
-
-.menu {
-	border-inline-end: 0 !important;
 }
 
 .workspaceMenuItem {
@@ -253,8 +205,6 @@
 	font-size: 12px;
 }
 
-.workspaceMenu :global(.ant-menu-submenu-title:hover) .workspaceActions,
-.workspaceMenu :global(.ant-menu-submenu-title:focus-within) .workspaceActions,
 .projectTreeItem:hover .workspaceActions,
 .projectTreeItem:focus-within .workspaceActions {
 	opacity: 1;
@@ -274,4 +224,8 @@
 .renameErrorText {
 	display: block;
 	margin-top: 8px;
+}
+
+.treeItemPaddingLeft {
+	padding-left: 26px !important;
 }
