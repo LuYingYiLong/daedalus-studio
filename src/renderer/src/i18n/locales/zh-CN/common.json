@@ -204,6 +204,7 @@
     "model": {
       "fallback": "模型",
       "notConfigured": "未配置",
+      "configureProvider": "配置供应商",
       "capabilities": {
         "reasoning": "推理",
         "vision": "视觉",
@@ -697,6 +698,7 @@
     },
     "defaultModel": {
       "selectModel": "选择模型",
+      "configureProvider": "配置供应商",
       "notConfigured": "未配置，始终询问我",
       "routing": {
         "sessionTitle": {

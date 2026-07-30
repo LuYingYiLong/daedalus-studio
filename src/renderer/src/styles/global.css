@@ -94,6 +94,29 @@
 	font-display: swap;
 }
 
+.settings-window-warmup {
+	position: fixed;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	pointer-events: none;
+}
+
+.settings-window-warmup__indicator {
+	width: 24px;
+	height: 24px;
+	border: 2px solid rgb(71 140 191 / 22%);
+	border-top-color: #478cbf;
+	border-radius: 50%;
+	animation: settings-window-warmup-spin 700ms linear infinite;
+}
+
+@keyframes settings-window-warmup-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
 :root {
 	--ds-bg: #141414;
 	--ds-code-bg: #ffffff1d;

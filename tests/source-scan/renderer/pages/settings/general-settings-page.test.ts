@@ -9,6 +9,15 @@ describe("GeneralSettingsPage", () => {
 		const generalApiSource: string = readRepoFile("src", "renderer", "src", "api", "general-settings-api.ts");
 		const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 		const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
+		const mainSource: string = readRepoFile("src", "main", "index.ts");
+		const preferencesControllerSource: string = readRepoFile(
+			"src",
+			"renderer",
+			"src",
+			"app",
+			"hooks",
+			"useClientPreferencesController.ts"
+		);
 
 		expect(pageSource).toContain("useTranslation");
 		expect(pageSource).toContain("settings.general.general.autoExpandTodoList.title");
@@ -40,7 +49,13 @@ describe("GeneralSettingsPage", () => {
 		expect(generalApiSource).toContain('client.request<GeneralSettings>("generalSettings.update", patch)');
 		expect(preloadSource).toContain("client-preferences:get");
 		expect(preloadSource).toContain("client-preferences:update");
+		expect(preloadSource).toContain("client-preferences:changed");
+		expect(preloadSource).toContain("applyRendererTheme(preferences)");
+		expect(mainSource).toContain("broadcastClientPreferencesChanged(nextPreferences)");
+		expect(preferencesControllerSource).toContain("window.electronAPI.clientPreferences.onChanged");
+		expect(preferencesControllerSource).toContain("dispatchClientPreferencesChanged(preferences)");
 		expect(viteEnvSource).toContain("ClientPreferencesAPI");
+		expect(viteEnvSource).toContain("onChanged: (callback: (preferences: ClientPreferences) => void) => () => void;");
 		expect(viteEnvSource).toContain("autoCheckForUpdates: boolean;");
 		expect(viteEnvSource).toContain('language: "system" | "en-US" | "zh-CN";');
 	});

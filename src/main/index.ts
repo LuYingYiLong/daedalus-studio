@@ -41,6 +41,15 @@ configureAppIdentity();
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
+const rendererReadyWindows: WeakSet<BrowserWindow> = new WeakSet();
+const rendererShellReadyWindows: WeakSet<BrowserWindow> = new WeakSet();
+const rendererRevealRequestedWindows: WeakSet<BrowserWindow> = new WeakSet();
+const rendererReadyFallbackTimers: Map<number, ReturnType<typeof setTimeout>> = new Map();
+const RENDERER_READY_FALLBACK_MS: number = 3_500;
+const SETTINGS_WINDOW_PREWARM_DELAY_MS: number = 750;
+let settingsWindowPrewarmTimer: ReturnType<typeof setTimeout> | null = null;
+let allowSettingsWindowClose: boolean = false;
+let pendingSettingsPage: string = "provider";
 const SETTINGS_PAGE_KEYS: readonly string[] = [
 	"provider",
 	"default_model",
@@ -113,6 +122,104 @@ function applyWindowThemeToAllWindows(): void {
 	}
 }
 
+function clearRendererReadyFallback(browserWindow: BrowserWindow): void {
+	const fallbackTimer: ReturnType<typeof setTimeout> | undefined = rendererReadyFallbackTimers.get(browserWindow.id);
+	if (fallbackTimer === undefined) {
+		return;
+	}
+	clearTimeout(fallbackTimer);
+	rendererReadyFallbackTimers.delete(browserWindow.id);
+}
+
+function revealRendererWindow(browserWindow: BrowserWindow): void {
+	if (browserWindow.isDestroyed()) {
+		return;
+	}
+	clearRendererReadyFallback(browserWindow);
+	applyWindowTheme(browserWindow, clientPreferencesService.getCachedPreferences());
+	if (browserWindow.isMinimized()) {
+		browserWindow.restore();
+	}
+	browserWindow.show();
+	browserWindow.focus();
+}
+
+function trackRendererWindow(browserWindow: BrowserWindow): void {
+	browserWindow.once("closed", (): void => {
+		clearRendererReadyFallback(browserWindow);
+	});
+}
+
+function requestRendererWindowReveal(browserWindow: BrowserWindow): void {
+	if (browserWindow.isDestroyed()) {
+		return;
+	}
+	rendererRevealRequestedWindows.add(browserWindow);
+	if (
+		rendererReadyWindows.has(browserWindow)
+		|| rendererShellReadyWindows.has(browserWindow)
+	) {
+		revealRendererWindow(browserWindow);
+		return;
+	}
+	if (rendererReadyFallbackTimers.has(browserWindow.id)) {
+		return;
+	}
+	const fallbackTimer: ReturnType<typeof setTimeout> = setTimeout((): void => {
+		if (!browserWindow.isDestroyed() && rendererRevealRequestedWindows.has(browserWindow)) {
+			revealRendererWindow(browserWindow);
+		}
+	}, RENDERER_READY_FALLBACK_MS);
+	rendererReadyFallbackTimers.set(browserWindow.id, fallbackTimer);
+}
+
+function markRendererWindowReady(browserWindow: BrowserWindow): void {
+	if (browserWindow.isDestroyed()) {
+		return;
+	}
+	rendererReadyWindows.add(browserWindow);
+	clearRendererReadyFallback(browserWindow);
+	if (rendererRevealRequestedWindows.has(browserWindow)) {
+		revealRendererWindow(browserWindow);
+	}
+}
+
+function broadcastClientPreferencesChanged(preferences: ClientPreferences): void {
+	for (const browserWindow of BrowserWindow.getAllWindows()) {
+		if (!browserWindow.isDestroyed()) {
+			browserWindow.webContents.send("client-preferences:changed", preferences);
+		}
+	}
+}
+
+ipcMain.on("window:renderer-ready", (event): void => {
+	const browserWindow: BrowserWindow | null = BrowserWindow.fromWebContents(event.sender);
+	if (browserWindow !== null) {
+		markRendererWindowReady(browserWindow);
+		if (browserWindow === mainWindow) {
+			scheduleSettingsWindowPrewarm();
+		}
+		if (browserWindow === settingsWindow) {
+			setImmediate((): void => {
+				if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
+					settingsWindow.webContents.send("window:open-settings", pendingSettingsPage);
+				}
+			});
+		}
+	}
+});
+
+ipcMain.on("window:renderer-shell-ready", (event): void => {
+	const browserWindow: BrowserWindow | null = BrowserWindow.fromWebContents(event.sender);
+	if (browserWindow === null || browserWindow.isDestroyed()) {
+		return;
+	}
+	rendererShellReadyWindows.add(browserWindow);
+	if (rendererRevealRequestedWindows.has(browserWindow)) {
+		revealRendererWindow(browserWindow);
+	}
+});
+
 function isSettingsPageKey(value: unknown): value is string {
 	return typeof value === "string" && SETTINGS_PAGE_KEYS.includes(value);
 }
@@ -133,19 +240,17 @@ function loadRendererWindow(browserWindow: BrowserWindow, view: "main" | "settin
 	});
 }
 
-function openSettingsWindow(page: string = "provider"): void {
+function createSettingsWindow(page: string): BrowserWindow | null {
 	if (mainWindow === null || mainWindow.isDestroyed()) {
-		return;
+		return null;
 	}
+	pendingSettingsPage = page;
 
 	if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
-		if (settingsWindow.isMinimized()) {
-			settingsWindow.restore();
+		if (rendererReadyWindows.has(settingsWindow)) {
+			settingsWindow.webContents.send("window:open-settings", page);
 		}
-		settingsWindow.show();
-		settingsWindow.focus();
-		settingsWindow.webContents.send("window:open-settings", page);
-		return;
+		return settingsWindow;
 	}
 
 	const colors: WindowThemeColors = getCurrentWindowThemeColors(clientPreferencesService.getCachedPreferences());
@@ -176,15 +281,55 @@ function openSettingsWindow(page: string = "provider"): void {
 		} : {})
 	});
 	applyWindowTheme(settingsWindow, clientPreferencesService.getCachedPreferences());
-	settingsWindow.once("ready-to-show", () => settingsWindow?.show());
+	trackRendererWindow(settingsWindow);
 	settingsWindow.webContents.setWindowOpenHandler(({ url }) => {
 		void shell.openExternal(url);
 		return { action: "deny" };
+	});
+	settingsWindow.on("close", (event): void => {
+		if (
+			!allowSettingsWindowClose
+			&& mainWindow !== null
+			&& !mainWindow.isDestroyed()
+		) {
+			event.preventDefault();
+			if (settingsWindow !== null) {
+				rendererRevealRequestedWindows.delete(settingsWindow);
+			}
+			settingsWindow?.hide();
+		}
 	});
 	settingsWindow.on("closed", () => {
 		settingsWindow = null;
 	});
 	loadRendererWindow(settingsWindow, "settings", page);
+	return settingsWindow;
+}
+
+function openSettingsWindow(page: string = "provider"): void {
+	const browserWindow: BrowserWindow | null = createSettingsWindow(page);
+	if (browserWindow !== null) {
+		requestRendererWindowReveal(browserWindow);
+	}
+}
+
+function scheduleSettingsWindowPrewarm(): void {
+	if (
+		settingsWindowPrewarmTimer !== null
+		|| (settingsWindow !== null && !settingsWindow.isDestroyed())
+	) {
+		return;
+	}
+	settingsWindowPrewarmTimer = setTimeout((): void => {
+		settingsWindowPrewarmTimer = null;
+		if (
+			mainWindow !== null
+			&& !mainWindow.isDestroyed()
+			&& (settingsWindow === null || settingsWindow.isDestroyed())
+		) {
+			createSettingsWindow("provider");
+		}
+	}, SETTINGS_WINDOW_PREWARM_DELAY_MS);
 }
 
 ipcMain.handle("window:open-settings", (_event, page?: unknown): void => {
@@ -229,14 +374,8 @@ function createWindow(): void {
 	backendBootstrapService.attachWindow(mainWindow);
 	windowLifecycleController.attachWindow(mainWindow);
 	nativeNotificationService.attachWindow(mainWindow);
-
-	mainWindow.once("ready-to-show", () => {
-		if (mainWindow === null) {
-			return;
-		}
-		applyWindowTheme(mainWindow, clientPreferencesService.getCachedPreferences());
-		mainWindow.show();
-	});
+	trackRendererWindow(mainWindow);
+	requestRendererWindowReveal(mainWindow);
 
 	mainWindow.webContents.setWindowOpenHandler(({ url }) => {
 		void shell.openExternal(url);
@@ -245,7 +384,12 @@ function createWindow(): void {
 
 	mainWindow.on("closed", () => {
 		mainWindow = null;
+		if (settingsWindowPrewarmTimer !== null) {
+			clearTimeout(settingsWindowPrewarmTimer);
+			settingsWindowPrewarmTimer = null;
+		}
 		if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
+			allowSettingsWindowClose = true;
 			settingsWindow.close();
 		}
 		windowLifecycleController.quit();
@@ -255,8 +399,9 @@ function createWindow(): void {
 
 app.whenReady().then(async () => {
 	const preferences: ClientPreferences = await clientPreferencesService.load();
-	clientPreferencesService.onDidChange((): void => {
+	clientPreferencesService.onDidChange((nextPreferences: ClientPreferences): void => {
 		applyWindowThemeToAllWindows();
+		broadcastClientPreferencesChanged(nextPreferences);
 		windowLifecycleController.syncTrayWithPreferences();
 	});
 	nativeTheme.on("updated", (): void => {
@@ -282,6 +427,7 @@ app.whenReady().then(async () => {
 });
 
 app.on("before-quit", () => {
+	allowSettingsWindowClose = true;
 	windowLifecycleController.markQuitting();
 	terminalPtyService.dispose();
 	backendManager.detach();

@@ -1585,6 +1585,9 @@ function HomePage({
 													onModeChange={onModeChange}
 													onApprovalModeChange={onApprovalModeChange}
 											onProviderModelChange={onProviderModelChange}
+											onConfigureProvider={(): void => {
+												void window.electronAPI.windowControl.openSettings("provider");
+											}}
 											onReasoningEffortChange={onReasoningEffortChange}
 													onAddFiles={onAddFiles}
 													onAddFolder={onAddFolder}

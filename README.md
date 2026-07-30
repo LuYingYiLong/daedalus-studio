@@ -1,89 +1,205 @@
 <p align="center">
-  <img alt="banner" src="./docs/images/banner.png" />
+  <img alt="Daedalus Studio banner" src="./docs/images/banner.png" />
 </p>
 
 <h1 align="center">Daedalus Studio</h1>
 
 <p align="center">
-  <b>AI-assisted Godot development workbench.</b>
+  A desktop workbench for building Godot projects with an AI agent that can inspect, edit, run tools, and verify its work.
 </p>
 
 <p align="center">
-  <a href="./README-CN.md" align="center">中文</a>
+  <a href="https://github.com/LuYingYiLong/daedalus-studio/releases/latest">
+    <img alt="Latest release" src="https://img.shields.io/github/v/release/LuYingYiLong/daedalus-studio?display_name=tag&sort=semver" />
+  </a>
+  <a href="https://github.com/LuYingYiLong/daedalus-studio/actions/workflows/build-release.yml">
+    <img alt="Release build" src="https://github.com/LuYingYiLong/daedalus-studio/actions/workflows/build-release.yml/badge.svg" />
+  </a>
+  <img alt="Windows x64" src="https://img.shields.io/badge/platform-Windows%20x64-0078D4" />
+  <img alt="Godot 4.7 or newer" src="https://img.shields.io/badge/Godot-4.7%2B-478CBF" />
+  <a href="./LICENSE">
+    <img alt="GPL-3.0-only license" src="https://img.shields.io/badge/license-GPL--3.0--only-blue" />
+  </a>
 </p>
 
-![Daedalus Studio workflow](./docs/images/daedalus-studio-workflow.png)
+<p align="center">
+  <a href="https://github.com/LuYingYiLong/daedalus-studio/releases/latest"><strong>Download</strong></a>
+  ·
+  <a href="#getting-started">Getting started</a>
+  ·
+  <a href="#development">Development</a>
+  ·
+  <a href="https://github.com/LuYingYiLong/daedalus-backend">Backend</a>
+  ·
+  <a href="./README-CN.md">简体中文</a>
+</p>
 
-Daedalus Studio is a desktop workbench for building Godot projects with an AI assistant that understands project files, scenes, scripts, workflow steps, approvals, and validation results. It is designed for Godot-first editing instead of generic chat beside an editor.
+![Daedalus Studio workspace](./docs/images/daedalus-studio-workflow.png)
 
-## Why Daedalus Studio
+Daedalus Studio is a Godot-first AI development environment. It combines persistent project sessions, reviewable tool calls, file and Git diffs, terminal validation, MCP integrations, and a managed local backend in one native desktop application.
 
-- Godot-aware workspace context: open a Godot project, attach files, inspect scene structure, and let the assistant reason with `res://` paths.
-- Scene and project operations: create or patch scenes, update project settings, work with Input Map and Autoloads, and inspect written results.
-- Workflow mode: turn a request into reviewable steps, execute them with progress tracking, and keep a visible task checklist while the assistant works.
-- Safer tool use: tool calls, file writes, terminal commands, image import, and plan approvals are surfaced in the timeline instead of being hidden inside chat text.
-- Validation-oriented runs: Daedalus can run checks, inspect Godot output when available, and report when work is completed but not verified.
-- Native desktop experience: managed backend startup, update checks, tray support, native notifications, and Windows installer updates.
+It is designed for work that should leave auditable project changes—not just a chat transcript.
 
-## Godot-Focused Capabilities
+## Highlights
 
-Daedalus Studio is strongest when it is connected to a Godot workspace:
+- **Godot-aware workspaces** — understand `res://` paths, scenes, resources, scripts, project settings, Input Map, Autoloads, and project dependencies.
+- **Agent runs with visible state** — simple edits stay lightweight; larger tasks can become structured workflows with Todo progress, approvals, verification, interruption recovery, and safe retry.
+- **Review before trust** — inspect file patches, Git diffs, tool inputs, terminal output, warnings, and verification status in the conversation timeline.
+- **Provider freedom** — use the built-in provider catalog or add OpenAI-compatible Chat Completions, OpenAI Responses, and Anthropic-compatible providers and models.
+- **MCP and Skills** — connect custom MCP servers and enable project or personal skills without allowing either mechanism to bypass tool policy.
+- **Persistent desktop workspace** — retain sessions, panel layouts, terminal tabs, archived conversations, workspace appearance, and unread completion state.
+- **Managed integrations** — Studio verifies, installs, updates, repairs, and rolls back the Daedalus backend and the bundled Godot editor plugin.
 
-- understands Godot project layout and resource paths
-- edits `.tscn`, `.tres`, `.gd`, `.gdshader`, and project configuration through backend tools
-- supports Godot scene inspection and scene patch workflows
-- analyzes project dependencies, script references, unused resources, and scene nodes through backend Godot tools
-- can use a configured Godot executable for validation and editor/runtime checks
-- keeps writes inside the selected workspace boundary
+## How It Fits Together
 
-## Workflow
+```mermaid
+flowchart LR
+    U["Daedalus Studio<br/>Electron + React"] -->|local authenticated RPC| B["Daedalus Backend"]
+    G["Godot editor plugin"] -->|shared runtime RPC| B
+    B --> P["Model providers"]
+    B --> M["Built-in and custom MCP servers"]
+    B --> W["Workspace files, Git, terminal, LSP/DAP"]
+    B --> E["Godot Editor Bridge"]
+    E --> G
+```
 
-Workflow mode is built for multi-step Godot tasks:
+Studio is the desktop client and lifecycle owner. The backend is the execution and persistence layer. The Godot plugin is a lightweight editor client and bridge. Their versions are pinned in each Studio release and checked before startup, so incompatible components are not silently mixed.
 
-1. Ask for a feature or fix, such as creating a main scene, adding UI, or wiring gameplay logic.
-2. Daedalus prepares a plan or task flow when needed.
-3. You approve, revise, or clarify before risky work continues.
-4. The assistant executes tools and writes files through the backend.
-5. The result view shows whether the task was verified, completed with warnings, or failed.
+## Core Capabilities
 
-## Supported AI Providers
+### Agent and workflow
 
-Daedalus Studio currently supports these built-in providers:
+- Direct answers, read-only inspection, lightweight edits, and multi-stage workflows.
+- Persistent run state with explicit routing, execution, verification, approval, and terminal states.
+- Approval continuation and tool-budget continuation without replaying completed writes.
+- Safe retry from interrupted runs using recorded evidence and write fingerprints.
+- Session-specific model selection, context attachments, plans, Todo state, and layout preferences.
 
-- DeepSeek
-- Moonshot
-- OpenAI
-- Zhipu
+### Godot project work
 
-Provider API keys are configured in **Settings -> Provider**. Model lists are loaded through the backend, and model capabilities such as tools, reasoning, vision, web search, and image generation are shown when available.
+- Inspect and edit scenes, resources, scripts, shaders, project settings, Input Map, and Autoloads.
+- Use typed Editor Bridge patches with preflight checks, fingerprints, and Godot Undo/Redo transactions.
+- Work with animation, TileMap/GridMap, audio buses, resources, editor navigation, and safe previews when the connected plugin advertises those capabilities.
+- Run Godot headless checks and consume LSP, diagnostics, and read-only DAP information.
+- Install or repair the bundled plugin only for projects targeting Godot 4.7 or newer.
 
-## Backend
+### Review and workspace tools
 
-Daedalus Studio talks to the Daedalus backend for sessions, tools, workflow execution, Godot operations, provider routing, and managed updates.
+- Inline file diffs and a dockable Git diff review panel.
+- Session-scoped side and bottom panels with restorable tabs and dimensions.
+- Integrated terminal tabs; terminal processes are isolated by session and are not restored after restart.
+- Workspace tree with pinned, recent, archived, running, and unread session states.
+- Native tray actions, notifications, automatic updates, and a separate Settings window.
 
-- Backend repository: [LuYingYiLong/daedalus-backend](https://github.com/LuYingYiLong/daedalus-backend)
-- Managed backend package: `daedalus-backend`
+### Providers, web search, MCP, and Skills
 
-Packaged builds can install and repair the managed backend automatically. In development builds, start the backend separately before using the app.
+The provider and model list comes from the backend at runtime. The built-in catalog currently includes DeepSeek, Moonshot/Kimi, OpenAI, Zhipu AI, Alibaba Cloud Qwen, Volcengine Ark, MiniMax, StepFun, iFlytek Spark, OpenCode, Baidu Qianfan, and Xiaomi MiMo.
+
+Model discovery and local capability overrides are supported. Independent web-search adapters are currently available for Zhipu AI and Xiaomi MiMo; search is explicit and remains disabled until configured.
+
+Custom MCP servers and custom providers are treated as user-controlled integrations. Review their endpoints, commands, environment variables, and requested tool approvals before enabling them.
 
 ## Getting Started
 
-1. Download the latest Windows installer from [Releases](https://github.com/LuYingYiLong/daedalus-studio/releases/latest).
-2. Launch Daedalus Studio and let it prepare the managed backend.
-3. Open **Settings -> Provider** and add an API key for one of the supported providers.
-4. Open **Settings -> General** and set your Godot executable path if Daedalus cannot detect it.
-5. Add or select a Godot workspace.
-6. Start a chat and choose the model you want to use.
+### Requirements
 
-## Typical Tasks
+- Windows 10 or Windows 11, x64.
+- A supported model-provider account and API key.
+- Godot 4.7 or newer for editor-plugin installation and the full Godot toolset.
 
-- Build or revise a Godot scene from a natural-language request.
-- Ask the assistant to inspect scene structure and fix missing nodes.
-- Generate a plan for a gameplay feature, then approve the workflow.
-- Analyze project dependencies or find script references.
-- Review file changes and Git diffs before committing.
-- Import generated image assets into the current Godot workspace.
+### Install
 
-## Notes
+1. Download `Daedalus-Studio-Setup-<version>.exe` from the [latest release](https://github.com/LuYingYiLong/daedalus-studio/releases/latest).
+2. Install and launch Daedalus Studio.
+3. Allow the first-run screen to verify and install the bundled backend.
+4. Open **Settings → Providers**, configure a provider, and test the connection.
+5. Add a workspace. For Godot projects, configure or auto-detect the Godot executable and install the bundled plugin from **Settings → Godot Projects**.
+6. Create a session, choose a model, and describe the change or investigation you want.
 
-Daedalus Studio is still evolving quickly. For best results, keep the Studio app and the managed backend updated together, and review tool approvals when a task writes files, runs terminal commands, or changes project configuration.
+Studio stores application preferences in Electron's user-data directory and Daedalus runtime data under `%USERPROFILE%\.daedalus`. API keys are stored through the operating-system credential store rather than in Daedalus JSON configuration.
+
+## Safety Model
+
+Daedalus is an agentic tool and can modify files or run commands after approval. Its safety model is based on enforceable boundaries:
+
+- Workspace paths are validated before file, Git, Godot, and terminal operations.
+- Read, verify, propose, write, and destructive tools have separate policies.
+- Writes and risky external operations pass through the approval gateway.
+- Scene and resource patches are preflighted before a single Undo/Redo transaction is committed.
+- API keys and custom MCP secrets are kept out of ordinary configuration and logs.
+- Missing validation is reported as a warning; a failed applicable validator is not presented as success.
+
+You should still review changes and keep important projects under version control.
+
+## Development
+
+### Prerequisites
+
+- Node.js 24.x and npm.
+- Windows for the supported packaged build.
+- A local checkout of [daedalus-backend](https://github.com/LuYingYiLong/daedalus-backend) when running Studio in development mode.
+
+### Run from source
+
+Start the backend first:
+
+```powershell
+git clone https://github.com/LuYingYiLong/daedalus-backend.git
+cd daedalus-backend
+npm ci
+npm run dev
+```
+
+Then start Studio in another terminal:
+
+```powershell
+git clone https://github.com/LuYingYiLong/daedalus-studio.git
+cd daedalus-studio
+npm ci
+npm run dev
+```
+
+Development Studio connects to the backend on port `38181`. If the repositories are not siblings, set the development backend directory in Studio's startup settings.
+
+### Checks and builds
+
+```powershell
+npm run typecheck
+npm test
+npm run build
+npm run pack:win
+```
+
+- `npm run build` creates production Electron bundles in `out/`.
+- `npm run pack:win` creates an unpacked Windows build.
+- `npm run build:win` creates the NSIS installer and updater metadata in `release/`.
+- Release builds download fixed backend and Godot-plugin versions from their GitHub releases and verify manifests, sizes, hashes, protocols, and backend self-tests before packaging.
+
+## Repository Layout
+
+```text
+src/main/            Electron lifecycle, windows, backend bootstrap, updates, native services
+src/preload/         Narrow IPC bridge exposed to the renderer
+src/renderer/src/    React application, features, pages, API clients, i18n, styles
+scripts/             Verified component preparation and packaging helpers
+tests/               Main/renderer unit, integration, and source-contract tests
+docs/                Architecture and UI design notes
+build/               Icons and generated packaging inputs
+```
+
+See [docs/file-structure.md](./docs/file-structure.md) and [docs/ui-design-system.md](./docs/ui-design-system.md) for deeper implementation notes.
+
+## Project Status
+
+Daedalus Studio is under active development. Session and project data are intended to remain durable, while internal protocol and extension contracts may evolve between coordinated Studio, backend, and plugin releases.
+
+Bug reports should include the Studio version, backend version, Godot version, reproduction steps, and sanitized startup or session diagnostics. Do not include API keys or custom MCP secrets.
+
+## Related Projects
+
+- [Daedalus Backend](https://github.com/LuYingYiLong/daedalus-backend) — runtime, sessions, providers, workflows, tools, MCP, and Godot services.
+- [Godot Daedalus](https://github.com/LuYingYiLong/godot-daedalus) — Godot editor plugin and Editor Bridge.
+
+## License
+
+Daedalus Studio is licensed under the [GNU General Public License v3.0 only](./LICENSE).

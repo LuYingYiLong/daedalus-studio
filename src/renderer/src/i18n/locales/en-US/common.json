@@ -204,6 +204,7 @@
     "model": {
       "fallback": "Model",
       "notConfigured": "Not configured",
+      "configureProvider": "Configure provider",
       "capabilities": {
         "reasoning": "Reasoning",
         "vision": "Vision",
@@ -697,6 +698,7 @@
     },
     "defaultModel": {
       "selectModel": "Select a model",
+      "configureProvider": "Configure provider",
       "notConfigured": "Not configured - always ask me",
       "routing": {
         "sessionTitle": {

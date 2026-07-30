@@ -128,18 +128,18 @@ function resolveRendererTheme(themePreference: ClientPreferences["theme"]): "lig
 	return globalThis.matchMedia?.("(prefers-color-scheme: light)").matches === true ? "light" : "dark";
 }
 
-const initialClientPreferences: ClientPreferences = getCachedClientPreferences();
+let cachedClientPreferences: ClientPreferences = getCachedClientPreferences();
 
-function applyInitialTheme(): void {
+function applyRendererTheme(preferences: ClientPreferences = cachedClientPreferences): void {
 	const rootElement: HTMLElement | null = document.documentElement;
 	if (rootElement === null) {
 		return;
 	}
-	rootElement.dataset.theme = resolveRendererTheme(initialClientPreferences.theme);
+	rootElement.dataset.theme = resolveRendererTheme(preferences.theme);
 }
 
-applyInitialTheme();
-document.addEventListener("readystatechange", applyInitialTheme, { once: true });
+applyRendererTheme();
+document.addEventListener("readystatechange", (): void => applyRendererTheme(), { once: true });
 
 contextBridge.exposeInMainWorld("electronAPI", {
 	versions: {
@@ -185,13 +185,24 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
 	clientPreferences: {
 		getCached: (): ClientPreferences => {
-			return initialClientPreferences;
+			return cachedClientPreferences;
 		},
 		get: (): Promise<ClientPreferences> => {
 			return ipcRenderer.invoke("client-preferences:get");
 		},
 		update: (patch: Partial<ClientPreferences>): Promise<ClientPreferences> => {
 			return ipcRenderer.invoke("client-preferences:update", patch);
+		},
+		onChanged: (callback: (preferences: ClientPreferences) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, preferences: ClientPreferences): void => {
+				cachedClientPreferences = preferences;
+				applyRendererTheme(preferences);
+				callback(preferences);
+			};
+			ipcRenderer.on("client-preferences:changed", handler);
+			return (): void => {
+				ipcRenderer.removeListener("client-preferences:changed", handler);
+			};
 		}
 	},
 
@@ -228,6 +239,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
 	windowControl: {
 		openSettings: (page?: string): Promise<void> => ipcRenderer.invoke("window:open-settings", page),
+		rendererShellReady: (): void => ipcRenderer.send("window:renderer-shell-ready"),
+		rendererReady: (): void => ipcRenderer.send("window:renderer-ready"),
 		onSettingsPageRequested: (callback: (page: string) => void): (() => void) => {
 			const handler = (_event: Electron.IpcRendererEvent, page: string): void => callback(page);
 			ipcRenderer.on("window:open-settings", handler);

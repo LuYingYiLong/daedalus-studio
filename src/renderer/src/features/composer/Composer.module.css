@@ -336,11 +336,6 @@
 	min-width: 180px;
 }
 
-.providerMutedText {
-	font-size: 11px;
-	color: var(--ds-text-muted);
-}
-
 .modelMenuItem {
 	display: grid;
 	gap: 2px;

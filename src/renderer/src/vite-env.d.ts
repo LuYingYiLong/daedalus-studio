@@ -82,6 +82,7 @@ declare global {
 		getCached: () => ClientPreferences;
 		get: () => Promise<ClientPreferences>;
 		update: (patch: Partial<ClientPreferences>) => Promise<ClientPreferences>;
+		onChanged: (callback: (preferences: ClientPreferences) => void) => () => void;
 	}
 
 	type AppUpdateStatus =
@@ -166,6 +167,8 @@ declare global {
 
 	interface WindowControlAPI {
 		openSettings: (page?: string) => Promise<void>;
+		rendererShellReady: () => void;
+		rendererReady: () => void;
 		onSettingsPageRequested: (callback: (page: string) => void) => () => void;
 	}
 

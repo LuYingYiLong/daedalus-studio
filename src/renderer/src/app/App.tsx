@@ -338,7 +338,7 @@ function findPreferredComposerModel(
 	const lastComposerModel = preferences.lastComposerModel;
 	if (lastComposerModel !== null && selection !== null) {
 		const provider: ProviderModelSelectionProvider | undefined = selection.providers.find((item: ProviderModelSelectionProvider): boolean => {
-			return item.provider === lastComposerModel.providerId;
+			return item.configured && item.provider === lastComposerModel.providerId;
 		});
 		if (provider?.models.some((model): boolean => model.id === lastComposerModel.modelId) === true) {
 			return lastComposerModel;
@@ -346,7 +346,7 @@ function findPreferredComposerModel(
 	}
 
 	const firstProviderWithModel: ProviderModelSelectionProvider | undefined = selection?.providers.find((provider: ProviderModelSelectionProvider): boolean => {
-		return provider.models.length > 0;
+		return provider.configured && provider.models.length > 0;
 	});
 	const firstModelId: string | undefined = firstProviderWithModel?.models[0]?.id;
 	if (firstProviderWithModel !== undefined && firstModelId !== undefined) {
@@ -354,10 +354,6 @@ function findPreferredComposerModel(
 			providerId: firstProviderWithModel.provider,
 			modelId: firstModelId
 		};
-	}
-
-	if (selection !== null) {
-		return selection.activeModel;
 	}
 
 	return null;
@@ -1270,13 +1266,24 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 
 		setHomeDraft((currentDraft: HomeDraft): HomeDraft => {
-			if (currentDraft.providerId !== null || currentDraft.modelId !== null) {
+			const currentProvider: ProviderModelSelectionProvider | undefined = providerModelSelection?.providers.find(
+				(provider: ProviderModelSelectionProvider): boolean => {
+					return provider.configured
+						&& provider.provider === currentDraft.providerId
+						&& provider.models.some((model: ProviderModelInfo): boolean => model.id === currentDraft.modelId);
+				}
+			);
+			if (currentProvider !== undefined) {
 				return currentDraft;
 			}
 
 			const preferredModel = findPreferredComposerModel(clientPreferences, providerModelSelection);
 			if (preferredModel === null) {
-				return currentDraft;
+				return {
+					...currentDraft,
+					providerId: null,
+					modelId: null
+				};
 			}
 
 			return {
@@ -1293,18 +1300,30 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		};
 	}, [discardPendingTimelineEvents]);
 
-	useEffect((): void => {
+	useEffect((): (() => void) => {
+		let cancelled: boolean = false;
 		async function loadProviderModelSelection(): Promise<void> {
 			try {
 				const result: ProviderModelSelection = await fetchProviderModelSelection();
 
-				setProviderModelSelection(result);
+				if (!cancelled) {
+					setProviderModelSelection(result);
+				}
 			} catch (error: unknown) {
 				console.error("[App] load provider model selection failed", error);
 			}
 		}
 
+		function handleWindowFocus(): void {
+			void loadProviderModelSelection();
+		}
+
 		void loadProviderModelSelection();
+		window.addEventListener("focus", handleWindowFocus);
+		return (): void => {
+			cancelled = true;
+			window.removeEventListener("focus", handleWindowFocus);
+		};
 	}, []);
 
 	useEffect((): void => {

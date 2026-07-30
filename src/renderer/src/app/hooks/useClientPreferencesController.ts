@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useEventListener, useMemoizedFn, useRequest } from "ahooks";
 import {
 	CLIENT_PREFERENCES_CHANGED_EVENT,
+	dispatchClientPreferencesChanged,
 	fetchClientPreferences,
 	getCachedClientPreferences,
 	type ClientPreferences,
@@ -53,6 +54,13 @@ function useClientPreferencesController(): ClientPreferencesController {
 			mediaQuery.removeEventListener("change", handleSystemThemeChange);
 		};
 	}, []);
+
+	useEffect((): (() => void) => {
+		return window.electronAPI.clientPreferences.onChanged((preferences: ClientPreferences): void => {
+			applyPreferences(preferences);
+			dispatchClientPreferencesChanged(preferences);
+		});
+	}, [applyPreferences]);
 
 	useEventListener(CLIENT_PREFERENCES_CHANGED_EVENT, (event: Event): void => {
 		const preferences: ClientPreferences | undefined = (event as CustomEvent<ClientPreferences>).detail;

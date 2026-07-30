@@ -47,6 +47,7 @@ export type ComposerProps = {
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
 	onProviderModelChange?: (providerId: string, modelId: string) => void;
+	onConfigureProvider?: () => void;
 	onReasoningEffortChange?: (effort: string) => void;
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onWorkspaceAdd?: () => void;
@@ -184,7 +185,7 @@ function findSelectedProvider(selection: ProviderModelSelection | null, selected
 	}
 
 	return selection.providers.find((provider: ProviderModelSelectionProvider): boolean => {
-		return provider.provider === selectedModel.provider;
+		return provider.configured && provider.provider === selectedModel.provider;
 	}) ?? null;
 }
 
@@ -204,11 +205,15 @@ function getSelectedModelLabel(selection: ProviderModelSelection | null, selecte
 	const selectedProvider: ProviderModelSelectionProvider | null = findSelectedProvider(selection, selectedModel);
 	const selectedModelInfo: ProviderModelInfo | null = findSelectedModel(selection, selectedModel);
 
+	if (selection !== null && !selection.providers.some((provider: ProviderModelSelectionProvider): boolean => provider.configured)) {
+		return t("composer.model.configureProvider");
+	}
+
 	if (selectedProvider === null || selectedModel === null) {
 		return t("composer.model.fallback");
 	}
 
-	return `${selectedProvider.displayName} / ${selectedModelInfo?.displayName ?? selectedModel.model}`;
+	return `${selectedProvider.displayName}/${selectedModelInfo?.displayName ?? selectedModel.model}`;
 }
 
 function getReasoningEffortLabel(effort: string, t: TFunction<"common">): string {
@@ -231,18 +236,13 @@ function createProviderModelItems(selection: ProviderModelSelection | null, t: T
 		return [];
 	}
 
-	return selection.providers.map((provider: ProviderModelSelectionProvider) => {
+	return selection.providers.filter((provider: ProviderModelSelectionProvider): boolean => {
+		return provider.configured;
+	}).map((provider: ProviderModelSelectionProvider) => {
 		return {
 			key: `provider:${provider.provider}`,
 			popupClassName: styles.modelSubmenuPopup,
-			label: (
-				<span className={styles.providerGroupLabel}>
-					<span>{provider.displayName}</span>
-					{provider.configured ? null : (
-						<span className={styles.providerMutedText}>{t("composer.model.notConfigured")}</span>
-					)}
-				</span>
-			),
+			label: <span className={styles.providerGroupLabel}>{provider.displayName}</span>,
 			children: provider.models.map((model: ProviderModelInfo) => {
 				const modelBadges: string[] = [];
 
@@ -394,6 +394,7 @@ function Composer({
 	onModeChange,
 	onApprovalModeChange,
 	onProviderModelChange,
+	onConfigureProvider,
 	onReasoningEffortChange,
 	onWorkspaceSelect,
 	onWorkspaceAdd,
@@ -487,6 +488,9 @@ function Composer({
 	const providerModelItems: MenuProps["items"] = useMemo((): MenuProps["items"] => {
 		return createProviderModelItems(providerModelSelection, t);
 	}, [providerModelSelection, t]);
+	const hasConfiguredProviders: boolean = providerModelSelection?.providers.some(
+		(provider: ProviderModelSelectionProvider): boolean => provider.configured
+	) ?? false;
 	const workspaceFooterItems: MenuProps["items"] = useMemo((): MenuProps["items"] => {
 		return createWorkspaceFooterItems(workspaceOptions, t);
 	}, [workspaceOptions, t]);
@@ -991,6 +995,18 @@ function Composer({
 			</Tooltip>
 		</div>
 	);
+	const modelButton: React.JSX.Element = (
+		<Button
+			type="text"
+			className={styles.modelButton}
+			disabled={providerModelSelection === null}
+			onClick={!hasConfiguredProviders ? onConfigureProvider : undefined}
+		>
+			<span className={styles.modelButtonContent}>
+				<span className={styles.modelButtonText}>{selectedModelLabel}</span>
+			</span>
+		</Button>
+	);
 
 	return (
 		<div ref={rootRef} className={styles.composerRoot}>
@@ -1117,23 +1133,17 @@ function Composer({
 
 						<Divider vertical={true} />
 
-						<Tooltip title={t("composer.tooltips.model")}>
-							<Dropdown
-								disabled={providerModelSelection === null}
-								rootClassName={styles.modelDropdown}
-								autoAdjustOverflow={true}
-								menu={providerModelMenu}
-								trigger={["click"]}
-							>
-								<Button
-									type="text"
-									className={styles.modelButton}
+						<Tooltip title={hasConfiguredProviders ? t("composer.tooltips.model") : t("composer.model.configureProvider")}>
+							{hasConfiguredProviders ? (
+								<Dropdown
+									rootClassName={styles.modelDropdown}
+									autoAdjustOverflow={true}
+									menu={providerModelMenu}
+									trigger={["click"]}
 								>
-									<span className={styles.modelButtonContent}>
-										<span className={styles.modelButtonText}>{selectedModelLabel}</span>
-									</span>
-								</Button>
-							</Dropdown>
+									{modelButton}
+								</Dropdown>
+							) : modelButton}
 						</Tooltip>
 
 						{displayedReasoningEffort === null ? null : (

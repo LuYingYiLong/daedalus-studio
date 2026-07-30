@@ -81,12 +81,21 @@ function decodeModelRef(value: string): ProviderTaskModelRef | null {
 	};
 }
 
-function createModelSelectOptions(selection: ProviderModelSelection | null, filterModel?: (model: ProviderModelInfo) => boolean): SelectProps["options"] {
-	if (selection === null) {
-		return [];
-	}
+function getConfiguredProviders(selection: ProviderModelSelection | null): ProviderModelSelectionProvider[] {
+	return selection?.providers.filter((provider: ProviderModelSelectionProvider): boolean => {
+		return provider.configured;
+	}) ?? [];
+}
 
-	return selection.providers.map((provider: ProviderModelSelectionProvider) => {
+function isConfiguredModelRef(selection: ProviderModelSelection, ref: ProviderTaskModelRef): boolean {
+	return getConfiguredProviders(selection).some((provider: ProviderModelSelectionProvider): boolean => {
+		return provider.provider === ref.provider
+			&& provider.models.some((model: ProviderModelInfo): boolean => model.id === ref.model);
+	});
+}
+
+function createModelSelectOptions(selection: ProviderModelSelection | null, filterModel?: (model: ProviderModelInfo) => boolean): SelectProps["options"] {
+	return getConfiguredProviders(selection).map((provider: ProviderModelSelectionProvider) => {
 		const models: ProviderModelInfo[] = filterModel === undefined
 			? provider.models
 			: provider.models.filter(filterModel);
@@ -94,7 +103,7 @@ function createModelSelectOptions(selection: ProviderModelSelection | null, filt
 			label: provider.displayName,
 			options: models.map((model: ProviderModelInfo) => {
 				return {
-					label: `${model.displayName} / ${provider.displayName}`,
+					label: `${provider.displayName}/${model.displayName}`,
 					value: encodeModelRef({
 						provider: provider.provider,
 						model: model.id
@@ -150,23 +159,39 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 			return;
 		}
 
+		const nextModelRef: ProviderTaskModelRef | null = value === undefined ? null : decodeModelRef(value);
+		if (value !== undefined && nextModelRef === null) {
+			return;
+		}
 		const modelRouting: Partial<ProviderModelRouting> = {
-			[key]: value === undefined ? null : decodeModelRef(value)
+			[key]: nextModelRef
 		};
-		const activeModel: ProviderTaskModelRef = {
-			provider: selection.activeModel.providerId,
-			model: selection.activeModel.modelId
+		const configuredProviders: ProviderModelSelectionProvider[] = getConfiguredProviders(selection);
+		const persistenceProvider: ProviderModelSelectionProvider | undefined = (
+			nextModelRef === null
+				? undefined
+				: configuredProviders.find((provider: ProviderModelSelectionProvider): boolean => provider.provider === nextModelRef.provider)
+		) ?? configuredProviders.find((provider: ProviderModelSelectionProvider): boolean => provider.models.length > 0)
+			?? configuredProviders[0];
+		if (persistenceProvider === undefined) {
+			return;
+		}
+		const persistenceModel: string | undefined = nextModelRef?.model
+			?? persistenceProvider.selectedModel
+			?? persistenceProvider.models[0]?.id;
+		const saveParams: Parameters<typeof saveProviderConfig>[0] = {
+			provider: persistenceProvider.provider,
+			activate: false,
+			modelRouting
 		};
+		if (persistenceModel !== undefined) {
+			saveParams.model = persistenceModel;
+		}
 
 		try {
 			setSavingKey(key);
 			setErrorMessage(null);
-			const nextSelection: ProviderModelSelection = await saveProviderConfig({
-				provider: activeModel.provider,
-				model: activeModel.model,
-				activate: true,
-				modelRouting
-			});
+			const nextSelection: ProviderModelSelection = await saveProviderConfig(saveParams);
 			setSelection(nextSelection);
 			onSelectionChange?.(nextSelection);
 		} catch (error: unknown) {
@@ -191,6 +216,7 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 			</section>
 		);
 	}
+	const hasConfiguredProviders: boolean = getConfiguredProviders(selection).length > 0;
 
 	return (
 		<section className={styles.page}>
@@ -213,7 +239,7 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 
 				{ROUTING_OPTIONS.map((option: RoutingOption): React.JSX.Element => {
 					const routedModel: ProviderTaskModelRef | null = selection.modelRouting[option.key];
-					const value: string | undefined = routedModel === null
+					const value: string | undefined = routedModel === null || !isConfiguredModelRef(selection, routedModel)
 						? undefined
 						: encodeModelRef(routedModel);
 
@@ -232,8 +258,13 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 									className={styles.modelSelect}
 									options={createModelSelectOptions(selection, option.filterModel)}
 									value={value}
+									disabled={!hasConfiguredProviders}
 									allowClear={{ clearIcon: <Icon name="clear" /> }}
-									placeholder={option.placeholderKey === undefined ? t("settings.defaultModel.selectModel") : t(option.placeholderKey)}
+									placeholder={!hasConfiguredProviders
+										? t("settings.defaultModel.configureProvider")
+										: option.placeholderKey === undefined
+											? t("settings.defaultModel.selectModel")
+											: t(option.placeholderKey)}
 									showSearch={{
 										optionFilterProp: "label"
 									}}

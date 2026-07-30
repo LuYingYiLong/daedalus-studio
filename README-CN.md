@@ -1,89 +1,205 @@
 <p align="center">
-  <img alt="banner" src="./docs/images/banner.png" />
+  <img alt="Daedalus Studio 横幅" src="./docs/images/banner.png" />
 </p>
 
 <h1 align="center">Daedalus Studio</h1>
 
 <p align="center">
-  <b>AI-assisted Godot development workbench.</b>
+  面向 Godot 项目的桌面 AI 开发工作台：理解项目、执行工具、修改文件，并验证实际结果。
 </p>
 
 <p align="center">
-  <a href="./README.md" align="center">English</a>
+  <a href="https://github.com/LuYingYiLong/daedalus-studio/releases/latest">
+    <img alt="最新版本" src="https://img.shields.io/github/v/release/LuYingYiLong/daedalus-studio?display_name=tag&sort=semver" />
+  </a>
+  <a href="https://github.com/LuYingYiLong/daedalus-studio/actions/workflows/build-release.yml">
+    <img alt="发布构建" src="https://github.com/LuYingYiLong/daedalus-studio/actions/workflows/build-release.yml/badge.svg" />
+  </a>
+  <img alt="Windows x64" src="https://img.shields.io/badge/platform-Windows%20x64-0078D4" />
+  <img alt="Godot 4.7 或更高版本" src="https://img.shields.io/badge/Godot-4.7%2B-478CBF" />
+  <a href="./LICENSE">
+    <img alt="GPL-3.0-only 许可证" src="https://img.shields.io/badge/license-GPL--3.0--only-blue" />
+  </a>
 </p>
 
-![Daedalus Studio workflow](./docs/images/daedalus-studio-workflow.png)
+<p align="center">
+  <a href="https://github.com/LuYingYiLong/daedalus-studio/releases/latest"><strong>下载</strong></a>
+  ·
+  <a href="#快速开始">快速开始</a>
+  ·
+  <a href="#开发">开发</a>
+  ·
+  <a href="https://github.com/LuYingYiLong/daedalus-backend">后端</a>
+  ·
+  <a href="./README.md">English</a>
+</p>
 
-Daedalus Studio 是一个面向 Godot 项目的桌面 AI 工作台。它不只是把聊天窗口放在编辑器旁边，而是让 AI 能理解项目文件、场景、脚本、工作流步骤、审批和验证结果，围绕 Godot 开发流程完成任务。
+![Daedalus Studio 工作区](./docs/images/daedalus-studio-workflow.png)
 
-## 为什么选择 Daedalus Studio
+Daedalus Studio 是一套以 Godot 为核心的 AI 开发环境。它把持久化项目会话、可审查的工具调用、文件与 Git 差异、终端验证、MCP 集成以及受管本地后端整合进一个原生桌面应用。
 
-- Godot 项目上下文：打开 Godot 项目、附加文件、检查场景结构，并让 AI 使用 `res://` 路径理解资源关系。
-- 场景和项目操作：创建或 patch 场景、更新 project settings、处理 Input Map 和 Autoload，并检查实际写入结果。
-- Workflow 模式：把需求拆成可审查的步骤，执行时展示进度，并在界面里保留清晰的任务列表。
-- 更安全的工具调用：工具调用、文件写入、终端命令、生图导入和计划审批都会出现在时间线里，而不是藏在聊天正文中。
-- 面向验证的执行结果：Daedalus 会在可用时运行检查、读取 Godot 输出，并明确区分“已验证完成”和“完成但未验证”。
-- 原生桌面体验：托管后端启动、更新检测、系统托盘、原生通知和 Windows 安装包更新。
+它面向的是能够留下真实、可追溯项目改动的开发任务，而不只是一次聊天。
 
-## 针对 Godot 强化的能力
+## 主要特点
 
-Daedalus Studio 在连接 Godot workspace 后能力最完整：
+- **理解 Godot 工作区**：识别 `res://` 路径、场景、资源、脚本、项目设置、Input Map、Autoload 和项目依赖。
+- **具有明确状态的 Agent Run**：简单修改保持轻量；复杂任务可以升级为带 Todo、审批、验证、中断恢复和安全重试的 Workflow。
+- **先审查，再信任**：在会话时间线中检查文件补丁、Git diff、工具参数、终端输出、警告和验证状态。
+- **自由选择供应商**：使用内置供应商目录，或添加兼容 OpenAI Chat Completions、OpenAI Responses 和 Anthropic Messages 的自定义供应商与模型。
+- **MCP 与 Skills**：连接自定义 MCP Server，启用项目或个人 Skill，同时保持工具策略与审批边界不被绕过。
+- **持久化桌面工作区**：保存会话、面板布局、终端标签、归档会话、工作区外观以及未读完成状态。
+- **受管组件**：由 Studio 校验、安装、更新、修复和回滚 Daedalus Backend 与内置 Godot 编辑器插件。
 
-- 理解 Godot 项目结构和资源路径
-- 通过后端工具编辑 `.tscn`、`.tres`、`.gd`、`.gdshader` 和项目配置
-- 支持 Godot 场景检查和 scene patch 工作流
-- 通过后端 Godot 工具分析项目依赖、脚本引用、未使用资源和跨场景节点
-- 可以配置 Godot 可执行文件，用于验证、编辑器和运行时相关检查
-- 写入操作会被限制在当前选择的 workspace 边界内
+## 组件关系
 
-## Workflow
+```mermaid
+flowchart LR
+    U["Daedalus Studio<br/>Electron + React"] -->|本地鉴权 RPC| B["Daedalus Backend"]
+    G["Godot 编辑器插件"] -->|共享运行时 RPC| B
+    B --> P["模型供应商"]
+    B --> M["内置与自定义 MCP Server"]
+    B --> W["工作区文件、Git、终端、LSP/DAP"]
+    B --> E["Godot Editor Bridge"]
+    E --> G
+```
 
-Workflow 模式适合多步骤 Godot 任务：
+Studio 是桌面客户端与生命周期管理者；Backend 负责执行与持久化；Godot 插件是轻量编辑器客户端和 Editor Bridge。每个 Studio 版本都会固定并检查三端版本，避免不兼容组件被静默混用。
 
-1. 提出一个功能或修复需求，例如创建主场景、添加 UI、接入玩法逻辑。
-2. Daedalus 在需要时生成计划或任务流。
-3. 你可以批准、修改或补充澄清信息。
-4. AI 通过后端工具执行操作并写入文件。
-5. 结果视图会展示任务是已验证完成、带警告完成，还是失败。
+## 核心能力
 
-## 支持的 AI Provider
+### Agent 与 Workflow
 
-Daedalus Studio 当前内置支持：
+- 支持直接回答、只读检查、轻量修改和多阶段 Workflow。
+- 持久化 Run 状态，明确区分路由、执行、验证、审批和终态。
+- 审批与工具预算恢复不会重放已经完成的写操作。
+- 中断任务可以基于已有证据和写入 fingerprint 从安全检查点重试。
+- 会话独立保存模型、上下文附件、计划、Todo 和布局偏好。
 
-- DeepSeek
-- Moonshot
-- OpenAI
-- Zhipu
+### Godot 项目开发
 
-API Key 在 **Settings -> Provider** 中配置。模型列表由后端加载；当模型能力可用时，界面会展示工具调用、推理、视觉、网页搜索和生图等能力标签。
+- 检查与编辑场景、资源、脚本、Shader、项目设置、Input Map 和 Autoload。
+- 使用带预检、fingerprint 和 Godot Undo/Redo 事务的类型化 Editor Bridge Patch。
+- 在插件声明对应能力时处理动画、TileMap/GridMap、音频总线、资源、编辑器导航与安全预览。
+- 执行 Godot headless 检查，读取 LSP、诊断和只读 DAP 信息。
+- 仅为 Godot 4.7 或更高版本的项目安装或修复内置插件。
 
-## 后端
+### 审查与工作区工具
 
-Daedalus Studio 通过 Daedalus backend 处理会话、工具、Workflow 执行、Godot 操作、Provider 路由和托管更新。
+- 行内文件差异和可停靠的 Git diff 审查面板。
+- 按会话恢复侧边与底部面板的标签、顺序和尺寸。
+- 集成终端标签；终端进程按会话隔离，应用重启后不会恢复旧进程。
+- 工作区树展示置顶、最近、归档、运行中和未读会话状态。
+- 支持系统托盘、原生通知、自动更新和独立的设置窗口。
 
-- 后端仓库：[LuYingYiLong/daedalus-backend](https://github.com/LuYingYiLong/daedalus-backend)
-- 托管后端包：`daedalus-backend`
+### 供应商、联网搜索、MCP 与 Skills
 
-正式包可以自动安装和修复托管后端。开发环境下，需要先单独启动后端再使用前端。
+供应商与模型列表由 Backend 动态提供。当前内置目录覆盖 DeepSeek、Moonshot/Kimi、OpenAI、智谱 AI、阿里云百炼、火山引擎方舟、MiniMax、阶跃星辰、讯飞星火、OpenCode、百度千帆和 Xiaomi MiMo。
+
+Studio 支持远端模型发现和本地能力覆盖。独立联网搜索适配器当前支持智谱 AI 与 Xiaomi MiMo；联网搜索必须由用户明确配置和开启。
+
+自定义 MCP Server 与自定义供应商都属于用户控制的外部集成。启用前应检查其地址、命令、环境变量和工具审批请求。
 
 ## 快速开始
 
-1. 从 [Releases](https://github.com/LuYingYiLong/daedalus-studio/releases/latest) 下载最新 Windows 安装包。
-2. 启动 Daedalus Studio，并等待它准备托管后端。
-3. 打开 **Settings -> Provider**，为支持的 Provider 配置 API Key。
-4. 如果 Daedalus 没有自动检测到 Godot，打开 **Settings -> General** 设置 Godot 可执行文件路径。
-5. 添加或选择一个 Godot workspace。
-6. 开始聊天，并选择要使用的模型。
+### 系统要求
 
-## 常见任务
+- Windows 10 或 Windows 11，x64。
+- 可用的模型供应商账号与 API Key。
+- 如需完整 Godot 工具和编辑器插件，需要 Godot 4.7 或更高版本。
 
-- 用自然语言创建或修改 Godot 场景。
-- 让 AI 检查场景结构并修复缺失节点。
-- 为玩法功能生成计划，然后审批并执行 Workflow。
-- 分析项目依赖或查找脚本引用。
-- 在提交前查看文件变更和 Git diff。
-- 将生成的图片资产导入当前 Godot workspace。
+### 安装
 
-## 注意
+1. 从 [最新 Release](https://github.com/LuYingYiLong/daedalus-studio/releases/latest) 下载 `Daedalus-Studio-Setup-<version>.exe`。
+2. 安装并启动 Daedalus Studio。
+3. 等待首次启动页面校验并安装内置 Backend。
+4. 打开 **设置 → 供应商**，配置供应商并测试连接。
+5. 添加工作区。对于 Godot 项目，请配置或自动检测 Godot 可执行文件，并在 **设置 → Godot 项目** 中安装内置插件。
+6. 新建会话、选择模型，然后描述需要完成的修改或检查。
 
-Daedalus Studio 仍在快速迭代。建议保持 Studio 和托管后端同步更新；当任务需要写文件、运行终端命令或修改项目配置时，请认真查看审批内容。
+Studio 的应用偏好保存在 Electron user-data 目录，Daedalus 运行数据保存在 `%USERPROFILE%\.daedalus`。API Key 通过操作系统凭据存储保存，不会写入 Daedalus 的普通 JSON 配置。
+
+## 安全模型
+
+Daedalus 是能够在获得批准后修改文件和执行命令的 Agent 工具。它使用可执行的边界控制风险：
+
+- 文件、Git、Godot 和终端操作执行前都会校验工作区路径。
+- Read、Verify、Propose、Write 和 Destructive 工具有不同策略。
+- 写入和高风险外部操作必须经过审批网关。
+- 场景与资源 Patch 会完整预检，再以单个 Undo/Redo 事务提交。
+- API Key 和自定义 MCP Secret 不会进入普通配置或日志。
+- 缺少验证环境会明确显示警告；实际执行失败的适用验证器不会被包装成成功。
+
+仍然建议使用版本控制，并在接受改动前进行人工审查。
+
+## 开发
+
+### 开发环境
+
+- Node.js 24.x 与 npm。
+- 受支持的正式打包需要 Windows。
+- 开发模式需要本地的 [daedalus-backend](https://github.com/LuYingYiLong/daedalus-backend) 仓库。
+
+### 从源码运行
+
+先启动 Backend：
+
+```powershell
+git clone https://github.com/LuYingYiLong/daedalus-backend.git
+cd daedalus-backend
+npm ci
+npm run dev
+```
+
+然后在另一个终端启动 Studio：
+
+```powershell
+git clone https://github.com/LuYingYiLong/daedalus-studio.git
+cd daedalus-studio
+npm ci
+npm run dev
+```
+
+开发版 Studio 默认连接 `38181` 端口。如果两个仓库不在相邻目录，请在 Studio 启动设置中配置开发 Backend 目录。
+
+### 检查与构建
+
+```powershell
+npm run typecheck
+npm test
+npm run build
+npm run pack:win
+```
+
+- `npm run build` 在 `out/` 中生成 Electron 生产 Bundle。
+- `npm run pack:win` 生成未安装的 Windows 应用目录。
+- `npm run build:win` 在 `release/` 中生成 NSIS 安装包与更新元数据。
+- 发布构建会下载固定版本的 Backend 和 Godot 插件，并在打包前检查清单、大小、哈希、协议与 Backend self-test。
+
+## 仓库结构
+
+```text
+src/main/            Electron 生命周期、窗口、Backend 启动、更新与原生服务
+src/preload/         暴露给 Renderer 的窄 IPC Bridge
+src/renderer/src/    React 应用、功能、页面、API Client、国际化与样式
+scripts/             组件校验、准备与打包脚本
+tests/               Main/Renderer 单元、集成与源码契约测试
+docs/                架构与 UI 设计文档
+build/               图标与生成的打包输入
+```
+
+更深入的实现约定见 [docs/file-structure.md](./docs/file-structure.md) 和 [docs/ui-design-system.md](./docs/ui-design-system.md)。
+
+## 项目状态
+
+Daedalus Studio 正在积极开发中。会话和项目数据以持久、可恢复为目标；内部协议与扩展契约可能在 Studio、Backend 和插件协同发布时继续演进。
+
+提交问题时，请提供 Studio 版本、Backend 版本、Godot 版本、复现步骤和脱敏后的启动或会话诊断。请勿提交 API Key 或自定义 MCP Secret。
+
+## 相关项目
+
+- [Daedalus Backend](https://github.com/LuYingYiLong/daedalus-backend)：运行时、会话、供应商、Workflow、工具、MCP 与 Godot 服务。
+- [Godot Daedalus](https://github.com/LuYingYiLong/godot-daedalus)：Godot 编辑器插件与 Editor Bridge。
+
+## 许可证
+
+Daedalus Studio 使用 [GNU General Public License v3.0 only](./LICENSE) 许可证。
