@@ -9,6 +9,7 @@ export type CommitActionDialogProps = {
 	commitMessage: string;
 	includeUnstagedChanges: boolean;
 	commitOperation: CommitOrPushAction | null;
+	isCommitMessageGenerating: boolean;
 	errorMessage: string | null;
 	hasWorkspace: boolean;
 	onCancel: () => void;
@@ -22,6 +23,7 @@ function CommitActionDialog({
 	commitMessage,
 	includeUnstagedChanges,
 	commitOperation,
+	isCommitMessageGenerating,
 	errorMessage,
 	hasWorkspace,
 	onCancel,
@@ -31,12 +33,16 @@ function CommitActionDialog({
 }: CommitActionDialogProps): JSX.Element {
 	const { t } = useTranslation();
 	const isCommitOperationRunning: boolean = commitOperation !== null;
+	const canClose: boolean = !isCommitOperationRunning || isCommitMessageGenerating;
 
 	return (
 		<Modal
 			title={t("git.commit.title")}
 			open={open}
 			onCancel={onCancel}
+			closable={canClose}
+			keyboard={canClose}
+			mask={{ closable: canClose }}
 			className={styles.modal}
 			footer={(
 				<Space>

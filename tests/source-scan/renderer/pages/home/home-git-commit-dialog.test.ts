@@ -26,6 +26,12 @@ describe("HomePage git commit dialog source", () => {
 		expect(commitActionDialogSource).toContain("loading={commitOperation === \"commit\"}");
 		expect(commitActionDialogSource).toContain("loading={commitOperation === \"commit_and_push\"}");
 		expect(commitActionDialogSource).toContain("loading={commitOperation === \"push\"}");
+		expect(commitActionDialogSource).toContain("const canClose: boolean = !isCommitOperationRunning || isCommitMessageGenerating;");
+		expect(commitActionDialogSource).toContain("mask={{ closable: canClose }}");
+		expect(gitActionControllerSource).toContain("setIsCommitMessageGenerating(true)");
+		expect(gitActionControllerSource).toContain("setIsCommitMessageGenerating(false)");
+		expect(gitActionControllerSource).toContain("if (isCommitOperationRunning && !isCommitMessageGenerating)");
+		expect(gitActionControllerSource).toContain("workspace_git_commit_message_generation_timeout:");
 		expect(gitActionControllerSource).not.toContain("provider: selectedProviderId");
 		expect(gitActionControllerSource).not.toContain("model: selectedModelId");
 	});

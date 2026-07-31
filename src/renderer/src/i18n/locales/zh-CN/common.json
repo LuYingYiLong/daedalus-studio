@@ -381,6 +381,7 @@
       },
       "errors": {
         "selectWorkspace": "请先选择 workspace 再提交。",
+        "generationTimeout": "AI 提交信息生成超过 60 秒，已视为失败。",
         "actionFailed": "{{action}} 失败。"
       }
     },

@@ -381,6 +381,7 @@
       },
       "errors": {
         "selectWorkspace": "Please select a workspace before committing.",
+        "generationTimeout": "AI commit message generation timed out after 60 seconds.",
         "actionFailed": "Failed to {{action}}."
       }
     },

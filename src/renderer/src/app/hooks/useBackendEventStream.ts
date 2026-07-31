@@ -26,6 +26,7 @@ import {
 	markWorkflowTodoFailed,
 	normalizeWorkflowTodoSnapshot
 } from "@/features/composer/workflow-todo";
+import { hasQueuedFollowUpResponse } from "../run-completion-notification";
 
 type RefValue<T> = {
 	current: T;
@@ -36,6 +37,7 @@ export type BackendEventStreamParams = {
 	activeChatRequestIdRef: RefValue<string | null>;
 	pendingUserActionRequestIdsRef: RefValue<Set<string>>;
 	activeSessionTitleRef: RefValue<string>;
+	activeWorkbenchRef: RefValue<WorkbenchSnapshot | null>;
 	onEventObserved?: (event: BackendEvent) => void;
 	applyWorkbench: (nextWorkbench: WorkbenchSnapshot) => void;
 	appendQueuedRunUserBlock: (workbenchSnapshot: WorkbenchSnapshot) => void;
@@ -207,7 +209,15 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 			});
 			const requestId: string = getBackendEventRequestId(event);
 			const sessionId: string | null = params.activeSessionIdRef.current;
-			if (sessionId !== null && !params.pendingUserActionRequestIdsRef.current.has(requestId)) {
+			const hasQueuedFollowUp: boolean = hasQueuedFollowUpResponse(
+				params.activeWorkbenchRef.current,
+				requestId
+			);
+			if (
+				sessionId !== null
+				&& !hasQueuedFollowUp
+				&& !params.pendingUserActionRequestIdsRef.current.has(requestId)
+			) {
 				params.showNativeTaskNotification({
 					kind: "run_completed",
 					sessionId,

@@ -651,6 +651,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [timelinePage, setTimelinePage] = useState<TimelinePageState>(emptyTimelinePage);
 	const [timelineNavigationEntries, setTimelineNavigationEntries] = useState<SessionTimelineNavigationEntry[]>([]);
 	const [workbench, setWorkbench] = useState<WorkbenchSnapshot | null>(null);
+	const activeWorkbenchRef = useLatest(workbench);
 	const [sessionError, setSessionError] = useState<string | null>(null);
 	const [isSessionLoading, setIsSessionLoading] = useState(false);
 	const [isTimelineLoadingBefore, setIsTimelineLoadingBefore] = useState<boolean>(false);
@@ -1397,6 +1398,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		activeChatRequestIdRef,
 		pendingUserActionRequestIdsRef,
 		activeSessionTitleRef,
+		activeWorkbenchRef,
 		onEventObserved: handleBackendEventObserved,
 		applyWorkbench,
 		appendQueuedRunUserBlock,

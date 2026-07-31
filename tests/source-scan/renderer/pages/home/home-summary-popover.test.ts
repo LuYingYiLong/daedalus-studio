@@ -37,4 +37,10 @@ describe("HomePage summary popover source", () => {
 		expect(source).toContain("onClick={openSummaryDiffReview}");
 		expect(source).toContain("await loadSummaryOverview();");
 	});
+
+	it("shows commit message generation progress on the commit action", () => {
+		expect(source).toContain("aria-busy={gitActions.isCommitMessageGenerating}");
+		expect(source).toContain('gitActions.isCommitMessageGenerating ? <Spin size="small" /> : <Icon name="git-commit" />');
+		expect(source).toContain('icon={<Icon name="list-check" />}');
+	});
 });

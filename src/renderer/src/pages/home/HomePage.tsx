@@ -936,7 +936,8 @@ function HomePage({
 						<Button
 							type="text"
 							block
-							icon={<Icon name="git-commit" />}
+							aria-busy={gitActions.isCommitMessageGenerating}
+							icon={gitActions.isCommitMessageGenerating ? <Spin size="small" /> : <Icon name="git-commit" />}
 							className={styles.summaryActionButton}
 							onClick={(): void => {
 								gitActions.openCommitDialog();

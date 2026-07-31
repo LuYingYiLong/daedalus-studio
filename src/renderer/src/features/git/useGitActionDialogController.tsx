@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { App as AntdApp } from "antd";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -34,6 +34,7 @@ type GitActionDialogController = {
 	commitDialogProps: CommitActionDialogProps;
 	branchDialogProps: BranchActionDialogProps;
 	createBranchDialogProps: CreateBranchDialogProps;
+	isCommitMessageGenerating: boolean;
 	openCommitDialog: () => void;
 	openBranchDialog: () => void;
 	closeBranchDialog: () => void;
@@ -59,6 +60,15 @@ function formatCommitActionSuccess(result: CommitOrPushResult, t: TFunction<"com
 	return t("git.commit.messages.pushed");
 }
 
+function formatCommitActionError(error: unknown, action: CommitOrPushAction, t: TFunction<"common">): string {
+	if (error instanceof Error && error.message.startsWith("workspace_git_commit_message_generation_timeout:")) {
+		return t("git.commit.errors.generationTimeout");
+	}
+	return error instanceof Error
+		? error.message
+		: t("git.commit.errors.actionFailed", { action: getCommitActionLabel(action, t).toLowerCase() });
+}
+
 export function useGitActionDialogController({
 	workspaceId,
 	resetKey,
@@ -70,11 +80,13 @@ export function useGitActionDialogController({
 	const { t } = useTranslation();
 	const { message: messageApi } = AntdApp.useApp();
 	const [commitOpen, setCommitOpen] = useState<boolean>(false);
+	const commitOpenRef = useRef<boolean>(false);
 	const [branchOpen, setBranchOpen] = useState<boolean>(false);
 	const [createBranchOpen, setCreateBranchOpen] = useState<boolean>(false);
 	const [commitMessage, setCommitMessage] = useState<string>("");
 	const [includeUnstagedChanges, setIncludeUnstagedChanges] = useState<boolean>(true);
 	const [commitOperation, setCommitOperation] = useState<CommitOrPushAction | null>(null);
+	const [isCommitMessageGenerating, setIsCommitMessageGenerating] = useState<boolean>(false);
 	const [commitError, setCommitError] = useState<string | null>(null);
 	const [branches, setBranches] = useState<WorkspaceGitBranchItem[]>([]);
 	const [branchSearch, setBranchSearch] = useState<string>("");
@@ -88,12 +100,14 @@ export function useGitActionDialogController({
 	const isBranchOperationRunning: boolean = branchOperation !== null;
 
 	useEffect((): void => {
+		commitOpenRef.current = false;
 		setCommitOpen(false);
 		setBranchOpen(false);
 		setCreateBranchOpen(false);
 		setCommitMessage("");
 		setCommitError(null);
 		setCommitOperation(null);
+		setIsCommitMessageGenerating(false);
 		setBranches([]);
 		setBranchSearch("");
 		setSelectedBranchName(null);
@@ -107,16 +121,18 @@ export function useGitActionDialogController({
 	const openCommitDialog = useCallback((): void => {
 		onBeforeCommitOpen?.();
 		setCommitError(null);
+		commitOpenRef.current = true;
 		setCommitOpen(true);
 	}, [onBeforeCommitOpen]);
 
 	const closeCommitDialog = useCallback((): void => {
-		if (isCommitOperationRunning) {
+		if (isCommitOperationRunning && !isCommitMessageGenerating) {
 			return;
 		}
+		commitOpenRef.current = false;
 		setCommitOpen(false);
 		setCommitError(null);
-	}, [isCommitOperationRunning]);
+	}, [isCommitMessageGenerating, isCommitOperationRunning]);
 
 	const loadBranches = useCallback(async (): Promise<void> => {
 		if (workspaceId === null) {
@@ -202,7 +218,12 @@ export function useGitActionDialogController({
 		try {
 			let nextMessage: string | undefined = commitMessage.trim();
 			if (action !== "push" && (nextMessage ?? "").length === 0) {
-				nextMessage = await generateMessageForCommitAction();
+				setIsCommitMessageGenerating(true);
+				try {
+					nextMessage = await generateMessageForCommitAction();
+				} finally {
+					setIsCommitMessageGenerating(false);
+				}
 			}
 
 			const result: CommitOrPushResult = await commitOrPushGit({
@@ -212,11 +233,16 @@ export function useGitActionDialogController({
 				includeUnstagedChanges
 			});
 			void messageApi.success(formatCommitActionSuccess(result, t));
+			commitOpenRef.current = false;
 			setCommitOpen(false);
 			setCommitMessage("");
 			await onCommitSuccess?.(result);
 		} catch (error: unknown) {
-			setCommitError(error instanceof Error ? error.message : t("git.commit.errors.actionFailed", { action: getCommitActionLabel(action, t).toLowerCase() }));
+			const errorMessage: string = formatCommitActionError(error, action, t);
+			setCommitError(errorMessage);
+			if (!commitOpenRef.current) {
+				void messageApi.error(errorMessage);
+			}
 		} finally {
 			setCommitOperation(null);
 		}
@@ -299,6 +325,7 @@ export function useGitActionDialogController({
 			commitMessage,
 			includeUnstagedChanges,
 			commitOperation,
+			isCommitMessageGenerating,
 			errorMessage: commitError,
 			hasWorkspace: workspaceId !== null,
 			onCancel: closeCommitDialog,
@@ -316,6 +343,7 @@ export function useGitActionDialogController({
 		commitOperation,
 		handleCommitAction,
 		includeUnstagedChanges,
+		isCommitMessageGenerating,
 		workspaceId
 	]);
 
@@ -385,6 +413,7 @@ export function useGitActionDialogController({
 		commitDialogProps,
 		branchDialogProps,
 		createBranchDialogProps,
+		isCommitMessageGenerating,
 		openCommitDialog,
 		openBranchDialog,
 		closeBranchDialog

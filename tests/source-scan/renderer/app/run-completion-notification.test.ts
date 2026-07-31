@@ -1,0 +1,15 @@
+import { describe, expect, it } from "vitest";
+import { readRepoFile } from "../../../helpers/repo-paths";
+
+describe("run completion notification wiring", () => {
+	it("checks the active message queue before showing a completed notification", () => {
+		const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const streamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
+
+		expect(appSource).toContain("const activeWorkbenchRef = useLatest(workbench);");
+		expect(appSource).toContain("activeWorkbenchRef,");
+		expect(streamSource).toContain("hasQueuedFollowUpResponse");
+		expect(streamSource).toContain("&& !hasQueuedFollowUp");
+		expect(streamSource).toContain('kind: "run_completed"');
+	});
+});
