@@ -16,7 +16,7 @@ describe("BootSplash", () => {
 	it("renders BootSplash before App and passes bootstrap data into App", () => {
 		expect(windowProvidersSource).toContain("<AntdApp component=\"div\"");
 		expect(windowProvidersSource).toContain("className={styles.root}");
-		expect(mainWindowRootSource).toContain("<MainTitlebar />");
+		expect(mainWindowRootSource).toContain("<MainTitlebar updatesEnabled={bootstrapData !== null} />");
 		expect(mainWindowRootSource).toContain("<BootSplash loadData={loadBootstrapData} onReady={handleBootstrapReady} />");
 		expect(mainWindowRootSource).toContain("<App bootstrapData={bootstrapData} />");
 		expect(settingsWindowSource).toContain("DEFAULT_CLIENT_PREFERENCES");
@@ -53,6 +53,7 @@ describe("BootSplash", () => {
 		expect(bootstrapSource).toContain("fetchWorkspaces()");
 		expect(bootstrapSource).toContain("fetchSessions()");
 		expect(bootstrapSource).toContain("fetchWorkspaceTreeOrder()");
+		expect(bootstrapSource).toContain("withBootstrapTimeout(\"workspace tree order\"");
 		expect(bootstrapSource).toContain("fetchSlashCommands()");
 		expect(bootstrapSource).toContain("fetchSkills()");
 		expect(bootstrapSource).not.toContain("loadSettingsBootstrapData");

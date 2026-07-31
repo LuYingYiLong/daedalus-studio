@@ -44,6 +44,11 @@ describe("backend bootstrap service", () => {
 		expect(serviceSource).toContain("return await this.installBundledAndStart();");
 	});
 
+	it("replaces a compatible managed backend when it is older than the bundled backend", () => {
+		expect(serviceSource).toContain("compareSemanticVersions(current.version, packageJson.backendBootstrapVersion) < 0");
+		expect(serviceSource).toContain("Replacing a managed backend older than the bundled backend.");
+	});
+
 	it("exposes bootstrap IPC without exposing npm or file paths to renderer code", () => {
 		expect(serviceSource).toContain("ipcMain.handle(\"backend-bootstrap:get-state\"");
 		expect(serviceSource).toContain("ipcMain.handle(\"backend-bootstrap:prepare\"");

@@ -2,6 +2,7 @@ import { BrowserWindow, app, ipcMain } from "electron";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import packageJson from "../../../package.json";
 import {
 	activateBackendCandidate,
 	commitBackendCandidate,
@@ -22,7 +23,10 @@ import {
 	backendManager,
 	type BackendLaunchTarget
 } from "./backend-manager";
-import { BackendManifestCompatibilityError } from "./backend-binary-manifest";
+import {
+	BackendManifestCompatibilityError,
+	compareSemanticVersions
+} from "./backend-binary-manifest";
 import { createLogger } from "./logger";
 
 const logger = createLogger("backend-bootstrap");
@@ -277,6 +281,14 @@ export class BackendBootstrapService {
 					errorMessage: getErrorMessage(error),
 					suggestedAction: "Use Repair backend to restore the verified backend bundled with Daedalus Studio."
 				});
+			}
+			if (compareSemanticVersions(current.version, packageJson.backendBootstrapVersion) < 0) {
+				logger.info("Replacing a managed backend older than the bundled backend.", {
+					currentVersion: current.version,
+					bundledVersion: packageJson.backendBootstrapVersion
+				});
+				await backendManager.stopAndWait();
+				return await this.installBundledAndStart();
 			}
 			return await this.startAndCommitCurrent(current.version, false);
 		}

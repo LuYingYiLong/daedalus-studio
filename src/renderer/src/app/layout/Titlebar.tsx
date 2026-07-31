@@ -13,6 +13,10 @@ import { Icon } from "@/assets/icons";
 import AppUpdateDialog from "@/features/app-update/AppUpdateDialog";
 import styles from "./Titlebar.module.css";
 
+type MainTitlebarProps = {
+	updatesEnabled: boolean;
+};
+
 function shouldShowUpdateButton(state: AppUpdateState | null): boolean {
 	if (state === null) {
 		return false;
@@ -45,12 +49,12 @@ function getUpdateButtonLabel(state: AppUpdateState | null): string {
 	return "Update";
 }
 
-function MainTitlebar(): React.JSX.Element {
+function MainTitlebar({ updatesEnabled }: MainTitlebarProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(() => getCachedClientPreferences());
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
 	const [updateModalOpen, setUpdateModalOpen] = useState<boolean>(false);
-	const showUpdateButton: boolean = shouldShowUpdateButton(updateState);
+	const showUpdateButton: boolean = updatesEnabled && shouldShowUpdateButton(updateState);
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -58,7 +62,12 @@ function MainTitlebar(): React.JSX.Element {
 			if (!cancelled) {
 				setUpdateState(state);
 			}
-			if (!cancelled && clientPreferences.autoCheckForUpdates && (state.status === "idle" || state.status === "not_available" || state.status === "error")) {
+			if (
+				!cancelled
+				&& updatesEnabled
+				&& clientPreferences.autoCheckForUpdates
+				&& (state.status === "idle" || state.status === "not_available" || state.status === "error")
+			) {
 				void window.electronAPI.appUpdate.check().then((nextState: AppUpdateState): void => {
 					if (!cancelled) {
 						setUpdateState(nextState);
@@ -73,7 +82,7 @@ function MainTitlebar(): React.JSX.Element {
 			cancelled = true;
 			unsubscribe();
 		};
-	}, [clientPreferences.autoCheckForUpdates]);
+	}, [clientPreferences.autoCheckForUpdates, updatesEnabled]);
 
 	const handleClientPreferencesChanged = useMemoizedFn((event: Event): void => {
 		const preferences: ClientPreferences | undefined = (event as CustomEvent<ClientPreferences>).detail;
@@ -85,7 +94,7 @@ function MainTitlebar(): React.JSX.Element {
 	useEventListener(CLIENT_PREFERENCES_CHANGED_EVENT, handleClientPreferencesChanged);
 
 	const startDownload = useMemoizedFn(async (): Promise<void> => {
-		if (updateState?.status !== "available" && updateState?.status !== "error") {
+		if (!updatesEnabled || (updateState?.status !== "available" && updateState?.status !== "error")) {
 			return;
 		}
 		const nextState: AppUpdateState = await window.electronAPI.appUpdate.download();
