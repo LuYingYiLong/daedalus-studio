@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
 	AppUpdateService,
+	getDifferentialDownloadFallbackReason,
+	resolveBackendUpdateBaselineVersion,
 	type AppUpdateState,
 	type BackendUpdateCheckResult,
 	type BackendUpdateClient,
@@ -49,8 +51,15 @@ function createBackendCheckResult(updateAvailable: boolean = false): BackendUpda
 class FakeAutoUpdater {
 	public autoDownload: boolean = true;
 	public allowPrerelease: boolean = true;
+	public logger: {
+		info: (message?: unknown) => void;
+		warn: (message?: unknown) => void;
+		error: (message?: unknown) => void;
+		debug?: (message: string) => void;
+	} | null = null;
 	public checkCount: number = 0;
 	public downloadCount: number = 0;
+	public downloadScenario: (() => void) | null = null;
 	public quitAndInstallArgs: Array<[boolean, boolean]> = [];
 	public installEvents: string[] = [];
 	private readonly handlers: Map<FakeUpdaterEventName, Array<(...args: unknown[]) => void>> = new Map();
@@ -70,6 +79,10 @@ class FakeAutoUpdater {
 
 	public async downloadUpdate(): Promise<string[]> {
 		this.downloadCount += 1;
+		if (this.downloadScenario !== null) {
+			this.downloadScenario();
+			return ["installer.exe"];
+		}
 		this.emit("download-progress", {
 			percent: 42,
 			bytesPerSecond: 100,
@@ -152,6 +165,19 @@ class FakeBackendUpdateClient implements BackendUpdateClient {
 }
 
 describe("app update service", () => {
+	it("extracts a bounded one-line differential fallback reason", () => {
+		expect(getDifferentialDownloadFallbackReason(
+			"Cannot download differentially, fallback to full download: Error: old blockmap unavailable\n at updater"
+		)).toBe("Error: old blockmap unavailable");
+		expect(getDifferentialDownloadFallbackReason("ordinary updater error")).toBeNull();
+	});
+
+	it("uses the newer bundled backend as the online update baseline", () => {
+		expect(resolveBackendUpdateBaselineVersion("1.1.7", "1.1.8")).toBe("1.1.8");
+		expect(resolveBackendUpdateBaselineVersion("1.1.9", "1.1.8")).toBe("1.1.9");
+		expect(resolveBackendUpdateBaselineVersion("1.1.8", "1.1.8")).toBe("1.1.8");
+	});
+
 	it("keeps client updater disabled for unpackaged builds while checking backend updates", async () => {
 		const fakeUpdater = new FakeAutoUpdater();
 		const fakeBackend = new FakeBackendUpdateClient();
@@ -303,6 +329,100 @@ describe("app update service", () => {
 		expect(fakeBackend.cleanupCount).toBe(1);
 		expect(fakeUpdater.downloadCount).toBe(1);
 		expect(service.getState().updateKind).toBe("combined");
+	});
+
+	it("reports the official differential fallback as a full-installer download phase", async () => {
+		const fakeUpdater = new FakeAutoUpdater();
+		const fakeBackend = new FakeBackendUpdateClient();
+		const events: AppUpdateState[] = [];
+		const service = new AppUpdateService({
+			isPackaged: true,
+			currentVersion: "1.0.6",
+			autoUpdater: fakeUpdater,
+			backendUpdateClient: fakeBackend,
+			sendEvent: (_channel, state): void => {
+				events.push(state);
+			}
+		});
+		fakeUpdater.downloadScenario = (): void => {
+			fakeUpdater.emit("download-progress", {
+				percent: 100,
+				bytesPerSecond: 100,
+				total: 1000,
+				transferred: 1000
+			});
+			fakeUpdater.logger?.error(
+				"Cannot download differentially, fallback to full download: Error: GitHub range request failed\n at updater"
+			);
+			fakeUpdater.emit("download-progress", {
+				percent: 12,
+				bytesPerSecond: 100,
+				total: 2000,
+				transferred: 240
+			});
+			fakeUpdater.emit("update-downloaded", createUpdateInfo("1.0.7"));
+		};
+
+		fakeUpdater.emit("update-available", createUpdateInfo("1.0.7"));
+		await service.download();
+
+		expect(events).toContainEqual(expect.objectContaining({
+			status: "downloading",
+			progress: 0,
+			client: expect.objectContaining({
+				downloadPhase: "full",
+				downloadAttempt: 2,
+				downloadFallbackReason: "Error: GitHub range request failed"
+			})
+		}));
+		expect(events).toContainEqual(expect.objectContaining({
+			status: "downloading",
+			progress: 12,
+			client: expect.objectContaining({ downloadPhase: "full" })
+		}));
+		expect(service.getState().client.status).toBe("downloaded");
+	});
+
+	it("infers a full-installer fallback when updater progress restarts without a log hook", async () => {
+		const fakeUpdater = new FakeAutoUpdater();
+		const fakeBackend = new FakeBackendUpdateClient();
+		const events: AppUpdateState[] = [];
+		const service = new AppUpdateService({
+			isPackaged: true,
+			currentVersion: "1.0.6",
+			autoUpdater: fakeUpdater,
+			backendUpdateClient: fakeBackend,
+			sendEvent: (_channel, state): void => {
+				events.push(state);
+			}
+		});
+		fakeUpdater.downloadScenario = (): void => {
+			fakeUpdater.emit("download-progress", {
+				percent: 96,
+				bytesPerSecond: 100,
+				total: 1000,
+				transferred: 960
+			});
+			fakeUpdater.emit("download-progress", {
+				percent: 4,
+				bytesPerSecond: 100,
+				total: 2000,
+				transferred: 80
+			});
+			fakeUpdater.emit("update-downloaded", createUpdateInfo("1.0.7"));
+		};
+
+		fakeUpdater.emit("update-available", createUpdateInfo("1.0.7"));
+		await service.download();
+
+		expect(events).toContainEqual(expect.objectContaining({
+			status: "downloading",
+			progress: 4,
+			client: expect.objectContaining({
+				downloadPhase: "full",
+				downloadAttempt: 2
+			})
+		}));
 	});
 
 	it("keeps the previous backend when installed backend verification fails", async () => {

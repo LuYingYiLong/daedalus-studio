@@ -40,6 +40,9 @@ type AppUpdateComponentState = {
 	releaseDate: string | null;
 	progress: number | null;
 	errorMessage: string | null;
+	downloadPhase: "differential" | "full" | null;
+	downloadAttempt: number | null;
+	downloadFallbackReason: string | null;
 };
 
 type BackendBootstrapState = {

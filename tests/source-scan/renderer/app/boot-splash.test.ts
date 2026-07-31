@@ -44,6 +44,8 @@ describe("BootSplash", () => {
 	it("preloads backend and first-screen data before entering the app", () => {
 		expect(splashSource).toContain("window.electronAPI.backendBootstrap.prepare()");
 		expect(splashSource).toContain("window.electronAPI.backendBootstrap.onStateChanged");
+		expect(splashSource).toContain("BACKEND_BOOTSTRAP_PROGRESS_WEIGHT");
+		expect(splashSource).toContain("state.progress * BACKEND_BOOTSTRAP_PROGRESS_WEIGHT / 100");
 		expect(splashSource).toContain("setState(createBackendErrorState(backendState, t));");
 		expect(bootstrapSource).toContain("window.electronAPI.backend.healthCheck()");
 		expect(bootstrapSource).toContain("\"backend.health\"");

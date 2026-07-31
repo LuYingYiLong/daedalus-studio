@@ -13,6 +13,7 @@ describe("app update source", () => {
 	const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 	const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.tsx");
+	const updateVisibilitySource: string = readRepoFile("src", "renderer", "src", "features", "app-update", "update-visibility.ts");
 	const titlebarCss: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.module.css");
 	const updateDialogSource: string = readRepoFile("src", "renderer", "src", "features", "app-update", "AppUpdateDialog.tsx");
 	const aboutSettingsSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "AboutSettingsPage.tsx");
@@ -29,6 +30,8 @@ describe("app update source", () => {
 		expect(releaseWorkflowSource).toContain("overwrite_files: true");
 		expect(serviceSource).toContain("autoDownload = false");
 		expect(serviceSource).toContain("allowPrerelease = false");
+		expect(serviceSource).toContain("Cannot download differentially, fallback to full download:");
+		expect(serviceSource).toContain("downloadPhase: \"full\"");
 	});
 
 	it("does not enable client updates for unpacked builds without update metadata", () => {
@@ -44,6 +47,8 @@ describe("app update source", () => {
 		expect(serviceSource).toContain("ipcMain.handle(\"app-update:download\"");
 		expect(serviceSource).toContain("ipcMain.handle(\"app-update:acknowledge\"");
 		expect(serviceSource).toContain("fetchBackendReleaseManifest");
+		expect(serviceSource).toContain("resolveBackendUpdateBaselineVersion");
+		expect(serviceSource).toContain("packageJson.backendBootstrapVersion");
 		expect(serviceSource).toContain("stageBackendRelease");
 		expect(serviceSource).toContain("activateBackendCandidate");
 		expect(serviceSource).toContain("commitBackendCandidate");
@@ -88,9 +93,12 @@ describe("app update source", () => {
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.onStateChanged");
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.download");
 		expect(titlebarSource).toContain("window.electronAPI.appUpdate.acknowledge");
-		expect(titlebarSource).toContain("const hasKnownUpdate: boolean");
-		expect(titlebarSource).toContain('if (state.status === "error")');
-		expect(titlebarSource).toContain("state.updateKind !== null");
+		expect(titlebarSource).toContain("shouldShowUpdateButton(updateState)");
+		expect(updateVisibilitySource).toContain("const hasKnownUpdate: boolean");
+		expect(updateVisibilitySource).toContain("if (!hasKnownUpdate)");
+		expect(updateVisibilitySource).toContain("state.updateKind !== null");
+		expect(titlebarSource).toContain('&& state.status === "idle"');
+		expect(titlebarSource).not.toContain('state.status === "not_available" || state.status === "error"');
 		expect(titlebarSource).toContain("clientPreferences.autoCheckForUpdates");
 		expect(titlebarSource).not.toContain("!preferences.autoCheckForUpdates");
 		expect(titlebarSource).toContain("<AppUpdateDialog");
@@ -100,6 +108,8 @@ describe("app update source", () => {
 		expect(updateDialogSource).not.toContain("maskClosable");
 		expect(updateDialogSource).toContain("appUpdate.components.backend");
 		expect(updateDialogSource).toContain("appUpdate.status.restarting");
+		expect(updateDialogSource).toContain("appUpdate.fallback.description");
+		expect(updateDialogSource).toContain('state.client.downloadPhase === "full"');
 		expect(updateDialogSource).toContain("https://github.com/LuYingYiLong/godot-daedalus/releases");
 		expect(updateDialogSource).toContain("copyable={{ text: entry.message }}");
 		expect(aboutSettingsSource).toContain("<AppUpdateDialog");

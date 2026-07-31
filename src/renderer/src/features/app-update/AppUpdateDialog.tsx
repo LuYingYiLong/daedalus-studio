@@ -70,9 +70,16 @@ function getUpdateStatusText(state: AppUpdateState | null, t: (key: string) => s
 		return t("appUpdate.status.checking");
 	}
 	if (state.status === "downloading") {
-		return state.backend.status === "downloading"
-			? t("appUpdate.status.installingBackend")
-			: t("appUpdate.status.downloading");
+		if (state.backend.status === "downloading") {
+			return t("appUpdate.status.installingBackend");
+		}
+		if (state.client.downloadPhase === "full") {
+			return t("appUpdate.status.downloadingFullInstaller");
+		}
+		if (state.client.downloadPhase === "differential") {
+			return t("appUpdate.status.downloadingDifferential");
+		}
+		return t("appUpdate.status.downloading");
 	}
 	if (state.status === "downloaded" && state.updateKind === "backend") {
 		return t("appUpdate.status.backendUpdated");
@@ -100,6 +107,9 @@ function AppUpdateDialog({ open, state, onClose, onDownload }: AppUpdateDialogPr
 	const clientVersionText: string | null = state === null ? null : getComponentVersionText(t("appUpdate.components.client"), state.client);
 	const backendVersionText: string | null = state === null ? null : getComponentVersionText(t("appUpdate.components.backend"), state.backend);
 	const isProgressState: boolean = state?.status === "downloading" || state?.status === "downloaded" || state?.status === "installing";
+	const isFullDownloadFallback: boolean = state?.client.downloadPhase === "full"
+		&& state.client.downloadAttempt === 2
+		&& (state.client.status === "downloading" || state.client.status === "error");
 	const errorEntries: UpdateErrorEntry[] = getUpdateErrorEntries(state, t);
 
 	return (
@@ -117,6 +127,23 @@ function AppUpdateDialog({ open, state, onClose, onDownload }: AppUpdateDialogPr
 				{backendVersionText !== null ? <Typography.Text type="secondary">{backendVersionText}</Typography.Text> : null}
 				{state?.releaseName !== null && state?.releaseName !== undefined ? <Typography.Text type="secondary">{state.releaseName}</Typography.Text> : null}
 				<Typography.Text type="secondary">{getUpdateStatusText(state, t)}</Typography.Text>
+				{isFullDownloadFallback ? (
+					<Alert
+						type="warning"
+						showIcon={true}
+						title={t("appUpdate.fallback.title")}
+						description={(
+							<div className={styles.fallbackContent}>
+								<Typography.Text>{t("appUpdate.fallback.description")}</Typography.Text>
+								{state?.client.downloadFallbackReason !== null && state?.client.downloadFallbackReason !== undefined ? (
+									<Typography.Text type="secondary">
+										{t("appUpdate.fallback.reason")} {state.client.downloadFallbackReason}
+									</Typography.Text>
+								) : null}
+							</div>
+						)}
+					/>
+				) : null}
 				{isProgressState ? (
 					<Progress percent={state?.status === "downloaded" || state?.status === "installing" ? 100 : updateProgress} status={state?.status === "downloaded" ? "success" : "active"} />
 				) : null}

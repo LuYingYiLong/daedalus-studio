@@ -24,6 +24,8 @@ type BootstrapState =
 
 type Translate = (key: string) => string;
 
+const BACKEND_BOOTSTRAP_PROGRESS_WEIGHT: number = 70;
+
 function createInitialProgress(t: Translate): BootstrapProgress {
 	return {
 		label: t("app.boot.progress.starting"),
@@ -50,14 +52,29 @@ function getBackendBootstrapProgress(state: BackendBootstrapState, t: Translate)
 	};
 	return {
 		label: labelByPhase[state.phase],
-		percent: Math.max(0, Math.min(100, state.progress))
+		percent: Math.max(
+			0,
+			Math.min(
+				BACKEND_BOOTSTRAP_PROGRESS_WEIGHT,
+				Math.round(state.progress * BACKEND_BOOTSTRAP_PROGRESS_WEIGHT / 100)
+			)
+		)
 	};
 }
 
 function getFirstScreenProgress(progress: BootstrapProgress): BootstrapProgress {
 	return {
 		label: progress.label,
-		percent: Math.max(70, Math.min(100, Math.round(70 + progress.percent * 0.3)))
+		percent: Math.max(
+			BACKEND_BOOTSTRAP_PROGRESS_WEIGHT,
+			Math.min(
+				100,
+				Math.round(
+					BACKEND_BOOTSTRAP_PROGRESS_WEIGHT
+					+ progress.percent * (100 - BACKEND_BOOTSTRAP_PROGRESS_WEIGHT) / 100
+				)
+			)
+		)
 	};
 }
 

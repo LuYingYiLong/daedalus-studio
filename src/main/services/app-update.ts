@@ -3,6 +3,7 @@ import electronUpdater from "electron-updater";
 import type { ProgressInfo, UpdateInfo } from "electron-updater";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import packageJson from "../../../package.json";
 import { backendManager } from "./backend-manager";
 import { compareSemanticVersions } from "./backend-binary-manifest";
 import {
@@ -28,6 +29,8 @@ export type AppUpdateStatus =
 
 export type AppUpdateKind = "client" | "backend" | "combined" | null;
 
+export type AppUpdateDownloadPhase = "differential" | "full" | null;
+
 export type AppUpdateComponentState = {
 	status: AppUpdateStatus;
 	currentVersion: string | null;
@@ -36,6 +39,9 @@ export type AppUpdateComponentState = {
 	releaseDate: string | null;
 	progress: number | null;
 	errorMessage: string | null;
+	downloadPhase: AppUpdateDownloadPhase;
+	downloadAttempt: number | null;
+	downloadFallbackReason: string | null;
 };
 
 export type AppUpdateState = {
@@ -108,16 +114,27 @@ type AppUpdateEventHandler<TEventName extends AppUpdateEventName> = (...args: Ap
 type AppUpdaterLike = {
 	autoDownload: boolean;
 	allowPrerelease: boolean;
+	logger?: AppUpdaterLogger | null;
 	checkForUpdates: () => Promise<unknown>;
 	downloadUpdate: () => Promise<unknown>;
 	quitAndInstall: (isSilent: boolean, isForceRunAfter: boolean) => void;
 	on: (eventName: AppUpdateEventName, handler: (...args: unknown[]) => void) => unknown;
 };
 
+type AppUpdaterLogger = {
+	info: (message?: unknown) => void;
+	warn: (message?: unknown) => void;
+	error: (message?: unknown) => void;
+	debug?: (message: string) => void;
+};
+
+const DIFFERENTIAL_DOWNLOAD_FALLBACK_PREFIX = "Cannot download differentially, fallback to full download:";
+
 function createNoopAutoUpdater(): AppUpdaterLike {
 	return {
 		autoDownload: false,
 		allowPrerelease: false,
+		logger: null,
 		async checkForUpdates(): Promise<null> {
 			return null;
 		},
@@ -165,6 +182,15 @@ function asErrorRecord(value: unknown): Record<string, unknown> | null {
 		: null;
 }
 
+export function resolveBackendUpdateBaselineVersion(
+	currentVersion: string,
+	bundledVersion: string
+): string {
+	return compareSemanticVersions(currentVersion, bundledVersion) >= 0
+		? currentVersion
+		: bundledVersion;
+}
+
 function getNonEmptyString(value: unknown): string | null {
 	if (typeof value !== "string") {
 		return null;
@@ -191,6 +217,22 @@ function getSafeUpdateUrl(value: unknown): string | null {
 	} catch {
 		return null;
 	}
+}
+
+export function getDifferentialDownloadFallbackReason(message: unknown): string | null {
+	if (typeof message !== "string") {
+		return null;
+	}
+	const fallbackIndex: number = message.indexOf(DIFFERENTIAL_DOWNLOAD_FALLBACK_PREFIX);
+	if (fallbackIndex < 0) {
+		return null;
+	}
+	const reason: string = message
+		.slice(fallbackIndex + DIFFERENTIAL_DOWNLOAD_FALLBACK_PREFIX.length)
+		.trim()
+		.split(/\r?\n/, 1)[0]
+		.trim();
+	return reason.length > 0 ? reason.slice(0, 600) : null;
 }
 
 function getErrorMessage(error: unknown, fallback: string = "Update failed."): string {
@@ -249,7 +291,10 @@ function createComponentState(status: AppUpdateStatus, currentVersion: string | 
 		releaseName: null,
 		releaseDate: null,
 		progress: null,
-		errorMessage
+		errorMessage,
+		downloadPhase: null,
+		downloadAttempt: null,
+		downloadFallbackReason: null
 	};
 }
 
@@ -359,11 +404,15 @@ class MainProcessBackendUpdateClient implements BackendUpdateClient {
 			throw new Error("Cannot check backend updates before a verified backend is selected.");
 		}
 		const latest = await fetchBackendReleaseManifest();
+		const updateBaselineVersion: string = resolveBackendUpdateBaselineVersion(
+			launchTarget.version,
+			packageJson.backendBootstrapVersion
+		);
 		return {
 			currentVersion: launchTarget.version,
 			installedVersion: launchTarget.version,
 			latestVersion: latest.version,
-			updateAvailable: isVersionNewer(latest.version, launchTarget.version),
+			updateAvailable: isVersionNewer(latest.version, updateBaselineVersion),
 			checkedAt: new Date().toISOString(),
 			errorMessage: null
 		};
@@ -440,6 +489,7 @@ export class AppUpdateService {
 			createComponentState(this.isPackaged ? "idle" : "unsupported", options.currentVersion ?? getDefaultCurrentVersion(), this.isPackaged ? null : getUnsupportedClientMessage()),
 			createComponentState("idle", null)
 		);
+		this.configureUpdaterLogger();
 		this.registerUpdaterEvents();
 	}
 
@@ -542,7 +592,10 @@ export class AppUpdateService {
 		this.updateClient({
 			status: "checking",
 			progress: null,
-			errorMessage: null
+			errorMessage: null,
+			downloadPhase: null,
+			downloadAttempt: null,
+			downloadFallbackReason: null
 		});
 		try {
 			await this.autoUpdater.checkForUpdates();
@@ -659,7 +712,10 @@ export class AppUpdateService {
 		this.updateClient({
 			status: "downloading",
 			progress: 0,
-			errorMessage: null
+			errorMessage: null,
+			downloadPhase: "differential",
+			downloadAttempt: 1,
+			downloadFallbackReason: null
 		});
 		try {
 			await this.autoUpdater.downloadUpdate();
@@ -673,7 +729,10 @@ export class AppUpdateService {
 			this.updateClient({
 				status: "checking",
 				progress: null,
-				errorMessage: null
+				errorMessage: null,
+				downloadPhase: null,
+				downloadAttempt: null,
+				downloadFallbackReason: null
 			});
 		});
 		this.onUpdaterEvent("update-available", (info: UpdateInfo): void => {
@@ -684,7 +743,10 @@ export class AppUpdateService {
 				releaseName: getUpdateReleaseName(info),
 				releaseDate: getUpdateReleaseDate(info),
 				progress: null,
-				errorMessage: null
+				errorMessage: null,
+				downloadPhase: null,
+				downloadAttempt: null,
+				downloadFallbackReason: null
 			});
 		});
 		this.onUpdaterEvent("update-not-available", (): void => {
@@ -694,14 +756,26 @@ export class AppUpdateService {
 				releaseName: null,
 				releaseDate: null,
 				progress: null,
-				errorMessage: null
+				errorMessage: null,
+				downloadPhase: null,
+				downloadAttempt: null,
+				downloadFallbackReason: null
 			});
 		});
 		this.onUpdaterEvent("download-progress", (progress: ProgressInfo): void => {
+			const nextProgress: number = Math.max(0, Math.min(100, progress.percent));
+			const inferredFullDownloadFallback: boolean = this.state.client.downloadPhase === "differential"
+				&& this.state.client.progress !== null
+				&& this.state.client.progress >= 90
+				&& nextProgress <= 10;
 			this.updateClient({
 				status: "downloading",
-				progress: Math.max(0, Math.min(100, progress.percent)),
-				errorMessage: null
+				progress: nextProgress,
+				errorMessage: null,
+				...(inferredFullDownloadFallback ? {
+					downloadPhase: "full" as const,
+					downloadAttempt: 2
+				} : {})
 			});
 		});
 		this.onUpdaterEvent("update-downloaded", (info: UpdateInfo): void => {
@@ -729,6 +803,53 @@ export class AppUpdateService {
 		});
 		this.onUpdaterEvent("error", (error: unknown): void => {
 			this.handleClientError(error, "Client update failed.");
+		});
+	}
+
+	private configureUpdaterLogger(): void {
+		const upstreamLogger: AppUpdaterLogger | null = this.autoUpdater.logger ?? null;
+		const forward = (level: keyof Pick<AppUpdaterLogger, "info" | "warn" | "error">, message?: unknown): void => {
+			try {
+				upstreamLogger?.[level](message);
+			} catch (error: unknown) {
+				console.warn(`[AppUpdateService] updater logger ${level} forwarding failed`, error);
+			}
+		};
+		this.autoUpdater.logger = {
+			info: (message?: unknown): void => {
+				forward("info", message);
+			},
+			warn: (message?: unknown): void => {
+				forward("warn", message);
+			},
+			error: (message?: unknown): void => {
+				forward("error", message);
+				if (typeof message === "string" && message.includes(DIFFERENTIAL_DOWNLOAD_FALLBACK_PREFIX)) {
+					this.handleDifferentialDownloadFallback(getDifferentialDownloadFallbackReason(message));
+				}
+			},
+			debug: (message: string): void => {
+				try {
+					upstreamLogger?.debug?.(message);
+				} catch (error: unknown) {
+					console.warn("[AppUpdateService] updater logger debug forwarding failed", error);
+				}
+			}
+		};
+	}
+
+	private handleDifferentialDownloadFallback(reason: string | null): void {
+		console.warn(
+			"[AppUpdateService] differential update unavailable; falling back to the full installer",
+			reason ?? "No reason was provided by electron-updater."
+		);
+		this.updateClient({
+			status: "downloading",
+			progress: 0,
+			errorMessage: null,
+			downloadPhase: "full",
+			downloadAttempt: 2,
+			downloadFallbackReason: reason
 		});
 	}
 

@@ -11,30 +11,12 @@ import {
 } from "@/api/client-preferences-api";
 import { Icon } from "@/assets/icons";
 import AppUpdateDialog from "@/features/app-update/AppUpdateDialog";
+import { shouldShowUpdateButton } from "@/features/app-update/update-visibility";
 import styles from "./Titlebar.module.css";
 
 type MainTitlebarProps = {
 	updatesEnabled: boolean;
 };
-
-function shouldShowUpdateButton(state: AppUpdateState | null): boolean {
-	if (state === null) {
-		return false;
-	}
-	if (state.status === "error") {
-		return true;
-	}
-	const hasKnownUpdate: boolean = state.updateKind !== null
-		|| state.client.availableVersion !== null
-		|| state.backend.availableVersion !== null;
-	if (!hasKnownUpdate) {
-		return false;
-	}
-	return state.status === "available"
-		|| state.status === "downloading"
-		|| state.status === "downloaded"
-		|| state.status === "installing";
-}
 
 function getUpdateButtonLabel(state: AppUpdateState | null): string {
 	if (state?.status === "downloading") {
@@ -66,7 +48,7 @@ function MainTitlebar({ updatesEnabled }: MainTitlebarProps): React.JSX.Element 
 				!cancelled
 				&& updatesEnabled
 				&& clientPreferences.autoCheckForUpdates
-				&& (state.status === "idle" || state.status === "not_available" || state.status === "error")
+				&& state.status === "idle"
 			) {
 				void window.electronAPI.appUpdate.check().then((nextState: AppUpdateState): void => {
 					if (!cancelled) {

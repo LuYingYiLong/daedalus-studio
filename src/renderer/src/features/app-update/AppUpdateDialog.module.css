@@ -4,7 +4,8 @@
 }
 
 .errorContent,
-.errorEntry {
+.errorEntry,
+.fallbackContent {
 	display: grid;
 	gap: var(--ds-space-1);
 	min-width: 0;

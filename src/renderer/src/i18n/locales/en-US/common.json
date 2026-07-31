@@ -1201,11 +1201,18 @@
     "status": {
       "checking": "Checking for updates...",
       "downloading": "Downloading update...",
+      "downloadingDifferential": "Downloading differential update...",
+      "downloadingFullInstaller": "Downloading full installer...",
       "installingBackend": "Installing backend update...",
       "backendUpdated": "Backend updated. Close this dialog to continue.",
       "restarting": "Restarting to install...",
       "failed": "Update failed",
       "ready": "Update is ready."
+    },
+    "fallback": {
+      "title": "Switched to the full installer",
+      "description": "The differential update could not be completed, so Daedalus Studio automatically fell back to a full download. Progress restarts at 0%; the installer is not being applied twice.",
+      "reason": "Fallback reason:"
     },
     "actions": {
       "retry": "Retry",

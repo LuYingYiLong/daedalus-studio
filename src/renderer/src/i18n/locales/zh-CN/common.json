@@ -1201,11 +1201,18 @@
     "status": {
       "checking": "正在检查更新...",
       "downloading": "正在下载更新...",
+      "downloadingDifferential": "正在下载差分更新...",
+      "downloadingFullInstaller": "正在下载完整安装包...",
       "installingBackend": "正在安装后端更新...",
       "backendUpdated": "后端已更新。关闭此对话框以继续。",
       "restarting": "正在重启以安装...",
       "failed": "更新失败",
       "ready": "更新已就绪。"
+    },
+    "fallback": {
+      "title": "已切换为完整安装包",
+      "description": "差分更新未能完成，Daedalus Studio 已自动回退为完整下载。进度会从 0% 重新计算，这不是重复安装。",
+      "reason": "回退原因："
     },
     "actions": {
       "retry": "重试",
