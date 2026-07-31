@@ -5,11 +5,13 @@ import {
 	type KeyboardShortcutOverrides,
 	type ShortcutPlatform
 } from "../../keyboard-shortcuts";
+import { DEFAULT_STUDIO_THEME_COLOR, normalizeStudioThemeColor } from "../../theme-color";
 
 export type ClientPreferences = {
 	autoCheckForUpdates: boolean;
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
+	themeColor: string;
 	language: "system" | "en-US" | "zh-CN";
 	workspaceSidebar: {
 		open: boolean;
@@ -24,10 +26,13 @@ export type ClientPreferences = {
 
 export type ClientPreferencesPatch = Partial<ClientPreferences>;
 
+export const DEFAULT_THEME_COLOR: string = DEFAULT_STUDIO_THEME_COLOR;
+
 export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	autoCheckForUpdates: true,
 	minimizeToTrayOnClose: false,
 	theme: "system",
+	themeColor: DEFAULT_THEME_COLOR,
 	language: "system",
 	workspaceSidebar: {
 		open: true,
@@ -93,6 +98,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 		value.theme === "light" || value.theme === "dark" || value.theme === "system"
 			? value.theme
 			: DEFAULT_CLIENT_PREFERENCES.theme;
+	const themeColor: string = normalizeStudioThemeColor(value.themeColor);
 	const languagePreference: ClientPreferences["language"] =
 		value.language === "en-US" || value.language === "zh-CN" || value.language === "system"
 			? value.language
@@ -118,6 +124,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			autoCheckForUpdates,
 			minimizeToTrayOnClose,
 			theme: themePreference,
+			themeColor,
 			language: languagePreference,
 			workspaceSidebar,
 			keyboardShortcuts,
@@ -126,6 +133,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 		normalized: value.autoCheckForUpdates !== autoCheckForUpdates
 			|| value.minimizeToTrayOnClose !== minimizeToTrayOnClose
 			|| value.theme !== themePreference
+			|| value.themeColor !== themeColor
 			|| value.language !== languagePreference
 			|| JSON.stringify(value.workspaceSidebar ?? null) !== JSON.stringify(workspaceSidebar)
 			|| JSON.stringify(value.keyboardShortcuts ?? null) !== JSON.stringify(keyboardShortcuts)
@@ -134,6 +142,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 				"autoCheckForUpdates",
 				"minimizeToTrayOnClose",
 				"theme",
+				"themeColor",
 				"language",
 				"workspaceSidebar",
 				"keyboardShortcuts",
@@ -156,6 +165,9 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	}
 	if (value.theme === "light" || value.theme === "dark" || value.theme === "system") {
 		patch.theme = value.theme;
+	}
+	if (typeof value.themeColor === "string" && /^#[0-9a-fA-F]{6}$/.test(value.themeColor.trim())) {
+		patch.themeColor = normalizeStudioThemeColor(value.themeColor);
 	}
 	if (value.language === "en-US" || value.language === "zh-CN" || value.language === "system") {
 		patch.language = value.language;

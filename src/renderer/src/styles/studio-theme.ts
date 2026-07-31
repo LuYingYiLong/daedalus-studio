@@ -1,13 +1,18 @@
 import { theme as antdTheme, type ThemeConfig } from "antd";
+import {
+	createStudioAccentPalette,
+	DEFAULT_STUDIO_THEME_COLOR,
+	type ResolvedStudioTheme,
+	type StudioAccentPalette
+} from "../../../theme-color";
 
-export type ResolvedTheme = "light" | "dark";
+export { createStudioAccentPalette, DEFAULT_STUDIO_THEME_COLOR } from "../../../theme-color";
+export type { StudioAccentPalette } from "../../../theme-color";
+
+export type ResolvedTheme = ResolvedStudioTheme;
 export type ThemePreference = ResolvedTheme | "system";
 
 type StudioThemeColors = {
-	accent: string;
-	accentHover: string;
-	accentActive: string;
-	accentMuted: string;
 	bg: string;
 	surface: string;
 	surfaceElevated: string;
@@ -20,10 +25,6 @@ type StudioThemeColors = {
 
 const studioThemeColors: Record<ResolvedTheme, StudioThemeColors> = {
 	dark: {
-		accent: "#478cbf",
-		accentHover: "#5aa0d2",
-		accentActive: "#386f98",
-		accentMuted: "rgb(71 140 191 / 24%)",
 		bg: "#141414",
 		surface: "#1b1b1b",
 		surfaceElevated: "#1f1f1f",
@@ -34,10 +35,6 @@ const studioThemeColors: Record<ResolvedTheme, StudioThemeColors> = {
 		textMuted: "#8c8c8c"
 	},
 	light: {
-		accent: "#478cbf",
-		accentHover: "#5aa0d2",
-		accentActive: "#386f98",
-		accentMuted: "rgb(71 140 191 / 18%)",
 		bg: "#f5f5f5",
 		surface: "#ffffff",
 		surfaceElevated: "#ffffff",
@@ -56,8 +53,12 @@ export function resolveThemePreference(themePreference: ThemePreference, systemT
 	return themePreference === "system" ? systemTheme : themePreference;
 }
 
-export function createStudioTheme(resolvedTheme: ResolvedTheme): ThemeConfig {
+export function createStudioTheme(
+	resolvedTheme: ResolvedTheme,
+	themeColor: string = DEFAULT_STUDIO_THEME_COLOR
+): ThemeConfig {
 	const dsColors: StudioThemeColors = studioThemeColors[resolvedTheme];
+	const accent: StudioAccentPalette = createStudioAccentPalette(resolvedTheme, themeColor);
 
 	return {
 		algorithm: resolvedTheme === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
@@ -73,9 +74,9 @@ export function createStudioTheme(resolvedTheme: ResolvedTheme): ThemeConfig {
 			colorBorder: dsColors.border,
 			colorBorderSecondary: dsColors.border,
 			colorFillQuaternary: dsColors.surfaceHover,
-			colorPrimary: dsColors.accent,
-			colorPrimaryActive: dsColors.accentActive,
-			colorPrimaryHover: dsColors.accentHover,
+			colorPrimary: accent.primary,
+			colorPrimaryActive: accent.active,
+			colorPrimaryHover: accent.hover,
 			colorText: dsColors.textPrimary,
 			colorTextSecondary: dsColors.textSecondary,
 			colorTextTertiary: dsColors.textMuted,
@@ -104,19 +105,19 @@ export function createStudioTheme(resolvedTheme: ResolvedTheme): ThemeConfig {
 			},
 			Tree: {
 				indentSize: 24,
-				nodeSelectedBg: dsColors.accentMuted
+				nodeSelectedBg: accent.muted
 			},
 			Menu: {
 				darkItemBg: "transparent",
 				darkItemHoverBg: dsColors.surfaceHover,
-				darkItemSelectedBg: dsColors.accentMuted,
+				darkItemSelectedBg: accent.muted,
 				darkItemSelectedColor: dsColors.textPrimary,
 				itemBg: "transparent",
 				itemBorderRadius: 4,
 				itemHeight: 28,
 				itemHoverBg: dsColors.surfaceHover,
 				itemPaddingInline: 8,
-				itemSelectedBg: dsColors.accentMuted,
+				itemSelectedBg: accent.muted,
 				subMenuItemBg: "transparent"
 			},
 			Alert: {

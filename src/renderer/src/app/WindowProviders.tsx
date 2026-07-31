@@ -5,6 +5,7 @@ import zhCN from "antd/locale/zh_CN";
 import i18n from "@/i18n";
 import useClientPreferencesController from "./hooks/useClientPreferencesController";
 import { createStudioTheme } from "@/styles/studio-theme";
+import { applyStudioAccentVariables } from "../../../theme-color";
 import styles from "./WindowProviders.module.css";
 
 type WindowProvidersProps = {
@@ -12,13 +13,17 @@ type WindowProvidersProps = {
 };
 
 function WindowProviders({ children }: WindowProvidersProps): React.JSX.Element {
-	const { resolvedTheme, resolvedLanguage } = useClientPreferencesController();
-	const studioTheme: ThemeConfig = useMemo((): ThemeConfig => createStudioTheme(resolvedTheme), [resolvedTheme]);
+	const { resolvedTheme, resolvedLanguage, themeColor } = useClientPreferencesController();
+	const studioTheme: ThemeConfig = useMemo(
+		(): ThemeConfig => createStudioTheme(resolvedTheme, themeColor),
+		[resolvedTheme, themeColor]
+	);
 	const antdLocale = resolvedLanguage === "zh-CN" ? zhCN : enUS;
 
 	useEffect((): void => {
 		document.documentElement.dataset.theme = resolvedTheme;
-	}, [resolvedTheme]);
+		applyStudioAccentVariables(document.documentElement.style, resolvedTheme, themeColor);
+	}, [resolvedTheme, themeColor]);
 
 	useEffect((): void => {
 		document.documentElement.lang = resolvedLanguage;

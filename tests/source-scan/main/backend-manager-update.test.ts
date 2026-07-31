@@ -29,4 +29,20 @@ describe("backend manager update support", () => {
 		expect(preloadSource).toContain("backend:restart");
 		expect(preloadSource).toContain("backend:get-connection-info");
 	});
+
+	it("keeps a main-process runtime lease while Studio is open", () => {
+		expect(source).toContain("runtimeLeaseSocket");
+		expect(source).toContain("ensureRuntimeLease");
+		expect(source).toContain("openRuntimeLease");
+		expect(source).toContain("closeRuntimeLease");
+		expect(source).toContain("await this.ensureRuntimeLease();");
+		expect(source).toContain("Daedalus Studio is releasing the backend runtime");
+	});
+
+	it("waits for a healthy runtime before returning connection details to a window", () => {
+		expect(source).toContain("getReadyConnectionInfo");
+		expect(source).toContain("await this.restartAndWaitHealthy()");
+		expect(source).toContain("await this.ensureRuntimeLease()");
+		expect(source).toContain("await this.getReadyConnectionInfo()");
+	});
 });

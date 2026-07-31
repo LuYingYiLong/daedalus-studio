@@ -1134,6 +1134,11 @@
           "light": "浅色",
           "dark": "深色"
         },
+        "themeColor": {
+          "title": "主题色",
+          "description": "自定义 Studio 的强调色和主要控件颜色。",
+          "reset": "恢复默认"
+        },
         "language": {
           "title": "语言",
           "description": "选择 Studio 的显示语言。",
@@ -1186,7 +1191,8 @@
       "backend": "有可用的 Daedalus 后端更新。",
       "combined": "Daedalus Studio 和后端都有可用更新。",
       "notAvailable": "Daedalus Studio 已是最新版本。",
-      "unsupported": "当前安装方式不支持更新。"
+      "unsupported": "当前安装方式不支持更新。",
+      "failed": "自动更新未能完成。"
     },
     "components": {
       "client": "客户端",
@@ -1202,10 +1208,12 @@
       "ready": "更新已就绪。"
     },
     "actions": {
-      "retry": "重试"
+      "retry": "重试",
+      "openReleases": "前往 GitHub Releases 手动下载"
     },
     "errors": {
-      "download": "下载更新失败。"
+      "download": "下载更新失败。",
+      "manualDownloadHint": "如果当前网络无法连接 GitHub，或自动下载反复失败，请尝试使用浏览器从 Releases 页面手动下载安装包。"
     }
   }
 }

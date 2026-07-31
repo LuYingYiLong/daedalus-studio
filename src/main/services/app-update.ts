@@ -100,7 +100,7 @@ type AppUpdateEventMap = {
 	"update-not-available": [UpdateInfo];
 	"download-progress": [ProgressInfo];
 	"update-downloaded": [UpdateInfo];
-	"error": [Error];
+	"error": [unknown];
 };
 
 type AppUpdateEventHandler<TEventName extends AppUpdateEventName> = (...args: AppUpdateEventMap[TEventName]) => void;
@@ -159,8 +159,74 @@ function getUpdateReleaseDate(info: UpdateInfo): string | null {
 		: null;
 }
 
-function getErrorMessage(error: Error): string {
-	return error.message.trim().length > 0 ? error.message : "Update failed.";
+function asErrorRecord(value: unknown): Record<string, unknown> | null {
+	return typeof value === "object" && value !== null
+		? value as Record<string, unknown>
+		: null;
+}
+
+function getNonEmptyString(value: unknown): string | null {
+	if (typeof value !== "string") {
+		return null;
+	}
+	const normalized: string = value.trim();
+	return normalized.length > 0 ? normalized : null;
+}
+
+function getSafeUpdateUrl(value: unknown): string | null {
+	const rawUrl: string | null = getNonEmptyString(value);
+	if (rawUrl === null) {
+		return null;
+	}
+	try {
+		const parsed: URL = new URL(rawUrl);
+		if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+			return null;
+		}
+		parsed.username = "";
+		parsed.password = "";
+		parsed.search = "";
+		parsed.hash = "";
+		return parsed.toString();
+	} catch {
+		return null;
+	}
+}
+
+function getErrorMessage(error: unknown, fallback: string = "Update failed."): string {
+	const errorRecord: Record<string, unknown> | null = asErrorRecord(error);
+	const causeRecord: Record<string, unknown> | null = asErrorRecord(errorRecord?.cause);
+	const responseRecord: Record<string, unknown> | null = asErrorRecord(errorRecord?.response);
+	const message: string = getNonEmptyString(error instanceof Error ? error.message : errorRecord?.message)
+		?? getNonEmptyString(error)
+		?? fallback;
+	const details: string[] = [message];
+	const code: string | null = getNonEmptyString(errorRecord?.code) ?? getNonEmptyString(causeRecord?.code);
+	const statusValue: unknown = errorRecord?.statusCode
+		?? errorRecord?.status
+		?? responseRecord?.statusCode
+		?? responseRecord?.status;
+	const statusCode: string | null = typeof statusValue === "number" || typeof statusValue === "string"
+		? String(statusValue).trim() || null
+		: null;
+	const causeMessage: string | null = getNonEmptyString(errorRecord?.cause instanceof Error
+		? errorRecord.cause.message
+		: causeRecord?.message ?? errorRecord?.cause);
+	const requestUrl: string | null = getSafeUpdateUrl(errorRecord?.url ?? errorRecord?.requestUrl ?? responseRecord?.url);
+
+	if (code !== null && !message.includes(code)) {
+		details.push(`Error code: ${code}`);
+	}
+	if (statusCode !== null && !message.includes(statusCode)) {
+		details.push(`HTTP status: ${statusCode}`);
+	}
+	if (requestUrl !== null && !message.includes(requestUrl)) {
+		details.push(`URL: ${requestUrl}`);
+	}
+	if (causeMessage !== null && causeMessage !== message && !message.includes(causeMessage)) {
+		details.push(`Cause: ${causeMessage}`);
+	}
+	return details.join("\n");
 }
 
 function getUnsupportedClientMessage(): string {
@@ -217,6 +283,9 @@ function getOverallStatus(client: AppUpdateComponentState, backend: AppUpdateCom
 	if (statuses.includes("downloading")) {
 		return "downloading";
 	}
+	if (statuses.includes("error")) {
+		return "error";
+	}
 	if (statuses.includes("downloaded")) {
 		return "downloaded";
 	}
@@ -225,9 +294,6 @@ function getOverallStatus(client: AppUpdateComponentState, backend: AppUpdateCom
 	}
 	if (statuses.includes("checking")) {
 		return "checking";
-	}
-	if (statuses.includes("error")) {
-		return "error";
 	}
 	if (statuses.every((status: AppUpdateStatus): boolean => status === "unsupported")) {
 		return "unsupported";
@@ -251,7 +317,13 @@ function getPrimaryComponent(updateKind: AppUpdateKind, client: AppUpdateCompone
 }
 
 function getCombinedErrorMessage(client: AppUpdateComponentState, backend: AppUpdateComponentState): string | null {
-	return client.errorMessage ?? backend.errorMessage;
+	if (client.status === "error") {
+		return client.errorMessage;
+	}
+	if (backend.status === "error") {
+		return backend.errorMessage;
+	}
+	return null;
 }
 
 function createState(client: AppUpdateComponentState, backend: AppUpdateComponentState): AppUpdateState {
@@ -475,7 +547,7 @@ export class AppUpdateService {
 		try {
 			await this.autoUpdater.checkForUpdates();
 		} catch (error: unknown) {
-			this.handleClientError(error instanceof Error ? error : new Error("Client update check failed."));
+			this.handleClientError(error, "Client update check failed.");
 		}
 	}
 
@@ -500,7 +572,7 @@ export class AppUpdateService {
 			this.updateBackend({
 				status: "error",
 				progress: null,
-				errorMessage: error instanceof Error ? error.message : "Backend update check failed."
+				errorMessage: getErrorMessage(error, "Backend update check failed.")
 			});
 		}
 	}
@@ -558,16 +630,12 @@ export class AppUpdateService {
 				errorMessage: null
 			});
 		} catch (error: unknown) {
-			let errorMessage: string = error instanceof Error
-				? error.message
-				: "Backend update install failed.";
+			let errorMessage: string = getErrorMessage(error, "Backend update install failed.");
 			if (candidateActivated) {
 				try {
 					await this.backendUpdateClient.rollbackFailedInstall();
 				} catch (rollbackError: unknown) {
-					errorMessage = `${errorMessage} Rollback also failed: ${
-						rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
-					}`;
+					errorMessage = `${errorMessage}\nRollback also failed: ${getErrorMessage(rollbackError, "Unknown rollback error.")}`;
 				}
 			}
 			this.updateBackend({
@@ -596,7 +664,7 @@ export class AppUpdateService {
 		try {
 			await this.autoUpdater.downloadUpdate();
 		} catch (error: unknown) {
-			this.handleClientError(error instanceof Error ? error : new Error("Client update download failed."));
+			this.handleClientError(error, "Client update download failed.");
 		}
 	}
 
@@ -659,8 +727,8 @@ export class AppUpdateService {
 				this.autoUpdater.quitAndInstall(false, true);
 			}, this.installDelayMs);
 		});
-		this.onUpdaterEvent("error", (error: Error): void => {
-			this.handleClientError(error);
+		this.onUpdaterEvent("error", (error: unknown): void => {
+			this.handleClientError(error, "Client update failed.");
 		});
 	}
 
@@ -671,11 +739,11 @@ export class AppUpdateService {
 		this.autoUpdater.on(eventName, handler as (...args: unknown[]) => void);
 	}
 
-	private handleClientError(error: Error): void {
+	private handleClientError(error: unknown, fallback: string): void {
 		this.updateClient({
 			status: "error",
 			progress: null,
-			errorMessage: getErrorMessage(error)
+			errorMessage: getErrorMessage(error, fallback)
 		});
 	}
 

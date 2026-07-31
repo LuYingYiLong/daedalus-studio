@@ -67,6 +67,7 @@ declare global {
 		autoCheckForUpdates: boolean;
 		minimizeToTrayOnClose: boolean;
 		theme: "system" | "light" | "dark";
+		themeColor: string;
 		language: "system" | "en-US" | "zh-CN";
 		workspaceSidebar: {
 			open: boolean;

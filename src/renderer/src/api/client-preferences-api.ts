@@ -1,9 +1,11 @@
 import type { KeyboardShortcutOverrides } from "./keyboard-shortcuts";
+import { DEFAULT_STUDIO_THEME_COLOR } from "../../../theme-color";
 
 export type ClientPreferences = {
 	autoCheckForUpdates: boolean;
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
+	themeColor: string;
 	language: LanguagePreference;
 	workspaceSidebar: WorkspaceSidebarPreferences;
 	keyboardShortcuts: KeyboardShortcutOverrides;
@@ -22,10 +24,13 @@ export type WorkspaceSidebarPreferences = {
 
 export type ClientPreferencesPatch = Partial<ClientPreferences>;
 
+export const DEFAULT_THEME_COLOR: string = DEFAULT_STUDIO_THEME_COLOR;
+
 export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	autoCheckForUpdates: true,
 	minimizeToTrayOnClose: false,
 	theme: "system",
+	themeColor: DEFAULT_THEME_COLOR,
 	language: "system",
 	workspaceSidebar: {
 		open: true,

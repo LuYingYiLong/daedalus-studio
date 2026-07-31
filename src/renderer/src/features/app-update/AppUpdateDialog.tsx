@@ -2,6 +2,14 @@ import { Alert, Button, Modal, Progress, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import styles from "./AppUpdateDialog.module.css";
 
+const APP_RELEASES_URL = "https://github.com/LuYingYiLong/godot-daedalus/releases";
+
+type UpdateErrorEntry = {
+	key: "client" | "backend";
+	label: string;
+	message: string;
+};
+
 export type AppUpdateDialogProps = {
 	open: boolean;
 	state: AppUpdateState | null;
@@ -10,6 +18,9 @@ export type AppUpdateDialogProps = {
 };
 
 function getUpdateSummary(state: AppUpdateState | null, t: (key: string) => string): string {
+	if (state?.status === "error") {
+		return t("appUpdate.summary.failed");
+	}
 	if (state?.status === "not_available") {
 		return t("appUpdate.summary.notAvailable");
 	}
@@ -23,6 +34,35 @@ function getUpdateSummary(state: AppUpdateState | null, t: (key: string) => stri
 		return t("appUpdate.summary.backend");
 	}
 	return t("appUpdate.summary.client");
+}
+
+function getUpdateErrorEntries(state: AppUpdateState | null, t: (key: string) => string): UpdateErrorEntry[] {
+	if (state === null) {
+		return [];
+	}
+	const entries: UpdateErrorEntry[] = [];
+	if (state.client.status === "error" && state.client.errorMessage !== null) {
+		entries.push({
+			key: "client",
+			label: t("appUpdate.components.client"),
+			message: state.client.errorMessage
+		});
+	}
+	if (state.backend.status === "error" && state.backend.errorMessage !== null) {
+		entries.push({
+			key: "backend",
+			label: t("appUpdate.components.backend"),
+			message: state.backend.errorMessage
+		});
+	}
+	if (entries.length === 0 && state.errorMessage !== null) {
+		entries.push({
+			key: "client",
+			label: t("appUpdate.status.failed"),
+			message: state.errorMessage
+		});
+	}
+	return entries;
 }
 
 function getUpdateStatusText(state: AppUpdateState | null, t: (key: string) => string): string {
@@ -60,6 +100,7 @@ function AppUpdateDialog({ open, state, onClose, onDownload }: AppUpdateDialogPr
 	const clientVersionText: string | null = state === null ? null : getComponentVersionText(t("appUpdate.components.client"), state.client);
 	const backendVersionText: string | null = state === null ? null : getComponentVersionText(t("appUpdate.components.backend"), state.backend);
 	const isProgressState: boolean = state?.status === "downloading" || state?.status === "downloaded" || state?.status === "installing";
+	const errorEntries: UpdateErrorEntry[] = getUpdateErrorEntries(state, t);
 
 	return (
 		<Modal
@@ -84,7 +125,32 @@ function AppUpdateDialog({ open, state, onClose, onDownload }: AppUpdateDialogPr
 						type="error"
 						showIcon={true}
 						title={t("appUpdate.status.failed")}
-						description={state.errorMessage ?? t("appUpdate.errors.download")}
+						description={(
+							<div className={styles.errorContent}>
+								{errorEntries.map((entry: UpdateErrorEntry): React.JSX.Element => (
+									<div key={entry.key} className={styles.errorEntry}>
+										<Typography.Text strong={true}>{entry.label}</Typography.Text>
+										<Typography.Paragraph
+											className={styles.errorMessage}
+											copyable={{ text: entry.message }}
+										>
+											{entry.message}
+										</Typography.Paragraph>
+									</div>
+								))}
+								<Typography.Text type="secondary">{t("appUpdate.errors.manualDownloadHint")}</Typography.Text>
+								<Button
+									type="link"
+									size="small"
+									className={styles.releaseLink}
+									href={APP_RELEASES_URL}
+									target="_blank"
+									rel="noreferrer"
+								>
+									{t("appUpdate.actions.openReleases")}
+								</Button>
+							</div>
+						)}
 						action={<Button size="small" type="primary" onClick={(): void => { void onDownload(); }}>{t("appUpdate.actions.retry")}</Button>}
 					/>
 				) : null}

@@ -1134,6 +1134,11 @@
           "light": "Light",
           "dark": "Dark"
         },
+        "themeColor": {
+          "title": "Theme color",
+          "description": "Customize the Studio accent and primary control color.",
+          "reset": "Restore default"
+        },
         "language": {
           "title": "Language",
           "description": "Choose the Studio display language.",
@@ -1186,7 +1191,8 @@
       "backend": "A Daedalus backend update is available.",
       "combined": "Daedalus Studio and the backend both have updates.",
       "notAvailable": "Daedalus Studio is up to date.",
-      "unsupported": "Updates are not available for this installation."
+      "unsupported": "Updates are not available for this installation.",
+      "failed": "The automatic update could not be completed."
     },
     "components": {
       "client": "Client",
@@ -1202,10 +1208,12 @@
       "ready": "Update is ready."
     },
     "actions": {
-      "retry": "Retry"
+      "retry": "Retry",
+      "openReleases": "Download from GitHub Releases"
     },
     "errors": {
-      "download": "Failed to download update."
+      "download": "Failed to download update.",
+      "manualDownloadHint": "If GitHub is unavailable on your network or automatic downloads keep failing, download the installer manually from the Releases page."
     }
   }
 }

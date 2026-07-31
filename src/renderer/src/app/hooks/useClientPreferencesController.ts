@@ -23,6 +23,7 @@ function getCurrentSystemTheme(): ResolvedTheme {
 
 export type ClientPreferencesController = {
 	themePreference: ThemePreference;
+	themeColor: string;
 	languagePreference: LanguagePreference;
 	systemTheme: ResolvedTheme;
 	resolvedTheme: ResolvedTheme;
@@ -31,11 +32,13 @@ export type ClientPreferencesController = {
 
 function useClientPreferencesController(): ClientPreferencesController {
 	const [themePreference, setThemePreference] = useState<ThemePreference>(() => getCachedClientPreferences().theme);
+	const [themeColor, setThemeColor] = useState<string>(() => getCachedClientPreferences().themeColor);
 	const [languagePreference, setLanguagePreference] = useState<LanguagePreference>(() => getCachedClientPreferences().language);
 	const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() => getCurrentSystemTheme());
 
 	const applyPreferences = useMemoizedFn((preferences: ClientPreferences): void => {
 		setThemePreference(preferences.theme);
+		setThemeColor(preferences.themeColor);
 		setLanguagePreference(preferences.language);
 	});
 
@@ -71,6 +74,7 @@ function useClientPreferencesController(): ClientPreferencesController {
 
 	return {
 		themePreference,
+		themeColor,
 		languagePreference,
 		systemTheme,
 		resolvedTheme: resolveThemePreference(themePreference, systemTheme),

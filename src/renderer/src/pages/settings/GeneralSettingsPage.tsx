@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { CSSProperties, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import styles from "./GeneralSettingsPage.module.css";
-import { Alert, Button, Card, Segmented, Select, Space, Spin, Switch, Tooltip, Typography } from "antd";
-import type { SelectProps } from "antd";
+import { Alert, Button, Card, ColorPicker, Segmented, Select, Space, Spin, Switch, Tooltip, Typography } from "antd";
+import type { ColorPickerProps, SelectProps } from "antd";
 import { Icon } from "@/assets/icons";
 import SettingsItem from "@/components/SettingsItem";
 import {
 	fetchClientPreferences,
+	DEFAULT_THEME_COLOR,
 	updateClientPreferences,
 	type ClientPreferences,
 	type LanguagePreference
@@ -16,6 +17,7 @@ import {
 	updateGeneralSettings,
 	type GeneralSettings
 } from "@/api/general-settings-api";
+import { body } from "motion/react-client";
 
 type GeneralSettingsPageProps = {
 	clientPreferences: ClientPreferences;
@@ -24,8 +26,20 @@ type GeneralSettingsPageProps = {
 	onGeneralSettingsChange: (settings: GeneralSettings) => void;
 };
 
-type SettingKey = "autoCheckForUpdates" | "autoExpandTodoList" | "godotExecutablePath" | "language" | "minimizeToTrayOnClose" | "theme";
+type SettingKey = "autoCheckForUpdates" | "autoExpandTodoList" | "godotExecutablePath" | "language" | "minimizeToTrayOnClose" | "theme" | "themeColor";
 type ThemePreference = ClientPreferences["theme"];
+
+const colorPickerProps: ColorPickerProps = {
+	styles: {
+		root: {
+			height: 20,
+		},
+		body: {
+			height: 20,
+			width: 20,
+		}
+	}
+}
 
 function GeneralSettingsPage({
 	clientPreferences,
@@ -201,6 +215,37 @@ function GeneralSettingsPage({
 		}
 	}
 
+	function handleThemeColorPreview(themeColor: string): void {
+		setDraftClientPreferences((preferences: ClientPreferences): ClientPreferences => ({
+			...preferences,
+			themeColor
+		}));
+	}
+
+	async function handleThemeColorChange(themeColor: string): Promise<void> {
+		const previousPreferences: ClientPreferences = clientPreferences;
+		const optimisticPreferences: ClientPreferences = {
+			...draftClientPreferences,
+			themeColor
+		};
+
+		try {
+			setSavingKey("themeColor");
+			setErrorMessage(null);
+			setDraftClientPreferences(optimisticPreferences);
+			onClientPreferencesChange(optimisticPreferences);
+			const savedPreferences: ClientPreferences = await updateClientPreferences({ themeColor });
+			setDraftClientPreferences(savedPreferences);
+			onClientPreferencesChange(savedPreferences);
+		} catch (error: unknown) {
+			setDraftClientPreferences(previousPreferences);
+			onClientPreferencesChange(previousPreferences);
+			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
+		} finally {
+			setSavingKey(null);
+		}
+	}
+
 	async function handleLanguageChange(languagePreference: LanguagePreference): Promise<void> {
 		const previousPreferences: ClientPreferences = draftClientPreferences;
 		const optimisticPreferences: ClientPreferences = {
@@ -274,6 +319,36 @@ function GeneralSettingsPage({
 										void handleThemeChange(value as ThemePreference);
 									}}
 								/>
+							</SettingsItem>
+							<SettingsItem
+								title={t("settings.general.display.themeColor.title")}
+								description={t("settings.general.display.themeColor.description")}
+							>
+								<Space.Compact>
+									<ColorPicker
+										{...colorPickerProps}
+										value={draftClientPreferences.themeColor}
+										format="hex"
+										disabledAlpha={true}
+										disabledFormat={true}
+										showText={(color): React.ReactNode => color.toHexString().toUpperCase()}
+										disabled={savingKey !== null}
+										onChange={(color): void => {
+											handleThemeColorPreview(color.toHexString());
+										}}
+										onChangeComplete={(color): void => {
+											void handleThemeColorChange(color.toHexString());
+										}}
+									/>
+									<Button
+										loading={savingKey === "themeColor"}
+										disabled={savingKey !== null || draftClientPreferences.themeColor === DEFAULT_THEME_COLOR}
+										onClick={(): void => {
+											void handleThemeColorChange(DEFAULT_THEME_COLOR);
+										}}
+										icon={<Icon name="reload" />}
+									/>
+								</Space.Compact>
 							</SettingsItem>
 							<SettingsItem
 								title={t("settings.general.display.language.title")}

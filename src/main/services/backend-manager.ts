@@ -217,6 +217,9 @@ class BackendManager {
 	private authToken: string | null = null;
 	private connectionId: string | null = null;
 	private activeTarget: BackendLaunchTarget | null = null;
+	private runtimeLeaseSocket: WebSocket | null = null;
+	private runtimeLeasePromise: Promise<void> | null = null;
+	private connectionInfoPromise: Promise<BackendConnectionInfo> | null = null;
 
 	public constructor() {
 		this.port = app?.isPackaged === true ? PROD_PORT : DEV_PORT;
@@ -247,6 +250,7 @@ class BackendManager {
 				throw new Error("No verified packaged backend is available.");
 			}
 			await this.spawnProcess(launchTarget);
+			await this.ensureRuntimeLease();
 		}
 		this.startHealthCheck();
 	}
@@ -286,6 +290,7 @@ class BackendManager {
 		const processToStop: ChildProcess | null = this.process;
 		if (processToStop === null) {
 			await this.requestGracefulShutdown().catch((): void => {});
+			this.closeRuntimeLease();
 			this.authToken = null;
 			this.connectionId = null;
 			this.activeTarget = null;
@@ -294,6 +299,7 @@ class BackendManager {
 		}
 
 		await this.requestGracefulShutdown().catch((): void => {});
+		this.closeRuntimeLease();
 		const exited: boolean = await this.waitForProcessExit(processToStop, GRACEFUL_SHUTDOWN_TIMEOUT);
 		if (!exited && this.process === processToStop) {
 			logger.warn("Backend graceful shutdown timed out; terminating the process.");
@@ -313,6 +319,7 @@ class BackendManager {
 		this.isShuttingDown = true;
 		this.stopHealthCheck();
 		this.clearRestartTimer();
+		this.closeRuntimeLease();
 		this.process = null;
 		this.activeTarget = null;
 		this.authToken = null;
@@ -329,6 +336,35 @@ class BackendManager {
 			port: this.port,
 			authProtocol: this.authToken === null ? null : `${AUTH_PROTOCOL_PREFIX}${this.authToken}`
 		};
+	}
+
+	public async getReadyConnectionInfo(): Promise<BackendConnectionInfo> {
+		if (!app.isPackaged) {
+			return this.getConnectionInfo();
+		}
+		if (await this.ping()) {
+			this.setStatus("healthy");
+			await this.ensureRuntimeLease();
+			return this.getConnectionInfo();
+		}
+		if (this.connectionInfoPromise !== null) {
+			return await this.connectionInfoPromise;
+		}
+
+		this.connectionInfoPromise = (async (): Promise<BackendConnectionInfo> => {
+			if (this.status === "starting") {
+				await this.waitUntilHealthy();
+			} else {
+				await this.restartAndWaitHealthy();
+			}
+			await this.ensureRuntimeLease();
+			return this.getConnectionInfo();
+		})();
+		try {
+			return await this.connectionInfoPromise;
+		} finally {
+			this.connectionInfoPromise = null;
+		}
 	}
 
 	public getStatus(): BackendStatus {
@@ -350,7 +386,10 @@ class BackendManager {
 
 	public registerIpc(): void {
 		ipcMain.handle("backend:get-port", (): number => this.port);
-		ipcMain.handle("backend:get-connection-info", (): BackendConnectionInfo => this.getConnectionInfo());
+		ipcMain.handle(
+			"backend:get-connection-info",
+			async (): Promise<BackendConnectionInfo> => await this.getReadyConnectionInfo()
+		);
 		ipcMain.handle("backend:get-status", (): BackendStatus => this.status);
 		ipcMain.handle("backend:health-check", async (): Promise<boolean> => await this.ping());
 		ipcMain.handle("backend:restart", async (): Promise<void> => await this.restartAndWaitHealthy());
@@ -367,6 +406,7 @@ class BackendManager {
 				throw new Error("No packaged backend is available.");
 			}
 			await this.spawnProcess(launchTarget);
+			await this.ensureRuntimeLease();
 		}
 		this.startHealthCheck();
 	}
@@ -505,6 +545,92 @@ class BackendManager {
 		this.activeTarget = launchTarget;
 	}
 
+	private async ensureRuntimeLease(): Promise<void> {
+		if (!app.isPackaged || this.isShuttingDown) {
+			return;
+		}
+		if (this.runtimeLeaseSocket?.readyState === WebSocket.OPEN) {
+			return;
+		}
+		if (this.runtimeLeasePromise !== null) {
+			return await this.runtimeLeasePromise;
+		}
+
+		this.runtimeLeasePromise = this.openRuntimeLease();
+		try {
+			await this.runtimeLeasePromise;
+		} finally {
+			this.runtimeLeasePromise = null;
+		}
+	}
+
+	private async openRuntimeLease(): Promise<void> {
+		if (this.authToken === null) {
+			throw new Error("Backend runtime authentication is unavailable.");
+		}
+
+		const socket = new WebSocket(
+			`ws://127.0.0.1:${this.port}`,
+			`${AUTH_PROTOCOL_PREFIX}${this.authToken}`
+		);
+		this.runtimeLeaseSocket = socket;
+
+		await new Promise<void>((resolveOpen, rejectOpen): void => {
+			let settled: boolean = false;
+			const timeout: ReturnType<typeof setTimeout> = setTimeout((): void => {
+				if (!settled) {
+					socket.terminate();
+					finish(new Error("Timed out establishing the Studio backend runtime lease."));
+				}
+			}, HEALTH_CHECK_TIMEOUT);
+			const finish = (error: Error | null): void => {
+				if (settled) {
+					return;
+				}
+				settled = true;
+				clearTimeout(timeout);
+				if (error === null) {
+					resolveOpen();
+				} else {
+					if (this.runtimeLeaseSocket === socket) {
+						this.runtimeLeaseSocket = null;
+					}
+					rejectOpen(error);
+				}
+			};
+
+			socket.once("open", (): void => finish(null));
+			socket.on("error", (error: Error): void => {
+				if (!settled) {
+					finish(error);
+					return;
+				}
+				logger.warn("Backend runtime lease socket error.", { message: error.message });
+			});
+			socket.once("close", (): void => {
+				if (this.runtimeLeaseSocket === socket) {
+					this.runtimeLeaseSocket = null;
+				}
+				if (!settled) {
+					finish(new Error("Backend runtime lease closed before it was ready."));
+				}
+			});
+		});
+	}
+
+	private closeRuntimeLease(): void {
+		const socket: WebSocket | null = this.runtimeLeaseSocket;
+		this.runtimeLeaseSocket = null;
+		if (socket === null || socket.readyState === WebSocket.CLOSED) {
+			return;
+		}
+		if (socket.readyState === WebSocket.CONNECTING) {
+			socket.terminate();
+			return;
+		}
+		socket.close(1000, "Daedalus Studio is releasing the backend runtime");
+	}
+
 	private handleProcessCrash(): void {
 		if (this.restartAttempts >= this.config.maxRestartAttempts) {
 			logger.error("Backend reached the restart limit.", undefined, {
@@ -533,6 +659,7 @@ class BackendManager {
 					return;
 				}
 				await this.spawnProcess(launchTarget);
+				await this.ensureRuntimeLease();
 			} catch (error: unknown) {
 				logger.error("Backend process failed to restart", error as Error);
 				this.handleProcessCrash();
@@ -554,6 +681,11 @@ class BackendManager {
 			if (ok) {
 				this.setStatus("healthy");
 				this.restartAttempts = 0;
+				void this.ensureRuntimeLease().catch((error: unknown): void => {
+					logger.warn("Failed to restore the Studio backend runtime lease.", {
+						message: error instanceof Error ? error.message : String(error)
+					});
+				});
 			} else {
 				const wasHealthy: boolean = this.status === "healthy";
 				this.setStatus("unhealthy");

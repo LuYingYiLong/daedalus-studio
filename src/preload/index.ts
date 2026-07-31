@@ -1,10 +1,12 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import type { KeyboardShortcutOverrides } from "../keyboard-shortcuts";
+import { applyStudioAccentVariables } from "../theme-color";
 
 type ClientPreferences = {
 	autoCheckForUpdates: boolean;
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
+	themeColor: string;
 	language: "system" | "en-US" | "zh-CN";
 	workspaceSidebar: {
 		open: boolean;
@@ -137,7 +139,9 @@ function applyRendererTheme(preferences: ClientPreferences = cachedClientPrefere
 	if (rootElement === null) {
 		return;
 	}
-	rootElement.dataset.theme = resolveRendererTheme(preferences.theme);
+	const resolvedTheme: "light" | "dark" = resolveRendererTheme(preferences.theme);
+	rootElement.dataset.theme = resolvedTheme;
+	applyStudioAccentVariables(rootElement.style, resolvedTheme, preferences.themeColor);
 }
 
 applyRendererTheme();

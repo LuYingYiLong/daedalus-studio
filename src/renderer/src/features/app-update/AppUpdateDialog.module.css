@@ -2,3 +2,24 @@
 	display: grid;
 	gap: var(--ds-space-2);
 }
+
+.errorContent,
+.errorEntry {
+	display: grid;
+	gap: var(--ds-space-1);
+	min-width: 0;
+}
+
+.errorMessage {
+	margin: 0 !important;
+	max-height: 160px;
+	overflow: auto;
+	white-space: pre-wrap;
+	word-break: break-word;
+	user-select: text;
+}
+
+.releaseLink {
+	justify-self: start;
+	padding-inline: 0;
+}

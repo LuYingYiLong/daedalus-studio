@@ -270,6 +270,7 @@ function KeyboardShortcutsSettingsPage({
 							event.stopPropagation();
 							openEditor(definition.id);
 						}}
+						icon={<Icon name="pencil" />}
 					>
 						{t("settings.keyboardShortcuts.actions.edit")}
 					</Button>
@@ -281,6 +282,7 @@ function KeyboardShortcutsSettingsPage({
 							event.stopPropagation();
 							void resetShortcut(definition.id);
 						}}
+						icon={<Icon name="reload" />}
 					>
 						{t("settings.keyboardShortcuts.actions.reset")}
 					</Button>

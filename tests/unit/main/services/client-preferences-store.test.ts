@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	DEFAULT_CLIENT_PREFERENCES,
+	DEFAULT_THEME_COLOR,
 	loadClientPreferencesFile,
 	normalizeClientPreferences,
 	updateClientPreferencesFile
@@ -59,6 +60,7 @@ describe("client preferences store", () => {
 				autoCheckForUpdates: true,
 				minimizeToTrayOnClose: false,
 				theme: "system",
+				themeColor: DEFAULT_THEME_COLOR,
 				language: "system",
 				workspaceSidebar: {
 					open: true,
@@ -88,6 +90,7 @@ describe("client preferences store", () => {
 			autoCheckForUpdates: true,
 			minimizeToTrayOnClose: true,
 			theme: "system",
+			themeColor: DEFAULT_THEME_COLOR,
 			language: "system",
 			workspaceSidebar: {
 				open: true,
@@ -123,6 +126,18 @@ describe("client preferences store", () => {
 		}, memory.io);
 
 		expect(nextPreferences.theme).toBe("dark");
+	});
+
+	it("normalizes and updates the custom theme color as six-digit hex", async () => {
+		expect(normalizeClientPreferences({ themeColor: " #AABBCC " }).preferences.themeColor).toBe("#aabbcc");
+		expect(normalizeClientPreferences({ themeColor: "rgba(1, 2, 3, 0.5)" }).preferences.themeColor).toBe(DEFAULT_THEME_COLOR);
+
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
+			themeColor: "#C05A91"
+		}, memory.io);
+
+		expect(nextPreferences.themeColor).toBe("#c05a91");
 	});
 
 	it("updates the language preference", async () => {

@@ -349,7 +349,7 @@ describe("app update service", () => {
 		await service.checkForUpdates();
 		fakeUpdater.emit("update-available", createUpdateInfo("1.1.0"));
 		await expect(service.download()).resolves.toMatchObject({
-			status: "available",
+			status: "error",
 			errorMessage: "install failed",
 			backend: {
 				status: "error"
@@ -377,5 +377,37 @@ describe("app update service", () => {
 				status: "error"
 			}
 		});
+	});
+
+	it("preserves updater diagnostics while removing sensitive URL parameters", () => {
+		const fakeUpdater = new FakeAutoUpdater();
+		const fakeBackend = new FakeBackendUpdateClient();
+		const service = new AppUpdateService({
+			isPackaged: true,
+			currentVersion: "1.0.0",
+			autoUpdater: fakeUpdater,
+			backendUpdateClient: fakeBackend,
+			sendEvent: (): void => {}
+		});
+		const networkError: Error & {
+			code: string;
+			statusCode: number;
+			url: string;
+			cause: Error;
+		} = Object.assign(new Error("request failed"), {
+			code: "ERR_NETWORK_CHANGED",
+			statusCode: 503,
+			url: "https://github.com/LuYingYiLong/godot-daedalus/releases/download/v1.0.7/setup.exe?token=secret",
+			cause: new Error("socket disconnected")
+		});
+
+		fakeUpdater.emit("error", networkError);
+		const errorMessage: string | null = service.getState().client.errorMessage;
+		expect(errorMessage).toContain("request failed");
+		expect(errorMessage).toContain("Error code: ERR_NETWORK_CHANGED");
+		expect(errorMessage).toContain("HTTP status: 503");
+		expect(errorMessage).toContain("URL: https://github.com/LuYingYiLong/godot-daedalus/releases/download/v1.0.7/setup.exe");
+		expect(errorMessage).toContain("Cause: socket disconnected");
+		expect(errorMessage).not.toContain("token=secret");
 	});
 });

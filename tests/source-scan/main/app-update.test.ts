@@ -100,6 +100,8 @@ describe("app update source", () => {
 		expect(updateDialogSource).not.toContain("maskClosable");
 		expect(updateDialogSource).toContain("appUpdate.components.backend");
 		expect(updateDialogSource).toContain("appUpdate.status.restarting");
+		expect(updateDialogSource).toContain("https://github.com/LuYingYiLong/godot-daedalus/releases");
+		expect(updateDialogSource).toContain("copyable={{ text: entry.message }}");
 		expect(aboutSettingsSource).toContain("<AppUpdateDialog");
 		expect(aboutSettingsSource).toContain("window.electronAPI.appUpdate.check()");
 		expect(aboutSettingsSource).toContain("settings.about.actions.checkForUpdates");

@@ -1,4 +1,4 @@
-import { Alert, App, Button, Divider, Empty, Flex, Form, Input, Menu, Modal, Select, Space, Spin, Table, Tag, Tooltip, Typography } from "antd";
+import { Alert, App, Button, Empty, Flex, Form, Input, Menu, Modal, Select, Space, Spin, Table, Tag, Tooltip, Typography } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, Key, KeyboardEvent } from "react";
@@ -755,21 +755,23 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 							<div className={styles.fieldLabelRow}>
 								<Typography.Title className={styles.fieldLabel} level={4}>{t("settings.provider.apiKey")}</Typography.Title>
 							</div>
-							<Space.Compact>
-								<Input.Password
-									value={draftApiKey}
-									placeholder={selectedProvider.apiKeyMasked ?? t("settings.provider.enterApiKey")}
-									onChange={(event: ChangeEvent<HTMLInputElement>): void => {
-										setDraftApiKey(event.target.value);
-										setIsApiKeyDirty(true);
-									}}
-								/>
-								<Button
-									onClick={(): void => void handleTestProvider(selectedProvider)}
-									loading={isTesting}
-								>
-									{t("settings.provider.actions.test")}
-								</Button>
+							<Flex gap="small">
+								<Space.Compact block className={styles.apiKeyCompact}>
+									<Input.Password
+										value={draftApiKey}
+										placeholder={selectedProvider.apiKeyMasked ?? t("settings.provider.enterApiKey")}
+										onChange={(event: ChangeEvent<HTMLInputElement>): void => {
+											setDraftApiKey(event.target.value);
+											setIsApiKeyDirty(true);
+										}}
+									/>
+									<Button
+										onClick={(): void => void handleTestProvider(selectedProvider)}
+										loading={isTesting}
+									>
+										{t("settings.provider.actions.test")}
+									</Button>
+								</Space.Compact>
 								<Button
 									color="danger"
 									variant="solid"
@@ -780,7 +782,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 									loading={isSaving}
 									onClick={(): void => void handleClearApiKey(selectedProvider)}
 								/>
-							</Space.Compact>
+							</Flex>
 							<Typography.Text type="secondary" className={styles.fieldHint}>
 								{selectedProvider.apiKeyMasked !== null && !isApiKeyDirty ? t("settings.provider.savedKey", { key: selectedProvider.apiKeyMasked }) : t("settings.provider.newKeyHint")}
 							</Typography.Text>

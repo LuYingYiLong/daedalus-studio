@@ -308,7 +308,7 @@ function StatisticsSettingsPage(): React.JSX.Element {
 			<div className={styles.content}>
 				{error !== undefined ? (
 					<Alert type="error" showIcon title={t("settings.statistics.errors.load")} description={error instanceof Error ? error.message : String(error)} />
-				) : null}title
+				) : null}
 				{summary !== null && !summary.available ? (
 					<Alert type="warning" showIcon title={t("settings.statistics.unavailable.title")} description={summary.errorMessage ?? t("settings.statistics.unavailable.description")} />
 				) : null}
