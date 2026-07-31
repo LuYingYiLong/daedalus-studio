@@ -16,6 +16,7 @@ import {
 	getDistanceFromBottomByMetrics,
 	isNearBottomByMetrics,
 	shouldAutoFollowAppend,
+	shouldImmediatelyFollowBlockAppend,
 	shouldAutoFollowViewport
 } from "./message-list-virtual";
 import type { ConversationSearchMatch } from "./conversation-search-engine";
@@ -524,7 +525,13 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			return;
 		}
 
-		const blockCountChanged: boolean = lastViewportBlockCountRef.current !== renderableBlocks.length;
+		const previousBlockCount: number = lastViewportBlockCountRef.current;
+		const blockCountChanged: boolean = previousBlockCount !== renderableBlocks.length;
+		const followBlockAppendImmediately: boolean = shouldImmediatelyFollowBlockAppend(
+			autoFollowRef.current,
+			previousBlockCount,
+			renderableBlocks.length
+		);
 		lastViewportBlockCountRef.current = renderableBlocks.length;
 
 		if (anchor !== null) {
@@ -540,7 +547,10 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		}
 
 		if (blockCountChanged) {
-			updateViewport();
+			if (followBlockAppendImmediately) {
+				scrollToBottom(element);
+			}
+			updateViewport({ preserveAutoFollow: followBlockAppendImmediately });
 		}
 	}, [renderableBlocks, updateViewport]);
 

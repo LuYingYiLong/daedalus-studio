@@ -37,6 +37,7 @@ function CommitActionDialog({
 			title={t("git.commit.title")}
 			open={open}
 			onCancel={onCancel}
+			className={styles.modal}
 			footer={(
 				<Space>
 					<Button

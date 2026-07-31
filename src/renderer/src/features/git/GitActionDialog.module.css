@@ -1,4 +1,8 @@
-.commitDialogBody {
+.modal {
+	user-select: none;
+}
+
+comm.itDialogBody {
 	display: grid;
 	gap: 12px;
 }

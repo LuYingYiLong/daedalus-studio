@@ -13,3 +13,11 @@ export function shouldAutoFollowViewport(isCurrentlyFollowing: boolean, distance
 export function shouldAutoFollowAppend(isNearBottom: boolean, hasRunningAssistantBlock: boolean, blockCountIncreased: boolean): boolean {
 	return isNearBottom && (hasRunningAssistantBlock || blockCountIncreased);
 }
+
+export function shouldImmediatelyFollowBlockAppend(
+	isCurrentlyFollowing: boolean,
+	previousBlockCount: number,
+	nextBlockCount: number
+): boolean {
+	return isCurrentlyFollowing && nextBlockCount > previousBlockCount;
+}

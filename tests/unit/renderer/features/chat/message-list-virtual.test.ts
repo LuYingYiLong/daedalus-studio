@@ -3,6 +3,7 @@ import {
 	getDistanceFromBottomByMetrics,
 	isNearBottomByMetrics,
 	shouldAutoFollowAppend,
+	shouldImmediatelyFollowBlockAppend,
 	shouldAutoFollowViewport
 } from "@/features/chat/message-list-virtual";
 
@@ -24,6 +25,13 @@ describe("message-list-virtual", () => {
 		expect(shouldAutoFollowAppend(true, false, true)).toBe(true);
 		expect(shouldAutoFollowAppend(true, true, false)).toBe(true);
 		expect(shouldAutoFollowAppend(false, true, true)).toBe(false);
+	});
+
+	it("keeps the composer send anchored before measuring the appended block", () => {
+		expect(shouldImmediatelyFollowBlockAppend(true, 4, 5)).toBe(true);
+		expect(shouldImmediatelyFollowBlockAppend(false, 4, 5)).toBe(false);
+		expect(shouldImmediatelyFollowBlockAppend(true, 5, 5)).toBe(false);
+		expect(shouldImmediatelyFollowBlockAppend(true, 5, 4)).toBe(false);
 	});
 
 });
