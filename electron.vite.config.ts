@@ -27,10 +27,20 @@ export default defineConfig({
 		root: resolve(__dirname, "src/renderer"),
 		plugins: [react(), svgr()],
 		resolve: {
-			alias: {
-				"@": resolve(__dirname, "src/renderer/src"),
-				"@renderer": resolve(__dirname, "src/renderer/src")
-			}
+			alias: [
+				{
+					find: /^decode-named-character-reference$/,
+					replacement: resolve(__dirname, "node_modules/decode-named-character-reference/index.js")
+				},
+				{
+					find: "@",
+					replacement: resolve(__dirname, "src/renderer/src")
+				},
+				{
+					find: "@renderer",
+					replacement: resolve(__dirname, "src/renderer/src")
+				}
+			]
 		},
 		build: {
 			rollupOptions: {

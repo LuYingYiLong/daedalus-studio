@@ -30,6 +30,6 @@ describe("ConversationAnchorNavigator source", () => {
 		expect(messageListSource).toContain("onActiveUserEntryChange");
 		expect(homePageSource).toContain("ConversationAnchorNavigator");
 		expect(homePageSource).toContain("onTimelineNavigationLoadEntry");
-		expect(homePageStyles).toContain(".chatBody {\n\tposition: relative;\n\tdisplay: grid;");
+		expect(homePageStyles).toMatch(/\.chatBody\s*\{[\s\S]*?position:\s*relative;[\s\S]*?display:\s*grid;/u);
 	});
 });

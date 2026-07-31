@@ -18,6 +18,11 @@ import {
 	shouldAutoFollowAppend,
 	shouldAutoFollowViewport
 } from "./message-list-virtual";
+import type { ConversationSearchMatch } from "./conversation-search-engine";
+import {
+	applyConversationSearchHighlights,
+	clearConversationSearchHighlights
+} from "./conversation-search-highlight";
 
 export type MessageListProps = {
 	blocks: TimelineBlock[];
@@ -40,6 +45,10 @@ export type MessageListProps = {
 	onAwayFromBottomChange?: (awayFromBottom: boolean) => void;
 	onActiveUserEntryChange?: (entryId: string | null) => void;
 	onScrollContainerReady?: (element: HTMLElement | null) => void;
+	blockOffset?: number;
+	searchOpen?: boolean;
+	searchQuery?: string;
+	activeSearchMatch?: ConversationSearchMatch | null;
 };
 
 export type MessageListHandle = {
@@ -50,6 +59,11 @@ export type MessageListHandle = {
 type ScrollAnchor = {
 	entryId: string;
 	top: number;
+};
+
+type RenderableTimelineBlock = {
+	block: TimelineBlock;
+	blockOffset: number;
 };
 
 const AUTO_FOLLOW_PAUSE_THRESHOLD: number = 72;
@@ -198,7 +212,11 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	scrollToBottomRequest = 0,
 	onAwayFromBottomChange,
 	onActiveUserEntryChange,
-	onScrollContainerReady
+	onScrollContainerReady,
+	blockOffset = 0,
+	searchOpen = false,
+	searchQuery = "",
+	activeSearchMatch = null
 }: MessageListProps, ref): React.JSX.Element {
 	const { t } = useTranslation();
 	const [messageApi, messageContextHolder] = message.useMessage();
@@ -215,11 +233,16 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const viewportUpdateFrameRef = useRef<number | null>(null);
 	const [nowMs, setNowMs] = useState<number>(() => Date.now());
 	const [contextMenuSelection, setContextMenuSelection] = useState<string>("");
-	const renderableBlocks: TimelineBlock[] = useMemo((): TimelineBlock[] => {
-		return blocks.filter(shouldRenderTimelineBlock);
-	}, [blocks]);
-	const hasRunningAssistantBlock: boolean = renderableBlocks.some((block: TimelineBlock): boolean => {
-		return block.type === "assistant" && block.status === "running";
+	const renderableBlocks: RenderableTimelineBlock[] = useMemo((): RenderableTimelineBlock[] => {
+		return blocks
+			.map((block: TimelineBlock, index: number): RenderableTimelineBlock => ({
+				block,
+				blockOffset: blockOffset + index
+			}))
+			.filter((item: RenderableTimelineBlock): boolean => shouldRenderTimelineBlock(item.block));
+	}, [blockOffset, blocks]);
+	const hasRunningAssistantBlock: boolean = renderableBlocks.some((item: RenderableTimelineBlock): boolean => {
+		return item.block.type === "assistant" && item.block.status === "running";
 	});
 	const isInitialLoading: boolean = isLoading === true && renderableBlocks.length === 0;
 	const canEditUserMessages: boolean = onRetryFromUserMessage !== undefined && !retryDisabled && !hasRunningAssistantBlock && activeRetryRequestId === null;
@@ -378,6 +401,29 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			scrollToEntry
 		};
 	}, [scrollToBottomNow, scrollToEntry]);
+
+	useLayoutEffect((): (() => void) | void => {
+		const element: HTMLElement | null = listRef.current;
+		if (element === null || !searchOpen || searchQuery.trim().length === 0) {
+			clearConversationSearchHighlights(element);
+			return;
+		}
+		const result = applyConversationSearchHighlights(element, searchQuery, activeSearchMatch);
+		if (result.activeElement !== null) {
+			autoFollowRef.current = false;
+			setAwayFromBottom(true);
+			const targetTop: number = result.activeElement.getBoundingClientRect().top
+				- element.getBoundingClientRect().top
+				+ element.scrollTop;
+			element.scrollTo({
+				top: Math.max(0, targetTop - Math.min(72, element.clientHeight * 0.24)),
+				behavior: "smooth"
+			});
+		}
+		return (): void => {
+			clearConversationSearchHighlights(element);
+		};
+	}, [activeSearchMatch, renderableBlocks, searchOpen, searchQuery, setAwayFromBottom]);
 
 	const updateViewport = useCallback((options: ViewportMetricsOptions = {}): void => {
 		const element: HTMLElement | null = listRef.current;
@@ -588,12 +634,13 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 								<Spin size="small" />
 							</div>
 						) : null}
-						{renderableBlocks.map((block: TimelineBlock): React.ReactNode => {
+						{renderableBlocks.map(({ block, blockOffset: absoluteBlockOffset }: RenderableTimelineBlock): React.ReactNode => {
 							if (block.type === "user") {
 								return (
 									<UserBubble
 										key={block.id}
 										entryId={block.id}
+										searchBlockOffset={absoluteBlockOffset}
 										requestId={block.requestId}
 										message={block.content}
 										additionalContext={block.additionalContext ?? []}
@@ -612,6 +659,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 								<AssistantBubble
 									key={block.id}
 									entryId={block.id}
+									searchBlockOffset={absoluteBlockOffset}
 									bodyParts={block.bodyParts}
 									message={getAssistantMarkdown(block)}
 									elapsedTime={formatElapsedTime(

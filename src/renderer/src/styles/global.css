@@ -302,3 +302,19 @@ body {
 	width: 16px;
 	height: 16px;
 }
+
+::highlight(daedalus-conversation-search) {
+	color: inherit;
+	background-color: color-mix(in srgb, var(--ds-warning) 42%, transparent);
+}
+
+::highlight(daedalus-conversation-search-active) {
+	color: var(--ds-text-inverse);
+	background-color: var(--ds-accent);
+}
+
+[data-entry-id][data-chat-search-active="true"] {
+	outline: 2px solid var(--ds-accent);
+	outline-offset: 2px;
+	border-radius: var(--ds-radius-sm);
+}

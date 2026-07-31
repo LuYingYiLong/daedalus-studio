@@ -2944,24 +2944,28 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			});
 	}, [activeSessionId, timelinePage.blockOffset, timelinePage.blocks.length, timelinePage.hasMoreAfter]);
 
-	const handleTimelineNavigationLoadEntry = useCallback(async (entry: SessionTimelineNavigationEntry): Promise<void> => {
-		if (activeSessionId === null || entry.blockOffset < 0) {
+	const handleTimelineSearchLoadOffset = useCallback(async (blockOffset: number): Promise<void> => {
+		if (activeSessionId === null || blockOffset < 0) {
 			return;
 		}
 		const sessionId: string = activeSessionId;
-		const pageStart: number = Math.max(0, entry.blockOffset - 40);
+		const pageStart: number = Math.max(0, blockOffset - 40);
+		const result: SessionTimelineResult = await fetchSessionTimelineAfter(sessionId, pageStart, 100);
+		if (activeSessionIdRef.current !== sessionId || result.sessionId !== sessionId) {
+			return;
+		}
+		setTimelinePage(createTimelinePageFromTimelineResult(result));
+	}, [activeSessionId]);
+
+	const handleTimelineNavigationLoadEntry = useCallback(async (entry: SessionTimelineNavigationEntry): Promise<void> => {
 		try {
-			const result: SessionTimelineResult = await fetchSessionTimelineAfter(sessionId, pageStart, 100);
-			if (activeSessionIdRef.current !== sessionId || result.sessionId !== sessionId) {
-				return;
-			}
-			setTimelinePage(createTimelinePageFromTimelineResult(result));
+			await handleTimelineSearchLoadOffset(entry.blockOffset);
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to load conversation turn";
 			setSessionError(errorMessage);
 			console.error("[App] load timeline navigation entry failed", error);
 		}
-	}, [activeSessionId]);
+	}, [handleTimelineSearchLoadOffset]);
 
 	function patchContext(action: NonNullable<WorkbenchPatch["additionalContextAction"]>): void {
 		flushPendingComposerTextSync();
@@ -3465,6 +3469,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						activeWorkspaceId={activeSessionId === null ? homeDraft.workspaceId : currentSessionWorkspaceId}
 						chatTitle={chatTitle}
 						timelineBlocks={timelineBlocks}
+						timelineBlockOffset={timelinePage.blockOffset}
 						timelineNavigationEntries={timelineNavigationEntries}
 						isSessionLoading={isSessionLoading}
 						sessionError={sessionError}
@@ -3543,6 +3548,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						onLoadMoreBefore={handleLoadMoreBefore}
 						onLoadMoreAfter={handleLoadMoreAfter}
 						onTimelineNavigationLoadEntry={handleTimelineNavigationLoadEntry}
+						onTimelineSearchLoadOffset={handleTimelineSearchLoadOffset}
 						onRetryEditStart={(requestId: string): void => {
 							setActiveRetryRequestId(requestId);
 						}}

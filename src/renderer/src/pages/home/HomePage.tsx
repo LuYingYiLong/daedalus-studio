@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button, Divider, Dropdown, Empty, Input, message as antdMessage, Modal, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
-import type { CollapseProps, MenuProps, SplitterProps } from "antd";
+import type { CollapseProps, InputRef, MenuProps, SplitterProps } from "antd";
 import { useTranslation } from "react-i18next";
 import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, SessionTimelineNavigationEntry, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
@@ -14,6 +14,8 @@ import { fetchSessionOverview, type SessionOverviewPlanItem, type SessionOvervie
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import MessageList, { type MessageListHandle } from "@/features/chat/MessageList";
 import ConversationAnchorNavigator from "@/features/chat/ConversationAnchorNavigator";
+import ConversationSearchPanel from "@/features/chat/ConversationSearchPanel";
+import { useConversationSearch } from "@/features/chat/useConversationSearch";
 import Composer from "@/features/composer/Composer";
 import FloatingWorkflowTodoPanel, { type WorkflowFileChangeSummary } from "@/features/composer/FloatingWorkflowTodoPanel";
 import MessageQueuePanel from "@/features/composer/MessageQueuePanel";
@@ -80,6 +82,45 @@ const BOTTOM_DOCK_CLOSED_SIZE: number = 0;
 const BOTTOM_DOCK_DEFAULT_SIZE: number = 280;
 const BOTTOM_DOCK_MAX_SIZE: number = 520;
 const BOTTOM_DOCK_CLOSE_THRESHOLD: number = 120;
+const MAX_SELECTED_SEARCH_QUERY_LENGTH: number = 500;
+
+function getSelectedConversationSearchQuery(container: HTMLElement | null): string | undefined {
+	const selection: Selection | null = window.getSelection();
+	if (
+		container === null
+		|| selection === null
+		|| selection.isCollapsed
+		|| selection.rangeCount === 0
+		|| selection.anchorNode === null
+		|| selection.focusNode === null
+		|| !container.contains(selection.anchorNode)
+		|| !container.contains(selection.focusNode)
+	) {
+		return undefined;
+	}
+	const anchorElement: Element | null = selection.anchorNode instanceof Element
+		? selection.anchorNode
+		: selection.anchorNode.parentElement;
+	const focusElement: Element | null = selection.focusNode instanceof Element
+		? selection.focusNode
+		: selection.focusNode.parentElement;
+	if (
+		anchorElement === null
+		|| focusElement === null
+		|| anchorElement.closest('[data-chat-search-text="true"]') === null
+		|| focusElement.closest('[data-chat-search-text="true"]') === null
+		|| anchorElement.closest("[data-chat-search-ignore]") !== null
+		|| focusElement.closest("[data-chat-search-ignore]") !== null
+	) {
+		return undefined;
+	}
+	const selectedText: string = selection.toString().trim();
+	return selectedText.length > 0
+		&& selectedText.length <= MAX_SELECTED_SEARCH_QUERY_LENGTH
+		&& !/[\r\n]/u.test(selectedText)
+		? selectedText
+		: undefined;
+}
 
 function isWorkspaceLaunchTargetId(value: string): value is WorkspaceLaunchTargetId {
 	return value === "file-explorer"
@@ -200,6 +241,7 @@ type HomePageProps = {
 	activeWorkspaceId: string | null;
 	chatTitle: string;
 	timelineBlocks: TimelineBlock[];
+	timelineBlockOffset: number;
 	timelineNavigationEntries: SessionTimelineNavigationEntry[];
 	isSessionLoading: boolean;
 	sessionError: string | null;
@@ -270,6 +312,7 @@ type HomePageProps = {
 	onLoadMoreBefore: () => void;
 	onLoadMoreAfter: () => void;
 	onTimelineNavigationLoadEntry: (entry: SessionTimelineNavigationEntry) => Promise<void>;
+	onTimelineSearchLoadOffset: (blockOffset: number) => Promise<void>;
 	onRetryEditStart: (requestId: string) => void;
 	onRetryEditCancel: (requestId: string) => void;
 	onRetryFromUserMessage: (payload: RetryUserMessagePayload) => Promise<boolean>;
@@ -320,6 +363,7 @@ function HomePage({
 	activeWorkspaceId,
 	chatTitle,
 	timelineBlocks,
+	timelineBlockOffset,
 	timelineNavigationEntries,
 	isSessionLoading,
 	sessionError,
@@ -390,6 +434,7 @@ function HomePage({
 	onLoadMoreBefore,
 	onLoadMoreAfter,
 	onTimelineNavigationLoadEntry,
+	onTimelineSearchLoadOffset,
 	onRetryEditStart,
 	onRetryEditCancel,
 	onRetryFromUserMessage,
@@ -455,6 +500,8 @@ function HomePage({
 		layout: sessionLayout
 	});
 	const messageListRef = useRef<MessageListHandle | null>(null);
+	const conversationSearchInputRef = useRef<InputRef | null>(null);
+	const chatBodyRef = useRef<HTMLDivElement | null>(null);
 	const [messageScrollContainer, setMessageScrollContainer] = useState<HTMLElement | null>(null);
 	const [activeTimelineEntryId, setActiveTimelineEntryId] = useState<string | null>(null);
 	const [pendingTimelineEntryId, setPendingTimelineEntryId] = useState<string | null>(null);
@@ -478,6 +525,59 @@ function HomePage({
 	const sideDockSize: number = sessionLayout.side.size;
 	const bottomDockOpen: boolean = sessionLayout.bottom.open;
 	const bottomDockSize: number = sessionLayout.bottom.size;
+	const handleConversationSearchLoadError = useCallback((error: unknown): void => {
+		console.warn("[HomePage] conversation search degraded to loaded messages", error);
+	}, []);
+	const conversationSearch = useConversationSearch({
+		sessionId: isHome ? null : activeSessionId,
+		timelineBlocks,
+		timelineBlockOffset,
+		activeRetryRequestId,
+		onLoadBlockOffset: onTimelineSearchLoadOffset,
+		onLoadError: handleConversationSearchLoadError
+	});
+	const focusConversationSearchInput = useCallback((): void => {
+		window.requestAnimationFrame((): void => {
+			conversationSearchInputRef.current?.focus();
+			conversationSearchInputRef.current?.select();
+		});
+	}, []);
+
+	useEffect((): (() => void) => {
+		const handleSearchShortcut = (event: KeyboardEvent): void => {
+			if (event.defaultPrevented) {
+				return;
+			}
+			const isFindShortcut: boolean = event.key.toLowerCase() === "f"
+				&& (event.ctrlKey || event.metaKey)
+				&& !event.altKey
+				&& !event.shiftKey;
+			if (isFindShortcut) {
+				if (isHome || activeSessionId === null) {
+					return;
+				}
+				event.preventDefault();
+				conversationSearch.openSearch(getSelectedConversationSearchQuery(chatBodyRef.current));
+				focusConversationSearchInput();
+				return;
+			}
+			if (event.key === "Escape" && conversationSearch.open) {
+				event.preventDefault();
+				conversationSearch.closeSearch();
+			}
+		};
+		window.addEventListener("keydown", handleSearchShortcut);
+		return (): void => {
+			window.removeEventListener("keydown", handleSearchShortcut);
+		};
+	}, [activeSessionId, conversationSearch, focusConversationSearchInput, isHome]);
+
+	useEffect((): (() => void) | void => {
+		if (!conversationSearch.open) {
+			return;
+		}
+		focusConversationSearchInput();
+	}, [conversationSearch.open, focusConversationSearchInput]);
 
 	const updateSideDock = useCallback((
 		nextSideLayout: DockLayoutPreferences,
@@ -1453,14 +1553,30 @@ function HomePage({
 
 									<Divider size="small" />
 
-									<div className={styles.chatBody}>
+									<div ref={chatBodyRef} className={styles.chatBody}>
 										{isHome ? (
 											<NewSessionHome workspace={homeWorkspace} errorMessage={sessionError} />
 										) : (
 											<>
+												<ConversationSearchPanel
+													open={conversationSearch.open}
+													query={conversationSearch.query}
+													current={conversationSearch.current}
+													total={conversationSearch.total}
+													loading={conversationSearch.loading}
+													inputRef={conversationSearchInputRef}
+													onQueryChange={conversationSearch.setQuery}
+													onPrevious={conversationSearch.goPrevious}
+													onNext={conversationSearch.goNext}
+													onClose={conversationSearch.closeSearch}
+												/>
 												<MessageList
 													ref={messageListRef}
 													blocks={timelineBlocks}
+													blockOffset={timelineBlockOffset}
+													searchOpen={conversationSearch.open}
+													searchQuery={conversationSearch.query}
+													activeSearchMatch={conversationSearch.activeMatch}
 													isLoading={isSessionLoading}
 													errorMessage={sessionError}
 													hasMoreBefore={hasMoreBefore}

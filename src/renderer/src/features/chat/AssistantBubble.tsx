@@ -15,6 +15,7 @@ import MarkdownContent from "../markdown/MarkdownContent";
 
 export type AssistantBubbleProps = {
 	entryId?: string;
+	searchBlockOffset?: number;
 	content?: string;
 	bodyParts?: TimelineBodyPart[];
 	message?: string;
@@ -54,7 +55,7 @@ function createAssistantCopyText(message?: string, content?: string, bodyParts?:
 		.join("\n\n");
 }
 
-function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, endTime, streaming = false, onInlineDiffReview }: AssistantBubbleProps): React.JSX.Element {
+function AssistantBubble({ entryId, searchBlockOffset, content, bodyParts, message, elapsedTime, endTime, streaming = false, onInlineDiffReview }: AssistantBubbleProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [copied, setCopied] = React.useState<boolean>(false);
 
@@ -71,7 +72,12 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 	function renderBodyPart(part: TimelineBodyPart, index: number): React.ReactNode {
 		if (part.type === "markdown") {
 			return (
-				<div key={index} className={`${styles.markdownPart} markdown-body`}>
+				<div
+					key={index}
+					className={`${styles.markdownPart} markdown-body`}
+					data-chat-search-text="true"
+					data-chat-search-block-offset={searchBlockOffset}
+				>
 					<MarkdownContent streaming={streaming}>{part.text}</MarkdownContent>
 				</div>
 			);
@@ -158,7 +164,11 @@ function AssistantBubble({ entryId, content, bodyParts, message, elapsedTime, en
 				{bodyParts ? (
 					renderBodyParts(bodyParts)
 				) : (
-					<div className="markdown-body">
+					<div
+						className="markdown-body"
+						data-chat-search-text="true"
+						data-chat-search-block-offset={searchBlockOffset}
+					>
 						<MarkdownContent streaming={streaming}>{message ?? content ?? ""}</MarkdownContent>
 					</div>
 				)}

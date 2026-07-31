@@ -126,6 +126,13 @@
       "ariaLabel": "\u5bf9\u8bdd\u8f6e\u6b21",
       "emptyMessage": "\u7528\u6237\u6d88\u606f"
     },
+    "conversationSearch": {
+      "placeholder": "在会话中搜索",
+      "previous": "上一个匹配项",
+      "next": "下一个匹配项",
+      "close": "关闭搜索",
+      "loadError": "无法加载完整会话搜索索引，仍可搜索当前已加载的消息。"
+    },
     "workspaceLaunch": {
       "openIn": "在 {{target}} 中打开",
       "aria": {

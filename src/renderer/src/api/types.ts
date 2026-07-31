@@ -420,6 +420,21 @@ export type SessionTimelineNavigationIndexResult = {
 	entries: SessionTimelineNavigationEntry[];
 };
 
+export type SessionTimelineSearchDocument = {
+	blockOffset: number;
+	requestId: string;
+	role: "user" | "assistant";
+	markdownSegments: string[];
+};
+
+export type SessionTimelineSearchIndexPage = {
+	timelineSearchIndex: true;
+	sessionId: string;
+	blockCount: number;
+	nextOffset: number | null;
+	documents: SessionTimelineSearchDocument[];
+};
+
 export type SessionOpenResult = {
 	opened: true;
 	metadata: SessionMetadata;

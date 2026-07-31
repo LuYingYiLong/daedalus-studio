@@ -126,6 +126,13 @@
       "ariaLabel": "Conversation turns",
       "emptyMessage": "User message"
     },
+    "conversationSearch": {
+      "placeholder": "Find in conversation",
+      "previous": "Previous match",
+      "next": "Next match",
+      "close": "Close search",
+      "loadError": "Failed to load the complete conversation search index. Loaded messages remain searchable."
+    },
     "workspaceLaunch": {
       "openIn": "Open in {{target}}",
       "aria": {

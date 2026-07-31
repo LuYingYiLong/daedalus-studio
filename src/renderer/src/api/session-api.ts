@@ -1,5 +1,5 @@
 import { createBackendClient } from "@/shared/api/transport/backend-client";
-import type { SessionListResult, SessionMetadata, SessionOpenResult, SessionTimelineNavigationIndexResult, SessionTimelineResult, WorkbenchSnapshot } from "./types";
+import type { SessionListResult, SessionMetadata, SessionOpenResult, SessionTimelineNavigationIndexResult, SessionTimelineResult, SessionTimelineSearchIndexPage, WorkbenchSnapshot } from "./types";
 import type { ChatMode } from "./chat-api";
 
 export type CreateSessionParams = {
@@ -217,6 +217,20 @@ export async function fetchSessionTimelineIndex(sessionId: string): Promise<Sess
 	const client = await createBackendClient();
 
 	return client.request<SessionTimelineNavigationIndexResult>("session.timeline.index", { sessionId });
+}
+
+export async function fetchSessionTimelineSearchIndex(
+	sessionId: string,
+	afterOffset: number = 0,
+	limit: number = 120
+): Promise<SessionTimelineSearchIndexPage> {
+	const client = await createBackendClient();
+
+	return client.request<SessionTimelineSearchIndexPage>("session.timeline.search.index", {
+		sessionId,
+		afterOffset,
+		limit
+	});
 }
 
 export async function setSessionPinned(sessionId: string, pinned: boolean): Promise<SetSessionPinnedResult> {

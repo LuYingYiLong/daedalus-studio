@@ -24,13 +24,13 @@
 
 <p align="center">
   <a href="https://github.com/LuYingYiLong/daedalus-studio/releases/latest"><strong>Download</strong></a>
-  ·
+  |
   <a href="#getting-started">Getting started</a>
-  ·
+  |
   <a href="#development">Development</a>
-  ·
+  |
   <a href="https://github.com/LuYingYiLong/daedalus-backend">Backend</a>
-  ·
+  |
   <a href="./README-CN.md">简体中文</a>
 </p>
 

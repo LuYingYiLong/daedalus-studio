@@ -148,6 +148,8 @@
 
 .chatBody {
 	position: relative;
+	z-index: 1;
+	isolation: isolate;
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
 	min-width: 0;
@@ -156,6 +158,8 @@
 }
 
 .chatHeader {
+	position: relative;
+	z-index: 3;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -166,6 +170,7 @@
 	min-height: 40px;
 	min-width: 0;
 	user-select: none;
+	background: var(--ds-bg);
 }
 
 .chatText {

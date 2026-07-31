@@ -16,6 +16,7 @@ export type RetryUserMessagePayload = {
 
 export type UserBubbleProps = {
 	entryId?: string;
+	searchBlockOffset?: number;
 	requestId: string;
 	message: string;
 	additionalContext?: AdditionalContextItem[];
@@ -39,6 +40,7 @@ function cloneContextItems(items: AdditionalContextItem[]): AdditionalContextIte
 
 function UserBubble({
 	entryId,
+	searchBlockOffset,
 	requestId,
 	message,
 	additionalContext = [],
@@ -207,6 +209,8 @@ function UserBubble({
 						<AdditionalContextStrip items={additionalContext} />
 						<div
 							className={`${styles.content} markdown-body ${disabled ? styles.disabledContent : ""}`}
+							data-chat-search-text="true"
+							data-chat-search-block-offset={searchBlockOffset}
 							onDoubleClick={(): void => {
 								beginRetryEdit();
 							}}
