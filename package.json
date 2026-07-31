@@ -67,6 +67,7 @@
     "react-diff-view": "^3.3.3",
     "react-dom": "^19.2.7",
     "react-i18next": "^17.0.11",
+    "react-virtuoso": "^4.18.11",
     "remark-parse": "^11.0.0",
     "three": "^0.185.1",
     "unified": "^11.0.5",

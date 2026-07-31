@@ -28,6 +28,11 @@ const HIGHLIGHT_LANGUAGE_ALIASES: Record<string, string> = {
 	plain: "plaintext",
 	text: "plaintext"
 };
+const MAX_HIGHLIGHT_CACHE_ENTRIES: number = 128;
+const MAX_HIGHLIGHT_CACHE_SOURCE_CHARS: number = 1_500_000;
+type HighlightCacheEntry = { html: string | null; sourceChars: number };
+const highlightCache: Map<string, HighlightCacheEntry> = new Map();
+let highlightCacheSourceChars: number = 0;
 
 function normalizeHighlightLanguage(language: string): string {
 	const normalized: string = language.trim().toLowerCase().replace(/^hljs-/u, "");
@@ -36,10 +41,30 @@ function normalizeHighlightLanguage(language: string): string {
 
 function highlightCode(code: string, language: string): string | null {
 	const normalizedLanguage: string = normalizeHighlightLanguage(language);
-	if (hljs.getLanguage(normalizedLanguage) !== undefined) {
-		return hljs.highlight(code, { language: normalizedLanguage }).value;
+	const cacheKey: string = `${normalizedLanguage}\u0000${code}`;
+	const cached: HighlightCacheEntry | undefined = highlightCache.get(cacheKey);
+	if (cached !== undefined) {
+		highlightCache.delete(cacheKey);
+		highlightCache.set(cacheKey, cached);
+		return cached.html;
 	}
-	return null;
+	const html: string | null = hljs.getLanguage(normalizedLanguage) !== undefined
+		? hljs.highlight(code, { language: normalizedLanguage }).value
+		: null;
+	if (code.length <= MAX_HIGHLIGHT_CACHE_SOURCE_CHARS) {
+		const entry: HighlightCacheEntry = { html, sourceChars: code.length };
+		highlightCache.set(cacheKey, entry);
+		highlightCacheSourceChars += entry.sourceChars;
+		while (highlightCache.size > MAX_HIGHLIGHT_CACHE_ENTRIES || highlightCacheSourceChars > MAX_HIGHLIGHT_CACHE_SOURCE_CHARS) {
+			const oldest: [string, HighlightCacheEntry] | undefined = highlightCache.entries().next().value;
+			if (oldest === undefined) {
+				break;
+			}
+			highlightCache.delete(oldest[0]);
+			highlightCacheSourceChars -= oldest[1].sourceChars;
+		}
+	}
+	return html;
 }
 
 function formatLanguageLabel(language: string): string {

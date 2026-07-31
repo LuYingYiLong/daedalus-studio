@@ -32,11 +32,13 @@ import {
 	applyWorkbenchSnapshot,
 	createTimelinePageFromOpenResult,
 	createTimelinePageFromTimelineResult,
-	emptyTimelinePage,
-	mergeTimelineAfter,
-	mergeTimelineBefore,
 	type TimelinePageState
 } from "@/features/workbench/workbench-state";
+import {
+	createTimelinePageStore,
+	useTimelineSelector,
+	type TimelinePageStore
+} from "@/features/workbench/timeline-page-store";
 import {
 	applyRunStateFromWorkbench,
 	applyAgentRunState,
@@ -648,7 +650,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [recentSessions, setRecentSessions] = useState<SessionMetadata[]>(() => getRecentSessions(bootstrapData.sessionList.sessions));
 	const recentSessionsRef = useLatest(recentSessions);
 	const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceConfig | null>(null);
-	const [timelinePage, setTimelinePage] = useState<TimelinePageState>(emptyTimelinePage);
+	const timelineStoreRef = useRef<TimelinePageStore | null>(null);
+	if (timelineStoreRef.current === null) {
+		timelineStoreRef.current = createTimelinePageStore();
+	}
+	const timelineStore: TimelinePageStore = timelineStoreRef.current;
+	const timelineBlockCount: number = useTimelineSelector(timelineStore, (page: TimelinePageState): number => page.blockCount);
 	const [timelineNavigationEntries, setTimelineNavigationEntries] = useState<SessionTimelineNavigationEntry[]>([]);
 	const [workbench, setWorkbench] = useState<WorkbenchSnapshot | null>(null);
 	const activeWorkbenchRef = useLatest(workbench);
@@ -802,7 +809,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		discardPendingTimelineEvents,
 		flushPendingTimelineEvents,
 		enqueueTimelineStreamingEvent
-	} = useTimelineStreamBuffer({ activeSessionIdRef, setTimelinePage });
+	} = useTimelineStreamBuffer({ activeSessionIdRef, timelineStore });
 
 	useEffect((): void => {
 		void window.electronAPI.tray.updateRecentSessions(
@@ -971,7 +978,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	function resetSessionPresentationState(): void {
-		setTimelinePage(emptyTimelinePage);
+		timelineStore.reset();
 		setIsTimelineLoadingBefore(false);
 		setIsTimelineLoadingAfter(false);
 		setWorkbench(null);
@@ -1189,7 +1196,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	function appendOptimisticUserBlock(requestId: string, message: string, additionalContext: AdditionalContextItem[]): void {
-		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+		timelineStore.update((currentPage: TimelinePageState): TimelinePageState => {
 			const sessionId: string | null = activeSessionIdRef.current;
 			const hasUserBlock: boolean = currentPage.blocks.some((block: TimelineBlock): boolean => {
 				return block.type === "user" && block.requestId === requestId;
@@ -1252,7 +1259,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	function applyOptimisticRetry(retryFromRequestId: string, requestId: string, message: string, additionalContext: AdditionalContextItem[]): void {
 		applyOptimisticActiveRun(requestId, false, false);
-		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+		timelineStore.update((currentPage: TimelinePageState): TimelinePageState => {
 			const sessionId: string | null = activeSessionIdRef.current;
 			const trimmedPage: TimelinePageState = trimTimelineFromRequest(currentPage, retryFromRequestId);
 
@@ -1426,7 +1433,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		showNativeTaskNotification,
 		setActiveSessionMetadata,
 		setRunState,
-		setTimelinePage,
+		timelineStore,
 		setWorkflowTodoSnapshot,
 		setLatestPlanClarification,
 		setLatestPlanApproval,
@@ -1506,7 +1513,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setActiveWorkspace(createWorkspaceFromSessionMetadata(created, created.workbench));
 			setWorkbench(created.workbench);
 			setHomeDraft(draft);
-			setTimelinePage(emptyTimelinePage);
+			timelineStore.reset();
 			setIsNewSessionHome(true);
 			setSessionError(null);
 		})();
@@ -1693,7 +1700,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				return;
 			}
 
-			setTimelinePage(createTimelinePageFromOpenResult(result));
+			timelineStore.replace(createTimelinePageFromOpenResult(result));
 			setLatestPlanClarification(result.latestPlanClarification);
 			setLatestPlanApproval(result.latestPlanApproval);
 			setActiveSessionMetadata(result.metadata);
@@ -2276,7 +2283,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setActiveSessionId(created.id);
 			setActiveSessionMetadata(created);
 			setActiveWorkspace(createWorkspaceFromSessionMetadata(created, created.workbench));
-			setTimelinePage(emptyTimelinePage);
+			timelineStore.reset();
 				setWorkbench(created.workbench);
 				setWorkflowTodoSnapshot(null);
 				rememberLoadedWorkflowTodo(null);
@@ -2324,7 +2331,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			});
 			setSessionError(errorMessage);
 			if (sessionCreated && !isBackendRpcErrorMessage(errorMessage)) {
-				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+				timelineStore.update((currentPage: TimelinePageState): TimelinePageState => {
 					return {
 						...currentPage,
 						blocks: applyBackendEventToTimeline(
@@ -2428,7 +2435,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			});
 			setSessionError(errorMessage);
 			if (!isBackendRpcErrorMessage(errorMessage)) {
-				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+				timelineStore.update((currentPage: TimelinePageState): TimelinePageState => {
 					return {
 						...currentPage,
 						blocks: applyBackendEventToTimeline(
@@ -2826,7 +2833,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 
 		const activeOptimisticRequestId: string | null = activeChatRequestIdRef.current ?? getRunControllerRequestId(runState);
-		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
+		timelineStore.update((currentPage: TimelinePageState): TimelinePageState => {
 			return mergeOptimisticUserBlocks(currentPage, createTimelinePageFromTimelineResult(timeline), activeOptimisticRequestId);
 		});
 		setLatestPlanClarification(timeline.latestPlanClarification);
@@ -2887,6 +2894,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	const handleLoadMoreBefore = useCallback((): void => {
+		const timelinePage: TimelinePageState = timelineStore.getSnapshot();
 		if (activeSessionId === null || !timelinePage.hasMoreBefore || isTimelinePageLoadingRef.current) {
 			return;
 		}
@@ -2904,9 +2912,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					});
 					return;
 				}
-				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
-					return mergeTimelineBefore(currentPage, createTimelinePageFromTimelineResult(result));
-				});
+				timelineStore.mergeBefore(createTimelinePageFromTimelineResult(result));
 			})
 			.catch((error: unknown): void => {
 				console.error("[App] load previous timeline page failed", error);
@@ -2915,9 +2921,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				isTimelinePageLoadingRef.current = false;
 				setIsTimelineLoadingBefore(false);
 			});
-	}, [activeSessionId, timelinePage.blockOffset, timelinePage.hasMoreBefore]);
+	}, [activeSessionId, timelineStore]);
 
 	const handleLoadMoreAfter = useCallback((): void => {
+		const timelinePage: TimelinePageState = timelineStore.getSnapshot();
 		if (activeSessionId === null || !timelinePage.hasMoreAfter || isTimelinePageLoadingRef.current) {
 			return;
 		}
@@ -2935,9 +2942,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					});
 					return;
 				}
-				setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
-					return mergeTimelineAfter(currentPage, createTimelinePageFromTimelineResult(result));
-				});
+				timelineStore.mergeAfter(createTimelinePageFromTimelineResult(result));
 			})
 			.catch((error: unknown): void => {
 				console.error("[App] load next timeline page failed", error);
@@ -2946,7 +2951,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				isTimelinePageLoadingRef.current = false;
 				setIsTimelineLoadingAfter(false);
 			});
-	}, [activeSessionId, timelinePage.blockOffset, timelinePage.blocks.length, timelinePage.hasMoreAfter]);
+	}, [activeSessionId, timelineStore]);
 
 	const handleTimelineSearchLoadOffset = useCallback(async (blockOffset: number): Promise<void> => {
 		if (activeSessionId === null || blockOffset < 0) {
@@ -2958,8 +2963,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		if (activeSessionIdRef.current !== sessionId || result.sessionId !== sessionId) {
 			return;
 		}
-		setTimelinePage(createTimelinePageFromTimelineResult(result));
-	}, [activeSessionId]);
+		timelineStore.replace(createTimelinePageFromTimelineResult(result));
+	}, [activeSessionId, timelineStore]);
 
 	const handleTimelineNavigationLoadEntry = useCallback(async (entry: SessionTimelineNavigationEntry): Promise<void> => {
 		try {
@@ -3169,7 +3174,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	});
 	const selectedProviderId: string | null = displayedComposerModel.providerId;
 	const selectedModelId: string | null = displayedComposerModel.modelId;
-	const timelineBlocks: TimelineBlock[] = timelinePage.blocks;
 	const latestPlanClarificationKey: string | null = latestPlanClarification === null
 		? null
 		: createPlanClarificationKey(latestPlanClarification);
@@ -3183,7 +3187,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const pendingPlanApproval: PlanApprovalState | null = latestPlanApproval;
 	const pendingToolBudget: PendingToolBudget | null = workbench?.pendingToolBudget ?? null;
 	const chatTitle: string = isNewSessionHome ? "New session" : getSessionTitle(activeSessionMetadata, activeSessionId);
-	const initialScrollToBottomKey: string = activeSessionId === null ? "" : `${activeSessionId}:${timelinePage.blockCount}`;
 	const loadingComposerDraft = activeSessionId !== null && loadingComposerDraftRef.current?.sessionId === activeSessionId
 		? loadingComposerDraftRef.current.text
 		: null;
@@ -3233,7 +3236,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		return (): void => {
 			cancelled = true;
 		};
-	}, [activeSessionId, timelinePage.blockCount]);
+	}, [activeSessionId, timelineBlockCount]);
 
 	useEffect((): void => {
 		pendingUserActionRequestIdsRef.current.clear();
@@ -3473,16 +3476,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						activeSessionMetadata={activeSessionMetadata}
 						activeWorkspaceId={activeSessionId === null ? homeDraft.workspaceId : currentSessionWorkspaceId}
 						chatTitle={chatTitle}
-						timelineBlocks={timelineBlocks}
-						timelineBlockOffset={timelinePage.blockOffset}
+						timelineStore={timelineStore}
 						timelineNavigationEntries={timelineNavigationEntries}
 						isSessionLoading={isSessionLoading}
 						sessionError={sessionError}
-						hasMoreBefore={timelinePage.hasMoreBefore}
-						hasMoreAfter={timelinePage.hasMoreAfter}
 						isLoadingMoreBefore={isTimelineLoadingBefore}
 						isLoadingMoreAfter={isTimelineLoadingAfter}
-						initialScrollToBottomKey={initialScrollToBottomKey}
 						retryDisabled={composerIsSending || isSessionLoading}
 						activeRetryRequestId={activeRetryRequestId}
 						providerModelSelection={providerModelSelection}

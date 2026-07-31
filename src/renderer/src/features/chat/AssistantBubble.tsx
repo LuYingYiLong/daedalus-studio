@@ -12,6 +12,7 @@ import ThinkingPart from "./ThinkingPart";
 import ImageGenerationPart from "./ImageGenerationPart";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import MarkdownContent from "../markdown/MarkdownContent";
+import { useTimelineDisclosure } from "./timeline-disclosure-state";
 
 export type AssistantBubbleProps = {
 	entryId?: string;
@@ -58,6 +59,8 @@ function createAssistantCopyText(message?: string, content?: string, bodyParts?:
 function AssistantBubble({ entryId, searchBlockOffset, content, bodyParts, message, elapsedTime, endTime, streaming = false, onInlineDiffReview }: AssistantBubbleProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [copied, setCopied] = React.useState<boolean>(false);
+	const disclosurePrefix: string = entryId ?? "assistant";
+	const [summaryOpen, setSummaryOpen] = useTimelineDisclosure(`${disclosurePrefix}:summary`, false);
 
 	async function copyMessage(): Promise<void> {
 		try {
@@ -84,11 +87,11 @@ function AssistantBubble({ entryId, searchBlockOffset, content, bodyParts, messa
 		}
 
 		if (part.type === "thinking" && part.text.trim().length > 0) {
-			return <ThinkingPart key={index} part={part} />
+			return <ThinkingPart key={index} part={part} disclosureKey={`${disclosurePrefix}:thinking:${index}`} />
 		}
 
 		if (part.type === "tool") {
-			return <ToolPart key={index} part={part} />
+			return <ToolPart key={index} part={part} disclosureKey={`${disclosurePrefix}:tool:${index}`} />
 		}
 
 		if (part.type === "status") {
@@ -137,7 +140,11 @@ function AssistantBubble({ entryId, searchBlockOffset, content, bodyParts, messa
 						size="small"
 						className={styles.summaryCollapse}
 						bordered={false}
-						defaultActiveKey={[]}
+						destroyOnHidden={true}
+						activeKey={summaryOpen ? [summaryStartPart.stepRunId || "summary-process"] : []}
+						onChange={(keys: string | string[]): void => {
+							setSummaryOpen((Array.isArray(keys) ? keys : [keys]).length > 0);
+						}}
 						items={[
 							{
 								key: summaryStartPart.stepRunId || "summary-process",
@@ -165,7 +172,6 @@ function AssistantBubble({ entryId, searchBlockOffset, content, bodyParts, messa
 					renderBodyParts(bodyParts)
 				) : (
 					<div
-						className="markdown-body"
 						data-chat-search-text="true"
 						data-chat-search-block-offset={searchBlockOffset}
 					>

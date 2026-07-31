@@ -2,9 +2,10 @@ import { TimelineBodyPart } from "@/api/types";
 import styles from "./ToolPart.module.css"
 import { Icon } from "@/assets/icons";
 import { Collapse, Tag } from "antd";
-import React from "react";
+import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { getToolDisplayInfo } from "./tool-display";
+import { useTimelineDisclosure } from "./timeline-disclosure-state";
 
 export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
 
@@ -35,12 +36,13 @@ function getToolStatus(events: Record<string, unknown>[]): ToolStatus {
 }
 
 export type ToolPartProps = {
-	part: TimelineToolPart
+	part: TimelineToolPart;
+	disclosureKey?: string;
 }
 
-
-function ToolPart({ part }: ToolPartProps): React.JSX.Element {
+function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.Element {
 	const { t } = useTranslation();
+	const [open, setOpen] = useTimelineDisclosure(disclosureKey, false);
 	const toolDisplay = getToolDisplayInfo(part.events);
 	const status = getToolStatus(part.events);
 	const statusText: Record<ToolStatus, string> = {
@@ -65,12 +67,19 @@ function ToolPart({ part }: ToolPartProps): React.JSX.Element {
 			<span className={styles.toolLabelText}>{toolDisplay.label}</span>
 		</span>
 	);
+	const eventJson: string = useMemo((): string => {
+		return open ? JSON.stringify(part.events, null, 2) : "";
+	}, [open, part.events]);
 	
 	return (
 		<Collapse
 			size="small"
 			bordered={false}
-			
+			destroyOnHidden={true}
+			activeKey={open ? ["tool"] : []}
+			onChange={(keys: string | string[]): void => {
+				setOpen((Array.isArray(keys) ? keys : [keys]).includes("tool"));
+			}}
 			className={styles.toolCollapse}
 			expandIcon={() => (
 				<Icon name={toolDisplay.iconName} className={styles.toolIcon} />
@@ -81,7 +90,7 @@ function ToolPart({ part }: ToolPartProps): React.JSX.Element {
 					label,
 					children: (
 						<pre className={styles.eventJson}>
-							{JSON.stringify(part.events, null, 2)}
+							{eventJson}
 						</pre>
 					),
 					extra: genStatusTag()

@@ -16,7 +16,7 @@ describe("Composer workflow todo visibility", () => {
 		expect(composerSource).not.toContain("Steps");
 		expect(agentSource).toContain("<FloatingWorkflowTodoPanel");
 		expect(agentSource).toContain("const showWorkflowTodoPanel: boolean = !workflowTodoCollapsed && workflowTodoSnapshot !== null;");
-		expect(agentSource).toContain("{showWorkflowTodoPanel ? (");
+		expect(agentSource).toContain("{showWorkflowTodoPanel && workflowTodoSnapshot !== null ? (");
 		expect(floatingTodoSource).not.toContain("Collapse");
 		expect(floatingTodoSource).not.toContain("import { Steps");
 		expect(floatingTodoSource).not.toContain("<Steps");
@@ -26,7 +26,7 @@ describe("Composer workflow todo visibility", () => {
 		expect(floatingTodoSource).toContain("styles.additions");
 		expect(floatingTodoSource).toContain("styles.deletions");
 		expect(agentSource).toContain("aggregateTimelineFileChanges(timelineBlocks)");
-		expect(agentSource).toContain("fileChangeSummary={workflowFileChangeSummary}");
+		expect(agentSource).toContain("fileChangeSummary={fileChangeSummary}");
 		expect(globalCss).toContain("--ds-git-addition");
 		expect(globalCss).toContain("--ds-git-deletion");
 		expect(designDoc).toContain("`--ds-git-addition`");

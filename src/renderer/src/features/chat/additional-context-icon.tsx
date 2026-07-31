@@ -75,7 +75,6 @@ export function getAdditionalContextIconName(item: AdditionalContextItem): strin
 		case "htm":
 			return "html";
 		case "txt":
-		case "md":
 			return "txt";
 		case "php":
 			return "php";

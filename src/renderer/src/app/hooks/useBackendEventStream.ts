@@ -3,7 +3,8 @@ import { useMemoizedFn } from "ahooks";
 import type { PlanApprovalState, PlanClarificationState, SessionMetadata, WorkbenchSnapshot, WorkflowTodoSnapshot } from "@/api/types";
 import { createBackendClient } from "@/shared/api/transport/backend-client";
 import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
-import { applyBackendEventToTimeline, isTimelineStreamingDeltaEvent, type TimelinePageState } from "@/features/workbench/workbench-state";
+import { isTimelineStreamingDeltaEvent } from "@/features/workbench/workbench-state";
+import type { TimelinePageStore } from "@/features/workbench/timeline-page-store";
 import { applyRunStateFromBackendEvent, type RunControllerState } from "@/features/workbench/run-state";
 import {
 	getBackendEventRequestId,
@@ -53,7 +54,7 @@ export type BackendEventStreamParams = {
 	showNativeTaskNotification: (payload: NativeNotificationPayload) => void;
 	setActiveSessionMetadata: Dispatch<SetStateAction<SessionMetadata | null>>;
 	setRunState: Dispatch<SetStateAction<RunControllerState>>;
-	setTimelinePage: Dispatch<SetStateAction<TimelinePageState>>;
+	timelineStore: TimelinePageStore;
 	setWorkflowTodoSnapshot: Dispatch<SetStateAction<WorkflowTodoSnapshot | null>>;
 	setLatestPlanClarification: Dispatch<SetStateAction<PlanClarificationState | null>>;
 	setLatestPlanApproval: Dispatch<SetStateAction<PlanApprovalState | null>>;
@@ -195,12 +196,7 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 			params.enqueueTimelineStreamingEvent(event, activeSessionId);
 		} else {
 			params.flushPendingTimelineEvents();
-			params.setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
-				return {
-					...currentPage,
-					blocks: applyBackendEventToTimeline(currentPage.blocks, event)
-				};
-			});
+			params.timelineStore.applyEvents([event]);
 		}
 
 		if (isRunCompletionEvent(event)) {

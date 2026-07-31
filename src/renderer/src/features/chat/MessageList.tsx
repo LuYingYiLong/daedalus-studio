@@ -1,29 +1,32 @@
-import { TimelineAssistantBlock, TimelineBlock } from "@/api/types";
+import type { TimelineAssistantBlock, TimelineBlock } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
-import AssistantBubble from "./AssistantBubble";
-import UserBubble from "./UserBubble";
-import type { RetryUserMessagePayload } from "./UserBubble";
-import styles from "./MessageList.module.css";
 import { formatElapsedTime, formatShortDateTime } from "@/shared/lib/time-format";
-import { Spin, Alert, Dropdown, message } from "antd";
+import { Alert, Dropdown, message, Spin } from "antd";
 import type { MenuProps } from "antd";
-import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { flushSync } from "react-dom";
-import { useThrottleFn } from "ahooks";
-import { useTranslation } from "react-i18next";
 import {
-	getDistanceFromBottomByMetrics,
-	isNearBottomByMetrics,
-	shouldAutoFollowAppend,
-	shouldImmediatelyFollowBlockAppend,
-	shouldAutoFollowViewport
-} from "./message-list-virtual";
+	forwardRef,
+	memo,
+	useCallback,
+	useEffect,
+	useImperativeHandle,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState
+} from "react";
+import { flushSync } from "react-dom";
+import { useTranslation } from "react-i18next";
+import { Virtuoso, type ListRange, type VirtuosoHandle } from "react-virtuoso";
+import AssistantBubble from "./AssistantBubble";
 import type { ConversationSearchMatch } from "./conversation-search-engine";
 import {
 	applyConversationSearchHighlights,
 	clearConversationSearchHighlights
 } from "./conversation-search-highlight";
+import styles from "./MessageList.module.css";
+import { TimelineDisclosureProvider } from "./timeline-disclosure-state";
+import UserBubble, { type RetryUserMessagePayload } from "./UserBubble";
 
 export type MessageListProps = {
 	blocks: TimelineBlock[];
@@ -33,7 +36,6 @@ export type MessageListProps = {
 	hasMoreAfter?: boolean;
 	isLoadingMoreBefore?: boolean;
 	isLoadingMoreAfter?: boolean;
-	initialScrollToBottomKey?: string;
 	onLoadMoreBefore?: () => void;
 	onLoadMoreAfter?: () => void;
 	retryDisabled?: boolean;
@@ -57,124 +59,56 @@ export type MessageListHandle = {
 	scrollToEntry: (entryId: string, behavior?: ScrollBehavior) => boolean;
 };
 
-type ScrollAnchor = {
-	entryId: string;
-	top: number;
-};
-
 type RenderableTimelineBlock = {
 	block: TimelineBlock;
 	blockOffset: number;
 };
 
-const AUTO_FOLLOW_PAUSE_THRESHOLD: number = 72;
-const AUTO_FOLLOW_RESUME_THRESHOLD: number = 16;
-const WHEEL_DETACH_DELTA: number = 4;
-const LOAD_MORE_THRESHOLD: number = 320;
+const DEFAULT_ITEM_HEIGHT: number = 168;
+const MIN_ITEM_HEIGHT: number = 48;
+const MAX_ITEM_HEIGHT: number = 640;
+const VIRTUAL_VIEWPORT_EXPANSION = { top: 800, bottom: 1200 } as const;
+const FULL_WINDOW_VIEWPORT_EXPANSION = { top: 1_000_000, bottom: 1_000_000 } as const;
+const AT_BOTTOM_THRESHOLD: number = 16;
+
+function normalizeVirtuosoScrollBehavior(behavior: ScrollBehavior): "auto" | "smooth" {
+	return behavior === "smooth" ? "smooth" : "auto";
+}
 
 function getAssistantMarkdown(block: TimelineAssistantBlock): string {
 	if (block.content.length > 0) {
 		return block.content;
 	}
-
-	const markdown: string = block.bodyParts
+	return block.bodyParts
 		.filter((part) => part.type === "markdown")
 		.map((part) => part.text)
 		.join("");
-
-	return markdown.length > 0 ? markdown : block.content;
 }
 
 export function shouldRenderTimelineBlock(block: TimelineBlock): boolean {
 	if (block.type !== "assistant") {
 		return true;
 	}
+	return block.status === "running" || block.content.trim().length > 0 || block.bodyParts.length > 0;
+}
 
-	if (block.status === "running") {
-		return true;
+function getEstimatedItemHeight(blocks: TimelineBlock[]): number {
+	const estimates: number[] = blocks
+		.map((block: TimelineBlock): number | null => block.renderHints?.estimatedHeight ?? null)
+		.filter((height: number | null): height is number => height !== null && Number.isFinite(height) && height > 0)
+		.sort((left: number, right: number): number => left - right);
+	if (estimates.length === 0) {
+		return DEFAULT_ITEM_HEIGHT;
 	}
-
-	return block.content.trim().length > 0 || block.bodyParts.length > 0;
-}
-
-type ViewportMetricsOptions = {
-	preserveAutoFollow?: boolean;
-};
-
-function getDistanceFromBottom(element: HTMLElement): number {
-	return getDistanceFromBottomByMetrics(element.scrollHeight, element.scrollTop, element.clientHeight);
-}
-
-function isNearBottom(element: HTMLElement, threshold: number = AUTO_FOLLOW_RESUME_THRESHOLD): boolean {
-	return isNearBottomByMetrics(element.scrollHeight, element.scrollTop, element.clientHeight, threshold);
-}
-
-function scrollToBottom(element: HTMLElement, behavior: ScrollBehavior = "auto"): void {
-	element.scrollTo({
-		top: element.scrollHeight,
-		behavior
-	});
-}
-
-function queryEntryElement(container: HTMLElement, entryId: string): HTMLElement | null {
-	return container.querySelector(`[data-entry-id="${CSS.escape(entryId)}"]`);
-}
-
-function createElementAnchor(element: HTMLElement, anchorElement: HTMLElement | null): ScrollAnchor | null {
-	if (anchorElement === null) {
-		return null;
-	}
-
-	const entryId: string | null = anchorElement.getAttribute("data-entry-id");
-	if (entryId === null) {
-		return null;
-	}
-
-	return {
-		entryId,
-		top: anchorElement.getBoundingClientRect().top
-	};
-}
-
-function queryFirstEntryElement(element: HTMLElement): HTMLElement | null {
-	return element.querySelector("[data-entry-id]") as HTMLElement | null;
-}
-
-function queryLastEntryElement(element: HTMLElement): HTMLElement | null {
-	const entryElements: NodeListOf<HTMLElement> = element.querySelectorAll("[data-entry-id]");
-	return entryElements[entryElements.length - 1] ?? null;
-}
-
-function getActiveUserEntryId(element: HTMLElement): string | null {
-	const targetTop: number = element.getBoundingClientRect().top + Math.min(56, element.clientHeight * 0.2);
-	const entries: NodeListOf<HTMLElement> = element.querySelectorAll('[data-entry-kind="user"][data-entry-id]');
-	let activeEntryId: string | null = null;
-	for (const entry of entries) {
-		const bounds: DOMRect = entry.getBoundingClientRect();
-		const entryId: string | null = entry.getAttribute("data-entry-id");
-		if (entryId === null) {
-			continue;
-		}
-		if (bounds.top <= targetTop) {
-			activeEntryId = entryId;
-			continue;
-		}
-		if (activeEntryId === null && bounds.bottom >= targetTop) {
-			return entryId;
-		}
-		break;
-	}
-	return activeEntryId;
+	const median: number = estimates[Math.floor(estimates.length / 2)] ?? DEFAULT_ITEM_HEIGHT;
+	return Math.min(MAX_ITEM_HEIGHT, Math.max(MIN_ITEM_HEIGHT, Math.round(median)));
 }
 
 function isNodeInside(element: HTMLElement, node: Node | null): boolean {
 	if (node === null) {
 		return false;
 	}
-
-	const target: Element | null = node.nodeType === Node.ELEMENT_NODE
-		? node as Element
-		: node.parentElement;
+	const target: Element | null = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
 	return target !== null && element.contains(target);
 }
 
@@ -188,10 +122,45 @@ function getSelectedTextInside(element: HTMLElement): string {
 	) {
 		return "";
 	}
-
 	const selectedText: string = selection.toString();
 	return selectedText.trim().length > 0 ? selectedText : "";
 }
+
+type AssistantTimelineRowProps = {
+	block: TimelineAssistantBlock;
+	blockOffset: number;
+	onInlineDiffReview?: () => void;
+};
+
+const AssistantTimelineRow = memo(function AssistantTimelineRow({ block, blockOffset, onInlineDiffReview }: AssistantTimelineRowProps): React.JSX.Element {
+	const [nowIsoTime, setNowIsoTime] = useState<string>(() => new Date().toISOString());
+	useEffect((): (() => void) | void => {
+		if (block.status !== "running") {
+			return;
+		}
+		setNowIsoTime(new Date().toISOString());
+		const timerId: number = window.setInterval((): void => {
+			setNowIsoTime(new Date().toISOString());
+		}, 1000);
+		return (): void => window.clearInterval(timerId);
+	}, [block.status]);
+
+	return (
+		<AssistantBubble
+			entryId={block.id}
+			searchBlockOffset={blockOffset}
+			bodyParts={block.bodyParts}
+			message={getAssistantMarkdown(block)}
+			elapsedTime={formatElapsedTime(
+				block.startedAtUtc,
+				block.status === "running" ? nowIsoTime : block.completedAtUtc
+			) ?? undefined}
+			endTime={block.status === "running" ? undefined : formatShortDateTime(block.completedAtUtc)}
+			streaming={block.status === "running"}
+			onInlineDiffReview={onInlineDiffReview}
+		/>
+	);
+});
 
 const MessageList = forwardRef<MessageListHandle, MessageListProps>(function MessageList({
 	blocks,
@@ -201,7 +170,6 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	hasMoreAfter = false,
 	isLoadingMoreBefore = false,
 	isLoadingMoreAfter = false,
-	initialScrollToBottomKey = "",
 	onLoadMoreBefore,
 	onLoadMoreAfter,
 	retryDisabled = false,
@@ -221,477 +189,351 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 }: MessageListProps, ref): React.JSX.Element {
 	const { t } = useTranslation();
 	const [messageApi, messageContextHolder] = message.useMessage();
-	const listRef = useRef<HTMLElement | null>(null);
-	const contentRef = useRef<HTMLDivElement | null>(null);
-	const pendingAnchorRef = useRef<ScrollAnchor | null>(null);
-	const lastInitialScrollKeyRef = useRef<string>("");
-	const lastBlockCountRef = useRef<number>(0);
-	const lastViewportBlockCountRef = useRef<number>(0);
-	const autoFollowRef = useRef<boolean>(true);
-	const awayFromBottomRef = useRef<boolean>(false);
-	const activeUserEntryIdRef = useRef<string | null>(null);
+	const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+	const scrollerRef = useRef<HTMLElement | null>(null);
+	const atBottomRef = useRef<boolean>(true);
+	const initialPositionPendingRef = useRef<boolean>(true);
+	const initialSettleStartedRef = useRef<boolean>(false);
 	const lastScrollToBottomRequestRef = useRef<number>(0);
-	const viewportUpdateFrameRef = useRef<number | null>(null);
-	const [nowMs, setNowMs] = useState<number>(() => Date.now());
+	const highlightFrameRef = useRef<number | null>(null);
 	const [contextMenuSelection, setContextMenuSelection] = useState<string>("");
-	const renderableBlocks: RenderableTimelineBlock[] = useMemo((): RenderableTimelineBlock[] => {
-		return blocks
-			.map((block: TimelineBlock, index: number): RenderableTimelineBlock => ({
-				block,
-				blockOffset: blockOffset + index
-			}))
-			.filter((item: RenderableTimelineBlock): boolean => shouldRenderTimelineBlock(item.block));
+	const [selectionViewportExpanded, setSelectionViewportExpanded] = useState<boolean>(false);
+	const [searchRangeRevision, setSearchRangeRevision] = useState<number>(0);
+	const items: RenderableTimelineBlock[] = useMemo((): RenderableTimelineBlock[] => {
+		return blocks.map((block: TimelineBlock, index: number): RenderableTimelineBlock => ({
+			block,
+			blockOffset: blockOffset + index
+		}));
 	}, [blockOffset, blocks]);
-	const hasRunningAssistantBlock: boolean = renderableBlocks.some((item: RenderableTimelineBlock): boolean => {
-		return item.block.type === "assistant" && item.block.status === "running";
-	});
-	const isInitialLoading: boolean = isLoading === true && renderableBlocks.length === 0;
+	const hasRunningAssistantBlock: boolean = blocks.some((block: TimelineBlock): boolean => block.type === "assistant" && block.status === "running");
+	const isInitialLoading: boolean = isLoading === true && blocks.length === 0;
 	const canEditUserMessages: boolean = onRetryFromUserMessage !== undefined && !retryDisabled && !hasRunningAssistantBlock && activeRetryRequestId === null;
+	const defaultItemHeight: number = useMemo((): number => getEstimatedItemHeight(blocks), [blocks]);
+	const expandFullWindow: boolean = selectionViewportExpanded || activeRetryRequestId !== null;
+	const increaseViewportBy = expandFullWindow ? FULL_WINDOW_VIEWPORT_EXPANSION : VIRTUAL_VIEWPORT_EXPANSION;
+	const lastAbsoluteIndex: number = blockOffset + Math.max(0, blocks.length - 1);
 
-	const selectAllMessageText = useCallback((): void => {
-		const content: HTMLDivElement | null = contentRef.current;
+	const setAwayFromBottom = useCallback((awayFromBottom: boolean): void => {
+		onAwayFromBottomChange?.(awayFromBottom);
+	}, [onAwayFromBottomChange]);
+
+	const scrollToBottomNow = useCallback((behavior: ScrollBehavior = "auto"): void => {
+		atBottomRef.current = true;
+		setAwayFromBottom(false);
+		if (blocks.length > 0) {
+			virtuosoRef.current?.scrollToIndex({ index: lastAbsoluteIndex, align: "end", behavior: normalizeVirtuosoScrollBehavior(behavior) });
+		}
+	}, [blocks.length, lastAbsoluteIndex, setAwayFromBottom]);
+
+	const scrollToEntry = useCallback((entryId: string, behavior: ScrollBehavior = "smooth"): boolean => {
+		const index: number = blocks.findIndex((block: TimelineBlock): boolean => block.id === entryId);
+		if (index < 0) {
+			return false;
+		}
+		atBottomRef.current = false;
+		setAwayFromBottom(true);
+		virtuosoRef.current?.scrollToIndex({ index: blockOffset + index, align: "center", behavior: normalizeVirtuosoScrollBehavior(behavior) });
+		return true;
+	}, [blockOffset, blocks, setAwayFromBottom]);
+
+	useImperativeHandle(ref, (): MessageListHandle => ({
+		scrollToBottom: scrollToBottomNow,
+		scrollToEntry
+	}), [scrollToBottomNow, scrollToEntry]);
+
+	const selectMountedMessageText = useCallback((): void => {
+		const scroller: HTMLElement | null = scrollerRef.current;
 		const selection: Selection | null = window.getSelection();
-		if (content === null || selection === null) {
+		if (scroller === null || selection === null) {
 			return;
 		}
-
+		const firstEntry: HTMLElement | null = scroller.querySelector("[data-entry-id]");
+		const entries: NodeListOf<HTMLElement> = scroller.querySelectorAll("[data-entry-id]");
+		const lastEntry: HTMLElement | undefined = entries[entries.length - 1];
+		if (firstEntry === null || lastEntry === undefined) {
+			return;
+		}
 		const range: Range = document.createRange();
-		range.selectNodeContents(content);
+		range.setStartBefore(firstEntry);
+		range.setEndAfter(lastEntry);
 		selection.removeAllRanges();
 		selection.addRange(range);
 		setContextMenuSelection(selection.toString());
 	}, []);
 
+	const selectAllMessageText = useCallback((): void => {
+		flushSync((): void => setSelectionViewportExpanded(true));
+		window.requestAnimationFrame((): void => {
+			window.requestAnimationFrame(selectMountedMessageText);
+		});
+	}, [selectMountedMessageText]);
+
+	useEffect((): (() => void) | void => {
+		if (!selectionViewportExpanded) {
+			return;
+		}
+		const handleSelectionChange = (): void => {
+			const selection: Selection | null = window.getSelection();
+			if (selection === null || selection.isCollapsed) {
+				setSelectionViewportExpanded(false);
+			}
+		};
+		document.addEventListener("selectionchange", handleSelectionChange);
+		return (): void => document.removeEventListener("selectionchange", handleSelectionChange);
+	}, [selectionViewportExpanded]);
+
 	const copyContextMenuSelection = useCallback((): void => {
 		if (contextMenuSelection.length === 0) {
 			return;
 		}
-
 		void copyTextToClipboard(contextMenuSelection)
-			.then((): void => {
-				void messageApi.success(t("chat.common.copied"));
-			})
+			.then((): void => void messageApi.success(t("chat.common.copied")))
 			.catch((error: unknown): void => {
 				console.error("[MessageList] copy selected text failed", error);
 				void messageApi.error(t("chat.common.copyFailed"));
 			});
 	}, [contextMenuSelection, messageApi, t]);
 
-	const messageContextMenu: MenuProps = useMemo((): MenuProps => {
-		const hasSelection: boolean = contextMenuSelection.length > 0;
-		return {
-			items: [
-				{
-					key: "select-all",
-					label: t("chat.common.selectAll"),
-				},
-				...(hasSelection ? [
-					{
-						type: "divider" as const
-					},
-					{
-						key: "copy",
-						label: t("chat.common.copy"),
-					}
-				] : [])
-			],
-			onClick: ({ key, domEvent }): void => {
-				domEvent.preventDefault();
-				domEvent.stopPropagation();
-				if (key === "select-all") {
-					selectAllMessageText();
-					return;
-				}
-				if (key === "copy") {
-					copyContextMenuSelection();
-				}
+	const messageContextMenu: MenuProps = useMemo((): MenuProps => ({
+		items: [
+			{ key: "select-all", label: t("chat.common.selectAll") },
+			...(contextMenuSelection.length > 0 ? [
+				{ type: "divider" as const },
+				{ key: "copy", label: t("chat.common.copy") }
+			] : [])
+		],
+		onClick: ({ key, domEvent }): void => {
+			domEvent.preventDefault();
+			domEvent.stopPropagation();
+			if (key === "select-all") {
+				selectAllMessageText();
+			} else if (key === "copy") {
+				copyContextMenuSelection();
 			}
-		};
-	}, [contextMenuSelection.length, copyContextMenuSelection, selectAllMessageText, t]);
+		}
+	}), [contextMenuSelection.length, copyContextMenuSelection, selectAllMessageText, t]);
 
 	const handleContextMenuCapture = useCallback((): void => {
-		const content: HTMLDivElement | null = contentRef.current;
-		if (content === null) {
-			return;
+		const scroller: HTMLElement | null = scrollerRef.current;
+		if (scroller !== null) {
+			flushSync((): void => setContextMenuSelection(getSelectedTextInside(scroller)));
 		}
-
-		flushSync((): void => {
-			setContextMenuSelection(getSelectedTextInside(content));
-		});
 	}, []);
 
-	const setAwayFromBottom = useCallback((awayFromBottom: boolean): void => {
-		if (awayFromBottomRef.current !== awayFromBottom) {
-			awayFromBottomRef.current = awayFromBottom;
-			onAwayFromBottomChange?.(awayFromBottom);
+	const applySearchHighlights = useCallback((scrollActiveIntoView: boolean): void => {
+		const scroller: HTMLElement | null = scrollerRef.current;
+		if (highlightFrameRef.current !== null) {
+			window.cancelAnimationFrame(highlightFrameRef.current);
 		}
-	}, [onAwayFromBottomChange]);
-
-	const detachAutoFollow = useCallback((): void => {
-		if (!autoFollowRef.current && awayFromBottomRef.current) {
-			return;
-		}
-		autoFollowRef.current = false;
-		setAwayFromBottom(true);
-	}, [setAwayFromBottom]);
-
-	const syncViewportMetrics = useCallback((element: HTMLElement, options: ViewportMetricsOptions = {}): void => {
-		const distanceFromBottom: number = getDistanceFromBottom(element);
-		const initialScrollPending: boolean = initialScrollToBottomKey.length > 0 && lastInitialScrollKeyRef.current !== initialScrollToBottomKey && isLoading !== true;
-		if (initialScrollPending && distanceFromBottom > AUTO_FOLLOW_RESUME_THRESHOLD) {
-			autoFollowRef.current = true;
-			setAwayFromBottom(false);
-			return;
-		}
-		if (options.preserveAutoFollow === true && autoFollowRef.current) {
-			setAwayFromBottom(false);
-			return;
-		}
-		autoFollowRef.current = shouldAutoFollowViewport(
-			autoFollowRef.current,
-			distanceFromBottom,
-			AUTO_FOLLOW_PAUSE_THRESHOLD,
-			AUTO_FOLLOW_RESUME_THRESHOLD
-		);
-		setAwayFromBottom(!autoFollowRef.current);
-	}, [initialScrollToBottomKey, isLoading, setAwayFromBottom]);
-
-	const scheduleAutoFollowScroll = useCallback((behavior: ScrollBehavior = "auto"): void => {
-		if (!autoFollowRef.current) {
-			return;
-		}
-
-		window.requestAnimationFrame((): void => {
-			const element: HTMLElement | null = listRef.current;
-			if (element === null || !autoFollowRef.current) {
+		highlightFrameRef.current = window.requestAnimationFrame((): void => {
+			highlightFrameRef.current = null;
+			if (scroller === null || !searchOpen || searchQuery.trim().length === 0) {
+				clearConversationSearchHighlights(scroller);
 				return;
 			}
-
-			scrollToBottom(element, behavior);
-			syncViewportMetrics(element);
+			const result = applyConversationSearchHighlights(scroller, searchQuery, activeSearchMatch);
+			if (scrollActiveIntoView && result.activeElement !== null) {
+				result.activeElement.scrollIntoView({ block: "center", behavior: "smooth" });
+			}
 		});
-	}, [syncViewportMetrics]);
+	}, [activeSearchMatch, searchOpen, searchQuery]);
 
-	const scrollToBottomNow = useCallback((behavior: ScrollBehavior = "auto"): void => {
-		const element: HTMLElement | null = listRef.current;
-		if (element === null) {
+	useLayoutEffect((): (() => void) => {
+		if (activeSearchMatch !== null) {
+			const targetIndex: number = activeSearchMatch.blockOffset;
+			if (targetIndex >= blockOffset && targetIndex < blockOffset + blocks.length) {
+				atBottomRef.current = false;
+				setAwayFromBottom(true);
+				virtuosoRef.current?.scrollToIndex({ index: targetIndex, align: "center", behavior: "smooth" });
+			}
+		}
+		applySearchHighlights(true);
+		return (): void => clearConversationSearchHighlights(scrollerRef.current);
+	}, [activeSearchMatch, applySearchHighlights, blockOffset, blocks.length, setAwayFromBottom]);
+
+	useLayoutEffect((): void => {
+		if (searchRangeRevision > 0) {
+			applySearchHighlights(false);
+		}
+	}, [applySearchHighlights, searchRangeRevision]);
+
+	const handleRangeChanged = useCallback((range: ListRange): void => {
+		let activeEntryId: string | null = null;
+		const relativeStart: number = Math.max(0, range.startIndex - blockOffset);
+		for (let index: number = Math.min(relativeStart, blocks.length - 1); index >= 0; index -= 1) {
+			const block: TimelineBlock | undefined = blocks[index];
+			if (block?.type === "user") {
+				activeEntryId = block.id;
+				break;
+			}
+		}
+		onActiveUserEntryChange?.(activeEntryId);
+		if (searchOpen) {
+			setSearchRangeRevision((revision: number): number => revision + 1);
+		}
+	}, [blockOffset, blocks, onActiveUserEntryChange, searchOpen]);
+
+	const handleAtBottomStateChange = useCallback((atBottom: boolean): void => {
+		if (initialPositionPendingRef.current && !atBottom) {
 			return;
 		}
-
-		autoFollowRef.current = true;
-		scrollToBottom(element, behavior);
-		syncViewportMetrics(element);
-	}, [syncViewportMetrics]);
-
-	const scrollToEntry = useCallback((entryId: string, behavior: ScrollBehavior = "smooth"): boolean => {
-		const element: HTMLElement | null = listRef.current;
-		const target: HTMLElement | null = element === null ? null : queryEntryElement(element, entryId);
-		if (element === null || target === null) {
-			return false;
-		}
-		autoFollowRef.current = false;
-		setAwayFromBottom(true);
-		const targetTop: number = target.getBoundingClientRect().top - element.getBoundingClientRect().top + element.scrollTop;
-		element.scrollTo({ top: Math.max(0, targetTop - Math.min(48, element.clientHeight * 0.18)), behavior });
-		return true;
+		initialPositionPendingRef.current = false;
+		atBottomRef.current = atBottom;
+		setAwayFromBottom(!atBottom);
 	}, [setAwayFromBottom]);
 
-	useImperativeHandle(ref, (): MessageListHandle => {
-		return {
-			scrollToBottom: scrollToBottomNow,
-			scrollToEntry
-		};
-	}, [scrollToBottomNow, scrollToEntry]);
-
-	useLayoutEffect((): (() => void) | void => {
-		const element: HTMLElement | null = listRef.current;
-		if (element === null || !searchOpen || searchQuery.trim().length === 0) {
-			clearConversationSearchHighlights(element);
-			return;
+	const handleScrollerRef = useCallback((element: HTMLElement | Window | null): void => {
+		const scroller: HTMLElement | null = element instanceof HTMLElement ? element : null;
+		if (scroller !== null) {
+			initialPositionPendingRef.current = true;
+			atBottomRef.current = true;
 		}
-		const result = applyConversationSearchHighlights(element, searchQuery, activeSearchMatch);
-		if (result.activeElement !== null) {
-			autoFollowRef.current = false;
-			setAwayFromBottom(true);
-			const targetTop: number = result.activeElement.getBoundingClientRect().top
-				- element.getBoundingClientRect().top
-				+ element.scrollTop;
-			element.scrollTo({
-				top: Math.max(0, targetTop - Math.min(72, element.clientHeight * 0.24)),
-				behavior: "smooth"
-			});
-		}
-		return (): void => {
-			clearConversationSearchHighlights(element);
-		};
-	}, [activeSearchMatch, renderableBlocks, searchOpen, searchQuery, setAwayFromBottom]);
-
-	const updateViewport = useCallback((options: ViewportMetricsOptions = {}): void => {
-		const element: HTMLElement | null = listRef.current;
-
-		if (element === null) {
-			return;
-		}
-
-		const nearLoadMoreAfter: boolean = isNearBottom(element, LOAD_MORE_THRESHOLD);
-		syncViewportMetrics(element, options);
-		const activeUserEntryId: string | null = getActiveUserEntryId(element);
-		if (activeUserEntryIdRef.current !== activeUserEntryId) {
-			activeUserEntryIdRef.current = activeUserEntryId;
-			onActiveUserEntryChange?.(activeUserEntryId);
-		}
-
-		const contentFitsViewport: boolean = element.scrollHeight <= element.clientHeight + LOAD_MORE_THRESHOLD;
-
-		if ((element.scrollTop < LOAD_MORE_THRESHOLD || contentFitsViewport) && hasMoreBefore && !isLoadingMoreBefore) {
-			pendingAnchorRef.current = createElementAnchor(element, queryFirstEntryElement(element));
-			onLoadMoreBefore?.();
-		}
-
-		const distanceFromBottom: number = getDistanceFromBottom(element);
-		if ((distanceFromBottom < LOAD_MORE_THRESHOLD || contentFitsViewport) && hasMoreAfter && nearLoadMoreAfter && !isLoadingMoreAfter) {
-			pendingAnchorRef.current = createElementAnchor(element, queryLastEntryElement(element));
-			onLoadMoreAfter?.();
-		}
-	}, [hasMoreAfter, hasMoreBefore, isLoadingMoreAfter, isLoadingMoreBefore, onActiveUserEntryChange, onLoadMoreAfter, onLoadMoreBefore, syncViewportMetrics]);
-
-	const handleWheel = useCallback((event: WheelEvent): void => {
-		if (event.deltaY >= -WHEEL_DETACH_DELTA) {
-			return;
-		}
-
-		const element: HTMLElement | null = listRef.current;
-		if (element === null || element.scrollHeight <= element.clientHeight) {
-			return;
-		}
-
-		detachAutoFollow();
-	}, [detachAutoFollow]);
-
-	const {
-		run: scheduleViewportUpdate,
-		cancel: cancelScheduledViewportUpdate
-	} = useThrottleFn((): void => {
-		if (viewportUpdateFrameRef.current !== null) {
-			return;
-		}
-
-		viewportUpdateFrameRef.current = window.requestAnimationFrame((): void => {
-			viewportUpdateFrameRef.current = null;
-			updateViewport();
-		});
-	}, {
-		wait: 50,
-		leading: true,
-		trailing: true
-	});
-
-	useEffect((): (() => void) | void => {
-		const element: HTMLElement | null = listRef.current;
-
-		if (element === null) {
-			return;
-		}
-
-		updateViewport();
-		element.addEventListener("scroll", scheduleViewportUpdate, { passive: true });
-		element.addEventListener("wheel", handleWheel, { passive: true });
-		window.addEventListener("resize", scheduleViewportUpdate);
-
-		return (): void => {
-			element.removeEventListener("scroll", scheduleViewportUpdate);
-			element.removeEventListener("wheel", handleWheel);
-			window.removeEventListener("resize", scheduleViewportUpdate);
-			cancelScheduledViewportUpdate();
-			if (viewportUpdateFrameRef.current !== null) {
-				window.cancelAnimationFrame(viewportUpdateFrameRef.current);
-				viewportUpdateFrameRef.current = null;
-			}
-		};
-	}, [cancelScheduledViewportUpdate, handleWheel, scheduleViewportUpdate, updateViewport]);
+		scrollerRef.current = scroller;
+		onScrollContainerReady?.(scroller);
+	}, [onScrollContainerReady]);
 
 	useEffect((): (() => void) => {
-		onScrollContainerReady?.(listRef.current);
 		return (): void => {
 			onScrollContainerReady?.(null);
+			if (highlightFrameRef.current !== null) {
+				window.cancelAnimationFrame(highlightFrameRef.current);
+			}
 		};
 	}, [onScrollContainerReady]);
 
-	useLayoutEffect((): void => {
-		const element: HTMLElement | null = listRef.current;
-		const anchor: ScrollAnchor | null = pendingAnchorRef.current;
-
-		if (element === null) {
+	useEffect((): (() => void) | void => {
+		if (initialSettleStartedRef.current || isInitialLoading || blocks.length === 0) {
 			return;
 		}
-
-		const previousBlockCount: number = lastViewportBlockCountRef.current;
-		const blockCountChanged: boolean = previousBlockCount !== renderableBlocks.length;
-		const followBlockAppendImmediately: boolean = shouldImmediatelyFollowBlockAppend(
-			autoFollowRef.current,
-			previousBlockCount,
-			renderableBlocks.length
-		);
-		lastViewportBlockCountRef.current = renderableBlocks.length;
-
-		if (anchor !== null) {
-			const anchorElement: HTMLElement | null = queryEntryElement(element, anchor.entryId);
-			if (anchorElement !== null) {
-				const nextTop: number = anchorElement.getBoundingClientRect().top;
-				element.scrollTop += nextTop - anchor.top;
-			}
-
-			pendingAnchorRef.current = null;
-			updateViewport({ preserveAutoFollow: true });
-			return;
-		}
-
-		if (blockCountChanged) {
-			if (followBlockAppendImmediately) {
-				scrollToBottom(element);
-			}
-			updateViewport({ preserveAutoFollow: followBlockAppendImmediately });
-		}
-	}, [renderableBlocks, updateViewport]);
-
-	useLayoutEffect((): void => {
-		const element: HTMLElement | null = listRef.current;
-
-		if (element === null || initialScrollToBottomKey.length === 0 || lastInitialScrollKeyRef.current === initialScrollToBottomKey || isLoading) {
-			return;
-		}
-
-		lastInitialScrollKeyRef.current = initialScrollToBottomKey;
-		autoFollowRef.current = true;
-
-		scrollToBottom(element);
-		syncViewportMetrics(element);
-
-		window.requestAnimationFrame((): void => {
-			const currentElement: HTMLElement | null = listRef.current;
-			if (currentElement === null) {
-				return;
-			}
-
-			scrollToBottom(currentElement);
-			window.requestAnimationFrame((): void => {
-				if (listRef.current !== null) {
-					scrollToBottom(listRef.current);
-					updateViewport();
+		initialSettleStartedRef.current = true;
+		let secondFrameId: number | null = null;
+		const firstFrameId: number = window.requestAnimationFrame((): void => {
+			secondFrameId = window.requestAnimationFrame((): void => {
+				initialPositionPendingRef.current = false;
+				const scroller: HTMLElement | null = scrollerRef.current;
+				if (scroller === null) {
+					return;
 				}
+				const atBottom: boolean = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <= AT_BOTTOM_THRESHOLD;
+				if (!atBottom) {
+					scrollToBottomNow("auto");
+					return;
+				}
+				atBottomRef.current = true;
+				setAwayFromBottom(false);
 			});
 		});
-	}, [initialScrollToBottomKey, isLoading, updateViewport]);
+		return (): void => {
+			window.cancelAnimationFrame(firstFrameId);
+			if (secondFrameId !== null) {
+				window.cancelAnimationFrame(secondFrameId);
+			}
+		};
+	}, [blocks.length, isInitialLoading, scrollToBottomNow, setAwayFromBottom]);
 
 	useEffect((): void => {
 		if (scrollToBottomRequest <= 0 || lastScrollToBottomRequestRef.current === scrollToBottomRequest) {
 			return;
 		}
-
 		lastScrollToBottomRequestRef.current = scrollToBottomRequest;
-		autoFollowRef.current = true;
-
 		scrollToBottomNow("smooth");
 	}, [scrollToBottomNow, scrollToBottomRequest]);
 
-	useEffect((): void => {
-		const element: HTMLElement | null = listRef.current;
-		const blockCountIncreased: boolean = renderableBlocks.length > lastBlockCountRef.current;
-		lastBlockCountRef.current = renderableBlocks.length;
-
-		if (element === null || isLoading) {
-			return;
+	const renderHeader = useCallback((): React.JSX.Element | null => {
+		if (errorMessage === null || errorMessage === undefined) {
+			return isLoadingMoreBefore ? <div className={styles.pageLoadingIndicator}><Spin size="small" /></div> : null;
 		}
+		return (
+			<div className={styles.messageListContent}>
+				<Alert description={errorMessage} type="error" showIcon={true} />
+			</div>
+		);
+	}, [errorMessage, isLoadingMoreBefore]);
 
-		if (shouldAutoFollowAppend(autoFollowRef.current, hasRunningAssistantBlock, blockCountIncreased)) {
-			scheduleAutoFollowScroll(hasRunningAssistantBlock ? "auto" : "smooth");
+	const renderFooter = useCallback((): React.JSX.Element | null => {
+		return isLoadingMoreAfter ? <div className={styles.pageLoadingIndicator}><Spin size="small" /></div> : null;
+	}, [isLoadingMoreAfter]);
+
+	const renderEmpty = useCallback((): null => null, []);
+
+	const itemContent = useCallback((_index: number, item: RenderableTimelineBlock): React.ReactNode => {
+		const block: TimelineBlock = item.block;
+		if (!shouldRenderTimelineBlock(block)) {
+			return <div className={styles.emptyAssistantPlaceholder} aria-hidden="true" />;
 		}
-	}, [renderableBlocks, hasRunningAssistantBlock, isLoading, scheduleAutoFollowScroll]);
-
-	useEffect((): (() => void) | void => {
-		if (!hasRunningAssistantBlock) {
-			return;
-		}
-
-		setNowMs(Date.now());
-
-		const timerId: number = window.setInterval((): void => {
-			setNowMs(Date.now());
-		}, 1000);
-
-		return (): void => {
-			window.clearInterval(timerId);
-		};
-	}, [hasRunningAssistantBlock]);
-
-	const nowIsoTime: string = new Date(nowMs).toISOString();
+		return (
+			<div className={styles.messageListContent}>
+				{block.type === "user" ? (
+					<UserBubble
+						entryId={block.id}
+						searchBlockOffset={item.blockOffset}
+						requestId={block.requestId}
+						message={block.content}
+						additionalContext={block.additionalContext ?? []}
+						sentTime={formatShortDateTime(block.sentAtUtc)}
+						showEditButton={canEditUserMessages}
+						disabled={retryDisabled}
+						isRetryEditing={activeRetryRequestId === block.requestId}
+						onRetryEditStart={onRetryEditStart}
+						onRetryEditCancel={onRetryEditCancel}
+						onRetryFromUserMessage={onRetryFromUserMessage}
+					/>
+				) : (
+					<AssistantTimelineRow block={block} blockOffset={item.blockOffset} onInlineDiffReview={onInlineDiffReview} />
+				)}
+			</div>
+		);
+	}, [activeRetryRequestId, canEditUserMessages, onInlineDiffReview, onRetryEditCancel, onRetryEditStart, onRetryFromUserMessage, retryDisabled]);
+	const virtuosoComponents = useMemo(() => ({
+		Header: renderHeader,
+		Footer: renderFooter,
+		EmptyPlaceholder: renderEmpty
+	}), [renderEmpty, renderFooter, renderHeader]);
 
 	return (
 		<>
 			{messageContextHolder}
-			<Dropdown menu={messageContextMenu} trigger={["contextMenu"]}>
-				<section ref={listRef} className={styles.messageList} onContextMenuCapture={handleContextMenuCapture}>
-					<div ref={contentRef} className={`${styles.messageListContent} ${isInitialLoading ? styles.messageListContentLoading : ""}`}>
-				{errorMessage ? (
-					<Alert description={errorMessage} type="error" showIcon={true} />
-				) : null}
-				{isInitialLoading ? (
+			{isInitialLoading ? (
+				<div className={styles.initialLoadingShell}>
 					<Spin className={styles.loadingIcon} />
-				) : (
-					<>
-						{isLoadingMoreBefore ? (
-							<div className={styles.pageLoadingIndicator}>
-								<Spin size="small" />
-							</div>
-						) : null}
-						{renderableBlocks.map(({ block, blockOffset: absoluteBlockOffset }: RenderableTimelineBlock): React.ReactNode => {
-							if (block.type === "user") {
-								return (
-									<UserBubble
-										key={block.id}
-										entryId={block.id}
-										searchBlockOffset={absoluteBlockOffset}
-										requestId={block.requestId}
-										message={block.content}
-										additionalContext={block.additionalContext ?? []}
-										sentTime={formatShortDateTime(block.sentAtUtc)}
-										showEditButton={canEditUserMessages}
-										disabled={retryDisabled}
-										isRetryEditing={activeRetryRequestId === block.requestId}
-										onRetryEditStart={onRetryEditStart}
-										onRetryEditCancel={onRetryEditCancel}
-										onRetryFromUserMessage={onRetryFromUserMessage}
-									/>
-								);
-							}
-
-							return (
-								<AssistantBubble
-									key={block.id}
-									entryId={block.id}
-									searchBlockOffset={absoluteBlockOffset}
-									bodyParts={block.bodyParts}
-									message={getAssistantMarkdown(block)}
-									elapsedTime={formatElapsedTime(
-										block.startedAtUtc,
-										block.status === "running" ? nowIsoTime : block.completedAtUtc
-									) ?? undefined}
-									endTime={block.status === "running" ? undefined : formatShortDateTime(block.completedAtUtc)}
-									streaming={block.status === "running"}
-									onInlineDiffReview={onInlineDiffReview}
-								/>
-							);
-						})}
-						{isLoadingMoreAfter ? (
-							<div className={styles.pageLoadingIndicator}>
-								<Spin size="small" />
-							</div>
-						) : null}
-					</>
-				)}
+				</div>
+			) : (
+			<TimelineDisclosureProvider>
+				<Dropdown menu={messageContextMenu} trigger={["contextMenu"]}>
+					<div className={styles.messageListShell} onContextMenuCapture={handleContextMenuCapture}>
+						<Virtuoso<RenderableTimelineBlock>
+					ref={virtuosoRef}
+					className={styles.messageList}
+					data={items}
+					firstItemIndex={blockOffset}
+					initialTopMostItemIndex={{ index: Math.max(0, items.length - 1), align: "end" }}
+					computeItemKey={(_index: number, item: RenderableTimelineBlock): string => item.block.id}
+					defaultItemHeight={defaultItemHeight}
+					increaseViewportBy={increaseViewportBy}
+					minOverscanItemCount={{ top: 3, bottom: 4 }}
+					alignToBottom={true}
+					followOutput={(): "auto" | false => atBottomRef.current ? "auto" : false}
+					atBottomThreshold={AT_BOTTOM_THRESHOLD}
+					atBottomStateChange={handleAtBottomStateChange}
+					startReached={(): void => {
+						if (hasMoreBefore && !isLoadingMoreBefore) {
+							onLoadMoreBefore?.();
+						}
+					}}
+					endReached={(): void => {
+						if (hasMoreAfter && !isLoadingMoreAfter) {
+							onLoadMoreAfter?.();
+						}
+					}}
+					rangeChanged={handleRangeChanged}
+					scrollerRef={handleScrollerRef}
+					components={virtuosoComponents}
+					itemContent={itemContent}
+						/>
 					</div>
-				</section>
-			</Dropdown>
+				</Dropdown>
+			</TimelineDisclosureProvider>
+			)}
 		</>
 	);
 });

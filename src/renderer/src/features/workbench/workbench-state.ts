@@ -25,7 +25,7 @@ export const emptyTimelinePage: TimelinePageState = {
 	hasMoreAfter: false
 };
 
-export const MAX_TIMELINE_WINDOW_BLOCKS: number = 160;
+export const MAX_TIMELINE_WINDOW_BLOCKS: number = 400;
 const TIMELINE_STREAM_DELTA_EVENTS: ReadonlySet<string> = new Set([
 	"agent.message.delta",
 	"agent.thinking.delta"

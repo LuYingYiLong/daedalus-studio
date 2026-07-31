@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button, Divider, Dropdown, Empty, Input, message as antdMessage, Modal, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
-import type { CollapseProps, InputRef, MenuProps, SplitterProps } from "antd";
+import type { CollapseProps, MenuProps, SplitterProps } from "antd";
 import { useTranslation } from "react-i18next";
 import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, SessionTimelineNavigationEntry, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
@@ -19,10 +19,7 @@ import {
 } from "@/api/keyboard-shortcuts";
 import { fetchSessionOverview, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
-import MessageList, { type MessageListHandle } from "@/features/chat/MessageList";
-import ConversationAnchorNavigator from "@/features/chat/ConversationAnchorNavigator";
-import ConversationSearchPanel from "@/features/chat/ConversationSearchPanel";
-import { useConversationSearch } from "@/features/chat/useConversationSearch";
+import ConversationTimelinePane, { type ConversationTimelinePaneHandle } from "@/features/chat/ConversationTimelinePane";
 import Composer from "@/features/composer/Composer";
 import FloatingWorkflowTodoPanel, { type WorkflowFileChangeSummary } from "@/features/composer/FloatingWorkflowTodoPanel";
 import MessageQueuePanel from "@/features/composer/MessageQueuePanel";
@@ -50,6 +47,8 @@ import SessionPlanPreviewDialog from "./SessionPlanPreviewDialog";
 import SessionSourcesDialog from "./SessionSourcesDialog";
 import SessionSourcePreviewDialog from "./SessionSourcePreviewDialog";
 import { formatSourceSubtitle } from "./session-overview-formatters";
+import type { TimelinePageStore } from "@/features/workbench/timeline-page-store";
+import { useTimelineSelector } from "@/features/workbench/timeline-page-store";
 
 type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot";
 
@@ -196,60 +195,97 @@ function getRecordNumber(record: Record<string, unknown>, key: string): number {
 	return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+type WorkflowFileChangeContribution = WorkflowFileChangeSummary & {
+	batchIds: string[];
+};
+
+const timelineFileChangeContributionCache: WeakMap<TimelineBlock, WorkflowFileChangeContribution[]> = new WeakMap();
+
+function getTimelineFileChangeContributions(block: TimelineBlock): WorkflowFileChangeContribution[] {
+	const cached: WorkflowFileChangeContribution[] | undefined = timelineFileChangeContributionCache.get(block);
+	if (cached !== undefined) {
+		return cached;
+	}
+	const contributions: WorkflowFileChangeContribution[] = [];
+	if (block.type === "assistant") {
+		for (const part of block.bodyParts) {
+			if (part.type === "inline_diff") {
+				contributions.push({
+					additions: part.additions,
+					deletions: part.deletions,
+					changedFiles: part.editedFileCount,
+					batchIds: part.batchIds.filter((batchId: string): boolean => batchId.length > 0)
+				});
+				continue;
+			}
+			if (part.type !== "tool") {
+				continue;
+			}
+			for (const event of part.events) {
+				const fileEditBatch: unknown = event.fileEditBatch;
+				if (!isRecord(fileEditBatch)) {
+					continue;
+				}
+				const batchId: string = getRecordString(fileEditBatch, "batchId");
+				contributions.push({
+					additions: getRecordNumber(fileEditBatch, "additions"),
+					deletions: getRecordNumber(fileEditBatch, "deletions"),
+					changedFiles: getRecordNumber(fileEditBatch, "editedFileCount"),
+					batchIds: batchId.length > 0 ? [batchId] : []
+				});
+			}
+		}
+	}
+	timelineFileChangeContributionCache.set(block, contributions);
+	return contributions;
+}
+
 function aggregateTimelineFileChanges(blocks: TimelineBlock[]): WorkflowFileChangeSummary {
 	const countedBatchIds: Set<string> = new Set();
 	let additions: number = 0;
 	let deletions: number = 0;
 	let changedFiles: number = 0;
 
-	function addFileChangeRecord(record: Record<string, unknown>): void {
-		const batchId: string = getRecordString(record, "batchId");
-		if (batchId.length > 0) {
-			if (countedBatchIds.has(batchId)) {
-				return;
-			}
-			countedBatchIds.add(batchId);
-		}
-
-		additions += getRecordNumber(record, "additions");
-		deletions += getRecordNumber(record, "deletions");
-		changedFiles += getRecordNumber(record, "editedFileCount");
-	}
-
 	for (const block of blocks) {
-		if (block.type !== "assistant") {
-			continue;
-		}
-
-		for (const part of block.bodyParts) {
-			if (part.type === "inline_diff") {
-				const batchIds: string[] = part.batchIds.filter((batchId: string): boolean => batchId.length > 0);
-				if (batchIds.length > 0 && batchIds.every((batchId: string): boolean => countedBatchIds.has(batchId))) {
-					continue;
-				}
-				additions += part.additions;
-				deletions += part.deletions;
-				changedFiles += part.editedFileCount;
-				for (const batchId of batchIds) {
-					countedBatchIds.add(batchId);
-				}
+		for (const contribution of getTimelineFileChangeContributions(block)) {
+			if (contribution.batchIds.length > 0 && contribution.batchIds.every((batchId: string): boolean => countedBatchIds.has(batchId))) {
 				continue;
 			}
-
-			if (part.type !== "tool") {
-				continue;
-			}
-
-			for (const event of part.events) {
-				const fileEditBatch: unknown = event.fileEditBatch;
-				if (isRecord(fileEditBatch)) {
-					addFileChangeRecord(fileEditBatch);
-				}
+			additions += contribution.additions;
+			deletions += contribution.deletions;
+			changedFiles += contribution.changedFiles;
+			for (const batchId of contribution.batchIds) {
+				countedBatchIds.add(batchId);
 			}
 		}
 	}
 
 	return { additions, deletions, changedFiles };
+}
+
+type TimelineWorkflowTodoPanelProps = {
+	timelineStore: TimelinePageStore;
+	snapshot: WorkflowTodoSnapshot;
+	onDismiss: (snapshot: WorkflowTodoSnapshot) => void;
+};
+
+function TimelineWorkflowTodoPanel({ timelineStore, snapshot, onDismiss }: TimelineWorkflowTodoPanelProps): React.JSX.Element {
+	const timelineBlocks: TimelineBlock[] = useTimelineSelector(
+		timelineStore,
+		(page): TimelineBlock[] => page.blocks
+	);
+	const fileChangeSummary: WorkflowFileChangeSummary = useMemo(
+		(): WorkflowFileChangeSummary => aggregateTimelineFileChanges(timelineBlocks),
+		[timelineBlocks]
+	);
+
+	return (
+		<FloatingWorkflowTodoPanel
+			snapshot={snapshot}
+			fileChangeSummary={fileChangeSummary}
+			onDismiss={onDismiss}
+		/>
+	);
 }
 
 type HomePageProps = {
@@ -270,16 +306,12 @@ type HomePageProps = {
 	activeSessionMetadata: SessionMetadata | null;
 	activeWorkspaceId: string | null;
 	chatTitle: string;
-	timelineBlocks: TimelineBlock[];
-	timelineBlockOffset: number;
+	timelineStore: TimelinePageStore;
 	timelineNavigationEntries: SessionTimelineNavigationEntry[];
 	isSessionLoading: boolean;
 	sessionError: string | null;
-	hasMoreBefore: boolean;
-	hasMoreAfter: boolean;
 	isLoadingMoreBefore: boolean;
 	isLoadingMoreAfter: boolean;
-	initialScrollToBottomKey: string;
 	retryDisabled: boolean;
 	activeRetryRequestId: string | null;
 	providerModelSelection: ProviderModelSelection | null;
@@ -393,16 +425,12 @@ function HomePage({
 	activeSessionMetadata,
 	activeWorkspaceId,
 	chatTitle,
-	timelineBlocks,
-	timelineBlockOffset,
+	timelineStore,
 	timelineNavigationEntries,
 	isSessionLoading,
 	sessionError,
-	hasMoreBefore,
-	hasMoreAfter,
 	isLoadingMoreBefore,
 	isLoadingMoreAfter,
-	initialScrollToBottomKey,
 	retryDisabled,
 	activeRetryRequestId,
 	providerModelSelection,
@@ -530,12 +558,8 @@ function HomePage({
 		sessionId: activeSessionId,
 		layout: sessionLayout
 	});
-	const messageListRef = useRef<MessageListHandle | null>(null);
-	const conversationSearchInputRef = useRef<InputRef | null>(null);
+	const conversationTimelinePaneRef = useRef<ConversationTimelinePaneHandle | null>(null);
 	const chatBodyRef = useRef<HTMLDivElement | null>(null);
-	const [messageScrollContainer, setMessageScrollContainer] = useState<HTMLElement | null>(null);
-	const [activeTimelineEntryId, setActiveTimelineEntryId] = useState<string | null>(null);
-	const [pendingTimelineEntryId, setPendingTimelineEntryId] = useState<string | null>(null);
 	const scrollToBottomButtonRef = useRef<HTMLButtonElement | null>(null);
 	const scrollToBottomButtonVisibleRef = useRef<boolean>(false);
 	const workspaceForActions: WorkspaceConfig | null = activeWorkspace ?? (isHome ? homeWorkspace : null);
@@ -556,30 +580,6 @@ function HomePage({
 	const sideDockSize: number = sessionLayout.side.size;
 	const bottomDockOpen: boolean = sessionLayout.bottom.open;
 	const bottomDockSize: number = sessionLayout.bottom.size;
-	const handleConversationSearchLoadError = useCallback((error: unknown): void => {
-		console.warn("[HomePage] conversation search degraded to loaded messages", error);
-	}, []);
-	const conversationSearch = useConversationSearch({
-		sessionId: isHome ? null : activeSessionId,
-		timelineBlocks,
-		timelineBlockOffset,
-		activeRetryRequestId,
-		onLoadBlockOffset: onTimelineSearchLoadOffset,
-		onLoadError: handleConversationSearchLoadError
-	});
-	const focusConversationSearchInput = useCallback((): void => {
-		window.requestAnimationFrame((): void => {
-			conversationSearchInputRef.current?.focus();
-			conversationSearchInputRef.current?.select();
-		});
-	}, []);
-
-	useEffect((): (() => void) | void => {
-		if (!conversationSearch.open) {
-			return;
-		}
-		focusConversationSearchInput();
-	}, [conversationSearch.open, focusConversationSearchInput]);
 
 	const updateSideDock = useCallback((
 		nextSideLayout: DockLayoutPreferences,
@@ -616,21 +616,6 @@ function HomePage({
 		};
 	}, [activeSessionId, sessionLayout]);
 
-	useEffect((): void => {
-		setActiveTimelineEntryId(null);
-		setPendingTimelineEntryId(null);
-	}, [activeSessionId]);
-
-	useEffect((): void => {
-		if (pendingTimelineEntryId === null || !timelineBlocks.some((block: TimelineBlock): boolean => block.id === pendingTimelineEntryId)) {
-			return;
-		}
-		window.requestAnimationFrame((): void => {
-			if (messageListRef.current?.scrollToEntry(pendingTimelineEntryId, "smooth") === true) {
-				setPendingTimelineEntryId(null);
-			}
-		});
-	}, [pendingTimelineEntryId, timelineBlocks]);
 	const filteredGodotSceneFiles: GodotSceneFile[] = useMemo((): GodotSceneFile[] => {
 		const query: string = godotSceneSearch.trim().toLowerCase();
 		if (query.length === 0) {
@@ -640,9 +625,6 @@ function HomePage({
 			return scene.relativePath.toLowerCase().includes(query) || scene.name.toLowerCase().includes(query);
 		});
 	}, [godotSceneFiles, godotSceneSearch]);
-	const workflowFileChangeSummary: WorkflowFileChangeSummary = useMemo((): WorkflowFileChangeSummary => {
-		return aggregateTimelineFileChanges(timelineBlocks);
-	}, [timelineBlocks]);
 	const selectedLaunchTarget: WorkspaceLaunchTarget = useMemo((): WorkspaceLaunchTarget => {
 		return workspaceLaunchTargets.find((target: WorkspaceLaunchTarget): boolean => target.id === selectedLaunchTargetId)
 			?? workspaceLaunchTargets[0]
@@ -1143,17 +1125,9 @@ function HomePage({
 	}, [activeSessionId, isHome, setScrollToBottomButtonVisible]);
 
 	const scrollMessageListToBottom = useCallback((): void => {
-		messageListRef.current?.scrollToBottom("smooth");
+		conversationTimelinePaneRef.current?.scrollToBottom("smooth");
 		setScrollToBottomButtonVisible(false);
 	}, [setScrollToBottomButtonVisible]);
-
-	const handleTimelineNavigate = useCallback((entry: SessionTimelineNavigationEntry): void => {
-		if (messageListRef.current?.scrollToEntry(entry.entryId, "smooth") === true) {
-			return;
-		}
-		setPendingTimelineEntryId(entry.entryId);
-		void onTimelineNavigationLoadEntry(entry);
-	}, [onTimelineNavigationLoadEntry]);
 
 	const requestSideDockKind = useCallback((kind: DockPanelKind): void => {
 		dockActivationRequestIdRef.current += 1;
@@ -1212,21 +1186,6 @@ function HomePage({
 		});
 	}, [onWorkspaceSidebarChange, workspaceSidebar, workspaceSidebarOpen]);
 
-	const navigateConversationTurn = useCallback((direction: "previous" | "next"): void => {
-		if (timelineNavigationEntries.length === 0) {
-			return;
-		}
-		const activeIndex: number = timelineNavigationEntries.findIndex(
-			(entry: SessionTimelineNavigationEntry): boolean => entry.entryId === activeTimelineEntryId
-		);
-		const targetIndex: number = activeIndex < 0
-			? direction === "previous" ? timelineNavigationEntries.length - 1 : 0
-			: direction === "previous" ? activeIndex - 1 : activeIndex + 1;
-		const target: SessionTimelineNavigationEntry | undefined = timelineNavigationEntries[targetIndex];
-		if (target !== undefined) {
-			handleTimelineNavigate(target);
-		}
-	}, [activeTimelineEntryId, handleTimelineNavigate, timelineNavigationEntries]);
 
 	useEffect((): (() => void) => {
 		const platform: ShortcutPlatform = detectShortcutPlatform();
@@ -1234,9 +1193,8 @@ function HomePage({
 			if (event.defaultPrevented) {
 				return;
 			}
-			if (event.key === "Escape" && conversationSearch.open) {
+			if (event.key === "Escape" && conversationTimelinePaneRef.current?.closeSearch() === true) {
 				event.preventDefault();
-				conversationSearch.closeSearch();
 				return;
 			}
 			if (shouldIgnoreGlobalShortcut(event)) {
@@ -1276,15 +1234,14 @@ function HomePage({
 			}
 			if (commandId === "conversation.find") {
 				event.preventDefault();
-				conversationSearch.openSearch(getSelectedConversationSearchQuery(chatBodyRef.current));
-				focusConversationSearchInput();
+				conversationTimelinePaneRef.current?.openSearch(getSelectedConversationSearchQuery(chatBodyRef.current));
 				return;
 			}
 			if (timelineNavigationEntries.length === 0) {
 				return;
 			}
 			event.preventDefault();
-			navigateConversationTurn(commandId === "conversation.previousTurn" ? "previous" : "next");
+			conversationTimelinePaneRef.current?.navigateTurn(commandId === "conversation.previousTurn" ? "previous" : "next");
 		};
 		window.addEventListener("keydown", handleGlobalShortcut);
 		return (): void => {
@@ -1292,11 +1249,8 @@ function HomePage({
 		};
 	}, [
 		activeSessionId,
-		conversationSearch,
-		focusConversationSearchInput,
 		isHome,
 		keyboardShortcuts,
-		navigateConversationTurn,
 		showBottomDockButton,
 		showSideDockButton,
 		timelineNavigationEntries.length,
@@ -1659,54 +1613,29 @@ function HomePage({
 									<div ref={chatBodyRef} className={styles.chatBody}>
 										{isHome ? (
 											<NewSessionHome workspace={homeWorkspace} errorMessage={sessionError} />
-										) : (
-											<>
-												<ConversationSearchPanel
-													open={conversationSearch.open}
-													query={conversationSearch.query}
-													current={conversationSearch.current}
-													total={conversationSearch.total}
-													loading={conversationSearch.loading}
-													inputRef={conversationSearchInputRef}
-													onQueryChange={conversationSearch.setQuery}
-													onPrevious={conversationSearch.goPrevious}
-													onNext={conversationSearch.goNext}
-													onClose={conversationSearch.closeSearch}
-												/>
-												<MessageList
-													ref={messageListRef}
-													blocks={timelineBlocks}
-													blockOffset={timelineBlockOffset}
-													searchOpen={conversationSearch.open}
-													searchQuery={conversationSearch.query}
-													activeSearchMatch={conversationSearch.activeMatch}
-													isLoading={isSessionLoading}
-													errorMessage={sessionError}
-													hasMoreBefore={hasMoreBefore}
-													hasMoreAfter={hasMoreAfter}
-													isLoadingMoreBefore={isLoadingMoreBefore}
-													isLoadingMoreAfter={isLoadingMoreAfter}
-													initialScrollToBottomKey={initialScrollToBottomKey}
-													onLoadMoreBefore={onLoadMoreBefore}
-													onLoadMoreAfter={onLoadMoreAfter}
-													retryDisabled={retryDisabled}
-													activeRetryRequestId={activeRetryRequestId}
-													onRetryEditStart={onRetryEditStart}
-													onRetryEditCancel={onRetryEditCancel}
-													onRetryFromUserMessage={onRetryFromUserMessage}
-													onInlineDiffReview={openReviewPanel}
-													onAwayFromBottomChange={setScrollToBottomButtonVisible}
-													onActiveUserEntryChange={setActiveTimelineEntryId}
-													onScrollContainerReady={setMessageScrollContainer}
-												/>
-												<ConversationAnchorNavigator
-													entries={timelineNavigationEntries}
-													activeEntryId={activeTimelineEntryId}
-													scrollContainer={messageScrollContainer}
-													onNavigate={handleTimelineNavigate}
-												/>
-											</>
-										)}
+										) : activeSessionId !== null ? (
+											<ConversationTimelinePane
+												ref={conversationTimelinePaneRef}
+												sessionId={activeSessionId}
+												timelineStore={timelineStore}
+												timelineNavigationEntries={timelineNavigationEntries}
+												isLoading={isSessionLoading}
+												errorMessage={sessionError}
+												isLoadingMoreBefore={isLoadingMoreBefore}
+												isLoadingMoreAfter={isLoadingMoreAfter}
+												retryDisabled={retryDisabled}
+												activeRetryRequestId={activeRetryRequestId}
+												onLoadMoreBefore={onLoadMoreBefore}
+												onLoadMoreAfter={onLoadMoreAfter}
+												onTimelineNavigationLoadEntry={onTimelineNavigationLoadEntry}
+												onTimelineSearchLoadOffset={onTimelineSearchLoadOffset}
+												onRetryEditStart={onRetryEditStart}
+												onRetryEditCancel={onRetryEditCancel}
+												onRetryFromUserMessage={onRetryFromUserMessage}
+												onInlineDiffReview={openReviewPanel}
+												onAwayFromBottomChange={setScrollToBottomButtonVisible}
+											/>
+										) : null}
 									</div>
 
 									<footer className={styles.composer}>
@@ -1765,10 +1694,10 @@ function HomePage({
 											/>
 										) : (
 											<>
-												{showWorkflowTodoPanel ? (
-													<FloatingWorkflowTodoPanel
+								{showWorkflowTodoPanel && workflowTodoSnapshot !== null ? (
+													<TimelineWorkflowTodoPanel
+														timelineStore={timelineStore}
 														snapshot={workflowTodoSnapshot}
-														fileChangeSummary={workflowFileChangeSummary}
 														onDismiss={onWorkflowTodoDismiss}
 													/>
 												) : null}

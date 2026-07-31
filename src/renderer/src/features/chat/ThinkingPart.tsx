@@ -5,18 +5,16 @@ import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 
 import { useTranslation } from "react-i18next";
 import MarkdownContent from "../markdown/MarkdownContent";
 import styles from "./ThinkingPart.module.css";
+import { useTimelineDisclosure } from "./timeline-disclosure-state";
 
 export type TimelineThinkingPart = Extract<TimelineBodyPart, { type: "thinking" }>;
 
 export type ThinkingPartProps = {
 	part: TimelineThinkingPart;
+	disclosureKey?: string;
 };
 
 const THINKING_SCROLL_BOTTOM_THRESHOLD: number = 24;
-
-function normalizeActiveKeys(nextKeys: string | string[]): string[] {
-	return Array.isArray(nextKeys) ? nextKeys : [nextKeys];
-}
 
 function isNearScrollBottom(element: HTMLElement): boolean {
 	return element.scrollHeight - element.scrollTop - element.clientHeight <= THINKING_SCROLL_BOTTOM_THRESHOLD;
@@ -44,7 +42,7 @@ function containScrollableWheel(event: React.WheelEvent<HTMLDivElement>): void {
 	}
 }
 
-function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
+function ThinkingPart({ part, disclosureKey = "thinking" }: ThinkingPartProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const contentRef = useRef<HTMLDivElement | null>(null);
 	const bodyRef = useRef<HTMLDivElement | null>(null);
@@ -52,7 +50,7 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 	const autoFollowFrameRef = useRef<number | null>(null);
 	const userScrollFrameRef = useRef<number | null>(null);
 	const touchYRef = useRef<number | null>(null);
-	const [activeKeys, setActiveKeys] = useState<string[]>(() => part.done ? [] : ["thinking"]);
+	const [open, setOpen] = useTimelineDisclosure(disclosureKey, !part.done);
 	const [labelIndex, setLabelIndex] = useState<number>(0);
 	const activeThinkingLabels: readonly string[] = [
 		t("chat.thinking.label"),
@@ -100,9 +98,9 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 
 	useEffect((): void => {
 		if (part.done) {
-			setActiveKeys([]);
+			setOpen(false);
 		}
-	}, [part.done]);
+	}, [part.done, setOpen]);
 
 	useEffect((): (() => void) | undefined => {
 		if (part.done) {
@@ -142,10 +140,10 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 	}, [cancelAutoFollowFrame, scheduleAutoFollowScroll]);
 
 	useLayoutEffect((): void => {
-		if (activeKeys.includes("thinking")) {
+		if (open) {
 			scheduleAutoFollowScroll();
 		}
-	}, [activeKeys, part.text, scheduleAutoFollowScroll]);
+	}, [open, part.text, scheduleAutoFollowScroll]);
 
 	if (part.done && part.text.trim().length === 0) {
 		return null;
@@ -156,13 +154,14 @@ function ThinkingPart({ part }: ThinkingPartProps): React.JSX.Element | null {
 			size="small"
 			bordered={false}
 			className={styles.thinkingCollapse}
-			activeKey={activeKeys}
+			destroyOnHidden={true}
+			activeKey={open ? ["thinking"] : []}
 			onChange={(nextKeys: string | string[]): void => {
-				const normalizedKeys: string[] = normalizeActiveKeys(nextKeys);
-				if (normalizedKeys.includes("thinking")) {
+				const nextOpen: boolean = (Array.isArray(nextKeys) ? nextKeys : [nextKeys]).includes("thinking");
+				if (nextOpen) {
 					autoFollowRef.current = true;
 				}
-				setActiveKeys(normalizedKeys);
+				setOpen(nextOpen);
 			}}
 			expandIcon={() => (
 				<Icon name="thinking" className={styles.thinkingIcon} />

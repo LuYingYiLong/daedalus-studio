@@ -1,0 +1,199 @@
+import type { SessionTimelineNavigationEntry, TimelineBlock } from "@/api/types";
+import type { TimelinePageStore } from "@/features/workbench/timeline-page-store";
+import { useTimelinePage } from "@/features/workbench/timeline-page-store";
+import type { RetryUserMessagePayload } from "./UserBubble";
+import ConversationAnchorNavigator from "./ConversationAnchorNavigator";
+import ConversationSearchPanel from "./ConversationSearchPanel";
+import MessageList, { type MessageListHandle } from "./MessageList";
+import { useConversationSearch } from "./useConversationSearch";
+import type { InputRef } from "antd";
+import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+
+export type ConversationTimelinePaneHandle = {
+	closeSearch: () => boolean;
+	navigateTurn: (direction: "previous" | "next") => void;
+	openSearch: (query?: string) => void;
+	scrollToBottom: (behavior?: ScrollBehavior) => void;
+};
+
+export type ConversationTimelinePaneProps = {
+	sessionId: string;
+	timelineStore: TimelinePageStore;
+	timelineNavigationEntries: SessionTimelineNavigationEntry[];
+	isLoading: boolean;
+	errorMessage: string | null;
+	isLoadingMoreBefore: boolean;
+	isLoadingMoreAfter: boolean;
+	retryDisabled: boolean;
+	activeRetryRequestId: string | null;
+	onLoadMoreBefore: () => void;
+	onLoadMoreAfter: () => void;
+	onTimelineNavigationLoadEntry: (entry: SessionTimelineNavigationEntry) => Promise<void>;
+	onTimelineSearchLoadOffset: (blockOffset: number) => Promise<void>;
+	onRetryEditStart: (requestId: string) => void;
+	onRetryEditCancel: (requestId: string) => void;
+	onRetryFromUserMessage: (payload: RetryUserMessagePayload) => Promise<boolean>;
+	onInlineDiffReview: () => void;
+	onAwayFromBottomChange: (awayFromBottom: boolean) => void;
+};
+
+const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, ConversationTimelinePaneProps>(function ConversationTimelinePane({
+	sessionId,
+	timelineStore,
+	timelineNavigationEntries,
+	isLoading,
+	errorMessage,
+	isLoadingMoreBefore,
+	isLoadingMoreAfter,
+	retryDisabled,
+	activeRetryRequestId,
+	onLoadMoreBefore,
+	onLoadMoreAfter,
+	onTimelineNavigationLoadEntry,
+	onTimelineSearchLoadOffset,
+	onRetryEditStart,
+	onRetryEditCancel,
+	onRetryFromUserMessage,
+	onInlineDiffReview,
+	onAwayFromBottomChange
+}: ConversationTimelinePaneProps, ref): React.JSX.Element {
+	const timelinePage = useTimelinePage(timelineStore);
+	const messageListRef = useRef<MessageListHandle | null>(null);
+	const conversationSearchInputRef = useRef<InputRef | null>(null);
+	const [messageScrollContainer, setMessageScrollContainer] = useState<HTMLElement | null>(null);
+	const [activeTimelineEntryId, setActiveTimelineEntryId] = useState<string | null>(null);
+	const [pendingTimelineEntryId, setPendingTimelineEntryId] = useState<string | null>(null);
+	const handleConversationSearchLoadError = useCallback((error: unknown): void => {
+		console.warn("[ConversationTimelinePane] conversation search degraded to loaded messages", error);
+	}, []);
+	const conversationSearch = useConversationSearch({
+		sessionId,
+		timelineBlocks: timelinePage.blocks,
+		timelineBlockOffset: timelinePage.blockOffset,
+		activeRetryRequestId,
+		onLoadBlockOffset: onTimelineSearchLoadOffset,
+		onLoadError: handleConversationSearchLoadError
+	});
+
+	const focusConversationSearchInput = useCallback((): void => {
+		window.requestAnimationFrame((): void => {
+			conversationSearchInputRef.current?.focus();
+			conversationSearchInputRef.current?.select();
+		});
+	}, []);
+
+	useEffect((): void => {
+		if (conversationSearch.open) {
+			focusConversationSearchInput();
+		}
+	}, [conversationSearch.open, focusConversationSearchInput]);
+
+	useEffect((): void => {
+		setActiveTimelineEntryId(null);
+		setPendingTimelineEntryId(null);
+	}, [sessionId]);
+
+	useEffect((): void => {
+		if (pendingTimelineEntryId === null || !timelinePage.blocks.some((block: TimelineBlock): boolean => block.id === pendingTimelineEntryId)) {
+			return;
+		}
+		window.requestAnimationFrame((): void => {
+			if (messageListRef.current?.scrollToEntry(pendingTimelineEntryId, "smooth") === true) {
+				setPendingTimelineEntryId(null);
+			}
+		});
+	}, [pendingTimelineEntryId, timelinePage.blocks]);
+
+	const handleTimelineNavigate = useCallback((entry: SessionTimelineNavigationEntry): void => {
+		if (messageListRef.current?.scrollToEntry(entry.entryId, "smooth") === true) {
+			return;
+		}
+		setPendingTimelineEntryId(entry.entryId);
+		void onTimelineNavigationLoadEntry(entry);
+	}, [onTimelineNavigationLoadEntry]);
+
+	const navigateTurn = useCallback((direction: "previous" | "next"): void => {
+		if (timelineNavigationEntries.length === 0) {
+			return;
+		}
+		const activeIndex: number = timelineNavigationEntries.findIndex(
+			(entry: SessionTimelineNavigationEntry): boolean => entry.entryId === activeTimelineEntryId
+		);
+		const targetIndex: number = activeIndex < 0
+			? direction === "previous" ? timelineNavigationEntries.length - 1 : 0
+			: direction === "previous" ? activeIndex - 1 : activeIndex + 1;
+		const target: SessionTimelineNavigationEntry | undefined = timelineNavigationEntries[targetIndex];
+		if (target !== undefined) {
+			handleTimelineNavigate(target);
+		}
+	}, [activeTimelineEntryId, handleTimelineNavigate, timelineNavigationEntries]);
+
+	useImperativeHandle(ref, (): ConversationTimelinePaneHandle => ({
+		closeSearch: (): boolean => {
+			if (!conversationSearch.open) {
+				return false;
+			}
+			conversationSearch.closeSearch();
+			return true;
+		},
+		navigateTurn,
+		openSearch: (query?: string): void => {
+			conversationSearch.openSearch(query);
+			focusConversationSearchInput();
+		},
+		scrollToBottom: (behavior: ScrollBehavior = "smooth"): void => {
+			messageListRef.current?.scrollToBottom(behavior);
+		}
+	}), [conversationSearch, focusConversationSearchInput, navigateTurn]);
+
+	return (
+		<>
+			<ConversationSearchPanel
+				open={conversationSearch.open}
+				query={conversationSearch.query}
+				current={conversationSearch.current}
+				total={conversationSearch.total}
+				loading={conversationSearch.loading}
+				inputRef={conversationSearchInputRef}
+				onQueryChange={conversationSearch.setQuery}
+				onPrevious={conversationSearch.goPrevious}
+				onNext={conversationSearch.goNext}
+				onClose={conversationSearch.closeSearch}
+			/>
+			<MessageList
+				key={sessionId}
+				ref={messageListRef}
+				blocks={timelinePage.blocks}
+				blockOffset={timelinePage.blockOffset}
+				searchOpen={conversationSearch.open}
+				searchQuery={conversationSearch.query}
+				activeSearchMatch={conversationSearch.activeMatch}
+				isLoading={isLoading}
+				errorMessage={errorMessage}
+				hasMoreBefore={timelinePage.hasMoreBefore}
+				hasMoreAfter={timelinePage.hasMoreAfter}
+				isLoadingMoreBefore={isLoadingMoreBefore}
+				isLoadingMoreAfter={isLoadingMoreAfter}
+				onLoadMoreBefore={onLoadMoreBefore}
+				onLoadMoreAfter={onLoadMoreAfter}
+				retryDisabled={retryDisabled}
+				activeRetryRequestId={activeRetryRequestId}
+				onRetryEditStart={onRetryEditStart}
+				onRetryEditCancel={onRetryEditCancel}
+				onRetryFromUserMessage={onRetryFromUserMessage}
+				onInlineDiffReview={onInlineDiffReview}
+				onAwayFromBottomChange={onAwayFromBottomChange}
+				onActiveUserEntryChange={setActiveTimelineEntryId}
+				onScrollContainerReady={setMessageScrollContainer}
+			/>
+			<ConversationAnchorNavigator
+				entries={timelineNavigationEntries}
+				activeEntryId={activeTimelineEntryId}
+				scrollContainer={messageScrollContainer}
+				onNavigate={handleTimelineNavigate}
+			/>
+		</>
+	);
+});
+
+export default memo(ConversationTimelinePane);

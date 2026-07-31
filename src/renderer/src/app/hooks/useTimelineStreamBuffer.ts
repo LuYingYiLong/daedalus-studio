@@ -1,10 +1,10 @@
-import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef } from "react";
 import { useMemoizedFn } from "ahooks";
-import type { TimelineBlock } from "@/api/types";
 import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
-import { applyBackendEventsToTimeline, type TimelinePageState } from "@/features/workbench/workbench-state";
+import type { TimelinePageStore } from "@/features/workbench/timeline-page-store";
 
-const TIMELINE_STREAM_BATCH_MS = 50;
+const TIMELINE_STREAM_BATCH_MS = 40;
+const BACKGROUND_TIMELINE_STREAM_BATCH_MS = 120;
 
 type RefValue<T> = {
 	current: T;
@@ -18,21 +18,24 @@ export type TimelineStreamBufferController = {
 
 export type TimelineStreamBufferParams = {
 	activeSessionIdRef: RefValue<string | null>;
-	setTimelinePage: Dispatch<SetStateAction<TimelinePageState>>;
+	timelineStore: TimelinePageStore;
 };
 
-function useTimelineStreamBuffer({ activeSessionIdRef, setTimelinePage }: TimelineStreamBufferParams): TimelineStreamBufferController {
+function useTimelineStreamBuffer({ activeSessionIdRef, timelineStore }: TimelineStreamBufferParams): TimelineStreamBufferController {
 	const pendingTimelineEventsRef = useRef<BackendEvent[]>([]);
 	const pendingTimelineSessionIdRef = useRef<string | null>(null);
 	const timelineStreamBatchTimerRef = useRef<number | null>(null);
+	const timelineStreamFrameRef = useRef<number | null>(null);
 
 	const clearTimelineStreamBatchTimer = useMemoizedFn((): void => {
-		if (timelineStreamBatchTimerRef.current === null) {
-			return;
+		if (timelineStreamBatchTimerRef.current !== null) {
+			window.clearTimeout(timelineStreamBatchTimerRef.current);
+			timelineStreamBatchTimerRef.current = null;
 		}
-
-		window.clearTimeout(timelineStreamBatchTimerRef.current);
-		timelineStreamBatchTimerRef.current = null;
+		if (timelineStreamFrameRef.current !== null) {
+			window.cancelAnimationFrame(timelineStreamFrameRef.current);
+			timelineStreamFrameRef.current = null;
+		}
 	});
 
 	const discardPendingTimelineEvents = useMemoizedFn((): void => {
@@ -53,13 +56,7 @@ function useTimelineStreamBuffer({ activeSessionIdRef, setTimelinePage }: Timeli
 			return;
 		}
 
-		setTimelinePage((currentPage: TimelinePageState): TimelinePageState => {
-			const blocks: TimelineBlock[] = applyBackendEventsToTimeline(currentPage.blocks, events);
-			return {
-				...currentPage,
-				blocks
-			};
-		});
+		timelineStore.applyEvents(events);
 	});
 
 	const enqueueTimelineStreamingEvent = useMemoizedFn((event: BackendEvent, sessionId: string | null): void => {
@@ -72,14 +69,17 @@ function useTimelineStreamBuffer({ activeSessionIdRef, setTimelinePage }: Timeli
 
 		pendingTimelineSessionIdRef.current = sessionId;
 		pendingTimelineEventsRef.current.push(event);
-		if (timelineStreamBatchTimerRef.current !== null) {
+		if (timelineStreamBatchTimerRef.current !== null || timelineStreamFrameRef.current !== null) {
 			return;
 		}
 
-		timelineStreamBatchTimerRef.current = window.setTimeout(
-			flushPendingTimelineEvents,
-			TIMELINE_STREAM_BATCH_MS
-		);
+		timelineStreamBatchTimerRef.current = window.setTimeout((): void => {
+			timelineStreamBatchTimerRef.current = null;
+			timelineStreamFrameRef.current = window.requestAnimationFrame((): void => {
+				timelineStreamFrameRef.current = null;
+				flushPendingTimelineEvents();
+			});
+		}, document.visibilityState === "hidden" ? BACKGROUND_TIMELINE_STREAM_BATCH_MS : TIMELINE_STREAM_BATCH_MS);
 	});
 
 	useEffect((): (() => void) => {
