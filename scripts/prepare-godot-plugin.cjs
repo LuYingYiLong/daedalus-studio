@@ -333,9 +333,11 @@ async function main() {
 		|| pluginMetadata.studioVersion !== packageManifest.version
 		|| !Number.isInteger(pluginMetadata.pluginProtocolVersion)
 		|| pluginMetadata.pluginProtocolVersion < 1
+		|| typeof pluginMetadata.minGodotVersion !== "string"
+		|| !/^\d+\.\d+\.\d+$/u.test(pluginMetadata.minGodotVersion)
 	) {
 		throw new Error(
-			"Plugin metadata does not match the Studio package manifest or contains an invalid protocol version."
+			"Plugin metadata does not match the Studio package manifest or contains an invalid protocol/minimum Godot version."
 		);
 	}
 	const pluginProtocolVersion = pluginMetadata.pluginProtocolVersion;
@@ -364,7 +366,7 @@ async function main() {
 		pluginVersion,
 		pluginProtocolVersion,
 		studioVersion: packageManifest.version,
-		minGodotVersion: "4.7.0",
+		minGodotVersion: pluginMetadata.minGodotVersion,
 		sourceCommit: readSourceCommit(),
 		sourceTag: `v${pluginVersion}`,
 		publishedAt: new Date().toISOString(),

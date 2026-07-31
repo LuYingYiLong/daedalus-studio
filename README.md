@@ -16,7 +16,7 @@
     <img alt="Release build" src="https://github.com/LuYingYiLong/daedalus-studio/actions/workflows/build-release.yml/badge.svg" />
   </a>
   <img alt="Windows x64" src="https://img.shields.io/badge/platform-Windows%20x64-0078D4" />
-  <img alt="Godot 4.7 or newer" src="https://img.shields.io/badge/Godot-4.7%2B-478CBF" />
+  <img alt="Godot 4.5 or newer" src="https://img.shields.io/badge/Godot-4.5%2B-478CBF" />
   <a href="./LICENSE">
     <img alt="GPL-3.0-only license" src="https://img.shields.io/badge/license-GPL--3.0--only-blue" />
   </a>
@@ -81,7 +81,7 @@ Studio is the desktop client and lifecycle owner. The backend is the execution a
 - Use typed Editor Bridge patches with preflight checks, fingerprints, and Godot Undo/Redo transactions.
 - Work with animation, TileMap/GridMap, audio buses, resources, editor navigation, and safe previews when the connected plugin advertises those capabilities.
 - Run Godot headless checks and consume LSP, diagnostics, and read-only DAP information.
-- Install or repair the bundled plugin only for projects targeting Godot 4.7 or newer.
+- Install or repair the bundled plugin only for projects targeting Godot 4.5 or newer.
 
 ### Review and workspace tools
 
@@ -105,7 +105,7 @@ Custom MCP servers and custom providers are treated as user-controlled integrati
 
 - Windows 10 or Windows 11, x64.
 - A supported model-provider account and API key.
-- Godot 4.7 or newer for editor-plugin installation and the full Godot toolset.
+- Godot 4.5 or newer for editor-plugin installation and the full Godot toolset.
 
 ### Install
 

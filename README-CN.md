@@ -16,7 +16,7 @@
     <img alt="发布构建" src="https://github.com/LuYingYiLong/daedalus-studio/actions/workflows/build-release.yml/badge.svg" />
   </a>
   <img alt="Windows x64" src="https://img.shields.io/badge/platform-Windows%20x64-0078D4" />
-  <img alt="Godot 4.7 或更高版本" src="https://img.shields.io/badge/Godot-4.7%2B-478CBF" />
+  <img alt="Godot 4.5 或更高版本" src="https://img.shields.io/badge/Godot-4.5%2B-478CBF" />
   <a href="./LICENSE">
     <img alt="GPL-3.0-only 许可证" src="https://img.shields.io/badge/license-GPL--3.0--only-blue" />
   </a>
@@ -81,7 +81,7 @@ Studio 是桌面客户端与生命周期管理者；Backend 负责执行与持�
 - 使用带预检、fingerprint 和 Godot Undo/Redo 事务的类型化 Editor Bridge Patch。
 - 在插件声明对应能力时处理动画、TileMap/GridMap、音频总线、资源、编辑器导航与安全预览。
 - 执行 Godot headless 检查，读取 LSP、诊断和只读 DAP 信息。
-- 仅为 Godot 4.7 或更高版本的项目安装或修复内置插件。
+- 仅为 Godot 4.5 或更高版本的项目安装或修复内置插件。
 
 ### 审查与工作区工具
 
@@ -105,7 +105,7 @@ Studio 支持远端模型发现和本地能力覆盖。独立联网搜索适配�
 
 - Windows 10 或 Windows 11，x64。
 - 可用的模型供应商账号与 API Key。
-- 如需完整 Godot 工具和编辑器插件，需要 Godot 4.7 或更高版本。
+- 如需完整 Godot 工具和编辑器插件，需要 Godot 4.5 或更高版本。
 
 ### 安装
 

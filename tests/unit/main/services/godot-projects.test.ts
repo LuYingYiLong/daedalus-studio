@@ -110,11 +110,11 @@ describe("Godot project plugin management", () => {
 		expect(isGodotProcessName("godotized.exe")).toBe(false);
 	});
 
-	it("blocks plugin installation below Godot 4.7 and when the project version is unknown", () => {
-		expect(getGodotVersionCompatibilityError("4.7", "4.7.0")).toBeNull();
-		expect(getGodotVersionCompatibilityError("4.7.1", "4.7.0")).toBeNull();
-		expect(getGodotVersionCompatibilityError("4.6.1", "4.7.0")).toContain("targets Godot 4.6.1");
-		expect(getGodotVersionCompatibilityError(null, "4.7.0")).toContain("Cannot determine");
+	it("blocks plugin installation below Godot 4.5 and when the project version is unknown", () => {
+		expect(getGodotVersionCompatibilityError("4.5", "4.5.0")).toBeNull();
+		expect(getGodotVersionCompatibilityError("4.7.1", "4.5.0")).toBeNull();
+		expect(getGodotVersionCompatibilityError("4.4.4", "4.5.0")).toContain("targets Godot 4.4.4");
+		expect(getGodotVersionCompatibilityError(null, "4.5.0")).toContain("Cannot determine");
 	});
 
 	it("recognizes the local Godot-Daedalus source project in development", () => {
