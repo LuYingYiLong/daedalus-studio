@@ -53,6 +53,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install and verify Electron
+        run: npm run verify:electron
+
       - name: Resolve fixed bundled versions
         shell: pwsh
         run: |

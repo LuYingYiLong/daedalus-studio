@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && node scripts/electron-vite.cjs build",
     "pack": "npm run pack:win",
+    "verify:electron": "node scripts/verify-electron.cjs",
     "prepare:backend-bootstrap": "node scripts/prepare-backend-bootstrap.cjs",
     "prepare:godot-plugin": "node scripts/prepare-godot-plugin.cjs",
     "pack:win": "npm run build && npm run prepare:backend-bootstrap && npm run prepare:godot-plugin && node scripts/electron-builder-win.cjs --dir",
