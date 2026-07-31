@@ -53,6 +53,7 @@ import { getSessionTitle } from "./session-title";
 import HomePage from "@/pages/home/HomePage";
 import WorkspaceProjectDialog from "@/features/workspace/WorkspaceProjectDialog";
 import { extractEnabledSkillRefs, type ComposerCompletionTrigger } from "@/features/composer/composer-completion";
+import { createComposerReasoningEffortUpdate } from "@/features/composer/composer-reasoning-effort";
 import { createWorkflowTodoSnapshotFromPlanData, getWorkflowTodoSnapshotKey, isWorkflowTodoActive, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
 import { saveImageAttachment, saveTextAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
 import {
@@ -2079,8 +2080,20 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					}
 				};
 		});
-		queueWorkbenchPatch({ composer: { reasoningEffort: nextEffort } }, true);
-		await persistSessionUiMetadata({ reasoningEffort: nextEffort });
+		const currentModel = getDisplayedComposerModel({
+			isNewSessionHome,
+			homeDraft,
+			workbench,
+			activeSessionMetadata,
+			providerModelSelection
+		});
+		const update = createComposerReasoningEffortUpdate(
+			currentModel.providerId,
+			currentModel.modelId,
+			nextEffort
+		);
+		queueWorkbenchPatch(update.workbenchPatch, true);
+		await persistSessionUiMetadata(update.sessionMetadata);
 	}
 
 	async function handleApprovalApprove(approvalId: string, consentText?: string): Promise<void> {
@@ -3462,6 +3475,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						isHome={isNewSessionHome}
 						activeSessionId={activeSessionId}
 						workspaceSidebar={clientPreferences.workspaceSidebar}
+						keyboardShortcuts={clientPreferences.keyboardShortcuts}
 						onWorkspaceSidebarChange={handleWorkspaceSidebarChange}
 						sessionLayout={activeSessionLayout}
 						onSessionLayoutChange={handleSessionLayoutChange}

@@ -55,6 +55,7 @@ const SETTINGS_PAGE_KEYS: readonly string[] = [
 	"provider",
 	"default_model",
 	"general",
+	"keyboard_shortcuts",
 	"search",
 	"statistics",
 	"personalization",

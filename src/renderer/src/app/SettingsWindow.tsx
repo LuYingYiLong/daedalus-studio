@@ -16,6 +16,7 @@ import StatisticsSettingsPage from "@/pages/settings/StatisticsSettingsPage";
 import AboutSettingsPage from "@/pages/settings/AboutSettingsPage";
 import GodotProjectsSettingsPage from "@/pages/settings/GodotProjectsSettingsPage";
 import DocumentationSettingsPage from "@/pages/settings/DocumentationSettingsPage";
+import KeyboardShortcutsSettingsPage from "@/pages/settings/KeyboardShortcutsSettingsPage";
 import styles from "./SettingsWindow.module.css";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -23,6 +24,7 @@ type SettingsPageKey =
 	| "provider"
 	| "default_model"
 	| "general"
+	| "keyboard_shortcuts"
 	| "search"
 	| "statistics"
 	| "personalization"
@@ -43,6 +45,7 @@ const menuItemConfigs: SettingsMenuItemConfig[] = [
 	{ key: "provider", labelKey: "settings.menu.provider", icon: <Icon name="cloud" /> },
 	{ key: "default_model", labelKey: "settings.menu.defaultModel", icon: <Icon name="instance" /> },
 	{ key: "general", labelKey: "settings.menu.general", icon: <Icon name="equalizer" /> },
+	{ key: "keyboard_shortcuts", labelKey: "settings.menu.keyboardShortcuts", icon: <Icon name="keyboard" /> },
 	{ key: "search", labelKey: "settings.menu.search", icon: <Icon name="search" /> },
 	{ key: "statistics", labelKey: "settings.menu.statistics", icon: <Icon name="statistics" /> },
 	{ key: "personalization", labelKey: "settings.menu.personalization", icon: <Icon name="magic" /> },
@@ -124,6 +127,11 @@ function SettingsWindow(): React.JSX.Element {
 						generalSettings={generalSettings}
 						onClientPreferencesChange={setClientPreferences}
 						onGeneralSettingsChange={setGeneralSettings}
+					/>
+				) : activePage === "keyboard_shortcuts" ? (
+					<KeyboardShortcutsSettingsPage
+						clientPreferences={clientPreferences}
+						onClientPreferencesChange={setClientPreferences}
 					/>
 				) : activePage === "search" ? (
 					<SearchSettingsPage />

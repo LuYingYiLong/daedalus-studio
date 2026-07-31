@@ -562,6 +562,7 @@
       "provider": "供应商",
       "defaultModel": "默认模型",
       "general": "通用",
+      "keyboardShortcuts": "键盘快捷键",
       "search": "搜索",
       "statistics": "统计",
       "personalization": "个性化",
@@ -586,6 +587,43 @@
       "save": "保存",
       "close": "关闭",
       "update": "更新"
+    },
+    "keyboardShortcuts": {
+      "title": "键盘快捷键",
+      "search": {
+        "action": "搜索动作名称",
+        "mapping": "按下快捷键以查找动作"
+      },
+      "columns": {
+        "name": "名称",
+        "shortcut": "快捷键",
+        "actions": "操作"
+      },
+      "actions": {
+        "edit": "编辑",
+        "reset": "恢复默认"
+      },
+      "commands": {
+        "toggleWorkspaceSidebar": "切换 Workspace 侧边栏",
+        "toggleBottomPanel": "切换底部面板",
+        "toggleSessionSidebar": "切换会话侧边栏",
+        "previousTurn": "上一个对话轮次",
+        "nextTurn": "下一个对话轮次",
+        "findInConversation": "在会话中查找"
+      },
+      "empty": "没有匹配的快捷键动作。",
+      "editor": {
+        "title": "编辑“{{action}}”快捷键",
+        "description": "按下新的单段快捷键。普通字符需要搭配修饰键。",
+        "placeholder": "按下快捷键",
+        "required": "请录入一个快捷键。",
+        "invalid": "该按键不能单独用作快捷键。",
+        "conflict": "该快捷键已被“{{action}}”使用。"
+      },
+      "errors": {
+        "load": "无法加载键盘快捷键。",
+        "save": "无法保存键盘快捷键。"
+      }
     },
     "documentation": {
       "title": "文档",

@@ -64,6 +64,7 @@ describe("client preferences store", () => {
 					open: true,
 					size: 260
 				},
+				keyboardShortcuts: {},
 				lastComposerModel: {
 					providerId: "minimax",
 					modelId: "MiniMax-M3"
@@ -92,6 +93,7 @@ describe("client preferences store", () => {
 				open: true,
 				size: 260
 			},
+			keyboardShortcuts: {},
 			lastComposerModel: null
 		});
 		expect(memory.writes.at(-1)).toBe(`${JSON.stringify(nextPreferences, null, 2)}\n`);
@@ -158,5 +160,20 @@ describe("client preferences store", () => {
 			size: 720
 		});
 		expect(memory.writes.at(-1)).toBe(`${JSON.stringify(nextPreferences, null, 2)}\n`);
+	});
+
+	it("normalizes global keyboard shortcut overrides", async () => {
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
+			keyboardShortcuts: {
+				"workbench.toggleWorkspaceSidebar": "Alt+Mod+KeyQ",
+				"conversation.previousTurn": "KeyP",
+				unknown: "Mod+KeyU"
+			}
+		} as never, memory.io);
+
+		expect(nextPreferences.keyboardShortcuts).toEqual({
+			"workbench.toggleWorkspaceSidebar": "Mod+Alt+KeyQ"
+		});
 	});
 });

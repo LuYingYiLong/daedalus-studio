@@ -562,6 +562,7 @@
       "provider": "Provider",
       "defaultModel": "Default model",
       "general": "General",
+      "keyboardShortcuts": "Keyboard shortcuts",
       "search": "Search",
       "statistics": "Statistics",
       "personalization": "Personalization",
@@ -586,6 +587,43 @@
       "save": "Save",
       "close": "Close",
       "update": "Update"
+    },
+    "keyboardShortcuts": {
+      "title": "Keyboard Shortcuts",
+      "search": {
+        "action": "Search action names",
+        "mapping": "Press a shortcut to find actions"
+      },
+      "columns": {
+        "name": "Name",
+        "shortcut": "Shortcut",
+        "actions": "Actions"
+      },
+      "actions": {
+        "edit": "Edit",
+        "reset": "Reset"
+      },
+      "commands": {
+        "toggleWorkspaceSidebar": "Toggle Workspace sidebar",
+        "toggleBottomPanel": "Toggle bottom panel",
+        "toggleSessionSidebar": "Toggle session sidebar",
+        "previousTurn": "Previous conversation turn",
+        "nextTurn": "Next conversation turn",
+        "findInConversation": "Find in conversation"
+      },
+      "empty": "No shortcut actions match your search.",
+      "editor": {
+        "title": "Edit “{{action}}” shortcut",
+        "description": "Press a new single shortcut. Printable keys require a modifier.",
+        "placeholder": "Press a shortcut",
+        "required": "Enter a shortcut.",
+        "invalid": "This key cannot be used as a shortcut by itself.",
+        "conflict": "This shortcut is already used by “{{action}}”."
+      },
+      "errors": {
+        "load": "Failed to load keyboard shortcuts.",
+        "save": "Failed to save keyboard shortcuts."
+      }
     },
     "documentation": {
       "title": "Documentation",

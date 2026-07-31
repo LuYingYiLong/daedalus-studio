@@ -1,9 +1,12 @@
+import type { KeyboardShortcutOverrides } from "./keyboard-shortcuts";
+
 export type ClientPreferences = {
 	autoCheckForUpdates: boolean;
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
 	language: LanguagePreference;
 	workspaceSidebar: WorkspaceSidebarPreferences;
+	keyboardShortcuts: KeyboardShortcutOverrides;
 	lastComposerModel: {
 		providerId: string;
 		modelId: string;
@@ -28,6 +31,7 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 		open: true,
 		size: 260
 	},
+	keyboardShortcuts: {},
 	lastComposerModel: null
 };
 

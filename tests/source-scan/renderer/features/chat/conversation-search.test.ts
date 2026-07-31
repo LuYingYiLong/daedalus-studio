@@ -12,9 +12,10 @@ describe("conversation search source", () => {
 	const thinkingPart: string = readRepoFile("src", "renderer", "src", "features", "chat", "ThinkingPart.tsx");
 	const toolPart: string = readRepoFile("src", "renderer", "src", "features", "chat", "ToolPart.tsx");
 
-	it("binds conversation-local Ctrl/Cmd+F, Escape, and cyclic navigation controls", () => {
-		expect(homePage).toContain('event.key.toLowerCase() === "f"');
-		expect(homePage).toContain("event.ctrlKey || event.metaKey");
+	it("binds conversation find through the shared shortcut dispatcher and keeps local controls", () => {
+		expect(homePage).toContain("findMatchingShortcutCommand");
+		expect(homePage).toContain('"conversation.find"');
+		expect(homePage).toContain("keyboardShortcuts");
 		expect(homePage).toContain('event.key === "Escape"');
 		expect(homePage).toContain("getSelectedConversationSearchQuery(chatBodyRef.current)");
 		expect(homePage).toContain('[data-chat-search-text="true"]');

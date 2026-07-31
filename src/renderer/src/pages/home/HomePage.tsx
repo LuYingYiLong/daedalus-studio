@@ -10,6 +10,13 @@ import type { ProviderModelSelection } from "@/api/provider-api";
 import type { DeleteWorkspaceResult, WorkspaceTreeOrderPreferences } from "@/api/workspace-api";
 import type { SkillSummary } from "@/api/skill-api";
 import type { WorkspaceSidebarPreferences } from "@/api/client-preferences-api";
+import {
+	detectShortcutPlatform,
+	findMatchingShortcutCommand,
+	type KeyboardShortcutOverrides,
+	type ShortcutCommandId,
+	type ShortcutPlatform
+} from "@/api/keyboard-shortcuts";
 import { fetchSessionOverview, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import MessageList, { type MessageListHandle } from "@/features/chat/MessageList";
@@ -122,6 +129,28 @@ function getSelectedConversationSearchQuery(container: HTMLElement | null): stri
 		: undefined;
 }
 
+function shouldIgnoreGlobalShortcut(event: KeyboardEvent): boolean {
+	if (event.isComposing) {
+		return true;
+	}
+	const target: EventTarget | null = event.target;
+	if (!(target instanceof Element)) {
+		return false;
+	}
+	return target.closest([
+		"input",
+		"textarea",
+		"select",
+		"[contenteditable='true']",
+		"[contenteditable='']",
+		"[role='textbox']",
+		"[role='combobox']",
+		"[role='dialog']",
+		"[role='menu']",
+		"[role='listbox']"
+	].join(",")) !== null;
+}
+
 function isWorkspaceLaunchTargetId(value: string): value is WorkspaceLaunchTargetId {
 	return value === "file-explorer"
 		|| value === "terminal"
@@ -228,6 +257,7 @@ type HomePageProps = {
 	isHome: boolean;
 	activeSessionId: string | null;
 	workspaceSidebar: WorkspaceSidebarPreferences;
+	keyboardShortcuts: KeyboardShortcutOverrides;
 	onWorkspaceSidebarChange: (
 		workspaceSidebar: WorkspaceSidebarPreferences,
 		options?: { persist?: boolean }
@@ -356,6 +386,7 @@ function HomePage({
 	isHome,
 	activeSessionId,
 	workspaceSidebar,
+	keyboardShortcuts,
 	onWorkspaceSidebarChange,
 	sessionLayout,
 	onSessionLayoutChange,
@@ -542,35 +573,6 @@ function HomePage({
 			conversationSearchInputRef.current?.select();
 		});
 	}, []);
-
-	useEffect((): (() => void) => {
-		const handleSearchShortcut = (event: KeyboardEvent): void => {
-			if (event.defaultPrevented) {
-				return;
-			}
-			const isFindShortcut: boolean = event.key.toLowerCase() === "f"
-				&& (event.ctrlKey || event.metaKey)
-				&& !event.altKey
-				&& !event.shiftKey;
-			if (isFindShortcut) {
-				if (isHome || activeSessionId === null) {
-					return;
-				}
-				event.preventDefault();
-				conversationSearch.openSearch(getSelectedConversationSearchQuery(chatBodyRef.current));
-				focusConversationSearchInput();
-				return;
-			}
-			if (event.key === "Escape" && conversationSearch.open) {
-				event.preventDefault();
-				conversationSearch.closeSearch();
-			}
-		};
-		window.addEventListener("keydown", handleSearchShortcut);
-		return (): void => {
-			window.removeEventListener("keydown", handleSearchShortcut);
-		};
-	}, [activeSessionId, conversationSearch, focusConversationSearchInput, isHome]);
 
 	useEffect((): (() => void) | void => {
 		if (!conversationSearch.open) {
@@ -1201,6 +1203,106 @@ function HomePage({
 		}
 		openBottomDock();
 	}, [bottomDockOpen, closeBottomDock, openBottomDock]);
+
+	const toggleWorkspaceSidebar = useCallback((): void => {
+		onWorkspaceSidebarChange({
+			...workspaceSidebar,
+			open: !workspaceSidebarOpen
+		});
+	}, [onWorkspaceSidebarChange, workspaceSidebar, workspaceSidebarOpen]);
+
+	const navigateConversationTurn = useCallback((direction: "previous" | "next"): void => {
+		if (timelineNavigationEntries.length === 0) {
+			return;
+		}
+		const activeIndex: number = timelineNavigationEntries.findIndex(
+			(entry: SessionTimelineNavigationEntry): boolean => entry.entryId === activeTimelineEntryId
+		);
+		const targetIndex: number = activeIndex < 0
+			? direction === "previous" ? timelineNavigationEntries.length - 1 : 0
+			: direction === "previous" ? activeIndex - 1 : activeIndex + 1;
+		const target: SessionTimelineNavigationEntry | undefined = timelineNavigationEntries[targetIndex];
+		if (target !== undefined) {
+			handleTimelineNavigate(target);
+		}
+	}, [activeTimelineEntryId, handleTimelineNavigate, timelineNavigationEntries]);
+
+	useEffect((): (() => void) => {
+		const platform: ShortcutPlatform = detectShortcutPlatform();
+		const handleGlobalShortcut = (event: KeyboardEvent): void => {
+			if (event.defaultPrevented) {
+				return;
+			}
+			if (event.key === "Escape" && conversationSearch.open) {
+				event.preventDefault();
+				conversationSearch.closeSearch();
+				return;
+			}
+			if (shouldIgnoreGlobalShortcut(event)) {
+				return;
+			}
+			const commandId: ShortcutCommandId | null = findMatchingShortcutCommand(
+				event,
+				keyboardShortcuts,
+				platform
+			);
+			if (commandId === null || event.repeat) {
+				return;
+			}
+			if (commandId === "workbench.toggleWorkspaceSidebar") {
+				event.preventDefault();
+				toggleWorkspaceSidebar();
+				return;
+			}
+			if (commandId === "workbench.toggleBottomPanel") {
+				if (!showBottomDockButton) {
+					return;
+				}
+				event.preventDefault();
+				toggleBottomDock();
+				return;
+			}
+			if (commandId === "workbench.toggleSessionSidebar") {
+				if (activeSessionId === null || !showSideDockButton) {
+					return;
+				}
+				event.preventDefault();
+				toggleSideDock();
+				return;
+			}
+			if (activeSessionId === null || isHome) {
+				return;
+			}
+			if (commandId === "conversation.find") {
+				event.preventDefault();
+				conversationSearch.openSearch(getSelectedConversationSearchQuery(chatBodyRef.current));
+				focusConversationSearchInput();
+				return;
+			}
+			if (timelineNavigationEntries.length === 0) {
+				return;
+			}
+			event.preventDefault();
+			navigateConversationTurn(commandId === "conversation.previousTurn" ? "previous" : "next");
+		};
+		window.addEventListener("keydown", handleGlobalShortcut);
+		return (): void => {
+			window.removeEventListener("keydown", handleGlobalShortcut);
+		};
+	}, [
+		activeSessionId,
+		conversationSearch,
+		focusConversationSearchInput,
+		isHome,
+		keyboardShortcuts,
+		navigateConversationTurn,
+		showBottomDockButton,
+		showSideDockButton,
+		timelineNavigationEntries.length,
+		toggleBottomDock,
+		toggleSideDock,
+		toggleWorkspaceSidebar
+	]);
 
 	function handleWorkspaceSidebarResize(sizes: number[]): void {
 		const nextSize: number | undefined = sizes[0];

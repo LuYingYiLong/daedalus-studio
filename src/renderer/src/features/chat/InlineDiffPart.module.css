@@ -56,9 +56,9 @@
 }
 
 .additions {
-	color: var(--ds-success);
+	color: var(--ds-git-addition);
 }
 
 .deletions {
-	color: var(--ds-danger);
+	color: var(--ds-git-deletion);
 }

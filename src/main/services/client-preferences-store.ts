@@ -1,5 +1,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import {
+	normalizeKeyboardShortcutOverrides,
+	type KeyboardShortcutOverrides,
+	type ShortcutPlatform
+} from "../../keyboard-shortcuts";
 
 export type ClientPreferences = {
 	autoCheckForUpdates: boolean;
@@ -10,6 +15,7 @@ export type ClientPreferences = {
 		open: boolean;
 		size: number;
 	};
+	keyboardShortcuts: KeyboardShortcutOverrides;
 	lastComposerModel: {
 		providerId: string;
 		modelId: string;
@@ -27,8 +33,11 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 		open: true,
 		size: 260
 	},
+	keyboardShortcuts: {},
 	lastComposerModel: null
 };
+
+const SHORTCUT_PLATFORM: ShortcutPlatform = process.platform === "darwin" ? "mac" : "other";
 
 type ClientPreferencesStoreIo = {
 	readText(path: string): Promise<string>;
@@ -89,6 +98,10 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			? value.language
 			: DEFAULT_CLIENT_PREFERENCES.language;
 	const workspaceSidebar: ClientPreferences["workspaceSidebar"] = normalizeWorkspaceSidebar(value.workspaceSidebar);
+	const keyboardShortcuts: KeyboardShortcutOverrides = normalizeKeyboardShortcutOverrides(
+		value.keyboardShortcuts,
+		SHORTCUT_PLATFORM
+	);
 	const lastComposerModel = isRecord(value.lastComposerModel)
 		&& typeof value.lastComposerModel.providerId === "string"
 		&& value.lastComposerModel.providerId.trim().length > 0
@@ -107,6 +120,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			theme: themePreference,
 			language: languagePreference,
 			workspaceSidebar,
+			keyboardShortcuts,
 			lastComposerModel
 		},
 		normalized: value.autoCheckForUpdates !== autoCheckForUpdates
@@ -114,8 +128,17 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			|| value.theme !== themePreference
 			|| value.language !== languagePreference
 			|| JSON.stringify(value.workspaceSidebar ?? null) !== JSON.stringify(workspaceSidebar)
+			|| JSON.stringify(value.keyboardShortcuts ?? null) !== JSON.stringify(keyboardShortcuts)
 			|| JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel)
-			|| Object.keys(value).some((key: string): boolean => key !== "autoCheckForUpdates" && key !== "minimizeToTrayOnClose" && key !== "theme" && key !== "language" && key !== "workspaceSidebar" && key !== "lastComposerModel")
+			|| Object.keys(value).some((key: string): boolean => ![
+				"autoCheckForUpdates",
+				"minimizeToTrayOnClose",
+				"theme",
+				"language",
+				"workspaceSidebar",
+				"keyboardShortcuts",
+				"lastComposerModel"
+			].includes(key))
 	};
 }
 
@@ -144,6 +167,9 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 		&& Number.isFinite(value.workspaceSidebar.size)
 	) {
 		patch.workspaceSidebar = normalizeWorkspaceSidebar(value.workspaceSidebar);
+	}
+	if (isRecord(value.keyboardShortcuts)) {
+		patch.keyboardShortcuts = normalizeKeyboardShortcutOverrides(value.keyboardShortcuts, SHORTCUT_PLATFORM);
 	}
 	if (value.lastComposerModel === null) {
 		patch.lastComposerModel = null;

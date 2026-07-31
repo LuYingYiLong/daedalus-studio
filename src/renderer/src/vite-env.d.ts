@@ -72,6 +72,15 @@ declare global {
 			open: boolean;
 			size: number;
 		};
+		keyboardShortcuts: Partial<Record<
+			| "workbench.toggleWorkspaceSidebar"
+			| "workbench.toggleBottomPanel"
+			| "workbench.toggleSessionSidebar"
+			| "conversation.previousTurn"
+			| "conversation.nextTurn"
+			| "conversation.find",
+			string
+		>>;
 		lastComposerModel: {
 			providerId: string;
 			modelId: string;

@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
+import type { KeyboardShortcutOverrides } from "../keyboard-shortcuts";
 
 type ClientPreferences = {
 	autoCheckForUpdates: boolean;
@@ -9,6 +10,7 @@ type ClientPreferences = {
 		open: boolean;
 		size: number;
 	};
+	keyboardShortcuts: KeyboardShortcutOverrides;
 	lastComposerModel: {
 		providerId: string;
 		modelId: string;
