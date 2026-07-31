@@ -13,8 +13,13 @@
 	overflow-x: hidden;
 	overflow-y: auto;
 	overflow-y: overlay;
-	padding: var(--agent-chat-side-padding, 8px) 0;
 	scrollbar-gutter: auto;
+}
+
+.listEdgeSpacer {
+	height: var(--agent-chat-side-padding, 8px);
+	min-height: var(--agent-chat-side-padding, 8px);
+	pointer-events: none;
 }
 
 .messageListContent {

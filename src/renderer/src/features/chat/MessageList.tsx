@@ -25,6 +25,7 @@ import {
 	clearConversationSearchHighlights
 } from "./conversation-search-highlight";
 import styles from "./MessageList.module.css";
+import { isNearBottomByMetrics } from "./message-list-virtual";
 import { TimelineDisclosureProvider } from "./timeline-disclosure-state";
 import UserBubble, { type RetryUserMessagePayload } from "./UserBubble";
 
@@ -191,9 +192,14 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const [messageApi, messageContextHolder] = message.useMessage();
 	const virtuosoRef = useRef<VirtuosoHandle | null>(null);
 	const scrollerRef = useRef<HTMLElement | null>(null);
-	const atBottomRef = useRef<boolean>(true);
-	const initialPositionPendingRef = useRef<boolean>(true);
-	const initialSettleStartedRef = useRef<boolean>(false);
+	const shouldFollowBottomRef = useRef<boolean>(true);
+	const initialBottomAnchorRef = useRef<boolean>(true);
+	const bottomStateFrameRef = useRef<number | null>(null);
+	const bottomFollowFrameRef = useRef<number | null>(null);
+	const lastTotalListHeightRef = useRef<number | null>(null);
+	const lastScrollerTopRef = useRef<number>(0);
+	const pointerScrollActiveRef = useRef<boolean>(false);
+	const userScrollAwayIntentRef = useRef<boolean>(false);
 	const lastScrollToBottomRequestRef = useRef<number>(0);
 	const highlightFrameRef = useRef<number | null>(null);
 	const [contextMenuSelection, setContextMenuSelection] = useState<string>("");
@@ -211,30 +217,91 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const defaultItemHeight: number = useMemo((): number => getEstimatedItemHeight(blocks), [blocks]);
 	const expandFullWindow: boolean = selectionViewportExpanded || activeRetryRequestId !== null;
 	const increaseViewportBy = expandFullWindow ? FULL_WINDOW_VIEWPORT_EXPANSION : VIRTUAL_VIEWPORT_EXPANSION;
-	const lastAbsoluteIndex: number = blockOffset + Math.max(0, blocks.length - 1);
-
 	const setAwayFromBottom = useCallback((awayFromBottom: boolean): void => {
 		onAwayFromBottomChange?.(awayFromBottom);
 	}, [onAwayFromBottomChange]);
 
-	const scrollToBottomNow = useCallback((behavior: ScrollBehavior = "auto"): void => {
-		atBottomRef.current = true;
-		setAwayFromBottom(false);
-		if (blocks.length > 0) {
-			virtuosoRef.current?.scrollToIndex({ index: lastAbsoluteIndex, align: "end", behavior: normalizeVirtuosoScrollBehavior(behavior) });
+	const commitBottomState = useCallback((atBottom: boolean): void => {
+		setAwayFromBottom(!atBottom);
+	}, [setAwayFromBottom]);
+
+	const releaseBottomFollow = useCallback((): void => {
+		initialBottomAnchorRef.current = false;
+		shouldFollowBottomRef.current = false;
+	}, []);
+
+	const scheduleBottomFollow = useCallback((): void => {
+		if (bottomFollowFrameRef.current !== null) {
+			return;
 		}
-	}, [blocks.length, lastAbsoluteIndex, setAwayFromBottom]);
+		bottomFollowFrameRef.current = window.requestAnimationFrame((): void => {
+			bottomFollowFrameRef.current = null;
+			if (!initialBottomAnchorRef.current && !shouldFollowBottomRef.current) {
+				return;
+			}
+			virtuosoRef.current?.scrollTo({ top: Number.MAX_SAFE_INTEGER, behavior: "auto" });
+			virtuosoRef.current?.autoscrollToBottom();
+		});
+	}, []);
+
+	const syncBottomStateFromMetrics = useCallback((): void => {
+		const scroller: HTMLElement | null = scrollerRef.current;
+		if (scroller === null) {
+			return;
+		}
+		const atBottom: boolean = isNearBottomByMetrics(
+			scroller.scrollHeight,
+			scroller.scrollTop,
+			scroller.clientHeight,
+			AT_BOTTOM_THRESHOLD
+		);
+		if (atBottom) {
+			initialBottomAnchorRef.current = false;
+			shouldFollowBottomRef.current = true;
+			commitBottomState(true);
+			return;
+		}
+		if (initialBottomAnchorRef.current && blocks.length > 0) {
+			commitBottomState(true);
+			scheduleBottomFollow();
+			return;
+		}
+		if (shouldFollowBottomRef.current) {
+			commitBottomState(true);
+			return;
+		}
+		commitBottomState(false);
+	}, [blocks.length, commitBottomState, scheduleBottomFollow]);
+
+	const scheduleBottomStateSync = useCallback((): void => {
+		if (bottomStateFrameRef.current !== null) {
+			return;
+		}
+		bottomStateFrameRef.current = window.requestAnimationFrame((): void => {
+			bottomStateFrameRef.current = null;
+			syncBottomStateFromMetrics();
+		});
+	}, [syncBottomStateFromMetrics]);
+
+	const scrollToBottomNow = useCallback((behavior: ScrollBehavior = "auto"): void => {
+		initialBottomAnchorRef.current = false;
+		shouldFollowBottomRef.current = true;
+		commitBottomState(true);
+		if (blocks.length > 0) {
+			virtuosoRef.current?.scrollToIndex({ index: "LAST", align: "end", behavior: normalizeVirtuosoScrollBehavior(behavior) });
+		}
+	}, [blocks.length, commitBottomState]);
 
 	const scrollToEntry = useCallback((entryId: string, behavior: ScrollBehavior = "smooth"): boolean => {
 		const index: number = blocks.findIndex((block: TimelineBlock): boolean => block.id === entryId);
 		if (index < 0) {
 			return false;
 		}
-		atBottomRef.current = false;
-		setAwayFromBottom(true);
-		virtuosoRef.current?.scrollToIndex({ index: blockOffset + index, align: "center", behavior: normalizeVirtuosoScrollBehavior(behavior) });
+		releaseBottomFollow();
+		commitBottomState(false);
+		virtuosoRef.current?.scrollToIndex({ index, align: "center", behavior: normalizeVirtuosoScrollBehavior(behavior) });
 		return true;
-	}, [blockOffset, blocks, setAwayFromBottom]);
+	}, [blocks, commitBottomState, releaseBottomFollow]);
 
 	useImperativeHandle(ref, (): MessageListHandle => ({
 		scrollToBottom: scrollToBottomNow,
@@ -342,14 +409,14 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		if (activeSearchMatch !== null) {
 			const targetIndex: number = activeSearchMatch.blockOffset;
 			if (targetIndex >= blockOffset && targetIndex < blockOffset + blocks.length) {
-				atBottomRef.current = false;
-				setAwayFromBottom(true);
-				virtuosoRef.current?.scrollToIndex({ index: targetIndex, align: "center", behavior: "smooth" });
+				releaseBottomFollow();
+				commitBottomState(false);
+				virtuosoRef.current?.scrollToIndex({ index: targetIndex - blockOffset, align: "center", behavior: "smooth" });
 			}
 		}
 		applySearchHighlights(true);
 		return (): void => clearConversationSearchHighlights(scrollerRef.current);
-	}, [activeSearchMatch, applySearchHighlights, blockOffset, blocks.length, setAwayFromBottom]);
+	}, [activeSearchMatch, applySearchHighlights, blockOffset, blocks.length, commitBottomState, releaseBottomFollow]);
 
 	useLayoutEffect((): void => {
 		if (searchRangeRevision > 0) {
@@ -374,62 +441,102 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	}, [blockOffset, blocks, onActiveUserEntryChange, searchOpen]);
 
 	const handleAtBottomStateChange = useCallback((atBottom: boolean): void => {
-		if (initialPositionPendingRef.current && !atBottom) {
+		if (atBottom) {
+			initialBottomAnchorRef.current = false;
+			shouldFollowBottomRef.current = true;
+			commitBottomState(true);
 			return;
 		}
-		initialPositionPendingRef.current = false;
-		atBottomRef.current = atBottom;
-		setAwayFromBottom(!atBottom);
-	}, [setAwayFromBottom]);
+		scheduleBottomStateSync();
+	}, [commitBottomState, scheduleBottomStateSync]);
+
+	const handleTotalListHeightChanged = useCallback((height: number): void => {
+		if (height <= 0 || lastTotalListHeightRef.current === height) {
+			return;
+		}
+		lastTotalListHeightRef.current = height;
+		if (initialBottomAnchorRef.current || shouldFollowBottomRef.current) {
+			commitBottomState(true);
+			scheduleBottomFollow();
+		}
+		scheduleBottomStateSync();
+	}, [commitBottomState, scheduleBottomFollow, scheduleBottomStateSync]);
+
+	const handleWheelCapture = useCallback((event: React.WheelEvent<HTMLDivElement>): void => {
+		userScrollAwayIntentRef.current = event.deltaY < 0;
+	}, []);
+
+	const handlePointerDownCapture = useCallback((): void => {
+		pointerScrollActiveRef.current = true;
+		lastScrollerTopRef.current = scrollerRef.current?.scrollTop ?? 0;
+	}, []);
+
+	const handlePointerEndCapture = useCallback((): void => {
+		pointerScrollActiveRef.current = false;
+	}, []);
+
+	const handleScrollCapture = useCallback((): void => {
+		const scroller: HTMLElement | null = scrollerRef.current;
+		if (scroller === null) {
+			return;
+		}
+		const nextScrollTop: number = scroller.scrollTop;
+		if (
+			(pointerScrollActiveRef.current || userScrollAwayIntentRef.current)
+			&& nextScrollTop < lastScrollerTopRef.current - 1
+		) {
+			releaseBottomFollow();
+		}
+		userScrollAwayIntentRef.current = false;
+		lastScrollerTopRef.current = nextScrollTop;
+		scheduleBottomStateSync();
+	}, [releaseBottomFollow, scheduleBottomStateSync]);
+
+	const handleKeyDownCapture = useCallback((event: React.KeyboardEvent<HTMLDivElement>): void => {
+		if (
+			event.key === "ArrowUp"
+			|| event.key === "PageUp"
+			|| event.key === "Home"
+			|| (event.key === " " && event.shiftKey)
+		) {
+			userScrollAwayIntentRef.current = true;
+		}
+	}, []);
 
 	const handleScrollerRef = useCallback((element: HTMLElement | Window | null): void => {
 		const scroller: HTMLElement | null = element instanceof HTMLElement ? element : null;
-		if (scroller !== null) {
-			initialPositionPendingRef.current = true;
-			atBottomRef.current = true;
+		if (scroller !== null && scroller !== scrollerRef.current) {
+			initialBottomAnchorRef.current = true;
+			shouldFollowBottomRef.current = true;
+			lastTotalListHeightRef.current = null;
+			lastScrollerTopRef.current = scroller.scrollTop;
+			commitBottomState(true);
 		}
 		scrollerRef.current = scroller;
 		onScrollContainerReady?.(scroller);
-	}, [onScrollContainerReady]);
+	}, [commitBottomState, onScrollContainerReady]);
 
 	useEffect((): (() => void) => {
+		const handlePointerEnd = (): void => {
+			pointerScrollActiveRef.current = false;
+		};
+		window.addEventListener("pointerup", handlePointerEnd);
+		window.addEventListener("pointercancel", handlePointerEnd);
 		return (): void => {
+			window.removeEventListener("pointerup", handlePointerEnd);
+			window.removeEventListener("pointercancel", handlePointerEnd);
 			onScrollContainerReady?.(null);
+			if (bottomStateFrameRef.current !== null) {
+				window.cancelAnimationFrame(bottomStateFrameRef.current);
+			}
+			if (bottomFollowFrameRef.current !== null) {
+				window.cancelAnimationFrame(bottomFollowFrameRef.current);
+			}
 			if (highlightFrameRef.current !== null) {
 				window.cancelAnimationFrame(highlightFrameRef.current);
 			}
 		};
 	}, [onScrollContainerReady]);
-
-	useEffect((): (() => void) | void => {
-		if (initialSettleStartedRef.current || isInitialLoading || blocks.length === 0) {
-			return;
-		}
-		initialSettleStartedRef.current = true;
-		let secondFrameId: number | null = null;
-		const firstFrameId: number = window.requestAnimationFrame((): void => {
-			secondFrameId = window.requestAnimationFrame((): void => {
-				initialPositionPendingRef.current = false;
-				const scroller: HTMLElement | null = scrollerRef.current;
-				if (scroller === null) {
-					return;
-				}
-				const atBottom: boolean = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <= AT_BOTTOM_THRESHOLD;
-				if (!atBottom) {
-					scrollToBottomNow("auto");
-					return;
-				}
-				atBottomRef.current = true;
-				setAwayFromBottom(false);
-			});
-		});
-		return (): void => {
-			window.cancelAnimationFrame(firstFrameId);
-			if (secondFrameId !== null) {
-				window.cancelAnimationFrame(secondFrameId);
-			}
-		};
-	}, [blocks.length, isInitialLoading, scrollToBottomNow, setAwayFromBottom]);
 
 	useEffect((): void => {
 		if (scrollToBottomRequest <= 0 || lastScrollToBottomRequestRef.current === scrollToBottomRequest) {
@@ -439,19 +546,28 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		scrollToBottomNow("smooth");
 	}, [scrollToBottomNow, scrollToBottomRequest]);
 
-	const renderHeader = useCallback((): React.JSX.Element | null => {
-		if (errorMessage === null || errorMessage === undefined) {
-			return isLoadingMoreBefore ? <div className={styles.pageLoadingIndicator}><Spin size="small" /></div> : null;
-		}
+	const renderHeader = useCallback((): React.JSX.Element => {
 		return (
-			<div className={styles.messageListContent}>
-				<Alert description={errorMessage} type="error" showIcon={true} />
-			</div>
+			<>
+				<div className={styles.listEdgeSpacer} aria-hidden="true" />
+				{errorMessage !== null && errorMessage !== undefined ? (
+					<div className={styles.messageListContent}>
+						<Alert description={errorMessage} type="error" showIcon={true} />
+					</div>
+				) : isLoadingMoreBefore ? (
+					<div className={styles.pageLoadingIndicator}><Spin size="small" /></div>
+				) : null}
+			</>
 		);
 	}, [errorMessage, isLoadingMoreBefore]);
 
-	const renderFooter = useCallback((): React.JSX.Element | null => {
-		return isLoadingMoreAfter ? <div className={styles.pageLoadingIndicator}><Spin size="small" /></div> : null;
+	const renderFooter = useCallback((): React.JSX.Element => {
+		return (
+			<>
+				{isLoadingMoreAfter ? <div className={styles.pageLoadingIndicator}><Spin size="small" /></div> : null}
+				<div className={styles.listEdgeSpacer} aria-hidden="true" />
+			</>
+		);
 	}, [isLoadingMoreAfter]);
 
 	const renderEmpty = useCallback((): null => null, []);
@@ -500,21 +616,31 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			) : (
 			<TimelineDisclosureProvider>
 				<Dropdown menu={messageContextMenu} trigger={["contextMenu"]}>
-					<div className={styles.messageListShell} onContextMenuCapture={handleContextMenuCapture}>
+					<div
+						className={styles.messageListShell}
+						onContextMenuCapture={handleContextMenuCapture}
+						onWheelCapture={handleWheelCapture}
+						onPointerDownCapture={handlePointerDownCapture}
+						onPointerUpCapture={handlePointerEndCapture}
+						onPointerCancelCapture={handlePointerEndCapture}
+						onScrollCapture={handleScrollCapture}
+						onKeyDownCapture={handleKeyDownCapture}
+					>
 						<Virtuoso<RenderableTimelineBlock>
 					ref={virtuosoRef}
 					className={styles.messageList}
 					data={items}
 					firstItemIndex={blockOffset}
-					initialTopMostItemIndex={{ index: Math.max(0, items.length - 1), align: "end" }}
+					initialTopMostItemIndex={{ index: "LAST", align: "end" }}
 					computeItemKey={(_index: number, item: RenderableTimelineBlock): string => item.block.id}
 					defaultItemHeight={defaultItemHeight}
 					increaseViewportBy={increaseViewportBy}
 					minOverscanItemCount={{ top: 3, bottom: 4 }}
 					alignToBottom={true}
-					followOutput={(): "auto" | false => atBottomRef.current ? "auto" : false}
+					followOutput={(): "auto" | false => shouldFollowBottomRef.current ? "auto" : false}
 					atBottomThreshold={AT_BOTTOM_THRESHOLD}
 					atBottomStateChange={handleAtBottomStateChange}
+					totalListHeightChanged={handleTotalListHeightChanged}
 					startReached={(): void => {
 						if (hasMoreBefore && !isLoadingMoreBefore) {
 							onLoadMoreBefore?.();

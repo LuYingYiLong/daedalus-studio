@@ -12,6 +12,9 @@ describe("message-list-virtual", () => {
 		expect(getDistanceFromBottomByMetrics(5000, 4300, 600)).toBe(100);
 		expect(isNearBottomByMetrics(5000, 4300, 600, 320)).toBe(true);
 		expect(isNearBottomByMetrics(5000, 1000, 600, 320)).toBe(false);
+		expect(isNearBottomByMetrics(420, 0, 600, 16)).toBe(true);
+		expect(isNearBottomByMetrics(616, 0, 600, 16)).toBe(true);
+		expect(isNearBottomByMetrics(617, 0, 600, 16)).toBe(false);
 	});
 
 	it("uses a tighter threshold to leave and resume bottom following", () => {
