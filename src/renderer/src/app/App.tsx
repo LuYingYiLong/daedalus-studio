@@ -970,6 +970,18 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setPlanApprovalError(null);
 	}
 
+	function resetSessionPresentationState(): void {
+		setTimelinePage(emptyTimelinePage);
+		setIsTimelineLoadingBefore(false);
+		setIsTimelineLoadingAfter(false);
+		setWorkbench(null);
+		clearWorkflowTodoUiState();
+		resetPlanClarificationUiState();
+		resetPlanApprovalUiState();
+		setActiveRetryRequestId(null);
+		setRunState((currentState: RunControllerState): RunControllerState => createIdleRunState(currentState.sequence));
+	}
+
 	function applyInitialWorkflowTodoPreference(snapshot: WorkflowTodoSnapshot | null): void {
 		if (snapshot === null) {
 			initializedWorkflowTodoKeyRef.current = "";
@@ -1436,8 +1448,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				activeSessionIdRef.current = null;
 				setActiveSessionId(null);
 				setActiveSessionMetadata(null);
-				setWorkbench(null);
-				setTimelinePage(emptyTimelinePage);
+				resetSessionPresentationState();
 				setIsNewSessionHome(true);
 				void createTemporarySession().catch((error: unknown): void => {
 					setSessionError(error instanceof Error ? error.message : "Failed to restore New session");
@@ -1541,8 +1552,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			activeSessionIdRef.current = null;
 			setActiveSessionId(null);
 			setActiveSessionMetadata(null);
-			setWorkbench(null);
-			setRunState(createIdleRunState());
+			resetSessionPresentationState();
 			await createTemporarySession();
 			return;
 		}
@@ -1565,13 +1575,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setIsNewSessionHome(true);
 		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection));
 		setActiveWorkspace(null);
-		setTimelinePage(emptyTimelinePage);
-		setWorkbench(null);
-		setWorkflowTodoSnapshot(null);
-		rememberLoadedWorkflowTodo(null);
-		resetPlanClarificationUiState();
-		resetPlanApprovalUiState();
-		setActiveRetryRequestId(null);
+		resetSessionPresentationState();
 		setSessionError(null);
 		await createTemporarySession();
 		void loadHomeWorkspaces();
@@ -1593,7 +1597,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		activeSessionIdRef.current = null;
 		setActiveSessionId(null);
 		setActiveSessionMetadata(null);
-		setWorkbench(null);
+		resetSessionPresentationState();
 		setActiveWorkspace(workspace);
 		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection, workspace));
 		setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
@@ -1682,14 +1686,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setActiveSessionId(sessionId);
 			setActiveSessionMetadata(session);
 			setActiveWorkspace(null);
-			setTimelinePage(emptyTimelinePage);
-			setIsTimelineLoadingBefore(false);
-			setIsTimelineLoadingAfter(false);
-			setWorkbench(null);
-			setWorkflowTodoSnapshot(null);
-			rememberLoadedWorkflowTodo(null);
-			resetPlanClarificationUiState();
-			resetPlanApprovalUiState();
+			resetSessionPresentationState();
 
 			const result: SessionOpenResult = await openSession(sessionId);
 			if (navigationVersionRef.current !== navigationVersion || activeSessionIdRef.current !== sessionId) {
@@ -1750,15 +1747,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		activeSessionIdRef.current = null;
 		setActiveSessionId(null);
 		setActiveSessionMetadata(null);
-		setTimelinePage(emptyTimelinePage);
-		setIsTimelineLoadingBefore(false);
-		setIsTimelineLoadingAfter(false);
-		setWorkbench(null);
-		setWorkflowTodoSnapshot(null);
-		rememberLoadedWorkflowTodo(null);
-		resetPlanClarificationUiState();
-		resetPlanApprovalUiState();
-		setActiveRetryRequestId(null);
+		resetSessionPresentationState();
 		setActiveWorkspace(null);
 		setSessionError(null);
 		setIsNewSessionHome(true);

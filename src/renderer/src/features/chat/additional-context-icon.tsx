@@ -103,6 +103,12 @@ export function getAdditionalContextIconName(item: AdditionalContextItem): strin
 		case "zsh":
 		case "ps1":
 			return "shell";
+		case "md":
+			return "markdown";
+		case "rst":
+			return "restructuredtext";
+		case "lua":
+			return "lua";
 		default:
 			return item.kind === "script" || item.kind === "script_selection" ? "script" : "file";
 	}

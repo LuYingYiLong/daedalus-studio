@@ -32,11 +32,26 @@ describe("Composer workflow todo visibility", () => {
 		expect(designDoc).toContain("`--ds-git-addition`");
 		expect(designDoc).toContain("Git 差异 UI 统一使用");
 		expect(appSource).toContain("function clearWorkflowTodoUiState(options: { preservePlanSnapshot?: boolean } = {})");
+		expect(appSource).toContain("function resetSessionPresentationState(): void");
 		expect(backendEventStreamSource).toContain('if (event.event === "agent.run.state")');
 		expect(backendEventStreamSource).toContain("normalizeWorkflowTodoSnapshot(runData?.todo)");
 		expect(backendEventStreamSource).toContain('event.event === "plan.execution.started"');
 		expect(backendEventStreamSource).toContain("expandWorkflowTodoPanel();");
 		expect(backendEventStreamSource).not.toContain('event.event === "workflow.todo.updated"');
 		expect(backendEventStreamSource).not.toContain('event.event === "agent.run.snapshot"');
+	});
+
+	it("clears the previous session presentation before creating a workspace session", () => {
+		const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const handlerStart: number = appSource.indexOf("async function handleNewWorkspaceSession");
+		const handlerEnd: number = appSource.indexOf("async function handleHomeWorkspaceSelect", handlerStart);
+		const handlerSource: string = appSource.slice(handlerStart, handlerEnd);
+
+		expect(handlerStart).toBeGreaterThanOrEqual(0);
+		expect(handlerEnd).toBeGreaterThan(handlerStart);
+		expect(handlerSource).toContain("resetSessionPresentationState();");
+		expect(handlerSource.indexOf("resetSessionPresentationState();")).toBeLessThan(
+			handlerSource.indexOf("await createTemporarySession(workspace);")
+		);
 	});
 });
