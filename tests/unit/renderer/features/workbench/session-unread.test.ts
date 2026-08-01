@@ -16,6 +16,15 @@ function createRunEvent(sessionId: string, stage: string): BackendEvent {
 	};
 }
 
+function createGoalEvent(sessionId: string, stage: string): BackendEvent {
+	return {
+		type: "event",
+		event: "agent.goal.state",
+		sessionId,
+		data: { stage }
+	};
+}
+
 describe("session unread responses", () => {
 	it("marks a completed response unread while its window is not focused", () => {
 		const next = applyResponseFinished(new Set<string>(), {
@@ -58,6 +67,17 @@ describe("session unread responses", () => {
 		expect(getUnreadResponseSessionId(createRunEvent("session-a", "completed"))).toBe("session-a");
 		expect(getUnreadResponseSessionId(createRunEvent("session-a", "failed"))).toBe("session-a");
 		expect(getUnreadResponseSessionId(createRunEvent("session-a", "cancelled"))).toBeNull();
+	});
+
+	it("notifies only when the whole Goal reaches a reviewable terminal state", () => {
+		expect(getUnreadResponseSessionId({
+			...createRunEvent("session-a", "completed"),
+			data: { stage: "completed", goalId: "goal-a" }
+		})).toBeNull();
+		expect(getUnreadResponseSessionId(createGoalEvent("session-a", "running"))).toBeNull();
+		expect(getUnreadResponseSessionId(createGoalEvent("session-a", "achieved"))).toBe("session-a");
+		expect(getUnreadResponseSessionId(createGoalEvent("session-a", "failed"))).toBe("session-a");
+		expect(getUnreadResponseSessionId(createGoalEvent("session-a", "cancelled"))).toBeNull();
 	});
 
 	it("removes archived or deleted sessions", () => {

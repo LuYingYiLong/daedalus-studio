@@ -194,6 +194,7 @@
   },
   "composer": {
     "placeholder": "What can I say?",
+    "goalPlaceholder": "Describe the goal and a verifiable completion result",
     "context": {
       "addFiles": "Add files",
       "addFolder": "Add folder",
@@ -202,7 +203,8 @@
     "mode": {
       "ask": "Ask",
       "agent": "Agent",
-      "plan": "Plan"
+      "plan": "Plan",
+      "goal": "Goal"
     },
     "approvalMode": {
       "manual": "Manual",
@@ -252,13 +254,34 @@
       "usedTokens": "{{used}} / {{total}} tokens",
       "meta": "{{model}} / {{available}} available / {{source}}",
       "compress": "Compress chat",
+      "pressure": "{{level}} pressure · largest: {{largest}}",
+      "none": "None",
+      "pressureLevels": {
+        "low": "Low",
+        "moderate": "Moderate",
+        "high": "High",
+        "critical": "Critical"
+      },
       "breakdown": {
         "systemAndTools": "System & tools",
         "history": "History",
         "historyWithSummary": "History (summary)",
         "currentMessage": "Current message",
         "reservedOutput": "Reserved output",
-        "safetyMargin": "Safety margin"
+        "safetyMargin": "Safety margin",
+        "kinds": {
+          "base_system": "Base system prompt",
+          "custom_instructions": "Custom instructions",
+          "skills": "Skills",
+          "mcp_context": "MCP context",
+          "tool_definitions": "Tool definitions",
+          "history": "Conversation history",
+          "summary": "Conversation summary",
+          "current_message": "Current message",
+          "additional_context": "Additional context",
+          "output_reserve": "Output reserve",
+          "safety_margin": "Safety margin"
+        }
       },
       "compressDisabled": {
         "sending": "A message is being sent",
@@ -267,6 +290,59 @@
       "errors": {
         "estimate": "Context estimate failed"
       }
+    }
+  },
+  "goal": {
+    "aria": "Goal execution status",
+    "stages": {
+      "readiness": "Checking readiness",
+      "running": "Running",
+      "evaluating": "Evaluating",
+      "pausing": "Pausing",
+      "awaiting_approval": "Awaiting approval",
+      "awaiting_tool_budget": "Awaiting tool budget",
+      "paused": "Paused",
+      "achieved": "Achieved",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "fields": {
+      "stage": "Status",
+      "cycles": "Cycles",
+      "tokens": "Tokens",
+      "activeTime": "Active time"
+    },
+    "evaluation": "Evaluation",
+    "readiness": "Readiness",
+    "workflow": "Current workflow",
+    "actions": {
+      "pause": "Pause",
+      "resume": "Resume",
+      "cancel": "Cancel",
+      "extend": "Add budget",
+      "rollback": "Roll back"
+    },
+    "cancelConfirm": {
+      "title": "Cancel this Goal?",
+      "description": "The current safe operation will finish first. Existing workspace changes will be kept."
+    },
+    "rollback": {
+      "title": "Roll back Goal changes?",
+      "description": "Restore all {{count}} tracked files to their state before this Goal.",
+      "unavailableTitle": "Complete rollback is unavailable",
+      "unavailable": "Some Goal changes cannot be restored safely.",
+      "success": "Goal changes were rolled back."
+    },
+    "extend": {
+      "title": "Add Goal budget",
+      "cycles": "Additional cycles",
+      "tokens": "Additional tokens",
+      "minutes": "Additional active minutes"
+    },
+    "errors": {
+      "action": "Failed to update Goal",
+      "rollback": "Failed to roll back Goal changes",
+      "budget": "Failed to add Goal budget"
     }
   },
   "messageQueue": {
@@ -843,6 +919,10 @@
         "workflowPlanner": {
           "title": "Workflow planner model",
           "description": "Used for planning agent workflows before execution."
+        },
+        "goalEvaluator": {
+          "title": "Goal completion evaluator model",
+          "description": "Used to judge whether a Goal is complete after each execution cycle. Falls back to the Goal model when unset."
         },
         "imageRecognition": {
           "title": "Image recognition model",

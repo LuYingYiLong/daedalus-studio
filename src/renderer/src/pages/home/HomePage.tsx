@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Button, Divider, Dropdown, Empty, Input, message as antdMessage, Modal, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
 import type { CollapseProps, MenuProps, SplitterProps } from "antd";
 import { useTranslation } from "react-i18next";
-import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SelectionAskThread, SessionMetadata, SessionTimelineNavigationEntry, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, AgentGoalState, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SelectionAskThread, SessionMetadata, SessionTimelineNavigationEntry, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode, PendingApproval } from "@/api/approval-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
@@ -22,6 +22,7 @@ import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import ConversationTimelinePane, { type ConversationTimelinePaneHandle } from "@/features/chat/ConversationTimelinePane";
 import Composer from "@/features/composer/Composer";
 import FloatingWorkflowTodoPanel, { type WorkflowFileChangeSummary } from "@/features/composer/FloatingWorkflowTodoPanel";
+import FloatingGoalPanel from "@/features/composer/FloatingGoalPanel";
 import MessageQueuePanel from "@/features/composer/MessageQueuePanel";
 import NewSessionHome from "./NewSessionHome";
 import ApprovalDialog from "@/features/approval/ApprovalDialog";
@@ -265,11 +266,13 @@ function aggregateTimelineFileChanges(blocks: TimelineBlock[]): WorkflowFileChan
 
 type TimelineWorkflowTodoPanelProps = {
 	timelineStore: TimelinePageStore;
-	snapshot: WorkflowTodoSnapshot;
+	snapshot: WorkflowTodoSnapshot | null;
+	goal: AgentGoalState | null;
 	onDismiss: (snapshot: WorkflowTodoSnapshot) => void;
+	onGoalChange: (goal: AgentGoalState) => void;
 };
 
-function TimelineWorkflowTodoPanel({ timelineStore, snapshot, onDismiss }: TimelineWorkflowTodoPanelProps): React.JSX.Element {
+function TimelineWorkflowTodoPanel({ timelineStore, snapshot, goal, onDismiss, onGoalChange }: TimelineWorkflowTodoPanelProps): React.JSX.Element | null {
 	const timelineBlocks: TimelineBlock[] = useTimelineSelector(
 		timelineStore,
 		(page): TimelineBlock[] => page.blocks
@@ -279,7 +282,10 @@ function TimelineWorkflowTodoPanel({ timelineStore, snapshot, onDismiss }: Timel
 		[timelineBlocks]
 	);
 
-	return (
+	if (goal !== null) {
+		return <FloatingGoalPanel goal={goal} workflowTodo={snapshot} fileChangeSummary={fileChangeSummary} onChange={onGoalChange} />;
+	}
+	return snapshot === null ? null : (
 		<FloatingWorkflowTodoPanel
 			snapshot={snapshot}
 			fileChangeSummary={fileChangeSummary}
@@ -324,6 +330,7 @@ type HomePageProps = {
 	messageQueue: MessageQueueItem[];
 	pendingGuides: PendingGuide[];
 	workflowTodoSnapshot: WorkflowTodoSnapshot | null;
+	currentGoal: AgentGoalState | null;
 	workflowTodoCollapsed: boolean;
 	mode: ChatMode;
 	approvalMode: ApprovalMode;
@@ -411,6 +418,7 @@ type HomePageProps = {
 	onGuideDelete: (guideId: string) => void;
 	onGuideReorder: (guideIds: string[]) => void;
 	onWorkflowTodoDismiss: (snapshot: WorkflowTodoSnapshot) => void;
+	onGoalChange: (goal: AgentGoalState) => void;
 	onCompletionOpen: (trigger: ComposerCompletionTrigger) => void;
 };
 
@@ -444,6 +452,7 @@ function HomePage({
 	messageQueue,
 	pendingGuides,
 	workflowTodoSnapshot,
+	currentGoal,
 	workflowTodoCollapsed,
 	mode,
 	approvalMode,
@@ -531,6 +540,7 @@ function HomePage({
 	onGuideDelete,
 	onGuideReorder,
 	onWorkflowTodoDismiss,
+	onGoalChange,
 	onCompletionOpen
 }: HomePageProps): React.JSX.Element {
 	const { t } = useTranslation();
@@ -1716,11 +1726,13 @@ function HomePage({
 											/>
 										) : (
 											<>
-								{showWorkflowTodoPanel && workflowTodoSnapshot !== null ? (
+												{currentGoal !== null || (showWorkflowTodoPanel && workflowTodoSnapshot !== null) ? (
 													<TimelineWorkflowTodoPanel
 														timelineStore={timelineStore}
 														snapshot={workflowTodoSnapshot}
+														goal={currentGoal}
 														onDismiss={onWorkflowTodoDismiss}
+														onGoalChange={onGoalChange}
 													/>
 												) : null}
 												{!isHome ? (

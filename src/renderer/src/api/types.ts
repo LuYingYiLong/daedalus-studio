@@ -44,7 +44,7 @@ export type SessionMetadata = {
 	provider?: string;
 	model?: string;
 	reasoningEffort?: string;
-	chatMode?: "agent" | "ask" | "plan";
+	chatMode?: "agent" | "ask" | "plan" | "goal";
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
 	archivedAt?: string;
@@ -77,7 +77,7 @@ export type MessageQueueItem = {
 	id: number;
 	text: string;
 	additionalContext: AdditionalContextItem[];
-	mode: "agent" | "ask" | "plan" | null;
+	mode: "agent" | "ask" | "plan" | "goal" | null;
 	provider: string | null;
 	model: string | null;
 	reasoningEffort?: string | null;
@@ -228,6 +228,8 @@ export type AgentRunState = {
 	requestId: string;
 	rootRequestId: string;
 	retryOfRunId?: string;
+	goalId?: string;
+	goalCycle?: number;
 	revision: number;
 	intent: "answer" | "inspect" | "mutate";
 	scope: "bounded" | "unknown" | "complex";
@@ -259,12 +261,36 @@ export type AgentRunState = {
 	updatedAt: string;
 };
 
+export type AgentGoalStage = "readiness" | "running" | "evaluating" | "pausing" | "awaiting_approval" | "awaiting_tool_budget" | "paused" | "achieved" | "failed" | "cancelled";
+export type AgentGoalState = {
+	schemaVersion: 1;
+	goalId: string;
+	sessionId: string;
+	rootRequestId: string;
+	revision: number;
+	title: string;
+	condition: string;
+	stage: AgentGoalStage;
+	pauseReason: "user_interruption" | "backend_restart" | "client_disconnected" | "budget_exhausted" | "readiness_blocked" | "no_progress" | null;
+	activeRunId: string | null;
+	cycle: number;
+	modelSnapshot: { provider: string; model: string; reasoningEffort: string | null; approvalMode: string; workspaceId: string | null };
+	budget: { maxCycles: number; maxTokens: number; maxActiveMinutes: number };
+	usage: { cycles: number; tokens: number; activeMilliseconds: number; estimatedTokens: boolean };
+	readiness: { ready: boolean; checks: Array<{ id: string; status: "passed" | "warning" | "blocked"; message: string; action?: string }>; checkedAt: string } | null;
+	evaluation: { disposition: "achieved" | "continue" | "blocked"; summary: string; evidenceToolCallIds: string[]; unmetCriteria: string[]; nextAction: string | null } | null;
+	checkpoint: { status: "available" | "partial" | "unavailable" | "rolled_back"; fileCount: number; totalBytes: number; unavailableReasons: string[] };
+	createdAt: string;
+	updatedAt: string;
+	completedAt: string | null;
+};
+
 export type WorkbenchSnapshot = {
 	revision: number;
 	sessionId: string | null;
 	composer: {
 		text: string;
-		chatMode: "agent" | "ask" | "plan" | null;
+		chatMode: "agent" | "ask" | "plan" | "goal" | null;
 		provider?: string;
 		providerDisplayName?: string;
 		model?: string;
@@ -295,7 +321,7 @@ export type WorkbenchPatch = {
 	clientSequence?: number;
 	composer?: {
 		text?: string;
-		chatMode?: "agent" | "ask" | "plan";
+		chatMode?: "agent" | "ask" | "plan" | "goal";
 		provider?: string;
 		model?: string;
 		reasoningEffort?: string;
@@ -501,6 +527,7 @@ export type SessionOpenResult = {
 	workbench: WorkbenchSnapshot;
 	agentRuns: AgentRunState[];
 	activeAgentRun: AgentRunState | null;
+	currentGoal: AgentGoalState | null;
 	workspaceWarning: string | null;
 };
 

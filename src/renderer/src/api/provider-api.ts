@@ -30,6 +30,7 @@ export type ProviderModelRouting = {
 	imageGeneration: ProviderTaskModelRef | null;
 	gitCommit: ProviderTaskModelRef | null;
 	commandReview: ProviderTaskModelRef | null;
+	goalEvaluator: ProviderTaskModelRef | null;
 };
 
 export type ProviderModelInfo = {

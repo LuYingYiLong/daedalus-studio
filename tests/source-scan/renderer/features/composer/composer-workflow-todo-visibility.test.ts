@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("Composer workflow todo visibility", () => {
-	it("keeps workflow todos out of Composer and renders the floating panel from snapshots", () => {
+	it("keeps execution status out of Composer and renders the matching floating panel", () => {
 		const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
 		const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
 		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
 		const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 		const floatingTodoSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "FloatingWorkflowTodoPanel.tsx");
+		const floatingGoalSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "FloatingGoalPanel.tsx");
 		const globalCss: string = readRepoFile("src", "renderer", "src", "styles", "global.css");
 		const designDoc: string = readRepoFile("docs", "ui-design-system.md");
 
@@ -16,7 +17,9 @@ describe("Composer workflow todo visibility", () => {
 		expect(composerSource).not.toContain("Steps");
 		expect(agentSource).toContain("<FloatingWorkflowTodoPanel");
 		expect(agentSource).toContain("const showWorkflowTodoPanel: boolean = !workflowTodoCollapsed && workflowTodoSnapshot !== null;");
-		expect(agentSource).toContain("{showWorkflowTodoPanel && workflowTodoSnapshot !== null ? (");
+		expect(agentSource).toContain("{currentGoal !== null || (showWorkflowTodoPanel && workflowTodoSnapshot !== null) ? (");
+		expect(agentSource).toContain("<FloatingGoalPanel");
+		expect(floatingGoalSource).toContain("workflowTodo");
 		expect(floatingTodoSource).not.toContain("Collapse");
 		expect(floatingTodoSource).not.toContain("import { Steps");
 		expect(floatingTodoSource).not.toContain("<Steps");

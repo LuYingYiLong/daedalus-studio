@@ -10,7 +10,7 @@ import useTimelineStreamBuffer from "./hooks/useTimelineStreamBuffer";
 import useWorkbenchPatchQueue, { mergeWorkbenchPatch } from "./hooks/useWorkbenchPatchQueue";
 import { fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
-import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SelectionAskThread, SessionMetadata, SessionOpenResult, SessionTimelineNavigationEntry, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, AgentGoalState, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SelectionAskThread, SessionMetadata, SessionOpenResult, SessionTimelineNavigationEntry, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import { checkSessionIntegrity, createSession, deleteSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, fetchSessionTimelineIndex, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/chat/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
@@ -694,6 +694,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [fullTrustConfirmationText, setFullTrustConfirmationText] = useState<string>("");
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
 	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] = useState<WorkflowTodoSnapshot | null>(null);
+	const [currentGoal, setCurrentGoal] = useState<AgentGoalState | null>(null);
 	const [runState, setRunState] = useState<RunControllerState>(() => createIdleRunState());
 	const [unreadSessionIds, setUnreadSessionIds] = useState<ReadonlySet<string>>(() => new Set<string>());
 	const windowFocusedRef = useRef<boolean>(document.hasFocus());
@@ -989,6 +990,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setIsTimelineLoadingAfter(false);
 		setWorkbench(null);
 		clearWorkflowTodoUiState();
+		setCurrentGoal(null);
 		resetPlanClarificationUiState();
 		resetPlanApprovalUiState();
 		setActiveRetryRequestId(null);
@@ -1399,6 +1401,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		if (responseSessionId === null) {
 			return;
 		}
+		if (
+			event.event === "agent.goal.state"
+			&& activeWorkbenchRef.current?.messageQueue.some((item: MessageQueueItem): boolean => item.status === "pending" || item.status === "sending") === true
+		) {
+			return;
+		}
 
 		setUnreadSessionIds((currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
 			return applyResponseFinished(currentSessionIds, {
@@ -1441,6 +1449,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setRunState,
 		timelineStore,
 		setWorkflowTodoSnapshot,
+		setCurrentGoal,
 		setLatestPlanClarification,
 		setLatestPlanApproval,
 		setPlanClarificationError,
@@ -1728,6 +1737,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					? createIdleRunState(currentState.sequence)
 					: applyAgentRunState(currentState, result.activeAgentRun)
 			));
+			setCurrentGoal(result.currentGoal);
 			if (loadingComposerDraft?.sessionId === sessionId) {
 				queueWorkbenchPatch({ composer: { text: loadingComposerDraft.text } });
 			}
@@ -2299,17 +2309,20 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection));
 			applyOptimisticSend(requestId, message, created.workbench.composer.additionalContext);
 
+			const createdChatMode: ChatMode = created.workbench.composer.chatMode ?? homeDraft.chatMode;
 			await sendChatMessage({
 				requestId,
 				message,
-				mode: created.workbench.composer.chatMode ?? homeDraft.chatMode,
+				mode: createdChatMode,
 				provider: providerId ?? undefined,
 				model: modelId ?? undefined,
 				reasoningEffort: created.workbench.composer.reasoningEffort ?? undefined,
 				additionalContext: created.workbench.composer.additionalContext,
 				skillRefs
 			});
-			await refreshLatestTimeline(created.id);
+			if (createdChatMode !== "goal") {
+				await refreshLatestTimeline(created.id);
+			}
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to start new session";
 
@@ -2419,7 +2432,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				additionalContext,
 				skillRefs
 			});
-			await refreshLatestTimeline();
+			if (chatMode !== "goal") {
+				await refreshLatestTimeline();
+			}
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to send message";
 
@@ -2740,7 +2755,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				additionalContext: payload.additionalContext,
 				skillRefs
 			});
-			await refreshLatestTimeline();
+			if (chatMode !== "goal") {
+				await refreshLatestTimeline();
+			}
 			return true;
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to retry message";
@@ -3503,6 +3520,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						messageQueue={composerMessageQueue}
 						pendingGuides={composerPendingGuides}
 						workflowTodoSnapshot={workflowTodoSnapshot}
+						currentGoal={currentGoal}
 						workflowTodoCollapsed={activeSessionMetadata?.workflowTodoCollapsed === true}
 						mode={composerMode}
 						approvalMode={approvalMode}
@@ -3654,6 +3672,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						onWorkflowTodoDismiss={(snapshot: WorkflowTodoSnapshot): void => {
 							void handleWorkflowTodoDismiss(snapshot);
 						}}
+						onGoalChange={setCurrentGoal}
 						onCompletionOpen={handleCompletionOpen}
 				/>
 			</div>

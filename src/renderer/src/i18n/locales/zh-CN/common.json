@@ -194,6 +194,7 @@
   },
   "composer": {
     "placeholder": "想让我做什么？",
+    "goalPlaceholder": "描述目标以及可以验证的完成结果",
     "context": {
       "addFiles": "添加文件",
       "addFolder": "添加文件夹",
@@ -202,7 +203,8 @@
     "mode": {
       "ask": "问答",
       "agent": "Agent",
-      "plan": "计划"
+      "plan": "计划",
+      "goal": "Goal"
     },
     "approvalMode": {
       "manual": "手动",
@@ -252,13 +254,34 @@
       "usedTokens": "{{used}} / {{total}} tokens",
       "meta": "{{model}} / 可用 {{available}} / {{source}}",
       "compress": "压缩聊天",
+      "pressure": "{{level}}压力 · 最大贡献项：{{largest}}",
+      "none": "无",
+      "pressureLevels": {
+        "low": "低",
+        "moderate": "中等",
+        "high": "高",
+        "critical": "严重"
+      },
       "breakdown": {
         "systemAndTools": "系统与工具",
         "history": "历史记录",
         "historyWithSummary": "历史记录（摘要）",
         "currentMessage": "当前消息",
         "reservedOutput": "预留输出",
-        "safetyMargin": "安全余量"
+        "safetyMargin": "安全余量",
+        "kinds": {
+          "base_system": "基础系统提示词",
+          "custom_instructions": "自定义指令",
+          "skills": "技能",
+          "mcp_context": "MCP 上下文",
+          "tool_definitions": "工具定义",
+          "history": "会话历史",
+          "summary": "会话摘要",
+          "current_message": "当前消息",
+          "additional_context": "附加上下文",
+          "output_reserve": "预留输出",
+          "safety_margin": "安全余量"
+        }
       },
       "compressDisabled": {
         "sending": "正在发送消息",
@@ -267,6 +290,59 @@
       "errors": {
         "estimate": "上下文估算失败"
       }
+    }
+  },
+  "goal": {
+    "aria": "Goal 执行状态",
+    "stages": {
+      "readiness": "检查就绪状态",
+      "running": "执行中",
+      "evaluating": "判定中",
+      "pausing": "正在暂停",
+      "awaiting_approval": "等待审批",
+      "awaiting_tool_budget": "等待工具预算",
+      "paused": "已暂停",
+      "achieved": "已完成",
+      "failed": "失败",
+      "cancelled": "已取消"
+    },
+    "fields": {
+      "stage": "状态",
+      "cycles": "循环",
+      "tokens": "Token",
+      "activeTime": "有效耗时"
+    },
+    "evaluation": "完成判定",
+    "readiness": "就绪检查",
+    "workflow": "当前 Workflow",
+    "actions": {
+      "pause": "暂停",
+      "resume": "恢复",
+      "cancel": "取消",
+      "extend": "追加预算",
+      "rollback": "完整回滚"
+    },
+    "cancelConfirm": {
+      "title": "取消这个 Goal？",
+      "description": "当前安全操作会先执行完，已经产生的工作区更改将保留。"
+    },
+    "rollback": {
+      "title": "回滚 Goal 更改？",
+      "description": "将 {{count}} 个受跟踪文件完整恢复到 Goal 开始前的状态。",
+      "unavailableTitle": "无法完整回滚",
+      "unavailable": "部分 Goal 更改无法安全恢复。",
+      "success": "Goal 更改已完整回滚。"
+    },
+    "extend": {
+      "title": "追加 Goal 预算",
+      "cycles": "额外循环数",
+      "tokens": "额外 Token",
+      "minutes": "额外有效分钟数"
+    },
+    "errors": {
+      "action": "更新 Goal 失败",
+      "rollback": "回滚 Goal 更改失败",
+      "budget": "追加 Goal 预算失败"
     }
   },
   "messageQueue": {
@@ -843,6 +919,10 @@
         "workflowPlanner": {
           "title": "Workflow 规划模型",
           "description": "用于在执行前规划 agent workflow。"
+        },
+        "goalEvaluator": {
+          "title": "Goal 完成判定模型",
+          "description": "用于在每个执行循环后判断 Goal 是否完成；未配置时回退到 Goal 创建时的会话模型。"
         },
         "imageRecognition": {
           "title": "图像识别模型",

@@ -36,10 +36,20 @@ function removeSessionId(currentSessionIds: ReadonlySet<string>, sessionId: stri
  */
 export function getUnreadResponseSessionId(event: BackendEvent): string | null {
 	if (
+		event.event === "agent.goal.state"
+		&& typeof event.sessionId === "string"
+		&& event.sessionId.length > 0
+		&& isRecord(event.data)
+		&& (event.data.stage === "achieved" || event.data.stage === "failed")
+	) {
+		return event.sessionId;
+	}
+	if (
 		event.event !== "agent.run.state"
 		|| typeof event.sessionId !== "string"
 		|| event.sessionId.length === 0
 		|| !isRecord(event.data)
+		|| typeof event.data.goalId === "string"
 		|| (event.data.stage !== "completed" && event.data.stage !== "failed")
 	) {
 		return null;

@@ -17,6 +17,13 @@ export type ContextUsageEstimate = {
 	canCompress: boolean;
 	compressReason?: string | null;
 	summaryActive: boolean;
+	breakdown: Array<{
+		kind: "base_system" | "custom_instructions" | "skills" | "mcp_context" | "tool_definitions" | "history" | "summary" | "current_message" | "additional_context" | "output_reserve" | "safety_margin";
+		tokens: number;
+		percent: number;
+	}>;
+	pressure: "low" | "moderate" | "high" | "critical";
+	largestContributor: { kind: ContextUsageEstimate["breakdown"][number]["kind"]; tokens: number; percent: number } | null;
 };
 
 export type EstimateContextUsageParams = {

@@ -41,6 +41,11 @@ const ROUTING_OPTIONS: RoutingOption[] = [
 		descriptionKey: "settings.defaultModel.routing.workflowPlanner.description"
 	},
 	{
+		key: "goalEvaluator",
+		titleKey: "settings.defaultModel.routing.goalEvaluator.title",
+		descriptionKey: "settings.defaultModel.routing.goalEvaluator.description"
+	},
+	{
 		key: "imageRecognition",
 		titleKey: "settings.defaultModel.routing.imageRecognition.title",
 		descriptionKey: "settings.defaultModel.routing.imageRecognition.description"

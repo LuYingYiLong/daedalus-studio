@@ -1,6 +1,6 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { useMemoizedFn } from "ahooks";
-import type { PlanApprovalState, PlanClarificationState, SessionMetadata, WorkbenchSnapshot, WorkflowTodoSnapshot } from "@/api/types";
+import type { AgentGoalState, PlanApprovalState, PlanClarificationState, SessionMetadata, WorkbenchSnapshot, WorkflowTodoSnapshot } from "@/api/types";
 import { createBackendClient } from "@/shared/api/transport/backend-client";
 import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
 import { isTimelineStreamingDeltaEvent } from "@/features/workbench/workbench-state";
@@ -56,6 +56,7 @@ export type BackendEventStreamParams = {
 	setRunState: Dispatch<SetStateAction<RunControllerState>>;
 	timelineStore: TimelinePageStore;
 	setWorkflowTodoSnapshot: Dispatch<SetStateAction<WorkflowTodoSnapshot | null>>;
+	setCurrentGoal: Dispatch<SetStateAction<AgentGoalState | null>>;
 	setLatestPlanClarification: Dispatch<SetStateAction<PlanClarificationState | null>>;
 	setLatestPlanApproval: Dispatch<SetStateAction<PlanApprovalState | null>>;
 	setPlanClarificationError: Dispatch<SetStateAction<string | null>>;
@@ -119,6 +120,22 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 				});
 			} else {
 				params.applyInitialWorkflowTodoPreference(snapshot);
+			}
+		} else if (event.event === "agent.goal.state") {
+			const goal: AgentGoalState = event.data as AgentGoalState;
+			params.setCurrentGoal(goal);
+			if (
+				(goal.stage === "achieved" || goal.stage === "failed")
+				&& !hasQueuedFollowUpResponse(params.activeWorkbenchRef.current, goal.rootRequestId)
+			) {
+				params.showNativeTaskNotification({
+					kind: "run_completed",
+					sessionId: goal.sessionId,
+					requestId: goal.rootRequestId,
+					title: goal.stage === "achieved" ? "Daedalus achieved the Goal" : "Daedalus Goal stopped",
+					body: goal.evaluation?.summary ?? goal.title,
+					dedupeKey: `goal_completed:${goal.goalId}:${goal.revision}`
+				});
 			}
 		} else if (event.event === "plan.generated" || event.event === "plan.revised") {
 			const planTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromPlanData(event.data);
@@ -212,9 +229,14 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 				params.activeWorkbenchRef.current,
 				requestId
 			);
+			const runData: Record<string, unknown> | null = typeof event.data === "object" && event.data !== null
+				? event.data as Record<string, unknown>
+				: null;
+			const belongsToGoal: boolean = typeof runData?.goalId === "string";
 			if (
 				sessionId !== null
 				&& !hasQueuedFollowUp
+				&& !belongsToGoal
 				&& !params.pendingUserActionRequestIdsRef.current.has(requestId)
 			) {
 				params.showNativeTaskNotification({

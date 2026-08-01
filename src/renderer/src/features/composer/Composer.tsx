@@ -144,11 +144,16 @@ function createModeItems(t: TFunction<"common">): MenuProps["items"] {
 			label: t("composer.mode.plan"),
 			icon: <Icon name="plan" />
 		},
+		{
+			key: "goal",
+			label: t("composer.mode.goal"),
+			icon: <Icon name="goal" />
+		},
 	];
 }
 
 function isComposerMode(value: string): value is ChatMode {
-	return value === "ask" || value === "agent" || value === "plan";
+	return value === "ask" || value === "agent" || value === "plan" || value === "goal";
 }
 
 function isApprovalMode(value: string): value is ApprovalMode {
@@ -953,31 +958,21 @@ function Composer({
 				strokeColor={contextUsageStrokeColor}
 				className={styles.contextUsage}
 			/>
+			<Typography.Text type="secondary" className={styles.contextUsageMeta}>
+				{t("composer.contextUsage.pressure", {
+					level: t(`composer.contextUsage.pressureLevels.${contextUsage.pressure}`),
+					largest: contextUsage.largestContributor === null
+						? t("composer.contextUsage.none")
+						: t(`composer.contextUsage.breakdown.kinds.${contextUsage.largestContributor.kind}`)
+				})}
+			</Typography.Text>
 			<div className={styles.contextUsageBreakdown}>
-				<div className={styles.contextUsageRow}>
-					<span>{t("composer.contextUsage.breakdown.systemAndTools")}</span>
-					<span>{formatTokenCount(contextUsage.systemAndContextTokens)}</span>
-				</div>
-				<div className={styles.contextUsageRow}>
-					<span>
-						{contextUsage.summaryActive
-							? t("composer.contextUsage.breakdown.historyWithSummary")
-							: t("composer.contextUsage.breakdown.history")}
-					</span>
-					<span>{formatTokenCount(contextUsage.historyTokens)}</span>
-				</div>
-				<div className={styles.contextUsageRow}>
-					<span>{t("composer.contextUsage.breakdown.currentMessage")}</span>
-					<span>{formatTokenCount(contextUsage.currentMessageTokens)}</span>
-				</div>
-				<div className={styles.contextUsageRow}>
-					<span>{t("composer.contextUsage.breakdown.reservedOutput")}</span>
-					<span>{formatTokenCount(contextUsage.outputReserveTokens)}</span>
-				</div>
-				<div className={styles.contextUsageRow}>
-					<span>{t("composer.contextUsage.breakdown.safetyMargin")}</span>
-					<span>{formatTokenCount(contextUsage.safetyMarginTokens)}</span>
-				</div>
+				{contextUsage.breakdown.map((item) => (
+					<div className={styles.contextUsageRow} key={item.kind}>
+						<span>{t(`composer.contextUsage.breakdown.kinds.${item.kind}`)}</span>
+						<span>{formatTokenCount(item.tokens)} · {item.percent.toFixed(1)}%</span>
+					</div>
+				))}
 			</div>
 			{contextUsageError === null ? null : (
 				<Typography.Text type="danger" className={styles.contextUsageMeta}>{contextUsageError}</Typography.Text>
@@ -1067,7 +1062,7 @@ function Composer({
 						ref={textAreaRef}
 						value={draftMessage}
 						autoSize={{ minRows: 4, maxRows: 4 }}
-						placeholder={t("composer.placeholder")}
+						placeholder={mode === "goal" ? t("composer.goalPlaceholder") : t("composer.placeholder")}
 						className={styles.composerTextArea}
 						onChange={handleTextAreaChange}
 						onKeyDown={handleTextAreaKeyDown}
