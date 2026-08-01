@@ -215,6 +215,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		}
 	},
 
+	sessionCatalog: {
+		notifyChanged: (): void => {
+			ipcRenderer.send("session-catalog:changed");
+		},
+		onChanged: (callback: () => void): (() => void) => {
+			const handler = (): void => callback();
+			ipcRenderer.on("session-catalog:changed", handler);
+			return (): void => {
+				ipcRenderer.removeListener("session-catalog:changed", handler);
+			};
+		}
+	},
+
 	clipboard: {
 		writeText: (text: string): Promise<{ written: true }> => {
 			return ipcRenderer.invoke("clipboard:write-text", text);

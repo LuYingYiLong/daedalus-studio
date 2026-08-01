@@ -19,12 +19,19 @@
 }
 
 .messageList {
+	min-height: 0;
+	overflow-y: auto;
+	overflow-anchor: none;
+	padding: var(--ds-space-2);
+}
+
+.messageItems {
 	display: flex;
 	flex-direction: column;
 	gap: var(--ds-space-3);
-	min-height: 0;
-	overflow-y: auto;
-	padding: var(--ds-space-2);
+	width: 100%;
+	min-width: 0;
+	min-height: 100%;
 }
 
 .userMessage,
@@ -48,6 +55,13 @@
 
 .messageContent.messageContent {
 	width: auto;
+}
+
+.userMessageText {
+	line-height: 1.7;
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+	word-break: break-word;
 }
 
 .assistantMessage {

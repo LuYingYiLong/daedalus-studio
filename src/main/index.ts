@@ -204,6 +204,21 @@ function broadcastClientPreferencesChanged(preferences: ClientPreferences): void
 	}
 }
 
+function broadcastSessionCatalogChanged(senderWebContentsId: number): void {
+	for (const browserWindow of BrowserWindow.getAllWindows()) {
+		if (!browserWindow.isDestroyed() && browserWindow.webContents.id !== senderWebContentsId) {
+			browserWindow.webContents.send("session-catalog:changed");
+		}
+	}
+}
+
+ipcMain.on("session-catalog:changed", (event): void => {
+	if (BrowserWindow.fromWebContents(event.sender) === null) {
+		return;
+	}
+	broadcastSessionCatalogChanged(event.sender.id);
+});
+
 ipcMain.on("window:renderer-ready", (event): void => {
 	const browserWindow: BrowserWindow | null = BrowserWindow.fromWebContents(event.sender);
 	if (browserWindow !== null) {

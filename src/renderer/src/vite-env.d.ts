@@ -95,6 +95,11 @@ declare global {
 		onChanged: (callback: (preferences: ClientPreferences) => void) => () => void;
 	}
 
+	interface SessionCatalogAPI {
+		notifyChanged: () => void;
+		onChanged: (callback: () => void) => () => void;
+	}
+
 	type AppUpdateStatus =
 		| "idle"
 		| "checking"
@@ -315,6 +320,7 @@ declare global {
 		backend: BackendAPI;
 		backendBootstrap: BackendBootstrapAPI;
 		clientPreferences: ClientPreferencesAPI;
+		sessionCatalog: SessionCatalogAPI;
 		clipboard: ClipboardAPI;
 		nativeNotifications: NativeNotificationAPI;
 		tray: TrayAPI;

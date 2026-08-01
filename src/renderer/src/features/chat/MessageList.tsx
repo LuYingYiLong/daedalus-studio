@@ -59,6 +59,8 @@ export type MessageListProps = {
 	onAddSelectionContext?: (item: AdditionalContextItem) => void;
 	onSelectionAsk?: (anchor: MessageTextAnchor) => Promise<void>;
 	onOpenSelectionAsk?: (threadId: string) => Promise<void>;
+	onDeleteSelectionAsk?: (threadId: string) => Promise<void>;
+	onDeleteAllSelectionAsks?: () => Promise<void>;
 };
 
 export type MessageListHandle = {
@@ -201,7 +203,9 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	selectionAskThreads = [],
 	onAddSelectionContext,
 	onSelectionAsk,
-	onOpenSelectionAsk
+	onOpenSelectionAsk,
+	onDeleteSelectionAsk,
+	onDeleteAllSelectionAsks
 }: MessageListProps, ref): React.JSX.Element {
 	const { t } = useTranslation();
 	const [messageApi, messageContextHolder] = message.useMessage();
@@ -675,7 +679,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 					components={virtuosoComponents}
 					itemContent={itemContent}
 						/>
-						{onAddSelectionContext !== undefined && onSelectionAsk !== undefined && onOpenSelectionAsk !== undefined ? (
+						{onAddSelectionContext !== undefined && onSelectionAsk !== undefined && onOpenSelectionAsk !== undefined && onDeleteSelectionAsk !== undefined && onDeleteAllSelectionAsks !== undefined ? (
 							<MessageSelectionOverlay
 								container={selectionContainer}
 								scroller={selectionScroller}
@@ -684,6 +688,8 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 								onAddContext={onAddSelectionContext}
 								onAsk={onSelectionAsk}
 								onOpenAsk={onOpenSelectionAsk}
+								onDeleteAsk={onDeleteSelectionAsk}
+								onDeleteAllAsks={onDeleteAllSelectionAsks}
 							/>
 						) : null}
 					</div>

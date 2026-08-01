@@ -255,6 +255,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 			setBusyAction("restore");
 			setErrorMessage(null);
 			await restoreArchivedSession(session.id);
+			window.electronAPI.sessionCatalog.notifyChanged();
 			setArchivedSessions((currentSessions: SessionMetadata[]): SessionMetadata[] => {
 				return currentSessions.filter((currentSession: SessionMetadata): boolean => currentSession.id !== session.id);
 			});

@@ -649,6 +649,11 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [activeSessionMetadata, setActiveSessionMetadata] = useState<SessionMetadata | null>(null);
 	const [recentSessions, setRecentSessions] = useState<SessionMetadata[]>(() => getRecentSessions(bootstrapData.sessionList.sessions));
 	const recentSessionsRef = useLatest(recentSessions);
+	useEffect((): (() => void) => {
+		return window.electronAPI.sessionCatalog.onChanged((): void => {
+			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		});
+	}, []);
 	const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceConfig | null>(null);
 	const timelineStoreRef = useRef<TimelinePageStore | null>(null);
 	if (timelineStoreRef.current === null) {

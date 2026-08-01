@@ -1,5 +1,5 @@
 import type { MessageTextAnchor, SelectionAskMessage, SelectionAskThread, SelectionAskThreadPage } from "@/api/types";
-import { cancelSelectionAskResponse, createSelectionAskThread, getSelectionAskThread, listSelectionAskThreads, sendSelectionAskMessage } from "@/api/session-api";
+import { cancelSelectionAskResponse, createSelectionAskThread, deleteAllSelectionAskThreads, deleteSelectionAskThread, getSelectionAskThread, listSelectionAskThreads, sendSelectionAskMessage } from "@/api/session-api";
 import { createBackendClient } from "@/shared/api/transport/backend-client";
 import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -33,6 +33,8 @@ export function useSelectionAsk(sessionId: string, initialThreads: SelectionAskT
 	close: () => void;
 	createOrOpen: (anchor: MessageTextAnchor, locale: "zh-CN" | "en-US") => Promise<void>;
 	open: (threadId: string) => Promise<void>;
+	remove: (threadId: string) => Promise<void>;
+	removeAll: () => Promise<void>;
 	send: (message: string) => Promise<void>;
 	cancel: () => Promise<void>;
 } {
@@ -207,6 +209,47 @@ export function useSelectionAsk(sessionId: string, initialThreads: SelectionAskT
 		}
 	}, [applyPage, sessionId]);
 
+	const remove = useCallback(async (threadId: string): Promise<void> => {
+		try {
+			await deleteSelectionAskThread(sessionId, threadId);
+			setState((current: SelectionAskState): SelectionAskState => {
+				const messagesByThread: Record<string, SelectionAskMessage[]> = { ...current.messagesByThread };
+				delete messagesByThread[threadId];
+				const removedActiveThread: boolean = current.activeThreadId === threadId;
+				return {
+					...current,
+					threads: current.threads.filter((thread: SelectionAskThread): boolean => thread.threadId !== threadId),
+					messagesByThread,
+					activeThreadId: removedActiveThread ? null : current.activeThreadId,
+					sending: removedActiveThread ? false : current.sending,
+					cancelling: removedActiveThread ? false : current.cancelling,
+					error: null
+				};
+			});
+		} catch (error: unknown) {
+			setState((current: SelectionAskState): SelectionAskState => ({ ...current, error: error instanceof Error ? error.message : String(error) }));
+			throw error;
+		}
+	}, [sessionId]);
+
+	const removeAll = useCallback(async (): Promise<void> => {
+		try {
+			await deleteAllSelectionAskThreads(sessionId);
+			setState((current: SelectionAskState): SelectionAskState => ({
+				...current,
+				threads: [],
+				messagesByThread: {},
+				activeThreadId: null,
+				sending: false,
+				cancelling: false,
+				error: null
+			}));
+		} catch (error: unknown) {
+			setState((current: SelectionAskState): SelectionAskState => ({ ...current, error: error instanceof Error ? error.message : String(error) }));
+			throw error;
+		}
+	}, [sessionId]);
+
 	return {
 		...state,
 		close: (): void => setState((current: SelectionAskState): SelectionAskState => ({
@@ -217,6 +260,8 @@ export function useSelectionAsk(sessionId: string, initialThreads: SelectionAskT
 		})),
 		createOrOpen,
 		open,
+		remove,
+		removeAll,
 		send,
 		cancel
 	};

@@ -135,6 +135,20 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 			void message.error(error instanceof Error ? error.message : t("chat.selection.askFailed"));
 		}
 	}, [i18n.language, message, selectionAsk, t]);
+	const handleDeleteSelectionAsk = useCallback(async (threadId: string): Promise<void> => {
+		try {
+			await selectionAsk.remove(threadId);
+		} catch (error: unknown) {
+			void message.error(error instanceof Error ? error.message : t("chat.selection.deleteAskFailed"));
+		}
+	}, [message, selectionAsk, t]);
+	const handleDeleteAllSelectionAsks = useCallback(async (): Promise<void> => {
+		try {
+			await selectionAsk.removeAll();
+		} catch (error: unknown) {
+			void message.error(error instanceof Error ? error.message : t("chat.selection.deleteAskFailed"));
+		}
+	}, [message, selectionAsk, t]);
 
 	const navigateTurn = useCallback((direction: "previous" | "next"): void => {
 		if (timelineNavigationEntries.length === 0) {
@@ -197,6 +211,8 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 				onAddSelectionContext={onAddContext}
 				onSelectionAsk={handleSelectionAsk}
 				onOpenSelectionAsk={selectionAsk.open}
+				onDeleteSelectionAsk={handleDeleteSelectionAsk}
+				onDeleteAllSelectionAsks={handleDeleteAllSelectionAsks}
 				isLoading={isLoading}
 				errorMessage={errorMessage}
 				hasMoreBefore={timelinePage.hasMoreBefore}

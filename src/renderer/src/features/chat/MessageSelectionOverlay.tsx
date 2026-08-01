@@ -1,7 +1,7 @@
 import type { AdditionalContextItem, MessageTextAnchor, SelectionAskThread } from "@/api/types";
 import { Icon } from "@/assets/icons";
-import { Button, Input, Space, Tooltip } from "antd";
-import type { InputRef } from "antd";
+import { Button, Dropdown, Input, Space, Tooltip } from "antd";
+import type { InputRef, MenuProps } from "antd";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createMessageTextAnchor, getMessageAnchorKey, getMessageSelectionContextId, resolveMessageTextAnchor } from "./message-text-anchor";
@@ -21,6 +21,8 @@ export type MessageSelectionOverlayProps = {
 	onAddContext: (item: AdditionalContextItem) => void;
 	onAsk: (anchor: MessageTextAnchor) => Promise<void>;
 	onOpenAsk: (threadId: string) => Promise<void>;
+	onDeleteAsk: (threadId: string) => Promise<void>;
+	onDeleteAllAsks: () => Promise<void>;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -91,7 +93,7 @@ function createContextItem(anchor: MessageTextAnchor, annotation: string, existi
 	};
 }
 
-function MessageSelectionOverlay({ container, scroller, contextItems, askThreads, onAddContext, onAsk, onOpenAsk }: MessageSelectionOverlayProps): React.JSX.Element | null {
+function MessageSelectionOverlay({ container, scroller, contextItems, askThreads, onAddContext, onAsk, onOpenAsk, onDeleteAsk, onDeleteAllAsks }: MessageSelectionOverlayProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const inputRef = useRef<InputRef | null>(null);
 	const cancelEditRef = useRef<boolean>(false);
@@ -274,6 +276,36 @@ function MessageSelectionOverlay({ container, scroller, contextItems, askThreads
 		clearBrowserSelection();
 	}, [annotation, editing, onAddContext]);
 
+	const askMarkerMenu = useCallback((threadId: string): MenuProps => ({
+		items: [
+			{
+				key: "delete",
+				icon: <Icon name="remove" />,
+				label: t("chat.selection.deleteAsk"),
+				danger: true
+			},
+			{
+				type: "divider"
+			},
+			{
+				key: "deleteAll",
+				icon: <Icon name="clear" />,
+				label: t("chat.selection.deleteAllAsks"),
+				danger: true
+			}
+		],
+		onClick: ({ key, domEvent }): void => {
+			domEvent.stopPropagation();
+			if (key === "delete") {
+				void onDeleteAsk(threadId);
+				return;
+			}
+			if (key === "deleteAll") {
+				void onDeleteAllAsks();
+			}
+		}
+	}), [onDeleteAllAsks, onDeleteAsk, t]);
+
 	return (
 		<div className={styles.overlay} aria-hidden={false}>
 			{activeSelection !== null && editing === null ? (
@@ -341,31 +373,30 @@ function MessageSelectionOverlay({ container, scroller, contextItems, askThreads
 						data-message-selection-control="true"
 						className={styles.marker}
 						style={{ left, top }}
-						type="text"
 						shape="circle"
-						size="small"
 						icon={<Icon name="chat" />}
 						onClick={(): void => startAnnotation(anchor, left, top, item)}
 					/>
 				</Tooltip>
 			))}
 			{markers.asks.map(({ thread, left, top }) => (
-				<Tooltip key={thread.threadId} title={t("chat.selection.openAsk")}>
-					<Button
-						ref={(element: HTMLButtonElement | null): void => {
-							if (element === null) askMarkerElementsRef.current.delete(thread.threadId);
-							else askMarkerElementsRef.current.set(thread.threadId, element);
-						}}
-						data-message-selection-control="true"
-						className={`${styles.marker} ${styles.askMarker}`}
-						style={{ left, top }}
-						type="text"
-						shape="circle"
-						size="small"
-						icon={<Icon name="ask" />}
-						onClick={(): void => { void onOpenAsk(thread.threadId); }}
-					/>
-				</Tooltip>
+				<Dropdown key={thread.threadId} menu={askMarkerMenu(thread.threadId)} trigger={["contextMenu"]}>
+					<Tooltip title={t("chat.selection.openAsk")}>
+						<Button
+							ref={(element: HTMLButtonElement | null): void => {
+								if (element === null) askMarkerElementsRef.current.delete(thread.threadId);
+								else askMarkerElementsRef.current.set(thread.threadId, element);
+							}}
+							data-message-selection-control="true"
+							className={`${styles.marker} ${styles.askMarker}`}
+							style={{ left, top }}
+							shape="circle"
+							icon={<Icon name="ask" />}
+							onContextMenu={(event): void => event.stopPropagation()}
+							onClick={(): void => { void onOpenAsk(thread.threadId); }}
+						/>
+					</Tooltip>
+				</Dropdown>
 			))}
 		</div>
 	);

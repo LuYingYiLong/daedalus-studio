@@ -32,13 +32,12 @@
 
 .marker {
 	z-index: 1;
-	transform: translate(-56px, -100%);
+	transform: translate(-12px, -60%);
 	transition-property: color, background-color, border-color, box-shadow !important;
-	color: var(--ant-color-primary);
 	background: var(--ant-color-bg-elevated, var(--ds-bg));
-	box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
+	box-shadow: 0 1px 4px var(--ds-box-shadow)
 }
 
 .askMarker {
-	transform: translate(-28px, -100%);
+	transform: translate(0px, -60%);
 }

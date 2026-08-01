@@ -274,6 +274,19 @@ export async function cancelSelectionAskResponse(
 	return client.request("session.selectionAsk.cancel", { sessionId, threadId });
 }
 
+export async function deleteSelectionAskThread(
+	sessionId: string,
+	threadId: string
+): Promise<{ threadId: string; deleted: boolean }> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.delete", { sessionId, threadId });
+}
+
+export async function deleteAllSelectionAskThreads(sessionId: string): Promise<{ deletedCount: number }> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.deleteAll", { sessionId });
+}
+
 export async function setSessionPinned(sessionId: string, pinned: boolean): Promise<SetSessionPinnedResult> {
 	const client = await createBackendClient();
 
