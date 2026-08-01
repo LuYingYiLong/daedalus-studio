@@ -47,10 +47,14 @@ describe("MessageList virtual history window source", () => {
 		expect(messageListSource).toContain("followOutput={(): \"auto\" | false => shouldFollowBottomRef.current ? \"auto\" : false}");
 	});
 
-	it("uses Virtuoso reach callbacks and temporarily mounts the loaded window for selection and retry editing", () => {
+	it("uses Virtuoso reach callbacks and only expands the loaded window for retry editing", () => {
 		expect(messageListSource).toContain("startReached=");
 		expect(messageListSource).toContain("endReached=");
 		expect(messageListSource).toContain("activeRetryRequestId !== null");
 		expect(messageListSource).toContain("FULL_WINDOW_VIEWPORT_EXPANSION");
+		expect(messageListSource).not.toContain("selectionViewportExpanded");
+		expect(messageListSource).not.toContain("selectMountedMessageText");
+		expect(messageListSource).toContain('key: "copy-all"');
+		expect(messageListSource).toContain("getTimelineCopyText(blocks)");
 	});
 });

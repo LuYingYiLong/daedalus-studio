@@ -491,7 +491,8 @@
       "copy": "Copy",
       "copied": "Copied",
       "copyFailed": "Failed to copy selected text.",
-      "selectAll": "Select all"
+      "selectAll": "Select all",
+      "copyAll": "Copy all"
     },
     "assistant": {
       "process": "Process",

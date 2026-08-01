@@ -103,6 +103,14 @@ export function shouldRenderTimelineBlock(block: TimelineBlock): boolean {
 	return block.status === "running" || block.content.trim().length > 0 || block.bodyParts.length > 0;
 }
 
+export function getTimelineCopyText(blocks: readonly TimelineBlock[]): string {
+	return blocks
+		.map((block: TimelineBlock): string => block.type === "user" ? block.content : getAssistantMarkdown(block))
+		.map((content: string): string => content.trim())
+		.filter((content: string): boolean => content.length > 0)
+		.join("\n\n");
+}
+
 function getEstimatedItemHeight(blocks: TimelineBlock[]): number {
 	const estimates: number[] = blocks
 		.map((block: TimelineBlock): number | null => block.renderHints?.estimatedHeight ?? null)
@@ -222,7 +230,6 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const lastScrollToBottomRequestRef = useRef<number>(0);
 	const highlightFrameRef = useRef<number | null>(null);
 	const [contextMenuSelection, setContextMenuSelection] = useState<string>("");
-	const [selectionViewportExpanded, setSelectionViewportExpanded] = useState<boolean>(false);
 	const [searchRangeRevision, setSearchRangeRevision] = useState<number>(0);
 	const [selectionContainer, setSelectionContainer] = useState<HTMLElement | null>(null);
 	const [selectionScroller, setSelectionScroller] = useState<HTMLElement | null>(null);
@@ -236,7 +243,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const isInitialLoading: boolean = isLoading === true && blocks.length === 0;
 	const canEditUserMessages: boolean = onRetryFromUserMessage !== undefined && !retryDisabled && !hasRunningAssistantBlock && activeRetryRequestId === null;
 	const defaultItemHeight: number = useMemo((): number => getEstimatedItemHeight(blocks), [blocks]);
-	const expandFullWindow: boolean = selectionViewportExpanded || activeRetryRequestId !== null;
+	const expandFullWindow: boolean = activeRetryRequestId !== null;
 	const increaseViewportBy = expandFullWindow ? FULL_WINDOW_VIEWPORT_EXPANSION : VIRTUAL_VIEWPORT_EXPANSION;
 	const setAwayFromBottom = useCallback((awayFromBottom: boolean): void => {
 		onAwayFromBottomChange?.(awayFromBottom);
@@ -329,47 +336,6 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		scrollToEntry
 	}), [scrollToBottomNow, scrollToEntry]);
 
-	const selectMountedMessageText = useCallback((): void => {
-		const scroller: HTMLElement | null = scrollerRef.current;
-		const selection: Selection | null = window.getSelection();
-		if (scroller === null || selection === null) {
-			return;
-		}
-		const firstEntry: HTMLElement | null = scroller.querySelector("[data-entry-id]");
-		const entries: NodeListOf<HTMLElement> = scroller.querySelectorAll("[data-entry-id]");
-		const lastEntry: HTMLElement | undefined = entries[entries.length - 1];
-		if (firstEntry === null || lastEntry === undefined) {
-			return;
-		}
-		const range: Range = document.createRange();
-		range.setStartBefore(firstEntry);
-		range.setEndAfter(lastEntry);
-		selection.removeAllRanges();
-		selection.addRange(range);
-		setContextMenuSelection(selection.toString());
-	}, []);
-
-	const selectAllMessageText = useCallback((): void => {
-		flushSync((): void => setSelectionViewportExpanded(true));
-		window.requestAnimationFrame((): void => {
-			window.requestAnimationFrame(selectMountedMessageText);
-		});
-	}, [selectMountedMessageText]);
-
-	useEffect((): (() => void) | void => {
-		if (!selectionViewportExpanded) {
-			return;
-		}
-		const handleSelectionChange = (): void => {
-			const selection: Selection | null = window.getSelection();
-			if (selection === null || selection.isCollapsed) {
-				setSelectionViewportExpanded(false);
-			}
-		};
-		document.addEventListener("selectionchange", handleSelectionChange);
-		return (): void => document.removeEventListener("selectionchange", handleSelectionChange);
-	}, [selectionViewportExpanded]);
-
 	const copyContextMenuSelection = useCallback((): void => {
 		if (contextMenuSelection.length === 0) {
 			return;
@@ -382,9 +348,22 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			});
 	}, [contextMenuSelection, messageApi, t]);
 
+	const copyAllMessageText = useCallback((): void => {
+		const text: string = getTimelineCopyText(blocks);
+		if (text.length === 0) {
+			return;
+		}
+		void copyTextToClipboard(text)
+			.then((): void => void messageApi.success(t("chat.common.copied")))
+			.catch((error: unknown): void => {
+				console.error("[MessageList] copy all messages failed", error);
+				void messageApi.error(t("chat.common.copyFailed"));
+			});
+	}, [blocks, messageApi, t]);
+
 	const messageContextMenu: MenuProps = useMemo((): MenuProps => ({
 		items: [
-			{ key: "select-all", label: t("chat.common.selectAll") },
+			{ key: "copy-all", label: t("chat.common.copyAll"), disabled: blocks.length === 0 },
 			...(contextMenuSelection.length > 0 ? [
 				{ type: "divider" as const },
 				{ key: "copy", label: t("chat.common.copy") }
@@ -393,13 +372,13 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		onClick: ({ key, domEvent }): void => {
 			domEvent.preventDefault();
 			domEvent.stopPropagation();
-			if (key === "select-all") {
-				selectAllMessageText();
+			if (key === "copy-all") {
+				copyAllMessageText();
 			} else if (key === "copy") {
 				copyContextMenuSelection();
 			}
 		}
-	}), [contextMenuSelection.length, copyContextMenuSelection, selectAllMessageText, t]);
+	}), [blocks.length, contextMenuSelection.length, copyAllMessageText, copyContextMenuSelection, t]);
 
 	const handleContextMenuCapture = useCallback((): void => {
 		const scroller: HTMLElement | null = scrollerRef.current;
