@@ -152,6 +152,11 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 						onChange={(keys: string | string[]): void => {
 							setSummaryOpen((Array.isArray(keys) ? keys : [keys]).length > 0);
 						}}
+						expandIcon={({ isActive }) => (
+							<span className={`collapseExpandIcon ${isActive ? "collapseExpandIconActive" : ""}`}>
+								<Icon name="arrow-down" />
+							</span>
+						)}
 						items={[
 							{
 								key: summaryStartPart.stepRunId || "summary-process",

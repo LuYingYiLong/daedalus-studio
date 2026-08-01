@@ -16,25 +16,6 @@
 	user-select: none;
 }
 
-.progressTrigger {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	min-width: 0;
-	padding: 2px 4px;
-	border: 0;
-	border-radius: var(--ds-radius-sm);
-	background: transparent;
-	color: var(--ds-text-primary);
-	cursor: pointer;
-}
-
-.progressTrigger:hover,
-.progressTrigger:focus-visible {
-	background: var(--ds-surface-hover);
-	outline: none;
-}
-
 .phaseText {
 	font-variant-numeric: tabular-nums;
 	line-height: 1;

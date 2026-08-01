@@ -28,6 +28,7 @@ import {
 	normalizeWorkflowTodoSnapshot
 } from "@/features/composer/workflow-todo";
 import { hasQueuedFollowUpResponse } from "../run-completion-notification";
+import { selectLatestGoalState } from "@/features/composer/goal-state";
 
 type RefValue<T> = {
 	current: T;
@@ -123,7 +124,9 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 			}
 		} else if (event.event === "agent.goal.state") {
 			const goal: AgentGoalState = event.data as AgentGoalState;
-			params.setCurrentGoal(goal);
+			params.setCurrentGoal((currentGoal: AgentGoalState | null): AgentGoalState => {
+				return selectLatestGoalState(currentGoal, goal);
+			});
 			if (
 				(goal.stage === "achieved" || goal.stage === "failed")
 				&& !hasQueuedFollowUpResponse(params.activeWorkbenchRef.current, goal.rootRequestId)

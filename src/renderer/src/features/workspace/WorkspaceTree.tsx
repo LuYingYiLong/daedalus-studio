@@ -1372,10 +1372,7 @@ function WorkspaceTree({
 					items={sectionItems}
 					onChange={handleSectionChange}
 					expandIcon={({ isActive }) => (
-						<span
-							className={`${styles.collapseExpandIcon} ${isActive ? styles.collapseExpandIconActive : ""
-								}`}
-						>
+						<span className={`collapseExpandIcon ${isActive ? "collapseExpandIconActive" : ""}`}>
 							<Icon name="arrow-down" />
 						</span>
 					)}

@@ -4,7 +4,11 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import { applyGoalRollback, cancelGoal, extendGoalBudget, pauseGoal, previewGoalRollback, resumeGoal } from "@/api/goal-api";
 import type { AgentGoalState, WorkflowTodoSnapshot, WorkflowTodoStep } from "@/api/types";
-import type { WorkflowFileChangeSummary } from "./FloatingWorkflowTodoPanel";
+import {
+	getWorkflowTodoProgress,
+	WorkflowTodoStepList,
+	type WorkflowFileChangeSummary
+} from "./FloatingWorkflowTodoPanel";
 import styles from "./FloatingGoalPanel.module.css";
 
 type Props = {
@@ -57,6 +61,7 @@ export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummar
 	const paused = goal.stage === "paused";
 	const readinessIssues = goal.readiness?.checks.filter((check) => check.status !== "passed") ?? [];
 	const todoSteps: WorkflowTodoStep[] = workflowTodo?.steps ?? [];
+	const todoProgress = getWorkflowTodoProgress(todoSteps);
 	const summary = useMemo(() => `${goal.usage.cycles}/${goal.budget.maxCycles}`, [goal.budget.maxCycles, goal.usage.cycles]);
 
 	async function runAction(kind: "pause" | "resume" | "cancel", operation: () => Promise<AgentGoalState>): Promise<void> {
@@ -144,8 +149,21 @@ export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummar
 			)}
 			{todoSteps.length === 0 ? null : (
 				<div className={styles.section}>
-					<Typography.Text strong>{t("goal.workflow")}</Typography.Text>
-					{todoSteps.map((step) => <Typography.Text key={step.id} type="secondary">• {step.title}</Typography.Text>)}
+					<div className={styles.workflowHeading}>
+						<Typography.Text strong>{workflowTodo?.title ?? t("goal.workflow")}</Typography.Text>
+						<span className={styles.workflowProgress}>
+							<Progress
+								type="circle"
+								size={14}
+								percent={todoProgress.percent}
+								showInfo={false}
+								strokeColor="var(--ds-accent)"
+								strokeWidth={10}
+							/>
+							<Typography.Text>{todoProgress.finished}/{todoSteps.length}</Typography.Text>
+						</span>
+					</div>
+					<WorkflowTodoStepList steps={todoSteps} />
 				</div>
 			)}
 			<div className={styles.footer}>
@@ -164,14 +182,31 @@ export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummar
 	return (
 		<>
 			<div className={styles.panel} aria-label={t("goal.aria")}>
-				<Popover open={popoverOpen} onOpenChange={setPopoverOpen} trigger="click" placement="top" title={goal.title} content={content}>
-					<Button type="text" size="small" className={styles.trigger} icon={<Icon name="goal" />}>
+				<Popover
+					open={popoverOpen} 
+					onOpenChange={setPopoverOpen}
+					placement="top"
+					title={goal.title}
+					content={content}
+				>
+					<Button
+						type="text"
+						size="small"
+						className={styles.trigger}
+						icon={<Icon name="goal" />}
+					>
 						{t(`goal.stages.${goal.stage}`)} · {summary}
 					</Button>
 				</Popover>
 				<span className={styles.diff}><span>+{fileChangeSummary.additions}</span><span>-{fileChangeSummary.deletions}</span></span>
 			</div>
-			<Modal title={t("goal.extend.title")} open={budgetOpen} confirmLoading={budgetSaving} destroyOnHidden onCancel={() => setBudgetOpen(false)} onOk={() => void handleExtend()}>
+			<Modal
+				title={t("goal.extend.title")}
+				open={budgetOpen}
+				confirmLoading={budgetSaving}
+				destroyOnHidden onCancel={() => setBudgetOpen(false)}
+				onOk={() => void handleExtend()}
+			>
 				<div className={styles.budgetFields}>
 					<label>{t("goal.extend.cycles")}<InputNumber min={0} max={100} value={cycles} onChange={(value) => setCycles(value ?? 0)} /></label>
 					<label>{t("goal.extend.tokens")}<InputNumber min={0} max={10_000_000} step={10_000} value={tokens} onChange={(value) => setTokens(value ?? 0)} /></label>

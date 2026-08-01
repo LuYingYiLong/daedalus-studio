@@ -112,19 +112,6 @@
 	pointer-events: auto;
 }
 
-.collapseExpandIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transform: rotate(-90deg);
-  transform-origin: center;
-  transition: transform var(--ant-motion-duration-mid) var(--ant-motion-ease-in-out);
-}
-
-.collapseExpandIconActive {
-  transform: rotate(0deg);
-}
-
 .workspaceMenuItem {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;

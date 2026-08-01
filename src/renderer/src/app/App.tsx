@@ -57,6 +57,7 @@ import WorkspaceProjectDialog from "@/features/workspace/WorkspaceProjectDialog"
 import { extractEnabledSkillRefs, type ComposerCompletionTrigger } from "@/features/composer/composer-completion";
 import { createComposerReasoningEffortUpdate } from "@/features/composer/composer-reasoning-effort";
 import { createWorkflowTodoSnapshotFromPlanData, getWorkflowTodoSnapshotKey, isWorkflowTodoActive, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
+import { selectLatestGoalState } from "@/features/composer/goal-state";
 import { saveImageAttachment, saveTextAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
 import {
 	CLIENT_PREFERENCES_CHANGED_EVENT,
@@ -695,6 +696,11 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
 	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] = useState<WorkflowTodoSnapshot | null>(null);
 	const [currentGoal, setCurrentGoal] = useState<AgentGoalState | null>(null);
+	const applyCurrentGoalSnapshot = useCallback((nextGoal: AgentGoalState): void => {
+		setCurrentGoal((current: AgentGoalState | null): AgentGoalState => {
+			return selectLatestGoalState(current, nextGoal);
+		});
+	}, []);
 	const [runState, setRunState] = useState<RunControllerState>(() => createIdleRunState());
 	const [unreadSessionIds, setUnreadSessionIds] = useState<ReadonlySet<string>>(() => new Set<string>());
 	const windowFocusedRef = useRef<boolean>(document.hasFocus());
@@ -1737,7 +1743,11 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					? createIdleRunState(currentState.sequence)
 					: applyAgentRunState(currentState, result.activeAgentRun)
 			));
-			setCurrentGoal(result.currentGoal);
+			setCurrentGoal((current: AgentGoalState | null): AgentGoalState | null => {
+				return result.currentGoal === null
+					? null
+					: selectLatestGoalState(current, result.currentGoal);
+			});
 			if (loadingComposerDraft?.sessionId === sessionId) {
 				queueWorkbenchPatch({ composer: { text: loadingComposerDraft.text } });
 			}
@@ -3672,7 +3682,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						onWorkflowTodoDismiss={(snapshot: WorkflowTodoSnapshot): void => {
 							void handleWorkflowTodoDismiss(snapshot);
 						}}
-						onGoalChange={setCurrentGoal}
+						onGoalChange={applyCurrentGoalSnapshot}
 						onCompletionOpen={handleCompletionOpen}
 				/>
 			</div>
