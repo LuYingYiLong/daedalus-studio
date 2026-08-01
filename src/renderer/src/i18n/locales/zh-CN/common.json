@@ -254,7 +254,12 @@
       "usedTokens": "{{used}} / {{total}} tokens",
       "meta": "{{model}} / 可用 {{available}} / {{source}}",
       "compress": "压缩聊天",
-      "pressure": "{{level}}压力 · 最大贡献项：{{largest}}",
+      "pressureLevel": "{{level}}压力",
+      "largestContributor": "最大贡献项：{{largest}}",
+      "columns": {
+        "tokens": "Token",
+        "share": "占比"
+      },
       "none": "无",
       "pressureLevels": {
         "low": "低",

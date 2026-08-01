@@ -562,6 +562,7 @@ function HomePage({
 	const [isGodotSceneLoading, setIsGodotSceneLoading] = useState<boolean>(false);
 	const [godotSceneSearch, setGodotSceneSearch] = useState<string>("");
 	const dockActivationRequestIdRef = useRef<number>(0);
+	const summaryRequestIdRef = useRef<number>(0);
 	const [sideDockActivationRequest, setSideDockActivationRequest] = useState<DockPanelActivationRequest | null>(null);
 	const previousSessionLayoutRef = useRef<{
 		sessionId: string | null;
@@ -747,8 +748,10 @@ function HomePage({
 	}, [effectiveGodotLaunchExecutablePath, workspaceForActions]);
 
 	useEffect((): void => {
+		summaryRequestIdRef.current += 1;
 		setSummaryOpen(false);
 		setSummaryOverview(null);
+		setIsSummaryLoading(false);
 		setSummaryError(null);
 		setPlansModalOpen(false);
 		setSourcesModalOpen(false);
@@ -763,23 +766,33 @@ function HomePage({
 			return null;
 		}
 
+		const requestId: number = ++summaryRequestIdRef.current;
+		const sessionId: string = activeSessionId;
 		setIsSummaryLoading(true);
 		setSummaryError(null);
 		try {
 			const result: SessionOverviewResult = await fetchSessionOverview({
-				sessionId: activeSessionId,
+				sessionId,
 				planLimit,
 				sourceLimit
 			});
+			if (requestId !== summaryRequestIdRef.current) {
+				return null;
+			}
 			setSummaryOverview(result);
 			return result;
 		} catch (error: unknown) {
+			if (requestId !== summaryRequestIdRef.current) {
+				return null;
+			}
 			const message: string = error instanceof Error ? error.message : t("agentPage.summary.errors.load");
 			console.error("[HomePage] failed to load session overview", error);
 			setSummaryError(message);
 			return null;
 		} finally {
-			setIsSummaryLoading(false);
+			if (requestId === summaryRequestIdRef.current) {
+				setIsSummaryLoading(false);
+			}
 		}
 	}, [activeSessionId]);
 
@@ -792,17 +805,17 @@ function HomePage({
 		setGodotSceneSearch("");
 		setPreviewSource(null);
 		setPreviewPlan(null);
-		if (summaryOpen) {
+		if (activeSessionId !== null) {
 			void loadSummaryOverview();
 		}
-	}, [activeWorkspace?.id, loadSummaryOverview]);
+	}, [activeSessionId, activeWorkspace?.id, loadSummaryOverview]);
 
 	const handleSummaryOpenChange = useCallback((open: boolean): void => {
 		setSummaryOpen(open);
-		if (open && !isSummaryLoading) {
+		if (open && summaryOverview === null && summaryError === null && !isSummaryLoading) {
 			void loadSummaryOverview();
 		}
-	}, [isSummaryLoading, loadSummaryOverview]);
+	}, [isSummaryLoading, loadSummaryOverview, summaryError, summaryOverview]);
 
 	const gitActions = useGitActionDialogController({
 		workspaceId: workspaceForActions?.id ?? null,
@@ -1470,6 +1483,7 @@ function HomePage({
 				placement="bottom"
 				open={summaryOpen}
 				onOpenChange={handleSummaryOpenChange}
+				fresh
 				className={styles.summaryPopver}
 				content={summaryPopoverContent}
 			>

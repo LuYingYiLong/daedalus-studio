@@ -11,6 +11,14 @@ describe("HomePage summary popover source", () => {
 		expect(source).toContain("loadSummaryOverview");
 	});
 
+	it("prewarms and reuses the current session overview", () => {
+		expect(source).toContain("const summaryRequestIdRef = useRef<number>(0);");
+		expect(source).toContain("if (activeSessionId !== null) {");
+		expect(source).toContain("open && summaryOverview === null && summaryError === null && !isSummaryLoading");
+		expect(source).toContain("requestId !== summaryRequestIdRef.current");
+		expect(source).toContain("fresh");
+	});
+
 	it("shows the summary action for non-home sessions independently of workspace launch controls", () => {
 		expect(source).toContain("const showWorkspaceLaunchControls: boolean = workspaceForActions !== null;");
 		expect(source).toContain("const showSummaryButton: boolean = activeSessionId !== null;");

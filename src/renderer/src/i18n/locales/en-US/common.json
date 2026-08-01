@@ -254,7 +254,12 @@
       "usedTokens": "{{used}} / {{total}} tokens",
       "meta": "{{model}} / {{available}} available / {{source}}",
       "compress": "Compress chat",
-      "pressure": "{{level}} pressure · largest: {{largest}}",
+      "pressureLevel": "{{level}} pressure",
+      "largestContributor": "Largest: {{largest}}",
+      "columns": {
+        "tokens": "Tokens",
+        "share": "Share"
+      },
       "none": "None",
       "pressureLevels": {
         "low": "Low",

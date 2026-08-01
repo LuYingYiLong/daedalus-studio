@@ -958,19 +958,26 @@ function Composer({
 				strokeColor={contextUsageStrokeColor}
 				className={styles.contextUsage}
 			/>
-			<Typography.Text type="secondary" className={styles.contextUsageMeta}>
-				{t("composer.contextUsage.pressure", {
-					level: t(`composer.contextUsage.pressureLevels.${contextUsage.pressure}`),
-					largest: contextUsage.largestContributor === null
-						? t("composer.contextUsage.none")
-						: t(`composer.contextUsage.breakdown.kinds.${contextUsage.largestContributor.kind}`)
-				})}
-			</Typography.Text>
+			<div className={styles.contextUsagePressure}>
+				<Typography.Text type="secondary">
+					{t("composer.contextUsage.pressureLevel", {
+						level: t(`composer.contextUsage.pressureLevels.${contextUsage.pressure}`)
+					})}
+				</Typography.Text>
+				<Typography.Text type="secondary" ellipsis>
+					{t("composer.contextUsage.largestContributor", {
+						largest: contextUsage.largestContributor === null
+							? t("composer.contextUsage.none")
+							: t(`composer.contextUsage.breakdown.kinds.${contextUsage.largestContributor.kind}`)
+					})}
+				</Typography.Text>
+			</div>
 			<div className={styles.contextUsageBreakdown}>
 				{contextUsage.breakdown.map((item) => (
 					<div className={styles.contextUsageRow} key={item.kind}>
-						<span>{t(`composer.contextUsage.breakdown.kinds.${item.kind}`)}</span>
-						<span>{formatTokenCount(item.tokens)} · {item.percent.toFixed(1)}%</span>
+						<span className={styles.contextUsageLabel}>{t(`composer.contextUsage.breakdown.kinds.${item.kind}`)}</span>
+						<span className={styles.contextUsageValue}>{formatTokenCount(item.tokens)}</span>
+						<span className={styles.contextUsagePercent}>{item.percent.toFixed(1)}%</span>
 					</div>
 				))}
 			</div>

@@ -125,6 +125,11 @@ export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummar
 		}
 	}
 
+	function handleOpenBudget(): void {
+		setPopoverOpen(false);
+		setBudgetOpen(true);
+	}
+
 	const content = (
 		<div className={styles.content}>
 			<div className={styles.metrics}>
@@ -171,7 +176,7 @@ export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummar
 				<Space size={2}>
 					{active && !paused ? <Button type="text" size="small" loading={action === "pause"} icon={<Icon name="stop" />} onClick={() => void runAction("pause", () => pauseGoal(goal.goalId))}>{t("goal.actions.pause")}</Button> : null}
 					{paused ? <Button type="text" size="small" loading={action === "resume"} icon={<Icon name="play" />} onClick={() => void runAction("resume", () => resumeGoal(goal.goalId))}>{t("goal.actions.resume")}</Button> : null}
-					{goal.pauseReason === "budget_exhausted" ? <Button type="text" size="small" icon={<Icon name="add" />} onClick={() => setBudgetOpen(true)}>{t("goal.actions.extend")}</Button> : null}
+					{goal.pauseReason === "budget_exhausted" ? <Button type="text" size="small" icon={<Icon name="add" />} onClick={handleOpenBudget}>{t("goal.actions.extend")}</Button> : null}
 					{active ? <Button type="text" danger size="small" loading={action === "cancel"} icon={<Icon name="close" />} onClick={confirmCancel}>{t("goal.actions.cancel")}</Button> : null}
 					{!active && goal.checkpoint.status === "available" ? <Button type="text" danger size="small" loading={action === "rollback"} icon={<Icon name="undo" />} onClick={() => void handleRollback()}>{t("goal.actions.rollback")}</Button> : null}
 				</Space>
