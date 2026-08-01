@@ -14,6 +14,8 @@ describe("ConversationAnchorNavigator source", () => {
 		expect(navigatorSource).toContain("<Tooltip");
 		expect(navigatorSource).toContain("entries.map");
 		expect(navigatorSource).toContain("getCurrentAnchor");
+		expect(navigatorSource).toContain("data-conversation-anchor-active");
+		expect(navigatorSource).toContain("navigator.scrollTop");
 	});
 
 	it("keeps the navigator floating, compact, and scrollable without a visible scrollbar", () => {
@@ -22,13 +24,22 @@ describe("ConversationAnchorNavigator source", () => {
 		expect(navigatorStyles).toContain("scrollbar-width: none");
 		expect(navigatorStyles).toContain(":global(.ant-anchor)::before");
 		expect(navigatorStyles).toContain("height: 4px !important");
+		expect(navigatorStyles).toContain("justify-content: flex-end");
 		expect(navigatorStyles).toContain("tickHovered");
 		expect(navigatorStyles).toContain("tickNeighborOne");
 	});
 
 	it("connects viewport detection and unloaded turn navigation through HomePage", () => {
 		expect(messageListSource).toContain("scrollToEntry");
-		expect(messageListSource).toContain("onActiveUserEntryChange");
+		expect(messageListSource).toContain("index: blockOffset + index");
+		expect(messageListSource).toContain("getActiveBlockOffset");
+		expect(messageListSource).toContain("onActiveBlockOffsetChange");
+		expect(messageListSource).toContain("data-timeline-block-offset");
+		expect(messageListSource).toContain("addEventListener(\"scroll\"");
+		expect(messageListSource).toContain("Math.min(56, scroller.clientHeight * 0.2)");
+		expect(timelinePaneSource).toContain("resolveActiveTimelineEntryId");
+		expect(timelinePaneSource).toContain("resolveAdjacentTimelineEntry");
+		expect(messageListSource).not.toContain("lastActiveUserEntryIdRef");
 		expect(homePageSource).toContain("ConversationTimelinePane");
 		expect(timelinePaneSource).toContain("ConversationAnchorNavigator");
 		expect(homePageSource).toContain("onTimelineNavigationLoadEntry");

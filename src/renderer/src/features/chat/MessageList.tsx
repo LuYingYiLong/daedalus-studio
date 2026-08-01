@@ -19,6 +19,7 @@ import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Virtuoso, type ListRange, type VirtuosoHandle } from "react-virtuoso";
 import AssistantBubble from "./AssistantBubble";
+import { resolveActiveBlockOffset, type ConversationViewportRow } from "./conversation-navigation";
 import type { ConversationSearchMatch } from "./conversation-search-engine";
 import {
 	applyConversationSearchHighlights,
@@ -48,7 +49,7 @@ export type MessageListProps = {
 	onInlineDiffReview?: () => void;
 	scrollToBottomRequest?: number;
 	onAwayFromBottomChange?: (awayFromBottom: boolean) => void;
-	onActiveUserEntryChange?: (entryId: string | null) => void;
+	onActiveBlockOffsetChange?: (blockOffset: number | null) => void;
 	onScrollContainerReady?: (element: HTMLElement | null) => void;
 	blockOffset?: number;
 	searchOpen?: boolean;
@@ -64,6 +65,7 @@ export type MessageListProps = {
 };
 
 export type MessageListHandle = {
+	getActiveBlockOffset: () => number | null;
 	scrollToBottom: (behavior?: ScrollBehavior) => void;
 	scrollToEntry: (entryId: string, behavior?: ScrollBehavior) => boolean;
 };
@@ -201,7 +203,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	onInlineDiffReview,
 	scrollToBottomRequest = 0,
 	onAwayFromBottomChange,
-	onActiveUserEntryChange,
+	onActiveBlockOffsetChange,
 	onScrollContainerReady,
 	blockOffset = 0,
 	searchOpen = false,
@@ -229,6 +231,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const userScrollAwayIntentRef = useRef<boolean>(false);
 	const lastScrollToBottomRequestRef = useRef<number>(0);
 	const highlightFrameRef = useRef<number | null>(null);
+	const activeEntryFrameRef = useRef<number | null>(null);
 	const [contextMenuSelection, setContextMenuSelection] = useState<string>("");
 	const [searchRangeRevision, setSearchRangeRevision] = useState<number>(0);
 	const [selectionContainer, setSelectionContainer] = useState<HTMLElement | null>(null);
@@ -327,14 +330,46 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		}
 		releaseBottomFollow();
 		commitBottomState(false);
-		virtuosoRef.current?.scrollToIndex({ index, align: "center", behavior: normalizeVirtuosoScrollBehavior(behavior) });
+		virtuosoRef.current?.scrollToIndex({ index: blockOffset + index, align: "start", behavior: normalizeVirtuosoScrollBehavior(behavior) });
 		return true;
-	}, [blocks, commitBottomState, releaseBottomFollow]);
+	}, [blockOffset, blocks, commitBottomState, releaseBottomFollow]);
+
+	const getActiveBlockOffset = useCallback((): number | null => {
+		const scroller: HTMLElement | null = scrollerRef.current;
+		if (scroller === null) {
+			return null;
+		}
+		const scrollerBounds: DOMRect = scroller.getBoundingClientRect();
+		const activationTop: number = scrollerBounds.top + Math.min(56, scroller.clientHeight * 0.2);
+		const rows: ConversationViewportRow[] = Array.from(
+			scroller.querySelectorAll<HTMLElement>("[data-timeline-block-offset]")
+		).map((row: HTMLElement): ConversationViewportRow | null => {
+			const parsedBlockOffset: number = Number(row.dataset.timelineBlockOffset);
+			if (!Number.isSafeInteger(parsedBlockOffset)) {
+				return null;
+			}
+			return {
+				blockOffset: parsedBlockOffset,
+				top: row.getBoundingClientRect().top
+			};
+		}).filter((row: ConversationViewportRow | null): row is ConversationViewportRow => row !== null);
+		return resolveActiveBlockOffset(
+			rows,
+			activationTop,
+			isNearBottomByMetrics(
+				scroller.scrollHeight,
+				scroller.scrollTop,
+				scroller.clientHeight,
+				AT_BOTTOM_THRESHOLD
+			)
+		);
+	}, []);
 
 	useImperativeHandle(ref, (): MessageListHandle => ({
+		getActiveBlockOffset,
 		scrollToBottom: scrollToBottomNow,
 		scrollToEntry
-	}), [scrollToBottomNow, scrollToEntry]);
+	}), [getActiveBlockOffset, scrollToBottomNow, scrollToEntry]);
 
 	const copyContextMenuSelection = useCallback((): void => {
 		if (contextMenuSelection.length === 0) {
@@ -411,7 +446,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			if (targetIndex >= blockOffset && targetIndex < blockOffset + blocks.length) {
 				releaseBottomFollow();
 				commitBottomState(false);
-				virtuosoRef.current?.scrollToIndex({ index: targetIndex - blockOffset, align: "center", behavior: "smooth" });
+				virtuosoRef.current?.scrollToIndex({ index: targetIndex, align: "center", behavior: "smooth" });
 			}
 		}
 		applySearchHighlights(true);
@@ -424,21 +459,29 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		}
 	}, [applySearchHighlights, searchRangeRevision]);
 
-	const handleRangeChanged = useCallback((range: ListRange): void => {
-		let activeEntryId: string | null = null;
-		const relativeStart: number = Math.max(0, range.startIndex - blockOffset);
-		for (let index: number = Math.min(relativeStart, blocks.length - 1); index >= 0; index -= 1) {
-			const block: TimelineBlock | undefined = blocks[index];
-			if (block?.type === "user") {
-				activeEntryId = block.id;
-				break;
-			}
+	const scheduleActiveBlockOffsetSync = useCallback((): void => {
+		if (activeEntryFrameRef.current !== null) {
+			return;
 		}
-		onActiveUserEntryChange?.(activeEntryId);
+		activeEntryFrameRef.current = window.requestAnimationFrame((): void => {
+			activeEntryFrameRef.current = null;
+			const nextBlockOffset: number | null = getActiveBlockOffset();
+			if (nextBlockOffset !== null) {
+				onActiveBlockOffsetChange?.(nextBlockOffset);
+			}
+		});
+	}, [getActiveBlockOffset, onActiveBlockOffsetChange]);
+
+	const handleRangeChanged = useCallback((_range: ListRange): void => {
+		scheduleActiveBlockOffsetSync();
 		if (searchOpen) {
 			setSearchRangeRevision((revision: number): number => revision + 1);
 		}
-	}, [blockOffset, blocks, onActiveUserEntryChange, searchOpen]);
+	}, [scheduleActiveBlockOffsetSync, searchOpen]);
+
+	useLayoutEffect((): void => {
+		scheduleActiveBlockOffsetSync();
+	}, [items, scheduleActiveBlockOffsetSync]);
 
 	const handleAtBottomStateChange = useCallback((atBottom: boolean): void => {
 		if (atBottom) {
@@ -460,7 +503,8 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			scheduleBottomFollow();
 		}
 		scheduleBottomStateSync();
-	}, [commitBottomState, scheduleBottomFollow, scheduleBottomStateSync]);
+		scheduleActiveBlockOffsetSync();
+	}, [commitBottomState, scheduleActiveBlockOffsetSync, scheduleBottomFollow, scheduleBottomStateSync]);
 
 	const handleWheelCapture = useCallback((event: React.WheelEvent<HTMLDivElement>): void => {
 		userScrollAwayIntentRef.current = event.deltaY < 0;
@@ -490,7 +534,8 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		userScrollAwayIntentRef.current = false;
 		lastScrollerTopRef.current = nextScrollTop;
 		scheduleBottomStateSync();
-	}, [releaseBottomFollow, scheduleBottomStateSync]);
+		scheduleActiveBlockOffsetSync();
+	}, [releaseBottomFollow, scheduleActiveBlockOffsetSync, scheduleBottomStateSync]);
 
 	const handleKeyDownCapture = useCallback((event: React.KeyboardEvent<HTMLDivElement>): void => {
 		if (
@@ -517,6 +562,17 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		onScrollContainerReady?.(scroller);
 	}, [commitBottomState, onScrollContainerReady]);
 
+	useEffect((): (() => void) | undefined => {
+		const scroller: HTMLElement | null = selectionScroller;
+		if (scroller === null) {
+			return undefined;
+		}
+		const handleNativeScroll = (): void => scheduleActiveBlockOffsetSync();
+		scroller.addEventListener("scroll", handleNativeScroll, { passive: true });
+		scheduleActiveBlockOffsetSync();
+		return (): void => scroller.removeEventListener("scroll", handleNativeScroll);
+	}, [scheduleActiveBlockOffsetSync, selectionScroller]);
+
 	useEffect((): (() => void) => {
 		const handlePointerEnd = (): void => {
 			pointerScrollActiveRef.current = false;
@@ -535,6 +591,9 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			}
 			if (highlightFrameRef.current !== null) {
 				window.cancelAnimationFrame(highlightFrameRef.current);
+			}
+			if (activeEntryFrameRef.current !== null) {
+				window.cancelAnimationFrame(activeEntryFrameRef.current);
 			}
 		};
 	}, [onScrollContainerReady]);
@@ -576,10 +635,10 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const itemContent = useCallback((_index: number, item: RenderableTimelineBlock): React.ReactNode => {
 		const block: TimelineBlock = item.block;
 		if (!shouldRenderTimelineBlock(block)) {
-			return <div className={styles.emptyAssistantPlaceholder} aria-hidden="true" />;
+			return <div className={styles.emptyAssistantPlaceholder} data-timeline-block-offset={item.blockOffset} aria-hidden="true" />;
 		}
 		return (
-			<div className={styles.messageListContent}>
+			<div className={styles.messageListContent} data-timeline-block-offset={item.blockOffset}>
 				{block.type === "user" ? (
 					<UserBubble
 						entryId={block.id}
