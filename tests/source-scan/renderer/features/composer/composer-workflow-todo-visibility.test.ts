@@ -17,7 +17,10 @@ describe("Composer workflow todo visibility", () => {
 		expect(composerSource).not.toContain("Steps");
 		expect(agentSource).toContain("<FloatingWorkflowTodoPanel");
 		expect(agentSource).toContain("const showWorkflowTodoPanel: boolean = !workflowTodoCollapsed && workflowTodoSnapshot !== null;");
-		expect(agentSource).toContain("{currentGoal !== null || (showWorkflowTodoPanel && workflowTodoSnapshot !== null) ? (");
+		expect(agentSource).toContain("const showExecutionStatusPanel: boolean = !isHome");
+		expect(agentSource).toContain("&& (currentGoal !== null || showWorkflowTodoPanel);");
+		expect(agentSource).toContain("showExecutionStatusPanel ? styles.scrollToBottomButtonAboveExecutionStatus");
+		expect(agentSource).toContain("{showExecutionStatusPanel ? (");
 		expect(agentSource).toContain("<FloatingGoalPanel");
 		expect(floatingGoalSource).toContain("workflowTodo");
 		expect(floatingTodoSource).not.toContain("Collapse");

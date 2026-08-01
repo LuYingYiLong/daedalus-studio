@@ -562,8 +562,8 @@
 	will-change: opacity, transform;
 }
 
-.scrollToBottomButtonAboveTodo {
-	bottom: calc(100% + 52px);
+.scrollToBottomButtonAboveExecutionStatus {
+	bottom: calc(100% + 64px);
 }
 
 .scrollToBottomButtonHidden {

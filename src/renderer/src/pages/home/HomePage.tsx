@@ -583,6 +583,12 @@ function HomePage({
 	const showBottomDockButton: boolean = showDockControls;
 	const terminalWaitForCwd: boolean = !isHome && isSessionLoading && workspaceForActions === null;
 	const showWorkflowTodoPanel: boolean = !workflowTodoCollapsed && workflowTodoSnapshot !== null;
+	const showExecutionStatusPanel: boolean = !isHome
+		&& pendingApproval === null
+		&& pendingToolBudget === null
+		&& pendingPlanClarification === null
+		&& pendingPlanApproval === null
+		&& (currentGoal !== null || showWorkflowTodoPanel);
 	const effectiveGodotLaunchExecutablePath: string | null = godotLaunchExecutablePath?.trim()
 		? godotLaunchExecutablePath.trim()
 		: null;
@@ -1692,10 +1698,10 @@ function HomePage({
 												title={t("agentPage.actions.scrollToBottom")}
 												icon={<Icon name="arrow-bottom" />}
 												tabIndex={-1}
-												className={[
-													styles.scrollToBottomButton,
-													showWorkflowTodoPanel ? styles.scrollToBottomButtonAboveTodo : "",
-													styles.scrollToBottomButtonHidden
+											className={[
+												styles.scrollToBottomButton,
+												showExecutionStatusPanel ? styles.scrollToBottomButtonAboveExecutionStatus : "",
+												styles.scrollToBottomButtonHidden
 												].filter(Boolean).join(" ")}
 												onClick={scrollMessageListToBottom}
 											/>
@@ -1740,7 +1746,7 @@ function HomePage({
 											/>
 										) : (
 											<>
-												{currentGoal !== null || (showWorkflowTodoPanel && workflowTodoSnapshot !== null) ? (
+											{showExecutionStatusPanel ? (
 													<TimelineWorkflowTodoPanel
 														timelineStore={timelineStore}
 														snapshot={workflowTodoSnapshot}
