@@ -16,6 +16,7 @@ import { useTimelineDisclosure } from "./timeline-disclosure-state";
 
 export type AssistantBubbleProps = {
 	entryId?: string;
+	requestId?: string;
 	searchBlockOffset?: number;
 	content?: string;
 	bodyParts?: TimelineBodyPart[];
@@ -23,6 +24,7 @@ export type AssistantBubbleProps = {
 	elapsedTime?: string;
 	endTime?: string;
 	streaming?: boolean;
+	selectionEnabled?: boolean;
 	onInlineDiffReview?: () => void;
 };
 
@@ -56,7 +58,7 @@ function createAssistantCopyText(message?: string, content?: string, bodyParts?:
 		.join("\n\n");
 }
 
-function AssistantBubble({ entryId, searchBlockOffset, content, bodyParts, message, elapsedTime, endTime, streaming = false, onInlineDiffReview }: AssistantBubbleProps): React.JSX.Element {
+function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyParts, message, elapsedTime, endTime, streaming = false, selectionEnabled = false, onInlineDiffReview }: AssistantBubbleProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [copied, setCopied] = React.useState<boolean>(false);
 	const disclosurePrefix: string = entryId ?? "assistant";
@@ -80,6 +82,11 @@ function AssistantBubble({ entryId, searchBlockOffset, content, bodyParts, messa
 					className={`${styles.markdownPart} markdown-body`}
 					data-chat-search-text="true"
 					data-chat-search-block-offset={searchBlockOffset}
+					data-message-selection-enabled={selectionEnabled}
+					data-message-selection-entry-id={entryId}
+					data-message-selection-request-id={requestId}
+					data-message-selection-role="assistant"
+					data-message-selection-segment={`assistant:markdown:${index}`}
 				>
 					<MarkdownContent streaming={streaming}>{part.text}</MarkdownContent>
 				</div>
@@ -174,6 +181,11 @@ function AssistantBubble({ entryId, searchBlockOffset, content, bodyParts, messa
 					<div
 						data-chat-search-text="true"
 						data-chat-search-block-offset={searchBlockOffset}
+						data-message-selection-enabled={selectionEnabled}
+						data-message-selection-entry-id={entryId}
+						data-message-selection-request-id={requestId}
+						data-message-selection-role="assistant"
+						data-message-selection-segment="assistant:content"
 					>
 						<MarkdownContent streaming={streaming}>{message ?? content ?? ""}</MarkdownContent>
 					</div>

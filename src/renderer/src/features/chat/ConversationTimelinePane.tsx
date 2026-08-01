@@ -1,4 +1,4 @@
-import type { SessionTimelineNavigationEntry, TimelineBlock } from "@/api/types";
+import type { AdditionalContextItem, MessageTextAnchor, SelectionAskThread, SessionTimelineNavigationEntry, TimelineBlock } from "@/api/types";
 import type { TimelinePageStore } from "@/features/workbench/timeline-page-store";
 import { useTimelinePage } from "@/features/workbench/timeline-page-store";
 import type { RetryUserMessagePayload } from "./UserBubble";
@@ -6,8 +6,12 @@ import ConversationAnchorNavigator from "./ConversationAnchorNavigator";
 import ConversationSearchPanel from "./ConversationSearchPanel";
 import MessageList, { type MessageListHandle } from "./MessageList";
 import { useConversationSearch } from "./useConversationSearch";
-import type { InputRef } from "antd";
+import { App, type InputRef } from "antd";
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useSelectionAsk } from "./useSelectionAsk";
+import SelectionAskDialog from "./SelectionAskDialog";
+import styles from "./ConversationTimelinePane.module.css";
 
 export type ConversationTimelinePaneHandle = {
 	closeSearch: () => boolean;
@@ -35,6 +39,9 @@ export type ConversationTimelinePaneProps = {
 	onRetryFromUserMessage: (payload: RetryUserMessagePayload) => Promise<boolean>;
 	onInlineDiffReview: () => void;
 	onAwayFromBottomChange: (awayFromBottom: boolean) => void;
+	contextItems: AdditionalContextItem[];
+	onAddContext: (item: AdditionalContextItem) => void;
+	initialSelectionAskThreads: SelectionAskThread[];
 };
 
 const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, ConversationTimelinePaneProps>(function ConversationTimelinePane({
@@ -55,14 +62,23 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 	onRetryEditCancel,
 	onRetryFromUserMessage,
 	onInlineDiffReview,
-	onAwayFromBottomChange
+	onAwayFromBottomChange,
+	contextItems,
+	onAddContext,
+	initialSelectionAskThreads
 }: ConversationTimelinePaneProps, ref): React.JSX.Element {
+	const { i18n, t } = useTranslation();
+	const { message } = App.useApp();
 	const timelinePage = useTimelinePage(timelineStore);
 	const messageListRef = useRef<MessageListHandle | null>(null);
 	const conversationSearchInputRef = useRef<InputRef | null>(null);
 	const [messageScrollContainer, setMessageScrollContainer] = useState<HTMLElement | null>(null);
 	const [activeTimelineEntryId, setActiveTimelineEntryId] = useState<string | null>(null);
 	const [pendingTimelineEntryId, setPendingTimelineEntryId] = useState<string | null>(null);
+	const selectionAsk = useSelectionAsk(sessionId, initialSelectionAskThreads);
+	const activeSelectionAskThread: SelectionAskThread | null = selectionAsk.activeThreadId === null
+		? null
+		: selectionAsk.threads.find((thread: SelectionAskThread): boolean => thread.threadId === selectionAsk.activeThreadId) ?? null;
 	const handleConversationSearchLoadError = useCallback((error: unknown): void => {
 		console.warn("[ConversationTimelinePane] conversation search degraded to loaded messages", error);
 	}, []);
@@ -112,6 +128,14 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 		void onTimelineNavigationLoadEntry(entry);
 	}, [onTimelineNavigationLoadEntry]);
 
+	const handleSelectionAsk = useCallback(async (anchor: MessageTextAnchor): Promise<void> => {
+		try {
+			await selectionAsk.createOrOpen(anchor, i18n.language.startsWith("zh") ? "zh-CN" : "en-US");
+		} catch (error: unknown) {
+			void message.error(error instanceof Error ? error.message : t("chat.selection.askFailed"));
+		}
+	}, [i18n.language, message, selectionAsk, t]);
+
 	const navigateTurn = useCallback((direction: "previous" | "next"): void => {
 		if (timelineNavigationEntries.length === 0) {
 			return;
@@ -147,7 +171,7 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 	}), [conversationSearch, focusConversationSearchInput, navigateTurn]);
 
 	return (
-		<>
+		<div className={styles.timelinePane}>
 			<ConversationSearchPanel
 				open={conversationSearch.open}
 				query={conversationSearch.query}
@@ -168,6 +192,11 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 				searchOpen={conversationSearch.open}
 				searchQuery={conversationSearch.query}
 				activeSearchMatch={conversationSearch.activeMatch}
+				contextItems={contextItems}
+				selectionAskThreads={selectionAsk.threads}
+				onAddSelectionContext={onAddContext}
+				onSelectionAsk={handleSelectionAsk}
+				onOpenSelectionAsk={selectionAsk.open}
 				isLoading={isLoading}
 				errorMessage={errorMessage}
 				hasMoreBefore={timelinePage.hasMoreBefore}
@@ -190,9 +219,18 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 				entries={timelineNavigationEntries}
 				activeEntryId={activeTimelineEntryId}
 				scrollContainer={messageScrollContainer}
-				onNavigate={handleTimelineNavigate}
+					onNavigate={handleTimelineNavigate}
 			/>
-		</>
+			<SelectionAskDialog
+				thread={activeSelectionAskThread}
+				messages={activeSelectionAskThread === null ? [] : selectionAsk.messagesByThread[activeSelectionAskThread.threadId] ?? []}
+				loading={selectionAsk.loading}
+				sending={selectionAsk.sending || activeSelectionAskThread?.status === "running"}
+				error={selectionAsk.error}
+				onClose={selectionAsk.close}
+				onSend={selectionAsk.send}
+			/>
+		</div>
 	);
 });
 

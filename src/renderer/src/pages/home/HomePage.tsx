@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Button, Divider, Dropdown, Empty, Input, message as antdMessage, Modal, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
 import type { CollapseProps, MenuProps, SplitterProps } from "antd";
 import { useTranslation } from "react-i18next";
-import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, SessionTimelineNavigationEntry, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SelectionAskThread, SessionMetadata, SessionTimelineNavigationEntry, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode, PendingApproval } from "@/api/approval-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
@@ -320,6 +320,7 @@ type HomePageProps = {
 	reasoningEffort: string | null;
 	message: string;
 	contextItems: AdditionalContextItem[];
+	selectionAskThreads: SelectionAskThread[];
 	messageQueue: MessageQueueItem[];
 	pendingGuides: PendingGuide[];
 	workflowTodoSnapshot: WorkflowTodoSnapshot | null;
@@ -439,6 +440,7 @@ function HomePage({
 	reasoningEffort,
 	message,
 	contextItems,
+	selectionAskThreads,
 	messageQueue,
 	pendingGuides,
 	workflowTodoSnapshot,
@@ -580,6 +582,23 @@ function HomePage({
 	const sideDockSize: number = sessionLayout.side.size;
 	const bottomDockOpen: boolean = sessionLayout.bottom.open;
 	const bottomDockSize: number = sessionLayout.bottom.size;
+	const selectionMarkerContextItems: AdditionalContextItem[] = useMemo((): AdditionalContextItem[] => {
+		const byId = new Map<string, AdditionalContextItem>();
+		for (const item of contextItems) {
+			byId.set(item.id, item);
+		}
+		for (const queueItem of messageQueue) {
+			if (queueItem.status !== "pending") {
+				continue;
+			}
+			for (const item of queueItem.additionalContext) {
+				if (item.kind === "message_selection") {
+					byId.set(item.id, item);
+				}
+			}
+		}
+		return [...byId.values()];
+	}, [contextItems, messageQueue]);
 
 	const updateSideDock = useCallback((
 		nextSideLayout: DockLayoutPreferences,
@@ -1634,6 +1653,9 @@ function HomePage({
 												onRetryFromUserMessage={onRetryFromUserMessage}
 												onInlineDiffReview={openReviewPanel}
 												onAwayFromBottomChange={setScrollToBottomButtonVisible}
+												contextItems={selectionMarkerContextItems}
+												onAddContext={onAddContext}
+												initialSelectionAskThreads={selectionAskThreads}
 											/>
 										) : null}
 									</div>

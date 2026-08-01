@@ -33,8 +33,8 @@
 	min-width: 24px;
 	padding: var(--ds-space-1) var(--ds-space-2);
 	overflow: hidden;
-	border-radius: var(--ds-radius-sm);
-	background: var(--ds-accent);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ant-color-primary-bg);
 	cursor: text;
 }
 

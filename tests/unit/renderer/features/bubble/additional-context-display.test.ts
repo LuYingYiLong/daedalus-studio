@@ -60,4 +60,32 @@ describe("additional-context-display", () => {
 		expect(summarizeAdditionalContextItem(nodeItem).iconName).toBe("node");
 		expect(summarizeAdditionalContextItem(sceneItem).iconName).toBe("scene_edit");
 	});
+
+	it("uses a chat marker for message-selection context", () => {
+		const item: AdditionalContextItem = {
+			id: "selection-1",
+			kind: "message_selection",
+			title: "Selected answer",
+			source: "manual",
+			data: {
+				anchor: {
+					entryId: "assistant-1",
+					requestId: "request-1",
+					role: "assistant",
+					segmentKey: "assistant:markdown:0",
+					startOffset: 0,
+					endOffset: 8,
+					quote: "Selected",
+					contextBefore: "",
+					contextAfter: " answer"
+				},
+				selectedText: "Selected",
+				annotation: "Explain this"
+			}
+		};
+
+		const display = summarizeAdditionalContextItem(item);
+		expect(display.iconName).toBe("chat");
+		expect(display.meta).toBe("Selected message text");
+	});
 });

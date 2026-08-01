@@ -1,0 +1,59 @@
+.shell {
+	display: grid;
+	grid-template-rows: auto minmax(220px, 52vh) auto auto;
+	gap: var(--ds-space-2);
+	min-width: 0;
+}
+
+.anchorHeader {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--ds-space-2);
+	min-width: 0;
+	padding-bottom: var(--ds-space-2);
+	border-bottom: 1px solid var(--ds-border);
+}
+
+.anchorHeader > :first-child {
+	min-width: 0;
+}
+
+.messageList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ds-space-3);
+	min-height: 0;
+	overflow-y: auto;
+	padding: var(--ds-space-2);
+}
+
+.userMessage,
+.assistantMessage {
+	max-width: 88%;
+	padding: var(--ds-space-2);
+	border-radius: var(--ant-border-radius-lg);
+}
+
+.userMessage {
+	align-self: flex-end;
+	background: var(--ds-accent);
+}
+
+.assistantMessage {
+	align-self: flex-start;
+	background: var(--ant-color-fill-tertiary);
+}
+
+.loading {
+	margin: auto;
+}
+
+.composer {
+	display: flex;
+	width: 100%;
+}
+
+.composer > :global(.ant-input) {
+	min-width: 0;
+	flex: 1;
+}

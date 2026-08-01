@@ -108,6 +108,10 @@ function getMeta(item: AdditionalContextItem): string {
 		return line > 0 ? `Line ${line}` : "Review comment";
 	}
 
+	if (item.kind === "message_selection") {
+		return "Selected message text";
+	}
+
 	return item.kind.replaceAll("_", " ");
 }
 

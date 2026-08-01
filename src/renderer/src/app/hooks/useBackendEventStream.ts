@@ -73,6 +73,9 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 		if (isSessionScopedBackendEvent(event) && (eventSessionId === null || eventSessionId !== activeSessionId)) {
 			return;
 		}
+		if (event.event.startsWith("session.selectionAsk.")) {
+			return;
+		}
 
 		if (event.event === "session.renamed") {
 			const metadata: SessionMetadata | null = getBackendEventSessionMetadata(event);

@@ -38,12 +38,14 @@ function cloneContextItems(items: AdditionalContextItem[]): AdditionalContextIte
 	});
 }
 
+const EMPTY_ADDITIONAL_CONTEXT: AdditionalContextItem[] = [];
+
 function UserBubble({
 	entryId,
 	searchBlockOffset,
 	requestId,
 	message,
-	additionalContext = [],
+	additionalContext = EMPTY_ADDITIONAL_CONTEXT,
 	sentTime,
 	showEditButton,
 	disabled = false,
@@ -64,9 +66,11 @@ function UserBubble({
 		wasRetryEditingRef.current = isRetryEditing;
 
 		if (!isRetryEditing) {
-			setDraftText(message);
-			setDraftContext(cloneContextItems(additionalContext));
-			setIsSubmittingRetry(false);
+			if (wasRetryEditing) {
+				setDraftText(message);
+				setDraftContext(cloneContextItems(additionalContext));
+				setIsSubmittingRetry(false);
+			}
 			return;
 		}
 
@@ -211,6 +215,11 @@ function UserBubble({
 							className={`${styles.content} markdown-body ${disabled ? styles.disabledContent : ""}`}
 							data-chat-search-text="true"
 							data-chat-search-block-offset={searchBlockOffset}
+							data-message-selection-enabled="true"
+							data-message-selection-entry-id={entryId}
+							data-message-selection-request-id={requestId}
+							data-message-selection-role="user"
+							data-message-selection-segment="user:content"
 							onDoubleClick={(): void => {
 								beginRetryEdit();
 							}}

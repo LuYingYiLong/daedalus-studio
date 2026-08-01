@@ -138,6 +138,7 @@ export function isSessionScopedBackendEvent(event: BackendEvent): boolean {
 		|| event.event.startsWith("plan.")
 		|| event.event.startsWith("guide.")
 		|| event.event === "session.workbench.updated"
+		|| event.event.startsWith("session.selectionAsk.")
 		|| event.event === "session.renamed"
 		|| event.event === "message.queue.updated";
 }

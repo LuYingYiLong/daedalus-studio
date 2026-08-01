@@ -58,7 +58,7 @@ export type SessionListResult = {
 
 export type AdditionalContextItem = {
 	id: string;
-	kind: "editor_selection" | "scene" | "node" | "file" | "folder" | "script" | "script_selection" | "filesystem_selection" | "image" | "text_attachment" | "git_diff_comment";
+	kind: "editor_selection" | "scene" | "node" | "file" | "folder" | "script" | "script_selection" | "filesystem_selection" | "image" | "text_attachment" | "git_diff_comment" | "message_selection";
 	title: string;
 	subtitle?: string;
 	pinned?: boolean;
@@ -160,6 +160,52 @@ export type WorkflowTodoSnapshot = {
 	todos: WorkflowTodoStep[];
 	activeStepRunId?: string;
 	activePhaseRunId?: string;
+};
+
+export type MessageTextAnchor = {
+	entryId: string;
+	requestId: string;
+	role: "user" | "assistant";
+	segmentKey: string;
+	startOffset: number;
+	endOffset: number;
+	quote: string;
+	contextBefore: string;
+	contextAfter: string;
+};
+
+export type SelectionAskThreadStatus = "idle" | "running" | "failed" | "interrupted";
+export type SelectionAskMessageStatus = "completed" | "running" | "failed" | "interrupted";
+
+export type SelectionAskThread = {
+	threadId: string;
+	sessionId: string;
+	anchor: MessageTextAnchor;
+	provider: string;
+	model: string;
+	reasoningEffort?: string;
+	status: SelectionAskThreadStatus;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type SelectionAskMessage = {
+	messageId: string;
+	threadId: string;
+	sequence: number;
+	requestId: string;
+	role: "user" | "assistant";
+	content: string;
+	status: SelectionAskMessageStatus;
+	errorMessage?: string;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type SelectionAskThreadPage = {
+	thread: SelectionAskThread;
+	messages: SelectionAskMessage[];
+	hasMoreBefore: boolean;
 };
 
 export type AgentRunStage =
@@ -451,6 +497,7 @@ export type SessionOpenResult = {
 	latestPlanApproval: PlanApprovalState | null;
 	pendingGuides: PendingGuide[];
 	messageQueue: MessageQueueItem[];
+	selectionAskThreads: SelectionAskThread[];
 	workbench: WorkbenchSnapshot;
 	agentRuns: AgentRunState[];
 	activeAgentRun: AgentRunState | null;

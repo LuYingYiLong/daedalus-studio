@@ -108,7 +108,7 @@ function CodeBlock({ code, language, highlight }: CodeBlockProps): React.JSX.Ele
 
 	return (
 		<div className={styles.codeBlock}>
-			<div className={styles.codeHeader} data-chat-search-ignore="true">
+			<div className={styles.codeHeader} data-chat-search-ignore="true" data-message-selection-ignore="true">
 				<div className={styles.codeTitle}>
 					<span>{label}</span>
 				</div>

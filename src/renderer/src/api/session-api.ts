@@ -1,5 +1,5 @@
 import { createBackendClient } from "@/shared/api/transport/backend-client";
-import type { SessionListResult, SessionMetadata, SessionOpenResult, SessionTimelineNavigationIndexResult, SessionTimelineResult, SessionTimelineSearchIndexPage, WorkbenchSnapshot } from "./types";
+import type { MessageTextAnchor, SelectionAskMessage, SelectionAskThread, SelectionAskThreadPage, SessionListResult, SessionMetadata, SessionOpenResult, SessionTimelineNavigationIndexResult, SessionTimelineResult, SessionTimelineSearchIndexPage, WorkbenchSnapshot } from "./types";
 import type { ChatMode } from "./chat-api";
 
 export type CreateSessionParams = {
@@ -231,6 +231,39 @@ export async function fetchSessionTimelineSearchIndex(
 		afterOffset,
 		limit
 	});
+}
+
+export async function listSelectionAskThreads(sessionId: string): Promise<{ sessionId: string; threads: SelectionAskThread[] }> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.list", { sessionId });
+}
+
+export async function getSelectionAskThread(sessionId: string, threadId: string, beforeSequence?: number): Promise<SelectionAskThreadPage> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.get", {
+		sessionId,
+		threadId,
+		...(beforeSequence === undefined ? {} : { beforeSequence }),
+		limit: 100
+	});
+}
+
+export async function createSelectionAskThread(
+	sessionId: string,
+	anchor: MessageTextAnchor,
+	locale: "zh-CN" | "en-US"
+): Promise<SelectionAskThreadPage & { created: boolean }> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.create", { sessionId, anchor, locale });
+}
+
+export async function sendSelectionAskMessage(
+	sessionId: string,
+	threadId: string,
+	message: string
+): Promise<{ thread: SelectionAskThread; messages: SelectionAskMessage[] }> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.send", { sessionId, threadId, message });
 }
 
 export async function setSessionPinned(sessionId: string, pinned: boolean): Promise<SetSessionPinnedResult> {

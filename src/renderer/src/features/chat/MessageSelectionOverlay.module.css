@@ -1,0 +1,45 @@
+.overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 8;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+.selectionActions,
+.annotationInput,
+.marker {
+	position: absolute;
+	pointer-events: auto;
+}
+
+.selectionActions {
+	z-index: 2;
+	transform: translate(-50%, -100%);
+	transition-property: color, background-color, border-color, box-shadow !important;
+	padding: 2px;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ant-border-radius);
+	background: var(--ant-color-bg-elevated, var(--ds-bg));
+	box-shadow: var(--ant-box-shadow-secondary, 0 6px 16px rgb(0 0 0 / 12%));
+}
+
+.annotationInput {
+	z-index: 3;
+	width: min(320px, calc(100% - 24px));
+	transform: translate(-50%, -100%);
+	transition-property: color, background-color, border-color, box-shadow !important;
+}
+
+.marker {
+	z-index: 1;
+	transform: translate(-56px, -100%);
+	transition-property: color, background-color, border-color, box-shadow !important;
+	color: var(--ant-color-primary);
+	background: var(--ant-color-bg-elevated, var(--ds-bg));
+	box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
+}
+
+.askMarker {
+	transform: translate(-28px, -100%);
+}

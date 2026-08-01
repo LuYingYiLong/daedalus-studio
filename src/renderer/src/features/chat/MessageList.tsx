@@ -1,4 +1,4 @@
-import type { TimelineAssistantBlock, TimelineBlock } from "@/api/types";
+import type { AdditionalContextItem, MessageTextAnchor, SelectionAskThread, TimelineAssistantBlock, TimelineBlock } from "@/api/types";
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import { formatElapsedTime, formatShortDateTime } from "@/shared/lib/time-format";
@@ -28,6 +28,7 @@ import styles from "./MessageList.module.css";
 import { isNearBottomByMetrics } from "./message-list-virtual";
 import { TimelineDisclosureProvider } from "./timeline-disclosure-state";
 import UserBubble, { type RetryUserMessagePayload } from "./UserBubble";
+import MessageSelectionOverlay from "./MessageSelectionOverlay";
 
 export type MessageListProps = {
 	blocks: TimelineBlock[];
@@ -53,6 +54,11 @@ export type MessageListProps = {
 	searchOpen?: boolean;
 	searchQuery?: string;
 	activeSearchMatch?: ConversationSearchMatch | null;
+	contextItems?: AdditionalContextItem[];
+	selectionAskThreads?: SelectionAskThread[];
+	onAddSelectionContext?: (item: AdditionalContextItem) => void;
+	onSelectionAsk?: (anchor: MessageTextAnchor) => Promise<void>;
+	onOpenSelectionAsk?: (threadId: string) => Promise<void>;
 };
 
 export type MessageListHandle = {
@@ -64,6 +70,8 @@ type RenderableTimelineBlock = {
 	block: TimelineBlock;
 	blockOffset: number;
 };
+
+const EMPTY_ADDITIONAL_CONTEXT: AdditionalContextItem[] = [];
 
 const DEFAULT_ITEM_HEIGHT: number = 168;
 const MIN_ITEM_HEIGHT: number = 48;
@@ -149,6 +157,7 @@ const AssistantTimelineRow = memo(function AssistantTimelineRow({ block, blockOf
 	return (
 		<AssistantBubble
 			entryId={block.id}
+			requestId={block.requestId}
 			searchBlockOffset={blockOffset}
 			bodyParts={block.bodyParts}
 			message={getAssistantMarkdown(block)}
@@ -158,6 +167,7 @@ const AssistantTimelineRow = memo(function AssistantTimelineRow({ block, blockOf
 			) ?? undefined}
 			endTime={block.status === "running" ? undefined : formatShortDateTime(block.completedAtUtc)}
 			streaming={block.status === "running"}
+			selectionEnabled={block.status !== "running" && block.status !== "failed"}
 			onInlineDiffReview={onInlineDiffReview}
 		/>
 	);
@@ -186,7 +196,12 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	blockOffset = 0,
 	searchOpen = false,
 	searchQuery = "",
-	activeSearchMatch = null
+	activeSearchMatch = null,
+	contextItems = [],
+	selectionAskThreads = [],
+	onAddSelectionContext,
+	onSelectionAsk,
+	onOpenSelectionAsk
 }: MessageListProps, ref): React.JSX.Element {
 	const { t } = useTranslation();
 	const [messageApi, messageContextHolder] = message.useMessage();
@@ -205,6 +220,8 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const [contextMenuSelection, setContextMenuSelection] = useState<string>("");
 	const [selectionViewportExpanded, setSelectionViewportExpanded] = useState<boolean>(false);
 	const [searchRangeRevision, setSearchRangeRevision] = useState<number>(0);
+	const [selectionContainer, setSelectionContainer] = useState<HTMLElement | null>(null);
+	const [selectionScroller, setSelectionScroller] = useState<HTMLElement | null>(null);
 	const items: RenderableTimelineBlock[] = useMemo((): RenderableTimelineBlock[] => {
 		return blocks.map((block: TimelineBlock, index: number): RenderableTimelineBlock => ({
 			block,
@@ -513,6 +530,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			commitBottomState(true);
 		}
 		scrollerRef.current = scroller;
+		setSelectionScroller((current: HTMLElement | null): HTMLElement | null => current === scroller ? current : scroller);
 		onScrollContainerReady?.(scroller);
 	}, [commitBottomState, onScrollContainerReady]);
 
@@ -585,7 +603,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 						searchBlockOffset={item.blockOffset}
 						requestId={block.requestId}
 						message={block.content}
-						additionalContext={block.additionalContext ?? []}
+						additionalContext={block.additionalContext ?? EMPTY_ADDITIONAL_CONTEXT}
 						sentTime={formatShortDateTime(block.sentAtUtc)}
 						showEditButton={canEditUserMessages}
 						disabled={retryDisabled}
@@ -617,6 +635,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			<TimelineDisclosureProvider>
 				<Dropdown menu={messageContextMenu} trigger={["contextMenu"]}>
 					<div
+						ref={setSelectionContainer}
 						className={styles.messageListShell}
 						onContextMenuCapture={handleContextMenuCapture}
 						onWheelCapture={handleWheelCapture}
@@ -656,6 +675,17 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 					components={virtuosoComponents}
 					itemContent={itemContent}
 						/>
+						{onAddSelectionContext !== undefined && onSelectionAsk !== undefined && onOpenSelectionAsk !== undefined ? (
+							<MessageSelectionOverlay
+								container={selectionContainer}
+								scroller={selectionScroller}
+								contextItems={contextItems}
+								askThreads={selectionAskThreads}
+								onAddContext={onAddSelectionContext}
+								onAsk={onSelectionAsk}
+								onOpenAsk={onOpenSelectionAsk}
+							/>
+						) : null}
 					</div>
 				</Dropdown>
 			</TimelineDisclosureProvider>

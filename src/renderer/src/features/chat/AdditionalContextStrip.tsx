@@ -39,7 +39,7 @@ function AdditionalContextStrip({
 			{items.map((item: AdditionalContextItem): React.ReactNode => {
 				const display = summarizeAdditionalContextItem(item);
 				const nextPinned: boolean = item.pinned !== true;
-				const canTogglePin: boolean = interactive && item.kind !== "git_diff_comment";
+				const canTogglePin: boolean = interactive && item.kind !== "git_diff_comment" && item.kind !== "message_selection";
 
 				return (
 					<Tooltip

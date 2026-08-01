@@ -506,10 +506,23 @@
         "editAndResend": "Edit and resend"
       }
     },
-    "contextStrip": {
-      "aria": "Message context",
-      "pinned": "Pinned"
-    },
+		"contextStrip": {
+			"aria": "Message context",
+			"pinned": "Pinned"
+		},
+		"selection": {
+			"attachContext": "Attach context",
+			"askAi": "Ask AI",
+			"annotationPlaceholder": "Add a note (optional)",
+			"editAnnotation": "Edit annotation",
+			"openAsk": "Open selection Ask",
+			"askTitle": "Selection Ask",
+			"askPlaceholder": "Ask a follow-up…",
+			"sendAsk": "Send question",
+			"askFailed": "Failed to create selection Ask",
+			"responseFailed": "Response failed",
+			"interrupted": "The response was interrupted by a Backend restart"
+		},
     "tool": {
       "status": {
         "running": "Running",

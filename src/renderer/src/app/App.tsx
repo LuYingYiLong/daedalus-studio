@@ -10,7 +10,7 @@ import useTimelineStreamBuffer from "./hooks/useTimelineStreamBuffer";
 import useWorkbenchPatchQueue, { mergeWorkbenchPatch } from "./hooks/useWorkbenchPatchQueue";
 import { fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
-import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SessionMetadata, SessionOpenResult, SessionTimelineNavigationEntry, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SelectionAskThread, SessionMetadata, SessionOpenResult, SessionTimelineNavigationEntry, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
 import { checkSessionIntegrity, createSession, deleteSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, fetchSessionTimelineIndex, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/chat/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
@@ -657,6 +657,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const timelineStore: TimelinePageStore = timelineStoreRef.current;
 	const timelineBlockCount: number = useTimelineSelector(timelineStore, (page: TimelinePageState): number => page.blockCount);
 	const [timelineNavigationEntries, setTimelineNavigationEntries] = useState<SessionTimelineNavigationEntry[]>([]);
+	const [selectionAskThreads, setSelectionAskThreads] = useState<SelectionAskThread[]>([]);
 	const [workbench, setWorkbench] = useState<WorkbenchSnapshot | null>(null);
 	const activeWorkbenchRef = useLatest(workbench);
 	const [sessionError, setSessionError] = useState<string | null>(null);
@@ -1692,6 +1693,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			activeSessionIdRef.current = sessionId;
 			setActiveSessionId(sessionId);
 			setActiveSessionMetadata(session);
+			setSelectionAskThreads([]);
 			setActiveWorkspace(null);
 			resetSessionPresentationState();
 
@@ -1704,6 +1706,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setLatestPlanClarification(result.latestPlanClarification);
 			setLatestPlanApproval(result.latestPlanApproval);
 			setActiveSessionMetadata(result.metadata);
+			setSelectionAskThreads(result.selectionAskThreads);
 			const loadingComposerDraft = loadingComposerDraftRef.current as { sessionId: string; text: string } | null;
 			const openedWorkbench: WorkbenchSnapshot = loadingComposerDraft?.sessionId === sessionId
 				? {
@@ -1754,6 +1757,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		activeSessionIdRef.current = null;
 		setActiveSessionId(null);
 		setActiveSessionMetadata(null);
+		setSelectionAskThreads([]);
 		resetSessionPresentationState();
 		setActiveWorkspace(null);
 		setSessionError(null);
@@ -3490,6 +3494,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						reasoningEffort={composerReasoningEffort}
 						message={composerMessage}
 						contextItems={composerContextItems}
+						selectionAskThreads={selectionAskThreads}
 						messageQueue={composerMessageQueue}
 						pendingGuides={composerPendingGuides}
 						workflowTodoSnapshot={workflowTodoSnapshot}

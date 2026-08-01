@@ -53,6 +53,9 @@ export function getAdditionalContextIconName(item: AdditionalContextItem): strin
 	if (item.kind === "git_diff_comment") {
 		return "git-diff";
 	}
+	if (item.kind === "message_selection") {
+		return "chat";
+	}
 	if (item.kind === "editor_selection") {
 		return "read";
 	}
@@ -108,6 +111,11 @@ export function getAdditionalContextIconName(item: AdditionalContextItem): strin
 			return "restructuredtext";
 		case "lua":
 			return "lua";
+		case "yml":
+		case "yaml":
+			return "yml";
+		case "json":
+			return "json";
 		default:
 			return item.kind === "script" || item.kind === "script_selection" ? "script" : "file";
 	}
