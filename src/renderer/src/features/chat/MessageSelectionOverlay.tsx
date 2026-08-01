@@ -277,14 +277,31 @@ function MessageSelectionOverlay({ container, scroller, contextItems, askThreads
 	return (
 		<div className={styles.overlay} aria-hidden={false}>
 			{activeSelection !== null && editing === null ? (
-				<Space.Compact data-message-selection-control="true" data-message-selection-actions="true" className={styles.selectionActions} style={{ left: activeSelection.left, top: activeSelection.top }}>
-					<Button type="text" size="small" icon={<Icon name="chat" />} onMouseDown={(event) => event.preventDefault()} onClick={(): void => startAnnotation(activeSelection.anchor, activeSelection.left, activeSelection.top)}>
+				<Space.Compact
+					data-message-selection-control="true"
+					data-message-selection-actions="true"
+					className={styles.selectionActions}
+					style={{
+						left: activeSelection.left,
+						top: activeSelection.top
+					}}
+				>
+					<Button
+						type="text"
+						icon={<Icon name="chat" />}
+						onMouseDown={(event) => event.preventDefault()}
+						onClick={(): void => startAnnotation(activeSelection.anchor, activeSelection.left, activeSelection.top)}
+					>
 						{t("chat.selection.attachContext")}
 					</Button>
-					<Button type="text" size="small" icon={<Icon name="ask" />} onMouseDown={(event) => event.preventDefault()} onClick={(): void => {
-						setActiveSelection(null);
-						clearBrowserSelection();
-						void onAsk(activeSelection.anchor);
+					<Button
+						type="text"
+						icon={<Icon name="ask" />}
+						onMouseDown={(event) => event.preventDefault()}
+						onClick={(): void => {
+							setActiveSelection(null);
+							clearBrowserSelection();
+							void onAsk(activeSelection.anchor);
 					}}>
 						{t("chat.selection.askAi")}
 					</Button>

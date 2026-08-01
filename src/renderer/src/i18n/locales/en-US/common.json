@@ -519,6 +519,8 @@
 			"askTitle": "Selection Ask",
 			"askPlaceholder": "Ask a follow-up…",
 			"sendAsk": "Send question",
+			"stopAsk": "Stop response",
+			"stoppingAsk": "Stopping response",
 			"askFailed": "Failed to create selection Ask",
 			"responseFailed": "Response failed",
 			"interrupted": "The response was interrupted by a Backend restart"

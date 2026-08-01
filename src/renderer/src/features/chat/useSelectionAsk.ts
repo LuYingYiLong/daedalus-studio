@@ -1,5 +1,5 @@
 import type { MessageTextAnchor, SelectionAskMessage, SelectionAskThread, SelectionAskThreadPage } from "@/api/types";
-import { createSelectionAskThread, getSelectionAskThread, listSelectionAskThreads, sendSelectionAskMessage } from "@/api/session-api";
+import { cancelSelectionAskResponse, createSelectionAskThread, getSelectionAskThread, listSelectionAskThreads, sendSelectionAskMessage } from "@/api/session-api";
 import { createBackendClient } from "@/shared/api/transport/backend-client";
 import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -11,6 +11,7 @@ type SelectionAskState = {
 	activeThreadId: string | null;
 	loading: boolean;
 	sending: boolean;
+	cancelling: boolean;
 	error: string | null;
 };
 
@@ -33,9 +34,10 @@ export function useSelectionAsk(sessionId: string, initialThreads: SelectionAskT
 	createOrOpen: (anchor: MessageTextAnchor, locale: "zh-CN" | "en-US") => Promise<void>;
 	open: (threadId: string) => Promise<void>;
 	send: (message: string) => Promise<void>;
+	cancel: () => Promise<void>;
 } {
 	const [state, setState] = useState<SelectionAskState>({
-		threads: initialThreads, messagesByThread: {}, activeThreadId: null, loading: initialThreads.length === 0, sending: false, error: null
+		threads: initialThreads, messagesByThread: {}, activeThreadId: null, loading: initialThreads.length === 0, sending: false, cancelling: false, error: null
 	});
 	const stateRef = useRef<SelectionAskState>(state);
 	stateRef.current = state;
@@ -50,6 +52,8 @@ export function useSelectionAsk(sessionId: string, initialThreads: SelectionAskT
 			},
 			activeThreadId: page.thread.threadId,
 			loading: false,
+			sending: page.thread.status === "running",
+			cancelling: false,
 			error: null
 		}));
 	}, []);
@@ -57,7 +61,7 @@ export function useSelectionAsk(sessionId: string, initialThreads: SelectionAskT
 	useEffect((): (() => void) => {
 		let disposed: boolean = false;
 		let unsubscribe: (() => void) | null = null;
-		setState({ threads: initialThreads, messagesByThread: {}, activeThreadId: null, loading: initialThreads.length === 0, sending: false, error: null });
+		setState({ threads: initialThreads, messagesByThread: {}, activeThreadId: null, loading: initialThreads.length === 0, sending: false, cancelling: false, error: null });
 		void listSelectionAskThreads(sessionId).then((result): void => {
 			if (!disposed) {
 				setState((current: SelectionAskState): SelectionAskState => {
@@ -110,14 +114,18 @@ export function useSelectionAsk(sessionId: string, initialThreads: SelectionAskT
 					const nextStatus: SelectionAskThread["status"] = event.event.endsWith(".done")
 						? "idle"
 						: event.event.endsWith(".error") ? "failed" : "running";
+					const updatesActiveThread: boolean = current.activeThreadId === threadId;
 					return {
 						...current,
 						threads: current.threads.map((thread: SelectionAskThread): SelectionAskThread => thread.threadId === threadId
 							? { ...thread, status: nextStatus }
 							: thread),
 						messagesByThread: { ...current.messagesByThread, [threadId]: messages },
-						sending: event.event.endsWith(".delta"),
-						error: event.event.endsWith(".error") && typeof data?.message === "string" ? data.message : current.error
+						sending: updatesActiveThread ? event.event.endsWith(".delta") : current.sending,
+						cancelling: updatesActiveThread && !event.event.endsWith(".delta") ? false : current.cancelling,
+						error: updatesActiveThread && event.event.endsWith(".error") && typeof data?.message === "string"
+							? data.message
+							: current.error
 					};
 				});
 			});
@@ -129,7 +137,14 @@ export function useSelectionAsk(sessionId: string, initialThreads: SelectionAskT
 	}, [initialThreads, sessionId]);
 
 	const open = useCallback(async (threadId: string): Promise<void> => {
-		setState((current: SelectionAskState): SelectionAskState => ({ ...current, activeThreadId: threadId, loading: true, error: null }));
+		setState((current: SelectionAskState): SelectionAskState => ({
+			...current,
+			activeThreadId: threadId,
+			loading: true,
+			sending: current.threads.find((thread: SelectionAskThread): boolean => thread.threadId === threadId)?.status === "running",
+			cancelling: false,
+			error: null
+		}));
 		try {
 			applyPage(await getSelectionAskThread(sessionId, threadId));
 		} catch (error: unknown) {
@@ -143,21 +158,21 @@ export function useSelectionAsk(sessionId: string, initialThreads: SelectionAskT
 			await open(existing.threadId);
 			return;
 		}
-		setState((current: SelectionAskState): SelectionAskState => ({ ...current, loading: true, sending: true, error: null }));
+		setState((current: SelectionAskState): SelectionAskState => ({ ...current, loading: true, sending: true, cancelling: false, error: null }));
 		try {
 			applyPage(await createSelectionAskThread(sessionId, anchor, locale));
 		} catch (error: unknown) {
-			setState((current: SelectionAskState): SelectionAskState => ({ ...current, loading: false, sending: false, error: error instanceof Error ? error.message : String(error) }));
+			setState((current: SelectionAskState): SelectionAskState => ({ ...current, loading: false, sending: false, cancelling: false, error: error instanceof Error ? error.message : String(error) }));
 			throw error;
 		}
 	}, [applyPage, open, sessionId]);
 
 	const send = useCallback(async (message: string): Promise<void> => {
 		const threadId: string | null = stateRef.current.activeThreadId;
-		if (threadId === null || message.trim().length === 0 || stateRef.current.sending) {
+		if (threadId === null || message.trim().length === 0 || stateRef.current.sending || stateRef.current.cancelling) {
 			return;
 		}
-		setState((current: SelectionAskState): SelectionAskState => ({ ...current, sending: true, error: null }));
+		setState((current: SelectionAskState): SelectionAskState => ({ ...current, sending: true, cancelling: false, error: null }));
 		try {
 			const result = await sendSelectionAskMessage(sessionId, threadId, message.trim());
 			setState((current: SelectionAskState): SelectionAskState => ({
@@ -166,15 +181,43 @@ export function useSelectionAsk(sessionId: string, initialThreads: SelectionAskT
 				messagesByThread: { ...current.messagesByThread, [threadId]: mergeMessages(current.messagesByThread[threadId] ?? [], result.messages) }
 			}));
 		} catch (error: unknown) {
-			setState((current: SelectionAskState): SelectionAskState => ({ ...current, sending: false, error: error instanceof Error ? error.message : String(error) }));
+			setState((current: SelectionAskState): SelectionAskState => ({ ...current, sending: false, cancelling: false, error: error instanceof Error ? error.message : String(error) }));
 		}
 	}, [sessionId]);
 
+	const cancel = useCallback(async (): Promise<void> => {
+		const current: SelectionAskState = stateRef.current;
+		const threadId: string | null = current.activeThreadId;
+		if (threadId === null || !current.sending || current.cancelling) {
+			return;
+		}
+		setState((next: SelectionAskState): SelectionAskState => ({ ...next, cancelling: true, error: null }));
+		try {
+			const result = await cancelSelectionAskResponse(sessionId, threadId);
+			if (!result.cancelled) {
+				applyPage(await getSelectionAskThread(sessionId, threadId));
+				setState((next: SelectionAskState): SelectionAskState => ({ ...next, sending: false, cancelling: false }));
+			}
+		} catch (error: unknown) {
+			setState((next: SelectionAskState): SelectionAskState => ({
+				...next,
+				cancelling: false,
+				error: error instanceof Error ? error.message : String(error)
+			}));
+		}
+	}, [applyPage, sessionId]);
+
 	return {
 		...state,
-		close: (): void => setState((current: SelectionAskState): SelectionAskState => ({ ...current, activeThreadId: null })),
+		close: (): void => setState((current: SelectionAskState): SelectionAskState => ({
+			...current,
+			activeThreadId: null,
+			sending: false,
+			cancelling: false
+		})),
 		createOrOpen,
 		open,
-		send
+		send,
+		cancel
 	};
 }

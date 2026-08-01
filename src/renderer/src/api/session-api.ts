@@ -266,6 +266,14 @@ export async function sendSelectionAskMessage(
 	return client.request("session.selectionAsk.send", { sessionId, threadId, message });
 }
 
+export async function cancelSelectionAskResponse(
+	sessionId: string,
+	threadId: string
+): Promise<{ threadId: string; cancelled: boolean }> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.cancel", { sessionId, threadId });
+}
+
 export async function setSessionPinned(sessionId: string, pinned: boolean): Promise<SetSessionPinnedResult> {
 	const client = await createBackendClient();
 

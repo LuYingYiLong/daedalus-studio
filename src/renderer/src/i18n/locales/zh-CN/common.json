@@ -519,6 +519,8 @@
 			"askTitle": "选区问答",
 			"askPlaceholder": "继续提问…",
 			"sendAsk": "发送问题",
+			"stopAsk": "停止回答",
+			"stoppingAsk": "正在停止回答",
 			"askFailed": "创建选区问答失败",
 			"responseFailed": "回答失败",
 			"interrupted": "Backend 重启，回答已中断"

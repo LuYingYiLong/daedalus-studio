@@ -30,17 +30,29 @@
 .userMessage,
 .assistantMessage {
 	max-width: 88%;
-	padding: var(--ds-space-2);
 	border-radius: var(--ant-border-radius-lg);
 }
 
 .userMessage {
 	align-self: flex-end;
+	width: fit-content;
+	min-width: 24px;
+	padding: var(--ds-space-1) var(--ds-space-2);
+	overflow: hidden;
 	background: var(--ds-accent);
+}
+
+.userMessage.userMessage {
+	width: fit-content;
+}
+
+.messageContent.messageContent {
+	width: auto;
 }
 
 .assistantMessage {
 	align-self: flex-start;
+	padding: var(--ds-space-2);
 	background: var(--ant-color-fill-tertiary);
 }
 

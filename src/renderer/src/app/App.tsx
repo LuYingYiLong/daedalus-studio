@@ -2375,7 +2375,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 
 		const message: string = nextMessage.trim();
-		if (message.length === 0) {
+		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
+		if (message.length === 0 && additionalContext.length === 0) {
 			return;
 		}
 
@@ -2385,7 +2386,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 
 		const requestId: string = createChatRequestId();
-		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
 		const chatMode: ChatMode = getChatMode(workbench);
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
 		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatchWithComposerText(), {
@@ -2463,12 +2463,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			return;
 		}
 		const message: string = nextMessage.trim();
-		if (message.length === 0) {
+		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
+		if (message.length === 0 && additionalContext.length === 0) {
 			return;
 		}
 
 		const previousWorkbench: WorkbenchSnapshot = workbench;
-		const additionalContext: AdditionalContextItem[] = workbench.composer.additionalContext;
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
 		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatchWithComposerText(), {
 			composer: { text: "" },
@@ -2707,7 +2707,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 
 		const message: string = payload.message.trim();
-		if (message.length === 0) {
+		if (message.length === 0 && payload.additionalContext.length === 0) {
 			return false;
 		}
 

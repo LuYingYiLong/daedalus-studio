@@ -102,7 +102,7 @@ function UserBubble({
 
 	async function submitRetryEdit(): Promise<void> {
 		const trimmedText: string = draftText.trim();
-		if (trimmedText.length === 0 || isSubmittingRetry) {
+		if ((trimmedText.length === 0 && draftContext.length === 0) || isSubmittingRetry) {
 			return;
 		}
 
@@ -199,7 +199,7 @@ function UserBubble({
 								type="primary"
 								icon={<Icon name="send" width={16} height={16} />}
 								loading={isSubmittingRetry}
-								disabled={draftText.trim().length === 0}
+								disabled={draftText.trim().length === 0 && draftContext.length === 0}
 								onClick={(): void => {
 									void submitRetryEdit();
 								}}
@@ -211,7 +211,7 @@ function UserBubble({
 				) : (
 					<>
 						<AdditionalContextStrip items={additionalContext} />
-						<div
+						{message.length > 0 ? <div
 							className={`${styles.content} markdown-body ${disabled ? styles.disabledContent : ""}`}
 							data-chat-search-text="true"
 							data-chat-search-block-offset={searchBlockOffset}
@@ -225,7 +225,7 @@ function UserBubble({
 							}}
 						>
 							<MarkdownContent>{message}</MarkdownContent>
-						</div>
+						</div> : null}
 					</>
 				)}
 			</div>
@@ -233,7 +233,7 @@ function UserBubble({
 				{sentTime ? (
 					<Typography.Text type="secondary">{sentTime}</Typography.Text>
 				) : null}
-				<Tooltip title={copied ? t("chat.common.copied") : t("chat.common.copy")}>
+				{message.length > 0 ? <Tooltip title={copied ? t("chat.common.copied") : t("chat.common.copy")}>
 					<Button
 						type="text"
 						size="small"
@@ -244,7 +244,7 @@ function UserBubble({
 							void copyMessage();
 						}}
 					/>
-				</Tooltip>
+				</Tooltip> : null}
 				{canShowEditButton ? (
 					<Tooltip title={t("chat.user.actions.editAndResend")}>
 						<Button

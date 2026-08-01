@@ -152,6 +152,13 @@ function shouldShowQueueItem(item: MessageQueueItem, activeQueueItemId: number |
 	return item.id !== activeQueueItemId && item.status !== "sending" && item.status !== "approval";
 }
 
+function getQueueItemText(item: MessageQueueItem): string {
+	const message: string = item.text.trim();
+	return message.length > 0
+		? message
+		: item.additionalContext.map((context): string => context.title).join(" · ");
+}
+
 function MessageQueuePanel({
 	messageQueue,
 	pendingGuides,
@@ -241,7 +248,7 @@ function MessageQueuePanel({
 									id={String(item.id)}
 									disabled={item.status !== "pending"}
 									icon={<Icon name="send" />}
-									text={item.text}
+									text={getQueueItemText(item)}
 									editLabel={t("messageQueue.actions.edit")}
 									removeLabel={t("messageQueue.actions.remove")}
 									dragLabel={t("messageQueue.actions.dragToReorder")}

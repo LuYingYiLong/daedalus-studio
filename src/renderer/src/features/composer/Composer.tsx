@@ -651,14 +651,15 @@ function Composer({
 			return;
 		}
 		const trimmedMessage: string = draftMessage.trim();
-		if (trimmedMessage.length === 0 && isSending) {
+		const hasSubmittableContent: boolean = trimmedMessage.length > 0 || composerContextItems.length > 0;
+		if (!hasSubmittableContent && isSending) {
 			if (isCancelling) {
 				return;
 			}
 			onCancel?.();
 			return;
 		}
-		if (trimmedMessage.length === 0) {
+		if (!hasSubmittableContent) {
 			return;
 		}
 
@@ -1159,7 +1160,7 @@ function Composer({
 						<Tooltip title={
 							isCancelling
 								? t("composer.send.stopping")
-								: isSending && draftMessage.trim().length === 0
+								: isSending && draftMessage.trim().length === 0 && composerContextItems.length === 0
 									? t("composer.send.stop")
 									: isSending
 										? t("composer.send.queue")
@@ -1168,9 +1169,9 @@ function Composer({
 							<Button
 								type="text"
 								shape="circle"
-								icon={<Icon name={isSending && draftMessage.trim().length === 0 ? "stop" : "send"} />}
+								icon={<Icon name={isSending && draftMessage.trim().length === 0 && composerContextItems.length === 0 ? "stop" : "send"} />}
 								className={styles.composerSendButton}
-								disabled={isCancelling || isAddingTextAttachment || (!isSending && draftMessage.trim().length === 0)}
+								disabled={isCancelling || isAddingTextAttachment || (!isSending && draftMessage.trim().length === 0 && composerContextItems.length === 0)}
 								onClick={submitMessage}
 							/>
 						</Tooltip>

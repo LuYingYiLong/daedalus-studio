@@ -226,9 +226,11 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 				messages={activeSelectionAskThread === null ? [] : selectionAsk.messagesByThread[activeSelectionAskThread.threadId] ?? []}
 				loading={selectionAsk.loading}
 				sending={selectionAsk.sending || activeSelectionAskThread?.status === "running"}
+				cancelling={selectionAsk.cancelling}
 				error={selectionAsk.error}
 				onClose={selectionAsk.close}
 				onSend={selectionAsk.send}
+				onStop={selectionAsk.cancel}
 			/>
 		</div>
 	);
