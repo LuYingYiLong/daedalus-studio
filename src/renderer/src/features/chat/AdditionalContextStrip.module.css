@@ -33,7 +33,7 @@
 	border-radius: var(--ds-radius-sm);
 	color: var(--ds-text-primary);
 	background: var(--ds-surface-elevated);
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+	box-shadow: var(--ds-box-shadow);
 }
 
 .interactiveChip {

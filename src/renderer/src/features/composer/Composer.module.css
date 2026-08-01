@@ -23,7 +23,7 @@
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
 	background: var(--ds-surface);
-	box-shadow: var(--ant-box-shadow-secondary);
+	box-shadow: var(--ds-box-shadow);
 	transition: border-color 0.15s;
 }
 
@@ -44,7 +44,7 @@
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
 	background: var(--ds-surface-elevated);
-	box-shadow: 0 8px 16px var(--ds-box-shadow);
+	box-shadow: var(--ds-box-shadow);
 }
 
 .completionItem {

@@ -162,7 +162,7 @@
 }
 
 .sessionTitleBadge :global(.ant-badge-dot) {
-	box-shadow: 0 0 0 1px var(--ant-color-bg-container);
+	box-shadow: var(--ds-box-shadow);
 }
 
 .workspaceActionButton,

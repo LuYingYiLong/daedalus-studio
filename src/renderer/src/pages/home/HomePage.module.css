@@ -554,7 +554,7 @@
 	bottom: calc(100% + 8px);
 	z-index: 20;
 	contain: layout style;
-	box-shadow: 0 8px 16px var(--ds-box-shadow);
+	box-shadow: var(--ds-box-shadow);
 	transform: translateX(-50%);
 	transition:
 		opacity 120ms ease,

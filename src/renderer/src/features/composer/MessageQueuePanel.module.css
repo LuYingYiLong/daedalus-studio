@@ -52,7 +52,7 @@
 
 .itemDragging {
 	background: var(--ds-accent-muted);
-	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+	box-shadow: var(--ds-box-shadow);
 }
 
 .dragHandle {

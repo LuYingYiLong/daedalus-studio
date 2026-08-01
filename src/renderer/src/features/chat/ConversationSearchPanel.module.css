@@ -14,7 +14,7 @@
 	background: var(--ant-color-bg-elevated);
 	border: 1px solid var(--ant-color-border-secondary);
 	border-radius: var(--ant-border-radius-lg);
-	box-shadow: var(--ant-box-shadow-secondary);
+	box-shadow: var(--ds-box-shadow);
 	opacity: 0;
 	pointer-events: none;
 	transform: translateY(calc(-100% - var(--ds-space-4)));
