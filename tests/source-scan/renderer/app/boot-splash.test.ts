@@ -16,7 +16,11 @@ describe("BootSplash", () => {
 	it("renders BootSplash before App and passes bootstrap data into App", () => {
 		expect(windowProvidersSource).toContain("<AntdApp component=\"div\"");
 		expect(windowProvidersSource).toContain("className={styles.root}");
-		expect(mainWindowRootSource).toContain("<MainTitlebar updatesEnabled={bootstrapData !== null} />");
+		expect(mainWindowRootSource).toContain("<MainTitlebar appReady={bootstrapData !== null} />");
+		expect(mainWindowRootSource).toContain("bootstrapData === null");
+		const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.tsx");
+		expect(titlebarSource).toContain("{appReady ? (");
+		expect(titlebarSource).toContain("className={styles.workspaceSidebarButton}");
 		expect(mainWindowRootSource).toContain("<BootSplash loadData={loadBootstrapData} onReady={handleBootstrapReady} />");
 		expect(mainWindowRootSource).toContain("<App bootstrapData={bootstrapData} />");
 		expect(settingsWindowSource).toContain("DEFAULT_CLIENT_PREFERENCES");

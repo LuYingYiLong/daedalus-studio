@@ -15,7 +15,7 @@ import { shouldShowUpdateButton } from "@/features/app-update/update-visibility"
 import styles from "./Titlebar.module.css";
 
 type MainTitlebarProps = {
-	updatesEnabled: boolean;
+	appReady: boolean;
 };
 
 function getUpdateButtonLabel(state: AppUpdateState | null): string {
@@ -31,12 +31,12 @@ function getUpdateButtonLabel(state: AppUpdateState | null): string {
 	return "Update";
 }
 
-function MainTitlebar({ updatesEnabled }: MainTitlebarProps): React.JSX.Element {
+function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(() => getCachedClientPreferences());
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
 	const [updateModalOpen, setUpdateModalOpen] = useState<boolean>(false);
-	const showUpdateButton: boolean = updatesEnabled && shouldShowUpdateButton(updateState);
+	const showUpdateButton: boolean = appReady && shouldShowUpdateButton(updateState);
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -46,7 +46,7 @@ function MainTitlebar({ updatesEnabled }: MainTitlebarProps): React.JSX.Element 
 			}
 			if (
 				!cancelled
-				&& updatesEnabled
+				&& appReady
 				&& clientPreferences.autoCheckForUpdates
 				&& state.status === "idle"
 			) {
@@ -64,7 +64,7 @@ function MainTitlebar({ updatesEnabled }: MainTitlebarProps): React.JSX.Element 
 			cancelled = true;
 			unsubscribe();
 		};
-	}, [clientPreferences.autoCheckForUpdates, updatesEnabled]);
+	}, [appReady, clientPreferences.autoCheckForUpdates]);
 
 	const handleClientPreferencesChanged = useMemoizedFn((event: Event): void => {
 		const preferences: ClientPreferences | undefined = (event as CustomEvent<ClientPreferences>).detail;
@@ -76,7 +76,7 @@ function MainTitlebar({ updatesEnabled }: MainTitlebarProps): React.JSX.Element 
 	useEventListener(CLIENT_PREFERENCES_CHANGED_EVENT, handleClientPreferencesChanged);
 
 	const startDownload = useMemoizedFn(async (): Promise<void> => {
-		if (!updatesEnabled || (updateState?.status !== "available" && updateState?.status !== "error")) {
+		if (!appReady || (updateState?.status !== "available" && updateState?.status !== "error")) {
 			return;
 		}
 		const nextState: AppUpdateState = await window.electronAPI.appUpdate.download();
@@ -125,19 +125,21 @@ function MainTitlebar({ updatesEnabled }: MainTitlebarProps): React.JSX.Element 
 
 	return (
 		<div className={styles.root}>
-			<Tooltip title={workspaceSidebarLabel}>
-				<Button
-					type="text"
-					shape="circle"
-					className={styles.workspaceSidebarButton}
-					aria-label={workspaceSidebarLabel}
-					aria-pressed={clientPreferences.workspaceSidebar.open}
-					icon={<Icon name={clientPreferences.workspaceSidebar.open ? "layout-left-toggled" : "layout-left"} />}
-					onClick={(): void => {
-						void toggleWorkspaceSidebar();
-					}}
-				/>
-			</Tooltip>
+			{appReady ? (
+				<Tooltip title={workspaceSidebarLabel}>
+					<Button
+						type="text"
+						shape="circle"
+						className={styles.workspaceSidebarButton}
+						aria-label={workspaceSidebarLabel}
+						aria-pressed={clientPreferences.workspaceSidebar.open}
+						icon={<Icon name={clientPreferences.workspaceSidebar.open ? "layout-left-toggled" : "layout-left"} />}
+						onClick={(): void => {
+							void toggleWorkspaceSidebar();
+						}}
+					/>
+				</Tooltip>
+			) : null}
 			<div className={styles.brandCluster}>
 				<p className={styles.brandName}>Daedalus Studio</p>
 				{showUpdateButton ? (

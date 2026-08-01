@@ -282,7 +282,6 @@ function MessageSelectionOverlay({ container, scroller, contextItems, askThreads
 				key: "delete",
 				icon: <Icon name="remove" />,
 				label: t("chat.selection.deleteAsk"),
-				danger: true
 			},
 			{
 				type: "divider"
@@ -291,7 +290,6 @@ function MessageSelectionOverlay({ container, scroller, contextItems, askThreads
 				key: "deleteAll",
 				icon: <Icon name="clear" />,
 				label: t("chat.selection.deleteAllAsks"),
-				danger: true
 			}
 		],
 		onClick: ({ key, domEvent }): void => {
@@ -380,7 +378,11 @@ function MessageSelectionOverlay({ container, scroller, contextItems, askThreads
 				</Tooltip>
 			))}
 			{markers.asks.map(({ thread, left, top }) => (
-				<Dropdown key={thread.threadId} menu={askMarkerMenu(thread.threadId)} trigger={["contextMenu"]}>
+				<Dropdown
+					key={thread.threadId}
+					menu={askMarkerMenu(thread.threadId)}
+					trigger={["contextMenu"]}
+				>
 					<Tooltip title={t("chat.selection.openAsk")}>
 						<Button
 							ref={(element: HTMLButtonElement | null): void => {

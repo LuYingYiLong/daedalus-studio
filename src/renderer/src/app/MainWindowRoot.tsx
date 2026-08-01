@@ -12,7 +12,7 @@ function MainWindowRoot(): React.JSX.Element {
 
 	return (
 		<>
-			<MainTitlebar updatesEnabled={bootstrapData !== null} />
+			<MainTitlebar appReady={bootstrapData !== null} />
 			{bootstrapData === null ? (
 				<BootSplash loadData={loadBootstrapData} onReady={handleBootstrapReady} />
 			) : <App bootstrapData={bootstrapData} />}
