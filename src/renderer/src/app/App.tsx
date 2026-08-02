@@ -126,7 +126,7 @@ type AppProps = {
 };
 
 const SUPPORTED_IMAGE_MIME_TYPES: readonly SupportedImageMimeType[] = ["image/png", "image/jpeg", "image/webp", "image/gif"];
-const MAX_IMAGE_ATTACHMENT_BYTES: number = 1024 * 1024;
+const MAX_IMAGE_ATTACHMENT_BYTES: number = 5 * 1024 * 1024;
 const RECENT_CONTEXT_FILE_WINDOW_MS: number = 2000;
 const CONTEXT_SUBTITLE_MAX_CHARS: number = 400;
 const PLAN_CLARIFICATION_SKIP_REPLY: string = "Continue with the current assumptions.";
@@ -2932,7 +2932,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					throw new Error(`Unsupported image type: ${file.type || file.name}`);
 				}
 				if (file.size <= 0 || file.size > MAX_IMAGE_ATTACHMENT_BYTES) {
-					throw new Error(`${file.name} is larger than 1 MiB.`);
+					throw new Error(`${file.name} is larger than 5 MiB.`);
 				}
 
 				const dataUrl: string = await readFileAsDataUrl(file);

@@ -266,6 +266,7 @@ function aggregateTimelineFileChanges(blocks: TimelineBlock[]): WorkflowFileChan
 
 type TimelineWorkflowTodoPanelProps = {
 	timelineStore: TimelinePageStore;
+	sessionId: string;
 	snapshot: WorkflowTodoSnapshot | null;
 	goal: AgentGoalState | null;
 	onDismiss: (snapshot: WorkflowTodoSnapshot) => void;
@@ -273,7 +274,7 @@ type TimelineWorkflowTodoPanelProps = {
 	onGoalDismiss: (goal: AgentGoalState) => Promise<void>;
 };
 
-function TimelineWorkflowTodoPanel({ timelineStore, snapshot, goal, onDismiss, onGoalChange, onGoalDismiss }: TimelineWorkflowTodoPanelProps): React.JSX.Element | null {
+function TimelineWorkflowTodoPanel({ timelineStore, sessionId, snapshot, goal, onDismiss, onGoalChange, onGoalDismiss }: TimelineWorkflowTodoPanelProps): React.JSX.Element | null {
 	const timelineBlocks: TimelineBlock[] = useTimelineSelector(
 		timelineStore,
 		(page): TimelineBlock[] => page.blocks
@@ -284,7 +285,16 @@ function TimelineWorkflowTodoPanel({ timelineStore, snapshot, goal, onDismiss, o
 	);
 
 	if (goal !== null) {
-		return <FloatingGoalPanel goal={goal} workflowTodo={snapshot} fileChangeSummary={fileChangeSummary} onChange={onGoalChange} onDismiss={onGoalDismiss} />;
+		return (
+			<FloatingGoalPanel
+				goal={goal}
+				sessionId={sessionId}
+				workflowTodo={snapshot}
+				fileChangeSummary={fileChangeSummary}
+				onChange={onGoalChange}
+				onDismiss={onGoalDismiss}
+			/>
+		);
 	}
 	return snapshot === null ? null : (
 		<FloatingWorkflowTodoPanel
@@ -1754,11 +1764,12 @@ function HomePage({
 											{showExecutionStatusPanel ? (
 													<TimelineWorkflowTodoPanel
 														timelineStore={timelineStore}
+														sessionId={activeSessionId!}
 														snapshot={workflowTodoSnapshot}
-												goal={currentGoal}
-												onDismiss={onWorkflowTodoDismiss}
-												onGoalChange={onGoalChange}
-												onGoalDismiss={onGoalDismiss}
+														goal={currentGoal}
+														onDismiss={onWorkflowTodoDismiss}
+														onGoalChange={onGoalChange}
+														onGoalDismiss={onGoalDismiss}
 													/>
 												) : null}
 												{!isHome ? (

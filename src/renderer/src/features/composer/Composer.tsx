@@ -12,7 +12,7 @@ import type { SlashCommandDefinition } from "@/api/command-api";
 import type { SkillSummary } from "@/api/skill-api";
 import type { AdditionalContextItem, WorkspaceConfig } from "@/api/types";
 import type { ProviderModelInfo, ProviderModelSelection, ProviderModelSelectionProvider, ProviderReasoningEffortOption } from "@/api/provider-api";
-import { compressSession, estimateContextUsage, type ContextUsageEstimate } from "@/api/context-api";
+import { compressSession, estimateContextUsage, type ContextUsageEstimate, type EstimateContextUsageParams } from "@/api/context-api";
 import AdditionalContextStrip from "@/features/chat/AdditionalContextStrip";
 import { WorkspaceIconView } from "@/features/workspace/workspace-appearance";
 import {
@@ -90,6 +90,7 @@ const CONTEXT_USAGE_DANGER_STROKE: ProgressStrokeColor = {
 const NO_WORKSPACE_KEY: string = "workspace:none";
 const ADD_WORKSPACE_KEY: string = "workspace:add";
 const EMPTY_CONTEXT_ITEMS: AdditionalContextItem[] = [];
+const CONTEXT_USAGE_REFRESH_INTERVAL_MS: number = 5_000;
 
 function createContextItems(t: TFunction<"common">): MenuProps["items"] {
 	return [
@@ -423,13 +424,14 @@ function Composer({
 	const imageInputRef = useRef<HTMLInputElement | null>(null);
 	const suppressedCompletionValueRef = useRef<string | null>(null);
 	const completionStateSignatureRef = useRef<string>("");
+	const contextUsageRequestRef = useRef<number>(0);
+	const contextUsageParamsRef = useRef<EstimateContextUsageParams>({});
 	const [draftMessage, setDraftMessage] = useState<string>(message);
 	const [completionToken, setCompletionToken] = useState<ComposerCompletionToken | null>(null);
 	const [completionOptions, setCompletionOptions] = useState<ComposerCompletionOption[]>([]);
 	const [selectedCompletionIndex, setSelectedCompletionIndex] = useState<number>(0);
 	const [isComposing, setIsComposing] = useState<boolean>(false);
 	const [contextUsage, setContextUsage] = useState<ContextUsageEstimate | null>(null);
-	const [isContextUsageLoading, setIsContextUsageLoading] = useState<boolean>(false);
 	const [contextUsageError, setContextUsageError] = useState<string | null>(null);
 	const [isCompressingContext, setIsCompressingContext] = useState<boolean>(false);
 
@@ -505,6 +507,13 @@ function Composer({
 			provider: selectedProviderId,
 			model: selectedModelId
 		};
+	contextUsageParamsRef.current = {
+		message: draftMessage,
+		mode,
+		provider: selectedModel?.provider,
+		model: selectedModel?.model,
+		additionalContext: composerContextItems
+	};
 	const selectedModelKey: string | undefined = selectedModel === null
 		? undefined
 		: createModelKey(selectedModel.provider, selectedModel.model);
@@ -582,44 +591,40 @@ function Composer({
 
 	useEffect((): (() => void) => {
 		if (!showContextUsage) {
-			setIsContextUsageLoading(false);
 			setContextUsage(null);
 			setContextUsageError(null);
 			return (): void => { };
 		}
 
-		let cancelled: boolean = false;
-		const timer: number = window.setTimeout((): void => {
-			setIsContextUsageLoading(true);
-			setContextUsageError(null);
-			void estimateContextUsage({
-				message: draftMessage,
-				mode,
-				provider: selectedModel?.provider,
-				model: selectedModel?.model,
-				additionalContext: composerContextItems
-			}).then((usage: ContextUsageEstimate): void => {
-				if (cancelled) {
-					return;
-				}
+		let disposed: boolean = false;
+		let inFlight: boolean = false;
+		const pollContextUsage = async (): Promise<void> => {
+			if (inFlight) return;
+			inFlight = true;
+			const requestId: number = ++contextUsageRequestRef.current;
+			try {
+				const usage: ContextUsageEstimate = await estimateContextUsage(contextUsageParamsRef.current);
+				if (disposed || requestId !== contextUsageRequestRef.current) return;
 				setContextUsage(usage);
-			}).catch((error: unknown): void => {
-				if (cancelled) {
-					return;
+				setContextUsageError(null);
+			} catch (error: unknown) {
+				if (!disposed && requestId === contextUsageRequestRef.current) {
+					setContextUsageError(getErrorMessage(error, t));
 				}
-				setContextUsageError(getErrorMessage(error, t));
-			}).finally((): void => {
-				if (!cancelled) {
-					setIsContextUsageLoading(false);
-				}
-			});
-		}, 350);
+			} finally {
+				inFlight = false;
+			}
+		};
+		setContextUsageError(null);
+		void pollContextUsage();
+		const timer: number = window.setInterval((): void => void pollContextUsage(), CONTEXT_USAGE_REFRESH_INTERVAL_MS);
 
 		return (): void => {
-			cancelled = true;
-			window.clearTimeout(timer);
+			disposed = true;
+			contextUsageRequestRef.current += 1;
+			window.clearInterval(timer);
 		};
-	}, [draftMessage, mode, selectedModel?.provider, selectedModel?.model, composerContextItems, showContextUsage, t]);
+	}, [mode, selectedModel?.provider, selectedModel?.model, composerContextItems, showContextUsage, t]);
 
 	const handleProviderModelClick: MenuProps["onClick"] = useCallback(({ key }): void => {
 		const nextSelectedModel: SelectedModel | null = parseModelKey(String(key));
@@ -879,21 +884,14 @@ function Composer({
 	}
 
 	async function refreshContextUsage(): Promise<void> {
-		setIsContextUsageLoading(true);
 		setContextUsageError(null);
+		const requestId: number = ++contextUsageRequestRef.current;
 		try {
-			const usage: ContextUsageEstimate = await estimateContextUsage({
-				message: draftMessage,
-				mode,
-				provider: selectedModel?.provider,
-				model: selectedModel?.model,
-				additionalContext: composerContextItems
-			});
+			const usage: ContextUsageEstimate = await estimateContextUsage(contextUsageParamsRef.current);
+			if (requestId !== contextUsageRequestRef.current) return;
 			setContextUsage(usage);
 		} catch (error: unknown) {
-			setContextUsageError(getErrorMessage(error, t));
-		} finally {
-			setIsContextUsageLoading(false);
+			if (requestId === contextUsageRequestRef.current) setContextUsageError(getErrorMessage(error, t));
 		}
 	}
 

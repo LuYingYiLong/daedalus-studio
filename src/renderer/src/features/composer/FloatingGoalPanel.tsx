@@ -1,8 +1,8 @@
 import { App, Button, InputNumber, Modal, Popover, Progress, Space, Typography } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
-import { applyGoalRollback, cancelGoal, extendGoalBudget, previewGoalRollback, resumeGoal } from "@/api/goal-api";
+import { applyGoalRollback, cancelGoal, extendGoalBudget, getCurrentGoal, previewGoalRollback, resumeGoal } from "@/api/goal-api";
 import type { AgentGoalState, WorkflowTodoSnapshot, WorkflowTodoStep } from "@/api/types";
 import {
 	getWorkflowTodoProgress,
@@ -19,6 +19,7 @@ import styles from "./FloatingGoalPanel.module.css";
 
 type Props = {
 	goal: AgentGoalState;
+	sessionId: string;
 	workflowTodo: WorkflowTodoSnapshot | null;
 	fileChangeSummary: WorkflowFileChangeSummary;
 	onChange: (goal: AgentGoalState) => void;
@@ -35,7 +36,14 @@ function formatDuration(milliseconds: number): string {
 	return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 }
 
-export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummary, onChange, onDismiss }: Props): React.JSX.Element {
+export default function FloatingGoalPanel({
+	goal,
+	sessionId,
+	workflowTodo,
+	fileChangeSummary,
+	onChange,
+	onDismiss
+}: Props): React.JSX.Element {
 	const { t } = useTranslation();
 	const { message, modal } = App.useApp();
 	const budgetDefaults = useMemo(() => getGoalBudgetExtensionDefaults(goal), [goal.budget, goal.usage]);
@@ -46,9 +54,43 @@ export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummar
 	const [cycles, setCycles] = useState(budgetDefaults.cycles);
 	const [tokens, setTokens] = useState(budgetDefaults.tokens);
 	const [minutes, setMinutes] = useState(budgetDefaults.activeMinutes);
+	const [telemetryGoal, setTelemetryGoal] = useState<AgentGoalState | null>(null);
+	const telemetryRequestRef = useRef(0);
+	const effectiveGoal = telemetryGoal?.goalId === goal.goalId && telemetryGoal.revision >= goal.revision
+		? telemetryGoal
+		: goal;
 	const [now, setNow] = useState((): number => Date.now());
 	const [activeStartedAt, setActiveStartedAt] = useState((): number => Date.now());
-	const tracksActiveTime = goal.stage === "running" || goal.stage === "evaluating";
+	const tracksActiveTime = effectiveGoal.stage === "running" || effectiveGoal.stage === "evaluating";
+	useEffect((): void => {
+		setTelemetryGoal(null);
+	}, [goal.goalId, goal.revision]);
+	useEffect((): (() => void) | undefined => {
+		if (!popoverOpen) return undefined;
+		let disposed = false;
+		let inFlight = false;
+		const refresh = async (): Promise<void> => {
+			if (inFlight) return;
+			inFlight = true;
+			const requestId = ++telemetryRequestRef.current;
+			try {
+				const goalResult = await getCurrentGoal(sessionId);
+				if (disposed || requestId !== telemetryRequestRef.current) return;
+				if (goalResult?.goalId === goal.goalId) setTelemetryGoal(goalResult);
+			} catch {
+				// Keep the last telemetry snapshot; normal event updates remain authoritative.
+			} finally {
+				inFlight = false;
+			}
+		};
+		void refresh();
+		const timer = window.setInterval((): void => void refresh(), 5_000);
+		return (): void => {
+			disposed = true;
+			telemetryRequestRef.current += 1;
+			window.clearInterval(timer);
+		};
+	}, [goal.goalId, goal.stage, popoverOpen, sessionId]);
 	useEffect((): (() => void) | undefined => {
 		const startedAt = Date.now();
 		setNow(startedAt);
@@ -56,18 +98,17 @@ export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummar
 		if (!tracksActiveTime) return undefined;
 		const timer = window.setInterval((): void => setNow(Date.now()), 1000);
 		return (): void => window.clearInterval(timer);
-	}, [goal.goalId, goal.stage, goal.usage.activeMilliseconds, tracksActiveTime]);
-	const displayedActiveMilliseconds = goal.usage.activeMilliseconds + (tracksActiveTime
+	}, [effectiveGoal.goalId, effectiveGoal.stage, effectiveGoal.usage.activeMilliseconds, tracksActiveTime]);
+	const displayedActiveMilliseconds = effectiveGoal.usage.activeMilliseconds + (tracksActiveTime
 		? Math.max(0, now - activeStartedAt)
 		: 0);
-	const percent = goal.stage === "achieved" ? 100 : Math.min(100, Math.round((goal.usage.cycles / Math.max(1, goal.budget.maxCycles)) * 100));
 	const active = !isAgentGoalTerminal(goal);
 	const paused = goal.stage === "paused";
 	const canResume = hasGoalBudgetRemaining(goal);
 	const readinessIssues = goal.readiness?.checks.filter((check) => check.status !== "passed") ?? [];
 	const todoSteps: WorkflowTodoStep[] = workflowTodo?.steps ?? [];
 	const todoProgress = getWorkflowTodoProgress(todoSteps);
-	const summary = useMemo(() => `${goal.usage.cycles}/${goal.budget.maxCycles}`, [goal.budget.maxCycles, goal.usage.cycles]);
+	const summary = useMemo(() => `${effectiveGoal.usage.cycles}/${effectiveGoal.budget.maxCycles}`, [effectiveGoal.budget.maxCycles, effectiveGoal.usage.cycles]);
 
 	async function runAction(kind: "resume" | "cancel", operation: () => Promise<AgentGoalState>): Promise<void> {
 		try {
@@ -166,12 +207,11 @@ export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummar
 	const content = (
 		<div className={styles.content}>
 			<div className={styles.metrics}>
-				<div><span>{t("goal.fields.stage")}</span><strong>{t(`goal.stages.${goal.stage}`)}</strong></div>
+				<div><span>{t("goal.fields.stage")}</span><strong>{t(`goal.stages.${effectiveGoal.stage}`)}</strong></div>
 				<div><span>{t("goal.fields.cycles")}</span><strong>{summary}</strong></div>
-				<div><span>{t("goal.fields.tokens")}</span><strong>{formatTokens(goal.usage.tokens)} / {formatTokens(goal.budget.maxTokens)}</strong></div>
+				<div><span>{t("goal.fields.tokens")}</span><strong>{formatTokens(effectiveGoal.usage.tokens)} / {formatTokens(effectiveGoal.budget.maxTokens)}</strong></div>
 				<div><span>{t("goal.fields.activeTime")}</span><strong>{formatDuration(displayedActiveMilliseconds)}</strong></div>
 			</div>
-			<Progress percent={percent} showInfo={false} status={goal.stage === "failed" ? "exception" : goal.stage === "achieved" ? "success" : "normal"} />
 			{goal.evaluation === null ? null : (
 				<div className={styles.section}>
 					<Typography.Text strong>{t("goal.evaluation")}</Typography.Text>
