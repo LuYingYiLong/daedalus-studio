@@ -84,6 +84,14 @@ import {
 	markActiveSessionRead,
 	removeUnreadSessions
 } from "@/features/workspace/session-unread";
+import {
+	applyRunningSessionEvent,
+	markRunStopped,
+	markSessionRunStarted,
+	removeRunningSessions,
+	syncSessionRunFromOpen,
+	type RunningSessionState
+} from "@/features/workspace/session-running";
 import { Icon } from "@/assets/icons";
 
 type SupportedImageMimeType = SaveImageAttachmentParams["mimeType"];
@@ -693,6 +701,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		});
 	}, []);
 	const [runState, setRunState] = useState<RunControllerState>(() => createIdleRunState());
+	const [runningSessionState, setRunningSessionState] = useState<RunningSessionState>(() => new Map());
 	const [unreadSessionIds, setUnreadSessionIds] = useState<ReadonlySet<string>>(() => new Set<string>());
 	const windowFocusedRef = useRef<boolean>(document.hasFocus());
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(bootstrapData.clientPreferences ?? DEFAULT_CLIENT_PREFERENCES);
@@ -804,6 +813,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		await deleteSession(sessionId);
 		composerDraftsRef.current.delete(sessionId);
 		removeStoredSessionLayouts([sessionId]);
+		setRunningSessionState((current: RunningSessionState): RunningSessionState => {
+			return removeRunningSessions(current, [sessionId]);
+		});
 		setUnreadSessionIds((currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
 			return removeUnreadSessions(currentSessionIds, [sessionId]);
 		});
@@ -1124,6 +1136,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	function applyOptimisticActiveRun(requestId: string, clearComposerText: boolean, clearComposerContext: boolean = false, preserveWorkflowTodo: boolean = false): void {
 		const startedAt: string = new Date().toISOString();
 		const sequence: number = runState.sequence + 1;
+		setRunningSessionState((current: RunningSessionState): RunningSessionState => {
+			return markSessionRunStarted(current, activeSessionIdRef.current, requestId);
+		});
 
 		clearWorkflowTodoUiState({ preservePlanSnapshot: preserveWorkflowTodo });
 		setRunState((currentState: RunControllerState): RunControllerState => createOptimisticRunState(currentState, requestId, startedAt));
@@ -1194,6 +1209,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	function finishOptimisticActiveRun(requestId: string): void {
+		setRunningSessionState((current: RunningSessionState): RunningSessionState => {
+			return markRunStopped(current, requestId);
+		});
 		setRunState((currentState: RunControllerState): RunControllerState => finishOptimisticRunState(currentState, requestId));
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 			if (currentWorkbench === null || currentWorkbench.activeRun.requestId !== requestId) {
@@ -1341,6 +1359,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}, [activeSessionId]);
 
 	const handleBackendEventObserved = useCallback((event: BackendEvent): void => {
+		setRunningSessionState((current: RunningSessionState): RunningSessionState => {
+			return applyRunningSessionEvent(current, event);
+		});
 		const responseSessionId: string | null = getUnreadResponseSessionId(event);
 		if (responseSessionId === null) {
 			return;
@@ -1669,6 +1690,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					? createIdleRunState(currentState.sequence)
 					: applyAgentRunState(currentState, result.activeAgentRun)
 			));
+			setRunningSessionState((current: RunningSessionState): RunningSessionState => {
+				return syncSessionRunFromOpen(current, sessionId, result.activeAgentRun);
+			});
 			const openedGoalDismissed: boolean = result.currentGoal !== null
 				&& isAgentGoalDismissed(result.currentGoal, dismissedTerminalGoalIdsRef.current);
 			setCurrentGoal((current: AgentGoalState | null): AgentGoalState | null => {
@@ -1714,6 +1738,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	function handleSessionArchive(session: SessionMetadata): void {
+		setRunningSessionState((current: RunningSessionState): RunningSessionState => {
+			return removeRunningSessions(current, [session.id]);
+		});
 		setUnreadSessionIds((currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
 			return removeUnreadSessions(currentSessionIds, [session.id]);
 		});
@@ -2245,6 +2272,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				replaceComposerInput(message, activeSessionIdRef.current);
 			}
 			setRunState((currentState: RunControllerState): RunControllerState => finishOptimisticRunState(currentState, requestId));
+			setRunningSessionState((current: RunningSessionState): RunningSessionState => {
+				return markRunStopped(current, requestId);
+			});
 			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 				return currentWorkbench === null
 					? currentWorkbench
@@ -2357,6 +2387,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 			replaceComposerInput(message, activeSessionId);
 			setRunState((currentState: RunControllerState): RunControllerState => finishOptimisticRunState(currentState, requestId));
+			setRunningSessionState((current: RunningSessionState): RunningSessionState => {
+				return markRunStopped(current, requestId);
+			});
 			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 				return currentWorkbench === null
 					? currentWorkbench
@@ -3147,7 +3180,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		?? (generalSettings.godotExecutableStatus === "ready" ? generalSettings.godotExecutablePath : null);
 	const composerIsSending: boolean = isRunControllerActive(runState) || isHomeSubmitting;
 	const composerIsCancelling: boolean = runState.status === "cancelling";
-	const runningSessionIds: string[] = activeSessionId !== null && composerIsSending ? [activeSessionId] : [];
+	const runningSessionIds: string[] = [...runningSessionState.keys()];
 
 	useEffect((): void => {
 		activeSessionTitleRef.current = chatTitle;

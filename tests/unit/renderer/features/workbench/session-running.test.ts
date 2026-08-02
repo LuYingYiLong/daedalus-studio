@@ -1,0 +1,109 @@
+import { describe, expect, it } from "vitest";
+import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
+import {
+	applyRunningSessionEvent,
+	markRunStopped,
+	markSessionRunStarted,
+	removeRunningSessions,
+	type RunningSessionState
+} from "@/features/workspace/session-running";
+
+function createRunEvent(options: {
+	sessionId: string;
+	requestId: string;
+	runId: string;
+	stage: string;
+	revision?: number;
+}): BackendEvent {
+	return {
+		protocolVersion: 3,
+		type: "event",
+		eventId: `${options.runId}:${options.revision ?? 1}`,
+		event: "agent.run.state",
+		sessionId: options.sessionId,
+		requestId: options.requestId,
+		runId: options.runId,
+		sequence: options.revision ?? 1,
+		createdAt: new Date(0).toISOString(),
+		data: {
+			requestId: options.requestId,
+			runId: options.runId,
+			stage: options.stage,
+			revision: options.revision ?? 1
+		}
+	};
+}
+
+function ids(state: RunningSessionState): string[] {
+	return [...state.keys()];
+}
+
+describe("session running indicators", () => {
+	it("keeps a background session running when another session starts", () => {
+		let state: RunningSessionState = new Map();
+		state = applyRunningSessionEvent(state, createRunEvent({
+			sessionId: "session-a",
+			requestId: "request-a",
+			runId: "run-a",
+			stage: "executing"
+		}));
+		state = applyRunningSessionEvent(state, createRunEvent({
+			sessionId: "session-b",
+			requestId: "request-b",
+			runId: "run-b",
+			stage: "routing"
+		}));
+
+		expect(ids(state)).toEqual(["session-a", "session-b"]);
+	});
+
+	it("removes only the session whose run reaches a terminal stage", () => {
+		let state: RunningSessionState = new Map();
+		state = markSessionRunStarted(state, "session-a", "request-a");
+		state = markSessionRunStarted(state, "session-b", "request-b");
+		state = applyRunningSessionEvent(state, createRunEvent({
+			sessionId: "session-a",
+			requestId: "request-a",
+			runId: "run-a",
+			stage: "completed"
+		}));
+
+		expect(ids(state)).toEqual(["session-b"]);
+	});
+
+	it("ignores a late terminal event from an older run", () => {
+		let state: RunningSessionState = new Map();
+		state = applyRunningSessionEvent(state, createRunEvent({
+			sessionId: "session-a",
+			requestId: "request-new",
+			runId: "run-new",
+			stage: "executing",
+			revision: 2
+		}));
+		const unchanged: RunningSessionState = applyRunningSessionEvent(state, createRunEvent({
+			sessionId: "session-a",
+			requestId: "request-old",
+			runId: "run-old",
+			stage: "completed",
+			revision: 3
+		}));
+
+		expect(unchanged).toBe(state);
+		expect(ids(unchanged)).toEqual(["session-a"]);
+	});
+
+	it("can stop an optimistic run after navigating away", () => {
+		const running: RunningSessionState = markSessionRunStarted(new Map(), "session-a", "request-a");
+		const stopped: RunningSessionState = markRunStopped(running, "request-a");
+
+		expect(ids(stopped)).toEqual([]);
+	});
+
+	it("cleans removed sessions without disturbing other indicators", () => {
+		let state: RunningSessionState = new Map();
+		state = markSessionRunStarted(state, "session-a", "request-a");
+		state = markSessionRunStarted(state, "session-b", "request-b");
+
+		expect(ids(removeRunningSessions(state, ["session-a"]))).toEqual(["session-b"]);
+	});
+});
