@@ -15,6 +15,7 @@ const TOOL_DISPLAY_TEMPLATES: Record<string, ToolDisplayTemplate> = {
 	mcp_skills_propose_create: { label: "Draft skill", iconName: "skill", target: "skill" },
 	mcp_skills_create: { label: "Create skill", iconName: "skill", target: "skill" },
 	mcp_image_generate: { label: "Generate image", iconName: "magic", target: "query" },
+	mcp_image_inspect: { label: "Inspect image", iconName: "vision", target: "file" },
 	mcp_web_search: { label: "Search the web", iconName: "global", target: "query" },
 
 	mcp_workspace_list_files: { label: "Browse workspace files", iconName: "folder-search", target: "folder" },

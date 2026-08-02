@@ -30,6 +30,7 @@ export type ComposerProps = {
 	selectedModelId: string | null;
 	reasoningEffort?: string | null;
 	message: string;
+	onDraftChange?: (message: string) => void;
 	contextItems?: AdditionalContextItem[];
 	mode: ChatMode;
 	approvalMode: ApprovalMode;
@@ -43,7 +44,6 @@ export type ComposerProps = {
 	selectedWorkspace?: WorkspaceConfig | null;
 	workspaceFooterDisabled?: boolean;
 	showContextUsage?: boolean;
-	onMessageChange?: (message: string) => void;
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
 	onProviderModelChange?: (providerId: string, modelId: string) => void;
@@ -395,7 +395,6 @@ function Composer({
 	selectedWorkspace = null,
 	workspaceFooterDisabled = false,
 	showContextUsage = true,
-	onMessageChange,
 	onModeChange,
 	onApprovalModeChange,
 	onProviderModelChange,
@@ -414,6 +413,7 @@ function Composer({
 	onCancel,
 	onSubmit,
 	onGuideSubmit,
+	onDraftChange,
 	onCompletionOpen
 }: ComposerProps): React.JSX.Element {
 	const { t } = useTranslation();
@@ -422,7 +422,6 @@ function Composer({
 	const imageInputRef = useRef<HTMLInputElement | null>(null);
 	const suppressedCompletionValueRef = useRef<string | null>(null);
 	const completionStateSignatureRef = useRef<string>("");
-	const lastSyncedMessageRef = useRef<string>(message);
 	const [draftMessage, setDraftMessage] = useState<string>(message);
 	const [completionToken, setCompletionToken] = useState<ComposerCompletionToken | null>(null);
 	const [completionOptions, setCompletionOptions] = useState<ComposerCompletionOption[]>([]);
@@ -575,16 +574,9 @@ function Composer({
 	}, [slashCommands, skills]);
 
 	useEffect((): void => {
-		const nativeTextArea: HTMLTextAreaElement | null = getNativeTextArea(textAreaRef.current);
-		const isFocused: boolean = nativeTextArea !== null && document.activeElement === nativeTextArea;
-		const localMessageIsClean: boolean = draftMessage === lastSyncedMessageRef.current;
-
-		lastSyncedMessageRef.current = message;
-		if (!isFocused || localMessageIsClean) {
-			setDraftMessage(message);
-			suppressedCompletionValueRef.current = null;
-			hideCompletion();
-		}
+		setDraftMessage(message);
+		suppressedCompletionValueRef.current = null;
+		hideCompletion();
 	}, [message]);
 
 	useEffect((): (() => void) => {
@@ -645,10 +637,9 @@ function Composer({
 
 	function clearDraftMessage(): void {
 		setDraftMessage("");
-		lastSyncedMessageRef.current = "";
+		onDraftChange?.("");
 		suppressedCompletionValueRef.current = null;
 		hideCompletion();
-		onMessageChange?.("");
 	}
 
 	function submitMessage(): void {
@@ -750,7 +741,7 @@ function Composer({
 		suppressedCompletionValueRef.current = option.trigger === "/" ? replacement.value : null;
 		hideCompletion();
 		setDraftMessage(replacement.value);
-		onMessageChange?.(replacement.value);
+		onDraftChange?.(replacement.value);
 		setSelectionAfterRender(replacement.caretIndex);
 	}
 
@@ -762,7 +753,7 @@ function Composer({
 		}
 
 		setDraftMessage(nextMessage);
-		onMessageChange?.(nextMessage);
+		onDraftChange?.(nextMessage);
 		refreshCompletion(nextMessage, event.target.selectionStart);
 	}
 

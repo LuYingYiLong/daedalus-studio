@@ -1,0 +1,27 @@
+import { describe, expect, it } from "vitest";
+import { readRepoFile } from "../../../../helpers/repo-paths";
+
+describe("Composer draft lifetime", () => {
+	const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+	const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
+	const homePageSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
+
+	it("keeps per-session drafts in renderer memory instead of workbench persistence", () => {
+		expect(appSource).not.toContain("COMPOSER_TEXT_SYNC_DEBOUNCE_MS");
+		expect(appSource).not.toContain("pendingComposerTextSyncRef");
+		expect(appSource).not.toContain("takePendingWorkbenchPatchWithComposerText");
+		expect(composerSource).not.toContain("onMessageChange");
+		expect(appSource).toContain("composerDraftsRef = useRef<Map<string, string>>(new Map())");
+		expect(appSource).toContain("composerDraftsRef.current.get(composerScopeId) ?? \"\"");
+		expect(homePageSource).toContain("onDraftChange={onDraftChange}");
+		expect(composerSource).toContain("onDraftChange?.(nextMessage)");
+	});
+
+	it("restores drafts by conversation and keeps typed temporary sessions alive", () => {
+		expect(appSource).toContain("composerInstanceKey");
+		expect(homePageSource).toContain("key={composerInstanceKey}");
+		expect(composerSource).toContain("const [draftMessage, setDraftMessage] = useState<string>(message)");
+		expect(appSource).toContain("draftText.trim().length > 0");
+		expect(appSource).toContain("composerDraftsRef.current.delete(sessionId)");
+	});
+});

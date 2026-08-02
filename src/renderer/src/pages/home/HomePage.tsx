@@ -324,7 +324,9 @@ type HomePageProps = {
 	selectedProviderId: string | null;
 	selectedModelId: string | null;
 	reasoningEffort: string | null;
+	composerInstanceKey: string;
 	message: string;
+	onDraftChange: (message: string) => void;
 	contextItems: AdditionalContextItem[];
 	selectionAskThreads: SelectionAskThread[];
 	messageQueue: MessageQueueItem[];
@@ -386,7 +388,6 @@ type HomePageProps = {
 	onRetryEditStart: (requestId: string) => void;
 	onRetryEditCancel: (requestId: string) => void;
 	onRetryFromUserMessage: (payload: RetryUserMessagePayload) => Promise<boolean>;
-	onMessageChange: (message: string) => void;
 	onModeChange: (mode: ChatMode) => void;
 	onApprovalModeChange: (mode: ApprovalMode) => void;
 	onApprovalApprove: (approvalId: string, consentText?: string) => void;
@@ -446,7 +447,9 @@ function HomePage({
 	selectedProviderId,
 	selectedModelId,
 	reasoningEffort,
+	composerInstanceKey,
 	message,
+	onDraftChange,
 	contextItems,
 	selectionAskThreads,
 	messageQueue,
@@ -508,7 +511,6 @@ function HomePage({
 	onRetryEditStart,
 	onRetryEditCancel,
 	onRetryFromUserMessage,
-	onMessageChange,
 	onModeChange,
 	onApprovalModeChange,
 	onApprovalApprove,
@@ -1767,12 +1769,14 @@ function HomePage({
 														onGuideReorder={onGuideReorder}
 													/>
 												) : null}
-												<Composer
-													providerModelSelection={providerModelSelection}
+											<Composer
+												key={composerInstanceKey}
+												providerModelSelection={providerModelSelection}
 											selectedProviderId={selectedProviderId}
 											selectedModelId={selectedModelId}
 											reasoningEffort={reasoningEffort}
-													message={message}
+												message={message}
+												onDraftChange={onDraftChange}
 													contextItems={contextItems}
 													mode={mode}
 													approvalMode={approvalMode}
@@ -1786,8 +1790,7 @@ function HomePage({
 											selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
 											workspaceFooterDisabled={workspaceFooterDisabled}
 											showContextUsage={!isHome}
-													onMessageChange={onMessageChange}
-													onModeChange={onModeChange}
+												onModeChange={onModeChange}
 													onApprovalModeChange={onApprovalModeChange}
 											onProviderModelChange={onProviderModelChange}
 											onConfigureProvider={(): void => {

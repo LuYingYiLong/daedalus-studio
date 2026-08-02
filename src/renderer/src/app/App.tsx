@@ -127,21 +127,10 @@ const SUPPORTED_IMAGE_MIME_TYPES: readonly SupportedImageMimeType[] = ["image/pn
 const MAX_IMAGE_ATTACHMENT_BYTES: number = 1024 * 1024;
 const RECENT_CONTEXT_FILE_WINDOW_MS: number = 2000;
 const CONTEXT_SUBTITLE_MAX_CHARS: number = 400;
-const COMPOSER_TEXT_SYNC_DEBOUNCE_MS: number = 320;
 const PLAN_CLARIFICATION_SKIP_REPLY: string = "Continue with the current assumptions.";
 const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
 const DEFAULT_SESSION_LAYOUT: SessionLayoutPreferences = createDefaultSessionLayout();
 
-type PendingComposerTextSync =
-	| {
-		scope: "home";
-		text: string;
-	}
-	| {
-		scope: "session";
-		sessionId: string;
-		text: string;
-	};
 function createChatRequestId(): string {
 	return `studio-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -314,7 +303,6 @@ function getPendingApprovalCount(workbench: WorkbenchSnapshot | null): number {
 }
 
 type HomeDraft = {
-	message: string;
 	workspaceId: string | null;
 	workspace: WorkspaceConfig | null;
 	chatMode: ChatMode;
@@ -325,7 +313,6 @@ type HomeDraft = {
 
 function createHomeDraft(): HomeDraft {
 	return {
-		message: "",
 		workspaceId: null,
 		workspace: null,
 		chatMode: "agent",
@@ -711,10 +698,11 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const navigationVersionRef = useRef<number>(0);
 	const activeChatRequestIdRef = useRef<string | null>(null);
 	const cancelledChatRequestIdsRef = useRef<Set<string>>(new Set());
-	const submittedComposerTextRef = useRef<{ requestId: string; text: string } | null>(null);
-	const loadingComposerDraftRef = useRef<{ sessionId: string; text: string } | null>(null);
-	const pendingComposerTextSyncRef = useRef<PendingComposerTextSync | null>(null);
-	const composerTextSyncTimerRef = useRef<number | null>(null);
+	const composerDraftsRef = useRef<Map<string, string>>(new Map());
+	const [composerInputReset, setComposerInputReset] = useState<{ scopeId: string; revision: number }>({
+		scopeId: "home",
+		revision: 0
+	});
 	const slashCommandsLoadingRef = useRef<boolean>(false);
 	const skillsLoadingRef = useRef<boolean>(false);
 	const slashCommandsRetryAtRef = useRef<number>(0);
@@ -810,6 +798,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	const deleteSessionWithLayout = useCallback(async (sessionId: string): Promise<void> => {
 		await deleteSession(sessionId);
+		composerDraftsRef.current.delete(sessionId);
 		removeStoredSessionLayouts([sessionId]);
 		setUnreadSessionIds((currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
 			return removeUnreadSessions(currentSessionIds, [sessionId]);
@@ -1090,23 +1079,13 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	const applyWorkbench = useCallback((nextWorkbench: WorkbenchSnapshot): void => {
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot => {
-			const submittedComposerText = submittedComposerTextRef.current;
-			const normalizedWorkbench: WorkbenchSnapshot = submittedComposerText !== null
-				&& currentWorkbench?.composer.text === ""
-				&& nextWorkbench.composer.text === submittedComposerText.text
-				? {
-					...nextWorkbench,
-					composer: {
-						...nextWorkbench.composer,
-						text: ""
-					}
+			const normalizedWorkbench: WorkbenchSnapshot = {
+				...nextWorkbench,
+				composer: {
+					...nextWorkbench.composer,
+					text: ""
 				}
-				: nextWorkbench;
-
-			if (normalizedWorkbench.composer.text === "" && submittedComposerText !== null) {
-				submittedComposerTextRef.current = null;
-			}
-
+			};
 			return applyWorkbenchSnapshot(currentWorkbench, normalizedWorkbench);
 		});
 	}, []);
@@ -1117,71 +1096,26 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		queueWorkbenchPatch
 	} = useWorkbenchPatchQueue(applyWorkbench);
 
-	function clearComposerTextSyncTimer(): void {
-		if (composerTextSyncTimerRef.current !== null) {
-			window.clearTimeout(composerTextSyncTimerRef.current);
-			composerTextSyncTimerRef.current = null;
+	function replaceComposerInput(text: string, scopeId: string = activeSessionIdRef.current ?? "home"): void {
+		if (text.length === 0) {
+			composerDraftsRef.current.delete(scopeId);
+		} else {
+			composerDraftsRef.current.set(scopeId, text);
 		}
+		setComposerInputReset((current): { scopeId: string; revision: number } => ({
+			scopeId,
+			revision: current.revision + 1
+		}));
 	}
 
-	function discardPendingComposerTextSync(): void {
-		clearComposerTextSyncTimer();
-		pendingComposerTextSyncRef.current = null;
-	}
-
-	function flushPendingComposerTextSync(): void {
-		clearComposerTextSyncTimer();
-		const pendingTextSync: PendingComposerTextSync | null = pendingComposerTextSyncRef.current;
-		pendingComposerTextSyncRef.current = null;
-		if (pendingTextSync === null) {
+	function handleComposerDraftChange(text: string): void {
+		const scopeId: string = activeSessionIdRef.current ?? "home";
+		if (text.length === 0) {
+			composerDraftsRef.current.delete(scopeId);
 			return;
 		}
-
-		if (pendingTextSync.scope === "home") {
-			if (activeSessionIdRef.current !== null) {
-				return;
-			}
-			setHomeDraft((currentDraft: HomeDraft): HomeDraft => {
-				return currentDraft.message === pendingTextSync.text
-					? currentDraft
-					: {
-						...currentDraft,
-						message: pendingTextSync.text
-					};
-			});
-			return;
-		}
-
-		if (activeSessionIdRef.current !== pendingTextSync.sessionId) {
-			return;
-		}
-
-		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
-			if (currentWorkbench === null || currentWorkbench.composer.text === pendingTextSync.text) {
-				return currentWorkbench;
-			}
-
-			return {
-				...currentWorkbench,
-				composer: {
-					...currentWorkbench.composer,
-					text: pendingTextSync.text
-				}
-			};
-		});
-		queueWorkbenchPatch({ composer: { text: pendingTextSync.text } });
+		composerDraftsRef.current.set(scopeId, text);
 	}
-
-	function takePendingWorkbenchPatchWithComposerText(): WorkbenchPatch {
-		flushPendingComposerTextSync();
-		return takePendingWorkbenchPatch();
-	}
-
-	useEffect((): (() => void) => {
-		return (): void => {
-			clearComposerTextSyncTimer();
-		};
-	}, []);
 
 	function applyOptimisticActiveRun(requestId: string, clearComposerText: boolean, clearComposerContext: boolean = false, preserveWorkflowTodo: boolean = false): void {
 		const startedAt: string = new Date().toISOString();
@@ -1467,9 +1401,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	useEffect((): (() => void) => {
 		return onBackendReconnected((): void => {
-			discardPendingComposerTextSync();
 			takePendingWorkbenchPatch();
-			loadingComposerDraftRef.current = null;
 			const sessionId: string | null = activeSessionIdRef.current;
 			if (activeSessionMetadata?.temporary === true) {
 				temporaryDraftSessionIdRef.current = null;
@@ -1550,12 +1482,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		if (activeSessionMetadata?.temporary !== true || activeSessionId === null) {
 			return;
 		}
-		const pendingText: string = pendingComposerTextSyncRef.current?.scope === "session"
-			&& pendingComposerTextSyncRef.current.sessionId === activeSessionId
-			? pendingComposerTextSyncRef.current.text
-			: "";
-		const hasDraft: boolean = pendingText.trim().length > 0
-			|| (workbench?.composer.text.trim().length ?? 0) > 0
+		const draftText: string = composerDraftsRef.current.get(activeSessionId) ?? "";
+		const hasDraft: boolean = draftText.trim().length > 0
 			|| (workbench?.composer.additionalContext.length ?? 0) > 0;
 		if (hasDraft) {
 			temporaryDraftSessionIdRef.current = activeSessionId;
@@ -1598,8 +1526,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 		navigationVersionRef.current += 1;
 		await persistPendingWorkbenchPatchBeforeNavigation();
-		submittedComposerTextRef.current = null;
-		loadingComposerDraftRef.current = null;
 		setIsNewSessionHome(true);
 		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection));
 		setActiveWorkspace(null);
@@ -1702,7 +1628,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		navigationVersionRef.current = navigationVersion;
 		await discardTemporarySessionIfEmpty();
 		await persistPendingWorkbenchPatchBeforeNavigation();
-		loadingComposerDraftRef.current = null;
 		const sessionId: string = session.id;
 		console.info("[App] session selected", { sessionId });
 
@@ -1727,16 +1652,13 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setLatestPlanApproval(result.latestPlanApproval);
 			setActiveSessionMetadata(result.metadata);
 			setSelectionAskThreads(result.selectionAskThreads);
-			const loadingComposerDraft = loadingComposerDraftRef.current as { sessionId: string; text: string } | null;
-			const openedWorkbench: WorkbenchSnapshot = loadingComposerDraft?.sessionId === sessionId
-				? {
-					...result.workbench,
-					composer: {
-						...result.workbench.composer,
-						text: loadingComposerDraft.text
-					}
+			const openedWorkbench: WorkbenchSnapshot = {
+				...result.workbench,
+				composer: {
+					...result.workbench.composer,
+					text: ""
 				}
-				: result.workbench;
+			};
 			setWorkbench(openedWorkbench);
 			setRunState((currentState: RunControllerState): RunControllerState => (
 				result.activeAgentRun === null
@@ -1748,9 +1670,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					? null
 					: selectLatestGoalState(current, result.currentGoal);
 			});
-			if (loadingComposerDraft?.sessionId === sessionId) {
-				queueWorkbenchPatch({ composer: { text: loadingComposerDraft.text } });
-			}
 			setApprovalModeState(result.metadata.approvalMode ?? "manual");
 			setActiveWorkspace(createWorkspaceFromSessionOpenResult(result));
 			const workflowTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromTimelineResult(result);
@@ -1776,9 +1695,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	function resetToNewSessionHome(): void {
 		navigationVersionRef.current += 1;
-		discardPendingComposerTextSync();
 		takePendingWorkbenchPatch();
-		loadingComposerDraftRef.current = null;
 		activeSessionIdRef.current = null;
 		setActiveSessionId(null);
 		setActiveSessionMetadata(null);
@@ -1823,6 +1740,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	function handleWorkspaceDelete(result: DeleteWorkspaceResult): void {
+		for (const sessionId of [...result.deletedSessionIds, ...result.deletedArchivedSessionIds]) {
+			composerDraftsRef.current.delete(sessionId);
+		}
 		setUnreadSessionIds((currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
 			return removeUnreadSessions(currentSessionIds, [
 				...result.deletedSessionIds,
@@ -2229,35 +2149,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		void messageApi.error(errorMessage);
 	}
 
-	function handleComposerTextChange(nextText: string): void {
-		if (nextText.length > 0) {
-			submittedComposerTextRef.current = null;
-		}
-
-		if (activeSessionIdRef.current !== null) {
-			loadingComposerDraftRef.current = nextText.length === 0
-				? null
-				: { sessionId: activeSessionIdRef.current, text: nextText };
-			pendingComposerTextSyncRef.current = {
-				scope: "session",
-				sessionId: activeSessionIdRef.current,
-				text: nextText
-			};
-		} else {
-			pendingComposerTextSyncRef.current = {
-				scope: "home",
-				text: nextText
-			};
-		}
-
-		clearComposerTextSyncTimer();
-		composerTextSyncTimerRef.current = window.setTimeout((): void => {
-			flushPendingComposerTextSync();
-		}, COMPOSER_TEXT_SYNC_DEBOUNCE_MS);
-	}
-
 	async function persistPendingWorkbenchPatchBeforeNavigation(): Promise<void> {
-		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatchWithComposerText();
+		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
 		if (Object.keys(pendingPatch).length === 0) {
 			return;
 		}
@@ -2280,16 +2173,13 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const modelId: string | null = homeDraft.modelId ?? providerModelSelection?.activeModel.modelId ?? null;
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
 		let sessionCreated: boolean = false;
+		replaceComposerInput("", "home");
 
 		try {
 			setIsHomeSubmitting(true);
 			setSessionError(null);
 			setActiveRetryRequestId(null);
 			activeChatRequestIdRef.current = requestId;
-			submittedComposerTextRef.current = {
-				requestId,
-				text: message
-			};
 
 			const created = await createSession({
 				title: "New session",
@@ -2303,7 +2193,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			sessionCreated = true;
 
 			if (cancelledChatRequestIdsRef.current.delete(requestId)) {
-				submittedComposerTextRef.current = null;
 				return;
 			}
 
@@ -2336,15 +2225,11 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to start new session";
 
-			if (submittedComposerTextRef.current?.requestId === requestId) {
-				submittedComposerTextRef.current = null;
-			}
 			if (!sessionCreated) {
 				setIsNewSessionHome(true);
-				setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
-					...currentDraft,
-					message
-				}));
+				replaceComposerInput(message, "home");
+			} else if (activeSessionIdRef.current !== null) {
+				replaceComposerInput(message, activeSessionIdRef.current);
 			}
 			setRunState((currentState: RunControllerState): RunControllerState => finishOptimisticRunState(currentState, requestId));
 			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
@@ -2352,10 +2237,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					? currentWorkbench
 					: {
 						...currentWorkbench,
-						composer: {
-							...currentWorkbench.composer,
-							text: message
-						},
 						activeRun: currentWorkbench.activeRun.requestId === requestId
 							? { status: "idle" }
 							: currentWorkbench.activeRun
@@ -2395,8 +2276,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			});
 		}
 
-		loadingComposerDraftRef.current = null;
-
 		if (activeSessionId === null || workbench === null) {
 			setSessionError("Please open session first before sending a message");
 			return;
@@ -2407,6 +2286,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		if (message.length === 0 && additionalContext.length === 0) {
 			return;
 		}
+		replaceComposerInput("", activeSessionId);
 
 		if (isRunControllerActive(runState)) {
 			await handleQueueMessageSubmit(message);
@@ -2416,7 +2296,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const requestId: string = createChatRequestId();
 		const chatMode: ChatMode = getChatMode(workbench);
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatchWithComposerText(), {
+		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatch(), {
 			additionalContextAction: { action: "clearUnpinned" }
 		});
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
@@ -2425,10 +2305,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setSessionError(null);
 			setActiveRetryRequestId(null);
 			activeChatRequestIdRef.current = requestId;
-			submittedComposerTextRef.current = {
-				requestId,
-				text: message
-			};
 			applyOptimisticSend(requestId, message, additionalContext);
 
 			await flushPendingPatch;
@@ -2448,9 +2324,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		} catch (error: unknown) {
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to send message";
 
-			if (submittedComposerTextRef.current?.requestId === requestId) {
-				submittedComposerTextRef.current = null;
-			}
+			replaceComposerInput(message, activeSessionId);
 			setRunState((currentState: RunControllerState): RunControllerState => finishOptimisticRunState(currentState, requestId));
 			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 				return currentWorkbench === null
@@ -2459,7 +2333,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						...currentWorkbench,
 						composer: {
 							...currentWorkbench.composer,
-							text: message,
 							additionalContext
 						},
 						activeRun: currentWorkbench.activeRun.requestId === requestId
@@ -2500,8 +2373,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 		const previousWorkbench: WorkbenchSnapshot = workbench;
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatchWithComposerText(), {
-			composer: { text: "" },
+		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatch(), {
 			additionalContextAction: { action: "clearUnpinned" }
 		});
 
@@ -2512,7 +2384,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					...currentWorkbench,
 					composer: {
 						...currentWorkbench.composer,
-						text: "",
 						additionalContext: currentWorkbench.composer.additionalContext.filter((item: AdditionalContextItem): boolean => item.pinned === true)
 					}
 				};
@@ -2533,6 +2404,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setSessionError(null);
 		} catch (error: unknown) {
 			setWorkbench(previousWorkbench);
+			replaceComposerInput(message, activeSessionId);
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to queue message";
 			setSessionError(errorMessage);
 			console.error("[App] queue message failed", error);
@@ -2541,10 +2413,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	async function handleGuideSubmit(nextMessage: string): Promise<void> {
 		if (isNewSessionHome && activeSessionId === null) {
-			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
-				...currentDraft,
-				message: nextMessage
-			}));
+			replaceComposerInput(nextMessage, "home");
 			void messageApi.info("Guides can be added after a session starts.");
 			return;
 		}
@@ -2556,22 +2425,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		if (message.length === 0) {
 			return;
 		}
+		replaceComposerInput("", activeSessionId);
 
-		const previousWorkbench: WorkbenchSnapshot = workbench;
-		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatchWithComposerText(), {
-			composer: { text: "" }
-		});
-		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
-			return currentWorkbench === null
-				? currentWorkbench
-				: {
-					...currentWorkbench,
-					composer: {
-						...currentWorkbench.composer,
-						text: ""
-					}
-				};
-		});
+		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
 
 		try {
 			await sendWorkbenchPatch(pendingPatch, false);
@@ -2579,7 +2435,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			applyWorkbench(result.workbench);
 			setSessionError(null);
 		} catch (error: unknown) {
-			setWorkbench(previousWorkbench);
+			replaceComposerInput(message, activeSessionId);
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to add guide";
 			setSessionError(errorMessage);
 			console.error("[App] add guide failed", error);
@@ -2617,12 +2473,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 		const previousWorkbench: WorkbenchSnapshot = workbench;
 		const additionalContext: AdditionalContextItem[] = item.additionalContext ?? [];
-		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatchWithComposerText(), {
+		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatch(), {
 			composer: {
-				text: item.text,
 				additionalContext
 			}
 		});
+		replaceComposerInput(item.text, activeSessionIdRef.current ?? "home");
 
 		setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 			return currentWorkbench === null
@@ -2631,7 +2487,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					...currentWorkbench,
 					composer: {
 						...currentWorkbench.composer,
-						text: item.text,
 						additionalContext
 					},
 					messageQueue: currentWorkbench.messageQueue.filter((queueItem: MessageQueueItem): boolean => queueItem.id !== item.id)
@@ -2744,7 +2599,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const requestId: string = createChatRequestId();
 		const chatMode: ChatMode = getChatMode(workbench);
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatchWithComposerText();
+		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
 
 		try {
@@ -3013,7 +2868,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}, [handleTimelineSearchLoadOffset]);
 
 	function patchContext(action: NonNullable<WorkbenchPatch["additionalContextAction"]>): void {
-		flushPendingComposerTextSync();
 		queueWorkbenchPatch({ additionalContextAction: action }, true);
 	}
 
@@ -3223,10 +3077,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const pendingPlanApproval: PlanApprovalState | null = latestPlanApproval;
 	const pendingToolBudget: PendingToolBudget | null = workbench?.pendingToolBudget ?? null;
 	const chatTitle: string = isNewSessionHome ? "New session" : getSessionTitle(activeSessionMetadata, activeSessionId);
-	const loadingComposerDraft = activeSessionId !== null && loadingComposerDraftRef.current?.sessionId === activeSessionId
-		? loadingComposerDraftRef.current.text
-		: null;
-	const composerMessage: string = activeSessionId === null ? homeDraft.message : loadingComposerDraft ?? workbench?.composer.text ?? "";
+	const composerScopeId: string = activeSessionId ?? "home";
+	const composerMessage: string = composerDraftsRef.current.get(composerScopeId) ?? "";
+	const composerInstanceKey: string = `${composerScopeId}:${composerInputReset.scopeId === composerScopeId ? composerInputReset.revision : 0}`;
 	const composerMode: ChatMode = activeSessionId === null ? homeDraft.chatMode : getChatMode(workbench);
 	const composerReasoningEffort: string | null = activeSessionId === null
 		? homeDraft.reasoningEffort
@@ -3524,7 +3377,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						selectedProviderId={selectedProviderId}
 						selectedModelId={selectedModelId}
 						reasoningEffort={composerReasoningEffort}
+						composerInstanceKey={composerInstanceKey}
 						message={composerMessage}
+						onDraftChange={handleComposerDraftChange}
 						contextItems={composerContextItems}
 						selectionAskThreads={selectionAskThreads}
 						messageQueue={composerMessageQueue}
@@ -3600,7 +3455,6 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 							});
 						}}
 						onRetryFromUserMessage={handleRetryFromUserMessage}
-						onMessageChange={handleComposerTextChange}
 						onModeChange={(mode: ChatMode): void => {
 							void handleModeChange(mode);
 						}}
