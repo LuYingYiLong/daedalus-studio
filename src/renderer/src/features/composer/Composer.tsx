@@ -23,6 +23,7 @@ import {
 	type ComposerCompletionToken,
 	type ComposerCompletionTrigger
 } from "./composer-completion";
+import { parseComposerModeCommand } from "./composer-mode-command";
 
 export type ComposerProps = {
 	providerModelSelection: ProviderModelSelection | null;
@@ -61,7 +62,7 @@ export type ComposerProps = {
 	onPinContext?: (contextId: string, pinned: boolean) => void;
 	onClearUnpinnedContext?: () => void;
 	onCancel?: () => void;
-	onSubmit?: (message: string) => void;
+	onSubmit?: (message: string, modeOverride?: ChatMode) => void;
 	onGuideSubmit?: (message: string) => void;
 	onCompletionOpen?: (trigger: ComposerCompletionTrigger) => void;
 };
@@ -646,8 +647,14 @@ function Composer({
 		if (isAddingTextAttachment) {
 			return;
 		}
-		const trimmedMessage: string = draftMessage.trim();
+		const modeCommand = parseComposerModeCommand(draftMessage);
+		const trimmedMessage: string = modeCommand?.message ?? draftMessage.trim();
 		const hasSubmittableContent: boolean = trimmedMessage.length > 0 || composerContextItems.length > 0;
+		if (!hasSubmittableContent && modeCommand !== null) {
+			clearDraftMessage();
+			onModeChange?.(modeCommand.mode);
+			return;
+		}
 		if (!hasSubmittableContent && isSending) {
 			if (isCancelling) {
 				return;
@@ -660,7 +667,7 @@ function Composer({
 		}
 
 		clearDraftMessage();
-		onSubmit?.(trimmedMessage);
+		onSubmit?.(trimmedMessage, modeCommand?.mode);
 	}
 
 	function submitGuideMessage(): void {

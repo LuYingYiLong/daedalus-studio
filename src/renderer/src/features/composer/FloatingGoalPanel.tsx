@@ -2,13 +2,19 @@ import { App, Button, InputNumber, Modal, Popover, Progress, Space, Typography }
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
-import { applyGoalRollback, cancelGoal, extendGoalBudget, pauseGoal, previewGoalRollback, resumeGoal } from "@/api/goal-api";
+import { applyGoalRollback, cancelGoal, extendGoalBudget, previewGoalRollback, resumeGoal } from "@/api/goal-api";
 import type { AgentGoalState, WorkflowTodoSnapshot, WorkflowTodoStep } from "@/api/types";
 import {
 	getWorkflowTodoProgress,
 	WorkflowTodoStepList,
 	type WorkflowFileChangeSummary
 } from "./FloatingWorkflowTodoPanel";
+import {
+	getGoalBudgetExtensionDefaults,
+	hasGoalBudgetAfterExtension,
+	hasGoalBudgetRemaining
+} from "./goal-budget";
+import { isAgentGoalTerminal } from "./goal-display";
 import styles from "./FloatingGoalPanel.module.css";
 
 type Props = {
@@ -16,6 +22,7 @@ type Props = {
 	workflowTodo: WorkflowTodoSnapshot | null;
 	fileChangeSummary: WorkflowFileChangeSummary;
 	onChange: (goal: AgentGoalState) => void;
+	onDismiss: (goal: AgentGoalState) => Promise<void>;
 };
 
 function formatTokens(tokens: number): string {
@@ -28,20 +35,17 @@ function formatDuration(milliseconds: number): string {
 	return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 }
 
-function isTerminal(goal: AgentGoalState): boolean {
-	return goal.stage === "achieved" || goal.stage === "failed" || goal.stage === "cancelled";
-}
-
-export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummary, onChange }: Props): React.JSX.Element {
+export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummary, onChange, onDismiss }: Props): React.JSX.Element {
 	const { t } = useTranslation();
 	const { message, modal } = App.useApp();
+	const budgetDefaults = useMemo(() => getGoalBudgetExtensionDefaults(goal), [goal.budget, goal.usage]);
 	const [popoverOpen, setPopoverOpen] = useState(false);
-	const [action, setAction] = useState<"pause" | "resume" | "cancel" | "rollback" | null>(null);
+	const [action, setAction] = useState<"resume" | "cancel" | "rollback" | "dismiss" | null>(null);
 	const [budgetOpen, setBudgetOpen] = useState(false);
 	const [budgetSaving, setBudgetSaving] = useState(false);
-	const [cycles, setCycles] = useState(2);
-	const [tokens, setTokens] = useState(100_000);
-	const [minutes, setMinutes] = useState(30);
+	const [cycles, setCycles] = useState(budgetDefaults.cycles);
+	const [tokens, setTokens] = useState(budgetDefaults.tokens);
+	const [minutes, setMinutes] = useState(budgetDefaults.activeMinutes);
 	const [now, setNow] = useState((): number => Date.now());
 	const [activeStartedAt, setActiveStartedAt] = useState((): number => Date.now());
 	const tracksActiveTime = goal.stage === "running" || goal.stage === "evaluating";
@@ -57,14 +61,15 @@ export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummar
 		? Math.max(0, now - activeStartedAt)
 		: 0);
 	const percent = goal.stage === "achieved" ? 100 : Math.min(100, Math.round((goal.usage.cycles / Math.max(1, goal.budget.maxCycles)) * 100));
-	const active = !isTerminal(goal);
+	const active = !isAgentGoalTerminal(goal);
 	const paused = goal.stage === "paused";
+	const canResume = hasGoalBudgetRemaining(goal);
 	const readinessIssues = goal.readiness?.checks.filter((check) => check.status !== "passed") ?? [];
 	const todoSteps: WorkflowTodoStep[] = workflowTodo?.steps ?? [];
 	const todoProgress = getWorkflowTodoProgress(todoSteps);
 	const summary = useMemo(() => `${goal.usage.cycles}/${goal.budget.maxCycles}`, [goal.budget.maxCycles, goal.usage.cycles]);
 
-	async function runAction(kind: "pause" | "resume" | "cancel", operation: () => Promise<AgentGoalState>): Promise<void> {
+	async function runAction(kind: "resume" | "cancel", operation: () => Promise<AgentGoalState>): Promise<void> {
 		try {
 			setAction(kind);
 			onChange(await operation());
@@ -114,10 +119,23 @@ export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummar
 	}
 
 	async function handleExtend(): Promise<void> {
+		const extension = { cycles, tokens, activeMinutes: minutes };
+		if (!hasGoalBudgetAfterExtension(goal, extension)) {
+			void message.warning(t("goal.errors.insufficientBudget"));
+			return;
+		}
 		try {
 			setBudgetSaving(true);
-			onChange(await extendGoalBudget(goal.goalId, cycles, tokens, minutes));
+			const extendedGoal = await extendGoalBudget(goal.goalId, cycles, tokens, minutes);
+			onChange(extendedGoal);
 			setBudgetOpen(false);
+			if (goal.stage === "paused" && goal.pauseReason === "budget_exhausted") {
+				try {
+					onChange(await resumeGoal(goal.goalId));
+				} catch (error: unknown) {
+					void message.error(error instanceof Error ? error.message : t("goal.errors.action"));
+				}
+			}
 		} catch (error: unknown) {
 			void message.error(error instanceof Error ? error.message : t("goal.errors.budget"));
 		} finally {
@@ -126,8 +144,23 @@ export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummar
 	}
 
 	function handleOpenBudget(): void {
+		setCycles(budgetDefaults.cycles);
+		setTokens(budgetDefaults.tokens);
+		setMinutes(budgetDefaults.activeMinutes);
 		setPopoverOpen(false);
 		setBudgetOpen(true);
+	}
+
+	async function handleDismiss(): Promise<void> {
+		try {
+			setAction("dismiss");
+			await onDismiss(goal);
+			setPopoverOpen(false);
+		} catch (error: unknown) {
+			void message.error(error instanceof Error ? error.message : t("goal.errors.dismiss"));
+		} finally {
+			setAction(null);
+		}
 	}
 
 	const content = (
@@ -174,11 +207,11 @@ export default function FloatingGoalPanel({ goal, workflowTodo, fileChangeSummar
 			<div className={styles.footer}>
 				<Typography.Text type="secondary">{t("workflowTodo.changedFiles", { count: fileChangeSummary.changedFiles })}</Typography.Text>
 				<Space size={2}>
-					{active && !paused ? <Button type="text" size="small" loading={action === "pause"} icon={<Icon name="stop" />} onClick={() => void runAction("pause", () => pauseGoal(goal.goalId))}>{t("goal.actions.pause")}</Button> : null}
-					{paused ? <Button type="text" size="small" loading={action === "resume"} icon={<Icon name="play" />} onClick={() => void runAction("resume", () => resumeGoal(goal.goalId))}>{t("goal.actions.resume")}</Button> : null}
-					{goal.pauseReason === "budget_exhausted" ? <Button type="text" size="small" icon={<Icon name="add" />} onClick={handleOpenBudget}>{t("goal.actions.extend")}</Button> : null}
+					{paused && canResume ? <Button type="text" size="small" loading={action === "resume"} icon={<Icon name="play" />} onClick={() => void runAction("resume", () => resumeGoal(goal.goalId))}>{t("goal.actions.resume")}</Button> : null}
+					{paused && !canResume ? <Button type="text" size="small" icon={<Icon name="add" />} onClick={handleOpenBudget}>{t("goal.actions.extend")}</Button> : null}
 					{active ? <Button type="text" danger size="small" loading={action === "cancel"} icon={<Icon name="close" />} onClick={confirmCancel}>{t("goal.actions.cancel")}</Button> : null}
 					{!active && goal.checkpoint.status === "available" ? <Button type="text" danger size="small" loading={action === "rollback"} icon={<Icon name="undo" />} onClick={() => void handleRollback()}>{t("goal.actions.rollback")}</Button> : null}
+					{!active ? <Button type="text" size="small" loading={action === "dismiss"} icon={<Icon name="close" />} onClick={() => void handleDismiss()}>{t("goal.actions.dismiss")}</Button> : null}
 				</Space>
 			</div>
 		</div>

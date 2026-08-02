@@ -325,7 +325,8 @@
       "resume": "Resume",
       "cancel": "Cancel",
       "extend": "Add budget",
-      "rollback": "Roll back"
+      "rollback": "Roll back",
+      "dismiss": "Close"
     },
     "cancelConfirm": {
       "title": "Cancel this Goal?",
@@ -345,9 +346,11 @@
       "minutes": "Additional active minutes"
     },
     "errors": {
+      "insufficientBudget": "The added budget is still below current usage. Increase the token, cycle, or active-time budget.",
       "action": "Failed to update Goal",
       "rollback": "Failed to roll back Goal changes",
-      "budget": "Failed to add Goal budget"
+      "budget": "Failed to add Goal budget",
+      "dismiss": "Failed to close Goal status"
     }
   },
   "messageQueue": {

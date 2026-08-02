@@ -325,7 +325,8 @@
       "resume": "恢复",
       "cancel": "取消",
       "extend": "追加预算",
-      "rollback": "完整回滚"
+      "rollback": "完整回滚",
+      "dismiss": "关闭"
     },
     "cancelConfirm": {
       "title": "取消这个 Goal？",
@@ -345,9 +346,11 @@
       "minutes": "额外有效分钟数"
     },
     "errors": {
+      "insufficientBudget": "追加后的预算仍低于当前已使用量，请增加 Token、循环或有效时间预算。",
       "action": "更新 Goal 失败",
       "rollback": "回滚 Goal 更改失败",
-      "budget": "追加 Goal 预算失败"
+      "budget": "追加 Goal 预算失败",
+      "dismiss": "关闭 Goal 状态失败"
     }
   },
   "messageQueue": {

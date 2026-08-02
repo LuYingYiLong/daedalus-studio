@@ -23,6 +23,11 @@ export const pauseGoal = (goalId: string): Promise<AgentGoalState> => requestGoa
 export const resumeGoal = (goalId: string): Promise<AgentGoalState> => requestGoal("agent.goal.resume", { goalId });
 export const cancelGoal = (goalId: string): Promise<AgentGoalState> => requestGoal("agent.goal.cancel", { goalId });
 
+export async function dismissGoal(goalId: string): Promise<{ goalId: string; dismissed: true }> {
+	const client = await createBackendClient();
+	return client.request<{ goalId: string; dismissed: true }>("agent.goal.dismiss", { goalId });
+}
+
 export function extendGoalBudget(goalId: string, additionalCycles: number, additionalTokens: number, additionalActiveMinutes: number): Promise<AgentGoalState> {
 	return requestGoal("agent.goal.extendBudget", { goalId, additionalCycles, additionalTokens, additionalActiveMinutes });
 }

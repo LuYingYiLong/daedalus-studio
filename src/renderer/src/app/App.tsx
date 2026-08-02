@@ -11,6 +11,8 @@ import useWorkbenchPatchQueue, { mergeWorkbenchPatch } from "./hooks/useWorkbenc
 import { fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import type { AdditionalContextItem, AgentGoalState, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SelectionAskThread, SessionMetadata, SessionOpenResult, SessionTimelineNavigationEntry, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
+import { isAgentGoalDismissed, isAgentGoalTerminal } from "@/features/composer/goal-display";
+import { dismissGoal } from "@/api/goal-api";
 import { checkSessionIntegrity, createSession, deleteSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, fetchSessionTimelineAfter, fetchSessionTimelineBefore, fetchSessionTimelineIndex, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/api/session-api";
 import type { RetryUserMessagePayload } from "@/features/chat/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
@@ -683,8 +685,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
 	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] = useState<WorkflowTodoSnapshot | null>(null);
 	const [currentGoal, setCurrentGoal] = useState<AgentGoalState | null>(null);
+	const dismissedTerminalGoalIdsRef = useRef<Set<string>>(new Set());
 	const applyCurrentGoalSnapshot = useCallback((nextGoal: AgentGoalState): void => {
-		setCurrentGoal((current: AgentGoalState | null): AgentGoalState => {
+		setCurrentGoal((current: AgentGoalState | null): AgentGoalState | null => {
+			if (isAgentGoalDismissed(nextGoal, dismissedTerminalGoalIdsRef.current)) return current?.goalId === nextGoal.goalId ? null : current;
 			return selectLatestGoalState(current, nextGoal);
 		});
 	}, []);
@@ -1665,14 +1669,16 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 					? createIdleRunState(currentState.sequence)
 					: applyAgentRunState(currentState, result.activeAgentRun)
 			));
+			const openedGoalDismissed: boolean = result.currentGoal !== null
+				&& isAgentGoalDismissed(result.currentGoal, dismissedTerminalGoalIdsRef.current);
 			setCurrentGoal((current: AgentGoalState | null): AgentGoalState | null => {
-				return result.currentGoal === null
+				return result.currentGoal === null || openedGoalDismissed
 					? null
 					: selectLatestGoalState(current, result.currentGoal);
 			});
 			setApprovalModeState(result.metadata.approvalMode ?? "manual");
 			setActiveWorkspace(createWorkspaceFromSessionOpenResult(result));
-			const workflowTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromTimelineResult(result);
+			const workflowTodo: WorkflowTodoSnapshot | null = openedGoalDismissed ? null : createWorkflowTodoSnapshotFromTimelineResult(result);
 			setWorkflowTodoSnapshot(workflowTodo);
 			rememberLoadedWorkflowTodo(workflowTodo);
 			if (workflowTodo !== null && isWorkflowTodoActive(workflowTodo)) {
@@ -2162,12 +2168,19 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 	}
 
-	async function handleHomeComposerSubmit(nextMessage: string): Promise<void> {
+	async function handleHomeComposerSubmit(nextMessage: string, modeOverride?: ChatMode): Promise<void> {
 		const message: string = nextMessage.trim();
 		if (message.length === 0 || isHomeSubmitting) {
 			return;
 		}
 
+		const chatMode: ChatMode = modeOverride ?? homeDraft.chatMode;
+		if (modeOverride !== undefined && modeOverride !== homeDraft.chatMode) {
+			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
+				...currentDraft,
+				chatMode: modeOverride
+			}));
+		}
 		const requestId: string = createChatRequestId();
 		const providerId: string | null = homeDraft.providerId ?? providerModelSelection?.activeModel.providerId ?? null;
 		const modelId: string | null = homeDraft.modelId ?? providerModelSelection?.activeModel.modelId ?? null;
@@ -2187,7 +2200,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				provider: providerId ?? undefined,
 				model: modelId ?? undefined,
 				reasoningEffort: homeDraft.reasoningEffort,
-				chatMode: homeDraft.chatMode,
+				chatMode,
 				approvalMode
 			});
 			sessionCreated = true;
@@ -2208,7 +2221,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection));
 			applyOptimisticSend(requestId, message, created.workbench.composer.additionalContext);
 
-			const createdChatMode: ChatMode = created.workbench.composer.chatMode ?? homeDraft.chatMode;
+			const createdChatMode: ChatMode = created.workbench.composer.chatMode ?? chatMode;
 			await sendChatMessage({
 				requestId,
 				message,
@@ -2263,9 +2276,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 	}
 
-	async function handleComposerSubmit(nextMessage: string): Promise<void> {
+	async function handleComposerSubmit(nextMessage: string, modeOverride?: ChatMode): Promise<void> {
 		if (isNewSessionHome && activeSessionId === null) {
-			await handleHomeComposerSubmit(nextMessage);
+			await handleHomeComposerSubmit(nextMessage, modeOverride);
 			return;
 		}
 		if (isNewSessionHome) {
@@ -2288,15 +2301,33 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 		replaceComposerInput("", activeSessionId);
 
+		const currentChatMode: ChatMode = getChatMode(workbench);
+		const chatMode: ChatMode = modeOverride ?? currentChatMode;
+		if (modeOverride !== undefined && modeOverride !== currentChatMode) {
+			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
+				return currentWorkbench === null
+					? currentWorkbench
+					: {
+						...currentWorkbench,
+						composer: {
+							...currentWorkbench.composer,
+							chatMode
+						}
+					};
+			});
+			void persistSessionUiMetadata({ chatMode });
+		}
+
 		if (isRunControllerActive(runState)) {
-			await handleQueueMessageSubmit(message);
+			await handleQueueMessageSubmit(message, modeOverride);
 			return;
 		}
 
 		const requestId: string = createChatRequestId();
-		const chatMode: ChatMode = getChatMode(workbench);
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatch(), {
+		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(mergeWorkbenchPatch(takePendingWorkbenchPatch(), modeOverride === undefined
+			? {}
+			: { composer: { chatMode } }), {
 			additionalContextAction: { action: "clearUnpinned" }
 		});
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
@@ -2360,7 +2391,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 	}
 
-	async function handleQueueMessageSubmit(nextMessage: string): Promise<void> {
+	async function handleQueueMessageSubmit(nextMessage: string, modeOverride?: ChatMode): Promise<void> {
 		if (activeSessionId === null || workbench === null) {
 			setSessionError("Please open session first before queueing a message");
 			return;
@@ -2373,7 +2404,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 		const previousWorkbench: WorkbenchSnapshot = workbench;
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(takePendingWorkbenchPatch(), {
+		const chatMode: ChatMode = modeOverride ?? getChatMode(workbench);
+		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(mergeWorkbenchPatch(takePendingWorkbenchPatch(), modeOverride === undefined
+			? {}
+			: { composer: { chatMode } }), {
 			additionalContextAction: { action: "clearUnpinned" }
 		});
 
@@ -2394,7 +2428,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			const result = await addQueuedMessage({
 				text: message,
 				additionalContext,
-				mode: getChatMode(workbench),
+				mode: chatMode,
 				provider: workbench.composer.provider,
 				model: workbench.composer.model,
 				reasoningEffort: workbench.composer.reasoningEffort ?? undefined,
@@ -2782,6 +2816,21 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setSessionError(message);
 			console.error("[App] dismiss workflow todo failed", error);
 		}
+	}
+
+	async function handleTerminalGoalDismiss(goal: AgentGoalState): Promise<void> {
+		if (!isAgentGoalTerminal(goal)) return;
+		await dismissGoal(goal.goalId);
+		const snapshot: WorkflowTodoSnapshot | null = workflowTodoSnapshot;
+		if (snapshot !== null) {
+			const params: { workflowId?: string; runId?: string } = {};
+			if (snapshot.workflowId !== undefined) params.workflowId = snapshot.workflowId;
+			if (snapshot.runId !== undefined) params.runId = snapshot.runId;
+			await dismissWorkflowTodo(params);
+		}
+		dismissedTerminalGoalIdsRef.current.add(goal.goalId);
+		setCurrentGoal((current: AgentGoalState | null): AgentGoalState | null => current?.goalId === goal.goalId ? null : current);
+		setWorkflowTodoSnapshot(null);
 	}
 
 	const handleLoadMoreBefore = useCallback((): void => {
@@ -3511,8 +3560,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						onCancel={(): void => {
 							void handleComposerCancel();
 						}}
-						onSubmit={(message: string): void => {
-							void handleComposerSubmit(message);
+						onSubmit={(message: string, modeOverride?: ChatMode): void => {
+							void handleComposerSubmit(message, modeOverride);
 						}}
 						onGuideSubmit={(message: string): void => {
 							void handleGuideSubmit(message);
@@ -3537,6 +3586,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 							void handleWorkflowTodoDismiss(snapshot);
 						}}
 						onGoalChange={applyCurrentGoalSnapshot}
+						onGoalDismiss={handleTerminalGoalDismiss}
 						onCompletionOpen={handleCompletionOpen}
 				/>
 			</div>

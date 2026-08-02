@@ -270,9 +270,10 @@ type TimelineWorkflowTodoPanelProps = {
 	goal: AgentGoalState | null;
 	onDismiss: (snapshot: WorkflowTodoSnapshot) => void;
 	onGoalChange: (goal: AgentGoalState) => void;
+	onGoalDismiss: (goal: AgentGoalState) => Promise<void>;
 };
 
-function TimelineWorkflowTodoPanel({ timelineStore, snapshot, goal, onDismiss, onGoalChange }: TimelineWorkflowTodoPanelProps): React.JSX.Element | null {
+function TimelineWorkflowTodoPanel({ timelineStore, snapshot, goal, onDismiss, onGoalChange, onGoalDismiss }: TimelineWorkflowTodoPanelProps): React.JSX.Element | null {
 	const timelineBlocks: TimelineBlock[] = useTimelineSelector(
 		timelineStore,
 		(page): TimelineBlock[] => page.blocks
@@ -283,7 +284,7 @@ function TimelineWorkflowTodoPanel({ timelineStore, snapshot, goal, onDismiss, o
 	);
 
 	if (goal !== null) {
-		return <FloatingGoalPanel goal={goal} workflowTodo={snapshot} fileChangeSummary={fileChangeSummary} onChange={onGoalChange} />;
+		return <FloatingGoalPanel goal={goal} workflowTodo={snapshot} fileChangeSummary={fileChangeSummary} onChange={onGoalChange} onDismiss={onGoalDismiss} />;
 	}
 	return snapshot === null ? null : (
 		<FloatingWorkflowTodoPanel
@@ -410,7 +411,7 @@ type HomePageProps = {
 	onPinContext: (contextId: string, pinned: boolean) => void;
 	onClearUnpinnedContext: () => void;
 	onCancel: () => void;
-	onSubmit: (message: string) => void;
+	onSubmit: (message: string, modeOverride?: ChatMode) => void;
 	onGuideSubmit: (message: string) => void;
 	activeQueueItemId: number | null;
 	onQueueMessageRemove: (queueId: number) => void;
@@ -420,6 +421,7 @@ type HomePageProps = {
 	onGuideReorder: (guideIds: string[]) => void;
 	onWorkflowTodoDismiss: (snapshot: WorkflowTodoSnapshot) => void;
 	onGoalChange: (goal: AgentGoalState) => void;
+	onGoalDismiss: (goal: AgentGoalState) => Promise<void>;
 	onCompletionOpen: (trigger: ComposerCompletionTrigger) => void;
 };
 
@@ -543,6 +545,7 @@ function HomePage({
 	onGuideReorder,
 	onWorkflowTodoDismiss,
 	onGoalChange,
+	onGoalDismiss,
 	onCompletionOpen
 }: HomePageProps): React.JSX.Element {
 	const { t } = useTranslation();
@@ -1752,9 +1755,10 @@ function HomePage({
 													<TimelineWorkflowTodoPanel
 														timelineStore={timelineStore}
 														snapshot={workflowTodoSnapshot}
-														goal={currentGoal}
-														onDismiss={onWorkflowTodoDismiss}
-														onGoalChange={onGoalChange}
+												goal={currentGoal}
+												onDismiss={onWorkflowTodoDismiss}
+												onGoalChange={onGoalChange}
+												onGoalDismiss={onGoalDismiss}
 													/>
 												) : null}
 												{!isHome ? (
