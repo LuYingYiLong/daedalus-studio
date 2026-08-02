@@ -5,21 +5,29 @@ export type ConversationTurnDirection = "previous" | "next";
 export type ConversationViewportRow = {
 	blockOffset: number;
 	top: number;
+	bottom: number;
 };
 
 export function resolveActiveBlockOffset(
 	rows: readonly ConversationViewportRow[],
 	activationTop: number,
-	atBottom: boolean = false
+	atBottom: boolean = false,
+	viewportTop: number = Number.NEGATIVE_INFINITY,
+	viewportBottom: number = Number.POSITIVE_INFINITY
 ): number | null {
-	if (rows.length === 0) {
+	const visibleRows: ConversationViewportRow[] = rows
+		.filter((row: ConversationViewportRow): boolean => row.bottom > viewportTop && row.top < viewportBottom)
+		.sort((left: ConversationViewportRow, right: ConversationViewportRow): number => (
+			left.top - right.top || left.blockOffset - right.blockOffset
+		));
+	if (visibleRows.length === 0) {
 		return null;
 	}
 	if (atBottom) {
-		return rows[rows.length - 1]?.blockOffset ?? null;
+		return visibleRows[visibleRows.length - 1]?.blockOffset ?? null;
 	}
-	let activeBlockOffset: number = rows[0].blockOffset;
-	for (const row of rows) {
+	let activeBlockOffset: number = visibleRows[0]!.blockOffset;
+	for (const row of visibleRows) {
 		if (row.top > activationTop) {
 			break;
 		}

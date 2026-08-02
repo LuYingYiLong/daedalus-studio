@@ -34,7 +34,9 @@ describe("ConversationAnchorNavigator source", () => {
 		expect(messageListSource).toContain("index: blockOffset + index");
 		expect(messageListSource).toContain("getActiveBlockOffset");
 		expect(messageListSource).toContain("onActiveBlockOffsetChange");
-		expect(messageListSource).toContain("data-timeline-block-offset");
+		expect(messageListSource).toContain('querySelectorAll<HTMLElement>("[data-item-index]")');
+		expect(messageListSource).toContain("isScrolling={handleVirtuosoScrolling}");
+		expect(messageListSource).toContain("virtuosoScrollingRef.current");
 		expect(messageListSource).toContain("addEventListener(\"scroll\"");
 		expect(messageListSource).toContain("Math.min(56, scroller.clientHeight * 0.2)");
 		expect(timelinePaneSource).toContain("resolveActiveTimelineEntryId");

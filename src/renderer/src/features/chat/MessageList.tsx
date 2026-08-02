@@ -232,6 +232,8 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const lastScrollToBottomRequestRef = useRef<number>(0);
 	const highlightFrameRef = useRef<number | null>(null);
 	const activeEntryFrameRef = useRef<number | null>(null);
+	const virtuosoScrollingRef = useRef<boolean>(false);
+	const lastReportedActiveBlockOffsetRef = useRef<number | null>(null);
 	const [contextMenuSelection, setContextMenuSelection] = useState<string>("");
 	const [searchRangeRevision, setSearchRangeRevision] = useState<number>(0);
 	const [selectionContainer, setSelectionContainer] = useState<HTMLElement | null>(null);
@@ -342,15 +344,17 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		const scrollerBounds: DOMRect = scroller.getBoundingClientRect();
 		const activationTop: number = scrollerBounds.top + Math.min(56, scroller.clientHeight * 0.2);
 		const rows: ConversationViewportRow[] = Array.from(
-			scroller.querySelectorAll<HTMLElement>("[data-timeline-block-offset]")
+			scroller.querySelectorAll<HTMLElement>("[data-item-index]")
 		).map((row: HTMLElement): ConversationViewportRow | null => {
-			const parsedBlockOffset: number = Number(row.dataset.timelineBlockOffset);
+			const parsedBlockOffset: number = Number(row.dataset.itemIndex);
 			if (!Number.isSafeInteger(parsedBlockOffset)) {
 				return null;
 			}
+			const rowBounds: DOMRect = row.getBoundingClientRect();
 			return {
 				blockOffset: parsedBlockOffset,
-				top: row.getBoundingClientRect().top
+				top: rowBounds.top,
+				bottom: rowBounds.bottom
 			};
 		}).filter((row: ConversationViewportRow | null): row is ConversationViewportRow => row !== null);
 		return resolveActiveBlockOffset(
@@ -361,7 +365,9 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 				scroller.scrollTop,
 				scroller.clientHeight,
 				AT_BOTTOM_THRESHOLD
-			)
+			),
+			scrollerBounds.top,
+			scrollerBounds.bottom
 		);
 	}, []);
 
@@ -466,11 +472,20 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		activeEntryFrameRef.current = window.requestAnimationFrame((): void => {
 			activeEntryFrameRef.current = null;
 			const nextBlockOffset: number | null = getActiveBlockOffset();
-			if (nextBlockOffset !== null) {
+			if (nextBlockOffset !== null && nextBlockOffset !== lastReportedActiveBlockOffsetRef.current) {
+				lastReportedActiveBlockOffsetRef.current = nextBlockOffset;
 				onActiveBlockOffsetChange?.(nextBlockOffset);
+			}
+			if (virtuosoScrollingRef.current) {
+				scheduleActiveBlockOffsetSync();
 			}
 		});
 	}, [getActiveBlockOffset, onActiveBlockOffsetChange]);
+
+	const handleVirtuosoScrolling = useCallback((scrolling: boolean): void => {
+		virtuosoScrollingRef.current = scrolling;
+		scheduleActiveBlockOffsetSync();
+	}, [scheduleActiveBlockOffsetSync]);
 
 	const handleRangeChanged = useCallback((_range: ListRange): void => {
 		scheduleActiveBlockOffsetSync();
@@ -697,6 +712,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 					defaultItemHeight={defaultItemHeight}
 					increaseViewportBy={increaseViewportBy}
 					minOverscanItemCount={{ top: 3, bottom: 4 }}
+					isScrolling={handleVirtuosoScrolling}
 					alignToBottom={true}
 					followOutput={(): "auto" | false => shouldFollowBottomRef.current ? "auto" : false}
 					atBottomThreshold={AT_BOTTOM_THRESHOLD}

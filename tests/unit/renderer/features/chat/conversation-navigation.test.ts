@@ -11,19 +11,34 @@ const entries: SessionTimelineNavigationEntry[] = [
 describe("conversation navigation", () => {
 	it("uses the actual mounted row nearest the viewport activation line", () => {
 		expect(resolveActiveBlockOffset([
-			{ blockOffset: 20, top: -100 },
-			{ blockOffset: 21, top: 32 },
-			{ blockOffset: 22, top: 160 }
+			{ blockOffset: 20, top: -100, bottom: 32 },
+			{ blockOffset: 21, top: 32, bottom: 160 },
+			{ blockOffset: 22, top: 160, bottom: 260 }
 		], 88)).toBe(21);
-		expect(resolveActiveBlockOffset([{ blockOffset: 20, top: 120 }], 88)).toBe(20);
+		expect(resolveActiveBlockOffset([{ blockOffset: 20, top: 120, bottom: 180 }], 88)).toBe(20);
 		expect(resolveActiveBlockOffset([], 88)).toBeNull();
+	});
+
+	it("ignores Virtuoso overscan rows outside the real viewport", () => {
+		expect(resolveActiveBlockOffset([
+			{ blockOffset: 18, top: -420, bottom: -120 },
+			{ blockOffset: 19, top: -120, bottom: 120 },
+			{ blockOffset: 20, top: 120, bottom: 280 },
+			{ blockOffset: 21, top: 280, bottom: 520 }
+		], 88, false, 0, 240)).toBe(19);
+		expect(resolveActiveBlockOffset([
+			{ blockOffset: 18, top: -420, bottom: -120 },
+			{ blockOffset: 19, top: -120, bottom: 120 },
+			{ blockOffset: 20, top: 120, bottom: 280 },
+			{ blockOffset: 21, top: 280, bottom: 520 }
+		], 88, true, 0, 240)).toBe(20);
 	});
 
 	it("uses the final mounted block as the active turn at the bottom of a short conversation", () => {
 		expect(resolveActiveBlockOffset([
-			{ blockOffset: 0, top: 40 },
-			{ blockOffset: 1, top: 140 },
-			{ blockOffset: 2, top: 240 }
+			{ blockOffset: 0, top: 40, bottom: 140 },
+			{ blockOffset: 1, top: 140, bottom: 240 },
+			{ blockOffset: 2, top: 240, bottom: 340 }
 		], 88, true)).toBe(2);
 	});
 
