@@ -48,10 +48,14 @@ describe("settings window lifecycle", () => {
 		expect(mainSource).toContain('ipcMain.on("window:renderer-shell-ready"');
 		expect(mainSource).toContain("requestRendererWindowReveal(mainWindow)");
 		expect(mainSource).toContain("RENDERER_READY_FALLBACK_MS");
+		expect(mainSource).toContain('browserWindow.once("ready-to-show"');
+		expect(mainSource).toContain("rendererPaintReadyWindows");
+		expect(mainSource).toContain("paintWhenInitiallyHidden: true");
 		expect(preloadSource).toContain('ipcRenderer.send("window:renderer-shell-ready")');
 		expect(preloadSource).toContain('ipcRenderer.send("window:renderer-ready")');
 		expect(rendererEntrySource).toContain("window.electronAPI.windowControl.rendererShellReady()");
 		expect(rendererEntrySource).toContain("await waitForStudioFonts(document.fonts)");
+		expect(rendererEntrySource).toContain("await waitForRendererPaint()");
 		expect(rendererEntrySource).toContain("window.electronAPI.windowControl.rendererReady()");
 		expect(globalStylesSource).toContain(".settings-window-warmup__indicator");
 	});

@@ -8,6 +8,7 @@ import "react-diff-view/style/index.css";
 import "./styles/global.css";
 import "./styles/markdown.css";
 import { waitForStudioFonts } from "./styles/studio-fonts";
+import { waitForRendererPaint } from "./app/renderer-paint";
 
 const rootElement = document.getElementById("root");
 
@@ -41,6 +42,7 @@ async function startRenderer(): Promise<void> {
 			</StrictMode>
 		);
 	});
+	await waitForRendererPaint();
 	window.electronAPI.windowControl.rendererReady();
 }
 

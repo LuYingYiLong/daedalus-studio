@@ -44,6 +44,7 @@ let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 const rendererReadyWindows: WeakSet<BrowserWindow> = new WeakSet();
 const rendererShellReadyWindows: WeakSet<BrowserWindow> = new WeakSet();
+const rendererPaintReadyWindows: WeakSet<BrowserWindow> = new WeakSet();
 const rendererRevealRequestedWindows: WeakSet<BrowserWindow> = new WeakSet();
 const rendererReadyFallbackTimers: Map<number, ReturnType<typeof setTimeout>> = new Map();
 const RENDERER_READY_FALLBACK_MS: number = 3_500;
@@ -149,7 +150,41 @@ function revealRendererWindow(browserWindow: BrowserWindow): void {
 	browserWindow.focus();
 }
 
+function hasRendererContentReady(browserWindow: BrowserWindow): boolean {
+	return rendererReadyWindows.has(browserWindow) || rendererShellReadyWindows.has(browserWindow);
+}
+
+function canRevealRendererWindow(browserWindow: BrowserWindow): boolean {
+	return rendererPaintReadyWindows.has(browserWindow) && hasRendererContentReady(browserWindow);
+}
+
+function scheduleRendererReadyFallback(browserWindow: BrowserWindow): void {
+	if (rendererReadyFallbackTimers.has(browserWindow.id)) {
+		return;
+	}
+	const fallbackTimer: ReturnType<typeof setTimeout> = setTimeout((): void => {
+		if (!browserWindow.isDestroyed() && rendererRevealRequestedWindows.has(browserWindow)) {
+			revealRendererWindow(browserWindow);
+		}
+	}, RENDERER_READY_FALLBACK_MS);
+	rendererReadyFallbackTimers.set(browserWindow.id, fallbackTimer);
+}
+
 function trackRendererWindow(browserWindow: BrowserWindow): void {
+	browserWindow.once("ready-to-show", (): void => {
+		if (browserWindow.isDestroyed()) {
+			return;
+		}
+		rendererPaintReadyWindows.add(browserWindow);
+		if (!rendererRevealRequestedWindows.has(browserWindow)) {
+			return;
+		}
+		if (hasRendererContentReady(browserWindow)) {
+			revealRendererWindow(browserWindow);
+			return;
+		}
+		scheduleRendererReadyFallback(browserWindow);
+	});
 	browserWindow.once("closed", (): void => {
 		clearRendererReadyFallback(browserWindow);
 	});
@@ -160,22 +195,13 @@ function requestRendererWindowReveal(browserWindow: BrowserWindow): void {
 		return;
 	}
 	rendererRevealRequestedWindows.add(browserWindow);
-	if (
-		rendererReadyWindows.has(browserWindow)
-		|| rendererShellReadyWindows.has(browserWindow)
-	) {
+	if (canRevealRendererWindow(browserWindow)) {
 		revealRendererWindow(browserWindow);
 		return;
 	}
-	if (rendererReadyFallbackTimers.has(browserWindow.id)) {
-		return;
+	if (rendererPaintReadyWindows.has(browserWindow)) {
+		scheduleRendererReadyFallback(browserWindow);
 	}
-	const fallbackTimer: ReturnType<typeof setTimeout> = setTimeout((): void => {
-		if (!browserWindow.isDestroyed() && rendererRevealRequestedWindows.has(browserWindow)) {
-			revealRendererWindow(browserWindow);
-		}
-	}, RENDERER_READY_FALLBACK_MS);
-	rendererReadyFallbackTimers.set(browserWindow.id, fallbackTimer);
 }
 
 function activateMainWindow(): void {
@@ -191,7 +217,7 @@ function markRendererWindowReady(browserWindow: BrowserWindow): void {
 	}
 	rendererReadyWindows.add(browserWindow);
 	clearRendererReadyFallback(browserWindow);
-	if (rendererRevealRequestedWindows.has(browserWindow)) {
+	if (rendererRevealRequestedWindows.has(browserWindow) && rendererPaintReadyWindows.has(browserWindow)) {
 		revealRendererWindow(browserWindow);
 	}
 }
@@ -242,7 +268,7 @@ ipcMain.on("window:renderer-shell-ready", (event): void => {
 		return;
 	}
 	rendererShellReadyWindows.add(browserWindow);
-	if (rendererRevealRequestedWindows.has(browserWindow)) {
+	if (rendererRevealRequestedWindows.has(browserWindow) && rendererPaintReadyWindows.has(browserWindow)) {
 		revealRendererWindow(browserWindow);
 	}
 });
@@ -292,6 +318,7 @@ function createSettingsWindow(page: string): BrowserWindow | null {
 		title: "Settings",
 		icon: getWindowIconPath(),
 		show: false,
+		paintWhenInitiallyHidden: true,
 		...getNativeWindowMaterialOptions(),
 		webPreferences: {
 			preload: join(__dirname, "../preload/index.js"),
@@ -374,6 +401,7 @@ function createWindow(): void {
 		backgroundColor: getWindowBackgroundColor(colors),
 		icon: getWindowIconPath(),
 		show: false,
+		paintWhenInitiallyHidden: true,
 		...getNativeWindowMaterialOptions(),
 		webPreferences: {
 			preload: join(__dirname, "../preload/index.js"),
