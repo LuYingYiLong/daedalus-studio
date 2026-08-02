@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { fetchSessionTimelineSearchIndex } from "@/api/session-api";
+import {
+	cancelSessionTimelineSearch,
+	fetchSessionTimelineSearchPage,
+	startSessionTimelineSearch
+} from "@/api/session-api";
 import type { SessionTimelineSearchDocument, TimelineBlock } from "@/api/types";
 import type {
 	ConversationSearchMatch,
@@ -30,7 +34,7 @@ export type ConversationSearchController = {
 	goNext: () => void;
 };
 
-function timelineBlocksToSearchDocuments(
+export function timelineBlocksToSearchDocuments(
 	blocks: TimelineBlock[],
 	blockOffset: number
 ): SessionTimelineSearchDocument[] {
@@ -44,7 +48,11 @@ function timelineBlocksToSearchDocuments(
 				markdownSegments: [block.content]
 			}];
 		}
-		const markdownSegments: string[] = block.bodyParts
+		const summaryStartIndex: number = block.bodyParts.findIndex((part): boolean => part.type === "summary_start");
+		const visibleBodyParts = summaryStartIndex < 0
+			? block.bodyParts
+			: block.bodyParts.slice(summaryStartIndex + 1);
+		const markdownSegments: string[] = visibleBodyParts
 			.filter((part) => part.type === "markdown")
 			.map((part) => part.text)
 			.filter((text: string): boolean => text.length > 0);
@@ -80,10 +88,13 @@ export function useConversationSearch({
 	const queryRef = useRef<string>("");
 	const currentOrdinalRef = useRef<number>(-1);
 	const loadingRef = useRef<boolean>(false);
+	const openRef = useRef<boolean>(false);
 	const loadedDocumentsRef = useRef<SessionTimelineSearchDocument[]>([]);
 	const searchDebounceRef = useRef<number | null>(null);
 	const loadedUpdateRef = useRef<number | null>(null);
 	const pendingLoadOffsetRef = useRef<number | null>(null);
+	const searchIdRef = useRef<string | null>(null);
+	const historyRefreshRef = useRef<number | null>(null);
 
 	const loadedDocuments: SessionTimelineSearchDocument[] = useMemo(
 		(): SessionTimelineSearchDocument[] => timelineBlocksToSearchDocuments(timelineBlocks, timelineBlockOffset),
@@ -93,6 +104,7 @@ export function useConversationSearch({
 	queryRef.current = query;
 	currentOrdinalRef.current = currentOrdinal;
 	loadingRef.current = loading;
+	openRef.current = open;
 
 	const sendToWorker = useCallback((message: ConversationSearchWorkerRequest): void => {
 		workerRef.current?.postMessage(message);
@@ -127,6 +139,22 @@ export function useConversationSearch({
 			? undefined
 			: Math.max(0, currentOrdinalRef.current));
 	}, [sendSearch]);
+
+	const scheduleHistoryRefresh = useCallback((): void => {
+		if (historyRefreshRef.current !== null) return;
+		historyRefreshRef.current = window.setTimeout((): void => {
+			historyRefreshRef.current = null;
+			if (queryRef.current.trim().length > 0) refreshSearch();
+		}, 120);
+	}, [refreshSearch]);
+
+	const releaseRemoteSearch = useCallback((): void => {
+		const searchId: string | null = searchIdRef.current;
+		searchIdRef.current = null;
+		if (searchId !== null) {
+			void cancelSessionTimelineSearch(searchId).catch((): void => {});
+		}
+	}, []);
 
 	const ensureWorker = useCallback((): Worker => {
 		if (workerRef.current !== null) {
@@ -172,11 +200,13 @@ export function useConversationSearch({
 			refreshSearch();
 			return;
 		}
+		releaseRemoteSearch();
 		const worker: Worker = ensureWorker();
 		const generation: number = ++generationRef.current;
 		indexedSessionIdRef.current = null;
-		loadingRef.current = true;
-		setLoading(true);
+		const shouldLoadHistory: boolean = queryRef.current.trim().length > 0;
+		loadingRef.current = shouldLoadHistory;
+		setLoading(shouldLoadHistory);
 		setTotal(0);
 		setCurrentOrdinal(-1);
 		setActiveMatch(null);
@@ -186,14 +216,17 @@ export function useConversationSearch({
 			documents: loadedDocumentsRef.current
 		} satisfies ConversationSearchWorkerRequest);
 		refreshSearch();
+		if (!shouldLoadHistory) return;
 
 		void (async (): Promise<void> => {
-			let nextOffset: number | null = 0;
+			let nextOffset: number = 0;
+			let restartForGenerationChange: boolean = false;
 			try {
-				while (nextOffset !== null) {
-					const requestedOffset: number = nextOffset;
-					const page = await fetchSessionTimelineSearchIndex(sessionId, requestedOffset, 120);
+				let page = await startSessionTimelineSearch(sessionId);
+				searchIdRef.current = page.searchId;
+				while (true) {
 					if (generationRef.current !== generation || page.sessionId !== sessionId) {
+						void cancelSessionTimelineSearch(page.searchId).catch((): void => {});
 						return;
 					}
 					worker.postMessage({
@@ -204,21 +237,35 @@ export function useConversationSearch({
 						type: "upsert",
 						documents: loadedDocumentsRef.current
 					} satisfies ConversationSearchWorkerRequest);
-					if (queryRef.current.trim().length > 0) {
-						refreshSearch();
+					scheduleHistoryRefresh();
+					if (page.status === "ready" && page.nextOffset === null) break;
+					if (page.pending) {
+						await new Promise<void>((resolve): void => {
+							window.setTimeout(resolve, page.retryAfterMs ?? 150);
+						});
+					} else {
+						nextOffset = page.nextOffset ?? page.indexedThroughOffset;
 					}
-					nextOffset = page.nextOffset;
-					if (nextOffset !== null && nextOffset <= requestedOffset) {
-						throw new Error("Session search index did not advance.");
-					}
+					if (generationRef.current !== generation) return;
+					page = await fetchSessionTimelineSearchPage(page.searchId, nextOffset, 400);
 				}
 			} catch (error: unknown) {
 				if (generationRef.current !== generation) {
 					return;
 				}
-				onLoadError(error);
+				const message: string = error instanceof Error ? error.message : String(error);
+				if (message.includes("session_search_generation_changed")) {
+					restartForGenerationChange = true;
+				} else if (!message.includes("session_search_not_found")) {
+					onLoadError(error);
+				}
 			}
 			if (generationRef.current !== generation) {
+				return;
+			}
+			if (restartForGenerationChange && openRef.current && queryRef.current.trim().length > 0) {
+				indexedSessionIdRef.current = null;
+				window.setTimeout(startIndexing, 0);
 				return;
 			}
 			indexedSessionIdRef.current = sessionId;
@@ -226,7 +273,7 @@ export function useConversationSearch({
 			loadingRef.current = false;
 			refreshSearch();
 		})();
-	}, [ensureWorker, onLoadError, refreshSearch, sessionId]);
+	}, [ensureWorker, onLoadError, refreshSearch, releaseRemoteSearch, scheduleHistoryRefresh, sessionId]);
 
 	const openSearch = useCallback((selectedQuery?: string): void => {
 		if (sessionId === null) {
@@ -244,13 +291,20 @@ export function useConversationSearch({
 			setActiveMatch(null);
 		}
 		followLatestMatchRef.current = true;
+		openRef.current = true;
 		setOpen(true);
 		startIndexing();
 	}, [sessionId, startIndexing]);
 
 	const closeSearch = useCallback((): void => {
+		openRef.current = false;
+		generationRef.current += 1;
+		indexedSessionIdRef.current = null;
+		releaseRemoteSearch();
+		setLoading(false);
+		loadingRef.current = false;
 		setOpen(false);
-	}, []);
+	}, [releaseRemoteSearch]);
 
 	const setQuery = useCallback((nextQuery: string): void => {
 		queryRef.current = nextQuery;
@@ -263,13 +317,22 @@ export function useConversationSearch({
 			window.clearTimeout(searchDebounceRef.current);
 		}
 		if (nextQuery.trim().length === 0) {
+			generationRef.current += 1;
+			indexedSessionIdRef.current = null;
+			releaseRemoteSearch();
+			setLoading(false);
+			loadingRef.current = false;
 			return;
 		}
 		searchDebounceRef.current = window.setTimeout((): void => {
 			searchDebounceRef.current = null;
-			sendSearch();
+			if (openRef.current && searchIdRef.current === null && indexedSessionIdRef.current === null) {
+				startIndexing();
+			} else {
+				sendSearch();
+			}
 		}, 80);
-	}, [sendSearch]);
+	}, [releaseRemoteSearch, sendSearch, startIndexing]);
 
 	const resolveOrdinal = useCallback((ordinal: number): void => {
 		if (workerRef.current === null || total <= 0) {
@@ -298,13 +361,18 @@ export function useConversationSearch({
 			if (loadedUpdateRef.current !== null) {
 				window.clearTimeout(loadedUpdateRef.current);
 			}
+			if (historyRefreshRef.current !== null) {
+				window.clearTimeout(historyRefreshRef.current);
+			}
+			releaseRemoteSearch();
 			workerRef.current?.terminate();
 			workerRef.current = null;
 		};
-	}, []);
+	}, [releaseRemoteSearch]);
 
 	useEffect((): void => {
 		generationRef.current += 1;
+		releaseRemoteSearch();
 		indexedSessionIdRef.current = null;
 		if (searchDebounceRef.current !== null) {
 			window.clearTimeout(searchDebounceRef.current);
@@ -318,6 +386,7 @@ export function useConversationSearch({
 		workerRef.current = null;
 		pendingLoadOffsetRef.current = null;
 		setOpen(false);
+		openRef.current = false;
 		setQueryState("");
 		queryRef.current = "";
 		setTotal(0);
@@ -326,13 +395,14 @@ export function useConversationSearch({
 		setLoading(false);
 		loadingRef.current = false;
 		followLatestMatchRef.current = true;
-	}, [sessionId]);
+	}, [releaseRemoteSearch, sessionId]);
 
 	useEffect((): void => {
 		if (activeRetryRequestId === null) {
 			return;
 		}
 		generationRef.current += 1;
+		releaseRemoteSearch();
 		indexedSessionIdRef.current = null;
 		if (searchDebounceRef.current !== null) {
 			window.clearTimeout(searchDebounceRef.current);
@@ -345,6 +415,7 @@ export function useConversationSearch({
 		workerRef.current?.terminate();
 		workerRef.current = null;
 		setOpen(false);
+		openRef.current = false;
 		setQueryState("");
 		queryRef.current = "";
 		setTotal(0);
@@ -353,7 +424,7 @@ export function useConversationSearch({
 		setLoading(false);
 		loadingRef.current = false;
 		followLatestMatchRef.current = true;
-	}, [activeRetryRequestId]);
+	}, [activeRetryRequestId, releaseRemoteSearch]);
 
 	useEffect((): (() => void) | void => {
 		if (workerRef.current === null) {

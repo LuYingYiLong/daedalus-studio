@@ -501,11 +501,22 @@ export type SessionTimelineSearchDocument = {
 
 export type SessionTimelineSearchIndexPage = {
 	timelineSearchIndex: true;
+	searchId?: string;
 	sessionId: string;
+	generationId?: string;
+	sourceRevision?: number;
+	status?: "building" | "ready";
 	blockCount: number;
+	indexedThroughOffset?: number;
 	nextOffset: number | null;
 	documents: SessionTimelineSearchDocument[];
+	pending?: boolean;
+	retryAfterMs?: number;
 };
+
+export type SessionSearchPage = Required<Pick<SessionTimelineSearchIndexPage,
+	"searchId" | "sessionId" | "generationId" | "sourceRevision" | "status" | "blockCount" | "indexedThroughOffset" | "documents" | "nextOffset" | "pending"
+>> & { retryAfterMs?: number };
 
 export type SessionOpenResult = {
 	opened: true;

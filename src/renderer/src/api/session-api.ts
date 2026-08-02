@@ -1,5 +1,5 @@
 import { createBackendClient } from "@/shared/api/transport/backend-client";
-import type { MessageTextAnchor, SelectionAskMessage, SelectionAskThread, SelectionAskThreadPage, SessionListResult, SessionMetadata, SessionOpenResult, SessionTimelineNavigationIndexResult, SessionTimelineResult, SessionTimelineSearchIndexPage, WorkbenchSnapshot } from "./types";
+import type { MessageTextAnchor, SelectionAskMessage, SelectionAskThread, SelectionAskThreadPage, SessionListResult, SessionMetadata, SessionOpenResult, SessionSearchPage, SessionTimelineNavigationIndexResult, SessionTimelineResult, SessionTimelineSearchIndexPage, WorkbenchSnapshot } from "./types";
 import type { ChatMode } from "./chat-api";
 
 export type CreateSessionParams = {
@@ -231,6 +231,25 @@ export async function fetchSessionTimelineSearchIndex(
 		afterOffset,
 		limit
 	});
+}
+
+export async function startSessionTimelineSearch(sessionId: string): Promise<SessionSearchPage> {
+	const client = await createBackendClient();
+	return client.request<SessionSearchPage>("session.timeline.search.start", { sessionId });
+}
+
+export async function fetchSessionTimelineSearchPage(
+	searchId: string,
+	afterOffset: number = 0,
+	limit: number = 400
+): Promise<SessionSearchPage> {
+	const client = await createBackendClient();
+	return client.request<SessionSearchPage>("session.timeline.search.page", { searchId, afterOffset, limit });
+}
+
+export async function cancelSessionTimelineSearch(searchId: string): Promise<void> {
+	const client = await createBackendClient();
+	await client.request("session.timeline.search.cancel", { searchId });
 }
 
 export async function listSelectionAskThreads(sessionId: string): Promise<{ sessionId: string; threads: SelectionAskThread[] }> {

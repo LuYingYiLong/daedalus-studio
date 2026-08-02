@@ -11,6 +11,7 @@ describe("conversation search source", () => {
 	const assistantBubble: string = readRepoFile("src", "renderer", "src", "features", "chat", "AssistantBubble.tsx");
 	const thinkingPart: string = readRepoFile("src", "renderer", "src", "features", "chat", "ThinkingPart.tsx");
 	const toolPart: string = readRepoFile("src", "renderer", "src", "features", "chat", "ToolPart.tsx");
+	const searchHook: string = readRepoFile("src", "renderer", "src", "features", "chat", "useConversationSearch.ts");
 
 	it("binds conversation find through the shared shortcut dispatcher and keeps local controls", () => {
 		expect(homePage).toContain("findMatchingShortcutCommand");
@@ -58,5 +59,13 @@ describe("conversation search source", () => {
 	it("bundles the Markdown parser with the worker-safe entity decoder", () => {
 		expect(viteConfig).toContain('find: /^decode-named-character-reference$/');
 		expect(viteConfig).toContain('"node_modules/decode-named-character-reference/index.js"');
+	});
+
+	it("loads persistent history progressively and cancels connection-bound searches", () => {
+		expect(searchHook).toContain("startSessionTimelineSearch(sessionId)");
+		expect(searchHook).toContain("fetchSessionTimelineSearchPage(page.searchId, nextOffset, 400)");
+		expect(searchHook).toContain("cancelSessionTimelineSearch(searchId)");
+		expect(searchHook).toContain("page.retryAfterMs ?? 150");
+		expect(searchHook).not.toContain("Session search index did not advance.");
 	});
 });
