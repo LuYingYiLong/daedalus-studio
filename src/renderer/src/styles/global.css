@@ -282,11 +282,6 @@ body {
 	margin-inline: 0 !important;
 }
 
-.daedalus-compact-menu .ant-menu-item-icon {
-	margin-inline-start: 4px;
-	margin-inline-end: 8px;
-}
-
 .daedalus-compact-menu .ant-menu-title-content {
 	min-width: 0;
 }

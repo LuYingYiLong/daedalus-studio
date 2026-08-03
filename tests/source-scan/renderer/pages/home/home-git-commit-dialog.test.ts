@@ -46,6 +46,12 @@ describe("HomePage git commit dialog source", () => {
 		expect(branchActionDialogSource).toContain("onCreateBranchOpen");
 		expect(gitActionControllerSource).toContain("onRefresh:");
 		expect(branchActionDialogSource).toContain('description={t("git.branch.empty")}');
+		expect(branchActionDialogSource).toContain("<Menu");
+		expect(branchActionDialogSource).toContain("if (branch.remote)");
+		expect(branchActionDialogSource).toContain("onBranchCheckout(branch.name)");
+		expect(branchActionDialogSource).not.toContain("styles.branchItem");
+		expect(branchActionDialogSource).not.toContain('t("git.branch.actions.checkout")');
+		expect(branchActionDialogSource).not.toContain('t("git.branch.tags.remote")');
 		expect(createBranchDialogSource).toContain('okText={t("git.branch.actions.createAndCheckout")}');
 		expect(gitActionControllerSource).toContain("onBeforeBranchOpen");
 		expect(agentSource).toContain("onBeforeBranchOpen");

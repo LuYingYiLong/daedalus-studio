@@ -1,5 +1,6 @@
-import type { ChangeEvent, JSX, KeyboardEvent } from "react";
-import { Alert, Button, Empty, Input, Modal, Spin, Tag, Typography } from "antd";
+import type { ChangeEvent, JSX } from "react";
+import { Alert, Button, Empty, Input, Menu, Modal, Spin, Typography } from "antd";
+import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 import type { WorkspaceGitBranchItem } from "@/api/workspace-git-api";
 import type { WorkspaceGitDiffFileSummary } from "@/api/workspace-git-diff-api";
@@ -31,7 +32,6 @@ export type BranchActionDialogProps = {
 	onCreateBranchOpen: () => void;
 	onRefresh: () => void;
 	onSearchChange: (search: string) => void;
-	onBranchSelect: (branchName: string) => void;
 	onBranchCheckout: (branchName?: string) => void;
 	onCheckoutCommitMessageChange: (message: string) => void;
 	onCheckoutDraftCancel: () => void;
@@ -40,14 +40,15 @@ export type BranchActionDialogProps = {
 
 function filterBranches(branches: WorkspaceGitBranchItem[], search: string): WorkspaceGitBranchItem[] {
 	const normalizedSearch: string = search.trim().toLowerCase();
-	if (normalizedSearch.length === 0) {
-		return branches;
-	}
-
 	return branches.filter((branch: WorkspaceGitBranchItem): boolean => {
+		if (branch.remote) {
+			return false;
+		}
+		if (normalizedSearch.length === 0) {
+			return true;
+		}
 		return branch.name.toLowerCase().includes(normalizedSearch)
-			|| branch.fullName.toLowerCase().includes(normalizedSearch)
-			|| (branch.upstream ?? "").toLowerCase().includes(normalizedSearch);
+			|| branch.fullName.toLowerCase().includes(normalizedSearch);
 	});
 }
 
@@ -68,7 +69,6 @@ function BranchActionDialog({
 	onCreateBranchOpen,
 	onRefresh,
 	onSearchChange,
-	onBranchSelect,
 	onBranchCheckout,
 	onCheckoutCommitMessageChange,
 	onCheckoutDraftCancel,
@@ -77,6 +77,14 @@ function BranchActionDialog({
 	const { t } = useTranslation();
 	const isBranchOperationRunning: boolean = branchOperation !== null;
 	const visibleBranches: WorkspaceGitBranchItem[] = filterBranches(branches, branchSearch);
+	const branchMenuItems: MenuProps["items"] = visibleBranches.map((branch: WorkspaceGitBranchItem): NonNullable<MenuProps["items"]>[number] => ({
+		key: branch.name,
+		icon: branchOperation === "checkout" && branch.name === selectedBranchName
+			? <Spin size="small" />
+			: <Icon name="git-branch" />,
+		label: branch.name,
+		disabled: !hasWorkspace || isBranchesLoading || isBranchOperationRunning
+	}));
 
 	const hiddenDraftFileCount: number = Math.max(0, (checkoutDraft?.changedFiles ?? 0) - (checkoutDraft?.files.length ?? 0));
 	const canCommitDraft: boolean = checkoutCommitMessage.trim().length > 0 && !isCheckoutDraftCommitting;
@@ -123,54 +131,26 @@ function BranchActionDialog({
 						{t("git.branch.actions.createAndCheckout")}
 					</Button>
 				</div>
-				<div className={styles.branchList}>
+				<div className={styles.branchMenuViewport}>
 					{isBranchesLoading ? (
 						<div className={styles.branchLoading}>
 							<Spin size="small" />
 						</div>
 					) : visibleBranches.length > 0 ? (
-						visibleBranches.map((branch: WorkspaceGitBranchItem): JSX.Element => (
-							<div
-								key={branch.fullName}
-								className={styles.branchItem}
-								data-selected={branch.name === selectedBranchName}
-								role="button"
-								tabIndex={0}
-								aria-selected={branch.name === selectedBranchName}
-								onClick={(): void => onBranchSelect(branch.name)}
-								onKeyDown={(event: KeyboardEvent<HTMLDivElement>): void => {
-									if (event.key === "Enter" || event.key === " ") {
-										event.preventDefault();
-										onBranchSelect(branch.name);
-									}
-								}}
-							>
-								<span className={styles.branchItemIcon}>
-									<Icon name="git-branch" />
-								</span>
-								<span className={styles.branchItemMain}>
-									<span className={styles.branchItemTitle}>
-										<Typography.Text ellipsis={true}>{branch.name}</Typography.Text>
-										{branch.current ? <Tag color="success">{t("git.branch.tags.current")}</Tag> : null}
-										{branch.remote ? <Tag>{t("git.branch.tags.remote")}</Tag> : null}
-									</span>
-									<span className={styles.branchItemMeta}>
-										{branch.upstream ?? branch.lastCommit ?? branch.fullName}
-									</span>
-								</span>
-								<Button
-									type={branch.name === selectedBranchName ? "primary" : "text"}
-									disabled={!hasWorkspace || branch.current || isBranchesLoading || isBranchOperationRunning}
-									loading={branchOperation === "checkout" && branch.name === selectedBranchName}
-									onClick={(event): void => {
-										event.stopPropagation();
-										onBranchCheckout(branch.name);
-									}}
-								>
-									{t("git.branch.actions.checkout")}
-								</Button>
-							</div>
-						))
+						<Menu
+							className="daedalus-compact-menu"
+							mode="inline"
+							inlineIndent={8}
+							items={branchMenuItems}
+							selectedKeys={selectedBranchName === null ? [] : [selectedBranchName]}
+							onClick={({ key }): void => {
+								const branch: WorkspaceGitBranchItem | undefined = visibleBranches.find((item: WorkspaceGitBranchItem): boolean => item.name === key);
+								if (branch === undefined || branch.current || isBranchOperationRunning) {
+									return;
+								}
+								onBranchCheckout(branch.name);
+							}}
+						/>
 					) : (
 						<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("git.branch.empty")} />
 					)}

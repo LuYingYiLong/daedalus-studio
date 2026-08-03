@@ -488,7 +488,6 @@ export function useGitActionDialogController({
 				void loadBranches();
 			},
 			onSearchChange: setBranchSearch,
-			onBranchSelect: setSelectedBranchName,
 			onBranchCheckout: (branchName?: string): void => {
 				void handleBranchCheckout(branchName);
 			},
