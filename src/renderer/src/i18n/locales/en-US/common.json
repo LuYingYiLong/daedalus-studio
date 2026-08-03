@@ -621,6 +621,29 @@
         "approvalRequired": "Approval required"
       }
     },
+    "terminalPart": {
+      "commandFallback": "Terminal command",
+      "cwd": "cwd",
+      "sandbox": "sandbox",
+      "exitCode": "exit",
+      "duration": "duration",
+      "jobId": "job",
+      "output": "Output",
+      "copyCommand": "Copy command",
+      "copyOutput": "Copy output",
+      "waitingOutput": "Waiting for output…",
+      "noOutput": "No output",
+      "omitted": "{{count}} characters omitted",
+      "status": {
+        "approval": "Approval required",
+        "running": "Running",
+        "success": "Done",
+        "failed": "Failed",
+        "timed_out": "Timed out",
+        "cancelled": "Cancelled",
+        "background": "Background job"
+      }
+    },
     "plan": {
       "open": "Open plan"
     },

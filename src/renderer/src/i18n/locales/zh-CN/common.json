@@ -621,6 +621,29 @@
         "approvalRequired": "需要批准"
       }
     },
+    "terminalPart": {
+      "commandFallback": "终端命令",
+      "cwd": "目录",
+      "sandbox": "沙箱",
+      "exitCode": "退出码",
+      "duration": "耗时",
+      "jobId": "任务",
+      "output": "输出",
+      "copyCommand": "复制命令",
+      "copyOutput": "复制输出",
+      "waitingOutput": "等待输出…",
+      "noOutput": "没有输出",
+      "omitted": "已省略 {{count}} 个字符",
+      "status": {
+        "approval": "需要批准",
+        "running": "运行中",
+        "success": "完成",
+        "failed": "失败",
+        "timed_out": "已超时",
+        "cancelled": "已取消",
+        "background": "后台任务"
+      }
+    },
     "plan": {
       "open": "打开计划"
     },

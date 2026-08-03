@@ -4,7 +4,9 @@ import {
 	getWorkflowTodoSnapshotKey,
 	isWorkflowTodoClearEvent,
 	mapWorkflowTodoStatusToStepStatus,
-	normalizeWorkflowTodoSnapshot
+	normalizeWorkflowTodoSnapshot,
+	reconcileWorkflowTodoWithRunStage,
+	selectLatestWorkflowTodoSnapshot
 } from "@/features/composer/workflow-todo";
 
 describe("workflow-todo", () => {
@@ -74,5 +76,38 @@ describe("workflow-todo", () => {
 		expect(isWorkflowTodoClearEvent(dismissEvent)).toBe(true);
 		expect(isWorkflowTodoClearEvent(cancelEvent)).toBe(false);
 		expect(isWorkflowTodoClearEvent(snapshotEvent)).toBe(false);
+	});
+
+	it("reconciles the latest workflow todo with its terminal AgentRun stage", () => {
+		const snapshot = normalizeWorkflowTodoSnapshot({
+			workflowId: "workflow-goal-cycle-6",
+			phases: [
+				{ id: "inspect", title: "Inspect", status: "pending" },
+				{ id: "implement", title: "Implement", status: "done" },
+				{ id: "verify", title: "Verify", status: "done" },
+				{ id: "summarize", title: "Summarize", status: "pending" }
+			]
+		});
+		expect(snapshot).not.toBeNull();
+
+		const completed = reconcileWorkflowTodoWithRunStage(snapshot!, "completed");
+		expect(completed.steps.every((step) => step.status === "done")).toBe(true);
+		expect(completed.workflowId).toBe("workflow-goal-cycle-6");
+	});
+
+	it("prefers the authoritative v3 AgentRun todo over a legacy workflow snapshot", () => {
+		const selected = selectLatestWorkflowTodoSnapshot(
+			{
+				workflowId: "workflow-goal-cycle-6",
+				phases: [{ id: "verify", title: "Verify", status: "done" }]
+			},
+			{
+				workflowId: "workflow-goal-cycle-1",
+				phases: [{ id: "inspect", title: "Inspect", status: "running" }]
+			}
+		);
+
+		expect(selected?.workflowId).toBe("workflow-goal-cycle-6");
+		expect(selected?.steps[0]?.title).toBe("Verify");
 	});
 });

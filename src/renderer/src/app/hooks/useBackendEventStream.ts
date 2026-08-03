@@ -25,7 +25,8 @@ import {
 	markWorkflowTodoCompleted,
 	markWorkflowTodoExecuting,
 	markWorkflowTodoFailed,
-	normalizeWorkflowTodoSnapshot
+	normalizeWorkflowTodoSnapshot,
+	reconcileWorkflowTodoWithRunStage
 } from "@/features/composer/workflow-todo";
 import { hasQueuedFollowUpResponse } from "../run-completion-notification";
 import { selectLatestGoalState } from "@/features/composer/goal-state";
@@ -105,7 +106,10 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 				typeof event.data === "object" && event.data !== null && !Array.isArray(event.data)
 					? event.data as Record<string, unknown>
 					: null;
-			const snapshot: WorkflowTodoSnapshot | null = normalizeWorkflowTodoSnapshot(runData?.todo);
+			const normalizedSnapshot: WorkflowTodoSnapshot | null = normalizeWorkflowTodoSnapshot(runData?.todo);
+			const snapshot: WorkflowTodoSnapshot | null = normalizedSnapshot === null
+				? null
+				: reconcileWorkflowTodoWithRunStage(normalizedSnapshot, runData?.stage);
 			params.setWorkflowTodoSnapshot(snapshot);
 			if (snapshot === null) {
 				params.rememberLoadedWorkflowTodo(null);

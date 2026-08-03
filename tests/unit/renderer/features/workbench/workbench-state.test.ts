@@ -887,3 +887,76 @@ describe("workbench-state", () => {
 		expect(merged.blocks.at(-1)?.id).toBe("next-79");
 	});
 });
+
+describe("terminal tool timeline output", () => {
+	it("coalesces transient output and replaces it with the persisted final snapshot", () => {
+		let blocks: TimelineBlock[] = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "terminal-request",
+			event: "agent.tool.call",
+			data: {
+				toolCallId: "terminal-call",
+				toolName: "mcp_terminal_run_command",
+				args: { commandLine: "npm test" }
+			}
+		});
+
+		for (let sequence: number = 1; sequence <= 80; sequence += 1) {
+			blocks = applyBackendEventToTimeline(blocks, {
+				type: "event",
+				id: "terminal-request",
+				event: "agent.tool.progress",
+				data: {
+					toolCallId: "terminal-call",
+					toolName: "mcp_terminal_run_command",
+					code: "terminal_output",
+					terminalOutputDelta: {
+						stream: "stdout",
+						sequence,
+						text: String(sequence).padStart(3, "0") + "x".repeat(97),
+						omittedChars: 0
+					}
+				}
+			});
+		}
+
+		const liveAssistant = blocks[0];
+		const liveTool = liveAssistant?.type === "assistant"
+			? liveAssistant.bodyParts.find((part) => part.type === "tool")
+			: undefined;
+		expect(liveTool?.type === "tool" ? liveTool.events : []).toHaveLength(2);
+		const liveProgress = liveTool?.type === "tool" ? liveTool.events.find((event) => event.code === "terminal_output") : undefined;
+		const runtime = liveProgress?.terminalRuntimeOutput as Record<string, unknown> | undefined;
+		expect(String(runtime?.stdout ?? "")).toHaveLength(6000);
+		expect(runtime?.stdoutOmittedChars).toBe(2000);
+
+		blocks = applyBackendEventToTimeline(blocks, {
+			type: "event",
+			id: "terminal-request",
+			event: "agent.tool.result",
+			data: {
+				toolCallId: "terminal-call",
+				toolName: "mcp_terminal_run_command",
+				ok: true,
+				terminalDisplay: {
+					commandLine: "npm test",
+					cwd: ".",
+					executionMode: "wait",
+					status: "completed",
+					exitCode: 0,
+					stdout: "done",
+					stderr: "",
+					stdoutOmittedChars: 0,
+					stderrOmittedChars: 0,
+					truncated: false
+				}
+			}
+		});
+
+		const finalAssistant = blocks[0];
+		const finalTool = finalAssistant?.type === "assistant"
+			? finalAssistant.bodyParts.find((part) => part.type === "tool")
+			: undefined;
+		expect(finalTool?.type === "tool" ? finalTool.events.map((event) => event.type) : []).toEqual(["tool.call", "tool.result"]);
+	});
+});

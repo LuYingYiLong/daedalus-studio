@@ -62,6 +62,7 @@ export type MessageListProps = {
 	onOpenSelectionAsk?: (threadId: string) => Promise<void>;
 	onDeleteSelectionAsk?: (threadId: string) => Promise<void>;
 	onDeleteAllSelectionAsks?: () => Promise<void>;
+	hideInlineDiff?: boolean;
 };
 
 export type MessageListHandle = {
@@ -150,10 +151,11 @@ function getSelectedTextInside(element: HTMLElement): string {
 type AssistantTimelineRowProps = {
 	block: TimelineAssistantBlock;
 	blockOffset: number;
+	hideInlineDiff: boolean;
 	onInlineDiffReview?: () => void;
 };
 
-const AssistantTimelineRow = memo(function AssistantTimelineRow({ block, blockOffset, onInlineDiffReview }: AssistantTimelineRowProps): React.JSX.Element {
+const AssistantTimelineRow = memo(function AssistantTimelineRow({ block, blockOffset, hideInlineDiff, onInlineDiffReview }: AssistantTimelineRowProps): React.JSX.Element {
 	const [nowIsoTime, setNowIsoTime] = useState<string>(() => new Date().toISOString());
 	useEffect((): (() => void) | void => {
 		if (block.status !== "running") {
@@ -180,6 +182,7 @@ const AssistantTimelineRow = memo(function AssistantTimelineRow({ block, blockOf
 			endTime={block.status === "running" ? undefined : formatShortDateTime(block.completedAtUtc)}
 			streaming={block.status === "running"}
 			selectionEnabled={block.status !== "running" && block.status !== "failed"}
+			hideInlineDiff={hideInlineDiff}
 			onInlineDiffReview={onInlineDiffReview}
 		/>
 	);
@@ -215,7 +218,8 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	onSelectionAsk,
 	onOpenSelectionAsk,
 	onDeleteSelectionAsk,
-	onDeleteAllSelectionAsks
+	onDeleteAllSelectionAsks,
+	hideInlineDiff = false
 }: MessageListProps, ref): React.JSX.Element {
 	const { t } = useTranslation();
 	const [messageApi, messageContextHolder] = message.useMessage();
@@ -670,11 +674,11 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 						onRetryFromUserMessage={onRetryFromUserMessage}
 					/>
 				) : (
-					<AssistantTimelineRow block={block} blockOffset={item.blockOffset} onInlineDiffReview={onInlineDiffReview} />
+					<AssistantTimelineRow block={block} blockOffset={item.blockOffset} hideInlineDiff={hideInlineDiff} onInlineDiffReview={onInlineDiffReview} />
 				)}
 			</div>
 		);
-	}, [activeRetryRequestId, canEditUserMessages, onInlineDiffReview, onRetryEditCancel, onRetryEditStart, onRetryFromUserMessage, retryDisabled]);
+	}, [activeRetryRequestId, canEditUserMessages, hideInlineDiff, onInlineDiffReview, onRetryEditCancel, onRetryEditStart, onRetryFromUserMessage, retryDisabled]);
 	const virtuosoComponents = useMemo(() => ({
 		Header: renderHeader,
 		Footer: renderFooter,

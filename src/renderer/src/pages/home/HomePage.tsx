@@ -1701,6 +1701,7 @@ function HomePage({
 												contextItems={selectionMarkerContextItems}
 												onAddContext={onAddContext}
 												initialSelectionAskThreads={selectionAskThreads}
+												goal={currentGoal}
 											/>
 										) : null}
 									</div>

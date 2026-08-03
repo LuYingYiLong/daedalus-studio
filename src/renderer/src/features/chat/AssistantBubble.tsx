@@ -5,6 +5,7 @@ import { TimelineBodyPart } from "@/api/types";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import ToolPart from "./ToolPart";
+import TerminalPart, { isTerminalCommandPart } from "./TerminalPart";
 import StatusPart from "./StatusPart";
 import PlanPart from "./PlanPart";
 import InlineDiffPart from "./InlineDiffPart";
@@ -25,6 +26,7 @@ export type AssistantBubbleProps = {
 	endTime?: string;
 	streaming?: boolean;
 	selectionEnabled?: boolean;
+	hideInlineDiff?: boolean;
 	onInlineDiffReview?: () => void;
 };
 
@@ -58,7 +60,7 @@ function createAssistantCopyText(message?: string, content?: string, bodyParts?:
 		.join("\n\n");
 }
 
-function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyParts, message, elapsedTime, endTime, streaming = false, selectionEnabled = false, onInlineDiffReview }: AssistantBubbleProps): React.JSX.Element {
+function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyParts, message, elapsedTime, endTime, streaming = false, selectionEnabled = false, hideInlineDiff = false, onInlineDiffReview }: AssistantBubbleProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [copied, setCopied] = React.useState<boolean>(false);
 	const disclosurePrefix: string = entryId ?? "assistant";
@@ -98,7 +100,9 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 		}
 
 		if (part.type === "tool") {
-			return <ToolPart key={index} part={part} disclosureKey={`${disclosurePrefix}:tool:${index}`} />
+			return isTerminalCommandPart(part)
+				? <TerminalPart key={index} part={part} disclosureKey={`${disclosurePrefix}:tool:${index}`} />
+				: <ToolPart key={index} part={part} disclosureKey={`${disclosurePrefix}:tool:${index}`} />
 		}
 
 		if (part.type === "status") {
@@ -110,7 +114,7 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 		}
 
 		if (part.type === "inline_diff") {
-			return <InlineDiffPart key={index} part={part} onReview={onInlineDiffReview} />
+			return hideInlineDiff ? null : <InlineDiffPart key={index} part={part} onReview={onInlineDiffReview} />
 		}
 
 		if (part.type === "image_generation") {

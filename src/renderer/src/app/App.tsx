@@ -58,7 +58,8 @@ import HomePage from "@/pages/home/HomePage";
 import WorkspaceProjectDialog from "@/features/workspace/WorkspaceProjectDialog";
 import { extractEnabledSkillRefs, type ComposerCompletionTrigger } from "@/features/composer/composer-completion";
 import { createComposerReasoningEffortUpdate } from "@/features/composer/composer-reasoning-effort";
-import { createWorkflowTodoSnapshotFromPlanData, getWorkflowTodoSnapshotKey, isWorkflowTodoActive, normalizeWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
+import { isComposerWorkspaceSelectionLocked } from "@/features/composer/composer-workspace-lock";
+import { createWorkflowTodoSnapshotFromPlanData, getWorkflowTodoSnapshotKey, isWorkflowTodoActive, selectLatestWorkflowTodoSnapshot } from "@/features/composer/workflow-todo";
 import { selectLatestGoalState } from "@/features/composer/goal-state";
 import { saveImageAttachment, saveTextAttachment, type SaveImageAttachmentParams } from "@/api/image-attachment-api";
 import {
@@ -515,8 +516,7 @@ function createWorkflowTodoSnapshotFromTimelineResult(result: {
 	latestWorkflowSnapshot: unknown | null;
 	latestAgentSnapshot: unknown | null;
 }): WorkflowTodoSnapshot | null {
-	return normalizeWorkflowTodoSnapshot(result.latestWorkflowSnapshot)
-		?? normalizeWorkflowTodoSnapshot(result.latestAgentSnapshot);
+	return selectLatestWorkflowTodoSnapshot(result.latestAgentSnapshot, result.latestWorkflowSnapshot);
 }
 
 function getWorkflowTodoSnapshotIdentity(snapshot: WorkflowTodoSnapshot): string {
@@ -3170,6 +3170,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const composerMessageQueue: MessageQueueItem[] = activeSessionId === null ? [] : workbench?.messageQueue ?? [];
 	const composerPendingGuides: PendingGuide[] = activeSessionId === null ? [] : workbench?.pendingGuides ?? [];
 	const currentSessionWorkspaceId: string | null = activeSessionMetadata?.workspaceId ?? null;
+	const composerWorkspaceLocked: boolean = isComposerWorkspaceSelectionLocked(activeSessionId, activeSessionMetadata);
 	const displayedWorkspace: WorkspaceConfig | null = activeSessionId === null
 		? homeDraft.workspace
 		: currentSessionWorkspaceId === null
@@ -3500,7 +3501,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						runningSessionIds={runningSessionIds}
 						unreadSessionIds={[...unreadSessionIds]}
 						homeWorkspace={homeDraft.workspace}
-						workspaceFooterDisabled={isHomeSubmitting || activeSessionId !== null || isSessionLoading}
+						workspaceFooterDisabled={isHomeSubmitting || composerWorkspaceLocked || isSessionLoading}
 						activeWorkspace={displayedWorkspace}
 						godotLaunchExecutablePath={godotLaunchExecutablePath}
 						onNewSession={handleNewSession}

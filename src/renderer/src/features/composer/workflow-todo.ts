@@ -109,6 +109,14 @@ export function normalizeWorkflowTodoSnapshot(value: unknown): WorkflowTodoSnaps
 	return snapshot;
 }
 
+export function selectLatestWorkflowTodoSnapshot(
+	latestAgentSnapshot: unknown,
+	latestWorkflowSnapshot: unknown
+): WorkflowTodoSnapshot | null {
+	return normalizeWorkflowTodoSnapshot(latestAgentSnapshot)
+		?? normalizeWorkflowTodoSnapshot(latestWorkflowSnapshot);
+}
+
 export function getWorkflowTodoSnapshotKey(snapshot: WorkflowTodoSnapshot): string {
 	return snapshot.runId ?? snapshot.workflowId ?? snapshot.title ?? "workflow";
 }
@@ -277,4 +285,17 @@ export function markWorkflowTodoFailed(snapshot: WorkflowTodoSnapshot): Workflow
 			status: index === targetIndex ? "failed" : step.status
 		}))
 	};
+}
+
+export function reconcileWorkflowTodoWithRunStage(
+	snapshot: WorkflowTodoSnapshot,
+	stage: unknown
+): WorkflowTodoSnapshot {
+	if (stage === "completed") {
+		return markWorkflowTodoCompleted(snapshot);
+	}
+	if (stage === "failed") {
+		return markWorkflowTodoFailed(snapshot);
+	}
+	return snapshot;
 }

@@ -185,6 +185,65 @@ function appendThinkingPart(parts: TimelineBodyPart[], text: string, done: boole
 	return [...nextParts, { type: "thinking", text, done }];
 }
 
+const MAX_TERMINAL_RUNTIME_STREAM_CHARS: number = 6000;
+
+function appendTerminalRuntimeTail(current: string, delta: string, omittedChars: number): { text: string; omittedChars: number } {
+	const combined: string = current + delta;
+	if (combined.length <= MAX_TERMINAL_RUNTIME_STREAM_CHARS) {
+		return { text: combined, omittedChars };
+	}
+	return {
+		text: combined.slice(-MAX_TERMINAL_RUNTIME_STREAM_CHARS),
+		omittedChars: omittedChars + combined.length - MAX_TERMINAL_RUNTIME_STREAM_CHARS
+	};
+}
+
+function mergeTerminalOutputProgress(
+	events: Record<string, unknown>[],
+	normalizedEvent: Record<string, unknown>
+): Record<string, unknown>[] {
+	const delta: unknown = normalizedEvent.terminalOutputDelta;
+	if (!isRecord(delta) || (delta.stream !== "stdout" && delta.stream !== "stderr")) {
+		return [...events, normalizedEvent];
+	}
+	const sequence: number = typeof delta.sequence === "number" && Number.isFinite(delta.sequence) ? delta.sequence : 0;
+	const deltaText: string = getStringValue(delta, "text");
+	const deltaOmittedChars: number = typeof delta.omittedChars === "number" && Number.isFinite(delta.omittedChars)
+		? Math.max(0, Math.floor(delta.omittedChars))
+		: 0;
+	const existingIndex: number = events.findIndex((item: Record<string, unknown>): boolean => item.code === "terminal_output");
+	const existingEvent: Record<string, unknown> = existingIndex < 0 ? {} : events[existingIndex]!;
+	const runtimeOutput: Record<string, unknown> = isRecord(existingEvent.terminalRuntimeOutput)
+		? existingEvent.terminalRuntimeOutput
+		: {};
+	const lastSequence: number = typeof runtimeOutput.lastSequence === "number" ? runtimeOutput.lastSequence : 0;
+	if (sequence <= lastSequence) {
+		return events;
+	}
+	const stream: "stdout" | "stderr" = delta.stream;
+	const currentText: string = typeof runtimeOutput[stream] === "string" ? runtimeOutput[stream] : "";
+	const omittedKey: "stdoutOmittedChars" | "stderrOmittedChars" = stream === "stdout" ? "stdoutOmittedChars" : "stderrOmittedChars";
+	const currentOmittedChars: number = typeof runtimeOutput[omittedKey] === "number" ? runtimeOutput[omittedKey] : 0;
+	const nextTail = appendTerminalRuntimeTail(currentText, deltaText, Math.max(currentOmittedChars, deltaOmittedChars));
+	const mergedEvent: Record<string, unknown> = {
+		...normalizedEvent,
+		terminalRuntimeOutput: {
+			...runtimeOutput,
+			[stream]: nextTail.text,
+			[omittedKey]: nextTail.omittedChars,
+			lastSequence: sequence
+		}
+	};
+	delete mergedEvent.terminalOutputDelta;
+
+	if (existingIndex < 0) {
+		return [...events, mergedEvent];
+	}
+	return events.map((item: Record<string, unknown>, index: number): Record<string, unknown> => (
+		index === existingIndex ? mergedEvent : item
+	));
+}
+
 function appendToolPart(parts: TimelineBodyPart[], event: BackendEvent): TimelineBodyPart[] {
 	const data: Record<string, unknown> = getEventData(event);
 	const toolCallId: string = getStringValue(data, "toolCallId")
@@ -202,9 +261,14 @@ function appendToolPart(parts: TimelineBodyPart[], event: BackendEvent): Timelin
 					return item;
 				}
 
+				const nextEvents: Record<string, unknown>[] = normalizedEvent.code === "terminal_output"
+					? mergeTerminalOutputProgress(item.events, normalizedEvent)
+					: normalizedEvent.type === "tool.result" && isRecord(normalizedEvent.terminalDisplay)
+						? [...item.events.filter((toolEvent: Record<string, unknown>): boolean => toolEvent.code !== "terminal_output"), normalizedEvent]
+						: [...item.events, normalizedEvent];
 				return {
 					...item,
-					events: [...item.events, normalizedEvent]
+					events: nextEvents
 				};
 			});
 		}
@@ -213,7 +277,9 @@ function appendToolPart(parts: TimelineBodyPart[], event: BackendEvent): Timelin
 	return [...parts, {
 		type: "tool",
 		tool_call_id: toolCallId,
-		events: [normalizedEvent]
+		events: normalizedEvent.code === "terminal_output"
+			? mergeTerminalOutputProgress([], normalizedEvent)
+			: [normalizedEvent]
 	}];
 }
 

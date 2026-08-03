@@ -1,4 +1,4 @@
-import type { AdditionalContextItem, MessageTextAnchor, SelectionAskThread, SessionTimelineNavigationEntry, TimelineBlock } from "@/api/types";
+import type { AdditionalContextItem, AgentGoalState, MessageTextAnchor, SelectionAskThread, SessionTimelineNavigationEntry, TimelineBlock } from "@/api/types";
 import type { TimelinePageStore } from "@/features/workbench/timeline-page-store";
 import { useTimelinePage } from "@/features/workbench/timeline-page-store";
 import type { RetryUserMessagePayload } from "./UserBubble";
@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useSelectionAsk } from "./useSelectionAsk";
 import SelectionAskDialog from "./SelectionAskDialog";
 import styles from "./ConversationTimelinePane.module.css";
+import { shouldHideInlineDiffForGoal } from "@/features/composer/goal-display";
 
 export type ConversationTimelinePaneHandle = {
 	closeSearch: () => boolean;
@@ -43,6 +44,7 @@ export type ConversationTimelinePaneProps = {
 	contextItems: AdditionalContextItem[];
 	onAddContext: (item: AdditionalContextItem) => void;
 	initialSelectionAskThreads: SelectionAskThread[];
+	goal: AgentGoalState | null;
 };
 
 const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, ConversationTimelinePaneProps>(function ConversationTimelinePane({
@@ -66,7 +68,8 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 	onAwayFromBottomChange,
 	contextItems,
 	onAddContext,
-	initialSelectionAskThreads
+	initialSelectionAskThreads,
+	goal
 }: ConversationTimelinePaneProps, ref): React.JSX.Element {
 	const { i18n, t } = useTranslation();
 	const { message } = App.useApp();
@@ -212,6 +215,7 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 				searchOpen={conversationSearch.open}
 				searchQuery={conversationSearch.query}
 				activeSearchMatch={conversationSearch.activeMatch}
+				hideInlineDiff={shouldHideInlineDiffForGoal(goal)}
 				contextItems={contextItems}
 				selectionAskThreads={selectionAsk.threads}
 				onAddSelectionContext={onAddContext}

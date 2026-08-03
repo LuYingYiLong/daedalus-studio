@@ -7,3 +7,12 @@ export function isAgentGoalTerminal(goal: AgentGoalState): boolean {
 export function isAgentGoalDismissed(goal: AgentGoalState, dismissedGoalIds: ReadonlySet<string>): boolean {
 	return isAgentGoalTerminal(goal) && dismissedGoalIds.has(goal.goalId);
 }
+
+export function shouldHideInlineDiffForGoal(goal: AgentGoalState | null): boolean {
+	return goal !== null && (
+		goal.stage === "readiness"
+		|| goal.stage === "running"
+		|| goal.stage === "evaluating"
+		|| goal.stage === "pausing"
+	);
+}
