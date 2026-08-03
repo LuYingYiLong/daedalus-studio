@@ -1,8 +1,9 @@
 import { Anchor, Tooltip } from "antd";
 import type { AnchorProps } from "antd";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SessionTimelineNavigationEntry } from "@/api/types";
+import { resolveActiveBlockOffset, resolveActiveTimelineEntryId, type ConversationViewportRow } from "./conversation-navigation";
 import styles from "./ConversationAnchorNavigator.module.css";
 
 export type ConversationAnchorNavigatorProps = {
@@ -10,6 +11,7 @@ export type ConversationAnchorNavigatorProps = {
 	activeEntryId: string | null;
 	scrollContainer: HTMLElement | null;
 	onNavigate: (entry: SessionTimelineNavigationEntry) => void;
+	onActiveEntryChange?: (entry: SessionTimelineNavigationEntry) => void;
 };
 
 function entryHref(entry: SessionTimelineNavigationEntry): string {
@@ -32,24 +34,110 @@ function getWaveClass(distance: number): string {
 	return "";
 }
 
+function resolveViewportActiveEntryId(
+	entries: readonly SessionTimelineNavigationEntry[],
+	scrollContainer: HTMLElement
+): string | null {
+	const containerBounds: DOMRect = scrollContainer.getBoundingClientRect();
+	const rows: ConversationViewportRow[] = Array.from(
+		scrollContainer.querySelectorAll<HTMLElement>("[data-timeline-block-offset]")
+	).map((row: HTMLElement): ConversationViewportRow | null => {
+		const blockOffset: number = Number(row.dataset.timelineBlockOffset);
+		if (!Number.isSafeInteger(blockOffset)) {
+			return null;
+		}
+		const bounds: DOMRect = row.getBoundingClientRect();
+		return { blockOffset, top: bounds.top, bottom: bounds.bottom };
+	}).filter((row: ConversationViewportRow | null): row is ConversationViewportRow => row !== null);
+	const atBottom: boolean = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight <= 16;
+	const activeBlockOffset: number | null = resolveActiveBlockOffset(
+		rows,
+		containerBounds.top + Math.min(56, scrollContainer.clientHeight * 0.2),
+		atBottom,
+		containerBounds.top,
+		containerBounds.bottom
+	);
+	return resolveActiveTimelineEntryId(entries, activeBlockOffset);
+}
+
 export default function ConversationAnchorNavigator({
 	entries,
 	activeEntryId,
 	scrollContainer,
-	onNavigate
+	onNavigate,
+	onActiveEntryChange
 }: ConversationAnchorNavigatorProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+	const [viewportActiveEntryId, setViewportActiveEntryId] = useState<string | null>(null);
 	const navigatorRef = useRef<HTMLElement | null>(null);
+	const viewportFrameRef = useRef<number | null>(null);
 	const entriesByHref: ReadonlyMap<string, SessionTimelineNavigationEntry> = useMemo((): ReadonlyMap<string, SessionTimelineNavigationEntry> => {
 		return new Map(entries.map((entry: SessionTimelineNavigationEntry): [string, SessionTimelineNavigationEntry] => [entryHref(entry), entry]));
 	}, [entries]);
-	const activeEntry: SessionTimelineNavigationEntry | undefined = entries.find((entry: SessionTimelineNavigationEntry): boolean => entry.entryId === activeEntryId);
+	const effectiveActiveEntryId: string | null = viewportActiveEntryId !== null
+		&& entries.some((entry: SessionTimelineNavigationEntry): boolean => entry.entryId === viewportActiveEntryId)
+		? viewportActiveEntryId
+		: activeEntryId;
+	const activeEntry: SessionTimelineNavigationEntry | undefined = entries.find((entry: SessionTimelineNavigationEntry): boolean => entry.entryId === effectiveActiveEntryId);
 	const activeHref: string = activeEntry === undefined ? "" : entryHref(activeEntry);
+
+	useEffect((): (() => void) | undefined => {
+		if (scrollContainer === null) {
+			setViewportActiveEntryId(null);
+			return undefined;
+		}
+
+		const syncActiveEntry = (): void => {
+			viewportFrameRef.current = null;
+			const nextActiveEntryId: string | null = resolveViewportActiveEntryId(entries, scrollContainer);
+			setViewportActiveEntryId((currentEntryId: string | null): string | null => (
+				currentEntryId === nextActiveEntryId ? currentEntryId : nextActiveEntryId
+			));
+			const nextActiveEntry: SessionTimelineNavigationEntry | undefined = entries.find(
+				(entry: SessionTimelineNavigationEntry): boolean => entry.entryId === nextActiveEntryId
+			);
+			if (nextActiveEntry !== undefined) {
+				onActiveEntryChange?.(nextActiveEntry);
+			}
+		};
+		const scheduleActiveEntrySync = (): void => {
+			if (viewportFrameRef.current !== null) {
+				return;
+			}
+			viewportFrameRef.current = window.requestAnimationFrame(syncActiveEntry);
+		};
+
+		scrollContainer.addEventListener("scroll", scheduleActiveEntrySync, { passive: true });
+		const resizeObserver = new ResizeObserver(scheduleActiveEntrySync);
+		resizeObserver.observe(scrollContainer);
+		const observeMountedRows = (): void => {
+			for (const row of scrollContainer.querySelectorAll<HTMLElement>("[data-timeline-block-offset]")) {
+				resizeObserver.observe(row);
+			}
+		};
+		observeMountedRows();
+		const mutationObserver = new MutationObserver((): void => {
+			observeMountedRows();
+			scheduleActiveEntrySync();
+		});
+		mutationObserver.observe(scrollContainer, { childList: true, subtree: true });
+		scheduleActiveEntrySync();
+
+		return (): void => {
+			scrollContainer.removeEventListener("scroll", scheduleActiveEntrySync);
+			resizeObserver.disconnect();
+			mutationObserver.disconnect();
+			if (viewportFrameRef.current !== null) {
+				window.cancelAnimationFrame(viewportFrameRef.current);
+				viewportFrameRef.current = null;
+			}
+		};
+	}, [entries, onActiveEntryChange, scrollContainer]);
 
 	useLayoutEffect((): (() => void) | undefined => {
 		const navigator: HTMLElement | null = navigatorRef.current;
-		if (navigator === null || activeEntryId === null) {
+		if (navigator === null || effectiveActiveEntryId === null) {
 			return undefined;
 		}
 		const frameId: number = window.requestAnimationFrame((): void => {
@@ -67,10 +155,10 @@ export default function ConversationAnchorNavigator({
 			}
 		});
 		return (): void => window.cancelAnimationFrame(frameId);
-	}, [activeEntryId, entries.length]);
+	}, [effectiveActiveEntryId, entries.length]);
 
 	const items: AnchorProps["items"] = entries.map((entry: SessionTimelineNavigationEntry, index: number) => {
-		const isActive: boolean = entry.entryId === activeEntryId;
+		const isActive: boolean = entry.entryId === effectiveActiveEntryId;
 		const distance: number = hoveredIndex === null ? -1 : Math.abs(index - hoveredIndex);
 		const tooltipText: string = entry.preview.length > 0 ? entry.preview : t("agentPage.conversationNavigator.emptyMessage");
 		return {

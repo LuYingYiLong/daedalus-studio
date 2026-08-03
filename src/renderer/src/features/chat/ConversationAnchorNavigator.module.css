@@ -113,7 +113,7 @@
 	height: 4px;
 	box-sizing: border-box;
 	padding: 1px 0;
-	opacity: 0.5;
+	opacity: 0.3;
 	transition: width 180ms ease, opacity 180ms ease, transform 180ms ease;
 }
 

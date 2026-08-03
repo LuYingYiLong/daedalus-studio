@@ -136,6 +136,9 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 		setPendingTimelineEntryId(entry.entryId);
 		void onTimelineNavigationLoadEntry(entry);
 	}, [onTimelineNavigationLoadEntry]);
+	const handleViewportTimelineEntryChange = useCallback((entry: SessionTimelineNavigationEntry): void => {
+		setActiveTimelineBlockOffset(entry.blockOffset);
+	}, []);
 
 	const handleSelectionAsk = useCallback(async (anchor: MessageTextAnchor): Promise<void> => {
 		try {
@@ -245,7 +248,8 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 				entries={timelineNavigationEntries}
 				activeEntryId={activeTimelineEntryId}
 				scrollContainer={messageScrollContainer}
-					onNavigate={handleTimelineNavigate}
+				onNavigate={handleTimelineNavigate}
+				onActiveEntryChange={handleViewportTimelineEntryChange}
 			/>
 			<SelectionAskDialog
 				thread={activeSelectionAskThread}

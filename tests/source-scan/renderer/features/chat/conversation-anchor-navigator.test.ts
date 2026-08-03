@@ -16,6 +16,12 @@ describe("ConversationAnchorNavigator source", () => {
 		expect(navigatorSource).toContain("getCurrentAnchor");
 		expect(navigatorSource).toContain("data-conversation-anchor-active");
 		expect(navigatorSource).toContain("navigator.scrollTop");
+		expect(navigatorSource).toContain('scrollContainer.addEventListener("scroll", scheduleActiveEntrySync');
+		expect(navigatorSource).toContain("resolveViewportActiveEntryId(entries, scrollContainer)");
+		expect(navigatorSource).toContain("new ResizeObserver(scheduleActiveEntrySync)");
+		expect(navigatorSource).toContain("new MutationObserver((): void => {");
+		expect(navigatorSource).toContain("resizeObserver.observe(row)");
+		expect(timelinePaneSource).toContain("onActiveEntryChange={handleViewportTimelineEntryChange}");
 	});
 
 	it("keeps the navigator floating, compact, and scrollable without a visible scrollbar", () => {
@@ -27,6 +33,7 @@ describe("ConversationAnchorNavigator source", () => {
 		expect(navigatorStyles).toContain("justify-content: flex-end");
 		expect(navigatorStyles).toContain("tickHovered");
 		expect(navigatorStyles).toContain("tickNeighborOne");
+		expect(navigatorStyles).toMatch(/\.tickActive[\s\S]*?width:\s*var\(--navigator-tick-width\);/u);
 	});
 
 	it("connects viewport detection and unloaded turn navigation through HomePage", () => {
@@ -34,7 +41,10 @@ describe("ConversationAnchorNavigator source", () => {
 		expect(messageListSource).toContain("index: blockOffset + index");
 		expect(messageListSource).toContain("getActiveBlockOffset");
 		expect(messageListSource).toContain("onActiveBlockOffsetChange");
-		expect(messageListSource).toContain('querySelectorAll<HTMLElement>("[data-item-index]")');
+		expect(messageListSource).toContain('querySelectorAll<HTMLElement>("[data-timeline-block-offset]")');
+		expect(messageListSource).toContain("row.dataset.timelineBlockOffset");
+		expect(messageListSource).toContain("document.elementFromPoint(viewportX, viewportY)");
+		expect(messageListSource).toContain("lastReportedActiveBlockOffsetRef.current");
 		expect(messageListSource).toContain("isScrolling={handleVirtuosoScrolling}");
 		expect(messageListSource).toContain("virtuosoScrollingRef.current");
 		expect(messageListSource).toContain("addEventListener(\"scroll\"");

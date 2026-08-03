@@ -148,6 +148,23 @@ function getSelectedTextInside(element: HTMLElement): string {
 	return selectedText.trim().length > 0 ? selectedText : "";
 }
 
+function getTimelineBlockOffsetAtPoint(
+	scroller: HTMLElement,
+	scrollerBounds: DOMRect,
+	viewportY: number
+): number | null {
+	const viewportX: number = scrollerBounds.left + scroller.clientWidth / 2;
+	let candidate: Element | null = document.elementFromPoint(viewportX, viewportY);
+	while (candidate !== null && candidate !== scroller) {
+		if (candidate instanceof HTMLElement && candidate.dataset.timelineBlockOffset !== undefined) {
+			const blockOffset: number = Number(candidate.dataset.timelineBlockOffset);
+			return Number.isSafeInteger(blockOffset) ? blockOffset : null;
+		}
+		candidate = candidate.parentElement;
+	}
+	return null;
+}
+
 type AssistantTimelineRowProps = {
 	block: TimelineAssistantBlock;
 	blockOffset: number;
@@ -347,10 +364,22 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		}
 		const scrollerBounds: DOMRect = scroller.getBoundingClientRect();
 		const activationTop: number = scrollerBounds.top + Math.min(56, scroller.clientHeight * 0.2);
+		const atBottom: boolean = isNearBottomByMetrics(
+			scroller.scrollHeight,
+			scroller.scrollTop,
+			scroller.clientHeight,
+			AT_BOTTOM_THRESHOLD
+		);
+		if (!atBottom) {
+			const pointedBlockOffset: number | null = getTimelineBlockOffsetAtPoint(scroller, scrollerBounds, activationTop);
+			if (pointedBlockOffset !== null) {
+				return pointedBlockOffset;
+			}
+		}
 		const rows: ConversationViewportRow[] = Array.from(
-			scroller.querySelectorAll<HTMLElement>("[data-item-index]")
+			scroller.querySelectorAll<HTMLElement>("[data-timeline-block-offset]")
 		).map((row: HTMLElement): ConversationViewportRow | null => {
-			const parsedBlockOffset: number = Number(row.dataset.itemIndex);
+			const parsedBlockOffset: number = Number(row.dataset.timelineBlockOffset);
 			if (!Number.isSafeInteger(parsedBlockOffset)) {
 				return null;
 			}
@@ -364,15 +393,10 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		return resolveActiveBlockOffset(
 			rows,
 			activationTop,
-			isNearBottomByMetrics(
-				scroller.scrollHeight,
-				scroller.scrollTop,
-				scroller.clientHeight,
-				AT_BOTTOM_THRESHOLD
-			),
+			atBottom,
 			scrollerBounds.top,
 			scrollerBounds.bottom
-		);
+		) ?? lastReportedActiveBlockOffsetRef.current;
 	}, []);
 
 	useImperativeHandle(ref, (): MessageListHandle => ({
