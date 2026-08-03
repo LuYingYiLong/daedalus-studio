@@ -11,13 +11,22 @@
 }
 
 .sourceGridButton {
-	display: grid;
-	gap: 6px;
-	justify-items: stretch;
+	min-width: 0;
+	max-width: 100%;
 	height: auto;
 	padding: 8px;
+	overflow: hidden;
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-sm);
+}
+
+.sourceGridButtonContent {
+	display: grid;
+	justify-items: stretch;
+	gap: 6px;
+	width: 100%;
+	min-width: 0;
+	overflow: hidden;
 }
 
 .sourceGridThumbnail {
@@ -25,6 +34,25 @@
 	aspect-ratio: 1 / 1;
 	border-radius: var(--ds-radius-sm);
 	object-fit: cover;
+}
+
+.sourceGridThumbnailSkeleton {
+	display: block;
+	width: 100% !important;
+	height: auto !important;
+	aspect-ratio: 1 / 1;
+	border-radius: var(--ds-radius-sm);
+}
+
+.sourceGridStatus {
+	display: flex;
+	justify-content: center;
+	margin-block: 8px;
+}
+
+.sourceGridStatus:global(.ant-alert) {
+	display: flex;
+	justify-content: flex-start;
 }
 
 .sourceGridTextIcon {
@@ -45,28 +73,23 @@
 .sourceGridText {
 	display: grid;
 	gap: 2px;
+	width: 100%;
 	min-width: 0;
+	overflow: hidden;
 	text-align: left;
 }
 
-.sourcePreviewImage {
+.summaryItemTitle,
+.summaryMeta {
 	display: block;
+	min-width: 0;
 	max-width: 100%;
-	max-height: min(70vh, 720px);
-	margin: 0 auto;
-	border: 1px solid var(--ds-border);
-	border-radius: var(--ds-radius-sm);
-	object-fit: contain;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-.sourcePreviewText {
-	max-height: min(70vh, 720px);
-	margin: 0;
-	padding: 12px;
-	overflow: auto;
-	border: 1px solid var(--ds-border);
-	border-radius: var(--ds-radius-sm);
-	background: var(--ds-surface-muted);
-	color: var(--ds-text-primary);
-	word-break: break-word;
+.summaryMeta {
+	font-size: 12px;
+	line-height: 1.35;
 }

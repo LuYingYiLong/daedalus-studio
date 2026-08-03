@@ -327,6 +327,28 @@
 	white-space: nowrap;
 }
 
+.sourcePreviewImage {
+	display: block;
+	max-width: 100%;
+	max-height: min(70vh, 720px);
+	margin: 0 auto;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-sm);
+	object-fit: contain;
+}
+
+.sourcePreviewText {
+	max-height: min(70vh, 720px);
+	margin: 0;
+	padding: 12px;
+	overflow: auto;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-sm);
+	background: var(--ds-surface-muted);
+	color: var(--ds-text-primary);
+	word-break: break-word;
+}
+
 .sourceButton {
 	justify-content: flex-start;
 	height: auto;
@@ -366,6 +388,19 @@
 	max-height: min(520px, 70vh);
 	overflow-y: auto;
 	padding-right: 0;
+}
+
+.summaryModalStatus,
+.planPreviewStatus {
+	display: grid;
+	place-items: center;
+	min-height: 64px;
+}
+
+.summaryModalStatus:global(.ant-alert) {
+	display: flex;
+	justify-content: flex-start;
+	min-height: auto;
 }
 
 .godotSceneModalBody {
@@ -408,6 +443,10 @@
 .planPreviewMarkdown {
 	max-height: min(70vh, 720px);
 	overflow: auto;
+}
+
+.planPreviewStatus {
+	min-height: 180px;
 }
 
 .chatTitle {

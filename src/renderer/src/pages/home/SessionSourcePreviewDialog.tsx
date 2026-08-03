@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { Modal } from "antd";
+import { Modal, theme } from "antd";
 import { useTranslation } from "react-i18next";
 import type { SessionOverviewSourceItem } from "@/api/session-overview-api";
 import MarkdownContent from "@/features/markdown/MarkdownContent";
@@ -12,6 +12,7 @@ type SessionSourcePreviewDialogProps = {
 
 export default function SessionSourcePreviewDialog({ source, onClose }: SessionSourcePreviewDialogProps): JSX.Element {
 	const { t } = useTranslation();
+	const { token } = theme.useToken();
 
 	return (
 		<Modal
@@ -20,6 +21,7 @@ export default function SessionSourcePreviewDialog({ source, onClose }: SessionS
 			footer={null}
 			onCancel={onClose}
 			width={720}
+			zIndex={token.zIndexPopupBase + 10}
 		>
 			{source !== null ? (
 				source.thumbnailDataUrl !== undefined ? (

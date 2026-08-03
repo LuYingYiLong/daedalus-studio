@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { Button, Modal } from "antd";
+import { Alert, Button, Modal, Spin } from "antd";
 import { useTranslation } from "react-i18next";
 import type { SessionOverviewPlanItem, SessionOverviewResult } from "@/api/session-overview-api";
 import styles from "./HomePage.module.css";
@@ -7,6 +7,8 @@ import styles from "./HomePage.module.css";
 type SessionPlansDialogProps = {
 	overview: SessionOverviewResult | null;
 	open: boolean;
+	loading: boolean;
+	error: string | null;
 	onClose: () => void;
 	onPlanSelect: (plan: SessionOverviewPlanItem) => void;
 };
@@ -19,7 +21,7 @@ function formatOverviewDate(value: string): string {
 	return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-export default function SessionPlansDialog({ overview, open, onClose, onPlanSelect }: SessionPlansDialogProps): JSX.Element {
+export default function SessionPlansDialog({ overview, open, loading, error, onClose, onPlanSelect }: SessionPlansDialogProps): JSX.Element {
 	const { t } = useTranslation();
 
 	return (
@@ -30,6 +32,7 @@ export default function SessionPlansDialog({ overview, open, onClose, onPlanSele
 			onCancel={onClose}
 			width={640}
 		>
+			{error !== null ? <Alert type="error" showIcon message={error} className={styles.summaryModalStatus} /> : null}
 			<div className={styles.summaryModalList}>
 				{overview?.plans.items.map((plan: SessionOverviewPlanItem): JSX.Element => (
 					<Button
@@ -49,6 +52,7 @@ export default function SessionPlansDialog({ overview, open, onClose, onPlanSele
 					</Button>
 				))}
 			</div>
+			{loading ? <div className={styles.summaryModalStatus}><Spin size="small" /></div> : null}
 		</Modal>
 	);
 }

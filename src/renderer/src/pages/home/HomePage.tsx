@@ -7,6 +7,7 @@ import type { ChatMode } from "@/api/chat-api";
 import type { ApprovalMode, PendingApproval } from "@/api/approval-api";
 import type { SlashCommandDefinition } from "@/api/command-api";
 import type { ProviderModelSelection } from "@/api/provider-api";
+import { getPlan, type PlanResult } from "@/api/plan-api";
 import type { DeleteWorkspaceResult, WorkspaceTreeOrderPreferences } from "@/api/workspace-api";
 import type { SkillSummary } from "@/api/skill-api";
 import type { WorkspaceSidebarPreferences } from "@/api/client-preferences-api";
@@ -582,9 +583,17 @@ function HomePage({
 	const [summaryGitSourceFolderId, setSummaryGitSourceFolderId] = useState<string | null>(null);
 	const [summaryGitActionRequest, setSummaryGitActionRequest] = useState<SummaryGitActionRequest | null>(null);
 	const [plansModalOpen, setPlansModalOpen] = useState<boolean>(false);
+	const [plansDialogOverview, setPlansDialogOverview] = useState<SessionOverviewResult | null>(null);
+	const [isPlansDialogLoading, setIsPlansDialogLoading] = useState<boolean>(false);
+	const [plansDialogError, setPlansDialogError] = useState<string | null>(null);
 	const [sourcesModalOpen, setSourcesModalOpen] = useState<boolean>(false);
+	const [sourcesDialogOverview, setSourcesDialogOverview] = useState<SessionOverviewResult | null>(null);
+	const [isSourcesDialogLoading, setIsSourcesDialogLoading] = useState<boolean>(false);
+	const [sourcesDialogError, setSourcesDialogError] = useState<string | null>(null);
 	const [previewSource, setPreviewSource] = useState<SessionOverviewSourceItem | null>(null);
 	const [previewPlan, setPreviewPlan] = useState<SessionOverviewPlanItem | null>(null);
+	const [isPlanPreviewLoading, setIsPlanPreviewLoading] = useState<boolean>(false);
+	const [planPreviewError, setPlanPreviewError] = useState<string | null>(null);
 	const [isGodotProject, setIsGodotProject] = useState<boolean>(false);
 	const [isGodotSceneModalOpen, setIsGodotSceneModalOpen] = useState<boolean>(false);
 	const [godotSceneFiles, setGodotSceneFiles] = useState<GodotSceneFile[]>([]);
@@ -593,6 +602,7 @@ function HomePage({
 	const dockActivationRequestIdRef = useRef<number>(0);
 	const summaryRequestIdRef = useRef<number>(0);
 	const summaryGitActionRequestIdRef = useRef<number>(0);
+	const planPreviewRequestIdRef = useRef<number>(0);
 	const [sideDockActivationRequest, setSideDockActivationRequest] = useState<DockPanelActivationRequest | null>(null);
 	const previousSessionLayoutRef = useRef<{
 		sessionId: string | null;
@@ -793,11 +803,20 @@ function HomePage({
 		setSummaryGitSourceFolderId(null);
 		setSummaryGitActionRequest(null);
 		setPlansModalOpen(false);
+		setPlansDialogOverview(null);
+		setIsPlansDialogLoading(false);
+		setPlansDialogError(null);
 		setSourcesModalOpen(false);
+		setSourcesDialogOverview(null);
+		setIsSourcesDialogLoading(false);
+		setSourcesDialogError(null);
 		setIsGodotSceneModalOpen(false);
 		setGodotSceneSearch("");
 		setPreviewSource(null);
 		setPreviewPlan(null);
+		setIsPlanPreviewLoading(false);
+		setPlanPreviewError(null);
+		planPreviewRequestIdRef.current += 1;
 	}, [summaryScopeKey]);
 
 	const loadSummaryOverview = useCallback(async (planLimit: number = SUMMARY_PREVIEW_LIMIT, sourceLimit: number = SUMMARY_PREVIEW_LIMIT): Promise<SessionOverviewResult | null> => {
@@ -840,15 +859,103 @@ function HomePage({
 		setSummaryOverview(null);
 		setSummaryError(null);
 		setPlansModalOpen(false);
+		setPlansDialogOverview(null);
+		setIsPlansDialogLoading(false);
+		setPlansDialogError(null);
 		setSourcesModalOpen(false);
+		setSourcesDialogOverview(null);
+		setIsSourcesDialogLoading(false);
+		setSourcesDialogError(null);
 		setIsGodotSceneModalOpen(false);
 		setGodotSceneSearch("");
 		setPreviewSource(null);
 		setPreviewPlan(null);
+		setIsPlanPreviewLoading(false);
+		setPlanPreviewError(null);
+		planPreviewRequestIdRef.current += 1;
 		if (activeSessionId !== null || workspaceForActions !== null) {
 			void loadSummaryOverview();
 		}
 	}, [activeSessionId, loadSummaryOverview, workspaceForActions]);
+
+	useEffect((): (() => void) | void => {
+		if (!plansModalOpen || activeSessionId === null) {
+			return;
+		}
+
+		let cancelled: boolean = false;
+		setIsPlansDialogLoading(true);
+		setPlansDialogError(null);
+		const frameId: number = window.requestAnimationFrame((): void => {
+			void fetchSessionOverview({
+				sessionId: activeSessionId,
+				planLimit: SUMMARY_SEE_MORE_LIMIT,
+				sourceLimit: 0,
+				includePlanPreviews: false,
+				includeSourceImages: false
+			})
+				.then((result: SessionOverviewResult): void => {
+					if (!cancelled) {
+						setPlansDialogOverview(result);
+					}
+				})
+				.catch((error: unknown): void => {
+					if (!cancelled) {
+						console.error("[HomePage] failed to load session plans", error);
+						setPlansDialogError(error instanceof Error ? error.message : t("agentPage.summary.errors.load"));
+					}
+				})
+				.finally((): void => {
+					if (!cancelled) {
+						setIsPlansDialogLoading(false);
+					}
+				});
+		});
+
+		return (): void => {
+			cancelled = true;
+			window.cancelAnimationFrame(frameId);
+		};
+	}, [activeSessionId, plansModalOpen, t]);
+
+	useEffect((): (() => void) | void => {
+		if (!sourcesModalOpen || activeSessionId === null) {
+			return;
+		}
+
+		let cancelled: boolean = false;
+		setIsSourcesDialogLoading(true);
+		setSourcesDialogError(null);
+		const frameId: number = window.requestAnimationFrame((): void => {
+			void fetchSessionOverview({
+				sessionId: activeSessionId,
+				planLimit: 0,
+				sourceLimit: SUMMARY_SEE_MORE_LIMIT,
+				includeSourceImages: false
+			})
+				.then((result: SessionOverviewResult): void => {
+					if (!cancelled) {
+						setSourcesDialogOverview(result);
+					}
+				})
+				.catch((error: unknown): void => {
+					if (!cancelled) {
+						console.error("[HomePage] failed to load session sources", error);
+						setSourcesDialogError(error instanceof Error ? error.message : t("agentPage.summary.errors.load"));
+					}
+				})
+				.finally((): void => {
+					if (!cancelled) {
+						setIsSourcesDialogLoading(false);
+					}
+				});
+		});
+
+		return (): void => {
+			cancelled = true;
+			window.cancelAnimationFrame(frameId);
+		};
+	}, [activeSessionId, sourcesModalOpen, t]);
 
 	const handleSummaryOpenChange = useCallback((open: boolean): void => {
 		setSummaryOpen(open);
@@ -1200,20 +1307,59 @@ function HomePage({
 		return items;
 	}, [gitActions.isCommitMessageGenerating, openGodotSceneModal, requestSummaryGitAction, runGodotProject, showGodotSummaryActions, summaryEnvInfos, summaryOverview, t]);
 
-	async function openPlansModal(): Promise<void> {
-		const result: SessionOverviewResult | null = await loadSummaryOverview(SUMMARY_SEE_MORE_LIMIT, SUMMARY_PREVIEW_LIMIT);
-		if (result !== null) {
-			setPlansModalOpen(true);
-			setSummaryOpen(false);
-		}
+	function openPlansModal(): void {
+		setSummaryOpen(false);
+		setPlansDialogOverview(summaryOverview);
+		setPlansDialogError(null);
+		setPlansModalOpen(true);
 	}
 
-	async function openSourcesModal(): Promise<void> {
-		const result: SessionOverviewResult | null = await loadSummaryOverview(SUMMARY_PREVIEW_LIMIT, SUMMARY_SEE_MORE_LIMIT);
-		if (result !== null) {
-			setSourcesModalOpen(true);
-			setSummaryOpen(false);
+	function openPlanPreview(plan: SessionOverviewPlanItem): void {
+		const requestId: number = ++planPreviewRequestIdRef.current;
+		setPreviewPlan(plan);
+		setPlanPreviewError(null);
+		if (plan.previewMarkdown.trim().length > 0) {
+			setIsPlanPreviewLoading(false);
+			return;
 		}
+		if (activeSessionId === null) {
+			setIsPlanPreviewLoading(false);
+			setPlanPreviewError(t("agentPage.summary.errors.load"));
+			return;
+		}
+
+		setIsPlanPreviewLoading(true);
+		void getPlan(plan.planId, activeSessionId)
+			.then((result: PlanResult): void => {
+				if (requestId !== planPreviewRequestIdRef.current) {
+					return;
+				}
+				setPreviewPlan({
+					...plan,
+					title: result.title || plan.title,
+					status: result.status,
+					updatedAt: result.updatedAt,
+					previewMarkdown: result.previewMarkdown || result.markdown || ""
+				});
+			})
+			.catch((error: unknown): void => {
+				if (requestId === planPreviewRequestIdRef.current) {
+					console.error("[HomePage] failed to load plan preview", error);
+					setPlanPreviewError(error instanceof Error ? error.message : t("agentPage.summary.errors.load"));
+				}
+			})
+			.finally((): void => {
+				if (requestId === planPreviewRequestIdRef.current) {
+					setIsPlanPreviewLoading(false);
+				}
+			});
+	}
+
+	function openSourcesModal(): void {
+		setSummaryOpen(false);
+		setSourcesDialogOverview(summaryOverview);
+		setSourcesDialogError(null);
+		setSourcesModalOpen(true);
 	}
 
 	async function openWorkspaceLaunchTarget(
@@ -1983,18 +2129,29 @@ function HomePage({
 				</Splitter.Panel>
 			</Splitter>
 			<SessionPlansDialog
-				overview={summaryOverview}
+				overview={plansDialogOverview}
 				open={plansModalOpen}
+				loading={isPlansDialogLoading}
+				error={plansDialogError}
 				onClose={(): void => setPlansModalOpen(false)}
-				onPlanSelect={setPreviewPlan}
+				onPlanSelect={openPlanPreview}
 			/>
 			<SessionPlanPreviewDialog
 				plan={previewPlan}
-				onClose={(): void => setPreviewPlan(null)}
+				loading={isPlanPreviewLoading}
+				error={planPreviewError}
+				onClose={(): void => {
+					planPreviewRequestIdRef.current += 1;
+					setPreviewPlan(null);
+					setIsPlanPreviewLoading(false);
+					setPlanPreviewError(null);
+				}}
 			/>
 			<SessionSourcesDialog
-				overview={summaryOverview}
+				overview={sourcesDialogOverview}
 				open={sourcesModalOpen}
+				loading={isSourcesDialogLoading}
+				error={sourcesDialogError}
 				onClose={(): void => setSourcesModalOpen(false)}
 				onSourceSelect={setPreviewSource}
 			/>

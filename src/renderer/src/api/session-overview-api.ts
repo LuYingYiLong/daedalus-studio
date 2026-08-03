@@ -1,6 +1,8 @@
 import { createBackendClient } from "@/shared/api/transport/backend-client";
 import type { WorkspaceConfig, WorkspaceSourceFolder } from "@/api/types";
 import { fetchWorkspaceGitDiffSummary, type WorkspaceGitDiffSummaryResult } from "@/api/workspace-git-diff-api";
+import { fetchGeneratedImageDataUrl } from "@/api/generated-image-api";
+import { fetchImageAttachmentDataUrl } from "@/api/image-attachment-api";
 
 export type SessionOverviewGitInfo = {
 	sourceFolderId: string;
@@ -53,12 +55,27 @@ export type FetchSessionOverviewParams = {
 	sessionId: string;
 	planLimit?: number;
 	sourceLimit?: number;
+	includePlanPreviews?: boolean;
+	includeSourceImages?: boolean;
 };
 
 export async function fetchSessionOverview(params: FetchSessionOverviewParams): Promise<SessionOverviewResult> {
 	const client = await createBackendClient();
 
 	return client.request<SessionOverviewResult>("session.overview.get", params);
+}
+
+export async function fetchSessionOverviewSourceImageDataUrl(
+	sessionId: string,
+	source: Pick<SessionOverviewSourceItem, "id" | "kind">
+): Promise<string> {
+	if (source.kind === "generated_image") {
+		return (await fetchGeneratedImageDataUrl(sessionId, source.id)).dataUrl;
+	}
+	if (source.kind === "image_attachment") {
+		return (await fetchImageAttachmentDataUrl(source.id)).dataUrl;
+	}
+	throw new Error("Text sources do not have image data.");
 }
 
 function getPathBasename(inputPath: string): string {
