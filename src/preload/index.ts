@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import type { KeyboardShortcutOverrides } from "../keyboard-shortcuts";
 import { applyStudioAccentVariables } from "../theme-color";
+import type { OnboardingPreferences } from "../onboarding";
 
 type ClientPreferences = {
 	autoCheckForUpdates: boolean;
@@ -17,6 +18,7 @@ type ClientPreferences = {
 		providerId: string;
 		modelId: string;
 	} | null;
+	onboarding: OnboardingPreferences;
 };
 
 type AppUpdateState = {
@@ -261,6 +263,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
 	windowControl: {
 		openSettings: (page?: string): Promise<void> => ipcRenderer.invoke("window:open-settings", page),
+		relaunch: (): Promise<void> => ipcRenderer.invoke("window:relaunch"),
 		rendererShellReady: (): void => ipcRenderer.send("window:renderer-shell-ready"),
 		rendererReady: (): void => ipcRenderer.send("window:renderer-ready"),
 		onSettingsPageRequested: (callback: (page: string) => void): (() => void) => {

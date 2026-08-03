@@ -29,5 +29,8 @@ describe("AboutSettingsPage", () => {
 		expect(cssSource).toContain("overflow-y: auto;");
 		expect(cssSource).toMatch(/\.content\s*{[^}]*display:\s*grid;/);
 		expect(cssSource).toContain("padding: 0 var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);");
+		expect(pageSource).toContain("createDefaultOnboardingPreferences()");
+		expect(pageSource).toContain("window.electronAPI.windowControl.relaunch()");
+		expect(pageSource).toContain("settings.about.onboarding.resetAndRestart");
 	});
 });

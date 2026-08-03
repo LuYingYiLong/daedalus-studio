@@ -148,6 +148,20 @@
 	font-size: 16px;
 }
 
+.onboardingRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ds-space-3);
+}
+
+@media (max-width: 720px) {
+	.onboardingRow {
+		align-items: stretch;
+		flex-direction: column;
+	}
+}
+
 .linkIcon {
 	width: 16px;
 	height: 16px;

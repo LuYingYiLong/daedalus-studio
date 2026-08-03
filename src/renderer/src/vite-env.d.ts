@@ -1,5 +1,7 @@
 /// <reference types="vite-plugin-svgr/client" />
 
+import type { OnboardingPreferences } from "../../onboarding";
+
 export {};
 
 declare global {
@@ -86,6 +88,7 @@ declare global {
 			providerId: string;
 			modelId: string;
 		} | null;
+		onboarding: OnboardingPreferences;
 	}
 
 	interface ClientPreferencesAPI {
@@ -185,6 +188,7 @@ declare global {
 
 	interface WindowControlAPI {
 		openSettings: (page?: string) => Promise<void>;
+		relaunch: () => Promise<void>;
 		rendererShellReady: () => void;
 		rendererReady: () => void;
 		onSettingsPageRequested: (callback: (page: string) => void) => () => void;

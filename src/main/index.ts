@@ -53,6 +53,7 @@ const RENDERER_READY_FALLBACK_MS: number = 3_500;
 const SETTINGS_WINDOW_PREWARM_DELAY_MS: number = 100;
 let settingsWindowPrewarmTimer: ReturnType<typeof setTimeout> | null = null;
 let isAppQuitting: boolean = false;
+let isDevelopmentRendererReloading: boolean = false;
 let pendingSettingsPage: string = "provider";
 const SETTINGS_PAGE_KEYS: readonly string[] = [
 	"provider",
@@ -369,6 +370,7 @@ function cancelSettingsWindowPrewarm(): void {
 function scheduleSettingsWindowPrewarm(): void {
 	if (
 		isAppQuitting
+		|| isDevelopmentRendererReloading
 		|| settingsWindowPrewarmTimer !== null
 		|| mainWindow === null
 		|| mainWindow.isDestroyed()
@@ -380,6 +382,7 @@ function scheduleSettingsWindowPrewarm(): void {
 		settingsWindowPrewarmTimer = null;
 		if (
 			!isAppQuitting
+			&& !isDevelopmentRendererReloading
 			&& mainWindow !== null
 			&& !mainWindow.isDestroyed()
 			&& (settingsWindow === null || settingsWindow.isDestroyed())
@@ -391,6 +394,58 @@ function scheduleSettingsWindowPrewarm(): void {
 
 ipcMain.handle("window:open-settings", (_event, page?: unknown): void => {
 	openSettingsWindow(isSettingsPageKey(page) ? page : "provider");
+});
+
+function reloadDevelopmentRenderer(): void {
+	if (isDevelopmentRendererReloading) {
+		return;
+	}
+
+	isDevelopmentRendererReloading = true;
+	cancelSettingsWindowPrewarm();
+
+	if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
+		settingsWindow.destroy();
+	}
+
+	const browserWindow: BrowserWindow | null = mainWindow;
+	if (browserWindow === null || browserWindow.isDestroyed()) {
+		isDevelopmentRendererReloading = false;
+		createWindow();
+		return;
+	}
+
+	const finishReload = (): void => {
+		browserWindow.webContents.removeListener("did-finish-load", finishReload);
+		browserWindow.webContents.removeListener("did-fail-load", finishReload);
+		isDevelopmentRendererReloading = false;
+	};
+	browserWindow.webContents.once("did-finish-load", finishReload);
+	browserWindow.webContents.once("did-fail-load", finishReload);
+	browserWindow.webContents.reloadIgnoringCache();
+	revealRendererWindow(browserWindow);
+}
+
+ipcMain.handle("window:relaunch", (event): void => {
+	const senderWindow: BrowserWindow | null = BrowserWindow.fromWebContents(event.sender);
+	if (senderWindow === null || (senderWindow !== mainWindow && senderWindow !== settingsWindow)) {
+		throw new Error("window_relaunch_not_allowed");
+	}
+	if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
+		setImmediate(reloadDevelopmentRenderer);
+		return;
+	}
+	if (isAppQuitting) {
+		return;
+	}
+	isAppQuitting = true;
+	cancelSettingsWindowPrewarm();
+	windowLifecycleController.markQuitting();
+	app.relaunch({
+		execPath: process.execPath,
+		args: process.argv.slice(1)
+	});
+	app.quit();
 });
 
 function createWindow(): void {

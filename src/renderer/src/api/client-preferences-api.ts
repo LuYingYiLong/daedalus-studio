@@ -1,5 +1,6 @@
 import type { KeyboardShortcutOverrides } from "./keyboard-shortcuts";
 import { DEFAULT_STUDIO_THEME_COLOR } from "../../../theme-color";
+import { createDefaultOnboardingPreferences, type OnboardingPreferences } from "../../../onboarding";
 
 export type ClientPreferences = {
 	autoCheckForUpdates: boolean;
@@ -13,6 +14,7 @@ export type ClientPreferences = {
 		providerId: string;
 		modelId: string;
 	} | null;
+	onboarding: OnboardingPreferences;
 };
 
 export type LanguagePreference = "system" | "en-US" | "zh-CN";
@@ -37,7 +39,8 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 		size: 260
 	},
 	keyboardShortcuts: {},
-	lastComposerModel: null
+	lastComposerModel: null,
+	onboarding: createDefaultOnboardingPreferences()
 };
 
 export const CLIENT_PREFERENCES_CHANGED_EVENT = "daedalus:client-preferences-changed";

@@ -1,0 +1,189 @@
+.root {
+	display: flex;
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 0;
+	padding: clamp(16px, 3vw, 36px);
+	overflow: hidden;
+}
+
+.shell {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr) auto;
+	gap: var(--ds-space-3);
+	width: min(1040px, 100%);
+	min-width: 0;
+	min-height: 0;
+	margin: 0 auto;
+	padding: var(--ds-space-4);
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-surface-elevated);
+	box-shadow: var(--ds-box-shadow);
+	user-select: none;
+}
+
+.body {
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+	padding: var(--ds-space-2) clamp(2px, 2vw, 22px);
+}
+
+.footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ds-space-2);
+}
+
+.welcome,
+.stepContent,
+.stepContentWide {
+	display: grid;
+	align-content: center;
+	gap: var(--ds-space-3);
+	width: min(720px, 100%);
+	min-height: 100%;
+	margin: 0 auto;
+}
+
+.stepContentWide {
+	width: min(900px, 100%);
+	align-content: start;
+}
+
+.welcome {
+	justify-items: center;
+	text-align: center;
+}
+
+.welcome :global(.ant-typography),
+.stepHeading :global(.ant-typography) {
+	margin-block: 0 !important;
+}
+
+.logo {
+	width: 88px;
+	height: 88px;
+}
+
+.welcomeDescription {
+	max-width: 620px;
+	font-size: 16px;
+}
+
+.featureTags {
+	justify-content: center;
+}
+
+.featureTags :global(.daedalus-icon) {
+	width: 14px;
+	height: 14px;
+}
+
+.stepHeading {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--ds-space-3);
+}
+
+.stepIcon {
+	width: 34px !important;
+	height: 34px !important;
+	flex: 0 0 auto;
+	margin-top: 3px;
+	color: var(--ds-accent);
+}
+
+.form {
+	display: grid;
+	min-width: 0;
+}
+
+.form :global(.ant-form-item) {
+	margin-bottom: var(--ds-space-2);
+}
+
+.growingField {
+	flex: 1 1 320px;
+	min-width: 220px;
+}
+
+.settingRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ds-space-3);
+	padding: var(--ds-space-3);
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-surface);
+}
+
+.settingDescription,
+.projectCell {
+	display: grid;
+	min-width: 0;
+	gap: 2px;
+}
+
+.progressPanel {
+	display: grid;
+	gap: var(--ds-space-2);
+	padding: var(--ds-space-3);
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-md);
+	background: var(--ds-surface);
+}
+
+.multilineError {
+	white-space: pre-line;
+}
+
+.summaryRegion {
+	display: flex;
+	justify-content: center;
+	width: 100%;
+}
+
+.summaryList {
+	display: grid;
+	flex: 0 1 420px;
+	gap: var(--ds-space-2);
+	width: 100%;
+	max-width: 420px;
+}
+
+.summaryItem {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ds-space-2);
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--ds-border);
+}
+
+@media (max-width: 760px) {
+	.root {
+		padding: 10px;
+	}
+
+	.shell {
+		padding: 14px;
+	}
+
+	.settingRow {
+		align-items: stretch;
+		flex-direction: column;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.root *,
+	.root *::before,
+	.root *::after {
+		scroll-behavior: auto !important;
+		transition-duration: 0.01ms !important;
+	}
+}

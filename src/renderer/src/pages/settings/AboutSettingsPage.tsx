@@ -1,4 +1,4 @@
-import { Button, Card, Descriptions, Spin, Tag, Typography } from "antd";
+import { App, Button, Card, Descriptions, Spin, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useRequest } from "ahooks";
 import { useTranslation } from "react-i18next";
@@ -8,6 +8,8 @@ import { Icon } from "@/assets/icons";
 import backendColorfulIconUrl from "@/assets/icons/backend-colorful.svg?url";
 import daedalusColorfulIconUrl from "@/assets/icons/icon-colorful.svg";
 import AppUpdateDialog from "@/features/app-update/AppUpdateDialog";
+import { updateClientPreferences } from "@/api/client-preferences-api";
+import { createDefaultOnboardingPreferences } from "../../../../onboarding";
 import styles from "./AboutSettingsPage.module.css";
 
 type PackageInfo = {
@@ -89,8 +91,10 @@ async function loadBackendDetails(fallbackMessage: string): Promise<BackendDetai
 
 function AboutSettingsPage(): React.JSX.Element {
 	const { t } = useTranslation();
+	const { message, modal } = App.useApp();
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
 	const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState<boolean>(false);
+	const [isResettingOnboarding, setIsResettingOnboarding] = useState<boolean>(false);
 	const {
 		data,
 		loading: isLoading,
@@ -170,6 +174,26 @@ function AboutSettingsPage(): React.JSX.Element {
 		if (updateState?.updateKind === "backend" && updateState.backend.status === "downloaded") {
 			setUpdateState(await window.electronAPI.appUpdate.acknowledge());
 		}
+	}
+
+	function confirmResetOnboarding(): void {
+		modal.confirm({
+			title: t("settings.about.onboarding.confirmTitle"),
+			content: t("settings.about.onboarding.confirmDescription"),
+			okText: t("settings.about.onboarding.resetAndRestart"),
+			cancelText: t("settings.common.cancel"),
+			async onOk(): Promise<void> {
+				setIsResettingOnboarding(true);
+				try {
+					await updateClientPreferences({ onboarding: createDefaultOnboardingPreferences() });
+					await window.electronAPI.windowControl.relaunch();
+				} catch (resetError: unknown) {
+					setIsResettingOnboarding(false);
+					void message.error(getErrorMessage(resetError, t("settings.about.onboarding.resetFailed")));
+					throw resetError;
+				}
+			}
+		});
 	}
 
 	const gitHubUrl = "https://github.com/LuYingYiLong/daedalus-studio";
@@ -355,6 +379,17 @@ function AboutSettingsPage(): React.JSX.Element {
 							<Typography.Text type="secondary">
 								{t("settings.about.sourceDescription")}
 							</Typography.Text>
+						</Card>
+
+						<Card title={t("settings.about.onboarding.title")} className={styles.detailsCard}>
+							<div className={styles.onboardingRow}>
+								<Typography.Text type="secondary">
+									{t("settings.about.onboarding.description")}
+								</Typography.Text>
+								<Button loading={isResettingOnboarding} disabled={isResettingOnboarding} onClick={confirmResetOnboarding}>
+									{t("settings.about.onboarding.resetAndRestart")}
+								</Button>
+							</div>
 						</Card>
 					</>
 				) : null}

@@ -35,6 +35,138 @@
       "subtitleWithWorkspace": "Describe the next task for this workspace."
     }
   },
+  "onboarding": {
+    "ariaLabel": "Daedalus Studio setup",
+    "steps": {
+      "welcome": "Welcome",
+      "provider": "Provider",
+      "godot_executable": "Godot",
+      "documentation": "Documentation",
+      "godot_plugin": "Plugin",
+      "complete": "Complete"
+    },
+    "actions": {
+      "start": "Start setup",
+      "back": "Back",
+      "next": "Next",
+      "skip": "Skip",
+      "cancel": "Cancel",
+      "enterStudio": "Enter Daedalus Studio"
+    },
+    "outcomes": {
+      "configured": "Configured",
+      "skipped": "Skipped"
+    },
+    "welcome": {
+      "title": "Welcome to Daedalus Studio",
+      "description": "Set up the essentials for AI-assisted Godot development. Every integration is optional and can be changed later in Settings.",
+      "features": {
+        "agent": "AI agents",
+        "godot": "Godot integration",
+        "documentation": "Offline documentation"
+      }
+    },
+    "provider": {
+      "title": "Configure a model provider",
+      "description": "Connect a provider and choose the model Daedalus should use for new conversations.",
+      "existingReady": "A provider and model are already ready. You can continue or configure another one.",
+      "testSucceeded": "Connection succeeded. Choose a model to finish setup.",
+      "saved": "The provider and model are ready.",
+      "fields": {
+        "provider": "Provider",
+        "apiKey": "API key",
+        "apiKeyPlaceholder": "Enter an API key",
+        "baseUrl": "API Base URL",
+        "model": "Model",
+        "modelPlaceholder": "Select a model"
+      },
+      "actions": {
+        "test": "Test connection",
+        "save": "Save and use"
+      },
+      "errors": {
+        "test": "The provider connection failed.",
+        "save": "Failed to save the provider and model."
+      }
+    },
+    "godotExecutable": {
+      "title": "Select the Godot executable",
+      "description": "Daedalus uses this executable for project validation, launch actions, and version-aware documentation.",
+      "ready": "Godot {{version}} is ready.",
+      "path": "Godot executable",
+      "notSelected": "No Godot executable selected",
+      "actions": {
+        "select": "Select executable"
+      },
+      "errors": {
+        "invalid": "The selected executable could not be validated.",
+        "select": "Failed to select the Godot executable."
+      }
+    },
+    "documentation": {
+      "title": "Install offline Godot documentation",
+      "description": "Download an official godot-docs branch so agents can verify unfamiliar Godot APIs without relying on web access.",
+      "ready": "Offline documentation search is ready.",
+      "installed": "{{count}} documentation version installed",
+      "installed_other": "{{count}} documentation versions installed",
+      "enableSearch": "Enable search",
+      "branch": "Documentation branch",
+      "selectBranch": "Select a branch",
+      "install": "Download and install",
+      "stages": {
+        "resolving": "Resolving documentation source",
+        "downloading": "Downloading documentation",
+        "extracting": "Extracting documentation",
+        "indexing": "Building search index",
+        "validating": "Validating search index",
+        "rolling_back": "Restoring healthy index",
+        "finalizing": "Finishing installation",
+        "completed": "Documentation is ready",
+        "failed": "Documentation installation failed",
+        "cancelled": "Documentation installation cancelled"
+      },
+      "errors": {
+        "load": "Failed to load documentation options.",
+        "job": "Failed to read documentation progress.",
+        "install": "Failed to install documentation.",
+        "cancel": "Failed to cancel the documentation operation.",
+        "toggle": "Failed to update documentation search."
+      }
+    },
+    "godotPlugin": {
+      "title": "Install the Godot Daedalus plugin",
+      "description": "Choose one or more Godot projects. The plugin connects their editors to Daedalus tools and diagnostics.",
+      "ready": "Godot Daedalus is installed for at least one project.",
+      "pendingRestart": "Plugin changes are staged and will apply after Godot closes.",
+      "selected": "{{count}} project selected",
+      "selected_other": "{{count}} projects selected",
+      "empty": "No Godot projects were found.",
+      "incompatible": "Requires Godot 4.5 or newer",
+      "columns": {
+        "project": "Project",
+        "godot": "Godot",
+        "status": "Status"
+      },
+      "actions": {
+        "scan": "Rescan",
+        "add": "Add project",
+        "install": "Install selected"
+      },
+      "errors": {
+        "scan": "Failed to scan Godot projects.",
+        "add": "Failed to add the Godot project.",
+        "install": "Failed to install the plugin."
+      }
+    },
+    "complete": {
+      "title": "Daedalus Studio is ready",
+      "description": "You can revisit every optional integration from Settings at any time."
+    },
+    "errors": {
+      "saveProgress": "Failed to save setup progress.",
+      "complete": "Failed to complete setup."
+    }
+  },
   "workspaceTree": {
     "projectEditor": {
       "appearance": "Project appearance",
@@ -997,6 +1129,14 @@
       "actions": {
         "refresh": "Refresh",
         "checkForUpdates": "Check for updates"
+      },
+      "onboarding": {
+        "title": "Setup guide",
+        "description": "Restart the first-run guide without removing providers, Godot paths, documentation, or installed plugins.",
+        "resetAndRestart": "Reset and restart",
+        "confirmTitle": "Reset the setup guide?",
+        "confirmDescription": "Daedalus Studio will restart at the welcome page. Your existing configuration will be kept.",
+        "resetFailed": "Failed to reset the setup guide."
       },
       "fields": {
         "author": "Author",

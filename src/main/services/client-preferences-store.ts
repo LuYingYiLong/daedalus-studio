@@ -6,6 +6,14 @@ import {
 	type ShortcutPlatform
 } from "../../keyboard-shortcuts";
 import { DEFAULT_STUDIO_THEME_COLOR, normalizeStudioThemeColor } from "../../theme-color";
+import {
+	ONBOARDING_STEP_IDS,
+	createDefaultOnboardingPreferences,
+	type OnboardingConfigurableStepId,
+	type OnboardingPreferences,
+	type OnboardingStepId,
+	type OnboardingStepOutcome
+} from "../../onboarding";
 
 export type ClientPreferences = {
 	autoCheckForUpdates: boolean;
@@ -22,6 +30,7 @@ export type ClientPreferences = {
 		providerId: string;
 		modelId: string;
 	} | null;
+	onboarding: OnboardingPreferences;
 };
 
 export type ClientPreferencesPatch = Partial<ClientPreferences>;
@@ -39,7 +48,8 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 		size: 260
 	},
 	keyboardShortcuts: {},
-	lastComposerModel: null
+	lastComposerModel: null,
+	onboarding: createDefaultOnboardingPreferences()
 };
 
 const SHORTCUT_PLATFORM: ShortcutPlatform = process.platform === "darwin" ? "mac" : "other";
@@ -80,6 +90,46 @@ function normalizeWorkspaceSidebar(value: unknown): ClientPreferences["workspace
 	return { open, size };
 }
 
+const ONBOARDING_CONFIGURABLE_STEP_IDS: readonly OnboardingConfigurableStepId[] = [
+	"provider",
+	"godot_executable",
+	"documentation",
+	"godot_plugin"
+];
+
+function normalizeOnboardingPreferences(value: unknown): OnboardingPreferences {
+	const defaults: OnboardingPreferences = createDefaultOnboardingPreferences();
+	if (!isRecord(value) || value.schemaVersion !== 1) {
+		return defaults;
+	}
+
+	const completed: boolean = value.completed === true;
+	const currentStep: OnboardingStepId = typeof value.currentStep === "string"
+		&& ONBOARDING_STEP_IDS.includes(value.currentStep as OnboardingStepId)
+		? value.currentStep as OnboardingStepId
+		: defaults.currentStep;
+	const stepOutcomes: OnboardingPreferences["stepOutcomes"] = {};
+	if (isRecord(value.stepOutcomes)) {
+		for (const stepId of ONBOARDING_CONFIGURABLE_STEP_IDS) {
+			const outcome: unknown = value.stepOutcomes[stepId];
+			if (outcome === "configured" || outcome === "skipped") {
+				stepOutcomes[stepId] = outcome as OnboardingStepOutcome;
+			}
+		}
+	}
+	const completedAt: string | null = completed && typeof value.completedAt === "string" && value.completedAt.trim().length > 0
+		? value.completedAt.trim()
+		: null;
+
+	return {
+		schemaVersion: 1,
+		completed,
+		currentStep: completed ? "complete" : currentStep,
+		stepOutcomes,
+		completedAt
+	};
+}
+
 export function normalizeClientPreferences(value: unknown): { preferences: ClientPreferences; normalized: boolean } {
 	if (!isRecord(value)) {
 		return {
@@ -118,6 +168,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			modelId: value.lastComposerModel.modelId.trim()
 		}
 		: DEFAULT_CLIENT_PREFERENCES.lastComposerModel;
+	const onboarding: OnboardingPreferences = normalizeOnboardingPreferences(value.onboarding);
 
 	return {
 		preferences: {
@@ -128,7 +179,8 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			language: languagePreference,
 			workspaceSidebar,
 			keyboardShortcuts,
-			lastComposerModel
+			lastComposerModel,
+			onboarding
 		},
 		normalized: value.autoCheckForUpdates !== autoCheckForUpdates
 			|| value.minimizeToTrayOnClose !== minimizeToTrayOnClose
@@ -138,6 +190,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			|| JSON.stringify(value.workspaceSidebar ?? null) !== JSON.stringify(workspaceSidebar)
 			|| JSON.stringify(value.keyboardShortcuts ?? null) !== JSON.stringify(keyboardShortcuts)
 			|| JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel)
+			|| JSON.stringify(value.onboarding ?? null) !== JSON.stringify(onboarding)
 			|| Object.keys(value).some((key: string): boolean => ![
 				"autoCheckForUpdates",
 				"minimizeToTrayOnClose",
@@ -146,7 +199,8 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 				"language",
 				"workspaceSidebar",
 				"keyboardShortcuts",
-				"lastComposerModel"
+				"lastComposerModel",
+				"onboarding"
 			].includes(key))
 	};
 }
@@ -196,6 +250,9 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 			providerId: value.lastComposerModel.providerId.trim(),
 			modelId: value.lastComposerModel.modelId.trim()
 		};
+	}
+	if (isRecord(value.onboarding)) {
+		patch.onboarding = normalizeOnboardingPreferences(value.onboarding);
 	}
 	return patch;
 }

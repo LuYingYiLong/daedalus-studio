@@ -70,7 +70,8 @@ describe("client preferences store", () => {
 				lastComposerModel: {
 					providerId: "minimax",
 					modelId: "MiniMax-M3"
-				}
+				},
+				onboarding: DEFAULT_CLIENT_PREFERENCES.onboarding
 			},
 			normalized: true
 		});
@@ -97,7 +98,8 @@ describe("client preferences store", () => {
 				size: 260
 			},
 			keyboardShortcuts: {},
-			lastComposerModel: null
+			lastComposerModel: null,
+			onboarding: DEFAULT_CLIENT_PREFERENCES.onboarding
 		});
 		expect(memory.writes.at(-1)).toBe(`${JSON.stringify(nextPreferences, null, 2)}\n`);
 	});
@@ -190,5 +192,49 @@ describe("client preferences store", () => {
 		expect(nextPreferences.keyboardShortcuts).toEqual({
 			"workbench.toggleWorkspaceSidebar": "Mod+Alt+KeyQ"
 		});
+	});
+
+	it("starts existing users at onboarding and persists resumable progress", async () => {
+		expect(normalizeClientPreferences({ autoCheckForUpdates: true }).preferences.onboarding).toEqual({
+			schemaVersion: 1,
+			completed: false,
+			currentStep: "welcome",
+			stepOutcomes: {},
+			completedAt: null
+		});
+
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
+			onboarding: {
+				schemaVersion: 1,
+				completed: false,
+				currentStep: "documentation",
+				stepOutcomes: {
+					provider: "configured",
+					godot_executable: "skipped"
+				},
+				completedAt: null
+			}
+		}, memory.io);
+
+		expect(nextPreferences.onboarding.currentStep).toBe("documentation");
+		expect(nextPreferences.onboarding.stepOutcomes).toEqual({
+			provider: "configured",
+			godot_executable: "skipped"
+		});
+	});
+
+	it("resets invalid onboarding state without losing other preferences", () => {
+		const normalized = normalizeClientPreferences({
+			theme: "dark",
+			onboarding: {
+				schemaVersion: 2,
+				completed: true,
+				currentStep: "missing"
+			}
+		}).preferences;
+
+		expect(normalized.theme).toBe("dark");
+		expect(normalized.onboarding).toEqual(DEFAULT_CLIENT_PREFERENCES.onboarding);
 	});
 });
