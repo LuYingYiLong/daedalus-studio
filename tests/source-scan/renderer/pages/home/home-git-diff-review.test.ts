@@ -77,7 +77,7 @@ describe("HomePage git diff review source", () => {
 		expect(dockPanelTabsSource).toContain('t("dock.add.reviewPanel")');
 		expect(dockPanelTabsSource).toContain('t("dock.add.terminalPanel")');
 		expect(dockPanelTabsSource).toContain("ensurePanelTab(defaultKind)");
-		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} sourceFolderId={sourceFolderId} contextItems={contextItems}");
+		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} sourceFolderId={sourceFolderId} gitStateRevision={gitStateRevision} contextItems={contextItems}");
 		expect(dockPanelTabsSource).toContain("<TerminalPanel");
 		expect(dockPanelTabsSource).toContain("terminalId={createTerminalRuntimeId(sessionId, tab.key)}");
 		expect(dockPanelTabsSource).toContain("createTerminalRuntimeId(sessionId, targetKey)");
@@ -96,9 +96,20 @@ describe("HomePage git diff review source", () => {
 	it("opens shared git action dialogs from the review panel", () => {
 		expect(reviewPanelSource).toContain("useGitActionDialogController");
 		expect(reviewPanelSource).toContain("onCommitSuccess: async (): Promise<void> => {");
-		expect(reviewPanelSource).toContain("await Promise.all([loadSummary(true), onGitStateChange?.()]);");
+		expect(reviewPanelSource).toContain("if (onGitStateChange !== undefined)");
+		expect(reviewPanelSource).toContain("await onGitStateChange();");
+		expect(reviewPanelSource).toContain("await loadSummary(true);");
+		expect(reviewPanelSource).not.toContain("Promise.all([loadSummary(true), onGitStateChange?.()])");
+		expect(reviewPanelSource).toContain("gitStateRevision?: number;");
+		expect(reviewPanelSource).toContain("}, [gitStateRevision, sourceFolderId, workspaceId]);");
+		expect(dockPanelTabsSource).toContain("gitStateRevision={gitStateRevision}");
 		expect(dockPanelTabsSource).toContain("onGitStateChange={onGitStateChange}");
 		expect(agentSource).toContain("const handleDockGitStateChange = useCallback");
+		expect(agentSource).toContain("const [gitStateRevision, setGitStateRevision]");
+		expect(agentSource).toContain("setGitStateRevision((current: number): number => current + 1);");
+		expect(agentSource).toContain("onCommitSuccess: handleDockGitStateChange");
+		expect(agentSource).toContain("onBranchSuccess: handleDockGitStateChange");
+		expect(agentSource).toContain("gitStateRevision={gitStateRevision}");
 		expect(agentSource).toContain("onGitStateChange={handleDockGitStateChange}");
 		expect(reviewPanelSource).toContain("onClick={gitActions.openCommitDialog}");
 		expect(reviewPanelSource).toContain("<CommitActionDialog {...gitActions.commitDialogProps} />");

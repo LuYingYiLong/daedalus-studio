@@ -55,6 +55,9 @@ describe("HomePage summary popover source", () => {
 		expect(source).toContain('requestSummaryGitAction(envInfo.sourceFolderId, "diff")');
 		expect(source).toContain("sourceFolderId: summaryGitSourceFolderId");
 		expect(source).toContain("await loadSummaryOverview();");
+		expect(source).toContain("onCommitSuccess: handleDockGitStateChange");
+		expect(source).toContain("onBranchSuccess: handleDockGitStateChange");
+		expect(source).toContain("setGitStateRevision((current: number): number => current + 1);");
 	});
 
 	it("shows commit message generation progress on the commit action", () => {

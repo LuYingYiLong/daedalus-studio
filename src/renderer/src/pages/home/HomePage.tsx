@@ -582,6 +582,7 @@ function HomePage({
 	const [summaryError, setSummaryError] = useState<string | null>(null);
 	const [summaryGitSourceFolderId, setSummaryGitSourceFolderId] = useState<string | null>(null);
 	const [summaryGitActionRequest, setSummaryGitActionRequest] = useState<SummaryGitActionRequest | null>(null);
+	const [gitStateRevision, setGitStateRevision] = useState<number>(0);
 	const [plansModalOpen, setPlansModalOpen] = useState<boolean>(false);
 	const [plansDialogOverview, setPlansDialogOverview] = useState<SessionOverviewResult | null>(null);
 	const [isPlansDialogLoading, setIsPlansDialogLoading] = useState<boolean>(false);
@@ -964,6 +965,7 @@ function HomePage({
 		}
 	}, [isSummaryLoading, loadSummaryOverview, summaryError, summaryOverview]);
 	const handleDockGitStateChange = useCallback(async (): Promise<void> => {
+		setGitStateRevision((current: number): number => current + 1);
 		onWorkspaceRefresh();
 		await loadSummaryOverview();
 	}, [loadSummaryOverview, onWorkspaceRefresh]);
@@ -978,14 +980,8 @@ function HomePage({
 		onBeforeBranchOpen: (): void => {
 			setSummaryOpen(false);
 		},
-		onCommitSuccess: async (): Promise<void> => {
-			onWorkspaceRefresh();
-			await loadSummaryOverview();
-		},
-		onBranchSuccess: async (): Promise<void> => {
-			onWorkspaceRefresh();
-			await loadSummaryOverview();
-		}
+		onCommitSuccess: handleDockGitStateChange,
+		onBranchSuccess: handleDockGitStateChange
 	});
 
 	const requestSummaryGitAction = useCallback((sourceFolderId: string, action: SummaryGitAction): void => {
@@ -2082,8 +2078,9 @@ function HomePage({
 											cwd={workspaceForActions?.rootPath ?? null}
 											contextItems={contextItems}
 											onAddContext={onAddContext}
-											onRemoveContext={onRemoveContext}
-											onGitStateChange={handleDockGitStateChange}
+										onRemoveContext={onRemoveContext}
+										gitStateRevision={gitStateRevision}
+										onGitStateChange={handleDockGitStateChange}
 											isOpen={sideDockOpen}
 											waitForCwd={terminalWaitForCwd}
 											defaultKind="review"
@@ -2114,6 +2111,7 @@ function HomePage({
 									contextItems={contextItems}
 									onAddContext={onAddContext}
 									onRemoveContext={onRemoveContext}
+									gitStateRevision={gitStateRevision}
 									onGitStateChange={handleDockGitStateChange}
 									isOpen={bottomDockOpen}
 									waitForCwd={terminalWaitForCwd}

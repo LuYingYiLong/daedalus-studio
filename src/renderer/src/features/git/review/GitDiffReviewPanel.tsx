@@ -32,6 +32,7 @@ import styles from "./GitDiffReviewPanel.module.css";
 export type GitDiffReviewPanelProps = {
 	workspaceId: string;
 	sourceFolderId?: string | null;
+	gitStateRevision?: number;
 	contextItems: AdditionalContextItem[];
 	onAddContext: (item: AdditionalContextItem) => void;
 	onRemoveContext: (contextId: string) => void;
@@ -115,7 +116,7 @@ function renderFileStats(file: WorkspaceGitDiffFileSummary): ReactElement {
 	);
 }
 
-function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, contextItems, onAddContext, onRemoveContext, onGitStateChange }: GitDiffReviewPanelProps): ReactElement {
+function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, gitStateRevision = 0, contextItems, onAddContext, onRemoveContext, onGitStateChange }: GitDiffReviewPanelProps): ReactElement {
 	const { t } = useTranslation();
 	const [summary, setSummary] = useState<WorkspaceGitDiffSummaryResult | null>(null);
 	const [files, setFiles] = useState<WorkspaceGitDiffFileSummary[]>([]);
@@ -190,7 +191,7 @@ function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, contextItems, 
 
 	useEffect((): void => {
 		void loadSummary(true);
-	}, [sourceFolderId, workspaceId]);
+	}, [gitStateRevision, sourceFolderId, workspaceId]);
 
 	const reviewComments: AdditionalContextItem[] = useMemo((): AdditionalContextItem[] => {
 		return contextItems.filter((item: AdditionalContextItem): boolean => {
@@ -205,10 +206,18 @@ function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, contextItems, 
 		workspaceId,
 		sourceFolderId,
 		onCommitSuccess: async (): Promise<void> => {
-			await Promise.all([loadSummary(true), onGitStateChange?.()]);
+			if (onGitStateChange !== undefined) {
+				await onGitStateChange();
+			} else {
+				await loadSummary(true);
+			}
 		},
 		onBranchSuccess: async (): Promise<void> => {
-			await Promise.all([loadSummary(true), onGitStateChange?.()]);
+			if (onGitStateChange !== undefined) {
+				await onGitStateChange();
+			} else {
+				await loadSummary(true);
+			}
 		}
 	});
 
