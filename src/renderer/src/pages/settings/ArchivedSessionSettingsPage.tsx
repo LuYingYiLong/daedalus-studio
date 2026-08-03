@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Empty, Input, Menu, Modal, Popconfirm, Select, Space, Tag, Tooltip, Typography } from "antd";
+import { Button, Empty, Flex, Input, Menu, Modal, Popconfirm, Select, Space, Tag, Tooltip, Typography } from "antd";
 import type { MenuProps } from "antd";
 import { deleteArchivedSession, fetchArchivedSessions, restoreArchivedSession } from "@/api/session-api";
 import { fetchWorkspaces } from "@/api/workspace-api";
@@ -124,6 +124,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 	const [busyAction, setBusyAction] = useState<SessionAction | null>(null);
 	const [deleteAllOpen, setDeleteAllOpen] = useState<boolean>(false);
 	const [isDeletingAll, setIsDeletingAll] = useState<boolean>(false);
+	const [catalogRevision, setCatalogRevision] = useState<number>(0);
 	const labels: ArchivedSessionLabels = useMemo((): ArchivedSessionLabels => {
 		return {
 			all: t("settings.archivedSessions.filters.all"),
@@ -141,6 +142,12 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 			restoreAria: (sessionTitle: string): string => t("settings.archivedSessions.aria.restore", { sessionTitle })
 		};
 	}, [t]);
+
+	useEffect((): (() => void) => {
+		return window.electronAPI.sessionCatalog.onChanged((): void => {
+			setCatalogRevision((currentRevision: number): number => currentRevision + 1);
+		});
+	}, []);
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -177,7 +184,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 		return (): void => {
 			cancelled = true;
 		};
-	}, [labels.failedLoad]);
+	}, [catalogRevision, labels.failedLoad]);
 
 	const workspacesById: Map<string, WorkspaceConfig> = useMemo((): Map<string, WorkspaceConfig> => {
 		return new Map(workspaces.map((workspace: WorkspaceConfig): [string, WorkspaceConfig] => [workspace.id, workspace]));
@@ -331,21 +338,23 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 					</Typography.Title>
 					<Tag>{archivedSessions.length}</Tag>
 				</div>
-				<Space.Compact className={styles.spaceCompact}>
-					<Input
-						allowClear={true}
-						prefix={<Icon name="search" />}
-						placeholder={t("settings.archivedSessions.searchPlaceholder")}
-						value={searchText}
-						className={styles.searchBox}
-						onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setSearchText(event.target.value)}
-					/>
-					<Select
-						className={styles.workspaceSelect}
-						value={workspaceFilter}
-						options={workspaceOptions}
-						onChange={(value: string): void => setWorkspaceFilter(value)}
-					/>
+				<Flex gap="small" className={styles.toolbar}>
+					<Space.Compact className={styles.filtersCompact}>
+						<Input
+							allowClear={true}
+							prefix={<Icon name="search" />}
+							placeholder={t("settings.archivedSessions.searchPlaceholder")}
+							value={searchText}
+							className={styles.searchBox}
+							onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setSearchText(event.target.value)}
+						/>
+						<Select
+							className={styles.selectBox}
+							value={workspaceFilter}
+							options={workspaceOptions}
+							onChange={(value: string): void => setWorkspaceFilter(value)}
+						/>
+					</Space.Compact>
 					<Button
 						color="danger"
 						variant="solid"
@@ -355,7 +364,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 					>
 						{labels.deleteAll}
 					</Button>
-				</Space.Compact>
+				</Flex>
 			</header>
 
 			{errorMessage !== null ? (

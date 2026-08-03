@@ -654,6 +654,7 @@ function WorkspaceTree({
 		try {
 			setArchivingSessionId(session.id);
 			await archiveSession(session.id);
+			window.electronAPI.sessionCatalog.notifyChanged();
 			setSessions((currentSessions: SessionMetadata[]): SessionMetadata[] => {
 				return currentSessions.filter((currentSession: SessionMetadata): boolean => currentSession.id !== session.id);
 			});

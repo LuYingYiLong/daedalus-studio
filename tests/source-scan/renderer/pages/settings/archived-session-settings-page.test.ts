@@ -12,11 +12,22 @@ describe("ArchivedSessionSettingsPage", () => {
 			"ArchivedSessionSettingsPage.tsx"
 		);
 		const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const workspaceTreeSource: string = readRepoFile(
+			"src",
+			"renderer",
+			"src",
+			"features",
+			"workspace",
+			"WorkspaceTree.tsx"
+		);
 		const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 		const mainSource: string = readRepoFile("src", "main", "index.ts");
 		const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 
 		expect(pageSource).toContain("window.electronAPI.sessionCatalog.notifyChanged()");
+		expect(pageSource).toContain("window.electronAPI.sessionCatalog.onChanged");
+		expect(pageSource).toContain("setCatalogRevision((currentRevision: number): number => currentRevision + 1)");
+		expect(workspaceTreeSource).toContain("window.electronAPI.sessionCatalog.notifyChanged()");
 		expect(appSource).toContain("window.electronAPI.sessionCatalog.onChanged");
 		expect(appSource).toContain("setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1)");
 		expect(preloadSource).toContain('ipcRenderer.send("session-catalog:changed")');

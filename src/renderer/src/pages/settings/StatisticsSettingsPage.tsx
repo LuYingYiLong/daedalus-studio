@@ -1,5 +1,5 @@
 import { Column, Line, Pie } from "@ant-design/charts";
-import { Alert, Card, Empty, Segmented, Spin, Statistic, Tooltip, Typography } from "antd";
+import { Alert, Card, Empty, Segmented, Spin, Statistic, theme as antdTheme, Tooltip, Typography } from "antd";
 import { useMemo, useState } from "react";
 import { useRequest } from "ahooks";
 import { useTranslation } from "react-i18next";
@@ -241,6 +241,7 @@ function ChartEmpty({ description }: { description: string }): React.JSX.Element
 
 function StatisticsSettingsPage(): React.JSX.Element {
 	const { t } = useTranslation();
+	const { token } = antdTheme.useToken();
 	const [range, setRange] = useState<TimeRangeKey>("30d");
 	const {
 		data,
@@ -279,6 +280,40 @@ function StatisticsSettingsPage(): React.JSX.Element {
 	}, [data?.trends, range]);
 	const tokenHeatmapColumnCount: number = Math.max(1, Math.ceil(tokenHeatmapCells.length / 7));
 	const heatmapHasActivity: boolean = tokenHeatmapCells.some((cell: TokenHeatmapCell): boolean => cell.tokens > 0);
+	const chartTheme = useMemo(() => ({
+		axis: {
+			gridStroke: token.colorBorderSecondary,
+			gridStrokeOpacity: 0.55,
+			labelFill: token.colorTextSecondary,
+			labelOpacity: 1,
+			lineStroke: token.colorBorderSecondary,
+			lineStrokeOpacity: 0.75,
+			tickStroke: token.colorBorderSecondary,
+			tickOpacity: 0.75,
+			titleFill: token.colorText,
+			titleOpacity: 1
+		},
+		legendCategory: {
+			itemLabelFill: token.colorTextSecondary,
+			itemLabelFillOpacity: 1,
+			itemValueFill: token.colorTextSecondary,
+			itemValueFillOpacity: 1,
+			navButtonFill: token.colorTextSecondary,
+			navButtonFillOpacity: 1,
+			navPageNumFill: token.colorTextTertiary,
+			navPageNumFillOpacity: 1,
+			titleFill: token.colorText,
+			titleFillOpacity: 1
+		},
+		legendContinuous: {
+			handleLabelFill: token.colorTextSecondary,
+			handleLabelFillOpacity: 1,
+			labelFill: token.colorTextSecondary,
+			labelFillOpacity: 1,
+			titleFill: token.colorText,
+			titleFillOpacity: 1
+		}
+	}), [token.colorBorderSecondary, token.colorText, token.colorTextSecondary, token.colorTextTertiary]);
 
 	return (
 		<section className={styles.page}>
@@ -382,6 +417,7 @@ function StatisticsSettingsPage(): React.JSX.Element {
 									{requestTrendData.length > 0 ? (
 										<Column
 											data={requestTrendData}
+											theme={chartTheme}
 											xField="bucket"
 											yField="requests"
 											height={260}
@@ -398,6 +434,7 @@ function StatisticsSettingsPage(): React.JSX.Element {
 									{tokenTrendData.length > 0 ? (
 										<Line
 											data={tokenTrendData}
+											theme={chartTheme}
 											xField="bucket"
 											yField="tokens"
 											height={260}
@@ -414,6 +451,7 @@ function StatisticsSettingsPage(): React.JSX.Element {
 									{providerRows.length > 0 ? (
 										<Pie
 											data={providerRows}
+											theme={chartTheme}
 											angleField="value"
 											colorField="label"
 											height={260}
@@ -430,6 +468,7 @@ function StatisticsSettingsPage(): React.JSX.Element {
 									{modelRows.length > 0 ? (
 										<Column
 											data={modelRows}
+											theme={chartTheme}
 											xField="label"
 											yField="value"
 											height={260}
