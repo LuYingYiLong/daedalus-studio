@@ -1,6 +1,9 @@
 import { createBackendClient } from "@/shared/api/transport/backend-client";
 
 export type SessionOverviewGitInfo = {
+	sourceFolderId: string;
+	sourceFolderPath: string;
+	title: string;
 	hasGitRepository: boolean;
 	branch: string | null;
 	additions: number;
@@ -33,6 +36,7 @@ export type SessionOverviewSourceItem = {
 export type SessionOverviewResult = {
 	sessionId: string;
 	envInfo: SessionOverviewGitInfo | null;
+	envInfos?: SessionOverviewGitInfo[];
 	plans: {
 		total: number;
 		items: SessionOverviewPlanItem[];

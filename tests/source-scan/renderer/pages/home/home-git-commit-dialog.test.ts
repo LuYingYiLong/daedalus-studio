@@ -50,4 +50,17 @@ describe("HomePage git commit dialog source", () => {
 		expect(gitActionControllerSource).toContain("onBeforeBranchOpen");
 		expect(agentSource).toContain("onBeforeBranchOpen");
 	});
+
+	it("preflights working tree changes before checkout and offers an atomic commit flow", () => {
+		expect(gitActionControllerSource).toContain("fetchWorkspaceGitDiffSummary");
+		expect(gitActionControllerSource).toContain("summary.changedFiles > 0");
+		expect(gitActionControllerSource).toContain("setCheckoutDraft({");
+		expect(gitActionControllerSource).toContain('action: "commit"');
+		expect(gitActionControllerSource).toContain("includeUnstagedChanges: true");
+		expect(gitActionControllerSource).toContain("checkoutDraft.branchName");
+		expect(branchActionDialogSource).toContain('title={t("git.branch.checkoutDraft.title")}');
+		expect(branchActionDialogSource).toContain("destroyOnHidden={true}");
+		expect(branchActionDialogSource).toContain("mask={{ closable: !isCheckoutDraftCommitting }}");
+		expect(branchActionDialogSource).toContain('okText={t("git.branch.checkoutDraft.commitAndCheckout")}');
+	});
 });

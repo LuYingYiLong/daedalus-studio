@@ -29,6 +29,7 @@ type DockPanelTabsProps = {
 	placement: DockPanelPlacement;
 	sessionId: string | null;
 	workspaceId: string | null;
+	sourceFolderId?: string | null;
 	cwd: string | null;
 	isOpen: boolean;
 	waitForCwd: boolean;
@@ -94,6 +95,7 @@ function DockPanelTabs({
 	placement,
 	sessionId,
 	workspaceId,
+	sourceFolderId = null,
 	cwd,
 	isOpen,
 	waitForCwd,
@@ -218,7 +220,7 @@ function DockPanelTabs({
 				return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("dock.empty.noWorkspaceSelected")} />;
 			}
 			return isOpen
-				? <GitDiffReviewPanel workspaceId={workspaceId} contextItems={contextItems} onAddContext={onAddContext} onRemoveContext={onRemoveContext} />
+				? <GitDiffReviewPanel workspaceId={workspaceId} sourceFolderId={sourceFolderId} contextItems={contextItems} onAddContext={onAddContext} onRemoveContext={onRemoveContext} />
 				: null;
 		}
 

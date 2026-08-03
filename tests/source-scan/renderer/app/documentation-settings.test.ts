@@ -19,6 +19,7 @@ describe("Godot documentation settings", () => {
 		"godot-documentation-api.ts"
 	);
 	const mainSource: string = readRepoFile("src", "main", "index.ts");
+	const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 
 	it("places Documentation between Skills and Godot projects", () => {
 		const skillsIndex: number = settingsWindowSource.indexOf('{ key: "skills"');
@@ -46,5 +47,15 @@ describe("Godot documentation settings", () => {
 		expect(pageSource).toContain("cancelGodotDocumentationJob");
 		expect(apiSource).toContain('"godotDocumentation.branches.list"');
 		expect(apiSource).toContain('"godotDocumentation.job.cancel"');
+	});
+
+	it("imports local folders or ZIP archives through native path pickers", () => {
+		expect(pageSource).toContain('setModalMode("local")');
+		expect(pageSource).toContain('godotDocumentationFs.pickDirectory()');
+		expect(pageSource).toContain('godotDocumentationFs.pickZip()');
+		expect(pageSource).toContain("importLocalGodotDocumentation(values.branch, sourcePath)");
+		expect(apiSource).toContain('"godotDocumentation.importLocal"');
+		expect(mainSource).toContain("registerGodotDocumentationFsIpc");
+		expect(preloadSource).toContain("godotDocumentationFs:");
 	});
 });

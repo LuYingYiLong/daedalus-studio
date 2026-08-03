@@ -4,6 +4,8 @@ export type GodotDocumentationRecord = {
 	id: string;
 	branch: string;
 	commitSha: string;
+	source: "official" | "local";
+	sourcePath?: string;
 	installedAt: string;
 	updatedAt: string;
 	documentCount: number;
@@ -24,7 +26,7 @@ export type GodotDocumentationJobStage =
 
 export type GodotDocumentationJob = {
 	jobId: string;
-	operation: "install" | "update";
+	operation: "install" | "update" | "import";
 	branch: string;
 	documentId: string | null;
 	stage: GodotDocumentationJobStage;
@@ -70,6 +72,11 @@ export async function fetchGodotDocumentationBranches(refresh: boolean = false):
 export async function installGodotDocumentation(branch: string): Promise<GodotDocumentationJob> {
 	const client = await createBackendClient();
 	return client.request<GodotDocumentationJob>("godotDocumentation.install", { branch });
+}
+
+export async function importLocalGodotDocumentation(branch: string, sourcePath: string): Promise<GodotDocumentationJob> {
+	const client = await createBackendClient();
+	return client.request<GodotDocumentationJob>("godotDocumentation.importLocal", { branch, sourcePath });
 }
 
 export async function updateGodotDocumentation(documentId: string): Promise<GodotDocumentationJob> {

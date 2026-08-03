@@ -107,3 +107,68 @@ comm.itDialogBody {
 .createBranchHint {
 	font-size: 12px;
 }
+
+.checkoutDraftBody {
+	display: grid;
+	gap: 12px;
+}
+
+.checkoutDraftDescription {
+	margin-bottom: 0 !important;
+}
+
+.checkoutDraftFiles {
+	display: grid;
+	max-height: min(42vh, 360px);
+	overflow-y: auto;
+	border-block: 1px solid var(--ant-color-border-secondary);
+}
+
+.checkoutDraftFile {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 12px;
+	align-items: center;
+	min-height: 34px;
+	padding-inline: 2px 8px;
+	border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.checkoutDraftFile:last-child {
+	border-bottom: 0;
+}
+
+.checkoutDraftPath {
+	min-width: 0;
+	font-family: var(--ant-font-family-code);
+	font-size: 12px;
+}
+
+.checkoutDraftStats {
+	display: inline-flex;
+	gap: 6px;
+	align-items: center;
+	font-family: var(--ant-font-family-code);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.additions {
+	color: var(--ant-color-success);
+}
+
+.deletions {
+	color: var(--ant-color-error);
+}
+
+.checkoutDraftMore {
+	padding-block: 8px;
+	text-align: center;
+}
+
+.checkoutDraftSummary {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	justify-content: space-between;
+}

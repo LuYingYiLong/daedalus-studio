@@ -97,7 +97,7 @@ describe("HomePage terminal panel source", () => {
 		expect(dockPanelTabsSource).toContain("createTerminalRuntimeId(sessionId, targetKey)");
 		expect(dockPanelTabsSource).toContain("open: nextTabs.length > 0 && layout.open");
 		expect(dockPanelTabsSource).toContain("terminalId={createTerminalRuntimeId(sessionId, tab.key)}");
-		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} contextItems={contextItems}");
+		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} sourceFolderId={sourceFolderId} contextItems={contextItems}");
 		expect(dockPanelTabsSource).toContain("tabs: reorderDockTabs(layout.tabs, sourceKey, targetKey)");
 		expect(terminalPanelSource).not.toContain("Tabs");
 	});

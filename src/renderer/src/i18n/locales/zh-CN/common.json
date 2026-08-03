@@ -483,7 +483,24 @@
       },
       "messages": {
         "switched": "已切换到 {{branch}}。",
+        "committedAndSwitched": "已提交工作区更改并切换到 {{branch}}。",
         "createdAndSwitched": "已创建并切换到 {{branch}}。"
+      },
+      "checkoutDraft": {
+        "title": "提交更改以切换分支",
+        "description": "切换到 {{branch}} 前，将提交以下工作区更改：",
+        "commitAndCheckout": "提交并切换分支",
+        "cancel": "取消",
+        "commitMessagePlaceholder": "输入提交消息",
+        "summary": "{{count}} 个已更改文件",
+        "summary_other": "{{count}} 个已更改文件",
+        "moreFiles": "还有 {{count}} 个文件",
+        "moreFiles_other": "还有 {{count}} 个文件",
+        "errors": {
+          "commitMessageRequired": "请输入提交消息。",
+          "load": "检查工作区更改失败。",
+          "commit": "切换分支前提交更改失败。"
+        }
       },
       "errors": {
         "selectWorkspaceBeforeSwitching": "请先选择 workspace 再切换分支。",
@@ -756,11 +773,16 @@
       "title": "文档",
       "enabled": "启用文档查询",
       "add": "添加文档",
+      "importLocal": "导入本地文档",
       "empty": "尚未安装 Godot 离线文档。",
       "item": {
         "stats": "{{documents}} 个文档 · {{chunks}} 个分块 · {{classes}} 个类 · {{size}}",
         "updated": "更新于 {{date}}",
-        "licenses": "手册：CC BY 3.0 · 类参考：MIT"
+        "licenses": "手册：CC BY 3.0 · 类参考：MIT",
+        "source": {
+          "official": "官方",
+          "local": "本地"
+        }
       },
       "modal": {
         "title": "添加 Godot 文档",
@@ -773,6 +795,20 @@
         "refresh": "刷新分支",
         "notice": "下载内容会固定到不可变 commit。磁盘占用取决于所选分支和生成的 SQLite 索引。",
         "download": "下载并建立索引"
+      },
+      "local": {
+        "title": "导入本地 Godot 文档",
+        "sourceTitle": "本地 godot-docs 源",
+        "sourceDescription": "选择已解压的 godot-docs 文件夹或 ZIP 压缩包。Daedalus 会复制并建立索引，不会修改原始文件。",
+        "branch": "文档版本",
+        "branchRequired": "请输入文档版本或分支名称。",
+        "branchPlaceholder": "例如 4.7 或 master",
+        "source": "本地来源",
+        "sourceRequired": "请选择 godot-docs 文件夹或 ZIP 压缩包。",
+        "sourcePlaceholder": "选择文件夹或 ZIP 压缩包",
+        "selectFolder": "选择文件夹",
+        "selectZip": "选择 ZIP",
+        "import": "导入并建立索引"
       },
       "progress": {
         "title": "Godot {{branch}} 文档",
@@ -797,6 +833,16 @@
           "completed": "文档索引已可使用。",
           "failed": "文档操作失败。",
           "cancelled": "文档操作已取消。"
+        },
+        "localMessage": {
+          "resolving": "正在检查本地文档来源…",
+          "downloading": "正在复制本地文档压缩包…",
+          "extracting": "正在校验并暂存本地文档来源…",
+          "indexing": "正在建立本地符号和全文搜索索引…",
+          "finalizing": "正在启用导入的文档 generation…",
+          "completed": "导入的文档索引已可使用。",
+          "failed": "本地文档导入失败。",
+          "cancelled": "本地文档导入已取消。"
         }
       },
       "remove": {
@@ -811,6 +857,7 @@
       "errors": {
         "load": "加载文档设置失败。",
         "branches": "加载官方文档分支失败。",
+        "pickLocal": "选择本地文档来源失败。",
         "job": "读取文档任务进度失败。",
         "update": "更新文档失败。",
         "cancel": "取消文档操作失败。",

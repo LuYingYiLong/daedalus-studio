@@ -15,7 +15,11 @@ import {
 	type WorkspaceGitBranchOperationResult,
 	type WorkspaceGitBranchesResult
 } from "@/api/workspace-git-api";
-import type { BranchActionDialogProps } from "./BranchActionDialog";
+import {
+	fetchWorkspaceGitDiffSummary,
+	type WorkspaceGitDiffSummaryResult
+} from "@/api/workspace-git-diff-api";
+import type { BranchActionDialogProps, BranchCheckoutDraft } from "./BranchActionDialog";
 import type { CommitActionDialogProps } from "./CommitActionDialog";
 import type { CreateBranchDialogProps } from "./CreateBranchDialog";
 
@@ -23,6 +27,7 @@ type BranchOperation = "checkout" | "create";
 
 type UseGitActionDialogControllerOptions = {
 	workspaceId: string | null;
+	sourceFolderId?: string | null;
 	resetKey?: unknown;
 	onCommitSuccess?: (result: CommitOrPushResult) => void | Promise<void>;
 	onBranchSuccess?: (result: WorkspaceGitBranchOperationResult) => void | Promise<void>;
@@ -71,6 +76,7 @@ function formatCommitActionError(error: unknown, action: CommitOrPushAction, t: 
 
 export function useGitActionDialogController({
 	workspaceId,
+	sourceFolderId = null,
 	resetKey,
 	onCommitSuccess,
 	onBranchSuccess,
@@ -96,8 +102,12 @@ export function useGitActionDialogController({
 	const [isBranchesLoading, setIsBranchesLoading] = useState<boolean>(false);
 	const [branchOperation, setBranchOperation] = useState<BranchOperation | null>(null);
 	const [branchError, setBranchError] = useState<string | null>(null);
+	const [checkoutDraft, setCheckoutDraft] = useState<BranchCheckoutDraft | null>(null);
+	const [checkoutCommitMessage, setCheckoutCommitMessage] = useState<string>("");
+	const [checkoutDraftError, setCheckoutDraftError] = useState<string | null>(null);
+	const [isCheckoutDraftCommitting, setIsCheckoutDraftCommitting] = useState<boolean>(false);
 	const isCommitOperationRunning: boolean = commitOperation !== null;
-	const isBranchOperationRunning: boolean = branchOperation !== null;
+	const isBranchOperationRunning: boolean = branchOperation !== null || isCheckoutDraftCommitting;
 
 	useEffect((): void => {
 		commitOpenRef.current = false;
@@ -116,7 +126,11 @@ export function useGitActionDialogController({
 		setIsBranchesLoading(false);
 		setBranchOperation(null);
 		setBranchError(null);
-	}, [resetKey, workspaceId]);
+		setCheckoutDraft(null);
+		setCheckoutCommitMessage("");
+		setCheckoutDraftError(null);
+		setIsCheckoutDraftCommitting(false);
+	}, [resetKey, sourceFolderId, workspaceId]);
 
 	const openCommitDialog = useCallback((): void => {
 		onBeforeCommitOpen?.();
@@ -145,7 +159,10 @@ export function useGitActionDialogController({
 		setIsBranchesLoading(true);
 		setBranchError(null);
 		try {
-			const result: WorkspaceGitBranchesResult = await listWorkspaceGitBranches({ workspaceId });
+			const result: WorkspaceGitBranchesResult = await listWorkspaceGitBranches({
+				workspaceId,
+				sourceFolderId: sourceFolderId ?? undefined
+			});
 			setBranches(result.branches);
 			setSelectedBranchName((previous: string | null): string | null => {
 				if (previous !== null && result.branches.some((branch: WorkspaceGitBranchItem): boolean => branch.name === previous)) {
@@ -163,10 +180,13 @@ export function useGitActionDialogController({
 		} finally {
 			setIsBranchesLoading(false);
 		}
-	}, [t, workspaceId]);
+	}, [sourceFolderId, t, workspaceId]);
 
 	const openBranchDialog = useCallback((): void => {
 		onBeforeBranchOpen?.();
+		setCheckoutDraft(null);
+		setCheckoutCommitMessage("");
+		setCheckoutDraftError(null);
 		setBranchOpen(true);
 		void loadBranches();
 	}, [loadBranches, onBeforeBranchOpen]);
@@ -178,6 +198,9 @@ export function useGitActionDialogController({
 		setBranchOpen(false);
 		setCreateBranchOpen(false);
 		setBranchError(null);
+		setCheckoutDraft(null);
+		setCheckoutCommitMessage("");
+		setCheckoutDraftError(null);
 	}, [isBranchOperationRunning]);
 
 	const openCreateBranchDialog = useCallback((): void => {
@@ -201,11 +224,12 @@ export function useGitActionDialogController({
 
 		const generated: GenerateGitCommitMessageResult = await generateGitCommitMessage({
 			workspaceId,
+			sourceFolderId: sourceFolderId ?? undefined,
 			includeUnstagedChanges
 		});
 		setCommitMessage(generated.message);
 		return generated.message;
-	}, [includeUnstagedChanges, t, workspaceId]);
+	}, [includeUnstagedChanges, sourceFolderId, t, workspaceId]);
 
 	const handleCommitAction = useCallback(async (action: CommitOrPushAction): Promise<void> => {
 		if (workspaceId === null) {
@@ -228,6 +252,7 @@ export function useGitActionDialogController({
 
 			const result: CommitOrPushResult = await commitOrPushGit({
 				workspaceId,
+				sourceFolderId: sourceFolderId ?? undefined,
 				action,
 				message: action === "push" ? undefined : nextMessage,
 				includeUnstagedChanges
@@ -252,6 +277,7 @@ export function useGitActionDialogController({
 		includeUnstagedChanges,
 		messageApi,
 		onCommitSuccess,
+		sourceFolderId,
 		t,
 		workspaceId
 	]);
@@ -271,19 +297,113 @@ export function useGitActionDialogController({
 		setBranchError(null);
 		setSelectedBranchName(branchName);
 		try {
+			const summary: WorkspaceGitDiffSummaryResult = await fetchWorkspaceGitDiffSummary({
+				workspaceId,
+				sourceFolderId: sourceFolderId ?? undefined,
+				cursor: 0,
+				limit: 100
+			});
+			if (!summary.hasGitRepository) {
+				setBranchError(t("git.branch.errors.notGitRepository"));
+				return;
+			}
+			if (summary.changedFiles > 0) {
+				setCheckoutDraft({
+					branchName,
+					files: summary.files,
+					changedFiles: summary.changedFiles,
+					additions: summary.additions,
+					deletions: summary.deletions
+				});
+				setCheckoutCommitMessage("");
+				setCheckoutDraftError(null);
+				return;
+			}
+
 			const result: WorkspaceGitBranchOperationResult = await checkoutWorkspaceGitBranch({
 				workspaceId,
+				sourceFolderId: sourceFolderId ?? undefined,
 				branchName
 			});
 			void messageApi.success(t("git.branch.messages.switched", { branch: result.branch }));
 			setBranchOpen(false);
 			await onBranchSuccess?.(result);
 		} catch (error: unknown) {
-			setBranchError(error instanceof Error ? error.message : t("git.branch.errors.switch"));
+			setBranchError(error instanceof Error ? error.message : t("git.branch.checkoutDraft.errors.load"));
 		} finally {
 			setBranchOperation(null);
 		}
-	}, [messageApi, onBranchSuccess, selectedBranchName, t, workspaceId]);
+	}, [messageApi, onBranchSuccess, selectedBranchName, sourceFolderId, t, workspaceId]);
+
+	const closeCheckoutDraft = useCallback((): void => {
+		if (isCheckoutDraftCommitting) {
+			return;
+		}
+		setCheckoutDraft(null);
+		setCheckoutCommitMessage("");
+		setCheckoutDraftError(null);
+	}, [isCheckoutDraftCommitting]);
+
+	const handleCheckoutDraftCommit = useCallback(async (): Promise<void> => {
+		if (workspaceId === null || checkoutDraft === null) {
+			return;
+		}
+		const message: string = checkoutCommitMessage.trim();
+		if (message.length === 0) {
+			setCheckoutDraftError(t("git.branch.checkoutDraft.errors.commitMessageRequired"));
+			return;
+		}
+
+		let committed: boolean = false;
+		setIsCheckoutDraftCommitting(true);
+		setCheckoutDraftError(null);
+		setBranchError(null);
+		try {
+			const commitResult: CommitOrPushResult = await commitOrPushGit({
+				workspaceId,
+				sourceFolderId: sourceFolderId ?? undefined,
+				action: "commit",
+				message,
+				includeUnstagedChanges: true
+			});
+			committed = true;
+			const checkoutResult: WorkspaceGitBranchOperationResult = await checkoutWorkspaceGitBranch({
+				workspaceId,
+				sourceFolderId: sourceFolderId ?? undefined,
+				branchName: checkoutDraft.branchName
+			});
+			setCheckoutDraft(null);
+			setCheckoutCommitMessage("");
+			setBranchOpen(false);
+			void messageApi.success(t("git.branch.messages.committedAndSwitched", { branch: checkoutResult.branch }));
+			void Promise.allSettled([
+				Promise.resolve().then((): void | Promise<void> => onCommitSuccess?.(commitResult)),
+				Promise.resolve().then((): void | Promise<void> => onBranchSuccess?.(checkoutResult))
+			]);
+		} catch (error: unknown) {
+			const errorMessage: string = error instanceof Error
+				? error.message
+				: t(committed ? "git.branch.errors.switch" : "git.branch.checkoutDraft.errors.commit");
+			if (committed) {
+				setCheckoutDraft(null);
+				setCheckoutCommitMessage("");
+				setBranchError(errorMessage);
+			} else {
+				setCheckoutDraftError(errorMessage);
+			}
+		} finally {
+			setIsCheckoutDraftCommitting(false);
+		}
+	}, [
+		checkoutCommitMessage,
+		checkoutDraft,
+		messageApi,
+		onBranchSuccess,
+		onCommitSuccess,
+		sourceFolderId,
+		t,
+		workspaceId
+	]);
 
 	const handleBranchCreate = useCallback(async (): Promise<void> => {
 		if (workspaceId === null) {
@@ -301,6 +421,7 @@ export function useGitActionDialogController({
 		try {
 			const result: WorkspaceGitBranchOperationResult = await createWorkspaceGitBranch({
 				workspaceId,
+				sourceFolderId: sourceFolderId ?? undefined,
 				branchName,
 				startPoint: newBranchStartPoint.trim().length > 0 ? newBranchStartPoint.trim() : undefined
 			});
@@ -317,7 +438,7 @@ export function useGitActionDialogController({
 		} finally {
 			setBranchOperation(null);
 		}
-	}, [loadBranches, messageApi, newBranchName, newBranchStartPoint, onBranchSuccess, t, workspaceId]);
+	}, [loadBranches, messageApi, newBranchName, newBranchStartPoint, onBranchSuccess, sourceFolderId, t, workspaceId]);
 
 	const commitDialogProps: CommitActionDialogProps = useMemo((): CommitActionDialogProps => {
 		return {
@@ -356,6 +477,10 @@ export function useGitActionDialogController({
 			isBranchesLoading,
 			branchOperation,
 			errorMessage: branchError,
+			checkoutDraft,
+			checkoutCommitMessage,
+			checkoutDraftError,
+			isCheckoutDraftCommitting,
 			hasWorkspace: workspaceId !== null,
 			onClose: closeBranchDialog,
 			onCreateBranchOpen: openCreateBranchDialog,
@@ -366,6 +491,11 @@ export function useGitActionDialogController({
 			onBranchSelect: setSelectedBranchName,
 			onBranchCheckout: (branchName?: string): void => {
 				void handleBranchCheckout(branchName);
+			},
+			onCheckoutCommitMessageChange: setCheckoutCommitMessage,
+			onCheckoutDraftCancel: closeCheckoutDraft,
+			onCheckoutDraftCommit: (): void => {
+				void handleCheckoutDraftCommit();
 			}
 		};
 	}, [
@@ -374,9 +504,15 @@ export function useGitActionDialogController({
 		branchOperation,
 		branchSearch,
 		branches,
+		checkoutCommitMessage,
+		checkoutDraft,
+		checkoutDraftError,
 		closeBranchDialog,
+		closeCheckoutDraft,
 		handleBranchCheckout,
+		handleCheckoutDraftCommit,
 		isBranchesLoading,
+		isCheckoutDraftCommitting,
 		loadBranches,
 		openCreateBranchDialog,
 		selectedBranchName,

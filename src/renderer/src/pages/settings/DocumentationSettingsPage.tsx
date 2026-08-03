@@ -4,6 +4,7 @@ import {
 	Button,
 	Empty,
 	Form,
+	Input,
 	Modal,
 	Progress,
 	Select,
@@ -20,6 +21,7 @@ import {
 	fetchGodotDocumentation,
 	fetchGodotDocumentationBranches,
 	fetchGodotDocumentationJob,
+	importLocalGodotDocumentation,
 	installGodotDocumentation,
 	removeGodotDocumentation,
 	setGodotDocumentationEnabled,
@@ -34,9 +36,10 @@ import styles from "./DocumentationSettingsPage.module.css";
 
 type DocumentationFormValues = {
 	branch: string;
+	sourcePath?: string;
 };
 
-type DocumentationModalMode = "select" | "progress" | null;
+type DocumentationModalMode = "select" | "local" | "progress" | null;
 
 const TERMINAL_JOB_STAGES: ReadonlySet<GodotDocumentationJob["stage"]> = new Set([
 	"completed",
@@ -200,6 +203,12 @@ function DocumentationSettingsPage(): React.JSX.Element {
 		void loadBranches(false);
 	}
 
+	function openLocalImportModal(): void {
+		form.resetFields();
+		setModalMode("local");
+		setBranchError(null);
+	}
+
 	function closeModal(): void {
 		if (job !== null && !isTerminalJob(job)) {
 			return;
@@ -213,6 +222,34 @@ function DocumentationSettingsPage(): React.JSX.Element {
 		try {
 			const values: DocumentationFormValues = await form.validateFields();
 			const nextJob: GodotDocumentationJob = await installGodotDocumentation(values.branch);
+			setJob(nextJob);
+			setModalMode("progress");
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				setBranchError(error.message);
+			}
+		}
+	}
+
+	async function pickLocalSource(kind: "directory" | "zip"): Promise<void> {
+		try {
+			setBranchError(null);
+			const sourcePath: string | null = kind === "directory"
+				? await window.electronAPI.godotDocumentationFs.pickDirectory()
+				: await window.electronAPI.godotDocumentationFs.pickZip();
+			if (sourcePath !== null) {
+				form.setFieldValue("sourcePath", sourcePath);
+			}
+		} catch (error: unknown) {
+			setBranchError(error instanceof Error ? error.message : t("settings.documentation.errors.pickLocal"));
+		}
+	}
+
+	async function startLocalImport(): Promise<void> {
+		try {
+			const values: DocumentationFormValues = await form.validateFields();
+			const sourcePath: string = values.sourcePath?.trim() ?? "";
+			const nextJob: GodotDocumentationJob = await importLocalGodotDocumentation(values.branch, sourcePath);
 			setJob(nextJob);
 			setModalMode("progress");
 		} catch (error: unknown) {
@@ -283,6 +320,7 @@ function DocumentationSettingsPage(): React.JSX.Element {
 
 	const documents: GodotDocumentationRecord[] = documentation?.documents ?? [];
 	const selectedBranch: string | undefined = Form.useWatch("branch", form);
+	const selectedLocalPath: string | undefined = Form.useWatch("sourcePath", form);
 
 	return (
 		<section className={styles.page}>
@@ -303,6 +341,13 @@ function DocumentationSettingsPage(): React.JSX.Element {
 							void toggleDocumentation(checked);
 						}}
 					/>
+					<Button
+						icon={<Icon name="folder-open" />}
+						disabled={documentation?.activeJob !== null}
+						onClick={openLocalImportModal}
+					>
+						{t("settings.documentation.importLocal")}
+					</Button>
 					<Button
 						type="primary"
 						icon={<Icon name="add" />}
@@ -331,9 +376,14 @@ function DocumentationSettingsPage(): React.JSX.Element {
 							image={Empty.PRESENTED_IMAGE_SIMPLE}
 							description={t("settings.documentation.empty")}
 						>
-							<Button type="primary" icon={<Icon name="download" />} onClick={openAddModal}>
-								{t("settings.documentation.add")}
-							</Button>
+							<Space>
+								<Button icon={<Icon name="folder-open" />} onClick={openLocalImportModal}>
+									{t("settings.documentation.importLocal")}
+								</Button>
+								<Button type="primary" icon={<Icon name="download" />} onClick={openAddModal}>
+									{t("settings.documentation.add")}
+								</Button>
+							</Space>
 						</Empty>
 					</div>
 				) : (
@@ -348,7 +398,19 @@ function DocumentationSettingsPage(): React.JSX.Element {
 												Godot {document.branch}
 											</Typography.Title>
 											<Tag color="blue">{document.branch}</Tag>
+											<Tag color={document.source === "local" ? "purple" : "default"}>
+												{t(`settings.documentation.item.source.${document.source}`)}
+											</Tag>
 										</div>
+										{document.source === "local" && document.sourcePath ? (
+											<Typography.Text
+												type="secondary"
+												className={styles.documentMeta}
+												title={document.sourcePath}
+											>
+												{document.sourcePath}
+											</Typography.Text>
+										) : null}
 										<Typography.Text type="secondary" className={styles.documentMeta}>
 											{t("settings.documentation.item.stats", {
 												documents: document.documentCount,
@@ -399,7 +461,9 @@ function DocumentationSettingsPage(): React.JSX.Element {
 			<Modal
 				title={modalMode === "progress"
 					? t("settings.documentation.progress.title", { branch: job?.branch ?? "" })
-					: t("settings.documentation.modal.title")}
+					: modalMode === "local"
+						? t("settings.documentation.local.title")
+						: t("settings.documentation.modal.title")}
 				className={styles.modal}
 				centered={true}
 				open={modalMode !== null}
@@ -419,6 +483,19 @@ function DocumentationSettingsPage(): React.JSX.Element {
 							}}
 						>
 							{t("settings.documentation.modal.download")}
+						</Button>
+					</Space>
+				) : modalMode === "local" ? (
+					<Space>
+						<Button onClick={closeModal}>{t("settings.common.cancel")}</Button>
+						<Button
+							type="primary"
+							disabled={!selectedBranch?.trim() || !selectedLocalPath?.trim()}
+							onClick={(): void => {
+								void startLocalImport();
+							}}
+						>
+							{t("settings.documentation.local.import")}
 						</Button>
 					</Space>
 				) : job !== null && !isTerminalJob(job) ? (
@@ -484,6 +561,55 @@ function DocumentationSettingsPage(): React.JSX.Element {
 							{t("settings.documentation.modal.notice")}
 						</Typography.Text>
 					</div>
+				) : modalMode === "local" ? (
+					<div className={styles.modalIntro}>
+						<Alert
+							type="info"
+							showIcon={true}
+							message={t("settings.documentation.local.sourceTitle")}
+							description={t("settings.documentation.local.sourceDescription")}
+						/>
+						<Form<DocumentationFormValues>
+							form={form}
+							layout="vertical"
+							preserve={false}
+						>
+							<Form.Item
+								name="branch"
+								label={t("settings.documentation.local.branch")}
+								rules={[{ required: true, whitespace: true, message: t("settings.documentation.local.branchRequired") }]}
+							>
+								<Input placeholder={t("settings.documentation.local.branchPlaceholder")} />
+							</Form.Item>
+							<Form.Item
+								name="sourcePath"
+								label={t("settings.documentation.local.source")}
+								rules={[{ required: true, whitespace: true, message: t("settings.documentation.local.sourceRequired") }]}
+							>
+								<Input
+									readOnly={true}
+									placeholder={t("settings.documentation.local.sourcePlaceholder")}
+								/>
+							</Form.Item>
+							<Space wrap={true}>
+								<Button
+									icon={<Icon name="folder-open" />}
+									onClick={(): void => { void pickLocalSource("directory"); }}
+								>
+									{t("settings.documentation.local.selectFolder")}
+								</Button>
+								<Button
+									icon={<Icon name="archive" />}
+									onClick={(): void => { void pickLocalSource("zip"); }}
+								>
+									{t("settings.documentation.local.selectZip")}
+								</Button>
+							</Space>
+						</Form>
+						{branchError !== null ? (
+							<Alert type="warning" showIcon={true} description={branchError} />
+						) : null}
+					</div>
 				) : job !== null ? (
 					<div className={styles.progressBody}>
 						<div className={styles.progressHeader}>
@@ -502,7 +628,7 @@ function DocumentationSettingsPage(): React.JSX.Element {
 								? t("settings.documentation.messages.upToDate")
 								: job.message.startsWith("Download interrupted")
 									? t("settings.documentation.progress.retrying")
-									: t(`settings.documentation.progress.message.${job.stage}`)}
+									: t(`settings.documentation.progress.${job.operation === "import" ? "localMessage" : "message"}.${job.stage}`)}
 						</Typography.Text>
 						{job.error !== null ? (
 							<Alert type="error" showIcon={true} description={job.error} />

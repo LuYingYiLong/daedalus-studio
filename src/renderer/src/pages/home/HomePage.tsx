@@ -17,7 +17,7 @@ import {
 	type ShortcutCommandId,
 	type ShortcutPlatform
 } from "@/api/keyboard-shortcuts";
-import { fetchSessionOverview, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
+import { fetchSessionOverview, type SessionOverviewGitInfo, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import ConversationTimelinePane, { type ConversationTimelinePaneHandle } from "@/features/chat/ConversationTimelinePane";
 import Composer from "@/features/composer/Composer";
@@ -62,6 +62,14 @@ type GodotSceneFile = {
 	relativePath: string;
 	resourcePath: string;
 	name: string;
+};
+
+type SummaryGitAction = "diff" | "branch" | "commit";
+
+type SummaryGitActionRequest = {
+	id: number;
+	action: SummaryGitAction;
+	sourceFolderId: string;
 };
 
 const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
@@ -194,6 +202,10 @@ function getRecordString(record: Record<string, unknown>, key: string): string {
 function getRecordNumber(record: Record<string, unknown>, key: string): number {
 	const value: unknown = record[key];
 	return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function getPathBasename(inputPath: string): string {
+	return inputPath.split(/[\\/]/u).filter(Boolean).at(-1) ?? inputPath;
 }
 
 type WorkflowFileChangeContribution = WorkflowFileChangeSummary & {
@@ -567,6 +579,8 @@ function HomePage({
 	const [summaryOverview, setSummaryOverview] = useState<SessionOverviewResult | null>(null);
 	const [isSummaryLoading, setIsSummaryLoading] = useState<boolean>(false);
 	const [summaryError, setSummaryError] = useState<string | null>(null);
+	const [summaryGitSourceFolderId, setSummaryGitSourceFolderId] = useState<string | null>(null);
+	const [summaryGitActionRequest, setSummaryGitActionRequest] = useState<SummaryGitActionRequest | null>(null);
 	const [plansModalOpen, setPlansModalOpen] = useState<boolean>(false);
 	const [sourcesModalOpen, setSourcesModalOpen] = useState<boolean>(false);
 	const [previewSource, setPreviewSource] = useState<SessionOverviewSourceItem | null>(null);
@@ -578,6 +592,7 @@ function HomePage({
 	const [godotSceneSearch, setGodotSceneSearch] = useState<string>("");
 	const dockActivationRequestIdRef = useRef<number>(0);
 	const summaryRequestIdRef = useRef<number>(0);
+	const summaryGitActionRequestIdRef = useRef<number>(0);
 	const [sideDockActivationRequest, setSideDockActivationRequest] = useState<DockPanelActivationRequest | null>(null);
 	const previousSessionLayoutRef = useRef<{
 		sessionId: string | null;
@@ -774,6 +789,8 @@ function HomePage({
 		setSummaryOverview(null);
 		setIsSummaryLoading(false);
 		setSummaryError(null);
+		setSummaryGitSourceFolderId(null);
+		setSummaryGitActionRequest(null);
 		setPlansModalOpen(false);
 		setSourcesModalOpen(false);
 		setIsGodotSceneModalOpen(false);
@@ -840,6 +857,7 @@ function HomePage({
 
 	const gitActions = useGitActionDialogController({
 		workspaceId: workspaceForActions?.id ?? null,
+		sourceFolderId: summaryGitSourceFolderId,
 		resetKey: activeSessionId,
 		onBeforeCommitOpen: (): void => {
 			setSummaryOpen(false);
@@ -856,6 +874,58 @@ function HomePage({
 			await loadSummaryOverview();
 		}
 	});
+
+	const requestSummaryGitAction = useCallback((sourceFolderId: string, action: SummaryGitAction): void => {
+		setSummaryOpen(false);
+		setSummaryGitSourceFolderId(sourceFolderId);
+		summaryGitActionRequestIdRef.current += 1;
+		setSummaryGitActionRequest({
+			id: summaryGitActionRequestIdRef.current,
+			action,
+			sourceFolderId
+		});
+	}, []);
+
+	useEffect((): void => {
+		if (summaryGitActionRequest === null || summaryGitActionRequest.sourceFolderId !== summaryGitSourceFolderId) {
+			return;
+		}
+		if (summaryGitActionRequest.action === "diff") {
+			openSummaryDiffReview();
+		} else if (summaryGitActionRequest.action === "branch") {
+			gitActions.openBranchDialog();
+		} else {
+			gitActions.openCommitDialog();
+		}
+		setSummaryGitActionRequest(null);
+	}, [gitActions.openBranchDialog, gitActions.openCommitDialog, openSummaryDiffReview, summaryGitActionRequest, summaryGitSourceFolderId]);
+
+	const summaryEnvInfos: SessionOverviewGitInfo[] = useMemo((): SessionOverviewGitInfo[] => {
+		if (summaryOverview === null) {
+			return [];
+		}
+		if ((summaryOverview.envInfos?.length ?? 0) > 0) {
+			return summaryOverview.envInfos ?? [];
+		}
+		if (summaryOverview.envInfo === null) {
+			return [];
+		}
+		const fallbackSource = workspaceForActions?.sourceFolders.find(
+			(source): boolean => source.path === summaryOverview.envInfo?.sourceFolderPath
+		) ?? workspaceForActions?.sourceFolders.find(
+			(source): boolean => source.id === workspaceForActions.primarySourceFolderId
+		) ?? workspaceForActions?.sourceFolders[0];
+		const sourceFolderPath: string = summaryOverview.envInfo.sourceFolderPath
+			|| fallbackSource?.path
+			|| workspaceForActions?.rootPath
+			|| "";
+		return [{
+			...summaryOverview.envInfo,
+			sourceFolderId: summaryOverview.envInfo.sourceFolderId || fallbackSource?.id || "primary",
+			sourceFolderPath,
+			title: summaryOverview.envInfo.title || getPathBasename(sourceFolderPath)
+		}];
+	}, [summaryOverview, workspaceForActions]);
 
 	const loadGodotSceneFiles = useCallback(async (): Promise<void> => {
 		if (workspaceForActions === null) {
@@ -942,10 +1012,10 @@ function HomePage({
 		}
 
 		const items: NonNullable<CollapseProps["items"]> = [];
-		if (summaryOverview.envInfo !== null && summaryOverview.envInfo.hasGitRepository) {
+		for (const envInfo of summaryEnvInfos) {
 			items.push({
-				key: "env_info",
-				label: t("agentPage.summary.sections.envInfo"),
+				key: `env_info:${envInfo.sourceFolderId}`,
+				label: <Tooltip title={envInfo.sourceFolderPath}>{envInfo.title}</Tooltip>,
 				children: (
 					<div className={styles.summarySection}>
 						<Button
@@ -953,17 +1023,17 @@ function HomePage({
 							block
 							icon={<Icon name="git-diff" />}
 							className={styles.summaryActionButton}
-							onClick={openSummaryDiffReview}
+							onClick={(): void => requestSummaryGitAction(envInfo.sourceFolderId, "diff")}
 						>
 							<span className={styles.diffRow}>
 								<span className={styles.diffLabel}>
 									{t("agentPage.summary.actions.diff")}
 								</span>
 								<span className={styles.additions}>
-									{`+${summaryOverview.envInfo.additions}`}
+									{`+${envInfo.additions}`}
 								</span>
 								<span className={styles.deletions}>
-									{`-${summaryOverview.envInfo.deletions}`}
+									{`-${envInfo.deletions}`}
 								</span>
 							</span>
 						</Button>
@@ -973,10 +1043,10 @@ function HomePage({
 							icon={<Icon name="git-branch" />}
 							className={styles.summaryActionButton}
 							onClick={(): void => {
-								gitActions.openBranchDialog();
+								requestSummaryGitAction(envInfo.sourceFolderId, "branch");
 							}}
 						>
-							{summaryOverview.envInfo.branch ?? t("agentPage.summary.detachedHead")}
+							{envInfo.branch ?? t("agentPage.summary.detachedHead")}
 						</Button>
 						<Button
 							type="text"
@@ -985,7 +1055,7 @@ function HomePage({
 							icon={gitActions.isCommitMessageGenerating ? <Spin size="small" /> : <Icon name="git-commit" />}
 							className={styles.summaryActionButton}
 							onClick={(): void => {
-								gitActions.openCommitDialog();
+								requestSummaryGitAction(envInfo.sourceFolderId, "commit");
 							}}
 						>
 							{t("agentPage.summary.actions.commitOrPush")}
@@ -1115,7 +1185,7 @@ function HomePage({
 		}
 
 		return items;
-	}, [gitActions.openBranchDialog, gitActions.openCommitDialog, openGodotSceneModal, openSummaryDiffReview, runGodotProject, showGodotSummaryActions, summaryOverview, t]);
+	}, [gitActions.isCommitMessageGenerating, openGodotSceneModal, requestSummaryGitAction, runGodotProject, showGodotSummaryActions, summaryEnvInfos, summaryOverview, t]);
 
 	async function openPlansModal(): Promise<void> {
 		const result: SessionOverviewResult | null = await loadSummaryOverview(SUMMARY_SEE_MORE_LIMIT, SUMMARY_PREVIEW_LIMIT);
@@ -1847,6 +1917,7 @@ function HomePage({
 											placement="side"
 											sessionId={activeSessionId}
 											workspaceId={workspaceForActions?.id ?? null}
+											sourceFolderId={summaryGitSourceFolderId}
 											cwd={workspaceForActions?.rootPath ?? null}
 											contextItems={contextItems}
 											onAddContext={onAddContext}
@@ -1876,6 +1947,7 @@ function HomePage({
 									placement="bottom"
 									sessionId={activeSessionId}
 									workspaceId={workspaceForActions?.id ?? null}
+									sourceFolderId={summaryGitSourceFolderId}
 									cwd={workspaceForActions?.rootPath ?? null}
 									contextItems={contextItems}
 									onAddContext={onAddContext}

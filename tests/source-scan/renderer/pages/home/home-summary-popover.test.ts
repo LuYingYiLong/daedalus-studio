@@ -28,7 +28,9 @@ describe("HomePage summary popover source", () => {
 	});
 
 	it("renders conditional sections, see more modals, and image preview", () => {
-		expect(source).toContain("summaryOverview.envInfo !== null");
+		expect(source).toContain("summaryOverview.envInfos?.length");
+		expect(source).toContain("for (const envInfo of summaryEnvInfos)");
+		expect(source).toContain("label: <Tooltip title={envInfo.sourceFolderPath}>{envInfo.title}</Tooltip>");
 		expect(source).toContain("summaryOverview.plans.total > 0");
 		expect(source).toContain("summaryOverview.sources.total > 0");
 		expect(source).toContain("openPlansModal");
@@ -42,7 +44,8 @@ describe("HomePage summary popover source", () => {
 		expect(source).toContain("setSummaryOpen(false);");
 		expect(source).toContain("kind: \"review\"");
 		expect(source).toContain("updateSideDock({ ...sessionLayout.side, open: true });");
-		expect(source).toContain("onClick={openSummaryDiffReview}");
+		expect(source).toContain('requestSummaryGitAction(envInfo.sourceFolderId, "diff")');
+		expect(source).toContain("sourceFolderId: summaryGitSourceFolderId");
 		expect(source).toContain("await loadSummaryOverview();");
 	});
 

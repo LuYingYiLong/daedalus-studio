@@ -483,7 +483,24 @@
       },
       "messages": {
         "switched": "Switched to {{branch}}.",
+        "committedAndSwitched": "Committed the working tree changes and switched to {{branch}}.",
         "createdAndSwitched": "Created and switched to {{branch}}."
+      },
+      "checkoutDraft": {
+        "title": "Commit changes to switch branches",
+        "description": "Commit the following working tree changes before switching to {{branch}}.",
+        "commitAndCheckout": "Commit & Checkout",
+        "cancel": "Cancel",
+        "commitMessagePlaceholder": "Commit message",
+        "summary": "{{count}} changed file",
+        "summary_other": "{{count}} changed files",
+        "moreFiles": "And {{count}} more file",
+        "moreFiles_other": "And {{count}} more files",
+        "errors": {
+          "commitMessageRequired": "Enter a commit message.",
+          "load": "Failed to inspect working tree changes.",
+          "commit": "Failed to commit changes before switching branches."
+        }
       },
       "errors": {
         "selectWorkspaceBeforeSwitching": "Please select a workspace before switching branches.",
@@ -756,11 +773,16 @@
       "title": "Documentation",
       "enabled": "Enable documentation search",
       "add": "Add documentation",
+      "importLocal": "Import local documentation",
       "empty": "No offline Godot documentation is installed.",
       "item": {
         "stats": "{{documents}} documents · {{chunks}} chunks · {{classes}} classes · {{size}}",
         "updated": "Updated {{date}}",
-        "licenses": "Manual: CC BY 3.0 · Class Reference: MIT"
+        "licenses": "Manual: CC BY 3.0 · Class Reference: MIT",
+        "source": {
+          "official": "Official",
+          "local": "Local"
+        }
       },
       "modal": {
         "title": "Add Godot documentation",
@@ -773,6 +795,20 @@
         "refresh": "Refresh branches",
         "notice": "The download is pinned to an immutable commit. Disk usage depends on the selected branch and the generated SQLite index.",
         "download": "Download and index"
+      },
+      "local": {
+        "title": "Import local Godot documentation",
+        "sourceTitle": "Local godot-docs source",
+        "sourceDescription": "Choose an extracted godot-docs directory or a ZIP archive. Daedalus copies and indexes the source; the original files are not modified.",
+        "branch": "Documentation version",
+        "branchRequired": "Enter the documentation version or branch name.",
+        "branchPlaceholder": "For example, 4.7 or master",
+        "source": "Local source",
+        "sourceRequired": "Choose a godot-docs directory or ZIP archive.",
+        "sourcePlaceholder": "Choose a directory or ZIP archive",
+        "selectFolder": "Select folder",
+        "selectZip": "Select ZIP",
+        "import": "Import and index"
       },
       "progress": {
         "title": "Godot {{branch}} documentation",
@@ -797,6 +833,16 @@
           "completed": "The documentation index is ready.",
           "failed": "The documentation operation failed.",
           "cancelled": "The documentation operation was cancelled."
+        },
+        "localMessage": {
+          "resolving": "Inspecting the local documentation source…",
+          "downloading": "Copying the local documentation archive…",
+          "extracting": "Verifying and staging the local documentation source…",
+          "indexing": "Building the local symbol and full-text search index…",
+          "finalizing": "Activating the imported documentation generation…",
+          "completed": "The imported documentation index is ready.",
+          "failed": "The local documentation import failed.",
+          "cancelled": "The local documentation import was cancelled."
         }
       },
       "remove": {
@@ -811,6 +857,7 @@
       "errors": {
         "load": "Failed to load documentation settings.",
         "branches": "Failed to load official documentation branches.",
+        "pickLocal": "Failed to select the local documentation source.",
         "job": "Failed to read documentation job progress.",
         "update": "Failed to update documentation.",
         "cancel": "Failed to cancel the documentation operation.",

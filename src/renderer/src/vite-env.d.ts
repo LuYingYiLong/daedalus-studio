@@ -381,6 +381,10 @@ declare global {
 			pickSkillZip: () => Promise<string | null>;
 			pickSkillDirectory: () => Promise<string | null>;
 		};
+		godotDocumentationFs: {
+			pickDirectory: () => Promise<string | null>;
+			pickZip: () => Promise<string | null>;
+		};
 		godotProjects: GodotProjectsAPI;
 		skillCli: {
 			listGlobalCodexSkills: () => Promise<Array<{ name: string; path: string; slug: string }>>;

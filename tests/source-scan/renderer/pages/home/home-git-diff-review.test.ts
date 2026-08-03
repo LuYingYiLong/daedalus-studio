@@ -77,7 +77,7 @@ describe("HomePage git diff review source", () => {
 		expect(dockPanelTabsSource).toContain('t("dock.add.reviewPanel")');
 		expect(dockPanelTabsSource).toContain('t("dock.add.terminalPanel")');
 		expect(dockPanelTabsSource).toContain("ensurePanelTab(defaultKind)");
-		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} contextItems={contextItems}");
+		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} sourceFolderId={sourceFolderId} contextItems={contextItems}");
 		expect(dockPanelTabsSource).toContain("<TerminalPanel");
 		expect(dockPanelTabsSource).toContain("terminalId={createTerminalRuntimeId(sessionId, tab.key)}");
 		expect(dockPanelTabsSource).toContain("createTerminalRuntimeId(sessionId, targetKey)");

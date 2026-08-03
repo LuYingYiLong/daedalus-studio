@@ -31,6 +31,7 @@ import styles from "./GitDiffReviewPanel.module.css";
 
 export type GitDiffReviewPanelProps = {
 	workspaceId: string;
+	sourceFolderId?: string | null;
 	contextItems: AdditionalContextItem[];
 	onAddContext: (item: AdditionalContextItem) => void;
 	onRemoveContext: (contextId: string) => void;
@@ -113,7 +114,7 @@ function renderFileStats(file: WorkspaceGitDiffFileSummary): ReactElement {
 	);
 }
 
-function GitDiffReviewPanel({ workspaceId, contextItems, onAddContext, onRemoveContext }: GitDiffReviewPanelProps): ReactElement {
+function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, contextItems, onAddContext, onRemoveContext }: GitDiffReviewPanelProps): ReactElement {
 	const { t } = useTranslation();
 	const [summary, setSummary] = useState<WorkspaceGitDiffSummaryResult | null>(null);
 	const [files, setFiles] = useState<WorkspaceGitDiffFileSummary[]>([]);
@@ -134,7 +135,11 @@ function GitDiffReviewPanel({ workspaceId, contextItems, onAddContext, onRemoveC
 			[path]: { status: "loading" }
 		}));
 		try {
-			const result: WorkspaceGitDiffFileResult = await fetchWorkspaceGitDiffFile({ workspaceId, path });
+			const result: WorkspaceGitDiffFileResult = await fetchWorkspaceGitDiffFile({
+				workspaceId,
+				sourceFolderId: sourceFolderId ?? undefined,
+				path
+			});
 			setPreviews((current: Record<string, FilePreviewState>): Record<string, FilePreviewState> => ({
 				...current,
 				[path]: { status: "loaded", result }
@@ -157,6 +162,7 @@ function GitDiffReviewPanel({ workspaceId, contextItems, onAddContext, onRemoveC
 		try {
 			const result: WorkspaceGitDiffSummaryResult = await fetchWorkspaceGitDiffSummary({
 				workspaceId,
+				sourceFolderId: sourceFolderId ?? undefined,
 				cursor: reset ? 0 : nextCursor ?? 0,
 				limit: 100
 			});
@@ -183,7 +189,7 @@ function GitDiffReviewPanel({ workspaceId, contextItems, onAddContext, onRemoveC
 
 	useEffect((): void => {
 		void loadSummary(true);
-	}, [workspaceId]);
+	}, [sourceFolderId, workspaceId]);
 
 	const reviewComments: AdditionalContextItem[] = useMemo((): AdditionalContextItem[] => {
 		return contextItems.filter((item: AdditionalContextItem): boolean => {
@@ -196,6 +202,7 @@ function GitDiffReviewPanel({ workspaceId, contextItems, onAddContext, onRemoveC
 	const areAllEligibleExpanded: boolean = autoExpandableKeys.length > 0 && autoExpandableKeys.every((key: string): boolean => expandedKeys.includes(key));
 	const gitActions = useGitActionDialogController({
 		workspaceId,
+		sourceFolderId,
 		onCommitSuccess: (): void => { void loadSummary(true); },
 		onBranchSuccess: (): void => { void loadSummary(true); }
 	});
