@@ -469,7 +469,10 @@ class BackendManager {
 			"--json"
 		], {
 			cwd: launchTarget.cwd,
-			env: { ...process.env },
+			env: {
+				...process.env,
+				NODE_USE_SYSTEM_CA: process.env.NODE_USE_SYSTEM_CA ?? "1"
+			},
 			windowsHide: true,
 			stdio: "pipe"
 		});

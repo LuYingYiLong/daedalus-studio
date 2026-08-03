@@ -31,12 +31,14 @@
 	margin: 0 !important;
 }
 
-.spaceCompact {
+.toolbar {
 	width: 100%;
+	min-width: 0;
 }
 
 .searchBox {
-	min-width: 160px;
+	flex: 1 1 auto;
+	min-width: 0;
 }
 
 .serverList {

@@ -18,12 +18,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	cancelGodotDocumentationJob,
+	checkGodotDocumentationHealth,
 	fetchGodotDocumentation,
 	fetchGodotDocumentationBranches,
 	fetchGodotDocumentationJob,
 	importLocalGodotDocumentation,
 	installGodotDocumentation,
 	removeGodotDocumentation,
+	repairGodotDocumentation,
 	setGodotDocumentationEnabled,
 	updateGodotDocumentation,
 	type GodotDocumentationBranch,
@@ -78,6 +80,13 @@ function getJobStatus(job: GodotDocumentationJob): "active" | "success" | "excep
 	return "active";
 }
 
+function getHealthTagColor(status: GodotDocumentationRecord["health"]["status"]): string {
+	if (status === "ready") return "success";
+	if (status === "checking" || status === "repairing") return "processing";
+	if (status === "degraded") return "warning";
+	return "error";
+}
+
 function DocumentationSettingsPage(): React.JSX.Element {
 	const { t, i18n } = useTranslation();
 	const { message, modal } = App.useApp();
@@ -92,6 +101,7 @@ function DocumentationSettingsPage(): React.JSX.Element {
 	const [branchesLoading, setBranchesLoading] = useState<boolean>(false);
 	const [branchError, setBranchError] = useState<string | null>(null);
 	const [job, setJob] = useState<GodotDocumentationJob | null>(null);
+	const [localRepairDocumentId, setLocalRepairDocumentId] = useState<string | null>(null);
 	const branchRequestRevision = useRef<number>(0);
 
 	const loadDocumentation = useCallback(async (): Promise<GodotDocumentationState | null> => {
@@ -205,6 +215,7 @@ function DocumentationSettingsPage(): React.JSX.Element {
 
 	function openLocalImportModal(): void {
 		form.resetFields();
+		setLocalRepairDocumentId(null);
 		setModalMode("local");
 		setBranchError(null);
 	}
@@ -215,6 +226,7 @@ function DocumentationSettingsPage(): React.JSX.Element {
 		}
 		setModalMode(null);
 		setJob(null);
+		setLocalRepairDocumentId(null);
 		form.resetFields();
 	}
 
@@ -257,6 +269,54 @@ function DocumentationSettingsPage(): React.JSX.Element {
 				setBranchError(error.message);
 			}
 		}
+	}
+
+	async function startHealthCheck(document: GodotDocumentationRecord): Promise<void> {
+		try {
+			setBusyDocumentId(document.id);
+			const nextJob = await checkGodotDocumentationHealth(document.id, true);
+			setJob(nextJob);
+			setModalMode("progress");
+		} catch (error: unknown) {
+			setErrorMessage(error instanceof Error ? error.message : t("settings.documentation.errors.check"));
+		} finally {
+			setBusyDocumentId(null);
+		}
+	}
+
+	async function startRepairJob(document: GodotDocumentationRecord, allowNetwork: boolean): Promise<void> {
+		try {
+			setBusyDocumentId(document.id);
+			const nextJob = await repairGodotDocumentation(document.id, allowNetwork);
+			setJob(nextJob);
+			setModalMode("progress");
+		} catch (error: unknown) {
+			setErrorMessage(error instanceof Error ? error.message : t("settings.documentation.errors.repair"));
+		} finally {
+			setBusyDocumentId(null);
+		}
+	}
+
+	function startRepair(document: GodotDocumentationRecord): void {
+		if (document.repairAvailability === "source_required") {
+			form.setFieldsValue({ branch: document.branch, sourcePath: undefined });
+			setLocalRepairDocumentId(document.id);
+			setBranchError(null);
+			setModalMode("local");
+			return;
+		}
+		if (document.repairAvailability === "network_required") {
+			modal.confirm({
+				title: t("settings.documentation.repair.networkTitle"),
+				content: t("settings.documentation.repair.networkDescription", { branch: document.branch }),
+				okText: t("settings.documentation.repair.download"),
+				async onOk(): Promise<void> {
+					await startRepairJob(document, true);
+				}
+			});
+			return;
+		}
+		void startRepairJob(document, false);
 	}
 
 	async function startUpdate(document: GodotDocumentationRecord): Promise<void> {
@@ -319,6 +379,7 @@ function DocumentationSettingsPage(): React.JSX.Element {
 	}
 
 	const documents: GodotDocumentationRecord[] = documentation?.documents ?? [];
+	const hasReadyDocument: boolean = documents.some((document): boolean => document.health.status === "ready");
 	const selectedBranch: string | undefined = Form.useWatch("branch", form);
 	const selectedLocalPath: string | undefined = Form.useWatch("sourcePath", form);
 
@@ -368,6 +429,14 @@ function DocumentationSettingsPage(): React.JSX.Element {
 						closable={{ onClose: (): void => setErrorMessage(null) }}
 					/>
 				) : null}
+				{documentation?.enabled === true && documents.length > 0 && !hasReadyDocument ? (
+					<Alert
+						type="warning"
+						showIcon={true}
+						message={t("settings.documentation.health.allUnavailable")}
+						description={t("settings.documentation.health.toolUnavailable")}
+					/>
+				) : null}
 				{isLoading ? (
 					<div className={styles.centerState}><Spin /></div>
 				) : documents.length === 0 ? (
@@ -398,37 +467,45 @@ function DocumentationSettingsPage(): React.JSX.Element {
 												Godot {document.branch}
 											</Typography.Title>
 											<Tag color="blue">{document.branch}</Tag>
-											<Tag color={document.source === "local" ? "purple" : "default"}>
-												{t(`settings.documentation.item.source.${document.source}`)}
+											<Tag color={getHealthTagColor(document.health.status)}>
+												{t(`settings.documentation.health.status.${document.health.status}`)}
 											</Tag>
 										</div>
-										{document.source === "local" && document.sourcePath ? (
-											<Typography.Text
-												type="secondary"
-												className={styles.documentMeta}
-												title={document.sourcePath}
-											>
-												{document.sourcePath}
-											</Typography.Text>
-										) : null}
 										<Typography.Text type="secondary" className={styles.documentMeta}>
 											{t("settings.documentation.item.stats", {
 												documents: document.documentCount,
 												chunks: document.chunkCount,
 												classes: document.classCount,
-												size: formatBytes(document.sizeBytes, i18n.resolvedLanguage ?? "en-US")
+												 size: formatBytes(document.sizeBytes, i18n.resolvedLanguage ?? "en-US")
 											})}
 										</Typography.Text>
-										<Typography.Text type="secondary" className={styles.documentMeta}>
-											{t("settings.documentation.item.updated", {
-												date: new Intl.DateTimeFormat(i18n.resolvedLanguage ?? "en-US", {
-													dateStyle: "medium",
-													timeStyle: "short"
-												}).format(new Date(document.updatedAt))
-											})}
-										</Typography.Text>
+										{document.health.message !== null ? (
+											<Typography.Text type="danger" className={styles.documentMeta} title={document.health.message}>
+												{document.health.message}
+											</Typography.Text>
+										) : null}
 									</div>
 									<div className={styles.documentActions}>
+										<Button
+											type="text"
+											icon={<Icon name="check" />}
+											loading={busy && document.health.status === "checking"}
+											disabled={busyDocumentId !== null || documentation?.activeJob !== null}
+											onClick={(): void => { void startHealthCheck(document); }}
+										>
+											{t("settings.documentation.health.check")}
+										</Button>
+										{document.health.status === "ready" ? null : (
+											<Button
+												type="text"
+												icon={<Icon name="repair" />}
+												loading={busy && document.health.status === "repairing"}
+												disabled={busyDocumentId !== null || documentation?.activeJob !== null || document.repairAvailability === "none"}
+												onClick={(): void => startRepair(document)}
+											>
+												{t("settings.documentation.health.repairAction")}
+											</Button>
+										)}
 										<Button
 											type="text"
 											icon={<Icon name="reload" />}
@@ -462,7 +539,7 @@ function DocumentationSettingsPage(): React.JSX.Element {
 				title={modalMode === "progress"
 					? t("settings.documentation.progress.title", { branch: job?.branch ?? "" })
 					: modalMode === "local"
-						? t("settings.documentation.local.title")
+						? t(localRepairDocumentId === null ? "settings.documentation.local.title" : "settings.documentation.repair.sourceTitle")
 						: t("settings.documentation.modal.title")}
 				className={styles.modal}
 				centered={true}
@@ -579,32 +656,38 @@ function DocumentationSettingsPage(): React.JSX.Element {
 								label={t("settings.documentation.local.branch")}
 								rules={[{ required: true, whitespace: true, message: t("settings.documentation.local.branchRequired") }]}
 							>
-								<Input placeholder={t("settings.documentation.local.branchPlaceholder")} />
-							</Form.Item>
-							<Form.Item
-								name="sourcePath"
-								label={t("settings.documentation.local.source")}
-								rules={[{ required: true, whitespace: true, message: t("settings.documentation.local.sourceRequired") }]}
-							>
 								<Input
-									readOnly={true}
-									placeholder={t("settings.documentation.local.sourcePlaceholder")}
+									placeholder={t("settings.documentation.local.branchPlaceholder")}
+									disabled={localRepairDocumentId !== null}
 								/>
 							</Form.Item>
-							<Space wrap={true}>
-								<Button
-									icon={<Icon name="folder-open" />}
-									onClick={(): void => { void pickLocalSource("directory"); }}
+							<div className={styles.sourceRow}>
+								<Form.Item
+									className={styles.sourceField}
+									name="sourcePath"
+									label={t("settings.documentation.local.source")}
+									rules={[{ required: true, whitespace: true, message: t("settings.documentation.local.sourceRequired") }]}
 								>
-									{t("settings.documentation.local.selectFolder")}
-								</Button>
-								<Button
-									icon={<Icon name="archive" />}
-									onClick={(): void => { void pickLocalSource("zip"); }}
-								>
-									{t("settings.documentation.local.selectZip")}
-								</Button>
-							</Space>
+									<Input
+										readOnly={true}
+										placeholder={t("settings.documentation.local.sourcePlaceholder")}
+									/>
+								</Form.Item>
+								<Space.Compact className={styles.sourceActions}>
+									<Button
+										icon={<Icon name="folder-open" />}
+										onClick={(): void => { void pickLocalSource("directory"); }}
+									>
+										{t("settings.documentation.local.selectFolder")}
+									</Button>
+									<Button
+										icon={<Icon name="file-zip" />}
+										onClick={(): void => { void pickLocalSource("zip"); }}
+									>
+										{t("settings.documentation.local.selectZip")}
+									</Button>
+								</Space.Compact>
+							</div>
 						</Form>
 						{branchError !== null ? (
 							<Alert type="warning" showIcon={true} description={branchError} />
@@ -628,6 +711,8 @@ function DocumentationSettingsPage(): React.JSX.Element {
 								? t("settings.documentation.messages.upToDate")
 								: job.message.startsWith("Download interrupted")
 									? t("settings.documentation.progress.retrying")
+								: job.operation === "check" || job.operation === "repair"
+									? t(`settings.documentation.operationMessage.${job.operation}.${job.stage}`)
 									: t(`settings.documentation.progress.${job.operation === "import" ? "localMessage" : "message"}.${job.stage}`)}
 						</Typography.Text>
 						{job.error !== null ? (

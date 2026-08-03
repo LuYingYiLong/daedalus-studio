@@ -107,6 +107,22 @@
 	margin-bottom: 0 !important;
 }
 
+.sourceRow {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: var(--ds-space-2);
+	align-items: end;
+}
+
+.sourceField {
+	min-width: 0;
+	margin-bottom: 0 !important;
+}
+
+.sourceActions {
+	white-space: nowrap;
+}
+
 .progressHeader {
 	display: flex;
 	align-items: center;

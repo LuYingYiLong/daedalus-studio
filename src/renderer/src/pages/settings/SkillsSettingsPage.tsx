@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Button, Checkbox, Dropdown, Empty, Input, MenuProps, Modal, Select, Space, Spin, Switch, Tag, Tooltip, Typography } from "antd";
+import { Alert, Button, Checkbox, Dropdown, Empty, Flex, Input, MenuProps, Modal, Select, Space, Spin, Switch, Tag, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import styles from "./SkillsSettingsPage.module.css";
 import {
@@ -316,21 +316,24 @@ function SkillsSettingsPage(): React.JSX.Element {
 					</Typography.Title>
 					<Tag>{customSkills.length}</Tag>
 				</div>
-				<Space.Compact className={styles.spaceCompact}>
-					<Input
-						allowClear={true}
-						prefix={<Icon name="search" />}
-						placeholder={t("settings.skills.searchPlaceholder")}
-						className={styles.searchBox}
-						value={query}
-						onChange={(event: ChangeEvent<HTMLInputElement>): void => setQuery(event.target.value)}
-					/>
-					<Select
-						value={scopeFilter}
-						options={scopeOptions}
-						className={styles.selectBox}
-						onChange={(value: SkillScopeFilter): void => setScopeFilter(value)}
-					/>
+				<Flex gap="small" className={styles.toolbar}>
+					<Space.Compact block={true} className={styles.filtersCompact}>
+						<Input
+							allowClear={true}
+							prefix={<Icon name="search" />}
+							placeholder={t("settings.skills.searchPlaceholder")}
+							className={styles.searchBox}
+							value={query}
+							onChange={(event: ChangeEvent<HTMLInputElement>): void => setQuery(event.target.value)}
+						/>
+						<Select
+							value={scopeFilter}
+							options={scopeOptions}
+							className={styles.selectBox}
+							onChange={(value: SkillScopeFilter): void => setScopeFilter(value)}
+							suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
+						/>
+					</Space.Compact>
 					<Dropdown
 						menu={{
 							items: addItems,
@@ -344,9 +347,14 @@ function SkillsSettingsPage(): React.JSX.Element {
 						}}
 						trigger={["click"]}
 					>
-						<Button icon={<Icon name="add" />}>{t("settings.common.add")}</Button>
+						<Button
+							type="primary"
+							icon={<Icon name="add" />}
+						>
+							{t("settings.common.add")}
+						</Button>
 					</Dropdown>
-				</Space.Compact>
+				</Flex>
 			</header>
 
 			{errorMessage !== null ? (

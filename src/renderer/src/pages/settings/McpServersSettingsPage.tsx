@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import styles from "./McpServersSettingsPage.module.css";
-import { Alert, Button, Empty, Form, Input, Modal, Select, Space, Spin, Switch, Tag, Tooltip, Typography } from "antd";
+import { Alert, Button, Empty, Flex, Form, Input, Modal, Select, Spin, Switch, Tag, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import TextArea from "antd/es/input/TextArea";
 import {
@@ -232,7 +232,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 					</Typography.Title>
 					<Tag>{servers.length}</Tag>
 				</div>
-				<Space.Compact className={styles.spaceCompact}>
+				<Flex gap="small" className={styles.toolbar}>
 					<Input
 						allowClear={true}
 						prefix={<Icon name="search" />}
@@ -242,12 +242,13 @@ function McpServersSettingsPage(): React.JSX.Element {
 						onChange={(event: ChangeEvent<HTMLInputElement>): void => setQuery(event.target.value)}
 					/>
 					<Button
+						type="primary"
 						icon={<Icon name="add" />}
 						onClick={openAddModal}
 					>
 						{t("settings.common.add")}
 					</Button>
-				</Space.Compact>
+				</Flex>
 			</header>
 
 			{errorMessage !== null ? (

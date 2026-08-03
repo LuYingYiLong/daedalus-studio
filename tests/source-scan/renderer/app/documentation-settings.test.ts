@@ -58,4 +58,13 @@ describe("Godot documentation settings", () => {
 		expect(mainSource).toContain("registerGodotDocumentationFsIpc");
 		expect(preloadSource).toContain("godotDocumentationFs:");
 	});
+
+	it("exposes index health checks and explicit repair sources", () => {
+		expect(apiSource).toContain('"godotDocumentation.health.check"');
+		expect(apiSource).toContain('"godotDocumentation.repair"');
+		expect(pageSource).toContain("checkGodotDocumentationHealth(document.id, true)");
+		expect(pageSource).toContain('document.repairAvailability === "network_required"');
+		expect(pageSource).toContain('document.repairAvailability === "source_required"');
+		expect(pageSource).toContain("repairGodotDocumentation(document.id, allowNetwork)");
+	});
 });

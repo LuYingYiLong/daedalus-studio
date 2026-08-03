@@ -784,6 +784,34 @@
           "local": "Local"
         }
       },
+      "health": {
+        "status": {
+          "checking": "Checking",
+          "ready": "Healthy",
+          "degraded": "Degraded",
+          "repairing": "Repairing",
+          "unavailable": "Unavailable"
+        },
+        "check": "Check index",
+        "repairAction": "Repair index",
+        "neverChecked": "Index has not been checked yet",
+        "checked": "Checked {{date}}",
+        "allUnavailable": "No healthy documentation index is available",
+        "toolUnavailable": "Documentation search remains enabled, but the LLM will not receive the search tool until an index is repaired.",
+        "repair": {
+          "rollback": "Previous healthy index available",
+          "cached_source": "Offline repair available",
+          "network_required": "Download required",
+          "source_required": "Local source required",
+          "none": "No repair source available"
+        }
+      },
+      "repair": {
+        "networkTitle": "Download documentation to repair the index?",
+        "networkDescription": "The local source cache for Godot {{branch}} is unavailable. Daedalus will connect to GitHub only after you confirm.",
+        "download": "Download and repair",
+        "sourceTitle": "Select a local source to repair documentation"
+      },
       "modal": {
         "title": "Add Godot documentation",
         "sourceTitle": "Official Godot documentation",
@@ -819,6 +847,8 @@
           "downloading": "Downloading",
           "extracting": "Extracting",
           "indexing": "Indexing",
+          "validating": "Validating",
+          "rolling_back": "Rolling back",
           "finalizing": "Finalizing",
           "completed": "Completed",
           "failed": "Failed",
@@ -845,6 +875,32 @@
           "cancelled": "The local documentation import was cancelled."
         }
       },
+      "operationMessage": {
+        "check": {
+          "resolving": "Preparing the documentation health check…",
+          "downloading": "Preparing the documentation health check…",
+          "extracting": "Preparing the documentation health check…",
+          "indexing": "Preparing the documentation health check…",
+          "validating": "Checking SQLite integrity, metadata, counts, and hashes…",
+          "rolling_back": "Checking a previous healthy index…",
+          "finalizing": "Saving the documentation health result…",
+          "completed": "The documentation index is healthy.",
+          "failed": "The documentation health check failed.",
+          "cancelled": "The documentation health check was cancelled."
+        },
+        "repair": {
+          "resolving": "Resolving a repair source…",
+          "downloading": "Downloading the confirmed official documentation source…",
+          "extracting": "Preparing the cached documentation source…",
+          "indexing": "Rebuilding the documentation index…",
+          "validating": "Verifying the rebuilt index before activation…",
+          "rolling_back": "Validating a previous healthy generation…",
+          "finalizing": "Activating the repaired documentation generation…",
+          "completed": "The documentation index was repaired.",
+          "failed": "The documentation repair failed.",
+          "cancelled": "The documentation repair was cancelled."
+        }
+      },
       "remove": {
         "title": "Delete documentation?",
         "description": "Godot {{branch}} documentation will be removed from this device."
@@ -855,6 +911,8 @@
         "removed": "Godot {{branch}} documentation was removed."
       },
       "errors": {
+        "check": "Failed to check the documentation index.",
+        "repair": "Failed to repair the documentation index.",
         "load": "Failed to load documentation settings.",
         "branches": "Failed to load official documentation branches.",
         "pickLocal": "Failed to select the local documentation source.",
@@ -1393,11 +1451,13 @@
     },
     "actions": {
       "retry": "Retry",
-      "openReleases": "Download from GitHub Releases"
+      "openReleases": "Download from GitHub Releases",
+      "openClientReleases": "Download Daedalus Studio",
+      "openBackendReleases": "Download Daedalus Backend"
     },
     "errors": {
       "download": "Failed to download update.",
-      "manualDownloadHint": "If GitHub is unavailable on your network or automatic downloads keep failing, download the installer manually from the Releases page."
+      "manualDownloadHint": "If GitHub is unavailable on your network or automatic downloads keep failing, use the matching component's Releases page for a manual download."
     }
   }
 }

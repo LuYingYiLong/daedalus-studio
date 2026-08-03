@@ -784,6 +784,34 @@
           "local": "本地"
         }
       },
+      "health": {
+        "status": {
+          "checking": "检查中",
+          "ready": "健康",
+          "degraded": "已降级",
+          "repairing": "修复中",
+          "unavailable": "不可用"
+        },
+        "check": "检查索引",
+        "repairAction": "修复索引",
+        "neverChecked": "索引尚未检查",
+        "checked": "检查于 {{date}}",
+        "allUnavailable": "没有可用的健康文档索引",
+        "toolUnavailable": "文档查询开关会保持开启，但在索引修复前，LLM 暂时不会获得文档搜索工具。",
+        "repair": {
+          "rollback": "可回退到上一份健康索引",
+          "cached_source": "可离线修复",
+          "network_required": "需要重新下载",
+          "source_required": "需要重新选择本地来源",
+          "none": "没有可用修复来源"
+        }
+      },
+      "repair": {
+        "networkTitle": "下载文档以修复索引？",
+        "networkDescription": "Godot {{branch}} 的本地源缓存不可用。Daedalus 只会在你确认后连接 GitHub。",
+        "download": "下载并修复",
+        "sourceTitle": "选择本地来源以修复文档"
+      },
       "modal": {
         "title": "添加 Godot 文档",
         "sourceTitle": "Godot 官方文档",
@@ -819,6 +847,8 @@
           "downloading": "正在下载",
           "extracting": "正在解压",
           "indexing": "正在索引",
+          "validating": "正在校验",
+          "rolling_back": "正在回退",
           "finalizing": "正在完成",
           "completed": "已完成",
           "failed": "失败",
@@ -845,6 +875,32 @@
           "cancelled": "本地文档导入已取消。"
         }
       },
+      "operationMessage": {
+        "check": {
+          "resolving": "正在准备文档健康检查…",
+          "downloading": "正在准备文档健康检查…",
+          "extracting": "正在准备文档健康检查…",
+          "indexing": "正在准备文档健康检查…",
+          "validating": "正在检查 SQLite 完整性、元数据、数量和哈希…",
+          "rolling_back": "正在检查上一份健康索引…",
+          "finalizing": "正在保存文档健康状态…",
+          "completed": "文档索引健康。",
+          "failed": "文档健康检查失败。",
+          "cancelled": "文档健康检查已取消。"
+        },
+        "repair": {
+          "resolving": "正在选择修复来源…",
+          "downloading": "正在下载已确认的官方文档来源…",
+          "extracting": "正在准备本地缓存的文档来源…",
+          "indexing": "正在重建文档索引…",
+          "validating": "正在验收重建后的索引…",
+          "rolling_back": "正在验证上一份健康 Generation…",
+          "finalizing": "正在启用修复后的文档 Generation…",
+          "completed": "文档索引已修复。",
+          "failed": "文档索引修复失败。",
+          "cancelled": "文档索引修复已取消。"
+        }
+      },
       "remove": {
         "title": "删除文档？",
         "description": "将从此设备删除 Godot {{branch}} 文档。"
@@ -855,6 +911,8 @@
         "removed": "已删除 Godot {{branch}} 文档。"
       },
       "errors": {
+        "check": "检查文档索引失败。",
+        "repair": "修复文档索引失败。",
         "load": "加载文档设置失败。",
         "branches": "加载官方文档分支失败。",
         "pickLocal": "选择本地文档来源失败。",
@@ -1393,11 +1451,13 @@
     },
     "actions": {
       "retry": "重试",
-      "openReleases": "前往 GitHub Releases 手动下载"
+      "openReleases": "前往 GitHub Releases 手动下载",
+      "openClientReleases": "下载 Daedalus Studio",
+      "openBackendReleases": "下载 Daedalus Backend"
     },
     "errors": {
       "download": "下载更新失败。",
-      "manualDownloadHint": "如果当前网络无法连接 GitHub，或自动下载反复失败，请尝试使用浏览器从 Releases 页面手动下载安装包。"
+      "manualDownloadHint": "如果当前网络无法连接 GitHub，或自动下载反复失败，请使用浏览器前往对应组件的 Releases 页面手动下载。"
     }
   }
 }

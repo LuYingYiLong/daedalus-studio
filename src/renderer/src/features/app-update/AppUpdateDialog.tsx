@@ -2,12 +2,14 @@ import { Alert, Button, Modal, Progress, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import styles from "./AppUpdateDialog.module.css";
 
-const APP_RELEASES_URL = "https://github.com/LuYingYiLong/godot-daedalus/releases";
+const APP_RELEASES_URL = "https://github.com/LuYingYiLong/daedalus-studio/releases";
+const BACKEND_RELEASES_URL = "https://github.com/LuYingYiLong/daedalus-backend/releases";
 
 type UpdateErrorEntry = {
 	key: "client" | "backend";
 	label: string;
 	message: string;
+	releasesUrl: string;
 };
 
 export type AppUpdateDialogProps = {
@@ -45,21 +47,24 @@ function getUpdateErrorEntries(state: AppUpdateState | null, t: (key: string) =>
 		entries.push({
 			key: "client",
 			label: t("appUpdate.components.client"),
-			message: state.client.errorMessage
+			message: state.client.errorMessage,
+			releasesUrl: APP_RELEASES_URL
 		});
 	}
 	if (state.backend.status === "error" && state.backend.errorMessage !== null) {
 		entries.push({
 			key: "backend",
 			label: t("appUpdate.components.backend"),
-			message: state.backend.errorMessage
+			message: state.backend.errorMessage,
+			releasesUrl: BACKEND_RELEASES_URL
 		});
 	}
 	if (entries.length === 0 && state.errorMessage !== null) {
 		entries.push({
 			key: "client",
 			label: t("appUpdate.status.failed"),
-			message: state.errorMessage
+			message: state.errorMessage,
+			releasesUrl: APP_RELEASES_URL
 		});
 	}
 	return entries;
@@ -166,16 +171,21 @@ function AppUpdateDialog({ open, state, onClose, onDownload }: AppUpdateDialogPr
 									</div>
 								))}
 								<Typography.Text type="secondary">{t("appUpdate.errors.manualDownloadHint")}</Typography.Text>
-								<Button
-									type="link"
-									size="small"
-									className={styles.releaseLink}
-									href={APP_RELEASES_URL}
-									target="_blank"
-									rel="noreferrer"
-								>
-									{t("appUpdate.actions.openReleases")}
-								</Button>
+								{errorEntries.map((entry: UpdateErrorEntry): React.JSX.Element => (
+									<Button
+										key={`${entry.key}-releases`}
+										type="link"
+										size="small"
+										className={styles.releaseLink}
+										href={entry.releasesUrl}
+										target="_blank"
+										rel="noreferrer"
+									>
+										{t(entry.key === "backend"
+											? "appUpdate.actions.openBackendReleases"
+											: "appUpdate.actions.openClientReleases")}
+									</Button>
+								))}
 							</div>
 						)}
 						action={<Button size="small" type="primary" onClick={(): void => { void onDownload(); }}>{t("appUpdate.actions.retry")}</Button>}

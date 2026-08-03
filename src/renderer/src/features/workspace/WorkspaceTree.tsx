@@ -485,7 +485,6 @@ function WorkspaceTree({
 		return reconcileWorkspaceTreeOrder(initialWorkspaceTreeOrder, initialWorkspaces, filterVisibleSessions(initialSessions));
 	});
 	const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(initialActiveWorkspaceId);
-	const [openWorkspaceKeys, setOpenWorkspaceKeys] = useState<string[]>(() => initialWorkspaces.map((workspace: WorkspaceConfig): string => `workspace:${workspace.id}`));
 	const [selectedMenuKeys, setSelectedMenuKeys] = useState<string[]>([]);
 	const [isWorkspaceLoading, setIsWorkspaceLoading] = useState<boolean>(true);
 	const [workspaceError, setWorkspaceError] = useState<string | null>(null);
@@ -587,7 +586,8 @@ function WorkspaceTree({
 			),
 			pinnedSessionIds: [...nextOrder.pinnedSessionIds],
 			recentSessionIds: [...nextOrder.recentSessionIds],
-			expandedSectionKeys: [...nextOrder.expandedSectionKeys]
+			expandedSectionKeys: [...nextOrder.expandedSectionKeys],
+			expandedWorkspaceIds: [...nextOrder.expandedWorkspaceIds]
 		};
 
 		orderSaveQueueRef.current = orderSaveQueueRef.current.then(async (): Promise<void> => {
@@ -820,9 +820,6 @@ function WorkspaceTree({
 							};
 					});
 			});
-			setOpenWorkspaceKeys((currentKeys: string[]): string[] => {
-				return currentKeys.filter((key: string): boolean => key !== `workspace:${workspace.id}`);
-			});
 			setSelectedMenuKeys((currentKeys: string[]): string[] => {
 				return currentKeys.filter((key: string): boolean => {
 					if (key === `workspace:${workspace.id}`) {
@@ -895,9 +892,6 @@ function WorkspaceTree({
 				setSessions(visibleSessions);
 				setWorkspaceTreeOrder(reconciledOrder);
 				setActiveWorkspaceId(workspaceList.active);
-				setOpenWorkspaceKeys(workspaceList.workspaces.map((workspace: WorkspaceConfig): string => {
-					return `workspace:${workspace.id}`;
-				}));
 
 				if (workspaceList.workspaces.length === 0 && sessionList.sessions.length === 0 && reloadIndex < 5) {
 					retryTimer = window.setTimeout((): void => {
@@ -1060,8 +1054,18 @@ function WorkspaceTree({
 	}, [labels.noRecentSessions, orderedRecentSessions, sessionMenuOptions]);
 	const effectiveSelectedMenuKeys: string[] = getSelectedMenuKeys(selectedSessionId, selectedWorkspaceId, selectedMenuKeys);
 	const openSectionKeys: WorkspaceTreeSectionKey[] = effectiveWorkspaceTreeOrder.expandedSectionKeys;
+	const openWorkspaceKeys: string[] = effectiveWorkspaceTreeOrder.expandedWorkspaceIds.map(
+		(workspaceId: string): string => `workspace:${workspaceId}`
+	);
 	const handleProjectTreeExpand: NonNullable<TreeProps<ProjectTreeNode>["onExpand"]> = (expandedKeys): void => {
-		setOpenWorkspaceKeys(expandedKeys.map((key: Key): string => String(key)));
+		const expandedWorkspaceIds: string[] = expandedKeys.flatMap((key: Key): string[] => {
+			const normalizedKey: string = String(key);
+			return normalizedKey.startsWith("workspace:") ? [normalizedKey.slice("workspace:".length)] : [];
+		});
+		persistWorkspaceTreeOrder({
+			...workspaceTreeOrderRef.current,
+			expandedWorkspaceIds
+		});
 	};
 	const handleProjectTreeSelect: NonNullable<TreeProps<ProjectTreeNode>["onSelect"]> = (_selectedKeys, info): void => {
 		const node: ProjectTreeNode = info.node;
@@ -1071,10 +1075,13 @@ function WorkspaceTree({
 		}
 		setSelectedMenuKeys([selectedKey]);
 		if (node.kind === "workspace") {
-			setOpenWorkspaceKeys((currentKeys: string[]): string[] => {
-				return currentKeys.includes(selectedKey)
-					? currentKeys.filter((key: string): boolean => key !== selectedKey)
-					: [...currentKeys, selectedKey];
+			const workspaceId: string = node.workspaceId ?? selectedKey.slice("workspace:".length);
+			const currentOrder: WorkspaceTreeOrderPreferences = workspaceTreeOrderRef.current;
+			persistWorkspaceTreeOrder({
+				...currentOrder,
+				expandedWorkspaceIds: currentOrder.expandedWorkspaceIds.includes(workspaceId)
+					? currentOrder.expandedWorkspaceIds.filter((id: string): boolean => id !== workspaceId)
+					: [...currentOrder.expandedWorkspaceIds, workspaceId]
 			});
 			return;
 		}
@@ -1329,25 +1336,6 @@ function WorkspaceTree({
 		}
 	}, [selectedSessionId, selectedWorkspaceId]);
 
-	useEffect((): void => {
-		if (selectedSessionId === null) {
-			return;
-		}
-
-		const selectedSession: SessionMetadata | undefined = sessions.find((session: SessionMetadata): boolean => {
-			return session.id === selectedSessionId;
-		});
-
-		if (selectedSession?.workspaceId === undefined) {
-			return;
-		}
-
-		const workspaceKey: string = `workspace:${selectedSession.workspaceId}`;
-		setOpenWorkspaceKeys((currentKeys: string[]): string[] => {
-			return currentKeys.includes(workspaceKey) ? currentKeys : [...currentKeys, workspaceKey];
-		});
-	}, [selectedSessionId, sessions]);
-
 	return (
 		<div className={styles.workspaceTreeRegion}>
 			{messageContextHolder}
@@ -1414,9 +1402,13 @@ function WorkspaceTree({
 					)
 						? currentWorkspaces.map((workspace: WorkspaceConfig): WorkspaceConfig => workspace.id === createdWorkspace.id ? createdWorkspace : workspace)
 						: [...currentWorkspaces, createdWorkspace]);
-					setOpenWorkspaceKeys((currentKeys: string[]): string[] => currentKeys.includes(`workspace:${createdWorkspace.id}`)
-						? currentKeys
-						: [...currentKeys, `workspace:${createdWorkspace.id}`]);
+					const currentOrder: WorkspaceTreeOrderPreferences = workspaceTreeOrderRef.current;
+					if (!currentOrder.expandedWorkspaceIds.includes(createdWorkspace.id)) {
+						persistWorkspaceTreeOrder({
+							...currentOrder,
+							expandedWorkspaceIds: [...currentOrder.expandedWorkspaceIds, createdWorkspace.id]
+						});
+					}
 					ensureSectionOpen("projects");
 					setIsCreateProjectOpen(false);
 					onWorkspaceUpdate?.(createdWorkspace);

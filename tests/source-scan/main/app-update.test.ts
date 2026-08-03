@@ -110,7 +110,10 @@ describe("app update source", () => {
 		expect(updateDialogSource).toContain("appUpdate.status.restarting");
 		expect(updateDialogSource).toContain("appUpdate.fallback.description");
 		expect(updateDialogSource).toContain('state.client.downloadPhase === "full"');
-		expect(updateDialogSource).toContain("https://github.com/LuYingYiLong/godot-daedalus/releases");
+		expect(updateDialogSource).toContain("https://github.com/LuYingYiLong/daedalus-studio/releases");
+		expect(updateDialogSource).toContain("https://github.com/LuYingYiLong/daedalus-backend/releases");
+		expect(updateDialogSource).not.toContain("https://github.com/LuYingYiLong/godot-daedalus/releases");
+		expect(binaryStoreSource).toContain("net.fetch.bind(net)");
 		expect(updateDialogSource).toContain("copyable={{ text: entry.message }}");
 		expect(aboutSettingsSource).toContain("<AppUpdateDialog");
 		expect(aboutSettingsSource).toContain("window.electronAPI.appUpdate.check()");

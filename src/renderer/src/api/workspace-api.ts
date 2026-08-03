@@ -47,6 +47,7 @@ export type WorkspaceTreeOrderPreferences = {
 	pinnedSessionIds: string[];
 	recentSessionIds: string[];
 	expandedSectionKeys: WorkspaceTreeSectionKey[];
+	expandedWorkspaceIds: string[];
 	updatedAt: string;
 };
 
@@ -59,6 +60,7 @@ export type WorkspaceTreeOrderUpdate = Pick<
 	| "pinnedSessionIds"
 	| "recentSessionIds"
 	| "expandedSectionKeys"
+	| "expandedWorkspaceIds"
 >;
 
 export async function fetchWorkspaces(): Promise<WorkspaceListResult> {

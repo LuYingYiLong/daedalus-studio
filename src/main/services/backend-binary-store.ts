@@ -1,4 +1,4 @@
-import { app } from "electron";
+import { app, net } from "electron";
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createReadStream, existsSync } from "node:fs";
@@ -450,7 +450,13 @@ export async function inspectBundledBackend(): Promise<InstalledBackendBinary> {
 }
 
 async function fetchChecked(url: string): Promise<Response> {
-	const response: Response = await fetch(url, {
+	// Backend updates run inside Electron, so use Chromium's network stack. It
+	// honors the OS certificate store and configured proxy instead of relying on
+	// Node's bundled CA set, which can reject valid enterprise TLS interception.
+	const updateFetch: typeof globalThis.fetch = typeof net?.fetch === "function"
+		? net.fetch.bind(net) as typeof globalThis.fetch
+		: globalThis.fetch;
+	const response: Response = await updateFetch(url, {
 		redirect: "follow",
 		headers: {
 			"Accept": "application/octet-stream, application/json",

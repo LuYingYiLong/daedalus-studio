@@ -37,6 +37,7 @@ function order(overrides: Partial<WorkspaceTreeOrderPreferences> = {}): Workspac
 		pinnedSessionIds: ["session-pinned", "session-pinned-2"],
 		recentSessionIds: ["session-recent", "session-recent-2"],
 		expandedSectionKeys: ["pinned", "projects", "recent"],
+		expandedWorkspaceIds: ["workspace-a"],
 		updatedAt: "2026-07-30T00:00:00.000Z",
 		...overrides
 	};
@@ -66,6 +67,16 @@ describe("workspace tree order", (): void => {
 		expect(result.sessionIdsByWorkspace["workspace-c"]).toEqual([]);
 		expect(result.pinnedSessionIds).toEqual(["session-pinned", "session-pinned-2"]);
 		expect(result.recentSessionIds).toEqual(["session-recent", "session-recent-2"]);
+		expect(result.expandedWorkspaceIds).toEqual(["workspace-c", "workspace-a"]);
+	});
+
+	it("keeps collapsed workspaces collapsed and removes deleted expansion ids", (): void => {
+		const result = reconcileWorkspaceTreeOrder(order({
+			workspaceIds: ["workspace-a", "workspace-b", "workspace-deleted"],
+			expandedWorkspaceIds: ["workspace-b", "workspace-deleted"]
+		}), WORKSPACES, SESSIONS);
+
+		expect(result.expandedWorkspaceIds).toEqual(["workspace-b"]);
 	});
 
 	it("moves workspaces and sessions only in their own order arrays", (): void => {

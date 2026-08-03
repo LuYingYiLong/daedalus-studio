@@ -21,6 +21,7 @@ export function createEmptyWorkspaceTreeOrder(): WorkspaceTreeOrderPreferences {
 		pinnedSessionIds: [],
 		recentSessionIds: [],
 		expandedSectionKeys: [...WORKSPACE_TREE_SECTION_KEYS],
+		expandedWorkspaceIds: [],
 		updatedAt: new Date(0).toISOString()
 	};
 }
@@ -44,6 +45,8 @@ export function reconcileWorkspaceTreeOrder(
 		workspaces.map((workspace: WorkspaceConfig): string => workspace.id),
 		preferences.workspaceIds
 	);
+	const savedWorkspaceIdSet: ReadonlySet<string> = new Set(preferences.workspaceIds);
+	const expandedWorkspaceIdSet: ReadonlySet<string> = new Set(preferences.expandedWorkspaceIds);
 	const workspaceIdSet: ReadonlySet<string> = new Set(workspaceIds);
 	const pinnedSessionIds: string[] = mergeSavedOrder(
 		sessions
@@ -93,6 +96,9 @@ export function reconcileWorkspaceTreeOrder(
 		expandedSectionKeys: preferences.expandedSectionKeys.filter(
 			(sectionKey: WorkspaceTreeSectionKey): boolean => WORKSPACE_TREE_SECTION_KEYS.includes(sectionKey)
 		),
+		expandedWorkspaceIds: workspaceIds.filter((workspaceId: string): boolean => {
+			return !savedWorkspaceIdSet.has(workspaceId) || expandedWorkspaceIdSet.has(workspaceId);
+		}),
 		updatedAt: preferences.updatedAt
 	};
 }
@@ -106,13 +112,15 @@ export function areWorkspaceTreeOrdersEqual(
 		sessionIdsByWorkspace: left.sessionIdsByWorkspace,
 		pinnedSessionIds: left.pinnedSessionIds,
 		recentSessionIds: left.recentSessionIds,
-		expandedSectionKeys: left.expandedSectionKeys
+		expandedSectionKeys: left.expandedSectionKeys,
+		expandedWorkspaceIds: left.expandedWorkspaceIds
 	}) === JSON.stringify({
 		workspaceIds: right.workspaceIds,
 		sessionIdsByWorkspace: right.sessionIdsByWorkspace,
 		pinnedSessionIds: right.pinnedSessionIds,
 		recentSessionIds: right.recentSessionIds,
-		expandedSectionKeys: right.expandedSectionKeys
+		expandedSectionKeys: right.expandedSectionKeys,
+		expandedWorkspaceIds: right.expandedWorkspaceIds
 	});
 }
 

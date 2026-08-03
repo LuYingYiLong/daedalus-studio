@@ -6,6 +6,19 @@ export type GodotDocumentationRecord = {
 	commitSha: string;
 	source: "official" | "local";
 	sourcePath?: string;
+	sourceRef: {
+		kind: "official_zip" | "local_zip" | "local_tree";
+		sha256: string;
+		sizeBytes: number;
+	} | null;
+	activeGenerationId: string | null;
+	health: {
+		status: "checking" | "ready" | "degraded" | "repairing" | "unavailable";
+		code: string | null;
+		message: string | null;
+		checkedAt: string | null;
+	};
+	repairAvailability: "rollback" | "cached_source" | "network_required" | "source_required" | "none";
 	installedAt: string;
 	updatedAt: string;
 	documentCount: number;
@@ -19,6 +32,8 @@ export type GodotDocumentationJobStage =
 	| "downloading"
 	| "extracting"
 	| "indexing"
+	| "validating"
+	| "rolling_back"
 	| "finalizing"
 	| "completed"
 	| "failed"
@@ -26,7 +41,7 @@ export type GodotDocumentationJobStage =
 
 export type GodotDocumentationJob = {
 	jobId: string;
-	operation: "install" | "update" | "import";
+	operation: "install" | "update" | "import" | "check" | "repair";
 	branch: string;
 	documentId: string | null;
 	stage: GodotDocumentationJobStage;
@@ -40,7 +55,7 @@ export type GodotDocumentationJob = {
 };
 
 export type GodotDocumentationState = {
-	schemaVersion: 1;
+	schemaVersion: 2;
 	enabled: boolean;
 	documents: GodotDocumentationRecord[];
 	activeJob: GodotDocumentationJob | null;
@@ -82,6 +97,16 @@ export async function importLocalGodotDocumentation(branch: string, sourcePath: 
 export async function updateGodotDocumentation(documentId: string): Promise<GodotDocumentationJob> {
 	const client = await createBackendClient();
 	return client.request<GodotDocumentationJob>("godotDocumentation.update", { documentId });
+}
+
+export async function checkGodotDocumentationHealth(documentId: string, deep: boolean = true): Promise<GodotDocumentationJob> {
+	const client = await createBackendClient();
+	return client.request<GodotDocumentationJob>("godotDocumentation.health.check", { documentId, deep });
+}
+
+export async function repairGodotDocumentation(documentId: string, allowNetwork: boolean): Promise<GodotDocumentationJob> {
+	const client = await createBackendClient();
+	return client.request<GodotDocumentationJob>("godotDocumentation.repair", { documentId, allowNetwork });
 }
 
 export async function removeGodotDocumentation(documentId: string): Promise<GodotDocumentationState> {

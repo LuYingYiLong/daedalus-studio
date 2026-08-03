@@ -24,6 +24,7 @@ describe("backend manager update support", () => {
 		expect(source).not.toContain("DAEDALUS_BACKEND_AUTH_TOKEN");
 		expect(source).toContain("backend.health");
 		expect(source).not.toContain("ELECTRON_RUN_AS_NODE");
+		expect(source).toContain('NODE_USE_SYSTEM_CA: process.env.NODE_USE_SYSTEM_CA ?? "1"');
 		expect(source).toContain("restartAndWaitHealthy");
 		expect(source).toContain("waitUntilHealthy");
 		expect(preloadSource).toContain("backend:restart");
