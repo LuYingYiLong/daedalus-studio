@@ -39,6 +39,7 @@ type DockPanelTabsProps = {
 	contextItems: AdditionalContextItem[];
 	onAddContext: (item: AdditionalContextItem) => void;
 	onRemoveContext: (contextId: string) => void;
+	onGitStateChange?: () => void | Promise<void>;
 	onLayoutChange: (layout: DockLayoutPreferences) => void;
 };
 
@@ -105,6 +106,7 @@ function DockPanelTabs({
 	contextItems,
 	onAddContext,
 	onRemoveContext,
+	onGitStateChange,
 	onLayoutChange
 }: DockPanelTabsProps): React.JSX.Element {
 	const { t } = useTranslation();
@@ -220,7 +222,7 @@ function DockPanelTabs({
 				return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("dock.empty.noWorkspaceSelected")} />;
 			}
 			return isOpen
-				? <GitDiffReviewPanel workspaceId={workspaceId} sourceFolderId={sourceFolderId} contextItems={contextItems} onAddContext={onAddContext} onRemoveContext={onRemoveContext} />
+				? <GitDiffReviewPanel workspaceId={workspaceId} sourceFolderId={sourceFolderId} contextItems={contextItems} onAddContext={onAddContext} onRemoveContext={onRemoveContext} onGitStateChange={onGitStateChange} />
 				: null;
 		}
 

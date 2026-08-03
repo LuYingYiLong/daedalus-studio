@@ -854,6 +854,10 @@ function HomePage({
 			void loadSummaryOverview();
 		}
 	}, [isSummaryLoading, loadSummaryOverview, summaryError, summaryOverview]);
+	const handleDockGitStateChange = useCallback(async (): Promise<void> => {
+		onWorkspaceRefresh();
+		await loadSummaryOverview();
+	}, [loadSummaryOverview, onWorkspaceRefresh]);
 
 	const gitActions = useGitActionDialogController({
 		workspaceId: workspaceForActions?.id ?? null,
@@ -1929,6 +1933,7 @@ function HomePage({
 											contextItems={contextItems}
 											onAddContext={onAddContext}
 											onRemoveContext={onRemoveContext}
+											onGitStateChange={handleDockGitStateChange}
 											isOpen={sideDockOpen}
 											waitForCwd={terminalWaitForCwd}
 											defaultKind="review"
@@ -1959,6 +1964,7 @@ function HomePage({
 									contextItems={contextItems}
 									onAddContext={onAddContext}
 									onRemoveContext={onRemoveContext}
+									onGitStateChange={handleDockGitStateChange}
 									isOpen={bottomDockOpen}
 									waitForCwd={terminalWaitForCwd}
 									defaultKind="terminal"

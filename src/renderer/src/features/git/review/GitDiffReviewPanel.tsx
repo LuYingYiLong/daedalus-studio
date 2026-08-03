@@ -35,6 +35,7 @@ export type GitDiffReviewPanelProps = {
 	contextItems: AdditionalContextItem[];
 	onAddContext: (item: AdditionalContextItem) => void;
 	onRemoveContext: (contextId: string) => void;
+	onGitStateChange?: () => void | Promise<void>;
 };
 
 type FilePreviewState = {
@@ -114,7 +115,7 @@ function renderFileStats(file: WorkspaceGitDiffFileSummary): ReactElement {
 	);
 }
 
-function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, contextItems, onAddContext, onRemoveContext }: GitDiffReviewPanelProps): ReactElement {
+function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, contextItems, onAddContext, onRemoveContext, onGitStateChange }: GitDiffReviewPanelProps): ReactElement {
 	const { t } = useTranslation();
 	const [summary, setSummary] = useState<WorkspaceGitDiffSummaryResult | null>(null);
 	const [files, setFiles] = useState<WorkspaceGitDiffFileSummary[]>([]);
@@ -203,8 +204,12 @@ function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, contextItems, 
 	const gitActions = useGitActionDialogController({
 		workspaceId,
 		sourceFolderId,
-		onCommitSuccess: (): void => { void loadSummary(true); },
-		onBranchSuccess: (): void => { void loadSummary(true); }
+		onCommitSuccess: async (): Promise<void> => {
+			await Promise.all([loadSummary(true), onGitStateChange?.()]);
+		},
+		onBranchSuccess: async (): Promise<void> => {
+			await Promise.all([loadSummary(true), onGitStateChange?.()]);
+		}
 	});
 
 	function handleCollapseChange(keys: string | string[]): void {

@@ -95,7 +95,11 @@ describe("HomePage git diff review source", () => {
 
 	it("opens shared git action dialogs from the review panel", () => {
 		expect(reviewPanelSource).toContain("useGitActionDialogController");
-		expect(reviewPanelSource).toContain("onCommitSuccess: (): void => { void loadSummary(true); }");
+		expect(reviewPanelSource).toContain("onCommitSuccess: async (): Promise<void> => {");
+		expect(reviewPanelSource).toContain("await Promise.all([loadSummary(true), onGitStateChange?.()]);");
+		expect(dockPanelTabsSource).toContain("onGitStateChange={onGitStateChange}");
+		expect(agentSource).toContain("const handleDockGitStateChange = useCallback");
+		expect(agentSource).toContain("onGitStateChange={handleDockGitStateChange}");
 		expect(reviewPanelSource).toContain("onClick={gitActions.openCommitDialog}");
 		expect(reviewPanelSource).toContain("<CommitActionDialog {...gitActions.commitDialogProps} />");
 		expect(reviewPanelSource).toContain("<BranchActionDialog {...gitActions.branchDialogProps} />");
