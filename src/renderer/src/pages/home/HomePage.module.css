@@ -77,7 +77,7 @@
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
-	background-color: var(--ds-tr-bg);
+	background-color: var(--ds-bg-tint);
 	border-radius: var(--ds-space-2);
 }
 

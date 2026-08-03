@@ -119,7 +119,7 @@
 
 :root {
 	--ds-bg: #141414;
-	--ds-tr-bg: rgba(20, 20, 20, 0.75);
+	--ds-bg-tint: rgba(20, 20, 20, 0.75);
 	--ds-code-bg: #ffffff1d;
 	--ds-bg-sunken: #0f0f0f;
 	--ds-surface: #1b1b1b;
@@ -144,7 +144,7 @@
 	--ds-git-deletion: #ff7b72;
 	--ds-git-addition-bg: rgb(63 185 80 / 14%);
 	--ds-git-deletion-bg: rgb(255 123 114 / 14%);
-	--ds-window-glass-tint: rgb(20 20 20 / 62%);
+	--ds-window-glass-tint: rgb(20 20 20 / 70%);
 	--ds-window-glass-highlight: rgb(255 255 255 / 7%);
 	--ds-space-1: 4px;
 	--ds-space-2: 8px;
