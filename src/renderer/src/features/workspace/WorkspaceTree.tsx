@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Key, MouseEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { archiveSession, fetchSessions, renameSession, setSessionPinned } from "@/api/session-api";
+import { archiveSession, exportSession, fetchSessions, renameSession, setSessionPinned } from "@/api/session-api";
+import type { ExportSessionResult } from "@/api/session-api";
 import {
 	deleteWorkspace,
 	fetchWorkspaces,
@@ -74,12 +75,17 @@ type SessionTreePresentation = {
 type WorkspaceTreeLabels = {
 	archiveSession: string;
 	copySessionId: string;
+	exportDialogButton: string;
+	exportDialogTitle: string;
+	exportSession: string;
+	exportingSession: string;
 	delete: string;
 	editProject: string;
 	deleteWorkspaceBody: string;
 	deleteWorkspaceTitle: string;
 	failedArchiveSession: string;
 	failedCopySessionId: string;
+	failedExportSession: string;
 	failedDeleteWorkspace: string;
 	failedLoadWorkspace: string;
 	failedOpenSessionDirectory: string;
@@ -103,6 +109,8 @@ type WorkspaceTreeLabels = {
 	rename: string;
 	renameSession: string;
 	sessionIdCopied: string;
+	sessionExported: string;
+	sessionExportedWithMissingFiles: (count: number) => string;
 	sessionTitleCannotBeEmpty: string;
 	sessionTitlePlaceholder: string;
 	unpinSession: string;
@@ -120,6 +128,7 @@ function filterVisibleSessions(sessions: SessionMetadata[]): SessionMetadata[] {
 
 type CreateSessionMenuItemOptions = {
 	archivingSessionId: string | null;
+	exportingSessionId: string | null;
 	pinningSessionId: string | null;
 	runningSessionIds: ReadonlySet<string>;
 	unreadSessionIds: ReadonlySet<string>;
@@ -131,6 +140,7 @@ type CreateSessionMenuItemOptions = {
 	onArchive: (session: SessionMetadata) => void;
 	onOpenSessionInExplorer: (session: SessionMetadata) => void;
 	onCopySessionId: (session: SessionMetadata) => void;
+	onExportSession: (session: SessionMetadata) => void;
 };
 
 type CreateWorkspaceMenuItemOptions = CreateSessionMenuItemOptions & {
@@ -147,6 +157,7 @@ function createSessionTreePresentation(
 ): SessionTreePresentation {
 	const isArchiving: boolean = options.archivingSessionId === session.id;
 	const isPinning: boolean = options.pinningSessionId === session.id;
+	const isExporting: boolean = options.exportingSessionId === session.id;
 	const isRunning: boolean = options.runningSessionIds.has(session.id);
 	const isUnread: boolean = options.unreadSessionIds.has(session.id);
 	const isPinned: boolean = session.pinned === true;
@@ -179,6 +190,12 @@ function createSessionTreePresentation(
 				key: "copy",
 				label: labels.copySessionId,
 				icon: <Icon name="copy" />,
+			},
+			{
+				key: "export",
+				label: isExporting ? labels.exportingSession : labels.exportSession,
+				icon: isExporting ? <Spin size="small" /> : <Icon name="export" />,
+				disabled: options.exportingSessionId !== null
 			}
 		],
 		onClick: ({ key, domEvent }): void => {
@@ -203,6 +220,10 @@ function createSessionTreePresentation(
 			}
 			if (key === "copy") {
 				options.onCopySessionId(session);
+				return;
+			}
+			if (key === "export") {
+				options.onExportSession(session);
 			}
 		}
 	};
@@ -491,6 +512,7 @@ function WorkspaceTree({
 	const [reloadIndex, setReloadIndex] = useState<number>(0);
 	const [archivingSessionId, setArchivingSessionId] = useState<string | null>(null);
 	const [pinningSessionId, setPinningSessionId] = useState<string | null>(null);
+	const [exportingSessionId, setExportingSessionId] = useState<string | null>(null);
 	const [isCreateProjectOpen, setIsCreateProjectOpen] = useState<boolean>(false);
 	const [deleteTargetWorkspace, setDeleteTargetWorkspace] = useState<WorkspaceConfig | null>(null);
 	const [editTargetWorkspace, setEditTargetWorkspace] = useState<WorkspaceConfig | null>(null);
@@ -511,12 +533,17 @@ function WorkspaceTree({
 		return {
 			archiveSession: t("workspaceTree.actions.archiveSession"),
 			copySessionId: t("workspaceTree.actions.copySessionId"),
+			exportDialogButton: t("workspaceTree.exportDialog.button"),
+			exportDialogTitle: t("workspaceTree.exportDialog.title"),
+			exportSession: t("workspaceTree.actions.exportSession"),
+			exportingSession: t("workspaceTree.status.exportingSession"),
 			delete: t("workspaceTree.actions.delete"),
 			editProject: t("workspaceTree.actions.editProject", { defaultValue: "Edit project" }),
 			deleteWorkspaceBody: t("workspaceTree.modals.deleteWorkspace.body"),
 			deleteWorkspaceTitle: t("workspaceTree.modals.deleteWorkspace.title"),
 			failedArchiveSession: t("workspaceTree.errors.archiveSession"),
 			failedCopySessionId: t("workspaceTree.errors.copySessionId"),
+			failedExportSession: t("workspaceTree.errors.exportSession"),
 			failedDeleteWorkspace: t("workspaceTree.errors.deleteWorkspace"),
 			failedLoadWorkspace: t("workspaceTree.errors.loadWorkspace"),
 			failedOpenSessionDirectory: t("workspaceTree.errors.openSessionDirectory"),
@@ -540,6 +567,11 @@ function WorkspaceTree({
 			rename: t("workspaceTree.actions.rename"),
 			renameSession: t("workspaceTree.actions.renameSession"),
 			sessionIdCopied: t("workspaceTree.messages.sessionIdCopied"),
+			sessionExported: t("workspaceTree.messages.sessionExported"),
+			sessionExportedWithMissingFiles: (count: number): string => t(
+				"workspaceTree.messages.sessionExportedWithMissingFiles",
+				{ count }
+			),
 			sessionTitleCannotBeEmpty: t("workspaceTree.errors.sessionTitleCannotBeEmpty"),
 			sessionTitlePlaceholder: t("workspaceTree.modals.renameSession.placeholder"),
 			unpinSession: t("workspaceTree.actions.unpinSession"),
@@ -775,6 +807,34 @@ function WorkspaceTree({
 		}
 	}
 
+	async function handleExportSession(session: SessionMetadata): Promise<void> {
+		if (exportingSessionId !== null) {
+			return;
+		}
+		try {
+			const destinationPath: string | null = await window.electronAPI.sessionFs.pickExportDestination({
+				sessionId: session.id,
+				title: session.title,
+				dialogTitle: labels.exportDialogTitle,
+				buttonLabel: labels.exportDialogButton
+			});
+			if (destinationPath === null) {
+				return;
+			}
+			setExportingSessionId(session.id);
+			const result: ExportSessionResult = await exportSession(session.id, destinationPath);
+			if (result.missingFileCount > 0) {
+				void messageApi.warning(labels.sessionExportedWithMissingFiles(result.missingFileCount));
+			} else {
+				void messageApi.success(labels.sessionExported);
+			}
+		} catch (error: unknown) {
+			showWorkspaceOperationError(error, labels.failedExportSession);
+		} finally {
+			setExportingSessionId(null);
+		}
+	}
+
 	async function handleOpenWorkspaceInExplorer(workspace: WorkspaceConfig): Promise<void> {
 		try {
 			setWorkspaceError(null);
@@ -935,6 +995,7 @@ function WorkspaceTree({
 	const sessionMenuOptions: CreateSessionMenuItemOptions = useMemo((): CreateSessionMenuItemOptions => {
 		return {
 			archivingSessionId,
+			exportingSessionId,
 			pinningSessionId,
 			runningSessionIds: runningSessionIdSet,
 			unreadSessionIds: unreadSessionIdSet,
@@ -959,9 +1020,12 @@ function WorkspaceTree({
 			},
 			onCopySessionId: (session: SessionMetadata): void => {
 				void handleCopySessionId(session);
+			},
+			onExportSession: (session: SessionMetadata): void => {
+				void handleExportSession(session);
 			}
 		};
-	}, [archivingSessionId, labels, pinningSessionId, runningSessionIdSet, unreadSessionIdSet]);
+	}, [archivingSessionId, exportingSessionId, labels, pinningSessionId, runningSessionIdSet, unreadSessionIdSet]);
 	const sessionGroups = useMemo((): {
 		pinnedSessions: SessionMetadata[];
 		projectSessions: SessionMetadata[];

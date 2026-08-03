@@ -5,23 +5,27 @@ describe("HomePage summary popover source", () => {
 	const source: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 	const apiSource: string = readRepoFile("src", "renderer", "src", "api", "session-overview-api.ts");
 
-	it("uses session overview RPC for dynamic summary content", () => {
+	it("uses one overview model for sessions and the NewSessionHome workspace", () => {
 		expect(apiSource).toContain('"session.overview.get"');
 		expect(source).toContain("fetchSessionOverview");
+		expect(source).toContain("fetchWorkspaceOverview");
+		expect(apiSource).toContain("workspace.sourceFolders");
+		expect(apiSource).toContain("fetchWorkspaceGitDiffSummary");
 		expect(source).toContain("loadSummaryOverview");
 	});
 
 	it("prewarms and reuses the current session overview", () => {
 		expect(source).toContain("const summaryRequestIdRef = useRef<number>(0);");
-		expect(source).toContain("if (activeSessionId !== null) {");
+		expect(source).toContain("if (activeSessionId !== null || workspaceForActions !== null) {");
 		expect(source).toContain("open && summaryOverview === null && summaryError === null && !isSummaryLoading");
 		expect(source).toContain("requestId !== summaryRequestIdRef.current");
 		expect(source).toContain("fresh");
 	});
 
-	it("shows the summary action for non-home sessions independently of workspace launch controls", () => {
+	it("keeps the summary action mounted while NewSessionHome changes scope", () => {
 		expect(source).toContain("const showWorkspaceLaunchControls: boolean = workspaceForActions !== null;");
-		expect(source).toContain("const showSummaryButton: boolean = activeSessionId !== null;");
+		expect(source).toContain("const showSummaryButton: boolean = true;");
+		expect(source).toContain('const summaryScopeKey: string = activeSessionId ?? `workspace:${workspaceForActions?.id ?? "none"}`;');
 		expect(source).toContain("{showWorkspaceLaunchControls ? (");
 		expect(source).toContain("{showSummaryButton ? renderSummaryButton() : null}");
 		expect(source).toContain("className={styles.floatingActionSlot}");

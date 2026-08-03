@@ -17,7 +17,7 @@ import {
 	type ShortcutCommandId,
 	type ShortcutPlatform
 } from "@/api/keyboard-shortcuts";
-import { fetchSessionOverview, type SessionOverviewGitInfo, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
+import { fetchSessionOverview, fetchWorkspaceOverview, type SessionOverviewGitInfo, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
 import WorkspaceTree from "@/features/workspace/WorkspaceTree";
 import ConversationTimelinePane, { type ConversationTimelinePaneHandle } from "@/features/chat/ConversationTimelinePane";
 import Composer from "@/features/composer/Composer";
@@ -606,9 +606,10 @@ function HomePage({
 	const scrollToBottomButtonRef = useRef<HTMLButtonElement | null>(null);
 	const scrollToBottomButtonVisibleRef = useRef<boolean>(false);
 	const workspaceForActions: WorkspaceConfig | null = activeWorkspace ?? (isHome ? homeWorkspace : null);
+	const summaryScopeKey: string = activeSessionId ?? `workspace:${workspaceForActions?.id ?? "none"}`;
 	const showDockControls: boolean = !isHome || workspaceForActions !== null;
 	const showWorkspaceLaunchControls: boolean = workspaceForActions !== null;
-	const showSummaryButton: boolean = activeSessionId !== null;
+	const showSummaryButton: boolean = true;
 	const showSideDockButton: boolean = showDockControls;
 	const showBottomDockButton: boolean = showDockControls;
 	const terminalWaitForCwd: boolean = !isHome && isSessionLoading && workspaceForActions === null;
@@ -797,23 +798,24 @@ function HomePage({
 		setGodotSceneSearch("");
 		setPreviewSource(null);
 		setPreviewPlan(null);
-	}, [activeSessionId]);
+	}, [summaryScopeKey]);
 
 	const loadSummaryOverview = useCallback(async (planLimit: number = SUMMARY_PREVIEW_LIMIT, sourceLimit: number = SUMMARY_PREVIEW_LIMIT): Promise<SessionOverviewResult | null> => {
-		if (activeSessionId === null) {
+		if (activeSessionId === null && workspaceForActions === null) {
 			return null;
 		}
 
 		const requestId: number = ++summaryRequestIdRef.current;
-		const sessionId: string = activeSessionId;
 		setIsSummaryLoading(true);
 		setSummaryError(null);
 		try {
-			const result: SessionOverviewResult = await fetchSessionOverview({
-				sessionId,
-				planLimit,
-				sourceLimit
-			});
+			const result: SessionOverviewResult = activeSessionId !== null
+				? await fetchSessionOverview({
+					sessionId: activeSessionId,
+					planLimit,
+					sourceLimit
+				})
+				: await fetchWorkspaceOverview(workspaceForActions!);
 			if (requestId !== summaryRequestIdRef.current) {
 				return null;
 			}
@@ -832,7 +834,7 @@ function HomePage({
 				setIsSummaryLoading(false);
 			}
 		}
-	}, [activeSessionId]);
+	}, [activeSessionId, workspaceForActions]);
 
 	useEffect((): void => {
 		setSummaryOverview(null);
@@ -843,10 +845,10 @@ function HomePage({
 		setGodotSceneSearch("");
 		setPreviewSource(null);
 		setPreviewPlan(null);
-		if (activeSessionId !== null) {
+		if (activeSessionId !== null || workspaceForActions !== null) {
 			void loadSummaryOverview();
 		}
-	}, [activeSessionId, activeWorkspace?.id, loadSummaryOverview]);
+	}, [activeSessionId, loadSummaryOverview, workspaceForActions]);
 
 	const handleSummaryOpenChange = useCallback((open: boolean): void => {
 		setSummaryOpen(open);
@@ -862,7 +864,7 @@ function HomePage({
 	const gitActions = useGitActionDialogController({
 		workspaceId: workspaceForActions?.id ?? null,
 		sourceFolderId: summaryGitSourceFolderId,
-		resetKey: activeSessionId,
+		resetKey: summaryScopeKey,
 		onBeforeCommitOpen: (): void => {
 			setSummaryOpen(false);
 		},
@@ -1202,6 +1204,7 @@ function HomePage({
 		const result: SessionOverviewResult | null = await loadSummaryOverview(SUMMARY_SEE_MORE_LIMIT, SUMMARY_PREVIEW_LIMIT);
 		if (result !== null) {
 			setPlansModalOpen(true);
+			setSummaryOpen(false);
 		}
 	}
 
@@ -1209,6 +1212,7 @@ function HomePage({
 		const result: SessionOverviewResult | null = await loadSummaryOverview(SUMMARY_PREVIEW_LIMIT, SUMMARY_SEE_MORE_LIMIT);
 		if (result !== null) {
 			setSourcesModalOpen(true);
+			setSummaryOpen(false);
 		}
 	}
 

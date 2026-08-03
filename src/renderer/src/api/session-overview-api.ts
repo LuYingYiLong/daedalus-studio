@@ -1,4 +1,6 @@
 import { createBackendClient } from "@/shared/api/transport/backend-client";
+import type { WorkspaceConfig, WorkspaceSourceFolder } from "@/api/types";
+import { fetchWorkspaceGitDiffSummary, type WorkspaceGitDiffSummaryResult } from "@/api/workspace-git-diff-api";
 
 export type SessionOverviewGitInfo = {
 	sourceFolderId: string;
@@ -57,4 +59,61 @@ export async function fetchSessionOverview(params: FetchSessionOverviewParams): 
 	const client = await createBackendClient();
 
 	return client.request<SessionOverviewResult>("session.overview.get", params);
+}
+
+function getPathBasename(inputPath: string): string {
+	return inputPath.split(/[\\/]/u).filter(Boolean).at(-1) ?? inputPath;
+}
+
+export async function fetchWorkspaceOverview(workspace: WorkspaceConfig): Promise<SessionOverviewResult> {
+	const sourceFolders: WorkspaceSourceFolder[] = workspace.sourceFolders.length > 0
+		? workspace.sourceFolders
+		: [{
+			id: workspace.primarySourceFolderId || "primary",
+			path: workspace.rootPath,
+			capabilities: { git: false, godot: workspace.kind === "godot" }
+		}];
+	const envInfos: Array<SessionOverviewGitInfo | null> = await Promise.all(sourceFolders.map(
+		async (sourceFolder: WorkspaceSourceFolder): Promise<SessionOverviewGitInfo | null> => {
+			try {
+				const gitSummary: WorkspaceGitDiffSummaryResult = await fetchWorkspaceGitDiffSummary({
+					workspaceId: workspace.id,
+					sourceFolderId: sourceFolder.id,
+					cursor: 0,
+					limit: 1
+				});
+				if (!gitSummary.hasGitRepository) {
+					return null;
+				}
+				return {
+					sourceFolderId: sourceFolder.id,
+					sourceFolderPath: sourceFolder.path,
+					title: getPathBasename(sourceFolder.path),
+					hasGitRepository: true,
+					branch: gitSummary.branch,
+					additions: gitSummary.additions,
+					deletions: gitSummary.deletions,
+					changedFiles: gitSummary.changedFiles
+				};
+			} catch (error: unknown) {
+				console.error("[session-overview-api] failed to load workspace source folder summary", {
+					workspaceId: workspace.id,
+					sourceFolderId: sourceFolder.id,
+					error
+				});
+				return null;
+			}
+		}
+	));
+	const availableEnvInfos: SessionOverviewGitInfo[] = envInfos.filter(
+		(envInfo: SessionOverviewGitInfo | null): envInfo is SessionOverviewGitInfo => envInfo !== null
+	);
+
+	return {
+		sessionId: "",
+		envInfo: availableEnvInfos[0] ?? null,
+		envInfos: availableEnvInfos,
+		plans: { total: 0, items: [] },
+		sources: { total: 0, items: [] }
+	};
 }

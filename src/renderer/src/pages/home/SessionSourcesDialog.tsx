@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { SessionOverviewResult, SessionOverviewSourceItem } from "@/api/session-overview-api";
 import { formatSourceSubtitle } from "./session-overview-formatters";
-import styles from "./HomePage.module.css";
+import styles from "./SessionSourcesDialog.module.css";
 
 type SessionSourcesDialogProps = {
 	overview: SessionOverviewResult | null;
@@ -23,6 +23,7 @@ export default function SessionSourcesDialog({ overview, open, onClose, onSource
 			footer={null}
 			onCancel={onClose}
 			width={640}
+			className={styles.modal}
 		>
 			<div className={styles.summarySourceGrid}>
 				{overview?.sources.items.map((source: SessionOverviewSourceItem): JSX.Element => (

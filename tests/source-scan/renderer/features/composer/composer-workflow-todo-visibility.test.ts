@@ -22,6 +22,9 @@ describe("Composer workflow todo visibility", () => {
 		expect(agentSource).toContain("showExecutionStatusPanel ? styles.scrollToBottomButtonAboveExecutionStatus");
 		expect(agentSource).toContain("{showExecutionStatusPanel ? (");
 		expect(agentSource).toContain("<FloatingGoalPanel");
+		expect(appSource).toContain("applyCurrentGoalSnapshot,");
+		expect(backendEventStreamSource).toContain("params.applyCurrentGoalSnapshot(goal);");
+		expect(backendEventStreamSource).not.toContain("params.setCurrentGoal(");
 		expect(floatingGoalSource).toContain("workflowTodo");
 		expect(floatingTodoSource).not.toContain("Collapse");
 		expect(floatingTodoSource).not.toContain("import { Steps");

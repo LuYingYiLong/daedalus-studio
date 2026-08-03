@@ -196,6 +196,7 @@
       "archiveSession": "Archive session",
       "openInExplorer": "Open in Explorer",
       "copySessionId": "Copy session ID",
+      "exportSession": "Export session data",
       "delete": "Delete",
       "newSessionInWorkspace": "New session in workspace"
     },
@@ -220,14 +221,22 @@
     },
     "status": {
       "assistantRunning": "Assistant is responding",
-      "unreadResponse": "Unread assistant response"
+      "unreadResponse": "Unread assistant response",
+      "exportingSession": "Exporting session…"
     },
     "messages": {
-      "sessionIdCopied": "Session ID copied"
+      "sessionIdCopied": "Session ID copied",
+      "sessionExported": "Session data exported",
+      "sessionExportedWithMissingFiles": "Session data exported, but {{count}} external files were missing"
+    },
+    "exportDialog": {
+      "title": "Export session data",
+      "button": "Export"
     },
     "errors": {
       "archiveSession": "Failed to archive session",
       "copySessionId": "Failed to copy session ID",
+      "exportSession": "Failed to export session data",
       "deleteWorkspace": "Failed to delete workspace",
       "loadWorkspace": "Failed to load workspace",
       "openSessionDirectory": "Failed to open session directory",

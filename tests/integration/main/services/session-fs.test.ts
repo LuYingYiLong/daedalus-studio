@@ -3,7 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { openSessionDirectory, resolveSessionDirectory } from "@main/services/session-fs";
+import { openSessionDirectory, pickSessionExportDestination, resolveSessionDirectory } from "@main/services/session-fs";
 
 describe("session-fs", () => {
 	it("resolves session directories inside the Daedalus sessions root", () => {
@@ -62,5 +62,37 @@ describe("session-fs", () => {
 			homeDirectory,
 			openPath: async (): Promise<string> => "explorer failed"
 		})).rejects.toThrow("explorer failed");
+	});
+
+	it("opens a SQLite save dialog with a safe default file name", async () => {
+		const calls: Array<{ defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }> = [];
+		const selectedPath: string | null = await pickSessionExportDestination({
+			sessionId: "session-20260803-export",
+			title: "Project: invalid/name?"
+		}, undefined, {
+			documentsDirectory: "C:/Users/test/Documents",
+			showSaveDialog: async (_owner, options) => {
+				calls.push(options);
+				return { canceled: false, filePath: "C:/Users/test/Documents/exported-session" };
+			}
+		});
+
+		expect(selectedPath).toBe(resolve("C:/Users/test/Documents/exported-session.sqlite"));
+		expect(calls).toHaveLength(1);
+		expect(calls[0]?.defaultPath).toBe(join(
+			"C:/Users/test/Documents",
+			"Project invalid name-session-20260803-export.sqlite"
+		));
+		expect(calls[0]?.filters).toEqual([{ name: "SQLite Database", extensions: ["sqlite"] }]);
+	});
+
+	it("returns null when session export selection is cancelled", async () => {
+		await expect(pickSessionExportDestination({
+			sessionId: "session-20260803-cancel",
+			title: "Cancelled"
+		}, undefined, {
+			documentsDirectory: "C:/Users/test/Documents",
+			showSaveDialog: async () => ({ canceled: true, filePath: "" })
+		})).resolves.toBeNull();
 	});
 });

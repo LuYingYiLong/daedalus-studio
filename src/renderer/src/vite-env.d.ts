@@ -224,6 +224,12 @@ declare global {
 
 	interface SessionFsAPI {
 		openSessionDirectory: (sessionId: string) => Promise<{ opened: true }>;
+		pickExportDestination: (params: {
+			sessionId: string;
+			title: string;
+			dialogTitle?: string;
+			buttonLabel?: string;
+		}) => Promise<string | null>;
 	}
 
 	type DockTabKind = "review" | "terminal";

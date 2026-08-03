@@ -170,6 +170,7 @@
 
 :root[data-theme="light"] {
 	--ds-bg: #f5f5f5;
+	--ds-bg-tint: rgba(255, 255, 255, 0.75);
 	--ds-tr-bg: rgb(245, 245, 245, 0.7);
 	--ds-code-bg: #14141414;
 	--ds-bg-sunken: #eeeeee;

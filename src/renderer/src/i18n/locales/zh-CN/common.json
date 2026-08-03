@@ -194,6 +194,7 @@
       "archiveSession": "归档会话",
       "openInExplorer": "在资源管理器中打开",
       "copySessionId": "复制会话 ID",
+      "exportSession": "导出会话数据",
       "delete": "删除",
       "newSessionInWorkspace": "在 workspace 中新建会话"
     },
@@ -218,14 +219,22 @@
     },
     "status": {
       "assistantRunning": "助手正在响应",
-      "unreadResponse": "未读助手响应"
+      "unreadResponse": "未读助手响应",
+      "exportingSession": "正在导出会话…"
     },
     "messages": {
-      "sessionIdCopied": "已复制会话 ID"
+      "sessionIdCopied": "已复制会话 ID",
+      "sessionExported": "会话数据已导出",
+      "sessionExportedWithMissingFiles": "会话数据已导出，但有 {{count}} 个外部文件缺失"
+    },
+    "exportDialog": {
+      "title": "导出会话数据",
+      "button": "导出"
     },
     "errors": {
       "archiveSession": "归档会话失败",
       "copySessionId": "复制会话 ID 失败",
+      "exportSession": "导出会话数据失败",
       "deleteWorkspace": "删除 workspace 失败",
       "loadWorkspace": "加载 workspace 失败",
       "openSessionDirectory": "打开会话目录失败",

@@ -29,7 +29,6 @@ import {
 	reconcileWorkflowTodoWithRunStage
 } from "@/features/composer/workflow-todo";
 import { hasQueuedFollowUpResponse } from "../run-completion-notification";
-import { selectLatestGoalState } from "@/features/composer/goal-state";
 
 type RefValue<T> = {
 	current: T;
@@ -58,7 +57,7 @@ export type BackendEventStreamParams = {
 	setRunState: Dispatch<SetStateAction<RunControllerState>>;
 	timelineStore: TimelinePageStore;
 	setWorkflowTodoSnapshot: Dispatch<SetStateAction<WorkflowTodoSnapshot | null>>;
-	setCurrentGoal: Dispatch<SetStateAction<AgentGoalState | null>>;
+	applyCurrentGoalSnapshot: (goal: AgentGoalState) => void;
 	setLatestPlanClarification: Dispatch<SetStateAction<PlanClarificationState | null>>;
 	setLatestPlanApproval: Dispatch<SetStateAction<PlanApprovalState | null>>;
 	setPlanClarificationError: Dispatch<SetStateAction<string | null>>;
@@ -128,9 +127,7 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 			}
 		} else if (event.event === "agent.goal.state") {
 			const goal: AgentGoalState = event.data as AgentGoalState;
-			params.setCurrentGoal((currentGoal: AgentGoalState | null): AgentGoalState => {
-				return selectLatestGoalState(currentGoal, goal);
-			});
+			params.applyCurrentGoalSnapshot(goal);
 			if (
 				(goal.stage === "achieved" || goal.stage === "failed")
 				&& !hasQueuedFollowUpResponse(params.activeWorkbenchRef.current, goal.rootRequestId)

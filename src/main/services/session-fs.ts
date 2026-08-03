@@ -1,7 +1,8 @@
-import { ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import type { SaveDialogOptions, SaveDialogReturnValue } from "electron";
 import { stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export type SessionFsOpenDirectoryResult = {
 	opened: true;
@@ -12,7 +13,44 @@ export type SessionFsOpenDirectoryOptions = {
 	openPath?: (path: string) => Promise<string>;
 };
 
+export type SessionFsPickExportDestinationParams = {
+	sessionId: string;
+	title: string;
+	dialogTitle?: string;
+	buttonLabel?: string;
+};
+
+export type SessionFsPickExportDestinationOptions = {
+	documentsDirectory?: string;
+	showSaveDialog?: (
+		owner: BrowserWindow | undefined,
+		options: SaveDialogOptions
+	) => Promise<SaveDialogReturnValue>;
+};
+
 const SESSION_ID_PATTERN: RegExp = /^session-[A-Za-z0-9_-]+$/u;
+
+function sanitizeExportFileName(title: string, sessionId: string): string {
+	const normalizedTitle: string = title
+		.normalize("NFKC")
+		.replace(/[<>:"/\\|?*\u0000-\u001f]/gu, " ")
+		.replace(/\s+/gu, " ")
+		.trim()
+		.replace(/[. ]+$/gu, "")
+		.slice(0, 80);
+	return `${normalizedTitle.length > 0 ? normalizedTitle : sessionId}-${sessionId}.sqlite`;
+}
+
+function ensureSqliteExtension(filePath: string): string {
+	return extname(filePath).toLocaleLowerCase() === ".sqlite" ? filePath : `${filePath}.sqlite`;
+}
+
+async function showSessionExportSaveDialog(
+	owner: BrowserWindow | undefined,
+	options: SaveDialogOptions
+): Promise<SaveDialogReturnValue> {
+	return owner === undefined ? dialog.showSaveDialog(options) : dialog.showSaveDialog(owner, options);
+}
 
 function isPathInside(root: string, target: string): boolean {
 	const relativePath: string = relative(root, target);
@@ -56,8 +94,43 @@ export async function openSessionDirectory(
 	return { opened: true };
 }
 
+export async function pickSessionExportDestination(
+	params: SessionFsPickExportDestinationParams,
+	owner?: BrowserWindow,
+	options: SessionFsPickExportDestinationOptions = {}
+): Promise<string | null> {
+	if (!SESSION_ID_PATTERN.test(params.sessionId)) {
+		throw new Error("Invalid session id.");
+	}
+	if (typeof params.title !== "string" || params.title.length > 500) {
+		throw new Error("Invalid session title.");
+	}
+	if (params.dialogTitle !== undefined && (typeof params.dialogTitle !== "string" || params.dialogTitle.length > 120)) {
+		throw new Error("Invalid export dialog title.");
+	}
+	if (params.buttonLabel !== undefined && (typeof params.buttonLabel !== "string" || params.buttonLabel.length > 40)) {
+		throw new Error("Invalid export button label.");
+	}
+	const documentsDirectory: string = options.documentsDirectory ?? app.getPath("documents");
+	const showSaveDialog = options.showSaveDialog ?? showSessionExportSaveDialog;
+	const result: SaveDialogReturnValue = await showSaveDialog(owner, {
+		title: params.dialogTitle?.trim() || "Export session data",
+		defaultPath: join(documentsDirectory, sanitizeExportFileName(params.title, params.sessionId)),
+		buttonLabel: params.buttonLabel?.trim() || "Export",
+		filters: [{ name: "SQLite Database", extensions: ["sqlite"] }],
+		properties: ["createDirectory", "showOverwriteConfirmation"]
+	});
+	if (result.canceled || typeof result.filePath !== "string" || result.filePath.trim().length === 0) {
+		return null;
+	}
+	return resolve(ensureSqliteExtension(result.filePath));
+}
+
 export function registerSessionFsIpc(): void {
 	ipcMain.handle("session-fs:open-directory", async (_event, sessionId: string): Promise<SessionFsOpenDirectoryResult> => {
 		return openSessionDirectory(sessionId);
+	});
+	ipcMain.handle("session-fs:pick-export-destination", async (event, params: SessionFsPickExportDestinationParams): Promise<string | null> => {
+		return pickSessionExportDestination(params, BrowserWindow.fromWebContents(event.sender) ?? undefined);
 	});
 }

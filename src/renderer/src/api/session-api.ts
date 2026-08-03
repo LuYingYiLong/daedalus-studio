@@ -71,6 +71,16 @@ export type DeleteSessionResult = {
 	sessionId: string;
 };
 
+export type ExportSessionResult = {
+	exported: true;
+	sessionId: string;
+	destinationPath: string;
+	byteSize: number;
+	tableCounts: Record<string, number>;
+	embeddedFileCount: number;
+	missingFileCount: number;
+};
+
 export type DismissWorkflowTodoParams = {
 	workflowId?: string;
 	runId?: string;
@@ -211,6 +221,14 @@ export async function deleteArchivedSession(sessionId: string): Promise<DeleteAr
 	return client.request<DeleteArchivedSessionResult>("session.archived.delete", {
 		sessionId
 	});
+}
+
+export async function exportSession(
+	sessionId: string,
+	destinationPath: string
+): Promise<ExportSessionResult> {
+	const client = await createBackendClient();
+	return client.request<ExportSessionResult>("session.export", { sessionId, destinationPath });
 }
 
 export async function fetchSessionTimelineIndex(sessionId: string): Promise<SessionTimelineNavigationIndexResult> {

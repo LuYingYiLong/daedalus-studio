@@ -1414,7 +1414,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setRunState,
 		timelineStore,
 		setWorkflowTodoSnapshot,
-		setCurrentGoal,
+		applyCurrentGoalSnapshot,
 		setLatestPlanClarification,
 		setLatestPlanApproval,
 		setPlanClarificationError,
