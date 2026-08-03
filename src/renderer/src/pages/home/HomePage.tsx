@@ -1013,6 +1013,7 @@ function HomePage({
 
 		const items: NonNullable<CollapseProps["items"]> = [];
 		for (const envInfo of summaryEnvInfos) {
+			const hasDiffStats: boolean = envInfo.additions > 0 || envInfo.deletions > 0;
 			items.push({
 				key: `env_info:${envInfo.sourceFolderId}`,
 				label: <Tooltip title={envInfo.sourceFolderPath}>{envInfo.title}</Tooltip>,
@@ -1029,12 +1030,16 @@ function HomePage({
 								<span className={styles.diffLabel}>
 									{t("agentPage.summary.actions.diff")}
 								</span>
-								<span className={styles.additions}>
-									{`+${envInfo.additions}`}
-								</span>
-								<span className={styles.deletions}>
-									{`-${envInfo.deletions}`}
-								</span>
+								{hasDiffStats ? (
+									<>
+										<span className={styles.additions}>
+											{`+${envInfo.additions}`}
+										</span>
+										<span className={styles.deletions}>
+											{`-${envInfo.deletions}`}
+										</span>
+									</>
+								) : null}
 							</span>
 						</Button>
 						<Button

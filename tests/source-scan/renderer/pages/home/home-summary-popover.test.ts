@@ -30,6 +30,8 @@ describe("HomePage summary popover source", () => {
 	it("renders conditional sections, see more modals, and image preview", () => {
 		expect(source).toContain("summaryOverview.envInfos?.length");
 		expect(source).toContain("for (const envInfo of summaryEnvInfos)");
+		expect(source).toContain("envInfo.additions > 0 || envInfo.deletions > 0");
+		expect(source).toContain("{hasDiffStats ? (");
 		expect(source).toContain("label: <Tooltip title={envInfo.sourceFolderPath}>{envInfo.title}</Tooltip>");
 		expect(source).toContain("summaryOverview.plans.total > 0");
 		expect(source).toContain("summaryOverview.sources.total > 0");
