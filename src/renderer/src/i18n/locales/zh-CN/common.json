@@ -661,6 +661,21 @@
         "background": "后台任务"
       }
     },
+    "providerReconnect": {
+        "attempt": "尝试重新连接 {{attempt}}/{{max}}",
+        "recovered": "连接已恢复",
+        "failed": "无法连接模型服务",
+        "stopped": "已停止重新连接",
+      "timeout": "模型服务连续 {{seconds}} 秒没有返回数据时开始重连。",
+      "extended": "检测到临时传输或网关故障，自动重连已扩展至 15 次。",
+      "reason": {
+        "transport": "模型服务的传输连接意外中断。",
+        "idle_timeout": "模型服务的数据流长时间没有活动。",
+        "gateway": "临时网关错误中断了本次请求。",
+        "rate_limit": "模型供应商暂时限制了请求频率。",
+        "server": "模型供应商返回了临时服务错误。"
+      }
+    },
     "plan": {
       "open": "打开计划"
     },

@@ -1,0 +1,52 @@
+.collapse {
+	width: 100%;
+	margin-block: 4px;
+	background: var(--ant-color-fill-quaternary);
+	user-select: none;
+}
+
+.collapse :global(.ant-collapse-header) {
+	align-items: center;
+}
+
+.collapse :global(.ant-collapse-header-text) {
+	min-width: 0;
+}
+
+.label {
+	display: block;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--ant-color-text-secondary);
+}
+
+.icon svg {
+	width: 16px;
+	height: 16px;
+}
+
+.iconActive {
+	color: var(--ant-color-primary);
+	animation: reconnectPulse 1.2s ease-in-out infinite;
+}
+
+.details {
+	padding-inline: 2px;
+}
+
+@keyframes reconnectPulse {
+	0%, 100% { opacity: 0.45; }
+	50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.iconActive { animation: none; }
+}

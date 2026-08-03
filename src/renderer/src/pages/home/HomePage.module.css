@@ -77,7 +77,7 @@
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
-	background-color: var(--ds-bg);
+	background-color: var(--ds-tr-bg);
 	border-radius: var(--ds-space-2);
 }
 
@@ -170,7 +170,6 @@
 	min-height: 40px;
 	min-width: 0;
 	user-select: none;
-	background: var(--ds-bg);
 }
 
 .chatText {

@@ -11,6 +11,7 @@ import PlanPart from "./PlanPart";
 import InlineDiffPart from "./InlineDiffPart";
 import ThinkingPart from "./ThinkingPart";
 import ImageGenerationPart from "./ImageGenerationPart";
+import ProviderReconnectPart from "./ProviderReconnectPart";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import MarkdownContent from "../markdown/MarkdownContent";
 import { useTimelineDisclosure } from "./timeline-disclosure-state";
@@ -103,6 +104,17 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 			return isTerminalCommandPart(part)
 				? <TerminalPart key={index} part={part} disclosureKey={`${disclosurePrefix}:tool:${index}`} />
 				: <ToolPart key={index} part={part} disclosureKey={`${disclosurePrefix}:tool:${index}`} />
+		}
+
+		if (part.type === "provider_reconnect") {
+			return (
+				<ProviderReconnectPart
+					key={part.reconnectId}
+					part={part}
+					disclosureKey={`${disclosurePrefix}:provider-reconnect:${part.reconnectId}`}
+					streaming={streaming}
+				/>
+			);
 		}
 
 		if (part.type === "status") {

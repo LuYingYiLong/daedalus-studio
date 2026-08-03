@@ -45,7 +45,7 @@
 	min-height: 0;
 	height: 100%;
 	overflow: hidden;
-	background: var(--ds-bg);
+	background-color: var(--ds-tr-bg);
 }
 
 .activePage > * {

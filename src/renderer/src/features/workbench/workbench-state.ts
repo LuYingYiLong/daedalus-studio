@@ -198,6 +198,73 @@ function appendTerminalRuntimeTail(current: string, delta: string, omittedChars:
 	};
 }
 
+function truncateTextByCodePoints(text: string, count: number): { text: string; removed: number } {
+	if (count <= 0 || text.length === 0) return { text, removed: 0 };
+	const codePoints: string[] = Array.from(text);
+	const removed: number = Math.min(Math.trunc(count), codePoints.length);
+	return { text: codePoints.slice(0, codePoints.length - removed).join(""), removed };
+}
+
+function discardAttemptText(parts: TimelineBodyPart[], type: "markdown" | "thinking", count: number): TimelineBodyPart[] {
+	let remaining: number = Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0;
+	if (remaining === 0) return parts;
+	const nextParts: TimelineBodyPart[] = [...parts];
+	for (let index: number = nextParts.length - 1; index >= 0 && remaining > 0; index -= 1) {
+		const part: TimelineBodyPart = nextParts[index]!;
+		if (part.type !== type) continue;
+		const truncated = truncateTextByCodePoints(part.text, remaining);
+		remaining -= truncated.removed;
+		if (truncated.text.length === 0) {
+			nextParts.splice(index, 1);
+		} else {
+			nextParts[index] = { ...part, text: truncated.text };
+		}
+	}
+	return nextParts;
+}
+
+function getFiniteNumber(record: Record<string, unknown>, key: string): number {
+	const value: unknown = record[key];
+	return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function appendProviderReconnectPart(parts: TimelineBodyPart[], data: Record<string, unknown>): TimelineBodyPart[] {
+	const reconnectId: string = getStringValue(data, "reconnectId");
+	const revision: number = getFiniteNumber(data, "revision");
+	if (reconnectId.length === 0 || revision <= 0) return parts;
+	const existingIndex: number = parts.findIndex((part: TimelineBodyPart): boolean => (
+		part.type === "provider_reconnect" && part.reconnectId === reconnectId
+	));
+	const existing: Extract<TimelineBodyPart, { type: "provider_reconnect" }> | undefined = existingIndex >= 0
+		? parts[existingIndex] as Extract<TimelineBodyPart, { type: "provider_reconnect" }>
+		: undefined;
+	if (existing !== undefined && existing.revision >= revision) return parts;
+
+	let nextParts: TimelineBodyPart[] = discardAttemptText(parts, "markdown", getFiniteNumber(data, "discardedMessageCodePoints"));
+	nextParts = discardAttemptText(nextParts, "thinking", getFiniteNumber(data, "discardedThinkingCodePoints"));
+	const status: string = getStringValue(data, "status");
+	const reason: string = getStringValue(data, "reason");
+	const part: Extract<TimelineBodyPart, { type: "provider_reconnect" }> = {
+		type: "provider_reconnect",
+		reconnectId,
+		revision,
+		provider: getStringValue(data, "provider"),
+		model: getStringValue(data, "model"),
+		status: status === "reconnecting" || status === "recovered" || status === "failed" ? status : "waiting",
+		reason: reason === "idle_timeout" || reason === "gateway" || reason === "rate_limit" || reason === "server" ? reason : "transport",
+		attempt: Math.max(0, Math.trunc(getFiniteNumber(data, "attempt"))),
+		maxAttempts: getFiniteNumber(data, "maxAttempts") === 15 ? 15 : 5,
+		timeoutMs: Math.max(0, Math.trunc(getFiniteNumber(data, "timeoutMs"))),
+		autoExtended: data.autoExtended === true,
+		...(getStringValue(data, "retryAt").length === 0 ? {} : { retryAt: getStringValue(data, "retryAt") })
+	};
+	const currentIndex: number = nextParts.findIndex((item: TimelineBodyPart): boolean => (
+		item.type === "provider_reconnect" && item.reconnectId === reconnectId
+	));
+	if (currentIndex < 0) return [...nextParts, part];
+	return nextParts.map((item: TimelineBodyPart, index: number): TimelineBodyPart => index === currentIndex ? part : item);
+}
+
 function mergeTerminalOutputProgress(
 	events: Record<string, unknown>[],
 	normalizedEvent: Record<string, unknown>
@@ -642,6 +709,8 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		nextParts = appendThinkingPart(nextParts, getStringValue(data, "text"), false);
 	} else if (event.event === "agent.thinking.done") {
 		nextParts = appendThinkingPart(nextParts, "", true);
+	} else if (event.event === "agent.provider.reconnect") {
+		nextParts = appendProviderReconnectPart(nextParts, data);
 	} else if (event.event === "agent.summary.started") {
 		nextParts = appendSummaryStartPart(nextParts, event);
 	} else if (event.event === "agent.status") {
@@ -691,7 +760,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 
 	return {
 		...block,
-		content: getAssistantContent(nextParts, block.content),
+		content: getAssistantContent(nextParts, event.event === "agent.provider.reconnect" ? "" : block.content),
 		completedAtUtc,
 		status: nextStatus,
 		bodyParts: nextParts
@@ -702,6 +771,7 @@ function shouldCreateAssistantBlock(event: BackendEvent): boolean {
 	return event.event === "agent.run.state"
 		|| event.event === "agent.message.delta"
 		|| event.event === "agent.thinking.delta"
+		|| event.event === "agent.provider.reconnect"
 		|| event.event === "agent.summary.started"
 		|| event.event.startsWith("agent.tool.")
 		|| event.event === "agent.status"

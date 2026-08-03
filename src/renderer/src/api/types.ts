@@ -439,6 +439,20 @@ export type PlanApprovalState = {
 export type TimelineBodyPart =
 	| { type: "markdown"; text: string }
 	| { type: "thinking"; text: string; done: boolean }
+	| {
+		type: "provider_reconnect";
+		reconnectId: string;
+		revision: number;
+		provider: string;
+		model: string;
+		status: "waiting" | "reconnecting" | "recovered" | "failed";
+		reason: "transport" | "idle_timeout" | "gateway" | "rate_limit" | "server";
+		attempt: number;
+		maxAttempts: 5 | 15;
+		timeoutMs: number;
+		retryAt?: string;
+		autoExtended: boolean;
+	}
 	| { type: "tool"; tool_call_id: string; events: Record<string, unknown>[] }
 	| { type: "summary_start"; runId: string; stepId: string; stepRunId: string; title: string; foldTitle: string }
 	| {

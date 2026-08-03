@@ -661,6 +661,21 @@
         "background": "Background job"
       }
     },
+    "providerReconnect": {
+        "attempt": "Trying to reconnect {{attempt}}/{{max}}",
+        "recovered": "Connection restored",
+        "failed": "Unable to connect to the model service",
+        "stopped": "Reconnect stopped",
+      "timeout": "A reconnect starts after {{seconds}} seconds without provider activity.",
+      "extended": "Transient transport or gateway failures extended automatic reconnects to 15 attempts.",
+      "reason": {
+        "transport": "The transport connection ended unexpectedly.",
+        "idle_timeout": "The provider stream stopped producing data.",
+        "gateway": "A temporary gateway error interrupted the request.",
+        "rate_limit": "The provider temporarily rate-limited the request.",
+        "server": "The provider returned a temporary server error."
+      }
+    },
     "plan": {
       "open": "Open plan"
     },

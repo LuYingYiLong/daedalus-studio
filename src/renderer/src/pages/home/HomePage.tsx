@@ -1013,6 +1013,7 @@ function HomePage({
 
 		const items: NonNullable<CollapseProps["items"]> = [];
 		for (const envInfo of summaryEnvInfos) {
+			const hasDiff: boolean = envInfo.changedFiles > 0;
 			const hasDiffStats: boolean = envInfo.additions > 0 || envInfo.deletions > 0;
 			items.push({
 				key: `env_info:${envInfo.sourceFolderId}`,
@@ -1056,6 +1057,7 @@ function HomePage({
 						<Button
 							type="text"
 							block
+							disabled={!hasDiff}
 							aria-busy={gitActions.isCommitMessageGenerating}
 							icon={gitActions.isCommitMessageGenerating ? <Spin size="small" /> : <Icon name="git-commit" />}
 							className={styles.summaryActionButton}

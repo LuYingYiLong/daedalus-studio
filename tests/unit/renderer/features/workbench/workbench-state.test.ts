@@ -239,6 +239,61 @@ describe("workbench-state", () => {
 		]);
 	});
 
+	it("rolls back a failed provider attempt once and updates its reconnect part in place", () => {
+		let blocks: TimelineBlock[] = applyBackendEventsToTimeline([], [
+			{ type: "event", id: "request-reconnect", event: "agent.message.delta", data: { text: "stable partial🙂" } },
+			{ type: "event", id: "request-reconnect", event: "agent.thinking.delta", data: { text: "thinking" } }
+		]);
+		const waiting: BackendEvent = {
+			type: "event",
+			id: "request-reconnect",
+			event: "agent.provider.reconnect",
+			data: {
+				reconnectId: "reconnect-a",
+				revision: 1,
+				provider: "deepseek",
+				model: "deepseek-v4-flash",
+				status: "waiting",
+				reason: "transport",
+				attempt: 1,
+				maxAttempts: 5,
+				timeoutMs: 60_000,
+				autoExtended: false,
+				discardedMessageCodePoints: 8,
+				discardedThinkingCodePoints: 8
+			}
+		};
+		blocks = applyBackendEventToTimeline(blocks, waiting);
+		blocks = applyBackendEventToTimeline(blocks, waiting);
+		blocks = applyBackendEventToTimeline(blocks, {
+			type: "event",
+			id: "request-reconnect",
+			event: "agent.message.delta",
+			data: { text: "complete" }
+		});
+		blocks = applyBackendEventToTimeline(blocks, {
+			type: "event",
+			id: "request-reconnect",
+			event: "agent.provider.reconnect",
+			data: {
+				...(waiting.data as Record<string, unknown>),
+				revision: 2,
+				status: "recovered",
+				discardedMessageCodePoints: 0,
+				discardedThinkingCodePoints: 0
+			}
+		});
+
+		const assistant = blocks[0];
+		expect(assistant?.type).toBe("assistant");
+		if (assistant?.type !== "assistant") throw new Error("Expected assistant block");
+		expect(assistant.content).toBe("stable complete");
+		expect(assistant.bodyParts.filter((part) => part.type === "thinking")).toHaveLength(0);
+		const reconnectParts = assistant.bodyParts.filter((part) => part.type === "provider_reconnect");
+		expect(reconnectParts).toHaveLength(1);
+		expect(reconnectParts[0]).toMatchObject({ revision: 2, status: "recovered" });
+	});
+
 	it("creates a running assistant block when an agent run starts", () => {
 		const blocks: TimelineBlock[] = applyBackendEventToTimeline(
 			[],
