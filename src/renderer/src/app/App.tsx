@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useEventListener, useLatest } from "ahooks";
 import { Input, message as antdMessage, Modal, Typography, Spin } from "antd";
+import { useTranslation } from "react-i18next";
 import { useDiskSpaceCheck } from "@/shared/hooks/useDiskSpaceCheck";
 import { onBackendReconnected } from "@/shared/api/transport/backend-client";
 import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
@@ -644,6 +645,7 @@ function getRecentSessions(sessions: SessionMetadata[]): SessionMetadata[] {
 }
 
 function App({ bootstrapData }: AppProps): React.JSX.Element {
+	const { t } = useTranslation();
 	const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState<number>(0);
 	const [isNewSessionHome, setIsNewSessionHome] = useState<boolean>(true);
 	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() => createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection));
@@ -2036,7 +2038,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	async function handleFullTrustConfirm(): Promise<void> {
 		if (fullTrustConfirmationText !== FULL_TRUST_CONFIRMATION_TEXT) {
-			void messageApi.error(`Type ${FULL_TRUST_CONFIRMATION_TEXT} to enable Full Trust.`);
+			void messageApi.error(t("app.fullTrust.errors.confirmation", { confirmationText: FULL_TRUST_CONFIRMATION_TEXT }));
 			return;
 		}
 
@@ -3492,9 +3494,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			{messageContextHolder}
 			<Modal
 				open={isFullTrustModalOpen}
-				title="Enable Full Trust?"
-				okText="Enable Full Trust"
-				cancelText="Cancel"
+				title={t("app.fullTrust.title")}
+				okText={t("app.fullTrust.actions.enable")}
+				cancelText={t("app.fullTrust.actions.cancel")}
 				okButtonProps={{
 					danger: true,
 					disabled: fullTrustConfirmationText !== FULL_TRUST_CONFIRMATION_TEXT
@@ -3511,10 +3513,12 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				}}
 			>
 				<Typography.Paragraph>
-					Full Trust disables the OS sandbox, automatically approves all tools, and lets terminal commands run with your normal user permissions.
+					{t("app.fullTrust.description")}
 				</Typography.Paragraph>
 				<Typography.Paragraph type="secondary">
-					Type <Typography.Text code>{FULL_TRUST_CONFIRMATION_TEXT}</Typography.Text> to confirm this global security mode.
+					{t("app.fullTrust.confirmationPrefix")}{" "}
+					<Typography.Text code>{FULL_TRUST_CONFIRMATION_TEXT}</Typography.Text>{" "}
+					{t("app.fullTrust.confirmationSuffix")}
 				</Typography.Paragraph>
 				<Input
 					value={fullTrustConfirmationText}

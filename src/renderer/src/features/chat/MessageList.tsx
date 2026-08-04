@@ -457,6 +457,20 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		}
 	}, []);
 
+	const handleCopyCapture = useCallback((event: React.ClipboardEvent<HTMLDivElement>): void => {
+		const scroller: HTMLElement | null = scrollerRef.current;
+		const selectedText: string = scroller === null ? "" : getSelectedTextInside(scroller);
+		if (selectedText.length === 0) {
+			return;
+		}
+
+		event.preventDefault();
+		void copyTextToClipboard(selectedText).catch((error: unknown): void => {
+			console.error("[MessageList] native copy selected text failed", error);
+			void messageApi.error(t("chat.common.copyFailed"));
+		});
+	}, [messageApi, t]);
+
 	const applySearchHighlights = useCallback((scrollActiveIntoView: boolean): void => {
 		const scroller: HTMLElement | null = scrollerRef.current;
 		if (highlightFrameRef.current !== null) {
@@ -723,6 +737,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 					<div
 						ref={setSelectionContainer}
 						className={styles.messageListShell}
+						onCopyCapture={handleCopyCapture}
 						onContextMenuCapture={handleContextMenuCapture}
 						onWheelCapture={handleWheelCapture}
 						onPointerDownCapture={handlePointerDownCapture}

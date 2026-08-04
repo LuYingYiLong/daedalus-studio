@@ -204,6 +204,7 @@ function MessageSelectionOverlay({ container, scroller, contextItems, askThreads
 			if (editing === null) setActiveSelection(null);
 		};
 		const handleKeyDown = (event: KeyboardEvent): void => {
+			if (event.ctrlKey || event.metaKey) return;
 			if (!isSelectionControl(event.target) && editing === null) setActiveSelection(null);
 		};
 		const handleKeyUp = (event: KeyboardEvent): void => {

@@ -902,6 +902,21 @@ function Composer({
 		};
 	}
 
+	function handleTextAreaCopy(event: React.ClipboardEvent<HTMLTextAreaElement>): void {
+		const textArea: HTMLTextAreaElement = event.currentTarget;
+		const selectionStart: number = textArea.selectionStart;
+		const selectionEnd: number = textArea.selectionEnd;
+		const selectedText: string = textArea.value.slice(selectionStart, selectionEnd);
+		if (selectedText.length === 0) {
+			return;
+		}
+
+		event.preventDefault();
+		void copyTextToClipboard(selectedText).catch((error: unknown): void => {
+			console.error("[Composer] native copy failed", error);
+		});
+	}
+
 	function addContextFiles(files: File[]): boolean {
 		if (onAddContextFiles === undefined) {
 			return false;
@@ -941,7 +956,23 @@ function Composer({
 		const text: string = event.clipboardData.getData("text/plain");
 		if (text.trim().length > 100 && onAddPastedTextAttachment?.(text) === true) {
 			event.preventDefault();
+			return;
 		}
+
+		if (text.length === 0) {
+			return;
+		}
+
+		event.preventDefault();
+		const textArea: HTMLTextAreaElement = event.currentTarget;
+		const selectionStart: number = textArea.selectionStart;
+		const selectionEnd: number = textArea.selectionEnd;
+		const nextMessage: string = `${textArea.value.slice(0, selectionStart)}${text}${textArea.value.slice(selectionEnd)}`;
+		suppressedCompletionValueRef.current = null;
+		setDraftMessage(nextMessage);
+		onDraftChange?.(nextMessage);
+		setSelectionAfterRender(selectionStart + text.length);
+		refreshCompletion(nextMessage, selectionStart + text.length);
 	}
 
 	function handleTextAreaDragOver(event: React.DragEvent<HTMLTextAreaElement>): void {
@@ -1152,6 +1183,7 @@ function Composer({
 								onKeyDown={handleTextAreaKeyDown}
 								onSelect={handleTextAreaSelection}
 								onContextMenu={handleTextAreaContextMenu}
+								onCopy={handleTextAreaCopy}
 								onPaste={handleTextAreaPaste}
 								onDragOver={handleTextAreaDragOver}
 								onDrop={handleTextAreaDrop}

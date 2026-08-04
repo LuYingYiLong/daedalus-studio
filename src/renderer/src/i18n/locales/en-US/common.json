@@ -52,6 +52,19 @@
       "titleWithWorkspace": "What should we work on for {{workspaceName}}?",
       "subtitleWithoutWorkspace": "Choose a workspace or start without one.",
       "subtitleWithWorkspace": "Describe the next task for this workspace."
+    },
+    "fullTrust": {
+      "title": "Enable Full Trust?",
+      "description": "Full Trust disables the OS sandbox, automatically approves all tools, and lets terminal commands run with your normal user permissions.",
+      "confirmationPrefix": "Type",
+      "confirmationSuffix": "to confirm this global security mode.",
+      "actions": {
+        "enable": "Enable Full Trust",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "confirmation": "Type {{confirmationText}} to enable Full Trust."
+      }
     }
   },
   "onboarding": {

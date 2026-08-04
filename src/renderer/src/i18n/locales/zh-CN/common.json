@@ -52,6 +52,19 @@
       "titleWithWorkspace": "要在 {{workspaceName}} 里做什么？",
       "subtitleWithoutWorkspace": "选择一个 workspace，或直接开始。",
       "subtitleWithWorkspace": "描述这个 workspace 接下来要处理的任务。"
+    },
+    "fullTrust": {
+      "title": "启用 Full Trust？",
+      "description": "Full Trust 会关闭 OS 沙箱，自动批准所有工具，并允许终端命令以你的普通用户权限运行。",
+      "confirmationPrefix": "输入",
+      "confirmationSuffix": "以确认这个全局安全模式。",
+      "actions": {
+        "enable": "启用 Full Trust",
+        "cancel": "取消"
+      },
+      "errors": {
+        "confirmation": "输入 {{confirmationText}} 才能启用 Full Trust。"
+      }
     }
   },
   "onboarding": {
