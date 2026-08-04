@@ -21,6 +21,7 @@ import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import DeleteWorkspaceDialog from "./DeleteWorkspaceDialog";
 import WorkspaceProjectDialog from "./WorkspaceProjectDialog";
+import { getWorkspaceIconStyle, WORKSPACE_ICON_NAMES } from "./workspace-appearance";
 import {
 	areWorkspaceTreeOrdersEqual,
 	canDropWorkspaceTreeNode,
@@ -120,6 +121,14 @@ type WorkspaceTreeLabels = {
 	newSessionInWorkspaceAria: (workspaceName: string) => string;
 	workspaceActionsAria: (workspaceName: string) => string;
 };
+
+function getWorkspaceTreeSwitcherIcon(workspace: WorkspaceConfig, expanded: boolean | undefined): React.JSX.Element {
+	const configuredIconName: string = WORKSPACE_ICON_NAMES[workspace.icon] ?? "folder";
+	const iconName: string = configuredIconName === "folder" && expanded === true
+		? "folder-open"
+		: configuredIconName;
+	return <Icon name={iconName} style={getWorkspaceIconStyle(workspace.color)} />;
+}
 
 function filterVisibleSessions(sessions: SessionMetadata[]): SessionMetadata[] {
 	return sessions.filter((session: SessionMetadata): boolean => session.temporary !== true);
@@ -1377,7 +1386,7 @@ function WorkspaceTree({
 						).workspace;
 						return workspace === undefined
 							? null
-							: <Icon name={nodeProps.expanded ? "folder-open" : "folder"} />;
+							: getWorkspaceTreeSwitcherIcon(workspace, nodeProps.expanded);
 					}}
 				/>
 			)

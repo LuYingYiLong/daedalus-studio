@@ -44,7 +44,7 @@ export type ToolPartProps = {
 function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [open, setOpen] = useTimelineDisclosure(disclosureKey, false);
-	const toolDisplay = getToolDisplayInfo(part.events);
+	const toolDisplay = getToolDisplayInfo(part.events, t);
 	const status = getToolStatus(part.events);
 	const statusText: Record<ToolStatus, string> = {
 		running: t("chat.tool.status.running"),

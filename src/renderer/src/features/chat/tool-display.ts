@@ -10,6 +10,8 @@ type ToolDisplayTemplate = {
 	target?: "file" | "folder" | "scene" | "setting" | "query" | "command" | "preset" | "skill" | "node" | "job" | "uid" | "resource";
 };
 
+export type ToolDisplayTranslator = (key: string, options?: Record<string, unknown>) => string;
+
 const TOOL_DISPLAY_TEMPLATES: Record<string, ToolDisplayTemplate> = {
 	mcp_skills_load: { label: "Load skill", iconName: "skill", target: "skill" },
 	mcp_skills_propose_create: { label: "Draft skill", iconName: "skill", target: "skill" },
@@ -243,22 +245,34 @@ function getFallbackIcon(toolName: string): string {
 	return "mcp";
 }
 
-export function getToolDisplayInfo(events: Record<string, unknown>[]): ToolDisplayInfo {
+function translateToolLabel(toolName: string, fallback: string, t?: ToolDisplayTranslator): string {
+	if (t === undefined) {
+		return fallback;
+	}
+
+	const key = `chat.tool.labels.${toolName}`;
+	const translated = t(key, { defaultValue: fallback });
+	return translated.length > 0 ? translated : fallback;
+}
+
+export function getToolDisplayInfo(events: Record<string, unknown>[], t?: ToolDisplayTranslator): ToolDisplayInfo {
 	const rawName: string = getToolName(events);
 	const args: Record<string, unknown> = getToolArgs(events);
 	const template: ToolDisplayTemplate | undefined = TOOL_DISPLAY_TEMPLATES[rawName];
 
 	if (template === undefined) {
+		const fallbackLabel = humanizeToolName(rawName);
 		return {
-			label: humanizeToolName(rawName),
+			label: translateToolLabel(rawName, fallbackLabel, t),
 			iconName: getFallbackIcon(rawName),
 			rawName
 		};
 	}
 
 	const target: string | undefined = getTarget(args, template.target);
+	const label = translateToolLabel(rawName, template.label, t);
 	return {
-		label: target === undefined ? template.label : `${template.label}: ${target}`,
+		label: target === undefined ? label : `${label}: ${target}`,
 		iconName: template.iconName,
 		rawName
 	};

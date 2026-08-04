@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next";
 import type { AdditionalContextItem } from "@/api/types";
 import { getAdditionalContextIconName } from "./additional-context-icon";
 
@@ -45,11 +46,11 @@ function getSelectedPaths(item: AdditionalContextItem): SelectedPath[] {
 	});
 }
 
-function getFilesystemSelectionMeta(item: AdditionalContextItem): string {
+function getFilesystemSelectionMeta(item: AdditionalContextItem, t: TFunction<"common">): string {
 	const selectedPaths: SelectedPath[] = getSelectedPaths(item);
 
 	if (selectedPaths.length === 0) {
-		return item.subtitle ?? "Selection";
+		return item.subtitle ?? t("chat.contextStrip.display.selection");
 	}
 
 	const fileCount: number = selectedPaths.filter((selectedPath: SelectedPath): boolean => selectedPath.kind === "file").length;
@@ -57,19 +58,19 @@ function getFilesystemSelectionMeta(item: AdditionalContextItem): string {
 	const parts: string[] = [];
 
 	if (fileCount > 0) {
-		parts.push(`${fileCount} file${fileCount === 1 ? "" : "s"}`);
+		parts.push(t("chat.contextStrip.display.fileCount", { count: fileCount }));
 	}
 
 	if (folderCount > 0) {
-		parts.push(`${folderCount} folder${folderCount === 1 ? "" : "s"}`);
+		parts.push(t("chat.contextStrip.display.folderCount", { count: folderCount }));
 	}
 
-	return parts.length > 0 ? parts.join(" · ") : `${selectedPaths.length} selected`;
+	return parts.length > 0 ? parts.join(" · ") : t("chat.contextStrip.display.selectedCount", { count: selectedPaths.length });
 }
 
-function getMeta(item: AdditionalContextItem): string {
+function getMeta(item: AdditionalContextItem, t: TFunction<"common">): string {
 	if (item.kind === "filesystem_selection") {
-		return getFilesystemSelectionMeta(item);
+		return getFilesystemSelectionMeta(item, t);
 	}
 
 	if (item.subtitle !== undefined && item.subtitle.trim().length > 0) {
@@ -82,7 +83,9 @@ function getMeta(item: AdditionalContextItem): string {
 		const lineEnd: number = typeof data.lineEnd === "number" ? data.lineEnd : 0;
 
 		if (lineStart > 0 && lineEnd > 0) {
-			return lineStart === lineEnd ? `Line ${lineStart}` : `Lines ${lineStart}-${lineEnd}`;
+			return lineStart === lineEnd
+				? t("chat.contextStrip.display.line", { line: lineStart })
+				: t("chat.contextStrip.display.linesRange", { start: lineStart, end: lineEnd });
 		}
 	}
 
@@ -99,24 +102,24 @@ function getMeta(item: AdditionalContextItem): string {
 	if (item.kind === "text_attachment") {
 		const data: Record<string, unknown> = getDataRecord(item);
 		const byteSize: number = typeof data.byteSize === "number" ? data.byteSize : 0;
-		return byteSize > 0 ? `${Math.ceil(byteSize / 1024)} KiB` : "Text attachment";
+		return byteSize > 0 ? t("chat.contextStrip.display.fileSize", { size: Math.ceil(byteSize / 1024) }) : t("chat.contextStrip.display.textAttachment");
 	}
 
 	if (item.kind === "git_diff_comment") {
 		const data: Record<string, unknown> = getDataRecord(item);
 		const line: number = typeof data.newLine === "number" ? data.newLine : typeof data.oldLine === "number" ? data.oldLine : 0;
-		return line > 0 ? `Line ${line}` : "Review comment";
+		return line > 0 ? t("chat.contextStrip.display.line", { line }) : t("chat.contextStrip.display.reviewComment");
 	}
 
 	if (item.kind === "message_selection") {
-		return "Selected message text";
+		return t("chat.contextStrip.display.selectedMessageText");
 	}
 
 	return item.kind.replaceAll("_", " ");
 }
 
-function getTooltipLines(item: AdditionalContextItem, meta: string): string[] {
-	const lines: string[] = [item.title || "Context"];
+function getTooltipLines(item: AdditionalContextItem, meta: string, t: TFunction<"common">): string[] {
+	const lines: string[] = [item.title || t("chat.contextStrip.display.contextFallback")];
 
 	if (meta.length > 0) {
 		lines.push(meta);
@@ -132,29 +135,32 @@ function getTooltipLines(item: AdditionalContextItem, meta: string): string[] {
 		const selectedPaths: SelectedPath[] = getSelectedPaths(item);
 		for (const selectedPath of selectedPaths.slice(0, 6)) {
 			if (selectedPath.resourcePath !== undefined && selectedPath.resourcePath.length > 0) {
-				lines.push(`${selectedPath.kind || "path"}: ${selectedPath.resourcePath}`);
+				lines.push(t("chat.contextStrip.display.pathLabel", {
+					kind: selectedPath.kind || t("chat.contextStrip.display.pathFallback"),
+					path: selectedPath.resourcePath
+				}));
 			}
 		}
 
 		if (selectedPaths.length > 6) {
-			lines.push(`... ${selectedPaths.length - 6} more`);
+			lines.push(t("chat.contextStrip.display.more", { count: selectedPaths.length - 6 }));
 		}
 	}
 
 	if (item.pinned === true) {
-		lines.push("Pinned");
+		lines.push(t("chat.contextStrip.pinned"));
 	}
 
 	return lines;
 }
 
-export function summarizeAdditionalContextItem(item: AdditionalContextItem): AdditionalContextDisplay {
-	const meta: string = getMeta(item);
-	const lines: string[] = getTooltipLines(item, meta);
+export function summarizeAdditionalContextItem(item: AdditionalContextItem, t: TFunction<"common">): AdditionalContextDisplay {
+	const meta: string = getMeta(item, t);
+	const lines: string[] = getTooltipLines(item, meta, t);
 
 	return {
 		iconName: getAdditionalContextIconName(item),
-		title: item.title || "Context",
+		title: item.title || t("chat.contextStrip.display.contextFallback"),
 		meta,
 		tooltip: lines.join("\n")
 	};

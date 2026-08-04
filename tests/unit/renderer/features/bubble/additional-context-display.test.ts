@@ -1,6 +1,46 @@
 import { describe, expect, it } from "vitest";
+import type { TFunction } from "i18next";
 import type { AdditionalContextItem } from "@/api/types";
 import { summarizeAdditionalContextItem } from "@/features/chat/additional-context-display";
+
+const EN_DISPLAY: Record<string, string> = {
+	"chat.contextStrip.display.selection": "Selection",
+	"chat.contextStrip.display.fileCount": "{{count}} file",
+	"chat.contextStrip.display.fileCount_other": "{{count}} files",
+	"chat.contextStrip.display.folderCount": "{{count}} folder",
+	"chat.contextStrip.display.folderCount_other": "{{count}} folders",
+	"chat.contextStrip.display.selectedCount": "{{count}} selected",
+	"chat.contextStrip.display.selectedCount_other": "{{count}} selected",
+	"chat.contextStrip.display.line": "Line {{line}}",
+	"chat.contextStrip.display.linesRange": "Lines {{start}}-{{end}}",
+	"chat.contextStrip.display.fileSize": "{{size}} KiB",
+	"chat.contextStrip.display.textAttachment": "Text attachment",
+	"chat.contextStrip.display.reviewComment": "Review comment",
+	"chat.contextStrip.display.selectedMessageText": "Selected message text",
+	"chat.contextStrip.display.contextFallback": "Context",
+	"chat.contextStrip.display.more": "... {{count}} more",
+	"chat.contextStrip.display.more_other": "... {{count}} more",
+	"chat.contextStrip.display.pathLabel": "{{kind}}: {{path}}",
+	"chat.contextStrip.display.pathFallback": "path",
+	"chat.contextStrip.pinned": "Pinned"
+};
+
+function createMockT(): TFunction<"common"> {
+	const mockT = ((key: string, options?: Record<string, unknown>): string => {
+		const count: unknown = options?.count;
+		let template: string = EN_DISPLAY[key] ?? key;
+		if (typeof count === "number" && count !== 1 && EN_DISPLAY[`${key}_other`] !== undefined) {
+			template = EN_DISPLAY[`${key}_other`];
+		}
+		for (const [name, value] of Object.entries(options ?? {})) {
+			template = template.replaceAll(`{{${name}}}`, String(value));
+		}
+		return template;
+	}) as unknown as TFunction<"common">;
+	return mockT;
+}
+
+const mockT: TFunction<"common"> = createMockT();
 
 describe("additional-context-display", () => {
 	it("summarizes filesystem selections with item counts and tooltip paths", () => {
@@ -17,7 +57,7 @@ describe("additional-context-display", () => {
 			}
 		};
 
-		const display = summarizeAdditionalContextItem(item);
+		const display = summarizeAdditionalContextItem(item, mockT);
 
 		expect(display.iconName).toBe("folder_browse");
 		expect(display.meta).toBe("1 file · 1 folder");
@@ -37,7 +77,7 @@ describe("additional-context-display", () => {
 			}
 		};
 
-		const display = summarizeAdditionalContextItem(item);
+		const display = summarizeAdditionalContextItem(item, mockT);
 
 		expect(display.iconName).toBe("script");
 		expect(display.meta).toBe("Lines 12-16");
@@ -57,8 +97,8 @@ describe("additional-context-display", () => {
 			source: "editor"
 		};
 
-		expect(summarizeAdditionalContextItem(nodeItem).iconName).toBe("node");
-		expect(summarizeAdditionalContextItem(sceneItem).iconName).toBe("scene_edit");
+		expect(summarizeAdditionalContextItem(nodeItem, mockT).iconName).toBe("node");
+		expect(summarizeAdditionalContextItem(sceneItem, mockT).iconName).toBe("scene_edit");
 	});
 
 	it("uses a chat marker for message-selection context", () => {
@@ -84,7 +124,7 @@ describe("additional-context-display", () => {
 			}
 		};
 
-		const display = summarizeAdditionalContextItem(item);
+		const display = summarizeAdditionalContextItem(item, mockT);
 		expect(display.iconName).toBe("chat");
 		expect(display.meta).toBe("Selected message text");
 	});

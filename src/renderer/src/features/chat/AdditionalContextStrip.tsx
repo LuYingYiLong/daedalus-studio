@@ -37,7 +37,7 @@ function AdditionalContextStrip({
 	return (
 		<div className={stripClassName} aria-label={t("chat.contextStrip.aria")}>
 			{items.map((item: AdditionalContextItem): React.ReactNode => {
-				const display = summarizeAdditionalContextItem(item);
+				const display = summarizeAdditionalContextItem(item, t);
 				const nextPinned: boolean = item.pinned !== true;
 				const canTogglePin: boolean = interactive && item.kind !== "git_diff_comment" && item.kind !== "message_selection";
 
