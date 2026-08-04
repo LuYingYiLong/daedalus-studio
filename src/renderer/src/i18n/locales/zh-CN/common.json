@@ -3,6 +3,11 @@
     "boot": {
       "progress": {
         "starting": "正在启动 Daedalus Studio",
+        "connectingBackend": "正在连接后端",
+        "loadingPreferences": "正在加载偏好设置",
+        "loadingWorkspaceData": "正在加载工作区数据",
+        "loadingCommandsAndSkills": "正在加载指令与技能",
+        "ready": "准备就绪",
         "checkingBackend": "正在检查后端",
         "checkingBackendPackage": "正在检查后端包",
         "installingBackend": "正在安装后端",
@@ -19,7 +24,21 @@
         "markedBackendMissing": "已标记的后端版本缺失",
         "healthFailed": "Daedalus 后端未能启动",
         "studioStartFailed": "Daedalus Studio 无法启动",
-        "bootstrapFailed": "后端启动流程失败。"
+        "bootstrapFailed": "后端启动流程失败。",
+        "backendReadyTimeout": "等待后端就绪超时。",
+        "resourceTimeout": "加载{{resource}}超时。"
+      },
+      "resources": {
+        "backendHealth": "后端状态",
+        "clientPreferences": "客户端偏好",
+        "generalSettings": "通用设置",
+        "providerModels": "供应商与模型",
+        "workspaces": "工作区",
+        "sessions": "会话列表",
+        "sessionLayouts": "会话布局",
+        "workspaceTreeOrder": "工作区排序",
+        "slashCommands": "斜杠指令",
+        "skills": "技能"
       },
       "actions": {
         "retry": "重试",
@@ -334,6 +353,12 @@
   "composer": {
     "placeholder": "想让我做什么？",
     "goalPlaceholder": "描述目标以及可以验证的完成结果",
+    "textAreaMenu": {
+      "cut": "剪切",
+      "copy": "复制",
+      "paste": "粘贴",
+      "selectAll": "全选"
+    },
     "context": {
       "addFiles": "添加文件",
       "addFolder": "添加文件夹",

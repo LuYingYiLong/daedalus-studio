@@ -1,10 +1,10 @@
 {
   "name": "daedalus-studio",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Standalone workbench for AI-assisted Godot development",
   "license": "GPL-3.0-only",
   "author": "LuYingYiLong",
-  "backendBootstrapVersion": "1.1.9",
+  "backendBootstrapVersion": "1.2.0",
   "godotPluginVersion": "1.3.4",
   "backendProtocolVersion": 3,
   "godotPluginProtocolVersion": 3,

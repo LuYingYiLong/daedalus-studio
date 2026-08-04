@@ -235,6 +235,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	clipboard: {
 		writeText: (text: string): Promise<{ written: true }> => {
 			return ipcRenderer.invoke("clipboard:write-text", text);
+		},
+		readText: (): Promise<{ text: string }> => {
+			return ipcRenderer.invoke("clipboard:read-text");
 		}
 	},
 

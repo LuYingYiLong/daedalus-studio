@@ -21,7 +21,8 @@ describe("BootSplash", () => {
 		const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.tsx");
 		expect(titlebarSource).toContain("{appReady ? (");
 		expect(titlebarSource).toContain("className={styles.workspaceSidebarButton}");
-		expect(mainWindowRootSource).toContain("<BootSplash loadData={loadBootstrapData} onReady={handleBootstrapReady} />");
+		expect(mainWindowRootSource).toContain("<BootSplash loadData={loadData} onReady={handleBootstrapReady} />");
+		expect(mainWindowRootSource).toContain("loadBootstrapData(onProgress, t)");
 		expect(mainWindowRootSource).toContain("bootstrapData.clientPreferences.onboarding.completed");
 		expect(mainWindowRootSource).toContain("<OnboardingWizard bootstrapData={bootstrapData} onComplete={handleOnboardingComplete} />");
 		expect(mainWindowRootSource).toContain("<App bootstrapData={bootstrapData} />");
@@ -61,7 +62,9 @@ describe("BootSplash", () => {
 		expect(bootstrapSource).toContain("fetchWorkspaces()");
 		expect(bootstrapSource).toContain("fetchSessions()");
 		expect(bootstrapSource).toContain("fetchWorkspaceTreeOrder()");
-		expect(bootstrapSource).toContain("withBootstrapTimeout(\"workspace tree order\"");
+		expect(bootstrapSource).toContain('t("app.boot.resources.workspaceTreeOrder")');
+		expect(bootstrapSource).toContain('t("app.boot.progress.loadingWorkspaceData")');
+		expect(bootstrapSource).toContain('t("app.boot.error.resourceTimeout"');
 		expect(bootstrapSource).toContain("fetchSlashCommands()");
 		expect(bootstrapSource).toContain("fetchSkills()");
 		expect(bootstrapSource).not.toContain("loadSettingsBootstrapData");

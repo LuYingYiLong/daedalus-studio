@@ -46,3 +46,20 @@ export async function copyTextToClipboard(text: string): Promise<void> {
 
 	writeTextWithDomFallback(text);
 }
+
+export async function readTextFromClipboard(): Promise<string> {
+	try {
+		if (navigator.clipboard?.readText !== undefined) {
+			return await navigator.clipboard.readText();
+		}
+	} catch {
+		// Electron renderer 可能没有 Clipboard API 权限，继续尝试主进程剪贴板。
+	}
+
+	if (window.electronAPI?.clipboard?.readText !== undefined) {
+		const result: { text: string } = await window.electronAPI.clipboard.readText();
+		return result.text;
+	}
+
+	throw new Error("Clipboard text cannot be read in this environment.");
+}

@@ -3,6 +3,11 @@
     "boot": {
       "progress": {
         "starting": "Starting Daedalus Studio",
+        "connectingBackend": "Connecting to backend",
+        "loadingPreferences": "Loading preferences",
+        "loadingWorkspaceData": "Loading workspace data",
+        "loadingCommandsAndSkills": "Loading commands and skills",
+        "ready": "Ready",
         "checkingBackend": "Checking backend",
         "checkingBackendPackage": "Checking backend package",
         "installingBackend": "Installing backend",
@@ -19,7 +24,21 @@
         "markedBackendMissing": "Marked backend version is missing",
         "healthFailed": "Daedalus backend did not start",
         "studioStartFailed": "Daedalus Studio could not start",
-        "bootstrapFailed": "Backend bootstrap failed."
+        "bootstrapFailed": "Backend bootstrap failed.",
+        "backendReadyTimeout": "Timed out waiting for the backend to become ready.",
+        "resourceTimeout": "Timed out while loading {{resource}}."
+      },
+      "resources": {
+        "backendHealth": "backend health",
+        "clientPreferences": "client preferences",
+        "generalSettings": "general settings",
+        "providerModels": "providers and models",
+        "workspaces": "workspaces",
+        "sessions": "sessions",
+        "sessionLayouts": "session layouts",
+        "workspaceTreeOrder": "workspace tree order",
+        "slashCommands": "slash commands",
+        "skills": "skills"
       },
       "actions": {
         "retry": "Retry",
@@ -336,6 +355,12 @@
   "composer": {
     "placeholder": "What can I say?",
     "goalPlaceholder": "Describe the goal and a verifiable completion result",
+    "textAreaMenu": {
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select all"
+    },
     "context": {
       "addFiles": "Add files",
       "addFolder": "Add folder",

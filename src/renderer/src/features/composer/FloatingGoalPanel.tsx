@@ -125,6 +125,7 @@ export default function FloatingGoalPanel({
 		modal.confirm({
 			title: t("goal.cancelConfirm.title"),
 			content: t("goal.cancelConfirm.description"),
+			cancelText: t("goal.actions.dismiss"),
 			okText: t("goal.actions.cancel"),
 			okButtonProps: { danger: true },
 			onOk: (): Promise<void> => runAction("cancel", () => cancelGoal(goal.goalId))

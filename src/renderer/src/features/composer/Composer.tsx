@@ -24,6 +24,7 @@ import {
 	type ComposerCompletionTrigger
 } from "./composer-completion";
 import { parseComposerModeCommand } from "./composer-mode-command";
+import { copyTextToClipboard, readTextFromClipboard } from "@/shared/lib/clipboard";
 
 export type ComposerProps = {
 	providerModelSelection: ProviderModelSelection | null;
@@ -73,6 +74,11 @@ type SelectedModel = {
 };
 
 type ProgressStrokeColor = NonNullable<ProgressProps["strokeColor"]>;
+
+type TextAreaSelection = {
+	start: number;
+	end: number;
+};
 
 const CONTEXT_USAGE_NORMAL_STROKE: ProgressStrokeColor = {
 	"0%": "var(--ds-accent)",
@@ -421,6 +427,7 @@ function Composer({
 	const { t } = useTranslation();
 	const rootRef = useRef<HTMLDivElement | null>(null);
 	const textAreaRef = useRef<TextAreaRef | null>(null);
+	const textAreaSelectionRef = useRef<TextAreaSelection>({ start: 0, end: 0 });
 	const imageInputRef = useRef<HTMLInputElement | null>(null);
 	const suppressedCompletionValueRef = useRef<string | null>(null);
 	const completionStateSignatureRef = useRef<string>("");
@@ -483,6 +490,58 @@ function Composer({
 		}
 	}, [onAddFiles, onAddFolder]);
 
+	const handleTextAreaContextAction: MenuProps["onClick"] = useCallback(({ key }): void => {
+		const nativeTextArea: HTMLTextAreaElement | null = getNativeTextArea(textAreaRef.current);
+		if (nativeTextArea === null) {
+			return;
+		}
+
+		const selection: TextAreaSelection = textAreaSelectionRef.current;
+		const value: string = nativeTextArea.value;
+		const selectedText: string = value.slice(selection.start, selection.end);
+		const replaceSelection = (replacement: string): void => {
+			const nextMessage: string = `${value.slice(0, selection.start)}${replacement}${value.slice(selection.end)}`;
+			suppressedCompletionValueRef.current = null;
+			hideCompletion();
+			setDraftMessage(nextMessage);
+			onDraftChange?.(nextMessage);
+			setSelectionAfterRender(selection.start + replacement.length);
+		};
+
+		switch (String(key)) {
+			case "cut":
+				if (selectedText.length > 0) {
+					void copyTextToClipboard(selectedText)
+						.then((): void => replaceSelection(""))
+						.catch((error: unknown): void => console.error("[Composer] cut failed", error));
+				}
+				return;
+			case "copy":
+				if (selectedText.length > 0) {
+					void copyTextToClipboard(selectedText).catch((error: unknown): void => console.error("[Composer] copy failed", error));
+				}
+				return;
+			case "paste":
+				void readTextFromClipboard()
+					.then((text: string): void => {
+						if (text.trim().length > 100 && onAddPastedTextAttachment?.(text) === true) {
+							return;
+						}
+						replaceSelection(text);
+					})
+					.catch((error: unknown): void => console.error("[Composer] paste failed", error));
+				return;
+			case "select-all":
+				nativeTextArea.focus();
+				nativeTextArea.select();
+				textAreaSelectionRef.current = { start: 0, end: value.length };
+				refreshCompletion(value, value.length);
+				return;
+			default:
+				return;
+		}
+	}, [onAddPastedTextAttachment, onDraftChange]);
+
 	function handleImageInputChange(event: React.ChangeEvent<HTMLInputElement>): void {
 		const files: File[] = Array.from(event.currentTarget.files ?? []);
 		event.currentTarget.value = "";
@@ -533,6 +592,15 @@ function Composer({
 		items: createContextItems(t),
 		onClick: handleContextItemClick
 	}), [handleContextItemClick, t]);
+	const textAreaContextMenu: MenuProps = useMemo((): MenuProps => ({
+		items: [
+			{ key: "cut", label: t("composer.textAreaMenu.cut") },
+			{ key: "copy", label: t("composer.textAreaMenu.copy") },
+			{ key: "paste", label: t("composer.textAreaMenu.paste") },
+			{ key: "select-all", label: t("composer.textAreaMenu.selectAll") }
+		],
+		onClick: handleTextAreaContextAction
+	}), [handleTextAreaContextAction, t]);
 	const modeMenu: MenuProps = useMemo((): MenuProps => ({
 		items: createModeItems(t),
 		selectedKeys: [mode],
@@ -820,7 +888,18 @@ function Composer({
 
 	function handleTextAreaSelection(event: React.SyntheticEvent<HTMLTextAreaElement>): void {
 		const textArea: HTMLTextAreaElement = event.currentTarget;
+		textAreaSelectionRef.current = {
+			start: textArea.selectionStart,
+			end: textArea.selectionEnd
+		};
 		refreshCompletion(textArea.value, textArea.selectionStart);
+	}
+
+	function handleTextAreaContextMenu(event: React.MouseEvent<HTMLTextAreaElement>): void {
+		textAreaSelectionRef.current = {
+			start: event.currentTarget.selectionStart,
+			end: event.currentTarget.selectionEnd
+		};
 	}
 
 	function addContextFiles(files: File[]): boolean {
@@ -1061,26 +1140,31 @@ function Composer({
 							/>
 						</div>
 					) : null}
-					<Input.TextArea
-						ref={textAreaRef}
-						value={draftMessage}
-						autoSize={{ minRows: 4, maxRows: 4 }}
-						placeholder={mode === "goal" ? t("composer.goalPlaceholder") : t("composer.placeholder")}
-						className={styles.composerTextArea}
-						onChange={handleTextAreaChange}
-						onKeyDown={handleTextAreaKeyDown}
-						onSelect={handleTextAreaSelection}
-						onPaste={handleTextAreaPaste}
-						onDragOver={handleTextAreaDragOver}
-						onDrop={handleTextAreaDrop}
-						onCompositionStart={(): void => {
-							setIsComposing(true);
-						}}
-						onCompositionEnd={(event: React.CompositionEvent<HTMLTextAreaElement>): void => {
-							setIsComposing(false);
-							refreshCompletion(event.currentTarget.value, event.currentTarget.selectionStart);
-						}}
-					/>
+					<Dropdown menu={textAreaContextMenu} trigger={["contextMenu"]}>
+						<div className={styles.composerTextAreaContextTarget}>
+							<Input.TextArea
+								ref={textAreaRef}
+								value={draftMessage}
+								autoSize={{ minRows: 4, maxRows: 4 }}
+								placeholder={mode === "goal" ? t("composer.goalPlaceholder") : t("composer.placeholder")}
+								className={styles.composerTextArea}
+								onChange={handleTextAreaChange}
+								onKeyDown={handleTextAreaKeyDown}
+								onSelect={handleTextAreaSelection}
+								onContextMenu={handleTextAreaContextMenu}
+								onPaste={handleTextAreaPaste}
+								onDragOver={handleTextAreaDragOver}
+								onDrop={handleTextAreaDrop}
+								onCompositionStart={(): void => {
+									setIsComposing(true);
+								}}
+								onCompositionEnd={(event: React.CompositionEvent<HTMLTextAreaElement>): void => {
+									setIsComposing(false);
+									refreshCompletion(event.currentTarget.value, event.currentTarget.selectionStart);
+								}}
+							/>
+						</div>
+					</Dropdown>
 					<div className={styles.composerToolbar}>
 						<Tooltip title={t("composer.tooltips.addContext")}>
 							<Dropdown

@@ -154,6 +154,7 @@ declare global {
 
 	interface ClipboardAPI {
 		writeText: (text: string) => Promise<{ written: true }>;
+		readText: () => Promise<{ text: string }>;
 	}
 
 	type NativeNotificationKind = "run_completed" | "approval_required" | "clarification_required";

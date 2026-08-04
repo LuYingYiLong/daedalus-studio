@@ -109,6 +109,10 @@
 	border-radius: 0px;
 }
 
+.composerTextAreaContextTarget {
+	width: 100%;
+}
+
 .composerTextArea:focus,
 .composerTextArea:hover {
 	border: 0;

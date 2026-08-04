@@ -17,7 +17,9 @@ describe("HomePage summary popover source", () => {
 	it("prewarms and reuses the current session overview", () => {
 		expect(source).toContain("const summaryRequestIdRef = useRef<number>(0);");
 		expect(source).toContain("if (activeSessionId !== null || workspaceForActions !== null) {");
-		expect(source).toContain("open && summaryOverview === null && summaryError === null && !isSummaryLoading");
+		expect(source).toContain("if (summaryOverview === null && summaryError === null && !isSummaryLoading)");
+		expect(source).toContain("loadSummaryOverview(SUMMARY_PREVIEW_LIMIT, SUMMARY_PREVIEW_LIMIT, true)");
+		expect(source).toContain("silent: boolean = false");
 		expect(source).toContain("requestId !== summaryRequestIdRef.current");
 		expect(source).toContain("fresh");
 	});

@@ -4,6 +4,10 @@ export type ClipboardWriteTextResult = {
 	written: true;
 };
 
+export type ClipboardReadTextResult = {
+	text: string;
+};
+
 export function registerClipboardIpc(): void {
 	ipcMain.handle("clipboard:write-text", async (_event, text: unknown): Promise<ClipboardWriteTextResult> => {
 		if (typeof text !== "string") {
@@ -12,5 +16,9 @@ export function registerClipboardIpc(): void {
 
 		clipboard.writeText(text);
 		return { written: true };
+	});
+
+	ipcMain.handle("clipboard:read-text", async (): Promise<ClipboardReadTextResult> => {
+		return { text: clipboard.readText() };
 	});
 }

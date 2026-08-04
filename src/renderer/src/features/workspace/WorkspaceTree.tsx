@@ -21,7 +21,6 @@ import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import DeleteWorkspaceDialog from "./DeleteWorkspaceDialog";
 import WorkspaceProjectDialog from "./WorkspaceProjectDialog";
-import { WorkspaceIconView } from "./workspace-appearance";
 import {
 	areWorkspaceTreeOrdersEqual,
 	canDropWorkspaceTreeNode,
@@ -478,6 +477,10 @@ function getSelectedMenuKeys(selectedSessionId: string | null, selectedWorkspace
 	return fallbackKeys;
 }
 
+function areStringListsEqual(left: readonly string[], right: readonly string[]): boolean {
+	return left.length === right.length && left.every((value: string, index: number): boolean => value === right[index]);
+}
+
 function WorkspaceTree({
 	refreshToken = 0,
 	selectedSessionId = null,
@@ -505,6 +508,10 @@ function WorkspaceTree({
 	const [workspaceTreeOrder, setWorkspaceTreeOrder] = useState<WorkspaceTreeOrderPreferences>(() => {
 		return reconcileWorkspaceTreeOrder(initialWorkspaceTreeOrder, initialWorkspaces, filterVisibleSessions(initialSessions));
 	});
+	const [expandedWorkspaceIds, setExpandedWorkspaceIds] = useState<string[]>(() => {
+		return reconcileWorkspaceTreeOrder(initialWorkspaceTreeOrder, initialWorkspaces, filterVisibleSessions(initialSessions))
+			.expandedWorkspaceIds;
+	});
 	const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(initialActiveWorkspaceId);
 	const [selectedMenuKeys, setSelectedMenuKeys] = useState<string[]>([]);
 	const [isWorkspaceLoading, setIsWorkspaceLoading] = useState<boolean>(true);
@@ -522,10 +529,12 @@ function WorkspaceTree({
 	const [renameError, setRenameError] = useState<string | null>(null);
 	const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
 	const workspaceTreeOrderRef = useRef<WorkspaceTreeOrderPreferences>(workspaceTreeOrder);
+	const expandedWorkspaceIdsRef = useRef<string[]>(expandedWorkspaceIds);
 	const workspacesRef = useRef<WorkspaceConfig[]>(workspaces);
 	const sessionsRef = useRef<SessionMetadata[]>(sessions);
 	const orderSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
 	const orderSaveRevisionRef = useRef<number>(0);
+	const expansionSaveTimerRef = useRef<number | null>(null);
 	const isMountedRef = useRef<boolean>(true);
 	const runningSessionIdSet: ReadonlySet<string> = useMemo((): ReadonlySet<string> => new Set(runningSessionIds), [runningSessionIds]);
 	const unreadSessionIdSet: ReadonlySet<string> = useMemo((): ReadonlySet<string> => new Set(unreadSessionIds), [unreadSessionIds]);
@@ -587,7 +596,10 @@ function WorkspaceTree({
 		};
 	}, [t]);
 
-	workspaceTreeOrderRef.current = workspaceTreeOrder;
+	workspaceTreeOrderRef.current = {
+		...workspaceTreeOrder,
+		expandedWorkspaceIds: expandedWorkspaceIdsRef.current
+	};
 	workspacesRef.current = workspaces;
 	sessionsRef.current = sessions;
 
@@ -599,14 +611,19 @@ function WorkspaceTree({
 
 	function setCanonicalWorkspaceTreeOrder(nextOrder: WorkspaceTreeOrderPreferences): void {
 		workspaceTreeOrderRef.current = nextOrder;
+		expandedWorkspaceIdsRef.current = nextOrder.expandedWorkspaceIds;
+		setExpandedWorkspaceIds(nextOrder.expandedWorkspaceIds);
 		setWorkspaceTreeOrder(nextOrder);
 	}
 
-	function persistWorkspaceTreeOrder(nextOrder: WorkspaceTreeOrderPreferences): void {
-		if (areWorkspaceTreeOrdersEqual(workspaceTreeOrderRef.current, nextOrder)) {
-			return;
+	function clearScheduledExpansionSave(): void {
+		if (expansionSaveTimerRef.current !== null) {
+			window.clearTimeout(expansionSaveTimerRef.current);
+			expansionSaveTimerRef.current = null;
 		}
-		setCanonicalWorkspaceTreeOrder(nextOrder);
+	}
+
+	function enqueueWorkspaceTreeOrderSave(nextOrder: WorkspaceTreeOrderPreferences): void {
 		const revision: number = orderSaveRevisionRef.current + 1;
 		orderSaveRevisionRef.current = revision;
 		const payload = {
@@ -628,11 +645,14 @@ function WorkspaceTree({
 				if (!isMountedRef.current || revision !== orderSaveRevisionRef.current) {
 					return;
 				}
-				setCanonicalWorkspaceTreeOrder(reconcileWorkspaceTreeOrder(
+				const reconciledOrder: WorkspaceTreeOrderPreferences = reconcileWorkspaceTreeOrder(
 					savedOrder,
 					workspacesRef.current,
 					sessionsRef.current
-				));
+				);
+				if (!areWorkspaceTreeOrdersEqual(workspaceTreeOrderRef.current, reconciledOrder)) {
+					setCanonicalWorkspaceTreeOrder(reconciledOrder);
+				}
 			} catch (error: unknown) {
 				if (!isMountedRef.current || revision !== orderSaveRevisionRef.current) {
 					return;
@@ -652,6 +672,33 @@ function WorkspaceTree({
 				showWorkspaceOperationError(error, labels.failedSaveOrder);
 			}
 		});
+	}
+
+	function persistWorkspaceTreeOrder(nextOrder: WorkspaceTreeOrderPreferences): void {
+		if (areWorkspaceTreeOrdersEqual(workspaceTreeOrderRef.current, nextOrder)) {
+			return;
+		}
+		clearScheduledExpansionSave();
+		setCanonicalWorkspaceTreeOrder(nextOrder);
+		enqueueWorkspaceTreeOrderSave(nextOrder);
+	}
+
+	function persistExpandedWorkspaceIds(nextExpandedWorkspaceIds: string[]): void {
+		if (areStringListsEqual(expandedWorkspaceIdsRef.current, nextExpandedWorkspaceIds)) {
+			return;
+		}
+		const nextOrder: WorkspaceTreeOrderPreferences = {
+			...workspaceTreeOrderRef.current,
+			expandedWorkspaceIds: nextExpandedWorkspaceIds
+		};
+		workspaceTreeOrderRef.current = nextOrder;
+		expandedWorkspaceIdsRef.current = nextExpandedWorkspaceIds;
+		setExpandedWorkspaceIds(nextExpandedWorkspaceIds);
+		clearScheduledExpansionSave();
+		expansionSaveTimerRef.current = window.setTimeout((): void => {
+			expansionSaveTimerRef.current = null;
+			enqueueWorkspaceTreeOrderSave(workspaceTreeOrderRef.current);
+		}, 300);
 	}
 
 	const handleSectionChange: NonNullable<CollapseProps["onChange"]> = (keys): void => {
@@ -909,7 +956,14 @@ function WorkspaceTree({
 	useEffect((): (() => void) => {
 		isMountedRef.current = true;
 		return (): void => {
+			const pendingOrder: WorkspaceTreeOrderPreferences | null = expansionSaveTimerRef.current === null
+				? null
+				: workspaceTreeOrderRef.current;
+			clearScheduledExpansionSave();
 			isMountedRef.current = false;
+			if (pendingOrder !== null) {
+				enqueueWorkspaceTreeOrderSave(pendingOrder);
+			}
 		};
 	}, []);
 
@@ -949,8 +1003,10 @@ function WorkspaceTree({
 				workspacesRef.current = workspaceList.workspaces;
 				sessionsRef.current = visibleSessions;
 				workspaceTreeOrderRef.current = reconciledOrder;
+				expandedWorkspaceIdsRef.current = reconciledOrder.expandedWorkspaceIds;
 				setWorkspaces(workspaceList.workspaces);
 				setSessions(visibleSessions);
+				setExpandedWorkspaceIds(reconciledOrder.expandedWorkspaceIds);
 				setWorkspaceTreeOrder(reconciledOrder);
 				setActiveWorkspaceId(workspaceList.active);
 
@@ -1119,7 +1175,7 @@ function WorkspaceTree({
 	}, [labels.noRecentSessions, orderedRecentSessions, sessionMenuOptions]);
 	const effectiveSelectedMenuKeys: string[] = getSelectedMenuKeys(selectedSessionId, selectedWorkspaceId, selectedMenuKeys);
 	const openSectionKeys: WorkspaceTreeSectionKey[] = effectiveWorkspaceTreeOrder.expandedSectionKeys;
-	const openWorkspaceKeys: string[] = effectiveWorkspaceTreeOrder.expandedWorkspaceIds.map(
+	const openWorkspaceKeys: string[] = expandedWorkspaceIds.map(
 		(workspaceId: string): string => `workspace:${workspaceId}`
 	);
 	const handleProjectTreeExpand: NonNullable<TreeProps<ProjectTreeNode>["onExpand"]> = (expandedKeys): void => {
@@ -1127,10 +1183,7 @@ function WorkspaceTree({
 			const normalizedKey: string = String(key);
 			return normalizedKey.startsWith("workspace:") ? [normalizedKey.slice("workspace:".length)] : [];
 		});
-		persistWorkspaceTreeOrder({
-			...workspaceTreeOrderRef.current,
-			expandedWorkspaceIds
-		});
+		persistExpandedWorkspaceIds(expandedWorkspaceIds);
 	};
 	const handleProjectTreeSelect: NonNullable<TreeProps<ProjectTreeNode>["onSelect"]> = (_selectedKeys, info): void => {
 		const node: ProjectTreeNode = info.node;
@@ -1142,12 +1195,11 @@ function WorkspaceTree({
 		if (node.kind === "workspace") {
 			const workspaceId: string = node.workspaceId ?? selectedKey.slice("workspace:".length);
 			const currentOrder: WorkspaceTreeOrderPreferences = workspaceTreeOrderRef.current;
-			persistWorkspaceTreeOrder({
-				...currentOrder,
-				expandedWorkspaceIds: currentOrder.expandedWorkspaceIds.includes(workspaceId)
+			persistExpandedWorkspaceIds(
+				currentOrder.expandedWorkspaceIds.includes(workspaceId)
 					? currentOrder.expandedWorkspaceIds.filter((id: string): boolean => id !== workspaceId)
 					: [...currentOrder.expandedWorkspaceIds, workspaceId]
-			});
+			);
 			return;
 		}
 		if (node.sessionId !== undefined) {
@@ -1323,7 +1375,9 @@ function WorkspaceTree({
 						const workspace: WorkspaceConfig | undefined = (
 							nodeProps as { workspace?: WorkspaceConfig }
 						).workspace;
-						return workspace === undefined ? null : <WorkspaceIconView workspace={workspace} />;
+						return workspace === undefined
+							? null
+							: <Icon name={nodeProps.expanded ? "folder-open" : "folder"} />;
 					}}
 				/>
 			)
@@ -1469,10 +1523,7 @@ function WorkspaceTree({
 						: [...currentWorkspaces, createdWorkspace]);
 					const currentOrder: WorkspaceTreeOrderPreferences = workspaceTreeOrderRef.current;
 					if (!currentOrder.expandedWorkspaceIds.includes(createdWorkspace.id)) {
-						persistWorkspaceTreeOrder({
-							...currentOrder,
-							expandedWorkspaceIds: [...currentOrder.expandedWorkspaceIds, createdWorkspace.id]
-						});
+						persistExpandedWorkspaceIds([...currentOrder.expandedWorkspaceIds, createdWorkspace.id]);
 					}
 					ensureSectionOpen("projects");
 					setIsCreateProjectOpen(false);

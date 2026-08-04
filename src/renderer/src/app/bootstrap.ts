@@ -50,6 +50,8 @@ export type BootstrapProgress = {
 	percent: number;
 };
 
+export type BootstrapTranslator = (key: string, options?: Record<string, unknown>) => string;
+
 const BACKEND_READY_TIMEOUT_MS: number = 30000;
 const BACKEND_READY_POLL_MS: number = 500;
 const BOOTSTRAP_RESOURCE_TIMEOUT_MS: number = 20000;
@@ -62,12 +64,13 @@ function delay(ms: number): Promise<void> {
 
 async function withBootstrapTimeout<TResult>(
 	resourceName: string,
-	task: Promise<TResult>
+	task: Promise<TResult>,
+	t: BootstrapTranslator
 ): Promise<TResult> {
 	let timeoutId: number | null = null;
 	const timeoutTask = new Promise<never>((_resolve, reject): void => {
-		timeoutId = window.setTimeout((): void => {
-			reject(new Error(`Timed out while loading ${resourceName}.`));
+	timeoutId = window.setTimeout((): void => {
+			reject(new Error(t("app.boot.error.resourceTimeout", { resource: resourceName })));
 		}, BOOTSTRAP_RESOURCE_TIMEOUT_MS);
 	});
 	try {
@@ -79,26 +82,30 @@ async function withBootstrapTimeout<TResult>(
 	}
 }
 
-async function waitForBackendReady(onProgress: (progress: BootstrapProgress) => void): Promise<void> {
+async function waitForBackendReady(
+	onProgress: (progress: BootstrapProgress) => void,
+	t: BootstrapTranslator
+): Promise<void> {
 	const deadline: number = Date.now() + BACKEND_READY_TIMEOUT_MS;
-	onProgress({ label: "Starting backend", percent: 10 });
+	onProgress({ label: t("app.boot.progress.startingBackend"), percent: 10 });
 	while (Date.now() < deadline) {
 		if (await window.electronAPI.backend.healthCheck()) {
 			return;
 		}
 		await delay(BACKEND_READY_POLL_MS);
 	}
-	throw new Error("Backend did not become ready in time.");
+	throw new Error(t("app.boot.error.backendReadyTimeout"));
 }
 
 async function loadInitialSettingsData(
-	onProgress: (progress: BootstrapProgress) => void
+	onProgress: (progress: BootstrapProgress) => void,
+	t: BootstrapTranslator
 ): Promise<InitialSettingsData> {
-	onProgress({ label: "Loading preferences", percent: 40 });
+	onProgress({ label: t("app.boot.progress.loadingPreferences"), percent: 40 });
 	const [clientPreferences, generalSettings, providerModelSelection]: [ClientPreferences, GeneralSettings, ProviderModelSelection] = await Promise.all([
-		withBootstrapTimeout("client preferences", fetchClientPreferences()),
-		withBootstrapTimeout("general settings", fetchGeneralSettings()),
-		withBootstrapTimeout("provider models", fetchProviderModelSelection())
+		withBootstrapTimeout(t("app.boot.resources.clientPreferences"), fetchClientPreferences(), t),
+		withBootstrapTimeout(t("app.boot.resources.generalSettings"), fetchGeneralSettings(), t),
+		withBootstrapTimeout(t("app.boot.resources.providerModels"), fetchProviderModelSelection(), t)
 	]);
 	return {
 		clientPreferences,
@@ -107,38 +114,42 @@ async function loadInitialSettingsData(
 	};
 }
 
-export async function loadBootstrapData(onProgress: (progress: BootstrapProgress) => void): Promise<BootstrapData> {
-	await waitForBackendReady(onProgress);
+export async function loadBootstrapData(
+	onProgress: (progress: BootstrapProgress) => void,
+	t: BootstrapTranslator
+): Promise<BootstrapData> {
+	await waitForBackendReady(onProgress, t);
 
-	onProgress({ label: "Connecting backend", percent: 25 });
+	onProgress({ label: t("app.boot.progress.connectingBackend"), percent: 25 });
 	const client = await createBackendClient();
 	const backendHealth: BackendHealthResult = await withBootstrapTimeout(
-		"backend health",
-		client.request<BackendHealthResult>("backend.health")
+		t("app.boot.resources.backendHealth"),
+		client.request<BackendHealthResult>("backend.health"),
+		t
 	);
 
-	const settingsData: InitialSettingsData = await loadInitialSettingsData(onProgress);
+	const settingsData: InitialSettingsData = await loadInitialSettingsData(onProgress, t);
 
-	onProgress({ label: "Loading workspace data", percent: 60 });
+	onProgress({ label: t("app.boot.progress.loadingWorkspaceData"), percent: 60 });
 	const [workspaceList, sessionList, sessionLayouts, workspaceTreeOrder]: [
 		WorkspaceListResult,
 		SessionListResult,
 		SessionLayoutMap,
 		WorkspaceTreeOrderPreferences
 	] = await Promise.all([
-		withBootstrapTimeout("workspaces", fetchWorkspaces()),
-		withBootstrapTimeout("sessions", fetchSessions()),
-		withBootstrapTimeout("session layouts", window.electronAPI.sessionLayout.getAll()),
-		withBootstrapTimeout("workspace tree order", fetchWorkspaceTreeOrder())
+		withBootstrapTimeout(t("app.boot.resources.workspaces"), fetchWorkspaces(), t),
+		withBootstrapTimeout(t("app.boot.resources.sessions"), fetchSessions(), t),
+		withBootstrapTimeout(t("app.boot.resources.sessionLayouts"), window.electronAPI.sessionLayout.getAll(), t),
+		withBootstrapTimeout(t("app.boot.resources.workspaceTreeOrder"), fetchWorkspaceTreeOrder(), t)
 	]);
 
-	onProgress({ label: "Loading commands and skills", percent: 85 });
+	onProgress({ label: t("app.boot.progress.loadingCommandsAndSkills"), percent: 85 });
 	const [slashCommands, skillList] = await Promise.all([
-		withBootstrapTimeout("slash commands", fetchSlashCommands()),
-		withBootstrapTimeout("skills", fetchSkills())
+		withBootstrapTimeout(t("app.boot.resources.slashCommands"), fetchSlashCommands(), t),
+		withBootstrapTimeout(t("app.boot.resources.skills"), fetchSkills(), t)
 	]);
 
-	onProgress({ label: "Ready", percent: 100 });
+	onProgress({ label: t("app.boot.progress.ready"), percent: 100 });
 	return {
 		backendHealth,
 		...settingsData,
