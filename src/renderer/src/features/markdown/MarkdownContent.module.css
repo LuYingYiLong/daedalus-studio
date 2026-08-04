@@ -1,9 +1,16 @@
 .codeBlock {
 	margin: 0 0 var(--ds-space-2);
-	overflow: hidden;
+	/* 不能在这里裁剪，否则 sticky 标题会把自身当作滚动容器。 */
+	overflow: visible;
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
 	background: var(--ds-surface);
+}
+
+.codeHeaderSticky {
+	position: sticky;
+	top: 0;
+	z-index: 2;
 }
 
 .codeHeader {
@@ -13,8 +20,14 @@
 	min-height: 40px;
 	padding: 0 var(--ds-space-2);
 	border-bottom: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
 	background: var(--ds-surface-elevated);
 	user-select: none;
+	transition: border-radius 0.12s ease;
+}
+
+.codeHeaderSticky[data-code-header-pinned="true"] .codeHeader {
+	border-radius: 0px;
 }
 
 .codeTitle {
@@ -52,7 +65,14 @@
 .codeScroller {
 	max-width: 100%;
 	overflow: auto;
+	border-radius: 0 0 var(--ds-radius-lg) var(--ds-radius-lg);
 	background: var(--ds-bg-sunken);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.codeHeader {
+		transition: none;
+	}
 }
 
 .code {

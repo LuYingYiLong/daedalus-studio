@@ -91,7 +91,7 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 					data-message-selection-role="assistant"
 					data-message-selection-segment={`assistant:markdown:${index}`}
 				>
-					<MarkdownContent streaming={streaming}>{part.text}</MarkdownContent>
+					<MarkdownContent streaming={streaming} stickyCodeHeaders>{part.text}</MarkdownContent>
 				</div>
 			);
 		}
@@ -208,7 +208,7 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 						data-message-selection-role="assistant"
 						data-message-selection-segment="assistant:content"
 					>
-						<MarkdownContent streaming={streaming}>{message ?? content ?? ""}</MarkdownContent>
+						<MarkdownContent streaming={streaming} stickyCodeHeaders>{message ?? content ?? ""}</MarkdownContent>
 					</div>
 				)}
 			</div>

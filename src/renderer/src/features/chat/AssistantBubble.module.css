@@ -54,7 +54,8 @@
 .content {
 	width: 100%;
 	max-width: 100%;
-	overflow: hidden;
+	/* 让 MarkdownContent 的可选 sticky 代码标题能附着到消息列表滚动容器。 */
+	overflow: visible;
 }
 
 .markdownPart {

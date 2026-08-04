@@ -4,19 +4,21 @@ import remarkGfm from "remark-gfm";
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import hljs from "highlight.js";
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import styles from "./MarkdownContent.module.css";
 import "highlight.js/styles/github-dark.css";
 
 export type MarkdownContentProps = {
 	children: string;
 	streaming?: boolean;
+	stickyCodeHeaders?: boolean; // 让代码块标题在所在滚动容器顶部吸附，方便持续使用复制按钮，默认关闭
 };
 
 type CodeBlockProps = {
 	code: string;
 	language: string;
 	highlight: boolean;
+	stickyHeader: boolean;
 };
 
 const HIGHLIGHT_LANGUAGE_ALIASES: Record<string, string> = {
@@ -79,52 +81,112 @@ function formatLanguageLabel(language: string): string {
 	return `${language.charAt(0).toUpperCase()}${language.slice(1)}`;
 }
 
-function getCodeFileExtension(language: string): string {
-	const normalized: string = language.toLowerCase();
-	const extensions: Record<string, string> = {
-		javascript: "js",
-		typescript: "ts",
-		tsx: "tsx",
-		jsx: "jsx",
-		json: "json",
-		gdscript: "gd",
-		python: "py",
-		powershell: "ps1",
-		shell: "sh",
-		bash: "sh",
-		html: "html",
-		css: "css",
-		markdown: "md",
-		yaml: "yaml",
-		yml: "yml"
-	};
-
-	return extensions[normalized] ?? (normalized.length > 0 ? normalized : "txt");
+function findScrollContainer(element: HTMLElement): HTMLElement | null {
+	let current: HTMLElement | null = element.parentElement;
+	while (current !== null) {
+		const overflowY: string = window.getComputedStyle(current).overflowY;
+		if (overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay") {
+			return current;
+		}
+		current = current.parentElement;
+	}
+	return null;
 }
 
-function CodeBlock({ code, language, highlight }: CodeBlockProps): React.JSX.Element {
+function useStickyCodeHeader(enabled: boolean): {
+	blockRef: React.RefObject<HTMLDivElement | null>;
+	headerRef: React.RefObject<HTMLDivElement | null>;
+	isPinned: boolean;
+} {
+	const blockRef = useRef<HTMLDivElement | null>(null);
+	const headerRef = useRef<HTMLDivElement | null>(null);
+	const [isPinned, setIsPinned] = useState<boolean>(false);
+
+	useLayoutEffect((): (() => void) | void => {
+		if (!enabled) {
+			setIsPinned(false);
+			return;
+		}
+
+		const block: HTMLDivElement | null = blockRef.current;
+		const header: HTMLDivElement | null = headerRef.current;
+		if (block === null || header === null) {
+			return;
+		}
+
+		const scrollContainer: HTMLElement | null = findScrollContainer(block);
+		let frameId: number | null = null;
+		const updatePinnedState = (): void => {
+			frameId = null;
+			const blockRect: DOMRect = block.getBoundingClientRect();
+			const headerHeight: number = header.getBoundingClientRect().height;
+			const containerTop: number = scrollContainer?.getBoundingClientRect().top ?? 0;
+			const nextPinned: boolean = blockRect.top < containerTop && blockRect.bottom > containerTop + headerHeight;
+			setIsPinned((currentPinned: boolean): boolean => currentPinned === nextPinned ? currentPinned : nextPinned);
+		};
+		const scheduleUpdate = (): void => {
+			if (frameId === null) {
+				frameId = window.requestAnimationFrame(updatePinnedState);
+			}
+		};
+		const resizeObserver: ResizeObserver | null = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleUpdate);
+		resizeObserver?.observe(block);
+		if (scrollContainer !== null) {
+			resizeObserver?.observe(scrollContainer);
+			scrollContainer.addEventListener("scroll", scheduleUpdate, { passive: true });
+		} else {
+			window.addEventListener("scroll", scheduleUpdate, { passive: true });
+		}
+		window.addEventListener("resize", scheduleUpdate);
+		scheduleUpdate();
+
+		return (): void => {
+			resizeObserver?.disconnect();
+			if (scrollContainer !== null) {
+				scrollContainer.removeEventListener("scroll", scheduleUpdate);
+			} else {
+				window.removeEventListener("scroll", scheduleUpdate);
+			}
+			window.removeEventListener("resize", scheduleUpdate);
+			if (frameId !== null) {
+				window.cancelAnimationFrame(frameId);
+			}
+		};
+	}, [enabled]);
+
+	return { blockRef, headerRef, isPinned };
+}
+
+function CodeBlock({ code, language, highlight, stickyHeader }: CodeBlockProps): React.JSX.Element {
 	const label: string = formatLanguageLabel(language);
 	const highlightedCode: string | null = highlight ? highlightCode(code, language) : null;
+	const { blockRef, headerRef, isPinned } = useStickyCodeHeader(stickyHeader);
 
 	return (
-		<div className={styles.codeBlock}>
-			<div className={styles.codeHeader} data-chat-search-ignore="true" data-message-selection-ignore="true">
-				<div className={styles.codeTitle}>
-					<span>{label}</span>
-				</div>
-				<div className={styles.codeActions}>
-					<Tooltip title="Copy code">
-						<Button
-							type="text"
-							shape="circle"
-							className={styles.codeAction}
-							aria-label="Copy code"
-							icon={<Icon name="copy" />}
-							onClick={(): void => {
-								void copyTextToClipboard(code);
-							}}
-						/>
-					</Tooltip>
+		<div ref={blockRef} className={styles.codeBlock}>
+			<div
+				ref={headerRef}
+				className={stickyHeader ? styles.codeHeaderSticky : undefined}
+				data-code-header-pinned={stickyHeader && isPinned ? "true" : undefined}
+			>
+				<div className={styles.codeHeader} data-chat-search-ignore="true" data-message-selection-ignore="true">
+					<div className={styles.codeTitle}>
+						<span>{label}</span>
+					</div>
+					<div className={styles.codeActions}>
+						<Tooltip title="Copy code">
+							<Button
+								type="text"
+								shape="circle"
+								className={styles.codeAction}
+								aria-label="Copy code"
+								icon={<Icon name="copy" />}
+								onClick={(): void => {
+									void copyTextToClipboard(code);
+								}}
+							/>
+						</Tooltip>
+					</div>
 				</div>
 			</div>
 			<div className={styles.codeScroller}>
@@ -144,7 +206,7 @@ function CodeBlock({ code, language, highlight }: CodeBlockProps): React.JSX.Ele
 const MemoizedCodeBlock = memo(CodeBlock);
 const MARKDOWN_REMARK_PLUGINS = [remarkGfm];
 
-function createMarkdownComponents(highlightCodeBlocks: boolean): Components {
+function createMarkdownComponents(highlightCodeBlocks: boolean, stickyCodeHeaders: boolean): Components {
 	return {
 		pre({ children, node: _node, ..._props }): React.JSX.Element {
 			return <>{children}</>;
@@ -155,7 +217,7 @@ function createMarkdownComponents(highlightCodeBlocks: boolean): Components {
 			const isBlock: boolean = language.length > 0 || code.includes("\n");
 
 			if (isBlock) {
-				return <MemoizedCodeBlock code={code} language={language} highlight={highlightCodeBlocks} />;
+				return <MemoizedCodeBlock code={code} language={language} highlight={highlightCodeBlocks} stickyHeader={stickyCodeHeaders} />;
 			}
 
 			return (
@@ -167,8 +229,10 @@ function createMarkdownComponents(highlightCodeBlocks: boolean): Components {
 	};
 }
 
-const MARKDOWN_COMPONENTS: Components = createMarkdownComponents(true);
-const STREAMING_MARKDOWN_COMPONENTS: Components = createMarkdownComponents(false);
+const MARKDOWN_COMPONENTS: Components = createMarkdownComponents(true, false);
+const STICKY_MARKDOWN_COMPONENTS: Components = createMarkdownComponents(true, true);
+const STREAMING_MARKDOWN_COMPONENTS: Components = createMarkdownComponents(false, false);
+const STICKY_STREAMING_MARKDOWN_COMPONENTS: Components = createMarkdownComponents(false, true);
 
 export function getStreamingMarkdownRenderIntervalMs(length: number): number {
 	if (length < 4_000) {
@@ -220,22 +284,26 @@ function useStreamingMarkdownSource(source: string, streaming: boolean): string 
 type RenderedMarkdownProps = {
 	source: string;
 	streaming: boolean;
+	stickyCodeHeaders: boolean;
 };
 
-const RenderedMarkdown = memo(function RenderedMarkdown({ source, streaming }: RenderedMarkdownProps): React.JSX.Element {
+const RenderedMarkdown = memo(function RenderedMarkdown({ source, streaming, stickyCodeHeaders }: RenderedMarkdownProps): React.JSX.Element {
+	const components: Components = streaming
+		? (stickyCodeHeaders ? STICKY_STREAMING_MARKDOWN_COMPONENTS : STREAMING_MARKDOWN_COMPONENTS)
+		: (stickyCodeHeaders ? STICKY_MARKDOWN_COMPONENTS : MARKDOWN_COMPONENTS);
 	return (
 		<Markdown
 			remarkPlugins={MARKDOWN_REMARK_PLUGINS}
-			components={streaming ? STREAMING_MARKDOWN_COMPONENTS : MARKDOWN_COMPONENTS}
+			components={components}
 		>
 			{source}
 		</Markdown>
 	);
 });
 
-function MarkdownContent({ children, streaming = false }: MarkdownContentProps): React.JSX.Element {
+function MarkdownContent({ children, streaming = false, stickyCodeHeaders = false }: MarkdownContentProps): React.JSX.Element {
 	const renderedSource: string = useStreamingMarkdownSource(children, streaming);
-	return <RenderedMarkdown source={renderedSource} streaming={streaming} />;
+	return <RenderedMarkdown source={renderedSource} streaming={streaming} stickyCodeHeaders={stickyCodeHeaders} />;
 }
 
 export default memo(MarkdownContent);
