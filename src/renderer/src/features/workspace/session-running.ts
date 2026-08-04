@@ -16,6 +16,13 @@ const INACTIVE_RUN_STAGES: ReadonlySet<string> = new Set([
 	"interrupted"
 ]);
 
+const TERMINAL_EVENT_NAMES: ReadonlySet<string> = new Set([
+	"agent.message.done",
+	"agent.run.done",
+	"agent.run.error",
+	"agent.run.cancelled"
+]);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -49,6 +56,19 @@ function setSessionRun(
 	const next: Map<string, SessionRunIdentity> = new Map(current);
 	next.set(sessionId, nextEntry);
 	return next;
+}
+
+function getEventRequestId(event: BackendEvent): string {
+	const dataRequestId: string = isRecord(event.data) ? readString(event.data, "requestId") : "";
+	return dataRequestId.length > 0
+		? dataRequestId
+		: typeof event.requestId === "string"
+			? event.requestId.trim()
+			: "";
+}
+
+function getEventSessionId(event: BackendEvent): string {
+	return typeof event.sessionId === "string" ? event.sessionId.trim() : "";
 }
 
 export function markSessionRunStarted(
@@ -128,14 +148,42 @@ export function applyRunningSessionEvent(
 	current: RunningSessionState,
 	event: BackendEvent
 ): RunningSessionState {
+	if (event.event === "session.workbench.updated" && typeof event.sessionId === "string" && isRecord(event.data)) {
+		const sessionId: string = getEventSessionId(event);
+		const workbench: unknown = event.data.workbench;
+		if (sessionId.length === 0 || !isRecord(workbench) || !isRecord(workbench.activeRun)) {
+			return current;
+		}
+		const status: string = readString(workbench.activeRun, "status");
+		if (status === "idle") {
+			const requestId: string = readString(workbench.activeRun, "requestId");
+			return markSessionRunStopped(current, sessionId, requestId.length > 0 ? requestId : undefined);
+		}
+		const requestId: string = readString(workbench.activeRun, "requestId")
+			|| (typeof event.requestId === "string" ? event.requestId.trim() : "");
+		if (requestId.length === 0) {
+			return current;
+		}
+		return setSessionRun(current, sessionId, {
+			requestId,
+			runId: null,
+			revision: typeof event.sequence === "number" && Number.isFinite(event.sequence) ? event.sequence : 0
+		});
+	}
+
+	if (TERMINAL_EVENT_NAMES.has(event.event)) {
+		const sessionId: string = getEventSessionId(event);
+		const requestId: string = getEventRequestId(event);
+		return markSessionRunStopped(current, sessionId, requestId.length > 0 ? requestId : undefined);
+	}
+
 	if (event.event !== "agent.run.state" || typeof event.sessionId !== "string" || !isRecord(event.data)) {
 		return current;
 	}
-	const sessionId: string = event.sessionId.trim();
+	const sessionId: string = getEventSessionId(event);
 	const stage: string = readString(event.data, "stage");
 	const runId: string = readString(event.data, "runId");
-	const requestId: string = readString(event.data, "requestId")
-		|| (typeof event.requestId === "string" ? event.requestId.trim() : "");
+	const requestId: string = getEventRequestId(event);
 	if (sessionId.length === 0 || stage.length === 0 || requestId.length === 0) {
 		return current;
 	}

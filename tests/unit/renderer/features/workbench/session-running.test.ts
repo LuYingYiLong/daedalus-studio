@@ -34,6 +34,27 @@ function createRunEvent(options: {
 	};
 }
 
+function createEvent(options: {
+	event: string;
+	sessionId: string;
+	requestId: string;
+	data?: unknown;
+	sequence?: number;
+}): BackendEvent {
+	return {
+		protocolVersion: 3,
+		type: "event",
+		eventId: `${options.event}:${options.requestId}:${options.sequence ?? 1}`,
+		event: options.event,
+		sessionId: options.sessionId,
+		requestId: options.requestId,
+		runId: options.requestId,
+		sequence: options.sequence ?? 1,
+		createdAt: new Date(0).toISOString(),
+		data: options.data
+	};
+}
+
 function ids(state: RunningSessionState): string[] {
 	return [...state.keys()];
 }
@@ -97,6 +118,36 @@ describe("session running indicators", () => {
 		const stopped: RunningSessionState = markRunStopped(running, "request-a");
 
 		expect(ids(stopped)).toEqual([]);
+	});
+
+	it("clears an optimistic indicator when only message.done arrives", () => {
+		let state: RunningSessionState = markSessionRunStarted(new Map(), "session-a", "request-a");
+		state = applyRunningSessionEvent(state, createEvent({
+			event: "agent.message.done",
+			sessionId: "session-a",
+			requestId: "request-a",
+			data: { requestId: "request-a" }
+		}));
+
+		expect(ids(state)).toEqual([]);
+	});
+
+	it("clears a stale indicator from an idle workbench snapshot", () => {
+		let state: RunningSessionState = markSessionRunStarted(new Map(), "session-a", "request-a");
+		state = applyRunningSessionEvent(state, createEvent({
+			event: "session.workbench.updated",
+			sessionId: "session-a",
+			requestId: "sync",
+			data: {
+				workbench: {
+					activeRun: {
+						status: "idle"
+					}
+				}
+			}
+		}));
+
+		expect(ids(state)).toEqual([]);
 	});
 
 	it("cleans removed sessions without disturbing other indicators", () => {
