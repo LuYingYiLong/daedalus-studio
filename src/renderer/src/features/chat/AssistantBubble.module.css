@@ -29,6 +29,29 @@
 	user-select: none;
 }
 
+/* 仅提升“总结前的过程”内嵌 Part 的层级，普通消息保持原样。 */
+.summaryContent {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ds-space-1);
+}
+
+.summaryContent > :global(.ant-collapse) {
+	margin: 0;
+	overflow: hidden;
+	background: var(--ds-bg-sunken);
+}
+
+.summaryContent > :global(.ant-collapse) > :global(.ant-collapse-item),
+.summaryContent > :global(.ant-collapse) > :global(.ant-collapse-item) > :global(.ant-collapse-header),
+.summaryContent > :global(.ant-collapse) > :global(.ant-collapse-item) > :global(.ant-collapse-content) {
+	background: var(--ds-bg-sunken);
+}
+
+.summaryContent > :global(.ant-collapse) > :global(.ant-collapse-item) {
+	border-bottom: 0;
+}
+
 .unknownPart {
 	width: 100%;
 	max-height: 240px;

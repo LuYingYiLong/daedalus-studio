@@ -177,7 +177,7 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 							{
 								key: summaryStartPart.stepRunId || "summary-process",
 								label: summaryStartPart.foldTitle || t("chat.assistant.process"),
-								children: foldedChildren
+								children: <div className={styles.summaryContent}>{foldedChildren}</div>
 							}
 						]}
 					/>

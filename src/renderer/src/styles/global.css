@@ -121,7 +121,7 @@
 	--ds-bg: #141414;
 	--ds-bg-tint: rgba(20, 20, 20, 0.75);
 	--ds-code-bg: #ffffff1d;
-	--ds-bg-sunken: #0f0f0f;
+	--ds-bg-sunken: #1b1b1b;
 	--ds-surface: #1b1b1b;
 	--ds-surface-elevated: #1f1f1f;
 	--ds-surface-hover: #242424;
@@ -173,7 +173,7 @@
 	--ds-bg-tint: rgba(255, 255, 255, 0.75);
 	--ds-tr-bg: rgb(245, 245, 245, 0.7);
 	--ds-code-bg: #14141414;
-	--ds-bg-sunken: #eeeeee;
+	--ds-bg-sunken: #e8e8e8;
 	--ds-surface: #ffffff;
 	--ds-surface-elevated: #ffffff;
 	--ds-surface-hover: #f0f0f0;
