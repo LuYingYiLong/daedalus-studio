@@ -1026,6 +1026,7 @@
       "documentation": "文档",
       "godotProjects": "Godot 项目",
       "archivedSessions": "已归档会话",
+      "import": "导入",
       "about": "关于",
       "fallbackTitle": "设置",
       "placeholder": "这个设置区域稍后实现。"
@@ -1329,6 +1330,22 @@
 		"backendDetails": "加载后端详情失败",
 		"backendUpdate": "更新后端失败",
 		"backendRepair": "修复后端失败"
+      }
+    },
+    "import": {
+      "title": "导入",
+      "session": {
+        "title": "会话数据",
+        "importSession": {
+          "title": "导入 Daedalus 会话",
+          "description": "选择从 WorkspaceTree 导出的 SQLite 文件，并把这个会话导入回本机 Studio。",
+          "action": "选择 SQLite 文件",
+          "dialogTitle": "导入 Daedalus 会话",
+          "dialogButton": "导入",
+          "success": "已导入会话：{{title}}",
+          "successArchived": "已导入归档会话：{{title}}",
+          "resultDescription_other": "会话 ID：{{sessionId}} · 已恢复 {{files}} 个文件"
+        }
       }
     },
     "archivedSessions": {

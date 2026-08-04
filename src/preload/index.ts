@@ -332,6 +332,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		},
 		pickExportDestination: (params: { sessionId: string; title: string; dialogTitle?: string; buttonLabel?: string }): Promise<string | null> => {
 			return ipcRenderer.invoke("session-fs:pick-export-destination", params);
+		},
+		pickImportSource: (params?: { dialogTitle?: string; buttonLabel?: string }): Promise<string | null> => {
+			return ipcRenderer.invoke("session-fs:pick-import-source", params);
 		}
 	},
 

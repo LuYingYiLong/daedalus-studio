@@ -1028,6 +1028,7 @@
       "documentation": "Documentation",
       "godotProjects": "Godot projects",
       "archivedSessions": "Archived sessions",
+      "import": "Import",
       "about": "About",
       "fallbackTitle": "Settings",
       "placeholder": "This settings section will be implemented later."
@@ -1331,6 +1332,22 @@
 		"backendDetails": "Failed to load backend details",
 		"backendUpdate": "Failed to update backend",
 		"backendRepair": "Failed to repair backend"
+      }
+    },
+    "import": {
+      "title": "Import",
+      "session": {
+        "title": "Session data",
+        "importSession": {
+          "title": "Import Daedalus session",
+          "description": "Choose a SQLite file exported from WorkspaceTree and import that session back into this Studio.",
+          "action": "Choose SQLite file",
+          "dialogTitle": "Import Daedalus session",
+          "dialogButton": "Import",
+          "success": "Imported session: {{title}}",
+          "successArchived": "Imported archived session: {{title}}",
+          "resultDescription_other": "Session ID: {{sessionId}} · {{files}} files restored"
+        }
       }
     },
     "archivedSessions": {

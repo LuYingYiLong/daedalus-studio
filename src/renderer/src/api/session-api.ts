@@ -81,6 +81,16 @@ export type ExportSessionResult = {
 	missingFileCount: number;
 };
 
+export type ImportSessionResult = {
+	imported: true;
+	sessionId: string;
+	title: string;
+	sourcePath: string;
+	archived: boolean;
+	tableCounts: Record<string, number>;
+	restoredFileCount: number;
+};
+
 export type DismissWorkflowTodoParams = {
 	workflowId?: string;
 	runId?: string;
@@ -229,6 +239,11 @@ export async function exportSession(
 ): Promise<ExportSessionResult> {
 	const client = await createBackendClient();
 	return client.request<ExportSessionResult>("session.export", { sessionId, destinationPath });
+}
+
+export async function importSession(sourcePath: string): Promise<ImportSessionResult> {
+	const client = await createBackendClient();
+	return client.request<ImportSessionResult>("session.import", { sourcePath });
 }
 
 export async function fetchSessionTimelineIndex(sessionId: string): Promise<SessionTimelineNavigationIndexResult> {

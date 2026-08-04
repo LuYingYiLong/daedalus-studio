@@ -1,0 +1,38 @@
+.page {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+	padding: 0px 0px var(--ds-space-2) var(--ds-space-2);
+	overflow: hidden;
+	user-select: none;
+}
+
+.header {
+	display: grid;
+	gap: 8px;
+	padding-right: var(--ds-space-2);
+}
+
+.titleRow {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 8px;
+}
+
+.title {
+	display: flex;
+	align-items: center;
+	margin: 0px 0px 8px 0px !important;
+}
+
+.settingsStack {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ds-space-2);
+	min-width: 0;
+	min-height: 0;
+	padding-right: var(--ds-space-2);
+	overflow-y: auto;
+}

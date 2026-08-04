@@ -233,6 +233,10 @@ declare global {
 			dialogTitle?: string;
 			buttonLabel?: string;
 		}) => Promise<string | null>;
+		pickImportSource: (params?: {
+			dialogTitle?: string;
+			buttonLabel?: string;
+		}) => Promise<string | null>;
 	}
 
 	type DockTabKind = "review" | "terminal";

@@ -113,7 +113,7 @@ export function createStudioTheme(
 				darkItemSelectedBg: accent.muted,
 				darkItemSelectedColor: dsColors.textPrimary,
 				itemBg: "transparent",
-				itemBorderRadius: 4,
+				itemBorderRadius: 6,
 				itemHeight: 28,
 				itemHoverBg: dsColors.surfaceHover,
 				itemPaddingInline: 8,
@@ -121,8 +121,8 @@ export function createStudioTheme(
 				subMenuItemBg: "transparent"
 			},
 			Alert: {
-				defaultPadding: 8,
-				withDescriptionPadding: 8
+				defaultPadding: 6,
+				withDescriptionPadding: 6
 			},
 			Form: {
 				itemMarginBottom: 4

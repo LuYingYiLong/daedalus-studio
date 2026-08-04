@@ -8,6 +8,7 @@ import ProviderSettingsPage from "@/pages/settings/ProviderSettingsPage";
 import DefaultModelSettingsPage from "@/pages/settings/DefaultModelSettingsPage";
 import PersonalizationSettingsPage from "@/pages/settings/PersonalizationSettingsPage";
 import ArchivedSessionSettingsPage from "@/pages/settings/ArchivedSessionSettingsPage";
+import ImportSettingsPage from "@/pages/settings/ImportSettingsPage";
 import McpServersSettingsPage from "@/pages/settings/McpServersSettingsPage";
 import SkillsSettingsPage from "@/pages/settings/SkillsSettingsPage";
 import GeneralSettingsPage from "@/pages/settings/GeneralSettingsPage";
@@ -33,6 +34,7 @@ type SettingsPageKey =
 	| "documentation"
 	| "godot_projects"
 	| "archived_sessions"
+	| "import"
 	| "about";
 
 type SettingsMenuItemConfig = {
@@ -54,6 +56,7 @@ const menuItemConfigs: SettingsMenuItemConfig[] = [
 	{ key: "documentation", labelKey: "settings.menu.documentation", icon: <Icon name="book" /> },
 	{ key: "godot_projects", labelKey: "settings.menu.godotProjects", icon: <Icon name="godot" /> },
 	{ key: "archived_sessions", labelKey: "settings.menu.archivedSessions", icon: <Icon name="archive" /> },
+	{ key: "import", labelKey: "settings.menu.import", icon: <Icon name="download" /> },
 	{ key: "about", labelKey: "settings.menu.about", icon: <Icon name="info" /> }
 ];
 
@@ -149,6 +152,8 @@ function SettingsWindow(): React.JSX.Element {
 					<GodotProjectsSettingsPage />
 				) : activePage === "archived_sessions" ? (
 					<ArchivedSessionSettingsPage />
+				) : activePage === "import" ? (
+					<ImportSettingsPage />
 				) : activePage === "about" ? (
 					<AboutSettingsPage />
 				) : (
