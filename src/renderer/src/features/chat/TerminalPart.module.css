@@ -98,7 +98,6 @@
 	border-radius: var(--ds-radius-sm);
 	color: var(--ds-text-primary);
 	background: var(--ds-bg-sunken);
-	font-family: var(--ds-font-family-code);
 	font-size: 12px;
 	line-height: 1.55;
 	overscroll-behavior: contain;
@@ -128,6 +127,7 @@
 	margin: 4px 0 0;
 	white-space: pre-wrap;
 	word-break: break-word;
+	font-family: var(--ds-font-family-code);
 }
 
 .stderr pre {

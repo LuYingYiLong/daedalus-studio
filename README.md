@@ -97,6 +97,8 @@ The provider and model list comes from the backend at runtime. The built-in cata
 
 Model discovery and local capability overrides are supported. Independent web-search adapters are currently available for Zhipu AI and Xiaomi MiMo; search is explicit and remains disabled until configured.
 
+Daedalus Backend built-in 42 functions the Godot MCP tools,It covers four dimensions: offline Godot project analysis, LSP diagnosis, DAP debugging, and editor state reading. For example, LSP diagnosis, DAP debugging, text reading and writing, script references, editor configuration, scene viewport, etc...
+
 Custom MCP servers and custom providers are treated as user-controlled integrations. Review their endpoints, commands, environment variables, and requested tool approvals before enabling them.
 
 ## Getting Started
@@ -112,7 +114,7 @@ Custom MCP servers and custom providers are treated as user-controlled integrati
 1. Download `Daedalus-Studio-Setup-<version>.exe` from the [latest release](https://github.com/LuYingYiLong/daedalus-studio/releases/latest).
 2. Install and launch Daedalus Studio.
 3. Allow the first-run screen to verify and install the bundled backend.
-4. Open **Settings → Providers**, configure a provider, and test the connection.
+4. Finish novice guide
 5. Add a workspace. For Godot projects, configure or auto-detect the Godot executable and install the bundled plugin from **Settings → Godot Projects**.
 6. Create a session, choose a model, and describe the change or investigation you want.
 

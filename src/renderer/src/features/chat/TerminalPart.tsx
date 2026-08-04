@@ -1,6 +1,6 @@
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
-import { Button, Collapse, Flex, Spin, Tag, Tooltip } from "antd";
+import { Button, Collapse, Spin, Tag, Tooltip } from "antd";
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TimelineToolPart } from "./ToolPart";
@@ -190,7 +190,6 @@ function TerminalPart({ part, disclosureKey }: TerminalPartProps): React.JSX.Ele
 				label: <code className={styles.commandLabel} title={display.commandLine}>{display.commandLine || t("chat.terminalPart.commandFallback")}</code>,
 				extra: (
 					<Tag color={statusColors[status]} className={styles.statusTag}>
-						{status === "running" ? <Spin size="small" /> : null}
 						{statusLabel}
 					</Tag>
 				),
