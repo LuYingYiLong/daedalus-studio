@@ -310,6 +310,10 @@
       "open": "展开工作区边栏",
       "close": "收起工作区边栏"
     },
+    "sessionNavigation": {
+      "previous": "上一个会话",
+      "next": "下一个会话"
+    },
     "summary": {
       "tooltip": "摘要",
       "empty": "暂无摘要",

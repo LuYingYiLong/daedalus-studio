@@ -363,6 +363,7 @@ function GeneralSettingsPage({
 									onChange={(value: LanguagePreference): void => {
 										void handleLanguageChange(value);
 									}}
+									suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 								/>
 							</SettingsItem>
 						</div>

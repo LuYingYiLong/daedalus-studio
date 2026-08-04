@@ -10,12 +10,18 @@
 	overflow: hidden;
 	user-select: none;
 	-webkit-app-region: drag;
+	padding: 0px var(--ds-space-2);
 }
 
-.workspaceSidebarButton {
+.menuBar {
+	display: flex;
+	align-items: center;
+	gap: var(--ds-space-1);
+}
+
+.actionButton {
 	position: relative;
 	z-index: 1;
-	margin-left: var(--ds-space-2);
 	-webkit-app-region: no-drag;
 }
 

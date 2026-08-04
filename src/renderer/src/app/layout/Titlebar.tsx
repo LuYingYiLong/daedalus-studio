@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useEventListener, useMemoizedFn } from "ahooks";
 import { Button, Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
@@ -12,6 +12,12 @@ import {
 import { Icon } from "@/assets/icons";
 import AppUpdateDialog from "@/features/app-update/AppUpdateDialog";
 import { shouldShowUpdateButton } from "@/features/app-update/update-visibility";
+import {
+	getSessionNavigationSnapshot,
+	navigateSessionHistory,
+	SESSION_NAVIGATION_EVENT,
+	subscribeToSessionNavigation
+} from "@/shared/lib/session-navigation-history";
 import styles from "./Titlebar.module.css";
 
 type MainTitlebarProps = {
@@ -36,6 +42,11 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(() => getCachedClientPreferences());
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
 	const [updateModalOpen, setUpdateModalOpen] = useState<boolean>(false);
+	const sessionNavigation = useSyncExternalStore(
+		subscribeToSessionNavigation,
+		getSessionNavigationSnapshot,
+		getSessionNavigationSnapshot
+	);
 	const showUpdateButton: boolean = appReady && shouldShowUpdateButton(updateState);
 
 	useEffect((): (() => void) => {
@@ -122,23 +133,61 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 	const workspaceSidebarLabel: string = clientPreferences.workspaceSidebar.open
 		? t("agentPage.workspaceSidebar.close")
 		: t("agentPage.workspaceSidebar.open");
+	const previousSessionLabel: string = t("agentPage.sessionNavigation.previous");
+	const nextSessionLabel: string = t("agentPage.sessionNavigation.next");
+
+	function handleSessionNavigation(direction: "back" | "forward"): void {
+		const sessionId: string | null = navigateSessionHistory(direction);
+		if (sessionId === null) {
+			return;
+		}
+		window.dispatchEvent(new CustomEvent<string>(SESSION_NAVIGATION_EVENT, { detail: sessionId }));
+	}
 
 	return (
 		<div className={styles.root}>
 			{appReady ? (
-				<Tooltip title={workspaceSidebarLabel}>
-					<Button
-						type="text"
-						shape="circle"
-						className={styles.workspaceSidebarButton}
-						aria-label={workspaceSidebarLabel}
-						aria-pressed={clientPreferences.workspaceSidebar.open}
-						icon={<Icon name={clientPreferences.workspaceSidebar.open ? "layout-left-toggled" : "layout-left"} />}
-						onClick={(): void => {
-							void toggleWorkspaceSidebar();
-						}}
-					/>
-				</Tooltip>
+				<div className={styles.menuBar}>
+					<Tooltip title={workspaceSidebarLabel}>
+						<Button
+							type="text"
+							shape="circle"
+							className={styles.actionButton}
+							aria-label={workspaceSidebarLabel}
+							aria-pressed={clientPreferences.workspaceSidebar.open}
+							icon={<Icon name={clientPreferences.workspaceSidebar.open ? "layout-left-toggled" : "layout-left"} />}
+							onClick={(): void => {
+								void toggleWorkspaceSidebar();
+							}}
+						/>
+					</Tooltip>
+					<Tooltip title={previousSessionLabel}>
+						<Button
+							type="text"
+							shape="circle"
+							className={styles.actionButton}
+							aria-label={previousSessionLabel}
+							disabled={!sessionNavigation.canGoBack}
+							icon={<Icon name="arrow-left" />}
+							onClick={(): void => {
+								handleSessionNavigation("back");
+							}}
+						/>
+					</Tooltip>
+					<Tooltip title={nextSessionLabel}>
+						<Button
+							type="text"
+							shape="circle"
+							className={styles.actionButton}
+							aria-label={nextSessionLabel}
+							disabled={!sessionNavigation.canGoForward}
+							icon={<Icon name="arrow-right" />}
+							onClick={(): void => {
+								handleSessionNavigation("forward");
+							}}
+						/>
+					</Tooltip>
+				</div>
 			) : null}
 			<div className={styles.brandCluster}>
 				<p className={styles.brandName}>Daedalus Studio</p>

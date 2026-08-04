@@ -95,6 +95,11 @@ import {
 	type RunningSessionState
 } from "@/features/workspace/session-running";
 import { Icon } from "@/assets/icons";
+import {
+	recordOpenedSession,
+	removeSessionFromNavigationHistory,
+	SESSION_NAVIGATION_EVENT
+} from "@/shared/lib/session-navigation-history";
 
 type SupportedImageMimeType = SaveImageAttachmentParams["mimeType"];
 type WorkspacePickedEntry = {
@@ -824,6 +829,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 	const deleteSessionWithLayout = useCallback(async (sessionId: string): Promise<void> => {
 		await deleteSession(sessionId);
+		removeSessionFromNavigationHistory(sessionId);
 		composerDraftsRef.current.delete(sessionId);
 		removeStoredSessionLayouts([sessionId]);
 		setRunningSessionState((current: RunningSessionState): RunningSessionState => {
@@ -1664,7 +1670,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setIsWorkspaceProjectDialogOpen(true);
 	}
 
-	async function handleSessionSelect(session: SessionMetadata): Promise<void> {
+	async function handleSessionSelect(
+		session: SessionMetadata,
+		options: { recordNavigation?: boolean } = {}
+	): Promise<void> {
 		const navigationVersion: number = navigationVersionRef.current + 1;
 		navigationVersionRef.current = navigationVersion;
 		await discardTemporarySessionIfEmpty();
@@ -1718,6 +1727,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			});
 			setApprovalModeState(result.metadata.approvalMode ?? "manual");
 			setActiveWorkspace(createWorkspaceFromSessionOpenResult(result));
+			if (options.recordNavigation !== false && result.metadata.temporary !== true) {
+				recordOpenedSession(sessionId);
+			}
 			const workflowTodo: WorkflowTodoSnapshot | null = openedGoalDismissed ? null : createWorkflowTodoSnapshotFromTimelineResult(result);
 			setWorkflowTodoSnapshot(workflowTodo);
 			rememberLoadedWorkflowTodo(workflowTodo);
@@ -1738,6 +1750,39 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setIsSessionLoading(false);
 		}
 	}
+
+	useEffect((): (() => void) => {
+		function handleSessionNavigation(event: Event): void {
+			const sessionId: unknown = (event as CustomEvent<unknown>).detail;
+			if (typeof sessionId !== "string" || sessionId.length === 0 || sessionId === activeSessionIdRef.current) {
+				return;
+			}
+
+			void (async (): Promise<void> => {
+				try {
+					const sessionList = await fetchSessions();
+					const session: SessionMetadata | undefined = sessionList.sessions.find(
+						(candidate: SessionMetadata): boolean => candidate.id === sessionId
+					);
+					if (session === undefined) {
+						removeSessionFromNavigationHistory(sessionId);
+						showTransientError("Session not found");
+						return;
+					}
+					setRecentSessions(getRecentSessions(sessionList.sessions));
+					await handleSessionSelect(session, { recordNavigation: false });
+				} catch (error: unknown) {
+					showTransientError(error instanceof Error ? error.message : "Failed to open session");
+					console.error("[App] navigate session history failed", error);
+				}
+			})();
+		}
+
+		window.addEventListener(SESSION_NAVIGATION_EVENT, handleSessionNavigation);
+		return (): void => {
+			window.removeEventListener(SESSION_NAVIGATION_EVENT, handleSessionNavigation);
+		};
+	}, [handleSessionSelect]);
 
 	function resetToNewSessionHome(): void {
 		navigationVersionRef.current += 1;
@@ -2276,6 +2321,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			activeSessionIdRef.current = created.id;
 			setActiveSessionId(created.id);
 			setActiveSessionMetadata(created);
+			recordOpenedSession(created.id);
 			setActiveWorkspace(createWorkspaceFromSessionMetadata(created, created.workbench));
 			timelineStore.reset();
 				setWorkbench(created.workbench);

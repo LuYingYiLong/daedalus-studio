@@ -73,6 +73,12 @@ type SummaryGitActionRequest = {
 	sourceFolderId: string;
 };
 
+type SummaryOverviewTarget = {
+	scopeKey: string;
+	sessionId: string | null;
+	workspace: WorkspaceConfig | null;
+};
+
 const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 	{ id: "file-explorer", label: "File Explorer" },
 	{ id: "terminal", label: "Terminal" }
@@ -760,6 +766,16 @@ function HomePage({
 	}, []);
 	const workspaceForActions: WorkspaceConfig | null = activeWorkspace ?? (isHome ? homeWorkspace : null);
 	const summaryScopeKey: string = activeSessionId ?? `workspace:${workspaceForActions?.id ?? "none"}`;
+	const summaryOverviewTargetRef = useRef<SummaryOverviewTarget>({
+		scopeKey: summaryScopeKey,
+		sessionId: activeSessionId,
+		workspace: workspaceForActions
+	});
+	summaryOverviewTargetRef.current = {
+		scopeKey: summaryScopeKey,
+		sessionId: activeSessionId,
+		workspace: workspaceForActions
+	};
 	const showDockControls: boolean = !isHome || workspaceForActions !== null;
 	const showWorkspaceLaunchControls: boolean = workspaceForActions !== null;
 	const showSummaryButton: boolean = true;
@@ -967,7 +983,8 @@ function HomePage({
 		sourceLimit: number = SUMMARY_PREVIEW_LIMIT,
 		silent: boolean = false
 	): Promise<SessionOverviewResult | null> => {
-		if (activeSessionId === null && workspaceForActions === null) {
+		const target: SummaryOverviewTarget = summaryOverviewTargetRef.current;
+		if (target.sessionId === null && target.workspace === null) {
 			return null;
 		}
 
@@ -977,20 +994,20 @@ function HomePage({
 			setSummaryError(null);
 		}
 		try {
-			const result: SessionOverviewResult = activeSessionId !== null
+			const result: SessionOverviewResult = target.sessionId !== null
 				? await fetchSessionOverview({
-					sessionId: activeSessionId,
+					sessionId: target.sessionId,
 					planLimit,
 					sourceLimit
 				})
-				: await fetchWorkspaceOverview(workspaceForActions!);
-			if (requestId !== summaryRequestIdRef.current) {
+				: await fetchWorkspaceOverview(target.workspace!);
+			if (requestId !== summaryRequestIdRef.current || target.scopeKey !== summaryOverviewTargetRef.current.scopeKey) {
 				return null;
 			}
 			setSummaryOverview(result);
 			return result;
 		} catch (error: unknown) {
-			if (requestId !== summaryRequestIdRef.current) {
+			if (requestId !== summaryRequestIdRef.current || target.scopeKey !== summaryOverviewTargetRef.current.scopeKey) {
 				return null;
 			}
 			console.error("[HomePage] failed to load session overview", error);
@@ -1003,30 +1020,13 @@ function HomePage({
 				setIsSummaryLoading(false);
 			}
 		}
-	}, [activeSessionId, workspaceForActions]);
+	}, [t]);
 
 	useEffect((): void => {
-		setSummaryOverview(null);
-		setSummaryError(null);
-		setPlansModalOpen(false);
-		setPlansDialogOverview(null);
-		setIsPlansDialogLoading(false);
-		setPlansDialogError(null);
-		setSourcesModalOpen(false);
-		setSourcesDialogOverview(null);
-		setIsSourcesDialogLoading(false);
-		setSourcesDialogError(null);
-		setIsGodotSceneModalOpen(false);
-		setGodotSceneSearch("");
-		setPreviewSource(null);
-		setPreviewPlan(null);
-		setIsPlanPreviewLoading(false);
-		setPlanPreviewError(null);
-		planPreviewRequestIdRef.current += 1;
-		if (activeSessionId !== null || workspaceForActions !== null) {
+		if (summaryOverviewTargetRef.current.sessionId !== null || summaryOverviewTargetRef.current.workspace !== null) {
 			void loadSummaryOverview();
 		}
-	}, [activeSessionId, loadSummaryOverview, workspaceForActions]);
+	}, [loadSummaryOverview, summaryScopeKey]);
 
 	useEffect((): (() => void) | void => {
 		if (!plansModalOpen || activeSessionId === null) {

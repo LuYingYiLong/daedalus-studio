@@ -312,6 +312,10 @@
       "open": "Show workspace sidebar",
       "close": "Hide workspace sidebar"
     },
+    "sessionNavigation": {
+      "previous": "Previous session",
+      "next": "Next session"
+    },
     "summary": {
       "tooltip": "Summary",
       "empty": "No summary yet",

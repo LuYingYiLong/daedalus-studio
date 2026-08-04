@@ -1141,7 +1141,7 @@ function Composer({
 						</div>
 					) : null}
 					<Dropdown menu={textAreaContextMenu} trigger={["contextMenu"]}>
-						<div className={styles.composerTextAreaContextTarget}>
+						<div className={styles.composerTextAreaContextTarget} data-studio-input-context-menu="custom">
 							<Input.TextArea
 								ref={textAreaRef}
 								value={draftMessage}

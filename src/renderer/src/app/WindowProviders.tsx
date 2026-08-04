@@ -6,6 +6,7 @@ import i18n from "@/i18n";
 import useClientPreferencesController from "./hooks/useClientPreferencesController";
 import { createStudioTheme } from "@/styles/studio-theme";
 import { applyStudioAccentVariables } from "../../../theme-color";
+import InputContextMenu from "@/shared/components/InputContextMenu";
 import styles from "./WindowProviders.module.css";
 
 type WindowProvidersProps = {
@@ -34,6 +35,7 @@ function WindowProviders({ children }: WindowProvidersProps): React.JSX.Element 
 		<ConfigProvider theme={studioTheme} locale={antdLocale}>
 			<AntdApp component="div" className={styles.root}>
 				{children}
+				<InputContextMenu />
 			</AntdApp>
 		</ConfigProvider>
 	);

@@ -353,6 +353,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 							value={workspaceFilter}
 							options={workspaceOptions}
 							onChange={(value: string): void => setWorkspaceFilter(value)}
+							suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 						/>
 					</Space.Compact>
 					<Button

@@ -10,6 +10,7 @@ import {
 } from "@/api/web-search-settings-api";
 import SettingsItem from "@/components/SettingsItem";
 import styles from "./SearchSettingsPage.module.css";
+import { Icon } from "@/assets/icons";
 
 type SavingKey = "enabled" | "model" | "maxResults" | "maxKeywords";
 
@@ -232,6 +233,7 @@ function SearchSettingsPage(): React.JSX.Element {
 											disabled={savingKey !== null || settings.models.length === 0}
 											placeholder={t("settings.search.model.placeholder")}
 											onChange={handleModelChange}
+											suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 										/>
 									)
 								},
