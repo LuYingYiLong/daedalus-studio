@@ -6,20 +6,22 @@ type SettingsItemProps = {
 	title: ReactNode;
 	description: ReactNode;
 	children: ReactNode;
+	className?: string;
 };
 
 function SettingsItem({
 	title,
 	description,
-	children
+	children,
+	className
 }: SettingsItemProps): React.JSX.Element {
 	return (
-		<div className={styles.item}>
+		<div className={[styles.item, className].filter(Boolean).join(" ")}>
 			<div className={styles.meta}>
-				<Typography.Text>{title}</Typography.Text>
-				<Typography.Text type="secondary">{description}</Typography.Text>
+				<Typography.Text strong>{title}</Typography.Text>
+				<Typography.Text type="secondary" className={styles.description}>{description}</Typography.Text>
 			</div>
-			{children}
+			<div className={styles.action}>{children}</div>
 		</div>
 	);
 }

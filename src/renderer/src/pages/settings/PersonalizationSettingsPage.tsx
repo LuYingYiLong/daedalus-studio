@@ -138,7 +138,7 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 						<Input.TextArea
 							className={styles.textarea}
 							value={draftPrompt}
-							autoSize={{ minRows: 6, maxRows: 14 }}
+							autoSize={{ minRows: 6, maxRows: 6 }}
 							maxLength={20000}
 							showCount={true}
 							onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
@@ -158,7 +158,7 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 						<Input.TextArea
 							className={styles.textarea}
 							value={draftGitCommitPrompt}
-							autoSize={{ minRows: 6, maxRows: 14 }}
+							autoSize={{ minRows: 6, maxRows: 6 }}
 							maxLength={20000}
 							showCount={true}
 							onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
@@ -178,7 +178,7 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 						<Input.TextArea
 							className={styles.textarea}
 							value={draftCommandReviewPrompt}
-							autoSize={{ minRows: 6, maxRows: 14 }}
+							autoSize={{ minRows: 6, maxRows: 6 }}
 							maxLength={20000}
 							showCount={true}
 							placeholder={t("settings.personalization.commandReviewPrompt.placeholder")}

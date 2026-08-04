@@ -51,7 +51,7 @@
 .preferenceList {
 	display: grid;
 	gap: 0;
-	margin: -8px 0;
+	min-width: 0;
 }
 
 .preferenceControl {

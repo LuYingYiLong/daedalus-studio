@@ -63,10 +63,10 @@ export function createStudioTheme(
 	return {
 		algorithm: resolvedTheme === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
 		token: {
-			borderRadius: 4,
-			borderRadiusLG: 8,
-			borderRadiusSM: 4,
 			borderRadiusXS: 4,
+			borderRadiusSM: 6,
+			borderRadius: 6,
+			borderRadiusLG: 8,
 			colorBgBase: dsColors.bg,
 			colorBgContainer: dsColors.surface,
 			colorBgElevated: dsColors.surfaceElevated,
@@ -85,17 +85,17 @@ export function createStudioTheme(
 			controlHeightSM: 24,
 			fontFamily: dsFontFamily,
 			fontFamilyCode: dsFontFamilyCode,
-			margin: 8,
-			marginSM: 8,
-			marginXS: 4,
 			padding: 8,
-			paddingLG: 16,
+			margin: 8,
+			marginXS: 4,
+			marginSM: 8,
+			paddingXS: 4,
 			paddingSM: 8,
-			paddingXS: 4
+			paddingLG: 16,
 		},
 		components: {
 			Button: {
-				borderRadius: 4,
+				borderRadius: 6,
 				dangerShadow: "none",
 				defaultShadow: "none",
 				iconGap: 4,

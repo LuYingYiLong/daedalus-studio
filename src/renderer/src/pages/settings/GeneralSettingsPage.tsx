@@ -1,10 +1,11 @@
 import { CSSProperties, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import styles from "./GeneralSettingsPage.module.css";
-import { Alert, Button, Card, ColorPicker, Segmented, Select, Space, Spin, Switch, Tooltip, Typography } from "antd";
+import { Alert, Button, ColorPicker, Segmented, Select, Space, Spin, Switch, Tooltip, Typography } from "antd";
 import type { ColorPickerProps, SelectProps } from "antd";
 import { Icon } from "@/assets/icons";
 import SettingsItem from "@/components/SettingsItem";
+import SettingsList from "@/components/SettingsList";
 import {
 	fetchClientPreferences,
 	DEFAULT_THEME_COLOR,
@@ -17,7 +18,6 @@ import {
 	updateGeneralSettings,
 	type GeneralSettings
 } from "@/api/general-settings-api";
-import { body } from "motion/react-client";
 
 type GeneralSettingsPageProps = {
 	clientPreferences: ClientPreferences;
@@ -281,9 +281,7 @@ function GeneralSettingsPage({
 			</header>
 
 			<div className={styles.settingsStack}>
-				<Card
-					title={t("settings.general.display.title")}
-				>
+				<SettingsList title={t("settings.general.display.title")}>
 					{errorMessage !== null ? (
 						<Alert
 							type="warning"
@@ -368,9 +366,9 @@ function GeneralSettingsPage({
 							</SettingsItem>
 						</div>
 					)}
-				</Card>
+				</SettingsList>
 
-				<Card title={t("settings.general.godot.title")}>
+				<SettingsList title={t("settings.general.godot.title")}>
 					{isLoading ? (
 						<div className={styles.loading}>
 							<Spin />
@@ -402,11 +400,9 @@ function GeneralSettingsPage({
 							</SettingsItem>
 						</div>
 					)}
-				</Card>
+				</SettingsList>
 
-				<Card
-					title={t("settings.general.general.title")}
-				>
+				<SettingsList title={t("settings.general.general.title")}>
 					{isLoading ? (
 						<div className={styles.loading}>
 							<Spin />
@@ -453,7 +449,7 @@ function GeneralSettingsPage({
 							))}
 						</div>
 					)}
-				</Card>
+				</SettingsList>
 			</div>
 		</section>
 	);

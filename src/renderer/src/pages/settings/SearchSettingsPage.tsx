@@ -1,4 +1,4 @@
-import { Alert, Card, Select, Slider, Spin, Switch, Typography } from "antd";
+import { Alert, Select, Slider, Spin, Switch, Typography } from "antd";
 import type { SelectProps, SliderSingleProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,6 +9,7 @@ import {
 	type WebSearchSettings
 } from "@/api/web-search-settings-api";
 import SettingsItem from "@/components/SettingsItem";
+import SettingsList from "@/components/SettingsList";
 import styles from "./SearchSettingsPage.module.css";
 import { Icon } from "@/assets/icons";
 
@@ -188,7 +189,7 @@ function SearchSettingsPage(): React.JSX.Element {
 			</header>
 
 			<div className={styles.content}>
-				<Card title={t("settings.search.webSearchTitle")}>
+				<SettingsList title={t("settings.search.webSearchTitle")}>
 					{errorMessage !== null ? (
 						<Alert
 							type="warning"
@@ -305,7 +306,7 @@ function SearchSettingsPage(): React.JSX.Element {
 							description={t("settings.search.configureProvider")}
 						/>
 					) : null}
-				</Card>
+				</SettingsList>
 			</div>
 		</section>
 	);

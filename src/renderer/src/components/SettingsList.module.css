@@ -1,0 +1,18 @@
+.title {
+	margin: 0px !important;
+	padding-bottom: var(--ds-space-1);
+}
+
+.list {
+	display: grid;
+	min-width: 0;
+	background: var(--ds-surface-elevated);
+	border: 1px solid var(--ds-border-subtle);
+	border-radius: var(--ds-radius-lg);
+}
+
+.body {
+	display: grid;
+	min-width: 0;
+	padding: 0px;
+}
