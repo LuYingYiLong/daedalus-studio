@@ -71,6 +71,15 @@ describe("client preferences store", () => {
 					providerId: "minimax",
 					modelId: "MiniMax-M3"
 				},
+				newSessionComposer: {
+					mode: "agent",
+					approvalMode: "manual",
+					model: {
+						providerId: "minimax",
+						modelId: "MiniMax-M3"
+					},
+					reasoningEffort: "medium"
+				},
 				onboarding: DEFAULT_CLIENT_PREFERENCES.onboarding
 			},
 			normalized: true
@@ -99,6 +108,7 @@ describe("client preferences store", () => {
 			},
 			keyboardShortcuts: {},
 			lastComposerModel: null,
+			newSessionComposer: DEFAULT_CLIENT_PREFERENCES.newSessionComposer,
 			onboarding: DEFAULT_CLIENT_PREFERENCES.onboarding
 		});
 		expect(memory.writes.at(-1)).toBe(`${JSON.stringify(nextPreferences, null, 2)}\n`);
@@ -128,6 +138,55 @@ describe("client preferences store", () => {
 		}, memory.io);
 
 		expect(nextPreferences.theme).toBe("dark");
+	});
+
+	it("persists and normalizes new-session composer defaults", async () => {
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
+			newSessionComposer: {
+				mode: "goal",
+				approvalMode: "auto-safe",
+				model: {
+					providerId: "deepseek",
+					modelId: "deepseek-v4-pro"
+				},
+				reasoningEffort: " max "
+			}
+		}, memory.io);
+
+		expect(nextPreferences.newSessionComposer).toEqual({
+			mode: "goal",
+			approvalMode: "auto-safe",
+			model: {
+				providerId: "deepseek",
+				modelId: "deepseek-v4-pro"
+			},
+			reasoningEffort: "max"
+		});
+	});
+
+	it("falls back invalid new-session values and carries forward the legacy model", () => {
+		const preferences = normalizeClientPreferences({
+			lastComposerModel: {
+				providerId: "stepfun",
+				modelId: "step-3"
+			},
+			newSessionComposer: {
+				mode: "invalid",
+				approvalMode: "invalid",
+				reasoningEffort: ""
+			}
+		}).preferences;
+
+		expect(preferences.newSessionComposer).toEqual({
+			mode: "agent",
+			approvalMode: "manual",
+			model: {
+				providerId: "stepfun",
+				modelId: "step-3"
+			},
+			reasoningEffort: "medium"
+		});
 	});
 
 	it("normalizes and updates the custom theme color as six-digit hex", async () => {

@@ -1,6 +1,12 @@
 import type { KeyboardShortcutOverrides } from "./keyboard-shortcuts";
 import { DEFAULT_STUDIO_THEME_COLOR } from "../../../theme-color";
 import { createDefaultOnboardingPreferences, type OnboardingPreferences } from "../../../onboarding";
+import {
+	createDefaultNewSessionComposerPreferences,
+	type NewSessionComposerPreferences
+} from "../../../new-session-composer-preferences";
+
+export type { NewSessionComposerPreferences } from "../../../new-session-composer-preferences";
 
 export type ClientPreferences = {
 	autoCheckForUpdates: boolean;
@@ -14,6 +20,7 @@ export type ClientPreferences = {
 		providerId: string;
 		modelId: string;
 	} | null;
+	newSessionComposer: NewSessionComposerPreferences;
 	onboarding: OnboardingPreferences;
 };
 
@@ -40,6 +47,7 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	},
 	keyboardShortcuts: {},
 	lastComposerModel: null,
+	newSessionComposer: createDefaultNewSessionComposerPreferences(),
 	onboarding: createDefaultOnboardingPreferences()
 };
 

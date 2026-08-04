@@ -1,6 +1,7 @@
 /// <reference types="vite-plugin-svgr/client" />
 
 import type { OnboardingPreferences } from "../../onboarding";
+import type { NewSessionComposerPreferences } from "../../new-session-composer-preferences";
 
 export {};
 
@@ -88,6 +89,7 @@ declare global {
 			providerId: string;
 			modelId: string;
 		} | null;
+		newSessionComposer: NewSessionComposerPreferences;
 		onboarding: OnboardingPreferences;
 	}
 

@@ -14,6 +14,11 @@ import {
 	type OnboardingStepId,
 	type OnboardingStepOutcome
 } from "../../onboarding";
+import {
+	createDefaultNewSessionComposerPreferences,
+	type NewSessionComposerModel,
+	type NewSessionComposerPreferences
+} from "../../new-session-composer-preferences";
 
 export type ClientPreferences = {
 	autoCheckForUpdates: boolean;
@@ -30,6 +35,7 @@ export type ClientPreferences = {
 		providerId: string;
 		modelId: string;
 	} | null;
+	newSessionComposer: NewSessionComposerPreferences;
 	onboarding: OnboardingPreferences;
 };
 
@@ -49,6 +55,7 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	},
 	keyboardShortcuts: {},
 	lastComposerModel: null,
+	newSessionComposer: createDefaultNewSessionComposerPreferences(),
 	onboarding: createDefaultOnboardingPreferences()
 };
 
@@ -88,6 +95,47 @@ function normalizeWorkspaceSidebar(value: unknown): ClientPreferences["workspace
 		? Math.min(720, Math.max(150, Math.trunc(value.size)))
 		: DEFAULT_CLIENT_PREFERENCES.workspaceSidebar.size;
 	return { open, size };
+}
+
+function normalizeComposerModel(value: unknown): NewSessionComposerModel | null {
+	return isRecord(value)
+		&& typeof value.providerId === "string"
+		&& value.providerId.trim().length > 0
+		&& typeof value.modelId === "string"
+		&& value.modelId.trim().length > 0
+		? {
+			providerId: value.providerId.trim(),
+			modelId: value.modelId.trim()
+		}
+		: null;
+}
+
+function normalizeNewSessionComposerPreferences(
+	value: unknown,
+	legacyModel: NewSessionComposerModel | null
+): NewSessionComposerPreferences {
+	const defaults: NewSessionComposerPreferences = createDefaultNewSessionComposerPreferences();
+	if (!isRecord(value)) {
+		return {
+			...defaults,
+			model: legacyModel
+		};
+	}
+
+	return {
+		mode: value.mode === "ask" || value.mode === "agent" || value.mode === "plan" || value.mode === "goal"
+			? value.mode
+			: defaults.mode,
+		approvalMode: value.approvalMode === "manual" || value.approvalMode === "auto-safe" || value.approvalMode === "full-trust"
+			? value.approvalMode
+			: defaults.approvalMode,
+		model: normalizeComposerModel(value.model) ?? legacyModel,
+		reasoningEffort: typeof value.reasoningEffort === "string"
+			&& value.reasoningEffort.trim().length > 0
+			&& value.reasoningEffort.trim().length <= 80
+			? value.reasoningEffort.trim()
+			: defaults.reasoningEffort
+	};
 }
 
 const ONBOARDING_CONFIGURABLE_STEP_IDS: readonly OnboardingConfigurableStepId[] = [
@@ -158,16 +206,11 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 		value.keyboardShortcuts,
 		SHORTCUT_PLATFORM
 	);
-	const lastComposerModel = isRecord(value.lastComposerModel)
-		&& typeof value.lastComposerModel.providerId === "string"
-		&& value.lastComposerModel.providerId.trim().length > 0
-		&& typeof value.lastComposerModel.modelId === "string"
-		&& value.lastComposerModel.modelId.trim().length > 0
-		? {
-			providerId: value.lastComposerModel.providerId.trim(),
-			modelId: value.lastComposerModel.modelId.trim()
-		}
-		: DEFAULT_CLIENT_PREFERENCES.lastComposerModel;
+	const lastComposerModel: NewSessionComposerModel | null = normalizeComposerModel(value.lastComposerModel);
+	const newSessionComposer: NewSessionComposerPreferences = normalizeNewSessionComposerPreferences(
+		value.newSessionComposer,
+		lastComposerModel
+	);
 	const onboarding: OnboardingPreferences = normalizeOnboardingPreferences(value.onboarding);
 
 	return {
@@ -180,6 +223,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			workspaceSidebar,
 			keyboardShortcuts,
 			lastComposerModel,
+			newSessionComposer,
 			onboarding
 		},
 		normalized: value.autoCheckForUpdates !== autoCheckForUpdates
@@ -190,6 +234,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			|| JSON.stringify(value.workspaceSidebar ?? null) !== JSON.stringify(workspaceSidebar)
 			|| JSON.stringify(value.keyboardShortcuts ?? null) !== JSON.stringify(keyboardShortcuts)
 			|| JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel)
+			|| JSON.stringify(value.newSessionComposer ?? null) !== JSON.stringify(newSessionComposer)
 			|| JSON.stringify(value.onboarding ?? null) !== JSON.stringify(onboarding)
 			|| Object.keys(value).some((key: string): boolean => ![
 				"autoCheckForUpdates",
@@ -200,6 +245,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 				"workspaceSidebar",
 				"keyboardShortcuts",
 				"lastComposerModel",
+				"newSessionComposer",
 				"onboarding"
 			].includes(key))
 	};
@@ -250,6 +296,12 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 			providerId: value.lastComposerModel.providerId.trim(),
 			modelId: value.lastComposerModel.modelId.trim()
 		};
+	}
+	if (isRecord(value.newSessionComposer)) {
+		patch.newSessionComposer = normalizeNewSessionComposerPreferences(
+			value.newSessionComposer,
+			DEFAULT_CLIENT_PREFERENCES.newSessionComposer.model
+		);
 	}
 	if (isRecord(value.onboarding)) {
 		patch.onboarding = normalizeOnboardingPreferences(value.onboarding);

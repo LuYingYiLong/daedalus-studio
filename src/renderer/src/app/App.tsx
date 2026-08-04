@@ -69,6 +69,7 @@ import {
 	fetchClientPreferences,
 	updateClientPreferences,
 	type ClientPreferences,
+	type NewSessionComposerPreferences,
 	type WorkspaceSidebarPreferences
 } from "@/api/client-preferences-api";
 import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
@@ -337,7 +338,7 @@ function findPreferredComposerModel(
 	preferences: ClientPreferences,
 	selection: ProviderModelSelection | null
 ): { providerId: string; modelId: string } | null {
-	const lastComposerModel = preferences.lastComposerModel;
+	const lastComposerModel = preferences.newSessionComposer.model ?? preferences.lastComposerModel;
 	if (lastComposerModel !== null && selection !== null) {
 		const provider: ProviderModelSelectionProvider | undefined = selection.providers.find((item: ProviderModelSelectionProvider): boolean => {
 			return item.configured && item.provider === lastComposerModel.providerId;
@@ -368,6 +369,8 @@ function createPreferredHomeDraft(
 ): HomeDraft {
 	const draft: HomeDraft = {
 		...createHomeDraft(),
+		chatMode: preferences.newSessionComposer.mode,
+		reasoningEffort: preferences.newSessionComposer.reasoningEffort,
 		workspaceId: workspace?.id ?? null,
 		workspace
 	};
@@ -379,7 +382,15 @@ function createPreferredHomeDraft(
 	return {
 		...draft,
 		providerId: preferredModel.providerId,
-		modelId: preferredModel.modelId
+		modelId: preferredModel.modelId,
+		reasoningEffort: resolveReasoningEffortForComposerModelChange({
+			selection,
+			previousProviderId: preferences.newSessionComposer.model?.providerId ?? null,
+			previousModelId: preferences.newSessionComposer.model?.modelId ?? null,
+			previousEffort: preferences.newSessionComposer.reasoningEffort,
+			nextProviderId: preferredModel.providerId,
+			nextModelId: preferredModel.modelId
+		})
 	};
 }
 
@@ -670,7 +681,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [providerModelSelection, setProviderModelSelection] = useState<ProviderModelSelection | null>(bootstrapData.providerModelSelection);
 	const [slashCommands, setSlashCommands] = useState<SlashCommandDefinition[]>(() => bootstrapData.slashCommands);
 	const [skills, setSkills] = useState<SkillSummary[]>(() => bootstrapData.skills);
-	const [approvalMode, setApprovalModeState] = useState<ApprovalMode>("manual");
+	const [approvalMode, setApprovalModeState] = useState<ApprovalMode>(
+		() => bootstrapData.clientPreferences.newSessionComposer.approvalMode
+	);
 	const [isApprovalModeSaving, setIsApprovalModeSaving] = useState<boolean>(false);
 	const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
 	const [approvalError, setApprovalError] = useState<string | null>(null);
@@ -1472,7 +1485,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		if (temporarySessionCreationRef.current !== null) {
 			return temporarySessionCreationRef.current;
 		}
-		const draft: HomeDraft = createPreferredHomeDraft(clientPreferences, providerModelSelection, workspace);
+		const currentPreferences: ClientPreferences = clientPreferencesRef.current;
+		const draft: HomeDraft = createPreferredHomeDraft(currentPreferences, providerModelSelection, workspace);
+		const preferredApprovalMode: ApprovalMode = currentPreferences.newSessionComposer.approvalMode;
 		const createOperation: Promise<void> = (async (): Promise<void> => {
 			const created = await createSession({
 				title: "New session",
@@ -1482,7 +1497,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				model: draft.modelId ?? undefined,
 				reasoningEffort: draft.reasoningEffort,
 				chatMode: draft.chatMode,
-				approvalMode
+				approvalMode: preferredApprovalMode
 			});
 			temporaryDraftSessionIdRef.current = created.id;
 			activeSessionIdRef.current = created.id;
@@ -1491,6 +1506,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			setActiveWorkspace(createWorkspaceFromSessionMetadata(created, created.workbench));
 			setWorkbench(created.workbench);
 			setHomeDraft(draft);
+			setApprovalModeState(preferredApprovalMode);
 			timelineStore.reset();
 			setIsNewSessionHome(true);
 			setSessionError(null);
@@ -1734,7 +1750,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setActiveWorkspace(null);
 		setSessionError(null);
 		setIsNewSessionHome(true);
-		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection));
+		setHomeDraft(createPreferredHomeDraft(clientPreferencesRef.current, providerModelSelection));
+		setApprovalModeState(clientPreferencesRef.current.newSessionComposer.approvalMode);
 	}
 
 	function handleSessionArchive(session: SessionMetadata): void {
@@ -1898,6 +1915,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	async function handleModeChange(nextMode: ChatMode): Promise<void> {
+		persistNewSessionComposerDefaults({ mode: nextMode });
 		if (isNewSessionHome && activeSessionId === null) {
 			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
 				...currentDraft,
@@ -1937,6 +1955,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 			setApprovalModeState(result.mode);
 			await persistSessionUiMetadata({ approvalMode: result.mode });
+			persistNewSessionComposerDefaults({ approvalMode: result.mode });
 			return true;
 		} catch (error: unknown) {
 			const message: string = error instanceof Error ? error.message : "Failed to save approval mode";
@@ -1982,20 +2001,24 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			if (isHomeSubmitting) {
 				void messageApi.info("Model changes apply to your next message.");
 			}
+			const nextReasoningEffort: string = resolveReasoningEffortForComposerModelChange({
+				selection: providerModelSelection,
+				previousProviderId: homeDraft.providerId,
+				previousModelId: homeDraft.modelId,
+				previousEffort: homeDraft.reasoningEffort,
+				nextProviderId: providerId,
+				nextModelId: modelId
+			});
 			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
 				...currentDraft,
 				providerId,
 				modelId,
-				reasoningEffort: resolveReasoningEffortForComposerModelChange({
-					selection: providerModelSelection,
-					previousProviderId: currentDraft.providerId,
-					previousModelId: currentDraft.modelId,
-					previousEffort: currentDraft.reasoningEffort,
-					nextProviderId: providerId,
-					nextModelId: modelId
-				})
+				reasoningEffort: nextReasoningEffort
 			}));
-			persistLastComposerModel(providerId, modelId);
+			persistNewSessionComposerDefaults({
+				model: { providerId, modelId },
+				reasoningEffort: nextReasoningEffort
+			});
 			return;
 		}
 
@@ -2029,7 +2052,11 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			}
 			setActiveSessionMetadata(result.metadata);
 			applyWorkbench(result.workbench);
-			persistLastComposerModel(providerId, modelId);
+			persistNewSessionComposerDefaults({
+				model: { providerId, modelId },
+				reasoningEffort: result.workbench.composer.reasoningEffort
+					?? clientPreferencesRef.current.newSessionComposer.reasoningEffort
+			});
 		} catch (error: unknown) {
 			if (activeSessionIdRef.current === sessionId && previousWorkbench !== null) {
 				setWorkbench(previousWorkbench);
@@ -2041,6 +2068,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}
 
 	async function handleReasoningEffortChange(nextEffort: string): Promise<void> {
+		persistNewSessionComposerDefaults({ reasoningEffort: nextEffort });
 		if (isNewSessionHome && activeSessionId === null) {
 			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
 				...currentDraft,
@@ -2160,21 +2188,28 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 	}
 
-	function persistLastComposerModel(providerId: string, modelId: string): void {
-		const nextPreferences: ClientPreferences = {
-			...clientPreferences,
-			lastComposerModel: {
-				providerId,
-				modelId
-			}
+	function persistNewSessionComposerDefaults(patch: Partial<NewSessionComposerPreferences>): void {
+		const currentPreferences: ClientPreferences = clientPreferencesRef.current;
+		const newSessionComposer: NewSessionComposerPreferences = {
+			...currentPreferences.newSessionComposer,
+			...patch
 		};
+		const nextPreferences: ClientPreferences = {
+			...currentPreferences,
+			lastComposerModel: newSessionComposer.model,
+			newSessionComposer
+		};
+		clientPreferencesRef.current = nextPreferences;
 		setClientPreferences(nextPreferences);
+		dispatchClientPreferencesChanged(nextPreferences);
 		void updateClientPreferences({
-			lastComposerModel: nextPreferences.lastComposerModel
+			lastComposerModel: nextPreferences.lastComposerModel,
+			newSessionComposer
 		}).then((savedPreferences: ClientPreferences): void => {
+			clientPreferencesRef.current = savedPreferences;
 			setClientPreferences(savedPreferences);
 		}).catch((error: unknown): void => {
-			console.error("[App] save last composer model failed", error);
+			console.error("[App] save new-session composer defaults failed", error);
 		});
 	}
 
@@ -2203,6 +2238,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 
 		const chatMode: ChatMode = modeOverride ?? homeDraft.chatMode;
 		if (modeOverride !== undefined && modeOverride !== homeDraft.chatMode) {
+			persistNewSessionComposerDefaults({ mode: modeOverride });
 			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
 				...currentDraft,
 				chatMode: modeOverride
@@ -2334,6 +2370,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		const currentChatMode: ChatMode = getChatMode(workbench);
 		const chatMode: ChatMode = modeOverride ?? currentChatMode;
 		if (modeOverride !== undefined && modeOverride !== currentChatMode) {
+			persistNewSessionComposerDefaults({ mode: chatMode });
 			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
 				return currentWorkbench === null
 					? currentWorkbench

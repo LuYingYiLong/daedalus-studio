@@ -6,7 +6,8 @@ describe("Composer context usage layout", () => {
 	const styles: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.module.css");
 
 	it("renders token totals and percentages as aligned columns without a text separator", () => {
-		expect(source).toContain("contextUsageBreakdownHeader");
+		expect(source).toContain("contextUsageBreakdown");
+		expect(source).toContain("contextUsageRow");
 		expect(source).toContain("contextUsageValue");
 		expect(source).toContain("contextUsagePercent");
 		expect(source).not.toContain("formatTokenCount(item.tokens)} ·");

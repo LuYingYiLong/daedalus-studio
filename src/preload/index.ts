@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, webUtils } from "electron";
 import type { KeyboardShortcutOverrides } from "../keyboard-shortcuts";
 import { applyStudioAccentVariables } from "../theme-color";
 import type { OnboardingPreferences } from "../onboarding";
+import type { NewSessionComposerPreferences } from "../new-session-composer-preferences";
 
 type ClientPreferences = {
 	autoCheckForUpdates: boolean;
@@ -18,6 +19,7 @@ type ClientPreferences = {
 		providerId: string;
 		modelId: string;
 	} | null;
+	newSessionComposer: NewSessionComposerPreferences;
 	onboarding: OnboardingPreferences;
 };
 
