@@ -76,6 +76,25 @@ function formatCompact(value: number): string {
 	}).format(value);
 }
 
+function formatTokenUsage(value: number, tokensSuffix: string): { value: string; suffix: string } {
+	const normalizedValue: number = Number.isFinite(value) ? Math.max(0, value) : 0;
+	const hundredMillion: number = 100_000_000;
+	if (normalizedValue < hundredMillion) {
+		return {
+			value: formatCompact(normalizedValue),
+			suffix: tokensSuffix
+		};
+	}
+
+	const valueInHundredMillions: number = normalizedValue / hundredMillion;
+	return {
+		value: new Intl.NumberFormat(undefined, {
+			maximumFractionDigits: valueInHundredMillions >= 100 ? 0 : 1
+		}).format(valueInHundredMillions),
+		suffix: "亿"
+	};
+}
+
 function formatPercent(value: number): string {
 	return new Intl.NumberFormat(undefined, {
 		style: "percent",
@@ -252,6 +271,9 @@ function StatisticsSettingsPage(): React.JSX.Element {
 	});
 
 	const summary: UsageMetricsSummary | null = data?.summary ?? null;
+	const totalTokenUsage: { value: string; suffix: string } | null = summary === null
+		? null
+		: formatTokenUsage(summary.realTotalTokens, t("settings.statistics.metrics.tokensSuffix"));
 	const averageDurationMs: number | undefined = getAverage(data?.recentLogs.map((log: UsageMetricsLog): number => log.durationMs) ?? []);
 	const averageFirstTokenMs: number | undefined = getAverage(data?.recentLogs.map((log: UsageMetricsLog): number | undefined => log.firstTokenMs) ?? []);
 	const providerRows: DistributionRow[] = useMemo((): DistributionRow[] => {
@@ -366,8 +388,8 @@ function StatisticsSettingsPage(): React.JSX.Element {
 							<Statistic
 								classNames={METRIC_CLASS_NAMES}
 								title={t("settings.statistics.metrics.tokens")}
-								value={formatCompact(summary.realTotalTokens)}
-								suffix={t("settings.statistics.metrics.tokensSuffix")}
+								value={totalTokenUsage?.value ?? "-"}
+								suffix={totalTokenUsage?.suffix}
 							/>
 							<Statistic
 								classNames={METRIC_CLASS_NAMES}

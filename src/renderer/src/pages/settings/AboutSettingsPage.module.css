@@ -125,6 +125,14 @@
 	min-width: 0;
 }
 
+.backendActions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+	gap: var(--ds-space-1);
+}
+
 .backendError {
 	margin-bottom: 12px !important;
 }

@@ -649,6 +649,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() => createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection));
 	const [homeWorkspaceOptions, setHomeWorkspaceOptions] = useState<WorkspaceConfig[]>(() => bootstrapData.workspaceList.workspaces);
 	const [isWorkspaceProjectDialogOpen, setIsWorkspaceProjectDialogOpen] = useState<boolean>(false);
+	const [isWorkspaceSessionCreating, setIsWorkspaceSessionCreating] = useState<boolean>(false);
   const [pendingTextAttachmentCount, setPendingTextAttachmentCount] = useState<number>(0);
   const isAddingTextAttachment: boolean = pendingTextAttachmentCount > 0;
 	const [isHomeSubmitting, setIsHomeSubmitting] = useState<boolean>(false);
@@ -1589,26 +1590,31 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	}, []);
 
 	async function handleNewWorkspaceSession(workspace: WorkspaceConfig): Promise<void> {
-		if (activeSessionMetadata?.temporary === true && activeSessionId !== null) {
-			await deleteSessionWithLayout(activeSessionId).catch((error: unknown): void => {
-				console.warn("[App] discard temporary session failed", error);
-			});
-		}
-		temporaryDraftSessionIdRef.current = null;
-		activeSessionIdRef.current = null;
-		setActiveSessionId(null);
-		setActiveSessionMetadata(null);
-		resetSessionPresentationState();
-		setActiveWorkspace(workspace);
-		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection, workspace));
-		setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
-			if (currentWorkspaces.some((currentWorkspace: WorkspaceConfig): boolean => currentWorkspace.id === workspace.id)) {
-				return currentWorkspaces;
+		setIsWorkspaceSessionCreating(true);
+		try {
+			if (activeSessionMetadata?.temporary === true && activeSessionId !== null) {
+				await deleteSessionWithLayout(activeSessionId).catch((error: unknown): void => {
+					console.warn("[App] discard temporary session failed", error);
+				});
 			}
-			return [...currentWorkspaces, workspace];
-		});
+			temporaryDraftSessionIdRef.current = null;
+			activeSessionIdRef.current = null;
+			setActiveSessionId(null);
+			setActiveSessionMetadata(null);
+			resetSessionPresentationState();
+			setActiveWorkspace(workspace);
+			setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection, workspace));
+			setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
+				if (currentWorkspaces.some((currentWorkspace: WorkspaceConfig): boolean => currentWorkspace.id === workspace.id)) {
+					return currentWorkspaces;
+				}
+				return [...currentWorkspaces, workspace];
+			});
 
-		await createTemporarySession(workspace);
+			await createTemporarySession(workspace);
+		} finally {
+			setIsWorkspaceSessionCreating(false);
+		}
 	}
 
 	async function handleHomeWorkspaceSelect(workspaceId: string): Promise<void> {
@@ -3253,7 +3259,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 	const composerMessageQueue: MessageQueueItem[] = activeSessionId === null ? [] : workbench?.messageQueue ?? [];
 	const composerPendingGuides: PendingGuide[] = activeSessionId === null ? [] : workbench?.pendingGuides ?? [];
 	const currentSessionWorkspaceId: string | null = activeSessionMetadata?.workspaceId ?? null;
-	const composerWorkspaceLocked: boolean = isComposerWorkspaceSelectionLocked(activeSessionId, activeSessionMetadata);
+	const composerWorkspaceLocked: boolean = isWorkspaceSessionCreating
+		|| isComposerWorkspaceSelectionLocked(activeSessionId, activeSessionMetadata);
 	const displayedWorkspace: WorkspaceConfig | null = activeSessionId === null
 		? homeDraft.workspace
 		: currentSessionWorkspaceId === null

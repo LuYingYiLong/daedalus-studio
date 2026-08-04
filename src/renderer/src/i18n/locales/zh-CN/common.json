@@ -765,6 +765,8 @@
     },
     "assistant": {
       "process": "过程",
+      "respondedIn": "已响应：{{elapsed}}",
+      "stoppedIn": "已停止：{{elapsed}}",
       "copyAria": "复制助手消息"
     },
     "user": {
@@ -848,10 +850,8 @@
       "open": "打开计划"
     },
     "thinking": {
-      "label": "思考中",
-      "labelDot": "思考中.",
-      "labelDotDot": "思考中..",
-      "labelDotDotDot": "思考中..."
+	  "label": "思考过程",
+	  "activeLabel": "正在思考"
     },
     "inlineDiff": {
       "title": "已编辑 {{count}} 个文件",
@@ -1154,6 +1154,10 @@
       "backend": {
         "description": "本地 RPC、workflow、MCP 和 Godot 集成服务。",
         "detailsTitle": "后端详情",
+		"repairConfirmTitle": "修复 Daedalus 后端？",
+		"repairConfirmDescription": "这会停止并重新安装当前 Studio 附带的后端。正在进行的模型响应会被中断。",
+		"repairSucceeded": "后端已修复并重新连接。",
+		"updateNotAvailable": "当前没有可用的后端更新。",
         "status": {
           "healthy": "正常",
           "starting": "启动中",
@@ -1164,7 +1168,9 @@
       },
       "actions": {
         "refresh": "刷新",
-        "checkForUpdates": "检查更新"
+		"checkForUpdates": "检查更新",
+		"updateBackend": "更新后端",
+		"repairBackend": "修复后端"
       },
       "onboarding": {
         "title": "新手引导",
@@ -1192,7 +1198,9 @@
       },
       "errors": {
         "applicationInfo": "加载应用信息失败",
-        "backendDetails": "加载后端详情失败"
+		"backendDetails": "加载后端详情失败",
+		"backendUpdate": "更新后端失败",
+		"backendRepair": "修复后端失败"
       }
     },
     "archivedSessions": {

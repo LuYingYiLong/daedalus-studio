@@ -7,10 +7,13 @@
 
 .toolCollapse :global(.ant-collapse-header) {
 	align-items: center;
+	min-width: 0;
 }
 
-.toolCollapse :global(.ant-collapse-header-text) {
+.toolCollapse :global(.ant-collapse-title) {
+	flex: 1 1 0;
 	min-width: 0;
+	overflow: hidden;
 }
 
 .toolLabel {

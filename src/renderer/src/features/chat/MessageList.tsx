@@ -196,6 +196,7 @@ const AssistantTimelineRow = memo(function AssistantTimelineRow({ block, blockOf
 				block.startedAtUtc,
 				block.status === "running" ? nowIsoTime : block.completedAtUtc
 			) ?? undefined}
+			completionStatus={block.completionStatus}
 			endTime={block.status === "running" ? undefined : formatShortDateTime(block.completedAtUtc)}
 			streaming={block.status === "running"}
 			selectionEnabled={block.status !== "running" && block.status !== "failed"}

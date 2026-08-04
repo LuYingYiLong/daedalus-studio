@@ -97,6 +97,8 @@ Studio 是桌面客户端与生命周期管理者；Backend 负责执行与持�
 
 Studio 支持远端模型发现和本地能力覆盖。独立联网搜索适配器当前支持智谱 AI 与 Xiaomi MiMo；联网搜索必须由用户明确配置和开启。
 
+Daedalus Backend内置了42种功能的Godot MCP工具，覆盖了离线 Godot 项目分析、LSP 诊断、DAP 调试、编辑器状态读取四个维度，例如LSP诊断、DAP调试、文本读写、脚本引用、编辑器配置、场景视口等…
+
 自定义 MCP Server 与自定义供应商都属于用户控制的外部集成。启用前应检查其地址、命令、环境变量和工具审批请求。
 
 ## 快速开始
@@ -112,8 +114,8 @@ Studio 支持远端模型发现和本地能力覆盖。独立联网搜索适配�
 1. 从 [最新 Release](https://github.com/LuYingYiLong/daedalus-studio/releases/latest) 下载 `Daedalus-Studio-Setup-<version>.exe`。
 2. 安装并启动 Daedalus Studio。
 3. 等待首次启动页面校验并安装内置 Backend。
-4. 打开 **设置 → 供应商**，配置供应商并测试连接。
-5. 添加工作区。对于 Godot 项目，请配置或自动检测 Godot 可执行文件，并在 **设置 → Godot 项目** 中安装内置插件。
+4. 完成新手引导
+5. 添加**工作区**。对于 Godot 项目，请配置或自动检测 Godot 可执行文件，并在 **设置 → Godot 项目** 中安装内置插件。
 6. 新建会话、选择模型，然后描述需要完成的修改或检查。
 
 Studio 的应用偏好保存在 Electron user-data 目录，Daedalus 运行数据保存在 `%USERPROFILE%\.daedalus`。API Key 通过操作系统凭据存储保存，不会写入 Daedalus 的普通 JSON 配置。

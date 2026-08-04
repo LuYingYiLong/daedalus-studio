@@ -1,7 +1,8 @@
 import type { TimelineBodyPart } from "@/api/types";
 import { Icon } from "@/assets/icons";
+import ShinyText from "@/components/ShinyText";
 import { Collapse } from "antd";
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import MarkdownContent from "../markdown/MarkdownContent";
 import styles from "./ThinkingPart.module.css";
@@ -51,13 +52,6 @@ function ThinkingPart({ part, disclosureKey = "thinking" }: ThinkingPartProps): 
 	const userScrollFrameRef = useRef<number | null>(null);
 	const touchYRef = useRef<number | null>(null);
 	const [open, setOpen] = useTimelineDisclosure(disclosureKey, !part.done);
-	const [labelIndex, setLabelIndex] = useState<number>(0);
-	const activeThinkingLabels: readonly string[] = [
-		t("chat.thinking.label"),
-		t("chat.thinking.labelDot"),
-		t("chat.thinking.labelDotDot"),
-		t("chat.thinking.labelDotDotDot")
-	];
 
 	const cancelAutoFollowFrame = useCallback((): void => {
 		if (autoFollowFrameRef.current !== null) {
@@ -101,20 +95,6 @@ function ThinkingPart({ part, disclosureKey = "thinking" }: ThinkingPartProps): 
 			setOpen(false);
 		}
 	}, [part.done, setOpen]);
-
-	useEffect((): (() => void) | undefined => {
-		if (part.done) {
-			setLabelIndex(0);
-			return undefined;
-		}
-
-		const intervalId: number = window.setInterval((): void => {
-			setLabelIndex((currentIndex: number): number => (currentIndex + 1) % activeThinkingLabels.length);
-		}, 500);
-		return (): void => {
-			window.clearInterval(intervalId);
-		};
-	}, [activeThinkingLabels.length, part.done]);
 
 	useLayoutEffect((): (() => void) => {
 		const bodyElement: HTMLDivElement | null = bodyRef.current;
@@ -169,7 +149,9 @@ function ThinkingPart({ part, disclosureKey = "thinking" }: ThinkingPartProps): 
 			items={[
 				{
 					key: "thinking",
-					label: part.done ? t("chat.thinking.label") : activeThinkingLabels[labelIndex],
+					label: part.done
+						? t("chat.thinking.label")
+						: <ShinyText text={t("chat.thinking.activeLabel")} speed={2.4} />,
 					children: (
 						<div
 							ref={contentRef}

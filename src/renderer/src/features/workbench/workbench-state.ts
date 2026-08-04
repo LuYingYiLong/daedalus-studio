@@ -185,6 +185,20 @@ function appendThinkingPart(parts: TimelineBodyPart[], text: string, done: boole
 	return [...nextParts, { type: "thinking", text, done }];
 }
 
+function finishRunningThinkingParts(parts: TimelineBodyPart[]): TimelineBodyPart[] {
+	let changed: boolean = false;
+	const nextParts: TimelineBodyPart[] = parts.map((part: TimelineBodyPart): TimelineBodyPart => {
+		if (part.type !== "thinking" || part.done) {
+			return part;
+		}
+
+		changed = true;
+		return { ...part, done: true };
+	});
+
+	return changed ? nextParts : parts;
+}
+
 const MAX_TERMINAL_RUNTIME_STREAM_CHARS: number = 6000;
 
 function appendTerminalRuntimeTail(current: string, delta: string, omittedChars: number): { text: string; omittedChars: number } {
@@ -649,6 +663,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 	const nowIso: string = new Date().toISOString();
 	let nextParts: TimelineBodyPart[] = block.bodyParts;
 	let nextStatus: TimelineAssistantBlock["status"] = block.status;
+	let nextCompletionStatus: TimelineAssistantBlock["completionStatus"] = block.completionStatus;
 	let completedAtUtc: string = block.completedAtUtc;
 
 	if (event.event === "agent.run.state") {
@@ -656,9 +671,10 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		const terminal: Record<string, unknown> = isRecord(data.terminal) ? data.terminal : {};
 		if (stage === "failed") {
 			nextStatus = "failed";
+			nextCompletionStatus = undefined;
 			completedAtUtc = getStringValue(terminal, "completedAt") || nowIso;
 			const details: string = getStringValue(terminal, "message") || "Unknown backend error";
-			nextParts = failRunningImageGenerationParts(nextParts, details);
+			nextParts = finishRunningThinkingParts(failRunningImageGenerationParts(nextParts, details));
 			if (!hasErrorStatusDetails(nextParts, details)) {
 				nextParts = [...nextParts, {
 					type: "status",
@@ -669,25 +685,20 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 				}];
 			}
 		} else if (stage === "cancelled") {
-			nextStatus = undefined;
+			nextStatus = "stopped";
+			nextCompletionStatus = "stopped";
 			completedAtUtc = getStringValue(terminal, "completedAt") || nowIso;
-			nextParts = failRunningImageGenerationParts(nextParts, "Image generation was cancelled.");
-			if (!hasStatusCode(nextParts, "cancelled")) {
-				nextParts = [...nextParts, {
-					type: "status",
-					status: "info",
-					title: "Stopped",
-					details: getStringValue(terminal, "message") || "The response was stopped by the user.",
-					code: "cancelled"
-				}];
-			}
+			nextParts = finishRunningThinkingParts(failRunningImageGenerationParts(nextParts, "Image generation was cancelled."));
 		} else if (stage === "completed") {
 			nextStatus = undefined;
+			nextCompletionStatus = "responded";
 			completedAtUtc = getStringValue(terminal, "completedAt") || nowIso;
+			nextParts = finishRunningThinkingParts(nextParts);
 		} else if (stage === "interrupted") {
 			nextStatus = undefined;
+			nextCompletionStatus = undefined;
 			completedAtUtc = nowIso;
-			nextParts = failRunningImageGenerationParts(nextParts, "Image generation was interrupted.");
+			nextParts = finishRunningThinkingParts(failRunningImageGenerationParts(nextParts, "Image generation was interrupted."));
 			if (!hasStatusCode(nextParts, "agent_run_interrupted")) {
 				nextParts = [...nextParts, {
 					type: "status",
@@ -701,6 +712,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 			}
 		} else {
 			nextStatus = "running";
+			nextCompletionStatus = undefined;
 			completedAtUtc = nowIso;
 		}
 	} else if (event.event === "agent.message.delta") {
@@ -739,6 +751,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		}
 	} else if (event.event === "plan.error") {
 		nextStatus = "failed";
+		nextCompletionStatus = undefined;
 		completedAtUtc = nowIso;
 		const details: string = getStringValue(data, "message") || "Unknown backend error";
 		if (!hasErrorStatusDetails(nextParts, details)) {
@@ -752,6 +765,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		}
 	} else if (event.event === "agent.message.done") {
 		nextStatus = undefined;
+		nextCompletionStatus = "responded";
 		completedAtUtc = nowIso;
 		nextParts = appendFinalMarkdownPart(nextParts, getStringValue(data, "text"));
 	} else {
@@ -763,6 +777,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		content: getAssistantContent(nextParts, event.event === "agent.provider.reconnect" ? "" : block.content),
 		completedAtUtc,
 		status: nextStatus,
+		completionStatus: nextCompletionStatus,
 		bodyParts: nextParts
 	};
 }

@@ -95,6 +95,7 @@ function AboutSettingsPage(): React.JSX.Element {
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
 	const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState<boolean>(false);
 	const [isResettingOnboarding, setIsResettingOnboarding] = useState<boolean>(false);
+	const [isRepairingBackend, setIsRepairingBackend] = useState<boolean>(false);
 	const {
 		data,
 		loading: isLoading,
@@ -115,7 +116,7 @@ function AboutSettingsPage(): React.JSX.Element {
 
 	const {
 		loading: isBackendRefreshing,
-		run: refreshBackendDetails
+		runAsync: refreshBackendDetails
 	} = useRequest(async (): Promise<BackendDetails> => {
 		return loadBackendDetails(t("settings.about.errors.backendDetails"));
 	}, {
@@ -157,16 +158,59 @@ function AboutSettingsPage(): React.JSX.Element {
 
 	const {
 		loading: isCheckingUpdates,
-		run: checkForUpdates
-	} = useRequest(async (): Promise<void> => {
+		runAsync: checkForUpdates
+	} = useRequest(async (): Promise<AppUpdateState> => {
 		setIsUpdateDialogOpen(true);
 		const nextState: AppUpdateState = await window.electronAPI.appUpdate.check();
 		setUpdateState(nextState);
+		return nextState;
 	}, { manual: true });
 
-	async function startUpdateDownload(): Promise<void> {
+	async function startUpdateDownload(): Promise<AppUpdateState> {
 		const nextState: AppUpdateState = await window.electronAPI.appUpdate.download();
 		setUpdateState(nextState);
+		return nextState;
+	}
+
+	async function updateBackend(): Promise<void> {
+		try {
+			const nextState: AppUpdateState = await checkForUpdates();
+			if (nextState.backend.status !== "available") {
+				void message.info(t("settings.about.backend.updateNotAvailable"));
+				return;
+			}
+			await startUpdateDownload();
+			await refreshBackendDetails();
+		} catch (updateError: unknown) {
+			void message.error(getErrorMessage(updateError, t("settings.about.errors.backendUpdate")));
+		}
+	}
+
+	async function repairBackend(): Promise<void> {
+		setIsRepairingBackend(true);
+		try {
+			const result: BackendBootstrapState = await window.electronAPI.backendBootstrap.repair();
+			if (result.status !== "healthy") {
+				throw new Error(result.errorMessage ?? t("settings.about.errors.backendRepair"));
+			}
+			await refreshBackendDetails();
+			void message.success(t("settings.about.backend.repairSucceeded"));
+		} catch (repairError: unknown) {
+			void message.error(getErrorMessage(repairError, t("settings.about.errors.backendRepair")));
+			throw repairError;
+		} finally {
+			setIsRepairingBackend(false);
+		}
+	}
+
+	function confirmBackendRepair(): void {
+		modal.confirm({
+			title: t("settings.about.backend.repairConfirmTitle"),
+			content: t("settings.about.backend.repairConfirmDescription"),
+			okText: t("settings.about.actions.repairBackend"),
+			cancelText: t("settings.common.cancel"),
+			onOk: repairBackend
+		});
 	}
 
 	async function closeUpdateDialog(): Promise<void> {
@@ -205,12 +249,14 @@ function AboutSettingsPage(): React.JSX.Element {
 	const backendPort: number | null = backendHealth?.port ?? backendDetails?.port ?? null;
 	const unavailableLabel: string = t("settings.about.unavailable");
 	const backendStatusLabel: string = getBackendStatusLabel(backendStatus, t);
+	const isBackendUpdating: boolean = updateState?.backend.status === "downloading"
+		|| updateState?.backend.status === "installing";
 
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
 				<Typography.Title level={3} className={styles.title}>{t("settings.about.title")}</Typography.Title>
-				<Button icon={<Icon name="reload" />} loading={isCheckingUpdates} onClick={(): void => checkForUpdates()}>
+				<Button icon={<Icon name="reload" />} loading={isCheckingUpdates} onClick={(): void => { void checkForUpdates(); }}>
 					{t("settings.about.actions.checkForUpdates")}
 				</Button>
 			</header>
@@ -296,16 +342,37 @@ function AboutSettingsPage(): React.JSX.Element {
 
 						<Card
 							title={(
-								<div className={styles.cardTitleRow}>
+							<div className={styles.cardTitleRow}>
 									<span>{t("settings.about.backend.detailsTitle")}</span>
+									<div className={styles.backendActions}>
 									<Button
 										size="small"
 										icon={<Icon name="reload" />}
 										loading={isBackendRefreshing}
-										onClick={(): void => refreshBackendDetails()}
+										disabled={isRepairingBackend || isBackendUpdating}
+										onClick={(): void => { void refreshBackendDetails(); }}
 									>
 										{t("settings.about.actions.refresh")}
 									</Button>
+									<Button
+										size="small"
+										icon={<Icon name="reload" />}
+										loading={isCheckingUpdates || isBackendUpdating}
+										disabled={isRepairingBackend}
+										onClick={(): void => { void updateBackend(); }}
+									>
+										{t("settings.about.actions.updateBackend")}
+									</Button>
+									<Button
+										size="small"
+										icon={<Icon name="repair" />}
+										loading={isRepairingBackend}
+										disabled={isCheckingUpdates || isBackendUpdating}
+										onClick={confirmBackendRepair}
+									>
+										{t("settings.about.actions.repairBackend")}
+									</Button>
+									</div>
 								</div>
 							)}
 							className={styles.detailsCard}
@@ -394,7 +461,12 @@ function AboutSettingsPage(): React.JSX.Element {
 					</>
 				) : null}
 			</div>
-			<AppUpdateDialog open={isUpdateDialogOpen} state={updateState} onClose={closeUpdateDialog} onDownload={startUpdateDownload} />
+			<AppUpdateDialog
+				open={isUpdateDialogOpen}
+				state={updateState}
+				onClose={closeUpdateDialog}
+				onDownload={async (): Promise<void> => { await startUpdateDownload(); }}
+			/>
 		</section>
 	);
 }

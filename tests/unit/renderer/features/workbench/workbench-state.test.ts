@@ -329,9 +329,34 @@ describe("workbench-state", () => {
 		if (assistant?.type !== "assistant") {
 			throw new Error("Expected assistant block");
 		}
-		expect(assistant.status).toBeUndefined();
-		expect(assistant.bodyParts.filter((part) => part.type === "status" && part.code === "cancelled")).toHaveLength(1);
+		expect(assistant.status).toBe("stopped");
+		expect(assistant.bodyParts.some((part) => part.type === "status" && part.code === "cancelled")).toBe(false);
 	});
+
+	it("finishes an active thinking part when the run is cancelled", () => {
+		const thinking: TimelineBlock[] = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "request-thinking-cancelled",
+			event: "agent.thinking.delta",
+			data: { text: "checking the workspace" }
+		});
+		const cancelled: TimelineBlock[] = applyBackendEventToTimeline(
+			thinking,
+			createAgentRunEvent("request-thinking-cancelled", "cancelled", 2)
+		);
+		const assistant = cancelled[0];
+
+		expect(assistant?.type).toBe("assistant");
+		if (assistant?.type !== "assistant") {
+			throw new Error("Expected assistant block");
+		}
+		expect(assistant.bodyParts).toContainEqual({
+			type: "thinking",
+			text: "checking the workspace",
+			done: true
+		});
+	});
+
 
 	it("deduplicates repeated terminal errors in the assistant block", () => {
 		const started: TimelineBlock[] = applyBackendEventToTimeline(

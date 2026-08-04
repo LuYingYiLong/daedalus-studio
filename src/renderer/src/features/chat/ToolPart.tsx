@@ -1,4 +1,5 @@
 import { TimelineBodyPart } from "@/api/types";
+import ShinyText from "@/components/ShinyText";
 import styles from "./ToolPart.module.css"
 import { Icon } from "@/assets/icons";
 import { Collapse, Tag } from "antd";
@@ -57,9 +58,10 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 		error: "red",
 		approval: "gold"
 	}
+	const isActiveStatus: boolean = status === "running" || status === "approval";
 	const genStatusTag = () => (
 		<Tag color={statusColor[status]}>
-			{statusText[status]}
+			{isActiveStatus ? <ShinyText text={statusText[status]} speed={2.4} color="currentColor" /> : statusText[status]}
 		</Tag>
 	)
 	const label = (

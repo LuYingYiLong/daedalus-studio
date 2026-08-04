@@ -24,6 +24,7 @@ export type AssistantBubbleProps = {
 	bodyParts?: TimelineBodyPart[];
 	message?: string;
 	elapsedTime?: string;
+	completionStatus?: "responded" | "stopped";
 	endTime?: string;
 	streaming?: boolean;
 	selectionEnabled?: boolean;
@@ -61,11 +62,18 @@ function createAssistantCopyText(message?: string, content?: string, bodyParts?:
 		.join("\n\n");
 }
 
-function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyParts, message, elapsedTime, endTime, streaming = false, selectionEnabled = false, hideInlineDiff = false, onInlineDiffReview }: AssistantBubbleProps): React.JSX.Element {
+function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyParts, message, elapsedTime, completionStatus, endTime, streaming = false, selectionEnabled = false, hideInlineDiff = false, onInlineDiffReview }: AssistantBubbleProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [copied, setCopied] = React.useState<boolean>(false);
 	const disclosurePrefix: string = entryId ?? "assistant";
 	const [summaryOpen, setSummaryOpen] = useTimelineDisclosure(`${disclosurePrefix}:summary`, false);
+	const timingLabel: string | undefined = elapsedTime === undefined
+		? undefined
+		: completionStatus === "stopped"
+			? t("chat.assistant.stoppedIn", { elapsed: elapsedTime })
+			: completionStatus === "responded"
+				? t("chat.assistant.respondedIn", { elapsed: elapsedTime })
+				: elapsedTime;
 
 	async function copyMessage(): Promise<void> {
 		try {
@@ -96,8 +104,10 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 			);
 		}
 
-		if (part.type === "thinking" && part.text.trim().length > 0) {
-			return <ThinkingPart key={index} part={part} disclosureKey={`${disclosurePrefix}:thinking:${index}`} />
+		if (part.type === "thinking") {
+			return part.text.trim().length > 0
+				? <ThinkingPart key={index} part={part} disclosureKey={`${disclosurePrefix}:thinking:${index}`} />
+				: null;
 		}
 
 		if (part.type === "tool") {
@@ -189,9 +199,9 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 
 	return (
 		<article id={entryId} className={styles.root} data-entry-id={entryId} data-entry-kind="assistant">
-			{elapsedTime !== undefined ? (
+			{timingLabel !== undefined ? (
 				<div className={styles.timingRow}>
-					<Typography.Text type="secondary">{elapsedTime}</Typography.Text>
+					<Typography.Text type="secondary">{timingLabel}</Typography.Text>
 					<Divider size="small" className={styles.antDivider} />
 				</div>
 			) : null}

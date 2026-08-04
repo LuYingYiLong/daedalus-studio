@@ -767,6 +767,8 @@
     },
     "assistant": {
       "process": "Process",
+      "respondedIn": "Responded: {{elapsed}}",
+      "stoppedIn": "Stopped: {{elapsed}}",
       "copyAria": "Copy assistant message"
     },
     "user": {
@@ -850,10 +852,8 @@
       "open": "Open plan"
     },
     "thinking": {
-      "label": "Thinking",
-      "labelDot": "Thinking.",
-      "labelDotDot": "Thinking..",
-      "labelDotDotDot": "Thinking..."
+	  "label": "Thought process",
+	  "activeLabel": "Thinking"
     },
     "inlineDiff": {
       "title": "Edited {{count}} file",
@@ -1156,6 +1156,10 @@
       "backend": {
         "description": "Local RPC, workflow, MCP, and Godot integration service.",
         "detailsTitle": "Backend Details",
+		"repairConfirmTitle": "Repair Daedalus backend?",
+		"repairConfirmDescription": "This stops and reinstalls the backend bundled with this Studio version. Any active model response will be interrupted.",
+		"repairSucceeded": "Backend repaired and reconnected.",
+		"updateNotAvailable": "No backend update is available.",
         "status": {
           "healthy": "Healthy",
           "starting": "Starting",
@@ -1166,7 +1170,9 @@
       },
       "actions": {
         "refresh": "Refresh",
-        "checkForUpdates": "Check for updates"
+		"checkForUpdates": "Check for updates",
+		"updateBackend": "Update backend",
+		"repairBackend": "Repair backend"
       },
       "onboarding": {
         "title": "Setup guide",
@@ -1194,7 +1200,9 @@
       },
       "errors": {
         "applicationInfo": "Failed to load application information",
-        "backendDetails": "Failed to load backend details"
+		"backendDetails": "Failed to load backend details",
+		"backendUpdate": "Failed to update backend",
+		"backendRepair": "Failed to repair backend"
       }
     },
     "archivedSessions": {
