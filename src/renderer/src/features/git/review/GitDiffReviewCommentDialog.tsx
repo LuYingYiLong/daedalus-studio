@@ -24,6 +24,9 @@ function GitDiffReviewCommentDialog({ target, onCancel, onSubmit }: GitDiffRevie
 	const [form] = Form.useForm<CommentFormValues>();
 
 	useEffect((): void => {
+		if (target === null) {
+			return;
+		}
 		form.resetFields();
 	}, [form, target]);
 
@@ -33,6 +36,8 @@ function GitDiffReviewCommentDialog({ target, onCancel, onSubmit }: GitDiffRevie
 			title={t("review.commentDialog.title")}
 			okText={t("review.commentDialog.submit")}
 			cancelText={t("chat.user.actions.cancel")}
+			forceRender
+			destroyOnHidden
 			onCancel={onCancel}
 			onOk={(): void => {
 				void form.validateFields().then((values: CommentFormValues): void => {
@@ -53,7 +58,7 @@ function GitDiffReviewCommentDialog({ target, onCancel, onSubmit }: GitDiffRevie
 					</Typography.Paragraph>
 				</>
 			) : null}
-			<Form form={form} layout="vertical">
+			<Form form={form} preserve={false} layout="vertical">
 				<Form.Item
 					name="comment"
 					label={t("review.commentDialog.label")}

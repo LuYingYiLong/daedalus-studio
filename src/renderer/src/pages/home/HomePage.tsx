@@ -99,6 +99,33 @@ const BOTTOM_DOCK_DEFAULT_SIZE: number = 280;
 const BOTTOM_DOCK_MAX_SIZE: number = 520;
 const BOTTOM_DOCK_CLOSE_THRESHOLD: number = 120;
 const MAX_SELECTED_SEARCH_QUERY_LENGTH: number = 500;
+const PANEL_LAYOUT_PERSIST_DELAY_MS: number = 360;
+
+function areWorkspaceSidebarPreferencesEqual(
+	left: WorkspaceSidebarPreferences,
+	right: WorkspaceSidebarPreferences
+): boolean {
+	return left.open === right.open && left.size === right.size;
+}
+
+function areDockLayoutPreferencesEqual(left: DockLayoutPreferences, right: DockLayoutPreferences): boolean {
+	return left.open === right.open
+		&& left.size === right.size
+		&& left.activeTabKey === right.activeTabKey
+		&& left.tabs.length === right.tabs.length
+		&& left.tabs.every((tab, index): boolean => {
+			const candidate = right.tabs[index];
+			return candidate !== undefined
+				&& tab.key === candidate.key
+				&& tab.kind === candidate.kind
+				&& tab.index === candidate.index;
+		});
+}
+
+function areSessionLayoutPreferencesEqual(left: SessionLayoutPreferences, right: SessionLayoutPreferences): boolean {
+	return areDockLayoutPreferencesEqual(left.side, right.side)
+		&& areDockLayoutPreferencesEqual(left.bottom, right.bottom);
+}
 
 function getSelectedConversationSearchQuery(container: HTMLElement | null): string | undefined {
 	const selection: Selection | null = window.getSelection();
@@ -600,6 +627,8 @@ function HomePage({
 	const [godotSceneFiles, setGodotSceneFiles] = useState<GodotSceneFile[]>([]);
 	const [isGodotSceneLoading, setIsGodotSceneLoading] = useState<boolean>(false);
 	const [godotSceneSearch, setGodotSceneSearch] = useState<string>("");
+	const [visualWorkspaceSidebar, setVisualWorkspaceSidebar] = useState<WorkspaceSidebarPreferences>(workspaceSidebar);
+	const [visualSessionLayout, setVisualSessionLayout] = useState<SessionLayoutPreferences>(sessionLayout);
 	const dockActivationRequestIdRef = useRef<number>(0);
 	const summaryRequestIdRef = useRef<number>(0);
 	const summaryGitActionRequestIdRef = useRef<number>(0);
@@ -616,6 +645,119 @@ function HomePage({
 	const chatBodyRef = useRef<HTMLDivElement | null>(null);
 	const scrollToBottomButtonRef = useRef<HTMLButtonElement | null>(null);
 	const scrollToBottomButtonVisibleRef = useRef<boolean>(false);
+	const visualWorkspaceSidebarRef = useRef<WorkspaceSidebarPreferences>(workspaceSidebar);
+	const visualSessionLayoutRef = useRef<SessionLayoutPreferences>(sessionLayout);
+	const workspaceSidebarSaveTimerRef = useRef<number | null>(null);
+	const sessionLayoutSaveTimerRef = useRef<number | null>(null);
+	const pendingWorkspaceSidebarSaveRef = useRef<{
+		value: WorkspaceSidebarPreferences;
+		save: HomePageProps["onWorkspaceSidebarChange"];
+	} | null>(null);
+	const pendingSessionLayoutSaveRef = useRef<{
+		value: SessionLayoutPreferences;
+		save: HomePageProps["onSessionLayoutChange"];
+	} | null>(null);
+
+	function applyVisualWorkspaceSidebar(nextWorkspaceSidebar: WorkspaceSidebarPreferences): void {
+		visualWorkspaceSidebarRef.current = nextWorkspaceSidebar;
+		setVisualWorkspaceSidebar(nextWorkspaceSidebar);
+	}
+
+	function applyVisualSessionLayout(nextSessionLayout: SessionLayoutPreferences): void {
+		visualSessionLayoutRef.current = nextSessionLayout;
+		setVisualSessionLayout(nextSessionLayout);
+	}
+
+	function clearWorkspaceSidebarSave(): void {
+		if (workspaceSidebarSaveTimerRef.current !== null) {
+			window.clearTimeout(workspaceSidebarSaveTimerRef.current);
+			workspaceSidebarSaveTimerRef.current = null;
+		}
+		pendingWorkspaceSidebarSaveRef.current = null;
+	}
+
+	function clearSessionLayoutSave(): void {
+		if (sessionLayoutSaveTimerRef.current !== null) {
+			window.clearTimeout(sessionLayoutSaveTimerRef.current);
+			sessionLayoutSaveTimerRef.current = null;
+		}
+		pendingSessionLayoutSaveRef.current = null;
+	}
+
+	function flushWorkspaceSidebarSave(): void {
+		const pendingSave = pendingWorkspaceSidebarSaveRef.current;
+		clearWorkspaceSidebarSave();
+		pendingSave?.save(pendingSave.value);
+	}
+
+	function flushSessionLayoutSave(): void {
+		const pendingSave = pendingSessionLayoutSaveRef.current;
+		clearSessionLayoutSave();
+		pendingSave?.save(pendingSave.value);
+	}
+
+	function commitWorkspaceSidebar(nextWorkspaceSidebar: WorkspaceSidebarPreferences, persist: boolean = true): void {
+		clearWorkspaceSidebarSave();
+		applyVisualWorkspaceSidebar(nextWorkspaceSidebar);
+		onWorkspaceSidebarChange(nextWorkspaceSidebar, { persist });
+	}
+
+	function commitSessionLayout(nextSessionLayout: SessionLayoutPreferences, persist: boolean = true): void {
+		clearSessionLayoutSave();
+		applyVisualSessionLayout(nextSessionLayout);
+		onSessionLayoutChange(nextSessionLayout, { persist });
+	}
+
+	function scheduleWorkspaceSidebarSave(nextWorkspaceSidebar: WorkspaceSidebarPreferences): void {
+		applyVisualWorkspaceSidebar(nextWorkspaceSidebar);
+		clearWorkspaceSidebarSave();
+		pendingWorkspaceSidebarSaveRef.current = {
+			value: nextWorkspaceSidebar,
+			save: onWorkspaceSidebarChange
+		};
+		workspaceSidebarSaveTimerRef.current = window.setTimeout((): void => {
+			const pendingSave = pendingWorkspaceSidebarSaveRef.current;
+			workspaceSidebarSaveTimerRef.current = null;
+			pendingWorkspaceSidebarSaveRef.current = null;
+			pendingSave?.save(pendingSave.value);
+		}, PANEL_LAYOUT_PERSIST_DELAY_MS);
+	}
+
+	function scheduleSessionLayoutSave(nextSessionLayout: SessionLayoutPreferences): void {
+		applyVisualSessionLayout(nextSessionLayout);
+		clearSessionLayoutSave();
+		pendingSessionLayoutSaveRef.current = {
+			value: nextSessionLayout,
+			save: onSessionLayoutChange
+		};
+		sessionLayoutSaveTimerRef.current = window.setTimeout((): void => {
+			const pendingSave = pendingSessionLayoutSaveRef.current;
+			sessionLayoutSaveTimerRef.current = null;
+			pendingSessionLayoutSaveRef.current = null;
+			pendingSave?.save(pendingSave.value);
+		}, PANEL_LAYOUT_PERSIST_DELAY_MS);
+	}
+
+	useEffect((): void => {
+		if (!areWorkspaceSidebarPreferencesEqual(visualWorkspaceSidebarRef.current, workspaceSidebar)) {
+			flushWorkspaceSidebarSave();
+			applyVisualWorkspaceSidebar(workspaceSidebar);
+		}
+	}, [workspaceSidebar]);
+
+	useEffect((): void => {
+		if (!areSessionLayoutPreferencesEqual(visualSessionLayoutRef.current, sessionLayout)) {
+			flushSessionLayoutSave();
+			applyVisualSessionLayout(sessionLayout);
+		}
+	}, [sessionLayout]);
+
+	useEffect((): (() => void) => {
+		return (): void => {
+			flushWorkspaceSidebarSave();
+			flushSessionLayoutSave();
+		};
+	}, []);
 	const workspaceForActions: WorkspaceConfig | null = activeWorkspace ?? (isHome ? homeWorkspace : null);
 	const summaryScopeKey: string = activeSessionId ?? `workspace:${workspaceForActions?.id ?? "none"}`;
 	const showDockControls: boolean = !isHome || workspaceForActions !== null;
@@ -635,12 +777,12 @@ function HomePage({
 		? godotLaunchExecutablePath.trim()
 		: null;
 	const showGodotSummaryActions: boolean = workspaceForActions !== null && effectiveGodotLaunchExecutablePath !== null && isGodotProject;
-	const workspaceSidebarOpen: boolean = workspaceSidebar.open;
-	const workspaceSidebarSize: number = workspaceSidebar.size;
-	const sideDockOpen: boolean = sessionLayout.side.open;
-	const sideDockSize: number = sessionLayout.side.size;
-	const bottomDockOpen: boolean = sessionLayout.bottom.open;
-	const bottomDockSize: number = sessionLayout.bottom.size;
+	const workspaceSidebarOpen: boolean = visualWorkspaceSidebar.open;
+	const workspaceSidebarSize: number = visualWorkspaceSidebar.size;
+	const sideDockOpen: boolean = visualSessionLayout.side.open;
+	const sideDockSize: number = visualSessionLayout.side.size;
+	const bottomDockOpen: boolean = visualSessionLayout.bottom.open;
+	const bottomDockSize: number = visualSessionLayout.bottom.size;
 	const selectionMarkerContextItems: AdditionalContextItem[] = useMemo((): AdditionalContextItem[] => {
 		const byId = new Map<string, AdditionalContextItem>();
 		for (const item of contextItems) {
@@ -663,21 +805,21 @@ function HomePage({
 		nextSideLayout: DockLayoutPreferences,
 		persist: boolean = true
 	): void => {
-		onSessionLayoutChange({
-			...sessionLayout,
+		commitSessionLayout({
+			...visualSessionLayoutRef.current,
 			side: nextSideLayout
-		}, { persist });
-	}, [onSessionLayoutChange, sessionLayout]);
+		}, persist);
+	}, [commitSessionLayout]);
 
 	const updateBottomDock = useCallback((
 		nextBottomLayout: DockLayoutPreferences,
 		persist: boolean = true
 	): void => {
-		onSessionLayoutChange({
-			...sessionLayout,
+		commitSessionLayout({
+			...visualSessionLayoutRef.current,
 			bottom: nextBottomLayout
-		}, { persist });
-	}, [onSessionLayoutChange, sessionLayout]);
+		}, persist);
+	}, [commitSessionLayout]);
 
 	useLayoutEffect((): void => {
 		const previous = previousSessionLayoutRef.current;
@@ -728,8 +870,8 @@ function HomePage({
 			id: dockActivationRequestIdRef.current,
 			kind: "review"
 		});
-		updateSideDock({ ...sessionLayout.side, open: true });
-	}, [sessionLayout.side, updateSideDock, workspaceForActions]);
+		updateSideDock({ ...visualSessionLayoutRef.current.side, open: true });
+	}, [updateSideDock, workspaceForActions]);
 	useEffect((): (() => void) | void => {
 		if (!showWorkspaceLaunchControls) {
 			return;
@@ -1441,15 +1583,21 @@ function HomePage({
 	}, []);
 
 	const openSideDock = useCallback((kind?: DockPanelKind): void => {
-		updateSideDock({ ...sessionLayout.side, open: true });
+		scheduleSessionLayoutSave({
+			...visualSessionLayoutRef.current,
+			side: { ...visualSessionLayoutRef.current.side, open: true }
+		});
 		if (kind !== undefined) {
 			requestSideDockKind(kind);
 		}
-	}, [requestSideDockKind, sessionLayout.side, updateSideDock]);
+	}, [requestSideDockKind, scheduleSessionLayoutSave]);
 
 	const closeSideDock = useCallback((): void => {
-		updateSideDock({ ...sessionLayout.side, open: false });
-	}, [sessionLayout.side, updateSideDock]);
+		scheduleSessionLayoutSave({
+			...visualSessionLayoutRef.current,
+			side: { ...visualSessionLayoutRef.current.side, open: false }
+		});
+	}, [scheduleSessionLayoutSave]);
 
 	const toggleSideDock = useCallback((): void => {
 		if (sideDockOpen) {
@@ -1467,12 +1615,18 @@ function HomePage({
 	}, [openSideDock, workspaceForActions]);
 
 	const openBottomDock = useCallback((): void => {
-		updateBottomDock({ ...sessionLayout.bottom, open: true });
-	}, [sessionLayout.bottom, updateBottomDock]);
+		scheduleSessionLayoutSave({
+			...visualSessionLayoutRef.current,
+			bottom: { ...visualSessionLayoutRef.current.bottom, open: true }
+		});
+	}, [scheduleSessionLayoutSave]);
 
 	const closeBottomDock = useCallback((): void => {
-		updateBottomDock({ ...sessionLayout.bottom, open: false });
-	}, [sessionLayout.bottom, updateBottomDock]);
+		scheduleSessionLayoutSave({
+			...visualSessionLayoutRef.current,
+			bottom: { ...visualSessionLayoutRef.current.bottom, open: false }
+		});
+	}, [scheduleSessionLayoutSave]);
 
 	const toggleBottomDock = useCallback((): void => {
 		if (bottomDockOpen) {
@@ -1483,11 +1637,11 @@ function HomePage({
 	}, [bottomDockOpen, closeBottomDock, openBottomDock]);
 
 	const toggleWorkspaceSidebar = useCallback((): void => {
-		onWorkspaceSidebarChange({
-			...workspaceSidebar,
-			open: !workspaceSidebarOpen
+		scheduleWorkspaceSidebarSave({
+			...visualWorkspaceSidebarRef.current,
+			open: !visualWorkspaceSidebarRef.current.open
 		});
-	}, [onWorkspaceSidebarChange, workspaceSidebar, workspaceSidebarOpen]);
+	}, [scheduleWorkspaceSidebarSave]);
 
 
 	useEffect((): (() => void) => {
@@ -1573,14 +1727,14 @@ function HomePage({
 			Math.max(WORKSPACE_SIDEBAR_CLOSED_SIZE, Math.trunc(nextSize))
 		);
 		if (normalizedSize < WORKSPACE_SIDEBAR_CLOSE_THRESHOLD) {
-			onWorkspaceSidebarChange({ ...workspaceSidebar, open: false }, { persist: false });
+			applyVisualWorkspaceSidebar({ ...visualWorkspaceSidebarRef.current, open: false });
 			return;
 		}
 
-		onWorkspaceSidebarChange({
+		applyVisualWorkspaceSidebar({
 			open: true,
 			size: normalizedSize
-		}, { persist: false });
+		});
 	}
 
 	function handleWorkspaceSidebarResizeEnd(sizes: number[]): void {
@@ -1589,11 +1743,11 @@ function HomePage({
 			return;
 		}
 		if (nextSize < WORKSPACE_SIDEBAR_CLOSE_THRESHOLD) {
-			onWorkspaceSidebarChange({ ...workspaceSidebar, open: false });
+			commitWorkspaceSidebar({ ...visualWorkspaceSidebarRef.current, open: false });
 			return;
 		}
 
-		onWorkspaceSidebarChange({
+		commitWorkspaceSidebar({
 			open: true,
 			size: Math.min(
 				WORKSPACE_SIDEBAR_MAX_SIZE,
@@ -1610,15 +1764,17 @@ function HomePage({
 
 		const normalizedSize: number = Math.min(SIDE_DOCK_MAX_SIZE, Math.max(SIDE_DOCK_CLOSED_SIZE, Math.trunc(nextSize)));
 		if (normalizedSize < SIDE_DOCK_CLOSE_THRESHOLD) {
-			updateSideDock({ ...sessionLayout.side, open: false }, false);
+			applyVisualSessionLayout({
+				...visualSessionLayoutRef.current,
+				side: { ...visualSessionLayoutRef.current.side, open: false }
+			});
 			return;
 		}
 
-		updateSideDock({
-			...sessionLayout.side,
-			open: true,
-			size: normalizedSize
-		}, false);
+		applyVisualSessionLayout({
+			...visualSessionLayoutRef.current,
+			side: { ...visualSessionLayoutRef.current.side, open: true, size: normalizedSize }
+		});
 	}
 
 	function handleSideDockResizeEnd(sizes: number[]): void {
@@ -1627,15 +1783,17 @@ function HomePage({
 			return;
 		}
 		if (nextSize < SIDE_DOCK_CLOSE_THRESHOLD) {
-			updateSideDock({ ...sessionLayout.side, open: false });
+			commitSessionLayout({
+				...visualSessionLayoutRef.current,
+				side: { ...visualSessionLayoutRef.current.side, open: false }
+			});
 			return;
 		}
 
 		const validSize: number = Math.min(SIDE_DOCK_MAX_SIZE, Math.max(SIDE_DOCK_CLOSE_THRESHOLD, Math.trunc(nextSize)));
-		updateSideDock({
-			...sessionLayout.side,
-			open: true,
-			size: validSize
+		commitSessionLayout({
+			...visualSessionLayoutRef.current,
+			side: { ...visualSessionLayoutRef.current.side, open: true, size: validSize }
 		});
 	}
 
@@ -1647,15 +1805,17 @@ function HomePage({
 
 		const normalizedSize: number = Math.min(BOTTOM_DOCK_MAX_SIZE, Math.max(BOTTOM_DOCK_CLOSED_SIZE, Math.trunc(nextSize)));
 		if (normalizedSize < BOTTOM_DOCK_CLOSE_THRESHOLD) {
-			updateBottomDock({ ...sessionLayout.bottom, open: false }, false);
+			applyVisualSessionLayout({
+				...visualSessionLayoutRef.current,
+				bottom: { ...visualSessionLayoutRef.current.bottom, open: false }
+			});
 			return;
 		}
 
-		updateBottomDock({
-			...sessionLayout.bottom,
-			open: true,
-			size: normalizedSize
-		}, false);
+		applyVisualSessionLayout({
+			...visualSessionLayoutRef.current,
+			bottom: { ...visualSessionLayoutRef.current.bottom, open: true, size: normalizedSize }
+		});
 	}
 
 	function handleBottomDockResizeEnd(sizes: number[]): void {
@@ -1664,15 +1824,17 @@ function HomePage({
 			return;
 		}
 		if (nextSize < BOTTOM_DOCK_CLOSE_THRESHOLD) {
-			updateBottomDock({ ...sessionLayout.bottom, open: false });
+			commitSessionLayout({
+				...visualSessionLayoutRef.current,
+				bottom: { ...visualSessionLayoutRef.current.bottom, open: false }
+			});
 			return;
 		}
 
 		const validSize: number = Math.min(BOTTOM_DOCK_MAX_SIZE, Math.max(BOTTOM_DOCK_CLOSE_THRESHOLD, Math.trunc(nextSize)));
-		updateBottomDock({
-			...sessionLayout.bottom,
-			open: true,
-			size: validSize
+		commitSessionLayout({
+			...visualSessionLayoutRef.current,
+			bottom: { ...visualSessionLayoutRef.current.bottom, open: true, size: validSize }
 		});
 	}
 
@@ -2106,7 +2268,7 @@ function HomePage({
 											isOpen={sideDockOpen}
 											waitForCwd={terminalWaitForCwd}
 											defaultKind="review"
-											layout={sessionLayout.side}
+											layout={visualSessionLayout.side}
 											activationRequest={sideDockActivationRequest}
 											onLayoutChange={updateSideDock}
 										/>
@@ -2138,7 +2300,7 @@ function HomePage({
 									isOpen={bottomDockOpen}
 									waitForCwd={terminalWaitForCwd}
 									defaultKind="terminal"
-									layout={sessionLayout.bottom}
+									layout={visualSessionLayout.bottom}
 									onLayoutChange={updateBottomDock}
 								/>
 							</div>
