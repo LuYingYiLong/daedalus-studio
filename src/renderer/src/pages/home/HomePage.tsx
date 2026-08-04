@@ -820,14 +820,20 @@ function HomePage({
 		planPreviewRequestIdRef.current += 1;
 	}, [summaryScopeKey]);
 
-	const loadSummaryOverview = useCallback(async (planLimit: number = SUMMARY_PREVIEW_LIMIT, sourceLimit: number = SUMMARY_PREVIEW_LIMIT): Promise<SessionOverviewResult | null> => {
+	const loadSummaryOverview = useCallback(async (
+		planLimit: number = SUMMARY_PREVIEW_LIMIT,
+		sourceLimit: number = SUMMARY_PREVIEW_LIMIT,
+		silent: boolean = false
+	): Promise<SessionOverviewResult | null> => {
 		if (activeSessionId === null && workspaceForActions === null) {
 			return null;
 		}
 
 		const requestId: number = ++summaryRequestIdRef.current;
-		setIsSummaryLoading(true);
-		setSummaryError(null);
+		if (!silent) {
+			setIsSummaryLoading(true);
+			setSummaryError(null);
+		}
 		try {
 			const result: SessionOverviewResult = activeSessionId !== null
 				? await fetchSessionOverview({
@@ -845,12 +851,13 @@ function HomePage({
 			if (requestId !== summaryRequestIdRef.current) {
 				return null;
 			}
-			const message: string = error instanceof Error ? error.message : t("agentPage.summary.errors.load");
 			console.error("[HomePage] failed to load session overview", error);
-			setSummaryError(message);
+			if (!silent) {
+				setSummaryError(error instanceof Error ? error.message : t("agentPage.summary.errors.load"));
+			}
 			return null;
 		} finally {
-			if (requestId === summaryRequestIdRef.current) {
+			if (!silent && requestId === summaryRequestIdRef.current) {
 				setIsSummaryLoading(false);
 			}
 		}
@@ -960,9 +967,15 @@ function HomePage({
 
 	const handleSummaryOpenChange = useCallback((open: boolean): void => {
 		setSummaryOpen(open);
-		if (open && summaryOverview === null && summaryError === null && !isSummaryLoading) {
-			void loadSummaryOverview();
+		if (!open) {
+			return;
 		}
+		if (summaryOverview === null && summaryError === null && !isSummaryLoading) {
+			void loadSummaryOverview();
+			return;
+		}
+		// 先显示缓存，再静默读取当前 Git 工作区状态，避免 diff 长时间停留在旧快照。
+		void loadSummaryOverview(SUMMARY_PREVIEW_LIMIT, SUMMARY_PREVIEW_LIMIT, true);
 	}, [isSummaryLoading, loadSummaryOverview, summaryError, summaryOverview]);
 	const handleDockGitStateChange = useCallback(async (): Promise<void> => {
 		setGitStateRevision((current: number): number => current + 1);
@@ -1711,6 +1724,15 @@ function HomePage({
 							items={item === undefined ? [] : [item]}
 							className={styles.summaryCollapse}
 							defaultActiveKey={[String(item?.key ?? "")]}
+							onChange={(activeKeys: string | string[]): void => {
+								const key: string = String(item?.key ?? "");
+								const expanded: boolean = Array.isArray(activeKeys)
+									? activeKeys.includes(key)
+									: activeKeys === key;
+								if (expanded && key.startsWith("env_info:")) {
+									void loadSummaryOverview(SUMMARY_PREVIEW_LIMIT, SUMMARY_PREVIEW_LIMIT, true);
+								}
+							}}
 						/>
 					</div>
 				))
