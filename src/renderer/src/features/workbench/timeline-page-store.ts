@@ -26,9 +26,24 @@ function cloneEmptyTimelinePage(): TimelinePageState {
 	};
 }
 
+const MAX_REMEMBERED_TIMELINE_EVENT_KEYS: number = 8192;
+
+function getTimelineEventKey(event: BackendEvent): string | null {
+	const eventId: string = typeof event.eventId === "string" ? event.eventId.trim() : "";
+	if (eventId.length > 0) {
+		return `event:${eventId}`;
+	}
+
+	const sessionId: string = typeof event.sessionId === "string" ? event.sessionId.trim() : "";
+	return sessionId.length > 0 && typeof event.sequence === "number" && Number.isSafeInteger(event.sequence)
+		? `sequence:${sessionId}:${event.sequence}`
+		: null;
+}
+
 export function createTimelinePageStore(initialPage: TimelinePageState = cloneEmptyTimelinePage()): TimelinePageStore {
 	let snapshot: TimelinePageState = initialPage;
 	const listeners: Set<() => void> = new Set();
+	const rememberedEventKeys: Set<string> = new Set();
 
 	const publish = (nextSnapshot: TimelinePageState): void => {
 		if (Object.is(snapshot, nextSnapshot)) {
@@ -52,8 +67,16 @@ export function createTimelinePageStore(initialPage: TimelinePageState = cloneEm
 				listeners.delete(listener);
 			};
 		},
-		reset: (): void => publish(cloneEmptyTimelinePage()),
-		replace: publish,
+		reset: (): void => {
+			rememberedEventKeys.clear();
+			publish(cloneEmptyTimelinePage());
+		},
+		replace: (page: TimelinePageState): void => {
+			if (snapshot.sessionId !== page.sessionId) {
+				rememberedEventKeys.clear();
+			}
+			publish(page);
+		},
 		update,
 		mergeBefore: (page: TimelinePageState): void => update((current: TimelinePageState): TimelinePageState => mergeTimelineBefore(current, page)),
 		mergeAfter: (page: TimelinePageState): void => update((current: TimelinePageState): TimelinePageState => mergeTimelineAfter(current, page)),
@@ -61,8 +84,28 @@ export function createTimelinePageStore(initialPage: TimelinePageState = cloneEm
 			if (events.length === 0) {
 				return;
 			}
+			const unseenEvents: BackendEvent[] = events.filter((event: BackendEvent): boolean => {
+				const eventKey: string | null = getTimelineEventKey(event);
+				if (eventKey === null) {
+					return true;
+				}
+				if (rememberedEventKeys.has(eventKey)) {
+					return false;
+				}
+				rememberedEventKeys.add(eventKey);
+				if (rememberedEventKeys.size > MAX_REMEMBERED_TIMELINE_EVENT_KEYS) {
+					const oldestEventKey: string | undefined = rememberedEventKeys.values().next().value;
+					if (oldestEventKey !== undefined) {
+						rememberedEventKeys.delete(oldestEventKey);
+					}
+				}
+				return true;
+			});
+			if (unseenEvents.length === 0) {
+				return;
+			}
 			update((current: TimelinePageState): TimelinePageState => {
-				const blocks = applyBackendEventsToTimeline(current.blocks, events);
+				const blocks = applyBackendEventsToTimeline(current.blocks, unseenEvents);
 				return blocks === current.blocks ? current : { ...current, blocks };
 			});
 		}

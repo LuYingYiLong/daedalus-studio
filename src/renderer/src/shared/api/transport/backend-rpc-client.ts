@@ -70,6 +70,8 @@ const DEFAULT_CLIENT_CONFIG: ClientConfig = {
 	authProtocol: null
 };
 
+const MAX_REMEMBERED_EVENT_IDS: number = 8192;
+
 function createRequestParams(method: string, params: unknown): unknown {
 	if (method !== "client.hello") {
 		return params;
@@ -109,6 +111,7 @@ export class BackendRpcClient {
 	private socket: WebSocket | null = null;
 	private requestIndex: number = 0;
 	private readonly pendingRequests: Map<string, PendingRequest> = new Map();
+	private readonly receivedEventIds: Set<string> = new Set();
 	private readonly eventListeners: Set<BackendEventListener> = new Set();
 	private readonly connectionListeners: Set<BackendConnectionListener> = new Set();
 	private hasConnectedOnce: boolean = false;
@@ -346,6 +349,23 @@ export class BackendRpcClient {
 		}
 
 		if (isBackendEvent(message)) {
+			const eventId: string = message.eventId ?? "";
+			if (eventId.length > 0 && this.receivedEventIds.has(eventId)) {
+				console.debug("[Daedalus backend:event] duplicate ignored", {
+					eventId,
+					event: message.event
+				});
+				return;
+			}
+			if (eventId.length > 0) {
+				this.receivedEventIds.add(eventId);
+				if (this.receivedEventIds.size > MAX_REMEMBERED_EVENT_IDS) {
+					const oldestEventId: string | undefined = this.receivedEventIds.values().next().value;
+					if (oldestEventId !== undefined) {
+						this.receivedEventIds.delete(oldestEventId);
+					}
+				}
+			}
 			console.debug("[Daedalus backend:event]", message.event, message.data);
 			for (const listener of this.eventListeners) {
 				listener(message);

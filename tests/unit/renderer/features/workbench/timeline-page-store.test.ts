@@ -60,6 +60,29 @@ describe("TimelinePageStore", () => {
 		expect(nextSnapshot.blocks[1]?.type === "assistant" ? nextSnapshot.blocks[1].content : "").toBe("hello world");
 	});
 
+	it("ignores a replayed runtime event by eventId", () => {
+		const store = createTimelinePageStore(createPage([]));
+		const event: BackendEvent = {
+			protocolVersion: 3,
+			type: "event",
+			eventId: "event-duplicate",
+			event: "agent.message.delta",
+			sessionId: "session-a",
+			requestId: "request-a",
+			runId: "run-a",
+			sequence: 1,
+			createdAt: "2026-07-29T00:00:00.000Z",
+			data: { text: "hello" }
+		};
+
+		store.applyEvents([event]);
+		store.applyEvents([event]);
+
+		const assistant = store.getSnapshot().blocks[0];
+		expect(assistant?.type).toBe("assistant");
+		expect(assistant?.type === "assistant" ? assistant.content : "").toBe("hello");
+	});
+
 	it("merges pages and keeps at most the 400-block sliding window", () => {
 		const initialBlocks: TimelineBlock[] = Array.from(
 			{ length: MAX_TIMELINE_WINDOW_BLOCKS },

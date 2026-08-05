@@ -249,6 +249,17 @@ describe("BackendRpcClient", () => {
 
 			expect(eventListener).not.toHaveBeenCalled();
 		});
+
+		it("ignores a replayed event with the same eventId", () => {
+			const eventListener = vi.fn();
+			client.addEventListener(eventListener);
+			const event = createEvent("agent.message.delta", { text: "hello" });
+
+			simulateMessage(event);
+			simulateMessage(event);
+
+			expect(eventListener).toHaveBeenCalledTimes(1);
+		});
 	});
 
 	describe("client.hello 特殊处理", () => {

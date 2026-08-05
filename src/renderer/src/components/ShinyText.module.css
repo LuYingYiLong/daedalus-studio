@@ -1,3 +1,4 @@
 .shinyText {
 	display: inline-block;
+	font-family: var(--ds-font-family);
 }
