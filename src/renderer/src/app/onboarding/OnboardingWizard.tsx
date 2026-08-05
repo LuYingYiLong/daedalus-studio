@@ -376,6 +376,7 @@ function DocumentationOnboardingStep({ godotVersion, onConfiguredChange, onBusyC
 	const [loading, setLoading] = useState<boolean>(true);
 	const [toggling, setToggling] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
+	const [branchListWarning, setBranchListWarning] = useState<string | null>(null);
 
 	const loadDocumentation = useCallback(async (): Promise<GodotDocumentationState> => {
 		const nextState: GodotDocumentationState = await fetchGodotDocumentation();
@@ -391,7 +392,7 @@ function DocumentationOnboardingStep({ godotVersion, onConfiguredChange, onBusyC
 				if (cancelled) return;
 				setBranches(branchList.branches);
 				setRecommendedBranch(branchList.recommendedBranch);
-				if (branchList.error !== undefined) setError(branchList.error);
+				setBranchListWarning(branchList.error ?? null);
 			})
 			.catch((loadError: unknown): void => {
 				if (!cancelled) setError(getErrorMessage(loadError, t("onboarding.documentation.errors.load")));
@@ -475,6 +476,7 @@ function DocumentationOnboardingStep({ godotVersion, onConfiguredChange, onBusyC
 				</div>
 			</div>
 			{isDocumentationConfigured(documentation) ? <Alert showIcon type="success" title={t("onboarding.documentation.ready")} /> : null}
+			{branchListWarning !== null ? <Alert showIcon type="warning" description={branchListWarning} /> : null}
 			{error !== null ? <Alert showIcon type="error" description={error} /> : null}
 			{readyDocuments.length > 0 ? (
 				<div className={styles.settingRow}>

@@ -28,7 +28,8 @@ const HEALTH_CHECK_INTERVAL: number = 5000;
 const HEALTH_CHECK_TIMEOUT: number = 2500;
 const MAX_RESTART_ATTEMPTS: number = 5;
 const RESTART_DELAY: number = 2000;
-const RESTART_HEALTH_TIMEOUT: number = 20000;
+// 打包版首次冷启动会初始化本地索引和自定义 MCP；给慢磁盘、代理环境留出真实的启动窗口。
+const RESTART_HEALTH_TIMEOUT: number = 45_000;
 const RESTART_HEALTH_POLL_INTERVAL: number = 500;
 const GRACEFUL_SHUTDOWN_TIMEOUT: number = 5000;
 const AUTH_PROTOCOL_PREFIX: string = "daedalus-auth.";

@@ -53,6 +53,9 @@ const RENDERER_READY_FALLBACK_MS: number = 3_500;
 const SETTINGS_WINDOW_PREWARM_DELAY_MS: number = 100;
 let settingsWindowPrewarmTimer: ReturnType<typeof setTimeout> | null = null;
 let isAppQuitting: boolean = false;
+let allowAppQuit: boolean = false;
+let preserveBackendForClientInstall: boolean = false;
+let gracefulQuitPromise: Promise<void> | null = null;
 let isDevelopmentRendererReloading: boolean = false;
 let pendingSettingsPage: string = "provider";
 const SETTINGS_PAGE_KEYS: readonly string[] = [
@@ -73,11 +76,28 @@ const SETTINGS_PAGE_KEYS: readonly string[] = [
 windowLifecycleController.registerIpc();
 appUpdateService.setBeforeClientInstall(async (): Promise<void> => {
 	isAppQuitting = true;
+	preserveBackendForClientInstall = true;
 	cancelSettingsWindowPrewarm();
 	windowLifecycleController.markQuitting();
 	terminalPtyService.dispose();
 	backendManager.detach();
 });
+
+async function releaseBackendBeforeQuit(): Promise<void> {
+	if (preserveBackendForClientInstall) {
+		// 客户端更新由更新流程接管运行时，不能在这里终止后端。
+		backendManager.detach();
+		return;
+	}
+
+	try {
+		// 必须等待 shutdown RPC 和运行时 lease 关闭完成；仅 detach 会留下短暂的旧 38180 实例。
+		await backendManager.stopAndWait();
+	} catch {
+		// 退出不能被不可达的旧后端阻塞，仍释放本地引用以便下次启动重新获取运行时。
+		backendManager.detach();
+	}
+}
 
 function getWindowIconPath(): string | undefined {
 	if (process.platform === "darwin") {
@@ -544,12 +564,19 @@ if (!hasSingleInstanceLock) {
 		});
 	});
 
-	app.on("before-quit", () => {
+	app.on("before-quit", (event) => {
+		if (allowAppQuit) {
+			return;
+		}
+		event.preventDefault();
 		isAppQuitting = true;
 		cancelSettingsWindowPrewarm();
 		windowLifecycleController.markQuitting();
 		terminalPtyService.dispose();
-		backendManager.detach();
+		gracefulQuitPromise ??= releaseBackendBeforeQuit().finally((): void => {
+			allowAppQuit = true;
+			app.quit();
+		});
 	});
 
 	app.on("window-all-closed", () => {

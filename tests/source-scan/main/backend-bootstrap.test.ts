@@ -30,6 +30,13 @@ describe("backend bootstrap service", () => {
 		expect(managerSource).toContain("startAndWaitHealthy");
 	});
 
+	it("waits for a normal client shutdown so a stale runtime is not reused next launch", () => {
+		expect(mainSource).toContain("await backendManager.stopAndWait();");
+		expect(mainSource).toContain("event.preventDefault();");
+		expect(mainSource).toContain("preserveBackendForClientInstall");
+		expect(mainSource).toContain("allowAppQuit = true;");
+	});
+
 	it("stops startup when the marked managed backend version is missing", () => {
 		expect(serviceSource).toContain("inspectCurrentBackend()");
 		expect(serviceSource).toContain("marked_backend_missing");
