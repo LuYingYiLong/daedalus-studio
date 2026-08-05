@@ -96,6 +96,7 @@ import {
 	type RunningSessionState
 } from "@/features/workspace/session-running";
 import { Icon } from "@/assets/icons";
+import type { SessionArchiveContext } from "@/features/workspace/WorkspaceTree";
 import {
 	recordOpenedSession,
 	removeSessionFromNavigationHistory,
@@ -1546,7 +1547,66 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		});
 	}
 
-	async function handleNewSession(options: { restoreTemporaryDraft?: boolean } = {}): Promise<void> {
+	function findWorkspaceForSession(session: SessionMetadata): WorkspaceConfig | null {
+		if (session.workspaceId === undefined) {
+			return null;
+		}
+		if (activeWorkspace?.id === session.workspaceId) {
+			return activeWorkspace;
+		}
+
+		const knownWorkspace: WorkspaceConfig | undefined = homeWorkspaceOptions.find(
+			(workspace: WorkspaceConfig): boolean => workspace.id === session.workspaceId
+		);
+		if (knownWorkspace !== undefined) {
+			return knownWorkspace;
+		}
+		if (session.workspaceRoot === undefined) {
+			return null;
+		}
+
+		return createSingleSourceWorkspaceSnapshot({
+			id: session.workspaceId,
+			name: session.workspaceName ?? session.title,
+			kind: session.workspaceKind ?? "godot",
+			rootPath: session.workspaceRoot,
+			godotExecutablePath: session.godotExecutablePath
+		});
+	}
+
+	async function restoreTemporaryDraftOnNewSessionHome(workspace: WorkspaceConfig | null): Promise<boolean> {
+		const temporaryDraftId: string | null = temporaryDraftSessionIdRef.current;
+		if (temporaryDraftId === null) {
+			return false;
+		}
+
+		let temporaryDraft: SessionMetadata | undefined;
+		let sessionListLoaded: boolean = false;
+		try {
+			const sessionList = await fetchSessions();
+			sessionListLoaded = true;
+			temporaryDraft = sessionList.sessions.find(
+				(session: SessionMetadata): boolean => session.id === temporaryDraftId
+			);
+		} catch (error: unknown) {
+			console.warn("[App] load temporary draft before returning home failed", error);
+		}
+
+		if (sessionListLoaded && temporaryDraft === undefined) {
+			temporaryDraftSessionIdRef.current = null;
+			return false;
+		}
+
+		await handleSessionSelect(temporaryDraft ?? { id: temporaryDraftId } as SessionMetadata, { recordNavigation: false });
+		setIsNewSessionHome(true);
+		if (sessionListLoaded && temporaryDraft?.workspaceId === undefined && workspace !== null) {
+			await handleHomeWorkspaceSelect(workspace.id);
+		}
+		return true;
+	}
+
+	async function handleNewSession(options: { restoreTemporaryDraft?: boolean; workspace?: WorkspaceConfig | null } = {}): Promise<void> {
+		const preferredWorkspace: WorkspaceConfig | null = options.workspace ?? null;
 		if (activeSessionMetadata?.temporary === true) {
 			const temporaryId: string | null = activeSessionId;
 			temporaryDraftSessionIdRef.current = null;
@@ -1563,9 +1623,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			return;
 		}
 		if (temporaryDraftSessionIdRef.current !== null && options.restoreTemporaryDraft !== false) {
-			await handleSessionSelect({ id: temporaryDraftSessionIdRef.current } as SessionMetadata);
-			setIsNewSessionHome(true);
-			return;
+			if (await restoreTemporaryDraftOnNewSessionHome(preferredWorkspace)) {
+				return;
+			}
 		}
 		if (temporaryDraftSessionIdRef.current !== null) {
 			const temporaryId: string = temporaryDraftSessionIdRef.current;
@@ -1577,11 +1637,11 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		navigationVersionRef.current += 1;
 		await persistPendingWorkbenchPatchBeforeNavigation();
 		setIsNewSessionHome(true);
-		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection));
-		setActiveWorkspace(null);
+		setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection, preferredWorkspace));
+		setActiveWorkspace(preferredWorkspace);
 		resetSessionPresentationState();
 		setSessionError(null);
-		await createTemporarySession();
+		await createTemporarySession(preferredWorkspace);
 		void loadHomeWorkspaces();
 	}
 
@@ -1807,18 +1867,28 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setApprovalModeState(clientPreferencesRef.current.newSessionComposer.approvalMode);
 	}
 
-	function handleSessionArchive(session: SessionMetadata): void {
+	async function handleSessionArchive(session: SessionMetadata, context: SessionArchiveContext): Promise<void> {
 		setRunningSessionState((current: RunningSessionState): RunningSessionState => {
 			return removeRunningSessions(current, [session.id]);
 		});
 		setUnreadSessionIds((currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
 			return removeUnreadSessions(currentSessionIds, [session.id]);
 		});
-		if (session.id !== activeSessionId) {
+		if (!context.wasActive || session.id !== activeSessionIdRef.current) {
 			return;
 		}
 
-		resetToNewSessionHome();
+		const workspace: WorkspaceConfig | null = findWorkspaceForSession(session);
+		try {
+			await handleNewSession({
+				restoreTemporaryDraft: true,
+				workspace
+			});
+		} catch (error: unknown) {
+			const errorMessage: string = error instanceof Error ? error.message : "Failed to open New session";
+			setSessionError(errorMessage);
+			console.error("[App] return to New session after archive failed", error);
+		}
 	}
 
 	function handleSessionRename(session: SessionMetadata): void {

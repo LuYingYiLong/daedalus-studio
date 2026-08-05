@@ -49,13 +49,17 @@ export type WorkspaceTreeProps = {
 	runningSessionIds?: readonly string[];
 	unreadSessionIds?: readonly string[];
 	onSessionSelect?: (session: SessionMetadata) => void;
-	onSessionArchive?: (session: SessionMetadata) => void;
+	onSessionArchive?: (session: SessionMetadata, context: SessionArchiveContext) => void;
 	onSessionRename?: (session: SessionMetadata) => void;
 	onSessionsChange?: (sessions: SessionMetadata[]) => void;
 	onNewSession?: () => void;
 	onNewWorkspaceSession?: (workspace: WorkspaceConfig) => void;
 	onWorkspaceDelete?: (result: DeleteWorkspaceResult) => void;
 	onWorkspaceUpdate?: (workspace: WorkspaceConfig) => void;
+};
+
+export type SessionArchiveContext = {
+	wasActive: boolean;
 };
 
 type ProjectTreeNode = TreeDataNode & {
@@ -738,6 +742,7 @@ function WorkspaceTree({
 		if (archivingSessionId !== null) {
 			return;
 		}
+		const wasActive: boolean = selectedSessionId === session.id;
 
 		try {
 			setArchivingSessionId(session.id);
@@ -749,7 +754,7 @@ function WorkspaceTree({
 			setSelectedMenuKeys((currentKeys: string[]): string[] => {
 				return currentKeys.filter((key: string): boolean => key !== `session:${session.id}`);
 			});
-			onSessionArchive?.(session);
+			onSessionArchive?.(session, { wasActive });
 		} catch (error: unknown) {
 			showWorkspaceOperationError(error, labels.failedArchiveSession);
 		} finally {

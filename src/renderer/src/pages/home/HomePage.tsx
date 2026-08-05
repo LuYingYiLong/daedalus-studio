@@ -19,7 +19,7 @@ import {
 	type ShortcutPlatform
 } from "@/api/keyboard-shortcuts";
 import { fetchSessionOverview, fetchWorkspaceOverview, type SessionOverviewGitInfo, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/api/session-overview-api";
-import WorkspaceTree from "@/features/workspace/WorkspaceTree";
+import WorkspaceTree, { type SessionArchiveContext } from "@/features/workspace/WorkspaceTree";
 import ConversationTimelinePane, { type ConversationTimelinePaneHandle } from "@/features/chat/ConversationTimelinePane";
 import Composer from "@/features/composer/Composer";
 import FloatingWorkflowTodoPanel, { type WorkflowFileChangeSummary } from "@/features/composer/FloatingWorkflowTodoPanel";
@@ -433,7 +433,7 @@ type HomePageProps = {
 	onHomeWorkspaceAdd: () => void;
 	onHomeWorkspaceClear: () => void;
 	onSessionSelect: (session: SessionMetadata) => void;
-	onSessionArchive: (session: SessionMetadata) => void;
+	onSessionArchive: (session: SessionMetadata, context: SessionArchiveContext) => void;
 	onSessionRename: (session: SessionMetadata) => void;
 	onSessionsChange: (sessions: SessionMetadata[]) => void;
 	onWorkspaceDelete: (result: DeleteWorkspaceResult) => void;
