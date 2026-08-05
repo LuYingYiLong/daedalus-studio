@@ -170,9 +170,10 @@ type AssistantTimelineRowProps = {
 	blockOffset: number;
 	hideInlineDiff: boolean;
 	onInlineDiffReview?: () => void;
+	onTerminalWheelPassThrough?: (deltaY: number) => void;
 };
 
-const AssistantTimelineRow = memo(function AssistantTimelineRow({ block, blockOffset, hideInlineDiff, onInlineDiffReview }: AssistantTimelineRowProps): React.JSX.Element {
+const AssistantTimelineRow = memo(function AssistantTimelineRow({ block, blockOffset, hideInlineDiff, onInlineDiffReview, onTerminalWheelPassThrough }: AssistantTimelineRowProps): React.JSX.Element {
 	const [nowIsoTime, setNowIsoTime] = useState<string>(() => new Date().toISOString());
 	useEffect((): (() => void) | void => {
 		if (block.status !== "running") {
@@ -202,6 +203,7 @@ const AssistantTimelineRow = memo(function AssistantTimelineRow({ block, blockOf
 			selectionEnabled={block.status !== "running" && block.status !== "failed"}
 			hideInlineDiff={hideInlineDiff}
 			onInlineDiffReview={onInlineDiffReview}
+			onTerminalWheelPassThrough={onTerminalWheelPassThrough}
 		/>
 	);
 });
@@ -568,6 +570,15 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		userScrollAwayIntentRef.current = event.deltaY < 0;
 	}, []);
 
+	const handleTerminalWheelPassThrough = useCallback((deltaY: number): void => {
+		const scroller: HTMLElement | null = scrollerRef.current;
+		if (scroller === null || !Number.isFinite(deltaY) || deltaY === 0) {
+			return;
+		}
+		userScrollAwayIntentRef.current = deltaY < 0;
+		scroller.scrollTop += deltaY;
+	}, []);
+
 	const handlePointerDownCapture = useCallback((): void => {
 		pointerScrollActiveRef.current = true;
 		lastScrollerTopRef.current = scrollerRef.current?.scrollTop ?? 0;
@@ -713,11 +724,11 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 						onRetryFromUserMessage={onRetryFromUserMessage}
 					/>
 				) : (
-					<AssistantTimelineRow block={block} blockOffset={item.blockOffset} hideInlineDiff={hideInlineDiff} onInlineDiffReview={onInlineDiffReview} />
+					<AssistantTimelineRow block={block} blockOffset={item.blockOffset} hideInlineDiff={hideInlineDiff} onInlineDiffReview={onInlineDiffReview} onTerminalWheelPassThrough={handleTerminalWheelPassThrough} />
 				)}
 			</div>
 		);
-	}, [activeRetryRequestId, canEditUserMessages, hideInlineDiff, onInlineDiffReview, onRetryEditCancel, onRetryEditStart, onRetryFromUserMessage, retryDisabled]);
+	}, [activeRetryRequestId, canEditUserMessages, handleTerminalWheelPassThrough, hideInlineDiff, onInlineDiffReview, onRetryEditCancel, onRetryEditStart, onRetryFromUserMessage, retryDisabled]);
 	const virtuosoComponents = useMemo(() => ({
 		Header: renderHeader,
 		Footer: renderFooter,

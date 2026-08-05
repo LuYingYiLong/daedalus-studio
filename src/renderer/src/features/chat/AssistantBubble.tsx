@@ -30,6 +30,7 @@ export type AssistantBubbleProps = {
 	selectionEnabled?: boolean;
 	hideInlineDiff?: boolean;
 	onInlineDiffReview?: () => void;
+	onTerminalWheelPassThrough?: (deltaY: number) => void;
 };
 
 function createAssistantCopyText(message?: string, content?: string, bodyParts?: TimelineBodyPart[]): string {
@@ -62,7 +63,7 @@ function createAssistantCopyText(message?: string, content?: string, bodyParts?:
 		.join("\n\n");
 }
 
-function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyParts, message, elapsedTime, completionStatus, endTime, streaming = false, selectionEnabled = false, hideInlineDiff = false, onInlineDiffReview }: AssistantBubbleProps): React.JSX.Element {
+function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyParts, message, elapsedTime, completionStatus, endTime, streaming = false, selectionEnabled = false, hideInlineDiff = false, onInlineDiffReview, onTerminalWheelPassThrough }: AssistantBubbleProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [copied, setCopied] = React.useState<boolean>(false);
 	const disclosurePrefix: string = entryId ?? "assistant";
@@ -112,7 +113,7 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 
 		if (part.type === "tool") {
 			return isTerminalCommandPart(part)
-				? <TerminalPart key={index} part={part} disclosureKey={`${disclosurePrefix}:tool:${index}`} />
+				? <TerminalPart key={index} part={part} disclosureKey={`${disclosurePrefix}:tool:${index}`} onScrollWheelPassThrough={onTerminalWheelPassThrough} />
 				: <ToolPart key={index} part={part} disclosureKey={`${disclosurePrefix}:tool:${index}`} />
 		}
 

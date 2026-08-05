@@ -31,6 +31,7 @@ type TerminalDisplay = TerminalOutput & {
 export type TerminalPartProps = {
 	part: TimelineToolPart;
 	disclosureKey: string;
+	onScrollWheelPassThrough?: (deltaY: number) => void;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -133,7 +134,19 @@ function formatDuration(durationMs: number): string {
 	return `${minutes}m ${seconds}s`;
 }
 
-function TerminalPart({ part, disclosureKey }: TerminalPartProps): React.JSX.Element {
+function canConsumeOutputWheel(element: HTMLElement, deltaY: number): boolean {
+	if (deltaY === 0 || element.scrollHeight <= element.clientHeight) {
+		return false;
+	}
+
+	if (deltaY < 0) {
+		return element.scrollTop > 0;
+	}
+
+	return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
+}
+
+function TerminalPart({ part, disclosureKey, onScrollWheelPassThrough }: TerminalPartProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [open, setOpen] = useTimelineDisclosure(disclosureKey, false);
 	const [copied, setCopied] = useState<"command" | "output" | null>(null);
@@ -143,9 +156,22 @@ function TerminalPart({ part, disclosureKey }: TerminalPartProps): React.JSX.Ele
 	const status: TerminalStatus = getTerminalStatus(part, display);
 	const outputText: string = [display.stdout, display.stderr].filter((value: string): boolean => value.length > 0).join("\n");
 
-	useLayoutEffect((): void => {
-		if (!open || !followOutputRef.current || outputRef.current === null) return;
-		outputRef.current.scrollTop = outputRef.current.scrollHeight;
+	useLayoutEffect(() => {
+		if (!open) return;
+		const element: HTMLDivElement | null = outputRef.current;
+		if (element === null) return;
+
+		if (followOutputRef.current) {
+			element.scrollTop = element.scrollHeight;
+		}
+
+		const observer: ResizeObserver = new ResizeObserver((): void => {
+			if (followOutputRef.current) {
+				element.scrollTop = element.scrollHeight;
+			}
+		});
+		observer.observe(element);
+		return (): void => observer.disconnect();
 	}, [display.stderr, display.stdout, open]);
 
 	async function copy(kind: "command" | "output", value: string): Promise<void> {
@@ -207,7 +233,19 @@ function TerminalPart({ part, disclosureKey }: TerminalPartProps): React.JSX.Ele
 						<div className={styles.outputHeader}>
 							<span>{t("chat.terminalPart.output")}</span>
 						</div>
-						<div ref={outputRef} className={styles.output} onScroll={(event): void => {
+						<div ref={outputRef} className={styles.output} onWheel={(event: React.WheelEvent<HTMLDivElement>): void => {
+							const element: HTMLDivElement = event.currentTarget;
+							if (canConsumeOutputWheel(element, event.deltaY)) {
+								event.stopPropagation();
+								return;
+							}
+
+							if (event.deltaY !== 0 && onScrollWheelPassThrough !== undefined) {
+								event.preventDefault();
+								event.stopPropagation();
+								onScrollWheelPassThrough(event.deltaY);
+							}
+						}} onScroll={(event): void => {
 							const element: HTMLDivElement = event.currentTarget;
 							followOutputRef.current = element.scrollHeight - element.scrollTop - element.clientHeight <= 16;
 						}}>

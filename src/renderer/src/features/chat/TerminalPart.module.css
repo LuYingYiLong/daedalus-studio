@@ -100,7 +100,6 @@
 	background: var(--ds-bg-sunken);
 	font-size: 12px;
 	line-height: 1.55;
-	overscroll-behavior: contain;
 }
 
 .output section + section {

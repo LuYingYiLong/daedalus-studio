@@ -38,14 +38,12 @@
 	white-space: nowrap;
 }
 
-.eventJson {
+.resultText {
 	max-height: 200px;
-	margin: 0;
-	padding: var(--ds-space-2);
 	overflow: auto;
-	border-radius: var(--ds-radius-sm);
+	color: var(--ds-text-secondary);
 	font-size: 14px;
+	line-height: 1.55;
 	white-space: pre-wrap;
 	user-select: text;
-	font-family: var(--ds-font-family-code);
 }
