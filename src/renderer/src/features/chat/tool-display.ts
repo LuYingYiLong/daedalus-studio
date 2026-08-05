@@ -138,9 +138,11 @@ function getToolName(events: Record<string, unknown>[]): string {
 }
 
 function getToolArgs(events: Record<string, unknown>[]): Record<string, unknown> {
-	for (const event of events) {
+	for (const event of [...events].reverse()) {
 		if (isRecord(event.args)) {
-			return event.args;
+			if (Object.keys(event.args).length > 0) {
+				return event.args;
+			}
 		}
 	}
 
