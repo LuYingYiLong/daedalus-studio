@@ -10,4 +10,14 @@ describe("ToolPart result rendering", () => {
 		expect(source).toContain("className={styles.resultText}");
 		expect(source).not.toContain("JSON.stringify(part.events");
 	});
+
+	it("keeps file writes visible while running and renders structured file change statistics", () => {
+		const source: string = readRepoFile("src", "renderer", "src", "features", "chat", "ToolPart.tsx");
+
+		expect(source).toContain("FILE_WRITE_TOOL_NAMES");
+		expect(source).toContain('t("chat.tool.activity.writing"');
+		expect(source).toContain("function getFileEditBatch");
+		expect(source).toContain("fileEditBatch.editedFiles.map");
+		expect(source).toContain('t("chat.tool.fileChanges.summary"');
+	});
 });

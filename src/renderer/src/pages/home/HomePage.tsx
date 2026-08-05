@@ -438,6 +438,7 @@ type HomePageProps = {
 	onSessionsChange: (sessions: SessionMetadata[]) => void;
 	onWorkspaceDelete: (result: DeleteWorkspaceResult) => void;
 	onWorkspaceUpdate: (workspace: WorkspaceConfig) => void;
+	onWorkspaceProjectCreated: (workspace: WorkspaceConfig) => void;
 	onLoadMoreBefore: () => void;
 	onLoadMoreAfter: () => void;
 	onTimelineNavigationLoadEntry: (entry: SessionTimelineNavigationEntry) => Promise<void>;
@@ -562,6 +563,7 @@ function HomePage({
 	onSessionsChange,
 	onWorkspaceDelete,
 	onWorkspaceUpdate,
+	onWorkspaceProjectCreated,
 	onLoadMoreBefore,
 	onLoadMoreAfter,
 	onTimelineNavigationLoadEntry,
@@ -1984,6 +1986,7 @@ function HomePage({
 							onNewWorkspaceSession={onNewWorkspaceSession}
 							onWorkspaceDelete={onWorkspaceDelete}
 							onWorkspaceUpdate={onWorkspaceUpdate}
+							onWorkspaceProjectCreated={onWorkspaceProjectCreated}
 						/>
 						<footer className={styles.workspaceFooter}>
 							<Button

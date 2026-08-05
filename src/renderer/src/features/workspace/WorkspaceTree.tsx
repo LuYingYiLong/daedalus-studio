@@ -56,6 +56,7 @@ export type WorkspaceTreeProps = {
 	onNewWorkspaceSession?: (workspace: WorkspaceConfig) => void;
 	onWorkspaceDelete?: (result: DeleteWorkspaceResult) => void;
 	onWorkspaceUpdate?: (workspace: WorkspaceConfig) => void;
+	onWorkspaceProjectCreated?: (workspace: WorkspaceConfig) => void;
 };
 
 export type SessionArchiveContext = {
@@ -512,7 +513,8 @@ function WorkspaceTree({
 	onNewSession,
 	onNewWorkspaceSession,
 	onWorkspaceDelete,
-	onWorkspaceUpdate
+	onWorkspaceUpdate,
+	onWorkspaceProjectCreated
 }: WorkspaceTreeProps): React.JSX.Element {
 	const [messageApi, messageContextHolder] = message.useMessage();
 	const { t } = useTranslation();
@@ -1542,6 +1544,7 @@ function WorkspaceTree({
 					ensureSectionOpen("projects");
 					setIsCreateProjectOpen(false);
 					onWorkspaceUpdate?.(createdWorkspace);
+					onWorkspaceProjectCreated?.(createdWorkspace);
 				}}
 			/>
 

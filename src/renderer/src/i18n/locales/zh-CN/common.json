@@ -930,10 +930,17 @@
         "mcp_terminal_cancel_job": "取消终端任务"
       },
       "status": {
-        "running": "运行中",
-        "done": "完成",
-        "failed": "失败",
-        "approvalRequired": "需要批准"
+		"running": "运行中",
+		"done": "完成",
+		"failed": "失败",
+		"approvalRequired": "需要批准"
+	  },
+	  "activity": {
+		"running": "工具正在执行。",
+		"writing": "正在写入：{{tool}}"
+	  },
+	  "fileChanges": {
+		"summary": "已变更 {{count}} 个文件"
       }
     },
     "terminalPart": {

@@ -1176,7 +1176,7 @@ function Composer({
 							<Input.TextArea
 								ref={textAreaRef}
 								value={draftMessage}
-								autoSize={{ minRows: 4, maxRows: 4 }}
+								autoSize={{ minRows: 4, maxRows: 6 }}
 								placeholder={mode === "goal" ? t("composer.goalPlaceholder") : t("composer.placeholder")}
 								className={styles.composerTextArea}
 								onChange={handleTextAreaChange}

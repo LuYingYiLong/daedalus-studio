@@ -932,10 +932,18 @@
         "mcp_terminal_cancel_job": "Cancel terminal job"
       },
       "status": {
-        "running": "Running",
-        "done": "Done",
-        "failed": "Failed",
-        "approvalRequired": "Approval required"
+		"running": "Running",
+		"done": "Done",
+		"failed": "Failed",
+		"approvalRequired": "Approval required"
+	  },
+	  "activity": {
+		"running": "The tool is running.",
+		"writing": "Writing now: {{tool}}"
+	  },
+	  "fileChanges": {
+		"summary": "{{count}} file changed",
+		"summary_other": "{{count}} files changed"
       }
     },
     "terminalPart": {

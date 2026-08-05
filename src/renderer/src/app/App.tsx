@@ -2013,6 +2013,14 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		}
 	}
 
+	function handleWorkspaceTreeProjectCreated(workspace: WorkspaceConfig): void {
+		setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		void handleNewWorkspaceSession(workspace).catch((error: unknown): void => {
+			showTransientError(error instanceof Error ? error.message : "Failed to open the new project");
+			console.error("[App] open workspace tree project failed", error);
+		});
+	}
+
 	async function persistSessionUiMetadata(params: SaveSessionUiMetadataParams): Promise<void> {
 		const sessionId: string | null = activeSessionId;
 		if (sessionId === null) {
@@ -3689,6 +3697,7 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						onSessionsChange={handleSessionsChange}
 						onWorkspaceDelete={handleWorkspaceDelete}
 						onWorkspaceUpdate={handleWorkspaceUpdate}
+						onWorkspaceProjectCreated={handleWorkspaceTreeProjectCreated}
 						onLoadMoreBefore={handleLoadMoreBefore}
 						onLoadMoreAfter={handleLoadMoreAfter}
 						onTimelineNavigationLoadEntry={handleTimelineNavigationLoadEntry}

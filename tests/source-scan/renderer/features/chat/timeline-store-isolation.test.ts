@@ -16,7 +16,9 @@ describe("timeline rendering isolation", () => {
 	});
 
 	it("lazily creates and destroys tool details", () => {
-		expect(toolPartSource).toContain("open ? JSON.stringify(part.events, null, 2) :");
+		expect(toolPartSource).toContain("activeKey={open ? [\"tool\"] : []}");
+		expect(toolPartSource).toContain("function getToolResultText");
+		expect(toolPartSource).not.toContain("JSON.stringify(part.events");
 		expect(toolPartSource).toContain("destroyOnHidden={true}");
 	});
 });

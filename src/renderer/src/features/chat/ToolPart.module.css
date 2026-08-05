@@ -47,3 +47,72 @@
 	white-space: pre-wrap;
 	user-select: text;
 }
+
+.details {
+	display: grid;
+	gap: var(--ds-space-1);
+}
+
+.activityText {
+	color: var(--ds-text-secondary);
+	font-size: 13px;
+	line-height: 1.45;
+}
+
+.fileChanges {
+	display: grid;
+	overflow: hidden;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-sm);
+}
+
+.fileChangesSummary,
+.fileItem {
+	display: flex;
+	align-items: center;
+	gap: var(--ds-space-2);
+	min-width: 0;
+	padding: 6px 8px;
+	font-size: 12px;
+}
+
+.fileChangesSummary {
+	justify-content: space-between;
+	color: var(--ds-text-secondary);
+	background: var(--ds-surface-sunken);
+}
+
+.fileList {
+	display: grid;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.fileItem + .fileItem {
+	border-top: 1px solid var(--ds-border);
+}
+
+.filePath {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	font-family: var(--ds-font-family-code);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.fileStats {
+	display: inline-flex;
+	flex: 0 0 auto;
+	gap: var(--ds-space-1);
+	font-variant-numeric: tabular-nums;
+}
+
+.additions {
+	color: var(--ds-git-addition);
+}
+
+.deletions {
+	color: var(--ds-git-deletion);
+}
