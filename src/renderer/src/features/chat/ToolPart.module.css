@@ -31,7 +31,7 @@
 }
 
 .toolLabelText {
-	min-width: 0;
+	flex: 0 0 auto;
 	overflow: hidden;
 	color: var(--ds-text-primary);
 	text-overflow: ellipsis;
@@ -46,6 +46,16 @@
 	line-height: 1.55;
 	white-space: pre-wrap;
 	user-select: text;
+}
+
+.toolFilePath {
+	min-width: 0;
+	margin-left: var(--ds-space-1);
+	overflow: hidden;
+	color: var(--ds-text-secondary);
+	font-family: var(--ds-font-family-code);
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .details {
@@ -64,6 +74,32 @@
 	overflow: hidden;
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-sm);
+}
+
+.fileDiffList,
+.fileDiff {
+	min-width: 0;
+}
+
+.fileDiff {
+	overflow: auto;
+	border-top: 1px solid var(--ds-border);
+}
+
+.fileDiff :global(.diff) {
+	margin: 0;
+	font-family: var(--ds-font-family-code);
+	font-size: 12px;
+}
+
+.diffLoading,
+.diffUnavailable {
+	display: flex;
+	gap: var(--ds-space-2);
+	align-items: center;
+	padding: 10px;
+	color: var(--ds-text-secondary);
+	font-size: 12px;
 }
 
 .fileChangesSummary,

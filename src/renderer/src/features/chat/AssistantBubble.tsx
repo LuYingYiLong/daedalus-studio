@@ -12,6 +12,7 @@ import InlineDiffPart from "./InlineDiffPart";
 import ThinkingPart from "./ThinkingPart";
 import ImageGenerationPart from "./ImageGenerationPart";
 import ProviderReconnectPart from "./ProviderReconnectPart";
+import CompressionPart from "./CompressionPart";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import MarkdownContent from "../markdown/MarkdownContent";
 import { useTimelineDisclosure } from "./timeline-disclosure-state";
@@ -126,6 +127,10 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 					streaming={streaming}
 				/>
 			);
+		}
+
+		if (part.type === "compression") {
+			return <CompressionPart key={part.compressionId} part={part} disclosureKey={`${disclosurePrefix}:compression:${part.compressionId}`} />;
 		}
 
 		if (part.type === "status") {

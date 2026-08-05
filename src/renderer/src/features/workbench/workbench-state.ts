@@ -480,6 +480,30 @@ function appendSummaryStartPart(parts: TimelineBodyPart[], event: BackendEvent):
 	}];
 }
 
+function appendCompressionPart(parts: TimelineBodyPart[], event: BackendEvent): TimelineBodyPart[] {
+	const data: Record<string, unknown> = getEventData(event);
+	const compressionId: string = getStringValue(data, "compressionId");
+	if (compressionId.length === 0) return parts;
+	const statusValue: string = getStringValue(data, "status");
+	const status: Extract<TimelineBodyPart, { type: "compression" }>["status"] = (
+		statusValue === "completed" || statusValue === "skipped" || statusValue === "failed"
+	) ? statusValue : "running";
+	const nextPart: Extract<TimelineBodyPart, { type: "compression" }> = {
+		type: "compression",
+		compressionId,
+		status,
+		summary: getStringValue(data, "summary"),
+		reason: getStringValue(data, "reason")
+	};
+	const existingIndex: number = parts.findIndex((part: TimelineBodyPart): boolean => (
+		part.type === "compression" && part.compressionId === compressionId
+	));
+	if (existingIndex < 0) return [...parts, nextPart];
+	return parts.map((part: TimelineBodyPart, index: number): TimelineBodyPart => (
+		index === existingIndex ? nextPart : part
+	));
+}
+
 function getAssistantContent(parts: TimelineBodyPart[], fallback: string): string {
 	const content: string = parts
 		.filter((part: TimelineBodyPart): part is Extract<TimelineBodyPart, { type: "markdown" }> => part.type === "markdown")
@@ -725,6 +749,8 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		nextParts = appendProviderReconnectPart(nextParts, data);
 	} else if (event.event === "agent.summary.started") {
 		nextParts = appendSummaryStartPart(nextParts, event);
+	} else if (event.event === "agent.context.compression") {
+		nextParts = appendCompressionPart(nextParts, event);
 	} else if (event.event === "agent.status") {
 		const title: string = getStringValue(data, "title") || getStringValue(data, "stage");
 		const details: string = getStringValue(data, "details") || getStringValue(data, "detail") || getStringValue(data, "message");
@@ -788,6 +814,7 @@ function shouldCreateAssistantBlock(event: BackendEvent): boolean {
 		|| event.event === "agent.thinking.delta"
 		|| event.event === "agent.provider.reconnect"
 		|| event.event === "agent.summary.started"
+		|| event.event === "agent.context.compression"
 		|| event.event.startsWith("agent.tool.")
 		|| event.event === "agent.status"
 		|| event.event === "plan.generated"

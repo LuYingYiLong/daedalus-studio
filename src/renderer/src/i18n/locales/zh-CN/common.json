@@ -988,6 +988,12 @@
 	  "label": "思考过程",
 	  "activeLabel": "正在思考"
     },
+    "compression": {
+      "running": "正在压缩上下文",
+      "completed": "上下文已自动压缩",
+      "skipped": "上下文压缩已跳过",
+      "failed": "上下文压缩失败"
+    },
     "inlineDiff": {
       "title": "已编辑 {{count}} 个文件",
       "title_other": "已编辑 {{count}} 个文件",

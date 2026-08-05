@@ -457,6 +457,13 @@ export type TimelineBodyPart =
 	| { type: "tool"; tool_call_id: string; events: Record<string, unknown>[] }
 	| { type: "summary_start"; runId: string; stepId: string; stepRunId: string; title: string; foldTitle: string }
 	| {
+		type: "compression";
+		compressionId: string;
+		status: "running" | "completed" | "skipped" | "failed";
+		summary: string;
+		reason: string;
+	}
+	| {
 		type: "image_generation";
 		status: "running" | "completed" | "failed";
 		prompt: string;

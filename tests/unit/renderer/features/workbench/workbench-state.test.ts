@@ -294,6 +294,37 @@ describe("workbench-state", () => {
 		expect(reconnectParts[0]).toMatchObject({ revision: 2, status: "recovered" });
 	});
 
+	it("updates one context compression part with the generated summary", () => {
+		const running: BackendEvent = {
+			type: "event",
+			id: "request-compression",
+			event: "agent.context.compression",
+			data: {
+				compressionId: "context-compression:request-compression",
+				status: "running"
+			}
+		};
+		let blocks: TimelineBlock[] = applyBackendEventToTimeline([], running);
+		blocks = applyBackendEventToTimeline(blocks, {
+			...running,
+			data: {
+				compressionId: "context-compression:request-compression",
+				status: "completed",
+				summary: "- Completed: inspected the workspace\n- Constraint: preserve tests"
+			}
+		});
+
+		const assistant: TimelineBlock | undefined = blocks[0];
+		expect(assistant?.type).toBe("assistant");
+		if (assistant?.type !== "assistant") throw new Error("Expected assistant block");
+		const compressionParts = assistant.bodyParts.filter((part) => part.type === "compression");
+		expect(compressionParts).toHaveLength(1);
+		expect(compressionParts[0]).toMatchObject({
+			status: "completed",
+			summary: "- Completed: inspected the workspace\n- Constraint: preserve tests"
+		});
+	});
+
 	it("creates a running assistant block when an agent run starts", () => {
 		const blocks: TimelineBlock[] = applyBackendEventToTimeline(
 			[],

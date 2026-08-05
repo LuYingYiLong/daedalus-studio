@@ -7,12 +7,15 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { getToolDisplayInfo } from "./tool-display";
 import { useTimelineDisclosure } from "./timeline-disclosure-state";
+import ToolFileDiff from "./ToolFileDiff";
 
 export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
 
 type ToolStatus = "running" | "success" | "error" | "approval";
 
 type FileEditBatchSummary = {
+	batchId: string;
+	sessionId?: string;
 	editedFileCount: number;
 	additions: number;
 	deletions: number;
@@ -87,6 +90,11 @@ function getFileEditBatch(events: Record<string, unknown>[]): FileEditBatchSumma
 	}
 
 	const batch: Record<string, unknown> = result.fileEditBatch;
+	const batchId: string | undefined = getStringValue(batch, "batchId");
+	const sessionId: string | undefined = getStringValue(batch, "sessionId");
+	if (batchId === undefined) {
+		return undefined;
+	}
 	const editedFiles: FileEditSummaryItem[] = Array.isArray(batch.editedFiles)
 		? batch.editedFiles.flatMap((value: unknown): FileEditSummaryItem[] => {
 			if (!isRecord(value) || typeof value.path !== "string") {
@@ -105,6 +113,8 @@ function getFileEditBatch(events: Record<string, unknown>[]): FileEditBatchSumma
 	}
 
 	return {
+		batchId,
+		sessionId,
 		editedFileCount,
 		additions: getFiniteNumber(batch.additions) ?? editedFiles.reduce((total: number, file: FileEditSummaryItem): number => total + file.additions, 0),
 		deletions: getFiniteNumber(batch.deletions) ?? editedFiles.reduce((total: number, file: FileEditSummaryItem): number => total + file.deletions, 0),
@@ -141,7 +151,7 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 	const { t } = useTranslation();
 	const toolDisplay = getToolDisplayInfo(part.events, t);
 	const isFileWriteTool: boolean = FILE_WRITE_TOOL_NAMES.has(toolDisplay.rawName);
-	const [open, setOpen] = useTimelineDisclosure(disclosureKey, isFileWriteTool);
+	const [open, setOpen] = useTimelineDisclosure(disclosureKey, false);
 	const status = getToolStatus(part.events);
 	const statusText: Record<ToolStatus, string> = {
 		running: t("chat.tool.status.running"),
@@ -161,20 +171,26 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 			{isActiveStatus ? <ShinyText text={statusText[status]} speed={2.4} color="currentColor" /> : statusText[status]}
 		</Tag>
 	)
+	const resultText: string = useMemo((): string => getToolResultText(part.events), [part.events]);
+	const fileEditBatch: FileEditBatchSummary | undefined = useMemo((): FileEditBatchSummary | undefined => getFileEditBatch(part.events), [part.events]);
 	const label = (
 		<span className={styles.toolLabel} title={toolDisplay.label}>
 			<span className={styles.toolLabelText}>{toolDisplay.label}</span>
+			{fileEditBatch === undefined ? null : (
+				<span className={styles.fileStats}>
+					<span className={styles.additions}>+{fileEditBatch.additions}</span>
+					<span className={styles.deletions}>-{fileEditBatch.deletions}</span>
+				</span>
+			)}
 		</span>
 	);
-	const resultText: string = useMemo((): string => getToolResultText(part.events), [part.events]);
-	const fileEditBatch: FileEditBatchSummary | undefined = useMemo((): FileEditBatchSummary | undefined => getFileEditBatch(part.events), [part.events]);
 	const activityText: string | undefined = status === "running"
 		? isFileWriteTool
 			? t("chat.tool.activity.writing", { tool: toolDisplay.label })
 			: t("chat.tool.activity.running")
 		: undefined;
 	const hasDetails: boolean = activityText !== undefined || resultText.length > 0 || fileEditBatch !== undefined;
-	
+
 	return (
 		<Collapse
 			size="small"
@@ -205,17 +221,13 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 											<span className={styles.deletions}>-{fileEditBatch.deletions}</span>
 										</span>
 									</div>
-									<ul className={styles.fileList}>
-										{fileEditBatch.editedFiles.map((file: FileEditSummaryItem): React.JSX.Element => (
-											<li key={file.path} className={styles.fileItem} title={file.path}>
-												<span className={styles.filePath}>{file.path}</span>
-												<span className={styles.fileStats}>
-													<span className={styles.additions}>+{file.additions}</span>
-													<span className={styles.deletions}>-{file.deletions}</span>
-												</span>
-											</li>
-										))}
-									</ul>
+									{fileEditBatch.sessionId === undefined ? (
+										<ul className={styles.fileList}>
+											{fileEditBatch.editedFiles.map((file: FileEditSummaryItem): React.JSX.Element => (
+												<li key={file.path} className={styles.fileItem}>{file.path}</li>
+											))}
+										</ul>
+									) : <ToolFileDiff sessionId={fileEditBatch.sessionId} batchId={fileEditBatch.batchId} />}
 								</div>
 							)}
 						</div>

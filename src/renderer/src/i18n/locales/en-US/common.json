@@ -991,6 +991,12 @@
 	  "label": "Thought process",
 	  "activeLabel": "Thinking"
     },
+    "compression": {
+      "running": "Compressing context",
+      "completed": "Context automatically compressed",
+      "skipped": "Context compression skipped",
+      "failed": "Context compression failed"
+    },
     "inlineDiff": {
       "title": "Edited {{count}} file",
       "title_other": "Edited {{count}} files",
