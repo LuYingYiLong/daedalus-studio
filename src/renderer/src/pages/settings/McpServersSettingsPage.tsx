@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import styles from "./McpServersSettingsPage.module.css";
-import { Alert, Button, Empty, Flex, Form, Input, Modal, Select, Spin, Switch, Tag, Tooltip, Typography } from "antd";
+import { Alert, Button, Empty, Flex, Form, Input, Modal, Select, Switch, Tag, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import TextArea from "antd/es/input/TextArea";
 import {
@@ -89,7 +89,7 @@ function createEditFormValues(server: CustomMcpServer): McpServerFormValues {
 	};
 }
 
-function McpServersSettingsPage(): React.JSX.Element {
+function McpServersSettingsPage(): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const [form] = Form.useForm<McpServerFormValues>();
 	const [serverModalMode, setServerModalMode] = useState<"add" | "edit" | null>(null);
@@ -223,6 +223,10 @@ function McpServersSettingsPage(): React.JSX.Element {
 		});
 	}
 
+	if (isLoading) {
+		return null;
+	}
+
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
@@ -263,9 +267,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 			) : null}
 
 			<div className={styles.serverList}>
-				{isLoading ? (
-					<Spin />
-				) : filteredServers.length === 0 ? (
+				{filteredServers.length === 0 ? (
 					<Empty
 						description={servers.length === 0 ? t("settings.mcpServers.empty.none") : t("settings.mcpServers.empty.noMatches")}
 					/>

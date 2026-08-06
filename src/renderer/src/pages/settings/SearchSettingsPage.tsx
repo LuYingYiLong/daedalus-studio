@@ -1,4 +1,4 @@
-import { Alert, Select, Slider, Spin, Switch, Typography } from "antd";
+import { Alert, Select, Slider, Switch, Typography } from "antd";
 import type { SelectProps, SliderSingleProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -78,7 +78,7 @@ function createModelOptions(settings: WebSearchSettings | null): SelectProps["op
 	return Array.from(groups.values());
 }
 
-function SearchSettingsPage(): React.JSX.Element {
+function SearchSettingsPage(): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const [settings, setSettings] = useState<WebSearchSettings | null>(null);
 	const [draftMaxResults, setDraftMaxResults] = useState<number>(5);
@@ -178,6 +178,10 @@ function SearchSettingsPage(): React.JSX.Element {
 		void savePatch("maxKeywords", { maxKeywords: value });
 	}
 
+	if (isLoading && settings === null) {
+		return null;
+	}
+
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
@@ -202,11 +206,7 @@ function SearchSettingsPage(): React.JSX.Element {
 						/>
 					) : null}
 
-					{isLoading || settings === null ? (
-						<div className={styles.loading}>
-							<Spin />
-						</div>
-					) : (
+					{settings === null ? null : (
 						<div className={styles.settingsList}>
 							{[
 								{

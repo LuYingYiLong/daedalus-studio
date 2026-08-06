@@ -1,7 +1,7 @@
 import { CSSProperties, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import styles from "./GeneralSettingsPage.module.css";
-import { Alert, Button, ColorPicker, Segmented, Select, Space, Spin, Switch, Tooltip, Typography } from "antd";
+import { Alert, Button, ColorPicker, Segmented, Select, Space, Switch, Tooltip, Typography } from "antd";
 import type { ColorPickerProps, SelectProps } from "antd";
 import { Icon } from "@/assets/icons";
 import SettingsItem from "@/components/SettingsItem";
@@ -46,7 +46,7 @@ function GeneralSettingsPage({
 	generalSettings,
 	onClientPreferencesChange,
 	onGeneralSettingsChange
-}: GeneralSettingsPageProps): React.JSX.Element {
+}: GeneralSettingsPageProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const languageOptions: SelectProps<LanguagePreference>["options"] = [
 		{ label: t("settings.general.display.language.system"), value: "system" },
@@ -270,6 +270,10 @@ function GeneralSettingsPage({
 		}
 	}
 
+	if (isLoading) {
+		return null;
+	}
+
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
@@ -294,12 +298,7 @@ function GeneralSettingsPage({
 						/>
 					) : null}
 
-					{isLoading ? (
-						<div className={styles.loading}>
-							<Spin />
-						</div>
-					) : (
-						<div className={styles.preferenceList}>
+					<div className={styles.preferenceList}>
 							<SettingsItem
 								title={t("settings.general.display.theme.title")}
 								description={t("settings.general.display.theme.description")}
@@ -364,17 +363,11 @@ function GeneralSettingsPage({
 									suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 								/>
 							</SettingsItem>
-						</div>
-					)}
+					</div>
 				</SettingsList>
 
 				<SettingsList title={t("settings.general.godot.title")}>
-					{isLoading ? (
-						<div className={styles.loading}>
-							<Spin />
-						</div>
-					) : (
-						<div className={styles.preferenceList}>
+					<div className={styles.preferenceList}>
 							<SettingsItem
 								title={t("settings.general.godot.executable")}
 								description={draftGeneralSettings.godotExecutablePath?.trim() || t("settings.general.godot.placeholder")}
@@ -398,17 +391,11 @@ function GeneralSettingsPage({
 									</Tooltip>
 								</Space.Compact>
 							</SettingsItem>
-						</div>
-					)}
+					</div>
 				</SettingsList>
 
 				<SettingsList title={t("settings.general.general.title")}>
-					{isLoading ? (
-						<div className={styles.loading}>
-							<Spin />
-						</div>
-					) : (
-						<div className={styles.preferenceList}>
+					<div className={styles.preferenceList}>
 							{[
 								{
 									key: "autoExpandTodoList" as const,
@@ -447,8 +434,7 @@ function GeneralSettingsPage({
 									/>
 								</SettingsItem>
 							))}
-						</div>
-					)}
+					</div>
 				</SettingsList>
 			</div>
 		</section>

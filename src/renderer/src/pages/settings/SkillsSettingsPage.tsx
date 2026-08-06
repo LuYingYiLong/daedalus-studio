@@ -60,7 +60,7 @@ function applySkillResult(result: SkillListResult, setSkills: (skills: SkillSumm
 	setSkills(result.skills);
 }
 
-function SkillsSettingsPage(): React.JSX.Element {
+function SkillsSettingsPage(): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const [skills, setSkills] = useState<SkillSummary[]>([]);
 	const [query, setQuery] = useState<string>("");
@@ -307,6 +307,10 @@ function SkillsSettingsPage(): React.JSX.Element {
 		});
 	}
 
+	if (isLoading) {
+		return null;
+	}
+
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
@@ -369,9 +373,7 @@ function SkillsSettingsPage(): React.JSX.Element {
 			) : null}
 
 			<div className={styles.skillList}>
-				{isLoading ? (
-					<Spin />
-				) : filteredSkills.length === 0 ? (
+				{filteredSkills.length === 0 ? (
 					<Empty
 						description={customSkills.length === 0 ? t("settings.skills.empty.none") : t("settings.skills.empty.noMatches")}
 					/>

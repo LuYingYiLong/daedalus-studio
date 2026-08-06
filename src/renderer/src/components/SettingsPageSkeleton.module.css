@@ -1,0 +1,16 @@
+.root {
+	width: 100%;
+	padding: var(--ds-space-3);
+	border-radius: var(--ds-radius-md);
+	background: color-mix(in srgb, var(--ds-surface) 72%, transparent);
+}
+
+.root :global(.ant-skeleton-title) {
+	margin-block-start: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.root :global(.ant-skeleton-active) {
+		animation: none;
+	}
+}

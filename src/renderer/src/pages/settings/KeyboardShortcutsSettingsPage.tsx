@@ -33,7 +33,7 @@ type KeyboardShortcutsSettingsPageProps = {
 function KeyboardShortcutsSettingsPage({
 	clientPreferences,
 	onClientPreferencesChange
-}: KeyboardShortcutsSettingsPageProps): React.JSX.Element {
+}: KeyboardShortcutsSettingsPageProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const platform: ShortcutPlatform = useMemo((): ShortcutPlatform => detectShortcutPlatform(), []);
 	const [draftPreferences, setDraftPreferences] = useState<ClientPreferences>(clientPreferences);
@@ -295,6 +295,10 @@ function KeyboardShortcutsSettingsPage({
 		? null
 		: getShortcutDefinition(editingCommandId);
 
+	if (isLoading) {
+		return null;
+	}
+
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
@@ -335,7 +339,7 @@ function KeyboardShortcutsSettingsPage({
 						size="small"
 						columns={columns}
 						dataSource={filteredDefinitions}
-						loading={isLoading}
+						loading={false}
 						pagination={false}
 						onRow={(definition: ShortcutDefinition): React.HTMLAttributes<HTMLTableRowElement> => ({
 							className: styles.editableRow,
@@ -359,7 +363,7 @@ function KeyboardShortcutsSettingsPage({
 							}
 						})}
 						locale={{
-							emptyText: isLoading ? null : (
+							emptyText: (
 								<Empty
 									image={Empty.PRESENTED_IMAGE_SIMPLE}
 									description={t("settings.keyboardShortcuts.empty")}

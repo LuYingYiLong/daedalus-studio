@@ -1,4 +1,4 @@
-import { Alert, Button, Input, Spin, Typography } from "antd";
+import { Alert, Button, Input, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
@@ -6,7 +6,7 @@ import { Icon } from "@/assets/icons";
 import { fetchUserPromptConfig, saveUserPrompt, type UserPromptConfig } from "@/api/user-prompt-api";
 import styles from "./PersonalizationSettingsPage.module.css";
 
-function PersonalizationSettingsPage(): React.JSX.Element {
+function PersonalizationSettingsPage(): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const [savedPrompt, setSavedPrompt] = useState<string>("");
 	const [draftPrompt, setDraftPrompt] = useState<string>("");
@@ -101,6 +101,10 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 		setErrorMessage(null);
 	}
 
+	if (isLoading) {
+		return null;
+	}
+
 	return (
 		<section className={styles.page}>
 			<article className={styles.card}>
@@ -129,12 +133,7 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 					/>
 				) : null}
 
-				{isLoading ? (
-					<div className={styles.loading}>
-						<Spin />
-					</div>
-				) : (
-					<>
+				<>
 						<Input.TextArea
 							className={styles.textarea}
 							value={draftPrompt}
@@ -195,8 +194,7 @@ function PersonalizationSettingsPage(): React.JSX.Element {
 								{t("settings.common.save")}
 							</Button>
 						</div>
-					</>
-				)}
+				</>
 			</article>
 		</section>
 	);

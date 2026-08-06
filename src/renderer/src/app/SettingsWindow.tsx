@@ -84,15 +84,102 @@ function getInitialSettingsPage(): SettingsPageKey {
 
 function SettingsWindow(): React.JSX.Element {
 	const { t, i18n } = useTranslation();
-	const [activePage, setActivePage] = useState<SettingsPageKey>(getInitialSettingsPage);
+	const [activePage, setActivePage] = useState<SettingsPageKey>(() => getInitialSettingsPage());
+	const [visitedPages, setVisitedPages] = useState<Set<SettingsPageKey>>(() => new Set([getInitialSettingsPage()]));
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(DEFAULT_CLIENT_PREFERENCES);
 	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(DEFAULT_GENERAL_SETTINGS);
 	const items: MenuItem[] = createSettingsMenuItems(t);
 
+	function selectSettingsPage(page: SettingsPageKey): void {
+		setActivePage(page);
+		setVisitedPages((currentPages: Set<SettingsPageKey>): Set<SettingsPageKey> => {
+			if (currentPages.has(page)) {
+				return currentPages;
+			}
+
+			const nextPages: Set<SettingsPageKey> = new Set(currentPages);
+			nextPages.add(page);
+			return nextPages;
+		});
+	}
+
+	function renderSettingsPage(page: SettingsPageKey): React.JSX.Element {
+		if (page === "provider") {
+			return <ProviderSettingsPage />;
+		}
+		if (page === "default_model") {
+			return <DefaultModelSettingsPage />;
+		}
+		if (page === "general") {
+			return (
+				<GeneralSettingsPage
+					clientPreferences={clientPreferences}
+					generalSettings={generalSettings}
+					onClientPreferencesChange={setClientPreferences}
+					onGeneralSettingsChange={setGeneralSettings}
+				/>
+			);
+		}
+		if (page === "keyboard_shortcuts") {
+			return (
+				<KeyboardShortcutsSettingsPage
+					clientPreferences={clientPreferences}
+					onClientPreferencesChange={setClientPreferences}
+				/>
+			);
+		}
+		if (page === "search") {
+			return <SearchSettingsPage />;
+		}
+		if (page === "statistics") {
+			return <StatisticsSettingsPage />;
+		}
+		if (page === "personalization") {
+			return <PersonalizationSettingsPage />;
+		}
+		if (page === "mcp_servers") {
+			return <McpServersSettingsPage />;
+		}
+		if (page === "skills") {
+			return <SkillsSettingsPage />;
+		}
+		if (page === "documentation") {
+			return <DocumentationSettingsPage />;
+		}
+		if (page === "godot_projects") {
+			return <GodotProjectsSettingsPage />;
+		}
+		if (page === "archived_sessions") {
+			return <ArchivedSessionSettingsPage />;
+		}
+		if (page === "import") {
+			return <ImportSettingsPage />;
+		}
+		if (page === "about") {
+			return <AboutSettingsPage />;
+		}
+
+		return (
+			<section className={styles.placeholder}>
+				<div className={styles.placeholderHeader}>
+					<Icon name="settings" className={styles.placeholderIcon} />
+					<div>
+						<Typography.Title level={3} className={styles.placeholderTitle}>
+							{getSettingsPageTitle(page, t)}
+						</Typography.Title>
+						<Typography.Text type="secondary">
+							{t("settings.menu.placeholder")}
+						</Typography.Text>
+					</div>
+				</div>
+			</section>
+		);
+	}
+
 	useEffect((): (() => void) => {
 		return window.electronAPI.windowControl.onSettingsPageRequested((page: string): void => {
 			if (isSettingsPageKey(page)) {
-				setActivePage(page);
+				selectSettingsPage(page);
 			}
 		});
 	}, []);
@@ -112,7 +199,7 @@ function SettingsWindow(): React.JSX.Element {
 					selectedKeys={[activePage]}
 					onClick={({ key }): void => {
 						if (isSettingsPageKey(key)) {
-							setActivePage(key);
+							selectSettingsPage(key);
 						}
 					}}
 				/>
@@ -120,57 +207,20 @@ function SettingsWindow(): React.JSX.Element {
 
 			<div className={styles.activePage}>
 				<header className={styles.activeHeader} />
-				{activePage === "provider" ? (
-					<ProviderSettingsPage />
-				) : activePage === "default_model" ? (
-					<DefaultModelSettingsPage />
-				) : activePage === "general" ? (
-					<GeneralSettingsPage
-						clientPreferences={clientPreferences}
-						generalSettings={generalSettings}
-						onClientPreferencesChange={setClientPreferences}
-						onGeneralSettingsChange={setGeneralSettings}
-					/>
-				) : activePage === "keyboard_shortcuts" ? (
-					<KeyboardShortcutsSettingsPage
-						clientPreferences={clientPreferences}
-						onClientPreferencesChange={setClientPreferences}
-					/>
-				) : activePage === "search" ? (
-					<SearchSettingsPage />
-				) : activePage === "statistics" ? (
-					<StatisticsSettingsPage />
-				) : activePage === "personalization" ? (
-					<PersonalizationSettingsPage />
-				) : activePage === "mcp_servers" ? (
-					<McpServersSettingsPage />
-				) : activePage === "skills" ? (
-					<SkillsSettingsPage />
-				) : activePage === "documentation" ? (
-					<DocumentationSettingsPage />
-				) : activePage === "godot_projects" ? (
-					<GodotProjectsSettingsPage />
-				) : activePage === "archived_sessions" ? (
-					<ArchivedSessionSettingsPage />
-				) : activePage === "import" ? (
-					<ImportSettingsPage />
-				) : activePage === "about" ? (
-					<AboutSettingsPage />
-				) : (
-					<section className={styles.placeholder}>
-						<div className={styles.placeholderHeader}>
-							<Icon name="settings" className={styles.placeholderIcon} />
-							<div>
-								<Typography.Title level={3} className={styles.placeholderTitle}>
-									{getSettingsPageTitle(activePage, t)}
-								</Typography.Title>
-								<Typography.Text type="secondary">
-									{t("settings.menu.placeholder")}
-								</Typography.Text>
+				<div className={styles.pageViewport}>
+					{menuItemConfigs.filter((item: SettingsMenuItemConfig): boolean => visitedPages.has(item.key)).map((item: SettingsMenuItemConfig): React.JSX.Element => {
+						const isActive: boolean = item.key === activePage;
+						return (
+							<div
+								key={item.key}
+								className={`${styles.pageView} ${isActive ? styles.pageViewActive : ""}`}
+								aria-hidden={!isActive}
+							>
+								{renderSettingsPage(item.key)}
 							</div>
-						</div>
-					</section>
-				)}
+						);
+					})}
+				</div>
 			</div>
 		</main>
 	);

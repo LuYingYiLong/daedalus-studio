@@ -1,5 +1,5 @@
 import { Column, Line, Pie } from "@ant-design/charts";
-import { Alert, Card, Empty, Segmented, Spin, Statistic, theme as antdTheme, Tooltip, Typography } from "antd";
+import { Alert, Card, Empty, Segmented, Statistic, theme as antdTheme, Tooltip, Typography } from "antd";
 import { useMemo, useState } from "react";
 import { useRequest } from "ahooks";
 import { useTranslation } from "react-i18next";
@@ -14,6 +14,7 @@ import {
 	type UsageMetricsTrendPoint
 } from "@/api/usage-metrics-api";
 import styles from "./StatisticsSettingsPage.module.css";
+import SettingsPageSkeleton from "@/components/SettingsPageSkeleton";
 
 const METRIC_CLASS_NAMES = {
 	root: styles.metricCard,
@@ -373,7 +374,7 @@ function StatisticsSettingsPage(): React.JSX.Element {
 				{isLoading && data === undefined ? (
 					<Card>
 						<div className={styles.loading}>
-							<Spin />
+							<SettingsPageSkeleton rows={5} />
 						</div>
 					</Card>
 				) : summary !== null ? (

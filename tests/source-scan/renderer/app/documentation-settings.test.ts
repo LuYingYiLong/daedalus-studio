@@ -33,9 +33,11 @@ describe("Godot documentation settings", () => {
 		expect(mainSource).toContain('"documentation"');
 	});
 
-	it("keeps loading and empty states mutually exclusive", () => {
-		expect(pageSource).toContain("isLoading ? (");
-		expect(pageSource).toContain(") : documents.length === 0 ? (");
+	it("waits for the initial document load without rendering a loading indicator", () => {
+		expect(pageSource).toContain("if (isLoading) {");
+		expect(pageSource).toContain("return null;");
+		expect(pageSource).not.toContain("SettingsPageSkeleton");
+		expect(pageSource).toContain("documents.length === 0 ? (");
 		expect(pageSource).toContain("destroyOnHidden={true}");
 		expect(pageSource).toContain("preserve={false}");
 		expect(pageSource).toContain("const { message, modal } = App.useApp()");

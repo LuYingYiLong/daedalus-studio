@@ -87,7 +87,7 @@ function getHealthTagColor(status: GodotDocumentationRecord["health"]["status"])
 	return "error";
 }
 
-function DocumentationSettingsPage(): React.JSX.Element {
+function DocumentationSettingsPage(): React.JSX.Element | null {
 	const { t, i18n } = useTranslation();
 	const { message, modal } = App.useApp();
 	const [form] = Form.useForm<DocumentationFormValues>();
@@ -383,6 +383,10 @@ function DocumentationSettingsPage(): React.JSX.Element {
 	const selectedBranch: string | undefined = Form.useWatch("branch", form);
 	const selectedLocalPath: string | undefined = Form.useWatch("sourcePath", form);
 
+	if (isLoading) {
+		return null;
+	}
+
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
@@ -437,9 +441,7 @@ function DocumentationSettingsPage(): React.JSX.Element {
 						description={t("settings.documentation.health.toolUnavailable")}
 					/>
 				) : null}
-				{isLoading ? (
-					<div className={styles.centerState}><Spin /></div>
-				) : documents.length === 0 ? (
+				{documents.length === 0 ? (
 					<div className={styles.centerState}>
 						<Empty
 							image={Empty.PRESENTED_IMAGE_SIMPLE}

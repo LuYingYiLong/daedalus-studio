@@ -112,7 +112,7 @@ function createArchivedSessionMenuItem(session: SessionMetadata, options: Create
 	};
 }
 
-function ArchivedSessionSettingsPage(): React.JSX.Element {
+function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([]);
 	const [archivedSessions, setArchivedSessions] = useState<SessionMetadata[]>([]);
@@ -329,6 +329,10 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 		}
 	}
 
+	if (isLoading) {
+		return null;
+	}
+
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
@@ -375,11 +379,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element {
 			) : null}
 
 			<div className={styles.menuScroller}>
-				{isLoading ? (
-					<Typography.Text type="secondary" className={styles.emptyText}>
-						{t("settings.archivedSessions.loading")}
-					</Typography.Text>
-				) : filteredSessions.length === 0 ? (
+				{filteredSessions.length === 0 ? (
 					<Empty
 						description={archivedSessions.length === 0 ? t("settings.archivedSessions.empty.none") : t("settings.archivedSessions.empty.noMatches")}
 					/>

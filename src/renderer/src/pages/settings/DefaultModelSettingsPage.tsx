@@ -1,4 +1,4 @@
-import { Alert, Button, Select, Spin, Typography } from "antd";
+import { Alert, Button, Select, Typography } from "antd";
 import type { SelectProps } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -119,7 +119,7 @@ function createModelSelectOptions(selection: ProviderModelSelection | null, filt
 	}).filter((group): boolean => Array.isArray(group.options) && group.options.length > 0);
 }
 
-function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPageProps): React.JSX.Element {
+function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPageProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const [selection, setSelection] = useState<ProviderModelSelection | null>(null);
 	const [savingKey, setSavingKey] = useState<RoutingKey | null>(null);
@@ -207,11 +207,7 @@ function DefaultModelSettingsPage({ onSelectionChange }: DefaultModelSettingsPag
 	}
 
 	if (isLoading && selection === null) {
-		return (
-			<section className={styles.loading}>
-				<Spin />
-			</section>
-		);
+		return null;
 	}
 
 	if (selection === null) {

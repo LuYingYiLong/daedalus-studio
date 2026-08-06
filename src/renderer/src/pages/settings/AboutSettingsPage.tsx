@@ -1,4 +1,4 @@
-import { App, Button, Card, Descriptions, Spin, Tag, Typography } from "antd";
+import { App, Button, Card, Descriptions, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useRequest } from "ahooks";
 import { useTranslation } from "react-i18next";
@@ -89,7 +89,7 @@ async function loadBackendDetails(fallbackMessage: string): Promise<BackendDetai
 	}
 }
 
-function AboutSettingsPage(): React.JSX.Element {
+function AboutSettingsPage(): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const { message, modal } = App.useApp();
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
@@ -252,6 +252,10 @@ function AboutSettingsPage(): React.JSX.Element {
 	const isBackendUpdating: boolean = updateState?.backend.status === "downloading"
 		|| updateState?.backend.status === "installing";
 
+	if (isLoading) {
+		return null;
+	}
+
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
@@ -262,13 +266,7 @@ function AboutSettingsPage(): React.JSX.Element {
 			</header>
 
 			<div className={styles.content}>
-				{isLoading ? (
-					<Card>
-						<div className={styles.loading}>
-							<Spin />
-						</div>
-					</Card>
-				) : errorMessage !== null ? (
+				{errorMessage !== null ? (
 					<Card>
 						<Typography.Text type="danger">
 							{errorMessage}

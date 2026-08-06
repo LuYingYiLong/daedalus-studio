@@ -1,4 +1,4 @@
-import { Alert, App, Button, Empty, Flex, Form, Input, Menu, Modal, Select, Space, Spin, Table, Tag, Tooltip, Typography } from "antd";
+import { Alert, App, Button, Empty, Flex, Form, Input, Menu, Modal, Select, Space, Table, Tag, Tooltip, Typography } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, Key, KeyboardEvent } from "react";
@@ -140,7 +140,7 @@ function mergeManagedModels(
 	return [...modelsById.values()];
 }
 
-function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps): React.JSX.Element {
+function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const { message, modal } = App.useApp();
 	const [selection, setSelection] = useState<ProviderModelSelection | null>(null);
@@ -611,14 +611,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 	}
 
 	if (isLoading && selection === null) {
-		return (
-			<section className={styles.page}>
-				<div className={styles.providerListPane}>
-					<Spin />
-				</div>
-				<div className={styles.detailPane} />
-			</section>
-		);
+		return null;
 	}
 
 	if (selection === null || selectedProvider === null) {

@@ -58,6 +58,62 @@
 	-webkit-app-region: drag;
 }
 
+.pageViewport {
+	position: relative;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.pageView {
+	position: absolute;
+	inset: 0;
+	min-width: 0;
+	min-height: 0;
+	visibility: hidden;
+	pointer-events: none;
+	opacity: 0;
+	transform: translateY(4px);
+	transition: none;
+}
+
+.pageViewActive {
+	z-index: 1;
+	visibility: visible;
+	pointer-events: auto;
+	animation: settingsPageEnter 160ms ease-out both;
+}
+
+@keyframes settingsPageEnter {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pageView {
+		transform: none;
+	}
+
+	.pageViewActive {
+		animation: settingsPageEnterReduced 120ms ease-out both;
+	}
+}
+
+@keyframes settingsPageEnterReduced {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
 .divider {
 	align-self: stretch;
 	height: auto;
