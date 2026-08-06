@@ -17,6 +17,7 @@ type FileEditBatchSummary = {
 	batchId: string;
 	sessionId?: string;
 	editedFileCount: number;
+	sourceFolderId?: string;
 	additions: number;
 	deletions: number;
 	editedFiles: FileEditSummaryItem[];
@@ -24,6 +25,7 @@ type FileEditBatchSummary = {
 
 type FileEditSummaryItem = {
 	path: string;
+	sourceFolderId?: string;
 	additions: number;
 	deletions: number;
 };
@@ -69,6 +71,18 @@ function getLatestEvent(events: Record<string, unknown>[], type: string): Record
 	return [...events].reverse().find((event: Record<string, unknown>): boolean => event.type === type);
 }
 
+function getSourceFolderId(events: Record<string, unknown>[]): string | undefined {
+	for (const event of [...events].reverse()) {
+		const direct: string | undefined = getStringValue(event, "sourceFolderId");
+		if (direct !== undefined) return direct;
+		if (isRecord(event.args)) {
+			const fromArgs: string | undefined = getStringValue(event.args, "sourceFolderId");
+			if (fromArgs !== undefined) return fromArgs;
+		}
+	}
+	return undefined;
+}
+
 function getToolResultText(events: Record<string, unknown>[]): string {
 	const result: Record<string, unknown> | undefined = getLatestEvent(events, "tool.result");
 	if (result !== undefined) {
@@ -92,6 +106,7 @@ function getFileEditBatch(events: Record<string, unknown>[]): FileEditBatchSumma
 	const batch: Record<string, unknown> = result.fileEditBatch;
 	const batchId: string | undefined = getStringValue(batch, "batchId");
 	const sessionId: string | undefined = getStringValue(batch, "sessionId");
+	const sourceFolderId: string | undefined = getStringValue(batch, "sourceFolderId");
 	if (batchId === undefined) {
 		return undefined;
 	}
@@ -102,6 +117,7 @@ function getFileEditBatch(events: Record<string, unknown>[]): FileEditBatchSumma
 			}
 			return [{
 				path: value.path,
+				sourceFolderId: getStringValue(value, "sourceFolderId") ?? sourceFolderId,
 				additions: getFiniteNumber(value.additions) ?? 0,
 				deletions: getFiniteNumber(value.deletions) ?? 0
 			}];
@@ -116,6 +132,7 @@ function getFileEditBatch(events: Record<string, unknown>[]): FileEditBatchSumma
 		batchId,
 		sessionId,
 		editedFileCount,
+		sourceFolderId,
 		additions: getFiniteNumber(batch.additions) ?? editedFiles.reduce((total: number, file: FileEditSummaryItem): number => total + file.additions, 0),
 		deletions: getFiniteNumber(batch.deletions) ?? editedFiles.reduce((total: number, file: FileEditSummaryItem): number => total + file.deletions, 0),
 		editedFiles
@@ -175,7 +192,10 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 	const fileEditBatch: FileEditBatchSummary | undefined = useMemo((): FileEditBatchSummary | undefined => getFileEditBatch(part.events), [part.events]);
 	const label = (
 		<span className={styles.toolLabel} title={toolDisplay.label}>
-			<span className={styles.toolLabelText}>{toolDisplay.label}</span>
+			<span className={styles.toolLabelText}>{((): string => {
+				const sourceFolderId: string | undefined = fileEditBatch?.sourceFolderId ?? getSourceFolderId(part.events);
+				return sourceFolderId === undefined ? toolDisplay.label : `[${sourceFolderId}] ${toolDisplay.label}`;
+			})()}</span>
 			{fileEditBatch === undefined ? null : (
 				<span className={styles.fileStats}>
 					<span className={styles.additions}>+{fileEditBatch.additions}</span>
@@ -224,7 +244,7 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 									{fileEditBatch.sessionId === undefined ? (
 										<ul className={styles.fileList}>
 											{fileEditBatch.editedFiles.map((file: FileEditSummaryItem): React.JSX.Element => (
-												<li key={file.path} className={styles.fileItem}>{file.path}</li>
+																				<li key={`${file.sourceFolderId ?? ""}:${file.path}`} className={styles.fileItem}>{file.sourceFolderId === undefined ? file.path : `[${file.sourceFolderId}] ${file.path}`}</li>
 											))}
 										</ul>
 									) : <ToolFileDiff sessionId={fileEditBatch.sessionId} batchId={fileEditBatch.batchId} />}

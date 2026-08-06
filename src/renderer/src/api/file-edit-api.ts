@@ -2,6 +2,7 @@ import { createBackendClient } from "@/shared/api/transport/backend-client";
 
 export type FileEditSnapshot = {
 	path: string;
+	sourceFolderId?: string;
 	existedBefore: boolean;
 	existsAfter: boolean;
 	beforeText?: string;

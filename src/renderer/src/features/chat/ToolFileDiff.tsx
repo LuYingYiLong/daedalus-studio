@@ -40,6 +40,9 @@ function ToolFileDiff({ sessionId, batchId }: ToolFileDiffProps): React.JSX.Elem
 		<div className={styles.fileDiffList}>
 			{parsedEdits.map(({ edit, file }): React.JSX.Element => (
 				<section key={edit.path} className={styles.fileDiff}>
+					<div className={styles.fileDiffPath}>
+						{edit.sourceFolderId === undefined ? edit.path : `[${edit.sourceFolderId}] ${edit.path}`}
+					</div>
 					{file === null
 						? <div className={styles.diffUnavailable}>{edit.unavailableReason ?? "This edit has no text snapshot to compare."}</div>
 						: <Diff diffType={file.type} hunks={file.hunks} viewType="split" />}

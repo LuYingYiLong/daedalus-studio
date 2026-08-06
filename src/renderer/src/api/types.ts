@@ -8,6 +8,10 @@ export type WorkspaceSourceFolder = {
 	capabilities: {
 		git: boolean;
 		godot: boolean;
+		projectMarkers?: string[];
+		typecheck?: "available" | "unavailable" | "unknown";
+		terminalPresets?: string[];
+		workflowProfile?: "godot" | "workspace";
 	};
 };
 
@@ -388,6 +392,7 @@ export type TimelineAssistantBlock = {
 };
 
 export type TimelineEditedFile = {
+	sourceFolderId?: string;
 	displayPath?: string;
 	path?: string;
 	absolutePath?: string;

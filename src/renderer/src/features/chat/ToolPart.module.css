@@ -86,6 +86,14 @@
 	border-top: 1px solid var(--ds-border);
 }
 
+.fileDiffPath {
+	padding: 6px 8px;
+	color: var(--ds-text-secondary);
+	font-family: var(--ds-font-family-code);
+	font-size: 12px;
+	background: var(--ds-surface-sunken);
+}
+
 .fileDiff :global(.diff) {
 	margin: 0;
 	font-family: var(--ds-font-family-code);
