@@ -368,8 +368,12 @@
     }
   },
   "composer": {
-    "placeholder": "想让我做什么？",
-    "goalPlaceholder": "描述目标以及可以验证的完成结果",
+    "placeholders": {
+      "ask": "问我一个问题，或一起探索一个想法",
+      "agent": "描述需要我检查、修改或执行的内容",
+      "plan": "描述你希望制定计划达成的结果",
+      "goal": "描述目标以及可以验证的完成结果"
+    },
     "textAreaMenu": {
       "cut": "剪切",
       "copy": "复制",

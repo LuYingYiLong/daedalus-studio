@@ -98,6 +98,19 @@ const ADD_WORKSPACE_KEY: string = "workspace:add";
 const EMPTY_CONTEXT_ITEMS: AdditionalContextItem[] = [];
 const CONTEXT_USAGE_REFRESH_INTERVAL_MS: number = 5_000;
 
+type ComposerPlaceholderKey =
+	| "composer.placeholders.ask"
+	| "composer.placeholders.agent"
+	| "composer.placeholders.plan"
+	| "composer.placeholders.goal";
+
+const COMPOSER_PLACEHOLDER_KEYS: Record<ChatMode, ComposerPlaceholderKey> = {
+	ask: "composer.placeholders.ask",
+	agent: "composer.placeholders.agent",
+	plan: "composer.placeholders.plan",
+	goal: "composer.placeholders.goal"
+};
+
 function createContextItems(t: TFunction<"common">): MenuProps["items"] {
 	return [
 		{
@@ -1177,7 +1190,7 @@ function Composer({
 								ref={textAreaRef}
 								value={draftMessage}
 								autoSize={{ minRows: 4, maxRows: 6 }}
-								placeholder={mode === "goal" ? t("composer.goalPlaceholder") : t("composer.placeholder")}
+								placeholder={t(COMPOSER_PLACEHOLDER_KEYS[mode])}
 								className={styles.composerTextArea}
 								onChange={handleTextAreaChange}
 								onKeyDown={handleTextAreaKeyDown}

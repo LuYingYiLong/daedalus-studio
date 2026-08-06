@@ -370,8 +370,12 @@
     }
   },
   "composer": {
-    "placeholder": "What can I say?",
-    "goalPlaceholder": "Describe the goal and a verifiable completion result",
+    "placeholders": {
+      "ask": "Ask a question or explore an idea",
+      "agent": "Describe what you want me to inspect, change, or run",
+      "plan": "Describe the outcome you want to plan",
+      "goal": "Describe the goal and a verifiable completion result"
+    },
     "textAreaMenu": {
       "cut": "Cut",
       "copy": "Copy",
