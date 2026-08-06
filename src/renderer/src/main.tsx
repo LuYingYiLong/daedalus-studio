@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import MainWindowRoot from "./app/MainWindowRoot";
+import MainWindowErrorBoundary from "./app/MainWindowErrorBoundary";
 import SettingsWindow from "./app/SettingsWindow";
 import WindowProviders from "./app/WindowProviders";
 import "react-diff-view/style/index.css";
@@ -36,9 +37,11 @@ async function startRenderer(): Promise<void> {
 	flushSync((): void => {
 		root.render(
 			<StrictMode>
-				<WindowProviders>
-					{isSettingsWindow ? <SettingsWindow /> : <MainWindowRoot />}
-				</WindowProviders>
+				<MainWindowErrorBoundary>
+					<WindowProviders>
+						{isSettingsWindow ? <SettingsWindow /> : <MainWindowRoot />}
+					</WindowProviders>
+				</MainWindowErrorBoundary>
 			</StrictMode>
 		);
 	});

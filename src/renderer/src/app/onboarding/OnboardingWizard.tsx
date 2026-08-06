@@ -50,6 +50,8 @@ import { Icon } from "@/assets/icons";
 import daedalusColorfulIconUrl from "@/assets/icons/icon-colorful.svg";
 import {
 	ONBOARDING_STEP_IDS,
+	createDefaultOnboardingPreferences,
+	isOnboardingPreferences,
 	type OnboardingConfigurableStepId,
 	type OnboardingPreferences,
 	type OnboardingStepId,
@@ -383,7 +385,7 @@ function DocumentationOnboardingStep({ godotVersion, onConfiguredChange, onBusyC
 	const loadDocumentation = useCallback(async (): Promise<GodotDocumentationState> => {
 		const nextState: GodotDocumentationState = await fetchGodotDocumentation();
 		setDocumentation(nextState);
-		setJob(nextState.activeJob);
+		setJob(nextState.activeJob ?? null);
 		return nextState;
 	}, []);
 
@@ -392,11 +394,12 @@ function DocumentationOnboardingStep({ godotVersion, onConfiguredChange, onBusyC
 		void Promise.all([loadDocumentation(), fetchGodotDocumentationBranches(false)])
 			.then(([, branchList]): void => {
 				if (cancelled) return;
-				setBranches(branchList.branches);
+				setBranches(Array.isArray(branchList.branches) ? branchList.branches : []);
 				setRecommendedBranch(branchList.recommendedBranch);
 				setBranchListWarning(branchList.error ?? null);
 			})
 			.catch((loadError: unknown): void => {
+				console.error("[Onboarding] documentation bootstrap failed", loadError);
 				if (!cancelled) setError(getErrorMessage(loadError, t("onboarding.documentation.errors.load")));
 			})
 			.finally((): void => {
@@ -422,11 +425,12 @@ function DocumentationOnboardingStep({ godotVersion, onConfiguredChange, onBusyC
 		if (!busy || job === null) return;
 		const timer: number = window.setTimeout((): void => {
 			void fetchGodotDocumentationJob(job.jobId).then((nextJob: GodotDocumentationJob | null): void => {
-				if (nextJob === null) return;
-				setJob(nextJob);
-				if (TERMINAL_DOCUMENTATION_JOB_STAGES.has(nextJob.stage)) {
+				const normalizedJob: GodotDocumentationJob | null = nextJob ?? null;
+				setJob(normalizedJob);
+				if (normalizedJob === null) return;
+				if (TERMINAL_DOCUMENTATION_JOB_STAGES.has(normalizedJob.stage)) {
 					void loadDocumentation();
-					if (nextJob.stage === "failed") setError(nextJob.error ?? nextJob.message);
+					if (normalizedJob.stage === "failed") setError(normalizedJob.error ?? normalizedJob.message);
 				}
 			}).catch((pollError: unknown): void => setError(getErrorMessage(pollError, t("onboarding.documentation.errors.job"))));
 		}, 600);
@@ -437,7 +441,7 @@ function DocumentationOnboardingStep({ godotVersion, onConfiguredChange, onBusyC
 		if (branch === null) return;
 		setError(null);
 		try {
-			setJob(await installGodotDocumentation(branch));
+			setJob((await installGodotDocumentation(branch)) ?? null);
 		} catch (installError: unknown) {
 			setError(getErrorMessage(installError, t("onboarding.documentation.errors.install")));
 		}
@@ -446,7 +450,7 @@ function DocumentationOnboardingStep({ godotVersion, onConfiguredChange, onBusyC
 	async function cancelJob(): Promise<void> {
 		if (job === null || !busy) return;
 		try {
-			setJob(await cancelGodotDocumentationJob(job.jobId));
+			setJob((await cancelGodotDocumentationJob(job.jobId)) ?? null);
 		} catch (cancelError: unknown) {
 			setError(getErrorMessage(cancelError, t("onboarding.documentation.errors.cancel")));
 		}
@@ -684,7 +688,12 @@ function GodotPluginOnboardingStep({ onConfiguredChange, onBusyChange }: GodotPl
 
 function OnboardingWizard({ bootstrapData, onComplete }: OnboardingWizardProps): React.JSX.Element {
 	const { t } = useTranslation();
-	const [preferences, setPreferences] = useState<ClientPreferences>(bootstrapData.clientPreferences);
+	const [preferences, setPreferences] = useState<ClientPreferences>(() => ({
+		...bootstrapData.clientPreferences,
+		onboarding: isOnboardingPreferences(bootstrapData.clientPreferences.onboarding)
+			? bootstrapData.clientPreferences.onboarding
+			: createDefaultOnboardingPreferences()
+	}));
 	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(bootstrapData.generalSettings);
 	const [providerSelection, setProviderSelection] = useState<ProviderModelSelection>(bootstrapData.providerModelSelection);
 	const [documentationConfigured, setDocumentationConfigured] = useState<boolean>(false);
@@ -730,6 +739,7 @@ function OnboardingWizard({ bootstrapData, onComplete }: OnboardingWizardProps):
 			setPreferences(nextPreferences);
 			return nextPreferences;
 		} catch (error: unknown) {
+			console.error("[Onboarding] persist step failed", { currentStep, step, outcome, error });
 			setNavigationError(getErrorMessage(error, t("onboarding.errors.saveProgress")));
 			throw error;
 		} finally {

@@ -4,6 +4,7 @@ import { readRepoFile } from "../../../helpers/repo-paths";
 describe("BootSplash", () => {
 	const windowProvidersSource: string = readRepoFile("src", "renderer", "src", "app", "WindowProviders.tsx");
 	const mainWindowRootSource: string = readRepoFile("src", "renderer", "src", "app", "MainWindowRoot.tsx");
+	const mainWindowErrorBoundarySource: string = readRepoFile("src", "renderer", "src", "app", "MainWindowErrorBoundary.tsx");
 	const settingsWindowSource: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindow.tsx");
 	const splashSource: string = readRepoFile("src", "renderer", "src", "app", "BootSplash.tsx");
 	const bootstrapSource: string = readRepoFile("src", "renderer", "src", "app", "bootstrap.ts");
@@ -23,9 +24,14 @@ describe("BootSplash", () => {
 		expect(titlebarSource).toContain("className={styles.actionButton}");
 		expect(mainWindowRootSource).toContain("<BootSplash loadData={loadData} onReady={handleBootstrapReady} />");
 		expect(mainWindowRootSource).toContain("loadBootstrapData(onProgress, t)");
-		expect(mainWindowRootSource).toContain("bootstrapData.clientPreferences.onboarding.completed");
+		expect(mainWindowRootSource).toContain("bootstrapData?.clientPreferences?.onboarding?.completed");
 		expect(mainWindowRootSource).toContain("<OnboardingWizard bootstrapData={bootstrapData} onComplete={handleOnboardingComplete} />");
 		expect(mainWindowRootSource).toContain("<App bootstrapData={bootstrapData} />");
+		expect(mainWindowErrorBoundarySource).toContain("getDerivedStateFromError");
+		expect(mainWindowErrorBoundarySource).toContain("Skip onboarding and enter Studio");
+		expect(mainWindowErrorBoundarySource).toContain("createCompletedOnboardingPreferences");
+		expect(mainWindowErrorBoundarySource).toContain("Reset onboarding and restart");
+		expect(mainWindowErrorBoundarySource).toContain("createDefaultOnboardingPreferences");
 		expect(settingsWindowSource).toContain("DEFAULT_CLIENT_PREFERENCES");
 		expect(settingsWindowSource).toContain("DEFAULT_GENERAL_SETTINGS");
 		expect(settingsWindowSource).not.toContain("bootstrapData");

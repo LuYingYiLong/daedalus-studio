@@ -48,10 +48,18 @@ class ClientPreferencesService {
 
 	async update(patch: ClientPreferencesPatch): Promise<ClientPreferences> {
 		await this.load();
-		this.preferences = await updateClientPreferencesFile(this.getPreferencesPath(), patch);
-		this.loaded = true;
-		this.notifyChange();
-		return this.getCachedPreferences();
+		try {
+			this.preferences = await updateClientPreferencesFile(this.getPreferencesPath(), patch);
+			this.loaded = true;
+			this.notifyChange();
+			return this.getCachedPreferences();
+		} catch (error: unknown) {
+			console.error("[ClientPreferences] update failed", {
+				fields: Object.keys(patch),
+				error
+			});
+			throw error;
+		}
 	}
 
 	registerIpc(): void {

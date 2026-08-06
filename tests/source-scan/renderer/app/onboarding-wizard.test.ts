@@ -5,7 +5,9 @@ describe("OnboardingWizard", () => {
 	const source: string = readRepoFile("src", "renderer", "src", "app", "onboarding", "OnboardingWizard.tsx");
 	const preferencesSource: string = readRepoFile("src", "main", "services", "client-preferences-store.ts");
 	const preloadSource: string = readRepoFile("src", "preload", "index.ts");
-	const mainSource: string = readRepoFile("src", "main", "index.ts");
+		const mainSource: string = readRepoFile("src", "main", "index.ts");
+		const preferencesServiceSource: string = readRepoFile("src", "main", "services", "client-preferences.ts");
+		const onboardingSource: string = readRepoFile("src", "onboarding.ts");
 
 	it("persists all six steps and supports optional setup flows", () => {
 		expect(source).toContain("ONBOARDING_STEP_IDS.map");
@@ -15,6 +17,9 @@ describe("OnboardingWizard", () => {
 		expect(source).toContain("window.electronAPI.pickGodotExecutable()");
 		expect(source).toContain("installGodotDocumentation");
 		expect(source).toContain("window.electronAPI.godotProjects.install");
+		expect(source).toContain("setJob(nextState.activeJob ?? null)");
+		expect(source).toContain("console.error(\"[Onboarding] persist step failed\"");
+		expect(preferencesServiceSource).toContain("[ClientPreferences] update failed");
 	});
 
 	it("normalizes persisted progress and exposes a guarded relaunch API", () => {
@@ -26,6 +31,7 @@ describe("OnboardingWizard", () => {
 		expect(mainSource).toContain("!app.isPackaged && process.env.ELECTRON_RENDERER_URL");
 		expect(mainSource).toContain("setImmediate(reloadDevelopmentRenderer)");
 		expect(mainSource).toContain("browserWindow.webContents.reloadIgnoringCache()");
+		expect(onboardingSource).toContain("isOnboardingPreferences");
 		expect(mainSource).toContain("app.relaunch({");
 		expect(mainSource).toContain("execPath: process.execPath");
 		expect(mainSource).toContain("args: process.argv.slice(1)");

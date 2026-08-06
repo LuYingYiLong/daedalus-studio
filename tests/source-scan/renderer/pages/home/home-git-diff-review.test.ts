@@ -13,6 +13,7 @@ describe("HomePage git diff review source", () => {
 	const dockPanelTabsCss: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.module.css");
 	const panelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "panel-tabs", "PanelTabs.tsx");
 	const panelTabsCss: string = readRepoFile("src", "renderer", "src", "features", "panel-tabs", "PanelTabs.module.css");
+	const reviewPanelCss: string = readRepoFile("src", "renderer", "src", "features", "git", "review", "GitDiffReviewPanel.module.css");
 	const packageJsonSource: string = readRepoFile("package.json");
 
 	it("renders the side dock inside an Ant Design Splitter", () => {
@@ -66,6 +67,14 @@ describe("HomePage git diff review source", () => {
 	it("keeps close ownership on the fixed layout-right button", () => {
 		expect(reviewPanelSource).not.toContain("Close review panel");
 		expect(reviewPanelSource).not.toContain("onClose");
+	});
+
+	it("overrides react-diff-view light defaults for dark-theme readability", () => {
+		expect(reviewPanelCss).toContain("--diff-code-insert-background-color: var(--ds-git-addition-bg)");
+		expect(reviewPanelCss).toContain("--diff-code-delete-background-color: var(--ds-git-deletion-bg)");
+		expect(reviewPanelCss).toContain(".diffTable :global(.diff-code-insert)");
+		expect(reviewPanelCss).toContain(".diffTable :global(.diff-code-delete)");
+		expect(reviewPanelCss).toContain("--diff-omit-gutter-line-color");
 	});
 
 	it("renders dock tabs that can add both review and terminal panels", () => {

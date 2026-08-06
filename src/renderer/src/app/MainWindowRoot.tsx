@@ -18,14 +18,14 @@ function MainWindowRoot(): React.JSX.Element {
 	const handleOnboardingComplete = useCallback((data: BootstrapData): void => {
 		setBootstrapData(data);
 	}, []);
-	const isAppReady: boolean = bootstrapData?.clientPreferences.onboarding.completed === true;
+	const isAppReady: boolean = bootstrapData?.clientPreferences?.onboarding?.completed === true;
 
 	return (
 		<>
 			<MainTitlebar appReady={isAppReady} />
 			{bootstrapData === null ? (
 				<BootSplash loadData={loadData} onReady={handleBootstrapReady} />
-			) : bootstrapData.clientPreferences.onboarding.completed ? (
+			) : bootstrapData.clientPreferences?.onboarding?.completed === true ? (
 				<App bootstrapData={bootstrapData} />
 			) : (
 				<OnboardingWizard bootstrapData={bootstrapData} onComplete={handleOnboardingComplete} />

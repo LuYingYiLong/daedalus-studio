@@ -21,6 +21,32 @@ export type OnboardingPreferences = {
 	completedAt: string | null;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
+}
+
+export function isOnboardingPreferences(value: unknown): value is OnboardingPreferences {
+	if (!isRecord(value) || value.schemaVersion !== 1 || typeof value.completed !== "boolean") {
+		return false;
+	}
+	if (typeof value.currentStep !== "string" || !ONBOARDING_STEP_IDS.includes(value.currentStep as OnboardingStepId)) {
+		return false;
+	}
+	if (value.completedAt !== null && typeof value.completedAt !== "string") {
+		return false;
+	}
+	if (!isRecord(value.stepOutcomes)) {
+		return false;
+	}
+	for (const stepId of ["provider", "godot_executable", "documentation", "godot_plugin"] as const) {
+		const outcome: unknown = value.stepOutcomes?.[stepId];
+		if (outcome !== undefined && outcome !== "configured" && outcome !== "skipped") {
+			return false;
+		}
+	}
+	return true;
+}
+
 export function createDefaultOnboardingPreferences(): OnboardingPreferences {
 	return {
 		schemaVersion: 1,
@@ -31,3 +57,11 @@ export function createDefaultOnboardingPreferences(): OnboardingPreferences {
 	};
 }
 
+export function createCompletedOnboardingPreferences(completedAt: string = new Date().toISOString()): OnboardingPreferences {
+	return {
+		...createDefaultOnboardingPreferences(),
+		completed: true,
+		currentStep: "complete",
+		completedAt
+	};
+}
