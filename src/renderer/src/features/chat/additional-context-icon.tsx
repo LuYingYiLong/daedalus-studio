@@ -115,7 +115,11 @@ export function getAdditionalContextIconName(item: AdditionalContextItem): strin
 		case "yaml":
 			return "yml";
 		case "json":
+		case "jsonl":
 			return "json";
+		case "sqlite":
+		case "sql":
+			return "sql";
 		default:
 			return item.kind === "script" || item.kind === "script_selection" ? "script" : "file";
 	}
