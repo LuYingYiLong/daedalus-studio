@@ -145,10 +145,11 @@ function TerminalPart({ part, disclosureKey, onScrollWheelPassThrough }: Termina
 			activeKey={open ? ["terminal"] : []}
 			onChange={(keys: string | string[]): void => setOpen((Array.isArray(keys) ? keys : [keys]).includes("terminal"))}
 			className={styles.collapse}
+			ghost
 			expandIcon={() => <Icon name="terminal" className={styles.icon} />}
 			items={[{
 				key: "terminal",
-				label: <code className={styles.commandLabel} title={display.commandLine}>{display.commandLine || t("chat.terminalPart.commandFallback")}</code>,
+				label: display.commandLine || t("chat.terminalPart.commandFallback"),
 				extra: (
 					<Tag color={statusColors[status]} className={styles.statusTag}>
 						{statusLabel}

@@ -1,28 +1,15 @@
 .collapse {
-	width: 100%;
-	margin: 0;
-	overflow: hidden;
-	background: var(--ds-bg-sunken);
+	user-select: none;
 }
 
-.label {
-	display: flex;
-	align-items: center;
-	gap: var(--ds-space-1);
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+.collapse :global(.ant-collapse-title),
+.collapse :global(.collapseExpandIcon),
+.collapse :global(.collapseExpandIcon svg) {
+	color: var(--ds-text-muted);
 }
 
-.label > svg {
-	flex: 0 0 auto;
-}
-
-.label > :last-child {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+.collapse > :global(.ant-collapse-item) > :global(.ant-collapse-panel) > :global(.ant-collapse-body) {
+	padding: 0px !important;
 }
 
 .content {
@@ -33,7 +20,6 @@
 
 .content > :global(.ant-collapse) {
 	margin: 0;
-	background: var(--ds-bg-sunken);
 }
 
 .content > :global(.ant-collapse) > :global(.ant-collapse-item) {

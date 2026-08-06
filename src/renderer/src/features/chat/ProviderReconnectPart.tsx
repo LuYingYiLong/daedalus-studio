@@ -37,6 +37,7 @@ function ProviderReconnectPart({ part, disclosureKey, streaming }: ProviderRecon
 			onChange={(keys: string | string[]): void => {
 				setOpen((Array.isArray(keys) ? keys : [keys]).includes(part.reconnectId));
 			}}
+			ghost
 			className={styles.collapse}
 			expandIcon={(): React.JSX.Element => (
 				<span

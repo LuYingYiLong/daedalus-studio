@@ -200,6 +200,7 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 						className={styles.summaryCollapse}
 						bordered={false}
 						destroyOnHidden={true}
+						ghost
 						activeKey={summaryOpen ? [summaryStartPart.stepRunId || "summary-process"] : []}
 						onChange={(keys: string | string[]): void => {
 							setSummaryOpen((Array.isArray(keys) ? keys : [keys]).length > 0);

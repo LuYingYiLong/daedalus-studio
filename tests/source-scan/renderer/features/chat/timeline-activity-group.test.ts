@@ -10,7 +10,9 @@ describe("Timeline activity group rendering", () => {
 		expect(assistantSource).toContain('renderActivitySegments(foldedParts, "summary-before", false)');
 		expect(assistantSource).toContain('renderActivitySegments(visibleParts, "summary-after", true)');
 		expect(groupSource).toContain("destroyOnHidden={false}");
-		expect(groupSource).toContain('name="list-check"');
+		expect(groupSource).toContain('name="arrow-down"');
+		expect(groupSource).toContain('import ShinyText from "@/components/ShinyText";');
+		expect(groupSource).toContain("group.active ? (");
 		expect(groupSource).toContain("getSummaryLabel");
 	});
 

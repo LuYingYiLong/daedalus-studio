@@ -1,12 +1,9 @@
 .collapse {
-	width: 100%;
-	margin-block: 4px;
-	background: var(--ant-color-fill-quaternary);
 	user-select: none;
 }
 
-.collapse :global(.ant-collapse-header) {
-	align-items: center;
+.collapse :global(.ant-collapse-title) {
+	color: var(--ds-text-muted);
 }
 
 .collapse :global(.ant-collapse-header-text) {
@@ -25,16 +22,17 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	color: var(--ant-color-text-secondary);
+	color: var(--ds-text-muted);
 }
 
 .icon svg {
 	width: 16px;
 	height: 16px;
+	color: var(--ds-text-muted);
 }
 
 .iconActive {
-	color: var(--ant-color-primary);
+	color: var(--ds-text-muted);
 	animation: reconnectPulse 1.2s ease-in-out infinite;
 }
 

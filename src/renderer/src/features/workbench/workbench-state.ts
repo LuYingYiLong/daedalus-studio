@@ -190,6 +190,27 @@ function getActivityMetadata(data: Record<string, unknown>): TimelineActivityMet
 	};
 }
 
+function mergeToolActivityMetadata(
+	current: TimelineActivityMetadata,
+	incoming: TimelineActivityMetadata
+): TimelineActivityMetadata {
+	if (current.activityGroupId === undefined || current.activityPartId === undefined) {
+		return incoming;
+	}
+	if (incoming.activityGroupStats === undefined) {
+		return current;
+	}
+
+	return {
+		...current,
+		activityGroupStats: {
+			editedFiles: Math.max(current.activityGroupStats?.editedFiles ?? 0, incoming.activityGroupStats.editedFiles),
+			commands: Math.max(current.activityGroupStats?.commands ?? 0, incoming.activityGroupStats.commands),
+			thoughts: Math.max(current.activityGroupStats?.thoughts ?? 0, incoming.activityGroupStats.thoughts)
+		}
+	};
+}
+
 function appendThinkingPart(parts: TimelineBodyPart[], text: string, done: boolean, metadata: TimelineActivityMetadata = {}): TimelineBodyPart[] {
 	const nextParts: TimelineBodyPart[] = [...parts];
 
@@ -386,7 +407,9 @@ function appendToolPart(parts: TimelineBodyPart[], event: BackendEvent): Timelin
 						: [...item.events, normalizedEvent];
 				return {
 					...item,
-					...getActivityMetadata(data),
+					// A result may be delivered after streamed prose. Keep this card in
+					// the activity group established by its first event.
+					...mergeToolActivityMetadata(item, getActivityMetadata(data)),
 					events: nextEvents
 				};
 			});

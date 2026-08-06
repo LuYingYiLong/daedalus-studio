@@ -294,6 +294,59 @@ describe("workbench-state", () => {
 		}
 	});
 
+	it("keeps a tool in its call activity group when streamed prose arrives before the result", () => {
+		const blocks = applyBackendEventsToTimeline([], [
+			{
+				type: "event",
+				id: "request-delayed-tool-result",
+				event: "agent.thinking.delta",
+				data: {
+					text: "prepare",
+					activityGroupId: "activity:request:1",
+					activityPartId: "thinking:1",
+					activityPartKind: "thinking",
+					activityGroupStats: { editedFiles: 0, commands: 0, thoughts: 1 }
+				}
+			},
+			{
+				type: "event",
+				id: "request-delayed-tool-result",
+				event: "agent.tool.call",
+				data: {
+					toolCallId: "write-1",
+					toolName: "mcp_workspace_overwrite_text_file",
+					activityGroupId: "activity:request:1",
+					activityPartId: "tool:write-1",
+					activityPartKind: "tool",
+					activityGroupStats: { editedFiles: 0, commands: 0, thoughts: 1 }
+				}
+			},
+			{ type: "event", id: "request-delayed-tool-result", event: "agent.message.delta", data: { text: "Writing the file." } },
+			{
+				type: "event",
+				id: "request-delayed-tool-result",
+				event: "agent.tool.result",
+				data: {
+					toolCallId: "write-1",
+					toolName: "mcp_workspace_overwrite_text_file",
+					ok: true,
+					activityGroupId: "activity:request:2",
+					activityPartId: "tool:write-1-result",
+					activityPartKind: "tool",
+					activityGroupStats: { editedFiles: 1, commands: 0, thoughts: 0 }
+				}
+			}
+		]);
+
+		const assistant = blocks[0];
+		expect(assistant?.type).toBe("assistant");
+		if (assistant?.type === "assistant") {
+			const tool = assistant.bodyParts.find((part) => part.type === "tool");
+			expect(tool?.type === "tool" ? tool.activityGroupId : "").toBe("activity:request:1");
+			expect(tool?.type === "tool" ? tool.activityGroupStats : undefined).toEqual({ editedFiles: 1, commands: 0, thoughts: 1 });
+		}
+	});
+
 	it("rolls back a failed provider attempt once and updates its reconnect part in place", () => {
 		let blocks: TimelineBlock[] = applyBackendEventsToTimeline([], [
 			{ type: "event", id: "request-reconnect", event: "agent.message.delta", data: { text: "stable partial🙂" } },

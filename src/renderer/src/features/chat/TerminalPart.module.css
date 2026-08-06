@@ -1,23 +1,15 @@
 .collapse {
-	width: 100%;
-	margin: 4px 0;
 	user-select: none;
 }
 
-.collapse :global(.ant-collapse-header) {
-	align-items: center;
-	min-width: 0;
-}
-
-.collapse :global(.ant-collapse-title) {
-	flex: 1 1 0;
-	min-width: 0;
-	overflow: hidden;
+.collapse :global(.ant-collapse-title),
+.collapse :global(.collapseExpandIcon),
+.collapse :global(.collapseExpandIcon svg) {
+	color: var(--ds-text-muted);
 }
 
 .icon {
-	width: 16px;
-	height: 16px;
+	color: var(--ds-text-muted) !important;
 }
 
 .commandLabel {

@@ -137,6 +137,7 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 		<Collapse
 			size="small"
 			bordered={false}
+			ghost
 			destroyOnHidden={true}
 			activeKey={open ? ["tool"] : []}
 			onChange={(keys: string | string[]): void => {

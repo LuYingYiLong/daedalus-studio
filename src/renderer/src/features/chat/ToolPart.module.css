@@ -14,6 +14,14 @@
 	flex: 1 1 0;
 	min-width: 0;
 	overflow: hidden;
+	color: var(--ds-text-muted) !important;
+}
+
+.toolCollapse :global(.ant-collapse-expand-icon),
+.toolCollapse :global(.ant-collapse-expand-icon svg),
+.toolCollapse .toolIcon,
+.toolCollapse .toolIcon svg {
+	color: var(--ds-text-muted) !important;
 }
 
 .toolLabel {
@@ -33,7 +41,7 @@
 .toolLabelText {
 	flex: 0 0 auto;
 	overflow: hidden;
-	color: var(--ds-text-primary);
+	color: var(--ds-text-muted);
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }

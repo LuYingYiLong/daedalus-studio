@@ -133,8 +133,9 @@ function ThinkingPart({ part, disclosureKey = "thinking" }: ThinkingPartProps): 
 		<Collapse
 			size="small"
 			bordered={false}
-			className={styles.thinkingCollapse}
+			className={styles.collapse}
 			destroyOnHidden={true}
+			ghost
 			activeKey={open ? ["thinking"] : []}
 			onChange={(nextKeys: string | string[]): void => {
 				const nextOpen: boolean = (Array.isArray(nextKeys) ? nextKeys : [nextKeys]).includes("thinking");
@@ -144,7 +145,7 @@ function ThinkingPart({ part, disclosureKey = "thinking" }: ThinkingPartProps): 
 				setOpen(nextOpen);
 			}}
 			expandIcon={() => (
-				<Icon name="thinking" className={styles.thinkingIcon} />
+				<Icon name="thinking" className={styles.icon} />
 			)}
 			items={[
 				{

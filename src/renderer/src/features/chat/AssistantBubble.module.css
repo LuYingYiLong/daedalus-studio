@@ -24,9 +24,18 @@
 
 .summaryCollapse {
 	width: 100%;
-	margin-top: 4px;
-	margin-bottom: 8px;
+	margin: 0;
 	user-select: none;
+}
+
+.summaryCollapse :global(.ant-collapse-title),
+.summaryCollapse :global(.collapseExpandIcon),
+.summaryCollapse :global(.collapseExpandIcon svg) {
+	color: var(--ds-text-muted);
+}
+
+.summaryCollapse > :global(.ant-collapse-item) > :global(.ant-collapse-panel) > :global(.ant-collapse-body) {
+	padding: 0 !important;
 }
 
 /* 仅提升“总结前的过程”内嵌 Part 的层级，普通消息保持原样。 */
@@ -34,22 +43,6 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--ds-space-1);
-}
-
-.summaryContent > :global(.ant-collapse) {
-	margin: 0;
-	overflow: hidden;
-	background: var(--ds-bg-sunken);
-}
-
-.summaryContent > :global(.ant-collapse) > :global(.ant-collapse-item),
-.summaryContent > :global(.ant-collapse) > :global(.ant-collapse-item) > :global(.ant-collapse-header),
-.summaryContent > :global(.ant-collapse) > :global(.ant-collapse-item) > :global(.ant-collapse-content) {
-	background: var(--ds-bg-sunken);
-}
-
-.summaryContent > :global(.ant-collapse) > :global(.ant-collapse-item) {
-	border-bottom: 0;
 }
 
 .unknownPart {

@@ -1,13 +1,13 @@
-.thinkingCollapse {
-	width: 100%;
-	margin-top: 4px;
-	margin-bottom: 4px;
+.collapse {
 	user-select: none;
 }
 
-.thinkingIcon {
-	width: 16px;
-	height: 16px;
+.collapse :global(.ant-collapse-title) {
+	color: var(--ds-text-muted);
+}
+
+.icon {
+	color: var(--ds-text-muted) !important;
 }
 
 .thinkingContent {
@@ -17,6 +17,7 @@
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	scrollbar-width: none;
+	color: var(--ds-text-secondary);
 	user-select: text;
 }
 
