@@ -8,7 +8,8 @@ describe("composer workspace loading state", () => {
 
 		const homeSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 
-		expect(appSource).toContain("const composerWorkspaceLocked: boolean = isComposerWorkspaceSelectionLocked(activeSessionId, activeSessionMetadata);");
+		expect(appSource).toContain("const composerWorkspaceLocked: boolean = isWorkspaceSessionCreating");
+		expect(appSource).toContain("|| isComposerWorkspaceSelectionLocked(activeSessionId, activeSessionMetadata);");
 		expect(appSource).toContain("workspaceFooterDisabled={isHomeSubmitting || composerWorkspaceLocked || isSessionLoading}");
 		expect(homeSource).toContain("onWorkspaceSelect={isHome ? onHomeWorkspaceSelect : undefined}");
 		expect(composerSource).toContain("disabled={workspaceFooterDisabled}");

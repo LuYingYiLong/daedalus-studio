@@ -19,7 +19,8 @@ describe("session layout persistence wiring", () => {
 	it("keeps layouts in App and does not persist transient splitter movement", () => {
 		expect(appSource).toContain("bootstrapData.sessionLayouts");
 		expect(appSource).toContain("window.electronAPI.sessionLayout.save({ sessionId, layout })");
-		expect(homeSource).toContain("}, false);");
+		expect(homeSource).toContain("applyVisualSessionLayout({");
+		expect(homeSource).toContain("commitSessionLayout({");
 		expect(homeSource).toContain("onResizeEnd={handleSideDockResizeEnd}");
 		expect(homeSource).toContain("onResizeEnd={handleBottomDockResizeEnd}");
 		expect(homeSource).not.toContain("setSideDockOpen(false);");

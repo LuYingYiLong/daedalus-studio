@@ -26,7 +26,7 @@ describe("HomePage git diff review source", () => {
 		expect(agentSource).toContain("dockId=\"side\"");
 		expect(agentSource).toContain("placement=\"side\"");
 		expect(agentSource).toContain("defaultKind=\"review\"");
-		expect(agentSource).toContain("layout={sessionLayout.side}");
+		expect(agentSource).toContain("layout={visualSessionLayout.side}");
 		expect(agentSource).toContain("onLayoutChange={updateSideDock}");
 		expect(agentSource).toContain("SIDE_DOCK_DEFAULT_SIZE");
 		expect(agentSource).toContain("SIDE_DOCK_CLOSE_THRESHOLD");
@@ -40,7 +40,8 @@ describe("HomePage git diff review source", () => {
 		expect(resizeStart).toBeGreaterThan(-1);
 		expect(resizeEnd).toBeGreaterThan(resizeStart);
 		expect(resizeSource).toContain("normalizedSize < SIDE_DOCK_CLOSE_THRESHOLD");
-		expect(resizeSource).toContain("updateSideDock({ ...sessionLayout.side, open: false }, false);");
+		expect(resizeSource).toContain("applyVisualSessionLayout({");
+		expect(resizeSource).toContain("side: { ...visualSessionLayoutRef.current.side, open: false }");
 	});
 
 	it("adds a fixed state-aware layout-right top menu button for the side dock", () => {
@@ -166,7 +167,7 @@ describe("HomePage git diff review source", () => {
 		expect(messageListSource).toContain("onInlineDiffReview?: () => void;");
 		expect(messageListSource).toContain("onInlineDiffReview={onInlineDiffReview}");
 		expect(assistantBubbleSource).toContain("onInlineDiffReview?: () => void;");
-		expect(assistantBubbleSource).toContain("<InlineDiffPart key={index} part={part} onReview={onInlineDiffReview} />");
+		expect(assistantBubbleSource).toContain("<InlineDiffPart key={partKey} part={part} onReview={onInlineDiffReview} />");
 		expect(inlineDiffSource).toContain("onReview?: () => void;");
 		expect(inlineDiffSource).toContain("onClick={onReview}");
 		expect(inlineDiffSource).toContain("className={styles.filePathButton}");

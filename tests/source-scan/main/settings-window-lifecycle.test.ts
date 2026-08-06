@@ -35,7 +35,7 @@ describe("settings window lifecycle", () => {
 		expect(mainSource).toContain("isAppQuitting");
 		expect(mainSource).not.toContain("settingsWindow?.hide()");
 		expect(mainSource).not.toContain("allowSettingsWindowClose");
-		expect(mainSource).not.toContain("event.preventDefault()");
+		expect(mainSource).not.toContain('settingsWindow.on("close"');
 	});
 
 	it("shows a lightweight settings shell immediately and swaps in content after critical fonts load", () => {

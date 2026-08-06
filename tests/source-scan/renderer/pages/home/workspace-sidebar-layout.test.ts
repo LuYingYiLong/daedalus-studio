@@ -11,7 +11,8 @@ describe("global workspace sidebar layout", () => {
 		expect(appSource).toContain("updateClientPreferences({ workspaceSidebar })");
 		expect(homeSource).toContain("onResize={handleWorkspaceSidebarResize}");
 		expect(homeSource).toContain("onResizeEnd={handleWorkspaceSidebarResizeEnd}");
-		expect(homeSource).toContain("{ persist: false }");
+		expect(homeSource).toContain("applyVisualWorkspaceSidebar({");
+		expect(homeSource).toContain("commitWorkspaceSidebar({");
 	});
 
 	it("uses text buttons and state-specific layout icons", () => {

@@ -21,7 +21,7 @@ describe("HomePage terminal panel source", () => {
 		expect(agentSource).toContain("cwd={workspaceForActions?.rootPath ?? null}");
 		expect(agentSource).toContain("isOpen={bottomDockOpen}");
 		expect(agentSource).toContain("defaultKind=\"terminal\"");
-		expect(agentSource).toContain("layout={sessionLayout.bottom}");
+		expect(agentSource).toContain("layout={visualSessionLayout.bottom}");
 		expect(agentSource).toContain("onLayoutChange={updateBottomDock}");
 	});
 
@@ -40,7 +40,8 @@ describe("HomePage terminal panel source", () => {
 		expect(resizeStart).toBeGreaterThan(-1);
 		expect(resizeEnd).toBeGreaterThan(resizeStart);
 		expect(resizeSource).toContain("normalizedSize < BOTTOM_DOCK_CLOSE_THRESHOLD");
-		expect(resizeSource).toContain("updateBottomDock({ ...sessionLayout.bottom, open: false }, false);");
+		expect(resizeSource).toContain("applyVisualSessionLayout({");
+		expect(resizeSource).toContain("bottom: { ...visualSessionLayoutRef.current.bottom, open: false }");
 	});
 
 	it("places layout-bottom before layout-right and uses it as the panel switch", () => {

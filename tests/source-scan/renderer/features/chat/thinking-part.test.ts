@@ -5,10 +5,10 @@ describe("ThinkingPart source", () => {
 	const source: string = readRepoFile("src", "renderer", "src", "features", "chat", "ThinkingPart.tsx");
 
 	it("animates the active thinking label without affecting completed thinking parts", () => {
-		expect(source).toContain('t("chat.thinking.labelDotDotDot")');
-		expect(source).toContain("window.setInterval");
-		expect(source).toContain("window.clearInterval");
-		expect(source).toContain('part.done ? t("chat.thinking.label") : activeThinkingLabels[labelIndex]');
+		expect(source).toContain('import ShinyText from "@/components/ShinyText";');
+		expect(source).toContain('t("chat.thinking.activeLabel")');
+		expect(source).toContain('<ShinyText text={t("chat.thinking.activeLabel")} speed={2.4} />');
+		expect(source).toContain('? t("chat.thinking.label")');
 	});
 
 	it("follows the rendered markdown height without treating programmatic scrolling as user intent", () => {

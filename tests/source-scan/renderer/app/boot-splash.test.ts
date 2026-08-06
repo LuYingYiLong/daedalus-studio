@@ -20,7 +20,7 @@ describe("BootSplash", () => {
 		expect(mainWindowRootSource).toContain("bootstrapData === null");
 		const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.tsx");
 		expect(titlebarSource).toContain("{appReady ? (");
-		expect(titlebarSource).toContain("className={styles.workspaceSidebarButton}");
+		expect(titlebarSource).toContain("className={styles.actionButton}");
 		expect(mainWindowRootSource).toContain("<BootSplash loadData={loadData} onReady={handleBootstrapReady} />");
 		expect(mainWindowRootSource).toContain("loadBootstrapData(onProgress, t)");
 		expect(mainWindowRootSource).toContain("bootstrapData.clientPreferences.onboarding.completed");

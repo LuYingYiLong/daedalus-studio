@@ -11,9 +11,9 @@ describe("SettingsItem", () => {
 		expect(componentSource).toContain("title: ReactNode;");
 		expect(componentSource).toContain("description: ReactNode;");
 		expect(componentSource).toContain("children: ReactNode;");
-		expect(componentSource).toContain("<Typography.Text>{title}</Typography.Text>");
-		expect(componentSource).toContain('<Typography.Text type="secondary">{description}</Typography.Text>');
-		expect(cssSource).toContain("grid-template-columns: minmax(0, 1fr) auto;");
+		expect(componentSource).toContain("<Typography.Text strong>{title}</Typography.Text>");
+		expect(componentSource).toContain('<Typography.Text type="secondary" className={styles.description}>{description}</Typography.Text>');
+		expect(cssSource).toContain("grid-template-columns: minmax(0, 1fr) minmax(0, max-content);");
 		expect(cssSource).toContain(".item + .item");
 		expect(generalPageSource).toContain('import SettingsItem from "@/components/SettingsItem";');
 		expect(searchPageSource).toContain('import SettingsItem from "@/components/SettingsItem";');
