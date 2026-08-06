@@ -18,6 +18,10 @@ export type PlanResult = {
 	metadata?: Record<string, unknown>;
 };
 
+export type PlanClarificationSubmission =
+	| { reply: string; skip?: never }
+	| { skip: true; reply?: never };
+
 export type PlanApprovalResult = {
 	planApproved: true;
 	planId: string;
@@ -35,12 +39,12 @@ export async function getPlan(planId: string, sessionId?: string): Promise<PlanR
 	});
 }
 
-export async function submitPlanClarification(planId: string, reply: string): Promise<PlanResult> {
+export async function submitPlanClarification(planId: string, submission: PlanClarificationSubmission): Promise<PlanResult> {
 	const client = await createBackendClient();
 
 	return client.request<PlanResult>("plan.clarify", {
 		planId,
-		reply
+		...submission
 	});
 }
 

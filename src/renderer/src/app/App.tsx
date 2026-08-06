@@ -74,7 +74,7 @@ import {
 	type WorkspaceSidebarPreferences
 } from "@/api/client-preferences-api";
 import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
-import { approvePlan, revisePlan, submitPlanClarification, type PlanResult } from "@/api/plan-api";
+import { approvePlan, revisePlan, submitPlanClarification, type PlanClarificationSubmission, type PlanResult } from "@/api/plan-api";
 import type { BootstrapData } from "./bootstrap";
 import {
 	createDefaultSessionLayout,
@@ -146,7 +146,6 @@ const SUPPORTED_IMAGE_MIME_TYPES: readonly SupportedImageMimeType[] = ["image/pn
 const MAX_IMAGE_ATTACHMENT_BYTES: number = 5 * 1024 * 1024;
 const RECENT_CONTEXT_FILE_WINDOW_MS: number = 2000;
 const CONTEXT_SUBTITLE_MAX_CHARS: number = 400;
-const PLAN_CLARIFICATION_SKIP_REPLY: string = "Continue with the current assumptions.";
 const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
 const DEFAULT_SESSION_LAYOUT: SessionLayoutPreferences = createDefaultSessionLayout();
 
@@ -3495,10 +3494,10 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setIsPlanRevising(false);
 	}, [latestPlanApprovalKey]);
 
-	async function handlePlanClarificationSubmit(reply: string): Promise<void> {
+	async function handlePlanClarificationSubmit(reply: string | undefined, skip: boolean = false): Promise<void> {
 		const clarification: PlanClarificationState | null = pendingPlanClarification;
-		const trimmedReply: string = reply.trim();
-		if (clarification === null || trimmedReply.length === 0 || isPlanClarificationSubmitting) {
+		const trimmedReply: string = reply?.trim() ?? "";
+		if (clarification === null || (!skip && trimmedReply.length === 0) || isPlanClarificationSubmitting) {
 			return;
 		}
 
@@ -3510,7 +3509,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		setSuppressedPlanClarificationKey(currentClarificationKey);
 		activeChatRequestIdRef.current = runRequestId;
 		applyOptimisticActiveRun(runRequestId, false, false);
-		const result: PlanResult = await submitPlanClarification(clarification.planId, trimmedReply);
+		const submission: PlanClarificationSubmission = skip ? { skip: true } : { reply: trimmedReply };
+		const result: PlanResult = await submitPlanClarification(clarification.planId, submission);
 		if ((result as unknown as { cancelled?: unknown }).cancelled === true) {
 			return;
 		}
@@ -3766,9 +3766,9 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 						onPlanClarificationSubmit={(reply: string): void => {
 							void handlePlanClarificationSubmit(reply);
 						}}
-						onPlanClarificationSkip={(): void => {
-							void handlePlanClarificationSubmit(PLAN_CLARIFICATION_SKIP_REPLY);
-						}}
+							onPlanClarificationSkip={(): void => {
+								void handlePlanClarificationSubmit(undefined, true);
+							}}
 						onPlanApprove={(planId: string): void => {
 							void handlePlanApprove(planId);
 						}}

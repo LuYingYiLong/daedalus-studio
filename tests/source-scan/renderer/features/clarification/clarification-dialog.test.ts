@@ -11,6 +11,7 @@ describe("ClarificationDialog source", () => {
 		expect(source).toContain("reply.text");
 		expect(source).toContain("reply.description");
 		expect(source).toContain('placeholder={t("clarification.placeholder")}');
+		expect(source).toContain('t("clarification.skipHint")');
 		expect(source).toContain("onSkip");
 		expect(source).not.toContain("Pagination");
 		expect(source).not.toContain("Suggested Reply (Recommend)");

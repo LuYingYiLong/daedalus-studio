@@ -602,11 +602,12 @@
   },
   "clarification": {
     "aria": "Plan clarification",
-    "title": "Clarification needed",
-    "recommendedSuffix": "(Recommended)",
-    "placeholder": "Tell the assistant how to proceed",
-    "actions": {
-      "skip": "Skip",
+      "title": "Clarification needed",
+      "recommendedSuffix": "(Recommended)",
+      "placeholder": "Tell the assistant how to proceed",
+		"skipHint": "Skip continues planning without cancelling the task. The question is treated as missing information and the assistant will make assumptions from available context. Core requirements, architecture, platform, or data-format choices may make the plan less accurate; you can add details later and revise the plan.",
+      "actions": {
+		"skip": "Skip and continue",
       "submit": "Submit"
     }
   },

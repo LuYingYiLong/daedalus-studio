@@ -36,6 +36,13 @@
 	color: var(--ds-text-primary);
 }
 
+.skipHint {
+	margin: 0 !important;
+	color: var(--ds-text-secondary);
+	font-size: 12px;
+	line-height: 1.5;
+}
+
 .suggestedReplies {
 	display: flex;
 	flex-direction: column;

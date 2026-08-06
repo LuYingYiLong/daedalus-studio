@@ -23,6 +23,12 @@ describe("App plan clarification source", () => {
 		expect(source).toContain("setSessionError(errorMessage)");
 	});
 
+	it("uses a structured skip instead of a synthetic clarification reply", () => {
+		expect(source).toContain("const submission: PlanClarificationSubmission = skip ? { skip: true } : { reply: trimmedReply };");
+		expect(source).toContain("handlePlanClarificationSubmit(undefined, true)");
+		expect(source).not.toContain("Continue with the current assumptions.");
+	});
+
 	it("marks plan clarification and revision operations as cancellable active runs", () => {
 		expect(backendEventStateSource).toContain("requestId: requestId.length > 0 ? requestId : planId");
 		expect(source).toContain("const runRequestId: string = clarification.requestId;");

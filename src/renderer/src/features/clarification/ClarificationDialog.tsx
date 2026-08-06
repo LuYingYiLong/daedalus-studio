@@ -48,6 +48,10 @@ function ClarificationDialog({
 				{question}
 			</Typography.Paragraph>
 
+			<Typography.Paragraph className={styles.skipHint}>
+				{t("clarification.skipHint")}
+			</Typography.Paragraph>
+
 			{recommendedReplies.length > 0 ? (
 				<div className={styles.suggestedReplies}>
 					{recommendedReplies.slice(0, 3).map((reply: PlanRecommendedReply, index: number): React.JSX.Element => (

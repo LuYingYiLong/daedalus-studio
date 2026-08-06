@@ -600,11 +600,12 @@
   },
   "clarification": {
     "aria": "计划澄清",
-    "title": "需要澄清",
-    "recommendedSuffix": "（推荐）",
-    "placeholder": "告诉助手接下来怎么做",
-    "actions": {
-      "skip": "跳过",
+      "title": "需要澄清",
+      "recommendedSuffix": "（推荐）",
+      "placeholder": "告诉助手接下来怎么做",
+		"skipHint": "跳过会继续制定计划，不会取消任务。该问题会视为未提供信息，助手将依据已有上下文做出假设；若涉及核心需求、架构、平台或数据格式，计划可能不够准确。之后仍可补充说明并重新调整计划。",
+      "actions": {
+		"skip": "跳过并继续",
       "submit": "提交"
     }
   },
