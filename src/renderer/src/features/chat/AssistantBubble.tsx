@@ -166,12 +166,13 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 	function renderActivitySegments(parts: TimelineBodyPart[], scope: string, isTerminalSegment: boolean): React.ReactNode[] {
 		return groupTimelineActivity(parts, streaming, isTerminalSegment).map((segment: TimelineActivitySegment): React.ReactNode => {
 			if (segment.type === "activity_group") {
+				const segmentKey: string = `${segment.id}:${segment.startIndex}`;
 				return (
 					<TimelineActivityGroup
-						key={`${disclosurePrefix}:${scope}:${segment.id}`}
+						key={`${disclosurePrefix}:${scope}:${segmentKey}`}
 						group={segment}
-						disclosureKey={`${disclosurePrefix}:${scope}:${segment.id}`}
-						renderPart={(part: TimelineActivityPart, index: number, childKey: string): React.ReactNode => renderBodyPart(part, index, `${scope}:${segment.id}:${childKey}`)}
+						disclosureKey={`${disclosurePrefix}:${scope}:${segmentKey}`}
+						renderPart={(part: TimelineActivityPart, index: number, childKey: string): React.ReactNode => renderBodyPart(part, index, `${scope}:${segmentKey}:${childKey}`)}
 					/>
 				);
 			}

@@ -3,6 +3,7 @@ import type { TimelineBodyPart } from "../../../../../src/renderer/src/api/types
 import {
 	getTimelineActivityLabel,
 	getTimelineActivityStats,
+	getTimelinePartKey,
 	groupTimelineActivity,
 	type TimelineActivityPart
 } from "../../../../../src/renderer/src/features/chat/timeline-activity-groups";
@@ -58,6 +59,15 @@ const translate = (key: string, options?: Record<string, unknown>): string => {
 };
 
 describe("timeline activity grouping", () => {
+	it("creates unique render keys for repeated thinking part ids", () => {
+		const first = thinking("first", true, "activity:request:1", "thinking:1");
+		const second = thinking("second", true, "activity:request:2", "thinking:1");
+
+		expect(getTimelinePartKey(first, 0)).not.toBe(getTimelinePartKey(second, 1));
+		expect(getTimelinePartKey(first, 0)).toContain("activity:request:1");
+		expect(getTimelinePartKey(second, 1)).toContain("activity:request:2");
+	});
+
 	it("groups contiguous thinking, tools, and terminal commands while keeping the order", () => {
 		const parts: TimelineBodyPart[] = [
 			thinking("inspect the workspace", true, "activity:request:1", "thinking:1", { editedFiles: 0, commands: 1, thoughts: 1 }),

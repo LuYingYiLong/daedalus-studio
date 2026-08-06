@@ -61,11 +61,14 @@ function getBackendStats(parts: TimelineActivityPart[]): TimelineActivityStats {
 }
 
 export function getTimelinePartKey(part: TimelineBodyPart, index: number): string {
+	const groupKey: string = part.type === "thinking" || part.type === "tool"
+		? part.activityGroupId?.trim() || "legacy"
+		: "legacy";
 	if (part.type === "tool" && part.tool_call_id.trim().length > 0) {
-		return `tool:${part.tool_call_id}`;
+		return `tool:${groupKey}:${part.tool_call_id}:${index}`;
 	}
 	if (part.type === "thinking") {
-		return `thinking:${part.activityPartId ?? index}`;
+		return `thinking:${groupKey}:${part.activityPartId ?? "part"}:${index}`;
 	}
 	if (part.type === "provider_reconnect") {
 		return `provider-reconnect:${part.reconnectId}`;
