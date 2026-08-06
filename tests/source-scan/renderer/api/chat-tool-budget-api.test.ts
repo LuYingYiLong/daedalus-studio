@@ -10,4 +10,9 @@ describe("chat tool budget API source", () => {
 		expect(source).toContain("stopToolBudget");
 		expect(source).toContain("\"ai.toolBudget.stop\"");
 	});
+
+	it("sends explicit execution policy and output target defaults", () => {
+		expect(source).toContain('executionPolicy: params.executionPolicy ?? "auto"');
+		expect(source).toContain('outputTarget: params.outputTarget ?? "chat"');
+	});
 });

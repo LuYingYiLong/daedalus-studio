@@ -19,7 +19,7 @@ import type { RetryUserMessagePayload } from "@/features/chat/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/api/provider-api";
 import type { ProviderModelInfo, ProviderModelSelectionProvider, ProviderReasoningEffortOption } from "@/api/provider-api";
 import { getPlanApprovalFromResult, normalizePlanClarification } from "./backend-event-state";
-import { cancelChatMessage, continueToolBudget, retryAgentRun, sendChatMessage, stopToolBudget, type ChatMode } from "@/api/chat-api";
+import { cancelChatMessage, continueToolBudget, retryAgentRun, sendChatMessage, stopToolBudget, type ChatMode, type ChatOutputTarget } from "@/api/chat-api";
 import { fetchSlashCommands, type SlashCommandDefinition } from "@/api/command-api";
 import { fetchSkills, type SkillSummary } from "@/api/skill-api";
 import {
@@ -314,6 +314,32 @@ function readImageDimensions(dataUrl: string): Promise<{ width?: number; height?
 
 function getChatMode(workbench: WorkbenchSnapshot | null): ChatMode {
 	return workbench?.composer.chatMode ?? "ask";
+}
+
+/** The execution target is an explicit UI policy, never inferred from prompt text. */
+function getChatOutputTarget(mode: ChatMode, workspaceId: string | null | undefined): ChatOutputTarget {
+	return workspaceId !== undefined && workspaceId !== null && (mode === "agent" || mode === "goal")
+		? "workspace"
+		: "chat";
+}
+
+/**
+ * A session can retain its workspace selection while the rendered workspace
+ * snapshot is being refreshed. Keep the execution contract tied to that
+ * persisted selection so an Agent retry cannot silently fall back to chat.
+ */
+function getCurrentWorkspaceId(
+	activeWorkspace: WorkspaceConfig | null,
+	workbench: WorkbenchSnapshot | null
+): string | null {
+	if (activeWorkspace !== null) {
+		return activeWorkspace.id;
+	}
+
+	const workspaceId: unknown = workbench?.activeSelection.workspaceId;
+	return typeof workspaceId === "string" && workspaceId.length > 0
+		? workspaceId
+		: null;
 }
 
 function getPendingApprovalCount(workbench: WorkbenchSnapshot | null): number {
@@ -2424,6 +2450,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				provider: providerId ?? undefined,
 				model: modelId ?? undefined,
 				reasoningEffort: created.workbench.composer.reasoningEffort ?? undefined,
+				executionPolicy: "auto",
+				outputTarget: getChatOutputTarget(createdChatMode, created.workspaceId ?? homeDraft.workspaceId),
 				additionalContext: created.workbench.composer.additionalContext,
 				skillRefs
 			});
@@ -2545,6 +2573,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				provider: workbench.composer.provider ?? undefined,
 				model: workbench.composer.model ?? undefined,
 				reasoningEffort: workbench.composer.reasoningEffort ?? undefined,
+				executionPolicy: "auto",
+				outputTarget: getChatOutputTarget(chatMode, getCurrentWorkspaceId(activeWorkspace, workbench)),
 				additionalContext,
 				skillRefs
 			});
@@ -2634,6 +2664,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				provider: workbench.composer.provider,
 				model: workbench.composer.model,
 				reasoningEffort: workbench.composer.reasoningEffort ?? undefined,
+				executionPolicy: "auto",
+				outputTarget: getChatOutputTarget(chatMode, getCurrentWorkspaceId(activeWorkspace, workbench)),
 				skillRefs
 			});
 			applyWorkbench(result.workbench);
@@ -2852,6 +2884,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 				provider: workbench.composer.provider ?? undefined,
 				model: workbench.composer.model ?? undefined,
 				reasoningEffort: workbench.composer.reasoningEffort ?? undefined,
+				executionPolicy: "auto",
+				outputTarget: getChatOutputTarget(chatMode, getCurrentWorkspaceId(activeWorkspace, workbench)),
 				retryFromRequestId: payload.requestId,
 				additionalContext: payload.additionalContext,
 				skillRefs

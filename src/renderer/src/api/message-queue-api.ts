@@ -1,6 +1,6 @@
 import { createBackendClient } from "@/shared/api/transport/backend-client";
 import type { AdditionalContextItem, MessageQueueItem, WorkbenchSnapshot } from "./types";
-import type { ChatMode } from "./chat-api";
+import type { ChatMode, ChatOutputTarget, ExecutionPolicy } from "./chat-api";
 
 export type QueueMessageInput = {
 	text: string;
@@ -8,6 +8,8 @@ export type QueueMessageInput = {
 	provider?: string;
 	model?: string;
 	reasoningEffort?: string;
+	executionPolicy?: ExecutionPolicy;
+	outputTarget?: ChatOutputTarget;
 	skillRefs?: string[];
 	additionalContext?: AdditionalContextItem[];
 };

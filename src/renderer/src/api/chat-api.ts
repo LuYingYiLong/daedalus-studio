@@ -2,6 +2,8 @@ import { createBackendClient } from "@/shared/api/transport/backend-client";
 import type { AdditionalContextItem } from "./types";
 
 export type ChatMode = "ask" | "agent" | "plan" | "goal";
+export type ExecutionPolicy = "auto" | "read_only";
+export type ChatOutputTarget = "chat" | "workspace";
 
 export type SendChatMessageParams = {
 	requestId: string;
@@ -10,6 +12,8 @@ export type SendChatMessageParams = {
 	provider?: string | undefined;
 	model?: string | undefined;
 	reasoningEffort?: string | undefined;
+	executionPolicy?: ExecutionPolicy | undefined;
+	outputTarget?: ChatOutputTarget | undefined;
 	retryFromRequestId?: string;
 	additionalContext?: AdditionalContextItem[];
 	skillRefs?: string[];
@@ -48,7 +52,9 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<un
 		skillRefs: params.skillRefs,
 		options: {
 			stream: true,
-			reasoningEffort: params.reasoningEffort
+			reasoningEffort: params.reasoningEffort,
+			executionPolicy: params.executionPolicy ?? "auto",
+			outputTarget: params.outputTarget ?? "chat"
 		},
 		additionalContext: params.additionalContext
 	});
