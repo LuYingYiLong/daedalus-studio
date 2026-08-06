@@ -1,0 +1,41 @@
+.collapse {
+	width: 100%;
+	margin: 0;
+	overflow: hidden;
+	background: var(--ds-bg-sunken);
+}
+
+.label {
+	display: flex;
+	align-items: center;
+	gap: var(--ds-space-1);
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.label > svg {
+	flex: 0 0 auto;
+}
+
+.label > :last-child {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.content {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ds-space-1);
+}
+
+.content > :global(.ant-collapse) {
+	margin: 0;
+	background: var(--ds-bg-sunken);
+}
+
+.content > :global(.ant-collapse) > :global(.ant-collapse-item) {
+	border-bottom: 0;
+}

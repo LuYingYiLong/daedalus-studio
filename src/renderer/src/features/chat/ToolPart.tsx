@@ -8,27 +8,11 @@ import { useTranslation } from "react-i18next";
 import { getToolDisplayInfo } from "./tool-display";
 import { useTimelineDisclosure } from "./timeline-disclosure-state";
 import ToolFileDiff from "./ToolFileDiff";
+import { getFileEditBatch, getSourceFolderId, type FileEditBatchSummary, type FileEditSummaryItem } from "./tool-part-data";
 
 export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
 
 type ToolStatus = "running" | "success" | "error" | "approval";
-
-type FileEditBatchSummary = {
-	batchId: string;
-	sessionId?: string;
-	editedFileCount: number;
-	sourceFolderId?: string;
-	additions: number;
-	deletions: number;
-	editedFiles: FileEditSummaryItem[];
-};
-
-type FileEditSummaryItem = {
-	path: string;
-	sourceFolderId?: string;
-	additions: number;
-	deletions: number;
-};
 
 const FILE_WRITE_TOOL_NAMES: ReadonlySet<string> = new Set<string>([
 	"mcp_workspace_create_text_file",
@@ -50,14 +34,6 @@ const FILE_WRITE_TOOL_NAMES: ReadonlySet<string> = new Set<string>([
 	"mcp_godot_unset_project_setting"
 ]);
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function getFiniteNumber(value: unknown): number | undefined {
-	return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
 function hasEventType(events: Record<string, unknown>[], eventTypes: string[]): boolean {
 	return events.some((event: Record<string, unknown>): boolean => typeof event.type === "string" && eventTypes.includes(event.type));
 }
@@ -69,18 +45,6 @@ function getStringValue(event: Record<string, unknown> | undefined, key: string)
 
 function getLatestEvent(events: Record<string, unknown>[], type: string): Record<string, unknown> | undefined {
 	return [...events].reverse().find((event: Record<string, unknown>): boolean => event.type === type);
-}
-
-function getSourceFolderId(events: Record<string, unknown>[]): string | undefined {
-	for (const event of [...events].reverse()) {
-		const direct: string | undefined = getStringValue(event, "sourceFolderId");
-		if (direct !== undefined) return direct;
-		if (isRecord(event.args)) {
-			const fromArgs: string | undefined = getStringValue(event.args, "sourceFolderId");
-			if (fromArgs !== undefined) return fromArgs;
-		}
-	}
-	return undefined;
 }
 
 function getToolResultText(events: Record<string, unknown>[]): string {
@@ -95,48 +59,6 @@ function getToolResultText(events: Record<string, unknown>[]): string {
 
 	const error: Record<string, unknown> | undefined = getLatestEvent(events, "tool.error");
 	return getStringValue(error, "message") ?? "";
-}
-
-function getFileEditBatch(events: Record<string, unknown>[]): FileEditBatchSummary | undefined {
-	const result: Record<string, unknown> | undefined = getLatestEvent(events, "tool.result");
-	if (result === undefined || !isRecord(result.fileEditBatch)) {
-		return undefined;
-	}
-
-	const batch: Record<string, unknown> = result.fileEditBatch;
-	const batchId: string | undefined = getStringValue(batch, "batchId");
-	const sessionId: string | undefined = getStringValue(batch, "sessionId");
-	const sourceFolderId: string | undefined = getStringValue(batch, "sourceFolderId");
-	if (batchId === undefined) {
-		return undefined;
-	}
-	const editedFiles: FileEditSummaryItem[] = Array.isArray(batch.editedFiles)
-		? batch.editedFiles.flatMap((value: unknown): FileEditSummaryItem[] => {
-			if (!isRecord(value) || typeof value.path !== "string") {
-				return [];
-			}
-			return [{
-				path: value.path,
-				sourceFolderId: getStringValue(value, "sourceFolderId") ?? sourceFolderId,
-				additions: getFiniteNumber(value.additions) ?? 0,
-				deletions: getFiniteNumber(value.deletions) ?? 0
-			}];
-		})
-		: [];
-	const editedFileCount: number = getFiniteNumber(batch.editedFileCount) ?? editedFiles.length;
-	if (editedFileCount <= 0) {
-		return undefined;
-	}
-
-	return {
-		batchId,
-		sessionId,
-		editedFileCount,
-		sourceFolderId,
-		additions: getFiniteNumber(batch.additions) ?? editedFiles.reduce((total: number, file: FileEditSummaryItem): number => total + file.additions, 0),
-		deletions: getFiniteNumber(batch.deletions) ?? editedFiles.reduce((total: number, file: FileEditSummaryItem): number => total + file.deletions, 0),
-		editedFiles
-	};
 }
 
 function getToolStatus(events: Record<string, unknown>[]): ToolStatus {

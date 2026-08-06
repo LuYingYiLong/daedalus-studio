@@ -268,6 +268,7 @@ function ProviderOnboardingStep({ selection, onSelectionChange }: ProviderStepPr
 							label: item.displayName
 						}))}
 						onChange={setProviderId}
+						suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 					/>
 				</Form.Item>
 				<Form.Item label={t("onboarding.provider.fields.apiKey")}>
@@ -297,6 +298,7 @@ function ProviderOnboardingStep({ selection, onSelectionChange }: ProviderStepPr
 							placeholder={t("onboarding.provider.fields.modelPlaceholder")}
 							options={availableModels.map((model) => ({ value: model.id, label: model.displayName }))}
 							onChange={setModelId}
+							suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 						/>
 					</Form.Item>
 					<Form.Item>
@@ -513,6 +515,7 @@ function DocumentationOnboardingStep({ godotVersion, onConfiguredChange, onBusyC
 								disabled: item.installed
 							}))}
 							onChange={setBranch}
+							suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 						/>
 					</Form.Item>
 					<Form.Item>

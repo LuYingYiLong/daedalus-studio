@@ -239,6 +239,61 @@ describe("workbench-state", () => {
 		]);
 	});
 
+	it("keeps a prelude-adjacent thinking part out of the following backend tool group", () => {
+		const blocks = applyBackendEventsToTimeline([], [
+			{
+				type: "event",
+				id: "request-activity",
+				event: "agent.thinking.delta",
+				data: {
+					text: "inspect",
+					activityGroupId: "activity:request:1",
+					activityPartId: "thinking:1",
+					activityPartKind: "thinking",
+					activityGroupStats: { editedFiles: 0, commands: 0, thoughts: 1 }
+				}
+			},
+			{ type: "event", id: "request-activity", event: "agent.message.delta", data: { text: "I will read the files." } },
+			{
+				type: "event",
+				id: "request-activity",
+				event: "agent.thinking.done",
+				data: {
+					activityGroupId: "activity:request:2",
+					activityPartId: "thinking:2",
+					activityPartKind: "thinking",
+					activityGroupStats: { editedFiles: 0, commands: 0, thoughts: 0 }
+				}
+			},
+			...[
+				["read-1", "tool:read-1"],
+				["read-2", "tool:read-2"]
+			].map(([toolCallId, activityPartId]) => ({
+				type: "event" as const,
+				id: "request-activity",
+				event: "agent.tool.call",
+				data: {
+					toolCallId,
+					toolName: "mcp_workspace_read_text_file",
+					activityGroupId: "activity:request:2",
+					activityPartId,
+					activityPartKind: "tool" as const,
+					activityGroupStats: { editedFiles: 0, commands: 0, thoughts: 0 }
+				}
+			}))
+		]);
+
+		const assistant = blocks[0];
+		expect(assistant?.type).toBe("assistant");
+		if (assistant?.type === "assistant") {
+			const thinking = assistant.bodyParts.find((part) => part.type === "thinking");
+			const tools = assistant.bodyParts.filter((part) => part.type === "tool");
+			expect(thinking?.type === "thinking" ? thinking.activityGroupId : "").toBe("activity:request:1");
+			expect(thinking?.type === "thinking" ? thinking.done : false).toBe(true);
+			expect(tools.map((part) => part.type === "tool" ? part.activityGroupId : "")).toEqual(["activity:request:2", "activity:request:2"]);
+		}
+	});
+
 	it("rolls back a failed provider attempt once and updates its reconnect part in place", () => {
 		let blocks: TimelineBlock[] = applyBackendEventsToTimeline([], [
 			{ type: "event", id: "request-reconnect", event: "agent.message.delta", data: { text: "stable partial🙂" } },

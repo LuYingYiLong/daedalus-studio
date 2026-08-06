@@ -988,6 +988,17 @@
 	  "label": "思考过程",
 	  "activeLabel": "正在思考"
     },
+    "activityGroup": {
+      "activeThinking": "正在思考",
+      "lastThinking": "思考过程",
+      "summary": {
+        "files": "编辑了 {{count}} 个文件",
+        "commands": "运行了 {{count}} 次命令",
+        "thoughts": "思考了 {{count}} 次",
+        "separator": "，",
+        "empty": "活动过程"
+      }
+    },
     "compression": {
       "running": "正在压缩上下文",
       "completed": "上下文已自动压缩",

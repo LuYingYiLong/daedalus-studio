@@ -991,6 +991,20 @@
 	  "label": "Thought process",
 	  "activeLabel": "Thinking"
     },
+    "activityGroup": {
+      "activeThinking": "Thinking",
+      "lastThinking": "Thought process",
+      "summary": {
+        "files": "Edited {{count}} file",
+        "files_other": "Edited {{count}} files",
+        "commands": "Ran {{count}} command",
+        "commands_other": "Ran {{count}} commands",
+        "thoughts": "Thought {{count}} time",
+        "thoughts_other": "Thought {{count}} times",
+        "separator": ", ",
+        "empty": "Activity"
+      }
+    },
     "compression": {
       "running": "Compressing context",
       "completed": "Context automatically compressed",

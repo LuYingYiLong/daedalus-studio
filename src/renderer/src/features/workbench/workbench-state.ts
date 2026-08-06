@@ -164,25 +164,62 @@ function appendFinalMarkdownPart(parts: TimelineBodyPart[], text: string): Timel
 	return appendMarkdownPart(parts, text);
 }
 
-function appendThinkingPart(parts: TimelineBodyPart[], text: string, done: boolean): TimelineBodyPart[] {
+type TimelineActivityMetadata = {
+	activityGroupId?: string;
+	activityPartId?: string;
+	activityPartKind?: "thinking" | "tool";
+	activityGroupStats?: { editedFiles: number; commands: number; thoughts: number };
+};
+
+function getActivityMetadata(data: Record<string, unknown>): TimelineActivityMetadata {
+	const activityGroupId: string = getStringValue(data, "activityGroupId");
+	const activityPartId: string = getStringValue(data, "activityPartId");
+	const activityPartKind: string = getStringValue(data, "activityPartKind");
+	const stats: Record<string, unknown> = isRecord(data.activityGroupStats) ? data.activityGroupStats : {};
+	return {
+		...(activityGroupId.length === 0 ? {} : { activityGroupId }),
+		...(activityPartId.length === 0 ? {} : { activityPartId }),
+		...(activityPartKind === "thinking" || activityPartKind === "tool" ? { activityPartKind } : {}),
+		...(activityGroupId.length === 0 || activityPartId.length === 0 ? {} : {
+			activityGroupStats: {
+				editedFiles: typeof stats.editedFiles === "number" ? stats.editedFiles : 0,
+				commands: typeof stats.commands === "number" ? stats.commands : 0,
+				thoughts: typeof stats.thoughts === "number" ? stats.thoughts : 0
+			}
+		})
+	};
+}
+
+function appendThinkingPart(parts: TimelineBodyPart[], text: string, done: boolean, metadata: TimelineActivityMetadata = {}): TimelineBodyPart[] {
 	const nextParts: TimelineBodyPart[] = [...parts];
 
-	for (let index: number = nextParts.length - 1; index >= 0; index -= 1) {
-		const part: TimelineBodyPart = nextParts[index]!;
-
-		if (part.type !== "thinking" || part.done) {
-			continue;
-		}
-
-		nextParts[index] = {
-			...part,
-			text: text.length > 0 ? part.text + text : part.text,
-			done: done ? true : part.done
+	const lastPart: TimelineBodyPart | undefined = nextParts.at(-1);
+	if (text.length > 0 && lastPart?.type === "thinking" && !lastPart.done) {
+		nextParts[nextParts.length - 1] = {
+			...lastPart,
+			text: lastPart.text + text,
+			...metadata
 		};
 		return nextParts;
 	}
 
-	return [...nextParts, { type: "thinking", text, done }];
+	if (done) {
+		for (let index: number = nextParts.length - 1; index >= 0; index -= 1) {
+			const part: TimelineBodyPart = nextParts[index]!;
+			if (part.type !== "thinking" || part.done) {
+				continue;
+			}
+
+			nextParts[index] = {
+				...part,
+				done: true,
+				...(part.activityGroupId === metadata.activityGroupId || metadata.activityGroupId === undefined ? metadata : {})
+			};
+			return nextParts;
+		}
+	}
+
+	return [...nextParts, { type: "thinking", text, done, ...metadata }];
 }
 
 function finishRunningThinkingParts(parts: TimelineBodyPart[]): TimelineBodyPart[] {
@@ -349,6 +386,7 @@ function appendToolPart(parts: TimelineBodyPart[], event: BackendEvent): Timelin
 						: [...item.events, normalizedEvent];
 				return {
 					...item,
+					...getActivityMetadata(data),
 					events: nextEvents
 				};
 			});
@@ -358,6 +396,7 @@ function appendToolPart(parts: TimelineBodyPart[], event: BackendEvent): Timelin
 	return [...parts, {
 		type: "tool",
 		tool_call_id: toolCallId,
+		...getActivityMetadata(data),
 		events: normalizedEvent.code === "terminal_output"
 			? mergeTerminalOutputProgress([], normalizedEvent)
 			: [normalizedEvent]
@@ -742,9 +781,9 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 	} else if (event.event === "agent.message.delta") {
 		nextParts = appendMarkdownPart(nextParts, getStringValue(data, "text"));
 	} else if (event.event === "agent.thinking.delta") {
-		nextParts = appendThinkingPart(nextParts, getStringValue(data, "text"), false);
+		nextParts = appendThinkingPart(nextParts, getStringValue(data, "text"), false, getActivityMetadata(data));
 	} else if (event.event === "agent.thinking.done") {
-		nextParts = appendThinkingPart(nextParts, "", true);
+		nextParts = appendThinkingPart(nextParts, "", true, getActivityMetadata(data));
 	} else if (event.event === "agent.provider.reconnect") {
 		nextParts = appendProviderReconnectPart(nextParts, data);
 	} else if (event.event === "agent.summary.started") {

@@ -444,7 +444,15 @@ export type PlanApprovalState = {
 
 export type TimelineBodyPart =
 	| { type: "markdown"; text: string }
-	| { type: "thinking"; text: string; done: boolean }
+	| {
+		type: "thinking";
+		text: string;
+		done: boolean;
+		activityGroupId?: string;
+		activityPartId?: string;
+		activityPartKind?: "thinking" | "tool";
+		activityGroupStats?: { editedFiles: number; commands: number; thoughts: number };
+	}
 	| {
 		type: "provider_reconnect";
 		reconnectId: string;
@@ -459,7 +467,15 @@ export type TimelineBodyPart =
 		retryAt?: string;
 		autoExtended: boolean;
 	}
-	| { type: "tool"; tool_call_id: string; events: Record<string, unknown>[] }
+	| {
+		type: "tool";
+		tool_call_id: string;
+		events: Record<string, unknown>[];
+		activityGroupId?: string;
+		activityPartId?: string;
+		activityPartKind?: "thinking" | "tool";
+		activityGroupStats?: { editedFiles: number; commands: number; thoughts: number };
+	}
 	| { type: "summary_start"; runId: string; stepId: string; stepRunId: string; title: string; foldTitle: string }
 	| {
 		type: "compression";

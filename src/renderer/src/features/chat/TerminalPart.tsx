@@ -3,30 +3,13 @@ import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import { Button, Collapse, Spin, Tag, Tooltip } from "antd";
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { TimelineToolPart } from "./ToolPart";
+import { readTerminalDisplay as readSharedTerminalDisplay, isTerminalCommandPart, type TerminalDisplay as SharedTerminalDisplay, type TimelineToolPart } from "./tool-part-data";
 import { useTimelineDisclosure } from "./timeline-disclosure-state";
 import styles from "./TerminalPart.module.css";
 
 type TerminalStatus = "approval" | "running" | "success" | "failed" | "timed_out" | "cancelled" | "background";
 
-type TerminalOutput = {
-	stdout: string;
-	stderr: string;
-	stdoutOmittedChars: number;
-	stderrOmittedChars: number;
-};
-
-type TerminalDisplay = TerminalOutput & {
-	commandLine: string;
-	cwd: string;
-	executionMode: "wait" | "job";
-	sandboxMode?: string | undefined;
-	status: string;
-	exitCode: number | null;
-	durationMs?: number | undefined;
-	jobId?: string | undefined;
-	truncated: boolean;
-};
+type TerminalDisplay = SharedTerminalDisplay;
 
 export type TerminalPartProps = {
 	part: TimelineToolPart;
@@ -34,18 +17,9 @@ export type TerminalPartProps = {
 	onScrollWheelPassThrough?: (deltaY: number) => void;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
 function getString(record: Record<string, unknown> | undefined, key: string): string {
 	const value: unknown = record?.[key];
 	return typeof value === "string" ? value : "";
-}
-
-function getNumber(record: Record<string, unknown> | undefined, key: string): number | undefined {
-	const value: unknown = record?.[key];
-	return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function getLatestEvent(events: Record<string, unknown>[], type: string): Record<string, unknown> | undefined {
@@ -59,49 +33,10 @@ function getLatestEventIndex(events: Record<string, unknown>[], eventTypes: read
 	return -1;
 }
 
-function getToolName(part: TimelineToolPart): string {
-	return part.events.map((event: Record<string, unknown>): string => getString(event, "toolName"))
-		.find((toolName: string): boolean => toolName.length > 0) ?? "";
-}
-
-export function isTerminalCommandPart(part: TimelineToolPart): boolean {
-	return getToolName(part) === "mcp_terminal_run_command";
-}
-
-function redactCommandLine(value: string): string {
-	return value
-		.replace(/(Authorization\s*:\s*Bearer\s+)[^\s,;]+/giu, "$1[REDACTED]")
-		.replace(/(\bBearer\s+)[A-Za-z0-9._~+/=-]+/giu, "$1[REDACTED]")
-		.replace(/\b([A-Z0-9_]*(?:API[_-]?KEY|TOKEN|SECRET|PASSWORD|PASSWD))\s*([=:])\s*(?:"[^"]*"|'[^']*'|[^\s,;]+)/giu, "$1$2[REDACTED]");
-}
+export { isTerminalCommandPart } from "./tool-part-data";
 
 function readTerminalDisplay(part: TimelineToolPart): TerminalDisplay {
-	const callEvent: Record<string, unknown> | undefined = getLatestEvent(part.events, "tool.call")
-		?? getLatestEvent(part.events, "tool.approval_required");
-	const args: Record<string, unknown> = isRecord(callEvent?.args) ? callEvent.args : {};
-	const resultEvent: Record<string, unknown> | undefined = getLatestEvent(part.events, "tool.result");
-	const persisted: Record<string, unknown> = isRecord(resultEvent?.terminalDisplay) ? resultEvent.terminalDisplay : {};
-	const progressEvent: Record<string, unknown> | undefined = [...part.events].reverse()
-		.find((event: Record<string, unknown>): boolean => event.code === "terminal_output");
-	const runtime: Record<string, unknown> = isRecord(progressEvent?.terminalRuntimeOutput) ? progressEvent.terminalRuntimeOutput : {};
-	const exitCode: number | undefined = getNumber(persisted, "exitCode") ?? getNumber(resultEvent, "exitCode");
-	const executionMode: "wait" | "job" = getString(persisted, "executionMode") === "job" || args.executionMode === "job" ? "job" : "wait";
-
-	return {
-		commandLine: redactCommandLine(getString(persisted, "commandLine") || getString(args, "commandLine")),
-		cwd: getString(persisted, "cwd") || getString(args, "cwd") || ".",
-		executionMode,
-		sandboxMode: getString(persisted, "sandboxMode") || undefined,
-		status: getString(persisted, "status") || getString(resultEvent, "terminalJobStatus"),
-		exitCode: exitCode ?? null,
-		durationMs: getNumber(persisted, "durationMs"),
-		jobId: getString(persisted, "jobId") || getString(resultEvent, "terminalJobId") || undefined,
-		stdout: getString(persisted, "stdout") || getString(runtime, "stdout"),
-		stderr: getString(persisted, "stderr") || getString(runtime, "stderr"),
-		stdoutOmittedChars: getNumber(persisted, "stdoutOmittedChars") ?? getNumber(runtime, "stdoutOmittedChars") ?? 0,
-		stderrOmittedChars: getNumber(persisted, "stderrOmittedChars") ?? getNumber(runtime, "stderrOmittedChars") ?? 0,
-		truncated: persisted.truncated === true
-	};
+	return readSharedTerminalDisplay(part);
 }
 
 function getTerminalStatus(part: TimelineToolPart, display: TerminalDisplay): TerminalStatus {

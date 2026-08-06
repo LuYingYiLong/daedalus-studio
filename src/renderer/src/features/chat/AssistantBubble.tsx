@@ -16,6 +16,8 @@ import CompressionPart from "./CompressionPart";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import MarkdownContent from "../markdown/MarkdownContent";
 import { useTimelineDisclosure } from "./timeline-disclosure-state";
+import TimelineActivityGroup from "./TimelineActivityGroup";
+import { getTimelinePartKey, groupTimelineActivity, type TimelineActivityPart, type TimelineActivitySegment } from "./timeline-activity-groups";
 
 export type AssistantBubbleProps = {
 	entryId?: string;
@@ -87,11 +89,12 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 		}
 	}
 
-	function renderBodyPart(part: TimelineBodyPart, index: number): React.ReactNode {
+	function renderBodyPart(part: TimelineBodyPart, index: number, keySuffix: string = getTimelinePartKey(part, index)): React.ReactNode {
+		const partKey: string = `${disclosurePrefix}:${keySuffix}`;
 		if (part.type === "markdown") {
 			return (
 				<div
-					key={index}
+					key={partKey}
 					className={`${styles.markdownPart} markdown-body`}
 					data-chat-search-text="true"
 					data-chat-search-block-offset={searchBlockOffset}
@@ -108,14 +111,14 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 
 		if (part.type === "thinking") {
 			return part.text.trim().length > 0
-				? <ThinkingPart key={index} part={part} disclosureKey={`${disclosurePrefix}:thinking:${index}`} />
+				? <ThinkingPart key={partKey} part={part} disclosureKey={`${partKey}:thinking`} />
 				: null;
 		}
 
 		if (part.type === "tool") {
 			return isTerminalCommandPart(part)
-				? <TerminalPart key={index} part={part} disclosureKey={`${disclosurePrefix}:tool:${index}`} onScrollWheelPassThrough={onTerminalWheelPassThrough} />
-				: <ToolPart key={index} part={part} disclosureKey={`${disclosurePrefix}:tool:${index}`} />
+				? <TerminalPart key={partKey} part={part} disclosureKey={`${partKey}:terminal`} onScrollWheelPassThrough={onTerminalWheelPassThrough} />
+				: <ToolPart key={partKey} part={part} disclosureKey={`${partKey}:tool`} />
 		}
 
 		if (part.type === "provider_reconnect") {
@@ -130,23 +133,23 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 		}
 
 		if (part.type === "compression") {
-			return <CompressionPart key={part.compressionId} part={part} disclosureKey={`${disclosurePrefix}:compression:${part.compressionId}`} />;
+			return <CompressionPart key={partKey} part={part} disclosureKey={`${partKey}:compression`} />;
 		}
 
 		if (part.type === "status") {
-			return <StatusPart key={index} part={part} />
+			return <StatusPart key={partKey} part={part} />
 		}
 
 		if (part.type === "plan") {
-			return <PlanPart key={index} part={part} />
+			return <PlanPart key={partKey} part={part} />
 		}
 
 		if (part.type === "inline_diff") {
-			return hideInlineDiff ? null : <InlineDiffPart key={index} part={part} onReview={onInlineDiffReview} />
+			return hideInlineDiff ? null : <InlineDiffPart key={partKey} part={part} onReview={onInlineDiffReview} />
 		}
 
 		if (part.type === "image_generation") {
-			return <ImageGenerationPart key={index} part={part} />
+			return <ImageGenerationPart key={partKey} part={part} />
 		}
 
 		if (part.type === "summary_start") {
@@ -154,23 +157,40 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 		}
 
 		return (
-			<pre key={index} className={styles.unknownPart}>
+			<pre key={partKey} className={styles.unknownPart}>
 				{JSON.stringify(part, null, 2)}
 			</pre>
 		);
+	}
+
+	function renderActivitySegments(parts: TimelineBodyPart[], scope: string, isTerminalSegment: boolean): React.ReactNode[] {
+		return groupTimelineActivity(parts, streaming, isTerminalSegment).map((segment: TimelineActivitySegment): React.ReactNode => {
+			if (segment.type === "activity_group") {
+				return (
+					<TimelineActivityGroup
+						key={`${disclosurePrefix}:${scope}:${segment.id}`}
+						group={segment}
+						disclosureKey={`${disclosurePrefix}:${scope}:${segment.id}`}
+						renderPart={(part: TimelineActivityPart, index: number, childKey: string): React.ReactNode => renderBodyPart(part, index, `${scope}:${segment.id}:${childKey}`)}
+					/>
+				);
+			}
+			return renderBodyPart(segment.part, segment.index, `${scope}:${getTimelinePartKey(segment.part, segment.index)}`);
+		});
 	}
 
 	function renderBodyParts(parts: TimelineBodyPart[]): React.ReactNode {
 		const summaryStartIndex: number = parts.findIndex((part: TimelineBodyPart): boolean => part.type === "summary_start");
 
 		if (summaryStartIndex < 0) {
-			return parts.map(renderBodyPart);
+			return renderActivitySegments(parts, "main", true);
 		}
 
 		const summaryStartPart: Extract<TimelineBodyPart, { type: "summary_start" }> = parts[summaryStartIndex] as Extract<TimelineBodyPart, { type: "summary_start" }>;
 		const foldedParts: TimelineBodyPart[] = parts.slice(0, summaryStartIndex);
 		const visibleParts: TimelineBodyPart[] = parts.slice(summaryStartIndex + 1);
-		const foldedChildren: React.ReactNode[] = foldedParts.map(renderBodyPart).filter((child: React.ReactNode): boolean => child !== null && child !== undefined);
+		const foldedChildren: React.ReactNode[] = renderActivitySegments(foldedParts, "summary-before", false).filter((child: React.ReactNode): boolean => child !== null && child !== undefined);
+		const visibleChildren: React.ReactNode[] = renderActivitySegments(visibleParts, "summary-after", true).filter((child: React.ReactNode): boolean => child !== null && child !== undefined);
 
 		return (
 			<>
@@ -198,7 +218,7 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 						]}
 					/>
 				) : null}
-				{visibleParts.map(renderBodyPart)}
+				{visibleChildren}
 			</>
 		);
 	}
