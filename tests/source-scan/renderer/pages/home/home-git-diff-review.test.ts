@@ -188,6 +188,9 @@ describe("HomePage git diff review source", () => {
 		expect(inlineDiffSource).not.toContain("List.Item");
 		expect(inlineDiffSource).not.toContain(", List,");
 		expect(inlineDiffSource).toContain("<ul className={styles.fileList}>");
+		expect(inlineDiffSource).toContain("part.editedFiles.slice(0, visibleFileLimit)");
+		expect(inlineDiffSource).toContain('chat.inlineDiff.showMoreFiles');
+		expect(inlineDiffSource).toContain('chat.inlineDiff.collapseFiles');
 		expect(inlineDiffSource).toContain("<li key={`${filePath}:${index}`} className={styles.fileItem}>");
 	});
 });

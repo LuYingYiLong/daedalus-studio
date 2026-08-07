@@ -2,7 +2,7 @@ import { TimelineBodyPart } from "@/api/types";
 import { Button, Card } from "antd";
 import styles from "./InlineDiffPart.module.css";
 import { Icon } from "@/assets/icons";
-import { memo } from "react";
+import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export type TimelineInlineDiffPart = Extract<TimelineBodyPart, { type: "inline_diff" }>;
@@ -17,6 +17,13 @@ function getFilePath(item: TimelineInlineDiffPart["editedFiles"][number], unknow
 
 function InlineDiffPart({ part, onReview }: InlineDiffPartProps): React.JSX.Element {
 	const { t } = useTranslation();
+	const [showAllFiles, setShowAllFiles] = useState<boolean>(false);
+	const visibleFileLimit: number = 3;
+	const hasHiddenFiles: boolean = part.editedFiles.length > visibleFileLimit;
+	const visibleFiles = showAllFiles || !hasHiddenFiles
+		? part.editedFiles
+		: part.editedFiles.slice(0, visibleFileLimit);
+	const hiddenFileCount: number = Math.max(0, part.editedFiles.length - visibleFileLimit);
 	const extra: React.ReactNode = (
 		<div>
 			<Button
@@ -38,7 +45,7 @@ function InlineDiffPart({ part, onReview }: InlineDiffPartProps): React.JSX.Elem
 			extra={extra}
 		>
 			<ul className={styles.fileList}>
-				{part.editedFiles.map((item, index) => {
+				{visibleFiles.map((item, index) => {
 					const filePath: string = getFilePath(item, t("chat.inlineDiff.unknownFile"));
 					return (
 					<li key={`${filePath}:${index}`} className={styles.fileItem}>
@@ -60,6 +67,28 @@ function InlineDiffPart({ part, onReview }: InlineDiffPartProps): React.JSX.Elem
 				);
 				})}
 			</ul>
+			{hasHiddenFiles && !showAllFiles && (
+				<Button
+					type="text"
+					size="small"
+					className={styles.fileListToggle}
+					onClick={(): void => setShowAllFiles(true)}
+					aria-expanded={false}
+				>
+					{t("chat.inlineDiff.showMoreFiles", { count: hiddenFileCount })}
+				</Button>
+			)}
+			{hasHiddenFiles && showAllFiles && (
+				<Button
+					type="text"
+					size="small"
+					className={styles.fileListToggle}
+					onClick={(): void => setShowAllFiles(false)}
+					aria-expanded={true}
+				>
+					{t("chat.inlineDiff.collapseFiles")}
+				</Button>
+			)}
 		</Card>
 	);
 }

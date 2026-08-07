@@ -23,6 +23,19 @@
 	min-width: 0;
 }
 
+.fileListToggle {
+	width: 100%;
+	border-radius: 0;
+	color: var(--ds-text-secondary);
+	justify-content: flex-start;
+	height: 40px;
+}
+
+.fileListToggle:hover {
+	color: var(--ds-text-primary);
+	background: var(--ds-surface-hover);
+}
+
 .filePathButton {
 	justify-content: flex-start;
 	width: 100%;

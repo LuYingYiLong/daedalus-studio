@@ -1022,6 +1022,8 @@
       "title_other": "Edited {{count}} files",
       "unknownFile": "Unknown file",
       "openReviewAria": "Open review for {{filePath}}",
+      "showMoreFiles": "Show {{count}} more files",
+      "collapseFiles": "Collapse files",
       "actions": {
         "undo": "Undo",
         "review": "Review"
