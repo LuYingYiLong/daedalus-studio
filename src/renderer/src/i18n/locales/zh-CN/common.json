@@ -779,7 +779,8 @@
       "copied": "已复制",
       "copyFailed": "复制选中文本失败。",
       "selectAll": "全选",
-      "copyAll": "复制全部"
+      "copyAll": "复制全部",
+      "loadingConversation": "正在加载会话"
     },
     "assistant": {
       "process": "过程",

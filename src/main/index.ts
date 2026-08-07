@@ -20,6 +20,9 @@ import type { ClientPreferences } from "./services/client-preferences";
 import { configureAppIdentity, getAppIconPath } from "./services/app-identity";
 import { godotProjectsService } from "./services/godot-projects";
 import { sessionLayoutService } from "./services/session-layout";
+import { resetDaedalusData } from "./services/data-reset";
+import { getDaedalusDir } from "./services/backend-binary-store";
+import { homedir } from "node:os";
 
 backendManager.registerIpc();
 backendBootstrapService.registerIpc();
@@ -37,6 +40,22 @@ appUpdateService.registerIpc();
 nativeNotificationService.registerIpc();
 godotProjectsService.registerIpc();
 sessionLayoutService.registerIpc();
+
+ipcMain.handle("app-data:reset-all", async (event): Promise<{ reset: true }> => {
+	const senderWindow: BrowserWindow | null = BrowserWindow.fromWebContents(event.sender);
+	if (senderWindow === null || senderWindow.isDestroyed()) {
+		throw new Error("app_data_reset_not_allowed");
+	}
+
+	// 先停止后端再清理 SQLite、运行时状态和配置，避免 Windows 文件锁留下半套数据。
+	await backendManager.stopAndWait();
+	await resetDaedalusData({
+		daedalusRoot: getDaedalusDir(),
+		userProfile: process.env.USERPROFILE ?? homedir(),
+		studioDataRoot: app.getPath("userData")
+	});
+	return { reset: true };
+});
 
 configureAppIdentity();
 
@@ -446,12 +465,16 @@ function reloadDevelopmentRenderer(): void {
 	revealRendererWindow(browserWindow);
 }
 
-ipcMain.handle("window:relaunch", (event): void => {
+ipcMain.handle("window:relaunch", (event, options?: unknown): void => {
 	const senderWindow: BrowserWindow | null = BrowserWindow.fromWebContents(event.sender);
 	if (senderWindow === null || (senderWindow !== mainWindow && senderWindow !== settingsWindow)) {
 		throw new Error("window_relaunch_not_allowed");
 	}
-	if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
+	const forceProcessRelaunch: boolean = typeof options === "object"
+		&& options !== null
+		&& !Array.isArray(options)
+		&& (options as Record<string, unknown>).forceProcess === true;
+	if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL && !forceProcessRelaunch) {
 		setImmediate(reloadDevelopmentRenderer);
 		return;
 	}

@@ -5,9 +5,9 @@ describe("OnboardingWizard", () => {
 	const source: string = readRepoFile("src", "renderer", "src", "app", "onboarding", "OnboardingWizard.tsx");
 	const preferencesSource: string = readRepoFile("src", "main", "services", "client-preferences-store.ts");
 	const preloadSource: string = readRepoFile("src", "preload", "index.ts");
-		const mainSource: string = readRepoFile("src", "main", "index.ts");
-		const preferencesServiceSource: string = readRepoFile("src", "main", "services", "client-preferences.ts");
-		const onboardingSource: string = readRepoFile("src", "onboarding.ts");
+	const mainSource: string = readRepoFile("src", "main", "index.ts");
+	const preferencesServiceSource: string = readRepoFile("src", "main", "services", "client-preferences.ts");
+	const onboardingSource: string = readRepoFile("src", "onboarding.ts");
 
 	it("persists all six steps and supports optional setup flows", () => {
 		expect(source).toContain("ONBOARDING_STEP_IDS.map");
@@ -25,10 +25,10 @@ describe("OnboardingWizard", () => {
 	it("normalizes persisted progress and exposes a guarded relaunch API", () => {
 		expect(preferencesSource).toContain("normalizeOnboardingPreferences");
 		expect(preferencesSource).toContain('currentStep: completed ? "complete" : currentStep');
-		expect(preloadSource).toContain('relaunch: (): Promise<void> => ipcRenderer.invoke("window:relaunch")');
+		expect(preloadSource).toContain('relaunch: (options?: { forceProcess?: boolean }): Promise<void> => ipcRenderer.invoke("window:relaunch", options)');
 		expect(mainSource).toContain('ipcMain.handle("window:relaunch"');
 		expect(mainSource).toContain("senderWindow !== mainWindow && senderWindow !== settingsWindow");
-		expect(mainSource).toContain("!app.isPackaged && process.env.ELECTRON_RENDERER_URL");
+		expect(mainSource).toContain("!app.isPackaged && process.env.ELECTRON_RENDERER_URL && !forceProcessRelaunch");
 		expect(mainSource).toContain("setImmediate(reloadDevelopmentRenderer)");
 		expect(mainSource).toContain("browserWindow.webContents.reloadIgnoringCache()");
 		expect(onboardingSource).toContain("isOnboardingPreferences");

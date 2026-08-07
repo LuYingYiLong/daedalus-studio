@@ -73,6 +73,10 @@
 	margin-inline-end: 4px;
 }
 
+.projectTreeSwitcher::before {
+	background: transparent !important;
+}
+
 .projectTreeItem:global(.ant-tree-treenode-leaf) .projectTreeSwitcher {
 	width: 0 !important;
 	min-width: 0 !important;

@@ -191,7 +191,7 @@ declare global {
 
 	interface WindowControlAPI {
 		openSettings: (page?: string) => Promise<void>;
-		relaunch: () => Promise<void>;
+		relaunch: (options?: { forceProcess?: boolean }) => Promise<void>;
 		rendererShellReady: () => void;
 		rendererReady: () => void;
 		onSettingsPageRequested: (callback: (page: string) => void) => () => void;
@@ -336,6 +336,9 @@ declare global {
 		versions: ElectronVersions;
 		backend: BackendAPI;
 		backendBootstrap: BackendBootstrapAPI;
+		dataReset: {
+			resetAll: () => Promise<{ reset: true }>;
+		};
 		clientPreferences: ClientPreferencesAPI;
 		sessionCatalog: SessionCatalogAPI;
 		clipboard: ClipboardAPI;

@@ -1863,7 +1863,7 @@ function HomePage({
 		<div className={styles.summaryPanel}>
 			{isSummaryLoading && summaryOverview === null ? (
 				<div className={styles.summaryLoading}>
-					<Spin size="small" />
+					<Spin />
 				</div>
 			) : summaryError !== null ? (
 				<div className={styles.summaryEmpty}>

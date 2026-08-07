@@ -39,4 +39,14 @@ describe("DefaultModelSettingsPage", () => {
 		expect(pageSource).toContain('t("settings.defaultModel.configureProvider")');
 		expect(pageSource).toContain("activate: false");
 	});
+
+	it("keeps the model routing page scrollable inside the preserved settings viewport", () => {
+		const pageCss: string = readRepoFile("src", "renderer", "src", "pages", "settings", "DefaultModelSettingsPage.module.css");
+		const windowCss: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindow.module.css");
+
+		expect(pageCss).toContain("overflow: auto;");
+		expect(windowCss).toContain(".pageView {");
+		expect(windowCss).toContain("display: grid;");
+		expect(windowCss).toContain(".pageView > * {");
+	});
 });

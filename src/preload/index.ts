@@ -268,7 +268,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
 	windowControl: {
 		openSettings: (page?: string): Promise<void> => ipcRenderer.invoke("window:open-settings", page),
-		relaunch: (): Promise<void> => ipcRenderer.invoke("window:relaunch"),
+		relaunch: (options?: { forceProcess?: boolean }): Promise<void> => ipcRenderer.invoke("window:relaunch", options),
 		rendererShellReady: (): void => ipcRenderer.send("window:renderer-shell-ready"),
 		rendererReady: (): void => ipcRenderer.send("window:renderer-ready"),
 		onSettingsPageRequested: (callback: (page: string) => void): (() => void) => {
@@ -276,6 +276,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			ipcRenderer.on("window:open-settings", handler);
 			return () => { ipcRenderer.removeListener("window:open-settings", handler); };
 		}
+	},
+
+	dataReset: {
+		resetAll: (): Promise<{ reset: true }> => ipcRenderer.invoke("app-data:reset-all")
 	},
 
 	appUpdate: {
