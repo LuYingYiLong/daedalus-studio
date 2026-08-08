@@ -6,7 +6,7 @@ import type { TimelinePageStore } from "@/features/workbench/timeline-page-store
 
 type RefValue<T> = { current: T };
 
-export type AppTimelineControllerParams = {
+export type TimelineControllerParams = {
 	activeSessionId: string | null;
 	activeSessionIdRef: RefValue<string | null>;
 	timelineStore: TimelinePageStore;
@@ -14,7 +14,7 @@ export type AppTimelineControllerParams = {
 	setSessionError: (message: string | null) => void;
 };
 
-export type AppTimelineController = {
+export type TimelineController = {
 	timelineNavigationEntries: SessionTimelineNavigationEntry[];
 	isTimelineLoadingBefore: boolean;
 	isTimelineLoadingAfter: boolean;
@@ -25,7 +25,7 @@ export type AppTimelineController = {
 	resetTimelineUiState: () => void;
 };
 
-export default function useAppTimelineController(params: AppTimelineControllerParams): AppTimelineController {
+export default function useTimelineController(params: TimelineControllerParams): TimelineController {
 	const [timelineNavigationEntries, setTimelineNavigationEntries] = useState<SessionTimelineNavigationEntry[]>([]);
 	const [isTimelineLoadingBefore, setIsTimelineLoadingBefore] = useState<boolean>(false);
 	const [isTimelineLoadingAfter, setIsTimelineLoadingAfter] = useState<boolean>(false);
@@ -130,3 +130,4 @@ export default function useAppTimelineController(params: AppTimelineControllerPa
 		resetTimelineUiState
 	};
 }
+

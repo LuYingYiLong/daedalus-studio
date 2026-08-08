@@ -2,15 +2,15 @@ import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } 
 import type { AdditionalContextItem, AgentGoalState, PlanApprovalState, PlanClarificationState, SessionMetadata, WorkbenchSnapshot, WorkflowTodoSnapshot } from "@/api/types";
 import { approvePlan, revisePlan, submitPlanClarification, type PlanClarificationSubmission, type PlanResult } from "@/api/plan-api";
 import { dismissGoal } from "@/api/goal-api";
-import { getPlanApprovalFromResult, normalizePlanClarification } from "../backend-event-state";
-import { createPlanApprovalKey, createPlanClarificationKey } from "../app-helpers";
+import { getPlanApprovalFromResult, normalizePlanClarification } from "@/shared/lib/backend-event-state";
+import { createPlanApprovalKey, createPlanClarificationKey } from "./plan-helpers";
 import { createWorkflowTodoSnapshotFromPlanData } from "@/features/composer/workflow-todo";
 import { isAgentGoalDismissed, isAgentGoalTerminal } from "@/features/composer/goal-display";
 import { selectLatestGoalState } from "@/features/composer/goal-state";
 
 type RefValue<T> = { current: T };
 
-export type AppPlanGoalControllerParams = {
+export type PlanGoalControllerParams = {
 	activeSessionId: string | null;
 	activeChatRequestIdRef: RefValue<string | null>;
 	dismissedTerminalGoalIdsRef: RefValue<Set<string>>;
@@ -24,7 +24,7 @@ export type AppPlanGoalControllerParams = {
 	dismissWorkflowTodoForGoal: () => Promise<void>;
 };
 
-export type AppPlanGoalController = {
+export type PlanGoalController = {
 	currentGoal: AgentGoalState | null;
 	setCurrentGoal: Dispatch<SetStateAction<AgentGoalState | null>>;
 	applyCurrentGoalSnapshot: (nextGoal: AgentGoalState) => void;
@@ -57,7 +57,7 @@ export type AppPlanGoalController = {
 	handleTerminalGoalDismiss: (goal: AgentGoalState) => Promise<void>;
 };
 
-export default function useAppPlanGoalController(params: AppPlanGoalControllerParams): AppPlanGoalController {
+export default function usePlanGoalController(params: PlanGoalControllerParams): PlanGoalController {
 	const [latestPlanClarification, setLatestPlanClarification] = useState<PlanClarificationState | null>(null);
 	const [suppressedPlanClarificationKey, setSuppressedPlanClarificationKey] = useState<string | null>(null);
 	const [isPlanClarificationSubmitting, setIsPlanClarificationSubmitting] = useState<boolean>(false);
@@ -240,3 +240,4 @@ export default function useAppPlanGoalController(params: AppPlanGoalControllerPa
 		handleTerminalGoalDismiss
 	};
 }
+

@@ -19,7 +19,7 @@ import {
 	isRunCompletionEvent,
 	isSessionScopedBackendEvent,
 	shouldClearPlanClarificationForEvent
-} from "../backend-event-state";
+} from "@/shared/lib/backend-event-state";
 import {
 	createWorkflowTodoSnapshotFromPlanData,
 	isWorkflowTodoClearEvent,

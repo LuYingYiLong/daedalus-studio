@@ -15,11 +15,11 @@ import {
 	isSupportedImageMimeType,
 	readFileAsDataUrl,
 	readImageDimensions
-} from "../app-helpers";
+} from "./context-helpers";
 
 type ContextPatchAction = NonNullable<WorkbenchPatch["additionalContextAction"]>;
 
-export type AppContextControllerParams = {
+export type WorkspaceContextControllerParams = {
 	activeSessionId: string | null;
 	activeWorkspace: WorkspaceConfig | null;
 	activeSessionMetadata: {
@@ -34,7 +34,7 @@ export type AppContextControllerParams = {
 	showTransientError: (message: string) => void;
 };
 
-export type AppContextController = {
+export type WorkspaceContextController = {
 	patchContext: (action: ContextPatchAction) => void;
 	handleAddImageFiles: (files: File[]) => Promise<void>;
 	handleAddPastedTextAttachment: (content: string) => boolean;
@@ -42,7 +42,7 @@ export type AppContextController = {
 	handleAddContextFiles: (files: File[]) => Promise<void>;
 };
 
-export default function useAppContextController(params: AppContextControllerParams): AppContextController {
+export default function useWorkspaceContextController(params: WorkspaceContextControllerParams): WorkspaceContextController {
 	const recentContextFileSignaturesRef = useRef<Map<string, number>>(new Map());
 
 	function patchContext(action: ContextPatchAction): void {
@@ -222,4 +222,5 @@ export default function useAppContextController(params: AppContextControllerPara
 		handleAddContextFiles
 	};
 }
+
 

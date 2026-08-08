@@ -16,11 +16,13 @@ describe("App decomposition", () => {
 	});
 
 	it("keeps domain controllers outside App", () => {
-		expect(readRepoFile("src", "renderer", "src", "app", "useAppController.tsx")).toContain("useAppApprovalController");
-		expect(readRepoFile("src", "renderer", "src", "app", "useAppController.tsx")).toContain("useAppContextController");
+		expect(readRepoFile("src", "renderer", "src", "app", "useAppController.tsx")).toContain("useApprovalController");
+		expect(readRepoFile("src", "renderer", "src", "app", "useAppController.tsx")).toContain("useWorkspaceContextController");
 		expect(readRepoFile("src", "renderer", "src", "app", "useAppController.tsx")).toContain("useAppEventBridge");
-		expect(readRepoFile("src", "renderer", "src", "app", "useAppController.tsx")).toContain("useAppPlanGoalController");
-		expect(readRepoFile("src", "renderer", "src", "app", "useAppController.tsx")).toContain("useAppTimelineController");
+		expect(readRepoFile("src", "renderer", "src", "app", "useAppController.tsx")).toContain("usePlanGoalController");
+		expect(readRepoFile("src", "renderer", "src", "app", "useAppController.tsx")).toContain("useTimelineController");
+		expect(readRepoFile("src", "renderer", "src", "app", "useAppController.tsx")).toContain("@/features/approval/controllers/useApprovalController");
+		expect(readRepoFile("src", "renderer", "src", "app", "useAppController.tsx")).toContain("@/features/composer/controllers/usePlanGoalController");
 		expect(readRepoFile("src", "renderer", "src", "app", "App.tsx")).not.toContain("from \"./AppShell\"");
 	});
 });

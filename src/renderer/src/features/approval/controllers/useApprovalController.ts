@@ -13,7 +13,7 @@ import { continueToolBudget, stopToolBudget } from "@/api/chat-api";
 
 type RefValue<T> = { current: T };
 
-export type AppApprovalControllerParams = {
+export type ApprovalControllerParams = {
 	initialMode: ApprovalMode;
 	activeSessionId: string | null;
 	pendingToolBudgetId: string | undefined;
@@ -25,7 +25,7 @@ export type AppApprovalControllerParams = {
 	onFullTrustRequested: () => void;
 };
 
-export type AppApprovalController = {
+export type ApprovalController = {
 	approvalMode: ApprovalMode;
 	setApprovalModeState: Dispatch<SetStateAction<ApprovalMode>>;
 	isApprovalModeSaving: boolean;
@@ -47,7 +47,7 @@ export type AppApprovalController = {
 	handleToolBudgetStop: (budgetId: string) => Promise<void>;
 };
 
-export default function useAppApprovalController(params: AppApprovalControllerParams): AppApprovalController {
+export default function useApprovalController(params: ApprovalControllerParams): ApprovalController {
 	const [approvalMode, setApprovalModeState] = useState<ApprovalMode>(params.initialMode);
 	const [isApprovalModeSaving, setIsApprovalModeSaving] = useState<boolean>(false);
 	const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
@@ -205,3 +205,4 @@ export default function useAppApprovalController(params: AppApprovalControllerPa
 		handleToolBudgetStop
 	};
 }
+

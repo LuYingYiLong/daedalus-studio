@@ -1,0 +1,59 @@
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { repoPath, readRepoFile } from "../../../helpers/repo-paths";
+
+function collectSourceFiles(relativeRoot: string): string[] {
+	const absoluteRoot: string = repoPath("src", "renderer", "src", relativeRoot);
+	const files: string[] = [];
+	const visit = (directory: string): void => {
+		for (const entry of readdirSync(directory)) {
+			const absolutePath: string = join(directory, entry);
+			if (statSync(absolutePath).isDirectory()) {
+				visit(absolutePath);
+				continue;
+			}
+			if (/\.(?:ts|tsx)$/u.test(entry)) files.push(absolutePath);
+		}
+	};
+	visit(absoluteRoot);
+	return files;
+}
+
+function sourceOf(relativeRoot: string): string {
+	return collectSourceFiles(relativeRoot).map((filePath: string): string => readFileSync(filePath, "utf8")).join("\n");
+}
+
+describe("renderer architecture boundaries", () => {
+	it("keeps shared code independent from product layers", () => {
+		const source: string = sourceOf("shared");
+		expect(source).not.toMatch(/@\/app\//u);
+		expect(source).not.toMatch(/@\/pages\//u);
+		expect(source).not.toMatch(/@\/features\//u);
+	});
+
+	it("keeps generic components independent from product layers", () => {
+		const source: string = sourceOf("components");
+		expect(source).not.toMatch(/@\/app\//u);
+		expect(source).not.toMatch(/@\/pages\//u);
+		expect(source).not.toMatch(/@\/features\//u);
+	});
+
+	it("prevents features from reaching into app or page composition", () => {
+		const source: string = sourceOf("features");
+		expect(source).not.toMatch(/@\/app\//u);
+		expect(source).not.toMatch(/@\/pages\//u);
+	});
+
+	it("uses feature-owned controller entrypoints", () => {
+		const appController: string = readRepoFile("src", "renderer", "src", "app", "useAppController.tsx");
+		expect(appController).toContain("@/features/approval/controllers/useApprovalController");
+		expect(appController).toContain("@/features/workspace/controllers/useWorkspaceContextController");
+		expect(appController).toContain("@/features/composer/controllers/usePlanGoalController");
+		expect(appController).toContain("@/features/chat/controllers/useTimelineController");
+		expect(appController).not.toContain("./hooks/useAppApprovalController");
+		expect(appController).not.toContain("./hooks/useAppContextController");
+		expect(appController).not.toContain("./hooks/useAppPlanGoalController");
+		expect(appController).not.toContain("./hooks/useAppTimelineController");
+	});
+});

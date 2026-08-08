@@ -9,10 +9,10 @@ import useNativeTaskNotifications from "./hooks/useNativeTaskNotifications";
 import useAppEventBridge from "./hooks/useAppEventBridge";
 import useTimelineStreamBuffer from "./hooks/useTimelineStreamBuffer";
 import useWorkbenchPatchQueue, { mergeWorkbenchPatch } from "./hooks/useWorkbenchPatchQueue";
-import useAppContextController from "./hooks/useAppContextController";
-import useAppApprovalController from "./hooks/useAppApprovalController";
-import useAppPlanGoalController from "./hooks/useAppPlanGoalController";
-import useAppTimelineController from "./hooks/useAppTimelineController";
+import useWorkspaceContextController from "@/features/workspace/controllers/useWorkspaceContextController";
+import useApprovalController from "@/features/approval/controllers/useApprovalController";
+import usePlanGoalController from "@/features/composer/controllers/usePlanGoalController";
+import useTimelineController from "@/features/chat/controllers/useTimelineController";
 import { fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/api/workspace-api";
 import styles from "./App.module.css";
 import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, SelectionAskThread, SessionMetadata, SessionOpenResult, SessionTimelineNavigationEntry, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/api/types";
@@ -183,7 +183,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	const [workbench, setWorkbench] = useState<WorkbenchSnapshot | null>(null);
 	const activeWorkbenchRef = useLatest(workbench);
 	const [sessionError, setSessionError] = useState<string | null>(null);
-	const timelineController = useAppTimelineController({
+	const timelineController = useTimelineController({
 		activeSessionId,
 		activeSessionIdRef,
 		timelineStore,
@@ -236,7 +236,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	const activeSessionLayout: SessionLayoutPreferences = activeSessionId === null
 		? temporarySessionLayout
 		: sessionLayouts[activeSessionId] ?? DEFAULT_SESSION_LAYOUT;
-	const planGoalController = useAppPlanGoalController({
+	const planGoalController = usePlanGoalController({
 		activeSessionId,
 		activeChatRequestIdRef,
 		dismissedTerminalGoalIdsRef,
@@ -289,7 +289,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		handlePlanRevise,
 		handleTerminalGoalDismiss
 	} = planGoalController;
-	const approvalController = useAppApprovalController({
+	const approvalController = useApprovalController({
 		initialMode: bootstrapData.clientPreferences.newSessionComposer.approvalMode,
 		activeSessionId,
 		pendingToolBudgetId: workbench?.pendingToolBudget?.budgetId,
@@ -2450,7 +2450,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		handleAddPastedTextAttachment,
 		handleAddWorkspaceContext,
 		handleAddContextFiles
-	} = useAppContextController({
+	} = useWorkspaceContextController({
 		activeSessionId,
 		activeWorkspace,
 		activeSessionMetadata,
