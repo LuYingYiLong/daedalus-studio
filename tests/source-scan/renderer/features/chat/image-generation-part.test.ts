@@ -3,8 +3,8 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("ImageGenerationPart", () => {
 	it("renders the model label and prompt as separate text rows", () => {
-		const componentSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "ImageGenerationPart.tsx");
-		const cssSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "ImageGenerationPart.module.css");
+		const componentSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ImageGenerationPart.tsx");
+		const cssSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ImageGenerationPart.module.css");
 
 		expect(componentSource).toContain('className={styles.modelLabel}');
 		expect(componentSource).toContain('className={styles.prompt}');

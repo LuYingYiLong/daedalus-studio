@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("ApprovalDialog source", () => {
-	const source: string = readRepoFile("src", "renderer", "src", "features", "approval", "ApprovalDialog.tsx");
+	const source: string = readRepoFile("src", "renderer", "src", "widgets", "approval", "ApprovalDialog.tsx");
 
 	it("keeps approval UI focused on reason and actions", () => {
 		expect(source).toContain('t("approval.tool.title")');

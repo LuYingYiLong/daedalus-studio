@@ -3,8 +3,8 @@ import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths
 
 describe("App plan clarification source", () => {
 	const source: string = readAppImplementation();
-	const backendEventStateSource: string = readRepoFile("src", "renderer", "src", "shared", "lib", "backend-event-state.ts");
-	const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
+	const backendEventStateSource: string = readRepoFile("src", "renderer", "src", "domain", "run", "backend-event-state.ts");
+	const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useBackendEventStream.ts");
 
 	it("updates local clarification and approval state from plan.clarify results", () => {
 		expect(source).toContain("const result: PlanResult = await submitPlanClarification");

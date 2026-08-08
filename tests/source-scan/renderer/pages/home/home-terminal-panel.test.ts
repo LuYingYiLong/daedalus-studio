@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("HomePage terminal panel source", () => {
-	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
-	const terminalPanelSource: string = readRepoFile("src", "renderer", "src", "features", "terminal", "TerminalPanel.tsx");
-	const dockPanelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.tsx");
-	const panelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "panel-tabs", "PanelTabs.tsx");
+	const agentSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+	const terminalPanelSource: string = readRepoFile("src", "renderer", "src", "widgets", "terminal", "TerminalPanel.tsx");
+	const dockPanelTabsSource: string = readRepoFile("src", "renderer", "src", "widgets", "dock", "DockPanelTabs.tsx");
+	const panelTabsSource: string = readRepoFile("src", "renderer", "src", "widgets", "panel-tabs", "PanelTabs.tsx");
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 
 	it("wraps chat and side dock inside a vertical Splitter for the bottom dock", () => {

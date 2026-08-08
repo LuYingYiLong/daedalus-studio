@@ -3,8 +3,8 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("Provider customizations", () => {
 	it("uses backend RPC and controlled Ant Design dialogs for provider and model edits", () => {
-		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "ProviderSettingsPage.tsx");
-		const apiSource: string = readRepoFile("src", "renderer", "src", "api", "provider-api.ts");
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "ProviderSettingsPage.tsx");
+		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "provider-api.ts");
 
 		expect(apiSource).toContain('"provider.custom.add"');
 		expect(apiSource).toContain('"provider.model.add"');
@@ -27,8 +27,8 @@ describe("Provider customizations", () => {
 	});
 
 	it("discovers models during the modal transition and synchronizes a controlled selection", () => {
-		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "ProviderSettingsPage.tsx");
-		const apiSource: string = readRepoFile("src", "renderer", "src", "api", "provider-api.ts");
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "ProviderSettingsPage.tsx");
+		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "provider-api.ts");
 
 		expect(apiSource).toContain('"provider.models.discover"');
 		expect(apiSource).toContain('"provider.models.import"');

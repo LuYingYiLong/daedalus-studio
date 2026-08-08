@@ -3,9 +3,9 @@ import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths
 
 describe("session layout persistence wiring", () => {
 	const appSource: string = readAppImplementation();
-	const bootstrapSource: string = readRepoFile("src", "renderer", "src", "app", "bootstrap.ts");
-	const homeSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
-	const dockSource: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.tsx");
+	const bootstrapSource: string = readRepoFile("src", "renderer", "src", "app", "bootstrap", "bootstrap.ts");
+	const homeSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+	const dockSource: string = readRepoFile("src", "renderer", "src", "widgets", "dock", "DockPanelTabs.tsx");
 	const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 
 	it("loads layouts during bootstrap and exposes the dedicated Electron API", () => {

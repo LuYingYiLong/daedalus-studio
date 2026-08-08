@@ -3,7 +3,7 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("SkillsSettingsPage", () => {
 	it("filters out internal builtin skills and exposes scope filters", () => {
-		const source: string = readRepoFile("src", "renderer", "src", "pages", "settings", "SkillsSettingsPage.tsx");
+		const source: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "SkillsSettingsPage.tsx");
 		expect(source).toContain('skill.source !== "builtin"');
 		expect(source).toContain('value: "personal"');
 		expect(source).toContain('value: "project"');
@@ -11,8 +11,8 @@ describe("SkillsSettingsPage", () => {
 	});
 
 	it("wires ZIP and folder install actions through skillFs and skill.install", () => {
-		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "SkillsSettingsPage.tsx");
-		const apiSource: string = readRepoFile("src", "renderer", "src", "api", "skill-api.ts");
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "SkillsSettingsPage.tsx");
+		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "skill-api.ts");
 		const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 		expect(pageSource).toContain("pickSkillZip");
 		expect(pageSource).toContain("pickSkillDirectory");

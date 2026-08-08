@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
+import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
 import {
 	applyResponseFinished,
 	getUnreadResponseSessionId,
 	markActiveSessionRead,
 	removeUnreadSessions
-} from "@/features/workspace/session-unread";
+} from "@/domain/workspace/session-unread";
 
 function createRunEvent(sessionId: string, stage: string): BackendEvent {
 	return {

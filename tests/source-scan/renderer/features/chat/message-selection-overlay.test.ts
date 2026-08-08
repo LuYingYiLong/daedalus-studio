@@ -4,7 +4,7 @@ import path from "node:path";
 
 describe("MessageSelectionOverlay", () => {
 	it("provides Ask-only context menu deletion actions", () => {
-		const source = readFileSync(path.resolve("src/renderer/src/features/chat/MessageSelectionOverlay.tsx"), "utf8");
+		const source = readFileSync(path.resolve("src/renderer/src/widgets/conversation/MessageSelectionOverlay.tsx"), "utf8");
 
 		expect(source).toContain('trigger={["contextMenu"]}');
 		expect(source).toContain('key: "delete"');

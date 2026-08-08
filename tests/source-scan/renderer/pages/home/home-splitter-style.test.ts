@@ -3,8 +3,8 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("HomePage Splitter styling", () => {
 	it("keeps the semantic dragger states without restoring a visible dashed divider", () => {
-		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
-		const cssSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.module.css");
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+		const cssSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.module.css");
 
 		expect(pageSource).toContain("draggerIcon={null}");
 		expect(pageSource).toContain("classNames={SPLITTER_CLASS_NAMES}");

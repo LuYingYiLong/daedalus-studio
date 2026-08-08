@@ -3,7 +3,7 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("DefaultModelSettingsPage", () => {
 	it("uses the Select clear-icon API for the single-value model selector", () => {
-		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "DefaultModelSettingsPage.tsx");
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "DefaultModelSettingsPage.tsx");
 
 		expect(pageSource).toContain('allowClear={{ clearIcon: <Icon name="clear" /> }}');
 		expect(pageSource).toContain('suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}');
@@ -11,7 +11,7 @@ describe("DefaultModelSettingsPage", () => {
 	});
 
 	it("includes the Git commit model routing option", () => {
-		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "DefaultModelSettingsPage.tsx");
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "DefaultModelSettingsPage.tsx");
 
 		expect(pageSource).toContain('key: "gitCommit"');
 		expect(pageSource).toContain("settings.defaultModel.routing.gitCommit.title");
@@ -19,9 +19,9 @@ describe("DefaultModelSettingsPage", () => {
 	});
 
 	it("provides a text-only command review route", () => {
-		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "DefaultModelSettingsPage.tsx");
-		const providerSource: string = readRepoFile("src", "renderer", "src", "api", "provider-api.ts");
-		const promptSource: string = readRepoFile("src", "renderer", "src", "api", "user-prompt-api.ts");
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "DefaultModelSettingsPage.tsx");
+		const providerSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "provider-api.ts");
+		const promptSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "user-prompt-api.ts");
 
 		expect(pageSource).toContain('key: "commandReview"');
 		expect(pageSource).toContain("!isImageTaskModel(model)");
@@ -31,7 +31,7 @@ describe("DefaultModelSettingsPage", () => {
 	});
 
 	it("only offers configured providers and renders provider before model", () => {
-		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "DefaultModelSettingsPage.tsx");
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "DefaultModelSettingsPage.tsx");
 
 		expect(pageSource).toContain("return provider.configured;");
 		expect(pageSource).toContain("`${provider.displayName}/${model.displayName}`");
@@ -41,8 +41,8 @@ describe("DefaultModelSettingsPage", () => {
 	});
 
 	it("keeps the model routing page scrollable inside the preserved settings viewport", () => {
-		const pageCss: string = readRepoFile("src", "renderer", "src", "pages", "settings", "DefaultModelSettingsPage.module.css");
-		const windowCss: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindow.module.css");
+		const pageCss: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "DefaultModelSettingsPage.module.css");
+		const windowCss: string = readRepoFile("src", "renderer", "src", "app", "shell", "SettingsWindow.module.css");
 
 		expect(pageCss).toContain("overflow: auto;");
 		expect(windowCss).toContain(".pageView {");

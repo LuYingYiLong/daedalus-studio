@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { TimelineBlock } from "@/api/types";
-import { timelineBlocksToSearchDocuments } from "@/features/chat/useConversationSearch";
+import type { TimelineBlock } from "@/platform/rpc/types";
+import { timelineBlocksToSearchDocuments } from "@/features/conversation/useConversationSearch";
 
 describe("conversation search documents", () => {
 	it("indexes only the visible final Markdown after a summary marker", () => {

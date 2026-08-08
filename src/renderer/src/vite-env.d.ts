@@ -1,7 +1,7 @@
 /// <reference types="vite-plugin-svgr/client" />
 
-import type { OnboardingPreferences } from "../../onboarding";
-import type { NewSessionComposerPreferences } from "../../new-session-composer-preferences";
+import type { OnboardingPreferences } from "../../contracts/onboarding";
+import type { NewSessionComposerPreferences } from "../../contracts/new-session-composer-preferences";
 
 export {};
 

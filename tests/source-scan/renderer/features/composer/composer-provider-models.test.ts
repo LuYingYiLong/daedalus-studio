@@ -3,8 +3,8 @@ import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-pa
 
 describe("Composer provider models", () => {
 	it("shows configured providers only and opens provider settings for the empty state", () => {
-		const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
-		const homePageSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
+		const composerSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.tsx");
+		const homePageSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
 	const appSource: string = readAppImplementation();
 
 		expect(composerSource).toContain("return provider.configured;");

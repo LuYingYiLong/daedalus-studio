@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("MessageList virtual history window source", () => {
-	const messageListSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "MessageList.tsx");
-	const messageListStyles: string = readRepoFile("src", "renderer", "src", "features", "chat", "MessageList.module.css");
-	const assistantBubbleStyles: string = readRepoFile("src", "renderer", "src", "features", "chat", "AssistantBubble.module.css");
-	const userBubbleStyles: string = readRepoFile("src", "renderer", "src", "features", "chat", "UserBubble.module.css");
+	const messageListSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "MessageList.tsx");
+	const messageListStyles: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "MessageList.module.css");
+	const assistantBubbleStyles: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "AssistantBubble.module.css");
+	const userBubbleStyles: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "UserBubble.module.css");
 
 	it("uses Virtuoso dynamic-height virtualization with stable absolute indexes", () => {
 		expect(messageListSource).toContain('from "react-virtuoso"');

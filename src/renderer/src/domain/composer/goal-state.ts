@@ -1,0 +1,14 @@
+import type { AgentGoalState } from "@/platform/rpc/types";
+
+export function selectLatestGoalState(
+	currentGoal: AgentGoalState | null,
+	incomingGoal: AgentGoalState
+): AgentGoalState {
+	if (
+		currentGoal?.goalId === incomingGoal.goalId
+		&& currentGoal.revision >= incomingGoal.revision
+	) {
+		return currentGoal;
+	}
+	return incomingGoal;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createComposerReasoningEffortUpdate } from "@/features/composer/composer-reasoning-effort";
+import { createComposerReasoningEffortUpdate } from "@/domain/composer/composer-reasoning-effort";
 
 describe("composer reasoning effort update", () => {
 	it("keeps the selected provider and model bound to the effort change", () => {

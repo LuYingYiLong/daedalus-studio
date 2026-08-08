@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("ProviderReconnectPart", () => {
-	const source: string = readRepoFile("src", "renderer", "src", "features", "chat", "ProviderReconnectPart.tsx");
+	const source: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ProviderReconnectPart.tsx");
 
 	it("uses one controlled Ant Design collapse row with the wlan icon", () => {
 		expect(source).toContain("<Collapse");

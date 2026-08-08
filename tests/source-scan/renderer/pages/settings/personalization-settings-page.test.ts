@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("PersonalizationSettingsPage source", () => {
-	const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "PersonalizationSettingsPage.tsx");
-	const apiSource: string = readRepoFile("src", "renderer", "src", "api", "user-prompt-api.ts");
+	const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "PersonalizationSettingsPage.tsx");
+	const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "user-prompt-api.ts");
 
 	it("exposes a dedicated git commit prompt setting", () => {
 		expect(pageSource).toContain("settings.personalization.gitCommitPrompt.title");

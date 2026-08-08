@@ -1,15 +1,15 @@
 import { StrictMode } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import MainWindowRoot from "./app/MainWindowRoot";
-import MainWindowErrorBoundary from "./app/MainWindowErrorBoundary";
-import SettingsWindow from "./app/SettingsWindow";
-import WindowProviders from "./app/WindowProviders";
+import MainWindowRoot from "./app/shell/MainWindowRoot";
+import MainWindowErrorBoundary from "./app/errors/MainWindowErrorBoundary";
+import SettingsWindow from "./app/shell/SettingsWindow";
+import WindowProviders from "./app/shell/WindowProviders";
 import "react-diff-view/style/index.css";
-import "./styles/global.css";
-import "./styles/markdown.css";
-import { waitForStudioFonts } from "./styles/studio-fonts";
-import { waitForRendererPaint } from "./app/renderer-paint";
+import "./ui/styles/global.css";
+import "./ui/styles/markdown.css";
+import { waitForStudioFonts } from "./ui/styles/studio-fonts";
+import { waitForRendererPaint } from "./app/runtime/renderer-paint";
 
 const rootElement = document.getElementById("root");
 

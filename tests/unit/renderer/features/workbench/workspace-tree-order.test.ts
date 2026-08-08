@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { SessionMetadata, WorkspaceConfig } from "../../../../../src/renderer/src/api/types";
-import type { WorkspaceTreeOrderPreferences } from "../../../../../src/renderer/src/api/workspace-api";
+import type { SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
+import type { WorkspaceTreeOrderPreferences } from "@/platform/rpc/workspace-api";
 import {
 	canDropWorkspaceTreeNode,
 	moveSectionSessionInTreeOrder,
@@ -10,7 +10,7 @@ import {
 	sortSessionsByTreeOrder,
 	sortWorkspacesByTreeOrder,
 	sortWorkspaceSessionsByTreeOrder
-} from "../../../../../src/renderer/src/features/workspace/workspace-tree-order";
+} from "@/domain/workspace/workspace-tree-order";
 
 const WORKSPACES: WorkspaceConfig[] = [
 	{ id: "workspace-a", name: "A", kind: "godot", rootPath: "D:/A", icon: 0, color: 0, sourceFolders: [], primarySourceFolderId: "" },

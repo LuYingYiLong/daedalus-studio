@@ -3,9 +3,9 @@ import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-pa
 
 describe("timeline rendering isolation", () => {
 	const appSource: string = readAppImplementation();
-	const streamBufferSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useTimelineStreamBuffer.ts");
-	const paneSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "ConversationTimelinePane.tsx");
-	const toolPartSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "ToolPart.tsx");
+	const streamBufferSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useTimelineStreamBuffer.ts");
+	const paneSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ConversationTimelinePane.tsx");
+	const toolPartSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ToolPart.tsx");
 
 	it("keeps timeline bodies out of App React state", () => {
 		expect(appSource).toContain("createTimelinePageStore()");

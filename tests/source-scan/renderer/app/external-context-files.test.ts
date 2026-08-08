@@ -3,7 +3,7 @@ import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths
 
 describe("external dropped context files", () => {
 	const appSource: string = readAppImplementation();
-	const imageAttachmentApiSource: string = readRepoFile("src", "renderer", "src", "api", "image-attachment-api.ts");
+	const imageAttachmentApiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "image-attachment-api.ts");
 
 	it("keeps workspace paths scoped and adds outside files as absolute-path context", () => {
 		expect(appSource).toContain("export function createExternalFileContextItem");

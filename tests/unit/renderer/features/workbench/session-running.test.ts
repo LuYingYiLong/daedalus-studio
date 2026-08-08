@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
+import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
 import {
 	applyRunningSessionEvent,
 	markRunStopped,
 	markSessionRunStarted,
 	removeRunningSessions,
 	type RunningSessionState
-} from "@/features/workspace/session-running";
+} from "@/domain/workspace/session-running";
 
 function createRunEvent(options: {
 	sessionId: string;

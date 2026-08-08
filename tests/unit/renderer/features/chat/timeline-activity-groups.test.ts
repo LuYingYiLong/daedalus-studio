@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { TimelineBodyPart } from "../../../../../src/renderer/src/api/types";
+import type { TimelineBodyPart } from "@/platform/rpc/types";
 import {
 	getTimelineActivityLabel,
 	getTimelineActivityStats,
 	getTimelinePartKey,
 	groupTimelineActivity,
 	type TimelineActivityPart
-} from "../../../../../src/renderer/src/features/chat/timeline-activity-groups";
+} from "@/domain/conversation/timeline-activity-groups";
 
 function thinking(
 	text: string,

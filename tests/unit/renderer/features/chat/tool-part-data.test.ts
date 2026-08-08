@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getToolRecovery, isTimelineToolEventType } from "../../../../../src/renderer/src/features/chat/tool-part-data";
+import { getToolRecovery, isTimelineToolEventType } from "@/domain/conversation/tool-part-data";
 
 describe("timeline tool event compatibility", () => {
 	it("recognizes normalized and legacy agent-prefixed terminal events", () => {

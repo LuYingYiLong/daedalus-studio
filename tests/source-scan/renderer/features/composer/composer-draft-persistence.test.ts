@@ -3,8 +3,8 @@ import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-pa
 
 describe("Composer draft lifetime", () => {
 	const appSource: string = readAppImplementation();
-	const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
-	const homePageSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
+	const composerSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.tsx");
+	const homePageSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
 
 	it("keeps per-session drafts in renderer memory instead of workbench persistence", () => {
 		expect(appSource).not.toContain("COMPOSER_TEXT_SYNC_DEBOUNCE_MS");

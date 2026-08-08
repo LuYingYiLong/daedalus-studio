@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
+import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
 import {
 	getWorkflowTodoSnapshotKey,
 	isWorkflowTodoClearEvent,
@@ -7,7 +7,7 @@ import {
 	normalizeWorkflowTodoSnapshot,
 	reconcileWorkflowTodoWithRunStage,
 	selectLatestWorkflowTodoSnapshot
-} from "@/features/composer/workflow-todo";
+} from "@/domain/composer/workflow-todo";
 
 describe("workflow-todo", () => {
 	it("normalizes workflow todo snapshots with steps", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { AgentGoalState } from "@/api/types";
-import { selectLatestGoalState } from "@/features/composer/goal-state";
+import type { AgentGoalState } from "@/platform/rpc/types";
+import { selectLatestGoalState } from "@/domain/composer/goal-state";
 
 function createGoal(goalId: string, revision: number, stage: AgentGoalState["stage"]): AgentGoalState {
 	return {

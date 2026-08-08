@@ -6,10 +6,10 @@ import {
 	setApprovalMode,
 	type ApprovalMode,
 	type PendingApproval
-} from "@/api/approval-api";
-import type { NewSessionComposerPreferences } from "@/api/client-preferences-api";
-import type { SaveSessionUiMetadataParams } from "@/api/session-api";
-import { continueToolBudget, stopToolBudget } from "@/api/chat-api";
+} from "@/platform/rpc/approval-api";
+import type { NewSessionComposerPreferences } from "@/platform/rpc/client-preferences-api";
+import type { SaveSessionUiMetadataParams } from "@/platform/rpc/session-api";
+import { continueToolBudget, stopToolBudget } from "@/platform/rpc/chat-api";
 
 type RefValue<T> = { current: T };
 

@@ -5,9 +5,9 @@ import {
 	mergeOptimisticUserBlocks,
 	normalizeLocalPathForCompare,
 	trimTimelineFromRequest
-} from "@/app/app-helpers";
-import type { TimelinePageState } from "@/features/workbench/workbench-state";
-import type { TimelineBlock } from "@/api/types";
+} from "@/app/runtime/app-helpers";
+import type { TimelinePageState } from "@/domain/workbench/workbench-state";
+import type { TimelineBlock } from "@/platform/rpc/types";
 
 function page(blocks: TimelineBlock[], sessionId: string = "session-1"): TimelinePageState {
 	return {

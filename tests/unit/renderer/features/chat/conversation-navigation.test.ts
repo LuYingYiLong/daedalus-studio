@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { SessionTimelineNavigationEntry } from "@/api/types";
-import { resolveActiveBlockOffset, resolveActiveTimelineEntryId, resolveAdjacentTimelineEntry } from "@/features/chat/conversation-navigation";
+import type { SessionTimelineNavigationEntry } from "@/platform/rpc/types";
+import { resolveActiveBlockOffset, resolveActiveTimelineEntryId, resolveAdjacentTimelineEntry } from "@/domain/conversation/conversation-navigation";
 
 const entries: SessionTimelineNavigationEntry[] = [
 	{ entryId: "turn-1", requestId: "request-1", blockOffset: 0, sentAtUtc: "2026-08-02T00:00:00.000Z", preview: "one" },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { hasQueuedFollowUpResponse } from "@/app/run-completion-notification";
-import type { MessageQueueStatus } from "@/api/types";
+import { hasQueuedFollowUpResponse } from "@/app/runtime/run-completion-notification";
+import type { MessageQueueStatus } from "@/platform/rpc/types";
 
 function createQueueState(
 	items: Array<{ id: number; status: MessageQueueStatus }>,

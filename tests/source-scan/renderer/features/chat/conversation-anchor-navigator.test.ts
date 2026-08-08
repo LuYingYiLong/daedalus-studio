@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("ConversationAnchorNavigator source", () => {
-	const navigatorSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "ConversationAnchorNavigator.tsx");
-	const navigatorStyles: string = readRepoFile("src", "renderer", "src", "features", "chat", "ConversationAnchorNavigator.module.css");
-	const homePageSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
-	const timelinePaneSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "ConversationTimelinePane.tsx");
-	const homePageStyles: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.module.css").replace(/\r\n/g, "\n");
-	const messageListSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "MessageList.tsx");
+	const navigatorSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ConversationAnchorNavigator.tsx");
+	const navigatorStyles: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ConversationAnchorNavigator.module.css");
+	const homePageSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+	const timelinePaneSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ConversationTimelinePane.tsx");
+	const homePageStyles: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.module.css").replace(/\r\n/g, "\n");
+	const messageListSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "MessageList.tsx");
 
 	it("uses Anchor and Tooltip for every indexed user turn", () => {
 		expect(navigatorSource).toContain("<Anchor");

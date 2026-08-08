@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
-import type { TimelineBlock } from "@/api/types";
-import { createTimelinePageStore } from "@/features/workbench/timeline-page-store";
-import { MAX_TIMELINE_WINDOW_BLOCKS, type TimelinePageState } from "@/features/workbench/workbench-state";
+import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
+import type { TimelineBlock } from "@/platform/rpc/types";
+import { createTimelinePageStore } from "@/domain/workbench/timeline-page-store";
+import { MAX_TIMELINE_WINDOW_BLOCKS, type TimelinePageState } from "@/domain/workbench/workbench-state";
 
 function createUserBlock(id: string): TimelineBlock {
 	return {

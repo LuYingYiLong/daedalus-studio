@@ -1,6 +1,6 @@
 import { useRef, type Dispatch, type SetStateAction } from "react";
-import { saveImageAttachment, saveTextAttachment } from "@/api/image-attachment-api";
-import type { AdditionalContextItem, WorkbenchPatch, WorkspaceConfig } from "@/api/types";
+import { saveImageAttachment, saveTextAttachment } from "@/platform/rpc/image-attachment-api";
+import type { AdditionalContextItem, WorkbenchPatch, WorkspaceConfig } from "@/platform/rpc/types";
 import {
 	CONTEXT_SUBTITLE_MAX_CHARS,
 	MAX_IMAGE_ATTACHMENT_BYTES,

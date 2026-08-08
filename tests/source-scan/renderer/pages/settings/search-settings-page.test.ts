@@ -3,11 +3,11 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("SearchSettingsPage", () => {
 	it("renders web search settings backed by backend RPC", () => {
-		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "SearchSettingsPage.tsx");
-		const settingsSource: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindow.tsx");
-		const apiSource: string = readRepoFile("src", "renderer", "src", "api", "web-search-settings-api.ts");
-		const providerSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "ProviderSettingsPage.tsx");
-		const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "SearchSettingsPage.tsx");
+		const settingsSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "SettingsWindow.tsx");
+		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "web-search-settings-api.ts");
+		const providerSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "ProviderSettingsPage.tsx");
+		const composerSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.tsx");
 
 		expect(settingsSource).toContain('key: "search"');
 		expect(settingsSource).toContain('labelKey: "settings.menu.search"');

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	ConversationSearchEngine,
 	extractMarkdownVisibleBlocks
-} from "@/features/chat/conversation-search-engine";
+} from "@/domain/conversation/conversation-search-engine";
 
 describe("conversation search engine", () => {
 	it("extracts visible Markdown text without formatting, link targets, images, or raw HTML", () => {

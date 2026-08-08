@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createMcpServerAddPayload, createMcpServerUpdatePayload, parseEnvLines, parseHeaderLines, parseLineList } from "@/features/settings/lib/mcp-form-utils";
+import { createMcpServerAddPayload, createMcpServerUpdatePayload, parseEnvLines, parseHeaderLines, parseLineList } from "@/domain/settings/mcp-form-utils";
 
 describe("mcp-form-utils", () => {
 	it("parses multiline args, env and headers", () => {

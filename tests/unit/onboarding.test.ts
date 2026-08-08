@@ -3,7 +3,7 @@ import {
 	createCompletedOnboardingPreferences,
 	createDefaultOnboardingPreferences,
 	isOnboardingPreferences
-} from "../../src/onboarding";
+} from "../../src/contracts/onboarding";
 
 describe("onboarding runtime state", () => {
 	it("accepts the persisted default state", () => {

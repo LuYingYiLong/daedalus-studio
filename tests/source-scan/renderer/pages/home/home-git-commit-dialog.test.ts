@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("HomePage git commit dialog source", () => {
-	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
-	const commitActionDialogSource: string = readRepoFile("src", "renderer", "src", "features", "git", "CommitActionDialog.tsx");
-	const branchActionDialogSource: string = readRepoFile("src", "renderer", "src", "features", "git", "BranchActionDialog.tsx");
-	const createBranchDialogSource: string = readRepoFile("src", "renderer", "src", "features", "git", "CreateBranchDialog.tsx");
+	const agentSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+	const commitActionDialogSource: string = readRepoFile("src", "renderer", "src", "widgets", "git", "CommitActionDialog.tsx");
+	const branchActionDialogSource: string = readRepoFile("src", "renderer", "src", "widgets", "git", "BranchActionDialog.tsx");
+	const createBranchDialogSource: string = readRepoFile("src", "renderer", "src", "widgets", "git", "CreateBranchDialog.tsx");
 	const gitActionControllerSource: string = readRepoFile("src", "renderer", "src", "features", "git", "useGitActionDialogController.tsx");
 
 	it("generates commit messages and wires commit push actions", () => {

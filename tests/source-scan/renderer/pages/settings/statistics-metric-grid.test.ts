@@ -3,8 +3,8 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("statistics metric grid", () => {
 	it("keeps all metrics in one container-responsive row without horizontal scrolling", () => {
-		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "StatisticsSettingsPage.tsx");
-		const stylesSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "StatisticsSettingsPage.module.css");
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "StatisticsSettingsPage.tsx");
+		const stylesSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "StatisticsSettingsPage.module.css");
 
 		expect(pageSource).not.toContain("<Divider");
 		expect(pageSource).toContain("classNames={METRIC_CLASS_NAMES}");

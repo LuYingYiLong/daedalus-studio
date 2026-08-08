@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createFileEditUnifiedDiff } from "@/features/chat/file-edit-diff";
+import { createFileEditUnifiedDiff } from "@/domain/conversation/file-edit-diff";
 
 describe("file edit diff", () => {
 	it("keeps surrounding context while rendering a bounded text replacement", (): void => {

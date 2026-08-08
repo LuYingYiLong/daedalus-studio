@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
-import type { TimelineBlock, WorkbenchSnapshot } from "@/api/types";
+import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
+import type { TimelineBlock, WorkbenchSnapshot } from "@/platform/rpc/types";
 import {
 	applyBackendEventToTimeline,
 	applyBackendEventsToTimeline,
@@ -10,7 +10,7 @@ import {
 	MAX_TIMELINE_WINDOW_BLOCKS,
 	mergeTimelineAfter,
 	mergeTimelineBefore
-} from "@/features/workbench/workbench-state";
+} from "@/domain/workbench/workbench-state";
 import {
 	applyRunStateFromBackendEvent,
 	applyRunStateFromWorkbench,
@@ -18,7 +18,7 @@ import {
 	createOptimisticRunState,
 	isRunControllerActive,
 	type RunControllerState
-} from "@/features/workbench/run-state";
+} from "@/domain/workbench/run-state";
 
 function createWorkbench(revision: number, text: string): WorkbenchSnapshot {
 	return {

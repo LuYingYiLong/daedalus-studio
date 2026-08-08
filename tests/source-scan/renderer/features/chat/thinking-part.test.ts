@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("ThinkingPart source", () => {
-	const source: string = readRepoFile("src", "renderer", "src", "features", "chat", "ThinkingPart.tsx");
+	const source: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ThinkingPart.tsx");
 
 	it("animates the active thinking label without affecting completed thinking parts", () => {
-		expect(source).toContain('import ShinyText from "@/components/ShinyText";');
+		expect(source).toContain('import ShinyText from "@/ui/ShinyText";');
 		expect(source).toContain('t("chat.thinking.activeLabel")');
 		expect(source).toContain('<ShinyText text={t("chat.thinking.activeLabel")} speed={2.4} />');
 		expect(source).toContain('? t("chat.thinking.label")');

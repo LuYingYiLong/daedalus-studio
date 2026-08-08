@@ -2,20 +2,19 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../helpers/repo-paths";
 
 describe("Godot documentation settings", () => {
-	const settingsWindowSource: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindow.tsx");
+	const settingsWindowSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "SettingsWindow.tsx");
 	const pageSource: string = readRepoFile(
 		"src",
 		"renderer",
 		"src",
-		"pages",
-		"settings",
+		"widgets", "settings",
 		"DocumentationSettingsPage.tsx"
 	);
 	const apiSource: string = readRepoFile(
 		"src",
 		"renderer",
 		"src",
-		"api",
+		"platform", "rpc",
 		"godot-documentation-api.ts"
 	);
 	const mainSource: string = readRepoFile("src", "main", "index.ts");

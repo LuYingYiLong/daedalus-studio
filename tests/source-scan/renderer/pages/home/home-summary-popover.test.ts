@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("HomePage summary popover source", () => {
-	const source: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
-	const apiSource: string = readRepoFile("src", "renderer", "src", "api", "session-overview-api.ts");
+	const source: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+	const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "session-overview-api.ts");
 
 	it("uses one overview model for sessions and the NewSessionHome workspace", () => {
 		expect(apiSource).toContain('"session.overview.get"');

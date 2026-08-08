@@ -14,7 +14,7 @@ describe("settings window lifecycle", () => {
 	it("keeps the settings window title separate from the shared renderer document title", () => {
 		const mainSource: string = readRepoFile("src", "main", "index.ts");
 		const rendererEntrySource: string = readRepoFile("src", "renderer", "src", "main.tsx");
-		const settingsWindowSource: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindow.tsx");
+		const settingsWindowSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "SettingsWindow.tsx");
 
 		expect(mainSource).toContain('title: "Settings",');
 		expect(rendererEntrySource).toContain('document.title = "Settings";');
@@ -42,7 +42,7 @@ describe("settings window lifecycle", () => {
 		const mainSource: string = readRepoFile("src", "main", "index.ts");
 		const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 		const rendererEntrySource: string = readRepoFile("src", "renderer", "src", "main.tsx");
-		const globalStylesSource: string = readRepoFile("src", "renderer", "src", "styles", "global.css");
+		const globalStylesSource: string = readRepoFile("src", "renderer", "src", "ui", "styles", "global.css");
 
 		expect(mainSource).toContain('ipcMain.on("window:renderer-ready"');
 		expect(mainSource).toContain('ipcMain.on("window:renderer-shell-ready"');

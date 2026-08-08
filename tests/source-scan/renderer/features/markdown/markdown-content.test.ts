@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("MarkdownContent source", () => {
-	const source: string = readRepoFile("src", "renderer", "src", "features", "markdown", "MarkdownContent.tsx");
+	const source: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "MarkdownContent.tsx");
 
 	it("guards highlight.js calls and uses a lightweight streaming renderer", () => {
 		expect(source).toContain("gd: \"gdscript\"");

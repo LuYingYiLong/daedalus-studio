@@ -7,16 +7,15 @@ describe("SelectionAskDialog", () => {
 			"src",
 			"renderer",
 			"src",
-			"features",
-			"chat",
+			"widgets",
+			"conversation",
 			"SelectionAskDialog.tsx"
 		);
 		const cssSource: string = readRepoFile(
 			"src",
 			"renderer",
 			"src",
-			"features",
-			"chat",
+			"widgets", "conversation",
 			"SelectionAskDialog.module.css"
 		);
 

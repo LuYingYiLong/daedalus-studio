@@ -1,5 +1,5 @@
-import type { AdditionalContextItem, WorkspaceConfig } from "@/api/types";
-import type { SaveImageAttachmentParams } from "@/api/image-attachment-api";
+import type { AdditionalContextItem, WorkspaceConfig } from "@/platform/rpc/types";
+import type { SaveImageAttachmentParams } from "@/platform/rpc/image-attachment-api";
 
 export type SupportedImageMimeType = SaveImageAttachmentParams["mimeType"];
 

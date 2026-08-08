@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("MessageQueuePanel source", () => {
-	const panelSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "MessageQueuePanel.tsx");
-	const panelStyleSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "MessageQueuePanel.module.css");
-	const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
+	const panelSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "MessageQueuePanel.tsx");
+	const panelStyleSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "MessageQueuePanel.module.css");
+	const composerSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.tsx");
 	const appSource: string = readAppImplementation();
-	const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
-	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
-	const queueApiSource: string = readRepoFile("src", "renderer", "src", "api", "message-queue-api.ts");
-	const guideApiSource: string = readRepoFile("src", "renderer", "src", "api", "guide-api.ts");
+	const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useBackendEventStream.ts");
+	const agentSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+	const queueApiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "message-queue-api.ts");
+	const guideApiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "guide-api.ts");
 	const packageJsonSource: string = readRepoFile("package.json");
 
 	it("uses sortable dnd-kit rows with explicit draggable and guide icons", () => {

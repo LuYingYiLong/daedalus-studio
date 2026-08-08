@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseComposerModeCommand } from "@/features/composer/composer-mode-command";
+import { parseComposerModeCommand } from "@/domain/composer/composer-mode-command";
 
 describe("composer mode commands", () => {
 	it.each([

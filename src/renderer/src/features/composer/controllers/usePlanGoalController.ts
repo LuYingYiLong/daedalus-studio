@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
-import type { AdditionalContextItem, AgentGoalState, PlanApprovalState, PlanClarificationState, SessionMetadata, WorkbenchSnapshot, WorkflowTodoSnapshot } from "@/api/types";
-import { approvePlan, revisePlan, submitPlanClarification, type PlanClarificationSubmission, type PlanResult } from "@/api/plan-api";
-import { dismissGoal } from "@/api/goal-api";
-import { getPlanApprovalFromResult, normalizePlanClarification } from "@/shared/lib/backend-event-state";
+import type { AdditionalContextItem, AgentGoalState, PlanApprovalState, PlanClarificationState, SessionMetadata, WorkbenchSnapshot, WorkflowTodoSnapshot } from "@/platform/rpc/types";
+import { approvePlan, revisePlan, submitPlanClarification, type PlanClarificationSubmission, type PlanResult } from "@/platform/rpc/plan-api";
+import { dismissGoal } from "@/platform/rpc/goal-api";
+import { getPlanApprovalFromResult, normalizePlanClarification } from "@/domain/run/backend-event-state";
 import { createPlanApprovalKey, createPlanClarificationKey } from "./plan-helpers";
-import { createWorkflowTodoSnapshotFromPlanData } from "@/features/composer/workflow-todo";
-import { isAgentGoalDismissed, isAgentGoalTerminal } from "@/features/composer/goal-display";
-import { selectLatestGoalState } from "@/features/composer/goal-state";
+import { createWorkflowTodoSnapshotFromPlanData } from "@/domain/composer/workflow-todo";
+import { isAgentGoalDismissed, isAgentGoalTerminal } from "@/domain/composer/goal-display";
+import { selectLatestGoalState } from "@/domain/composer/goal-state";
 
 type RefValue<T> = { current: T };
 

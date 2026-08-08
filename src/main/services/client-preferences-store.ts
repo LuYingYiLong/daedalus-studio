@@ -4,8 +4,8 @@ import {
 	normalizeKeyboardShortcutOverrides,
 	type KeyboardShortcutOverrides,
 	type ShortcutPlatform
-} from "../../keyboard-shortcuts";
-import { DEFAULT_STUDIO_THEME_COLOR, normalizeStudioThemeColor } from "../../theme-color";
+} from "../../contracts/keyboard-shortcuts";
+import { DEFAULT_STUDIO_THEME_COLOR, normalizeStudioThemeColor } from "../../contracts/theme-color";
 import {
 	ONBOARDING_STEP_IDS,
 	createDefaultOnboardingPreferences,
@@ -13,12 +13,12 @@ import {
 	type OnboardingPreferences,
 	type OnboardingStepId,
 	type OnboardingStepOutcome
-} from "../../onboarding";
+} from "../../contracts/onboarding";
 import {
 	createDefaultNewSessionComposerPreferences,
 	type NewSessionComposerModel,
 	type NewSessionComposerPreferences
-} from "../../new-session-composer-preferences";
+} from "../../contracts/new-session-composer-preferences";
 
 export type ClientPreferences = {
 	autoCheckForUpdates: boolean;

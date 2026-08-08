@@ -7,8 +7,7 @@ describe("ArchivedSessionSettingsPage", () => {
 			"src",
 			"renderer",
 			"src",
-			"pages",
-			"settings",
+			"widgets", "settings",
 			"ArchivedSessionSettingsPage.tsx"
 		);
 		const appSource: string = readAppImplementation();
@@ -16,8 +15,7 @@ describe("ArchivedSessionSettingsPage", () => {
 			"src",
 			"renderer",
 			"src",
-			"features",
-			"workspace",
+			"widgets", "workspace",
 			"WorkspaceTree.tsx"
 		);
 		const preloadSource: string = readRepoFile("src", "preload", "index.ts");

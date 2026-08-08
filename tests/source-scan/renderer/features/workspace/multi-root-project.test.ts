@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("multi-root workspace projects", () => {
-	const typesSource: string = readRepoFile("src", "renderer", "src", "api", "types.ts");
-	const workspaceApiSource: string = readRepoFile("src", "renderer", "src", "api", "workspace-api.ts");
-	const gitApiSource: string = readRepoFile("src", "renderer", "src", "api", "workspace-git-api.ts");
-	const gitDiffApiSource: string = readRepoFile("src", "renderer", "src", "api", "workspace-git-diff-api.ts");
-	const treeSource: string = readRepoFile("src", "renderer", "src", "features", "workspace", "WorkspaceTree.tsx");
-	const editorSource: string = readRepoFile("src", "renderer", "src", "features", "workspace", "WorkspaceProjectDialog.tsx");
-	const deleteSource: string = readRepoFile("src", "renderer", "src", "features", "workspace", "DeleteWorkspaceDialog.tsx");
-	const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
+	const typesSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "types.ts");
+	const workspaceApiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "workspace-api.ts");
+	const gitApiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "workspace-git-api.ts");
+	const gitDiffApiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "workspace-git-diff-api.ts");
+	const treeSource: string = readRepoFile("src", "renderer", "src", "widgets", "workspace", "WorkspaceTree.tsx");
+	const editorSource: string = readRepoFile("src", "renderer", "src", "widgets", "workspace", "WorkspaceProjectDialog.tsx");
+	const deleteSource: string = readRepoFile("src", "renderer", "src", "widgets", "workspace", "DeleteWorkspaceDialog.tsx");
+	const composerSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.tsx");
 	const appSource: string = readAppImplementation();
 
 	it("models a stable project with appearance and source folders", () => {

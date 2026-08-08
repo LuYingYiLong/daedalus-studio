@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getToolDisplayInfo } from "@/features/chat/tool-display";
+import { getToolDisplayInfo } from "@/domain/conversation/tool-display";
 
 describe("tool display", () => {
 	it("uses the actual tool-call arguments after a streaming preview", (): void => {

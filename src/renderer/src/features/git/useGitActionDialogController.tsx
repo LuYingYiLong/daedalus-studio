@@ -14,14 +14,12 @@ import {
 	type WorkspaceGitBranchItem,
 	type WorkspaceGitBranchOperationResult,
 	type WorkspaceGitBranchesResult
-} from "@/api/workspace-git-api";
+} from "@/platform/rpc/workspace-git-api";
 import {
 	fetchWorkspaceGitDiffSummary,
 	type WorkspaceGitDiffSummaryResult
-} from "@/api/workspace-git-diff-api";
-import type { BranchActionDialogProps, BranchCheckoutDraft } from "./BranchActionDialog";
-import type { CommitActionDialogProps } from "./CommitActionDialog";
-import type { CreateBranchDialogProps } from "./CreateBranchDialog";
+} from "@/platform/rpc/workspace-git-diff-api";
+import type { BranchActionDialogProps, BranchCheckoutDraft, CommitActionDialogProps, CreateBranchDialogProps } from "@/features/git/dialog-types";
 
 type BranchOperation = "checkout" | "create";
 

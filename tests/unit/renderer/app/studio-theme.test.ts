@@ -3,7 +3,7 @@ import {
 	createStudioAccentPalette,
 	createStudioTheme,
 	DEFAULT_STUDIO_THEME_COLOR
-} from "@/styles/studio-theme";
+} from "@/ui/styles/studio-theme";
 
 describe("Studio theme color", () => {
 	it("uses the saved color as the Ant Design primary token", () => {

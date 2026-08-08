@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("Composer context usage layout", () => {
-	const source: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
-	const styles: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.module.css");
+	const source: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.tsx");
+	const styles: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.module.css");
 
 	it("renders token totals and percentages as aligned columns without a text separator", () => {
 		expect(source).toContain("contextUsageBreakdown");

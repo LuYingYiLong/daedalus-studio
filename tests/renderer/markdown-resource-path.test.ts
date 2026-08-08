@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMarkdownResourceLabel, parseMarkdownResourceHref } from "@/features/markdown/markdown-resource-path";
+import { formatMarkdownResourceLabel, parseMarkdownResourceHref } from "@/domain/markdown/markdown-resource-path";
 
 describe("markdown resource paths", () => {
 	it("recognizes Windows paths and normalizes escaped separators", () => {

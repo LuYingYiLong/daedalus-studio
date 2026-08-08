@@ -3,10 +3,10 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("GeneralSettingsPage", () => {
 	it("renders general options and splits backend settings from client preferences", () => {
-		const pageSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "GeneralSettingsPage.tsx");
-		const cssSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "GeneralSettingsPage.module.css");
-		const apiSource: string = readRepoFile("src", "renderer", "src", "api", "client-preferences-api.ts");
-		const generalApiSource: string = readRepoFile("src", "renderer", "src", "api", "general-settings-api.ts");
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "GeneralSettingsPage.tsx");
+		const cssSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "GeneralSettingsPage.module.css");
+		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "client-preferences-api.ts");
+		const generalApiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "general-settings-api.ts");
 		const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 		const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 		const mainSource: string = readRepoFile("src", "main", "index.ts");
@@ -15,6 +15,7 @@ describe("GeneralSettingsPage", () => {
 			"renderer",
 			"src",
 			"app",
+			"runtime",
 			"hooks",
 			"useClientPreferencesController.ts"
 		);

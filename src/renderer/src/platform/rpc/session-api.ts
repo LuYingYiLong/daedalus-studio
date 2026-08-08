@@ -1,0 +1,352 @@
+import { createBackendClient } from "@/platform/rpc/transport/backend-client";
+import type { MessageTextAnchor, SelectionAskMessage, SelectionAskThread, SelectionAskThreadPage, SessionListResult, SessionMetadata, SessionOpenResult, SessionSearchPage, SessionTimelineNavigationIndexResult, SessionTimelineResult, SessionTimelineSearchIndexPage, WorkbenchSnapshot } from "./types";
+import type { ChatMode } from "./chat-api";
+
+export type CreateSessionParams = {
+	title: string;
+	temporary?: boolean;
+	workspaceId?: string | null;
+	provider?: string;
+	model?: string;
+	reasoningEffort?: string;
+	chatMode?: ChatMode;
+	approvalMode?: "manual" | "auto-safe" | "full-trust";
+	workflowTodoCollapsed?: boolean;
+};
+
+export type SaveSessionUiMetadataParams = {
+	provider?: string;
+	model?: string;
+	reasoningEffort?: string;
+	chatMode?: ChatMode;
+	approvalMode?: "manual" | "auto-safe" | "full-trust";
+	workflowTodoCollapsed?: boolean;
+};
+
+export type CreateSessionResult = SessionMetadata & {
+	workbench: WorkbenchSnapshot;
+};
+
+export type SaveSessionResult = {
+	saved: true;
+	sessionId: string;
+	messageCount: number;
+};
+
+export type SetSessionModelParams = {
+	provider: string;
+	model: string;
+};
+
+export type SetSessionModelResult = {
+	metadata: SessionMetadata;
+	workbench: WorkbenchSnapshot;
+};
+
+export type ArchiveSessionResult = {
+	archived: true;
+	metadata: SessionMetadata;
+};
+
+export type RenameSessionResult = SessionMetadata;
+
+export type SetSessionPinnedResult = SessionMetadata;
+
+export type ArchivedSessionListResult = {
+	archivedSessions: SessionMetadata[];
+};
+
+export type RestoreArchivedSessionResult = {
+	restored: true;
+	metadata: SessionMetadata;
+};
+
+export type DeleteArchivedSessionResult = {
+	deletedArchived: true;
+	sessionId: string;
+};
+
+export type DeleteSessionResult = {
+	deleted: true;
+	sessionId: string;
+};
+
+export type ExportSessionResult = {
+	exported: true;
+	sessionId: string;
+	destinationPath: string;
+	byteSize: number;
+	tableCounts: Record<string, number>;
+	embeddedFileCount: number;
+	missingFileCount: number;
+};
+
+export type ImportSessionResult = {
+	imported: true;
+	sessionId: string;
+	title: string;
+	sourcePath: string;
+	archived: boolean;
+	tableCounts: Record<string, number>;
+	restoredFileCount: number;
+};
+
+export type DismissWorkflowTodoParams = {
+	workflowId?: string;
+	runId?: string;
+};
+
+export type DismissWorkflowTodoResult = {
+	dismissed: true;
+	workflowId: string | null;
+	runId: string | null;
+};
+
+export type SessionIntegrityIssue = {
+	file: "messages" | "events" | "approval-events" | "workflow-events" | "agent-events";
+	line: number;
+	expectedSessionId: string;
+	actualSessionId: string;
+	requestId?: string;
+	event?: string;
+};
+
+export type SessionIntegrityCheckResult = {
+	sessionId: string;
+	ok: boolean;
+	issues: SessionIntegrityIssue[];
+	checkedFiles: SessionIntegrityIssue["file"][];
+};
+
+export async function fetchSessions(): Promise<SessionListResult> {
+	const client = await createBackendClient();
+
+	return client.request<SessionListResult>("session.list");
+}
+
+export async function createSession(params: CreateSessionParams): Promise<CreateSessionResult> {
+	const client = await createBackendClient();
+
+	return client.request<CreateSessionResult>("session.create", params);
+}
+
+export async function openSession(sessionId: string, limit: number = 100): Promise<SessionOpenResult> {
+	const client = await createBackendClient();
+
+	return client.request<SessionOpenResult>("session.open", {
+		sessionId,
+		limit
+	});
+}
+
+export async function fetchSessionTimeline(sessionId: string, limit: number = 100): Promise<SessionTimelineResult> {
+	const client = await createBackendClient();
+
+	return client.request<SessionTimelineResult>("session.timeline", {
+		sessionId,
+		limit
+	});
+}
+
+export async function fetchSessionTimelineBefore(sessionId: string, beforeOffset: number, limit: number = 80): Promise<SessionTimelineResult> {
+	const client = await createBackendClient();
+
+	return client.request<SessionTimelineResult>("session.timeline", {
+		sessionId,
+		beforeOffset,
+		limit
+	});
+}
+
+export async function fetchSessionTimelineAfter(sessionId: string, afterOffset: number, limit: number = 80): Promise<SessionTimelineResult> {
+	const client = await createBackendClient();
+
+	return client.request<SessionTimelineResult>("session.timeline", {
+		sessionId,
+		afterOffset,
+		limit
+	});
+}
+
+export async function checkSessionIntegrity(sessionId: string): Promise<SessionIntegrityCheckResult> {
+	const client = await createBackendClient();
+
+	return client.request<SessionIntegrityCheckResult>("session.integrity.check", {
+		sessionId
+	});
+}
+
+export async function saveSessionUiMetadata(params: SaveSessionUiMetadataParams): Promise<SaveSessionResult> {
+	const client = await createBackendClient();
+
+	return client.request<SaveSessionResult>("session.save", params);
+}
+
+export async function setSessionModel(params: SetSessionModelParams): Promise<SetSessionModelResult> {
+	const client = await createBackendClient();
+
+	return client.request<SetSessionModelResult>("session.model.set", params);
+}
+
+export async function dismissWorkflowTodo(params: DismissWorkflowTodoParams = {}): Promise<DismissWorkflowTodoResult> {
+	const client = await createBackendClient();
+
+	return client.request<DismissWorkflowTodoResult>("session.workflow.todo.dismiss", params);
+}
+
+export async function archiveSession(sessionId: string): Promise<ArchiveSessionResult> {
+	const client = await createBackendClient();
+
+	return client.request<ArchiveSessionResult>("session.archive", {
+		sessionId
+	});
+}
+
+export async function renameSession(sessionId: string, title: string): Promise<RenameSessionResult> {
+	const client = await createBackendClient();
+
+	return client.request<RenameSessionResult>("session.rename", {
+		sessionId,
+		title
+	});
+}
+
+export async function fetchArchivedSessions(): Promise<ArchivedSessionListResult> {
+	const client = await createBackendClient();
+
+	return client.request<ArchivedSessionListResult>("session.archived.list");
+}
+
+export async function restoreArchivedSession(sessionId: string): Promise<RestoreArchivedSessionResult> {
+	const client = await createBackendClient();
+
+	return client.request<RestoreArchivedSessionResult>("session.archived.restore", {
+		sessionId
+	});
+}
+
+export async function deleteArchivedSession(sessionId: string): Promise<DeleteArchivedSessionResult> {
+	const client = await createBackendClient();
+
+	return client.request<DeleteArchivedSessionResult>("session.archived.delete", {
+		sessionId
+	});
+}
+
+export async function exportSession(
+	sessionId: string,
+	destinationPath: string
+): Promise<ExportSessionResult> {
+	const client = await createBackendClient();
+	return client.request<ExportSessionResult>("session.export", { sessionId, destinationPath });
+}
+
+export async function importSession(sourcePath: string): Promise<ImportSessionResult> {
+	const client = await createBackendClient();
+	return client.request<ImportSessionResult>("session.import", { sourcePath });
+}
+
+export async function fetchSessionTimelineIndex(sessionId: string): Promise<SessionTimelineNavigationIndexResult> {
+	const client = await createBackendClient();
+
+	return client.request<SessionTimelineNavigationIndexResult>("session.timeline.index", { sessionId });
+}
+
+export async function fetchSessionTimelineSearchIndex(
+	sessionId: string,
+	afterOffset: number = 0,
+	limit: number = 120
+): Promise<SessionTimelineSearchIndexPage> {
+	const client = await createBackendClient();
+
+	return client.request<SessionTimelineSearchIndexPage>("session.timeline.search.index", {
+		sessionId,
+		afterOffset,
+		limit
+	});
+}
+
+export async function startSessionTimelineSearch(sessionId: string): Promise<SessionSearchPage> {
+	const client = await createBackendClient();
+	return client.request<SessionSearchPage>("session.timeline.search.start", { sessionId });
+}
+
+export async function fetchSessionTimelineSearchPage(
+	searchId: string,
+	afterOffset: number = 0,
+	limit: number = 400
+): Promise<SessionSearchPage> {
+	const client = await createBackendClient();
+	return client.request<SessionSearchPage>("session.timeline.search.page", { searchId, afterOffset, limit });
+}
+
+export async function cancelSessionTimelineSearch(searchId: string): Promise<void> {
+	const client = await createBackendClient();
+	await client.request("session.timeline.search.cancel", { searchId });
+}
+
+export async function listSelectionAskThreads(sessionId: string): Promise<{ sessionId: string; threads: SelectionAskThread[] }> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.list", { sessionId });
+}
+
+export async function getSelectionAskThread(sessionId: string, threadId: string, beforeSequence?: number): Promise<SelectionAskThreadPage> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.get", {
+		sessionId,
+		threadId,
+		...(beforeSequence === undefined ? {} : { beforeSequence }),
+		limit: 100
+	});
+}
+
+export async function createSelectionAskThread(
+	sessionId: string,
+	anchor: MessageTextAnchor,
+	locale: "zh-CN" | "en-US"
+): Promise<SelectionAskThreadPage & { created: boolean }> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.create", { sessionId, anchor, locale });
+}
+
+export async function sendSelectionAskMessage(
+	sessionId: string,
+	threadId: string,
+	message: string
+): Promise<{ thread: SelectionAskThread; messages: SelectionAskMessage[] }> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.send", { sessionId, threadId, message });
+}
+
+export async function cancelSelectionAskResponse(
+	sessionId: string,
+	threadId: string
+): Promise<{ threadId: string; cancelled: boolean }> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.cancel", { sessionId, threadId });
+}
+
+export async function deleteSelectionAskThread(
+	sessionId: string,
+	threadId: string
+): Promise<{ threadId: string; deleted: boolean }> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.delete", { sessionId, threadId });
+}
+
+export async function deleteAllSelectionAskThreads(sessionId: string): Promise<{ deletedCount: number }> {
+	const client = await createBackendClient();
+	return client.request("session.selectionAsk.deleteAll", { sessionId });
+}
+
+export async function setSessionPinned(sessionId: string, pinned: boolean): Promise<SetSessionPinnedResult> {
+	const client = await createBackendClient();
+
+	return client.request<SetSessionPinnedResult>("session.pin.set", { sessionId, pinned });
+}
+
+export async function deleteSession(sessionId: string): Promise<DeleteSessionResult> {
+	const client = await createBackendClient();
+
+	return client.request<DeleteSessionResult>("session.delete", { sessionId });
+}

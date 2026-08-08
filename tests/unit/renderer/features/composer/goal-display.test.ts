@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { AgentGoalState } from "@/api/types";
-import { isAgentGoalDismissed, isAgentGoalTerminal, shouldHideInlineDiffForGoal } from "@/features/composer/goal-display";
+import type { AgentGoalState } from "@/platform/rpc/types";
+import { isAgentGoalDismissed, isAgentGoalTerminal, shouldHideInlineDiffForGoal } from "@/domain/composer/goal-display";
 
 function createGoal(stage: AgentGoalState["stage"]): AgentGoalState {
 	return { goalId: "goal-test", stage } as AgentGoalState;

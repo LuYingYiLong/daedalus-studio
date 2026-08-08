@@ -7,7 +7,7 @@ describe("OnboardingWizard", () => {
 	const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 	const mainSource: string = readRepoFile("src", "main", "index.ts");
 	const preferencesServiceSource: string = readRepoFile("src", "main", "services", "client-preferences.ts");
-	const onboardingSource: string = readRepoFile("src", "onboarding.ts");
+	const onboardingSource: string = readRepoFile("src", "contracts", "onboarding.ts");
 
 	it("persists all six steps and supports optional setup flows", () => {
 		expect(source).toContain("ONBOARDING_STEP_IDS.map");

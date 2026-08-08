@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { TimelineBlock } from "@/api/types";
-import { getTimelineCopyText, shouldRenderTimelineBlock } from "@/features/chat/MessageList";
+import type { TimelineBlock } from "@/platform/rpc/types";
+import { getTimelineCopyText, shouldRenderTimelineBlock } from "@/widgets/conversation/MessageList";
 
 describe("MessageList", () => {
 	it("filters completed empty assistant blocks before rendering", () => {

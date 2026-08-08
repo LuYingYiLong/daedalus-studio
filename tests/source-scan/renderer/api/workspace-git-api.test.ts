@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../helpers/repo-paths";
 
 describe("workspace git API source", () => {
-	const apiSource: string = readRepoFile("src", "renderer", "src", "api", "workspace-git-api.ts");
+	const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "workspace-git-api.ts");
 
 	it("wraps git commit and branch RPCs", () => {
 		expect(apiSource).toContain("workspace.git.commit.message.generate");

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { AgentGoalState } from "@/api/types";
+import type { AgentGoalState } from "@/platform/rpc/types";
 import {
 	getGoalBudgetExtensionDefaults,
 	hasGoalBudgetAfterExtension,
 	hasGoalBudgetRemaining
-} from "@/features/composer/goal-budget";
+} from "@/domain/composer/goal-budget";
 
 function createGoal(): AgentGoalState {
 	return {

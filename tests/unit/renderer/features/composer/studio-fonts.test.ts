@@ -3,7 +3,7 @@ import {
 	CRITICAL_STUDIO_FONTS,
 	waitForStudioFonts,
 	type StudioFontFaceSet
-} from "@renderer/styles/studio-fonts";
+} from "@renderer/ui/styles/studio-fonts";
 
 describe("studio font readiness", () => {
 	it("loads every critical UI font before reporting readiness", async () => {

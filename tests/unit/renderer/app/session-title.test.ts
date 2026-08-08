@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { SessionMetadata } from "@/api/types";
-import { getSessionTitle } from "@/app/session-title";
+import type { SessionMetadata } from "@/platform/rpc/types";
+import { getSessionTitle } from "@/app/runtime/session-title";
 
 function createSessionMetadata(title: string): SessionMetadata {
 	return {

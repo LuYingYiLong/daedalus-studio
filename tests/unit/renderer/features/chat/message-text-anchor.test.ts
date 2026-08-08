@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { MessageTextAnchor } from "@/api/types";
-import { getMessageAnchorKey, getMessageSelectionContextId } from "@/features/chat/message-text-anchor";
+import type { MessageTextAnchor } from "@/platform/rpc/types";
+import { getMessageAnchorKey, getMessageSelectionContextId } from "@/domain/conversation/message-text-anchor";
 
 const anchor: MessageTextAnchor = {
 	entryId: "assistant-1",

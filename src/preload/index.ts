@@ -1,8 +1,8 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
-import type { KeyboardShortcutOverrides } from "../keyboard-shortcuts";
-import { applyStudioAccentVariables } from "../theme-color";
-import type { OnboardingPreferences } from "../onboarding";
-import type { NewSessionComposerPreferences } from "../new-session-composer-preferences";
+import type { KeyboardShortcutOverrides } from "../contracts/keyboard-shortcuts";
+import { applyStudioAccentVariables } from "../contracts/theme-color";
+import type { OnboardingPreferences } from "../contracts/onboarding";
+import type { NewSessionComposerPreferences } from "../contracts/new-session-composer-preferences";
 
 type ClientPreferences = {
 	autoCheckForUpdates: boolean;

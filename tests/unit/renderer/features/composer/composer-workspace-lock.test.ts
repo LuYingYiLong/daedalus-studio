@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { SessionMetadata } from "@/api/types";
-import { isComposerWorkspaceSelectionLocked } from "@/features/composer/composer-workspace-lock";
+import type { SessionMetadata } from "@/platform/rpc/types";
+import { isComposerWorkspaceSelectionLocked } from "@/domain/composer/composer-workspace-lock";
 
 function metadata(value: Partial<SessionMetadata>): SessionMetadata {
 	return value as SessionMetadata;

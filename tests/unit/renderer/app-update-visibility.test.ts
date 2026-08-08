@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shouldShowUpdateButton } from "@/features/app-update/update-visibility";
+import { shouldShowUpdateButton } from "@/domain/app-update/update-visibility";
 
 function createComponentState(
 	status: AppUpdateStatus,

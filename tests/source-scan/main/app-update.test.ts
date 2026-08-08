@@ -12,11 +12,11 @@ describe("app update source", () => {
 	const bootstrapSource: string = readRepoFile("src", "main", "services", "backend-bootstrap.ts");
 	const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
-	const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.tsx");
-	const updateVisibilitySource: string = readRepoFile("src", "renderer", "src", "features", "app-update", "update-visibility.ts");
-	const titlebarCss: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.module.css");
-	const updateDialogSource: string = readRepoFile("src", "renderer", "src", "features", "app-update", "AppUpdateDialog.tsx");
-	const aboutSettingsSource: string = readRepoFile("src", "renderer", "src", "pages", "settings", "AboutSettingsPage.tsx");
+	const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "Titlebar.tsx");
+	const updateVisibilitySource: string = readRepoFile("src", "renderer", "src", "domain", "app-update", "update-visibility.ts");
+	const titlebarCss: string = readRepoFile("src", "renderer", "src", "app", "shell", "Titlebar.module.css");
+	const updateDialogSource: string = readRepoFile("src", "renderer", "src", "widgets", "app-update", "AppUpdateDialog.tsx");
+	const aboutSettingsSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "AboutSettingsPage.tsx");
 
 	it("configures electron-updater and GitHub publishing", () => {
 		expect(packageSource).toContain("\"electron-updater\"");

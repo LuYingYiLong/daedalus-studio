@@ -9,7 +9,7 @@ import {
 	normalizeShortcutBinding,
 	shortcutBindingFromKeyboardEvent,
 	type ShortcutKeyboardEvent
-} from "../../src/keyboard-shortcuts";
+} from "../../src/contracts/keyboard-shortcuts";
 
 function keyboardEvent(
 	code: string,

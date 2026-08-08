@@ -25,32 +25,32 @@ function sourceOf(relativeRoot: string): string {
 }
 
 describe("renderer architecture boundaries", () => {
-	it("keeps shared code independent from product layers", () => {
-		const source: string = sourceOf("shared");
+	it("keeps domain code independent from app and widgets", () => {
+		const source: string = sourceOf("domain");
 		expect(source).not.toMatch(/@\/app\//u);
-		expect(source).not.toMatch(/@\/pages\//u);
-		expect(source).not.toMatch(/@\/features\//u);
+		expect(source).not.toMatch(/@\/widgets\//u);
+		expect(source).not.toMatch(/from ["']antd["']/u);
 	});
 
-	it("keeps generic components independent from product layers", () => {
-		const source: string = sourceOf("components");
+	it("keeps the UI layer independent from product orchestration", () => {
+		const source: string = sourceOf("ui");
 		expect(source).not.toMatch(/@\/app\//u);
-		expect(source).not.toMatch(/@\/pages\//u);
 		expect(source).not.toMatch(/@\/features\//u);
+		expect(source).not.toMatch(/@\/widgets\//u);
 	});
 
-	it("prevents features from reaching into app or page composition", () => {
+	it("prevents use-case features from reaching into app or widget composition", () => {
 		const source: string = sourceOf("features");
 		expect(source).not.toMatch(/@\/app\//u);
-		expect(source).not.toMatch(/@\/pages\//u);
+		expect(source).not.toMatch(/@\/widgets\//u);
 	});
 
 	it("uses feature-owned controller entrypoints", () => {
-		const appController: string = readRepoFile("src", "renderer", "src", "app", "useAppController.tsx");
+		const appController: string = readRepoFile("src", "renderer", "src", "app", "runtime", "useAppController.tsx");
 		expect(appController).toContain("@/features/approval/controllers/useApprovalController");
 		expect(appController).toContain("@/features/workspace/controllers/useWorkspaceContextController");
 		expect(appController).toContain("@/features/composer/controllers/usePlanGoalController");
-		expect(appController).toContain("@/features/chat/controllers/useTimelineController");
+		expect(appController).toContain("@/features/conversation/controllers/useTimelineController");
 		expect(appController).not.toContain("./hooks/useAppApprovalController");
 		expect(appController).not.toContain("./hooks/useAppContextController");
 		expect(appController).not.toContain("./hooks/useAppPlanGoalController");

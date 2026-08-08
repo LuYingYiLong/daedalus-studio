@@ -3,12 +3,12 @@ import {
 	createDefaultSessionLayout,
 	createTerminalRuntimeId,
 	listTerminalRuntimeIds
-} from "@/features/dock/session-layout";
+} from "@/domain/session/session-layout";
 import {
 	createDockTab,
 	getNextDockTabIndex,
 	reorderDockTabs
-} from "@/features/dock/DockPanelTabs";
+} from "@/widgets/dock/DockPanelTabs";
 
 describe("session dock layout", () => {
 	it("creates the fixed closed defaults", () => {

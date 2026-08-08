@@ -3,8 +3,8 @@ import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-pa
 
 describe("global workspace sidebar layout", () => {
 	const appSource: string = readAppImplementation();
-	const homeSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
-	const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.tsx");
+	const homeSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+	const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "Titlebar.tsx");
 
 	it("stores the workspace sidebar outside session layouts and persists only resize end", () => {
 		expect(appSource).toContain("workspaceSidebar: clientPreferences.workspaceSidebar");

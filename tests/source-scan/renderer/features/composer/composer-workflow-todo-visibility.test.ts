@@ -3,13 +3,13 @@ import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-pa
 
 describe("Composer workflow todo visibility", () => {
 	it("keeps execution status out of Composer and renders the matching floating panel", () => {
-		const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
+		const composerSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.tsx");
 		const appSource: string = readAppImplementation();
-		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
-		const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
-		const floatingTodoSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "FloatingWorkflowTodoPanel.tsx");
-		const floatingGoalSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "FloatingGoalPanel.tsx");
-		const globalCss: string = readRepoFile("src", "renderer", "src", "styles", "global.css");
+		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useBackendEventStream.ts");
+		const agentSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+		const floatingTodoSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "FloatingWorkflowTodoPanel.tsx");
+		const floatingGoalSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "FloatingGoalPanel.tsx");
+		const globalCss: string = readRepoFile("src", "renderer", "src", "ui", "styles", "global.css");
 		const designDoc: string = readRepoFile("docs", "ui-design-system.md");
 
 		expect(composerSource).not.toContain("workflowTodoSnapshot");

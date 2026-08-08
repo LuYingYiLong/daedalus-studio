@@ -3,15 +3,15 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("conversation search source", () => {
 	const viteConfig: string = readRepoFile("electron.vite.config.ts");
-	const homePage: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
-	const homeStyles: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.module.css");
-	const panel: string = readRepoFile("src", "renderer", "src", "features", "chat", "ConversationSearchPanel.tsx");
-	const panelStyles: string = readRepoFile("src", "renderer", "src", "features", "chat", "ConversationSearchPanel.module.css");
-	const userBubble: string = readRepoFile("src", "renderer", "src", "features", "chat", "UserBubble.tsx");
-	const assistantBubble: string = readRepoFile("src", "renderer", "src", "features", "chat", "AssistantBubble.tsx");
-	const thinkingPart: string = readRepoFile("src", "renderer", "src", "features", "chat", "ThinkingPart.tsx");
-	const toolPart: string = readRepoFile("src", "renderer", "src", "features", "chat", "ToolPart.tsx");
-	const searchHook: string = readRepoFile("src", "renderer", "src", "features", "chat", "useConversationSearch.ts");
+	const homePage: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+	const homeStyles: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.module.css");
+	const panel: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ConversationSearchPanel.tsx");
+	const panelStyles: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ConversationSearchPanel.module.css");
+	const userBubble: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "UserBubble.tsx");
+	const assistantBubble: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "AssistantBubble.tsx");
+	const thinkingPart: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ThinkingPart.tsx");
+	const toolPart: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ToolPart.tsx");
+	const searchHook: string = readRepoFile("src", "renderer", "src", "features", "conversation", "useConversationSearch.ts");
 
 	it("binds conversation find through the shared shortcut dispatcher and keeps local controls", () => {
 		expect(homePage).toContain("findMatchingShortcutCommand");
@@ -48,8 +48,8 @@ describe("conversation search source", () => {
 			"src",
 			"renderer",
 			"src",
-			"features",
-			"chat",
+			"domain",
+			"conversation",
 			"conversation-search-highlight.ts"
 		);
 		expect(highlight).toContain("h5,h6,li,td,th,pre");

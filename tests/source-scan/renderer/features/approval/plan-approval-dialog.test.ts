@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("PlanApprovalDialog source", () => {
-	const source: string = readRepoFile("src", "renderer", "src", "features", "approval", "PlanApprovalDialog.tsx");
+	const source: string = readRepoFile("src", "renderer", "src", "widgets", "approval", "PlanApprovalDialog.tsx");
 
 	it("renders approve and revise actions from controlled plan props", () => {
 		expect(source).toContain("PlanApprovalDialogProps");

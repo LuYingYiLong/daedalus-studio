@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { SlashCommandDefinition } from "@/api/command-api";
-import type { SkillSummary } from "@/api/skill-api";
+import type { SlashCommandDefinition } from "@/platform/rpc/command-api";
+import type { SkillSummary } from "@/platform/rpc/skill-api";
 import {
 	createCompletionOptions,
 	extractEnabledSkillRefs,
 	getCompletionToken,
 	replaceCompletionToken
-} from "@/features/composer/composer-completion";
+} from "@/domain/composer/composer-completion";
 
 const commands: SlashCommandDefinition[] = [
 	{

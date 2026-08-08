@@ -3,12 +3,12 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("KeyboardShortcutsSettingsPage", () => {
 	it("registers the settings page and renders controlled Ant Design inputs, table, and editor", () => {
-		const settingsWindow: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindow.tsx");
+		const settingsWindow: string = readRepoFile("src", "renderer", "src", "app", "shell", "SettingsWindow.tsx");
 		const page: string = readRepoFile(
 			"src",
 			"renderer",
 			"src",
-			"pages",
+			"widgets",
 			"settings",
 			"KeyboardShortcutsSettingsPage.tsx"
 		);

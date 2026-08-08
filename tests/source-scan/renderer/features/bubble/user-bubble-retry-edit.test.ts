@@ -3,7 +3,7 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("UserBubble retry editing", () => {
 	it("does not reset the retry draft while an edit is already active", () => {
-		const source: string = readRepoFile("src", "renderer", "src", "features", "chat", "UserBubble.tsx");
+		const source: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "UserBubble.tsx");
 
 		expect(source).toContain("const wasRetryEditingRef = useRef<boolean>(isRetryEditing);");
 		expect(source).toContain("if (!wasRetryEditing) {");
@@ -12,8 +12,8 @@ describe("UserBubble retry editing", () => {
 	});
 
 	it("exposes the retry edit button through the same edit path as double click", () => {
-		const userBubbleSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "UserBubble.tsx");
-		const messageListSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "MessageList.tsx");
+		const userBubbleSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "UserBubble.tsx");
+		const messageListSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "MessageList.tsx");
 
 		expect(messageListSource).toContain("const canEditUserMessages: boolean = onRetryFromUserMessage !== undefined && !retryDisabled && !hasRunningAssistantBlock && activeRetryRequestId === null;");
 		expect(messageListSource).toContain("showEditButton={canEditUserMessages}");

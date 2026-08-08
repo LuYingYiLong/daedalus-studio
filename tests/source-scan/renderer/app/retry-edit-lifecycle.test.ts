@@ -17,7 +17,7 @@ describe("retry edit lifecycle", () => {
 
 	it("releases the composer send state from run-state events", () => {
 		const source: string = readAppImplementation();
-		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
+		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useBackendEventStream.ts");
 		const eventSubscription: number = backendEventStreamSource.indexOf("unsubscribe = client.addEventListener");
 		const cancellationEvent: number = backendEventStreamSource.indexOf("if (isRunCancellationEvent(event))");
 		const runStateReducer: number = backendEventStreamSource.indexOf("applyRunStateFromBackendEvent(currentState, event)");

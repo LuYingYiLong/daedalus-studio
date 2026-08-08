@@ -3,9 +3,9 @@ import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-pa
 
 describe("Composer todo preferences", () => {
 	it("applies todo auto expand preference before rendering the floating HomePage panel", () => {
-		const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
+		const composerSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.tsx");
 		const appSource: string = readAppImplementation();
-		const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
+		const agentSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
 
 		expect(composerSource).not.toContain("autoExpandWorkflowTodo");
 		expect(composerSource).not.toContain("dismissedWorkflowTodoKeyRef");

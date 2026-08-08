@@ -3,8 +3,8 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("SessionSourcesDialog source title layout", (): void => {
 	it("keeps Ant Design button content shrinkable and truncates long titles", (): void => {
-		const source: string = readRepoFile("src", "renderer", "src", "pages", "home", "SessionSourcesDialog.tsx");
-		const css: string = readRepoFile("src", "renderer", "src", "pages", "home", "SessionSourcesDialog.module.css");
+		const source: string = readRepoFile("src", "renderer", "src", "widgets", "home", "SessionSourcesDialog.tsx");
+		const css: string = readRepoFile("src", "renderer", "src", "widgets", "home", "SessionSourcesDialog.module.css");
 
 		expect(source).toContain("classNames={{ content: styles.sourceGridButtonContent }}");
 		expect(source).toContain("title={source.title}");
@@ -15,8 +15,8 @@ describe("SessionSourcesDialog source title layout", (): void => {
 	});
 
 	it("loads visible source images asynchronously after the dialog opens", (): void => {
-		const dialogSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "SessionSourcesDialog.tsx");
-		const homePageSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
+		const dialogSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "SessionSourcesDialog.tsx");
+		const homePageSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
 
 		expect(homePageSource).toContain("setSourcesModalOpen(true);");
 		expect(homePageSource).toContain("window.requestAnimationFrame");

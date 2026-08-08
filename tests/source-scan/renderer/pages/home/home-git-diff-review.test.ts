@@ -2,18 +2,18 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("HomePage git diff review source", () => {
-	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
-	const messageListSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "MessageList.tsx");
-	const assistantBubbleSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "AssistantBubble.tsx");
-	const inlineDiffSource: string = readRepoFile("src", "renderer", "src", "features", "chat", "InlineDiffPart.tsx");
-	const reviewPanelSource: string = readRepoFile("src", "renderer", "src", "features", "git", "review", "GitDiffReviewPanel.tsx");
-	const commitActionDialogSource: string = readRepoFile("src", "renderer", "src", "features", "git", "CommitActionDialog.tsx");
+	const agentSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+	const messageListSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "MessageList.tsx");
+	const assistantBubbleSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "AssistantBubble.tsx");
+	const inlineDiffSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "InlineDiffPart.tsx");
+	const reviewPanelSource: string = readRepoFile("src", "renderer", "src", "widgets", "git", "review", "GitDiffReviewPanel.tsx");
+	const commitActionDialogSource: string = readRepoFile("src", "renderer", "src", "widgets", "git", "CommitActionDialog.tsx");
 	const gitActionControllerSource: string = readRepoFile("src", "renderer", "src", "features", "git", "useGitActionDialogController.tsx");
-	const dockPanelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.tsx");
-	const dockPanelTabsCss: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.module.css");
-	const panelTabsSource: string = readRepoFile("src", "renderer", "src", "features", "panel-tabs", "PanelTabs.tsx");
-	const panelTabsCss: string = readRepoFile("src", "renderer", "src", "features", "panel-tabs", "PanelTabs.module.css");
-	const reviewPanelCss: string = readRepoFile("src", "renderer", "src", "features", "git", "review", "GitDiffReviewPanel.module.css");
+	const dockPanelTabsSource: string = readRepoFile("src", "renderer", "src", "widgets", "dock", "DockPanelTabs.tsx");
+	const dockPanelTabsCss: string = readRepoFile("src", "renderer", "src", "widgets", "dock", "DockPanelTabs.module.css");
+	const panelTabsSource: string = readRepoFile("src", "renderer", "src", "widgets", "panel-tabs", "PanelTabs.tsx");
+	const panelTabsCss: string = readRepoFile("src", "renderer", "src", "widgets", "panel-tabs", "PanelTabs.module.css");
+	const reviewPanelCss: string = readRepoFile("src", "renderer", "src", "widgets", "git", "review", "GitDiffReviewPanel.module.css");
 	const packageJsonSource: string = readRepoFile("package.json");
 
 	it("renders the side dock inside an Ant Design Splitter", () => {

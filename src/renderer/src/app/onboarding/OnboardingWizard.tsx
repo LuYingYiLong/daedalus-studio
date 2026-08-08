@@ -28,8 +28,8 @@ import {
 	type ProviderModelInfo,
 	type ProviderModelSelection,
 	type ProviderModelSelectionProvider
-} from "@/api/provider-api";
-import { updateGeneralSettings, type GeneralSettings } from "@/api/general-settings-api";
+} from "@/platform/rpc/provider-api";
+import { updateGeneralSettings, type GeneralSettings } from "@/platform/rpc/general-settings-api";
 import {
 	cancelGodotDocumentationJob,
 	fetchGodotDocumentation,
@@ -41,11 +41,11 @@ import {
 	type GodotDocumentationJob,
 	type GodotDocumentationRecord,
 	type GodotDocumentationState
-} from "@/api/godot-documentation-api";
+} from "@/platform/rpc/godot-documentation-api";
 import {
 	updateClientPreferences,
 	type ClientPreferences
-} from "@/api/client-preferences-api";
+} from "@/platform/rpc/client-preferences-api";
 import { Icon } from "@/assets/icons";
 import daedalusColorfulIconUrl from "@/assets/icons/icon-colorful.svg";
 import {
@@ -56,8 +56,8 @@ import {
 	type OnboardingPreferences,
 	type OnboardingStepId,
 	type OnboardingStepOutcome
-} from "../../../../onboarding";
-import type { BootstrapData } from "../bootstrap";
+} from "../../../../contracts/onboarding";
+import type { BootstrapData } from "../bootstrap/bootstrap";
 import styles from "./OnboardingWizard.module.css";
 
 type OnboardingWizardProps = {

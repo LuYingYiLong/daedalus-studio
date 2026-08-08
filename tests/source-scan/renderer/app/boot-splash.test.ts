@@ -2,15 +2,15 @@ import { describe, expect, it } from "vitest";
 import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths";
 
 describe("BootSplash", () => {
-	const windowProvidersSource: string = readRepoFile("src", "renderer", "src", "app", "WindowProviders.tsx");
-	const mainWindowRootSource: string = readRepoFile("src", "renderer", "src", "app", "MainWindowRoot.tsx");
-	const mainWindowErrorBoundarySource: string = readRepoFile("src", "renderer", "src", "app", "MainWindowErrorBoundary.tsx");
-	const settingsWindowSource: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindow.tsx");
-	const splashSource: string = readRepoFile("src", "renderer", "src", "app", "BootSplash.tsx");
-	const bootstrapSource: string = readRepoFile("src", "renderer", "src", "app", "bootstrap.ts");
+	const windowProvidersSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "WindowProviders.tsx");
+	const mainWindowRootSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "MainWindowRoot.tsx");
+	const mainWindowErrorBoundarySource: string = readRepoFile("src", "renderer", "src", "app", "errors", "MainWindowErrorBoundary.tsx");
+	const settingsWindowSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "SettingsWindow.tsx");
+	const splashSource: string = readRepoFile("src", "renderer", "src", "app", "bootstrap", "BootSplash.tsx");
+	const bootstrapSource: string = readRepoFile("src", "renderer", "src", "app", "bootstrap", "bootstrap.ts");
 	const appSource: string = readAppImplementation();
-	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
-	const workspaceTreeSource: string = readRepoFile("src", "renderer", "src", "features", "workspace", "WorkspaceTree.tsx");
+	const agentSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+	const workspaceTreeSource: string = readRepoFile("src", "renderer", "src", "widgets", "workspace", "WorkspaceTree.tsx");
 	const preloadSource: string = readRepoFile("src", "preload", "index.ts");
 	const viteEnvSource: string = readRepoFile("src", "renderer", "src", "vite-env.d.ts");
 
@@ -19,7 +19,7 @@ describe("BootSplash", () => {
 		expect(windowProvidersSource).toContain("className={styles.root}");
 		expect(mainWindowRootSource).toContain("<MainTitlebar appReady={isAppReady} />");
 		expect(mainWindowRootSource).toContain("bootstrapData === null");
-		const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.tsx");
+		const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "Titlebar.tsx");
 		expect(titlebarSource).toContain("{appReady ? (");
 		expect(titlebarSource).toContain("className={styles.actionButton}");
 		expect(mainWindowRootSource).toContain("<BootSplash loadData={loadData} onReady={handleBootstrapReady} />");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { waitForRendererPaint, type AnimationFrameScheduler } from "@/app/renderer-paint";
+import { waitForRendererPaint, type AnimationFrameScheduler } from "@/app/runtime/renderer-paint";
 
 describe("renderer paint readiness", () => {
 	it("waits for two animation frames before resolving", async () => {

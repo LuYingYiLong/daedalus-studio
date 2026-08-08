@@ -5,7 +5,7 @@ import {
 	shouldAutoFollowAppend,
 	shouldImmediatelyFollowBlockAppend,
 	shouldAutoFollowViewport
-} from "@/features/chat/message-list-virtual";
+} from "@/domain/conversation/message-list-virtual";
 
 describe("message-list-virtual", () => {
 	it("detects near-bottom state for initial and streaming scroll behavior", () => {
