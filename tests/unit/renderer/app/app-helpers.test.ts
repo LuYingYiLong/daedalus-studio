@@ -1,0 +1,68 @@
+import { describe, expect, it } from "vitest";
+import {
+	getChatOutputTarget,
+	getSessionSortTime,
+	mergeOptimisticUserBlocks,
+	normalizeLocalPathForCompare,
+	trimTimelineFromRequest
+} from "@/app/app-helpers";
+import type { TimelinePageState } from "@/features/workbench/workbench-state";
+import type { TimelineBlock } from "@/api/types";
+
+function page(blocks: TimelineBlock[], sessionId: string = "session-1"): TimelinePageState {
+	return {
+		sessionId,
+		blocks,
+		blockCount: blocks.length,
+		blockOffset: 0,
+		hasMoreBefore: false,
+		hasMoreAfter: false
+	};
+}
+
+function userBlock(requestId: string, id: string = requestId): TimelineBlock {
+	return {
+		id,
+		type: "user",
+		requestId,
+		content: requestId,
+		sentAtUtc: "2026-08-08T00:00:00.000Z",
+		additionalContext: [],
+		renderHints: { estimatedHeight: 96, contentChars: requestId.length, bodyPartCount: 1, heavyPartCount: 0 }
+	};
+}
+
+describe("app helpers", () => {
+	it("normalizes local paths for safe comparisons", () => {
+		expect(normalizeLocalPathForCompare("C:/Project/src/App.tsx")).toBe("c:/project/src/app.tsx");
+		expect(normalizeLocalPathForCompare("C:\\Project\\src\\App.tsx")).toBe("c:/project/src/app.tsx");
+	});
+
+	it("selects workspace output only for workspace-capable chat modes", () => {
+		expect(getChatOutputTarget("agent", "workspace-1")).toBe("workspace");
+		expect(getChatOutputTarget("goal", "workspace-1")).toBe("workspace");
+		expect(getChatOutputTarget("ask", "workspace-1")).toBe("chat");
+		expect(getChatOutputTarget("agent", null)).toBe("chat");
+	});
+
+	it("trims timeline content from a request boundary", () => {
+		const result = trimTimelineFromRequest(page([userBlock("first"), userBlock("second"), userBlock("third")]), "second");
+
+		expect(result.blocks.map((block) => block.requestId)).toEqual(["first"]);
+		expect(result.blockCount).toBe(1);
+		expect(result.hasMoreAfter).toBe(false);
+	});
+
+	it("preserves an optimistic user block when the server page has not materialized it yet", () => {
+		const current = page([userBlock("request-1", "optimistic:request-1:user")]);
+		const next = page([userBlock("request-2")]);
+		const result = mergeOptimisticUserBlocks(current, next, "request-1");
+
+		expect(result.blocks.map((block) => block.requestId)).toEqual(["request-2", "request-1"]);
+	});
+
+	it("falls back to a stable timestamp for session sorting", () => {
+		expect(getSessionSortTime({ createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-02T00:00:00.000Z" } as never)).toBe(Date.parse("2026-08-02T00:00:00.000Z"));
+		expect(getSessionSortTime({ createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "invalid" } as never)).toBe(Date.parse("2026-08-01T00:00:00.000Z"));
+	});
+});

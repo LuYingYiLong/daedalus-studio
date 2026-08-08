@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("multi-root workspace projects", () => {
 	const typesSource: string = readRepoFile("src", "renderer", "src", "api", "types.ts");
@@ -10,7 +10,7 @@ describe("multi-root workspace projects", () => {
 	const editorSource: string = readRepoFile("src", "renderer", "src", "features", "workspace", "WorkspaceProjectDialog.tsx");
 	const deleteSource: string = readRepoFile("src", "renderer", "src", "features", "workspace", "DeleteWorkspaceDialog.tsx");
 	const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
-	const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+	const appSource: string = readAppImplementation();
 
 	it("models a stable project with appearance and source folders", () => {
 		expect(typesSource).toContain("export type WorkspaceIcon = 0 | 1 | 2 | 3 | 4 | 5 | 6;");

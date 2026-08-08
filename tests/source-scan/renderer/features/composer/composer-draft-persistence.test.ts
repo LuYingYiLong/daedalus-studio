@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("Composer draft lifetime", () => {
-	const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+	const appSource: string = readAppImplementation();
 	const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
 	const homePageSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 

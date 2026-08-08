@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("MessageQueuePanel source", () => {
 	const panelSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "MessageQueuePanel.tsx");
 	const panelStyleSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "MessageQueuePanel.module.css");
 	const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
-	const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+	const appSource: string = readAppImplementation();
 	const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
 	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 	const queueApiSource: string = readRepoFile("src", "renderer", "src", "api", "message-queue-api.ts");

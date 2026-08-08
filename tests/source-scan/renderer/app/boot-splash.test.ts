@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths";
 
 describe("BootSplash", () => {
 	const windowProvidersSource: string = readRepoFile("src", "renderer", "src", "app", "WindowProviders.tsx");
@@ -8,7 +8,7 @@ describe("BootSplash", () => {
 	const settingsWindowSource: string = readRepoFile("src", "renderer", "src", "app", "SettingsWindow.tsx");
 	const splashSource: string = readRepoFile("src", "renderer", "src", "app", "BootSplash.tsx");
 	const bootstrapSource: string = readRepoFile("src", "renderer", "src", "app", "bootstrap.ts");
-	const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+	const appSource: string = readAppImplementation();
 	const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 	const workspaceTreeSource: string = readRepoFile("src", "renderer", "src", "features", "workspace", "WorkspaceTree.tsx");
 	const preloadSource: string = readRepoFile("src", "preload", "index.ts");

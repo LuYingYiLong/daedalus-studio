@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("ArchivedSessionSettingsPage", () => {
 	it("invalidates the main-window session catalog after restoring a session", () => {
@@ -11,7 +11,7 @@ describe("ArchivedSessionSettingsPage", () => {
 			"settings",
 			"ArchivedSessionSettingsPage.tsx"
 		);
-		const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const appSource: string = readAppImplementation();
 		const workspaceTreeSource: string = readRepoFile(
 			"src",
 			"renderer",

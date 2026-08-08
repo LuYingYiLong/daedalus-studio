@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths";
 
 describe("retry edit lifecycle", () => {
 	it("closes the retry editor before waiting for the retried LLM response", () => {
-		const source: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const source: string = readAppImplementation();
 		const retryStart: number = source.indexOf("async function handleRetryFromUserMessage");
 		const optimisticRetry: number = source.indexOf("applyOptimisticRetry(payload.requestId, requestId, message, payload.additionalContext);", retryStart);
 		const closeEditor: number = source.indexOf("setActiveRetryRequestId(null);", optimisticRetry);
@@ -16,7 +16,7 @@ describe("retry edit lifecycle", () => {
 	});
 
 	it("releases the composer send state from run-state events", () => {
-		const source: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const source: string = readAppImplementation();
 		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
 		const eventSubscription: number = backendEventStreamSource.indexOf("unsubscribe = client.addEventListener");
 		const cancellationEvent: number = backendEventStreamSource.indexOf("if (isRunCancellationEvent(event))");
@@ -34,17 +34,17 @@ describe("retry edit lifecycle", () => {
 	});
 
 	it("does not revive stale optimistic user messages after a retry timeline refresh", () => {
-		const source: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const source: string = readAppImplementation();
 
-		expect(source).toContain("function mergeOptimisticUserBlocks(currentPage: TimelinePageState, nextPage: TimelinePageState, activeOptimisticRequestId: string | null): TimelinePageState");
-		expect(source).toContain("return activeOptimisticRequestId !== null");
-		expect(source).toContain("&& block.requestId === activeOptimisticRequestId;");
+		expect(source).toContain("export function mergeOptimisticUserBlocks");
+		expect(source).toContain("block.id.startsWith(\"optimistic:\")");
+		expect(source).toContain("block.requestId === activeOptimisticRequestId");
 		expect(source).toContain("const activeOptimisticRequestId: string | null = activeChatRequestIdRef.current ?? getRunControllerRequestId(runState);");
 		expect(source).toContain("mergeOptimisticUserBlocks(currentPage, createTimelinePageFromTimelineResult(timeline), activeOptimisticRequestId)");
 	});
 
 	it("refreshes the real backend timeline after a retry failure instead of restoring a stale checkpoint", () => {
-		const source: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const source: string = readAppImplementation();
 		const retryStart: number = source.indexOf("async function handleRetryFromUserMessage");
 		const catchStart: number = source.indexOf("} catch (error: unknown) {", retryStart);
 		const refreshOnFailure: number = source.indexOf("await refreshLatestTimeline().catch", catchStart);

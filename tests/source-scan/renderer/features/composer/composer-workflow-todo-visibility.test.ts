@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("Composer workflow todo visibility", () => {
 	it("keeps execution status out of Composer and renders the matching floating panel", () => {
 		const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
-		const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const appSource: string = readAppImplementation();
 		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
 		const agentSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 		const floatingTodoSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "FloatingWorkflowTodoPanel.tsx");
@@ -52,7 +52,7 @@ describe("Composer workflow todo visibility", () => {
 	});
 
 	it("clears the previous session presentation before creating a workspace session", () => {
-		const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const appSource: string = readAppImplementation();
 		const handlerStart: number = appSource.indexOf("async function handleNewWorkspaceSession");
 		const handlerEnd: number = appSource.indexOf("async function handleHomeWorkspaceSelect", handlerStart);
 		const handlerSource: string = appSource.slice(handlerStart, handlerEnd);

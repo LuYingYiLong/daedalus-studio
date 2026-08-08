@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths";
 
 describe("Composer cancellation source", () => {
 	it("can cancel while a new session is being created and blocks the pending chat RPC", () => {
-		const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const appSource: string = readAppImplementation();
 		const composerSource: string = readRepoFile("src", "renderer", "src", "features", "composer", "Composer.tsx");
 
 		expect(appSource).toContain("const requestId: string | null = getRunControllerRequestId(runState);");

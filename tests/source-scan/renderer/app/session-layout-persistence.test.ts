@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths";
 
 describe("session layout persistence wiring", () => {
-	const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+	const appSource: string = readAppImplementation();
 	const bootstrapSource: string = readRepoFile("src", "renderer", "src", "app", "bootstrap.ts");
 	const homeSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 	const dockSource: string = readRepoFile("src", "renderer", "src", "features", "dock", "DockPanelTabs.tsx");

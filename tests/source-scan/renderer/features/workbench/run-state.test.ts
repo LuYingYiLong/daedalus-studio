@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("Run state source", () => {
 	it("centralizes Composer run controls through run-state helpers", () => {
-		const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const appSource: string = readAppImplementation();
 		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
 		const runStateSource: string = readRepoFile("src", "renderer", "src", "features", "workbench", "run-state.ts");
 

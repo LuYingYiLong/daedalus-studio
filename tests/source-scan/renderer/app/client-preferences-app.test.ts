@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths";
 
 describe("App client preferences", () => {
 	it("restores all new-session composer defaults without changing existing sessions", () => {
-		const source: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const source: string = readAppImplementation();
 
 		expect(source).toContain("findPreferredComposerModel");
 		expect(source).toContain("preferences.newSessionComposer.model ?? preferences.lastComposerModel");
@@ -19,7 +19,7 @@ describe("App client preferences", () => {
 	});
 
 	it("keeps the session model visible while a session workbench is loading", () => {
-		const source: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+		const source: string = readAppImplementation();
 
 		expect(source).toContain("function getDisplayedComposerModel");
 		expect(source).toContain("params.workbench?.composer.provider ?? params.activeSessionMetadata?.provider ?? fallbackProviderId");

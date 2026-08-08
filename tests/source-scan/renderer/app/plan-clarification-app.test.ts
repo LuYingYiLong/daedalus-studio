@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths";
 
 describe("App plan clarification source", () => {
-	const source: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+	const source: string = readAppImplementation();
 	const backendEventStateSource: string = readRepoFile("src", "renderer", "src", "app", "backend-event-state.ts");
 	const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "hooks", "useBackendEventStream.ts");
 

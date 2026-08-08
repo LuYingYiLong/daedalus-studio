@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("global workspace sidebar layout", () => {
-	const appSource: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+	const appSource: string = readAppImplementation();
 	const homeSource: string = readRepoFile("src", "renderer", "src", "pages", "home", "HomePage.tsx");
 	const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "layout", "Titlebar.tsx");
 
 	it("stores the workspace sidebar outside session layouts and persists only resize end", () => {
-		expect(appSource).toContain("workspaceSidebar={clientPreferences.workspaceSidebar}");
+		expect(appSource).toContain("workspaceSidebar: clientPreferences.workspaceSidebar");
 		expect(appSource).toContain("updateClientPreferences({ workspaceSidebar })");
 		expect(homeSource).toContain("onResize={handleWorkspaceSidebarResize}");
 		expect(homeSource).toContain("onResizeEnd={handleWorkspaceSidebarResizeEnd}");

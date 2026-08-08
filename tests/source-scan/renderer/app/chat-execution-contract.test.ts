@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { readRepoFile } from "../../../helpers/repo-paths";
+import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths";
 
 describe("chat execution contract source", () => {
-	const source: string = readRepoFile("src", "renderer", "src", "app", "App.tsx");
+	const source: string = readAppImplementation();
 
 	it("derives the workspace target from structured session state", () => {
 		expect(source).toContain("function getCurrentWorkspaceId(");
