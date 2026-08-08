@@ -1,5 +1,6 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { useMemoizedFn } from "ahooks";
+import { useTranslation } from "react-i18next";
 import type { AgentGoalState, PlanApprovalState, PlanClarificationState, SessionMetadata, WorkbenchSnapshot, WorkflowTodoSnapshot } from "@/api/types";
 import { createBackendClient } from "@/shared/api/transport/backend-client";
 import type { BackendEvent } from "@/shared/api/transport/backend-rpc-client";
@@ -68,6 +69,8 @@ export type BackendEventStreamParams = {
 };
 
 function useBackendEventStream(params: BackendEventStreamParams): void {
+	const { t } = useTranslation();
+
 	const handleBackendEvent = useMemoizedFn((event: BackendEvent): void => {
 		params.onEventObserved?.(event);
 		const eventSessionId: string | null = getBackendEventSessionId(event);
@@ -138,7 +141,7 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 					kind: "run_completed",
 					sessionId: goal.sessionId,
 					requestId: goal.rootRequestId,
-					title: goal.stage === "achieved" ? "Daedalus achieved the Goal" : "Daedalus Goal stopped",
+					title: t(goal.stage === "achieved" ? "nativeNotifications.goalAchievedTitle" : "nativeNotifications.goalStoppedTitle"),
 					body: goal.evaluation?.summary ?? goal.title,
 					dedupeKey: `goal_completed:${goal.goalId}:${goal.revision}`
 				});
@@ -184,8 +187,8 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 						kind: "approval_required",
 						sessionId: activeSessionId,
 						requestId: eventPlanApproval.requestId,
-						title: "Daedalus needs approval",
-						body: "A plan is ready for review.",
+						title: t("nativeNotifications.approvalTitle"),
+						body: t("nativeNotifications.planApprovalBody"),
 						dedupeKey: `approval_required:${activeSessionId}:plan:${eventPlanApproval.planId}:${eventPlanApproval.updatedAt}`
 					});
 				}
@@ -249,8 +252,8 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 					kind: "run_completed",
 					sessionId,
 					requestId,
-					title: "Daedalus finished",
-					body: `"${params.activeSessionTitleRef.current}" is ready.`,
+					title: t("nativeNotifications.runCompletedTitle"),
+					body: t("nativeNotifications.runCompletedBody", { sessionTitle: params.activeSessionTitleRef.current }),
 					dedupeKey: `run_completed:${sessionId}:${requestId}`
 				});
 			}

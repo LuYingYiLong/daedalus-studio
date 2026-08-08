@@ -1,6 +1,6 @@
 import type { TimelineBodyPart } from "@/api/types";
 import { getToolDisplayInfo, type ToolDisplayTranslator } from "./tool-display";
-import { isTerminalCommandPart, readTerminalDisplay, type TimelineToolPart } from "./tool-part-data";
+import { getTimelineToolCategory, isTerminalCommandPart, readTerminalDisplay, type TimelineToolPart } from "./tool-part-data";
 
 export type TimelineActivityPart =
 	| Extract<TimelineBodyPart, { type: "thinking" }>
@@ -9,6 +9,7 @@ export type TimelineActivityPart =
 export type TimelineActivityStats = {
 	editedFiles: number;
 	commands: number;
+	tools: number;
 	thoughts: number;
 };
 
@@ -47,17 +48,22 @@ function isBackendActivityPart(part: TimelineBodyPart): part is TimelineActivity
 }
 
 function getBackendStats(parts: TimelineActivityPart[]): TimelineActivityStats {
+	const inferredTools: number = parts.filter((part: TimelineActivityPart): boolean => (
+		part.type === "tool"
+		&& getTimelineToolCategory(part) === "tool"
+	)).length;
 	for (let index: number = parts.length - 1; index >= 0; index -= 1) {
 		const stats = parts[index]?.activityGroupStats;
 		if (stats !== undefined) {
 			return {
 				editedFiles: Math.max(0, stats.editedFiles),
 				commands: Math.max(0, stats.commands),
+				tools: inferredTools,
 				thoughts: Math.max(0, stats.thoughts)
 			};
 		}
 	}
-	return { editedFiles: 0, commands: 0, thoughts: 0 };
+	return { editedFiles: 0, commands: 0, tools: inferredTools, thoughts: 0 };
 }
 
 export function getTimelinePartKey(part: TimelineBodyPart, index: number): string {

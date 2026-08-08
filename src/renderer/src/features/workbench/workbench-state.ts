@@ -168,7 +168,7 @@ type TimelineActivityMetadata = {
 	activityGroupId?: string;
 	activityPartId?: string;
 	activityPartKind?: "thinking" | "tool";
-	activityGroupStats?: { editedFiles: number; commands: number; thoughts: number };
+	activityGroupStats?: { editedFiles: number; commands: number; tools?: number; thoughts: number };
 };
 
 function getActivityMetadata(data: Record<string, unknown>): TimelineActivityMetadata {
@@ -184,6 +184,7 @@ function getActivityMetadata(data: Record<string, unknown>): TimelineActivityMet
 			activityGroupStats: {
 				editedFiles: typeof stats.editedFiles === "number" ? stats.editedFiles : 0,
 				commands: typeof stats.commands === "number" ? stats.commands : 0,
+				...(typeof stats.tools === "number" ? { tools: stats.tools } : {}),
 				thoughts: typeof stats.thoughts === "number" ? stats.thoughts : 0
 			}
 		})
@@ -206,6 +207,9 @@ function mergeToolActivityMetadata(
 		activityGroupStats: {
 			editedFiles: Math.max(current.activityGroupStats?.editedFiles ?? 0, incoming.activityGroupStats.editedFiles),
 			commands: Math.max(current.activityGroupStats?.commands ?? 0, incoming.activityGroupStats.commands),
+			...(current.activityGroupStats?.tools !== undefined || incoming.activityGroupStats.tools !== undefined
+				? { tools: Math.max(current.activityGroupStats?.tools ?? 0, incoming.activityGroupStats.tools ?? 0) }
+				: {}),
 			thoughts: Math.max(current.activityGroupStats?.thoughts ?? 0, incoming.activityGroupStats.thoughts)
 		}
 	};

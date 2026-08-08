@@ -1012,6 +1012,8 @@
         "files_other": "Edited {{count}} files",
         "commands": "Ran {{count}} command",
         "commands_other": "Ran {{count}} commands",
+        "tools": "Used {{count}} tool",
+        "tools_other": "Used {{count}} tools",
         "thoughts": "Thought {{count}} time",
         "thoughts_other": "Thought {{count}} times",
         "separator": ", ",
@@ -1807,6 +1809,18 @@
         "godotExecutable": "Failed to validate the Godot executable"
       }
     }
+  },
+  "nativeNotifications": {
+    "goalAchievedTitle": "Daedalus achieved the goal",
+    "goalStoppedTitle": "Daedalus goal stopped",
+    "approvalTitle": "Daedalus needs approval",
+    "toolApprovalBody": "The assistant is waiting for tool approval.",
+    "toolBudgetBody": "The assistant needs a tool budget decision.",
+    "planApprovalBody": "A plan is ready for review.",
+    "clarificationTitle": "Daedalus needs clarification",
+    "clarificationBody": "A plan question is waiting for your reply.",
+    "runCompletedTitle": "Daedalus finished",
+    "runCompletedBody": "{{sessionTitle}} is ready."
   },
   "appUpdate": {
     "title": "Daedalus Studio update",

@@ -462,7 +462,7 @@ export type TimelineBodyPart =
 		activityGroupId?: string;
 		activityPartId?: string;
 		activityPartKind?: "thinking" | "tool";
-		activityGroupStats?: { editedFiles: number; commands: number; thoughts: number };
+		activityGroupStats?: { editedFiles: number; commands: number; tools?: number; thoughts: number };
 	}
 	| {
 		type: "provider_reconnect";
@@ -485,7 +485,7 @@ export type TimelineBodyPart =
 		activityGroupId?: string;
 		activityPartId?: string;
 		activityPartKind?: "thinking" | "tool";
-		activityGroupStats?: { editedFiles: number; commands: number; thoughts: number };
+		activityGroupStats?: { editedFiles: number; commands: number; tools?: number; thoughts: number };
 	}
 	| { type: "summary_start"; runId: string; stepId: string; stepRunId: string; title: string; foldTitle: string }
 	| {

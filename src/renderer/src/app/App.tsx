@@ -3427,8 +3427,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			kind: "approval_required",
 			sessionId: activeSessionId,
 			requestId: pendingApproval.requestId,
-			title: "Daedalus needs approval",
-			body: "The assistant is waiting for tool approval.",
+			title: t("nativeNotifications.approvalTitle"),
+			body: t("nativeNotifications.toolApprovalBody"),
 			dedupeKey: `approval_required:${activeSessionId}:tool:${pendingApproval.approvalId}`
 		});
 	}, [activeSessionId, pendingApproval?.approvalId, pendingApproval?.requestId]);
@@ -3442,8 +3442,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			kind: "approval_required",
 			sessionId: activeSessionId,
 			requestId: pendingToolBudget.requestId,
-			title: "Daedalus needs approval",
-			body: "The assistant needs a tool budget decision.",
+			title: t("nativeNotifications.approvalTitle"),
+			body: t("nativeNotifications.toolBudgetBody"),
 			dedupeKey: `approval_required:${activeSessionId}:tool_budget:${pendingToolBudget.budgetId}`
 		});
 	}, [activeSessionId, pendingToolBudget?.budgetId, pendingToolBudget?.requestId]);
@@ -3457,8 +3457,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			kind: "approval_required",
 			sessionId: activeSessionId,
 			requestId: pendingPlanApproval.requestId,
-			title: "Daedalus needs approval",
-			body: "A plan is ready for review.",
+			title: t("nativeNotifications.approvalTitle"),
+			body: t("nativeNotifications.planApprovalBody"),
 			dedupeKey: `approval_required:${activeSessionId}:plan:${pendingPlanApproval.planId}:${pendingPlanApproval.updatedAt}`
 		});
 	}, [activeSessionId, pendingPlanApproval?.planId, pendingPlanApproval?.requestId, pendingPlanApproval?.updatedAt]);
@@ -3472,8 +3472,8 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 			kind: "clarification_required",
 			sessionId: activeSessionId,
 			requestId: pendingPlanClarification.requestId,
-			title: "Daedalus needs clarification",
-			body: "A plan question is waiting for your reply.",
+			title: t("nativeNotifications.clarificationTitle"),
+			body: t("nativeNotifications.clarificationBody"),
 			dedupeKey: `clarification_required:${activeSessionId}:${pendingPlanClarification.planId}:${pendingPlanClarification.question}`
 		});
 	}, [activeSessionId, pendingPlanClarification?.planId, pendingPlanClarification?.question, pendingPlanClarification?.requestId]);

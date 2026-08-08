@@ -13,7 +13,7 @@ function thinking(
 	done: boolean = true,
 	groupId: string = "activity:request:1",
 	partId: string = `thinking:${text}`,
-	stats: { editedFiles: number; commands: number; thoughts: number } = { editedFiles: 0, commands: 0, thoughts: 1 }
+	stats: { editedFiles: number; commands: number; tools?: number; thoughts: number } = { editedFiles: 0, commands: 0, thoughts: 1 }
 ): Extract<TimelineBodyPart, { type: "thinking" }> {
 	return {
 		type: "thinking",
@@ -33,7 +33,7 @@ function tool(
 	result: Record<string, unknown> = { ok: true },
 	groupId: string = "activity:request:1",
 	partId: string = `tool:${toolCallId}`,
-	stats: { editedFiles: number; commands: number; thoughts: number } = { editedFiles: 0, commands: 0, thoughts: 0 }
+	stats: { editedFiles: number; commands: number; tools?: number; thoughts: number } = { editedFiles: 0, commands: 0, thoughts: 0 }
 ): Extract<TimelineBodyPart, { type: "tool" }> {
 	return {
 		type: "tool",
@@ -80,7 +80,7 @@ describe("timeline activity grouping", () => {
 		expect(segments[0]?.type).toBe("activity_group");
 		if (segments[0]?.type === "activity_group") {
 			expect(segments[0].parts).toHaveLength(3);
-			expect(segments[0].stats).toEqual({ editedFiles: 0, commands: 1, thoughts: 1 });
+			expect(segments[0].stats).toEqual({ editedFiles: 0, commands: 1, tools: 1, thoughts: 1 });
 			expect(segments[0].active).toBe(false);
 		}
 	});
@@ -187,16 +187,38 @@ describe("timeline activity grouping", () => {
 			}, "activity:request:1", "tool:write-3", { editedFiles: 3, commands: 0, thoughts: 0 })
 		];
 
-		expect(getTimelineActivityStats(parts)).toEqual({ editedFiles: 3, commands: 0, thoughts: 0 });
+		expect(getTimelineActivityStats(parts)).toEqual({ editedFiles: 3, commands: 0, tools: 1, thoughts: 0 });
 	});
 
 	it("uses backend stats instead of recomputing from tool payloads", () => {
 		const part = tool("read-1", "mcp_workspace_read_text_file", {}, {
 			ok: true,
-			fileEditBatch: { editedFileCount: 99 }
+			fileEditBatch: { batchId: "backend-summary", editedFileCount: 99 }
 		}, "activity:request:1", "tool:read-1", { editedFiles: 2, commands: 4, thoughts: 3 });
 
-		expect(getTimelineActivityStats([part])).toEqual({ editedFiles: 2, commands: 4, thoughts: 3 });
+		expect(getTimelineActivityStats([part])).toEqual({ editedFiles: 2, commands: 4, tools: 0, thoughts: 3 });
+	});
+
+	it("does not include terminal commands in the generic tool count", () => {
+		const parts: TimelineActivityPart[] = [
+			tool("read-1", "mcp_workspace_read_text_file", {}, { ok: true }, "activity:request:1", "tool:read-1", { editedFiles: 0, commands: 1, tools: 99, thoughts: 0 }),
+			tool("command-1", "mcp_terminal_run_command", { commandLine: "npm test" }, { ok: true }, "activity:request:1", "tool:command-1", { editedFiles: 0, commands: 1, tools: 99, thoughts: 0 })
+		];
+
+		expect(getTimelineActivityStats(parts)).toEqual({ editedFiles: 0, commands: 1, tools: 1, thoughts: 0 });
+	});
+
+	it("counts unclassified non-terminal tools separately from files and commands", () => {
+		const parts: TimelineActivityPart[] = [
+			tool("read-1", "mcp_workspace_read_text_file"),
+			tool("read-2", "mcp_workspace_search_text"),
+			tool("write-1", "mcp_workspace_overwrite_text_file", {}, {
+				ok: true,
+				fileEditBatch: { batchId: "batch-1", editedFileCount: 1, editedFiles: [{ path: "src/index.ts" }] }
+			})
+		];
+
+		expect(getTimelineActivityStats(parts)).toEqual({ editedFiles: 0, commands: 0, tools: 2, thoughts: 0 });
 	});
 
 	it("uses structured latest-event labels without exposing raw tool event JSON", () => {

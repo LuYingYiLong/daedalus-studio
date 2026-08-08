@@ -25,6 +25,9 @@ function getSummaryLabel(group: TimelineActivityGroupSegment, t: (key: string, o
 	if (group.stats.commands > 0) {
 		parts.push(t("chat.activityGroup.summary.commands", { count: group.stats.commands }));
 	}
+	if (group.stats.tools > 0) {
+		parts.push(t("chat.activityGroup.summary.tools", { count: group.stats.tools }));
+	}
 	if (group.stats.thoughts > 0) {
 		parts.push(t("chat.activityGroup.summary.thoughts", { count: group.stats.thoughts }));
 	}

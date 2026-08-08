@@ -1007,6 +1007,7 @@
       "summary": {
         "files": "编辑了 {{count}} 个文件",
         "commands": "运行了 {{count}} 次命令",
+        "tools": "使用了 {{count}} 次工具",
         "thoughts": "思考了 {{count}} 次",
         "separator": "，",
         "empty": "活动过程"
@@ -1801,6 +1802,18 @@
         "godotExecutable": "验证 Godot 可执行文件失败"
       }
     }
+  },
+  "nativeNotifications": {
+    "goalAchievedTitle": "Daedalus 已完成目标",
+    "goalStoppedTitle": "Daedalus 目标已停止",
+    "approvalTitle": "Daedalus 需要审批",
+    "toolApprovalBody": "助手正在等待工具审批。",
+    "toolBudgetBody": "助手需要增加工具预算才能继续。",
+    "planApprovalBody": "计划已准备好，等待你审阅。",
+    "clarificationTitle": "Daedalus 需要补充信息",
+    "clarificationBody": "有一个计划问题等待你的回复。",
+    "runCompletedTitle": "Daedalus 已完成",
+    "runCompletedBody": "{{sessionTitle}} 已准备就绪。"
   },
   "appUpdate": {
     "title": "Daedalus Studio 更新",

@@ -58,6 +58,8 @@ export function isTerminalCommandPart(part: TimelineToolPart): boolean {
 	return getToolName(part) === "mcp_terminal_run_command";
 }
 
+export type TimelineToolCategory = "terminal" | "file_edit" | "tool";
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -160,6 +162,12 @@ export function getFileEditBatch(events: Record<string, unknown>[]): FileEditBat
 		deletions: getFiniteNumber(batch.deletions) ?? editedFiles.reduce((total: number, file: FileEditSummaryItem): number => total + file.deletions, 0),
 		editedFiles
 	};
+}
+
+/** Categorizes a tool using the same structured result parser as ToolPart. */
+export function getTimelineToolCategory(part: TimelineToolPart): TimelineToolCategory {
+	if (isTerminalCommandPart(part)) return "terminal";
+	return getFileEditBatch(part.events) === undefined ? "tool" : "file_edit";
 }
 
 export function readTerminalDisplay(part: TimelineToolPart): TerminalDisplay {
