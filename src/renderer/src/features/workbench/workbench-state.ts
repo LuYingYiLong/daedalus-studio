@@ -329,7 +329,9 @@ function appendProviderReconnectPart(parts: TimelineBodyPart[], data: Record<str
 		status: status === "reconnecting" || status === "recovered" || status === "failed" ? status : "waiting",
 		reason: reason === "idle_timeout" || reason === "gateway" || reason === "rate_limit" || reason === "server" ? reason : "transport",
 		attempt: Math.max(0, Math.trunc(getFiniteNumber(data, "attempt"))),
-		maxAttempts: getFiniteNumber(data, "maxAttempts") === 15 ? 15 : 5,
+		maxAttempts: getFiniteNumber(data, "maxAttempts") === 15
+			? 15
+			: getFiniteNumber(data, "maxAttempts") === 2 ? 2 : 5,
 		timeoutMs: Math.max(0, Math.trunc(getFiniteNumber(data, "timeoutMs"))),
 		autoExtended: data.autoExtended === true,
 		...(getStringValue(data, "retryAt").length === 0 ? {} : { retryAt: getStringValue(data, "retryAt") })

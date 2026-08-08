@@ -473,7 +473,7 @@ export type TimelineBodyPart =
 		status: "waiting" | "reconnecting" | "recovered" | "failed";
 		reason: "transport" | "idle_timeout" | "gateway" | "rate_limit" | "server";
 		attempt: number;
-		maxAttempts: 5 | 15;
+		maxAttempts: 2 | 5 | 15;
 		timeoutMs: number;
 		retryAt?: string;
 		autoExtended: boolean;
