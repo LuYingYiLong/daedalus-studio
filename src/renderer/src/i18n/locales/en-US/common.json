@@ -776,6 +776,18 @@
     }
   },
   "chat": {
+    "markdownResource": {
+      "openFile": "Open file",
+      "openInCurrentTarget": "Open in current workspace app",
+      "openInCurrentTargetNamed": "Open in {{target}}",
+      "openWith": "Open with",
+      "saveAs": "Save as",
+      "copyPath": "Copy path",
+      "pathCopied": "Path copied",
+      "revealInExplorer": "Show in File Explorer",
+      "savedAs": "File saved",
+      "noWorkspace": "Select a workspace before opening this file"
+    },
     "common": {
       "copy": "Copy",
       "copied": "Copied",
@@ -1514,6 +1526,7 @@
       "errors": {
         "delete": "Failed to delete MCP server",
         "load": "Failed to load MCP servers",
+        "loadTimeout": "MCP configuration is taking too long to respond. The page is still available, but runtime statuses may be stale.",
         "update": "Failed to update MCP server"
       }
     },

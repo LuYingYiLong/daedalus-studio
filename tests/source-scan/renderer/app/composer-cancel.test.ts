@@ -11,6 +11,8 @@ describe("Composer cancellation source", () => {
 		expect(appSource).toContain("cancelledChatRequestIdsRef.current.add(cancellationRequestId);");
 		expect(appSource).toContain("cancelledChatRequestIdsRef.current.has(cancellationRequestId)");
 		expect(appSource).toContain("!result.alreadyFinished");
+		expect(appSource).toContain("if (result.alreadyFinished === true && !wasCreatingSession)");
+		expect(appSource).toContain("finishOptimisticActiveRun(cancellationRequestId);");
 		expect(appSource).toContain("if (cancelledChatRequestIdsRef.current.delete(requestId))");
 		expect(appSource.indexOf("if (cancelledChatRequestIdsRef.current.delete(requestId))"))
 			.toBeLessThan(appSource.indexOf("await sendChatMessage({", appSource.indexOf("async function handleHomeComposerSubmit")));

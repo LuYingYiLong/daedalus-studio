@@ -1,5 +1,5 @@
 import { BrowserWindow, dialog, ipcMain, shell } from "electron";
-import { access, readFile, readdir, stat } from "node:fs/promises";
+import { access, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { execFile, spawn } from "node:child_process";
 import { basename, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
@@ -31,6 +31,22 @@ export type WorkspaceFsCreateEntriesFromPathsParams = {
 export type WorkspaceFsOpenDirectoryResult = {
 	opened: true;
 };
+export type WorkspaceFsFileParams = {
+	workspaceRoot: string;
+	filePath: string;
+};
+export type WorkspaceFsOpenFileResult = {
+	opened: true;
+};
+export type WorkspaceFsRevealFileResult = {
+	revealed: true;
+};
+export type WorkspaceFsSaveFileAsResult = {
+	saved: true;
+	filePath: string;
+} | {
+	saved: false;
+};
 export type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot";
 export type WorkspaceLaunchTarget = {
 	id: WorkspaceLaunchTargetId;
@@ -56,6 +72,7 @@ export type WorkspaceLaunchDetectionOptions = {
 	readDirectory?: typeof readdir | undefined;
 };
 export type WorkspaceLaunchSpawnOptions = WorkspaceLaunchDetectionOptions & {
+	filePath?: string;
 	spawnProcess?: ((command: string, args: string[], options: { cwd: string; detached: true; stdio: "ignore"; windowsHide: false; shell?: boolean | undefined }) => { unref(): void }) | undefined;
 };
 
@@ -85,6 +102,30 @@ function assertInsideWorkspace(workspaceRoot: string, relativePath: string | und
 		target,
 		relativePath: targetRelativePath === "" ? "" : targetRelativePath.replaceAll("\\", "/")
 	};
+}
+
+function assertWorkspaceFile(workspaceRoot: string, filePath: string): { root: string; target: string; relativePath: string } {
+	const root: string = resolve(workspaceRoot);
+	const target: string = resolve(isAbsolute(filePath) ? filePath : join(root, filePath));
+	if (!isPathInside(root, target)) {
+		throw new Error("File is outside workspace root.");
+	}
+
+	const targetRelativePath: string = relative(root, target);
+	return {
+		root,
+		target,
+		relativePath: targetRelativePath.replaceAll("\\", "/")
+	};
+}
+
+async function resolveWorkspaceFile(params: WorkspaceFsFileParams): Promise<{ root: string; target: string; relativePath: string }> {
+	const resolvedFile = assertWorkspaceFile(params.workspaceRoot, params.filePath);
+	const fileStats = await stat(resolvedFile.target);
+	if (!fileStats.isFile()) {
+		throw new Error("Workspace resource is not a file.");
+	}
+	return resolvedFile;
 }
 
 function toResourcePath(relativePath: string): string {
@@ -474,6 +515,49 @@ export async function openWorkspaceDirectory(
 	return { opened: true };
 }
 
+export async function openWorkspaceFile(
+	params: WorkspaceFsFileParams,
+	openPath: (path: string) => Promise<string> = shell.openPath
+): Promise<WorkspaceFsOpenFileResult> {
+	const resolvedFile = await resolveWorkspaceFile(params);
+	const openError: string = await openPath(resolvedFile.target);
+	if (openError.trim().length > 0) {
+		throw new Error(openError);
+	}
+	return { opened: true };
+}
+
+export async function revealWorkspaceFile(
+	params: WorkspaceFsFileParams,
+	revealFile: (path: string) => void = shell.showItemInFolder
+): Promise<WorkspaceFsRevealFileResult> {
+	const resolvedFile = await resolveWorkspaceFile(params);
+	revealFile(resolvedFile.target);
+	return { revealed: true };
+}
+
+export async function saveWorkspaceFileAs(
+	owner: BrowserWindow | undefined,
+	params: WorkspaceFsFileParams
+): Promise<WorkspaceFsSaveFileAsResult> {
+	const resolvedFile = await resolveWorkspaceFile(params);
+	const result: Electron.SaveDialogReturnValue = owner === undefined
+		? await dialog.showSaveDialog({
+			title: "Save workspace file as",
+			defaultPath: basename(resolvedFile.target)
+		})
+		: await dialog.showSaveDialog(owner, {
+			title: "Save workspace file as",
+			defaultPath: basename(resolvedFile.target)
+		});
+	if (result.canceled || result.filePath === undefined) {
+		return { saved: false };
+	}
+
+	await writeFile(result.filePath, await readFile(resolvedFile.target));
+	return { saved: true, filePath: result.filePath };
+}
+
 export async function openWorkspaceLaunchTarget(
 	workspaceRoot: string,
 	targetId: WorkspaceLaunchTargetId,
@@ -486,9 +570,14 @@ export async function openWorkspaceLaunchTarget(
 	}
 
 	if (targetId === "file-explorer") {
-		await openWorkspaceDirectory(root);
+		if (options.filePath === undefined) {
+			await openWorkspaceDirectory(root);
+		} else {
+			await revealWorkspaceFile({ workspaceRoot: root, filePath: options.filePath });
+		}
 		return { opened: true, targetId };
 	}
+	const resolvedFile = options.filePath === undefined ? null : await resolveWorkspaceFile({ workspaceRoot: root, filePath: options.filePath });
 
 	const target: ResolvedWorkspaceLaunchTarget | null = await resolveWorkspaceLaunchTarget(targetId, options);
 	if (target === null || target.command === undefined) {
@@ -518,7 +607,7 @@ export async function openWorkspaceLaunchTarget(
 						? ["--path", root]
 						: ["--path", root, godotProjectScenePath]
 					: ["--editor", "--path", root]
-				: [...(target.args ?? []), root];
+				: [...(target.args ?? []), target.id === "vscode" || target.id === "visual-studio" ? resolvedFile?.target ?? root : root];
 	const child = spawnProcess(target.command, args, {
 		cwd: root,
 		detached: true,
@@ -550,13 +639,23 @@ export function registerWorkspaceFsIpc(): void {
 	ipcMain.handle("workspace-fs:open-directory", async (_event, workspaceRoot: string): Promise<WorkspaceFsOpenDirectoryResult> => {
 		return openWorkspaceDirectory(workspaceRoot);
 	});
+	ipcMain.handle("workspace-fs:open-file", async (_event, params: WorkspaceFsFileParams): Promise<WorkspaceFsOpenFileResult> => {
+		return openWorkspaceFile(params);
+	});
+	ipcMain.handle("workspace-fs:reveal-file", async (_event, params: WorkspaceFsFileParams): Promise<WorkspaceFsRevealFileResult> => {
+		return revealWorkspaceFile(params);
+	});
+	ipcMain.handle("workspace-fs:save-file-as", async (event, params: WorkspaceFsFileParams): Promise<WorkspaceFsSaveFileAsResult> => {
+		return saveWorkspaceFileAs(BrowserWindow.fromWebContents(event.sender) ?? undefined, params);
+	});
 	ipcMain.handle("workspace-fs:list-launch-targets", async (_event, params?: { godotExecutablePath?: string | null }): Promise<WorkspaceLaunchTarget[]> => {
 		return listWorkspaceLaunchTargets({
 			godotExecutablePath: params?.godotExecutablePath
 		});
 	});
-	ipcMain.handle("workspace-fs:open-launch-target", async (_event, params: { workspaceRoot: string; targetId: WorkspaceLaunchTargetId; godotExecutablePath?: string | null; godotRunMode?: "editor" | "project" | "scene"; godotScenePath?: string }): Promise<WorkspaceLaunchTargetResult> => {
+	ipcMain.handle("workspace-fs:open-launch-target", async (_event, params: { workspaceRoot: string; targetId: WorkspaceLaunchTargetId; filePath?: string; godotExecutablePath?: string | null; godotRunMode?: "editor" | "project" | "scene"; godotScenePath?: string }): Promise<WorkspaceLaunchTargetResult> => {
 		return openWorkspaceLaunchTarget(params.workspaceRoot, params.targetId, {
+			filePath: params.filePath,
 			godotExecutablePath: params.godotExecutablePath,
 			godotRunMode: params.godotRunMode,
 			godotScenePath: params.godotScenePath

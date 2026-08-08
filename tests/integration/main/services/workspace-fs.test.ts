@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtempSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, getPickedWorkspaceDirectory, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceLaunchTarget } from "@main/services/workspace-fs";
+import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, getPickedWorkspaceDirectory, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceFile, openWorkspaceLaunchTarget, revealWorkspaceFile } from "@main/services/workspace-fs";
 
 describe("workspace-fs", () => {
 	it("lists files and folders inside workspace root", async () => {
@@ -158,6 +158,26 @@ describe("workspace-fs", () => {
 			"git-bash",
 			"godot"
 		]);
+	});
+
+	it("opens and reveals only files inside the workspace", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const filePath: string = join(root, "README.md");
+		const outsideRoot: string = mkdtempSync(join(tmpdir(), "daedalus-studio-outside-"));
+		await writeFile(filePath, "# Daedalus", "utf8");
+		const openedPaths: string[] = [];
+		const revealedPaths: string[] = [];
+
+		await expect(openWorkspaceFile({ workspaceRoot: root, filePath }, async (path: string): Promise<string> => {
+			openedPaths.push(path);
+			return "";
+		})).resolves.toEqual({ opened: true });
+		await expect(revealWorkspaceFile({ workspaceRoot: root, filePath }, (path: string): void => {
+			revealedPaths.push(path);
+		})).resolves.toEqual({ revealed: true });
+		expect(openedPaths).toEqual([filePath]);
+		expect(revealedPaths).toEqual([filePath]);
+		await expect(openWorkspaceFile({ workspaceRoot: root, filePath: join(outsideRoot, "README.md") }, async (): Promise<string> => "")).rejects.toThrow("outside workspace");
 	});
 
 	it("opens Godot editor with the workspace root as project path", async () => {

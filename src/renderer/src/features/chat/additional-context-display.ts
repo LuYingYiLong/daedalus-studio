@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import type { AdditionalContextItem } from "@/api/types";
-import { getAdditionalContextIconName } from "./additional-context-icon";
+import { getAdditionalContextIconName } from "./context-item-icon";
 
 export type AdditionalContextDisplay = {
 	iconName: string;

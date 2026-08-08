@@ -2,6 +2,7 @@ import { useRequest } from "ahooks";
 import { Icon } from "@/assets/icons";
 import { fetchImageAttachmentDataUrl } from "@/api/image-attachment-api";
 import type { AdditionalContextItem } from "@/api/types";
+import { getFileIconName } from "@/features/markdown/file-icon";
 
 type AdditionalContextIconProps = {
 	item: AdditionalContextItem;
@@ -12,15 +13,6 @@ function getDataRecord(item: AdditionalContextItem): Record<string, unknown> {
 	return typeof item.data === "object" && item.data !== null && !Array.isArray(item.data)
 		? item.data as Record<string, unknown>
 		: {};
-}
-
-function getPathExtension(path: string | undefined): string {
-	if (path === undefined) {
-		return "";
-	}
-	const fileName: string = path.replaceAll("\\", "/").split("/").at(-1) ?? "";
-	const dotIndex: number = fileName.lastIndexOf(".");
-	return dotIndex < 0 ? "" : fileName.slice(dotIndex + 1).toLowerCase();
 }
 
 function getItemPath(item: AdditionalContextItem): string | undefined {
@@ -60,69 +52,10 @@ export function getAdditionalContextIconName(item: AdditionalContextItem): strin
 		return "read";
 	}
 
-	switch (getPathExtension(getItemPath(item))) {
-		case "rs":
-			return "rust";
-		case "py":
-			return "python";
-		case "ts":
-			return "typescript";
-		case "tsx":
-		case "jsx":
-			return "react";
-		case "js":
-			return "javascript";
-		case "css":
-			return "css";
-		case "html":
-		case "htm":
-			return "html";
-		case "txt":
-			return "txt";
-		case "php":
-			return "php";
-		case "cs":
-			return "csharp";
-		case "cpp":
-		case "cc":
-		case "cxx":
-		case "hpp":
-		case "hh":
-			return "cpp";
-		case "c":
-		case "h":
-			return "c";
-		case "go":
-			return "go";
-		case "kt":
-			return "kotlin";
-		case "rb":
-			return "ruby";
-		case "vue":
-			return "vue";
-		case "sh":
-		case "pash":
-		case "zsh":
-		case "ps1":
-			return "shell";
-		case "md":
-			return "markdown";
-		case "rst":
-			return "restructuredtext";
-		case "lua":
-			return "lua";
-		case "yml":
-		case "yaml":
-			return "yml";
-		case "json":
-		case "jsonl":
-			return "json";
-		case "sqlite":
-		case "sql":
-			return "sql";
-		default:
-			return item.kind === "script" || item.kind === "script_selection" ? "script" : "file";
-	}
+	const fileIconName: string = getFileIconName(getItemPath(item));
+	return fileIconName === "file" && (item.kind === "script" || item.kind === "script_selection")
+		? "script"
+		: fileIconName;
 }
 
 export function AdditionalContextIcon({ item, className }: AdditionalContextIconProps): React.JSX.Element | null {

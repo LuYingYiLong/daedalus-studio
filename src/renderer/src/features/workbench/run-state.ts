@@ -129,10 +129,29 @@ export function finishOptimisticRunState(current: RunControllerState, requestId:
 }
 
 export function applyRunStateFromBackendEvent(current: RunControllerState, event: BackendEvent): RunControllerState {
-	if (event.event !== "agent.run.state" || !isAgentRunState(event.data)) {
+	if (event.event === "agent.run.state" && isAgentRunState(event.data)) {
+		return applyAgentRunState(current, event.data, event.sequence);
+	}
+	if (event.event !== "agent.run.cancelled" || current.status === "idle") {
 		return current;
 	}
-	return applyAgentRunState(current, event.data, event.sequence);
+
+	const eventData: Record<string, unknown> | null = isRecord(event.data) ? event.data : null;
+	const eventRequestIds: ReadonlySet<string> = new Set([
+		event.requestId,
+		event.id,
+		eventData?.requestId,
+		eventData?.runId
+	].filter((value: unknown): value is string => typeof value === "string" && value.length > 0));
+	const currentRequestIds: ReadonlySet<string> = new Set([
+		current.requestId,
+		current.agentRun?.runId,
+		current.agentRun?.rootRequestId
+	].filter((value: string | null | undefined): value is string => typeof value === "string" && value.length > 0));
+	if (![...eventRequestIds].some((requestId: string): boolean => currentRequestIds.has(requestId))) {
+		return current;
+	}
+	return createIdleRunState(current.sequence + 1, current.agentRun);
 }
 
 export function isRunControllerActive(state: RunControllerState): boolean {

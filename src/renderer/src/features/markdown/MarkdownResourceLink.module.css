@@ -1,0 +1,32 @@
+.resourceLink {
+	display: inline-flex;
+	max-width: 100%;
+	align-items: baseline;
+	gap: 4px;
+	color: var(--ds-text-link, var(--ds-accent));
+	vertical-align: baseline;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.resourceLink:hover {
+	text-decoration: underline;
+}
+
+.resourceLink:focus-visible {
+	border-radius: var(--ds-radius-sm);
+	outline: 2px solid var(--ds-accent);
+	outline-offset: 2px;
+}
+
+.resourceIcon {
+	flex: 0 0 auto;
+	width: 1em !important;
+	height: 1em !important;
+	color: currentcolor;
+}
+
+.resourceLabel {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}

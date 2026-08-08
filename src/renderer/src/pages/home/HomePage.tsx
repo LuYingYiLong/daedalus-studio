@@ -51,6 +51,7 @@ import SessionSourcePreviewDialog from "./SessionSourcePreviewDialog";
 import { formatSourceSubtitle } from "./session-overview-formatters";
 import type { TimelinePageStore } from "@/features/workbench/timeline-page-store";
 import { useTimelineSelector } from "@/features/workbench/timeline-page-store";
+import { MarkdownResourceActionsProvider } from "@/features/markdown/markdown-resource-actions";
 
 type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot";
 
@@ -2092,6 +2093,14 @@ function HomePage({
 										{isHome ? (
 											<NewSessionHome workspace={homeWorkspace} errorMessage={sessionError} />
 										) : activeSessionId !== null ? (
+											<MarkdownResourceActionsProvider
+												value={{
+													workspaceRoot: workspaceForActions?.rootPath ?? null,
+													godotExecutablePath: effectiveGodotLaunchExecutablePath,
+													currentWorkspaceLaunch: workspaceForActions === null ? null : selectedLaunchTarget,
+													launchTargets: workspaceLaunchTargets
+												}}
+											>
 											<ConversationTimelinePane
 												ref={conversationTimelinePaneRef}
 												sessionId={activeSessionId}
@@ -2117,6 +2126,7 @@ function HomePage({
 												initialSelectionAskThreads={selectionAskThreads}
 												goal={currentGoal}
 											/>
+											</MarkdownResourceActionsProvider>
 										) : null}
 									</div>
 

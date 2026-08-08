@@ -774,6 +774,18 @@
     }
   },
   "chat": {
+    "markdownResource": {
+      "openFile": "打开文件",
+      "openInCurrentTarget": "在当前工作区应用中打开",
+      "openInCurrentTargetNamed": "在 {{target}} 中打开",
+      "openWith": "打开方式",
+      "saveAs": "另存为",
+      "copyPath": "复制路径",
+      "pathCopied": "路径已复制",
+      "revealInExplorer": "在资源管理器中打开",
+      "savedAs": "文件已保存",
+      "noWorkspace": "请先选择工作区，再打开此文件"
+    },
     "common": {
       "copy": "复制",
       "copied": "已复制",
@@ -1507,6 +1519,7 @@
       "errors": {
         "delete": "删除 MCP 服务失败",
         "load": "加载 MCP 服务失败",
+        "loadTimeout": "MCP 配置响应时间过长。页面仍可使用，但运行状态可能暂时不是最新。",
         "update": "更新 MCP 服务失败"
       }
     },

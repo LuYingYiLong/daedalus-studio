@@ -383,6 +383,9 @@ declare global {
 				kind: "file" | "folder";
 			}>>;
 			openWorkspaceDirectory: (workspaceRoot: string) => Promise<{ opened: true }>;
+			openFile: (params: { workspaceRoot: string; filePath: string }) => Promise<{ opened: true }>;
+			revealFile: (params: { workspaceRoot: string; filePath: string }) => Promise<{ revealed: true }>;
+			saveFileAs: (params: { workspaceRoot: string; filePath: string }) => Promise<{ saved: true; filePath: string } | { saved: false }>;
 			listLaunchTargets: (params?: {
 				godotExecutablePath?: string | null;
 			}) => Promise<Array<{
@@ -391,6 +394,7 @@ declare global {
 			}>>;
 			openLaunchTarget: (params: {
 				workspaceRoot: string;
+				filePath?: string;
 				targetId: WorkspaceLaunchTargetId;
 				godotExecutablePath?: string | null;
 				godotRunMode?: "editor" | "project" | "scene";

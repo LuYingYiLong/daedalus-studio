@@ -2961,6 +2961,19 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		try {
 			activeChatRequestIdRef.current = cancellationRequestId;
 			const result = await cancelChatMessage(cancellationRequestId);
+			if (result.alreadyFinished === true && !wasCreatingSession) {
+				// The backend may have emitted the terminal event before this second,
+				// idempotent cancel request arrived. Do not wait for an event that has
+				// already happened; reconcile the local controller immediately.
+				if (activeChatRequestIdRef.current === cancellationRequestId) {
+					activeChatRequestIdRef.current = null;
+				}
+				cancelledChatRequestIdsRef.current.delete(cancellationRequestId);
+				finishOptimisticActiveRun(cancellationRequestId);
+				resetPlanClarificationUiState();
+				resetPlanApprovalUiState();
+				return;
+			}
 			if (!result.cancelled && !result.alreadyFinished && !wasCreatingSession) {
 				throw new Error("The backend did not accept the cancellation request.");
 			}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import styles from "./McpServersSettingsPage.module.css";
-import { Alert, Button, Empty, Flex, Form, Input, Modal, Select, Switch, Tag, Tooltip, Typography } from "antd";
+import { Alert, Button, Empty, Flex, Form, Input, Modal, Select, Skeleton, Switch, Tag, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import TextArea from "antd/es/input/TextArea";
 import {
@@ -20,6 +20,8 @@ import { createMcpServerAddPayload, createMcpServerUpdatePayload, type McpServer
 const DEFAULT_FORM_VALUES: McpServerFormValues = {
 	transport: "stdio"
 };
+
+const MCP_CONFIG_LOAD_TIMEOUT_MS: number = 5_000;
 
 function getStatusColor(status: McpRuntimeStatus): string {
 	if (status === "connected") {
@@ -89,7 +91,7 @@ function createEditFormValues(server: CustomMcpServer): McpServerFormValues {
 	};
 }
 
-function McpServersSettingsPage(): React.JSX.Element | null {
+function McpServersSettingsPage(): React.JSX.Element {
 	const { t } = useTranslation();
 	const [form] = Form.useForm<McpServerFormValues>();
 	const [serverModalMode, setServerModalMode] = useState<"add" | "edit" | null>(null);
@@ -107,10 +109,18 @@ function McpServersSettingsPage(): React.JSX.Element | null {
 		let cancelled: boolean = false;
 
 		async function loadMcpServers(): Promise<void> {
+			let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 			try {
 				setIsLoading(true);
 				setErrorMessage(null);
-				const result: McpConfigListResult = await fetchMcpConfig();
+				const result: McpConfigListResult = await Promise.race([
+					fetchMcpConfig(),
+					new Promise<never>((_resolve, reject): void => {
+						timeoutHandle = setTimeout((): void => {
+							reject(new Error(t("settings.mcpServers.errors.loadTimeout")));
+						}, MCP_CONFIG_LOAD_TIMEOUT_MS);
+					})
+				]);
 				if (!cancelled) {
 					applyConfigResult(result, setServers, setErrorMessage);
 				}
@@ -121,6 +131,9 @@ function McpServersSettingsPage(): React.JSX.Element | null {
 			} finally {
 				if (!cancelled) {
 					setIsLoading(false);
+				}
+				if (timeoutHandle !== null) {
+					clearTimeout(timeoutHandle);
 				}
 			}
 		}
@@ -223,10 +236,6 @@ function McpServersSettingsPage(): React.JSX.Element | null {
 		});
 	}
 
-	if (isLoading) {
-		return null;
-	}
-
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
@@ -267,7 +276,9 @@ function McpServersSettingsPage(): React.JSX.Element | null {
 			) : null}
 
 			<div className={styles.serverList}>
-				{filteredServers.length === 0 ? (
+				{isLoading ? (
+					<Skeleton active={true} paragraph={{ rows: 5 }} />
+				) : filteredServers.length === 0 ? (
 					<Empty
 						description={servers.length === 0 ? t("settings.mcpServers.empty.none") : t("settings.mcpServers.empty.noMatches")}
 					/>

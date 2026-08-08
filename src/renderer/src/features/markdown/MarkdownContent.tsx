@@ -6,6 +6,7 @@ import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import hljs from "highlight.js";
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import styles from "./MarkdownContent.module.css";
+import { MarkdownLink } from "./MarkdownResourceLink";
 import "highlight.js/styles/github-dark.css";
 
 export type MarkdownContentProps = {
@@ -208,6 +209,7 @@ const MARKDOWN_REMARK_PLUGINS = [remarkGfm];
 
 function createMarkdownComponents(highlightCodeBlocks: boolean, stickyCodeHeaders: boolean): Components {
 	return {
+		a: MarkdownLink,
 		pre({ children, node: _node, ..._props }): React.JSX.Element {
 			return <>{children}</>;
 		},

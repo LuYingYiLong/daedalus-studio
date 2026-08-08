@@ -376,10 +376,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		openWorkspaceDirectory: (workspaceRoot: string): Promise<{ opened: true }> => {
 			return ipcRenderer.invoke("workspace-fs:open-directory", workspaceRoot);
 		},
+		openFile: (params: { workspaceRoot: string; filePath: string }): Promise<{ opened: true }> => {
+			return ipcRenderer.invoke("workspace-fs:open-file", params);
+		},
+		revealFile: (params: { workspaceRoot: string; filePath: string }): Promise<{ revealed: true }> => {
+			return ipcRenderer.invoke("workspace-fs:reveal-file", params);
+		},
+		saveFileAs: (params: { workspaceRoot: string; filePath: string }): Promise<{ saved: true; filePath: string } | { saved: false }> => {
+			return ipcRenderer.invoke("workspace-fs:save-file-as", params);
+		},
 		listLaunchTargets: (params?: { godotExecutablePath?: string | null }): Promise<Array<{ id: "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot"; label: string }>> => {
 			return ipcRenderer.invoke("workspace-fs:list-launch-targets", params);
 		},
-		openLaunchTarget: (params: { workspaceRoot: string; targetId: "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot"; godotExecutablePath?: string | null; godotRunMode?: "editor" | "project" | "scene"; godotScenePath?: string }): Promise<{ opened: true; targetId: "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot" }> => {
+		openLaunchTarget: (params: { workspaceRoot: string; filePath?: string; targetId: "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot"; godotExecutablePath?: string | null; godotRunMode?: "editor" | "project" | "scene"; godotScenePath?: string }): Promise<{ opened: true; targetId: "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot" }> => {
 			return ipcRenderer.invoke("workspace-fs:open-launch-target", params);
 		}
 	},

@@ -159,6 +159,25 @@ describe("workbench-state", () => {
 		expect(done.sequence).toBe(4);
 	});
 
+	it("releases the active run for a legacy cancellation event", () => {
+		const running: RunControllerState = applyRunStateFromBackendEvent(
+			createIdleRunState(),
+			createAgentRunEvent("run-a", "executing", 3)
+		);
+		const cancelled: RunControllerState = applyRunStateFromBackendEvent(running, {
+			protocolVersion: 3,
+			type: "event",
+			eventId: "event:run-a:cancelled",
+			event: "agent.run.cancelled",
+			sessionId: "session-a",
+			requestId: "run-a",
+			data: { runId: "run-a", requestId: "run-a", reason: "cancelled" }
+		});
+
+		expect(cancelled.status).toBe("idle");
+		expect(cancelled.requestId).toBeNull();
+	});
+
 	it("ignores an out-of-order state event from a different run", () => {
 		const current: RunControllerState = applyRunStateFromBackendEvent(
 			createIdleRunState(),

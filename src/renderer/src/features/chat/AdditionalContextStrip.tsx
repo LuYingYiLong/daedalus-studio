@@ -4,7 +4,7 @@ import { Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 import styles from "./AdditionalContextStrip.module.css";
 import { summarizeAdditionalContextItem } from "./additional-context-display";
-import { AdditionalContextIcon } from "./additional-context-icon";
+import { AdditionalContextIcon } from "./context-item-icon";
 
 export type AdditionalContextStripProps = {
 	items: AdditionalContextItem[];

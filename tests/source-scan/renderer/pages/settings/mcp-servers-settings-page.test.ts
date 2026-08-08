@@ -8,4 +8,12 @@ describe("McpServersSettingsPage source", () => {
 		expect(source).not.toContain("Plan access");
 		expect(source).not.toContain("planAccess");
 	});
+
+	it("keeps the settings page visible when MCP config loading is slow", () => {
+		const source: string = readRepoFile("src", "renderer", "src", "pages", "settings", "McpServersSettingsPage.tsx");
+
+		expect(source).toContain("MCP_CONFIG_LOAD_TIMEOUT_MS");
+		expect(source).toContain("<Skeleton active={true}");
+		expect(source).not.toContain("if (isLoading) {\n\t\treturn null;");
+	});
 });

@@ -172,17 +172,23 @@ export function getBackendEventRequestId(event: BackendEvent): string {
 }
 
 export function isRunCancellationEvent(event: BackendEvent): boolean {
-	return event.event === "agent.run.state"
-		&& isRecord(event.data)
-		&& event.data.stage === "cancelled";
+	return event.event === "agent.run.cancelled"
+		|| (
+			event.event === "agent.run.state"
+			&& isRecord(event.data)
+			&& event.data.stage === "cancelled"
+		);
 }
 
 export function isRunCompletionEvent(event: BackendEvent): boolean {
-	return event.event === "agent.run.state"
-		&& isRecord(event.data)
-		&& (
-			event.data.stage === "completed"
-			|| event.data.stage === "failed"
-			|| event.data.stage === "cancelled"
+	return event.event === "agent.run.cancelled"
+		|| (
+			event.event === "agent.run.state"
+			&& isRecord(event.data)
+			&& (
+				event.data.stage === "completed"
+				|| event.data.stage === "failed"
+				|| event.data.stage === "cancelled"
+			)
 		);
 }
