@@ -2,6 +2,13 @@ import type { TimelineBodyPart } from "@/api/types";
 
 export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
 
+export type TimelineToolEventType = "tool.call" | "tool.result" | "tool.error" | "tool.approval_required" | "tool.approved" | "tool.rejected" | "tool.progress";
+
+/** Accepts both current normalized event types and legacy persisted agent.* types. */
+export function isTimelineToolEventType(event: Record<string, unknown>, type: TimelineToolEventType): boolean {
+	return event.type === type || event.type === `agent.${type}`;
+}
+
 export type FileEditSummaryItem = {
 	path: string;
 	sourceFolderId?: string;
@@ -17,6 +24,13 @@ export type FileEditBatchSummary = {
 	additions: number;
 	deletions: number;
 	editedFiles: FileEditSummaryItem[];
+};
+
+export type ToolRecoveryDisplay = {
+	recoveryKey: string;
+	attempt: number;
+	maxAttempts: number;
+	status: "failed" | "recovered" | "exhausted";
 };
 
 export type TerminalDisplay = {
@@ -57,8 +71,40 @@ function getStringValue(event: Record<string, unknown> | undefined, key: string)
 	return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
-function getLatestEvent(events: Record<string, unknown>[], type: string): Record<string, unknown> | undefined {
-	return [...events].reverse().find((event: Record<string, unknown>): boolean => event.type === type);
+function getLatestEvent(events: Record<string, unknown>[], type: TimelineToolEventType): Record<string, unknown> | undefined {
+	return [...events].reverse().find((event: Record<string, unknown>): boolean => isTimelineToolEventType(event, type));
+}
+
+function parseRecovery(value: unknown): ToolRecoveryDisplay | undefined {
+	if (!isRecord(value)) return undefined;
+	const attempt: number | undefined = getFiniteNumber(value.attempt);
+	const maxAttempts: number | undefined = getFiniteNumber(value.maxAttempts);
+	if (
+		typeof value.recoveryKey !== "string"
+		|| attempt === undefined
+		|| maxAttempts === undefined
+		|| (value.status !== "failed" && value.status !== "recovered" && value.status !== "exhausted")
+	) {
+		return undefined;
+	}
+	return {
+		recoveryKey: value.recoveryKey,
+		attempt,
+		maxAttempts,
+		status: value.status
+	};
+}
+
+export function getToolRecovery(events: Record<string, unknown>[]): ToolRecoveryDisplay | undefined {
+	for (const event of [...events].reverse()) {
+		const direct: ToolRecoveryDisplay | undefined = parseRecovery(event.recovery);
+		if (direct !== undefined) return direct;
+		if (isRecord(event.failure) && isRecord(event.failure.details)) {
+			const nested: ToolRecoveryDisplay | undefined = parseRecovery(event.failure.details.recovery);
+			if (nested !== undefined) return nested;
+		}
+	}
+	return undefined;
 }
 
 export function getSourceFolderId(events: Record<string, unknown>[]): string | undefined {

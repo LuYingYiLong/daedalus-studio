@@ -8,11 +8,11 @@ import { useTranslation } from "react-i18next";
 import { getToolDisplayInfo } from "./tool-display";
 import { useTimelineDisclosure } from "./timeline-disclosure-state";
 import ToolFileDiff from "./ToolFileDiff";
-import { getFileEditBatch, getSourceFolderId, type FileEditBatchSummary, type FileEditSummaryItem } from "./tool-part-data";
+import { getFileEditBatch, getSourceFolderId, getToolRecovery, isTimelineToolEventType, type FileEditBatchSummary, type FileEditSummaryItem, type ToolRecoveryDisplay } from "./tool-part-data";
 
 export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
 
-type ToolStatus = "running" | "success" | "error" | "approval";
+type ToolStatus = "pending" | "running" | "success" | "error" | "approval";
 
 const FILE_WRITE_TOOL_NAMES: ReadonlySet<string> = new Set<string>([
 	"mcp_workspace_create_text_file",
@@ -34,17 +34,13 @@ const FILE_WRITE_TOOL_NAMES: ReadonlySet<string> = new Set<string>([
 	"mcp_godot_unset_project_setting"
 ]);
 
-function hasEventType(events: Record<string, unknown>[], eventTypes: string[]): boolean {
-	return events.some((event: Record<string, unknown>): boolean => typeof event.type === "string" && eventTypes.includes(event.type));
-}
-
 function getStringValue(event: Record<string, unknown> | undefined, key: string): string | undefined {
 	const value: unknown = event?.[key];
 	return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
-function getLatestEvent(events: Record<string, unknown>[], type: string): Record<string, unknown> | undefined {
-	return [...events].reverse().find((event: Record<string, unknown>): boolean => event.type === type);
+function getLatestEvent(events: Record<string, unknown>[], type: "tool.result" | "tool.error"): Record<string, unknown> | undefined {
+	return [...events].reverse().find((event: Record<string, unknown>): boolean => isTimelineToolEventType(event, type));
 }
 
 function getToolResultText(events: Record<string, unknown>[]): string {
@@ -62,23 +58,40 @@ function getToolResultText(events: Record<string, unknown>[]): string {
 }
 
 function getToolStatus(events: Record<string, unknown>[]): ToolStatus {
-	if (hasEventType(events, ["tool.error"])) {
+	const latestTerminalIndex: number = [...events].map((event: Record<string, unknown>, index: number): number => (
+		isTimelineToolEventType(event, "tool.result") || isTimelineToolEventType(event, "tool.error") ? index : -1
+	)).reduce((latest: number, index: number): number => Math.max(latest, index), -1);
+	const latestResult: Record<string, unknown> | undefined = getLatestEvent(events, "tool.result");
+	const latestError: Record<string, unknown> | undefined = getLatestEvent(events, "tool.error");
+	if (latestTerminalIndex >= 0 && latestError !== undefined && (latestResult === undefined || events.lastIndexOf(latestError) > events.lastIndexOf(latestResult))) {
 		return "error";
 	}
 
-	if (hasEventType(events, ["tool.result"])) {
-		return "success";
+	if (latestTerminalIndex >= 0 && latestResult !== undefined && (latestError === undefined || events.lastIndexOf(latestResult) > events.lastIndexOf(latestError))) {
+		return latestResult.ok === false || latestResult.validationStatus === "failed" || latestResult.failure !== undefined
+			? "error"
+			: "success";
 	}
 
-	if (hasEventType(events, ["tool.approved", "tool.call", "tool.progress"])) {
-		return "running";
-	}
-
-	if (hasEventType(events, ["tool.approval_required"])) {
+	const latestApprovalIndex: number = [...events].map((event: Record<string, unknown>, index: number): number => (
+		isTimelineToolEventType(event, "tool.approval_required") ? index : -1
+	)).reduce((latest: number, index: number): number => Math.max(latest, index), -1);
+	const latestExecutionIndex: number = [...events].map((event: Record<string, unknown>, index: number): number => (
+		(isTimelineToolEventType(event, "tool.approved") || isTimelineToolEventType(event, "tool.call") && event.preview !== true || isTimelineToolEventType(event, "tool.progress")) ? index : -1
+	)).reduce((latest: number, index: number): number => Math.max(latest, index), -1);
+	if (latestApprovalIndex > latestExecutionIndex) {
 		return "approval";
 	}
 
-	return "running";
+	if (latestExecutionIndex >= 0) {
+		return "running";
+	}
+
+	if (events.some((event: Record<string, unknown>): boolean => isTimelineToolEventType(event, "tool.call") && event.preview === true)) {
+		return "pending";
+	}
+
+	return "pending";
 }
 
 export type ToolPartProps = {
@@ -93,12 +106,14 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 	const [open, setOpen] = useTimelineDisclosure(disclosureKey, false);
 	const status = getToolStatus(part.events);
 	const statusText: Record<ToolStatus, string> = {
+		pending: t("chat.tool.status.pending"),
 		running: t("chat.tool.status.running"),
 		success: t("chat.tool.status.done"),
 		error: t("chat.tool.status.failed"),
 		approval: t("chat.tool.status.approvalRequired"),
 	}
 	const statusColor: Record<ToolStatus, string> = {
+		pending: "default",
 		running: "lime",
 		success: "green",
 		error: "red",
@@ -112,6 +127,14 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 	)
 	const resultText: string = useMemo((): string => getToolResultText(part.events), [part.events]);
 	const fileEditBatch: FileEditBatchSummary | undefined = useMemo((): FileEditBatchSummary | undefined => getFileEditBatch(part.events), [part.events]);
+	const recovery: ToolRecoveryDisplay | undefined = useMemo((): ToolRecoveryDisplay | undefined => getToolRecovery(part.events), [part.events]);
+	const recoveryText: string | undefined = recovery === undefined
+		? undefined
+		: recovery.status === "recovered"
+			? t("chat.tool.recovery.recovered", { attempt: recovery.attempt, max: recovery.maxAttempts })
+			: recovery.status === "exhausted"
+				? t("chat.tool.recovery.exhausted", { attempt: recovery.attempt, max: recovery.maxAttempts })
+				: t("chat.tool.recovery.failed", { attempt: recovery.attempt, max: recovery.maxAttempts });
 	const label = (
 		<span className={styles.toolLabel} title={toolDisplay.label}>
 			<span className={styles.toolLabelText}>{((): string => {
@@ -130,8 +153,10 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 		? isFileWriteTool
 			? t("chat.tool.activity.writing", { tool: toolDisplay.label })
 			: t("chat.tool.activity.running")
+		: status === "pending"
+			? t("chat.tool.activity.pending")
 		: undefined;
-	const hasDetails: boolean = activityText !== undefined || resultText.length > 0 || fileEditBatch !== undefined;
+	const hasDetails: boolean = activityText !== undefined || resultText.length > 0 || fileEditBatch !== undefined || recoveryText !== undefined;
 
 	return (
 		<Collapse
@@ -154,6 +179,7 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 					children: !hasDetails ? null : (
 						<div className={styles.details}>
 							{activityText === undefined ? null : <div className={styles.activityText}>{activityText}</div>}
+							{recoveryText === undefined ? null : <div className={styles.recoveryText}>{recoveryText}</div>}
 							{resultText.length === 0 ? null : <div className={styles.resultText}>{resultText}</div>}
 							{fileEditBatch === undefined ? null : (
 								<div className={styles.fileChanges}>

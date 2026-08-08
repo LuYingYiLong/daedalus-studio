@@ -3,7 +3,7 @@ import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import { Button, Collapse, Spin, Tag, Tooltip } from "antd";
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { readTerminalDisplay as readSharedTerminalDisplay, isTerminalCommandPart, type TerminalDisplay as SharedTerminalDisplay, type TimelineToolPart } from "./tool-part-data";
+import { getToolRecovery, readTerminalDisplay as readSharedTerminalDisplay, isTerminalCommandPart, isTimelineToolEventType, type TerminalDisplay as SharedTerminalDisplay, type TimelineToolPart, type ToolRecoveryDisplay } from "./tool-part-data";
 import { useTimelineDisclosure } from "./timeline-disclosure-state";
 import styles from "./TerminalPart.module.css";
 
@@ -22,8 +22,8 @@ function getString(record: Record<string, unknown> | undefined, key: string): st
 	return typeof value === "string" ? value : "";
 }
 
-function getLatestEvent(events: Record<string, unknown>[], type: string): Record<string, unknown> | undefined {
-	return [...events].reverse().find((event: Record<string, unknown>): boolean => event.type === type);
+function getLatestEvent(events: Record<string, unknown>[], type: "tool.result" | "tool.error" | "tool.rejected"): Record<string, unknown> | undefined {
+	return [...events].reverse().find((event: Record<string, unknown>): boolean => isTimelineToolEventType(event, type));
 }
 
 function getLatestEventIndex(events: Record<string, unknown>[], eventTypes: readonly string[]): number {
@@ -56,8 +56,8 @@ function getTerminalStatus(part: TimelineToolPart, display: TerminalDisplay): Te
 		if (resultEvent.ok === false || (display.exitCode !== null && display.exitCode !== 0) || ["failed", "spawn_error"].includes(display.status)) return "failed";
 		return "success";
 	}
-	const approvalIndex: number = getLatestEventIndex(part.events, ["tool.approval_required"]);
-	const executionIndex: number = getLatestEventIndex(part.events, ["tool.approved", "tool.call", "tool.progress"]);
+	const approvalIndex: number = getLatestEventIndex(part.events, ["tool.approval_required", "agent.tool.approval_required"]);
+	const executionIndex: number = getLatestEventIndex(part.events, ["tool.approved", "agent.tool.approved", "tool.call", "agent.tool.call", "tool.progress", "agent.tool.progress"]);
 	return approvalIndex > executionIndex ? "approval" : "running";
 }
 
@@ -89,6 +89,14 @@ function TerminalPart({ part, disclosureKey, onScrollWheelPassThrough }: Termina
 	const followOutputRef = useRef<boolean>(true);
 	const display: TerminalDisplay = useMemo((): TerminalDisplay => readTerminalDisplay(part), [part]);
 	const status: TerminalStatus = getTerminalStatus(part, display);
+	const recovery: ToolRecoveryDisplay | undefined = useMemo((): ToolRecoveryDisplay | undefined => getToolRecovery(part.events), [part.events]);
+	const recoveryText: string | undefined = recovery === undefined
+		? undefined
+		: recovery.status === "recovered"
+			? t("chat.tool.recovery.recovered", { attempt: recovery.attempt, max: recovery.maxAttempts })
+			: recovery.status === "exhausted"
+				? t("chat.tool.recovery.exhausted", { attempt: recovery.attempt, max: recovery.maxAttempts })
+				: t("chat.tool.recovery.failed", { attempt: recovery.attempt, max: recovery.maxAttempts });
 	const outputText: string = [display.stdout, display.stderr].filter((value: string): boolean => value.length > 0).join("\n");
 
 	useLayoutEffect(() => {
@@ -157,6 +165,7 @@ function TerminalPart({ part, disclosureKey, onScrollWheelPassThrough }: Termina
 				),
 				children: (
 					<div className={styles.body}>
+						{recoveryText === undefined ? null : <div className={styles.recovery}>{recoveryText}</div>}
 						<div className={styles.commandBlock}>
 							<code>{display.commandLine || t("chat.terminalPart.commandFallback")}</code>
 							<Tooltip title={copied === "command" ? t("chat.common.copied") : t("chat.terminalPart.copyCommand")}>

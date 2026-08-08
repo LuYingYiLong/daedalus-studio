@@ -939,11 +939,18 @@
 		"running": "运行中",
 		"done": "完成",
 		"failed": "失败",
-		"approvalRequired": "需要批准"
+		"approvalRequired": "需要批准",
+		"pending": "待执行"
 	  },
 	  "activity": {
 		"running": "工具正在执行。",
+		"pending": "工具尚未开始执行。",
 		"writing": "正在写入：{{tool}}"
+	  },
+	  "recovery": {
+		"failed": "第 {{attempt}}/{{max}} 次恢复尝试失败，AI 可以调整同一结构化目标后重试。",
+		"recovered": "此前失败 {{attempt}}/{{max}} 次，本次已恢复。",
+		"exhausted": "已达到恢复上限（{{attempt}}/{{max}}），不会再次执行这一精确操作。"
 	  },
 	  "fileChanges": {
 		"summary": "已变更 {{count}} 个文件"

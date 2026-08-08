@@ -226,7 +226,7 @@ export type AgentRunStage =
 	| "cancelled";
 
 export type AgentRunState = {
-	schemaVersion: 1;
+	schemaVersion: 1 | 2 | 3;
 	runId: string;
 	sessionId: string;
 	requestId: string;
@@ -237,7 +237,7 @@ export type AgentRunState = {
 	revision: number;
 	intent: "answer" | "inspect" | "mutate";
 	scope: "bounded" | "unknown" | "complex";
-	lane: "direct" | "read" | "probe" | "lightweight" | "workflow";
+	lane: "direct" | "read" | "agent_loop" | "tool_assisted" | "probe" | "lightweight" | "workflow";
 	stage: AgentRunStage;
 	title: string;
 	planId: string | null;
@@ -251,7 +251,7 @@ export type AgentRunState = {
 	verificationStatus: "verified" | "unverified" | "failed" | null;
 	warnings: string[];
 	terminal: {
-		resultStatus: "completed" | "completed_with_warnings" | "failed" | "cancelled";
+		resultStatus: "completed" | "completed_with_warnings" | "blocked" | "failed" | "cancelled";
 		message?: string;
 		completedAt: string;
 	} | null;
@@ -259,6 +259,17 @@ export type AgentRunState = {
 		successfulWriteFingerprints: string[];
 		evidence: unknown[];
 		lastWriteAt?: string;
+	};
+	agentLoopState?: {
+		schemaVersion: 1;
+		recoveryEntries: Array<{
+			recoveryKey: string;
+			toolName: string;
+			attempts: number;
+			status: "unresolved" | "recovered" | "exhausted";
+			lastFailureCode?: string;
+			updatedAt: string;
+		}>;
 	};
 	interruptedReason?: string;
 	createdAt: string;

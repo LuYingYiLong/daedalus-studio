@@ -106,7 +106,9 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 					? event.data as Record<string, unknown>
 					: null;
 			const normalizedSnapshot: WorkflowTodoSnapshot | null = normalizeWorkflowTodoSnapshot(runData?.todo);
-			const snapshot: WorkflowTodoSnapshot | null = normalizedSnapshot === null
+			const snapshot: WorkflowTodoSnapshot | null = runData?.lane === "agent_loop"
+				? null
+				: normalizedSnapshot === null
 				? null
 				: reconcileWorkflowTodoWithRunStage(normalizedSnapshot, runData?.stage);
 			params.setWorkflowTodoSnapshot(snapshot);

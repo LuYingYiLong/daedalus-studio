@@ -75,6 +75,12 @@
 	font-size: 12px;
 }
 
+.recovery {
+	color: var(--ds-text-secondary);
+	font-size: 12px;
+	line-height: 1.45;
+}
+
 .outputHeader {
 	min-height: 24px;
 	color: var(--ds-text-secondary);

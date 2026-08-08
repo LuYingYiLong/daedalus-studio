@@ -941,11 +941,18 @@
 		"running": "Running",
 		"done": "Done",
 		"failed": "Failed",
-		"approvalRequired": "Approval required"
+		"approvalRequired": "Approval required",
+		"pending": "Not started"
 	  },
 	  "activity": {
 		"running": "The tool is running.",
+		"pending": "The tool has not started.",
 		"writing": "Writing now: {{tool}}"
+	  },
+	  "recovery": {
+		"failed": "Recovery attempt {{attempt}}/{{max}} failed. The assistant may adjust the same structured target and try again.",
+		"recovered": "Recovered after {{attempt}}/{{max}} failed attempts.",
+		"exhausted": "Recovery limit reached ({{attempt}}/{{max}}). This exact operation will not run again."
 	  },
 	  "fileChanges": {
 		"summary": "{{count}} file changed",
