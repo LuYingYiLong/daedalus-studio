@@ -7,6 +7,7 @@ describe("Provider request configuration", () => {
 		const domainSource: string = readRepoFile("src", "renderer", "src", "domain", "settings", "provider-request-overrides.ts");
 		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "ProviderSettingsPage.tsx");
 		const modalSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "ProviderRequestConfigModal.tsx");
+		const modalStyles: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "ProviderRequestConfigModal.module.css");
 
 		expect(apiSource).toContain("ProviderRequestOverrides");
 		expect(apiSource).toContain("requestOverrides?: ProviderRequestOverrides | null | undefined");
@@ -17,6 +18,12 @@ describe("Provider request configuration", () => {
 		expect(modalSource).toContain("createJSONEditor");
 		expect(modalSource).toContain("editor.destroy()");
 		expect(modalSource).toContain("parseProviderRequestOverrides");
+		expect(modalSource).toContain('mode: "tree"');
+		expect(modalSource).toContain("window.requestAnimationFrame");
+		expect(modalSource).toContain("Input.TextArea");
+		expect(modalSource).toContain("forceRender={true}");
+		expect(modalStyles).toContain("height: 380px;");
+		expect(modalStyles).not.toContain("user-select: none");
 		expect(domainSource).toContain('key !== "headers" && key !== "body"');
 		expect(modalSource).not.toContain("svelte-jsoneditor");
 	});

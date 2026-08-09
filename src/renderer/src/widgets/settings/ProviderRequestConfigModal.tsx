@@ -1,7 +1,7 @@
-import { Alert, Button, Flex, Modal, Typography } from "antd";
+import { Alert, Button, Flex, Input, Modal, Typography } from "antd";
 import { createJSONEditor, isJSONContent } from "vanilla-jsoneditor";
 import type { Content, JsonEditor } from "vanilla-jsoneditor";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	cloneProviderRequestOverrides,
@@ -31,55 +31,99 @@ function ProviderRequestConfigModal({
 	onSave
 }: ProviderRequestConfigModalProps): React.JSX.Element {
 	const { t } = useTranslation();
-	const editorHostRef = useRef<HTMLDivElement | null>(null);
 	const editorRef = useRef<JsonEditor | null>(null);
 	const initialValueKey: string = useMemo((): string => JSON.stringify(initialValue ?? EMPTY_PROVIDER_REQUEST_OVERRIDES), [initialValue]);
+	const initialContent: ProviderRequestOverrides = useMemo(
+		(): ProviderRequestOverrides => cloneProviderRequestOverrides(initialValue),
+		[initialValueKey]
+	);
+	const [editorHost, setEditorHost] = useState<HTMLDivElement | null>(null);
 	const [draft, setDraft] = useState<ProviderRequestOverrides | null>(null);
 	const [validationErrorKey, setValidationErrorKey] = useState<string | null>(null);
+	const [textValue, setTextValue] = useState<string>("");
+	const [usingTextEditor, setUsingTextEditor] = useState<boolean>(false);
+
+	const applyDraft = useCallback((value: unknown): void => {
+		const result = parseProviderRequestOverrides(value);
+		setDraft(result.value);
+		setValidationErrorKey(result.error);
+	}, []);
+
+	useEffect((): void => {
+		if (!open) {
+			return;
+		}
+
+		setDraft(initialContent);
+		setTextValue(JSON.stringify(initialContent, null, 2));
+		setValidationErrorKey(null);
+		setUsingTextEditor(false);
+	}, [initialContent, open]);
 
 	useEffect((): (() => void) | undefined => {
-		if (!open || editorHostRef.current === null) {
+		if (!open || editorHost === null || usingTextEditor) {
 			return undefined;
 		}
 
-		const initialContent: ProviderRequestOverrides = cloneProviderRequestOverrides(initialValue);
-		setDraft(initialContent);
-		setValidationErrorKey(null);
+		let cancelled: boolean = false;
+		let editor: JsonEditor | null = null;
+		const frame: number = window.requestAnimationFrame((): void => {
+			if (cancelled) {
+				return;
+			}
 
-		const editor: JsonEditor = createJSONEditor({
-			target: editorHostRef.current,
-			props: {
-				content: { json: initialContent },
-				mode: "text",
-				mainMenuBar: true,
-				navigationBar: false,
-				statusBar: true,
-				onChange: (content: Content): void => {
-					if (!isJSONContent(content)) {
-						setDraft(null);
-						setValidationErrorKey("settings.provider.requestConfiguration.validation.json");
-						return;
+			try {
+				editor = createJSONEditor({
+					target: editorHost,
+					props: {
+						content: { json: initialContent },
+						mode: "text",
+						mainMenuBar: true,
+						navigationBar: false,
+						statusBar: true,
+						onChange: (content: Content): void => {
+							if (!isJSONContent(content)) {
+								setDraft(null);
+								setValidationErrorKey("settings.provider.requestConfiguration.validation.json");
+								return;
+							}
+
+							applyDraft(content.json);
+						}
 					}
-
-					const result = parseProviderRequestOverrides(content.json);
-					setDraft(result.value);
-					setValidationErrorKey(result.error);
-				}
+				});
+				editorRef.current = editor;
+			} catch {
+				setUsingTextEditor(true);
 			}
 		});
-		editorRef.current = editor;
 
 		return (): void => {
+			cancelled = true;
+			window.cancelAnimationFrame(frame);
 			editorRef.current = null;
-			void editor.destroy();
+			if (editor !== null) {
+				void editor.destroy();
+			}
 		};
-	}, [initialValue, initialValueKey, open]);
+	}, [applyDraft, editorHost, initialContent, open, usingTextEditor]);
 
 	function resetValue(): void {
 		const nextValue: ProviderRequestOverrides = cloneProviderRequestOverrides(undefined);
 		editorRef.current?.updateProps({ content: { json: nextValue } });
 		setDraft(nextValue);
+		setTextValue(JSON.stringify(nextValue, null, 2));
 		setValidationErrorKey(null);
+	}
+
+	function handleTextChange(nextText: string): void {
+		setTextValue(nextText);
+		try {
+			applyDraft(JSON.parse(nextText) as unknown);
+		} catch {
+			setDraft(null);
+			setValidationErrorKey("settings.provider.requestConfiguration.validation.json");
+		}
 	}
 
 	const displayedError: string | null = validationErrorKey === null ? errorMessage : t(validationErrorKey);
@@ -90,6 +134,7 @@ function ProviderRequestConfigModal({
 			title={t("settings.provider.requestConfiguration.title", { provider: providerName })}
 			width={780}
 			destroyOnHidden={true}
+			forceRender={true}
 			closable={!saving}
 			keyboard={!saving}
 			mask={{ closable: !saving }}
@@ -117,7 +162,23 @@ function ProviderRequestConfigModal({
 				</Typography.Paragraph>
 				<Alert type="info" showIcon={true} description={t("settings.provider.requestConfiguration.safetyHint")} />
 				{displayedError !== null ? <Alert type="error" showIcon={true} description={displayedError} /> : null}
-				<div ref={editorHostRef} className={styles.editorHost} />
+				<Flex justify="space-between" align="center" gap="small" className={styles.editorToolbar}>
+					<Typography.Text type="secondary">{t("settings.provider.requestConfiguration.editorHint")}</Typography.Text>
+					{usingTextEditor ? null : (
+						<Button type="link" size="small" onClick={(): void => setUsingTextEditor(true)}>
+							{t("settings.provider.requestConfiguration.useTextEditor")}
+						</Button>
+					)}
+				</Flex>
+				{usingTextEditor ? (
+					<Input.TextArea
+						value={textValue}
+						onChange={(event): void => handleTextChange(event.target.value)}
+						autoSize={false}
+						spellCheck={false}
+						className={styles.textEditor}
+					/>
+				) : <div ref={setEditorHost} className={styles.editorHost} />}
 			</div>
 		</Modal>
 	);

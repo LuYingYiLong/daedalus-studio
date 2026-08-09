@@ -1558,6 +1558,8 @@
         "open": "自定义请求",
         "description": "为文本模型请求添加供应商特有的请求头或 JSON 正文字段。不需要的区块可以省略或保留为空对象。",
         "safetyHint": "认证、模型、消息、工具和流式字段仍由 Daedalus 管理。保存时会拒绝这些保留字段。",
+        "editorHint": "仅支持 headers 和 body 两个顶层字段",
+        "useTextEditor": "改用文本编辑",
         "reset": "重置配置",
         "validation": {
           "json": "请先输入有效的 JSON。",

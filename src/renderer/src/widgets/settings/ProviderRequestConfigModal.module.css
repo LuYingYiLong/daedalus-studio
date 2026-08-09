@@ -11,9 +11,13 @@
 	margin-bottom: 0 !important;
 }
 
+.editorToolbar {
+	min-height: 24px;
+}
+
 .editorHost {
-	min-height: 380px;
-	overflow: hidden;
+	height: 380px;
+	overflow: auto;
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-sm);
 	background: var(--ds-bg-sunken);
@@ -51,9 +55,21 @@
 }
 
 .editorHost :global(.jse-main) {
-	min-height: 380px;
+	height: 100%;
 }
 
 .editorHost :global(.jse-contents) {
-	min-height: 380px;
+	min-height: 100%;
+}
+
+.textEditor {
+	min-height: 380px !important;
+	padding: var(--ds-space-3) !important;
+	border-color: var(--ds-border) !important;
+	border-radius: var(--ds-radius-sm) !important;
+	background: var(--ds-bg-sunken) !important;
+	color: var(--ds-text-primary) !important;
+	font-family: var(--ds-font-family-code) !important;
+	line-height: 1.55 !important;
+	resize: vertical !important;
 }

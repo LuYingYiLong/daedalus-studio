@@ -1565,6 +1565,8 @@
         "open": "Custom request",
         "description": "Add provider-specific headers or JSON body fields to text-model requests. Omit a section or leave it empty when it is not needed.",
         "safetyHint": "Daedalus keeps authentication, model, messages, tools, and streaming fields under its own control. Reserved fields are rejected when you save.",
+        "editorHint": "Only the top-level headers and body fields are supported",
+        "useTextEditor": "Use text editor",
         "reset": "Reset configuration",
         "validation": {
           "json": "Enter valid JSON before saving.",
