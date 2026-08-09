@@ -9,9 +9,11 @@ export type ToolBudgetDialogProps = {
 	pendingToolBudget: PendingToolBudget | null;
 	isContinuing?: boolean;
 	isStopping?: boolean;
+	isCancelling?: boolean;
 	errorMessage?: string | null;
 	onContinue?: (budgetId: string) => void;
 	onStop?: (budgetId: string) => void;
+	onCancel?: () => void;
 };
 
 function formatNumber(value: number): string {
@@ -26,9 +28,11 @@ function ToolBudgetDialog({
 	pendingToolBudget,
 	isContinuing = false,
 	isStopping = false,
+	isCancelling = false,
 	errorMessage,
 	onContinue,
-	onStop
+	onStop,
+	onCancel
 }: ToolBudgetDialogProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const { token } = theme.useToken();
@@ -36,7 +40,7 @@ function ToolBudgetDialog({
 		return null;
 	}
 
-	const isBusy: boolean = isContinuing || isStopping;
+	const isBusy: boolean = isContinuing || isStopping || isCancelling;
 	const actionButtonStyle: React.CSSProperties = {
 		borderRadius: token.borderRadiusSM
 	};
@@ -104,14 +108,22 @@ function ToolBudgetDialog({
 					}}
 				>{t("approval.toolBudget.actions.continue")}</Button>
 				<Button
-					danger={true}
 					disabled={isBusy}
 					loading={isStopping}
 					style={actionButtonStyle}
 					onClick={(): void => {
 						onStop?.(pendingToolBudget.budgetId);
 					}}
-				>{t("approval.toolBudget.actions.stop")}</Button>
+				>{t("approval.toolBudget.actions.summarize")}</Button>
+				<Button
+					danger={true}
+					disabled={isBusy}
+					loading={isCancelling}
+					style={actionButtonStyle}
+					onClick={(): void => {
+						onCancel?.();
+					}}
+				>{t("approval.toolBudget.actions.cancel")}</Button>
 			</footer>
 		</div>
 	);

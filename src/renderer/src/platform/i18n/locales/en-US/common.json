@@ -591,7 +591,9 @@
       "additionalStepsValue_other": "+{{formatted}} steps",
       "actions": {
         "continue": "Continue",
-        "stop": "No, stop and summarize"
+        "stop": "No, stop and summarize",
+        "summarize": "Summarize with current results",
+        "cancel": "Cancel this run"
       }
     },
     "plan": {

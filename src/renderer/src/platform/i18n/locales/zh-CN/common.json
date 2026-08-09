@@ -589,7 +589,9 @@
       "additionalStepsValue_other": "+{{formatted}} 步",
       "actions": {
         "continue": "继续",
-        "stop": "否，结束并总结"
+        "stop": "否，结束并总结",
+        "summarize": "用现有结果总结",
+        "cancel": "取消本轮"
       }
     },
     "plan": {

@@ -226,21 +226,29 @@ export function createOptimisticUserBlock(requestId: string, message: string, ad
 	};
 }
 
+/** 实时 assistant 事件可先于排队消息到达，按 requestId 维持消息对顺序 */
+export function insertUserBlockBeforeRequestAssistant(blocks: TimelineBlock[], userBlock: TimelineBlock): TimelineBlock[] {
+	if (userBlock.type !== "user") return blocks;
+	if (blocks.some((block: TimelineBlock): boolean => block.type === "user" && block.requestId === userBlock.requestId)) return blocks;
+
+	const assistantIndex: number = blocks.findIndex((block: TimelineBlock): boolean => {
+		return block.type === "assistant" && block.requestId === userBlock.requestId;
+	});
+	if (assistantIndex < 0) return [...blocks, userBlock];
+
+	return [...blocks.slice(0, assistantIndex), userBlock, ...blocks.slice(assistantIndex)];
+}
+
 export function mergeOptimisticUserBlocks(currentPage: TimelinePageState, nextPage: TimelinePageState, activeOptimisticRequestId: string | null): TimelinePageState {
 	if (currentPage.sessionId !== null && nextPage.sessionId !== null && currentPage.sessionId !== nextPage.sessionId) return currentPage;
 	const optimisticUserBlocks: TimelineBlock[] = currentPage.blocks.filter((block): boolean => activeOptimisticRequestId !== null && block.type === "user" && block.id.startsWith("optimistic:") && block.requestId === activeOptimisticRequestId);
 	const missingOptimisticUserBlocks: Map<string, TimelineBlock> = new Map(optimisticUserBlocks.filter((optimisticBlock): boolean => !nextPage.blocks.some((block): boolean => block.type === "user" && block.requestId === optimisticBlock.requestId)).map((block): [string, TimelineBlock] => [block.requestId, block]));
 	if (missingOptimisticUserBlocks.size === 0) return nextPage;
-	const blocks: TimelineBlock[] = [];
-	for (const block of nextPage.blocks) {
-		const optimisticBlock = missingOptimisticUserBlocks.get(block.requestId);
-		if (optimisticBlock !== undefined && block.type !== "user") {
-			blocks.push(optimisticBlock);
-			missingOptimisticUserBlocks.delete(block.requestId);
-		}
-		blocks.push(block);
+	let blocks: TimelineBlock[] = nextPage.blocks;
+	for (const optimisticBlock of missingOptimisticUserBlocks.values()) {
+		blocks = insertUserBlockBeforeRequestAssistant(blocks, optimisticBlock);
 	}
-	return { ...nextPage, sessionId: currentPage.sessionId ?? nextPage.sessionId, blocks: [...blocks, ...missingOptimisticUserBlocks.values()], blockCount: nextPage.blockCount + missingOptimisticUserBlocks.size, hasMoreAfter: false };
+	return { ...nextPage, sessionId: currentPage.sessionId ?? nextPage.sessionId, blocks, blockCount: nextPage.blockCount + missingOptimisticUserBlocks.size, hasMoreAfter: false };
 }
 
 export function trimTimelineFromRequest(page: TimelinePageState, requestId: string): TimelinePageState {

@@ -136,6 +136,7 @@ import {
 	isLocalPathInsideWorkspace,
 	isSameWorkflowTodoSnapshot,
 	isSupportedImageMimeType,
+	insertUserBlockBeforeRequestAssistant,
 	mergeOptimisticUserBlocks,
 	normalizeLocalPathForCompare,
 	readFileAsDataUrl,
@@ -730,14 +731,15 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			if (hasUserBlock) {
 				return currentPage;
 			}
+			const blocks: TimelineBlock[] = insertUserBlockBeforeRequestAssistant(
+				currentPage.blocks,
+				createOptimisticUserBlock(requestId, message, additionalContext)
+			);
 
 			return {
 				...currentPage,
 				sessionId: currentPage.sessionId ?? sessionId,
-				blocks: [
-					...currentPage.blocks,
-					createOptimisticUserBlock(requestId, message, additionalContext)
-				],
+				blocks,
 				blockCount: currentPage.blockCount + 1,
 				hasMoreAfter: false
 			};
@@ -794,10 +796,10 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			return {
 				...trimmedPage,
 				sessionId: trimmedPage.sessionId ?? sessionId,
-				blocks: [
-					...trimmedPage.blocks,
+				blocks: insertUserBlockBeforeRequestAssistant(
+					trimmedPage.blocks,
 					createOptimisticUserBlock(requestId, message, additionalContext)
-				],
+				),
 				blockCount: trimmedPage.blockCount + 1,
 				hasMoreAfter: false
 			};

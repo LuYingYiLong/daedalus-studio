@@ -218,6 +218,20 @@ describe("workbench-state", () => {
 		expect(withDone[0]?.type === "assistant" ? withDone[0].status : "missing").toBeUndefined();
 	});
 
+	it("keeps an arriving assistant block adjacent to its user request", () => {
+		const blocks: TimelineBlock[] = applyBackendEventToTimeline(
+			[createUserBlock("request-earlier"), createUserBlock("request-current"), createUserBlock("request-later")],
+			createAgentRunEvent("request-current", "executing")
+		);
+
+		expect(blocks.map((block) => `${block.type}:${block.requestId}`)).toEqual([
+			"user:request-earlier",
+			"user:request-current",
+			"assistant:request-current",
+			"user:request-later"
+		]);
+	});
+
 	it("batches adjacent streaming deltas without changing timeline semantics", () => {
 		const blocks: TimelineBlock[] = applyBackendEventsToTimeline([], [
 			{

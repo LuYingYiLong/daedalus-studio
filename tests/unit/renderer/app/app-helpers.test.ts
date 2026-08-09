@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	getChatOutputTarget,
 	getSessionSortTime,
+	insertUserBlockBeforeRequestAssistant,
 	mergeOptimisticUserBlocks,
 	normalizeLocalPathForCompare,
 	trimTimelineFromRequest
@@ -32,6 +33,18 @@ function userBlock(requestId: string, id: string = requestId): TimelineBlock {
 	};
 }
 
+function assistantBlock(requestId: string, id: string = requestId): TimelineBlock {
+	return {
+		id,
+		type: "assistant",
+		requestId,
+		content: requestId,
+		startedAtUtc: "2026-08-08T00:00:00.000Z",
+		completedAtUtc: "2026-08-08T00:00:01.000Z",
+		bodyParts: []
+	};
+}
+
 describe("app helpers", () => {
 	it("normalizes local paths for safe comparisons", () => {
 		expect(normalizeLocalPathForCompare("C:/Project/src/App.tsx")).toBe("c:/project/src/app.tsx");
@@ -59,6 +72,30 @@ describe("app helpers", () => {
 		const result = mergeOptimisticUserBlocks(current, next, "request-1");
 
 		expect(result.blocks.map((block) => block.requestId)).toEqual(["request-2", "request-1"]);
+	});
+
+	it("inserts a late queued user block before its already-live assistant block", () => {
+		const result = insertUserBlockBeforeRequestAssistant(
+			[userBlock("request-earlier"), assistantBlock("request-queued")],
+			userBlock("request-queued", "optimistic:request-queued:user")
+		);
+
+		expect(result.map((block) => `${block.type}:${block.requestId}`)).toEqual([
+			"user:request-earlier",
+			"user:request-queued",
+			"assistant:request-queued"
+		]);
+	});
+
+	it("keeps an optimistic user block before a persisted assistant during refresh", () => {
+		const current = page([userBlock("request-queued", "optimistic:request-queued:user")]);
+		const next = page([assistantBlock("request-queued")]);
+		const result = mergeOptimisticUserBlocks(current, next, "request-queued");
+
+		expect(result.blocks.map((block) => `${block.type}:${block.requestId}`)).toEqual([
+			"user:request-queued",
+			"assistant:request-queued"
+		]);
 	});
 
 	it("falls back to a stable timestamp for session sorting", () => {

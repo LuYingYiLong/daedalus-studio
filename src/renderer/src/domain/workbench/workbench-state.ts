@@ -906,6 +906,15 @@ function createLiveAssistantBlock(event: BackendEvent): TimelineAssistantBlock {
 	}, event);
 }
 
+function insertLiveAssistantBlockInRequestOrder(blocks: TimelineBlock[], assistantBlock: TimelineAssistantBlock): TimelineBlock[] {
+	for (let index: number = blocks.length - 1; index >= 0; index -= 1) {
+		if (blocks[index]?.requestId === assistantBlock.requestId) {
+			return [...blocks.slice(0, index + 1), assistantBlock, ...blocks.slice(index + 1)];
+		}
+	}
+	return [...blocks, assistantBlock];
+}
+
 export function applyBackendEventToTimeline(blocks: TimelineBlock[], event: BackendEvent): TimelineBlock[] {
 	const canonicalEvent: BackendEvent = rewriteEventForTimeline(blocks, event);
 	let changed: boolean = false;
@@ -926,7 +935,7 @@ export function applyBackendEventToTimeline(blocks: TimelineBlock[], event: Back
 		return blocks;
 	}
 
-	return [...blocks, createLiveAssistantBlock(canonicalEvent)];
+	return insertLiveAssistantBlockInRequestOrder(blocks, createLiveAssistantBlock(canonicalEvent));
 }
 
 export function applyBackendEventsToTimeline(blocks: TimelineBlock[], events: readonly BackendEvent[]): TimelineBlock[] {

@@ -2158,11 +2158,13 @@ function HomePage({
 										) : !isHome && pendingToolBudget !== null ? (
 											<ToolBudgetDialog
 												pendingToolBudget={pendingToolBudget}
-												isContinuing={isToolBudgetContinuing}
-												isStopping={isToolBudgetStopping}
-												errorMessage={toolBudgetError}
-												onContinue={onToolBudgetContinue}
-												onStop={onToolBudgetStop}
+											isContinuing={isToolBudgetContinuing}
+											isStopping={isToolBudgetStopping}
+											isCancelling={isCancelling}
+											errorMessage={toolBudgetError}
+											onContinue={onToolBudgetContinue}
+											onStop={onToolBudgetStop}
+											onCancel={onCancel}
 											/>
 										) : !isHome && pendingPlanClarification !== null ? (
 											<ClarificationDialog
