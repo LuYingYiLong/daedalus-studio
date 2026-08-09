@@ -3,7 +3,7 @@ import type { TimelinePageStore } from "@/domain/workbench/timeline-page-store";
 import { useTimelinePage } from "@/domain/workbench/timeline-page-store";
 import type { RetryUserMessagePayload } from "./UserBubble";
 import ConversationAnchorNavigator from "./ConversationAnchorNavigator";
-import { resolveActiveTimelineEntryId, resolveAdjacentTimelineEntry } from "@/domain/conversation/conversation-navigation";
+import { resolveActiveTimelineEntryIdFromLoadedBlocks, resolveAdjacentTimelineEntry } from "@/domain/conversation/conversation-navigation";
 import ConversationSearchPanel from "./ConversationSearchPanel";
 import MessageList, { type MessageListHandle } from "./MessageList";
 import { useConversationSearch } from "@/features/conversation/useConversationSearch";
@@ -76,7 +76,6 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 	const timelinePage = useTimelinePage(timelineStore);
 	const messageListRef = useRef<MessageListHandle | null>(null);
 	const conversationSearchInputRef = useRef<InputRef | null>(null);
-	const [messageScrollContainer, setMessageScrollContainer] = useState<HTMLElement | null>(null);
 	const [activeTimelineBlockOffset, setActiveTimelineBlockOffset] = useState<number | null>(null);
 	const [pendingTimelineEntryId, setPendingTimelineEntryId] = useState<string | null>(null);
 	const selectionAsk = useSelectionAsk(sessionId, initialSelectionAskThreads);
@@ -84,8 +83,13 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 		? null
 		: selectionAsk.threads.find((thread: SelectionAskThread): boolean => thread.threadId === selectionAsk.activeThreadId) ?? null;
 	const activeTimelineEntryId: string | null = useMemo(
-		(): string | null => resolveActiveTimelineEntryId(timelineNavigationEntries, activeTimelineBlockOffset),
-		[activeTimelineBlockOffset, timelineNavigationEntries]
+		(): string | null => resolveActiveTimelineEntryIdFromLoadedBlocks(
+			timelineNavigationEntries,
+			timelinePage.blocks,
+			timelinePage.blockOffset,
+			activeTimelineBlockOffset
+		),
+		[activeTimelineBlockOffset, timelineNavigationEntries, timelinePage.blockOffset, timelinePage.blocks]
 	);
 	const handleConversationSearchLoadError = useCallback((error: unknown): void => {
 		console.warn("[ConversationTimelinePane] conversation search degraded to loaded messages", error);
@@ -118,6 +122,12 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 	}, [sessionId]);
 
 	useEffect((): void => {
+		if (activeTimelineBlockOffset === null && timelinePage.blocks.length > 0) {
+			setActiveTimelineBlockOffset(timelinePage.blockOffset + timelinePage.blocks.length - 1);
+		}
+	}, [activeTimelineBlockOffset, timelinePage.blockOffset, timelinePage.blocks.length]);
+
+	useEffect((): void => {
 		if (pendingTimelineEntryId === null || !timelinePage.blocks.some((block: TimelineBlock): boolean => block.id === pendingTimelineEntryId)) {
 			return;
 		}
@@ -136,10 +146,6 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 		setPendingTimelineEntryId(entry.entryId);
 		void onTimelineNavigationLoadEntry(entry);
 	}, [onTimelineNavigationLoadEntry]);
-	const handleViewportTimelineEntryChange = useCallback((entry: SessionTimelineNavigationEntry): void => {
-		setActiveTimelineBlockOffset(entry.blockOffset);
-	}, []);
-
 	const handleSelectionAsk = useCallback(async (anchor: MessageTextAnchor): Promise<void> => {
 		try {
 			await selectionAsk.createOrOpen(anchor, i18n.language.startsWith("zh") ? "zh-CN" : "en-US");
@@ -167,7 +173,12 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 			return;
 		}
 		const liveBlockOffset: number | null = messageListRef.current?.getActiveBlockOffset() ?? activeTimelineBlockOffset;
-		const liveActiveEntryId: string | null = resolveActiveTimelineEntryId(timelineNavigationEntries, liveBlockOffset);
+		const liveActiveEntryId: string | null = resolveActiveTimelineEntryIdFromLoadedBlocks(
+			timelineNavigationEntries,
+			timelinePage.blocks,
+			timelinePage.blockOffset,
+			liveBlockOffset
+		);
 		const target: SessionTimelineNavigationEntry | null = resolveAdjacentTimelineEntry(
 			timelineNavigationEntries,
 			liveActiveEntryId,
@@ -176,7 +187,7 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 		if (target !== null) {
 			handleTimelineNavigate(target);
 		}
-	}, [activeTimelineBlockOffset, handleTimelineNavigate, timelineNavigationEntries]);
+	}, [activeTimelineBlockOffset, handleTimelineNavigate, timelineNavigationEntries, timelinePage.blockOffset, timelinePage.blocks]);
 
 	useImperativeHandle(ref, (): ConversationTimelinePaneHandle => ({
 		closeSearch: (): boolean => {
@@ -242,14 +253,11 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 				onInlineDiffReview={onInlineDiffReview}
 				onAwayFromBottomChange={onAwayFromBottomChange}
 				onActiveBlockOffsetChange={setActiveTimelineBlockOffset}
-				onScrollContainerReady={setMessageScrollContainer}
 			/>
 			<ConversationAnchorNavigator
 				entries={timelineNavigationEntries}
 				activeEntryId={activeTimelineEntryId}
-				scrollContainer={messageScrollContainer}
 				onNavigate={handleTimelineNavigate}
-				onActiveEntryChange={handleViewportTimelineEntryChange}
 			/>
 			<SelectionAskDialog
 				thread={activeSelectionAskThread}

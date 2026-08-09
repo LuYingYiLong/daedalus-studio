@@ -7,6 +7,7 @@ import hljs from "highlight.js";
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import styles from "./MarkdownContent.module.css";
 import { MarkdownLink } from "./MarkdownResourceLink";
+import { useTimelineScrollFrameCoordinator } from "@/features/conversation/timeline-scroll-frame-context";
 import "highlight.js/styles/github-dark.css";
 
 export type MarkdownContentProps = {
@@ -102,6 +103,7 @@ function useStickyCodeHeader(enabled: boolean): {
 	const blockRef = useRef<HTMLDivElement | null>(null);
 	const headerRef = useRef<HTMLDivElement | null>(null);
 	const [isPinned, setIsPinned] = useState<boolean>(false);
+	const scrollFrameCoordinator = useTimelineScrollFrameCoordinator();
 
 	useLayoutEffect((): (() => void) | void => {
 		if (!enabled) {
@@ -116,9 +118,7 @@ function useStickyCodeHeader(enabled: boolean): {
 		}
 
 		const scrollContainer: HTMLElement | null = findScrollContainer(block);
-		let frameId: number | null = null;
 		const updatePinnedState = (): void => {
-			frameId = null;
 			const blockRect: DOMRect = block.getBoundingClientRect();
 			const headerHeight: number = header.getBoundingClientRect().height;
 			const containerTop: number = scrollContainer?.getBoundingClientRect().top ?? 0;
@@ -126,34 +126,28 @@ function useStickyCodeHeader(enabled: boolean): {
 			setIsPinned((currentPinned: boolean): boolean => currentPinned === nextPinned ? currentPinned : nextPinned);
 		};
 		const scheduleUpdate = (): void => {
-			if (frameId === null) {
-				frameId = window.requestAnimationFrame(updatePinnedState);
+			if (scrollFrameCoordinator === null) {
+				updatePinnedState();
+				return;
 			}
+			scrollFrameCoordinator.schedule();
 		};
+		const unsubscribe = scrollFrameCoordinator?.subscribe("sticky_code_header", updatePinnedState);
 		const resizeObserver: ResizeObserver | null = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleUpdate);
 		resizeObserver?.observe(block);
 		if (scrollContainer !== null) {
 			resizeObserver?.observe(scrollContainer);
-			scrollContainer.addEventListener("scroll", scheduleUpdate, { passive: true });
-		} else {
-			window.addEventListener("scroll", scheduleUpdate, { passive: true });
 		}
 		window.addEventListener("resize", scheduleUpdate);
+		updatePinnedState();
 		scheduleUpdate();
 
 		return (): void => {
 			resizeObserver?.disconnect();
-			if (scrollContainer !== null) {
-				scrollContainer.removeEventListener("scroll", scheduleUpdate);
-			} else {
-				window.removeEventListener("scroll", scheduleUpdate);
-			}
+			unsubscribe?.();
 			window.removeEventListener("resize", scheduleUpdate);
-			if (frameId !== null) {
-				window.cancelAnimationFrame(frameId);
-			}
 		};
-	}, [enabled]);
+	}, [enabled, scrollFrameCoordinator]);
 
 	return { blockRef, headerRef, isPinned };
 }

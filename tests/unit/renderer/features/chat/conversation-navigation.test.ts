@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { SessionTimelineNavigationEntry } from "@/platform/rpc/types";
-import { resolveActiveBlockOffset, resolveActiveTimelineEntryId, resolveAdjacentTimelineEntry } from "@/domain/conversation/conversation-navigation";
+import type { SessionTimelineNavigationEntry, TimelineBlock } from "@/platform/rpc/types";
+import { resolveActiveBlockOffset, resolveActiveTimelineEntryId, resolveActiveTimelineEntryIdFromLoadedBlocks, resolveAdjacentTimelineEntry } from "@/domain/conversation/conversation-navigation";
 
 const entries: SessionTimelineNavigationEntry[] = [
 	{ entryId: "turn-1", requestId: "request-1", blockOffset: 0, sentAtUtc: "2026-08-02T00:00:00.000Z", preview: "one" },
@@ -44,7 +44,24 @@ describe("conversation navigation", () => {
 
 	it("maps an assistant block to the latest preceding user turn", () => {
 		expect(resolveActiveTimelineEntryId(entries, 7)).toBe("turn-2");
+		expect(resolveActiveTimelineEntryId(entries, 8)).toBe("turn-2");
 		expect(resolveActiveTimelineEntryId(entries, 9)).toBe("turn-3");
+	});
+
+	it("prefers exact loaded user block identities when legacy offsets drift", () => {
+		const loadedBlocks: TimelineBlock[] = [
+			{ id: "turn-2", type: "user", requestId: "request-2", content: "two", sentAtUtc: "2026-08-02T00:01:00.000Z" },
+			{ id: "goal-cycle", type: "assistant", requestId: "goal-cycle", content: "", startedAtUtc: "2026-08-02T00:01:01.000Z", completedAtUtc: "2026-08-02T00:01:02.000Z", bodyParts: [] },
+			{ id: "turn-3", type: "user", requestId: "request-3", content: "three", sentAtUtc: "2026-08-02T00:02:00.000Z" },
+			{ id: "turn-3-response", type: "assistant", requestId: "request-3", content: "done", startedAtUtc: "2026-08-02T00:02:01.000Z", completedAtUtc: "2026-08-02T00:02:02.000Z", bodyParts: [] }
+		];
+		const driftedEntries: SessionTimelineNavigationEntry[] = entries.map((entry) => ({
+			...entry,
+			blockOffset: entry.blockOffset + 10
+		}));
+
+		expect(resolveActiveTimelineEntryIdFromLoadedBlocks(driftedEntries, loadedBlocks, 20, 23)).toBe("turn-3");
+		expect(resolveActiveTimelineEntryIdFromLoadedBlocks(driftedEntries, loadedBlocks, 20, 21)).toBe("turn-2");
 	});
 
 	it("does not invent an active turn before the first indexed user block", () => {

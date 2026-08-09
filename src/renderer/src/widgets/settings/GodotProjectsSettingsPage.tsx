@@ -6,6 +6,7 @@ import {
 	Flex,
 	Popconfirm,
 	Space,
+	Spin,
 	Table,
 	Tag,
 	Typography,
@@ -218,6 +219,7 @@ function GodotProjectsSettingsPage(): React.JSX.Element {
 	const hasPendingRestart: boolean = result?.projects.some((project: GodotProjectInfo): boolean =>
 		project.status === "pending_restart"
 	) ?? false;
+	const showInitialLoading: boolean = loading && result === null;
 
 	useInterval((): void => {
 		void window.electronAPI.godotProjects.scan().then(setResult).catch((): void => {});
@@ -276,17 +278,23 @@ function GodotProjectsSettingsPage(): React.JSX.Element {
 			) : null}
 
 			<div className={styles.tableRegion}>
-				<Table<GodotProjectInfo>
-					rowKey="id"
-					size="middle"
-					columns={columns}
-					dataSource={result?.projects ?? []}
-					loading={loading}
-					pagination={false}
-					locale={{
-						emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("settings.godotProjects.empty", { defaultValue: "No Godot projects were found." })} />
-					}}
-				/>
+				{showInitialLoading ? (
+					<div className={styles.loadingState} role="status" aria-live="polite">
+						<Spin size="large" />
+					</div>
+				) : (
+					<Table<GodotProjectInfo>
+						rowKey="id"
+						size="middle"
+						columns={columns}
+						dataSource={result?.projects ?? []}
+						loading={false}
+						pagination={false}
+						locale={{
+							emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("settings.godotProjects.empty", { defaultValue: "No Godot projects were found." })} />
+						}}
+					/>
+				)}
 			</div>
 		</section>
 	);

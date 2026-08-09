@@ -5,6 +5,7 @@ import type { InputRef, MenuProps } from "antd";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createMessageTextAnchor, getMessageAnchorKey, getMessageSelectionContextId, resolveMessageTextAnchor } from "@/domain/conversation/message-text-anchor";
+import { useTimelineScrollFrameCoordinator } from "@/features/conversation/timeline-scroll-frame-context";
 import styles from "./MessageSelectionOverlay.module.css";
 
 type PositionedAnchor = { anchor: MessageTextAnchor; left: number; top: number };
@@ -104,6 +105,7 @@ function MessageSelectionOverlay({ container, scroller, contextItems, askThreads
 	const [editing, setEditing] = useState<{ anchor: MessageTextAnchor; itemId?: string; left: number; top: number } | null>(null);
 	const [annotation, setAnnotation] = useState<string>("");
 	const [markers, setMarkers] = useState<PositionedMarkers>({ contexts: [], asks: [] });
+	const scrollFrameCoordinator = useTimelineScrollFrameCoordinator();
 
 	const contextAnchors = useMemo(() => contextItems.flatMap((item: AdditionalContextItem) => {
 		const anchor: MessageTextAnchor | null = getContextAnchor(item);
@@ -157,6 +159,7 @@ function MessageSelectionOverlay({ container, scroller, contextItems, askThreads
 		updateMarkers();
 		updateActiveControls();
 	}, [updateActiveControls, updateMarkers]);
+	const needsPositionUpdates: boolean = contextAnchors.length > 0 || askThreads.length > 0 || activeSelection !== null || editing !== null;
 
 	useEffect((): (() => void) | void => {
 		if (container === null) {
@@ -220,21 +223,6 @@ function MessageSelectionOverlay({ container, scroller, contextItems, askThreads
 		window.addEventListener("pointerup", handlePointerUp, true);
 		window.addEventListener("pointercancel", handlePointerCancel, true);
 		document.addEventListener("selectionchange", handleSelectionChange);
-		scroller?.addEventListener("scroll", updateOverlayPositions, { passive: true });
-		window.addEventListener("resize", updateOverlayPositions);
-		const observer = new ResizeObserver(updateOverlayPositions);
-		observer.observe(container);
-		if (scroller !== null) observer.observe(scroller);
-		const observeSegments = (): void => {
-			container.querySelectorAll<HTMLElement>("[data-message-selection-segment]").forEach((segment: HTMLElement): void => observer.observe(segment));
-		};
-		observeSegments();
-		const mutationObserver = new MutationObserver((): void => {
-			observeSegments();
-			updateOverlayPositions();
-		});
-		mutationObserver.observe(container, { childList: true, subtree: true });
-		updateOverlayPositions();
 		return (): void => {
 			container.removeEventListener("pointerdown", handlePointerDown, true);
 			container.removeEventListener("keydown", handleKeyDown, true);
@@ -242,13 +230,48 @@ function MessageSelectionOverlay({ container, scroller, contextItems, askThreads
 			window.removeEventListener("pointerup", handlePointerUp, true);
 			window.removeEventListener("pointercancel", handlePointerCancel, true);
 			document.removeEventListener("selectionchange", handleSelectionChange);
-			scroller?.removeEventListener("scroll", updateOverlayPositions);
-			window.removeEventListener("resize", updateOverlayPositions);
-			observer.disconnect();
-			mutationObserver.disconnect();
 			if (selectionFrame !== null) window.cancelAnimationFrame(selectionFrame);
 		};
-	}, [container, editing, scroller, updateOverlayPositions]);
+	}, [container, editing]);
+
+	useEffect((): (() => void) | void => {
+		if (container === null || !needsPositionUpdates) {
+			return;
+		}
+		let localFrame: number | null = null;
+		const schedulePositionUpdate = (): void => {
+			if (scrollFrameCoordinator !== null) {
+				scrollFrameCoordinator.schedule();
+				return;
+			}
+			if (localFrame !== null) {
+				return;
+			}
+			localFrame = window.requestAnimationFrame((): void => {
+				localFrame = null;
+				updateOverlayPositions();
+			});
+		};
+		const unsubscribe = scrollFrameCoordinator?.subscribe("selection_overlay", updateOverlayPositions);
+		const resizeObserver = new ResizeObserver(schedulePositionUpdate);
+		resizeObserver.observe(container);
+		if (scroller !== null) {
+			resizeObserver.observe(scroller);
+		}
+		const mutationObserver = new MutationObserver(schedulePositionUpdate);
+		mutationObserver.observe(container, { childList: true, subtree: true });
+		window.addEventListener("resize", schedulePositionUpdate);
+		schedulePositionUpdate();
+		return (): void => {
+			unsubscribe?.();
+			resizeObserver.disconnect();
+			mutationObserver.disconnect();
+			window.removeEventListener("resize", schedulePositionUpdate);
+			if (localFrame !== null) {
+				window.cancelAnimationFrame(localFrame);
+			}
+		};
+	}, [container, needsPositionUpdates, scroller, scrollFrameCoordinator, updateOverlayPositions]);
 
 	useLayoutEffect((): void => updateOverlayPositions(), [updateOverlayPositions]);
 	useEffect((): void => {

@@ -1,4 +1,4 @@
-import type { SessionTimelineNavigationEntry } from "@/platform/rpc/types";
+import type { SessionTimelineNavigationEntry, TimelineBlock } from "@/platform/rpc/types";
 
 export type ConversationTurnDirection = "previous" | "next";
 
@@ -51,6 +51,30 @@ export function resolveActiveTimelineEntryId(
 		activeEntryId = entry.entryId;
 	}
 	return activeEntryId;
+}
+
+export function resolveActiveTimelineEntryIdFromLoadedBlocks(
+	entries: readonly SessionTimelineNavigationEntry[],
+	blocks: readonly TimelineBlock[],
+	loadedBlockOffset: number,
+	activeBlockOffset: number | null
+): string | null {
+	if (activeBlockOffset === null) {
+		return null;
+	}
+	const localIndex: number = activeBlockOffset - loadedBlockOffset;
+	if (Number.isSafeInteger(localIndex) && localIndex >= 0 && localIndex < blocks.length) {
+		const entryIds: ReadonlySet<string> = new Set(
+			entries.map((entry: SessionTimelineNavigationEntry): string => entry.entryId)
+		);
+		for (let index: number = localIndex; index >= 0; index -= 1) {
+			const block: TimelineBlock = blocks[index]!;
+			if (block.type === "user" && entryIds.has(block.id)) {
+				return block.id;
+			}
+		}
+	}
+	return resolveActiveTimelineEntryId(entries, activeBlockOffset);
 }
 
 export function resolveAdjacentTimelineEntry(
