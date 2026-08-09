@@ -146,10 +146,10 @@ export function resolveReasoningEffortForComposerModelChange(params: {
 export function findPreferredComposerModel(preferences: ClientPreferences, selection: ProviderModelSelection | null): { providerId: string; modelId: string } | null {
 	const lastComposerModel = preferences.newSessionComposer.model ?? preferences.lastComposerModel;
 	if (lastComposerModel !== null && selection !== null) {
-		const provider = selection.providers.find((item): boolean => item.configured && item.provider === lastComposerModel.providerId);
+		const provider = selection.providers.find((item): boolean => item.configured && item.enabled !== false && item.provider === lastComposerModel.providerId);
 		if (provider?.models.some((model): boolean => model.id === lastComposerModel.modelId) === true) return lastComposerModel;
 	}
-	const firstProvider = selection?.providers.find((provider): boolean => provider.configured && provider.models.length > 0);
+	const firstProvider = selection?.providers.find((provider): boolean => provider.configured && provider.enabled !== false && provider.models.length > 0);
 	const firstModelId: string | undefined = firstProvider?.models[0]?.id;
 	return firstProvider !== undefined && firstModelId !== undefined ? { providerId: firstProvider.provider, modelId: firstModelId } : null;
 }

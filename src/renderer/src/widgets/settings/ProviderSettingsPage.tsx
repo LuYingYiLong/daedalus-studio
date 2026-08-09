@@ -1,4 +1,4 @@
-import { Alert, App, Button, Empty, Flex, Form, Input, Menu, Modal, Select, Space, Table, Tag, Tooltip, Typography } from "antd";
+import { Alert, App, Button, Empty, Flex, Form, Input, Menu, Modal, Select, Space, Switch, Table, Tag, Tooltip, Typography } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, Key, KeyboardEvent } from "react";
@@ -9,7 +9,10 @@ import {
 	addProviderModel,
 	discoverProviderModels,
 	fetchProviderModelSelection,
+	getProviderUsage,
+	removeCustomProvider,
 	saveProviderConfig,
+	setProviderEnabled,
 	syncProviderModels,
 	updateProviderModel,
 	type CustomProviderType,
@@ -21,8 +24,11 @@ import {
 	type ProviderModelsDiscoverResult,
 	type ProviderModelInfo,
 	type ProviderModelSelection,
-	type ProviderModelSelectionProvider
+	type ProviderModelSelectionProvider,
+	type ProviderModelUsage,
+	type ProviderRequestOverrides
 } from "@/platform/rpc/provider-api";
+import ProviderRequestConfigModal from "./ProviderRequestConfigModal";
 import styles from "./ProviderSettingsPage.module.css";
 
 type CapabilityBadge = {
@@ -153,6 +159,10 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 	const [isTesting, setIsTesting] = useState<boolean>(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+	const [isRequestConfigOpen, setIsRequestConfigOpen] = useState<boolean>(false);
+	const [isRequestConfigSaving, setIsRequestConfigSaving] = useState<boolean>(false);
+	const [providerAction, setProviderAction] = useState<"enable" | "disable" | "remove" | null>(null);
+	const [requestConfigError, setRequestConfigError] = useState<string | null>(null);
 	const [isAddProviderOpen, setIsAddProviderOpen] = useState<boolean>(false);
 	const [modelDialogMode, setModelDialogMode] = useState<"add" | "edit" | null>(null);
 	const [editingModel, setEditingModel] = useState<ProviderModelInfo | null>(null);
@@ -228,6 +238,11 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 		setIsApiKeyDirty(false);
 	}, [selectedProvider]);
 
+	useEffect((): void => {
+		setIsRequestConfigOpen(false);
+		setRequestConfigError(null);
+	}, [selectedProviderId]);
+
 	const filteredProviders: ProviderModelSelectionProvider[] = useMemo((): ProviderModelSelectionProvider[] => {
 		if (selection === null) {
 			return [];
@@ -246,12 +261,13 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 
 	const providerMenuItems: MenuProps["items"] = useMemo((): MenuProps["items"] => {
 		return filteredProviders.map((provider: ProviderModelSelectionProvider): NonNullable<MenuProps["items"]>[number] => {
+			const enabled: boolean = provider.enabled !== false;
 			return {
 				key: provider.provider,
 				label: (
 					<span className={styles.providerMenuLabel}>
 						<span className={styles.providerName}>{provider.displayName}</span>
-						{provider.configured ? <Tag color="success" className={styles.providerStatusTag}>{t("settings.common.on")}</Tag> : null}
+						{enabled ? <Tag color="success" className={styles.providerStatusTag}>{t("settings.common.on")}</Tag> : null}
 					</span>
 				)
 			};
@@ -271,16 +287,47 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 		return params;
 	}
 
-	function createCredentialSavePayload(provider: ProviderModelSelectionProvider): Parameters<typeof saveProviderConfig>[0] {
+	function createCredentialSavePayload(
+		provider: ProviderModelSelectionProvider,
+		enableProvider: boolean = false
+	): Parameters<typeof saveProviderConfig>[0] {
 		const payload: Parameters<typeof saveProviderConfig>[0] = {
 			provider: provider.provider,
 			baseUrl: draftBaseUrl.trim().length > 0 ? draftBaseUrl.trim() : null,
 			activate: false
 		};
+		if (enableProvider) {
+			payload.enabled = true;
+		}
 		if (isApiKeyDirty && draftApiKey.trim().length > 0) {
 			payload.apiKey = draftApiKey.trim();
 		}
 		return payload;
+	}
+
+	async function handleSaveRequestOverrides(value: ProviderRequestOverrides): Promise<void> {
+		if (selectedProvider === null) {
+			return;
+		}
+
+		try {
+			setIsRequestConfigSaving(true);
+			setRequestConfigError(null);
+			const nextSelection: ProviderModelSelection = await saveProviderConfig({
+				provider: selectedProvider.provider,
+				requestOverrides: value,
+				activate: false
+			});
+			setSelection(nextSelection);
+			onSelectionChange?.(nextSelection);
+			setSelectedProviderId(selectedProvider.provider);
+			setIsRequestConfigOpen(false);
+			void message.success(t("settings.provider.messages.requestConfigurationSaved"));
+		} catch (error: unknown) {
+			setRequestConfigError(error instanceof Error ? error.message : t("settings.provider.errors.saveRequestConfiguration"));
+		} finally {
+			setIsRequestConfigSaving(false);
+		}
 	}
 
 	async function handleClearApiKey(provider: ProviderModelSelectionProvider): Promise<void> {
@@ -324,7 +371,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			if (result.source !== "api" || result.error !== undefined) {
 				throw new Error(result.error ?? t("settings.provider.errors.testConnection"));
 			}
-			const nextSelection: ProviderModelSelection = await saveProviderConfig(createCredentialSavePayload(provider));
+			const nextSelection: ProviderModelSelection = await saveProviderConfig(createCredentialSavePayload(provider, true));
 			setSelection(nextSelection);
 			onSelectionChange?.(nextSelection);
 			setSelectedProviderId(provider.provider);
@@ -453,6 +500,109 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				return t("settings.provider.discovery.guards.taskRouting", { task: guard.task });
 			case "webSearch":
 				return t("settings.provider.discovery.guards.webSearch");
+		}
+	}
+
+	function getProviderUsageLabel(usage: ProviderModelUsage): string {
+		if (usage.kind === "activeModel") {
+			return t("settings.provider.usage.activeModel", { model: usage.model });
+		}
+		const task: string = t(`settings.defaultModel.routing.${usage.task}.title`, {
+			defaultValue: usage.task
+		});
+		return t("settings.provider.usage.taskRouting", { task, model: usage.model });
+	}
+
+	function showProviderUsageBlocked(provider: ProviderModelSelectionProvider, usages: ProviderModelUsage[]): void {
+		void modal.warning({
+			title: t("settings.provider.usage.blockedTitle"),
+			content: (
+				<div>
+					<Typography.Paragraph>
+						{t("settings.provider.usage.blockedDescription", { provider: provider.displayName })}
+					</Typography.Paragraph>
+					<ul>
+						{usages.map((usage: ProviderModelUsage): React.JSX.Element => (
+							<li key={usage.kind === "taskRouting"
+								? `${usage.kind}:${usage.task}:${usage.model}`
+								: `${usage.kind}:${usage.model}`}>
+								{getProviderUsageLabel(usage)}
+							</li>
+						))}
+					</ul>
+				</div>
+			),
+			okText: t("settings.common.confirm")
+		});
+	}
+
+	function applyProviderSelection(nextSelection: ProviderModelSelection, nextProviderId: string | null): void {
+		setSelection(nextSelection);
+		onSelectionChange?.(nextSelection);
+		setSelectedProviderId(nextProviderId ?? nextSelection.providers[0]?.provider ?? nextSelection.activeModel.providerId);
+	}
+
+	async function handleProviderEnabledChange(provider: ProviderModelSelectionProvider, enabled: boolean): Promise<void> {
+		try {
+			setProviderAction(enabled ? "enable" : "disable");
+			setErrorMessage(null);
+			const result = await setProviderEnabled({ provider: provider.provider, enabled });
+			if (!result.updated) {
+				showProviderUsageBlocked(provider, result.usages);
+				return;
+			}
+			applyProviderSelection(result.selection, provider.provider);
+			void message.success(t(enabled ? "settings.provider.messages.providerEnabled" : "settings.provider.messages.providerDisabled", {
+				provider: provider.displayName
+			}));
+		} catch (error: unknown) {
+			setErrorMessage(getCustomizationErrorMessage(error, "settings.provider.errors.updateProviderState", t));
+		} finally {
+			setProviderAction(null);
+		}
+	}
+
+	async function handleRemoveProvider(provider: ProviderModelSelectionProvider): Promise<void> {
+		if (!provider.custom) {
+			return;
+		}
+
+		try {
+			const usage = await getProviderUsage(provider.provider);
+			if (usage.usages.length > 0) {
+				showProviderUsageBlocked(provider, usage.usages);
+				return;
+			}
+		} catch (error: unknown) {
+			setErrorMessage(getCustomizationErrorMessage(error, "settings.provider.errors.removeProvider", t));
+			return;
+		}
+
+		const confirmed: boolean = await modal.confirm({
+			title: t("settings.provider.remove.confirmTitle"),
+			content: t("settings.provider.remove.confirmDescription", { provider: provider.displayName }),
+			okText: t("settings.provider.actions.removeProvider"),
+			okButtonProps: { danger: true },
+			cancelText: t("settings.common.cancel")
+		});
+		if (!confirmed) {
+			return;
+		}
+
+		try {
+			setProviderAction("remove");
+			setErrorMessage(null);
+			const result = await removeCustomProvider(provider.provider);
+			if (!result.updated) {
+				showProviderUsageBlocked(provider, result.usages);
+				return;
+			}
+			applyProviderSelection(result.selection, null);
+			void message.success(t("settings.provider.messages.providerRemoved", { provider: provider.displayName }));
+		} catch (error: unknown) {
+			setErrorMessage(getCustomizationErrorMessage(error, "settings.provider.errors.removeProvider", t));
+		} finally {
+			setProviderAction(null);
 		}
 	}
 
@@ -693,6 +843,9 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 		return selectedDiscoveryIds.has(model.id);
 	});
 	const canApplyDiscoveryChanges: boolean = selectionChanged || hasSelectedRemoteModels;
+	const selectedProviderEnabled: boolean = selectedProvider.enabled !== false;
+	const providerEnableUnavailable: boolean = !selectedProviderEnabled && !selectedProvider.configured;
+	const isProviderActionPending: boolean = providerAction !== null;
 
 	return (
 		<section className={styles.page}>
@@ -725,6 +878,37 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 						<Typography.Title level={3} className={styles.detailTitle}>
 							{selectedProvider.displayName}
 						</Typography.Title>
+						<Space>
+							<Tooltip
+								title={providerEnableUnavailable
+									? t("settings.provider.enterApiKey")
+									: selectedProviderEnabled
+									? t("settings.provider.actions.disableProvider")
+									: t("settings.provider.actions.enableProvider")}
+								placement="bottom"
+								>
+								<Switch
+									checked={selectedProviderEnabled}
+									loading={providerAction === "enable" || providerAction === "disable"}
+									disabled={isProviderActionPending || providerEnableUnavailable}
+									aria-label={selectedProviderEnabled
+										? t("settings.provider.actions.disableProvider")
+										: t("settings.provider.actions.enableProvider")}
+									onChange={(enabled: boolean): void => void handleProviderEnabledChange(selectedProvider, enabled)}
+								/>
+							</Tooltip>
+							<Tooltip title={t("settings.provider.actions.removeProvider")} placement="bottom">
+								<Button
+									type="primary"
+									danger
+									icon={<Icon name="remove" />}
+									loading={providerAction === "remove"}
+									disabled={isProviderActionPending || !selectedProvider.custom}
+									aria-label={t("settings.provider.actions.removeProvider")}
+									onClick={(): void => void handleRemoveProvider(selectedProvider)}
+								/>
+							</Tooltip>
+						</Space>
 					</header>
 
 					<div className={styles.detailBody}>
@@ -782,7 +966,21 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 						</div>
 
 						<div className={styles.fieldGroup}>
-							<Typography.Title className={styles.fieldLabel} level={4}>{t("settings.provider.apiBaseUrl")}</Typography.Title>
+							<Flex justify="space-between">
+								<Typography.Title className={styles.fieldLabel} level={4}>{t("settings.provider.apiBaseUrl")}</Typography.Title>
+								<Tooltip title={t("settings.provider.requestConfiguration.open")}>
+									<Button
+										type="text"
+										shape="circle"
+										icon={<Icon name="more-v" />}
+										aria-label={t("settings.provider.requestConfiguration.open")}
+										onClick={(): void => {
+											setRequestConfigError(null);
+											setIsRequestConfigOpen(true);
+										}}
+									/>
+								</Tooltip>
+							</Flex>
 							<Input
 								value={draftBaseUrl}
 								onChange={(event: ChangeEvent<HTMLInputElement>): void => setDraftBaseUrl(event.target.value)}
@@ -843,6 +1041,21 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				</div>
 			</section>
 
+			<ProviderRequestConfigModal
+				open={isRequestConfigOpen}
+				providerName={selectedProvider.displayName}
+				initialValue={selectedProvider.requestOverrides}
+				saving={isRequestConfigSaving}
+				errorMessage={requestConfigError}
+				onCancel={(): void => {
+					if (!isRequestConfigSaving) {
+						setIsRequestConfigOpen(false);
+						setRequestConfigError(null);
+					}
+				}}
+				onSave={(value: ProviderRequestOverrides): void => void handleSaveRequestOverrides(value)}
+			/>
+
 			<Modal
 				open={isDiscoveryOpen}
 				title={t("settings.provider.dialogs.discoverModelsTitle", {
@@ -862,6 +1075,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				destroyOnHidden={true}
 				onCancel={closeDiscoveryDialog}
 				onOk={(): void => void handleSyncDiscoveredModels()}
+				className={styles.modal}
 			>
 				<div className={styles.discoveryDialog}>
 					<Flex className={styles.discoveryHeader} gap="small">
@@ -952,6 +1166,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 					setDialogError(null);
 				}}
 				onOk={(): void => void handleAddProvider()}
+				className={styles.modal}
 			>
 				{dialogError !== null ? <Alert className={styles.dialogAlert} type="error" showIcon={true} description={dialogError} /> : null}
 				<Form<AddProviderFormValues>
@@ -983,6 +1198,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 								{ value: "openai-responses", label: "OpenAI-Response" },
 								{ value: "anthropic", label: "Anthropic" }
 							]}
+							suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 						/>
 					</Form.Item>
 				</Form>
@@ -1003,6 +1219,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 					setDialogError(null);
 				}}
 				onOk={(): void => void handleSaveModel()}
+				className={styles.modal}
 			>
 				{dialogError !== null ? <Alert className={styles.dialogAlert} type="error" showIcon={true} description={dialogError} /> : null}
 				<Form<ModelFormValues>

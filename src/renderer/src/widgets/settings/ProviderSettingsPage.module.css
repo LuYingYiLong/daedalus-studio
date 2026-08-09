@@ -195,3 +195,7 @@
 .discoveryTable {
 	min-width: 0;
 }
+
+.modal {
+	user-select: none;
+}

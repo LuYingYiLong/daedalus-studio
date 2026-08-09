@@ -1,0 +1,59 @@
+.modal {
+	user-select: none;
+}
+
+.content {
+	display: grid;
+	gap: var(--ds-space-3);
+}
+
+.description {
+	margin-bottom: 0 !important;
+}
+
+.editorHost {
+	min-height: 380px;
+	overflow: hidden;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-sm);
+	background: var(--ds-bg-sunken);
+	color: var(--ds-text-primary);
+	font-family: var(--ds-font-family-code);
+	--jse-background-color: var(--ds-bg-sunken);
+	--jse-text-color: var(--ds-text-primary);
+	--jse-text-color-inverse: var(--ds-text-inverse);
+	--jse-main-border: 0;
+	--jse-menu-color: var(--ds-surface);
+	--jse-modal-background: var(--ds-surface-elevated);
+	--jse-modal-overlay-background: rgb(0 0 0 / 40%);
+	--jse-panel-background: var(--ds-surface);
+	--jse-panel-border: 1px solid var(--ds-border);
+	--jse-key-color: var(--ds-accent);
+	--jse-string-color: #6faa88;
+	--jse-number-color: #c98954;
+	--jse-boolean-color: #9b7bca;
+	--jse-null-color: var(--ds-text-muted);
+	--jse-selection-background-color: var(--ds-accent-muted);
+	--jse-hover-background-color: var(--ds-surface-hover);
+	--jse-context-menu-pointer-background: var(--ds-surface-elevated);
+	--jse-context-menu-pointer-background-highlight: var(--ds-surface-hover);
+	--jse-context-menu-separator-color: var(--ds-border);
+	--jse-context-menu-color: var(--ds-text-primary);
+	--jse-context-menu-color-highlight: var(--ds-text-primary);
+	--jse-context-menu-background: var(--ds-surface-elevated);
+	--jse-context-menu-background-highlight: var(--ds-surface-hover);
+	--jse-button-background: var(--ds-surface-elevated);
+	--jse-button-background-highlight: var(--ds-surface-hover);
+	--jse-button-color: var(--ds-text-secondary);
+	--jse-button-color-highlight: var(--ds-accent);
+	--jse-delimiter-color: var(--ds-text-muted);
+	--jse-separator-color: var(--ds-border);
+}
+
+.editorHost :global(.jse-main) {
+	min-height: 380px;
+}
+
+.editorHost :global(.jse-contents) {
+	min-height: 380px;
+}

@@ -106,7 +106,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
 function isProviderConfigured(selection: ProviderModelSelection): boolean {
 	return selection.providers.some((provider: ProviderModelSelectionProvider): boolean => {
 		const selectedModel: string | null = provider.selectedModel ?? provider.defaultModel;
-		return provider.selected && provider.configured && provider.ready && selectedModel !== null;
+		return provider.selected && provider.configured && provider.enabled !== false && provider.ready && selectedModel !== null;
 	});
 }
 

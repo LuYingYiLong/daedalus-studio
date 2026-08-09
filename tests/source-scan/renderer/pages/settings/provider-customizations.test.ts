@@ -48,4 +48,26 @@ describe("Provider customizations", () => {
 		expect(pageSource).toContain('result.source !== "api"');
 		expect(pageSource).not.toContain("handleRefreshModels");
 	});
+
+	it("guards every provider disable and custom-provider removal with backend usage checks", () => {
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "ProviderSettingsPage.tsx");
+		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "provider-api.ts");
+
+		expect(apiSource).toContain('"provider.setEnabled"');
+		expect(apiSource).toContain('"provider.usage.get"');
+		expect(apiSource).toContain('"provider.custom.remove"');
+		expect(apiSource).toContain("ProviderModelUsage");
+		expect(pageSource).toContain("setProviderEnabled");
+		expect(pageSource).toContain("getProviderUsage");
+		expect(pageSource).toContain("removeCustomProvider");
+		expect(pageSource).toContain("showProviderUsageBlocked");
+		expect(pageSource).toContain("result.usages");
+		expect(pageSource).toContain("await modal.confirm");
+		expect(pageSource).toContain("if (!provider.custom)");
+		expect(pageSource).toContain("disabled={isProviderActionPending || !selectedProvider.custom}");
+		expect(pageSource).toContain("selectedProvider.enabled !== false");
+		expect(pageSource).toContain("providerEnableUnavailable");
+		expect(pageSource).toContain("createCredentialSavePayload(provider, true)");
+		expect(pageSource).toContain('{enabled ? <Tag color="success" className={styles.providerStatusTag}>{t("settings.common.on")}</Tag> : null}');
+	});
 });

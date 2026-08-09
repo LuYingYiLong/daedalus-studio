@@ -227,6 +227,7 @@
       "unpinSession": "Unpin session",
       "archiveSession": "Archive session",
       "openInExplorer": "Open in Explorer",
+      "openWorkspaceDirectory": "Open workspace directory",
       "copySessionId": "Copy session ID",
       "exportSession": "Export session data",
       "delete": "Delete",
@@ -1559,6 +1560,20 @@
       "savedKey": "Saved key: {{key}}",
       "searchPlaceholder": "Search providers...",
       "updated": "updated {{updatedAt}}",
+      "requestConfiguration": {
+        "title": "Custom request · {{provider}}",
+        "open": "Custom request",
+        "description": "Add provider-specific headers or JSON body fields to text-model requests. Omit a section or leave it empty when it is not needed.",
+        "safetyHint": "Daedalus keeps authentication, model, messages, tools, and streaming fields under its own control. Reserved fields are rejected when you save.",
+        "reset": "Reset configuration",
+        "validation": {
+          "json": "Enter valid JSON before saving.",
+          "root": "The request configuration must be a JSON object.",
+          "topLevel": "Only the top-level fields \"headers\" and \"body\" are supported.",
+          "headers": "\"headers\" must be an object whose values are strings.",
+          "body": "\"body\" must be an object containing JSON values."
+        }
+      },
       "dialogs": {
         "addProviderTitle": "Add provider",
         "addModelTitle": "Add model",
@@ -1581,10 +1596,13 @@
       "actions": {
         "addModel": "Add model",
         "clearApiKey": "Clear API key",
+		"enableProvider": "Enable provider",
+		"disableProvider": "Disable provider",
         "fetchModels": "Fetch models",
         "importModels": "Import models",
         "applyModelChanges": "Apply changes",
         "removeModels": "Remove models",
+		"removeProvider": "Remove provider",
         "reloadModels": "Reload models",
         "test": "Test"
       },
@@ -1610,6 +1628,19 @@
         "vision": "Vision",
         "webSearch": "Search"
       },
+	  "status": {
+		"disabled": "Disabled"
+	  },
+	  "usage": {
+		"blockedTitle": "Provider is still in use",
+		"blockedDescription": "{{provider}} cannot be disabled or removed until these model assignments are changed.",
+		"activeModel": "Main model: {{model}}",
+		"taskRouting": "{{task}}: {{model}}"
+	  },
+	  "remove": {
+		"confirmTitle": "Remove custom provider?",
+		"confirmDescription": "Remove {{provider}} and its saved API key, request configuration, models, and local customizations? This cannot be undone."
+	  },
       "columns": {
         "capabilities": "Capabilities",
         "model": "Model"
@@ -1627,12 +1658,19 @@
         "syncModels": "Failed to apply provider model changes",
         "refreshModels": "Failed to refresh provider models",
         "saveModel": "Failed to save model",
+		"updateProviderState": "Failed to update provider state",
+		"removeProvider": "Failed to remove provider",
+        "saveRequestConfiguration": "Failed to save custom request configuration",
         "testConnection": "Provider connection test failed"
       },
       "messages": {
         "testSuccess": "Provider connection test succeeded",
         "importSuccess": "Imported {{count}} models",
-        "syncSuccess": "Model changes applied: {{enabled}} enabled, {{removed}} removed"
+        "syncSuccess": "Model changes applied: {{enabled}} enabled, {{removed}} removed",
+		"providerEnabled": "{{provider}} is enabled",
+		"providerDisabled": "{{provider}} is disabled",
+		"providerRemoved": "{{provider}} was removed",
+        "requestConfigurationSaved": "Custom request configuration saved"
       }
     },
     "search": {

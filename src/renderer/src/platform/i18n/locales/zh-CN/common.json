@@ -225,6 +225,7 @@
       "unpinSession": "取消置顶会话",
       "archiveSession": "归档会话",
       "openInExplorer": "在资源管理器中打开",
+      "openWorkspaceDirectory": "打开工作区目录",
       "copySessionId": "复制会话 ID",
       "exportSession": "导出会话数据",
       "delete": "删除",
@@ -1552,6 +1553,20 @@
       "savedKey": "已保存 key：{{key}}",
       "searchPlaceholder": "搜索供应商...",
       "updated": "更新于 {{updatedAt}}",
+      "requestConfiguration": {
+        "title": "自定义请求 · {{provider}}",
+        "open": "自定义请求",
+        "description": "为文本模型请求添加供应商特有的请求头或 JSON 正文字段。不需要的区块可以省略或保留为空对象。",
+        "safetyHint": "认证、模型、消息、工具和流式字段仍由 Daedalus 管理。保存时会拒绝这些保留字段。",
+        "reset": "重置配置",
+        "validation": {
+          "json": "请先输入有效的 JSON。",
+          "root": "请求配置必须是一个 JSON 对象。",
+          "topLevel": "顶层仅支持 \"headers\" 和 \"body\" 字段。",
+          "headers": "\"headers\" 必须是一个值均为字符串的对象。",
+          "body": "\"body\" 必须是只包含 JSON 值的对象。"
+        }
+      },
       "dialogs": {
         "addProviderTitle": "添加供应商",
         "addModelTitle": "添加模型",
@@ -1574,10 +1589,13 @@
       "actions": {
         "addModel": "添加模型",
         "clearApiKey": "清除 API Key",
+		"enableProvider": "启用供应商",
+		"disableProvider": "禁用供应商",
         "fetchModels": "获取模型",
         "importModels": "导入模型",
         "applyModelChanges": "应用更改",
         "removeModels": "删除模型",
+		"removeProvider": "删除供应商",
         "reloadModels": "重新获取模型",
         "test": "测试"
       },
@@ -1603,6 +1621,19 @@
         "vision": "视觉",
         "webSearch": "搜索"
       },
+	  "status": {
+		"disabled": "已禁用"
+	  },
+	  "usage": {
+		"blockedTitle": "供应商仍在使用中",
+		"blockedDescription": "{{provider}} 仍被以下模型配置使用，调整这些配置后才能禁用或删除。",
+		"activeModel": "主模型：{{model}}",
+		"taskRouting": "{{task}}：{{model}}"
+	  },
+	  "remove": {
+		"confirmTitle": "删除自定义供应商？",
+		"confirmDescription": "删除 {{provider}} 及其保存的 API Key、请求配置、模型和本地自定义项？此操作不可撤销。"
+	  },
       "columns": {
         "capabilities": "能力",
         "model": "模型"
@@ -1620,12 +1651,19 @@
         "syncModels": "应用供应商模型更改失败",
         "refreshModels": "刷新供应商模型失败",
         "saveModel": "保存模型失败",
+		"updateProviderState": "更新供应商状态失败",
+		"removeProvider": "删除供应商失败",
+        "saveRequestConfiguration": "保存自定义请求配置失败",
         "testConnection": "供应商连接测试失败"
       },
       "messages": {
         "testSuccess": "供应商连接测试成功",
         "importSuccess": "已导入 {{count}} 个模型",
-        "syncSuccess": "模型更改已应用：启用 {{enabled}} 个，删除 {{removed}} 个"
+        "syncSuccess": "模型更改已应用：启用 {{enabled}} 个，删除 {{removed}} 个",
+		"providerEnabled": "{{provider}} 已启用",
+		"providerDisabled": "{{provider}} 已禁用",
+		"providerRemoved": "{{provider}} 已删除",
+        "requestConfigurationSaved": "自定义请求配置已保存"
       }
     },
     "search": {

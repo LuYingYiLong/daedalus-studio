@@ -211,7 +211,7 @@ function findSelectedProvider(selection: ProviderModelSelection | null, selected
 	}
 
 	return selection.providers.find((provider: ProviderModelSelectionProvider): boolean => {
-		return provider.configured && provider.provider === selectedModel.provider;
+		return provider.configured && provider.enabled !== false && provider.provider === selectedModel.provider;
 	}) ?? null;
 }
 
@@ -231,7 +231,7 @@ function getSelectedModelLabel(selection: ProviderModelSelection | null, selecte
 	const selectedProvider: ProviderModelSelectionProvider | null = findSelectedProvider(selection, selectedModel);
 	const selectedModelInfo: ProviderModelInfo | null = findSelectedModel(selection, selectedModel);
 
-	if (selection !== null && !selection.providers.some((provider: ProviderModelSelectionProvider): boolean => provider.configured)) {
+	if (selection !== null && !selection.providers.some((provider: ProviderModelSelectionProvider): boolean => provider.configured && provider.enabled !== false)) {
 		return t("composer.model.configureProvider");
 	}
 
@@ -263,7 +263,7 @@ function createProviderModelItems(selection: ProviderModelSelection | null, t: T
 	}
 
 	return selection.providers.filter((provider: ProviderModelSelectionProvider): boolean => {
-		return provider.configured;
+		return provider.configured && provider.enabled !== false;
 	}).map((provider: ProviderModelSelectionProvider) => {
 		return {
 			key: `provider:${provider.provider}`,
@@ -568,7 +568,7 @@ function Composer({
 		return createProviderModelItems(providerModelSelection, t);
 	}, [providerModelSelection, t]);
 	const hasConfiguredProviders: boolean = providerModelSelection?.providers.some(
-		(provider: ProviderModelSelectionProvider): boolean => provider.configured
+		(provider: ProviderModelSelectionProvider): boolean => provider.configured && provider.enabled !== false
 	) ?? false;
 	const workspaceFooterItems: MenuProps["items"] = useMemo((): MenuProps["items"] => {
 		return createWorkspaceFooterItems(workspaceOptions, t);

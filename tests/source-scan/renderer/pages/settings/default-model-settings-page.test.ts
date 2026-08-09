@@ -30,10 +30,10 @@ describe("DefaultModelSettingsPage", () => {
 		expect(promptSource).toContain("commandReviewPrompt: string;");
 	});
 
-	it("only offers configured providers and renders provider before model", () => {
+	it("only offers configured and enabled providers and renders provider before model", () => {
 		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "DefaultModelSettingsPage.tsx");
 
-		expect(pageSource).toContain("return provider.configured;");
+		expect(pageSource).toContain("return provider.configured && provider.enabled !== false;");
 		expect(pageSource).toContain("`${provider.displayName}/${model.displayName}`");
 		expect(pageSource).toContain("disabled={!hasConfiguredProviders}");
 		expect(pageSource).toContain('t("settings.defaultModel.configureProvider")');

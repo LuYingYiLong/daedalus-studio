@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useEventListener, useLatest } from "ahooks";
-import { Input, message as antdMessage, Modal, Typography, Spin } from "antd";
+import { Input, message as antdMessage, Spin } from "antd";
 import { useTranslation } from "react-i18next";
 import { useDiskSpaceCheck } from "@/app/runtime/hooks/useDiskSpaceCheck";
 import { onBackendReconnected } from "@/platform/rpc/transport/backend-client";
@@ -20,11 +20,11 @@ import { isAgentGoalDismissed } from "@/domain/composer/goal-display";
 import { checkSessionIntegrity, createSession, deleteSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/platform/rpc/session-api";
 import type { RetryUserMessagePayload } from "@/widgets/conversation/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/platform/rpc/provider-api";
-import type { ProviderModelInfo, ProviderModelSelectionProvider, ProviderReasoningEffortOption } from "@/platform/rpc/provider-api";
-import { cancelChatMessage, retryAgentRun, sendChatMessage, type ChatMode, type ChatOutputTarget } from "@/platform/rpc/chat-api";
+import type { ProviderModelInfo, ProviderModelSelectionProvider } from "@/platform/rpc/provider-api";
+import { cancelChatMessage, retryAgentRun, sendChatMessage, type ChatMode } from "@/platform/rpc/chat-api";
 import { fetchSlashCommands, type SlashCommandDefinition } from "@/platform/rpc/command-api";
 import { fetchSkills, type SkillSummary } from "@/platform/rpc/skill-api";
-import type { ApprovalMode, PendingApproval } from "@/platform/rpc/approval-api";
+import type { ApprovalMode } from "@/platform/rpc/approval-api";
 import {
 	applyBackendEventToTimeline,
 	applyWorkbenchSnapshot,
@@ -818,6 +818,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			const currentProvider: ProviderModelSelectionProvider | undefined = providerModelSelection?.providers.find(
 				(provider: ProviderModelSelectionProvider): boolean => {
 					return provider.configured
+						&& provider.enabled !== false
 						&& provider.provider === currentDraft.providerId
 						&& provider.models.some((model: ProviderModelInfo): boolean => model.id === currentDraft.modelId);
 				}

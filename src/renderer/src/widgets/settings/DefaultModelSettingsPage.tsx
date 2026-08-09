@@ -88,7 +88,7 @@ function decodeModelRef(value: string): ProviderTaskModelRef | null {
 
 function getConfiguredProviders(selection: ProviderModelSelection | null): ProviderModelSelectionProvider[] {
 	return selection?.providers.filter((provider: ProviderModelSelectionProvider): boolean => {
-		return provider.configured;
+		return provider.configured && provider.enabled !== false;
 	}) ?? [];
 }
 

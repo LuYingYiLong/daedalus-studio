@@ -65,6 +65,19 @@ export type ProviderReasoningEffortOption = {
 	fallback: "low" | "medium" | "high" | "max";
 };
 
+export type ProviderRequestJsonValue =
+	| null
+	| boolean
+	| number
+	| string
+	| ProviderRequestJsonValue[]
+	| { [key: string]: ProviderRequestJsonValue };
+
+export type ProviderRequestOverrides = {
+	headers: Record<string, string>;
+	body: Record<string, ProviderRequestJsonValue>;
+};
+
 export type ProviderModelSelectionProvider = {
 	provider: string;
 	displayName: string;
@@ -75,9 +88,11 @@ export type ProviderModelSelectionProvider = {
 	defaultModel: string | null;
 	baseUrl: string;
 	custom: boolean;
+	enabled?: boolean | undefined;
 	providerType: CustomProviderType | null;
 	ready: boolean;
 	apiKeyMasked: string | null;
+	requestOverrides?: ProviderRequestOverrides | undefined;
 	models: ProviderModelInfo[];
 	modelsSource: "cache" | "fallback";
 	modelsCacheUpdatedAt?: string | null;
@@ -116,6 +131,20 @@ export type ProviderModelRemovalGuard =
 	| { kind: "taskRouting"; task: ProviderTaskModelKind }
 	| { kind: "webSearch" };
 
+export type ProviderModelUsage =
+	| { kind: "activeModel"; model: string }
+	| { kind: "taskRouting"; task: ProviderTaskModelKind; model: string };
+
+export type ProviderMutationResult = {
+	updated: boolean;
+	usages: ProviderModelUsage[];
+	selection: ProviderModelSelection;
+};
+
+export type ProviderUsageResult = {
+	usages: ProviderModelUsage[];
+};
+
 export type ManagedProviderModel = DiscoveredProviderModel & {
 	enabled: boolean;
 	removalGuards: ProviderModelRemovalGuard[];
@@ -134,8 +163,10 @@ export type SaveProviderConfigParams = {
 	apiKey?: string | null | undefined;
 	model?: string | undefined;
 	baseUrl?: string | null | undefined;
+	enabled?: boolean | undefined;
 	activate?: boolean | undefined;
 	modelRouting?: Partial<ProviderModelRouting> | undefined;
+	requestOverrides?: ProviderRequestOverrides | null | undefined;
 };
 
 export async function fetchProviderModelSelection(): Promise<ProviderModelSelection> {
@@ -203,6 +234,24 @@ export async function addCustomProvider(params: {
 }): Promise<{ providerId: string; selection: ProviderModelSelection }> {
 	const client = await createBackendClient();
 	return client.request("provider.custom.add", params);
+}
+
+export async function setProviderEnabled(params: {
+	provider: string;
+	enabled: boolean;
+}): Promise<ProviderMutationResult> {
+	const client = await createBackendClient();
+	return client.request("provider.setEnabled", params);
+}
+
+export async function getProviderUsage(provider: string): Promise<ProviderUsageResult> {
+	const client = await createBackendClient();
+	return client.request("provider.usage.get", { provider });
+}
+
+export async function removeCustomProvider(provider: string): Promise<ProviderMutationResult> {
+	const client = await createBackendClient();
+	return client.request("provider.custom.remove", { provider });
 }
 
 export async function addProviderModel(params: {

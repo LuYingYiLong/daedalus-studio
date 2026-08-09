@@ -27,6 +27,7 @@
 .settingsMenu {
 	-webkit-app-region: none;
 	border-inline-end: 0px !important;
+	user-select: none;
 }
 
 .settingsMenu :global(.ant-menu-item) {

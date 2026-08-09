@@ -93,7 +93,6 @@ type WorkspaceTreeLabels = {
 	failedExportSession: string;
 	failedDeleteWorkspace: string;
 	failedLoadWorkspace: string;
-	failedOpenSessionDirectory: string;
 	failedOpenWorkspaceDirectory: string;
 	failedPinSession: string;
 	failedRenameSession: string;
@@ -107,6 +106,7 @@ type WorkspaceTreeLabels = {
 	noSessions: string;
 	noWorkspace: string;
 	openInExplorer: string;
+	openWorkspaceDirectory: string;
 	pinSession: string;
 	pinned: string;
 	projects: string;
@@ -151,7 +151,8 @@ type CreateSessionMenuItemOptions = {
 	onPin: (session: SessionMetadata) => void;
 	onRename: (session: SessionMetadata) => void;
 	onArchive: (session: SessionMetadata) => void;
-	onOpenSessionInExplorer: (session: SessionMetadata) => void;
+	canOpenSessionWorkspace: (session: SessionMetadata) => boolean;
+	onOpenSessionWorkspaceInExplorer: (session: SessionMetadata) => void;
 	onCopySessionId: (session: SessionMetadata) => void;
 	onExportSession: (session: SessionMetadata) => void;
 };
@@ -196,8 +197,9 @@ function createSessionTreePresentation(
 			},
 			{
 				key: "open",
-				label: labels.openInExplorer,
+				label: labels.openWorkspaceDirectory,
 				icon: <Icon name="folder-open" />,
+				disabled: !options.canOpenSessionWorkspace(session)
 			},
 			{
 				key: "copy",
@@ -228,7 +230,7 @@ function createSessionTreePresentation(
 				return;
 			}
 			if (key === "open") {
-				options.onOpenSessionInExplorer(session);
+				options.onOpenSessionWorkspaceInExplorer(session);
 				return;
 			}
 			if (key === "copy") {
@@ -553,6 +555,9 @@ function WorkspaceTree({
 	const isMountedRef = useRef<boolean>(true);
 	const runningSessionIdSet: ReadonlySet<string> = useMemo((): ReadonlySet<string> => new Set(runningSessionIds), [runningSessionIds]);
 	const unreadSessionIdSet: ReadonlySet<string> = useMemo((): ReadonlySet<string> => new Set(unreadSessionIds), [unreadSessionIds]);
+	const workspaceById: ReadonlyMap<string, WorkspaceConfig> = useMemo((): ReadonlyMap<string, WorkspaceConfig> => {
+		return new Map(workspaces.map((workspace: WorkspaceConfig): [string, WorkspaceConfig] => [workspace.id, workspace]));
+	}, [workspaces]);
 	const labels: WorkspaceTreeLabels = useMemo((): WorkspaceTreeLabels => {
 		return {
 			archiveSession: t("workspaceTree.actions.archiveSession"),
@@ -570,7 +575,6 @@ function WorkspaceTree({
 			failedExportSession: t("workspaceTree.errors.exportSession"),
 			failedDeleteWorkspace: t("workspaceTree.errors.deleteWorkspace"),
 			failedLoadWorkspace: t("workspaceTree.errors.loadWorkspace"),
-			failedOpenSessionDirectory: t("workspaceTree.errors.openSessionDirectory"),
 			failedOpenWorkspaceDirectory: t("workspaceTree.errors.openWorkspaceDirectory"),
 			failedPinSession: t("workspaceTree.errors.pinSession"),
 			failedRenameSession: t("workspaceTree.errors.renameSession"),
@@ -584,6 +588,7 @@ function WorkspaceTree({
 			noSessions: t("workspaceTree.empty.noSessions"),
 			noWorkspace: t("workspaceTree.empty.noWorkspace"),
 			openInExplorer: t("workspaceTree.actions.openInExplorer"),
+			openWorkspaceDirectory: t("workspaceTree.actions.openWorkspaceDirectory"),
 			pinSession: t("workspaceTree.actions.pinSession"),
 			pinned: t("workspaceTree.groups.pinned"),
 			projects: t("workspaceTree.groups.projects"),
@@ -852,12 +857,19 @@ function WorkspaceTree({
 		}
 	}
 
-	async function handleOpenSessionInExplorer(session: SessionMetadata): Promise<void> {
+	async function handleOpenSessionWorkspaceInExplorer(session: SessionMetadata): Promise<void> {
+		const workspace: WorkspaceConfig | undefined = session.workspaceId === undefined
+			? undefined
+			: workspaceById.get(session.workspaceId);
+		if (workspace === undefined) {
+			void messageApi.warning(labels.noWorkspace);
+			return;
+		}
 		try {
 			setWorkspaceError(null);
-			await window.electronAPI.sessionFs.openSessionDirectory(session.id);
+			await window.electronAPI.workspaceFs.openWorkspaceDirectory(workspace.rootPath);
 		} catch (error: unknown) {
-			showWorkspaceOperationError(error, labels.failedOpenSessionDirectory);
+			showWorkspaceOperationError(error, labels.failedOpenWorkspaceDirectory);
 		}
 	}
 
@@ -1087,8 +1099,11 @@ function WorkspaceTree({
 			onArchive: (session: SessionMetadata): void => {
 				void handleArchiveSessionAction(session);
 			},
-			onOpenSessionInExplorer: (session: SessionMetadata): void => {
-				void handleOpenSessionInExplorer(session);
+			canOpenSessionWorkspace: (session: SessionMetadata): boolean => {
+				return session.workspaceId !== undefined && workspaceById.has(session.workspaceId);
+			},
+			onOpenSessionWorkspaceInExplorer: (session: SessionMetadata): void => {
+				void handleOpenSessionWorkspaceInExplorer(session);
 			},
 			onCopySessionId: (session: SessionMetadata): void => {
 				void handleCopySessionId(session);
@@ -1097,7 +1112,7 @@ function WorkspaceTree({
 				void handleExportSession(session);
 			}
 		};
-	}, [archivingSessionId, exportingSessionId, labels, pinningSessionId, runningSessionIdSet, unreadSessionIdSet]);
+	}, [archivingSessionId, exportingSessionId, labels, pinningSessionId, runningSessionIdSet, unreadSessionIdSet, workspaceById]);
 	const sessionGroups = useMemo((): {
 		pinnedSessions: SessionMetadata[];
 		projectSessions: SessionMetadata[];
