@@ -26,9 +26,7 @@ import {
 import { parseComposerModeCommand } from "@/domain/composer/composer-mode-command";
 import { copyTextToClipboard, readTextFromClipboard } from "@/platform/electron/clipboard";
 import {
-	allocateContextBudgetSegments,
-	createContextBudgetStrokeColors,
-	CONTEXT_PROGRESS_STEPS
+	normalizeContextBudgetSegments
 } from "@/domain/composer/context-budget-segments";
 
 export type ComposerProps = {
@@ -622,16 +620,13 @@ function Composer({
 	}), [handleWorkspaceClick, selectedWorkspaceKey, workspaceFooterItems]);
 	const hasCompletion: boolean = completionToken !== null && completionOptions.length > 0;
 	const contextUsagePercent: number = contextUsage?.committedPercent ?? contextUsage?.percent ?? 0;
-	const contextSegmentAllocation = allocateContextBudgetSegments({
-		inputPercent: contextUsage?.inputPercent ?? 0,
+	const contextSegmentAllocation = normalizeContextBudgetSegments({
+		committedPercent: contextUsagePercent,
+		inputPercent: contextUsage?.inputPercent ?? contextUsagePercent,
 		outputReservePercent: contextUsage?.outputReservePercent ?? 0,
 		safetyMarginPercent: contextUsage?.safetyMarginPercent ?? 0
 	});
-	const contextUsageStrokeColors: string[] = createContextBudgetStrokeColors(contextSegmentAllocation, {
-		input: CONTEXT_INPUT_COLOR,
-		outputReserve: CONTEXT_OUTPUT_RESERVE_COLOR,
-		safetyMargin: CONTEXT_SAFETY_MARGIN_COLOR
-	});
+	const contextUsageRailColor: string = `linear-gradient(to right, ${CONTEXT_SAFETY_MARGIN_COLOR} 0%, ${CONTEXT_SAFETY_MARGIN_COLOR} ${contextSegmentAllocation.committedPercent}%, var(--ds-border) ${contextSegmentAllocation.committedPercent}%, var(--ds-border) 100%)`;
 	const compressDisabledReason: string | null = isSending
 		? t("composer.contextUsage.compressDisabled.sending")
 		: contextUsage?.canCompress === false
@@ -1068,12 +1063,14 @@ function Composer({
 				</Typography.Text>
 			</div>
 			<Progress
-				percent={contextUsage.committedPercent ?? contextUsage.percent}
+				percent={contextSegmentAllocation.outputEndPercent}
+				success={{
+					percent: contextSegmentAllocation.inputEndPercent,
+					strokeColor: CONTEXT_INPUT_COLOR
+				}}
 				showInfo={false}
-				steps={CONTEXT_PROGRESS_STEPS}
-				strokeColor={contextUsageStrokeColors}
-				railColor="var(--ds-fill-secondary)"
-				strokeLinecap="butt"
+				strokeColor={CONTEXT_OUTPUT_RESERVE_COLOR}
+				railColor={contextUsageRailColor}
 				className={styles.contextUsage}
 			/>
 			<div className={styles.contextUsageLegend}>
@@ -1358,7 +1355,7 @@ function Composer({
 										type="circle"
 										percent={contextUsagePercent}
 						strokeColor="var(--ds-accent)"
-						railColor="var(--ds-fill-secondary)"
+						railColor="var(--ds-border)"
 										showInfo={false}
 										size={16}
 									/>

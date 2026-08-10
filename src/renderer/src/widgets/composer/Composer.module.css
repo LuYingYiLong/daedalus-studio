@@ -258,7 +258,6 @@
 .contextUsagePanel {
 	display: grid;
 	gap: var(--ds-space-2);
-	width: 300px;
 	user-select: none;
 }
 

@@ -1,43 +1,40 @@
 import { describe, expect, it } from "vitest";
-import {
-	allocateContextBudgetSegments,
-	createContextBudgetStrokeColors
-} from "../../../src/renderer/src/domain/composer/context-budget-segments.js";
+import { normalizeContextBudgetSegments } from "../../../src/renderer/src/domain/composer/context-budget-segments.js";
 
 describe("context budget segments", () => {
-	it("uses largest remainders and stays within twenty steps", (): void => {
-		const allocation = allocateContextBudgetSegments({
+	it("keeps continuous segment boundaries in the same order as the budget", (): void => {
+		const allocation = normalizeContextBudgetSegments({
+			committedPercent: 50,
 			inputPercent: 43,
 			outputReservePercent: 6,
 			safetyMarginPercent: 1
 		});
-		expect(allocation.activeSteps).toBe(10);
-		expect(allocation.inputSteps + allocation.outputReserveSteps + allocation.safetyMarginSteps).toBe(10);
-		expect(allocation.safetyMarginSteps).toBe(1);
+		expect(allocation.inputPercent).toBe(43);
+		expect(allocation.outputReservePercent).toBe(6);
+		expect(allocation.safetyMarginPercent).toBe(1);
+		expect(allocation.inputEndPercent).toBe(43);
+		expect(allocation.outputEndPercent).toBe(49);
 	});
 
-	it("clamps overcommitted context to twenty steps", (): void => {
-		const allocation = allocateContextBudgetSegments({
+	it("scales rounded segments to the committed window percentage", (): void => {
+		const allocation = normalizeContextBudgetSegments({
+			committedPercent: 100,
 			inputPercent: 110,
 			outputReservePercent: 10,
 			safetyMarginPercent: 5
 		});
-		expect(allocation.activeSteps).toBe(20);
-		expect(allocation.inputSteps + allocation.outputReserveSteps + allocation.safetyMarginSteps).toBe(20);
-		expect(createContextBudgetStrokeColors(allocation, {
-			input: "input",
-			outputReserve: "output",
-			safetyMargin: "safety"
-		})).toHaveLength(20);
+		expect(allocation.inputPercent + allocation.outputReservePercent + allocation.safetyMarginPercent).toBeCloseTo(100);
+		expect(allocation.outputEndPercent).toBeCloseTo(95.6522, 3);
 	});
 
-	it("keeps a positive safety margin visible when only one step is available", (): void => {
-		const allocation = allocateContextBudgetSegments({
+	it("falls back to a single continuous input segment for legacy estimates", (): void => {
+		const allocation = normalizeContextBudgetSegments({
+			committedPercent: 3.2,
 			inputPercent: 3,
 			outputReservePercent: 0,
-			safetyMarginPercent: 0.2
+			safetyMarginPercent: 0
 		});
-		expect(allocation.activeSteps).toBe(1);
-		expect(allocation.safetyMarginSteps).toBe(1);
+		expect(allocation.inputPercent).toBe(3.2);
+		expect(allocation.outputEndPercent).toBe(3.2);
 	});
 });

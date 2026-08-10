@@ -20,4 +20,11 @@ describe("Composer context usage layout", () => {
 		expect(source).toContain("composer.contextUsage.pressureLevel");
 		expect(source).toContain("composer.contextUsage.largestContributor");
 	});
+
+	it("uses one continuous progress bar with a success segment", () => {
+		expect(source).toContain("success={{");
+		expect(source).toContain("contextUsageRailColor");
+		expect(source).not.toContain("contextUsageBase");
+		expect(source).not.toContain("contextUsageOverlay");
+	});
 });
