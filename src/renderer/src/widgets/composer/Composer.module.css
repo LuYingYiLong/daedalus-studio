@@ -289,6 +289,39 @@
 	margin: 0;
 }
 
+.contextUsageLegend {
+	display: grid;
+	gap: 4px;
+}
+
+.contextUsageLegendItem {
+	display: grid;
+	grid-template-columns: 8px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 7px;
+	color: var(--ds-text-secondary);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+
+.contextUsageSwatch {
+	display: block;
+	width: 8px;
+	height: 8px;
+	border-radius: 2px;
+}
+
+.contextUsageLegendPercent {
+	margin-inline-start: 4px;
+	color: var(--ds-text-muted);
+}
+
+.contextUsageNotice {
+	display: block;
+	font-size: 12px;
+	line-height: 1.45;
+}
+
 .contextUsagePressure {
 	display: flex;
 	align-items: center;

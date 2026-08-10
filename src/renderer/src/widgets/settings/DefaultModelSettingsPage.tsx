@@ -46,6 +46,11 @@ const ROUTING_OPTIONS: RoutingOption[] = [
 		descriptionKey: "settings.defaultModel.routing.goalEvaluator.description"
 	},
 	{
+		key: "contextCompression",
+		titleKey: "settings.defaultModel.routing.contextCompression.title",
+		descriptionKey: "settings.defaultModel.routing.contextCompression.description"
+	},
+	{
 		key: "imageRecognition",
 		titleKey: "settings.defaultModel.routing.imageRecognition.title",
 		descriptionKey: "settings.defaultModel.routing.imageRecognition.description"

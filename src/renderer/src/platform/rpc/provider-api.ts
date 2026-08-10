@@ -31,6 +31,7 @@ export type ProviderModelRouting = {
 	gitCommit: ProviderTaskModelRef | null;
 	commandReview: ProviderTaskModelRef | null;
 	goalEvaluator: ProviderTaskModelRef | null;
+	contextCompression: ProviderTaskModelRef | null;
 };
 
 export type ProviderModelInfo = {

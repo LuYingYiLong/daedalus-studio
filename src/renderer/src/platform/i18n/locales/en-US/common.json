@@ -443,6 +443,12 @@
       "usedTokens": "{{used}} / {{total}} tokens",
       "meta": "{{model}} / {{available}} available / {{source}}",
       "compress": "Compress chat",
+	  "compressionResult": "Before {{before}}, after {{after}}, saved {{saved}} tokens; {{restorable}} raw blocks remain recoverable",
+	  "legend": {
+		"input": "Actual input",
+		"outputReserve": "Output reserve",
+		"safetyMargin": "Safety margin"
+	  },
       "pressureLevel": "{{level}} pressure",
       "largestContributor": "Largest: {{largest}}",
       "columns": {
@@ -1467,6 +1473,10 @@
           "title": "Goal completion evaluator model",
           "description": "Used to judge whether a Goal is complete after each execution cycle. Falls back to the Goal model when unset."
         },
+		"contextCompression": {
+		  "title": "Context compression model",
+		  "description": "Creates recoverable structured context summaries. Follows the active model when unset and always disables reasoning."
+		},
         "imageRecognition": {
           "title": "Image recognition model",
           "description": "Used when the active chat model cannot consume image context directly."

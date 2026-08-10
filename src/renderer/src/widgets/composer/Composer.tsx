@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Input, Dropdown, Button, Divider, Flex, Tooltip, Popover, Progress, Typography, Spin } from "antd";
-import type { MenuProps, ProgressProps } from "antd";
+import type { MenuProps } from "antd";
 import type { TextAreaRef } from "antd/es/input/TextArea";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -25,6 +25,11 @@ import {
 } from "@/domain/composer/composer-completion";
 import { parseComposerModeCommand } from "@/domain/composer/composer-mode-command";
 import { copyTextToClipboard, readTextFromClipboard } from "@/platform/electron/clipboard";
+import {
+	allocateContextBudgetSegments,
+	createContextBudgetStrokeColors,
+	CONTEXT_PROGRESS_STEPS
+} from "@/domain/composer/context-budget-segments";
 
 export type ComposerProps = {
 	providerModelSelection: ProviderModelSelection | null;
@@ -73,25 +78,14 @@ type SelectedModel = {
 	model: string;
 };
 
-type ProgressStrokeColor = NonNullable<ProgressProps["strokeColor"]>;
-
 type TextAreaSelection = {
 	start: number;
 	end: number;
 };
 
-const CONTEXT_USAGE_NORMAL_STROKE: ProgressStrokeColor = {
-	"0%": "var(--ds-accent)",
-	"100%": "var(--ds-success)",
-};
-const CONTEXT_USAGE_WARNING_STROKE: ProgressStrokeColor = {
-	"0%": "var(--ds-warning)",
-	"100%": "var(--ds-warning)",
-};
-const CONTEXT_USAGE_DANGER_STROKE: ProgressStrokeColor = {
-	"0%": "var(--ds-danger)",
-	"100%": "var(--ds-danger)",
-};
+const CONTEXT_INPUT_COLOR: string = "var(--ds-accent)";
+const CONTEXT_OUTPUT_RESERVE_COLOR: string = "color-mix(in srgb, var(--ds-accent) 65%, var(--ds-surface))";
+const CONTEXT_SAFETY_MARGIN_COLOR: string = "color-mix(in srgb, var(--ds-accent) 35%, var(--ds-surface))";
 
 const NO_WORKSPACE_KEY: string = "workspace:none";
 const ADD_WORKSPACE_KEY: string = "workspace:add";
@@ -383,20 +377,6 @@ function formatTokenCount(tokens: number): string {
 	return Math.max(0, Math.round(tokens)).toLocaleString();
 }
 
-function getContextUsageStrokeColor(percent: number): ProgressStrokeColor {
-	if (percent >= 90) {
-		return CONTEXT_USAGE_DANGER_STROKE;
-	}
-	if (percent >= 70) {
-		return CONTEXT_USAGE_WARNING_STROKE;
-	}
-	return CONTEXT_USAGE_NORMAL_STROKE;
-}
-
-function getContextUsageStatus(percent: number): "normal" | "exception" {
-	return percent >= 90 ? "exception" : "normal";
-}
-
 function Composer({
 	providerModelSelection,
 	selectedProviderId,
@@ -454,6 +434,7 @@ function Composer({
 	const [contextUsage, setContextUsage] = useState<ContextUsageEstimate | null>(null);
 	const [contextUsageError, setContextUsageError] = useState<string | null>(null);
 	const [isCompressingContext, setIsCompressingContext] = useState<boolean>(false);
+	const [contextCompressionNotice, setContextCompressionNotice] = useState<string | null>(null);
 
 	const handleModeClick: MenuProps["onClick"] = useCallback(({ key }): void => {
 		if (isComposerMode(key)) {
@@ -640,9 +621,17 @@ function Composer({
 		onClick: handleWorkspaceClick
 	}), [handleWorkspaceClick, selectedWorkspaceKey, workspaceFooterItems]);
 	const hasCompletion: boolean = completionToken !== null && completionOptions.length > 0;
-	const contextUsagePercent: number = contextUsage?.percent ?? 0;
-	const contextUsageStrokeColor: ProgressStrokeColor = getContextUsageStrokeColor(contextUsagePercent);
-	const contextUsageStatus: "normal" | "exception" = getContextUsageStatus(contextUsagePercent);
+	const contextUsagePercent: number = contextUsage?.committedPercent ?? contextUsage?.percent ?? 0;
+	const contextSegmentAllocation = allocateContextBudgetSegments({
+		inputPercent: contextUsage?.inputPercent ?? 0,
+		outputReservePercent: contextUsage?.outputReservePercent ?? 0,
+		safetyMarginPercent: contextUsage?.safetyMarginPercent ?? 0
+	});
+	const contextUsageStrokeColors: string[] = createContextBudgetStrokeColors(contextSegmentAllocation, {
+		input: CONTEXT_INPUT_COLOR,
+		outputReserve: CONTEXT_OUTPUT_RESERVE_COLOR,
+		safetyMargin: CONTEXT_SAFETY_MARGIN_COLOR
+	});
 	const compressDisabledReason: string | null = isSending
 		? t("composer.contextUsage.compressDisabled.sending")
 		: contextUsage?.canCompress === false
@@ -1021,10 +1010,18 @@ function Composer({
 	async function handleCompressContext(): Promise<void> {
 		setIsCompressingContext(true);
 		setContextUsageError(null);
+		setContextCompressionNotice(null);
 		try {
 			const result = await compressSession(8);
 			if (!result.compressed && result.reason !== undefined) {
 				setContextUsageError(result.reason);
+			} else if (result.compressed) {
+				setContextCompressionNotice(t("composer.contextUsage.compressionResult", {
+					before: formatTokenCount(result.beforeTokens ?? 0),
+					after: formatTokenCount(result.afterTokens ?? 0),
+					saved: formatTokenCount(result.savedTokens ?? 0),
+					restorable: result.restorableBlockCount ?? 0
+				}));
 			}
 			await refreshContextUsage();
 		} catch (error: unknown) {
@@ -1054,12 +1051,12 @@ function Composer({
 				<div className={styles.contextUsageTitleRow}>
 					<Typography.Text strong>
 						{t("composer.contextUsage.usedTokens", {
-							used: formatTokenCount(contextUsage.usedTokens),
+							used: formatTokenCount(contextUsage.committedTokens ?? contextUsage.usedTokens),
 							total: formatTokenCount(contextUsage.contextWindowTokens)
 						})}
 					</Typography.Text>
-					<Typography.Text type={contextUsage.percent >= 90 ? "danger" : "secondary"}>
-						{contextUsage.percent.toFixed(1)}%
+					<Typography.Text type="secondary">
+						{(contextUsage.committedPercent ?? contextUsage.percent).toFixed(1)}%
 					</Typography.Text>
 				</div>
 				<Typography.Text type="secondary" className={styles.contextUsageMeta}>
@@ -1071,12 +1068,27 @@ function Composer({
 				</Typography.Text>
 			</div>
 			<Progress
-				percent={contextUsage.percent}
+				percent={contextUsage.committedPercent ?? contextUsage.percent}
 				showInfo={false}
-				status={contextUsageStatus}
-				strokeColor={contextUsageStrokeColor}
+				steps={CONTEXT_PROGRESS_STEPS}
+				strokeColor={contextUsageStrokeColors}
+				railColor="var(--ds-fill-secondary)"
+				strokeLinecap="butt"
 				className={styles.contextUsage}
 			/>
+			<div className={styles.contextUsageLegend}>
+				{[
+					{ key: "input", color: CONTEXT_INPUT_COLOR, tokens: contextUsage.inputTokens ?? 0, percent: contextUsage.inputPercent ?? 0 },
+					{ key: "outputReserve", color: CONTEXT_OUTPUT_RESERVE_COLOR, tokens: contextUsage.outputReserveTokens, percent: contextUsage.outputReservePercent ?? 0 },
+					{ key: "safetyMargin", color: CONTEXT_SAFETY_MARGIN_COLOR, tokens: contextUsage.safetyMarginTokens, percent: contextUsage.safetyMarginPercent ?? 0 }
+				].map((item) => (
+					<div className={styles.contextUsageLegendItem} key={item.key}>
+						<span className={styles.contextUsageSwatch} style={{ background: item.color }} />
+						<span>{t(`composer.contextUsage.legend.${item.key}`)}</span>
+						<span>{formatTokenCount(item.tokens)} <span className={styles.contextUsageLegendPercent}>{item.percent.toFixed(1)}%</span></span>
+					</div>
+				))}
+			</div>
 			<div className={styles.contextUsagePressure}>
 				<Typography.Text type="secondary">
 					{t("composer.contextUsage.pressureLevel", {
@@ -1102,6 +1114,9 @@ function Composer({
 			</div>
 			{contextUsageError === null ? null : (
 				<Typography.Text type="danger" className={styles.contextUsageMeta}>{contextUsageError}</Typography.Text>
+			)}
+			{contextCompressionNotice === null ? null : (
+				<Typography.Text type="secondary" className={styles.contextUsageNotice}>{contextCompressionNotice}</Typography.Text>
 			)}
 			<Tooltip title={compressDisabledReason ?? undefined}>
 				<span className={styles.contextUsageCompressWrap}>
@@ -1339,11 +1354,11 @@ function Composer({
 							<span className={styles.contextUsageAnchor}>
 								<button type="button" className={styles.contextUsageButton} aria-label={t("composer.contextUsage.title")}>
 									<span className={styles.contextUsageButtonText}>{Math.round(contextUsagePercent)}%</span>
-									<Progress
+					<Progress
 										type="circle"
 										percent={contextUsagePercent}
-										status={contextUsageStatus}
-										strokeColor={contextUsageStrokeColor}
+						strokeColor="var(--ds-accent)"
+						railColor="var(--ds-fill-secondary)"
 										showInfo={false}
 										size={16}
 									/>

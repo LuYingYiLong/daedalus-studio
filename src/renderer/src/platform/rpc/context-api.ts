@@ -4,6 +4,13 @@ import type { ChatMode } from "./chat-api";
 
 export type ContextUsageEstimate = {
 	usedTokens: number;
+	inputTokens: number;
+	inputPercent: number;
+	committedTokens: number;
+	committedPercent: number;
+	outputReservePercent: number;
+	safetyMarginPercent: number;
+	availablePercent: number;
 	contextWindowTokens: number;
 	percent: number;
 	availableTokens: number;
@@ -17,6 +24,9 @@ export type ContextUsageEstimate = {
 	canCompress: boolean;
 	compressReason?: string | null;
 	summaryActive: boolean;
+	contextGeneration?: number | undefined;
+	contextCompressionLevel?: "capture" | "distill" | "condense" | null | undefined;
+	restorableBlockCount?: number | undefined;
 	breakdown: Array<{
 		kind: "base_system" | "custom_instructions" | "skills" | "mcp_context" | "tool_definitions" | "history" | "summary" | "current_message" | "additional_context" | "output_reserve" | "safety_margin";
 		tokens: number;
@@ -41,6 +51,14 @@ export type CompressSessionResult = {
 	oldMessageCount?: number | undefined;
 	keptMessageCount?: number | undefined;
 	summaryLength?: number | undefined;
+	compressionId?: string | undefined;
+	generation?: number | undefined;
+	level?: "capture" | "distill" | "condense" | undefined;
+	beforeTokens?: number | undefined;
+	afterTokens?: number | undefined;
+	savedTokens?: number | undefined;
+	restorableBlockCount?: number | undefined;
+	warning?: string | undefined;
 };
 
 export async function estimateContextUsage(params: EstimateContextUsageParams): Promise<ContextUsageEstimate> {
