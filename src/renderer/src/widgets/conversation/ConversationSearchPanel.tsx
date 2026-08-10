@@ -3,6 +3,7 @@ import type { InputRef } from "antd";
 import type { RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
+import ShinyText from "@/ui/ShinyText";
 import styles from "./ConversationSearchPanel.module.css";
 
 type ConversationSearchPanelProps = {
@@ -32,6 +33,7 @@ export default function ConversationSearchPanel({
 }: ConversationSearchPanelProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const navigationDisabled: boolean = total === 0 || query.trim().length === 0;
+	const indexingCompleteConversation: boolean = loading && query.trim().length > 0 && total === 0;
 
 	return (
 		<div
@@ -62,8 +64,14 @@ export default function ConversationSearchPanel({
 					}
 				}}
 			/>
-			<span className={styles.resultCount} aria-live="polite">
-				{navigationDisabled ? "0/0" : `${current}/${total}`}
+			<span
+				className={`${styles.resultCount} ${indexingCompleteConversation ? styles.resultIndexing : ""}`}
+				aria-live="polite"
+				role="status"
+			>
+				{indexingCompleteConversation
+					? <ShinyText text={t("agentPage.conversationSearch.indexing")} speed={2.4} color="currentColor" />
+					: navigationDisabled ? "0/0" : `${current}/${total}`}
 			</span>
 			<Tooltip title={t("agentPage.conversationSearch.previous")} trigger={["hover", "focus"]}>
 				<Button

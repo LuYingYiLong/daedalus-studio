@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { BackendRpcClient } from "@/platform/rpc/transport/backend-rpc-client";
+import { BackendConnectionError, BackendRpcClient, BackendRpcError } from "@/platform/rpc/transport/backend-rpc-client";
 
 describe("BackendRpcClient", () => {
 	let client: BackendRpcClient;
@@ -175,6 +175,8 @@ describe("BackendRpcClient", () => {
 			});
 
 			await expect(requestPromise).rejects.toThrow("ERR_001: Test error");
+			await expect(requestPromise).rejects.toBeInstanceOf(BackendRpcError);
+			await expect(requestPromise).rejects.toMatchObject({ code: "ERR_001" });
 		});
 
 		it("连接关闭时请求应失败", async () => {
@@ -183,6 +185,8 @@ describe("BackendRpcClient", () => {
 			simulateClose();
 
 			await expect(requestPromise).rejects.toThrow("连接已关闭");
+			await expect(requestPromise).rejects.toBeInstanceOf(BackendConnectionError);
+			await expect(requestPromise).rejects.toMatchObject({ code: "backend_connection_closed" });
 		});
 	});
 

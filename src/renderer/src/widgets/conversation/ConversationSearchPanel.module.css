@@ -44,6 +44,11 @@
 	text-align: center;
 }
 
+.resultIndexing {
+	min-width: 132px;
+	text-align: start;
+}
+
 .panel :global(.ant-btn) {
 	flex: 0 0 auto;
 }

@@ -303,6 +303,7 @@
       "previous": "上一个匹配项",
       "next": "下一个匹配项",
       "close": "关闭搜索",
+      "indexing": "正在搜索完整会话…",
       "loadError": "无法加载完整会话搜索索引，仍可搜索当前已加载的消息。"
     },
     "workspaceLaunch": {

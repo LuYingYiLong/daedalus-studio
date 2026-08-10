@@ -305,6 +305,7 @@
       "previous": "Previous match",
       "next": "Next match",
       "close": "Close search",
+      "indexing": "Searching the full conversation…",
       "loadError": "Failed to load the complete conversation search index. Loaded messages remain searchable."
     },
     "workspaceLaunch": {

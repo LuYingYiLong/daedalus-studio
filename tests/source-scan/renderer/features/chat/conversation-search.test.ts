@@ -66,6 +66,17 @@ describe("conversation search source", () => {
 		expect(searchHook).toContain("fetchSessionTimelineSearchPage(page.searchId, nextOffset, 400)");
 		expect(searchHook).toContain("cancelSessionTimelineSearch(searchId)");
 		expect(searchHook).toContain("page.retryAfterMs ?? 150");
-		expect(searchHook).not.toContain("Session search index did not advance.");
+		expect(searchHook).toContain("MAX_REMOTE_SEARCH_RECOVERY_ATTEMPTS");
+		expect(searchHook).toContain("isRecoverableRemoteSearchError(error)");
+		expect(searchHook).toContain("onBackendReconnected");
+		expect(searchHook).not.toContain('message.includes("session_search_not_found")');
+	});
+
+	it("renders a distinct full-history indexing state instead of a false zero-result count", () => {
+		expect(panel).toContain('import ShinyText from "@/ui/ShinyText"');
+		expect(panel).toContain("indexingCompleteConversation");
+		expect(panel).toContain('t("agentPage.conversationSearch.indexing")');
+		expect(panel).toContain("styles.resultIndexing");
+		expect(panelStyles).toContain(".resultIndexing");
 	});
 });

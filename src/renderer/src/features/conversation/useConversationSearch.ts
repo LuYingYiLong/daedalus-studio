@@ -5,6 +5,8 @@ import {
 	startSessionTimelineSearch
 } from "@/platform/rpc/session-api";
 import type { SessionTimelineSearchDocument, TimelineBlock } from "@/platform/rpc/types";
+import { onBackendReconnected } from "@/platform/rpc/transport/backend-client";
+import { BackendConnectionError, BackendRpcError } from "@/platform/rpc/transport/backend-rpc-client";
 import type {
 	ConversationSearchMatch,
 	ConversationSearchWorkerRequest,
@@ -19,6 +21,32 @@ type UseConversationSearchOptions = {
 	onLoadBlockOffset: (blockOffset: number) => Promise<void>;
 	onLoadError: (error: unknown) => void;
 };
+
+const MAX_REMOTE_SEARCH_RECOVERY_ATTEMPTS: number = 2;
+const REMOTE_SEARCH_RECOVERY_DELAY_MS: number = 180;
+
+function isSearchGenerationChanged(error: unknown): boolean {
+	return error instanceof BackendRpcError && error.code === "session_search_generation_changed";
+}
+
+function isRecoverableRemoteSearchError(error: unknown): boolean {
+	if (error instanceof BackendRpcError) {
+		return error.code === "session_search_not_found";
+	}
+	if (error instanceof BackendConnectionError) {
+		return error.code === "backend_connection_failed"
+			|| error.code === "backend_connection_closed"
+			|| error.code === "backend_connection_timeout"
+			|| error.code === "backend_connection_not_open";
+	}
+	return false;
+}
+
+function waitForRemoteSearchRecovery(): Promise<void> {
+	return new Promise<void>((resolve): void => {
+		window.setTimeout(resolve, REMOTE_SEARCH_RECOVERY_DELAY_MS);
+	});
+}
 
 export type ConversationSearchController = {
 	open: boolean;
@@ -219,45 +247,68 @@ export function useConversationSearch({
 		if (!shouldLoadHistory) return;
 
 		void (async (): Promise<void> => {
-			let nextOffset: number = 0;
 			let restartForGenerationChange: boolean = false;
-			try {
-				let page = await startSessionTimelineSearch(sessionId);
-				searchIdRef.current = page.searchId;
-				while (true) {
-					if (generationRef.current !== generation || page.sessionId !== sessionId) {
-						void cancelSessionTimelineSearch(page.searchId).catch((): void => {});
+			let completedIndexing: boolean = false;
+			let recoveryAttempt: number = 0;
+			let activeSearchId: string | null = null;
+			while (true) {
+				let nextOffset: number = 0;
+				try {
+					let page = await startSessionTimelineSearch(sessionId);
+					activeSearchId = page.searchId;
+					searchIdRef.current = page.searchId;
+					while (true) {
+						if (generationRef.current !== generation || page.sessionId !== sessionId) {
+							void cancelSessionTimelineSearch(page.searchId).catch((): void => {});
+							return;
+						}
+						worker.postMessage({
+							type: "upsert",
+							documents: page.documents
+						} satisfies ConversationSearchWorkerRequest);
+						worker.postMessage({
+							type: "upsert",
+							documents: loadedDocumentsRef.current
+						} satisfies ConversationSearchWorkerRequest);
+						scheduleHistoryRefresh();
+						if (page.status === "ready" && page.nextOffset === null) {
+							completedIndexing = true;
+							break;
+						}
+						if (page.pending) {
+							await new Promise<void>((resolve): void => {
+								window.setTimeout(resolve, page.retryAfterMs ?? 150);
+							});
+						} else {
+							nextOffset = page.nextOffset ?? page.indexedThroughOffset;
+						}
+						if (generationRef.current !== generation) return;
+						page = await fetchSessionTimelineSearchPage(page.searchId, nextOffset, 400);
+					}
+					break;
+				} catch (error: unknown) {
+					if (generationRef.current !== generation) {
 						return;
 					}
-					worker.postMessage({
-						type: "upsert",
-						documents: page.documents
-					} satisfies ConversationSearchWorkerRequest);
-					worker.postMessage({
-						type: "upsert",
-						documents: loadedDocumentsRef.current
-					} satisfies ConversationSearchWorkerRequest);
-					scheduleHistoryRefresh();
-					if (page.status === "ready" && page.nextOffset === null) break;
-					if (page.pending) {
-						await new Promise<void>((resolve): void => {
-							window.setTimeout(resolve, page.retryAfterMs ?? 150);
-						});
-					} else {
-						nextOffset = page.nextOffset ?? page.indexedThroughOffset;
+					if (isSearchGenerationChanged(error)) {
+						restartForGenerationChange = true;
+						break;
 					}
-					if (generationRef.current !== generation) return;
-					page = await fetchSessionTimelineSearchPage(page.searchId, nextOffset, 400);
-				}
-			} catch (error: unknown) {
-				if (generationRef.current !== generation) {
-					return;
-				}
-				const message: string = error instanceof Error ? error.message : String(error);
-				if (message.includes("session_search_generation_changed")) {
-					restartForGenerationChange = true;
-				} else if (!message.includes("session_search_not_found")) {
+					if (
+						isRecoverableRemoteSearchError(error)
+						&& recoveryAttempt < MAX_REMOTE_SEARCH_RECOVERY_ATTEMPTS
+						&& openRef.current
+						&& queryRef.current.trim().length > 0
+					) {
+						recoveryAttempt += 1;
+						if (searchIdRef.current === activeSearchId) {
+							searchIdRef.current = null;
+						}
+						await waitForRemoteSearchRecovery();
+						continue;
+					}
 					onLoadError(error);
+					break;
 				}
 			}
 			if (generationRef.current !== generation) {
@@ -268,10 +319,10 @@ export function useConversationSearch({
 				window.setTimeout(startIndexing, 0);
 				return;
 			}
-			indexedSessionIdRef.current = sessionId;
+			indexedSessionIdRef.current = completedIndexing ? sessionId : null;
 			setLoading(false);
 			loadingRef.current = false;
-			refreshSearch();
+			if (completedIndexing) refreshSearch();
 		})();
 	}, [ensureWorker, onLoadError, refreshSearch, releaseRemoteSearch, scheduleHistoryRefresh, sessionId]);
 
@@ -425,6 +476,16 @@ export function useConversationSearch({
 		loadingRef.current = false;
 		followLatestMatchRef.current = true;
 	}, [activeRetryRequestId, releaseRemoteSearch]);
+
+	useEffect((): (() => void) => onBackendReconnected((): void => {
+		if (
+			openRef.current
+			&& queryRef.current.trim().length > 0
+			&& indexedSessionIdRef.current !== sessionId
+		) {
+			startIndexing();
+		}
+	}), [sessionId, startIndexing]);
 
 	useEffect((): (() => void) | void => {
 		if (workerRef.current === null) {

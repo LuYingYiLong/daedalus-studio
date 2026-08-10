@@ -56,6 +56,29 @@ type BackendConnectionListener = (event: BackendConnectionEvent) => void;
 
 type ConnectionState = "disconnected" | "connecting" | "connected" | "reconnecting";
 
+export class BackendRpcError extends Error {
+	readonly code: string;
+
+	constructor(code: string, message: string) {
+		super(`${code}: ${message}`);
+		this.name = "BackendRpcError";
+		this.code = code;
+	}
+}
+
+export class BackendConnectionError extends Error {
+	readonly code: "backend_connection_failed" | "backend_connection_closed" | "backend_connection_timeout" | "backend_connection_not_open" | "backend_connection_manually_closed";
+
+	constructor(
+		code: BackendConnectionError["code"],
+		message: string
+	) {
+		super(message);
+		this.name = "BackendConnectionError";
+		this.code = code;
+	}
+}
+
 type ClientConfig = {
 	readonly enableReconnect: boolean;
 	readonly reconnectConfig: ReconnectConfig;
@@ -208,7 +231,10 @@ export class BackendRpcClient {
 	private handleError = (): void => {
 		this.clearConnectionTimer();
 
-		const error: Error = new Error(`无法连接后端：${this.url}`);
+		const error: BackendConnectionError = new BackendConnectionError(
+			"backend_connection_failed",
+			`无法连接后端：${this.url}`
+		);
 
 		console.error("[Daedalus backend] 连接错误", { url: this.url, error });
 
@@ -222,7 +248,7 @@ export class BackendRpcClient {
 	private handleClose = (): void => {
 		this.clearConnectionTimer();
 		this.socket = null;
-		this.rejectPendingRequests(new Error("后端连接已关闭"));
+		this.rejectPendingRequests(new BackendConnectionError("backend_connection_closed", "后端连接已关闭"));
 
 		const wasManualClose: boolean = this.manualClose;
 
@@ -256,7 +282,10 @@ export class BackendRpcClient {
 		this.state = "disconnected";
 
 		if (this.connectReject) {
-			this.connectReject(new Error(`连接超时：${this.config.connectionTimeout}ms`));
+			this.connectReject(new BackendConnectionError(
+				"backend_connection_timeout",
+				`连接超时：${this.config.connectionTimeout}ms`
+			));
 			this.connectReject = null;
 			this.connectResolve = null;
 		}
@@ -279,7 +308,7 @@ export class BackendRpcClient {
 		const socket: WebSocket | null = this.socket;
 
 		if (!socket || socket.readyState !== WebSocket.OPEN) {
-			return Promise.reject(new Error("后端连接尚未打开"));
+			return Promise.reject(new BackendConnectionError("backend_connection_not_open", "后端连接尚未打开"));
 		}
 
 		const request: BackendRequest = {
@@ -327,7 +356,7 @@ export class BackendRpcClient {
 		this.socket?.close();
 		this.socket = null;
 		this.state = "disconnected";
-		this.rejectPendingRequests(new Error("后端连接已手动关闭"));
+		this.rejectPendingRequests(new BackendConnectionError("backend_connection_manually_closed", "后端连接已手动关闭"));
 	}
 
 	isOpen(): boolean {
@@ -392,7 +421,7 @@ export class BackendRpcClient {
 			return;
 		}
 
-		pendingRequest.reject(new Error(`${message.error.code}: ${message.error.message}`));
+		pendingRequest.reject(new BackendRpcError(message.error.code, message.error.message));
 	}
 
 	private rejectPendingRequests(error: Error): void {
