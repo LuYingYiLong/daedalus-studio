@@ -349,6 +349,7 @@ function McpServersSettingsPage(): React.JSX.Element {
 				okText={serverModalMode === "edit" ? t("settings.common.save") : t("settings.common.add")}
 				confirmLoading={isSaving}
 				destroyOnHidden={true}
+				className={styles.modal}
 			>
 				<Form<McpServerFormValues>
 					form={form}

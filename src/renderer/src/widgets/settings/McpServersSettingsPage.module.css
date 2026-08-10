@@ -102,3 +102,7 @@
 	align-items: center;
 	gap: 8px;
 }
+
+.modal {
+	user-select: none;
+}

@@ -18,12 +18,12 @@ describe("Provider request configuration", () => {
 		expect(modalSource).toContain("createJSONEditor");
 		expect(modalSource).toContain("editor.destroy()");
 		expect(modalSource).toContain("parseProviderRequestOverrides");
-		expect(modalSource).toContain('mode: "tree"');
+		expect(modalSource).toContain('mode: "text"');
 		expect(modalSource).toContain("window.requestAnimationFrame");
 		expect(modalSource).toContain("Input.TextArea");
 		expect(modalSource).toContain("forceRender={true}");
 		expect(modalStyles).toContain("height: 380px;");
-		expect(modalStyles).not.toContain("user-select: none");
+		expect(modalStyles).toContain("user-select: none");
 		expect(domainSource).toContain('key !== "headers" && key !== "body"');
 		expect(modalSource).not.toContain("svelte-jsoneditor");
 	});
