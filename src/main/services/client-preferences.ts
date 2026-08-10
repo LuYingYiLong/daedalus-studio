@@ -4,7 +4,7 @@ import {
 	DEFAULT_CLIENT_PREFERENCES,
 	loadClientPreferencesFile,
 	normalizeClientPreferencesPatch,
-	updateClientPreferencesFile,
+	saveClientPreferencesFile,
 	type ClientPreferences,
 	type ClientPreferencesPatch
 } from "./client-preferences-store";
@@ -13,6 +13,7 @@ class ClientPreferencesService {
 	private preferences: ClientPreferences = { ...DEFAULT_CLIENT_PREFERENCES };
 	private loaded: boolean = false;
 	private loadPromise: Promise<ClientPreferences> | null = null;
+	private updateTail: Promise<void> = Promise.resolve();
 	private readonly changeListeners: Set<(preferences: ClientPreferences) => void> = new Set();
 
 	getPreferencesPath(): string {
@@ -48,14 +49,28 @@ class ClientPreferencesService {
 
 	async update(patch: ClientPreferencesPatch): Promise<ClientPreferences> {
 		await this.load();
-		try {
-			this.preferences = await updateClientPreferencesFile(this.getPreferencesPath(), patch);
+		const normalizedPatch: ClientPreferencesPatch = normalizeClientPreferencesPatch(patch);
+		const updateOperation: Promise<ClientPreferences> = this.updateTail.then(async (): Promise<ClientPreferences> => {
+			const nextPreferences: ClientPreferences = {
+				...this.preferences,
+				...normalizedPatch
+			};
+			await saveClientPreferencesFile(this.getPreferencesPath(), nextPreferences);
+			this.preferences = nextPreferences;
 			this.loaded = true;
-			this.notifyChange();
-			return this.getCachedPreferences();
+			const persistedPreferences: ClientPreferences = this.getCachedPreferences();
+			setTimeout((): void => this.notifyChange(persistedPreferences), 0);
+			return persistedPreferences;
+		});
+		this.updateTail = updateOperation.then(
+			(): void => {},
+			(): void => {}
+		);
+		try {
+			return await updateOperation;
 		} catch (error: unknown) {
 			console.error("[ClientPreferences] update failed", {
-				fields: Object.keys(patch),
+				fields: Object.keys(normalizedPatch),
 				error
 			});
 			throw error;
@@ -79,8 +94,7 @@ class ClientPreferencesService {
 		return this.getCachedPreferences();
 	}
 
-	private notifyChange(): void {
-		const preferences: ClientPreferences = this.getCachedPreferences();
+	private notifyChange(preferences: ClientPreferences = this.getCachedPreferences()): void {
 		for (const listener of this.changeListeners) {
 			listener(preferences);
 		}

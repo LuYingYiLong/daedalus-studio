@@ -10,14 +10,13 @@ import {
 	Result,
 	Select,
 	Space,
-	Steps,
 	Switch,
 	Table,
 	Tag,
 	Typography,
 	type TableProps
 } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	discoverProviderModels,
@@ -68,6 +67,7 @@ type OnboardingWizardProps = {
 type ProviderStepProps = {
 	selection: ProviderModelSelection;
 	onSelectionChange: (selection: ProviderModelSelection) => void;
+	onBusyChange: (busy: boolean) => void;
 };
 
 type GodotExecutableStepProps = {
@@ -99,8 +99,25 @@ const TERMINAL_DOCUMENTATION_JOB_STAGES: ReadonlySet<GodotDocumentationJob["stag
 	"cancelled"
 ]);
 
+const ONBOARDING_NAVIGATION_TIMEOUT_MS: number = 12_000;
+
 function getErrorMessage(error: unknown, fallback: string): string {
 	return error instanceof Error && error.message.trim().length > 0 ? error.message : fallback;
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+	return new Promise<T>((resolve, reject): void => {
+		const timeoutId: number = window.setTimeout((): void => {
+			reject(new Error(timeoutMessage));
+		}, timeoutMs);
+		void promise.then((value: T): void => {
+			window.clearTimeout(timeoutId);
+			resolve(value);
+		}, (error: unknown): void => {
+			window.clearTimeout(timeoutId);
+			reject(error);
+		});
+	});
 }
 
 function isProviderConfigured(selection: ProviderModelSelection): boolean {
@@ -144,7 +161,7 @@ function getProjectStatusColor(status: GodotProjectPluginStatus): string {
 	return "default";
 }
 
-function ProviderOnboardingStep({ selection, onSelectionChange }: ProviderStepProps): React.JSX.Element {
+function ProviderOnboardingStep({ selection, onSelectionChange, onBusyChange }: ProviderStepProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const { message } = AntdApp.useApp();
 	const [providerId, setProviderId] = useState<string>(selection.current.provider);
@@ -185,6 +202,12 @@ function ProviderOnboardingStep({ selection, onSelectionChange }: ProviderStepPr
 	const canSave: boolean = provider !== null
 		&& modelId !== null
 		&& (!needsConnectionTest || testedProviderId === provider.provider);
+	const busy: boolean = testing || saving;
+
+	useEffect((): (() => void) => {
+		onBusyChange(busy);
+		return (): void => onBusyChange(false);
+	}, [busy, onBusyChange]);
 
 	async function testConnection(): Promise<void> {
 		if (provider === null) return;
@@ -418,7 +441,10 @@ function DocumentationOnboardingStep({ godotVersion, onConfiguredChange, onBusyC
 	}, [branch, branches, godotVersion, recommendedBranch]);
 
 	const busy: boolean = job !== null && !TERMINAL_DOCUMENTATION_JOB_STAGES.has(job.stage);
-	useEffect((): void => onBusyChange(busy), [busy, onBusyChange]);
+	useEffect((): (() => void) => {
+		onBusyChange(busy);
+		return (): void => onBusyChange(false);
+	}, [busy, onBusyChange]);
 	useEffect((): void => onConfiguredChange(isDocumentationConfigured(documentation)), [documentation, onConfiguredChange]);
 
 	useEffect((): (() => void) | void => {
@@ -554,7 +580,10 @@ function GodotPluginOnboardingStep({ onConfiguredChange, onBusyChange }: GodotPl
 	}, [t]);
 
 	useEffect((): void => { void loadProjects(); }, [loadProjects]);
-	useEffect((): void => onBusyChange(busy), [busy, onBusyChange]);
+	useEffect((): (() => void) => {
+		onBusyChange(busy);
+		return (): void => onBusyChange(false);
+	}, [busy, onBusyChange]);
 	useEffect((): void => onConfiguredChange(hasConfiguredGodotProject(result)), [onConfiguredChange, result]);
 
 	async function addProject(): Promise<void> {
@@ -698,88 +727,151 @@ function OnboardingWizard({ bootstrapData, onComplete }: OnboardingWizardProps):
 	const [providerSelection, setProviderSelection] = useState<ProviderModelSelection>(bootstrapData.providerModelSelection);
 	const [documentationConfigured, setDocumentationConfigured] = useState<boolean>(false);
 	const [pluginConfigured, setPluginConfigured] = useState<boolean>(false);
+	const [providerBusy, setProviderBusy] = useState<boolean>(false);
 	const [documentationBusy, setDocumentationBusy] = useState<boolean>(false);
 	const [pluginBusy, setPluginBusy] = useState<boolean>(false);
-	const [savingNavigation, setSavingNavigation] = useState<boolean>(false);
+	const [pendingCheckpointCount, setPendingCheckpointCount] = useState<number>(0);
 	const [navigationError, setNavigationError] = useState<string | null>(null);
+	const mountedRef = useRef<boolean>(true);
+	const navigationTransitionRef = useRef<boolean>(false);
+	const checkpointVersionRef = useRef<number>(0);
+	const transitionTimerRef = useRef<number | null>(null);
+	const stepViewportRef = useRef<HTMLDivElement>(null);
+
+	useEffect((): (() => void) => {
+		return (): void => {
+			mountedRef.current = false;
+			navigationTransitionRef.current = false;
+			if (transitionTimerRef.current !== null) {
+				window.clearTimeout(transitionTimerRef.current);
+			}
+		};
+	}, []);
 
 	const currentStep: OnboardingStepId = preferences.onboarding.currentStep;
 	const currentIndex: number = Math.max(0, ONBOARDING_STEP_IDS.indexOf(currentStep));
+	const stepItems = useMemo((): Array<{ title: string }> => ONBOARDING_STEP_IDS.map((stepId: OnboardingStepId) => ({
+		title: t(`onboarding.steps.${stepId}`)
+	})), [t]);
+	const progressPercent: number = currentStep === "welcome"
+		? 0
+		: Math.round((currentIndex / (ONBOARDING_STEP_IDS.length - 1)) * 100);
+	const currentStepTitle: string = stepItems[currentIndex]?.title ?? "";
 	const configuredByStep: Record<OnboardingConfigurableStepId, boolean> = {
 		provider: isProviderConfigured(providerSelection),
 		godot_executable: generalSettings.godotExecutableStatus === "ready",
 		documentation: documentationConfigured,
 		godot_plugin: pluginConfigured
 	};
-	const activeOperation: boolean = documentationBusy || pluginBusy;
+	const activeOperation: boolean = currentStep === "provider"
+		? providerBusy
+		: currentStep === "documentation"
+			? documentationBusy
+			: currentStep === "godot_plugin"
+				? pluginBusy
+				: false;
+	useEffect((): (() => void) => {
+		const frame: number = window.requestAnimationFrame((): void => {
+			stepViewportRef.current?.focus({ preventScroll: true });
+		});
+		return (): void => window.cancelAnimationFrame(frame);
+	}, [currentStep]);
 
-	const stepItems = ONBOARDING_STEP_IDS.map((stepId: OnboardingStepId) => ({
-		title: t(`onboarding.steps.${stepId}`)
-	}));
-
-	async function persistStep(step: OnboardingStepId, outcome?: OnboardingStepOutcome): Promise<ClientPreferences> {
-		setSavingNavigation(true);
+	function beginStepTransition(): boolean {
+		if (navigationTransitionRef.current || activeOperation) {
+			return false;
+		}
+		navigationTransitionRef.current = true;
 		setNavigationError(null);
-		try {
-			const stepOutcomes: OnboardingPreferences["stepOutcomes"] = {
-				...preferences.onboarding.stepOutcomes
-			};
-			if (outcome !== undefined && CONFIGURABLE_STEPS.includes(currentStep as OnboardingConfigurableStepId)) {
-				stepOutcomes[currentStep as OnboardingConfigurableStepId] = outcome;
+		return true;
+	}
+
+	function endStepTransition(): void {
+		if (transitionTimerRef.current !== null) {
+			window.clearTimeout(transitionTimerRef.current);
+		}
+		transitionTimerRef.current = window.setTimeout((): void => {
+			navigationTransitionRef.current = false;
+		}, 180);
+	}
+
+	function persistCheckpoint(nextPreferences: ClientPreferences, fallback: string): void {
+		const checkpointVersion: number = checkpointVersionRef.current + 1;
+		checkpointVersionRef.current = checkpointVersion;
+		setPendingCheckpointCount((count: number): number => count + 1);
+		void withTimeout(updateClientPreferences({
+			onboarding: nextPreferences.onboarding
+		}), ONBOARDING_NAVIGATION_TIMEOUT_MS, t("onboarding.errors.timeout")).catch((error: unknown): void => {
+			console.error("[Onboarding] persist checkpoint failed", {
+				step: nextPreferences.onboarding.currentStep,
+				error
+			});
+			if (mountedRef.current && checkpointVersion === checkpointVersionRef.current) {
+				setNavigationError(getErrorMessage(error, fallback));
 			}
-			const nextPreferences: ClientPreferences = await updateClientPreferences({
-				onboarding: {
-					...preferences.onboarding,
-					completed: false,
-					currentStep: step,
-					stepOutcomes,
-					completedAt: null
-				}
-			});
-			setPreferences(nextPreferences);
-			return nextPreferences;
-		} catch (error: unknown) {
-			console.error("[Onboarding] persist step failed", { currentStep, step, outcome, error });
-			setNavigationError(getErrorMessage(error, t("onboarding.errors.saveProgress")));
-			throw error;
-		} finally {
-			setSavingNavigation(false);
-		}
+		}).finally((): void => {
+			if (mountedRef.current) {
+				setPendingCheckpointCount((count: number): number => Math.max(0, count - 1));
+			}
+		});
 	}
 
-	async function goForward(outcome?: OnboardingStepOutcome): Promise<void> {
+	function persistStep(step: OnboardingStepId, outcome?: OnboardingStepOutcome): void {
+		if (!beginStepTransition()) {
+			return;
+		}
+		const stepOutcomes: OnboardingPreferences["stepOutcomes"] = {
+			...preferences.onboarding.stepOutcomes
+		};
+		if (outcome !== undefined && CONFIGURABLE_STEPS.includes(currentStep as OnboardingConfigurableStepId)) {
+			stepOutcomes[currentStep as OnboardingConfigurableStepId] = outcome;
+		}
+		const nextPreferences: ClientPreferences = {
+			...preferences,
+			onboarding: {
+				...preferences.onboarding,
+				completed: false,
+				currentStep: step,
+				stepOutcomes,
+				completedAt: null
+			}
+		};
+		setPreferences(nextPreferences);
+		persistCheckpoint(nextPreferences, t("onboarding.errors.saveProgress"));
+		endStepTransition();
+	}
+
+	function goForward(outcome?: OnboardingStepOutcome): void {
 		const nextStep: OnboardingStepId = ONBOARDING_STEP_IDS[Math.min(currentIndex + 1, ONBOARDING_STEP_IDS.length - 1)];
-		await persistStep(nextStep, outcome).catch((): void => {});
+		persistStep(nextStep, outcome);
 	}
 
-	async function goBack(): Promise<void> {
+	function goBack(): void {
 		const previousStep: OnboardingStepId = ONBOARDING_STEP_IDS[Math.max(0, currentIndex - 1)];
-		await persistStep(previousStep).catch((): void => {});
+		persistStep(previousStep);
 	}
 
-	async function finish(): Promise<void> {
-		setSavingNavigation(true);
-		setNavigationError(null);
-		try {
-			const nextPreferences: ClientPreferences = await updateClientPreferences({
-				onboarding: {
-					...preferences.onboarding,
-					completed: true,
-					currentStep: "complete",
-					completedAt: new Date().toISOString()
-				}
-			});
-			onComplete({
-				...bootstrapData,
-				clientPreferences: nextPreferences,
-				generalSettings,
-				providerModelSelection: providerSelection
-			});
-		} catch (error: unknown) {
-			setNavigationError(getErrorMessage(error, t("onboarding.errors.complete")));
-		} finally {
-			setSavingNavigation(false);
+	function finish(): void {
+		if (!beginStepTransition()) {
+			return;
 		}
+		const nextPreferences: ClientPreferences = {
+			...preferences,
+			onboarding: {
+				...preferences.onboarding,
+				completed: true,
+				currentStep: "complete",
+				completedAt: new Date().toISOString()
+			}
+		};
+		setPreferences(nextPreferences);
+		persistCheckpoint(nextPreferences, t("onboarding.errors.complete"));
+		onComplete({
+			...bootstrapData,
+			clientPreferences: nextPreferences,
+			generalSettings,
+			providerModelSelection: providerSelection
+		});
 	}
 
 	function getSummaryOutcome(step: OnboardingConfigurableStepId): OnboardingStepOutcome {
@@ -803,7 +895,13 @@ function OnboardingWizard({ bootstrapData, onComplete }: OnboardingWizardProps):
 			</div>
 		);
 	} else if (currentStep === "provider") {
-		content = <ProviderOnboardingStep selection={providerSelection} onSelectionChange={setProviderSelection} />;
+		content = (
+			<ProviderOnboardingStep
+				selection={providerSelection}
+				onSelectionChange={setProviderSelection}
+				onBusyChange={setProviderBusy}
+			/>
+		);
 	} else if (currentStep === "godot_executable") {
 		content = <GodotExecutableOnboardingStep settings={generalSettings} onSettingsChange={setGeneralSettings} />;
 	} else if (currentStep === "documentation") {
@@ -849,33 +947,58 @@ function OnboardingWizard({ bootstrapData, onComplete }: OnboardingWizardProps):
 	return (
 		<main className={styles.root} aria-label={t("onboarding.ariaLabel")}>
 			<div className={styles.shell}>
-				<Steps current={currentIndex} items={stepItems} responsive={true} size="small" />
-				<div className={styles.body}>{content}</div>
+				<header className={styles.progressHeader}>
+					<div className={styles.progressMeta}>
+						<Typography.Text type="secondary">
+							{t("onboarding.progress", { current: currentIndex + 1, total: ONBOARDING_STEP_IDS.length })}
+						</Typography.Text>
+						<Typography.Text strong>{currentStepTitle}</Typography.Text>
+					</div>
+					<Progress
+						percent={progressPercent}
+						showInfo={false}
+						size="small"
+						aria-label={t("onboarding.progress", { current: currentIndex + 1, total: ONBOARDING_STEP_IDS.length })}
+					/>
+				</header>
+				<div className={styles.body} aria-live="polite">
+					<div
+						key={currentStep}
+						ref={stepViewportRef}
+						className={styles.stepViewport}
+						tabIndex={-1}
+						data-step={currentStep}
+					>
+						{content}
+					</div>
+				</div>
 				{navigationError !== null ? <Alert showIcon type="error" description={navigationError} /> : null}
+				<div className={styles.navigationStatus} role="status" aria-live="polite">
+					{pendingCheckpointCount > 0 ? t("onboarding.status.saving") : ""}
+				</div>
 				<footer className={styles.footer}>
 					<div>
 						{currentIndex > 0 && currentStep !== "complete" ? (
-							<Button disabled={savingNavigation || activeOperation} onClick={(): void => { void goBack(); }}>
+							<Button disabled={activeOperation} onClick={goBack}>
 								{t("onboarding.actions.back")}
 							</Button>
 						) : null}
 					</div>
 					<Space>
 						{currentConfigurableStep !== null ? (
-							<Button disabled={savingNavigation || activeOperation} onClick={(): void => { void goForward("skipped"); }}>
+							<Button type="text" disabled={activeOperation} onClick={(): void => goForward("skipped")}>
 								{t("onboarding.actions.skip")}
 							</Button>
 						) : null}
 						{currentStep === "complete" ? (
-							<Button type="primary" loading={savingNavigation} onClick={(): void => { void finish(); }}>
+							<Button type="primary" disabled={activeOperation} onClick={finish}>
 								{t("onboarding.actions.enterStudio")}
 							</Button>
 						) : (
 							<Button
 								type="primary"
-								loading={savingNavigation}
 								disabled={!canContinue || activeOperation}
-								onClick={(): void => { void goForward(currentConfigurableStep === null ? undefined : "configured"); }}
+								onClick={(): void => goForward(currentConfigurableStep === null ? undefined : "configured")}
 							>
 								{currentStep === "welcome" ? t("onboarding.actions.start") : t("onboarding.actions.next")}
 							</Button>

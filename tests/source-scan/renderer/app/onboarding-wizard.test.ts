@@ -13,13 +13,26 @@ describe("OnboardingWizard", () => {
 		expect(source).toContain("ONBOARDING_STEP_IDS.map");
 		expect(source).toContain('goForward("skipped")');
 		expect(source).toContain('goForward(currentConfigurableStep === null ? undefined : "configured")');
+		expect(source).toContain("const activeOperation: boolean = currentStep === \"provider\"");
+		expect(source).not.toContain("const navigationBusy:");
+		expect(source).not.toContain("disabled={navigationBusy}");
+		expect(source).toContain("return (): void => onBusyChange(false);");
+		expect(source).toContain("ONBOARDING_NAVIGATION_TIMEOUT_MS");
+		expect(source).toContain("function persistCheckpoint(nextPreferences: ClientPreferences");
+		expect(source).toContain("setPreferences(nextPreferences);");
+		expect(source).toContain("persistCheckpoint(nextPreferences");
+		expect(source).not.toContain("await persistStep(");
 		expect(source).toContain("discoverProviderModels");
 		expect(source).toContain("window.electronAPI.pickGodotExecutable()");
 		expect(source).toContain("installGodotDocumentation");
 		expect(source).toContain("window.electronAPI.godotProjects.install");
 		expect(source).toContain("setJob(nextState.activeJob ?? null)");
-		expect(source).toContain("console.error(\"[Onboarding] persist step failed\"");
+		expect(source).toContain("console.error(\"[Onboarding] persist checkpoint failed\"");
 		expect(preferencesServiceSource).toContain("[ClientPreferences] update failed");
+		expect(preferencesServiceSource).toContain("private updateTail: Promise<void> = Promise.resolve()");
+		expect(preferencesServiceSource).toContain("saveClientPreferencesFile");
+		expect(preferencesServiceSource).toContain("setTimeout((): void => this.notifyChange(persistedPreferences), 0)");
+		expect(preferencesServiceSource).not.toContain("updateClientPreferencesFile");
 	});
 
 	it("normalizes persisted progress and exposes a guarded relaunch API", () => {

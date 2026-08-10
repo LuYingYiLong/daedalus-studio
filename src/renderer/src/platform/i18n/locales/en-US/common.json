@@ -85,6 +85,10 @@
       "cancel": "Cancel",
       "enterStudio": "Enter Daedalus Studio"
     },
+    "progress": "Step {{current}} of {{total}}",
+    "status": {
+      "saving": "Saving setup"
+    },
     "outcomes": {
       "configured": "Configured",
       "skipped": "Skipped"
@@ -196,7 +200,8 @@
     },
     "errors": {
       "saveProgress": "Failed to save setup progress.",
-      "complete": "Failed to complete setup."
+      "complete": "Failed to complete setup.",
+      "timeout": "Saving setup timed out. Check the backend connection and try again."
     }
   },
   "workspaceTree": {

@@ -85,6 +85,10 @@
       "cancel": "取消",
       "enterStudio": "进入 Daedalus Studio"
     },
+    "progress": "第 {{current}} 步，共 {{total}} 步",
+    "status": {
+      "saving": "正在保存设置"
+    },
     "outcomes": {
       "configured": "已配置",
       "skipped": "已跳过"
@@ -194,7 +198,8 @@
     },
     "errors": {
       "saveProgress": "保存引导进度失败。",
-      "complete": "完成新手引导失败。"
+      "complete": "完成新手引导失败。",
+      "timeout": "保存引导进度超时，请检查后端连接后重试。"
     }
   },
   "workspaceTree": {
