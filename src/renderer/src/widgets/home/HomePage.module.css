@@ -265,6 +265,12 @@
 .summaryPanel {
 	min-width: 324px;
 	max-width: 360px;
+	box-sizing: border-box;
+	max-height: calc(100vh - 32px);
+	max-height: calc(100dvh - 32px);
+	overflow-x: hidden;
+	overflow-y: auto;
+	overscroll-behavior: contain;
 }
 
 .summarySection {

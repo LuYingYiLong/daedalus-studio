@@ -4,6 +4,7 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 describe("HomePage summary popover source", () => {
 	const source: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
 	const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "session-overview-api.ts");
+	const styles: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.module.css");
 
 	it("uses one overview model for sessions and the NewSessionHome workspace", () => {
 		expect(apiSource).toContain('"session.overview.get"');
@@ -66,5 +67,11 @@ describe("HomePage summary popover source", () => {
 		expect(source).toContain("aria-busy={gitActions.isCommitMessageGenerating}");
 		expect(source).toContain('gitActions.isCommitMessageGenerating ? <Spin size="small" /> : <Icon name="git-commit" />');
 		expect(source).toContain('icon={<Icon name="list-check" />}');
+	});
+
+	it("limits the summary popover to the viewport and scrolls its content", (): void => {
+		expect(styles).toContain(".summaryPanel {");
+		expect(styles).toContain("max-height: calc(100dvh - 32px);");
+		expect(styles).toContain("overflow-y: auto;");
 	});
 });
