@@ -221,6 +221,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	const navigationVersionRef = useRef<number>(0);
 	const activeChatRequestIdRef = useRef<string | null>(null);
 	const cancelledChatRequestIdsRef = useRef<Set<string>>(new Set());
+	const homeSubmissionPendingRef = useRef<boolean>(false);
 	const composerDraftsRef = useRef<Map<string, string>>(new Map());
 	const [composerInputReset, setComposerInputReset] = useState<{ scopeId: string; revision: number }>({
 		scopeId: "home",
@@ -482,7 +483,11 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	}, [runState.status]);
 
 	useEffect((): void => {
-		setRunState((currentState: RunControllerState): RunControllerState => applyRunStateFromWorkbench(currentState, workbench));
+		setRunState((currentState: RunControllerState): RunControllerState => applyRunStateFromWorkbench(
+			currentState,
+			workbench,
+			cancelledChatRequestIdsRef.current
+		));
 	}, [workbench]);
 
 	const loadSlashCommands = useCallback(async (): Promise<void> => {
@@ -593,6 +598,10 @@ export default function useAppController({ bootstrapData }: AppProps) {
 
 		const workflowTodoKey: string = getWorkflowTodoSnapshotKey(snapshot);
 		const workflowTodoIsActive: boolean = isWorkflowTodoActive(snapshot);
+		if (activeSessionMetadata?.workflowTodoDismissedKey === workflowTodoKey) {
+			initializedWorkflowTodoKeyRef.current = workflowTodoKey;
+			return;
+		}
 		if (initializedWorkflowTodoKeyRef.current === workflowTodoKey) {
 			if (!workflowTodoIsActive || expandedActiveWorkflowTodoKeyRef.current === workflowTodoKey) {
 				return;
@@ -609,10 +618,11 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				? currentMetadata
 				: {
 					...currentMetadata,
-					workflowTodoCollapsed
+					workflowTodoCollapsed,
+					workflowTodoDismissedKey: null
 				};
 		});
-		void saveSessionUiMetadata({ workflowTodoCollapsed }).catch((error: unknown): void => {
+		void saveSessionUiMetadata({ workflowTodoCollapsed, workflowTodoDismissedKey: null }).catch((error: unknown): void => {
 			console.error("[App] save initial workflow todo collapsed state failed", error);
 		});
 	}
@@ -955,6 +965,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	useAppEventBridge({
 		activeSessionIdRef,
 		activeChatRequestIdRef,
+		cancelledChatRequestIdsRef,
 		pendingUserActionRequestIdsRef,
 		activeSessionTitleRef,
 		activeWorkbenchRef,
@@ -1335,7 +1346,11 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			const workflowTodo: WorkflowTodoSnapshot | null = openedGoalDismissed ? null : createWorkflowTodoSnapshotFromTimelineResult(result);
 			setWorkflowTodoSnapshot(workflowTodo);
 			rememberLoadedWorkflowTodo(workflowTodo);
-			if (workflowTodo !== null && isWorkflowTodoActive(workflowTodo)) {
+			if (
+				workflowTodo !== null
+				&& isWorkflowTodoActive(workflowTodo)
+				&& result.metadata.workflowTodoDismissedKey !== getWorkflowTodoSnapshotKey(workflowTodo)
+			) {
 				expandWorkflowTodoPanel();
 			}
 
@@ -1769,9 +1784,10 @@ export default function useAppController({ bootstrapData }: AppProps) {
 
 	async function handleHomeComposerSubmit(nextMessage: string, modeOverride?: ChatMode): Promise<void> {
 		const message: string = nextMessage.trim();
-		if (message.length === 0 || isHomeSubmitting) {
+		if (message.length === 0 || homeSubmissionPendingRef.current) {
 			return;
 		}
+		homeSubmissionPendingRef.current = true;
 
 		const chatMode: ChatMode = modeOverride ?? homeDraft.chatMode;
 		if (modeOverride !== undefined && modeOverride !== homeDraft.chatMode) {
@@ -1805,7 +1821,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			});
 			sessionCreated = true;
 
-			if (cancelledChatRequestIdsRef.current.delete(requestId)) {
+			if (cancelledChatRequestIdsRef.current.has(requestId)) {
 				return;
 			}
 
@@ -1839,6 +1855,11 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				await refreshLatestTimeline(created.id);
 			}
 		} catch (error: unknown) {
+			if (cancelledChatRequestIdsRef.current.has(requestId)) {
+				finishOptimisticActiveRun(requestId);
+				setSessionError(null);
+				return;
+			}
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to start new session";
 
 			if (!sessionCreated) {
@@ -1875,6 +1896,8 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			}
 			console.error("[App] start new session failed", error);
 		} finally {
+			homeSubmissionPendingRef.current = false;
+			cancelledChatRequestIdsRef.current.delete(requestId);
 			if (activeChatRequestIdRef.current === requestId) {
 				activeChatRequestIdRef.current = null;
 			}
@@ -1962,6 +1985,11 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				await refreshLatestTimeline();
 			}
 		} catch (error: unknown) {
+			if (cancelledChatRequestIdsRef.current.has(requestId)) {
+				finishOptimisticActiveRun(requestId);
+				setSessionError(null);
+				return;
+			}
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to send message";
 
 			replaceComposerInput(message, activeSessionId);
@@ -1997,6 +2025,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			}
 			console.error("[App] send message failed", error);
 		} finally {
+			cancelledChatRequestIdsRef.current.delete(requestId);
 			if (activeChatRequestIdRef.current === requestId) {
 				activeChatRequestIdRef.current = null;
 			}
@@ -2275,6 +2304,11 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			}
 			return true;
 		} catch (error: unknown) {
+			if (cancelledChatRequestIdsRef.current.has(requestId)) {
+				finishOptimisticActiveRun(requestId);
+				setSessionError(null);
+				return true;
+			}
 			const errorMessage: string = error instanceof Error ? error.message : "Failed to retry message";
 
 			setRunState((currentState: RunControllerState): RunControllerState => finishOptimisticRunState(currentState, requestId));
@@ -2295,6 +2329,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			console.error("[App] retry message failed", error);
 			return false;
 		} finally {
+			cancelledChatRequestIdsRef.current.delete(requestId);
 			if (activeChatRequestIdRef.current === requestId) {
 				activeChatRequestIdRef.current = null;
 			}
@@ -2330,7 +2365,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			return;
 		}
 
-		const wasCreatingSession: boolean = isHomeSubmitting;
+		const wasCreatingSession: boolean = homeSubmissionPendingRef.current;
 		const previousRunState: RunControllerState = runState;
 		cancelledChatRequestIdsRef.current.add(cancellationRequestId);
 		setRunState((currentState: RunControllerState): RunControllerState => ({
@@ -2342,15 +2377,18 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		try {
 			activeChatRequestIdRef.current = cancellationRequestId;
 			const result = await cancelChatMessage(cancellationRequestId);
-			if (result.alreadyFinished === true && !wasCreatingSession) {
-				// The backend may have emitted the terminal event before this second,
-				// idempotent cancel request arrived. Do not wait for an event that has
-				// already happened; reconcile the local controller immediately.
+			if (result.cancelled || result.alreadyFinished || wasCreatingSession) {
+				// The cancellation response is authoritative. Terminal events remain the
+				// persisted source of truth, but the Composer must not stay in a stopping
+				// state while waiting for an event that may already have been delivered.
 				if (activeChatRequestIdRef.current === cancellationRequestId) {
 					activeChatRequestIdRef.current = null;
 				}
-				cancelledChatRequestIdsRef.current.delete(cancellationRequestId);
+				if (result.alreadyFinished === true) {
+					cancelledChatRequestIdsRef.current.delete(cancellationRequestId);
+				}
 				finishOptimisticActiveRun(cancellationRequestId);
+				setIsHomeSubmitting(false);
 				resetPlanClarificationUiState();
 				resetPlanApprovalUiState();
 				return;
@@ -2360,13 +2398,21 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			}
 		} catch (error: unknown) {
 			console.error("[App] cancel chat failed", error);
-			if (!wasCreatingSession) {
-				cancelledChatRequestIdsRef.current.delete(cancellationRequestId);
-				setRunState((currentState: RunControllerState): RunControllerState => (
-					currentState.requestId === cancellationRequestId ? previousRunState : currentState
-				));
-				showTransientError(error instanceof Error ? error.message : "Failed to stop the response");
+			if (wasCreatingSession) {
+				if (activeChatRequestIdRef.current === cancellationRequestId) {
+					activeChatRequestIdRef.current = null;
+				}
+				finishOptimisticActiveRun(cancellationRequestId);
+				setIsHomeSubmitting(false);
+				resetPlanClarificationUiState();
+				resetPlanApprovalUiState();
+				return;
 			}
+			cancelledChatRequestIdsRef.current.delete(cancellationRequestId);
+			setRunState((currentState: RunControllerState): RunControllerState => (
+				currentState.requestId === cancellationRequestId ? previousRunState : currentState
+			));
+			showTransientError(error instanceof Error ? error.message : "Failed to stop the response");
 		}
 	}
 
@@ -2395,7 +2441,11 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		const workflowTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromTimelineResult(timeline);
 		setWorkflowTodoSnapshot(workflowTodo);
 		rememberLoadedWorkflowTodo(workflowTodo);
-		if (workflowTodo !== null && isWorkflowTodoActive(workflowTodo)) {
+		if (
+			workflowTodo !== null
+			&& isWorkflowTodoActive(workflowTodo)
+			&& activeSessionMetadata?.workflowTodoDismissedKey !== getWorkflowTodoSnapshotKey(workflowTodo)
+		) {
 			expandWorkflowTodoPanel();
 		}
 
@@ -2423,6 +2473,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	}
 
 	async function handleWorkflowTodoDismiss(snapshot: WorkflowTodoSnapshot): Promise<void> {
+		const dismissedKey: string = getWorkflowTodoSnapshotKey(snapshot);
 		const params: { workflowId?: string; runId?: string } = {};
 		if (snapshot.workflowId !== undefined) {
 			params.workflowId = snapshot.workflowId;
@@ -2433,6 +2484,21 @@ export default function useAppController({ bootstrapData }: AppProps) {
 
 		try {
 			await dismissWorkflowTodo(params);
+			setActiveSessionMetadata((currentMetadata: SessionMetadata | null): SessionMetadata | null => {
+				return currentMetadata === null
+					? currentMetadata
+					: {
+						...currentMetadata,
+						workflowTodoCollapsed: true,
+						workflowTodoDismissedKey: dismissedKey
+					};
+			});
+			void saveSessionUiMetadata({
+				workflowTodoCollapsed: true,
+				workflowTodoDismissedKey: dismissedKey
+			}).catch((error: unknown): void => {
+				console.error("[App] save dismissed workflow todo state failed", error);
+			});
 			setWorkflowTodoSnapshot((currentSnapshot: WorkflowTodoSnapshot | null): WorkflowTodoSnapshot | null => {
 				if (currentSnapshot === null || isSameWorkflowTodoSnapshot(currentSnapshot, snapshot)) {
 					return null;

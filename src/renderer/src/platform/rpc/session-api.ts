@@ -12,6 +12,7 @@ export type CreateSessionParams = {
 	chatMode?: ChatMode;
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
+	workflowTodoDismissedKey?: string | null;
 };
 
 export type SaveSessionUiMetadataParams = {
@@ -21,6 +22,7 @@ export type SaveSessionUiMetadataParams = {
 	chatMode?: ChatMode;
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
+	workflowTodoDismissedKey?: string | null;
 };
 
 export type CreateSessionResult = SessionMetadata & {

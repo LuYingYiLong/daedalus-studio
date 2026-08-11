@@ -51,6 +51,7 @@ export type SessionMetadata = {
 	chatMode?: "agent" | "ask" | "plan" | "goal";
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
+	workflowTodoDismissedKey?: string | null;
 	archivedAt?: string;
 	createdAt: string;
 	updatedAt: string;

@@ -34,6 +34,22 @@ describe("workflow-todo", () => {
 		expect(snapshot === null ? "" : getWorkflowTodoSnapshotKey(snapshot)).toBe("run-a");
 	});
 
+	it("keeps Agent Loop Todo snapshots visible and source-scoped", () => {
+		const snapshot = normalizeWorkflowTodoSnapshot({
+			workflowId: "agent-loop:run-a",
+			source: "agent_loop",
+			revision: 2,
+			phases: [
+				{ id: "scan", title: "Scan references", status: "done" },
+				{ id: "remove", title: "Remove obsolete setting", status: "running" }
+			]
+		});
+
+		expect(snapshot?.source).toBe("agent_loop");
+		expect(snapshot?.steps.map((step) => step.status)).toEqual(["done", "running"]);
+		expect(snapshot === null ? "" : getWorkflowTodoSnapshotKey(snapshot)).toBe("agent-loop:run-a");
+	});
+
 	it("falls back from phases to todos", () => {
 		const phaseSnapshot = normalizeWorkflowTodoSnapshot({
 			workflowId: "workflow-a",

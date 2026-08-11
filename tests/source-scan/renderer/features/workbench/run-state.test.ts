@@ -8,8 +8,10 @@ describe("Run state source", () => {
 		const runStateSource: string = readRepoFile("src", "renderer", "src", "domain", "workbench", "run-state.ts");
 
 		expect(appSource).toContain("useState<RunControllerState>(() => createIdleRunState())");
-		expect(backendEventStreamSource).toContain("applyRunStateFromBackendEvent(currentState, event)");
-		expect(appSource).toContain("applyRunStateFromWorkbench(currentState, workbench)");
+		expect(backendEventStreamSource).toContain("applyRunStateFromBackendEvent(");
+		expect(backendEventStreamSource).toContain("params.cancelledChatRequestIdsRef.current");
+		expect(appSource).toContain("applyRunStateFromWorkbench(");
+		expect(appSource).toContain("cancelledChatRequestIdsRef.current");
 		expect(appSource).toContain("const composerIsSending: boolean = isRunControllerActive(runState) || isHomeSubmitting;");
 		expect(appSource).toContain("const requestId: string | null = getRunControllerRequestId(runState);");
 		expect(appSource).not.toContain("function getIsSending(");

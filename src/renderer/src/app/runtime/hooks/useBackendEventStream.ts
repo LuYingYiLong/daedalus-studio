@@ -38,6 +38,7 @@ type RefValue<T> = {
 export type BackendEventStreamParams = {
 	activeSessionIdRef: RefValue<string | null>;
 	activeChatRequestIdRef: RefValue<string | null>;
+	cancelledChatRequestIdsRef: RefValue<Set<string>>;
 	pendingUserActionRequestIdsRef: RefValue<Set<string>>;
 	activeSessionTitleRef: RefValue<string>;
 	activeWorkbenchRef: RefValue<WorkbenchSnapshot | null>;
@@ -90,7 +91,11 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 			return;
 		}
 
-		params.setRunState((currentState: RunControllerState): RunControllerState => applyRunStateFromBackendEvent(currentState, event));
+		params.setRunState((currentState: RunControllerState): RunControllerState => applyRunStateFromBackendEvent(
+			currentState,
+			event,
+			params.cancelledChatRequestIdsRef.current
+		));
 
 		const eventWorkbench: WorkbenchSnapshot | null = getWorkbenchFromEvent(event);
 		if (eventWorkbench !== null) {
@@ -109,9 +114,7 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 					? event.data as Record<string, unknown>
 					: null;
 			const normalizedSnapshot: WorkflowTodoSnapshot | null = normalizeWorkflowTodoSnapshot(runData?.todo);
-			const snapshot: WorkflowTodoSnapshot | null = runData?.lane === "agent_loop"
-				? null
-				: normalizedSnapshot === null
+			const snapshot: WorkflowTodoSnapshot | null = normalizedSnapshot === null
 				? null
 				: reconcileWorkflowTodoWithRunStage(normalizedSnapshot, runData?.stage);
 			params.setWorkflowTodoSnapshot(snapshot);
@@ -165,7 +168,6 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 			});
 		} else if (isWorkflowTodoClearEvent(event)) {
 			params.setWorkflowTodoSnapshot(null);
-			params.rememberLoadedWorkflowTodo(null);
 		}
 
 		const eventPlanClarification: PlanClarificationState | null = getPlanClarificationFromEvent(event);

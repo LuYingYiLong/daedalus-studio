@@ -20,7 +20,7 @@ describe("retry edit lifecycle", () => {
 		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useBackendEventStream.ts");
 		const eventSubscription: number = backendEventStreamSource.indexOf("unsubscribe = client.addEventListener");
 		const cancellationEvent: number = backendEventStreamSource.indexOf("if (isRunCancellationEvent(event))");
-		const runStateReducer: number = backendEventStreamSource.indexOf("applyRunStateFromBackendEvent(currentState, event)");
+		const runStateReducer: number = backendEventStreamSource.indexOf("applyRunStateFromBackendEvent(");
 		const cancelHandler: number = source.indexOf("async function handleComposerCancel");
 		const requestFromRunState: number = source.indexOf("const requestId: string | null = getRunControllerRequestId(runState);", cancelHandler);
 
@@ -29,7 +29,7 @@ describe("retry edit lifecycle", () => {
 		expect(cancellationEvent).toBeGreaterThanOrEqual(0);
 		expect(cancelHandler).toBeGreaterThanOrEqual(0);
 		expect(requestFromRunState).toBeGreaterThan(cancelHandler);
-		expect(source).not.toContain("finishOptimisticActiveRun(cancelledRequestId);");
+		expect(source).toContain("finishOptimisticActiveRun(cancellationRequestId);");
 		expect(source).not.toContain("finishOptimisticActiveRun(result.requestId);");
 	});
 

@@ -62,7 +62,11 @@ function normalizeWorkbenchActiveRun(activeRun: WorkbenchActiveRun, fallbackSequ
 	};
 }
 
-export function applyRunStateFromWorkbench(current: RunControllerState, workbench: WorkbenchSnapshot | null): RunControllerState {
+export function applyRunStateFromWorkbench(
+	current: RunControllerState,
+	workbench: WorkbenchSnapshot | null,
+	cancelledRequestIds?: ReadonlySet<string>
+): RunControllerState {
 	if (current.agentRun !== null) {
 		return current;
 	}
@@ -70,6 +74,9 @@ export function applyRunStateFromWorkbench(current: RunControllerState, workbenc
 		return createIdleRunState(current.sequence);
 	}
 	const next: RunControllerState = normalizeWorkbenchActiveRun(workbench.activeRun, workbench.revision);
+	if (next.requestId !== null && cancelledRequestIds?.has(next.requestId) === true) {
+		return current;
+	}
 	return next.sequence < current.sequence ? current : next;
 }
 
@@ -128,8 +135,21 @@ export function finishOptimisticRunState(current: RunControllerState, requestId:
 	return createIdleRunState(current.sequence + 1, current.agentRun);
 }
 
-export function applyRunStateFromBackendEvent(current: RunControllerState, event: BackendEvent): RunControllerState {
+export function applyRunStateFromBackendEvent(
+	current: RunControllerState,
+	event: BackendEvent,
+	cancelledRequestIds?: ReadonlySet<string>
+): RunControllerState {
 	if (event.event === "agent.run.state" && isAgentRunState(event.data)) {
+		if (
+			!TERMINAL_RUN_STAGES.has(event.data.stage)
+			&& (
+				cancelledRequestIds?.has(event.data.requestId) === true
+				|| cancelledRequestIds?.has(event.data.runId) === true
+			)
+		) {
+			return current;
+		}
 		return applyAgentRunState(current, event.data, event.sequence);
 	}
 	if (event.event !== "agent.run.cancelled" || current.status === "idle") {

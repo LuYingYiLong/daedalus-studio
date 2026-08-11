@@ -178,6 +178,42 @@ describe("workbench-state", () => {
 		expect(cancelled.requestId).toBeNull();
 	});
 
+	it("does not revive a locally cancelled run from a late non-terminal event", () => {
+		const cancelledRequestIds: ReadonlySet<string> = new Set(["run-a"]);
+		const idle: RunControllerState = createIdleRunState(4);
+		const lateEvent: RunControllerState = applyRunStateFromBackendEvent(
+			idle,
+			createAgentRunEvent("run-a", "executing", 5),
+			cancelledRequestIds
+		);
+		const lateWorkbench = createWorkbench(6, "");
+		lateWorkbench.activeRun = {
+			status: "streaming",
+			requestId: "run-a",
+			sequence: 6
+		};
+		const afterWorkbench: RunControllerState = applyRunStateFromWorkbench(
+			lateEvent,
+			lateWorkbench,
+			cancelledRequestIds
+		);
+
+		expect(lateEvent).toBe(idle);
+		expect(afterWorkbench).toBe(idle);
+	});
+
+	it("still accepts the terminal event for a locally cancelled run", () => {
+		const cancelledRequestIds: ReadonlySet<string> = new Set(["run-a"]);
+		const done: RunControllerState = applyRunStateFromBackendEvent(
+			createIdleRunState(4),
+			createAgentRunEvent("run-a", "cancelled", 5),
+			cancelledRequestIds
+		);
+
+		expect(done.status).toBe("idle");
+		expect(done.agentRun?.stage).toBe("cancelled");
+	});
+
 	it("ignores an out-of-order state event from a different run", () => {
 		const current: RunControllerState = applyRunStateFromBackendEvent(
 			createIdleRunState(),

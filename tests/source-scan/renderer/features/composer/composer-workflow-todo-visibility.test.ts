@@ -44,7 +44,8 @@ describe("Composer workflow todo visibility", () => {
 		expect(appSource).toContain("function resetSessionPresentationState(): void");
 		expect(backendEventStreamSource).toContain('if (event.event === "agent.run.state")');
 		expect(backendEventStreamSource).toContain("normalizeWorkflowTodoSnapshot(runData?.todo)");
-		expect(backendEventStreamSource).toContain('runData?.lane === "agent_loop"');
+		expect(backendEventStreamSource).not.toContain('runData?.lane === "agent_loop"');
+		expect(backendEventStreamSource).toContain("reconcileWorkflowTodoWithRunStage(normalizedSnapshot, runData?.stage)");
 		expect(backendEventStreamSource).toContain('event.event === "plan.execution.started"');
 		expect(backendEventStreamSource).toContain("expandWorkflowTodoPanel();");
 		expect(backendEventStreamSource).not.toContain('event.event === "workflow.todo.updated"');
