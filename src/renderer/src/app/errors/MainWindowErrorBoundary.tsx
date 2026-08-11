@@ -3,6 +3,7 @@ import {
 	createCompletedOnboardingPreferences,
 	createDefaultOnboardingPreferences
 } from "../../../../contracts/onboarding";
+import { waitForRendererPaint } from "../runtime/renderer-paint";
 
 type MainWindowErrorBoundaryProps = {
 	children: ReactNode;
@@ -58,6 +59,9 @@ export default class MainWindowErrorBoundary extends Component<
 
 	componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
 		console.error("[Renderer] main window render failed", error, errorInfo);
+		void waitForRendererPaint().then((): void => {
+			window.electronAPI.windowControl.rendererReady();
+		});
 	}
 
 	private reload(): void {
@@ -116,6 +120,7 @@ export default class MainWindowErrorBoundary extends Component<
 		const copy = getCopy();
 		return (
 			<main
+				data-studio-main-window-error="ready"
 				style={{
 					boxSizing: "border-box",
 					display: "grid",

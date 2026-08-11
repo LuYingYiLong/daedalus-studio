@@ -16,14 +16,6 @@
 	padding: 0px var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);
 }
 
-.titleRow {
-	display: flex;
-	align-items: center;
-	justify-content: flex-start;
-	gap: 12px;
-	user-select: none;
-}
-
 .appIcon {
 	width: 24px;
 	height: 24px;
@@ -67,14 +59,13 @@
 .appHeader {
 	display: flex;
 	align-items: center;
-	gap: var(--ds-space-3);
-	padding-bottom: var(--ds-space-2);
+	gap: var(--ds-space-2);
 }
 
 .backendHeader {
 	display: flex;
 	align-items: center;
-	gap: var(--ds-space-3);
+	gap: var(--ds-space-2);
 }
 
 .largeAppIcon {
@@ -109,7 +100,6 @@
 
 .description {
 	margin: 0px !important;
-	color: var(--ds-text-secondary);
 }
 
 .detailsCard,
@@ -121,7 +111,6 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 12px;
 	min-width: 0;
 }
 

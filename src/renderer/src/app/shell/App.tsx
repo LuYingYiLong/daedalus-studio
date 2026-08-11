@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import { useEffect, useRef, type ComponentProps, type ReactNode } from "react";
 import { Input, Modal, Typography } from "antd";
 import HomePage from "@/widgets/home/HomePage";
 import WorkspaceProjectDialog from "@/widgets/workspace/WorkspaceProjectDialog";
@@ -6,9 +6,11 @@ import type { WorkspaceConfig } from "@/platform/rpc/types";
 import styles from "./App.module.css";
 import type { BootstrapData } from "../bootstrap/bootstrap";
 import useAppController from "../runtime/useAppController";
+import { waitForRendererPaint } from "../runtime/renderer-paint";
 
 type AppProps = {
 	bootstrapData: BootstrapData;
+	onReady?: () => void;
 };
 
 type HomePageProps = ComponentProps<typeof HomePage>;
@@ -35,7 +37,8 @@ type AppViewModel = {
 	onWorkspaceProjectSaved: (workspace: WorkspaceConfig) => void;
 };
 
-function App({ bootstrapData }: AppProps): React.JSX.Element {
+function App({ bootstrapData, onReady }: AppProps): React.JSX.Element {
+	const readyReportedRef = useRef<boolean>(false);
 	const {
 		messageContextHolder,
 		homePageProps,
@@ -57,6 +60,20 @@ function App({ bootstrapData }: AppProps): React.JSX.Element {
 		onWorkspaceProjectDialogCancel,
 		onWorkspaceProjectSaved
 	}: AppViewModel = useAppController({ bootstrapData });
+
+	useEffect((): (() => void) => {
+		let cancelled: boolean = false;
+		void waitForRendererPaint().then((): void => {
+			if (cancelled || readyReportedRef.current) {
+				return;
+			}
+			readyReportedRef.current = true;
+			onReady?.();
+		});
+		return (): void => {
+			cancelled = true;
+		};
+	}, [onReady]);
 
 	return (
 		<main className={styles.shell}>

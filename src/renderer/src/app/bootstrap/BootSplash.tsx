@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Progress, Result, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import type { BootstrapProgress } from "../bootstrap/bootstrap";
 import styles from "./BootSplash.module.css";
+import { waitForRendererPaint } from "../runtime/renderer-paint";
 
 type BootSplashProps<TBootstrapData> = {
 	loadData: (onProgress: (progress: BootstrapProgress) => void) => Promise<TBootstrapData>;
 	onReady: (data: TBootstrapData) => void;
+	onPaintReady?: () => void;
 };
 
 type BootstrapState =
@@ -107,14 +109,28 @@ function createBackendErrorState(backendState: BackendBootstrapState, t: Transla
 	};
 }
 
-function BootSplash<TBootstrapData>({ loadData, onReady }: BootSplashProps<TBootstrapData>): React.JSX.Element {
+function BootSplash<TBootstrapData>({ loadData, onReady, onPaintReady }: BootSplashProps<TBootstrapData>): React.JSX.Element {
 	const { t } = useTranslation();
+	const paintReadyReportedRef = useRef<boolean>(false);
 	const [runId, setRunId] = useState<number>(0);
 	const [actionKey, setActionKey] = useState<string | null>(null);
 	const [state, setState] = useState<BootstrapState>({
 		status: "loading",
 		progress: createInitialProgress(t)
 	});
+	useEffect((): (() => void) => {
+		let cancelled: boolean = false;
+		void waitForRendererPaint().then((): void => {
+			if (cancelled || paintReadyReportedRef.current) {
+				return;
+			}
+			paintReadyReportedRef.current = true;
+			onPaintReady?.();
+		});
+		return (): void => {
+			cancelled = true;
+		};
+	}, [onPaintReady]);
 	const loadingProgress: BootstrapProgress = state.status === "loading" ? state.progress : createInitialProgress(t);
 	const runBootstrapAction = useCallback(async (action: "repair" | "retry-start"): Promise<void> => {
 		setActionKey(action);
@@ -233,7 +249,7 @@ function BootSplash<TBootstrapData>({ loadData, onReady }: BootSplashProps<TBoot
 
 	if (state.status === "error") {
 		return (
-			<main className={styles.root}>
+			<main className={styles.root} data-studio-boot-splash="ready">
 				<Result
 					className={styles.result}
 					status={state.backendState === null || state.backendState.status === "unsupported" ? "error" : "500"}
@@ -251,7 +267,7 @@ function BootSplash<TBootstrapData>({ loadData, onReady }: BootSplashProps<TBoot
 	}
 
 	return (
-		<main className={styles.root}>
+		<main className={styles.root} data-studio-boot-splash="ready">
 			<section className={styles.panel}>
 				<div className={styles.brand}>
 					<Typography.Title level={3}>Daedalus Studio</Typography.Title>

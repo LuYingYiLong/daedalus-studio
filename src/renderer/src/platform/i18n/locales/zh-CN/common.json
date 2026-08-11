@@ -83,7 +83,8 @@
       "next": "下一步",
       "skip": "跳过",
       "cancel": "取消",
-      "enterStudio": "进入 Daedalus Studio"
+      "enterStudio": "进入 Daedalus Studio",
+      "enteringStudio": "正在进入 Daedalus Studio"
     },
     "progress": "第 {{current}} 步，共 {{total}} 步",
     "status": {
@@ -827,6 +828,7 @@
 		"contextStrip": {
 			"aria": "消息上下文",
 			"pinned": "已固定",
+			"expandText": "展开到输入框",
 			"display": {
 				"contextFallback": "上下文",
 				"selection": "选择",

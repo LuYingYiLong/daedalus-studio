@@ -9,7 +9,7 @@ import "react-diff-view/style/index.css";
 import "./ui/styles/global.css";
 import "./ui/styles/markdown.css";
 import { waitForStudioFonts } from "./ui/styles/studio-fonts";
-import { waitForRendererPaint } from "./app/runtime/renderer-paint";
+import { waitForGlobalStyles, waitForRendererPaint } from "./app/runtime/renderer-paint";
 
 const rootElement = document.getElementById("root");
 
@@ -33,6 +33,7 @@ async function startRenderer(): Promise<void> {
 		window.electronAPI.windowControl.rendererShellReady();
 	}
 	await waitForStudioFonts(document.fonts);
+	await waitForGlobalStyles();
 	const root = createRoot(rendererRootElement);
 	flushSync((): void => {
 		root.render(
@@ -46,7 +47,9 @@ async function startRenderer(): Promise<void> {
 		);
 	});
 	await waitForRendererPaint();
-	window.electronAPI.windowControl.rendererReady();
+	if (isSettingsWindow) {
+		window.electronAPI.windowControl.rendererReady();
+	}
 }
 
 void startRenderer();

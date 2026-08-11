@@ -4,6 +4,7 @@ import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths
 describe("BootSplash", () => {
 	const windowProvidersSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "WindowProviders.tsx");
 	const mainWindowRootSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "MainWindowRoot.tsx");
+	const mainWindowRootStyleSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "MainWindowRoot.module.css");
 	const mainWindowErrorBoundarySource: string = readRepoFile("src", "renderer", "src", "app", "errors", "MainWindowErrorBoundary.tsx");
 	const settingsWindowSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "SettingsWindow.tsx");
 	const splashSource: string = readRepoFile("src", "renderer", "src", "app", "bootstrap", "BootSplash.tsx");
@@ -22,11 +23,20 @@ describe("BootSplash", () => {
 		const titlebarSource: string = readRepoFile("src", "renderer", "src", "app", "shell", "Titlebar.tsx");
 		expect(titlebarSource).toContain("{appReady ? (");
 		expect(titlebarSource).toContain("className={styles.actionButton}");
-		expect(mainWindowRootSource).toContain("<BootSplash loadData={loadData} onReady={handleBootstrapReady} />");
+		expect(mainWindowRootSource).toContain("<BootSplash loadData={loadData} onReady={handleBootstrapReady} onPaintReady={handleBootSplashPaintReady} />");
 		expect(mainWindowRootSource).toContain("loadBootstrapData(onProgress, t)");
-		expect(mainWindowRootSource).toContain("bootstrapData?.clientPreferences?.onboarding?.completed");
-		expect(mainWindowRootSource).toContain("<OnboardingWizard bootstrapData={bootstrapData} onComplete={handleOnboardingComplete} />");
-		expect(mainWindowRootSource).toContain("<App bootstrapData={bootstrapData} />");
+		expect(mainWindowRootSource).toContain("data.clientPreferences?.onboarding?.completed");
+		expect(mainWindowRootSource).toContain("onPrewarmApp={preloadAppModule}");
+		expect(mainWindowRootSource).toContain('type AppHandoffPhase = "idle" | "preparing" | "entering" | "ready";');
+		expect(mainWindowRootSource).toContain("setHandoffPhase(\"preparing\")");
+		expect(mainWindowRootSource).toContain("event.target === event.currentTarget");
+		expect(mainWindowRootStyleSource).toContain("animation: app-enter 160ms");
+		expect(mainWindowRootStyleSource).toContain("translateY(2px)");
+		expect(mainWindowRootStyleSource).toContain("opacity: .001");
+		expect(mainWindowRootSource).toContain('inert={handoffPhase === "preparing" ? true : undefined}');
+		expect(mainWindowRootStyleSource).toContain("prefers-reduced-motion: reduce");
+		expect(mainWindowRootSource).toContain("<App bootstrapData={appBootstrapData} onReady={handleAppPaintReady} />");
+		expect(mainWindowRootSource).toContain("const App = lazy(loadAppModule)");
 		expect(mainWindowErrorBoundarySource).toContain("getDerivedStateFromError");
 		expect(mainWindowErrorBoundarySource).toContain("Skip onboarding and enter Studio");
 		expect(mainWindowErrorBoundarySource).toContain("createCompletedOnboardingPreferences");

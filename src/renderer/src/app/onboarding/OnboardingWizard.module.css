@@ -3,7 +3,7 @@
 	flex: 1 1 auto;
 	min-width: 0;
 	min-height: 0;
-	padding: clamp(16px, 3vw, 36px);
+	padding: var(--ds-space-4);
 	overflow: hidden;
 }
 

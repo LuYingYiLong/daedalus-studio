@@ -29,6 +29,7 @@ import NewSessionHome from "./NewSessionHome";
 import ApprovalDialog from "@/widgets/approval/ApprovalDialog";
 import ToolBudgetDialog from "@/widgets/approval/ToolBudgetDialog";
 import type { ComposerCompletionTrigger } from "@/domain/composer/composer-completion";
+import type { PastedTextAttachmentInput } from "@/features/conversation/pasted-text-attachment";
 import type { RetryUserMessagePayload } from "@/widgets/conversation/UserBubble";
 import styles from "./HomePage.module.css";
 import { Icon } from "@/assets/icons";
@@ -462,7 +463,7 @@ type HomePageProps = {
 	onAddFiles: () => void;
 	onAddFolder: () => void;
 	onAddImages: (files: File[]) => void;
-	onAddPastedTextAttachment: (text: string) => boolean;
+	onAddPastedTextAttachment: (input: PastedTextAttachmentInput) => boolean;
 	onAddContextFiles: (files: File[]) => void;
 	onAddContext: (item: AdditionalContextItem) => void;
 	onRemoveContext: (contextId: string) => void;

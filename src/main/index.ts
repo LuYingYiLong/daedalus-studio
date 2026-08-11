@@ -201,6 +201,9 @@ function canRevealRendererWindow(browserWindow: BrowserWindow): boolean {
 }
 
 function scheduleRendererReadyFallback(browserWindow: BrowserWindow): void {
+	if (browserWindow === mainWindow) {
+		return;
+	}
 	if (rendererReadyFallbackTimers.has(browserWindow.id)) {
 		return;
 	}

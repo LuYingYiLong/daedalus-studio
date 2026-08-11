@@ -13,6 +13,7 @@ import type { SkillSummary } from "@/platform/rpc/skill-api";
 import type { AdditionalContextItem, WorkspaceConfig } from "@/platform/rpc/types";
 import type { ProviderModelInfo, ProviderModelSelection, ProviderModelSelectionProvider, ProviderReasoningEffortOption } from "@/platform/rpc/provider-api";
 import { compressSession, estimateContextUsage, type ContextUsageEstimate, type EstimateContextUsageParams } from "@/platform/rpc/context-api";
+import { fetchTextAttachmentContent } from "@/platform/rpc/image-attachment-api";
 import AdditionalContextStrip from "@/widgets/conversation/AdditionalContextStrip";
 import { WorkspaceIconView } from "@/widgets/workspace/workspace-appearance";
 import {
@@ -28,6 +29,14 @@ import { copyTextToClipboard, readTextFromClipboard } from "@/platform/electron/
 import {
 	normalizeContextBudgetSegments
 } from "@/domain/composer/context-budget-segments";
+import {
+	createComposerPasteOrigin,
+	getComposerPasteOrigin,
+	getTextAttachmentId,
+	isLongPastedText,
+	resolveComposerPasteRange,
+	type PastedTextAttachmentInput
+} from "@/features/conversation/pasted-text-attachment";
 
 export type ComposerProps = {
 	providerModelSelection: ProviderModelSelection | null;
@@ -61,7 +70,7 @@ export type ComposerProps = {
 	onAddFolder?: () => void;
 	onAddImages?: (files: File[]) => void;
 	onAddContextFiles?: (files: File[]) => void;
-	onAddPastedTextAttachment?: (text: string) => boolean;
+	onAddPastedTextAttachment?: (input: PastedTextAttachmentInput) => boolean;
 	onRemoveContext?: (contextId: string) => void;
 	onPinContext?: (contextId: string, pinned: boolean) => void;
 	onClearUnpinnedContext?: () => void;
@@ -424,6 +433,7 @@ function Composer({
 	const completionStateSignatureRef = useRef<string>("");
 	const contextUsageRequestRef = useRef<number>(0);
 	const contextUsageParamsRef = useRef<EstimateContextUsageParams>({});
+	const expandingTextAttachmentIdsRef = useRef<Set<string>>(new Set());
 	const [draftMessage, setDraftMessage] = useState<string>(message);
 	const [completionToken, setCompletionToken] = useState<ComposerCompletionToken | null>(null);
 	const [completionOptions, setCompletionOptions] = useState<ComposerCompletionOption[]>([]);
@@ -516,7 +526,10 @@ function Composer({
 			case "paste":
 				void readTextFromClipboard()
 					.then((text: string): void => {
-						if (text.trim().length > 100 && onAddPastedTextAttachment?.(text) === true) {
+						if (isLongPastedText(text) && onAddPastedTextAttachment?.({
+							content: text,
+							origin: createComposerPasteOrigin(value, selection.start, selection.end)
+						}) === true) {
 							return;
 						}
 						replaceSelection(text);
@@ -809,6 +822,41 @@ function Composer({
 		});
 	}
 
+	async function expandTextAttachment(item: AdditionalContextItem): Promise<void> {
+		const attachmentId: string | null = getTextAttachmentId(item);
+		if (attachmentId === null || expandingTextAttachmentIdsRef.current.has(attachmentId)) {
+			return;
+		}
+
+		expandingTextAttachmentIdsRef.current.add(attachmentId);
+		try {
+			const result = await fetchTextAttachmentContent(attachmentId);
+			const nativeTextArea: HTMLTextAreaElement | null = getNativeTextArea(textAreaRef.current);
+			const value: string = nativeTextArea?.value ?? draftMessage;
+			const origin = getComposerPasteOrigin(item);
+			const fallbackSelection: TextAreaSelection = textAreaSelectionRef.current;
+			const range = origin === null
+				? {
+					start: Math.max(0, Math.min(fallbackSelection.start, value.length)),
+					end: Math.max(0, Math.min(fallbackSelection.end, value.length))
+				}
+				: resolveComposerPasteRange(value, origin);
+			const nextMessage: string = `${value.slice(0, range.start)}${result.content}${value.slice(range.end)}`;
+			suppressedCompletionValueRef.current = null;
+			hideCompletion();
+			setDraftMessage(nextMessage);
+			onDraftChange?.(nextMessage);
+			onRemoveContext?.(item.id);
+			const caretIndex: number = range.start + result.content.length;
+			textAreaSelectionRef.current = { start: caretIndex, end: caretIndex };
+			setSelectionAfterRender(caretIndex);
+		} catch (error: unknown) {
+			console.error("[Composer] expand pasted text failed", error);
+		} finally {
+			expandingTextAttachmentIdsRef.current.delete(attachmentId);
+		}
+	}
+
 	function applyCompletion(option: ComposerCompletionOption): void {
 		if (completionToken === null) {
 			return;
@@ -951,7 +999,13 @@ function Composer({
 		}
 
 		const text: string = event.clipboardData.getData("text/plain");
-		if (text.trim().length > 100 && onAddPastedTextAttachment?.(text) === true) {
+		const textArea: HTMLTextAreaElement = event.currentTarget;
+		const selectionStart: number = textArea.selectionStart;
+		const selectionEnd: number = textArea.selectionEnd;
+		if (isLongPastedText(text) && onAddPastedTextAttachment?.({
+			content: text,
+			origin: createComposerPasteOrigin(textArea.value, selectionStart, selectionEnd)
+		}) === true) {
 			event.preventDefault();
 			return;
 		}
@@ -961,9 +1015,6 @@ function Composer({
 		}
 
 		event.preventDefault();
-		const textArea: HTMLTextAreaElement = event.currentTarget;
-		const selectionStart: number = textArea.selectionStart;
-		const selectionEnd: number = textArea.selectionEnd;
 		const nextMessage: string = `${textArea.value.slice(0, selectionStart)}${text}${textArea.value.slice(selectionEnd)}`;
 		suppressedCompletionValueRef.current = null;
 		setDraftMessage(nextMessage);
@@ -1192,6 +1243,9 @@ function Composer({
 								}}
 								onRemove={(contextId: string): void => {
 									onRemoveContext?.(contextId);
+								}}
+								onExpandTextAttachment={(item: AdditionalContextItem): void => {
+									void expandTextAttachment(item);
 								}}
 							/>
 						</div>

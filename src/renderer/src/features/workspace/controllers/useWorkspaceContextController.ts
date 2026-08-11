@@ -1,6 +1,7 @@
 import { useRef, type Dispatch, type SetStateAction } from "react";
 import { saveImageAttachment, saveTextAttachment } from "@/platform/rpc/image-attachment-api";
 import type { AdditionalContextItem, WorkbenchPatch, WorkspaceConfig } from "@/platform/rpc/types";
+import type { PastedTextAttachmentInput } from "@/features/conversation/pasted-text-attachment";
 import {
 	CONTEXT_SUBTITLE_MAX_CHARS,
 	MAX_IMAGE_ATTACHMENT_BYTES,
@@ -37,7 +38,7 @@ export type WorkspaceContextControllerParams = {
 export type WorkspaceContextController = {
 	patchContext: (action: ContextPatchAction) => void;
 	handleAddImageFiles: (files: File[]) => Promise<void>;
-	handleAddPastedTextAttachment: (content: string) => boolean;
+	handleAddPastedTextAttachment: (input: PastedTextAttachmentInput) => boolean;
 	handleAddWorkspaceContext: (kind: "files" | "folder") => Promise<void>;
 	handleAddContextFiles: (files: File[]) => Promise<void>;
 };
@@ -84,15 +85,24 @@ export default function useWorkspaceContextController(params: WorkspaceContextCo
 		}
 	}
 
-	function handleAddPastedTextAttachment(content: string): boolean {
+	function handleAddPastedTextAttachment(input: PastedTextAttachmentInput): boolean {
 		if (params.activeSessionId === null) {
 			return false;
 		}
 
 		params.setPendingTextAttachmentCount((count: number): number => count + 1);
-		void saveTextAttachment({ sessionId: params.activeSessionId, content })
+		void saveTextAttachment({ sessionId: params.activeSessionId, content: input.content })
 			.then((result): void => {
-				patchContext({ action: "addOrReplace", item: result.attachment });
+				const data: Record<string, unknown> = typeof result.attachment.data === "object" && result.attachment.data !== null && !Array.isArray(result.attachment.data)
+					? result.attachment.data as Record<string, unknown>
+					: {};
+				patchContext({
+					action: "addOrReplace",
+					item: {
+						...result.attachment,
+						data: { ...data, composerPasteOrigin: input.origin }
+					}
+				});
 			})
 			.catch((error: unknown): void => {
 				params.showTransientError(error instanceof Error ? error.message : "Failed to save pasted text");
@@ -222,5 +232,4 @@ export default function useWorkspaceContextController(params: WorkspaceContextCo
 		handleAddContextFiles
 	};
 }
-
 

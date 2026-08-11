@@ -18,6 +18,9 @@ describe("OnboardingWizard", () => {
 		expect(source).not.toContain("disabled={navigationBusy}");
 		expect(source).toContain("return (): void => onBusyChange(false);");
 		expect(source).toContain("ONBOARDING_NAVIGATION_TIMEOUT_MS");
+		expect(source).toContain('if (currentStep === "complete")');
+		expect(source).toContain("onPrewarmApp?.()");
+		expect(source).toContain("activeOperation || isEnteringStudio");
 		expect(source).toContain("function persistCheckpoint(nextPreferences: ClientPreferences");
 		expect(source).toContain("setPreferences(nextPreferences);");
 		expect(source).toContain("persistCheckpoint(nextPreferences");

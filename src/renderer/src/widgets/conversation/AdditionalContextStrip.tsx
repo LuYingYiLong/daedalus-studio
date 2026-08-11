@@ -13,6 +13,7 @@ export type AdditionalContextStripProps = {
 	interactive?: boolean;
 	onTogglePin?: (contextId: string, pinned: boolean) => void;
 	onRemove?: (contextId: string) => void;
+	onExpandTextAttachment?: (item: AdditionalContextItem) => void;
 };
 
 function AdditionalContextStrip({
@@ -21,7 +22,8 @@ function AdditionalContextStrip({
 	className,
 	interactive = false,
 	onTogglePin,
-	onRemove
+	onRemove,
+	onExpandTextAttachment
 }: AdditionalContextStripProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	if (items.length === 0) {
@@ -40,6 +42,7 @@ function AdditionalContextStrip({
 				const display = summarizeAdditionalContextItem(item, t);
 				const nextPinned: boolean = item.pinned !== true;
 				const canTogglePin: boolean = interactive && item.kind !== "git_diff_comment" && item.kind !== "message_selection";
+				const canExpandText: boolean = interactive && item.kind === "text_attachment" && onExpandTextAttachment !== undefined;
 
 				return (
 					<Tooltip
@@ -70,7 +73,29 @@ function AdditionalContextStrip({
 								onRemove?.(item.id);
 							} : undefined}
 						>
-							<AdditionalContextIcon item={item} className={styles.contextIcon} />
+							{canExpandText ? (
+								<span
+									className={styles.expandTextButton}
+									role="button"
+									tabIndex={0}
+									title={t("chat.contextStrip.expandText")}
+									aria-label={t("chat.contextStrip.expandText")}
+									onClick={(event: React.MouseEvent<HTMLSpanElement>): void => {
+										event.stopPropagation();
+										onExpandTextAttachment?.(item);
+									}}
+									onKeyDown={(event: React.KeyboardEvent<HTMLSpanElement>): void => {
+										if (event.key !== "Enter" && event.key !== " ") {
+											return;
+										}
+										event.preventDefault();
+										event.stopPropagation();
+										onExpandTextAttachment?.(item);
+									}}
+								>
+									<AdditionalContextIcon item={item} className={styles.contextIcon} />
+								</span>
+							) : <AdditionalContextIcon item={item} className={styles.contextIcon} />}
 							<span className={styles.contextText}>
 								<span className={styles.contextTitle}>{display.title}</span>
 								<span className={styles.contextMeta}>{display.meta}</span>

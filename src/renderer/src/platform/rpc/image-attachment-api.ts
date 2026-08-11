@@ -31,6 +31,11 @@ export type ImageAttachmentDataResult = {
 	dataUrl: string;
 };
 
+export type TextAttachmentContentResult = {
+	attachmentId: string;
+	content: string;
+};
+
 export async function saveImageAttachment(params: SaveImageAttachmentParams): Promise<SaveImageAttachmentResult> {
 	const client = await createBackendClient();
 
@@ -41,6 +46,12 @@ export async function saveTextAttachment(params: SaveTextAttachmentParams): Prom
 	const client = await createBackendClient();
 
 	return client.request<SaveTextAttachmentResult>("attachment.text.save", params);
+}
+
+export async function fetchTextAttachmentContent(attachmentId: string): Promise<TextAttachmentContentResult> {
+	const client = await createBackendClient();
+
+	return client.request<TextAttachmentContentResult>("attachment.text.get", { attachmentId });
 }
 
 export async function fetchImageAttachmentDataUrl(attachmentId: string): Promise<ImageAttachmentDataResult> {

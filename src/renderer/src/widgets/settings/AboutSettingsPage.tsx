@@ -1,4 +1,4 @@
-import { App, Button, Card, Descriptions, Tag, Typography } from "antd";
+import { App, Button, Card, Descriptions, Space, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useRequest } from "ahooks";
 import { useTranslation } from "react-i18next";
@@ -260,7 +260,11 @@ function AboutSettingsPage(): React.JSX.Element | null {
 		<section className={styles.page}>
 			<header className={styles.header}>
 				<Typography.Title level={3} className={styles.title}>{t("settings.about.title")}</Typography.Title>
-				<Button icon={<Icon name="reload" />} loading={isCheckingUpdates} onClick={(): void => { void checkForUpdates(); }}>
+				<Button
+					type="primary"
+					icon={<Icon name="reload" />}
+					loading={isCheckingUpdates}
+					onClick={(): void => { void checkForUpdates(); }}>
 					{t("settings.about.actions.checkForUpdates")}
 				</Button>
 			</header>
@@ -282,21 +286,21 @@ function AboutSettingsPage(): React.JSX.Element | null {
 									className={styles.largeIcon}
 								/>
 								<div className={styles.appInfo}>
-									<div className={styles.titleRow}>
+									<Space>
 										<Typography.Title level={3} className={styles.appName}>
 											Daedalus Studio
 										</Typography.Title>
 										<Tag className={styles.versionTag}>
 											v{packageInfo.version || "1.0.0"}
 										</Tag>
-									</div>
+									</Space>
 									{packageInfo.description ? (
 										<Typography.Text type="secondary" className={styles.description}>
 											{packageInfo.description}
 										</Typography.Text>
 									) : null}
 								</div>
-							</div>	
+							</div>
 						</Card>
 
 						<Card className={styles.backendCard}>
@@ -307,14 +311,14 @@ function AboutSettingsPage(): React.JSX.Element | null {
 									className={styles.largeIcon}
 								/>
 								<div className={styles.backendInfo}>
-									<div className={styles.titleRow}>
+									<Space>
 										<Typography.Title level={3} className={styles.appName}>
 											Daedalus Backend
 										</Typography.Title>
 										<Tag color={getBackendStatusColor(backendStatus)} className={styles.versionTag}>
 											{backendStatusLabel}
 										</Tag>
-									</div>
+									</Space>
 									<Typography.Text type="secondary" className={styles.description}>
 										{t("settings.about.backend.description")}
 									</Typography.Text>
@@ -340,36 +344,35 @@ function AboutSettingsPage(): React.JSX.Element | null {
 
 						<Card
 							title={(
-							<div className={styles.cardTitleRow}>
+								<div className={styles.cardTitleRow}>
 									<span>{t("settings.about.backend.detailsTitle")}</span>
 									<div className={styles.backendActions}>
-									<Button
-										size="small"
-										icon={<Icon name="reload" />}
-										loading={isBackendRefreshing}
-										disabled={isRepairingBackend || isBackendUpdating}
-										onClick={(): void => { void refreshBackendDetails(); }}
-									>
-										{t("settings.about.actions.refresh")}
-									</Button>
-									<Button
-										size="small"
-										icon={<Icon name="reload" />}
-										loading={isCheckingUpdates || isBackendUpdating}
-										disabled={isRepairingBackend}
-										onClick={(): void => { void updateBackend(); }}
-									>
-										{t("settings.about.actions.updateBackend")}
-									</Button>
-									<Button
-										size="small"
-										icon={<Icon name="repair" />}
-										loading={isRepairingBackend}
-										disabled={isCheckingUpdates || isBackendUpdating}
-										onClick={confirmBackendRepair}
-									>
-										{t("settings.about.actions.repairBackend")}
-									</Button>
+										<Space.Compact>
+											<Button
+												icon={<Icon name="reload" />}
+												loading={isBackendRefreshing}
+												disabled={isRepairingBackend || isBackendUpdating}
+												onClick={(): void => { void refreshBackendDetails(); }}
+											>
+												{t("settings.about.actions.refresh")}
+											</Button>
+											<Button
+												icon={<Icon name="reload" />}
+												loading={isCheckingUpdates || isBackendUpdating}
+												disabled={isRepairingBackend}
+												onClick={(): void => { void updateBackend(); }}
+											>
+												{t("settings.about.actions.updateBackend")}
+											</Button>
+											<Button
+												icon={<Icon name="repair" />}
+												loading={isRepairingBackend}
+												disabled={isCheckingUpdates || isBackendUpdating}
+												onClick={confirmBackendRepair}
+											>
+												{t("settings.about.actions.repairBackend")}
+											</Button>
+										</Space.Compact>
 									</div>
 								</div>
 							)}

@@ -57,6 +57,27 @@
 	color: var(--ds-text-secondary);
 }
 
+.expandTextButton {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	margin: -4px;
+	padding: 4px;
+	border-radius: var(--ds-radius-xs);
+	cursor: pointer;
+}
+
+.expandTextButton:hover {
+	color: var(--ds-accent);
+	background: var(--ds-accent-subtle);
+}
+
+.expandTextButton:focus-visible {
+	outline: 2px solid var(--ds-accent);
+	outline-offset: 1px;
+}
+
 .contextText {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);

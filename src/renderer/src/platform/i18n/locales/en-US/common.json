@@ -83,7 +83,8 @@
       "next": "Next",
       "skip": "Skip",
       "cancel": "Cancel",
-      "enterStudio": "Enter Daedalus Studio"
+      "enterStudio": "Enter Daedalus Studio",
+      "enteringStudio": "Entering Daedalus Studio"
     },
     "progress": "Step {{current}} of {{total}}",
     "status": {
@@ -829,6 +830,7 @@
 		"contextStrip": {
 			"aria": "Message context",
 			"pinned": "Pinned",
+			"expandText": "Expand into composer",
 			"display": {
 				"contextFallback": "Context",
 				"selection": "Selection",

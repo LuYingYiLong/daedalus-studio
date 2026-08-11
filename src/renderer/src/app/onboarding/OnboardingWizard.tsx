@@ -61,6 +61,8 @@ import styles from "./OnboardingWizard.module.css";
 
 type OnboardingWizardProps = {
 	bootstrapData: BootstrapData;
+	isEnteringStudio?: boolean;
+	onPrewarmApp?: () => void;
 	onComplete: (bootstrapData: BootstrapData) => void;
 };
 
@@ -715,7 +717,7 @@ function GodotPluginOnboardingStep({ onConfiguredChange, onBusyChange }: GodotPl
 	);
 }
 
-function OnboardingWizard({ bootstrapData, onComplete }: OnboardingWizardProps): React.JSX.Element {
+function OnboardingWizard({ bootstrapData, isEnteringStudio = false, onPrewarmApp, onComplete }: OnboardingWizardProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [preferences, setPreferences] = useState<ClientPreferences>(() => ({
 		...bootstrapData.clientPreferences,
@@ -770,6 +772,11 @@ function OnboardingWizard({ bootstrapData, onComplete }: OnboardingWizardProps):
 			: currentStep === "godot_plugin"
 				? pluginBusy
 				: false;
+	useEffect((): void => {
+		if (currentStep === "complete") {
+			onPrewarmApp?.();
+		}
+	}, [currentStep, onPrewarmApp]);
 	useEffect((): (() => void) => {
 		const frame: number = window.requestAnimationFrame((): void => {
 			stepViewportRef.current?.focus({ preventScroll: true });
@@ -952,7 +959,6 @@ function OnboardingWizard({ bootstrapData, onComplete }: OnboardingWizardProps):
 						<Typography.Text type="secondary">
 							{t("onboarding.progress", { current: currentIndex + 1, total: ONBOARDING_STEP_IDS.length })}
 						</Typography.Text>
-						<Typography.Text strong>{currentStepTitle}</Typography.Text>
 					</div>
 					<Progress
 						percent={progressPercent}
@@ -979,20 +985,31 @@ function OnboardingWizard({ bootstrapData, onComplete }: OnboardingWizardProps):
 				<footer className={styles.footer}>
 					<div>
 						{currentIndex > 0 && currentStep !== "complete" ? (
-							<Button disabled={activeOperation} onClick={goBack}>
+							<Button
+								disabled={activeOperation}
+								onClick={goBack}
+							>
 								{t("onboarding.actions.back")}
 							</Button>
 						) : null}
 					</div>
 					<Space>
 						{currentConfigurableStep !== null ? (
-							<Button type="text" disabled={activeOperation} onClick={(): void => goForward("skipped")}>
+							<Button
+								type="text"
+								disabled={activeOperation}
+								onClick={(): void => goForward("skipped")}
+							>
 								{t("onboarding.actions.skip")}
 							</Button>
 						) : null}
 						{currentStep === "complete" ? (
-							<Button type="primary" disabled={activeOperation} onClick={finish}>
-								{t("onboarding.actions.enterStudio")}
+							<Button
+								type="primary"
+								disabled={activeOperation || isEnteringStudio}
+								onClick={finish}
+							>
+								{t(isEnteringStudio ? "onboarding.actions.enteringStudio" : "onboarding.actions.enterStudio")}
 							</Button>
 						) : (
 							<Button

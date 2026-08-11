@@ -28,6 +28,9 @@ describe("AboutSettingsPage", () => {
 		expect(cssSource).toContain("max-height: 100%;");
 		expect(cssSource).toContain("overflow-y: auto;");
 		expect(cssSource).toMatch(/\.content\s*{[^}]*display:\s*grid;/);
+		expect(pageSource).toContain("classNames={{ body: styles.overviewCardBody }}");
+		expect(cssSource).toContain(".overviewCardBody");
+		expect(cssSource).toContain("min-height: 112px;");
 		expect(cssSource).toContain("padding: 0 var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);");
 		expect(pageSource).toContain("createDefaultOnboardingPreferences()");
 		expect(pageSource).toContain("window.electronAPI.windowControl.relaunch()");
