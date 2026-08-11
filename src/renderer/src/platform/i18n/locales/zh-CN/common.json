@@ -1498,6 +1498,10 @@
           "title": "会话标题模型",
           "description": "用于自动重命名会话和轻量标题生成。"
         },
+		"nextStepHints": {
+		  "title": "下一步建议模型",
+		  "description": "在主回复完成后为未输入内容的 Composer 生成一条可选后续建议；未配置时跟随当前模型，并始终关闭思考。"
+		},
         "workflowPlanner": {
           "title": "Workflow 规划模型",
           "description": "用于在执行前规划 agent workflow。"
@@ -1889,9 +1893,9 @@
       },
       "general": {
         "title": "常规设置",
-        "autoExpandTodoList": {
-          "title": "自动展开待办列表",
-          "description": "当会话创建新的待办列表时，自动展开 workflow 待办列表。"
+        "nextStepHintsEnabled": {
+          "title": "开启下一步建议",
+          "description": "每次回复完成后，让 Daedalus 在输入框中提示一个可能的下一步。"
         },
         "autoCheckForUpdates": {
           "title": "启动时检查更新",

@@ -2,7 +2,7 @@ import { createBackendClient } from "@/platform/rpc/transport/backend-client";
 
 export type GeneralSettings = {
 	schemaVersion: 2;
-	autoExpandTodoList: boolean;
+	nextStepHintsEnabled: boolean;
 	godotExecutablePath: string | null;
 	godotExecutableVersion: string | null;
 	godotExecutableStatus: "unconfigured" | "ready" | "unavailable";
@@ -11,13 +11,13 @@ export type GeneralSettings = {
 };
 
 export type GeneralSettingsPatch = {
-	autoExpandTodoList?: boolean;
+	nextStepHintsEnabled?: boolean;
 	godotExecutablePath?: string | null;
 };
 
 export const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
 	schemaVersion: 2,
-	autoExpandTodoList: false,
+	nextStepHintsEnabled: true,
 	godotExecutablePath: null,
 	godotExecutableVersion: null,
 	godotExecutableStatus: "unconfigured",

@@ -9,6 +9,8 @@ describe("NewSessionHome source", () => {
 
 	it("uses a local-time greeting and workspace-aware starter prompts", () => {
 		expect(source).toContain("getNewSessionGreetingPeriod(new Date().getHours())");
+		expect(source).toContain("const hasComposerText: boolean = message.trim().length > 0;");
+		expect(source).toContain("{hasComposerText === false ? (");
 		expect(source).toContain('const starterScope: "unbound" | "workspace"');
 		expect(source).toContain("app.home.starters.${starterScope}.${starter.id}.prompt");
 	});
@@ -32,7 +34,7 @@ describe("NewSessionHome source", () => {
 	});
 
 	it("centers the text layer independently from the starter actions", () => {
-		const contentEnd: number = source.indexOf("</div>\n\t\t\t<div className={styles.starterGroup}");
+		const contentEnd: number = source.indexOf("</div>\n\t\t\t{hasComposerText === false ?");
 		expect(contentEnd).toBeGreaterThan(0);
 		expect(source.indexOf("<div className={styles.homeContent}")).toBeLessThan(contentEnd);
 		expect(styles).toContain("position: relative;");
@@ -44,7 +46,7 @@ describe("NewSessionHome source", () => {
 	});
 
 	it("keeps errors out of the centered text layer", () => {
-		const contentEnd: number = source.indexOf("</div>\n\t\t\t<div className={styles.starterGroup}");
+		const contentEnd: number = source.indexOf("</div>\n\t\t\t{hasComposerText === false ?");
 		const errorStart: number = source.indexOf("<Alert");
 		expect(errorStart).toBeGreaterThan(contentEnd);
 		expect(styles).toContain("bottom: var(--ds-space-4, 16px);");

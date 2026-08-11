@@ -49,7 +49,7 @@ describe("client preferences store", () => {
 
 	it("normalizes missing fields and strips unknown fields", () => {
 		expect(normalizeClientPreferences({
-			autoExpandTodoList: false,
+			obsoleteSetting: false,
 			lastComposerModel: {
 				providerId: "minimax",
 				modelId: "MiniMax-M3"
@@ -88,7 +88,7 @@ describe("client preferences store", () => {
 
 	it("updates only requested fields and persists normalized JSON", async () => {
 		const memory = createMemoryIo(JSON.stringify({
-			autoExpandTodoList: false,
+			obsoleteSetting: false,
 			minimizeToTrayOnClose: false
 		}));
 

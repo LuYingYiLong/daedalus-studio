@@ -18,6 +18,16 @@ describe("DefaultModelSettingsPage", () => {
 		expect(pageSource).toContain("settings.defaultModel.routing.gitCommit.description");
 	});
 
+	it("includes a reasoning-disabled next-step suggestion route", () => {
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "DefaultModelSettingsPage.tsx");
+		const providerSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "provider-api.ts");
+
+		expect(pageSource).toContain('key: "nextStepHints"');
+		expect(pageSource).toContain("settings.defaultModel.routing.nextStepHints.title");
+		expect(pageSource).toContain("settings.defaultModel.routing.nextStepHints.description");
+		expect(providerSource).toContain("nextStepHints: ProviderTaskModelRef | null;");
+	});
+
 	it("provides a text-only command review route", () => {
 		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "DefaultModelSettingsPage.tsx");
 		const providerSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "provider-api.ts");

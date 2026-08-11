@@ -13,6 +13,7 @@ import {
 type NewSessionHomeProps = {
 	workspace: WorkspaceConfig | null;
 	errorMessage: string | null;
+	message: string;
 	onStarterSelect: (prompt: string) => void;
 };
 
@@ -27,8 +28,9 @@ const STARTER_ICONS: Record<NewSessionStarterId, string> = {
 	plan: "plan"
 };
 
-function NewSessionHome({ workspace, errorMessage, onStarterSelect }: NewSessionHomeProps): React.JSX.Element {
+function NewSessionHome({ workspace, errorMessage, message, onStarterSelect }: NewSessionHomeProps): React.JSX.Element {
 	const { t } = useTranslation();
+	const hasComposerText: boolean = message.trim().length > 0;
 	const greetingPeriod = getNewSessionGreetingPeriod(new Date().getHours());
 	const title: string = t(`app.home.greeting.${greetingPeriod}`);
 	const subtitle: string = workspace === null
@@ -53,21 +55,23 @@ function NewSessionHome({ workspace, errorMessage, onStarterSelect }: NewSession
 					{subtitle}
 				</Typography.Text>
 			</div>
-			<div className={styles.starterGroup} aria-label={t("app.home.starters.label")}>
-				<div className={styles.starterList}>
-					{starters.map((starter: NewSessionStarter): React.JSX.Element => (
-						<Button
-							key={starter.id}
-							type="text"
-							className={styles.starterButton}
-							icon={<Icon name={starter.iconName} />}
-							onClick={(): void => onStarterSelect(t(`app.home.starters.${starterScope}.${starter.id}.prompt`))}
-						>
-							{t(`app.home.starters.${starterScope}.${starter.id}.label`)}
-						</Button>
-					))}
+			{hasComposerText === false ? (
+				<div className={styles.starterGroup} aria-label={t("app.home.starters.label")}>
+					<div className={styles.starterList}>
+						{starters.map((starter: NewSessionStarter): React.JSX.Element => (
+							<Button
+								key={starter.id}
+								type="text"
+								className={styles.starterButton}
+								icon={<Icon name={starter.iconName} />}
+								onClick={(): void => onStarterSelect(t(`app.home.starters.${starterScope}.${starter.id}.prompt`))}
+							>
+								{t(`app.home.starters.${starterScope}.${starter.id}.label`)}
+							</Button>
+						))}
+					</div>
 				</div>
-			</div>
+			) : null}
 			{errorMessage !== null ? (
 				<Alert
 					type="error"

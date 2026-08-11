@@ -1505,6 +1505,10 @@
           "title": "Session title model",
           "description": "Used for automatic session renaming and lightweight title generation."
         },
+		"nextStepHints": {
+		  "title": "Next-step suggestion model",
+		  "description": "Generates one optional follow-up in the empty composer after a chat response. Follows the active model when unset and always disables reasoning."
+		},
         "workflowPlanner": {
           "title": "Workflow planner model",
           "description": "Used for planning agent workflows before execution."
@@ -1896,9 +1900,9 @@
       },
       "general": {
         "title": "General settings",
-        "autoExpandTodoList": {
-          "title": "Auto-expand todo list",
-          "description": "Expand the workflow todo list when a session creates a new todo list."
+        "nextStepHintsEnabled": {
+          "title": "Suggest the next step",
+          "description": "After a completed reply, let Daedalus suggest a useful next action in the composer."
         },
         "autoCheckForUpdates": {
           "title": "Check for updates on startup",

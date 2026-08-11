@@ -26,7 +26,7 @@ type GeneralSettingsPageProps = {
 	onGeneralSettingsChange: (settings: GeneralSettings) => void;
 };
 
-type SettingKey = "autoCheckForUpdates" | "autoExpandTodoList" | "godotExecutablePath" | "language" | "minimizeToTrayOnClose" | "theme" | "themeColor";
+type SettingKey = "autoCheckForUpdates" | "godotExecutablePath" | "language" | "minimizeToTrayOnClose" | "nextStepHintsEnabled" | "theme" | "themeColor";
 type ThemePreference = ClientPreferences["theme"];
 
 const colorPickerProps: ColorPickerProps = {
@@ -103,19 +103,19 @@ function GeneralSettingsPage({
 		};
 	}, [onClientPreferencesChange, onGeneralSettingsChange, t]);
 
-	async function handleAutoExpandTodoListChange(checked: boolean): Promise<void> {
+	async function handleNextStepHintsEnabledChange(checked: boolean): Promise<void> {
 		const previousSettings: GeneralSettings = draftGeneralSettings;
 		const optimisticSettings: GeneralSettings = {
 			...previousSettings,
-			autoExpandTodoList: checked
+			nextStepHintsEnabled: checked
 		};
 
 		try {
-			setSavingKey("autoExpandTodoList");
+			setSavingKey("nextStepHintsEnabled");
 			setErrorMessage(null);
 			setDraftGeneralSettings(optimisticSettings);
 			onGeneralSettingsChange(optimisticSettings);
-			const savedSettings: GeneralSettings = await updateGeneralSettings({ autoExpandTodoList: checked });
+			const savedSettings: GeneralSettings = await updateGeneralSettings({ nextStepHintsEnabled: checked });
 			setDraftGeneralSettings(savedSettings);
 			onGeneralSettingsChange(savedSettings);
 		} catch (error: unknown) {
@@ -398,11 +398,11 @@ function GeneralSettingsPage({
 					<div className={styles.preferenceList}>
 							{[
 								{
-									key: "autoExpandTodoList" as const,
-									title: t("settings.general.general.autoExpandTodoList.title"),
-									description: t("settings.general.general.autoExpandTodoList.description"),
-									checked: draftGeneralSettings.autoExpandTodoList,
-									onChange: handleAutoExpandTodoListChange
+									key: "nextStepHintsEnabled" as const,
+									title: t("settings.general.general.nextStepHintsEnabled.title"),
+									description: t("settings.general.general.nextStepHintsEnabled.description"),
+									checked: draftGeneralSettings.nextStepHintsEnabled,
+									onChange: handleNextStepHintsEnabledChange
 								},
 								{
 									key: "autoCheckForUpdates" as const,

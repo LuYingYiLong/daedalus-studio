@@ -603,7 +603,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		if (workflowTodoIsActive) {
 			expandedActiveWorkflowTodoKeyRef.current = workflowTodoKey;
 		}
-		const workflowTodoCollapsed: boolean = workflowTodoIsActive ? false : !generalSettings.autoExpandTodoList;
+		const workflowTodoCollapsed: boolean = !workflowTodoIsActive;
 		setActiveSessionMetadata((currentMetadata: SessionMetadata | null): SessionMetadata | null => {
 			return currentMetadata === null
 				? currentMetadata
@@ -2495,6 +2495,10 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		?? (generalSettings.godotExecutableStatus === "ready" ? generalSettings.godotExecutablePath : null);
 	const composerIsSending: boolean = isRunControllerActive(runState) || isHomeSubmitting;
 	const composerIsCancelling: boolean = runState.status === "cancelling";
+	const nextStepSuggestionCandidate: unknown = workbench?.nextStepHints?.hints?.[0]?.message;
+	const nextStepSuggestion: string | null = activeSessionId === null || composerIsSending || typeof nextStepSuggestionCandidate !== "string"
+		? null
+		: nextStepSuggestionCandidate.trim() || null;
 	const runningSessionIds: string[] = [...runningSessionState.keys()];
 
 	useEffect((): void => {
@@ -2592,6 +2596,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		reasoningEffort: composerReasoningEffort,
 		composerInstanceKey,
 		message: composerMessage,
+		nextStepSuggestion,
 		onDraftChange: handleComposerDraftChange,
 		contextItems: composerContextItems,
 		selectionAskThreads,

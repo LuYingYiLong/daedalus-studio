@@ -385,6 +385,7 @@ type HomePageProps = {
 	reasoningEffort: string | null;
 	composerInstanceKey: string;
 	message: string;
+	nextStepSuggestion: string | null;
 	onDraftChange: (message: string) => void;
 	contextItems: AdditionalContextItem[];
 	selectionAskThreads: SelectionAskThread[];
@@ -510,6 +511,7 @@ function HomePage({
 	reasoningEffort,
 	composerInstanceKey,
 	message,
+	nextStepSuggestion,
 	onDraftChange,
 	contextItems,
 	selectionAskThreads,
@@ -2100,11 +2102,12 @@ function HomePage({
 
 									<div ref={chatBodyRef} className={styles.chatBody}>
 										{isHome ? (
-											<NewSessionHome
-												workspace={homeWorkspace}
-												errorMessage={sessionError}
-												onStarterSelect={handleHomeStarterSelect}
-											/>
+							<NewSessionHome
+								workspace={homeWorkspace}
+								errorMessage={sessionError}
+								message={message}
+								onStarterSelect={handleHomeStarterSelect}
+							/>
 										) : activeSessionId !== null ? (
 											<MarkdownResourceActionsProvider
 												value={{
@@ -2224,10 +2227,11 @@ function HomePage({
 														onGuideReorder={onGuideReorder}
 													/>
 												) : null}
-											<Composer
-												key={composerInstanceKey}
-												providerModelSelection={providerModelSelection}
-												inputRequest={composerInputRequest ?? undefined}
+												<Composer
+													key={composerInstanceKey}
+													providerModelSelection={providerModelSelection}
+													inputRequest={composerInputRequest ?? undefined}
+													nextStepSuggestion={nextStepSuggestion}
 											selectedProviderId={selectedProviderId}
 											selectedModelId={selectedModelId}
 											reasoningEffort={reasoningEffort}

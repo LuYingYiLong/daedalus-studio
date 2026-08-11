@@ -27,6 +27,7 @@ export type ProviderModelRouting = {
 	imageRecognition: ProviderTaskModelRef | null;
 	workflowPlanner: ProviderTaskModelRef | null;
 	sessionTitle: ProviderTaskModelRef | null;
+	nextStepHints: ProviderTaskModelRef | null;
 	imageGeneration: ProviderTaskModelRef | null;
 	gitCommit: ProviderTaskModelRef | null;
 	commandReview: ProviderTaskModelRef | null;

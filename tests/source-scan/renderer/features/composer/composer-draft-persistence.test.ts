@@ -24,4 +24,14 @@ describe("Composer draft lifetime", () => {
 		expect(appSource).toContain("draftText.trim().length > 0");
 		expect(appSource).toContain("composerDraftsRef.current.delete(sessionId)");
 	});
+
+	it("uses a server suggestion only as an empty composer placeholder", () => {
+		expect(appSource).toContain("const nextStepSuggestionCandidate: unknown = workbench?.nextStepHints?.hints?.[0]?.message;");
+		expect(appSource).toContain("nextStepSuggestion,");
+		expect(homePageSource).toContain("nextStepSuggestion={nextStepSuggestion}");
+		expect(composerSource).toContain("nextStepSuggestion?: string | null;");
+		expect(composerSource).toContain("const textAreaPlaceholder: string = draftMessage.length === 0");
+		expect(composerSource).toContain("placeholder={textAreaPlaceholder}");
+		expect(composerSource).not.toContain("setDraftMessage(nextStepSuggestion");
+	});
 });

@@ -21,7 +21,7 @@ describe("GeneralSettingsPage", () => {
 		);
 
 		expect(pageSource).toContain("useTranslation");
-		expect(pageSource).toContain("settings.general.general.autoExpandTodoList.title");
+		expect(pageSource).toContain("settings.general.general.nextStepHintsEnabled.title");
 		expect(pageSource).toContain("settings.general.general.autoCheckForUpdates.title");
 		expect(pageSource).toContain("settings.general.general.minimizeToTrayOnClose.title");
 		expect(pageSource).toContain("settings.general.display.title");
@@ -39,6 +39,7 @@ describe("GeneralSettingsPage", () => {
 		expect(pageSource).toContain("window.electronAPI.pickGodotExecutable()");
 		expect(apiSource).toContain('language: "system"');
 		expect(generalApiSource).toContain("godotExecutablePath: null");
+		expect(generalApiSource).toContain("nextStepHintsEnabled: boolean;");
 		expect(generalApiSource).toContain("schemaVersion: 2;");
 		expect(generalApiSource).toContain("godotExecutableVersion: string | null;");
 		expect(generalApiSource).toContain('godotExecutableStatus: "unconfigured" | "ready" | "unavailable";');

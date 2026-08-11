@@ -36,6 +36,11 @@ const ROUTING_OPTIONS: RoutingOption[] = [
 		descriptionKey: "settings.defaultModel.routing.sessionTitle.description"
 	},
 	{
+		key: "nextStepHints",
+		titleKey: "settings.defaultModel.routing.nextStepHints.title",
+		descriptionKey: "settings.defaultModel.routing.nextStepHints.description"
+	},
+	{
 		key: "workflowPlanner",
 		titleKey: "settings.defaultModel.routing.workflowPlanner.title",
 		descriptionKey: "settings.defaultModel.routing.workflowPlanner.description"

@@ -44,6 +44,7 @@ export type ComposerProps = {
 	selectedModelId: string | null;
 	reasoningEffort?: string | null;
 	message: string;
+	nextStepSuggestion?: string | null;
 	inputRequest?: ComposerInputRequest;
 	onDraftChange?: (message: string) => void;
 	contextItems?: AdditionalContextItem[];
@@ -396,6 +397,7 @@ function Composer({
 	selectedModelId,
 	reasoningEffort,
 	message,
+	nextStepSuggestion,
 	inputRequest,
 	contextItems: composerContextItems = EMPTY_CONTEXT_ITEMS,
 	mode,
@@ -451,6 +453,9 @@ function Composer({
 	const [contextUsageError, setContextUsageError] = useState<string | null>(null);
 	const [isCompressingContext, setIsCompressingContext] = useState<boolean>(false);
 	const [contextCompressionNotice, setContextCompressionNotice] = useState<string | null>(null);
+	const textAreaPlaceholder: string = draftMessage.length === 0 && nextStepSuggestion?.trim().length
+		? nextStepSuggestion
+		: t(COMPOSER_PLACEHOLDER_KEYS[mode]);
 
 	const handleModeClick: MenuProps["onClick"] = useCallback(({ key }): void => {
 		if (isComposerMode(key)) {
@@ -1289,7 +1294,7 @@ function Composer({
 								ref={textAreaRef}
 								value={draftMessage}
 								autoSize={{ minRows: 4, maxRows: 6 }}
-								placeholder={t(COMPOSER_PLACEHOLDER_KEYS[mode])}
+								placeholder={textAreaPlaceholder}
 								className={styles.composerTextArea}
 								onChange={handleTextAreaChange}
 								onKeyDown={handleTextAreaKeyDown}
