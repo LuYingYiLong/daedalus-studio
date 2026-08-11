@@ -48,10 +48,43 @@
       }
     },
     "home": {
-      "titleWithoutWorkspace": "想从哪里开始？",
-      "titleWithWorkspace": "要在 {{workspaceName}} 里做什么？",
-      "subtitleWithoutWorkspace": "选择一个 workspace，或直接开始。",
-      "subtitleWithWorkspace": "描述这个 workspace 接下来要处理的任务。"
+      "greeting": {
+        "morning": "早上好，今天想做什么？",
+        "afternoon": "下午好，接下来想做什么？",
+        "evening": "晚上好，今天还想推进什么？"
+      },
+      "subtitleWithoutWorkspace": "先选择一个 workspace，或者直接说说你的想法",
+      "subtitleWithWorkspace": "{{workspaceName}} 已准备好。告诉我想推进什么，我会从合适的地方开始",
+      "starters": {
+        "workspace": {
+          "explore": {
+            "label": "先帮我了解这个项目",
+            "prompt": "先帮我了解这个项目。请读取必要的工作区信息，告诉我它的结构和建议的起点。"
+          },
+          "next_step": {
+            "label": "帮我梳理下一步",
+            "prompt": "根据这个项目的当前状态，帮我梳理接下来最值得推进的事情。"
+          },
+          "plan": {
+            "label": "为一个功能做计划",
+            "prompt": "我想为一个功能做计划。请先了解必要上下文，再给我一个清晰、可执行的方案。"
+          }
+        },
+        "unbound": {
+          "explore": {
+            "label": "一起梳理想法",
+            "prompt": "我有一个想法，帮我一起梳理目标、约束和合适的下一步。"
+          },
+          "next_step": {
+            "label": "解释一个概念",
+            "prompt": "请用清晰、简洁的方式解释一个概念，必要时结合例子。"
+          },
+          "plan": {
+            "label": "做一份实施计划",
+            "prompt": "帮我把一个想法整理成一份实际可执行的计划。"
+          }
+        }
+      }
     },
     "fullTrust": {
       "title": "启用 Full Trust？",

@@ -477,41 +477,6 @@
 	white-space: nowrap;
 }
 
-.homePanel {
-	display: grid;
-	place-items: center;
-	min-width: 0;
-	min-height: 0;
-	padding: var(--ds-space-4);
-}
-
-.homeContent {
-	display: grid;
-	justify-items: center;
-	gap: var(--ds-space-2);
-	width: min(800px, 100%);
-	text-align: center;
-	user-select: none;
-}
-
-.homeTitle {
-	margin: 0;
-	line-height: 1.18;
-	letter-spacing: 0;
-}
-
-.homeSubtitle {
-	color: var(--ds-text-secondary);
-}
-
-.homeError {
-	display: block;
-	width: min(520px, 100%);
-	max-width: 100%;
-	text-align: left;
-	overflow-wrap: anywhere;
-}
-
 .composer {
 	position: relative;
 	display: grid;

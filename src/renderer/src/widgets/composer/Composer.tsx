@@ -44,6 +44,7 @@ export type ComposerProps = {
 	selectedModelId: string | null;
 	reasoningEffort?: string | null;
 	message: string;
+	inputRequest?: ComposerInputRequest;
 	onDraftChange?: (message: string) => void;
 	contextItems?: AdditionalContextItem[];
 	mode: ChatMode;
@@ -78,6 +79,11 @@ export type ComposerProps = {
 	onSubmit?: (message: string, modeOverride?: ChatMode) => void;
 	onGuideSubmit?: (message: string) => void;
 	onCompletionOpen?: (trigger: ComposerCompletionTrigger) => void;
+};
+
+export type ComposerInputRequest = {
+	requestId: number;
+	message: string;
 };
 
 type SelectedModel = {
@@ -390,6 +396,7 @@ function Composer({
 	selectedModelId,
 	reasoningEffort,
 	message,
+	inputRequest,
 	contextItems: composerContextItems = EMPTY_CONTEXT_ITEMS,
 	mode,
 	approvalMode,
@@ -428,6 +435,7 @@ function Composer({
 	const rootRef = useRef<HTMLDivElement | null>(null);
 	const textAreaRef = useRef<TextAreaRef | null>(null);
 	const textAreaSelectionRef = useRef<TextAreaSelection>({ start: 0, end: 0 });
+	const lastInputRequestIdRef = useRef<number | undefined>(inputRequest?.requestId);
 	const imageInputRef = useRef<HTMLInputElement | null>(null);
 	const suppressedCompletionValueRef = useRef<string | null>(null);
 	const completionStateSignatureRef = useRef<string>("");
@@ -666,6 +674,31 @@ function Composer({
 		suppressedCompletionValueRef.current = null;
 		hideCompletion();
 	}, [message]);
+
+	useEffect((): (() => void) | void => {
+		if (inputRequest === undefined || inputRequest.requestId === lastInputRequestIdRef.current) {
+			return;
+		}
+
+		lastInputRequestIdRef.current = inputRequest.requestId;
+		setDraftMessage(inputRequest.message);
+		suppressedCompletionValueRef.current = null;
+		hideCompletion();
+		onDraftChange?.(inputRequest.message);
+		const animationFrameId: number = window.requestAnimationFrame((): void => {
+			const nativeTextArea: HTMLTextAreaElement | null = getNativeTextArea(textAreaRef.current);
+			if (nativeTextArea === null) {
+				return;
+			}
+
+			nativeTextArea.focus({ preventScroll: true });
+			const caretIndex: number = inputRequest.message.length;
+			nativeTextArea.setSelectionRange(caretIndex, caretIndex);
+			textAreaSelectionRef.current = { start: caretIndex, end: caretIndex };
+		});
+
+		return (): void => window.cancelAnimationFrame(animationFrameId);
+	}, [inputRequest, onDraftChange]);
 
 	useEffect((): (() => void) => {
 		if (!showContextUsage) {

@@ -48,10 +48,43 @@
       }
     },
     "home": {
-      "titleWithoutWorkspace": "What would you like to work on?",
-      "titleWithWorkspace": "What should we work on for {{workspaceName}}?",
-      "subtitleWithoutWorkspace": "Choose a workspace or start without one.",
-      "subtitleWithWorkspace": "Describe the next task for this workspace."
+      "greeting": {
+        "morning": "Good morning — what would you like to work on?",
+        "afternoon": "Good afternoon — what would you like to work on?",
+        "evening": "Good evening — what would you like to work on?"
+      },
+      "subtitleWithoutWorkspace": "Choose a workspace below, or start with an idea and add one later.",
+      "subtitleWithWorkspace": "{{workspaceName}} is ready. Tell me what you would like to move forward.",
+      "starters": {
+        "workspace": {
+          "explore": {
+            "label": "Get to know this workspace",
+            "prompt": "Help me understand this workspace. Start by reading only the necessary project context, then tell me how it is organized and where a good starting point is."
+          },
+          "next_step": {
+            "label": "Find a good next step",
+            "prompt": "Based on the current state of this workspace, help me identify the most worthwhile next step."
+          },
+          "plan": {
+            "label": "Plan a feature",
+            "prompt": "I want to plan a feature. First learn the necessary context, then give me a clear, actionable approach."
+          }
+        },
+        "unbound": {
+          "explore": {
+            "label": "Talk through an idea",
+            "prompt": "I have an idea. Help me clarify the goal, constraints, and a sensible next step."
+          },
+          "next_step": {
+            "label": "Explain a concept",
+            "prompt": "Explain a concept clearly and concisely, with an example if it helps."
+          },
+          "plan": {
+            "label": "Turn an idea into a plan",
+            "prompt": "Help me turn an idea into a practical, actionable plan."
+          }
+        }
+      }
     },
     "fullTrust": {
       "title": "Enable Full Trust?",

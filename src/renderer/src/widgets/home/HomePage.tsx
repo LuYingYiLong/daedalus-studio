@@ -21,7 +21,7 @@ import {
 import { fetchSessionOverview, fetchWorkspaceOverview, type SessionOverviewGitInfo, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/platform/rpc/session-overview-api";
 import WorkspaceTree, { type SessionArchiveContext } from "@/widgets/workspace/WorkspaceTree";
 import ConversationTimelinePane, { type ConversationTimelinePaneHandle } from "@/widgets/conversation/ConversationTimelinePane";
-import Composer from "@/widgets/composer/Composer";
+import Composer, { type ComposerInputRequest } from "@/widgets/composer/Composer";
 import FloatingWorkflowTodoPanel, { type WorkflowFileChangeSummary } from "@/widgets/composer/FloatingWorkflowTodoPanel";
 import FloatingGoalPanel from "@/widgets/composer/FloatingGoalPanel";
 import MessageQueuePanel from "@/widgets/composer/MessageQueuePanel";
@@ -637,6 +637,7 @@ function HomePage({
 	const [godotSceneFiles, setGodotSceneFiles] = useState<GodotSceneFile[]>([]);
 	const [isGodotSceneLoading, setIsGodotSceneLoading] = useState<boolean>(false);
 	const [godotSceneSearch, setGodotSceneSearch] = useState<string>("");
+	const [composerInputRequest, setComposerInputRequest] = useState<ComposerInputRequest | null>(null);
 	const [visualWorkspaceSidebar, setVisualWorkspaceSidebar] = useState<WorkspaceSidebarPreferences>(workspaceSidebar);
 	const [visualSessionLayout, setVisualSessionLayout] = useState<SessionLayoutPreferences>(sessionLayout);
 	const dockActivationRequestIdRef = useRef<number>(0);
@@ -677,6 +678,13 @@ function HomePage({
 		visualSessionLayoutRef.current = nextSessionLayout;
 		setVisualSessionLayout(nextSessionLayout);
 	}
+
+	const handleHomeStarterSelect = useCallback((prompt: string): void => {
+		setComposerInputRequest((currentRequest: ComposerInputRequest | null): ComposerInputRequest => ({
+			requestId: (currentRequest?.requestId ?? 0) + 1,
+			message: prompt
+		}));
+	}, []);
 
 	function clearWorkspaceSidebarSave(): void {
 		if (workspaceSidebarSaveTimerRef.current !== null) {
@@ -2092,7 +2100,11 @@ function HomePage({
 
 									<div ref={chatBodyRef} className={styles.chatBody}>
 										{isHome ? (
-											<NewSessionHome workspace={homeWorkspace} errorMessage={sessionError} />
+											<NewSessionHome
+												workspace={homeWorkspace}
+												errorMessage={sessionError}
+												onStarterSelect={handleHomeStarterSelect}
+											/>
 										) : activeSessionId !== null ? (
 											<MarkdownResourceActionsProvider
 												value={{
@@ -2215,6 +2227,7 @@ function HomePage({
 											<Composer
 												key={composerInstanceKey}
 												providerModelSelection={providerModelSelection}
+												inputRequest={composerInputRequest ?? undefined}
 											selectedProviderId={selectedProviderId}
 											selectedModelId={selectedModelId}
 											reasoningEffort={reasoningEffort}

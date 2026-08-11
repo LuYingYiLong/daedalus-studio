@@ -22,7 +22,6 @@
 
 .cover {
 	z-index: 1;
-	background: var(--ds-window-glass-tint);
 }
 
 .appPreparing {
