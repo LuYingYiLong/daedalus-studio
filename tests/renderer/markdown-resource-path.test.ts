@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { getFileIconName } from "@/domain/markdown/file-icon";
 import { formatMarkdownResourceLabel, parseMarkdownResourceHref } from "@/domain/markdown/markdown-resource-path";
+import { transformMarkdownUrl } from "@/domain/markdown/markdown-url-transform";
+
+const LINK_NODE = { tagName: "a" } as Parameters<typeof transformMarkdownUrl>[2];
+const IMAGE_NODE = { tagName: "img" } as Parameters<typeof transformMarkdownUrl>[2];
 
 describe("markdown resource paths", () => {
 	it("recognizes Windows paths and normalizes escaped separators", () => {
@@ -13,6 +18,23 @@ describe("markdown resource paths", () => {
 		expect(parseMarkdownResourceHref("file:///C:/workspace/src/app.ts")).toMatchObject({
 			absolutePath: "C:\\workspace\\src\\app.ts"
 		});
+	});
+
+	it("selects the HTML icon from Windows resource file names", () => {
+		expect(getFileIconName("C:\\Users\\LuYingYiLong\\Documents\\test\\lagrange-like\\index.html")).toBe("html");
+		expect(getFileIconName("index.HTML")).toBe("html");
+	});
+
+	it("preserves validated local file links before react-markdown renders them", () => {
+		const windowsPath: string = "C:/Users/LuYingYiLong/Documents/test/lagrange-like/index.html";
+		expect(transformMarkdownUrl(windowsPath, "href", LINK_NODE)).toBe(windowsPath);
+		expect(transformMarkdownUrl("file:///C:/workspace/src/App.tsx:42", "href", LINK_NODE)).toBe("file:///C:/workspace/src/App.tsx:42");
+	});
+
+	it("keeps default URL sanitization for non-resource URLs and image sources", () => {
+		expect(transformMarkdownUrl("https://example.com", "href", LINK_NODE)).toBe("https://example.com");
+		expect(transformMarkdownUrl("javascript:alert(1)", "href", LINK_NODE)).toBe("");
+		expect(transformMarkdownUrl("C:/workspace/image.png", "src", IMAGE_NODE)).toBe("");
 	});
 
 	it("separates a line and column suffix from the file path", () => {

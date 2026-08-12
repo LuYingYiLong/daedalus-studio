@@ -7,5 +7,6 @@ export type FileIconProps = {
 };
 
 export function FileIcon({ path, className }: FileIconProps): React.JSX.Element {
-	return <Icon name={getFileIconName(path)} className={className} />;
+	const iconName: string = getFileIconName(path);
+	return <Icon name={iconName} className={className} data-file-icon={iconName} aria-hidden="true" />;
 }

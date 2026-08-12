@@ -7,6 +7,7 @@ import hljs from "highlight.js";
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import styles from "./MarkdownContent.module.css";
 import { MarkdownLink } from "./MarkdownResourceLink";
+import { transformMarkdownUrl } from "@/domain/markdown/markdown-url-transform";
 import { useTimelineScrollFrameCoordinator } from "@/features/conversation/timeline-scroll-frame-context";
 import "highlight.js/styles/github-dark.css";
 
@@ -291,6 +292,7 @@ const RenderedMarkdown = memo(function RenderedMarkdown({ source, streaming, sti
 		<Markdown
 			remarkPlugins={MARKDOWN_REMARK_PLUGINS}
 			components={components}
+			urlTransform={transformMarkdownUrl}
 		>
 			{source}
 		</Markdown>

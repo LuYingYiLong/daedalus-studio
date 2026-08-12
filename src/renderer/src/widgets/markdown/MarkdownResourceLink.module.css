@@ -1,8 +1,6 @@
 .resourceLink {
-	display: inline-flex;
+	display: inline;
 	max-width: 100%;
-	align-items: baseline;
-	gap: 4px;
 	color: var(--ds-text-link, var(--ds-accent));
 	vertical-align: baseline;
 	text-decoration: none;
@@ -20,13 +18,16 @@
 }
 
 .resourceIcon {
-	flex: 0 0 auto;
-	width: 1em !important;
-	height: 1em !important;
+	display: inline-block;
+	width: 16px !important;
+	height: 16px !important;
+	margin-inline-end: 4px;
+	overflow: visible;
 	color: currentcolor;
+	vertical-align: -0.125em;
 }
 
 .resourceLabel {
-	min-width: 0;
 	overflow-wrap: anywhere;
+	font-weight: 700;
 }

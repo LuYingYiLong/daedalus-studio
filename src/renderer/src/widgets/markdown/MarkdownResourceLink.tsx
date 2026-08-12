@@ -11,7 +11,6 @@ import styles from "./MarkdownResourceLink.module.css";
 
 type MarkdownResourceLinkProps = {
 	resource: MarkdownResourceRef;
-	href: string;
 	children: React.ReactNode;
 	className?: string;
 };
@@ -36,7 +35,7 @@ function getErrorMessage(error: unknown): string {
 	return error instanceof Error && error.message.trim().length > 0 ? error.message : "Unknown error";
 }
 
-function WorkspaceResourceLink({ resource, href, children, className }: MarkdownResourceLinkProps): React.JSX.Element {
+function WorkspaceResourceLink({ resource, children, className }: MarkdownResourceLinkProps): React.JSX.Element {
 	const { message } = App.useApp();
 	const { t } = useTranslation();
 	const actions = useMarkdownResourceActions();
@@ -198,23 +197,26 @@ function WorkspaceResourceLink({ resource, href, children, className }: Markdown
 			menu={{ items: menuItems, onClick: handleMenuClick }}
 		>
 			<Tooltip title={resource.displayPath}>
-				<a
+				<span
 					className={[styles.resourceLink, className].filter(Boolean).join(" ")}
-					href={href}
+					role="link"
+					tabIndex={0}
+					aria-label={resource.displayPath}
 					onClick={(event): void => {
-						event.preventDefault();
+						event.stopPropagation();
 						void openFile();
 					}}
 					onKeyDown={(event): void => {
 						if (event.key === "Enter" || event.key === " ") {
 							event.preventDefault();
+							event.stopPropagation();
 							void openFile();
 						}
 					}}
 				>
-					<FileIcon path={resource.displayPath} className={styles.resourceIcon} />
+					<FileIcon path={resource.fileName} className={styles.resourceIcon} />
 					<span className={styles.resourceLabel}>{resourceLabel}</span>
-				</a>
+				</span>
 			</Tooltip>
 		</Dropdown>
 	);
@@ -226,5 +228,5 @@ export function MarkdownLink({ href, children, node: _node, ...props }: React.Co
 		return <a href={href} {...props}>{children}</a>;
 	}
 
-	return <WorkspaceResourceLink resource={resource} href={href} className={props.className}>{children}</WorkspaceResourceLink>;
+	return <WorkspaceResourceLink resource={resource} className={props.className}>{children}</WorkspaceResourceLink>;
 }
