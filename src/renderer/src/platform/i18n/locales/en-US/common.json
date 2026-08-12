@@ -1823,7 +1823,8 @@
       "confirm": {
         "delete": {
           "title": "Delete skill?",
-          "description": "Delete {{name}} from Daedalus Studio. This removes the personal skill files but does not change any Godot project files."
+          "description": "Delete {{name}} from Daedalus Studio? This permanently removes its personal skill files.",
+          "projectDescription": "Delete {{name}} from the current project? This permanently removes its directory under .github/skills and will appear as a version-control change."
         }
       },
       "empty": {
@@ -1835,8 +1836,15 @@
         "install": "Failed to install skill",
         "npxDiscover": "Failed to find local Codex skills",
         "load": "Failed to load skills",
+        "loadContent": "Failed to read SKILL.md",
         "selectSource": "Failed to select skill source",
-        "update": "Failed to update skill"
+        "update": "Failed to update skill",
+        "updateContent": "Failed to save SKILL.md"
+      },
+      "editor": {
+        "title": "Edit skill",
+        "titleWithName": "Edit {{name}}",
+        "description": "YAML frontmatter, skill instructions, and file size are validated before saving. The skill ID and directory are not changed."
       },
       "install": {
         "description": "Project installs require an active workspace. Personal installs are available across workspaces.",
@@ -1846,7 +1854,7 @@
       },
       "npx": {
         "title": "Import global Codex skills",
-        "description": "Only locally available Skills CLI entries are listed. Daedalus Studio does not download packages or execute skill instructions.",
+        "description": "Lists global Codex skills. If the Skills CLI is missing, Daedalus Studio downloads the CLI once through npx but never executes skill instructions.",
         "empty": "No global Codex skills were found.",
         "selectAll": "Select all available skills",
         "alreadyInstalled": "Already installed",

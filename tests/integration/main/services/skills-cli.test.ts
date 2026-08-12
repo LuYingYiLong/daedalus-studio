@@ -74,6 +74,44 @@ describe("skills-cli", () => {
 		expect(result).toEqual([{ name: "Review Godot", path: await realpath(skillPath), slug: "review-godot" }]);
 	});
 
+	it("allows npx to install the CLI only after a precise missing-package result", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-skills-cli-install-"));
+		const skillPath: string = join(root, "review-godot");
+		await mkdir(skillPath);
+		const calls: Array<readonly string[]> = [];
+		let attempt: number = 0;
+		const result = await listGlobalCodexSkills({
+			codexSkillsDirectory: root,
+			homeDirectory: root,
+			dependencies: {
+				runCommand: async (_command: string, args: readonly string[], _cwd: string): Promise<CommandResult> => {
+					calls.push(args);
+					attempt += 1;
+					return attempt === 1
+						? {
+							exitCode: 1,
+							stdout: "",
+							stderr: "npm error npx canceled due to missing packages and no YES option: [\\\"skills@1.5.22\\\"]",
+							timedOut: false
+						}
+						: {
+							exitCode: 0,
+							stdout: JSON.stringify([{ name: "Review Godot", path: skillPath, scope: "global", agents: ["Codex"] }]),
+							stderr: "",
+							timedOut: false
+						};
+				},
+				realpath,
+				lstat
+			}
+		});
+
+		expect(calls).toHaveLength(2);
+		expect(calls[0]?.[0]).toBe("--no-install");
+		expect(calls[1]?.[0]).toBe("--yes");
+		expect(result).toEqual([{ name: "Review Godot", path: await realpath(skillPath), slug: "review-godot" }]);
+	});
+
 	it("filters invalid, outside-root, nested, and non-Codex entries", async () => {
 		const root: string = mkdtempSync(join(tmpdir(), "daedalus-skills-cli-"));
 		const validPath: string = join(root, "valid-skill");

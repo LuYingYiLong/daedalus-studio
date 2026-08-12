@@ -19,6 +19,9 @@ declare global {
 			authProtocol: string | null;
 		}>;
 		getStatus: () => Promise<string>;
+		getDiagnostics: () => Promise<BackendDiagnostics>;
+		getLogTail: () => Promise<BackendLogTail>;
+		openLog: () => Promise<{ opened: boolean; path: string | null }>;
 		healthCheck: () => Promise<boolean>;
 		restart: () => Promise<void>;
 		onStatusChanged: (callback: (status: string) => void) => () => void;
@@ -98,6 +101,21 @@ declare global {
 		get: () => Promise<ClientPreferences>;
 		update: (patch: Partial<ClientPreferences>) => Promise<ClientPreferences>;
 		onChanged: (callback: (preferences: ClientPreferences) => void) => () => void;
+	}
+
+	interface BackendDiagnostics {
+		status: "starting" | "healthy" | "unhealthy" | "stopped";
+		port: number;
+		name: string | null;
+		version: string | null;
+		processId: number | null;
+		logPath: string | null;
+	}
+
+	interface BackendLogTail {
+		path: string | null;
+		content: string;
+		truncated: boolean;
 	}
 
 	interface SessionCatalogAPI {
@@ -191,6 +209,7 @@ declare global {
 
 	interface WindowControlAPI {
 		openSettings: (page?: string) => Promise<void>;
+		openExternal: (url: string) => Promise<void>;
 		relaunch: (options?: { forceProcess?: boolean }) => Promise<void>;
 		rendererShellReady: () => void;
 		rendererReady: () => void;

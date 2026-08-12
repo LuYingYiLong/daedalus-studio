@@ -1,6 +1,6 @@
 .root {
 	width: 100%;
-	padding: var(--ds-space-3);
+	padding: var(--ds-space-2);
 	border-radius: var(--ds-radius-md);
 	background: color-mix(in srgb, var(--ds-surface) 72%, transparent);
 }

@@ -150,6 +150,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	const { t } = useTranslation();
 	const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState<number>(0);
 	const [isNewSessionHome, setIsNewSessionHome] = useState<boolean>(true);
+	const [homeComposerMessage, setHomeComposerMessage] = useState<string>("");
 	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() => createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection));
 	const [homeWorkspaceOptions, setHomeWorkspaceOptions] = useState<WorkspaceConfig[]>(() => bootstrapData.workspaceList.workspaces);
 	const [isWorkspaceProjectDialogOpen, setIsWorkspaceProjectDialogOpen] = useState<boolean>(false);
@@ -687,6 +688,9 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		} else {
 			composerDraftsRef.current.set(scopeId, text);
 		}
+		if (isNewSessionHome) {
+			setHomeComposerMessage(text);
+		}
 		setComposerInputReset((current): { scopeId: string; revision: number } => ({
 			scopeId,
 			revision: current.revision + 1
@@ -697,9 +701,15 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		const scopeId: string = activeSessionIdRef.current ?? "home";
 		if (text.length === 0) {
 			composerDraftsRef.current.delete(scopeId);
+			if (isNewSessionHome) {
+				setHomeComposerMessage("");
+			}
 			return;
 		}
 		composerDraftsRef.current.set(scopeId, text);
+		if (isNewSessionHome) {
+			setHomeComposerMessage(text);
+		}
 	}
 
 	function applyOptimisticActiveRun(requestId: string, clearComposerText: boolean, clearComposerContext: boolean = false, preserveWorkflowTodo: boolean = false): void {
@@ -2539,7 +2549,8 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	const pendingToolBudget: PendingToolBudget | null = workbench?.pendingToolBudget ?? null;
 	const chatTitle: string = isNewSessionHome ? "New session" : getSessionTitle(activeSessionMetadata, activeSessionId);
 	const composerScopeId: string = activeSessionId ?? "home";
-	const composerMessage: string = composerDraftsRef.current.get(composerScopeId) ?? "";
+	const storedComposerMessage: string = composerDraftsRef.current.get(composerScopeId) ?? "";
+	const composerMessage: string = isNewSessionHome ? homeComposerMessage : storedComposerMessage;
 	const composerInstanceKey: string = `${composerScopeId}:${composerInputReset.scopeId === composerScopeId ? composerInputReset.revision : 0}`;
 	const composerMode: ChatMode = activeSessionId === null ? homeDraft.chatMode : getChatMode(workbench);
 	const composerReasoningEffort: string | null = activeSessionId === null
@@ -2566,6 +2577,13 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		? null
 		: nextStepSuggestionCandidate.trim() || null;
 	const runningSessionIds: string[] = [...runningSessionState.keys()];
+
+	useEffect((): void => {
+		if (!isNewSessionHome) {
+			return;
+		}
+		setHomeComposerMessage(storedComposerMessage);
+	}, [activeSessionId, isNewSessionHome, storedComposerMessage]);
 
 	useEffect((): void => {
 		activeSessionTitleRef.current = chatTitle;

@@ -41,6 +41,18 @@ export async function setSkillEnabled(ref: string, enabled: boolean): Promise<Sk
 	return client.request<SkillListResult>("skill.set_enabled", { ref, enabled });
 }
 
+export async function fetchSkillContent(ref: string): Promise<{ ref: string; content: string }> {
+	const client = await createBackendClient();
+
+	return client.request<{ ref: string; content: string }>("skill.get", { ref });
+}
+
+export async function updateSkillContent(ref: string, content: string): Promise<SkillListResult> {
+	const client = await createBackendClient();
+
+	return client.request<SkillListResult>("skill.update", { ref, content });
+}
+
 export async function removeSkill(ref: string): Promise<SkillListResult> {
 	const client = await createBackendClient();
 

@@ -4,8 +4,10 @@ import { delimiter, dirname, isAbsolute, join, relative, resolve } from "node:pa
 import { app, ipcMain } from "electron";
 
 const SKILLS_CLI_TIMEOUT_MS: number = 10_000;
+const SKILLS_CLI_INSTALL_TIMEOUT_MS: number = 60_000;
 const SKILLS_CLI_MAX_OUTPUT_BYTES: number = 1_000_000;
 const SKILL_SLUG_PATTERN: RegExp = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
+const SKILLS_CLI_ARGUMENTS: readonly string[] = ["skills", "list", "--global", "--agent", "codex", "--json"];
 
 export type NpxCodexSkill = {
 	name: string;
@@ -21,7 +23,7 @@ type SkillsCliCommandResult = {
 };
 
 type SkillsCliDependencies = {
-	runCommand: (command: string, args: readonly string[], cwd: string) => Promise<SkillsCliCommandResult>;
+	runCommand: (command: string, args: readonly string[], cwd: string, timeoutMs?: number) => Promise<SkillsCliCommandResult>;
 	realpath: (path: string) => Promise<string>;
 	lstat: (path: string) => Promise<{ isDirectory(): boolean; isSymbolicLink(): boolean }>;
 };
@@ -96,6 +98,14 @@ function clipOutput(value: string): string {
 	return value.length > 1200 ? `${value.slice(0, 1200)}...` : value;
 }
 
+function requiresNpxInstall(result: SkillsCliCommandResult): boolean {
+	if (result.exitCode === 0 || result.timedOut) {
+		return false;
+	}
+	const output: string = `${result.stderr}\n${result.stdout}`;
+	return /npx\s+canceled due to missing packages and no YES option/iu.test(output);
+}
+
 function parseSkillsCliList(value: string): SkillsCliListEntry[] {
 	let parsed: unknown;
 	try {
@@ -124,7 +134,12 @@ function parseSkillsCliList(value: string): SkillsCliListEntry[] {
 	});
 }
 
-async function runSkillsCliCommand(command: string, args: readonly string[], cwd: string): Promise<SkillsCliCommandResult> {
+async function runSkillsCliCommand(
+	command: string,
+	args: readonly string[],
+	cwd: string,
+	timeoutMs: number = SKILLS_CLI_TIMEOUT_MS
+): Promise<SkillsCliCommandResult> {
 	const invocation: SkillsCliInvocation = await resolveSkillsCliInvocation(command, args);
 	return await new Promise<SkillsCliCommandResult>((resolveResult): void => {
 		const child: ChildProcess = spawn(invocation.command, [...invocation.args], {
@@ -142,7 +157,7 @@ async function runSkillsCliCommand(command: string, args: readonly string[], cwd
 		const timeout = setTimeout((): void => {
 			timedOut = true;
 			child.kill();
-		}, SKILLS_CLI_TIMEOUT_MS);
+		}, timeoutMs);
 		const finish = (result: SkillsCliCommandResult): void => {
 			if (settled) {
 				return;
@@ -199,11 +214,21 @@ export async function listGlobalCodexSkills(
 	const dependencies: SkillsCliDependencies = options.dependencies ?? defaultDependencies;
 	const homeDirectory: string = resolve(options.homeDirectory ?? app.getPath("home"));
 	const codexSkillsDirectory: string = resolve(options.codexSkillsDirectory ?? join(homeDirectory, ".codex", "skills"));
-	const result: SkillsCliCommandResult = await dependencies.runCommand(
-		getNpxCommand(options.platform),
-		["--no-install", "skills", "list", "--global", "--agent", "codex", "--json"],
-		homeDirectory
+	const npxCommand: string = getNpxCommand(options.platform);
+	let result: SkillsCliCommandResult = await dependencies.runCommand(
+		npxCommand,
+		["--no-install", ...SKILLS_CLI_ARGUMENTS],
+		homeDirectory,
+		SKILLS_CLI_TIMEOUT_MS
 	);
+	if (requiresNpxInstall(result)) {
+		result = await dependencies.runCommand(
+			npxCommand,
+			["--yes", ...SKILLS_CLI_ARGUMENTS],
+			homeDirectory,
+			SKILLS_CLI_INSTALL_TIMEOUT_MS
+		);
+	}
 	if (result.timedOut) {
 		throw new Error("Skills CLI timed out while listing global Codex skills.");
 	}

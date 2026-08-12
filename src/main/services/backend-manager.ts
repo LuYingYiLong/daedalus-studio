@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { ChildProcess, spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 import WebSocket from "ws";
 import {
@@ -59,9 +60,26 @@ export type BackendConnectionInfo = {
 	authProtocol: string | null;
 };
 
+export type BackendDiagnostics = {
+	status: BackendStatus;
+	port: number;
+	name: string | null;
+	version: string | null;
+	processId: number | null;
+	logPath: string | null;
+};
+
+export type BackendLogTail = {
+	path: string | null;
+	content: string;
+	truncated: boolean;
+};
+
 type BackendHealthResult = {
 	name?: unknown;
 	version?: unknown;
+	pid?: unknown;
+	logPath?: unknown;
 	buildId?: unknown;
 	distribution?: unknown;
 	runtime?: {
@@ -378,6 +396,30 @@ class BackendManager {
 		return typeof count === "number" && Number.isSafeInteger(count) && count > 0 ? count : 0;
 	}
 
+	public async getDiagnostics(): Promise<BackendDiagnostics> {
+		const health: BackendHealthResult = await this.requestRpc<BackendHealthResult>("backend.health");
+		return {
+			status: this.status,
+			port: this.port,
+			name: typeof health.name === "string" ? health.name : null,
+			version: typeof health.version === "string" ? health.version : null,
+			processId: typeof health.pid === "number" && Number.isSafeInteger(health.pid) ? health.pid : null,
+			logPath: typeof health.logPath === "string" && health.logPath.length > 0 ? health.logPath : null
+		};
+	}
+
+	public async getLogTail(): Promise<BackendLogTail> {
+		const diagnostics: BackendDiagnostics = await this.getDiagnostics();
+		if (diagnostics.logPath === null) {
+			return { path: null, content: "", truncated: false };
+		}
+		const maxBytes: number = 64 * 1024;
+		const logBuffer: Buffer = await readFile(diagnostics.logPath);
+		const truncated: boolean = logBuffer.byteLength > maxBytes;
+		const content: string = logBuffer.subarray(Math.max(0, logBuffer.byteLength - maxBytes)).toString("utf8");
+		return { path: diagnostics.logPath, content, truncated };
+	}
+
 	public onDidChangeStatus(listener: (status: BackendStatus) => void): () => void {
 		this.statusListeners.add(listener);
 		return (): void => {
@@ -393,6 +435,19 @@ class BackendManager {
 		);
 		ipcMain.handle("backend:get-status", (): BackendStatus => this.status);
 		ipcMain.handle("backend:health-check", async (): Promise<boolean> => await this.ping());
+		ipcMain.handle("backend:get-diagnostics", async (): Promise<BackendDiagnostics> => await this.getDiagnostics());
+		ipcMain.handle("backend:get-log-tail", async (): Promise<BackendLogTail> => await this.getLogTail());
+		ipcMain.handle("backend:open-log", async (): Promise<{ opened: boolean; path: string | null }> => {
+			const diagnostics: BackendDiagnostics = await this.getDiagnostics();
+			if (diagnostics.logPath === null) {
+				return { opened: false, path: null };
+			}
+			const openError: string = await shell.openPath(diagnostics.logPath);
+			if (openError.length > 0) {
+				throw new Error(openError);
+			}
+			return { opened: true, path: diagnostics.logPath };
+		});
 		ipcMain.handle("backend:restart", async (): Promise<void> => await this.restartAndWaitHealthy());
 	}
 

@@ -11,4 +11,18 @@ describe("Skills settings npx import", () => {
 		expect(source).toContain("selectedNpxCandidates");
 		expect(source).toContain("alreadyInstalled");
 	});
+
+	it("keeps edit and delete actions visible and edits SKILL.md through the backend API", () => {
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "SkillsSettingsPage.tsx");
+		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "skill-api.ts");
+
+		expect(pageSource).toContain("openSkillEditor(skill)");
+		expect(pageSource).toContain('icon={<Icon name="pencil" />}');
+		expect(pageSource).toContain('icon={<Icon name="remove" />}');
+		expect(pageSource).toContain("disabled={!skill.removable");
+		expect(pageSource).toContain("updateSkillContent(skillEditor.skill.ref, skillEditor.content)");
+		expect(pageSource).not.toContain("{skill.removable ? (");
+		expect(apiSource).toContain('"skill.get"');
+		expect(apiSource).toContain('"skill.update"');
+	});
 });

@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Button, Checkbox, Dropdown, Empty, Flex, Input, MenuProps, Modal, Select, Space, Spin, Switch, Tag, Tooltip, Typography } from "antd";
+import { Alert, App as AntdApp, Button, Checkbox, Dropdown, Empty, Flex, Input, MenuProps, Modal, Select, Space, Spin, Switch, Tag, Tooltip, Typography } from "antd";
 import { Icon } from "@/assets/icons";
 import styles from "./SkillsSettingsPage.module.css";
 import {
 	fetchSkills,
+	fetchSkillContent,
 	installSkill,
 	removeSkill,
 	setSkillEnabled,
+	updateSkillContent,
 	type SkillInstallKind,
 	type SkillInstallSource,
 	type SkillListResult,
@@ -33,6 +35,11 @@ type NpxImportSummary = {
 	installed: number;
 	skipped: number;
 	failed: Array<{ name: string; message: string }>;
+};
+
+type SkillEditorState = {
+	skill: SkillSummary;
+	content: string;
 };
 
 function getSourceColor(source: SkillSource): string {
@@ -62,6 +69,7 @@ function applySkillResult(result: SkillListResult, setSkills: (skills: SkillSumm
 
 function SkillsSettingsPage(): React.JSX.Element | null {
 	const { t } = useTranslation();
+	const { modal } = AntdApp.useApp();
 	const [skills, setSkills] = useState<SkillSummary[]>([]);
 	const [query, setQuery] = useState<string>("");
 	const [scopeFilter, setScopeFilter] = useState<SkillScopeFilter>("all");
@@ -78,6 +86,10 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 	const [isNpxImporting, setIsNpxImporting] = useState<boolean>(false);
 	const [npxImportError, setNpxImportError] = useState<string | null>(null);
 	const [npxImportSummary, setNpxImportSummary] = useState<NpxImportSummary | null>(null);
+	const [skillEditor, setSkillEditor] = useState<SkillEditorState | null>(null);
+	const [isSkillEditorLoading, setIsSkillEditorLoading] = useState<boolean>(false);
+	const [isSkillEditorSaving, setIsSkillEditorSaving] = useState<boolean>(false);
+	const [skillEditorError, setSkillEditorError] = useState<string | null>(null);
 	const addItems: MenuProps["items"] = useMemo((): MenuProps["items"] => [
 		{
 			key: "npx",
@@ -286,10 +298,48 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 		}
 	}
 
+	async function openSkillEditor(skill: SkillSummary): Promise<void> {
+		if (!skill.editable || isSkillEditorLoading) {
+			return;
+		}
+		setSkillEditor({ skill, content: "" });
+		setSkillEditorError(null);
+		setIsSkillEditorLoading(true);
+		try {
+			const result: { ref: string; content: string } = await fetchSkillContent(skill.ref);
+			setSkillEditor((current: SkillEditorState | null): SkillEditorState | null => {
+				return current?.skill.ref === result.ref ? { ...current, content: result.content } : current;
+			});
+		} catch (error: unknown) {
+			setSkillEditorError(error instanceof Error ? error.message : t("settings.skills.errors.loadContent"));
+		} finally {
+			setIsSkillEditorLoading(false);
+		}
+	}
+
+	async function saveSkillEditor(): Promise<void> {
+		if (skillEditor === null || isSkillEditorLoading || isSkillEditorSaving) {
+			return;
+		}
+		setIsSkillEditorSaving(true);
+		setSkillEditorError(null);
+		try {
+			const result: SkillListResult = await updateSkillContent(skillEditor.skill.ref, skillEditor.content);
+			applySkillResult(result, setSkills);
+			setSkillEditor(null);
+		} catch (error: unknown) {
+			setSkillEditorError(error instanceof Error ? error.message : t("settings.skills.errors.updateContent"));
+		} finally {
+			setIsSkillEditorSaving(false);
+		}
+	}
+
 	function confirmDelete(skill: SkillSummary): void {
-		Modal.confirm({
+		modal.confirm({
 			title: t("settings.skills.confirm.delete.title"),
-			content: t("settings.skills.confirm.delete.description", { name: skill.name }),
+			content: t(skill.source === "project"
+				? "settings.skills.confirm.delete.projectDescription"
+				: "settings.skills.confirm.delete.description", { name: skill.name }),
 			okText: t("settings.common.delete"),
 			okButtonProps: { danger: true },
 			async onOk(): Promise<void> {
@@ -385,8 +435,6 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 								<div className={styles.skillTitleRow}>
 									<Typography.Title level={4} className={styles.skillTitle}>{skill.name}</Typography.Title>
 									<Tag color={getSourceColor(skill.source)}>{getSourceLabel(skill.source, t)}</Tag>
-									{skill.valid ? <Tag color="success">{t("settings.skills.valid")}</Tag> : <Tag color="error">{t("settings.skills.invalid")}</Tag>}
-									{skill.enabled ? <Tag color="success">{t("settings.common.on")}</Tag> : <Tag>{t("settings.common.off")}</Tag>}
 								</div>
 								{skill.description.length > 0 ? (
 									<Typography.Text type="secondary" className={styles.skillDescription}>{skill.description}</Typography.Text>
@@ -398,33 +446,81 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 								</Typography.Text>
 							</div>
 							<div className={styles.skillActions}>
-								<Tooltip title={skill.enabled ? t("settings.common.disable") : t("settings.common.enable")}>
-									<Switch
-										checked={skill.enabled}
-										loading={isBusy}
-										disabled={!skill.valid || (busyRef !== null && !isBusy)}
-										onChange={(checked: boolean): void => {
-											void handleSetEnabled(skill, checked);
-										}}
-									/>
-								</Tooltip>
-								{skill.removable ? (
+								<Flex align="center" gap="small" wrap={true} justify="flex-end">
+									<Button
+										type="text"
+										icon={<Icon name="pencil" />}
+										disabled={!skill.editable || busyRef !== null || isSkillEditorLoading}
+										onClick={(): void => { void openSkillEditor(skill); }}
+									>
+										{t("settings.common.edit")}
+									</Button>
 									<Button
 										type="text"
 										danger={true}
 										icon={<Icon name="remove" />}
 										loading={isBusy}
-										disabled={busyRef !== null && !isBusy}
+										disabled={!skill.removable || (busyRef !== null && !isBusy)}
 										onClick={(): void => confirmDelete(skill)}
 									>
 										{t("settings.common.delete")}
 									</Button>
-								) : null}
+									<Tooltip title={skill.enabled ? t("settings.common.disable") : t("settings.common.enable")}>
+										<Switch
+											checked={skill.enabled}
+											loading={isBusy}
+											disabled={!skill.valid || (busyRef !== null && !isBusy)}
+											onChange={(checked: boolean): void => {
+												void handleSetEnabled(skill, checked);
+											}}
+										/>
+									</Tooltip>
+								</Flex>
 							</div>
 						</div>
 					);
 				})}
 			</div>
+
+			<Modal
+				className={styles.modal}
+				title={skillEditor === null ? t("settings.skills.editor.title") : t("settings.skills.editor.titleWithName", { name: skillEditor.skill.name })}
+				open={skillEditor !== null}
+				okText={t("settings.common.save")}
+				confirmLoading={isSkillEditorSaving}
+				okButtonProps={{ disabled: isSkillEditorLoading || skillEditor?.content.trim().length === 0 }}
+				cancelButtonProps={{ disabled: isSkillEditorSaving }}
+				destroyOnHidden={true}
+				onOk={(): void => { void saveSkillEditor(); }}
+				onCancel={(): void => {
+					if (!isSkillEditorSaving) {
+						setSkillEditor(null);
+						setSkillEditorError(null);
+					}
+				}}
+			>
+				<div className={styles.skillEditor}>
+					{skillEditorError !== null ? <Alert type="error" showIcon={true} description={skillEditorError} /> : null}
+					<Typography.Text type="secondary">
+						{skillEditor?.skill.displayPath ?? ""}
+					</Typography.Text>
+					<Spin spinning={isSkillEditorLoading}>
+						<Input.TextArea
+							className={styles.skillEditorInput}
+							value={skillEditor?.content ?? ""}
+							autoSize={false}
+							rows={18}
+							spellCheck={false}
+							disabled={isSkillEditorLoading || isSkillEditorSaving}
+							onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
+								const content: string = event.target.value;
+								setSkillEditor((current: SkillEditorState | null): SkillEditorState | null => current === null ? null : { ...current, content });
+							}}
+						/>
+					</Spin>
+					<Typography.Text type="secondary">{t("settings.skills.editor.description")}</Typography.Text>
+				</div>
+			</Modal>
 
 			<Modal
 				title={pendingInstall === null ? t("settings.skills.install.title") : t(pendingInstall.kind === "zip" ? "settings.skills.install.fromZip" : "settings.skills.install.fromFolder")}
@@ -461,21 +557,28 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 					void handleConfirmNpxImport();
 				}}
 				onCancel={closeNpxImportDialog}
+				className={styles.modal}
 			>
 				<div className={styles.npxImportForm}>
 					<Typography.Text type="secondary">{t("settings.skills.npx.description")}</Typography.Text>
 					{isNpxLoading ? <Spin /> : null}
-					{npxImportError !== null ? <Alert type="warning" showIcon={true} description={npxImportError} /> : null}
+					{npxImportError !== null ? <
+						Alert type="warning"
+						showIcon={true}
+						description={npxImportError}
+						className={styles.npxError}
+					/> : null}
 					{npxImportSummary !== null ? (
 						<Alert
 							type={npxImportSummary.failed.length === 0 ? "success" : "warning"}
 							showIcon={true}
-							message={t("settings.skills.npx.summary", {
+							title={t("settings.skills.npx.summary", {
 								installed: npxImportSummary.installed,
 								skipped: npxImportSummary.skipped,
 								failed: npxImportSummary.failed.length
 							})}
 							description={npxImportSummary.failed.length > 0 ? npxImportSummary.failed.map((failure): string => `${failure.name}: ${failure.message}`).join("\n") : undefined}
+							className={styles.npxError}
 						/>
 					) : null}
 					{npxCandidates !== null && npxCandidates.length === 0 ? (
@@ -491,6 +594,7 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 									setNpxTargetSource(value);
 									setNpxImportSummary(null);
 								}}
+								suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 							/>
 							<Checkbox
 								checked={importableNpxCandidates.length > 0 && selectedNpxCandidates.length === importableNpxCandidates.length}

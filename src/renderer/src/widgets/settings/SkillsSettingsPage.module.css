@@ -111,7 +111,19 @@
 .skillActions {
 	display: flex;
 	align-items: center;
+	justify-content: flex-end;
 	gap: 8px;
+}
+
+.skillEditor {
+	display: grid;
+	gap: 10px;
+}
+
+.skillEditorInput {
+	font-size: 12px;
+	line-height: 1.55;
+	resize: vertical;
 }
 
 .installForm {
@@ -137,13 +149,31 @@
 	align-items: center;
 	gap: 8px;
 	min-width: 0;
-	padding: 6px 8px;
+	padding: var(--ds-space-2);
 	border: 1px solid var(--ds-border-subtle);
-	border-radius: var(--ds-radius-sm);
+	border-radius: var(--ds-radius-lg);
 }
 
 .npxSkillMain {
 	display: grid;
 	gap: 2px;
 	min-width: 0;
+}
+
+.modal {
+	user-select: none;
+}
+
+.npxError {
+	user-select: text;
+}
+
+@media (max-width: 780px) {
+	.skillItem {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.skillActions {
+		justify-content: flex-start;
+	}
 }

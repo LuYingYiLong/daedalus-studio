@@ -438,6 +438,26 @@ ipcMain.handle("window:open-settings", (_event, page?: unknown): void => {
 	openSettingsWindow(isSettingsPageKey(page) ? page : "provider");
 });
 
+ipcMain.handle("window:open-external", async (event, rawUrl: unknown): Promise<void> => {
+	const senderWindow: BrowserWindow | null = BrowserWindow.fromWebContents(event.sender);
+	if (senderWindow === null || (senderWindow !== mainWindow && senderWindow !== settingsWindow)) {
+		throw new Error("window_open_external_not_allowed");
+	}
+	if (typeof rawUrl !== "string") {
+		throw new Error("window_external_url_invalid");
+	}
+	let url: URL;
+	try {
+		url = new URL(rawUrl);
+	} catch {
+		throw new Error("window_external_url_invalid");
+	}
+	if (url.protocol !== "https:" || (url.hostname !== "github.com" && !url.hostname.endsWith(".github.com"))) {
+		throw new Error("window_external_url_not_allowed");
+	}
+	await shell.openExternal(url.toString());
+});
+
 function reloadDevelopmentRenderer(): void {
 	if (isDevelopmentRendererReloading) {
 		return;

@@ -62,6 +62,21 @@ type BackendBootstrapState = {
 	suggestedAction: string | null;
 };
 
+type BackendDiagnostics = {
+	status: "starting" | "healthy" | "unhealthy" | "stopped";
+	port: number;
+	name: string | null;
+	version: string | null;
+	processId: number | null;
+	logPath: string | null;
+};
+
+type BackendLogTail = {
+	path: string | null;
+	content: string;
+	truncated: boolean;
+};
+
 type NativeNotificationPayload = {
 	kind: "run_completed" | "approval_required" | "clarification_required";
 	sessionId?: string | null;
@@ -167,6 +182,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			return ipcRenderer.invoke("backend:get-connection-info");
 		},
 		getStatus: (): Promise<string> => ipcRenderer.invoke("backend:get-status"),
+		getDiagnostics: (): Promise<BackendDiagnostics> => ipcRenderer.invoke("backend:get-diagnostics"),
+		getLogTail: (): Promise<BackendLogTail> => ipcRenderer.invoke("backend:get-log-tail"),
+		openLog: (): Promise<{ opened: boolean; path: string | null }> => ipcRenderer.invoke("backend:open-log"),
 		healthCheck: (): Promise<boolean> => ipcRenderer.invoke("backend:health-check"),
 		restart: (): Promise<void> => ipcRenderer.invoke("backend:restart"),
 		onStatusChanged: (callback: (status: string) => void): (() => void) => {
@@ -268,6 +286,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
 	windowControl: {
 		openSettings: (page?: string): Promise<void> => ipcRenderer.invoke("window:open-settings", page),
+		openExternal: (url: string): Promise<void> => ipcRenderer.invoke("window:open-external", url),
 		relaunch: (options?: { forceProcess?: boolean }): Promise<void> => ipcRenderer.invoke("window:relaunch", options),
 		rendererShellReady: (): void => ipcRenderer.send("window:renderer-shell-ready"),
 		rendererReady: (): void => ipcRenderer.send("window:renderer-ready"),

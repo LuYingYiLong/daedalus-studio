@@ -1816,7 +1816,8 @@
       "confirm": {
         "delete": {
           "title": "删除技能？",
-          "description": "从 Daedalus Studio 删除 {{name}}。这会移除个人技能文件，但不会修改任何 Godot 项目文件。"
+          "description": "从 Daedalus Studio 删除 {{name}}。这会永久移除对应的个人技能文件。",
+          "projectDescription": "从当前项目删除 {{name}}？这会永久移除项目中的 .github/skills 技能目录，并会反映在版本控制变更中。"
         }
       },
       "empty": {
@@ -1828,8 +1829,15 @@
         "install": "安装技能失败",
         "npxDiscover": "查找本地 Codex Skill 失败",
         "load": "加载技能失败",
+        "loadContent": "读取 SKILL.md 失败",
         "selectSource": "选择技能来源失败",
-        "update": "更新技能失败"
+        "update": "更新技能失败",
+        "updateContent": "保存 SKILL.md 失败"
+      },
+      "editor": {
+        "title": "编辑技能",
+        "titleWithName": "编辑 {{name}}",
+        "description": "保存前会校验 YAML frontmatter、技能说明和文件大小。技能标识和目录不会改变。"
       },
       "install": {
         "description": "项目安装需要当前存在活动 workspace。个人安装可在所有 workspace 中使用。",
@@ -1839,7 +1847,7 @@
       },
       "npx": {
         "title": "导入全局 Codex Skill",
-        "description": "仅列出本机可用的 Skills CLI 条目。Daedalus Studio 不会下载包，也不会执行 Skill 指令。",
+        "description": "列出全局 Codex Skill。若本机尚无 Skills CLI，Daedalus Studio 会通过 npx 下载一次 CLI，但不会执行 Skill 指令。",
         "empty": "未找到全局 Codex Skill。",
         "selectAll": "选择全部可导入 Skill",
         "alreadyInstalled": "已安装",

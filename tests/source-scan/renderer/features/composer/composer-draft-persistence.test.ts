@@ -13,6 +13,10 @@ describe("Composer draft lifetime", () => {
 		expect(composerSource).not.toContain("onMessageChange");
 		expect(appSource).toContain("composerDraftsRef = useRef<Map<string, string>>(new Map())");
 		expect(appSource).toContain("composerDraftsRef.current.get(composerScopeId) ?? \"\"");
+		expect(appSource).toContain("const [homeComposerMessage, setHomeComposerMessage] = useState<string>(\"\")");
+		expect(appSource).toContain("if (isNewSessionHome) {");
+		expect(appSource).toContain("setHomeComposerMessage(text);");
+		expect(appSource).toContain("const composerMessage: string = isNewSessionHome ? homeComposerMessage : storedComposerMessage;");
 		expect(homePageSource).toContain("onDraftChange={onDraftChange}");
 		expect(composerSource).toContain("onDraftChange?.(nextMessage)");
 	});
