@@ -35,4 +35,17 @@ describe("SkillsSettingsPage", () => {
 		expect(apiSource).toContain("sourceFolderId?: string");
 		expect(apiSource).toContain('{ ref, enabled, ...target }');
 	});
+
+	it("uses one grouped view selector for personal and workspace skills", () => {
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "SkillsSettingsPage.tsx");
+		const cssSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "SkillsSettingsPage.module.css");
+		expect(pageSource).toContain('type SkillViewSelection = "all" | "personal" | `workspace:${string}`');
+		expect(pageSource).not.toContain("__workspace_divider");
+		expect(pageSource).toContain("...workspaces.map");
+		expect(pageSource).toContain("loadSkillsForView(viewSelection, workspaces)");
+		expect(pageSource).not.toContain("scopeOptions");
+		expect(pageSource).not.toContain("className={styles.workspaceSelect}");
+		expect(pageSource).not.toContain("workspaceDivider");
+		expect(cssSource).not.toContain("workspaceDivider");
+	});
 });

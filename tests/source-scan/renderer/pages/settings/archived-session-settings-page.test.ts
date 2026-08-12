@@ -33,5 +33,7 @@ describe("ArchivedSessionSettingsPage", () => {
 		expect(mainSource).toContain('ipcMain.on("session-catalog:changed"');
 		expect(mainSource).toContain("broadcastSessionCatalogChanged(event.sender.id)");
 		expect(viteEnvSource).toContain("interface SessionCatalogAPI");
+		expect(pageSource).toContain('<Flex className={styles.toolbar} gap="small" wrap={false}>');
+		expect(pageSource).not.toContain('<Space className={styles.toolbar}>');
 	});
 });

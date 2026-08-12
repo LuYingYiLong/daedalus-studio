@@ -97,7 +97,7 @@ function createArchivedSessionMenuItem(session: SessionMetadata, options: Create
 							shape="circle"
 							danger={true}
 							aria-label={options.labels.deleteAria(session.title)}
-							icon={<Icon name="remove" width={16} height={16}/>}
+							icon={<Icon name="remove" width={16} height={16} />}
 							loading={isDeleting}
 							disabled={options.busySessionId !== null && !isDeleting}
 							onClick={(event: MouseEvent<HTMLElement>): void => {
@@ -336,30 +336,28 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
-				<div className={styles.titleRow}>
+				<Space>
 					<Typography.Title level={3} className={styles.title}>
 						{t("settings.archivedSessions.title")}
 					</Typography.Title>
 					<Tag>{archivedSessions.length}</Tag>
-				</div>
-				<Flex gap="small" className={styles.toolbar}>
-					<Space.Compact className={styles.filtersCompact}>
-						<Input
-							allowClear={true}
-							prefix={<Icon name="search" />}
-							placeholder={t("settings.archivedSessions.searchPlaceholder")}
-							value={searchText}
-							className={styles.searchBox}
-							onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setSearchText(event.target.value)}
-						/>
-						<Select
-							className={styles.selectBox}
-							value={workspaceFilter}
-							options={workspaceOptions}
-							onChange={(value: string): void => setWorkspaceFilter(value)}
-							suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
-						/>
-					</Space.Compact>
+				</Space>
+				<Flex className={styles.toolbar} gap="small" wrap={false}>
+					<Input
+						allowClear={true}
+						prefix={<Icon name="search" />}
+						placeholder={t("settings.archivedSessions.searchPlaceholder")}
+						value={searchText}
+						className={styles.searchBox}
+						onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setSearchText(event.target.value)}
+					/>
+					<Select
+						className={styles.selectBox}
+						value={workspaceFilter}
+						options={workspaceOptions}
+						onChange={(value: string): void => setWorkspaceFilter(value)}
+						suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
+					/>
 					<Button
 						color="danger"
 						variant="solid"

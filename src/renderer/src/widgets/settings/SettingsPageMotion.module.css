@@ -1,0 +1,32 @@
+.enter {
+	opacity: 0;
+	transform: translateY(4px);
+	animation: settingsPageContentEnter 160ms ease-out both;
+}
+
+@keyframes settingsPageContentEnter {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.enter {
+		transform: none;
+		animation: settingsPageContentEnterReduced 120ms ease-out both;
+	}
+}
+
+@keyframes settingsPageContentEnterReduced {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}

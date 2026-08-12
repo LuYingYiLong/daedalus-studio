@@ -228,11 +228,11 @@ function GodotProjectsSettingsPage(): React.JSX.Element {
 	return (
 		<section className={styles.page}>
 			<Flex className={styles.header} align="center" justify="space-between" gap="small" wrap>
-				<div>
+				<Space>
 					<Typography.Title level={3} className={styles.title}>
 						{t("settings.godotProjects.title", { defaultValue: "Godot projects" })}
 					</Typography.Title>
-				</div>
+				</Space>
 				<Space wrap>
 					{hasPending ? (
 						<Button loading={actionLoading("retry")} onClick={(): void => { void runAction("retry"); }}>

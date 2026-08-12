@@ -24,6 +24,7 @@ import {
 } from "@/platform/rpc/client-preferences-api";
 import { Icon } from "@/assets/icons";
 import styles from "./KeyboardShortcutsSettingsPage.module.css";
+import pageMotionStyles from "./SettingsPageMotion.module.css";
 
 type KeyboardShortcutsSettingsPageProps = {
 	clientPreferences: ClientPreferences;
@@ -300,7 +301,7 @@ function KeyboardShortcutsSettingsPage({
 	}
 
 	return (
-		<section className={styles.page}>
+		<section className={`${styles.page} ${pageMotionStyles.enter}`}>
 			<header className={styles.header}>
 				<Typography.Title level={3} className={styles.title}>
 					{t("settings.keyboardShortcuts.title")}

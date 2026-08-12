@@ -1,6 +1,7 @@
 import { CSSProperties, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import styles from "./GeneralSettingsPage.module.css";
+import pageMotionStyles from "./SettingsPageMotion.module.css";
 import { Alert, Button, ColorPicker, Segmented, Select, Space, Switch, Tooltip, Typography } from "antd";
 import type { ColorPickerProps, SelectProps } from "antd";
 import { Icon } from "@/assets/icons";
@@ -275,7 +276,7 @@ function GeneralSettingsPage({
 	}
 
 	return (
-		<section className={styles.page}>
+		<section className={`${styles.page} ${pageMotionStyles.enter}`}>
 			<header className={styles.header}>
 				<div className={styles.titleRow}>
 					<Typography.Title level={3} className={styles.title}>

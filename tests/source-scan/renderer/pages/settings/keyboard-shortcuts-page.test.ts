@@ -12,12 +12,15 @@ describe("KeyboardShortcutsSettingsPage", () => {
 			"settings",
 			"KeyboardShortcutsSettingsPage.tsx"
 		);
+		const motionCssSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "SettingsPageMotion.module.css");
 		const main: string = readRepoFile("src", "main", "index.ts");
 
 		expect(settingsWindow).toContain('"keyboard_shortcuts"');
 		expect(settingsWindow).toContain('name="keyboard"');
 		expect(main).toContain('"keyboard_shortcuts"');
 		expect(page).toContain("<Table<ShortcutDefinition>");
+		expect(page).toContain("pageMotionStyles.enter");
+		expect(motionCssSource).toContain("animation: settingsPageContentEnter 160ms ease-out both;");
 		expect(page).toContain('rowKey="id"');
 		expect(page).toContain("pagination={false}");
 		expect(page).toContain("onRow={(definition: ShortcutDefinition)");

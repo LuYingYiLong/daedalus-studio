@@ -5,6 +5,7 @@ describe("GeneralSettingsPage", () => {
 	it("renders general options and splits backend settings from client preferences", () => {
 		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "GeneralSettingsPage.tsx");
 		const cssSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "GeneralSettingsPage.module.css");
+		const motionCssSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "SettingsPageMotion.module.css");
 		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "client-preferences-api.ts");
 		const generalApiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "general-settings-api.ts");
 		const preloadSource: string = readRepoFile("src", "preload", "index.ts");
@@ -34,6 +35,7 @@ describe("GeneralSettingsPage", () => {
 		expect(pageSource).toContain("settings.general.godot.executable");
 		expect(pageSource).toContain("draftGeneralSettings.godotExecutablePath?.trim()");
 		expect(pageSource).toContain("<SettingsItem");
+		expect(pageSource).toContain("pageMotionStyles.enter");
 		expect(pageSource).not.toContain("<Input");
 		expect(pageSource).not.toContain("<Tag");
 		expect(pageSource).toContain("window.electronAPI.pickGodotExecutable()");
@@ -49,6 +51,8 @@ describe("GeneralSettingsPage", () => {
 		expect(cssSource).toContain("padding: 0px 0px var(--ds-space-2) var(--ds-space-2);");
 		expect(cssSource).toContain(".settingsStack");
 		expect(cssSource).toContain("overflow-y: auto;");
+		expect(motionCssSource).toContain("animation: settingsPageContentEnter 160ms ease-out both;");
+		expect(motionCssSource).toContain("@media (prefers-reduced-motion: reduce)");
 		expect(apiSource).toContain("window.electronAPI.clientPreferences.get");
 		expect(apiSource).toContain("window.electronAPI.clientPreferences.update");
 		expect(generalApiSource).toContain('client.request<GeneralSettings>("generalSettings.get")');

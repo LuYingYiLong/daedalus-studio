@@ -3,6 +3,7 @@ import {
 	App,
 	Button,
 	Empty,
+	Flex,
 	Form,
 	Input,
 	Modal,
@@ -390,14 +391,16 @@ function DocumentationSettingsPage(): React.JSX.Element | null {
 	return (
 		<section className={styles.page}>
 			<header className={styles.header}>
-				<div className={styles.titleRow}>
+				<Space>
 					<Typography.Title level={3} className={styles.title}>
 						{t("settings.documentation.title")}
 					</Typography.Title>
 					<Tag>{documents.length}</Tag>
-				</div>
-				<div className={styles.headerActions}>
-					<Typography.Text>{t("settings.documentation.enabled")}</Typography.Text>
+				</Space>
+				<Flex className={styles.toolbar}>
+					<Typography.Text>
+						{t("settings.documentation.enabled")}
+					</Typography.Text>
 					<Switch
 						checked={documentation?.enabled ?? false}
 						loading={isToggling}
@@ -421,7 +424,7 @@ function DocumentationSettingsPage(): React.JSX.Element | null {
 					>
 						{t("settings.documentation.add")}
 					</Button>
-				</div>
+				</Flex>
 			</header>
 
 			<div className={styles.body}>
