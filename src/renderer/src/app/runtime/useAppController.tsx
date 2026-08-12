@@ -23,7 +23,7 @@ import { fetchProviderModelSelection, type ProviderModelSelection } from "@/plat
 import type { ProviderModelInfo, ProviderModelSelectionProvider } from "@/platform/rpc/provider-api";
 import { cancelChatMessage, retryAgentRun, sendChatMessage, type ChatMode } from "@/platform/rpc/chat-api";
 import { fetchSlashCommands, type SlashCommandDefinition } from "@/platform/rpc/command-api";
-import { fetchSkills, type SkillSummary } from "@/platform/rpc/skill-api";
+import { fetchSkills, type SkillSummary, type SkillTarget } from "@/platform/rpc/skill-api";
 import type { ApprovalMode } from "@/platform/rpc/approval-api";
 import {
 	applyBackendEventToTimeline,
@@ -229,9 +229,12 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		revision: 0
 	});
 	const slashCommandsLoadingRef = useRef<boolean>(false);
-	const skillsLoadingRef = useRef<boolean>(false);
+	const skillsLoadingTargetKeyRef = useRef<string | null>(null);
+	const skillsLoadVersionRef = useRef<number>(0);
+	const skillTargetRef = useRef<SkillTarget>({});
 	const slashCommandsRetryAtRef = useRef<number>(0);
 	const skillsRetryAtRef = useRef<number>(0);
+	const skillsRetryTargetKeyRef = useRef<string | null>(null);
 	const initializedWorkflowTodoKeyRef = useRef<string>("");
 	const expandedActiveWorkflowTodoKeyRef = useRef<string>("");
 	const pendingUserActionRequestIdsRef = useRef<Set<string>>(new Set());
@@ -508,23 +511,38 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		}
 	}, []);
 
-	const loadSkills = useCallback(async (): Promise<void> => {
-		if (skillsLoadingRef.current || Date.now() < skillsRetryAtRef.current) {
+	const loadSkills = useCallback(async (target: SkillTarget = skillTargetRef.current): Promise<void> => {
+		const targetKey: string = `${target.workspaceId ?? "global"}\u0000${target.sourceFolderId ?? "all"}`;
+		if (
+			skillsLoadingTargetKeyRef.current === targetKey
+			|| (skillsRetryTargetKeyRef.current === targetKey && Date.now() < skillsRetryAtRef.current)
+		) {
 			return;
 		}
 
-		skillsLoadingRef.current = true;
+		const loadVersion: number = skillsLoadVersionRef.current + 1;
+		skillsLoadVersionRef.current = loadVersion;
+		skillsLoadingTargetKeyRef.current = targetKey;
 		try {
-			const result = await fetchSkills();
-
+			const result = await fetchSkills(target);
+			if (skillsLoadVersionRef.current !== loadVersion) {
+				return;
+			}
 			setSkills(result.skills);
 			skillsRetryAtRef.current = 0;
+			skillsRetryTargetKeyRef.current = null;
 		} catch (error: unknown) {
+			if (skillsLoadVersionRef.current !== loadVersion) {
+				return;
+			}
 			setSkills([]);
 			skillsRetryAtRef.current = Date.now() + 3000;
+			skillsRetryTargetKeyRef.current = targetKey;
 			console.error("[App] load skills failed", error);
 		} finally {
-			skillsLoadingRef.current = false;
+			if (skillsLoadVersionRef.current === loadVersion) {
+				skillsLoadingTargetKeyRef.current = null;
+			}
 		}
 	}, []);
 
@@ -964,12 +982,14 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	}, []);
 
 	useEffect((): void => {
-		if (activeSessionId === null && activeWorkspace === null && homeDraft.workspace === null) {
+		const workspace: WorkspaceConfig | null = activeWorkspace ?? homeDraft.workspace;
+		skillTargetRef.current = workspace === null ? {} : { workspaceId: workspace.id };
+		if (activeSessionId === null && workspace === null) {
 			setSkills([]);
 			return;
 		}
 
-		void loadSkills();
+		void loadSkills(skillTargetRef.current);
 	}, [activeSessionId, activeWorkspace?.id, homeDraft.workspace?.id, loadSkills]);
 
 	useAppEventBridge({

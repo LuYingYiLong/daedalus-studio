@@ -51,6 +51,11 @@
 	min-width: 20%;
 }
 
+.workspaceSelect {
+	flex: 0 1 220px;
+	min-width: 160px;
+}
+
 .skillList {
 	display: grid;
 	align-content: start;
@@ -169,6 +174,14 @@
 }
 
 @media (max-width: 780px) {
+	.toolbar {
+		flex-wrap: wrap;
+	}
+
+	.workspaceSelect {
+		flex: 1 1 100%;
+	}
+
 	.skillItem {
 		grid-template-columns: minmax(0, 1fr);
 	}

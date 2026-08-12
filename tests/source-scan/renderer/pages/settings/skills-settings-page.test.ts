@@ -20,4 +20,19 @@ describe("SkillsSettingsPage", () => {
 		expect(viteEnvSource).toContain("pickSkillZip");
 		expect(viteEnvSource).toContain("pickSkillDirectory");
 	});
+
+	it("requires an explicit project and source-folder target for project skill operations", () => {
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "SkillsSettingsPage.tsx");
+		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "skill-api.ts");
+		expect(pageSource).toContain("fetchWorkspaces()");
+		expect(pageSource).toContain("setSelectedWorkspaceId(null)");
+		expect(pageSource).not.toContain("result.workspaces[0]");
+		expect(pageSource).toContain("selectedProjectTarget()");
+		expect(pageSource).toContain("sourceFolderId: selectedSourceFolderId");
+		expect(pageSource).toContain("targetForSkill(skill)");
+		expect(apiSource).toContain("export type SkillTarget");
+		expect(apiSource).toContain("workspaceId?: string");
+		expect(apiSource).toContain("sourceFolderId?: string");
+		expect(apiSource).toContain('{ ref, enabled, ...target }');
+	});
 });

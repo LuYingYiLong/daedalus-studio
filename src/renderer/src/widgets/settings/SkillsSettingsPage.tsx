@@ -14,8 +14,11 @@ import {
 	type SkillInstallSource,
 	type SkillListResult,
 	type SkillSource,
-	type SkillSummary
+	type SkillSummary,
+	type SkillTarget
 } from "@/platform/rpc/skill-api";
+import { fetchWorkspaces } from "@/platform/rpc/workspace-api";
+import type { WorkspaceConfig, WorkspaceSourceFolder } from "@/platform/rpc/types";
 
 type SkillScopeFilter = "all" | Exclude<SkillSource, "builtin">;
 
@@ -67,10 +70,20 @@ function applySkillResult(result: SkillListResult, setSkills: (skills: SkillSumm
 	setSkills(result.skills);
 }
 
+function getSourceFolderLabel(sourceFolder: WorkspaceSourceFolder): string {
+	const normalizedPath: string = sourceFolder.path.replaceAll("\\", "/").replace(/\/$/u, "");
+	const directoryName: string = normalizedPath.slice(normalizedPath.lastIndexOf("/") + 1) || sourceFolder.path;
+	return `[${sourceFolder.id}] ${directoryName}`;
+}
+
 function SkillsSettingsPage(): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const { modal } = AntdApp.useApp();
 	const [skills, setSkills] = useState<SkillSummary[]>([]);
+	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([]);
+	const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
+	const [selectedSourceFolderId, setSelectedSourceFolderId] = useState<string | null>(null);
+	const [areWorkspacesLoading, setAreWorkspacesLoading] = useState<boolean>(true);
 	const [query, setQuery] = useState<string>("");
 	const [scopeFilter, setScopeFilter] = useState<SkillScopeFilter>("all");
 	const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -116,15 +129,96 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 		{ value: "personal", label: t("settings.skills.scope.personal") },
 		{ value: "project", label: t("settings.skills.scope.project") }
 	], [t]);
+	const selectedWorkspace: WorkspaceConfig | null = useMemo((): WorkspaceConfig | null => {
+		return workspaces.find((workspace: WorkspaceConfig): boolean => workspace.id === selectedWorkspaceId) ?? null;
+	}, [selectedWorkspaceId, workspaces]);
+	const workspaceOptions: Array<{ value: string; label: string }> = useMemo((): Array<{ value: string; label: string }> => {
+		return workspaces.map((workspace: WorkspaceConfig): { value: string; label: string } => ({ value: workspace.id, label: workspace.name }));
+	}, [workspaces]);
+	const sourceFolderOptions: Array<{ value: string; label: string }> = useMemo((): Array<{ value: string; label: string }> => {
+		return (selectedWorkspace?.sourceFolders ?? []).map((sourceFolder: WorkspaceSourceFolder): { value: string; label: string } => ({
+			value: sourceFolder.id,
+			label: getSourceFolderLabel(sourceFolder)
+		}));
+	}, [selectedWorkspace]);
+
+	function selectedCatalogTarget(): SkillTarget {
+		return selectedWorkspaceId === null ? {} : { workspaceId: selectedWorkspaceId };
+	}
+
+	function selectedProjectTarget(): SkillTarget | null {
+		return selectedWorkspaceId === null || selectedSourceFolderId === null
+			? null
+			: { workspaceId: selectedWorkspaceId, sourceFolderId: selectedSourceFolderId };
+	}
+
+	function targetForSkill(skill: SkillSummary): SkillTarget {
+		if (skill.source !== "project") {
+			return selectedCatalogTarget();
+		}
+		return {
+			...(skill.workspaceId === undefined ? selectedCatalogTarget() : { workspaceId: skill.workspaceId }),
+			...(skill.sourceFolderId === undefined ? {} : { sourceFolderId: skill.sourceFolderId })
+		};
+	}
+
+	function sourceFolderLabel(sourceFolderId: string | undefined): string | null {
+		if (sourceFolderId === undefined) {
+			return null;
+		}
+		const sourceFolder: WorkspaceSourceFolder | undefined = selectedWorkspace?.sourceFolders.find(
+			(candidate: WorkspaceSourceFolder): boolean => candidate.id === sourceFolderId
+		);
+		return sourceFolder === undefined ? sourceFolderId : getSourceFolderLabel(sourceFolder);
+	}
+
+	function handleWorkspaceTargetChange(workspaceId: string | null): void {
+		setSelectedWorkspaceId(workspaceId);
+		const workspace: WorkspaceConfig | undefined = workspaces.find((candidate: WorkspaceConfig): boolean => candidate.id === workspaceId);
+		setSelectedSourceFolderId(workspace?.primarySourceFolderId ?? null);
+		setNpxImportSummary(null);
+	}
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
+		async function loadWorkspaces(): Promise<void> {
+			try {
+				const result = await fetchWorkspaces();
+				if (cancelled) {
+					return;
+				}
+				setWorkspaces(result.workspaces);
+				setSelectedWorkspaceId(null);
+				setSelectedSourceFolderId(null);
+			} catch (error: unknown) {
+				if (!cancelled) {
+					setErrorMessage(error instanceof Error ? error.message : t("settings.skills.errors.loadWorkspaces"));
+				}
+			} finally {
+				if (!cancelled) {
+					setAreWorkspacesLoading(false);
+				}
+			}
+		}
+		void loadWorkspaces();
+		return (): void => {
+			cancelled = true;
+		};
+	}, [t]);
+
+	useEffect((): (() => void) => {
+		let cancelled: boolean = false;
+		if (areWorkspacesLoading) {
+			return (): void => {
+				cancelled = true;
+			};
+		}
 
 		async function loadSkills(): Promise<void> {
 			try {
 				setIsLoading(true);
 				setErrorMessage(null);
-				const result: SkillListResult = await fetchSkills();
+				const result: SkillListResult = await fetchSkills(selectedCatalogTarget());
 				if (!cancelled) {
 					applySkillResult(result, setSkills);
 				}
@@ -144,7 +238,7 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 		return (): void => {
 			cancelled = true;
 		};
-	}, [t]);
+	}, [areWorkspacesLoading, selectedWorkspaceId, t]);
 
 	const customSkills: SkillSummary[] = useMemo((): SkillSummary[] => {
 		return skills.filter((skill: SkillSummary): boolean => skill.source !== "builtin");
@@ -169,9 +263,13 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 
 	const importableNpxCandidates: NpxSkillCandidate[] = useMemo((): NpxSkillCandidate[] => {
 		return (npxCandidates ?? []).filter((candidate: NpxSkillCandidate): boolean => {
-			return !skills.some((skill: SkillSummary): boolean => skill.source === npxTargetSource && skill.slug === candidate.slug);
+			return !skills.some((skill: SkillSummary): boolean => {
+				return skill.source === npxTargetSource
+					&& skill.slug === candidate.slug
+					&& (npxTargetSource !== "project" || skill.sourceFolderId === selectedSourceFolderId);
+			});
 		});
-	}, [npxCandidates, npxTargetSource, skills]);
+	}, [npxCandidates, npxTargetSource, selectedSourceFolderId, skills]);
 	const selectedNpxCandidates: NpxSkillCandidate[] = useMemo((): NpxSkillCandidate[] => {
 		const selectedPaths = new Set<string>(npxSelectedPaths);
 		return importableNpxCandidates.filter((candidate: NpxSkillCandidate): boolean => selectedPaths.has(candidate.path));
@@ -237,6 +335,11 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 		if (selectedNpxCandidates.length === 0) {
 			return;
 		}
+		const projectTarget: SkillTarget | null = npxTargetSource === "project" ? selectedProjectTarget() : null;
+		if (npxTargetSource === "project" && projectTarget === null) {
+			setNpxImportError(t("settings.skills.errors.projectTargetRequired"));
+			return;
+		}
 		setIsNpxImporting(true);
 		setNpxImportError(null);
 		const summary: NpxImportSummary = {
@@ -250,7 +353,8 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 					const result: SkillListResult = await installSkill({
 						source: npxTargetSource,
 						kind: "folder",
-						path: candidate.path
+						path: candidate.path,
+						...(npxTargetSource === "project" ? projectTarget! : selectedCatalogTarget())
 					});
 					applySkillResult(result, setSkills);
 					summary.installed += 1;
@@ -273,9 +377,17 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 			return;
 		}
 		try {
+			const projectTarget: SkillTarget | null = pendingInstall.source === "project" ? selectedProjectTarget() : null;
+			if (pendingInstall.source === "project" && projectTarget === null) {
+				setErrorMessage(t("settings.skills.errors.projectTargetRequired"));
+				return;
+			}
 			setIsSaving(true);
 			setErrorMessage(null);
-			const result: SkillListResult = await installSkill(pendingInstall);
+			const result: SkillListResult = await installSkill({
+				...pendingInstall,
+				...(pendingInstall.source === "project" ? projectTarget! : selectedCatalogTarget())
+			});
 			applySkillResult(result, setSkills);
 			setPendingInstall(null);
 		} catch (error: unknown) {
@@ -289,7 +401,7 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 		try {
 			setBusyRef(skill.ref);
 			setErrorMessage(null);
-			const result: SkillListResult = await setSkillEnabled(skill.ref, enabled);
+			const result: SkillListResult = await setSkillEnabled(skill.ref, enabled, targetForSkill(skill));
 			applySkillResult(result, setSkills);
 		} catch (error: unknown) {
 			setErrorMessage(error instanceof Error ? error.message : t("settings.skills.errors.update"));
@@ -306,7 +418,7 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 		setSkillEditorError(null);
 		setIsSkillEditorLoading(true);
 		try {
-			const result: { ref: string; content: string } = await fetchSkillContent(skill.ref);
+			const result: { ref: string; content: string } = await fetchSkillContent(skill.ref, targetForSkill(skill));
 			setSkillEditor((current: SkillEditorState | null): SkillEditorState | null => {
 				return current?.skill.ref === result.ref ? { ...current, content: result.content } : current;
 			});
@@ -324,7 +436,7 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 		setIsSkillEditorSaving(true);
 		setSkillEditorError(null);
 		try {
-			const result: SkillListResult = await updateSkillContent(skillEditor.skill.ref, skillEditor.content);
+			const result: SkillListResult = await updateSkillContent(skillEditor.skill.ref, skillEditor.content, targetForSkill(skillEditor.skill));
 			applySkillResult(result, setSkills);
 			setSkillEditor(null);
 		} catch (error: unknown) {
@@ -346,7 +458,7 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 				try {
 					setBusyRef(skill.ref);
 					setErrorMessage(null);
-					const result: SkillListResult = await removeSkill(skill.ref);
+					const result: SkillListResult = await removeSkill(skill.ref, targetForSkill(skill));
 					applySkillResult(result, setSkills);
 				} catch (error: unknown) {
 					setErrorMessage(error instanceof Error ? error.message : t("settings.skills.errors.delete"));
@@ -357,7 +469,7 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 		});
 	}
 
-	if (isLoading) {
+	if (isLoading || areWorkspacesLoading) {
 		return null;
 	}
 
@@ -388,6 +500,16 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 							suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 						/>
 					</Space.Compact>
+					<Select
+						allowClear={true}
+						value={selectedWorkspaceId ?? undefined}
+						options={workspaceOptions}
+						placeholder={t("settings.skills.target.workspacePlaceholder")}
+						className={styles.workspaceSelect}
+						disabled={workspaces.length === 0}
+						onChange={(value: string | undefined): void => handleWorkspaceTargetChange(value ?? null)}
+						suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
+					/>
 					<Dropdown
 						menu={{
 							items: addItems,
@@ -435,6 +557,9 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 								<div className={styles.skillTitleRow}>
 									<Typography.Title level={4} className={styles.skillTitle}>{skill.name}</Typography.Title>
 									<Tag color={getSourceColor(skill.source)}>{getSourceLabel(skill.source, t)}</Tag>
+									{skill.source === "project" && sourceFolderLabel(skill.sourceFolderId) !== null ? (
+										<Tag>{sourceFolderLabel(skill.sourceFolderId)}</Tag>
+									) : null}
 								</div>
 								{skill.description.length > 0 ? (
 									<Typography.Text type="secondary" className={styles.skillDescription}>{skill.description}</Typography.Text>
@@ -527,6 +652,7 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 				open={pendingInstall !== null}
 				okText={t("settings.skills.actions.install")}
 				confirmLoading={isSaving}
+				okButtonProps={{ disabled: pendingInstall?.source === "project" && selectedProjectTarget() === null }}
 				onOk={(): void => {
 					void handleConfirmInstall();
 				}}
@@ -540,6 +666,26 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 							options={installScopeOptions}
 							onChange={(value: SkillInstallSource): void => setPendingInstall({ ...pendingInstall, source: value })}
 						/>
+						{pendingInstall.source === "project" ? (
+							<>
+								<Select
+									value={selectedWorkspaceId ?? undefined}
+									options={workspaceOptions}
+									placeholder={t("settings.skills.target.workspacePlaceholder")}
+									onChange={(value: string): void => handleWorkspaceTargetChange(value)}
+									suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
+								/>
+								<Select
+									value={selectedSourceFolderId ?? undefined}
+									options={sourceFolderOptions}
+									placeholder={t("settings.skills.target.sourceFolderPlaceholder")}
+									disabled={selectedWorkspace === null}
+									onChange={setSelectedSourceFolderId}
+									suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
+								/>
+								<Typography.Text type="secondary">{t("settings.skills.target.projectPathHint")}</Typography.Text>
+							</>
+						) : null}
 						<Typography.Text type="secondary">
 							{t("settings.skills.install.description")}
 						</Typography.Text>
@@ -551,7 +697,12 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 				title={t("settings.skills.npx.title")}
 				open={npxImportOpen}
 				okText={t("settings.skills.actions.importSelected")}
-				okButtonProps={{ disabled: selectedNpxCandidates.length === 0 || isNpxLoading || npxImportError !== null }}
+				okButtonProps={{
+					disabled: selectedNpxCandidates.length === 0
+						|| isNpxLoading
+						|| npxImportError !== null
+						|| (npxTargetSource === "project" && selectedProjectTarget() === null)
+				}}
 				confirmLoading={isNpxImporting}
 				onOk={(): void => {
 					void handleConfirmNpxImport();
@@ -596,6 +747,26 @@ function SkillsSettingsPage(): React.JSX.Element | null {
 								}}
 								suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 							/>
+							{npxTargetSource === "project" ? (
+								<>
+									<Select
+										value={selectedWorkspaceId ?? undefined}
+										options={workspaceOptions}
+										placeholder={t("settings.skills.target.workspacePlaceholder")}
+										disabled={isNpxImporting}
+										onChange={(value: string): void => handleWorkspaceTargetChange(value)}
+										suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
+									/>
+									<Select
+										value={selectedSourceFolderId ?? undefined}
+										options={sourceFolderOptions}
+										placeholder={t("settings.skills.target.sourceFolderPlaceholder")}
+										disabled={selectedWorkspace === null || isNpxImporting}
+										onChange={setSelectedSourceFolderId}
+										suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
+									/>
+								</>
+							) : null}
 							<Checkbox
 								checked={importableNpxCandidates.length > 0 && selectedNpxCandidates.length === importableNpxCandidates.length}
 								indeterminate={selectedNpxCandidates.length > 0 && selectedNpxCandidates.length < importableNpxCandidates.length}

@@ -20,7 +20,7 @@ describe("Skills settings npx import", () => {
 		expect(pageSource).toContain('icon={<Icon name="pencil" />}');
 		expect(pageSource).toContain('icon={<Icon name="remove" />}');
 		expect(pageSource).toContain("disabled={!skill.removable");
-		expect(pageSource).toContain("updateSkillContent(skillEditor.skill.ref, skillEditor.content)");
+		expect(pageSource).toContain("updateSkillContent(skillEditor.skill.ref, skillEditor.content, targetForSkill(skillEditor.skill))");
 		expect(pageSource).not.toContain("{skill.removable ? (");
 		expect(apiSource).toContain('"skill.get"');
 		expect(apiSource).toContain('"skill.update"');

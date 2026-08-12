@@ -1836,7 +1836,9 @@
         "install": "Failed to install skill",
         "npxDiscover": "Failed to find local Codex skills",
         "load": "Failed to load skills",
+        "loadWorkspaces": "Failed to load projects",
         "loadContent": "Failed to read SKILL.md",
+        "projectTargetRequired": "Select a project and source folder before installing a project skill",
         "selectSource": "Failed to select skill source",
         "update": "Failed to update skill",
         "updateContent": "Failed to save SKILL.md"
@@ -1847,7 +1849,7 @@
         "description": "YAML frontmatter, skill instructions, and file size are validated before saving. The skill ID and directory are not changed."
       },
       "install": {
-        "description": "Project installs require an active workspace. Personal installs are available across workspaces.",
+        "description": "Personal skills are stored in your user directory. Project skills are stored in the selected source folder's .github/skills directory.",
         "fromFolder": "Install from folder",
         "fromZip": "Install from ZIP",
         "title": "Install skill"
@@ -1865,6 +1867,11 @@
         "builtin": "Built-in",
         "personal": "Personal",
         "project": "Project"
+      },
+      "target": {
+        "workspacePlaceholder": "Select project",
+        "sourceFolderPlaceholder": "Select source folder",
+        "projectPathHint": "The skill will be installed under .github/skills in the selected source folder."
       }
     },
     "general": {
