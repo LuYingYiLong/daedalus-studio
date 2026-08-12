@@ -2,7 +2,7 @@ import packageJson from "../../../package.json";
 
 export const BACKEND_BINARY_MANIFEST_SCHEMA_VERSION: 1 = 1;
 export const BACKEND_PROTOCOL_VERSION: number = packageJson.backendProtocolVersion;
-export const GODOT_PLUGIN_PROTOCOL_VERSION: number = packageJson.godotPluginProtocolVersion;
+export const GODOT_BRIDGE_PROTOCOL_VERSION: number = packageJson.godotBridgeProtocolVersion;
 
 const SHA256_PATTERN: RegExp = /^[a-f0-9]{64}$/u;
 const VERSION_PATTERN: RegExp = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
@@ -23,8 +23,8 @@ export type BackendPayloadManifestV1 = {
 	arch: "x64";
 	nodeVersion: string;
 	protocolVersion: number;
-	minPluginProtocolVersion: number;
-	maxPluginProtocolVersion: number;
+	minBridgeProtocolVersion: number;
+	maxBridgeProtocolVersion: number;
 	minStudioVersion: string;
 	publishedAt: string;
 	authenticode: BackendAuthenticodeStatus;
@@ -116,8 +116,8 @@ function parsePayloadManifestRecord(record: Record<string, unknown>): BackendPay
 		arch: requireLiteral(record, "arch", "x64"),
 		nodeVersion: requireVersion(record, "nodeVersion"),
 		protocolVersion: requirePositiveInteger(record, "protocolVersion"),
-		minPluginProtocolVersion: requirePositiveInteger(record, "minPluginProtocolVersion"),
-		maxPluginProtocolVersion: requirePositiveInteger(record, "maxPluginProtocolVersion"),
+		minBridgeProtocolVersion: requirePositiveInteger(record, "minBridgeProtocolVersion"),
+		maxBridgeProtocolVersion: requirePositiveInteger(record, "maxBridgeProtocolVersion"),
 		minStudioVersion: requireVersion(record, "minStudioVersion"),
 		publishedAt,
 		authenticode,
@@ -190,11 +190,11 @@ export function assertBackendManifestCompatible(
 		);
 	}
 	if (
-		manifest.minPluginProtocolVersion > GODOT_PLUGIN_PROTOCOL_VERSION
-		|| manifest.maxPluginProtocolVersion < GODOT_PLUGIN_PROTOCOL_VERSION
+		manifest.minBridgeProtocolVersion > GODOT_BRIDGE_PROTOCOL_VERSION
+		|| manifest.maxBridgeProtocolVersion < GODOT_BRIDGE_PROTOCOL_VERSION
 	) {
 		throw new BackendManifestCompatibilityError(
-			`Backend ${manifest.version} does not support bundled Godot plugin protocol ${GODOT_PLUGIN_PROTOCOL_VERSION}.`
+			`Backend ${manifest.version} does not support bundled Editor Bridge Protocol ${GODOT_BRIDGE_PROTOCOL_VERSION}.`
 		);
 	}
 }
@@ -209,8 +209,8 @@ export function payloadManifestsMatch(
 		&& left.arch === right.arch
 		&& left.nodeVersion === right.nodeVersion
 		&& left.protocolVersion === right.protocolVersion
-		&& left.minPluginProtocolVersion === right.minPluginProtocolVersion
-		&& left.maxPluginProtocolVersion === right.maxPluginProtocolVersion
+		&& left.minBridgeProtocolVersion === right.minBridgeProtocolVersion
+		&& left.maxBridgeProtocolVersion === right.maxBridgeProtocolVersion
 		&& left.minStudioVersion === right.minStudioVersion
 		&& left.publishedAt === right.publishedAt
 		&& left.authenticode === right.authenticode

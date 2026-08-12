@@ -66,30 +66,30 @@ describe("Godot project plugin management", () => {
 		].join("\n");
 		const enabled = updateEditorPluginEnabled(
 			source,
-			"res://addons/godot_daedalus/plugin.cfg",
+			"res://addons/daedalus_editor_bridge/plugin.cfg",
 			true
 		);
 		expect(enabled).toContain('"res://addons/gut/plugin.cfg"');
-		expect(enabled).toContain('"res://addons/godot_daedalus/plugin.cfg"');
+		expect(enabled).toContain('"res://addons/daedalus_editor_bridge/plugin.cfg"');
 		expect(enabled).toContain("[rendering]");
 
 		const disabled = updateEditorPluginEnabled(
 			enabled,
-			"res://addons/godot_daedalus/plugin.cfg",
+			"res://addons/daedalus_editor_bridge/plugin.cfg",
 			false
 		);
 		expect(disabled).toContain('"res://addons/gut/plugin.cfg"');
-		expect(disabled).not.toContain('"res://addons/godot_daedalus/plugin.cfg"');
+		expect(disabled).not.toContain('"res://addons/daedalus_editor_bridge/plugin.cfg"');
 	});
 
 	it("adds an editor_plugins section when the project has none", () => {
 		const updated = updateEditorPluginEnabled(
 			'[application]\nconfig/name="Demo"\n',
-			"res://addons/godot_daedalus/plugin.cfg",
+			"res://addons/daedalus_editor_bridge/plugin.cfg",
 			true
 		);
 		expect(updated).toContain("[editor_plugins]");
-		expect(updated).toContain('PackedStringArray("res://addons/godot_daedalus/plugin.cfg")');
+		expect(updated).toContain('PackedStringArray("res://addons/daedalus_editor_bridge/plugin.cfg")');
 	});
 
 	it("rejects archive paths that can escape the staging directory", () => {
@@ -110,14 +110,19 @@ describe("Godot project plugin management", () => {
 		expect(isGodotProcessName("godotized.exe")).toBe(false);
 	});
 
-	it("blocks plugin installation below Godot 4.5 and when the project version is unknown", () => {
-		expect(getGodotVersionCompatibilityError("4.5", "4.5.0")).toBeNull();
-		expect(getGodotVersionCompatibilityError("4.7.1", "4.5.0")).toBeNull();
-		expect(getGodotVersionCompatibilityError("4.4.4", "4.5.0")).toContain("targets Godot 4.4.4");
-		expect(getGodotVersionCompatibilityError(null, "4.5.0")).toContain("Cannot determine");
+	it("accepts all Godot 4.x projects and rejects older or unknown versions", () => {
+		expect(getGodotVersionCompatibilityError("4.0", "4.0.0")).toBeNull();
+		expect(getGodotVersionCompatibilityError("4.7.1", "4.0.0")).toBeNull();
+		expect(getGodotVersionCompatibilityError("3.5.3", "4.0.0")).toContain("targets Godot 3.5.3");
+		expect(getGodotVersionCompatibilityError(null, "4.0.0")).toContain("Cannot determine");
 	});
 
-	it("recognizes the local Godot-Daedalus source project in development", () => {
+	it("recognizes the local Editor Bridge source project in development", () => {
+		expect(isDevelopmentPluginSourceProject(
+			"C:\\repo-parent\\daedalus-editor-bridge",
+			"C:\\repo-parent\\daedalus-studio",
+			undefined
+		)).toBe(true);
 		expect(isDevelopmentPluginSourceProject(
 			"C:\\repo-parent\\godot_projects\\godot-daedalus",
 			"C:\\repo-parent\\daedalus-studio",
@@ -126,10 +131,10 @@ describe("Godot project plugin management", () => {
 		expect(isDevelopmentPluginSourceProject(
 			"C:\\projects\\custom-daedalus",
 			"C:\\repo-parent\\daedalus-studio",
-			"C:\\projects\\custom-daedalus\\addons\\godot_daedalus"
+			"C:\\projects\\custom-daedalus\\addons\\daedalus_editor_bridge"
 		)).toBe(true);
 		expect(isDevelopmentPluginSourceProject(
-			"C:\\repo-parent\\godot_projects\\godot-daedalus",
+			"C:\\repo-parent\\daedalus-editor-bridge",
 			"C:\\repo-parent\\daedalus-studio",
 			" "
 		)).toBe(true);
@@ -142,10 +147,10 @@ describe("Godot project plugin management", () => {
 
 	it("treats Godot import metadata as mutable after installation", () => {
 		expect(isGodotManagedPluginFile(
-			"addons/godot_daedalus/assets/icons/add.svg.import"
+			"addons/daedalus_editor_bridge/status.svg.import"
 		)).toBe(true);
 		expect(isGodotManagedPluginFile(
-			"addons/godot_daedalus/scripts/main.gd"
+			"addons/daedalus_editor_bridge/scripts/bridge_runtime.gd"
 		)).toBe(false);
 		expect(isGodotManagedPluginFile(
 			"addons/other_plugin/icon.svg.import"

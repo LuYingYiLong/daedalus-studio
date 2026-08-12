@@ -22,10 +22,10 @@ extraResources:
     filter:
       - daedalus-backend.exe
       - backend-manifest.json
-  - from: build/godot-plugin
-    to: godot-plugin
+  - from: build/editor-bridge
+    to: editor-bridge
     filter:
-      - godot-daedalus-plugin-v*.zip
+      - daedalus-editor-bridge-v*.zip
       - plugin-manifest.json
 
 asar: true

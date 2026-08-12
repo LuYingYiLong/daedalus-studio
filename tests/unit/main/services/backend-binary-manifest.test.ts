@@ -20,8 +20,8 @@ function createPayloadManifest(
 		arch: "x64",
 		nodeVersion: "24.18.0",
 		protocolVersion: 3,
-		minPluginProtocolVersion: 3,
-		maxPluginProtocolVersion: 3,
+		minBridgeProtocolVersion: 4,
+		maxBridgeProtocolVersion: 4,
 		minStudioVersion: "1.0.1",
 		publishedAt: "2026-07-24T12:00:00.000Z",
 		authenticode: "unsigned",
@@ -82,10 +82,10 @@ describe("backend binary manifest", () => {
 			createPayloadManifest({ protocolVersion: 2 }),
 			"1.1.0"
 		);
-		const incompatiblePluginProtocol = (): void => assertBackendManifestCompatible(
+		const incompatibleBridgeProtocol = (): void => assertBackendManifestCompatible(
 			createPayloadManifest({
-				minPluginProtocolVersion: 2,
-				maxPluginProtocolVersion: 2
+				minBridgeProtocolVersion: 3,
+				maxBridgeProtocolVersion: 3
 			}),
 			"1.1.0"
 		);
@@ -93,8 +93,8 @@ describe("backend binary manifest", () => {
 		expect(incompatibleStudio).toThrow(/requires Daedalus Studio/u);
 		expect(incompatibleBackendProtocol).toThrow(BackendManifestCompatibilityError);
 		expect(incompatibleBackendProtocol).toThrow(/protocol/u);
-		expect(incompatiblePluginProtocol).toThrow(BackendManifestCompatibilityError);
-		expect(incompatiblePluginProtocol).toThrow(/Godot plugin protocol/u);
+		expect(incompatibleBridgeProtocol).toThrow(BackendManifestCompatibilityError);
+		expect(incompatibleBridgeProtocol).toThrow(/Editor Bridge Protocol/u);
 	});
 
 	it("compares versions and detects payload identity drift", () => {

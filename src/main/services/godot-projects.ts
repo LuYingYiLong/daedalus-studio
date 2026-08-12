@@ -15,8 +15,8 @@ import { existsSync } from "node:fs";
 import { inflateRawSync } from "node:zlib";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-const PLUGIN_RESOURCE_PATH: string = "res://addons/godot_daedalus/plugin.cfg";
-const PLUGIN_RELATIVE_ROOT: string = "addons/godot_daedalus";
+const PLUGIN_RESOURCE_PATH: string = "res://addons/daedalus_editor_bridge/plugin.cfg";
+const PLUGIN_RELATIVE_ROOT: string = "addons/daedalus_editor_bridge";
 const PROJECT_STATE_SCHEMA_VERSION: 2 = 2;
 const MAX_ARCHIVE_BYTES: number = 64 * 1024 * 1024;
 const MAX_FILE_COUNT: number = 2_000;
@@ -63,9 +63,9 @@ type PluginFileManifest = {
 };
 
 type PluginPackageManifest = {
-	schemaVersion: 1;
-	pluginVersion: string;
-	pluginProtocolVersion: number;
+	schemaVersion: 2;
+	bridgeVersion: string;
+	bridgeProtocolVersion: number;
 	studioVersion: string;
 	minGodotVersion: string;
 	sourceCommit: string;
@@ -79,9 +79,9 @@ type PluginPackageManifest = {
 };
 
 type InstalledIntegrityManifest = {
-	schemaVersion: 1;
-	pluginVersion: string;
-	pluginProtocolVersion: number;
+	schemaVersion: 2;
+	bridgeVersion: string;
+	bridgeProtocolVersion: number;
 	files: PluginFileManifest[];
 };
 
@@ -128,15 +128,19 @@ function normalizeComparablePath(value: string): string {
 export function isDevelopmentPluginSourceProject(
 	projectPath: string,
 	appPath: string,
-	configuredSource: string | undefined = process.env.GODOT_DAEDALUS_PLUGIN_SOURCE
+	configuredSource: string | undefined = process.env.DAEDALUS_EDITOR_BRIDGE_SOURCE
 ): boolean {
 	const explicitSource: string | null = configuredSource?.trim() || null;
-	const sourceRoot: string = resolve(
-		explicitSource
-			?? join(appPath, "..", "godot_projects", "godot-daedalus", PLUGIN_RELATIVE_ROOT)
-	);
-	return normalizeComparablePath(join(projectPath, PLUGIN_RELATIVE_ROOT))
-		=== normalizeComparablePath(sourceRoot);
+	const sourceRoots: string[] = explicitSource !== null
+		? [resolve(explicitSource)]
+		: [
+			join(appPath, "..", "daedalus-editor-bridge", PLUGIN_RELATIVE_ROOT),
+			join(appPath, "..", "godot_projects", "godot-daedalus", PLUGIN_RELATIVE_ROOT)
+		];
+	const projectBridgeRoot: string = normalizeComparablePath(join(projectPath, PLUGIN_RELATIVE_ROOT));
+	return sourceRoots.some((sourceRoot: string): boolean => (
+		projectBridgeRoot === normalizeComparablePath(sourceRoot)
+	));
 }
 
 export function isGodotManagedPluginFile(path: string): boolean {
@@ -262,7 +266,7 @@ function requireString(record: Record<string, unknown>, key: string): string {
 
 function parsePluginManifest(value: unknown): PluginPackageManifest {
 	const record: Record<string, unknown> = requireRecord(value, "Plugin manifest");
-	if (record.schemaVersion !== 1 || !Number.isSafeInteger(record.pluginProtocolVersion)) {
+	if (record.schemaVersion !== 2 || !Number.isSafeInteger(record.bridgeProtocolVersion)) {
 		throw new Error("Plugin manifest schema is unsupported.");
 	}
 	const archiveRecord: Record<string, unknown> = requireRecord(record.archive, "Plugin archive manifest");
@@ -291,9 +295,9 @@ function parsePluginManifest(value: unknown): PluginPackageManifest {
 		return { path, size, sha256: digest };
 	});
 	return {
-		schemaVersion: 1,
-		pluginVersion: requireString(record, "pluginVersion"),
-		pluginProtocolVersion: record.pluginProtocolVersion as number,
+		schemaVersion: 2,
+		bridgeVersion: requireString(record, "bridgeVersion"),
+		bridgeProtocolVersion: record.bridgeProtocolVersion as number,
 		studioVersion: requireString(record, "studioVersion"),
 		minGodotVersion: requireString(record, "minGodotVersion"),
 		sourceCommit: requireString(record, "sourceCommit"),
@@ -310,8 +314,8 @@ function parsePluginManifest(value: unknown): PluginPackageManifest {
 function parseInstalledIntegrityManifest(value: unknown): InstalledIntegrityManifest {
 	const record: Record<string, unknown> = requireRecord(value, "Installed plugin integrity manifest");
 	if (
-		record.schemaVersion !== 1
-		|| !Number.isSafeInteger(record.pluginProtocolVersion)
+		record.schemaVersion !== 2
+		|| !Number.isSafeInteger(record.bridgeProtocolVersion)
 		|| !Array.isArray(record.files)
 	) {
 		throw new Error("Installed plugin integrity manifest schema is unsupported.");
@@ -324,7 +328,7 @@ function parseInstalledIntegrityManifest(value: unknown): InstalledIntegrityMani
 		const digest: string = requireString(file, "sha256").toLowerCase();
 		if (
 			!path.startsWith(`${PLUGIN_RELATIVE_ROOT}/`)
-			|| path === `${PLUGIN_RELATIVE_ROOT}/daedalus-integrity.json`
+			|| path === `${PLUGIN_RELATIVE_ROOT}/daedalus-bridge-integrity.json`
 			|| typeof size !== "number"
 			|| !Number.isSafeInteger(size)
 			|| size < 0
@@ -337,9 +341,9 @@ function parseInstalledIntegrityManifest(value: unknown): InstalledIntegrityMani
 		return { path, size, sha256: digest };
 	});
 	return {
-		schemaVersion: 1,
-		pluginVersion: requireString(record, "pluginVersion"),
-		pluginProtocolVersion: record.pluginProtocolVersion as number,
+		schemaVersion: 2,
+		bridgeVersion: requireString(record, "bridgeVersion"),
+		bridgeProtocolVersion: record.bridgeProtocolVersion as number,
 		files
 	};
 }
@@ -542,13 +546,13 @@ class GodotProjectsService {
 	}
 
 	private getPluginStagingRoot(): string {
-		return join(app.getPath("userData"), "godot-plugin-staging");
+		return join(app.getPath("userData"), "editor-bridge-staging");
 	}
 
 	private getBundleRoot(): string {
 		return app.isPackaged
-			? join(process.resourcesPath, "godot-plugin")
-			: join(app.getAppPath(), "build", "godot-plugin");
+			? join(process.resourcesPath, "editor-bridge")
+			: join(app.getAppPath(), "build", "editor-bridge");
 	}
 
 	private async loadState(): Promise<void> {
@@ -783,7 +787,7 @@ class GodotProjectsService {
 		const stagingRoot: string = this.getPluginStagingRoot();
 		const operationRoot: string = join(
 			stagingRoot,
-			`${pluginPackage.manifest.pluginVersion}-${process.pid}-${randomBytes(6).toString("hex")}`
+			`${pluginPackage.manifest.bridgeVersion}-${process.pid}-${randomBytes(6).toString("hex")}`
 		);
 		const stagedPluginPath: string = join(operationRoot, PLUGIN_RELATIVE_ROOT);
 		try {
@@ -829,11 +833,11 @@ class GodotProjectsService {
 		try {
 			const integrity = parseInstalledIntegrityManifest(
 				JSON.parse(await readFile(
-					join(projectPath, PLUGIN_RELATIVE_ROOT, "daedalus-integrity.json"),
+					join(projectPath, PLUGIN_RELATIVE_ROOT, "daedalus-bridge-integrity.json"),
 					"utf8"
 				)) as unknown
 			);
-			if (integrity.pluginVersion !== pluginVersion) {
+			if (integrity.bridgeVersion !== pluginVersion) {
 				return false;
 			}
 			for (const file of integrity.files) {
@@ -881,11 +885,11 @@ class GodotProjectsService {
 				errorMessage = this.state.pendingErrors[projectPath] ?? null;
 			} else if (pluginPackage === null) {
 				status = "failed";
-			} else if (compareVersions(pluginVersion, pluginPackage.manifest.pluginVersion) < 0) {
+			} else if (compareVersions(pluginVersion, pluginPackage.manifest.bridgeVersion) < 0) {
 				status = await this.verifyInstalledVersionIntegrity(projectPath, pluginVersion)
 					? "outdated"
 					: "modified";
-			} else if (pluginVersion === pluginPackage.manifest.pluginVersion) {
+			} else if (pluginVersion === pluginPackage.manifest.bridgeVersion) {
 				const intact: boolean = await this.verifyInstalledFiles(projectPath, pluginPackage.manifest);
 				status = !intact ? "modified" : enabled ? "current" : "disabled";
 			} else {
@@ -904,7 +908,7 @@ class GodotProjectsService {
 			path: projectPath,
 			godotVersion: parseGodotVersion(projectText),
 			pluginVersion,
-			bundledPluginVersion: pluginPackage?.manifest.pluginVersion ?? null,
+			bundledPluginVersion: pluginPackage?.manifest.bridgeVersion ?? null,
 			enabled,
 			status,
 			errorMessage
@@ -931,7 +935,7 @@ class GodotProjectsService {
 			projects,
 			plugin: {
 				available: pluginPackage !== null,
-				version: pluginPackage?.manifest.pluginVersion ?? null,
+				version: pluginPackage?.manifest.bridgeVersion ?? null,
 				studioVersion: pluginPackage?.manifest.studioVersion ?? null,
 				errorMessage: packageError
 			}
@@ -980,10 +984,10 @@ class GodotProjectsService {
 		const originalProjectText: string = await readFile(projectFile, "utf8");
 		const addonsRoot: string = join(projectPath, "addons");
 		const operationId: string = `${process.pid}-${randomBytes(6).toString("hex")}`;
-		const stagingRoot: string = join(addonsRoot, `.godot_daedalus.staging-${operationId}`);
+		const stagingRoot: string = join(addonsRoot, `.daedalus_editor_bridge.staging-${operationId}`);
 		const stagedPlugin: string = join(stagingRoot, PLUGIN_RELATIVE_ROOT);
 		const targetPlugin: string = join(projectPath, PLUGIN_RELATIVE_ROOT);
-		const backupPlugin: string = join(addonsRoot, `.godot_daedalus.backup-${operationId}`);
+		const backupPlugin: string = join(addonsRoot, `.daedalus_editor_bridge.backup-${operationId}`);
 		let movedOriginal: boolean = false;
 		let installedCandidate: boolean = false;
 		let projectFileUpdated: boolean = false;
@@ -994,7 +998,7 @@ class GodotProjectsService {
 			} else {
 				const stagingBase: string = await realpath(this.getPluginStagingRoot());
 				const source: string = await realpath(externalStagedPluginPath);
-				if (!isInside(stagingBase, source) || basename(source) !== "godot_daedalus") {
+				if (!isInside(stagingBase, source) || basename(source) !== "daedalus_editor_bridge") {
 					throw new Error("Staged Godot plugin is outside the managed staging directory.");
 				}
 				await cp(source, stagedPlugin, { recursive: true, errorOnExist: true, force: false });
@@ -1062,7 +1066,7 @@ class GodotProjectsService {
 				createdAt: new Date().toISOString(),
 				allowModified,
 				enabled,
-				pluginVersion: pluginPackage.manifest.pluginVersion,
+				pluginVersion: pluginPackage.manifest.bridgeVersion,
 				stagedPluginPath
 			});
 			return await this.scan();
@@ -1091,7 +1095,7 @@ class GodotProjectsService {
 	public async setEnabled(projectPathInput: string, enabled: boolean): Promise<GodotProjectScanResult> {
 		const projectPath: string | null = await this.normalizeProjectPath(projectPathInput);
 		if (projectPath === null || !existsSync(join(projectPath, PLUGIN_RELATIVE_ROOT, "plugin.cfg"))) {
-			throw new Error("Godot Daedalus is not installed in this project.");
+			throw new Error("Daedalus Editor Bridge is not installed in this project.");
 		}
 		if (await isGodotEditorRunning()) {
 			await this.replacePendingOperation(projectPath, {
@@ -1117,7 +1121,7 @@ class GodotProjectsService {
 		const trashPlugin: string = join(
 			projectPath,
 			"addons",
-			`.godot_daedalus.remove-${process.pid}-${randomBytes(5).toString("hex")}`
+			`.daedalus_editor_bridge.remove-${process.pid}-${randomBytes(5).toString("hex")}`
 		);
 		let moved: boolean = false;
 		let projectFileUpdated: boolean = false;
@@ -1217,10 +1221,10 @@ class GodotProjectsService {
 				switch (operation.kind) {
 					case "install_or_upgrade": {
 						const pluginPackage = await this.loadPackage();
-						if (operation.pluginVersion !== pluginPackage.manifest.pluginVersion) {
+						if (operation.pluginVersion !== pluginPackage.manifest.bridgeVersion) {
 							await this.removeStagedPlugin(operation.stagedPluginPath);
 							const replacementStagedPluginPath: string = await this.stagePluginPackage(pluginPackage);
-							operation.pluginVersion = pluginPackage.manifest.pluginVersion;
+							operation.pluginVersion = pluginPackage.manifest.bridgeVersion;
 							operation.stagedPluginPath = replacementStagedPluginPath;
 						}
 						await this.applyInstallOrUpgrade(

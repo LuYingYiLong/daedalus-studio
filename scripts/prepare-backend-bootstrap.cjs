@@ -39,9 +39,9 @@ const expectedProtocolVersion = assertProtocolVersion(
 	packageJson.backendProtocolVersion,
 	"backendProtocolVersion"
 );
-const expectedPluginProtocolVersion = assertProtocolVersion(
-	packageJson.godotPluginProtocolVersion,
-	"godotPluginProtocolVersion"
+const expectedBridgeProtocolVersion = assertProtocolVersion(
+	packageJson.godotBridgeProtocolVersion,
+	"godotBridgeProtocolVersion"
 );
 
 function assertVersion(value) {
@@ -72,10 +72,10 @@ function assertPayloadManifest(manifest) {
 		|| manifest.arch !== "x64"
 		|| manifest.nodeVersion !== expectedNodeVersion
 		|| manifest.protocolVersion !== expectedProtocolVersion
-		|| !Number.isSafeInteger(manifest.minPluginProtocolVersion)
-		|| !Number.isSafeInteger(manifest.maxPluginProtocolVersion)
-		|| manifest.minPluginProtocolVersion > expectedPluginProtocolVersion
-		|| manifest.maxPluginProtocolVersion < expectedPluginProtocolVersion
+		|| !Number.isSafeInteger(manifest.minBridgeProtocolVersion)
+		|| !Number.isSafeInteger(manifest.maxBridgeProtocolVersion)
+		|| manifest.minBridgeProtocolVersion > expectedBridgeProtocolVersion
+		|| manifest.maxBridgeProtocolVersion < expectedBridgeProtocolVersion
 		|| typeof manifest.minStudioVersion !== "string"
 		|| compareVersions(packageJson.version, manifest.minStudioVersion) < 0
 		|| typeof manifest.publishedAt !== "string"
@@ -98,8 +98,8 @@ function payloadManifestFieldsMatch(left, right) {
 		&& left.arch === right.arch
 		&& left.nodeVersion === right.nodeVersion
 		&& left.protocolVersion === right.protocolVersion
-		&& left.minPluginProtocolVersion === right.minPluginProtocolVersion
-		&& left.maxPluginProtocolVersion === right.maxPluginProtocolVersion
+		&& left.minBridgeProtocolVersion === right.minBridgeProtocolVersion
+		&& left.maxBridgeProtocolVersion === right.maxBridgeProtocolVersion
 		&& left.minStudioVersion === right.minStudioVersion
 		&& left.publishedAt === right.publishedAt
 		&& left.authenticode === right.authenticode

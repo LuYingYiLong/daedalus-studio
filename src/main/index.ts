@@ -23,6 +23,7 @@ import { sessionLayoutService } from "./services/session-layout";
 import { resetDaedalusData } from "./services/data-reset";
 import { getDaedalusDir } from "./services/backend-binary-store";
 import { homedir } from "node:os";
+import { publishStudioExecutableRecord } from "./services/studio-executable-record";
 
 backendManager.registerIpc();
 backendBootstrapService.registerIpc();
@@ -580,6 +581,9 @@ if (!hasSingleInstanceLock) {
 	});
 
 	void app.whenReady().then(async (): Promise<void> => {
+		await publishStudioExecutableRecord().catch((): void => {
+			// Bridge launch metadata is a convenience; failure must not block Studio startup.
+		});
 		const preferences: ClientPreferences = await clientPreferencesService.load();
 		clientPreferencesService.onDidChange((nextPreferences: ClientPreferences): void => {
 			applyWindowThemeToAllWindows();

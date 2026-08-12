@@ -63,8 +63,8 @@ jobs:
           if ($package.backendBootstrapVersion -notmatch "^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$") {
             throw "package.json must contain a fixed backendBootstrapVersion."
           }
-          if ($package.godotPluginVersion -notmatch "^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$") {
-            throw "package.json must contain a fixed godotPluginVersion."
+          if ($package.godotBridgeVersion -notmatch "^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$") {
+            throw "package.json must contain a fixed godotBridgeVersion."
           }
           $backendProtocolVersion = 0
           if (
@@ -76,26 +76,26 @@ jobs:
           ) {
             throw "package.json must contain a positive integer backendProtocolVersion."
           }
-          $godotPluginProtocolVersion = 0
+          $godotBridgeProtocolVersion = 0
           if (
             -not [int]::TryParse(
-              [string]$package.godotPluginProtocolVersion,
-              [ref]$godotPluginProtocolVersion
+              [string]$package.godotBridgeProtocolVersion,
+              [ref]$godotBridgeProtocolVersion
             ) `
-            -or $godotPluginProtocolVersion -le 0
+            -or $godotBridgeProtocolVersion -le 0
           ) {
-            throw "package.json must contain a positive integer godotPluginProtocolVersion."
+            throw "package.json must contain a positive integer godotBridgeProtocolVersion."
           }
           "BACKEND_BOOTSTRAP_VERSION=$($package.backendBootstrapVersion)" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "GODOT_PLUGIN_VERSION=$($package.godotPluginVersion)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "GODOT_BRIDGE_VERSION=$($package.godotBridgeVersion)" | Out-File -FilePath $env:GITHUB_ENV -Append
           "BACKEND_PROTOCOL_VERSION=$backendProtocolVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "GODOT_PLUGIN_PROTOCOL_VERSION=$godotPluginProtocolVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "GODOT_BRIDGE_PROTOCOL_VERSION=$godotBridgeProtocolVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Download and verify backend bootstrap
         run: npm run prepare:backend-bootstrap
 
-      - name: Download and verify Godot plugin
-        run: npm run prepare:godot-plugin
+      - name: Download and verify Editor Bridge
+        run: npm run prepare:editor-bridge
 
       - name: Run tests
         run: npm test
@@ -130,12 +130,12 @@ jobs:
           if ((Get-FileHash -LiteralPath $executablePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $manifest.executable.sha256) {
             throw "Packaged backend executable SHA-256 verification failed."
           }
-          $expectedPluginProtocolVersion = [int]$env:GODOT_PLUGIN_PROTOCOL_VERSION
+          $expectedBridgeProtocolVersion = [int]$env:GODOT_BRIDGE_PROTOCOL_VERSION
           if (
-            $manifest.minPluginProtocolVersion -gt $expectedPluginProtocolVersion `
-            -or $manifest.maxPluginProtocolVersion -lt $expectedPluginProtocolVersion
+            $manifest.minBridgeProtocolVersion -gt $expectedBridgeProtocolVersion `
+            -or $manifest.maxBridgeProtocolVersion -lt $expectedBridgeProtocolVersion
           ) {
-            throw "Packaged backend does not support bundled Godot plugin protocol $expectedPluginProtocolVersion."
+            throw "Packaged backend does not support bundled Editor Bridge Protocol $expectedBridgeProtocolVersion."
           }
           $files = @(Get-ChildItem -LiteralPath $backendDir -File)
           if ($files.Count -ne 2) {
@@ -160,31 +160,31 @@ jobs:
             throw "Packaged backend self-test identity or required checks did not match the manifest."
           }
 
-      - name: Verify packaged Godot plugin
+      - name: Verify packaged Editor Bridge
         shell: pwsh
         run: |
-          $pluginDir = Join-Path "release" "win-unpacked\resources\godot-plugin"
+          $pluginDir = Join-Path "release" "win-unpacked\resources\editor-bridge"
           $manifestPath = Join-Path $pluginDir "plugin-manifest.json"
           if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
-            throw "Packaged Godot plugin manifest is missing."
+            throw "Packaged Editor Bridge manifest is missing."
           }
           $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
           $archivePath = Join-Path $pluginDir $manifest.archive.fileName
-          if ($manifest.pluginVersion -ne $env:GODOT_PLUGIN_VERSION) {
-            throw "Packaged Godot plugin version does not match package.json."
+          if ($manifest.bridgeVersion -ne $env:GODOT_BRIDGE_VERSION) {
+            throw "Packaged Editor Bridge version does not match package.json."
           }
-          $expectedPluginProtocolVersion = [int]$env:GODOT_PLUGIN_PROTOCOL_VERSION
-          if ($manifest.pluginProtocolVersion -ne $expectedPluginProtocolVersion) {
-            throw "Packaged Godot plugin protocol $($manifest.pluginProtocolVersion) does not match $expectedPluginProtocolVersion."
+          $expectedBridgeProtocolVersion = [int]$env:GODOT_BRIDGE_PROTOCOL_VERSION
+          if ($manifest.bridgeProtocolVersion -ne $expectedBridgeProtocolVersion) {
+            throw "Packaged Editor Bridge Protocol $($manifest.bridgeProtocolVersion) does not match $expectedBridgeProtocolVersion."
           }
           if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf)) {
-            throw "Packaged Godot plugin archive is missing."
+            throw "Packaged Editor Bridge archive is missing."
           }
           if ((Get-Item -LiteralPath $archivePath).Length -ne $manifest.archive.size) {
-            throw "Packaged Godot plugin archive size verification failed."
+            throw "Packaged Editor Bridge archive size verification failed."
           }
           if ((Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $manifest.archive.sha256) {
-            throw "Packaged Godot plugin archive SHA-256 verification failed."
+            throw "Packaged Editor Bridge archive SHA-256 verification failed."
           }
 
       - name: Verify updater metadata

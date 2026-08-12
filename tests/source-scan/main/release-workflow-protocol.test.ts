@@ -3,24 +3,41 @@ import { readRepoFile } from "../../helpers/repo-paths";
 
 describe("release workflow protocol compatibility", () => {
 	const workflowSource: string = readRepoFile(".github", "workflows", "build-release.yml");
+	const bridgePrepareSource: string = readRepoFile("scripts", "prepare-editor-bridge.cjs");
 
-	it("derives packaged backend and Godot plugin protocol checks from package.json", () => {
+	it("derives packaged backend and Editor Bridge protocol checks from package.json", () => {
 		expect(workflowSource).toContain("[string]$package.backendProtocolVersion");
-		expect(workflowSource).toContain("[string]$package.godotPluginProtocolVersion");
+		expect(workflowSource).toContain("[string]$package.godotBridgeProtocolVersion");
 		expect(workflowSource).toContain("BACKEND_PROTOCOL_VERSION=$backendProtocolVersion");
-		expect(workflowSource).toContain("GODOT_PLUGIN_PROTOCOL_VERSION=$godotPluginProtocolVersion");
+		expect(workflowSource).toContain("GODOT_BRIDGE_PROTOCOL_VERSION=$godotBridgeProtocolVersion");
 		expect(workflowSource).toContain("$manifest.protocolVersion -ne $expectedBackendProtocolVersion");
 		expect(workflowSource).toContain(
-			"$manifest.minPluginProtocolVersion -gt $expectedPluginProtocolVersion",
+			"$manifest.minBridgeProtocolVersion -gt $expectedBridgeProtocolVersion",
 		);
 		expect(workflowSource).toContain(
-			"$manifest.maxPluginProtocolVersion -lt $expectedPluginProtocolVersion",
+			"$manifest.maxBridgeProtocolVersion -lt $expectedBridgeProtocolVersion",
 		);
 		expect(workflowSource).toContain(
-			"$manifest.pluginProtocolVersion -ne $expectedPluginProtocolVersion",
+			"$manifest.bridgeProtocolVersion -ne $expectedBridgeProtocolVersion",
 		);
 		expect(workflowSource).not.toMatch(
-			/\$manifest\.(?:min|max)PluginProtocolVersion\s+-ne\s+\d+/,
+			/\$manifest\.(?:min|max)BridgeProtocolVersion\s+-ne\s+\d+/,
 		);
+	});
+
+	it("excludes Godot-generated cache and native artifacts from the embedded Bridge", () => {
+		for (const extension of [
+			".uid",
+			".import",
+			".dll",
+			".so",
+			".dylib",
+			".a",
+			".wasm",
+			".gdextension",
+		]) {
+			expect(bridgePrepareSource).toContain(`\"${extension}\"`);
+		}
+		expect(bridgePrepareSource).toContain("Editor Bridge script contains a UID reference");
 	});
 });
