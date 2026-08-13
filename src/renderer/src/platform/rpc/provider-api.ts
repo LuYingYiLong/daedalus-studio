@@ -74,12 +74,16 @@ export type ProviderModelCustomizationInfo = {
 	contextWindowTokens?: number | undefined;
 	maxOutputTokens?: number | undefined;
 	capabilities: ProviderModelCapabilityOverrides;
+	reasoningEfforts?: ProviderReasoningEffortOption[] | undefined;
 	updatedAt: string;
 };
 
+export type BaseReasoningEffort = "low" | "medium" | "high" | "max";
+
 export type ProviderReasoningEffortOption = {
 	id: string;
-	fallback: "low" | "medium" | "high" | "max";
+	fallback: BaseReasoningEffort;
+	default?: boolean | undefined;
 };
 
 export type ProviderRequestJsonValue =
@@ -279,6 +283,7 @@ export async function addProviderModel(params: {
 	contextWindowTokens: number;
 	maxOutputTokens: number;
 	capabilities: EditableModelCapabilityValues;
+	reasoningEfforts: ProviderReasoningEffortOption[];
 }): Promise<ProviderModelSelection> {
 	const client = await createBackendClient();
 	return client.request("provider.model.add", params);
@@ -291,6 +296,7 @@ export async function updateProviderModel(params: {
 	contextWindowTokens: number | null;
 	maxOutputTokens: number | null;
 	capabilities: EditableModelCapabilityUpdates;
+	reasoningEfforts: ProviderReasoningEffortOption[] | null;
 }): Promise<ProviderModelSelection> {
 	const client = await createBackendClient();
 	return client.request("provider.model.update", params);

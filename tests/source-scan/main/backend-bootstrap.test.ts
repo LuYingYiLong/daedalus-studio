@@ -76,4 +76,11 @@ describe("backend bootstrap service", () => {
 		expect(prepareSource.indexOf("const backendSource = resolveBackendSource();"))
 			.toBeLessThan(prepareSource.indexOf("process.env.DAEDALUS_BACKEND_BOOTSTRAP_DIR"));
 	});
+
+	it("accepts patch-level Node 24 updates for backend SEA payloads", () => {
+		expect(prepareSource).toContain("const minimumNodeVersion = [24, 18, 0];");
+		expect(prepareSource).toContain("function isCompatibleNodeVersion(value)");
+		expect(prepareSource).toContain("!isCompatibleNodeVersion(manifest.nodeVersion)");
+		expect(prepareSource).not.toContain("manifest.nodeVersion !== expectedNodeVersion");
+	});
 });

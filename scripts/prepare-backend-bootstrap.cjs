@@ -22,7 +22,7 @@ const executableName = "daedalus-backend.exe";
 const releaseManifestName = "daedalus-backend-win32-x64.json";
 const releaseBaseUrl = "https://github.com/LuYingYiLong/daedalus-backend/releases";
 const maxArchiveBytes = 256 * 1024 * 1024;
-const expectedNodeVersion = "24.18.0";
+const minimumNodeVersion = [24, 18, 0];
 const siblingBackendRoot = resolve(projectRoot, "..", "daedalus-backend");
 
 function fail(message) {
@@ -89,6 +89,28 @@ function compareVersions(left, right) {
 	return 0;
 }
 
+function parseNodeVersion(value) {
+	const match = typeof value === "string"
+		? value.trim().match(/^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/u)
+		: null;
+	return match === null
+		? null
+		: [Number.parseInt(match[1], 10), Number.parseInt(match[2], 10), Number.parseInt(match[3], 10)];
+}
+
+function isCompatibleNodeVersion(value) {
+	const parsed = parseNodeVersion(value);
+	if (parsed === null || parsed[0] !== minimumNodeVersion[0]) {
+		return false;
+	}
+	for (let index = 0; index < minimumNodeVersion.length; index += 1) {
+		if (parsed[index] !== minimumNodeVersion[index]) {
+			return parsed[index] > minimumNodeVersion[index];
+		}
+	}
+	return true;
+}
+
 function assertPayloadManifest(manifest) {
 	if (
 		manifest.schemaVersion !== 1
@@ -97,7 +119,7 @@ function assertPayloadManifest(manifest) {
 		|| manifest.buildId.length === 0
 		|| manifest.platform !== "win32"
 		|| manifest.arch !== "x64"
-		|| manifest.nodeVersion !== expectedNodeVersion
+		|| !isCompatibleNodeVersion(manifest.nodeVersion)
 		|| manifest.protocolVersion !== expectedProtocolVersion
 		|| !Number.isSafeInteger(manifest.minBridgeProtocolVersion)
 		|| !Number.isSafeInteger(manifest.maxBridgeProtocolVersion)

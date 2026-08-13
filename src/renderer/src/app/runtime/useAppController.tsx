@@ -483,6 +483,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	useEffect((): void => {
 		if (runState.status === "idle") {
 			activeChatRequestIdRef.current = null;
+			setIsHomeSubmitting(false);
 		}
 	}, [runState.status]);
 

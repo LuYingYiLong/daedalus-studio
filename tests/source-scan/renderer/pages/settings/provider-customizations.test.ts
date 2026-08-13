@@ -23,6 +23,11 @@ describe("Provider customizations", () => {
 		expect(pageSource).toContain('name="maxOutputTokens"');
 		expect(pageSource).toContain('value: "inherit"');
 		expect(pageSource).toContain("createUniformCapabilityFormValues(\"inherit\")");
+		expect(pageSource).toContain('<Form.List name="reasoningEfforts">');
+		expect(pageSource).toContain("inheritReasoningEfforts");
+		expect(pageSource).toContain("reasoningEffortFallback");
+		expect(pageSource).toContain("reasoningEffortDefault");
+		expect(apiSource).toContain("reasoningEfforts: ProviderReasoningEffortOption[] | null");
 		expect(apiSource).toContain("contextWindowTokens: number");
 		expect(apiSource).toContain("ProviderModelCustomizationInfo");
 		expect(pageSource).not.toContain("getModelTokenText");

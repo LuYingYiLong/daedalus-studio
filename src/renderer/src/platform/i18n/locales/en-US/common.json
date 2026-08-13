@@ -1667,17 +1667,25 @@
         "modelTypes": "Model types",
         "contextWindowTokens": "Context window (tokens)",
         "maxOutputTokens": "Maximum output (tokens)",
-        "modelCapabilities": "Model capabilities"
+        "modelCapabilities": "Model capabilities",
+        "reasoningEfforts": "Reasoning effort",
+        "reasoningEffortId": "Provider value",
+        "reasoningEffortFallback": "Equivalent level",
+        "reasoningEffortDefault": "Default"
       },
       "validation": {
         "providerName": "Enter a provider name between 1 and 80 characters",
         "providerType": "Select a provider type",
         "modelId": "Enter a model ID between 1 and 200 characters",
         "modelName": "Enter a model name between 1 and 120 characters",
-        "tokenLimit": "Enter an integer between 1 and 2,000,000,000"
+        "tokenLimit": "Enter an integer between 1 and 2,000,000,000",
+        "reasoningEffortId": "Enter a provider value between 1 and 32 characters",
+        "reasoningEffortDuplicate": "Provider values must be unique"
       },
       "actions": {
         "addModel": "Add model",
+        "addReasoningEffort": "Add effort level",
+        "removeReasoningEffort": "Remove",
         "clearApiKey": "Clear API key",
 		"enableProvider": "Enable provider",
 		"disableProvider": "Disable provider",
@@ -1713,6 +1721,17 @@
         "vision": "Vision",
         "webSearch": "Search"
       },
+	  "reasoningEfforts": {
+		"description": "Define the reasoning effort values accepted by this provider. Equivalent levels let Daedalus map a selection when switching models.",
+		"disabled": "Enable the model's reasoning capability before configuring effort levels.",
+		"empty": "No selectable levels. The model will use its provider-defined fixed or automatic reasoning strength.",
+		"fallback": {
+		  "low": "Low",
+		  "medium": "Medium",
+		  "high": "High",
+		  "max": "Maximum"
+		}
+	  },
 	  "modelOverrides": {
 		"description": "Fields without an override continue to follow the provider API or Daedalus catalog and adopt future metadata updates automatically.",
 		"inherit": "Follow source",

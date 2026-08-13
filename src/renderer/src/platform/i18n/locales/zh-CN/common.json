@@ -1660,17 +1660,25 @@
         "modelTypes": "模型类型",
         "contextWindowTokens": "上下文窗口（tokens）",
         "maxOutputTokens": "最大输出（tokens）",
-        "modelCapabilities": "模型能力"
+        "modelCapabilities": "模型能力",
+        "reasoningEfforts": "推理强度",
+        "reasoningEffortId": "供应商参数值",
+        "reasoningEffortFallback": "等效档位",
+        "reasoningEffortDefault": "默认"
       },
       "validation": {
         "providerName": "请输入 1–80 个字符的供应商名称",
         "providerType": "请选择供应商类型",
         "modelId": "请输入 1–200 个字符的模型 ID",
         "modelName": "请输入 1–120 个字符的模型名称",
-        "tokenLimit": "请输入 1–2,000,000,000 之间的整数"
+        "tokenLimit": "请输入 1–2,000,000,000 之间的整数",
+        "reasoningEffortId": "请输入 1–32 个字符的供应商参数值",
+        "reasoningEffortDuplicate": "供应商参数值不能重复"
       },
       "actions": {
         "addModel": "添加模型",
+        "addReasoningEffort": "添加强度档位",
+        "removeReasoningEffort": "移除",
         "clearApiKey": "清除 API Key",
 		"enableProvider": "启用供应商",
 		"disableProvider": "禁用供应商",
@@ -1706,6 +1714,17 @@
         "vision": "视觉",
         "webSearch": "搜索"
       },
+	  "reasoningEfforts": {
+		"description": "配置该供应商 API 接受的推理强度参数值。等效档位用于在切换模型时映射到最接近的强度。",
+		"disabled": "请先启用模型的推理能力，再配置推理强度。",
+		"empty": "未配置可选档位；模型将使用供应商定义的固定或自动推理强度。",
+		"fallback": {
+		  "low": "低",
+		  "medium": "中",
+		  "high": "高",
+		  "max": "最高"
+		}
+	  },
 	  "modelOverrides": {
 		"description": "未覆盖的字段会继续跟随供应商 API 或 Daedalus catalog，并在模型元数据更新后自动采用新值。",
 		"inherit": "跟随来源",

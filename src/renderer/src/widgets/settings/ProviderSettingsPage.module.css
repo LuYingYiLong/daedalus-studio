@@ -193,6 +193,47 @@
 	margin-block: 4px var(--ds-space-3);
 }
 
+.reasoningEffortHeader {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--ds-space-3);
+	margin-bottom: var(--ds-space-3);
+}
+
+.reasoningEffortHeader > :first-child {
+	min-width: 0;
+	flex: 1;
+}
+
+.reasoningEffortList {
+	display: grid;
+	gap: var(--ds-space-2);
+}
+
+.reasoningEffortRow {
+	display: grid;
+	grid-template-columns: minmax(180px, 1.4fr) minmax(140px, 1fr) auto auto;
+	align-items: end;
+	gap: var(--ds-space-2);
+	padding: var(--ds-space-2);
+	border: 1px solid var(--ant-color-border-secondary);
+	border-radius: var(--ds-radius-md);
+}
+
+.reasoningEffortRow :global(.ant-form-item) {
+	margin-bottom: 0;
+}
+
+.reasoningEffortRow > button {
+	margin-bottom: 1px;
+}
+
+.reasoningEffortEmpty {
+	display: block;
+	padding: var(--ds-space-2) 0;
+}
+
 .discoveryDialog {
 	display: grid;
 	gap: var(--ds-space-3);
@@ -212,13 +253,19 @@
 	min-width: 0;
 }
 
-.modal {
-	user-select: none;
-}
-
 @media (max-width: 720px) {
 	.tokenLimitGrid,
 	.capabilityEditorGrid {
 		grid-template-columns: minmax(0, 1fr);
 	}
+
+	.reasoningEffortHeader {
+		flex-direction: column;
+	}
+
+	.reasoningEffortRow {
+		grid-template-columns: minmax(0, 1fr);
+		align-items: stretch;
+	}
+
 }

@@ -10,13 +10,18 @@ export type RunControllerState = {
 	queueItemId: number | null;
 	statusCode: string | null;
 	sequence: number;
+	workbenchSequence: number;
 	agentRun: AgentRunState | null;
 };
 
 const ACTIVE_RUN_STATUSES: readonly RunControllerStatus[] = ["streaming", "approval", "paused", "cancelling"];
 const TERMINAL_RUN_STAGES: ReadonlySet<AgentRunState["stage"]> = new Set(["completed", "failed", "cancelled"]);
 
-export function createIdleRunState(sequence: number = 0, agentRun: AgentRunState | null = null): RunControllerState {
+export function createIdleRunState(
+	sequence: number = 0,
+	agentRun: AgentRunState | null = null,
+	workbenchSequence: number = 0
+): RunControllerState {
 	return {
 		status: "idle",
 		requestId: null,
@@ -24,6 +29,7 @@ export function createIdleRunState(sequence: number = 0, agentRun: AgentRunState
 		queueItemId: null,
 		statusCode: null,
 		sequence,
+		workbenchSequence,
 		agentRun
 	};
 }
@@ -44,12 +50,20 @@ function isAgentRunState(value: unknown): value is AgentRunState {
 		&& typeof value.lane === "string";
 }
 
-function normalizeWorkbenchActiveRun(activeRun: WorkbenchActiveRun, fallbackSequence: number): RunControllerState {
-	const sequence: number = typeof activeRun.sequence === "number" && Number.isFinite(activeRun.sequence)
+function getWorkbenchActiveRunSequence(activeRun: WorkbenchActiveRun, fallbackSequence: number): number {
+	return typeof activeRun.sequence === "number" && Number.isFinite(activeRun.sequence)
 		? activeRun.sequence
 		: fallbackSequence;
+}
+
+function normalizeWorkbenchActiveRun(
+	activeRun: WorkbenchActiveRun,
+	workbenchSequence: number,
+	eventSequence: number,
+	agentRun: AgentRunState | null
+): RunControllerState {
 	if (activeRun.status === "idle") {
-		return createIdleRunState(sequence);
+		return createIdleRunState(eventSequence, agentRun, workbenchSequence);
 	}
 	return {
 		status: activeRun.status,
@@ -57,8 +71,9 @@ function normalizeWorkbenchActiveRun(activeRun: WorkbenchActiveRun, fallbackSequ
 		startedAt: activeRun.startedAt ?? null,
 		queueItemId: activeRun.queueItemId ?? null,
 		statusCode: activeRun.statusCode ?? null,
-		sequence,
-		agentRun: null
+		sequence: eventSequence,
+		workbenchSequence,
+		agentRun
 	};
 }
 
@@ -67,17 +82,23 @@ export function applyRunStateFromWorkbench(
 	workbench: WorkbenchSnapshot | null,
 	cancelledRequestIds?: ReadonlySet<string>
 ): RunControllerState {
-	if (current.agentRun !== null) {
+	if (workbench === null) {
+		return createIdleRunState(current.sequence, current.agentRun, current.workbenchSequence);
+	}
+	const workbenchSequence: number = getWorkbenchActiveRunSequence(workbench.activeRun, workbench.revision);
+	if (workbenchSequence <= current.workbenchSequence) {
 		return current;
 	}
-	if (workbench === null) {
-		return createIdleRunState(current.sequence);
-	}
-	const next: RunControllerState = normalizeWorkbenchActiveRun(workbench.activeRun, workbench.revision);
+	const next: RunControllerState = normalizeWorkbenchActiveRun(
+		workbench.activeRun,
+		workbenchSequence,
+		current.sequence,
+		current.agentRun
+	);
 	if (next.requestId !== null && cancelledRequestIds?.has(next.requestId) === true) {
 		return current;
 	}
-	return next.sequence < current.sequence ? current : next;
+	return next;
 }
 
 export function applyAgentRunState(
@@ -91,8 +112,11 @@ export function applyAgentRunState(
 	if (current.agentRun?.runId === run.runId && run.revision <= current.agentRun.revision) {
 		return current;
 	}
+	const workbenchSequence: number = current.requestId === run.requestId
+		? current.workbenchSequence
+		: current.workbenchSequence + 1;
 	if (run.stage === "interrupted" || TERMINAL_RUN_STAGES.has(run.stage)) {
-		return createIdleRunState(sequence, run);
+		return createIdleRunState(sequence, run, workbenchSequence);
 	}
 	if (run.stage === "awaiting_approval" || run.stage === "awaiting_tool_budget") {
 		return {
@@ -102,6 +126,7 @@ export function applyAgentRunState(
 			queueItemId: null,
 			statusCode: run.stage === "awaiting_tool_budget" ? "tool_budget" : "approval_required",
 			sequence,
+			workbenchSequence,
 			agentRun: run
 		};
 	}
@@ -112,6 +137,7 @@ export function applyAgentRunState(
 		queueItemId: null,
 		statusCode: run.stage,
 		sequence,
+		workbenchSequence,
 		agentRun: run
 	};
 }
@@ -124,6 +150,7 @@ export function createOptimisticRunState(current: RunControllerState, requestId:
 		queueItemId: null,
 		statusCode: null,
 		sequence: current.sequence + 1,
+		workbenchSequence: current.workbenchSequence + 1,
 		agentRun: null
 	};
 }
@@ -132,7 +159,7 @@ export function finishOptimisticRunState(current: RunControllerState, requestId:
 	if (current.requestId !== null && current.requestId !== requestId) {
 		return current;
 	}
-	return createIdleRunState(current.sequence + 1, current.agentRun);
+	return createIdleRunState(current.sequence + 1, current.agentRun, current.workbenchSequence + 1);
 }
 
 export function applyRunStateFromBackendEvent(
@@ -171,7 +198,7 @@ export function applyRunStateFromBackendEvent(
 	if (![...eventRequestIds].some((requestId: string): boolean => currentRequestIds.has(requestId))) {
 		return current;
 	}
-	return createIdleRunState(current.sequence + 1, current.agentRun);
+	return createIdleRunState(current.sequence + 1, current.agentRun, current.workbenchSequence + 1);
 }
 
 export function isRunControllerActive(state: RunControllerState): boolean {

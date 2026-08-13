@@ -1,4 +1,4 @@
-import { Alert, App, Button, Divider, Empty, Flex, Form, Input, InputNumber, Menu, Modal, Select, Space, Switch, Table, Tag, Tooltip, Typography } from "antd";
+import { Alert, App, Button, Divider, Empty, Flex, Form, Input, InputNumber, Menu, Modal, Segmented, Select, Space, Switch, Table, Tag, Tooltip, Typography } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, Key, KeyboardEvent } from "react";
@@ -16,6 +16,7 @@ import {
 	syncProviderModels,
 	updateProviderModel,
 	type CustomProviderType,
+	type BaseReasoningEffort,
 	type DiscoveredProviderModel,
 	type EditableModelCapabilityUpdates,
 	type EditableModelCapabilityValues,
@@ -25,6 +26,7 @@ import {
 	type ProviderModelRemovalGuard,
 	type ProviderModelsDiscoverResult,
 	type ProviderModelInfo,
+	type ProviderReasoningEffortOption,
 	type ProviderModelSelection,
 	type ProviderModelSelectionProvider,
 	type ProviderModelUsage,
@@ -58,9 +60,17 @@ type ModelFormValues = {
 	maxOutputTokens: number;
 	inheritMaxOutputTokens: boolean;
 	capabilities: Record<keyof EditableModelCapabilities, CapabilityFormValue>;
+	inheritReasoningEfforts: boolean;
+	reasoningEfforts: ReasoningEffortFormValue[];
 };
 
 type CapabilityFormValue = "inherit" | "enabled" | "disabled";
+
+type ReasoningEffortFormValue = {
+	id: string;
+	fallback: BaseReasoningEffort;
+	default: boolean;
+};
 
 type EditableCapability = {
 	key: keyof EditableModelCapabilities;
@@ -130,6 +140,25 @@ function toCustomModelCapabilities(values: ModelFormValues["capabilities"]): Edi
 		capabilities[capability.key] = values[capability.key] === "enabled";
 	}
 	return capabilities;
+}
+
+function createReasoningEffortFormValues(model: ProviderModelInfo | null): ReasoningEffortFormValue[] {
+	const efforts: readonly ProviderReasoningEffortOption[] = model?.customization?.reasoningEfforts
+		?? model?.capabilities.reasoningEfforts
+		?? [];
+	return efforts.map((effort: ProviderReasoningEffortOption): ReasoningEffortFormValue => ({
+		id: effort.id,
+		fallback: effort.fallback,
+		default: effort.default === true
+	}));
+}
+
+function toReasoningEffortOptions(values: readonly ReasoningEffortFormValue[]): ProviderReasoningEffortOption[] {
+	return values.map((effort: ReasoningEffortFormValue): ProviderReasoningEffortOption => ({
+		id: effort.id.trim(),
+		fallback: effort.fallback,
+		...(effort.default ? { default: true } : {})
+	}));
 }
 
 function getCustomizationErrorMessage(
@@ -231,6 +260,10 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 	const inheritDisplayName: boolean = Form.useWatch("inheritDisplayName", modelForm) ?? false;
 	const inheritContextWindowTokens: boolean = Form.useWatch("inheritContextWindowTokens", modelForm) ?? false;
 	const inheritMaxOutputTokens: boolean = Form.useWatch("inheritMaxOutputTokens", modelForm) ?? false;
+	const inheritReasoningEfforts: boolean = Form.useWatch("inheritReasoningEfforts", modelForm) ?? false;
+	const reasoningCapabilityValue: CapabilityFormValue = Form.useWatch(["capabilities", "reasoning"], modelForm) ?? "disabled";
+	const reasoningEffortsEnabled: boolean = reasoningCapabilityValue === "enabled"
+		|| (reasoningCapabilityValue === "inherit" && editingModel?.capabilities.reasoning === true);
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -743,7 +776,9 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			inheritContextWindowTokens: false,
 			maxOutputTokens: 8_192,
 			inheritMaxOutputTokens: false,
-			capabilities: createCapabilityFormValues(null, false)
+			capabilities: createCapabilityFormValues(null, false),
+			inheritReasoningEfforts: false,
+			reasoningEfforts: []
 		});
 		setModelDialogMode("add");
 	}
@@ -760,7 +795,9 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			inheritContextWindowTokens: !isCustomModel && model.customization?.contextWindowTokens === undefined,
 			maxOutputTokens: model.maxOutputTokens,
 			inheritMaxOutputTokens: !isCustomModel && model.customization?.maxOutputTokens === undefined,
-			capabilities: createCapabilityFormValues(model, !isCustomModel)
+			capabilities: createCapabilityFormValues(model, !isCustomModel),
+			inheritReasoningEfforts: !isCustomModel && model.customization?.reasoningEfforts === undefined,
+			reasoningEfforts: createReasoningEffortFormValues(model)
 		});
 		setModelDialogMode("edit");
 	}
@@ -791,6 +828,9 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 		}
 		try {
 			const values: ModelFormValues = await modelForm.validateFields();
+			const reasoningEfforts: ProviderReasoningEffortOption[] = values.capabilities.reasoning === "disabled"
+				? []
+				: toReasoningEffortOptions(values.reasoningEfforts);
 			setIsDialogSaving(true);
 			setDialogError(null);
 			const nextSelection: ProviderModelSelection = modelDialogMode === "add"
@@ -800,7 +840,8 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 					displayName: values.displayName,
 					contextWindowTokens: values.contextWindowTokens,
 					maxOutputTokens: values.maxOutputTokens,
-					capabilities: toCustomModelCapabilities(values.capabilities)
+					capabilities: toCustomModelCapabilities(values.capabilities),
+					reasoningEfforts
 				})
 				: await updateProviderModel({
 					provider: selectedProvider.provider,
@@ -812,7 +853,12 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 					maxOutputTokens: canInheritModelFields && values.inheritMaxOutputTokens
 						? null
 						: values.maxOutputTokens,
-					capabilities: toEditableCapabilities(values.capabilities, canInheritModelFields)
+					capabilities: toEditableCapabilities(values.capabilities, canInheritModelFields),
+					reasoningEfforts: values.capabilities.reasoning !== "disabled"
+						&& canInheritModelFields
+						&& values.inheritReasoningEfforts
+						? null
+						: reasoningEfforts
 				});
 			setSelection(nextSelection);
 			onSelectionChange?.(nextSelection);
@@ -1306,7 +1352,8 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 										inheritDisplayName: true,
 										inheritContextWindowTokens: true,
 										inheritMaxOutputTokens: true,
-										capabilities: createUniformCapabilityFormValues("inherit")
+										capabilities: createUniformCapabilityFormValues("inherit"),
+										inheritReasoningEfforts: true
 									});
 								}}
 							>
@@ -1323,7 +1370,9 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 						inheritDisplayName: false,
 						inheritContextWindowTokens: false,
 						inheritMaxOutputTokens: false,
-						capabilities: createUniformCapabilityFormValues("disabled")
+						capabilities: createUniformCapabilityFormValues("disabled"),
+						inheritReasoningEfforts: false,
+						reasoningEfforts: []
 					}}
 				>
 					<Form.Item
@@ -1426,24 +1475,128 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 						{t("settings.provider.fields.modelCapabilities")}
 					</Divider>
 					{EDITABLE_CAPABILITIES.map((capability: EditableCapability): React.JSX.Element => (
-						<Form.Item
-							key={capability.key}
-							name={["capabilities", capability.key]}
-							label={t(capability.labelKey)}
-						>
-							<Select
-								options={[
-									...(canInheritModelFields ? [{
-										value: "inherit",
-										label: t("settings.provider.modelOverrides.inherit")
-									}] : []),
-									{ value: "enabled", label: t("settings.common.on") },
-									{ value: "disabled", label: t("settings.common.off") }
-								]}
-								suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
-							/>
-						</Form.Item>
+							<Form.Item
+								key={capability.key}
+								name={["capabilities", capability.key]}
+								label={t(capability.labelKey)}
+							>
+								<Segmented<CapabilityFormValue>
+									block={true}
+									size="small"
+									options={[
+										...(canInheritModelFields ? [{
+											value: "inherit" as CapabilityFormValue,
+											label: t("settings.provider.modelOverrides.inherit")
+										}] : []),
+										{ value: "enabled" as CapabilityFormValue, label: t("settings.common.on") },
+										{ value: "disabled" as CapabilityFormValue, label: t("settings.common.off") }
+									]}
+								/>
+							</Form.Item>
 					))}
+					<Divider orientation="horizontal" className={styles.modelFormDivider}>
+						{t("settings.provider.fields.reasoningEfforts")}
+					</Divider>
+					<div className={styles.reasoningEffortHeader}>
+						<Typography.Text type="secondary">
+							{t(reasoningEffortsEnabled
+								? "settings.provider.reasoningEfforts.description"
+								: "settings.provider.reasoningEfforts.disabled")}
+						</Typography.Text>
+						{canInheritModelFields ? (
+							<Flex gap={6} align="center" className={styles.inheritControl}>
+								<Form.Item noStyle={true} name="inheritReasoningEfforts" valuePropName="checked">
+									<Switch size="small" disabled={!reasoningEffortsEnabled} />
+								</Form.Item>
+								<Typography.Text type="secondary">{t("settings.provider.modelOverrides.inherit")}</Typography.Text>
+							</Flex>
+						) : null}
+					</div>
+					<Form.List name="reasoningEfforts">
+						{(fields, { add, remove }): React.JSX.Element => (
+							<div className={styles.reasoningEffortList}>
+								{fields.length === 0 ? (
+									<Typography.Text type="secondary" className={styles.reasoningEffortEmpty}>
+										{t("settings.provider.reasoningEfforts.empty")}
+									</Typography.Text>
+								) : null}
+								{fields.map((field): React.JSX.Element => (
+									<div key={field.key} className={styles.reasoningEffortRow}>
+										<Form.Item
+											name={[field.name, "id"]}
+											label={t("settings.provider.fields.reasoningEffortId")}
+											rules={[
+												{
+													required: true,
+													whitespace: true,
+													max: 32,
+													message: t("settings.provider.validation.reasoningEffortId")
+												},
+												{
+													validator: async (_rule, value: string | undefined): Promise<void> => {
+														const id: string = value?.trim() ?? "";
+														const efforts: ReasoningEffortFormValue[] = modelForm.getFieldValue("reasoningEfforts") ?? [];
+														if (id.length > 0 && efforts.filter((effort): boolean => effort?.id?.trim() === id).length > 1) {
+															throw new Error(t("settings.provider.validation.reasoningEffortDuplicate"));
+														}
+													}
+												}
+											]}
+										>
+											<Input disabled={!reasoningEffortsEnabled || inheritReasoningEfforts} maxLength={32} />
+										</Form.Item>
+										<Form.Item
+											name={[field.name, "fallback"]}
+											label={t("settings.provider.fields.reasoningEffortFallback")}
+											rules={[{ required: true }]}
+										>
+											<Select
+												disabled={!reasoningEffortsEnabled || inheritReasoningEfforts}
+												options={(["low", "medium", "high", "max"] as const).map((fallback: BaseReasoningEffort) => ({
+													value: fallback,
+													label: t(`settings.provider.reasoningEfforts.fallback.${fallback}`)
+												}))}
+											/>
+										</Form.Item>
+										<Form.Item
+											name={[field.name, "default"]}
+											label={t("settings.provider.fields.reasoningEffortDefault")}
+											valuePropName="checked"
+										>
+											<Switch
+												disabled={!reasoningEffortsEnabled || inheritReasoningEfforts}
+												onChange={(checked: boolean): void => {
+													if (!checked) {
+														return;
+													}
+													const efforts: ReasoningEffortFormValue[] = modelForm.getFieldValue("reasoningEfforts") ?? [];
+													modelForm.setFieldValue("reasoningEfforts", efforts.map((effort, index): ReasoningEffortFormValue => ({
+														...effort,
+														default: index === field.name
+													})));
+												}}
+											/>
+										</Form.Item>
+										<Button
+											type="text"
+											danger={true}
+											disabled={!reasoningEffortsEnabled || inheritReasoningEfforts}
+											onClick={(): void => remove(field.name)}
+										>
+											{t("settings.provider.actions.removeReasoningEffort")}
+										</Button>
+									</div>
+								))}
+								<Button
+									type="dashed"
+									disabled={!reasoningEffortsEnabled || inheritReasoningEfforts || fields.length >= 16}
+									onClick={(): void => add({ id: "", fallback: "medium", default: fields.length === 0 })}
+								>
+									{t("settings.provider.actions.addReasoningEffort")}
+								</Button>
+							</div>
+						)}
+					</Form.List>
 				</Form>
 			</Modal>
 		</section>

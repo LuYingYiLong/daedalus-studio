@@ -136,27 +136,59 @@ describe("workbench-state", () => {
 		expect(applied.activeRun).toEqual(current.activeRun);
 	});
 
-	it("derives run controls from sequenced backend events and ignores stale workbench state", () => {
-		const idle: RunControllerState = createIdleRunState();
+	it("derives run controls from backend events and ignores stale workbench run state", () => {
+		const initialWorkbench = createWorkbench(4, "");
+		initialWorkbench.activeRun = {
+			status: "streaming",
+			requestId: "run-a",
+			sequence: 5
+		};
+		const idle: RunControllerState = applyRunStateFromWorkbench(createIdleRunState(), initialWorkbench);
 		const started: RunControllerState = applyRunStateFromBackendEvent(
 			idle,
-			createAgentRunEvent("run-a", "executing", 3)
+			createAgentRunEvent("run-a", "executing", 300)
 		);
 		const staleWorkbench = createWorkbench(10, "");
 		staleWorkbench.activeRun = {
 			status: "idle",
-			sequence: 2
+			sequence: 4
 		};
 		const afterStaleWorkbench: RunControllerState = applyRunStateFromWorkbench(started, staleWorkbench);
 		const done: RunControllerState = applyRunStateFromBackendEvent(
 			afterStaleWorkbench,
-			createAgentRunEvent("run-a", "completed", 4)
+			createAgentRunEvent("run-a", "completed", 301)
 		);
 
 		expect(isRunControllerActive(started)).toBe(true);
 		expect(afterStaleWorkbench.status).toBe("streaming");
 		expect(done.status).toBe("idle");
-		expect(done.sequence).toBe(4);
+		expect(done.sequence).toBe(301);
+	});
+
+	it("releases an active run from a newer idle workbench snapshot when its terminal event is missing", () => {
+		const activeWorkbench = createWorkbench(4, "");
+		activeWorkbench.activeRun = {
+			status: "streaming",
+			requestId: "run-a",
+			sequence: 5
+		};
+		const fromWorkbench: RunControllerState = applyRunStateFromWorkbench(createIdleRunState(), activeWorkbench);
+		const running: RunControllerState = applyRunStateFromBackendEvent(
+			fromWorkbench,
+			createAgentRunEvent("run-a", "executing", 300)
+		);
+		const completedWorkbench = createWorkbench(5, "");
+		completedWorkbench.activeRun = {
+			status: "idle",
+			sequence: 6
+		};
+
+		const completed: RunControllerState = applyRunStateFromWorkbench(running, completedWorkbench);
+
+		expect(running.status).toBe("streaming");
+		expect(completed.status).toBe("idle");
+		expect(completed.workbenchSequence).toBe(6);
+		expect(completed.agentRun?.stage).toBe("executing");
 	});
 
 	it("releases the active run for a legacy cancellation event", () => {
