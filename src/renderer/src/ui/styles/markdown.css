@@ -90,6 +90,43 @@
 	overflow-wrap: anywhere;
 }
 
+.markdown-body code.language-math,
+.markdown-body code.math-inline,
+.markdown-body code.math-display {
+	padding: 0;
+	border-radius: 0;
+	background: transparent;
+	color: inherit;
+	font-family: inherit;
+	font-size: inherit;
+	font-weight: inherit;
+	white-space: normal;
+	overflow-wrap: normal;
+}
+
+.markdown-body code.math-display {
+	display: block;
+	width: 100%;
+}
+
+.markdown-body .katex {
+	max-width: 100%;
+	color: inherit;
+	font-size: 1.02em;
+}
+
+.markdown-body .katex-display {
+	max-width: 100%;
+	margin: 0 0 8px;
+	padding: var(--ds-space-1) 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+
+.markdown-body .katex-display > .katex {
+	min-width: max-content;
+}
+
 .markdown-body pre {
 	max-width: 100%;
 	padding: var(--ds-space-2) var(--ds-space-3);

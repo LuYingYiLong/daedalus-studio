@@ -10,6 +10,7 @@ describe("MarkdownContent source", () => {
 	const mermaidBlockSource: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "MermaidBlock.tsx");
 	const mermaidRendererSource: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "mermaid-renderer.ts");
 	const mermaidPngExportSource: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "mermaid-png-export.ts");
+	const markdownStyles: string = readRepoFile("src", "renderer", "src", "ui", "styles", "markdown.css");
 	const markdownFileIconSource: string = readRepoFile("src", "renderer", "src", "domain", "markdown", "file-icon.ts");
 	const fileExportSource: string = readRepoFile("src", "main", "services", "file-export.ts");
 	const packageManifest = JSON.parse(readRepoFile("package.json")) as { dependencies?: Record<string, string> };
@@ -55,6 +56,21 @@ describe("MarkdownContent source", () => {
 		expect(fileExportSource).toContain('file-export:save-text');
 		expect(mermaidBlockSource).not.toContain("<details");
 		expect(readRepoFile("src", "renderer", "src", "widgets", "markdown", "MermaidBlock.module.css")).toContain(".sourceCollapse :global(.ant-collapse-body)");
+	});
+
+	it("renders inline and display LaTeX with KaTeX without passing generated nodes to code highlighting", () => {
+		expect(packageManifest.dependencies?.katex).toBeDefined();
+		expect(packageManifest.dependencies?.["remark-math"]).toBeDefined();
+		expect(packageManifest.dependencies?.["rehype-katex"]).toBeDefined();
+		expect(source).toContain('import remarkMath from "remark-math"');
+		expect(source).toContain('import rehypeKatex from "rehype-katex"');
+		expect(source).toContain('import "katex/dist/katex.min.css"');
+		expect(source).toContain("const MARKDOWN_REMARK_PLUGINS = [remarkGfm, remarkMath]");
+		expect(source).toContain("const MARKDOWN_REHYPE_PLUGINS = [rehypeKatex]");
+		expect(source).toContain("rehypePlugins={MARKDOWN_REHYPE_PLUGINS}");
+		expect(source).toContain('name === "language-math" || name === "math-inline" || name === "math-display"');
+		expect(markdownStyles).toContain(".markdown-body .katex-display");
+		expect(markdownStyles).toContain("overflow-x: auto;");
 	});
 
 	it("renders local resources as non-navigating links with visible file icons", () => {

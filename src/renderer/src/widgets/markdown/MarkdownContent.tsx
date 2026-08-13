@@ -1,6 +1,8 @@
 import { App, Button, Tooltip } from "antd";
 import Markdown, { type Components } from "react-markdown";
+import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import hljs from "highlight.js";
@@ -13,6 +15,7 @@ import { getFileExtensionForLanguage, normalizeHighlightLanguage as normalizeMar
 import { useTimelineScrollFrameCoordinator } from "@/features/conversation/timeline-scroll-frame-context";
 import MermaidBlock from "./MermaidBlock";
 import "highlight.js/styles/github-dark.css";
+import "katex/dist/katex.min.css";
 
 export type MarkdownContentProps = {
 	children: string;
@@ -222,7 +225,8 @@ function CodeBlock({ code, language, highlight, stickyHeader }: CodeBlockProps):
 }
 
 const MemoizedCodeBlock = memo(CodeBlock);
-const MARKDOWN_REMARK_PLUGINS = [remarkGfm];
+const MARKDOWN_REMARK_PLUGINS = [remarkGfm, remarkMath];
+const MARKDOWN_REHYPE_PLUGINS = [rehypeKatex];
 
 function createMarkdownComponents(
 	highlightCodeBlocks: boolean,
@@ -235,6 +239,18 @@ function createMarkdownComponents(
 			return <>{children}</>;
 		},
 		code({ children, className, node: _node, ...props }): React.JSX.Element {
+			const classNames: string[] = className?.split(/\s+/u).filter(Boolean) ?? [];
+			const isMath: boolean = classNames.some((name: string): boolean =>
+				name === "language-math" || name === "math-inline" || name === "math-display"
+			);
+			if (isMath) {
+				return (
+					<code className={className} {...props}>
+						{children}
+					</code>
+				);
+			}
+
 			const code: string = String(children).replace(/\n$/u, "");
 			const language: string = /language-([\w-]+)/u.exec(className ?? "")?.[1] ?? "";
 			const isBlock: boolean = language.length > 0 || code.includes("\n");
@@ -321,6 +337,7 @@ const RenderedMarkdown = memo(function RenderedMarkdown({ source, streaming, sti
 	return (
 		<Markdown
 			remarkPlugins={MARKDOWN_REMARK_PLUGINS}
+			rehypePlugins={MARKDOWN_REHYPE_PLUGINS}
 			components={components}
 			urlTransform={transformMarkdownUrl}
 		>
