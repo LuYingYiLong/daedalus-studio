@@ -1,0 +1,139 @@
+.block {
+	max-width: 100%;
+	margin: 0 0 var(--ds-space-2);
+	overflow: hidden;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-surface);
+}
+
+.header {
+	display: flex;
+	min-height: 40px;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 var(--ds-space-2) 0 var(--ds-space-3);
+	border-bottom: 1px solid var(--ds-border);
+	background: var(--ds-surface-elevated);
+	user-select: none;
+}
+
+.title {
+	display: inline-flex;
+	min-width: 0;
+	align-items: center;
+	gap: var(--ds-space-2);
+	color: var(--ds-text-primary);
+	font-size: 13px;
+	font-weight: 650;
+}
+
+.title svg {
+	width: 16px;
+	height: 16px;
+	color: var(--ds-text-muted);
+}
+
+.action {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	color: var(--ds-text-muted);
+	border-radius: var(--ds-radius-sm);
+	box-shadow: none;
+}
+
+.action:hover {
+	color: var(--ds-text-primary) !important;
+	background: var(--ds-surface-hover) !important;
+}
+
+.viewport {
+	min-height: 120px;
+	padding: var(--ds-space-3);
+	overflow: auto;
+	background: var(--ds-bg-sunken);
+}
+
+.diagram {
+	display: grid;
+	min-width: 100%;
+	place-items: center;
+}
+
+.diagram :global(svg) {
+	display: block;
+	width: auto;
+	min-width: min(100%, 360px);
+	max-width: none !important;
+	height: auto;
+	font-family: var(--ds-font-family) !important;
+}
+
+.loading {
+	display: grid;
+	min-height: 96px;
+	place-items: center;
+	color: var(--ds-text-muted);
+	font-size: 13px;
+}
+
+.error {
+	display: flex;
+	min-height: 96px;
+	align-items: flex-start;
+	gap: var(--ds-space-2);
+	padding: var(--ds-space-3);
+	color: var(--ds-danger);
+}
+
+.error > svg {
+	flex: 0 0 auto;
+	margin-top: 2px;
+}
+
+.error div {
+	display: grid;
+	min-width: 0;
+	gap: var(--ds-space-1);
+}
+
+.error span {
+	color: var(--ds-text-secondary);
+	font-family: var(--ds-font-family-code);
+	font-size: 12px;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.sourceDisclosure {
+	border-top: 1px solid var(--ds-border);
+	background: var(--ds-surface);
+}
+
+.sourceDisclosure summary {
+	padding: var(--ds-space-2) var(--ds-space-3);
+	color: var(--ds-text-muted);
+	font-size: 12px;
+	cursor: pointer;
+	user-select: none;
+}
+
+.sourceDisclosure[open] summary {
+	border-bottom: 1px solid var(--ds-border);
+}
+
+.sourceDisclosure pre {
+	max-height: 320px;
+	margin: 0 !important;
+	padding: var(--ds-space-2) var(--ds-space-3) !important;
+	overflow: auto;
+	border: 0 !important;
+	border-radius: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sourceDisclosure {
+	scroll-behavior: auto;
+	}
+}

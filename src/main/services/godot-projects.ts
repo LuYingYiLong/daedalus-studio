@@ -498,35 +498,6 @@ function parsePendingOperations(value: unknown): Record<string, PendingPluginOpe
 	return operations;
 }
 
-export function isGodotProcessName(name: string): boolean {
-	return /^godot(?:[_.-]|\d|\.exe$)/iu.test(name.trim());
-}
-
-async function isGodotEditorRunning(): Promise<boolean> {
-	if (process.platform !== "win32") {
-		return false;
-	}
-	return await new Promise<boolean>((resolveRunning): void => {
-		execFile(
-			"tasklist.exe",
-			["/FO", "CSV", "/NH"],
-			{ windowsHide: true, maxBuffer: 512 * 1024 },
-			(error: Error | null, stdout: string): void => {
-				if (error !== null) {
-					// An unknown editor state must never permit an in-place plugin replacement.
-					resolveRunning(true);
-					return;
-				}
-				const rows: string[] = stdout.split(/\r?\n/u);
-				resolveRunning(rows.some((row: string): boolean => {
-					const match: RegExpMatchArray | null = row.match(/^"([^"]+)"(?:,|$)/u);
-					return match !== null && isGodotProcessName(match[1] ?? "");
-				}));
-			}
-		);
-	});
-}
-
 class GodotProjectsService {
 	private state: ProjectState = {
 		schemaVersion: PROJECT_STATE_SCHEMA_VERSION,
@@ -890,17 +861,6 @@ class GodotProjectsService {
 		await rm(operationRoot, { recursive: true, force: true }).catch((): void => {});
 	}
 
-	private async replacePendingOperation(
-		projectPath: string,
-		operation: PendingPluginOperation
-	): Promise<void> {
-		const previous: PendingPluginOperation | undefined = this.state.pendingOperations[projectPath];
-		this.state.pendingOperations[projectPath] = operation;
-		delete this.state.pendingErrors[projectPath];
-		await this.saveState();
-		await this.removeStagedPlugin(previous?.stagedPluginPath);
-	}
-
 	private async verifyInstalledVersionIntegrity(
 		projectPath: string,
 		pluginVersion: string
@@ -1134,18 +1094,6 @@ class GodotProjectsService {
 			throw new Error(versionCompatibilityError);
 		}
 		const enabled: boolean = current.pluginVersion === null ? true : current.enabled;
-		if (await isGodotEditorRunning()) {
-			const stagedPluginPath: string = await this.stagePluginPackage(pluginPackage);
-			await this.replacePendingOperation(projectPath, {
-				kind: "install_or_upgrade",
-				createdAt: new Date().toISOString(),
-				allowModified,
-				enabled,
-				pluginVersion: pluginPackage.manifest.bridgeVersion,
-				stagedPluginPath
-			});
-			return await this.scan();
-		}
 		try {
 			await this.applyInstallOrUpgrade(projectPath, pluginPackage, enabled);
 			delete this.state.pendingErrors[projectPath];
@@ -1171,14 +1119,6 @@ class GodotProjectsService {
 		const projectPath: string | null = await this.normalizeProjectPath(projectPathInput);
 		if (projectPath === null || !existsSync(join(projectPath, PLUGIN_RELATIVE_ROOT, "plugin.cfg"))) {
 			throw new Error("Daedalus Bridge is not installed in this project.");
-		}
-		if (await isGodotEditorRunning()) {
-			await this.replacePendingOperation(projectPath, {
-				kind: "set_enabled",
-				createdAt: new Date().toISOString(),
-				enabled
-			});
-			return await this.scan();
 		}
 		await this.applySetEnabled(projectPath, enabled);
 		delete this.state.pendingErrors[projectPath];
@@ -1234,13 +1174,6 @@ class GodotProjectsService {
 		if (!existsSync(join(projectPath, PLUGIN_RELATIVE_ROOT))) {
 			return await this.scan();
 		}
-		if (await isGodotEditorRunning()) {
-			await this.replacePendingOperation(projectPath, {
-				kind: "uninstall",
-				createdAt: new Date().toISOString()
-			});
-			return await this.scan();
-		}
 		try {
 			await this.applyUninstall(projectPath);
 			delete this.state.pendingErrors[projectPath];
@@ -1271,7 +1204,7 @@ class GodotProjectsService {
 	private async applyPendingOperations(): Promise<void> {
 		await this.loadState();
 		const pendingEntries: Array<[string, PendingPluginOperation]> = Object.entries(this.state.pendingOperations);
-		if (pendingEntries.length === 0 || await isGodotEditorRunning()) {
+		if (pendingEntries.length === 0) {
 			return;
 		}
 		for (const [storedProjectPath, operation] of pendingEntries) {

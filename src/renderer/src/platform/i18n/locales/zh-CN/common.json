@@ -839,6 +839,13 @@
       "savedAs": "文件已保存",
       "noWorkspace": "请先选择工作区，再打开此文件"
     },
+    "mermaid": {
+      "title": "Mermaid 图表",
+      "rendering": "正在生成图表…",
+      "renderFailed": "无法生成图表",
+      "copySource": "复制图表源码",
+      "showSource": "查看图表源码"
+    },
     "common": {
       "copy": "复制",
       "copied": "已复制",

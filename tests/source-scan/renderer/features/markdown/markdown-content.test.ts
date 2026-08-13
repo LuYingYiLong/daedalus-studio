@@ -7,6 +7,9 @@ describe("MarkdownContent source", () => {
 	const resourceLinkStyles: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "MarkdownResourceLink.module.css");
 	const fileIconSource: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "file-icon.tsx");
 	const htmlIconSource: string = readRepoFile("src", "renderer", "src", "assets", "icons", "html.svg");
+	const mermaidBlockSource: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "MermaidBlock.tsx");
+	const mermaidRendererSource: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "mermaid-renderer.ts");
+	const packageManifest = JSON.parse(readRepoFile("package.json")) as { dependencies?: Record<string, string> };
 
 	it("guards highlight.js calls and uses a lightweight streaming renderer", () => {
 		expect(source).toContain("gd: \"gdscript\"");
@@ -19,6 +22,20 @@ describe("MarkdownContent source", () => {
 		expect(source).toContain("a: MarkdownLink");
 		expect(source).toContain("urlTransform={transformMarkdownUrl}");
 		expect(source).not.toContain("resolveMarkdownResourceHref");
+	});
+
+	it("renders completed Mermaid fences securely without parsing partial streams", () => {
+		expect(packageManifest.dependencies?.mermaid).toBeDefined();
+		expect(source).toContain('language.toLowerCase() === "mermaid"');
+		expect(source).toContain("<MermaidBlock source={code} />");
+		expect(source).toContain("createMarkdownComponents(false, false, false)");
+		expect(source).toContain("createMarkdownComponents(false, true, false)");
+		expect(mermaidRendererSource).toContain('await import("mermaid")');
+		expect(mermaidRendererSource).toContain('securityLevel: "strict"');
+		expect(mermaidRendererSource).toContain("suppressErrorRendering: true");
+		expect(mermaidRendererSource).toContain("renderQueue");
+		expect(mermaidBlockSource).toContain('attributeFilter: ["data-theme", "style"]');
+		expect(mermaidBlockSource).toContain("scrollFrameCoordinator?.schedule()");
 	});
 
 	it("renders local resources as non-navigating links with visible file icons", () => {

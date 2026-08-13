@@ -9,6 +9,7 @@ import styles from "./MarkdownContent.module.css";
 import { MarkdownLink } from "./MarkdownResourceLink";
 import { transformMarkdownUrl } from "@/domain/markdown/markdown-url-transform";
 import { useTimelineScrollFrameCoordinator } from "@/features/conversation/timeline-scroll-frame-context";
+import MermaidBlock from "./MermaidBlock";
 import "highlight.js/styles/github-dark.css";
 
 export type MarkdownContentProps = {
@@ -202,7 +203,11 @@ function CodeBlock({ code, language, highlight, stickyHeader }: CodeBlockProps):
 const MemoizedCodeBlock = memo(CodeBlock);
 const MARKDOWN_REMARK_PLUGINS = [remarkGfm];
 
-function createMarkdownComponents(highlightCodeBlocks: boolean, stickyCodeHeaders: boolean): Components {
+function createMarkdownComponents(
+	highlightCodeBlocks: boolean,
+	stickyCodeHeaders: boolean,
+	renderMermaidDiagrams: boolean
+): Components {
 	return {
 		a: MarkdownLink,
 		pre({ children, node: _node, ..._props }): React.JSX.Element {
@@ -212,6 +217,10 @@ function createMarkdownComponents(highlightCodeBlocks: boolean, stickyCodeHeader
 			const code: string = String(children).replace(/\n$/u, "");
 			const language: string = /language-([\w-]+)/u.exec(className ?? "")?.[1] ?? "";
 			const isBlock: boolean = language.length > 0 || code.includes("\n");
+
+			if (renderMermaidDiagrams && language.toLowerCase() === "mermaid") {
+				return <MermaidBlock source={code} />;
+			}
 
 			if (isBlock) {
 				return <MemoizedCodeBlock code={code} language={language} highlight={highlightCodeBlocks} stickyHeader={stickyCodeHeaders} />;
@@ -226,10 +235,10 @@ function createMarkdownComponents(highlightCodeBlocks: boolean, stickyCodeHeader
 	};
 }
 
-const MARKDOWN_COMPONENTS: Components = createMarkdownComponents(true, false);
-const STICKY_MARKDOWN_COMPONENTS: Components = createMarkdownComponents(true, true);
-const STREAMING_MARKDOWN_COMPONENTS: Components = createMarkdownComponents(false, false);
-const STICKY_STREAMING_MARKDOWN_COMPONENTS: Components = createMarkdownComponents(false, true);
+const MARKDOWN_COMPONENTS: Components = createMarkdownComponents(true, false, true);
+const STICKY_MARKDOWN_COMPONENTS: Components = createMarkdownComponents(true, true, true);
+const STREAMING_MARKDOWN_COMPONENTS: Components = createMarkdownComponents(false, false, false);
+const STICKY_STREAMING_MARKDOWN_COMPONENTS: Components = createMarkdownComponents(false, true, false);
 
 export function getStreamingMarkdownRenderIntervalMs(length: number): number {
 	if (length < 4_000) {

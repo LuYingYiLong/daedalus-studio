@@ -841,6 +841,13 @@
       "savedAs": "File saved",
       "noWorkspace": "Select a workspace before opening this file"
     },
+    "mermaid": {
+      "title": "Mermaid diagram",
+      "rendering": "Rendering diagram…",
+      "renderFailed": "Unable to render diagram",
+      "copySource": "Copy diagram source",
+      "showSource": "View diagram source"
+    },
     "common": {
       "copy": "Copy",
       "copied": "Copied",

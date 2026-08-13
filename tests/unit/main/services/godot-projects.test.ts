@@ -26,7 +26,6 @@ import {
 	inspectZipEntries,
 	isDevelopmentPluginSourceProject,
 	isGodotManagedPluginFile,
-	isGodotProcessName,
 	updateEditorPluginEnabled
 } from "@main/services/godot-projects";
 
@@ -99,15 +98,6 @@ describe("Godot project plugin management", () => {
 		expect(() => inspectZipEntries(
 			createCentralDirectoryOnlyZip("C:/outside.txt")
 		)).toThrow(/unsafe path/u);
-	});
-
-	it("recognizes Godot editor process names without treating unrelated processes as Godot", () => {
-		expect(isGodotProcessName("Godot_v4.4-stable_win64.exe")).toBe(true);
-		expect(isGodotProcessName("Godot.exe")).toBe(true);
-		expect(isGodotProcessName("godot4.exe")).toBe(true);
-		expect(isGodotProcessName("godot-helper.exe")).toBe(true);
-		expect(isGodotProcessName("notgodot.exe")).toBe(false);
-		expect(isGodotProcessName("godotized.exe")).toBe(false);
 	});
 
 	it("accepts all Godot 4.x projects and rejects older or unknown versions", () => {

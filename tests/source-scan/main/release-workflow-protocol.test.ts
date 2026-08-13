@@ -63,4 +63,10 @@ describe("release workflow protocol compatibility", () => {
 		expect(godotProjectsSource.indexOf("await this.prepareDevelopmentBundle();"))
 			.toBeLessThan(godotProjectsSource.indexOf("plugin-manifest.json", godotProjectsSource.indexOf("private async loadPackage")));
 	});
+
+	it("installs and updates the Bridge without probing running Godot processes", () => {
+		expect(godotProjectsSource).not.toContain("isGodotEditorRunning");
+		expect(godotProjectsSource).not.toContain("isGodotProcessName");
+		expect(godotProjectsSource).not.toContain('"tasklist.exe"');
+	});
 });
