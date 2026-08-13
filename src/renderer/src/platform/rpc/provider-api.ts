@@ -44,6 +44,7 @@ export type ProviderModelInfo = {
 	maxOutputTokens: number;
 	capabilities: ProviderModelCapabilities;
 	ownedBy?: string | undefined;
+	customization?: ProviderModelCustomizationInfo | undefined;
 };
 
 export type ProviderId = string;
@@ -60,6 +61,20 @@ export type ProviderModelCapabilities = {
 	vision?: boolean | undefined;
 	imageGeneration?: boolean | undefined;
 	imageEdit?: boolean | undefined;
+};
+
+export type ProviderModelCapabilityOverrides = Partial<Pick<
+	ProviderModelCapabilities,
+	"imageInput" | "videoInput" | "reasoning" | "tools" | "webSearch" | "imageGeneration" | "imageEdit"
+>>;
+
+export type ProviderModelCustomizationInfo = {
+	source: "custom" | "override";
+	displayName?: string | undefined;
+	contextWindowTokens?: number | undefined;
+	maxOutputTokens?: number | undefined;
+	capabilities: ProviderModelCapabilityOverrides;
+	updatedAt: string;
 };
 
 export type ProviderReasoningEffortOption = {
@@ -102,11 +117,12 @@ export type ProviderModelSelectionProvider = {
 
 export type CustomProviderType = "openai" | "openai-responses" | "anthropic";
 
-export type EditableModelCapabilities = {
-	vision: boolean;
-	webSearch: boolean;
-	reasoning: boolean;
-	tools: boolean;
+export type EditableModelCapabilities = ProviderModelCapabilityOverrides;
+export type EditableModelCapabilityValues = {
+	[K in keyof EditableModelCapabilities]-?: boolean;
+};
+export type EditableModelCapabilityUpdates = {
+	[K in keyof EditableModelCapabilities]-?: boolean | null;
 };
 
 export type SaveProviderModelSelectionParams = {
@@ -123,7 +139,7 @@ export type ProviderModelsListResult = {
 	error?: string | undefined;
 };
 
-export type DiscoveredProviderModel = Omit<ProviderModelInfo, "provider" | "endpointType">;
+export type DiscoveredProviderModel = Omit<ProviderModelInfo, "provider" | "endpointType" | "customization">;
 
 export type ProviderTaskModelKind = keyof ProviderModelRouting;
 
@@ -260,6 +276,9 @@ export async function addProviderModel(params: {
 	provider: string;
 	id: string;
 	displayName: string;
+	contextWindowTokens: number;
+	maxOutputTokens: number;
+	capabilities: EditableModelCapabilityValues;
 }): Promise<ProviderModelSelection> {
 	const client = await createBackendClient();
 	return client.request("provider.model.add", params);
@@ -268,8 +287,10 @@ export async function addProviderModel(params: {
 export async function updateProviderModel(params: {
 	provider: string;
 	id: string;
-	displayName: string;
-	capabilities: EditableModelCapabilities;
+	displayName: string | null;
+	contextWindowTokens: number | null;
+	maxOutputTokens: number | null;
+	capabilities: EditableModelCapabilityUpdates;
 }): Promise<ProviderModelSelection> {
 	const client = await createBackendClient();
 	return client.request("provider.model.update", params);

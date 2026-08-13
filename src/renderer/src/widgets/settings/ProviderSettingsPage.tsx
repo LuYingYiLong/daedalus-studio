@@ -1,4 +1,4 @@
-import { Alert, App, Button, Empty, Flex, Form, Input, Menu, Modal, Select, Space, Switch, Table, Tag, Tooltip, Typography } from "antd";
+import { Alert, App, Button, Divider, Empty, Flex, Form, Input, InputNumber, Menu, Modal, Select, Space, Switch, Table, Tag, Tooltip, Typography } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, Key, KeyboardEvent } from "react";
@@ -17,6 +17,8 @@ import {
 	updateProviderModel,
 	type CustomProviderType,
 	type DiscoveredProviderModel,
+	type EditableModelCapabilityUpdates,
+	type EditableModelCapabilityValues,
 	type EditableModelCapabilities,
 	type ManagedProviderModel,
 	type ProviderModelCapabilities,
@@ -50,7 +52,19 @@ type AddProviderFormValues = {
 type ModelFormValues = {
 	id: string;
 	displayName: string;
-	capabilities: Array<keyof EditableModelCapabilities>;
+	inheritDisplayName: boolean;
+	contextWindowTokens: number;
+	inheritContextWindowTokens: boolean;
+	maxOutputTokens: number;
+	inheritMaxOutputTokens: boolean;
+	capabilities: Record<keyof EditableModelCapabilities, CapabilityFormValue>;
+};
+
+type CapabilityFormValue = "inherit" | "enabled" | "disabled";
+
+type EditableCapability = {
+	key: keyof EditableModelCapabilities;
+	labelKey: string;
 };
 
 const CAPABILITY_BADGES: CapabilityBadge[] = [
@@ -60,31 +74,62 @@ const CAPABILITY_BADGES: CapabilityBadge[] = [
 	{ key: "tools", labelKey: "settings.provider.capabilities.tools", icon: "mcp", color: "orange" }
 ];
 
+const EDITABLE_CAPABILITIES: EditableCapability[] = [
+	{ key: "imageInput", labelKey: "settings.provider.capabilities.imageInput" },
+	{ key: "videoInput", labelKey: "settings.provider.capabilities.videoInput" },
+	{ key: "reasoning", labelKey: "settings.provider.capabilities.reasoning" },
+	{ key: "tools", labelKey: "settings.provider.capabilities.tools" },
+	{ key: "webSearch", labelKey: "settings.provider.capabilities.webSearch" },
+	{ key: "imageGeneration", labelKey: "settings.provider.capabilities.imageGeneration" },
+	{ key: "imageEdit", labelKey: "settings.provider.capabilities.imageEdit" }
+];
+
+function createUniformCapabilityFormValues(value: CapabilityFormValue): ModelFormValues["capabilities"] {
+	const values = {} as ModelFormValues["capabilities"];
+	for (const capability of EDITABLE_CAPABILITIES) {
+		values[capability.key] = value;
+	}
+	return values;
+}
+
 function getVisibleCapabilities(capabilities: ProviderModelCapabilities): CapabilityBadge[] {
 	return CAPABILITY_BADGES.filter((badge: CapabilityBadge): boolean => capabilities[badge.key] === true);
 }
 
-function getEditableCapabilities(capabilities: ProviderModelCapabilities): Array<keyof EditableModelCapabilities> {
-	const values: Array<keyof EditableModelCapabilities> = [];
-	if (capabilities.vision === true || capabilities.imageInput === true) {
-		values.push("vision");
-	}
-	for (const key of ["webSearch", "reasoning", "tools"] as const) {
-		if (capabilities[key] === true) {
-			values.push(key);
+function createCapabilityFormValues(
+	model: ProviderModelInfo | null,
+	allowInheritance: boolean
+): ModelFormValues["capabilities"] {
+	const values: ModelFormValues["capabilities"] = createUniformCapabilityFormValues("disabled");
+	for (const capability of EDITABLE_CAPABILITIES) {
+		const override: boolean | undefined = model?.customization?.capabilities[capability.key];
+		if (allowInheritance && override === undefined) {
+			values[capability.key] = "inherit";
+		} else {
+			values[capability.key] = (override ?? model?.capabilities[capability.key]) === true ? "enabled" : "disabled";
 		}
 	}
 	return values;
 }
 
-function toEditableCapabilities(values: Array<keyof EditableModelCapabilities>): EditableModelCapabilities {
-	const selected: Set<keyof EditableModelCapabilities> = new Set(values);
-	return {
-		vision: selected.has("vision"),
-		webSearch: selected.has("webSearch"),
-		reasoning: selected.has("reasoning"),
-		tools: selected.has("tools")
-	};
+function toEditableCapabilities(
+	values: ModelFormValues["capabilities"],
+	allowInheritance: boolean
+): EditableModelCapabilityUpdates {
+	const capabilities = {} as EditableModelCapabilityUpdates;
+	for (const capability of EDITABLE_CAPABILITIES) {
+		const value: CapabilityFormValue = values[capability.key];
+		capabilities[capability.key] = allowInheritance && value === "inherit" ? null : value === "enabled";
+	}
+	return capabilities;
+}
+
+function toCustomModelCapabilities(values: ModelFormValues["capabilities"]): EditableModelCapabilityValues {
+	const capabilities = {} as EditableModelCapabilityValues;
+	for (const capability of EDITABLE_CAPABILITIES) {
+		capabilities[capability.key] = values[capability.key] === "enabled";
+	}
+	return capabilities;
 }
 
 function getCustomizationErrorMessage(
@@ -182,6 +227,10 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 	const discoveryRequestIdRef = useRef<number>(0);
 	const [providerForm] = Form.useForm<AddProviderFormValues>();
 	const [modelForm] = Form.useForm<ModelFormValues>();
+	const canInheritModelFields: boolean = modelDialogMode === "edit" && editingModel?.customization?.source !== "custom";
+	const inheritDisplayName: boolean = Form.useWatch("inheritDisplayName", modelForm) ?? false;
+	const inheritContextWindowTokens: boolean = Form.useWatch("inheritContextWindowTokens", modelForm) ?? false;
+	const inheritMaxOutputTokens: boolean = Form.useWatch("inheritMaxOutputTokens", modelForm) ?? false;
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -689,7 +738,12 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 		modelForm.setFieldsValue({
 			id: "",
 			displayName: "",
-			capabilities: []
+			inheritDisplayName: false,
+			contextWindowTokens: 128_000,
+			inheritContextWindowTokens: false,
+			maxOutputTokens: 8_192,
+			inheritMaxOutputTokens: false,
+			capabilities: createCapabilityFormValues(null, false)
 		});
 		setModelDialogMode("add");
 	}
@@ -697,10 +751,16 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 	function openEditModelDialog(model: ProviderModelInfo): void {
 		setDialogError(null);
 		setEditingModel(model);
+		const isCustomModel: boolean = model.customization?.source === "custom";
 		modelForm.setFieldsValue({
 			id: model.id,
 			displayName: model.displayName,
-			capabilities: getEditableCapabilities(model.capabilities)
+			inheritDisplayName: !isCustomModel && model.customization?.displayName === undefined,
+			contextWindowTokens: model.contextWindowTokens,
+			inheritContextWindowTokens: !isCustomModel && model.customization?.contextWindowTokens === undefined,
+			maxOutputTokens: model.maxOutputTokens,
+			inheritMaxOutputTokens: !isCustomModel && model.customization?.maxOutputTokens === undefined,
+			capabilities: createCapabilityFormValues(model, !isCustomModel)
 		});
 		setModelDialogMode("edit");
 	}
@@ -737,13 +797,22 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				? await addProviderModel({
 					provider: selectedProvider.provider,
 					id: values.id,
-					displayName: values.displayName
+					displayName: values.displayName,
+					contextWindowTokens: values.contextWindowTokens,
+					maxOutputTokens: values.maxOutputTokens,
+					capabilities: toCustomModelCapabilities(values.capabilities)
 				})
 				: await updateProviderModel({
 					provider: selectedProvider.provider,
 					id: editingModel?.id ?? values.id,
-					displayName: values.displayName,
-					capabilities: toEditableCapabilities(values.capabilities)
+					displayName: canInheritModelFields && values.inheritDisplayName ? null : values.displayName,
+					contextWindowTokens: canInheritModelFields && values.inheritContextWindowTokens
+						? null
+						: values.contextWindowTokens,
+					maxOutputTokens: canInheritModelFields && values.inheritMaxOutputTokens
+						? null
+						: values.maxOutputTokens,
+					capabilities: toEditableCapabilities(values.capabilities, canInheritModelFields)
 				});
 			setSelection(nextSelection);
 			onSelectionChange?.(nextSelection);
@@ -883,10 +952,10 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 								title={providerEnableUnavailable
 									? t("settings.provider.enterApiKey")
 									: selectedProviderEnabled
-									? t("settings.provider.actions.disableProvider")
-									: t("settings.provider.actions.enableProvider")}
+										? t("settings.provider.actions.disableProvider")
+										: t("settings.provider.actions.enableProvider")}
 								placement="bottom"
-								>
+							>
 								<Switch
 									checked={selectedProviderEnabled}
 									loading={providerAction === "enable" || providerAction === "disable"}
@@ -1220,13 +1289,42 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				}}
 				onOk={(): void => void handleSaveModel()}
 				className={styles.modal}
+				width={720}
 			>
 				{dialogError !== null ? <Alert className={styles.dialogAlert} type="error" showIcon={true} description={dialogError} /> : null}
+				{canInheritModelFields ? (
+					<Alert
+						className={styles.dialogAlert}
+						type="info"
+						showIcon={true}
+						description={t("settings.provider.modelOverrides.description")}
+						action={(
+							<Button
+								type="primary"
+								onClick={(): void => {
+									modelForm.setFieldsValue({
+										inheritDisplayName: true,
+										inheritContextWindowTokens: true,
+										inheritMaxOutputTokens: true,
+										capabilities: createUniformCapabilityFormValues("inherit")
+									});
+								}}
+							>
+								{t("settings.provider.modelOverrides.resetAll")}
+							</Button>
+						)}
+					/>
+				) : null}
 				<Form<ModelFormValues>
 					form={modelForm}
 					layout="vertical"
 					preserve={false}
-					initialValues={{ capabilities: [] }}
+					initialValues={{
+						inheritDisplayName: false,
+						inheritContextWindowTokens: false,
+						inheritMaxOutputTokens: false,
+						capabilities: createUniformCapabilityFormValues("disabled")
+					}}
 				>
 					<Form.Item
 						name="id"
@@ -1240,31 +1338,112 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 					>
 						<Input autoFocus={modelDialogMode === "add"} readOnly={modelDialogMode === "edit"} maxLength={200} />
 					</Form.Item>
-					<Form.Item
-						name="displayName"
-						label={t("settings.provider.fields.modelName")}
-						rules={[{
-							required: true,
-							whitespace: true,
-							max: 120,
-							message: t("settings.provider.validation.modelName")
-						}]}
-					>
-						<Input autoFocus={modelDialogMode === "edit"} maxLength={120} />
+					<Form.Item label={t("settings.provider.fields.modelName")}>
+						<Flex gap="small" align="center">
+							<Form.Item
+								noStyle={true}
+								name="displayName"
+								rules={[{
+									required: true,
+									whitespace: true,
+									max: 120,
+									message: t("settings.provider.validation.modelName")
+								}]}
+							>
+								<Input
+									autoFocus={modelDialogMode === "edit"}
+									disabled={canInheritModelFields && inheritDisplayName}
+									maxLength={120}
+								/>
+							</Form.Item>
+							{canInheritModelFields ? (
+								<Flex gap={6} align="center" className={styles.inheritControl}>
+									<Form.Item noStyle={true} name="inheritDisplayName" valuePropName="checked">
+										<Switch size="small" />
+									</Form.Item>
+									<Typography.Text type="secondary">{t("settings.provider.modelOverrides.inherit")}</Typography.Text>
+								</Flex>
+							) : null}
+						</Flex>
 					</Form.Item>
-					<Form.Item
-						name="capabilities"
-						label={t("settings.provider.fields.modelTypes")}
-						hidden={modelDialogMode !== "edit"}
-					>
-						<Select
-							mode="multiple"
-							options={CAPABILITY_BADGES.map((capability: CapabilityBadge) => ({
-								value: capability.key,
-								label: t(capability.labelKey)
-							}))}
-						/>
-					</Form.Item>
+					<div className={styles.tokenLimitGrid}>
+						<Form.Item label={t("settings.provider.fields.contextWindowTokens")}>
+							<Flex gap="small" align="center">
+								<Form.Item noStyle={true} name="contextWindowTokens" rules={[{
+									required: true,
+									type: "number",
+									min: 1,
+									max: 2_000_000_000,
+									message: t("settings.provider.validation.tokenLimit")
+								}]}>
+									<InputNumber<number>
+										disabled={canInheritModelFields && inheritContextWindowTokens}
+										min={1}
+										max={2_000_000_000}
+										precision={0}
+										style={{ width: "100%" }}
+									/>
+								</Form.Item>
+								{canInheritModelFields ? (
+									<Flex gap={6} align="center" className={styles.inheritControl}>
+										<Form.Item noStyle={true} name="inheritContextWindowTokens" valuePropName="checked">
+											<Switch size="small" />
+										</Form.Item>
+										<Typography.Text type="secondary">{t("settings.provider.modelOverrides.inherit")}</Typography.Text>
+									</Flex>
+								) : null}
+							</Flex>
+						</Form.Item>
+						<Form.Item label={t("settings.provider.fields.maxOutputTokens")}>
+							<Flex gap="small" align="center">
+								<Form.Item noStyle={true} name="maxOutputTokens" rules={[{
+									required: true,
+									type: "number",
+									min: 1,
+									max: 2_000_000_000,
+									message: t("settings.provider.validation.tokenLimit")
+								}]}>
+									<InputNumber<number>
+										disabled={canInheritModelFields && inheritMaxOutputTokens}
+										min={1}
+										max={2_000_000_000}
+										precision={0}
+										style={{ width: "100%" }}
+									/>
+								</Form.Item>
+								{canInheritModelFields ? (
+									<Flex gap={6} align="center" className={styles.inheritControl}>
+										<Form.Item noStyle={true} name="inheritMaxOutputTokens" valuePropName="checked">
+											<Switch size="small" />
+										</Form.Item>
+										<Typography.Text type="secondary">{t("settings.provider.modelOverrides.inherit")}</Typography.Text>
+									</Flex>
+								) : null}
+							</Flex>
+						</Form.Item>
+					</div>
+					<Divider orientation="horizontal" className={styles.modelFormDivider}>
+						{t("settings.provider.fields.modelCapabilities")}
+					</Divider>
+					{EDITABLE_CAPABILITIES.map((capability: EditableCapability): React.JSX.Element => (
+						<Form.Item
+							key={capability.key}
+							name={["capabilities", capability.key]}
+							label={t(capability.labelKey)}
+						>
+							<Select
+								options={[
+									...(canInheritModelFields ? [{
+										value: "inherit",
+										label: t("settings.provider.modelOverrides.inherit")
+									}] : []),
+									{ value: "enabled", label: t("settings.common.on") },
+									{ value: "disabled", label: t("settings.common.off") }
+								]}
+								suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
+							/>
+						</Form.Item>
+					))}
 				</Form>
 			</Modal>
 		</section>

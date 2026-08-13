@@ -1657,13 +1657,17 @@
         "providerType": "供应商类型",
         "modelId": "模型 ID",
         "modelName": "模型名称",
-        "modelTypes": "模型类型"
+        "modelTypes": "模型类型",
+        "contextWindowTokens": "上下文窗口（tokens）",
+        "maxOutputTokens": "最大输出（tokens）",
+        "modelCapabilities": "模型能力"
       },
       "validation": {
         "providerName": "请输入 1–80 个字符的供应商名称",
         "providerType": "请选择供应商类型",
         "modelId": "请输入 1–200 个字符的模型 ID",
-        "modelName": "请输入 1–120 个字符的模型名称"
+        "modelName": "请输入 1–120 个字符的模型名称",
+        "tokenLimit": "请输入 1–2,000,000,000 之间的整数"
       },
       "actions": {
         "addModel": "添加模型",
@@ -1694,12 +1698,19 @@
       },
       "capabilities": {
         "imageEdit": "编辑",
-        "imageGeneration": "图像",
+        "imageGeneration": "图像生成",
+        "imageInput": "图片输入",
+        "videoInput": "视频输入",
         "reasoning": "推理",
         "tools": "工具",
         "vision": "视觉",
         "webSearch": "搜索"
       },
+	  "modelOverrides": {
+		"description": "未覆盖的字段会继续跟随供应商 API 或 Daedalus catalog，并在模型元数据更新后自动采用新值。",
+		"inherit": "跟随来源",
+		"resetAll": "全部恢复跟随"
+	  },
 	  "status": {
 		"disabled": "已禁用"
 	  },

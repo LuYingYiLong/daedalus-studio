@@ -11,19 +11,23 @@ describe("Provider customizations", () => {
 		expect(apiSource).toContain('"provider.model.update"');
 		expect(pageSource).toContain("destroyOnHidden={true}");
 		expect(pageSource).toContain("preserve={false}");
-		expect(pageSource).toContain('mode="multiple"');
 		expect(pageSource).toContain("readOnly={modelDialogMode === \"edit\"}");
 		expect(pageSource).toContain("onRow={(model: ProviderModelInfo)");
 		expect(pageSource).toContain("forceRender={true}");
 		expect(pageSource).toContain("result.providers[0]?.provider ?? result.activeModel.providerId");
 		expect(pageSource).toContain("id: model.id");
 		expect(pageSource).toContain("displayName: model.displayName");
-		expect(pageSource).toContain("getEditableCapabilities(model.capabilities)");
-		expect(pageSource).toContain('name="capabilities"');
-		expect(pageSource).toContain('hidden={modelDialogMode !== "edit"}');
+		expect(pageSource).toContain("createCapabilityFormValues(model, !isCustomModel)");
+		expect(pageSource).toContain('["capabilities", capability.key]');
+		expect(pageSource).toContain('name="contextWindowTokens"');
+		expect(pageSource).toContain('name="maxOutputTokens"');
+		expect(pageSource).toContain('value: "inherit"');
+		expect(pageSource).toContain("createUniformCapabilityFormValues(\"inherit\")");
+		expect(apiSource).toContain("contextWindowTokens: number");
+		expect(apiSource).toContain("ProviderModelCustomizationInfo");
 		expect(pageSource).not.toContain("getModelTokenText");
-		expect(pageSource).not.toContain("model.contextWindowTokens");
-		expect(pageSource).not.toContain("model.maxOutputTokens");
+		expect(pageSource).toContain("model.contextWindowTokens");
+		expect(pageSource).toContain("model.maxOutputTokens");
 	});
 
 	it("discovers models during the modal transition and synchronizes a controlled selection", () => {

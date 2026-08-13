@@ -17,7 +17,7 @@ export type GeneralSettingsPatch = {
 
 export const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
 	schemaVersion: 2,
-	nextStepHintsEnabled: true,
+	nextStepHintsEnabled: false,
 	godotExecutablePath: null,
 	godotExecutableVersion: null,
 	godotExecutableStatus: "unconfigured",

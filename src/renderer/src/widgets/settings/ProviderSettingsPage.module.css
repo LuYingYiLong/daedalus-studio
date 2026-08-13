@@ -177,6 +177,22 @@
 	margin-bottom: var(--ds-space-3);
 }
 
+.tokenLimitGrid,
+.capabilityEditorGrid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	column-gap: var(--ds-space-3);
+}
+
+.inheritControl {
+	flex: 0 0 auto;
+	white-space: nowrap;
+}
+
+.modelFormDivider {
+	margin-block: 4px var(--ds-space-3);
+}
+
 .discoveryDialog {
 	display: grid;
 	gap: var(--ds-space-3);
@@ -198,4 +214,11 @@
 
 .modal {
 	user-select: none;
+}
+
+@media (max-width: 720px) {
+	.tokenLimitGrid,
+	.capabilityEditorGrid {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }

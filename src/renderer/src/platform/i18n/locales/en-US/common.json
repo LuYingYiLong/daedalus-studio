@@ -1664,13 +1664,17 @@
         "providerType": "Provider type",
         "modelId": "Model ID",
         "modelName": "Model name",
-        "modelTypes": "Model types"
+        "modelTypes": "Model types",
+        "contextWindowTokens": "Context window (tokens)",
+        "maxOutputTokens": "Maximum output (tokens)",
+        "modelCapabilities": "Model capabilities"
       },
       "validation": {
         "providerName": "Enter a provider name between 1 and 80 characters",
         "providerType": "Select a provider type",
         "modelId": "Enter a model ID between 1 and 200 characters",
-        "modelName": "Enter a model name between 1 and 120 characters"
+        "modelName": "Enter a model name between 1 and 120 characters",
+        "tokenLimit": "Enter an integer between 1 and 2,000,000,000"
       },
       "actions": {
         "addModel": "Add model",
@@ -1701,12 +1705,19 @@
       },
       "capabilities": {
         "imageEdit": "Edit",
-        "imageGeneration": "Image",
+        "imageGeneration": "Image generation",
+        "imageInput": "Image input",
+        "videoInput": "Video input",
         "reasoning": "Reasoning",
         "tools": "Tools",
         "vision": "Vision",
         "webSearch": "Search"
       },
+	  "modelOverrides": {
+		"description": "Fields without an override continue to follow the provider API or Daedalus catalog and adopt future metadata updates automatically.",
+		"inherit": "Follow source",
+		"resetAll": "Reset all to source"
+	  },
 	  "status": {
 		"disabled": "Disabled"
 	  },
