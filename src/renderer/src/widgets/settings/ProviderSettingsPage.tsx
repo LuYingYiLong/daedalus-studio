@@ -1482,7 +1482,6 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 							>
 								<Segmented<CapabilityFormValue>
 									block={true}
-									size="small"
 									options={[
 										...(canInheritModelFields ? [{
 											value: "inherit" as CapabilityFormValue,
@@ -1588,7 +1587,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 									</div>
 								))}
 								<Button
-									type="dashed"
+									icon={<Icon name="add" />}
 									disabled={!reasoningEffortsEnabled || inheritReasoningEfforts || fields.length >= 16}
 									onClick={(): void => add({ id: "", fallback: "medium", default: fields.length === 0 })}
 								>

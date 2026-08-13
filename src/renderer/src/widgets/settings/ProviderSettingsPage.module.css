@@ -216,9 +216,6 @@
 	grid-template-columns: minmax(180px, 1.4fr) minmax(140px, 1fr) auto auto;
 	align-items: end;
 	gap: var(--ds-space-2);
-	padding: var(--ds-space-2);
-	border: 1px solid var(--ant-color-border-secondary);
-	border-radius: var(--ds-radius-md);
 }
 
 .reasoningEffortRow :global(.ant-form-item) {
