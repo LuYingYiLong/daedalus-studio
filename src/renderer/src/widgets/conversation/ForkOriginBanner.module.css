@@ -1,0 +1,35 @@
+.root {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	margin: 8px 16px 0;
+	padding: 5px 10px;
+	border: 1px solid var(--ant-color-border-secondary);
+	border-radius: var(--ant-border-radius);
+	background: var(--ant-color-fill-quaternary);
+	user-select: none;
+}
+
+.icon {
+	flex: 0 0 auto;
+	color: var(--ant-color-text-tertiary);
+}
+
+.label {
+	flex: 0 0 auto;
+}
+
+.sourceButton {
+	min-width: 0;
+	max-width: 220px;
+	padding-inline: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.preview {
+	min-width: 0;
+	flex: 1 1 auto;
+}

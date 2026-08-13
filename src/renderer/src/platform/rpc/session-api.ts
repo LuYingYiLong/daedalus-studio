@@ -1,5 +1,5 @@
 import { createBackendClient } from "@/platform/rpc/transport/backend-client";
-import type { MessageTextAnchor, SelectionAskMessage, SelectionAskThread, SelectionAskThreadPage, SessionListResult, SessionMetadata, SessionOpenResult, SessionSearchPage, SessionTimelineNavigationIndexResult, SessionTimelineResult, SessionTimelineSearchIndexPage, WorkbenchSnapshot } from "./types";
+import type { MessageTextAnchor, SelectionAskMessage, SelectionAskThread, SelectionAskThreadPage, SessionForkResult, SessionListResult, SessionMetadata, SessionOpenResult, SessionSearchPage, SessionTimelineNavigationIndexResult, SessionTimelineResult, SessionTimelineSearchIndexPage, WorkbenchSnapshot } from "./types";
 import type { ChatMode } from "./chat-api";
 
 export type CreateSessionParams = {
@@ -27,6 +27,12 @@ export type SaveSessionUiMetadataParams = {
 
 export type CreateSessionResult = SessionMetadata & {
 	workbench: WorkbenchSnapshot;
+};
+
+export type ForkSessionParams = {
+	sourceSessionId: string;
+	sourceRequestId?: string;
+	title: string;
 };
 
 export type SaveSessionResult = {
@@ -130,6 +136,12 @@ export async function createSession(params: CreateSessionParams): Promise<Create
 	const client = await createBackendClient();
 
 	return client.request<CreateSessionResult>("session.create", params);
+}
+
+export async function forkSession(params: ForkSessionParams): Promise<SessionForkResult> {
+	const client = await createBackendClient();
+
+	return client.request<SessionForkResult>("session.fork", params);
 }
 
 export async function openSession(sessionId: string, limit: number = 100): Promise<SessionOpenResult> {

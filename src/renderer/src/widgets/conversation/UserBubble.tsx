@@ -27,6 +27,9 @@ export type UserBubbleProps = {
 	onRetryEditStart?: (requestId: string) => void;
 	onRetryEditCancel?: (requestId: string) => void;
 	onRetryFromUserMessage?: (payload: RetryUserMessagePayload) => boolean | void | Promise<boolean | void>;
+	onForkFromUserMessage?: (requestId: string) => void | Promise<void>;
+	forkDisabled?: boolean;
+	isForking?: boolean;
 };
 
 function cloneContextItems(items: AdditionalContextItem[]): AdditionalContextItem[] {
@@ -52,7 +55,10 @@ function UserBubble({
 	isRetryEditing = false,
 	onRetryEditStart,
 	onRetryEditCancel,
-	onRetryFromUserMessage
+	onRetryFromUserMessage,
+	onForkFromUserMessage,
+	forkDisabled = false,
+	isForking = false
 }: UserBubbleProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [draftText, setDraftText] = useState<string>(message);
@@ -144,6 +150,13 @@ function UserBubble({
 		} catch (error: unknown) {
 			console.error("[UserBubble] copy failed", error);
 		}
+	}
+
+	async function forkMessage(): Promise<void> {
+		if (forkDisabled || isForking || onForkFromUserMessage === undefined) {
+			return;
+		}
+		await onForkFromUserMessage(requestId);
 	}
 
 	const canShowEditButton: boolean = showEditButton === true && !isRetryEditing;
@@ -245,6 +258,22 @@ function UserBubble({
 						}}
 					/>
 				</Tooltip> : null}
+				{onForkFromUserMessage !== undefined ? (
+					<Tooltip title={t("chat.user.actions.forkFromHere")}>
+						<Button
+							type="text"
+							size="small"
+							shape="circle"
+							aria-label={t("chat.user.forkAria")}
+							icon={<Icon name="fork" />}
+							loading={isForking}
+							disabled={forkDisabled}
+							onClick={(): void => {
+								void forkMessage();
+							}}
+						/>
+					</Tooltip>
+				) : null}
 				{canShowEditButton ? (
 					<Tooltip title={t("chat.user.actions.editAndResend")}>
 						<Button

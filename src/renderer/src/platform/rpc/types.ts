@@ -34,6 +34,13 @@ export type WorkspaceListResult = {
 };
 
 // 会话
+export type SessionForkOrigin = {
+	sessionId: string;
+	requestId: string;
+	sessionTitle: string;
+	messagePreview: string;
+};
+
 export type SessionMetadata = {
 	id: string;
 	title: string;
@@ -52,6 +59,7 @@ export type SessionMetadata = {
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
 	workflowTodoDismissedKey?: string | null;
+	forkedFrom?: SessionForkOrigin;
 	archivedAt?: string;
 	createdAt: string;
 	updatedAt: string;
@@ -595,6 +603,10 @@ export type SessionOpenResult = {
 	activeAgentRun: AgentRunState | null;
 	currentGoal: AgentGoalState | null;
 	workspaceWarning: string | null;
+};
+
+export type SessionForkResult = SessionOpenResult & {
+	forked: true;
 };
 
 export type SessionTimelineResult = {

@@ -1555,6 +1555,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 													value: fallback,
 													label: t(`settings.provider.reasoningEfforts.fallback.${fallback}`)
 												}))}
+												suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 											/>
 										</Form.Item>
 										<Form.Item

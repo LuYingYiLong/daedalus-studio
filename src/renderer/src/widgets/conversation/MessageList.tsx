@@ -51,6 +51,9 @@ export type MessageListProps = {
 	onRetryEditStart?: (requestId: string) => void;
 	onRetryEditCancel?: (requestId: string) => void;
 	onRetryFromUserMessage?: (payload: RetryUserMessagePayload) => boolean | void | Promise<boolean | void>;
+	onForkFromUserMessage?: (requestId: string) => void | Promise<void>;
+	forkDisabled?: boolean;
+	forkingRequestId?: string | null;
 	onInlineDiffReview?: () => void;
 	scrollToBottomRequest?: number;
 	onAwayFromBottomChange?: (awayFromBottom: boolean) => void;
@@ -227,6 +230,9 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	onRetryEditStart,
 	onRetryEditCancel,
 	onRetryFromUserMessage,
+	onForkFromUserMessage,
+	forkDisabled = false,
+	forkingRequestId = null,
 	onInlineDiffReview,
 	scrollToBottomRequest = 0,
 	onAwayFromBottomChange,
@@ -737,13 +743,16 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 						onRetryEditStart={onRetryEditStart}
 						onRetryEditCancel={onRetryEditCancel}
 						onRetryFromUserMessage={onRetryFromUserMessage}
+						onForkFromUserMessage={onForkFromUserMessage}
+						forkDisabled={forkDisabled}
+						isForking={forkingRequestId === block.requestId}
 					/>
 				) : (
 					<AssistantTimelineRow block={block} blockOffset={item.blockOffset} hideInlineDiff={hideInlineDiff} onInlineDiffReview={onInlineDiffReview} onTerminalWheelPassThrough={handleTerminalWheelPassThrough} />
 				)}
 			</div>
 		);
-	}, [activeRetryRequestId, canEditUserMessages, handleTerminalWheelPassThrough, hideInlineDiff, onInlineDiffReview, onRetryEditCancel, onRetryEditStart, onRetryFromUserMessage, retryDisabled]);
+	}, [activeRetryRequestId, canEditUserMessages, forkDisabled, forkingRequestId, handleTerminalWheelPassThrough, hideInlineDiff, onForkFromUserMessage, onInlineDiffReview, onRetryEditCancel, onRetryEditStart, onRetryFromUserMessage, retryDisabled]);
 	const virtuosoComponents = useMemo(() => ({
 		Header: renderHeader,
 		Footer: renderFooter,

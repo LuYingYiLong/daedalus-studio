@@ -21,6 +21,7 @@ import {
 import { fetchSessionOverview, fetchWorkspaceOverview, type SessionOverviewGitInfo, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/platform/rpc/session-overview-api";
 import WorkspaceTree, { type SessionArchiveContext } from "@/widgets/workspace/WorkspaceTree";
 import ConversationTimelinePane, { type ConversationTimelinePaneHandle } from "@/widgets/conversation/ConversationTimelinePane";
+import ForkOriginBanner from "@/widgets/conversation/ForkOriginBanner";
 import Composer, { type ComposerInputRequest } from "@/widgets/composer/Composer";
 import FloatingWorkflowTodoPanel, { type WorkflowFileChangeSummary } from "@/widgets/composer/FloatingWorkflowTodoPanel";
 import FloatingGoalPanel from "@/widgets/composer/FloatingGoalPanel";
@@ -425,6 +426,9 @@ type HomePageProps = {
 	initialWorkspaceTreeOrder: WorkspaceTreeOrderPreferences;
 	runningSessionIds: readonly string[];
 	unreadSessionIds: readonly string[];
+	forkingSessionId: string | null;
+	forkingRequestId: string | null;
+	forkDisabled: boolean;
 	homeWorkspace: WorkspaceConfig | null;
 	workspaceFooterDisabled: boolean;
 	activeWorkspace: WorkspaceConfig | null;
@@ -437,6 +441,9 @@ type HomePageProps = {
 	onHomeWorkspaceAdd: () => void;
 	onHomeWorkspaceClear: () => void;
 	onSessionSelect: (session: SessionMetadata) => void;
+	onSessionFork: (session: SessionMetadata) => void;
+	onForkFromUserMessage: (requestId: string) => Promise<void>;
+	onForkSourceOpen: (sessionId: string) => Promise<void>;
 	onSessionArchive: (session: SessionMetadata, context: SessionArchiveContext) => void;
 	onSessionRename: (session: SessionMetadata) => void;
 	onSessionsChange: (sessions: SessionMetadata[]) => void;
@@ -551,6 +558,9 @@ function HomePage({
 	initialWorkspaceTreeOrder,
 	runningSessionIds,
 	unreadSessionIds,
+	forkingSessionId,
+	forkingRequestId,
+	forkDisabled,
 	homeWorkspace,
 	workspaceFooterDisabled,
 	activeWorkspace,
@@ -563,6 +573,9 @@ function HomePage({
 	onHomeWorkspaceAdd,
 	onHomeWorkspaceClear,
 	onSessionSelect,
+	onSessionFork,
+	onForkFromUserMessage,
+	onForkSourceOpen,
 	onSessionArchive,
 	onSessionRename,
 	onSessionsChange,
@@ -2012,9 +2025,11 @@ function HomePage({
 							initialWorkspaceTreeOrder={initialWorkspaceTreeOrder}
 							runningSessionIds={runningSessionIds}
 							unreadSessionIds={unreadSessionIds}
+							forkingSessionId={forkingSessionId}
 							sessionUpdate={activeSessionMetadata}
 							onNewSession={onNewUnboundSession}
 							onSessionSelect={onSessionSelect}
+							onSessionFork={onSessionFork}
 							onSessionArchive={onSessionArchive}
 							onSessionRename={onSessionRename}
 							onSessionsChange={onSessionsChange}
@@ -2140,31 +2155,45 @@ function HomePage({
 													launchTargets: workspaceLaunchTargets
 												}}
 											>
-											<ConversationTimelinePane
-												ref={conversationTimelinePaneRef}
-												sessionId={activeSessionId}
-												timelineStore={timelineStore}
-												timelineNavigationEntries={timelineNavigationEntries}
-												isLoading={isSessionLoading}
-												errorMessage={sessionError}
-												isLoadingMoreBefore={isLoadingMoreBefore}
-												isLoadingMoreAfter={isLoadingMoreAfter}
-												retryDisabled={retryDisabled}
-												activeRetryRequestId={activeRetryRequestId}
-												onLoadMoreBefore={onLoadMoreBefore}
-												onLoadMoreAfter={onLoadMoreAfter}
-												onTimelineNavigationLoadEntry={onTimelineNavigationLoadEntry}
-												onTimelineSearchLoadOffset={onTimelineSearchLoadOffset}
-												onRetryEditStart={onRetryEditStart}
-												onRetryEditCancel={onRetryEditCancel}
-												onRetryFromUserMessage={onRetryFromUserMessage}
-												onInlineDiffReview={openReviewPanel}
-												onAwayFromBottomChange={setScrollToBottomButtonVisible}
-												contextItems={selectionMarkerContextItems}
-												onAddContext={onAddContext}
-												initialSelectionAskThreads={selectionAskThreads}
-												goal={currentGoal}
-											/>
+											<div className={styles.conversationStack}>
+												{activeSessionMetadata?.forkedFrom !== undefined ? (
+													<ForkOriginBanner
+														origin={activeSessionMetadata.forkedFrom}
+														disabled={isSessionLoading}
+														onOpenSource={onForkSourceOpen}
+													/>
+												) : null}
+												<div className={styles.conversationTimelineSlot}>
+													<ConversationTimelinePane
+														ref={conversationTimelinePaneRef}
+														sessionId={activeSessionId}
+														timelineStore={timelineStore}
+														timelineNavigationEntries={timelineNavigationEntries}
+														isLoading={isSessionLoading}
+														errorMessage={sessionError}
+														isLoadingMoreBefore={isLoadingMoreBefore}
+														isLoadingMoreAfter={isLoadingMoreAfter}
+														retryDisabled={retryDisabled}
+														activeRetryRequestId={activeRetryRequestId}
+														onLoadMoreBefore={onLoadMoreBefore}
+														onLoadMoreAfter={onLoadMoreAfter}
+														onTimelineNavigationLoadEntry={onTimelineNavigationLoadEntry}
+														onTimelineSearchLoadOffset={onTimelineSearchLoadOffset}
+														onRetryEditStart={onRetryEditStart}
+														onRetryEditCancel={onRetryEditCancel}
+														onRetryFromUserMessage={onRetryFromUserMessage}
+														onForkFromUserMessage={onForkFromUserMessage}
+														forkDisabled={forkDisabled}
+														forkingRequestId={forkingRequestId}
+														onInlineDiffReview={openReviewPanel}
+														onAwayFromBottomChange={setScrollToBottomButtonVisible}
+														contextItems={selectionMarkerContextItems}
+														onAddContext={onAddContext}
+														initialSelectionAskThreads={selectionAskThreads}
+														goal={currentGoal}
+													/>
+												</div>
+											</div>
 											</MarkdownResourceActionsProvider>
 										) : null}
 									</div>

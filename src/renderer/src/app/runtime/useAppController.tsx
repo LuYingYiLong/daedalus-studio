@@ -15,9 +15,9 @@ import usePlanGoalController from "@/features/composer/controllers/usePlanGoalCo
 import useTimelineController from "@/features/conversation/controllers/useTimelineController";
 import { fetchWorkspaces, selectWorkspace, type DeleteWorkspaceResult } from "@/platform/rpc/workspace-api";
 import styles from "../shell/App.module.css";
-import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, SelectionAskThread, SessionMetadata, SessionOpenResult, SessionTimelineNavigationEntry, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/platform/rpc/types";
+import type { AdditionalContextItem, MessageQueueItem, PendingGuide, PendingToolBudget, SelectionAskThread, SessionForkResult, SessionMetadata, SessionOpenResult, SessionTimelineNavigationEntry, SessionTimelineResult, TimelineBlock, WorkbenchPatch, WorkbenchSnapshot, WorkflowTodoSnapshot, WorkspaceConfig } from "@/platform/rpc/types";
 import { isAgentGoalDismissed } from "@/domain/composer/goal-display";
-import { checkSessionIntegrity, createSession, deleteSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/platform/rpc/session-api";
+import { checkSessionIntegrity, createSession, deleteSession, dismissWorkflowTodo, fetchSessions, fetchSessionTimeline, forkSession, openSession, saveSessionUiMetadata, setSessionModel, type SaveSessionUiMetadataParams, type SessionIntegrityCheckResult } from "@/platform/rpc/session-api";
 import type { RetryUserMessagePayload } from "@/widgets/conversation/UserBubble";
 import { fetchProviderModelSelection, type ProviderModelSelection } from "@/platform/rpc/provider-api";
 import type { ProviderModelInfo, ProviderModelSelectionProvider } from "@/platform/rpc/provider-api";
@@ -210,6 +210,9 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	const [isFullTrustModalOpen, setIsFullTrustModalOpen] = useState<boolean>(false);
 	const [fullTrustConfirmationText, setFullTrustConfirmationText] = useState<string>("");
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<string | null>(null);
+	const [forkingSourceSessionId, setForkingSourceSessionId] = useState<string | null>(null);
+	const [forkingRequestId, setForkingRequestId] = useState<string | null>(null);
+	const forkOperationRef = useRef<boolean>(false);
 	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] = useState<WorkflowTodoSnapshot | null>(null);
 	const dismissedTerminalGoalIdsRef = useRef<Set<string>>(new Set());
 	const [runState, setRunState] = useState<RunControllerState>(() => createIdleRunState());
@@ -1396,6 +1399,78 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			console.error("[App] open session failed", error);
 		} finally {
 			setIsSessionLoading(false);
+		}
+	}
+
+	async function handleSessionFork(source: SessionMetadata, sourceRequestId?: string): Promise<void> {
+		if (forkOperationRef.current) {
+			return;
+		}
+		forkOperationRef.current = true;
+		setForkingSourceSessionId(source.id);
+		setForkingRequestId(sourceRequestId ?? null);
+		try {
+			await discardTemporarySessionIfEmpty();
+			await persistPendingWorkbenchPatchBeforeNavigation();
+			const titleSuffix: string = t("chat.fork.titleSuffix");
+			const sourceTitle: string = source.title.trim() || t("chat.fork.untitledSource");
+			const forkTitle: string = `${sourceTitle.slice(0, Math.max(1, 200 - titleSuffix.length))}${titleSuffix}`;
+			const result: SessionForkResult = await forkSession({
+				sourceSessionId: source.id,
+				...(sourceRequestId === undefined ? {} : { sourceRequestId }),
+				title: forkTitle,
+			});
+			const sessionId: string = result.metadata.id;
+			navigationVersionRef.current += 1;
+			activeSessionIdRef.current = sessionId;
+			setIsNewSessionHome(false);
+			setActiveSessionId(sessionId);
+			resetSessionPresentationState();
+			timelineStore.replace(createTimelinePageFromOpenResult(result));
+			setActiveSessionMetadata(result.metadata);
+			setSelectionAskThreads([]);
+			setWorkbench(result.workbench);
+			setLatestPlanClarification(null);
+			setLatestPlanApproval(null);
+			setRunState((currentState: RunControllerState): RunControllerState => createIdleRunState(currentState.sequence));
+			setRunningSessionState((current: RunningSessionState): RunningSessionState => {
+				return syncSessionRunFromOpen(current, sessionId, null);
+			});
+			setCurrentGoal(null);
+			setWorkflowTodoSnapshot(null);
+			rememberLoadedWorkflowTodo(null);
+			setApprovalModeState(result.metadata.approvalMode ?? "manual");
+			setActiveWorkspace(createWorkspaceFromSessionOpenResult(result));
+			setSessionError(null);
+			recordOpenedSession(sessionId);
+			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+			window.electronAPI.sessionCatalog.notifyChanged();
+			void checkActiveSessionIntegrity(sessionId);
+		} catch (error: unknown) {
+			const errorMessage: string = error instanceof Error ? error.message : t("chat.fork.errors.create");
+			console.error("[App] fork session failed", error);
+			void messageApi.error(errorMessage);
+		} finally {
+			forkOperationRef.current = false;
+			setForkingSourceSessionId(null);
+			setForkingRequestId(null);
+		}
+	}
+
+	async function handleForkSourceOpen(sessionId: string): Promise<void> {
+		try {
+			const sessionList = await fetchSessions();
+			const source: SessionMetadata | undefined = sessionList.sessions.find(
+				(session: SessionMetadata): boolean => session.id === sessionId,
+			);
+			if (source === undefined) {
+				void messageApi.info(t("chat.fork.errors.sourceUnavailable"));
+				return;
+			}
+			await handleSessionSelect(source);
+		} catch (error: unknown) {
+			console.error("[App] open fork source failed", error);
+			void messageApi.error(error instanceof Error ? error.message : t("chat.fork.errors.openSource"));
 		}
 	}
 
@@ -2740,6 +2815,9 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		initialWorkspaceTreeOrder: bootstrapData.workspaceTreeOrder,
 		runningSessionIds,
 		unreadSessionIds: [...unreadSessionIds],
+		forkingSessionId: forkingSourceSessionId,
+		forkingRequestId,
+		forkDisabled: composerIsSending || isSessionLoading || forkingSourceSessionId !== null,
 		homeWorkspace: homeDraft.workspace,
 		workspaceFooterDisabled: isHomeSubmitting || composerWorkspaceLocked || isSessionLoading,
 		activeWorkspace: displayedWorkspace,
@@ -2760,6 +2838,16 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		onHomeWorkspaceAdd: handleHomeWorkspaceAdd,
 		onHomeWorkspaceClear: handleHomeWorkspaceClear,
 		onSessionSelect: handleSessionSelect,
+		onSessionFork: (session: SessionMetadata): void => {
+			void handleSessionFork(session);
+		},
+		onForkFromUserMessage: async (requestId: string): Promise<void> => {
+			if (activeSessionMetadata === null) {
+				return;
+			}
+			await handleSessionFork(activeSessionMetadata, requestId);
+		},
+		onForkSourceOpen: handleForkSourceOpen,
 		onSessionArchive: handleSessionArchive,
 		onSessionRename: handleSessionRename,
 		onSessionsChange: handleSessionsChange,

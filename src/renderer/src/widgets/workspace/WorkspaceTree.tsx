@@ -48,7 +48,9 @@ export type WorkspaceTreeProps = {
 	sessionUpdate?: SessionMetadata | null;
 	runningSessionIds?: readonly string[];
 	unreadSessionIds?: readonly string[];
+	forkingSessionId?: string | null;
 	onSessionSelect?: (session: SessionMetadata) => void;
+	onSessionFork?: (session: SessionMetadata) => void;
 	onSessionArchive?: (session: SessionMetadata, context: SessionArchiveContext) => void;
 	onSessionRename?: (session: SessionMetadata) => void;
 	onSessionsChange?: (sessions: SessionMetadata[]) => void;
@@ -91,6 +93,7 @@ type WorkspaceTreeLabels = {
 	failedArchiveSession: string;
 	failedCopySessionId: string;
 	failedExportSession: string;
+	forkSession: string;
 	failedDeleteWorkspace: string;
 	failedLoadWorkspace: string;
 	failedOpenWorkspaceDirectory: string;
@@ -142,6 +145,7 @@ function filterVisibleSessions(sessions: SessionMetadata[]): SessionMetadata[] {
 type CreateSessionMenuItemOptions = {
 	archivingSessionId: string | null;
 	exportingSessionId: string | null;
+	forkingSessionId: string | null;
 	pinningSessionId: string | null;
 	runningSessionIds: ReadonlySet<string>;
 	unreadSessionIds: ReadonlySet<string>;
@@ -155,6 +159,7 @@ type CreateSessionMenuItemOptions = {
 	onOpenSessionWorkspaceInExplorer: (session: SessionMetadata) => void;
 	onCopySessionId: (session: SessionMetadata) => void;
 	onExportSession: (session: SessionMetadata) => void;
+	onFork: (session: SessionMetadata) => void;
 };
 
 type CreateWorkspaceMenuItemOptions = CreateSessionMenuItemOptions & {
@@ -190,6 +195,12 @@ function createSessionTreePresentation(
 				icon: <Icon name="pencil" />,
 			},
 			{
+				key: "fork",
+				label: labels.forkSession,
+				icon: <Icon name="fork" />,
+				disabled: isRunning || options.forkingSessionId !== null,
+			},
+			{
 				key: "archive",
 				label: labels.archiveSession,
 				icon: <Icon name="archive" />,
@@ -223,6 +234,10 @@ function createSessionTreePresentation(
 			}
 			if (key === "rename") {
 				options.onRename(session);
+				return;
+			}
+			if (key === "fork") {
+				options.onFork(session);
 				return;
 			}
 			if (key === "archive") {
@@ -508,7 +523,9 @@ function WorkspaceTree({
 	sessionUpdate = null,
 	runningSessionIds = [],
 	unreadSessionIds = [],
+	forkingSessionId = null,
 	onSessionSelect,
+	onSessionFork,
 	onSessionArchive,
 	onSessionRename,
 	onSessionsChange,
@@ -573,6 +590,7 @@ function WorkspaceTree({
 			failedArchiveSession: t("workspaceTree.errors.archiveSession"),
 			failedCopySessionId: t("workspaceTree.errors.copySessionId"),
 			failedExportSession: t("workspaceTree.errors.exportSession"),
+			forkSession: t("workspaceTree.actions.forkSession"),
 			failedDeleteWorkspace: t("workspaceTree.errors.deleteWorkspace"),
 			failedLoadWorkspace: t("workspaceTree.errors.loadWorkspace"),
 			failedOpenWorkspaceDirectory: t("workspaceTree.errors.openWorkspaceDirectory"),
@@ -1080,6 +1098,7 @@ function WorkspaceTree({
 		return {
 			archivingSessionId,
 			exportingSessionId,
+			forkingSessionId,
 			pinningSessionId,
 			runningSessionIds: runningSessionIdSet,
 			unreadSessionIds: unreadSessionIdSet,
@@ -1095,6 +1114,9 @@ function WorkspaceTree({
 			},
 			onRename: (session: SessionMetadata): void => {
 				handleRenameSessionStart(session);
+			},
+			onFork: (session: SessionMetadata): void => {
+				onSessionFork?.(session);
 			},
 			onArchive: (session: SessionMetadata): void => {
 				void handleArchiveSessionAction(session);
@@ -1112,7 +1134,7 @@ function WorkspaceTree({
 				void handleExportSession(session);
 			}
 		};
-	}, [archivingSessionId, exportingSessionId, labels, pinningSessionId, runningSessionIdSet, unreadSessionIdSet, workspaceById]);
+	}, [archivingSessionId, exportingSessionId, forkingSessionId, labels, onSessionFork, pinningSessionId, runningSessionIdSet, unreadSessionIdSet, workspaceById]);
 	const sessionGroups = useMemo((): {
 		pinnedSessions: SessionMetadata[];
 		projectSessions: SessionMetadata[];

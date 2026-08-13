@@ -260,6 +260,7 @@
       "newProject": "新建项目",
       "rename": "重命名",
       "renameSession": "重命名会话",
+      "forkSession": "分叉会话",
       "pinSession": "置顶会话",
       "unpinSession": "取消置顶会话",
       "archiveSession": "归档会话",
@@ -872,12 +873,25 @@
     "user": {
       "copyAria": "复制用户消息",
       "editAndResendAria": "编辑并重新发送用户消息",
+      "forkAria": "从这条用户消息分叉会话",
       "actions": {
         "cancel": "取消",
         "send": "发送",
-        "editAndResend": "编辑并重新发送"
+        "editAndResend": "编辑并重新发送",
+        "forkFromHere": "从这里分叉"
       }
     },
+		"fork": {
+			"titleSuffix": " · 分叉",
+			"untitledSource": "未命名会话",
+			"originLabel": "分叉自",
+			"openSourceTooltip": "打开来源会话",
+			"errors": {
+				"create": "创建分叉会话失败",
+				"sourceUnavailable": "来源会话不可用或已归档",
+				"openSource": "打开来源会话失败"
+			}
+		},
 		"contextStrip": {
 			"aria": "消息上下文",
 			"pinned": "已固定",

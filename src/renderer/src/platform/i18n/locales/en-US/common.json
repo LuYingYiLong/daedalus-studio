@@ -262,6 +262,7 @@
       "newProject": "New project",
       "rename": "Rename",
       "renameSession": "Rename session",
+      "forkSession": "Fork session",
       "pinSession": "Pin session",
       "unpinSession": "Unpin session",
       "archiveSession": "Archive session",
@@ -874,12 +875,25 @@
     "user": {
       "copyAria": "Copy user message",
       "editAndResendAria": "Edit and resend user message",
+      "forkAria": "Fork conversation from this user message",
       "actions": {
         "cancel": "Cancel",
         "send": "Send",
-        "editAndResend": "Edit and resend"
+        "editAndResend": "Edit and resend",
+        "forkFromHere": "Fork from here"
       }
     },
+		"fork": {
+			"titleSuffix": " · Fork",
+			"untitledSource": "Untitled session",
+			"originLabel": "Forked from",
+			"openSourceTooltip": "Open source session",
+			"errors": {
+				"create": "Failed to fork session.",
+				"sourceUnavailable": "The source session is unavailable or archived.",
+				"openSource": "Failed to open the source session."
+			}
+		},
 		"contextStrip": {
 			"aria": "Message context",
 			"pinned": "Pinned",
