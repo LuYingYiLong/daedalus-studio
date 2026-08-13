@@ -25,6 +25,22 @@ type UseConversationSearchOptions = {
 const MAX_REMOTE_SEARCH_RECOVERY_ATTEMPTS: number = 2;
 const REMOTE_SEARCH_RECOVERY_DELAY_MS: number = 180;
 
+function areSearchMatchesEqual(
+	left: ConversationSearchMatch | null,
+	right: ConversationSearchMatch | null
+): boolean {
+	if (left === right) {
+		return true;
+	}
+	if (left === null || right === null) {
+		return false;
+	}
+	return left.blockOffset === right.blockOffset
+		&& left.requestId === right.requestId
+		&& left.role === right.role
+		&& left.occurrenceIndexInBlock === right.occurrenceIndexInBlock;
+}
+
 function isSearchGenerationChanged(error: unknown): boolean {
 	return error instanceof BackendRpcError && error.code === "session_search_generation_changed";
 }
@@ -194,9 +210,11 @@ export function useConversationSearch({
 			if (response.type !== "result" || response.requestId !== latestRequestIdRef.current) {
 				return;
 			}
-			setTotal(response.total);
-			setCurrentOrdinal(response.ordinal);
-			setActiveMatch(response.match);
+			setTotal((previousTotal: number): number => previousTotal === response.total ? previousTotal : response.total);
+			setCurrentOrdinal((previousOrdinal: number): number => previousOrdinal === response.ordinal ? previousOrdinal : response.ordinal);
+			setActiveMatch((previousMatch: ConversationSearchMatch | null): ConversationSearchMatch | null => (
+				areSearchMatchesEqual(previousMatch, response.match) ? previousMatch : response.match
+			));
 		});
 		const handleWorkerFailure = (event: ErrorEvent | MessageEvent): void => {
 			event.preventDefault();

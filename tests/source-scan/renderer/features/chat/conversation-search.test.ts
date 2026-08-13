@@ -12,6 +12,7 @@ describe("conversation search source", () => {
 	const thinkingPart: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ThinkingPart.tsx");
 	const toolPart: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ToolPart.tsx");
 	const searchHook: string = readRepoFile("src", "renderer", "src", "features", "conversation", "useConversationSearch.ts");
+	const messageList: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "MessageList.tsx");
 
 	it("binds conversation find through the shared shortcut dispatcher and keeps local controls", () => {
 		expect(homePage).toContain("findMatchingShortcutCommand");
@@ -70,6 +71,12 @@ describe("conversation search source", () => {
 		expect(searchHook).toContain("isRecoverableRemoteSearchError(error)");
 		expect(searchHook).toContain("onBackendReconnected");
 		expect(searchHook).not.toContain('message.includes("session_search_not_found")');
+	});
+
+	it("does not let Virtuoso range changes drive a React update loop", () => {
+		expect(messageList).not.toContain("setSearchRangeRevision");
+		expect(messageList).toContain("applySearchHighlights(false)");
+		expect(messageList).toContain("handleRangeChanged");
 	});
 
 	it("renders a distinct full-history indexing state instead of a false zero-result count", () => {

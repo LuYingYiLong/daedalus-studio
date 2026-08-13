@@ -121,9 +121,9 @@
 	min-height: 34px;
 	padding: 0 13px;
 	border: 1px solid var(--ds-border-strong, #59616c);
-	border-radius: 8px;
-	background: var(--ds-control-bg, #292e35);
-	color: var(--ds-text-primary, #f1f3f5);
+	border-radius: var(--ds-radius-sm);
+	background: var(--ds-control-bg);
+	color: var(--ds-text-primary);
 	font: inherit;
 	cursor: pointer;
 	transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;

@@ -265,7 +265,6 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const lastReportedActiveBlockOffsetRef = useRef<number | null>(null);
 	const lastReportedAwayFromBottomRef = useRef<boolean | null>(null);
 	const [contextMenuSelection, setContextMenuSelection] = useState<string>("");
-	const [searchRangeRevision, setSearchRangeRevision] = useState<number>(0);
 	const [selectionContainer, setSelectionContainer] = useState<HTMLElement | null>(null);
 	const [selectionScroller, setSelectionScroller] = useState<HTMLElement | null>(null);
 	const items: RenderableTimelineBlock[] = useMemo((): RenderableTimelineBlock[] => {
@@ -507,12 +506,6 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		return (): void => clearConversationSearchHighlights(scrollerRef.current);
 	}, [activeSearchMatch, applySearchHighlights, blockOffset, blocks.length, commitBottomState, releaseBottomFollow]);
 
-	useLayoutEffect((): void => {
-		if (searchRangeRevision > 0) {
-			applySearchHighlights(false);
-		}
-	}, [applySearchHighlights, searchRangeRevision]);
-
 	const syncActiveBlockOffset = useCallback((): void => {
 		const nextBlockOffset: number | null = getActiveBlockOffset();
 		if (nextBlockOffset !== null && nextBlockOffset !== lastReportedActiveBlockOffsetRef.current) {
@@ -540,9 +533,11 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const handleRangeChanged = useCallback((_range: ListRange): void => {
 		scheduleTimelineScrollFrame();
 		if (searchOpen) {
-			setSearchRangeRevision((revision: number): number => revision + 1);
+			// 可见范围变化通常由滚动、定位或高亮触发。这里只安排下一帧更新，
+			// 不让 Virtuoso 的 rangeChanged 反过来驱动 React 状态更新，避免滚动时形成更新闭环。
+			applySearchHighlights(false);
 		}
-	}, [scheduleTimelineScrollFrame, searchOpen]);
+	}, [applySearchHighlights, scheduleTimelineScrollFrame, searchOpen]);
 
 	useLayoutEffect((): void => {
 		scheduleTimelineScrollFrame();
