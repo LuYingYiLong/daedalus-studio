@@ -1,4 +1,4 @@
-import { App, Button, Tooltip } from "antd";
+import { App, Button, Collapse, Tooltip } from "antd";
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
@@ -157,10 +157,22 @@ function MermaidBlock({ source }: MermaidBlockProps): React.JSX.Element {
 					<div className={styles.loading}>{t("chat.mermaid.rendering")}</div>
 				)}
 			</div>
-			<details className={styles.sourceDisclosure}>
-				<summary>{t("chat.mermaid.showSource")}</summary>
-				<pre><code>{source}</code></pre>
-			</details>
+			<Collapse
+				className={styles.sourceCollapse}
+				ghost
+				items={[{
+					key: "source",
+					label: t("chat.mermaid.showSource"),
+					children: (
+						<pre className={styles.sourceContent}><code>{source}</code></pre>
+					)
+				}]}
+				expandIcon={({ isActive }) => (
+					<span className={`collapseExpandIcon ${isActive ? "collapseExpandIconActive" : ""}`}>
+						<Icon name="arrow-down" />
+					</span>
+				)}
+			/>
 		</div>
 	);
 }

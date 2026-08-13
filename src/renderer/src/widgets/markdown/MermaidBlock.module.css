@@ -106,34 +106,31 @@
 	overflow-wrap: anywhere;
 }
 
-.sourceDisclosure {
-	border-top: 1px solid var(--ds-border);
+.sourceCollapse {
 	background: var(--ds-surface);
 }
 
-.sourceDisclosure summary {
-	padding: var(--ds-space-2) var(--ds-space-3);
-	color: var(--ds-text-muted);
-	font-size: 12px;
-	cursor: pointer;
-	user-select: none;
+.sourceCollapse :global(.ant-collapse-header-text) {
+	color: inherit;
 }
 
-.sourceDisclosure[open] summary {
-	border-bottom: 1px solid var(--ds-border);
+.sourceCollapse :global(.ant-collapse-content-box) {
+	padding: 0 !important;
+	border-top: 1px solid var(--ds-border);
 }
 
-.sourceDisclosure pre {
+.sourceContent {
 	max-height: 320px;
 	margin: 0 !important;
 	padding: var(--ds-space-2) var(--ds-space-3) !important;
 	overflow: auto;
-	border: 0 !important;
-	border-radius: 0 !important;
+	border: 0;
+	border-radius: 0;
+	background: var(--ds-bg-sunken);
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.sourceDisclosure {
-	scroll-behavior: auto;
+	.sourceCollapse :global(.ant-collapse-content) {
+		transition: none;
 	}
 }

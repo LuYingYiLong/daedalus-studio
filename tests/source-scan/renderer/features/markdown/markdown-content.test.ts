@@ -36,6 +36,10 @@ describe("MarkdownContent source", () => {
 		expect(mermaidRendererSource).toContain("renderQueue");
 		expect(mermaidBlockSource).toContain('attributeFilter: ["data-theme", "style"]');
 		expect(mermaidBlockSource).toContain("scrollFrameCoordinator?.schedule()");
+		expect(mermaidBlockSource).toContain("import { App, Button, Collapse, Tooltip } from \"antd\"");
+		expect(mermaidBlockSource).toContain("className={styles.sourceCollapse}");
+		expect(mermaidBlockSource).not.toContain("<details");
+		expect(readRepoFile("src", "renderer", "src", "widgets", "markdown", "MermaidBlock.module.css")).toContain(".sourceCollapse :global(.ant-collapse-header)");
 	});
 
 	it("renders local resources as non-navigating links with visible file icons", () => {
