@@ -849,6 +849,12 @@
       "exported": "PNG 图片已导出",
       "exportFailed": "无法导出 PNG 图片"
     },
+    "codeBlock": {
+      "copy": "复制代码",
+      "exportAsFile": "导出为文件",
+      "exported": "文件已导出",
+      "exportFailed": "无法导出文件"
+    },
     "common": {
       "copy": "复制",
       "copied": "已复制",

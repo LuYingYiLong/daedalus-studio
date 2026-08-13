@@ -1,13 +1,15 @@
-import { Button, Tooltip } from "antd";
+import { App, Button, Tooltip } from "antd";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import hljs from "highlight.js";
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./MarkdownContent.module.css";
 import { MarkdownLink } from "./MarkdownResourceLink";
 import { transformMarkdownUrl } from "@/domain/markdown/markdown-url-transform";
+import { getFileExtensionForLanguage, normalizeHighlightLanguage as normalizeMarkdownHighlightLanguage } from "@/domain/markdown/file-icon";
 import { useTimelineScrollFrameCoordinator } from "@/features/conversation/timeline-scroll-frame-context";
 import MermaidBlock from "./MermaidBlock";
 import "highlight.js/styles/github-dark.css";
@@ -25,15 +27,6 @@ type CodeBlockProps = {
 	stickyHeader: boolean;
 };
 
-const HIGHLIGHT_LANGUAGE_ALIASES: Record<string, string> = {
-	gd: "gdscript",
-	gds: "gdscript",
-	sh: "bash",
-	shell: "bash",
-	ps1: "powershell",
-	plain: "plaintext",
-	text: "plaintext"
-};
 const MAX_HIGHLIGHT_CACHE_ENTRIES: number = 128;
 const MAX_HIGHLIGHT_CACHE_SOURCE_CHARS: number = 1_500_000;
 type HighlightCacheEntry = { html: string | null; sourceChars: number };
@@ -41,8 +34,7 @@ const highlightCache: Map<string, HighlightCacheEntry> = new Map();
 let highlightCacheSourceChars: number = 0;
 
 function normalizeHighlightLanguage(language: string): string {
-	const normalized: string = language.trim().toLowerCase().replace(/^hljs-/u, "");
-	return HIGHLIGHT_LANGUAGE_ALIASES[normalized] ?? normalized;
+	return normalizeMarkdownHighlightLanguage(language);
 }
 
 function highlightCode(code: string, language: string): string | null {
@@ -155,9 +147,26 @@ function useStickyCodeHeader(enabled: boolean): {
 }
 
 function CodeBlock({ code, language, highlight, stickyHeader }: CodeBlockProps): React.JSX.Element {
+	const { message } = App.useApp();
+	const { t } = useTranslation();
 	const label: string = formatLanguageLabel(language);
 	const highlightedCode: string | null = highlight ? highlightCode(code, language) : null;
 	const { blockRef, headerRef, isPinned } = useStickyCodeHeader(stickyHeader);
+	const fileExtension: string = getFileExtensionForLanguage(language);
+
+	const exportCodeAsFile = (): void => {
+		void window.electronAPI.fileExport.saveText({
+			defaultFileName: `snippet.${fileExtension}`,
+			content: code
+		}).then((result): void => {
+			if (result.saved) {
+				message.success(t("chat.codeBlock.exported"));
+			}
+		}).catch((error: unknown): void => {
+			console.error("[MarkdownContent] code export failed", error);
+			message.error(t("chat.codeBlock.exportFailed"));
+		});
+	};
 
 	return (
 		<div ref={blockRef} className={styles.codeBlock}>
@@ -171,15 +180,27 @@ function CodeBlock({ code, language, highlight, stickyHeader }: CodeBlockProps):
 						<span>{label}</span>
 					</div>
 					<div className={styles.codeActions}>
-						<Tooltip title="Copy code">
+						<Tooltip title={t("chat.codeBlock.exportAsFile")}>
 							<Button
 								type="text"
 								shape="circle"
 								className={styles.codeAction}
-								aria-label="Copy code"
+								aria-label={t("chat.codeBlock.exportAsFile")}
+								icon={<Icon name="download" />}
+								onClick={exportCodeAsFile}
+							/>
+						</Tooltip>
+						<Tooltip title={t("chat.codeBlock.copy")}>
+							<Button
+								type="text"
+								shape="circle"
+								className={styles.codeAction}
+								aria-label={t("chat.codeBlock.copy")}
 								icon={<Icon name="copy" />}
 								onClick={(): void => {
-									void copyTextToClipboard(code);
+									void copyTextToClipboard(code).catch((error: unknown): void => {
+										console.error("[MarkdownContent] code copy failed", error);
+									});
 								}}
 							/>
 						</Tooltip>

@@ -57,7 +57,11 @@ describe("release workflow protocol compatibility", () => {
 	});
 
 	it("prepares a missing development Bridge package before project scanning", () => {
-		expect(packageManifest.scripts?.predev).toBe("npm run prepare:editor-bridge");
+		expect(packageManifest.scripts?.predev).toBe("node scripts/prepare-editor-bridge.cjs --development");
+		expect(bridgePrepareSource).toContain("--development");
+		expect(bridgePrepareSource).toContain("Using cached ${relative(root, archivePath)}");
+		expect(bridgePrepareSource).toContain("NODE_EXTRA_CA_CERTS");
+		expect(bridgePrepareSource).toContain("A production build still requires a verified Bridge package.");
 		expect(godotProjectsSource).toContain("prepareDevelopmentBundle");
 		expect(godotProjectsSource).toContain('ELECTRON_RUN_AS_NODE: "1"');
 		expect(godotProjectsSource.indexOf("await this.prepareDevelopmentBundle();"))

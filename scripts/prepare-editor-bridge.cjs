@@ -34,6 +34,8 @@ const sourceRoot = resolve(
 const sourceRepository = resolve(sourceRoot, "..", "..");
 const archiveName = `daedalus-bridge-v${packageManifest.godotBridgeVersion}.zip`;
 const archivePath = join(outputRoot, archiveName);
+const manifestPath = join(outputRoot, "plugin-manifest.json");
+const isDevelopmentPreparation = process.argv.includes("--development");
 
 const CRC_TABLE = (() => {
 	const table = new Uint32Array(256);
@@ -178,7 +180,7 @@ function download(url, redirects = 0) {
 		return Promise.reject(new Error("Too many redirects while downloading Daedalus Bridge."));
 	}
 	return new Promise((resolveDownload, rejectDownload) => {
-		https.get(url, {
+		const request = https.get(url, {
 			headers: { "User-Agent": "daedalus-studio-build" }
 		}, (response) => {
 			if (
@@ -199,8 +201,63 @@ function download(url, redirects = 0) {
 			response.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
 			response.on("end", () => resolveDownload(Buffer.concat(chunks)));
 			response.on("error", rejectDownload);
-		}).on("error", rejectDownload);
+		});
+		request.setTimeout(30_000, () => {
+			request.destroy(Object.assign(new Error(`Timed out while downloading ${url}.`), { code: "ETIMEDOUT" }));
+		});
+		request.on("error", rejectDownload);
 	});
+}
+
+function isNetworkError(error) {
+	const code = error && typeof error === "object" && typeof error.code === "string" ? error.code : "";
+	return [
+		"CERT_HAS_EXPIRED",
+		"ECONNREFUSED",
+		"ECONNRESET",
+		"EAI_AGAIN",
+		"ENETUNREACH",
+		"ENOTFOUND",
+		"ETIMEDOUT",
+		"UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+		"UNABLE_TO_GET_ISSUER_CERT",
+		"UNABLE_TO_GET_ISSUER_CERT_LOCALLY"
+	].includes(code);
+}
+
+async function hasUsablePreparedRelease() {
+	try {
+		const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+		const archive = await readFile(archivePath);
+		return manifest.schemaVersion === 2
+			&& manifest.bridgeVersion === packageManifest.godotBridgeVersion
+			&& manifest.studioVersion === packageManifest.version
+			&& manifest.archive?.fileName === archiveName
+			&& manifest.archive?.size === archive.length
+			&& manifest.archive?.sha256 === sha256(archive)
+			&& Array.isArray(manifest.files);
+	} catch {
+		return false;
+	}
+}
+
+async function usePreparedReleaseIfAvailable() {
+	if (!await hasUsablePreparedRelease()) {
+		return false;
+	}
+	process.stdout.write(`Using cached ${relative(root, archivePath)}; no Bridge download required.\n`);
+	return true;
+}
+
+function printDevelopmentFallback(error) {
+	const detail = error instanceof Error ? error.message : String(error);
+	console.warn([
+		"Daedalus Bridge is unavailable in this development checkout; continuing without Bridge packaging.",
+		`Reason: ${detail}`,
+		"To enable Bridge development, clone daedalus-bridge beside daedalus-studio, or set DAEDALUS_BRIDGE_SOURCE.",
+		"If HTTPS is intercepted by a proxy or antivirus, configure NODE_EXTRA_CA_CERTS with its trusted root certificate.",
+		"A production build still requires a verified Bridge package."
+	].join("\n"));
 }
 
 async function prepareFromRelease() {
@@ -228,7 +285,7 @@ async function prepareFromRelease() {
 	await rm(outputRoot, { recursive: true, force: true });
 	await mkdir(outputRoot, { recursive: true });
 	await writeFile(archivePath, archive);
-	await writeFile(join(outputRoot, "plugin-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+	await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 	process.stdout.write(`Prepared ${relative(root, archivePath)} from the fixed v${version} release.\n`);
 }
 
@@ -240,7 +297,18 @@ async function main() {
 		if (configuredSourceRoot !== null) {
 			throw new Error(`DAEDALUS_BRIDGE_SOURCE is not a Daedalus Bridge repository or addon root: ${configuredSourceRoot}`);
 		}
-		await prepareFromRelease();
+		if (await usePreparedReleaseIfAvailable()) {
+			return;
+		}
+		try {
+			await prepareFromRelease();
+		} catch (error) {
+			if (isDevelopmentPreparation && isNetworkError(error)) {
+				printDevelopmentFallback(error);
+				return;
+			}
+			throw error;
+		}
 		return;
 	}
 	const pluginConfig = await readFile(join(sourceRoot, "plugin.cfg"), "utf8");
@@ -314,7 +382,7 @@ async function main() {
 	await rm(outputRoot, { recursive: true, force: true });
 	await mkdir(outputRoot, { recursive: true });
 	await writeFile(archivePath, archive);
-	await writeFile(join(outputRoot, "plugin-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+	await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 	process.stdout.write(`Prepared ${relative(root, archivePath)} (${files.length} files).\n`);
 }
 

@@ -10,10 +10,11 @@ describe("MarkdownContent source", () => {
 	const mermaidBlockSource: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "MermaidBlock.tsx");
 	const mermaidRendererSource: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "mermaid-renderer.ts");
 	const mermaidPngExportSource: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "mermaid-png-export.ts");
+	const markdownFileIconSource: string = readRepoFile("src", "renderer", "src", "domain", "markdown", "file-icon.ts");
+	const fileExportSource: string = readRepoFile("src", "main", "services", "file-export.ts");
 	const packageManifest = JSON.parse(readRepoFile("package.json")) as { dependencies?: Record<string, string> };
 
 	it("guards highlight.js calls and uses a lightweight streaming renderer", () => {
-		expect(source).toContain("gd: \"gdscript\"");
 		expect(source).toContain("hljs.getLanguage(normalizedLanguage)");
 		expect(source).not.toContain("hljs.highlightAuto(code).value");
 		expect(source).toContain("getStreamingMarkdownRenderIntervalMs");
@@ -46,6 +47,12 @@ describe("MarkdownContent source", () => {
 		expect(mermaidPngExportSource).toContain("MAX_OUTPUT_PIXELS");
 		expect(mermaidPngExportSource).toContain("MIN_PIXEL_RATIO");
 		expect(mermaidPngExportSource).toContain('canvas.toBlob');
+		expect(source).toContain("getFileExtensionForLanguage");
+		expect(source).toContain("window.electronAPI.fileExport.saveText");
+		expect(source).not.toContain("const HIGHLIGHT_LANGUAGE_ALIASES");
+		expect(markdownFileIconSource).toContain("HIGHLIGHT_LANGUAGE_ALIASES");
+		expect(markdownFileIconSource).toContain('gd: "gdscript"');
+		expect(fileExportSource).toContain('file-export:save-text');
 		expect(mermaidBlockSource).not.toContain("<details");
 		expect(readRepoFile("src", "renderer", "src", "widgets", "markdown", "MermaidBlock.module.css")).toContain(".sourceCollapse :global(.ant-collapse-body)");
 	});

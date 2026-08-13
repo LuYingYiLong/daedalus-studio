@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getFileIconName } from "@/domain/markdown/file-icon";
+import { getFileExtensionForLanguage, getFileIconName, normalizeHighlightLanguage } from "@/domain/markdown/file-icon";
 import { formatMarkdownResourceLabel, parseMarkdownResourceHref } from "@/domain/markdown/markdown-resource-path";
 import { transformMarkdownUrl } from "@/domain/markdown/markdown-url-transform";
 
@@ -23,6 +23,14 @@ describe("markdown resource paths", () => {
 	it("selects the HTML icon from Windows resource file names", () => {
 		expect(getFileIconName("C:\\Users\\LuYingYiLong\\Documents\\test\\lagrange-like\\index.html")).toBe("html");
 		expect(getFileIconName("index.HTML")).toBe("html");
+	});
+
+	it("normalizes code language aliases for highlighting and file export", () => {
+		expect(normalizeHighlightLanguage("gd")).toBe("gdscript");
+		expect(normalizeHighlightLanguage("hljs-PS1")).toBe("powershell");
+		expect(getFileExtensionForLanguage("gd")).toBe("gd");
+		expect(getFileExtensionForLanguage("typescript")).toBe("ts");
+		expect(getFileExtensionForLanguage("plain")).toBe("txt");
 	});
 
 	it("preserves validated local file links before react-markdown renders them", () => {

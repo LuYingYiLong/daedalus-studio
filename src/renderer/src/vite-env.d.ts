@@ -426,6 +426,12 @@ declare global {
 				bytes: Uint8Array;
 			}) => Promise<{ saved: true; filePath: string } | { saved: false }>;
 		};
+		fileExport: {
+			saveText: (params: {
+				defaultFileName: string;
+				content: string;
+			}) => Promise<{ saved: true; filePath: string } | { saved: false }>;
+		};
 		skillFs: {
 			pickSkillZip: () => Promise<string | null>;
 			pickSkillDirectory: () => Promise<string | null>;

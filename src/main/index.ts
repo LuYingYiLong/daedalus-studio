@@ -25,6 +25,7 @@ import { getDaedalusDir } from "./services/backend-binary-store";
 import { homedir } from "node:os";
 import { publishStudioExecutableRecord } from "./services/studio-executable-record";
 import { registerImageExportIpc } from "./services/image-export";
+import { registerFileExportIpc } from "./services/file-export";
 
 backendManager.registerIpc();
 backendBootstrapService.registerIpc();
@@ -35,6 +36,7 @@ registerGodotDocumentationFsIpc();
 registerSkillsCliIpc();
 registerClipboardIpc();
 registerImageExportIpc();
+registerFileExportIpc();
 registerGodotExecutableDialogIpc();
 clientPreferencesService.registerIpc();
 registerSystemInfoIpc();

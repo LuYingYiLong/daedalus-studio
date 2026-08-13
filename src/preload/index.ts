@@ -418,6 +418,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		}
 	},
 
+	fileExport: {
+		saveText: (params: { defaultFileName: string; content: string }): Promise<{ saved: true; filePath: string } | { saved: false }> => {
+			return ipcRenderer.invoke("file-export:save-text", params);
+		}
+	},
+
 	skillFs: {
 		pickSkillZip: (): Promise<string | null> => {
 			return ipcRenderer.invoke("skill-fs:pick-zip");

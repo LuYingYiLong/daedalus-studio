@@ -851,6 +851,12 @@
       "exported": "PNG image exported",
       "exportFailed": "Unable to export PNG image"
     },
+    "codeBlock": {
+      "copy": "Copy code",
+      "exportAsFile": "Export as file",
+      "exported": "File exported",
+      "exportFailed": "Unable to export file"
+    },
     "common": {
       "copy": "Copy",
       "copied": "Copied",
