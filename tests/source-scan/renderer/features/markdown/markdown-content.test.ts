@@ -9,6 +9,7 @@ describe("MarkdownContent source", () => {
 	const htmlIconSource: string = readRepoFile("src", "renderer", "src", "assets", "icons", "html.svg");
 	const mermaidBlockSource: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "MermaidBlock.tsx");
 	const mermaidRendererSource: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "mermaid-renderer.ts");
+	const mermaidPngExportSource: string = readRepoFile("src", "renderer", "src", "widgets", "markdown", "mermaid-png-export.ts");
 	const packageManifest = JSON.parse(readRepoFile("package.json")) as { dependencies?: Record<string, string> };
 
 	it("guards highlight.js calls and uses a lightweight streaming renderer", () => {
@@ -38,8 +39,15 @@ describe("MarkdownContent source", () => {
 		expect(mermaidBlockSource).toContain("scrollFrameCoordinator?.schedule()");
 		expect(mermaidBlockSource).toContain("import { App, Button, Collapse, Tooltip } from \"antd\"");
 		expect(mermaidBlockSource).toContain("className={styles.sourceCollapse}");
+		expect(mermaidBlockSource).toContain("window.electronAPI.imageExport.savePng");
+		expect(mermaidBlockSource).toContain('icon={<Icon name="download" />}');
+		expect(mermaidBlockSource).toContain("viewport?.clientWidth");
+		expect(mermaidBlockSource).toContain("viewport?.clientHeight");
+		expect(mermaidPngExportSource).toContain("MAX_OUTPUT_PIXELS");
+		expect(mermaidPngExportSource).toContain("MIN_PIXEL_RATIO");
+		expect(mermaidPngExportSource).toContain('canvas.toBlob');
 		expect(mermaidBlockSource).not.toContain("<details");
-		expect(readRepoFile("src", "renderer", "src", "widgets", "markdown", "MermaidBlock.module.css")).toContain(".sourceCollapse :global(.ant-collapse-header)");
+		expect(readRepoFile("src", "renderer", "src", "widgets", "markdown", "MermaidBlock.module.css")).toContain(".sourceCollapse :global(.ant-collapse-body)");
 	});
 
 	it("renders local resources as non-navigating links with visible file icons", () => {

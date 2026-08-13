@@ -9,6 +9,7 @@ import {
 	renderMermaidDiagram,
 	type MermaidRenderAppearance
 } from "./mermaid-renderer";
+import { renderMermaidPng } from "./mermaid-png-export";
 import styles from "./MermaidBlock.module.css";
 
 type MermaidBlockProps = {
@@ -72,6 +73,7 @@ function MermaidBlock({ source }: MermaidBlockProps): React.JSX.Element {
 	const { message } = App.useApp();
 	const { t } = useTranslation();
 	const containerRef = useRef<HTMLDivElement | null>(null);
+	const viewportRef = useRef<HTMLDivElement | null>(null);
 	const appearance: MermaidRenderAppearance = useMermaidAppearance();
 	const appearanceKey: string = useMemo((): string => getAppearanceKey(appearance), [appearance]);
 	const scrollFrameCoordinator = useTimelineScrollFrameCoordinator();
@@ -80,6 +82,7 @@ function MermaidBlock({ source }: MermaidBlockProps): React.JSX.Element {
 		svg: "",
 		error: null
 	});
+	const [exporting, setExporting] = useState<boolean>(false);
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -124,6 +127,34 @@ function MermaidBlock({ source }: MermaidBlockProps): React.JSX.Element {
 			.catch((): void => void message.error(t("chat.common.copyFailed")));
 	};
 
+	const exportPng = async (): Promise<void> => {
+		if (renderState.status !== "ready" || exporting) {
+			return;
+		}
+		setExporting(true);
+		try {
+			const viewport: HTMLDivElement | null = viewportRef.current;
+			const bytes: Uint8Array = await renderMermaidPng({
+				svg: renderState.svg,
+				background: appearance.surfaceMuted,
+				viewportWidth: viewport?.clientWidth,
+				viewportHeight: viewport?.clientHeight,
+				pixelRatio: window.devicePixelRatio
+			});
+			const result = await window.electronAPI.imageExport.savePng({
+				defaultFileName: "mermaid-diagram.png",
+				bytes
+			});
+			if (result.saved) {
+				void message.success(t("chat.mermaid.exported"));
+			}
+		} catch {
+			void message.error(t("chat.mermaid.exportFailed"));
+		} finally {
+			setExporting(false);
+		}
+	};
+
 	return (
 		<div ref={containerRef} className={styles.block}>
 			<div className={styles.header} data-chat-search-ignore="true" data-message-selection-ignore="true">
@@ -131,18 +162,32 @@ function MermaidBlock({ source }: MermaidBlockProps): React.JSX.Element {
 					<Icon name="workflow" />
 					<span>{t("chat.mermaid.title")}</span>
 				</div>
-				<Tooltip title={t("chat.mermaid.copySource")}>
-					<Button
-						type="text"
-						shape="circle"
-						className={styles.action}
-						aria-label={t("chat.mermaid.copySource")}
-						icon={<Icon name="copy" />}
-						onClick={copySource}
-					/>
-				</Tooltip>
+				<div className={styles.actions}>
+					<Tooltip title={t("chat.mermaid.exportPng")}>
+						<Button
+							type="text"
+							shape="circle"
+							className={styles.action}
+							aria-label={t("chat.mermaid.exportPng")}
+							icon={<Icon name="download" />}
+							loading={exporting}
+							disabled={renderState.status !== "ready"}
+							onClick={() => void exportPng()}
+						/>
+					</Tooltip>
+					<Tooltip title={t("chat.mermaid.copySource")}>
+						<Button
+							type="text"
+							shape="circle"
+							className={styles.action}
+							aria-label={t("chat.mermaid.copySource")}
+							icon={<Icon name="copy" />}
+							onClick={copySource}
+						/>
+					</Tooltip>
+				</div>
 			</div>
-			<div className={styles.viewport} data-chat-search-ignore="true" data-message-selection-ignore="true">
+			<div ref={viewportRef} className={styles.viewport} data-chat-search-ignore="true" data-message-selection-ignore="true">
 				{renderState.svg.length > 0 ? (
 					<div className={styles.diagram} dangerouslySetInnerHTML={{ __html: renderState.svg }} />
 				) : renderState.status === "failed" ? (

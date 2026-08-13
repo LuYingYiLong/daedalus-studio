@@ -844,7 +844,10 @@
       "rendering": "正在生成图表…",
       "renderFailed": "无法生成图表",
       "copySource": "复制图表源码",
-      "showSource": "查看图表源码"
+      "showSource": "查看图表源码",
+      "exportPng": "导出 PNG",
+      "exported": "PNG 图片已导出",
+      "exportFailed": "无法导出 PNG 图片"
     },
     "common": {
       "copy": "复制",

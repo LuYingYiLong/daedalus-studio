@@ -34,6 +34,13 @@
 	color: var(--ds-text-muted);
 }
 
+.actions {
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 2px;
+}
+
 .action {
 	width: 28px;
 	height: 28px;
@@ -114,7 +121,7 @@
 	color: inherit;
 }
 
-.sourceCollapse :global(.ant-collapse-content-box) {
+.sourceCollapse :global(.ant-collapse-body) {
 	padding: 0 !important;
 	border-top: 1px solid var(--ds-border);
 }
@@ -124,8 +131,8 @@
 	margin: 0 !important;
 	padding: var(--ds-space-2) var(--ds-space-3) !important;
 	overflow: auto;
-	border: 0;
-	border-radius: 0;
+	border: 0 !important;
+	border-radius: 0 !important;
 	background: var(--ds-bg-sunken);
 }
 

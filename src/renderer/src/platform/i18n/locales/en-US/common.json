@@ -846,7 +846,10 @@
       "rendering": "Rendering diagram…",
       "renderFailed": "Unable to render diagram",
       "copySource": "Copy diagram source",
-      "showSource": "View diagram source"
+      "showSource": "View diagram source",
+      "exportPng": "Export PNG",
+      "exported": "PNG image exported",
+      "exportFailed": "Unable to export PNG image"
     },
     "common": {
       "copy": "Copy",

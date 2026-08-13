@@ -420,6 +420,12 @@ declare global {
 				godotScenePath?: string;
 			}) => Promise<{ opened: true; targetId: WorkspaceLaunchTargetId }>;
 		};
+		imageExport: {
+			savePng: (params: {
+				defaultFileName: string;
+				bytes: Uint8Array;
+			}) => Promise<{ saved: true; filePath: string } | { saved: false }>;
+		};
 		skillFs: {
 			pickSkillZip: () => Promise<string | null>;
 			pickSkillDirectory: () => Promise<string | null>;

@@ -412,6 +412,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		}
 	},
 
+	imageExport: {
+		savePng: (params: { defaultFileName: string; bytes: Uint8Array }): Promise<{ saved: true; filePath: string } | { saved: false }> => {
+			return ipcRenderer.invoke("image-export:save-png", params);
+		}
+	},
+
 	skillFs: {
 		pickSkillZip: (): Promise<string | null> => {
 			return ipcRenderer.invoke("skill-fs:pick-zip");

@@ -24,6 +24,7 @@ import { resetDaedalusData } from "./services/data-reset";
 import { getDaedalusDir } from "./services/backend-binary-store";
 import { homedir } from "node:os";
 import { publishStudioExecutableRecord } from "./services/studio-executable-record";
+import { registerImageExportIpc } from "./services/image-export";
 
 backendManager.registerIpc();
 backendBootstrapService.registerIpc();
@@ -33,6 +34,7 @@ registerSkillFsIpc();
 registerGodotDocumentationFsIpc();
 registerSkillsCliIpc();
 registerClipboardIpc();
+registerImageExportIpc();
 registerGodotExecutableDialogIpc();
 clientPreferencesService.registerIpc();
 registerSystemInfoIpc();
