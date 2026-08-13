@@ -189,6 +189,18 @@
 	user-select: none;
 }
 
+.chatTitleRow {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
+}
+
+.forkOriginButton {
+	flex: 0 0 auto;
+	color: var(--ant-color-text-tertiary);
+}
+
 .chatText {
 	display: block;
 	min-width: 0;

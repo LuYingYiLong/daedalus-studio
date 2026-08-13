@@ -8,12 +8,14 @@ export type ForkOriginBannerProps = {
 	origin: SessionForkOrigin;
 	disabled?: boolean;
 	onOpenSource: (sessionId: string) => void | Promise<void>;
+	onDismiss: () => void;
 };
 
 export default function ForkOriginBanner({
 	origin,
 	disabled = false,
 	onOpenSource,
+	onDismiss,
 }: ForkOriginBannerProps): React.JSX.Element {
 	const { t } = useTranslation();
 	return (
@@ -38,6 +40,17 @@ export default function ForkOriginBanner({
 			<Typography.Text type="secondary" ellipsis={{ tooltip: origin.messagePreview }} className={styles.preview}>
 				{origin.messagePreview}
 			</Typography.Text>
+			<Tooltip title={t("chat.fork.dismissOriginTooltip")}>
+				<Button
+					type="text"
+					size="small"
+					shape="circle"
+					className={styles.dismissButton}
+					aria-label={t("chat.fork.dismissOriginAria")}
+					icon={<Icon name="close" />}
+					onClick={onDismiss}
+				/>
+			</Tooltip>
 		</div>
 	);
 }

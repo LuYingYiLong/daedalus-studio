@@ -888,6 +888,9 @@
 			"untitledSource": "Untitled session",
 			"originLabel": "Forked from",
 			"openSourceTooltip": "Open source session",
+			"openSourceAria": "Open source session",
+			"dismissOriginTooltip": "Hide this fork origin notice",
+			"dismissOriginAria": "Hide fork origin notice permanently",
 			"errors": {
 				"create": "Failed to fork session.",
 				"sourceUnavailable": "The source session is unavailable or archived.",

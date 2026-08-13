@@ -33,3 +33,8 @@
 	min-width: 0;
 	flex: 1 1 auto;
 }
+
+.dismissButton {
+	flex: 0 0 auto;
+	color: var(--ant-color-text-tertiary);
+}

@@ -444,6 +444,7 @@ type HomePageProps = {
 	onSessionFork: (session: SessionMetadata) => void;
 	onForkFromUserMessage: (requestId: string) => Promise<void>;
 	onForkSourceOpen: (sessionId: string) => Promise<void>;
+	onForkOriginDismiss: () => void;
 	onSessionArchive: (session: SessionMetadata, context: SessionArchiveContext) => void;
 	onSessionRename: (session: SessionMetadata) => void;
 	onSessionsChange: (sessions: SessionMetadata[]) => void;
@@ -576,6 +577,7 @@ function HomePage({
 	onSessionFork,
 	onForkFromUserMessage,
 	onForkSourceOpen,
+	onForkOriginDismiss,
 	onSessionArchive,
 	onSessionRename,
 	onSessionsChange,
@@ -797,7 +799,7 @@ function HomePage({
 	const workspaceForActions: WorkspaceConfig | null = workspaceSnapshotForActions === null
 		? null
 		: workspaceOptions.find((workspace: WorkspaceConfig): boolean => workspace.id === workspaceSnapshotForActions.id)
-			?? workspaceSnapshotForActions;
+		?? workspaceSnapshotForActions;
 	const summaryScopeKey: string = activeSessionId ?? `workspace:${workspaceForActions?.id ?? "none"}`;
 	const summaryOverviewTargetRef = useRef<SummaryOverviewTarget>({
 		scopeKey: summaryScopeKey,
@@ -948,7 +950,7 @@ function HomePage({
 				});
 			})
 			.catch((error: unknown): void => {
-			console.error("[HomePage] failed to list workspace launch targets", error);
+				console.error("[HomePage] failed to list workspace launch targets", error);
 				if (!cancelled) {
 					setWorkspaceLaunchTargets(FALLBACK_WORKSPACE_LAUNCH_TARGETS);
 					setSelectedLaunchTargetId("file-explorer");
@@ -976,7 +978,7 @@ function HomePage({
 			}
 			setIsGodotProject(result.entries.some((entry): boolean => entry.kind === "file" && entry.name === "project.godot"));
 		}).catch((error: unknown): void => {
-		console.error("[HomePage] failed to detect Godot project", error);
+			console.error("[HomePage] failed to detect Godot project", error);
 			if (!cancelled) {
 				setIsGodotProject(false);
 			}
@@ -2057,290 +2059,344 @@ function HomePage({
 
 				<Splitter.Panel min={360}>
 					<div className={styles.agentMain}>
-				{showWorkspaceLaunchControls || showSummaryButton || showBottomDockButton || showSideDockButton ? (
-					<div className={styles.floatingActionSlot}>
-						<div className={styles.floatingActions}>
-							{showWorkspaceLaunchControls ? (
-								<Space.Compact className={styles.workspaceLaunchControls}>
-									<Button
-										loading={isOpeningLaunchTarget}
-										icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
-										onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
-									>
-										{t("agentPage.workspaceLaunch.openIn", { target: selectedLaunchTarget.label })}
-									</Button>
-									<Dropdown
-										menu={{
-											items: workspaceLaunchMenuItems,
-											selectedKeys: [selectedLaunchTarget.id],
-											onClick: handleWorkspaceLaunchMenuClick
-										}}
-										trigger={["click"]}
-									>
-										<Button
-											aria-label={t("agentPage.workspaceLaunch.aria.selectTarget")}
-											icon={<Icon name="arrow-down" />}
-										/>
-									</Dropdown>
-								</Space.Compact>
-							) : null}
-							{showSummaryButton ? renderSummaryButton() : null}
-							{showBottomDockButton ? (
-								<Tooltip title={bottomDockOpen ? t("agentPage.dock.closeBottom") : t("agentPage.dock.openBottom")}>
-									<Button
-										type="text"
-										shape="circle"
-										aria-pressed={bottomDockOpen}
-										icon={<Icon name={bottomDockOpen ? "layout-bottom-toggled" : "layout-bottom"} />}
-										onClick={toggleBottomDock}
-									/>
-								</Tooltip>
-							) : null}
-							{showSideDockButton ? (
-								<Tooltip title={sideDockOpen ? t("agentPage.dock.closeSidebar") : t("agentPage.dock.openSidebar")}>
-									<Button
-										type="text"
-										shape="circle"
-										aria-pressed={sideDockOpen}
-										icon={<Icon name={sideDockOpen ? "layout-right-toggled" : "layout-right"} />}
-										onClick={toggleSideDock}
-									/>
-								</Tooltip>
-							) : null}
-						</div>
-					</div>
-				) : null}
-				<Splitter
-					className={styles.agentVerticalSplitter}
-					classNames={SPLITTER_CLASS_NAMES}
-					draggerIcon={null}
-					orientation="vertical"
-					collapsible={{ motion: true }}
-					onResize={handleBottomDockResize}
-					onResizeEnd={handleBottomDockResizeEnd}
-				>
-					<Splitter.Panel min={360}>
+						{showWorkspaceLaunchControls || showSummaryButton || showBottomDockButton || showSideDockButton ? (
+							<div className={styles.floatingActionSlot}>
+								<div className={styles.floatingActions}>
+									{showWorkspaceLaunchControls ? (
+										<Space.Compact className={styles.workspaceLaunchControls}>
+											<Button
+												loading={isOpeningLaunchTarget}
+												icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
+												onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
+											>
+												{t("agentPage.workspaceLaunch.openIn", { target: selectedLaunchTarget.label })}
+											</Button>
+											<Dropdown
+												menu={{
+													items: workspaceLaunchMenuItems,
+													selectedKeys: [selectedLaunchTarget.id],
+													onClick: handleWorkspaceLaunchMenuClick
+												}}
+												trigger={["click"]}
+											>
+												<Button
+													aria-label={t("agentPage.workspaceLaunch.aria.selectTarget")}
+													icon={<Icon name="arrow-down" />}
+												/>
+											</Dropdown>
+										</Space.Compact>
+									) : null}
+									{showSummaryButton ? renderSummaryButton() : null}
+									{showBottomDockButton ? (
+										<Tooltip title={bottomDockOpen ? t("agentPage.dock.closeBottom") : t("agentPage.dock.openBottom")}>
+											<Button
+												type="text"
+												shape="circle"
+												aria-pressed={bottomDockOpen}
+												icon={<Icon name={bottomDockOpen ? "layout-bottom-toggled" : "layout-bottom"} />}
+												onClick={toggleBottomDock}
+											/>
+										</Tooltip>
+									) : null}
+									{showSideDockButton ? (
+										<Tooltip title={sideDockOpen ? t("agentPage.dock.closeSidebar") : t("agentPage.dock.openSidebar")}>
+											<Button
+												type="text"
+												shape="circle"
+												aria-pressed={sideDockOpen}
+												icon={<Icon name={sideDockOpen ? "layout-right-toggled" : "layout-right"} />}
+												onClick={toggleSideDock}
+											/>
+										</Tooltip>
+									) : null}
+								</div>
+							</div>
+						) : null}
 						<Splitter
-							className={styles.agentSplitter}
+							className={styles.agentVerticalSplitter}
 							classNames={SPLITTER_CLASS_NAMES}
 							draggerIcon={null}
+							orientation="vertical"
 							collapsible={{ motion: true }}
-							onResize={handleSideDockResize}
-							onResizeEnd={handleSideDockResizeEnd}
+							onResize={handleBottomDockResize}
+							onResizeEnd={handleBottomDockResizeEnd}
 						>
 							<Splitter.Panel min={360}>
-								<section className={styles.chatPanel}>
-									<header className={styles.chatHeader}>
-										<Typography.Text className={styles.chatText} ellipsis={{ tooltip: chatTitle }}>
-											{chatTitle}
-										</Typography.Text>
-									</header>
-
-									<Divider size="small" />
-
-									<div ref={chatBodyRef} className={styles.chatBody}>
-										{isHome ? (
-							<NewSessionHome
-								workspace={homeWorkspace}
-								errorMessage={sessionError}
-								message={message}
-								onStarterSelect={handleHomeStarterSelect}
-							/>
-										) : activeSessionId !== null ? (
-											<MarkdownResourceActionsProvider
-												value={{
-													workspaceRoot: workspaceForActions?.rootPath ?? null,
-													godotExecutablePath: effectiveGodotLaunchExecutablePath,
-													currentWorkspaceLaunch: workspaceForActions === null ? null : selectedLaunchTarget,
-													launchTargets: workspaceLaunchTargets
-												}}
-											>
-											<div className={styles.conversationStack}>
-												{activeSessionMetadata?.forkedFrom !== undefined ? (
-													<ForkOriginBanner
-														origin={activeSessionMetadata.forkedFrom}
-														disabled={isSessionLoading}
-														onOpenSource={onForkSourceOpen}
-													/>
-												) : null}
-												<div className={styles.conversationTimelineSlot}>
-													<ConversationTimelinePane
-														ref={conversationTimelinePaneRef}
-														sessionId={activeSessionId}
-														timelineStore={timelineStore}
-														timelineNavigationEntries={timelineNavigationEntries}
-														isLoading={isSessionLoading}
-														errorMessage={sessionError}
-														isLoadingMoreBefore={isLoadingMoreBefore}
-														isLoadingMoreAfter={isLoadingMoreAfter}
-														retryDisabled={retryDisabled}
-														activeRetryRequestId={activeRetryRequestId}
-														onLoadMoreBefore={onLoadMoreBefore}
-														onLoadMoreAfter={onLoadMoreAfter}
-														onTimelineNavigationLoadEntry={onTimelineNavigationLoadEntry}
-														onTimelineSearchLoadOffset={onTimelineSearchLoadOffset}
-														onRetryEditStart={onRetryEditStart}
-														onRetryEditCancel={onRetryEditCancel}
-														onRetryFromUserMessage={onRetryFromUserMessage}
-														onForkFromUserMessage={onForkFromUserMessage}
-														forkDisabled={forkDisabled}
-														forkingRequestId={forkingRequestId}
-														onInlineDiffReview={openReviewPanel}
-														onAwayFromBottomChange={setScrollToBottomButtonVisible}
-														contextItems={selectionMarkerContextItems}
-														onAddContext={onAddContext}
-														initialSelectionAskThreads={selectionAskThreads}
-														goal={currentGoal}
-													/>
+								<Splitter
+									className={styles.agentSplitter}
+									classNames={SPLITTER_CLASS_NAMES}
+									draggerIcon={null}
+									collapsible={{ motion: true }}
+									onResize={handleSideDockResize}
+									onResizeEnd={handleSideDockResizeEnd}
+								>
+									<Splitter.Panel min={360}>
+										<section className={styles.chatPanel}>
+											<header className={styles.chatHeader}>
+												<div className={styles.chatTitleRow}>
+													<Typography.Text className={styles.chatText} ellipsis={{ tooltip: chatTitle }}>
+														{chatTitle}
+													</Typography.Text>
+													{activeSessionMetadata?.forkedFrom !== undefined ? (
+														<Tooltip placement="bottom" title={t("chat.fork.openSourceTooltip")}>
+															<Button
+																type="text"
+																size="small"
+																shape="circle"
+																className={styles.forkOriginButton}
+																aria-label={t("chat.fork.openSourceAria")}
+																icon={<Icon name="fork" />}
+																disabled={isSessionLoading}
+																onClick={(): void => {
+																	void onForkSourceOpen(activeSessionMetadata.forkedFrom!.sessionId);
+																}}
+															/>
+														</Tooltip>
+													) : null}
 												</div>
-											</div>
-											</MarkdownResourceActionsProvider>
-										) : null}
-									</div>
+											</header>
 
-									<footer className={styles.composer}>
-										{!isHome ? (
-											<Button
-												ref={scrollToBottomButtonRef}
-												shape="circle"
-												title={t("agentPage.actions.scrollToBottom")}
-												icon={<Icon name="arrow-bottom" />}
-												tabIndex={-1}
-											className={[
-												styles.scrollToBottomButton,
-												showExecutionStatusPanel ? styles.scrollToBottomButtonAboveExecutionStatus : "",
-												styles.scrollToBottomButtonHidden
-												].filter(Boolean).join(" ")}
-												onClick={scrollMessageListToBottom}
-											/>
-										) : null}
-										{!isHome && pendingApproval !== null ? (
-											<ApprovalDialog
-												pendingApproval={pendingApproval}
-												isApproving={isApproving}
-												isRejecting={isRejecting}
-												errorMessage={approvalError}
-												onApprove={onApprovalApprove}
-												onReject={onApprovalReject}
-											/>
-										) : !isHome && pendingToolBudget !== null ? (
-											<ToolBudgetDialog
-												pendingToolBudget={pendingToolBudget}
-											isContinuing={isToolBudgetContinuing}
-											isStopping={isToolBudgetStopping}
-											isCancelling={isCancelling}
-											errorMessage={toolBudgetError}
-											onContinue={onToolBudgetContinue}
-											onStop={onToolBudgetStop}
-											onCancel={onCancel}
-											/>
-										) : !isHome && pendingPlanClarification !== null ? (
-											<ClarificationDialog
-												planId={pendingPlanClarification.planId}
-												title={pendingPlanClarification.title}
-												question={pendingPlanClarification.question}
-												recommendedReplies={pendingPlanClarification.recommendedReplies}
-												isSubmitting={isPlanClarificationSubmitting}
-												errorMessage={planClarificationError}
-												onSubmit={onPlanClarificationSubmit}
-												onSkip={onPlanClarificationSkip}
-											/>
-										) : !isHome && pendingPlanApproval !== null ? (
-											<PlanApprovalDialog
-												plan={pendingPlanApproval}
-												isApproving={isPlanApproving}
-												isRevising={isPlanRevising}
-												errorMessage={planApprovalError}
-												onApprove={onPlanApprove}
-												onRevise={onPlanRevise}
-											/>
-										) : (
-											<>
-											{showExecutionStatusPanel ? (
-													<TimelineWorkflowTodoPanel
-														timelineStore={timelineStore}
-														sessionId={activeSessionId!}
-														snapshot={workflowTodoSnapshot}
-														goal={currentGoal}
-														onDismiss={onWorkflowTodoDismiss}
-														onGoalChange={onGoalChange}
-														onGoalDismiss={onGoalDismiss}
+											<Divider size="small" />
+
+											<div ref={chatBodyRef} className={styles.chatBody}>
+												{isHome ? (
+													<NewSessionHome
+														workspace={homeWorkspace}
+														errorMessage={sessionError}
+														message={message}
+														onStarterSelect={handleHomeStarterSelect}
 													/>
+												) : activeSessionId !== null ? (
+													<MarkdownResourceActionsProvider
+														value={{
+															workspaceRoot: workspaceForActions?.rootPath ?? null,
+															godotExecutablePath: effectiveGodotLaunchExecutablePath,
+															currentWorkspaceLaunch: workspaceForActions === null ? null : selectedLaunchTarget,
+															launchTargets: workspaceLaunchTargets
+														}}
+													>
+														<div className={styles.conversationStack}>
+															{activeSessionMetadata?.forkedFrom !== undefined && activeSessionMetadata.forkOriginDismissed !== true ? (
+																<ForkOriginBanner
+																	origin={activeSessionMetadata.forkedFrom}
+																	disabled={isSessionLoading}
+																	onOpenSource={onForkSourceOpen}
+																	onDismiss={onForkOriginDismiss}
+																/>
+															) : null}
+															<div className={styles.conversationTimelineSlot}>
+																<ConversationTimelinePane
+																	ref={conversationTimelinePaneRef}
+																	sessionId={activeSessionId}
+																	timelineStore={timelineStore}
+																	timelineNavigationEntries={timelineNavigationEntries}
+																	isLoading={isSessionLoading}
+																	errorMessage={sessionError}
+																	isLoadingMoreBefore={isLoadingMoreBefore}
+																	isLoadingMoreAfter={isLoadingMoreAfter}
+																	retryDisabled={retryDisabled}
+																	activeRetryRequestId={activeRetryRequestId}
+																	onLoadMoreBefore={onLoadMoreBefore}
+																	onLoadMoreAfter={onLoadMoreAfter}
+																	onTimelineNavigationLoadEntry={onTimelineNavigationLoadEntry}
+																	onTimelineSearchLoadOffset={onTimelineSearchLoadOffset}
+																	onRetryEditStart={onRetryEditStart}
+																	onRetryEditCancel={onRetryEditCancel}
+																	onRetryFromUserMessage={onRetryFromUserMessage}
+																	onForkFromUserMessage={onForkFromUserMessage}
+																	forkDisabled={forkDisabled}
+																	forkingRequestId={forkingRequestId}
+																	onInlineDiffReview={openReviewPanel}
+																	onAwayFromBottomChange={setScrollToBottomButtonVisible}
+																	contextItems={selectionMarkerContextItems}
+																	onAddContext={onAddContext}
+																	initialSelectionAskThreads={selectionAskThreads}
+																	goal={currentGoal}
+																/>
+															</div>
+														</div>
+													</MarkdownResourceActionsProvider>
 												) : null}
+											</div>
+
+											<footer className={styles.composer}>
 												{!isHome ? (
-													<MessageQueuePanel
-														messageQueue={messageQueue}
-														pendingGuides={pendingGuides}
-														activeQueueItemId={activeQueueItemId}
-														onQueueRemove={onQueueMessageRemove}
-														onQueueEdit={onQueueMessageEdit}
-														onQueueReorder={onQueueMessageReorder}
-														onGuideDelete={onGuideDelete}
-														onGuideReorder={onGuideReorder}
+													<Button
+														ref={scrollToBottomButtonRef}
+														shape="circle"
+														title={t("agentPage.actions.scrollToBottom")}
+														icon={<Icon name="arrow-bottom" />}
+														tabIndex={-1}
+														className={[
+															styles.scrollToBottomButton,
+															showExecutionStatusPanel ? styles.scrollToBottomButtonAboveExecutionStatus : "",
+															styles.scrollToBottomButtonHidden
+														].filter(Boolean).join(" ")}
+														onClick={scrollMessageListToBottom}
 													/>
 												) : null}
-												<Composer
-													key={composerInstanceKey}
-													providerModelSelection={providerModelSelection}
-													inputRequest={composerInputRequest ?? undefined}
-													nextStepSuggestion={nextStepSuggestion}
-											selectedProviderId={selectedProviderId}
-											selectedModelId={selectedModelId}
-											reasoningEffort={reasoningEffort}
-												message={message}
-												onDraftChange={onDraftChange}
+												{!isHome && pendingApproval !== null ? (
+													<ApprovalDialog
+														pendingApproval={pendingApproval}
+														isApproving={isApproving}
+														isRejecting={isRejecting}
+														errorMessage={approvalError}
+														onApprove={onApprovalApprove}
+														onReject={onApprovalReject}
+													/>
+												) : !isHome && pendingToolBudget !== null ? (
+													<ToolBudgetDialog
+														pendingToolBudget={pendingToolBudget}
+														isContinuing={isToolBudgetContinuing}
+														isStopping={isToolBudgetStopping}
+														isCancelling={isCancelling}
+														errorMessage={toolBudgetError}
+														onContinue={onToolBudgetContinue}
+														onStop={onToolBudgetStop}
+														onCancel={onCancel}
+													/>
+												) : !isHome && pendingPlanClarification !== null ? (
+													<ClarificationDialog
+														planId={pendingPlanClarification.planId}
+														title={pendingPlanClarification.title}
+														question={pendingPlanClarification.question}
+														recommendedReplies={pendingPlanClarification.recommendedReplies}
+														isSubmitting={isPlanClarificationSubmitting}
+														errorMessage={planClarificationError}
+														onSubmit={onPlanClarificationSubmit}
+														onSkip={onPlanClarificationSkip}
+													/>
+												) : !isHome && pendingPlanApproval !== null ? (
+													<PlanApprovalDialog
+														plan={pendingPlanApproval}
+														isApproving={isPlanApproving}
+														isRevising={isPlanRevising}
+														errorMessage={planApprovalError}
+														onApprove={onPlanApprove}
+														onRevise={onPlanRevise}
+													/>
+												) : (
+													<>
+														{showExecutionStatusPanel ? (
+															<TimelineWorkflowTodoPanel
+																timelineStore={timelineStore}
+																sessionId={activeSessionId!}
+																snapshot={workflowTodoSnapshot}
+																goal={currentGoal}
+																onDismiss={onWorkflowTodoDismiss}
+																onGoalChange={onGoalChange}
+																onGoalDismiss={onGoalDismiss}
+															/>
+														) : null}
+														{!isHome ? (
+															<MessageQueuePanel
+																messageQueue={messageQueue}
+																pendingGuides={pendingGuides}
+																activeQueueItemId={activeQueueItemId}
+																onQueueRemove={onQueueMessageRemove}
+																onQueueEdit={onQueueMessageEdit}
+																onQueueReorder={onQueueMessageReorder}
+																onGuideDelete={onGuideDelete}
+																onGuideReorder={onGuideReorder}
+															/>
+														) : null}
+														<Composer
+															key={composerInstanceKey}
+															providerModelSelection={providerModelSelection}
+															inputRequest={composerInputRequest ?? undefined}
+															nextStepSuggestion={nextStepSuggestion}
+															selectedProviderId={selectedProviderId}
+															selectedModelId={selectedModelId}
+															reasoningEffort={reasoningEffort}
+															message={message}
+															onDraftChange={onDraftChange}
+															contextItems={contextItems}
+															mode={mode}
+															approvalMode={approvalMode}
+															slashCommands={slashCommands}
+															skills={skills}
+															isSending={isSending}
+															isCancelling={isCancelling}
+															isAddingTextAttachment={isAddingTextAttachment}
+															isApprovalModeSaving={isApprovalModeSaving}
+															workspaceOptions={workspaceOptions}
+															selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
+															workspaceFooterDisabled={workspaceFooterDisabled}
+															showContextUsage={!isHome}
+															onModeChange={onModeChange}
+															onApprovalModeChange={onApprovalModeChange}
+															onProviderModelChange={onProviderModelChange}
+															onConfigureProvider={(): void => {
+																void window.electronAPI.windowControl.openSettings("provider");
+															}}
+															onReasoningEffortChange={onReasoningEffortChange}
+															onAddFiles={onAddFiles}
+															onAddFolder={onAddFolder}
+															onAddImages={onAddImages}
+															onAddPastedTextAttachment={onAddPastedTextAttachment}
+															onAddContextFiles={onAddContextFiles}
+															onWorkspaceSelect={isHome ? onHomeWorkspaceSelect : undefined}
+															onWorkspaceAdd={isHome ? onHomeWorkspaceAdd : undefined}
+															onWorkspaceClear={isHome ? onHomeWorkspaceClear : undefined}
+															onRemoveContext={onRemoveContext}
+															onPinContext={onPinContext}
+															onClearUnpinnedContext={onClearUnpinnedContext}
+															onCancel={onCancel}
+															onSubmit={onSubmit}
+															onGuideSubmit={onGuideSubmit}
+															onCompletionOpen={onCompletionOpen}
+														/>
+													</>
+												)}
+											</footer>
+										</section>
+									</Splitter.Panel>
+									{showSideDockButton ? (
+										<Splitter.Panel
+											size={sideDockOpen ? sideDockSize : SIDE_DOCK_CLOSED_SIZE}
+											min={SIDE_DOCK_CLOSED_SIZE}
+											max={SIDE_DOCK_MAX_SIZE}
+											collapsible={{ start: true, showCollapsibleIcon: false }}
+										>
+											<div className={styles.sideDockSlot} aria-hidden={!sideDockOpen}>
+												<DockPanelTabs
+													dockId="side"
+													placement="side"
+													sessionId={activeSessionId}
+													workspaceId={workspaceForActions?.id ?? null}
+													sourceFolderId={summaryGitSourceFolderId}
+													sourceFolders={workspaceForActions?.sourceFolders ?? []}
+													primarySourceFolderId={workspaceForActions?.primarySourceFolderId ?? null}
+													onSourceFolderChange={handleGitReviewSourceFolderChange}
+													cwd={workspaceForActions?.rootPath ?? null}
 													contextItems={contextItems}
-													mode={mode}
-													approvalMode={approvalMode}
-													slashCommands={slashCommands}
-													skills={skills}
-											isSending={isSending}
-											isCancelling={isCancelling}
-											isAddingTextAttachment={isAddingTextAttachment}
-											isApprovalModeSaving={isApprovalModeSaving}
-											workspaceOptions={workspaceOptions}
-											selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
-											workspaceFooterDisabled={workspaceFooterDisabled}
-											showContextUsage={!isHome}
-												onModeChange={onModeChange}
-													onApprovalModeChange={onApprovalModeChange}
-											onProviderModelChange={onProviderModelChange}
-											onConfigureProvider={(): void => {
-												void window.electronAPI.windowControl.openSettings("provider");
-											}}
-											onReasoningEffortChange={onReasoningEffortChange}
-													onAddFiles={onAddFiles}
-													onAddFolder={onAddFolder}
-											onAddImages={onAddImages}
-											onAddPastedTextAttachment={onAddPastedTextAttachment}
-											onAddContextFiles={onAddContextFiles}
-								onWorkspaceSelect={isHome ? onHomeWorkspaceSelect : undefined}
-								onWorkspaceAdd={isHome ? onHomeWorkspaceAdd : undefined}
-								onWorkspaceClear={isHome ? onHomeWorkspaceClear : undefined}
+													onAddContext={onAddContext}
 													onRemoveContext={onRemoveContext}
-													onPinContext={onPinContext}
-													onClearUnpinnedContext={onClearUnpinnedContext}
-													onCancel={onCancel}
-													onSubmit={onSubmit}
-													onGuideSubmit={onGuideSubmit}
-													onCompletionOpen={onCompletionOpen}
+													gitStateRevision={gitStateRevision}
+													onGitStateChange={handleDockGitStateChange}
+													isOpen={sideDockOpen}
+													waitForCwd={terminalWaitForCwd}
+													defaultKind="review"
+													layout={visualSessionLayout.side}
+													activationRequest={sideDockActivationRequest}
+													onLayoutChange={updateSideDock}
 												/>
-											</>
-										)}
-									</footer>
-								</section>
+											</div>
+										</Splitter.Panel>
+									) : null}
+								</Splitter>
 							</Splitter.Panel>
-							{showSideDockButton ? (
+							{showBottomDockButton ? (
 								<Splitter.Panel
-									size={sideDockOpen ? sideDockSize : SIDE_DOCK_CLOSED_SIZE}
-									min={SIDE_DOCK_CLOSED_SIZE}
-									max={SIDE_DOCK_MAX_SIZE}
+									size={bottomDockOpen ? bottomDockSize : BOTTOM_DOCK_CLOSED_SIZE}
+									min={BOTTOM_DOCK_CLOSED_SIZE}
+									max={BOTTOM_DOCK_MAX_SIZE}
 									collapsible={{ start: true, showCollapsibleIcon: false }}
 								>
-									<div className={styles.sideDockSlot} aria-hidden={!sideDockOpen}>
+									<div className={styles.bottomDockSlot} aria-hidden={!bottomDockOpen}>
 										<DockPanelTabs
-											dockId="side"
-											placement="side"
+											dockId="bottom"
+											placement="bottom"
 											sessionId={activeSessionId}
 											workspaceId={workspaceForActions?.id ?? null}
 											sourceFolderId={summaryGitSourceFolderId}
@@ -2350,54 +2406,19 @@ function HomePage({
 											cwd={workspaceForActions?.rootPath ?? null}
 											contextItems={contextItems}
 											onAddContext={onAddContext}
-										onRemoveContext={onRemoveContext}
-										gitStateRevision={gitStateRevision}
-										onGitStateChange={handleDockGitStateChange}
-											isOpen={sideDockOpen}
+											onRemoveContext={onRemoveContext}
+											gitStateRevision={gitStateRevision}
+											onGitStateChange={handleDockGitStateChange}
+											isOpen={bottomDockOpen}
 											waitForCwd={terminalWaitForCwd}
-											defaultKind="review"
-											layout={visualSessionLayout.side}
-											activationRequest={sideDockActivationRequest}
-											onLayoutChange={updateSideDock}
+											defaultKind="terminal"
+											layout={visualSessionLayout.bottom}
+											onLayoutChange={updateBottomDock}
 										/>
 									</div>
 								</Splitter.Panel>
 							) : null}
 						</Splitter>
-					</Splitter.Panel>
-					{showBottomDockButton ? (
-						<Splitter.Panel
-							size={bottomDockOpen ? bottomDockSize : BOTTOM_DOCK_CLOSED_SIZE}
-							min={BOTTOM_DOCK_CLOSED_SIZE}
-							max={BOTTOM_DOCK_MAX_SIZE}
-							collapsible={{ start: true, showCollapsibleIcon: false }}
-						>
-							<div className={styles.bottomDockSlot} aria-hidden={!bottomDockOpen}>
-								<DockPanelTabs
-									dockId="bottom"
-									placement="bottom"
-									sessionId={activeSessionId}
-									workspaceId={workspaceForActions?.id ?? null}
-									sourceFolderId={summaryGitSourceFolderId}
-									sourceFolders={workspaceForActions?.sourceFolders ?? []}
-									primarySourceFolderId={workspaceForActions?.primarySourceFolderId ?? null}
-									onSourceFolderChange={handleGitReviewSourceFolderChange}
-									cwd={workspaceForActions?.rootPath ?? null}
-									contextItems={contextItems}
-									onAddContext={onAddContext}
-									onRemoveContext={onRemoveContext}
-									gitStateRevision={gitStateRevision}
-									onGitStateChange={handleDockGitStateChange}
-									isOpen={bottomDockOpen}
-									waitForCwd={terminalWaitForCwd}
-									defaultKind="terminal"
-									layout={visualSessionLayout.bottom}
-									onLayoutChange={updateBottomDock}
-								/>
-							</div>
-						</Splitter.Panel>
-					) : null}
-				</Splitter>
 					</div>
 				</Splitter.Panel>
 			</Splitter>

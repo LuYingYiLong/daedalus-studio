@@ -59,6 +59,7 @@ export type SessionMetadata = {
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
 	workflowTodoDismissedKey?: string | null;
+	forkOriginDismissed?: boolean;
 	forkedFrom?: SessionForkOrigin;
 	archivedAt?: string;
 	createdAt: string;

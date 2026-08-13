@@ -33,8 +33,14 @@ describe("session fork UI", () => {
 		expect(controller).not.toContain("setWorkbench({ ...result.workbench, composer: { ...result.workbench.composer, text: \"\" } });");
 		expect(home).toContain("activeSessionMetadata?.forkedFrom");
 		expect(home).toContain("<ForkOriginBanner");
+		expect(home).toContain('icon={<Icon name="fork" />}');
+		expect(home).toContain("onForkSourceOpen(activeSessionMetadata.forkedFrom!.sessionId)");
+		expect(home).toContain("onForkOriginDismiss");
+		expect(home).toContain("forkOriginDismissed !== true");
 		expect(home).toContain("<div className={styles.conversationTimelineSlot}>");
 		expect(banner).toContain("origin.messagePreview");
 		expect(banner).toContain("onOpenSource(origin.sessionId)");
+		expect(banner).toContain("onDismiss");
+		expect(banner).toContain('icon={<Icon name="close" />}');
 	});
 });
