@@ -94,7 +94,7 @@ jobs:
       - name: Download and verify backend bootstrap
         run: npm run prepare:backend-bootstrap
 
-      - name: Download and verify Editor Bridge
+      - name: Download and verify Daedalus Bridge
         run: npm run prepare:editor-bridge
 
       - name: Run tests
@@ -160,22 +160,22 @@ jobs:
             throw "Packaged backend self-test identity or required checks did not match the manifest."
           }
 
-      - name: Verify packaged Editor Bridge
+      - name: Verify packaged Daedalus Bridge
         shell: pwsh
         run: |
-          $pluginDir = Join-Path "release" "win-unpacked\resources\editor-bridge"
+          $pluginDir = Join-Path "release" "win-unpacked\resources\daedalus-bridge"
           $manifestPath = Join-Path $pluginDir "plugin-manifest.json"
           if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
-            throw "Packaged Editor Bridge manifest is missing."
+            throw "Packaged Daedalus Bridge manifest is missing."
           }
           $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
           $archivePath = Join-Path $pluginDir $manifest.archive.fileName
           if ($manifest.bridgeVersion -ne $env:GODOT_BRIDGE_VERSION) {
-            throw "Packaged Editor Bridge version does not match package.json."
+            throw "Packaged Daedalus Bridge version does not match package.json."
           }
           $expectedBridgeProtocolVersion = [int]$env:GODOT_BRIDGE_PROTOCOL_VERSION
           if ($manifest.bridgeProtocolVersion -ne $expectedBridgeProtocolVersion) {
-            throw "Packaged Editor Bridge Protocol $($manifest.bridgeProtocolVersion) does not match $expectedBridgeProtocolVersion."
+            throw "Packaged Daedalus Bridge Protocol $($manifest.bridgeProtocolVersion) does not match $expectedBridgeProtocolVersion."
           }
           if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf)) {
             throw "Packaged Editor Bridge archive is missing."

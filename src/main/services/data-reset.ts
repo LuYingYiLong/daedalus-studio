@@ -8,7 +8,7 @@ const STUDIO_DATA_ENTRIES: readonly string[] = [
 	"client-preferences.json",
 	"session-layouts.json",
 	"godot-projects.json",
-	"editor-bridge-staging"
+	"daedalus-bridge-staging"
 ];
 
 export type DataResetOptions = {

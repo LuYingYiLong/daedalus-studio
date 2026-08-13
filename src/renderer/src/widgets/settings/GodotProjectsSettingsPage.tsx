@@ -200,7 +200,7 @@ function GodotProjectsSettingsPage(): React.JSX.Element {
 					) : null}
 					{project.pluginVersion !== null && project.status !== "development" ? (
 						<Popconfirm
-							title={t("settings.godotProjects.confirmUninstall", { defaultValue: "Uninstall Daedalus Editor Bridge from this project?" })}
+							title={t("settings.godotProjects.confirmUninstall", { defaultValue: "Uninstall Daedalus Bridge from this project?" })}
 							onConfirm={(): void => { void runAction("uninstall", project); }}
 						>
 							<Button danger size="small" loading={actionLoading("uninstall", project)}>

@@ -66,30 +66,30 @@ describe("Godot project plugin management", () => {
 		].join("\n");
 		const enabled = updateEditorPluginEnabled(
 			source,
-			"res://addons/daedalus_editor_bridge/plugin.cfg",
+			"res://addons/daedalus_bridge/plugin.cfg",
 			true
 		);
 		expect(enabled).toContain('"res://addons/gut/plugin.cfg"');
-		expect(enabled).toContain('"res://addons/daedalus_editor_bridge/plugin.cfg"');
+		expect(enabled).toContain('"res://addons/daedalus_bridge/plugin.cfg"');
 		expect(enabled).toContain("[rendering]");
 
 		const disabled = updateEditorPluginEnabled(
 			enabled,
-			"res://addons/daedalus_editor_bridge/plugin.cfg",
+			"res://addons/daedalus_bridge/plugin.cfg",
 			false
 		);
 		expect(disabled).toContain('"res://addons/gut/plugin.cfg"');
-		expect(disabled).not.toContain('"res://addons/daedalus_editor_bridge/plugin.cfg"');
+		expect(disabled).not.toContain('"res://addons/daedalus_bridge/plugin.cfg"');
 	});
 
 	it("adds an editor_plugins section when the project has none", () => {
 		const updated = updateEditorPluginEnabled(
 			'[application]\nconfig/name="Demo"\n',
-			"res://addons/daedalus_editor_bridge/plugin.cfg",
+			"res://addons/daedalus_bridge/plugin.cfg",
 			true
 		);
 		expect(updated).toContain("[editor_plugins]");
-		expect(updated).toContain('PackedStringArray("res://addons/daedalus_editor_bridge/plugin.cfg")');
+		expect(updated).toContain('PackedStringArray("res://addons/daedalus_bridge/plugin.cfg")');
 	});
 
 	it("rejects archive paths that can escape the staging directory", () => {
@@ -117,24 +117,19 @@ describe("Godot project plugin management", () => {
 		expect(getGodotVersionCompatibilityError(null, "4.0.0")).toContain("Cannot determine");
 	});
 
-	it("recognizes the local Editor Bridge source project in development", () => {
+	it("recognizes the local Daedalus Bridge source project in development", () => {
 		expect(isDevelopmentPluginSourceProject(
-			"C:\\repo-parent\\daedalus-editor-bridge",
-			"C:\\repo-parent\\daedalus-studio",
-			undefined
-		)).toBe(true);
-		expect(isDevelopmentPluginSourceProject(
-			"C:\\repo-parent\\godot_projects\\godot-daedalus",
+			"C:\\repo-parent\\daedalus-bridge",
 			"C:\\repo-parent\\daedalus-studio",
 			undefined
 		)).toBe(true);
 		expect(isDevelopmentPluginSourceProject(
 			"C:\\projects\\custom-daedalus",
 			"C:\\repo-parent\\daedalus-studio",
-			"C:\\projects\\custom-daedalus\\addons\\daedalus_editor_bridge"
+			"C:\\projects\\custom-daedalus\\addons\\daedalus_bridge"
 		)).toBe(true);
 		expect(isDevelopmentPluginSourceProject(
-			"C:\\repo-parent\\daedalus-editor-bridge",
+			"C:\\repo-parent\\daedalus-bridge",
 			"C:\\repo-parent\\daedalus-studio",
 			" "
 		)).toBe(true);
@@ -147,10 +142,10 @@ describe("Godot project plugin management", () => {
 
 	it("treats Godot import metadata as mutable after installation", () => {
 		expect(isGodotManagedPluginFile(
-			"addons/daedalus_editor_bridge/status.svg.import"
+			"addons/daedalus_bridge/status.svg.import"
 		)).toBe(true);
 		expect(isGodotManagedPluginFile(
-			"addons/daedalus_editor_bridge/scripts/bridge_runtime.gd"
+			"addons/daedalus_bridge/scripts/bridge_runtime.gd"
 		)).toBe(false);
 		expect(isGodotManagedPluginFile(
 			"addons/other_plugin/icon.svg.import"

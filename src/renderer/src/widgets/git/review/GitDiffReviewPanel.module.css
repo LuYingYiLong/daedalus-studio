@@ -31,7 +31,7 @@
 	width: 100%;
 	min-height: 32px;
 	align-items: center;
-	grid-template-columns: minmax(0, 1fr) auto auto;
+	grid-template-columns: minmax(0, 1fr) minmax(112px, 180px) auto auto;
 	gap: var(--ds-space-1);
 	padding: 0 var(--ds-space-2);
 	user-select: none;
@@ -58,6 +58,15 @@
 	align-items: center;
 	flex: 0 0 auto;
 	gap: var(--ds-space-1);
+}
+
+.sourceFolderSelect {
+	min-width: 112px;
+	max-width: 180px;
+}
+
+.sourceFolderSelect :global(.ant-select-selector) {
+	font-size: 12px;
 }
 
 .body {

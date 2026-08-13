@@ -15,8 +15,8 @@ import { existsSync } from "node:fs";
 import { inflateRawSync } from "node:zlib";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-const PLUGIN_RESOURCE_PATH: string = "res://addons/daedalus_editor_bridge/plugin.cfg";
-const PLUGIN_RELATIVE_ROOT: string = "addons/daedalus_editor_bridge";
+const PLUGIN_RESOURCE_PATH: string = "res://addons/daedalus_bridge/plugin.cfg";
+const PLUGIN_RELATIVE_ROOT: string = "addons/daedalus_bridge";
 const PROJECT_STATE_SCHEMA_VERSION: 2 = 2;
 const MAX_ARCHIVE_BYTES: number = 64 * 1024 * 1024;
 const MAX_FILE_COUNT: number = 2_000;
@@ -128,15 +128,12 @@ function normalizeComparablePath(value: string): string {
 export function isDevelopmentPluginSourceProject(
 	projectPath: string,
 	appPath: string,
-	configuredSource: string | undefined = process.env.DAEDALUS_EDITOR_BRIDGE_SOURCE
+	configuredSource: string | undefined = process.env.DAEDALUS_BRIDGE_SOURCE
 ): boolean {
 	const explicitSource: string | null = configuredSource?.trim() || null;
 	const sourceRoots: string[] = explicitSource !== null
 		? [resolve(explicitSource)]
-		: [
-			join(appPath, "..", "daedalus-editor-bridge", PLUGIN_RELATIVE_ROOT),
-			join(appPath, "..", "godot_projects", "godot-daedalus", PLUGIN_RELATIVE_ROOT)
-		];
+		: [join(appPath, "..", "daedalus-bridge", PLUGIN_RELATIVE_ROOT)];
 	const projectBridgeRoot: string = normalizeComparablePath(join(projectPath, PLUGIN_RELATIVE_ROOT));
 	return sourceRoots.some((sourceRoot: string): boolean => (
 		projectBridgeRoot === normalizeComparablePath(sourceRoot)
@@ -540,19 +537,96 @@ class GodotProjectsService {
 	private loaded: boolean = false;
 	private pendingOperationTimer: NodeJS.Timeout | undefined;
 	private pendingOperationRun: Promise<void> | undefined;
+	private developmentBundlePreparation: Promise<void> | undefined;
 
 	private getStatePath(): string {
 		return join(app.getPath("userData"), "godot-projects.json");
 	}
 
 	private getPluginStagingRoot(): string {
-		return join(app.getPath("userData"), "editor-bridge-staging");
+		return join(app.getPath("userData"), "daedalus-bridge-staging");
 	}
 
 	private getBundleRoot(): string {
 		return app.isPackaged
-			? join(process.resourcesPath, "editor-bridge")
-			: join(app.getAppPath(), "build", "editor-bridge");
+			? join(process.resourcesPath, "daedalus-bridge")
+			: join(app.getAppPath(), "build", "daedalus-bridge");
+	}
+
+	private async hasCompleteDevelopmentBundle(): Promise<boolean> {
+		const root: string = this.getBundleRoot();
+		try {
+			const manifestValue: unknown = JSON.parse(
+				await readFile(join(root, "plugin-manifest.json"), "utf8")
+			) as unknown;
+			if (typeof manifestValue !== "object" || manifestValue === null || Array.isArray(manifestValue)) {
+				return false;
+			}
+			const archiveValue: unknown = (manifestValue as { archive?: unknown }).archive;
+			if (typeof archiveValue !== "object" || archiveValue === null || Array.isArray(archiveValue)) {
+				return false;
+			}
+			const fileName: unknown = (archiveValue as { fileName?: unknown }).fileName;
+			return typeof fileName === "string"
+				&& fileName.length > 0
+				&& existsSync(join(root, fileName));
+		} catch {
+			return false;
+		}
+	}
+
+	private async prepareDevelopmentBundle(): Promise<void> {
+		if (app.isPackaged || await this.hasCompleteDevelopmentBundle()) {
+			return;
+		}
+		if (this.developmentBundlePreparation === undefined) {
+			const appRoot: string = app.getAppPath();
+			const scriptPath: string = join(appRoot, "scripts", "prepare-editor-bridge.cjs");
+			this.developmentBundlePreparation = new Promise<void>((resolvePreparation, rejectPreparation): void => {
+				if (!existsSync(scriptPath)) {
+					rejectPreparation(new Error(`Daedalus Bridge preparation script is missing: ${scriptPath}`));
+					return;
+				}
+				execFile(
+					process.execPath,
+					[scriptPath],
+					{
+						cwd: appRoot,
+						encoding: "utf8",
+						env: {
+							...process.env,
+							ELECTRON_RUN_AS_NODE: "1"
+						},
+						maxBuffer: 2 * 1024 * 1024,
+						timeout: 60_000,
+						windowsHide: true
+					},
+					(error: Error | null, _stdout: string, stderr: string): void => {
+						if (error === null) {
+							resolvePreparation();
+							return;
+						}
+						const detail: string = stderr.trim();
+						rejectPreparation(new Error(
+							detail.length > 0
+								? `Unable to prepare Daedalus Bridge: ${detail}`
+								: `Unable to prepare Daedalus Bridge: ${error.message}`
+						));
+					}
+				);
+			});
+		}
+		const activePreparation: Promise<void> = this.developmentBundlePreparation;
+		try {
+			await activePreparation;
+		} finally {
+			if (this.developmentBundlePreparation === activePreparation) {
+				this.developmentBundlePreparation = undefined;
+			}
+		}
+		if (!await this.hasCompleteDevelopmentBundle()) {
+			throw new Error("Daedalus Bridge preparation completed without producing a usable package.");
+		}
 	}
 
 	private async loadState(): Promise<void> {
@@ -620,6 +694,7 @@ class GodotProjectsService {
 		manifest: PluginPackageManifest;
 		archive: Buffer;
 	}> {
+		await this.prepareDevelopmentBundle();
 		const root: string = this.getBundleRoot();
 		const manifest: PluginPackageManifest = parsePluginManifest(
 			JSON.parse(await readFile(join(root, "plugin-manifest.json"), "utf8")) as unknown
@@ -984,10 +1059,10 @@ class GodotProjectsService {
 		const originalProjectText: string = await readFile(projectFile, "utf8");
 		const addonsRoot: string = join(projectPath, "addons");
 		const operationId: string = `${process.pid}-${randomBytes(6).toString("hex")}`;
-		const stagingRoot: string = join(addonsRoot, `.daedalus_editor_bridge.staging-${operationId}`);
+		const stagingRoot: string = join(addonsRoot, `.daedalus_bridge.staging-${operationId}`);
 		const stagedPlugin: string = join(stagingRoot, PLUGIN_RELATIVE_ROOT);
 		const targetPlugin: string = join(projectPath, PLUGIN_RELATIVE_ROOT);
-		const backupPlugin: string = join(addonsRoot, `.daedalus_editor_bridge.backup-${operationId}`);
+		const backupPlugin: string = join(addonsRoot, `.daedalus_bridge.backup-${operationId}`);
 		let movedOriginal: boolean = false;
 		let installedCandidate: boolean = false;
 		let projectFileUpdated: boolean = false;
@@ -998,7 +1073,7 @@ class GodotProjectsService {
 			} else {
 				const stagingBase: string = await realpath(this.getPluginStagingRoot());
 				const source: string = await realpath(externalStagedPluginPath);
-				if (!isInside(stagingBase, source) || basename(source) !== "daedalus_editor_bridge") {
+				if (!isInside(stagingBase, source) || basename(source) !== "daedalus_bridge") {
 					throw new Error("Staged Godot plugin is outside the managed staging directory.");
 				}
 				await cp(source, stagedPlugin, { recursive: true, errorOnExist: true, force: false });
@@ -1044,7 +1119,7 @@ class GodotProjectsService {
 			throw new Error("Godot project is unavailable.");
 		}
 		if (!app.isPackaged && isDevelopmentPluginSourceProject(projectPath, app.getAppPath())) {
-			throw new Error("The local Godot-Daedalus development source cannot be replaced by the bundled plugin.");
+			throw new Error("The local Daedalus Bridge development source cannot be replaced by the bundled plugin.");
 		}
 		const pluginPackage = await this.loadPackage();
 		const current: GodotProjectInfo = await this.inspectProject(projectPath, pluginPackage, null);
@@ -1095,7 +1170,7 @@ class GodotProjectsService {
 	public async setEnabled(projectPathInput: string, enabled: boolean): Promise<GodotProjectScanResult> {
 		const projectPath: string | null = await this.normalizeProjectPath(projectPathInput);
 		if (projectPath === null || !existsSync(join(projectPath, PLUGIN_RELATIVE_ROOT, "plugin.cfg"))) {
-			throw new Error("Daedalus Editor Bridge is not installed in this project.");
+			throw new Error("Daedalus Bridge is not installed in this project.");
 		}
 		if (await isGodotEditorRunning()) {
 			await this.replacePendingOperation(projectPath, {
@@ -1121,7 +1196,7 @@ class GodotProjectsService {
 		const trashPlugin: string = join(
 			projectPath,
 			"addons",
-			`.daedalus_editor_bridge.remove-${process.pid}-${randomBytes(5).toString("hex")}`
+			`.daedalus_bridge.remove-${process.pid}-${randomBytes(5).toString("hex")}`
 		);
 		let moved: boolean = false;
 		let projectFileUpdated: boolean = false;

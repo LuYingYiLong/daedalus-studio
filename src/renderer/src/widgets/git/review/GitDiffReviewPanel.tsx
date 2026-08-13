@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
-import { Alert, Button, Collapse, Divider, Empty, Spin, Tooltip, Typography } from "antd";
+import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { Alert, Button, Collapse, Divider, Empty, Select, Spin, Tooltip, Typography } from "antd";
 import type { CollapseProps } from "antd";
 import { useTranslation } from "react-i18next";
 import {
@@ -20,18 +20,26 @@ import {
 	type WorkspaceGitDiffFileSummary,
 	type WorkspaceGitDiffSummaryResult
 } from "@/platform/rpc/workspace-git-diff-api";
-import type { AdditionalContextItem } from "@/platform/rpc/types";
+import type { AdditionalContextItem, WorkspaceSourceFolder } from "@/platform/rpc/types";
 import { Icon } from "@/assets/icons";
 import BranchActionDialog from "@/widgets/git/BranchActionDialog";
 import CommitActionDialog from "@/widgets/git/CommitActionDialog";
 import CreateBranchDialog from "@/widgets/git/CreateBranchDialog";
 import { useGitActionDialogController } from "@/features/git/useGitActionDialogController";
 import GitDiffReviewCommentDialog, { type GitDiffReviewCommentTarget } from "./GitDiffReviewCommentDialog";
+import {
+	getSourceFolderDisplayName,
+	resolveGitReviewRequestSourceFolderId,
+	resolveGitReviewSourceFolderId
+} from "./source-folder-selection";
 import styles from "./GitDiffReviewPanel.module.css";
 
 export type GitDiffReviewPanelProps = {
 	workspaceId: string;
 	sourceFolderId?: string | null;
+	sourceFolders: WorkspaceSourceFolder[];
+	primarySourceFolderId?: string | null;
+	onSourceFolderChange?: (sourceFolderId: string | null) => void;
 	gitStateRevision?: number;
 	contextItems: AdditionalContextItem[];
 	onAddContext: (item: AdditionalContextItem) => void;
@@ -47,6 +55,7 @@ type FilePreviewState = {
 
 type ReviewCommentData = {
 	workspaceId?: string;
+	sourceFolderId?: string;
 	oldLine?: number;
 	newLine?: number;
 	lineText?: string;
@@ -61,6 +70,7 @@ function getReviewCommentData(item: AdditionalContextItem): ReviewCommentData {
 	const data: Record<string, unknown> = getDataRecord(item.data);
 	return {
 		workspaceId: typeof data.workspaceId === "string" ? data.workspaceId : undefined,
+		sourceFolderId: typeof data.sourceFolderId === "string" ? data.sourceFolderId : undefined,
 		oldLine: typeof data.oldLine === "number" ? data.oldLine : undefined,
 		newLine: typeof data.newLine === "number" ? data.newLine : undefined,
 		lineText: typeof data.lineText === "string" ? data.lineText : undefined,
@@ -116,8 +126,32 @@ function renderFileStats(file: WorkspaceGitDiffFileSummary): ReactElement {
 	);
 }
 
-function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, gitStateRevision = 0, contextItems, onAddContext, onRemoveContext, onGitStateChange }: GitDiffReviewPanelProps): ReactElement {
+function GitDiffReviewPanel({
+	workspaceId,
+	sourceFolderId = null,
+	sourceFolders,
+	primarySourceFolderId = null,
+	onSourceFolderChange,
+	gitStateRevision = 0,
+	contextItems,
+	onAddContext,
+	onRemoveContext,
+	onGitStateChange
+}: GitDiffReviewPanelProps): ReactElement {
 	const { t } = useTranslation();
+	const selectedSourceFolderId: string | null = resolveGitReviewSourceFolderId(
+		sourceFolders,
+		sourceFolderId,
+		primarySourceFolderId
+	);
+	const requestSourceFolderId: string | undefined = resolveGitReviewRequestSourceFolderId(
+		sourceFolders,
+		selectedSourceFolderId
+	);
+	const selectedSourceFolderIdRef = useRef<string | null>(selectedSourceFolderId);
+	selectedSourceFolderIdRef.current = selectedSourceFolderId;
+	const summaryRequestIdRef = useRef<number>(0);
+	const fileRequestIdsRef = useRef<Map<string, number>>(new Map());
 	const [summary, setSummary] = useState<WorkspaceGitDiffSummaryResult | null>(null);
 	const [files, setFiles] = useState<WorkspaceGitDiffFileSummary[]>([]);
 	const [nextCursor, setNextCursor] = useState<number | null>(null);
@@ -129,9 +163,17 @@ function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, gitStateRevisi
 	const [commentTarget, setCommentTarget] = useState<GitDiffReviewCommentTarget | null>(null);
 
 	async function loadFile(path: string, force: boolean = false): Promise<void> {
+		const requestSelectedSourceFolderId: string | null = selectedSourceFolderId;
+		const backendSourceFolderId: string | undefined = requestSourceFolderId;
+		if (requestSelectedSourceFolderId === null) {
+			return;
+		}
 		if (!force && (previews[path]?.status === "loading" || previews[path]?.status === "loaded")) {
 			return;
 		}
+		const requestKey: string = `${requestSelectedSourceFolderId}:${path}`;
+		const requestId: number = (fileRequestIdsRef.current.get(requestKey) ?? 0) + 1;
+		fileRequestIdsRef.current.set(requestKey, requestId);
 		setPreviews((current: Record<string, FilePreviewState>): Record<string, FilePreviewState> => ({
 			...current,
 			[path]: { status: "loading" }
@@ -139,14 +181,20 @@ function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, gitStateRevisi
 		try {
 			const result: WorkspaceGitDiffFileResult = await fetchWorkspaceGitDiffFile({
 				workspaceId,
-				sourceFolderId: sourceFolderId ?? undefined,
+				sourceFolderId: backendSourceFolderId,
 				path
 			});
+			if (selectedSourceFolderIdRef.current !== requestSelectedSourceFolderId || fileRequestIdsRef.current.get(requestKey) !== requestId) {
+				return;
+			}
 			setPreviews((current: Record<string, FilePreviewState>): Record<string, FilePreviewState> => ({
 				...current,
 				[path]: { status: "loaded", result }
 			}));
 		} catch (error: unknown) {
+			if (selectedSourceFolderIdRef.current !== requestSelectedSourceFolderId || fileRequestIdsRef.current.get(requestKey) !== requestId) {
+				return;
+			}
 			setPreviews((current: Record<string, FilePreviewState>): Record<string, FilePreviewState> => ({
 				...current,
 				[path]: { status: "error", errorMessage: error instanceof Error ? error.message : t("review.errors.loadFile") }
@@ -155,6 +203,12 @@ function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, gitStateRevisi
 	}
 
 	async function loadSummary(reset: boolean): Promise<void> {
+		const requestSelectedSourceFolderId: string | null = selectedSourceFolderId;
+		const backendSourceFolderId: string | undefined = requestSourceFolderId;
+		if (requestSelectedSourceFolderId === null) {
+			return;
+		}
+		const requestId: number = ++summaryRequestIdRef.current;
 		if (reset) {
 			setIsLoadingSummary(true);
 			setErrorMessage(null);
@@ -164,10 +218,13 @@ function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, gitStateRevisi
 		try {
 			const result: WorkspaceGitDiffSummaryResult = await fetchWorkspaceGitDiffSummary({
 				workspaceId,
-				sourceFolderId: sourceFolderId ?? undefined,
+				sourceFolderId: backendSourceFolderId,
 				cursor: reset ? 0 : nextCursor ?? 0,
 				limit: 100
 			});
+			if (requestId !== summaryRequestIdRef.current || selectedSourceFolderIdRef.current !== requestSelectedSourceFolderId) {
+				return;
+			}
 			setSummary(result);
 			setNextCursor(result.nextCursor);
 			if (reset) {
@@ -182,29 +239,63 @@ function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, gitStateRevisi
 				setFiles((current: WorkspaceGitDiffFileSummary[]): WorkspaceGitDiffFileSummary[] => [...current, ...result.files]);
 			}
 		} catch (error: unknown) {
+			if (requestId !== summaryRequestIdRef.current || selectedSourceFolderIdRef.current !== requestSelectedSourceFolderId) {
+				return;
+			}
 			setErrorMessage(error instanceof Error ? error.message : t("review.errors.loadDiff"));
 		} finally {
-			setIsLoadingSummary(false);
-			setIsLoadingMore(false);
+			if (requestId === summaryRequestIdRef.current && selectedSourceFolderIdRef.current === requestSelectedSourceFolderId) {
+				setIsLoadingSummary(false);
+				setIsLoadingMore(false);
+			}
 		}
 	}
 
 	useEffect((): void => {
-		void loadSummary(true);
-	}, [gitStateRevision, sourceFolderId, workspaceId]);
+		if (sourceFolderId !== selectedSourceFolderId) {
+			onSourceFolderChange?.(selectedSourceFolderId);
+		}
+	}, [onSourceFolderChange, selectedSourceFolderId, sourceFolderId]);
+
+	useEffect((): void => {
+		summaryRequestIdRef.current += 1;
+		fileRequestIdsRef.current.clear();
+		setSummary(null);
+		setFiles([]);
+		setNextCursor(null);
+		setPreviews({});
+		setExpandedKeys([]);
+		setErrorMessage(null);
+		setCommentTarget(null);
+		setIsLoadingSummary(false);
+		setIsLoadingMore(false);
+		if (selectedSourceFolderId !== null) {
+			void loadSummary(true);
+		}
+	}, [gitStateRevision, selectedSourceFolderId, workspaceId]);
 
 	const reviewComments: AdditionalContextItem[] = useMemo((): AdditionalContextItem[] => {
 		return contextItems.filter((item: AdditionalContextItem): boolean => {
-			return item.kind === "git_diff_comment" && getReviewCommentData(item).workspaceId === workspaceId;
+			const data: ReviewCommentData = getReviewCommentData(item);
+			return item.kind === "git_diff_comment"
+				&& data.workspaceId === workspaceId
+				&& (data.sourceFolderId === selectedSourceFolderId
+					|| (data.sourceFolderId === undefined && sourceFolders.length === 1));
 		});
-	}, [contextItems, workspaceId]);
+	}, [contextItems, selectedSourceFolderId, sourceFolders.length, workspaceId]);
+	const sourceFolderOptions = useMemo(() => sourceFolders.map((sourceFolder: WorkspaceSourceFolder) => ({
+		value: sourceFolder.id,
+		label: getSourceFolderDisplayName(sourceFolder),
+		title: sourceFolder.path
+	})), [sourceFolders]);
 	const autoExpandableKeys: string[] = useMemo((): string[] => {
 		return files.filter((file: WorkspaceGitDiffFileSummary): boolean => file.canAutoExpand).map((file: WorkspaceGitDiffFileSummary): string => file.path);
 	}, [files]);
 	const areAllEligibleExpanded: boolean = autoExpandableKeys.length > 0 && autoExpandableKeys.every((key: string): boolean => expandedKeys.includes(key));
 	const gitActions = useGitActionDialogController({
 		workspaceId,
-		sourceFolderId,
+		sourceFolderId: requestSourceFolderId ?? null,
+		resetKey: `${workspaceId}:${selectedSourceFolderId ?? "none"}`,
 		onCommitSuccess: async (): Promise<void> => {
 			if (onGitStateChange !== undefined) {
 				await onGitStateChange();
@@ -344,6 +435,18 @@ function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, gitStateRevisi
 				<div className={styles.titleBlock}>
 					{summary?.hasGitRepository ? <Typography.Text type="secondary" className={styles.meta}>{t("review.diffStats", { branch: summary.branch ?? t("git.detachedHead"), count: summary.changedFiles, additions: summary.additions, deletions: summary.deletions })}</Typography.Text> : null}
 				</div>
+				<Select
+					className={styles.sourceFolderSelect}
+					value={selectedSourceFolderId ?? undefined}
+					options={sourceFolderOptions}
+					placeholder={t("review.sourceFolder.placeholder")}
+					aria-label={t("review.sourceFolder.label")}
+					showSearch={true}
+					optionFilterProp="label"
+					disabled={sourceFolderOptions.length <= 1}
+					onChange={(nextSourceFolderId: string): void => onSourceFolderChange?.(nextSourceFolderId)}
+					suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
+				/>
 				<Tooltip title={t("git.commit.title")}><Button type="text" shape="circle" disabled={summary !== null && !summary.hasGitRepository} icon={<Icon name="git-commit" />} onClick={gitActions.openCommitDialog} /></Tooltip>
 				<div className={styles.headerActions}>
 					<Tooltip title={t(areAllEligibleExpanded ? "review.actions.collapseAllDiffs" : "review.actions.expandAllDiffs")}><Button type="text" shape="circle" disabled={autoExpandableKeys.length === 0} icon={<Icon name={areAllEligibleExpanded ? "fold" : "unfold"} />} onClick={toggleEligibleDiffs} /></Tooltip>
@@ -358,7 +461,18 @@ function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, gitStateRevisi
 							: !summary.hasGitRepository ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("review.empty.noGitRepository")} />
 								: files.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("review.empty.noWorkspaceChanges")} />
 									: <div className={styles.diffContent}>
-										<Collapse size="small" activeKey={expandedKeys} onChange={handleCollapseChange} items={collapseItems} className={styles.fileCollapse} />
+										<Collapse
+											size="small"
+											activeKey={expandedKeys}
+											onChange={handleCollapseChange}
+											items={collapseItems}
+											className={styles.fileCollapse}
+											expandIcon={({ isActive }) => (
+												<span className={`collapseExpandIcon ${isActive ? "collapseExpandIconActive" : ""}`}>
+													<Icon name="arrow-down" />
+												</span>
+											)}
+										/>
 										{nextCursor !== null ? <Button block={true} loading={isLoadingMore} onClick={(): void => { void loadSummary(false); }}>{t("review.actions.loadMoreFiles")}</Button> : null}
 									</div>}
 			</div>
@@ -378,7 +492,7 @@ function GitDiffReviewPanel({ workspaceId, sourceFolderId = null, gitStateRevisi
 						source: "manual",
 						resourcePath: commentTarget.path,
 						summary: comment,
-						data: { workspaceId, oldLine: commentTarget.oldLine, newLine: commentTarget.newLine, lineText: commentTarget.lineText, comment }
+						data: { workspaceId, sourceFolderId: selectedSourceFolderId, oldLine: commentTarget.oldLine, newLine: commentTarget.newLine, lineText: commentTarget.lineText, comment }
 					});
 					setCommentTarget(null);
 				}}

@@ -204,9 +204,9 @@
       }
     },
     "godotPlugin": {
-      "title": "Install Daedalus Editor Bridge",
+      "title": "Install Daedalus Bridge",
       "description": "Choose one or more Godot projects. The plugin connects their editors to Daedalus tools and diagnostics.",
-      "ready": "Daedalus Editor Bridge is installed for at least one project.",
+      "ready": "Daedalus Bridge is installed for at least one project.",
       "pendingRestart": "Plugin changes are staged and will apply after Godot closes.",
       "selected": "{{count}} project selected",
       "selected_other": "{{count}} projects selected",
@@ -759,6 +759,10 @@
   },
   "review": {
     "unknownFile": "Unknown file",
+    "sourceFolder": {
+      "label": "Source folder",
+      "placeholder": "Select source folder"
+    },
     "binaryFileChanged": "Binary file changed",
     "diffStats": "{{branch}} / {{count}} file / +{{additions}} -{{deletions}}",
     "diffStats_other": "{{branch}} / {{count}} files / +{{additions}} -{{deletions}}",
@@ -1353,7 +1357,7 @@
       "pendingRestart": "Plugin changes are waiting for Godot to close.",
       "pendingRestartDescription": "Studio has staged the plugin safely and will apply it automatically after all Godot editors have exited.",
       "confirmRepair": "Replace the installed plugin with the bundled version?",
-      "confirmUninstall": "Uninstall Daedalus Editor Bridge from this project?",
+      "confirmUninstall": "Uninstall Daedalus Bridge from this project?",
       "columns": {
         "project": "Project",
         "godot": "Godot",

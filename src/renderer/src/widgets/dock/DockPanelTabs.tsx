@@ -6,7 +6,7 @@ import PanelTabs, { type PanelTabsAddItem, type PanelTabsItem } from "@/widgets/
 import { Icon } from "@/assets/icons";
 import GitDiffReviewPanel from "@/widgets/git/review/GitDiffReviewPanel";
 import TerminalPanel from "@/widgets/terminal/TerminalPanel";
-import type { AdditionalContextItem } from "@/platform/rpc/types";
+import type { AdditionalContextItem, WorkspaceSourceFolder } from "@/platform/rpc/types";
 import {
 	createTerminalRuntimeId,
 	type DockLayoutPreferences,
@@ -30,6 +30,9 @@ type DockPanelTabsProps = {
 	sessionId: string | null;
 	workspaceId: string | null;
 	sourceFolderId?: string | null;
+	sourceFolders: WorkspaceSourceFolder[];
+	primarySourceFolderId?: string | null;
+	onSourceFolderChange?: (sourceFolderId: string | null) => void;
 	cwd: string | null;
 	isOpen: boolean;
 	waitForCwd: boolean;
@@ -98,6 +101,9 @@ function DockPanelTabs({
 	sessionId,
 	workspaceId,
 	sourceFolderId = null,
+	sourceFolders,
+	primarySourceFolderId = null,
+	onSourceFolderChange,
 	cwd,
 	isOpen,
 	waitForCwd,
@@ -224,7 +230,7 @@ function DockPanelTabs({
 				return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("dock.empty.noWorkspaceSelected")} />;
 			}
 			return isOpen
-				? <GitDiffReviewPanel workspaceId={workspaceId} sourceFolderId={sourceFolderId} gitStateRevision={gitStateRevision} contextItems={contextItems} onAddContext={onAddContext} onRemoveContext={onRemoveContext} onGitStateChange={onGitStateChange} />
+				? <GitDiffReviewPanel workspaceId={workspaceId} sourceFolderId={sourceFolderId} sourceFolders={sourceFolders} primarySourceFolderId={primarySourceFolderId} onSourceFolderChange={onSourceFolderChange} gitStateRevision={gitStateRevision} contextItems={contextItems} onAddContext={onAddContext} onRemoveContext={onRemoveContext} onGitStateChange={onGitStateChange} />
 				: null;
 		}
 

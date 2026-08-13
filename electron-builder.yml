@@ -22,10 +22,10 @@ extraResources:
     filter:
       - daedalus-backend.exe
       - backend-manifest.json
-  - from: build/editor-bridge
-    to: editor-bridge
+  - from: build/daedalus-bridge
+    to: daedalus-bridge
     filter:
-      - daedalus-editor-bridge-v*.zip
+      - daedalus-bridge-v*.zip
       - plugin-manifest.json
 
 asar: true

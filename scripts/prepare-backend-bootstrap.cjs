@@ -23,6 +23,7 @@ const releaseManifestName = "daedalus-backend-win32-x64.json";
 const releaseBaseUrl = "https://github.com/LuYingYiLong/daedalus-backend/releases";
 const maxArchiveBytes = 256 * 1024 * 1024;
 const expectedNodeVersion = "24.18.0";
+const siblingBackendRoot = resolve(projectRoot, "..", "daedalus-backend");
 
 function fail(message) {
 	throw new Error(`[prepare-backend-bootstrap] ${message}`);
@@ -49,6 +50,32 @@ function assertVersion(value) {
 		fail("BACKEND_BOOTSTRAP_VERSION must be a fixed semantic version.");
 	}
 	return value;
+}
+
+function validateBackendSource(sourceRoot, sourceKind) {
+	const packagePath = join(sourceRoot, "package.json");
+	const buildScriptPath = join(sourceRoot, "scripts", "build-windows-sea.ts");
+	if (!existsSync(packagePath) || !existsSync(buildScriptPath)) {
+		fail(`${sourceKind} is not a Daedalus Backend source repository: ${sourceRoot}`);
+	}
+	const sourceManifest = JSON.parse(readFileSync(packagePath, "utf8"));
+	if (sourceManifest.name !== "daedalus-backend" || sourceManifest.version !== version) {
+		fail(
+			`${sourceKind} must contain daedalus-backend ${version}, found ${String(sourceManifest.name)} ${String(sourceManifest.version)}.`
+		);
+	}
+	return sourceRoot;
+}
+
+function resolveBackendSource() {
+	if (existsSync(siblingBackendRoot)) {
+		return validateBackendSource(siblingBackendRoot, "Sibling backend repository");
+	}
+	const configuredSource = process.env.DAEDALUS_BACKEND_SOURCE;
+	if (typeof configuredSource === "string" && configuredSource.trim().length > 0) {
+		return validateBackendSource(resolve(configuredSource), "DAEDALUS_BACKEND_SOURCE");
+	}
+	return null;
 }
 
 function compareVersions(left, right) {
@@ -166,6 +193,38 @@ function installPayload(payloadDir) {
 	);
 }
 
+function buildSourcePayload(sourceRoot) {
+	const buildCommand = process.platform === "win32"
+		? process.env.ComSpec || "cmd.exe"
+		: "npm";
+	const buildArguments = process.platform === "win32"
+		? ["/d", "/s", "/c", "npm", "run", "release:sea:win"]
+		: ["run", "release:sea:win"];
+	console.log(`[prepare-backend-bootstrap] building backend from ${sourceRoot}`);
+	const result = spawnSync(
+		buildCommand,
+		buildArguments,
+		{
+			cwd: sourceRoot,
+			encoding: "utf8",
+			env: process.env,
+			maxBuffer: 32 * 1024 * 1024,
+			windowsHide: true
+		}
+	);
+	if (result.error !== undefined || result.status !== 0) {
+		fail(
+			result.stderr?.trim()
+				|| result.stdout?.trim()
+				|| result.error?.message
+				|| `Backend source build exited with ${String(result.status)}.`
+		);
+	}
+	const payloadDir = join(sourceRoot, "dist", "sea-win32-x64", "work", "payload");
+	readPayloadManifest(payloadDir);
+	return payloadDir;
+}
+
 async function download(url, targetPath, maxBytes) {
 	const response = await fetch(url, {
 		redirect: "follow",
@@ -281,6 +340,11 @@ async function downloadReleasePayload() {
 
 async function main() {
 	assertVersion(version);
+	const backendSource = resolveBackendSource();
+	if (backendSource !== null) {
+		installPayload(buildSourcePayload(backendSource));
+		return;
+	}
 	const override = process.env.DAEDALUS_BACKEND_BOOTSTRAP_DIR;
 	if (typeof override === "string" && override.trim().length > 0) {
 		installPayload(resolve(override));

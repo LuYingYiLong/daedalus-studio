@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../helpers/repo-paths";
 
 describe("backend bootstrap service", () => {
+	const prepareSource: string = readRepoFile("scripts", "prepare-backend-bootstrap.cjs");
 	const serviceSource: string = readRepoFile("src", "main", "services", "backend-bootstrap.ts");
 	const storeSource: string = readRepoFile("src", "main", "services", "backend-binary-store.ts");
 	const managerSource: string = readRepoFile("src", "main", "services", "backend-manager.ts");
@@ -65,5 +66,14 @@ describe("backend bootstrap service", () => {
 		expect(viteEnvSource).toContain("interface BackendBootstrapState");
 		expect(viteEnvSource).toContain("interface BackendBootstrapAPI");
 		expect(preloadSource).not.toContain("node:child_process");
+	});
+
+	it("prefers a sibling backend repository before environment and release fallbacks", () => {
+		expect(prepareSource).toContain('resolve(projectRoot, "..", "daedalus-backend")');
+		expect(prepareSource).toContain("if (existsSync(siblingBackendRoot))");
+		expect(prepareSource).toContain("process.env.DAEDALUS_BACKEND_SOURCE");
+		expect(prepareSource).toContain('["/d", "/s", "/c", "npm", "run", "release:sea:win"]');
+		expect(prepareSource.indexOf("const backendSource = resolveBackendSource();"))
+			.toBeLessThan(prepareSource.indexOf("process.env.DAEDALUS_BACKEND_BOOTSTRAP_DIR"));
 	});
 });

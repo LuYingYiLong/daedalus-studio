@@ -41,8 +41,15 @@ describe("HomePage git diff review source", () => {
 		expect(resizeStart).toBeGreaterThan(-1);
 		expect(resizeEnd).toBeGreaterThan(resizeStart);
 		expect(resizeSource).toContain("normalizedSize < SIDE_DOCK_CLOSE_THRESHOLD");
+		expect(resizeSource).toContain("performance.now() < sideDockProgrammaticOpenUntilRef.current");
 		expect(resizeSource).toContain("applyVisualSessionLayout({");
 		expect(resizeSource).toContain("side: { ...visualSessionLayoutRef.current.side, open: false }");
+	});
+
+	it("does not treat programmatic Splitter opening frames as a user close", () => {
+		expect(agentSource).toContain("const SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS: number = 400;");
+		expect(agentSource).toContain("sideDockProgrammaticOpenUntilRef.current = performance.now() + SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS;");
+		expect(agentSource).toContain("sideDockProgrammaticOpenUntilRef.current = 0;");
 	});
 
 	it("adds a fixed state-aware layout-right top menu button for the side dock", () => {
@@ -87,7 +94,7 @@ describe("HomePage git diff review source", () => {
 		expect(dockPanelTabsSource).toContain('t("dock.add.reviewPanel")');
 		expect(dockPanelTabsSource).toContain('t("dock.add.terminalPanel")');
 		expect(dockPanelTabsSource).toContain("ensurePanelTab(defaultKind)");
-		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} sourceFolderId={sourceFolderId} gitStateRevision={gitStateRevision} contextItems={contextItems}");
+		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} sourceFolderId={sourceFolderId} sourceFolders={sourceFolders} primarySourceFolderId={primarySourceFolderId} onSourceFolderChange={onSourceFolderChange} gitStateRevision={gitStateRevision} contextItems={contextItems}");
 		expect(dockPanelTabsSource).toContain("<TerminalPanel");
 		expect(dockPanelTabsSource).toContain("terminalId={createTerminalRuntimeId(sessionId, tab.key)}");
 		expect(dockPanelTabsSource).toContain("createTerminalRuntimeId(sessionId, targetKey)");
@@ -111,7 +118,15 @@ describe("HomePage git diff review source", () => {
 		expect(reviewPanelSource).toContain("await loadSummary(true);");
 		expect(reviewPanelSource).not.toContain("Promise.all([loadSummary(true), onGitStateChange?.()])");
 		expect(reviewPanelSource).toContain("gitStateRevision?: number;");
-		expect(reviewPanelSource).toContain("}, [gitStateRevision, sourceFolderId, workspaceId]);");
+		expect(reviewPanelSource).toContain("}, [gitStateRevision, selectedSourceFolderId, workspaceId]);");
+		expect(reviewPanelSource).toContain("resolveGitReviewSourceFolderId");
+		expect(reviewPanelSource).toContain("resolveGitReviewRequestSourceFolderId");
+		expect(reviewPanelSource).toContain("onSourceFolderChange?.(selectedSourceFolderId)");
+		expect(reviewPanelSource).toContain("selectedSourceFolderIdRef.current !== requestSelectedSourceFolderId");
+		expect(agentSource).toContain("workspaceOptions.find((workspace: WorkspaceConfig): boolean => workspace.id === workspaceSnapshotForActions.id)");
+		expect(agentSource).toContain("sourceFolders={workspaceForActions?.sourceFolders ?? []}");
+		expect(agentSource).toContain("onSourceFolderChange={handleGitReviewSourceFolderChange}");
+		expect(agentSource).toContain("current !== null && current.sourceFolderId !== sourceFolderId ? null : current");
 		expect(dockPanelTabsSource).toContain("gitStateRevision={gitStateRevision}");
 		expect(dockPanelTabsSource).toContain("onGitStateChange={onGitStateChange}");
 		expect(agentSource).toContain("const handleDockGitStateChange = useCallback");

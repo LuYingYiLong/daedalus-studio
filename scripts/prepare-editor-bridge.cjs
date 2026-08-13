@@ -15,22 +15,24 @@ const { dirname, join, relative, resolve } = require("node:path");
 
 const root = resolve(__dirname, "..");
 const packageManifest = require(join(root, "package.json"));
-const outputRoot = join(root, "build", "editor-bridge");
-const canonicalSourceRoot = join(root, "..", "daedalus-editor-bridge", "addons", "daedalus_editor_bridge");
-const legacyCheckoutSourceRoot = join(
-	root,
-	"..",
-	"godot_projects",
-	"godot-daedalus",
-	"addons",
-	"daedalus_editor_bridge"
-);
+const outputRoot = join(root, "build", "daedalus-bridge");
+const siblingRepositoryRoot = join(root, "..", "daedalus-bridge");
+const canonicalSourceRoot = join(root, "..", "daedalus-bridge", "addons", "daedalus_bridge");
+const configuredSourceValue = process.env.DAEDALUS_BRIDGE_SOURCE?.trim();
+const configuredSourceCandidate = configuredSourceValue ? resolve(configuredSourceValue) : null;
+const configuredSourceRoot = configuredSourceCandidate === null
+	? null
+	: existsSync(join(configuredSourceCandidate, "addons", "daedalus_bridge"))
+		? join(configuredSourceCandidate, "addons", "daedalus_bridge")
+		: configuredSourceCandidate;
+const siblingRepositoryExists = existsSync(siblingRepositoryRoot);
 const sourceRoot = resolve(
-	process.env.DAEDALUS_EDITOR_BRIDGE_SOURCE
-		|| (existsSync(canonicalSourceRoot) ? canonicalSourceRoot : legacyCheckoutSourceRoot)
+	siblingRepositoryExists
+		? canonicalSourceRoot
+		: configuredSourceRoot ?? canonicalSourceRoot
 );
 const sourceRepository = resolve(sourceRoot, "..", "..");
-const archiveName = `daedalus-editor-bridge-v${packageManifest.godotBridgeVersion}.zip`;
+const archiveName = `daedalus-bridge-v${packageManifest.godotBridgeVersion}.zip`;
 const archivePath = join(outputRoot, archiveName);
 
 const CRC_TABLE = (() => {
@@ -147,7 +149,7 @@ async function collectFiles(directory) {
 			const relativePath = relative(sourceRoot, path).replaceAll("\\", "/");
 			if (shouldInclude(relativePath)) {
 				entries.push({
-					path: `addons/daedalus_editor_bridge/${relativePath}`,
+					path: `addons/daedalus_bridge/${relativePath}`,
 					content: await readFile(path)
 				});
 			}
@@ -157,8 +159,8 @@ async function collectFiles(directory) {
 }
 
 function readSourceCommit() {
-	if (process.env.DAEDALUS_EDITOR_BRIDGE_SOURCE_COMMIT) {
-		return process.env.DAEDALUS_EDITOR_BRIDGE_SOURCE_COMMIT;
+	if (process.env.DAEDALUS_BRIDGE_SOURCE_COMMIT) {
+		return process.env.DAEDALUS_BRIDGE_SOURCE_COMMIT;
 	}
 	try {
 		return execFileSync("git", ["-c", `safe.directory=${sourceRepository.replaceAll("\\", "/")}`, "rev-parse", "HEAD"], {
@@ -173,7 +175,7 @@ function readSourceCommit() {
 
 function download(url, redirects = 0) {
 	if (redirects > 5) {
-		return Promise.reject(new Error("Too many redirects while downloading Daedalus Editor Bridge."));
+		return Promise.reject(new Error("Too many redirects while downloading Daedalus Bridge."));
 	}
 	return new Promise((resolveDownload, rejectDownload) => {
 		https.get(url, {
@@ -203,8 +205,8 @@ function download(url, redirects = 0) {
 
 async function prepareFromRelease() {
 	const version = packageManifest.godotBridgeVersion;
-	const releaseRoot = `https://github.com/LuYingYiLong/daedalus-editor-bridge/releases/download/v${version}`;
-	const releaseManifestName = `daedalus-editor-bridge-v${version}.manifest.json`;
+	const releaseRoot = `https://github.com/LuYingYiLong/daedalus-bridge/releases/download/v${version}`;
+	const releaseManifestName = `daedalus-bridge-v${version}.manifest.json`;
 	const [archive, manifestBuffer] = await Promise.all([
 		download(`${releaseRoot}/${archiveName}`),
 		download(`${releaseRoot}/${releaseManifestName}`)
@@ -217,7 +219,7 @@ async function prepareFromRelease() {
 		|| releaseManifest.archive?.sha256 !== sha256(archive)
 		|| !Array.isArray(releaseManifest.files)
 	) {
-		throw new Error("Downloaded Editor Bridge release manifest failed verification.");
+		throw new Error("Downloaded Daedalus Bridge release manifest failed verification.");
 	}
 	const manifest = {
 		...releaseManifest,
@@ -232,6 +234,12 @@ async function prepareFromRelease() {
 
 async function main() {
 	if (!existsSync(sourceRoot)) {
+		if (siblingRepositoryExists) {
+			throw new Error(`Sibling Daedalus Bridge repository is missing addons/daedalus_bridge: ${siblingRepositoryRoot}`);
+		}
+		if (configuredSourceRoot !== null) {
+			throw new Error(`DAEDALUS_BRIDGE_SOURCE is not a Daedalus Bridge repository or addon root: ${configuredSourceRoot}`);
+		}
 		await prepareFromRelease();
 		return;
 	}
@@ -242,26 +250,29 @@ async function main() {
 			`Bridge source version ${bridgeVersion || "unknown"} does not match package.json godotBridgeVersion ${packageManifest.godotBridgeVersion}.`
 		);
 	}
-	const pluginMetadata = JSON.parse(await readFile(join(sourceRoot, "daedalus-editor-bridge.json"), "utf8"));
+	const pluginMetadata = JSON.parse(await readFile(join(sourceRoot, "daedalus-bridge.json"), "utf8"));
 	if (
 		pluginMetadata.bridgeVersion !== bridgeVersion
 		|| pluginMetadata.studioVersion !== packageManifest.version
 		|| pluginMetadata.bridgeProtocolVersion !== packageManifest.godotBridgeProtocolVersion
+		|| pluginMetadata.name !== "Daedalus Bridge"
+		|| pluginMetadata.pluginId !== "DaedalusBridge"
+		|| pluginMetadata.installDirectory !== "addons/daedalus_bridge"
 		|| typeof pluginMetadata.minGodotVersion !== "string"
 		|| !/^\d+\.\d+\.\d+$/u.test(pluginMetadata.minGodotVersion)
 	) {
 		throw new Error(
-			"Plugin metadata does not match the Studio package manifest or contains an invalid protocol/minimum Godot version."
+			"Bridge metadata does not match the Studio package manifest, product identity, install directory, protocol, or minimum Godot version."
 		);
 	}
 	const bridgeProtocolVersion = pluginMetadata.bridgeProtocolVersion;
 	const files = await collectFiles(sourceRoot);
-	if (!files.some((entry) => entry.path === "addons/daedalus_editor_bridge/plugin.cfg")) {
-		throw new Error("Editor Bridge source does not contain plugin.cfg.");
+	if (!files.some((entry) => entry.path === "addons/daedalus_bridge/plugin.cfg")) {
+		throw new Error("Daedalus Bridge source does not contain plugin.cfg.");
 	}
 	for (const entry of files) {
 		if (entry.path.endsWith(".gd") && /uid:\/\//u.test(entry.content.toString("utf8"))) {
-			throw new Error(`Editor Bridge script contains a UID reference: ${entry.path}.`);
+			throw new Error(`Daedalus Bridge script contains a UID reference: ${entry.path}.`);
 		}
 	}
 	const integrityContent = Buffer.from(`${JSON.stringify({
@@ -275,7 +286,7 @@ async function main() {
 		}))
 	}, null, 2)}\n`, "utf8");
 	files.push({
-		path: "addons/daedalus_editor_bridge/daedalus-bridge-integrity.json",
+		path: "addons/daedalus_bridge/daedalus-bridge-integrity.json",
 		content: integrityContent
 	});
 	files.sort((left, right) => left.path.localeCompare(right.path));

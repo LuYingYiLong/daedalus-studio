@@ -203,9 +203,9 @@
       }
     },
     "godotPlugin": {
-      "title": "安装 Daedalus Editor Bridge",
+      "title": "安装 Daedalus Bridge",
       "description": "选择一个或多个 Godot 项目。插件会把编辑器连接到 Daedalus 工具和诊断服务。",
-      "ready": "至少一个项目已安装 Daedalus Editor Bridge。",
+      "ready": "至少一个项目已安装 Daedalus Bridge。",
       "pendingRestart": "插件更改已暂存，将在 Godot 关闭后应用。",
       "selected": "已选择 {{count}} 个项目",
       "empty": "没有发现 Godot 项目。",
@@ -757,6 +757,10 @@
   },
   "review": {
     "unknownFile": "未知文件",
+    "sourceFolder": {
+      "label": "源文件夹",
+      "placeholder": "选择源文件夹"
+    },
     "binaryFileChanged": "二进制文件已变更",
     "diffStats": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
     "diffStats_other": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
@@ -1346,7 +1350,7 @@
       "pendingRestart": "插件变更正等待 Godot 关闭。",
       "pendingRestartDescription": "Studio 已安全暂存插件；所有 Godot 编辑器退出后将自动应用变更。",
       "confirmRepair": "要使用内置版本替换当前安装的插件吗？",
-      "confirmUninstall": "要从该项目卸载 Daedalus Editor Bridge 吗？",
+      "confirmUninstall": "要从该项目卸载 Daedalus Bridge 吗？",
       "columns": {
         "project": "项目",
         "godot": "Godot",

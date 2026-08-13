@@ -102,6 +102,7 @@ const SIDE_DOCK_CLOSED_SIZE: number = 0;
 const SIDE_DOCK_DEFAULT_SIZE: number = 520;
 const SIDE_DOCK_MAX_SIZE: number = 720;
 const SIDE_DOCK_CLOSE_THRESHOLD: number = 150;
+const SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS: number = 400;
 const BOTTOM_DOCK_CLOSED_SIZE: number = 0;
 const BOTTOM_DOCK_DEFAULT_SIZE: number = 280;
 const BOTTOM_DOCK_MAX_SIZE: number = 520;
@@ -643,6 +644,7 @@ function HomePage({
 	const [visualWorkspaceSidebar, setVisualWorkspaceSidebar] = useState<WorkspaceSidebarPreferences>(workspaceSidebar);
 	const [visualSessionLayout, setVisualSessionLayout] = useState<SessionLayoutPreferences>(sessionLayout);
 	const dockActivationRequestIdRef = useRef<number>(0);
+	const sideDockProgrammaticOpenUntilRef = useRef<number>(0);
 	const summaryRequestIdRef = useRef<number>(0);
 	const summaryGitActionRequestIdRef = useRef<number>(0);
 	const planPreviewRequestIdRef = useRef<number>(0);
@@ -778,7 +780,11 @@ function HomePage({
 			flushSessionLayoutSave();
 		};
 	}, []);
-	const workspaceForActions: WorkspaceConfig | null = activeWorkspace ?? (isHome ? homeWorkspace : null);
+	const workspaceSnapshotForActions: WorkspaceConfig | null = activeWorkspace ?? (isHome ? homeWorkspace : null);
+	const workspaceForActions: WorkspaceConfig | null = workspaceSnapshotForActions === null
+		? null
+		: workspaceOptions.find((workspace: WorkspaceConfig): boolean => workspace.id === workspaceSnapshotForActions.id)
+			?? workspaceSnapshotForActions;
 	const summaryScopeKey: string = activeSessionId ?? `workspace:${workspaceForActions?.id ?? "none"}`;
 	const summaryOverviewTargetRef = useRef<SummaryOverviewTarget>({
 		scopeKey: summaryScopeKey,
@@ -895,6 +901,7 @@ function HomePage({
 			return;
 		}
 
+		sideDockProgrammaticOpenUntilRef.current = performance.now() + SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS;
 		dockActivationRequestIdRef.current += 1;
 		setSideDockActivationRequest({
 			id: dockActivationRequestIdRef.current,
@@ -1138,6 +1145,12 @@ function HomePage({
 		onWorkspaceRefresh();
 		await loadSummaryOverview();
 	}, [loadSummaryOverview, onWorkspaceRefresh]);
+	const handleGitReviewSourceFolderChange = useCallback((sourceFolderId: string | null): void => {
+		setSummaryGitSourceFolderId(sourceFolderId);
+		setSummaryGitActionRequest((current: SummaryGitActionRequest | null): SummaryGitActionRequest | null => (
+			current !== null && current.sourceFolderId !== sourceFolderId ? null : current
+		));
+	}, []);
 
 	const gitActions = useGitActionDialogController({
 		workspaceId: workspaceForActions?.id ?? null,
@@ -1597,6 +1610,7 @@ function HomePage({
 	}, []);
 
 	const openSideDock = useCallback((kind?: DockPanelKind): void => {
+		sideDockProgrammaticOpenUntilRef.current = performance.now() + SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS;
 		scheduleSessionLayoutSave({
 			...visualSessionLayoutRef.current,
 			side: { ...visualSessionLayoutRef.current.side, open: true }
@@ -1607,6 +1621,7 @@ function HomePage({
 	}, [requestSideDockKind, scheduleSessionLayoutSave]);
 
 	const closeSideDock = useCallback((): void => {
+		sideDockProgrammaticOpenUntilRef.current = 0;
 		scheduleSessionLayoutSave({
 			...visualSessionLayoutRef.current,
 			side: { ...visualSessionLayoutRef.current.side, open: false }
@@ -1778,6 +1793,9 @@ function HomePage({
 
 		const normalizedSize: number = Math.min(SIDE_DOCK_MAX_SIZE, Math.max(SIDE_DOCK_CLOSED_SIZE, Math.trunc(nextSize)));
 		if (normalizedSize < SIDE_DOCK_CLOSE_THRESHOLD) {
+			if (performance.now() < sideDockProgrammaticOpenUntilRef.current) {
+				return;
+			}
 			applyVisualSessionLayout({
 				...visualSessionLayoutRef.current,
 				side: { ...visualSessionLayoutRef.current.side, open: false }
@@ -1785,6 +1803,7 @@ function HomePage({
 			return;
 		}
 
+		sideDockProgrammaticOpenUntilRef.current = 0;
 		applyVisualSessionLayout({
 			...visualSessionLayoutRef.current,
 			side: { ...visualSessionLayoutRef.current.side, open: true, size: normalizedSize }
@@ -1797,6 +1816,9 @@ function HomePage({
 			return;
 		}
 		if (nextSize < SIDE_DOCK_CLOSE_THRESHOLD) {
+			if (performance.now() < sideDockProgrammaticOpenUntilRef.current) {
+				return;
+			}
 			commitSessionLayout({
 				...visualSessionLayoutRef.current,
 				side: { ...visualSessionLayoutRef.current.side, open: false }
@@ -1804,6 +1826,7 @@ function HomePage({
 			return;
 		}
 
+		sideDockProgrammaticOpenUntilRef.current = 0;
 		const validSize: number = Math.min(SIDE_DOCK_MAX_SIZE, Math.max(SIDE_DOCK_CLOSE_THRESHOLD, Math.trunc(nextSize)));
 		commitSessionLayout({
 			...visualSessionLayoutRef.current,
@@ -2292,6 +2315,9 @@ function HomePage({
 											sessionId={activeSessionId}
 											workspaceId={workspaceForActions?.id ?? null}
 											sourceFolderId={summaryGitSourceFolderId}
+											sourceFolders={workspaceForActions?.sourceFolders ?? []}
+											primarySourceFolderId={workspaceForActions?.primarySourceFolderId ?? null}
+											onSourceFolderChange={handleGitReviewSourceFolderChange}
 											cwd={workspaceForActions?.rootPath ?? null}
 											contextItems={contextItems}
 											onAddContext={onAddContext}
@@ -2324,6 +2350,9 @@ function HomePage({
 									sessionId={activeSessionId}
 									workspaceId={workspaceForActions?.id ?? null}
 									sourceFolderId={summaryGitSourceFolderId}
+									sourceFolders={workspaceForActions?.sourceFolders ?? []}
+									primarySourceFolderId={workspaceForActions?.primarySourceFolderId ?? null}
+									onSourceFolderChange={handleGitReviewSourceFolderChange}
 									cwd={workspaceForActions?.rootPath ?? null}
 									contextItems={contextItems}
 									onAddContext={onAddContext}

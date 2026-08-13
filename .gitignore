@@ -80,7 +80,7 @@ out
 release/
 build/backend-bootstrap/
 build/godot-plugin/
-build/editor-bridge/
+build/daedalus-bridge/
 
 # Nuxt.js build / generate output
 .nuxt

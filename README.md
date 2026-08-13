@@ -175,7 +175,9 @@ npm run pack:win
 - `npm run build` creates production Electron bundles in `out/`.
 - `npm run pack:win` creates an unpacked Windows build.
 - `npm run build:win` creates the NSIS installer and updater metadata in `release/`.
-- Release builds download fixed backend and Godot-plugin versions from their GitHub releases and verify manifests, sizes, hashes, protocols, and backend self-tests before packaging.
+- Windows packaging first looks beside the Studio repository for `daedalus-backend` and `daedalus-bridge`. A sibling backend is built with `npm run release:sea:win`; a sibling Bridge is packaged from `addons/daedalus_bridge`.
+- If a sibling repository is absent, set `DAEDALUS_BACKEND_SOURCE` to the backend repository root and `DAEDALUS_BRIDGE_SOURCE` to the Bridge repository or addon root. Sibling repositories intentionally take priority over these variables.
+- If no source repository is available, packaging retains the verified fallback paths: `DAEDALUS_BACKEND_BOOTSTRAP_DIR` for a prepared backend payload, then the fixed backend and Bridge GitHub releases. All packaged artifacts are still checked for versions, manifests, hashes, protocols, and backend self-tests.
 
 ## Repository Layout
 
