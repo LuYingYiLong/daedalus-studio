@@ -16,7 +16,8 @@ describe("Home dock fullscreen", () => {
 		expect(dockSource).toContain("isFullscreen={isFullscreen}");
 		expect(dockSource).toContain('t("dock.tabs.enterFullscreen")');
 		expect(dockCss).toContain(".fullscreen");
-		expect(dockCss).toContain("padding-top: var(--ds-space-2);");
+		expect(dockCss).toContain("padding-top: 0;");
+		expect(dockCss.indexOf(".fullscreen")).toBeGreaterThan(dockCss.indexOf(".side"));
 		expect(homeSource).toContain("type DockFullscreenPlacement");
 		expect(homeSource).toContain("visualSessionLayout.fullscreenDock");
 		expect(homeSource).toContain("toggleDockFullscreen");

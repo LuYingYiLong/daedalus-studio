@@ -301,6 +301,19 @@ body {
 	height: 16px;
 }
 
+.ant-btn > .ant-btn-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	line-height: 0;
+}
+
+.ant-btn > .ant-btn-icon > .daedalus-icon {
+	display: block;
+	vertical-align: middle;
+}
+
 ::highlight(daedalus-conversation-search) {
 	color: inherit;
 	background-color: color-mix(in srgb, var(--ds-warning) 42%, transparent);

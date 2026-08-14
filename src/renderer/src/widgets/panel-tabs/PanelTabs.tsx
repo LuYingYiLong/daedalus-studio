@@ -143,7 +143,6 @@ function PanelTabs({
 	return (
 		<Tabs
 			activeKey={activeKey ?? undefined}
-			type="editable-card"
 			hideAdd={true}
 			animated={false}
 			items={toTabsItems(items)}
