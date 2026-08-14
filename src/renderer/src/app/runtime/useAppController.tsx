@@ -2668,11 +2668,18 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		?? (generalSettings.godotExecutableStatus === "ready" ? generalSettings.godotExecutablePath : null);
 	const composerIsSending: boolean = isRunControllerActive(runState) || isHomeSubmitting;
 	const composerIsCancelling: boolean = runState.status === "cancelling";
+	const appUpdateRuntimeBusy: boolean = composerIsSending || runningSessionState.size > 0;
 	const nextStepSuggestionCandidate: unknown = workbench?.nextStepHints?.hints?.[0]?.message;
 	const nextStepSuggestion: string | null = activeSessionId === null || composerIsSending || typeof nextStepSuggestionCandidate !== "string"
 		? null
 		: nextStepSuggestionCandidate.trim() || null;
 	const runningSessionIds: string[] = [...runningSessionState.keys()];
+
+	useEffect((): void => {
+		void window.electronAPI.appUpdate.setRuntimeBusy(appUpdateRuntimeBusy).catch((error: unknown): void => {
+			console.warn("[App] failed to publish runtime activity to update service", error);
+		});
+	}, [appUpdateRuntimeBusy]);
 
 	useEffect((): void => {
 		if (!isNewSessionHome) {

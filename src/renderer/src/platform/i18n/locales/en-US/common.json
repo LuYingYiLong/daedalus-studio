@@ -1431,7 +1431,11 @@
 		"repairConfirmTitle": "Repair Daedalus backend?",
 		"repairConfirmDescription": "This stops and reinstalls the backend bundled with this Studio version. Any active model response will be interrupted.",
 		"repairSucceeded": "Backend repaired and reconnected.",
+		"restartSucceeded": "Backend restarted and reconnected.",
 		"updateNotAvailable": "No backend update is available.",
+		"updateWaiting": "An AI response is still running. The backend update will continue when it finishes.",
+		"actionWaiting": "An AI response is still running",
+		"actionWaitingDescription": "Backend restart, repair, and update actions are deferred to avoid interrupting the response. Retry when it finishes.",
         "status": {
           "healthy": "Healthy",
           "starting": "Starting",
@@ -1441,9 +1445,10 @@
         }
       },
       "actions": {
-        "refresh": "Refresh",
+		"refresh": "Refresh",
 		"checkForUpdates": "Check for updates",
 		"updateBackend": "Update backend",
+		"restartBackend": "Restart backend",
 		"repairBackend": "Repair backend"
       },
       "onboarding": {
@@ -1474,7 +1479,8 @@
         "applicationInfo": "Failed to load application information",
 		"backendDetails": "Failed to load backend details",
 		"backendUpdate": "Failed to update backend",
-		"backendRepair": "Failed to repair backend"
+		"backendRepair": "Failed to repair backend",
+		"backendRestart": "Failed to restart backend"
       }
     },
     "import": {
@@ -2035,8 +2041,15 @@
       "installingBackend": "Installing backend update...",
       "backendUpdated": "Backend updated. Close this dialog to continue.",
       "restarting": "Restarting to install...",
+      "waitingForResponse": "Waiting for the active response to finish...",
       "failed": "Update failed",
       "ready": "Update is ready."
+    },
+    "waiting": {
+      "title": "Update deferred",
+      "description": "An AI response is still running. Studio will continue installing the update when it finishes.",
+      "activeTitle": "An AI response is still running",
+      "activeDescription": "Installing now would interrupt the response. The update request is queued until it finishes."
     },
     "fallback": {
       "title": "Switched to the full installer",

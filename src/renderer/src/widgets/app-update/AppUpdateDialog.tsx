@@ -71,6 +71,9 @@ function getUpdateErrorEntries(state: AppUpdateState | null, t: (key: string) =>
 }
 
 function getUpdateStatusText(state: AppUpdateState | null, t: (key: string) => string): string {
+	if (state?.installDeferred === true) {
+		return t("appUpdate.status.waitingForResponse");
+	}
 	if (state === null || state.status === "checking") {
 		return t("appUpdate.status.checking");
 	}
@@ -108,7 +111,8 @@ function getComponentVersionText(label: string, state: AppUpdateComponentState):
 function AppUpdateDialog({ open, state, onClose, onDownload }: AppUpdateDialogProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const updateProgress: number = Math.round(state?.progress ?? 0);
-	const isClientRestartState: boolean = state?.client.status === "downloaded" || state?.client.status === "installing";
+	const isClientRestartState: boolean = (state?.client.status === "downloaded" || state?.client.status === "installing")
+		&& state?.installDeferred !== true;
 	const clientVersionText: string | null = state === null ? null : getComponentVersionText(t("appUpdate.components.client"), state.client);
 	const backendVersionText: string | null = state === null ? null : getComponentVersionText(t("appUpdate.components.backend"), state.backend);
 	const isProgressState: boolean = state?.status === "downloading" || state?.status === "downloaded" || state?.status === "installing";
@@ -128,6 +132,21 @@ function AppUpdateDialog({ open, state, onClose, onDownload }: AppUpdateDialogPr
 		>
 			<div className={styles.content}>
 				<Typography.Text>{getUpdateSummary(state, t)}</Typography.Text>
+				{state?.installDeferred === true ? (
+					<Alert
+						type="warning"
+						showIcon={true}
+						title={t("appUpdate.waiting.title")}
+						description={t("appUpdate.waiting.description")}
+					/>
+				) : state?.runtimeBusy === true && state.status === "available" ? (
+					<Alert
+						type="warning"
+						showIcon={true}
+						title={t("appUpdate.waiting.activeTitle")}
+						description={t("appUpdate.waiting.activeDescription")}
+					/>
+				) : null}
 				{clientVersionText !== null ? <Typography.Text type="secondary">{clientVersionText}</Typography.Text> : null}
 				{backendVersionText !== null ? <Typography.Text type="secondary">{backendVersionText}</Typography.Text> : null}
 				{state?.releaseName !== null && state?.releaseName !== undefined ? <Typography.Text type="secondary">{state.releaseName}</Typography.Text> : null}

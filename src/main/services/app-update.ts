@@ -47,6 +47,8 @@ export type AppUpdateComponentState = {
 export type AppUpdateState = {
 	status: AppUpdateStatus;
 	updateKind: AppUpdateKind;
+	runtimeBusy: boolean;
+	installDeferred: boolean;
 	currentVersion: string;
 	availableVersion: string | null;
 	releaseName: string | null;
@@ -371,12 +373,19 @@ function getCombinedErrorMessage(client: AppUpdateComponentState, backend: AppUp
 	return null;
 }
 
-function createState(client: AppUpdateComponentState, backend: AppUpdateComponentState): AppUpdateState {
+function createState(
+	client: AppUpdateComponentState,
+	backend: AppUpdateComponentState,
+	runtimeBusy: boolean = false,
+	installDeferred: boolean = false
+): AppUpdateState {
 	const updateKind: AppUpdateKind = getUpdateKind(client, backend);
 	const primary: AppUpdateComponentState = getPrimaryComponent(updateKind, client, backend);
 	return {
 		status: getOverallStatus(client, backend),
 		updateKind,
+		runtimeBusy,
+		installDeferred,
 		currentVersion: client.currentVersion ?? "",
 		availableVersion: primary.availableVersion,
 		releaseName: primary.releaseName,
@@ -471,9 +480,14 @@ export class AppUpdateService {
 	private readonly sendEvent: (channel: "app-update:state-changed", payload: AppUpdateState) => void;
 	private readonly installDelayMs: number;
 	private beforeClientInstall: () => void | Promise<void>;
+	private onRuntimeBusyChanged: (runtimeBusy: boolean) => void = (): void => {};
 	private state: AppUpdateState;
 	private checkPromise: Promise<void> | null = null;
 	private downloadPromise: Promise<AppUpdateState> | null = null;
+	private deferredDownloadRequested: boolean = false;
+	private deferredClientInstall: boolean = false;
+	private clientInstallTimer: ReturnType<typeof setTimeout> | null = null;
+	private clientInstallStarted: boolean = false;
 	private initialized: boolean = false;
 
 	public constructor(options: AppUpdateServiceOptions = {}) {
@@ -528,6 +542,11 @@ export class AppUpdateService {
 		if (this.state.status === "downloading" || this.state.status === "downloaded" || this.state.status === "installing") {
 			return this.getState();
 		}
+		if (this.state.runtimeBusy) {
+			this.deferredDownloadRequested = true;
+			this.setInstallDeferred(true);
+			return this.getState();
+		}
 		if (this.downloadPromise !== null) {
 			return await this.downloadPromise;
 		}
@@ -541,6 +560,9 @@ export class AppUpdateService {
 	}
 
 	public acknowledge(): AppUpdateState {
+		this.deferredDownloadRequested = false;
+		this.deferredClientInstall = false;
+		this.setInstallDeferred(false);
 		if (this.state.updateKind === "backend" && this.state.backend.status === "downloaded") {
 			this.updateBackend({
 				status: "not_available",
@@ -558,6 +580,10 @@ export class AppUpdateService {
 		this.beforeClientInstall = handler;
 	}
 
+	public setRuntimeBusyHandler(handler: (runtimeBusy: boolean) => void): void {
+		this.onRuntimeBusyChanged = handler;
+	}
+
 	public registerIpc(): void {
 		if (this.initialized) {
 			return;
@@ -567,6 +593,7 @@ export class AppUpdateService {
 			return;
 		}
 		ipcMain.handle("app-update:get-state", (): AppUpdateState => this.getState());
+		ipcMain.handle("app-update:set-runtime-busy", (_event, runtimeBusy: boolean): AppUpdateState => this.setRuntimeBusy(runtimeBusy === true));
 		ipcMain.handle("app-update:check", async (): Promise<AppUpdateState> => await this.checkForUpdates());
 		ipcMain.handle("app-update:download", async (): Promise<AppUpdateState> => await this.download());
 		ipcMain.handle("app-update:acknowledge", (): AppUpdateState => this.acknowledge());
@@ -634,6 +661,11 @@ export class AppUpdateService {
 		if (this.state.status === "error") {
 			await this.checkForUpdates();
 		}
+		if (this.state.runtimeBusy) {
+			this.deferredDownloadRequested = true;
+			this.setInstallDeferred(true);
+			return this.getState();
+		}
 
 		const shouldInstallBackend: boolean = this.state.backend.status === "available";
 		const shouldDownloadClient: boolean = this.state.client.status === "available";
@@ -643,7 +675,7 @@ export class AppUpdateService {
 
 		if (shouldInstallBackend) {
 			await this.installBackendUpdate();
-			if (this.state.backend.status === "error") {
+			if (this.state.runtimeBusy || this.deferredDownloadRequested || this.state.backend.status === "error") {
 				return this.getState();
 			}
 		}
@@ -654,6 +686,11 @@ export class AppUpdateService {
 	}
 
 	private async installBackendUpdate(): Promise<void> {
+		if (this.state.runtimeBusy) {
+			this.deferredDownloadRequested = true;
+			this.setInstallDeferred(true);
+			return;
+		}
 		this.updateBackend({
 			status: "downloading",
 			progress: 0,
@@ -787,23 +824,43 @@ export class AppUpdateService {
 				progress: 100,
 				errorMessage: null
 			});
-			setTimeout(async (): Promise<void> => {
-				this.updateClient({
-					status: "installing",
-					progress: 100,
-					errorMessage: null
-				});
-				try {
-					await this.beforeClientInstall();
-				} catch (error: unknown) {
-					console.error("[AppUpdateService] before client install hook failed", error);
-				}
-				this.autoUpdater.quitAndInstall(false, true);
-			}, this.installDelayMs);
+			this.scheduleClientInstall();
 		});
 		this.onUpdaterEvent("error", (error: unknown): void => {
 			this.handleClientError(error, "Client update failed.");
 		});
+	}
+
+	private scheduleClientInstall(): void {
+		if (this.clientInstallStarted || this.clientInstallTimer !== null) {
+			return;
+		}
+		if (this.state.runtimeBusy) {
+			this.deferredClientInstall = true;
+			this.setInstallDeferred(true);
+			return;
+		}
+
+		this.clientInstallTimer = setTimeout(async (): Promise<void> => {
+			this.clientInstallTimer = null;
+			if (this.state.runtimeBusy) {
+				this.deferredClientInstall = true;
+				this.setInstallDeferred(true);
+				return;
+			}
+			this.clientInstallStarted = true;
+			this.updateClient({
+				status: "installing",
+				progress: 100,
+				errorMessage: null
+			});
+			try {
+				await this.beforeClientInstall();
+			} catch (error: unknown) {
+				console.error("[AppUpdateService] before client install hook failed", error);
+			}
+			this.autoUpdater.quitAndInstall(false, true);
+		}, this.installDelayMs);
 	}
 
 	private configureUpdaterLogger(): void {
@@ -836,6 +893,39 @@ export class AppUpdateService {
 				}
 			}
 		};
+	}
+
+	public setRuntimeBusy(runtimeBusy: boolean): AppUpdateState {
+		this.onRuntimeBusyChanged(runtimeBusy);
+		if (this.state.runtimeBusy !== runtimeBusy) {
+			this.state = {
+				...this.state,
+				runtimeBusy
+			};
+			this.broadcast();
+		}
+
+		if (runtimeBusy) {
+			return this.getState();
+		}
+
+		const shouldResumeClientInstall: boolean = this.deferredClientInstall;
+		const shouldResumeDownload: boolean = this.deferredDownloadRequested;
+		if (!shouldResumeClientInstall && !shouldResumeDownload) {
+			return this.getState();
+		}
+
+		this.deferredClientInstall = false;
+		this.deferredDownloadRequested = false;
+		this.setInstallDeferred(false);
+		if (shouldResumeClientInstall) {
+			this.scheduleClientInstall();
+		} else {
+			void this.download().catch((error: unknown): void => {
+				console.error("[AppUpdateService] deferred update install failed", error);
+			});
+		}
+		return this.getState();
 	}
 
 	private handleDifferentialDownloadFallback(reason: string | null): void {
@@ -872,7 +962,7 @@ export class AppUpdateService {
 		this.state = createState({
 			...this.state.client,
 			...patch
-		}, this.state.backend);
+		}, this.state.backend, this.state.runtimeBusy, this.state.installDeferred);
 		this.broadcast();
 	}
 
@@ -880,7 +970,18 @@ export class AppUpdateService {
 		this.state = createState(this.state.client, {
 			...this.state.backend,
 			...patch
-		});
+		}, this.state.runtimeBusy, this.state.installDeferred);
+		this.broadcast();
+	}
+
+	private setInstallDeferred(installDeferred: boolean): void {
+		if (this.state.installDeferred === installDeferred) {
+			return;
+		}
+		this.state = {
+			...this.state,
+			installDeferred
+		};
 		this.broadcast();
 	}
 

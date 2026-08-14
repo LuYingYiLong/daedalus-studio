@@ -17,6 +17,10 @@ describe("AboutSettingsPage", () => {
 		expect(pageSource).toContain("settings.about.fields.runtimeMode");
 		expect(pageSource).toContain("settings.about.fields.logPath");
 		expect(pageSource).toContain("refreshBackendDetails");
+		expect(pageSource).toContain("backendBootstrap.retryStart()");
+		expect(pageSource).toContain("backendBootstrap.repair()");
+		expect(pageSource).toContain("settings.about.actions.restartBackend");
+		expect(pageSource).toContain("settings.about.backend.actionWaiting");
 		expect(pageSource).toContain("useRequest");
 		expect(pageSource).not.toContain('tone="native"');
 		expect(iconSource).not.toContain("NATIVE_COLOR_ICON_NAMES");

@@ -62,6 +62,8 @@ describe("backend bootstrap service", () => {
 		expect(serviceSource).toContain("ipcMain.handle(\"backend-bootstrap:prepare\"");
 		expect(serviceSource).toContain("ipcMain.handle(\"backend-bootstrap:repair\"");
 		expect(serviceSource).toContain("ipcMain.handle(\"backend-bootstrap:retry-start\"");
+		expect(serviceSource).toContain("setRuntimeBusy(runtimeBusy: boolean)");
+		expect(serviceSource).toContain('errorCode: "runtime_busy"');
 		expect(preloadSource).toContain("backendBootstrap: {");
 		expect(viteEnvSource).toContain("interface BackendBootstrapState");
 		expect(viteEnvSource).toContain("interface BackendBootstrapAPI");

@@ -152,6 +152,7 @@ export class BackendBootstrapService {
 	private mainWindow: BrowserWindow | null = null;
 	private state: BackendBootstrapState = createInitialState();
 	private preparePromise: Promise<BackendBootstrapState> | null = null;
+	private runtimeBusy: boolean = false;
 	private initialized: boolean = false;
 	private readonly stateListeners: Set<(state: BackendBootstrapState) => void> = new Set();
 
@@ -161,6 +162,10 @@ export class BackendBootstrapService {
 
 	public getState(): BackendBootstrapState {
 		return { ...this.state };
+	}
+
+	public setRuntimeBusy(runtimeBusy: boolean): void {
+		this.runtimeBusy = runtimeBusy;
 	}
 
 	public onDidChangeState(listener: (state: BackendBootstrapState) => void): () => void {
@@ -213,6 +218,16 @@ export class BackendBootstrapService {
 	}
 
 	private async runPrepare(options: RunPrepareOptions): Promise<BackendBootstrapState> {
+		if (options.forceInstall && this.runtimeBusy) {
+			return this.fail({
+				status: "error",
+				phase: "detect",
+				progress: 100,
+				errorCode: "runtime_busy",
+				errorMessage: "The backend cannot be repaired while an AI response is active.",
+				suggestedAction: "Wait for the active response to finish, then retry."
+			});
+		}
 		if (this.state.status === "healthy" && !options.forceInstall) {
 			return this.getState();
 		}
@@ -464,6 +479,16 @@ export class BackendBootstrapService {
 	}
 
 	private async runStartOnly(): Promise<BackendBootstrapState> {
+		if (this.runtimeBusy) {
+			return this.fail({
+				status: "error",
+				phase: "detect",
+				progress: 100,
+				errorCode: "runtime_busy",
+				errorMessage: "The backend cannot be restarted while an AI response is active.",
+				suggestedAction: "Wait for the active response to finish, then retry."
+			});
+		}
 		await backendManager.stopAndWait();
 		if (app?.isPackaged === true) {
 			const current: BackendCurrentFileV2 | null = await readCurrentBackendFile();

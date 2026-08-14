@@ -56,6 +56,11 @@
 	gap: var(--ds-space-2);
 }
 
+.overviewCardBody {
+	min-height: 112px;
+	padding: 0 var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);
+}
+
 .appHeader {
 	display: flex;
 	align-items: center;

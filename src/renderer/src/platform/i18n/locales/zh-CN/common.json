@@ -1424,7 +1424,11 @@
 		"repairConfirmTitle": "修复 Daedalus 后端？",
 		"repairConfirmDescription": "这会停止并重新安装当前 Studio 附带的后端。正在进行的模型响应会被中断。",
 		"repairSucceeded": "后端已修复并重新连接。",
+		"restartSucceeded": "后端已重启并重新连接。",
 		"updateNotAvailable": "当前没有可用的后端更新。",
+		"updateWaiting": "当前有 AI 响应正在进行，后端更新将在响应完成后继续。",
+		"actionWaiting": "当前有 AI 响应正在进行",
+		"actionWaitingDescription": "为避免中断响应，后端重启、修复和更新操作已暂缓。响应完成后可以重试。",
         "status": {
           "healthy": "正常",
           "starting": "启动中",
@@ -1434,9 +1438,10 @@
         }
       },
       "actions": {
-        "refresh": "刷新",
+		"refresh": "刷新",
 		"checkForUpdates": "检查更新",
 		"updateBackend": "更新后端",
+		"restartBackend": "重启后端",
 		"repairBackend": "修复后端"
       },
       "onboarding": {
@@ -1467,7 +1472,8 @@
         "applicationInfo": "加载应用信息失败",
 		"backendDetails": "加载后端详情失败",
 		"backendUpdate": "更新后端失败",
-		"backendRepair": "修复后端失败"
+		"backendRepair": "修复后端失败",
+		"backendRestart": "重启后端失败"
       }
     },
     "import": {
@@ -2028,8 +2034,15 @@
       "installingBackend": "正在安装后端更新...",
       "backendUpdated": "后端已更新。关闭此对话框以继续。",
       "restarting": "正在重启以安装...",
+      "waitingForResponse": "正在等待当前响应完成...",
       "failed": "更新失败",
       "ready": "更新已就绪。"
+    },
+    "waiting": {
+      "title": "更新已延后",
+      "description": "当前有 AI 响应正在进行。响应完成后，Studio 会继续安装更新。",
+      "activeTitle": "当前有 AI 响应正在进行",
+      "activeDescription": "安装更新会中断当前响应。请求已暂存，等待响应完成后继续。"
     },
     "fallback": {
       "title": "已切换为完整安装包",

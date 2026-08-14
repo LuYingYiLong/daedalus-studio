@@ -152,6 +152,8 @@ declare global {
 	interface AppUpdateState {
 		status: AppUpdateStatus;
 		updateKind: AppUpdateKind;
+		runtimeBusy: boolean;
+		installDeferred: boolean;
 		currentVersion: string;
 		availableVersion: string | null;
 		releaseName: string | null;
@@ -164,6 +166,7 @@ declare global {
 
 	interface AppUpdateAPI {
 		getState: () => Promise<AppUpdateState>;
+		setRuntimeBusy: (runtimeBusy: boolean) => Promise<AppUpdateState>;
 		check: () => Promise<AppUpdateState>;
 		download: () => Promise<AppUpdateState>;
 		acknowledge: () => Promise<AppUpdateState>;

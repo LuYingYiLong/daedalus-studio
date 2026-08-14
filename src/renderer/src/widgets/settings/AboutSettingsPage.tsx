@@ -1,4 +1,4 @@
-import { App, Button, Card, Descriptions, Space, Tag, Typography } from "antd";
+import { Alert, App, Button, Card, Descriptions, Space, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useRequest } from "ahooks";
 import { useTranslation } from "react-i18next";
@@ -93,9 +93,11 @@ function AboutSettingsPage(): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const { message, modal } = App.useApp();
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
+	const [backendBootstrapState, setBackendBootstrapState] = useState<BackendBootstrapState | null>(null);
 	const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState<boolean>(false);
 	const [isResettingOnboarding, setIsResettingOnboarding] = useState<boolean>(false);
 	const [isRepairingBackend, setIsRepairingBackend] = useState<boolean>(false);
+	const [isRestartingBackend, setIsRestartingBackend] = useState<boolean>(false);
 	const {
 		data,
 		loading: isLoading,
@@ -134,6 +136,12 @@ function AboutSettingsPage(): React.JSX.Element | null {
 		}
 	});
 
+	useEffect((): void => {
+		if (updateState?.backend.status === "downloaded") {
+			void refreshBackendDetails();
+		}
+	}, [refreshBackendDetails, updateState?.backend.status]);
+
 	useEffect((): (() => void) => {
 		return window.electronAPI.backend.onStatusChanged((status: string): void => {
 			mutate((current: AboutSettingsData | undefined): AboutSettingsData | undefined => {
@@ -154,6 +162,24 @@ function AboutSettingsPage(): React.JSX.Element | null {
 	useEffect((): (() => void) => {
 		void window.electronAPI.appUpdate.getState().then(setUpdateState);
 		return window.electronAPI.appUpdate.onStateChanged(setUpdateState);
+	}, []);
+
+	useEffect((): (() => void) => {
+		let cancelled: boolean = false;
+		void window.electronAPI.backendBootstrap.getState().then((state: BackendBootstrapState): void => {
+			if (!cancelled) {
+				setBackendBootstrapState(state);
+			}
+		});
+		const unsubscribe = window.electronAPI.backendBootstrap.onStateChanged((state: BackendBootstrapState): void => {
+			if (!cancelled) {
+				setBackendBootstrapState(state);
+			}
+		});
+		return (): void => {
+			cancelled = true;
+			unsubscribe();
+		};
 	}, []);
 
 	const {
@@ -179,27 +205,58 @@ function AboutSettingsPage(): React.JSX.Element | null {
 				void message.info(t("settings.about.backend.updateNotAvailable"));
 				return;
 			}
-			await startUpdateDownload();
-			await refreshBackendDetails();
+			const downloadedState: AppUpdateState = await startUpdateDownload();
+			if (downloadedState.installDeferred) {
+				void message.info(t("settings.about.backend.updateWaiting"));
+				return;
+			}
+			if (downloadedState.backend.status === "downloaded") {
+				await refreshBackendDetails();
+			}
 		} catch (updateError: unknown) {
 			void message.error(getErrorMessage(updateError, t("settings.about.errors.backendUpdate")));
 		}
 	}
 
 	async function repairBackend(): Promise<void> {
+		if (updateState?.runtimeBusy === true) {
+			void message.warning(t("settings.about.backend.actionWaiting"));
+			return;
+		}
 		setIsRepairingBackend(true);
 		try {
 			const result: BackendBootstrapState = await window.electronAPI.backendBootstrap.repair();
+			setBackendBootstrapState(result);
+			await refreshBackendDetails();
 			if (result.status !== "healthy") {
 				throw new Error(result.errorMessage ?? t("settings.about.errors.backendRepair"));
 			}
-			await refreshBackendDetails();
 			void message.success(t("settings.about.backend.repairSucceeded"));
 		} catch (repairError: unknown) {
 			void message.error(getErrorMessage(repairError, t("settings.about.errors.backendRepair")));
-			throw repairError;
 		} finally {
 			setIsRepairingBackend(false);
+		}
+	}
+
+	async function restartBackend(): Promise<void> {
+		if (updateState?.runtimeBusy === true) {
+			void message.warning(t("settings.about.backend.actionWaiting"));
+			return;
+		}
+		setIsRestartingBackend(true);
+		try {
+			const result: BackendBootstrapState = await window.electronAPI.backendBootstrap.retryStart();
+			setBackendBootstrapState(result);
+			await refreshBackendDetails();
+			if (result.status !== "healthy") {
+				throw new Error(result.errorMessage ?? t("settings.about.errors.backendRestart"));
+			}
+			void message.success(t("settings.about.backend.restartSucceeded"));
+		} catch (restartError: unknown) {
+			void message.error(getErrorMessage(restartError, t("settings.about.errors.backendRestart")));
+		} finally {
+			setIsRestartingBackend(false);
 		}
 	}
 
@@ -209,7 +266,9 @@ function AboutSettingsPage(): React.JSX.Element | null {
 			content: t("settings.about.backend.repairConfirmDescription"),
 			okText: t("settings.about.actions.repairBackend"),
 			cancelText: t("settings.common.cancel"),
-			onOk: repairBackend
+			onOk: async (): Promise<void> => {
+				await repairBackend();
+			}
 		});
 	}
 
@@ -249,8 +308,15 @@ function AboutSettingsPage(): React.JSX.Element | null {
 	const backendPort: number | null = backendHealth?.port ?? backendDetails?.port ?? null;
 	const unavailableLabel: string = t("settings.about.unavailable");
 	const backendStatusLabel: string = getBackendStatusLabel(backendStatus, t);
+	const isRuntimeBusy: boolean = updateState?.runtimeBusy === true;
 	const isBackendUpdating: boolean = updateState?.backend.status === "downloading"
 		|| updateState?.backend.status === "installing";
+	const isBackendActionBusy: boolean = isRepairingBackend || isRestartingBackend || isBackendUpdating;
+	const canRestartBackend: boolean = backendStatus !== "healthy" && backendStatus !== "starting";
+	const bootstrapErrorMessage: string | null = backendBootstrapState?.status === "error"
+		? backendBootstrapState.errorMessage
+			?? t("settings.about.errors.backendRepair")
+		: null;
 
 	if (isLoading) {
 		return null;
@@ -278,7 +344,7 @@ function AboutSettingsPage(): React.JSX.Element | null {
 					</Card>
 				) : packageInfo !== null ? (
 					<>
-						<Card className={styles.infoCard}>
+						<Card className={styles.infoCard} classNames={{ body: styles.overviewCardBody }}>
 							<div className={styles.appHeader}>
 								<img
 									src={daedalusColorfulIconUrl}
@@ -303,7 +369,7 @@ function AboutSettingsPage(): React.JSX.Element | null {
 							</div>
 						</Card>
 
-						<Card className={styles.backendCard}>
+						<Card className={styles.backendCard} classNames={{ body: styles.overviewCardBody }}>
 							<div className={styles.backendHeader}>
 								<img
 									src={backendColorfulIconUrl}
@@ -351,7 +417,7 @@ function AboutSettingsPage(): React.JSX.Element | null {
 											<Button
 												icon={<Icon name="reload" />}
 												loading={isBackendRefreshing}
-												disabled={isRepairingBackend || isBackendUpdating}
+												disabled={isBackendActionBusy}
 												onClick={(): void => { void refreshBackendDetails(); }}
 											>
 												{t("settings.about.actions.refresh")}
@@ -359,15 +425,25 @@ function AboutSettingsPage(): React.JSX.Element | null {
 											<Button
 												icon={<Icon name="reload" />}
 												loading={isCheckingUpdates || isBackendUpdating}
-												disabled={isRepairingBackend}
+												disabled={isBackendActionBusy || isRuntimeBusy}
 												onClick={(): void => { void updateBackend(); }}
 											>
 												{t("settings.about.actions.updateBackend")}
 											</Button>
+											{canRestartBackend ? (
+												<Button
+													icon={<Icon name="reload" />}
+													loading={isRestartingBackend}
+													disabled={isBackendActionBusy || isRuntimeBusy}
+													onClick={(): void => { void restartBackend(); }}
+												>
+													{t("settings.about.actions.restartBackend")}
+												</Button>
+											) : null}
 											<Button
 												icon={<Icon name="repair" />}
 												loading={isRepairingBackend}
-												disabled={isCheckingUpdates || isBackendUpdating}
+												disabled={isCheckingUpdates || isBackendActionBusy || isRuntimeBusy}
 												onClick={confirmBackendRepair}
 											>
 												{t("settings.about.actions.repairBackend")}
@@ -378,6 +454,22 @@ function AboutSettingsPage(): React.JSX.Element | null {
 							)}
 							className={styles.detailsCard}
 						>
+							{isRuntimeBusy ? (
+								<Alert
+									type="warning"
+									showIcon={true}
+									message={t("settings.about.backend.actionWaiting")}
+									description={t("settings.about.backend.actionWaitingDescription")}
+								/>
+							) : null}
+							{bootstrapErrorMessage !== null ? (
+								<Alert
+									type="error"
+									showIcon={true}
+									message={bootstrapErrorMessage}
+									description={backendBootstrapState?.suggestedAction ?? undefined}
+								/>
+							) : null}
 							{backendDetails?.errorMessage ? (
 								<Typography.Paragraph type="danger" className={styles.backendError}>
 									{backendDetails.errorMessage}

@@ -28,6 +28,8 @@ function createUpdateState(
 	return {
 		status,
 		updateKind,
+		runtimeBusy: false,
+		installDeferred: false,
 		currentVersion: "1.0.7",
 		availableVersion: clientAvailableVersion ?? backendAvailableVersion,
 		releaseName: null,

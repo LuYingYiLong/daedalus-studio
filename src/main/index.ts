@@ -106,6 +106,9 @@ appUpdateService.setBeforeClientInstall(async (): Promise<void> => {
 	terminalPtyService.dispose();
 	backendManager.detach();
 });
+appUpdateService.setRuntimeBusyHandler((runtimeBusy: boolean): void => {
+	backendBootstrapService.setRuntimeBusy(runtimeBusy);
+});
 
 async function releaseBackendBeforeQuit(): Promise<void> {
 	if (preserveBackendForClientInstall) {

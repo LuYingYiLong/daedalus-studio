@@ -307,6 +307,69 @@ describe("app update service", () => {
 		});
 	});
 
+	it("defers backend installation until active runtime work is idle", async () => {
+		const fakeUpdater = new FakeAutoUpdater();
+		const fakeBackend = new FakeBackendUpdateClient();
+		fakeBackend.checkResult = createBackendCheckResult(true);
+		const service = new AppUpdateService({
+			isPackaged: true,
+			currentVersion: "1.0.0",
+			autoUpdater: fakeUpdater,
+			backendUpdateClient: fakeBackend,
+			sendEvent: (): void => {}
+		});
+
+		await service.checkForUpdates();
+		service.setRuntimeBusy(true);
+		await expect(service.download()).resolves.toMatchObject({
+			status: "available",
+			runtimeBusy: true,
+			installDeferred: true
+		});
+		expect(fakeBackend.installCount).toBe(0);
+
+		service.setRuntimeBusy(false);
+		await vi.waitFor((): void => {
+			expect(service.getState().status).toBe("downloaded");
+		});
+		expect(fakeBackend.installCount).toBe(1);
+		expect(fakeBackend.restartCount).toBe(1);
+		expect(service.getState()).toMatchObject({
+		status: "downloaded",
+		runtimeBusy: false,
+		installDeferred: false
+		});
+	});
+
+	it("defers client quit-and-install after the installer is downloaded", async () => {
+		vi.useFakeTimers();
+		try {
+			const fakeUpdater = new FakeAutoUpdater();
+			const fakeBackend = new FakeBackendUpdateClient();
+			const service = new AppUpdateService({
+				isPackaged: true,
+				currentVersion: "1.0.0",
+				autoUpdater: fakeUpdater,
+				backendUpdateClient: fakeBackend,
+				installDelayMs: 1,
+				sendEvent: (): void => {}
+			});
+
+			service.setRuntimeBusy(true);
+			fakeUpdater.emit("update-available", createUpdateInfo("1.1.0"));
+			fakeUpdater.emit("update-downloaded", createUpdateInfo("1.1.0"));
+			await vi.advanceTimersByTimeAsync(1);
+			expect(fakeUpdater.quitAndInstallArgs).toHaveLength(0);
+			expect(service.getState()).toMatchObject({ installDeferred: true, runtimeBusy: true });
+
+			service.setRuntimeBusy(false);
+			await vi.advanceTimersByTimeAsync(1);
+			expect(fakeUpdater.quitAndInstallArgs).toEqual([[false, true]]);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it("installs backend before downloading client updates for combined updates", async () => {
 		const fakeUpdater = new FakeAutoUpdater();
 		const fakeBackend = new FakeBackendUpdateClient();

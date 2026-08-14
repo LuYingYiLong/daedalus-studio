@@ -43,6 +43,7 @@ describe("app update source", () => {
 		expect(mainSource).toContain("appUpdateService.registerIpc();");
 		expect(mainSource).toContain("checkForUpdatesIfEnabled(preferences.autoCheckForUpdates)");
 		expect(serviceSource).toContain("ipcMain.handle(\"app-update:get-state\"");
+		expect(serviceSource).toContain("ipcMain.handle(\"app-update:set-runtime-busy\"");
 		expect(serviceSource).toContain("ipcMain.handle(\"app-update:check\"");
 		expect(serviceSource).toContain("ipcMain.handle(\"app-update:download\"");
 		expect(serviceSource).toContain("ipcMain.handle(\"app-update:acknowledge\"");
@@ -66,6 +67,9 @@ describe("app update source", () => {
 		expect(serviceSource).toContain("cleanupPreviousVersion(result.version, result.previousVersion)");
 		expect(serviceSource).toContain("app-update:state-changed");
 		expect(serviceSource).toContain("await this.beforeClientInstall()");
+		expect(serviceSource).toContain("this.state.runtimeBusy");
+		expect(serviceSource).toContain("this.deferredClientInstall");
+		expect(serviceSource).toContain("setRuntimeBusyHandler");
 		expect(serviceSource).toContain("quitAndInstall(false, true)");
 		expect(mainSource).toContain("appUpdateService.setBeforeClientInstall");
 		expect(mainSource).toContain("windowLifecycleController.markQuitting()");
@@ -76,6 +80,7 @@ describe("app update source", () => {
 	it("exposes appUpdate through preload and renderer types", () => {
 		expect(preloadSource).toContain("appUpdate: {");
 		expect(preloadSource).toContain("ipcRenderer.invoke(\"app-update:get-state\")");
+		expect(preloadSource).toContain("ipcRenderer.invoke(\"app-update:set-runtime-busy\", runtimeBusy)");
 		expect(preloadSource).toContain("ipcRenderer.invoke(\"app-update:check\")");
 		expect(preloadSource).toContain("ipcRenderer.invoke(\"app-update:download\")");
 		expect(preloadSource).toContain("ipcRenderer.invoke(\"app-update:acknowledge\")");

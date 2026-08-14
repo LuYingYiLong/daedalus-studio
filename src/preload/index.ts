@@ -26,6 +26,8 @@ type ClientPreferences = {
 type AppUpdateState = {
 	status: "idle" | "checking" | "available" | "downloading" | "downloaded" | "installing" | "not_available" | "error" | "unsupported";
 	updateKind: "client" | "backend" | "combined" | null;
+	runtimeBusy: boolean;
+	installDeferred: boolean;
 	currentVersion: string;
 	availableVersion: string | null;
 	releaseName: string | null;
@@ -304,6 +306,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	appUpdate: {
 		getState: (): Promise<AppUpdateState> => {
 			return ipcRenderer.invoke("app-update:get-state");
+		},
+		setRuntimeBusy: (runtimeBusy: boolean): Promise<AppUpdateState> => {
+			return ipcRenderer.invoke("app-update:set-runtime-busy", runtimeBusy);
 		},
 		check: (): Promise<AppUpdateState> => {
 			return ipcRenderer.invoke("app-update:check");
