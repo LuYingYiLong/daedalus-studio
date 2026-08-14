@@ -144,6 +144,7 @@ import {
 	resolveReasoningEffortForComposerModelChange,
 	trimTimelineFromRequest
 } from "./app-helpers";
+import { DEFAULT_WORKSPACE_LAUNCH_TARGET_ID, type WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launch";
 Spin.setDefaultIndicator(<Icon name="spin-indicator" className={styles.spinner} />)
 
 export default function useAppController({ bootstrapData }: AppProps) {
@@ -1016,6 +1017,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		flushPendingTimelineEvents,
 		refreshLatestTimeline,
 		showNativeTaskNotification,
+		runCompletionNotificationsEnabled: clientPreferences.notifyOnRunCompleted,
 		setActiveSessionMetadata,
 		setRunState,
 		timelineStore,
@@ -1090,7 +1092,8 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				model: draft.modelId ?? undefined,
 				reasoningEffort: draft.reasoningEffort,
 				chatMode: draft.chatMode,
-				approvalMode: preferredApprovalMode
+				approvalMode: preferredApprovalMode,
+				workspaceLaunch: draft.workspaceLaunch
 			});
 			temporaryDraftSessionIdRef.current = created.id;
 			activeSessionIdRef.current = created.id;
@@ -1700,6 +1703,14 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		}
 	}
 
+	function handleWorkspaceLaunchChange(targetId: WorkspaceLaunchTargetId): void {
+		setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({
+			...currentDraft,
+			workspaceLaunch: targetId
+		}));
+		void persistSessionUiMetadata({ workspaceLaunch: targetId });
+	}
+
 	async function handleModeChange(nextMode: ChatMode): Promise<void> {
 		persistNewSessionComposerDefaults({ mode: nextMode });
 		if (isNewSessionHome && activeSessionId === null) {
@@ -1923,7 +1934,8 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				model: modelId ?? undefined,
 				reasoningEffort: homeDraft.reasoningEffort,
 				chatMode,
-				approvalMode
+				approvalMode,
+				workspaceLaunch: homeDraft.workspaceLaunch
 			});
 			sessionCreated = true;
 
@@ -2829,6 +2841,9 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		workspaceFooterDisabled: isHomeSubmitting || composerWorkspaceLocked || isSessionLoading,
 		activeWorkspace: displayedWorkspace,
 		godotLaunchExecutablePath,
+		workspaceLaunchPreference: activeSessionId === null
+			? homeDraft.workspaceLaunch
+			: activeSessionMetadata?.workspaceLaunch ?? DEFAULT_WORKSPACE_LAUNCH_TARGET_ID,
 		onNewSession: handleNewSession,
 		onNewUnboundSession: (): void => {
 			void handleNewSession({ restoreTemporaryDraft: false });
@@ -2910,6 +2925,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		onReasoningEffortChange: (effort: string): void => {
 			void handleReasoningEffortChange(effort);
 		},
+		onWorkspaceLaunchChange: handleWorkspaceLaunchChange,
 		onAddFiles: (): void => {
 			void handleAddWorkspaceContext("files");
 		},

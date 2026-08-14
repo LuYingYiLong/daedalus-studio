@@ -1,3 +1,5 @@
+import type { WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launch";
+
 // 工作区
 export type WorkspaceIcon = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type WorkspaceColor = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -59,6 +61,7 @@ export type SessionMetadata = {
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
 	workflowTodoDismissedKey?: string | null;
+	workspaceLaunch?: WorkspaceLaunchTargetId;
 	forkedFrom?: SessionForkOrigin;
 	archivedAt?: string;
 	createdAt: string;

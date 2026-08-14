@@ -397,7 +397,7 @@ function DocumentationSettingsPage(): React.JSX.Element | null {
 					</Typography.Title>
 					<Tag>{documents.length}</Tag>
 				</Space>
-				<Flex className={styles.toolbar}>
+				<Flex gap="small" align="center" className={styles.toolbar}>
 					<Typography.Text>
 						{t("settings.documentation.enabled")}
 					</Typography.Text>

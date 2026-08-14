@@ -184,7 +184,7 @@ function PanelTabs({
 				right: (
 					<>
 						{onFullscreenToggle !== undefined ? (
-							<Tooltip title={isFullscreen ? exitFullscreenLabel : fullscreenLabel}>
+							<Tooltip placement="bottom" title={isFullscreen ? exitFullscreenLabel : fullscreenLabel}>
 								<Button
 									type="text"
 									shape="circle"

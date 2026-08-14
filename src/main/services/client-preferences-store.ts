@@ -22,6 +22,7 @@ import {
 
 export type ClientPreferences = {
 	autoCheckForUpdates: boolean;
+	notifyOnRunCompleted: boolean;
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
 	themeColor: string;
@@ -45,6 +46,7 @@ export const DEFAULT_THEME_COLOR: string = DEFAULT_STUDIO_THEME_COLOR;
 
 export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	autoCheckForUpdates: true,
+	notifyOnRunCompleted: true,
 	minimizeToTrayOnClose: false,
 	theme: "system",
 	themeColor: DEFAULT_THEME_COLOR,
@@ -189,6 +191,9 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 	const autoCheckForUpdates: boolean = typeof value.autoCheckForUpdates === "boolean"
 		? value.autoCheckForUpdates
 		: DEFAULT_CLIENT_PREFERENCES.autoCheckForUpdates;
+	const notifyOnRunCompleted: boolean = typeof value.notifyOnRunCompleted === "boolean"
+		? value.notifyOnRunCompleted
+		: DEFAULT_CLIENT_PREFERENCES.notifyOnRunCompleted;
 	const minimizeToTrayOnClose: boolean = typeof value.minimizeToTrayOnClose === "boolean"
 		? value.minimizeToTrayOnClose
 		: DEFAULT_CLIENT_PREFERENCES.minimizeToTrayOnClose;
@@ -216,6 +221,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 	return {
 		preferences: {
 			autoCheckForUpdates,
+			notifyOnRunCompleted,
 			minimizeToTrayOnClose,
 			theme: themePreference,
 			themeColor,
@@ -227,6 +233,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			onboarding
 		},
 		normalized: value.autoCheckForUpdates !== autoCheckForUpdates
+			|| value.notifyOnRunCompleted !== notifyOnRunCompleted
 			|| value.minimizeToTrayOnClose !== minimizeToTrayOnClose
 			|| value.theme !== themePreference
 			|| value.themeColor !== themeColor
@@ -238,6 +245,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			|| JSON.stringify(value.onboarding ?? null) !== JSON.stringify(onboarding)
 			|| Object.keys(value).some((key: string): boolean => ![
 				"autoCheckForUpdates",
+				"notifyOnRunCompleted",
 				"minimizeToTrayOnClose",
 				"theme",
 				"themeColor",
@@ -259,6 +267,9 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	const patch: ClientPreferencesPatch = {};
 	if (typeof value.autoCheckForUpdates === "boolean") {
 		patch.autoCheckForUpdates = value.autoCheckForUpdates;
+	}
+	if (typeof value.notifyOnRunCompleted === "boolean") {
+		patch.notifyOnRunCompleted = value.notifyOnRunCompleted;
 	}
 	if (typeof value.minimizeToTrayOnClose === "boolean") {
 		patch.minimizeToTrayOnClose = value.minimizeToTrayOnClose;

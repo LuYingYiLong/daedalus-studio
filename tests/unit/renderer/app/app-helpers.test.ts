@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	createHomeDraft,
 	getChatOutputTarget,
 	getSessionSortTime,
 	insertUserBlockBeforeRequestAssistant,
@@ -56,6 +57,10 @@ describe("app helpers", () => {
 		expect(getChatOutputTarget("goal", "workspace-1")).toBe("workspace");
 		expect(getChatOutputTarget("ask", "workspace-1")).toBe("chat");
 		expect(getChatOutputTarget("agent", null)).toBe("chat");
+	});
+
+	it("defaults new session workspace launches to File Explorer", () => {
+		expect(createHomeDraft().workspaceLaunch).toBe("file-explorer");
 	});
 
 	it("trims timeline content from a request boundary", () => {

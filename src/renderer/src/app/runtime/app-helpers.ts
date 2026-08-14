@@ -23,6 +23,7 @@ import { createDefaultSessionLayout, type SessionLayoutPreferences } from "@/dom
 import { selectLatestWorkflowTodoSnapshot } from "@/domain/composer/workflow-todo";
 import type { BootstrapData } from "../bootstrap/bootstrap";
 import { createSingleSourceWorkspaceSnapshot } from "@/features/workspace/controllers/context-helpers";
+import { DEFAULT_WORKSPACE_LAUNCH_TARGET_ID, type WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launch";
 export { createSingleSourceWorkspaceSnapshot };
 export {
 	CONTEXT_SUBTITLE_MAX_CHARS,
@@ -56,6 +57,7 @@ export type HomeDraft = {
 	providerId: string | null;
 	modelId: string | null;
 	reasoningEffort: string;
+	workspaceLaunch: WorkspaceLaunchTargetId;
 };
 
 export const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
@@ -114,7 +116,7 @@ export function getPendingApprovalCount(workbench: WorkbenchSnapshot | null): nu
 }
 
 export function createHomeDraft(): HomeDraft {
-	return { workspaceId: null, workspace: null, chatMode: "agent", providerId: null, modelId: null, reasoningEffort: "medium" };
+	return { workspaceId: null, workspace: null, chatMode: "agent", providerId: null, modelId: null, reasoningEffort: "medium", workspaceLaunch: DEFAULT_WORKSPACE_LAUNCH_TARGET_ID };
 }
 
 export function findProviderModel(selection: ProviderModelSelection | null, providerId: string | null, modelId: string | null): ProviderModelInfo | null {

@@ -55,6 +55,7 @@ export type BackendEventStreamParams = {
 	flushPendingTimelineEvents: () => void;
 	refreshLatestTimeline: () => Promise<void>;
 	showNativeTaskNotification: (payload: NativeNotificationPayload) => void;
+	runCompletionNotificationsEnabled: boolean;
 	setActiveSessionMetadata: Dispatch<SetStateAction<SessionMetadata | null>>;
 	setRunState: Dispatch<SetStateAction<RunControllerState>>;
 	timelineStore: TimelinePageStore;
@@ -138,6 +139,7 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 			params.applyCurrentGoalSnapshot(goal);
 			if (
 				(goal.stage === "achieved" || goal.stage === "failed")
+				&& params.runCompletionNotificationsEnabled
 				&& !hasQueuedFollowUpResponse(params.activeWorkbenchRef.current, goal.rootRequestId)
 			) {
 				params.showNativeTaskNotification({
@@ -246,6 +248,7 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 			const belongsToGoal: boolean = typeof runData?.goalId === "string";
 			if (
 				sessionId !== null
+				&& params.runCompletionNotificationsEnabled
 				&& !hasQueuedFollowUp
 				&& !belongsToGoal
 				&& !params.pendingUserActionRequestIdsRef.current.has(requestId)

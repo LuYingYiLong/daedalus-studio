@@ -58,6 +58,7 @@ describe("client preferences store", () => {
 		})).toEqual({
 			preferences: {
 				autoCheckForUpdates: true,
+				notifyOnRunCompleted: true,
 				minimizeToTrayOnClose: false,
 				theme: "system",
 				themeColor: DEFAULT_THEME_COLOR,
@@ -98,6 +99,7 @@ describe("client preferences store", () => {
 
 		expect(nextPreferences).toEqual({
 			autoCheckForUpdates: true,
+			notifyOnRunCompleted: true,
 			minimizeToTrayOnClose: true,
 			theme: "system",
 			themeColor: DEFAULT_THEME_COLOR,
@@ -219,6 +221,16 @@ describe("client preferences store", () => {
 		}, memory.io);
 
 		expect(nextPreferences.autoCheckForUpdates).toBe(false);
+	});
+
+	it("updates the run completion notification preference", async () => {
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+
+		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
+			notifyOnRunCompleted: false
+		}, memory.io);
+
+		expect(nextPreferences.notifyOnRunCompleted).toBe(false);
 	});
 
 	it("normalizes and persists the global workspace sidebar layout", async () => {

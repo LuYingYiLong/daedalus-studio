@@ -6,6 +6,7 @@ import type { NewSessionComposerPreferences } from "../contracts/new-session-com
 
 type ClientPreferences = {
 	autoCheckForUpdates: boolean;
+	notifyOnRunCompleted: boolean;
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
 	themeColor: string;

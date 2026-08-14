@@ -9,6 +9,7 @@ describe("run completion notification wiring", () => {
 		expect(appSource).toContain("const activeWorkbenchRef = useLatest(workbench);");
 		expect(appSource).toContain("activeWorkbenchRef,");
 		expect(streamSource).toContain("hasQueuedFollowUpResponse");
+		expect(streamSource).toContain("runCompletionNotificationsEnabled");
 		expect(streamSource).toContain("&& !hasQueuedFollowUp");
 		expect(streamSource).toContain('kind: "run_completed"');
 	});

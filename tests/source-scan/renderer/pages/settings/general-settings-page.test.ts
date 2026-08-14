@@ -23,6 +23,8 @@ describe("GeneralSettingsPage", () => {
 
 		expect(pageSource).toContain("useTranslation");
 		expect(pageSource).toContain("settings.general.general.nextStepHintsEnabled.title");
+		expect(pageSource).toContain("settings.general.notifications.title");
+		expect(pageSource).toContain("settings.general.notifications.runCompleted.title");
 		expect(pageSource).toContain("settings.general.general.autoCheckForUpdates.title");
 		expect(pageSource).toContain("settings.general.general.minimizeToTrayOnClose.title");
 		expect(pageSource).toContain("settings.general.display.title");
@@ -40,6 +42,7 @@ describe("GeneralSettingsPage", () => {
 		expect(pageSource).not.toContain("<Tag");
 		expect(pageSource).toContain("window.electronAPI.pickGodotExecutable()");
 		expect(apiSource).toContain('language: "system"');
+		expect(apiSource).toContain("notifyOnRunCompleted: boolean;");
 		expect(generalApiSource).toContain("godotExecutablePath: null");
 		expect(generalApiSource).toContain("nextStepHintsEnabled: boolean;");
 		expect(generalApiSource).toContain("schemaVersion: 2;");
@@ -67,6 +70,7 @@ describe("GeneralSettingsPage", () => {
 		expect(viteEnvSource).toContain("ClientPreferencesAPI");
 		expect(viteEnvSource).toContain("onChanged: (callback: (preferences: ClientPreferences) => void) => () => void;");
 		expect(viteEnvSource).toContain("autoCheckForUpdates: boolean;");
+		expect(viteEnvSource).toContain("notifyOnRunCompleted: boolean;");
 		expect(viteEnvSource).toContain('language: "system" | "en-US" | "zh-CN";');
 	});
 });

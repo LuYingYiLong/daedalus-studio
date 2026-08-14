@@ -2009,6 +2009,13 @@
           "unconfigured": "Not configured"
         }
       },
+      "notifications": {
+        "title": "System notifications",
+        "runCompleted": {
+          "title": "Notify when an LLM reply finishes",
+          "description": "Show a system notification when a reply finishes in the background. No duplicate notification is shown while the window is focused."
+        }
+      },
       "general": {
         "title": "General settings",
         "nextStepHintsEnabled": {

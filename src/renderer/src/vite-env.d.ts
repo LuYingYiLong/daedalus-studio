@@ -71,6 +71,7 @@ declare global {
 
 	interface ClientPreferences {
 		autoCheckForUpdates: boolean;
+		notifyOnRunCompleted: boolean;
 		minimizeToTrayOnClose: boolean;
 		theme: "system" | "light" | "dark";
 		themeColor: string;

@@ -1,6 +1,7 @@
 import { createBackendClient } from "@/platform/rpc/transport/backend-client";
 import type { MessageTextAnchor, SelectionAskMessage, SelectionAskThread, SelectionAskThreadPage, SessionForkResult, SessionListResult, SessionMetadata, SessionOpenResult, SessionSearchPage, SessionTimelineNavigationIndexResult, SessionTimelineResult, SessionTimelineSearchIndexPage, WorkbenchSnapshot } from "./types";
 import type { ChatMode } from "./chat-api";
+import type { WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launch";
 
 export type CreateSessionParams = {
 	title: string;
@@ -13,6 +14,7 @@ export type CreateSessionParams = {
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
 	workflowTodoDismissedKey?: string | null;
+	workspaceLaunch?: WorkspaceLaunchTargetId;
 };
 
 export type SaveSessionUiMetadataParams = {
@@ -23,6 +25,7 @@ export type SaveSessionUiMetadataParams = {
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
 	workflowTodoDismissedKey?: string | null;
+	workspaceLaunch?: WorkspaceLaunchTargetId;
 };
 
 export type CreateSessionResult = SessionMetadata & {

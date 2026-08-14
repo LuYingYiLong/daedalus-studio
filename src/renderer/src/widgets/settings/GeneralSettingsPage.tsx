@@ -27,7 +27,7 @@ type GeneralSettingsPageProps = {
 	onGeneralSettingsChange: (settings: GeneralSettings) => void;
 };
 
-type SettingKey = "autoCheckForUpdates" | "godotExecutablePath" | "language" | "minimizeToTrayOnClose" | "nextStepHintsEnabled" | "theme" | "themeColor";
+type SettingKey = "autoCheckForUpdates" | "godotExecutablePath" | "language" | "minimizeToTrayOnClose" | "nextStepHintsEnabled" | "notifyOnRunCompleted" | "theme" | "themeColor";
 type ThemePreference = ClientPreferences["theme"];
 
 const colorPickerProps: ColorPickerProps = {
@@ -168,7 +168,11 @@ function GeneralSettingsPage({
 		await updateClientPreferenceSwitch("autoCheckForUpdates", checked);
 	}
 
-	async function updateClientPreferenceSwitch(key: "autoCheckForUpdates" | "minimizeToTrayOnClose", checked: boolean): Promise<void> {
+	async function handleRunCompletionNotificationsChange(checked: boolean): Promise<void> {
+		await updateClientPreferenceSwitch("notifyOnRunCompleted", checked);
+	}
+
+	async function updateClientPreferenceSwitch(key: "autoCheckForUpdates" | "minimizeToTrayOnClose" | "notifyOnRunCompleted", checked: boolean): Promise<void> {
 		const previousPreferences: ClientPreferences = draftClientPreferences;
 		const optimisticPreferences: ClientPreferences = {
 			...previousPreferences,
@@ -353,7 +357,6 @@ function GeneralSettingsPage({
 								description={t("settings.general.display.language.description")}
 							>
 								<Select<LanguagePreference>
-									className={styles.preferenceControl}
 									value={draftClientPreferences.language}
 									disabled={savingKey !== null && savingKey !== "language"}
 									options={languageOptions}
@@ -392,6 +395,24 @@ function GeneralSettingsPage({
 									</Tooltip>
 								</Space.Compact>
 							</SettingsItem>
+					</div>
+				</SettingsList>
+
+				<SettingsList title={t("settings.general.notifications.title")}>
+					<div className={styles.preferenceList}>
+						<SettingsItem
+							title={t("settings.general.notifications.runCompleted.title")}
+							description={t("settings.general.notifications.runCompleted.description")}
+						>
+							<Switch
+								checked={draftClientPreferences.notifyOnRunCompleted}
+								loading={savingKey === "notifyOnRunCompleted"}
+								disabled={savingKey !== null && savingKey !== "notifyOnRunCompleted"}
+								onChange={(checked: boolean): void => {
+									void handleRunCompletionNotificationsChange(checked);
+								}}
+							/>
+						</SettingsItem>
 					</div>
 				</SettingsList>
 

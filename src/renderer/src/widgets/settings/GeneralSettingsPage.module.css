@@ -54,10 +54,6 @@
 	min-width: 0;
 }
 
-.preferenceControl {
-	width: 220px;
-}
-
 @media (max-width: 720px) {
 	.preferenceControl {
 		width: 100%;

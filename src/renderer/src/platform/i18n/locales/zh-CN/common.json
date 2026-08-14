@@ -2002,6 +2002,13 @@
           "unconfigured": "未配置"
         }
       },
+      "notifications": {
+        "title": "系统通知",
+        "runCompleted": {
+          "title": "LLM 回复完成时通知",
+          "description": "当回复在后台完成时，通过系统通知提醒你。窗口处于前台时不会重复打扰。"
+        }
+      },
       "general": {
         "title": "常规设置",
         "nextStepHintsEnabled": {

@@ -10,6 +10,7 @@ export type { NewSessionComposerPreferences } from "../../../../contracts/new-se
 
 export type ClientPreferences = {
 	autoCheckForUpdates: boolean;
+	notifyOnRunCompleted: boolean;
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
 	themeColor: string;
@@ -37,6 +38,7 @@ export const DEFAULT_THEME_COLOR: string = DEFAULT_STUDIO_THEME_COLOR;
 
 export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	autoCheckForUpdates: true,
+	notifyOnRunCompleted: true,
 	minimizeToTrayOnClose: false,
 	theme: "system",
 	themeColor: DEFAULT_THEME_COLOR,

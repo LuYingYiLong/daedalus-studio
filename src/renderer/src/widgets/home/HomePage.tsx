@@ -54,8 +54,7 @@ import { formatSourceSubtitle } from "./session-overview-formatters";
 import type { TimelinePageStore } from "@/domain/workbench/timeline-page-store";
 import { useTimelineSelector } from "@/domain/workbench/timeline-page-store";
 import { MarkdownResourceActionsProvider } from "@/widgets/markdown/markdown-resource-actions";
-
-type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot";
+import { DEFAULT_WORKSPACE_LAUNCH_TARGET_ID, type WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launch";
 
 type WorkspaceLaunchTarget = {
 	id: WorkspaceLaunchTargetId;
@@ -434,6 +433,7 @@ type HomePageProps = {
 	workspaceFooterDisabled: boolean;
 	activeWorkspace: WorkspaceConfig | null;
 	godotLaunchExecutablePath: string | null;
+	workspaceLaunchPreference: WorkspaceLaunchTargetId;
 	onNewSession: () => void;
 	onNewUnboundSession: () => void;
 	onNewWorkspaceSession: (workspace: WorkspaceConfig) => void;
@@ -470,6 +470,7 @@ type HomePageProps = {
 	onPlanRevise: (planId: string, feedback: string) => void;
 	onProviderModelChange: (providerId: string, modelId: string) => void;
 	onReasoningEffortChange: (effort: string) => void;
+	onWorkspaceLaunchChange: (targetId: WorkspaceLaunchTargetId) => void;
 	onAddFiles: () => void;
 	onAddFolder: () => void;
 	onAddImages: (files: File[]) => void;
@@ -566,6 +567,7 @@ function HomePage({
 	workspaceFooterDisabled,
 	activeWorkspace,
 	godotLaunchExecutablePath,
+	workspaceLaunchPreference,
 	onNewSession,
 	onNewUnboundSession,
 	onNewWorkspaceSession,
@@ -602,6 +604,7 @@ function HomePage({
 	onPlanRevise,
 	onProviderModelChange,
 	onReasoningEffortChange,
+	onWorkspaceLaunchChange,
 	onAddFiles,
 	onAddFolder,
 	onAddImages,
@@ -628,7 +631,7 @@ function HomePage({
 	const { t } = useTranslation();
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
 	const [workspaceLaunchTargets, setWorkspaceLaunchTargets] = useState<WorkspaceLaunchTarget[]>(FALLBACK_WORKSPACE_LAUNCH_TARGETS);
-	const [selectedLaunchTargetId, setSelectedLaunchTargetId] = useState<WorkspaceLaunchTargetId>("file-explorer");
+	const [selectedLaunchTargetId, setSelectedLaunchTargetId] = useState<WorkspaceLaunchTargetId>(workspaceLaunchPreference);
 	const [isOpeningLaunchTarget, setIsOpeningLaunchTarget] = useState<boolean>(false);
 	const [summaryOpen, setSummaryOpen] = useState<boolean>(false);
 	const [summaryOverview, setSummaryOverview] = useState<SessionOverviewResult | null>(null);
@@ -958,28 +961,33 @@ function HomePage({
 				}
 
 				const nextTargets: WorkspaceLaunchTarget[] = targets.length > 0 ? targets : FALLBACK_WORKSPACE_LAUNCH_TARGETS;
+				const preferredTargetId: WorkspaceLaunchTargetId = workspaceLaunchPreference;
+				const fallbackTargetId: WorkspaceLaunchTargetId = nextTargets.find((target: WorkspaceLaunchTarget): boolean => target.id === DEFAULT_WORKSPACE_LAUNCH_TARGET_ID)?.id
+					?? DEFAULT_WORKSPACE_LAUNCH_TARGET_ID;
+				const resolvedTargetId: WorkspaceLaunchTargetId = nextTargets.some((target: WorkspaceLaunchTarget): boolean => target.id === preferredTargetId)
+					? preferredTargetId
+					: fallbackTargetId;
 				setWorkspaceLaunchTargets(nextTargets);
-				setSelectedLaunchTargetId((currentTargetId: WorkspaceLaunchTargetId): WorkspaceLaunchTargetId => {
-					if (nextTargets.some((target: WorkspaceLaunchTarget): boolean => target.id === currentTargetId)) {
-						return currentTargetId;
-					}
-					return nextTargets.find((target: WorkspaceLaunchTarget): boolean => target.id === "vscode")?.id
-						?? nextTargets[0]?.id
-						?? "file-explorer";
-				});
+				setSelectedLaunchTargetId(resolvedTargetId);
+				if (activeSessionMetadata?.workspaceLaunch !== undefined && activeSessionMetadata.workspaceLaunch !== resolvedTargetId) {
+					onWorkspaceLaunchChange(resolvedTargetId);
+				}
 			})
 			.catch((error: unknown): void => {
 				console.error("[HomePage] failed to list workspace launch targets", error);
 				if (!cancelled) {
 					setWorkspaceLaunchTargets(FALLBACK_WORKSPACE_LAUNCH_TARGETS);
-					setSelectedLaunchTargetId("file-explorer");
+					setSelectedLaunchTargetId(DEFAULT_WORKSPACE_LAUNCH_TARGET_ID);
+					if (activeSessionMetadata?.workspaceLaunch !== undefined && activeSessionMetadata.workspaceLaunch !== DEFAULT_WORKSPACE_LAUNCH_TARGET_ID) {
+						onWorkspaceLaunchChange(DEFAULT_WORKSPACE_LAUNCH_TARGET_ID);
+					}
 				}
 			});
 
 		return (): void => {
 			cancelled = true;
 		};
-	}, [effectiveGodotLaunchExecutablePath, showWorkspaceLaunchControls]);
+	}, [activeSessionMetadata?.workspaceLaunch, effectiveGodotLaunchExecutablePath, onWorkspaceLaunchChange, showWorkspaceLaunchControls, workspaceLaunchPreference]);
 
 	useEffect((): (() => void) | void => {
 		if (workspaceForActions === null || effectiveGodotLaunchExecutablePath === null) {
@@ -1583,6 +1591,7 @@ function HomePage({
 		}
 
 		setSelectedLaunchTargetId(targetId);
+		onWorkspaceLaunchChange(targetId);
 		setIsOpeningLaunchTarget(true);
 		try {
 			await window.electronAPI.workspaceFs.openLaunchTarget({
