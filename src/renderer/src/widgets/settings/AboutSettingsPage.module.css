@@ -49,11 +49,13 @@
 .infoCard {
 	display: grid;
 	gap: var(--ds-space-2);
+	min-height: 82px;
 }
 
 .backendCard {
 	display: grid;
 	gap: var(--ds-space-2);
+	min-height: 82px;
 }
 
 .overviewCardBody {
