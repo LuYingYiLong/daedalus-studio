@@ -6,7 +6,7 @@ export function repoPath(...segments: string[]): string {
 }
 
 export function readRepoFile(...segments: string[]): string {
-	return readFileSync(repoPath(...segments), "utf8");
+	return readFileSync(repoPath(...segments), "utf8").replace(/\r\n?/gu, "\n");
 }
 
 export function readAppImplementation(): string {
