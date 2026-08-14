@@ -38,7 +38,12 @@ describe("NewSessionHome source", () => {
 		expect(source.indexOf("<div className={styles.homeCenter}>")).toBeLessThan(source.indexOf("<div className={styles.homeContent}>"));
 		expect(styles).toContain(".homeCenter {");
 		expect(styles).toContain("align-content: center;");
-		expect(styles).toContain("overflow: auto;");
+		expect(styles).toContain("overflow-x: hidden;");
+		expect(styles).toContain("overflow-y: auto;");
+		expect(styles).toContain("scrollbar-width: none;");
+		expect(styles).toContain("-ms-overflow-style: none;");
+		expect(styles).toContain(".homeCenter::-webkit-scrollbar {");
+		expect(styles).toContain("display: none;");
 		expect(styles).toContain("gap: var(--ds-space-3);");
 		expect(styles).toContain("width: 100%;");
 		expect(styles).toContain("overflow-wrap: anywhere;");

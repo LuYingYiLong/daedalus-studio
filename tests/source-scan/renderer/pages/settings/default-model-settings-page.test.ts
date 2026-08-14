@@ -28,6 +28,14 @@ describe("DefaultModelSettingsPage", () => {
 		expect(providerSource).toContain("nextStepHints: ProviderTaskModelRef | null;");
 	});
 
+	it("does not expose the removed workflow planner route", () => {
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "DefaultModelSettingsPage.tsx");
+		const providerSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "provider-api.ts");
+
+		expect(pageSource).not.toContain("workflowPlanner");
+		expect(providerSource).not.toContain("workflowPlanner");
+	});
+
 	it("provides a text-only command review route", () => {
 		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "DefaultModelSettingsPage.tsx");
 		const providerSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "provider-api.ts");

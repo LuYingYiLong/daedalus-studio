@@ -115,9 +115,9 @@
 	min-width: 0;
 }
 
-.fileCollapse :global(.ant-collapse-content-box) {
+.fileCollapse :global(.ant-collapse-body) {
 	min-width: 0;
-	padding: 0;
+	padding: 0 !important;
 }
 
 .filePath {

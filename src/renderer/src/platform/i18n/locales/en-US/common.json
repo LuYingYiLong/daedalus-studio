@@ -1553,10 +1553,6 @@
 		  "title": "Next-step suggestion model",
 		  "description": "Generates one optional follow-up in the empty composer after a chat response. Follows the active model when unset and always disables reasoning."
 		},
-        "workflowPlanner": {
-          "title": "Workflow planner model",
-          "description": "Used for planning agent workflows before execution."
-        },
         "goalEvaluator": {
           "title": "Goal completion evaluator model",
           "description": "Used to judge whether a Goal is complete after each execution cycle. Falls back to the Goal model when unset."

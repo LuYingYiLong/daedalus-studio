@@ -1546,10 +1546,6 @@
 		  "title": "下一步建议模型",
 		  "description": "在主回复完成后为未输入内容的 Composer 生成一条可选后续建议；未配置时跟随当前模型，并始终关闭思考。"
 		},
-        "workflowPlanner": {
-          "title": "Workflow 规划模型",
-          "description": "用于在执行前规划 agent workflow。"
-        },
         "goalEvaluator": {
           "title": "Goal 完成判定模型",
           "description": "用于在每个执行循环后判断 Goal 是否完成；未配置时回退到 Goal 创建时的会话模型。"
