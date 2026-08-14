@@ -839,6 +839,8 @@ function HomePage({
 		: null;
 	const sideDockFullscreen: boolean = fullscreenDock === "side" && sideDockOpen;
 	const bottomDockFullscreen: boolean = fullscreenDock === "bottom" && bottomDockOpen;
+	const isDockFullscreen: boolean = sideDockFullscreen || bottomDockFullscreen;
+	const activeFullscreenDock: DockFullscreenPlacement | null = isDockFullscreen ? fullscreenDock : null;
 	const selectionMarkerContextItems: AdditionalContextItem[] = useMemo((): AdditionalContextItem[] => {
 		const byId = new Map<string, AdditionalContextItem>();
 		for (const item of contextItems) {
@@ -2007,6 +2009,56 @@ function HomePage({
 		);
 	}
 
+	const renderComposer = (compact: boolean): React.JSX.Element => (
+		<Composer
+			key={composerInstanceKey}
+			providerModelSelection={providerModelSelection}
+			inputRequest={composerInputRequest ?? undefined}
+			nextStepSuggestion={nextStepSuggestion}
+			selectedProviderId={selectedProviderId}
+			selectedModelId={selectedModelId}
+			reasoningEffort={reasoningEffort}
+			message={message}
+			onDraftChange={onDraftChange}
+			contextItems={contextItems}
+			mode={mode}
+			approvalMode={approvalMode}
+			slashCommands={slashCommands}
+			skills={skills}
+			isSending={isSending}
+			isCancelling={isCancelling}
+			isAddingTextAttachment={isAddingTextAttachment}
+			isApprovalModeSaving={isApprovalModeSaving}
+			workspaceOptions={workspaceOptions}
+			selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
+			workspaceFooterDisabled={workspaceFooterDisabled}
+			showContextUsage={!isHome}
+			compact={compact}
+			onModeChange={onModeChange}
+			onApprovalModeChange={onApprovalModeChange}
+			onProviderModelChange={onProviderModelChange}
+			onConfigureProvider={(): void => {
+				void window.electronAPI.windowControl.openSettings("provider");
+			}}
+			onReasoningEffortChange={onReasoningEffortChange}
+			onAddFiles={onAddFiles}
+			onAddFolder={onAddFolder}
+			onAddImages={onAddImages}
+			onAddPastedTextAttachment={onAddPastedTextAttachment}
+			onAddContextFiles={onAddContextFiles}
+			onWorkspaceSelect={isHome ? onHomeWorkspaceSelect : undefined}
+			onWorkspaceAdd={isHome ? onHomeWorkspaceAdd : undefined}
+			onWorkspaceClear={isHome ? onHomeWorkspaceClear : undefined}
+			onRemoveContext={onRemoveContext}
+			onPinContext={onPinContext}
+			onClearUnpinnedContext={onClearUnpinnedContext}
+			onCancel={onCancel}
+			onSubmit={onSubmit}
+			onGuideSubmit={onGuideSubmit}
+			onCompletionOpen={onCompletionOpen}
+		/>
+	);
+
 	return (
 		<div
 			className={styles.page}
@@ -2081,7 +2133,7 @@ function HomePage({
 				</Splitter.Panel>
 
 				<Splitter.Panel min={360}>
-					<div className={styles.agentMain} data-dock-fullscreen={fullscreenDock ?? undefined}>
+					<div className={styles.agentMain} data-dock-fullscreen={activeFullscreenDock ?? undefined}>
 						{showWorkspaceLaunchControls || showSummaryButton || showBottomDockButton || showSideDockButton ? (
 							<div className={styles.floatingActionSlot}>
 								<div className={styles.floatingActions}>
@@ -2137,7 +2189,7 @@ function HomePage({
 						) : null}
 						<Splitter
 							className={styles.agentVerticalSplitter}
-							data-dock-fullscreen={fullscreenDock ?? undefined}
+							data-dock-fullscreen={activeFullscreenDock ?? undefined}
 							data-fullscreen-motion-disabled={fullscreenMotionDisabled ? "true" : undefined}
 							classNames={SPLITTER_CLASS_NAMES}
 							draggerIcon={null}
@@ -2316,52 +2368,7 @@ function HomePage({
 																onGuideReorder={onGuideReorder}
 															/>
 														) : null}
-														<Composer
-															key={composerInstanceKey}
-															providerModelSelection={providerModelSelection}
-															inputRequest={composerInputRequest ?? undefined}
-															nextStepSuggestion={nextStepSuggestion}
-															selectedProviderId={selectedProviderId}
-															selectedModelId={selectedModelId}
-															reasoningEffort={reasoningEffort}
-															message={message}
-															onDraftChange={onDraftChange}
-															contextItems={contextItems}
-															mode={mode}
-															approvalMode={approvalMode}
-															slashCommands={slashCommands}
-															skills={skills}
-															isSending={isSending}
-															isCancelling={isCancelling}
-															isAddingTextAttachment={isAddingTextAttachment}
-															isApprovalModeSaving={isApprovalModeSaving}
-															workspaceOptions={workspaceOptions}
-															selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
-															workspaceFooterDisabled={workspaceFooterDisabled}
-															showContextUsage={!isHome}
-															onModeChange={onModeChange}
-															onApprovalModeChange={onApprovalModeChange}
-															onProviderModelChange={onProviderModelChange}
-															onConfigureProvider={(): void => {
-																void window.electronAPI.windowControl.openSettings("provider");
-															}}
-															onReasoningEffortChange={onReasoningEffortChange}
-															onAddFiles={onAddFiles}
-															onAddFolder={onAddFolder}
-															onAddImages={onAddImages}
-															onAddPastedTextAttachment={onAddPastedTextAttachment}
-															onAddContextFiles={onAddContextFiles}
-															onWorkspaceSelect={isHome ? onHomeWorkspaceSelect : undefined}
-															onWorkspaceAdd={isHome ? onHomeWorkspaceAdd : undefined}
-															onWorkspaceClear={isHome ? onHomeWorkspaceClear : undefined}
-															onRemoveContext={onRemoveContext}
-															onPinContext={onPinContext}
-															onClearUnpinnedContext={onClearUnpinnedContext}
-															onCancel={onCancel}
-															onSubmit={onSubmit}
-															onGuideSubmit={onGuideSubmit}
-															onCompletionOpen={onCompletionOpen}
-														/>
+														{isDockFullscreen ? null : renderComposer(false)}
 													</>
 												)}
 											</footer>
@@ -2439,6 +2446,11 @@ function HomePage({
 								</Splitter.Panel>
 							) : null}
 						</Splitter>
+						{isDockFullscreen ? (
+							<div className={styles.fullscreenComposer}>
+								{renderComposer(true)}
+							</div>
+						) : null}
 					</div>
 				</Splitter.Panel>
 			</Splitter>

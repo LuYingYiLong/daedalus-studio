@@ -60,6 +60,7 @@ export type ComposerProps = {
 	selectedWorkspace?: WorkspaceConfig | null;
 	workspaceFooterDisabled?: boolean;
 	showContextUsage?: boolean;
+	compact?: boolean;
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
 	onProviderModelChange?: (providerId: string, modelId: string) => void;
@@ -412,6 +413,7 @@ function Composer({
 	selectedWorkspace = null,
 	workspaceFooterDisabled = false,
 	showContextUsage = true,
+	compact = false,
 	onModeChange,
 	onApprovalModeChange,
 	onProviderModelChange,
@@ -1232,7 +1234,7 @@ function Composer({
 	);
 
 	return (
-		<div ref={rootRef} className={styles.composerRoot}>
+		<div ref={rootRef} className={`${styles.composerRoot} ${compact ? styles.composerRootCompact : ""}`}>
 			<input
 				ref={imageInputRef}
 				type="file"
@@ -1293,7 +1295,7 @@ function Composer({
 							<Input.TextArea
 								ref={textAreaRef}
 								value={draftMessage}
-								autoSize={{ minRows: 4, maxRows: 6 }}
+								autoSize={compact ? { minRows: 1, maxRows: 1 } : { minRows: 4, maxRows: 6 }}
 								placeholder={textAreaPlaceholder}
 								className={styles.composerTextArea}
 								onChange={handleTextAreaChange}

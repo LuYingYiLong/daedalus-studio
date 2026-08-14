@@ -27,6 +27,15 @@
 	transition: border-color 0.15s;
 }
 
+.composerRootCompact .composerSurface {
+	padding-top: 4px;
+	padding-bottom: 36px;
+}
+
+.composerRootCompact .composerToolbar {
+	bottom: 4px;
+}
+
 .composerSurface:focus-within {
 	border-color: var(--ds-accent);
 }
@@ -438,6 +447,10 @@
 	border-radius: 0 0 var(--ds-radius-lg) var(--ds-radius-lg);
 	margin-top: -6px;
 	min-height: 42px;
+}
+
+.composerRootCompact .footer {
+	display: none;
 }
 
 .workspaceFooterRow {

@@ -8,6 +8,8 @@ describe("Home dock fullscreen", () => {
 		const dockCss: string = readRepoFile("src", "renderer", "src", "widgets", "dock", "DockPanelTabs.module.css");
 		const homeSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
 		const homeCss: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.module.css");
+		const composerSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.tsx");
+		const composerCss: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.module.css");
 
 		expect(panelTabsSource).toContain('name={isFullscreen ? "compress" : "distraction-free"}');
 		expect(panelTabsSource).toContain("aria-pressed={isFullscreen}");
@@ -20,7 +22,11 @@ describe("Home dock fullscreen", () => {
 		expect(homeSource).toContain("toggleDockFullscreen");
 		expect(homeSource).toContain('size={bottomDockFullscreen ? "100%"');
 		expect(homeSource).toContain('size={sideDockFullscreen ? "100%"');
-		expect(homeSource).toContain("data-dock-fullscreen={fullscreenDock ?? undefined}");
+		expect(homeSource).toContain("fullscreenComposer");
+		expect(homeSource).toContain("renderComposer(true)");
+		expect(composerSource).toContain("autoSize={compact ? { minRows: 1, maxRows: 1 }");
+		expect(composerCss).toContain(".composerRootCompact .footer");
+		expect(homeSource).toContain("data-dock-fullscreen={activeFullscreenDock ?? undefined}");
 		expect(homeCss).toContain("data-fullscreen-motion-disabled=\"true\"");
 	});
 });
