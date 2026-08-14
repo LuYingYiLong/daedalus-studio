@@ -460,7 +460,7 @@ ipcMain.handle("window:open-external", async (event, rawUrl: unknown): Promise<v
 	} catch {
 		throw new Error("window_external_url_invalid");
 	}
-	if (url.protocol !== "https:" || (url.hostname !== "github.com" && !url.hostname.endsWith(".github.com"))) {
+	if (url.protocol !== "https:" && url.protocol !== "http:") {
 		throw new Error("window_external_url_not_allowed");
 	}
 	await shell.openExternal(url.toString());

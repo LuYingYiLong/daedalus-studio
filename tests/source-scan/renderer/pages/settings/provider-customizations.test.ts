@@ -58,6 +58,21 @@ describe("Provider customizations", () => {
 		expect(pageSource).not.toContain("handleRefreshModels");
 	});
 
+	it("keeps credential saving independent from model discovery and exposes classified discovery guidance", () => {
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "ProviderSettingsPage.tsx");
+		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "provider-api.ts");
+
+		expect(pageSource).toContain("handleSaveCredentials");
+		expect(pageSource).toContain("createCredentialSavePayload(provider)");
+		expect(pageSource).toContain("credentialsSaved");
+		expect(pageSource).toContain("getDiscoveryFailureMessage");
+		expect(pageSource).toContain("manualModelHint");
+		expect(pageSource).toContain("baseUrlHints.openaiCompatible");
+		expect(pageSource).toContain("isOpenAICompatibleCustomProvider");
+		expect(apiSource).toContain("ProviderModelDiscoveryFailureCode");
+		expect(apiSource).toContain("failure?: ProviderModelDiscoveryFailure");
+	});
+
 	it("guards every provider disable and custom-provider removal with backend usage checks", () => {
 		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "ProviderSettingsPage.tsx");
 		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "provider-api.ts");
@@ -78,5 +93,18 @@ describe("Provider customizations", () => {
 		expect(pageSource).toContain("providerEnableUnavailable");
 		expect(pageSource).toContain("createCredentialSavePayload(provider, true)");
 		expect(pageSource).toContain('{enabled ? <Tag color="success" className={styles.providerStatusTag}>{t("settings.common.on")}</Tag> : null}');
+	});
+
+	it("supports provider websites and custom provider editing", () => {
+		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "ProviderSettingsPage.tsx");
+		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "provider-api.ts");
+
+		expect(apiSource).toContain('"provider.custom.update"');
+		expect(apiSource).toContain("websiteUrl?: string | null | undefined");
+		expect(pageSource).toContain("openEditProviderDialog");
+		expect(pageSource).toContain("handleSaveProvider");
+		expect(pageSource).toContain('name="websiteUrl"');
+		expect(pageSource).toContain("openExternal(websiteUrl)");
+		expect(pageSource).toContain("selectedProvider.websiteUrl !== undefined");
 	});
 });

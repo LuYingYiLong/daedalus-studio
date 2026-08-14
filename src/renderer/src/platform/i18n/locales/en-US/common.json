@@ -1653,6 +1653,9 @@
       "apiBaseUrl": "API Base URL",
       "apiKey": "API Key",
       "enterApiKey": "Enter API key",
+      "baseUrlHints": {
+        "openaiCompatible": "OpenAI-compatible services usually require a version path such as /v1; for AIHub, use https://aihub.top/v1."
+      },
       "modelListSource": "Model list source: {{source}}",
       "models": "Models",
       "newKeyHint": "Only a newly entered key will be saved.",
@@ -1677,6 +1680,7 @@
       },
       "dialogs": {
         "addProviderTitle": "Add provider",
+        "editProviderTitle": "Edit provider",
         "addModelTitle": "Add model",
         "editModelTitle": "Edit model",
         "discoverModelsTitle": "{{provider}} Models"
@@ -1684,6 +1688,7 @@
       "fields": {
         "providerName": "Provider name",
         "providerType": "Provider type",
+        "websiteUrl": "Provider website",
         "modelId": "Model ID",
         "modelName": "Model name",
         "modelTypes": "Model types",
@@ -1698,6 +1703,7 @@
       "validation": {
         "providerName": "Enter a provider name between 1 and 80 characters",
         "providerType": "Select a provider type",
+        "websiteUrl": "Enter a valid http or https URL",
         "modelId": "Enter a model ID between 1 and 200 characters",
         "modelName": "Enter a model name between 1 and 120 characters",
         "tokenLimit": "Enter an integer between 1 and 2,000,000,000",
@@ -1716,12 +1722,15 @@
         "applyModelChanges": "Apply changes",
         "removeModels": "Remove models",
 		"removeProvider": "Remove provider",
+		"editProvider": "Edit provider",
+		"openWebsite": "Open provider website",
         "reloadModels": "Reload models",
         "test": "Test"
       },
       "discovery": {
         "searchPlaceholder": "Search model ID or name...",
         "empty": "No models available to manage",
+        "manualModelHint": "If the model list is unavailable, close this dialog, use Save to store the API key and Base URL, then add the model ID manually from the provider page.",
         "alreadyImported": "{{model}} is already imported",
         "selectModel": "Select {{model}}",
         "removeConfirmTitle": "Remove selected models?",
@@ -1731,6 +1740,15 @@
           "providerSelection": "This is the provider's saved model. Choose another provider model first.",
           "taskRouting": "This model is used by the {{task}} task route. Change it in Default Model settings first.",
           "webSearch": "This model is used by Web Search. Change it in Search settings first."
+        },
+        "failures": {
+          "authentication": "Authentication failed. Check that the API key is valid and does not include a Bearer prefix.",
+          "permission": "The provider denied access for this key. Check model permissions, groups, quota, or expiry.",
+          "rate_limited": "The provider is rate limiting requests. Try again later.",
+          "models_endpoint": "The model-list endpoint is unavailable. Check that the Base URL includes the correct version path; OpenAI-compatible services commonly require /v1.",
+          "response_format": "The API responded, but its model list is not in the OpenAI data[] format Daedalus recognizes. Save the credentials and add the model manually.",
+          "network": "Daedalus could not reach the provider. Check your network, proxy, DNS, and Base URL.",
+          "upstream": "The provider could not complete the model-list request. Check its service status and try again."
         }
       },
       "capabilities": {
@@ -1778,6 +1796,8 @@
       },
       "errors": {
         "addProvider": "Failed to add provider",
+		"updateProvider": "Failed to update provider",
+		"openWebsite": "Failed to open provider website",
         "clearApiKey": "Failed to clear API key",
         "load": "Failed to load provider settings",
         "modelIdConflict": "A model with this ID already exists for the provider",
@@ -1792,16 +1812,22 @@
 		"updateProviderState": "Failed to update provider state",
 		"removeProvider": "Failed to remove provider",
         "saveRequestConfiguration": "Failed to save custom request configuration",
+		"saveCredentials": "Failed to save provider credentials",
         "testConnection": "Provider connection test failed"
       },
       "messages": {
         "testSuccess": "Provider connection test succeeded",
+		"credentialsSaved": "Provider credentials saved",
         "importSuccess": "Imported {{count}} models",
         "syncSuccess": "Model changes applied: {{enabled}} enabled, {{removed}} removed",
 		"providerEnabled": "{{provider}} is enabled",
 		"providerDisabled": "{{provider}} is disabled",
 		"providerRemoved": "{{provider}} was removed",
+		"providerUpdated": "Provider details updated",
         "requestConfigurationSaved": "Custom request configuration saved"
+      },
+      "placeholders": {
+        "websiteUrl": "https://example.com"
       }
     },
     "search": {

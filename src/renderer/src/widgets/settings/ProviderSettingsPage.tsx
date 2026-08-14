@@ -14,6 +14,7 @@ import {
 	saveProviderConfig,
 	setProviderEnabled,
 	syncProviderModels,
+	updateCustomProvider,
 	updateProviderModel,
 	type CustomProviderType,
 	type BaseReasoningEffort,
@@ -23,6 +24,7 @@ import {
 	type EditableModelCapabilities,
 	type ManagedProviderModel,
 	type ProviderModelCapabilities,
+	type ProviderModelDiscoveryFailureCode,
 	type ProviderModelRemovalGuard,
 	type ProviderModelsDiscoverResult,
 	type ProviderModelInfo,
@@ -49,6 +51,7 @@ type ProviderSettingsPageProps = {
 type AddProviderFormValues = {
 	displayName: string;
 	providerType: CustomProviderType;
+	websiteUrl?: string | null;
 };
 
 type ModelFormValues = {
@@ -220,6 +223,26 @@ function mergeManagedModels(
 	return [...modelsById.values()];
 }
 
+function getDiscoveryFailureMessage(
+	result: ProviderModelsDiscoverResult,
+	t: (key: string) => string
+): string {
+	const code: ProviderModelDiscoveryFailureCode | undefined = result.failure?.code;
+	const guidanceKey: string | null = code === undefined
+		? null
+		: `settings.provider.discovery.failures.${code}`;
+	const guidance: string | null = guidanceKey === null ? null : t(guidanceKey);
+	const detail: string | undefined = result.error;
+	if (guidance === null || guidance === guidanceKey) {
+		return detail ?? t("settings.provider.errors.discoverModels");
+	}
+	return detail === undefined ? guidance : `${guidance} (${detail})`;
+}
+
+function isOpenAICompatibleCustomProvider(provider: ProviderModelSelectionProvider): boolean {
+	return provider.custom && (provider.providerType === "openai" || provider.providerType === "openai-responses");
+}
+
 function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const { message, modal } = App.useApp();
@@ -231,13 +254,15 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 	const [isApiKeyDirty, setIsApiKeyDirty] = useState<boolean>(false);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
+	const [isCredentialSaving, setIsCredentialSaving] = useState<boolean>(false);
 	const [isTesting, setIsTesting] = useState<boolean>(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [isRequestConfigOpen, setIsRequestConfigOpen] = useState<boolean>(false);
 	const [isRequestConfigSaving, setIsRequestConfigSaving] = useState<boolean>(false);
 	const [providerAction, setProviderAction] = useState<"enable" | "disable" | "remove" | null>(null);
 	const [requestConfigError, setRequestConfigError] = useState<string | null>(null);
-	const [isAddProviderOpen, setIsAddProviderOpen] = useState<boolean>(false);
+	const [providerDialogMode, setProviderDialogMode] = useState<"add" | "edit" | null>(null);
+	const [editingProvider, setEditingProvider] = useState<ProviderModelSelectionProvider | null>(null);
 	const [modelDialogMode, setModelDialogMode] = useState<"add" | "edit" | null>(null);
 	const [editingModel, setEditingModel] = useState<ProviderModelInfo | null>(null);
 	const [dialogError, setDialogError] = useState<string | null>(null);
@@ -445,13 +470,31 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 		}
 	}
 
+	async function handleSaveCredentials(provider: ProviderModelSelectionProvider): Promise<void> {
+		try {
+			setIsCredentialSaving(true);
+			setErrorMessage(null);
+			const nextSelection: ProviderModelSelection = await saveProviderConfig(createCredentialSavePayload(provider));
+			setSelection(nextSelection);
+			onSelectionChange?.(nextSelection);
+			setSelectedProviderId(provider.provider);
+			setDraftApiKey("");
+			setIsApiKeyDirty(false);
+			void message.success(t("settings.provider.messages.credentialsSaved"));
+		} catch (error: unknown) {
+			setErrorMessage(error instanceof Error ? error.message : t("settings.provider.errors.saveCredentials"));
+		} finally {
+			setIsCredentialSaving(false);
+		}
+	}
+
 	async function handleTestProvider(provider: ProviderModelSelectionProvider): Promise<void> {
 		try {
 			setIsTesting(true);
 			setErrorMessage(null);
 			const result: ProviderModelsDiscoverResult = await discoverProviderModels(createDiscoveryParams(provider));
 			if (result.source !== "api" || result.error !== undefined) {
-				throw new Error(result.error ?? t("settings.provider.errors.testConnection"));
+				throw new Error(getDiscoveryFailureMessage(result, t));
 			}
 			const nextSelection: ProviderModelSelection = await saveProviderConfig(createCredentialSavePayload(provider, true));
 			setSelection(nextSelection);
@@ -532,7 +575,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 				return nextModels;
 			});
 			setDiscoverySource(result.source);
-			setDiscoveryError(result.error ?? null);
+			setDiscoveryError(result.error === undefined ? null : getDiscoveryFailureMessage(result, t));
 		} catch (error: unknown) {
 			if (discoveryRequestIdRef.current === requestId) {
 				if (!preserveSelection) {
@@ -758,11 +801,27 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 
 	function openAddProviderDialog(): void {
 		setDialogError(null);
+		setEditingProvider(null);
 		providerForm.setFieldsValue({
 			displayName: "",
-			providerType: "openai"
+			providerType: "openai",
+			websiteUrl: ""
 		});
-		setIsAddProviderOpen(true);
+		setProviderDialogMode("add");
+	}
+
+	function openEditProviderDialog(provider: ProviderModelSelectionProvider): void {
+		if (!provider.custom) {
+			return;
+		}
+		setDialogError(null);
+		setEditingProvider(provider);
+		providerForm.setFieldsValue({
+			displayName: provider.displayName,
+			providerType: provider.providerType ?? "openai",
+			websiteUrl: provider.websiteUrl ?? ""
+		});
+		setProviderDialogMode("edit");
 	}
 
 	function openAddModelDialog(): void {
@@ -807,11 +866,15 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			const values: AddProviderFormValues = await providerForm.validateFields();
 			setIsDialogSaving(true);
 			setDialogError(null);
-			const result = await addCustomProvider(values);
+			const result = await addCustomProvider({
+				...values,
+				websiteUrl: values.websiteUrl?.trim() || null
+			});
 			setSelection(result.selection);
 			onSelectionChange?.(result.selection);
 			setSelectedProviderId(result.providerId);
-			setIsAddProviderOpen(false);
+			setProviderDialogMode(null);
+			setEditingProvider(null);
 		} catch (error: unknown) {
 			const message: string | null = getCustomizationErrorMessage(error, "settings.provider.errors.addProvider", t);
 			if (message !== null) {
@@ -819,6 +882,48 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			}
 		} finally {
 			setIsDialogSaving(false);
+		}
+	}
+
+	async function handleSaveProvider(): Promise<void> {
+		if (editingProvider === null) {
+			return;
+		}
+		try {
+			const values: AddProviderFormValues = await providerForm.validateFields();
+			setIsDialogSaving(true);
+			setDialogError(null);
+			const result = await updateCustomProvider({
+				provider: editingProvider.provider,
+				displayName: values.displayName,
+				providerType: values.providerType,
+				websiteUrl: values.websiteUrl?.trim() || null
+			});
+			setSelection(result.selection);
+			onSelectionChange?.(result.selection);
+			setSelectedProviderId(editingProvider.provider);
+			setProviderDialogMode(null);
+			setEditingProvider(null);
+			void message.success(t("settings.provider.messages.providerUpdated"));
+		} catch (error: unknown) {
+			const errorMessage: string | null = getCustomizationErrorMessage(error, "settings.provider.errors.updateProvider", t);
+			if (errorMessage !== null) {
+				setDialogError(errorMessage);
+			}
+		} finally {
+			setIsDialogSaving(false);
+		}
+	}
+
+	async function handleOpenProviderWebsite(provider: ProviderModelSelectionProvider): Promise<void> {
+		const websiteUrl: string | undefined = provider.websiteUrl;
+		if (websiteUrl === undefined) {
+			return;
+		}
+		try {
+			await window.electronAPI.windowControl.openExternal(websiteUrl);
+		} catch (error: unknown) {
+			void message.error(error instanceof Error ? error.message : t("settings.provider.errors.openWebsite"));
 		}
 	}
 
@@ -961,6 +1066,9 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 	const selectedProviderEnabled: boolean = selectedProvider.enabled !== false;
 	const providerEnableUnavailable: boolean = !selectedProviderEnabled && !selectedProvider.configured;
 	const isProviderActionPending: boolean = providerAction !== null;
+	const hasUnsavedCredentials: boolean = isApiKeyDirty
+		|| draftBaseUrl.trim() !== selectedProvider.baseUrl.trim();
+	const showOpenAICompatibleBaseUrlHint: boolean = isOpenAICompatibleCustomProvider(selectedProvider);
 
 	return (
 		<section className={styles.page}>
@@ -990,9 +1098,22 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			<section className={styles.detailPane}>
 				<div className={styles.detailContent}>
 					<header className={styles.detailHeader}>
-						<Typography.Title level={3} className={styles.detailTitle}>
-							{selectedProvider.displayName}
-						</Typography.Title>
+						<Space>
+							<Typography.Title level={3} className={styles.detailTitle}>
+								{selectedProvider.displayName}
+							</Typography.Title>
+							{selectedProvider.websiteUrl !== undefined ? (
+								<Tooltip title={t("settings.provider.actions.openWebsite")}>
+									<Button
+										type="text"
+										icon={<Icon name="external-link" />}
+										shape="circle"
+										aria-label={t("settings.provider.actions.openWebsite")}
+										onClick={(): void => void handleOpenProviderWebsite(selectedProvider)}
+									/>
+								</Tooltip>
+							) : null}
+						</Space>
 						<Space>
 							<Tooltip
 								title={providerEnableUnavailable
@@ -1014,13 +1135,23 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 							</Tooltip>
 							<Tooltip title={t("settings.provider.actions.removeProvider")} placement="bottom">
 								<Button
-									type="primary"
+									type="text"
+									shape="circle"
 									danger
 									icon={<Icon name="remove" />}
 									loading={providerAction === "remove"}
 									disabled={isProviderActionPending || !selectedProvider.custom}
-									aria-label={t("settings.provider.actions.removeProvider")}
 									onClick={(): void => void handleRemoveProvider(selectedProvider)}
+								/>
+							</Tooltip>
+							<Tooltip title={t("settings.provider.actions.editProvider")} placement="bottom">
+								<Button
+									type="text"
+									shape="circle"
+									icon={<Icon name="pencil" />}
+									disabled={isProviderActionPending || !selectedProvider.custom}
+									aria-label={t("settings.provider.actions.editProvider")}
+									onClick={(): void => openEditProviderDialog(selectedProvider)}
 								/>
 							</Tooltip>
 						</Space>
@@ -1060,8 +1191,16 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 									<Button
 										onClick={(): void => void handleTestProvider(selectedProvider)}
 										loading={isTesting}
+										disabled={isSaving || isCredentialSaving}
 									>
 										{t("settings.provider.actions.test")}
+									</Button>
+									<Button
+										onClick={(): void => void handleSaveCredentials(selectedProvider)}
+										loading={isCredentialSaving}
+										disabled={isSaving || isCredentialSaving || isTesting || !hasUnsavedCredentials}
+									>
+										{t("settings.common.save")}
 									</Button>
 								</Space.Compact>
 								<Button
@@ -1070,7 +1209,7 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 									icon={<Icon name="clear" />}
 									danger={selectedProvider.configured}
 									aria-label={t("settings.provider.actions.clearApiKey")}
-									disabled={isSaving || isTesting || (!selectedProvider.configured && draftApiKey.length === 0)}
+									disabled={isSaving || isCredentialSaving || isTesting || (!selectedProvider.configured && draftApiKey.length === 0)}
 									loading={isSaving}
 									onClick={(): void => void handleClearApiKey(selectedProvider)}
 								/>
@@ -1100,10 +1239,17 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 								value={draftBaseUrl}
 								onChange={(event: ChangeEvent<HTMLInputElement>): void => setDraftBaseUrl(event.target.value)}
 							/>
-							<Typography.Text type="secondary" className={styles.fieldHint}>
-								{t("settings.provider.modelListSource", { source: selectedProvider.modelsSource })}
-								{selectedProvider.modelsCacheUpdatedAt ? ` - ${t("settings.provider.updated", { updatedAt: selectedProvider.modelsCacheUpdatedAt })}` : ""}
-							</Typography.Text>
+							<div className={styles.fieldHints}>
+								{showOpenAICompatibleBaseUrlHint ? (
+									<Typography.Text type="secondary" className={styles.fieldHint}>
+										{t("settings.provider.baseUrlHints.openaiCompatible")}
+									</Typography.Text>
+								) : null}
+								<Typography.Text type="secondary" className={styles.fieldHint}>
+									{t("settings.provider.modelListSource", { source: selectedProvider.modelsSource })}
+									{selectedProvider.modelsCacheUpdatedAt ? ` - ${t("settings.provider.updated", { updatedAt: selectedProvider.modelsCacheUpdatedAt })}` : ""}
+								</Typography.Text>
+							</div>
 						</div>
 
 						<div className={styles.modelSectionHeader}>
@@ -1217,11 +1363,20 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 					</Flex>
 
 					{discoveryError !== null ? (
-						<Alert
-							type={discoveredModels.length > 0 ? "warning" : "error"}
-							showIcon={true}
-							description={discoveryError}
-						/>
+						<>
+							<Alert
+								type={discoveredModels.length > 0 ? "warning" : "error"}
+								showIcon={true}
+								description={discoveryError}
+							/>
+							{discoverySource === "fallback" && discoveryProvider?.custom ? (
+								<Alert
+									type="info"
+									showIcon={true}
+									description={t("settings.provider.discovery.manualModelHint")}
+								/>
+							) : null}
+						</>
 					) : null}
 
 					<Table<ManagedProviderModel>
@@ -1270,17 +1425,20 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			</Modal>
 
 			<Modal
-				open={isAddProviderOpen}
-				title={t("settings.provider.dialogs.addProviderTitle")}
-				okText={t("settings.common.add")}
+				open={providerDialogMode !== null}
+				title={providerDialogMode === "edit"
+					? t("settings.provider.dialogs.editProviderTitle")
+					: t("settings.provider.dialogs.addProviderTitle")}
+				okText={providerDialogMode === "edit" ? t("settings.common.save") : t("settings.common.add")}
 				cancelText={t("settings.common.cancel")}
 				confirmLoading={isDialogSaving}
 				destroyOnHidden={true}
 				onCancel={(): void => {
-					setIsAddProviderOpen(false);
+					setProviderDialogMode(null);
+					setEditingProvider(null);
 					setDialogError(null);
 				}}
-				onOk={(): void => void handleAddProvider()}
+				onOk={(): void => void (providerDialogMode === "edit" ? handleSaveProvider() : handleAddProvider())}
 				className={styles.modal}
 			>
 				{dialogError !== null ? <Alert className={styles.dialogAlert} type="error" showIcon={true} description={dialogError} /> : null}
@@ -1315,6 +1473,28 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 							]}
 							suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 						/>
+					</Form.Item>
+					<Form.Item
+						name="websiteUrl"
+						label={t("settings.provider.fields.websiteUrl")}
+						rules={[{
+							validator: async (_rule: unknown, value: string | undefined): Promise<void> => {
+								const normalized: string = value?.trim() ?? "";
+								if (normalized.length === 0) {
+									return;
+								}
+								try {
+									const url: URL = new URL(normalized);
+									if (url.protocol !== "http:" && url.protocol !== "https:") {
+										throw new Error("invalid_protocol");
+									}
+								} catch {
+									throw new Error(t("settings.provider.validation.websiteUrl"));
+								}
+							}
+						}]}
+					>
+						<Input placeholder={t("settings.provider.placeholders.websiteUrl")} maxLength={2048} />
 					</Form.Item>
 				</Form>
 			</Modal>

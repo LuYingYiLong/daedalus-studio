@@ -80,7 +80,7 @@
 }
 
 .detailTitle {
-	margin: 0;
+	margin: 0 !important;
 	user-select: none;
 }
 
@@ -108,6 +108,11 @@
 
 .fieldHint {
 	user-select: none;
+}
+
+.fieldHints {
+	display: grid;
+	gap: 4px;
 }
 
 .apiKeyCompact {

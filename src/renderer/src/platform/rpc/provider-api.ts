@@ -102,6 +102,7 @@ export type ProviderRequestOverrides = {
 export type ProviderModelSelectionProvider = {
 	provider: string;
 	displayName: string;
+	websiteUrl?: string | undefined;
 	configured: boolean;
 	selected: boolean;
 	selectedModel: string | null;
@@ -178,6 +179,21 @@ export type ProviderModelsDiscoverResult = {
 	managedModels: ManagedProviderModel[];
 	source: "api" | "fallback";
 	error?: string | undefined;
+	failure?: ProviderModelDiscoveryFailure | undefined;
+};
+
+export type ProviderModelDiscoveryFailureCode =
+	| "authentication"
+	| "permission"
+	| "rate_limited"
+	| "models_endpoint"
+	| "response_format"
+	| "network"
+	| "upstream";
+
+export type ProviderModelDiscoveryFailure = {
+	code: ProviderModelDiscoveryFailureCode;
+	httpStatus?: number | undefined;
 };
 
 export type SaveProviderConfigParams = {
@@ -253,9 +269,20 @@ export async function syncProviderModels(params: {
 export async function addCustomProvider(params: {
 	displayName: string;
 	providerType: CustomProviderType;
+	websiteUrl?: string | null | undefined;
 }): Promise<{ providerId: string; selection: ProviderModelSelection }> {
 	const client = await createBackendClient();
 	return client.request("provider.custom.add", params);
+}
+
+export async function updateCustomProvider(params: {
+	provider: string;
+	displayName: string;
+	providerType: CustomProviderType;
+	websiteUrl?: string | null | undefined;
+}): Promise<{ selection: ProviderModelSelection }> {
+	const client = await createBackendClient();
+	return client.request("provider.custom.update", params);
 }
 
 export async function setProviderEnabled(params: {
