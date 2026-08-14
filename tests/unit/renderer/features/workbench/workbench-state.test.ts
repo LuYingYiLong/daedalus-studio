@@ -282,7 +282,7 @@ describe("workbench-state", () => {
 
 		expect(withDelta).toHaveLength(1);
 		expect(withDelta[0]?.type).toBe("assistant");
-		expect(withDelta[0]?.content).toBe("hello");
+		expect(withDelta[0]?.type === "assistant" ? withDelta[0].content : "").toBe("hello");
 		expect(withDone[0]?.type === "assistant" ? withDone[0].status : "missing").toBeUndefined();
 	});
 
@@ -298,6 +298,26 @@ describe("workbench-state", () => {
 			"assistant:request-current",
 			"user:request-later"
 		]);
+	});
+
+	it("inserts a model change divider before the matching user block", () => {
+		const blocks: TimelineBlock[] = applyBackendEventToTimeline(
+			[createUserBlock("request-model")],
+			{
+				type: "event",
+				eventId: "model-change-1",
+				requestId: "request-model",
+				event: "session.model.changed",
+				createdAt: "2026-08-14T00:00:00.000Z",
+				data: {
+					from: { provider: "openai", model: "gpt-a", label: "OpenAI/gpt-a" },
+					to: { provider: "anthropic", model: "claude-b", label: "Anthropic/claude-b" },
+				},
+			},
+		);
+
+		expect(blocks.map((block: TimelineBlock): string => block.type)).toEqual(["divider", "user"]);
+		expect(blocks[0]?.type === "divider" ? blocks[0].dividerKind : "").toBe("model_change");
 	});
 
 	it("batches adjacent streaming deltas without changing timeline semantics", () => {
@@ -333,7 +353,7 @@ describe("workbench-state", () => {
 			event: "agent.run.state"
 		})).toBe(false);
 		expect(blocks).toHaveLength(1);
-		expect(blocks[0]?.content).toBe("long answer");
+		expect(blocks[0]?.type === "assistant" ? blocks[0].content : "").toBe("long answer");
 		expect(blocks[0]?.type === "assistant" ? blocks[0].bodyParts : []).toEqual([
 			{ type: "markdown", text: "long answer" },
 			{ type: "thinking", text: "checking", done: false }

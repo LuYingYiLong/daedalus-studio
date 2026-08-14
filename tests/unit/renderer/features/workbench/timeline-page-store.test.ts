@@ -52,12 +52,14 @@ describe("TimelinePageStore", () => {
 
 		store.applyEvents([delta]);
 		const firstAssistant: TimelineBlock | undefined = store.getSnapshot().blocks[1];
+		expect(store.getSnapshot().blockCount).toBe(2);
 		store.applyEvents([{ ...delta, data: { text: " world" } }]);
 		const nextSnapshot = store.getSnapshot();
 
 		expect(nextSnapshot.blocks[0]).toBe(userBlock);
 		expect(nextSnapshot.blocks[1]).not.toBe(firstAssistant);
 		expect(nextSnapshot.blocks[1]?.type === "assistant" ? nextSnapshot.blocks[1].content : "").toBe("hello world");
+		expect(nextSnapshot.blockCount).toBe(2);
 	});
 
 	it("ignores a replayed runtime event by eventId", () => {

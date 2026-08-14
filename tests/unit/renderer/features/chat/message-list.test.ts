@@ -26,6 +26,15 @@ describe("MessageList", () => {
 	it("builds copy-all text from user and assistant visible message bodies", () => {
 		const blocks: TimelineBlock[] = [
 			{
+				id: "divider-1",
+				type: "divider",
+				requestId: "request-1",
+				createdAtUtc: "2026-07-18T23:59:59.000Z",
+				dividerKind: "model_change",
+				from: { provider: "openai", model: "gpt-a", label: "OpenAI/gpt-a" },
+				to: { provider: "anthropic", model: "claude-b", label: "Anthropic/claude-b" }
+			},
+			{
 				id: "user-1",
 				type: "user",
 				requestId: "request-1",

@@ -40,6 +40,7 @@ export type ConversationTimelinePaneProps = {
 	onRetryEditCancel: (requestId: string) => void;
 	onRetryFromUserMessage: (payload: RetryUserMessagePayload) => Promise<boolean>;
 	onForkFromUserMessage: (requestId: string) => Promise<void>;
+	onOpenForkSource: (sessionId: string) => void | Promise<void>;
 	forkDisabled: boolean;
 	forkingRequestId: string | null;
 	onInlineDiffReview: () => void;
@@ -68,6 +69,7 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 	onRetryEditCancel,
 	onRetryFromUserMessage,
 	onForkFromUserMessage,
+	onOpenForkSource,
 	forkDisabled,
 	forkingRequestId,
 	onInlineDiffReview,
@@ -257,6 +259,7 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 				onRetryEditCancel={onRetryEditCancel}
 				onRetryFromUserMessage={onRetryFromUserMessage}
 				onForkFromUserMessage={onForkFromUserMessage}
+				onOpenForkSource={onOpenForkSource}
 				forkDisabled={forkDisabled}
 				forkingRequestId={forkingRequestId}
 				onInlineDiffReview={onInlineDiffReview}

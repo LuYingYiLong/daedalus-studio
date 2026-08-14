@@ -59,7 +59,6 @@ export type SessionMetadata = {
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
 	workflowTodoDismissedKey?: string | null;
-	forkOriginDismissed?: boolean;
 	forkedFrom?: SessionForkOrigin;
 	archivedAt?: string;
 	createdAt: string;
@@ -412,6 +411,24 @@ export type TimelineAssistantBlock = {
 	renderHints?: TimelineRenderHints;
 };
 
+export type TimelineDividerModelRef = {
+	provider: string;
+	model: string;
+	label: string;
+};
+
+export type TimelineDividerBlock = {
+	id: string;
+	type: "divider";
+	requestId: string;
+	createdAtUtc: string;
+	dividerKind: "fork_origin" | "model_change";
+	origin?: SessionForkOrigin;
+	from?: TimelineDividerModelRef;
+	to?: TimelineDividerModelRef;
+	renderHints?: TimelineRenderHints;
+};
+
 export type TimelineEditedFile = {
 	sourceFolderId?: string;
 	displayPath?: string;
@@ -539,7 +556,7 @@ export type TimelineBodyPart =
 		editedFiles: TimelineEditedFile[];
 	};
 
-export type TimelineBlock = TimelineUserBlock | TimelineAssistantBlock;
+export type TimelineBlock = TimelineUserBlock | TimelineAssistantBlock | TimelineDividerBlock;
 
 export type SessionTimelineNavigationEntry = {
 	entryId: string;

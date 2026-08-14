@@ -3,14 +3,16 @@ import { renderToStaticMarkup } from "react-dom/server";
 import Markdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 function renderMarkdown(source: string): string {
 	return renderToStaticMarkup(React.createElement(
 		Markdown,
 		{
 			remarkPlugins: [remarkMath],
-			rehypePlugins: [rehypeKatex],
+			rehypePlugins: [[rehypeKatex, {
+				strict: (errorCode: string): "ignore" | "warn" => errorCode === "unicodeTextInMathMode" ? "ignore" : "warn",
+			}]],
 		},
 		source,
 	));
@@ -36,5 +38,14 @@ describe("Markdown LaTeX rendering", () => {
 	it("keeps invalid LaTeX visible instead of throwing", () => {
 		expect((): string => renderMarkdown("$\\definitelyUnknownCommand{x}$")).not.toThrow();
 		expect(renderMarkdown("$\\definitelyUnknownCommand{x}$")).toContain('mathcolor="#cc0000"');
+	});
+
+	it("does not warn for CJK text inside a formula", () => {
+		const warningSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+		expect(renderMarkdown("$公式$ ")).toContain('class="katex"');
+		expect(warningSpy).not.toHaveBeenCalled();
+
+		warningSpy.mockRestore();
 	});
 });

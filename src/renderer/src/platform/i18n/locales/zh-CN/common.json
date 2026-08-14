@@ -887,8 +887,7 @@
 			"originLabel": "分叉自",
 			"openSourceTooltip": "打开来源会话",
 			"openSourceAria": "打开来源会话",
-			"dismissOriginTooltip": "隐藏分叉来源提示",
-			"dismissOriginAria": "永久隐藏分叉来源提示",
+			"modelChanged": "模型已从 {{from}} 切换到 {{to}}",
 			"errors": {
 				"create": "创建分叉会话失败",
 				"sourceUnavailable": "来源会话不可用或已归档",

@@ -35,6 +35,7 @@ import { TimelineDisclosureProvider } from "@/features/conversation/timeline-dis
 import { TimelineScrollFrameProvider } from "@/features/conversation/timeline-scroll-frame-context";
 import UserBubble, { type RetryUserMessagePayload } from "./UserBubble";
 import MessageSelectionOverlay from "./MessageSelectionOverlay";
+import DividerPart from "./DividerPart";
 
 export type MessageListProps = {
 	blocks: TimelineBlock[];
@@ -52,6 +53,7 @@ export type MessageListProps = {
 	onRetryEditCancel?: (requestId: string) => void;
 	onRetryFromUserMessage?: (payload: RetryUserMessagePayload) => boolean | void | Promise<boolean | void>;
 	onForkFromUserMessage?: (requestId: string) => void | Promise<void>;
+	onOpenForkSource?: (sessionId: string) => void | Promise<void>;
 	forkDisabled?: boolean;
 	forkingRequestId?: string | null;
 	onInlineDiffReview?: () => void;
@@ -115,7 +117,11 @@ export function shouldRenderTimelineBlock(block: TimelineBlock): boolean {
 
 export function getTimelineCopyText(blocks: readonly TimelineBlock[]): string {
 	return blocks
-		.map((block: TimelineBlock): string => block.type === "user" ? block.content : getAssistantMarkdown(block))
+		.map((block: TimelineBlock): string => block.type === "divider"
+			? ""
+			: block.type === "user"
+				? block.content
+				: getAssistantMarkdown(block))
 		.map((content: string): string => content.trim())
 		.filter((content: string): boolean => content.length > 0)
 		.join("\n\n");
@@ -231,6 +237,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	onRetryEditCancel,
 	onRetryFromUserMessage,
 	onForkFromUserMessage,
+	onOpenForkSource,
 	forkDisabled = false,
 	forkingRequestId = null,
 	onInlineDiffReview,
@@ -729,7 +736,9 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		}
 		return (
 			<div className={styles.messageListContent} data-timeline-block-offset={item.blockOffset}>
-				{block.type === "user" ? (
+				{block.type === "divider" ? (
+					<DividerPart block={block} onOpenForkSource={onOpenForkSource} />
+				) : block.type === "user" ? (
 					<UserBubble
 						entryId={block.id}
 						searchBlockOffset={item.blockOffset}
@@ -752,7 +761,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 				)}
 			</div>
 		);
-	}, [activeRetryRequestId, canEditUserMessages, forkDisabled, forkingRequestId, handleTerminalWheelPassThrough, hideInlineDiff, onForkFromUserMessage, onInlineDiffReview, onRetryEditCancel, onRetryEditStart, onRetryFromUserMessage, retryDisabled]);
+	}, [activeRetryRequestId, canEditUserMessages, forkDisabled, forkingRequestId, handleTerminalWheelPassThrough, hideInlineDiff, onForkFromUserMessage, onInlineDiffReview, onOpenForkSource, onRetryEditCancel, onRetryEditStart, onRetryFromUserMessage, retryDisabled]);
 	const virtuosoComponents = useMemo(() => ({
 		Header: renderHeader,
 		Footer: renderFooter,

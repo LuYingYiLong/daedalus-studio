@@ -21,7 +21,6 @@ import {
 import { fetchSessionOverview, fetchWorkspaceOverview, type SessionOverviewGitInfo, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/platform/rpc/session-overview-api";
 import WorkspaceTree, { type SessionArchiveContext } from "@/widgets/workspace/WorkspaceTree";
 import ConversationTimelinePane, { type ConversationTimelinePaneHandle } from "@/widgets/conversation/ConversationTimelinePane";
-import ForkOriginBanner from "@/widgets/conversation/ForkOriginBanner";
 import Composer, { type ComposerInputRequest } from "@/widgets/composer/Composer";
 import FloatingWorkflowTodoPanel, { type WorkflowFileChangeSummary } from "@/widgets/composer/FloatingWorkflowTodoPanel";
 import FloatingGoalPanel from "@/widgets/composer/FloatingGoalPanel";
@@ -444,7 +443,6 @@ type HomePageProps = {
 	onSessionFork: (session: SessionMetadata) => void;
 	onForkFromUserMessage: (requestId: string) => Promise<void>;
 	onForkSourceOpen: (sessionId: string) => Promise<void>;
-	onForkOriginDismiss: () => void;
 	onSessionArchive: (session: SessionMetadata, context: SessionArchiveContext) => void;
 	onSessionRename: (session: SessionMetadata) => void;
 	onSessionsChange: (sessions: SessionMetadata[]) => void;
@@ -577,7 +575,6 @@ function HomePage({
 	onSessionFork,
 	onForkFromUserMessage,
 	onForkSourceOpen,
-	onForkOriginDismiss,
 	onSessionArchive,
 	onSessionRename,
 	onSessionsChange,
@@ -2175,46 +2172,35 @@ function HomePage({
 															launchTargets: workspaceLaunchTargets
 														}}
 													>
-														<div className={styles.conversationStack}>
-															{activeSessionMetadata?.forkedFrom !== undefined && activeSessionMetadata.forkOriginDismissed !== true ? (
-																<ForkOriginBanner
-																	origin={activeSessionMetadata.forkedFrom}
-																	disabled={isSessionLoading}
-																	onOpenSource={onForkSourceOpen}
-																	onDismiss={onForkOriginDismiss}
-																/>
-															) : null}
-															<div className={styles.conversationTimelineSlot}>
-																<ConversationTimelinePane
-																	ref={conversationTimelinePaneRef}
-																	sessionId={activeSessionId}
-																	timelineStore={timelineStore}
-																	timelineNavigationEntries={timelineNavigationEntries}
-																	isLoading={isSessionLoading}
-																	errorMessage={sessionError}
-																	isLoadingMoreBefore={isLoadingMoreBefore}
-																	isLoadingMoreAfter={isLoadingMoreAfter}
-																	retryDisabled={retryDisabled}
-																	activeRetryRequestId={activeRetryRequestId}
-																	onLoadMoreBefore={onLoadMoreBefore}
-																	onLoadMoreAfter={onLoadMoreAfter}
-																	onTimelineNavigationLoadEntry={onTimelineNavigationLoadEntry}
-																	onTimelineSearchLoadOffset={onTimelineSearchLoadOffset}
-																	onRetryEditStart={onRetryEditStart}
-																	onRetryEditCancel={onRetryEditCancel}
-																	onRetryFromUserMessage={onRetryFromUserMessage}
-																	onForkFromUserMessage={onForkFromUserMessage}
-																	forkDisabled={forkDisabled}
-																	forkingRequestId={forkingRequestId}
-																	onInlineDiffReview={openReviewPanel}
-																	onAwayFromBottomChange={setScrollToBottomButtonVisible}
-																	contextItems={selectionMarkerContextItems}
-																	onAddContext={onAddContext}
-																	initialSelectionAskThreads={selectionAskThreads}
-																	goal={currentGoal}
-																/>
-															</div>
-														</div>
+														<ConversationTimelinePane
+															ref={conversationTimelinePaneRef}
+															sessionId={activeSessionId}
+															timelineStore={timelineStore}
+															timelineNavigationEntries={timelineNavigationEntries}
+															isLoading={isSessionLoading}
+															errorMessage={sessionError}
+															isLoadingMoreBefore={isLoadingMoreBefore}
+															isLoadingMoreAfter={isLoadingMoreAfter}
+															retryDisabled={retryDisabled}
+															activeRetryRequestId={activeRetryRequestId}
+															onLoadMoreBefore={onLoadMoreBefore}
+															onLoadMoreAfter={onLoadMoreAfter}
+															onTimelineNavigationLoadEntry={onTimelineNavigationLoadEntry}
+															onTimelineSearchLoadOffset={onTimelineSearchLoadOffset}
+															onRetryEditStart={onRetryEditStart}
+															onRetryEditCancel={onRetryEditCancel}
+															onRetryFromUserMessage={onRetryFromUserMessage}
+															onForkFromUserMessage={onForkFromUserMessage}
+															onOpenForkSource={onForkSourceOpen}
+															forkDisabled={forkDisabled}
+															forkingRequestId={forkingRequestId}
+															onInlineDiffReview={openReviewPanel}
+															onAwayFromBottomChange={setScrollToBottomButtonVisible}
+															contextItems={selectionMarkerContextItems}
+															onAddContext={onAddContext}
+															initialSelectionAskThreads={selectionAskThreads}
+															goal={currentGoal}
+														/>
 													</MarkdownResourceActionsProvider>
 												) : null}
 											</div>

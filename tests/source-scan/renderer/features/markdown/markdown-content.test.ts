@@ -66,7 +66,8 @@ describe("MarkdownContent source", () => {
 		expect(source).toContain('import rehypeKatex from "rehype-katex"');
 		expect(source).toContain('import "katex/dist/katex.min.css"');
 		expect(source).toContain("const MARKDOWN_REMARK_PLUGINS = [remarkGfm, remarkMath]");
-		expect(source).toContain("const MARKDOWN_REHYPE_PLUGINS = [rehypeKatex]");
+		expect(source).toContain("const MARKDOWN_REHYPE_PLUGINS: Array<[typeof rehypeKatex, { strict: StrictFunction }]> = [[rehypeKatex, { strict: MARKDOWN_KATEX_STRICT_HANDLER }]]");
+		expect(source).toContain('errorCode === "unicodeTextInMathMode" ? "ignore" : "warn"');
 		expect(source).toContain("rehypePlugins={MARKDOWN_REHYPE_PLUGINS}");
 		expect(source).toContain('name === "language-math" || name === "math-inline" || name === "math-display"');
 		expect(markdownStyles).toContain(".markdown-body .katex-display");

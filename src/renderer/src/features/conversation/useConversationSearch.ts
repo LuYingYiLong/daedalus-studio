@@ -84,6 +84,9 @@ export function timelineBlocksToSearchDocuments(
 ): SessionTimelineSearchDocument[] {
 	return blocks.flatMap((block: TimelineBlock, index: number): SessionTimelineSearchDocument[] => {
 		const absoluteBlockOffset: number = blockOffset + index;
+		if (block.type === "divider") {
+			return [];
+		}
 		if (block.type === "user") {
 			return block.content.length === 0 ? [] : [{
 				blockOffset: absoluteBlockOffset,

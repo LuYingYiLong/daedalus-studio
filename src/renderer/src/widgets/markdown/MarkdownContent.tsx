@@ -3,6 +3,7 @@ import Markdown, { type Components } from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import type { StrictFunction } from "katex";
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import hljs from "highlight.js";
@@ -226,7 +227,14 @@ function CodeBlock({ code, language, highlight, stickyHeader }: CodeBlockProps):
 
 const MemoizedCodeBlock = memo(CodeBlock);
 const MARKDOWN_REMARK_PLUGINS = [remarkGfm, remarkMath];
-const MARKDOWN_REHYPE_PLUGINS = [rehypeKatex];
+const MARKDOWN_KATEX_STRICT_HANDLER: StrictFunction = (errorCode: string): "ignore" | "warn" => {
+	// KaTeX can render CJK text with its fallback glyphs, but reports it as
+	// LaTeX-incompatible when a model places the text inside math delimiters.
+	// Keep other strict diagnostics visible so malformed formulas are still
+	// actionable during development.
+	return errorCode === "unicodeTextInMathMode" ? "ignore" : "warn";
+};
+const MARKDOWN_REHYPE_PLUGINS: Array<[typeof rehypeKatex, { strict: StrictFunction }]> = [[rehypeKatex, { strict: MARKDOWN_KATEX_STRICT_HANDLER }]];
 
 function createMarkdownComponents(
 	highlightCodeBlocks: boolean,

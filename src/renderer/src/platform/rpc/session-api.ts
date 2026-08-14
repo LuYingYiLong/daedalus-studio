@@ -23,7 +23,6 @@ export type SaveSessionUiMetadataParams = {
 	approvalMode?: "manual" | "auto-safe" | "full-trust";
 	workflowTodoCollapsed?: boolean;
 	workflowTodoDismissedKey?: string | null;
-	forkOriginDismissed?: boolean;
 };
 
 export type CreateSessionResult = SessionMetadata & {

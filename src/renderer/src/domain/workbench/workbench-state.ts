@@ -1,5 +1,5 @@
 import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
-import type { SessionOpenResult, SessionTimelineResult, TimelineAssistantBlock, TimelineBlock, TimelineBodyPart, WorkbenchSnapshot } from "@/platform/rpc/types";
+import type { SessionOpenResult, SessionTimelineResult, TimelineAssistantBlock, TimelineBlock, TimelineBodyPart, TimelineDividerBlock, TimelineDividerModelRef, WorkbenchSnapshot } from "@/platform/rpc/types";
 
 export type TimelinePageState = {
 	sessionId: string | null;
@@ -915,8 +915,57 @@ function insertLiveAssistantBlockInRequestOrder(blocks: TimelineBlock[], assista
 	return [...blocks, assistantBlock];
 }
 
+function readTimelineDividerModelRef(value: unknown): TimelineDividerModelRef | null {
+	if (!isRecord(value)) {
+		return null;
+	}
+	const provider: string = getStringValue(value, "provider");
+	const model: string = getStringValue(value, "model");
+	const label: string = getStringValue(value, "label");
+	if (provider.length === 0 || model.length === 0) {
+		return null;
+	}
+	return { provider, model, label: label || `${provider}/${model}` };
+}
+
+function applyModelChangeDividerEvent(blocks: TimelineBlock[], event: BackendEvent): TimelineBlock[] {
+	const data: Record<string, unknown> = getEventData(event);
+	const from: TimelineDividerModelRef | null = readTimelineDividerModelRef(data.from);
+	const to: TimelineDividerModelRef | null = readTimelineDividerModelRef(data.to);
+	if (from === null || to === null) {
+		return blocks;
+	}
+	const id: string = `divider:${getTransportEventId(event)}`;
+	if (blocks.some((block: TimelineBlock): boolean => block.id === id)) {
+		return blocks;
+	}
+	const requestId: string = getCanonicalEventRequestId(event);
+	const divider: TimelineDividerBlock = {
+		id,
+		type: "divider",
+		requestId,
+		createdAtUtc: event.createdAt ?? new Date().toISOString(),
+		dividerKind: "model_change",
+		from,
+		to,
+		renderHints: {
+			estimatedHeight: 48,
+			contentChars: from.label.length + to.label.length,
+			bodyPartCount: 0,
+			heavyPartCount: 0,
+		},
+	};
+	const requestBlockIndex: number = blocks.findIndex((block: TimelineBlock): boolean => block.requestId === requestId);
+	return requestBlockIndex < 0
+		? [...blocks, divider]
+		: [...blocks.slice(0, requestBlockIndex), divider, ...blocks.slice(requestBlockIndex)];
+}
+
 export function applyBackendEventToTimeline(blocks: TimelineBlock[], event: BackendEvent): TimelineBlock[] {
 	const canonicalEvent: BackendEvent = rewriteEventForTimeline(blocks, event);
+	if (canonicalEvent.event === "session.model.changed") {
+		return applyModelChangeDividerEvent(blocks, canonicalEvent);
+	}
 	let changed: boolean = false;
 	const nextBlocks: TimelineBlock[] = blocks.map((block: TimelineBlock): TimelineBlock => {
 		if (block.type !== "assistant" || !assistantBlockMatchesEvent(block, canonicalEvent)) {

@@ -1,0 +1,30 @@
+.divider {
+	margin: 12px 0;
+	color: var(--ant-color-text-tertiary);
+}
+
+.content {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	max-width: min(70vw, 640px);
+	min-width: 0;
+}
+
+.icon {
+	flex: 0 0 auto;
+}
+
+.sourceButton {
+	min-width: 0;
+	max-width: 220px;
+	padding-inline: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.preview {
+	min-width: 0;
+	max-width: 280px;
+}

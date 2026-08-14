@@ -2848,9 +2848,6 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			await handleSessionFork(activeSessionMetadata, requestId);
 		},
 		 onForkSourceOpen: handleForkSourceOpen,
-		onForkOriginDismiss: (): void => {
-			void persistSessionUiMetadata({ forkOriginDismissed: true });
-		},
 		onSessionArchive: handleSessionArchive,
 		onSessionRename: handleSessionRename,
 		onSessionsChange: handleSessionsChange,

@@ -106,7 +106,14 @@ export function createTimelinePageStore(initialPage: TimelinePageState = cloneEm
 			}
 			update((current: TimelinePageState): TimelinePageState => {
 				const blocks = applyBackendEventsToTimeline(current.blocks, unseenEvents);
-				return blocks === current.blocks ? current : { ...current, blocks };
+				if (blocks === current.blocks) {
+					return current;
+				}
+				return {
+					...current,
+					blocks,
+					blockCount: Math.max(0, current.blockCount + blocks.length - current.blocks.length),
+				};
 			});
 		}
 	};
