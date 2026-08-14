@@ -201,6 +201,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		handleLoadMoreAfter,
 		handleTimelineSearchLoadOffset,
 		handleTimelineNavigationLoadEntry,
+		refreshTimelineNavigationEntries,
 		resetTimelineUiState
 	} = timelineController;
 	const [isSessionLoading, setIsSessionLoading] = useState(false);
@@ -2554,6 +2555,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		timelineStore.update((currentPage: TimelinePageState): TimelinePageState => {
 			return mergeOptimisticUserBlocks(currentPage, createTimelinePageFromTimelineResult(timeline), activeOptimisticRequestId);
 		});
+		await refreshTimelineNavigationEntries(sessionId);
 		setLatestPlanClarification(timeline.latestPlanClarification);
 		setLatestPlanApproval(timeline.latestPlanApproval);
 		const workflowTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromTimelineResult(timeline);

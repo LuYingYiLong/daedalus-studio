@@ -22,6 +22,7 @@ export type TimelineController = {
 	handleLoadMoreAfter: () => void;
 	handleTimelineSearchLoadOffset: (blockOffset: number) => Promise<void>;
 	handleTimelineNavigationLoadEntry: (entry: SessionTimelineNavigationEntry) => Promise<void>;
+	refreshTimelineNavigationEntries: (sessionIdOverride?: string) => Promise<void>;
 	resetTimelineUiState: () => void;
 };
 
@@ -30,34 +31,43 @@ export default function useTimelineController(params: TimelineControllerParams):
 	const [isTimelineLoadingBefore, setIsTimelineLoadingBefore] = useState<boolean>(false);
 	const [isTimelineLoadingAfter, setIsTimelineLoadingAfter] = useState<boolean>(false);
 	const isTimelinePageLoadingRef = useRef<boolean>(false);
+	const timelineNavigationRequestVersionRef = useRef<number>(0);
 
 	const resetTimelineUiState = useCallback((): void => {
 		isTimelinePageLoadingRef.current = false;
+		timelineNavigationRequestVersionRef.current += 1;
 		setTimelineNavigationEntries([]);
 		setIsTimelineLoadingBefore(false);
 		setIsTimelineLoadingAfter(false);
 	}, []);
 
-	useEffect((): (() => void) | void => {
-		if (params.activeSessionId === null) {
+	const refreshTimelineNavigationEntries = useCallback(async (sessionIdOverride?: string): Promise<void> => {
+		const sessionId: string | null = sessionIdOverride ?? params.activeSessionId;
+		const requestVersion: number = timelineNavigationRequestVersionRef.current + 1;
+		timelineNavigationRequestVersionRef.current = requestVersion;
+		if (sessionId === null) {
 			setTimelineNavigationEntries([]);
 			return;
 		}
-		let cancelled: boolean = false;
-		const sessionId: string = params.activeSessionId;
-		void fetchSessionTimelineIndex(sessionId)
-			.then((result): void => {
-				if (!cancelled && params.activeSessionIdRef.current === sessionId && result.sessionId === sessionId) {
-					setTimelineNavigationEntries(result.entries);
-				}
-			})
-			.catch((error: unknown): void => {
-				if (!cancelled) console.warn("[App] load timeline navigation index failed", error);
-			});
-		return (): void => {
-			cancelled = true;
-		};
-	}, [params.activeSessionId, params.activeSessionIdRef, params.timelineBlockCount]);
+		try {
+			const result = await fetchSessionTimelineIndex(sessionId);
+			if (
+				timelineNavigationRequestVersionRef.current === requestVersion
+				&& params.activeSessionIdRef.current === sessionId
+				&& result.sessionId === sessionId
+			) {
+				setTimelineNavigationEntries(result.entries);
+			}
+		} catch (error: unknown) {
+			if (timelineNavigationRequestVersionRef.current === requestVersion) {
+				console.warn("[App] load timeline navigation index failed", error);
+			}
+		}
+	}, [params.activeSessionId, params.activeSessionIdRef]);
+
+	useEffect((): void => {
+		void refreshTimelineNavigationEntries();
+	}, [params.timelineBlockCount, refreshTimelineNavigationEntries]);
 
 	const handleLoadMoreBefore = useCallback((): void => {
 		const timelinePage: TimelinePageState = params.timelineStore.getSnapshot();
@@ -127,7 +137,7 @@ export default function useTimelineController(params: TimelineControllerParams):
 		handleLoadMoreAfter,
 		handleTimelineSearchLoadOffset,
 		handleTimelineNavigationLoadEntry,
+		refreshTimelineNavigationEntries,
 		resetTimelineUiState
 	};
 }
-

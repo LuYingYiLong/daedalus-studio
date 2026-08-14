@@ -5,6 +5,8 @@ describe("ConversationAnchorNavigator source", () => {
 	const navigatorSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ConversationAnchorNavigator.tsx");
 	const navigatorStyles: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ConversationAnchorNavigator.module.css");
 	const homePageSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+	const appControllerSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "useAppController.tsx");
+	const timelineControllerSource: string = readRepoFile("src", "renderer", "src", "features", "conversation", "controllers", "useTimelineController.ts");
 	const timelinePaneSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "ConversationTimelinePane.tsx");
 	const homePageStyles: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.module.css").replace(/\r\n/g, "\n");
 	const messageListSource: string = readRepoFile("src", "renderer", "src", "widgets", "conversation", "MessageList.tsx");
@@ -64,6 +66,15 @@ describe("ConversationAnchorNavigator source", () => {
 		expect(timelinePaneSource).toContain("ConversationAnchorNavigator");
 		expect(homePageSource).toContain("onTimelineNavigationLoadEntry");
 		expect(homePageStyles).toMatch(/\.chatBody\s*\{[\s\S]*?position:\s*relative;[\s\S]*?display:\s*grid;/u);
+	});
+
+	it("refreshes the navigation index after the persisted timeline settles", () => {
+		expect(timelineControllerSource).toContain("timelineNavigationRequestVersionRef");
+		expect(timelineControllerSource).toContain("refreshTimelineNavigationEntries");
+		expect(appControllerSource).toContain("await refreshTimelineNavigationEntries(sessionId);");
+		expect(appControllerSource.indexOf("await refreshTimelineNavigationEntries(sessionId);")).toBeGreaterThan(
+			appControllerSource.indexOf("mergeOptimisticUserBlocks(currentPage")
+		);
 	});
 
 	it("shares the scroll frame with code headers and selection overlays", () => {
