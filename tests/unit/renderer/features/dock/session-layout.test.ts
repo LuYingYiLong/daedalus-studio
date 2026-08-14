@@ -23,6 +23,7 @@ describe("session dock layout", () => {
 			size: 280,
 			activeTabKey: "bottom:terminal:1"
 		});
+		expect(layout.fullscreenDock).toBeNull();
 	});
 
 	it("creates stable keys and preserves explicit tab order", () => {

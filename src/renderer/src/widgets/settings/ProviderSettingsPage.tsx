@@ -1096,7 +1096,10 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 			</aside>
 
 			<section className={styles.detailPane}>
-				<div className={styles.detailContent}>
+				<div
+					key={selectedProvider.provider}
+					className={`${styles.detailContent} ${styles.detailTransition}`}
+				>
 					<header className={styles.detailHeader}>
 						<Space>
 							<Typography.Title level={3} className={styles.detailTitle}>

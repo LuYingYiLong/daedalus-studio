@@ -21,6 +21,11 @@
 	background: var(--ds-bg-sunken);
 }
 
+.fullscreen {
+	padding-top: var(--ds-space-2);
+	border: 0;
+}
+
 .tabs {
 	min-width: 0;
 	min-height: 0;

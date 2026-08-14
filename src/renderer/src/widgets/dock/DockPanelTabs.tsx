@@ -39,12 +39,14 @@ type DockPanelTabsProps = {
 	defaultKind: DockPanelKind;
 	layout: DockLayoutPreferences;
 	activationRequest?: DockPanelActivationRequest | null;
+	isFullscreen?: boolean;
 	contextItems: AdditionalContextItem[];
 	onAddContext: (item: AdditionalContextItem) => void;
 	onRemoveContext: (contextId: string) => void;
 	gitStateRevision?: number;
 	onGitStateChange?: () => void | Promise<void>;
 	onLayoutChange: (layout: DockLayoutPreferences) => void;
+	onFullscreenToggle?: () => void;
 };
 
 const ADD_REVIEW_KEY: DockPanelKind = "review";
@@ -110,12 +112,14 @@ function DockPanelTabs({
 	defaultKind,
 	layout,
 	activationRequest = null,
+	isFullscreen = false,
 	contextItems,
 	onAddContext,
 	onRemoveContext,
 	gitStateRevision = 0,
 	onGitStateChange,
-	onLayoutChange
+	onLayoutChange,
+	onFullscreenToggle
 }: DockPanelTabsProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const handledActivationIdRef = useRef<number | null>(null);
@@ -257,12 +261,16 @@ function DockPanelTabs({
 	}));
 
 	return (
-		<section className={`${styles.panel} ${placement === "side" ? styles.side : styles.bottom}`}>
+		<section className={`${styles.panel} ${placement === "side" ? styles.side : styles.bottom} ${isFullscreen ? styles.fullscreen : ""}`}>
 			<PanelTabs
 				activeKey={activeKey}
 				items={panelItems}
 				addItems={addItems}
 				addLabel={t("dock.add.label")}
+				isFullscreen={isFullscreen}
+				fullscreenLabel={t("dock.tabs.enterFullscreen")}
+				exitFullscreenLabel={t("dock.tabs.exitFullscreen")}
+				onFullscreenToggle={onFullscreenToggle}
 				className={styles.tabs}
 				onActiveChange={(nextActiveKey: string): void => {
 					onLayoutChange({ ...layout, activeTabKey: nextActiveKey });

@@ -6,6 +6,8 @@ export type DockTabPreferences = {
 	index: number;
 };
 
+export type DockFullscreenPlacement = "side" | "bottom";
+
 export type DockLayoutPreferences = {
 	open: boolean;
 	size: number;
@@ -16,6 +18,7 @@ export type DockLayoutPreferences = {
 export type SessionLayoutPreferences = {
 	side: DockLayoutPreferences;
 	bottom: DockLayoutPreferences;
+	fullscreenDock: DockFullscreenPlacement | null;
 };
 
 export type SessionLayoutMap = Record<string, SessionLayoutPreferences>;
@@ -30,6 +33,7 @@ const MAX_TERMINAL_RUNTIME_ID_LENGTH = 80;
 
 export function createDefaultSessionLayout(): SessionLayoutPreferences {
 	return {
+		fullscreenDock: null,
 		side: {
 			open: false,
 			size: SIDE_DOCK_DEFAULT_SIZE,
@@ -47,6 +51,7 @@ export function createDefaultSessionLayout(): SessionLayoutPreferences {
 
 export function cloneSessionLayout(layout: SessionLayoutPreferences): SessionLayoutPreferences {
 	return {
+		fullscreenDock: layout.fullscreenDock,
 		side: {
 			...layout.side,
 			tabs: layout.side.tabs.map((tab: DockTabPreferences): DockTabPreferences => ({ ...tab }))

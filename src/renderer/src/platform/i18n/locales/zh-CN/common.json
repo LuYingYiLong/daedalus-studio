@@ -668,7 +668,9 @@
       "changes": "变更",
       "changesIndexed": "变更 {{index}}",
       "terminal": "终端",
-      "terminalIndexed": "终端 {{index}}"
+      "terminalIndexed": "终端 {{index}}",
+      "enterFullscreen": "展开面板",
+      "exitFullscreen": "恢复面板"
     },
     "add": {
       "label": "添加面板",

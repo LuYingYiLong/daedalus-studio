@@ -670,7 +670,9 @@
       "changes": "Changes",
       "changesIndexed": "Changes {{index}}",
       "terminal": "Terminal",
-      "terminalIndexed": "Terminal {{index}}"
+      "terminalIndexed": "Terminal {{index}}",
+      "enterFullscreen": "Expand panel",
+      "exitFullscreen": "Restore panel"
     },
     "add": {
       "label": "Add panel",

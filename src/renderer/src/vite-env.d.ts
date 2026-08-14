@@ -279,6 +279,7 @@ declare global {
 	interface SessionLayoutPreferences {
 		side: DockLayoutPreferences;
 		bottom: DockLayoutPreferences;
+		fullscreenDock: "side" | "bottom" | null;
 	}
 
 	interface SessionLayoutAPI {

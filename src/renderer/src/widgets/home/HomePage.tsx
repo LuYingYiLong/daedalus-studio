@@ -39,6 +39,7 @@ import DockPanelTabs, { type DockPanelActivationRequest, type DockPanelKind } fr
 import {
 	listTerminalRuntimeIds,
 	type DockLayoutPreferences,
+	type DockFullscreenPlacement,
 	type SessionLayoutPreferences
 } from "@/domain/session/session-layout";
 import BranchActionDialog from "@/widgets/git/BranchActionDialog";
@@ -132,7 +133,8 @@ function areDockLayoutPreferencesEqual(left: DockLayoutPreferences, right: DockL
 }
 
 function areSessionLayoutPreferencesEqual(left: SessionLayoutPreferences, right: SessionLayoutPreferences): boolean {
-	return areDockLayoutPreferencesEqual(left.side, right.side)
+	return left.fullscreenDock === right.fullscreenDock
+		&& areDockLayoutPreferencesEqual(left.side, right.side)
 		&& areDockLayoutPreferencesEqual(left.bottom, right.bottom);
 }
 
@@ -655,6 +657,7 @@ function HomePage({
 	const [composerInputRequest, setComposerInputRequest] = useState<ComposerInputRequest | null>(null);
 	const [visualWorkspaceSidebar, setVisualWorkspaceSidebar] = useState<WorkspaceSidebarPreferences>(workspaceSidebar);
 	const [visualSessionLayout, setVisualSessionLayout] = useState<SessionLayoutPreferences>(sessionLayout);
+	const [fullscreenMotionDisabled, setFullscreenMotionDisabled] = useState<boolean>(false);
 	const dockActivationRequestIdRef = useRef<number>(0);
 	const sideDockProgrammaticOpenUntilRef = useRef<number>(0);
 	const summaryRequestIdRef = useRef<number>(0);
@@ -831,6 +834,11 @@ function HomePage({
 	const sideDockSize: number = visualSessionLayout.side.size;
 	const bottomDockOpen: boolean = visualSessionLayout.bottom.open;
 	const bottomDockSize: number = visualSessionLayout.bottom.size;
+	const fullscreenDock: DockFullscreenPlacement | null = showDockControls
+		? visualSessionLayout.fullscreenDock
+		: null;
+	const sideDockFullscreen: boolean = fullscreenDock === "side" && sideDockOpen;
+	const bottomDockFullscreen: boolean = fullscreenDock === "bottom" && bottomDockOpen;
 	const selectionMarkerContextItems: AdditionalContextItem[] = useMemo((): AdditionalContextItem[] => {
 		const byId = new Map<string, AdditionalContextItem>();
 		for (const item of contextItems) {
@@ -867,6 +875,18 @@ function HomePage({
 			...visualSessionLayoutRef.current,
 			bottom: nextBottomLayout
 		}, persist);
+	}, [commitSessionLayout]);
+
+	const toggleDockFullscreen = useCallback((placement: DockFullscreenPlacement): void => {
+		const currentPlacement: DockFullscreenPlacement | null = visualSessionLayoutRef.current.fullscreenDock;
+		setFullscreenMotionDisabled(true);
+		commitSessionLayout({
+			...visualSessionLayoutRef.current,
+			fullscreenDock: currentPlacement === placement ? null : placement
+		});
+		window.requestAnimationFrame((): void => {
+			setFullscreenMotionDisabled(false);
+		});
 	}, [commitSessionLayout]);
 
 	useLayoutEffect((): void => {
@@ -1636,6 +1656,9 @@ function HomePage({
 		sideDockProgrammaticOpenUntilRef.current = 0;
 		scheduleSessionLayoutSave({
 			...visualSessionLayoutRef.current,
+			fullscreenDock: visualSessionLayoutRef.current.fullscreenDock === "side"
+				? null
+				: visualSessionLayoutRef.current.fullscreenDock,
 			side: { ...visualSessionLayoutRef.current.side, open: false }
 		});
 	}, [scheduleSessionLayoutSave]);
@@ -1665,6 +1688,9 @@ function HomePage({
 	const closeBottomDock = useCallback((): void => {
 		scheduleSessionLayoutSave({
 			...visualSessionLayoutRef.current,
+			fullscreenDock: visualSessionLayoutRef.current.fullscreenDock === "bottom"
+				? null
+				: visualSessionLayoutRef.current.fullscreenDock,
 			bottom: { ...visualSessionLayoutRef.current.bottom, open: false }
 		});
 	}, [scheduleSessionLayoutSave]);
@@ -2055,7 +2081,7 @@ function HomePage({
 				</Splitter.Panel>
 
 				<Splitter.Panel min={360}>
-					<div className={styles.agentMain}>
+					<div className={styles.agentMain} data-dock-fullscreen={fullscreenDock ?? undefined}>
 						{showWorkspaceLaunchControls || showSummaryButton || showBottomDockButton || showSideDockButton ? (
 							<div className={styles.floatingActionSlot}>
 								<div className={styles.floatingActions}>
@@ -2111,6 +2137,8 @@ function HomePage({
 						) : null}
 						<Splitter
 							className={styles.agentVerticalSplitter}
+							data-dock-fullscreen={fullscreenDock ?? undefined}
+							data-fullscreen-motion-disabled={fullscreenMotionDisabled ? "true" : undefined}
 							classNames={SPLITTER_CLASS_NAMES}
 							draggerIcon={null}
 							orientation="vertical"
@@ -2118,16 +2146,18 @@ function HomePage({
 							onResize={handleBottomDockResize}
 							onResizeEnd={handleBottomDockResizeEnd}
 						>
-							<Splitter.Panel min={360}>
+							<Splitter.Panel min={bottomDockFullscreen ? BOTTOM_DOCK_CLOSED_SIZE : 360} size={bottomDockFullscreen ? 0 : undefined}>
 								<Splitter
 									className={styles.agentSplitter}
+									data-dock-fullscreen={sideDockFullscreen ? "side" : undefined}
+									data-fullscreen-motion-disabled={fullscreenMotionDisabled ? "true" : undefined}
 									classNames={SPLITTER_CLASS_NAMES}
 									draggerIcon={null}
 									collapsible={{ motion: true }}
 									onResize={handleSideDockResize}
 									onResizeEnd={handleSideDockResizeEnd}
 								>
-									<Splitter.Panel min={360}>
+									<Splitter.Panel min={sideDockFullscreen ? SIDE_DOCK_CLOSED_SIZE : 360} size={sideDockFullscreen ? 0 : undefined}>
 										<section className={styles.chatPanel}>
 											<header className={styles.chatHeader}>
 												<div className={styles.chatTitleRow}>
@@ -2339,9 +2369,9 @@ function HomePage({
 									</Splitter.Panel>
 									{showSideDockButton ? (
 										<Splitter.Panel
-											size={sideDockOpen ? sideDockSize : SIDE_DOCK_CLOSED_SIZE}
+											size={sideDockFullscreen ? "100%" : sideDockOpen ? sideDockSize : SIDE_DOCK_CLOSED_SIZE}
 											min={SIDE_DOCK_CLOSED_SIZE}
-											max={SIDE_DOCK_MAX_SIZE}
+											max={sideDockFullscreen ? undefined : SIDE_DOCK_MAX_SIZE}
 											collapsible={{ start: true, showCollapsibleIcon: false }}
 										>
 											<div className={styles.sideDockSlot} aria-hidden={!sideDockOpen}>
@@ -2361,11 +2391,13 @@ function HomePage({
 													gitStateRevision={gitStateRevision}
 													onGitStateChange={handleDockGitStateChange}
 													isOpen={sideDockOpen}
+													isFullscreen={sideDockFullscreen}
 													waitForCwd={terminalWaitForCwd}
 													defaultKind="review"
 													layout={visualSessionLayout.side}
 													activationRequest={sideDockActivationRequest}
 													onLayoutChange={updateSideDock}
+													onFullscreenToggle={(): void => toggleDockFullscreen("side")}
 												/>
 											</div>
 										</Splitter.Panel>
@@ -2374,9 +2406,9 @@ function HomePage({
 							</Splitter.Panel>
 							{showBottomDockButton ? (
 								<Splitter.Panel
-									size={bottomDockOpen ? bottomDockSize : BOTTOM_DOCK_CLOSED_SIZE}
+									size={bottomDockFullscreen ? "100%" : sideDockFullscreen ? BOTTOM_DOCK_CLOSED_SIZE : bottomDockOpen ? bottomDockSize : BOTTOM_DOCK_CLOSED_SIZE}
 									min={BOTTOM_DOCK_CLOSED_SIZE}
-									max={BOTTOM_DOCK_MAX_SIZE}
+									max={bottomDockFullscreen ? undefined : BOTTOM_DOCK_MAX_SIZE}
 									collapsible={{ start: true, showCollapsibleIcon: false }}
 								>
 									<div className={styles.bottomDockSlot} aria-hidden={!bottomDockOpen}>
@@ -2396,10 +2428,12 @@ function HomePage({
 											gitStateRevision={gitStateRevision}
 											onGitStateChange={handleDockGitStateChange}
 											isOpen={bottomDockOpen}
+											isFullscreen={bottomDockFullscreen}
 											waitForCwd={terminalWaitForCwd}
 											defaultKind="terminal"
 											layout={visualSessionLayout.bottom}
 											onLayoutChange={updateBottomDock}
+											onFullscreenToggle={(): void => toggleDockFullscreen("bottom")}
 										/>
 									</div>
 								</Splitter.Panel>

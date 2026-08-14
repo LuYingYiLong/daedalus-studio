@@ -9,6 +9,8 @@ export type DockTabPreferences = {
 	index: number;
 };
 
+export type DockFullscreenPlacement = "side" | "bottom";
+
 export type DockLayoutPreferences = {
 	open: boolean;
 	size: number;
@@ -19,6 +21,7 @@ export type DockLayoutPreferences = {
 export type SessionLayoutPreferences = {
 	side: DockLayoutPreferences;
 	bottom: DockLayoutPreferences;
+	fullscreenDock: DockFullscreenPlacement | null;
 };
 
 export type SessionLayoutMap = Record<string, SessionLayoutPreferences>;
@@ -56,6 +59,7 @@ function cloneDockLayout(layout: DockLayoutPreferences): DockLayoutPreferences {
 
 export function cloneSessionLayout(layout: SessionLayoutPreferences): SessionLayoutPreferences {
 	return {
+		fullscreenDock: layout.fullscreenDock,
 		side: cloneDockLayout(layout.side),
 		bottom: cloneDockLayout(layout.bottom)
 	};
@@ -63,6 +67,7 @@ export function cloneSessionLayout(layout: SessionLayoutPreferences): SessionLay
 
 export function createDefaultSessionLayout(): SessionLayoutPreferences {
 	return {
+		fullscreenDock: null,
 		side: {
 			open: false,
 			size: SIDE_DOCK_DEFAULT_SIZE,
@@ -157,7 +162,10 @@ export function normalizeSessionLayout(value: unknown): SessionLayoutPreferences
 		return defaults;
 	}
 
-	return { side, bottom };
+	const fullscreenDock: DockFullscreenPlacement | null = value.fullscreenDock === "side" || value.fullscreenDock === "bottom"
+		? value.fullscreenDock
+		: null;
+	return { fullscreenDock, side, bottom };
 }
 
 export function normalizeSessionLayoutRepository(value: unknown): SessionLayoutRepository {

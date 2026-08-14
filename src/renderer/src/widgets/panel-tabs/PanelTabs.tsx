@@ -2,7 +2,7 @@ import { cloneElement, type CSSProperties, type HTMLAttributes, type KeyboardEve
 import { closestCenter, DndContext, PointerSensor, useSensor, type DragEndEvent } from "@dnd-kit/core";
 import { horizontalListSortingStrategy, SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Button, Dropdown, Tabs } from "antd";
+import { Button, Dropdown, Tabs, Tooltip } from "antd";
 import type { MenuProps, TabsProps } from "antd";
 import { Icon } from "@/assets/icons";
 import styles from "./PanelTabs.module.css";
@@ -26,11 +26,15 @@ export type PanelTabsProps = {
 	items: PanelTabsItem[];
 	addItems: PanelTabsAddItem[];
 	addLabel: string;
+	isFullscreen?: boolean;
+	fullscreenLabel?: string;
+	exitFullscreenLabel?: string;
 	className?: string;
 	onActiveChange: (key: string) => void;
 	onAdd: (key: string) => void;
 	onClose: (key: string) => void;
 	onReorder?: (activeKey: string, overKey: string) => void;
+	onFullscreenToggle?: () => void;
 };
 
 type EditTargetKey = MouseEvent | KeyboardEvent | string;
@@ -100,11 +104,15 @@ function PanelTabs({
 	items,
 	addItems,
 	addLabel,
+	isFullscreen = false,
+	fullscreenLabel = "",
+	exitFullscreenLabel = "",
 	className,
 	onActiveChange,
 	onAdd,
 	onClose,
-	onReorder
+	onReorder,
+	onFullscreenToggle
 }: PanelTabsProps): React.JSX.Element {
 	const pointerSensor = useSensor(PointerSensor, {
 		activationConstraint: {
@@ -136,7 +144,6 @@ function PanelTabs({
 		<Tabs
 			activeKey={activeKey ?? undefined}
 			type="editable-card"
-			size="small"
 			hideAdd={true}
 			animated={false}
 			items={toTabsItems(items)}
@@ -176,23 +183,37 @@ function PanelTabs({
 			)}
 			tabBarExtraContent={{
 				right: (
-					<Dropdown
-						trigger={["click"]}
-						menu={{
-							items: menuItems,
-							onClick: ({ key }): void => {
-								onAdd(String(key));
-							}
-						}}
-					>
-						<Button
-							type="text"
-							shape="circle"
-							aria-label={addLabel}
-							className={styles.addButton}
-							icon={<Icon name="add" />}
-						/>
-					</Dropdown>
+					<>
+						{onFullscreenToggle !== undefined ? (
+							<Tooltip title={isFullscreen ? exitFullscreenLabel : fullscreenLabel}>
+								<Button
+									type="text"
+									shape="circle"
+									aria-label={isFullscreen ? exitFullscreenLabel : fullscreenLabel}
+									aria-pressed={isFullscreen}
+									icon={<Icon name={isFullscreen ? "compress" : "distraction-free"} />}
+									onClick={onFullscreenToggle}
+								/>
+							</Tooltip>
+						) : null}
+						<Dropdown
+							trigger={["click"]}
+							menu={{
+								items: menuItems,
+								onClick: ({ key }): void => {
+									onAdd(String(key));
+								}
+							}}
+						>
+							<Button
+								type="text"
+								shape="circle"
+								aria-label={addLabel}
+								className={styles.addButton}
+								icon={<Icon name="add" />}
+							/>
+						</Dropdown>
+					</>
 				)
 			}}
 		/>

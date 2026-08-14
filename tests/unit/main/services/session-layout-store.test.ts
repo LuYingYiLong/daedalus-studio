@@ -70,7 +70,17 @@ describe("session layout store", () => {
 		expect(normalized.side.activeTabKey).toBe("side:review:1");
 		expect(normalized.bottom.size).toBe(BOTTOM_DOCK_MAX_SIZE);
 		expect(normalized.bottom.activeTabKey).toBeNull();
+		expect(normalized.fullscreenDock).toBeNull();
 		expect(defaults.side.open).toBe(false);
+	});
+
+	it("persists a valid fullscreen dock placement", () => {
+		const normalized = normalizeSessionLayout({
+			...createDefaultSessionLayout(),
+			fullscreenDock: "side"
+		});
+
+		expect(normalized.fullscreenDock).toBe("side");
 	});
 
 	it("falls back to the fixed default when an unknown tab kind is present", () => {

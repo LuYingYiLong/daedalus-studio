@@ -112,6 +112,7 @@ type DockLayoutPreferences = {
 type SessionLayoutPreferences = {
 	side: DockLayoutPreferences;
 	bottom: DockLayoutPreferences;
+	fullscreenDock: "side" | "bottom" | null;
 };
 
 type GodotProjectPluginStatus =
