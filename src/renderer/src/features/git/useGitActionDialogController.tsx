@@ -138,7 +138,7 @@ export function useGitActionDialogController({
 	}, [onBeforeCommitOpen]);
 
 	const closeCommitDialog = useCallback((): void => {
-		if (isCommitOperationRunning && !isCommitMessageGenerating) {
+		if (isCommitOperationRunning || isCommitMessageGenerating) {
 			return;
 		}
 		commitOpenRef.current = false;

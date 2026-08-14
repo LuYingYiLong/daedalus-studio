@@ -803,15 +803,16 @@ function HomePage({
 		? null
 		: workspaceOptions.find((workspace: WorkspaceConfig): boolean => workspace.id === workspaceSnapshotForActions.id)
 		?? workspaceSnapshotForActions;
-	const summaryScopeKey: string = activeSessionId ?? `workspace:${workspaceForActions?.id ?? "none"}`;
+	const summarySessionId: string | null = isHome ? null : activeSessionId;
+	const summaryScopeKey: string = summarySessionId ?? `workspace:${workspaceForActions?.id ?? "none"}`;
 	const summaryOverviewTargetRef = useRef<SummaryOverviewTarget>({
 		scopeKey: summaryScopeKey,
-		sessionId: activeSessionId,
+		sessionId: summarySessionId,
 		workspace: workspaceForActions
 	});
 	summaryOverviewTargetRef.current = {
 		scopeKey: summaryScopeKey,
-		sessionId: activeSessionId,
+		sessionId: summarySessionId,
 		workspace: workspaceForActions
 	};
 	const showDockControls: boolean = !isHome || workspaceForActions !== null;

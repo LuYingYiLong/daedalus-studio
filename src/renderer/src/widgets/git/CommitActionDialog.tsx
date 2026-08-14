@@ -19,7 +19,7 @@ function CommitActionDialog({
 }: CommitActionDialogProps): JSX.Element {
 	const { t } = useTranslation();
 	const isCommitOperationRunning: boolean = commitOperation !== null;
-	const canClose: boolean = !isCommitOperationRunning || isCommitMessageGenerating;
+	const canClose: boolean = !isCommitOperationRunning && !isCommitMessageGenerating;
 
 	return (
 		<Modal
