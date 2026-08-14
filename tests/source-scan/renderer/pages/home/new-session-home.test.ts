@@ -28,27 +28,29 @@ describe("NewSessionHome source", () => {
 
 	it("uses a concise entrance and respects reduced motion", () => {
 		expect(styles).toContain("home-content-enter 160ms");
-		expect(styles).toContain("transform: translate(-50%, calc(-50% + 4px));");
+		expect(styles).toContain("transform: translateY(4px);");
 		expect(styles).toContain("starter-group-enter 160ms");
 		expect(styles).toContain("@media (prefers-reduced-motion: reduce)");
 	});
 
-	it("centers the text layer independently from the starter actions", () => {
-		const contentEnd: number = source.indexOf("</div>\n\t\t\t{hasComposerText === false ?");
-		expect(contentEnd).toBeGreaterThan(0);
-		expect(source.indexOf("<div className={styles.homeContent}")).toBeLessThan(contentEnd);
-		expect(styles).toContain("position: relative;");
-		expect(styles).toContain("top: 50%;");
-		expect(styles).toContain("left: 50%;");
-		expect(styles).toContain("transform: translate(-50%, -50%);");
+	it("keeps the subtitle and starter actions in one responsive flow", () => {
+		expect(source).toContain("<div className={styles.homeCenter}>");
+		expect(source.indexOf("<div className={styles.homeCenter}>")).toBeLessThan(source.indexOf("<div className={styles.homeContent}>"));
+		expect(styles).toContain(".homeCenter {");
+		expect(styles).toContain("align-content: center;");
+		expect(styles).toContain("overflow: auto;");
+		expect(styles).toContain("gap: var(--ds-space-3);");
+		expect(styles).toContain("width: 100%;");
+		expect(styles).toContain("overflow-wrap: anywhere;");
 		expect(styles).toContain(".starterGroup {");
-		expect(styles).toContain("top: calc(50% + clamp(");
 	});
 
 	it("keeps errors out of the centered text layer", () => {
-		const contentEnd: number = source.indexOf("</div>\n\t\t\t{hasComposerText === false ?");
+		const centerEnd: number = source.indexOf("</div>\n\t\t\t{errorMessage !== null ?");
+		expect(centerEnd).toBeGreaterThan(0);
 		const errorStart: number = source.indexOf("<Alert");
-		expect(errorStart).toBeGreaterThan(contentEnd);
+		expect(errorStart).toBeGreaterThan(centerEnd);
 		expect(styles).toContain("bottom: var(--ds-space-4, 16px);");
 	});
+
 });

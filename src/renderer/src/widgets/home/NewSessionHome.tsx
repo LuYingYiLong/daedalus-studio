@@ -47,31 +47,33 @@ function NewSessionHome({ workspace, errorMessage, message, onStarterSelect }: N
 
 	return (
 		<section className={styles.homePanel} aria-labelledby="new-session-home-title">
-			<div className={styles.homeContent}>
-				<Typography.Title level={1} className={styles.homeTitle}>
-					<span id="new-session-home-title">{title}</span>
-				</Typography.Title>
-				<Typography.Text className={styles.homeSubtitle}>
-					{subtitle}
-				</Typography.Text>
-			</div>
-			{hasComposerText === false ? (
-				<div className={styles.starterGroup} aria-label={t("app.home.starters.label")}>
-					<div className={styles.starterList}>
-						{starters.map((starter: NewSessionStarter): React.JSX.Element => (
-							<Button
-								key={starter.id}
-								type="text"
-								className={styles.starterButton}
-								icon={<Icon name={starter.iconName} />}
-								onClick={(): void => onStarterSelect(t(`app.home.starters.${starterScope}.${starter.id}.prompt`))}
-							>
-								{t(`app.home.starters.${starterScope}.${starter.id}.label`)}
-							</Button>
-						))}
-					</div>
+			<div className={styles.homeCenter}>
+				<div className={styles.homeContent}>
+					<Typography.Title level={1} className={styles.homeTitle}>
+						<span id="new-session-home-title">{title}</span>
+					</Typography.Title>
+					<Typography.Text className={styles.homeSubtitle}>
+						{subtitle}
+					</Typography.Text>
 				</div>
-			) : null}
+				{hasComposerText === false ? (
+					<div className={styles.starterGroup} aria-label={t("app.home.starters.label")}>
+						<div className={styles.starterList}>
+							{starters.map((starter: NewSessionStarter): React.JSX.Element => (
+								<Button
+									key={starter.id}
+									type="text"
+									className={styles.starterButton}
+									icon={<Icon name={starter.iconName} />}
+									onClick={(): void => onStarterSelect(t(`app.home.starters.${starterScope}.${starter.id}.prompt`))}
+								>
+									{t(`app.home.starters.${starterScope}.${starter.id}.label`)}
+								</Button>
+							))}
+						</div>
+					</div>
+				) : null}
+			</div>
 			{errorMessage !== null ? (
 				<Alert
 					type="error"
