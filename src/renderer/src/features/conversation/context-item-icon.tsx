@@ -48,6 +48,9 @@ export function getAdditionalContextIconName(item: AdditionalContextItem): strin
 	if (item.kind === "message_selection") {
 		return "chat";
 	}
+	if (item.kind === "file_selection") {
+		return getFileIconName(getItemPath(item));
+	}
 	if (item.kind === "editor_selection") {
 		return "read";
 	}

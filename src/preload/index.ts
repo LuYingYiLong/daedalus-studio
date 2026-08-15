@@ -104,16 +104,32 @@ type DockLayoutPreferences = {
 	size: number;
 	tabs: Array<{
 		key: string;
-		kind: "review" | "terminal";
+		kind: "review" | "terminal" | "files";
 		index: number;
 	}>;
 	activeTabKey: string | null;
+};
+
+type FilePanelLayoutPreferences = {
+	sidebarOpen: boolean;
+	splitSize: number;
+	selectedSourceFolderId: string | null;
+	expandedPathsBySourceFolder: Record<string, string[]>;
+	tabs: Array<{
+		key: string;
+		sourceFolderId: string;
+		relativePath: string;
+		pinned: boolean;
+	}>;
+	activeTabKey: string | null;
+	previewTabKey: string | null;
 };
 
 type SessionLayoutPreferences = {
 	side: DockLayoutPreferences;
 	bottom: DockLayoutPreferences;
 	fullscreenDock: "side" | "bottom" | null;
+	filePanels: Record<string, FilePanelLayoutPreferences>;
 };
 
 type GodotProjectPluginStatus =
@@ -410,6 +426,21 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		},
 		saveFileAs: (params: { workspaceRoot: string; filePath: string }): Promise<{ saved: true; filePath: string } | { saved: false }> => {
 			return ipcRenderer.invoke("workspace-fs:save-file-as", params);
+		},
+		readTextFile: (params: { workspaceRoot: string; filePath: string }): Promise<{ readable: boolean; binary: boolean; oversized: boolean; content?: string; byteSize: number; modifiedAtMs: number; sha256: string; relativePath: string }> => {
+			return ipcRenderer.invoke("workspace-fs:read-text-file", params);
+		},
+		statFile: (params: { workspaceRoot: string; filePath: string }): Promise<{ readable: boolean; binary: boolean; oversized: boolean; byteSize: number; modifiedAtMs: number; sha256: string; relativePath: string }> => {
+			return ipcRenderer.invoke("workspace-fs:stat-file", params);
+		},
+		writeTextFile: (params: { workspaceRoot: string; filePath: string; content: string; expectedSha256: string; expectedModifiedAtMs: number }): Promise<{ saved: true; byteSize: number; modifiedAtMs: number; sha256: string; relativePath: string }> => {
+			return ipcRenderer.invoke("workspace-fs:write-text-file", params);
+		},
+		saveTextFileAs: (params: { workspaceRoot: string; filePath: string; content: string }): Promise<{ saved: true; filePath: string } | { saved: false }> => {
+			return ipcRenderer.invoke("workspace-fs:save-text-file-as", params);
+		},
+		search: (params: { workspaceRoot: string; query: string; maxResults?: number }): Promise<{ entries: Array<{ name: string; relativePath: string; resourcePath: string; kind: "file" | "folder" }>; truncated: boolean }> => {
+			return ipcRenderer.invoke("workspace-fs:search", params);
 		},
 		listLaunchTargets: (params?: { godotExecutablePath?: string | null }): Promise<Array<{ id: "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot"; label: string }>> => {
 			return ipcRenderer.invoke("workspace-fs:list-launch-targets", params);

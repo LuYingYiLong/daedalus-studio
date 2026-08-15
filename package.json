@@ -65,6 +65,7 @@
     "i18next": "^26.3.6",
     "katex": "^0.18.4",
     "mermaid": "^11.16.1",
+    "monaco-editor": "^0.56.0",
     "node-pty": "^1.1.0",
     "react": "^19.2.7",
     "react-diff-view": "^3.3.3",

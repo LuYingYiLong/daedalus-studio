@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, isAbsolute } from "node:path";
 
-export type DockTabKind = "review" | "terminal";
+export type DockTabKind = "review" | "terminal" | "files";
 
 export type DockTabPreferences = {
 	key: string;
@@ -18,10 +18,28 @@ export type DockLayoutPreferences = {
 	activeTabKey: string | null;
 };
 
+export type FileTabPreferences = {
+	key: string;
+	sourceFolderId: string;
+	relativePath: string;
+	pinned: boolean;
+};
+
+export type FilePanelLayoutPreferences = {
+	sidebarOpen: boolean;
+	splitSize: number;
+	selectedSourceFolderId: string | null;
+	expandedPathsBySourceFolder: Record<string, string[]>;
+	tabs: FileTabPreferences[];
+	activeTabKey: string | null;
+	previewTabKey: string | null;
+};
+
 export type SessionLayoutPreferences = {
 	side: DockLayoutPreferences;
 	bottom: DockLayoutPreferences;
 	fullscreenDock: DockFullscreenPlacement | null;
+	filePanels: Record<string, FilePanelLayoutPreferences>;
 };
 
 export type SessionLayoutMap = Record<string, SessionLayoutPreferences>;
@@ -41,6 +59,9 @@ export const BOTTOM_DOCK_DEFAULT_SIZE = 280;
 
 const SESSION_ID_PATTERN: RegExp = /^session-[A-Za-z0-9_-]+$/u;
 const TAB_KEY_PATTERN: RegExp = /^[A-Za-z0-9:_-]{1,120}$/u;
+const SOURCE_FOLDER_ID_PATTERN: RegExp = /^[A-Za-z0-9._:-]{1,200}$/u;
+const MAX_FILE_TABS: number = 30;
+const MAX_EXPANDED_PATHS_PER_SOURCE: number = 500;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -60,6 +81,14 @@ function cloneDockLayout(layout: DockLayoutPreferences): DockLayoutPreferences {
 export function cloneSessionLayout(layout: SessionLayoutPreferences): SessionLayoutPreferences {
 	return {
 		fullscreenDock: layout.fullscreenDock,
+		filePanels: Object.fromEntries(Object.entries(layout.filePanels).map(([key, filePanel]): [string, FilePanelLayoutPreferences] => [
+			key,
+			{
+				...filePanel,
+				expandedPathsBySourceFolder: Object.fromEntries(Object.entries(filePanel.expandedPathsBySourceFolder).map(([sourceFolderId, paths]): [string, string[]] => [sourceFolderId, [...paths]])),
+				tabs: filePanel.tabs.map((tab: FileTabPreferences): FileTabPreferences => ({ ...tab }))
+			}
+		])),
 		side: cloneDockLayout(layout.side),
 		bottom: cloneDockLayout(layout.bottom)
 	};
@@ -68,6 +97,7 @@ export function cloneSessionLayout(layout: SessionLayoutPreferences): SessionLay
 export function createDefaultSessionLayout(): SessionLayoutPreferences {
 	return {
 		fullscreenDock: null,
+		filePanels: {},
 		side: {
 			open: false,
 			size: SIDE_DOCK_DEFAULT_SIZE,
@@ -102,7 +132,7 @@ function normalizeDockLayout(
 	for (const candidate of value.tabs) {
 		if (
 			!isRecord(candidate)
-			|| (candidate.kind !== "review" && candidate.kind !== "terminal")
+			|| (candidate.kind !== "review" && candidate.kind !== "terminal" && candidate.kind !== "files")
 			|| typeof candidate.key !== "string"
 			|| !TAB_KEY_PATTERN.test(candidate.key)
 			|| typeof candidate.index !== "number"
@@ -140,6 +170,87 @@ function normalizeDockLayout(
 	};
 }
 
+function isSafeRelativePath(value: string): boolean {
+	if (value.length === 0 || value.length > 1000 || isAbsolute(value)) {
+		return false;
+	}
+	const normalized: string = value.replaceAll("\\", "/");
+	return !normalized.split("/").some((segment: string): boolean => segment === ".." || segment.length === 0);
+}
+
+function isValidFileTabKey(value: string): boolean {
+	return value.length > 0 && value.length <= 1200 && !/[\u0000-\u001f\u007f]/u.test(value);
+}
+
+function normalizeFilePanelLayout(value: unknown): FilePanelLayoutPreferences {
+	const defaults: FilePanelLayoutPreferences = {
+		sidebarOpen: true,
+		splitSize: 68,
+		selectedSourceFolderId: null,
+		expandedPathsBySourceFolder: {},
+		tabs: [],
+		activeTabKey: null,
+		previewTabKey: null
+	};
+	if (!isRecord(value)) {
+		return defaults;
+	}
+	const tabs: FileTabPreferences[] = [];
+	const seenKeys: Set<string> = new Set();
+	if (Array.isArray(value.tabs)) {
+		for (const candidate of value.tabs.slice(0, MAX_FILE_TABS)) {
+			if (!isRecord(candidate)
+				|| typeof candidate.key !== "string"
+				|| !isValidFileTabKey(candidate.key)
+				|| typeof candidate.sourceFolderId !== "string"
+				|| !SOURCE_FOLDER_ID_PATTERN.test(candidate.sourceFolderId)
+				|| typeof candidate.relativePath !== "string"
+				|| !isSafeRelativePath(candidate.relativePath)
+				|| typeof candidate.pinned !== "boolean"
+				|| seenKeys.has(candidate.key)) {
+				continue;
+			}
+			seenKeys.add(candidate.key);
+			tabs.push({
+				key: candidate.key,
+				sourceFolderId: candidate.sourceFolderId,
+				relativePath: candidate.relativePath.replaceAll("\\", "/"),
+				pinned: candidate.pinned
+			});
+		}
+	}
+	const expandedPathsBySourceFolder: Record<string, string[]> = {};
+	if (isRecord(value.expandedPathsBySourceFolder)) {
+		for (const [sourceFolderId, paths] of Object.entries(value.expandedPathsBySourceFolder)) {
+			if (!SOURCE_FOLDER_ID_PATTERN.test(sourceFolderId) || !Array.isArray(paths)) {
+				continue;
+			}
+			expandedPathsBySourceFolder[sourceFolderId] = paths
+				.filter((path: unknown): path is string => typeof path === "string" && isSafeRelativePath(path))
+				.slice(0, MAX_EXPANDED_PATHS_PER_SOURCE);
+		}
+	}
+	const requestedActiveKey: string | null = typeof value.activeTabKey === "string" ? value.activeTabKey : null;
+	const activeTabKey: string | null = tabs.some((tab: FileTabPreferences): boolean => tab.key === requestedActiveKey)
+		? requestedActiveKey
+		: tabs[0]?.key ?? null;
+	const requestedPreviewKey: string | null = typeof value.previewTabKey === "string" ? value.previewTabKey : null;
+	const previewTabKey: string | null = tabs.some((tab: FileTabPreferences): boolean => tab.key === requestedPreviewKey && !tab.pinned)
+		? requestedPreviewKey
+		: null;
+	return {
+		sidebarOpen: typeof value.sidebarOpen === "boolean" ? value.sidebarOpen : defaults.sidebarOpen,
+		splitSize: clamp(typeof value.splitSize === "number" && Number.isFinite(value.splitSize) ? value.splitSize : defaults.splitSize, 25, 85),
+		selectedSourceFolderId: typeof value.selectedSourceFolderId === "string" && SOURCE_FOLDER_ID_PATTERN.test(value.selectedSourceFolderId)
+			? value.selectedSourceFolderId
+			: null,
+		expandedPathsBySourceFolder,
+		tabs,
+		activeTabKey,
+		previewTabKey
+	};
+}
+
 export function normalizeSessionLayout(value: unknown): SessionLayoutPreferences {
 	const defaults: SessionLayoutPreferences = createDefaultSessionLayout();
 	if (!isRecord(value)) {
@@ -165,7 +276,18 @@ export function normalizeSessionLayout(value: unknown): SessionLayoutPreferences
 	const fullscreenDock: DockFullscreenPlacement | null = value.fullscreenDock === "side" || value.fullscreenDock === "bottom"
 		? value.fullscreenDock
 		: null;
-	return { fullscreenDock, side, bottom };
+	const fileTabKeys: Set<string> = new Set([...side.tabs, ...bottom.tabs]
+		.filter((tab: DockTabPreferences): boolean => tab.kind === "files")
+		.map((tab: DockTabPreferences): string => tab.key));
+	const filePanels: Record<string, FilePanelLayoutPreferences> = {};
+	if (isRecord(value.filePanels)) {
+		for (const [tabKey, filePanel] of Object.entries(value.filePanels)) {
+			if (fileTabKeys.has(tabKey)) {
+				filePanels[tabKey] = normalizeFilePanelLayout(filePanel);
+			}
+		}
+	}
+	return { fullscreenDock, side, bottom, filePanels };
 }
 
 export function normalizeSessionLayoutRepository(value: unknown): SessionLayoutRepository {

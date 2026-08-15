@@ -1598,7 +1598,6 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 							) : null}
 						</Flex>
 					</Form.Item>
-					<div className={styles.tokenLimitGrid}>
 						<Form.Item label={t("settings.provider.fields.contextWindowTokens")}>
 							<Flex gap="small" align="center">
 								<Form.Item noStyle={true} name="contextWindowTokens" rules={[{
@@ -1653,7 +1652,6 @@ function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps):
 								) : null}
 							</Flex>
 						</Form.Item>
-					</div>
 					<Divider orientation="horizontal" className={styles.modelFormDivider}>
 						{t("settings.provider.fields.modelCapabilities")}
 					</Divider>

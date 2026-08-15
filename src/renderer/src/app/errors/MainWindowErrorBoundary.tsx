@@ -403,7 +403,6 @@ export default class MainWindowErrorBoundary extends Component<
 			<main className={styles.surface} data-studio-main-window-error="ready">
 				<header className={styles.titlebar} aria-label="Daedalus Studio">
 					<span className={styles.brand}>
-						<span className={styles.brandMark} aria-hidden="true" />
 						Daedalus Studio
 					</span>
 					<span className={styles.titlebarHint}>{copy.eyebrow}</span>
@@ -432,7 +431,7 @@ export default class MainWindowErrorBoundary extends Component<
 							</button>
 						</div>
 
-						<section className={styles.diagnosticsCard} aria-label={copy.diagnostics}>
+						<section aria-label={copy.diagnostics}>
 							<div className={styles.diagnosticsHeader}>
 								<h2 className={styles.diagnosticsTitle}>{copy.diagnostics}</h2>
 								<button

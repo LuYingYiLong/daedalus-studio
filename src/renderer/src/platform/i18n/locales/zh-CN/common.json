@@ -669,18 +669,55 @@
       "changesIndexed": "变更 {{index}}",
       "terminal": "终端",
       "terminalIndexed": "终端 {{index}}",
+	  "files": "文件",
+	  "filesIndexed": "文件 {{index}}",
       "enterFullscreen": "展开面板",
       "exitFullscreen": "恢复面板"
     },
     "add": {
       "label": "添加面板",
       "reviewPanel": "变更审阅面板",
-      "terminalPanel": "终端面板"
+	  "terminalPanel": "终端面板",
+	  "filesPanel": "文件面板"
     },
     "empty": {
       "noWorkspaceSelected": "未选择 workspace"
     }
   },
+	"files": {
+	  "noWorkspace": "选择 workspace 后即可浏览和编辑文件",
+	  "noSourceFolder": "无 source folder",
+	  "noFileSelected": "从文件树中选择文件",
+	  "editorAriaLabel": "文件编辑器",
+	  "loading": "正在读取文件…",
+	  "search": "搜索文件或路径",
+	  "save": "保存",
+	  "saved": "文件已保存",
+	  "savedAs": "文件已另存为",
+	  "reload": "重新加载",
+	  "binary": "该文件不是可编辑的 UTF-8 文本文件",
+	  "oversized": "文件超过 2 MiB，无法在文件面板中编辑",
+	  "openExternal": "在外部应用中打开",
+	  "showSidebar": "显示文件边栏",
+	  "hideSidebar": "隐藏文件边栏",
+	  "conflict": "文件已被外部修改。重新加载磁盘版本，或将当前草稿另存为。",
+	  "contextAdded": "已添加到上下文",
+	  "addSelectionContext": "添加到上下文",
+	  "comment": "评论",
+	  "commentPlaceholder": "输入对所选代码的评论",
+	  "closeTitle": "关闭已修改的文件？",
+	  "closeDirty": "{{name}} 包含尚未保存的修改。",
+	  "discard": "不保存",
+	  "cancel": "取消",
+	  "menu": {
+		"openFrom": "从 {{target}} 打开",
+		"openWith": "打开方式",
+		"saveAs": "另存为…",
+		"copyPath": "复制路径",
+		"copyRelativePath": "复制相对路径",
+		"addContext": "添加到上下文"
+	  }
+	},
   "git": {
     "detachedHead": "游离 HEAD",
     "actions": {
@@ -915,6 +952,7 @@
 				"textAttachment": "文本附件",
 				"reviewComment": "评审评论",
 				"selectedMessageText": "选中的消息文本",
+				"fileSelection": "文件选区",
 				"more": "... 还有 {{count}} 个",
 				"more_other": "... 还有 {{count}} 个",
 				"pathLabel": "{{kind}}: {{path}}",

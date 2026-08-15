@@ -6,12 +6,16 @@ import PanelTabs, { type PanelTabsAddItem, type PanelTabsItem } from "@/widgets/
 import { Icon } from "@/assets/icons";
 import GitDiffReviewPanel from "@/widgets/git/review/GitDiffReviewPanel";
 import TerminalPanel from "@/widgets/terminal/TerminalPanel";
-import type { AdditionalContextItem, WorkspaceSourceFolder } from "@/platform/rpc/types";
+import FilePanel from "@/widgets/files/FilePanel";
+import type { AdditionalContextItem, WorkspaceConfig, WorkspaceSourceFolder } from "@/platform/rpc/types";
+import type { WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launch";
 import {
+	createDefaultFilePanelLayout,
 	createTerminalRuntimeId,
 	type DockLayoutPreferences,
 	type DockTabKind,
-	type DockTabPreferences
+	type DockTabPreferences,
+	type FilePanelLayoutPreferences
 } from "@/domain/session/session-layout";
 import styles from "./DockPanelTabs.module.css";
 
@@ -29,6 +33,9 @@ type DockPanelTabsProps = {
 	placement: DockPanelPlacement;
 	sessionId: string | null;
 	workspaceId: string | null;
+	workspace: WorkspaceConfig | null;
+	launchTargets: Array<{ id: WorkspaceLaunchTargetId; label: string }>;
+	workspaceLaunchTargetId: WorkspaceLaunchTargetId;
 	sourceFolderId?: string | null;
 	sourceFolders: WorkspaceSourceFolder[];
 	primarySourceFolderId?: string | null;
@@ -38,6 +45,7 @@ type DockPanelTabsProps = {
 	waitForCwd: boolean;
 	defaultKind: DockPanelKind;
 	layout: DockLayoutPreferences;
+	filePanels: Record<string, FilePanelLayoutPreferences>;
 	activationRequest?: DockPanelActivationRequest | null;
 	isFullscreen?: boolean;
 	contextItems: AdditionalContextItem[];
@@ -46,17 +54,22 @@ type DockPanelTabsProps = {
 	gitStateRevision?: number;
 	onGitStateChange?: () => void | Promise<void>;
 	onLayoutChange: (layout: DockLayoutPreferences) => void;
+	onFilePanelChange: (panelKey: string, layout: FilePanelLayoutPreferences | null) => void;
 	onFullscreenToggle?: () => void;
 };
 
 const ADD_REVIEW_KEY: DockPanelKind = "review";
 const ADD_TERMINAL_KEY: DockPanelKind = "terminal";
+const ADD_FILES_KEY: DockPanelKind = "files";
 
 function getPanelTitle(kind: DockPanelKind, index: number, t: TFunction<"common">): string {
 	if (kind === "review") {
 		return index === 1 ? t("dock.tabs.changes") : t("dock.tabs.changesIndexed", { index });
 	}
-	return index === 1 ? t("dock.tabs.terminal") : t("dock.tabs.terminalIndexed", { index });
+	if (kind === "terminal") {
+		return index === 1 ? t("dock.tabs.terminal") : t("dock.tabs.terminalIndexed", { index });
+	}
+	return index === 1 ? t("dock.tabs.files") : t("dock.tabs.filesIndexed", { index });
 }
 
 export function createDockTab(dockId: string, kind: DockPanelKind, index: number): DockTabPreferences {
@@ -94,7 +107,7 @@ export function reorderDockTabs(
 }
 
 function getTabIconName(kind: DockPanelKind): string {
-	return kind === "review" ? "git-diff" : "terminal";
+	return kind === "review" ? "git-diff" : kind === "terminal" ? "terminal" : "file-system";
 }
 
 function DockPanelTabs({
@@ -102,6 +115,9 @@ function DockPanelTabs({
 	placement,
 	sessionId,
 	workspaceId,
+	workspace,
+	launchTargets,
+	workspaceLaunchTargetId,
 	sourceFolderId = null,
 	sourceFolders,
 	primarySourceFolderId = null,
@@ -111,6 +127,7 @@ function DockPanelTabs({
 	waitForCwd,
 	defaultKind,
 	layout,
+	filePanels,
 	activationRequest = null,
 	isFullscreen = false,
 	contextItems,
@@ -119,6 +136,7 @@ function DockPanelTabs({
 	gitStateRevision = 0,
 	onGitStateChange,
 	onLayoutChange,
+	onFilePanelChange,
 	onFullscreenToggle
 }: DockPanelTabsProps): React.JSX.Element {
 	const { t } = useTranslation();
@@ -138,11 +156,17 @@ function DockPanelTabs({
 			key: ADD_TERMINAL_KEY,
 			label: t("dock.add.terminalPanel"),
 			icon: <Icon name="terminal" />
+		},
+		{
+			key: ADD_FILES_KEY,
+			label: t("dock.add.filesPanel"),
+			icon: <Icon name="file-system" />,
+			disabled: !canOpenReview
 		}
 	], [canOpenReview, t]);
 
 	const addPanelTab = useCallback((kind: DockPanelKind): void => {
-		if (kind === "review" && workspaceId === null) {
+		if ((kind === "review" || kind === "files") && workspaceId === null) {
 			return;
 		}
 		const nextTab: DockTabPreferences = createDockTab(
@@ -155,7 +179,10 @@ function DockPanelTabs({
 			tabs: [...layout.tabs, nextTab],
 			activeTabKey: nextTab.key
 		});
-	}, [dockId, layout, onLayoutChange, workspaceId]);
+		if (kind === "files") {
+			onFilePanelChange(nextTab.key, createDefaultFilePanelLayout());
+		}
+	}, [dockId, layout, onFilePanelChange, onLayoutChange, workspaceId]);
 
 	const ensurePanelTab = useCallback((kind: DockPanelKind): void => {
 		const existingTab: DockTabPreferences | undefined = layout.tabs.find(
@@ -206,6 +233,9 @@ function DockPanelTabs({
 				console.error("[DockPanelTabs] failed to kill terminal tab", error);
 			});
 		}
+		if (targetTab?.kind === "files") {
+			onFilePanelChange(targetKey, null);
+		}
 
 		const targetIndex: number = layout.tabs.findIndex((tab: DockTabPreferences): boolean => tab.key === targetKey);
 		const nextTabs: DockTabPreferences[] = layout.tabs.filter(
@@ -223,7 +253,7 @@ function DockPanelTabs({
 	}
 
 	function handleAdd(kind: string): void {
-		if (kind === ADD_REVIEW_KEY || kind === ADD_TERMINAL_KEY) {
+		if (kind === ADD_REVIEW_KEY || kind === ADD_TERMINAL_KEY || kind === ADD_FILES_KEY) {
 			addPanelTab(kind);
 		}
 	}
@@ -236,6 +266,21 @@ function DockPanelTabs({
 			return isOpen
 				? <GitDiffReviewPanel workspaceId={workspaceId} sourceFolderId={sourceFolderId} sourceFolders={sourceFolders} primarySourceFolderId={primarySourceFolderId} onSourceFolderChange={onSourceFolderChange} gitStateRevision={gitStateRevision} contextItems={contextItems} onAddContext={onAddContext} onRemoveContext={onRemoveContext} onGitStateChange={onGitStateChange} />
 				: null;
+		}
+
+		if (tab.kind === "files") {
+			return (
+				<FilePanel
+					panelKey={tab.key}
+					sessionId={sessionId}
+					workspace={workspace}
+					layout={filePanels[tab.key] ?? createDefaultFilePanelLayout()}
+					launchTargets={launchTargets}
+					workspaceLaunchTargetId={workspaceLaunchTargetId}
+					onLayoutChange={(nextLayout: FilePanelLayoutPreferences): void => onFilePanelChange(tab.key, nextLayout)}
+					onAddContext={onAddContext}
+				/>
+			);
 		}
 
 		return (

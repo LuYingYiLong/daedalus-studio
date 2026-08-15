@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button, Divider, Dropdown, Empty, Input, message as antdMessage, Modal, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
-import type { CollapseProps, MenuProps, SplitterProps } from "antd";
+import type { CollapseProps, MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 import type { AdditionalContextItem, AgentGoalState, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SelectionAskThread, SessionMetadata, SessionTimelineNavigationEntry, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/platform/rpc/types";
 import type { ChatMode } from "@/platform/rpc/chat-api";
@@ -40,6 +40,7 @@ import {
 	listTerminalRuntimeIds,
 	type DockLayoutPreferences,
 	type DockFullscreenPlacement,
+	type FilePanelLayoutPreferences,
 	type SessionLayoutPreferences
 } from "@/domain/session/session-layout";
 import BranchActionDialog from "@/widgets/git/BranchActionDialog";
@@ -89,12 +90,6 @@ const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 const MAX_GODOT_SCENE_FILES: number = 500;
 const SUMMARY_PREVIEW_LIMIT: number = 3;
 const SUMMARY_SEE_MORE_LIMIT: number = 100;
-const SPLITTER_CLASS_NAMES: SplitterProps["classNames"] = {
-	dragger: {
-		default: styles.splitterDragger,
-		active: styles.splitterDraggerActive
-	}
-};
 const WORKSPACE_SIDEBAR_CLOSED_SIZE: number = 0;
 const WORKSPACE_SIDEBAR_MAX_SIZE: number = 720;
 const WORKSPACE_SIDEBAR_CLOSE_THRESHOLD: number = 150;
@@ -134,7 +129,8 @@ function areDockLayoutPreferencesEqual(left: DockLayoutPreferences, right: DockL
 function areSessionLayoutPreferencesEqual(left: SessionLayoutPreferences, right: SessionLayoutPreferences): boolean {
 	return left.fullscreenDock === right.fullscreenDock
 		&& areDockLayoutPreferencesEqual(left.side, right.side)
-		&& areDockLayoutPreferencesEqual(left.bottom, right.bottom);
+		&& areDockLayoutPreferencesEqual(left.bottom, right.bottom)
+		&& JSON.stringify(left.filePanels) === JSON.stringify(right.filePanels);
 }
 
 function getSelectedConversationSearchQuery(container: HTMLElement | null): string | undefined {
@@ -881,6 +877,19 @@ function HomePage({
 			...visualSessionLayoutRef.current,
 			bottom: nextBottomLayout
 		}, persist);
+	}, [commitSessionLayout]);
+
+	const updateFilePanel = useCallback((panelKey: string, nextFilePanel: FilePanelLayoutPreferences | null): void => {
+		const nextFilePanels: Record<string, FilePanelLayoutPreferences> = { ...visualSessionLayoutRef.current.filePanels };
+		if (nextFilePanel === null) {
+			delete nextFilePanels[panelKey];
+		} else {
+			nextFilePanels[panelKey] = nextFilePanel;
+		}
+		commitSessionLayout({
+			...visualSessionLayoutRef.current,
+			filePanels: nextFilePanels
+		});
 	}, [commitSessionLayout]);
 
 	const toggleDockFullscreen = useCallback((placement: DockFullscreenPlacement): void => {
@@ -2078,7 +2087,6 @@ function HomePage({
 			{messageContextHolder}
 			<Splitter
 				className={styles.workspaceSplitter}
-				classNames={SPLITTER_CLASS_NAMES}
 				draggerIcon={null}
 				collapsible={{ motion: true }}
 				onResize={handleWorkspaceSidebarResize}
@@ -2201,7 +2209,6 @@ function HomePage({
 							className={styles.agentVerticalSplitter}
 							data-dock-fullscreen={activeFullscreenDock ?? undefined}
 							data-fullscreen-motion-disabled={fullscreenMotionDisabled ? "true" : undefined}
-							classNames={SPLITTER_CLASS_NAMES}
 							draggerIcon={null}
 							orientation="vertical"
 							collapsible={{ motion: true }}
@@ -2213,7 +2220,6 @@ function HomePage({
 									className={styles.agentSplitter}
 									data-dock-fullscreen={sideDockFullscreen ? "side" : undefined}
 									data-fullscreen-motion-disabled={fullscreenMotionDisabled ? "true" : undefined}
-									classNames={SPLITTER_CLASS_NAMES}
 									draggerIcon={null}
 									collapsible={{ motion: true }}
 									onResize={handleSideDockResize}
@@ -2397,6 +2403,9 @@ function HomePage({
 													placement="side"
 													sessionId={activeSessionId}
 													workspaceId={workspaceForActions?.id ?? null}
+													workspace={workspaceForActions}
+													launchTargets={workspaceLaunchTargets}
+													workspaceLaunchTargetId={selectedLaunchTargetId}
 													sourceFolderId={summaryGitSourceFolderId}
 													sourceFolders={workspaceForActions?.sourceFolders ?? []}
 													primarySourceFolderId={workspaceForActions?.primarySourceFolderId ?? null}
@@ -2412,8 +2421,10 @@ function HomePage({
 													waitForCwd={terminalWaitForCwd}
 													defaultKind="review"
 													layout={visualSessionLayout.side}
+													filePanels={visualSessionLayout.filePanels}
 													activationRequest={sideDockActivationRequest}
 													onLayoutChange={updateSideDock}
+													onFilePanelChange={updateFilePanel}
 													onFullscreenToggle={(): void => toggleDockFullscreen("side")}
 												/>
 											</div>
@@ -2434,6 +2445,9 @@ function HomePage({
 											placement="bottom"
 											sessionId={activeSessionId}
 											workspaceId={workspaceForActions?.id ?? null}
+											workspace={workspaceForActions}
+											launchTargets={workspaceLaunchTargets}
+											workspaceLaunchTargetId={selectedLaunchTargetId}
 											sourceFolderId={summaryGitSourceFolderId}
 											sourceFolders={workspaceForActions?.sourceFolders ?? []}
 											primarySourceFolderId={workspaceForActions?.primarySourceFolderId ?? null}
@@ -2449,7 +2463,9 @@ function HomePage({
 											waitForCwd={terminalWaitForCwd}
 											defaultKind="terminal"
 											layout={visualSessionLayout.bottom}
+											filePanels={visualSessionLayout.filePanels}
 											onLayoutChange={updateBottomDock}
+											onFilePanelChange={updateFilePanel}
 											onFullscreenToggle={(): void => toggleDockFullscreen("bottom")}
 										/>
 									</div>

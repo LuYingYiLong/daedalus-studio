@@ -262,7 +262,7 @@ declare global {
 		}) => Promise<string | null>;
 	}
 
-	type DockTabKind = "review" | "terminal";
+	type DockTabKind = "review" | "terminal" | "files";
 
 	interface DockTabPreferences {
 		key: string;
@@ -281,6 +281,20 @@ declare global {
 		side: DockLayoutPreferences;
 		bottom: DockLayoutPreferences;
 		fullscreenDock: "side" | "bottom" | null;
+		filePanels: Record<string, {
+			sidebarOpen: boolean;
+			splitSize: number;
+			selectedSourceFolderId: string | null;
+			expandedPathsBySourceFolder: Record<string, string[]>;
+			tabs: Array<{
+				key: string;
+				sourceFolderId: string;
+				relativePath: string;
+				pinned: boolean;
+			}>;
+			activeTabKey: string | null;
+			previewTabKey: string | null;
+		}>;
 	}
 
 	interface SessionLayoutAPI {
@@ -410,6 +424,42 @@ declare global {
 			openFile: (params: { workspaceRoot: string; filePath: string }) => Promise<{ opened: true }>;
 			revealFile: (params: { workspaceRoot: string; filePath: string }) => Promise<{ revealed: true }>;
 			saveFileAs: (params: { workspaceRoot: string; filePath: string }) => Promise<{ saved: true; filePath: string } | { saved: false }>;
+			readTextFile: (params: { workspaceRoot: string; filePath: string }) => Promise<{
+				readable: boolean;
+				binary: boolean;
+				oversized: boolean;
+				content?: string;
+				byteSize: number;
+				modifiedAtMs: number;
+				sha256: string;
+				relativePath: string;
+			}>;
+			statFile: (params: { workspaceRoot: string; filePath: string }) => Promise<{
+				readable: boolean;
+				binary: boolean;
+				oversized: boolean;
+				byteSize: number;
+				modifiedAtMs: number;
+				sha256: string;
+				relativePath: string;
+			}>;
+			writeTextFile: (params: { workspaceRoot: string; filePath: string; content: string; expectedSha256: string; expectedModifiedAtMs: number }) => Promise<{
+				saved: true;
+				byteSize: number;
+				modifiedAtMs: number;
+				sha256: string;
+				relativePath: string;
+			}>;
+			saveTextFileAs: (params: { workspaceRoot: string; filePath: string; content: string }) => Promise<{ saved: true; filePath: string } | { saved: false }>;
+			search: (params: { workspaceRoot: string; query: string; maxResults?: number }) => Promise<{
+				entries: Array<{
+					name: string;
+					relativePath: string;
+					resourcePath: string;
+					kind: "file" | "folder";
+				}>;
+				truncated: boolean;
+			}>;
 			listLaunchTargets: (params?: {
 				godotExecutablePath?: string | null;
 			}) => Promise<Array<{

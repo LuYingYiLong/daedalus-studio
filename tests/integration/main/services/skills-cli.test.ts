@@ -1,4 +1,4 @@
-import { lstat, mkdir, realpath, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,7 +19,9 @@ function createDependencies(result: CommandResult, onRun?: (command: string, arg
 			return result;
 		},
 		realpath,
-		lstat
+		lstat,
+		readdir: async (path: string) => await readdir(path, { withFileTypes: true }),
+		readFile: async (path: string) => await readFile(path, "utf8")
 	};
 }
 
@@ -58,6 +60,7 @@ describe("skills-cli", () => {
 			codexSkillsDirectory: root,
 			homeDirectory: root,
 			platform: "win32",
+			skipLocalDiscovery: true,
 			dependencies: createDependencies({
 				exitCode: 0,
 				stdout: JSON.stringify([{ name: "Review Godot", path: skillPath, scope: "global", agents: ["Codex"] }]),
@@ -70,7 +73,31 @@ describe("skills-cli", () => {
 		});
 
 		expect(receivedCommand).toBe("npx.cmd");
-		expect(receivedArgs).toEqual(["--no-install", "skills", "list", "--global", "--agent", "codex", "--json"]);
+		expect(receivedArgs).toEqual(["--offline", "--no-install", "skills", "list", "--global", "--agent", "codex", "--json"]);
+		expect(result).toEqual([{ name: "Review Godot", path: await realpath(skillPath), slug: "review-godot" }]);
+	});
+
+	it("lists local Codex skills without starting npx when the skills directory is available", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-skills-cli-local-"));
+		const skillPath: string = join(root, "review-godot");
+		await mkdir(skillPath);
+		await writeFile(join(skillPath, "SKILL.md"), "---\nname: Review Godot\ndescription: Review Godot projects\n---\n");
+		let commandStarted: boolean = false;
+		const result = await listGlobalCodexSkills({
+			codexSkillsDirectory: root,
+			homeDirectory: root,
+			dependencies: {
+				...createDependencies({ exitCode: 1, stdout: "", stderr: "npx should not run", timedOut: false }, (): void => {
+					commandStarted = true;
+				}),
+				realpath,
+				lstat,
+				readdir: async (path: string) => await readdir(path, { withFileTypes: true }),
+				readFile: async (path: string) => await readFile(path, "utf8")
+			}
+		});
+
+		expect(commandStarted).toBe(false);
 		expect(result).toEqual([{ name: "Review Godot", path: await realpath(skillPath), slug: "review-godot" }]);
 	});
 
@@ -83,6 +110,7 @@ describe("skills-cli", () => {
 		const result = await listGlobalCodexSkills({
 			codexSkillsDirectory: root,
 			homeDirectory: root,
+			skipLocalDiscovery: true,
 			dependencies: {
 				runCommand: async (_command: string, args: readonly string[], _cwd: string): Promise<CommandResult> => {
 					calls.push(args);
@@ -102,12 +130,14 @@ describe("skills-cli", () => {
 						};
 				},
 				realpath,
-				lstat
+				lstat,
+				readdir: async (path: string) => await readdir(path, { withFileTypes: true }),
+				readFile: async (path: string) => await readFile(path, "utf8")
 			}
 		});
 
 		expect(calls).toHaveLength(2);
-		expect(calls[0]?.[0]).toBe("--no-install");
+		expect(calls[0]?.[0]).toBe("--offline");
 		expect(calls[1]?.[0]).toBe("--yes");
 		expect(result).toEqual([{ name: "Review Godot", path: await realpath(skillPath), slug: "review-godot" }]);
 	});
@@ -122,6 +152,7 @@ describe("skills-cli", () => {
 		const result = await listGlobalCodexSkills({
 			codexSkillsDirectory: root,
 			homeDirectory: root,
+			skipLocalDiscovery: true,
 			dependencies: createDependencies({
 				exitCode: 0,
 				stdout: JSON.stringify([
@@ -145,16 +176,19 @@ describe("skills-cli", () => {
 		const unavailable = (): Promise<unknown> => listGlobalCodexSkills({
 			codexSkillsDirectory: root,
 			homeDirectory: root,
+			skipLocalDiscovery: true,
 			dependencies: createDependencies({ exitCode: 1, stdout: "", stderr: "npx was not found", timedOut: false })
 		});
 		const timedOut = (): Promise<unknown> => listGlobalCodexSkills({
 			codexSkillsDirectory: root,
 			homeDirectory: root,
+			skipLocalDiscovery: true,
 			dependencies: createDependencies({ exitCode: 1, stdout: "", stderr: "", timedOut: true })
 		});
 		const malformed = (): Promise<unknown> => listGlobalCodexSkills({
 			codexSkillsDirectory: root,
 			homeDirectory: root,
+			skipLocalDiscovery: true,
 			dependencies: createDependencies({ exitCode: 0, stdout: "not-json", stderr: "", timedOut: false })
 		});
 

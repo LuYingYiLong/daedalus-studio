@@ -115,6 +115,18 @@ function getMeta(item: AdditionalContextItem, t: TFunction<"common">): string {
 		return t("chat.contextStrip.display.selectedMessageText");
 	}
 
+	if (item.kind === "file_selection") {
+		const data: Record<string, unknown> = getDataRecord(item);
+		const lineStart: number = typeof data.lineStart === "number" ? data.lineStart : 0;
+		const lineEnd: number = typeof data.lineEnd === "number" ? data.lineEnd : 0;
+		if (lineStart > 0 && lineEnd > 0) {
+			return lineStart === lineEnd
+				? t("chat.contextStrip.display.line", { line: lineStart })
+				: t("chat.contextStrip.display.linesRange", { start: lineStart, end: lineEnd });
+		}
+		return t("chat.contextStrip.display.fileSelection");
+	}
+
 	return item.kind.replaceAll("_", " ");
 }
 

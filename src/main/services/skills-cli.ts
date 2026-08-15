@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { lstat, realpath } from "node:fs/promises";
+import { lstat, readdir, readFile, realpath } from "node:fs/promises";
 import { delimiter, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { app, ipcMain } from "electron";
 
@@ -26,6 +26,14 @@ type SkillsCliDependencies = {
 	runCommand: (command: string, args: readonly string[], cwd: string, timeoutMs?: number) => Promise<SkillsCliCommandResult>;
 	realpath: (path: string) => Promise<string>;
 	lstat: (path: string) => Promise<{ isDirectory(): boolean; isSymbolicLink(): boolean }>;
+	readdir: (path: string) => Promise<SkillDirectoryEntry[]>;
+	readFile: (path: string) => Promise<string>;
+};
+
+type SkillDirectoryEntry = {
+	name: string;
+	isDirectory(): boolean;
+	isSymbolicLink(): boolean;
 };
 
 type SkillsCliListEntry = {
@@ -103,7 +111,70 @@ function requiresNpxInstall(result: SkillsCliCommandResult): boolean {
 		return false;
 	}
 	const output: string = `${result.stderr}\n${result.stdout}`;
-	return /npx\s+canceled due to missing packages and no YES option/iu.test(output);
+	return /npx\s+canceled due to missing packages and no YES option|ENOTCACHED|unable to resolve package|missing package/iu.test(output);
+}
+
+function parseSkillName(markdown: string, fallbackName: string): string {
+	const frontmatterMatch: RegExpMatchArray | null = markdown.match(/^---\s*\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u);
+	const nameLine: string | undefined = frontmatterMatch?.[1]
+		.split(/\r?\n/u)
+		.find((line: string): boolean => /^\s*name\s*:/iu.test(line));
+	const parsedName: string = nameLine?.replace(/^\s*name\s*:\s*/iu, "").trim().replace(/^("|')(.*)\1$/u, "$2") ?? "";
+	return parsedName.length > 0 && parsedName.length <= 200 ? parsedName : fallbackName;
+}
+
+async function listLocalCodexSkills(
+	codexSkillsDirectory: string,
+	dependencies: Pick<SkillsCliDependencies, "realpath" | "lstat" | "readdir" | "readFile">
+): Promise<NpxCodexSkill[] | null> {
+	let rootRealPath: string;
+	try {
+		rootRealPath = await dependencies.realpath(codexSkillsDirectory);
+	} catch {
+		return null;
+	}
+
+	let entries: SkillDirectoryEntry[];
+	try {
+		entries = await dependencies.readdir(codexSkillsDirectory);
+	} catch {
+		return [];
+	}
+
+	const skills: NpxCodexSkill[] = [];
+	const seenPaths = new Set<string>();
+	for (const entry of entries) {
+		if (!entry.isDirectory() || entry.isSymbolicLink()) {
+			continue;
+		}
+		const skillPath: string = join(codexSkillsDirectory, entry.name);
+		let sourceRealPath: string;
+		try {
+			const sourceStats = await dependencies.lstat(skillPath);
+			if (sourceStats.isSymbolicLink() || !sourceStats.isDirectory()) {
+				continue;
+			}
+			sourceRealPath = await dependencies.realpath(skillPath);
+		} catch {
+			continue;
+		}
+		if (!isInsideRoot(rootRealPath, sourceRealPath) || seenPaths.has(sourceRealPath)) {
+			continue;
+		}
+		let markdown: string;
+		try {
+			markdown = await dependencies.readFile(join(skillPath, "SKILL.md"));
+		} catch {
+			continue;
+		}
+		seenPaths.add(sourceRealPath);
+		skills.push({
+			name: parseSkillName(markdown, entry.name),
+			path: sourceRealPath,
+			slug: entry.name
+		});
+	}
+	return skills.sort((left: NpxCodexSkill, right: NpxCodexSkill): number => left.name.localeCompare(right.name));
 }
 
 function parseSkillsCliList(value: string): SkillsCliListEntry[] {
@@ -200,7 +271,9 @@ async function runSkillsCliCommand(
 const defaultDependencies: SkillsCliDependencies = {
 	runCommand: runSkillsCliCommand,
 	realpath,
-	lstat
+	lstat,
+	readdir: async (path: string): Promise<SkillDirectoryEntry[]> => await readdir(path, { withFileTypes: true }),
+	readFile: async (path: string): Promise<string> => await readFile(path, "utf8")
 };
 
 export async function listGlobalCodexSkills(
@@ -209,15 +282,22 @@ export async function listGlobalCodexSkills(
 		homeDirectory?: string;
 		dependencies?: SkillsCliDependencies;
 		platform?: NodeJS.Platform;
+		skipLocalDiscovery?: boolean;
 	} = {}
 ): Promise<NpxCodexSkill[]> {
 	const dependencies: SkillsCliDependencies = options.dependencies ?? defaultDependencies;
 	const homeDirectory: string = resolve(options.homeDirectory ?? app.getPath("home"));
 	const codexSkillsDirectory: string = resolve(options.codexSkillsDirectory ?? join(homeDirectory, ".codex", "skills"));
+	if (options.skipLocalDiscovery !== true) {
+		const localSkills: NpxCodexSkill[] | null = await listLocalCodexSkills(codexSkillsDirectory, dependencies);
+		if (localSkills !== null) {
+			return localSkills;
+		}
+	}
 	const npxCommand: string = getNpxCommand(options.platform);
 	let result: SkillsCliCommandResult = await dependencies.runCommand(
 		npxCommand,
-		["--no-install", ...SKILLS_CLI_ARGUMENTS],
+		["--offline", "--no-install", ...SKILLS_CLI_ARGUMENTS],
 		homeDirectory,
 		SKILLS_CLI_TIMEOUT_MS
 	);

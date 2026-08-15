@@ -671,18 +671,55 @@
       "changesIndexed": "Changes {{index}}",
       "terminal": "Terminal",
       "terminalIndexed": "Terminal {{index}}",
+	  "files": "Files",
+	  "filesIndexed": "Files {{index}}",
       "enterFullscreen": "Expand panel",
       "exitFullscreen": "Restore panel"
     },
     "add": {
       "label": "Add panel",
       "reviewPanel": "Review panel",
-      "terminalPanel": "Terminal panel"
+	  "terminalPanel": "Terminal panel",
+	  "filesPanel": "Files panel"
     },
     "empty": {
       "noWorkspaceSelected": "No workspace selected"
     }
   },
+	"files": {
+	  "noWorkspace": "Select a workspace to browse and edit files",
+	  "noSourceFolder": "No source folder",
+	  "noFileSelected": "Select a file from the file tree",
+	  "editorAriaLabel": "File editor",
+	  "loading": "Reading file…",
+	  "search": "Search files or paths",
+	  "save": "Save",
+	  "saved": "File saved",
+	  "savedAs": "File saved as",
+	  "reload": "Reload",
+	  "binary": "This file is not editable UTF-8 text",
+	  "oversized": "Files larger than 2 MiB cannot be edited in the Files panel",
+	  "openExternal": "Open in external app",
+	  "showSidebar": "Show file sidebar",
+	  "hideSidebar": "Hide file sidebar",
+	  "conflict": "The file changed outside Studio. Reload the disk version or save the current draft as a new file.",
+	  "contextAdded": "Added to context",
+	  "addSelectionContext": "Add to context",
+	  "comment": "Comment",
+	  "commentPlaceholder": "Comment on the selected code",
+	  "closeTitle": "Close modified file?",
+	  "closeDirty": "{{name}} contains unsaved changes.",
+	  "discard": "Don't save",
+	  "cancel": "Cancel",
+	  "menu": {
+		"openFrom": "Open from {{target}}",
+		"openWith": "Open with",
+		"saveAs": "Save as…",
+		"copyPath": "Copy path",
+		"copyRelativePath": "Copy relative path",
+		"addContext": "Add to context"
+	  }
+	},
   "git": {
     "detachedHead": "Detached HEAD",
     "actions": {
@@ -917,6 +954,7 @@
 				"textAttachment": "Text attachment",
 				"reviewComment": "Review comment",
 				"selectedMessageText": "Selected message text",
+				"fileSelection": "File selection",
 				"more": "... {{count}} more",
 				"more_other": "... {{count}} more",
 				"pathLabel": "{{kind}}: {{path}}",

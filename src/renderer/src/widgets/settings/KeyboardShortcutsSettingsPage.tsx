@@ -391,6 +391,7 @@ function KeyboardShortcutsSettingsPage({
 				onOk={(): void => {
 					void saveEditingBinding();
 				}}
+				className={styles.modal}
 			>
 				<div className={styles.editor}>
 					<Typography.Text type="secondary">

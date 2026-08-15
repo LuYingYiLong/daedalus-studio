@@ -1,11 +1,61 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, realpath, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtempSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, getPickedWorkspaceDirectory, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceFile, openWorkspaceLaunchTarget, revealWorkspaceFile } from "@main/services/workspace-fs";
+import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, getPickedWorkspaceDirectory, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceFile, openWorkspaceLaunchTarget, readWorkspaceTextFile, revealWorkspaceFile, searchWorkspaceEntries, statWorkspaceFile, writeWorkspaceTextFile } from "@main/services/workspace-fs";
 
 describe("workspace-fs", () => {
+	it("reads UTF-8 text with a stable fingerprint and rejects binary or oversized editor input", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		await writeFile(join(root, "note.txt"), "你好 Daedalus", "utf8");
+		await writeFile(join(root, "binary.dat"), Buffer.from([65, 0, 66]));
+		await writeFile(join(root, "large.txt"), Buffer.alloc(2 * 1024 * 1024 + 1, 65));
+
+		const text = await readWorkspaceTextFile({ workspaceRoot: root, filePath: "note.txt" });
+		expect(text).toMatchObject({ readable: true, binary: false, oversized: false, content: "你好 Daedalus", relativePath: "note.txt" });
+		expect(text.sha256).toHaveLength(64);
+		const statResult = await statWorkspaceFile({ workspaceRoot: root, filePath: "note.txt" });
+		expect(statResult.sha256).toBe(text.sha256);
+		expect("content" in statResult).toBe(false);
+		await expect(readWorkspaceTextFile({ workspaceRoot: root, filePath: "binary.dat" })).resolves.toMatchObject({ readable: false, binary: true });
+		await expect(readWorkspaceTextFile({ workspaceRoot: root, filePath: "large.txt" })).resolves.toMatchObject({ readable: false, oversized: true });
+	});
+
+	it("writes text atomically and refuses stale file revisions", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		await writeFile(join(root, "note.txt"), "before", "utf8");
+		const revision = await readWorkspaceTextFile({ workspaceRoot: root, filePath: "note.txt" });
+		const saved = await writeWorkspaceTextFile({
+			workspaceRoot: root,
+			filePath: "note.txt",
+			content: "after",
+			expectedSha256: revision.sha256,
+			expectedModifiedAtMs: revision.modifiedAtMs
+		});
+
+		expect(saved.saved).toBe(true);
+		await expect(readWorkspaceTextFile({ workspaceRoot: root, filePath: "note.txt" })).resolves.toMatchObject({ content: "after", sha256: saved.sha256 });
+		await expect(writeWorkspaceTextFile({
+			workspaceRoot: root,
+			filePath: "note.txt",
+			content: "stale",
+			expectedSha256: revision.sha256,
+			expectedModifiedAtMs: revision.modifiedAtMs
+		})).rejects.toThrow("workspace_file_conflict");
+	});
+
+	it("searches names and relative paths while respecting result limits", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		await mkdir(join(root, "scripts"));
+		await writeFile(join(root, "scripts", "player.gd"), "extends Node", "utf8");
+		await writeFile(join(root, "scripts", "player_test.gd"), "extends Node", "utf8");
+
+		await expect(searchWorkspaceEntries({ workspaceRoot: root, query: "scripts/player", maxResults: 1 })).resolves.toMatchObject({
+			entries: [{ relativePath: "scripts/player.gd", kind: "file" }],
+			truncated: true
+		});
+	});
 	it("lists files and folders inside workspace root", async () => {
 		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
 		await mkdir(join(root, "scripts"));
@@ -175,8 +225,9 @@ describe("workspace-fs", () => {
 		await expect(revealWorkspaceFile({ workspaceRoot: root, filePath }, (path: string): void => {
 			revealedPaths.push(path);
 		})).resolves.toEqual({ revealed: true });
-		expect(openedPaths).toEqual([filePath]);
-		expect(revealedPaths).toEqual([filePath]);
+		const canonicalFilePath: string = await realpath(filePath);
+		expect(openedPaths).toEqual([canonicalFilePath]);
+		expect(revealedPaths).toEqual([canonicalFilePath]);
 		await expect(openWorkspaceFile({ workspaceRoot: root, filePath: join(outsideRoot, "README.md") }, async (): Promise<string> => "")).rejects.toThrow("outside workspace");
 	});
 

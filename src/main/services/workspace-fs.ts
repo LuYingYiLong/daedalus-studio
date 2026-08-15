@@ -1,7 +1,9 @@
 import { BrowserWindow, dialog, ipcMain, shell } from "electron";
-import { access, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { access, lstat, readFile, readdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { execFile, spawn } from "node:child_process";
-import { basename, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { createHash, randomUUID } from "node:crypto";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { TextDecoder } from "node:util";
 
 export type WorkspaceFsEntry = {
 	name: string;
@@ -17,6 +19,15 @@ export type WorkspaceFsListChildrenParams = {
 
 export type WorkspaceFsListChildrenResult = {
 	entries: WorkspaceFsEntry[];
+};
+export type WorkspaceFsSearchParams = {
+	workspaceRoot: string;
+	query: string;
+	maxResults?: number;
+};
+export type WorkspaceFsSearchResult = {
+	entries: WorkspaceFsEntry[];
+	truncated: boolean;
 };
 
 export type WorkspaceFsPickDirectoryResult = string | null;
@@ -46,6 +57,30 @@ export type WorkspaceFsSaveFileAsResult = {
 	filePath: string;
 } | {
 	saved: false;
+};
+export type WorkspaceFsFileRevision = {
+	byteSize: number;
+	modifiedAtMs: number;
+	sha256: string;
+};
+export type WorkspaceFsReadTextFileResult = WorkspaceFsFileRevision & {
+	readable: boolean;
+	binary: boolean;
+	oversized: boolean;
+	relativePath: string;
+	content?: string;
+};
+export type WorkspaceFsWriteTextFileParams = WorkspaceFsFileParams & {
+	content: string;
+	expectedSha256: string;
+	expectedModifiedAtMs: number;
+};
+export type WorkspaceFsWriteTextFileResult = WorkspaceFsFileRevision & {
+	saved: true;
+	relativePath: string;
+};
+export type WorkspaceFsSaveTextFileAsParams = WorkspaceFsFileParams & {
+	content: string;
 };
 export type WorkspaceLaunchTargetId = "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot";
 export type WorkspaceLaunchTarget = {
@@ -81,6 +116,12 @@ const BASE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 	{ id: "terminal", label: "Terminal" }
 ];
 const OPTIONAL_LAUNCH_TARGET_IDS: WorkspaceLaunchTargetId[] = ["vscode", "visual-studio", "github-desktop", "git-bash", "godot"];
+const MAX_EDITABLE_TEXT_BYTES: number = 2 * 1024 * 1024;
+const DEFAULT_SEARCH_RESULT_LIMIT: number = 500;
+const MAX_SEARCH_RESULT_LIMIT: number = 1000;
+const MAX_SEARCH_QUERY_CHARS: number = 200;
+const MAX_SEARCHED_ENTRIES: number = 50_000;
+const UTF8_DECODER: TextDecoder = new TextDecoder("utf-8", { fatal: true });
 
 function isPathInside(root: string, target: string): boolean {
 	const relativePath: string = relative(root, target);
@@ -120,12 +161,113 @@ function assertWorkspaceFile(workspaceRoot: string, filePath: string): { root: s
 }
 
 async function resolveWorkspaceFile(params: WorkspaceFsFileParams): Promise<{ root: string; target: string; relativePath: string }> {
-	const resolvedFile = assertWorkspaceFile(params.workspaceRoot, params.filePath);
+	const resolvedFile = await resolveWorkspaceEntry(params);
 	const fileStats = await stat(resolvedFile.target);
 	if (!fileStats.isFile()) {
 		throw new Error("Workspace resource is not a file.");
 	}
 	return resolvedFile;
+}
+
+async function resolveWorkspaceEntry(params: WorkspaceFsFileParams): Promise<{ root: string; target: string; relativePath: string }> {
+	const resolvedEntry = assertWorkspaceFile(params.workspaceRoot, params.filePath);
+	const [rootRealPath, targetRealPath] = await Promise.all([realpath(resolvedEntry.root), realpath(resolvedEntry.target)]);
+	if (!isPathInside(rootRealPath, targetRealPath)) {
+		throw new Error("Workspace resource resolves outside workspace root.");
+	}
+	return {
+		root: rootRealPath,
+		target: targetRealPath,
+		relativePath: relative(rootRealPath, targetRealPath).replaceAll("\\", "/")
+	};
+}
+
+function hashBytes(bytes: Uint8Array): string {
+	return createHash("sha256").update(bytes).digest("hex");
+}
+
+function decodeEditableText(bytes: Buffer): { binary: boolean; content?: string } {
+	if (bytes.includes(0)) {
+		return { binary: true };
+	}
+	try {
+		return { binary: false, content: UTF8_DECODER.decode(bytes) };
+	} catch {
+		return { binary: true };
+	}
+}
+
+async function inspectWorkspaceTextFile(params: WorkspaceFsFileParams, includeContent: boolean): Promise<WorkspaceFsReadTextFileResult> {
+	const resolvedFile = await resolveWorkspaceFile(params);
+	const beforeStats = await stat(resolvedFile.target);
+	if (beforeStats.size > MAX_EDITABLE_TEXT_BYTES) {
+		return {
+			readable: false,
+			binary: false,
+			oversized: true,
+			byteSize: beforeStats.size,
+			modifiedAtMs: beforeStats.mtimeMs,
+			sha256: "",
+			relativePath: resolvedFile.relativePath
+		};
+	}
+	const bytes: Buffer = await readFile(resolvedFile.target);
+	const afterStats = await stat(resolvedFile.target);
+	const decoded = decodeEditableText(bytes);
+	return {
+		readable: !decoded.binary,
+		binary: decoded.binary,
+		oversized: false,
+		byteSize: bytes.byteLength,
+		modifiedAtMs: afterStats.mtimeMs,
+		sha256: hashBytes(bytes),
+		relativePath: resolvedFile.relativePath,
+		...(includeContent && decoded.content !== undefined ? { content: decoded.content } : {})
+	};
+}
+
+function encodeEditableText(content: string): Buffer {
+	const bytes: Buffer = Buffer.from(content, "utf8");
+	if (bytes.byteLength > MAX_EDITABLE_TEXT_BYTES) {
+		throw new Error("Workspace text file exceeds the 2 MiB editor limit.");
+	}
+	if (bytes.includes(0)) {
+		throw new Error("Workspace text file contains binary NUL bytes.");
+	}
+	return bytes;
+}
+
+export async function readWorkspaceTextFile(params: WorkspaceFsFileParams): Promise<WorkspaceFsReadTextFileResult> {
+	return inspectWorkspaceTextFile(params, true);
+}
+
+export async function statWorkspaceFile(params: WorkspaceFsFileParams): Promise<WorkspaceFsReadTextFileResult> {
+	return inspectWorkspaceTextFile(params, false);
+}
+
+export async function writeWorkspaceTextFile(params: WorkspaceFsWriteTextFileParams): Promise<WorkspaceFsWriteTextFileResult> {
+	const resolvedFile = await resolveWorkspaceFile(params);
+	const current = await statWorkspaceFile({ workspaceRoot: resolvedFile.root, filePath: resolvedFile.target });
+	if (!current.readable || current.sha256 !== params.expectedSha256 || current.modifiedAtMs !== params.expectedModifiedAtMs) {
+		throw new Error("workspace_file_conflict: The file changed outside Daedalus Studio.");
+	}
+	const bytes: Buffer = encodeEditableText(params.content);
+	const temporaryPath: string = join(dirname(resolvedFile.target), `.${basename(resolvedFile.target)}.daedalus-${randomUUID()}.tmp`);
+	try {
+		await writeFile(temporaryPath, bytes, { flag: "wx" });
+		await rename(temporaryPath, resolvedFile.target);
+	} catch (error: unknown) {
+		await rm(temporaryPath, { force: true });
+		throw error;
+	}
+	const savedStats = await stat(resolvedFile.target);
+	return {
+		saved: true,
+		byteSize: bytes.byteLength,
+		modifiedAtMs: savedStats.mtimeMs,
+		sha256: hashBytes(bytes),
+		relativePath: resolvedFile.relativePath
+	};
 }
 
 function toResourcePath(relativePath: string): string {
@@ -439,6 +581,73 @@ export async function listWorkspaceChildren(params: WorkspaceFsListChildrenParam
 	return { entries };
 }
 
+export async function searchWorkspaceEntries(params: WorkspaceFsSearchParams): Promise<WorkspaceFsSearchResult> {
+	const query: string = params.query.trim().toLocaleLowerCase();
+	if (query.length === 0 || query.length > MAX_SEARCH_QUERY_CHARS) {
+		return { entries: [], truncated: false };
+	}
+	const requestedLimit: number = params.maxResults ?? DEFAULT_SEARCH_RESULT_LIMIT;
+	const limit: number = Math.max(1, Math.min(MAX_SEARCH_RESULT_LIMIT, Math.floor(requestedLimit)));
+	const rootRealPath: string = await realpath(resolve(params.workspaceRoot));
+	const rootStats = await stat(rootRealPath);
+	if (!rootStats.isDirectory()) {
+		throw new Error("Workspace root is not a directory.");
+	}
+
+	const results: WorkspaceFsEntry[] = [];
+	const pendingDirectories: string[] = [rootRealPath];
+	let visitedEntries: number = 0;
+	let truncated: boolean = false;
+	while (pendingDirectories.length > 0 && visitedEntries < MAX_SEARCHED_ENTRIES) {
+		const directoryPath: string = pendingDirectories.shift()!;
+		const dirents = await readdir(directoryPath, { withFileTypes: true });
+		for (const dirent of dirents) {
+			visitedEntries += 1;
+			if (visitedEntries > MAX_SEARCHED_ENTRIES) {
+				truncated = true;
+				break;
+			}
+			if (dirent.isSymbolicLink() || (!dirent.isDirectory() && !dirent.isFile())) {
+				continue;
+			}
+			const absolutePath: string = join(directoryPath, dirent.name);
+			const entryStats = await lstat(absolutePath);
+			if (entryStats.isSymbolicLink()) {
+				continue;
+			}
+			const relativePath: string = relative(rootRealPath, absolutePath).replaceAll("\\", "/");
+			if (dirent.isDirectory()) {
+				pendingDirectories.push(absolutePath);
+			}
+			if (relativePath.toLocaleLowerCase().includes(query)) {
+				results.push({
+					name: dirent.name,
+					relativePath,
+					resourcePath: toResourcePath(relativePath),
+					kind: dirent.isDirectory() ? "folder" : "file"
+				});
+				if (results.length >= limit) {
+					truncated = true;
+					pendingDirectories.length = 0;
+					break;
+				}
+			}
+		}
+	}
+	if (pendingDirectories.length > 0) {
+		truncated = true;
+	}
+	return {
+		entries: results.sort((left: WorkspaceFsEntry, right: WorkspaceFsEntry): number => {
+			if (left.kind !== right.kind) {
+				return left.kind === "folder" ? -1 : 1;
+			}
+			return left.relativePath.localeCompare(right.relativePath);
+		}),
+		truncated
+	};
+}
+
 export function getPickedWorkspaceDirectory(result: Electron.OpenDialogReturnValue): WorkspaceFsPickDirectoryResult {
 	if (result.canceled) {
 		return null;
@@ -558,6 +767,22 @@ export async function saveWorkspaceFileAs(
 	return { saved: true, filePath: result.filePath };
 }
 
+export async function saveWorkspaceTextFileAs(
+	owner: BrowserWindow | undefined,
+	params: WorkspaceFsSaveTextFileAsParams
+): Promise<WorkspaceFsSaveFileAsResult> {
+	const resolvedFile = await resolveWorkspaceFile(params);
+	const bytes: Buffer = encodeEditableText(params.content);
+	const result: Electron.SaveDialogReturnValue = owner === undefined
+		? await dialog.showSaveDialog({ title: "Save workspace file as", defaultPath: basename(resolvedFile.target) })
+		: await dialog.showSaveDialog(owner, { title: "Save workspace file as", defaultPath: basename(resolvedFile.target) });
+	if (result.canceled || result.filePath === undefined) {
+		return { saved: false };
+	}
+	await writeFile(result.filePath, bytes, { flag: "w" });
+	return { saved: true, filePath: result.filePath };
+}
+
 export async function openWorkspaceLaunchTarget(
 	workspaceRoot: string,
 	targetId: WorkspaceLaunchTargetId,
@@ -573,11 +798,17 @@ export async function openWorkspaceLaunchTarget(
 		if (options.filePath === undefined) {
 			await openWorkspaceDirectory(root);
 		} else {
-			await revealWorkspaceFile({ workspaceRoot: root, filePath: options.filePath });
+			const resolvedEntry = await resolveWorkspaceEntry({ workspaceRoot: root, filePath: options.filePath });
+			const entryStats = await stat(resolvedEntry.target);
+			if (entryStats.isDirectory()) {
+				await openWorkspaceDirectory(resolvedEntry.target);
+			} else {
+				await revealWorkspaceFile({ workspaceRoot: root, filePath: resolvedEntry.target });
+			}
 		}
 		return { opened: true, targetId };
 	}
-	const resolvedFile = options.filePath === undefined ? null : await resolveWorkspaceFile({ workspaceRoot: root, filePath: options.filePath });
+	const resolvedEntry = options.filePath === undefined ? null : await resolveWorkspaceEntry({ workspaceRoot: root, filePath: options.filePath });
 
 	const target: ResolvedWorkspaceLaunchTarget | null = await resolveWorkspaceLaunchTarget(targetId, options);
 	if (target === null || target.command === undefined) {
@@ -607,7 +838,7 @@ export async function openWorkspaceLaunchTarget(
 						? ["--path", root]
 						: ["--path", root, godotProjectScenePath]
 					: ["--editor", "--path", root]
-				: [...(target.args ?? []), target.id === "vscode" || target.id === "visual-studio" ? resolvedFile?.target ?? root : root];
+				: [...(target.args ?? []), target.id === "vscode" || target.id === "visual-studio" ? resolvedEntry?.target ?? root : root];
 	const child = spawnProcess(target.command, args, {
 		cwd: root,
 		detached: true,
@@ -647,6 +878,21 @@ export function registerWorkspaceFsIpc(): void {
 	});
 	ipcMain.handle("workspace-fs:save-file-as", async (event, params: WorkspaceFsFileParams): Promise<WorkspaceFsSaveFileAsResult> => {
 		return saveWorkspaceFileAs(BrowserWindow.fromWebContents(event.sender) ?? undefined, params);
+	});
+	ipcMain.handle("workspace-fs:read-text-file", async (_event, params: WorkspaceFsFileParams): Promise<WorkspaceFsReadTextFileResult> => {
+		return readWorkspaceTextFile(params);
+	});
+	ipcMain.handle("workspace-fs:stat-file", async (_event, params: WorkspaceFsFileParams): Promise<WorkspaceFsReadTextFileResult> => {
+		return statWorkspaceFile(params);
+	});
+	ipcMain.handle("workspace-fs:write-text-file", async (_event, params: WorkspaceFsWriteTextFileParams): Promise<WorkspaceFsWriteTextFileResult> => {
+		return writeWorkspaceTextFile(params);
+	});
+	ipcMain.handle("workspace-fs:save-text-file-as", async (event, params: WorkspaceFsSaveTextFileAsParams): Promise<WorkspaceFsSaveFileAsResult> => {
+		return saveWorkspaceTextFileAs(BrowserWindow.fromWebContents(event.sender) ?? undefined, params);
+	});
+	ipcMain.handle("workspace-fs:search", async (_event, params: WorkspaceFsSearchParams): Promise<WorkspaceFsSearchResult> => {
+		return searchWorkspaceEntries(params);
 	});
 	ipcMain.handle("workspace-fs:list-launch-targets", async (_event, params?: { godotExecutablePath?: string | null }): Promise<WorkspaceLaunchTarget[]> => {
 		return listWorkspaceLaunchTargets({

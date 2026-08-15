@@ -83,6 +83,38 @@ describe("session layout store", () => {
 		expect(normalized.fullscreenDock).toBe("side");
 	});
 
+	it("normalizes file panel tabs and removes orphaned panel state", () => {
+		const defaults = createDefaultSessionLayout();
+		const normalized = normalizeSessionLayout({
+			...defaults,
+			side: {
+				...defaults.side,
+				tabs: [...defaults.side.tabs, { key: "side:files:1", kind: "files", index: 1 }]
+			},
+			filePanels: {
+				"side:files:1": {
+					sidebarOpen: false,
+					splitSize: 99,
+					selectedSourceFolderId: "primary",
+					expandedPathsBySourceFolder: { primary: ["scripts", "../outside"] },
+					tabs: [{ key: "primary:scripts/player.gd", sourceFolderId: "primary", relativePath: "scripts/player.gd", pinned: false }],
+					activeTabKey: "primary:scripts/player.gd",
+					previewTabKey: "primary:scripts/player.gd"
+				},
+				orphan: { sidebarOpen: true }
+			}
+		});
+
+		expect(normalized.filePanels["side:files:1"]).toMatchObject({
+			sidebarOpen: false,
+			splitSize: 85,
+			expandedPathsBySourceFolder: { primary: ["scripts"] },
+			activeTabKey: "primary:scripts/player.gd",
+			previewTabKey: "primary:scripts/player.gd"
+		});
+		expect(normalized.filePanels.orphan).toBeUndefined();
+	});
+
 	it("falls back to the fixed default when an unknown tab kind is present", () => {
 		expect(normalizeSessionLayout({
 			side: {

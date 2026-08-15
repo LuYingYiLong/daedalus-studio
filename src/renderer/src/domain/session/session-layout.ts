@@ -1,4 +1,4 @@
-export type DockTabKind = "review" | "terminal";
+export type DockTabKind = "review" | "terminal" | "files";
 
 export type DockTabPreferences = {
 	key: string;
@@ -15,10 +15,28 @@ export type DockLayoutPreferences = {
 	activeTabKey: string | null;
 };
 
+export type FileTabPreferences = {
+	key: string;
+	sourceFolderId: string;
+	relativePath: string;
+	pinned: boolean;
+};
+
+export type FilePanelLayoutPreferences = {
+	sidebarOpen: boolean;
+	splitSize: number;
+	selectedSourceFolderId: string | null;
+	expandedPathsBySourceFolder: Record<string, string[]>;
+	tabs: FileTabPreferences[];
+	activeTabKey: string | null;
+	previewTabKey: string | null;
+};
+
 export type SessionLayoutPreferences = {
 	side: DockLayoutPreferences;
 	bottom: DockLayoutPreferences;
 	fullscreenDock: DockFullscreenPlacement | null;
+	filePanels: Record<string, FilePanelLayoutPreferences>;
 };
 
 export type SessionLayoutMap = Record<string, SessionLayoutPreferences>;
@@ -31,9 +49,22 @@ export const BOTTOM_DOCK_MAX_SIZE = 520;
 export const BOTTOM_DOCK_DEFAULT_SIZE = 280;
 const MAX_TERMINAL_RUNTIME_ID_LENGTH = 80;
 
+export function createDefaultFilePanelLayout(): FilePanelLayoutPreferences {
+	return {
+		sidebarOpen: true,
+		splitSize: 68,
+		selectedSourceFolderId: null,
+		expandedPathsBySourceFolder: {},
+		tabs: [],
+		activeTabKey: null,
+		previewTabKey: null
+	};
+}
+
 export function createDefaultSessionLayout(): SessionLayoutPreferences {
 	return {
 		fullscreenDock: null,
+		filePanels: {},
 		side: {
 			open: false,
 			size: SIDE_DOCK_DEFAULT_SIZE,
@@ -52,6 +83,14 @@ export function createDefaultSessionLayout(): SessionLayoutPreferences {
 export function cloneSessionLayout(layout: SessionLayoutPreferences): SessionLayoutPreferences {
 	return {
 		fullscreenDock: layout.fullscreenDock,
+		filePanels: Object.fromEntries(Object.entries(layout.filePanels).map(([key, filePanel]): [string, FilePanelLayoutPreferences] => [
+			key,
+			{
+				...filePanel,
+				expandedPathsBySourceFolder: Object.fromEntries(Object.entries(filePanel.expandedPathsBySourceFolder).map(([sourceFolderId, paths]): [string, string[]] => [sourceFolderId, [...paths]])),
+				tabs: filePanel.tabs.map((tab: FileTabPreferences): FileTabPreferences => ({ ...tab }))
+			}
+		])),
 		side: {
 			...layout.side,
 			tabs: layout.side.tabs.map((tab: DockTabPreferences): DockTabPreferences => ({ ...tab }))

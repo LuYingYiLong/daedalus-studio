@@ -41,7 +41,7 @@ function AdditionalContextStrip({
 			{items.map((item: AdditionalContextItem): React.ReactNode => {
 				const display = summarizeAdditionalContextItem(item, t);
 				const nextPinned: boolean = item.pinned !== true;
-				const canTogglePin: boolean = interactive && item.kind !== "git_diff_comment" && item.kind !== "message_selection";
+				const canTogglePin: boolean = interactive && item.kind !== "git_diff_comment" && item.kind !== "message_selection" && item.kind !== "file_selection";
 				const canExpandText: boolean = interactive && item.kind === "text_attachment" && onExpandTextAttachment !== undefined;
 
 				return (

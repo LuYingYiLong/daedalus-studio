@@ -127,15 +127,6 @@
 	transition: none !important;
 }
 
-.splitterDragger::before {
-	background: transparent !important;
-}
-
-.splitterDragger:hover::before,
-.splitterDraggerActive::before {
-	background: transparent !important;
-}
-
 .agentVerticalSplitter > :global(.ant-splitter-bar) {
 	z-index: 14;
 }

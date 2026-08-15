@@ -311,7 +311,6 @@ body {
 
 .ant-btn > .ant-btn-icon > .daedalus-icon {
 	display: block;
-	vertical-align: middle;
 }
 
 ::highlight(daedalus-conversation-search) {
@@ -341,4 +340,18 @@ body {
 
 .collapseExpandIconActive {
   transform: rotate(0deg);
+}
+
+.ant-splitter-bar-dragger,
+.ant-splitter-bar-dragger-customize {
+	background: transparent !important;
+}
+
+.ant-splitter-bar-dragger::before,
+.ant-splitter-bar-dragger-customize::before,
+.ant-splitter-bar-dragger:hover::before,
+.ant-splitter-bar-dragger-customize:hover::before,
+.ant-splitter-bar-dragger:active::before,
+.ant-splitter-bar-dragger-customize:active::before {
+	background: transparent !important;
 }

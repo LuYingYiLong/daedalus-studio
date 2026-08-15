@@ -1,0 +1,204 @@
+.panel {
+	display: grid;
+	grid-template-rows: 38px auto minmax(0, 1fr);
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+	background: var(--ds-surface);
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	min-width: 0;
+	padding: 2px 8px 2px 12px;
+	border-bottom: 1px solid var(--ds-border);
+}
+
+.breadcrumb {
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.tabs :global(.ant-tabs-nav) {
+	margin: 0;
+}
+
+.tabs :global(.ant-tabs-content-holder) {
+	display: none;
+}
+
+.tabs :global(.ant-tabs-tab) {
+	padding-block: 5px !important;
+}
+
+.tabs :global(.ant-tabs-tab-btn span) {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.previewTab {
+	font-style: italic;
+}
+
+.body,
+.editorPane,
+.editor {
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+}
+
+.editorPane {
+	display: grid;
+	place-items: center;
+	position: relative;
+	overflow: hidden;
+}
+
+.editorPane > * {
+	max-width: 100%;
+}
+
+.editor {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	background: var(--ds-surface);
+}
+
+.monacoEditor {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+	font-family: var(--ds-font-family-code);
+}
+
+.editorError {
+	position: absolute;
+	z-index: 7;
+	top: 12px;
+	left: 12px;
+	right: 12px;
+}
+
+.selectionTools {
+	position: absolute;
+	z-index: 8;
+	filter: drop-shadow(0 5px 14px rgb(0 0 0 / 14%));
+}
+
+.selectionTools input {
+	width: 240px;
+}
+
+.conflict {
+	position: absolute;
+	z-index: 7;
+	top: 8px;
+	left: 12px;
+	right: 12px;
+}
+
+.sidebar {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-width: 0;
+	overflow: auto;
+	border-left: 1px solid var(--ds-border);
+}
+
+.sidebarControls {
+	position: sticky;
+	z-index: 4;
+	top: 0;
+	padding: 8px;
+	background: var(--ds-surface);
+}
+
+.sourceSelect {
+	width: 100%;
+}
+
+.divider {
+	margin: 8px 0;
+}
+
+.tree {
+	min-width: 0;
+	padding: 0 6px 12px;
+	overflow-x: hidden;
+	background: transparent;
+}
+
+.tree :global(.ant-tree-list-holder-inner) {
+	min-width: 0;
+}
+
+.tree :global(.ant-tree-treenode) {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	min-width: 0;
+	padding-block: 1px;
+}
+
+.tree :global(.ant-tree-indent-unit) {
+	width: 18px;
+}
+
+.tree :global(.ant-tree-switcher) {
+	flex: 0 0 20px;
+	width: 20px;
+	height: 28px;
+	line-height: 28px;
+}
+
+.tree :global(.ant-tree-node-content-wrapper) {
+	display: flex;
+	align-items: center;
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 28px;
+	padding-block: 2px;
+}
+
+.tree :global(.ant-tree-iconEle) {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 24px;
+	width: 24px;
+	height: 24px;
+	margin-inline-end: 4px;
+}
+
+.tree :global(.ant-tree-title) {
+	display: block;
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.treeTitle {
+	display: block;
+	overflow: hidden;
+	text-overflow: clip;
+	white-space: nowrap;
+}
+
+.empty {
+	display: grid;
+	place-items: center;
+	height: 100%;
+}
