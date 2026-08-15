@@ -10,7 +10,7 @@
 .panelTabs :global(.ant-tabs-nav) {
 	min-height: 34px;
 	margin: 0;
-	padding: 0 8px;
+	padding: 0 var(--ds-space-1);
 }
 
 .panelTabs :global(.ant-tabs-nav-wrap) {

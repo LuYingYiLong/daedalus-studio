@@ -72,6 +72,19 @@ describe("HomePage terminal panel source", () => {
 		expect(terminalPanelSource).toContain("window.electronAPI.terminal.onExit");
 	});
 
+	it("keeps initial shell output while terminal.create is still resolving", () => {
+		const dataHandlerIndex: number = terminalPanelSource.indexOf("const unsubscribeData");
+		const exitHandlerIndex: number = terminalPanelSource.indexOf("const unsubscribeExit");
+		const dataWriteIndex: number = terminalPanelSource.indexOf("terminalRef.current?.write(event.data)");
+		const dataHandlerSource: string = terminalPanelSource.slice(dataHandlerIndex, exitHandlerIndex);
+
+		expect(terminalPanelSource).toContain("if (event.terminalId !== terminalId)");
+		expect(dataHandlerIndex).toBeGreaterThan(-1);
+		expect(exitHandlerIndex).toBeGreaterThan(dataHandlerIndex);
+		expect(dataWriteIndex).toBeGreaterThan(dataHandlerIndex);
+		expect(dataHandlerSource).not.toContain("state === null");
+	});
+
 	it("waits for the session workspace cwd before creating a terminal", () => {
 		const waitGuardIndex: number = terminalPanelSource.indexOf("waitForCwdRef.current && cwdRef.current === null");
 		const createIndex: number = terminalPanelSource.indexOf("window.electronAPI.terminal.create");

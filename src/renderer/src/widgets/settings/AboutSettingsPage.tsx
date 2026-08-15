@@ -350,6 +350,7 @@ function AboutSettingsPage(): React.JSX.Element | null {
 									src={daedalusColorfulIconUrl}
 									alt=""
 									className={styles.largeIcon}
+									draggable={false}
 								/>
 								<div className={styles.appInfo}>
 									<Space>
@@ -375,6 +376,7 @@ function AboutSettingsPage(): React.JSX.Element | null {
 									src={backendColorfulIconUrl}
 									alt=""
 									className={styles.largeIcon}
+									draggable={false}
 								/>
 								<div className={styles.backendInfo}>
 									<Space>

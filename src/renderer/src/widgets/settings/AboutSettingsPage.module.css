@@ -85,6 +85,7 @@
 	width: 64px;
 	height: 64px;
 	flex: 0 0 auto;
+	-webkit-user-drag: none;
 }
 
 .appInfo {

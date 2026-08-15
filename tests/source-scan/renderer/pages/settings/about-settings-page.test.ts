@@ -10,6 +10,7 @@ describe("AboutSettingsPage", () => {
 
 		expect(pageSource).toContain('backend-colorful.svg?url');
 		expect(pageSource).toContain("src={backendColorfulIconUrl}");
+		expect(pageSource.match(/draggable=\{false\}/g)?.length).toBe(2);
 		expect(pageSource).not.toContain('name="backend-colorful"');
 		expect(pageSource).toContain('"backend.health"');
 		expect(pageSource).toContain("settings.about.backend.detailsTitle");
@@ -34,6 +35,7 @@ describe("AboutSettingsPage", () => {
 		expect(cssSource).toMatch(/\.content\s*{[^}]*display:\s*grid;/);
 		expect(pageSource).toContain("classNames={{ body: styles.overviewCardBody }}");
 		expect(cssSource).toContain(".overviewCardBody");
+		expect(cssSource).toContain("-webkit-user-drag: none;");
 		expect(cssSource).toContain("min-height: 112px;");
 		expect(cssSource).toContain("padding: 0 var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);");
 		expect(pageSource).toContain("createDefaultOnboardingPreferences()");

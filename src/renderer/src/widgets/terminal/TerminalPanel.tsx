@@ -274,8 +274,10 @@ function TerminalPanel({ terminalId, cwd, isOpen, waitForCwd }: TerminalPanelPro
 
 	useEffect((): (() => void) => {
 		const unsubscribeData = window.electronAPI.terminal.onData((event: TerminalDataEvent): void => {
-			const state: TerminalState | null = terminalStateRef.current;
-			if (state === null || event.terminalId !== state.terminalId) {
+			// The shell can emit its initial prompt before terminal.create resolves and
+			// terminalStateRef is populated. Route by the stable prop so that output is
+			// not lost during that startup window.
+			if (event.terminalId !== terminalId) {
 				return;
 			}
 			terminalRef.current?.write(event.data);
@@ -284,8 +286,11 @@ function TerminalPanel({ terminalId, cwd, isOpen, waitForCwd }: TerminalPanelPro
 			if (isRestartingRef.current) {
 				return;
 			}
+			if (event.terminalId !== terminalId) {
+				return;
+			}
 			const state: TerminalState | null = terminalStateRef.current;
-			if (state === null || event.terminalId !== state.terminalId) {
+			if (state === null) {
 				return;
 			}
 			syncTerminalState({ ...state, running: false });
@@ -295,7 +300,7 @@ function TerminalPanel({ terminalId, cwd, isOpen, waitForCwd }: TerminalPanelPro
 			unsubscribeData();
 			unsubscribeExit();
 		};
-	}, [syncTerminalState]);
+	}, [syncTerminalState, terminalId]);
 
 	useEffect((): (() => void) => {
 		const observer = new MutationObserver((mutations: MutationRecord[]): void => {
