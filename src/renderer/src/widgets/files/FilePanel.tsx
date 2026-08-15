@@ -71,6 +71,9 @@ type FilePanelProps = {
 const RUNTIME_BUFFERS = new Map<string, FileBuffer>();
 const MAX_SELECTION_CHARS: number = 8000;
 const EXTERNAL_CHANGE_POLL_MS: number = 2500;
+const FILE_PANEL_MIN_EDITOR_SPLIT: number = 25;
+const FILE_PANEL_MAX_EDITOR_SPLIT: number = 85;
+const FILE_PANEL_DEFAULT_EDITOR_SPLIT: number = 70;
 
 type MonacoApi = typeof MonacoNamespace;
 
@@ -134,6 +137,18 @@ function getEditorFontFamily(container: HTMLElement): string {
 	return fontFamily.length > 0 ? fontFamily : "SFMono-Regular, Consolas, 'Liberation Mono', monospace";
 }
 
+function normalizeEditorSplitSize(value: number): number {
+	if (!Number.isFinite(value)) return FILE_PANEL_DEFAULT_EDITOR_SPLIT;
+	return Math.min(FILE_PANEL_MAX_EDITOR_SPLIT, Math.max(FILE_PANEL_MIN_EDITOR_SPLIT, value));
+}
+
+function getEditorSplitSizeFromPixels(sizes: number[]): number | null {
+	const totalSize: number = sizes.reduce((total: number, size: number): number => total + size, 0);
+	const firstPanelSize: number | undefined = sizes[0];
+	if (firstPanelSize === undefined || !Number.isFinite(totalSize) || totalSize <= 0 || !Number.isFinite(firstPanelSize)) return null;
+	return normalizeEditorSplitSize((firstPanelSize / totalSize) * 100);
+}
+
 function createEmptyBuffer(): FileBuffer {
 	return {
 		content: "",
@@ -181,7 +196,9 @@ export function FilePanel({
 	const suppressModelChangeRef = useRef<boolean>(false);
 	const searchRequestRef = useRef<number>(0);
 	const [monacoReady, setMonacoReady] = useState<boolean>(false);
+	const [editorGeneration, setEditorGeneration] = useState<number>(0);
 	const [monacoError, setMonacoError] = useState<string | null>(null);
+	const [visualEditorSplitSize, setVisualEditorSplitSize] = useState<number>(() => normalizeEditorSplitSize(layout.splitSize));
 
 	const sourceFolders: WorkspaceSourceFolder[] = workspace?.sourceFolders ?? [];
 	const selectedSourceFolder: WorkspaceSourceFolder | null = useMemo((): WorkspaceSourceFolder | null => {
@@ -196,10 +213,31 @@ export function FilePanel({
 		?? null;
 	const activeBuffer: FileBuffer | null = activeTab === null ? null : buffers[activeTab.key] ?? null;
 	const isDirty: boolean = activeBuffer !== null && activeBuffer.content !== activeBuffer.savedContent;
+	const editorSplitSize: number = visualEditorSplitSize;
 
 	const patchLayout = useCallback((patch: Partial<FilePanelLayoutPreferences>): void => {
-		onLayoutChange({ ...layout, ...patch });
+		onLayoutChange({
+			...layout,
+			...patch,
+			splitSize: normalizeEditorSplitSize(patch.splitSize ?? layout.splitSize)
+		});
 	}, [layout, onLayoutChange]);
+
+	const handleSplitterResize = useCallback((sizes: number[]): void => {
+		const nextSplitSize: number | null = getEditorSplitSizeFromPixels(sizes);
+		if (nextSplitSize !== null) setVisualEditorSplitSize(nextSplitSize);
+	}, []);
+
+	const handleSplitterResizeEnd = useCallback((sizes: number[]): void => {
+		const nextSplitSize: number | null = getEditorSplitSizeFromPixels(sizes);
+		if (nextSplitSize === null) return;
+		setVisualEditorSplitSize(nextSplitSize);
+		patchLayout({ splitSize: nextSplitSize });
+	}, [patchLayout]);
+
+	useEffect((): void => {
+		setVisualEditorSplitSize(normalizeEditorSplitSize(layout.splitSize));
+	}, [layout.splitSize]);
 
 	useEffect((): (() => void) | undefined => {
 		const container: HTMLDivElement | null = editorContainerNode;
@@ -208,6 +246,7 @@ export function FilePanel({
 		let themeObserver: MutationObserver | null = null;
 		const initialize = async (): Promise<void> => {
 			try {
+				setMonacoError(null);
 				const [monacoModule, editorWorkerModule, jsonWorkerModule, cssWorkerModule, htmlWorkerModule, typescriptWorkerModule] = await Promise.all([
 					import("monaco-editor"),
 					import("../../../../../node_modules/monaco-editor/esm/vs/editor/editor.worker.js?worker"),
@@ -253,6 +292,7 @@ export function FilePanel({
 				});
 				editorRef.current = editor;
 				setMonacoReady(true);
+				setEditorGeneration((generation: number): number => generation + 1);
 				const updateTheme = (): void => {
 					monaco.editor.setTheme(document.documentElement.dataset.theme === "light" ? "vs" : "vs-dark");
 				};
@@ -348,7 +388,7 @@ export function FilePanel({
 			suppressModelChangeRef.current = false;
 		}
 		if (editor.getModel() !== model) editor.setModel(model);
-	}, [activeBuffer, activeTab, monacoReady, panelKey, sessionId]);
+	}, [activeBuffer, activeTab, editorGeneration, monacoReady, panelKey, sessionId]);
 
 	useEffect((): void => {
 		if (selectedSourceFolder === null || layout.selectedSourceFolderId === selectedSourceFolder.id) return;
@@ -392,9 +432,10 @@ export function FilePanel({
 	}, [messageApi, search, selectedSourceFolder]);
 
 	const pinTab = useCallback((key: string): void => {
-		if (layout.previewTabKey !== key) return;
+		const targetTab: FileTabPreferences | undefined = layout.tabs.find((tab: FileTabPreferences): boolean => tab.key === key);
+		if (targetTab === undefined || targetTab.pinned) return;
 		patchLayout({
-			previewTabKey: null,
+			previewTabKey: layout.previewTabKey === key ? null : layout.previewTabKey,
 			tabs: layout.tabs.map((tab: FileTabPreferences): FileTabPreferences => tab.key === key ? { ...tab, pinned: true } : tab)
 		});
 	}, [layout.previewTabKey, layout.tabs, patchLayout]);
@@ -535,7 +576,7 @@ export function FilePanel({
 			layoutDisposable.dispose();
 			window.removeEventListener("resize", updateSelection);
 		};
-	}, [activeTab?.key, monacoReady, updateSelection]);
+	}, [activeTab?.key, editorGeneration, monacoReady, updateSelection]);
 
 	useEffect((): void => {
 		const dirtyUnpinnedTab: FileTabPreferences | undefined = layout.tabs.find((tab: FileTabPreferences): boolean => {
@@ -636,6 +677,7 @@ export function FilePanel({
 		if (selectedSourceFolder === null || node.entry.kind !== "folder") return;
 		const result = await window.electronAPI.workspaceFs.listChildren({ workspaceRoot: selectedSourceFolder.path, relativePath: node.entry.relativePath });
 		setTreeData((current: FileTreeNode[]): FileTreeNode[] => replaceTreeChildren(current, node.key, result.entries.map(createTreeNode)));
+		setLoadedKeys((current: React.Key[]): React.Key[] => current.includes(node.key) ? current : [...current, node.key]);
 	}, [selectedSourceFolder]);
 
 	useEffect((): (() => void) => {
@@ -680,9 +722,25 @@ export function FilePanel({
 	const tabItems = layout.tabs.map((tab: FileTabPreferences) => {
 		const buffer: FileBuffer | undefined = buffers[tab.key];
 		const dirty: boolean = buffer !== undefined && buffer.content !== buffer.savedContent;
+		const isPreview: boolean = tab.pinned !== true;
 		return {
 			key: tab.key,
-			label: <span className={!tab.pinned ? styles.previewTab : undefined}><Icon name={getFileIconName(tab.relativePath)} /> {getFileName(tab.relativePath)}{dirty ? " •" : ""}</span>,
+			label: (
+				<span
+					className={`${styles.tabLabel} ${isPreview ? styles.previewTab : styles.pinnedTab}`}
+					data-file-preview={isPreview ? "true" : "false"}
+					onDoubleClick={(event: React.MouseEvent<HTMLSpanElement>): void => {
+						event.preventDefault();
+						event.stopPropagation();
+						pinTab(tab.key);
+					}}
+				>
+					<Icon name={getFileIconName(tab.relativePath)} />
+					<span className={styles.tabText}>
+						{getFileName(tab.relativePath)}{dirty ? " •" : ""}
+					</span>
+				</span>
+			),
 			children: null
 		};
 	});
@@ -693,8 +751,25 @@ export function FilePanel({
 			<header className={styles.header}>
 				<Breadcrumb className={styles.breadcrumb} items={breadcrumbItems} />
 				<Space size={2}>
-					{activeTab !== null ? <Tooltip title={t("files.save")}><Button type="text" icon={<Icon name="download" />} loading={activeBuffer?.saving} disabled={!isDirty || activeBuffer?.conflict === true || activeBuffer?.readable !== true} onClick={(): void => { void saveTab(activeTab); }} aria-label={t("files.save")} /></Tooltip> : null}
-					<Tooltip title={layout.sidebarOpen ? t("files.hideSidebar") : t("files.showSidebar")}><Button type="text" icon={<Icon name="layout-right" />} onClick={(): void => patchLayout({ sidebarOpen: !layout.sidebarOpen })} aria-label={layout.sidebarOpen ? t("files.hideSidebar") : t("files.showSidebar")} /></Tooltip>
+					{activeTab !== null 
+						? <Tooltip title={t("files.save")}>
+							<Button
+								type="text"
+								shape="circle"
+								icon={<Icon name="download" />}
+								loading={activeBuffer?.saving}
+								disabled={!isDirty || activeBuffer?.conflict === true || activeBuffer?.readable !== true}
+								onClick={(): void => { void saveTab(activeTab); }}
+								aria-label={t("files.save")} /></Tooltip> : null}
+					<Tooltip title={layout.sidebarOpen ? t("files.hideSidebar") : t("files.showSidebar")}>
+						<Button
+							type="text"
+							shape="circle"
+							icon={<Icon name="layout-right" />}
+							onClick={(): void => patchLayout({ sidebarOpen: !layout.sidebarOpen })}
+							aria-label={layout.sidebarOpen ? t("files.hideSidebar") : t("files.showSidebar")}
+						/>
+					</Tooltip>
 				</Space>
 			</header>
 			<Tabs
@@ -711,8 +786,8 @@ export function FilePanel({
 				}}
 			/>
 			<div className={styles.body}>
-				<Splitter onResizeEnd={(sizes: number[]): void => patchLayout({ splitSize: sizes[0] ?? layout.splitSize })}>
-					<Splitter.Panel min="25%" size={layout.sidebarOpen ? `${layout.splitSize}%` : "100%"}>
+				<Splitter onResize={handleSplitterResize} onResizeEnd={handleSplitterResizeEnd}>
+					<Splitter.Panel min={`${FILE_PANEL_MIN_EDITOR_SPLIT}%`} size={layout.sidebarOpen ? `${editorSplitSize}%` : "100%"}>
 						<div className={styles.editorPane}>
 							{activeTab === null ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("files.noFileSelected")} /> : activeBuffer?.loading ? <Typography.Text type="secondary">{t("files.loading")}</Typography.Text> : activeBuffer?.error !== null && activeBuffer?.error !== undefined ? <Alert type="error" showIcon message={activeBuffer.error} /> : activeBuffer?.readable !== true ? (
 								<Empty
@@ -794,7 +869,7 @@ export function FilePanel({
 							)}
 						</div>
 					</Splitter.Panel>
-					{layout.sidebarOpen ? <Splitter.Panel min="15%">
+					{layout.sidebarOpen ? <Splitter.Panel min={`${100 - FILE_PANEL_MAX_EDITOR_SPLIT}%`} size={`${100 - editorSplitSize}%`}>
 						<aside className={styles.sidebar}>
 							<div className={styles.sidebarControls}>
 								<Select
@@ -806,6 +881,7 @@ export function FilePanel({
 										}))
 									}
 									onChange={(id: string): void => patchLayout({ selectedSourceFolderId: id })}
+									suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 								/>
 								<Divider className={styles.divider} />
 								<Input
@@ -819,18 +895,29 @@ export function FilePanel({
 							</div>
 							<Tree<FileTreeNode>
 								showIcon
-								blockNode
-								className={styles.tree}
-								treeData={search.trim().length > 0 ? searchResults : treeData}
-								loadedKeys={loadedKeys}
-								expandedKeys={search.trim().length > 0 ? [] : layout.expandedPathsBySourceFolder[selectedSourceFolder?.id ?? ""] ?? []}
-								loadData={loadData}
-								titleRender={titleRender}
-								onLoad={(keys): void => setLoadedKeys(keys)}
+														showLine
+														blockNode
+														className={styles.tree}
+														classNames={{
+															item: styles.treeItem,
+															itemIcon: styles.treeItemIcon,
+															itemTitle: styles.treeItemTitle,
+															itemSwitcher: styles.treeItemSwitcher
+														}}
+														treeData={search.trim().length > 0 ? searchResults : treeData}
+														loadedKeys={loadedKeys}
+														expandAction="click"
+														expandedKeys={search.trim().length > 0 ? [] : layout.expandedPathsBySourceFolder[selectedSourceFolder?.id ?? ""] ?? []}
+										loadData={loadData}
+										switcherIcon={null}
+										titleRender={titleRender}
+									onLoad={(keys): void => setLoadedKeys(keys)}
 								onExpand={(keys): void => {
 									if (selectedSourceFolder !== null) patchLayout({ expandedPathsBySourceFolder: { ...layout.expandedPathsBySourceFolder, [selectedSourceFolder.id]: keys.map(String) } });
 								}}
-								onSelect={(_keys, info): void => openEntry(info.node.entry, false)}
+														onSelect={(_keys, info): void => {
+															if (info.node.entry.kind === "file") openEntry(info.node.entry, false);
+															}}
 							/>
 						</aside>
 					</Splitter.Panel> : null}

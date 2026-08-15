@@ -185,7 +185,7 @@ function isValidFileTabKey(value: string): boolean {
 function normalizeFilePanelLayout(value: unknown): FilePanelLayoutPreferences {
 	const defaults: FilePanelLayoutPreferences = {
 		sidebarOpen: true,
-		splitSize: 68,
+		splitSize: 70,
 		selectedSourceFolderId: null,
 		expandedPathsBySourceFolder: {},
 		tabs: [],

@@ -52,7 +52,7 @@ const MAX_TERMINAL_RUNTIME_ID_LENGTH = 80;
 export function createDefaultFilePanelLayout(): FilePanelLayoutPreferences {
 	return {
 		sidebarOpen: true,
-		splitSize: 68,
+		splitSize: 70,
 		selectedSourceFolderId: null,
 		expandedPathsBySourceFolder: {},
 		tabs: [],
