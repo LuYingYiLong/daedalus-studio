@@ -40,6 +40,7 @@ type FileTreeNode = TreeDataNode & {
 	key: string;
 	entry: WorkspaceFsEntry;
 	isLeaf: boolean;
+	isBottomSpacer?: boolean;
 	children?: FileTreeNode[];
 };
 
@@ -74,6 +75,11 @@ const EXTERNAL_CHANGE_POLL_MS: number = 2500;
 const FILE_PANEL_MIN_EDITOR_SPLIT: number = 25;
 const FILE_PANEL_MAX_EDITOR_SPLIT: number = 85;
 const FILE_PANEL_DEFAULT_EDITOR_SPLIT: number = 70;
+const EXPANDED_PATHS_PERSIST_DELAY_MS: number = 180;
+const MAX_DIRECTORY_CACHE_ENTRIES: number = 256;
+const FILE_TREE_ITEM_HEIGHT: number = 30;
+const FILE_PANEL_BOTTOM_SAFE_AREA: number = 120;
+const FILE_TREE_BOTTOM_SPACER_COUNT: number = Math.ceil(FILE_PANEL_BOTTOM_SAFE_AREA / FILE_TREE_ITEM_HEIGHT);
 
 type MonacoApi = typeof MonacoNamespace;
 
@@ -83,6 +89,20 @@ type MonacoEnvironment = {
 
 function normalizeRelativePath(path: string): string {
 	return path.replaceAll("\\", "/").replace(/^\/+|\/+$/gu, "");
+}
+
+function getDirectoryCacheKey(sourceFolder: WorkspaceSourceFolder, relativePath: string): string {
+	return `${sourceFolder.path}\u0000${normalizeRelativePath(relativePath)}`;
+}
+
+function cacheDirectoryEntries(cache: Map<string, FileTreeNode[]>, key: string, entries: FileTreeNode[]): void {
+	cache.delete(key);
+	cache.set(key, entries);
+	while (cache.size > MAX_DIRECTORY_CACHE_ENTRIES) {
+		const oldestKey: string | undefined = cache.keys().next().value;
+		if (oldestKey === undefined) break;
+		cache.delete(oldestKey);
+	}
 }
 
 function getFileName(path: string): string {
@@ -117,6 +137,7 @@ function createTreeNode(entry: WorkspaceFsEntry): FileTreeNode {
 		key: entry.relativePath,
 		entry,
 		isLeaf: entry.kind === "file",
+		selectable: entry.kind === "file",
 		title: entry.name,
 		icon: <Icon name={entry.kind === "folder" ? "folder" : getFileIconName(entry.relativePath)} />
 	};
@@ -189,16 +210,27 @@ export function FilePanel({
 	const [annotation, setAnnotation] = useState<string>("");
 	const [pendingClose, setPendingClose] = useState<PendingClose | null>(null);
 	const [editorContainerNode, setEditorContainerNode] = useState<HTMLDivElement | null>(null);
+	const [treeViewportNode, setTreeViewportNode] = useState<HTMLDivElement | null>(null);
+	const [treeViewportHeight, setTreeViewportHeight] = useState<number>(0);
 	const editorContainerRef = useCallback((node: HTMLDivElement | null): void => setEditorContainerNode(node), []);
 	const monacoRef = useRef<MonacoApi | null>(null);
 	const editorRef = useRef<MonacoNamespace.editor.IStandaloneCodeEditor | null>(null);
 	const modelsRef = useRef<Map<string, MonacoNamespace.editor.ITextModel>>(new Map());
 	const suppressModelChangeRef = useRef<boolean>(false);
 	const searchRequestRef = useRef<number>(0);
+	const directoryCacheRef = useRef<Map<string, FileTreeNode[]>>(new Map());
+	const directoryRequestsRef = useRef<Map<string, Promise<FileTreeNode[]>>>(new Map());
+	const layoutRef = useRef<FilePanelLayoutPreferences>(layout);
+	const onLayoutChangeRef = useRef<FilePanelProps["onLayoutChange"]>(onLayoutChange);
+	const expandedPathsPersistTimerRef = useRef<number | null>(null);
+	const pendingExpandedPathsRef = useRef<Record<string, string[]> | null>(null);
 	const [monacoReady, setMonacoReady] = useState<boolean>(false);
 	const [editorGeneration, setEditorGeneration] = useState<number>(0);
 	const [monacoError, setMonacoError] = useState<string | null>(null);
 	const [visualEditorSplitSize, setVisualEditorSplitSize] = useState<number>(() => normalizeEditorSplitSize(layout.splitSize));
+	const [visualExpandedKeys, setVisualExpandedKeys] = useState<React.Key[]>([]);
+	layoutRef.current = layout;
+	onLayoutChangeRef.current = onLayoutChange;
 
 	const sourceFolders: WorkspaceSourceFolder[] = workspace?.sourceFolders ?? [];
 	const selectedSourceFolder: WorkspaceSourceFolder | null = useMemo((): WorkspaceSourceFolder | null => {
@@ -214,14 +246,32 @@ export function FilePanel({
 	const activeBuffer: FileBuffer | null = activeTab === null ? null : buffers[activeTab.key] ?? null;
 	const isDirty: boolean = activeBuffer !== null && activeBuffer.content !== activeBuffer.savedContent;
 	const editorSplitSize: number = visualEditorSplitSize;
+	const treeDataWithBottomSafeArea: FileTreeNode[] = useMemo((): FileTreeNode[] => {
+		const visibleTreeData: FileTreeNode[] = search.trim().length > 0 ? searchResults : treeData;
+		if (visibleTreeData.length === 0) return visibleTreeData;
+		const bottomSpacers: FileTreeNode[] = Array.from({ length: FILE_TREE_BOTTOM_SPACER_COUNT }, (_, index: number): FileTreeNode => ({
+			key: `__daedalus-file-panel-bottom-spacer-${index}`,
+			entry: { name: "", relativePath: "", resourcePath: "", kind: "file" },
+			isLeaf: true,
+			isBottomSpacer: true,
+			selectable: false,
+			disabled: true,
+			title: "",
+			className: styles.treeSpacer
+		}));
+		return [...visibleTreeData, ...bottomSpacers];
+	}, [search, searchResults, treeData]);
 
 	const patchLayout = useCallback((patch: Partial<FilePanelLayoutPreferences>): void => {
-		onLayoutChange({
-			...layout,
+		const currentLayout: FilePanelLayoutPreferences = layoutRef.current;
+		const nextLayout: FilePanelLayoutPreferences = {
+			...currentLayout,
 			...patch,
-			splitSize: normalizeEditorSplitSize(patch.splitSize ?? layout.splitSize)
-		});
-	}, [layout, onLayoutChange]);
+			splitSize: normalizeEditorSplitSize(patch.splitSize ?? currentLayout.splitSize)
+		};
+		layoutRef.current = nextLayout;
+		onLayoutChangeRef.current(nextLayout);
+	}, []);
 
 	const handleSplitterResize = useCallback((sizes: number[]): void => {
 		const nextSplitSize: number | null = getEditorSplitSizeFromPixels(sizes);
@@ -238,6 +288,54 @@ export function FilePanel({
 	useEffect((): void => {
 		setVisualEditorSplitSize(normalizeEditorSplitSize(layout.splitSize));
 	}, [layout.splitSize]);
+
+	useEffect((): (() => void) | undefined => {
+		if (treeViewportNode === null) return undefined;
+		const updateHeight = (): void => {
+			setTreeViewportHeight(Math.max(0, Math.floor(treeViewportNode.clientHeight)));
+		};
+		updateHeight();
+		const observer = new ResizeObserver(updateHeight);
+		observer.observe(treeViewportNode);
+		return (): void => observer.disconnect();
+	}, [treeViewportNode]);
+
+	const flushExpandedPaths = useCallback((): void => {
+		if (expandedPathsPersistTimerRef.current !== null) {
+			window.clearTimeout(expandedPathsPersistTimerRef.current);
+			expandedPathsPersistTimerRef.current = null;
+		}
+		const pendingExpandedPaths: Record<string, string[]> | null = pendingExpandedPathsRef.current;
+		pendingExpandedPathsRef.current = null;
+		if (pendingExpandedPaths !== null) patchLayout({ expandedPathsBySourceFolder: pendingExpandedPaths });
+	}, [patchLayout]);
+
+	const scheduleExpandedPathsPersist = useCallback((sourceFolderId: string, keys: React.Key[]): void => {
+		const currentExpandedPaths: Record<string, string[]> = pendingExpandedPathsRef.current
+			?? layoutRef.current.expandedPathsBySourceFolder;
+		pendingExpandedPathsRef.current = {
+			...currentExpandedPaths,
+			[sourceFolderId]: keys.map(String)
+		};
+		if (expandedPathsPersistTimerRef.current !== null) window.clearTimeout(expandedPathsPersistTimerRef.current);
+		expandedPathsPersistTimerRef.current = window.setTimeout(flushExpandedPaths, EXPANDED_PATHS_PERSIST_DELAY_MS);
+	}, [flushExpandedPaths]);
+
+	useEffect((): void => {
+		if (expandedPathsPersistTimerRef.current !== null) window.clearTimeout(expandedPathsPersistTimerRef.current);
+		expandedPathsPersistTimerRef.current = null;
+		pendingExpandedPathsRef.current = null;
+		const sourceFolderId: string | undefined = selectedSourceFolder?.id;
+		setVisualExpandedKeys(sourceFolderId === undefined
+			? []
+			: layoutRef.current.expandedPathsBySourceFolder[sourceFolderId] ?? []);
+	}, [panelKey, selectedSourceFolder?.id, sessionId]);
+
+	useEffect((): (() => void) => {
+		return (): void => {
+			if (expandedPathsPersistTimerRef.current !== null) window.clearTimeout(expandedPathsPersistTimerRef.current);
+		};
+	}, []);
 
 	useEffect((): (() => void) | undefined => {
 		const container: HTMLDivElement | null = editorContainerNode;
@@ -283,7 +381,7 @@ export function FilePanel({
 					lineHeight: 22,
 					lineNumbers: "on",
 					minimap: { enabled: false },
-					padding: { top: 12, bottom: 24 },
+					padding: { top: 12, bottom: FILE_PANEL_BOTTOM_SAFE_AREA },
 					renderWhitespace: "selection",
 					scrollBeyondLastLine: false,
 					tabSize: 4,
@@ -395,19 +493,40 @@ export function FilePanel({
 		patchLayout({ selectedSourceFolderId: selectedSourceFolder.id });
 	}, [layout.selectedSourceFolderId, patchLayout, selectedSourceFolder]);
 
+	const loadDirectory = useCallback(async (sourceFolder: WorkspaceSourceFolder, relativePath: string): Promise<FileTreeNode[]> => {
+		const cacheKey: string = getDirectoryCacheKey(sourceFolder, relativePath);
+		const cachedEntries: FileTreeNode[] | undefined = directoryCacheRef.current.get(cacheKey);
+		if (cachedEntries !== undefined) {
+			cacheDirectoryEntries(directoryCacheRef.current, cacheKey, cachedEntries);
+			return cachedEntries;
+		}
+		const pendingRequest: Promise<FileTreeNode[]> | undefined = directoryRequestsRef.current.get(cacheKey);
+		if (pendingRequest !== undefined) return pendingRequest;
+		const request: Promise<FileTreeNode[]> = window.electronAPI.workspaceFs.listChildren({ workspaceRoot: sourceFolder.path, relativePath })
+			.then((result): FileTreeNode[] => {
+				const entries: FileTreeNode[] = result.entries.map(createTreeNode);
+				cacheDirectoryEntries(directoryCacheRef.current, cacheKey, entries);
+				return entries;
+			})
+			.finally((): void => {
+				directoryRequestsRef.current.delete(cacheKey);
+			});
+		directoryRequestsRef.current.set(cacheKey, request);
+		return request;
+	}, []);
+
 	const loadRoot = useCallback(async (): Promise<void> => {
 		if (selectedSourceFolder === null) {
 			setTreeData([]);
 			return;
 		}
 		try {
-			const result = await window.electronAPI.workspaceFs.listChildren({ workspaceRoot: selectedSourceFolder.path });
-			setTreeData(result.entries.map(createTreeNode));
+			setTreeData(await loadDirectory(selectedSourceFolder, ""));
 			setLoadedKeys([]);
 		} catch (error: unknown) {
 			void messageApi.error(String(error));
 		}
-	}, [messageApi, selectedSourceFolder]);
+	}, [loadDirectory, messageApi, selectedSourceFolder?.id, selectedSourceFolder?.path]);
 
 	useEffect((): void => { void loadRoot(); }, [loadRoot]);
 
@@ -667,18 +786,20 @@ export function FilePanel({
 		};
 	}, [addPathContext, launchTargets, messageApi, openWith, saveAs, selectedSourceFolder, t, workspaceLaunchTargetId]);
 
-	const titleRender: TreeProps<FileTreeNode>["titleRender"] = useCallback((node: FileTreeNode): React.ReactNode => (
-		<Dropdown menu={menuForEntry(node.entry)} trigger={["contextMenu"]}>
-			<span className={styles.treeTitle} onDoubleClick={(): void => openEntry(node.entry, true)}>{node.entry.name}</span>
-		</Dropdown>
-	), [menuForEntry, openEntry]);
+	const titleRender: TreeProps<FileTreeNode>["titleRender"] = useCallback((node: FileTreeNode): React.ReactNode => {
+		if (node.isBottomSpacer) return null;
+		return (
+			<Dropdown menu={menuForEntry(node.entry)} trigger={["contextMenu"]}>
+				<span className={styles.treeTitle} onDoubleClick={(): void => openEntry(node.entry, true)}>{node.entry.name}</span>
+			</Dropdown>
+		);
+	}, [menuForEntry, openEntry]);
 
 	const loadData = useCallback(async (node: FileTreeNode): Promise<void> => {
 		if (selectedSourceFolder === null || node.entry.kind !== "folder") return;
-		const result = await window.electronAPI.workspaceFs.listChildren({ workspaceRoot: selectedSourceFolder.path, relativePath: node.entry.relativePath });
-		setTreeData((current: FileTreeNode[]): FileTreeNode[] => replaceTreeChildren(current, node.key, result.entries.map(createTreeNode)));
-		setLoadedKeys((current: React.Key[]): React.Key[] => current.includes(node.key) ? current : [...current, node.key]);
-	}, [selectedSourceFolder]);
+		const entries: FileTreeNode[] = await loadDirectory(selectedSourceFolder, node.entry.relativePath);
+		setTreeData((current: FileTreeNode[]): FileTreeNode[] => replaceTreeChildren(current, node.key, entries));
+	}, [loadDirectory, selectedSourceFolder?.id, selectedSourceFolder?.path]);
 
 	useEffect((): (() => void) => {
 		if (layout.tabs.length === 0) return (): void => undefined;
@@ -872,53 +993,65 @@ export function FilePanel({
 					{layout.sidebarOpen ? <Splitter.Panel min={`${100 - FILE_PANEL_MAX_EDITOR_SPLIT}%`} size={`${100 - editorSplitSize}%`}>
 						<aside className={styles.sidebar}>
 							<div className={styles.sidebarControls}>
-								<Select
-									className={styles.sourceSelect}
-									value={selectedSourceFolder?.id}
-									options={
-										sourceFolders.map((folder: WorkspaceSourceFolder) => ({
-											value: folder.id, label: getSourceFolderLabel(folder)
-										}))
-									}
-									onChange={(id: string): void => patchLayout({ selectedSourceFolderId: id })}
-									suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
-								/>
+								<div className={styles.sidebarPadding}>
+									<Select
+										className={styles.sourceSelect}
+										value={selectedSourceFolder?.id}
+										options={
+											sourceFolders.map((folder: WorkspaceSourceFolder) => ({
+												value: folder.id, label: getSourceFolderLabel(folder)
+											}))
+										}
+										onChange={(id: string): void => patchLayout({ selectedSourceFolderId: id })}
+										suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
+									/>
+								</div>
 								<Divider className={styles.divider} />
-								<Input
-									allowClear
-									prefix={<Icon name="search" />}
-									suffix={searching ? <Spin size="small" /> : null}
-									value={search}
-									placeholder={t("files.search")}
-									onChange={(event): void => setSearch(event.target.value)}
+								<div className={styles.sidebarPadding2}>
+									<Input
+										allowClear
+										prefix={<Icon name="search" />}
+										suffix={searching ? <Spin size="small" /> : null}
+										value={search}
+										placeholder={t("files.search")}
+										onChange={(event): void => setSearch(event.target.value)}
+									/>
+								</div>
+							</div>
+							<div ref={setTreeViewportNode} className={styles.treeViewport}>
+								<Tree<FileTreeNode>
+									showIcon
+									showLine
+									blockNode
+									virtual
+									autoExpandParent={false}
+									motion={false}
+									height={treeViewportHeight > 0 ? treeViewportHeight : undefined}
+									itemHeight={FILE_TREE_ITEM_HEIGHT}
+									className={styles.tree}
+									classNames={{
+										item: styles.treeItem,
+										itemIcon: styles.treeItemIcon,
+										itemTitle: styles.treeItemTitle,
+										itemSwitcher: styles.treeItemSwitcher
+									}}
+									treeData={treeDataWithBottomSafeArea}
+									loadedKeys={loadedKeys}
+									expandAction="click"
+									expandedKeys={search.trim().length > 0 ? [] : visualExpandedKeys}
+									loadData={loadData}
+									switcherIcon={null}
+									titleRender={titleRender}
+									onLoad={(keys): void => setLoadedKeys(keys)}
+									onExpand={(keys): void => {
+										setVisualExpandedKeys(keys);
+										if (selectedSourceFolder !== null) scheduleExpandedPathsPersist(selectedSourceFolder.id, keys);
+									}}
+									onSelect={(_keys, info): void => {
+										if (info.node.entry.kind === "file") openEntry(info.node.entry, false);
+									}}
 								/>
 							</div>
-							<Tree<FileTreeNode>
-								showIcon
-														showLine
-														blockNode
-														className={styles.tree}
-														classNames={{
-															item: styles.treeItem,
-															itemIcon: styles.treeItemIcon,
-															itemTitle: styles.treeItemTitle,
-															itemSwitcher: styles.treeItemSwitcher
-														}}
-														treeData={search.trim().length > 0 ? searchResults : treeData}
-														loadedKeys={loadedKeys}
-														expandAction="click"
-														expandedKeys={search.trim().length > 0 ? [] : layout.expandedPathsBySourceFolder[selectedSourceFolder?.id ?? ""] ?? []}
-										loadData={loadData}
-										switcherIcon={null}
-										titleRender={titleRender}
-									onLoad={(keys): void => setLoadedKeys(keys)}
-								onExpand={(keys): void => {
-									if (selectedSourceFolder !== null) patchLayout({ expandedPathsBySourceFolder: { ...layout.expandedPathsBySourceFolder, [selectedSourceFolder.id]: keys.map(String) } });
-								}}
-														onSelect={(_keys, info): void => {
-															if (info.node.entry.kind === "file") openEntry(info.node.entry, false);
-															}}
-							/>
 						</aside>
 					</Splitter.Panel> : null}
 				</Splitter>

@@ -122,6 +122,7 @@ const MAX_SEARCH_RESULT_LIMIT: number = 1000;
 const MAX_SEARCH_QUERY_CHARS: number = 200;
 const MAX_SEARCHED_ENTRIES: number = 50_000;
 const UTF8_DECODER: TextDecoder = new TextDecoder("utf-8", { fatal: true });
+const WORKSPACE_ENTRY_NAME_COLLATOR: Intl.Collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
 function isPathInside(root: string, target: string): boolean {
 	const relativePath: string = relative(root, target);
@@ -575,7 +576,7 @@ export async function listWorkspaceChildren(params: WorkspaceFsListChildrenParam
 				return left.kind === "folder" ? -1 : 1;
 			}
 
-			return left.name.localeCompare(right.name);
+			return WORKSPACE_ENTRY_NAME_COLLATOR.compare(left.name, right.name);
 		});
 
 	return { entries };

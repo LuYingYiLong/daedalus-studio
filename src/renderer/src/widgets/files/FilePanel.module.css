@@ -155,16 +155,24 @@
 	flex-direction: column;
 	height: 100%;
 	min-width: 0;
-	overflow: auto;
+	min-height: 0;
+	overflow: hidden;
 	border-left: 1px solid var(--ds-border);
 }
 
 .sidebarControls {
-	position: sticky;
+	position: relative;
 	z-index: 4;
-	top: 0;
-	padding: 8px;
+	flex: 0 0 auto;
 	background: var(--ds-surface);
+}
+
+.sidebarPadding {
+	padding: var(--ds-space-2) var(--ds-space-2) 0 var(--ds-space-2);
+}
+
+.sidebarPadding2 {
+	padding: 0 var(--ds-space-2) 0 var(--ds-space-2);
 }
 
 .sourceSelect {
@@ -175,9 +183,17 @@
 	margin: 8px 0;
 }
 
-.tree {
+.treeViewport {
+	flex: 1 1 auto;
 	min-width: 0;
-	padding: 0 6px 12px;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.tree {
+	height: 100%;
+	min-width: 0;
+	padding: 0 6px;
 	overflow-x: hidden;
 	background: transparent;
 }
@@ -258,6 +274,11 @@
 	flex: 1 1 auto;
 	min-width: 0;
 	overflow: hidden;
+}
+
+.treeSpacer {
+	visibility: hidden;
+	pointer-events: none;
 }
 
 .treeTitle {
