@@ -11,6 +11,7 @@ import {
 } from "@/platform/rpc/client-preferences-api";
 import { Icon } from "@/assets/icons";
 import AppUpdateDialog from "@/widgets/app-update/AppUpdateDialog";
+import ChangelogDialog from "@/widgets/changelog/ChangelogDialog";
 import { shouldShowUpdateButton } from "@/domain/app-update/update-visibility";
 import {
 	getSessionNavigationSnapshot,
@@ -23,6 +24,24 @@ import styles from "./Titlebar.module.css";
 type MainTitlebarProps = {
 	appReady: boolean;
 };
+
+const LAST_SEEN_CHANGELOG_VERSION_KEY: string = "daedalus.studio.changelog.last-seen-version";
+
+function getLastSeenChangelogVersion(): string | null {
+	try {
+		return window.localStorage.getItem(LAST_SEEN_CHANGELOG_VERSION_KEY);
+	} catch {
+		return null;
+	}
+}
+
+function setLastSeenChangelogVersion(version: string): void {
+	try {
+		window.localStorage.setItem(LAST_SEEN_CHANGELOG_VERSION_KEY, version);
+	} catch {
+		// localStorage 不可用时仍允许用户手动关闭更新日志。
+	}
+}
 
 function getUpdateButtonLabel(state: AppUpdateState | null): string {
 	if (state?.status === "downloading") {
@@ -42,12 +61,28 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(() => getCachedClientPreferences());
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
 	const [updateModalOpen, setUpdateModalOpen] = useState<boolean>(false);
+	const [changelogVersion, setChangelogVersion] = useState<string | null>(null);
 	const sessionNavigation = useSyncExternalStore(
 		subscribeToSessionNavigation,
 		getSessionNavigationSnapshot,
 		getSessionNavigationSnapshot
 	);
 	const showUpdateButton: boolean = appReady && shouldShowUpdateButton(updateState);
+
+	useEffect((): (() => void) => {
+		if (!appReady) {
+			return (): void => undefined;
+		}
+		let cancelled: boolean = false;
+		void window.electronAPI.appInfo.getPackageInfo().then((packageInfo: PackageInfo): void => {
+			if (!cancelled && packageInfo.version.trim().length > 0 && getLastSeenChangelogVersion() !== packageInfo.version) {
+				setChangelogVersion(packageInfo.version);
+			}
+		}).catch((): void => undefined);
+		return (): void => {
+			cancelled = true;
+		};
+	}, [appReady]);
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -105,6 +140,18 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 			const nextState: AppUpdateState = await window.electronAPI.appUpdate.acknowledge();
 			setUpdateState(nextState);
 		}
+	}
+
+	function closeChangelog(): void {
+		if (changelogVersion !== null) {
+			setLastSeenChangelogVersion(changelogVersion);
+		}
+		setChangelogVersion(null);
+	}
+
+	function openFullChangelog(): void {
+		closeChangelog();
+		void window.electronAPI.windowControl.openSettings("about");
 	}
 
 	const toggleWorkspaceSidebar = useMemoizedFn(async (): Promise<void> => {
@@ -204,6 +251,12 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 				) : null}
 			</div>
 			<AppUpdateDialog open={updateModalOpen} state={updateState} onClose={handleUpdateModalClose} onDownload={startDownload} />
+			<ChangelogDialog
+				open={changelogVersion !== null}
+				version={changelogVersion}
+				onClose={closeChangelog}
+				onOpenFull={openFullChangelog}
+			/>
 		</div>
 	);
 }

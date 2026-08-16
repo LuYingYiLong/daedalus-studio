@@ -1487,6 +1487,7 @@
       },
       "actions": {
         "refresh": "刷新",
+        "viewChangelog": "查看更新日志",
         "checkForUpdates": "检查更新",
         "updateBackend": "更新后端",
         "restartBackend": "重启后端",
@@ -2148,6 +2149,15 @@
     "errors": {
       "download": "下载更新失败。",
       "manualDownloadHint": "如果当前网络无法连接 GitHub，或自动下载反复失败，请使用浏览器前往对应组件的 Releases 页面手动下载。"
+    }
+  },
+  "changelog": {
+    "title": "更新日志",
+    "whatsNew": "v{{version}} 更新内容",
+    "noReleaseNotes": "暂时没有 v{{version}} 的详细更新日志。",
+    "actions": {
+      "viewFull": "查看完整日志",
+      "close": "知道了"
     }
   }
 }

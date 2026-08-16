@@ -88,6 +88,13 @@
 	-webkit-user-drag: none;
 }
 
+.headerActions {
+	display: inline-flex;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
 .appInfo {
 	display: grid;
 	min-width: 0;

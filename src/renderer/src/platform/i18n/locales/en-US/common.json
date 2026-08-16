@@ -1494,6 +1494,7 @@
       },
       "actions": {
         "refresh": "Refresh",
+        "viewChangelog": "View update history",
         "checkForUpdates": "Check for updates",
         "updateBackend": "Update backend",
         "restartBackend": "Restart backend",
@@ -2155,6 +2156,15 @@
     "errors": {
       "download": "Failed to download update.",
       "manualDownloadHint": "If GitHub is unavailable on your network or automatic downloads keep failing, use the matching component's Releases page for a manual download."
+    }
+  },
+  "changelog": {
+    "title": "Update history",
+    "whatsNew": "What's new in v{{version}}",
+    "noReleaseNotes": "Detailed release notes for v{{version}} are not available yet.",
+    "actions": {
+      "viewFull": "View full history",
+      "close": "Done"
     }
   }
 }

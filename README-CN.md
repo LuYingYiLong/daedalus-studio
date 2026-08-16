@@ -50,19 +50,6 @@ Daedalus Studio 是一套以 Godot 为核心的 AI 开发环境。它把持久�
 - **持久化桌面工作区**：保存会话、面板布局、终端标签、归档会话、工作区外观以及未读完成状态。
 - **受管组件**：由 Studio 校验、安装、更新、修复和回滚 Daedalus Backend 与内置 Godot 编辑器插件。
 
-## 组件关系
-
-```mermaid
-flowchart LR
-    U["Daedalus Studio<br/>Electron + React"] -->|本地鉴权 RPC| B["Daedalus Backend"]
-    G["Godot 编辑器插件"] -->|共享运行时 RPC| B
-    B --> P["模型供应商"]
-    B --> M["内置与自定义 MCP Server"]
-    B --> W["工作区文件、Git、终端、LSP/DAP"]
-    B --> E["Godot Editor Bridge"]
-    E --> G
-```
-
 Studio 是桌面客户端与生命周期管理者；Backend 负责执行与持久化；Godot 插件是轻量编辑器客户端和 Editor Bridge。每个 Studio 版本都会固定并检查三端版本，避免不兼容组件被静默混用。
 
 ## 核心能力
@@ -217,20 +204,6 @@ npm run pack:win
 - `npm run pack:win` 生成未安装的 Windows 应用目录。
 - `npm run build:win` 在 `release/` 中生成 NSIS 安装包与更新元数据。
 - 发布构建会准备固定版本的 Backend 和 Godot Bridge，并在打包前检查清单、大小、哈希、协议与 Backend self-test。Bridge 缺失或无法校验仍会阻止正式打包，只有未打包的开发服务器可以在 Bridge 暂不可用时继续运行。
-
-## 仓库结构
-
-```text
-src/main/            Electron 生命周期、窗口、Backend 启动、更新与原生服务
-src/preload/         暴露给 Renderer 的窄 IPC Bridge
-src/renderer/src/    React 应用、功能、页面、API Client、国际化与样式
-scripts/             组件校验、准备与打包脚本
-tests/               Main/Renderer 单元、集成与源码契约测试
-docs/                架构与 UI 设计文档
-build/               图标与生成的打包输入
-```
-
-更深入的实现约定见 [docs/file-structure.md](./docs/file-structure.md) 和 [docs/ui-design-system.md](./docs/ui-design-system.md)。
 
 ## 项目状态
 

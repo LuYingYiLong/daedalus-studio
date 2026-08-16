@@ -50,19 +50,6 @@ It is designed for work that should leave auditable project changes—not just a
 - **Persistent desktop workspace** — retain sessions, panel layouts, terminal tabs, archived conversations, workspace appearance, and unread completion state.
 - **Managed integrations** — Studio verifies, installs, updates, repairs, and rolls back the Daedalus backend and the bundled Godot editor plugin.
 
-## How It Fits Together
-
-```mermaid
-flowchart LR
-    U["Daedalus Studio<br/>Electron + React"] -->|local authenticated RPC| B["Daedalus Backend"]
-    G["Godot editor plugin"] -->|shared runtime RPC| B
-    B --> P["Model providers"]
-    B --> M["Built-in and custom MCP servers"]
-    B --> W["Workspace files, Git, terminal, LSP/DAP"]
-    B --> E["Godot Editor Bridge"]
-    E --> G
-```
-
 Studio is the desktop client and lifecycle owner. The backend is the execution and persistence layer. The Godot plugin is a lightweight editor client and bridge. Their versions are pinned in each Studio release and checked before startup, so incompatible components are not silently mixed.
 
 ## Core Capabilities
@@ -219,20 +206,6 @@ npm run pack:win
 - Windows packaging first looks beside the Studio repository for `daedalus-backend` and `daedalus-bridge`. A sibling backend is built with `npm run release:sea:win`; a sibling Bridge is packaged from `addons/daedalus_bridge`.
 - If a sibling repository is absent, set `DAEDALUS_BACKEND_SOURCE` to the backend repository root and `DAEDALUS_BRIDGE_SOURCE` to the Bridge repository or addon root. Sibling repositories intentionally take priority over these variables.
 - If no source repository is available, packaging retains the verified fallback paths: `DAEDALUS_BACKEND_BOOTSTRAP_DIR` for a prepared backend payload, then the fixed backend and Bridge GitHub releases. All packaged artifacts are still checked for versions, manifests, hashes, protocols, and backend self-tests. A missing or unverifiable Bridge remains a packaging error; only the unbundled development server can continue without it.
-
-## Repository Layout
-
-```text
-src/main/            Electron lifecycle, windows, backend bootstrap, updates, native services
-src/preload/         Narrow IPC bridge exposed to the renderer
-src/renderer/src/    React application, features, pages, API clients, i18n, styles
-scripts/             Verified component preparation and packaging helpers
-tests/               Main/renderer unit, integration, and source-contract tests
-docs/                Architecture and UI design notes
-build/               Icons and generated packaging inputs
-```
-
-See [docs/file-structure.md](./docs/file-structure.md) and [docs/ui-design-system.md](./docs/ui-design-system.md) for deeper implementation notes.
 
 ## Project Status
 
