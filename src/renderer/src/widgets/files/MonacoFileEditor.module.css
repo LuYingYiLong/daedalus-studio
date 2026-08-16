@@ -1,0 +1,59 @@
+.editor {
+	position: absolute;
+	inset: 0;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+	background: var(--ds-surface);
+}
+
+.monacoEditor {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+	font-family: var(--ds-font-family-code);
+}
+
+.monacoEditor :global(.monaco-editor .find-widget) {
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	box-shadow: var(--ds-box-shadow);
+	background: var(--ds-surface-elevated, var(--ds-surface));
+}
+
+.monacoEditor :global(.monaco-editor .find-widget .find-part) {
+	gap: var(--ds-space-1);
+}
+
+.monacoEditor :global(.monaco-editor .find-widget .monaco-inputbox) {
+	border-radius: var(--ds-radius-sm);
+}
+
+.monacoEditor :global(.monaco-editor .find-widget .button) {
+	border-radius: var(--ds-radius-sm);
+}
+
+.monacoEditor :global(.monaco-editor .find-widget .codicon) {
+	font-size: 15px;
+}
+
+.editorError {
+	position: absolute;
+	z-index: 7;
+	top: 12px;
+	left: 12px;
+	right: 12px;
+}
+
+.selectionTools {
+	position: absolute;
+	z-index: 8;
+	filter: drop-shadow(0 5px 14px rgb(0 0 0 / 14%));
+}
+
+.selectionTools input {
+	width: 240px;
+}

@@ -277,6 +277,7 @@ function DockPanelTabs({
 					layout={filePanels[tab.key] ?? createDefaultFilePanelLayout()}
 					launchTargets={launchTargets}
 					workspaceLaunchTargetId={workspaceLaunchTargetId}
+					isFullscreen={isFullscreen}
 					onLayoutChange={(nextLayout: FilePanelLayoutPreferences): void => onFilePanelChange(tab.key, nextLayout)}
 					onAddContext={onAddContext}
 				/>

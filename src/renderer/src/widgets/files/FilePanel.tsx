@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Breadcrumb, Button, Divider, Dropdown, Empty, Input, message, Modal, Select, Space, Spin, Splitter, Tabs, Tooltip, Tree, Typography } from "antd";
 import type { MenuProps, TreeDataNode, TreeProps } from "antd";
-import type * as MonacoNamespace from "monaco-editor";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import { getFileIconName } from "@/domain/markdown/file-icon";
@@ -10,6 +9,7 @@ import type { WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launc
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import type { AdditionalContextItem, WorkspaceConfig, WorkspaceSourceFolder } from "@/platform/rpc/types";
 import { createContextId } from "@/features/workspace/controllers/context-helpers";
+import MonacoFileEditor, { type FileBuffer } from "./MonacoFileEditor";
 import styles from "./FilePanel.module.css";
 
 type WorkspaceFsEntry = {
@@ -21,39 +21,11 @@ type WorkspaceFsEntry = {
 
 type LaunchTarget = { id: WorkspaceLaunchTargetId; label: string };
 
-type FileBuffer = {
-	content: string;
-	savedContent: string;
-	sha256: string;
-	modifiedAtMs: number;
-	byteSize: number;
-	readable: boolean;
-	binary: boolean;
-	oversized: boolean;
-	loading: boolean;
-	saving: boolean;
-	conflict: boolean;
-	error: string | null;
-};
-
 type FileTreeNode = TreeDataNode & {
 	key: string;
 	entry: WorkspaceFsEntry;
 	isLeaf: boolean;
-	isBottomSpacer?: boolean;
 	children?: FileTreeNode[];
-};
-
-type SelectionRange = {
-	start: number;
-	end: number;
-	text: string;
-	lineStart: number;
-	lineEnd: number;
-	columnStart: number;
-	columnEnd: number;
-	top: number;
-	left: number;
 };
 
 type PendingClose = { tab: FileTabPreferences; dirty: boolean };
@@ -65,6 +37,7 @@ type FilePanelProps = {
 	layout: FilePanelLayoutPreferences;
 	launchTargets: LaunchTarget[];
 	workspaceLaunchTargetId: WorkspaceLaunchTargetId;
+	isFullscreen: boolean;
 	onLayoutChange: (layout: FilePanelLayoutPreferences) => void;
 	onAddContext: (item: AdditionalContextItem) => void;
 };
@@ -77,15 +50,8 @@ const FILE_PANEL_MAX_EDITOR_SPLIT: number = 85;
 const FILE_PANEL_DEFAULT_EDITOR_SPLIT: number = 70;
 const EXPANDED_PATHS_PERSIST_DELAY_MS: number = 180;
 const MAX_DIRECTORY_CACHE_ENTRIES: number = 256;
-const FILE_TREE_ITEM_HEIGHT: number = 30;
-const FILE_PANEL_BOTTOM_SAFE_AREA: number = 120;
-const FILE_TREE_BOTTOM_SPACER_COUNT: number = Math.ceil(FILE_PANEL_BOTTOM_SAFE_AREA / FILE_TREE_ITEM_HEIGHT);
-
-type MonacoApi = typeof MonacoNamespace;
-
-type MonacoEnvironment = {
-	getWorker: (_moduleId: string, label: string) => Worker;
-};
+const EDITOR_BOTTOM_SAFE_AREA: number = 50;
+const FILE_PANEL_BOTTOM_SAFE_AREA: number = 76;
 
 function normalizeRelativePath(path: string): string {
 	return path.replaceAll("\\", "/").replace(/^\/+|\/+$/gu, "");
@@ -122,16 +88,6 @@ function getBufferKey(sessionId: string | null, panelKey: string, tab: FileTabPr
 	return `${sessionId ?? "temporary"}\u0000${panelKey}\u0000${tab.sourceFolderId}\u0000${tab.relativePath}`;
 }
 
-function getMonacoLanguage(monaco: MonacoApi, path: string): string {
-	const extension: string = path.split(".").at(-1)?.toLowerCase() ?? "";
-	const aliases: Record<string, string> = {
-		cjs: "javascript", cs: "csharp", htm: "html", js: "javascript", jsx: "javascript", md: "markdown",
-		mjs: "javascript", ps1: "powershell", py: "python", sh: "shell", ts: "typescript", tsx: "typescript", yml: "yaml"
-	};
-	const language: string = aliases[extension] ?? extension;
-	return monaco.languages.getLanguages().some(({ id }): boolean => id === language) ? language : "plaintext";
-}
-
 function createTreeNode(entry: WorkspaceFsEntry): FileTreeNode {
 	return {
 		key: entry.relativePath,
@@ -144,18 +100,19 @@ function createTreeNode(entry: WorkspaceFsEntry): FileTreeNode {
 }
 
 function replaceTreeChildren(nodes: FileTreeNode[], key: string, children: FileTreeNode[]): FileTreeNode[] {
-	return nodes.map((node: FileTreeNode): FileTreeNode => node.key === key
-		? { ...node, children }
-		: node.children === undefined ? node : { ...node, children: replaceTreeChildren(node.children, key, children) });
-}
-
-function createMonacoModelUri(monaco: MonacoApi, panelKey: string, tab: FileTabPreferences): MonacoNamespace.Uri {
-	return monaco.Uri.parse(`daedalus://file/${encodeURIComponent(`${panelKey}/${tab.sourceFolderId}/${tab.relativePath}`)}`);
-}
-
-function getEditorFontFamily(container: HTMLElement): string {
-	const fontFamily: string = getComputedStyle(container).fontFamily.trim();
-	return fontFamily.length > 0 ? fontFamily : "SFMono-Regular, Consolas, 'Liberation Mono', monospace";
+	let changed: boolean = false;
+	const nextNodes: FileTreeNode[] = nodes.map((node: FileTreeNode): FileTreeNode => {
+		if (node.key === key) {
+			changed = true;
+			return { ...node, children };
+		}
+		if (node.children === undefined || !key.startsWith(`${node.key}/`)) return node;
+		const nextChildren: FileTreeNode[] = replaceTreeChildren(node.children, key, children);
+		if (nextChildren === node.children) return node;
+		changed = true;
+		return { ...node, children: nextChildren };
+	});
+	return changed ? nextNodes : nodes;
 }
 
 function normalizeEditorSplitSize(value: number): number {
@@ -194,6 +151,7 @@ export function FilePanel({
 	layout,
 	launchTargets,
 	workspaceLaunchTargetId,
+	isFullscreen,
 	onLayoutChange,
 	onAddContext
 }: FilePanelProps): React.JSX.Element {
@@ -205,18 +163,7 @@ export function FilePanel({
 	const [searchResults, setSearchResults] = useState<FileTreeNode[]>([]);
 	const [searching, setSearching] = useState<boolean>(false);
 	const [buffers, setBuffers] = useState<Record<string, FileBuffer>>({});
-	const [selection, setSelection] = useState<SelectionRange | null>(null);
-	const [commenting, setCommenting] = useState<boolean>(false);
-	const [annotation, setAnnotation] = useState<string>("");
 	const [pendingClose, setPendingClose] = useState<PendingClose | null>(null);
-	const [editorContainerNode, setEditorContainerNode] = useState<HTMLDivElement | null>(null);
-	const [treeViewportNode, setTreeViewportNode] = useState<HTMLDivElement | null>(null);
-	const [treeViewportHeight, setTreeViewportHeight] = useState<number>(0);
-	const editorContainerRef = useCallback((node: HTMLDivElement | null): void => setEditorContainerNode(node), []);
-	const monacoRef = useRef<MonacoApi | null>(null);
-	const editorRef = useRef<MonacoNamespace.editor.IStandaloneCodeEditor | null>(null);
-	const modelsRef = useRef<Map<string, MonacoNamespace.editor.ITextModel>>(new Map());
-	const suppressModelChangeRef = useRef<boolean>(false);
 	const searchRequestRef = useRef<number>(0);
 	const directoryCacheRef = useRef<Map<string, FileTreeNode[]>>(new Map());
 	const directoryRequestsRef = useRef<Map<string, Promise<FileTreeNode[]>>>(new Map());
@@ -224,9 +171,6 @@ export function FilePanel({
 	const onLayoutChangeRef = useRef<FilePanelProps["onLayoutChange"]>(onLayoutChange);
 	const expandedPathsPersistTimerRef = useRef<number | null>(null);
 	const pendingExpandedPathsRef = useRef<Record<string, string[]> | null>(null);
-	const [monacoReady, setMonacoReady] = useState<boolean>(false);
-	const [editorGeneration, setEditorGeneration] = useState<number>(0);
-	const [monacoError, setMonacoError] = useState<string | null>(null);
 	const [visualEditorSplitSize, setVisualEditorSplitSize] = useState<number>(() => normalizeEditorSplitSize(layout.splitSize));
 	const [visualExpandedKeys, setVisualExpandedKeys] = useState<React.Key[]>([]);
 	layoutRef.current = layout;
@@ -246,21 +190,6 @@ export function FilePanel({
 	const activeBuffer: FileBuffer | null = activeTab === null ? null : buffers[activeTab.key] ?? null;
 	const isDirty: boolean = activeBuffer !== null && activeBuffer.content !== activeBuffer.savedContent;
 	const editorSplitSize: number = visualEditorSplitSize;
-	const treeDataWithBottomSafeArea: FileTreeNode[] = useMemo((): FileTreeNode[] => {
-		const visibleTreeData: FileTreeNode[] = search.trim().length > 0 ? searchResults : treeData;
-		if (visibleTreeData.length === 0) return visibleTreeData;
-		const bottomSpacers: FileTreeNode[] = Array.from({ length: FILE_TREE_BOTTOM_SPACER_COUNT }, (_, index: number): FileTreeNode => ({
-			key: `__daedalus-file-panel-bottom-spacer-${index}`,
-			entry: { name: "", relativePath: "", resourcePath: "", kind: "file" },
-			isLeaf: true,
-			isBottomSpacer: true,
-			selectable: false,
-			disabled: true,
-			title: "",
-			className: styles.treeSpacer
-		}));
-		return [...visibleTreeData, ...bottomSpacers];
-	}, [search, searchResults, treeData]);
 
 	const patchLayout = useCallback((patch: Partial<FilePanelLayoutPreferences>): void => {
 		const currentLayout: FilePanelLayoutPreferences = layoutRef.current;
@@ -288,17 +217,6 @@ export function FilePanel({
 	useEffect((): void => {
 		setVisualEditorSplitSize(normalizeEditorSplitSize(layout.splitSize));
 	}, [layout.splitSize]);
-
-	useEffect((): (() => void) | undefined => {
-		if (treeViewportNode === null) return undefined;
-		const updateHeight = (): void => {
-			setTreeViewportHeight(Math.max(0, Math.floor(treeViewportNode.clientHeight)));
-		};
-		updateHeight();
-		const observer = new ResizeObserver(updateHeight);
-		observer.observe(treeViewportNode);
-		return (): void => observer.disconnect();
-	}, [treeViewportNode]);
 
 	const flushExpandedPaths = useCallback((): void => {
 		if (expandedPathsPersistTimerRef.current !== null) {
@@ -336,81 +254,6 @@ export function FilePanel({
 			if (expandedPathsPersistTimerRef.current !== null) window.clearTimeout(expandedPathsPersistTimerRef.current);
 		};
 	}, []);
-
-	useEffect((): (() => void) | undefined => {
-		const container: HTMLDivElement | null = editorContainerNode;
-		if (container === null) return undefined;
-		let disposed: boolean = false;
-		let themeObserver: MutationObserver | null = null;
-		const initialize = async (): Promise<void> => {
-			try {
-				setMonacoError(null);
-				const [monacoModule, editorWorkerModule, jsonWorkerModule, cssWorkerModule, htmlWorkerModule, typescriptWorkerModule] = await Promise.all([
-					import("monaco-editor"),
-					import("../../../../../node_modules/monaco-editor/esm/vs/editor/editor.worker.js?worker"),
-					import("../../../../../node_modules/monaco-editor/esm/vs/language/json/json.worker.js?worker"),
-					import("../../../../../node_modules/monaco-editor/esm/vs/language/css/css.worker.js?worker"),
-					import("../../../../../node_modules/monaco-editor/esm/vs/language/html/html.worker.js?worker"),
-					import("../../../../../node_modules/monaco-editor/esm/vs/language/typescript/ts.worker.js?worker")
-				]);
-				if (disposed) return;
-				const editorWorker = editorWorkerModule.default;
-				const jsonWorker = jsonWorkerModule.default;
-				const cssWorker = cssWorkerModule.default;
-				const htmlWorker = htmlWorkerModule.default;
-				const typescriptWorker = typescriptWorkerModule.default;
-				(globalThis as typeof globalThis & { MonacoEnvironment?: MonacoEnvironment }).MonacoEnvironment = {
-					getWorker: (_moduleId: string, label: string): Worker => {
-						if (label === "json") return new jsonWorker();
-						if (label === "css" || label === "scss" || label === "less") return new cssWorker();
-						if (label === "html" || label === "handlebars" || label === "razor") return new htmlWorker();
-						if (label === "typescript" || label === "javascript") return new typescriptWorker();
-						return new editorWorker();
-					}
-				};
-				const monaco: MonacoApi = monacoModule;
-				monacoRef.current = monaco;
-				const editor: MonacoNamespace.editor.IStandaloneCodeEditor = monaco.editor.create(container, {
-					automaticLayout: true,
-					ariaLabel: t("files.editorAriaLabel"),
-					autoIndent: "full",
-					bracketPairColorization: { enabled: true },
-					cursorBlinking: "smooth",
-					fontFamily: getEditorFontFamily(container),
-					fontSize: 13,
-					lineHeight: 22,
-					lineNumbers: "on",
-					minimap: { enabled: false },
-					padding: { top: 12, bottom: FILE_PANEL_BOTTOM_SAFE_AREA },
-					renderWhitespace: "selection",
-					scrollBeyondLastLine: false,
-					tabSize: 4,
-					wordWrap: "off",
-					theme: document.documentElement.dataset.theme === "light" ? "vs" : "vs-dark"
-				});
-				editorRef.current = editor;
-				setMonacoReady(true);
-				setEditorGeneration((generation: number): number => generation + 1);
-				const updateTheme = (): void => {
-					monaco.editor.setTheme(document.documentElement.dataset.theme === "light" ? "vs" : "vs-dark");
-				};
-				themeObserver = new MutationObserver(updateTheme);
-				themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-			} catch (error: unknown) {
-				if (!disposed) setMonacoError(String(error));
-			}
-		};
-		void initialize();
-		return (): void => {
-			disposed = true;
-			themeObserver?.disconnect();
-			editorRef.current?.dispose();
-			editorRef.current = null;
-			monacoRef.current = null;
-			for (const model of modelsRef.current.values()) model.dispose();
-			modelsRef.current.clear();
-		};
-	}, [editorContainerNode, t]);
 
 	const loadBuffer = useCallback(async (tab: FileTabPreferences, force: boolean = false): Promise<void> => {
 		const sourceFolder: WorkspaceSourceFolder | undefined = sourceFolders.find((folder: WorkspaceSourceFolder): boolean => folder.id === tab.sourceFolderId);
@@ -450,43 +293,15 @@ export function FilePanel({
 		for (const tab of layout.tabs) void loadBuffer(tab);
 	}, [layout.tabs, loadBuffer]);
 
-	useEffect((): void => {
-		const editor: MonacoNamespace.editor.IStandaloneCodeEditor | null = editorRef.current;
-		const monaco: MonacoApi | null = monacoRef.current;
-		if (editor === null || monaco === null || !monacoReady) return;
-		if (activeTab === null || activeBuffer === null || activeBuffer.loading || !activeBuffer.readable) {
-			if (editor.getModel() !== null) editor.setModel(null);
-			setSelection(null);
-			return;
-		}
-		let model: MonacoNamespace.editor.ITextModel | undefined = modelsRef.current.get(activeTab.key);
-		if (model === undefined || model.isDisposed()) {
-			const tabKey: string = activeTab.key;
-			model = monaco.editor.createModel(
-				activeBuffer.content,
-				getMonacoLanguage(monaco, activeTab.relativePath),
-				createMonacoModelUri(monaco, panelKey, activeTab)
-			);
-			model.onDidChangeContent((): void => {
-				if (suppressModelChangeRef.current) return;
-				const nextContent: string = model?.getValue() ?? "";
-				setBuffers((current) => {
-					const currentBuffer: FileBuffer | undefined = current[tabKey];
-					if (currentBuffer === undefined || currentBuffer.content === nextContent) return current;
-					const next: FileBuffer = { ...currentBuffer, content: nextContent };
-					RUNTIME_BUFFERS.set(getBufferKey(sessionId, panelKey, activeTab), next);
-					return { ...current, [tabKey]: next };
-				});
-			});
-			modelsRef.current.set(activeTab.key, model);
-		}
-		if (model.getValue() !== activeBuffer.content) {
-			suppressModelChangeRef.current = true;
-			model.setValue(activeBuffer.content);
-			suppressModelChangeRef.current = false;
-		}
-		if (editor.getModel() !== model) editor.setModel(model);
-	}, [activeBuffer, activeTab, editorGeneration, monacoReady, panelKey, sessionId]);
+	const handleEditorContentChange = useCallback((tab: FileTabPreferences, nextContent: string): void => {
+		setBuffers((current) => {
+			const currentBuffer: FileBuffer | undefined = current[tab.key];
+			if (currentBuffer === undefined || currentBuffer.content === nextContent) return current;
+			const next: FileBuffer = { ...currentBuffer, content: nextContent };
+			RUNTIME_BUFFERS.set(getBufferKey(sessionId, panelKey, tab), next);
+			return { ...current, [tab.key]: next };
+		});
+	}, [panelKey, sessionId]);
 
 	useEffect((): void => {
 		if (selectedSourceFolder === null || layout.selectedSourceFolderId === selectedSourceFolder.id) return;
@@ -648,55 +463,6 @@ export function FilePanel({
 		if (result.saved) void messageApi.success(t("files.savedAs"));
 	}, [buffers, messageApi, sourceFolders, t]);
 
-	const updateSelection = useCallback((): void => {
-		const editor: MonacoNamespace.editor.IStandaloneCodeEditor | null = editorRef.current;
-		const model: MonacoNamespace.editor.ITextModel | null = editor?.getModel() ?? null;
-		const range: MonacoNamespace.Selection | null = editor?.getSelection() ?? null;
-		if (editor === null || model === null || activeBuffer === null || activeTab === null || range === null || range.isEmpty()) {
-			setSelection(null);
-			setCommenting(false);
-			return;
-		}
-		const start: number = model.getOffsetAt(range.getStartPosition());
-		const end: number = Math.min(model.getOffsetAt(range.getEndPosition()), start + MAX_SELECTION_CHARS);
-		const selectedText: string = activeBuffer.content.slice(start, end);
-		if (selectedText.length === 0) return;
-		const startPosition: MonacoNamespace.Position = model.getPositionAt(start);
-		const endPosition: MonacoNamespace.Position = model.getPositionAt(end);
-		const anchorPosition = editor.getScrolledVisiblePosition(startPosition);
-		const editorNode: HTMLElement | null = editor.getDomNode();
-		const anchor = {
-			top: Math.max(8, (anchorPosition?.top ?? 38) - 38),
-			left: Math.min(Math.max(8, anchorPosition?.left ?? 8), Math.max(8, (editorNode?.clientWidth ?? 240) - 240))
-		};
-		setSelection({
-			start,
-			end,
-			text: selectedText,
-			lineStart: startPosition.lineNumber,
-			lineEnd: endPosition.lineNumber,
-			columnStart: startPosition.column,
-			columnEnd: endPosition.column,
-			top: anchor.top,
-			left: anchor.left
-		});
-	}, [activeBuffer, activeTab]);
-
-	useEffect((): (() => void) | undefined => {
-		const editor: MonacoNamespace.editor.IStandaloneCodeEditor | null = editorRef.current;
-		if (editor === null) return undefined;
-		const selectionDisposable = editor.onDidChangeCursorSelection(updateSelection);
-		const scrollDisposable = editor.onDidScrollChange(updateSelection);
-		const layoutDisposable = editor.onDidLayoutChange(updateSelection);
-		window.addEventListener("resize", updateSelection);
-		return (): void => {
-			selectionDisposable.dispose();
-			scrollDisposable.dispose();
-			layoutDisposable.dispose();
-			window.removeEventListener("resize", updateSelection);
-		};
-	}, [activeTab?.key, editorGeneration, monacoReady, updateSelection]);
-
 	useEffect((): void => {
 		const dirtyUnpinnedTab: FileTabPreferences | undefined = layout.tabs.find((tab: FileTabPreferences): boolean => {
 			const buffer: FileBuffer | undefined = buffers[tab.key];
@@ -708,35 +474,6 @@ export function FilePanel({
 			tabs: layout.tabs.map((tab: FileTabPreferences): FileTabPreferences => tab.key === dirtyUnpinnedTab.key ? { ...tab, pinned: true } : tab)
 		});
 	}, [buffers, layout.previewTabKey, layout.tabs, patchLayout]);
-
-	const addSelectionContext = useCallback((comment: string): void => {
-		if (selection === null || activeTab === null || workspace === null) return;
-		const resourcePath: string = `res://${normalizeRelativePath(activeTab.relativePath)}`;
-		onAddContext({
-			id: createContextId(),
-			kind: "file_selection",
-			title: getFileName(activeTab.relativePath),
-			subtitle: `${resourcePath}:${selection.lineStart}-${selection.lineEnd}`,
-			pinned: false,
-			source: "manual",
-			resourcePath,
-			data: {
-				selectedText: selection.text,
-				annotation: comment.trim(),
-				lineStart: selection.lineStart,
-				lineEnd: selection.lineEnd,
-				columnStart: selection.columnStart,
-				columnEnd: selection.columnEnd,
-				workspaceId: workspace.id,
-				sourceFolderId: activeTab.sourceFolderId,
-				relativePath: normalizeRelativePath(activeTab.relativePath)
-			}
-		});
-		setSelection(null);
-		setCommenting(false);
-		setAnnotation("");
-		void messageApi.success(t("files.contextAdded"));
-	}, [activeTab, messageApi, onAddContext, selection, t, workspace]);
 
 	const addPathContext = useCallback((entry: WorkspaceFsEntry): void => {
 		if (workspace === null || selectedSourceFolder === null) return;
@@ -787,7 +524,6 @@ export function FilePanel({
 	}, [addPathContext, launchTargets, messageApi, openWith, saveAs, selectedSourceFolder, t, workspaceLaunchTargetId]);
 
 	const titleRender: TreeProps<FileTreeNode>["titleRender"] = useCallback((node: FileTreeNode): React.ReactNode => {
-		if (node.isBottomSpacer) return null;
 		return (
 			<Dropdown menu={menuForEntry(node.entry)} trigger={["contextMenu"]}>
 				<span className={styles.treeTitle} onDoubleClick={(): void => openEntry(node.entry, true)}>{node.entry.name}</span>
@@ -954,38 +690,15 @@ export function FilePanel({
 													</Button>
 												</Space>}
 										/> : null}
-									<div className={styles.editor}>
-										<div ref={editorContainerRef} className={styles.monacoEditor} aria-label={t("files.editorAriaLabel")} />
-										{monacoError !== null ? <Alert className={styles.editorError} type="error" showIcon title={monacoError} /> : null}
-										{selection !== null ? <div className={styles.selectionTools} style={{ top: selection.top, left: selection.left }} onMouseDown={(event): void => event.preventDefault()}>
-											{commenting
-												? <Input
-													autoFocus
-													size="small"
-													maxLength={1200}
-													value={annotation}
-													placeholder={t("files.commentPlaceholder")}
-													onChange={(event): void => setAnnotation(event.target.value)}
-													onKeyDown={(event): void => {
-														if (event.key === "Enter") addSelectionContext(annotation);
-														else if (event.key === "Escape") {
-															setCommenting(false); setAnnotation("");
-														}
-													}} />
-												: <Space.Compact>
-													<Button
-														onClick={(): void => addSelectionContext("")}
-													>
-														{t("files.addSelectionContext")}
-													</Button>
-													<Button
-														onClick={(): void => setCommenting(true)}
-													>
-														{t("files.comment")}
-													</Button>
-												</Space.Compact>}
-										</div> : null}
-									</div>
+									<MonacoFileEditor
+										activeTab={activeTab}
+										activeBuffer={activeBuffer}
+										panelKey={panelKey}
+										workspace={workspace}
+										bottomSafeArea={isFullscreen ? EDITOR_BOTTOM_SAFE_AREA : 0}
+										onContentChange={handleEditorContentChange}
+										onAddContext={onAddContext}
+									/>
 								</>
 							)}
 						</div>
@@ -1018,16 +731,14 @@ export function FilePanel({
 									/>
 								</div>
 							</div>
-							<div ref={setTreeViewportNode} className={styles.treeViewport}>
+							<div className={styles.treeViewport}>
 								<Tree<FileTreeNode>
 									showIcon
 									showLine
 									blockNode
-									virtual
+									virtual={false}
 									autoExpandParent={false}
 									motion={false}
-									height={treeViewportHeight > 0 ? treeViewportHeight : undefined}
-									itemHeight={FILE_TREE_ITEM_HEIGHT}
 									className={styles.tree}
 									classNames={{
 										item: styles.treeItem,
@@ -1035,7 +746,7 @@ export function FilePanel({
 										itemTitle: styles.treeItemTitle,
 										itemSwitcher: styles.treeItemSwitcher
 									}}
-									treeData={treeDataWithBottomSafeArea}
+									treeData={search.trim().length > 0 ? searchResults : treeData}
 									loadedKeys={loadedKeys}
 									expandAction="click"
 									expandedKeys={search.trim().length > 0 ? [] : visualExpandedKeys}
@@ -1052,6 +763,7 @@ export function FilePanel({
 									}}
 								/>
 							</div>
+							{isFullscreen ? <div className={styles.treeBottomSafeArea} style={{ height: FILE_PANEL_BOTTOM_SAFE_AREA }} aria-hidden="true" /> : null}
 						</aside>
 					</Splitter.Panel> : null}
 				</Splitter>
