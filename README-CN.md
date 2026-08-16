@@ -122,94 +122,17 @@ Daedalus 是能够在获得批准后修改文件和执行命令的 Agent 工具�
 
 ## 开发
 
-### 开发环境
-
-- Node.js 24.x 与 npm。
-- 受支持的正式打包需要 Windows。
-- 开发模式需要本地的 [daedalus-backend](https://github.com/LuYingYiLong/daedalus-backend) 仓库。
-- 如果需要开发或测试 Godot Editor Bridge，还需要本地的 [daedalus-bridge](https://github.com/LuYingYiLong/daedalus-bridge) 仓库；普通 Studio 开发不强制要求它。
-
-### 从源码运行
-
-先启动 Backend：
-
-```powershell
-git clone https://github.com/LuYingYiLong/daedalus-backend.git
-cd daedalus-backend
-npm ci
-npm run dev
-```
-
-然后在另一个终端启动 Studio。Bridge 仓库对普通 Studio 开发是可选的：
-
-```powershell
-git clone https://github.com/LuYingYiLong/daedalus-studio.git
-cd daedalus-studio
-npm ci
-npm run dev
-```
-
-开发版 Studio 默认连接 `38181` 端口。如果两个仓库不在相邻目录，请在 Studio 启动设置中配置开发 Backend 目录。
-
-推荐的开发目录结构如下：
-
-```text
-D:\Daedalus-Studio\
-├─ daedalus-studio\
-├─ daedalus-backend\
-└─ daedalus-bridge\
-```
-
-当 `daedalus-bridge` 不存在时，`npm run dev` 会先复用 `build/daedalus-bridge` 中已经通过校验的缓存；没有缓存时才尝试下载固定版本。若下载遇到网络或证书问题，开发服务器会继续启动，但 Godot Bridge 功能暂时不可用；`npm run build:win`、`npm run pack:win` 等正式打包命令仍会严格失败。
-
-如果 Bridge 仓库位于其他路径，可以在启动前配置仓库根目录或 `addons/daedalus_bridge` 目录：
-
-```powershell
-$env:DAEDALUS_BRIDGE_SOURCE = "D:\src\daedalus-bridge"
-npm run dev
-```
-
-本地 Bridge 的版本、协议、Studio 版本和安装目录必须与 Studio 的 `package.json` 一致。若公司代理或杀毒软件重新签发 HTTPS 证书，请为 Node 配置可信根证书：
-
-```powershell
-$env:NODE_EXTRA_CA_CERTS = "C:\certs\company-root-ca.pem"
-npm run dev
-```
-
-不要使用 `NODE_TLS_REJECT_UNAUTHORIZED=0`，它会关闭当前进程所有 HTTPS 请求的证书校验。
-
-### 开发启动故障排查
-
-如果 `npm run dev` 还没启动 Electron 就报 `UNABLE_TO_VERIFY_LEAF_SIGNATURE`，说明失败发生在 Node 通过 HTTPS 准备可选 Bridge 包时，原因是证书链无法验证，不是 Renderer 或 Backend 启动失败。
-
-建议按以下顺序处理：
-
-1. 将 `daedalus-bridge` 克隆到本仓库旁边，或设置 `DAEDALUS_BRIDGE_SOURCE` 指向已有仓库。
-2. 如果之前生成过 Bridge 包，请保留 `build/daedalus-bridge`，准备脚本会先校验并离线复用它。
-3. 如果代理或杀毒软件重新签发了 HTTPS 证书，为 Node 设置 `NODE_EXTRA_CA_CERTS` 指向组织的根证书，然后重试。
-4. 如果当前不需要 Bridge，直接再次执行 `npm run dev`。开发模式会跳过 Bridge 打包并继续启动，Godot 项目页会显示插件暂不可用；普通聊天开发不受影响。
-
-不要通过关闭 TLS 校验来绕过证书错误。正式打包仍会严格要求通过校验的 Bridge 压缩包。
-
-### 检查与构建
-
-```powershell
-npm run typecheck
-npm test
-npm run build
-npm run pack:win
-```
-
-- `npm run build` 在 `out/` 中生成 Electron 生产 Bundle。
-- `npm run pack:win` 生成未安装的 Windows 应用目录。
-- `npm run build:win` 在 `release/` 中生成 NSIS 安装包与更新元数据。
-- 发布构建会准备固定版本的 Backend 和 Godot Bridge，并在打包前检查清单、大小、哈希、协议与 Backend self-test。Bridge 缺失或无法校验仍会阻止正式打包，只有未打包的开发服务器可以在 Bridge 暂不可用时继续运行。
+开发环境、Backend 与 Bridge 目录结构、启动故障排查、检查和打包说明统一维护在 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 项目状态
 
 Daedalus Studio 正在积极开发中。会话和项目数据以持久、可恢复为目标；内部协议与扩展契约可能在 Studio、Backend 和插件协同发布时继续演进。
 
 提交问题时，请提供 Studio 版本、Backend 版本、Godot 版本、复现步骤和脱敏后的启动或会话诊断。请勿提交 API Key 或自定义 MCP Secret。
+
+## 安全
+
+安全漏洞请按照 [安全策略](SECURITY.md) 通过私密渠道报告。
 
 ## 相关项目
 
