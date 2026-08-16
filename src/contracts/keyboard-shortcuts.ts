@@ -2,6 +2,9 @@ export const SHORTCUT_COMMAND_IDS = [
 	"workbench.toggleWorkspaceSidebar",
 	"workbench.toggleBottomPanel",
 	"workbench.toggleSessionSidebar",
+	"session.new",
+	"session.previous",
+	"session.next",
 	"conversation.previousTurn",
 	"conversation.nextTurn",
 	"conversation.find"
@@ -30,6 +33,9 @@ export const SHORTCUT_DEFINITIONS: readonly ShortcutDefinition[] = [
 	{ id: "workbench.toggleWorkspaceSidebar", labelKey: "settings.keyboardShortcuts.commands.toggleWorkspaceSidebar", defaultBinding: "Mod+KeyB" },
 	{ id: "workbench.toggleBottomPanel", labelKey: "settings.keyboardShortcuts.commands.toggleBottomPanel", defaultBinding: "Mod+KeyJ" },
 	{ id: "workbench.toggleSessionSidebar", labelKey: "settings.keyboardShortcuts.commands.toggleSessionSidebar", defaultBinding: "Mod+Alt+KeyB" },
+	{ id: "session.new", labelKey: "settings.keyboardShortcuts.commands.newSession", defaultBinding: "Mod+KeyN" },
+	{ id: "session.previous", labelKey: "settings.keyboardShortcuts.commands.previousSession", defaultBinding: "Mod+PageUp" },
+	{ id: "session.next", labelKey: "settings.keyboardShortcuts.commands.nextSession", defaultBinding: "Mod+PageDown" },
 	{ id: "conversation.previousTurn", labelKey: "settings.keyboardShortcuts.commands.previousTurn", defaultBinding: "PageUp" },
 	{ id: "conversation.nextTurn", labelKey: "settings.keyboardShortcuts.commands.nextTurn", defaultBinding: "PageDown" },
 	{ id: "conversation.find", labelKey: "settings.keyboardShortcuts.commands.findInConversation", defaultBinding: "Mod+KeyF" }

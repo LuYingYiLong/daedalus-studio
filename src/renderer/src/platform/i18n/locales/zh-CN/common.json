@@ -1249,6 +1249,9 @@
         "toggleWorkspaceSidebar": "切换 Workspace 侧边栏",
         "toggleBottomPanel": "切换底部面板",
         "toggleSessionSidebar": "切换会话侧边栏",
+        "newSession": "新建会话",
+        "previousSession": "上一个聊天",
+        "nextSession": "下一个聊天",
         "previousTurn": "上一个对话轮次",
         "nextTurn": "下一个对话轮次",
         "findInConversation": "在会话中查找"

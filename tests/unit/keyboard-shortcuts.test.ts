@@ -45,6 +45,9 @@ describe("keyboard shortcuts", () => {
 		const event: ShortcutKeyboardEvent = keyboardEvent("KeyJ", { ctrlKey: true });
 		expect(matchesShortcutKeyboardEvent(event, "Mod+KeyJ", "other")).toBe(true);
 		expect(findMatchingShortcutCommand(event, {}, "other")).toBe("workbench.toggleBottomPanel");
+		expect(findMatchingShortcutCommand(keyboardEvent("KeyN", { ctrlKey: true }), {}, "other")).toBe("session.new");
+		expect(findMatchingShortcutCommand(keyboardEvent("PageUp", { ctrlKey: true }), {}, "other")).toBe("session.previous");
+		expect(findMatchingShortcutCommand(keyboardEvent("PageDown", { ctrlKey: true }), {}, "other")).toBe("session.next");
 		expect(findMatchingShortcutCommand(event, {
 			"workbench.toggleBottomPanel": "Mod+KeyK"
 		}, "other")).toBeNull();

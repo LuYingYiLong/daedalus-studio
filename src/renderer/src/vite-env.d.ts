@@ -85,6 +85,9 @@ declare global {
 			| "workbench.toggleWorkspaceSidebar"
 			| "workbench.toggleBottomPanel"
 			| "workbench.toggleSessionSidebar"
+			| "session.new"
+			| "session.previous"
+			| "session.next"
 			| "conversation.previousTurn"
 			| "conversation.nextTurn"
 			| "conversation.find",

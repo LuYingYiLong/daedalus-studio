@@ -97,7 +97,7 @@
 }
 
 .workspaceTreeCollapse :global(.ant-collapse-header) {
-	padding: 0 0 0 var(--ds-space-2) !important;
+	padding: var(--ds-space-2) !important;
 }
 
 .workspaceTreeCollapse :global(.ant-collapse-body) {
@@ -111,7 +111,9 @@
 }
 
 .workspaceTreeCollapse :global(.ant-collapse-header:hover) .sectionAddButton,
-.workspaceTreeCollapse :global(.ant-collapse-header:focus-within) .sectionAddButton {
+.workspaceTreeCollapse
+	:global(.ant-collapse-header:focus-within)
+	.sectionAddButton {
 	opacity: 1;
 	pointer-events: auto;
 }

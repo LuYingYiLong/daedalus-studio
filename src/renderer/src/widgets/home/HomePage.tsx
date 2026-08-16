@@ -56,6 +56,7 @@ import type { TimelinePageStore } from "@/domain/workbench/timeline-page-store";
 import { useTimelineSelector } from "@/domain/workbench/timeline-page-store";
 import { MarkdownResourceActionsProvider } from "@/widgets/markdown/markdown-resource-actions";
 import { DEFAULT_WORKSPACE_LAUNCH_TARGET_ID, type WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launch";
+import { navigateSessionHistory, SESSION_NAVIGATION_EVENT } from "@/domain/session/session-navigation-history";
 
 type WorkspaceLaunchTarget = {
 	id: WorkspaceLaunchTargetId;
@@ -1774,6 +1775,20 @@ function HomePage({
 				toggleSideDock();
 				return;
 			}
+			if (commandId === "session.new") {
+				event.preventDefault();
+				onNewSession();
+				return;
+			}
+			if (commandId === "session.previous" || commandId === "session.next") {
+				event.preventDefault();
+				const sessionId: string | null = navigateSessionHistory(commandId === "session.previous" ? "back" : "forward");
+				if (sessionId === null) {
+					return;
+				}
+				window.dispatchEvent(new CustomEvent<string>(SESSION_NAVIGATION_EVENT, { detail: sessionId }));
+				return;
+			}
 			if (activeSessionId === null || isHome) {
 				return;
 			}
@@ -1799,6 +1814,7 @@ function HomePage({
 		showBottomDockButton,
 		showSideDockButton,
 		timelineNavigationEntries.length,
+		onNewSession,
 		toggleBottomDock,
 		toggleSideDock,
 		toggleWorkspaceSidebar
