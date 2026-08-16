@@ -1,10 +1,13 @@
-import { Alert, Button, Input, message, Space } from "antd";
+import { Alert, Button, Dropdown, Input, message, Space } from "antd";
+import type { MenuProps } from "antd";
 import type * as MonacoNamespace from "monaco-editor";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FileTabPreferences } from "@/domain/session/session-layout";
 import { createContextId } from "@/features/workspace/controllers/context-helpers";
+import { copyTextToClipboard, readTextFromClipboard } from "@/platform/electron/clipboard";
 import type { AdditionalContextItem, WorkspaceConfig } from "@/platform/rpc/types";
+import { Icon } from "@/assets/icons";
 import styles from "./MonacoFileEditor.module.css";
 
 export type FileBuffer = {
@@ -40,6 +43,11 @@ type SelectionRange = {
 	left: number;
 };
 
+type ContextMenuPosition = {
+	left: number;
+	top: number;
+};
+
 type MonacoFileEditorProps = {
 	activeTab: FileTabPreferences | null;
 	activeBuffer: FileBuffer | null;
@@ -51,6 +59,8 @@ type MonacoFileEditorProps = {
 };
 
 const MAX_SELECTION_CHARS: number = 8000;
+const MONACO_TOOLTIP_DELAY_MS: number = 1000;
+const FIND_WIDGET_BUTTON_SELECTOR: string = ".find-widget .button, .find-widget .codicon-find-selection, .find-widget .monaco-custom-toggle";
 
 function normalizeRelativePath(path: string): string {
 	return path.replaceAll("\\", "/").replace(/^\/+|\/+$/gu, "");
@@ -134,6 +144,120 @@ function defineDaedalusThemes(monaco: MonacoApi): void {
 	});
 }
 
+function findFindWidgetButton(target: EventTarget | null, container: HTMLElement): HTMLElement | null {
+	if (!(target instanceof Element)) return null;
+	const button: Element | null = target.closest(FIND_WIDGET_BUTTON_SELECTOR);
+	return button instanceof HTMLElement && container.contains(button) ? button : null;
+}
+
+function installDelayedFindWidgetTooltips(container: HTMLElement, delayMs: number): () => void {
+	const tooltip: HTMLDivElement = document.createElement("div");
+	tooltip.className = styles.findTooltip;
+	tooltip.setAttribute("role", "tooltip");
+	tooltip.hidden = true;
+	document.body.appendChild(tooltip);
+	let activeButton: HTMLElement | null = null;
+	let timer: number | null = null;
+	let animationFrame: number | null = null;
+
+	const hideTooltip = (): void => {
+		if (timer !== null) window.clearTimeout(timer);
+		timer = null;
+		if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
+		animationFrame = null;
+		activeButton = null;
+		tooltip.classList.remove(styles.findTooltipVisible);
+		tooltip.style.visibility = "hidden";
+		tooltip.hidden = true;
+	};
+
+	const positionTooltip = (button: HTMLElement): void => {
+		const buttonRect: DOMRect = button.getBoundingClientRect();
+		const tooltipWidth: number = tooltip.offsetWidth;
+		const tooltipHeight: number = tooltip.offsetHeight;
+		const horizontalPadding: number = 8;
+		const left: number = Math.min(
+			Math.max(horizontalPadding, buttonRect.left + (buttonRect.width - tooltipWidth) / 2),
+			Math.max(horizontalPadding, window.innerWidth - tooltipWidth - horizontalPadding)
+		);
+		const preferredTop: number = buttonRect.bottom + 8;
+		const top: number = preferredTop + tooltipHeight <= window.innerHeight - horizontalPadding
+			? preferredTop
+			: Math.max(horizontalPadding, buttonRect.top - tooltipHeight - 8);
+		tooltip.style.left = `${left}px`;
+		tooltip.style.top = `${top}px`;
+	};
+
+	const showTooltip = (button: HTMLElement): void => {
+		const label: string = button.getAttribute("aria-label")?.trim() ?? "";
+		if (label.length === 0 || activeButton !== button) return;
+		tooltip.textContent = label;
+		tooltip.hidden = false;
+		tooltip.style.visibility = "hidden";
+		positionTooltip(button);
+		animationFrame = window.requestAnimationFrame((): void => {
+			if (activeButton !== button) return;
+			tooltip.style.visibility = "visible";
+			tooltip.classList.add(styles.findTooltipVisible);
+		});
+	};
+
+	const scheduleTooltip = (button: HTMLElement): void => {
+		if (activeButton === button && (timer !== null || !tooltip.hidden)) return;
+		hideTooltip();
+		activeButton = button;
+		timer = window.setTimeout((): void => {
+			timer = null;
+			showTooltip(button);
+		}, delayMs);
+	};
+
+	const onMouseOver = (event: MouseEvent): void => {
+		const button: HTMLElement | null = findFindWidgetButton(event.target, container);
+		if (button === null) return;
+		if (event.relatedTarget instanceof Node && button.contains(event.relatedTarget)) return;
+		event.stopPropagation();
+		scheduleTooltip(button);
+	};
+	const onMouseOut = (event: MouseEvent): void => {
+		const button: HTMLElement | null = findFindWidgetButton(event.target, container);
+		if (button === null) return;
+		if (event.relatedTarget instanceof Node && button.contains(event.relatedTarget)) return;
+		event.stopPropagation();
+		hideTooltip();
+	};
+	const onFocus = (event: FocusEvent): void => {
+		const button: HTMLElement | null = findFindWidgetButton(event.target, container);
+		if (button === null) return;
+		event.stopPropagation();
+		scheduleTooltip(button);
+	};
+	const onBlur = (event: FocusEvent): void => {
+		const button: HTMLElement | null = findFindWidgetButton(event.target, container);
+		if (button === null) return;
+		event.stopPropagation();
+		hideTooltip();
+	};
+	const onResize = (): void => {
+		if (activeButton !== null && !tooltip.hidden) positionTooltip(activeButton);
+	};
+
+	container.addEventListener("mouseover", onMouseOver, true);
+	container.addEventListener("mouseout", onMouseOut, true);
+	container.addEventListener("focus", onFocus, true);
+	container.addEventListener("blur", onBlur, true);
+	window.addEventListener("resize", onResize);
+	return (): void => {
+		container.removeEventListener("mouseover", onMouseOver, true);
+		container.removeEventListener("mouseout", onMouseOut, true);
+		container.removeEventListener("focus", onFocus, true);
+		container.removeEventListener("blur", onBlur, true);
+		window.removeEventListener("resize", onResize);
+		hideTooltip();
+		tooltip.remove();
+	};
+}
+
 export function MonacoFileEditor({
 	activeTab,
 	activeBuffer,
@@ -157,12 +281,15 @@ export function MonacoFileEditor({
 	const [selection, setSelection] = useState<SelectionRange | null>(null);
 	const [commenting, setCommenting] = useState<boolean>(false);
 	const [annotation, setAnnotation] = useState<string>("");
+	const [contextMenuPosition, setContextMenuPosition] = useState<ContextMenuPosition | null>(null);
+	const contextMenuSelectionRef = useRef<MonacoNamespace.Selection | null>(null);
 
 	useEffect((): (() => void) | undefined => {
 		const container: HTMLDivElement | null = editorContainerNode;
 		if (container === null) return undefined;
 		let disposed: boolean = false;
 		let themeObserver: MutationObserver | null = null;
+		let disposeFindWidgetTooltips: (() => void) | null = null;
 		const initialize = async (): Promise<void> => {
 			try {
 				setMonacoError(null);
@@ -197,6 +324,7 @@ export function MonacoFileEditor({
 					ariaLabel: t("files.editorAriaLabel"),
 					autoIndent: "full",
 					bracketPairColorization: { enabled: true },
+					contextmenu: false,
 					cursorBlinking: "smooth",
 					fontFamily: getEditorFontFamily(container),
 					fontSize: 13,
@@ -217,6 +345,7 @@ export function MonacoFileEditor({
 					theme: getDaedalusThemeName()
 				});
 				editorRef.current = editor;
+				disposeFindWidgetTooltips = installDelayedFindWidgetTooltips(container, MONACO_TOOLTIP_DELAY_MS);
 				setMonacoReady(true);
 				setEditorGeneration((generation: number): number => generation + 1);
 				const updateTheme = (): void => {
@@ -231,6 +360,8 @@ export function MonacoFileEditor({
 		void initialize();
 		return (): void => {
 			disposed = true;
+			disposeFindWidgetTooltips?.();
+			disposeFindWidgetTooltips = null;
 			themeObserver?.disconnect();
 			editorRef.current?.dispose();
 			editorRef.current = null;
@@ -344,9 +475,118 @@ export function MonacoFileEditor({
 		void messageApi.success(t("files.contextAdded"));
 	}, [activeTab, messageApi, onAddContext, selection, t, workspace]);
 
+	const handleEditorContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>): void => {
+		const editor: MonacoNamespace.editor.IStandaloneCodeEditor | null = editorRef.current;
+		if (editor === null || editor.getModel() === null || editorContainerNode === null) return;
+		event.preventDefault();
+		event.stopPropagation();
+		contextMenuSelectionRef.current = editor.getSelection();
+		const editorRect: DOMRect = editorContainerNode.getBoundingClientRect();
+		setContextMenuPosition({
+			left: Math.max(0, event.clientX - editorRect.left),
+			top: Math.max(0, event.clientY - editorRect.top)
+		});
+	}, [editorContainerNode]);
+
+	const handleEditorContextMenuAction: MenuProps["onClick"] = useCallback(({ key }): void => {
+		setContextMenuPosition(null);
+		const editor: MonacoNamespace.editor.IStandaloneCodeEditor | null = editorRef.current;
+		const model: MonacoNamespace.editor.ITextModel | null = editor?.getModel() ?? null;
+		if (editor === null || model === null) return;
+
+		const savedSelection: MonacoNamespace.Selection | null = contextMenuSelectionRef.current;
+		const currentSelection: MonacoNamespace.Selection | null = savedSelection ?? editor.getSelection();
+		if (currentSelection !== null) editor.setSelection(currentSelection);
+		editor.focus();
+		contextMenuSelectionRef.current = null;
+
+		switch (String(key)) {
+			case "undo":
+				editor.trigger("contextmenu", "undo", null);
+				break;
+			case "redo":
+				editor.trigger("contextmenu", "redo", null);
+				break;
+			case "selectAll": {
+				const fullRange: MonacoNamespace.Range = model.getFullModelRange();
+				editor.setSelection(fullRange);
+				editor.revealRangeInCenter(fullRange);
+				break;
+			}
+			case "copy": {
+				if (currentSelection === null || currentSelection.isEmpty()) break;
+				const text: string = model.getValueInRange(currentSelection);
+				void copyTextToClipboard(text).catch((error: unknown): void => {
+					console.error("Failed to copy editor selection.", error);
+				});
+				break;
+			}
+			case "cut": {
+				if (currentSelection === null || currentSelection.isEmpty()) break;
+				const text: string = model.getValueInRange(currentSelection);
+				void copyTextToClipboard(text).then((): void => {
+					if (editor.getModel() !== model || model.isDisposed()) return;
+					editor.pushUndoStop();
+					editor.executeEdits("context-menu", [{ range: currentSelection, text: "", forceMoveMarkers: true }]);
+					editor.pushUndoStop();
+				}).catch((error: unknown): void => {
+					console.error("Failed to cut editor selection.", error);
+				});
+				break;
+			}
+			case "paste": {
+				const pasteSelection: MonacoNamespace.Selection | null = currentSelection;
+				void readTextFromClipboard().then((text: string): void => {
+					if (editor.getModel() !== model || model.isDisposed() || pasteSelection === null) return;
+					editor.setSelection(pasteSelection);
+					editor.pushUndoStop();
+					editor.executeEdits("context-menu", [{ range: pasteSelection, text, forceMoveMarkers: true }]);
+					editor.pushUndoStop();
+					editor.focus();
+				}).catch((error: unknown): void => {
+					console.error("Failed to paste into editor.", error);
+				});
+				break;
+			}
+			default:
+				break;
+		}
+	}, []);
+
+	const editorContextMenu: MenuProps = useMemo((): MenuProps => ({
+		items: [
+			{ key: "undo", label: t("files.editorMenu.undo"), icon: <Icon name="undo" /> },
+			{ key: "redo", label: t("files.editorMenu.redo"), icon: <Icon name="redo" /> },
+			{ type: "divider" },
+			{ key: "cut", label: t("files.editorMenu.cut") },
+			{ key: "copy", label: t("files.editorMenu.copy") },
+			{ key: "paste", label: t("files.editorMenu.paste") },
+			{ type: "divider" },
+			{ key: "selectAll", label: t("files.editorMenu.selectAll") }
+		],
+		onClick: handleEditorContextMenuAction
+	}), [handleEditorContextMenuAction, t]);
+
 	return (
-		<div className={styles.editor} style={bottomSafeArea > 0 ? { bottom: bottomSafeArea } : undefined}>
+		<div className={styles.editor} style={bottomSafeArea > 0 ? { bottom: bottomSafeArea } : undefined} onContextMenu={handleEditorContextMenu}>
 			{messageHolder}
+			{contextMenuPosition !== null ? <Dropdown
+				open={true}
+				menu={editorContextMenu}
+				placement="bottomLeft"
+				onOpenChange={(open: boolean): void => {
+					if (!open) {
+						setContextMenuPosition(null);
+						contextMenuSelectionRef.current = null;
+					}
+				}}
+			>
+				<span
+					className={styles.contextMenuAnchor}
+					style={{ left: contextMenuPosition.left, top: contextMenuPosition.top }}
+					aria-hidden="true"
+				/>
+			</Dropdown> : null}
 			<div ref={editorContainerRef} className={styles.monacoEditor} aria-label={t("files.editorAriaLabel")} />
 			{monacoError !== null ? <Alert className={styles.editorError} type="error" showIcon title={monacoError} /> : null}
 			{selection !== null ? <div className={styles.selectionTools} style={{ top: selection.top, left: selection.left }} onMouseDown={(event): void => event.preventDefault()}>

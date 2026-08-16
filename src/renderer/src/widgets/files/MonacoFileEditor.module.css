@@ -17,6 +17,14 @@
 	font-family: var(--ds-font-family-code);
 }
 
+.contextMenuAnchor {
+	position: absolute;
+	z-index: 20;
+	width: 1px;
+	height: 1px;
+	pointer-events: none;
+}
+
 .monacoEditor :global(.monaco-editor .find-widget) {
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
@@ -32,12 +40,94 @@
 	border-radius: var(--ds-radius-sm);
 }
 
-.monacoEditor :global(.monaco-editor .find-widget .button) {
+.monacoEditor :global(.monaco-editor .find-widget .find-actions),
+.monacoEditor :global(.monaco-editor .find-widget .replace-actions) {
+	gap: 2px;
+	align-items: center;
+}
+
+.monacoEditor :global(.monaco-editor .find-widget .button),
+.monacoEditor :global(.monaco-editor .find-widget .codicon-find-selection),
+.monacoEditor :global(.monaco-editor .find-widget .monaco-custom-toggle) {
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--ds-space-1);
+	margin: 0;
+	border: 1px solid transparent;
 	border-radius: var(--ds-radius-sm);
+	color: var(--ds-text-secondary);
+	background-color: transparent;
+	transition:
+		color 120ms ease,
+		background-color 120ms ease,
+		border-color 120ms ease,
+}
+
+.monacoEditor :global(.monaco-editor .find-widget .button:not(.disabled):hover),
+.monacoEditor :global(.monaco-editor .find-widget .codicon-find-selection:hover),
+.monacoEditor :global(.monaco-editor .find-widget .monaco-custom-toggle:not(.disabled):hover) {
+	color: var(--ds-accent) !important;
+	background-color: var(--ds-accent-muted) !important;
+	border-color: color-mix(in srgb, var(--ds-accent) 28%, transparent);
+}
+
+.monacoEditor :global(.monaco-editor .find-widget .button:focus-visible),
+.monacoEditor :global(.monaco-editor .find-widget .codicon-find-selection:focus-visible),
+.monacoEditor :global(.monaco-editor .find-widget .monaco-custom-toggle:focus-visible) {
+	outline: 2px solid color-mix(in srgb, var(--ds-accent) 70%, transparent);
+	outline-offset: 1px;
+}
+
+.monacoEditor :global(.monaco-editor .find-widget .button.checked),
+.monacoEditor :global(.monaco-editor .find-widget .button[aria-pressed="true"]),
+.monacoEditor :global(.monaco-editor .find-widget .monaco-custom-toggle.checked) {
+	color: var(--ds-accent) !important;
+	background-color: var(--ds-accent-muted) !important;
+	border-color: color-mix(in srgb, var(--ds-accent) 34%, transparent);
+}
+
+.monacoEditor :global(.monaco-editor .find-widget .button.disabled),
+.monacoEditor :global(.monaco-editor .find-widget .monaco-custom-toggle.disabled) {
+	color: var(--ds-text-muted);
+	opacity: 0.55;
+	cursor: default;
 }
 
 .monacoEditor :global(.monaco-editor .find-widget .codicon) {
 	font-size: 15px;
+}
+
+.findTooltip {
+	position: fixed;
+	z-index: 10000;
+	max-width: 260px;
+	padding: 5px 8px;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-sm);
+	color: var(--ds-text-primary);
+	background: var(--ds-surface-elevated, var(--ds-surface));
+	box-shadow: var(--ds-box-shadow);
+	font-family: var(--ds-font-family);
+	font-size: 12px;
+	line-height: 18px;
+	white-space: nowrap;
+	pointer-events: none;
+	opacity: 0;
+	transform: translateY(2px) scale(0.98);
+	transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.findTooltipVisible {
+	opacity: 1;
+	transform: translateY(0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.findTooltip {
+		transition: none;
+	}
 }
 
 .editorError {

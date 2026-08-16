@@ -707,6 +707,14 @@
 	  "addSelectionContext": "Add to context",
 	  "comment": "Comment",
 	  "commentPlaceholder": "Comment on the selected code",
+	  "editorMenu": {
+		"undo": "Undo",
+		"redo": "Redo",
+		"cut": "Cut",
+		"copy": "Copy",
+		"paste": "Paste",
+		"selectAll": "Select all"
+	  },
 	  "closeTitle": "Close modified file?",
 	  "closeDirty": "{{name}} contains unsaved changes.",
 	  "discard": "Don't save",

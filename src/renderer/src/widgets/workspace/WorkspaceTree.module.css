@@ -80,7 +80,7 @@
 .projectTreeItem:global(.ant-tree-treenode-leaf) .projectTreeSwitcher {
 	width: 0 !important;
 	min-width: 0 !important;
-	margin-inline-end: 0;
+	margin-inline-end: 0 !important;
 }
 
 .workspaceTreeCollapse {
@@ -97,7 +97,7 @@
 }
 
 .workspaceTreeCollapse :global(.ant-collapse-header) {
-	padding-left: var(--ds-space-2);
+	padding: 0 0 0 var(--ds-space-2) !important;
 }
 
 .workspaceTreeCollapse :global(.ant-collapse-body) {

@@ -705,6 +705,14 @@
 	  "addSelectionContext": "添加到上下文",
 	  "comment": "评论",
 	  "commentPlaceholder": "输入对所选代码的评论",
+	  "editorMenu": {
+		"undo": "撤销",
+		"redo": "重做",
+		"cut": "剪切",
+		"copy": "复制",
+		"paste": "粘贴",
+		"selectAll": "全选"
+	  },
 	  "closeTitle": "关闭已修改的文件？",
 	  "closeDirty": "{{name}} 包含尚未保存的修改。",
 	  "discard": "不保存",
