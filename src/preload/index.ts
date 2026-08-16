@@ -3,6 +3,7 @@ import type { KeyboardShortcutOverrides } from "../contracts/keyboard-shortcuts"
 import { applyStudioAccentVariables } from "../contracts/theme-color";
 import type { OnboardingPreferences } from "../contracts/onboarding";
 import type { NewSessionComposerPreferences } from "../contracts/new-session-composer-preferences";
+import type { GeneralSettings } from "../contracts/general-settings";
 
 type ClientPreferences = {
 	autoCheckForUpdates: boolean;
@@ -253,6 +254,21 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			ipcRenderer.on("client-preferences:changed", handler);
 			return (): void => {
 				ipcRenderer.removeListener("client-preferences:changed", handler);
+			};
+		}
+	},
+
+	generalSettings: {
+		notifyChanged: (settings: GeneralSettings): void => {
+			ipcRenderer.send("general-settings:changed", settings);
+		},
+		onChanged: (callback: (settings: GeneralSettings) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, settings: GeneralSettings): void => {
+				callback(settings);
+			};
+			ipcRenderer.on("general-settings:changed", handler);
+			return (): void => {
+				ipcRenderer.removeListener("general-settings:changed", handler);
 			};
 		}
 	},

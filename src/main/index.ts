@@ -26,6 +26,7 @@ import { homedir } from "node:os";
 import { publishStudioExecutableRecord } from "./services/studio-executable-record";
 import { registerImageExportIpc } from "./services/image-export";
 import { registerFileExportIpc } from "./services/file-export";
+import type { GeneralSettings } from "../contracts/general-settings";
 
 backendManager.registerIpc();
 backendBootstrapService.registerIpc();
@@ -283,6 +284,14 @@ function broadcastClientPreferencesChanged(preferences: ClientPreferences): void
 	}
 }
 
+function broadcastGeneralSettingsChanged(settings: GeneralSettings, senderWebContentsId: number): void {
+	for (const browserWindow of BrowserWindow.getAllWindows()) {
+		if (!browserWindow.isDestroyed() && browserWindow.webContents.id !== senderWebContentsId) {
+			browserWindow.webContents.send("general-settings:changed", settings);
+		}
+	}
+}
+
 function broadcastSessionCatalogChanged(senderWebContentsId: number): void {
 	for (const browserWindow of BrowserWindow.getAllWindows()) {
 		if (!browserWindow.isDestroyed() && browserWindow.webContents.id !== senderWebContentsId) {
@@ -296,6 +305,21 @@ ipcMain.on("session-catalog:changed", (event): void => {
 		return;
 	}
 	broadcastSessionCatalogChanged(event.sender.id);
+});
+
+ipcMain.on("general-settings:changed", (event, settings: GeneralSettings): void => {
+	if (BrowserWindow.fromWebContents(event.sender) === null) {
+		return;
+	}
+	if (
+		settings === null ||
+		typeof settings !== "object" ||
+		typeof settings.fontFamily !== "string" ||
+		typeof settings.fontFamilyCode !== "string"
+	) {
+		return;
+	}
+	broadcastGeneralSettingsChanged(settings, event.sender.id);
 });
 
 ipcMain.on("window:renderer-ready", (event): void => {

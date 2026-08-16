@@ -768,7 +768,7 @@ export function FilePanel({
 					</Splitter.Panel> : null}
 				</Splitter>
 			</div>
-			<Modal open={pendingClose !== null} title={t("files.closeTitle")} closable={false} maskClosable={false} footer={[
+			<Modal open={pendingClose !== null} title={t("files.closeTitle")} closable={false} mask={{ closable: false }} footer={[
 				<Button key="cancel" onClick={(): void => setPendingClose(null)}>{t("files.cancel")}</Button>,
 				<Button key="discard" onClick={(): void => { const tab = pendingClose?.tab; setPendingClose(null); if (tab !== undefined) { const buffer = buffers[tab.key]; if (buffer !== undefined) { const next = { ...buffer, content: buffer.savedContent }; RUNTIME_BUFFERS.set(getBufferKey(sessionId, panelKey, tab), next); setBuffers((current) => ({ ...current, [tab.key]: next })); } removeTab(tab); } }}>{t("files.discard")}</Button>,
 				<Button key="save" type="primary" onClick={(): void => { const tab = pendingClose?.tab; if (tab !== undefined) void saveTab(tab).then((saved: boolean): void => { if (saved) { setPendingClose(null); removeTab(tab); } }); }}>{t("files.save")}</Button>

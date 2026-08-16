@@ -1,8 +1,8 @@
-import { CSSProperties, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import styles from "./GeneralSettingsPage.module.css";
 import pageMotionStyles from "./SettingsPageMotion.module.css";
-import { Alert, Button, ColorPicker, Segmented, Select, Space, Switch, Tooltip, Typography } from "antd";
+import { Alert, Button, ColorPicker, Input, Segmented, Select, Space, Switch, Tooltip, Typography } from "antd";
 import type { ColorPickerProps, SelectProps } from "antd";
 import { Icon } from "@/assets/icons";
 import SettingsItem from "@/ui/SettingsItem";
@@ -27,7 +27,8 @@ type GeneralSettingsPageProps = {
 	onGeneralSettingsChange: (settings: GeneralSettings) => void;
 };
 
-type SettingKey = "autoCheckForUpdates" | "godotExecutablePath" | "language" | "minimizeToTrayOnClose" | "nextStepHintsEnabled" | "notifyOnRunCompleted" | "theme" | "themeColor";
+type FontFamilyKey = "fontFamily" | "fontFamilyCode";
+type SettingKey = "autoCheckForUpdates" | FontFamilyKey | "godotExecutablePath" | "language" | "minimizeToTrayOnClose" | "nextStepHintsEnabled" | "notifyOnRunCompleted" | "theme" | "themeColor";
 type ThemePreference = ClientPreferences["theme"];
 
 const colorPickerProps: ColorPickerProps = {
@@ -137,6 +138,33 @@ function GeneralSettingsPage({
 			onGeneralSettingsChange(savedSettings);
 		} catch (error: unknown) {
 			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.godotExecutable"));
+		} finally {
+			setSavingKey(null);
+		}
+	}
+
+	async function saveFontFamily(key: FontFamilyKey): Promise<void> {
+		const previousSettings: GeneralSettings = draftGeneralSettings;
+		const value: string = draftGeneralSettings[key].trim();
+		if (value === generalSettings[key].trim() || savingKey !== null) {
+			return;
+		}
+		try {
+			setSavingKey(key);
+			setErrorMessage(null);
+			const optimisticSettings: GeneralSettings = {
+				...previousSettings,
+				[key]: value
+			};
+			setDraftGeneralSettings(optimisticSettings);
+			onGeneralSettingsChange(optimisticSettings);
+			const savedSettings: GeneralSettings = await updateGeneralSettings({ [key]: value });
+			setDraftGeneralSettings(savedSettings);
+			onGeneralSettingsChange(savedSettings);
+		} catch (error: unknown) {
+			setDraftGeneralSettings(previousSettings);
+			onGeneralSettingsChange(previousSettings);
+			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
 		} finally {
 			setSavingKey(null);
 		}
@@ -367,6 +395,43 @@ function GeneralSettingsPage({
 									suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 								/>
 							</SettingsItem>
+					</div>
+				</SettingsList>
+
+				<SettingsList title={t("settings.general.fonts.title")}>
+					<div className={styles.preferenceList}>
+						<SettingsItem
+							title={t("settings.general.fonts.body.title")}
+							description={t("settings.general.fonts.body.description")}
+						>
+							<Input
+								className={styles.fontFamilyInput}
+								value={draftGeneralSettings.fontFamily}
+								maxLength={512}
+								allowClear
+								placeholder={t("settings.general.fonts.body.placeholder")}
+								disabled={savingKey !== null}
+								onChange={(event): void => setDraftGeneralSettings((settings): GeneralSettings => ({ ...settings, fontFamily: event.target.value }))}
+								onBlur={(): void => { void saveFontFamily("fontFamily"); }}
+								onPressEnter={(event): void => event.currentTarget.blur()}
+							/>
+						</SettingsItem>
+						<SettingsItem
+							title={t("settings.general.fonts.code.title")}
+							description={t("settings.general.fonts.code.description")}
+						>
+							<Input
+								className={styles.fontFamilyInput}
+								value={draftGeneralSettings.fontFamilyCode}
+								maxLength={512}
+								allowClear
+								placeholder={t("settings.general.fonts.code.placeholder")}
+								disabled={savingKey !== null}
+								onChange={(event): void => setDraftGeneralSettings((settings): GeneralSettings => ({ ...settings, fontFamilyCode: event.target.value }))}
+								onBlur={(): void => { void saveFontFamily("fontFamilyCode"); }}
+								onPressEnter={(event): void => event.currentTarget.blur()}
+							/>
+						</SettingsItem>
 					</div>
 				</SettingsList>
 

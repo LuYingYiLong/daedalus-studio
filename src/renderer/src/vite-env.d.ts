@@ -2,6 +2,7 @@
 
 import type { OnboardingPreferences } from "../../contracts/onboarding";
 import type { NewSessionComposerPreferences } from "../../contracts/new-session-composer-preferences";
+import type { GeneralSettings } from "../../contracts/general-settings";
 
 export {};
 
@@ -102,6 +103,11 @@ declare global {
 		get: () => Promise<ClientPreferences>;
 		update: (patch: Partial<ClientPreferences>) => Promise<ClientPreferences>;
 		onChanged: (callback: (preferences: ClientPreferences) => void) => () => void;
+	}
+
+	interface GeneralSettingsAPI {
+		notifyChanged: (settings: GeneralSettings) => void;
+		onChanged: (callback: (settings: GeneralSettings) => void) => () => void;
 	}
 
 	interface BackendDiagnostics {
@@ -378,6 +384,7 @@ declare global {
 			resetAll: () => Promise<{ reset: true }>;
 		};
 		clientPreferences: ClientPreferencesAPI;
+		generalSettings: GeneralSettingsAPI;
 		sessionCatalog: SessionCatalogAPI;
 		clipboard: ClipboardAPI;
 		nativeNotifications: NativeNotificationAPI;

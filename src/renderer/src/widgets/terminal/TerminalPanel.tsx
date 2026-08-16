@@ -304,17 +304,20 @@ function TerminalPanel({ terminalId, cwd, isOpen, waitForCwd }: TerminalPanelPro
 
 	useEffect((): (() => void) => {
 		const observer = new MutationObserver((mutations: MutationRecord[]): void => {
-			if (!mutations.some((mutation: MutationRecord): boolean => mutation.attributeName === "data-theme")) {
+			const themeChanged: boolean = mutations.some((mutation: MutationRecord): boolean => mutation.attributeName === "data-theme");
+			const fontChanged: boolean = mutations.some((mutation: MutationRecord): boolean => mutation.attributeName === "style");
+			if (!themeChanged && !fontChanged) {
 				return;
 			}
 			const terminal: Terminal | null = terminalRef.current;
 			if (terminal !== null) {
-				terminal.options.theme = createTerminalTheme();
+				if (themeChanged) terminal.options.theme = createTerminalTheme();
+				if (fontChanged) terminal.options.fontFamily = getCssVar("--ds-font-family-code", "Cascadia Code, Consolas, monospace");
 			}
 		});
 		observer.observe(document.documentElement, {
 			attributes: true,
-			attributeFilter: ["data-theme"]
+			attributeFilter: ["data-theme", "style"]
 		});
 
 		return (): void => {

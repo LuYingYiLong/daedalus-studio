@@ -382,26 +382,26 @@
       "aria": {
         "open": "Open session summary"
       },
-        "sections": {
-          "envInfo": "Env info",
-          "godot": "Godot",
-          "plans": "Plans",
-          "source": "Source"
+      "sections": {
+        "envInfo": "Env info",
+        "godot": "Godot",
+        "plans": "Plans",
+        "source": "Source"
+      },
+      "godot": {
+        "runProject": "Run project",
+        "runScene": "Run scene...",
+        "sceneModal": {
+          "title": "Run Godot scene",
+          "searchPlaceholder": "Search scenes",
+          "empty": "No scene files found"
         },
-        "godot": {
-          "runProject": "Run project",
-          "runScene": "Run scene...",
-          "sceneModal": {
-            "title": "Run Godot scene",
-            "searchPlaceholder": "Search scenes",
-            "empty": "No scene files found"
-          },
-          "errors": {
-            "loadScenes": "Failed to load Godot scenes"
-          }
-        },
-        "actions": {
-          "diff": "Diff",
+        "errors": {
+          "loadScenes": "Failed to load Godot scenes"
+        }
+      },
+      "actions": {
+        "diff": "Diff",
         "commitOrPush": "Commit or push",
         "seeMore": "See more",
         "retry": "Retry"
@@ -483,12 +483,12 @@
       "usedTokens": "{{used}} / {{total}} tokens",
       "meta": "{{model}} / {{available}} available / {{source}}",
       "compress": "Compress chat",
-	  "compressionResult": "Before {{before}}, after {{after}}, saved {{saved}} tokens; {{restorable}} raw blocks remain recoverable",
-	  "legend": {
-		"input": "Actual input",
-		"outputReserve": "Output reserve",
-		"safetyMargin": "Safety margin"
-	  },
+      "compressionResult": "Before {{before}}, after {{after}}, saved {{saved}} tokens; {{restorable}} raw blocks remain recoverable",
+      "legend": {
+        "input": "Actual input",
+        "outputReserve": "Output reserve",
+        "safetyMargin": "Safety margin"
+      },
       "pressureLevel": "{{level}} pressure",
       "largestContributor": "Largest: {{largest}}",
       "columns": {
@@ -656,12 +656,12 @@
   },
   "clarification": {
     "aria": "Plan clarification",
-      "title": "Clarification needed",
-      "recommendedSuffix": "(Recommended)",
-      "placeholder": "Tell the assistant how to proceed",
-		"skipHint": "Skip continues planning without cancelling the task. The question is treated as missing information and the assistant will make assumptions from available context. Core requirements, architecture, platform, or data-format choices may make the plan less accurate; you can add details later and revise the plan.",
-      "actions": {
-		"skip": "Skip and continue",
+    "title": "Clarification needed",
+    "recommendedSuffix": "(Recommended)",
+    "placeholder": "Tell the assistant how to proceed",
+    "skipHint": "Skip continues planning without cancelling the task. The question is treated as missing information and the assistant will make assumptions from available context. Core requirements, architecture, platform, or data-format choices may make the plan less accurate; you can add details later and revise the plan.",
+    "actions": {
+      "skip": "Skip and continue",
       "submit": "Submit"
     }
   },
@@ -671,63 +671,63 @@
       "changesIndexed": "Changes {{index}}",
       "terminal": "Terminal",
       "terminalIndexed": "Terminal {{index}}",
-	  "files": "Files",
-	  "filesIndexed": "Files {{index}}",
+      "files": "Files",
+      "filesIndexed": "Files {{index}}",
       "enterFullscreen": "Expand panel",
       "exitFullscreen": "Restore panel"
     },
     "add": {
       "label": "Add panel",
       "reviewPanel": "Review panel",
-	  "terminalPanel": "Terminal panel",
-	  "filesPanel": "Files panel"
+      "terminalPanel": "Terminal panel",
+      "filesPanel": "Files panel"
     },
     "empty": {
       "noWorkspaceSelected": "No workspace selected"
     }
   },
-	"files": {
-	  "noWorkspace": "Select a workspace to browse and edit files",
-	  "noSourceFolder": "No source folder",
-	  "noFileSelected": "Select a file from the file tree",
-	  "editorAriaLabel": "File editor",
-	  "loading": "Reading file…",
-	  "search": "Search files or paths",
-	  "save": "Save",
-	  "saved": "File saved",
-	  "savedAs": "File saved as",
-	  "reload": "Reload",
-	  "binary": "This file is not editable UTF-8 text",
-	  "oversized": "Files larger than 2 MiB cannot be edited in the Files panel",
-	  "openExternal": "Open in external app",
-	  "showSidebar": "Show file sidebar",
-	  "hideSidebar": "Hide file sidebar",
-	  "conflict": "The file changed outside Studio. Reload the disk version or save the current draft as a new file.",
-	  "contextAdded": "Added to context",
-	  "addSelectionContext": "Add to context",
-	  "comment": "Comment",
-	  "commentPlaceholder": "Comment on the selected code",
-	  "editorMenu": {
-		"undo": "Undo",
-		"redo": "Redo",
-		"cut": "Cut",
-		"copy": "Copy",
-		"paste": "Paste",
-		"selectAll": "Select all"
-	  },
-	  "closeTitle": "Close modified file?",
-	  "closeDirty": "{{name}} contains unsaved changes.",
-	  "discard": "Don't save",
-	  "cancel": "Cancel",
-	  "menu": {
-		"openFrom": "Open from {{target}}",
-		"openWith": "Open with",
-		"saveAs": "Save as…",
-		"copyPath": "Copy path",
-		"copyRelativePath": "Copy relative path",
-		"addContext": "Add to context"
-	  }
-	},
+  "files": {
+    "noWorkspace": "Select a workspace to browse and edit files",
+    "noSourceFolder": "No source folder",
+    "noFileSelected": "Select a file from the file tree",
+    "editorAriaLabel": "File editor",
+    "loading": "Reading file…",
+    "search": "Search files or paths",
+    "save": "Save",
+    "saved": "File saved",
+    "savedAs": "File saved as",
+    "reload": "Reload",
+    "binary": "This file is not editable UTF-8 text",
+    "oversized": "Files larger than 2 MiB cannot be edited in the Files panel",
+    "openExternal": "Open in external app",
+    "showSidebar": "Show file sidebar",
+    "hideSidebar": "Hide file sidebar",
+    "conflict": "The file changed outside Studio. Reload the disk version or save the current draft as a new file.",
+    "contextAdded": "Added to context",
+    "addSelectionContext": "Add to context",
+    "comment": "Comment",
+    "commentPlaceholder": "Comment on the selected code",
+    "editorMenu": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select all"
+    },
+    "closeTitle": "Close modified file?",
+    "closeDirty": "{{name}} contains unsaved changes.",
+    "discard": "Don't save",
+    "cancel": "Cancel",
+    "menu": {
+      "openFrom": "Open from {{target}}",
+      "openWith": "Open with",
+      "saveAs": "Save as…",
+      "copyPath": "Copy path",
+      "copyRelativePath": "Copy relative path",
+      "addContext": "Add to context"
+    }
+  },
   "git": {
     "detachedHead": "Detached HEAD",
     "actions": {
@@ -814,11 +814,11 @@
     "binaryFileChanged": "Binary file changed",
     "diffStats": "{{branch}} / {{count}} file / +{{additions}} -{{deletions}}",
     "diffStats_other": "{{branch}} / {{count}} files / +{{additions}} -{{deletions}}",
-      "actions": {
-        "refreshDiff": "Refresh git diff",
-        "expandAllDiffs": "Expand small diffs",
-        "collapseAllDiffs": "Collapse small diffs",
-        "loadMoreFiles": "Load more files"
+    "actions": {
+      "refreshDiff": "Refresh git diff",
+      "expandAllDiffs": "Expand small diffs",
+      "collapseAllDiffs": "Collapse small diffs",
+      "loadMoreFiles": "Load more files"
     },
     "empty": {
       "diffUnavailable": "Diff unavailable",
@@ -826,35 +826,35 @@
       "noGitRepository": "No Git repository",
       "noWorkspaceChanges": "No workspace changes"
     },
-      "notices": {
-		"lazyLoading": {
-		  "title": "Diffs load on demand",
-		  "description": "Small text files open first. Large files stay collapsed and are only requested when you open them."
-		},
-        "diffTruncated": {
+    "notices": {
+      "lazyLoading": {
+        "title": "Diffs load on demand",
+        "description": "Small text files open first. Large files stay collapsed and are only requested when you open them."
+      },
+      "diffTruncated": {
         "title": "Diff truncated",
         "description": "The patch is too large to show completely."
-        },
-        "diffParseFailed": "Diff parse failed"
       },
-	  "loadingFile": "Loading file diff",
-	  "fileTooLarge": {
-		"title": "File diff is too large to render",
-		"description": "This preview was not loaded so the review panel stays responsive."
-	  },
-	  "commentDialog": {
-		"title": "Request changes",
-		"open": "Request changes on this line",
-		"target": "{{path}}, line {{line}}",
-		"label": "What should change?",
-		"required": "Enter the requested change.",
-		"submit": "Add comment",
-		"contextMeta": "Review comment on line {{line}}"
-	  },
-      "errors": {
-        "loadDiff": "Failed to load git diff.",
-		"loadFile": "Failed to load file diff.",
-        "parseDiff": "Failed to parse diff."
+      "diffParseFailed": "Diff parse failed"
+    },
+    "loadingFile": "Loading file diff",
+    "fileTooLarge": {
+      "title": "File diff is too large to render",
+      "description": "This preview was not loaded so the review panel stays responsive."
+    },
+    "commentDialog": {
+      "title": "Request changes",
+      "open": "Request changes on this line",
+      "target": "{{path}}, line {{line}}",
+      "label": "What should change?",
+      "required": "Enter the requested change.",
+      "submit": "Add comment",
+      "contextMeta": "Review comment on line {{line}}"
+    },
+    "errors": {
+      "loadDiff": "Failed to load git diff.",
+      "loadFile": "Failed to load file diff.",
+      "parseDiff": "Failed to parse diff."
     }
   },
   "terminal": {
@@ -930,63 +930,63 @@
         "forkFromHere": "Fork from here"
       }
     },
-		"fork": {
-			"titleSuffix": " · Fork",
-			"untitledSource": "Untitled session",
-			"originLabel": "Forked from",
-			"openSourceTooltip": "Open source session",
-			"openSourceAria": "Open source session",
-			"modelChanged": "Model changed from {{from}} to {{to}}",
-			"errors": {
-				"create": "Failed to fork session.",
-				"sourceUnavailable": "The source session is unavailable or archived.",
-				"openSource": "Failed to open the source session."
-			}
-		},
-		"contextStrip": {
-			"aria": "Message context",
-			"pinned": "Pinned",
-			"expandText": "Expand into composer",
-			"display": {
-				"contextFallback": "Context",
-				"selection": "Selection",
-				"fileCount": "{{count}} file",
-				"fileCount_other": "{{count}} files",
-				"folderCount": "{{count}} folder",
-				"folderCount_other": "{{count}} folders",
-				"selectedCount": "{{count}} selected",
-				"selectedCount_other": "{{count}} selected",
-				"line": "Line {{line}}",
-				"linesRange": "Lines {{start}}-{{end}}",
-				"fileSize": "{{size}} KiB",
-				"textAttachment": "Text attachment",
-				"reviewComment": "Review comment",
-				"selectedMessageText": "Selected message text",
-				"fileSelection": "File selection",
-				"more": "... {{count}} more",
-				"more_other": "... {{count}} more",
-				"pathLabel": "{{kind}}: {{path}}",
-				"pathFallback": "path"
-			}
-		},
-		"selection": {
-			"attachContext": "Attach context",
-			"askAi": "Ask AI",
-			"annotationPlaceholder": "Add a note (optional)",
-			"editAnnotation": "Edit annotation",
-			"openAsk": "Open selection Ask",
-			"deleteAsk": "Delete",
-			"deleteAllAsks": "Delete all",
-			"deleteAskFailed": "Failed to delete selection Ask",
-			"askTitle": "Selection Ask",
-			"askPlaceholder": "Ask a follow-up…",
-			"sendAsk": "Send question",
-			"stopAsk": "Stop response",
-			"stoppingAsk": "Stopping response",
-			"askFailed": "Failed to create selection Ask",
-			"responseFailed": "Response failed",
-			"interrupted": "The response was interrupted by a Backend restart"
-		},
+    "fork": {
+      "titleSuffix": " · Fork",
+      "untitledSource": "Untitled session",
+      "originLabel": "Forked from",
+      "openSourceTooltip": "Open source session",
+      "openSourceAria": "Open source session",
+      "modelChanged": "Model changed from {{from}} to {{to}}",
+      "errors": {
+        "create": "Failed to fork session.",
+        "sourceUnavailable": "The source session is unavailable or archived.",
+        "openSource": "Failed to open the source session."
+      }
+    },
+    "contextStrip": {
+      "aria": "Message context",
+      "pinned": "Pinned",
+      "expandText": "Expand into composer",
+      "display": {
+        "contextFallback": "Context",
+        "selection": "Selection",
+        "fileCount": "{{count}} file",
+        "fileCount_other": "{{count}} files",
+        "folderCount": "{{count}} folder",
+        "folderCount_other": "{{count}} folders",
+        "selectedCount": "{{count}} selected",
+        "selectedCount_other": "{{count}} selected",
+        "line": "Line {{line}}",
+        "linesRange": "Lines {{start}}-{{end}}",
+        "fileSize": "{{size}} KiB",
+        "textAttachment": "Text attachment",
+        "reviewComment": "Review comment",
+        "selectedMessageText": "Selected message text",
+        "fileSelection": "File selection",
+        "more": "... {{count}} more",
+        "more_other": "... {{count}} more",
+        "pathLabel": "{{kind}}: {{path}}",
+        "pathFallback": "path"
+      }
+    },
+    "selection": {
+      "attachContext": "Attach context",
+      "askAi": "Ask AI",
+      "annotationPlaceholder": "Add a note (optional)",
+      "editAnnotation": "Edit annotation",
+      "openAsk": "Open selection Ask",
+      "deleteAsk": "Delete",
+      "deleteAllAsks": "Delete all",
+      "deleteAskFailed": "Failed to delete selection Ask",
+      "askTitle": "Selection Ask",
+      "askPlaceholder": "Ask a follow-up…",
+      "sendAsk": "Send question",
+      "stopAsk": "Stop response",
+      "stoppingAsk": "Stopping response",
+      "askFailed": "Failed to create selection Ask",
+      "responseFailed": "Response failed",
+      "interrupted": "The response was interrupted by a Backend restart"
+    },
     "tool": {
       "labels": {
         "mcp_skills_load": "Load skill",
@@ -1084,25 +1084,25 @@
         "mcp_terminal_cancel_job": "Cancel terminal job"
       },
       "status": {
-		"running": "Running",
-		"done": "Done",
-		"failed": "Failed",
-		"approvalRequired": "Approval required",
-		"pending": "Not started"
-	  },
-	  "activity": {
-		"running": "The tool is running.",
-		"pending": "The tool has not started.",
-		"writing": "Writing now: {{tool}}"
-	  },
-	  "recovery": {
-		"failed": "Recovery attempt {{attempt}}/{{max}} failed. The assistant may adjust the same structured target and try again.",
-		"recovered": "Recovered after {{attempt}}/{{max}} failed attempts.",
-		"exhausted": "Recovery limit reached ({{attempt}}/{{max}}). This exact operation will not run again."
-	  },
-	  "fileChanges": {
-		"summary": "{{count}} file changed",
-		"summary_other": "{{count}} files changed"
+        "running": "Running",
+        "done": "Done",
+        "failed": "Failed",
+        "approvalRequired": "Approval required",
+        "pending": "Not started"
+      },
+      "activity": {
+        "running": "The tool is running.",
+        "pending": "The tool has not started.",
+        "writing": "Writing now: {{tool}}"
+      },
+      "recovery": {
+        "failed": "Recovery attempt {{attempt}}/{{max}} failed. The assistant may adjust the same structured target and try again.",
+        "recovered": "Recovered after {{attempt}}/{{max}} failed attempts.",
+        "exhausted": "Recovery limit reached ({{attempt}}/{{max}}). This exact operation will not run again."
+      },
+      "fileChanges": {
+        "summary": "{{count}} file changed",
+        "summary_other": "{{count}} files changed"
       }
     },
     "terminalPart": {
@@ -1129,10 +1129,10 @@
       }
     },
     "providerReconnect": {
-        "attempt": "Trying to reconnect {{attempt}}/{{max}}",
-        "recovered": "Connection restored",
-        "failed": "Unable to connect to the model service",
-        "stopped": "Reconnect stopped",
+      "attempt": "Trying to reconnect {{attempt}}/{{max}}",
+      "recovered": "Connection restored",
+      "failed": "Unable to connect to the model service",
+      "stopped": "Reconnect stopped",
       "timeout": "A reconnect starts after {{seconds}} seconds without provider activity.",
       "extended": "Transient transport or gateway failures extended automatic reconnects to 15 attempts.",
       "reason": {
@@ -1147,8 +1147,8 @@
       "open": "Open plan"
     },
     "thinking": {
-	  "label": "Thought process",
-	  "activeLabel": "Thinking"
+      "label": "Thought process",
+      "activeLabel": "Thinking"
     },
     "activityGroup": {
       "activeThinking": "Thinking",
@@ -1476,14 +1476,14 @@
       "backend": {
         "description": "Local RPC, workflow, MCP, and Godot integration service.",
         "detailsTitle": "Backend Details",
-		"repairConfirmTitle": "Repair Daedalus backend?",
-		"repairConfirmDescription": "This stops and reinstalls the backend bundled with this Studio version. Any active model response will be interrupted.",
-		"repairSucceeded": "Backend repaired and reconnected.",
-		"restartSucceeded": "Backend restarted and reconnected.",
-		"updateNotAvailable": "No backend update is available.",
-		"updateWaiting": "An AI response is still running. The backend update will continue when it finishes.",
-		"actionWaiting": "An AI response is still running",
-		"actionWaitingDescription": "Backend restart, repair, and update actions are deferred to avoid interrupting the response. Retry when it finishes.",
+        "repairConfirmTitle": "Repair Daedalus backend?",
+        "repairConfirmDescription": "This stops and reinstalls the backend bundled with this Studio version. Any active model response will be interrupted.",
+        "repairSucceeded": "Backend repaired and reconnected.",
+        "restartSucceeded": "Backend restarted and reconnected.",
+        "updateNotAvailable": "No backend update is available.",
+        "updateWaiting": "An AI response is still running. The backend update will continue when it finishes.",
+        "actionWaiting": "An AI response is still running",
+        "actionWaitingDescription": "Backend restart, repair, and update actions are deferred to avoid interrupting the response. Retry when it finishes.",
         "status": {
           "healthy": "Healthy",
           "starting": "Starting",
@@ -1493,11 +1493,11 @@
         }
       },
       "actions": {
-		"refresh": "Refresh",
-		"checkForUpdates": "Check for updates",
-		"updateBackend": "Update backend",
-		"restartBackend": "Restart backend",
-		"repairBackend": "Repair backend"
+        "refresh": "Refresh",
+        "checkForUpdates": "Check for updates",
+        "updateBackend": "Update backend",
+        "restartBackend": "Restart backend",
+        "repairBackend": "Repair backend"
       },
       "onboarding": {
         "title": "Setup guide",
@@ -1525,10 +1525,10 @@
       },
       "errors": {
         "applicationInfo": "Failed to load application information",
-		"backendDetails": "Failed to load backend details",
-		"backendUpdate": "Failed to update backend",
-		"backendRepair": "Failed to repair backend",
-		"backendRestart": "Failed to restart backend"
+        "backendDetails": "Failed to load backend details",
+        "backendUpdate": "Failed to update backend",
+        "backendRepair": "Failed to repair backend",
+        "backendRestart": "Failed to restart backend"
       }
     },
     "import": {
@@ -1595,18 +1595,18 @@
           "title": "Session title model",
           "description": "Used for automatic session renaming and lightweight title generation."
         },
-		"nextStepHints": {
-		  "title": "Next-step suggestion model",
-		  "description": "Generates one optional follow-up in the empty composer after a chat response. Follows the active model when unset and always disables reasoning."
-		},
+        "nextStepHints": {
+          "title": "Next-step suggestion model",
+          "description": "Generates one optional follow-up in the empty composer after a chat response. Follows the active model when unset and always disables reasoning."
+        },
         "goalEvaluator": {
           "title": "Goal completion evaluator model",
           "description": "Used to judge whether a Goal is complete after each execution cycle. Falls back to the Goal model when unset."
         },
-		"contextCompression": {
-		  "title": "Context compression model",
-		  "description": "Creates recoverable structured context summaries. Follows the active model when unset and always disables reasoning."
-		},
+        "contextCompression": {
+          "title": "Context compression model",
+          "description": "Creates recoverable structured context summaries. Follows the active model when unset and always disables reasoning."
+        },
         "imageRecognition": {
           "title": "Image recognition model",
           "description": "Used when the active chat model cannot consume image context directly."
@@ -1759,15 +1759,15 @@
         "addReasoningEffort": "Add effort level",
         "removeReasoningEffort": "Remove",
         "clearApiKey": "Clear API key",
-		"enableProvider": "Enable provider",
-		"disableProvider": "Disable provider",
+        "enableProvider": "Enable provider",
+        "disableProvider": "Disable provider",
         "fetchModels": "Fetch models",
         "importModels": "Import models",
         "applyModelChanges": "Apply changes",
         "removeModels": "Remove models",
-		"removeProvider": "Remove provider",
-		"editProvider": "Edit provider",
-		"openWebsite": "Open provider website",
+        "removeProvider": "Remove provider",
+        "editProvider": "Edit provider",
+        "openWebsite": "Open provider website",
         "reloadModels": "Reload models",
         "test": "Test"
       },
@@ -1805,43 +1805,43 @@
         "vision": "Vision",
         "webSearch": "Search"
       },
-	  "reasoningEfforts": {
-		"description": "Define the reasoning effort values accepted by this provider. Equivalent levels let Daedalus map a selection when switching models.",
-		"disabled": "Enable the model's reasoning capability before configuring effort levels.",
-		"empty": "No selectable levels. The model will use its provider-defined fixed or automatic reasoning strength.",
-		"fallback": {
-		  "low": "Low",
-		  "medium": "Medium",
-		  "high": "High",
-		  "max": "Maximum"
-		}
-	  },
-	  "modelOverrides": {
-		"description": "Fields without an override continue to follow the provider API or Daedalus catalog and adopt future metadata updates automatically.",
-		"inherit": "Follow source",
-		"resetAll": "Reset all to source"
-	  },
-	  "status": {
-		"disabled": "Disabled"
-	  },
-	  "usage": {
-		"blockedTitle": "Provider is still in use",
-		"blockedDescription": "{{provider}} cannot be disabled or removed until these model assignments are changed.",
-		"activeModel": "Main model: {{model}}",
-		"taskRouting": "{{task}}: {{model}}"
-	  },
-	  "remove": {
-		"confirmTitle": "Remove custom provider?",
-		"confirmDescription": "Remove {{provider}} and its saved API key, request configuration, models, and local customizations? This cannot be undone."
-	  },
+      "reasoningEfforts": {
+        "description": "Define the reasoning effort values accepted by this provider. Equivalent levels let Daedalus map a selection when switching models.",
+        "disabled": "Enable the model's reasoning capability before configuring effort levels.",
+        "empty": "No selectable levels. The model will use its provider-defined fixed or automatic reasoning strength.",
+        "fallback": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "max": "Maximum"
+        }
+      },
+      "modelOverrides": {
+        "description": "Fields without an override continue to follow the provider API or Daedalus catalog and adopt future metadata updates automatically.",
+        "inherit": "Follow source",
+        "resetAll": "Reset all to source"
+      },
+      "status": {
+        "disabled": "Disabled"
+      },
+      "usage": {
+        "blockedTitle": "Provider is still in use",
+        "blockedDescription": "{{provider}} cannot be disabled or removed until these model assignments are changed.",
+        "activeModel": "Main model: {{model}}",
+        "taskRouting": "{{task}}: {{model}}"
+      },
+      "remove": {
+        "confirmTitle": "Remove custom provider?",
+        "confirmDescription": "Remove {{provider}} and its saved API key, request configuration, models, and local customizations? This cannot be undone."
+      },
       "columns": {
         "capabilities": "Capabilities",
         "model": "Model"
       },
       "errors": {
         "addProvider": "Failed to add provider",
-		"updateProvider": "Failed to update provider",
-		"openWebsite": "Failed to open provider website",
+        "updateProvider": "Failed to update provider",
+        "openWebsite": "Failed to open provider website",
         "clearApiKey": "Failed to clear API key",
         "load": "Failed to load provider settings",
         "modelIdConflict": "A model with this ID already exists for the provider",
@@ -1853,21 +1853,21 @@
         "syncModels": "Failed to apply provider model changes",
         "refreshModels": "Failed to refresh provider models",
         "saveModel": "Failed to save model",
-		"updateProviderState": "Failed to update provider state",
-		"removeProvider": "Failed to remove provider",
+        "updateProviderState": "Failed to update provider state",
+        "removeProvider": "Failed to remove provider",
         "saveRequestConfiguration": "Failed to save custom request configuration",
-		"saveCredentials": "Failed to save provider credentials",
+        "saveCredentials": "Failed to save provider credentials",
         "testConnection": "Provider connection test failed"
       },
       "messages": {
         "testSuccess": "Provider connection test succeeded",
-		"credentialsSaved": "Provider credentials saved",
+        "credentialsSaved": "Provider credentials saved",
         "importSuccess": "Imported {{count}} models",
         "syncSuccess": "Model changes applied: {{enabled}} enabled, {{removed}} removed",
-		"providerEnabled": "{{provider}} is enabled",
-		"providerDisabled": "{{provider}} is disabled",
-		"providerRemoved": "{{provider}} was removed",
-		"providerUpdated": "Provider details updated",
+        "providerEnabled": "{{provider}} is enabled",
+        "providerDisabled": "{{provider}} is disabled",
+        "providerRemoved": "{{provider}} was removed",
+        "providerUpdated": "Provider details updated",
         "requestConfigurationSaved": "Custom request configuration saved"
       },
       "placeholders": {
@@ -2039,6 +2039,19 @@
           "system": "System default",
           "english": "English",
           "chinese": "中文"
+        }
+      },
+      "fonts": {
+        "title": "Fonts",
+        "body": {
+          "title": "Body font family",
+          "description": "Customize the font family used by regular Studio text.",
+          "placeholder": "e.g. \"Inter\", \"Microsoft YaHei\", sans-serif"
+        },
+        "code": {
+          "title": "Code font family",
+          "description": "Customize the font family used by code, terminals, and the file editor.",
+          "placeholder": "e.g. \"JetBrains Mono\", Consolas, monospace"
         }
       },
       "godot": {

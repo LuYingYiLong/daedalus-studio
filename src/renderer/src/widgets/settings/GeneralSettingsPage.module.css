@@ -54,8 +54,16 @@
 	min-width: 0;
 }
 
+.fontFamilyInput {
+	width: min(380px, 42vw);
+}
+
 @media (max-width: 720px) {
 	.preferenceControl {
+		width: 100%;
+	}
+
+	.fontFamilyInput {
 		width: 100%;
 	}
 }

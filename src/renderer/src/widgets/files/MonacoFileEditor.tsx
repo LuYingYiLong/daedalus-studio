@@ -289,6 +289,7 @@ export function MonacoFileEditor({
 		if (container === null) return undefined;
 		let disposed: boolean = false;
 		let themeObserver: MutationObserver | null = null;
+		let fontObserver: MutationObserver | null = null;
 		let disposeFindWidgetTooltips: (() => void) | null = null;
 		const initialize = async (): Promise<void> => {
 			try {
@@ -353,6 +354,10 @@ export function MonacoFileEditor({
 				};
 				themeObserver = new MutationObserver(updateTheme);
 				themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+				fontObserver = new MutationObserver((): void => {
+					editor.updateOptions({ fontFamily: getEditorFontFamily(container) });
+				});
+				fontObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
 			} catch (error: unknown) {
 				if (!disposed) setMonacoError(String(error));
 			}
@@ -363,6 +368,7 @@ export function MonacoFileEditor({
 			disposeFindWidgetTooltips?.();
 			disposeFindWidgetTooltips = null;
 			themeObserver?.disconnect();
+			fontObserver?.disconnect();
 			editorRef.current?.dispose();
 			editorRef.current = null;
 			monacoRef.current = null;

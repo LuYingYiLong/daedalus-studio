@@ -481,12 +481,12 @@
       "usedTokens": "{{used}} / {{total}} tokens",
       "meta": "{{model}} / 可用 {{available}} / {{source}}",
       "compress": "压缩聊天",
-	  "compressionResult": "压缩前 {{before}}，压缩后 {{after}}，节省 {{saved}} tokens；{{restorable}} 个原始块可恢复",
-	  "legend": {
-		"input": "实际输入",
-		"outputReserve": "输出预留",
-		"safetyMargin": "安全边距"
-	  },
+      "compressionResult": "压缩前 {{before}}，压缩后 {{after}}，节省 {{saved}} tokens；{{restorable}} 个原始块可恢复",
+      "legend": {
+        "input": "实际输入",
+        "outputReserve": "输出预留",
+        "safetyMargin": "安全边距"
+      },
       "pressureLevel": "{{level}}压力",
       "largestContributor": "最大贡献项：{{largest}}",
       "columns": {
@@ -654,12 +654,12 @@
   },
   "clarification": {
     "aria": "计划澄清",
-      "title": "需要澄清",
-      "recommendedSuffix": "（推荐）",
-      "placeholder": "告诉助手接下来怎么做",
-		"skipHint": "跳过会继续制定计划，不会取消任务。该问题会视为未提供信息，助手将依据已有上下文做出假设；若涉及核心需求、架构、平台或数据格式，计划可能不够准确。之后仍可补充说明并重新调整计划。",
-      "actions": {
-		"skip": "跳过并继续",
+    "title": "需要澄清",
+    "recommendedSuffix": "（推荐）",
+    "placeholder": "告诉助手接下来怎么做",
+    "skipHint": "跳过会继续制定计划，不会取消任务。该问题会视为未提供信息，助手将依据已有上下文做出假设；若涉及核心需求、架构、平台或数据格式，计划可能不够准确。之后仍可补充说明并重新调整计划。",
+    "actions": {
+      "skip": "跳过并继续",
       "submit": "提交"
     }
   },
@@ -669,63 +669,63 @@
       "changesIndexed": "变更 {{index}}",
       "terminal": "终端",
       "terminalIndexed": "终端 {{index}}",
-	  "files": "文件",
-	  "filesIndexed": "文件 {{index}}",
+      "files": "文件",
+      "filesIndexed": "文件 {{index}}",
       "enterFullscreen": "展开面板",
       "exitFullscreen": "恢复面板"
     },
     "add": {
       "label": "添加面板",
       "reviewPanel": "变更审阅面板",
-	  "terminalPanel": "终端面板",
-	  "filesPanel": "文件面板"
+      "terminalPanel": "终端面板",
+      "filesPanel": "文件面板"
     },
     "empty": {
       "noWorkspaceSelected": "未选择 workspace"
     }
   },
-	"files": {
-	  "noWorkspace": "选择 workspace 后即可浏览和编辑文件",
-	  "noSourceFolder": "无 source folder",
-	  "noFileSelected": "从文件树中选择文件",
-	  "editorAriaLabel": "文件编辑器",
-	  "loading": "正在读取文件…",
-	  "search": "搜索文件或路径",
-	  "save": "保存",
-	  "saved": "文件已保存",
-	  "savedAs": "文件已另存为",
-	  "reload": "重新加载",
-	  "binary": "该文件不是可编辑的 UTF-8 文本文件",
-	  "oversized": "文件超过 2 MiB，无法在文件面板中编辑",
-	  "openExternal": "在外部应用中打开",
-	  "showSidebar": "显示文件边栏",
-	  "hideSidebar": "隐藏文件边栏",
-	  "conflict": "文件已被外部修改。重新加载磁盘版本，或将当前草稿另存为。",
-	  "contextAdded": "已添加到上下文",
-	  "addSelectionContext": "添加到上下文",
-	  "comment": "评论",
-	  "commentPlaceholder": "输入对所选代码的评论",
-	  "editorMenu": {
-		"undo": "撤销",
-		"redo": "重做",
-		"cut": "剪切",
-		"copy": "复制",
-		"paste": "粘贴",
-		"selectAll": "全选"
-	  },
-	  "closeTitle": "关闭已修改的文件？",
-	  "closeDirty": "{{name}} 包含尚未保存的修改。",
-	  "discard": "不保存",
-	  "cancel": "取消",
-	  "menu": {
-		"openFrom": "从 {{target}} 打开",
-		"openWith": "打开方式",
-		"saveAs": "另存为…",
-		"copyPath": "复制路径",
-		"copyRelativePath": "复制相对路径",
-		"addContext": "添加到上下文"
-	  }
-	},
+  "files": {
+    "noWorkspace": "选择 workspace 后即可浏览和编辑文件",
+    "noSourceFolder": "无 source folder",
+    "noFileSelected": "从文件树中选择文件",
+    "editorAriaLabel": "文件编辑器",
+    "loading": "正在读取文件…",
+    "search": "搜索文件或路径",
+    "save": "保存",
+    "saved": "文件已保存",
+    "savedAs": "文件已另存为",
+    "reload": "重新加载",
+    "binary": "该文件不是可编辑的 UTF-8 文本文件",
+    "oversized": "文件超过 2 MiB，无法在文件面板中编辑",
+    "openExternal": "在外部应用中打开",
+    "showSidebar": "显示文件边栏",
+    "hideSidebar": "隐藏文件边栏",
+    "conflict": "文件已被外部修改。重新加载磁盘版本，或将当前草稿另存为。",
+    "contextAdded": "已添加到上下文",
+    "addSelectionContext": "添加到上下文",
+    "comment": "评论",
+    "commentPlaceholder": "输入对所选代码的评论",
+    "editorMenu": {
+      "undo": "撤销",
+      "redo": "重做",
+      "cut": "剪切",
+      "copy": "复制",
+      "paste": "粘贴",
+      "selectAll": "全选"
+    },
+    "closeTitle": "关闭已修改的文件？",
+    "closeDirty": "{{name}} 包含尚未保存的修改。",
+    "discard": "不保存",
+    "cancel": "取消",
+    "menu": {
+      "openFrom": "从 {{target}} 打开",
+      "openWith": "打开方式",
+      "saveAs": "另存为…",
+      "copyPath": "复制路径",
+      "copyRelativePath": "复制相对路径",
+      "addContext": "添加到上下文"
+    }
+  },
   "git": {
     "detachedHead": "游离 HEAD",
     "actions": {
@@ -812,11 +812,11 @@
     "binaryFileChanged": "二进制文件已变更",
     "diffStats": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
     "diffStats_other": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
-      "actions": {
-        "refreshDiff": "刷新 Git diff",
-        "expandAllDiffs": "展开小型差异",
-        "collapseAllDiffs": "折叠小型差异",
-        "loadMoreFiles": "加载更多文件"
+    "actions": {
+      "refreshDiff": "刷新 Git diff",
+      "expandAllDiffs": "展开小型差异",
+      "collapseAllDiffs": "折叠小型差异",
+      "loadMoreFiles": "加载更多文件"
     },
     "empty": {
       "diffUnavailable": "Diff 不可用",
@@ -824,35 +824,35 @@
       "noGitRepository": "不是 Git 仓库",
       "noWorkspaceChanges": "workspace 暂无变更"
     },
-      "notices": {
-		"lazyLoading": {
-		  "title": "按需加载差异",
-		  "description": "优先打开较小的文本文件。大文件保持折叠，仅在手动打开时请求。"
-		},
-        "diffTruncated": {
+    "notices": {
+      "lazyLoading": {
+        "title": "按需加载差异",
+        "description": "优先打开较小的文本文件。大文件保持折叠，仅在手动打开时请求。"
+      },
+      "diffTruncated": {
         "title": "Diff 已截断",
         "description": "补丁太大，无法完整显示。"
-        },
-        "diffParseFailed": "Diff 解析失败"
       },
-	  "loadingFile": "正在加载文件差异",
-	  "fileTooLarge": {
-		"title": "文件差异过大，无法渲染",
-		"description": "为保持审阅面板流畅，未加载该文件预览。"
-	  },
-	  "commentDialog": {
-		"title": "请求更改",
-		"open": "请求更改此行",
-		"target": "{{path}}，第 {{line}} 行",
-		"label": "需要如何更改？",
-		"required": "请输入请求更改的内容。",
-		"submit": "添加评论",
-		"contextMeta": "第 {{line}} 行审阅评论"
-	  },
-      "errors": {
-        "loadDiff": "加载 Git diff 失败。",
-		"loadFile": "加载文件差异失败。",
-        "parseDiff": "解析 diff 失败。"
+      "diffParseFailed": "Diff 解析失败"
+    },
+    "loadingFile": "正在加载文件差异",
+    "fileTooLarge": {
+      "title": "文件差异过大，无法渲染",
+      "description": "为保持审阅面板流畅，未加载该文件预览。"
+    },
+    "commentDialog": {
+      "title": "请求更改",
+      "open": "请求更改此行",
+      "target": "{{path}}，第 {{line}} 行",
+      "label": "需要如何更改？",
+      "required": "请输入请求更改的内容。",
+      "submit": "添加评论",
+      "contextMeta": "第 {{line}} 行审阅评论"
+    },
+    "errors": {
+      "loadDiff": "加载 Git diff 失败。",
+      "loadFile": "加载文件差异失败。",
+      "parseDiff": "解析 diff 失败。"
     }
   },
   "terminal": {
@@ -928,63 +928,63 @@
         "forkFromHere": "从这里分叉"
       }
     },
-		"fork": {
-			"titleSuffix": " · 分叉",
-			"untitledSource": "未命名会话",
-			"originLabel": "分叉自",
-			"openSourceTooltip": "打开来源会话",
-			"openSourceAria": "打开来源会话",
-			"modelChanged": "模型已从 {{from}} 切换到 {{to}}",
-			"errors": {
-				"create": "创建分叉会话失败",
-				"sourceUnavailable": "来源会话不可用或已归档",
-				"openSource": "打开来源会话失败"
-			}
-		},
-		"contextStrip": {
-			"aria": "消息上下文",
-			"pinned": "已固定",
-			"expandText": "展开到输入框",
-			"display": {
-				"contextFallback": "上下文",
-				"selection": "选择",
-				"fileCount": "{{count}} 个文件",
-				"fileCount_other": "{{count}} 个文件",
-				"folderCount": "{{count}} 个文件夹",
-				"folderCount_other": "{{count}} 个文件夹",
-				"selectedCount": "已选 {{count}} 项",
-				"selectedCount_other": "已选 {{count}} 项",
-				"line": "第 {{line}} 行",
-				"linesRange": "第 {{start}}-{{end}} 行",
-				"fileSize": "{{size}} KiB",
-				"textAttachment": "文本附件",
-				"reviewComment": "评审评论",
-				"selectedMessageText": "选中的消息文本",
-				"fileSelection": "文件选区",
-				"more": "... 还有 {{count}} 个",
-				"more_other": "... 还有 {{count}} 个",
-				"pathLabel": "{{kind}}: {{path}}",
-				"pathFallback": "路径"
-			}
-		},
-		"selection": {
-			"attachContext": "附加上下文",
-			"askAi": "提问 AI",
-			"annotationPlaceholder": "添加批注（可留空）",
-			"editAnnotation": "编辑批注",
-			"openAsk": "打开选区问答",
-			"deleteAsk": "删除",
-			"deleteAllAsks": "删除全部",
-			"deleteAskFailed": "删除选区问答失败",
-			"askTitle": "选区问答",
-			"askPlaceholder": "继续提问…",
-			"sendAsk": "发送问题",
-			"stopAsk": "停止回答",
-			"stoppingAsk": "正在停止回答",
-			"askFailed": "创建选区问答失败",
-			"responseFailed": "回答失败",
-			"interrupted": "Backend 重启，回答已中断"
-		},
+    "fork": {
+      "titleSuffix": " · 分叉",
+      "untitledSource": "未命名会话",
+      "originLabel": "分叉自",
+      "openSourceTooltip": "打开来源会话",
+      "openSourceAria": "打开来源会话",
+      "modelChanged": "模型已从 {{from}} 切换到 {{to}}",
+      "errors": {
+        "create": "创建分叉会话失败",
+        "sourceUnavailable": "来源会话不可用或已归档",
+        "openSource": "打开来源会话失败"
+      }
+    },
+    "contextStrip": {
+      "aria": "消息上下文",
+      "pinned": "已固定",
+      "expandText": "展开到输入框",
+      "display": {
+        "contextFallback": "上下文",
+        "selection": "选择",
+        "fileCount": "{{count}} 个文件",
+        "fileCount_other": "{{count}} 个文件",
+        "folderCount": "{{count}} 个文件夹",
+        "folderCount_other": "{{count}} 个文件夹",
+        "selectedCount": "已选 {{count}} 项",
+        "selectedCount_other": "已选 {{count}} 项",
+        "line": "第 {{line}} 行",
+        "linesRange": "第 {{start}}-{{end}} 行",
+        "fileSize": "{{size}} KiB",
+        "textAttachment": "文本附件",
+        "reviewComment": "评审评论",
+        "selectedMessageText": "选中的消息文本",
+        "fileSelection": "文件选区",
+        "more": "... 还有 {{count}} 个",
+        "more_other": "... 还有 {{count}} 个",
+        "pathLabel": "{{kind}}: {{path}}",
+        "pathFallback": "路径"
+      }
+    },
+    "selection": {
+      "attachContext": "附加上下文",
+      "askAi": "提问 AI",
+      "annotationPlaceholder": "添加批注（可留空）",
+      "editAnnotation": "编辑批注",
+      "openAsk": "打开选区问答",
+      "deleteAsk": "删除",
+      "deleteAllAsks": "删除全部",
+      "deleteAskFailed": "删除选区问答失败",
+      "askTitle": "选区问答",
+      "askPlaceholder": "继续提问…",
+      "sendAsk": "发送问题",
+      "stopAsk": "停止回答",
+      "stoppingAsk": "正在停止回答",
+      "askFailed": "创建选区问答失败",
+      "responseFailed": "回答失败",
+      "interrupted": "Backend 重启，回答已中断"
+    },
     "tool": {
       "labels": {
         "mcp_skills_load": "加载技能",
@@ -1082,24 +1082,24 @@
         "mcp_terminal_cancel_job": "取消终端任务"
       },
       "status": {
-		"running": "运行中",
-		"done": "完成",
-		"failed": "失败",
-		"approvalRequired": "需要批准",
-		"pending": "待执行"
-	  },
-	  "activity": {
-		"running": "工具正在执行。",
-		"pending": "工具尚未开始执行。",
-		"writing": "正在写入：{{tool}}"
-	  },
-	  "recovery": {
-		"failed": "第 {{attempt}}/{{max}} 次恢复尝试失败，AI 可以调整同一结构化目标后重试。",
-		"recovered": "此前失败 {{attempt}}/{{max}} 次，本次已恢复。",
-		"exhausted": "已达到恢复上限（{{attempt}}/{{max}}），不会再次执行这一精确操作。"
-	  },
-	  "fileChanges": {
-		"summary": "已变更 {{count}} 个文件"
+        "running": "运行中",
+        "done": "完成",
+        "failed": "失败",
+        "approvalRequired": "需要批准",
+        "pending": "待执行"
+      },
+      "activity": {
+        "running": "工具正在执行。",
+        "pending": "工具尚未开始执行。",
+        "writing": "正在写入：{{tool}}"
+      },
+      "recovery": {
+        "failed": "第 {{attempt}}/{{max}} 次恢复尝试失败，AI 可以调整同一结构化目标后重试。",
+        "recovered": "此前失败 {{attempt}}/{{max}} 次，本次已恢复。",
+        "exhausted": "已达到恢复上限（{{attempt}}/{{max}}），不会再次执行这一精确操作。"
+      },
+      "fileChanges": {
+        "summary": "已变更 {{count}} 个文件"
       }
     },
     "terminalPart": {
@@ -1126,10 +1126,10 @@
       }
     },
     "providerReconnect": {
-        "attempt": "尝试重新连接 {{attempt}}/{{max}}",
-        "recovered": "连接已恢复",
-        "failed": "无法连接模型服务",
-        "stopped": "已停止重新连接",
+      "attempt": "尝试重新连接 {{attempt}}/{{max}}",
+      "recovered": "连接已恢复",
+      "failed": "无法连接模型服务",
+      "stopped": "已停止重新连接",
       "timeout": "模型服务连续 {{seconds}} 秒没有返回数据时开始重连。",
       "extended": "检测到临时传输或网关故障，自动重连已扩展至 15 次。",
       "reason": {
@@ -1144,8 +1144,8 @@
       "open": "打开计划"
     },
     "thinking": {
-	  "label": "思考过程",
-	  "activeLabel": "正在思考"
+      "label": "思考过程",
+      "activeLabel": "正在思考"
     },
     "activityGroup": {
       "activeThinking": "正在思考",
@@ -1469,14 +1469,14 @@
       "backend": {
         "description": "本地 RPC、workflow、MCP 和 Godot 集成服务。",
         "detailsTitle": "后端详情",
-		"repairConfirmTitle": "修复 Daedalus 后端？",
-		"repairConfirmDescription": "这会停止并重新安装当前 Studio 附带的后端。正在进行的模型响应会被中断。",
-		"repairSucceeded": "后端已修复并重新连接。",
-		"restartSucceeded": "后端已重启并重新连接。",
-		"updateNotAvailable": "当前没有可用的后端更新。",
-		"updateWaiting": "当前有 AI 响应正在进行，后端更新将在响应完成后继续。",
-		"actionWaiting": "当前有 AI 响应正在进行",
-		"actionWaitingDescription": "为避免中断响应，后端重启、修复和更新操作已暂缓。响应完成后可以重试。",
+        "repairConfirmTitle": "修复 Daedalus 后端？",
+        "repairConfirmDescription": "这会停止并重新安装当前 Studio 附带的后端。正在进行的模型响应会被中断。",
+        "repairSucceeded": "后端已修复并重新连接。",
+        "restartSucceeded": "后端已重启并重新连接。",
+        "updateNotAvailable": "当前没有可用的后端更新。",
+        "updateWaiting": "当前有 AI 响应正在进行，后端更新将在响应完成后继续。",
+        "actionWaiting": "当前有 AI 响应正在进行",
+        "actionWaitingDescription": "为避免中断响应，后端重启、修复和更新操作已暂缓。响应完成后可以重试。",
         "status": {
           "healthy": "正常",
           "starting": "启动中",
@@ -1486,11 +1486,11 @@
         }
       },
       "actions": {
-		"refresh": "刷新",
-		"checkForUpdates": "检查更新",
-		"updateBackend": "更新后端",
-		"restartBackend": "重启后端",
-		"repairBackend": "修复后端"
+        "refresh": "刷新",
+        "checkForUpdates": "检查更新",
+        "updateBackend": "更新后端",
+        "restartBackend": "重启后端",
+        "repairBackend": "修复后端"
       },
       "onboarding": {
         "title": "新手引导",
@@ -1518,10 +1518,10 @@
       },
       "errors": {
         "applicationInfo": "加载应用信息失败",
-		"backendDetails": "加载后端详情失败",
-		"backendUpdate": "更新后端失败",
-		"backendRepair": "修复后端失败",
-		"backendRestart": "重启后端失败"
+        "backendDetails": "加载后端详情失败",
+        "backendUpdate": "更新后端失败",
+        "backendRepair": "修复后端失败",
+        "backendRestart": "重启后端失败"
       }
     },
     "import": {
@@ -1588,18 +1588,18 @@
           "title": "会话标题模型",
           "description": "用于自动重命名会话和轻量标题生成。"
         },
-		"nextStepHints": {
-		  "title": "下一步建议模型",
-		  "description": "在主回复完成后为未输入内容的 Composer 生成一条可选后续建议；未配置时跟随当前模型，并始终关闭思考。"
-		},
+        "nextStepHints": {
+          "title": "下一步建议模型",
+          "description": "在主回复完成后为未输入内容的 Composer 生成一条可选后续建议；未配置时跟随当前模型，并始终关闭思考。"
+        },
         "goalEvaluator": {
           "title": "Goal 完成判定模型",
           "description": "用于在每个执行循环后判断 Goal 是否完成；未配置时回退到 Goal 创建时的会话模型。"
         },
-		"contextCompression": {
-		  "title": "上下文压缩模型",
-		  "description": "用于生成可恢复的结构化上下文摘要；未配置时跟随当前模型，始终关闭思考。"
-		},
+        "contextCompression": {
+          "title": "上下文压缩模型",
+          "description": "用于生成可恢复的结构化上下文摘要；未配置时跟随当前模型，始终关闭思考。"
+        },
         "imageRecognition": {
           "title": "图像识别模型",
           "description": "当当前聊天模型不能直接处理图片上下文时使用。"
@@ -1752,15 +1752,15 @@
         "addReasoningEffort": "添加强度档位",
         "removeReasoningEffort": "移除",
         "clearApiKey": "清除 API Key",
-		"enableProvider": "启用供应商",
-		"disableProvider": "禁用供应商",
+        "enableProvider": "启用供应商",
+        "disableProvider": "禁用供应商",
         "fetchModels": "获取模型",
         "importModels": "导入模型",
         "applyModelChanges": "应用更改",
         "removeModels": "删除模型",
-		"removeProvider": "删除供应商",
-		"editProvider": "编辑供应商",
-		"openWebsite": "打开供应商官网",
+        "removeProvider": "删除供应商",
+        "editProvider": "编辑供应商",
+        "openWebsite": "打开供应商官网",
         "reloadModels": "重新获取模型",
         "test": "测试"
       },
@@ -1798,43 +1798,43 @@
         "vision": "视觉",
         "webSearch": "搜索"
       },
-	  "reasoningEfforts": {
-		"description": "配置该供应商 API 接受的推理强度参数值。等效档位用于在切换模型时映射到最接近的强度。",
-		"disabled": "请先启用模型的推理能力，再配置推理强度。",
-		"empty": "未配置可选档位；模型将使用供应商定义的固定或自动推理强度。",
-		"fallback": {
-		  "low": "低",
-		  "medium": "中",
-		  "high": "高",
-		  "max": "最高"
-		}
-	  },
-	  "modelOverrides": {
-		"description": "未覆盖的字段会继续跟随供应商 API 或 Daedalus catalog，并在模型元数据更新后自动采用新值。",
-		"inherit": "跟随来源",
-		"resetAll": "全部恢复跟随"
-	  },
-	  "status": {
-		"disabled": "已禁用"
-	  },
-	  "usage": {
-		"blockedTitle": "供应商仍在使用中",
-		"blockedDescription": "{{provider}} 仍被以下模型配置使用，调整这些配置后才能禁用或删除。",
-		"activeModel": "主模型：{{model}}",
-		"taskRouting": "{{task}}：{{model}}"
-	  },
-	  "remove": {
-		"confirmTitle": "删除自定义供应商？",
-		"confirmDescription": "删除 {{provider}} 及其保存的 API Key、请求配置、模型和本地自定义项？此操作不可撤销。"
-	  },
+      "reasoningEfforts": {
+        "description": "配置该供应商 API 接受的推理强度参数值。等效档位用于在切换模型时映射到最接近的强度。",
+        "disabled": "请先启用模型的推理能力，再配置推理强度。",
+        "empty": "未配置可选档位；模型将使用供应商定义的固定或自动推理强度。",
+        "fallback": {
+          "low": "低",
+          "medium": "中",
+          "high": "高",
+          "max": "最高"
+        }
+      },
+      "modelOverrides": {
+        "description": "未覆盖的字段会继续跟随供应商 API 或 Daedalus catalog，并在模型元数据更新后自动采用新值。",
+        "inherit": "跟随来源",
+        "resetAll": "全部恢复跟随"
+      },
+      "status": {
+        "disabled": "已禁用"
+      },
+      "usage": {
+        "blockedTitle": "供应商仍在使用中",
+        "blockedDescription": "{{provider}} 仍被以下模型配置使用，调整这些配置后才能禁用或删除。",
+        "activeModel": "主模型：{{model}}",
+        "taskRouting": "{{task}}：{{model}}"
+      },
+      "remove": {
+        "confirmTitle": "删除自定义供应商？",
+        "confirmDescription": "删除 {{provider}} 及其保存的 API Key、请求配置、模型和本地自定义项？此操作不可撤销。"
+      },
       "columns": {
         "capabilities": "能力",
         "model": "模型"
       },
       "errors": {
         "addProvider": "添加供应商失败",
-		"updateProvider": "更新供应商失败",
-		"openWebsite": "打开供应商官网失败",
+        "updateProvider": "更新供应商失败",
+        "openWebsite": "打开供应商官网失败",
         "clearApiKey": "清除 API Key 失败",
         "load": "加载供应商设置失败",
         "modelIdConflict": "该供应商中已存在相同的模型 ID",
@@ -1846,8 +1846,8 @@
         "syncModels": "应用供应商模型更改失败",
         "refreshModels": "刷新供应商模型失败",
         "saveModel": "保存模型失败",
-		"updateProviderState": "更新供应商状态失败",
-		"removeProvider": "删除供应商失败",
+        "updateProviderState": "更新供应商状态失败",
+        "removeProvider": "删除供应商失败",
         "saveRequestConfiguration": "保存自定义请求配置失败",
         "saveCredentials": "保存供应商凭据失败",
         "testConnection": "供应商连接测试失败"
@@ -1857,10 +1857,10 @@
         "credentialsSaved": "供应商凭据已保存",
         "importSuccess": "已导入 {{count}} 个模型",
         "syncSuccess": "模型更改已应用：启用 {{enabled}} 个，删除 {{removed}} 个",
-		"providerEnabled": "{{provider}} 已启用",
-		"providerDisabled": "{{provider}} 已禁用",
-		"providerRemoved": "{{provider}} 已删除",
-		"providerUpdated": "供应商信息已更新",
+        "providerEnabled": "{{provider}} 已启用",
+        "providerDisabled": "{{provider}} 已禁用",
+        "providerRemoved": "{{provider}} 已删除",
+        "providerUpdated": "供应商信息已更新",
         "requestConfigurationSaved": "自定义请求配置已保存"
       },
       "placeholders": {
@@ -2032,6 +2032,19 @@
           "system": "跟随系统",
           "english": "English",
           "chinese": "中文"
+        }
+      },
+      "fonts": {
+        "title": "字体",
+        "body": {
+          "title": "正文字体族",
+          "description": "自定义 Studio 普通文本使用的字体族。",
+          "placeholder": "例如：\"Microsoft YaHei\", sans-serif"
+        },
+        "code": {
+          "title": "代码字体族",
+          "description": "自定义代码、终端和文件编辑器使用的字体族。",
+          "placeholder": "例如：\"JetBrains Mono\", Consolas, monospace"
         }
       },
       "godot": {
