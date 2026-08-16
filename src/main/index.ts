@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, shell, type BrowserWindowConstructorOptions } from "electron";
+import { app, BrowserWindow, ipcMain, nativeTheme, shell, type BrowserWindowConstructorOptions, type WebContents } from "electron";
 import { join } from "node:path";
 import { backendManager } from "./services/backend-manager";
 import { backendBootstrapService } from "./services/backend-bootstrap";
@@ -26,7 +26,13 @@ import { homedir } from "node:os";
 import { publishStudioExecutableRecord } from "./services/studio-executable-record";
 import { registerImageExportIpc } from "./services/image-export";
 import { registerFileExportIpc } from "./services/file-export";
+import { createLogger } from "./services/logger";
 import type { GeneralSettings } from "../contracts/general-settings";
+
+const logger = createLogger("main");
+const MEMORY_DIAGNOSTICS_INTERVAL_MS: number = 30_000;
+const MEMORY_DIAGNOSTICS_ENABLED: boolean = !app.isPackaged || process.env.DAEDALUS_MEMORY_DIAGNOSTICS === "1";
+let memoryDiagnosticsTimer: ReturnType<typeof setInterval> | null = null;
 
 backendManager.registerIpc();
 backendBootstrapService.registerIpc();
@@ -101,6 +107,7 @@ const SETTINGS_PAGE_KEYS: readonly string[] = [
 windowLifecycleController.registerIpc();
 appUpdateService.setBeforeClientInstall(async (): Promise<void> => {
 	isAppQuitting = true;
+	stopMemoryDiagnostics();
 	preserveBackendForClientInstall = true;
 	cancelSettingsWindowPrewarm();
 	windowLifecycleController.markQuitting();
@@ -506,6 +513,7 @@ function reloadDevelopmentRenderer(): void {
 	if (browserWindow === null || browserWindow.isDestroyed()) {
 		isDevelopmentRendererReloading = false;
 		createWindow();
+		startMemoryDiagnostics();
 		return;
 	}
 
@@ -518,6 +526,32 @@ function reloadDevelopmentRenderer(): void {
 	browserWindow.webContents.once("did-fail-load", finishReload);
 	browserWindow.webContents.reloadIgnoringCache();
 	revealRendererWindow(browserWindow);
+}
+
+async function logMemorySnapshot(): Promise<void> {
+	const windows = BrowserWindow.getAllWindows();
+	const windowMemory = await Promise.all(windows.map(async (browserWindow: BrowserWindow): Promise<Record<string, unknown>> => {
+		if (browserWindow.isDestroyed()) return { id: browserWindow.id, destroyed: true };
+		try {
+			const memory = await (browserWindow.webContents as WebContents & { getProcessMemoryInfo: () => Promise<Record<string, unknown>> }).getProcessMemoryInfo();
+			return { id: browserWindow.id, type: browserWindow === settingsWindow ? "settings" : "main", ...memory };
+		} catch (error: unknown) {
+			return { id: browserWindow.id, error: error instanceof Error ? error.message : String(error) };
+		}
+	}));
+	logger.info("memory_snapshot", { windows: windowMemory });
+}
+
+function startMemoryDiagnostics(): void {
+	if (!MEMORY_DIAGNOSTICS_ENABLED || memoryDiagnosticsTimer !== null) return;
+	memoryDiagnosticsTimer = setInterval((): void => { void logMemorySnapshot(); }, MEMORY_DIAGNOSTICS_INTERVAL_MS);
+	memoryDiagnosticsTimer.unref();
+}
+
+function stopMemoryDiagnostics(): void {
+	if (memoryDiagnosticsTimer === null) return;
+	clearInterval(memoryDiagnosticsTimer);
+	memoryDiagnosticsTimer = null;
 }
 
 ipcMain.handle("window:relaunch", (event, options?: unknown): void => {
@@ -651,6 +685,7 @@ if (!hasSingleInstanceLock) {
 		}
 		event.preventDefault();
 		isAppQuitting = true;
+		stopMemoryDiagnostics();
 		cancelSettingsWindowPrewarm();
 		windowLifecycleController.markQuitting();
 		terminalPtyService.dispose();

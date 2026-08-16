@@ -10,6 +10,7 @@ import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import type { AdditionalContextItem, WorkspaceConfig, WorkspaceSourceFolder } from "@/platform/rpc/types";
 import { createContextId } from "@/features/workspace/controllers/context-helpers";
 import MonacoFileEditor, { type FileBuffer } from "./MonacoFileEditor";
+import { FileRuntimeBufferCache } from "./file-runtime-buffer-cache";
 import styles from "./FilePanel.module.css";
 
 type WorkspaceFsEntry = {
@@ -42,7 +43,7 @@ type FilePanelProps = {
 	onAddContext: (item: AdditionalContextItem) => void;
 };
 
-const RUNTIME_BUFFERS = new Map<string, FileBuffer>();
+const RUNTIME_BUFFERS: FileRuntimeBufferCache<FileBuffer> = new FileRuntimeBufferCache();
 const MAX_SELECTION_CHARS: number = 8000;
 const EXTERNAL_CHANGE_POLL_MS: number = 2500;
 const FILE_PANEL_MIN_EDITOR_SPLIT: number = 25;
@@ -130,7 +131,7 @@ function getEditorSplitSizeFromPixels(sizes: number[]): number | null {
 function createEmptyBuffer(): FileBuffer {
 	return {
 		content: "",
-		savedContent: "",
+		isDirty: false,
 		sha256: "",
 		modifiedAtMs: 0,
 		byteSize: 0,
@@ -188,7 +189,7 @@ export function FilePanel({
 		?? layout.tabs[0]
 		?? null;
 	const activeBuffer: FileBuffer | null = activeTab === null ? null : buffers[activeTab.key] ?? null;
-	const isDirty: boolean = activeBuffer !== null && activeBuffer.content !== activeBuffer.savedContent;
+	const isDirty: boolean = activeBuffer?.isDirty === true;
 	const editorSplitSize: number = visualEditorSplitSize;
 
 	const patchLayout = useCallback((patch: Partial<FilePanelLayoutPreferences>): void => {
@@ -270,7 +271,7 @@ export function FilePanel({
 			const content: string = result.content ?? "";
 			const next: FileBuffer = {
 				content,
-				savedContent: content,
+				isDirty: false,
 				sha256: result.sha256,
 				modifiedAtMs: result.modifiedAtMs,
 				byteSize: result.byteSize,
@@ -282,6 +283,7 @@ export function FilePanel({
 				conflict: false,
 				error: null
 			};
+			if (!layoutRef.current.tabs.some((candidate: FileTabPreferences): boolean => candidate.key === tab.key)) return;
 			RUNTIME_BUFFERS.set(runtimeKey, next);
 			setBuffers((current) => ({ ...current, [tab.key]: next }));
 		} catch (error: unknown) {
@@ -297,10 +299,22 @@ export function FilePanel({
 		setBuffers((current) => {
 			const currentBuffer: FileBuffer | undefined = current[tab.key];
 			if (currentBuffer === undefined || currentBuffer.content === nextContent) return current;
-			const next: FileBuffer = { ...currentBuffer, content: nextContent };
+			const savedContent: string = currentBuffer.isDirty ? currentBuffer.savedContent ?? currentBuffer.content : currentBuffer.content;
+			const nextIsDirty: boolean = nextContent !== savedContent;
+			const next: FileBuffer = {
+				...currentBuffer,
+				content: nextContent,
+				savedContent: nextIsDirty ? savedContent : undefined,
+				isDirty: nextIsDirty
+			};
 			RUNTIME_BUFFERS.set(getBufferKey(sessionId, panelKey, tab), next);
 			return { ...current, [tab.key]: next };
 		});
+	}, [panelKey, sessionId]);
+
+	useEffect((): void => {
+		RUNTIME_BUFFERS.clearClean();
+		setBuffers({});
 	}, [panelKey, sessionId]);
 
 	useEffect((): void => {
@@ -394,12 +408,29 @@ export function FilePanel({
 			? -1
 			: layout.tabs.findIndex((tab: FileTabPreferences): boolean => tab.key === layout.previewTabKey && !tab.pinned);
 		const nextTabs: FileTabPreferences[] = [...layout.tabs];
-		if (replaceIndex >= 0) nextTabs.splice(replaceIndex, 1, nextTab);
+		if (replaceIndex >= 0) {
+			const replacedTab: FileTabPreferences | undefined = nextTabs[replaceIndex];
+			if (replacedTab !== undefined) {
+				RUNTIME_BUFFERS.delete(getBufferKey(sessionId, panelKey, replacedTab));
+				setBuffers((current) => {
+					const next = { ...current };
+					delete next[replacedTab.key];
+					return next;
+				});
+			}
+			nextTabs.splice(replaceIndex, 1, nextTab);
+		}
 		else nextTabs.push(nextTab);
 		patchLayout({ tabs: nextTabs, activeTabKey: key, previewTabKey: previewKey });
-	}, [layout.previewTabKey, layout.tabs, patchLayout, selectedSourceFolder]);
+	}, [layout.previewTabKey, layout.tabs, panelKey, patchLayout, selectedSourceFolder, sessionId]);
 
 	const removeTab = useCallback((tab: FileTabPreferences): void => {
+		RUNTIME_BUFFERS.delete(getBufferKey(sessionId, panelKey, tab));
+		setBuffers((current) => {
+			const next = { ...current };
+			delete next[tab.key];
+			return next;
+		});
 		const index: number = layout.tabs.findIndex((candidate: FileTabPreferences): boolean => candidate.key === tab.key);
 		const nextTabs: FileTabPreferences[] = layout.tabs.filter((candidate: FileTabPreferences): boolean => candidate.key !== tab.key);
 		patchLayout({
@@ -407,11 +438,11 @@ export function FilePanel({
 			activeTabKey: layout.activeTabKey === tab.key ? nextTabs[Math.max(0, index - 1)]?.key ?? nextTabs[0]?.key ?? null : layout.activeTabKey,
 			previewTabKey: layout.previewTabKey === tab.key ? null : layout.previewTabKey
 		});
-	}, [layout.activeTabKey, layout.previewTabKey, layout.tabs, patchLayout]);
+	}, [layout.activeTabKey, layout.previewTabKey, layout.tabs, panelKey, patchLayout, sessionId]);
 
 	const closeTab = useCallback((tab: FileTabPreferences): void => {
 		const buffer: FileBuffer | undefined = buffers[tab.key];
-		if (buffer !== undefined && buffer.content !== buffer.savedContent) {
+		if (buffer?.isDirty === true) {
 			setPendingClose({ tab, dirty: true });
 			return;
 		}
@@ -431,7 +462,7 @@ export function FilePanel({
 				expectedSha256: buffer.sha256,
 				expectedModifiedAtMs: buffer.modifiedAtMs
 			});
-			const next: FileBuffer = { ...buffer, savedContent: buffer.content, sha256: result.sha256, modifiedAtMs: result.modifiedAtMs, byteSize: result.byteSize, saving: false, conflict: false };
+			const next: FileBuffer = { ...buffer, savedContent: undefined, isDirty: false, sha256: result.sha256, modifiedAtMs: result.modifiedAtMs, byteSize: result.byteSize, saving: false, conflict: false };
 			RUNTIME_BUFFERS.set(getBufferKey(sessionId, panelKey, tab), next);
 			setBuffers((current) => ({ ...current, [tab.key]: next }));
 			pinTab(tab.key);
@@ -466,7 +497,7 @@ export function FilePanel({
 	useEffect((): void => {
 		const dirtyUnpinnedTab: FileTabPreferences | undefined = layout.tabs.find((tab: FileTabPreferences): boolean => {
 			const buffer: FileBuffer | undefined = buffers[tab.key];
-			return !tab.pinned && buffer !== undefined && buffer.content !== buffer.savedContent;
+			return !tab.pinned && buffer?.isDirty === true;
 		});
 		if (dirtyUnpinnedTab === undefined) return;
 		patchLayout({
@@ -546,7 +577,7 @@ export function FilePanel({
 				if (sourceFolder === undefined || buffer === undefined || buffer.loading || buffer.saving || !buffer.readable) continue;
 				void window.electronAPI.workspaceFs.statFile({ workspaceRoot: sourceFolder.path, filePath: tab.relativePath }).then((revision): void => {
 					if (revision.sha256 === buffer.sha256 && revision.modifiedAtMs === buffer.modifiedAtMs) return;
-					if (buffer.content === buffer.savedContent) void loadBuffer(tab, true);
+					if (!buffer.isDirty) void loadBuffer(tab, true);
 					else setBuffers((current) => ({ ...current, [tab.key]: { ...(current[tab.key] ?? buffer), conflict: true } }));
 				}).catch((): void => undefined);
 			}
@@ -578,7 +609,7 @@ export function FilePanel({
 
 	const tabItems = layout.tabs.map((tab: FileTabPreferences) => {
 		const buffer: FileBuffer | undefined = buffers[tab.key];
-		const dirty: boolean = buffer !== undefined && buffer.content !== buffer.savedContent;
+		const dirty: boolean = buffer?.isDirty === true;
 		const isPreview: boolean = tab.pinned !== true;
 		return {
 			key: tab.key,
@@ -693,6 +724,7 @@ export function FilePanel({
 									<MonacoFileEditor
 										activeTab={activeTab}
 										activeBuffer={activeBuffer}
+										tabKeys={layout.tabs.map((tab: FileTabPreferences): string => tab.key)}
 										panelKey={panelKey}
 										workspace={workspace}
 										bottomSafeArea={isFullscreen ? EDITOR_BOTTOM_SAFE_AREA : 0}
@@ -770,7 +802,7 @@ export function FilePanel({
 			</div>
 			<Modal open={pendingClose !== null} title={t("files.closeTitle")} closable={false} mask={{ closable: false }} footer={[
 				<Button key="cancel" onClick={(): void => setPendingClose(null)}>{t("files.cancel")}</Button>,
-				<Button key="discard" onClick={(): void => { const tab = pendingClose?.tab; setPendingClose(null); if (tab !== undefined) { const buffer = buffers[tab.key]; if (buffer !== undefined) { const next = { ...buffer, content: buffer.savedContent }; RUNTIME_BUFFERS.set(getBufferKey(sessionId, panelKey, tab), next); setBuffers((current) => ({ ...current, [tab.key]: next })); } removeTab(tab); } }}>{t("files.discard")}</Button>,
+				<Button key="discard" onClick={(): void => { const tab = pendingClose?.tab; setPendingClose(null); if (tab !== undefined) { const buffer = buffers[tab.key]; if (buffer !== undefined) { const next: FileBuffer = { ...buffer, content: buffer.savedContent ?? buffer.content, savedContent: undefined, isDirty: false }; RUNTIME_BUFFERS.set(getBufferKey(sessionId, panelKey, tab), next); setBuffers((current) => ({ ...current, [tab.key]: next })); } removeTab(tab); } }}>{t("files.discard")}</Button>,
 				<Button key="save" type="primary" onClick={(): void => { const tab = pendingClose?.tab; if (tab !== undefined) void saveTab(tab).then((saved: boolean): void => { if (saved) { setPendingClose(null); removeTab(tab); } }); }}>{t("files.save")}</Button>
 			]}>{pendingClose?.dirty ? t("files.closeDirty", { name: pendingClose.tab.relativePath }) : null}</Modal>
 		</div>

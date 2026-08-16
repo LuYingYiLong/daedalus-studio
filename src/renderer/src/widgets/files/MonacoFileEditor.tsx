@@ -12,7 +12,8 @@ import styles from "./MonacoFileEditor.module.css";
 
 export type FileBuffer = {
 	content: string;
-	savedContent: string;
+	savedContent?: string;
+	isDirty: boolean;
 	sha256: string;
 	modifiedAtMs: number;
 	byteSize: number;
@@ -30,6 +31,8 @@ type MonacoApi = typeof MonacoNamespace;
 type MonacoEnvironment = {
 	getWorker: (_moduleId: string, label: string) => Worker;
 };
+
+type MonacoWorkerConstructor = new () => Worker;
 
 type DaedalusThemeName = "daedalus-light" | "daedalus-dark";
 
@@ -51,6 +54,7 @@ type ContextMenuPosition = {
 type MonacoFileEditorProps = {
 	activeTab: FileTabPreferences | null;
 	activeBuffer: FileBuffer | null;
+	tabKeys: string[];
 	panelKey: string;
 	workspace: WorkspaceConfig | null;
 	bottomSafeArea: number;
@@ -61,6 +65,42 @@ type MonacoFileEditorProps = {
 const MAX_SELECTION_CHARS: number = 8000;
 const MONACO_TOOLTIP_DELAY_MS: number = 1000;
 const FIND_WIDGET_BUTTON_SELECTOR: string = ".find-widget .button, .find-widget .codicon-find-selection, .find-widget .monaco-custom-toggle";
+
+async function loadLanguageWorker(label: string): Promise<MonacoWorkerConstructor | null> {
+	switch (label) {
+		case "json":
+			return (await import("../../../../../node_modules/monaco-editor/esm/vs/language/json/json.worker.js?worker")).default;
+		case "css":
+		case "scss":
+		case "less":
+			return (await import("../../../../../node_modules/monaco-editor/esm/vs/language/css/css.worker.js?worker")).default;
+		case "html":
+		case "handlebars":
+		case "razor":
+			return (await import("../../../../../node_modules/monaco-editor/esm/vs/language/html/html.worker.js?worker")).default;
+		case "typescript":
+		case "javascript":
+			return (await import("../../../../../node_modules/monaco-editor/esm/vs/language/typescript/ts.worker.js?worker")).default;
+		default:
+			return null;
+	}
+}
+
+const LANGUAGE_WORKER_CONSTRUCTORS: Map<string, MonacoWorkerConstructor> = new Map();
+const LANGUAGE_WORKER_PROMISES: Map<string, Promise<void>> = new Map();
+
+function ensureLanguageWorkerLoaded(label: string): Promise<void> {
+	if (LANGUAGE_WORKER_CONSTRUCTORS.has(label)) return Promise.resolve();
+	const existingPromise: Promise<void> | undefined = LANGUAGE_WORKER_PROMISES.get(label);
+	if (existingPromise !== undefined) return existingPromise;
+	const promise: Promise<void> = loadLanguageWorker(label).then((constructor: MonacoWorkerConstructor | null): void => {
+		if (constructor !== null) LANGUAGE_WORKER_CONSTRUCTORS.set(label, constructor);
+	}).finally((): void => {
+		LANGUAGE_WORKER_PROMISES.delete(label);
+	});
+	LANGUAGE_WORKER_PROMISES.set(label, promise);
+	return promise;
+}
 
 function normalizeRelativePath(path: string): string {
 	return path.replaceAll("\\", "/").replace(/^\/+|\/+$/gu, "");
@@ -261,6 +301,7 @@ function installDelayedFindWidgetTooltips(container: HTMLElement, delayMs: numbe
 export function MonacoFileEditor({
 	activeTab,
 	activeBuffer,
+	tabKeys,
 	panelKey,
 	workspace,
 	bottomSafeArea,
@@ -283,6 +324,7 @@ export function MonacoFileEditor({
 	const [annotation, setAnnotation] = useState<string>("");
 	const [contextMenuPosition, setContextMenuPosition] = useState<ContextMenuPosition | null>(null);
 	const contextMenuSelectionRef = useRef<MonacoNamespace.Selection | null>(null);
+	const ensureLanguageWorker = useCallback((label: string): Promise<void> => ensureLanguageWorkerLoaded(label), []);
 
 	useEffect((): (() => void) | undefined => {
 		const container: HTMLDivElement | null = editorContainerNode;
@@ -294,27 +336,16 @@ export function MonacoFileEditor({
 		const initialize = async (): Promise<void> => {
 			try {
 				setMonacoError(null);
-				const [monacoModule, editorWorkerModule, jsonWorkerModule, cssWorkerModule, htmlWorkerModule, typescriptWorkerModule] = await Promise.all([
+				const [monacoModule, editorWorkerModule] = await Promise.all([
 					import("monaco-editor"),
-					import("../../../../../node_modules/monaco-editor/esm/vs/editor/editor.worker.js?worker"),
-					import("../../../../../node_modules/monaco-editor/esm/vs/language/json/json.worker.js?worker"),
-					import("../../../../../node_modules/monaco-editor/esm/vs/language/css/css.worker.js?worker"),
-					import("../../../../../node_modules/monaco-editor/esm/vs/language/html/html.worker.js?worker"),
-					import("../../../../../node_modules/monaco-editor/esm/vs/language/typescript/ts.worker.js?worker")
+					import("../../../../../node_modules/monaco-editor/esm/vs/editor/editor.worker.js?worker")
 				]);
 				if (disposed) return;
 				const editorWorker = editorWorkerModule.default;
-				const jsonWorker = jsonWorkerModule.default;
-				const cssWorker = cssWorkerModule.default;
-				const htmlWorker = htmlWorkerModule.default;
-				const typescriptWorker = typescriptWorkerModule.default;
 				(globalThis as typeof globalThis & { MonacoEnvironment?: MonacoEnvironment }).MonacoEnvironment = {
 					getWorker: (_moduleId: string, label: string): Worker => {
-						if (label === "json") return new jsonWorker();
-						if (label === "css" || label === "scss" || label === "less") return new cssWorker();
-						if (label === "html" || label === "handlebars" || label === "razor") return new htmlWorker();
-						if (label === "typescript" || label === "javascript") return new typescriptWorker();
-						return new editorWorker();
+						const workerConstructor: MonacoWorkerConstructor = LANGUAGE_WORKER_CONSTRUCTORS.get(label) ?? editorWorker;
+						return new workerConstructor();
 					}
 				};
 				const monaco: MonacoApi = monacoModule;
@@ -379,6 +410,16 @@ export function MonacoFileEditor({
 	}, [editorContainerNode, t]);
 
 	useEffect((): void => {
+		const openTabKeys: Set<string> = new Set(tabKeys);
+		for (const [key, model] of modelsRef.current) {
+			if (!openTabKeys.has(key)) {
+				model.dispose();
+				modelsRef.current.delete(key);
+			}
+		}
+	}, [tabKeys]);
+
+	useEffect((): void => {
 		const editor: MonacoNamespace.editor.IStandaloneCodeEditor | null = editorRef.current;
 		const monaco: MonacoApi | null = monacoRef.current;
 		if (editor === null || monaco === null || !monacoReady) return;
@@ -390,6 +431,7 @@ export function MonacoFileEditor({
 		let model: MonacoNamespace.editor.ITextModel | undefined = modelsRef.current.get(activeTab.key);
 		if (model === undefined || model.isDisposed()) {
 			const tab: FileTabPreferences = activeTab;
+			void ensureLanguageWorker(getMonacoLanguage(monaco, tab.relativePath));
 			model = monaco.editor.createModel(
 				activeBuffer.content,
 				getMonacoLanguage(monaco, tab.relativePath),
@@ -407,7 +449,7 @@ export function MonacoFileEditor({
 			suppressModelChangeRef.current = false;
 		}
 		if (editor.getModel() !== model) editor.setModel(model);
-	}, [activeBuffer, activeTab, editorGeneration, monacoReady, onContentChange, panelKey]);
+	}, [activeBuffer, activeTab, editorGeneration, ensureLanguageWorker, monacoReady, onContentChange, panelKey]);
 
 	const updateSelection = useCallback((): void => {
 		const editor: MonacoNamespace.editor.IStandaloneCodeEditor | null = editorRef.current;

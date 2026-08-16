@@ -238,7 +238,7 @@ function TerminalPanel({ terminalId, cwd, isOpen, waitForCwd }: TerminalPanelPro
 			fontFamily: getCssVar("--ds-font-family-code", "Cascadia Code, Consolas, monospace"),
 			fontSize: 13,
 			lineHeight: 1.18,
-			scrollback: 6000,
+			scrollback: 2000,
 			theme: createTerminalTheme()
 		});
 		const fitAddon = new FitAddon();
