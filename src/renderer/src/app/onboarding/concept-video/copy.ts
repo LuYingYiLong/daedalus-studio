@@ -35,9 +35,9 @@ const ENGLISH_CONCEPT_VIDEO_COPY: ConceptVideoCopy = {
 	noPinned: "No pinned sessions",
 	projects: "Projects",
 	recent: "Recent",
-	recentSession: "Project structure review",
+	recentSession: "Sample project structure",
 	settings: "Settings",
-	projectNames: ["l4d2-manager", "test2", "Miscard", "daedalus-backend", "test"],
+	projectNames: ["Sample project", "Demo workspace", "Game prototype", "Docs", "Playground"],
 	homeTitleLine1: "Good evening, what",
 	homeTitleLine2: "shall we move forward?",
 	homeSubtitle: "Choose a workspace, or just describe what is on your mind",
@@ -46,18 +46,18 @@ const ENGLISH_CONCEPT_VIDEO_COPY: ConceptVideoCopy = {
 	model: "DeepSeek / DeepSeek V4 Flash",
 	reasoning: "Max",
 	noWorkspace: "No workspace",
-	conversationTitle: "Daedalus v1.1.4 release notes",
-	userMessage: "Summarize what changed from v1.1.3 to v1.1.4",
+	conversationTitle: "Sample project structure",
+	userMessage: "Help me understand this sample project",
 	responseTime: "Responded · 3m 07s",
 	thinking: "Thinking",
 	assistantLines: [
-		"I checked the repositories in the current workspace and reviewed the commits between the two releases.",
-		"The backend, studio, and bridge projects each contain a focused set of changes.",
-		"I will organize the result by product area and call out the user-visible improvements first."
+		"I checked the sample project's entry points and mapped the main folders and files.",
+		"The structure is small enough to keep the first pass focused and easy to verify.",
+		"I will organize the result by feature area and call out the safest next step first."
 	],
 	toolSummary: "Used tools",
 	toolCount: "3 tools · 2 thoughts",
-	workspaceContext: "daedalus-backend"
+	workspaceContext: "Sample project"
 };
 
 const CHINESE_CONCEPT_VIDEO_COPY: ConceptVideoCopy = {
@@ -67,9 +67,9 @@ const CHINESE_CONCEPT_VIDEO_COPY: ConceptVideoCopy = {
 	noPinned: "暂无置顶会话",
 	projects: "项目",
 	recent: "最近",
-	recentSession: "Daedalus v1.1.4 更新总结",
+	recentSession: "示例项目结构分析",
 	settings: "打开设置",
-	projectNames: ["l4d2-manager", "test2", "Miscard", "daedalus-backend", "test"],
+	projectNames: ["示例项目", "演示工作区", "游戏原型", "文档", "练习项目"],
 	homeTitleLine1: "晚上好，今天还想推进",
 	homeTitleLine2: "什么？",
 	homeSubtitle: "先选择一个 workspace，或者直接说说你的想法",
@@ -78,18 +78,18 @@ const CHINESE_CONCEPT_VIDEO_COPY: ConceptVideoCopy = {
 	model: "DeepSeek / DeepSeek V4 Flash",
 	reasoning: "最大",
 	noWorkspace: "无 workspace",
-	conversationTitle: "Daedalus v1.1.4 更新总结",
-	userMessage: "总结一下Daedalus从v1.1.3更新到v1.1.4的更新内容",
+	conversationTitle: "示例项目结构分析",
+	userMessage: "帮我梳理一下这个示例项目的结构",
 	responseTime: "已响应 · 3m 07s",
 	thinking: "思考过程",
 	assistantLines: [
-		"我先确认当前工作区包含哪些仓库，再读取 v1.1.3 到 v1.1.4 之间的提交记录来总结。",
-		"工作区里有三个仓库（backend / studio / bridge），我会检查每个仓库的版本变化。",
-		"接下来我会按产品区域整理结果，并优先说明用户能感知到的改进。"
+		"我先确认示例项目的入口和主要目录，再整理文件之间的关系。",
+		"这个项目的结构比较清晰，我会把结果按功能区域分组，方便继续探索。",
+		"接下来我会给出一个安全、具体的下一步建议。"
 	],
 	toolSummary: "使用了工具",
 	toolCount: "使用了 3 次工具，思考了 2 次",
-	workspaceContext: "daedalus-backend"
+	workspaceContext: "示例项目"
 };
 
 export function getConceptVideoCopy(language: ConceptVideoLanguage): ConceptVideoCopy {

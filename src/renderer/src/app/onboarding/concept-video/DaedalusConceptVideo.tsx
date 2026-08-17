@@ -1,4 +1,4 @@
-import { AbsoluteFill } from "remotion";
+import { AbsoluteFill, staticFile, CanvasImage } from "remotion";
 import { TransitionSeries, linearTiming } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
 import { ContextScene } from "./ContextScene";
@@ -18,8 +18,8 @@ export function DaedalusConceptVideo({ language }: DaedalusConceptVideoProps): R
 	const copy = getConceptVideoCopy(language);
 
 	return (
-		<AbsoluteFill>
-			<TransitionSeries>
+        <AbsoluteFill>
+            <TransitionSeries>
 				<TransitionSeries.Sequence durationInFrames={110} name="Light home">
 					<ContextScene copy={copy} theme="light" />
 				</TransitionSeries.Sequence>
@@ -45,6 +45,6 @@ export function DaedalusConceptVideo({ language }: DaedalusConceptVideoProps): R
 					<LoopScene copy={copy} theme="dark" />
 				</TransitionSeries.Sequence>
 			</TransitionSeries>
-		</AbsoluteFill>
-	);
+        </AbsoluteFill>
+    );
 }
