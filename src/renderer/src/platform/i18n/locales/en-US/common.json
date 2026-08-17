@@ -2050,12 +2050,14 @@
         "body": {
           "title": "Body font family",
           "description": "Customize the font family used by regular Studio text.",
-          "placeholder": "e.g. \"Inter\", \"Microsoft YaHei\", sans-serif"
+          "placeholder": "e.g. \"Inter\", \"Microsoft YaHei\", sans-serif",
+          "reset": "Restore default body font"
         },
         "code": {
           "title": "Code font family",
           "description": "Customize the font family used by code, terminals, and the file editor.",
-          "placeholder": "e.g. \"JetBrains Mono\", Consolas, monospace"
+          "placeholder": "e.g. \"JetBrains Mono\", Consolas, monospace",
+          "reset": "Restore default code font"
         }
       },
       "godot": {

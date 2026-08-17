@@ -8,6 +8,10 @@ import { Icon } from "@/assets/icons";
 import SettingsItem from "@/ui/SettingsItem";
 import SettingsList from "@/ui/SettingsList";
 import {
+	DEFAULT_STUDIO_FONT_FAMILY,
+	DEFAULT_STUDIO_FONT_FAMILY_CODE
+} from "../../../../contracts/studio-fonts";
+import {
 	fetchClientPreferences,
 	DEFAULT_THEME_COLOR,
 	updateClientPreferences,
@@ -30,6 +34,11 @@ type GeneralSettingsPageProps = {
 type FontFamilyKey = "fontFamily" | "fontFamilyCode";
 type SettingKey = "autoCheckForUpdates" | FontFamilyKey | "godotExecutablePath" | "language" | "minimizeToTrayOnClose" | "nextStepHintsEnabled" | "notifyOnRunCompleted" | "theme" | "themeColor";
 type ThemePreference = ClientPreferences["theme"];
+
+const DEFAULT_FONT_FAMILIES: Record<FontFamilyKey, string> = {
+	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
+	fontFamilyCode: DEFAULT_STUDIO_FONT_FAMILY_CODE
+};
 
 const colorPickerProps: ColorPickerProps = {
 	styles: {
@@ -144,26 +153,55 @@ function GeneralSettingsPage({
 	}
 
 	async function saveFontFamily(key: FontFamilyKey): Promise<void> {
-		const previousSettings: GeneralSettings = draftGeneralSettings;
-		const value: string = draftGeneralSettings[key].trim();
-		if (value === generalSettings[key].trim() || savingKey !== null) {
+		const previousPreferences: ClientPreferences = draftClientPreferences;
+		const value: string = draftClientPreferences[key].trim();
+		if (value === clientPreferences[key].trim() || savingKey !== null) {
 			return;
 		}
 		try {
 			setSavingKey(key);
 			setErrorMessage(null);
-			const optimisticSettings: GeneralSettings = {
-				...previousSettings,
+			const optimisticPreferences: ClientPreferences = {
+				...previousPreferences,
 				[key]: value
 			};
-			setDraftGeneralSettings(optimisticSettings);
-			onGeneralSettingsChange(optimisticSettings);
-			const savedSettings: GeneralSettings = await updateGeneralSettings({ [key]: value });
-			setDraftGeneralSettings(savedSettings);
-			onGeneralSettingsChange(savedSettings);
+			setDraftClientPreferences(optimisticPreferences);
+			onClientPreferencesChange(optimisticPreferences);
+			const savedPreferences: ClientPreferences = await updateClientPreferences({ [key]: value });
+			setDraftClientPreferences(savedPreferences);
+			onClientPreferencesChange(savedPreferences);
 		} catch (error: unknown) {
-			setDraftGeneralSettings(previousSettings);
-			onGeneralSettingsChange(previousSettings);
+			setDraftClientPreferences(previousPreferences);
+			onClientPreferencesChange(previousPreferences);
+			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
+		} finally {
+			setSavingKey(null);
+		}
+	}
+
+	async function handleResetFontFamily(key: FontFamilyKey): Promise<void> {
+		const previousPreferences: ClientPreferences = draftClientPreferences;
+		const defaultValue: string = DEFAULT_FONT_FAMILIES[key];
+		if (previousPreferences[key] === defaultValue || savingKey !== null) {
+			return;
+		}
+
+		const optimisticPreferences: ClientPreferences = {
+			...previousPreferences,
+			[key]: defaultValue
+		};
+
+		try {
+			setSavingKey(key);
+			setErrorMessage(null);
+			setDraftClientPreferences(optimisticPreferences);
+			onClientPreferencesChange(optimisticPreferences);
+			const savedPreferences: ClientPreferences = await updateClientPreferences({ [key]: defaultValue });
+			setDraftClientPreferences(savedPreferences);
+			onClientPreferencesChange(savedPreferences);
+		} catch (error: unknown) {
+			setDraftClientPreferences(previousPreferences);
+			onClientPreferencesChange(previousPreferences);
 			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
 		} finally {
 			setSavingKey(null);
@@ -398,39 +436,63 @@ function GeneralSettingsPage({
 					</div>
 				</SettingsList>
 
-				<SettingsList title={t("settings.general.fonts.title")}>
+			<SettingsList title={t("settings.general.fonts.title")}>
 					<div className={styles.preferenceList}>
 						<SettingsItem
 							title={t("settings.general.fonts.body.title")}
 							description={t("settings.general.fonts.body.description")}
 						>
-							<Input
-								className={styles.fontFamilyInput}
-								value={draftGeneralSettings.fontFamily}
-								maxLength={512}
-								allowClear
-								placeholder={t("settings.general.fonts.body.placeholder")}
-								disabled={savingKey !== null}
-								onChange={(event): void => setDraftGeneralSettings((settings): GeneralSettings => ({ ...settings, fontFamily: event.target.value }))}
-								onBlur={(): void => { void saveFontFamily("fontFamily"); }}
-								onPressEnter={(event): void => event.currentTarget.blur()}
-							/>
+							<Space.Compact>
+								<Input
+									className={styles.fontFamilyInput}
+									value={draftClientPreferences.fontFamily}
+									maxLength={512}
+									allowClear
+									placeholder={t("settings.general.fonts.body.placeholder")}
+									disabled={savingKey !== null}
+									onChange={(event): void => setDraftClientPreferences((preferences): ClientPreferences => ({ ...preferences, fontFamily: event.target.value }))}
+									onBlur={(): void => { void saveFontFamily("fontFamily"); }}
+									onPressEnter={(event): void => event.currentTarget.blur()}
+								/>
+								<Tooltip title={t("settings.general.fonts.body.reset")}>
+									<Button
+										aria-label={t("settings.general.fonts.body.reset")}
+										icon={<Icon name="reload" />}
+										loading={savingKey === "fontFamily"}
+										disabled={savingKey !== null || draftClientPreferences.fontFamily === DEFAULT_FONT_FAMILIES.fontFamily}
+										onMouseDown={(event): void => event.preventDefault()}
+										onClick={(): void => { void handleResetFontFamily("fontFamily"); }}
+									/>
+								</Tooltip>
+							</Space.Compact>
 						</SettingsItem>
 						<SettingsItem
 							title={t("settings.general.fonts.code.title")}
 							description={t("settings.general.fonts.code.description")}
 						>
-							<Input
-								className={styles.fontFamilyInput}
-								value={draftGeneralSettings.fontFamilyCode}
-								maxLength={512}
-								allowClear
-								placeholder={t("settings.general.fonts.code.placeholder")}
-								disabled={savingKey !== null}
-								onChange={(event): void => setDraftGeneralSettings((settings): GeneralSettings => ({ ...settings, fontFamilyCode: event.target.value }))}
-								onBlur={(): void => { void saveFontFamily("fontFamilyCode"); }}
-								onPressEnter={(event): void => event.currentTarget.blur()}
-							/>
+							<Space.Compact>
+								<Input
+									className={styles.fontFamilyInput}
+									value={draftClientPreferences.fontFamilyCode}
+									maxLength={512}
+									allowClear
+									placeholder={t("settings.general.fonts.code.placeholder")}
+									disabled={savingKey !== null}
+									onChange={(event): void => setDraftClientPreferences((preferences): ClientPreferences => ({ ...preferences, fontFamilyCode: event.target.value }))}
+									onBlur={(): void => { void saveFontFamily("fontFamilyCode"); }}
+									onPressEnter={(event): void => event.currentTarget.blur()}
+								/>
+								<Tooltip title={t("settings.general.fonts.code.reset")}>
+									<Button
+										aria-label={t("settings.general.fonts.code.reset")}
+										icon={<Icon name="reload" />}
+										loading={savingKey === "fontFamilyCode"}
+										disabled={savingKey !== null || draftClientPreferences.fontFamilyCode === DEFAULT_FONT_FAMILIES.fontFamilyCode}
+										onMouseDown={(event): void => event.preventDefault()}
+										onClick={(): void => { void handleResetFontFamily("fontFamilyCode"); }}
+									/>
+								</Tooltip>
+								</Space.Compact>
 						</SettingsItem>
 					</div>
 				</SettingsList>

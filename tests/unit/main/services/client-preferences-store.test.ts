@@ -62,6 +62,8 @@ describe("client preferences store", () => {
 				minimizeToTrayOnClose: false,
 				theme: "system",
 				themeColor: DEFAULT_THEME_COLOR,
+				fontFamily: DEFAULT_CLIENT_PREFERENCES.fontFamily,
+				fontFamilyCode: DEFAULT_CLIENT_PREFERENCES.fontFamilyCode,
 				language: "system",
 				workspaceSidebar: {
 					open: true,
@@ -103,6 +105,8 @@ describe("client preferences store", () => {
 			minimizeToTrayOnClose: true,
 			theme: "system",
 			themeColor: DEFAULT_THEME_COLOR,
+			fontFamily: DEFAULT_CLIENT_PREFERENCES.fontFamily,
+			fontFamilyCode: DEFAULT_CLIENT_PREFERENCES.fontFamilyCode,
 			language: "system",
 			workspaceSidebar: {
 				open: true,
@@ -140,6 +144,20 @@ describe("client preferences store", () => {
 		}, memory.io);
 
 		expect(nextPreferences.theme).toBe("dark");
+	});
+
+	it("stores custom font families in Studio preferences", async () => {
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
+			fontFamily: '"Inter", sans-serif',
+			fontFamilyCode: '"JetBrains Mono", monospace'
+		}, memory.io);
+
+		expect(nextPreferences.fontFamily).toBe('"Inter", sans-serif');
+		expect(nextPreferences.fontFamilyCode).toBe('"JetBrains Mono", monospace');
+		await expect(updateClientPreferencesFile("prefs.json", {
+			fontFamily: "Inter; color: red"
+		}, memory.io)).rejects.toThrow(/fontFamily contains invalid CSS/u);
 	});
 
 	it("persists and normalizes new-session composer defaults", async () => {

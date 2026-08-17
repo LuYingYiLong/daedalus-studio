@@ -1,38 +1,27 @@
-import type { KeyboardShortcutOverrides } from "./keyboard-shortcuts";
 import { DEFAULT_STUDIO_THEME_COLOR } from "../../../../contracts/theme-color";
-import { createDefaultOnboardingPreferences, type OnboardingPreferences } from "../../../../contracts/onboarding";
+import {
+	DEFAULT_STUDIO_FONT_FAMILY,
+	DEFAULT_STUDIO_FONT_FAMILY_CODE
+} from "../../../../contracts/studio-fonts";
+import { createDefaultOnboardingPreferences } from "../../../../contracts/onboarding";
 import {
 	createDefaultNewSessionComposerPreferences,
 	type NewSessionComposerPreferences
 } from "../../../../contracts/new-session-composer-preferences";
+import type {
+	ClientPreferences,
+	ClientPreferencesPatch,
+	LanguagePreference,
+	WorkspaceSidebarPreferences
+} from "../../../../contracts/client-preferences";
 
+export type {
+	ClientPreferences,
+	ClientPreferencesPatch,
+	LanguagePreference,
+	WorkspaceSidebarPreferences
+} from "../../../../contracts/client-preferences";
 export type { NewSessionComposerPreferences } from "../../../../contracts/new-session-composer-preferences";
-
-export type ClientPreferences = {
-	autoCheckForUpdates: boolean;
-	notifyOnRunCompleted: boolean;
-	minimizeToTrayOnClose: boolean;
-	theme: "system" | "light" | "dark";
-	themeColor: string;
-	language: LanguagePreference;
-	workspaceSidebar: WorkspaceSidebarPreferences;
-	keyboardShortcuts: KeyboardShortcutOverrides;
-	lastComposerModel: {
-		providerId: string;
-		modelId: string;
-	} | null;
-	newSessionComposer: NewSessionComposerPreferences;
-	onboarding: OnboardingPreferences;
-};
-
-export type LanguagePreference = "system" | "en-US" | "zh-CN";
-
-export type WorkspaceSidebarPreferences = {
-	open: boolean;
-	size: number;
-};
-
-export type ClientPreferencesPatch = Partial<ClientPreferences>;
 
 export const DEFAULT_THEME_COLOR: string = DEFAULT_STUDIO_THEME_COLOR;
 
@@ -42,6 +31,8 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	minimizeToTrayOnClose: false,
 	theme: "system",
 	themeColor: DEFAULT_THEME_COLOR,
+	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
+	fontFamilyCode: DEFAULT_STUDIO_FONT_FAMILY_CODE,
 	language: "system",
 	workspaceSidebar: {
 		open: true,

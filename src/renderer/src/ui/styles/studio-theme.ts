@@ -5,6 +5,12 @@ import {
 	type ResolvedStudioTheme,
 	type StudioAccentPalette
 } from "../../../../contracts/theme-color";
+import {
+	DEFAULT_STUDIO_FONT_FAMILY,
+	DEFAULT_STUDIO_FONT_FAMILY_CODE,
+	applyStudioFontVariables,
+	normalizeStudioFontFamily
+} from "../../../../contracts/studio-fonts";
 
 export { createStudioAccentPalette, DEFAULT_STUDIO_THEME_COLOR } from "../../../../contracts/theme-color";
 export type { StudioAccentPalette } from "../../../../contracts/theme-color";
@@ -46,22 +52,11 @@ const studioThemeColors: Record<ResolvedTheme, StudioThemeColors> = {
 	}
 };
 
-export const DEFAULT_STUDIO_FONT_FAMILY: string = `"Mona Sans", "Wen Yuan Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-export const DEFAULT_STUDIO_FONT_FAMILY_CODE: string = `"Fira Code", "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, "Mona Sans", "Wen Yuan Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", monospace`;
-
-function resolveFontFamily(value: string | undefined, fallback: string): string {
-	const normalized: string = value?.trim() ?? "";
-	return normalized.length > 0 ? normalized : fallback;
-}
-
-export function applyStudioFontVariables(
-	style: CSSStyleDeclaration,
-	fontFamily?: string,
-	fontFamilyCode?: string
-): void {
-	style.setProperty("--ds-font-family", resolveFontFamily(fontFamily, DEFAULT_STUDIO_FONT_FAMILY));
-	style.setProperty("--ds-font-family-code", resolveFontFamily(fontFamilyCode, DEFAULT_STUDIO_FONT_FAMILY_CODE));
-}
+export {
+	DEFAULT_STUDIO_FONT_FAMILY,
+	DEFAULT_STUDIO_FONT_FAMILY_CODE,
+	applyStudioFontVariables
+} from "../../../../contracts/studio-fonts";
 
 export function resolveThemePreference(themePreference: ThemePreference, systemTheme: ResolvedTheme): ResolvedTheme {
 	return themePreference === "system" ? systemTheme : themePreference;
@@ -75,8 +70,8 @@ export function createStudioTheme(
 ): ThemeConfig {
 	const dsColors: StudioThemeColors = studioThemeColors[resolvedTheme];
 	const accent: StudioAccentPalette = createStudioAccentPalette(resolvedTheme, themeColor);
-	const resolvedFontFamily: string = resolveFontFamily(fontFamily, DEFAULT_STUDIO_FONT_FAMILY);
-	const resolvedFontFamilyCode: string = resolveFontFamily(fontFamilyCode, DEFAULT_STUDIO_FONT_FAMILY_CODE);
+	const resolvedFontFamily: string = normalizeStudioFontFamily(fontFamily, DEFAULT_STUDIO_FONT_FAMILY);
+	const resolvedFontFamilyCode: string = normalizeStudioFontFamily(fontFamilyCode, DEFAULT_STUDIO_FONT_FAMILY_CODE);
 
 	return {
 		algorithm: resolvedTheme === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,

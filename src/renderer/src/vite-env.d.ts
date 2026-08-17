@@ -1,8 +1,10 @@
 /// <reference types="vite-plugin-svgr/client" />
 
-import type { OnboardingPreferences } from "../../contracts/onboarding";
-import type { NewSessionComposerPreferences } from "../../contracts/new-session-composer-preferences";
 import type { GeneralSettings } from "../../contracts/general-settings";
+import type {
+	ClientPreferences as StudioClientPreferences,
+	ClientPreferencesPatch as StudioClientPreferencesPatch
+} from "../../contracts/client-preferences";
 
 export {};
 
@@ -70,41 +72,13 @@ declare global {
 		onStateChanged: (callback: (state: BackendBootstrapState) => void) => () => void;
 	}
 
-	interface ClientPreferences {
-		autoCheckForUpdates: boolean;
-		notifyOnRunCompleted: boolean;
-		minimizeToTrayOnClose: boolean;
-		theme: "system" | "light" | "dark";
-		themeColor: string;
-		language: "system" | "en-US" | "zh-CN";
-		workspaceSidebar: {
-			open: boolean;
-			size: number;
-		};
-		keyboardShortcuts: Partial<Record<
-			| "workbench.toggleWorkspaceSidebar"
-			| "workbench.toggleBottomPanel"
-			| "workbench.toggleSessionSidebar"
-			| "session.new"
-			| "session.previous"
-			| "session.next"
-			| "conversation.previousTurn"
-			| "conversation.nextTurn"
-			| "conversation.find",
-			string
-		>>;
-		lastComposerModel: {
-			providerId: string;
-			modelId: string;
-		} | null;
-		newSessionComposer: NewSessionComposerPreferences;
-		onboarding: OnboardingPreferences;
-	}
+	type ClientPreferences = StudioClientPreferences;
+	type ClientPreferencesPatch = StudioClientPreferencesPatch;
 
 	interface ClientPreferencesAPI {
 		getCached: () => ClientPreferences;
 		get: () => Promise<ClientPreferences>;
-		update: (patch: Partial<ClientPreferences>) => Promise<ClientPreferences>;
+		update: (patch: ClientPreferencesPatch) => Promise<ClientPreferences>;
 		onChanged: (callback: (preferences: ClientPreferences) => void) => () => void;
 	}
 

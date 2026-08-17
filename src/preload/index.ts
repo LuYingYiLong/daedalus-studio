@@ -1,29 +1,8 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
-import type { KeyboardShortcutOverrides } from "../contracts/keyboard-shortcuts";
 import { applyStudioAccentVariables } from "../contracts/theme-color";
-import type { OnboardingPreferences } from "../contracts/onboarding";
-import type { NewSessionComposerPreferences } from "../contracts/new-session-composer-preferences";
+import { applyStudioFontVariables } from "../contracts/studio-fonts";
+import type { ClientPreferences, ClientPreferencesPatch } from "../contracts/client-preferences";
 import type { GeneralSettings } from "../contracts/general-settings";
-
-type ClientPreferences = {
-	autoCheckForUpdates: boolean;
-	notifyOnRunCompleted: boolean;
-	minimizeToTrayOnClose: boolean;
-	theme: "system" | "light" | "dark";
-	themeColor: string;
-	language: "system" | "en-US" | "zh-CN";
-	workspaceSidebar: {
-		open: boolean;
-		size: number;
-	};
-	keyboardShortcuts: KeyboardShortcutOverrides;
-	lastComposerModel: {
-		providerId: string;
-		modelId: string;
-	} | null;
-	newSessionComposer: NewSessionComposerPreferences;
-	onboarding: OnboardingPreferences;
-};
 
 type AppUpdateState = {
 	status: "idle" | "checking" | "available" | "downloading" | "downloaded" | "installing" | "not_available" | "error" | "unsupported";
@@ -185,6 +164,7 @@ function applyRendererTheme(preferences: ClientPreferences = cachedClientPrefere
 	const resolvedTheme: "light" | "dark" = resolveRendererTheme(preferences.theme);
 	rootElement.dataset.theme = resolvedTheme;
 	applyStudioAccentVariables(rootElement.style, resolvedTheme, preferences.themeColor);
+	applyStudioFontVariables(rootElement.style, preferences.fontFamily, preferences.fontFamilyCode);
 }
 
 applyRendererTheme();
@@ -242,7 +222,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		get: (): Promise<ClientPreferences> => {
 			return ipcRenderer.invoke("client-preferences:get");
 		},
-		update: (patch: Partial<ClientPreferences>): Promise<ClientPreferences> => {
+		update: (patch: ClientPreferencesPatch): Promise<ClientPreferences> => {
 			return ipcRenderer.invoke("client-preferences:update", patch);
 		},
 		onChanged: (callback: (preferences: ClientPreferences) => void): (() => void) => {

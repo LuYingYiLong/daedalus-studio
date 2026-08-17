@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("GeneralSettingsPage", () => {
-	it("renders general options and splits backend settings from client preferences", () => {
+	it("renders general options with appearance preferences stored in Studio", () => {
 		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "GeneralSettingsPage.tsx");
 		const cssSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "GeneralSettingsPage.module.css");
 		const motionCssSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "SettingsPageMotion.module.css");
 		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "client-preferences-api.ts");
+		const clientPreferencesContractSource: string = readRepoFile("src", "contracts", "client-preferences.ts");
 		const generalApiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "general-settings-api.ts");
 		const generalSettingsContractSource: string = readRepoFile("src", "contracts", "general-settings.ts");
 		const preloadSource: string = readRepoFile("src", "preload", "index.ts");
@@ -34,6 +35,11 @@ describe("GeneralSettingsPage", () => {
 		expect(pageSource).toContain("settings.general.fonts.title");
 		expect(pageSource).toContain("settings.general.fonts.body.title");
 		expect(pageSource).toContain("settings.general.fonts.code.title");
+		expect(pageSource).toContain("settings.general.fonts.body.reset");
+		expect(pageSource).toContain("settings.general.fonts.code.reset");
+		expect(pageSource).toContain("handleResetFontFamily");
+		expect(pageSource).toContain("onMouseDown={(event): void => event.preventDefault()}");
+		expect(pageSource).toContain("DEFAULT_STUDIO_FONT_FAMILY_CODE");
 		expect(pageSource).toContain("Select<LanguagePreference>");
 		expect(pageSource).toContain("languageOptions");
 		expect(pageSource).toContain("updateClientPreferences");
@@ -45,13 +51,17 @@ describe("GeneralSettingsPage", () => {
 		expect(pageSource).toContain("<Input");
 		expect(pageSource).not.toContain("<Tag");
 		expect(pageSource).toContain("window.electronAPI.pickGodotExecutable()");
-		expect(apiSource).toContain('language: "system"');
-		expect(apiSource).toContain("notifyOnRunCompleted: boolean;");
+		expect(apiSource).toContain('"../../../../contracts/client-preferences"');
+		expect(clientPreferencesContractSource).toContain("export type ClientPreferences = {");
+		expect(clientPreferencesContractSource).toContain("notifyOnRunCompleted: boolean;");
+		expect(clientPreferencesContractSource).toContain("fontFamily: string;");
+		expect(clientPreferencesContractSource).toContain("fontFamilyCode: string;");
+		expect(clientPreferencesContractSource).toContain("export type ClientPreferencesPatch = Partial<ClientPreferences>;");
 		expect(generalApiSource).toContain("godotExecutablePath: null");
 		expect(generalSettingsContractSource).toContain("nextStepHintsEnabled: boolean;");
-		expect(generalSettingsContractSource).toContain("fontFamily: string;");
-		expect(generalSettingsContractSource).toContain("fontFamilyCode: string;");
-		expect(generalSettingsContractSource).toContain("schemaVersion: 2;");
+		expect(generalSettingsContractSource).not.toContain("fontFamily: string;");
+		expect(generalSettingsContractSource).not.toContain("fontFamilyCode: string;");
+		expect(generalSettingsContractSource).toContain("schemaVersion: 3;");
 		expect(generalSettingsContractSource).toContain("godotExecutableVersion: string | null;");
 		expect(generalSettingsContractSource).toContain('godotExecutableStatus: "unconfigured" | "ready" | "unavailable";');
 		expect(pageSource).not.toContain("<List");
@@ -70,15 +80,17 @@ describe("GeneralSettingsPage", () => {
 		expect(preloadSource).toContain("client-preferences:get");
 		expect(preloadSource).toContain("client-preferences:update");
 		expect(preloadSource).toContain("client-preferences:changed");
+		expect(preloadSource).toContain('"../contracts/client-preferences"');
 		expect(preloadSource).toContain("applyRendererTheme(preferences)");
+		expect(preloadSource).toContain("applyStudioFontVariables(rootElement.style, preferences.fontFamily, preferences.fontFamilyCode)");
 		expect(mainSource).toContain("broadcastClientPreferencesChanged(nextPreferences)");
 		expect(mainSource).toContain('ipcMain.on("general-settings:changed"');
 		expect(preferencesControllerSource).toContain("window.electronAPI.clientPreferences.onChanged");
 		expect(preferencesControllerSource).toContain("dispatchClientPreferencesChanged(preferences)");
 		expect(viteEnvSource).toContain("ClientPreferencesAPI");
+		expect(viteEnvSource).toContain('"../../contracts/client-preferences"');
 		expect(viteEnvSource).toContain("onChanged: (callback: (preferences: ClientPreferences) => void) => () => void;");
-		expect(viteEnvSource).toContain("autoCheckForUpdates: boolean;");
-		expect(viteEnvSource).toContain("notifyOnRunCompleted: boolean;");
-		expect(viteEnvSource).toContain('language: "system" | "en-US" | "zh-CN";');
+		expect(viteEnvSource).toContain("type ClientPreferences = StudioClientPreferences;");
+		expect(viteEnvSource).toContain("type ClientPreferencesPatch = StudioClientPreferencesPatch;");
 	});
 });

@@ -320,9 +320,7 @@ ipcMain.on("general-settings:changed", (event, settings: GeneralSettings): void 
 	}
 	if (
 		settings === null ||
-		typeof settings !== "object" ||
-		typeof settings.fontFamily !== "string" ||
-		typeof settings.fontFamilyCode !== "string"
+		typeof settings !== "object"
 	) {
 		return;
 	}

@@ -2043,12 +2043,14 @@
         "body": {
           "title": "正文字体族",
           "description": "自定义 Studio 普通文本使用的字体族。",
-          "placeholder": "例如：\"Microsoft YaHei\", sans-serif"
+          "placeholder": "例如：\"Microsoft YaHei\", sans-serif",
+          "reset": "恢复默认正文字体"
         },
         "code": {
           "title": "代码字体族",
           "description": "自定义代码、终端和文件编辑器使用的字体族。",
-          "placeholder": "例如：\"JetBrains Mono\", Consolas, monospace"
+          "placeholder": "例如：\"JetBrains Mono\", Consolas, monospace",
+          "reset": "恢复默认代码字体"
         }
       },
       "godot": {

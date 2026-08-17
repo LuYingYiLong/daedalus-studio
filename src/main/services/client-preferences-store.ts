@@ -7,6 +7,13 @@ import {
 } from "../../contracts/keyboard-shortcuts";
 import { DEFAULT_STUDIO_THEME_COLOR, normalizeStudioThemeColor } from "../../contracts/theme-color";
 import {
+	DEFAULT_STUDIO_FONT_FAMILY,
+	DEFAULT_STUDIO_FONT_FAMILY_CODE,
+	normalizeStudioFontFamily,
+	normalizeStudioFontFamilyPatch
+} from "../../contracts/studio-fonts";
+import type { ClientPreferences, ClientPreferencesPatch } from "../../contracts/client-preferences";
+import {
 	ONBOARDING_STEP_IDS,
 	createDefaultOnboardingPreferences,
 	type OnboardingConfigurableStepId,
@@ -20,27 +27,7 @@ import {
 	type NewSessionComposerPreferences
 } from "../../contracts/new-session-composer-preferences";
 
-export type ClientPreferences = {
-	autoCheckForUpdates: boolean;
-	notifyOnRunCompleted: boolean;
-	minimizeToTrayOnClose: boolean;
-	theme: "system" | "light" | "dark";
-	themeColor: string;
-	language: "system" | "en-US" | "zh-CN";
-	workspaceSidebar: {
-		open: boolean;
-		size: number;
-	};
-	keyboardShortcuts: KeyboardShortcutOverrides;
-	lastComposerModel: {
-		providerId: string;
-		modelId: string;
-	} | null;
-	newSessionComposer: NewSessionComposerPreferences;
-	onboarding: OnboardingPreferences;
-};
-
-export type ClientPreferencesPatch = Partial<ClientPreferences>;
+export type { ClientPreferences, ClientPreferencesPatch } from "../../contracts/client-preferences";
 
 export const DEFAULT_THEME_COLOR: string = DEFAULT_STUDIO_THEME_COLOR;
 
@@ -50,6 +37,8 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	minimizeToTrayOnClose: false,
 	theme: "system",
 	themeColor: DEFAULT_THEME_COLOR,
+	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
+	fontFamilyCode: DEFAULT_STUDIO_FONT_FAMILY_CODE,
 	language: "system",
 	workspaceSidebar: {
 		open: true,
@@ -202,6 +191,8 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			? value.theme
 			: DEFAULT_CLIENT_PREFERENCES.theme;
 	const themeColor: string = normalizeStudioThemeColor(value.themeColor);
+	const fontFamily: string = normalizeStudioFontFamily(value.fontFamily, DEFAULT_CLIENT_PREFERENCES.fontFamily);
+	const fontFamilyCode: string = normalizeStudioFontFamily(value.fontFamilyCode, DEFAULT_CLIENT_PREFERENCES.fontFamilyCode);
 	const languagePreference: ClientPreferences["language"] =
 		value.language === "en-US" || value.language === "zh-CN" || value.language === "system"
 			? value.language
@@ -225,6 +216,8 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			minimizeToTrayOnClose,
 			theme: themePreference,
 			themeColor,
+			fontFamily,
+			fontFamilyCode,
 			language: languagePreference,
 			workspaceSidebar,
 			keyboardShortcuts,
@@ -237,6 +230,8 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			|| value.minimizeToTrayOnClose !== minimizeToTrayOnClose
 			|| value.theme !== themePreference
 			|| value.themeColor !== themeColor
+			|| value.fontFamily !== fontFamily
+			|| value.fontFamilyCode !== fontFamilyCode
 			|| value.language !== languagePreference
 			|| JSON.stringify(value.workspaceSidebar ?? null) !== JSON.stringify(workspaceSidebar)
 			|| JSON.stringify(value.keyboardShortcuts ?? null) !== JSON.stringify(keyboardShortcuts)
@@ -249,6 +244,8 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 				"minimizeToTrayOnClose",
 				"theme",
 				"themeColor",
+				"fontFamily",
+				"fontFamilyCode",
 				"language",
 				"workspaceSidebar",
 				"keyboardShortcuts",
@@ -279,6 +276,12 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	}
 	if (typeof value.themeColor === "string" && /^#[0-9a-fA-F]{6}$/.test(value.themeColor.trim())) {
 		patch.themeColor = normalizeStudioThemeColor(value.themeColor);
+	}
+	if (typeof value.fontFamily === "string") {
+		patch.fontFamily = normalizeStudioFontFamilyPatch(value.fontFamily, DEFAULT_CLIENT_PREFERENCES.fontFamily, "fontFamily");
+	}
+	if (typeof value.fontFamilyCode === "string") {
+		patch.fontFamilyCode = normalizeStudioFontFamilyPatch(value.fontFamilyCode, DEFAULT_CLIENT_PREFERENCES.fontFamilyCode, "fontFamilyCode");
 	}
 	if (value.language === "en-US" || value.language === "zh-CN" || value.language === "system") {
 		patch.language = value.language;

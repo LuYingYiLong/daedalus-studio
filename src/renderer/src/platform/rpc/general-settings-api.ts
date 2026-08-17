@@ -5,19 +5,12 @@ export type { GeneralSettings } from "../../../../contracts/general-settings";
 
 export type GeneralSettingsPatch = {
 	nextStepHintsEnabled?: boolean;
-	fontFamily?: string;
-	fontFamilyCode?: string;
 	godotExecutablePath?: string | null;
 };
 
-export const DEFAULT_FONT_FAMILY: string = '"Mona Sans", "Wen Yuan Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-export const DEFAULT_FONT_FAMILY_CODE: string = '"Fira Code", "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, "Mona Sans", "Wen Yuan Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", monospace';
-
 export const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
-	schemaVersion: 2,
+	schemaVersion: 3,
 	nextStepHintsEnabled: false,
-	fontFamily: DEFAULT_FONT_FAMILY,
-	fontFamilyCode: DEFAULT_FONT_FAMILY_CODE,
 	godotExecutablePath: null,
 	godotExecutableVersion: null,
 	godotExecutableStatus: "unconfigured",
