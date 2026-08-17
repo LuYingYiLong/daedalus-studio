@@ -1,2168 +1,2164 @@
 {
-  "app": {
-    "boot": {
-      "progress": {
-        "starting": "正在启动 Daedalus Studio",
-        "connectingBackend": "正在连接后端",
-        "loadingPreferences": "正在加载偏好设置",
-        "loadingWorkspaceData": "正在加载工作区数据",
-        "loadingCommandsAndSkills": "正在加载指令与技能",
-        "ready": "准备就绪",
-        "checkingBackend": "正在检查后端",
-        "checkingBackendPackage": "正在检查后端包",
-        "installingBackend": "正在安装后端",
-        "preparingBackend": "正在准备后端",
-        "startingBackend": "正在启动后端",
-        "checkingBackendHealth": "正在检查后端健康状态",
-        "backendReady": "后端已就绪",
-        "backendStartupFailed": "后端启动失败"
-      },
-      "error": {
-        "developmentBackendNotRunning": "开发后端未运行",
-        "installFailed": "无法安装 Daedalus 后端",
-        "backendMissing": "Daedalus 后端缺失或已损坏",
-        "markedBackendMissing": "已标记的后端版本缺失",
-        "healthFailed": "Daedalus 后端未能启动",
-        "studioStartFailed": "Daedalus Studio 无法启动",
-        "bootstrapFailed": "后端启动流程失败。",
-        "backendReadyTimeout": "等待后端就绪超时。",
-        "resourceTimeout": "加载{{resource}}超时。"
-      },
-      "resources": {
-        "backendHealth": "后端状态",
-        "clientPreferences": "客户端偏好",
-        "generalSettings": "通用设置",
-        "providerModels": "供应商与模型",
-        "workspaces": "工作区",
-        "sessions": "会话列表",
-        "sessionLayouts": "会话布局",
-        "workspaceTreeOrder": "工作区排序",
-        "slashCommands": "斜杠指令",
-        "skills": "技能"
-      },
-      "actions": {
-        "retry": "重试",
-        "retryInstall": "重新安装",
-        "repairBackend": "修复后端",
-        "restartBackend": "重启后端"
-      }
-    },
-    "home": {
-      "greeting": {
-        "morning": "早上好，今天想做什么？",
-        "afternoon": "下午好，接下来想做什么？",
-        "evening": "晚上好，今天还想推进什么？"
-      },
-      "subtitleWithoutWorkspace": "先选择一个 workspace，或者直接说说你的想法",
-      "subtitleWithWorkspace": "{{workspaceName}} 已准备好。告诉我想推进什么，我会从合适的地方开始",
-      "starters": {
-        "workspace": {
-          "explore": {
-            "label": "先帮我了解这个项目",
-            "prompt": "先帮我了解这个项目。请读取必要的工作区信息，告诉我它的结构和建议的起点。"
-          },
-          "next_step": {
-            "label": "帮我梳理下一步",
-            "prompt": "根据这个项目的当前状态，帮我梳理接下来最值得推进的事情。"
-          },
-          "plan": {
-            "label": "为一个功能做计划",
-            "prompt": "我想为一个功能做计划。请先了解必要上下文，再给我一个清晰、可执行的方案。"
-          }
-        },
-        "unbound": {
-          "explore": {
-            "label": "一起梳理想法",
-            "prompt": "我有一个想法，帮我一起梳理目标、约束和合适的下一步。"
-          },
-          "next_step": {
-            "label": "解释一个概念",
-            "prompt": "请用清晰、简洁的方式解释一个概念，必要时结合例子。"
-          },
-          "plan": {
-            "label": "做一份实施计划",
-            "prompt": "帮我把一个想法整理成一份实际可执行的计划。"
-          }
-        }
-      }
-    },
-    "fullTrust": {
-      "title": "启用 Full Trust？",
-      "description": "Full Trust 会关闭 OS 沙箱，自动批准所有工具，并允许终端命令以你的普通用户权限运行。",
-      "confirmationPrefix": "输入",
-      "confirmationSuffix": "以确认这个全局安全模式。",
-      "actions": {
-        "enable": "启用 Full Trust",
-        "cancel": "取消"
-      },
-      "errors": {
-        "confirmation": "输入 {{confirmationText}} 才能启用 Full Trust。"
-      }
-    }
-  },
-  "onboarding": {
-    "ariaLabel": "Daedalus Studio 新手配置",
-    "steps": {
-      "welcome": "欢迎",
-      "provider": "供应商",
-      "godot_executable": "Godot",
-      "documentation": "文档",
-      "godot_plugin": "插件",
-      "complete": "完成"
-    },
-    "actions": {
-      "start": "开始配置",
-      "back": "上一步",
-      "next": "下一步",
-      "skip": "跳过",
-      "cancel": "取消",
-      "enterStudio": "进入 Daedalus Studio",
-      "enteringStudio": "正在进入 Daedalus Studio"
-    },
-    "progress": "第 {{current}} 步，共 {{total}} 步",
-    "status": {
-      "saving": "正在保存设置"
-    },
-    "outcomes": {
-      "configured": "已配置",
-      "skipped": "已跳过"
-    },
-    "welcome": {
-      "title": "欢迎使用 Daedalus Studio",
-      "description": "完成 AI 辅助 Godot 开发所需的基础配置。所有集成都可以跳过，并随时在设置中补充或修改。",
-      "features": {
-        "agent": "AI Agent",
-        "godot": "Godot 集成",
-        "documentation": "离线文档"
-      }
-    },
-    "provider": {
-      "title": "配置模型供应商",
-      "description": "连接一个供应商，并选择 Daedalus 新会话默认使用的模型。",
-      "existingReady": "已有供应商和模型可用，你可以直接继续或重新配置。",
-      "testSucceeded": "连接成功，请选择模型完成配置。",
-      "saved": "供应商和模型已可用。",
-      "fields": {
-        "provider": "供应商",
-        "apiKey": "API Key",
-        "apiKeyPlaceholder": "输入 API Key",
-        "baseUrl": "API Base URL",
-        "model": "模型",
-        "modelPlaceholder": "选择模型"
-      },
-      "actions": {
-        "test": "测试连接",
-        "save": "保存并使用"
-      },
-      "errors": {
-        "test": "供应商连接失败。",
-        "save": "保存供应商和模型失败。"
-      }
-    },
-    "godotExecutable": {
-      "title": "选择 Godot 可执行文件",
-      "description": "Daedalus 使用该程序验证和启动项目，并匹配对应版本的离线文档。",
-      "ready": "Godot {{version}} 已就绪。",
-      "path": "Godot 可执行文件",
-      "notSelected": "尚未选择 Godot 可执行文件",
-      "actions": {
-        "select": "选择可执行文件"
-      },
-      "errors": {
-        "invalid": "无法验证所选的 Godot 可执行文件。",
-        "select": "选择 Godot 可执行文件失败。"
-      }
-    },
-    "documentation": {
-      "title": "安装 Godot 离线文档",
-      "description": "下载官方 godot-docs 分支，让 Agent 在不依赖联网的情况下核对不熟悉的 Godot API。",
-      "ready": "离线文档查询已就绪。",
-      "installed": "已安装 {{count}} 个文档版本",
-      "enableSearch": "启用查询",
-      "branch": "文档分支",
-      "selectBranch": "选择分支",
-      "install": "下载并安装",
-      "stages": {
-        "resolving": "正在解析文档来源",
-        "downloading": "正在下载文档",
-        "extracting": "正在解压文档",
-        "indexing": "正在建立搜索索引",
-        "validating": "正在验证搜索索引",
-        "rolling_back": "正在恢复健康索引",
-        "finalizing": "正在完成安装",
-        "completed": "文档已就绪",
-        "failed": "文档安装失败",
-        "cancelled": "文档安装已取消"
-      },
-      "errors": {
-        "load": "加载文档选项失败。",
-        "job": "读取文档任务进度失败。",
-        "install": "安装文档失败。",
-        "cancel": "取消文档操作失败。",
-        "toggle": "更新文档查询状态失败。"
-      }
-    },
-    "godotPlugin": {
-      "title": "安装 Daedalus Bridge",
-      "description": "选择一个或多个 Godot 项目。插件会把编辑器连接到 Daedalus 工具和诊断服务。",
-      "ready": "至少一个项目已安装 Daedalus Bridge。",
-      "pendingRestart": "插件更改已暂存，将在 Godot 关闭后应用。",
-      "selected": "已选择 {{count}} 个项目",
-      "empty": "没有发现 Godot 项目。",
-      "incompatible": "需要 Godot 4.5 或更高版本",
-      "columns": {
-        "project": "项目",
-        "godot": "Godot",
-        "status": "状态"
-      },
-      "actions": {
-        "scan": "重新扫描",
-        "add": "添加项目",
-        "install": "安装到所选项目"
-      },
-      "errors": {
-        "scan": "扫描 Godot 项目失败。",
-        "add": "添加 Godot 项目失败。",
-        "install": "安装插件失败。"
-      }
-    },
-    "complete": {
-      "title": "Daedalus Studio 已就绪",
-      "description": "所有可选集成都可以随时在设置中重新配置。"
-    },
-    "errors": {
-      "saveProgress": "保存引导进度失败。",
-      "complete": "完成新手引导失败。",
-      "timeout": "保存引导进度超时，请检查后端连接后重试。"
-    }
-  },
-  "workspaceTree": {
-    "projectEditor": {
-      "appearance": "项目外观",
-      "icon": "图标",
-      "color": "颜色",
-      "namePlaceholder": "项目名称",
-      "sourceFolders": "源文件夹",
-      "addFolder": "添加文件夹",
-      "addFailed": "添加源文件夹失败。",
-      "duplicateFolder": "该源文件夹已在项目中。",
-      "nameRequired": "项目名称不能为空。",
-      "sourceFolderRequired": "请先添加一个源文件夹。",
-      "saveFailed": "保存项目失败。",
-      "makePrimary": "设为主文件夹",
-      "removeFolder": "移除源文件夹",
-      "primary": "主要",
-      "cancel": "取消",
-      "confirm": "确定"
-    },
-    "actions": {
-      "editProject": "编辑项目",
-      "newProject": "新建项目",
-      "rename": "重命名",
-      "renameSession": "重命名会话",
-      "forkSession": "分叉会话",
-      "pinSession": "置顶会话",
-      "unpinSession": "取消置顶会话",
-      "archiveSession": "归档会话",
-      "openInExplorer": "在资源管理器中打开",
-      "openWorkspaceDirectory": "打开工作区目录",
-      "copySessionId": "复制会话 ID",
-      "exportSession": "导出会话数据",
-      "delete": "删除",
-      "newSessionInWorkspace": "在 workspace 中新建会话"
-    },
-    "aria": {
-      "archiveSession": "归档 {{sessionTitle}}",
-      "pinSession": "置顶 {{sessionTitle}}",
-      "unpinSession": "取消置顶 {{sessionTitle}}",
-      "workspaceActions": "{{workspaceName}} 的 workspace 操作",
-      "newSessionInWorkspace": "在 {{workspaceName}} 中新建会话"
-    },
-    "empty": {
-      "noWorkspace": "暂无 workspace",
-      "noSessions": "暂无会话",
-      "noPinnedSessions": "暂无置顶会话",
-      "noProjects": "暂无项目",
-      "noRecentSessions": "暂无最近会话"
-    },
-    "groups": {
-      "pinned": "置顶",
-      "projects": "项目",
-      "recent": "最近"
-    },
-    "status": {
-      "assistantRunning": "助手正在响应",
-      "unreadResponse": "未读助手响应",
-      "exportingSession": "正在导出会话…"
-    },
-    "messages": {
-      "sessionIdCopied": "已复制会话 ID",
-      "sessionExported": "会话数据已导出",
-      "sessionExportedWithMissingFiles": "会话数据已导出，但有 {{count}} 个外部文件缺失"
-    },
-    "exportDialog": {
-      "title": "导出会话数据",
-      "button": "导出"
-    },
-    "errors": {
-      "archiveSession": "归档会话失败",
-      "copySessionId": "复制会话 ID 失败",
-      "exportSession": "导出会话数据失败",
-      "deleteWorkspace": "删除 workspace 失败",
-      "loadWorkspace": "加载 workspace 失败",
-      "openSessionDirectory": "打开会话目录失败",
-      "openWorkspaceDirectory": "打开 workspace 目录失败",
-      "pinSession": "更新置顶会话失败",
-      "renameSession": "重命名会话失败",
-      "saveOrder": "保存 workspace 排序失败",
-      "sessionTitleCannotBeEmpty": "会话标题不能为空。"
-    },
-    "modals": {
-      "deleteWorkspace": {
-        "sessionPolicy": "会话会尽量迁移到匹配的其他项目；无法匹配的会话将被永久删除。",
-        "title": "删除 workspace？",
-        "body": "这会从 Daedalus 删除该 workspace，并永久删除它的会话。Godot 项目文件夹中的文件不会被删除。"
-      },
-      "renameSession": {
-        "placeholder": "会话标题"
-      }
-    }
-  },
-  "agentPage": {
-    "actions": {
-      "newSession": "新建会话",
-      "openSettings": "打开设置",
-      "scrollToBottom": "滚动到底部"
-    },
-    "conversationNavigator": {
-      "ariaLabel": "\u5bf9\u8bdd\u8f6e\u6b21",
-      "emptyMessage": "\u7528\u6237\u6d88\u606f"
-    },
-    "conversationSearch": {
-      "placeholder": "在会话中搜索",
-      "previous": "上一个匹配项",
-      "next": "下一个匹配项",
-      "close": "关闭搜索",
-      "indexing": "正在搜索完整会话…",
-      "loadError": "无法加载完整会话搜索索引，仍可搜索当前已加载的消息。"
-    },
-    "workspaceLaunch": {
-      "openIn": "在 {{target}} 中打开",
-      "aria": {
-        "selectTarget": "选择 workspace 打开方式"
-      },
-      "errors": {
-        "open": "打开 workspace 失败。"
-      }
-    },
-    "dock": {
-      "openBottom": "打开底部面板",
-      "closeBottom": "关闭底部面板",
-      "openSidebar": "打开侧边栏",
-      "closeSidebar": "关闭侧边栏"
-    },
-    "workspaceSidebar": {
-      "open": "展开工作区边栏",
-      "close": "收起工作区边栏"
-    },
-    "sessionNavigation": {
-      "previous": "上一个会话",
-      "next": "下一个会话"
-    },
-    "summary": {
-      "tooltip": "摘要",
-      "empty": "暂无摘要",
-      "detachedHead": "游离 HEAD",
-      "unknownSize": "未知尺寸",
-      "sourceSubtitle": "{{mimeType}} / {{dimensions}}",
-      "fallbackPlanTitle": "计划",
-      "fallbackImageSourceTitle": "图片来源",
-      "aria": {
-        "open": "打开会话摘要"
-      },
-      "sections": {
-        "envInfo": "环境信息",
-        "godot": "Godot",
-        "plans": "计划",
-        "source": "来源"
-      },
-      "godot": {
-        "runProject": "运行项目",
-        "runScene": "运行特定场景...",
-        "sceneModal": {
-          "title": "运行 Godot 场景",
-          "searchPlaceholder": "搜索场景",
-          "empty": "没有找到场景文件"
-        },
-        "errors": {
-          "loadScenes": "加载 Godot 场景失败"
-        }
-      },
-      "actions": {
-        "diff": "变更",
-        "commitOrPush": "提交或推送",
-        "seeMore": "查看更多",
-        "retry": "重试"
-      },
-      "errors": {
-        "load": "加载会话摘要失败。"
-      }
-    }
-  },
-  "composer": {
-    "placeholders": {
-      "ask": "问我一个问题，或一起探索一个想法",
-      "agent": "描述需要我检查、修改或执行的内容",
-      "plan": "描述你希望制定计划达成的结果",
-      "goal": "描述目标以及可以验证的完成结果"
-    },
-    "textAreaMenu": {
-      "cut": "剪切",
-      "copy": "复制",
-      "paste": "粘贴",
-      "selectAll": "全选"
-    },
-    "context": {
-      "addFiles": "添加文件",
-      "addFolder": "添加文件夹",
-      "addImages": "添加图片"
-    },
-    "mode": {
-      "ask": "问答",
-      "agent": "Agent",
-      "plan": "计划",
-      "goal": "Goal"
-    },
-    "approvalMode": {
-      "manual": "手动",
-      "autoSafe": "自动安全",
-      "fullTrust": "完全信任"
-    },
-    "model": {
-      "fallback": "模型",
-      "notConfigured": "未配置",
-      "configureProvider": "配置供应商",
-      "capabilities": {
-        "reasoning": "推理",
-        "vision": "视觉",
-        "search": "搜索"
-      }
-    },
-    "reasoning": {
-      "efforts": {
-        "low": "低",
-        "medium": "中",
-        "high": "高",
-        "xhigh": "极高",
-        "max": "最大"
-      }
-    },
-    "workspace": {
-      "noWorkspace": "无 workspace",
-      "addWorkspace": "添加 workspace..."
-    },
-    "tooltips": {
-      "addContext": "添加附加上下文",
-      "mode": "模式",
-      "approvalMode": "审批模式",
-      "model": "模型",
-      "reasoningEffort": "推理强度"
-    },
-    "send": {
-      "send": "发送",
-      "stop": "停止",
-      "stopping": "正在停止...",
-      "queue": "加入队列"
-    },
-    "contextUsage": {
-      "title": "上下文用量",
-      "estimating": "正在估算上下文...",
-      "retry": "重试",
-      "usedTokens": "{{used}} / {{total}} tokens",
-      "meta": "{{model}} / 可用 {{available}} / {{source}}",
-      "compress": "压缩聊天",
-      "compressionResult": "压缩前 {{before}}，压缩后 {{after}}，节省 {{saved}} tokens；{{restorable}} 个原始块可恢复",
-      "legend": {
-        "input": "实际输入",
-        "outputReserve": "输出预留",
-        "safetyMargin": "安全边距"
-      },
-      "pressureLevel": "{{level}}压力",
-      "largestContributor": "最大贡献项：{{largest}}",
-      "columns": {
-        "tokens": "Token",
-        "share": "占比"
-      },
-      "none": "无",
-      "pressureLevels": {
-        "low": "低",
-        "moderate": "中等",
-        "high": "高",
-        "critical": "严重"
-      },
-      "breakdown": {
-        "systemAndTools": "系统与工具",
-        "history": "历史记录",
-        "historyWithSummary": "历史记录（摘要）",
-        "currentMessage": "当前消息",
-        "reservedOutput": "预留输出",
-        "safetyMargin": "安全余量",
-        "kinds": {
-          "base_system": "基础系统提示词",
-          "custom_instructions": "自定义指令",
-          "skills": "技能",
-          "mcp_context": "MCP 上下文",
-          "tool_definitions": "工具定义",
-          "history": "会话历史",
-          "summary": "会话摘要",
-          "current_message": "当前消息",
-          "additional_context": "附加上下文",
-          "output_reserve": "预留输出",
-          "safety_margin": "安全余量"
-        }
-      },
-      "compressDisabled": {
-        "sending": "正在发送消息",
-        "unavailable": "暂不可压缩"
-      },
-      "errors": {
-        "estimate": "上下文估算失败"
-      }
-    }
-  },
-  "goal": {
-    "aria": "Goal 执行状态",
-    "stages": {
-      "readiness": "检查就绪状态",
-      "running": "执行中",
-      "evaluating": "判定中",
-      "pausing": "正在暂停",
-      "awaiting_approval": "等待审批",
-      "awaiting_tool_budget": "等待工具预算",
-      "paused": "已暂停",
-      "achieved": "已完成",
-      "failed": "失败",
-      "cancelled": "已取消"
-    },
-    "fields": {
-      "stage": "状态",
-      "cycles": "循环",
-      "tokens": "Token",
-      "activeTime": "有效耗时"
-    },
-    "evaluation": "完成判定",
-    "readiness": "就绪检查",
-    "workflow": "当前 Workflow",
-    "actions": {
-      "pause": "暂停",
-      "resume": "恢复",
-      "cancel": "取消",
-      "extend": "追加预算",
-      "rollback": "完整回滚",
-      "dismiss": "关闭"
-    },
-    "cancelConfirm": {
-      "title": "取消这个 Goal？",
-      "description": "当前安全操作会先执行完，已经产生的工作区更改将保留。"
-    },
-    "rollback": {
-      "title": "回滚 Goal 更改？",
-      "description": "将 {{count}} 个受跟踪文件完整恢复到 Goal 开始前的状态。",
-      "unavailableTitle": "无法完整回滚",
-      "unavailable": "部分 Goal 更改无法安全恢复。",
-      "success": "Goal 更改已完整回滚。"
-    },
-    "extend": {
-      "title": "追加 Goal 预算",
-      "cycles": "额外循环数",
-      "tokens": "额外 Token",
-      "minutes": "额外有效分钟数"
-    },
-    "errors": {
-      "insufficientBudget": "追加后的预算仍低于当前已使用量，请增加 Token、循环或有效时间预算。",
-      "action": "更新 Goal 失败",
-      "rollback": "回滚 Goal 更改失败",
-      "budget": "追加 Goal 预算失败",
-      "dismiss": "关闭 Goal 状态失败"
-    }
-  },
-  "messageQueue": {
-    "groups": {
-      "guides": "引导",
-      "queue": "队列"
-    },
-    "actions": {
-      "edit": "编辑",
-      "remove": "移除",
-      "dragToReorder": "拖动排序"
-    }
-  },
-  "workflowTodo": {
-    "titleFallback": "待办",
-    "stepFallback": "步骤 {{index}}",
-    "changedFiles": "{{count}} 个文件",
-    "changedFiles_other": "{{count}} 个文件",
-    "dismiss": "关闭",
-    "aria": {
-      "progress": "Workflow 进度",
-      "fileChanges": "文件变更"
-    }
-  },
-  "approval": {
-    "tool": {
-      "title": "批准工具执行？",
-      "subtitle": "助手正在等待你的批准后继续。",
-      "consentPrefix": "输入",
-      "consentSuffix": "以批准这次跨 workspace 操作。",
-      "actions": {
-        "approve": "批准",
-        "reject": "拒绝"
-      }
-    },
-    "toolBudget": {
-      "title": "工具预算已达到上限",
-      "subtitle": "模型需要更多工具预算才能继续执行。",
-      "limitKind": {
-        "steps": "工具调用次数",
-        "toolResultChars": "工具结果总量"
-      },
-      "fields": {
-        "triggeredLimit": "触发上限",
-        "usedSteps": "已用步骤",
-        "toolResultChars": "工具结果字符",
-        "additionalSteps": "继续追加"
-      },
-      "additionalStepsValue": "+{{formatted}} 步",
-      "additionalStepsValue_other": "+{{formatted}} 步",
-      "actions": {
-        "continue": "继续",
-        "stop": "否，结束并总结",
-        "summarize": "用现有结果总结",
-        "cancel": "取消本轮"
-      }
-    },
-    "plan": {
-      "aria": "计划审批",
-      "title": "批准计划？",
-      "subtitle": "查看上方计划后，可以批准执行或要求修改。",
-      "revisionPlaceholder": "告诉助手如何修改计划",
-      "actions": {
-        "approveAndExecute": "批准并执行",
-        "revise": "修改"
-      }
-    }
-  },
-  "clarification": {
-    "aria": "计划澄清",
-    "title": "需要澄清",
-    "recommendedSuffix": "（推荐）",
-    "placeholder": "告诉助手接下来怎么做",
-    "skipHint": "跳过会继续制定计划，不会取消任务。该问题会视为未提供信息，助手将依据已有上下文做出假设；若涉及核心需求、架构、平台或数据格式，计划可能不够准确。之后仍可补充说明并重新调整计划。",
-    "actions": {
-      "skip": "跳过并继续",
-      "submit": "提交"
-    }
-  },
-  "dock": {
-    "tabs": {
-      "changes": "变更",
-      "changesIndexed": "变更 {{index}}",
-      "terminal": "终端",
-      "terminalIndexed": "终端 {{index}}",
-      "files": "文件",
-      "filesIndexed": "文件 {{index}}",
-      "enterFullscreen": "展开面板",
-      "exitFullscreen": "恢复面板"
-    },
-    "add": {
-      "label": "添加面板",
-      "reviewPanel": "变更审阅面板",
-      "terminalPanel": "终端面板",
-      "filesPanel": "文件面板"
-    },
-    "empty": {
-      "noWorkspaceSelected": "未选择 workspace"
-    }
-  },
-  "files": {
-    "noWorkspace": "选择 workspace 后即可浏览和编辑文件",
-    "noSourceFolder": "无 source folder",
-    "noFileSelected": "从文件树中选择文件",
-    "editorAriaLabel": "文件编辑器",
-    "loading": "正在读取文件…",
-    "search": "搜索文件或路径",
-    "save": "保存",
-    "saved": "文件已保存",
-    "savedAs": "文件已另存为",
-    "reload": "重新加载",
-    "binary": "该文件不是可编辑的 UTF-8 文本文件",
-    "oversized": "文件超过 2 MiB，无法在文件面板中编辑",
-    "openExternal": "在外部应用中打开",
-    "showSidebar": "显示文件边栏",
-    "hideSidebar": "隐藏文件边栏",
-    "conflict": "文件已被外部修改。重新加载磁盘版本，或将当前草稿另存为。",
-    "contextAdded": "已添加到上下文",
-    "addSelectionContext": "添加到上下文",
-    "comment": "评论",
-    "commentPlaceholder": "输入对所选代码的评论",
-    "editorMenu": {
-      "undo": "撤销",
-      "redo": "重做",
-      "cut": "剪切",
-      "copy": "复制",
-      "paste": "粘贴",
-      "selectAll": "全选"
-    },
-    "closeTitle": "关闭已修改的文件？",
-    "closeDirty": "{{name}} 包含尚未保存的修改。",
-    "discard": "不保存",
-    "cancel": "取消",
-    "menu": {
-      "openFrom": "从 {{target}} 打开",
-      "openWith": "打开方式",
-      "saveAs": "另存为…",
-      "copyPath": "复制路径",
-      "copyRelativePath": "复制相对路径",
-      "addContext": "添加到上下文"
-    }
-  },
-  "git": {
-    "detachedHead": "游离 HEAD",
-    "actions": {
-      "refresh": "刷新"
-    },
-    "commit": {
-      "title": "提交或推送",
-      "messagePlaceholder": "留空会自动生成提交信息",
-      "includeUnstaged": "包含未暂存变更",
-      "actions": {
-        "commit": "提交",
-        "push": "推送",
-        "commitAndPush": "提交并推送"
-      },
-      "messages": {
-        "changes": "变更",
-        "committedAndPushed": "已提交 {{target}} 并推送。",
-        "committed": "已提交 {{target}}。",
-        "pushed": "已推送变更。"
-      },
-      "errors": {
-        "selectWorkspace": "请先选择 workspace 再提交。",
-        "generationTimeout": "AI 提交信息生成超过 60 秒，已视为失败。",
-        "actionFailed": "{{action}} 失败。"
-      }
-    },
-    "branch": {
-      "title": "分支",
-      "searchPlaceholder": "搜索分支",
-      "empty": "没有找到分支",
-      "actions": {
-        "createAndCheckout": "创建并切换",
-        "checkout": "切换"
-      },
-      "tags": {
-        "current": "当前",
-        "remote": "远程"
-      },
-      "messages": {
-        "switched": "已切换到 {{branch}}。",
-        "committedAndSwitched": "已提交工作区更改并切换到 {{branch}}。",
-        "createdAndSwitched": "已创建并切换到 {{branch}}。"
-      },
-      "checkoutDraft": {
-        "title": "提交更改以切换分支",
-        "description": "切换到 {{branch}} 前，将提交以下工作区更改：",
-        "commitAndCheckout": "提交并切换分支",
-        "cancel": "取消",
-        "commitMessagePlaceholder": "输入提交消息",
-        "summary": "{{count}} 个已更改文件",
-        "summary_other": "{{count}} 个已更改文件",
-        "moreFiles": "还有 {{count}} 个文件",
-        "moreFiles_other": "还有 {{count}} 个文件",
-        "errors": {
-          "commitMessageRequired": "请输入提交消息。",
-          "load": "检查工作区更改失败。",
-          "commit": "切换分支前提交更改失败。"
-        }
-      },
-      "errors": {
-        "selectWorkspaceBeforeSwitching": "请先选择 workspace 再切换分支。",
-        "selectWorkspaceBeforeCreating": "请先选择 workspace 再创建分支。",
-        "notGitRepository": "当前 workspace 不是 Git 仓库。",
-        "load": "加载分支失败。",
-        "selectBranch": "请选择一个分支。",
-        "switch": "切换分支失败。",
-        "enterBranchName": "请输入分支名称。",
-        "create": "创建分支失败。"
-      }
-    },
-    "createBranch": {
-      "title": "创建分支",
-      "namePlaceholder": "新分支名称",
-      "startPointPlaceholder": "起点，可选",
-      "hint": "留空起点时会从当前 HEAD 创建。"
-    }
-  },
-  "review": {
-    "unknownFile": "未知文件",
-    "sourceFolder": {
-      "label": "源文件夹",
-      "placeholder": "选择源文件夹"
-    },
-    "binaryFileChanged": "二进制文件已变更",
-    "diffStats": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
-    "diffStats_other": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
-    "actions": {
-      "refreshDiff": "刷新 Git diff",
-      "expandAllDiffs": "展开小型差异",
-      "collapseAllDiffs": "折叠小型差异",
-      "loadMoreFiles": "加载更多文件"
-    },
-    "empty": {
-      "diffUnavailable": "Diff 不可用",
-      "noDiffLoaded": "尚未加载 diff",
-      "noGitRepository": "不是 Git 仓库",
-      "noWorkspaceChanges": "workspace 暂无变更"
-    },
-    "notices": {
-      "lazyLoading": {
-        "title": "按需加载差异",
-        "description": "优先打开较小的文本文件。大文件保持折叠，仅在手动打开时请求。"
-      },
-      "diffTruncated": {
-        "title": "Diff 已截断",
-        "description": "补丁太大，无法完整显示。"
-      },
-      "diffParseFailed": "Diff 解析失败"
-    },
-    "loadingFile": "正在加载文件差异",
-    "fileTooLarge": {
-      "title": "文件差异过大，无法渲染",
-      "description": "为保持审阅面板流畅，未加载该文件预览。"
-    },
-    "commentDialog": {
-      "title": "请求更改",
-      "open": "请求更改此行",
-      "target": "{{path}}，第 {{line}} 行",
-      "label": "需要如何更改？",
-      "required": "请输入请求更改的内容。",
-      "submit": "添加评论",
-      "contextMeta": "第 {{line}} 行审阅评论"
-    },
-    "errors": {
-      "loadDiff": "加载 Git diff 失败。",
-      "loadFile": "加载文件差异失败。",
-      "parseDiff": "解析 diff 失败。"
-    }
-  },
-  "terminal": {
-    "home": "主目录",
-    "status": {
-      "waitingForWorkspace": "等待 workspace",
-      "starting": "正在启动",
-      "notStarted": "未启动",
-      "running": "运行中",
-      "stopped": "已停止"
-    },
-    "actions": {
-      "restart": "重启终端",
-      "stop": "停止终端"
-    },
-    "errors": {
-      "start": "启动终端失败。",
-      "stop": "停止终端失败。",
-      "restart": "重启终端失败。"
-    }
-  },
-  "chat": {
-    "markdownResource": {
-      "openFile": "打开文件",
-      "openInCurrentTarget": "在当前工作区应用中打开",
-      "openInCurrentTargetNamed": "在 {{target}} 中打开",
-      "openWith": "打开方式",
-      "saveAs": "另存为",
-      "copyPath": "复制路径",
-      "pathCopied": "路径已复制",
-      "revealInExplorer": "在资源管理器中打开",
-      "savedAs": "文件已保存",
-      "noWorkspace": "请先选择工作区，再打开此文件"
-    },
-    "mermaid": {
-      "title": "Mermaid 图表",
-      "rendering": "正在生成图表…",
-      "renderFailed": "无法生成图表",
-      "copySource": "复制图表源码",
-      "showSource": "查看图表源码",
-      "exportPng": "导出 PNG",
-      "exported": "PNG 图片已导出",
-      "exportFailed": "无法导出 PNG 图片"
-    },
-    "codeBlock": {
-      "copy": "复制代码",
-      "exportAsFile": "导出为文件",
-      "exported": "文件已导出",
-      "exportFailed": "无法导出文件"
-    },
-    "common": {
-      "copy": "复制",
-      "copied": "已复制",
-      "copyFailed": "复制选中文本失败。",
-      "selectAll": "全选",
-      "copyAll": "复制全部",
-      "loadingConversation": "正在加载会话"
-    },
-    "assistant": {
-      "process": "过程",
-      "respondedIn": "已响应：{{elapsed}}",
-      "stoppedIn": "已停止：{{elapsed}}",
-      "copyAria": "复制助手消息"
-    },
-    "user": {
-      "copyAria": "复制用户消息",
-      "editAndResendAria": "编辑并重新发送用户消息",
-      "forkAria": "从这条用户消息分叉会话",
-      "actions": {
-        "cancel": "取消",
-        "send": "发送",
-        "editAndResend": "编辑并重新发送",
-        "forkFromHere": "从这里分叉"
-      }
-    },
-    "fork": {
-      "titleSuffix": " · 分叉",
-      "untitledSource": "未命名会话",
-      "originLabel": "分叉自",
-      "openSourceTooltip": "打开来源会话",
-      "openSourceAria": "打开来源会话",
-      "modelChanged": "模型已从 {{from}} 切换到 {{to}}",
-      "errors": {
-        "create": "创建分叉会话失败",
-        "sourceUnavailable": "来源会话不可用或已归档",
-        "openSource": "打开来源会话失败"
-      }
-    },
-    "contextStrip": {
-      "aria": "消息上下文",
-      "pinned": "已固定",
-      "expandText": "展开到输入框",
-      "display": {
-        "contextFallback": "上下文",
-        "selection": "选择",
-        "fileCount": "{{count}} 个文件",
-        "fileCount_other": "{{count}} 个文件",
-        "folderCount": "{{count}} 个文件夹",
-        "folderCount_other": "{{count}} 个文件夹",
-        "selectedCount": "已选 {{count}} 项",
-        "selectedCount_other": "已选 {{count}} 项",
-        "line": "第 {{line}} 行",
-        "linesRange": "第 {{start}}-{{end}} 行",
-        "fileSize": "{{size}} KiB",
-        "textAttachment": "文本附件",
-        "reviewComment": "评审评论",
-        "selectedMessageText": "选中的消息文本",
-        "fileSelection": "文件选区",
-        "more": "... 还有 {{count}} 个",
-        "more_other": "... 还有 {{count}} 个",
-        "pathLabel": "{{kind}}: {{path}}",
-        "pathFallback": "路径"
-      }
-    },
-    "selection": {
-      "attachContext": "附加上下文",
-      "askAi": "提问 AI",
-      "annotationPlaceholder": "添加批注（可留空）",
-      "editAnnotation": "编辑批注",
-      "openAsk": "打开选区问答",
-      "deleteAsk": "删除",
-      "deleteAllAsks": "删除全部",
-      "deleteAskFailed": "删除选区问答失败",
-      "askTitle": "选区问答",
-      "askPlaceholder": "继续提问…",
-      "sendAsk": "发送问题",
-      "stopAsk": "停止回答",
-      "stoppingAsk": "正在停止回答",
-      "askFailed": "创建选区问答失败",
-      "responseFailed": "回答失败",
-      "interrupted": "Backend 重启，回答已中断"
-    },
-    "tool": {
-      "labels": {
-        "mcp_skills_load": "加载技能",
-        "mcp_skills_propose_create": "草拟技能",
-        "mcp_skills_create": "创建技能",
-        "mcp_image_generate": "生成图片",
-        "mcp_image_inspect": "检查图片",
-        "mcp_web_search": "联网搜索",
-        "mcp_workspace_list_files": "浏览工作区文件",
-        "mcp_workspace_read_text_file": "读取文件",
-        "mcp_workspace_search_text": "搜索工作区文本",
-        "mcp_workspace_propose_create_text_file": "草拟文件",
-        "mcp_workspace_create_text_file": "创建文件",
-        "mcp_workspace_propose_overwrite_text_file": "草拟覆盖文件",
-        "mcp_workspace_overwrite_text_file": "覆盖文件",
-        "mcp_workspace_propose_replace_text_in_file": "草拟文本替换",
-        "mcp_workspace_replace_text_in_file": "替换文件文本",
-        "mcp_workspace_propose_replace_line_in_file": "草拟行替换",
-        "mcp_workspace_replace_line_in_file": "替换文件行",
-        "mcp_workspace_delete_file": "删除文件",
-        "mcp_godot_get_runtime_status": "检查 Godot 运行状态",
-        "mcp_godot_get_godot_version": "检查 Godot 版本",
-        "mcp_godot_search_documentation": "搜索 Godot 文档",
-        "mcp_godot_launch_editor": "启动 Godot 编辑器",
-        "mcp_godot_run_project": "运行 Godot 项目",
-        "mcp_godot_stop_project": "停止 Godot 项目",
-        "mcp_godot_get_debug_output": "读取 Godot 调试输出",
-        "mcp_godot_list_projects": "浏览 Godot 项目",
-        "mcp_godot_get_uid": "解析资源 UID",
-        "mcp_godot_resave_resource": "重新保存资源",
-        "mcp_godot_update_project_uids": "更新项目 UID",
-        "mcp_godot_save_scene_variant": "保存场景变体",
-        "mcp_godot_load_sprite_texture": "加载精灵纹理",
-        "mcp_godot_export_mesh_library": "导出 MeshLibrary",
-        "mcp_godot_propose_create_scene": "草拟场景",
-        "mcp_godot_create_scene": "创建场景",
-        "mcp_godot_propose_add_node_to_scene": "草拟场景节点",
-        "mcp_godot_add_node_to_scene": "添加场景节点",
-        "mcp_godot_propose_attach_script_to_node": "草拟脚本挂载",
-        "mcp_godot_attach_script_to_node": "挂载脚本到节点",
-        "mcp_godot_propose_connect_signal_in_scene": "草拟信号连接",
-        "mcp_godot_connect_signal_in_scene": "连接场景信号",
-        "mcp_godot_propose_apply_scene_patch": "草拟场景补丁",
-        "mcp_godot_apply_scene_patch": "应用场景补丁",
-        "mcp_godot_editor_apply_scene_patch": "修改已打开场景",
-        "mcp_godot_get_project_summary": "读取项目摘要",
-        "mcp_godot_list_project_files": "浏览项目文件",
-        "mcp_godot_list_scenes": "浏览场景",
-        "mcp_godot_list_scripts": "浏览脚本",
-        "mcp_godot_read_text_file": "读取文件",
-        "mcp_godot_search_text": "搜索项目文本",
-        "mcp_godot_get_project_log_config": "读取日志设置",
-        "mcp_godot_list_project_logs": "浏览项目日志",
-        "mcp_godot_read_project_log": "读取项目日志",
-        "mcp_godot_get_project_settings": "读取项目设置",
-        "mcp_godot_get_editor_config_summary": "读取编辑器配置摘要",
-        "mcp_godot_get_editor_settings": "读取编辑器设置",
-        "mcp_godot_list_editor_config_files": "浏览编辑器配置文件",
-        "mcp_godot_read_editor_config_file": "读取编辑器配置",
-        "mcp_godot_get_editor_project_state": "读取编辑器项目状态",
-        "mcp_godot_get_recent_projects": "浏览最近项目",
-        "mcp_godot_propose_set_project_setting": "草拟项目设置",
-        "mcp_godot_set_project_setting": "设置项目设置",
-        "mcp_godot_propose_unset_project_setting": "草拟移除设置",
-        "mcp_godot_unset_project_setting": "取消项目设置",
-        "mcp_godot_inspect_scene_tree": "检查场景树",
-        "mcp_godot_validate_scene_script_references": "验证场景脚本引用",
-        "mcp_godot_editor_get_context": "读取编辑器上下文",
-        "mcp_godot_editor_get_selected_nodes": "读取选中节点",
-        "mcp_godot_editor_inspect_node": "检查编辑器节点",
-        "mcp_godot_editor_capture_scene_view": "捕获场景视图",
-        "mcp_godot_lsp_get_status": "检查语言服务器",
-        "mcp_godot_lsp_get_file_diagnostics": "检查文件诊断",
-        "mcp_godot_lsp_get_document_symbols": "读取文档符号",
-        "mcp_godot_lsp_hover": "查看符号悬停信息",
-        "mcp_godot_lsp_goto_definition": "查找定义",
-        "mcp_godot_dap_get_status": "检查调试器状态",
-        "mcp_godot_dap_get_last_error": "读取调试器错误",
-        "mcp_godot_dap_get_stack_trace": "读取调用栈",
-        "mcp_godot_dap_get_variables": "读取调试变量",
-        "mcp_godot_propose_create_text_file": "草拟 Godot 文件",
-        "mcp_godot_create_text_file": "创建 Godot 文件",
-        "mcp_godot_propose_overwrite_text_file": "草拟覆盖 Godot 文件",
-        "mcp_godot_overwrite_text_file": "覆盖 Godot 文件",
-        "mcp_godot_propose_replace_text_in_file": "草拟 Godot 文本替换",
-        "mcp_godot_replace_text_in_file": "替换 Godot 文件文本",
-        "mcp_godot_delete_file": "删除 Godot 文件",
-        "mcp_terminal_get_capabilities": "检查终端能力",
-        "mcp_terminal_run_command": "运行终端命令",
-        "mcp_terminal_run_safe_preset": "运行验证命令",
-        "mcp_terminal_run_godot_scene_script": "运行 Godot 场景脚本",
-        "mcp_terminal_run_write_preset": "运行写入命令",
-        "mcp_terminal_get_job_status": "检查终端任务",
-        "mcp_terminal_get_job_tail": "读取终端输出",
-        "mcp_terminal_cancel_job": "取消终端任务"
-      },
-      "status": {
-        "running": "运行中",
-        "done": "完成",
-        "failed": "失败",
-        "approvalRequired": "需要批准",
-        "pending": "待执行"
-      },
-      "activity": {
-        "running": "工具正在执行。",
-        "pending": "工具尚未开始执行。",
-        "writing": "正在写入：{{tool}}"
-      },
-      "recovery": {
-        "failed": "第 {{attempt}}/{{max}} 次恢复尝试失败，AI 可以调整同一结构化目标后重试。",
-        "recovered": "此前失败 {{attempt}}/{{max}} 次，本次已恢复。",
-        "exhausted": "已达到恢复上限（{{attempt}}/{{max}}），不会再次执行这一精确操作。"
-      },
-      "fileChanges": {
-        "summary": "已变更 {{count}} 个文件"
-      }
-    },
-    "terminalPart": {
-      "commandFallback": "终端命令",
-      "cwd": "目录",
-      "sandbox": "沙箱",
-      "exitCode": "退出码",
-      "duration": "耗时",
-      "jobId": "任务",
-      "output": "输出",
-      "copyCommand": "复制命令",
-      "copyOutput": "复制输出",
-      "waitingOutput": "等待输出…",
-      "noOutput": "没有输出",
-      "omitted": "已省略 {{count}} 个字符",
-      "status": {
-        "approval": "需要批准",
-        "running": "运行中",
-        "success": "完成",
-        "failed": "失败",
-        "timed_out": "已超时",
-        "cancelled": "已取消",
-        "background": "后台任务"
-      }
-    },
-    "providerReconnect": {
-      "attempt": "尝试重新连接 {{attempt}}/{{max}}",
-      "recovered": "连接已恢复",
-      "failed": "无法连接模型服务",
-      "stopped": "已停止重新连接",
-      "timeout": "模型服务连续 {{seconds}} 秒没有返回数据时开始重连。",
-      "extended": "检测到临时传输或网关故障，自动重连已扩展至 15 次。",
-      "reason": {
-        "transport": "模型服务的传输连接意外中断。",
-        "idle_timeout": "模型服务的数据流长时间没有活动。",
-        "gateway": "临时网关错误中断了本次请求。",
-        "rate_limit": "模型供应商暂时限制了请求频率。",
-        "server": "模型供应商返回了临时服务错误。"
-      }
-    },
-    "plan": {
-      "open": "打开计划"
-    },
-    "thinking": {
-      "label": "思考过程",
-      "activeLabel": "正在思考"
-    },
-    "activityGroup": {
-      "activeThinking": "正在思考",
-      "lastThinking": "思考过程",
-      "summary": {
-        "files": "编辑了 {{count}} 个文件",
-        "commands": "运行了 {{count}} 次命令",
-        "tools": "使用了 {{count}} 次工具",
-        "thoughts": "思考了 {{count}} 次",
-        "separator": "，",
-        "empty": "活动过程"
-      }
-    },
-    "compression": {
-      "running": "正在压缩上下文",
-      "completed": "上下文已自动压缩",
-      "skipped": "上下文压缩已跳过",
-      "failed": "上下文压缩失败"
-    },
-    "inlineDiff": {
-      "title": "已编辑 {{count}} 个文件",
-      "title_other": "已编辑 {{count}} 个文件",
-      "unknownFile": "未知文件",
-      "openReviewAria": "打开 {{filePath}} 的审阅",
-      "showMoreFiles": "\u518d\u663e\u793a{{count}}\u4e2a\u6587\u4ef6",
-      "collapseFiles": "\u6536\u8d77\u6587\u4ef6",
-      "actions": {
-        "undo": "撤销",
-        "review": "审阅"
-      }
-    },
-    "imageGeneration": {
-      "modelFallback": "图像生成",
-      "generating": "正在生成图片",
-      "generated": "已生成图片",
-      "failed": "图像生成失败",
-      "previewUnavailable": "图片预览不可用",
-      "loading": "加载中",
-      "actions": {
-        "copyImage": "复制图片",
-        "saveImage": "保存图片"
-      },
-      "messages": {
-        "copied": "图片已复制"
-      },
-      "errors": {
-        "load": "加载生成图片失败",
-        "copy": "复制图片失败",
-        "unknown": "未知错误"
-      }
-    }
-  },
-  "settings": {
-    "menu": {
-      "provider": "供应商",
-      "defaultModel": "默认模型",
-      "general": "通用",
-      "keyboardShortcuts": "键盘快捷键",
-      "search": "搜索",
-      "statistics": "统计",
-      "personalization": "个性化",
-      "mcpServers": "MCP 服务器",
-      "skills": "技能",
-      "documentation": "文档",
-      "godotProjects": "Godot 项目",
-      "archivedSessions": "已归档会话",
-      "import": "导入",
-      "about": "关于",
-      "fallbackTitle": "设置",
-      "placeholder": "这个设置区域稍后实现。"
-    },
-    "common": {
-      "add": "添加",
-      "cancel": "取消",
-      "delete": "删除",
-      "disable": "禁用",
-      "edit": "编辑",
-      "enable": "启用",
-      "off": "关闭",
-      "on": "开启",
-      "save": "保存",
-      "close": "关闭",
-      "update": "更新"
-    },
-    "keyboardShortcuts": {
-      "title": "键盘快捷键",
-      "search": {
-        "action": "搜索动作名称",
-        "mapping": "按下快捷键以查找动作"
-      },
-      "columns": {
-        "name": "名称",
-        "shortcut": "快捷键",
-        "actions": "操作"
-      },
-      "actions": {
-        "edit": "编辑",
-        "reset": "恢复默认"
-      },
-      "commands": {
-        "toggleWorkspaceSidebar": "切换 Workspace 侧边栏",
-        "toggleBottomPanel": "切换底部面板",
-        "toggleSessionSidebar": "切换会话侧边栏",
-        "newSession": "新建会话",
-        "previousSession": "上一个聊天",
-        "nextSession": "下一个聊天",
-        "previousTurn": "上一个对话轮次",
-        "nextTurn": "下一个对话轮次",
-        "findInConversation": "在会话中查找"
-      },
-      "empty": "没有匹配的快捷键动作。",
-      "editor": {
-        "title": "编辑“{{action}}”快捷键",
-        "description": "按下新的单段快捷键。普通字符需要搭配修饰键。",
-        "placeholder": "按下快捷键",
-        "required": "请录入一个快捷键。",
-        "invalid": "该按键不能单独用作快捷键。",
-        "conflict": "该快捷键已被“{{action}}”使用。"
-      },
-      "errors": {
-        "load": "无法加载键盘快捷键。",
-        "save": "无法保存键盘快捷键。"
-      }
-    },
-    "documentation": {
-      "title": "文档",
-      "enabled": "启用文档查询",
-      "add": "添加文档",
-      "importLocal": "导入本地文档",
-      "empty": "尚未安装 Godot 离线文档。",
-      "item": {
-        "stats": "{{documents}} 个文档 · {{chunks}} 个分块 · {{classes}} 个类 · {{size}}",
-        "updated": "更新于 {{date}}",
-        "licenses": "手册：CC BY 3.0 · 类参考：MIT",
-        "source": {
-          "official": "官方",
-          "local": "本地"
-        }
-      },
-      "health": {
-        "status": {
-          "checking": "检查中",
-          "ready": "健康",
-          "degraded": "已降级",
-          "repairing": "修复中",
-          "unavailable": "不可用"
-        },
-        "check": "检查索引",
-        "repairAction": "修复索引",
-        "neverChecked": "索引尚未检查",
-        "checked": "检查于 {{date}}",
-        "allUnavailable": "没有可用的健康文档索引",
-        "toolUnavailable": "文档查询开关会保持开启，但在索引修复前，LLM 暂时不会获得文档搜索工具。",
-        "repair": {
-          "rollback": "可回退到上一份健康索引",
-          "cached_source": "可离线修复",
-          "network_required": "需要重新下载",
-          "source_required": "需要重新选择本地来源",
-          "none": "没有可用修复来源"
-        }
-      },
-      "repair": {
-        "networkTitle": "下载文档以修复索引？",
-        "networkDescription": "Godot {{branch}} 的本地源缓存不可用。Daedalus 只会在你确认后连接 GitHub。",
-        "download": "下载并修复",
-        "sourceTitle": "选择本地来源以修复文档"
-      },
-      "modal": {
-        "title": "添加 Godot 文档",
-        "sourceTitle": "Godot 官方文档",
-        "sourceDescription": "Daedalus 将从 godotengine/godot-docs 下载所选分支，并在本机建立全文索引。Studio 安装包不包含文档。",
-        "branch": "文档分支",
-        "branchRequired": "请选择文档分支。",
-        "branchPlaceholder": "选择或搜索分支",
-        "installed": "已安装",
-        "refresh": "刷新分支",
-        "notice": "下载内容会固定到不可变 commit。磁盘占用取决于所选分支和生成的 SQLite 索引。",
-        "download": "下载并建立索引"
-      },
-      "local": {
-        "title": "导入本地 Godot 文档",
-        "sourceTitle": "本地 godot-docs 源",
-        "sourceDescription": "选择已解压的 godot-docs 文件夹或 ZIP 压缩包。Daedalus 会复制并建立索引，不会修改原始文件。",
-        "branch": "文档版本",
-        "branchRequired": "请输入文档版本或分支名称。",
-        "branchPlaceholder": "例如 4.7 或 master",
-        "source": "本地来源",
-        "sourceRequired": "请选择 godot-docs 文件夹或 ZIP 压缩包。",
-        "sourcePlaceholder": "选择文件夹或 ZIP 压缩包",
-        "selectFolder": "选择文件夹",
-        "selectZip": "选择 ZIP",
-        "import": "导入并建立索引"
-      },
-      "progress": {
-        "title": "Godot {{branch}} 文档",
-        "cancel": "取消操作",
-        "retrying": "连接中断，正在重新下载文档…",
-        "stage": {
-          "resolving": "解析分支",
-          "downloading": "正在下载",
-          "extracting": "正在解压",
-          "indexing": "正在索引",
-          "validating": "正在校验",
-          "rolling_back": "正在回退",
-          "finalizing": "正在完成",
-          "completed": "已完成",
-          "failed": "失败",
-          "cancelled": "已取消"
-        },
-        "message": {
-          "resolving": "正在把所选分支解析为不可变 commit…",
-          "downloading": "正在从 Godot 官方文档仓库下载…",
-          "extracting": "正在校验并解压文档压缩包…",
-          "indexing": "正在建立本地符号和全文搜索索引…",
-          "finalizing": "正在启用新的文档 generation…",
-          "completed": "文档索引已可使用。",
-          "failed": "文档操作失败。",
-          "cancelled": "文档操作已取消。"
-        },
-        "localMessage": {
-          "resolving": "正在检查本地文档来源…",
-          "downloading": "正在复制本地文档压缩包…",
-          "extracting": "正在校验并暂存本地文档来源…",
-          "indexing": "正在建立本地符号和全文搜索索引…",
-          "finalizing": "正在启用导入的文档 generation…",
-          "completed": "导入的文档索引已可使用。",
-          "failed": "本地文档导入失败。",
-          "cancelled": "本地文档导入已取消。"
-        }
-      },
-      "operationMessage": {
-        "check": {
-          "resolving": "正在准备文档健康检查…",
-          "downloading": "正在准备文档健康检查…",
-          "extracting": "正在准备文档健康检查…",
-          "indexing": "正在准备文档健康检查…",
-          "validating": "正在检查 SQLite 完整性、元数据、数量和哈希…",
-          "rolling_back": "正在检查上一份健康索引…",
-          "finalizing": "正在保存文档健康状态…",
-          "completed": "文档索引健康。",
-          "failed": "文档健康检查失败。",
-          "cancelled": "文档健康检查已取消。"
-        },
-        "repair": {
-          "resolving": "正在选择修复来源…",
-          "downloading": "正在下载已确认的官方文档来源…",
-          "extracting": "正在准备本地缓存的文档来源…",
-          "indexing": "正在重建文档索引…",
-          "validating": "正在验收重建后的索引…",
-          "rolling_back": "正在验证上一份健康 Generation…",
-          "finalizing": "正在启用修复后的文档 Generation…",
-          "completed": "文档索引已修复。",
-          "failed": "文档索引修复失败。",
-          "cancelled": "文档索引修复已取消。"
-        }
-      },
-      "remove": {
-        "title": "删除文档？",
-        "description": "将从此设备删除 Godot {{branch}} 文档。"
-      },
-      "messages": {
-        "ready": "Godot 文档已可使用。",
-        "upToDate": "该文档已经是最新版本。",
-        "removed": "已删除 Godot {{branch}} 文档。"
-      },
-      "errors": {
-        "check": "检查文档索引失败。",
-        "repair": "修复文档索引失败。",
-        "load": "加载文档设置失败。",
-        "branches": "加载官方文档分支失败。",
-        "pickLocal": "选择本地文档来源失败。",
-        "job": "读取文档任务进度失败。",
-        "update": "更新文档失败。",
-        "cancel": "取消文档操作失败。",
-        "toggle": "更新文档查询开关失败。",
-        "remove": "删除文档失败。"
-      }
-    },
-    "godotProjects": {
-      "title": "Godot 项目",
-      "empty": "没有发现 Godot 项目。",
-      "bundleReady": "内置插件 {{version}} 已绑定到 Studio {{studioVersion}}。",
-      "actionCompleted": "Godot 项目已更新。",
-      "operationQueued": "插件变更已安全暂存。关闭 Godot 后，Studio 会自动应用。",
-      "pendingRestart": "插件变更正等待 Godot 关闭。",
-      "pendingRestartDescription": "Studio 已安全暂存插件；所有 Godot 编辑器退出后将自动应用变更。",
-      "confirmRepair": "要使用内置版本替换当前安装的插件吗？",
-      "confirmUninstall": "要从该项目卸载 Daedalus Bridge 吗？",
-      "columns": {
-        "project": "项目",
-        "godot": "Godot",
-        "plugin": "插件",
-        "status": "状态",
-        "actions": "操作"
-      },
-      "actions": {
-        "add": "添加项目",
-        "scan": "重新扫描",
-        "install": "安装",
-        "upgrade": "升级",
-        "upgradeAll": "全部升级",
-        "repair": "修复",
-        "uninstall": "卸载",
-        "retryPending": "重试待处理操作"
-      },
-      "status": {
-        "not_installed": "未安装",
-        "current": "已是最新",
-        "development": "开发源码",
-        "outdated": "可升级",
-        "disabled": "已禁用",
-        "modified": "已修改",
-        "pending": "待处理",
-        "pending_restart": "等待 Godot 关闭",
-        "failed": "失败"
-      }
-    },
-    "about": {
-      "title": "关于",
-      "unavailable": "不可用",
-      "applicationInformation": "应用信息",
-      "sourceCode": "源代码",
-      "sourceDescription": "访问 GitHub 仓库查看源代码、问题和贡献方式。",
-      "backend": {
-        "description": "本地 RPC、workflow、MCP 和 Godot 集成服务。",
-        "detailsTitle": "后端详情",
-        "repairConfirmTitle": "修复 Daedalus 后端？",
-        "repairConfirmDescription": "这会停止并重新安装当前 Studio 附带的后端。正在进行的模型响应会被中断。",
-        "repairSucceeded": "后端已修复并重新连接。",
-        "restartSucceeded": "后端已重启并重新连接。",
-        "updateNotAvailable": "当前没有可用的后端更新。",
-        "updateWaiting": "当前有 AI 响应正在进行，后端更新将在响应完成后继续。",
-        "actionWaiting": "当前有 AI 响应正在进行",
-        "actionWaitingDescription": "为避免中断响应，后端重启、修复和更新操作已暂缓。响应完成后可以重试。",
-        "status": {
-          "healthy": "正常",
-          "starting": "启动中",
-          "unhealthy": "异常",
-          "stopped": "已停止",
-          "unknown": "未知"
-        }
-      },
-      "actions": {
-        "refresh": "刷新",
-        "viewChangelog": "查看更新日志",
-        "checkForUpdates": "检查更新",
-        "updateBackend": "更新后端",
-        "restartBackend": "重启后端",
-        "repairBackend": "修复后端"
-      },
-      "onboarding": {
-        "title": "新手引导",
-        "description": "重新启动首次配置引导，不会删除供应商、Godot 路径、离线文档或已安装插件。",
-        "resetAndRestart": "重置并重启",
-        "confirmTitle": "重置新手引导？",
-        "confirmDescription": "Daedalus Studio 将重启并回到欢迎页，现有配置会全部保留。",
-        "resetFailed": "重置新手引导失败。"
-      },
-      "fields": {
-        "author": "作者",
-        "license": "许可证",
-        "logPath": "日志路径",
-        "managerStatus": "管理器状态",
-        "package": "包",
-        "port": "端口",
-        "processId": "进程 ID",
-        "protocol": "协议",
-        "runtimeMode": "运行模式",
-        "version": "版本"
-      },
-      "protocol": {
-        "multiClient": "多客户端",
-        "singleClient": "单客户端"
-      },
-      "errors": {
-        "applicationInfo": "加载应用信息失败",
-        "backendDetails": "加载后端详情失败",
-        "backendUpdate": "更新后端失败",
-        "backendRepair": "修复后端失败",
-        "backendRestart": "重启后端失败"
-      }
-    },
-    "import": {
-      "title": "导入",
-      "session": {
-        "title": "会话数据",
-        "importSession": {
-          "title": "导入 Daedalus 会话",
-          "description": "选择从 WorkspaceTree 导出的 SQLite 文件，并把这个会话导入回本机 Studio。",
-          "action": "选择 SQLite 文件",
-          "dialogTitle": "导入 Daedalus 会话",
-          "dialogButton": "导入",
-          "success": "已导入会话：{{title}}",
-          "successArchived": "已导入归档会话：{{title}}",
-          "resultDescription_other": "会话 ID：{{sessionId}} · 已恢复 {{files}} 个文件"
-        }
-      }
-    },
-    "archivedSessions": {
-      "title": "已归档会话",
-      "loading": "正在加载已归档会话...",
-      "searchPlaceholder": "搜索会话...",
-      "actions": {
-        "delete": "删除",
-        "deleteAll": "全部删除",
-        "restore": "取消归档"
-      },
-      "aria": {
-        "delete": "删除 {{sessionTitle}}",
-        "restore": "取消归档 {{sessionTitle}}"
-      },
-      "filters": {
-        "all": "全部",
-        "noWorkspace": "无 workspace"
-      },
-      "empty": {
-        "none": "暂无已归档会话",
-        "noMatches": "没有匹配的已归档会话"
-      },
-      "confirm": {
-        "deleteSession": {
-          "title": "删除已归档会话？",
-          "description": "这会永久删除这个已归档会话。"
-        },
-        "deleteAll": {
-          "title": "删除已归档会话？",
-          "description": "这会永久删除当前筛选条件下的 {{count}} 个已归档会话。",
-          "description_other": "这会永久删除当前筛选条件下的 {{count}} 个已归档会话。"
-        }
-      },
-      "errors": {
-        "deleteAll": "删除已归档会话失败",
-        "deleteSession": "删除已归档会话失败",
-        "load": "加载已归档会话失败",
-        "restore": "取消归档会话失败"
-      }
-    },
-    "defaultModel": {
-      "selectModel": "选择模型",
-      "configureProvider": "配置供应商",
-      "notConfigured": "未配置，始终询问我",
-      "routing": {
-        "sessionTitle": {
-          "title": "会话标题模型",
-          "description": "用于自动重命名会话和轻量标题生成。"
-        },
-        "nextStepHints": {
-          "title": "下一步建议模型",
-          "description": "在主回复完成后为未输入内容的 Composer 生成一条可选后续建议；未配置时跟随当前模型，并始终关闭思考。"
-        },
-        "goalEvaluator": {
-          "title": "Goal 完成判定模型",
-          "description": "用于在每个执行循环后判断 Goal 是否完成；未配置时回退到 Goal 创建时的会话模型。"
-        },
-        "contextCompression": {
-          "title": "上下文压缩模型",
-          "description": "用于生成可恢复的结构化上下文摘要；未配置时跟随当前模型，始终关闭思考。"
-        },
-        "imageRecognition": {
-          "title": "图像识别模型",
-          "description": "当当前聊天模型不能直接处理图片上下文时使用。"
-        },
-        "imageGeneration": {
-          "title": "图像生成/编辑模型",
-          "description": "用于 @image-gen 和 mcp_image_generate 的文生图或图生图任务。必须显式配置。"
-        },
-        "gitCommit": {
-          "title": "Git commit 模型",
-          "description": "用于根据 workspace 的 Git diff 生成 commit message。未设置时默认使用主模型。"
-        },
-        "commandReview": {
-          "title": "命令审查模型",
-          "description": "在 Auto-safe 模式下审查自由终端命令。未设置时，每条命令都会请求你的审批。"
-        }
-      },
-      "errors": {
-        "load": "加载默认模型设置失败",
-        "noSelection": "没有可用的供应商模型选择",
-        "save": "保存模型路由失败"
-      }
-    },
-    "mcpServers": {
-      "title": "MCP 服务",
-      "searchPlaceholder": "搜索 MCP...",
-      "noSecrets": "无密钥",
-      "toolCount": "{{count}} 个工具",
-      "toolCount_other": "{{count}} 个工具",
-      "empty": {
-        "none": "暂无自定义 MCP 服务",
-        "noMatches": "没有匹配的 MCP 服务"
-      },
-      "status": {
-        "connected": "已连接",
-        "disabled": "已禁用",
-        "failed": "失败",
-        "starting": "启动中"
-      },
-      "confirm": {
-        "delete": {
-          "title": "删除 MCP 服务？",
-          "description": "从 Daedalus Studio 删除 {{name}}。这个 MCP 服务保存的密钥也会被移除。"
-        }
-      },
-      "modal": {
-        "addTitle": "添加 MCP 服务",
-        "editTitle": "编辑 MCP 服务"
-      },
-      "form": {
-        "command": "命令",
-        "commandRequired": "命令不能为空",
-        "description": "描述",
-        "descriptionPlaceholder": "MCP 服务描述",
-        "name": "名称",
-        "namePlaceholder": "MCP 服务名称",
-        "nameRequired": "名称不能为空",
-        "type": "类型",
-        "urlRequired": "请输入有效 URL"
-      },
-      "errors": {
-        "delete": "删除 MCP 服务失败",
-        "load": "加载 MCP 服务失败",
-        "loadTimeout": "MCP 配置响应时间过长。页面仍可使用，但运行状态可能暂时不是最新。",
-        "update": "更新 MCP 服务失败"
-      }
-    },
-    "personalization": {
-      "userPrompt": {
-        "title": "用户提示词",
-        "description": "附加到新 AI 请求中的自定义指令。"
-      },
-      "gitCommitPrompt": {
-        "title": "Git commit 提示词",
-        "description": "仅在生成 commit message 时使用的自定义指令。"
-      },
-      "commandReviewPrompt": {
-        "title": "补充审查偏好",
-        "description": "用于 Auto-safe 命令审查的额外偏好。固定安全规则始终优先。",
-        "placeholder": "添加项目相关的命令审查偏好。"
-      },
-      "errors": {
-        "load": "加载个性化设置失败",
-        "save": "保存个性化设置失败"
-      }
-    },
-    "provider": {
-      "apiBaseUrl": "API Base URL",
-      "apiKey": "API Key",
-      "enterApiKey": "输入 API Key",
-      "baseUrlHints": {
-        "openaiCompatible": "OpenAI 兼容服务通常需要包含版本路径，例如 /v1；AIHub 请使用 https://aihub.top/v1。"
-      },
-      "modelListSource": "模型列表来源：{{source}}",
-      "models": "模型",
-      "newKeyHint": "只会保存新输入的 key。",
-      "savedKey": "已保存 key：{{key}}",
-      "searchPlaceholder": "搜索供应商...",
-      "updated": "更新于 {{updatedAt}}",
-      "requestConfiguration": {
-        "title": "自定义请求 · {{provider}}",
-        "open": "自定义请求",
-        "description": "为文本模型请求添加供应商特有的请求头或 JSON 正文字段。不需要的区块可以省略或保留为空对象。",
-        "safetyHint": "认证、模型、消息、工具和流式字段仍由 Daedalus 管理。保存时会拒绝这些保留字段。",
-        "editorHint": "仅支持 headers 和 body 两个顶层字段",
-        "useTextEditor": "改用文本编辑",
-        "reset": "重置配置",
-        "validation": {
-          "json": "请先输入有效的 JSON。",
-          "root": "请求配置必须是一个 JSON 对象。",
-          "topLevel": "顶层仅支持 \"headers\" 和 \"body\" 字段。",
-          "headers": "\"headers\" 必须是一个值均为字符串的对象。",
-          "body": "\"body\" 必须是只包含 JSON 值的对象。"
-        }
-      },
-      "dialogs": {
-        "addProviderTitle": "添加供应商",
-        "editProviderTitle": "编辑供应商",
-        "addModelTitle": "添加模型",
-        "editModelTitle": "编辑模型",
-        "discoverModelsTitle": "{{provider}}模型"
-      },
-      "fields": {
-        "providerName": "供应商名称",
-        "providerType": "供应商类型",
-        "websiteUrl": "供应商官网",
-        "modelId": "模型 ID",
-        "modelName": "模型名称",
-        "modelTypes": "模型类型",
-        "contextWindowTokens": "上下文窗口（tokens）",
-        "maxOutputTokens": "最大输出（tokens）",
-        "modelCapabilities": "模型能力",
-        "reasoningEfforts": "推理强度",
-        "reasoningEffortId": "供应商参数值",
-        "reasoningEffortFallback": "等效档位",
-        "reasoningEffortDefault": "默认"
-      },
-      "validation": {
-        "providerName": "请输入 1–80 个字符的供应商名称",
-        "providerType": "请选择供应商类型",
-        "websiteUrl": "请输入有效的 http 或 https 网址",
-        "modelId": "请输入 1–200 个字符的模型 ID",
-        "modelName": "请输入 1–120 个字符的模型名称",
-        "tokenLimit": "请输入 1–2,000,000,000 之间的整数",
-        "reasoningEffortId": "请输入 1–32 个字符的供应商参数值",
-        "reasoningEffortDuplicate": "供应商参数值不能重复"
-      },
-      "actions": {
-        "addModel": "添加模型",
-        "addReasoningEffort": "添加强度档位",
-        "removeReasoningEffort": "移除",
-        "clearApiKey": "清除 API Key",
-        "enableProvider": "启用供应商",
-        "disableProvider": "禁用供应商",
-        "fetchModels": "获取模型",
-        "importModels": "导入模型",
-        "applyModelChanges": "应用更改",
-        "removeModels": "删除模型",
-        "removeProvider": "删除供应商",
-        "editProvider": "编辑供应商",
-        "openWebsite": "打开供应商官网",
-        "reloadModels": "重新获取模型",
-        "test": "测试"
-      },
-      "discovery": {
-        "searchPlaceholder": "搜索模型 ID 或名称...",
-        "empty": "没有可管理的模型",
-        "manualModelHint": "模型列表不可用时，可先关闭此窗口，使用“保存”保存 API Key 与 Base URL，再通过右侧“添加模型”手动录入模型 ID。",
-        "alreadyImported": "{{model}} 已导入",
-        "selectModel": "选择 {{model}}",
-        "removeConfirmTitle": "删除所选模型？",
-        "removeConfirmDescription": "将从可用模型列表中删除 {{count}} 个模型。以后重新选择时会恢复原来的名称和能力覆盖。",
-        "guards": {
-          "activeModel": "该模型是当前默认模型，请先在默认模型设置中切换。",
-          "providerSelection": "该模型是此供应商当前保存的模型，请先切换供应商模型。",
-          "taskRouting": "该模型正被任务路由 {{task}} 使用，请先在默认模型设置中更换。",
-          "webSearch": "该模型正被联网搜索使用，请先在搜索设置中更换。"
-        },
-        "failures": {
-          "authentication": "身份验证失败。请检查 API Key 是否有效，且不要填写 Bearer 前缀。",
-          "permission": "供应商拒绝了此 Key 的访问。请检查模型权限、分组、额度或有效期。",
-          "rate_limited": "供应商当前限制了请求频率，请稍后重试。",
-          "models_endpoint": "无法访问模型列表端点。请确认 Base URL 包含正确的版本路径，OpenAI 兼容服务通常需要 /v1。",
-          "response_format": "API 已响应，但模型列表不是 Daedalus 可识别的 OpenAI data[] 格式。可以保存凭据后手动添加模型。",
-          "network": "无法连接到供应商。请检查网络、代理、DNS 和 Base URL。",
-          "upstream": "供应商暂时无法完成模型列表请求，请检查服务状态后重试。"
-        }
-      },
-      "capabilities": {
-        "imageEdit": "编辑",
-        "imageGeneration": "图像生成",
-        "imageInput": "图片输入",
-        "videoInput": "视频输入",
-        "reasoning": "推理",
-        "tools": "工具",
-        "vision": "视觉",
-        "webSearch": "搜索"
-      },
-      "reasoningEfforts": {
-        "description": "配置该供应商 API 接受的推理强度参数值。等效档位用于在切换模型时映射到最接近的强度。",
-        "disabled": "请先启用模型的推理能力，再配置推理强度。",
-        "empty": "未配置可选档位；模型将使用供应商定义的固定或自动推理强度。",
-        "fallback": {
-          "low": "低",
-          "medium": "中",
-          "high": "高",
-          "max": "最高"
-        }
-      },
-      "modelOverrides": {
-        "description": "未覆盖的字段会继续跟随供应商 API 或 Daedalus catalog，并在模型元数据更新后自动采用新值。",
-        "inherit": "跟随来源",
-        "resetAll": "全部恢复跟随"
-      },
-      "status": {
-        "disabled": "已禁用"
-      },
-      "usage": {
-        "blockedTitle": "供应商仍在使用中",
-        "blockedDescription": "{{provider}} 仍被以下模型配置使用，调整这些配置后才能禁用或删除。",
-        "activeModel": "主模型：{{model}}",
-        "taskRouting": "{{task}}：{{model}}"
-      },
-      "remove": {
-        "confirmTitle": "删除自定义供应商？",
-        "confirmDescription": "删除 {{provider}} 及其保存的 API Key、请求配置、模型和本地自定义项？此操作不可撤销。"
-      },
-      "columns": {
-        "capabilities": "能力",
-        "model": "模型"
-      },
-      "errors": {
-        "addProvider": "添加供应商失败",
-        "updateProvider": "更新供应商失败",
-        "openWebsite": "打开供应商官网失败",
-        "clearApiKey": "清除 API Key 失败",
-        "load": "加载供应商设置失败",
-        "modelIdConflict": "该供应商中已存在相同的模型 ID",
-        "modelNotFound": "这个模型已不在当前模型列表中，请刷新后重试",
-        "noSettings": "没有可用的供应商设置",
-        "providerNameConflict": "已存在同名供应商",
-        "discoverModels": "获取供应商模型失败",
-        "importModels": "导入供应商模型失败",
-        "syncModels": "应用供应商模型更改失败",
-        "refreshModels": "刷新供应商模型失败",
-        "saveModel": "保存模型失败",
-        "updateProviderState": "更新供应商状态失败",
-        "removeProvider": "删除供应商失败",
-        "saveRequestConfiguration": "保存自定义请求配置失败",
-        "saveCredentials": "保存供应商凭据失败",
-        "testConnection": "供应商连接测试失败"
-      },
-      "messages": {
-        "testSuccess": "供应商连接测试成功",
-        "credentialsSaved": "供应商凭据已保存",
-        "importSuccess": "已导入 {{count}} 个模型",
-        "syncSuccess": "模型更改已应用：启用 {{enabled}} 个，删除 {{removed}} 个",
-        "providerEnabled": "{{provider}} 已启用",
-        "providerDisabled": "{{provider}} 已禁用",
-        "providerRemoved": "{{provider}} 已删除",
-        "providerUpdated": "供应商信息已更新",
-        "requestConfigurationSaved": "自定义请求配置已保存"
-      },
-      "placeholders": {
-        "websiteUrl": "https://example.com"
-      }
-    },
-    "search": {
-      "title": "搜索",
-      "webSearchTitle": "网页搜索",
-      "configureProvider": "使用网页搜索前，请先在供应商设置中配置所选供应商的 API Key。",
-      "enabled": {
-        "title": "启用网页搜索",
-        "description": "当需要当前信息时，允许每个会话使用已配置的网页搜索工具。"
-      },
-      "model": {
-        "title": "搜索模型",
-        "description": "选择全局网页搜索工具使用的供应商原生搜索模型。",
-        "placeholder": "选择搜索模型"
-      },
-      "maxResults": {
-        "title": "搜索结果数量",
-        "description": "当搜索工具调用没有覆盖数量时，默认返回给助手的搜索结果数。",
-        "tooltip": "{{count}} 条结果",
-        "tooltip_other": "{{count}} 条结果"
-      },
-      "maxKeywords": {
-        "title": "搜索广度",
-        "description": "限制一次联网搜索最多生成的搜索关键词数；更高的数值可能提高召回率。",
-        "tooltip": "最多 {{count}} 个关键词",
-        "billingNotice": "所选供应商可能按搜索关键词调用次数额外计费。使用前请在供应商控制台开通联网搜索服务并确认定价。"
-      },
-      "errors": {
-        "load": "加载网页搜索设置失败",
-        "save": "保存网页搜索设置失败"
-      }
-    },
-    "statistics": {
-      "title": "统计",
-      "actions": {
-        "refresh": "刷新"
-      },
-      "range": {
-        "last7Days": "近 7 天",
-        "last30Days": "近 30 天",
-        "last90Days": "近 90 天",
-        "all": "全部时间"
-      },
-      "metrics": {
-        "requests": "LLM 请求",
-        "successRate": "成功率",
-        "tokens": "Token 用量",
-        "tokensSuffix": "tokens",
-        "cacheHitRate": "缓存命中率",
-        "avgDuration": "平均耗时",
-        "avgFirstToken": "首 token 平均耗时",
-        "tokenActivity": "Token 活动"
-      },
-      "charts": {
-        "requestsTrend": "请求趋势",
-        "tokensTrend": "Token 趋势",
-        "providerShare": "Provider token 占比",
-        "modelTokens": "模型 token 用量"
-      },
-      "empty": {
-        "noUsage": "暂无用量数据"
-      },
-      "unavailable": {
-        "title": "用量统计不可用",
-        "description": "后端无法打开用量统计数据库。"
-      },
-      "errors": {
-        "load": "加载统计失败"
-      },
-      "heatmap": {
-        "title": "Token 活动",
-        "tooltip": "{{date}}：{{tokens}} tokens"
-      },
-      "cacheSegments": {
-        "hit": "缓存命中 token",
-        "miss": "未命中 token"
-      }
-    },
-    "skills": {
-      "title": "技能",
-      "invalid": "无效",
-      "searchPlaceholder": "搜索技能...",
-      "valid": "有效",
-      "actions": {
-        "importFromNpx": "从 npx skills 导入",
-        "importSelected": "导入所选",
-        "install": "安装",
-        "installFromFolder": "从文件夹安装",
-        "installFromZip": "从 ZIP 安装"
-      },
-      "confirm": {
-        "delete": {
-          "title": "删除技能？",
-          "description": "从 Daedalus Studio 删除 {{name}}。这会永久移除对应的个人技能文件。",
-          "projectDescription": "从当前项目删除 {{name}}？这会永久移除项目中的 .github/skills 技能目录，并会反映在版本控制变更中。"
-        }
-      },
-      "empty": {
-        "none": "暂无自定义技能。可以让 agent 创建一个技能，或从 ZIP/文件夹安装。",
-        "noMatches": "没有匹配的技能"
-      },
-      "errors": {
-        "delete": "删除技能失败",
-        "install": "安装技能失败",
-        "npxDiscover": "查找本地 Codex Skill 失败",
-        "load": "加载技能失败",
-        "loadWorkspaces": "加载项目列表失败",
-        "loadContent": "读取 SKILL.md 失败",
-        "projectTargetRequired": "请选择项目和源文件夹后再安装项目技能",
-        "selectSource": "选择技能来源失败",
-        "update": "更新技能失败",
-        "updateContent": "保存 SKILL.md 失败"
-      },
-      "editor": {
-        "title": "编辑技能",
-        "titleWithName": "编辑 {{name}}",
-        "description": "保存前会校验 YAML frontmatter、技能说明和文件大小。技能标识和目录不会改变。"
-      },
-      "install": {
-        "description": "个人技能保存到用户目录；项目技能保存到所选源文件夹的 .github/skills。",
-        "fromFolder": "从文件夹安装",
-        "fromZip": "从 ZIP 安装",
-        "title": "安装技能"
-      },
-      "npx": {
-        "title": "导入全局 Codex Skill",
-        "description": "列出全局 Codex Skill。若本机尚无 Skills CLI，Daedalus Studio 会通过 npx 下载一次 CLI，但不会执行 Skill 指令。",
-        "empty": "未找到全局 Codex Skill。",
-        "selectAll": "选择全部可导入 Skill",
-        "alreadyInstalled": "已安装",
-        "summary": "已导入 {{installed}} 个，跳过 {{skipped}} 个，失败 {{failed}} 个。"
-      },
-      "scope": {
-        "all": "全部",
-        "builtin": "内置",
-        "personal": "个人",
-        "project": "项目"
-      },
-      "target": {
-        "workspacePlaceholder": "选择项目",
-        "sourceFolderPlaceholder": "选择源文件夹",
-        "projectPathHint": "技能将安装到所选源文件夹的 .github/skills 目录。"
-      }
-    },
-    "general": {
-      "title": "通用",
-      "display": {
-        "title": "显示设置",
-        "theme": {
-          "title": "主题",
-          "description": "选择此设备上的 Studio 颜色主题。",
-          "system": "跟随系统",
-          "light": "浅色",
-          "dark": "深色"
-        },
-        "themeColor": {
-          "title": "主题色",
-          "description": "自定义 Studio 的强调色和主要控件颜色。",
-          "reset": "恢复默认"
-        },
-        "language": {
-          "title": "语言",
-          "description": "选择 Studio 的显示语言。",
-          "placeholder": "选择语言",
-          "system": "跟随系统",
-          "english": "English",
-          "chinese": "中文"
-        }
-      },
-      "fonts": {
-        "title": "字体",
-        "body": {
-          "title": "正文字体族",
-          "description": "自定义 Studio 普通文本使用的字体族。",
-          "placeholder": "例如：\"Microsoft YaHei\", sans-serif",
-          "reset": "恢复默认正文字体"
-        },
-        "code": {
-          "title": "代码字体族",
-          "description": "自定义代码、终端和文件编辑器使用的字体族。",
-          "placeholder": "例如：\"JetBrains Mono\", Consolas, monospace",
-          "reset": "恢复默认代码字体"
-        }
-      },
-      "godot": {
-        "title": "Godot 环境",
-        "executable": "Godot 可执行文件",
-        "description": "当 workspace 没有提供自己的 Godot 可执行文件路径时使用。",
-        "placeholder": "选择 Godot 可执行文件",
-        "browse": "浏览",
-        "clear": "清除 Godot 可执行文件",
-        "status": {
-          "ready": "Godot {{version}}",
-          "readyFallback": "可用",
-          "unavailable": "不可用",
-          "unconfigured": "未配置"
-        }
-      },
-      "notifications": {
-        "title": "系统通知",
-        "runCompleted": {
-          "title": "LLM 回复完成时通知",
-          "description": "当回复在后台完成时，通过系统通知提醒你。窗口处于前台时不会重复打扰。"
-        }
-      },
-      "general": {
-        "title": "常规设置",
-        "nextStepHintsEnabled": {
-          "title": "开启下一步建议",
-          "description": "每次回复完成后，让 Daedalus 在输入框中提示一个可能的下一步。"
-        },
-        "autoCheckForUpdates": {
-          "title": "启动时检查更新",
-          "description": "应用启动时检查 Daedalus Studio 和后端更新。"
-        },
-        "minimizeToTrayOnClose": {
-          "title": "关闭时最小化到托盘",
-          "description": "点击窗口关闭按钮时，将 Daedalus Studio 隐藏到系统托盘。"
-        }
-      },
-      "errors": {
-        "load": "加载通用设置失败",
-        "save": "保存通用设置失败",
-        "godotExecutable": "验证 Godot 可执行文件失败"
-      }
-    }
-  },
-  "nativeNotifications": {
-    "goalAchievedTitle": "Daedalus 已完成目标",
-    "goalStoppedTitle": "Daedalus 目标已停止",
-    "approvalTitle": "Daedalus 需要审批",
-    "toolApprovalBody": "助手正在等待工具审批。",
-    "toolBudgetBody": "助手需要增加工具预算才能继续。",
-    "planApprovalBody": "计划已准备好，等待你审阅。",
-    "clarificationTitle": "Daedalus 需要补充信息",
-    "clarificationBody": "有一个计划问题等待你的回复。",
-    "runCompletedTitle": "Daedalus 已完成",
-    "runCompletedBody": "{{sessionTitle}} 已准备就绪。"
-  },
-  "appUpdate": {
-    "title": "Daedalus Studio 更新",
-    "summary": {
-      "client": "有可用的 Daedalus Studio 更新。",
-      "backend": "有可用的 Daedalus 后端更新。",
-      "combined": "Daedalus Studio 和后端都有可用更新。",
-      "notAvailable": "Daedalus Studio 已是最新版本。",
-      "unsupported": "当前安装方式不支持更新。",
-      "failed": "自动更新未能完成。"
-    },
-    "components": {
-      "client": "客户端",
-      "backend": "后端"
-    },
-    "status": {
-      "checking": "正在检查更新...",
-      "downloading": "正在下载更新...",
-      "downloadingDifferential": "正在下载差分更新...",
-      "downloadingFullInstaller": "正在下载完整安装包...",
-      "installingBackend": "正在安装后端更新...",
-      "backendUpdated": "后端已更新。关闭此对话框以继续。",
-      "restarting": "正在重启以安装...",
-      "waitingForResponse": "正在等待当前响应完成...",
-      "failed": "更新失败",
-      "ready": "更新已就绪。"
-    },
-    "waiting": {
-      "title": "更新已延后",
-      "description": "当前有 AI 响应正在进行。响应完成后，Studio 会继续安装更新。",
-      "activeTitle": "当前有 AI 响应正在进行",
-      "activeDescription": "安装更新会中断当前响应。请求已暂存，等待响应完成后继续。"
-    },
-    "fallback": {
-      "title": "已切换为完整安装包",
-      "description": "差分更新未能完成，Daedalus Studio 已自动回退为完整下载。进度会从 0% 重新计算，这不是重复安装。",
-      "reason": "回退原因："
-    },
-    "actions": {
-      "retry": "重试",
-      "openReleases": "前往 GitHub Releases 手动下载",
-      "openClientReleases": "下载 Daedalus Studio",
-      "openBackendReleases": "下载 Daedalus Backend"
-    },
-    "errors": {
-      "download": "下载更新失败。",
-      "manualDownloadHint": "如果当前网络无法连接 GitHub，或自动下载反复失败，请使用浏览器前往对应组件的 Releases 页面手动下载。"
-    }
-  },
-  "changelog": {
-    "title": "更新日志",
-    "whatsNew": "v{{version}} 更新内容",
-    "noReleaseNotes": "暂时没有 v{{version}} 的详细更新日志。",
-    "actions": {
-      "viewFull": "查看完整日志",
-      "close": "知道了"
-    }
-  }
+	"app": {
+		"boot": {
+			"progress": {
+				"starting": "正在启动 Daedalus Studio",
+				"connectingBackend": "正在连接后端",
+				"loadingPreferences": "正在加载偏好设置",
+				"loadingWorkspaceData": "正在加载工作区数据",
+				"loadingCommandsAndSkills": "正在加载指令与技能",
+				"ready": "准备就绪",
+				"checkingBackend": "正在检查后端",
+				"checkingBackendPackage": "正在检查后端包",
+				"installingBackend": "正在安装后端",
+				"preparingBackend": "正在准备后端",
+				"startingBackend": "正在启动后端",
+				"checkingBackendHealth": "正在检查后端健康状态",
+				"backendReady": "后端已就绪",
+				"backendStartupFailed": "后端启动失败"
+			},
+			"error": {
+				"developmentBackendNotRunning": "开发后端未运行",
+				"installFailed": "无法安装 Daedalus 后端",
+				"backendMissing": "Daedalus 后端缺失或已损坏",
+				"markedBackendMissing": "已标记的后端版本缺失",
+				"healthFailed": "Daedalus 后端未能启动",
+				"studioStartFailed": "Daedalus Studio 无法启动",
+				"bootstrapFailed": "后端启动流程失败。",
+				"backendReadyTimeout": "等待后端就绪超时。",
+				"resourceTimeout": "加载{{resource}}超时。"
+			},
+			"resources": {
+				"backendHealth": "后端状态",
+				"clientPreferences": "客户端偏好",
+				"generalSettings": "通用设置",
+				"providerModels": "供应商与模型",
+				"workspaces": "工作区",
+				"sessions": "会话列表",
+				"sessionLayouts": "会话布局",
+				"workspaceTreeOrder": "工作区排序",
+				"slashCommands": "斜杠指令",
+				"skills": "技能"
+			},
+			"actions": {
+				"retry": "重试",
+				"retryInstall": "重新安装",
+				"repairBackend": "修复后端",
+				"restartBackend": "重启后端"
+			}
+		},
+		"home": {
+			"greeting": {
+				"morning": "早上好，今天想做什么？",
+				"afternoon": "下午好，接下来想做什么？",
+				"evening": "晚上好，今天还想推进什么？"
+			},
+			"subtitleWithoutWorkspace": "先选择一个 workspace，或者直接说说你的想法",
+			"subtitleWithWorkspace": "{{workspaceName}} 已准备好。告诉我想推进什么，我会从合适的地方开始",
+			"starters": {
+				"workspace": {
+					"explore": {
+						"label": "先帮我了解这个项目",
+						"prompt": "先帮我了解这个项目。请读取必要的工作区信息，告诉我它的结构和建议的起点。"
+					},
+					"next_step": {
+						"label": "帮我梳理下一步",
+						"prompt": "根据这个项目的当前状态，帮我梳理接下来最值得推进的事情。"
+					},
+					"plan": {
+						"label": "为一个功能做计划",
+						"prompt": "我想为一个功能做计划。请先了解必要上下文，再给我一个清晰、可执行的方案。"
+					}
+				},
+				"unbound": {
+					"explore": {
+						"label": "一起梳理想法",
+						"prompt": "我有一个想法，帮我一起梳理目标、约束和合适的下一步。"
+					},
+					"next_step": {
+						"label": "解释一个概念",
+						"prompt": "请用清晰、简洁的方式解释一个概念，必要时结合例子。"
+					},
+					"plan": {
+						"label": "做一份实施计划",
+						"prompt": "帮我把一个想法整理成一份实际可执行的计划。"
+					}
+				}
+			}
+		},
+		"fullTrust": {
+			"title": "启用 Full Trust？",
+			"description": "Full Trust 会关闭 OS 沙箱，自动批准所有工具，并允许终端命令以你的普通用户权限运行。",
+			"confirmationPrefix": "输入",
+			"confirmationSuffix": "以确认这个全局安全模式。",
+			"actions": {
+				"enable": "启用 Full Trust",
+				"cancel": "取消"
+			},
+			"errors": {
+				"confirmation": "输入 {{confirmationText}} 才能启用 Full Trust。"
+			}
+		}
+	},
+	"onboarding": {
+		"ariaLabel": "Daedalus Studio 新手配置",
+		"steps": {
+			"welcome": "欢迎",
+			"provider": "供应商",
+			"godot_executable": "Godot",
+			"documentation": "文档",
+			"godot_plugin": "插件",
+			"complete": "完成"
+		},
+		"actions": {
+			"start": "开始配置",
+			"back": "上一步",
+			"next": "下一步",
+			"skip": "跳过",
+			"cancel": "取消",
+			"enterStudio": "进入 Daedalus Studio",
+			"enteringStudio": "正在进入 Daedalus Studio"
+		},
+		"progress": "第 {{current}} 步，共 {{total}} 步",
+		"status": {
+			"saving": "正在保存设置"
+		},
+		"outcomes": {
+			"configured": "已配置",
+			"skipped": "已跳过"
+		},
+		"welcome": {
+			"title": "欢迎使用 Daedalus Studio",
+			"description": "完成 AI 辅助 Godot 开发所需的基础配置。所有集成都可以跳过，并随时在设置中补充或修改。",
+			"conceptVideoLabel": "Daedalus Studio 概念视频"
+		},
+		"provider": {
+			"title": "配置模型供应商",
+			"description": "连接一个供应商，并选择 Daedalus 新会话默认使用的模型。",
+			"existingReady": "已有供应商和模型可用，你可以直接继续或重新配置。",
+			"testSucceeded": "连接成功，请选择模型完成配置。",
+			"saved": "供应商和模型已可用。",
+			"fields": {
+				"provider": "供应商",
+				"apiKey": "API Key",
+				"apiKeyPlaceholder": "输入 API Key",
+				"baseUrl": "API Base URL",
+				"model": "模型",
+				"modelPlaceholder": "选择模型"
+			},
+			"actions": {
+				"test": "测试连接",
+				"save": "保存并使用"
+			},
+			"errors": {
+				"test": "供应商连接失败。",
+				"save": "保存供应商和模型失败。"
+			}
+		},
+		"godotExecutable": {
+			"title": "选择 Godot 可执行文件",
+			"description": "Daedalus 使用该程序验证和启动项目，并匹配对应版本的离线文档。",
+			"ready": "Godot {{version}} 已就绪。",
+			"path": "Godot 可执行文件",
+			"notSelected": "尚未选择 Godot 可执行文件",
+			"actions": {
+				"select": "选择可执行文件"
+			},
+			"errors": {
+				"invalid": "无法验证所选的 Godot 可执行文件。",
+				"select": "选择 Godot 可执行文件失败。"
+			}
+		},
+		"documentation": {
+			"title": "安装 Godot 离线文档",
+			"description": "下载官方 godot-docs 分支，让 Agent 在不依赖联网的情况下核对不熟悉的 Godot API。",
+			"ready": "离线文档查询已就绪。",
+			"installed": "已安装 {{count}} 个文档版本",
+			"enableSearch": "启用查询",
+			"branch": "文档分支",
+			"selectBranch": "选择分支",
+			"install": "下载并安装",
+			"stages": {
+				"resolving": "正在解析文档来源",
+				"downloading": "正在下载文档",
+				"extracting": "正在解压文档",
+				"indexing": "正在建立搜索索引",
+				"validating": "正在验证搜索索引",
+				"rolling_back": "正在恢复健康索引",
+				"finalizing": "正在完成安装",
+				"completed": "文档已就绪",
+				"failed": "文档安装失败",
+				"cancelled": "文档安装已取消"
+			},
+			"errors": {
+				"load": "加载文档选项失败。",
+				"job": "读取文档任务进度失败。",
+				"install": "安装文档失败。",
+				"cancel": "取消文档操作失败。",
+				"toggle": "更新文档查询状态失败。"
+			}
+		},
+		"godotPlugin": {
+			"title": "安装 Daedalus Bridge",
+			"description": "选择一个或多个 Godot 项目。插件会把编辑器连接到 Daedalus 工具和诊断服务。",
+			"ready": "至少一个项目已安装 Daedalus Bridge。",
+			"pendingRestart": "插件更改已暂存，将在 Godot 关闭后应用。",
+			"selected": "已选择 {{count}} 个项目",
+			"empty": "没有发现 Godot 项目。",
+			"incompatible": "需要 Godot 4.5 或更高版本",
+			"columns": {
+				"project": "项目",
+				"godot": "Godot",
+				"status": "状态"
+			},
+			"actions": {
+				"scan": "重新扫描",
+				"add": "添加项目",
+				"install": "安装到所选项目"
+			},
+			"errors": {
+				"scan": "扫描 Godot 项目失败。",
+				"add": "添加 Godot 项目失败。",
+				"install": "安装插件失败。"
+			}
+		},
+		"complete": {
+			"title": "Daedalus Studio 已就绪",
+			"description": "所有可选集成都可以随时在设置中重新配置。"
+		},
+		"errors": {
+			"saveProgress": "保存引导进度失败。",
+			"complete": "完成新手引导失败。",
+			"timeout": "保存引导进度超时，请检查后端连接后重试。"
+		}
+	},
+	"workspaceTree": {
+		"projectEditor": {
+			"appearance": "项目外观",
+			"icon": "图标",
+			"color": "颜色",
+			"namePlaceholder": "项目名称",
+			"sourceFolders": "源文件夹",
+			"addFolder": "添加文件夹",
+			"addFailed": "添加源文件夹失败。",
+			"duplicateFolder": "该源文件夹已在项目中。",
+			"nameRequired": "项目名称不能为空。",
+			"sourceFolderRequired": "请先添加一个源文件夹。",
+			"saveFailed": "保存项目失败。",
+			"makePrimary": "设为主文件夹",
+			"removeFolder": "移除源文件夹",
+			"primary": "主要",
+			"cancel": "取消",
+			"confirm": "确定"
+		},
+		"actions": {
+			"editProject": "编辑项目",
+			"newProject": "新建项目",
+			"rename": "重命名",
+			"renameSession": "重命名会话",
+			"forkSession": "分叉会话",
+			"pinSession": "置顶会话",
+			"unpinSession": "取消置顶会话",
+			"archiveSession": "归档会话",
+			"openInExplorer": "在资源管理器中打开",
+			"openWorkspaceDirectory": "打开工作区目录",
+			"copySessionId": "复制会话 ID",
+			"exportSession": "导出会话数据",
+			"delete": "删除",
+			"newSessionInWorkspace": "在 workspace 中新建会话"
+		},
+		"aria": {
+			"archiveSession": "归档 {{sessionTitle}}",
+			"pinSession": "置顶 {{sessionTitle}}",
+			"unpinSession": "取消置顶 {{sessionTitle}}",
+			"workspaceActions": "{{workspaceName}} 的 workspace 操作",
+			"newSessionInWorkspace": "在 {{workspaceName}} 中新建会话"
+		},
+		"empty": {
+			"noWorkspace": "暂无 workspace",
+			"noSessions": "暂无会话",
+			"noPinnedSessions": "暂无置顶会话",
+			"noProjects": "暂无项目",
+			"noRecentSessions": "暂无最近会话"
+		},
+		"groups": {
+			"pinned": "置顶",
+			"projects": "项目",
+			"recent": "最近"
+		},
+		"status": {
+			"assistantRunning": "助手正在响应",
+			"unreadResponse": "未读助手响应",
+			"exportingSession": "正在导出会话…"
+		},
+		"messages": {
+			"sessionIdCopied": "已复制会话 ID",
+			"sessionExported": "会话数据已导出",
+			"sessionExportedWithMissingFiles": "会话数据已导出，但有 {{count}} 个外部文件缺失"
+		},
+		"exportDialog": {
+			"title": "导出会话数据",
+			"button": "导出"
+		},
+		"errors": {
+			"archiveSession": "归档会话失败",
+			"copySessionId": "复制会话 ID 失败",
+			"exportSession": "导出会话数据失败",
+			"deleteWorkspace": "删除 workspace 失败",
+			"loadWorkspace": "加载 workspace 失败",
+			"openSessionDirectory": "打开会话目录失败",
+			"openWorkspaceDirectory": "打开 workspace 目录失败",
+			"pinSession": "更新置顶会话失败",
+			"renameSession": "重命名会话失败",
+			"saveOrder": "保存 workspace 排序失败",
+			"sessionTitleCannotBeEmpty": "会话标题不能为空。"
+		},
+		"modals": {
+			"deleteWorkspace": {
+				"sessionPolicy": "会话会尽量迁移到匹配的其他项目；无法匹配的会话将被永久删除。",
+				"title": "删除 workspace？",
+				"body": "这会从 Daedalus 删除该 workspace，并永久删除它的会话。Godot 项目文件夹中的文件不会被删除。"
+			},
+			"renameSession": {
+				"placeholder": "会话标题"
+			}
+		}
+	},
+	"agentPage": {
+		"actions": {
+			"newSession": "新建会话",
+			"openSettings": "打开设置",
+			"scrollToBottom": "滚动到底部"
+		},
+		"conversationNavigator": {
+			"ariaLabel": "\u5bf9\u8bdd\u8f6e\u6b21",
+			"emptyMessage": "\u7528\u6237\u6d88\u606f"
+		},
+		"conversationSearch": {
+			"placeholder": "在会话中搜索",
+			"previous": "上一个匹配项",
+			"next": "下一个匹配项",
+			"close": "关闭搜索",
+			"indexing": "正在搜索完整会话…",
+			"loadError": "无法加载完整会话搜索索引，仍可搜索当前已加载的消息。"
+		},
+		"workspaceLaunch": {
+			"openIn": "在 {{target}} 中打开",
+			"aria": {
+				"selectTarget": "选择 workspace 打开方式"
+			},
+			"errors": {
+				"open": "打开 workspace 失败。"
+			}
+		},
+		"dock": {
+			"openBottom": "打开底部面板",
+			"closeBottom": "关闭底部面板",
+			"openSidebar": "打开侧边栏",
+			"closeSidebar": "关闭侧边栏"
+		},
+		"workspaceSidebar": {
+			"open": "展开工作区边栏",
+			"close": "收起工作区边栏"
+		},
+		"sessionNavigation": {
+			"previous": "上一个会话",
+			"next": "下一个会话"
+		},
+		"summary": {
+			"tooltip": "摘要",
+			"empty": "暂无摘要",
+			"detachedHead": "游离 HEAD",
+			"unknownSize": "未知尺寸",
+			"sourceSubtitle": "{{mimeType}} / {{dimensions}}",
+			"fallbackPlanTitle": "计划",
+			"fallbackImageSourceTitle": "图片来源",
+			"aria": {
+				"open": "打开会话摘要"
+			},
+			"sections": {
+				"envInfo": "环境信息",
+				"godot": "Godot",
+				"plans": "计划",
+				"source": "来源"
+			},
+			"godot": {
+				"runProject": "运行项目",
+				"runScene": "运行特定场景...",
+				"sceneModal": {
+					"title": "运行 Godot 场景",
+					"searchPlaceholder": "搜索场景",
+					"empty": "没有找到场景文件"
+				},
+				"errors": {
+					"loadScenes": "加载 Godot 场景失败"
+				}
+			},
+			"actions": {
+				"diff": "变更",
+				"commitOrPush": "提交或推送",
+				"seeMore": "查看更多",
+				"retry": "重试"
+			},
+			"errors": {
+				"load": "加载会话摘要失败。"
+			}
+		}
+	},
+	"composer": {
+		"placeholders": {
+			"ask": "问我一个问题，或一起探索一个想法",
+			"agent": "描述需要我检查、修改或执行的内容",
+			"plan": "描述你希望制定计划达成的结果",
+			"goal": "描述目标以及可以验证的完成结果"
+		},
+		"textAreaMenu": {
+			"cut": "剪切",
+			"copy": "复制",
+			"paste": "粘贴",
+			"selectAll": "全选"
+		},
+		"context": {
+			"addFiles": "添加文件",
+			"addFolder": "添加文件夹",
+			"addImages": "添加图片"
+		},
+		"mode": {
+			"ask": "问答",
+			"agent": "Agent",
+			"plan": "计划",
+			"goal": "Goal"
+		},
+		"approvalMode": {
+			"manual": "手动",
+			"autoSafe": "自动安全",
+			"fullTrust": "完全信任"
+		},
+		"model": {
+			"fallback": "模型",
+			"notConfigured": "未配置",
+			"configureProvider": "配置供应商",
+			"capabilities": {
+				"reasoning": "推理",
+				"vision": "视觉",
+				"search": "搜索"
+			}
+		},
+		"reasoning": {
+			"efforts": {
+				"low": "低",
+				"medium": "中",
+				"high": "高",
+				"xhigh": "极高",
+				"max": "最大"
+			}
+		},
+		"workspace": {
+			"noWorkspace": "无 workspace",
+			"addWorkspace": "添加 workspace..."
+		},
+		"tooltips": {
+			"addContext": "添加附加上下文",
+			"mode": "模式",
+			"approvalMode": "审批模式",
+			"model": "模型",
+			"reasoningEffort": "推理强度"
+		},
+		"send": {
+			"send": "发送",
+			"stop": "停止",
+			"stopping": "正在停止...",
+			"queue": "加入队列"
+		},
+		"contextUsage": {
+			"title": "上下文用量",
+			"estimating": "正在估算上下文...",
+			"retry": "重试",
+			"usedTokens": "{{used}} / {{total}} tokens",
+			"meta": "{{model}} / 可用 {{available}} / {{source}}",
+			"compress": "压缩聊天",
+			"compressionResult": "压缩前 {{before}}，压缩后 {{after}}，节省 {{saved}} tokens；{{restorable}} 个原始块可恢复",
+			"legend": {
+				"input": "实际输入",
+				"outputReserve": "输出预留",
+				"safetyMargin": "安全边距"
+			},
+			"pressureLevel": "{{level}}压力",
+			"largestContributor": "最大贡献项：{{largest}}",
+			"columns": {
+				"tokens": "Token",
+				"share": "占比"
+			},
+			"none": "无",
+			"pressureLevels": {
+				"low": "低",
+				"moderate": "中等",
+				"high": "高",
+				"critical": "严重"
+			},
+			"breakdown": {
+				"systemAndTools": "系统与工具",
+				"history": "历史记录",
+				"historyWithSummary": "历史记录（摘要）",
+				"currentMessage": "当前消息",
+				"reservedOutput": "预留输出",
+				"safetyMargin": "安全余量",
+				"kinds": {
+					"base_system": "基础系统提示词",
+					"custom_instructions": "自定义指令",
+					"skills": "技能",
+					"mcp_context": "MCP 上下文",
+					"tool_definitions": "工具定义",
+					"history": "会话历史",
+					"summary": "会话摘要",
+					"current_message": "当前消息",
+					"additional_context": "附加上下文",
+					"output_reserve": "预留输出",
+					"safety_margin": "安全余量"
+				}
+			},
+			"compressDisabled": {
+				"sending": "正在发送消息",
+				"unavailable": "暂不可压缩"
+			},
+			"errors": {
+				"estimate": "上下文估算失败"
+			}
+		}
+	},
+	"goal": {
+		"aria": "Goal 执行状态",
+		"stages": {
+			"readiness": "检查就绪状态",
+			"running": "执行中",
+			"evaluating": "判定中",
+			"pausing": "正在暂停",
+			"awaiting_approval": "等待审批",
+			"awaiting_tool_budget": "等待工具预算",
+			"paused": "已暂停",
+			"achieved": "已完成",
+			"failed": "失败",
+			"cancelled": "已取消"
+		},
+		"fields": {
+			"stage": "状态",
+			"cycles": "循环",
+			"tokens": "Token",
+			"activeTime": "有效耗时"
+		},
+		"evaluation": "完成判定",
+		"readiness": "就绪检查",
+		"workflow": "当前 Workflow",
+		"actions": {
+			"pause": "暂停",
+			"resume": "恢复",
+			"cancel": "取消",
+			"extend": "追加预算",
+			"rollback": "完整回滚",
+			"dismiss": "关闭"
+		},
+		"cancelConfirm": {
+			"title": "取消这个 Goal？",
+			"description": "当前安全操作会先执行完，已经产生的工作区更改将保留。"
+		},
+		"rollback": {
+			"title": "回滚 Goal 更改？",
+			"description": "将 {{count}} 个受跟踪文件完整恢复到 Goal 开始前的状态。",
+			"unavailableTitle": "无法完整回滚",
+			"unavailable": "部分 Goal 更改无法安全恢复。",
+			"success": "Goal 更改已完整回滚。"
+		},
+		"extend": {
+			"title": "追加 Goal 预算",
+			"cycles": "额外循环数",
+			"tokens": "额外 Token",
+			"minutes": "额外有效分钟数"
+		},
+		"errors": {
+			"insufficientBudget": "追加后的预算仍低于当前已使用量，请增加 Token、循环或有效时间预算。",
+			"action": "更新 Goal 失败",
+			"rollback": "回滚 Goal 更改失败",
+			"budget": "追加 Goal 预算失败",
+			"dismiss": "关闭 Goal 状态失败"
+		}
+	},
+	"messageQueue": {
+		"groups": {
+			"guides": "引导",
+			"queue": "队列"
+		},
+		"actions": {
+			"edit": "编辑",
+			"remove": "移除",
+			"dragToReorder": "拖动排序"
+		}
+	},
+	"workflowTodo": {
+		"titleFallback": "待办",
+		"stepFallback": "步骤 {{index}}",
+		"changedFiles": "{{count}} 个文件",
+		"changedFiles_other": "{{count}} 个文件",
+		"dismiss": "关闭",
+		"aria": {
+			"progress": "Workflow 进度",
+			"fileChanges": "文件变更"
+		}
+	},
+	"approval": {
+		"tool": {
+			"title": "批准工具执行？",
+			"subtitle": "助手正在等待你的批准后继续。",
+			"consentPrefix": "输入",
+			"consentSuffix": "以批准这次跨 workspace 操作。",
+			"actions": {
+				"approve": "批准",
+				"reject": "拒绝"
+			}
+		},
+		"toolBudget": {
+			"title": "工具预算已达到上限",
+			"subtitle": "模型需要更多工具预算才能继续执行。",
+			"limitKind": {
+				"steps": "工具调用次数",
+				"toolResultChars": "工具结果总量"
+			},
+			"fields": {
+				"triggeredLimit": "触发上限",
+				"usedSteps": "已用步骤",
+				"toolResultChars": "工具结果字符",
+				"additionalSteps": "继续追加"
+			},
+			"additionalStepsValue": "+{{formatted}} 步",
+			"additionalStepsValue_other": "+{{formatted}} 步",
+			"actions": {
+				"continue": "继续",
+				"stop": "否，结束并总结",
+				"summarize": "用现有结果总结",
+				"cancel": "取消本轮"
+			}
+		},
+		"plan": {
+			"aria": "计划审批",
+			"title": "批准计划？",
+			"subtitle": "查看上方计划后，可以批准执行或要求修改。",
+			"revisionPlaceholder": "告诉助手如何修改计划",
+			"actions": {
+				"approveAndExecute": "批准并执行",
+				"revise": "修改"
+			}
+		}
+	},
+	"clarification": {
+		"aria": "计划澄清",
+		"title": "需要澄清",
+		"recommendedSuffix": "（推荐）",
+		"placeholder": "告诉助手接下来怎么做",
+		"skipHint": "跳过会继续制定计划，不会取消任务。该问题会视为未提供信息，助手将依据已有上下文做出假设；若涉及核心需求、架构、平台或数据格式，计划可能不够准确。之后仍可补充说明并重新调整计划。",
+		"actions": {
+			"skip": "跳过并继续",
+			"submit": "提交"
+		}
+	},
+	"dock": {
+		"tabs": {
+			"changes": "变更",
+			"changesIndexed": "变更 {{index}}",
+			"terminal": "终端",
+			"terminalIndexed": "终端 {{index}}",
+			"files": "文件",
+			"filesIndexed": "文件 {{index}}",
+			"enterFullscreen": "展开面板",
+			"exitFullscreen": "恢复面板"
+		},
+		"add": {
+			"label": "添加面板",
+			"reviewPanel": "变更审阅面板",
+			"terminalPanel": "终端面板",
+			"filesPanel": "文件面板"
+		},
+		"empty": {
+			"noWorkspaceSelected": "未选择 workspace"
+		}
+	},
+	"files": {
+		"noWorkspace": "选择 workspace 后即可浏览和编辑文件",
+		"noSourceFolder": "无 source folder",
+		"noFileSelected": "从文件树中选择文件",
+		"editorAriaLabel": "文件编辑器",
+		"loading": "正在读取文件…",
+		"search": "搜索文件或路径",
+		"save": "保存",
+		"saved": "文件已保存",
+		"savedAs": "文件已另存为",
+		"reload": "重新加载",
+		"binary": "该文件不是可编辑的 UTF-8 文本文件",
+		"oversized": "文件超过 2 MiB，无法在文件面板中编辑",
+		"openExternal": "在外部应用中打开",
+		"showSidebar": "显示文件边栏",
+		"hideSidebar": "隐藏文件边栏",
+		"conflict": "文件已被外部修改。重新加载磁盘版本，或将当前草稿另存为。",
+		"contextAdded": "已添加到上下文",
+		"addSelectionContext": "添加到上下文",
+		"comment": "评论",
+		"commentPlaceholder": "输入对所选代码的评论",
+		"editorMenu": {
+			"undo": "撤销",
+			"redo": "重做",
+			"cut": "剪切",
+			"copy": "复制",
+			"paste": "粘贴",
+			"selectAll": "全选"
+		},
+		"closeTitle": "关闭已修改的文件？",
+		"closeDirty": "{{name}} 包含尚未保存的修改。",
+		"discard": "不保存",
+		"cancel": "取消",
+		"menu": {
+			"openFrom": "从 {{target}} 打开",
+			"openWith": "打开方式",
+			"saveAs": "另存为…",
+			"copyPath": "复制路径",
+			"copyRelativePath": "复制相对路径",
+			"addContext": "添加到上下文"
+		}
+	},
+	"git": {
+		"detachedHead": "游离 HEAD",
+		"actions": {
+			"refresh": "刷新"
+		},
+		"commit": {
+			"title": "提交或推送",
+			"messagePlaceholder": "留空会自动生成提交信息",
+			"includeUnstaged": "包含未暂存变更",
+			"actions": {
+				"commit": "提交",
+				"push": "推送",
+				"commitAndPush": "提交并推送"
+			},
+			"messages": {
+				"changes": "变更",
+				"committedAndPushed": "已提交 {{target}} 并推送。",
+				"committed": "已提交 {{target}}。",
+				"pushed": "已推送变更。"
+			},
+			"errors": {
+				"selectWorkspace": "请先选择 workspace 再提交。",
+				"generationTimeout": "AI 提交信息生成超过 60 秒，已视为失败。",
+				"actionFailed": "{{action}} 失败。"
+			}
+		},
+		"branch": {
+			"title": "分支",
+			"searchPlaceholder": "搜索分支",
+			"empty": "没有找到分支",
+			"actions": {
+				"createAndCheckout": "创建并切换",
+				"checkout": "切换"
+			},
+			"tags": {
+				"current": "当前",
+				"remote": "远程"
+			},
+			"messages": {
+				"switched": "已切换到 {{branch}}。",
+				"committedAndSwitched": "已提交工作区更改并切换到 {{branch}}。",
+				"createdAndSwitched": "已创建并切换到 {{branch}}。"
+			},
+			"checkoutDraft": {
+				"title": "提交更改以切换分支",
+				"description": "切换到 {{branch}} 前，将提交以下工作区更改：",
+				"commitAndCheckout": "提交并切换分支",
+				"cancel": "取消",
+				"commitMessagePlaceholder": "输入提交消息",
+				"summary": "{{count}} 个已更改文件",
+				"summary_other": "{{count}} 个已更改文件",
+				"moreFiles": "还有 {{count}} 个文件",
+				"moreFiles_other": "还有 {{count}} 个文件",
+				"errors": {
+					"commitMessageRequired": "请输入提交消息。",
+					"load": "检查工作区更改失败。",
+					"commit": "切换分支前提交更改失败。"
+				}
+			},
+			"errors": {
+				"selectWorkspaceBeforeSwitching": "请先选择 workspace 再切换分支。",
+				"selectWorkspaceBeforeCreating": "请先选择 workspace 再创建分支。",
+				"notGitRepository": "当前 workspace 不是 Git 仓库。",
+				"load": "加载分支失败。",
+				"selectBranch": "请选择一个分支。",
+				"switch": "切换分支失败。",
+				"enterBranchName": "请输入分支名称。",
+				"create": "创建分支失败。"
+			}
+		},
+		"createBranch": {
+			"title": "创建分支",
+			"namePlaceholder": "新分支名称",
+			"startPointPlaceholder": "起点，可选",
+			"hint": "留空起点时会从当前 HEAD 创建。"
+		}
+	},
+	"review": {
+		"unknownFile": "未知文件",
+		"sourceFolder": {
+			"label": "源文件夹",
+			"placeholder": "选择源文件夹"
+		},
+		"binaryFileChanged": "二进制文件已变更",
+		"diffStats": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
+		"diffStats_other": "{{branch}} / {{count}} 个文件 / +{{additions}} -{{deletions}}",
+		"actions": {
+			"refreshDiff": "刷新 Git diff",
+			"expandAllDiffs": "展开小型差异",
+			"collapseAllDiffs": "折叠小型差异",
+			"loadMoreFiles": "加载更多文件"
+		},
+		"empty": {
+			"diffUnavailable": "Diff 不可用",
+			"noDiffLoaded": "尚未加载 diff",
+			"noGitRepository": "不是 Git 仓库",
+			"noWorkspaceChanges": "workspace 暂无变更"
+		},
+		"notices": {
+			"lazyLoading": {
+				"title": "按需加载差异",
+				"description": "优先打开较小的文本文件。大文件保持折叠，仅在手动打开时请求。"
+			},
+			"diffTruncated": {
+				"title": "Diff 已截断",
+				"description": "补丁太大，无法完整显示。"
+			},
+			"diffParseFailed": "Diff 解析失败"
+		},
+		"loadingFile": "正在加载文件差异",
+		"fileTooLarge": {
+			"title": "文件差异过大，无法渲染",
+			"description": "为保持审阅面板流畅，未加载该文件预览。"
+		},
+		"commentDialog": {
+			"title": "请求更改",
+			"open": "请求更改此行",
+			"target": "{{path}}，第 {{line}} 行",
+			"label": "需要如何更改？",
+			"required": "请输入请求更改的内容。",
+			"submit": "添加评论",
+			"contextMeta": "第 {{line}} 行审阅评论"
+		},
+		"errors": {
+			"loadDiff": "加载 Git diff 失败。",
+			"loadFile": "加载文件差异失败。",
+			"parseDiff": "解析 diff 失败。"
+		}
+	},
+	"terminal": {
+		"home": "主目录",
+		"status": {
+			"waitingForWorkspace": "等待 workspace",
+			"starting": "正在启动",
+			"notStarted": "未启动",
+			"running": "运行中",
+			"stopped": "已停止"
+		},
+		"actions": {
+			"restart": "重启终端",
+			"stop": "停止终端"
+		},
+		"errors": {
+			"start": "启动终端失败。",
+			"stop": "停止终端失败。",
+			"restart": "重启终端失败。"
+		}
+	},
+	"chat": {
+		"markdownResource": {
+			"openFile": "打开文件",
+			"openInCurrentTarget": "在当前工作区应用中打开",
+			"openInCurrentTargetNamed": "在 {{target}} 中打开",
+			"openWith": "打开方式",
+			"saveAs": "另存为",
+			"copyPath": "复制路径",
+			"pathCopied": "路径已复制",
+			"revealInExplorer": "在资源管理器中打开",
+			"savedAs": "文件已保存",
+			"noWorkspace": "请先选择工作区，再打开此文件"
+		},
+		"mermaid": {
+			"title": "Mermaid 图表",
+			"rendering": "正在生成图表…",
+			"renderFailed": "无法生成图表",
+			"copySource": "复制图表源码",
+			"showSource": "查看图表源码",
+			"exportPng": "导出 PNG",
+			"exported": "PNG 图片已导出",
+			"exportFailed": "无法导出 PNG 图片"
+		},
+		"codeBlock": {
+			"copy": "复制代码",
+			"exportAsFile": "导出为文件",
+			"exported": "文件已导出",
+			"exportFailed": "无法导出文件"
+		},
+		"common": {
+			"copy": "复制",
+			"copied": "已复制",
+			"copyFailed": "复制选中文本失败。",
+			"selectAll": "全选",
+			"copyAll": "复制全部",
+			"loadingConversation": "正在加载会话"
+		},
+		"assistant": {
+			"process": "过程",
+			"respondedIn": "已响应：{{elapsed}}",
+			"stoppedIn": "已停止：{{elapsed}}",
+			"copyAria": "复制助手消息"
+		},
+		"user": {
+			"copyAria": "复制用户消息",
+			"editAndResendAria": "编辑并重新发送用户消息",
+			"forkAria": "从这条用户消息分叉会话",
+			"actions": {
+				"cancel": "取消",
+				"send": "发送",
+				"editAndResend": "编辑并重新发送",
+				"forkFromHere": "从这里分叉"
+			}
+		},
+		"fork": {
+			"titleSuffix": " · 分叉",
+			"untitledSource": "未命名会话",
+			"originLabel": "分叉自",
+			"openSourceTooltip": "打开来源会话",
+			"openSourceAria": "打开来源会话",
+			"modelChanged": "模型已从 {{from}} 切换到 {{to}}",
+			"errors": {
+				"create": "创建分叉会话失败",
+				"sourceUnavailable": "来源会话不可用或已归档",
+				"openSource": "打开来源会话失败"
+			}
+		},
+		"contextStrip": {
+			"aria": "消息上下文",
+			"pinned": "已固定",
+			"expandText": "展开到输入框",
+			"display": {
+				"contextFallback": "上下文",
+				"selection": "选择",
+				"fileCount": "{{count}} 个文件",
+				"fileCount_other": "{{count}} 个文件",
+				"folderCount": "{{count}} 个文件夹",
+				"folderCount_other": "{{count}} 个文件夹",
+				"selectedCount": "已选 {{count}} 项",
+				"selectedCount_other": "已选 {{count}} 项",
+				"line": "第 {{line}} 行",
+				"linesRange": "第 {{start}}-{{end}} 行",
+				"fileSize": "{{size}} KiB",
+				"textAttachment": "文本附件",
+				"reviewComment": "评审评论",
+				"selectedMessageText": "选中的消息文本",
+				"fileSelection": "文件选区",
+				"more": "... 还有 {{count}} 个",
+				"more_other": "... 还有 {{count}} 个",
+				"pathLabel": "{{kind}}: {{path}}",
+				"pathFallback": "路径"
+			}
+		},
+		"selection": {
+			"attachContext": "附加上下文",
+			"askAi": "提问 AI",
+			"annotationPlaceholder": "添加批注（可留空）",
+			"editAnnotation": "编辑批注",
+			"openAsk": "打开选区问答",
+			"deleteAsk": "删除",
+			"deleteAllAsks": "删除全部",
+			"deleteAskFailed": "删除选区问答失败",
+			"askTitle": "选区问答",
+			"askPlaceholder": "继续提问…",
+			"sendAsk": "发送问题",
+			"stopAsk": "停止回答",
+			"stoppingAsk": "正在停止回答",
+			"askFailed": "创建选区问答失败",
+			"responseFailed": "回答失败",
+			"interrupted": "Backend 重启，回答已中断"
+		},
+		"tool": {
+			"labels": {
+				"mcp_skills_load": "加载技能",
+				"mcp_skills_propose_create": "草拟技能",
+				"mcp_skills_create": "创建技能",
+				"mcp_image_generate": "生成图片",
+				"mcp_image_inspect": "检查图片",
+				"mcp_web_search": "联网搜索",
+				"mcp_workspace_list_files": "浏览工作区文件",
+				"mcp_workspace_read_text_file": "读取文件",
+				"mcp_workspace_search_text": "搜索工作区文本",
+				"mcp_workspace_propose_create_text_file": "草拟文件",
+				"mcp_workspace_create_text_file": "创建文件",
+				"mcp_workspace_propose_overwrite_text_file": "草拟覆盖文件",
+				"mcp_workspace_overwrite_text_file": "覆盖文件",
+				"mcp_workspace_propose_replace_text_in_file": "草拟文本替换",
+				"mcp_workspace_replace_text_in_file": "替换文件文本",
+				"mcp_workspace_propose_replace_line_in_file": "草拟行替换",
+				"mcp_workspace_replace_line_in_file": "替换文件行",
+				"mcp_workspace_delete_file": "删除文件",
+				"mcp_godot_get_runtime_status": "检查 Godot 运行状态",
+				"mcp_godot_get_godot_version": "检查 Godot 版本",
+				"mcp_godot_search_documentation": "搜索 Godot 文档",
+				"mcp_godot_launch_editor": "启动 Godot 编辑器",
+				"mcp_godot_run_project": "运行 Godot 项目",
+				"mcp_godot_stop_project": "停止 Godot 项目",
+				"mcp_godot_get_debug_output": "读取 Godot 调试输出",
+				"mcp_godot_list_projects": "浏览 Godot 项目",
+				"mcp_godot_get_uid": "解析资源 UID",
+				"mcp_godot_resave_resource": "重新保存资源",
+				"mcp_godot_update_project_uids": "更新项目 UID",
+				"mcp_godot_save_scene_variant": "保存场景变体",
+				"mcp_godot_load_sprite_texture": "加载精灵纹理",
+				"mcp_godot_export_mesh_library": "导出 MeshLibrary",
+				"mcp_godot_propose_create_scene": "草拟场景",
+				"mcp_godot_create_scene": "创建场景",
+				"mcp_godot_propose_add_node_to_scene": "草拟场景节点",
+				"mcp_godot_add_node_to_scene": "添加场景节点",
+				"mcp_godot_propose_attach_script_to_node": "草拟脚本挂载",
+				"mcp_godot_attach_script_to_node": "挂载脚本到节点",
+				"mcp_godot_propose_connect_signal_in_scene": "草拟信号连接",
+				"mcp_godot_connect_signal_in_scene": "连接场景信号",
+				"mcp_godot_propose_apply_scene_patch": "草拟场景补丁",
+				"mcp_godot_apply_scene_patch": "应用场景补丁",
+				"mcp_godot_editor_apply_scene_patch": "修改已打开场景",
+				"mcp_godot_get_project_summary": "读取项目摘要",
+				"mcp_godot_list_project_files": "浏览项目文件",
+				"mcp_godot_list_scenes": "浏览场景",
+				"mcp_godot_list_scripts": "浏览脚本",
+				"mcp_godot_read_text_file": "读取文件",
+				"mcp_godot_search_text": "搜索项目文本",
+				"mcp_godot_get_project_log_config": "读取日志设置",
+				"mcp_godot_list_project_logs": "浏览项目日志",
+				"mcp_godot_read_project_log": "读取项目日志",
+				"mcp_godot_get_project_settings": "读取项目设置",
+				"mcp_godot_get_editor_config_summary": "读取编辑器配置摘要",
+				"mcp_godot_get_editor_settings": "读取编辑器设置",
+				"mcp_godot_list_editor_config_files": "浏览编辑器配置文件",
+				"mcp_godot_read_editor_config_file": "读取编辑器配置",
+				"mcp_godot_get_editor_project_state": "读取编辑器项目状态",
+				"mcp_godot_get_recent_projects": "浏览最近项目",
+				"mcp_godot_propose_set_project_setting": "草拟项目设置",
+				"mcp_godot_set_project_setting": "设置项目设置",
+				"mcp_godot_propose_unset_project_setting": "草拟移除设置",
+				"mcp_godot_unset_project_setting": "取消项目设置",
+				"mcp_godot_inspect_scene_tree": "检查场景树",
+				"mcp_godot_validate_scene_script_references": "验证场景脚本引用",
+				"mcp_godot_editor_get_context": "读取编辑器上下文",
+				"mcp_godot_editor_get_selected_nodes": "读取选中节点",
+				"mcp_godot_editor_inspect_node": "检查编辑器节点",
+				"mcp_godot_editor_capture_scene_view": "捕获场景视图",
+				"mcp_godot_lsp_get_status": "检查语言服务器",
+				"mcp_godot_lsp_get_file_diagnostics": "检查文件诊断",
+				"mcp_godot_lsp_get_document_symbols": "读取文档符号",
+				"mcp_godot_lsp_hover": "查看符号悬停信息",
+				"mcp_godot_lsp_goto_definition": "查找定义",
+				"mcp_godot_dap_get_status": "检查调试器状态",
+				"mcp_godot_dap_get_last_error": "读取调试器错误",
+				"mcp_godot_dap_get_stack_trace": "读取调用栈",
+				"mcp_godot_dap_get_variables": "读取调试变量",
+				"mcp_godot_propose_create_text_file": "草拟 Godot 文件",
+				"mcp_godot_create_text_file": "创建 Godot 文件",
+				"mcp_godot_propose_overwrite_text_file": "草拟覆盖 Godot 文件",
+				"mcp_godot_overwrite_text_file": "覆盖 Godot 文件",
+				"mcp_godot_propose_replace_text_in_file": "草拟 Godot 文本替换",
+				"mcp_godot_replace_text_in_file": "替换 Godot 文件文本",
+				"mcp_godot_delete_file": "删除 Godot 文件",
+				"mcp_terminal_get_capabilities": "检查终端能力",
+				"mcp_terminal_run_command": "运行终端命令",
+				"mcp_terminal_run_safe_preset": "运行验证命令",
+				"mcp_terminal_run_godot_scene_script": "运行 Godot 场景脚本",
+				"mcp_terminal_run_write_preset": "运行写入命令",
+				"mcp_terminal_get_job_status": "检查终端任务",
+				"mcp_terminal_get_job_tail": "读取终端输出",
+				"mcp_terminal_cancel_job": "取消终端任务"
+			},
+			"status": {
+				"running": "运行中",
+				"done": "完成",
+				"failed": "失败",
+				"approvalRequired": "需要批准",
+				"pending": "待执行"
+			},
+			"activity": {
+				"running": "工具正在执行。",
+				"pending": "工具尚未开始执行。",
+				"writing": "正在写入：{{tool}}"
+			},
+			"recovery": {
+				"failed": "第 {{attempt}}/{{max}} 次恢复尝试失败，AI 可以调整同一结构化目标后重试。",
+				"recovered": "此前失败 {{attempt}}/{{max}} 次，本次已恢复。",
+				"exhausted": "已达到恢复上限（{{attempt}}/{{max}}），不会再次执行这一精确操作。"
+			},
+			"fileChanges": {
+				"summary": "已变更 {{count}} 个文件"
+			}
+		},
+		"terminalPart": {
+			"commandFallback": "终端命令",
+			"cwd": "目录",
+			"sandbox": "沙箱",
+			"exitCode": "退出码",
+			"duration": "耗时",
+			"jobId": "任务",
+			"output": "输出",
+			"copyCommand": "复制命令",
+			"copyOutput": "复制输出",
+			"waitingOutput": "等待输出…",
+			"noOutput": "没有输出",
+			"omitted": "已省略 {{count}} 个字符",
+			"status": {
+				"approval": "需要批准",
+				"running": "运行中",
+				"success": "完成",
+				"failed": "失败",
+				"timed_out": "已超时",
+				"cancelled": "已取消",
+				"background": "后台任务"
+			}
+		},
+		"providerReconnect": {
+			"attempt": "尝试重新连接 {{attempt}}/{{max}}",
+			"recovered": "连接已恢复",
+			"failed": "无法连接模型服务",
+			"stopped": "已停止重新连接",
+			"timeout": "模型服务连续 {{seconds}} 秒没有返回数据时开始重连。",
+			"extended": "检测到临时传输或网关故障，自动重连已扩展至 15 次。",
+			"reason": {
+				"transport": "模型服务的传输连接意外中断。",
+				"idle_timeout": "模型服务的数据流长时间没有活动。",
+				"gateway": "临时网关错误中断了本次请求。",
+				"rate_limit": "模型供应商暂时限制了请求频率。",
+				"server": "模型供应商返回了临时服务错误。"
+			}
+		},
+		"plan": {
+			"open": "打开计划"
+		},
+		"thinking": {
+			"label": "思考过程",
+			"activeLabel": "正在思考"
+		},
+		"activityGroup": {
+			"activeThinking": "正在思考",
+			"lastThinking": "思考过程",
+			"summary": {
+				"files": "编辑了 {{count}} 个文件",
+				"commands": "运行了 {{count}} 次命令",
+				"tools": "使用了 {{count}} 次工具",
+				"thoughts": "思考了 {{count}} 次",
+				"separator": "，",
+				"empty": "活动过程"
+			}
+		},
+		"compression": {
+			"running": "正在压缩上下文",
+			"completed": "上下文已自动压缩",
+			"skipped": "上下文压缩已跳过",
+			"failed": "上下文压缩失败"
+		},
+		"inlineDiff": {
+			"title": "已编辑 {{count}} 个文件",
+			"title_other": "已编辑 {{count}} 个文件",
+			"unknownFile": "未知文件",
+			"openReviewAria": "打开 {{filePath}} 的审阅",
+			"showMoreFiles": "\u518d\u663e\u793a{{count}}\u4e2a\u6587\u4ef6",
+			"collapseFiles": "\u6536\u8d77\u6587\u4ef6",
+			"actions": {
+				"undo": "撤销",
+				"review": "审阅"
+			}
+		},
+		"imageGeneration": {
+			"modelFallback": "图像生成",
+			"generating": "正在生成图片",
+			"generated": "已生成图片",
+			"failed": "图像生成失败",
+			"previewUnavailable": "图片预览不可用",
+			"loading": "加载中",
+			"actions": {
+				"copyImage": "复制图片",
+				"saveImage": "保存图片"
+			},
+			"messages": {
+				"copied": "图片已复制"
+			},
+			"errors": {
+				"load": "加载生成图片失败",
+				"copy": "复制图片失败",
+				"unknown": "未知错误"
+			}
+		}
+	},
+	"settings": {
+		"menu": {
+			"provider": "供应商",
+			"defaultModel": "默认模型",
+			"general": "通用",
+			"keyboardShortcuts": "键盘快捷键",
+			"search": "搜索",
+			"statistics": "统计",
+			"personalization": "个性化",
+			"mcpServers": "MCP 服务器",
+			"skills": "技能",
+			"documentation": "文档",
+			"godotProjects": "Godot 项目",
+			"archivedSessions": "已归档会话",
+			"import": "导入",
+			"about": "关于",
+			"fallbackTitle": "设置",
+			"placeholder": "这个设置区域稍后实现。"
+		},
+		"common": {
+			"add": "添加",
+			"cancel": "取消",
+			"delete": "删除",
+			"disable": "禁用",
+			"edit": "编辑",
+			"enable": "启用",
+			"off": "关闭",
+			"on": "开启",
+			"save": "保存",
+			"close": "关闭",
+			"update": "更新"
+		},
+		"keyboardShortcuts": {
+			"title": "键盘快捷键",
+			"search": {
+				"action": "搜索动作名称",
+				"mapping": "按下快捷键以查找动作"
+			},
+			"columns": {
+				"name": "名称",
+				"shortcut": "快捷键",
+				"actions": "操作"
+			},
+			"actions": {
+				"edit": "编辑",
+				"reset": "恢复默认"
+			},
+			"commands": {
+				"toggleWorkspaceSidebar": "切换 Workspace 侧边栏",
+				"toggleBottomPanel": "切换底部面板",
+				"toggleSessionSidebar": "切换会话侧边栏",
+				"newSession": "新建会话",
+				"previousSession": "上一个聊天",
+				"nextSession": "下一个聊天",
+				"previousTurn": "上一个对话轮次",
+				"nextTurn": "下一个对话轮次",
+				"findInConversation": "在会话中查找"
+			},
+			"empty": "没有匹配的快捷键动作。",
+			"editor": {
+				"title": "编辑“{{action}}”快捷键",
+				"description": "按下新的单段快捷键。普通字符需要搭配修饰键。",
+				"placeholder": "按下快捷键",
+				"required": "请录入一个快捷键。",
+				"invalid": "该按键不能单独用作快捷键。",
+				"conflict": "该快捷键已被“{{action}}”使用。"
+			},
+			"errors": {
+				"load": "无法加载键盘快捷键。",
+				"save": "无法保存键盘快捷键。"
+			}
+		},
+		"documentation": {
+			"title": "文档",
+			"enabled": "启用文档查询",
+			"add": "添加文档",
+			"importLocal": "导入本地文档",
+			"empty": "尚未安装 Godot 离线文档。",
+			"item": {
+				"stats": "{{documents}} 个文档 · {{chunks}} 个分块 · {{classes}} 个类 · {{size}}",
+				"updated": "更新于 {{date}}",
+				"licenses": "手册：CC BY 3.0 · 类参考：MIT",
+				"source": {
+					"official": "官方",
+					"local": "本地"
+				}
+			},
+			"health": {
+				"status": {
+					"checking": "检查中",
+					"ready": "健康",
+					"degraded": "已降级",
+					"repairing": "修复中",
+					"unavailable": "不可用"
+				},
+				"check": "检查索引",
+				"repairAction": "修复索引",
+				"neverChecked": "索引尚未检查",
+				"checked": "检查于 {{date}}",
+				"allUnavailable": "没有可用的健康文档索引",
+				"toolUnavailable": "文档查询开关会保持开启，但在索引修复前，LLM 暂时不会获得文档搜索工具。",
+				"repair": {
+					"rollback": "可回退到上一份健康索引",
+					"cached_source": "可离线修复",
+					"network_required": "需要重新下载",
+					"source_required": "需要重新选择本地来源",
+					"none": "没有可用修复来源"
+				}
+			},
+			"repair": {
+				"networkTitle": "下载文档以修复索引？",
+				"networkDescription": "Godot {{branch}} 的本地源缓存不可用。Daedalus 只会在你确认后连接 GitHub。",
+				"download": "下载并修复",
+				"sourceTitle": "选择本地来源以修复文档"
+			},
+			"modal": {
+				"title": "添加 Godot 文档",
+				"sourceTitle": "Godot 官方文档",
+				"sourceDescription": "Daedalus 将从 godotengine/godot-docs 下载所选分支，并在本机建立全文索引。Studio 安装包不包含文档。",
+				"branch": "文档分支",
+				"branchRequired": "请选择文档分支。",
+				"branchPlaceholder": "选择或搜索分支",
+				"installed": "已安装",
+				"refresh": "刷新分支",
+				"notice": "下载内容会固定到不可变 commit。磁盘占用取决于所选分支和生成的 SQLite 索引。",
+				"download": "下载并建立索引"
+			},
+			"local": {
+				"title": "导入本地 Godot 文档",
+				"sourceTitle": "本地 godot-docs 源",
+				"sourceDescription": "选择已解压的 godot-docs 文件夹或 ZIP 压缩包。Daedalus 会复制并建立索引，不会修改原始文件。",
+				"branch": "文档版本",
+				"branchRequired": "请输入文档版本或分支名称。",
+				"branchPlaceholder": "例如 4.7 或 master",
+				"source": "本地来源",
+				"sourceRequired": "请选择 godot-docs 文件夹或 ZIP 压缩包。",
+				"sourcePlaceholder": "选择文件夹或 ZIP 压缩包",
+				"selectFolder": "选择文件夹",
+				"selectZip": "选择 ZIP",
+				"import": "导入并建立索引"
+			},
+			"progress": {
+				"title": "Godot {{branch}} 文档",
+				"cancel": "取消操作",
+				"retrying": "连接中断，正在重新下载文档…",
+				"stage": {
+					"resolving": "解析分支",
+					"downloading": "正在下载",
+					"extracting": "正在解压",
+					"indexing": "正在索引",
+					"validating": "正在校验",
+					"rolling_back": "正在回退",
+					"finalizing": "正在完成",
+					"completed": "已完成",
+					"failed": "失败",
+					"cancelled": "已取消"
+				},
+				"message": {
+					"resolving": "正在把所选分支解析为不可变 commit…",
+					"downloading": "正在从 Godot 官方文档仓库下载…",
+					"extracting": "正在校验并解压文档压缩包…",
+					"indexing": "正在建立本地符号和全文搜索索引…",
+					"finalizing": "正在启用新的文档 generation…",
+					"completed": "文档索引已可使用。",
+					"failed": "文档操作失败。",
+					"cancelled": "文档操作已取消。"
+				},
+				"localMessage": {
+					"resolving": "正在检查本地文档来源…",
+					"downloading": "正在复制本地文档压缩包…",
+					"extracting": "正在校验并暂存本地文档来源…",
+					"indexing": "正在建立本地符号和全文搜索索引…",
+					"finalizing": "正在启用导入的文档 generation…",
+					"completed": "导入的文档索引已可使用。",
+					"failed": "本地文档导入失败。",
+					"cancelled": "本地文档导入已取消。"
+				}
+			},
+			"operationMessage": {
+				"check": {
+					"resolving": "正在准备文档健康检查…",
+					"downloading": "正在准备文档健康检查…",
+					"extracting": "正在准备文档健康检查…",
+					"indexing": "正在准备文档健康检查…",
+					"validating": "正在检查 SQLite 完整性、元数据、数量和哈希…",
+					"rolling_back": "正在检查上一份健康索引…",
+					"finalizing": "正在保存文档健康状态…",
+					"completed": "文档索引健康。",
+					"failed": "文档健康检查失败。",
+					"cancelled": "文档健康检查已取消。"
+				},
+				"repair": {
+					"resolving": "正在选择修复来源…",
+					"downloading": "正在下载已确认的官方文档来源…",
+					"extracting": "正在准备本地缓存的文档来源…",
+					"indexing": "正在重建文档索引…",
+					"validating": "正在验收重建后的索引…",
+					"rolling_back": "正在验证上一份健康 Generation…",
+					"finalizing": "正在启用修复后的文档 Generation…",
+					"completed": "文档索引已修复。",
+					"failed": "文档索引修复失败。",
+					"cancelled": "文档索引修复已取消。"
+				}
+			},
+			"remove": {
+				"title": "删除文档？",
+				"description": "将从此设备删除 Godot {{branch}} 文档。"
+			},
+			"messages": {
+				"ready": "Godot 文档已可使用。",
+				"upToDate": "该文档已经是最新版本。",
+				"removed": "已删除 Godot {{branch}} 文档。"
+			},
+			"errors": {
+				"check": "检查文档索引失败。",
+				"repair": "修复文档索引失败。",
+				"load": "加载文档设置失败。",
+				"branches": "加载官方文档分支失败。",
+				"pickLocal": "选择本地文档来源失败。",
+				"job": "读取文档任务进度失败。",
+				"update": "更新文档失败。",
+				"cancel": "取消文档操作失败。",
+				"toggle": "更新文档查询开关失败。",
+				"remove": "删除文档失败。"
+			}
+		},
+		"godotProjects": {
+			"title": "Godot 项目",
+			"empty": "没有发现 Godot 项目。",
+			"bundleReady": "内置插件 {{version}} 已绑定到 Studio {{studioVersion}}。",
+			"actionCompleted": "Godot 项目已更新。",
+			"operationQueued": "插件变更已安全暂存。关闭 Godot 后，Studio 会自动应用。",
+			"pendingRestart": "插件变更正等待 Godot 关闭。",
+			"pendingRestartDescription": "Studio 已安全暂存插件；所有 Godot 编辑器退出后将自动应用变更。",
+			"confirmRepair": "要使用内置版本替换当前安装的插件吗？",
+			"confirmUninstall": "要从该项目卸载 Daedalus Bridge 吗？",
+			"columns": {
+				"project": "项目",
+				"godot": "Godot",
+				"plugin": "插件",
+				"status": "状态",
+				"actions": "操作"
+			},
+			"actions": {
+				"add": "添加项目",
+				"scan": "重新扫描",
+				"install": "安装",
+				"upgrade": "升级",
+				"upgradeAll": "全部升级",
+				"repair": "修复",
+				"uninstall": "卸载",
+				"retryPending": "重试待处理操作"
+			},
+			"status": {
+				"not_installed": "未安装",
+				"current": "已是最新",
+				"development": "开发源码",
+				"outdated": "可升级",
+				"disabled": "已禁用",
+				"modified": "已修改",
+				"pending": "待处理",
+				"pending_restart": "等待 Godot 关闭",
+				"failed": "失败"
+			}
+		},
+		"about": {
+			"title": "关于",
+			"unavailable": "不可用",
+			"applicationInformation": "应用信息",
+			"sourceCode": "源代码",
+			"sourceDescription": "访问 GitHub 仓库查看源代码、问题和贡献方式。",
+			"backend": {
+				"description": "本地 RPC、workflow、MCP 和 Godot 集成服务。",
+				"detailsTitle": "后端详情",
+				"repairConfirmTitle": "修复 Daedalus 后端？",
+				"repairConfirmDescription": "这会停止并重新安装当前 Studio 附带的后端。正在进行的模型响应会被中断。",
+				"repairSucceeded": "后端已修复并重新连接。",
+				"restartSucceeded": "后端已重启并重新连接。",
+				"updateNotAvailable": "当前没有可用的后端更新。",
+				"updateWaiting": "当前有 AI 响应正在进行，后端更新将在响应完成后继续。",
+				"actionWaiting": "当前有 AI 响应正在进行",
+				"actionWaitingDescription": "为避免中断响应，后端重启、修复和更新操作已暂缓。响应完成后可以重试。",
+				"status": {
+					"healthy": "正常",
+					"starting": "启动中",
+					"unhealthy": "异常",
+					"stopped": "已停止",
+					"unknown": "未知"
+				}
+			},
+			"actions": {
+				"refresh": "刷新",
+				"viewChangelog": "查看更新日志",
+				"checkForUpdates": "检查更新",
+				"updateBackend": "更新后端",
+				"restartBackend": "重启后端",
+				"repairBackend": "修复后端"
+			},
+			"onboarding": {
+				"title": "新手引导",
+				"description": "重新启动首次配置引导，不会删除供应商、Godot 路径、离线文档或已安装插件。",
+				"resetAndRestart": "重置并重启",
+				"confirmTitle": "重置新手引导？",
+				"confirmDescription": "Daedalus Studio 将重启并回到欢迎页，现有配置会全部保留。",
+				"resetFailed": "重置新手引导失败。"
+			},
+			"fields": {
+				"author": "作者",
+				"license": "许可证",
+				"logPath": "日志路径",
+				"managerStatus": "管理器状态",
+				"package": "包",
+				"port": "端口",
+				"processId": "进程 ID",
+				"protocol": "协议",
+				"runtimeMode": "运行模式",
+				"version": "版本"
+			},
+			"protocol": {
+				"multiClient": "多客户端",
+				"singleClient": "单客户端"
+			},
+			"errors": {
+				"applicationInfo": "加载应用信息失败",
+				"backendDetails": "加载后端详情失败",
+				"backendUpdate": "更新后端失败",
+				"backendRepair": "修复后端失败",
+				"backendRestart": "重启后端失败"
+			}
+		},
+		"import": {
+			"title": "导入",
+			"session": {
+				"title": "会话数据",
+				"importSession": {
+					"title": "导入 Daedalus 会话",
+					"description": "选择从 WorkspaceTree 导出的 SQLite 文件，并把这个会话导入回本机 Studio。",
+					"action": "选择 SQLite 文件",
+					"dialogTitle": "导入 Daedalus 会话",
+					"dialogButton": "导入",
+					"success": "已导入会话：{{title}}",
+					"successArchived": "已导入归档会话：{{title}}",
+					"resultDescription_other": "会话 ID：{{sessionId}} · 已恢复 {{files}} 个文件"
+				}
+			}
+		},
+		"archivedSessions": {
+			"title": "已归档会话",
+			"loading": "正在加载已归档会话...",
+			"searchPlaceholder": "搜索会话...",
+			"actions": {
+				"delete": "删除",
+				"deleteAll": "全部删除",
+				"restore": "取消归档"
+			},
+			"aria": {
+				"delete": "删除 {{sessionTitle}}",
+				"restore": "取消归档 {{sessionTitle}}"
+			},
+			"filters": {
+				"all": "全部",
+				"noWorkspace": "无 workspace"
+			},
+			"empty": {
+				"none": "暂无已归档会话",
+				"noMatches": "没有匹配的已归档会话"
+			},
+			"confirm": {
+				"deleteSession": {
+					"title": "删除已归档会话？",
+					"description": "这会永久删除这个已归档会话。"
+				},
+				"deleteAll": {
+					"title": "删除已归档会话？",
+					"description": "这会永久删除当前筛选条件下的 {{count}} 个已归档会话。",
+					"description_other": "这会永久删除当前筛选条件下的 {{count}} 个已归档会话。"
+				}
+			},
+			"errors": {
+				"deleteAll": "删除已归档会话失败",
+				"deleteSession": "删除已归档会话失败",
+				"load": "加载已归档会话失败",
+				"restore": "取消归档会话失败"
+			}
+		},
+		"defaultModel": {
+			"selectModel": "选择模型",
+			"configureProvider": "配置供应商",
+			"notConfigured": "未配置，始终询问我",
+			"routing": {
+				"sessionTitle": {
+					"title": "会话标题模型",
+					"description": "用于自动重命名会话和轻量标题生成。"
+				},
+				"nextStepHints": {
+					"title": "下一步建议模型",
+					"description": "在主回复完成后为未输入内容的 Composer 生成一条可选后续建议；未配置时跟随当前模型，并始终关闭思考。"
+				},
+				"goalEvaluator": {
+					"title": "Goal 完成判定模型",
+					"description": "用于在每个执行循环后判断 Goal 是否完成；未配置时回退到 Goal 创建时的会话模型。"
+				},
+				"contextCompression": {
+					"title": "上下文压缩模型",
+					"description": "用于生成可恢复的结构化上下文摘要；未配置时跟随当前模型，始终关闭思考。"
+				},
+				"imageRecognition": {
+					"title": "图像识别模型",
+					"description": "当当前聊天模型不能直接处理图片上下文时使用。"
+				},
+				"imageGeneration": {
+					"title": "图像生成/编辑模型",
+					"description": "用于 @image-gen 和 mcp_image_generate 的文生图或图生图任务。必须显式配置。"
+				},
+				"gitCommit": {
+					"title": "Git commit 模型",
+					"description": "用于根据 workspace 的 Git diff 生成 commit message。未设置时默认使用主模型。"
+				},
+				"commandReview": {
+					"title": "命令审查模型",
+					"description": "在 Auto-safe 模式下审查自由终端命令。未设置时，每条命令都会请求你的审批。"
+				}
+			},
+			"errors": {
+				"load": "加载默认模型设置失败",
+				"noSelection": "没有可用的供应商模型选择",
+				"save": "保存模型路由失败"
+			}
+		},
+		"mcpServers": {
+			"title": "MCP 服务",
+			"searchPlaceholder": "搜索 MCP...",
+			"noSecrets": "无密钥",
+			"toolCount": "{{count}} 个工具",
+			"toolCount_other": "{{count}} 个工具",
+			"empty": {
+				"none": "暂无自定义 MCP 服务",
+				"noMatches": "没有匹配的 MCP 服务"
+			},
+			"status": {
+				"connected": "已连接",
+				"disabled": "已禁用",
+				"failed": "失败",
+				"starting": "启动中"
+			},
+			"confirm": {
+				"delete": {
+					"title": "删除 MCP 服务？",
+					"description": "从 Daedalus Studio 删除 {{name}}。这个 MCP 服务保存的密钥也会被移除。"
+				}
+			},
+			"modal": {
+				"addTitle": "添加 MCP 服务",
+				"editTitle": "编辑 MCP 服务"
+			},
+			"form": {
+				"command": "命令",
+				"commandRequired": "命令不能为空",
+				"description": "描述",
+				"descriptionPlaceholder": "MCP 服务描述",
+				"name": "名称",
+				"namePlaceholder": "MCP 服务名称",
+				"nameRequired": "名称不能为空",
+				"type": "类型",
+				"urlRequired": "请输入有效 URL"
+			},
+			"errors": {
+				"delete": "删除 MCP 服务失败",
+				"load": "加载 MCP 服务失败",
+				"loadTimeout": "MCP 配置响应时间过长。页面仍可使用，但运行状态可能暂时不是最新。",
+				"update": "更新 MCP 服务失败"
+			}
+		},
+		"personalization": {
+			"userPrompt": {
+				"title": "用户提示词",
+				"description": "附加到新 AI 请求中的自定义指令。"
+			},
+			"gitCommitPrompt": {
+				"title": "Git commit 提示词",
+				"description": "仅在生成 commit message 时使用的自定义指令。"
+			},
+			"commandReviewPrompt": {
+				"title": "补充审查偏好",
+				"description": "用于 Auto-safe 命令审查的额外偏好。固定安全规则始终优先。",
+				"placeholder": "添加项目相关的命令审查偏好。"
+			},
+			"errors": {
+				"load": "加载个性化设置失败",
+				"save": "保存个性化设置失败"
+			}
+		},
+		"provider": {
+			"apiBaseUrl": "API Base URL",
+			"apiKey": "API Key",
+			"enterApiKey": "输入 API Key",
+			"baseUrlHints": {
+				"openaiCompatible": "OpenAI 兼容服务通常需要包含版本路径，例如 /v1；AIHub 请使用 https://aihub.top/v1。"
+			},
+			"modelListSource": "模型列表来源：{{source}}",
+			"models": "模型",
+			"newKeyHint": "只会保存新输入的 key。",
+			"savedKey": "已保存 key：{{key}}",
+			"searchPlaceholder": "搜索供应商...",
+			"updated": "更新于 {{updatedAt}}",
+			"requestConfiguration": {
+				"title": "自定义请求 · {{provider}}",
+				"open": "自定义请求",
+				"description": "为文本模型请求添加供应商特有的请求头或 JSON 正文字段。不需要的区块可以省略或保留为空对象。",
+				"safetyHint": "认证、模型、消息、工具和流式字段仍由 Daedalus 管理。保存时会拒绝这些保留字段。",
+				"editorHint": "仅支持 headers 和 body 两个顶层字段",
+				"useTextEditor": "改用文本编辑",
+				"reset": "重置配置",
+				"validation": {
+					"json": "请先输入有效的 JSON。",
+					"root": "请求配置必须是一个 JSON 对象。",
+					"topLevel": "顶层仅支持 \"headers\" 和 \"body\" 字段。",
+					"headers": "\"headers\" 必须是一个值均为字符串的对象。",
+					"body": "\"body\" 必须是只包含 JSON 值的对象。"
+				}
+			},
+			"dialogs": {
+				"addProviderTitle": "添加供应商",
+				"editProviderTitle": "编辑供应商",
+				"addModelTitle": "添加模型",
+				"editModelTitle": "编辑模型",
+				"discoverModelsTitle": "{{provider}}模型"
+			},
+			"fields": {
+				"providerName": "供应商名称",
+				"providerType": "供应商类型",
+				"websiteUrl": "供应商官网",
+				"modelId": "模型 ID",
+				"modelName": "模型名称",
+				"modelTypes": "模型类型",
+				"contextWindowTokens": "上下文窗口（tokens）",
+				"maxOutputTokens": "最大输出（tokens）",
+				"modelCapabilities": "模型能力",
+				"reasoningEfforts": "推理强度",
+				"reasoningEffortId": "供应商参数值",
+				"reasoningEffortFallback": "等效档位",
+				"reasoningEffortDefault": "默认"
+			},
+			"validation": {
+				"providerName": "请输入 1–80 个字符的供应商名称",
+				"providerType": "请选择供应商类型",
+				"websiteUrl": "请输入有效的 http 或 https 网址",
+				"modelId": "请输入 1–200 个字符的模型 ID",
+				"modelName": "请输入 1–120 个字符的模型名称",
+				"tokenLimit": "请输入 1–2,000,000,000 之间的整数",
+				"reasoningEffortId": "请输入 1–32 个字符的供应商参数值",
+				"reasoningEffortDuplicate": "供应商参数值不能重复"
+			},
+			"actions": {
+				"addModel": "添加模型",
+				"addReasoningEffort": "添加强度档位",
+				"removeReasoningEffort": "移除",
+				"clearApiKey": "清除 API Key",
+				"enableProvider": "启用供应商",
+				"disableProvider": "禁用供应商",
+				"fetchModels": "获取模型",
+				"importModels": "导入模型",
+				"applyModelChanges": "应用更改",
+				"removeModels": "删除模型",
+				"removeProvider": "删除供应商",
+				"editProvider": "编辑供应商",
+				"openWebsite": "打开供应商官网",
+				"reloadModels": "重新获取模型",
+				"test": "测试"
+			},
+			"discovery": {
+				"searchPlaceholder": "搜索模型 ID 或名称...",
+				"empty": "没有可管理的模型",
+				"manualModelHint": "模型列表不可用时，可先关闭此窗口，使用“保存”保存 API Key 与 Base URL，再通过右侧“添加模型”手动录入模型 ID。",
+				"alreadyImported": "{{model}} 已导入",
+				"selectModel": "选择 {{model}}",
+				"removeConfirmTitle": "删除所选模型？",
+				"removeConfirmDescription": "将从可用模型列表中删除 {{count}} 个模型。以后重新选择时会恢复原来的名称和能力覆盖。",
+				"guards": {
+					"activeModel": "该模型是当前默认模型，请先在默认模型设置中切换。",
+					"providerSelection": "该模型是此供应商当前保存的模型，请先切换供应商模型。",
+					"taskRouting": "该模型正被任务路由 {{task}} 使用，请先在默认模型设置中更换。",
+					"webSearch": "该模型正被联网搜索使用，请先在搜索设置中更换。"
+				},
+				"failures": {
+					"authentication": "身份验证失败。请检查 API Key 是否有效，且不要填写 Bearer 前缀。",
+					"permission": "供应商拒绝了此 Key 的访问。请检查模型权限、分组、额度或有效期。",
+					"rate_limited": "供应商当前限制了请求频率，请稍后重试。",
+					"models_endpoint": "无法访问模型列表端点。请确认 Base URL 包含正确的版本路径，OpenAI 兼容服务通常需要 /v1。",
+					"response_format": "API 已响应，但模型列表不是 Daedalus 可识别的 OpenAI data[] 格式。可以保存凭据后手动添加模型。",
+					"network": "无法连接到供应商。请检查网络、代理、DNS 和 Base URL。",
+					"upstream": "供应商暂时无法完成模型列表请求，请检查服务状态后重试。"
+				}
+			},
+			"capabilities": {
+				"imageEdit": "编辑",
+				"imageGeneration": "图像生成",
+				"imageInput": "图片输入",
+				"videoInput": "视频输入",
+				"reasoning": "推理",
+				"tools": "工具",
+				"vision": "视觉",
+				"webSearch": "搜索"
+			},
+			"reasoningEfforts": {
+				"description": "配置该供应商 API 接受的推理强度参数值。等效档位用于在切换模型时映射到最接近的强度。",
+				"disabled": "请先启用模型的推理能力，再配置推理强度。",
+				"empty": "未配置可选档位；模型将使用供应商定义的固定或自动推理强度。",
+				"fallback": {
+					"low": "低",
+					"medium": "中",
+					"high": "高",
+					"max": "最高"
+				}
+			},
+			"modelOverrides": {
+				"description": "未覆盖的字段会继续跟随供应商 API 或 Daedalus catalog，并在模型元数据更新后自动采用新值。",
+				"inherit": "跟随来源",
+				"resetAll": "全部恢复跟随"
+			},
+			"status": {
+				"disabled": "已禁用"
+			},
+			"usage": {
+				"blockedTitle": "供应商仍在使用中",
+				"blockedDescription": "{{provider}} 仍被以下模型配置使用，调整这些配置后才能禁用或删除。",
+				"activeModel": "主模型：{{model}}",
+				"taskRouting": "{{task}}：{{model}}"
+			},
+			"remove": {
+				"confirmTitle": "删除自定义供应商？",
+				"confirmDescription": "删除 {{provider}} 及其保存的 API Key、请求配置、模型和本地自定义项？此操作不可撤销。"
+			},
+			"columns": {
+				"capabilities": "能力",
+				"model": "模型"
+			},
+			"errors": {
+				"addProvider": "添加供应商失败",
+				"updateProvider": "更新供应商失败",
+				"openWebsite": "打开供应商官网失败",
+				"clearApiKey": "清除 API Key 失败",
+				"load": "加载供应商设置失败",
+				"modelIdConflict": "该供应商中已存在相同的模型 ID",
+				"modelNotFound": "这个模型已不在当前模型列表中，请刷新后重试",
+				"noSettings": "没有可用的供应商设置",
+				"providerNameConflict": "已存在同名供应商",
+				"discoverModels": "获取供应商模型失败",
+				"importModels": "导入供应商模型失败",
+				"syncModels": "应用供应商模型更改失败",
+				"refreshModels": "刷新供应商模型失败",
+				"saveModel": "保存模型失败",
+				"updateProviderState": "更新供应商状态失败",
+				"removeProvider": "删除供应商失败",
+				"saveRequestConfiguration": "保存自定义请求配置失败",
+				"saveCredentials": "保存供应商凭据失败",
+				"testConnection": "供应商连接测试失败"
+			},
+			"messages": {
+				"testSuccess": "供应商连接测试成功",
+				"credentialsSaved": "供应商凭据已保存",
+				"importSuccess": "已导入 {{count}} 个模型",
+				"syncSuccess": "模型更改已应用：启用 {{enabled}} 个，删除 {{removed}} 个",
+				"providerEnabled": "{{provider}} 已启用",
+				"providerDisabled": "{{provider}} 已禁用",
+				"providerRemoved": "{{provider}} 已删除",
+				"providerUpdated": "供应商信息已更新",
+				"requestConfigurationSaved": "自定义请求配置已保存"
+			},
+			"placeholders": {
+				"websiteUrl": "https://example.com"
+			}
+		},
+		"search": {
+			"title": "搜索",
+			"webSearchTitle": "网页搜索",
+			"configureProvider": "使用网页搜索前，请先在供应商设置中配置所选供应商的 API Key。",
+			"enabled": {
+				"title": "启用网页搜索",
+				"description": "当需要当前信息时，允许每个会话使用已配置的网页搜索工具。"
+			},
+			"model": {
+				"title": "搜索模型",
+				"description": "选择全局网页搜索工具使用的供应商原生搜索模型。",
+				"placeholder": "选择搜索模型"
+			},
+			"maxResults": {
+				"title": "搜索结果数量",
+				"description": "当搜索工具调用没有覆盖数量时，默认返回给助手的搜索结果数。",
+				"tooltip": "{{count}} 条结果",
+				"tooltip_other": "{{count}} 条结果"
+			},
+			"maxKeywords": {
+				"title": "搜索广度",
+				"description": "限制一次联网搜索最多生成的搜索关键词数；更高的数值可能提高召回率。",
+				"tooltip": "最多 {{count}} 个关键词",
+				"billingNotice": "所选供应商可能按搜索关键词调用次数额外计费。使用前请在供应商控制台开通联网搜索服务并确认定价。"
+			},
+			"errors": {
+				"load": "加载网页搜索设置失败",
+				"save": "保存网页搜索设置失败"
+			}
+		},
+		"statistics": {
+			"title": "统计",
+			"actions": {
+				"refresh": "刷新"
+			},
+			"range": {
+				"last7Days": "近 7 天",
+				"last30Days": "近 30 天",
+				"last90Days": "近 90 天",
+				"all": "全部时间"
+			},
+			"metrics": {
+				"requests": "LLM 请求",
+				"successRate": "成功率",
+				"tokens": "Token 用量",
+				"tokensSuffix": "tokens",
+				"cacheHitRate": "缓存命中率",
+				"avgDuration": "平均耗时",
+				"avgFirstToken": "首 token 平均耗时",
+				"tokenActivity": "Token 活动"
+			},
+			"charts": {
+				"requestsTrend": "请求趋势",
+				"tokensTrend": "Token 趋势",
+				"providerShare": "Provider token 占比",
+				"modelTokens": "模型 token 用量"
+			},
+			"empty": {
+				"noUsage": "暂无用量数据"
+			},
+			"unavailable": {
+				"title": "用量统计不可用",
+				"description": "后端无法打开用量统计数据库。"
+			},
+			"errors": {
+				"load": "加载统计失败"
+			},
+			"heatmap": {
+				"title": "Token 活动",
+				"tooltip": "{{date}}：{{tokens}} tokens"
+			},
+			"cacheSegments": {
+				"hit": "缓存命中 token",
+				"miss": "未命中 token"
+			}
+		},
+		"skills": {
+			"title": "技能",
+			"invalid": "无效",
+			"searchPlaceholder": "搜索技能...",
+			"valid": "有效",
+			"actions": {
+				"importFromNpx": "从 npx skills 导入",
+				"importSelected": "导入所选",
+				"install": "安装",
+				"installFromFolder": "从文件夹安装",
+				"installFromZip": "从 ZIP 安装"
+			},
+			"confirm": {
+				"delete": {
+					"title": "删除技能？",
+					"description": "从 Daedalus Studio 删除 {{name}}。这会永久移除对应的个人技能文件。",
+					"projectDescription": "从当前项目删除 {{name}}？这会永久移除项目中的 .github/skills 技能目录，并会反映在版本控制变更中。"
+				}
+			},
+			"empty": {
+				"none": "暂无自定义技能。可以让 agent 创建一个技能，或从 ZIP/文件夹安装。",
+				"noMatches": "没有匹配的技能"
+			},
+			"errors": {
+				"delete": "删除技能失败",
+				"install": "安装技能失败",
+				"npxDiscover": "查找本地 Codex Skill 失败",
+				"load": "加载技能失败",
+				"loadWorkspaces": "加载项目列表失败",
+				"loadContent": "读取 SKILL.md 失败",
+				"projectTargetRequired": "请选择项目和源文件夹后再安装项目技能",
+				"selectSource": "选择技能来源失败",
+				"update": "更新技能失败",
+				"updateContent": "保存 SKILL.md 失败"
+			},
+			"editor": {
+				"title": "编辑技能",
+				"titleWithName": "编辑 {{name}}",
+				"description": "保存前会校验 YAML frontmatter、技能说明和文件大小。技能标识和目录不会改变。"
+			},
+			"install": {
+				"description": "个人技能保存到用户目录；项目技能保存到所选源文件夹的 .github/skills。",
+				"fromFolder": "从文件夹安装",
+				"fromZip": "从 ZIP 安装",
+				"title": "安装技能"
+			},
+			"npx": {
+				"title": "导入全局 Codex Skill",
+				"description": "列出全局 Codex Skill。若本机尚无 Skills CLI，Daedalus Studio 会通过 npx 下载一次 CLI，但不会执行 Skill 指令。",
+				"empty": "未找到全局 Codex Skill。",
+				"selectAll": "选择全部可导入 Skill",
+				"alreadyInstalled": "已安装",
+				"summary": "已导入 {{installed}} 个，跳过 {{skipped}} 个，失败 {{failed}} 个。"
+			},
+			"scope": {
+				"all": "全部",
+				"builtin": "内置",
+				"personal": "个人",
+				"project": "项目"
+			},
+			"target": {
+				"workspacePlaceholder": "选择项目",
+				"sourceFolderPlaceholder": "选择源文件夹",
+				"projectPathHint": "技能将安装到所选源文件夹的 .github/skills 目录。"
+			}
+		},
+		"general": {
+			"title": "通用",
+			"display": {
+				"title": "显示设置",
+				"theme": {
+					"title": "主题",
+					"description": "选择此设备上的 Studio 颜色主题。",
+					"system": "跟随系统",
+					"light": "浅色",
+					"dark": "深色"
+				},
+				"themeColor": {
+					"title": "主题色",
+					"description": "自定义 Studio 的强调色和主要控件颜色。",
+					"reset": "恢复默认"
+				},
+				"language": {
+					"title": "语言",
+					"description": "选择 Studio 的显示语言。",
+					"placeholder": "选择语言",
+					"system": "跟随系统",
+					"english": "English",
+					"chinese": "中文"
+				}
+			},
+			"fonts": {
+				"title": "字体",
+				"body": {
+					"title": "正文字体族",
+					"description": "自定义 Studio 普通文本使用的字体族。",
+					"placeholder": "例如：\"Microsoft YaHei\", sans-serif",
+					"reset": "恢复默认正文字体"
+				},
+				"code": {
+					"title": "代码字体族",
+					"description": "自定义代码、终端和文件编辑器使用的字体族。",
+					"placeholder": "例如：\"JetBrains Mono\", Consolas, monospace",
+					"reset": "恢复默认代码字体"
+				}
+			},
+			"godot": {
+				"title": "Godot 环境",
+				"executable": "Godot 可执行文件",
+				"description": "当 workspace 没有提供自己的 Godot 可执行文件路径时使用。",
+				"placeholder": "选择 Godot 可执行文件",
+				"browse": "浏览",
+				"clear": "清除 Godot 可执行文件",
+				"status": {
+					"ready": "Godot {{version}}",
+					"readyFallback": "可用",
+					"unavailable": "不可用",
+					"unconfigured": "未配置"
+				}
+			},
+			"notifications": {
+				"title": "系统通知",
+				"runCompleted": {
+					"title": "LLM 回复完成时通知",
+					"description": "当回复在后台完成时，通过系统通知提醒你。窗口处于前台时不会重复打扰。"
+				}
+			},
+			"general": {
+				"title": "常规设置",
+				"nextStepHintsEnabled": {
+					"title": "开启下一步建议",
+					"description": "每次回复完成后，让 Daedalus 在输入框中提示一个可能的下一步。"
+				},
+				"autoCheckForUpdates": {
+					"title": "启动时检查更新",
+					"description": "应用启动时检查 Daedalus Studio 和后端更新。"
+				},
+				"minimizeToTrayOnClose": {
+					"title": "关闭时最小化到托盘",
+					"description": "点击窗口关闭按钮时，将 Daedalus Studio 隐藏到系统托盘。"
+				}
+			},
+			"errors": {
+				"load": "加载通用设置失败",
+				"save": "保存通用设置失败",
+				"godotExecutable": "验证 Godot 可执行文件失败"
+			}
+		}
+	},
+	"nativeNotifications": {
+		"goalAchievedTitle": "Daedalus 已完成目标",
+		"goalStoppedTitle": "Daedalus 目标已停止",
+		"approvalTitle": "Daedalus 需要审批",
+		"toolApprovalBody": "助手正在等待工具审批。",
+		"toolBudgetBody": "助手需要增加工具预算才能继续。",
+		"planApprovalBody": "计划已准备好，等待你审阅。",
+		"clarificationTitle": "Daedalus 需要补充信息",
+		"clarificationBody": "有一个计划问题等待你的回复。",
+		"runCompletedTitle": "Daedalus 已完成",
+		"runCompletedBody": "{{sessionTitle}} 已准备就绪。"
+	},
+	"appUpdate": {
+		"title": "Daedalus Studio 更新",
+		"summary": {
+			"client": "有可用的 Daedalus Studio 更新。",
+			"backend": "有可用的 Daedalus 后端更新。",
+			"combined": "Daedalus Studio 和后端都有可用更新。",
+			"notAvailable": "Daedalus Studio 已是最新版本。",
+			"unsupported": "当前安装方式不支持更新。",
+			"failed": "自动更新未能完成。"
+		},
+		"components": {
+			"client": "客户端",
+			"backend": "后端"
+		},
+		"status": {
+			"checking": "正在检查更新...",
+			"downloading": "正在下载更新...",
+			"downloadingDifferential": "正在下载差分更新...",
+			"downloadingFullInstaller": "正在下载完整安装包...",
+			"installingBackend": "正在安装后端更新...",
+			"backendUpdated": "后端已更新。关闭此对话框以继续。",
+			"restarting": "正在重启以安装...",
+			"waitingForResponse": "正在等待当前响应完成...",
+			"failed": "更新失败",
+			"ready": "更新已就绪。"
+		},
+		"waiting": {
+			"title": "更新已延后",
+			"description": "当前有 AI 响应正在进行。响应完成后，Studio 会继续安装更新。",
+			"activeTitle": "当前有 AI 响应正在进行",
+			"activeDescription": "安装更新会中断当前响应。请求已暂存，等待响应完成后继续。"
+		},
+		"fallback": {
+			"title": "已切换为完整安装包",
+			"description": "差分更新未能完成，Daedalus Studio 已自动回退为完整下载。进度会从 0% 重新计算，这不是重复安装。",
+			"reason": "回退原因："
+		},
+		"actions": {
+			"retry": "重试",
+			"openReleases": "前往 GitHub Releases 手动下载",
+			"openClientReleases": "下载 Daedalus Studio",
+			"openBackendReleases": "下载 Daedalus Backend"
+		},
+		"errors": {
+			"download": "下载更新失败。",
+			"manualDownloadHint": "如果当前网络无法连接 GitHub，或自动下载反复失败，请使用浏览器前往对应组件的 Releases 页面手动下载。"
+		}
+	},
+	"changelog": {
+		"title": "更新日志",
+		"whatsNew": "v{{version}} 更新内容",
+		"noReleaseNotes": "暂时没有 v{{version}} 的详细更新日志。",
+		"actions": {
+			"viewFull": "查看完整日志",
+			"close": "知道了"
+		}
+	}
 }

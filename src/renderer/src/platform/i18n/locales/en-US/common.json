@@ -1,2175 +1,2171 @@
 {
-  "app": {
-    "boot": {
-      "progress": {
-        "starting": "Starting Daedalus Studio",
-        "connectingBackend": "Connecting to backend",
-        "loadingPreferences": "Loading preferences",
-        "loadingWorkspaceData": "Loading workspace data",
-        "loadingCommandsAndSkills": "Loading commands and skills",
-        "ready": "Ready",
-        "checkingBackend": "Checking backend",
-        "checkingBackendPackage": "Checking backend package",
-        "installingBackend": "Installing backend",
-        "preparingBackend": "Preparing backend",
-        "startingBackend": "Starting backend",
-        "checkingBackendHealth": "Checking backend health",
-        "backendReady": "Backend ready",
-        "backendStartupFailed": "Backend startup failed"
-      },
-      "error": {
-        "developmentBackendNotRunning": "Development backend is not running",
-        "installFailed": "Daedalus backend could not be installed",
-        "backendMissing": "Daedalus backend is missing or damaged",
-        "markedBackendMissing": "Marked backend version is missing",
-        "healthFailed": "Daedalus backend did not start",
-        "studioStartFailed": "Daedalus Studio could not start",
-        "bootstrapFailed": "Backend bootstrap failed.",
-        "backendReadyTimeout": "Timed out waiting for the backend to become ready.",
-        "resourceTimeout": "Timed out while loading {{resource}}."
-      },
-      "resources": {
-        "backendHealth": "backend health",
-        "clientPreferences": "client preferences",
-        "generalSettings": "general settings",
-        "providerModels": "providers and models",
-        "workspaces": "workspaces",
-        "sessions": "sessions",
-        "sessionLayouts": "session layouts",
-        "workspaceTreeOrder": "workspace tree order",
-        "slashCommands": "slash commands",
-        "skills": "skills"
-      },
-      "actions": {
-        "retry": "Retry",
-        "retryInstall": "Retry install",
-        "repairBackend": "Repair backend",
-        "restartBackend": "Restart backend"
-      }
-    },
-    "home": {
-      "greeting": {
-        "morning": "Good morning — what would you like to work on?",
-        "afternoon": "Good afternoon — what would you like to work on?",
-        "evening": "Good evening — what would you like to work on?"
-      },
-      "subtitleWithoutWorkspace": "Choose a workspace below, or start with an idea and add one later.",
-      "subtitleWithWorkspace": "{{workspaceName}} is ready. Tell me what you would like to move forward.",
-      "starters": {
-        "workspace": {
-          "explore": {
-            "label": "Get to know this workspace",
-            "prompt": "Help me understand this workspace. Start by reading only the necessary project context, then tell me how it is organized and where a good starting point is."
-          },
-          "next_step": {
-            "label": "Find a good next step",
-            "prompt": "Based on the current state of this workspace, help me identify the most worthwhile next step."
-          },
-          "plan": {
-            "label": "Plan a feature",
-            "prompt": "I want to plan a feature. First learn the necessary context, then give me a clear, actionable approach."
-          }
-        },
-        "unbound": {
-          "explore": {
-            "label": "Talk through an idea",
-            "prompt": "I have an idea. Help me clarify the goal, constraints, and a sensible next step."
-          },
-          "next_step": {
-            "label": "Explain a concept",
-            "prompt": "Explain a concept clearly and concisely, with an example if it helps."
-          },
-          "plan": {
-            "label": "Turn an idea into a plan",
-            "prompt": "Help me turn an idea into a practical, actionable plan."
-          }
-        }
-      }
-    },
-    "fullTrust": {
-      "title": "Enable Full Trust?",
-      "description": "Full Trust disables the OS sandbox, automatically approves all tools, and lets terminal commands run with your normal user permissions.",
-      "confirmationPrefix": "Type",
-      "confirmationSuffix": "to confirm this global security mode.",
-      "actions": {
-        "enable": "Enable Full Trust",
-        "cancel": "Cancel"
-      },
-      "errors": {
-        "confirmation": "Type {{confirmationText}} to enable Full Trust."
-      }
-    }
-  },
-  "onboarding": {
-    "ariaLabel": "Daedalus Studio setup",
-    "steps": {
-      "welcome": "Welcome",
-      "provider": "Provider",
-      "godot_executable": "Godot",
-      "documentation": "Documentation",
-      "godot_plugin": "Plugin",
-      "complete": "Complete"
-    },
-    "actions": {
-      "start": "Start setup",
-      "back": "Back",
-      "next": "Next",
-      "skip": "Skip",
-      "cancel": "Cancel",
-      "enterStudio": "Enter Daedalus Studio",
-      "enteringStudio": "Entering Daedalus Studio"
-    },
-    "progress": "Step {{current}} of {{total}}",
-    "status": {
-      "saving": "Saving setup"
-    },
-    "outcomes": {
-      "configured": "Configured",
-      "skipped": "Skipped"
-    },
-    "welcome": {
-      "title": "Welcome to Daedalus Studio",
-      "description": "Set up the essentials for AI-assisted Godot development. Every integration is optional and can be changed later in Settings.",
-      "features": {
-        "agent": "AI agents",
-        "godot": "Godot integration",
-        "documentation": "Offline documentation"
-      }
-    },
-    "provider": {
-      "title": "Configure a model provider",
-      "description": "Connect a provider and choose the model Daedalus should use for new conversations.",
-      "existingReady": "A provider and model are already ready. You can continue or configure another one.",
-      "testSucceeded": "Connection succeeded. Choose a model to finish setup.",
-      "saved": "The provider and model are ready.",
-      "fields": {
-        "provider": "Provider",
-        "apiKey": "API key",
-        "apiKeyPlaceholder": "Enter an API key",
-        "baseUrl": "API Base URL",
-        "model": "Model",
-        "modelPlaceholder": "Select a model"
-      },
-      "actions": {
-        "test": "Test connection",
-        "save": "Save and use"
-      },
-      "errors": {
-        "test": "The provider connection failed.",
-        "save": "Failed to save the provider and model."
-      }
-    },
-    "godotExecutable": {
-      "title": "Select the Godot executable",
-      "description": "Daedalus uses this executable for project validation, launch actions, and version-aware documentation.",
-      "ready": "Godot {{version}} is ready.",
-      "path": "Godot executable",
-      "notSelected": "No Godot executable selected",
-      "actions": {
-        "select": "Select executable"
-      },
-      "errors": {
-        "invalid": "The selected executable could not be validated.",
-        "select": "Failed to select the Godot executable."
-      }
-    },
-    "documentation": {
-      "title": "Install offline Godot documentation",
-      "description": "Download an official godot-docs branch so agents can verify unfamiliar Godot APIs without relying on web access.",
-      "ready": "Offline documentation search is ready.",
-      "installed": "{{count}} documentation version installed",
-      "installed_other": "{{count}} documentation versions installed",
-      "enableSearch": "Enable search",
-      "branch": "Documentation branch",
-      "selectBranch": "Select a branch",
-      "install": "Download and install",
-      "stages": {
-        "resolving": "Resolving documentation source",
-        "downloading": "Downloading documentation",
-        "extracting": "Extracting documentation",
-        "indexing": "Building search index",
-        "validating": "Validating search index",
-        "rolling_back": "Restoring healthy index",
-        "finalizing": "Finishing installation",
-        "completed": "Documentation is ready",
-        "failed": "Documentation installation failed",
-        "cancelled": "Documentation installation cancelled"
-      },
-      "errors": {
-        "load": "Failed to load documentation options.",
-        "job": "Failed to read documentation progress.",
-        "install": "Failed to install documentation.",
-        "cancel": "Failed to cancel the documentation operation.",
-        "toggle": "Failed to update documentation search."
-      }
-    },
-    "godotPlugin": {
-      "title": "Install Daedalus Bridge",
-      "description": "Choose one or more Godot projects. The plugin connects their editors to Daedalus tools and diagnostics.",
-      "ready": "Daedalus Bridge is installed for at least one project.",
-      "pendingRestart": "Plugin changes are staged and will apply after Godot closes.",
-      "selected": "{{count}} project selected",
-      "selected_other": "{{count}} projects selected",
-      "empty": "No Godot projects were found.",
-      "incompatible": "Requires Godot 4.5 or newer",
-      "columns": {
-        "project": "Project",
-        "godot": "Godot",
-        "status": "Status"
-      },
-      "actions": {
-        "scan": "Rescan",
-        "add": "Add project",
-        "install": "Install selected"
-      },
-      "errors": {
-        "scan": "Failed to scan Godot projects.",
-        "add": "Failed to add the Godot project.",
-        "install": "Failed to install the plugin."
-      }
-    },
-    "complete": {
-      "title": "Daedalus Studio is ready",
-      "description": "You can revisit every optional integration from Settings at any time."
-    },
-    "errors": {
-      "saveProgress": "Failed to save setup progress.",
-      "complete": "Failed to complete setup.",
-      "timeout": "Saving setup timed out. Check the backend connection and try again."
-    }
-  },
-  "workspaceTree": {
-    "projectEditor": {
-      "appearance": "Project appearance",
-      "icon": "Icon",
-      "color": "Color",
-      "namePlaceholder": "Project name",
-      "sourceFolders": "Source folders",
-      "addFolder": "Add folder",
-      "addFailed": "Failed to add source folder.",
-      "duplicateFolder": "This source folder is already in the project.",
-      "nameRequired": "Project name cannot be empty.",
-      "sourceFolderRequired": "Add a source folder before saving.",
-      "saveFailed": "Failed to save project.",
-      "makePrimary": "Make primary",
-      "removeFolder": "Remove source folder",
-      "primary": "Primary",
-      "cancel": "Cancel",
-      "confirm": "OK"
-    },
-    "actions": {
-      "editProject": "Edit project",
-      "newProject": "New project",
-      "rename": "Rename",
-      "renameSession": "Rename session",
-      "forkSession": "Fork session",
-      "pinSession": "Pin session",
-      "unpinSession": "Unpin session",
-      "archiveSession": "Archive session",
-      "openInExplorer": "Open in Explorer",
-      "openWorkspaceDirectory": "Open workspace directory",
-      "copySessionId": "Copy session ID",
-      "exportSession": "Export session data",
-      "delete": "Delete",
-      "newSessionInWorkspace": "New session in workspace"
-    },
-    "aria": {
-      "archiveSession": "Archive {{sessionTitle}}",
-      "pinSession": "Pin {{sessionTitle}}",
-      "unpinSession": "Unpin {{sessionTitle}}",
-      "workspaceActions": "Workspace actions for {{workspaceName}}",
-      "newSessionInWorkspace": "New session in {{workspaceName}}"
-    },
-    "empty": {
-      "noWorkspace": "No workspace",
-      "noSessions": "No sessions",
-      "noPinnedSessions": "No pinned sessions",
-      "noProjects": "No projects",
-      "noRecentSessions": "No recent sessions"
-    },
-    "groups": {
-      "pinned": "Pinned",
-      "projects": "Projects",
-      "recent": "Recent"
-    },
-    "status": {
-      "assistantRunning": "Assistant is responding",
-      "unreadResponse": "Unread assistant response",
-      "exportingSession": "Exporting session…"
-    },
-    "messages": {
-      "sessionIdCopied": "Session ID copied",
-      "sessionExported": "Session data exported",
-      "sessionExportedWithMissingFiles": "Session data exported, but {{count}} external files were missing"
-    },
-    "exportDialog": {
-      "title": "Export session data",
-      "button": "Export"
-    },
-    "errors": {
-      "archiveSession": "Failed to archive session",
-      "copySessionId": "Failed to copy session ID",
-      "exportSession": "Failed to export session data",
-      "deleteWorkspace": "Failed to delete workspace",
-      "loadWorkspace": "Failed to load workspace",
-      "openSessionDirectory": "Failed to open session directory",
-      "openWorkspaceDirectory": "Failed to open workspace directory",
-      "pinSession": "Failed to update pinned session",
-      "renameSession": "Failed to rename session",
-      "saveOrder": "Failed to save workspace order",
-      "sessionTitleCannotBeEmpty": "Session title cannot be empty."
-    },
-    "modals": {
-      "deleteWorkspace": {
-        "title": "Delete workspace?",
-        "body": "Delete {{workspaceName}} from Daedalus? Project files will not be deleted.",
-        "sessionPolicy": "Sessions are moved to another matching project when possible. Unmatched sessions are permanently deleted."
-      },
-      "renameSession": {
-        "placeholder": "Session title"
-      }
-    }
-  },
-  "agentPage": {
-    "actions": {
-      "newSession": "New session",
-      "openSettings": "Open settings",
-      "scrollToBottom": "Scroll to bottom"
-    },
-    "conversationNavigator": {
-      "ariaLabel": "Conversation turns",
-      "emptyMessage": "User message"
-    },
-    "conversationSearch": {
-      "placeholder": "Find in conversation",
-      "previous": "Previous match",
-      "next": "Next match",
-      "close": "Close search",
-      "indexing": "Searching the full conversation…",
-      "loadError": "Failed to load the complete conversation search index. Loaded messages remain searchable."
-    },
-    "workspaceLaunch": {
-      "openIn": "Open in {{target}}",
-      "aria": {
-        "selectTarget": "Select workspace launch target"
-      },
-      "errors": {
-        "open": "Failed to open workspace."
-      }
-    },
-    "dock": {
-      "openBottom": "Open bottom panel",
-      "closeBottom": "Close bottom panel",
-      "openSidebar": "Open sidebar",
-      "closeSidebar": "Close sidebar"
-    },
-    "workspaceSidebar": {
-      "open": "Show workspace sidebar",
-      "close": "Hide workspace sidebar"
-    },
-    "sessionNavigation": {
-      "previous": "Previous session",
-      "next": "Next session"
-    },
-    "summary": {
-      "tooltip": "Summary",
-      "empty": "No summary yet",
-      "detachedHead": "Detached HEAD",
-      "unknownSize": "Unknown size",
-      "sourceSubtitle": "{{mimeType}} / {{dimensions}}",
-      "fallbackPlanTitle": "Plan",
-      "fallbackImageSourceTitle": "Image source",
-      "aria": {
-        "open": "Open session summary"
-      },
-      "sections": {
-        "envInfo": "Env info",
-        "godot": "Godot",
-        "plans": "Plans",
-        "source": "Source"
-      },
-      "godot": {
-        "runProject": "Run project",
-        "runScene": "Run scene...",
-        "sceneModal": {
-          "title": "Run Godot scene",
-          "searchPlaceholder": "Search scenes",
-          "empty": "No scene files found"
-        },
-        "errors": {
-          "loadScenes": "Failed to load Godot scenes"
-        }
-      },
-      "actions": {
-        "diff": "Diff",
-        "commitOrPush": "Commit or push",
-        "seeMore": "See more",
-        "retry": "Retry"
-      },
-      "errors": {
-        "load": "Failed to load session summary."
-      }
-    }
-  },
-  "composer": {
-    "placeholders": {
-      "ask": "Ask a question or explore an idea",
-      "agent": "Describe what you want me to inspect, change, or run",
-      "plan": "Describe the outcome you want to plan",
-      "goal": "Describe the goal and a verifiable completion result"
-    },
-    "textAreaMenu": {
-      "cut": "Cut",
-      "copy": "Copy",
-      "paste": "Paste",
-      "selectAll": "Select all"
-    },
-    "context": {
-      "addFiles": "Add files",
-      "addFolder": "Add folder",
-      "addImages": "Add images"
-    },
-    "mode": {
-      "ask": "Ask",
-      "agent": "Agent",
-      "plan": "Plan",
-      "goal": "Goal"
-    },
-    "approvalMode": {
-      "manual": "Manual",
-      "autoSafe": "Auto-safe",
-      "fullTrust": "Full Trust"
-    },
-    "model": {
-      "fallback": "Model",
-      "notConfigured": "Not configured",
-      "configureProvider": "Configure provider",
-      "capabilities": {
-        "reasoning": "Reasoning",
-        "vision": "Vision",
-        "search": "Search"
-      }
-    },
-    "reasoning": {
-      "efforts": {
-        "low": "Low",
-        "medium": "Medium",
-        "high": "High",
-        "xhigh": "Extra high",
-        "max": "Max"
-      }
-    },
-    "workspace": {
-      "noWorkspace": "No workspace",
-      "addWorkspace": "Add workspace..."
-    },
-    "tooltips": {
-      "addContext": "Add additional context",
-      "mode": "Mode",
-      "approvalMode": "Approval mode",
-      "model": "Model",
-      "reasoningEffort": "Reasoning effort"
-    },
-    "send": {
-      "send": "Send",
-      "stop": "Stop",
-      "stopping": "Stopping...",
-      "queue": "Queue message"
-    },
-    "contextUsage": {
-      "title": "Context usage",
-      "estimating": "Estimating context...",
-      "retry": "Retry",
-      "usedTokens": "{{used}} / {{total}} tokens",
-      "meta": "{{model}} / {{available}} available / {{source}}",
-      "compress": "Compress chat",
-      "compressionResult": "Before {{before}}, after {{after}}, saved {{saved}} tokens; {{restorable}} raw blocks remain recoverable",
-      "legend": {
-        "input": "Actual input",
-        "outputReserve": "Output reserve",
-        "safetyMargin": "Safety margin"
-      },
-      "pressureLevel": "{{level}} pressure",
-      "largestContributor": "Largest: {{largest}}",
-      "columns": {
-        "tokens": "Tokens",
-        "share": "Share"
-      },
-      "none": "None",
-      "pressureLevels": {
-        "low": "Low",
-        "moderate": "Moderate",
-        "high": "High",
-        "critical": "Critical"
-      },
-      "breakdown": {
-        "systemAndTools": "System & tools",
-        "history": "History",
-        "historyWithSummary": "History (summary)",
-        "currentMessage": "Current message",
-        "reservedOutput": "Reserved output",
-        "safetyMargin": "Safety margin",
-        "kinds": {
-          "base_system": "Base system prompt",
-          "custom_instructions": "Custom instructions",
-          "skills": "Skills",
-          "mcp_context": "MCP context",
-          "tool_definitions": "Tool definitions",
-          "history": "Conversation history",
-          "summary": "Conversation summary",
-          "current_message": "Current message",
-          "additional_context": "Additional context",
-          "output_reserve": "Output reserve",
-          "safety_margin": "Safety margin"
-        }
-      },
-      "compressDisabled": {
-        "sending": "A message is being sent",
-        "unavailable": "Compression unavailable"
-      },
-      "errors": {
-        "estimate": "Context estimate failed"
-      }
-    }
-  },
-  "goal": {
-    "aria": "Goal execution status",
-    "stages": {
-      "readiness": "Checking readiness",
-      "running": "Running",
-      "evaluating": "Evaluating",
-      "pausing": "Pausing",
-      "awaiting_approval": "Awaiting approval",
-      "awaiting_tool_budget": "Awaiting tool budget",
-      "paused": "Paused",
-      "achieved": "Achieved",
-      "failed": "Failed",
-      "cancelled": "Cancelled"
-    },
-    "fields": {
-      "stage": "Status",
-      "cycles": "Cycles",
-      "tokens": "Tokens",
-      "activeTime": "Active time"
-    },
-    "evaluation": "Evaluation",
-    "readiness": "Readiness",
-    "workflow": "Current workflow",
-    "actions": {
-      "pause": "Pause",
-      "resume": "Resume",
-      "cancel": "Cancel",
-      "extend": "Add budget",
-      "rollback": "Roll back",
-      "dismiss": "Close"
-    },
-    "cancelConfirm": {
-      "title": "Cancel this Goal?",
-      "description": "The current safe operation will finish first. Existing workspace changes will be kept."
-    },
-    "rollback": {
-      "title": "Roll back Goal changes?",
-      "description": "Restore all {{count}} tracked files to their state before this Goal.",
-      "unavailableTitle": "Complete rollback is unavailable",
-      "unavailable": "Some Goal changes cannot be restored safely.",
-      "success": "Goal changes were rolled back."
-    },
-    "extend": {
-      "title": "Add Goal budget",
-      "cycles": "Additional cycles",
-      "tokens": "Additional tokens",
-      "minutes": "Additional active minutes"
-    },
-    "errors": {
-      "insufficientBudget": "The added budget is still below current usage. Increase the token, cycle, or active-time budget.",
-      "action": "Failed to update Goal",
-      "rollback": "Failed to roll back Goal changes",
-      "budget": "Failed to add Goal budget",
-      "dismiss": "Failed to close Goal status"
-    }
-  },
-  "messageQueue": {
-    "groups": {
-      "guides": "Guides",
-      "queue": "Queue"
-    },
-    "actions": {
-      "edit": "Edit",
-      "remove": "Remove",
-      "dragToReorder": "Drag to reorder"
-    }
-  },
-  "workflowTodo": {
-    "titleFallback": "Todo",
-    "stepFallback": "Step {{index}}",
-    "changedFiles": "{{count}} file",
-    "changedFiles_other": "{{count}} files",
-    "dismiss": "Dismiss",
-    "aria": {
-      "progress": "Workflow progress",
-      "fileChanges": "File changes"
-    }
-  },
-  "approval": {
-    "tool": {
-      "title": "Approve tool execution?",
-      "subtitle": "The assistant is waiting for approval before it continues.",
-      "consentPrefix": "Type",
-      "consentSuffix": "to approve this cross-workspace action.",
-      "actions": {
-        "approve": "Approve",
-        "reject": "Reject"
-      }
-    },
-    "toolBudget": {
-      "title": "Tool budget reached",
-      "subtitle": "The model needs more tool budget to continue.",
-      "limitKind": {
-        "steps": "Tool call count",
-        "toolResultChars": "Tool result total"
-      },
-      "fields": {
-        "triggeredLimit": "Triggered limit",
-        "usedSteps": "Used steps",
-        "toolResultChars": "Tool result characters",
-        "additionalSteps": "Additional steps"
-      },
-      "additionalStepsValue": "+{{formatted}} step",
-      "additionalStepsValue_other": "+{{formatted}} steps",
-      "actions": {
-        "continue": "Continue",
-        "stop": "No, stop and summarize",
-        "summarize": "Summarize with current results",
-        "cancel": "Cancel this run"
-      }
-    },
-    "plan": {
-      "aria": "Plan approval",
-      "title": "Approve plan?",
-      "subtitle": "Review the plan above, then approve it or ask for changes.",
-      "revisionPlaceholder": "Tell the assistant how to change the plan",
-      "actions": {
-        "approveAndExecute": "Approve and Execute",
-        "revise": "Revise"
-      }
-    }
-  },
-  "clarification": {
-    "aria": "Plan clarification",
-    "title": "Clarification needed",
-    "recommendedSuffix": "(Recommended)",
-    "placeholder": "Tell the assistant how to proceed",
-    "skipHint": "Skip continues planning without cancelling the task. The question is treated as missing information and the assistant will make assumptions from available context. Core requirements, architecture, platform, or data-format choices may make the plan less accurate; you can add details later and revise the plan.",
-    "actions": {
-      "skip": "Skip and continue",
-      "submit": "Submit"
-    }
-  },
-  "dock": {
-    "tabs": {
-      "changes": "Changes",
-      "changesIndexed": "Changes {{index}}",
-      "terminal": "Terminal",
-      "terminalIndexed": "Terminal {{index}}",
-      "files": "Files",
-      "filesIndexed": "Files {{index}}",
-      "enterFullscreen": "Expand panel",
-      "exitFullscreen": "Restore panel"
-    },
-    "add": {
-      "label": "Add panel",
-      "reviewPanel": "Review panel",
-      "terminalPanel": "Terminal panel",
-      "filesPanel": "Files panel"
-    },
-    "empty": {
-      "noWorkspaceSelected": "No workspace selected"
-    }
-  },
-  "files": {
-    "noWorkspace": "Select a workspace to browse and edit files",
-    "noSourceFolder": "No source folder",
-    "noFileSelected": "Select a file from the file tree",
-    "editorAriaLabel": "File editor",
-    "loading": "Reading file…",
-    "search": "Search files or paths",
-    "save": "Save",
-    "saved": "File saved",
-    "savedAs": "File saved as",
-    "reload": "Reload",
-    "binary": "This file is not editable UTF-8 text",
-    "oversized": "Files larger than 2 MiB cannot be edited in the Files panel",
-    "openExternal": "Open in external app",
-    "showSidebar": "Show file sidebar",
-    "hideSidebar": "Hide file sidebar",
-    "conflict": "The file changed outside Studio. Reload the disk version or save the current draft as a new file.",
-    "contextAdded": "Added to context",
-    "addSelectionContext": "Add to context",
-    "comment": "Comment",
-    "commentPlaceholder": "Comment on the selected code",
-    "editorMenu": {
-      "undo": "Undo",
-      "redo": "Redo",
-      "cut": "Cut",
-      "copy": "Copy",
-      "paste": "Paste",
-      "selectAll": "Select all"
-    },
-    "closeTitle": "Close modified file?",
-    "closeDirty": "{{name}} contains unsaved changes.",
-    "discard": "Don't save",
-    "cancel": "Cancel",
-    "menu": {
-      "openFrom": "Open from {{target}}",
-      "openWith": "Open with",
-      "saveAs": "Save as…",
-      "copyPath": "Copy path",
-      "copyRelativePath": "Copy relative path",
-      "addContext": "Add to context"
-    }
-  },
-  "git": {
-    "detachedHead": "Detached HEAD",
-    "actions": {
-      "refresh": "Refresh"
-    },
-    "commit": {
-      "title": "Commit or push",
-      "messagePlaceholder": "Leaving it blank will automatically generate the information",
-      "includeUnstaged": "Includes unstaged changes",
-      "actions": {
-        "commit": "Commit",
-        "push": "Push",
-        "commitAndPush": "Commit & Push"
-      },
-      "messages": {
-        "changes": "changes",
-        "committedAndPushed": "Committed {{target}} and pushed.",
-        "committed": "Committed {{target}}.",
-        "pushed": "Pushed changes."
-      },
-      "errors": {
-        "selectWorkspace": "Please select a workspace before committing.",
-        "generationTimeout": "AI commit message generation timed out after 60 seconds.",
-        "actionFailed": "Failed to {{action}}."
-      }
-    },
-    "branch": {
-      "title": "Branch",
-      "searchPlaceholder": "Search branch",
-      "empty": "No branches found",
-      "actions": {
-        "createAndCheckout": "Create & Checkout",
-        "checkout": "Checkout"
-      },
-      "tags": {
-        "current": "Current",
-        "remote": "Remote"
-      },
-      "messages": {
-        "switched": "Switched to {{branch}}.",
-        "committedAndSwitched": "Committed the working tree changes and switched to {{branch}}.",
-        "createdAndSwitched": "Created and switched to {{branch}}."
-      },
-      "checkoutDraft": {
-        "title": "Commit changes to switch branches",
-        "description": "Commit the following working tree changes before switching to {{branch}}.",
-        "commitAndCheckout": "Commit & Checkout",
-        "cancel": "Cancel",
-        "commitMessagePlaceholder": "Commit message",
-        "summary": "{{count}} changed file",
-        "summary_other": "{{count}} changed files",
-        "moreFiles": "And {{count}} more file",
-        "moreFiles_other": "And {{count}} more files",
-        "errors": {
-          "commitMessageRequired": "Enter a commit message.",
-          "load": "Failed to inspect working tree changes.",
-          "commit": "Failed to commit changes before switching branches."
-        }
-      },
-      "errors": {
-        "selectWorkspaceBeforeSwitching": "Please select a workspace before switching branches.",
-        "selectWorkspaceBeforeCreating": "Please select a workspace before creating branches.",
-        "notGitRepository": "Workspace is not a Git repository.",
-        "load": "Failed to load branches.",
-        "selectBranch": "Please select a branch.",
-        "switch": "Failed to switch branch.",
-        "enterBranchName": "Please enter a branch name.",
-        "create": "Failed to create branch."
-      }
-    },
-    "createBranch": {
-      "title": "Create branch",
-      "namePlaceholder": "New branch name",
-      "startPointPlaceholder": "Start point, optional",
-      "hint": "Leave start point empty to create from the current HEAD."
-    }
-  },
-  "review": {
-    "unknownFile": "Unknown file",
-    "sourceFolder": {
-      "label": "Source folder",
-      "placeholder": "Select source folder"
-    },
-    "binaryFileChanged": "Binary file changed",
-    "diffStats": "{{branch}} / {{count}} file / +{{additions}} -{{deletions}}",
-    "diffStats_other": "{{branch}} / {{count}} files / +{{additions}} -{{deletions}}",
-    "actions": {
-      "refreshDiff": "Refresh git diff",
-      "expandAllDiffs": "Expand small diffs",
-      "collapseAllDiffs": "Collapse small diffs",
-      "loadMoreFiles": "Load more files"
-    },
-    "empty": {
-      "diffUnavailable": "Diff unavailable",
-      "noDiffLoaded": "No diff loaded",
-      "noGitRepository": "No Git repository",
-      "noWorkspaceChanges": "No workspace changes"
-    },
-    "notices": {
-      "lazyLoading": {
-        "title": "Diffs load on demand",
-        "description": "Small text files open first. Large files stay collapsed and are only requested when you open them."
-      },
-      "diffTruncated": {
-        "title": "Diff truncated",
-        "description": "The patch is too large to show completely."
-      },
-      "diffParseFailed": "Diff parse failed"
-    },
-    "loadingFile": "Loading file diff",
-    "fileTooLarge": {
-      "title": "File diff is too large to render",
-      "description": "This preview was not loaded so the review panel stays responsive."
-    },
-    "commentDialog": {
-      "title": "Request changes",
-      "open": "Request changes on this line",
-      "target": "{{path}}, line {{line}}",
-      "label": "What should change?",
-      "required": "Enter the requested change.",
-      "submit": "Add comment",
-      "contextMeta": "Review comment on line {{line}}"
-    },
-    "errors": {
-      "loadDiff": "Failed to load git diff.",
-      "loadFile": "Failed to load file diff.",
-      "parseDiff": "Failed to parse diff."
-    }
-  },
-  "terminal": {
-    "home": "Home",
-    "status": {
-      "waitingForWorkspace": "Waiting for workspace",
-      "starting": "Starting",
-      "notStarted": "Not started",
-      "running": "Running",
-      "stopped": "Stopped"
-    },
-    "actions": {
-      "restart": "Restart terminal",
-      "stop": "Stop terminal"
-    },
-    "errors": {
-      "start": "Failed to start terminal.",
-      "stop": "Failed to stop terminal.",
-      "restart": "Failed to restart terminal."
-    }
-  },
-  "chat": {
-    "markdownResource": {
-      "openFile": "Open file",
-      "openInCurrentTarget": "Open in current workspace app",
-      "openInCurrentTargetNamed": "Open in {{target}}",
-      "openWith": "Open with",
-      "saveAs": "Save as",
-      "copyPath": "Copy path",
-      "pathCopied": "Path copied",
-      "revealInExplorer": "Show in File Explorer",
-      "savedAs": "File saved",
-      "noWorkspace": "Select a workspace before opening this file"
-    },
-    "mermaid": {
-      "title": "Mermaid diagram",
-      "rendering": "Rendering diagram…",
-      "renderFailed": "Unable to render diagram",
-      "copySource": "Copy diagram source",
-      "showSource": "View diagram source",
-      "exportPng": "Export PNG",
-      "exported": "PNG image exported",
-      "exportFailed": "Unable to export PNG image"
-    },
-    "codeBlock": {
-      "copy": "Copy code",
-      "exportAsFile": "Export as file",
-      "exported": "File exported",
-      "exportFailed": "Unable to export file"
-    },
-    "common": {
-      "copy": "Copy",
-      "copied": "Copied",
-      "copyFailed": "Failed to copy selected text.",
-      "selectAll": "Select all",
-      "copyAll": "Copy all",
-      "loadingConversation": "Loading conversation"
-    },
-    "assistant": {
-      "process": "Process",
-      "respondedIn": "Responded: {{elapsed}}",
-      "stoppedIn": "Stopped: {{elapsed}}",
-      "copyAria": "Copy assistant message"
-    },
-    "user": {
-      "copyAria": "Copy user message",
-      "editAndResendAria": "Edit and resend user message",
-      "forkAria": "Fork conversation from this user message",
-      "actions": {
-        "cancel": "Cancel",
-        "send": "Send",
-        "editAndResend": "Edit and resend",
-        "forkFromHere": "Fork from here"
-      }
-    },
-    "fork": {
-      "titleSuffix": " · Fork",
-      "untitledSource": "Untitled session",
-      "originLabel": "Forked from",
-      "openSourceTooltip": "Open source session",
-      "openSourceAria": "Open source session",
-      "modelChanged": "Model changed from {{from}} to {{to}}",
-      "errors": {
-        "create": "Failed to fork session.",
-        "sourceUnavailable": "The source session is unavailable or archived.",
-        "openSource": "Failed to open the source session."
-      }
-    },
-    "contextStrip": {
-      "aria": "Message context",
-      "pinned": "Pinned",
-      "expandText": "Expand into composer",
-      "display": {
-        "contextFallback": "Context",
-        "selection": "Selection",
-        "fileCount": "{{count}} file",
-        "fileCount_other": "{{count}} files",
-        "folderCount": "{{count}} folder",
-        "folderCount_other": "{{count}} folders",
-        "selectedCount": "{{count}} selected",
-        "selectedCount_other": "{{count}} selected",
-        "line": "Line {{line}}",
-        "linesRange": "Lines {{start}}-{{end}}",
-        "fileSize": "{{size}} KiB",
-        "textAttachment": "Text attachment",
-        "reviewComment": "Review comment",
-        "selectedMessageText": "Selected message text",
-        "fileSelection": "File selection",
-        "more": "... {{count}} more",
-        "more_other": "... {{count}} more",
-        "pathLabel": "{{kind}}: {{path}}",
-        "pathFallback": "path"
-      }
-    },
-    "selection": {
-      "attachContext": "Attach context",
-      "askAi": "Ask AI",
-      "annotationPlaceholder": "Add a note (optional)",
-      "editAnnotation": "Edit annotation",
-      "openAsk": "Open selection Ask",
-      "deleteAsk": "Delete",
-      "deleteAllAsks": "Delete all",
-      "deleteAskFailed": "Failed to delete selection Ask",
-      "askTitle": "Selection Ask",
-      "askPlaceholder": "Ask a follow-up…",
-      "sendAsk": "Send question",
-      "stopAsk": "Stop response",
-      "stoppingAsk": "Stopping response",
-      "askFailed": "Failed to create selection Ask",
-      "responseFailed": "Response failed",
-      "interrupted": "The response was interrupted by a Backend restart"
-    },
-    "tool": {
-      "labels": {
-        "mcp_skills_load": "Load skill",
-        "mcp_skills_propose_create": "Draft skill",
-        "mcp_skills_create": "Create skill",
-        "mcp_image_generate": "Generate image",
-        "mcp_image_inspect": "Inspect image",
-        "mcp_web_search": "Search the web",
-        "mcp_workspace_list_files": "Browse workspace files",
-        "mcp_workspace_read_text_file": "Read file",
-        "mcp_workspace_search_text": "Search workspace text",
-        "mcp_workspace_propose_create_text_file": "Draft file",
-        "mcp_workspace_create_text_file": "Create file",
-        "mcp_workspace_propose_overwrite_text_file": "Draft file overwrite",
-        "mcp_workspace_overwrite_text_file": "Overwrite file",
-        "mcp_workspace_propose_replace_text_in_file": "Draft text replacement",
-        "mcp_workspace_replace_text_in_file": "Replace text in file",
-        "mcp_workspace_propose_replace_line_in_file": "Draft line replacement",
-        "mcp_workspace_replace_line_in_file": "Replace line in file",
-        "mcp_workspace_delete_file": "Delete file",
-        "mcp_godot_get_runtime_status": "Check Godot runtime",
-        "mcp_godot_get_godot_version": "Check Godot version",
-        "mcp_godot_search_documentation": "Search Godot documentation",
-        "mcp_godot_launch_editor": "Launch Godot editor",
-        "mcp_godot_run_project": "Run Godot project",
-        "mcp_godot_stop_project": "Stop Godot project",
-        "mcp_godot_get_debug_output": "Read Godot debug output",
-        "mcp_godot_list_projects": "Browse Godot projects",
-        "mcp_godot_get_uid": "Resolve resource UID",
-        "mcp_godot_resave_resource": "Resave resource",
-        "mcp_godot_update_project_uids": "Update project UIDs",
-        "mcp_godot_save_scene_variant": "Save scene variant",
-        "mcp_godot_load_sprite_texture": "Load sprite texture",
-        "mcp_godot_export_mesh_library": "Export mesh library",
-        "mcp_godot_propose_create_scene": "Draft scene",
-        "mcp_godot_create_scene": "Create scene",
-        "mcp_godot_propose_add_node_to_scene": "Draft scene node",
-        "mcp_godot_add_node_to_scene": "Add scene node",
-        "mcp_godot_propose_attach_script_to_node": "Draft script attachment",
-        "mcp_godot_attach_script_to_node": "Attach script to node",
-        "mcp_godot_propose_connect_signal_in_scene": "Draft signal connection",
-        "mcp_godot_connect_signal_in_scene": "Connect scene signal",
-        "mcp_godot_propose_apply_scene_patch": "Draft scene patch",
-        "mcp_godot_apply_scene_patch": "Apply scene patch",
-        "mcp_godot_editor_apply_scene_patch": "Patch open scene",
-        "mcp_godot_get_project_summary": "Read project summary",
-        "mcp_godot_list_project_files": "Browse project files",
-        "mcp_godot_list_scenes": "Browse scenes",
-        "mcp_godot_list_scripts": "Browse scripts",
-        "mcp_godot_read_text_file": "Read file",
-        "mcp_godot_search_text": "Search project text",
-        "mcp_godot_get_project_log_config": "Read log settings",
-        "mcp_godot_list_project_logs": "Browse project logs",
-        "mcp_godot_read_project_log": "Read project log",
-        "mcp_godot_get_project_settings": "Read project settings",
-        "mcp_godot_get_editor_config_summary": "Read editor config summary",
-        "mcp_godot_get_editor_settings": "Read editor settings",
-        "mcp_godot_list_editor_config_files": "Browse editor config files",
-        "mcp_godot_read_editor_config_file": "Read editor config",
-        "mcp_godot_get_editor_project_state": "Read editor project state",
-        "mcp_godot_get_recent_projects": "Browse recent projects",
-        "mcp_godot_propose_set_project_setting": "Draft project setting",
-        "mcp_godot_set_project_setting": "Set project setting",
-        "mcp_godot_propose_unset_project_setting": "Draft setting removal",
-        "mcp_godot_unset_project_setting": "Unset project setting",
-        "mcp_godot_inspect_scene_tree": "Inspect scene tree",
-        "mcp_godot_validate_scene_script_references": "Validate scene scripts",
-        "mcp_godot_editor_get_context": "Read editor context",
-        "mcp_godot_editor_get_selected_nodes": "Read selected nodes",
-        "mcp_godot_editor_inspect_node": "Inspect editor node",
-        "mcp_godot_editor_capture_scene_view": "Capture scene view",
-        "mcp_godot_lsp_get_status": "Check language server",
-        "mcp_godot_lsp_get_file_diagnostics": "Check file diagnostics",
-        "mcp_godot_lsp_get_document_symbols": "Read document symbols",
-        "mcp_godot_lsp_hover": "Inspect symbol hover",
-        "mcp_godot_lsp_goto_definition": "Find definition",
-        "mcp_godot_dap_get_status": "Check debugger status",
-        "mcp_godot_dap_get_last_error": "Read debugger error",
-        "mcp_godot_dap_get_stack_trace": "Read stack trace",
-        "mcp_godot_dap_get_variables": "Read debugger variables",
-        "mcp_godot_propose_create_text_file": "Draft Godot file",
-        "mcp_godot_create_text_file": "Create Godot file",
-        "mcp_godot_propose_overwrite_text_file": "Draft Godot file overwrite",
-        "mcp_godot_overwrite_text_file": "Overwrite Godot file",
-        "mcp_godot_propose_replace_text_in_file": "Draft Godot text replacement",
-        "mcp_godot_replace_text_in_file": "Replace text in Godot file",
-        "mcp_godot_delete_file": "Delete Godot file",
-        "mcp_terminal_get_capabilities": "Check terminal capabilities",
-        "mcp_terminal_run_command": "Run terminal command",
-        "mcp_terminal_run_safe_preset": "Run verification command",
-        "mcp_terminal_run_godot_scene_script": "Run Godot scene script",
-        "mcp_terminal_run_write_preset": "Run write command",
-        "mcp_terminal_get_job_status": "Check terminal job",
-        "mcp_terminal_get_job_tail": "Read terminal output",
-        "mcp_terminal_cancel_job": "Cancel terminal job"
-      },
-      "status": {
-        "running": "Running",
-        "done": "Done",
-        "failed": "Failed",
-        "approvalRequired": "Approval required",
-        "pending": "Not started"
-      },
-      "activity": {
-        "running": "The tool is running.",
-        "pending": "The tool has not started.",
-        "writing": "Writing now: {{tool}}"
-      },
-      "recovery": {
-        "failed": "Recovery attempt {{attempt}}/{{max}} failed. The assistant may adjust the same structured target and try again.",
-        "recovered": "Recovered after {{attempt}}/{{max}} failed attempts.",
-        "exhausted": "Recovery limit reached ({{attempt}}/{{max}}). This exact operation will not run again."
-      },
-      "fileChanges": {
-        "summary": "{{count}} file changed",
-        "summary_other": "{{count}} files changed"
-      }
-    },
-    "terminalPart": {
-      "commandFallback": "Terminal command",
-      "cwd": "cwd",
-      "sandbox": "sandbox",
-      "exitCode": "exit",
-      "duration": "duration",
-      "jobId": "job",
-      "output": "Output",
-      "copyCommand": "Copy command",
-      "copyOutput": "Copy output",
-      "waitingOutput": "Waiting for output…",
-      "noOutput": "No output",
-      "omitted": "{{count}} characters omitted",
-      "status": {
-        "approval": "Approval required",
-        "running": "Running",
-        "success": "Done",
-        "failed": "Failed",
-        "timed_out": "Timed out",
-        "cancelled": "Cancelled",
-        "background": "Background job"
-      }
-    },
-    "providerReconnect": {
-      "attempt": "Trying to reconnect {{attempt}}/{{max}}",
-      "recovered": "Connection restored",
-      "failed": "Unable to connect to the model service",
-      "stopped": "Reconnect stopped",
-      "timeout": "A reconnect starts after {{seconds}} seconds without provider activity.",
-      "extended": "Transient transport or gateway failures extended automatic reconnects to 15 attempts.",
-      "reason": {
-        "transport": "The transport connection ended unexpectedly.",
-        "idle_timeout": "The provider stream stopped producing data.",
-        "gateway": "A temporary gateway error interrupted the request.",
-        "rate_limit": "The provider temporarily rate-limited the request.",
-        "server": "The provider returned a temporary server error."
-      }
-    },
-    "plan": {
-      "open": "Open plan"
-    },
-    "thinking": {
-      "label": "Thought process",
-      "activeLabel": "Thinking"
-    },
-    "activityGroup": {
-      "activeThinking": "Thinking",
-      "lastThinking": "Thought process",
-      "summary": {
-        "files": "Edited {{count}} file",
-        "files_other": "Edited {{count}} files",
-        "commands": "Ran {{count}} command",
-        "commands_other": "Ran {{count}} commands",
-        "tools": "Used {{count}} tool",
-        "tools_other": "Used {{count}} tools",
-        "thoughts": "Thought {{count}} time",
-        "thoughts_other": "Thought {{count}} times",
-        "separator": ", ",
-        "empty": "Activity"
-      }
-    },
-    "compression": {
-      "running": "Compressing context",
-      "completed": "Context automatically compressed",
-      "skipped": "Context compression skipped",
-      "failed": "Context compression failed"
-    },
-    "inlineDiff": {
-      "title": "Edited {{count}} file",
-      "title_other": "Edited {{count}} files",
-      "unknownFile": "Unknown file",
-      "openReviewAria": "Open review for {{filePath}}",
-      "showMoreFiles": "Show {{count}} more files",
-      "collapseFiles": "Collapse files",
-      "actions": {
-        "undo": "Undo",
-        "review": "Review"
-      }
-    },
-    "imageGeneration": {
-      "modelFallback": "Image generation",
-      "generating": "Generating images",
-      "generated": "Generated images",
-      "failed": "Image generation failed",
-      "previewUnavailable": "Image preview unavailable",
-      "loading": "Loading",
-      "actions": {
-        "copyImage": "Copy image",
-        "saveImage": "Save image"
-      },
-      "messages": {
-        "copied": "Image copied"
-      },
-      "errors": {
-        "load": "Failed to load generated image",
-        "copy": "Failed to copy image",
-        "unknown": "Unknown error"
-      }
-    }
-  },
-  "settings": {
-    "menu": {
-      "provider": "Provider",
-      "defaultModel": "Default model",
-      "general": "General",
-      "keyboardShortcuts": "Keyboard shortcuts",
-      "search": "Search",
-      "statistics": "Statistics",
-      "personalization": "Personalization",
-      "mcpServers": "MCP Servers",
-      "skills": "Skills",
-      "documentation": "Documentation",
-      "godotProjects": "Godot projects",
-      "archivedSessions": "Archived sessions",
-      "import": "Import",
-      "about": "About",
-      "fallbackTitle": "Settings",
-      "placeholder": "This settings section will be implemented later."
-    },
-    "common": {
-      "add": "Add",
-      "cancel": "Cancel",
-      "delete": "Delete",
-      "disable": "Disable",
-      "edit": "Edit",
-      "enable": "Enable",
-      "off": "OFF",
-      "on": "ON",
-      "save": "Save",
-      "close": "Close",
-      "update": "Update"
-    },
-    "keyboardShortcuts": {
-      "title": "Keyboard Shortcuts",
-      "search": {
-        "action": "Search action names",
-        "mapping": "Press a shortcut to find actions"
-      },
-      "columns": {
-        "name": "Name",
-        "shortcut": "Shortcut",
-        "actions": "Actions"
-      },
-      "actions": {
-        "edit": "Edit",
-        "reset": "Reset"
-      },
-      "commands": {
-        "toggleWorkspaceSidebar": "Toggle Workspace sidebar",
-        "toggleBottomPanel": "Toggle bottom panel",
-        "toggleSessionSidebar": "Toggle session sidebar",
-        "newSession": "New session",
-        "previousSession": "Previous chat",
-        "nextSession": "Next chat",
-        "previousTurn": "Previous conversation turn",
-        "nextTurn": "Next conversation turn",
-        "findInConversation": "Find in conversation"
-      },
-      "empty": "No shortcut actions match your search.",
-      "editor": {
-        "title": "Edit “{{action}}” shortcut",
-        "description": "Press a new single shortcut. Printable keys require a modifier.",
-        "placeholder": "Press a shortcut",
-        "required": "Enter a shortcut.",
-        "invalid": "This key cannot be used as a shortcut by itself.",
-        "conflict": "This shortcut is already used by “{{action}}”."
-      },
-      "errors": {
-        "load": "Failed to load keyboard shortcuts.",
-        "save": "Failed to save keyboard shortcuts."
-      }
-    },
-    "documentation": {
-      "title": "Documentation",
-      "enabled": "Enable documentation search",
-      "add": "Add documentation",
-      "importLocal": "Import local documentation",
-      "empty": "No offline Godot documentation is installed.",
-      "item": {
-        "stats": "{{documents}} documents · {{chunks}} chunks · {{classes}} classes · {{size}}",
-        "updated": "Updated {{date}}",
-        "licenses": "Manual: CC BY 3.0 · Class Reference: MIT",
-        "source": {
-          "official": "Official",
-          "local": "Local"
-        }
-      },
-      "health": {
-        "status": {
-          "checking": "Checking",
-          "ready": "Healthy",
-          "degraded": "Degraded",
-          "repairing": "Repairing",
-          "unavailable": "Unavailable"
-        },
-        "check": "Check index",
-        "repairAction": "Repair index",
-        "neverChecked": "Index has not been checked yet",
-        "checked": "Checked {{date}}",
-        "allUnavailable": "No healthy documentation index is available",
-        "toolUnavailable": "Documentation search remains enabled, but the LLM will not receive the search tool until an index is repaired.",
-        "repair": {
-          "rollback": "Previous healthy index available",
-          "cached_source": "Offline repair available",
-          "network_required": "Download required",
-          "source_required": "Local source required",
-          "none": "No repair source available"
-        }
-      },
-      "repair": {
-        "networkTitle": "Download documentation to repair the index?",
-        "networkDescription": "The local source cache for Godot {{branch}} is unavailable. Daedalus will connect to GitHub only after you confirm.",
-        "download": "Download and repair",
-        "sourceTitle": "Select a local source to repair documentation"
-      },
-      "modal": {
-        "title": "Add Godot documentation",
-        "sourceTitle": "Official Godot documentation",
-        "sourceDescription": "Daedalus downloads the selected branch from godotengine/godot-docs and builds a local full-text index. Documentation is not bundled with Studio.",
-        "branch": "Documentation branch",
-        "branchRequired": "Select a documentation branch.",
-        "branchPlaceholder": "Select or search for a branch",
-        "installed": "Installed",
-        "refresh": "Refresh branches",
-        "notice": "The download is pinned to an immutable commit. Disk usage depends on the selected branch and the generated SQLite index.",
-        "download": "Download and index"
-      },
-      "local": {
-        "title": "Import local Godot documentation",
-        "sourceTitle": "Local godot-docs source",
-        "sourceDescription": "Choose an extracted godot-docs directory or a ZIP archive. Daedalus copies and indexes the source; the original files are not modified.",
-        "branch": "Documentation version",
-        "branchRequired": "Enter the documentation version or branch name.",
-        "branchPlaceholder": "For example, 4.7 or master",
-        "source": "Local source",
-        "sourceRequired": "Choose a godot-docs directory or ZIP archive.",
-        "sourcePlaceholder": "Choose a directory or ZIP archive",
-        "selectFolder": "Select folder",
-        "selectZip": "Select ZIP",
-        "import": "Import and index"
-      },
-      "progress": {
-        "title": "Godot {{branch}} documentation",
-        "cancel": "Cancel operation",
-        "retrying": "The connection was interrupted. Retrying the documentation download…",
-        "stage": {
-          "resolving": "Resolving",
-          "downloading": "Downloading",
-          "extracting": "Extracting",
-          "indexing": "Indexing",
-          "validating": "Validating",
-          "rolling_back": "Rolling back",
-          "finalizing": "Finalizing",
-          "completed": "Completed",
-          "failed": "Failed",
-          "cancelled": "Cancelled"
-        },
-        "message": {
-          "resolving": "Resolving the selected branch to an immutable commit…",
-          "downloading": "Downloading from the official Godot documentation repository…",
-          "extracting": "Verifying and extracting the documentation archive…",
-          "indexing": "Building the local symbol and full-text search index…",
-          "finalizing": "Activating the new documentation generation…",
-          "completed": "The documentation index is ready.",
-          "failed": "The documentation operation failed.",
-          "cancelled": "The documentation operation was cancelled."
-        },
-        "localMessage": {
-          "resolving": "Inspecting the local documentation source…",
-          "downloading": "Copying the local documentation archive…",
-          "extracting": "Verifying and staging the local documentation source…",
-          "indexing": "Building the local symbol and full-text search index…",
-          "finalizing": "Activating the imported documentation generation…",
-          "completed": "The imported documentation index is ready.",
-          "failed": "The local documentation import failed.",
-          "cancelled": "The local documentation import was cancelled."
-        }
-      },
-      "operationMessage": {
-        "check": {
-          "resolving": "Preparing the documentation health check…",
-          "downloading": "Preparing the documentation health check…",
-          "extracting": "Preparing the documentation health check…",
-          "indexing": "Preparing the documentation health check…",
-          "validating": "Checking SQLite integrity, metadata, counts, and hashes…",
-          "rolling_back": "Checking a previous healthy index…",
-          "finalizing": "Saving the documentation health result…",
-          "completed": "The documentation index is healthy.",
-          "failed": "The documentation health check failed.",
-          "cancelled": "The documentation health check was cancelled."
-        },
-        "repair": {
-          "resolving": "Resolving a repair source…",
-          "downloading": "Downloading the confirmed official documentation source…",
-          "extracting": "Preparing the cached documentation source…",
-          "indexing": "Rebuilding the documentation index…",
-          "validating": "Verifying the rebuilt index before activation…",
-          "rolling_back": "Validating a previous healthy generation…",
-          "finalizing": "Activating the repaired documentation generation…",
-          "completed": "The documentation index was repaired.",
-          "failed": "The documentation repair failed.",
-          "cancelled": "The documentation repair was cancelled."
-        }
-      },
-      "remove": {
-        "title": "Delete documentation?",
-        "description": "Godot {{branch}} documentation will be removed from this device."
-      },
-      "messages": {
-        "ready": "Godot documentation is ready.",
-        "upToDate": "This documentation is already up to date.",
-        "removed": "Godot {{branch}} documentation was removed."
-      },
-      "errors": {
-        "check": "Failed to check the documentation index.",
-        "repair": "Failed to repair the documentation index.",
-        "load": "Failed to load documentation settings.",
-        "branches": "Failed to load official documentation branches.",
-        "pickLocal": "Failed to select the local documentation source.",
-        "job": "Failed to read documentation job progress.",
-        "update": "Failed to update documentation.",
-        "cancel": "Failed to cancel the documentation operation.",
-        "toggle": "Failed to update documentation search.",
-        "remove": "Failed to remove documentation."
-      }
-    },
-    "godotProjects": {
-      "title": "Godot projects",
-      "empty": "No Godot projects were found.",
-      "bundleReady": "Bundled plugin {{version}} is bound to Studio {{studioVersion}}.",
-      "actionCompleted": "Godot project updated.",
-      "operationQueued": "Plugin change is staged. Close Godot and Studio will apply it automatically.",
-      "pendingRestart": "Plugin changes are waiting for Godot to close.",
-      "pendingRestartDescription": "Studio has staged the plugin safely and will apply it automatically after all Godot editors have exited.",
-      "confirmRepair": "Replace the installed plugin with the bundled version?",
-      "confirmUninstall": "Uninstall Daedalus Bridge from this project?",
-      "columns": {
-        "project": "Project",
-        "godot": "Godot",
-        "plugin": "Plugin",
-        "status": "Status",
-        "actions": "Actions"
-      },
-      "actions": {
-        "add": "Add project",
-        "scan": "Rescan",
-        "install": "Install",
-        "upgrade": "Upgrade",
-        "upgradeAll": "Upgrade all",
-        "repair": "Repair",
-        "uninstall": "Uninstall",
-        "retryPending": "Retry pending"
-      },
-      "status": {
-        "not_installed": "Not installed",
-        "current": "Current",
-        "development": "Development source",
-        "outdated": "Outdated",
-        "disabled": "Disabled",
-        "modified": "Modified",
-        "pending": "Pending",
-        "pending_restart": "Waiting for Godot",
-        "failed": "Failed"
-      }
-    },
-    "about": {
-      "title": "About",
-      "unavailable": "Unavailable",
-      "applicationInformation": "Application Information",
-      "sourceCode": "Source Code",
-      "sourceDescription": "Visit our GitHub repository for source code, issues, and contributions.",
-      "backend": {
-        "description": "Local RPC, workflow, MCP, and Godot integration service.",
-        "detailsTitle": "Backend Details",
-        "repairConfirmTitle": "Repair Daedalus backend?",
-        "repairConfirmDescription": "This stops and reinstalls the backend bundled with this Studio version. Any active model response will be interrupted.",
-        "repairSucceeded": "Backend repaired and reconnected.",
-        "restartSucceeded": "Backend restarted and reconnected.",
-        "updateNotAvailable": "No backend update is available.",
-        "updateWaiting": "An AI response is still running. The backend update will continue when it finishes.",
-        "actionWaiting": "An AI response is still running",
-        "actionWaitingDescription": "Backend restart, repair, and update actions are deferred to avoid interrupting the response. Retry when it finishes.",
-        "status": {
-          "healthy": "Healthy",
-          "starting": "Starting",
-          "unhealthy": "Unhealthy",
-          "stopped": "Stopped",
-          "unknown": "Unknown"
-        }
-      },
-      "actions": {
-        "refresh": "Refresh",
-        "viewChangelog": "View update history",
-        "checkForUpdates": "Check for updates",
-        "updateBackend": "Update backend",
-        "restartBackend": "Restart backend",
-        "repairBackend": "Repair backend"
-      },
-      "onboarding": {
-        "title": "Setup guide",
-        "description": "Restart the first-run guide without removing providers, Godot paths, documentation, or installed plugins.",
-        "resetAndRestart": "Reset and restart",
-        "confirmTitle": "Reset the setup guide?",
-        "confirmDescription": "Daedalus Studio will restart at the welcome page. Your existing configuration will be kept.",
-        "resetFailed": "Failed to reset the setup guide."
-      },
-      "fields": {
-        "author": "Author",
-        "license": "License",
-        "logPath": "Log Path",
-        "managerStatus": "Manager Status",
-        "package": "Package",
-        "port": "Port",
-        "processId": "Process ID",
-        "protocol": "Protocol",
-        "runtimeMode": "Runtime Mode",
-        "version": "Version"
-      },
-      "protocol": {
-        "multiClient": "multi-client",
-        "singleClient": "single-client"
-      },
-      "errors": {
-        "applicationInfo": "Failed to load application information",
-        "backendDetails": "Failed to load backend details",
-        "backendUpdate": "Failed to update backend",
-        "backendRepair": "Failed to repair backend",
-        "backendRestart": "Failed to restart backend"
-      }
-    },
-    "import": {
-      "title": "Import",
-      "session": {
-        "title": "Session data",
-        "importSession": {
-          "title": "Import Daedalus session",
-          "description": "Choose a SQLite file exported from WorkspaceTree and import that session back into this Studio.",
-          "action": "Choose SQLite file",
-          "dialogTitle": "Import Daedalus session",
-          "dialogButton": "Import",
-          "success": "Imported session: {{title}}",
-          "successArchived": "Imported archived session: {{title}}",
-          "resultDescription_other": "Session ID: {{sessionId}} · {{files}} files restored"
-        }
-      }
-    },
-    "archivedSessions": {
-      "title": "Archived sessions",
-      "loading": "Loading archived sessions...",
-      "searchPlaceholder": "Search session...",
-      "actions": {
-        "delete": "Delete",
-        "deleteAll": "Delete all",
-        "restore": "Unarchive"
-      },
-      "aria": {
-        "delete": "Delete {{sessionTitle}}",
-        "restore": "Unarchive {{sessionTitle}}"
-      },
-      "filters": {
-        "all": "All",
-        "noWorkspace": "No workspace"
-      },
-      "empty": {
-        "none": "No archived sessions",
-        "noMatches": "No matching archived sessions"
-      },
-      "confirm": {
-        "deleteSession": {
-          "title": "Delete archived session?",
-          "description": "This permanently deletes this archived session."
-        },
-        "deleteAll": {
-          "title": "Delete archived sessions?",
-          "description": "This will permanently delete {{count}} archived session matching the current filter.",
-          "description_other": "This will permanently delete {{count}} archived sessions matching the current filter."
-        }
-      },
-      "errors": {
-        "deleteAll": "Failed to delete archived sessions",
-        "deleteSession": "Failed to delete archived session",
-        "load": "Failed to load archived sessions",
-        "restore": "Failed to unarchive session"
-      }
-    },
-    "defaultModel": {
-      "selectModel": "Select a model",
-      "configureProvider": "Configure provider",
-      "notConfigured": "Not configured - always ask me",
-      "routing": {
-        "sessionTitle": {
-          "title": "Session title model",
-          "description": "Used for automatic session renaming and lightweight title generation."
-        },
-        "nextStepHints": {
-          "title": "Next-step suggestion model",
-          "description": "Generates one optional follow-up in the empty composer after a chat response. Follows the active model when unset and always disables reasoning."
-        },
-        "goalEvaluator": {
-          "title": "Goal completion evaluator model",
-          "description": "Used to judge whether a Goal is complete after each execution cycle. Falls back to the Goal model when unset."
-        },
-        "contextCompression": {
-          "title": "Context compression model",
-          "description": "Creates recoverable structured context summaries. Follows the active model when unset and always disables reasoning."
-        },
-        "imageRecognition": {
-          "title": "Image recognition model",
-          "description": "Used when the active chat model cannot consume image context directly."
-        },
-        "imageGeneration": {
-          "title": "Image generation/edit model",
-          "description": "Used by @image-gen and mcp_image_generate for text-to-image or image-to-image tasks. This must be configured explicitly."
-        },
-        "gitCommit": {
-          "title": "Git commit model",
-          "description": "Used to generate commit messages from workspace Git diffs. Defaults to the main model when unset."
-        },
-        "commandReview": {
-          "title": "Command review model",
-          "description": "Reviews free terminal commands in Auto-safe mode. When unset, every command asks for your approval."
-        }
-      },
-      "errors": {
-        "load": "Failed to load default model settings",
-        "noSelection": "No provider model selection available",
-        "save": "Failed to save model routing"
-      }
-    },
-    "mcpServers": {
-      "title": "MCP Servers",
-      "searchPlaceholder": "Search MCP...",
-      "noSecrets": "No secrets",
-      "toolCount": "{{count}} tool",
-      "toolCount_other": "{{count}} tools",
-      "empty": {
-        "none": "No custom MCP servers",
-        "noMatches": "No matching MCP servers"
-      },
-      "status": {
-        "connected": "Connected",
-        "disabled": "Disabled",
-        "failed": "Failed",
-        "starting": "Starting"
-      },
-      "confirm": {
-        "delete": {
-          "title": "Delete MCP server?",
-          "description": "Delete {{name}} from Daedalus Studio. Stored secrets for this MCP server will also be removed."
-        }
-      },
-      "modal": {
-        "addTitle": "Add MCP server",
-        "editTitle": "Edit MCP server"
-      },
-      "form": {
-        "command": "Command",
-        "commandRequired": "Command is required",
-        "description": "Description",
-        "descriptionPlaceholder": "MCP server description",
-        "name": "Name",
-        "namePlaceholder": "MCP server name",
-        "nameRequired": "Name is required",
-        "type": "Type",
-        "urlRequired": "A valid URL is required"
-      },
-      "errors": {
-        "delete": "Failed to delete MCP server",
-        "load": "Failed to load MCP servers",
-        "loadTimeout": "MCP configuration is taking too long to respond. The page is still available, but runtime statuses may be stale.",
-        "update": "Failed to update MCP server"
-      }
-    },
-    "personalization": {
-      "userPrompt": {
-        "title": "User prompt",
-        "description": "Custom instructions appended to new AI requests."
-      },
-      "gitCommitPrompt": {
-        "title": "Git commit prompt",
-        "description": "Custom instructions used only when generating commit messages."
-      },
-      "commandReviewPrompt": {
-        "title": "Supplemental review preferences",
-        "description": "Additional preferences for Auto-safe command review. Fixed safety rules always take precedence.",
-        "placeholder": "Add project-specific command review preferences."
-      },
-      "errors": {
-        "load": "Failed to load personalization settings",
-        "save": "Failed to save personalization settings"
-      }
-    },
-    "provider": {
-      "apiBaseUrl": "API Base URL",
-      "apiKey": "API Key",
-      "enterApiKey": "Enter API key",
-      "baseUrlHints": {
-        "openaiCompatible": "OpenAI-compatible services usually require a version path such as /v1; for AIHub, use https://aihub.top/v1."
-      },
-      "modelListSource": "Model list source: {{source}}",
-      "models": "Models",
-      "newKeyHint": "Only a newly entered key will be saved.",
-      "savedKey": "Saved key: {{key}}",
-      "searchPlaceholder": "Search providers...",
-      "updated": "updated {{updatedAt}}",
-      "requestConfiguration": {
-        "title": "Custom request · {{provider}}",
-        "open": "Custom request",
-        "description": "Add provider-specific headers or JSON body fields to text-model requests. Omit a section or leave it empty when it is not needed.",
-        "safetyHint": "Daedalus keeps authentication, model, messages, tools, and streaming fields under its own control. Reserved fields are rejected when you save.",
-        "editorHint": "Only the top-level headers and body fields are supported",
-        "useTextEditor": "Use text editor",
-        "reset": "Reset configuration",
-        "validation": {
-          "json": "Enter valid JSON before saving.",
-          "root": "The request configuration must be a JSON object.",
-          "topLevel": "Only the top-level fields \"headers\" and \"body\" are supported.",
-          "headers": "\"headers\" must be an object whose values are strings.",
-          "body": "\"body\" must be an object containing JSON values."
-        }
-      },
-      "dialogs": {
-        "addProviderTitle": "Add provider",
-        "editProviderTitle": "Edit provider",
-        "addModelTitle": "Add model",
-        "editModelTitle": "Edit model",
-        "discoverModelsTitle": "{{provider}} Models"
-      },
-      "fields": {
-        "providerName": "Provider name",
-        "providerType": "Provider type",
-        "websiteUrl": "Provider website",
-        "modelId": "Model ID",
-        "modelName": "Model name",
-        "modelTypes": "Model types",
-        "contextWindowTokens": "Context window (tokens)",
-        "maxOutputTokens": "Maximum output (tokens)",
-        "modelCapabilities": "Model capabilities",
-        "reasoningEfforts": "Reasoning effort",
-        "reasoningEffortId": "Provider value",
-        "reasoningEffortFallback": "Equivalent level",
-        "reasoningEffortDefault": "Default"
-      },
-      "validation": {
-        "providerName": "Enter a provider name between 1 and 80 characters",
-        "providerType": "Select a provider type",
-        "websiteUrl": "Enter a valid http or https URL",
-        "modelId": "Enter a model ID between 1 and 200 characters",
-        "modelName": "Enter a model name between 1 and 120 characters",
-        "tokenLimit": "Enter an integer between 1 and 2,000,000,000",
-        "reasoningEffortId": "Enter a provider value between 1 and 32 characters",
-        "reasoningEffortDuplicate": "Provider values must be unique"
-      },
-      "actions": {
-        "addModel": "Add model",
-        "addReasoningEffort": "Add effort level",
-        "removeReasoningEffort": "Remove",
-        "clearApiKey": "Clear API key",
-        "enableProvider": "Enable provider",
-        "disableProvider": "Disable provider",
-        "fetchModels": "Fetch models",
-        "importModels": "Import models",
-        "applyModelChanges": "Apply changes",
-        "removeModels": "Remove models",
-        "removeProvider": "Remove provider",
-        "editProvider": "Edit provider",
-        "openWebsite": "Open provider website",
-        "reloadModels": "Reload models",
-        "test": "Test"
-      },
-      "discovery": {
-        "searchPlaceholder": "Search model ID or name...",
-        "empty": "No models available to manage",
-        "manualModelHint": "If the model list is unavailable, close this dialog, use Save to store the API key and Base URL, then add the model ID manually from the provider page.",
-        "alreadyImported": "{{model}} is already imported",
-        "selectModel": "Select {{model}}",
-        "removeConfirmTitle": "Remove selected models?",
-        "removeConfirmDescription": "{{count}} models will be removed from the available model list. Selecting them again later will restore their local names and capability overrides.",
-        "guards": {
-          "activeModel": "This is the active default model. Choose another model in Default Model settings first.",
-          "providerSelection": "This is the provider's saved model. Choose another provider model first.",
-          "taskRouting": "This model is used by the {{task}} task route. Change it in Default Model settings first.",
-          "webSearch": "This model is used by Web Search. Change it in Search settings first."
-        },
-        "failures": {
-          "authentication": "Authentication failed. Check that the API key is valid and does not include a Bearer prefix.",
-          "permission": "The provider denied access for this key. Check model permissions, groups, quota, or expiry.",
-          "rate_limited": "The provider is rate limiting requests. Try again later.",
-          "models_endpoint": "The model-list endpoint is unavailable. Check that the Base URL includes the correct version path; OpenAI-compatible services commonly require /v1.",
-          "response_format": "The API responded, but its model list is not in the OpenAI data[] format Daedalus recognizes. Save the credentials and add the model manually.",
-          "network": "Daedalus could not reach the provider. Check your network, proxy, DNS, and Base URL.",
-          "upstream": "The provider could not complete the model-list request. Check its service status and try again."
-        }
-      },
-      "capabilities": {
-        "imageEdit": "Edit",
-        "imageGeneration": "Image generation",
-        "imageInput": "Image input",
-        "videoInput": "Video input",
-        "reasoning": "Reasoning",
-        "tools": "Tools",
-        "vision": "Vision",
-        "webSearch": "Search"
-      },
-      "reasoningEfforts": {
-        "description": "Define the reasoning effort values accepted by this provider. Equivalent levels let Daedalus map a selection when switching models.",
-        "disabled": "Enable the model's reasoning capability before configuring effort levels.",
-        "empty": "No selectable levels. The model will use its provider-defined fixed or automatic reasoning strength.",
-        "fallback": {
-          "low": "Low",
-          "medium": "Medium",
-          "high": "High",
-          "max": "Maximum"
-        }
-      },
-      "modelOverrides": {
-        "description": "Fields without an override continue to follow the provider API or Daedalus catalog and adopt future metadata updates automatically.",
-        "inherit": "Follow source",
-        "resetAll": "Reset all to source"
-      },
-      "status": {
-        "disabled": "Disabled"
-      },
-      "usage": {
-        "blockedTitle": "Provider is still in use",
-        "blockedDescription": "{{provider}} cannot be disabled or removed until these model assignments are changed.",
-        "activeModel": "Main model: {{model}}",
-        "taskRouting": "{{task}}: {{model}}"
-      },
-      "remove": {
-        "confirmTitle": "Remove custom provider?",
-        "confirmDescription": "Remove {{provider}} and its saved API key, request configuration, models, and local customizations? This cannot be undone."
-      },
-      "columns": {
-        "capabilities": "Capabilities",
-        "model": "Model"
-      },
-      "errors": {
-        "addProvider": "Failed to add provider",
-        "updateProvider": "Failed to update provider",
-        "openWebsite": "Failed to open provider website",
-        "clearApiKey": "Failed to clear API key",
-        "load": "Failed to load provider settings",
-        "modelIdConflict": "A model with this ID already exists for the provider",
-        "modelNotFound": "This model is no longer in the current model list. Refresh and try again",
-        "noSettings": "No provider settings available",
-        "providerNameConflict": "A provider with this name already exists",
-        "discoverModels": "Failed to discover provider models",
-        "importModels": "Failed to import provider models",
-        "syncModels": "Failed to apply provider model changes",
-        "refreshModels": "Failed to refresh provider models",
-        "saveModel": "Failed to save model",
-        "updateProviderState": "Failed to update provider state",
-        "removeProvider": "Failed to remove provider",
-        "saveRequestConfiguration": "Failed to save custom request configuration",
-        "saveCredentials": "Failed to save provider credentials",
-        "testConnection": "Provider connection test failed"
-      },
-      "messages": {
-        "testSuccess": "Provider connection test succeeded",
-        "credentialsSaved": "Provider credentials saved",
-        "importSuccess": "Imported {{count}} models",
-        "syncSuccess": "Model changes applied: {{enabled}} enabled, {{removed}} removed",
-        "providerEnabled": "{{provider}} is enabled",
-        "providerDisabled": "{{provider}} is disabled",
-        "providerRemoved": "{{provider}} was removed",
-        "providerUpdated": "Provider details updated",
-        "requestConfigurationSaved": "Custom request configuration saved"
-      },
-      "placeholders": {
-        "websiteUrl": "https://example.com"
-      }
-    },
-    "search": {
-      "title": "Search",
-      "webSearchTitle": "Web search",
-      "configureProvider": "Configure the selected provider API key in Provider settings before web search can be used.",
-      "enabled": {
-        "title": "Enable web search",
-        "description": "Allow every conversation to use the configured web search tool when current information is needed."
-      },
-      "model": {
-        "title": "Search model",
-        "description": "Choose the provider-native search model used by the global web search tool.",
-        "placeholder": "Select a search model"
-      },
-      "maxResults": {
-        "title": "Search result count",
-        "description": "Default number of search results returned to the assistant when a search tool call does not override it.",
-        "tooltip": "{{count}} result",
-        "tooltip_other": "{{count}} results"
-      },
-      "maxKeywords": {
-        "title": "Search breadth",
-        "description": "Limit how many search keywords a single web search may generate. Higher values can improve recall.",
-        "tooltip": "Up to {{count}} keywords",
-        "billingNotice": "The selected provider may charge for each search keyword. Enable web search in the provider console and review its pricing before use."
-      },
-      "errors": {
-        "load": "Failed to load web search settings",
-        "save": "Failed to save web search settings"
-      }
-    },
-    "statistics": {
-      "title": "Statistics",
-      "actions": {
-        "refresh": "Refresh"
-      },
-      "range": {
-        "last7Days": "Last 7 days",
-        "last30Days": "Last 30 days",
-        "last90Days": "Last 90 days",
-        "all": "All time"
-      },
-      "metrics": {
-        "requests": "LLM requests",
-        "successRate": "Success rate",
-        "tokens": "Tokens",
-        "tokensSuffix": "tokens",
-        "cacheHitRate": "Cache hit rate",
-        "avgDuration": "Avg. duration",
-        "avgFirstToken": "Avg. first token",
-        "tokenActivity": "Token activity"
-      },
-      "charts": {
-        "requestsTrend": "Request trend",
-        "tokensTrend": "Token trend",
-        "providerShare": "Provider token share",
-        "modelTokens": "Model token usage"
-      },
-      "empty": {
-        "noUsage": "No usage data yet"
-      },
-      "unavailable": {
-        "title": "Usage metrics are unavailable",
-        "description": "The backend usage metrics database could not be opened."
-      },
-      "errors": {
-        "load": "Failed to load statistics"
-      },
-      "heatmap": {
-        "title": "Token activity",
-        "tooltip": "{{date}}: {{tokens}} tokens"
-      },
-      "cacheSegments": {
-        "hit": "Cache hit tokens",
-        "miss": "Non-cache tokens"
-      }
-    },
-    "skills": {
-      "title": "Skills",
-      "invalid": "INVALID",
-      "searchPlaceholder": "Search skill...",
-      "valid": "VALID",
-      "actions": {
-        "importFromNpx": "Import from npx skills",
-        "importSelected": "Import selected",
-        "install": "Install",
-        "installFromFolder": "Install from folder",
-        "installFromZip": "Install from ZIP"
-      },
-      "confirm": {
-        "delete": {
-          "title": "Delete skill?",
-          "description": "Delete {{name}} from Daedalus Studio? This permanently removes its personal skill files.",
-          "projectDescription": "Delete {{name}} from the current project? This permanently removes its directory under .github/skills and will appear as a version-control change."
-        }
-      },
-      "empty": {
-        "none": "No custom skills yet. Ask the agent to create a skill, or install one from ZIP/folder.",
-        "noMatches": "No matching skills"
-      },
-      "errors": {
-        "delete": "Failed to delete skill",
-        "install": "Failed to install skill",
-        "npxDiscover": "Failed to find local Codex skills",
-        "load": "Failed to load skills",
-        "loadWorkspaces": "Failed to load projects",
-        "loadContent": "Failed to read SKILL.md",
-        "projectTargetRequired": "Select a project and source folder before installing a project skill",
-        "selectSource": "Failed to select skill source",
-        "update": "Failed to update skill",
-        "updateContent": "Failed to save SKILL.md"
-      },
-      "editor": {
-        "title": "Edit skill",
-        "titleWithName": "Edit {{name}}",
-        "description": "YAML frontmatter, skill instructions, and file size are validated before saving. The skill ID and directory are not changed."
-      },
-      "install": {
-        "description": "Personal skills are stored in your user directory. Project skills are stored in the selected source folder's .github/skills directory.",
-        "fromFolder": "Install from folder",
-        "fromZip": "Install from ZIP",
-        "title": "Install skill"
-      },
-      "npx": {
-        "title": "Import global Codex skills",
-        "description": "Lists global Codex skills. If the Skills CLI is missing, Daedalus Studio downloads the CLI once through npx but never executes skill instructions.",
-        "empty": "No global Codex skills were found.",
-        "selectAll": "Select all available skills",
-        "alreadyInstalled": "Already installed",
-        "summary": "Imported {{installed}}, skipped {{skipped}}, failed {{failed}}."
-      },
-      "scope": {
-        "all": "All",
-        "builtin": "Built-in",
-        "personal": "Personal",
-        "project": "Project"
-      },
-      "target": {
-        "workspacePlaceholder": "Select project",
-        "sourceFolderPlaceholder": "Select source folder",
-        "projectPathHint": "The skill will be installed under .github/skills in the selected source folder."
-      }
-    },
-    "general": {
-      "title": "General",
-      "display": {
-        "title": "Display settings",
-        "theme": {
-          "title": "Theme",
-          "description": "Choose the Studio color theme for this device.",
-          "system": "System",
-          "light": "Light",
-          "dark": "Dark"
-        },
-        "themeColor": {
-          "title": "Theme color",
-          "description": "Customize the Studio accent and primary control color.",
-          "reset": "Restore default"
-        },
-        "language": {
-          "title": "Language",
-          "description": "Choose the Studio display language.",
-          "placeholder": "Select a language",
-          "system": "System default",
-          "english": "English",
-          "chinese": "中文"
-        }
-      },
-      "fonts": {
-        "title": "Fonts",
-        "body": {
-          "title": "Body font family",
-          "description": "Customize the font family used by regular Studio text.",
-          "placeholder": "e.g. \"Inter\", \"Microsoft YaHei\", sans-serif",
-          "reset": "Restore default body font"
-        },
-        "code": {
-          "title": "Code font family",
-          "description": "Customize the font family used by code, terminals, and the file editor.",
-          "placeholder": "e.g. \"JetBrains Mono\", Consolas, monospace",
-          "reset": "Restore default code font"
-        }
-      },
-      "godot": {
-        "title": "Godot environment",
-        "executable": "Godot executable",
-        "description": "Used when a workspace does not provide its own Godot executable path.",
-        "placeholder": "Select a Godot executable",
-        "browse": "Browse",
-        "clear": "Clear Godot executable",
-        "status": {
-          "ready": "Godot {{version}}",
-          "readyFallback": "ready",
-          "unavailable": "Unavailable",
-          "unconfigured": "Not configured"
-        }
-      },
-      "notifications": {
-        "title": "System notifications",
-        "runCompleted": {
-          "title": "Notify when an LLM reply finishes",
-          "description": "Show a system notification when a reply finishes in the background. No duplicate notification is shown while the window is focused."
-        }
-      },
-      "general": {
-        "title": "General settings",
-        "nextStepHintsEnabled": {
-          "title": "Suggest the next step",
-          "description": "After a completed reply, let Daedalus suggest a useful next action in the composer."
-        },
-        "autoCheckForUpdates": {
-          "title": "Check for updates on startup",
-          "description": "Check for Daedalus Studio and backend updates when the app starts."
-        },
-        "minimizeToTrayOnClose": {
-          "title": "Minimize to tray on close",
-          "description": "Hide Daedalus Studio to the system tray when the window close button is clicked."
-        }
-      },
-      "errors": {
-        "load": "Failed to load general settings",
-        "save": "Failed to save general settings",
-        "godotExecutable": "Failed to validate the Godot executable"
-      }
-    }
-  },
-  "nativeNotifications": {
-    "goalAchievedTitle": "Daedalus achieved the goal",
-    "goalStoppedTitle": "Daedalus goal stopped",
-    "approvalTitle": "Daedalus needs approval",
-    "toolApprovalBody": "The assistant is waiting for tool approval.",
-    "toolBudgetBody": "The assistant needs a tool budget decision.",
-    "planApprovalBody": "A plan is ready for review.",
-    "clarificationTitle": "Daedalus needs clarification",
-    "clarificationBody": "A plan question is waiting for your reply.",
-    "runCompletedTitle": "Daedalus finished",
-    "runCompletedBody": "{{sessionTitle}} is ready."
-  },
-  "appUpdate": {
-    "title": "Daedalus Studio update",
-    "summary": {
-      "client": "A Daedalus Studio update is available.",
-      "backend": "A Daedalus backend update is available.",
-      "combined": "Daedalus Studio and the backend both have updates.",
-      "notAvailable": "Daedalus Studio is up to date.",
-      "unsupported": "Updates are not available for this installation.",
-      "failed": "The automatic update could not be completed."
-    },
-    "components": {
-      "client": "Client",
-      "backend": "Backend"
-    },
-    "status": {
-      "checking": "Checking for updates...",
-      "downloading": "Downloading update...",
-      "downloadingDifferential": "Downloading differential update...",
-      "downloadingFullInstaller": "Downloading full installer...",
-      "installingBackend": "Installing backend update...",
-      "backendUpdated": "Backend updated. Close this dialog to continue.",
-      "restarting": "Restarting to install...",
-      "waitingForResponse": "Waiting for the active response to finish...",
-      "failed": "Update failed",
-      "ready": "Update is ready."
-    },
-    "waiting": {
-      "title": "Update deferred",
-      "description": "An AI response is still running. Studio will continue installing the update when it finishes.",
-      "activeTitle": "An AI response is still running",
-      "activeDescription": "Installing now would interrupt the response. The update request is queued until it finishes."
-    },
-    "fallback": {
-      "title": "Switched to the full installer",
-      "description": "The differential update could not be completed, so Daedalus Studio automatically fell back to a full download. Progress restarts at 0%; the installer is not being applied twice.",
-      "reason": "Fallback reason:"
-    },
-    "actions": {
-      "retry": "Retry",
-      "openReleases": "Download from GitHub Releases",
-      "openClientReleases": "Download Daedalus Studio",
-      "openBackendReleases": "Download Daedalus Backend"
-    },
-    "errors": {
-      "download": "Failed to download update.",
-      "manualDownloadHint": "If GitHub is unavailable on your network or automatic downloads keep failing, use the matching component's Releases page for a manual download."
-    }
-  },
-  "changelog": {
-    "title": "Update history",
-    "whatsNew": "What's new in v{{version}}",
-    "noReleaseNotes": "Detailed release notes for v{{version}} are not available yet.",
-    "actions": {
-      "viewFull": "View full history",
-      "close": "Done"
-    }
-  }
+	"app": {
+		"boot": {
+			"progress": {
+				"starting": "Starting Daedalus Studio",
+				"connectingBackend": "Connecting to backend",
+				"loadingPreferences": "Loading preferences",
+				"loadingWorkspaceData": "Loading workspace data",
+				"loadingCommandsAndSkills": "Loading commands and skills",
+				"ready": "Ready",
+				"checkingBackend": "Checking backend",
+				"checkingBackendPackage": "Checking backend package",
+				"installingBackend": "Installing backend",
+				"preparingBackend": "Preparing backend",
+				"startingBackend": "Starting backend",
+				"checkingBackendHealth": "Checking backend health",
+				"backendReady": "Backend ready",
+				"backendStartupFailed": "Backend startup failed"
+			},
+			"error": {
+				"developmentBackendNotRunning": "Development backend is not running",
+				"installFailed": "Daedalus backend could not be installed",
+				"backendMissing": "Daedalus backend is missing or damaged",
+				"markedBackendMissing": "Marked backend version is missing",
+				"healthFailed": "Daedalus backend did not start",
+				"studioStartFailed": "Daedalus Studio could not start",
+				"bootstrapFailed": "Backend bootstrap failed.",
+				"backendReadyTimeout": "Timed out waiting for the backend to become ready.",
+				"resourceTimeout": "Timed out while loading {{resource}}."
+			},
+			"resources": {
+				"backendHealth": "backend health",
+				"clientPreferences": "client preferences",
+				"generalSettings": "general settings",
+				"providerModels": "providers and models",
+				"workspaces": "workspaces",
+				"sessions": "sessions",
+				"sessionLayouts": "session layouts",
+				"workspaceTreeOrder": "workspace tree order",
+				"slashCommands": "slash commands",
+				"skills": "skills"
+			},
+			"actions": {
+				"retry": "Retry",
+				"retryInstall": "Retry install",
+				"repairBackend": "Repair backend",
+				"restartBackend": "Restart backend"
+			}
+		},
+		"home": {
+			"greeting": {
+				"morning": "Good morning — what would you like to work on?",
+				"afternoon": "Good afternoon — what would you like to work on?",
+				"evening": "Good evening — what would you like to work on?"
+			},
+			"subtitleWithoutWorkspace": "Choose a workspace below, or start with an idea and add one later.",
+			"subtitleWithWorkspace": "{{workspaceName}} is ready. Tell me what you would like to move forward.",
+			"starters": {
+				"workspace": {
+					"explore": {
+						"label": "Get to know this workspace",
+						"prompt": "Help me understand this workspace. Start by reading only the necessary project context, then tell me how it is organized and where a good starting point is."
+					},
+					"next_step": {
+						"label": "Find a good next step",
+						"prompt": "Based on the current state of this workspace, help me identify the most worthwhile next step."
+					},
+					"plan": {
+						"label": "Plan a feature",
+						"prompt": "I want to plan a feature. First learn the necessary context, then give me a clear, actionable approach."
+					}
+				},
+				"unbound": {
+					"explore": {
+						"label": "Talk through an idea",
+						"prompt": "I have an idea. Help me clarify the goal, constraints, and a sensible next step."
+					},
+					"next_step": {
+						"label": "Explain a concept",
+						"prompt": "Explain a concept clearly and concisely, with an example if it helps."
+					},
+					"plan": {
+						"label": "Turn an idea into a plan",
+						"prompt": "Help me turn an idea into a practical, actionable plan."
+					}
+				}
+			}
+		},
+		"fullTrust": {
+			"title": "Enable Full Trust?",
+			"description": "Full Trust disables the OS sandbox, automatically approves all tools, and lets terminal commands run with your normal user permissions.",
+			"confirmationPrefix": "Type",
+			"confirmationSuffix": "to confirm this global security mode.",
+			"actions": {
+				"enable": "Enable Full Trust",
+				"cancel": "Cancel"
+			},
+			"errors": {
+				"confirmation": "Type {{confirmationText}} to enable Full Trust."
+			}
+		}
+	},
+	"onboarding": {
+		"ariaLabel": "Daedalus Studio setup",
+		"steps": {
+			"welcome": "Welcome",
+			"provider": "Provider",
+			"godot_executable": "Godot",
+			"documentation": "Documentation",
+			"godot_plugin": "Plugin",
+			"complete": "Complete"
+		},
+		"actions": {
+			"start": "Start setup",
+			"back": "Back",
+			"next": "Next",
+			"skip": "Skip",
+			"cancel": "Cancel",
+			"enterStudio": "Enter Daedalus Studio",
+			"enteringStudio": "Entering Daedalus Studio"
+		},
+		"progress": "Step {{current}} of {{total}}",
+		"status": {
+			"saving": "Saving setup"
+		},
+		"outcomes": {
+			"configured": "Configured",
+			"skipped": "Skipped"
+		},
+		"welcome": {
+			"title": "Welcome to Daedalus Studio",
+			"description": "Set up the essentials for AI-assisted Godot development. Every integration is optional and can be changed later in Settings.",
+			"conceptVideoLabel": "Daedalus Studio concept video"
+		},
+		"provider": {
+			"title": "Configure a model provider",
+			"description": "Connect a provider and choose the model Daedalus should use for new conversations.",
+			"existingReady": "A provider and model are already ready. You can continue or configure another one.",
+			"testSucceeded": "Connection succeeded. Choose a model to finish setup.",
+			"saved": "The provider and model are ready.",
+			"fields": {
+				"provider": "Provider",
+				"apiKey": "API key",
+				"apiKeyPlaceholder": "Enter an API key",
+				"baseUrl": "API Base URL",
+				"model": "Model",
+				"modelPlaceholder": "Select a model"
+			},
+			"actions": {
+				"test": "Test connection",
+				"save": "Save and use"
+			},
+			"errors": {
+				"test": "The provider connection failed.",
+				"save": "Failed to save the provider and model."
+			}
+		},
+		"godotExecutable": {
+			"title": "Select the Godot executable",
+			"description": "Daedalus uses this executable for project validation, launch actions, and version-aware documentation.",
+			"ready": "Godot {{version}} is ready.",
+			"path": "Godot executable",
+			"notSelected": "No Godot executable selected",
+			"actions": {
+				"select": "Select executable"
+			},
+			"errors": {
+				"invalid": "The selected executable could not be validated.",
+				"select": "Failed to select the Godot executable."
+			}
+		},
+		"documentation": {
+			"title": "Install offline Godot documentation",
+			"description": "Download an official godot-docs branch so agents can verify unfamiliar Godot APIs without relying on web access.",
+			"ready": "Offline documentation search is ready.",
+			"installed": "{{count}} documentation version installed",
+			"installed_other": "{{count}} documentation versions installed",
+			"enableSearch": "Enable search",
+			"branch": "Documentation branch",
+			"selectBranch": "Select a branch",
+			"install": "Download and install",
+			"stages": {
+				"resolving": "Resolving documentation source",
+				"downloading": "Downloading documentation",
+				"extracting": "Extracting documentation",
+				"indexing": "Building search index",
+				"validating": "Validating search index",
+				"rolling_back": "Restoring healthy index",
+				"finalizing": "Finishing installation",
+				"completed": "Documentation is ready",
+				"failed": "Documentation installation failed",
+				"cancelled": "Documentation installation cancelled"
+			},
+			"errors": {
+				"load": "Failed to load documentation options.",
+				"job": "Failed to read documentation progress.",
+				"install": "Failed to install documentation.",
+				"cancel": "Failed to cancel the documentation operation.",
+				"toggle": "Failed to update documentation search."
+			}
+		},
+		"godotPlugin": {
+			"title": "Install Daedalus Bridge",
+			"description": "Choose one or more Godot projects. The plugin connects their editors to Daedalus tools and diagnostics.",
+			"ready": "Daedalus Bridge is installed for at least one project.",
+			"pendingRestart": "Plugin changes are staged and will apply after Godot closes.",
+			"selected": "{{count}} project selected",
+			"selected_other": "{{count}} projects selected",
+			"empty": "No Godot projects were found.",
+			"incompatible": "Requires Godot 4.5 or newer",
+			"columns": {
+				"project": "Project",
+				"godot": "Godot",
+				"status": "Status"
+			},
+			"actions": {
+				"scan": "Rescan",
+				"add": "Add project",
+				"install": "Install selected"
+			},
+			"errors": {
+				"scan": "Failed to scan Godot projects.",
+				"add": "Failed to add the Godot project.",
+				"install": "Failed to install the plugin."
+			}
+		},
+		"complete": {
+			"title": "Daedalus Studio is ready",
+			"description": "You can revisit every optional integration from Settings at any time."
+		},
+		"errors": {
+			"saveProgress": "Failed to save setup progress.",
+			"complete": "Failed to complete setup.",
+			"timeout": "Saving setup timed out. Check the backend connection and try again."
+		}
+	},
+	"workspaceTree": {
+		"projectEditor": {
+			"appearance": "Project appearance",
+			"icon": "Icon",
+			"color": "Color",
+			"namePlaceholder": "Project name",
+			"sourceFolders": "Source folders",
+			"addFolder": "Add folder",
+			"addFailed": "Failed to add source folder.",
+			"duplicateFolder": "This source folder is already in the project.",
+			"nameRequired": "Project name cannot be empty.",
+			"sourceFolderRequired": "Add a source folder before saving.",
+			"saveFailed": "Failed to save project.",
+			"makePrimary": "Make primary",
+			"removeFolder": "Remove source folder",
+			"primary": "Primary",
+			"cancel": "Cancel",
+			"confirm": "OK"
+		},
+		"actions": {
+			"editProject": "Edit project",
+			"newProject": "New project",
+			"rename": "Rename",
+			"renameSession": "Rename session",
+			"forkSession": "Fork session",
+			"pinSession": "Pin session",
+			"unpinSession": "Unpin session",
+			"archiveSession": "Archive session",
+			"openInExplorer": "Open in Explorer",
+			"openWorkspaceDirectory": "Open workspace directory",
+			"copySessionId": "Copy session ID",
+			"exportSession": "Export session data",
+			"delete": "Delete",
+			"newSessionInWorkspace": "New session in workspace"
+		},
+		"aria": {
+			"archiveSession": "Archive {{sessionTitle}}",
+			"pinSession": "Pin {{sessionTitle}}",
+			"unpinSession": "Unpin {{sessionTitle}}",
+			"workspaceActions": "Workspace actions for {{workspaceName}}",
+			"newSessionInWorkspace": "New session in {{workspaceName}}"
+		},
+		"empty": {
+			"noWorkspace": "No workspace",
+			"noSessions": "No sessions",
+			"noPinnedSessions": "No pinned sessions",
+			"noProjects": "No projects",
+			"noRecentSessions": "No recent sessions"
+		},
+		"groups": {
+			"pinned": "Pinned",
+			"projects": "Projects",
+			"recent": "Recent"
+		},
+		"status": {
+			"assistantRunning": "Assistant is responding",
+			"unreadResponse": "Unread assistant response",
+			"exportingSession": "Exporting session…"
+		},
+		"messages": {
+			"sessionIdCopied": "Session ID copied",
+			"sessionExported": "Session data exported",
+			"sessionExportedWithMissingFiles": "Session data exported, but {{count}} external files were missing"
+		},
+		"exportDialog": {
+			"title": "Export session data",
+			"button": "Export"
+		},
+		"errors": {
+			"archiveSession": "Failed to archive session",
+			"copySessionId": "Failed to copy session ID",
+			"exportSession": "Failed to export session data",
+			"deleteWorkspace": "Failed to delete workspace",
+			"loadWorkspace": "Failed to load workspace",
+			"openSessionDirectory": "Failed to open session directory",
+			"openWorkspaceDirectory": "Failed to open workspace directory",
+			"pinSession": "Failed to update pinned session",
+			"renameSession": "Failed to rename session",
+			"saveOrder": "Failed to save workspace order",
+			"sessionTitleCannotBeEmpty": "Session title cannot be empty."
+		},
+		"modals": {
+			"deleteWorkspace": {
+				"title": "Delete workspace?",
+				"body": "Delete {{workspaceName}} from Daedalus? Project files will not be deleted.",
+				"sessionPolicy": "Sessions are moved to another matching project when possible. Unmatched sessions are permanently deleted."
+			},
+			"renameSession": {
+				"placeholder": "Session title"
+			}
+		}
+	},
+	"agentPage": {
+		"actions": {
+			"newSession": "New session",
+			"openSettings": "Open settings",
+			"scrollToBottom": "Scroll to bottom"
+		},
+		"conversationNavigator": {
+			"ariaLabel": "Conversation turns",
+			"emptyMessage": "User message"
+		},
+		"conversationSearch": {
+			"placeholder": "Find in conversation",
+			"previous": "Previous match",
+			"next": "Next match",
+			"close": "Close search",
+			"indexing": "Searching the full conversation…",
+			"loadError": "Failed to load the complete conversation search index. Loaded messages remain searchable."
+		},
+		"workspaceLaunch": {
+			"openIn": "Open in {{target}}",
+			"aria": {
+				"selectTarget": "Select workspace launch target"
+			},
+			"errors": {
+				"open": "Failed to open workspace."
+			}
+		},
+		"dock": {
+			"openBottom": "Open bottom panel",
+			"closeBottom": "Close bottom panel",
+			"openSidebar": "Open sidebar",
+			"closeSidebar": "Close sidebar"
+		},
+		"workspaceSidebar": {
+			"open": "Show workspace sidebar",
+			"close": "Hide workspace sidebar"
+		},
+		"sessionNavigation": {
+			"previous": "Previous session",
+			"next": "Next session"
+		},
+		"summary": {
+			"tooltip": "Summary",
+			"empty": "No summary yet",
+			"detachedHead": "Detached HEAD",
+			"unknownSize": "Unknown size",
+			"sourceSubtitle": "{{mimeType}} / {{dimensions}}",
+			"fallbackPlanTitle": "Plan",
+			"fallbackImageSourceTitle": "Image source",
+			"aria": {
+				"open": "Open session summary"
+			},
+			"sections": {
+				"envInfo": "Env info",
+				"godot": "Godot",
+				"plans": "Plans",
+				"source": "Source"
+			},
+			"godot": {
+				"runProject": "Run project",
+				"runScene": "Run scene...",
+				"sceneModal": {
+					"title": "Run Godot scene",
+					"searchPlaceholder": "Search scenes",
+					"empty": "No scene files found"
+				},
+				"errors": {
+					"loadScenes": "Failed to load Godot scenes"
+				}
+			},
+			"actions": {
+				"diff": "Diff",
+				"commitOrPush": "Commit or push",
+				"seeMore": "See more",
+				"retry": "Retry"
+			},
+			"errors": {
+				"load": "Failed to load session summary."
+			}
+		}
+	},
+	"composer": {
+		"placeholders": {
+			"ask": "Ask a question or explore an idea",
+			"agent": "Describe what you want me to inspect, change, or run",
+			"plan": "Describe the outcome you want to plan",
+			"goal": "Describe the goal and a verifiable completion result"
+		},
+		"textAreaMenu": {
+			"cut": "Cut",
+			"copy": "Copy",
+			"paste": "Paste",
+			"selectAll": "Select all"
+		},
+		"context": {
+			"addFiles": "Add files",
+			"addFolder": "Add folder",
+			"addImages": "Add images"
+		},
+		"mode": {
+			"ask": "Ask",
+			"agent": "Agent",
+			"plan": "Plan",
+			"goal": "Goal"
+		},
+		"approvalMode": {
+			"manual": "Manual",
+			"autoSafe": "Auto-safe",
+			"fullTrust": "Full Trust"
+		},
+		"model": {
+			"fallback": "Model",
+			"notConfigured": "Not configured",
+			"configureProvider": "Configure provider",
+			"capabilities": {
+				"reasoning": "Reasoning",
+				"vision": "Vision",
+				"search": "Search"
+			}
+		},
+		"reasoning": {
+			"efforts": {
+				"low": "Low",
+				"medium": "Medium",
+				"high": "High",
+				"xhigh": "Extra high",
+				"max": "Max"
+			}
+		},
+		"workspace": {
+			"noWorkspace": "No workspace",
+			"addWorkspace": "Add workspace..."
+		},
+		"tooltips": {
+			"addContext": "Add additional context",
+			"mode": "Mode",
+			"approvalMode": "Approval mode",
+			"model": "Model",
+			"reasoningEffort": "Reasoning effort"
+		},
+		"send": {
+			"send": "Send",
+			"stop": "Stop",
+			"stopping": "Stopping...",
+			"queue": "Queue message"
+		},
+		"contextUsage": {
+			"title": "Context usage",
+			"estimating": "Estimating context...",
+			"retry": "Retry",
+			"usedTokens": "{{used}} / {{total}} tokens",
+			"meta": "{{model}} / {{available}} available / {{source}}",
+			"compress": "Compress chat",
+			"compressionResult": "Before {{before}}, after {{after}}, saved {{saved}} tokens; {{restorable}} raw blocks remain recoverable",
+			"legend": {
+				"input": "Actual input",
+				"outputReserve": "Output reserve",
+				"safetyMargin": "Safety margin"
+			},
+			"pressureLevel": "{{level}} pressure",
+			"largestContributor": "Largest: {{largest}}",
+			"columns": {
+				"tokens": "Tokens",
+				"share": "Share"
+			},
+			"none": "None",
+			"pressureLevels": {
+				"low": "Low",
+				"moderate": "Moderate",
+				"high": "High",
+				"critical": "Critical"
+			},
+			"breakdown": {
+				"systemAndTools": "System & tools",
+				"history": "History",
+				"historyWithSummary": "History (summary)",
+				"currentMessage": "Current message",
+				"reservedOutput": "Reserved output",
+				"safetyMargin": "Safety margin",
+				"kinds": {
+					"base_system": "Base system prompt",
+					"custom_instructions": "Custom instructions",
+					"skills": "Skills",
+					"mcp_context": "MCP context",
+					"tool_definitions": "Tool definitions",
+					"history": "Conversation history",
+					"summary": "Conversation summary",
+					"current_message": "Current message",
+					"additional_context": "Additional context",
+					"output_reserve": "Output reserve",
+					"safety_margin": "Safety margin"
+				}
+			},
+			"compressDisabled": {
+				"sending": "A message is being sent",
+				"unavailable": "Compression unavailable"
+			},
+			"errors": {
+				"estimate": "Context estimate failed"
+			}
+		}
+	},
+	"goal": {
+		"aria": "Goal execution status",
+		"stages": {
+			"readiness": "Checking readiness",
+			"running": "Running",
+			"evaluating": "Evaluating",
+			"pausing": "Pausing",
+			"awaiting_approval": "Awaiting approval",
+			"awaiting_tool_budget": "Awaiting tool budget",
+			"paused": "Paused",
+			"achieved": "Achieved",
+			"failed": "Failed",
+			"cancelled": "Cancelled"
+		},
+		"fields": {
+			"stage": "Status",
+			"cycles": "Cycles",
+			"tokens": "Tokens",
+			"activeTime": "Active time"
+		},
+		"evaluation": "Evaluation",
+		"readiness": "Readiness",
+		"workflow": "Current workflow",
+		"actions": {
+			"pause": "Pause",
+			"resume": "Resume",
+			"cancel": "Cancel",
+			"extend": "Add budget",
+			"rollback": "Roll back",
+			"dismiss": "Close"
+		},
+		"cancelConfirm": {
+			"title": "Cancel this Goal?",
+			"description": "The current safe operation will finish first. Existing workspace changes will be kept."
+		},
+		"rollback": {
+			"title": "Roll back Goal changes?",
+			"description": "Restore all {{count}} tracked files to their state before this Goal.",
+			"unavailableTitle": "Complete rollback is unavailable",
+			"unavailable": "Some Goal changes cannot be restored safely.",
+			"success": "Goal changes were rolled back."
+		},
+		"extend": {
+			"title": "Add Goal budget",
+			"cycles": "Additional cycles",
+			"tokens": "Additional tokens",
+			"minutes": "Additional active minutes"
+		},
+		"errors": {
+			"insufficientBudget": "The added budget is still below current usage. Increase the token, cycle, or active-time budget.",
+			"action": "Failed to update Goal",
+			"rollback": "Failed to roll back Goal changes",
+			"budget": "Failed to add Goal budget",
+			"dismiss": "Failed to close Goal status"
+		}
+	},
+	"messageQueue": {
+		"groups": {
+			"guides": "Guides",
+			"queue": "Queue"
+		},
+		"actions": {
+			"edit": "Edit",
+			"remove": "Remove",
+			"dragToReorder": "Drag to reorder"
+		}
+	},
+	"workflowTodo": {
+		"titleFallback": "Todo",
+		"stepFallback": "Step {{index}}",
+		"changedFiles": "{{count}} file",
+		"changedFiles_other": "{{count}} files",
+		"dismiss": "Dismiss",
+		"aria": {
+			"progress": "Workflow progress",
+			"fileChanges": "File changes"
+		}
+	},
+	"approval": {
+		"tool": {
+			"title": "Approve tool execution?",
+			"subtitle": "The assistant is waiting for approval before it continues.",
+			"consentPrefix": "Type",
+			"consentSuffix": "to approve this cross-workspace action.",
+			"actions": {
+				"approve": "Approve",
+				"reject": "Reject"
+			}
+		},
+		"toolBudget": {
+			"title": "Tool budget reached",
+			"subtitle": "The model needs more tool budget to continue.",
+			"limitKind": {
+				"steps": "Tool call count",
+				"toolResultChars": "Tool result total"
+			},
+			"fields": {
+				"triggeredLimit": "Triggered limit",
+				"usedSteps": "Used steps",
+				"toolResultChars": "Tool result characters",
+				"additionalSteps": "Additional steps"
+			},
+			"additionalStepsValue": "+{{formatted}} step",
+			"additionalStepsValue_other": "+{{formatted}} steps",
+			"actions": {
+				"continue": "Continue",
+				"stop": "No, stop and summarize",
+				"summarize": "Summarize with current results",
+				"cancel": "Cancel this run"
+			}
+		},
+		"plan": {
+			"aria": "Plan approval",
+			"title": "Approve plan?",
+			"subtitle": "Review the plan above, then approve it or ask for changes.",
+			"revisionPlaceholder": "Tell the assistant how to change the plan",
+			"actions": {
+				"approveAndExecute": "Approve and Execute",
+				"revise": "Revise"
+			}
+		}
+	},
+	"clarification": {
+		"aria": "Plan clarification",
+		"title": "Clarification needed",
+		"recommendedSuffix": "(Recommended)",
+		"placeholder": "Tell the assistant how to proceed",
+		"skipHint": "Skip continues planning without cancelling the task. The question is treated as missing information and the assistant will make assumptions from available context. Core requirements, architecture, platform, or data-format choices may make the plan less accurate; you can add details later and revise the plan.",
+		"actions": {
+			"skip": "Skip and continue",
+			"submit": "Submit"
+		}
+	},
+	"dock": {
+		"tabs": {
+			"changes": "Changes",
+			"changesIndexed": "Changes {{index}}",
+			"terminal": "Terminal",
+			"terminalIndexed": "Terminal {{index}}",
+			"files": "Files",
+			"filesIndexed": "Files {{index}}",
+			"enterFullscreen": "Expand panel",
+			"exitFullscreen": "Restore panel"
+		},
+		"add": {
+			"label": "Add panel",
+			"reviewPanel": "Review panel",
+			"terminalPanel": "Terminal panel",
+			"filesPanel": "Files panel"
+		},
+		"empty": {
+			"noWorkspaceSelected": "No workspace selected"
+		}
+	},
+	"files": {
+		"noWorkspace": "Select a workspace to browse and edit files",
+		"noSourceFolder": "No source folder",
+		"noFileSelected": "Select a file from the file tree",
+		"editorAriaLabel": "File editor",
+		"loading": "Reading file…",
+		"search": "Search files or paths",
+		"save": "Save",
+		"saved": "File saved",
+		"savedAs": "File saved as",
+		"reload": "Reload",
+		"binary": "This file is not editable UTF-8 text",
+		"oversized": "Files larger than 2 MiB cannot be edited in the Files panel",
+		"openExternal": "Open in external app",
+		"showSidebar": "Show file sidebar",
+		"hideSidebar": "Hide file sidebar",
+		"conflict": "The file changed outside Studio. Reload the disk version or save the current draft as a new file.",
+		"contextAdded": "Added to context",
+		"addSelectionContext": "Add to context",
+		"comment": "Comment",
+		"commentPlaceholder": "Comment on the selected code",
+		"editorMenu": {
+			"undo": "Undo",
+			"redo": "Redo",
+			"cut": "Cut",
+			"copy": "Copy",
+			"paste": "Paste",
+			"selectAll": "Select all"
+		},
+		"closeTitle": "Close modified file?",
+		"closeDirty": "{{name}} contains unsaved changes.",
+		"discard": "Don't save",
+		"cancel": "Cancel",
+		"menu": {
+			"openFrom": "Open from {{target}}",
+			"openWith": "Open with",
+			"saveAs": "Save as…",
+			"copyPath": "Copy path",
+			"copyRelativePath": "Copy relative path",
+			"addContext": "Add to context"
+		}
+	},
+	"git": {
+		"detachedHead": "Detached HEAD",
+		"actions": {
+			"refresh": "Refresh"
+		},
+		"commit": {
+			"title": "Commit or push",
+			"messagePlaceholder": "Leaving it blank will automatically generate the information",
+			"includeUnstaged": "Includes unstaged changes",
+			"actions": {
+				"commit": "Commit",
+				"push": "Push",
+				"commitAndPush": "Commit & Push"
+			},
+			"messages": {
+				"changes": "changes",
+				"committedAndPushed": "Committed {{target}} and pushed.",
+				"committed": "Committed {{target}}.",
+				"pushed": "Pushed changes."
+			},
+			"errors": {
+				"selectWorkspace": "Please select a workspace before committing.",
+				"generationTimeout": "AI commit message generation timed out after 60 seconds.",
+				"actionFailed": "Failed to {{action}}."
+			}
+		},
+		"branch": {
+			"title": "Branch",
+			"searchPlaceholder": "Search branch",
+			"empty": "No branches found",
+			"actions": {
+				"createAndCheckout": "Create & Checkout",
+				"checkout": "Checkout"
+			},
+			"tags": {
+				"current": "Current",
+				"remote": "Remote"
+			},
+			"messages": {
+				"switched": "Switched to {{branch}}.",
+				"committedAndSwitched": "Committed the working tree changes and switched to {{branch}}.",
+				"createdAndSwitched": "Created and switched to {{branch}}."
+			},
+			"checkoutDraft": {
+				"title": "Commit changes to switch branches",
+				"description": "Commit the following working tree changes before switching to {{branch}}.",
+				"commitAndCheckout": "Commit & Checkout",
+				"cancel": "Cancel",
+				"commitMessagePlaceholder": "Commit message",
+				"summary": "{{count}} changed file",
+				"summary_other": "{{count}} changed files",
+				"moreFiles": "And {{count}} more file",
+				"moreFiles_other": "And {{count}} more files",
+				"errors": {
+					"commitMessageRequired": "Enter a commit message.",
+					"load": "Failed to inspect working tree changes.",
+					"commit": "Failed to commit changes before switching branches."
+				}
+			},
+			"errors": {
+				"selectWorkspaceBeforeSwitching": "Please select a workspace before switching branches.",
+				"selectWorkspaceBeforeCreating": "Please select a workspace before creating branches.",
+				"notGitRepository": "Workspace is not a Git repository.",
+				"load": "Failed to load branches.",
+				"selectBranch": "Please select a branch.",
+				"switch": "Failed to switch branch.",
+				"enterBranchName": "Please enter a branch name.",
+				"create": "Failed to create branch."
+			}
+		},
+		"createBranch": {
+			"title": "Create branch",
+			"namePlaceholder": "New branch name",
+			"startPointPlaceholder": "Start point, optional",
+			"hint": "Leave start point empty to create from the current HEAD."
+		}
+	},
+	"review": {
+		"unknownFile": "Unknown file",
+		"sourceFolder": {
+			"label": "Source folder",
+			"placeholder": "Select source folder"
+		},
+		"binaryFileChanged": "Binary file changed",
+		"diffStats": "{{branch}} / {{count}} file / +{{additions}} -{{deletions}}",
+		"diffStats_other": "{{branch}} / {{count}} files / +{{additions}} -{{deletions}}",
+		"actions": {
+			"refreshDiff": "Refresh git diff",
+			"expandAllDiffs": "Expand small diffs",
+			"collapseAllDiffs": "Collapse small diffs",
+			"loadMoreFiles": "Load more files"
+		},
+		"empty": {
+			"diffUnavailable": "Diff unavailable",
+			"noDiffLoaded": "No diff loaded",
+			"noGitRepository": "No Git repository",
+			"noWorkspaceChanges": "No workspace changes"
+		},
+		"notices": {
+			"lazyLoading": {
+				"title": "Diffs load on demand",
+				"description": "Small text files open first. Large files stay collapsed and are only requested when you open them."
+			},
+			"diffTruncated": {
+				"title": "Diff truncated",
+				"description": "The patch is too large to show completely."
+			},
+			"diffParseFailed": "Diff parse failed"
+		},
+		"loadingFile": "Loading file diff",
+		"fileTooLarge": {
+			"title": "File diff is too large to render",
+			"description": "This preview was not loaded so the review panel stays responsive."
+		},
+		"commentDialog": {
+			"title": "Request changes",
+			"open": "Request changes on this line",
+			"target": "{{path}}, line {{line}}",
+			"label": "What should change?",
+			"required": "Enter the requested change.",
+			"submit": "Add comment",
+			"contextMeta": "Review comment on line {{line}}"
+		},
+		"errors": {
+			"loadDiff": "Failed to load git diff.",
+			"loadFile": "Failed to load file diff.",
+			"parseDiff": "Failed to parse diff."
+		}
+	},
+	"terminal": {
+		"home": "Home",
+		"status": {
+			"waitingForWorkspace": "Waiting for workspace",
+			"starting": "Starting",
+			"notStarted": "Not started",
+			"running": "Running",
+			"stopped": "Stopped"
+		},
+		"actions": {
+			"restart": "Restart terminal",
+			"stop": "Stop terminal"
+		},
+		"errors": {
+			"start": "Failed to start terminal.",
+			"stop": "Failed to stop terminal.",
+			"restart": "Failed to restart terminal."
+		}
+	},
+	"chat": {
+		"markdownResource": {
+			"openFile": "Open file",
+			"openInCurrentTarget": "Open in current workspace app",
+			"openInCurrentTargetNamed": "Open in {{target}}",
+			"openWith": "Open with",
+			"saveAs": "Save as",
+			"copyPath": "Copy path",
+			"pathCopied": "Path copied",
+			"revealInExplorer": "Show in File Explorer",
+			"savedAs": "File saved",
+			"noWorkspace": "Select a workspace before opening this file"
+		},
+		"mermaid": {
+			"title": "Mermaid diagram",
+			"rendering": "Rendering diagram…",
+			"renderFailed": "Unable to render diagram",
+			"copySource": "Copy diagram source",
+			"showSource": "View diagram source",
+			"exportPng": "Export PNG",
+			"exported": "PNG image exported",
+			"exportFailed": "Unable to export PNG image"
+		},
+		"codeBlock": {
+			"copy": "Copy code",
+			"exportAsFile": "Export as file",
+			"exported": "File exported",
+			"exportFailed": "Unable to export file"
+		},
+		"common": {
+			"copy": "Copy",
+			"copied": "Copied",
+			"copyFailed": "Failed to copy selected text.",
+			"selectAll": "Select all",
+			"copyAll": "Copy all",
+			"loadingConversation": "Loading conversation"
+		},
+		"assistant": {
+			"process": "Process",
+			"respondedIn": "Responded: {{elapsed}}",
+			"stoppedIn": "Stopped: {{elapsed}}",
+			"copyAria": "Copy assistant message"
+		},
+		"user": {
+			"copyAria": "Copy user message",
+			"editAndResendAria": "Edit and resend user message",
+			"forkAria": "Fork conversation from this user message",
+			"actions": {
+				"cancel": "Cancel",
+				"send": "Send",
+				"editAndResend": "Edit and resend",
+				"forkFromHere": "Fork from here"
+			}
+		},
+		"fork": {
+			"titleSuffix": " · Fork",
+			"untitledSource": "Untitled session",
+			"originLabel": "Forked from",
+			"openSourceTooltip": "Open source session",
+			"openSourceAria": "Open source session",
+			"modelChanged": "Model changed from {{from}} to {{to}}",
+			"errors": {
+				"create": "Failed to fork session.",
+				"sourceUnavailable": "The source session is unavailable or archived.",
+				"openSource": "Failed to open the source session."
+			}
+		},
+		"contextStrip": {
+			"aria": "Message context",
+			"pinned": "Pinned",
+			"expandText": "Expand into composer",
+			"display": {
+				"contextFallback": "Context",
+				"selection": "Selection",
+				"fileCount": "{{count}} file",
+				"fileCount_other": "{{count}} files",
+				"folderCount": "{{count}} folder",
+				"folderCount_other": "{{count}} folders",
+				"selectedCount": "{{count}} selected",
+				"selectedCount_other": "{{count}} selected",
+				"line": "Line {{line}}",
+				"linesRange": "Lines {{start}}-{{end}}",
+				"fileSize": "{{size}} KiB",
+				"textAttachment": "Text attachment",
+				"reviewComment": "Review comment",
+				"selectedMessageText": "Selected message text",
+				"fileSelection": "File selection",
+				"more": "... {{count}} more",
+				"more_other": "... {{count}} more",
+				"pathLabel": "{{kind}}: {{path}}",
+				"pathFallback": "path"
+			}
+		},
+		"selection": {
+			"attachContext": "Attach context",
+			"askAi": "Ask AI",
+			"annotationPlaceholder": "Add a note (optional)",
+			"editAnnotation": "Edit annotation",
+			"openAsk": "Open selection Ask",
+			"deleteAsk": "Delete",
+			"deleteAllAsks": "Delete all",
+			"deleteAskFailed": "Failed to delete selection Ask",
+			"askTitle": "Selection Ask",
+			"askPlaceholder": "Ask a follow-up…",
+			"sendAsk": "Send question",
+			"stopAsk": "Stop response",
+			"stoppingAsk": "Stopping response",
+			"askFailed": "Failed to create selection Ask",
+			"responseFailed": "Response failed",
+			"interrupted": "The response was interrupted by a Backend restart"
+		},
+		"tool": {
+			"labels": {
+				"mcp_skills_load": "Load skill",
+				"mcp_skills_propose_create": "Draft skill",
+				"mcp_skills_create": "Create skill",
+				"mcp_image_generate": "Generate image",
+				"mcp_image_inspect": "Inspect image",
+				"mcp_web_search": "Search the web",
+				"mcp_workspace_list_files": "Browse workspace files",
+				"mcp_workspace_read_text_file": "Read file",
+				"mcp_workspace_search_text": "Search workspace text",
+				"mcp_workspace_propose_create_text_file": "Draft file",
+				"mcp_workspace_create_text_file": "Create file",
+				"mcp_workspace_propose_overwrite_text_file": "Draft file overwrite",
+				"mcp_workspace_overwrite_text_file": "Overwrite file",
+				"mcp_workspace_propose_replace_text_in_file": "Draft text replacement",
+				"mcp_workspace_replace_text_in_file": "Replace text in file",
+				"mcp_workspace_propose_replace_line_in_file": "Draft line replacement",
+				"mcp_workspace_replace_line_in_file": "Replace line in file",
+				"mcp_workspace_delete_file": "Delete file",
+				"mcp_godot_get_runtime_status": "Check Godot runtime",
+				"mcp_godot_get_godot_version": "Check Godot version",
+				"mcp_godot_search_documentation": "Search Godot documentation",
+				"mcp_godot_launch_editor": "Launch Godot editor",
+				"mcp_godot_run_project": "Run Godot project",
+				"mcp_godot_stop_project": "Stop Godot project",
+				"mcp_godot_get_debug_output": "Read Godot debug output",
+				"mcp_godot_list_projects": "Browse Godot projects",
+				"mcp_godot_get_uid": "Resolve resource UID",
+				"mcp_godot_resave_resource": "Resave resource",
+				"mcp_godot_update_project_uids": "Update project UIDs",
+				"mcp_godot_save_scene_variant": "Save scene variant",
+				"mcp_godot_load_sprite_texture": "Load sprite texture",
+				"mcp_godot_export_mesh_library": "Export mesh library",
+				"mcp_godot_propose_create_scene": "Draft scene",
+				"mcp_godot_create_scene": "Create scene",
+				"mcp_godot_propose_add_node_to_scene": "Draft scene node",
+				"mcp_godot_add_node_to_scene": "Add scene node",
+				"mcp_godot_propose_attach_script_to_node": "Draft script attachment",
+				"mcp_godot_attach_script_to_node": "Attach script to node",
+				"mcp_godot_propose_connect_signal_in_scene": "Draft signal connection",
+				"mcp_godot_connect_signal_in_scene": "Connect scene signal",
+				"mcp_godot_propose_apply_scene_patch": "Draft scene patch",
+				"mcp_godot_apply_scene_patch": "Apply scene patch",
+				"mcp_godot_editor_apply_scene_patch": "Patch open scene",
+				"mcp_godot_get_project_summary": "Read project summary",
+				"mcp_godot_list_project_files": "Browse project files",
+				"mcp_godot_list_scenes": "Browse scenes",
+				"mcp_godot_list_scripts": "Browse scripts",
+				"mcp_godot_read_text_file": "Read file",
+				"mcp_godot_search_text": "Search project text",
+				"mcp_godot_get_project_log_config": "Read log settings",
+				"mcp_godot_list_project_logs": "Browse project logs",
+				"mcp_godot_read_project_log": "Read project log",
+				"mcp_godot_get_project_settings": "Read project settings",
+				"mcp_godot_get_editor_config_summary": "Read editor config summary",
+				"mcp_godot_get_editor_settings": "Read editor settings",
+				"mcp_godot_list_editor_config_files": "Browse editor config files",
+				"mcp_godot_read_editor_config_file": "Read editor config",
+				"mcp_godot_get_editor_project_state": "Read editor project state",
+				"mcp_godot_get_recent_projects": "Browse recent projects",
+				"mcp_godot_propose_set_project_setting": "Draft project setting",
+				"mcp_godot_set_project_setting": "Set project setting",
+				"mcp_godot_propose_unset_project_setting": "Draft setting removal",
+				"mcp_godot_unset_project_setting": "Unset project setting",
+				"mcp_godot_inspect_scene_tree": "Inspect scene tree",
+				"mcp_godot_validate_scene_script_references": "Validate scene scripts",
+				"mcp_godot_editor_get_context": "Read editor context",
+				"mcp_godot_editor_get_selected_nodes": "Read selected nodes",
+				"mcp_godot_editor_inspect_node": "Inspect editor node",
+				"mcp_godot_editor_capture_scene_view": "Capture scene view",
+				"mcp_godot_lsp_get_status": "Check language server",
+				"mcp_godot_lsp_get_file_diagnostics": "Check file diagnostics",
+				"mcp_godot_lsp_get_document_symbols": "Read document symbols",
+				"mcp_godot_lsp_hover": "Inspect symbol hover",
+				"mcp_godot_lsp_goto_definition": "Find definition",
+				"mcp_godot_dap_get_status": "Check debugger status",
+				"mcp_godot_dap_get_last_error": "Read debugger error",
+				"mcp_godot_dap_get_stack_trace": "Read stack trace",
+				"mcp_godot_dap_get_variables": "Read debugger variables",
+				"mcp_godot_propose_create_text_file": "Draft Godot file",
+				"mcp_godot_create_text_file": "Create Godot file",
+				"mcp_godot_propose_overwrite_text_file": "Draft Godot file overwrite",
+				"mcp_godot_overwrite_text_file": "Overwrite Godot file",
+				"mcp_godot_propose_replace_text_in_file": "Draft Godot text replacement",
+				"mcp_godot_replace_text_in_file": "Replace text in Godot file",
+				"mcp_godot_delete_file": "Delete Godot file",
+				"mcp_terminal_get_capabilities": "Check terminal capabilities",
+				"mcp_terminal_run_command": "Run terminal command",
+				"mcp_terminal_run_safe_preset": "Run verification command",
+				"mcp_terminal_run_godot_scene_script": "Run Godot scene script",
+				"mcp_terminal_run_write_preset": "Run write command",
+				"mcp_terminal_get_job_status": "Check terminal job",
+				"mcp_terminal_get_job_tail": "Read terminal output",
+				"mcp_terminal_cancel_job": "Cancel terminal job"
+			},
+			"status": {
+				"running": "Running",
+				"done": "Done",
+				"failed": "Failed",
+				"approvalRequired": "Approval required",
+				"pending": "Not started"
+			},
+			"activity": {
+				"running": "The tool is running.",
+				"pending": "The tool has not started.",
+				"writing": "Writing now: {{tool}}"
+			},
+			"recovery": {
+				"failed": "Recovery attempt {{attempt}}/{{max}} failed. The assistant may adjust the same structured target and try again.",
+				"recovered": "Recovered after {{attempt}}/{{max}} failed attempts.",
+				"exhausted": "Recovery limit reached ({{attempt}}/{{max}}). This exact operation will not run again."
+			},
+			"fileChanges": {
+				"summary": "{{count}} file changed",
+				"summary_other": "{{count}} files changed"
+			}
+		},
+		"terminalPart": {
+			"commandFallback": "Terminal command",
+			"cwd": "cwd",
+			"sandbox": "sandbox",
+			"exitCode": "exit",
+			"duration": "duration",
+			"jobId": "job",
+			"output": "Output",
+			"copyCommand": "Copy command",
+			"copyOutput": "Copy output",
+			"waitingOutput": "Waiting for output…",
+			"noOutput": "No output",
+			"omitted": "{{count}} characters omitted",
+			"status": {
+				"approval": "Approval required",
+				"running": "Running",
+				"success": "Done",
+				"failed": "Failed",
+				"timed_out": "Timed out",
+				"cancelled": "Cancelled",
+				"background": "Background job"
+			}
+		},
+		"providerReconnect": {
+			"attempt": "Trying to reconnect {{attempt}}/{{max}}",
+			"recovered": "Connection restored",
+			"failed": "Unable to connect to the model service",
+			"stopped": "Reconnect stopped",
+			"timeout": "A reconnect starts after {{seconds}} seconds without provider activity.",
+			"extended": "Transient transport or gateway failures extended automatic reconnects to 15 attempts.",
+			"reason": {
+				"transport": "The transport connection ended unexpectedly.",
+				"idle_timeout": "The provider stream stopped producing data.",
+				"gateway": "A temporary gateway error interrupted the request.",
+				"rate_limit": "The provider temporarily rate-limited the request.",
+				"server": "The provider returned a temporary server error."
+			}
+		},
+		"plan": {
+			"open": "Open plan"
+		},
+		"thinking": {
+			"label": "Thought process",
+			"activeLabel": "Thinking"
+		},
+		"activityGroup": {
+			"activeThinking": "Thinking",
+			"lastThinking": "Thought process",
+			"summary": {
+				"files": "Edited {{count}} file",
+				"files_other": "Edited {{count}} files",
+				"commands": "Ran {{count}} command",
+				"commands_other": "Ran {{count}} commands",
+				"tools": "Used {{count}} tool",
+				"tools_other": "Used {{count}} tools",
+				"thoughts": "Thought {{count}} time",
+				"thoughts_other": "Thought {{count}} times",
+				"separator": ", ",
+				"empty": "Activity"
+			}
+		},
+		"compression": {
+			"running": "Compressing context",
+			"completed": "Context automatically compressed",
+			"skipped": "Context compression skipped",
+			"failed": "Context compression failed"
+		},
+		"inlineDiff": {
+			"title": "Edited {{count}} file",
+			"title_other": "Edited {{count}} files",
+			"unknownFile": "Unknown file",
+			"openReviewAria": "Open review for {{filePath}}",
+			"showMoreFiles": "Show {{count}} more files",
+			"collapseFiles": "Collapse files",
+			"actions": {
+				"undo": "Undo",
+				"review": "Review"
+			}
+		},
+		"imageGeneration": {
+			"modelFallback": "Image generation",
+			"generating": "Generating images",
+			"generated": "Generated images",
+			"failed": "Image generation failed",
+			"previewUnavailable": "Image preview unavailable",
+			"loading": "Loading",
+			"actions": {
+				"copyImage": "Copy image",
+				"saveImage": "Save image"
+			},
+			"messages": {
+				"copied": "Image copied"
+			},
+			"errors": {
+				"load": "Failed to load generated image",
+				"copy": "Failed to copy image",
+				"unknown": "Unknown error"
+			}
+		}
+	},
+	"settings": {
+		"menu": {
+			"provider": "Provider",
+			"defaultModel": "Default model",
+			"general": "General",
+			"keyboardShortcuts": "Keyboard shortcuts",
+			"search": "Search",
+			"statistics": "Statistics",
+			"personalization": "Personalization",
+			"mcpServers": "MCP Servers",
+			"skills": "Skills",
+			"documentation": "Documentation",
+			"godotProjects": "Godot projects",
+			"archivedSessions": "Archived sessions",
+			"import": "Import",
+			"about": "About",
+			"fallbackTitle": "Settings",
+			"placeholder": "This settings section will be implemented later."
+		},
+		"common": {
+			"add": "Add",
+			"cancel": "Cancel",
+			"delete": "Delete",
+			"disable": "Disable",
+			"edit": "Edit",
+			"enable": "Enable",
+			"off": "OFF",
+			"on": "ON",
+			"save": "Save",
+			"close": "Close",
+			"update": "Update"
+		},
+		"keyboardShortcuts": {
+			"title": "Keyboard Shortcuts",
+			"search": {
+				"action": "Search action names",
+				"mapping": "Press a shortcut to find actions"
+			},
+			"columns": {
+				"name": "Name",
+				"shortcut": "Shortcut",
+				"actions": "Actions"
+			},
+			"actions": {
+				"edit": "Edit",
+				"reset": "Reset"
+			},
+			"commands": {
+				"toggleWorkspaceSidebar": "Toggle Workspace sidebar",
+				"toggleBottomPanel": "Toggle bottom panel",
+				"toggleSessionSidebar": "Toggle session sidebar",
+				"newSession": "New session",
+				"previousSession": "Previous chat",
+				"nextSession": "Next chat",
+				"previousTurn": "Previous conversation turn",
+				"nextTurn": "Next conversation turn",
+				"findInConversation": "Find in conversation"
+			},
+			"empty": "No shortcut actions match your search.",
+			"editor": {
+				"title": "Edit “{{action}}” shortcut",
+				"description": "Press a new single shortcut. Printable keys require a modifier.",
+				"placeholder": "Press a shortcut",
+				"required": "Enter a shortcut.",
+				"invalid": "This key cannot be used as a shortcut by itself.",
+				"conflict": "This shortcut is already used by “{{action}}”."
+			},
+			"errors": {
+				"load": "Failed to load keyboard shortcuts.",
+				"save": "Failed to save keyboard shortcuts."
+			}
+		},
+		"documentation": {
+			"title": "Documentation",
+			"enabled": "Enable documentation search",
+			"add": "Add documentation",
+			"importLocal": "Import local documentation",
+			"empty": "No offline Godot documentation is installed.",
+			"item": {
+				"stats": "{{documents}} documents · {{chunks}} chunks · {{classes}} classes · {{size}}",
+				"updated": "Updated {{date}}",
+				"licenses": "Manual: CC BY 3.0 · Class Reference: MIT",
+				"source": {
+					"official": "Official",
+					"local": "Local"
+				}
+			},
+			"health": {
+				"status": {
+					"checking": "Checking",
+					"ready": "Healthy",
+					"degraded": "Degraded",
+					"repairing": "Repairing",
+					"unavailable": "Unavailable"
+				},
+				"check": "Check index",
+				"repairAction": "Repair index",
+				"neverChecked": "Index has not been checked yet",
+				"checked": "Checked {{date}}",
+				"allUnavailable": "No healthy documentation index is available",
+				"toolUnavailable": "Documentation search remains enabled, but the LLM will not receive the search tool until an index is repaired.",
+				"repair": {
+					"rollback": "Previous healthy index available",
+					"cached_source": "Offline repair available",
+					"network_required": "Download required",
+					"source_required": "Local source required",
+					"none": "No repair source available"
+				}
+			},
+			"repair": {
+				"networkTitle": "Download documentation to repair the index?",
+				"networkDescription": "The local source cache for Godot {{branch}} is unavailable. Daedalus will connect to GitHub only after you confirm.",
+				"download": "Download and repair",
+				"sourceTitle": "Select a local source to repair documentation"
+			},
+			"modal": {
+				"title": "Add Godot documentation",
+				"sourceTitle": "Official Godot documentation",
+				"sourceDescription": "Daedalus downloads the selected branch from godotengine/godot-docs and builds a local full-text index. Documentation is not bundled with Studio.",
+				"branch": "Documentation branch",
+				"branchRequired": "Select a documentation branch.",
+				"branchPlaceholder": "Select or search for a branch",
+				"installed": "Installed",
+				"refresh": "Refresh branches",
+				"notice": "The download is pinned to an immutable commit. Disk usage depends on the selected branch and the generated SQLite index.",
+				"download": "Download and index"
+			},
+			"local": {
+				"title": "Import local Godot documentation",
+				"sourceTitle": "Local godot-docs source",
+				"sourceDescription": "Choose an extracted godot-docs directory or a ZIP archive. Daedalus copies and indexes the source; the original files are not modified.",
+				"branch": "Documentation version",
+				"branchRequired": "Enter the documentation version or branch name.",
+				"branchPlaceholder": "For example, 4.7 or master",
+				"source": "Local source",
+				"sourceRequired": "Choose a godot-docs directory or ZIP archive.",
+				"sourcePlaceholder": "Choose a directory or ZIP archive",
+				"selectFolder": "Select folder",
+				"selectZip": "Select ZIP",
+				"import": "Import and index"
+			},
+			"progress": {
+				"title": "Godot {{branch}} documentation",
+				"cancel": "Cancel operation",
+				"retrying": "The connection was interrupted. Retrying the documentation download…",
+				"stage": {
+					"resolving": "Resolving",
+					"downloading": "Downloading",
+					"extracting": "Extracting",
+					"indexing": "Indexing",
+					"validating": "Validating",
+					"rolling_back": "Rolling back",
+					"finalizing": "Finalizing",
+					"completed": "Completed",
+					"failed": "Failed",
+					"cancelled": "Cancelled"
+				},
+				"message": {
+					"resolving": "Resolving the selected branch to an immutable commit…",
+					"downloading": "Downloading from the official Godot documentation repository…",
+					"extracting": "Verifying and extracting the documentation archive…",
+					"indexing": "Building the local symbol and full-text search index…",
+					"finalizing": "Activating the new documentation generation…",
+					"completed": "The documentation index is ready.",
+					"failed": "The documentation operation failed.",
+					"cancelled": "The documentation operation was cancelled."
+				},
+				"localMessage": {
+					"resolving": "Inspecting the local documentation source…",
+					"downloading": "Copying the local documentation archive…",
+					"extracting": "Verifying and staging the local documentation source…",
+					"indexing": "Building the local symbol and full-text search index…",
+					"finalizing": "Activating the imported documentation generation…",
+					"completed": "The imported documentation index is ready.",
+					"failed": "The local documentation import failed.",
+					"cancelled": "The local documentation import was cancelled."
+				}
+			},
+			"operationMessage": {
+				"check": {
+					"resolving": "Preparing the documentation health check…",
+					"downloading": "Preparing the documentation health check…",
+					"extracting": "Preparing the documentation health check…",
+					"indexing": "Preparing the documentation health check…",
+					"validating": "Checking SQLite integrity, metadata, counts, and hashes…",
+					"rolling_back": "Checking a previous healthy index…",
+					"finalizing": "Saving the documentation health result…",
+					"completed": "The documentation index is healthy.",
+					"failed": "The documentation health check failed.",
+					"cancelled": "The documentation health check was cancelled."
+				},
+				"repair": {
+					"resolving": "Resolving a repair source…",
+					"downloading": "Downloading the confirmed official documentation source…",
+					"extracting": "Preparing the cached documentation source…",
+					"indexing": "Rebuilding the documentation index…",
+					"validating": "Verifying the rebuilt index before activation…",
+					"rolling_back": "Validating a previous healthy generation…",
+					"finalizing": "Activating the repaired documentation generation…",
+					"completed": "The documentation index was repaired.",
+					"failed": "The documentation repair failed.",
+					"cancelled": "The documentation repair was cancelled."
+				}
+			},
+			"remove": {
+				"title": "Delete documentation?",
+				"description": "Godot {{branch}} documentation will be removed from this device."
+			},
+			"messages": {
+				"ready": "Godot documentation is ready.",
+				"upToDate": "This documentation is already up to date.",
+				"removed": "Godot {{branch}} documentation was removed."
+			},
+			"errors": {
+				"check": "Failed to check the documentation index.",
+				"repair": "Failed to repair the documentation index.",
+				"load": "Failed to load documentation settings.",
+				"branches": "Failed to load official documentation branches.",
+				"pickLocal": "Failed to select the local documentation source.",
+				"job": "Failed to read documentation job progress.",
+				"update": "Failed to update documentation.",
+				"cancel": "Failed to cancel the documentation operation.",
+				"toggle": "Failed to update documentation search.",
+				"remove": "Failed to remove documentation."
+			}
+		},
+		"godotProjects": {
+			"title": "Godot projects",
+			"empty": "No Godot projects were found.",
+			"bundleReady": "Bundled plugin {{version}} is bound to Studio {{studioVersion}}.",
+			"actionCompleted": "Godot project updated.",
+			"operationQueued": "Plugin change is staged. Close Godot and Studio will apply it automatically.",
+			"pendingRestart": "Plugin changes are waiting for Godot to close.",
+			"pendingRestartDescription": "Studio has staged the plugin safely and will apply it automatically after all Godot editors have exited.",
+			"confirmRepair": "Replace the installed plugin with the bundled version?",
+			"confirmUninstall": "Uninstall Daedalus Bridge from this project?",
+			"columns": {
+				"project": "Project",
+				"godot": "Godot",
+				"plugin": "Plugin",
+				"status": "Status",
+				"actions": "Actions"
+			},
+			"actions": {
+				"add": "Add project",
+				"scan": "Rescan",
+				"install": "Install",
+				"upgrade": "Upgrade",
+				"upgradeAll": "Upgrade all",
+				"repair": "Repair",
+				"uninstall": "Uninstall",
+				"retryPending": "Retry pending"
+			},
+			"status": {
+				"not_installed": "Not installed",
+				"current": "Current",
+				"development": "Development source",
+				"outdated": "Outdated",
+				"disabled": "Disabled",
+				"modified": "Modified",
+				"pending": "Pending",
+				"pending_restart": "Waiting for Godot",
+				"failed": "Failed"
+			}
+		},
+		"about": {
+			"title": "About",
+			"unavailable": "Unavailable",
+			"applicationInformation": "Application Information",
+			"sourceCode": "Source Code",
+			"sourceDescription": "Visit our GitHub repository for source code, issues, and contributions.",
+			"backend": {
+				"description": "Local RPC, workflow, MCP, and Godot integration service.",
+				"detailsTitle": "Backend Details",
+				"repairConfirmTitle": "Repair Daedalus backend?",
+				"repairConfirmDescription": "This stops and reinstalls the backend bundled with this Studio version. Any active model response will be interrupted.",
+				"repairSucceeded": "Backend repaired and reconnected.",
+				"restartSucceeded": "Backend restarted and reconnected.",
+				"updateNotAvailable": "No backend update is available.",
+				"updateWaiting": "An AI response is still running. The backend update will continue when it finishes.",
+				"actionWaiting": "An AI response is still running",
+				"actionWaitingDescription": "Backend restart, repair, and update actions are deferred to avoid interrupting the response. Retry when it finishes.",
+				"status": {
+					"healthy": "Healthy",
+					"starting": "Starting",
+					"unhealthy": "Unhealthy",
+					"stopped": "Stopped",
+					"unknown": "Unknown"
+				}
+			},
+			"actions": {
+				"refresh": "Refresh",
+				"viewChangelog": "View update history",
+				"checkForUpdates": "Check for updates",
+				"updateBackend": "Update backend",
+				"restartBackend": "Restart backend",
+				"repairBackend": "Repair backend"
+			},
+			"onboarding": {
+				"title": "Setup guide",
+				"description": "Restart the first-run guide without removing providers, Godot paths, documentation, or installed plugins.",
+				"resetAndRestart": "Reset and restart",
+				"confirmTitle": "Reset the setup guide?",
+				"confirmDescription": "Daedalus Studio will restart at the welcome page. Your existing configuration will be kept.",
+				"resetFailed": "Failed to reset the setup guide."
+			},
+			"fields": {
+				"author": "Author",
+				"license": "License",
+				"logPath": "Log Path",
+				"managerStatus": "Manager Status",
+				"package": "Package",
+				"port": "Port",
+				"processId": "Process ID",
+				"protocol": "Protocol",
+				"runtimeMode": "Runtime Mode",
+				"version": "Version"
+			},
+			"protocol": {
+				"multiClient": "multi-client",
+				"singleClient": "single-client"
+			},
+			"errors": {
+				"applicationInfo": "Failed to load application information",
+				"backendDetails": "Failed to load backend details",
+				"backendUpdate": "Failed to update backend",
+				"backendRepair": "Failed to repair backend",
+				"backendRestart": "Failed to restart backend"
+			}
+		},
+		"import": {
+			"title": "Import",
+			"session": {
+				"title": "Session data",
+				"importSession": {
+					"title": "Import Daedalus session",
+					"description": "Choose a SQLite file exported from WorkspaceTree and import that session back into this Studio.",
+					"action": "Choose SQLite file",
+					"dialogTitle": "Import Daedalus session",
+					"dialogButton": "Import",
+					"success": "Imported session: {{title}}",
+					"successArchived": "Imported archived session: {{title}}",
+					"resultDescription_other": "Session ID: {{sessionId}} · {{files}} files restored"
+				}
+			}
+		},
+		"archivedSessions": {
+			"title": "Archived sessions",
+			"loading": "Loading archived sessions...",
+			"searchPlaceholder": "Search session...",
+			"actions": {
+				"delete": "Delete",
+				"deleteAll": "Delete all",
+				"restore": "Unarchive"
+			},
+			"aria": {
+				"delete": "Delete {{sessionTitle}}",
+				"restore": "Unarchive {{sessionTitle}}"
+			},
+			"filters": {
+				"all": "All",
+				"noWorkspace": "No workspace"
+			},
+			"empty": {
+				"none": "No archived sessions",
+				"noMatches": "No matching archived sessions"
+			},
+			"confirm": {
+				"deleteSession": {
+					"title": "Delete archived session?",
+					"description": "This permanently deletes this archived session."
+				},
+				"deleteAll": {
+					"title": "Delete archived sessions?",
+					"description": "This will permanently delete {{count}} archived session matching the current filter.",
+					"description_other": "This will permanently delete {{count}} archived sessions matching the current filter."
+				}
+			},
+			"errors": {
+				"deleteAll": "Failed to delete archived sessions",
+				"deleteSession": "Failed to delete archived session",
+				"load": "Failed to load archived sessions",
+				"restore": "Failed to unarchive session"
+			}
+		},
+		"defaultModel": {
+			"selectModel": "Select a model",
+			"configureProvider": "Configure provider",
+			"notConfigured": "Not configured - always ask me",
+			"routing": {
+				"sessionTitle": {
+					"title": "Session title model",
+					"description": "Used for automatic session renaming and lightweight title generation."
+				},
+				"nextStepHints": {
+					"title": "Next-step suggestion model",
+					"description": "Generates one optional follow-up in the empty composer after a chat response. Follows the active model when unset and always disables reasoning."
+				},
+				"goalEvaluator": {
+					"title": "Goal completion evaluator model",
+					"description": "Used to judge whether a Goal is complete after each execution cycle. Falls back to the Goal model when unset."
+				},
+				"contextCompression": {
+					"title": "Context compression model",
+					"description": "Creates recoverable structured context summaries. Follows the active model when unset and always disables reasoning."
+				},
+				"imageRecognition": {
+					"title": "Image recognition model",
+					"description": "Used when the active chat model cannot consume image context directly."
+				},
+				"imageGeneration": {
+					"title": "Image generation/edit model",
+					"description": "Used by @image-gen and mcp_image_generate for text-to-image or image-to-image tasks. This must be configured explicitly."
+				},
+				"gitCommit": {
+					"title": "Git commit model",
+					"description": "Used to generate commit messages from workspace Git diffs. Defaults to the main model when unset."
+				},
+				"commandReview": {
+					"title": "Command review model",
+					"description": "Reviews free terminal commands in Auto-safe mode. When unset, every command asks for your approval."
+				}
+			},
+			"errors": {
+				"load": "Failed to load default model settings",
+				"noSelection": "No provider model selection available",
+				"save": "Failed to save model routing"
+			}
+		},
+		"mcpServers": {
+			"title": "MCP Servers",
+			"searchPlaceholder": "Search MCP...",
+			"noSecrets": "No secrets",
+			"toolCount": "{{count}} tool",
+			"toolCount_other": "{{count}} tools",
+			"empty": {
+				"none": "No custom MCP servers",
+				"noMatches": "No matching MCP servers"
+			},
+			"status": {
+				"connected": "Connected",
+				"disabled": "Disabled",
+				"failed": "Failed",
+				"starting": "Starting"
+			},
+			"confirm": {
+				"delete": {
+					"title": "Delete MCP server?",
+					"description": "Delete {{name}} from Daedalus Studio. Stored secrets for this MCP server will also be removed."
+				}
+			},
+			"modal": {
+				"addTitle": "Add MCP server",
+				"editTitle": "Edit MCP server"
+			},
+			"form": {
+				"command": "Command",
+				"commandRequired": "Command is required",
+				"description": "Description",
+				"descriptionPlaceholder": "MCP server description",
+				"name": "Name",
+				"namePlaceholder": "MCP server name",
+				"nameRequired": "Name is required",
+				"type": "Type",
+				"urlRequired": "A valid URL is required"
+			},
+			"errors": {
+				"delete": "Failed to delete MCP server",
+				"load": "Failed to load MCP servers",
+				"loadTimeout": "MCP configuration is taking too long to respond. The page is still available, but runtime statuses may be stale.",
+				"update": "Failed to update MCP server"
+			}
+		},
+		"personalization": {
+			"userPrompt": {
+				"title": "User prompt",
+				"description": "Custom instructions appended to new AI requests."
+			},
+			"gitCommitPrompt": {
+				"title": "Git commit prompt",
+				"description": "Custom instructions used only when generating commit messages."
+			},
+			"commandReviewPrompt": {
+				"title": "Supplemental review preferences",
+				"description": "Additional preferences for Auto-safe command review. Fixed safety rules always take precedence.",
+				"placeholder": "Add project-specific command review preferences."
+			},
+			"errors": {
+				"load": "Failed to load personalization settings",
+				"save": "Failed to save personalization settings"
+			}
+		},
+		"provider": {
+			"apiBaseUrl": "API Base URL",
+			"apiKey": "API Key",
+			"enterApiKey": "Enter API key",
+			"baseUrlHints": {
+				"openaiCompatible": "OpenAI-compatible services usually require a version path such as /v1; for AIHub, use https://aihub.top/v1."
+			},
+			"modelListSource": "Model list source: {{source}}",
+			"models": "Models",
+			"newKeyHint": "Only a newly entered key will be saved.",
+			"savedKey": "Saved key: {{key}}",
+			"searchPlaceholder": "Search providers...",
+			"updated": "updated {{updatedAt}}",
+			"requestConfiguration": {
+				"title": "Custom request · {{provider}}",
+				"open": "Custom request",
+				"description": "Add provider-specific headers or JSON body fields to text-model requests. Omit a section or leave it empty when it is not needed.",
+				"safetyHint": "Daedalus keeps authentication, model, messages, tools, and streaming fields under its own control. Reserved fields are rejected when you save.",
+				"editorHint": "Only the top-level headers and body fields are supported",
+				"useTextEditor": "Use text editor",
+				"reset": "Reset configuration",
+				"validation": {
+					"json": "Enter valid JSON before saving.",
+					"root": "The request configuration must be a JSON object.",
+					"topLevel": "Only the top-level fields \"headers\" and \"body\" are supported.",
+					"headers": "\"headers\" must be an object whose values are strings.",
+					"body": "\"body\" must be an object containing JSON values."
+				}
+			},
+			"dialogs": {
+				"addProviderTitle": "Add provider",
+				"editProviderTitle": "Edit provider",
+				"addModelTitle": "Add model",
+				"editModelTitle": "Edit model",
+				"discoverModelsTitle": "{{provider}} Models"
+			},
+			"fields": {
+				"providerName": "Provider name",
+				"providerType": "Provider type",
+				"websiteUrl": "Provider website",
+				"modelId": "Model ID",
+				"modelName": "Model name",
+				"modelTypes": "Model types",
+				"contextWindowTokens": "Context window (tokens)",
+				"maxOutputTokens": "Maximum output (tokens)",
+				"modelCapabilities": "Model capabilities",
+				"reasoningEfforts": "Reasoning effort",
+				"reasoningEffortId": "Provider value",
+				"reasoningEffortFallback": "Equivalent level",
+				"reasoningEffortDefault": "Default"
+			},
+			"validation": {
+				"providerName": "Enter a provider name between 1 and 80 characters",
+				"providerType": "Select a provider type",
+				"websiteUrl": "Enter a valid http or https URL",
+				"modelId": "Enter a model ID between 1 and 200 characters",
+				"modelName": "Enter a model name between 1 and 120 characters",
+				"tokenLimit": "Enter an integer between 1 and 2,000,000,000",
+				"reasoningEffortId": "Enter a provider value between 1 and 32 characters",
+				"reasoningEffortDuplicate": "Provider values must be unique"
+			},
+			"actions": {
+				"addModel": "Add model",
+				"addReasoningEffort": "Add effort level",
+				"removeReasoningEffort": "Remove",
+				"clearApiKey": "Clear API key",
+				"enableProvider": "Enable provider",
+				"disableProvider": "Disable provider",
+				"fetchModels": "Fetch models",
+				"importModels": "Import models",
+				"applyModelChanges": "Apply changes",
+				"removeModels": "Remove models",
+				"removeProvider": "Remove provider",
+				"editProvider": "Edit provider",
+				"openWebsite": "Open provider website",
+				"reloadModels": "Reload models",
+				"test": "Test"
+			},
+			"discovery": {
+				"searchPlaceholder": "Search model ID or name...",
+				"empty": "No models available to manage",
+				"manualModelHint": "If the model list is unavailable, close this dialog, use Save to store the API key and Base URL, then add the model ID manually from the provider page.",
+				"alreadyImported": "{{model}} is already imported",
+				"selectModel": "Select {{model}}",
+				"removeConfirmTitle": "Remove selected models?",
+				"removeConfirmDescription": "{{count}} models will be removed from the available model list. Selecting them again later will restore their local names and capability overrides.",
+				"guards": {
+					"activeModel": "This is the active default model. Choose another model in Default Model settings first.",
+					"providerSelection": "This is the provider's saved model. Choose another provider model first.",
+					"taskRouting": "This model is used by the {{task}} task route. Change it in Default Model settings first.",
+					"webSearch": "This model is used by Web Search. Change it in Search settings first."
+				},
+				"failures": {
+					"authentication": "Authentication failed. Check that the API key is valid and does not include a Bearer prefix.",
+					"permission": "The provider denied access for this key. Check model permissions, groups, quota, or expiry.",
+					"rate_limited": "The provider is rate limiting requests. Try again later.",
+					"models_endpoint": "The model-list endpoint is unavailable. Check that the Base URL includes the correct version path; OpenAI-compatible services commonly require /v1.",
+					"response_format": "The API responded, but its model list is not in the OpenAI data[] format Daedalus recognizes. Save the credentials and add the model manually.",
+					"network": "Daedalus could not reach the provider. Check your network, proxy, DNS, and Base URL.",
+					"upstream": "The provider could not complete the model-list request. Check its service status and try again."
+				}
+			},
+			"capabilities": {
+				"imageEdit": "Edit",
+				"imageGeneration": "Image generation",
+				"imageInput": "Image input",
+				"videoInput": "Video input",
+				"reasoning": "Reasoning",
+				"tools": "Tools",
+				"vision": "Vision",
+				"webSearch": "Search"
+			},
+			"reasoningEfforts": {
+				"description": "Define the reasoning effort values accepted by this provider. Equivalent levels let Daedalus map a selection when switching models.",
+				"disabled": "Enable the model's reasoning capability before configuring effort levels.",
+				"empty": "No selectable levels. The model will use its provider-defined fixed or automatic reasoning strength.",
+				"fallback": {
+					"low": "Low",
+					"medium": "Medium",
+					"high": "High",
+					"max": "Maximum"
+				}
+			},
+			"modelOverrides": {
+				"description": "Fields without an override continue to follow the provider API or Daedalus catalog and adopt future metadata updates automatically.",
+				"inherit": "Follow source",
+				"resetAll": "Reset all to source"
+			},
+			"status": {
+				"disabled": "Disabled"
+			},
+			"usage": {
+				"blockedTitle": "Provider is still in use",
+				"blockedDescription": "{{provider}} cannot be disabled or removed until these model assignments are changed.",
+				"activeModel": "Main model: {{model}}",
+				"taskRouting": "{{task}}: {{model}}"
+			},
+			"remove": {
+				"confirmTitle": "Remove custom provider?",
+				"confirmDescription": "Remove {{provider}} and its saved API key, request configuration, models, and local customizations? This cannot be undone."
+			},
+			"columns": {
+				"capabilities": "Capabilities",
+				"model": "Model"
+			},
+			"errors": {
+				"addProvider": "Failed to add provider",
+				"updateProvider": "Failed to update provider",
+				"openWebsite": "Failed to open provider website",
+				"clearApiKey": "Failed to clear API key",
+				"load": "Failed to load provider settings",
+				"modelIdConflict": "A model with this ID already exists for the provider",
+				"modelNotFound": "This model is no longer in the current model list. Refresh and try again",
+				"noSettings": "No provider settings available",
+				"providerNameConflict": "A provider with this name already exists",
+				"discoverModels": "Failed to discover provider models",
+				"importModels": "Failed to import provider models",
+				"syncModels": "Failed to apply provider model changes",
+				"refreshModels": "Failed to refresh provider models",
+				"saveModel": "Failed to save model",
+				"updateProviderState": "Failed to update provider state",
+				"removeProvider": "Failed to remove provider",
+				"saveRequestConfiguration": "Failed to save custom request configuration",
+				"saveCredentials": "Failed to save provider credentials",
+				"testConnection": "Provider connection test failed"
+			},
+			"messages": {
+				"testSuccess": "Provider connection test succeeded",
+				"credentialsSaved": "Provider credentials saved",
+				"importSuccess": "Imported {{count}} models",
+				"syncSuccess": "Model changes applied: {{enabled}} enabled, {{removed}} removed",
+				"providerEnabled": "{{provider}} is enabled",
+				"providerDisabled": "{{provider}} is disabled",
+				"providerRemoved": "{{provider}} was removed",
+				"providerUpdated": "Provider details updated",
+				"requestConfigurationSaved": "Custom request configuration saved"
+			},
+			"placeholders": {
+				"websiteUrl": "https://example.com"
+			}
+		},
+		"search": {
+			"title": "Search",
+			"webSearchTitle": "Web search",
+			"configureProvider": "Configure the selected provider API key in Provider settings before web search can be used.",
+			"enabled": {
+				"title": "Enable web search",
+				"description": "Allow every conversation to use the configured web search tool when current information is needed."
+			},
+			"model": {
+				"title": "Search model",
+				"description": "Choose the provider-native search model used by the global web search tool.",
+				"placeholder": "Select a search model"
+			},
+			"maxResults": {
+				"title": "Search result count",
+				"description": "Default number of search results returned to the assistant when a search tool call does not override it.",
+				"tooltip": "{{count}} result",
+				"tooltip_other": "{{count}} results"
+			},
+			"maxKeywords": {
+				"title": "Search breadth",
+				"description": "Limit how many search keywords a single web search may generate. Higher values can improve recall.",
+				"tooltip": "Up to {{count}} keywords",
+				"billingNotice": "The selected provider may charge for each search keyword. Enable web search in the provider console and review its pricing before use."
+			},
+			"errors": {
+				"load": "Failed to load web search settings",
+				"save": "Failed to save web search settings"
+			}
+		},
+		"statistics": {
+			"title": "Statistics",
+			"actions": {
+				"refresh": "Refresh"
+			},
+			"range": {
+				"last7Days": "Last 7 days",
+				"last30Days": "Last 30 days",
+				"last90Days": "Last 90 days",
+				"all": "All time"
+			},
+			"metrics": {
+				"requests": "LLM requests",
+				"successRate": "Success rate",
+				"tokens": "Tokens",
+				"tokensSuffix": "tokens",
+				"cacheHitRate": "Cache hit rate",
+				"avgDuration": "Avg. duration",
+				"avgFirstToken": "Avg. first token",
+				"tokenActivity": "Token activity"
+			},
+			"charts": {
+				"requestsTrend": "Request trend",
+				"tokensTrend": "Token trend",
+				"providerShare": "Provider token share",
+				"modelTokens": "Model token usage"
+			},
+			"empty": {
+				"noUsage": "No usage data yet"
+			},
+			"unavailable": {
+				"title": "Usage metrics are unavailable",
+				"description": "The backend usage metrics database could not be opened."
+			},
+			"errors": {
+				"load": "Failed to load statistics"
+			},
+			"heatmap": {
+				"title": "Token activity",
+				"tooltip": "{{date}}: {{tokens}} tokens"
+			},
+			"cacheSegments": {
+				"hit": "Cache hit tokens",
+				"miss": "Non-cache tokens"
+			}
+		},
+		"skills": {
+			"title": "Skills",
+			"invalid": "INVALID",
+			"searchPlaceholder": "Search skill...",
+			"valid": "VALID",
+			"actions": {
+				"importFromNpx": "Import from npx skills",
+				"importSelected": "Import selected",
+				"install": "Install",
+				"installFromFolder": "Install from folder",
+				"installFromZip": "Install from ZIP"
+			},
+			"confirm": {
+				"delete": {
+					"title": "Delete skill?",
+					"description": "Delete {{name}} from Daedalus Studio? This permanently removes its personal skill files.",
+					"projectDescription": "Delete {{name}} from the current project? This permanently removes its directory under .github/skills and will appear as a version-control change."
+				}
+			},
+			"empty": {
+				"none": "No custom skills yet. Ask the agent to create a skill, or install one from ZIP/folder.",
+				"noMatches": "No matching skills"
+			},
+			"errors": {
+				"delete": "Failed to delete skill",
+				"install": "Failed to install skill",
+				"npxDiscover": "Failed to find local Codex skills",
+				"load": "Failed to load skills",
+				"loadWorkspaces": "Failed to load projects",
+				"loadContent": "Failed to read SKILL.md",
+				"projectTargetRequired": "Select a project and source folder before installing a project skill",
+				"selectSource": "Failed to select skill source",
+				"update": "Failed to update skill",
+				"updateContent": "Failed to save SKILL.md"
+			},
+			"editor": {
+				"title": "Edit skill",
+				"titleWithName": "Edit {{name}}",
+				"description": "YAML frontmatter, skill instructions, and file size are validated before saving. The skill ID and directory are not changed."
+			},
+			"install": {
+				"description": "Personal skills are stored in your user directory. Project skills are stored in the selected source folder's .github/skills directory.",
+				"fromFolder": "Install from folder",
+				"fromZip": "Install from ZIP",
+				"title": "Install skill"
+			},
+			"npx": {
+				"title": "Import global Codex skills",
+				"description": "Lists global Codex skills. If the Skills CLI is missing, Daedalus Studio downloads the CLI once through npx but never executes skill instructions.",
+				"empty": "No global Codex skills were found.",
+				"selectAll": "Select all available skills",
+				"alreadyInstalled": "Already installed",
+				"summary": "Imported {{installed}}, skipped {{skipped}}, failed {{failed}}."
+			},
+			"scope": {
+				"all": "All",
+				"builtin": "Built-in",
+				"personal": "Personal",
+				"project": "Project"
+			},
+			"target": {
+				"workspacePlaceholder": "Select project",
+				"sourceFolderPlaceholder": "Select source folder",
+				"projectPathHint": "The skill will be installed under .github/skills in the selected source folder."
+			}
+		},
+		"general": {
+			"title": "General",
+			"display": {
+				"title": "Display settings",
+				"theme": {
+					"title": "Theme",
+					"description": "Choose the Studio color theme for this device.",
+					"system": "System",
+					"light": "Light",
+					"dark": "Dark"
+				},
+				"themeColor": {
+					"title": "Theme color",
+					"description": "Customize the Studio accent and primary control color.",
+					"reset": "Restore default"
+				},
+				"language": {
+					"title": "Language",
+					"description": "Choose the Studio display language.",
+					"placeholder": "Select a language",
+					"system": "System default",
+					"english": "English",
+					"chinese": "中文"
+				}
+			},
+			"fonts": {
+				"title": "Fonts",
+				"body": {
+					"title": "Body font family",
+					"description": "Customize the font family used by regular Studio text.",
+					"placeholder": "e.g. \"Inter\", \"Microsoft YaHei\", sans-serif",
+					"reset": "Restore default body font"
+				},
+				"code": {
+					"title": "Code font family",
+					"description": "Customize the font family used by code, terminals, and the file editor.",
+					"placeholder": "e.g. \"JetBrains Mono\", Consolas, monospace",
+					"reset": "Restore default code font"
+				}
+			},
+			"godot": {
+				"title": "Godot environment",
+				"executable": "Godot executable",
+				"description": "Used when a workspace does not provide its own Godot executable path.",
+				"placeholder": "Select a Godot executable",
+				"browse": "Browse",
+				"clear": "Clear Godot executable",
+				"status": {
+					"ready": "Godot {{version}}",
+					"readyFallback": "ready",
+					"unavailable": "Unavailable",
+					"unconfigured": "Not configured"
+				}
+			},
+			"notifications": {
+				"title": "System notifications",
+				"runCompleted": {
+					"title": "Notify when an LLM reply finishes",
+					"description": "Show a system notification when a reply finishes in the background. No duplicate notification is shown while the window is focused."
+				}
+			},
+			"general": {
+				"title": "General settings",
+				"nextStepHintsEnabled": {
+					"title": "Suggest the next step",
+					"description": "After a completed reply, let Daedalus suggest a useful next action in the composer."
+				},
+				"autoCheckForUpdates": {
+					"title": "Check for updates on startup",
+					"description": "Check for Daedalus Studio and backend updates when the app starts."
+				},
+				"minimizeToTrayOnClose": {
+					"title": "Minimize to tray on close",
+					"description": "Hide Daedalus Studio to the system tray when the window close button is clicked."
+				}
+			},
+			"errors": {
+				"load": "Failed to load general settings",
+				"save": "Failed to save general settings",
+				"godotExecutable": "Failed to validate the Godot executable"
+			}
+		}
+	},
+	"nativeNotifications": {
+		"goalAchievedTitle": "Daedalus achieved the goal",
+		"goalStoppedTitle": "Daedalus goal stopped",
+		"approvalTitle": "Daedalus needs approval",
+		"toolApprovalBody": "The assistant is waiting for tool approval.",
+		"toolBudgetBody": "The assistant needs a tool budget decision.",
+		"planApprovalBody": "A plan is ready for review.",
+		"clarificationTitle": "Daedalus needs clarification",
+		"clarificationBody": "A plan question is waiting for your reply.",
+		"runCompletedTitle": "Daedalus finished",
+		"runCompletedBody": "{{sessionTitle}} is ready."
+	},
+	"appUpdate": {
+		"title": "Daedalus Studio update",
+		"summary": {
+			"client": "A Daedalus Studio update is available.",
+			"backend": "A Daedalus backend update is available.",
+			"combined": "Daedalus Studio and the backend both have updates.",
+			"notAvailable": "Daedalus Studio is up to date.",
+			"unsupported": "Updates are not available for this installation.",
+			"failed": "The automatic update could not be completed."
+		},
+		"components": {
+			"client": "Client",
+			"backend": "Backend"
+		},
+		"status": {
+			"checking": "Checking for updates...",
+			"downloading": "Downloading update...",
+			"downloadingDifferential": "Downloading differential update...",
+			"downloadingFullInstaller": "Downloading full installer...",
+			"installingBackend": "Installing backend update...",
+			"backendUpdated": "Backend updated. Close this dialog to continue.",
+			"restarting": "Restarting to install...",
+			"waitingForResponse": "Waiting for the active response to finish...",
+			"failed": "Update failed",
+			"ready": "Update is ready."
+		},
+		"waiting": {
+			"title": "Update deferred",
+			"description": "An AI response is still running. Studio will continue installing the update when it finishes.",
+			"activeTitle": "An AI response is still running",
+			"activeDescription": "Installing now would interrupt the response. The update request is queued until it finishes."
+		},
+		"fallback": {
+			"title": "Switched to the full installer",
+			"description": "The differential update could not be completed, so Daedalus Studio automatically fell back to a full download. Progress restarts at 0%; the installer is not being applied twice.",
+			"reason": "Fallback reason:"
+		},
+		"actions": {
+			"retry": "Retry",
+			"openReleases": "Download from GitHub Releases",
+			"openClientReleases": "Download Daedalus Studio",
+			"openBackendReleases": "Download Daedalus Backend"
+		},
+		"errors": {
+			"download": "Failed to download update.",
+			"manualDownloadHint": "If GitHub is unavailable on your network or automatic downloads keep failing, use the matching component's Releases page for a manual download."
+		}
+	},
+	"changelog": {
+		"title": "Update history",
+		"whatsNew": "What's new in v{{version}}",
+		"noReleaseNotes": "Detailed release notes for v{{version}} are not available yet.",
+		"actions": {
+			"viewFull": "View full history",
+			"close": "Done"
+		}
+	}
 }

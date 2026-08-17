@@ -1,0 +1,6 @@
+.player {
+	width: 100%;
+	overflow: hidden;
+	border-radius: var(--ds-radius-lg);
+	box-shadow: 0px 0px 0px 8px var(--ds-text-primary);
+}

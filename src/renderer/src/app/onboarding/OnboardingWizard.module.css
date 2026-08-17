@@ -51,8 +51,12 @@
 	outline: none;
 }
 
+.body::-webkit-scrollbar {
+	display: none;
+}
+
 .stepViewport > * {
-	animation: onboarding-step-in 160ms cubic-bezier(.22, .61, .36, 1);
+	animation: onboarding-step-in 160ms cubic-bezier(0.22, 0.61, 0.36, 1);
 	transform-origin: center top;
 	will-change: opacity, transform;
 }
@@ -111,15 +115,6 @@
 .welcomeDescription {
 	max-width: 620px;
 	font-size: 16px;
-}
-
-.featureTags {
-	justify-content: center;
-}
-
-.featureTags :global(.daedalus-icon) {
-	width: 14px;
-	height: 14px;
 }
 
 .stepHeading {

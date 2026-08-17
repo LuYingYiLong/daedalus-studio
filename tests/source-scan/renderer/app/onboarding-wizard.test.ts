@@ -8,12 +8,14 @@ describe("OnboardingWizard", () => {
 	const mainSource: string = readRepoFile("src", "main", "index.ts");
 	const preferencesServiceSource: string = readRepoFile("src", "main", "services", "client-preferences.ts");
 	const onboardingSource: string = readRepoFile("src", "contracts", "onboarding.ts");
+	const conceptVideoSource: string = readRepoFile("src", "renderer", "src", "app", "onboarding", "concept-video", "DaedalusConceptVideo.tsx");
+	const conceptPlayerSource: string = readRepoFile("src", "renderer", "src", "app", "onboarding", "concept-video", "DaedalusConceptPlayer.tsx");
 
 	it("persists all six steps and supports optional setup flows", () => {
 		expect(source).toContain("ONBOARDING_STEP_IDS.map");
 		expect(source).toContain('goForward("skipped")');
-		expect(source).toContain('goForward(currentConfigurableStep === null ? undefined : "configured")');
-		expect(source).toContain("const activeOperation: boolean = currentStep === \"provider\"");
+		expect(source).toMatch(/goForward\(\s*currentConfigurableStep\s*===\s*null\s*\?\s*undefined\s*:\s*"configured"\s*,?\s*\)/);
+		expect(source).toMatch(/const activeOperation:\s*boolean\s*=\s*currentStep\s*===\s*"provider"/);
 		expect(source).not.toContain("const navigationBusy:");
 		expect(source).not.toContain("disabled={navigationBusy}");
 		expect(source).toContain("return (): void => onBusyChange(false);");
@@ -21,7 +23,7 @@ describe("OnboardingWizard", () => {
 		expect(source).toContain('if (currentStep === "complete")');
 		expect(source).toContain("onPrewarmApp?.()");
 		expect(source).toContain("activeOperation || isEnteringStudio");
-		expect(source).toContain("function persistCheckpoint(nextPreferences: ClientPreferences");
+		expect(source).toMatch(/function persistCheckpoint\(\s*nextPreferences:\s*ClientPreferences/);
 		expect(source).toContain("setPreferences(nextPreferences);");
 		expect(source).toContain("persistCheckpoint(nextPreferences");
 		expect(source).not.toContain("await persistStep(");
@@ -29,6 +31,16 @@ describe("OnboardingWizard", () => {
 		expect(source).toContain("window.electronAPI.pickGodotExecutable()");
 		expect(source).toContain("installGodotDocumentation");
 		expect(source).toContain("window.electronAPI.godotProjects.install");
+		expect(source).toContain("<DaedalusConceptPlayer");
+		expect(source).toContain("onboarding.welcome.conceptVideoLabel");
+		expect(conceptVideoSource).toContain("TransitionSeries.Sequence durationInFrames={110} name=\"Light home\"");
+		expect(conceptVideoSource).toContain("TransitionSeries.Sequence durationInFrames={110} name=\"Dark home\"");
+		expect(conceptVideoSource).toContain("TransitionSeries.Sequence durationInFrames={110} name=\"Light conversation\"");
+		expect(conceptVideoSource).toContain("TransitionSeries.Sequence durationInFrames={110} name=\"Dark conversation\"");
+		expect(conceptPlayerSource).toContain("component={DaedalusConceptVideo}");
+		expect(conceptPlayerSource).toContain("inputProps={{ language }}");
+		expect(conceptPlayerSource).toContain("autoPlay={true}");
+		expect(conceptPlayerSource).toContain("initiallyMuted={true}");
 		expect(source).toContain("setJob(nextState.activeJob ?? null)");
 		expect(source).toContain("console.error(\"[Onboarding] persist checkpoint failed\"");
 		expect(preferencesServiceSource).toContain("[ClientPreferences] update failed");
