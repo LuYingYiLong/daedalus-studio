@@ -26,4 +26,13 @@ describe("browser service security boundary", () => {
 		expect(source).toContain("record.view.webContents.capturePage()");
 		expect(source).toContain("this.requireOwnedRecord(event, payload)");
 	});
+
+	it("uses right click to cancel element inspection without opening a page menu", () => {
+		const source = readRepoFile("src", "main", "services", "browser", "browser-inspector.ts");
+		expect(source).toContain('this.webContents.on("context-menu"');
+		expect(source).toContain('method === "Overlay.inspectModeCanceled"');
+		expect(source).toContain("event.preventDefault()");
+		expect(source).toContain("void this.cancel()");
+		expect(source).toContain('this.webContents.removeListener("context-menu"');
+	});
 });

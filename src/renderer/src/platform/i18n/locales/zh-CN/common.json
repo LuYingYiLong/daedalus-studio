@@ -1328,7 +1328,7 @@
 		"browser": {
 			"title": "浏览器",
 			"actions": {
-				"choose": "选择",
+				"choose": "浏览",
 				"openDownloads": "管理下载",
 				"openHistory": "查看历史",
 				"managePermissions": "管理权限",
@@ -1339,8 +1339,8 @@
 			"downloads": {
 				"title": "下载",
 				"directory": "下载位置",
-				"directoryDescription": "新下载文件的默认保存目录。",
 				"systemDefault": "系统下载目录",
+				"resetDirectory": "恢复为系统默认下载目录",
 				"askEveryTime": "每次询问保存位置",
 				"askEveryTimeDescription": "开始下载时选择文件名和目录。",
 				"manage": "下载管理器",

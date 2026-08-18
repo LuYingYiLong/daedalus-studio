@@ -263,6 +263,7 @@ declare global {
 		settings: {
 			get: () => Promise<BrowserSettings>;
 			update: (patch: Partial<Omit<BrowserSettings, "permissionRules">>) => Promise<BrowserSettings>;
+			getDefaultDownloadDirectory: () => Promise<string>;
 			pickDownloadDirectory: () => Promise<string | null>;
 		};
 		data: { clear: (options: BrowserClearDataOptions) => Promise<void> };

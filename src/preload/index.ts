@@ -397,6 +397,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		settings: {
 			get: (): Promise<BrowserSettings> => ipcRenderer.invoke("browser:settings-get"),
 			update: (patch: Partial<Omit<BrowserSettings, "permissionRules">>): Promise<BrowserSettings> => ipcRenderer.invoke("browser:settings-update", patch),
+			getDefaultDownloadDirectory: (): Promise<string> => ipcRenderer.invoke("browser:settings-get-default-download-directory"),
 			pickDownloadDirectory: (): Promise<string | null> => ipcRenderer.invoke("browser:settings-pick-download-directory")
 		},
 		data: {

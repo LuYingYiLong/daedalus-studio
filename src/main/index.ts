@@ -162,6 +162,10 @@ function getWindowBackgroundColor(colors: WindowThemeColors): string {
 	return process.platform === "win32" || process.platform === "darwin" ? "#00000000" : colors.backgroundColor;
 }
 
+function applyNativeThemePreference(preferences: ClientPreferences): void {
+	nativeTheme.themeSource = preferences.theme;
+}
+
 function getNativeWindowMaterialOptions(): Partial<BrowserWindowConstructorOptions> {
 	if (process.platform === "win32") {
 		return {
@@ -661,7 +665,9 @@ if (!hasSingleInstanceLock) {
 			// Bridge launch metadata is a convenience; failure must not block Studio startup.
 		});
 		const preferences: ClientPreferences = await clientPreferencesService.load();
+		applyNativeThemePreference(preferences);
 		clientPreferencesService.onDidChange((nextPreferences: ClientPreferences): void => {
+			applyNativeThemePreference(nextPreferences);
 			applyWindowThemeToAllWindows();
 			broadcastClientPreferencesChanged(nextPreferences);
 			windowLifecycleController.syncTrayWithPreferences();

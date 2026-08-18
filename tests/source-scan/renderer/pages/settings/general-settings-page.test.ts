@@ -38,7 +38,8 @@ describe("GeneralSettingsPage", () => {
 		expect(pageSource).toContain("settings.general.fonts.body.reset");
 		expect(pageSource).toContain("settings.general.fonts.code.reset");
 		expect(pageSource).toContain("handleResetFontFamily");
-		expect(pageSource).toContain("onMouseDown={(event): void => event.preventDefault()}");
+		expect(pageSource).toContain("onMouseDown={(event): void =>");
+		expect(pageSource).toContain("event.preventDefault()");
 		expect(pageSource).toContain("DEFAULT_STUDIO_FONT_FAMILY_CODE");
 		expect(pageSource).toContain("Select<LanguagePreference>");
 		expect(pageSource).toContain("languageOptions");

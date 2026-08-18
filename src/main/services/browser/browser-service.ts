@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
+	app,
 	BrowserWindow,
 	dialog,
 	ipcMain,
@@ -110,6 +111,7 @@ export class BrowserService {
 
 		ipcMain.handle("browser:settings-get", async (event): Promise<BrowserSettings> => { this.assertStudioSender(event); return await this.dataStore.getSettings(); });
 		ipcMain.handle("browser:settings-update", async (event, patch: unknown): Promise<BrowserSettings> => { this.assertStudioSender(event); return await this.updateSettings(patch); });
+		ipcMain.handle("browser:settings-get-default-download-directory", (event): string => { this.assertStudioSender(event); return app.getPath("downloads"); });
 		ipcMain.handle("browser:settings-pick-download-directory", async (event): Promise<string | null> => await this.pickDownloadDirectory(event));
 		ipcMain.handle("browser:permissions-set", async (event, payload: unknown) => { this.assertStudioSender(event); return await this.setPermission(payload); });
 		ipcMain.handle("browser:permissions-remove", async (event, payload: unknown) => { this.assertStudioSender(event); return await this.removePermission(payload); });

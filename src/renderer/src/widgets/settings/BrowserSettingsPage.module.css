@@ -26,10 +26,6 @@
 	overflow-y: auto;
 }
 
-.directoryInput {
-	width: min(420px, 42vw);
-}
-
 .managerActions {
 	display: flex;
 	flex-wrap: wrap;
@@ -62,10 +58,4 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-
-@media (max-width: 760px) {
-	.directoryInput {
-		width: 100%;
-	}
 }

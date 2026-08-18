@@ -1335,7 +1335,7 @@
 		"browser": {
 			"title": "Browser",
 			"actions": {
-				"choose": "Choose",
+				"choose": "Browse",
 				"openDownloads": "Manage downloads",
 				"openHistory": "View history",
 				"managePermissions": "Manage permissions",
@@ -1346,8 +1346,8 @@
 			"downloads": {
 				"title": "Downloads",
 				"directory": "Download location",
-				"directoryDescription": "The default folder for new downloads.",
 				"systemDefault": "System Downloads folder",
+				"resetDirectory": "Reset to the system Downloads folder",
 				"askEveryTime": "Ask where to save each file",
 				"askEveryTimeDescription": "Choose a file name and folder when a download starts.",
 				"manage": "Download manager",

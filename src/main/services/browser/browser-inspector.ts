@@ -51,6 +51,7 @@ const SNAPSHOT_FUNCTION: string = `function () {
 export class BrowserInspector {
 	private active: boolean = false;
 	private messageListener: ((event: Electron.Event, method: string, params: DebuggerMessageParams) => void) | null = null;
+	private contextMenuListener: ((event: Electron.Event) => void) | null = null;
 
 	constructor(
 		private readonly webContents: WebContents,
@@ -69,9 +70,19 @@ export class BrowserInspector {
 		this.messageListener = (_event: Electron.Event, method: string, params: DebuggerMessageParams): void => {
 			if (method === "Overlay.inspectNodeRequested" && typeof params.backendNodeId === "number") {
 				void this.capture(params.backendNodeId);
+				return;
+			}
+			if (method === "Overlay.inspectModeCanceled") {
+				this.cleanup();
+				this.onCancelled();
 			}
 		};
 		this.webContents.debugger.on("message", this.messageListener);
+		this.contextMenuListener = (event: Electron.Event): void => {
+			event.preventDefault();
+			void this.cancel();
+		};
+		this.webContents.on("context-menu", this.contextMenuListener);
 		await this.webContents.debugger.sendCommand("Overlay.setInspectMode", {
 			mode: "searchForNode",
 			highlightConfig: {
@@ -116,6 +127,8 @@ export class BrowserInspector {
 		this.active = false;
 		if (this.messageListener !== null) this.webContents.debugger.removeListener("message", this.messageListener);
 		this.messageListener = null;
+		if (this.contextMenuListener !== null) this.webContents.removeListener("context-menu", this.contextMenuListener);
+		this.contextMenuListener = null;
 		if (this.webContents.debugger.isAttached()) {
 			try { this.webContents.debugger.detach(); } catch { /* renderer already closed */ }
 		}
