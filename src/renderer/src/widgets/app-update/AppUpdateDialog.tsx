@@ -1,6 +1,7 @@
 import { Alert, Button, Modal, Progress, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import styles from "./AppUpdateDialog.module.css";
+import { createStudioCopyableConfig } from "@/ui/typography-copyable";
 
 const APP_RELEASES_URL = "https://github.com/LuYingYiLong/daedalus-studio/releases";
 const BACKEND_RELEASES_URL = "https://github.com/LuYingYiLong/daedalus-backend/releases";
@@ -183,7 +184,7 @@ function AppUpdateDialog({ open, state, onClose, onDownload }: AppUpdateDialogPr
 										<Typography.Text strong={true}>{entry.label}</Typography.Text>
 										<Typography.Paragraph
 											className={styles.errorMessage}
-											copyable={{ text: entry.message }}
+											copyable={createStudioCopyableConfig({ text: entry.message })}
 										>
 											{entry.message}
 										</Typography.Paragraph>

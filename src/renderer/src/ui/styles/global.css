@@ -325,6 +325,22 @@ body {
 	display: block;
 }
 
+/* Typography 的复制按钮不是 antd Button，单独校正自定义 SVG 的基线。 */
+.ant-typography-copy {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	vertical-align: middle;
+	line-height: 1;
+}
+
+.ant-typography-copy > .daedalus-icon {
+	display: block;
+	width: 1em;
+	height: 1em;
+	vertical-align: middle;
+}
+
 ::highlight(daedalus-conversation-search) {
 	color: inherit;
 	background-color: color-mix(in srgb, var(--ds-warning) 42%, transparent);

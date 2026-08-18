@@ -4,7 +4,8 @@
 	min-width: 0;
 	min-height: 0;
 	padding: 0px var(--ds-space-2) var(--ds-space-2);
-	overflow: hidden;
+	overflow-x: hidden;
+	overflow-y: auto;
 	user-select: none;
 }
 
@@ -23,11 +24,9 @@
 	display: flex;
 	min-width: 0;
 	min-height: 0;
-	padding-right: var(--ds-space-1);
 	flex-direction: column;
 	gap: var(--ds-space-2);
-	overflow-x: hidden;
-	overflow-y: auto;
+	overflow: visible;
 	align-content: start;
 }
 

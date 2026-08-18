@@ -35,6 +35,7 @@ import styles from "./HooksSettingsPage.module.css";
 import pageMotionStyles from "./SettingsPageMotion.module.css";
 import SettingsItem from "@/ui/SettingsItem";
 import SettingsList from "@/ui/SettingsList";
+import { createStudioCopyableConfig } from "@/ui/typography-copyable";
 
 const HOOK_TEMPLATE: string = `${JSON.stringify(
 	{
@@ -408,11 +409,9 @@ function HooksSettingsPage(): React.JSX.Element {
 										<Typography.Text strong>
 											{document.source.displayName}
 										</Typography.Text>
-										<Typography.Text
-											type="secondary"
-											copyable={{
-												text: document.source.path,
-											}}
+											<Typography.Text
+												type="secondary"
+												copyable={createStudioCopyableConfig({ text: document.source.path })}
 											ellipsis
 										>
 											{document.source.path}
@@ -603,9 +602,7 @@ function HooksSettingsPage(): React.JSX.Element {
 										</Typography.Text>
 										<Typography.Text
 											type="secondary"
-											copyable={{
-												text: handler.fingerprint,
-											}}
+												copyable={createStudioCopyableConfig({ text: handler.fingerprint })}
 										>
 											{t(
 												"settings.hooks.review.fingerprint",

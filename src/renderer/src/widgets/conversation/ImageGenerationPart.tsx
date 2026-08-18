@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { TimelineBodyPart, TimelineGeneratedImageArtifact } from "@/platform/rpc/types";
 import { fetchGeneratedImageDataUrl } from "@/platform/rpc/generated-image-api";
 import { Icon } from "@/assets/icons";
+import { createStudioCopyableConfig } from "@/ui/typography-copyable";
 import styles from "./ImageGenerationPart.module.css";
 
 export type TimelineImageGenerationPart = Extract<TimelineBodyPart, { type: "image_generation" }>;
@@ -129,10 +130,9 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 					<div className={styles.title}>
 						<Typography.Title level={4} className={styles.title}>{t("chat.imageGeneration.generating")}</Typography.Title>
 						<Typography.Text
-							copyable={{
-								icon: [<Icon name="copy" />],
+							copyable={createStudioCopyableConfig({
 								tooltips: [t("chat.common.copy"), t("chat.common.copied")],
-							}}
+							})}
 							className={styles.prompt}
 						>
 							{part.prompt}
@@ -166,10 +166,9 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 					<Typography.Title level={4} className={styles.title}>{t("chat.imageGeneration.generated")}</Typography.Title>
 					<Typography.Text type="secondary" className={styles.modelLabel}>{modelLabel}</Typography.Text>
 					<Typography.Text
-						copyable={{
-							icon: [<Icon name="copy" />, <Icon name="check" />],
+						copyable={createStudioCopyableConfig({
 							tooltips: [t("chat.common.copy"), t("chat.common.copied")],
-						}}
+						})}
 						className={styles.prompt}
 					>
 						{part.prompt}

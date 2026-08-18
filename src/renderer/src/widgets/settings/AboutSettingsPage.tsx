@@ -21,6 +21,7 @@ import ChangelogDialog from "@/widgets/changelog/ChangelogDialog";
 import { updateClientPreferences } from "@/platform/rpc/client-preferences-api";
 import { createDefaultOnboardingPreferences } from "../../../../contracts/onboarding";
 import styles from "./AboutSettingsPage.module.css";
+import { createStudioCopyableConfig } from "@/ui/typography-copyable";
 
 type PackageInfo = {
 	name: string;
@@ -759,7 +760,7 @@ function AboutSettingsPage(): React.JSX.Element | null {
 									{backendHealth?.logPath ? (
 										<Typography.Text
 											code
-											copyable
+											copyable={createStudioCopyableConfig()}
 											className={styles.pathText}
 										>
 											{backendHealth.logPath}
