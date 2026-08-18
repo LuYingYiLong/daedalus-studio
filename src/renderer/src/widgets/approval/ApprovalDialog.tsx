@@ -1,4 +1,4 @@
-import { Alert, Button, Input, theme, Typography } from "antd";
+import { Alert, Button, Dropdown, Input, Space, theme, Typography, type MenuProps } from "antd";
 import styles from "./ApprovalDialog.module.css";
 import React, { useEffect, useState } from "react";
 import { PendingApproval } from "@/platform/rpc/approval-api";
@@ -12,9 +12,12 @@ export type ApprovalDialogProps = {
 	isRejecting?: boolean;
 	errorMessage?: string | null;
 	onApprove?: (approvalId: string, consentText?: string) => void;
-	onApproveAndEnableAutoSafe?: (approvalId: string, consentText?: string) => void;
+	onApproveAndEnableAutoSafe?: (
+		approvalId: string,
+		consentText?: string,
+	) => void;
 	onReject?: (approvalId: string) => void;
-}
+};
 
 function ApprovalDialog({
 	pendingApproval,
@@ -24,7 +27,7 @@ function ApprovalDialog({
 	errorMessage,
 	onApprove,
 	onApproveAndEnableAutoSafe,
-	onReject
+	onReject,
 }: ApprovalDialogProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const { token } = theme.useToken();
@@ -38,12 +41,26 @@ function ApprovalDialog({
 		return null;
 	}
 
-	const approvalActionButtonStyle: React.CSSProperties = {
-		borderRadius: token.borderRadiusSM
-	};
-	const isBusy: boolean = isApproving || isApprovalAutoSafeEnabling || isRejecting;
+	const isBusy: boolean =
+		isApproving || isApprovalAutoSafeEnabling || isRejecting;
 	const requiredConsent = pendingApproval.requiredConsent;
-	const isConsentSatisfied: boolean = requiredConsent === undefined || consentText === requiredConsent.expectedText;
+	const isConsentSatisfied: boolean =
+		requiredConsent === undefined ||
+		consentText === requiredConsent.expectedText;
+	const approvalMenuItems: MenuProps["items"] = [
+		{
+			key: "enable-auto-safe",
+			label: t("approval.tool.actions.approveAndEnableAutoSafe"),
+			icon: <Icon name="shield" />,
+			disabled: isBusy || !isConsentSatisfied,
+			onClick: (): void => {
+				onApproveAndEnableAutoSafe?.(
+					pendingApproval.approvalId,
+					requiredConsent === undefined ? undefined : consentText,
+				);
+			},
+		},
+	];
 
 	return (
 		<div className={styles.approvalDialog}>
@@ -52,7 +69,10 @@ function ApprovalDialog({
 					<Typography.Title level={4} className={styles.title}>
 						{t("approval.tool.title")}
 					</Typography.Title>
-					<Typography.Text type="secondary" className={styles.subtitle}>
+					<Typography.Text
+						type="secondary"
+						className={styles.subtitle}
+					>
 						{t("approval.tool.subtitle")}
 					</Typography.Text>
 				</div>
@@ -87,15 +107,24 @@ function ApprovalDialog({
 					<Typography.Text className={styles.consentPrompt}>
 						{requiredConsent.prompt}
 					</Typography.Text>
-					<Typography.Text type="secondary" className={styles.consentHint}>
-						{t("approval.tool.consentPrefix")} <Typography.Text code>{requiredConsent.expectedText}</Typography.Text> {t("approval.tool.consentSuffix")}
+					<Typography.Text
+						type="secondary"
+						className={styles.consentHint}
+					>
+						{t("approval.tool.consentPrefix")}{" "}
+						<Typography.Text code>
+							{requiredConsent.expectedText}
+						</Typography.Text>{" "}
+						{t("approval.tool.consentSuffix")}
 					</Typography.Text>
 					<Input
 						className={styles.consentInput}
 						value={consentText}
 						disabled={isBusy}
 						placeholder={requiredConsent.expectedText}
-						onChange={(event: React.ChangeEvent<HTMLInputElement>): void => {
+						onChange={(
+							event: React.ChangeEvent<HTMLInputElement>,
+						): void => {
 							setConsentText(event.target.value);
 						}}
 					/>
@@ -104,38 +133,43 @@ function ApprovalDialog({
 
 			<footer className={styles.actions}>
 				<Button
-					type="primary"
-					block
-					disabled={isBusy || !isConsentSatisfied}
-					loading={isApproving}
-					style={approvalActionButtonStyle}
-					className={styles.approvalActionButton}
-					onClick={(): void => {
-						onApprove?.(pendingApproval.approvalId, requiredConsent === undefined ? undefined : consentText);
-					}}
-				>{t("approval.tool.actions.approve")}</Button>
-				<Button
-					block
-					disabled={isBusy || !isConsentSatisfied}
-					loading={isApprovalAutoSafeEnabling}
-					icon={<Icon name="shield" />}
-					style={approvalActionButtonStyle}
-					className={styles.approvalActionButton}
-					onClick={(): void => {
-						onApproveAndEnableAutoSafe?.(pendingApproval.approvalId, requiredConsent === undefined ? undefined : consentText);
-					}}
-				>{t("approval.tool.actions.approveAndEnableAutoSafe")}</Button>
-				<Button
 					danger={true}
-					block
 					disabled={isBusy}
 					loading={isRejecting}
-					style={approvalActionButtonStyle}
 					className={styles.approvalActionButton}
 					onClick={(): void => {
 						onReject?.(pendingApproval.approvalId);
 					}}
-				>{t("approval.tool.actions.reject")}</Button>
+				>
+					{t("approval.tool.actions.reject")}
+				</Button>
+				<Space.Compact>
+					<Button
+						type="primary"
+						disabled={isBusy || !isConsentSatisfied}
+						loading={isApproving}
+						className={styles.approvalActionButton}
+						onClick={(): void => {
+							onApprove?.(
+								pendingApproval.approvalId,
+								requiredConsent === undefined
+									? undefined
+									: consentText,
+							);
+						}}
+					>
+						{t("approval.tool.actions.approve")}
+					</Button>
+					<Dropdown menu={{ items: approvalMenuItems }} trigger={["click"]}>
+						<Button
+							type="primary"
+							disabled={isBusy || !isConsentSatisfied}
+							loading={isApprovalAutoSafeEnabling}
+							icon={<Icon name="more-v" />}
+							className={styles.approvalActionButton}
+						/>
+					</Dropdown>
+				</Space.Compact>
 			</footer>
 		</div>
 	);
