@@ -4,26 +4,48 @@ import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
 import i18n from "@/platform/i18n";
 import useClientPreferencesController from "../runtime/hooks/useClientPreferencesController";
-import { applyStudioFontVariables, createStudioTheme } from "@/ui/styles/studio-theme";
+import {
+	applyStudioFontVariables,
+	createStudioTheme,
+} from "@/ui/styles/studio-theme";
 import { applyStudioAccentVariables } from "../../../../contracts/theme-color";
 import InputContextMenu from "@/ui/InputContextMenu";
 import styles from "./WindowProviders.module.css";
+import { Icon } from "@/assets/icons";
 
 type WindowProvidersProps = {
 	children: React.ReactNode;
 };
 
-function WindowProviders({ children }: WindowProvidersProps): React.JSX.Element {
-	const { resolvedTheme, resolvedLanguage, themeColor, fontFamily, fontFamilyCode } = useClientPreferencesController();
+function WindowProviders({
+	children,
+}: WindowProvidersProps): React.JSX.Element {
+	const {
+		resolvedTheme,
+		resolvedLanguage,
+		themeColor,
+		fontFamily,
+		fontFamilyCode,
+	} = useClientPreferencesController();
 	const studioTheme: ThemeConfig = useMemo(
-		(): ThemeConfig => createStudioTheme(resolvedTheme, themeColor, fontFamily, fontFamilyCode),
-		[fontFamily, fontFamilyCode, resolvedTheme, themeColor]
+		(): ThemeConfig =>
+			createStudioTheme(
+				resolvedTheme,
+				themeColor,
+				fontFamily,
+				fontFamilyCode,
+			),
+		[fontFamily, fontFamilyCode, resolvedTheme, themeColor],
 	);
 	const antdLocale = resolvedLanguage === "zh-CN" ? zhCN : enUS;
 
 	useEffect((): void => {
 		document.documentElement.dataset.theme = resolvedTheme;
-		applyStudioAccentVariables(document.documentElement.style, resolvedTheme, themeColor);
+		applyStudioAccentVariables(
+			document.documentElement.style,
+			resolvedTheme,
+			themeColor,
+		);
 	}, [resolvedTheme, themeColor]);
 
 	useEffect((): void => {
@@ -35,12 +57,38 @@ function WindowProviders({ children }: WindowProvidersProps): React.JSX.Element 
 		applyStudioFontVariables(
 			document.documentElement.style,
 			fontFamily,
-			fontFamilyCode
+			fontFamilyCode,
 		);
 	}, [fontFamily, fontFamilyCode]);
 
 	return (
-		<ConfigProvider theme={studioTheme} locale={antdLocale}>
+		<ConfigProvider
+			theme={studioTheme}
+			locale={antdLocale}
+			select={{
+				suffixIcon: <Icon name="arrow-down" />,
+				removeIcon: <Icon name="clear" />,
+				menuItemSelectedIcon: <Icon name="check" />,
+			}}
+			spin={{
+				indicator: <Icon name="spin-indicator" className="spinner" />,
+			}}
+			collapse={{
+				expandIcon: ({ isActive }) => (
+					<span
+						className={`collapseExpandIcon ${isActive ? "collapseExpandIconActive" : ""}`}
+					>
+						<Icon name="arrow-down" />
+					</span>
+				),
+			}}
+			modal={{
+				closeIcon: <Icon name="close" />,
+			}}
+			tabs={{
+				moreIcon: <Icon name="more-h" />,
+			}}
+		>
 			<AntdApp component="div" className={styles.root}>
 				{children}
 				<InputContextMenu />

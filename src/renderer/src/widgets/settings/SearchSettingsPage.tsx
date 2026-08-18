@@ -6,7 +6,7 @@ import {
 	fetchWebSearchSettings,
 	updateWebSearchSettings,
 	type WebSearchModelOption,
-	type WebSearchSettings
+	type WebSearchSettings,
 } from "@/platform/rpc/web-search-settings-api";
 import SettingsItem from "@/ui/SettingsItem";
 import SettingsList from "@/ui/SettingsList";
@@ -21,20 +21,22 @@ const SEARCH_RESULT_MARKS: SliderSingleProps["marks"] = {
 	10: "10",
 	20: "20",
 	50: "50",
-	100: "100"
+	100: "100",
 };
 
 const SEARCH_KEYWORD_MARKS: SliderSingleProps["marks"] = {
 	1: "1",
 	2: "2",
-	3: "3"
+	3: "3",
 };
 
 function encodeModelValue(option: WebSearchModelOption): string {
 	return `${option.provider}:${encodeURIComponent(option.model)}`;
 }
 
-function decodeModelValue(value: string): { provider: string; model: string } | null {
+function decodeModelValue(
+	value: string,
+): { provider: string; model: string } | null {
 	const separatorIndex: number = value.indexOf(":");
 	if (separatorIndex <= 0 || separatorIndex >= value.length - 1) {
 		return null;
@@ -42,36 +44,49 @@ function decodeModelValue(value: string): { provider: string; model: string } | 
 
 	return {
 		provider: value.slice(0, separatorIndex),
-		model: decodeURIComponent(value.slice(separatorIndex + 1))
+		model: decodeURIComponent(value.slice(separatorIndex + 1)),
 	};
 }
 
-function getSelectedModelValue(settings: WebSearchSettings | null): string | undefined {
+function getSelectedModelValue(
+	settings: WebSearchSettings | null,
+): string | undefined {
 	if (settings === null) {
 		return undefined;
 	}
 
-	const selectedOption: WebSearchModelOption | undefined = settings.models.find((option: WebSearchModelOption): boolean => {
-		return option.provider === settings.provider && option.model === settings.model;
-	});
-	return selectedOption === undefined ? undefined : encodeModelValue(selectedOption);
+	const selectedOption: WebSearchModelOption | undefined =
+		settings.models.find((option: WebSearchModelOption): boolean => {
+			return (
+				option.provider === settings.provider &&
+				option.model === settings.model
+			);
+		});
+	return selectedOption === undefined
+		? undefined
+		: encodeModelValue(selectedOption);
 }
 
-function createModelOptions(settings: WebSearchSettings | null): SelectProps["options"] {
+function createModelOptions(
+	settings: WebSearchSettings | null,
+): SelectProps["options"] {
 	if (settings === null) {
 		return [];
 	}
 
-	const groups = new Map<string, { label: string; options: NonNullable<SelectProps["options"]> }>();
+	const groups = new Map<
+		string,
+		{ label: string; options: NonNullable<SelectProps["options"]> }
+	>();
 	for (const option of settings.models) {
 		const groupKey: string = option.provider;
 		const group = groups.get(groupKey) ?? {
 			label: option.providerDisplayName,
-			options: []
+			options: [],
 		};
 		group.options.push({
 			value: encodeModelValue(option),
-			label: `${option.providerDisplayName}/${option.modelDisplayName}`
+			label: `${option.providerDisplayName}/${option.modelDisplayName}`,
 		});
 		groups.set(groupKey, group);
 	}
@@ -94,7 +109,8 @@ function SearchSettingsPage(): React.JSX.Element | null {
 			try {
 				setIsLoading(true);
 				setErrorMessage(null);
-				const loadedSettings: WebSearchSettings = await fetchWebSearchSettings();
+				const loadedSettings: WebSearchSettings =
+					await fetchWebSearchSettings();
 				if (!cancelled) {
 					setSettings(loadedSettings);
 					setDraftMaxResults(loadedSettings.maxResults);
@@ -102,7 +118,11 @@ function SearchSettingsPage(): React.JSX.Element | null {
 				}
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(error instanceof Error ? error.message : t("settings.search.errors.load"));
+					setErrorMessage(
+						error instanceof Error
+							? error.message
+							: t("settings.search.errors.load"),
+					);
 				}
 			} finally {
 				if (!cancelled) {
@@ -118,20 +138,30 @@ function SearchSettingsPage(): React.JSX.Element | null {
 		};
 	}, [t]);
 
-	const modelOptions: SelectProps["options"] = useMemo((): SelectProps["options"] => {
-		return createModelOptions(settings);
-	}, [settings]);
-	const selectedModelValue: string | undefined = getSelectedModelValue(settings);
-	const selectedModelOption: WebSearchModelOption | undefined = settings?.models.find((option: WebSearchModelOption): boolean => {
-		return option.provider === settings.provider && option.model === settings.model;
-	});
+	const modelOptions: SelectProps["options"] =
+		useMemo((): SelectProps["options"] => {
+			return createModelOptions(settings);
+		}, [settings]);
+	const selectedModelValue: string | undefined =
+		getSelectedModelValue(settings);
+	const selectedModelOption: WebSearchModelOption | undefined =
+		settings?.models.find((option: WebSearchModelOption): boolean => {
+			return (
+				option.provider === settings.provider &&
+				option.model === settings.model
+			);
+		});
 	const maxKeywordsConfig = selectedModelOption?.searchOptions?.maxKeywords;
 
-	async function savePatch(key: SavingKey, patch: Parameters<typeof updateWebSearchSettings>[0]): Promise<void> {
+	async function savePatch(
+		key: SavingKey,
+		patch: Parameters<typeof updateWebSearchSettings>[0],
+	): Promise<void> {
 		try {
 			setSavingKey(key);
 			setErrorMessage(null);
-			const savedSettings: WebSearchSettings = await updateWebSearchSettings(patch);
+			const savedSettings: WebSearchSettings =
+				await updateWebSearchSettings(patch);
 			setSettings(savedSettings);
 			if (key === "maxResults") {
 				setDraftMaxResults(savedSettings.maxResults);
@@ -146,7 +176,11 @@ function SearchSettingsPage(): React.JSX.Element | null {
 			if (key === "maxKeywords" && settings !== null) {
 				setDraftMaxKeywords(settings.maxKeywords);
 			}
-			setErrorMessage(error instanceof Error ? error.message : t("settings.search.errors.save"));
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: t("settings.search.errors.save"),
+			);
 		} finally {
 			setSavingKey(null);
 		}
@@ -200,7 +234,7 @@ function SearchSettingsPage(): React.JSX.Element | null {
 							showIcon={true}
 							description={errorMessage}
 							closable={{
-								onClose: (): void => setErrorMessage(null)
+								onClose: (): void => setErrorMessage(null),
 							}}
 							className={styles.alert}
 						/>
@@ -212,7 +246,9 @@ function SearchSettingsPage(): React.JSX.Element | null {
 								{
 									key: "enabled",
 									title: t("settings.search.enabled.title"),
-									description: t("settings.search.enabled.description"),
+									description: t(
+										"settings.search.enabled.description",
+									),
 									action: (
 										<Switch
 											checked={settings.enabled}
@@ -220,28 +256,38 @@ function SearchSettingsPage(): React.JSX.Element | null {
 											disabled={savingKey !== null}
 											onChange={handleEnabledChange}
 										/>
-									)
+									),
 								},
 								{
 									key: "model",
 									title: t("settings.search.model.title"),
-									description: t("settings.search.model.description"),
+									description: t(
+										"settings.search.model.description",
+									),
 									action: (
 										<Select
 											value={selectedModelValue}
 											options={modelOptions}
 											loading={savingKey === "model"}
-											disabled={savingKey !== null || settings.models.length === 0}
-											placeholder={t("settings.search.model.placeholder")}
+											disabled={
+												savingKey !== null ||
+												settings.models.length === 0
+											}
+											placeholder={t(
+												"settings.search.model.placeholder",
+											)}
 											onChange={handleModelChange}
-											suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
 										/>
-									)
+									),
 								},
 								{
 									key: "maxResults",
-									title: t("settings.search.maxResults.title"),
-									description: t("settings.search.maxResults.description"),
+									title: t(
+										"settings.search.maxResults.title",
+									),
+									description: t(
+										"settings.search.maxResults.description",
+									),
 									action: (
 										<div className={styles.sliderControl}>
 											<Slider
@@ -251,26 +297,51 @@ function SearchSettingsPage(): React.JSX.Element | null {
 												marks={SEARCH_RESULT_MARKS}
 												value={draftMaxResults}
 												disabled={savingKey !== null}
-												tooltip={{ formatter: (value: number | undefined): string => t("settings.search.maxResults.tooltip", { count: value ?? 0 }) }}
-												onChange={(value: number): void => setDraftMaxResults(value)}
-												onChangeComplete={handleMaxResultsChangeComplete}
+												tooltip={{
+													formatter: (
+														value:
+															| number
+															| undefined,
+													): string =>
+														t(
+															"settings.search.maxResults.tooltip",
+															{
+																count:
+																	value ?? 0,
+															},
+														),
+												}}
+												onChange={(
+													value: number,
+												): void =>
+													setDraftMaxResults(value)
+												}
+												onChangeComplete={
+													handleMaxResultsChangeComplete
+												}
 											/>
 										</div>
-									)
-								}
-							].map((item): React.JSX.Element => (
-								<SettingsItem
-									key={item.key}
-									title={item.title}
-									description={item.description}
-								>
-									{item.action}
-								</SettingsItem>
-							))}
+									),
+								},
+							].map(
+								(item): React.JSX.Element => (
+									<SettingsItem
+										key={item.key}
+										title={item.title}
+										description={item.description}
+									>
+										{item.action}
+									</SettingsItem>
+								),
+							)}
 							{maxKeywordsConfig !== undefined ? (
 								<SettingsItem
-									title={t("settings.search.maxKeywords.title")}
-									description={t("settings.search.maxKeywords.description")}
+									title={t(
+										"settings.search.maxKeywords.title",
+									)}
+									description={t(
+										"settings.search.maxKeywords.description",
+									)}
 								>
 									<div className={styles.sliderControl}>
 										<Slider
@@ -280,9 +351,21 @@ function SearchSettingsPage(): React.JSX.Element | null {
 											marks={SEARCH_KEYWORD_MARKS}
 											value={draftMaxKeywords}
 											disabled={savingKey !== null}
-											tooltip={{ formatter: (value: number | undefined): string => t("settings.search.maxKeywords.tooltip", { count: value ?? 1 }) }}
-											onChange={(value: number): void => setDraftMaxKeywords(value)}
-											onChangeComplete={handleMaxKeywordsChangeComplete}
+											tooltip={{
+												formatter: (
+													value: number | undefined,
+												): string =>
+													t(
+														"settings.search.maxKeywords.tooltip",
+														{ count: value ?? 1 },
+													),
+											}}
+											onChange={(value: number): void =>
+												setDraftMaxKeywords(value)
+											}
+											onChangeComplete={
+												handleMaxKeywordsChangeComplete
+											}
 										/>
 									</div>
 								</SettingsItem>
@@ -294,12 +377,16 @@ function SearchSettingsPage(): React.JSX.Element | null {
 						<Alert
 							type="warning"
 							showIcon={true}
-							description={t("settings.search.maxKeywords.billingNotice")}
+							description={t(
+								"settings.search.maxKeywords.billingNotice",
+							)}
 							className={styles.providerNotice}
 						/>
 					) : null}
 
-					{settings !== null && settings.enabled && !settings.configured ? (
+					{settings !== null &&
+					settings.enabled &&
+					!settings.configured ? (
 						<Alert
 							type="info"
 							showIcon={true}

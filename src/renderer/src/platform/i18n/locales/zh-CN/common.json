@@ -1212,7 +1212,7 @@
 			"personalization": "个性化",
 			"mcpServers": "MCP 服务器",
 			"skills": "技能",
-			"hooks": "Hooks",
+			"hooks": "钩子",
 			"documentation": "文档",
 			"godotProjects": "Godot 项目",
 			"archivedSessions": "已归档会话",
@@ -1235,8 +1235,7 @@
 			"update": "更新"
 		},
 		"hooks": {
-			"title": "Hooks",
-			"description": "在受审核的 OS 沙箱中运行确定性的会话和工具生命周期脚本。Hook 始终禁用网络。",
+			"title": "钩子",
 			"actions": {
 				"refresh": "刷新",
 				"template": "创建模板",
@@ -1251,7 +1250,7 @@
 				"created": "文件已创建",
 				"valid": "格式有效",
 				"invalid": "格式无效",
-				"handlerCount": "{{count}} 个 Hook",
+				"handlerCount": "{{count}} 个钩子",
 				"trustedCount": "{{count}} 个已信任",
 				"reviewCount": "{{count}} 个待审核",
 				"errorCount": "{{count}} 个错误",
@@ -1262,12 +1261,12 @@
 				"title": "配置编辑器"
 			},
 			"dirty": {
-				"title": "放弃未保存的 Hooks 修改？",
+				"title": "放弃未保存的钩子修改？",
 				"description": "切换配置来源会丢失当前编辑内容。",
 				"discard": "放弃修改"
 			},
 			"review": {
-				"title": "审核 Hook 命令",
+				"title": "审核钩子命令",
 				"summaryTitle": "审核已配置的命令",
 				"warning": "保存不会自动信任命令。请逐项确认事件、命令和权限范围。",
 				"trust": "信任",
@@ -1282,18 +1281,18 @@
 				"status": "状态",
 				"duration": "耗时",
 				"detail": "详情",
-				"empty": "暂无 Hook 运行记录"
+				"empty": "暂无钩子运行记录"
 			},
 			"messages": {
-				"saved": "Hooks 配置已保存，请审核命令后再启用。",
+				"saved": "钩子配置已保存，请审核命令后再启用。",
 				"reloaded": "已从磁盘重新加载。",
-				"trusted": "Hook 已信任。",
-				"disabled": "Hook 已禁用。"
+				"trusted": "钩子已信任。",
+				"disabled": "钩子已禁用。"
 			},
 			"errors": {
-				"load": "无法加载 Hooks 配置。",
-				"save": "无法保存 Hooks 配置。",
-				"trust": "无法更新 Hook 信任状态。",
+				"load": "无法加载钩子配置。",
+				"save": "无法保存钩子配置。",
+				"trust": "无法更新钩子信任状态。",
 				"invalidJson": "hooks.json 不是有效的 JSON。"
 			}
 		},

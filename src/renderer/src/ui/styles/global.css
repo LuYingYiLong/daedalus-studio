@@ -1,6 +1,7 @@
 @font-face {
 	font-family: "Mona Sans";
-	src: url("../../assets/fonts/mona-sans-webfonts/fonts/webfonts/variable/MonaSansVF[wdth,opsz,wght].woff2") format("woff2-variations");
+	src: url("../../assets/fonts/mona-sans-webfonts/fonts/webfonts/variable/MonaSansVF[wdth,opsz,wght].woff2")
+		format("woff2-variations");
 	font-weight: 200 900;
 	font-style: normal;
 	font-display: swap;
@@ -56,7 +57,8 @@
 
 @font-face {
 	font-family: "Fira Code";
-	src: url("../../assets/fonts/fira-code/FiraCode-Light.woff2") format("woff2");
+	src: url("../../assets/fonts/fira-code/FiraCode-Light.woff2")
+		format("woff2");
 	font-weight: 300;
 	font-style: normal;
 	font-display: swap;
@@ -64,7 +66,8 @@
 
 @font-face {
 	font-family: "Fira Code";
-	src: url("../../assets/fonts/fira-code/FiraCode-Regular.woff2") format("woff2");
+	src: url("../../assets/fonts/fira-code/FiraCode-Regular.woff2")
+		format("woff2");
 	font-weight: 400;
 	font-style: normal;
 	font-display: swap;
@@ -72,7 +75,8 @@
 
 @font-face {
 	font-family: "Fira Code";
-	src: url("../../assets/fonts/fira-code/FiraCode-Medium.woff2") format("woff2");
+	src: url("../../assets/fonts/fira-code/FiraCode-Medium.woff2")
+		format("woff2");
 	font-weight: 500;
 	font-style: normal;
 	font-display: swap;
@@ -80,7 +84,8 @@
 
 @font-face {
 	font-family: "Fira Code";
-	src: url("../../assets/fonts/fira-code/FiraCode-SemiBold.woff2") format("woff2");
+	src: url("../../assets/fonts/fira-code/FiraCode-SemiBold.woff2")
+		format("woff2");
 	font-weight: 600;
 	font-style: normal;
 	font-display: swap;
@@ -155,8 +160,15 @@
 	--ds-control-height-sm: 24px;
 	--ds-control-height: 28px;
 	--ds-control-height-lg: 32px;
-	--ds-font-family: "Mona Sans", "Wen Yuan Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-	--ds-font-family-code: "Fira Code", "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, "Mona Sans", "Wen Yuan Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", monospace;
+	--ds-font-family:
+		"Mona Sans", "Wen Yuan Sans SC", "Microsoft YaHei UI",
+		"Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont,
+		"Segoe UI", sans-serif;
+	--ds-font-family-code:
+		"Fira Code", "Cascadia Code", "SFMono-Regular", Consolas,
+		"Liberation Mono", Menlo, Courier, "Mona Sans", "Wen Yuan Sans SC",
+		"Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system,
+		BlinkMacSystemFont, "Segoe UI", monospace;
 	color-scheme: dark;
 	font-family: var(--ds-font-family);
 	background: transparent;
@@ -330,16 +342,17 @@ body {
 }
 
 .collapseExpandIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transform: rotate(-90deg);
-  transform-origin: center;
-  transition: transform var(--ant-motion-duration-mid) var(--ant-motion-ease-in-out);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transform: rotate(-90deg);
+	transform-origin: center;
+	transition: transform var(--ant-motion-duration-mid)
+		var(--ant-motion-ease-in-out);
 }
 
 .collapseExpandIconActive {
-  transform: rotate(0deg);
+	transform: rotate(0deg);
 }
 
 .ant-splitter-bar-dragger,
@@ -354,4 +367,21 @@ body {
 .ant-splitter-bar-dragger:active::before,
 .ant-splitter-bar-dragger-customize:active::before {
 	background: transparent !important;
+}
+
+.spinner {
+	/* 设置旋转的基点为中心，避免围绕左上角转 */
+	transform-origin: center center;
+	animation: spin 2s linear infinite;
+	min-width: 22px;
+	min-height: 22px;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
 }

@@ -1243,7 +1243,6 @@
 		},
 		"hooks": {
 			"title": "Hooks",
-			"description": "Run deterministic session and tool lifecycle scripts inside an audited OS sandbox. Hook network access is always disabled.",
 			"actions": {
 				"refresh": "Refresh",
 				"template": "Create template",

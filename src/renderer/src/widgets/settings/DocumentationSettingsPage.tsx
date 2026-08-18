@@ -611,10 +611,9 @@ function DocumentationSettingsPage(): React.JSX.Element | null {
 									rules={[{ required: true, message: t("settings.documentation.modal.branchRequired") }]}
 								>
 									<Select
-										showSearch={true}
+										showSearch={{ optionFilterProp: "label" }}
 										loading={branchesLoading}
 										placeholder={t("settings.documentation.modal.branchPlaceholder")}
-										optionFilterProp="label"
 										options={branches.map((branch: GodotDocumentationBranch) => ({
 											value: branch.name,
 											label: branch.installed

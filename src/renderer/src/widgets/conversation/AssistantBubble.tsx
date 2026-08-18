@@ -17,7 +17,12 @@ import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import MarkdownContent from "../markdown/MarkdownContent";
 import { useTimelineDisclosure } from "@/features/conversation/timeline-disclosure-state";
 import TimelineActivityGroup from "./TimelineActivityGroup";
-import { getTimelinePartKey, groupTimelineActivity, type TimelineActivityPart, type TimelineActivitySegment } from "@/domain/conversation/timeline-activity-groups";
+import {
+	getTimelinePartKey,
+	groupTimelineActivity,
+	type TimelineActivityPart,
+	type TimelineActivitySegment,
+} from "@/domain/conversation/timeline-activity-groups";
 
 export type AssistantBubbleProps = {
 	entryId?: string;
@@ -36,7 +41,11 @@ export type AssistantBubbleProps = {
 	onTerminalWheelPassThrough?: (deltaY: number) => void;
 };
 
-function createAssistantCopyText(message?: string, content?: string, bodyParts?: TimelineBodyPart[]): string {
+function createAssistantCopyText(
+	message?: string,
+	content?: string,
+	bodyParts?: TimelineBodyPart[],
+): string {
 	const explicitText: string = message ?? content ?? "";
 	if (explicitText.trim().length > 0) {
 		return explicitText;
@@ -58,7 +67,9 @@ function createAssistantCopyText(message?: string, content?: string, bodyParts?:
 				return part.prompt;
 			}
 			if (part.type === "status") {
-				return [part.title, part.details].filter((text: string): boolean => text.trim().length > 0).join("\n");
+				return [part.title, part.details]
+					.filter((text: string): boolean => text.trim().length > 0)
+					.join("\n");
 			}
 			return "";
 		})
@@ -66,22 +77,43 @@ function createAssistantCopyText(message?: string, content?: string, bodyParts?:
 		.join("\n\n");
 }
 
-function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyParts, message, elapsedTime, completionStatus, endTime, streaming = false, selectionEnabled = false, hideInlineDiff = false, onInlineDiffReview, onTerminalWheelPassThrough }: AssistantBubbleProps): React.JSX.Element {
+function AssistantBubble({
+	entryId,
+	requestId,
+	searchBlockOffset,
+	content,
+	bodyParts,
+	message,
+	elapsedTime,
+	completionStatus,
+	endTime,
+	streaming = false,
+	selectionEnabled = false,
+	hideInlineDiff = false,
+	onInlineDiffReview,
+	onTerminalWheelPassThrough,
+}: AssistantBubbleProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [copied, setCopied] = React.useState<boolean>(false);
 	const disclosurePrefix: string = entryId ?? "assistant";
-	const [summaryOpen, setSummaryOpen] = useTimelineDisclosure(`${disclosurePrefix}:summary`, false);
-	const timingLabel: string | undefined = elapsedTime === undefined
-		? undefined
-		: completionStatus === "stopped"
-			? t("chat.assistant.stoppedIn", { elapsed: elapsedTime })
-			: completionStatus === "responded"
-				? t("chat.assistant.respondedIn", { elapsed: elapsedTime })
-				: elapsedTime;
+	const [summaryOpen, setSummaryOpen] = useTimelineDisclosure(
+		`${disclosurePrefix}:summary`,
+		false,
+	);
+	const timingLabel: string | undefined =
+		elapsedTime === undefined
+			? undefined
+			: completionStatus === "stopped"
+				? t("chat.assistant.stoppedIn", { elapsed: elapsedTime })
+				: completionStatus === "responded"
+					? t("chat.assistant.respondedIn", { elapsed: elapsedTime })
+					: elapsedTime;
 
 	async function copyMessage(): Promise<void> {
 		try {
-			await copyTextToClipboard(createAssistantCopyText(message, content, bodyParts));
+			await copyTextToClipboard(
+				createAssistantCopyText(message, content, bodyParts),
+			);
 			setCopied(true);
 			window.setTimeout((): void => setCopied(false), 1200);
 		} catch (error: unknown) {
@@ -89,7 +121,11 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 		}
 	}
 
-	function renderBodyPart(part: TimelineBodyPart, index: number, keySuffix: string = getTimelinePartKey(part, index)): React.ReactNode {
+	function renderBodyPart(
+		part: TimelineBodyPart,
+		index: number,
+		keySuffix: string = getTimelinePartKey(part, index),
+	): React.ReactNode {
 		const partKey: string = `${disclosurePrefix}:${keySuffix}`;
 		if (part.type === "markdown") {
 			return (
@@ -104,21 +140,38 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 					data-message-selection-role="assistant"
 					data-message-selection-segment={`assistant:markdown:${index}`}
 				>
-					<MarkdownContent streaming={streaming} stickyCodeHeaders>{part.text}</MarkdownContent>
+					<MarkdownContent streaming={streaming} stickyCodeHeaders>
+						{part.text}
+					</MarkdownContent>
 				</div>
 			);
 		}
 
 		if (part.type === "thinking") {
-			return part.text.trim().length > 0
-				? <ThinkingPart key={partKey} part={part} disclosureKey={`${partKey}:thinking`} />
-				: null;
+			return part.text.trim().length > 0 ? (
+				<ThinkingPart
+					key={partKey}
+					part={part}
+					disclosureKey={`${partKey}:thinking`}
+				/>
+			) : null;
 		}
 
 		if (part.type === "tool") {
-			return isTerminalCommandPart(part)
-				? <TerminalPart key={partKey} part={part} disclosureKey={`${partKey}:terminal`} onScrollWheelPassThrough={onTerminalWheelPassThrough} />
-				: <ToolPart key={partKey} part={part} disclosureKey={`${partKey}:tool`} />
+			return isTerminalCommandPart(part) ? (
+				<TerminalPart
+					key={partKey}
+					part={part}
+					disclosureKey={`${partKey}:terminal`}
+					onScrollWheelPassThrough={onTerminalWheelPassThrough}
+				/>
+			) : (
+				<ToolPart
+					key={partKey}
+					part={part}
+					disclosureKey={`${partKey}:tool`}
+				/>
+			);
 		}
 
 		if (part.type === "provider_reconnect") {
@@ -133,23 +186,35 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 		}
 
 		if (part.type === "compression") {
-			return <CompressionPart key={partKey} part={part} disclosureKey={`${partKey}:compression`} />;
+			return (
+				<CompressionPart
+					key={partKey}
+					part={part}
+					disclosureKey={`${partKey}:compression`}
+				/>
+			);
 		}
 
 		if (part.type === "status") {
-			return <StatusPart key={partKey} part={part} />
+			return <StatusPart key={partKey} part={part} />;
 		}
 
 		if (part.type === "plan") {
-			return <PlanPart key={partKey} part={part} />
+			return <PlanPart key={partKey} part={part} />;
 		}
 
 		if (part.type === "inline_diff") {
-			return hideInlineDiff ? null : <InlineDiffPart key={partKey} part={part} onReview={onInlineDiffReview} />
+			return hideInlineDiff ? null : (
+				<InlineDiffPart
+					key={partKey}
+					part={part}
+					onReview={onInlineDiffReview}
+				/>
+			);
 		}
 
 		if (part.type === "image_generation") {
-			return <ImageGenerationPart key={partKey} part={part} />
+			return <ImageGenerationPart key={partKey} part={part} />;
 		}
 
 		if (part.type === "summary_start") {
@@ -163,35 +228,82 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 		);
 	}
 
-	function renderActivitySegments(parts: TimelineBodyPart[], scope: string, isTerminalSegment: boolean): React.ReactNode[] {
-		return groupTimelineActivity(parts, streaming, isTerminalSegment).map((segment: TimelineActivitySegment): React.ReactNode => {
-			if (segment.type === "activity_group") {
-				const segmentKey: string = `${segment.id}:${segment.startIndex}`;
-				return (
-					<TimelineActivityGroup
-						key={`${disclosurePrefix}:${scope}:${segmentKey}`}
-						group={segment}
-						disclosureKey={`${disclosurePrefix}:${scope}:${segmentKey}`}
-						renderPart={(part: TimelineActivityPart, index: number, childKey: string): React.ReactNode => renderBodyPart(part, index, `${scope}:${segmentKey}:${childKey}`)}
-					/>
+	function renderActivitySegments(
+		parts: TimelineBodyPart[],
+		scope: string,
+		isTerminalSegment: boolean,
+	): React.ReactNode[] {
+		return groupTimelineActivity(parts, streaming, isTerminalSegment).map(
+			(segment: TimelineActivitySegment): React.ReactNode => {
+				if (segment.type === "activity_group") {
+					const segmentKey: string = `${segment.id}:${segment.startIndex}`;
+					return (
+						<TimelineActivityGroup
+							key={`${disclosurePrefix}:${scope}:${segmentKey}`}
+							group={segment}
+							disclosureKey={`${disclosurePrefix}:${scope}:${segmentKey}`}
+							renderPart={(
+								part: TimelineActivityPart,
+								index: number,
+								childKey: string,
+							): React.ReactNode =>
+								renderBodyPart(
+									part,
+									index,
+									`${scope}:${segmentKey}:${childKey}`,
+								)
+							}
+						/>
+					);
+				}
+				return renderBodyPart(
+					segment.part,
+					segment.index,
+					`${scope}:${getTimelinePartKey(segment.part, segment.index)}`,
 				);
-			}
-			return renderBodyPart(segment.part, segment.index, `${scope}:${getTimelinePartKey(segment.part, segment.index)}`);
-		});
+			},
+		);
 	}
 
 	function renderBodyParts(parts: TimelineBodyPart[]): React.ReactNode {
-		const summaryStartIndex: number = parts.findIndex((part: TimelineBodyPart): boolean => part.type === "summary_start");
+		const summaryStartIndex: number = parts.findIndex(
+			(part: TimelineBodyPart): boolean => part.type === "summary_start",
+		);
 
 		if (summaryStartIndex < 0) {
 			return renderActivitySegments(parts, "main", true);
 		}
 
-		const summaryStartPart: Extract<TimelineBodyPart, { type: "summary_start" }> = parts[summaryStartIndex] as Extract<TimelineBodyPart, { type: "summary_start" }>;
-		const foldedParts: TimelineBodyPart[] = parts.slice(0, summaryStartIndex);
-		const visibleParts: TimelineBodyPart[] = parts.slice(summaryStartIndex + 1);
-		const foldedChildren: React.ReactNode[] = renderActivitySegments(foldedParts, "summary-before", false).filter((child: React.ReactNode): boolean => child !== null && child !== undefined);
-		const visibleChildren: React.ReactNode[] = renderActivitySegments(visibleParts, "summary-after", true).filter((child: React.ReactNode): boolean => child !== null && child !== undefined);
+		const summaryStartPart: Extract<
+			TimelineBodyPart,
+			{ type: "summary_start" }
+		> = parts[summaryStartIndex] as Extract<
+			TimelineBodyPart,
+			{ type: "summary_start" }
+		>;
+		const foldedParts: TimelineBodyPart[] = parts.slice(
+			0,
+			summaryStartIndex,
+		);
+		const visibleParts: TimelineBodyPart[] = parts.slice(
+			summaryStartIndex + 1,
+		);
+		const foldedChildren: React.ReactNode[] = renderActivitySegments(
+			foldedParts,
+			"summary-before",
+			false,
+		).filter(
+			(child: React.ReactNode): boolean =>
+				child !== null && child !== undefined,
+		);
+		const visibleChildren: React.ReactNode[] = renderActivitySegments(
+			visibleParts,
+			"summary-after",
+			true,
+		).filter(
+			(child: React.ReactNode): boolean =>
+				child !== null && child !== undefined,
+		);
 
 		return (
 			<>
@@ -202,21 +314,34 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 						bordered={false}
 						destroyOnHidden={true}
 						ghost
-						activeKey={summaryOpen ? [summaryStartPart.stepRunId || "summary-process"] : []}
+						activeKey={
+							summaryOpen
+								? [
+										summaryStartPart.stepRunId ||
+											"summary-process",
+									]
+								: []
+						}
 						onChange={(keys: string | string[]): void => {
-							setSummaryOpen((Array.isArray(keys) ? keys : [keys]).length > 0);
+							setSummaryOpen(
+								(Array.isArray(keys) ? keys : [keys]).length >
+									0,
+							);
 						}}
-						expandIcon={({ isActive }) => (
-							<span className={`collapseExpandIcon ${isActive ? "collapseExpandIconActive" : ""}`}>
-								<Icon name="arrow-down" />
-							</span>
-						)}
 						items={[
 							{
-								key: summaryStartPart.stepRunId || "summary-process",
-								label: summaryStartPart.foldTitle || t("chat.assistant.process"),
-								children: <div className={styles.summaryContent}>{foldedChildren}</div>
-							}
+								key:
+									summaryStartPart.stepRunId ||
+									"summary-process",
+								label:
+									summaryStartPart.foldTitle ||
+									t("chat.assistant.process"),
+								children: (
+									<div className={styles.summaryContent}>
+										{foldedChildren}
+									</div>
+								),
+							},
 						]}
 					/>
 				) : null}
@@ -226,10 +351,17 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 	}
 
 	return (
-		<article id={entryId} className={styles.root} data-entry-id={entryId} data-entry-kind="assistant">
+		<article
+			id={entryId}
+			className={styles.root}
+			data-entry-id={entryId}
+			data-entry-kind="assistant"
+		>
 			{timingLabel !== undefined ? (
 				<div className={styles.timingRow}>
-					<Typography.Text type="secondary">{timingLabel}</Typography.Text>
+					<Typography.Text type="secondary">
+						{timingLabel}
+					</Typography.Text>
 					<Divider size="small" className={styles.antDivider} />
 				</div>
 			) : null}
@@ -246,12 +378,21 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 						data-message-selection-role="assistant"
 						data-message-selection-segment="assistant:content"
 					>
-						<MarkdownContent streaming={streaming} stickyCodeHeaders>{message ?? content ?? ""}</MarkdownContent>
+						<MarkdownContent
+							streaming={streaming}
+							stickyCodeHeaders
+						>
+							{message ?? content ?? ""}
+						</MarkdownContent>
 					</div>
 				)}
 			</div>
 			<div className={styles.toolbar}>
-				<Tooltip title={copied ? t("chat.common.copied") : t("chat.common.copy")}>
+				<Tooltip
+					title={
+						copied ? t("chat.common.copied") : t("chat.common.copy")
+					}
+				>
 					<Button
 						type="text"
 						size="small"
@@ -264,7 +405,9 @@ function AssistantBubble({ entryId, requestId, searchBlockOffset, content, bodyP
 					/>
 				</Tooltip>
 				{endTime ? (
-					<Typography.Text type="secondary">{endTime}</Typography.Text>
+					<Typography.Text type="secondary">
+						{endTime}
+					</Typography.Text>
 				) : null}
 			</div>
 		</article>
