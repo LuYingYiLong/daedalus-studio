@@ -19,4 +19,11 @@ describe("browser service security boundary", () => {
 		expect(source).toContain("SUPPORTED_PERMISSIONS.has(permission)");
 		expect(source).toContain("setDevicePermissionHandler");
 	});
+
+	it("captures a safe visual fallback before renderer overlays occlude the native view", () => {
+		const source = readRepoFile("src", "main", "services", "browser", "browser-service.ts");
+		expect(source).toContain('ipcMain.handle("browser:view-capture"');
+		expect(source).toContain("record.view.webContents.capturePage()");
+		expect(source).toContain("this.requireOwnedRecord(event, payload)");
+	});
 });

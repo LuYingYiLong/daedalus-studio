@@ -702,7 +702,6 @@
 			"credentials": "选择已保存的账号",
 			"more": "更多浏览器操作"
 		},
-		"actions": { "cancel": "取消" },
 		"empty": { "description": "输入网址以打开网页" },
 		"errors": {
 			"navigate": "无法打开该网址",
@@ -718,7 +717,7 @@
 		"annotation": {
 			"placeholder": "为所选网页元素添加评论（可选）",
 			"add": "添加到上下文",
-			"added": "网页元素已添加到上下文"
+			"addFailed": "无法将网页元素添加到上下文"
 		},
 		"history": { "title": "历史记录", "clear": "清除历史记录" },
 		"downloads": {
@@ -977,7 +976,8 @@
 			"pathCopied": "路径已复制",
 			"revealInExplorer": "在资源管理器中打开",
 			"savedAs": "文件已保存",
-			"noWorkspace": "请先选择工作区，再打开此文件"
+			"noWorkspace": "请先选择工作区，再打开此文件",
+			"outsideWorkspace": "该文件不属于当前项目的源文件夹"
 		},
 		"mermaid": {
 			"title": "Mermaid 图表",

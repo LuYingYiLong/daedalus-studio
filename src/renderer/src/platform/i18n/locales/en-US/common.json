@@ -704,7 +704,6 @@
 			"credentials": "Choose a saved account",
 			"more": "More browser actions"
 		},
-		"actions": { "cancel": "Cancel" },
 		"empty": { "description": "Enter a URL to open a page" },
 		"errors": {
 			"navigate": "Could not open this URL",
@@ -720,7 +719,7 @@
 		"annotation": {
 			"placeholder": "Comment on the selected web element (optional)",
 			"add": "Add to context",
-			"added": "Web element added to context"
+			"addFailed": "Could not add the web element to context"
 		},
 		"history": { "title": "History", "clear": "Clear history" },
 		"downloads": {
@@ -979,7 +978,8 @@
 			"pathCopied": "Path copied",
 			"revealInExplorer": "Show in File Explorer",
 			"savedAs": "File saved",
-			"noWorkspace": "Select a workspace before opening this file"
+			"noWorkspace": "Select a workspace before opening this file",
+			"outsideWorkspace": "This file is not inside a source folder of the current project"
 		},
 		"mermaid": {
 			"title": "Mermaid diagram",

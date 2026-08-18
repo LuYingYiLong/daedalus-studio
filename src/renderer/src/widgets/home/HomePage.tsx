@@ -2369,9 +2369,11 @@ function HomePage({
 														onStarterSelect={handleHomeStarterSelect}
 													/>
 												) : activeSessionId !== null ? (
-													<MarkdownResourceActionsProvider
-														value={{
-															workspaceRoot: workspaceForActions?.rootPath ?? null,
+												<MarkdownResourceActionsProvider
+													value={{
+														workspaceRoots: workspaceForActions === null
+															? []
+															: [workspaceForActions.rootPath, ...workspaceForActions.sourceFolders.map((sourceFolder): string => sourceFolder.path)],
 															godotExecutablePath: effectiveGodotLaunchExecutablePath,
 															currentWorkspaceLaunch: workspaceForActions === null ? null : selectedLaunchTarget,
 															launchTargets: workspaceLaunchTargets

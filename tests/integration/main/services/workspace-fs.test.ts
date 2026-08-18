@@ -210,11 +210,13 @@ describe("workspace-fs", () => {
 		]);
 	});
 
-	it("opens and reveals only files inside the workspace", async () => {
+	it("opens files and directories inside the workspace while keeping reveal file-only", async () => {
 		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
 		const filePath: string = join(root, "README.md");
+		const directoryPath: string = join(root, "docs");
 		const outsideRoot: string = mkdtempSync(join(tmpdir(), "daedalus-studio-outside-"));
 		await writeFile(filePath, "# Daedalus", "utf8");
+		await mkdir(directoryPath);
 		const openedPaths: string[] = [];
 		const revealedPaths: string[] = [];
 
@@ -222,11 +224,16 @@ describe("workspace-fs", () => {
 			openedPaths.push(path);
 			return "";
 		})).resolves.toEqual({ opened: true });
+		await expect(openWorkspaceFile({ workspaceRoot: root, filePath: directoryPath }, async (path: string): Promise<string> => {
+			openedPaths.push(path);
+			return "";
+		})).resolves.toEqual({ opened: true });
 		await expect(revealWorkspaceFile({ workspaceRoot: root, filePath }, (path: string): void => {
 			revealedPaths.push(path);
 		})).resolves.toEqual({ revealed: true });
 		const canonicalFilePath: string = await realpath(filePath);
-		expect(openedPaths).toEqual([canonicalFilePath]);
+		const canonicalDirectoryPath: string = await realpath(directoryPath);
+		expect(openedPaths).toEqual([canonicalFilePath, canonicalDirectoryPath]);
 		expect(revealedPaths).toEqual([canonicalFilePath]);
 		await expect(openWorkspaceFile({ workspaceRoot: root, filePath: join(outsideRoot, "README.md") }, async (): Promise<string> => "")).rejects.toThrow("outside workspace");
 	});

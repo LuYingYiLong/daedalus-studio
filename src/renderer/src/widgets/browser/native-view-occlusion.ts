@@ -7,7 +7,7 @@ let scheduledFrame: number | null = null;
 
 function readOcclusion(): boolean {
 	const overlays: Element[] = [...document.querySelectorAll(
-		".ant-modal-wrap, .ant-drawer-mask, .ant-drawer-content-wrapper, .ant-dropdown"
+		".ant-modal-wrap, .ant-drawer-mask, .ant-drawer-content-wrapper, .ant-dropdown, .ant-popover"
 	)];
 	return overlays.some((overlay: Element): boolean => {
 		return overlay instanceof HTMLElement

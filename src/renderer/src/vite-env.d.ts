@@ -227,6 +227,7 @@ declare global {
 			action: (browserId: string, action: "back" | "forward" | "reload" | "stop") => Promise<BrowserViewState>;
 			inspect: (browserId: string) => Promise<void>;
 			getState: (browserId: string) => Promise<BrowserViewState>;
+			capture: (browserId: string) => Promise<string | null>;
 			onStateChanged: (callback: (state: BrowserViewState) => void) => () => void;
 			onElementSelected: (callback: (event: { browserId: string; snapshot: BrowserElementSnapshot }) => void) => () => void;
 			onInspectCancelled: (callback: (event: { browserId: string }) => void) => () => void;

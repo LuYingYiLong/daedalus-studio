@@ -29,6 +29,7 @@ const SNAPSHOT_FUNCTION: string = `function () {
   for (const attribute of Array.from(element.attributes || []).slice(0, 20)) {
 	if (!/^on/i.test(attribute.name) && !['style', 'value', 'srcdoc'].includes(attribute.name.toLowerCase())) attributes[attribute.name] = attribute.value.slice(0, 500);
   }
+  const rect = element.getBoundingClientRect();
   return {
     url: location.href,
     pageTitle: document.title || '',
@@ -37,7 +38,13 @@ const SNAPSHOT_FUNCTION: string = `function () {
     role: element.getAttribute('role') || '',
     accessibleName: element.getAttribute('aria-label') || element.getAttribute('alt') || element.getAttribute('title') || '',
     selectedText: (element.innerText || element.textContent || '').trim().slice(0, 8000),
-    attributes
+    attributes,
+    viewportRect: {
+      x: Math.max(0, rect.x),
+      y: Math.max(0, rect.y),
+      width: Math.max(0, rect.width),
+      height: Math.max(0, rect.height)
+    }
   };
 }`;
 

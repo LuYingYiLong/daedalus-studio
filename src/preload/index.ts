@@ -338,6 +338,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			action: (browserId: string, action: "back" | "forward" | "reload" | "stop"): Promise<BrowserViewState> => ipcRenderer.invoke("browser:view-action", { browserId, action }),
 			inspect: (browserId: string): Promise<void> => ipcRenderer.invoke("browser:view-inspect", { browserId }),
 			getState: (browserId: string): Promise<BrowserViewState> => ipcRenderer.invoke("browser:view-state", { browserId }),
+			capture: (browserId: string): Promise<string | null> => ipcRenderer.invoke("browser:view-capture", { browserId }),
 			onStateChanged: (callback: (state: BrowserViewState) => void): (() => void) => {
 				const handler = (_event: Electron.IpcRendererEvent, state: BrowserViewState): void => callback(state);
 				ipcRenderer.on("browser:view-state-changed", handler);

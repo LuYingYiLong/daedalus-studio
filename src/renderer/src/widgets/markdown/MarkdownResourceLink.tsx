@@ -7,6 +7,7 @@ import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import { FileIcon } from "./file-icon";
 import { useMarkdownResourceActions, type MarkdownWorkspaceLaunchTargetId } from "./markdown-resource-actions";
 import { formatMarkdownResourceLabel, parseMarkdownResourceHref, type MarkdownResourceRef } from "@/domain/markdown/markdown-resource-path";
+import { resolveMarkdownResourceWorkspaceRoot } from "@/domain/markdown/markdown-resource-workspace";
 import styles from "./MarkdownResourceLink.module.css";
 
 type MarkdownResourceLinkProps = {
@@ -40,7 +41,7 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 	const { t } = useTranslation();
 	const actions = useMarkdownResourceActions();
 	const [menuOpen, setMenuOpen] = useState<boolean>(false);
-	const hasWorkspace: boolean = actions?.workspaceRoot !== null && actions?.workspaceRoot !== undefined;
+	const hasWorkspace: boolean = (actions?.workspaceRoots.length ?? 0) > 0;
 	const resourceLabel: React.ReactNode = typeof children === "string"
 		? formatMarkdownResourceLabel(resource, children)
 		: children;
@@ -55,11 +56,19 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 	}
 
 	function workspaceFileParams(): { workspaceRoot: string; filePath: string } | null {
-		if (!hasWorkspace || actions?.workspaceRoot === null || actions?.workspaceRoot === undefined) {
+		if (!hasWorkspace || actions === null) {
 			message.warning(t("chat.markdownResource.noWorkspace"));
 			return null;
 		}
-		return { workspaceRoot: actions.workspaceRoot, filePath: resource.absolutePath };
+		const workspaceRoot: string | null = resolveMarkdownResourceWorkspaceRoot(
+			resource.absolutePath,
+			actions.workspaceRoots,
+		);
+		if (workspaceRoot === null) {
+			message.error(t("chat.markdownResource.outsideWorkspace"));
+			return null;
+		}
+		return { workspaceRoot, filePath: resource.absolutePath };
 	}
 
 	function openFile(): Promise<void> {

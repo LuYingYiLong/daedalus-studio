@@ -8,7 +8,7 @@ export type MarkdownWorkspaceLaunchTarget = {
 };
 
 export type MarkdownResourceActionsContextValue = {
-	workspaceRoot: string | null;
+	workspaceRoots: readonly string[];
 	godotExecutablePath: string | null;
 	currentWorkspaceLaunch: MarkdownWorkspaceLaunchTarget | null;
 	launchTargets: readonly MarkdownWorkspaceLaunchTarget[];

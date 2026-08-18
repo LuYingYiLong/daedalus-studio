@@ -97,6 +97,7 @@ export class BrowserService {
 		ipcMain.handle("browser:view-action", (event, payload: unknown): BrowserViewState => this.runNavigationAction(event, payload));
 		ipcMain.handle("browser:view-inspect", async (event, payload: unknown): Promise<void> => await this.toggleInspect(event, payload));
 		ipcMain.handle("browser:view-state", (event, payload: unknown): BrowserViewState => ({ ...this.requireOwnedRecord(event, payload).state }));
+		ipcMain.handle("browser:view-capture", async (event, payload: unknown): Promise<string | null> => await this.captureView(event, payload));
 
 		ipcMain.handle("browser:history-list", async (event) => { this.assertStudioSender(event); return await this.dataStore.listHistory(); });
 		ipcMain.handle("browser:history-clear", async (event): Promise<void> => { this.assertStudioSender(event); await this.dataStore.clearHistory(); });
@@ -198,6 +199,13 @@ export class BrowserService {
 		if (typeof payload !== "object" || payload === null || Array.isArray(payload) || typeof (payload as Record<string, unknown>).visible !== "boolean") throw new Error("browser_visibility_invalid");
 		record.visible = (payload as Record<string, unknown>).visible as boolean;
 		record.view?.setVisible(record.visible);
+	}
+
+	private async captureView(event: IpcMainInvokeEvent, payload: unknown): Promise<string | null> {
+		const record: BrowserViewRecord = this.requireOwnedRecord(event, payload);
+		if (record.view === null || record.view.webContents.isDestroyed()) return null;
+		const image = await record.view.webContents.capturePage();
+		return image.isEmpty() ? null : image.toDataURL();
 	}
 
 	private async navigate(event: IpcMainInvokeEvent, payload: unknown): Promise<BrowserViewState> {

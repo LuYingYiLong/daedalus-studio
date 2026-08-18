@@ -12,4 +12,10 @@ describe("BrowserToolbar", () => {
 		expect(source).toContain("{state.url === null ? null : (\n\t\t\t\t<Tooltip title={labels.inspect}");
 		expect(source).toContain("{state.url === null || !hasCredentials ? null : (\n\t\t\t\t<Tooltip title={labels.credentials}");
 	});
+
+	it("keeps the reload action and icon stable while a page is loading", () => {
+		expect(source).toContain('icon={<Icon name="reload" />}');
+		expect(source).toContain('onClick={(): void => onAction("reload")}');
+		expect(source).not.toContain('state.isLoading ? "stop" : "reload"');
+	});
 });

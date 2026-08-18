@@ -85,6 +85,12 @@ export type BrowserElementSnapshot = {
 	accessibleName: string;
 	selectedText: string;
 	attributes: Record<string, string>;
+	viewportRect: {
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+	};
 };
 
 export type BrowserSettings = {

@@ -170,6 +170,15 @@ async function resolveWorkspaceFile(params: WorkspaceFsFileParams): Promise<{ ro
 	return resolvedFile;
 }
 
+async function resolveWorkspaceOpenableEntry(params: WorkspaceFsFileParams): Promise<{ root: string; target: string; relativePath: string }> {
+	const resolvedEntry = await resolveWorkspaceEntry(params);
+	const entryStats = await stat(resolvedEntry.target);
+	if (!entryStats.isFile() && !entryStats.isDirectory()) {
+		throw new Error("Workspace resource is not a file or directory.");
+	}
+	return resolvedEntry;
+}
+
 async function resolveWorkspaceEntry(params: WorkspaceFsFileParams): Promise<{ root: string; target: string; relativePath: string }> {
 	const resolvedEntry = assertWorkspaceFile(params.workspaceRoot, params.filePath);
 	const [rootRealPath, targetRealPath] = await Promise.all([realpath(resolvedEntry.root), realpath(resolvedEntry.target)]);
@@ -729,8 +738,8 @@ export async function openWorkspaceFile(
 	params: WorkspaceFsFileParams,
 	openPath: (path: string) => Promise<string> = shell.openPath
 ): Promise<WorkspaceFsOpenFileResult> {
-	const resolvedFile = await resolveWorkspaceFile(params);
-	const openError: string = await openPath(resolvedFile.target);
+	const resolvedEntry = await resolveWorkspaceOpenableEntry(params);
+	const openError: string = await openPath(resolvedEntry.target);
 	if (openError.trim().length > 0) {
 		throw new Error(openError);
 	}
