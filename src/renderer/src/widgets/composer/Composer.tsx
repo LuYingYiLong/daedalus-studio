@@ -107,6 +107,34 @@ const ADD_WORKSPACE_KEY: string = "workspace:add";
 const EMPTY_CONTEXT_ITEMS: AdditionalContextItem[] = [];
 const CONTEXT_USAGE_REFRESH_INTERVAL_MS: number = 5_000;
 
+function localizeContextCompressionReason(reason: string | null | undefined, t: TFunction<"common">): string | null {
+	if (reason === undefined || reason === null || reason.trim().length === 0) {
+		return null;
+	}
+
+	const knownReasons: Record<string, string> = {
+		"No active session": "composer.contextUsage.compressDisabled.noActiveSession",
+		"A run is active": "composer.contextUsage.compressDisabled.activeRun",
+		"Not enough messages": "composer.contextUsage.compressDisabled.notEnoughMessages",
+		"Protected context blocks cannot be compressed": "composer.contextUsage.compressDisabled.protectedBlocks",
+		"No new compressible messages": "composer.contextUsage.compressDisabled.noCompressibleMessages",
+		"No matching context blocks": "composer.contextUsage.compressDisabled.noMatchingBlocks"
+	};
+	const translationKey: string | undefined = knownReasons[reason];
+	if (translationKey !== undefined) {
+		return t(translationKey);
+	}
+
+	const apiKeySuffix: string = " API key not configured";
+	if (reason.endsWith(apiKeySuffix)) {
+		return t("composer.contextUsage.compressDisabled.providerApiKey", {
+			provider: reason.slice(0, -apiKeySuffix.length)
+		});
+	}
+
+	return reason;
+}
+
 type ComposerPlaceholderKey =
 	| "composer.placeholders.ask"
 	| "composer.placeholders.agent"
@@ -658,7 +686,7 @@ function Composer({
 	const compressDisabledReason: string | null = isSending
 		? t("composer.contextUsage.compressDisabled.sending")
 		: contextUsage?.canCompress === false
-			? contextUsage.compressReason ?? t("composer.contextUsage.compressDisabled.unavailable")
+			? localizeContextCompressionReason(contextUsage.compressReason, t) ?? t("composer.contextUsage.compressDisabled.unavailable")
 			: null;
 
 	useEffect((): void => {

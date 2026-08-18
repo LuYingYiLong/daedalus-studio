@@ -521,7 +521,14 @@
 			},
 			"compressDisabled": {
 				"sending": "A message is being sent",
-				"unavailable": "Compression unavailable"
+				"unavailable": "Compression unavailable",
+				"noActiveSession": "No active session",
+				"activeRun": "A run is active",
+				"notEnoughMessages": "Not enough messages",
+				"protectedBlocks": "Protected context blocks cannot be compressed",
+				"noCompressibleMessages": "No new compressible messages",
+				"noMatchingBlocks": "No matching context blocks",
+				"providerApiKey": "{{provider}} API key not configured"
 			},
 			"errors": {
 				"estimate": "Context estimate failed"
@@ -1698,7 +1705,7 @@
 			"apiKey": "API Key",
 			"enterApiKey": "Enter API key",
 			"baseUrlHints": {
-				"openaiCompatible": "OpenAI-compatible services usually require a version path such as /v1; for AIHub, use https://aihub.top/v1."
+				"openaiCompatible": "Follow the provider's documentation when entering the Base URL. It may be a root URL, a versioned path such as /v1, or another API prefix; Daedalus appends the endpoint after it."
 			},
 			"modelListSource": "Model list source: {{source}}",
 			"models": "Models",
@@ -1789,7 +1796,7 @@
 					"authentication": "Authentication failed. Check that the API key is valid and does not include a Bearer prefix.",
 					"permission": "The provider denied access for this key. Check model permissions, groups, quota, or expiry.",
 					"rate_limited": "The provider is rate limiting requests. Try again later.",
-					"models_endpoint": "The model-list endpoint is unavailable. Check that the Base URL includes the correct version path; OpenAI-compatible services commonly require /v1.",
+					"models_endpoint": "The model-list endpoint is unavailable. Check the Base URL and API prefix against the provider's documentation; some relays do not expose /models, so you can save the credentials and add the model manually.",
 					"response_format": "The API responded, but its model list is not in the OpenAI data[] format Daedalus recognizes. Save the credentials and add the model manually.",
 					"network": "Daedalus could not reach the provider. Check your network, proxy, DNS, and Base URL.",
 					"upstream": "The provider could not complete the model-list request. Check its service status and try again."

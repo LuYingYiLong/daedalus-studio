@@ -519,7 +519,14 @@
 			},
 			"compressDisabled": {
 				"sending": "正在发送消息",
-				"unavailable": "暂不可压缩"
+				"unavailable": "暂不可压缩",
+				"noActiveSession": "当前没有活动会话",
+				"activeRun": "当前会话正在运行",
+				"notEnoughMessages": "消息数量不足",
+				"protectedBlocks": "存在受保护的上下文块，无法压缩",
+				"noCompressibleMessages": "没有新的可压缩消息",
+				"noMatchingBlocks": "没有匹配的上下文块",
+				"providerApiKey": "{{provider}} API key 未配置"
 			},
 			"errors": {
 				"estimate": "上下文估算失败"
@@ -1691,7 +1698,7 @@
 			"apiKey": "API Key",
 			"enterApiKey": "输入 API Key",
 			"baseUrlHints": {
-				"openaiCompatible": "OpenAI 兼容服务通常需要包含版本路径，例如 /v1；AIHub 请使用 https://aihub.top/v1。"
+				"openaiCompatible": "请以供应商文档为准填写 Base URL。它可以是根地址、带版本路径（如 /v1）的地址，或其他 API 前缀；Daedalus 会在其后追加对应端点。"
 			},
 			"modelListSource": "模型列表来源：{{source}}",
 			"models": "模型",
@@ -1782,7 +1789,7 @@
 					"authentication": "身份验证失败。请检查 API Key 是否有效，且不要填写 Bearer 前缀。",
 					"permission": "供应商拒绝了此 Key 的访问。请检查模型权限、分组、额度或有效期。",
 					"rate_limited": "供应商当前限制了请求频率，请稍后重试。",
-					"models_endpoint": "无法访问模型列表端点。请确认 Base URL 包含正确的版本路径，OpenAI 兼容服务通常需要 /v1。",
+					"models_endpoint": "无法访问模型列表端点。请根据供应商文档检查 Base URL 及其 API 前缀；部分中转站不提供 /models，此时可以保存凭据后手动添加模型。",
 					"response_format": "API 已响应，但模型列表不是 Daedalus 可识别的 OpenAI data[] 格式。可以保存凭据后手动添加模型。",
 					"network": "无法连接到供应商。请检查网络、代理、DNS 和 Base URL。",
 					"upstream": "供应商暂时无法完成模型列表请求，请检查服务状态后重试。"

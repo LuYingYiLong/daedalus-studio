@@ -15,11 +15,14 @@ function CreateBranchDialog({
 	onClose,
 	onNewBranchNameChange,
 	onNewBranchStartPointChange,
-	onCreate
+	onCreate,
 }: CreateBranchDialogProps): JSX.Element {
 	const { t } = useTranslation();
 	const isBranchOperationRunning: boolean = branchOperation !== null;
-	const canCreateBranch: boolean = hasWorkspace && newBranchName.trim().length > 0 && !isBranchOperationRunning;
+	const canCreateBranch: boolean =
+		hasWorkspace &&
+		newBranchName.trim().length > 0 &&
+		!isBranchOperationRunning;
 
 	return (
 		<Modal
@@ -31,10 +34,15 @@ function CreateBranchDialog({
 			confirmLoading={branchOperation === "create"}
 			okButtonProps={{ disabled: !canCreateBranch }}
 			cancelButtonProps={{ disabled: isBranchOperationRunning }}
+			className={styles.modal}
 		>
 			<div className={styles.createBranchDialogBody}>
 				{errorMessage !== null ? (
-					<Alert type="error" showIcon={true} description={errorMessage} />
+					<Alert
+						type="error"
+						showIcon={true}
+						description={errorMessage}
+					/>
 				) : null}
 				<Input
 					value={newBranchName}
@@ -59,7 +67,10 @@ function CreateBranchDialog({
 						onNewBranchStartPointChange(event.target.value);
 					}}
 				/>
-				<Typography.Text type="secondary" className={styles.createBranchHint}>
+				<Typography.Text
+					type="secondary"
+					className={styles.createBranchHint}
+				>
 					{t("git.createBranch.hint")}
 				</Typography.Text>
 			</div>
