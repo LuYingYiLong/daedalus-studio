@@ -1,7 +1,7 @@
 import { Alert, Button, Dropdown, Input, message, Space } from "antd";
 import type { MenuProps } from "antd";
 import type * as MonacoNamespace from "monaco-editor";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FileTabPreferences } from "@/domain/session/session-layout";
 import { createContextId } from "@/features/workspace/controllers/context-helpers";
@@ -60,6 +60,15 @@ type MonacoFileEditorProps = {
 	bottomSafeArea: number;
 	onContentChange: (tab: FileTabPreferences, content: string) => void;
 	onAddContext: (item: AdditionalContextItem) => void;
+	editorHandleRef?: React.Ref<MonacoFileEditorHandle>;
+	ariaLabel?: string;
+	readOnly?: boolean;
+	enableSelectionTools?: boolean;
+};
+
+export type MonacoFileEditorHandle = {
+	format: () => Promise<void>;
+	focus: () => void;
 };
 
 const MAX_SELECTION_CHARS: number = 8000;
@@ -306,7 +315,11 @@ export function MonacoFileEditor({
 	workspace,
 	bottomSafeArea,
 	onContentChange,
-	onAddContext
+	onAddContext,
+	editorHandleRef,
+	ariaLabel,
+	readOnly = false,
+	enableSelectionTools = true
 }: MonacoFileEditorProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [messageApi, messageHolder] = message.useMessage();
@@ -325,6 +338,13 @@ export function MonacoFileEditor({
 	const [contextMenuPosition, setContextMenuPosition] = useState<ContextMenuPosition | null>(null);
 	const contextMenuSelectionRef = useRef<MonacoNamespace.Selection | null>(null);
 	const ensureLanguageWorker = useCallback((label: string): Promise<void> => ensureLanguageWorkerLoaded(label), []);
+
+	useImperativeHandle(editorHandleRef, (): MonacoFileEditorHandle => ({
+		format: async (): Promise<void> => {
+			await editorRef.current?.getAction("editor.action.formatDocument")?.run();
+		},
+		focus: (): void => editorRef.current?.focus()
+	}), []);
 
 	useEffect((): (() => void) | undefined => {
 		const container: HTMLDivElement | null = editorContainerNode;
@@ -353,7 +373,7 @@ export function MonacoFileEditor({
 				defineDaedalusThemes(monaco);
 				const editor: MonacoNamespace.editor.IStandaloneCodeEditor = monaco.editor.create(container, {
 					automaticLayout: true,
-					ariaLabel: t("files.editorAriaLabel"),
+					ariaLabel: ariaLabel ?? t("files.editorAriaLabel"),
 					autoIndent: "full",
 					bracketPairColorization: { enabled: true },
 					contextmenu: false,
@@ -363,6 +383,7 @@ export function MonacoFileEditor({
 					lineHeight: 22,
 					lineNumbers: "on",
 					minimap: { enabled: false },
+					readOnly,
 					padding: { top: 12, bottom: 24 },
 					renderWhitespace: "selection",
 					scrollBeyondLastLine: false,
@@ -407,7 +428,11 @@ export function MonacoFileEditor({
 			for (const model of modelsRef.current.values()) model.dispose();
 			modelsRef.current.clear();
 		};
-	}, [editorContainerNode, t]);
+	}, [ariaLabel, editorContainerNode, t]);
+
+	useEffect((): void => {
+		editorRef.current?.updateOptions({ readOnly });
+	}, [readOnly]);
 
 	useEffect((): void => {
 		const openTabKeys: Set<string> = new Set(tabKeys);
@@ -452,6 +477,10 @@ export function MonacoFileEditor({
 	}, [activeBuffer, activeTab, editorGeneration, ensureLanguageWorker, monacoReady, onContentChange, panelKey]);
 
 	const updateSelection = useCallback((): void => {
+		if (!enableSelectionTools) {
+			setSelection(null);
+			return;
+		}
 		const editor: MonacoNamespace.editor.IStandaloneCodeEditor | null = editorRef.current;
 		const model: MonacoNamespace.editor.ITextModel | null = editor?.getModel() ?? null;
 		const range: MonacoNamespace.Selection | null = editor?.getSelection() ?? null;
@@ -477,7 +506,7 @@ export function MonacoFileEditor({
 			top: Math.max(8, (anchorPosition?.top ?? 38) - 38),
 			left: Math.min(Math.max(8, anchorPosition?.left ?? 8), Math.max(8, (editorNode?.clientWidth ?? 240) - 240))
 		});
-	}, [activeBuffer, activeTab]);
+	}, [activeBuffer, activeTab, enableSelectionTools]);
 
 	useEffect((): (() => void) | undefined => {
 		const editor: MonacoNamespace.editor.IStandaloneCodeEditor | null = editorRef.current;
@@ -495,7 +524,7 @@ export function MonacoFileEditor({
 	}, [activeTab?.key, editorGeneration, monacoReady, updateSelection]);
 
 	const addSelectionContext = useCallback((comment: string): void => {
-		if (selection === null || activeTab === null || workspace === null) return;
+		if (!enableSelectionTools || selection === null || activeTab === null || workspace === null) return;
 		const resourcePath: string = `res://${normalizeRelativePath(activeTab.relativePath)}`;
 		onAddContext({
 			id: createContextId(),
@@ -521,7 +550,7 @@ export function MonacoFileEditor({
 		setCommenting(false);
 		setAnnotation("");
 		void messageApi.success(t("files.contextAdded"));
-	}, [activeTab, messageApi, onAddContext, selection, t, workspace]);
+	}, [activeTab, enableSelectionTools, messageApi, onAddContext, selection, t, workspace]);
 
 	const handleEditorContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>): void => {
 		const editor: MonacoNamespace.editor.IStandaloneCodeEditor | null = editorRef.current;
@@ -635,9 +664,9 @@ export function MonacoFileEditor({
 					aria-hidden="true"
 				/>
 			</Dropdown> : null}
-			<div ref={editorContainerRef} className={styles.monacoEditor} aria-label={t("files.editorAriaLabel")} />
+			<div ref={editorContainerRef} className={styles.monacoEditor} aria-label={ariaLabel ?? t("files.editorAriaLabel")} />
 			{monacoError !== null ? <Alert className={styles.editorError} type="error" showIcon title={monacoError} /> : null}
-			{selection !== null ? <div className={styles.selectionTools} style={{ top: selection.top, left: selection.left }} onMouseDown={(event): void => event.preventDefault()}>
+			{enableSelectionTools && selection !== null ? <div className={styles.selectionTools} style={{ top: selection.top, left: selection.left }} onMouseDown={(event): void => event.preventDefault()}>
 				{commenting
 					? <Input
 						autoFocus

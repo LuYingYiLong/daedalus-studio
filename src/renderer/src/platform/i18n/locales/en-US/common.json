@@ -1219,6 +1219,7 @@
 			"personalization": "Personalization",
 			"mcpServers": "MCP Servers",
 			"skills": "Skills",
+			"hooks": "Hooks",
 			"documentation": "Documentation",
 			"godotProjects": "Godot projects",
 			"archivedSessions": "Archived sessions",
@@ -1239,6 +1240,69 @@
 			"save": "Save",
 			"close": "Close",
 			"update": "Update"
+		},
+		"hooks": {
+			"title": "Hooks",
+			"description": "Run deterministic session and tool lifecycle scripts inside an audited OS sandbox. Hook network access is always disabled.",
+			"actions": {
+				"refresh": "Refresh",
+				"template": "Create template",
+				"format": "Format",
+				"reload": "Reload",
+				"review": "Review {{count}} items"
+			},
+			"sources": {
+				"title": "Configuration sources",
+				"select": "Configuration source",
+				"none": "No configuration source available",
+				"created": "File created",
+				"valid": "Valid JSON",
+				"invalid": "Invalid JSON",
+				"handlerCount": "{{count}} hooks",
+				"trustedCount": "{{count}} trusted",
+				"reviewCount": "{{count}} to review",
+				"errorCount": "{{count}} errors",
+				"trusted": "trusted",
+				"missing": "Not created"
+			},
+			"editor": {
+				"title": "Configuration editor"
+			},
+			"dirty": {
+				"title": "Discard unsaved Hooks changes?",
+				"description": "Switching configuration sources will discard the current editor contents.",
+				"discard": "Discard changes"
+			},
+			"review": {
+				"title": "Review Hook commands",
+				"summaryTitle": "Review configured commands",
+				"warning": "Saving never trusts commands automatically. Review each event, command, and permission scope.",
+				"trust": "Trust",
+				"permissions": "Matcher: {{matcher}} · Failure policy: {{policy}}",
+				"sandbox": "Target source folder writable · Other sources read-only · Network disabled",
+				"fingerprint": "Fingerprint: {{fingerprint}}…"
+			},
+			"runs": {
+				"title": "Recent runs",
+				"description": "Review recent lifecycle results and failure details.",
+				"event": "Event",
+				"status": "Status",
+				"duration": "Duration",
+				"detail": "Details",
+				"empty": "No Hook runs yet"
+			},
+			"messages": {
+				"saved": "Hooks configuration saved. Review commands before enabling them.",
+				"reloaded": "Reloaded from disk.",
+				"trusted": "Hook trusted.",
+				"disabled": "Hook disabled."
+			},
+			"errors": {
+				"load": "Failed to load Hooks configuration.",
+				"save": "Failed to save Hooks configuration.",
+				"trust": "Failed to update Hook trust.",
+				"invalidJson": "hooks.json is not valid JSON."
+			}
 		},
 		"keyboardShortcuts": {
 			"title": "Keyboard Shortcuts",

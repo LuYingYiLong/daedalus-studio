@@ -1,0 +1,126 @@
+.page {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+	padding: 0px var(--ds-space-2) var(--ds-space-2);
+	overflow: hidden;
+	user-select: none;
+}
+
+.pageHeader {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--ds-space-3);
+}
+
+.title {
+	margin: 0px 0px 4px !important;
+}
+
+.settingsStack {
+	display: flex;
+	min-width: 0;
+	min-height: 0;
+	padding-right: var(--ds-space-1);
+	flex-direction: column;
+	gap: var(--ds-space-2);
+	overflow-x: hidden;
+	overflow-y: auto;
+	align-content: start;
+}
+
+.sourceSelect {
+	width: 180px;
+}
+
+.sourceSummary {
+	padding: 0px var(--ds-space-2) var(--ds-space-2);
+}
+
+.emptyState {
+	display: grid;
+	min-height: 110px;
+	place-items: center;
+	padding: var(--ds-space-2);
+}
+
+.editorSection {
+	display: grid;
+	min-width: 0;
+	gap: var(--ds-space-2);
+	padding: var(--ds-space-2);
+}
+
+.editorHeader,
+.sectionHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ds-space-3);
+}
+
+.pathBlock,
+.handlerDescription {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.pathBlock {
+	overflow: hidden;
+}
+
+.editorAlert {
+	margin: 0;
+}
+
+.editorFrame {
+	position: relative;
+	min-width: 0;
+	height: min(520px, 56vh);
+	min-height: 360px;
+	overflow: hidden;
+	border: 1px solid var(--ds-border-subtle);
+	border-radius: var(--ds-radius-md);
+	background: var(--ds-surface);
+}
+
+.editor {
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.runsContent {
+	min-width: 0;
+	padding: var(--ds-space-2);
+}
+
+.sectionHeader {
+	margin-bottom: var(--ds-space-2);
+}
+
+.reviewAlert {
+	margin-bottom: 14px;
+}
+
+@media (max-width: 720px) {
+	.pageHeader,
+	.editorHeader {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.sourceSelect {
+		width: 100%;
+	}
+
+	.editorFrame {
+		height: 420px;
+		min-height: 280px;
+	}
+}

@@ -18,6 +18,7 @@ import AboutSettingsPage from "@/widgets/settings/AboutSettingsPage";
 import GodotProjectsSettingsPage from "@/widgets/settings/GodotProjectsSettingsPage";
 import DocumentationSettingsPage from "@/widgets/settings/DocumentationSettingsPage";
 import KeyboardShortcutsSettingsPage from "@/widgets/settings/KeyboardShortcutsSettingsPage";
+import HooksSettingsPage from "@/widgets/settings/HooksSettingsPage";
 import styles from "./SettingsWindow.module.css";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -31,6 +32,7 @@ type SettingsPageKey =
 	| "personalization"
 	| "mcp_servers"
 	| "skills"
+	| "hooks"
 	| "documentation"
 	| "godot_projects"
 	| "archived_sessions"
@@ -53,6 +55,7 @@ const menuItemConfigs: SettingsMenuItemConfig[] = [
 	{ key: "personalization", labelKey: "settings.menu.personalization", icon: <Icon name="magic" /> },
 	{ key: "mcp_servers", labelKey: "settings.menu.mcpServers", icon: <Icon name="mcp" /> },
 	{ key: "skills", labelKey: "settings.menu.skills", icon: <Icon name="skill" /> },
+	{ key: "hooks", labelKey: "settings.menu.hooks", icon: <Icon name="hook" /> },
 	{ key: "documentation", labelKey: "settings.menu.documentation", icon: <Icon name="book" /> },
 	{ key: "godot_projects", labelKey: "settings.menu.godotProjects", icon: <Icon name="godot" /> },
 	{ key: "archived_sessions", labelKey: "settings.menu.archivedSessions", icon: <Icon name="archive" /> },
@@ -142,6 +145,9 @@ function SettingsWindow(): React.JSX.Element {
 		}
 		if (page === "skills") {
 			return <SkillsSettingsPage />;
+		}
+		if (page === "hooks") {
+			return <HooksSettingsPage />;
 		}
 		if (page === "documentation") {
 			return <DocumentationSettingsPage />;

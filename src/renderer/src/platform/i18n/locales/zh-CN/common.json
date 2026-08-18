@@ -331,8 +331,8 @@
 			"scrollToBottom": "滚动到底部"
 		},
 		"conversationNavigator": {
-			"ariaLabel": "\u5bf9\u8bdd\u8f6e\u6b21",
-			"emptyMessage": "\u7528\u6237\u6d88\u606f"
+			"ariaLabel": "对话轮次",
+			"emptyMessage": "用户消息"
 		},
 		"conversationSearch": {
 			"placeholder": "在会话中搜索",
@@ -1173,8 +1173,8 @@
 			"title_other": "已编辑 {{count}} 个文件",
 			"unknownFile": "未知文件",
 			"openReviewAria": "打开 {{filePath}} 的审阅",
-			"showMoreFiles": "\u518d\u663e\u793a{{count}}\u4e2a\u6587\u4ef6",
-			"collapseFiles": "\u6536\u8d77\u6587\u4ef6",
+			"showMoreFiles": "再显示{{count}}个文件",
+			"collapseFiles": "收起文件",
 			"actions": {
 				"undo": "撤销",
 				"review": "审阅"
@@ -1212,6 +1212,7 @@
 			"personalization": "个性化",
 			"mcpServers": "MCP 服务器",
 			"skills": "技能",
+			"hooks": "Hooks",
 			"documentation": "文档",
 			"godotProjects": "Godot 项目",
 			"archivedSessions": "已归档会话",
@@ -1232,6 +1233,69 @@
 			"save": "保存",
 			"close": "关闭",
 			"update": "更新"
+		},
+		"hooks": {
+			"title": "Hooks",
+			"description": "在受审核的 OS 沙箱中运行确定性的会话和工具生命周期脚本。Hook 始终禁用网络。",
+			"actions": {
+				"refresh": "刷新",
+				"template": "创建模板",
+				"format": "格式化",
+				"reload": "重新加载",
+				"review": "审核 {{count}} 项"
+			},
+			"sources": {
+				"title": "配置来源",
+				"select": "选择配置来源",
+				"none": "暂无可用配置来源",
+				"created": "文件已创建",
+				"valid": "格式有效",
+				"invalid": "格式无效",
+				"handlerCount": "{{count}} 个 Hook",
+				"trustedCount": "{{count}} 个已信任",
+				"reviewCount": "{{count}} 个待审核",
+				"errorCount": "{{count}} 个错误",
+				"trusted": "已信任",
+				"missing": "尚未创建"
+			},
+			"editor": {
+				"title": "配置编辑器"
+			},
+			"dirty": {
+				"title": "放弃未保存的 Hooks 修改？",
+				"description": "切换配置来源会丢失当前编辑内容。",
+				"discard": "放弃修改"
+			},
+			"review": {
+				"title": "审核 Hook 命令",
+				"summaryTitle": "审核已配置的命令",
+				"warning": "保存不会自动信任命令。请逐项确认事件、命令和权限范围。",
+				"trust": "信任",
+				"permissions": "匹配：{{matcher}} · 失败策略：{{policy}}",
+				"sandbox": "目标 source folder 可写 · 其他 source 只读 · 网络已禁用",
+				"fingerprint": "指纹：{{fingerprint}}…"
+			},
+			"runs": {
+				"title": "最近运行",
+				"description": "查看最近的生命周期执行结果和失败原因。",
+				"event": "事件",
+				"status": "状态",
+				"duration": "耗时",
+				"detail": "详情",
+				"empty": "暂无 Hook 运行记录"
+			},
+			"messages": {
+				"saved": "Hooks 配置已保存，请审核命令后再启用。",
+				"reloaded": "已从磁盘重新加载。",
+				"trusted": "Hook 已信任。",
+				"disabled": "Hook 已禁用。"
+			},
+			"errors": {
+				"load": "无法加载 Hooks 配置。",
+				"save": "无法保存 Hooks 配置。",
+				"trust": "无法更新 Hook 信任状态。",
+				"invalidJson": "hooks.json 不是有效的 JSON。"
+			}
 		},
 		"keyboardShortcuts": {
 			"title": "键盘快捷键",
