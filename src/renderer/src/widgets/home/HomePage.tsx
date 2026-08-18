@@ -19,7 +19,7 @@ import {
 	type ShortcutPlatform
 } from "@/platform/rpc/keyboard-shortcuts";
 import { fetchSessionOverview, fetchWorkspaceOverview, type SessionOverviewGitInfo, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/platform/rpc/session-overview-api";
-import WorkspaceTree, { type SessionArchiveContext } from "@/widgets/workspace/WorkspaceTree";
+import { type SessionArchiveContext, type WorkspaceTreeProps } from "@/widgets/workspace/WorkspaceTree";
 import ConversationTimelinePane, { type ConversationTimelinePaneHandle } from "@/widgets/conversation/ConversationTimelinePane";
 import Composer, { type ComposerInputRequest } from "@/widgets/composer/Composer";
 import FloatingWorkflowTodoPanel, { type WorkflowFileChangeSummary } from "@/widgets/composer/FloatingWorkflowTodoPanel";
@@ -35,7 +35,9 @@ import styles from "./HomePage.module.css";
 import { Icon } from "@/assets/icons";
 import ClarificationDialog from "@/widgets/clarification/ClarificationDialog";
 import PlanApprovalDialog from "@/widgets/approval/PlanApprovalDialog";
-import DockPanelTabs, { type DockPanelActivationRequest, type DockPanelKind } from "@/widgets/dock/DockPanelTabs";
+import { type DockPanelActivationRequest, type DockPanelKind } from "@/widgets/dock/DockPanelTabs";
+import HomeWorkspaceSidebar from "./HomeWorkspaceSidebar";
+import HomeDockPanel from "./HomeDockPanel";
 import {
 	listTerminalRuntimeIds,
 	type DockLayoutPreferences,
@@ -2098,6 +2100,90 @@ function HomePage({
 		/>
 	);
 
+	const workspaceTreeProps: WorkspaceTreeProps = {
+		refreshToken: workspaceRefreshToken,
+		selectedSessionId: activeSessionId,
+		selectedWorkspaceId: activeWorkspaceId,
+		initialWorkspaces,
+		initialSessions,
+		initialActiveWorkspaceId,
+		initialWorkspaceTreeOrder,
+		runningSessionIds,
+		unreadSessionIds,
+		forkingSessionId,
+		sessionUpdate: activeSessionMetadata,
+		onNewSession: onNewUnboundSession,
+		onSessionSelect,
+		onSessionFork,
+		onSessionArchive,
+		onSessionRename,
+		onSessionsChange,
+		onNewWorkspaceSession,
+		onWorkspaceDelete,
+		onWorkspaceUpdate,
+		onWorkspaceProjectCreated,
+	};
+
+	const commonDockPanelProps = {
+		sessionId: activeSessionId,
+		workspaceId: workspaceForActions?.id ?? null,
+		workspace: workspaceForActions,
+		launchTargets: workspaceLaunchTargets,
+		workspaceLaunchTargetId: selectedLaunchTargetId,
+		sourceFolderId: summaryGitSourceFolderId,
+		sourceFolders: workspaceForActions?.sourceFolders ?? [],
+		primarySourceFolderId: workspaceForActions?.primarySourceFolderId ?? null,
+		onSourceFolderChange: handleGitReviewSourceFolderChange,
+		cwd: workspaceForActions?.rootPath ?? null,
+		contextItems,
+		onAddContext,
+		onRemoveContext,
+		gitStateRevision,
+		onGitStateChange: handleDockGitStateChange,
+		waitForCwd: terminalWaitForCwd,
+		filePanels: visualSessionLayout.filePanels,
+		onFilePanelChange: updateFilePanel,
+	};
+
+	const sideDockConfig = showSideDockButton ? {
+		...commonDockPanelProps,
+		dockId: "side",
+		placement: "side" as const,
+		isOpen: sideDockOpen,
+		isFullscreen: sideDockFullscreen,
+		defaultKind: "review" as const,
+		layout: visualSessionLayout.side,
+		activationRequest: sideDockActivationRequest,
+		onLayoutChange: updateSideDock,
+		onFullscreenToggle: (): void => toggleDockFullscreen("side"),
+		panelSize: sideDockFullscreen ? "100%" : sideDockOpen ? sideDockSize : SIDE_DOCK_CLOSED_SIZE,
+		panelMin: SIDE_DOCK_CLOSED_SIZE,
+		panelMax: sideDockFullscreen ? undefined : SIDE_DOCK_MAX_SIZE,
+		slotClassName: styles.sideDockSlot,
+	} : null;
+
+	const bottomDockConfig = showBottomDockButton ? {
+		...commonDockPanelProps,
+		dockId: "bottom",
+		placement: "bottom" as const,
+		isOpen: bottomDockOpen,
+		isFullscreen: bottomDockFullscreen,
+		defaultKind: "terminal" as const,
+		layout: visualSessionLayout.bottom,
+		onLayoutChange: updateBottomDock,
+		onFullscreenToggle: (): void => toggleDockFullscreen("bottom"),
+		panelSize: bottomDockFullscreen
+			? "100%"
+			: sideDockFullscreen
+				? BOTTOM_DOCK_CLOSED_SIZE
+				: bottomDockOpen
+					? bottomDockSize
+					: BOTTOM_DOCK_CLOSED_SIZE,
+		panelMin: BOTTOM_DOCK_CLOSED_SIZE,
+		panelMax: bottomDockFullscreen ? undefined : BOTTOM_DOCK_MAX_SIZE,
+		slotClassName: styles.bottomDockSlot,
+	} : null;
+
 	return (
 		<div
 			className={styles.page}
@@ -2118,56 +2204,14 @@ function HomePage({
 					max={WORKSPACE_SIDEBAR_MAX_SIZE}
 					collapsible={{ end: true, showCollapsibleIcon: false }}
 				>
-					<aside className={styles.workspaceSidebar} aria-hidden={!workspaceSidebarOpen}>
-						<header className={styles.workspaceHeader}>
-							<Button
-								type="text"
-								block
-								icon={<Icon name="add" />}
-								className={styles.createSessionButton}
-								onClick={onNewSession}
-							>
-								{t("agentPage.actions.newSession")}
-							</Button>
-						</header>
-						<WorkspaceTree
-							refreshToken={workspaceRefreshToken}
-							selectedSessionId={activeSessionId}
-							selectedWorkspaceId={activeWorkspaceId}
-							initialWorkspaces={initialWorkspaces}
-							initialSessions={initialSessions}
-							initialActiveWorkspaceId={initialActiveWorkspaceId}
-							initialWorkspaceTreeOrder={initialWorkspaceTreeOrder}
-							runningSessionIds={runningSessionIds}
-							unreadSessionIds={unreadSessionIds}
-							forkingSessionId={forkingSessionId}
-							sessionUpdate={activeSessionMetadata}
-							onNewSession={onNewUnboundSession}
-							onSessionSelect={onSessionSelect}
-							onSessionFork={onSessionFork}
-							onSessionArchive={onSessionArchive}
-							onSessionRename={onSessionRename}
-							onSessionsChange={onSessionsChange}
-							onNewWorkspaceSession={onNewWorkspaceSession}
-							onWorkspaceDelete={onWorkspaceDelete}
-							onWorkspaceUpdate={onWorkspaceUpdate}
-							onWorkspaceProjectCreated={onWorkspaceProjectCreated}
-						/>
-						<footer className={styles.workspaceFooter}>
-							<Button
-								icon={<Icon name="settings" />}
-								type="text"
-								block
-								className={styles.openSettingsButton}
-								aria-label={t("agentPage.actions.openSettings")}
-								onClick={(): void => {
-									void window.electronAPI.windowControl.openSettings();
-								}}
-							>
-								{t("agentPage.actions.openSettings")}
-							</Button>
-						</footer>
-					</aside>
+					<HomeWorkspaceSidebar
+						treeProps={workspaceTreeProps}
+						isOpen={workspaceSidebarOpen}
+						onNewSession={onNewSession}
+						onOpenSettings={(): void => {
+							void window.electronAPI.windowControl.openSettings();
+						}}
+					/>
 				</Splitter.Panel>
 
 				<Splitter.Panel min={360}>
@@ -2412,87 +2456,10 @@ function HomePage({
 											</footer>
 										</section>
 									</Splitter.Panel>
-									{showSideDockButton ? (
-										<Splitter.Panel
-											size={sideDockFullscreen ? "100%" : sideDockOpen ? sideDockSize : SIDE_DOCK_CLOSED_SIZE}
-											min={SIDE_DOCK_CLOSED_SIZE}
-											max={sideDockFullscreen ? undefined : SIDE_DOCK_MAX_SIZE}
-											collapsible={{ start: true, showCollapsibleIcon: false }}
-										>
-											<div className={styles.sideDockSlot} aria-hidden={!sideDockOpen}>
-												<DockPanelTabs
-													dockId="side"
-													placement="side"
-													sessionId={activeSessionId}
-													workspaceId={workspaceForActions?.id ?? null}
-													workspace={workspaceForActions}
-													launchTargets={workspaceLaunchTargets}
-													workspaceLaunchTargetId={selectedLaunchTargetId}
-													sourceFolderId={summaryGitSourceFolderId}
-													sourceFolders={workspaceForActions?.sourceFolders ?? []}
-													primarySourceFolderId={workspaceForActions?.primarySourceFolderId ?? null}
-													onSourceFolderChange={handleGitReviewSourceFolderChange}
-													cwd={workspaceForActions?.rootPath ?? null}
-													contextItems={contextItems}
-													onAddContext={onAddContext}
-													onRemoveContext={onRemoveContext}
-													gitStateRevision={gitStateRevision}
-													onGitStateChange={handleDockGitStateChange}
-													isOpen={sideDockOpen}
-													isFullscreen={sideDockFullscreen}
-													waitForCwd={terminalWaitForCwd}
-													defaultKind="review"
-													layout={visualSessionLayout.side}
-													filePanels={visualSessionLayout.filePanels}
-													activationRequest={sideDockActivationRequest}
-													onLayoutChange={updateSideDock}
-													onFilePanelChange={updateFilePanel}
-													onFullscreenToggle={(): void => toggleDockFullscreen("side")}
-												/>
-											</div>
-										</Splitter.Panel>
-									) : null}
+									{sideDockConfig === null ? null : <HomeDockPanel {...sideDockConfig} />}
 								</Splitter>
 							</Splitter.Panel>
-							{showBottomDockButton ? (
-								<Splitter.Panel
-									size={bottomDockFullscreen ? "100%" : sideDockFullscreen ? BOTTOM_DOCK_CLOSED_SIZE : bottomDockOpen ? bottomDockSize : BOTTOM_DOCK_CLOSED_SIZE}
-									min={BOTTOM_DOCK_CLOSED_SIZE}
-									max={bottomDockFullscreen ? undefined : BOTTOM_DOCK_MAX_SIZE}
-									collapsible={{ start: true, showCollapsibleIcon: false }}
-								>
-									<div className={styles.bottomDockSlot} aria-hidden={!bottomDockOpen}>
-										<DockPanelTabs
-											dockId="bottom"
-											placement="bottom"
-											sessionId={activeSessionId}
-											workspaceId={workspaceForActions?.id ?? null}
-											workspace={workspaceForActions}
-											launchTargets={workspaceLaunchTargets}
-											workspaceLaunchTargetId={selectedLaunchTargetId}
-											sourceFolderId={summaryGitSourceFolderId}
-											sourceFolders={workspaceForActions?.sourceFolders ?? []}
-											primarySourceFolderId={workspaceForActions?.primarySourceFolderId ?? null}
-											onSourceFolderChange={handleGitReviewSourceFolderChange}
-											cwd={workspaceForActions?.rootPath ?? null}
-											contextItems={contextItems}
-											onAddContext={onAddContext}
-											onRemoveContext={onRemoveContext}
-											gitStateRevision={gitStateRevision}
-											onGitStateChange={handleDockGitStateChange}
-											isOpen={bottomDockOpen}
-											isFullscreen={bottomDockFullscreen}
-											waitForCwd={terminalWaitForCwd}
-											defaultKind="terminal"
-											layout={visualSessionLayout.bottom}
-											filePanels={visualSessionLayout.filePanels}
-											onLayoutChange={updateBottomDock}
-											onFilePanelChange={updateFilePanel}
-											onFullscreenToggle={(): void => toggleDockFullscreen("bottom")}
-										/>
-									</div>
-								</Splitter.Panel>
-							) : null}
+							{bottomDockConfig === null ? null : <HomeDockPanel {...bottomDockConfig} />}
 						</Splitter>
 						{isDockFullscreen ? (
 							<div className={styles.fullscreenComposer}>

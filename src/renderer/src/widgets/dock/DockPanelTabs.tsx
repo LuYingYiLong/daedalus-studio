@@ -28,7 +28,7 @@ export type DockPanelActivationRequest = {
 	kind: DockPanelKind;
 };
 
-type DockPanelTabsProps = {
+export type DockPanelTabsProps = {
 	dockId: string;
 	placement: DockPanelPlacement;
 	sessionId: string | null;
