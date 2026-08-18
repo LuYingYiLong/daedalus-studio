@@ -677,6 +677,8 @@
 			"terminalIndexed": "Terminal {{index}}",
 			"files": "Files",
 			"filesIndexed": "Files {{index}}",
+			"browser": "Browser",
+			"browserIndexed": "Browser {{index}}",
 			"enterFullscreen": "Expand panel",
 			"exitFullscreen": "Restore panel"
 		},
@@ -684,10 +686,96 @@
 			"label": "Add panel",
 			"reviewPanel": "Review panel",
 			"terminalPanel": "Terminal panel",
-			"filesPanel": "Files panel"
+			"filesPanel": "Files panel",
+			"browserPanel": "Browser panel"
 		},
 		"empty": {
 			"noWorkspaceSelected": "No workspace selected"
+		}
+	},
+	"browser": {
+		"toolbar": {
+			"back": "Back",
+			"forward": "Forward",
+			"reload": "Reload",
+			"stop": "Stop loading",
+			"address": "Enter a URL",
+			"inspect": "Annotate a web element",
+			"credentials": "Choose a saved account",
+			"more": "More browser actions"
+		},
+		"actions": { "cancel": "Cancel" },
+		"empty": { "description": "Enter a URL to open a page" },
+		"errors": {
+			"navigate": "Could not open this URL",
+			"load": "Page failed to load"
+		},
+		"menu": {
+			"import": "Import cookies and passwords",
+			"downloads": "Downloads",
+			"history": "History",
+			"clearData": "Clear browsing data",
+			"settings": "Browser settings"
+		},
+		"annotation": {
+			"placeholder": "Comment on the selected web element (optional)",
+			"add": "Add to context",
+			"added": "Web element added to context"
+		},
+		"history": { "title": "History", "clear": "Clear history" },
+		"downloads": {
+			"title": "Downloads",
+			"clear": "Clear download records",
+			"state": {
+				"progressing": "Downloading",
+				"completed": "Completed",
+				"cancelled": "Cancelled",
+				"interrupted": "Interrupted"
+			}
+		},
+		"import": {
+			"title": "Import from browser",
+			"profile": "Browser profile",
+			"noProfiles": "No Chrome or Edge profiles found",
+			"cookies": "Import cookies and signed-in sessions",
+			"passwords": "Import saved passwords",
+			"completed": "Imported {{cookies}} cookies and {{passwords}} passwords; skipped {{skipped}} items ({{unsupported}} protected by system encryption)",
+			"failed": "Import failed"
+		},
+		"clear": {
+			"title": "Clear browsing data",
+			"timeRange": "Time range",
+			"timeRanges": {
+				"lastHour": "Last hour",
+				"last24Hours": "Last 24 hours",
+				"last7Days": "Last 7 days",
+				"last4Weeks": "Last 4 weeks",
+				"allTime": "All time"
+			},
+			"siteDataAllTime": "Electron cannot clear site storage and cache by time range. Selected site data will be cleared for all time.",
+			"action": "Clear data",
+			"completed": "Browsing data cleared",
+			"failed": "Failed to clear browsing data",
+			"history": "Browsing history",
+			"downloads": "Download records (files are kept)",
+			"cookiesAndStorage": "Cookies and site storage",
+			"cache": "Cache",
+			"passwords": "Saved passwords",
+			"passwordWarningTitle": "Delete passwords in the selected time range?",
+			"passwordWarningDescription": "This cannot be undone. Passwords matching the selected time range will be permanently removed from the password vault.",
+			"deletePasswords": "Delete passwords"
+		},
+		"passwords": {
+			"choose": "Choose an account",
+			"noMatch": "No saved account matches this site",
+			"fill": "Fill"
+		},
+		"permissions": {
+			"requestTitle": "Site permission request",
+			"requestDescription": "{{origin}} wants permission to use {{permission}}.",
+			"block": "Block",
+			"allowOnce": "Allow once",
+			"allowAlways": "Always allow"
 		}
 	},
 	"files": {
@@ -967,6 +1055,7 @@
 				"reviewComment": "Review comment",
 				"selectedMessageText": "Selected message text",
 				"fileSelection": "File selection",
+				"webElement": "Web element",
 				"more": "... {{count}} more",
 				"more_other": "... {{count}} more",
 				"pathLabel": "{{kind}}: {{path}}",
@@ -1221,6 +1310,7 @@
 			"mcpServers": "MCP Servers",
 			"skills": "Skills",
 			"hooks": "Hooks",
+			"browser": "Browser",
 			"documentation": "Documentation",
 			"godotProjects": "Godot projects",
 			"archivedSessions": "Archived sessions",
@@ -1241,6 +1331,55 @@
 			"save": "Save",
 			"close": "Close",
 			"update": "Update"
+		},
+		"browser": {
+			"title": "Browser",
+			"actions": {
+				"choose": "Choose",
+				"openDownloads": "Manage downloads",
+				"openHistory": "View history",
+				"managePermissions": "Manage permissions",
+				"clearData": "Clear data",
+				"import": "Import from Chrome or Edge",
+				"managePasswords": "Manage passwords"
+			},
+			"downloads": {
+				"title": "Downloads",
+				"directory": "Download location",
+				"directoryDescription": "The default folder for new downloads.",
+				"systemDefault": "System Downloads folder",
+				"askEveryTime": "Ask where to save each file",
+				"askEveryTimeDescription": "Choose a file name and folder when a download starts.",
+				"manage": "Download manager",
+				"manageDescription": "View progress, open files, or clear download records."
+			},
+			"privacy": {
+				"title": "Privacy and site data",
+				"history": "Browsing history",
+				"historyDescription": "View or clear recently visited pages.",
+				"permissions": "Site permissions",
+				"permissionsDescription": "Manage notification, location, media, and other site permission rules.",
+				"clearData": "Clear browsing data",
+				"clearDataDescription": "Choose whether to clear cookies, cache, history, download records, or passwords."
+			},
+			"passwords": {
+				"title": "Passwords and import",
+				"save": "Allow saving passwords",
+				"saveDescription": "Controls adding, editing, and importing passwords. Existing passwords can still be filled and managed. Passwords use operating-system secure storage.",
+				"manage": "Password manager",
+				"manageDescription": "Import, view, or delete accounts used for explicit filling.",
+				"managerTitle": "Password manager",
+				"addTitle": "Add password",
+				"editTitle": "Edit password",
+				"search": "Search sites or usernames",
+				"origin": "Site origin",
+				"username": "Username",
+				"password": "Password",
+				"reveal": "Show",
+				"hide": "Hide",
+				"copied": "Password copied"
+			},
+			"errors": { "load": "Failed to load browser settings", "save": "Failed to save browser settings" }
 		},
 		"hooks": {
 			"title": "Hooks",

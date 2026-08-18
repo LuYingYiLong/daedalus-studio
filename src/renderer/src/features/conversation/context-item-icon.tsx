@@ -51,6 +51,9 @@ export function getAdditionalContextIconName(item: AdditionalContextItem): strin
 	if (item.kind === "file_selection") {
 		return getFileIconName(getItemPath(item));
 	}
+	if (item.kind === "web_element") {
+		return "global";
+	}
 	if (item.kind === "editor_selection") {
 		return "read";
 	}

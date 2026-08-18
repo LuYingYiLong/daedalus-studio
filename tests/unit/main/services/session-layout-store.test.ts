@@ -115,6 +115,26 @@ describe("session layout store", () => {
 		expect(normalized.filePanels.orphan).toBeUndefined();
 	});
 
+	it("normalizes browser tabs and removes orphaned or unsafe panel state", () => {
+		const defaults = createDefaultSessionLayout();
+		const normalized = normalizeSessionLayout({
+			...defaults,
+			side: {
+				...defaults.side,
+				tabs: [...defaults.side.tabs, { key: "side:browser:1", kind: "browser", index: 1 }]
+			},
+			browserPanels: {
+				"side:browser:1": { lastUrl: "https://example.com/docs" },
+				orphan: { lastUrl: "https://orphan.example" },
+				unsafe: { lastUrl: "javascript:alert(1)" }
+			}
+		});
+
+		expect(normalized.browserPanels).toEqual({
+			"side:browser:1": { lastUrl: "https://example.com/docs" }
+		});
+	});
+
 	it("falls back to the fixed default when an unknown tab kind is present", () => {
 		expect(normalizeSessionLayout({
 			side: {

@@ -28,6 +28,9 @@ import { registerImageExportIpc } from "./services/image-export";
 import { registerFileExportIpc } from "./services/file-export";
 import { createLogger } from "./services/logger";
 import type { GeneralSettings } from "../contracts/general-settings";
+import { BrowserService } from "./services/browser/browser-service";
+import { BrowserDataStore } from "./services/browser/browser-data-store";
+import { BrowserPasswordStore } from "./services/browser/browser-password-store";
 
 const logger = createLogger("main");
 const MEMORY_DIAGNOSTICS_INTERVAL_MS: number = 30_000;
@@ -75,6 +78,13 @@ const hasSingleInstanceLock: boolean = app.requestSingleInstanceLock();
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
+const browserService = new BrowserService(
+	(): BrowserWindow | null => mainWindow,
+	(): BrowserWindow | null => settingsWindow,
+	new BrowserDataStore(join(app.getPath("userData"), "browser-data.json")),
+	new BrowserPasswordStore(join(app.getPath("userData"), "browser-passwords.json"))
+);
+browserService.registerIpc();
 const rendererReadyWindows: WeakSet<BrowserWindow> = new WeakSet();
 const rendererShellReadyWindows: WeakSet<BrowserWindow> = new WeakSet();
 const rendererPaintReadyWindows: WeakSet<BrowserWindow> = new WeakSet();
@@ -99,6 +109,7 @@ const SETTINGS_PAGE_KEYS: readonly string[] = [
 	"personalization",
 	"mcp_servers",
 	"skills",
+	"browser",
 	"documentation",
 	"godot_projects",
 	"archived_sessions",
@@ -112,6 +123,7 @@ appUpdateService.setBeforeClientInstall(async (): Promise<void> => {
 	cancelSettingsWindowPrewarm();
 	windowLifecycleController.markQuitting();
 	terminalPtyService.dispose();
+	browserService.destroyAll();
 	backendManager.detach();
 });
 appUpdateService.setRuntimeBusyHandler((runtimeBusy: boolean): void => {
@@ -626,6 +638,7 @@ function createWindow(): void {
 	});
 
 	mainWindow.on("closed", () => {
+		browserService.destroyAll();
 		mainWindow = null;
 		cancelSettingsWindowPrewarm();
 		if (settingsWindow !== null && !settingsWindow.isDestroyed()) {

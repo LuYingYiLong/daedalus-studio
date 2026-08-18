@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	createDefaultSessionLayout,
+	createDefaultBrowserPanelLayout,
 	createTerminalRuntimeId,
 	listTerminalRuntimeIds
 } from "@/domain/session/session-layout";
@@ -24,18 +25,22 @@ describe("session dock layout", () => {
 			activeTabKey: "bottom:terminal:1"
 		});
 		expect(layout.fullscreenDock).toBeNull();
+		expect(layout.browserPanels).toEqual({});
+		expect(createDefaultBrowserPanelLayout()).toEqual({ lastUrl: null });
 	});
 
 	it("creates stable keys and preserves explicit tab order", () => {
 		const first = createDockTab("side", "review", 1);
 		const second = createDockTab("side", "terminal", 1);
 		const third = createDockTab("side", "review", 2);
+		const browser = createDockTab("side", "browser", 1);
 		expect(getNextDockTabIndex([first, second, third], "review")).toBe(3);
 		expect(reorderDockTabs([first, second, third], first.key, third.key)).toEqual([
 			second,
 			third,
 			first
 		]);
+		expect(browser).toEqual({ key: "side:browser:1", kind: "browser", index: 1 });
 	});
 
 	it("scopes terminal runtime ids to their session", () => {

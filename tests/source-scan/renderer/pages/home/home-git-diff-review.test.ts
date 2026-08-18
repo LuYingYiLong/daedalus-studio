@@ -53,7 +53,7 @@ describe("HomePage git diff review source", () => {
 	});
 
 	it("adds a fixed state-aware layout-right top menu button for the side dock", () => {
-		expect(agentSource).toContain("const showDockControls: boolean = !isHome || workspaceForActions !== null;");
+		expect(agentSource).toContain("const showDockControls: boolean = true;");
 		expect(agentSource).toContain("const showSideDockButton: boolean = showDockControls;");
 		expect(agentSource).toContain("className={styles.floatingActionSlot}");
 		expect(agentSource).toContain("className={styles.floatingActions}");

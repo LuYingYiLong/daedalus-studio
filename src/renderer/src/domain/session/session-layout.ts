@@ -1,4 +1,4 @@
-export type DockTabKind = "review" | "terminal" | "files";
+export type DockTabKind = "review" | "terminal" | "files" | "browser";
 
 export type DockTabPreferences = {
 	key: string;
@@ -32,11 +32,16 @@ export type FilePanelLayoutPreferences = {
 	previewTabKey: string | null;
 };
 
+export type BrowserPanelLayoutPreferences = {
+	lastUrl: string | null;
+};
+
 export type SessionLayoutPreferences = {
 	side: DockLayoutPreferences;
 	bottom: DockLayoutPreferences;
 	fullscreenDock: DockFullscreenPlacement | null;
 	filePanels: Record<string, FilePanelLayoutPreferences>;
+	browserPanels: Record<string, BrowserPanelLayoutPreferences>;
 };
 
 export type SessionLayoutMap = Record<string, SessionLayoutPreferences>;
@@ -61,10 +66,17 @@ export function createDefaultFilePanelLayout(): FilePanelLayoutPreferences {
 	};
 }
 
+export function createDefaultBrowserPanelLayout(): BrowserPanelLayoutPreferences {
+	return {
+		lastUrl: null
+	};
+}
+
 export function createDefaultSessionLayout(): SessionLayoutPreferences {
 	return {
 		fullscreenDock: null,
 		filePanels: {},
+		browserPanels: {},
 		side: {
 			open: false,
 			size: SIDE_DOCK_DEFAULT_SIZE,
@@ -83,6 +95,7 @@ export function createDefaultSessionLayout(): SessionLayoutPreferences {
 export function cloneSessionLayout(layout: SessionLayoutPreferences): SessionLayoutPreferences {
 	return {
 		fullscreenDock: layout.fullscreenDock,
+		browserPanels: Object.fromEntries(Object.entries(layout.browserPanels).map(([key, browserPanel]): [string, BrowserPanelLayoutPreferences] => [key, { ...browserPanel }])),
 		filePanels: Object.fromEntries(Object.entries(layout.filePanels).map(([key, filePanel]): [string, FilePanelLayoutPreferences] => [
 			key,
 			{

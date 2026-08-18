@@ -21,8 +21,10 @@ describe("Home dock fullscreen", () => {
 		expect(homeSource).toContain("type DockFullscreenPlacement");
 		expect(homeSource).toContain("visualSessionLayout.fullscreenDock");
 		expect(homeSource).toContain("toggleDockFullscreen");
-		expect(homeSource).toContain('size={bottomDockFullscreen ? "100%"');
-		expect(homeSource).toContain('size={sideDockFullscreen ? "100%"');
+		expect(homeSource).toContain('size: bottomDockFullscreen');
+		expect(homeSource).toContain('size: sideDockFullscreen ? "100%"');
+		expect(homeSource).toContain("size={bottomDockConfig?.panel.size ?? BOTTOM_DOCK_CLOSED_SIZE}");
+		expect(homeSource).toContain("size={sideDockConfig?.panel.size ?? SIDE_DOCK_CLOSED_SIZE}");
 		expect(homeSource).toContain("fullscreenComposer");
 		expect(homeSource).toContain("renderComposer(true)");
 		expect(composerSource).toContain("autoSize={compact ? { minRows: 1, maxRows: 1 }");

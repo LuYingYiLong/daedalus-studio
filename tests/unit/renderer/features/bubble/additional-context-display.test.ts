@@ -17,6 +17,7 @@ const EN_DISPLAY: Record<string, string> = {
 	"chat.contextStrip.display.textAttachment": "Text attachment",
 	"chat.contextStrip.display.reviewComment": "Review comment",
 	"chat.contextStrip.display.selectedMessageText": "Selected message text",
+	"chat.contextStrip.display.webElement": "Web element",
 	"chat.contextStrip.display.contextFallback": "Context",
 	"chat.contextStrip.display.more": "... {{count}} more",
 	"chat.contextStrip.display.more_other": "... {{count}} more",
@@ -127,5 +128,31 @@ describe("additional-context-display", () => {
 		const display = summarizeAdditionalContextItem(item, mockT);
 		expect(display.iconName).toBe("chat");
 		expect(display.meta).toBe("Selected message text");
+	});
+
+	it("summarizes web elements with their selector and source URL", () => {
+		const item: AdditionalContextItem = {
+			id: "web-1",
+			kind: "web_element",
+			title: "Submit",
+			source: "manual",
+			data: {
+				url: "https://example.com/form",
+				pageTitle: "Example form",
+				selector: "#submit",
+				tagName: "BUTTON",
+				role: "button",
+				accessibleName: "Submit",
+				selectedText: "Submit",
+				attributes: { id: "submit" },
+				annotation: "Check this action"
+			}
+		};
+
+		const display = summarizeAdditionalContextItem(item, mockT);
+		expect(display.iconName).toBe("global");
+		expect(display.meta).toBe("button · #submit");
+		expect(display.tooltip).toContain("https://example.com/form");
+		expect(display.tooltip).toContain("Check this action");
 	});
 });

@@ -1,0 +1,71 @@
+.page {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+	padding: 0 0 var(--ds-space-2) var(--ds-space-2);
+	overflow: hidden;
+	user-select: none;
+}
+
+.header {
+	padding-right: var(--ds-space-2);
+}
+
+.title {
+	margin: 0 0 8px !important;
+}
+
+.content {
+	display: grid;
+	align-content: start;
+	gap: var(--ds-space-2);
+	min-height: 0;
+	padding-right: var(--ds-space-2);
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
+.directoryInput {
+	width: min(420px, 42vw);
+}
+
+.managerActions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 8px;
+}
+
+.passwordList,
+.permissionList {
+	display: grid;
+	gap: 4px;
+	max-height: 340px;
+	overflow-y: auto;
+}
+
+.managerRow {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 4px;
+}
+
+.managerMeta {
+	display: grid;
+	min-width: 0;
+}
+
+.managerMeta :global(.ant-typography) {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+	.directoryInput {
+		width: 100%;
+	}
+}

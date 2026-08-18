@@ -35,11 +35,12 @@ import styles from "./HomePage.module.css";
 import { Icon } from "@/assets/icons";
 import ClarificationDialog from "@/widgets/clarification/ClarificationDialog";
 import PlanApprovalDialog from "@/widgets/approval/PlanApprovalDialog";
-import { type DockPanelActivationRequest, type DockPanelKind } from "@/widgets/dock/DockPanelTabs";
+import { createDockTab, type DockPanelActivationRequest, type DockPanelKind } from "@/widgets/dock/DockPanelTabs";
 import HomeWorkspaceSidebar from "./HomeWorkspaceSidebar";
 import HomeDockPanel from "./HomeDockPanel";
 import {
 	listTerminalRuntimeIds,
+	type BrowserPanelLayoutPreferences,
 	type DockLayoutPreferences,
 	type DockFullscreenPlacement,
 	type FilePanelLayoutPreferences,
@@ -133,7 +134,20 @@ function areSessionLayoutPreferencesEqual(left: SessionLayoutPreferences, right:
 	return left.fullscreenDock === right.fullscreenDock
 		&& areDockLayoutPreferencesEqual(left.side, right.side)
 		&& areDockLayoutPreferencesEqual(left.bottom, right.bottom)
-		&& JSON.stringify(left.filePanels) === JSON.stringify(right.filePanels);
+		&& JSON.stringify(left.filePanels) === JSON.stringify(right.filePanels)
+		&& JSON.stringify(left.browserPanels) === JSON.stringify(right.browserPanels);
+}
+
+function ensureDockTab(layout: DockLayoutPreferences, dockId: string, defaultKind: DockPanelKind): DockLayoutPreferences {
+	const firstTab: DockLayoutPreferences["tabs"][number] | undefined = layout.tabs[0];
+	if (firstTab !== undefined) {
+		const activeTabKey: string | null = layout.tabs.some((tab): boolean => tab.key === layout.activeTabKey)
+			? layout.activeTabKey
+			: firstTab.key;
+		return activeTabKey === layout.activeTabKey ? layout : { ...layout, activeTabKey };
+	}
+	const tab = createDockTab(dockId, defaultKind, 1);
+	return { ...layout, tabs: [tab], activeTabKey: tab.key };
 }
 
 function getSelectedConversationSearchQuery(container: HTMLElement | null): string | undefined {
@@ -818,7 +832,7 @@ function HomePage({
 		sessionId: summarySessionId,
 		workspace: workspaceForActions
 	};
-	const showDockControls: boolean = !isHome || workspaceForActions !== null;
+	const showDockControls: boolean = true;
 	const showWorkspaceLaunchControls: boolean = workspaceForActions !== null;
 	const showSummaryButton: boolean = true;
 	const showSideDockButton: boolean = showDockControls;
@@ -896,6 +910,19 @@ function HomePage({
 		commitSessionLayout({
 			...visualSessionLayoutRef.current,
 			filePanels: nextFilePanels
+		});
+	}, [commitSessionLayout]);
+
+	const updateBrowserPanel = useCallback((panelKey: string, nextBrowserPanel: BrowserPanelLayoutPreferences | null): void => {
+		const nextBrowserPanels: Record<string, BrowserPanelLayoutPreferences> = { ...visualSessionLayoutRef.current.browserPanels };
+		if (nextBrowserPanel === null) {
+			delete nextBrowserPanels[panelKey];
+		} else {
+			nextBrowserPanels[panelKey] = nextBrowserPanel;
+		}
+		commitSessionLayout({
+			...visualSessionLayoutRef.current,
+			browserPanels: nextBrowserPanels
 		});
 	}, [commitSessionLayout]);
 
@@ -1671,25 +1698,27 @@ function HomePage({
 
 	const openSideDock = useCallback((kind?: DockPanelKind): void => {
 		sideDockProgrammaticOpenUntilRef.current = performance.now() + SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS;
-		scheduleSessionLayoutSave({
+		const currentSideLayout: DockLayoutPreferences = visualSessionLayoutRef.current.side;
+		const defaultKind: DockPanelKind = kind ?? (workspaceForActions === null ? "browser" : "review");
+		commitSessionLayout({
 			...visualSessionLayoutRef.current,
-			side: { ...visualSessionLayoutRef.current.side, open: true }
+			side: { ...ensureDockTab(currentSideLayout, "side", defaultKind), open: true }
 		});
 		if (kind !== undefined) {
 			requestSideDockKind(kind);
 		}
-	}, [requestSideDockKind, scheduleSessionLayoutSave]);
+	}, [commitSessionLayout, requestSideDockKind, workspaceForActions]);
 
 	const closeSideDock = useCallback((): void => {
 		sideDockProgrammaticOpenUntilRef.current = 0;
-		scheduleSessionLayoutSave({
+		commitSessionLayout({
 			...visualSessionLayoutRef.current,
 			fullscreenDock: visualSessionLayoutRef.current.fullscreenDock === "side"
 				? null
 				: visualSessionLayoutRef.current.fullscreenDock,
 			side: { ...visualSessionLayoutRef.current.side, open: false }
 		});
-	}, [scheduleSessionLayoutSave]);
+	}, [commitSessionLayout]);
 
 	const toggleSideDock = useCallback((): void => {
 		if (sideDockOpen) {
@@ -1707,21 +1736,22 @@ function HomePage({
 	}, [openSideDock, workspaceForActions]);
 
 	const openBottomDock = useCallback((): void => {
-		scheduleSessionLayoutSave({
+		const currentBottomLayout: DockLayoutPreferences = visualSessionLayoutRef.current.bottom;
+		commitSessionLayout({
 			...visualSessionLayoutRef.current,
-			bottom: { ...visualSessionLayoutRef.current.bottom, open: true }
+			bottom: { ...ensureDockTab(currentBottomLayout, "bottom", "terminal"), open: true }
 		});
-	}, [scheduleSessionLayoutSave]);
+	}, [commitSessionLayout]);
 
 	const closeBottomDock = useCallback((): void => {
-		scheduleSessionLayoutSave({
+		commitSessionLayout({
 			...visualSessionLayoutRef.current,
 			fullscreenDock: visualSessionLayoutRef.current.fullscreenDock === "bottom"
 				? null
 				: visualSessionLayoutRef.current.fullscreenDock,
 			bottom: { ...visualSessionLayoutRef.current.bottom, open: false }
 		});
-	}, [scheduleSessionLayoutSave]);
+	}, [commitSessionLayout]);
 
 	const toggleBottomDock = useCallback((): void => {
 		if (bottomDockOpen) {
@@ -2143,46 +2173,59 @@ function HomePage({
 		waitForCwd: terminalWaitForCwd,
 		filePanels: visualSessionLayout.filePanels,
 		onFilePanelChange: updateFilePanel,
+		browserPanels: visualSessionLayout.browserPanels,
+		onBrowserPanelChange: updateBrowserPanel,
 	};
 
 	const sideDockConfig = showSideDockButton ? {
-		...commonDockPanelProps,
-		dockId: "side",
-		placement: "side" as const,
-		isOpen: sideDockOpen,
-		isFullscreen: sideDockFullscreen,
-		defaultKind: "review" as const,
-		layout: visualSessionLayout.side,
-		activationRequest: sideDockActivationRequest,
-		onLayoutChange: updateSideDock,
-		onFullscreenToggle: (): void => toggleDockFullscreen("side"),
-		panelSize: sideDockFullscreen ? "100%" : sideDockOpen ? sideDockSize : SIDE_DOCK_CLOSED_SIZE,
-		panelMin: SIDE_DOCK_CLOSED_SIZE,
-		panelMax: sideDockFullscreen ? undefined : SIDE_DOCK_MAX_SIZE,
-		slotClassName: styles.sideDockSlot,
+		panel: {
+			size: sideDockFullscreen ? "100%" : sideDockOpen ? sideDockSize : SIDE_DOCK_CLOSED_SIZE,
+			min: SIDE_DOCK_CLOSED_SIZE,
+			max: sideDockFullscreen ? undefined : SIDE_DOCK_MAX_SIZE
+		},
+		content: {
+			...commonDockPanelProps,
+			dockId: "side",
+			placement: "side" as const,
+			isOpen: sideDockOpen,
+			isFullscreen: sideDockFullscreen,
+			defaultKind: "review" as const,
+			layout: visualSessionLayout.side,
+			activationRequest: sideDockActivationRequest,
+			onLayoutChange: updateSideDock,
+			onFullscreenToggle: (): void => toggleDockFullscreen("side"),
+			slotClassName: styles.sideDockSlot
+		}
 	} : null;
 
 	const bottomDockConfig = showBottomDockButton ? {
-		...commonDockPanelProps,
-		dockId: "bottom",
-		placement: "bottom" as const,
-		isOpen: bottomDockOpen,
-		isFullscreen: bottomDockFullscreen,
-		defaultKind: "terminal" as const,
-		layout: visualSessionLayout.bottom,
-		onLayoutChange: updateBottomDock,
-		onFullscreenToggle: (): void => toggleDockFullscreen("bottom"),
-		panelSize: bottomDockFullscreen
-			? "100%"
-			: sideDockFullscreen
-				? BOTTOM_DOCK_CLOSED_SIZE
-				: bottomDockOpen
-					? bottomDockSize
-					: BOTTOM_DOCK_CLOSED_SIZE,
-		panelMin: BOTTOM_DOCK_CLOSED_SIZE,
-		panelMax: bottomDockFullscreen ? undefined : BOTTOM_DOCK_MAX_SIZE,
-		slotClassName: styles.bottomDockSlot,
+		panel: {
+			size: bottomDockFullscreen
+				? "100%"
+				: sideDockFullscreen
+					? BOTTOM_DOCK_CLOSED_SIZE
+					: bottomDockOpen
+						? bottomDockSize
+						: BOTTOM_DOCK_CLOSED_SIZE,
+			min: BOTTOM_DOCK_CLOSED_SIZE,
+			max: bottomDockFullscreen ? undefined : BOTTOM_DOCK_MAX_SIZE
+		},
+		content: {
+			...commonDockPanelProps,
+			dockId: "bottom",
+			placement: "bottom" as const,
+			isOpen: bottomDockOpen,
+			isFullscreen: bottomDockFullscreen,
+			defaultKind: "terminal" as const,
+			layout: visualSessionLayout.bottom,
+			onLayoutChange: updateBottomDock,
+			onFullscreenToggle: (): void => toggleDockFullscreen("bottom"),
+			slotClassName: styles.bottomDockSlot
+		}
 	} : null;
+	// Splitter 的直接子节点必须始终是 Panel；Dock 内容可以按开关状态卸载，但 Panel 结构保持稳定。
+	const renderSideDock: boolean = sideDockConfig !== null && (sideDockOpen || sideDockFullscreen);
+	const renderBottomDock: boolean = bottomDockConfig !== null && (bottomDockOpen || bottomDockFullscreen);
 
 	return (
 		<div
@@ -2456,10 +2499,24 @@ function HomePage({
 											</footer>
 										</section>
 									</Splitter.Panel>
-									{sideDockConfig === null ? null : <HomeDockPanel {...sideDockConfig} />}
+									<Splitter.Panel
+										size={sideDockConfig?.panel.size ?? SIDE_DOCK_CLOSED_SIZE}
+										min={sideDockConfig?.panel.min ?? SIDE_DOCK_CLOSED_SIZE}
+										max={sideDockConfig?.panel.max}
+										collapsible={{ start: true, showCollapsibleIcon: false }}
+									>
+										{renderSideDock && sideDockConfig !== null ? <HomeDockPanel {...sideDockConfig.content} /> : null}
+									</Splitter.Panel>
 								</Splitter>
 							</Splitter.Panel>
-							{bottomDockConfig === null ? null : <HomeDockPanel {...bottomDockConfig} />}
+							<Splitter.Panel
+								size={bottomDockConfig?.panel.size ?? BOTTOM_DOCK_CLOSED_SIZE}
+								min={bottomDockConfig?.panel.min ?? BOTTOM_DOCK_CLOSED_SIZE}
+								max={bottomDockConfig?.panel.max}
+								collapsible={{ start: true, showCollapsibleIcon: false }}
+							>
+								{renderBottomDock && bottomDockConfig !== null ? <HomeDockPanel {...bottomDockConfig.content} /> : null}
+							</Splitter.Panel>
 						</Splitter>
 						{isDockFullscreen ? (
 							<div className={styles.fullscreenComposer}>

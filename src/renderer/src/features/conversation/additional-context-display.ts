@@ -127,6 +127,14 @@ function getMeta(item: AdditionalContextItem, t: TFunction<"common">): string {
 		return t("chat.contextStrip.display.fileSelection");
 	}
 
+	if (item.kind === "web_element") {
+		const data: Record<string, unknown> = getDataRecord(item);
+		const tagName: string = getString(data.tagName).toLowerCase();
+		const selector: string = getString(data.selector);
+		return [tagName, selector].filter((value: string): boolean => value.length > 0).join(" · ")
+			|| t("chat.contextStrip.display.webElement");
+	}
+
 	return item.kind.replaceAll("_", " ");
 }
 
@@ -157,6 +165,14 @@ function getTooltipLines(item: AdditionalContextItem, meta: string, t: TFunction
 		if (selectedPaths.length > 6) {
 			lines.push(t("chat.contextStrip.display.more", { count: selectedPaths.length - 6 }));
 		}
+	}
+
+	if (item.kind === "web_element") {
+		const data: Record<string, unknown> = getDataRecord(item);
+		const url: string = getString(data.url);
+		const annotation: string = getString(data.annotation);
+		if (url.length > 0 && !lines.includes(url)) lines.push(url);
+		if (annotation.length > 0) lines.push(annotation);
 	}
 
 	if (item.pinned === true) {

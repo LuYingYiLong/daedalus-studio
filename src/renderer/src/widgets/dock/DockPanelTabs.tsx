@@ -7,11 +7,14 @@ import { Icon } from "@/assets/icons";
 import GitDiffReviewPanel from "@/widgets/git/review/GitDiffReviewPanel";
 import TerminalPanel from "@/widgets/terminal/TerminalPanel";
 import FilePanel from "@/widgets/files/FilePanel";
+import BrowserPanel from "@/widgets/browser/BrowserPanel";
 import type { AdditionalContextItem, WorkspaceConfig, WorkspaceSourceFolder } from "@/platform/rpc/types";
 import type { WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launch";
 import {
 	createDefaultFilePanelLayout,
+	createDefaultBrowserPanelLayout,
 	createTerminalRuntimeId,
+	type BrowserPanelLayoutPreferences,
 	type DockLayoutPreferences,
 	type DockTabKind,
 	type DockTabPreferences,
@@ -46,6 +49,7 @@ export type DockPanelTabsProps = {
 	defaultKind: DockPanelKind;
 	layout: DockLayoutPreferences;
 	filePanels: Record<string, FilePanelLayoutPreferences>;
+	browserPanels: Record<string, BrowserPanelLayoutPreferences>;
 	activationRequest?: DockPanelActivationRequest | null;
 	isFullscreen?: boolean;
 	contextItems: AdditionalContextItem[];
@@ -55,12 +59,14 @@ export type DockPanelTabsProps = {
 	onGitStateChange?: () => void | Promise<void>;
 	onLayoutChange: (layout: DockLayoutPreferences) => void;
 	onFilePanelChange: (panelKey: string, layout: FilePanelLayoutPreferences | null) => void;
+	onBrowserPanelChange: (panelKey: string, layout: BrowserPanelLayoutPreferences | null) => void;
 	onFullscreenToggle?: () => void;
 };
 
 const ADD_REVIEW_KEY: DockPanelKind = "review";
 const ADD_TERMINAL_KEY: DockPanelKind = "terminal";
 const ADD_FILES_KEY: DockPanelKind = "files";
+const ADD_BROWSER_KEY: DockPanelKind = "browser";
 
 function getPanelTitle(kind: DockPanelKind, index: number, t: TFunction<"common">): string {
 	if (kind === "review") {
@@ -69,7 +75,10 @@ function getPanelTitle(kind: DockPanelKind, index: number, t: TFunction<"common"
 	if (kind === "terminal") {
 		return index === 1 ? t("dock.tabs.terminal") : t("dock.tabs.terminalIndexed", { index });
 	}
-	return index === 1 ? t("dock.tabs.files") : t("dock.tabs.filesIndexed", { index });
+	if (kind === "files") {
+		return index === 1 ? t("dock.tabs.files") : t("dock.tabs.filesIndexed", { index });
+	}
+	return index === 1 ? t("dock.tabs.browser") : t("dock.tabs.browserIndexed", { index });
 }
 
 export function createDockTab(dockId: string, kind: DockPanelKind, index: number): DockTabPreferences {
@@ -107,7 +116,13 @@ export function reorderDockTabs(
 }
 
 function getTabIconName(kind: DockPanelKind): string {
-	return kind === "review" ? "git-diff" : kind === "terminal" ? "terminal" : "file-system";
+	return kind === "review"
+		? "git-diff"
+		: kind === "terminal"
+			? "terminal"
+			: kind === "files"
+				? "file-system"
+				: "global";
 }
 
 function DockPanelTabs({
@@ -128,6 +143,7 @@ function DockPanelTabs({
 	defaultKind,
 	layout,
 	filePanels,
+	browserPanels,
 	activationRequest = null,
 	isFullscreen = false,
 	contextItems,
@@ -137,6 +153,7 @@ function DockPanelTabs({
 	onGitStateChange,
 	onLayoutChange,
 	onFilePanelChange,
+	onBrowserPanelChange,
 	onFullscreenToggle
 }: DockPanelTabsProps): React.JSX.Element {
 	const { t } = useTranslation();
@@ -162,6 +179,11 @@ function DockPanelTabs({
 			label: t("dock.add.filesPanel"),
 			icon: <Icon name="file-system" />,
 			disabled: !canOpenReview
+		},
+		{
+			key: ADD_BROWSER_KEY,
+			label: t("dock.add.browserPanel"),
+			icon: <Icon name="global" />
 		}
 	], [canOpenReview, t]);
 
@@ -181,8 +203,10 @@ function DockPanelTabs({
 		});
 		if (kind === "files") {
 			onFilePanelChange(nextTab.key, createDefaultFilePanelLayout());
+		} else if (kind === "browser") {
+			onBrowserPanelChange(nextTab.key, createDefaultBrowserPanelLayout());
 		}
-	}, [dockId, layout, onFilePanelChange, onLayoutChange, workspaceId]);
+	}, [dockId, layout, onBrowserPanelChange, onFilePanelChange, onLayoutChange, workspaceId]);
 
 	const ensurePanelTab = useCallback((kind: DockPanelKind): void => {
 		const existingTab: DockTabPreferences | undefined = layout.tabs.find(
@@ -235,6 +259,8 @@ function DockPanelTabs({
 		}
 		if (targetTab?.kind === "files") {
 			onFilePanelChange(targetKey, null);
+		} else if (targetTab?.kind === "browser") {
+			onBrowserPanelChange(targetKey, null);
 		}
 
 		const targetIndex: number = layout.tabs.findIndex((tab: DockTabPreferences): boolean => tab.key === targetKey);
@@ -253,7 +279,7 @@ function DockPanelTabs({
 	}
 
 	function handleAdd(kind: string): void {
-		if (kind === ADD_REVIEW_KEY || kind === ADD_TERMINAL_KEY || kind === ADD_FILES_KEY) {
+		if (kind === ADD_REVIEW_KEY || kind === ADD_TERMINAL_KEY || kind === ADD_FILES_KEY || kind === ADD_BROWSER_KEY) {
 			addPanelTab(kind);
 		}
 	}
@@ -284,6 +310,21 @@ function DockPanelTabs({
 			);
 		}
 
+		if (tab.kind === "browser") {
+			return (
+				<BrowserPanel
+					panelKey={tab.key}
+					sessionId={sessionId}
+					layout={browserPanels[tab.key] ?? createDefaultBrowserPanelLayout()}
+					isOpen={isOpen}
+					isActive={activeKey === tab.key}
+					isFullscreen={isFullscreen}
+					onLayoutChange={(nextLayout: BrowserPanelLayoutPreferences): void => onBrowserPanelChange(tab.key, nextLayout)}
+					onAddContext={onAddContext}
+				/>
+			);
+		}
+
 		return (
 			<TerminalPanel
 				terminalId={createTerminalRuntimeId(sessionId, tab.key)}
@@ -302,7 +343,7 @@ function DockPanelTabs({
 				{getPanelTitle(tab.kind, tab.index, t)}
 			</span>
 		),
-		forceRender: tab.kind === "terminal",
+		forceRender: tab.kind === "terminal" || tab.kind === "browser",
 		children: renderTabContent(tab)
 	}));
 

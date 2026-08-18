@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute } from "node:path";
 
-export type DockTabKind = "review" | "terminal" | "files";
+export type DockTabKind = "review" | "terminal" | "files" | "browser";
 
 export type DockTabPreferences = {
 	key: string;
@@ -35,11 +35,16 @@ export type FilePanelLayoutPreferences = {
 	previewTabKey: string | null;
 };
 
+export type BrowserPanelLayoutPreferences = {
+	lastUrl: string | null;
+};
+
 export type SessionLayoutPreferences = {
 	side: DockLayoutPreferences;
 	bottom: DockLayoutPreferences;
 	fullscreenDock: DockFullscreenPlacement | null;
 	filePanels: Record<string, FilePanelLayoutPreferences>;
+	browserPanels: Record<string, BrowserPanelLayoutPreferences>;
 };
 
 export type SessionLayoutMap = Record<string, SessionLayoutPreferences>;
@@ -81,6 +86,7 @@ function cloneDockLayout(layout: DockLayoutPreferences): DockLayoutPreferences {
 export function cloneSessionLayout(layout: SessionLayoutPreferences): SessionLayoutPreferences {
 	return {
 		fullscreenDock: layout.fullscreenDock,
+		browserPanels: Object.fromEntries(Object.entries(layout.browserPanels).map(([key, browserPanel]): [string, BrowserPanelLayoutPreferences] => [key, { ...browserPanel }])),
 		filePanels: Object.fromEntries(Object.entries(layout.filePanels).map(([key, filePanel]): [string, FilePanelLayoutPreferences] => [
 			key,
 			{
@@ -98,6 +104,7 @@ export function createDefaultSessionLayout(): SessionLayoutPreferences {
 	return {
 		fullscreenDock: null,
 		filePanels: {},
+		browserPanels: {},
 		side: {
 			open: false,
 			size: SIDE_DOCK_DEFAULT_SIZE,
@@ -132,7 +139,7 @@ function normalizeDockLayout(
 	for (const candidate of value.tabs) {
 		if (
 			!isRecord(candidate)
-			|| (candidate.kind !== "review" && candidate.kind !== "terminal" && candidate.kind !== "files")
+			|| (candidate.kind !== "review" && candidate.kind !== "terminal" && candidate.kind !== "files" && candidate.kind !== "browser")
 			|| typeof candidate.key !== "string"
 			|| !TAB_KEY_PATTERN.test(candidate.key)
 			|| typeof candidate.index !== "number"
@@ -287,7 +294,24 @@ export function normalizeSessionLayout(value: unknown): SessionLayoutPreferences
 			}
 		}
 	}
-	return { fullscreenDock, side, bottom, filePanels };
+	const browserTabKeys: Set<string> = new Set([...side.tabs, ...bottom.tabs]
+		.filter((tab: DockTabPreferences): boolean => tab.kind === "browser")
+		.map((tab: DockTabPreferences): string => tab.key));
+	const browserPanels: Record<string, BrowserPanelLayoutPreferences> = {};
+	if (isRecord(value.browserPanels)) {
+		for (const [tabKey, browserPanel] of Object.entries(value.browserPanels)) {
+			if (!browserTabKeys.has(tabKey) || !isRecord(browserPanel)) {
+				continue;
+			}
+			const lastUrl: string | null = typeof browserPanel.lastUrl === "string"
+				&& browserPanel.lastUrl.length <= 2048
+				&& /^https?:\/\//iu.test(browserPanel.lastUrl)
+				? browserPanel.lastUrl
+				: null;
+			browserPanels[tabKey] = { lastUrl };
+		}
+	}
+	return { fullscreenDock, side, bottom, filePanels, browserPanels };
 }
 
 export function normalizeSessionLayoutRepository(value: unknown): SessionLayoutRepository {

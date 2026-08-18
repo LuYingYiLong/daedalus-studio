@@ -675,6 +675,8 @@
 			"terminalIndexed": "终端 {{index}}",
 			"files": "文件",
 			"filesIndexed": "文件 {{index}}",
+			"browser": "浏览器",
+			"browserIndexed": "浏览器 {{index}}",
 			"enterFullscreen": "展开面板",
 			"exitFullscreen": "恢复面板"
 		},
@@ -682,10 +684,96 @@
 			"label": "添加面板",
 			"reviewPanel": "变更审阅面板",
 			"terminalPanel": "终端面板",
-			"filesPanel": "文件面板"
+			"filesPanel": "文件面板",
+			"browserPanel": "浏览器面板"
 		},
 		"empty": {
 			"noWorkspaceSelected": "未选择 workspace"
+		}
+	},
+	"browser": {
+		"toolbar": {
+			"back": "后退",
+			"forward": "前进",
+			"reload": "刷新",
+			"stop": "停止加载",
+			"address": "输入网址",
+			"inspect": "注释网页元素",
+			"credentials": "选择已保存的账号",
+			"more": "更多浏览器操作"
+		},
+		"actions": { "cancel": "取消" },
+		"empty": { "description": "输入网址以打开网页" },
+		"errors": {
+			"navigate": "无法打开该网址",
+			"load": "网页加载失败"
+		},
+		"menu": {
+			"import": "导入 Cookie 和密码",
+			"downloads": "下载",
+			"history": "历史记录",
+			"clearData": "清除浏览器数据",
+			"settings": "浏览器设置"
+		},
+		"annotation": {
+			"placeholder": "为所选网页元素添加评论（可选）",
+			"add": "添加到上下文",
+			"added": "网页元素已添加到上下文"
+		},
+		"history": { "title": "历史记录", "clear": "清除历史记录" },
+		"downloads": {
+			"title": "下载",
+			"clear": "清除下载记录",
+			"state": {
+				"progressing": "正在下载",
+				"completed": "已完成",
+				"cancelled": "已取消",
+				"interrupted": "已中断"
+			}
+		},
+		"import": {
+			"title": "从浏览器导入",
+			"profile": "浏览器配置档案",
+			"noProfiles": "没有发现 Chrome 或 Edge 配置档案",
+			"cookies": "导入 Cookie 和站点登录状态",
+			"passwords": "导入已保存的密码",
+			"completed": "已导入 {{cookies}} 个 Cookie、{{passwords}} 个密码，跳过 {{skipped}} 项（其中 {{unsupported}} 项受系统加密保护）",
+			"failed": "导入失败"
+		},
+		"clear": {
+			"title": "清除浏览器数据",
+			"timeRange": "时间范围",
+			"timeRanges": {
+				"lastHour": "过去 1 小时",
+				"last24Hours": "过去 24 小时",
+				"last7Days": "过去 7 天",
+				"last4Weeks": "过去 4 周",
+				"allTime": "全部时间"
+			},
+			"siteDataAllTime": "Electron 无法按时间范围清理站点存储和缓存；选中的站点数据将按全部时间清除。",
+			"action": "清除数据",
+			"completed": "浏览器数据已清除",
+			"failed": "清除浏览器数据失败",
+			"history": "浏览历史",
+			"downloads": "下载记录（不会删除文件）",
+			"cookiesAndStorage": "Cookie 和站点存储",
+			"cache": "缓存",
+			"passwords": "已保存的密码",
+			"passwordWarningTitle": "删除所选时间范围内的密码？",
+			"passwordWarningDescription": "此操作无法撤销。符合所选时间范围的密码会从密码库中永久删除。",
+			"deletePasswords": "删除密码"
+		},
+		"passwords": {
+			"choose": "选择登录账号",
+			"noMatch": "当前网站没有匹配的已保存账号",
+			"fill": "填充"
+		},
+		"permissions": {
+			"requestTitle": "网站权限请求",
+			"requestDescription": "{{origin}} 请求使用 {{permission}} 权限。",
+			"block": "拒绝",
+			"allowOnce": "本次允许",
+			"allowAlways": "始终允许"
 		}
 	},
 	"files": {
@@ -965,6 +1053,7 @@
 				"reviewComment": "评审评论",
 				"selectedMessageText": "选中的消息文本",
 				"fileSelection": "文件选区",
+				"webElement": "网页元素",
 				"more": "... 还有 {{count}} 个",
 				"more_other": "... 还有 {{count}} 个",
 				"pathLabel": "{{kind}}: {{path}}",
@@ -1214,6 +1303,7 @@
 			"mcpServers": "MCP 服务器",
 			"skills": "技能",
 			"hooks": "钩子",
+			"browser": "浏览器",
 			"documentation": "文档",
 			"godotProjects": "Godot 项目",
 			"archivedSessions": "已归档会话",
@@ -1234,6 +1324,55 @@
 			"save": "保存",
 			"close": "关闭",
 			"update": "更新"
+		},
+		"browser": {
+			"title": "浏览器",
+			"actions": {
+				"choose": "选择",
+				"openDownloads": "管理下载",
+				"openHistory": "查看历史",
+				"managePermissions": "管理权限",
+				"clearData": "清除数据",
+				"import": "从 Chrome 或 Edge 导入",
+				"managePasswords": "管理密码"
+			},
+			"downloads": {
+				"title": "下载",
+				"directory": "下载位置",
+				"directoryDescription": "新下载文件的默认保存目录。",
+				"systemDefault": "系统下载目录",
+				"askEveryTime": "每次询问保存位置",
+				"askEveryTimeDescription": "开始下载时选择文件名和目录。",
+				"manage": "下载管理器",
+				"manageDescription": "查看进度、打开文件或清除下载记录。"
+			},
+			"privacy": {
+				"title": "隐私和网站数据",
+				"history": "浏览历史",
+				"historyDescription": "查看或清除最近访问的网页。",
+				"permissions": "网站权限",
+				"permissionsDescription": "管理通知、位置、媒体等网站权限规则。",
+				"clearData": "清除浏览器数据",
+				"clearDataDescription": "选择清除 Cookie、缓存、历史、下载记录或密码。"
+			},
+			"passwords": {
+				"title": "密码和导入",
+				"save": "允许保存密码",
+				"saveDescription": "控制是否允许新增、编辑或导入密码；已有密码仍可填充和管理。密码使用操作系统安全存储加密。",
+				"manage": "密码管理器",
+				"manageDescription": "导入、查看或删除用于显式填充的账号。",
+				"managerTitle": "密码管理器",
+				"addTitle": "添加密码",
+				"editTitle": "编辑密码",
+				"search": "搜索网站或用户名",
+				"origin": "网站来源",
+				"username": "用户名",
+				"password": "密码",
+				"reveal": "显示",
+				"hide": "隐藏",
+				"copied": "密码已复制"
+			},
+			"errors": { "load": "加载浏览器设置失败", "save": "保存浏览器设置失败" }
 		},
 		"hooks": {
 			"title": "钩子",

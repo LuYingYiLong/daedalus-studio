@@ -1,0 +1,63 @@
+import { Button, Dropdown, Input, Space, Tooltip, type MenuProps } from "antd";
+import { Icon } from "@/assets/icons";
+import type { BrowserViewState } from "../../../../contracts/browser";
+import styles from "./BrowserPanel.module.css";
+
+type BrowserToolbarProps = {
+	state: BrowserViewState;
+	address: string;
+	inspecting: boolean;
+	hasCredentials: boolean;
+	menuItems: MenuProps["items"];
+	onAddressChange: (value: string) => void;
+	onNavigate: () => void;
+	onAction: (action: "back" | "forward" | "reload" | "stop") => void;
+	onInspect: () => void;
+	onOpenCredentials: () => void;
+	labels: {
+		back: string;
+		forward: string;
+		reload: string;
+		stop: string;
+		address: string;
+		inspect: string;
+		credentials: string;
+		more: string;
+	};
+};
+
+function BrowserToolbar({ state, address, inspecting, hasCredentials, menuItems, onAddressChange, onNavigate, onAction, onInspect, onOpenCredentials, labels }: BrowserToolbarProps): React.JSX.Element {
+	return (
+		<header className={styles.toolbar}>
+			<Space.Compact className={styles.navigationButtons}>
+				<Tooltip title={labels.back} mouseEnterDelay={1}><Button type="text" icon={<Icon name="arrow-left" />} aria-label={labels.back} disabled={!state.canGoBack} onClick={(): void => onAction("back")} /></Tooltip>
+				<Tooltip title={labels.forward} mouseEnterDelay={1}><Button type="text" icon={<Icon name="arrow-right" />} aria-label={labels.forward} disabled={!state.canGoForward} onClick={(): void => onAction("forward")} /></Tooltip>
+				<Tooltip title={state.isLoading ? labels.stop : labels.reload} mouseEnterDelay={1}><Button type="text" icon={<Icon name={state.isLoading ? "stop" : "reload"} />} aria-label={state.isLoading ? labels.stop : labels.reload} disabled={state.url === null} onClick={(): void => onAction(state.isLoading ? "stop" : "reload")} /></Tooltip>
+			</Space.Compact>
+			<Input
+				className={styles.addressInput}
+				value={address}
+				placeholder={labels.address}
+				allowClear
+				aria-label={labels.address}
+				onChange={(event): void => onAddressChange(event.target.value)}
+				onPressEnter={onNavigate}
+			/>
+			{state.url === null ? null : (
+				<Tooltip title={labels.inspect} mouseEnterDelay={1}>
+					<Button type={inspecting ? "primary" : "text"} icon={<Icon name="note" />} aria-label={labels.inspect} aria-pressed={inspecting} onClick={onInspect} />
+				</Tooltip>
+			)}
+			{state.url === null || !hasCredentials ? null : (
+				<Tooltip title={labels.credentials} mouseEnterDelay={1}>
+					<Button type="text" icon={<Icon name="shield" />} aria-label={labels.credentials} onClick={onOpenCredentials} />
+				</Tooltip>
+			)}
+			<Dropdown menu={{ items: menuItems }} trigger={["click"]}>
+				<Tooltip title={labels.more} mouseEnterDelay={1}><Button type="text" icon={<Icon name="more-v" />} aria-label={labels.more} /></Tooltip>
+			</Dropdown>
+		</header>
+	);
+}
+
+export default BrowserToolbar;

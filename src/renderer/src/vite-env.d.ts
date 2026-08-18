@@ -5,6 +5,20 @@ import type {
 	ClientPreferences as StudioClientPreferences,
 	ClientPreferencesPatch as StudioClientPreferencesPatch
 } from "../../contracts/client-preferences";
+import type {
+	BrowserClearDataOptions,
+	BrowserCredentialSummary,
+	BrowserDownloadRecord,
+	BrowserElementSnapshot,
+	BrowserHistoryEntry,
+	BrowserImportProfile,
+	BrowserImportResult,
+	BrowserPermissionRequest,
+	BrowserPermissionRule,
+	BrowserSettings,
+	BrowserViewBounds,
+	BrowserViewState
+} from "../../contracts/browser";
 
 export {};
 
@@ -203,6 +217,56 @@ declare global {
 		onSettingsPageRequested: (callback: (page: string) => void) => () => void;
 	}
 
+	interface BrowserAPI {
+		view: {
+			create: (browserId: string) => Promise<BrowserViewState>;
+			destroy: (browserId: string) => Promise<void>;
+			setBounds: (browserId: string, bounds: BrowserViewBounds) => Promise<void>;
+			setVisible: (browserId: string, visible: boolean) => Promise<void>;
+			navigate: (browserId: string, url: string) => Promise<BrowserViewState>;
+			action: (browserId: string, action: "back" | "forward" | "reload" | "stop") => Promise<BrowserViewState>;
+			inspect: (browserId: string) => Promise<void>;
+			getState: (browserId: string) => Promise<BrowserViewState>;
+			onStateChanged: (callback: (state: BrowserViewState) => void) => () => void;
+			onElementSelected: (callback: (event: { browserId: string; snapshot: BrowserElementSnapshot }) => void) => () => void;
+			onInspectCancelled: (callback: (event: { browserId: string }) => void) => () => void;
+		};
+		history: { list: () => Promise<BrowserHistoryEntry[]>; clear: () => Promise<void> };
+		downloads: {
+			list: () => Promise<BrowserDownloadRecord[]>;
+			cancel: (id: string) => Promise<void>;
+			open: (id: string) => Promise<void>;
+			reveal: (id: string) => Promise<void>;
+			remove: (id: string) => Promise<void>;
+			clear: () => Promise<void>;
+			onChanged: (callback: (record: BrowserDownloadRecord) => void) => () => void;
+		};
+		permissions: {
+			set: (rule: Pick<BrowserPermissionRule, "origin" | "permission" | "decision">) => Promise<BrowserPermissionRule[]>;
+			remove: (origin: string, permission: string) => Promise<BrowserPermissionRule[]>;
+			respond: (request: BrowserPermissionRequest, decision: "allow_once" | "allow_always" | "block") => Promise<void>;
+			onRequested: (callback: (request: BrowserPermissionRequest) => void) => () => void;
+		};
+		passwords: {
+			list: () => Promise<BrowserCredentialSummary[]>;
+			save: (payload: { origin: string; username: string; password: string }) => Promise<BrowserCredentialSummary>;
+			reveal: (id: string) => Promise<{ password: string }>;
+			remove: (id: string) => Promise<void>;
+			forUrl: (url: string) => Promise<BrowserCredentialSummary[]>;
+			fill: (browserId: string, credentialId: string) => Promise<void>;
+		};
+		import: {
+			listProfiles: () => Promise<BrowserImportProfile[]>;
+			run: (payload: { source: "chrome" | "edge"; profileId: string; includeCookies: boolean; includePasswords: boolean }) => Promise<BrowserImportResult>;
+		};
+		settings: {
+			get: () => Promise<BrowserSettings>;
+			update: (patch: Partial<Omit<BrowserSettings, "permissionRules">>) => Promise<BrowserSettings>;
+			pickDownloadDirectory: () => Promise<string | null>;
+		};
+		data: { clear: (options: BrowserClearDataOptions) => Promise<void> };
+	}
+
 	interface TerminalState {
 		terminalId: string;
 		shell: string;
@@ -245,7 +309,7 @@ declare global {
 		}) => Promise<string | null>;
 	}
 
-	type DockTabKind = "review" | "terminal" | "files";
+	type DockTabKind = "review" | "terminal" | "files" | "browser";
 
 	interface DockTabPreferences {
 		key: string;
@@ -278,6 +342,7 @@ declare global {
 			activeTabKey: string | null;
 			previewTabKey: string | null;
 		}>;
+		browserPanels: Record<string, { lastUrl: string | null }>;
 	}
 
 	interface SessionLayoutAPI {
@@ -367,6 +432,7 @@ declare global {
 		nativeNotifications: NativeNotificationAPI;
 		tray: TrayAPI;
 		windowControl: WindowControlAPI;
+		browser: BrowserAPI;
 		appUpdate: AppUpdateAPI;
 		terminal: TerminalAPI;
 		sessionFs: SessionFsAPI;

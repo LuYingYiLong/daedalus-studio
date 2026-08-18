@@ -3,6 +3,20 @@ import { applyStudioAccentVariables } from "../contracts/theme-color";
 import { applyStudioFontVariables } from "../contracts/studio-fonts";
 import type { ClientPreferences, ClientPreferencesPatch } from "../contracts/client-preferences";
 import type { GeneralSettings } from "../contracts/general-settings";
+import type {
+	BrowserClearDataOptions,
+	BrowserCredentialSummary,
+	BrowserDownloadRecord,
+	BrowserElementSnapshot,
+	BrowserHistoryEntry,
+	BrowserImportProfile,
+	BrowserImportResult,
+	BrowserPermissionRequest,
+	BrowserPermissionRule,
+	BrowserSettings,
+	BrowserViewBounds,
+	BrowserViewState
+} from "../contracts/browser";
 
 type AppUpdateState = {
 	status: "idle" | "checking" | "available" | "downloading" | "downloaded" | "installing" | "not_available" | "error" | "unsupported";
@@ -84,7 +98,7 @@ type DockLayoutPreferences = {
 	size: number;
 	tabs: Array<{
 		key: string;
-		kind: "review" | "terminal" | "files";
+		kind: "review" | "terminal" | "files" | "browser";
 		index: number;
 	}>;
 	activeTabKey: string | null;
@@ -110,6 +124,7 @@ type SessionLayoutPreferences = {
 	bottom: DockLayoutPreferences;
 	fullscreenDock: "side" | "bottom" | null;
 	filePanels: Record<string, FilePanelLayoutPreferences>;
+	browserPanels: Record<string, { lastUrl: string | null }>;
 };
 
 type GodotProjectPluginStatus =
@@ -310,6 +325,81 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			const handler = (_event: Electron.IpcRendererEvent, page: string): void => callback(page);
 			ipcRenderer.on("window:open-settings", handler);
 			return () => { ipcRenderer.removeListener("window:open-settings", handler); };
+		}
+	},
+
+	browser: {
+		view: {
+			create: (browserId: string): Promise<BrowserViewState> => ipcRenderer.invoke("browser:view-create", { browserId }),
+			destroy: (browserId: string): Promise<void> => ipcRenderer.invoke("browser:view-destroy", { browserId }),
+			setBounds: (browserId: string, bounds: BrowserViewBounds): Promise<void> => ipcRenderer.invoke("browser:view-bounds", { browserId, bounds }),
+			setVisible: (browserId: string, visible: boolean): Promise<void> => ipcRenderer.invoke("browser:view-visible", { browserId, visible }),
+			navigate: (browserId: string, url: string): Promise<BrowserViewState> => ipcRenderer.invoke("browser:view-navigate", { browserId, url }),
+			action: (browserId: string, action: "back" | "forward" | "reload" | "stop"): Promise<BrowserViewState> => ipcRenderer.invoke("browser:view-action", { browserId, action }),
+			inspect: (browserId: string): Promise<void> => ipcRenderer.invoke("browser:view-inspect", { browserId }),
+			getState: (browserId: string): Promise<BrowserViewState> => ipcRenderer.invoke("browser:view-state", { browserId }),
+			onStateChanged: (callback: (state: BrowserViewState) => void): (() => void) => {
+				const handler = (_event: Electron.IpcRendererEvent, state: BrowserViewState): void => callback(state);
+				ipcRenderer.on("browser:view-state-changed", handler);
+				return (): void => { ipcRenderer.removeListener("browser:view-state-changed", handler); };
+			},
+			onElementSelected: (callback: (event: { browserId: string; snapshot: BrowserElementSnapshot }) => void): (() => void) => {
+				const handler = (_event: Electron.IpcRendererEvent, payload: { browserId: string; snapshot: BrowserElementSnapshot }): void => callback(payload);
+				ipcRenderer.on("browser:view-element-selected", handler);
+				return (): void => { ipcRenderer.removeListener("browser:view-element-selected", handler); };
+			},
+			onInspectCancelled: (callback: (event: { browserId: string }) => void): (() => void) => {
+				const handler = (_event: Electron.IpcRendererEvent, payload: { browserId: string }): void => callback(payload);
+				ipcRenderer.on("browser:view-inspect-cancelled", handler);
+				return (): void => { ipcRenderer.removeListener("browser:view-inspect-cancelled", handler); };
+			}
+		},
+		history: {
+			list: (): Promise<BrowserHistoryEntry[]> => ipcRenderer.invoke("browser:history-list"),
+			clear: (): Promise<void> => ipcRenderer.invoke("browser:history-clear")
+		},
+		downloads: {
+			list: (): Promise<BrowserDownloadRecord[]> => ipcRenderer.invoke("browser:downloads-list"),
+			cancel: (id: string): Promise<void> => ipcRenderer.invoke("browser:downloads-cancel", id),
+			open: (id: string): Promise<void> => ipcRenderer.invoke("browser:downloads-open", id),
+			reveal: (id: string): Promise<void> => ipcRenderer.invoke("browser:downloads-reveal", id),
+			remove: (id: string): Promise<void> => ipcRenderer.invoke("browser:downloads-remove", id),
+			clear: (): Promise<void> => ipcRenderer.invoke("browser:downloads-clear"),
+			onChanged: (callback: (record: BrowserDownloadRecord) => void): (() => void) => {
+				const handler = (_event: Electron.IpcRendererEvent, record: BrowserDownloadRecord): void => callback(record);
+				ipcRenderer.on("browser:download-changed", handler);
+				return (): void => { ipcRenderer.removeListener("browser:download-changed", handler); };
+			}
+		},
+		permissions: {
+			set: (rule: Pick<BrowserPermissionRule, "origin" | "permission" | "decision">): Promise<BrowserPermissionRule[]> => ipcRenderer.invoke("browser:permissions-set", rule),
+			remove: (origin: string, permission: string): Promise<BrowserPermissionRule[]> => ipcRenderer.invoke("browser:permissions-remove", { origin, permission }),
+			respond: (request: BrowserPermissionRequest, decision: "allow_once" | "allow_always" | "block"): Promise<void> => ipcRenderer.invoke("browser:permissions-respond", { ...request, decision }),
+			onRequested: (callback: (request: BrowserPermissionRequest) => void): (() => void) => {
+				const handler = (_event: Electron.IpcRendererEvent, request: BrowserPermissionRequest): void => callback(request);
+				ipcRenderer.on("browser:permission-requested", handler);
+				return (): void => { ipcRenderer.removeListener("browser:permission-requested", handler); };
+			}
+		},
+		passwords: {
+			list: (): Promise<BrowserCredentialSummary[]> => ipcRenderer.invoke("browser:passwords-list"),
+			save: (payload: { origin: string; username: string; password: string }): Promise<BrowserCredentialSummary> => ipcRenderer.invoke("browser:passwords-save", payload),
+			reveal: (id: string): Promise<{ password: string }> => ipcRenderer.invoke("browser:passwords-reveal", id),
+			remove: (id: string): Promise<void> => ipcRenderer.invoke("browser:passwords-remove", id),
+			forUrl: (url: string): Promise<BrowserCredentialSummary[]> => ipcRenderer.invoke("browser:passwords-for-url", url),
+			fill: (browserId: string, credentialId: string): Promise<void> => ipcRenderer.invoke("browser:passwords-fill", { browserId, credentialId })
+		},
+		import: {
+			listProfiles: (): Promise<BrowserImportProfile[]> => ipcRenderer.invoke("browser:import-profiles"),
+			run: (payload: { source: "chrome" | "edge"; profileId: string; includeCookies: boolean; includePasswords: boolean }): Promise<BrowserImportResult> => ipcRenderer.invoke("browser:import-run", payload)
+		},
+		settings: {
+			get: (): Promise<BrowserSettings> => ipcRenderer.invoke("browser:settings-get"),
+			update: (patch: Partial<Omit<BrowserSettings, "permissionRules">>): Promise<BrowserSettings> => ipcRenderer.invoke("browser:settings-update", patch),
+			pickDownloadDirectory: (): Promise<string | null> => ipcRenderer.invoke("browser:settings-pick-download-directory")
+		},
+		data: {
+			clear: (options: BrowserClearDataOptions): Promise<void> => ipcRenderer.invoke("browser:data-clear", options)
 		}
 	},
 
