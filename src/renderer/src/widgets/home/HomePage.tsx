@@ -397,6 +397,7 @@ type HomePageProps = {
 	approvalMode: ApprovalMode;
 	pendingApproval: PendingApproval | null;
 	isApproving: boolean;
+	isApprovalAutoSafeEnabling: boolean;
 	isRejecting: boolean;
 	approvalError: string | null;
 	pendingToolBudget: PendingToolBudget | null;
@@ -458,6 +459,7 @@ type HomePageProps = {
 	onModeChange: (mode: ChatMode) => void;
 	onApprovalModeChange: (mode: ApprovalMode) => void;
 	onApprovalApprove: (approvalId: string, consentText?: string) => void;
+	onApprovalApproveAndEnableAutoSafe: (approvalId: string, consentText?: string) => void;
 	onApprovalReject: (approvalId: string) => void;
 	onToolBudgetContinue: (budgetId: string) => void;
 	onToolBudgetStop: (budgetId: string) => void;
@@ -531,6 +533,7 @@ function HomePage({
 	approvalMode,
 	pendingApproval,
 	isApproving,
+	isApprovalAutoSafeEnabling,
 	isRejecting,
 	approvalError,
 	pendingToolBudget,
@@ -592,6 +595,7 @@ function HomePage({
 	onModeChange,
 	onApprovalModeChange,
 	onApprovalApprove,
+	onApprovalApproveAndEnableAutoSafe,
 	onApprovalReject,
 	onToolBudgetContinue,
 	onToolBudgetStop,
@@ -2339,9 +2343,11 @@ function HomePage({
 													<ApprovalDialog
 														pendingApproval={pendingApproval}
 														isApproving={isApproving}
+														isApprovalAutoSafeEnabling={isApprovalAutoSafeEnabling}
 														isRejecting={isRejecting}
 														errorMessage={approvalError}
 														onApprove={onApprovalApprove}
+														onApproveAndEnableAutoSafe={onApprovalApproveAndEnableAutoSafe}
 														onReject={onApprovalReject}
 													/>
 												) : !isHome && pendingToolBudget !== null ? (

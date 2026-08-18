@@ -443,6 +443,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		approvalError,
 		clearApprovalError,
 		isApproving,
+		isApprovalAutoSafeEnabling,
 		isRejecting,
 		isToolBudgetContinuing,
 		isToolBudgetStopping,
@@ -451,6 +452,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		saveApprovalMode,
 		handleApprovalModeChange,
 		handleApprovalApprove,
+		handleApprovalApproveAndEnableAutoSafe,
 		handleApprovalReject,
 		handleToolBudgetContinue,
 		handleToolBudgetStop,
@@ -3894,6 +3896,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		approvalMode,
 		pendingApproval,
 		isApproving,
+		isApprovalAutoSafeEnabling,
 		isRejecting,
 		approvalError,
 		pendingToolBudget,
@@ -3995,6 +3998,9 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		},
 		onApprovalApprove: (approvalId: string, consentText?: string): void => {
 			void handleApprovalApprove(approvalId, consentText);
+		},
+		onApprovalApproveAndEnableAutoSafe: (approvalId: string, consentText?: string): void => {
+			void handleApprovalApproveAndEnableAutoSafe(approvalId, consentText);
 		},
 		onApprovalReject: (approvalId: string): void => {
 			void handleApprovalReject(approvalId);

@@ -34,6 +34,7 @@ export type ApprovalController = {
 	approvalError: string | null;
 	clearApprovalError: () => void;
 	isApproving: boolean;
+	isApprovalAutoSafeEnabling: boolean;
 	isRejecting: boolean;
 	isToolBudgetContinuing: boolean;
 	isToolBudgetStopping: boolean;
@@ -42,6 +43,7 @@ export type ApprovalController = {
 	saveApprovalMode: (nextMode: ApprovalMode, confirmationText?: string) => Promise<boolean>;
 	handleApprovalModeChange: (nextMode: ApprovalMode) => void;
 	handleApprovalApprove: (approvalId: string, consentText?: string) => Promise<void>;
+	handleApprovalApproveAndEnableAutoSafe: (approvalId: string, consentText?: string) => Promise<void>;
 	handleApprovalReject: (approvalId: string) => Promise<void>;
 	handleToolBudgetContinue: (budgetId: string) => Promise<void>;
 	handleToolBudgetStop: (budgetId: string) => Promise<void>;
@@ -56,6 +58,7 @@ export default function useApprovalController(params: ApprovalControllerParams):
 		setApprovalError(null);
 	}, []);
 	const [isApproving, setIsApproving] = useState<boolean>(false);
+	const [isApprovalAutoSafeEnabling, setIsApprovalAutoSafeEnabling] = useState<boolean>(false);
 	const [isRejecting, setIsRejecting] = useState<boolean>(false);
 	const [isToolBudgetContinuing, setIsToolBudgetContinuing] = useState<boolean>(false);
 	const [isToolBudgetStopping, setIsToolBudgetStopping] = useState<boolean>(false);
@@ -115,27 +118,75 @@ export default function useApprovalController(params: ApprovalControllerParams):
 		void saveApprovalMode(nextMode);
 	}, [approvalMode, isApprovalModeSaving, params, saveApprovalMode]);
 
-	const handleApprovalApprove = useCallback(async (approvalId: string, consentText?: string): Promise<void> => {
-		if (isApproving || isRejecting) return;
+	const handleApprovalApproveWithMode = useCallback(async (
+		approvalId: string,
+		consentText: string | undefined,
+		enableAutoSafe: boolean
+	): Promise<void> => {
+		if (isApproving || isApprovalAutoSafeEnabling || isRejecting) return;
 		const previousApproval = pendingApproval;
-		setIsApproving(true);
+		if (enableAutoSafe) {
+			// 先更新本地 UI，让模式切换在审批 RPC 返回前就可见。
+			setApprovalModeState("auto-safe");
+			params.persistNewSessionComposerDefaults({ approvalMode: "auto-safe" });
+			setIsApprovalAutoSafeEnabling(true);
+		} else {
+			setIsApproving(true);
+		}
 		setApprovalError(null);
 		setPendingApproval(null);
 		try {
-			await approveApproval(approvalId, consentText);
+			const result = await approveApproval(
+				approvalId,
+				consentText,
+				enableAutoSafe ? { enableAutoSafe: true } : undefined
+			);
+			if (enableAutoSafe && result.mode !== undefined) {
+				setApprovalModeState(result.mode);
+				try {
+					await params.persistSessionUiMetadata({ approvalMode: result.mode });
+				} catch (error: unknown) {
+					// 审批已经在后端完成，偏好写入失败不应把成功的工具执行显示成失败。
+					console.error("[App] persist approval mode after approval failed", error);
+				}
+				params.persistNewSessionComposerDefaults({ approvalMode: result.mode });
+			}
 			await refreshPendingApproval();
 			await params.refreshLatestTimeline();
 		} catch (error: unknown) {
+			if (enableAutoSafe) {
+				// 模式切换在后端先于审批执行；即使当前审批失败，也要把新模式和待审批项重新同步回来。
+				await refreshPendingApproval();
+			}
 			setPendingApproval(previousApproval);
 			setApprovalError(error instanceof Error ? error.message : "Failed to approve tool execution");
 			console.error("[App] approve approval failed", error);
 		} finally {
-			setIsApproving(false);
+			if (enableAutoSafe) {
+				setIsApprovalAutoSafeEnabling(false);
+			} else {
+				setIsApproving(false);
+			}
 		}
-	}, [isApproving, isRejecting, pendingApproval, params.refreshLatestTimeline, refreshPendingApproval]);
+	}, [
+		isApproving,
+		isApprovalAutoSafeEnabling,
+		isRejecting,
+		pendingApproval,
+		params,
+		refreshPendingApproval
+	]);
+
+	const handleApprovalApprove = useCallback(async (approvalId: string, consentText?: string): Promise<void> => {
+		await handleApprovalApproveWithMode(approvalId, consentText, false);
+	}, [handleApprovalApproveWithMode]);
+
+	const handleApprovalApproveAndEnableAutoSafe = useCallback(async (approvalId: string, consentText?: string): Promise<void> => {
+		await handleApprovalApproveWithMode(approvalId, consentText, true);
+	}, [handleApprovalApproveWithMode]);
 
 	const handleApprovalReject = useCallback(async (approvalId: string): Promise<void> => {
-		if (isApproving || isRejecting) return;
+		if (isApproving || isApprovalAutoSafeEnabling || isRejecting) return;
 		const previousApproval = pendingApproval;
 		setIsRejecting(true);
 		setApprovalError(null);
@@ -151,7 +202,7 @@ export default function useApprovalController(params: ApprovalControllerParams):
 		} finally {
 			setIsRejecting(false);
 		}
-	}, [isApproving, isRejecting, pendingApproval, params.refreshLatestTimeline, refreshPendingApproval]);
+	}, [isApproving, isApprovalAutoSafeEnabling, isRejecting, pendingApproval, params.refreshLatestTimeline, refreshPendingApproval]);
 
 	const handleToolBudgetContinue = useCallback(async (budgetId: string): Promise<void> => {
 		if (isToolBudgetContinuing || isToolBudgetStopping) return;
@@ -192,6 +243,7 @@ export default function useApprovalController(params: ApprovalControllerParams):
 		approvalError,
 		clearApprovalError,
 		isApproving,
+		isApprovalAutoSafeEnabling,
 		isRejecting,
 		isToolBudgetContinuing,
 		isToolBudgetStopping,
@@ -200,9 +252,9 @@ export default function useApprovalController(params: ApprovalControllerParams):
 		saveApprovalMode,
 		handleApprovalModeChange,
 		handleApprovalApprove,
+		handleApprovalApproveAndEnableAutoSafe,
 		handleApprovalReject,
 		handleToolBudgetContinue,
 		handleToolBudgetStop
 	};
 }
-

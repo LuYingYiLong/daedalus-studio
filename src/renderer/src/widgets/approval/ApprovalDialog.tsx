@@ -3,22 +3,27 @@ import styles from "./ApprovalDialog.module.css";
 import React, { useEffect, useState } from "react";
 import { PendingApproval } from "@/platform/rpc/approval-api";
 import { useTranslation } from "react-i18next";
+import { Icon } from "@/assets/icons";
 
 export type ApprovalDialogProps = {
 	pendingApproval: PendingApproval | null;
 	isApproving?: boolean;
+	isApprovalAutoSafeEnabling?: boolean;
 	isRejecting?: boolean;
 	errorMessage?: string | null;
 	onApprove?: (approvalId: string, consentText?: string) => void;
+	onApproveAndEnableAutoSafe?: (approvalId: string, consentText?: string) => void;
 	onReject?: (approvalId: string) => void;
 }
 
 function ApprovalDialog({
 	pendingApproval,
 	isApproving = false,
+	isApprovalAutoSafeEnabling = false,
 	isRejecting = false,
 	errorMessage,
 	onApprove,
+	onApproveAndEnableAutoSafe,
 	onReject
 }: ApprovalDialogProps): React.JSX.Element | null {
 	const { t } = useTranslation();
@@ -36,7 +41,7 @@ function ApprovalDialog({
 	const approvalActionButtonStyle: React.CSSProperties = {
 		borderRadius: token.borderRadiusSM
 	};
-	const isBusy: boolean = isApproving || isRejecting;
+	const isBusy: boolean = isApproving || isApprovalAutoSafeEnabling || isRejecting;
 	const requiredConsent = pendingApproval.requiredConsent;
 	const isConsentSatisfied: boolean = requiredConsent === undefined || consentText === requiredConsent.expectedText;
 
@@ -109,6 +114,17 @@ function ApprovalDialog({
 						onApprove?.(pendingApproval.approvalId, requiredConsent === undefined ? undefined : consentText);
 					}}
 				>{t("approval.tool.actions.approve")}</Button>
+				<Button
+					block
+					disabled={isBusy || !isConsentSatisfied}
+					loading={isApprovalAutoSafeEnabling}
+					icon={<Icon name="shield" />}
+					style={approvalActionButtonStyle}
+					className={styles.approvalActionButton}
+					onClick={(): void => {
+						onApproveAndEnableAutoSafe?.(pendingApproval.approvalId, requiredConsent === undefined ? undefined : consentText);
+					}}
+				>{t("approval.tool.actions.approveAndEnableAutoSafe")}</Button>
 				<Button
 					danger={true}
 					block

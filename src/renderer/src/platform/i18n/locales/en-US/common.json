@@ -621,6 +621,7 @@
 			"consentSuffix": "to approve this cross-workspace action.",
 			"actions": {
 				"approve": "Approve",
+				"approveAndEnableAutoSafe": "Approve for me (enable Auto-Safe)",
 				"reject": "Reject"
 			}
 		},

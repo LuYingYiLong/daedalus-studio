@@ -47,6 +47,7 @@ export type ApproveApprovalResult = {
 	approvalId: string;
 	result: ApprovalExecutionResult;
 	continued: boolean;
+	mode?: ApprovalMode;
 };
 
 export type RejectApprovalResult = {
@@ -70,12 +71,17 @@ export async function setApprovalMode(mode: ApprovalMode, confirmationText?: str
 	});
 }
 
-export async function approveApproval(approvalId: string, consentText?: string): Promise<ApproveApprovalResult> {
+export async function approveApproval(
+	approvalId: string,
+	consentText?: string,
+	options?: { enableAutoSafe?: boolean }
+): Promise<ApproveApprovalResult> {
 	const client = await createBackendClient();
 
 	return client.request<ApproveApprovalResult>("approval.approve", {
 		approvalId,
-		consentText
+		consentText,
+		...(options?.enableAutoSafe === true ? { enableAutoSafe: true } : {})
 	});
 }
 

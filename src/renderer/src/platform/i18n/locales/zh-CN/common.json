@@ -619,6 +619,7 @@
 			"consentSuffix": "以批准这次跨 workspace 操作。",
 			"actions": {
 				"approve": "批准",
+				"approveAndEnableAutoSafe": "替我审批（开启自动安全）",
 				"reject": "拒绝"
 			}
 		},

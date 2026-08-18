@@ -2,26 +2,37 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import styles from "./GeneralSettingsPage.module.css";
 import pageMotionStyles from "./SettingsPageMotion.module.css";
-import { Alert, Button, ColorPicker, Input, Segmented, Select, Space, Switch, Tooltip, Typography } from "antd";
+import {
+	Alert,
+	Button,
+	ColorPicker,
+	Input,
+	Segmented,
+	Select,
+	Space,
+	Switch,
+	Tooltip,
+	Typography,
+} from "antd";
 import type { ColorPickerProps, SelectProps } from "antd";
 import { Icon } from "@/assets/icons";
 import SettingsItem from "@/ui/SettingsItem";
 import SettingsList from "@/ui/SettingsList";
 import {
 	DEFAULT_STUDIO_FONT_FAMILY,
-	DEFAULT_STUDIO_FONT_FAMILY_CODE
+	DEFAULT_STUDIO_FONT_FAMILY_CODE,
 } from "../../../../contracts/studio-fonts";
 import {
 	fetchClientPreferences,
 	DEFAULT_THEME_COLOR,
 	updateClientPreferences,
 	type ClientPreferences,
-	type LanguagePreference
+	type LanguagePreference,
 } from "@/platform/rpc/client-preferences-api";
 import {
 	fetchGeneralSettings,
 	updateGeneralSettings,
-	type GeneralSettings
+	type GeneralSettings,
 } from "@/platform/rpc/general-settings-api";
 
 type GeneralSettingsPageProps = {
@@ -32,12 +43,21 @@ type GeneralSettingsPageProps = {
 };
 
 type FontFamilyKey = "fontFamily" | "fontFamilyCode";
-type SettingKey = "autoCheckForUpdates" | FontFamilyKey | "godotExecutablePath" | "language" | "minimizeToTrayOnClose" | "nextStepHintsEnabled" | "notifyOnRunCompleted" | "theme" | "themeColor";
+type SettingKey =
+	| "autoCheckForUpdates"
+	| FontFamilyKey
+	| "godotExecutablePath"
+	| "language"
+	| "minimizeToTrayOnClose"
+	| "nextStepHintsEnabled"
+	| "notifyOnRunCompleted"
+	| "theme"
+	| "themeColor";
 type ThemePreference = ClientPreferences["theme"];
 
 const DEFAULT_FONT_FAMILIES: Record<FontFamilyKey, string> = {
 	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
-	fontFamilyCode: DEFAULT_STUDIO_FONT_FAMILY_CODE
+	fontFamilyCode: DEFAULT_STUDIO_FONT_FAMILY_CODE,
 };
 
 const colorPickerProps: ColorPickerProps = {
@@ -48,24 +68,35 @@ const colorPickerProps: ColorPickerProps = {
 		body: {
 			height: 20,
 			width: 20,
-		}
-	}
-}
+		},
+	},
+};
 
 function GeneralSettingsPage({
 	clientPreferences,
 	generalSettings,
 	onClientPreferencesChange,
-	onGeneralSettingsChange
+	onGeneralSettingsChange,
 }: GeneralSettingsPageProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const languageOptions: SelectProps<LanguagePreference>["options"] = [
-		{ label: t("settings.general.display.language.system"), value: "system" },
-		{ label: t("settings.general.display.language.english"), value: "en-US" },
-		{ label: t("settings.general.display.language.chinese"), value: "zh-CN" }
+		{
+			label: t("settings.general.display.language.system"),
+			value: "system",
+		},
+		{
+			label: t("settings.general.display.language.english"),
+			value: "en-US",
+		},
+		{
+			label: t("settings.general.display.language.chinese"),
+			value: "zh-CN",
+		},
 	];
-	const [draftClientPreferences, setDraftClientPreferences] = useState<ClientPreferences>(clientPreferences);
-	const [draftGeneralSettings, setDraftGeneralSettings] = useState<GeneralSettings>(generalSettings);
+	const [draftClientPreferences, setDraftClientPreferences] =
+		useState<ClientPreferences>(clientPreferences);
+	const [draftGeneralSettings, setDraftGeneralSettings] =
+		useState<GeneralSettings>(generalSettings);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [savingKey, setSavingKey] = useState<SettingKey | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -85,10 +116,11 @@ function GeneralSettingsPage({
 			try {
 				setIsLoading(true);
 				setErrorMessage(null);
-				const [loadedClientPreferences, loadedGeneralSettings] = await Promise.all([
-					fetchClientPreferences(),
-					fetchGeneralSettings()
-				]);
+				const [loadedClientPreferences, loadedGeneralSettings] =
+					await Promise.all([
+						fetchClientPreferences(),
+						fetchGeneralSettings(),
+					]);
 				if (cancelled) {
 					return;
 				}
@@ -98,7 +130,11 @@ function GeneralSettingsPage({
 				onGeneralSettingsChange(loadedGeneralSettings);
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.load"));
+					setErrorMessage(
+						error instanceof Error
+							? error.message
+							: t("settings.general.errors.load"),
+					);
 				}
 			} finally {
 				if (!cancelled) {
@@ -114,11 +150,13 @@ function GeneralSettingsPage({
 		};
 	}, [onClientPreferencesChange, onGeneralSettingsChange, t]);
 
-	async function handleNextStepHintsEnabledChange(checked: boolean): Promise<void> {
+	async function handleNextStepHintsEnabledChange(
+		checked: boolean,
+	): Promise<void> {
 		const previousSettings: GeneralSettings = draftGeneralSettings;
 		const optimisticSettings: GeneralSettings = {
 			...previousSettings,
-			nextStepHintsEnabled: checked
+			nextStepHintsEnabled: checked,
 		};
 
 		try {
@@ -126,13 +164,19 @@ function GeneralSettingsPage({
 			setErrorMessage(null);
 			setDraftGeneralSettings(optimisticSettings);
 			onGeneralSettingsChange(optimisticSettings);
-			const savedSettings: GeneralSettings = await updateGeneralSettings({ nextStepHintsEnabled: checked });
+			const savedSettings: GeneralSettings = await updateGeneralSettings({
+				nextStepHintsEnabled: checked,
+			});
 			setDraftGeneralSettings(savedSettings);
 			onGeneralSettingsChange(savedSettings);
 		} catch (error: unknown) {
 			setDraftGeneralSettings(previousSettings);
 			onGeneralSettingsChange(previousSettings);
-			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: t("settings.general.errors.save"),
+			);
 		} finally {
 			setSavingKey(null);
 		}
@@ -142,11 +186,17 @@ function GeneralSettingsPage({
 		try {
 			setSavingKey("godotExecutablePath");
 			setErrorMessage(null);
-			const savedSettings: GeneralSettings = await updateGeneralSettings({ godotExecutablePath: path });
+			const savedSettings: GeneralSettings = await updateGeneralSettings({
+				godotExecutablePath: path,
+			});
 			setDraftGeneralSettings(savedSettings);
 			onGeneralSettingsChange(savedSettings);
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.godotExecutable"));
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: t("settings.general.errors.godotExecutable"),
+			);
 		} finally {
 			setSavingKey(null);
 		}
@@ -163,17 +213,22 @@ function GeneralSettingsPage({
 			setErrorMessage(null);
 			const optimisticPreferences: ClientPreferences = {
 				...previousPreferences,
-				[key]: value
+				[key]: value,
 			};
 			setDraftClientPreferences(optimisticPreferences);
 			onClientPreferencesChange(optimisticPreferences);
-			const savedPreferences: ClientPreferences = await updateClientPreferences({ [key]: value });
+			const savedPreferences: ClientPreferences =
+				await updateClientPreferences({ [key]: value });
 			setDraftClientPreferences(savedPreferences);
 			onClientPreferencesChange(savedPreferences);
 		} catch (error: unknown) {
 			setDraftClientPreferences(previousPreferences);
 			onClientPreferencesChange(previousPreferences);
-			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: t("settings.general.errors.save"),
+			);
 		} finally {
 			setSavingKey(null);
 		}
@@ -188,7 +243,7 @@ function GeneralSettingsPage({
 
 		const optimisticPreferences: ClientPreferences = {
 			...previousPreferences,
-			[key]: defaultValue
+			[key]: defaultValue,
 		};
 
 		try {
@@ -196,13 +251,18 @@ function GeneralSettingsPage({
 			setErrorMessage(null);
 			setDraftClientPreferences(optimisticPreferences);
 			onClientPreferencesChange(optimisticPreferences);
-			const savedPreferences: ClientPreferences = await updateClientPreferences({ [key]: defaultValue });
+			const savedPreferences: ClientPreferences =
+				await updateClientPreferences({ [key]: defaultValue });
 			setDraftClientPreferences(savedPreferences);
 			onClientPreferencesChange(savedPreferences);
 		} catch (error: unknown) {
 			setDraftClientPreferences(previousPreferences);
 			onClientPreferencesChange(previousPreferences);
-			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: t("settings.general.errors.save"),
+			);
 		} finally {
 			setSavingKey(null);
 		}
@@ -212,15 +272,22 @@ function GeneralSettingsPage({
 		try {
 			setSavingKey("godotExecutablePath");
 			setErrorMessage(null);
-			const path: string | null = await window.electronAPI.pickGodotExecutable();
+			const path: string | null =
+				await window.electronAPI.pickGodotExecutable();
 			if (path === null) {
 				return;
 			}
-			const savedSettings: GeneralSettings = await updateGeneralSettings({ godotExecutablePath: path });
+			const savedSettings: GeneralSettings = await updateGeneralSettings({
+				godotExecutablePath: path,
+			});
 			setDraftGeneralSettings(savedSettings);
 			onGeneralSettingsChange(savedSettings);
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.godotExecutable"));
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: t("settings.general.errors.godotExecutable"),
+			);
 		} finally {
 			setSavingKey(null);
 		}
@@ -230,19 +297,29 @@ function GeneralSettingsPage({
 		await updateClientPreferenceSwitch("minimizeToTrayOnClose", checked);
 	}
 
-	async function handleAutoCheckForUpdatesChange(checked: boolean): Promise<void> {
+	async function handleAutoCheckForUpdatesChange(
+		checked: boolean,
+	): Promise<void> {
 		await updateClientPreferenceSwitch("autoCheckForUpdates", checked);
 	}
 
-	async function handleRunCompletionNotificationsChange(checked: boolean): Promise<void> {
+	async function handleRunCompletionNotificationsChange(
+		checked: boolean,
+	): Promise<void> {
 		await updateClientPreferenceSwitch("notifyOnRunCompleted", checked);
 	}
 
-	async function updateClientPreferenceSwitch(key: "autoCheckForUpdates" | "minimizeToTrayOnClose" | "notifyOnRunCompleted", checked: boolean): Promise<void> {
+	async function updateClientPreferenceSwitch(
+		key:
+			| "autoCheckForUpdates"
+			| "minimizeToTrayOnClose"
+			| "notifyOnRunCompleted",
+		checked: boolean,
+	): Promise<void> {
 		const previousPreferences: ClientPreferences = draftClientPreferences;
 		const optimisticPreferences: ClientPreferences = {
 			...previousPreferences,
-			[key]: checked
+			[key]: checked,
 		};
 
 		try {
@@ -250,23 +327,30 @@ function GeneralSettingsPage({
 			setErrorMessage(null);
 			setDraftClientPreferences(optimisticPreferences);
 			onClientPreferencesChange(optimisticPreferences);
-			const savedPreferences: ClientPreferences = await updateClientPreferences({ [key]: checked });
+			const savedPreferences: ClientPreferences =
+				await updateClientPreferences({ [key]: checked });
 			setDraftClientPreferences(savedPreferences);
 			onClientPreferencesChange(savedPreferences);
 		} catch (error: unknown) {
 			setDraftClientPreferences(previousPreferences);
 			onClientPreferencesChange(previousPreferences);
-			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: t("settings.general.errors.save"),
+			);
 		} finally {
 			setSavingKey(null);
 		}
 	}
 
-	async function handleThemeChange(themePreference: ThemePreference): Promise<void> {
+	async function handleThemeChange(
+		themePreference: ThemePreference,
+	): Promise<void> {
 		const previousPreferences: ClientPreferences = draftClientPreferences;
 		const optimisticPreferences: ClientPreferences = {
 			...previousPreferences,
-			theme: themePreference
+			theme: themePreference,
 		};
 
 		try {
@@ -274,30 +358,37 @@ function GeneralSettingsPage({
 			setErrorMessage(null);
 			setDraftClientPreferences(optimisticPreferences);
 			onClientPreferencesChange(optimisticPreferences);
-			const savedPreferences: ClientPreferences = await updateClientPreferences({ theme: themePreference });
+			const savedPreferences: ClientPreferences =
+				await updateClientPreferences({ theme: themePreference });
 			setDraftClientPreferences(savedPreferences);
 			onClientPreferencesChange(savedPreferences);
 		} catch (error: unknown) {
 			setDraftClientPreferences(previousPreferences);
 			onClientPreferencesChange(previousPreferences);
-			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: t("settings.general.errors.save"),
+			);
 		} finally {
 			setSavingKey(null);
 		}
 	}
 
 	function handleThemeColorPreview(themeColor: string): void {
-		setDraftClientPreferences((preferences: ClientPreferences): ClientPreferences => ({
-			...preferences,
-			themeColor
-		}));
+		setDraftClientPreferences(
+			(preferences: ClientPreferences): ClientPreferences => ({
+				...preferences,
+				themeColor,
+			}),
+		);
 	}
 
 	async function handleThemeColorChange(themeColor: string): Promise<void> {
 		const previousPreferences: ClientPreferences = clientPreferences;
 		const optimisticPreferences: ClientPreferences = {
 			...draftClientPreferences,
-			themeColor
+			themeColor,
 		};
 
 		try {
@@ -305,23 +396,30 @@ function GeneralSettingsPage({
 			setErrorMessage(null);
 			setDraftClientPreferences(optimisticPreferences);
 			onClientPreferencesChange(optimisticPreferences);
-			const savedPreferences: ClientPreferences = await updateClientPreferences({ themeColor });
+			const savedPreferences: ClientPreferences =
+				await updateClientPreferences({ themeColor });
 			setDraftClientPreferences(savedPreferences);
 			onClientPreferencesChange(savedPreferences);
 		} catch (error: unknown) {
 			setDraftClientPreferences(previousPreferences);
 			onClientPreferencesChange(previousPreferences);
-			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: t("settings.general.errors.save"),
+			);
 		} finally {
 			setSavingKey(null);
 		}
 	}
 
-	async function handleLanguageChange(languagePreference: LanguagePreference): Promise<void> {
+	async function handleLanguageChange(
+		languagePreference: LanguagePreference,
+	): Promise<void> {
 		const previousPreferences: ClientPreferences = draftClientPreferences;
 		const optimisticPreferences: ClientPreferences = {
 			...previousPreferences,
-			language: languagePreference
+			language: languagePreference,
 		};
 
 		try {
@@ -329,13 +427,18 @@ function GeneralSettingsPage({
 			setErrorMessage(null);
 			setDraftClientPreferences(optimisticPreferences);
 			onClientPreferencesChange(optimisticPreferences);
-			const savedPreferences: ClientPreferences = await updateClientPreferences({ language: languagePreference });
+			const savedPreferences: ClientPreferences =
+				await updateClientPreferences({ language: languagePreference });
 			setDraftClientPreferences(savedPreferences);
 			onClientPreferencesChange(savedPreferences);
 		} catch (error: unknown) {
 			setDraftClientPreferences(previousPreferences);
 			onClientPreferencesChange(previousPreferences);
-			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: t("settings.general.errors.save"),
+			);
 		} finally {
 			setSavingKey(null);
 		}
@@ -363,84 +466,129 @@ function GeneralSettingsPage({
 							showIcon={true}
 							description={errorMessage}
 							closable={{
-								onClose: (): void => setErrorMessage(null)
+								onClose: (): void => setErrorMessage(null),
 							}}
 							className={styles.alert}
 						/>
 					) : null}
 
 					<div className={styles.preferenceList}>
-							<SettingsItem
-								title={t("settings.general.display.theme.title")}
-								description={t("settings.general.display.theme.description")}
-							>
-								<Segmented
-									className={styles.themeControl}
-									value={draftClientPreferences.theme}
-									disabled={savingKey !== null && savingKey !== "theme"}
-									options={[
-										{ label: t("settings.general.display.theme.system"), value: "system" },
-										{ label: t("settings.general.display.theme.light"), value: "light" },
-										{ label: t("settings.general.display.theme.dark"), value: "dark" }
-									]}
-									onChange={(value: string | number): void => {
-										void handleThemeChange(value as ThemePreference);
+						<SettingsItem
+							title={t("settings.general.display.theme.title")}
+							description={t(
+								"settings.general.display.theme.description",
+							)}
+						>
+							<Segmented
+								className={styles.themeControl}
+								value={draftClientPreferences.theme}
+								disabled={
+									savingKey !== null && savingKey !== "theme"
+								}
+								options={[
+									{
+										label: t(
+											"settings.general.display.theme.system",
+										),
+										value: "system",
+									},
+									{
+										label: t(
+											"settings.general.display.theme.light",
+										),
+										value: "light",
+									},
+									{
+										label: t(
+											"settings.general.display.theme.dark",
+										),
+										value: "dark",
+									},
+								]}
+								onChange={(value: string | number): void => {
+									void handleThemeChange(
+										value as ThemePreference,
+									);
+								}}
+							/>
+						</SettingsItem>
+						<SettingsItem
+							title={t(
+								"settings.general.display.themeColor.title",
+							)}
+							description={t(
+								"settings.general.display.themeColor.description",
+							)}
+						>
+							<Space.Compact>
+								<ColorPicker
+									{...colorPickerProps}
+									value={draftClientPreferences.themeColor}
+									format="hex"
+									disabledAlpha={true}
+									disabledFormat={true}
+									showText={(color): React.ReactNode =>
+										color.toHexString().toUpperCase()
+									}
+									disabled={savingKey !== null}
+									onChange={(color): void => {
+										handleThemeColorPreview(
+											color.toHexString(),
+										);
+									}}
+									onChangeComplete={(color): void => {
+										void handleThemeColorChange(
+											color.toHexString(),
+										);
 									}}
 								/>
-							</SettingsItem>
-							<SettingsItem
-								title={t("settings.general.display.themeColor.title")}
-								description={t("settings.general.display.themeColor.description")}
-							>
-								<Space.Compact>
-									<ColorPicker
-										{...colorPickerProps}
-										value={draftClientPreferences.themeColor}
-										format="hex"
-										disabledAlpha={true}
-										disabledFormat={true}
-										showText={(color): React.ReactNode => color.toHexString().toUpperCase()}
-										disabled={savingKey !== null}
-										onChange={(color): void => {
-											handleThemeColorPreview(color.toHexString());
-										}}
-										onChangeComplete={(color): void => {
-											void handleThemeColorChange(color.toHexString());
-										}}
-									/>
-									<Button
-										loading={savingKey === "themeColor"}
-										disabled={savingKey !== null || draftClientPreferences.themeColor === DEFAULT_THEME_COLOR}
-										onClick={(): void => {
-											void handleThemeColorChange(DEFAULT_THEME_COLOR);
-										}}
-										icon={<Icon name="reload" />}
-									/>
-								</Space.Compact>
-							</SettingsItem>
-							<SettingsItem
-								title={t("settings.general.display.language.title")}
-								description={t("settings.general.display.language.description")}
-							>
-								<Select<LanguagePreference>
-									value={draftClientPreferences.language}
-									disabled={savingKey !== null && savingKey !== "language"}
-									options={languageOptions}
-									placeholder={t("settings.general.display.language.placeholder")}
-									onChange={(value: LanguagePreference): void => {
-										void handleLanguageChange(value);
+								<Button
+									loading={savingKey === "themeColor"}
+									disabled={
+										savingKey !== null ||
+										draftClientPreferences.themeColor ===
+											DEFAULT_THEME_COLOR
+									}
+									onClick={(): void => {
+										void handleThemeColorChange(
+											DEFAULT_THEME_COLOR,
+										);
 									}}
-									suffixIcon={<Icon name="arrow-down" style={{ pointerEvents: "none" }} />}
+									icon={<Icon name="reload" />}
 								/>
-							</SettingsItem>
+							</Space.Compact>
+						</SettingsItem>
+						<SettingsItem
+							title={t("settings.general.display.language.title")}
+							description={t(
+								"settings.general.display.language.description",
+							)}
+						>
+							<Select<LanguagePreference>
+								value={draftClientPreferences.language}
+								disabled={
+									savingKey !== null &&
+									savingKey !== "language"
+								}
+								options={languageOptions}
+								placeholder={t(
+									"settings.general.display.language.placeholder",
+								)}
+								onChange={(value: LanguagePreference): void => {
+									void handleLanguageChange(value);
+								}}
+							/>
+						</SettingsItem>
 					</div>
 				</SettingsList>
 
-			<SettingsList title={t("settings.general.fonts.title")}>
+				<SettingsList title={t("settings.general.fonts.title")}>
 					<div className={styles.preferenceList}>
 						<SettingsItem
 							title={t("settings.general.fonts.body.title")}
-							description={t("settings.general.fonts.body.description")}
+							description={t(
+								"settings.general.fonts.body.description",
+							)}
 						>
 							<Space.Compact>
 								<Input
@@ -448,95 +596,193 @@ function GeneralSettingsPage({
 									value={draftClientPreferences.fontFamily}
 									maxLength={512}
 									allowClear
-									placeholder={t("settings.general.fonts.body.placeholder")}
+									placeholder={t(
+										"settings.general.fonts.body.placeholder",
+									)}
 									disabled={savingKey !== null}
-									onChange={(event): void => setDraftClientPreferences((preferences): ClientPreferences => ({ ...preferences, fontFamily: event.target.value }))}
-									onBlur={(): void => { void saveFontFamily("fontFamily"); }}
-									onPressEnter={(event): void => event.currentTarget.blur()}
+									onChange={(event): void =>
+										setDraftClientPreferences(
+											(
+												preferences,
+											): ClientPreferences => ({
+												...preferences,
+												fontFamily: event.target.value,
+											}),
+										)
+									}
+									onBlur={(): void => {
+										void saveFontFamily("fontFamily");
+									}}
+									onPressEnter={(event): void =>
+										event.currentTarget.blur()
+									}
 								/>
-								<Tooltip title={t("settings.general.fonts.body.reset")}>
+								<Tooltip
+									title={t(
+										"settings.general.fonts.body.reset",
+									)}
+								>
 									<Button
-										aria-label={t("settings.general.fonts.body.reset")}
+										aria-label={t(
+											"settings.general.fonts.body.reset",
+										)}
 										icon={<Icon name="reload" />}
 										loading={savingKey === "fontFamily"}
-										disabled={savingKey !== null || draftClientPreferences.fontFamily === DEFAULT_FONT_FAMILIES.fontFamily}
-										onMouseDown={(event): void => event.preventDefault()}
-										onClick={(): void => { void handleResetFontFamily("fontFamily"); }}
+										disabled={
+											savingKey !== null ||
+											draftClientPreferences.fontFamily ===
+												DEFAULT_FONT_FAMILIES.fontFamily
+										}
+										onMouseDown={(event): void =>
+											event.preventDefault()
+										}
+										onClick={(): void => {
+											void handleResetFontFamily(
+												"fontFamily",
+											);
+										}}
 									/>
 								</Tooltip>
 							</Space.Compact>
 						</SettingsItem>
 						<SettingsItem
 							title={t("settings.general.fonts.code.title")}
-							description={t("settings.general.fonts.code.description")}
+							description={t(
+								"settings.general.fonts.code.description",
+							)}
 						>
 							<Space.Compact>
 								<Input
 									className={styles.fontFamilyInput}
-									value={draftClientPreferences.fontFamilyCode}
+									value={
+										draftClientPreferences.fontFamilyCode
+									}
 									maxLength={512}
 									allowClear
-									placeholder={t("settings.general.fonts.code.placeholder")}
+									placeholder={t(
+										"settings.general.fonts.code.placeholder",
+									)}
 									disabled={savingKey !== null}
-									onChange={(event): void => setDraftClientPreferences((preferences): ClientPreferences => ({ ...preferences, fontFamilyCode: event.target.value }))}
-									onBlur={(): void => { void saveFontFamily("fontFamilyCode"); }}
-									onPressEnter={(event): void => event.currentTarget.blur()}
+									onChange={(event): void =>
+										setDraftClientPreferences(
+											(
+												preferences,
+											): ClientPreferences => ({
+												...preferences,
+												fontFamilyCode:
+													event.target.value,
+											}),
+										)
+									}
+									onBlur={(): void => {
+										void saveFontFamily("fontFamilyCode");
+									}}
+									onPressEnter={(event): void =>
+										event.currentTarget.blur()
+									}
 								/>
-								<Tooltip title={t("settings.general.fonts.code.reset")}>
+								<Tooltip
+									title={t(
+										"settings.general.fonts.code.reset",
+									)}
+								>
 									<Button
-										aria-label={t("settings.general.fonts.code.reset")}
+										aria-label={t(
+											"settings.general.fonts.code.reset",
+										)}
 										icon={<Icon name="reload" />}
 										loading={savingKey === "fontFamilyCode"}
-										disabled={savingKey !== null || draftClientPreferences.fontFamilyCode === DEFAULT_FONT_FAMILIES.fontFamilyCode}
-										onMouseDown={(event): void => event.preventDefault()}
-										onClick={(): void => { void handleResetFontFamily("fontFamilyCode"); }}
+										disabled={
+											savingKey !== null ||
+											draftClientPreferences.fontFamilyCode ===
+												DEFAULT_FONT_FAMILIES.fontFamilyCode
+										}
+										onMouseDown={(event): void =>
+											event.preventDefault()
+										}
+										onClick={(): void => {
+											void handleResetFontFamily(
+												"fontFamilyCode",
+											);
+										}}
 									/>
 								</Tooltip>
-								</Space.Compact>
+							</Space.Compact>
 						</SettingsItem>
 					</div>
 				</SettingsList>
 
 				<SettingsList title={t("settings.general.godot.title")}>
 					<div className={styles.preferenceList}>
-							<SettingsItem
-								title={t("settings.general.godot.executable")}
-								description={draftGeneralSettings.godotExecutablePath?.trim() || t("settings.general.godot.placeholder")}
-							>
-								<Space.Compact>
+						<SettingsItem
+							title={t("settings.general.godot.executable")}
+							description={
+								draftGeneralSettings.godotExecutablePath?.trim() ||
+								t("settings.general.godot.placeholder")
+							}
+						>
+							<Space.Compact>
+								<Button
+									icon={<Icon name="folder-open" />}
+									loading={
+										savingKey === "godotExecutablePath"
+									}
+									disabled={
+										savingKey !== null &&
+										savingKey !== "godotExecutablePath"
+									}
+									onClick={(): void => {
+										void handleGodotExecutablePick();
+									}}
+								>
+									{t("settings.general.godot.browse")}
+								</Button>
+								<Tooltip
+									title={t("settings.general.godot.clear")}
+								>
 									<Button
-										icon={<Icon name="folder-open" />}
-										loading={savingKey === "godotExecutablePath"}
-										disabled={savingKey !== null && savingKey !== "godotExecutablePath"}
-										onClick={(): void => { void handleGodotExecutablePick(); }}
-									>
-										{t("settings.general.godot.browse")}
-									</Button>
-									<Tooltip title={t("settings.general.godot.clear")}>
-										<Button
-											aria-label={t("settings.general.godot.clear")}
-											icon={<Icon name="clear" />}
-											disabled={savingKey !== null || draftGeneralSettings.godotExecutablePath === null}
-											onClick={(): void => { void saveGodotExecutablePath(null); }}
-										/>
-									</Tooltip>
-								</Space.Compact>
-							</SettingsItem>
+										aria-label={t(
+											"settings.general.godot.clear",
+										)}
+										icon={<Icon name="clear" />}
+										disabled={
+											savingKey !== null ||
+											draftGeneralSettings.godotExecutablePath ===
+												null
+										}
+										onClick={(): void => {
+											void saveGodotExecutablePath(null);
+										}}
+									/>
+								</Tooltip>
+							</Space.Compact>
+						</SettingsItem>
 					</div>
 				</SettingsList>
 
 				<SettingsList title={t("settings.general.notifications.title")}>
 					<div className={styles.preferenceList}>
 						<SettingsItem
-							title={t("settings.general.notifications.runCompleted.title")}
-							description={t("settings.general.notifications.runCompleted.description")}
+							title={t(
+								"settings.general.notifications.runCompleted.title",
+							)}
+							description={t(
+								"settings.general.notifications.runCompleted.description",
+							)}
 						>
 							<Switch
-								checked={draftClientPreferences.notifyOnRunCompleted}
+								checked={
+									draftClientPreferences.notifyOnRunCompleted
+								}
 								loading={savingKey === "notifyOnRunCompleted"}
-								disabled={savingKey !== null && savingKey !== "notifyOnRunCompleted"}
+								disabled={
+									savingKey !== null &&
+									savingKey !== "notifyOnRunCompleted"
+								}
 								onChange={(checked: boolean): void => {
-									void handleRunCompletionNotificationsChange(checked);
+									void handleRunCompletionNotificationsChange(
+										checked,
+									);
 								}}
 							/>
 						</SettingsItem>
@@ -545,29 +791,45 @@ function GeneralSettingsPage({
 
 				<SettingsList title={t("settings.general.general.title")}>
 					<div className={styles.preferenceList}>
-							{[
-								{
-									key: "nextStepHintsEnabled" as const,
-									title: t("settings.general.general.nextStepHintsEnabled.title"),
-									description: t("settings.general.general.nextStepHintsEnabled.description"),
-									checked: draftGeneralSettings.nextStepHintsEnabled,
-									onChange: handleNextStepHintsEnabledChange
-								},
-								{
-									key: "autoCheckForUpdates" as const,
-									title: t("settings.general.general.autoCheckForUpdates.title"),
-									description: t("settings.general.general.autoCheckForUpdates.description"),
-									checked: draftClientPreferences.autoCheckForUpdates,
-									onChange: handleAutoCheckForUpdatesChange
-								},
-								{
-									key: "minimizeToTrayOnClose" as const,
-									title: t("settings.general.general.minimizeToTrayOnClose.title"),
-									description: t("settings.general.general.minimizeToTrayOnClose.description"),
-									checked: draftClientPreferences.minimizeToTrayOnClose,
-									onChange: handleMinimizeToTrayChange
-								}
-							].map((item): React.JSX.Element => (
+						{[
+							{
+								key: "nextStepHintsEnabled" as const,
+								title: t(
+									"settings.general.general.nextStepHintsEnabled.title",
+								),
+								description: t(
+									"settings.general.general.nextStepHintsEnabled.description",
+								),
+								checked:
+									draftGeneralSettings.nextStepHintsEnabled,
+								onChange: handleNextStepHintsEnabledChange,
+							},
+							{
+								key: "autoCheckForUpdates" as const,
+								title: t(
+									"settings.general.general.autoCheckForUpdates.title",
+								),
+								description: t(
+									"settings.general.general.autoCheckForUpdates.description",
+								),
+								checked:
+									draftClientPreferences.autoCheckForUpdates,
+								onChange: handleAutoCheckForUpdatesChange,
+							},
+							{
+								key: "minimizeToTrayOnClose" as const,
+								title: t(
+									"settings.general.general.minimizeToTrayOnClose.title",
+								),
+								description: t(
+									"settings.general.general.minimizeToTrayOnClose.description",
+								),
+								checked:
+									draftClientPreferences.minimizeToTrayOnClose,
+								onChange: handleMinimizeToTrayChange,
+							},
+						].map(
+							(item): React.JSX.Element => (
 								<SettingsItem
 									key={item.key}
 									title={item.title}
@@ -576,13 +838,17 @@ function GeneralSettingsPage({
 									<Switch
 										checked={item.checked}
 										loading={savingKey === item.key}
-										disabled={savingKey !== null && savingKey !== item.key}
+										disabled={
+											savingKey !== null &&
+											savingKey !== item.key
+										}
 										onChange={(checked: boolean): void => {
 											void item.onChange(checked);
 										}}
 									/>
 								</SettingsItem>
-							))}
+							),
+						)}
 					</div>
 				</SettingsList>
 			</div>
