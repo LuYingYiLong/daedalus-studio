@@ -1,14 +1,56 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Button, Divider, Dropdown, Empty, Input, message as antdMessage, Modal, Space, Spin, Splitter, Typography, Popover, Collapse, Tooltip } from "antd";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
+import {
+	Button,
+	Divider,
+	Dropdown,
+	Empty,
+	Input,
+	message as antdMessage,
+	Modal,
+	Space,
+	Spin,
+	Splitter,
+	Typography,
+	Popover,
+	Collapse,
+	Tooltip,
+} from "antd";
 import type { CollapseProps, MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
-import type { AdditionalContextItem, AgentGoalState, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SelectionAskThread, SessionMetadata, SessionTimelineNavigationEntry, TimelineBlock, WorkflowTodoSnapshot, WorkspaceConfig } from "@/platform/rpc/types";
+import type {
+	AdditionalContextItem,
+	AgentGoalState,
+	MessageQueueItem,
+	PendingGuide,
+	PendingToolBudget,
+	PlanApprovalState,
+	PlanClarificationState,
+	SelectionAskThread,
+	SessionMetadata,
+	SessionTimelineNavigationEntry,
+	TimelineBlock,
+	WorkflowTodoSnapshot,
+	WorkspaceConfig,
+} from "@/platform/rpc/types";
 import type { ChatMode } from "@/platform/rpc/chat-api";
-import type { ApprovalMode, PendingApproval } from "@/platform/rpc/approval-api";
+import type {
+	ApprovalMode,
+	PendingApproval,
+} from "@/platform/rpc/approval-api";
 import type { SlashCommandDefinition } from "@/platform/rpc/command-api";
 import type { ProviderModelSelection } from "@/platform/rpc/provider-api";
 import { getPlan, type PlanResult } from "@/platform/rpc/plan-api";
-import type { DeleteWorkspaceResult, WorkspaceTreeOrderPreferences } from "@/platform/rpc/workspace-api";
+import type {
+	DeleteWorkspaceResult,
+	WorkspaceTreeOrderPreferences,
+} from "@/platform/rpc/workspace-api";
 import type { SkillSummary } from "@/platform/rpc/skill-api";
 import type { WorkspaceSidebarPreferences } from "@/platform/rpc/client-preferences-api";
 import {
@@ -16,13 +58,29 @@ import {
 	findMatchingShortcutCommand,
 	type KeyboardShortcutOverrides,
 	type ShortcutCommandId,
-	type ShortcutPlatform
+	type ShortcutPlatform,
 } from "@/platform/rpc/keyboard-shortcuts";
-import { fetchSessionOverview, fetchWorkspaceOverview, type SessionOverviewGitInfo, type SessionOverviewPlanItem, type SessionOverviewResult, type SessionOverviewSourceItem } from "@/platform/rpc/session-overview-api";
-import { type SessionArchiveContext, type WorkspaceTreeProps } from "@/widgets/workspace/WorkspaceTree";
-import ConversationTimelinePane, { type ConversationTimelinePaneHandle } from "@/widgets/conversation/ConversationTimelinePane";
-import Composer, { type ComposerInputRequest } from "@/widgets/composer/Composer";
-import FloatingWorkflowTodoPanel, { type WorkflowFileChangeSummary } from "@/widgets/composer/FloatingWorkflowTodoPanel";
+import {
+	fetchSessionOverview,
+	fetchWorkspaceOverview,
+	type SessionOverviewGitInfo,
+	type SessionOverviewPlanItem,
+	type SessionOverviewResult,
+	type SessionOverviewSourceItem,
+} from "@/platform/rpc/session-overview-api";
+import {
+	type SessionArchiveContext,
+	type WorkspaceTreeProps,
+} from "@/widgets/workspace/WorkspaceTree";
+import ConversationTimelinePane, {
+	type ConversationTimelinePaneHandle,
+} from "@/widgets/conversation/ConversationTimelinePane";
+import Composer, {
+	type ComposerInputRequest,
+} from "@/widgets/composer/Composer";
+import FloatingWorkflowTodoPanel, {
+	type WorkflowFileChangeSummary,
+} from "@/widgets/composer/FloatingWorkflowTodoPanel";
 import FloatingGoalPanel from "@/widgets/composer/FloatingGoalPanel";
 import MessageQueuePanel from "@/widgets/composer/MessageQueuePanel";
 import NewSessionHome from "./NewSessionHome";
@@ -35,7 +93,11 @@ import styles from "./HomePage.module.css";
 import { Icon } from "@/assets/icons";
 import ClarificationDialog from "@/widgets/clarification/ClarificationDialog";
 import PlanApprovalDialog from "@/widgets/approval/PlanApprovalDialog";
-import { createDockTab, type DockPanelActivationRequest, type DockPanelKind } from "@/widgets/dock/DockPanelTabs";
+import {
+	createDockTab,
+	type DockPanelActivationRequest,
+	type DockPanelKind,
+} from "@/widgets/dock/DockPanelTabs";
 import HomeWorkspaceSidebar from "./HomeWorkspaceSidebar";
 import FullscreenComposerShelf from "./FullscreenComposerShelf";
 import HomeDockPanel from "./HomeDockPanel";
@@ -46,7 +108,7 @@ import {
 	type DockLayoutPreferences,
 	type DockFullscreenPlacement,
 	type FilePanelLayoutPreferences,
-	type SessionLayoutPreferences
+	type SessionLayoutPreferences,
 } from "@/domain/session/session-layout";
 import BranchActionDialog from "@/widgets/git/BranchActionDialog";
 import CommitActionDialog from "@/widgets/git/CommitActionDialog";
@@ -60,11 +122,21 @@ import { formatSourceSubtitle } from "./session-overview-formatters";
 import type { TimelinePageStore } from "@/domain/workbench/timeline-page-store";
 import { useTimelineSelector } from "@/domain/workbench/timeline-page-store";
 import { MarkdownResourceActionsProvider } from "@/widgets/markdown/markdown-resource-actions";
-import { DEFAULT_WORKSPACE_LAUNCH_TARGET_ID, type WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launch";
-import { navigateSessionHistory, SESSION_NAVIGATION_EVENT } from "@/domain/session/session-navigation-history";
+import {
+	DEFAULT_WORKSPACE_LAUNCH_TARGET_ID,
+	type WorkspaceLaunchTargetId,
+} from "@/domain/workspace/workspace-launch";
+import {
+	navigateSessionHistory,
+	SESSION_NAVIGATION_EVENT,
+} from "@/domain/session/session-navigation-history";
 import { createBackendClient } from "@/platform/rpc/transport/backend-client";
 import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
-import { findBrowserRuntime, waitForBrowserRuntime, type BrowserRuntimeRegistration } from "@/widgets/browser/browser-runtime-registry";
+import {
+	findBrowserRuntime,
+	waitForBrowserRuntime,
+	type BrowserRuntimeRegistration,
+} from "@/widgets/browser/browser-runtime-registry";
 
 type WorkspaceLaunchTarget = {
 	id: WorkspaceLaunchTargetId;
@@ -93,7 +165,7 @@ type SummaryOverviewTarget = {
 
 const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 	{ id: "file-explorer", label: "File Explorer" },
-	{ id: "terminal", label: "Terminal" }
+	{ id: "terminal", label: "Terminal" },
 ];
 
 const MAX_GODOT_SCENE_FILES: number = 500;
@@ -116,79 +188,105 @@ const PANEL_LAYOUT_PERSIST_DELAY_MS: number = 360;
 
 function areWorkspaceSidebarPreferencesEqual(
 	left: WorkspaceSidebarPreferences,
-	right: WorkspaceSidebarPreferences
+	right: WorkspaceSidebarPreferences,
 ): boolean {
 	return left.open === right.open && left.size === right.size;
 }
 
-function areDockLayoutPreferencesEqual(left: DockLayoutPreferences, right: DockLayoutPreferences): boolean {
-	return left.open === right.open
-		&& left.size === right.size
-		&& left.activeTabKey === right.activeTabKey
-		&& left.tabs.length === right.tabs.length
-		&& left.tabs.every((tab, index): boolean => {
+function areDockLayoutPreferencesEqual(
+	left: DockLayoutPreferences,
+	right: DockLayoutPreferences,
+): boolean {
+	return (
+		left.open === right.open &&
+		left.size === right.size &&
+		left.activeTabKey === right.activeTabKey &&
+		left.tabs.length === right.tabs.length &&
+		left.tabs.every((tab, index): boolean => {
 			const candidate = right.tabs[index];
-			return candidate !== undefined
-				&& tab.key === candidate.key
-				&& tab.kind === candidate.kind
-				&& tab.index === candidate.index;
-		});
+			return (
+				candidate !== undefined &&
+				tab.key === candidate.key &&
+				tab.kind === candidate.kind &&
+				tab.index === candidate.index
+			);
+		})
+	);
 }
 
-function areSessionLayoutPreferencesEqual(left: SessionLayoutPreferences, right: SessionLayoutPreferences): boolean {
-	return left.fullscreenDock === right.fullscreenDock
-		&& areDockLayoutPreferencesEqual(left.side, right.side)
-		&& areDockLayoutPreferencesEqual(left.bottom, right.bottom)
-		&& JSON.stringify(left.filePanels) === JSON.stringify(right.filePanels)
-		&& JSON.stringify(left.browserPanels) === JSON.stringify(right.browserPanels);
+function areSessionLayoutPreferencesEqual(
+	left: SessionLayoutPreferences,
+	right: SessionLayoutPreferences,
+): boolean {
+	return (
+		left.fullscreenDock === right.fullscreenDock &&
+		areDockLayoutPreferencesEqual(left.side, right.side) &&
+		areDockLayoutPreferencesEqual(left.bottom, right.bottom) &&
+		JSON.stringify(left.filePanels) === JSON.stringify(right.filePanels) &&
+		JSON.stringify(left.browserPanels) ===
+			JSON.stringify(right.browserPanels)
+	);
 }
 
-function ensureDockTab(layout: DockLayoutPreferences, dockId: string, defaultKind: DockPanelKind): DockLayoutPreferences {
-	const firstTab: DockLayoutPreferences["tabs"][number] | undefined = layout.tabs[0];
+function ensureDockTab(
+	layout: DockLayoutPreferences,
+	dockId: string,
+	defaultKind: DockPanelKind,
+): DockLayoutPreferences {
+	const firstTab: DockLayoutPreferences["tabs"][number] | undefined =
+		layout.tabs[0];
 	if (firstTab !== undefined) {
-		const activeTabKey: string | null = layout.tabs.some((tab): boolean => tab.key === layout.activeTabKey)
+		const activeTabKey: string | null = layout.tabs.some(
+			(tab): boolean => tab.key === layout.activeTabKey,
+		)
 			? layout.activeTabKey
 			: firstTab.key;
-		return activeTabKey === layout.activeTabKey ? layout : { ...layout, activeTabKey };
+		return activeTabKey === layout.activeTabKey
+			? layout
+			: { ...layout, activeTabKey };
 	}
 	const tab = createDockTab(dockId, defaultKind, 1);
 	return { ...layout, tabs: [tab], activeTabKey: tab.key };
 }
 
-function getSelectedConversationSearchQuery(container: HTMLElement | null): string | undefined {
+function getSelectedConversationSearchQuery(
+	container: HTMLElement | null,
+): string | undefined {
 	const selection: Selection | null = window.getSelection();
 	if (
-		container === null
-		|| selection === null
-		|| selection.isCollapsed
-		|| selection.rangeCount === 0
-		|| selection.anchorNode === null
-		|| selection.focusNode === null
-		|| !container.contains(selection.anchorNode)
-		|| !container.contains(selection.focusNode)
+		container === null ||
+		selection === null ||
+		selection.isCollapsed ||
+		selection.rangeCount === 0 ||
+		selection.anchorNode === null ||
+		selection.focusNode === null ||
+		!container.contains(selection.anchorNode) ||
+		!container.contains(selection.focusNode)
 	) {
 		return undefined;
 	}
-	const anchorElement: Element | null = selection.anchorNode instanceof Element
-		? selection.anchorNode
-		: selection.anchorNode.parentElement;
-	const focusElement: Element | null = selection.focusNode instanceof Element
-		? selection.focusNode
-		: selection.focusNode.parentElement;
+	const anchorElement: Element | null =
+		selection.anchorNode instanceof Element
+			? selection.anchorNode
+			: selection.anchorNode.parentElement;
+	const focusElement: Element | null =
+		selection.focusNode instanceof Element
+			? selection.focusNode
+			: selection.focusNode.parentElement;
 	if (
-		anchorElement === null
-		|| focusElement === null
-		|| anchorElement.closest('[data-chat-search-text="true"]') === null
-		|| focusElement.closest('[data-chat-search-text="true"]') === null
-		|| anchorElement.closest("[data-chat-search-ignore]") !== null
-		|| focusElement.closest("[data-chat-search-ignore]") !== null
+		anchorElement === null ||
+		focusElement === null ||
+		anchorElement.closest('[data-chat-search-text="true"]') === null ||
+		focusElement.closest('[data-chat-search-text="true"]') === null ||
+		anchorElement.closest("[data-chat-search-ignore]") !== null ||
+		focusElement.closest("[data-chat-search-ignore]") !== null
 	) {
 		return undefined;
 	}
 	const selectedText: string = selection.toString().trim();
-	return selectedText.length > 0
-		&& selectedText.length <= MAX_SELECTED_SEARCH_QUERY_LENGTH
-		&& !/[\r\n]/u.test(selectedText)
+	return selectedText.length > 0 &&
+		selectedText.length <= MAX_SELECTED_SEARCH_QUERY_LENGTH &&
+		!/[\r\n]/u.test(selectedText)
 		? selectedText
 		: undefined;
 }
@@ -201,31 +299,41 @@ function shouldIgnoreGlobalShortcut(event: KeyboardEvent): boolean {
 	if (!(target instanceof Element)) {
 		return false;
 	}
-	return target.closest([
-		"input",
-		"textarea",
-		"select",
-		"[contenteditable='true']",
-		"[contenteditable='']",
-		"[role='textbox']",
-		"[role='combobox']",
-		"[role='dialog']",
-		"[role='menu']",
-		"[role='listbox']"
-	].join(",")) !== null;
+	return (
+		target.closest(
+			[
+				"input",
+				"textarea",
+				"select",
+				"[contenteditable='true']",
+				"[contenteditable='']",
+				"[role='textbox']",
+				"[role='combobox']",
+				"[role='dialog']",
+				"[role='menu']",
+				"[role='listbox']",
+			].join(","),
+		) !== null
+	);
 }
 
-function isWorkspaceLaunchTargetId(value: string): value is WorkspaceLaunchTargetId {
-	return value === "file-explorer"
-		|| value === "terminal"
-		|| value === "vscode"
-		|| value === "visual-studio"
-		|| value === "github-desktop"
-		|| value === "git-bash"
-		|| value === "godot";
+function isWorkspaceLaunchTargetId(
+	value: string,
+): value is WorkspaceLaunchTargetId {
+	return (
+		value === "file-explorer" ||
+		value === "terminal" ||
+		value === "vscode" ||
+		value === "visual-studio" ||
+		value === "github-desktop" ||
+		value === "git-bash" ||
+		value === "godot"
+	);
 }
 
-function getWorkspaceLaunchIcon(targetId: WorkspaceLaunchTargetId): React.ReactNode {
+function getWorkspaceLaunchIcon(
+	targetId: WorkspaceLaunchTargetId,
+): React.ReactNode {
 	if (targetId === "file-explorer") {
 		return <Icon name="folder" />;
 	}
@@ -268,10 +376,16 @@ type WorkflowFileChangeContribution = WorkflowFileChangeSummary & {
 	batchIds: string[];
 };
 
-const timelineFileChangeContributionCache: WeakMap<TimelineBlock, WorkflowFileChangeContribution[]> = new WeakMap();
+const timelineFileChangeContributionCache: WeakMap<
+	TimelineBlock,
+	WorkflowFileChangeContribution[]
+> = new WeakMap();
 
-function getTimelineFileChangeContributions(block: TimelineBlock): WorkflowFileChangeContribution[] {
-	const cached: WorkflowFileChangeContribution[] | undefined = timelineFileChangeContributionCache.get(block);
+function getTimelineFileChangeContributions(
+	block: TimelineBlock,
+): WorkflowFileChangeContribution[] {
+	const cached: WorkflowFileChangeContribution[] | undefined =
+		timelineFileChangeContributionCache.get(block);
 	if (cached !== undefined) {
 		return cached;
 	}
@@ -283,7 +397,9 @@ function getTimelineFileChangeContributions(block: TimelineBlock): WorkflowFileC
 					additions: part.additions,
 					deletions: part.deletions,
 					changedFiles: part.editedFileCount,
-					batchIds: part.batchIds.filter((batchId: string): boolean => batchId.length > 0)
+					batchIds: part.batchIds.filter(
+						(batchId: string): boolean => batchId.length > 0,
+					),
 				});
 				continue;
 			}
@@ -295,12 +411,18 @@ function getTimelineFileChangeContributions(block: TimelineBlock): WorkflowFileC
 				if (!isRecord(fileEditBatch)) {
 					continue;
 				}
-				const batchId: string = getRecordString(fileEditBatch, "batchId");
+				const batchId: string = getRecordString(
+					fileEditBatch,
+					"batchId",
+				);
 				contributions.push({
 					additions: getRecordNumber(fileEditBatch, "additions"),
 					deletions: getRecordNumber(fileEditBatch, "deletions"),
-					changedFiles: getRecordNumber(fileEditBatch, "editedFileCount"),
-					batchIds: batchId.length > 0 ? [batchId] : []
+					changedFiles: getRecordNumber(
+						fileEditBatch,
+						"editedFileCount",
+					),
+					batchIds: batchId.length > 0 ? [batchId] : [],
 				});
 			}
 		}
@@ -309,7 +431,9 @@ function getTimelineFileChangeContributions(block: TimelineBlock): WorkflowFileC
 	return contributions;
 }
 
-function aggregateTimelineFileChanges(blocks: TimelineBlock[]): WorkflowFileChangeSummary {
+function aggregateTimelineFileChanges(
+	blocks: TimelineBlock[],
+): WorkflowFileChangeSummary {
 	const countedBatchIds: Set<string> = new Set();
 	let additions: number = 0;
 	let deletions: number = 0;
@@ -317,7 +441,12 @@ function aggregateTimelineFileChanges(blocks: TimelineBlock[]): WorkflowFileChan
 
 	for (const block of blocks) {
 		for (const contribution of getTimelineFileChangeContributions(block)) {
-			if (contribution.batchIds.length > 0 && contribution.batchIds.every((batchId: string): boolean => countedBatchIds.has(batchId))) {
+			if (
+				contribution.batchIds.length > 0 &&
+				contribution.batchIds.every((batchId: string): boolean =>
+					countedBatchIds.has(batchId),
+				)
+			) {
 				continue;
 			}
 			additions += contribution.additions;
@@ -342,14 +471,23 @@ type TimelineWorkflowTodoPanelProps = {
 	onGoalDismiss: (goal: AgentGoalState) => Promise<void>;
 };
 
-function TimelineWorkflowTodoPanel({ timelineStore, sessionId, snapshot, goal, onDismiss, onGoalChange, onGoalDismiss }: TimelineWorkflowTodoPanelProps): React.JSX.Element | null {
+function TimelineWorkflowTodoPanel({
+	timelineStore,
+	sessionId,
+	snapshot,
+	goal,
+	onDismiss,
+	onGoalChange,
+	onGoalDismiss,
+}: TimelineWorkflowTodoPanelProps): React.JSX.Element | null {
 	const timelineBlocks: TimelineBlock[] = useTimelineSelector(
 		timelineStore,
-		(page): TimelineBlock[] => page.blocks
+		(page): TimelineBlock[] => page.blocks,
 	);
 	const fileChangeSummary: WorkflowFileChangeSummary = useMemo(
-		(): WorkflowFileChangeSummary => aggregateTimelineFileChanges(timelineBlocks),
-		[timelineBlocks]
+		(): WorkflowFileChangeSummary =>
+			aggregateTimelineFileChanges(timelineBlocks),
+		[timelineBlocks],
 	);
 
 	if (goal !== null) {
@@ -381,12 +519,12 @@ type HomePageProps = {
 	keyboardShortcuts: KeyboardShortcutOverrides;
 	onWorkspaceSidebarChange: (
 		workspaceSidebar: WorkspaceSidebarPreferences,
-		options?: { persist?: boolean }
+		options?: { persist?: boolean },
 	) => void;
 	sessionLayout: SessionLayoutPreferences;
 	onSessionLayoutChange: (
 		layout: SessionLayoutPreferences,
-		options?: { persist?: boolean }
+		options?: { persist?: boolean },
 	) => void;
 	activeSessionMetadata: SessionMetadata | null;
 	activeWorkspaceId: string | null;
@@ -450,7 +588,14 @@ type HomePageProps = {
 	forkDisabled: boolean;
 	homeWorkspace: WorkspaceConfig | null;
 	homeExecutionEnvironment: "local" | "worktree";
-	homeWorktreeSources: Record<string, { startingState?: import("@/platform/rpc/types").WorktreeStartingState; environmentId?: string | null; environmentFingerprint?: string | null }>;
+	homeWorktreeSources: Record<
+		string,
+		{
+			startingState?: import("@/platform/rpc/types").WorktreeStartingState;
+			environmentId?: string | null;
+			environmentFingerprint?: string | null;
+		}
+	>;
 	worktreeDisabledReason: string | null;
 	isWorktreePreparing: boolean;
 	workspaceFooterDisabled: boolean;
@@ -459,20 +604,39 @@ type HomePageProps = {
 	workspaceLaunchPreference: WorkspaceLaunchTargetId;
 	onNewSession: () => void;
 	onNewUnboundSession: () => void;
-	onNewWorkspaceSession: (workspace: WorkspaceConfig, environment?: "local" | "worktree") => void;
+	onNewWorkspaceSession: (
+		workspace: WorkspaceConfig,
+		environment?: "local" | "worktree",
+	) => void;
 	onWorkspaceRefresh: () => void;
 	onHomeWorkspaceSelect: (workspaceId: string) => void;
 	onHomeWorkspaceAdd: () => void;
 	onHomeWorkspaceClear: () => void;
-	onHomeExecutionEnvironmentChange: (environment: "local" | "worktree") => void;
-	onHomeWorktreeSourcesChange: (value: Record<string, { startingState?: import("@/platform/rpc/types").WorktreeStartingState; environmentId?: string | null; environmentFingerprint?: string | null }>) => void;
+	onHomeExecutionEnvironmentChange: (
+		environment: "local" | "worktree",
+	) => void;
+	onHomeWorktreeSourcesChange: (
+		value: Record<
+			string,
+			{
+				startingState?: import("@/platform/rpc/types").WorktreeStartingState;
+				environmentId?: string | null;
+				environmentFingerprint?: string | null;
+			}
+		>,
+	) => void;
 	onSessionSelect: (session: SessionMetadata) => void;
 	onSessionFork: (session: SessionMetadata) => void;
 	onForkFromUserMessage: (requestId: string) => Promise<void>;
 	onForkSourceOpen: (sessionId: string) => Promise<void>;
-	onSessionArchive: (session: SessionMetadata, context: SessionArchiveContext) => void;
+	onSessionArchive: (
+		session: SessionMetadata,
+		context: SessionArchiveContext,
+	) => void;
 	onSessionRename: (session: SessionMetadata) => void;
-	onSessionWorktreeDelete: (session: SessionMetadata) => Promise<SessionMetadata>;
+	onSessionWorktreeDelete: (
+		session: SessionMetadata,
+	) => Promise<SessionMetadata>;
 	onSessionWorktreeHandoff: (target: "local" | "worktree") => Promise<void>;
 	onSessionWorktreeSetup: (action: "retry" | "skip") => Promise<void>;
 	onSessionsChange: (sessions: SessionMetadata[]) => void;
@@ -481,15 +645,22 @@ type HomePageProps = {
 	onWorkspaceProjectCreated: (workspace: WorkspaceConfig) => void;
 	onLoadMoreBefore: () => void;
 	onLoadMoreAfter: () => void;
-	onTimelineNavigationLoadEntry: (entry: SessionTimelineNavigationEntry) => Promise<void>;
+	onTimelineNavigationLoadEntry: (
+		entry: SessionTimelineNavigationEntry,
+	) => Promise<void>;
 	onTimelineSearchLoadOffset: (blockOffset: number) => Promise<void>;
 	onRetryEditStart: (requestId: string) => void;
 	onRetryEditCancel: (requestId: string) => void;
-	onRetryFromUserMessage: (payload: RetryUserMessagePayload) => Promise<boolean>;
+	onRetryFromUserMessage: (
+		payload: RetryUserMessagePayload,
+	) => Promise<boolean>;
 	onModeChange: (mode: ChatMode) => void;
 	onApprovalModeChange: (mode: ApprovalMode) => void;
 	onApprovalApprove: (approvalId: string, consentText?: string) => void;
-	onApprovalApproveAndEnableAutoSafe: (approvalId: string, consentText?: string) => void;
+	onApprovalApproveAndEnableAutoSafe: (
+		approvalId: string,
+		consentText?: string,
+	) => void;
 	onApprovalReject: (approvalId: string) => void;
 	onToolBudgetContinue: (budgetId: string) => void;
 	onToolBudgetStop: (budgetId: string) => void;
@@ -666,60 +837,93 @@ function HomePage({
 	onWorkflowTodoDismiss,
 	onGoalChange,
 	onGoalDismiss,
-	onCompletionOpen
+	onCompletionOpen,
 }: HomePageProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
-	const [workspaceLaunchTargets, setWorkspaceLaunchTargets] = useState<WorkspaceLaunchTarget[]>(FALLBACK_WORKSPACE_LAUNCH_TARGETS);
-	const [selectedLaunchTargetId, setSelectedLaunchTargetId] = useState<WorkspaceLaunchTargetId>(workspaceLaunchPreference);
-	const [isOpeningLaunchTarget, setIsOpeningLaunchTarget] = useState<boolean>(false);
+	const [workspaceLaunchTargets, setWorkspaceLaunchTargets] = useState<
+		WorkspaceLaunchTarget[]
+	>(FALLBACK_WORKSPACE_LAUNCH_TARGETS);
+	const [selectedLaunchTargetId, setSelectedLaunchTargetId] =
+		useState<WorkspaceLaunchTargetId>(workspaceLaunchPreference);
+	const [isOpeningLaunchTarget, setIsOpeningLaunchTarget] =
+		useState<boolean>(false);
 	const [summaryOpen, setSummaryOpen] = useState<boolean>(false);
-	const [summaryOverview, setSummaryOverview] = useState<SessionOverviewResult | null>(null);
+	const [summaryOverview, setSummaryOverview] =
+		useState<SessionOverviewResult | null>(null);
 	const [isSummaryLoading, setIsSummaryLoading] = useState<boolean>(false);
 	const [summaryError, setSummaryError] = useState<string | null>(null);
-	const [summaryGitSourceFolderId, setSummaryGitSourceFolderId] = useState<string | null>(null);
-	const [summaryGitActionRequest, setSummaryGitActionRequest] = useState<SummaryGitActionRequest | null>(null);
+	const [summaryGitSourceFolderId, setSummaryGitSourceFolderId] = useState<
+		string | null
+	>(null);
+	const [summaryGitActionRequest, setSummaryGitActionRequest] =
+		useState<SummaryGitActionRequest | null>(null);
 	const [gitStateRevision, setGitStateRevision] = useState<number>(0);
 	const [plansModalOpen, setPlansModalOpen] = useState<boolean>(false);
-	const [plansDialogOverview, setPlansDialogOverview] = useState<SessionOverviewResult | null>(null);
-	const [isPlansDialogLoading, setIsPlansDialogLoading] = useState<boolean>(false);
-	const [plansDialogError, setPlansDialogError] = useState<string | null>(null);
+	const [plansDialogOverview, setPlansDialogOverview] =
+		useState<SessionOverviewResult | null>(null);
+	const [isPlansDialogLoading, setIsPlansDialogLoading] =
+		useState<boolean>(false);
+	const [plansDialogError, setPlansDialogError] = useState<string | null>(
+		null,
+	);
 	const [sourcesModalOpen, setSourcesModalOpen] = useState<boolean>(false);
-	const [sourcesDialogOverview, setSourcesDialogOverview] = useState<SessionOverviewResult | null>(null);
-	const [isSourcesDialogLoading, setIsSourcesDialogLoading] = useState<boolean>(false);
-	const [sourcesDialogError, setSourcesDialogError] = useState<string | null>(null);
-	const [previewSource, setPreviewSource] = useState<SessionOverviewSourceItem | null>(null);
-	const [previewPlan, setPreviewPlan] = useState<SessionOverviewPlanItem | null>(null);
-	const [isPlanPreviewLoading, setIsPlanPreviewLoading] = useState<boolean>(false);
-	const [planPreviewError, setPlanPreviewError] = useState<string | null>(null);
+	const [sourcesDialogOverview, setSourcesDialogOverview] =
+		useState<SessionOverviewResult | null>(null);
+	const [isSourcesDialogLoading, setIsSourcesDialogLoading] =
+		useState<boolean>(false);
+	const [sourcesDialogError, setSourcesDialogError] = useState<string | null>(
+		null,
+	);
+	const [previewSource, setPreviewSource] =
+		useState<SessionOverviewSourceItem | null>(null);
+	const [previewPlan, setPreviewPlan] =
+		useState<SessionOverviewPlanItem | null>(null);
+	const [isPlanPreviewLoading, setIsPlanPreviewLoading] =
+		useState<boolean>(false);
+	const [planPreviewError, setPlanPreviewError] = useState<string | null>(
+		null,
+	);
 	const [isGodotProject, setIsGodotProject] = useState<boolean>(false);
-	const [isGodotSceneModalOpen, setIsGodotSceneModalOpen] = useState<boolean>(false);
-	const [godotSceneFiles, setGodotSceneFiles] = useState<GodotSceneFile[]>([]);
-	const [isGodotSceneLoading, setIsGodotSceneLoading] = useState<boolean>(false);
+	const [isGodotSceneModalOpen, setIsGodotSceneModalOpen] =
+		useState<boolean>(false);
+	const [godotSceneFiles, setGodotSceneFiles] = useState<GodotSceneFile[]>(
+		[],
+	);
+	const [isGodotSceneLoading, setIsGodotSceneLoading] =
+		useState<boolean>(false);
 	const [godotSceneSearch, setGodotSceneSearch] = useState<string>("");
-	const [composerInputRequest, setComposerInputRequest] = useState<ComposerInputRequest | null>(null);
-	const [visualWorkspaceSidebar, setVisualWorkspaceSidebar] = useState<WorkspaceSidebarPreferences>(workspaceSidebar);
-	const [visualSessionLayout, setVisualSessionLayout] = useState<SessionLayoutPreferences>(sessionLayout);
-	const [fullscreenMotionDisabled, setFullscreenMotionDisabled] = useState<boolean>(false);
+	const [composerInputRequest, setComposerInputRequest] =
+		useState<ComposerInputRequest | null>(null);
+	const [visualWorkspaceSidebar, setVisualWorkspaceSidebar] =
+		useState<WorkspaceSidebarPreferences>(workspaceSidebar);
+	const [visualSessionLayout, setVisualSessionLayout] =
+		useState<SessionLayoutPreferences>(sessionLayout);
+	const [fullscreenMotionDisabled, setFullscreenMotionDisabled] =
+		useState<boolean>(false);
 	const dockActivationRequestIdRef = useRef<number>(0);
 	const sideDockProgrammaticOpenUntilRef = useRef<number>(0);
 	const summaryRequestIdRef = useRef<number>(0);
 	const summaryGitActionRequestIdRef = useRef<number>(0);
 	const planPreviewRequestIdRef = useRef<number>(0);
-	const [sideDockActivationRequest, setSideDockActivationRequest] = useState<DockPanelActivationRequest | null>(null);
+	const [sideDockActivationRequest, setSideDockActivationRequest] =
+		useState<DockPanelActivationRequest | null>(null);
 	const previousSessionLayoutRef = useRef<{
 		sessionId: string | null;
 		layout: SessionLayoutPreferences;
 	}>({
 		sessionId: activeSessionId,
-		layout: sessionLayout
+		layout: sessionLayout,
 	});
-	const conversationTimelinePaneRef = useRef<ConversationTimelinePaneHandle | null>(null);
+	const conversationTimelinePaneRef =
+		useRef<ConversationTimelinePaneHandle | null>(null);
 	const chatBodyRef = useRef<HTMLDivElement | null>(null);
 	const scrollToBottomButtonRef = useRef<HTMLButtonElement | null>(null);
 	const scrollToBottomButtonVisibleRef = useRef<boolean>(false);
-	const visualWorkspaceSidebarRef = useRef<WorkspaceSidebarPreferences>(workspaceSidebar);
-	const visualSessionLayoutRef = useRef<SessionLayoutPreferences>(sessionLayout);
+	const visualWorkspaceSidebarRef =
+		useRef<WorkspaceSidebarPreferences>(workspaceSidebar);
+	const visualSessionLayoutRef =
+		useRef<SessionLayoutPreferences>(sessionLayout);
 	const workspaceSidebarSaveTimerRef = useRef<number | null>(null);
 	const sessionLayoutSaveTimerRef = useRef<number | null>(null);
 	const pendingWorkspaceSidebarSaveRef = useRef<{
@@ -731,21 +935,29 @@ function HomePage({
 		save: HomePageProps["onSessionLayoutChange"];
 	} | null>(null);
 
-	function applyVisualWorkspaceSidebar(nextWorkspaceSidebar: WorkspaceSidebarPreferences): void {
+	function applyVisualWorkspaceSidebar(
+		nextWorkspaceSidebar: WorkspaceSidebarPreferences,
+	): void {
 		visualWorkspaceSidebarRef.current = nextWorkspaceSidebar;
 		setVisualWorkspaceSidebar(nextWorkspaceSidebar);
 	}
 
-	function applyVisualSessionLayout(nextSessionLayout: SessionLayoutPreferences): void {
+	function applyVisualSessionLayout(
+		nextSessionLayout: SessionLayoutPreferences,
+	): void {
 		visualSessionLayoutRef.current = nextSessionLayout;
 		setVisualSessionLayout(nextSessionLayout);
 	}
 
 	const handleHomeStarterSelect = useCallback((prompt: string): void => {
-		setComposerInputRequest((currentRequest: ComposerInputRequest | null): ComposerInputRequest => ({
-			requestId: (currentRequest?.requestId ?? 0) + 1,
-			message: prompt
-		}));
+		setComposerInputRequest(
+			(
+				currentRequest: ComposerInputRequest | null,
+			): ComposerInputRequest => ({
+				requestId: (currentRequest?.requestId ?? 0) + 1,
+				message: prompt,
+			}),
+		);
 	}, []);
 
 	function clearWorkspaceSidebarSave(): void {
@@ -776,24 +988,32 @@ function HomePage({
 		pendingSave?.save(pendingSave.value);
 	}
 
-	function commitWorkspaceSidebar(nextWorkspaceSidebar: WorkspaceSidebarPreferences, persist: boolean = true): void {
+	function commitWorkspaceSidebar(
+		nextWorkspaceSidebar: WorkspaceSidebarPreferences,
+		persist: boolean = true,
+	): void {
 		clearWorkspaceSidebarSave();
 		applyVisualWorkspaceSidebar(nextWorkspaceSidebar);
 		onWorkspaceSidebarChange(nextWorkspaceSidebar, { persist });
 	}
 
-	function commitSessionLayout(nextSessionLayout: SessionLayoutPreferences, persist: boolean = true): void {
+	function commitSessionLayout(
+		nextSessionLayout: SessionLayoutPreferences,
+		persist: boolean = true,
+	): void {
 		clearSessionLayoutSave();
 		applyVisualSessionLayout(nextSessionLayout);
 		onSessionLayoutChange(nextSessionLayout, { persist });
 	}
 
-	function scheduleWorkspaceSidebarSave(nextWorkspaceSidebar: WorkspaceSidebarPreferences): void {
+	function scheduleWorkspaceSidebarSave(
+		nextWorkspaceSidebar: WorkspaceSidebarPreferences,
+	): void {
 		applyVisualWorkspaceSidebar(nextWorkspaceSidebar);
 		clearWorkspaceSidebarSave();
 		pendingWorkspaceSidebarSaveRef.current = {
 			value: nextWorkspaceSidebar,
-			save: onWorkspaceSidebarChange
+			save: onWorkspaceSidebarChange,
 		};
 		workspaceSidebarSaveTimerRef.current = window.setTimeout((): void => {
 			const pendingSave = pendingWorkspaceSidebarSaveRef.current;
@@ -803,12 +1023,14 @@ function HomePage({
 		}, PANEL_LAYOUT_PERSIST_DELAY_MS);
 	}
 
-	function scheduleSessionLayoutSave(nextSessionLayout: SessionLayoutPreferences): void {
+	function scheduleSessionLayoutSave(
+		nextSessionLayout: SessionLayoutPreferences,
+	): void {
 		applyVisualSessionLayout(nextSessionLayout);
 		clearSessionLayoutSave();
 		pendingSessionLayoutSaveRef.current = {
 			value: nextSessionLayout,
-			save: onSessionLayoutChange
+			save: onSessionLayoutChange,
 		};
 		sessionLayoutSaveTimerRef.current = window.setTimeout((): void => {
 			const pendingSave = pendingSessionLayoutSaveRef.current;
@@ -819,14 +1041,24 @@ function HomePage({
 	}
 
 	useEffect((): void => {
-		if (!areWorkspaceSidebarPreferencesEqual(visualWorkspaceSidebarRef.current, workspaceSidebar)) {
+		if (
+			!areWorkspaceSidebarPreferencesEqual(
+				visualWorkspaceSidebarRef.current,
+				workspaceSidebar,
+			)
+		) {
 			flushWorkspaceSidebarSave();
 			applyVisualWorkspaceSidebar(workspaceSidebar);
 		}
 	}, [workspaceSidebar]);
 
 	useEffect((): void => {
-		if (!areSessionLayoutPreferencesEqual(visualSessionLayoutRef.current, sessionLayout)) {
+		if (
+			!areSessionLayoutPreferencesEqual(
+				visualSessionLayoutRef.current,
+				sessionLayout,
+			)
+		) {
 			flushSessionLayoutSave();
 			applyVisualSessionLayout(sessionLayout);
 		}
@@ -838,40 +1070,52 @@ function HomePage({
 			flushSessionLayoutSave();
 		};
 	}, []);
-	const workspaceSnapshotForActions: WorkspaceConfig | null = activeWorkspace ?? (isHome ? homeWorkspace : null);
-	const workspaceForActions: WorkspaceConfig | null = workspaceSnapshotForActions === null
-		? null
-		: workspaceOptions.find((workspace: WorkspaceConfig): boolean => workspace.id === workspaceSnapshotForActions.id)
-		?? workspaceSnapshotForActions;
+	const workspaceSnapshotForActions: WorkspaceConfig | null =
+		activeWorkspace ?? (isHome ? homeWorkspace : null);
+	const workspaceForActions: WorkspaceConfig | null =
+		workspaceSnapshotForActions === null
+			? null
+			: (workspaceOptions.find(
+					(workspace: WorkspaceConfig): boolean =>
+						workspace.id === workspaceSnapshotForActions.id,
+				) ?? workspaceSnapshotForActions);
 	const summarySessionId: string | null = isHome ? null : activeSessionId;
-	const summaryScopeKey: string = summarySessionId ?? `workspace:${workspaceForActions?.id ?? "none"}`;
+	const summaryScopeKey: string =
+		summarySessionId ?? `workspace:${workspaceForActions?.id ?? "none"}`;
 	const summaryOverviewTargetRef = useRef<SummaryOverviewTarget>({
 		scopeKey: summaryScopeKey,
 		sessionId: summarySessionId,
-		workspace: workspaceForActions
+		workspace: workspaceForActions,
 	});
 	summaryOverviewTargetRef.current = {
 		scopeKey: summaryScopeKey,
 		sessionId: summarySessionId,
-		workspace: workspaceForActions
+		workspace: workspaceForActions,
 	};
 	const showDockControls: boolean = true;
 	const showWorkspaceLaunchControls: boolean = workspaceForActions !== null;
 	const showSummaryButton: boolean = true;
 	const showSideDockButton: boolean = showDockControls;
 	const showBottomDockButton: boolean = showDockControls;
-	const terminalWaitForCwd: boolean = !isHome && isSessionLoading && workspaceForActions === null;
-	const showWorkflowTodoPanel: boolean = !workflowTodoCollapsed && workflowTodoSnapshot !== null;
-	const showExecutionStatusPanel: boolean = !isHome
-		&& pendingApproval === null
-		&& pendingToolBudget === null
-		&& pendingPlanClarification === null
-		&& pendingPlanApproval === null
-		&& (currentGoal !== null || showWorkflowTodoPanel);
-	const effectiveGodotLaunchExecutablePath: string | null = godotLaunchExecutablePath?.trim()
-		? godotLaunchExecutablePath.trim()
-		: null;
-	const showGodotSummaryActions: boolean = workspaceForActions !== null && effectiveGodotLaunchExecutablePath !== null && isGodotProject;
+	const terminalWaitForCwd: boolean =
+		!isHome && isSessionLoading && workspaceForActions === null;
+	const showWorkflowTodoPanel: boolean =
+		!workflowTodoCollapsed && workflowTodoSnapshot !== null;
+	const showExecutionStatusPanel: boolean =
+		!isHome &&
+		pendingApproval === null &&
+		pendingToolBudget === null &&
+		pendingPlanClarification === null &&
+		pendingPlanApproval === null &&
+		(currentGoal !== null || showWorkflowTodoPanel);
+	const effectiveGodotLaunchExecutablePath: string | null =
+		godotLaunchExecutablePath?.trim()
+			? godotLaunchExecutablePath.trim()
+			: null;
+	const showGodotSummaryActions: boolean =
+		workspaceForActions !== null &&
+		effectiveGodotLaunchExecutablePath !== null &&
+		isGodotProject;
 	const workspaceSidebarOpen: boolean = visualWorkspaceSidebar.open;
 	const workspaceSidebarSize: number = visualWorkspaceSidebar.size;
 	const sideDockOpen: boolean = visualSessionLayout.side.open;
@@ -881,66 +1125,82 @@ function HomePage({
 	const fullscreenDock: DockFullscreenPlacement | null = showDockControls
 		? visualSessionLayout.fullscreenDock
 		: null;
-	const sideDockFullscreen: boolean = fullscreenDock === "side" && sideDockOpen;
-	const bottomDockFullscreen: boolean = fullscreenDock === "bottom" && bottomDockOpen;
-	const isDockFullscreen: boolean = sideDockFullscreen || bottomDockFullscreen;
-	const activeFullscreenDock: DockFullscreenPlacement | null = isDockFullscreen ? fullscreenDock : null;
-	const fullscreenDockLayout: DockLayoutPreferences | null = activeFullscreenDock === "side"
-		? visualSessionLayout.side
-		: activeFullscreenDock === "bottom"
-			? visualSessionLayout.bottom
-			: null;
-	const isFullscreenBrowserPanel: boolean = fullscreenDockLayout?.tabs.find(
-		(tab) => tab.key === fullscreenDockLayout.activeTabKey,
-	)?.kind === "browser";
-	const selectionMarkerContextItems: AdditionalContextItem[] = useMemo((): AdditionalContextItem[] => {
-		const byId = new Map<string, AdditionalContextItem>();
-		for (const item of contextItems) {
-			byId.set(item.id, item);
-		}
-		for (const queueItem of messageQueue) {
-			if (queueItem.status !== "pending") {
-				continue;
+	const sideDockFullscreen: boolean =
+		fullscreenDock === "side" && sideDockOpen;
+	const bottomDockFullscreen: boolean =
+		fullscreenDock === "bottom" && bottomDockOpen;
+	const isDockFullscreen: boolean =
+		sideDockFullscreen || bottomDockFullscreen;
+	const activeFullscreenDock: DockFullscreenPlacement | null =
+		isDockFullscreen ? fullscreenDock : null;
+	const fullscreenDockLayout: DockLayoutPreferences | null =
+		activeFullscreenDock === "side"
+			? visualSessionLayout.side
+			: activeFullscreenDock === "bottom"
+				? visualSessionLayout.bottom
+				: null;
+	const isFullscreenBrowserPanel: boolean =
+		fullscreenDockLayout?.tabs.find(
+			(tab) => tab.key === fullscreenDockLayout.activeTabKey,
+		)?.kind === "browser";
+	const selectionMarkerContextItems: AdditionalContextItem[] =
+		useMemo((): AdditionalContextItem[] => {
+			const byId = new Map<string, AdditionalContextItem>();
+			for (const item of contextItems) {
+				byId.set(item.id, item);
 			}
-			for (const item of queueItem.additionalContext) {
-				if (item.kind === "message_selection") {
-					byId.set(item.id, item);
+			for (const queueItem of messageQueue) {
+				if (queueItem.status !== "pending") {
+					continue;
+				}
+				for (const item of queueItem.additionalContext) {
+					if (item.kind === "message_selection") {
+						byId.set(item.id, item);
+					}
 				}
 			}
-		}
-		return [...byId.values()];
-	}, [contextItems, messageQueue]);
+			return [...byId.values()];
+		}, [contextItems, messageQueue]);
 
 	const updateSideDock = useCallback(
-		(nextSideLayout: DockLayoutPreferences, persist: boolean = true): void => {
+		(
+			nextSideLayout: DockLayoutPreferences,
+			persist: boolean = true,
+		): void => {
 			commitSessionLayout(
 				{
 					...visualSessionLayoutRef.current,
-					side: nextSideLayout
+					side: nextSideLayout,
 				},
-				persist
+				persist,
 			);
 		},
-		[commitSessionLayout]
+		[commitSessionLayout],
 	);
 
 	const updateBottomDock = useCallback(
-		(nextBottomLayout: DockLayoutPreferences, persist: boolean = true): void => {
+		(
+			nextBottomLayout: DockLayoutPreferences,
+			persist: boolean = true,
+		): void => {
 			commitSessionLayout(
 				{
 					...visualSessionLayoutRef.current,
-					bottom: nextBottomLayout
+					bottom: nextBottomLayout,
 				},
-				persist
+				persist,
 			);
 		},
-		[commitSessionLayout]
+		[commitSessionLayout],
 	);
 
 	const updateFilePanel = useCallback(
-		(panelKey: string, nextFilePanel: FilePanelLayoutPreferences | null): void => {
+		(
+			panelKey: string,
+			nextFilePanel: FilePanelLayoutPreferences | null,
+		): void => {
 			const nextFilePanels: Record<string, FilePanelLayoutPreferences> = {
-				...visualSessionLayoutRef.current.filePanels
+				...visualSessionLayoutRef.current.filePanels,
 			};
 			if (nextFilePanel === null) {
 				delete nextFilePanels[panelKey];
@@ -949,16 +1209,22 @@ function HomePage({
 			}
 			commitSessionLayout({
 				...visualSessionLayoutRef.current,
-				filePanels: nextFilePanels
+				filePanels: nextFilePanels,
 			});
 		},
-		[commitSessionLayout]
+		[commitSessionLayout],
 	);
 
 	const updateBrowserPanel = useCallback(
-		(panelKey: string, nextBrowserPanel: BrowserPanelLayoutPreferences | null): void => {
-			const nextBrowserPanels: Record<string, BrowserPanelLayoutPreferences> = {
-				...visualSessionLayoutRef.current.browserPanels
+		(
+			panelKey: string,
+			nextBrowserPanel: BrowserPanelLayoutPreferences | null,
+		): void => {
+			const nextBrowserPanels: Record<
+				string,
+				BrowserPanelLayoutPreferences
+			> = {
+				...visualSessionLayoutRef.current.browserPanels,
 			};
 			if (nextBrowserPanel === null) {
 				delete nextBrowserPanels[panelKey];
@@ -967,76 +1233,100 @@ function HomePage({
 			}
 			commitSessionLayout({
 				...visualSessionLayoutRef.current,
-				browserPanels: nextBrowserPanels
+				browserPanels: nextBrowserPanels,
 			});
 		},
-		[commitSessionLayout]
+		[commitSessionLayout],
 	);
 
 	const toggleDockFullscreen = useCallback(
 		(placement: DockFullscreenPlacement): void => {
-			const currentPlacement: DockFullscreenPlacement | null = visualSessionLayoutRef.current.fullscreenDock;
+			const currentPlacement: DockFullscreenPlacement | null =
+				visualSessionLayoutRef.current.fullscreenDock;
 			setFullscreenMotionDisabled(true);
 			commitSessionLayout({
 				...visualSessionLayoutRef.current,
-				fullscreenDock: currentPlacement === placement ? null : placement
+				fullscreenDock:
+					currentPlacement === placement ? null : placement,
 			});
 			window.requestAnimationFrame((): void => {
 				setFullscreenMotionDisabled(false);
 			});
 		},
-		[commitSessionLayout]
+		[commitSessionLayout],
 	);
 
 	useLayoutEffect((): void => {
 		const previous = previousSessionLayoutRef.current;
 		if (previous.sessionId !== activeSessionId) {
-			for (const terminalId of listTerminalRuntimeIds(previous.sessionId, previous.layout)) {
-				void window.electronAPI.terminal.kill({ terminalId }).catch((error: unknown): void => {
-					console.error("[HomePage] failed to stop previous session terminal", error);
-				});
+			for (const terminalId of listTerminalRuntimeIds(
+				previous.sessionId,
+				previous.layout,
+			)) {
+				void window.electronAPI.terminal
+					.kill({ terminalId })
+					.catch((error: unknown): void => {
+						console.error(
+							"[HomePage] failed to stop previous session terminal",
+							error,
+						);
+					});
 			}
 		}
 		previousSessionLayoutRef.current = {
 			sessionId: activeSessionId,
-			layout: sessionLayout
+			layout: sessionLayout,
 		};
 	}, [activeSessionId, sessionLayout]);
 
-	const filteredGodotSceneFiles: GodotSceneFile[] = useMemo((): GodotSceneFile[] => {
-		const query: string = godotSceneSearch.trim().toLowerCase();
-		if (query.length === 0) {
-			return godotSceneFiles;
-		}
-		return godotSceneFiles.filter((scene: GodotSceneFile): boolean => {
-			return scene.relativePath.toLowerCase().includes(query) || scene.name.toLowerCase().includes(query);
-		});
-	}, [godotSceneFiles, godotSceneSearch]);
-	const selectedLaunchTarget: WorkspaceLaunchTarget = useMemo((): WorkspaceLaunchTarget => {
-		return workspaceLaunchTargets.find((target: WorkspaceLaunchTarget): boolean => target.id === selectedLaunchTargetId)
-			?? workspaceLaunchTargets[0]
-			?? FALLBACK_WORKSPACE_LAUNCH_TARGETS[0]!;
-	}, [selectedLaunchTargetId, workspaceLaunchTargets]);
-	const workspaceLaunchMenuItems: MenuProps["items"] = useMemo((): MenuProps["items"] => {
-		return workspaceLaunchTargets.map((target: WorkspaceLaunchTarget) => {
-			return {
-				key: target.id,
-				label: target.label,
-				icon: getWorkspaceLaunchIcon(target.id)
-			};
-		});
-	}, [workspaceLaunchTargets]);
+	const filteredGodotSceneFiles: GodotSceneFile[] =
+		useMemo((): GodotSceneFile[] => {
+			const query: string = godotSceneSearch.trim().toLowerCase();
+			if (query.length === 0) {
+				return godotSceneFiles;
+			}
+			return godotSceneFiles.filter((scene: GodotSceneFile): boolean => {
+				return (
+					scene.relativePath.toLowerCase().includes(query) ||
+					scene.name.toLowerCase().includes(query)
+				);
+			});
+		}, [godotSceneFiles, godotSceneSearch]);
+	const selectedLaunchTarget: WorkspaceLaunchTarget =
+		useMemo((): WorkspaceLaunchTarget => {
+			return (
+				workspaceLaunchTargets.find(
+					(target: WorkspaceLaunchTarget): boolean =>
+						target.id === selectedLaunchTargetId,
+				) ??
+				workspaceLaunchTargets[0] ??
+				FALLBACK_WORKSPACE_LAUNCH_TARGETS[0]!
+			);
+		}, [selectedLaunchTargetId, workspaceLaunchTargets]);
+	const workspaceLaunchMenuItems: MenuProps["items"] =
+		useMemo((): MenuProps["items"] => {
+			return workspaceLaunchTargets.map(
+				(target: WorkspaceLaunchTarget) => {
+					return {
+						key: target.id,
+						label: target.label,
+						icon: getWorkspaceLaunchIcon(target.id),
+					};
+				},
+			);
+		}, [workspaceLaunchTargets]);
 	const openSummaryDiffReview = useCallback((): void => {
 		setSummaryOpen(false);
 		if (workspaceForActions === null) {
 			return;
 		}
 
-		sideDockProgrammaticOpenUntilRef.current = performance.now() + SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS;
+		sideDockProgrammaticOpenUntilRef.current =
+			performance.now() + SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS;
 		dockActivationRequestIdRef.current += 1;
 		setSideDockActivationRequest({
 			id: dockActivationRequestIdRef.current,
-			kind: "review"
+			kind: "review",
 		});
 		updateSideDock({ ...visualSessionLayoutRef.current.side, open: true });
 	}, [updateSideDock, workspaceForActions]);
@@ -1046,34 +1336,62 @@ function HomePage({
 		}
 
 		let cancelled: boolean = false;
-		window.electronAPI.workspaceFs.listLaunchTargets({
-			godotExecutablePath: effectiveGodotLaunchExecutablePath
-		})
+		window.electronAPI.workspaceFs
+			.listLaunchTargets({
+				godotExecutablePath: effectiveGodotLaunchExecutablePath,
+			})
 			.then((targets: WorkspaceLaunchTarget[]): void => {
 				if (cancelled) {
 					return;
 				}
 
-				const nextTargets: WorkspaceLaunchTarget[] = targets.length > 0 ? targets : FALLBACK_WORKSPACE_LAUNCH_TARGETS;
-				const preferredTargetId: WorkspaceLaunchTargetId = workspaceLaunchPreference;
-				const fallbackTargetId: WorkspaceLaunchTargetId = nextTargets.find((target: WorkspaceLaunchTarget): boolean => target.id === DEFAULT_WORKSPACE_LAUNCH_TARGET_ID)?.id
-					?? DEFAULT_WORKSPACE_LAUNCH_TARGET_ID;
-				const resolvedTargetId: WorkspaceLaunchTargetId = nextTargets.some((target: WorkspaceLaunchTarget): boolean => target.id === preferredTargetId)
-					? preferredTargetId
-					: fallbackTargetId;
+				const nextTargets: WorkspaceLaunchTarget[] =
+					targets.length > 0
+						? targets
+						: FALLBACK_WORKSPACE_LAUNCH_TARGETS;
+				const preferredTargetId: WorkspaceLaunchTargetId =
+					workspaceLaunchPreference;
+				const fallbackTargetId: WorkspaceLaunchTargetId =
+					nextTargets.find(
+						(target: WorkspaceLaunchTarget): boolean =>
+							target.id === DEFAULT_WORKSPACE_LAUNCH_TARGET_ID,
+					)?.id ?? DEFAULT_WORKSPACE_LAUNCH_TARGET_ID;
+				const resolvedTargetId: WorkspaceLaunchTargetId =
+					nextTargets.some(
+						(target: WorkspaceLaunchTarget): boolean =>
+							target.id === preferredTargetId,
+					)
+						? preferredTargetId
+						: fallbackTargetId;
 				setWorkspaceLaunchTargets(nextTargets);
 				setSelectedLaunchTargetId(resolvedTargetId);
-				if (activeSessionMetadata?.workspaceLaunch !== undefined && activeSessionMetadata.workspaceLaunch !== resolvedTargetId) {
+				if (
+					activeSessionMetadata?.workspaceLaunch !== undefined &&
+					activeSessionMetadata.workspaceLaunch !== resolvedTargetId
+				) {
 					onWorkspaceLaunchChange(resolvedTargetId);
 				}
 			})
 			.catch((error: unknown): void => {
-				console.error("[HomePage] failed to list workspace launch targets", error);
+				console.error(
+					"[HomePage] failed to list workspace launch targets",
+					error,
+				);
 				if (!cancelled) {
-					setWorkspaceLaunchTargets(FALLBACK_WORKSPACE_LAUNCH_TARGETS);
-					setSelectedLaunchTargetId(DEFAULT_WORKSPACE_LAUNCH_TARGET_ID);
-					if (activeSessionMetadata?.workspaceLaunch !== undefined && activeSessionMetadata.workspaceLaunch !== DEFAULT_WORKSPACE_LAUNCH_TARGET_ID) {
-						onWorkspaceLaunchChange(DEFAULT_WORKSPACE_LAUNCH_TARGET_ID);
+					setWorkspaceLaunchTargets(
+						FALLBACK_WORKSPACE_LAUNCH_TARGETS,
+					);
+					setSelectedLaunchTargetId(
+						DEFAULT_WORKSPACE_LAUNCH_TARGET_ID,
+					);
+					if (
+						activeSessionMetadata?.workspaceLaunch !== undefined &&
+						activeSessionMetadata.workspaceLaunch !==
+							DEFAULT_WORKSPACE_LAUNCH_TARGET_ID
+					) {
+						onWorkspaceLaunchChange(
+							DEFAULT_WORKSPACE_LAUNCH_TARGET_ID,
+						);
 					}
 				}
 			});
@@ -1081,29 +1399,50 @@ function HomePage({
 		return (): void => {
 			cancelled = true;
 		};
-	}, [activeSessionMetadata?.workspaceLaunch, effectiveGodotLaunchExecutablePath, onWorkspaceLaunchChange, showWorkspaceLaunchControls, workspaceLaunchPreference]);
+	}, [
+		activeSessionMetadata?.workspaceLaunch,
+		effectiveGodotLaunchExecutablePath,
+		onWorkspaceLaunchChange,
+		showWorkspaceLaunchControls,
+		workspaceLaunchPreference,
+	]);
 
 	useEffect((): (() => void) | void => {
-		if (workspaceForActions === null || effectiveGodotLaunchExecutablePath === null) {
+		if (
+			workspaceForActions === null ||
+			effectiveGodotLaunchExecutablePath === null
+		) {
 			setIsGodotProject(false);
 			return;
 		}
 
 		let cancelled: boolean = false;
-		window.electronAPI.workspaceFs.listChildren({
-			workspaceRoot: workspaceForActions.rootPath,
-			relativePath: ""
-		}).then((result): void => {
-			if (cancelled) {
-				return;
-			}
-			setIsGodotProject(result.entries.some((entry): boolean => entry.kind === "file" && entry.name === "project.godot"));
-		}).catch((error: unknown): void => {
-			console.error("[HomePage] failed to detect Godot project", error);
-			if (!cancelled) {
-				setIsGodotProject(false);
-			}
-		});
+		window.electronAPI.workspaceFs
+			.listChildren({
+				workspaceRoot: workspaceForActions.rootPath,
+				relativePath: "",
+			})
+			.then((result): void => {
+				if (cancelled) {
+					return;
+				}
+				setIsGodotProject(
+					result.entries.some(
+						(entry): boolean =>
+							entry.kind === "file" &&
+							entry.name === "project.godot",
+					),
+				);
+			})
+			.catch((error: unknown): void => {
+				console.error(
+					"[HomePage] failed to detect Godot project",
+					error,
+				);
+				if (!cancelled) {
+					setIsGodotProject(false);
+				}
+			});
 
 		return (): void => {
 			cancelled = true;
@@ -1135,52 +1474,75 @@ function HomePage({
 		planPreviewRequestIdRef.current += 1;
 	}, [summaryScopeKey]);
 
-	const loadSummaryOverview = useCallback(async (
-		planLimit: number = SUMMARY_PREVIEW_LIMIT,
-		sourceLimit: number = SUMMARY_PREVIEW_LIMIT,
-		silent: boolean = false
-	): Promise<SessionOverviewResult | null> => {
-		const target: SummaryOverviewTarget = summaryOverviewTargetRef.current;
-		if (target.sessionId === null && target.workspace === null) {
-			return null;
-		}
+	const loadSummaryOverview = useCallback(
+		async (
+			planLimit: number = SUMMARY_PREVIEW_LIMIT,
+			sourceLimit: number = SUMMARY_PREVIEW_LIMIT,
+			silent: boolean = false,
+		): Promise<SessionOverviewResult | null> => {
+			const target: SummaryOverviewTarget =
+				summaryOverviewTargetRef.current;
+			if (target.sessionId === null && target.workspace === null) {
+				return null;
+			}
 
-		const requestId: number = ++summaryRequestIdRef.current;
-		if (!silent) {
-			setIsSummaryLoading(true);
-			setSummaryError(null);
-		}
-		try {
-			const result: SessionOverviewResult = target.sessionId !== null
-				? await fetchSessionOverview({
-					sessionId: target.sessionId,
-					planLimit,
-					sourceLimit
-				})
-				: await fetchWorkspaceOverview(target.workspace!);
-			if (requestId !== summaryRequestIdRef.current || target.scopeKey !== summaryOverviewTargetRef.current.scopeKey) {
-				return null;
-			}
-			setSummaryOverview(result);
-			return result;
-		} catch (error: unknown) {
-			if (requestId !== summaryRequestIdRef.current || target.scopeKey !== summaryOverviewTargetRef.current.scopeKey) {
-				return null;
-			}
-			console.error("[HomePage] failed to load session overview", error);
+			const requestId: number = ++summaryRequestIdRef.current;
 			if (!silent) {
-				setSummaryError(error instanceof Error ? error.message : t("agentPage.summary.errors.load"));
+				setIsSummaryLoading(true);
+				setSummaryError(null);
 			}
-			return null;
-		} finally {
-			if (!silent && requestId === summaryRequestIdRef.current) {
-				setIsSummaryLoading(false);
+			try {
+				const result: SessionOverviewResult =
+					target.sessionId !== null
+						? await fetchSessionOverview({
+								sessionId: target.sessionId,
+								planLimit,
+								sourceLimit,
+							})
+						: await fetchWorkspaceOverview(target.workspace!);
+				if (
+					requestId !== summaryRequestIdRef.current ||
+					target.scopeKey !==
+						summaryOverviewTargetRef.current.scopeKey
+				) {
+					return null;
+				}
+				setSummaryOverview(result);
+				return result;
+			} catch (error: unknown) {
+				if (
+					requestId !== summaryRequestIdRef.current ||
+					target.scopeKey !==
+						summaryOverviewTargetRef.current.scopeKey
+				) {
+					return null;
+				}
+				console.error(
+					"[HomePage] failed to load session overview",
+					error,
+				);
+				if (!silent) {
+					setSummaryError(
+						error instanceof Error
+							? error.message
+							: t("agentPage.summary.errors.load"),
+					);
+				}
+				return null;
+			} finally {
+				if (!silent && requestId === summaryRequestIdRef.current) {
+					setIsSummaryLoading(false);
+				}
 			}
-		}
-	}, [t]);
+		},
+		[t],
+	);
 
 	useEffect((): void => {
-		if (summaryOverviewTargetRef.current.sessionId !== null || summaryOverviewTargetRef.current.workspace !== null) {
+		if (
+			summaryOverviewTargetRef.current.sessionId !== null ||
+			summaryOverviewTargetRef.current.workspace !== null
+		) {
 			void loadSummaryOverview();
 		}
 	}, [loadSummaryOverview, summaryScopeKey]);
@@ -1199,7 +1561,7 @@ function HomePage({
 				planLimit: SUMMARY_SEE_MORE_LIMIT,
 				sourceLimit: 0,
 				includePlanPreviews: false,
-				includeSourceImages: false
+				includeSourceImages: false,
 			})
 				.then((result: SessionOverviewResult): void => {
 					if (!cancelled) {
@@ -1208,8 +1570,15 @@ function HomePage({
 				})
 				.catch((error: unknown): void => {
 					if (!cancelled) {
-						console.error("[HomePage] failed to load session plans", error);
-						setPlansDialogError(error instanceof Error ? error.message : t("agentPage.summary.errors.load"));
+						console.error(
+							"[HomePage] failed to load session plans",
+							error,
+						);
+						setPlansDialogError(
+							error instanceof Error
+								? error.message
+								: t("agentPage.summary.errors.load"),
+						);
 					}
 				})
 				.finally((): void => {
@@ -1238,7 +1607,7 @@ function HomePage({
 				sessionId: activeSessionId,
 				planLimit: 0,
 				sourceLimit: SUMMARY_SEE_MORE_LIMIT,
-				includeSourceImages: false
+				includeSourceImages: false,
 			})
 				.then((result: SessionOverviewResult): void => {
 					if (!cancelled) {
@@ -1247,8 +1616,15 @@ function HomePage({
 				})
 				.catch((error: unknown): void => {
 					if (!cancelled) {
-						console.error("[HomePage] failed to load session sources", error);
-						setSourcesDialogError(error instanceof Error ? error.message : t("agentPage.summary.errors.load"));
+						console.error(
+							"[HomePage] failed to load session sources",
+							error,
+						);
+						setSourcesDialogError(
+							error instanceof Error
+								? error.message
+								: t("agentPage.summary.errors.load"),
+						);
 					}
 				})
 				.finally((): void => {
@@ -1264,29 +1640,49 @@ function HomePage({
 		};
 	}, [activeSessionId, sourcesModalOpen, t]);
 
-	const handleSummaryOpenChange = useCallback((open: boolean): void => {
-		setSummaryOpen(open);
-		if (!open) {
-			return;
-		}
-		if (summaryOverview === null && summaryError === null && !isSummaryLoading) {
-			void loadSummaryOverview();
-			return;
-		}
-		// 先显示缓存，再静默读取当前 Git 工作区状态，避免 diff 长时间停留在旧快照。
-		void loadSummaryOverview(SUMMARY_PREVIEW_LIMIT, SUMMARY_PREVIEW_LIMIT, true);
-	}, [isSummaryLoading, loadSummaryOverview, summaryError, summaryOverview]);
+	const handleSummaryOpenChange = useCallback(
+		(open: boolean): void => {
+			setSummaryOpen(open);
+			if (!open) {
+				return;
+			}
+			if (
+				summaryOverview === null &&
+				summaryError === null &&
+				!isSummaryLoading
+			) {
+				void loadSummaryOverview();
+				return;
+			}
+			// 先显示缓存，再静默读取当前 Git 工作区状态，避免 diff 长时间停留在旧快照。
+			void loadSummaryOverview(
+				SUMMARY_PREVIEW_LIMIT,
+				SUMMARY_PREVIEW_LIMIT,
+				true,
+			);
+		},
+		[isSummaryLoading, loadSummaryOverview, summaryError, summaryOverview],
+	);
 	const handleDockGitStateChange = useCallback(async (): Promise<void> => {
 		setGitStateRevision((current: number): number => current + 1);
 		onWorkspaceRefresh();
 		await loadSummaryOverview();
 	}, [loadSummaryOverview, onWorkspaceRefresh]);
-	const handleGitReviewSourceFolderChange = useCallback((sourceFolderId: string | null): void => {
-		setSummaryGitSourceFolderId(sourceFolderId);
-		setSummaryGitActionRequest((current: SummaryGitActionRequest | null): SummaryGitActionRequest | null => (
-			current !== null && current.sourceFolderId !== sourceFolderId ? null : current
-		));
-	}, []);
+	const handleGitReviewSourceFolderChange = useCallback(
+		(sourceFolderId: string | null): void => {
+			setSummaryGitSourceFolderId(sourceFolderId);
+			setSummaryGitActionRequest(
+				(
+					current: SummaryGitActionRequest | null,
+				): SummaryGitActionRequest | null =>
+					current !== null &&
+					current.sourceFolderId !== sourceFolderId
+						? null
+						: current,
+			);
+		},
+		[],
+	);
 
 	const gitActions = useGitActionDialogController({
 		workspaceId: workspaceForActions?.id ?? null,
@@ -1299,22 +1695,28 @@ function HomePage({
 			setSummaryOpen(false);
 		},
 		onCommitSuccess: handleDockGitStateChange,
-		onBranchSuccess: handleDockGitStateChange
+		onBranchSuccess: handleDockGitStateChange,
 	});
 
-	const requestSummaryGitAction = useCallback((sourceFolderId: string, action: SummaryGitAction): void => {
-		setSummaryOpen(false);
-		setSummaryGitSourceFolderId(sourceFolderId);
-		summaryGitActionRequestIdRef.current += 1;
-		setSummaryGitActionRequest({
-			id: summaryGitActionRequestIdRef.current,
-			action,
-			sourceFolderId
-		});
-	}, []);
+	const requestSummaryGitAction = useCallback(
+		(sourceFolderId: string, action: SummaryGitAction): void => {
+			setSummaryOpen(false);
+			setSummaryGitSourceFolderId(sourceFolderId);
+			summaryGitActionRequestIdRef.current += 1;
+			setSummaryGitActionRequest({
+				id: summaryGitActionRequestIdRef.current,
+				action,
+				sourceFolderId,
+			});
+		},
+		[],
+	);
 
 	useEffect((): void => {
-		if (summaryGitActionRequest === null || summaryGitActionRequest.sourceFolderId !== summaryGitSourceFolderId) {
+		if (
+			summaryGitActionRequest === null ||
+			summaryGitActionRequest.sourceFolderId !== summaryGitSourceFolderId
+		) {
 			return;
 		}
 		if (summaryGitActionRequest.action === "diff") {
@@ -1325,34 +1727,55 @@ function HomePage({
 			gitActions.openCommitDialog();
 		}
 		setSummaryGitActionRequest(null);
-	}, [gitActions.openBranchDialog, gitActions.openCommitDialog, openSummaryDiffReview, summaryGitActionRequest, summaryGitSourceFolderId]);
+	}, [
+		gitActions.openBranchDialog,
+		gitActions.openCommitDialog,
+		openSummaryDiffReview,
+		summaryGitActionRequest,
+		summaryGitSourceFolderId,
+	]);
 
-	const summaryEnvInfos: SessionOverviewGitInfo[] = useMemo((): SessionOverviewGitInfo[] => {
-		if (summaryOverview === null) {
-			return [];
-		}
-		if ((summaryOverview.envInfos?.length ?? 0) > 0) {
-			return summaryOverview.envInfos ?? [];
-		}
-		if (summaryOverview.envInfo === null) {
-			return [];
-		}
-		const fallbackSource = workspaceForActions?.sourceFolders.find(
-			(source): boolean => source.path === summaryOverview.envInfo?.sourceFolderPath
-		) ?? workspaceForActions?.sourceFolders.find(
-			(source): boolean => source.id === workspaceForActions.primarySourceFolderId
-		) ?? workspaceForActions?.sourceFolders[0];
-		const sourceFolderPath: string = summaryOverview.envInfo.sourceFolderPath
-			|| fallbackSource?.path
-			|| workspaceForActions?.rootPath
-			|| "";
-		return [{
-			...summaryOverview.envInfo,
-			sourceFolderId: summaryOverview.envInfo.sourceFolderId || fallbackSource?.id || "primary",
-			sourceFolderPath,
-			title: summaryOverview.envInfo.title || getPathBasename(sourceFolderPath)
-		}];
-	}, [summaryOverview, workspaceForActions]);
+	const summaryEnvInfos: SessionOverviewGitInfo[] =
+		useMemo((): SessionOverviewGitInfo[] => {
+			if (summaryOverview === null) {
+				return [];
+			}
+			if ((summaryOverview.envInfos?.length ?? 0) > 0) {
+				return summaryOverview.envInfos ?? [];
+			}
+			if (summaryOverview.envInfo === null) {
+				return [];
+			}
+			const fallbackSource =
+				workspaceForActions?.sourceFolders.find(
+					(source): boolean =>
+						source.path ===
+						summaryOverview.envInfo?.sourceFolderPath,
+				) ??
+				workspaceForActions?.sourceFolders.find(
+					(source): boolean =>
+						source.id === workspaceForActions.primarySourceFolderId,
+				) ??
+				workspaceForActions?.sourceFolders[0];
+			const sourceFolderPath: string =
+				summaryOverview.envInfo.sourceFolderPath ||
+				fallbackSource?.path ||
+				workspaceForActions?.rootPath ||
+				"";
+			return [
+				{
+					...summaryOverview.envInfo,
+					sourceFolderId:
+						summaryOverview.envInfo.sourceFolderId ||
+						fallbackSource?.id ||
+						"primary",
+					sourceFolderPath,
+					title:
+						summaryOverview.envInfo.title ||
+						getPathBasename(sourceFolderPath),
+				},
+			];
+		}, [summaryOverview, workspaceForActions]);
 
 	const loadGodotSceneFiles = useCallback(async (): Promise<void> => {
 		if (workspaceForActions === null) {
@@ -1369,16 +1792,21 @@ function HomePage({
 					return;
 				}
 
-				const result = await window.electronAPI.workspaceFs.listChildren({
-					workspaceRoot,
-					relativePath
-				});
-				const entries = [...result.entries].sort((left, right): number => {
-					if (left.kind !== right.kind) {
-						return left.kind === "folder" ? -1 : 1;
-					}
-					return left.relativePath.localeCompare(right.relativePath);
-				});
+				const result =
+					await window.electronAPI.workspaceFs.listChildren({
+						workspaceRoot,
+						relativePath,
+					});
+				const entries = [...result.entries].sort(
+					(left, right): number => {
+						if (left.kind !== right.kind) {
+							return left.kind === "folder" ? -1 : 1;
+						}
+						return left.relativePath.localeCompare(
+							right.relativePath,
+						);
+					},
+				);
 
 				for (const entry of entries) {
 					if (scenes.length >= MAX_GODOT_SCENE_FILES) {
@@ -1395,7 +1823,7 @@ function HomePage({
 						scenes.push({
 							name: entry.name,
 							relativePath: entry.relativePath,
-							resourcePath: entry.resourcePath
+							resourcePath: entry.resourcePath,
 						});
 					}
 				}
@@ -1404,7 +1832,10 @@ function HomePage({
 			await scan("");
 			setGodotSceneFiles(scenes);
 		} catch (error: unknown) {
-			const message: string = error instanceof Error ? error.message : t("agentPage.summary.godot.errors.loadScenes");
+			const message: string =
+				error instanceof Error
+					? error.message
+					: t("agentPage.summary.godot.errors.loadScenes");
 			console.error("[HomePage] failed to load Godot scenes", error);
 			void messageApi.error(message);
 			setGodotSceneFiles([]);
@@ -1425,201 +1856,282 @@ function HomePage({
 		void openWorkspaceLaunchTarget("godot", { godotRunMode: "project" });
 	}, [openWorkspaceLaunchTarget]);
 
-	const runGodotScene = useCallback((scene: GodotSceneFile): void => {
-		setIsGodotSceneModalOpen(false);
-		void openWorkspaceLaunchTarget("godot", {
-			godotRunMode: "scene",
-			godotScenePath: scene.relativePath
-		});
-	}, [openWorkspaceLaunchTarget]);
-
-	const summaryCollapseItems: NonNullable<CollapseProps["items"]> = useMemo((): NonNullable<CollapseProps["items"]> => {
-		if (summaryOverview === null) {
-			return [];
-		}
-
-		const items: NonNullable<CollapseProps["items"]> = [];
-		for (const envInfo of summaryEnvInfos) {
-			const hasDiff: boolean = envInfo.changedFiles > 0;
-			const hasDiffStats: boolean = envInfo.additions > 0 || envInfo.deletions > 0;
-			items.push({
-				key: `env_info:${envInfo.sourceFolderId}`,
-				label: <Tooltip title={envInfo.sourceFolderPath}>{envInfo.title}</Tooltip>,
-				children: (
-					<div className={styles.summarySection}>
-						<Button
-							type="text"
-							block
-							icon={<Icon name="git-diff" />}
-							className={styles.summaryActionButton}
-							onClick={(): void => requestSummaryGitAction(envInfo.sourceFolderId, "diff")}
-						>
-							<span className={styles.diffRow}>
-								<span className={styles.diffLabel}>
-									{t("agentPage.summary.actions.diff")}
-								</span>
-								{hasDiffStats ? (
-									<>
-										<span className={styles.additions}>
-											{`+${envInfo.additions}`}
-										</span>
-										<span className={styles.deletions}>
-											{`-${envInfo.deletions}`}
-										</span>
-									</>
-								) : null}
-							</span>
-						</Button>
-						<Button
-							type="text"
-							block
-							icon={<Icon name="git-branch" />}
-							className={styles.summaryActionButton}
-							onClick={(): void => {
-								requestSummaryGitAction(envInfo.sourceFolderId, "branch");
-							}}
-						>
-							{envInfo.branch ?? t("agentPage.summary.detachedHead")}
-						</Button>
-						<Button
-							type="text"
-							block
-							disabled={!hasDiff}
-							aria-busy={gitActions.isCommitMessageGenerating}
-							icon={gitActions.isCommitMessageGenerating ? <Spin size="small" /> : <Icon name="git-commit" />}
-							className={styles.summaryActionButton}
-							onClick={(): void => {
-								requestSummaryGitAction(envInfo.sourceFolderId, "commit");
-							}}
-						>
-							{t("agentPage.summary.actions.commitOrPush")}
-						</Button>
-					</div>
-				),
-				showArrow: false
+	const runGodotScene = useCallback(
+		(scene: GodotSceneFile): void => {
+			setIsGodotSceneModalOpen(false);
+			void openWorkspaceLaunchTarget("godot", {
+				godotRunMode: "scene",
+				godotScenePath: scene.relativePath,
 			});
-		}
+		},
+		[openWorkspaceLaunchTarget],
+	);
 
-		if (showGodotSummaryActions) {
-			items.push({
-				key: "godot",
-				label: t("agentPage.summary.sections.godot"),
-				children: (
-					<div className={styles.summarySection}>
-						<Button
-							type="text"
-							block
-							icon={<Icon name="play" />}
-							className={styles.summaryActionButton}
-							onClick={runGodotProject}
-						>
-							{t("agentPage.summary.godot.runProject")}
-						</Button>
-						<Button
-							type="text"
-							block
-							icon={<Icon name="scene" />}
-							className={styles.summaryActionButton}
-							onClick={openGodotSceneModal}
-						>
-							{t("agentPage.summary.godot.runScene")}
-						</Button>
-					</div>
-				),
-				showArrow: false
-			});
-		}
+	const summaryCollapseItems: NonNullable<CollapseProps["items"]> =
+		useMemo((): NonNullable<CollapseProps["items"]> => {
+			if (summaryOverview === null) {
+				return [];
+			}
 
-		if (summaryOverview.plans.total > 0) {
-			items.push({
-				key: "plans",
-				label: t("agentPage.summary.sections.plans"),
-				children: (
-					<div className={styles.planList}>
-						{summaryOverview.plans.items.slice(0, SUMMARY_PREVIEW_LIMIT).map((plan: SessionOverviewPlanItem): React.ReactNode => (
+			const items: NonNullable<CollapseProps["items"]> = [];
+			for (const envInfo of summaryEnvInfos) {
+				const hasDiff: boolean = envInfo.changedFiles > 0;
+				const hasDiffStats: boolean =
+					envInfo.additions > 0 || envInfo.deletions > 0;
+				items.push({
+					key: `env_info:${envInfo.sourceFolderId}`,
+					label: (
+						<Tooltip title={envInfo.sourceFolderPath}>
+							{envInfo.title}
+						</Tooltip>
+					),
+					children: (
+						<div className={styles.summarySection}>
 							<Button
-								key={plan.planId}
 								type="text"
 								block
+								icon={<Icon name="git-diff" />}
 								className={styles.summaryActionButton}
-								onClick={(): void => {
-									setSummaryOpen(false);
-									setPreviewPlan(plan);
-								}}
+								onClick={(): void =>
+									requestSummaryGitAction(
+										envInfo.sourceFolderId,
+										"diff",
+									)
+								}
 							>
-								{plan.title}
-							</Button>
-						))}
-						{summaryOverview.plans.total > SUMMARY_PREVIEW_LIMIT ? (
-							<Button
-								type="text"
-								block
-								icon={<Icon name="external-link" />}
-								className={styles.summaryActionButton}
-								onClick={(): void => {
-									void openPlansModal();
-								}}
-							>
-								{t("agentPage.summary.actions.seeMore")}
-							</Button>
-						) : null}
-					</div>
-				),
-				showArrow: false
-			});
-		}
-
-		if (summaryOverview.sources.total > 0) {
-			items.push({
-				key: "source",
-				label: t("agentPage.summary.sections.source"),
-				children: (
-					<div className={styles.sourceList}>
-						{summaryOverview.sources.items.slice(0, SUMMARY_PREVIEW_LIMIT).map((source: SessionOverviewSourceItem): React.ReactNode => (
-							<Button
-								key={`${source.kind}:${source.id}`}
-								type="text"
-								block
-								className={styles.sourceButton}
-								icon={source.thumbnailDataUrl !== undefined ? (
-									<img
-										src={source.thumbnailDataUrl}
-										alt=""
-										className={styles.sourceThumbnail}
-									/>
-								) : <Icon name="txt" className={styles.sourceTextIcon} />}
-								onClick={(): void => {
-									setSummaryOpen(false);
-									setPreviewSource(source);
-								}}
-							>
-								<span className={styles.sourceText}>
-									<span className={styles.summaryItemTitle}>{source.title}</span>
-									<span className={styles.summaryMeta}>{formatSourceSubtitle(source, t)}</span>
+								<span className={styles.diffRow}>
+									<span className={styles.diffLabel}>
+										{t("agentPage.summary.actions.diff")}
+									</span>
+									{hasDiffStats ? (
+										<>
+											<span className={styles.additions}>
+												{`+${envInfo.additions}`}
+											</span>
+											<span className={styles.deletions}>
+												{`-${envInfo.deletions}`}
+											</span>
+										</>
+									) : null}
 								</span>
 							</Button>
-						))}
-						{summaryOverview.sources.total > SUMMARY_PREVIEW_LIMIT ? (
 							<Button
 								type="text"
 								block
-								icon={<Icon name="external-link" />}
+								icon={<Icon name="git-branch" />}
 								className={styles.summaryActionButton}
 								onClick={(): void => {
-									void openSourcesModal();
+									requestSummaryGitAction(
+										envInfo.sourceFolderId,
+										"branch",
+									);
 								}}
 							>
-								{t("agentPage.summary.actions.seeMore")}
+								{envInfo.branch ??
+									t("agentPage.summary.detachedHead")}
 							</Button>
-						) : null}
-					</div>
-				),
-				showArrow: false
-			});
-		}
+							<Button
+								type="text"
+								block
+								disabled={!hasDiff}
+								aria-busy={gitActions.isCommitMessageGenerating}
+								icon={
+									gitActions.isCommitMessageGenerating ? (
+										<Spin size="small" />
+									) : (
+										<Icon name="git-commit" />
+									)
+								}
+								className={styles.summaryActionButton}
+								onClick={(): void => {
+									requestSummaryGitAction(
+										envInfo.sourceFolderId,
+										"commit",
+									);
+								}}
+							>
+								{t("agentPage.summary.actions.commitOrPush")}
+							</Button>
+						</div>
+					),
+					showArrow: false,
+				});
+			}
 
-		return items;
-	}, [gitActions.isCommitMessageGenerating, openGodotSceneModal, requestSummaryGitAction, runGodotProject, showGodotSummaryActions, summaryEnvInfos, summaryOverview, t]);
+			if (showGodotSummaryActions) {
+				items.push({
+					key: "godot",
+					label: t("agentPage.summary.sections.godot"),
+					children: (
+						<div className={styles.summarySection}>
+							<Button
+								type="text"
+								block
+								icon={<Icon name="play" />}
+								className={styles.summaryActionButton}
+								onClick={runGodotProject}
+							>
+								{t("agentPage.summary.godot.runProject")}
+							</Button>
+							<Button
+								type="text"
+								block
+								icon={<Icon name="scene" />}
+								className={styles.summaryActionButton}
+								onClick={openGodotSceneModal}
+							>
+								{t("agentPage.summary.godot.runScene")}
+							</Button>
+						</div>
+					),
+					showArrow: false,
+				});
+			}
+
+			if (summaryOverview.plans.total > 0) {
+				items.push({
+					key: "plans",
+					label: t("agentPage.summary.sections.plans"),
+					children: (
+						<div className={styles.planList}>
+							{summaryOverview.plans.items
+								.slice(0, SUMMARY_PREVIEW_LIMIT)
+								.map(
+									(
+										plan: SessionOverviewPlanItem,
+									): React.ReactNode => (
+										<Button
+											key={plan.planId}
+											type="text"
+											block
+											className={
+												styles.summaryActionButton
+											}
+											onClick={(): void => {
+												setSummaryOpen(false);
+												setPreviewPlan(plan);
+											}}
+										>
+											{plan.title}
+										</Button>
+									),
+								)}
+							{summaryOverview.plans.total >
+							SUMMARY_PREVIEW_LIMIT ? (
+								<Button
+									type="text"
+									block
+									icon={<Icon name="external-link" />}
+									className={styles.summaryActionButton}
+									onClick={(): void => {
+										void openPlansModal();
+									}}
+								>
+									{t("agentPage.summary.actions.seeMore")}
+								</Button>
+							) : null}
+						</div>
+					),
+					showArrow: false,
+				});
+			}
+
+			if (summaryOverview.sources.total > 0) {
+				items.push({
+					key: "source",
+					label: t("agentPage.summary.sections.source"),
+					children: (
+						<div className={styles.sourceList}>
+							{summaryOverview.sources.items
+								.slice(0, SUMMARY_PREVIEW_LIMIT)
+								.map(
+									(
+										source: SessionOverviewSourceItem,
+									): React.ReactNode => (
+										<Button
+											key={`${source.kind}:${source.id}`}
+											type="text"
+											block
+											className={styles.sourceButton}
+											icon={
+												source.thumbnailDataUrl !==
+												undefined ? (
+													<img
+														src={
+															source.thumbnailDataUrl
+														}
+														alt=""
+														className={
+															styles.sourceThumbnail
+														}
+													/>
+												) : (
+													<Icon
+														name="txt"
+														className={
+															styles.sourceTextIcon
+														}
+													/>
+												)
+											}
+											onClick={(): void => {
+												setSummaryOpen(false);
+												setPreviewSource(source);
+											}}
+										>
+											<span className={styles.sourceText}>
+												<span
+													className={
+														styles.summaryItemTitle
+													}
+												>
+													{source.title}
+												</span>
+												<span
+													className={
+														styles.summaryMeta
+													}
+												>
+													{formatSourceSubtitle(
+														source,
+														t,
+													)}
+												</span>
+											</span>
+										</Button>
+									),
+								)}
+							{summaryOverview.sources.total >
+							SUMMARY_PREVIEW_LIMIT ? (
+								<Button
+									type="text"
+									block
+									icon={<Icon name="external-link" />}
+									className={styles.summaryActionButton}
+									onClick={(): void => {
+										void openSourcesModal();
+									}}
+								>
+									{t("agentPage.summary.actions.seeMore")}
+								</Button>
+							) : null}
+						</div>
+					),
+					showArrow: false,
+				});
+			}
+
+			return items;
+		}, [
+			gitActions.isCommitMessageGenerating,
+			openGodotSceneModal,
+			requestSummaryGitAction,
+			runGodotProject,
+			showGodotSummaryActions,
+			summaryEnvInfos,
+			summaryOverview,
+			t,
+		]);
 
 	function openPlansModal(): void {
 		setSummaryOpen(false);
@@ -1653,13 +2165,21 @@ function HomePage({
 					title: result.title || plan.title,
 					status: result.status,
 					updatedAt: result.updatedAt,
-					previewMarkdown: result.previewMarkdown || result.markdown || ""
+					previewMarkdown:
+						result.previewMarkdown || result.markdown || "",
 				});
 			})
 			.catch((error: unknown): void => {
 				if (requestId === planPreviewRequestIdRef.current) {
-					console.error("[HomePage] failed to load plan preview", error);
-					setPlanPreviewError(error instanceof Error ? error.message : t("agentPage.summary.errors.load"));
+					console.error(
+						"[HomePage] failed to load plan preview",
+						error,
+					);
+					setPlanPreviewError(
+						error instanceof Error
+							? error.message
+							: t("agentPage.summary.errors.load"),
+					);
 				}
 			})
 			.finally((): void => {
@@ -1681,7 +2201,7 @@ function HomePage({
 		options: {
 			godotRunMode?: "editor" | "project" | "scene";
 			godotScenePath?: string;
-		} = {}
+		} = {},
 	): Promise<void> {
 		if (workspaceForActions === null) {
 			return;
@@ -1694,20 +2214,33 @@ function HomePage({
 			await window.electronAPI.workspaceFs.openLaunchTarget({
 				workspaceRoot: workspaceForActions.rootPath,
 				targetId,
-				godotExecutablePath: targetId === "godot" ? effectiveGodotLaunchExecutablePath : undefined,
-				godotRunMode: targetId === "godot" ? options.godotRunMode : undefined,
-				godotScenePath: targetId === "godot" ? options.godotScenePath : undefined
+				godotExecutablePath:
+					targetId === "godot"
+						? effectiveGodotLaunchExecutablePath
+						: undefined,
+				godotRunMode:
+					targetId === "godot" ? options.godotRunMode : undefined,
+				godotScenePath:
+					targetId === "godot" ? options.godotScenePath : undefined,
 			});
 		} catch (error: unknown) {
-			const message: string = error instanceof Error ? error.message : t("agentPage.workspaceLaunch.errors.open");
-			console.error("[HomePage] failed to open workspace launch target", error);
+			const message: string =
+				error instanceof Error
+					? error.message
+					: t("agentPage.workspaceLaunch.errors.open");
+			console.error(
+				"[HomePage] failed to open workspace launch target",
+				error,
+			);
 			void messageApi.error(message);
 		} finally {
 			setIsOpeningLaunchTarget(false);
 		}
 	}
 
-	const handleWorkspaceLaunchMenuClick: MenuProps["onClick"] = ({ key }): void => {
+	const handleWorkspaceLaunchMenuClick: MenuProps["onClick"] = ({
+		key,
+	}): void => {
 		const targetId: string = String(key);
 		if (!isWorkspaceLaunchTargetId(targetId)) {
 			return;
@@ -1716,17 +2249,24 @@ function HomePage({
 		void openWorkspaceLaunchTarget(targetId);
 	};
 
-	const setScrollToBottomButtonVisible = useCallback((visible: boolean): void => {
-		scrollToBottomButtonVisibleRef.current = visible;
-		const button: HTMLButtonElement | null = scrollToBottomButtonRef.current;
-		if (button === null) {
-			return;
-		}
+	const setScrollToBottomButtonVisible = useCallback(
+		(visible: boolean): void => {
+			scrollToBottomButtonVisibleRef.current = visible;
+			const button: HTMLButtonElement | null =
+				scrollToBottomButtonRef.current;
+			if (button === null) {
+				return;
+			}
 
-		button.classList.toggle(styles.scrollToBottomButtonHidden, !visible);
-		button.tabIndex = visible ? 0 : -1;
-		button.setAttribute("aria-hidden", visible ? "false" : "true");
-	}, []);
+			button.classList.toggle(
+				styles.scrollToBottomButtonHidden,
+				!visible,
+			);
+			button.tabIndex = visible ? 0 : -1;
+			button.setAttribute("aria-hidden", visible ? "false" : "true");
+		},
+		[],
+	);
 
 	useLayoutEffect((): void => {
 		setScrollToBottomButtonVisible(scrollToBottomButtonVisibleRef.current);
@@ -1745,35 +2285,41 @@ function HomePage({
 		dockActivationRequestIdRef.current += 1;
 		setSideDockActivationRequest({
 			id: dockActivationRequestIdRef.current,
-			kind
+			kind,
 		});
 	}, []);
 
 	const openSideDock = useCallback(
 		(kind?: DockPanelKind): void => {
-			sideDockProgrammaticOpenUntilRef.current = performance.now() + SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS;
-			const currentSideLayout: DockLayoutPreferences = visualSessionLayoutRef.current.side;
-			const defaultKind: DockPanelKind = kind ?? (workspaceForActions === null ? "browser" : "review");
+			sideDockProgrammaticOpenUntilRef.current =
+				performance.now() + SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS;
+			const currentSideLayout: DockLayoutPreferences =
+				visualSessionLayoutRef.current.side;
+			const defaultKind: DockPanelKind =
+				kind ?? (workspaceForActions === null ? "browser" : "review");
 			commitSessionLayout({
 				...visualSessionLayoutRef.current,
 				side: {
 					...ensureDockTab(currentSideLayout, "side", defaultKind),
-					open: true
-				}
+					open: true,
+				},
 			});
 			if (kind !== undefined) {
 				requestSideDockKind(kind);
 			}
 		},
-		[commitSessionLayout, requestSideDockKind, workspaceForActions]
+		[commitSessionLayout, requestSideDockKind, workspaceForActions],
 	);
 
 	const closeSideDock = useCallback((): void => {
 		sideDockProgrammaticOpenUntilRef.current = 0;
 		commitSessionLayout({
 			...visualSessionLayoutRef.current,
-			fullscreenDock: visualSessionLayoutRef.current.fullscreenDock === "side" ? null : visualSessionLayoutRef.current.fullscreenDock,
-			side: { ...visualSessionLayoutRef.current.side, open: false }
+			fullscreenDock:
+				visualSessionLayoutRef.current.fullscreenDock === "side"
+					? null
+					: visualSessionLayoutRef.current.fullscreenDock,
+			side: { ...visualSessionLayoutRef.current.side, open: false },
 		});
 	}, [commitSessionLayout]);
 
@@ -1793,23 +2339,25 @@ function HomePage({
 	}, [openSideDock, workspaceForActions]);
 
 	const openBottomDock = useCallback((): void => {
-		const currentBottomLayout: DockLayoutPreferences = visualSessionLayoutRef.current.bottom;
+		const currentBottomLayout: DockLayoutPreferences =
+			visualSessionLayoutRef.current.bottom;
 		commitSessionLayout({
 			...visualSessionLayoutRef.current,
 			bottom: {
 				...ensureDockTab(currentBottomLayout, "bottom", "terminal"),
-				open: true
-			}
+				open: true,
+			},
 		});
 	}, [commitSessionLayout]);
 
 	const closeBottomDock = useCallback((): void => {
 		commitSessionLayout({
 			...visualSessionLayoutRef.current,
-			fullscreenDock: visualSessionLayoutRef.current.fullscreenDock === "bottom"
-				? null
-				: visualSessionLayoutRef.current.fullscreenDock,
-			bottom: { ...visualSessionLayoutRef.current.bottom, open: false }
+			fullscreenDock:
+				visualSessionLayoutRef.current.fullscreenDock === "bottom"
+					? null
+					: visualSessionLayoutRef.current.fullscreenDock,
+			bottom: { ...visualSessionLayoutRef.current.bottom, open: false },
 		});
 	}, [commitSessionLayout]);
 
@@ -1823,31 +2371,49 @@ function HomePage({
 
 	const ensureBrowserRuntime = useCallback(
 		async (sessionId: string): Promise<BrowserRuntimeRegistration> => {
-			const registered: BrowserRuntimeRegistration | null = findBrowserRuntime(sessionId);
+			const registered: BrowserRuntimeRegistration | null =
+				findBrowserRuntime(sessionId);
 			if (registered !== null) {
-				const current: SessionLayoutPreferences = visualSessionLayoutRef.current;
-				const targetLayout: DockLayoutPreferences = registered.placement === "side" ? current.side : current.bottom;
+				const current: SessionLayoutPreferences =
+					visualSessionLayoutRef.current;
+				const targetLayout: DockLayoutPreferences =
+					registered.placement === "side"
+						? current.side
+						: current.bottom;
 				commitSessionLayout({
 					...current,
 					[registered.placement]: {
 						...targetLayout,
 						open: true,
-						activeTabKey: registered.panelKey
-					}
+						activeTabKey: registered.panelKey,
+					},
 				});
 				return registered;
 			}
 
-			const current: SessionLayoutPreferences = visualSessionLayoutRef.current;
-			const sideTab = current.side.tabs.find((tab): boolean => tab.kind === "browser");
-			const bottomTab = current.bottom.tabs.find((tab): boolean => tab.kind === "browser");
+			const current: SessionLayoutPreferences =
+				visualSessionLayoutRef.current;
+			const sideTab = current.side.tabs.find(
+				(tab): boolean => tab.kind === "browser",
+			);
+			const bottomTab = current.bottom.tabs.find(
+				(tab): boolean => tab.kind === "browser",
+			);
 			if (sideTab !== undefined || bottomTab !== undefined) {
-				const placement = sideTab !== undefined ? ("side" as const) : ("bottom" as const);
+				const placement =
+					sideTab !== undefined
+						? ("side" as const)
+						: ("bottom" as const);
 				const tab = sideTab ?? bottomTab!;
-				const targetLayout: DockLayoutPreferences = placement === "side" ? current.side : current.bottom;
+				const targetLayout: DockLayoutPreferences =
+					placement === "side" ? current.side : current.bottom;
 				commitSessionLayout({
 					...current,
-					[placement]: { ...targetLayout, open: true, activeTabKey: tab.key }
+					[placement]: {
+						...targetLayout,
+						open: true,
+						activeTabKey: tab.key,
+					},
 				});
 				return await waitForBrowserRuntime(sessionId);
 			}
@@ -1859,16 +2425,16 @@ function HomePage({
 					...current.side,
 					open: true,
 					tabs: [...current.side.tabs, tab],
-					activeTabKey: tab.key
+					activeTabKey: tab.key,
 				},
 				browserPanels: {
 					...current.browserPanels,
-					[tab.key]: createDefaultBrowserPanelLayout()
-				}
+					[tab.key]: createDefaultBrowserPanelLayout(),
+				},
 			});
 			return await waitForBrowserRuntime(sessionId);
 		},
-		[commitSessionLayout]
+		[commitSessionLayout],
 	);
 
 	const activeBrowserCallsRef = useRef<Map<string, string>>(new Map());
@@ -1878,73 +2444,103 @@ function HomePage({
 		void createBackendClient()
 			.then((client): void => {
 				if (disposed) return;
-				removeListener = client.addEventListener((event: BackendEvent): void => {
-					if (event.event === "browser.tool.cancel") {
-						const data = event.data as { callId?: unknown } | undefined;
-						if (typeof data?.callId !== "string") return;
-						const browserId: string | undefined = activeBrowserCallsRef.current.get(data.callId);
-						if (browserId !== undefined) void window.electronAPI.browser.automation.cancel(browserId, data.callId);
-						return;
-					}
-					if (event.event !== "browser.tool.request") return;
-					const data = event.data as
-						| {
-								callId?: unknown;
-								sessionId?: unknown;
-								toolName?: unknown;
-								args?: unknown;
-						  }
-						| undefined;
-					if (
-						typeof data?.callId !== "string" ||
-						typeof data.sessionId !== "string" ||
-						typeof data.toolName !== "string" ||
-						data.args === null ||
-						typeof data.args !== "object" ||
-						Array.isArray(data.args)
-					)
-						return;
-					const callId: string = data.callId;
-					const requestSessionId: string = data.sessionId;
-					const toolName: string = data.toolName;
-					const args: Record<string, unknown> = data.args as Record<string, unknown>;
-					void (async (): Promise<void> => {
-						if (requestSessionId !== activeSessionId) throw new Error("browser_session_not_active");
-						const runtime: BrowserRuntimeRegistration = await ensureBrowserRuntime(requestSessionId);
-						activeBrowserCallsRef.current.set(callId, runtime.browserId);
-						try {
-							const result = await window.electronAPI.browser.automation.execute({
-								browserId: runtime.browserId,
-								callId,
-								toolName,
-								args
-							});
-							await client.request("browser.tool.result", {
-								callId,
-								ok: true,
-								result
-							});
-						} finally {
-							activeBrowserCallsRef.current.delete(callId);
+				removeListener = client.addEventListener(
+					(event: BackendEvent): void => {
+						if (event.event === "browser.tool.cancel") {
+							const data = event.data as
+								| { callId?: unknown }
+								| undefined;
+							if (typeof data?.callId !== "string") return;
+							const browserId: string | undefined =
+								activeBrowserCallsRef.current.get(data.callId);
+							if (browserId !== undefined)
+								void window.electronAPI.browser.automation.cancel(
+									browserId,
+									data.callId,
+								);
+							return;
 						}
-					})().catch((error: unknown): void => {
-						const message: string = error instanceof Error ? error.message : String(error);
-						void client
-							.request("browser.tool.result", {
+						if (event.event !== "browser.tool.request") return;
+						const data = event.data as
+							| {
+									callId?: unknown;
+									sessionId?: unknown;
+									toolName?: unknown;
+									args?: unknown;
+							  }
+							| undefined;
+						if (
+							typeof data?.callId !== "string" ||
+							typeof data.sessionId !== "string" ||
+							typeof data.toolName !== "string" ||
+							data.args === null ||
+							typeof data.args !== "object" ||
+							Array.isArray(data.args)
+						)
+							return;
+						const callId: string = data.callId;
+						const requestSessionId: string = data.sessionId;
+						const toolName: string = data.toolName;
+						const args: Record<string, unknown> =
+							data.args as Record<string, unknown>;
+						void (async (): Promise<void> => {
+							if (requestSessionId !== activeSessionId)
+								throw new Error("browser_session_not_active");
+							const runtime: BrowserRuntimeRegistration =
+								await ensureBrowserRuntime(requestSessionId);
+							activeBrowserCallsRef.current.set(
 								callId,
-								ok: false,
-								error: {
-									code: message.match(/browser_[a-z_]+/u)?.[0] ?? "browser_tool_failed",
-									message,
-									retryable: /busy|timeout|unavailable/u.test(message)
-								}
-							})
-							.catch((): void => {});
-					});
-				});
+								runtime.browserId,
+							);
+							try {
+								const result =
+									await window.electronAPI.browser.automation.execute(
+										{
+											browserId: runtime.browserId,
+											callId,
+											toolName,
+											args,
+										},
+									);
+								await client.request("browser.tool.result", {
+									callId,
+									ok: true,
+									result,
+								});
+							} finally {
+								activeBrowserCallsRef.current.delete(callId);
+							}
+						})().catch((error: unknown): void => {
+							const message: string =
+								error instanceof Error
+									? error.message
+									: String(error);
+							void client
+								.request("browser.tool.result", {
+									callId,
+									ok: false,
+									error: {
+										code:
+											message.match(
+												/browser_[a-z_]+/u,
+											)?.[0] ?? "browser_tool_failed",
+										message,
+										retryable:
+											/busy|timeout|unavailable/u.test(
+												message,
+											),
+									},
+								})
+								.catch((): void => {});
+						});
+					},
+				);
 			})
 			.catch((error: unknown): void => {
-				console.error("[HomePage] failed to attach browser tool runtime", error);
+				console.error(
+					"[HomePage] failed to attach browser tool runtime",
+					error,
+				);
 			});
 		return (): void => {
 			disposed = true;
@@ -1955,10 +2551,9 @@ function HomePage({
 	const toggleWorkspaceSidebar = useCallback((): void => {
 		scheduleWorkspaceSidebarSave({
 			...visualWorkspaceSidebarRef.current,
-			open: !visualWorkspaceSidebarRef.current.open
+			open: !visualWorkspaceSidebarRef.current.open,
 		});
 	}, [scheduleWorkspaceSidebarSave]);
-
 
 	useEffect((): (() => void) => {
 		const platform: ShortcutPlatform = detectShortcutPlatform();
@@ -1966,18 +2561,18 @@ function HomePage({
 			if (event.defaultPrevented) {
 				return;
 			}
-			if (event.key === "Escape" && conversationTimelinePaneRef.current?.closeSearch() === true) {
+			if (
+				event.key === "Escape" &&
+				conversationTimelinePaneRef.current?.closeSearch() === true
+			) {
 				event.preventDefault();
 				return;
 			}
 			if (shouldIgnoreGlobalShortcut(event)) {
 				return;
 			}
-			const commandId: ShortcutCommandId | null = findMatchingShortcutCommand(
-				event,
-				keyboardShortcuts,
-				platform
-			);
+			const commandId: ShortcutCommandId | null =
+				findMatchingShortcutCommand(event, keyboardShortcuts, platform);
 			if (commandId === null || event.repeat) {
 				return;
 			}
@@ -2007,16 +2602,21 @@ function HomePage({
 				onNewSession();
 				return;
 			}
-			if (commandId === "session.previous" || commandId === "session.next") {
+			if (
+				commandId === "session.previous" ||
+				commandId === "session.next"
+			) {
 				event.preventDefault();
-				const sessionId: string | null = navigateSessionHistory(commandId === "session.previous" ? "back" : "forward");
+				const sessionId: string | null = navigateSessionHistory(
+					commandId === "session.previous" ? "back" : "forward",
+				);
 				if (sessionId === null) {
 					return;
 				}
 				window.dispatchEvent(
 					new CustomEvent<string>(SESSION_NAVIGATION_EVENT, {
-						detail: sessionId
-					})
+						detail: sessionId,
+					}),
 				);
 				return;
 			}
@@ -2025,14 +2625,18 @@ function HomePage({
 			}
 			if (commandId === "conversation.find") {
 				event.preventDefault();
-				conversationTimelinePaneRef.current?.openSearch(getSelectedConversationSearchQuery(chatBodyRef.current));
+				conversationTimelinePaneRef.current?.openSearch(
+					getSelectedConversationSearchQuery(chatBodyRef.current),
+				);
 				return;
 			}
 			if (timelineNavigationEntries.length === 0) {
 				return;
 			}
 			event.preventDefault();
-			conversationTimelinePaneRef.current?.navigateTurn(commandId === "conversation.previousTurn" ? "previous" : "next");
+			conversationTimelinePaneRef.current?.navigateTurn(
+				commandId === "conversation.previousTurn" ? "previous" : "next",
+			);
 		};
 		window.addEventListener("keydown", handleGlobalShortcut);
 		return (): void => {
@@ -2048,7 +2652,7 @@ function HomePage({
 		onNewSession,
 		toggleBottomDock,
 		toggleSideDock,
-		toggleWorkspaceSidebar
+		toggleWorkspaceSidebar,
 	]);
 
 	function handleWorkspaceSidebarResize(sizes: number[]): void {
@@ -2057,18 +2661,21 @@ function HomePage({
 			return;
 		}
 
-		const normalizedSize: number = Math.min(WORKSPACE_SIDEBAR_MAX_SIZE, Math.max(WORKSPACE_SIDEBAR_CLOSED_SIZE, Math.trunc(nextSize)));
+		const normalizedSize: number = Math.min(
+			WORKSPACE_SIDEBAR_MAX_SIZE,
+			Math.max(WORKSPACE_SIDEBAR_CLOSED_SIZE, Math.trunc(nextSize)),
+		);
 		if (normalizedSize < WORKSPACE_SIDEBAR_CLOSE_THRESHOLD) {
 			applyVisualWorkspaceSidebar({
 				...visualWorkspaceSidebarRef.current,
-				open: false
+				open: false,
 			});
 			return;
 		}
 
 		applyVisualWorkspaceSidebar({
 			open: true,
-			size: normalizedSize
+			size: normalizedSize,
 		});
 	}
 
@@ -2080,7 +2687,7 @@ function HomePage({
 		if (nextSize < WORKSPACE_SIDEBAR_CLOSE_THRESHOLD) {
 			commitWorkspaceSidebar({
 				...visualWorkspaceSidebarRef.current,
-				open: false
+				open: false,
 			});
 			return;
 		}
@@ -2089,8 +2696,11 @@ function HomePage({
 			open: true,
 			size: Math.min(
 				WORKSPACE_SIDEBAR_MAX_SIZE,
-				Math.max(WORKSPACE_SIDEBAR_CLOSE_THRESHOLD, Math.trunc(nextSize))
-			)
+				Math.max(
+					WORKSPACE_SIDEBAR_CLOSE_THRESHOLD,
+					Math.trunc(nextSize),
+				),
+			),
 		});
 	}
 
@@ -2100,14 +2710,17 @@ function HomePage({
 			return;
 		}
 
-		const normalizedSize: number = Math.min(SIDE_DOCK_MAX_SIZE, Math.max(SIDE_DOCK_CLOSED_SIZE, Math.trunc(nextSize)));
+		const normalizedSize: number = Math.min(
+			SIDE_DOCK_MAX_SIZE,
+			Math.max(SIDE_DOCK_CLOSED_SIZE, Math.trunc(nextSize)),
+		);
 		if (normalizedSize < SIDE_DOCK_CLOSE_THRESHOLD) {
 			if (performance.now() < sideDockProgrammaticOpenUntilRef.current) {
 				return;
 			}
 			applyVisualSessionLayout({
 				...visualSessionLayoutRef.current,
-				side: { ...visualSessionLayoutRef.current.side, open: false }
+				side: { ...visualSessionLayoutRef.current.side, open: false },
 			});
 			return;
 		}
@@ -2118,8 +2731,8 @@ function HomePage({
 			side: {
 				...visualSessionLayoutRef.current.side,
 				open: true,
-				size: normalizedSize
-			}
+				size: normalizedSize,
+			},
 		});
 	}
 
@@ -2134,20 +2747,23 @@ function HomePage({
 			}
 			commitSessionLayout({
 				...visualSessionLayoutRef.current,
-				side: { ...visualSessionLayoutRef.current.side, open: false }
+				side: { ...visualSessionLayoutRef.current.side, open: false },
 			});
 			return;
 		}
 
 		sideDockProgrammaticOpenUntilRef.current = 0;
-		const validSize: number = Math.min(SIDE_DOCK_MAX_SIZE, Math.max(SIDE_DOCK_CLOSE_THRESHOLD, Math.trunc(nextSize)));
+		const validSize: number = Math.min(
+			SIDE_DOCK_MAX_SIZE,
+			Math.max(SIDE_DOCK_CLOSE_THRESHOLD, Math.trunc(nextSize)),
+		);
 		commitSessionLayout({
 			...visualSessionLayoutRef.current,
 			side: {
 				...visualSessionLayoutRef.current.side,
 				open: true,
-				size: validSize
-			}
+				size: validSize,
+			},
 		});
 	}
 
@@ -2157,11 +2773,17 @@ function HomePage({
 			return;
 		}
 
-		const normalizedSize: number = Math.min(BOTTOM_DOCK_MAX_SIZE, Math.max(BOTTOM_DOCK_CLOSED_SIZE, Math.trunc(nextSize)));
+		const normalizedSize: number = Math.min(
+			BOTTOM_DOCK_MAX_SIZE,
+			Math.max(BOTTOM_DOCK_CLOSED_SIZE, Math.trunc(nextSize)),
+		);
 		if (normalizedSize < BOTTOM_DOCK_CLOSE_THRESHOLD) {
 			applyVisualSessionLayout({
 				...visualSessionLayoutRef.current,
-				bottom: { ...visualSessionLayoutRef.current.bottom, open: false }
+				bottom: {
+					...visualSessionLayoutRef.current.bottom,
+					open: false,
+				},
 			});
 			return;
 		}
@@ -2171,8 +2793,8 @@ function HomePage({
 			bottom: {
 				...visualSessionLayoutRef.current.bottom,
 				open: true,
-				size: normalizedSize
-			}
+				size: normalizedSize,
+			},
 		});
 	}
 
@@ -2184,19 +2806,25 @@ function HomePage({
 		if (nextSize < BOTTOM_DOCK_CLOSE_THRESHOLD) {
 			commitSessionLayout({
 				...visualSessionLayoutRef.current,
-				bottom: { ...visualSessionLayoutRef.current.bottom, open: false }
+				bottom: {
+					...visualSessionLayoutRef.current.bottom,
+					open: false,
+				},
 			});
 			return;
 		}
 
-		const validSize: number = Math.min(BOTTOM_DOCK_MAX_SIZE, Math.max(BOTTOM_DOCK_CLOSE_THRESHOLD, Math.trunc(nextSize)));
+		const validSize: number = Math.min(
+			BOTTOM_DOCK_MAX_SIZE,
+			Math.max(BOTTOM_DOCK_CLOSE_THRESHOLD, Math.trunc(nextSize)),
+		);
 		commitSessionLayout({
 			...visualSessionLayoutRef.current,
 			bottom: {
 				...visualSessionLayoutRef.current.bottom,
 				open: true,
-				size: validSize
-			}
+				size: validSize,
+			},
 		});
 	}
 
@@ -2219,56 +2847,83 @@ function HomePage({
 		}
 	}
 
-	const summaryPopoverContent: React.ReactNode = useMemo((): React.ReactNode => (
-		<div className={styles.summaryPanel}>
-			{isSummaryLoading && summaryOverview === null ? (
-				<div className={styles.summaryLoading}>
-					<Spin />
-				</div>
-			) : summaryError !== null ? (
-				<div className={styles.summaryEmpty}>
-					<Typography.Text type="danger">{summaryError}</Typography.Text>
-					<Button
-						type="text"
-						icon={<Icon name="refresh" />}
-						onClick={(): void => {
-							void loadSummaryOverview();
-						}}
-					>
-						{t("agentPage.summary.actions.retry")}
-					</Button>
-				</div>
-			) : summaryCollapseItems.length > 0 ? (
-				summaryCollapseItems.map((item, index): React.ReactNode => (
-					<div key={String(item?.key ?? index)}>
-						{index > 0 ? <Divider size="small" /> : null}
-						<Collapse
-							size="small"
-							bordered={false}
-							items={item === undefined ? [] : [item]}
-							className={styles.summaryCollapse}
-							defaultActiveKey={[String(item?.key ?? "")]}
-							onChange={(activeKeys: string | string[]): void => {
-								const key: string = String(item?.key ?? "");
-								const expanded: boolean = Array.isArray(activeKeys)
-									? activeKeys.includes(key)
-									: activeKeys === key;
-								if (expanded && key.startsWith("env_info:")) {
-									void loadSummaryOverview(SUMMARY_PREVIEW_LIMIT, SUMMARY_PREVIEW_LIMIT, true);
-								}
-							}}
-						/>
+	const summaryPopoverContent: React.ReactNode = useMemo(
+		(): React.ReactNode => (
+			<div className={styles.summaryPanel}>
+				{isSummaryLoading && summaryOverview === null ? (
+					<div className={styles.summaryLoading}>
+						<Spin />
 					</div>
-				))
-			) : (
-				<Empty
-					image={Empty.PRESENTED_IMAGE_SIMPLE}
-					description={t("agentPage.summary.empty")}
-					className={styles.summaryEmpty}
-				/>
-			)}
-		</div>
-	), [isSummaryLoading, loadSummaryOverview, summaryCollapseItems, summaryError, summaryOverview, t]);
+				) : summaryError !== null ? (
+					<div className={styles.summaryEmpty}>
+						<Typography.Text type="danger">
+							{summaryError}
+						</Typography.Text>
+						<Button
+							type="text"
+							icon={<Icon name="refresh" />}
+							onClick={(): void => {
+								void loadSummaryOverview();
+							}}
+						>
+							{t("agentPage.summary.actions.retry")}
+						</Button>
+					</div>
+				) : summaryCollapseItems.length > 0 ? (
+					summaryCollapseItems.map(
+						(item, index): React.ReactNode => (
+							<div key={String(item?.key ?? index)}>
+								{index > 0 ? <Divider size="small" /> : null}
+								<Collapse
+									size="small"
+									bordered={false}
+									items={item === undefined ? [] : [item]}
+									className={styles.summaryCollapse}
+									defaultActiveKey={[String(item?.key ?? "")]}
+									onChange={(
+										activeKeys: string | string[],
+									): void => {
+										const key: string = String(
+											item?.key ?? "",
+										);
+										const expanded: boolean = Array.isArray(
+											activeKeys,
+										)
+											? activeKeys.includes(key)
+											: activeKeys === key;
+										if (
+											expanded &&
+											key.startsWith("env_info:")
+										) {
+											void loadSummaryOverview(
+												SUMMARY_PREVIEW_LIMIT,
+												SUMMARY_PREVIEW_LIMIT,
+												true,
+											);
+										}
+									}}
+								/>
+							</div>
+						),
+					)
+				) : (
+					<Empty
+						image={Empty.PRESENTED_IMAGE_SIMPLE}
+						description={t("agentPage.summary.empty")}
+						className={styles.summaryEmpty}
+					/>
+				)}
+			</div>
+		),
+		[
+			isSummaryLoading,
+			loadSummaryOverview,
+			summaryCollapseItems,
+			summaryError,
+			summaryOverview,
+			t,
+		],
+	);
 
 	function renderSummaryButton(): React.ReactNode {
 		return (
@@ -2281,7 +2936,10 @@ function HomePage({
 				className={styles.summaryPopver}
 				content={summaryPopoverContent}
 			>
-				<Tooltip title={t("agentPage.summary.tooltip")}>
+				<Tooltip
+					title={t("agentPage.summary.tooltip")}
+					placement="bottom"
+				>
 					<Button
 						type="text"
 						shape="circle"
@@ -2339,8 +2997,12 @@ function HomePage({
 			onWorkspaceSelect={isHome ? onHomeWorkspaceSelect : undefined}
 			onWorkspaceAdd={isHome ? onHomeWorkspaceAdd : undefined}
 			onWorkspaceClear={isHome ? onHomeWorkspaceClear : undefined}
-			onWorktreeModeChange={isHome ? onHomeExecutionEnvironmentChange : undefined}
-			onWorktreeSourceOptionsChange={isHome ? onHomeWorktreeSourcesChange : undefined}
+			onWorktreeModeChange={
+				isHome ? onHomeExecutionEnvironmentChange : undefined
+			}
+			onWorktreeSourceOptionsChange={
+				isHome ? onHomeWorktreeSourcesChange : undefined
+			}
 			onRemoveContext={onRemoveContext}
 			onPinContext={onPinContext}
 			onClearUnpinnedContext={onClearUnpinnedContext}
@@ -2384,7 +3046,8 @@ function HomePage({
 		workspaceLaunchTargetId: selectedLaunchTargetId,
 		sourceFolderId: summaryGitSourceFolderId,
 		sourceFolders: workspaceForActions?.sourceFolders ?? [],
-		primarySourceFolderId: workspaceForActions?.primarySourceFolderId ?? null,
+		primarySourceFolderId:
+			workspaceForActions?.primarySourceFolderId ?? null,
 		onSourceFolderChange: handleGitReviewSourceFolderChange,
 		cwd: workspaceForActions?.rootPath ?? null,
 		contextItems,
@@ -2396,15 +3059,19 @@ function HomePage({
 		filePanels: visualSessionLayout.filePanels,
 		onFilePanelChange: updateFilePanel,
 		browserPanels: visualSessionLayout.browserPanels,
-		onBrowserPanelChange: updateBrowserPanel
+		onBrowserPanelChange: updateBrowserPanel,
 	};
 
 	const sideDockConfig = showSideDockButton
 		? {
 				panel: {
-					size: sideDockFullscreen ? "100%" : sideDockOpen ? sideDockSize : SIDE_DOCK_CLOSED_SIZE,
+					size: sideDockFullscreen
+						? "100%"
+						: sideDockOpen
+							? sideDockSize
+							: SIDE_DOCK_CLOSED_SIZE,
 					min: SIDE_DOCK_CLOSED_SIZE,
-					max: sideDockFullscreen ? undefined : SIDE_DOCK_MAX_SIZE
+					max: sideDockFullscreen ? undefined : SIDE_DOCK_MAX_SIZE,
 				},
 				content: {
 					...commonDockPanelProps,
@@ -2416,18 +3083,27 @@ function HomePage({
 					layout: visualSessionLayout.side,
 					activationRequest: sideDockActivationRequest,
 					onLayoutChange: updateSideDock,
-					onFullscreenToggle: (): void => toggleDockFullscreen("side"),
-					slotClassName: styles.sideDockSlot
-				}
+					onFullscreenToggle: (): void =>
+						toggleDockFullscreen("side"),
+					slotClassName: styles.sideDockSlot,
+				},
 			}
 		: null;
 
 	const bottomDockConfig = showBottomDockButton
 		? {
 				panel: {
-					size: bottomDockFullscreen ? "100%" : sideDockFullscreen ? BOTTOM_DOCK_CLOSED_SIZE : bottomDockOpen ? bottomDockSize : BOTTOM_DOCK_CLOSED_SIZE,
+					size: bottomDockFullscreen
+						? "100%"
+						: sideDockFullscreen
+							? BOTTOM_DOCK_CLOSED_SIZE
+							: bottomDockOpen
+								? bottomDockSize
+								: BOTTOM_DOCK_CLOSED_SIZE,
 					min: BOTTOM_DOCK_CLOSED_SIZE,
-					max: bottomDockFullscreen ? undefined : BOTTOM_DOCK_MAX_SIZE
+					max: bottomDockFullscreen
+						? undefined
+						: BOTTOM_DOCK_MAX_SIZE,
 				},
 				content: {
 					...commonDockPanelProps,
@@ -2438,62 +3114,133 @@ function HomePage({
 					defaultKind: "terminal" as const,
 					layout: visualSessionLayout.bottom,
 					onLayoutChange: updateBottomDock,
-					onFullscreenToggle: (): void => toggleDockFullscreen("bottom"),
-					slotClassName: styles.bottomDockSlot
-				}
+					onFullscreenToggle: (): void =>
+						toggleDockFullscreen("bottom"),
+					slotClassName: styles.bottomDockSlot,
+				},
 			}
 		: null;
 	// Splitter 的直接子节点必须始终是 Panel；Dock 内容可以按开关状态卸载，但 Panel 结构保持稳定。
-	const renderSideDock: boolean = sideDockConfig !== null && (sideDockOpen || sideDockFullscreen);
-	const renderBottomDock: boolean = bottomDockConfig !== null && (bottomDockOpen || bottomDockFullscreen);
+	const renderSideDock: boolean =
+		sideDockConfig !== null && (sideDockOpen || sideDockFullscreen);
+	const renderBottomDock: boolean =
+		bottomDockConfig !== null && (bottomDockOpen || bottomDockFullscreen);
 	const pageActionControls =
-		showWorkspaceLaunchControls || showSummaryButton || showBottomDockButton || showSideDockButton ? (
+		showWorkspaceLaunchControls ||
+		showSummaryButton ||
+		showBottomDockButton ||
+		showSideDockButton ? (
 			<div className={styles.floatingActions}>
 				{showWorkspaceLaunchControls ? (
 					<Space.Compact className={styles.workspaceLaunchControls}>
 						<Button
 							loading={isOpeningLaunchTarget}
-							icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
+							icon={getWorkspaceLaunchIcon(
+								selectedLaunchTarget.id,
+							)}
 							onClick={(): void => {
-								void openWorkspaceLaunchTarget(selectedLaunchTarget.id);
+								void openWorkspaceLaunchTarget(
+									selectedLaunchTarget.id,
+								);
 							}}
 						>
 							{t("agentPage.workspaceLaunch.openIn", {
-								target: selectedLaunchTarget.label
+								target: selectedLaunchTarget.label,
 							})}
 						</Button>
 						<Dropdown
 							menu={{
 								items: workspaceLaunchMenuItems,
 								selectedKeys: [selectedLaunchTarget.id],
-								onClick: handleWorkspaceLaunchMenuClick
+								onClick: handleWorkspaceLaunchMenuClick,
 							}}
 							trigger={["click"]}
 						>
-							<Button aria-label={t("agentPage.workspaceLaunch.aria.selectTarget")} icon={<Icon name="arrow-down" />} />
+							<Button
+								aria-label={t(
+									"agentPage.workspaceLaunch.aria.selectTarget",
+								)}
+								icon={<Icon name="arrow-down" />}
+							/>
 						</Dropdown>
 					</Space.Compact>
 				) : null}
 				{showSummaryButton ? renderSummaryButton() : null}
 				{showBottomDockButton ? (
-					<Tooltip title={bottomDockOpen ? t("agentPage.dock.closeBottom") : t("agentPage.dock.openBottom")}>
-						<Button type="text" shape="circle" aria-pressed={bottomDockOpen} icon={<Icon name={bottomDockOpen ? "layout-bottom-toggled" : "layout-bottom"} />} onClick={toggleBottomDock} />
+					<Tooltip
+						title={
+							bottomDockOpen
+								? t("agentPage.dock.closeBottom")
+								: t("agentPage.dock.openBottom")
+						}
+						placement="bottom"
+					>
+						<Button
+							type="text"
+							shape="circle"
+							aria-pressed={bottomDockOpen}
+							icon={
+								<Icon
+									name={
+										bottomDockOpen
+											? "layout-bottom-toggled"
+											: "layout-bottom"
+									}
+								/>
+							}
+							onClick={toggleBottomDock}
+						/>
 					</Tooltip>
 				) : null}
 				{showSideDockButton ? (
-					<Tooltip title={sideDockOpen ? t("agentPage.dock.closeSidebar") : t("agentPage.dock.openSidebar")}>
-						<Button type="text" shape="circle" aria-pressed={sideDockOpen} icon={<Icon name={sideDockOpen ? "layout-right-toggled" : "layout-right"} />} onClick={toggleSideDock} />
+					<Tooltip
+						title={
+							sideDockOpen
+								? t("agentPage.dock.closeSidebar")
+								: t("agentPage.dock.openSidebar")
+						}
+						placement="bottom"
+					>
+						<Button
+							type="text"
+							shape="circle"
+							aria-pressed={sideDockOpen}
+							icon={
+								<Icon
+									name={
+										sideDockOpen
+											? "layout-right-toggled"
+											: "layout-right"
+									}
+								/>
+							}
+							onClick={toggleSideDock}
+						/>
 					</Tooltip>
 				) : null}
 			</div>
 		) : null;
 
 	return (
-		<div className={styles.page} onDragOver={handlePageDragOver} onDrop={handlePageDrop}>
+		<div
+			className={styles.page}
+			onDragOver={handlePageDragOver}
+			onDrop={handlePageDrop}
+		>
 			{messageContextHolder}
-			<Splitter className={styles.workspaceSplitter} draggerIcon={null} collapsible={{ motion: true }} onResize={handleWorkspaceSidebarResize} onResizeEnd={handleWorkspaceSidebarResizeEnd}>
+			<Splitter
+				className={styles.workspaceSplitter}
+				draggerIcon={null}
+				collapsible={{ motion: true }}
+				onResize={handleWorkspaceSidebarResize}
+				onResizeEnd={handleWorkspaceSidebarResizeEnd}
+			>
 				<Splitter.Panel
-					size={workspaceSidebarOpen ? workspaceSidebarSize : WORKSPACE_SIDEBAR_CLOSED_SIZE}
+					size={
+						workspaceSidebarOpen
+							? workspaceSidebarSize
+							: WORKSPACE_SIDEBAR_CLOSED_SIZE
+					}
 					min={WORKSPACE_SIDEBAR_CLOSED_SIZE}
 					max={WORKSPACE_SIDEBAR_MAX_SIZE}
 					collapsible={{ end: true, showCollapsibleIcon: false }}
@@ -2509,7 +3256,10 @@ function HomePage({
 				</Splitter.Panel>
 
 				<Splitter.Panel min={360}>
-					<div className={styles.agentMain} data-dock-fullscreen={activeFullscreenDock ?? undefined}>
+					<div
+						className={styles.agentMain}
+						data-dock-fullscreen={activeFullscreenDock ?? undefined}
+					>
 						{pageActionControls !== null ? (
 							<div className={styles.floatingActionSlot}>
 								{pageActionControls}
@@ -2517,127 +3267,351 @@ function HomePage({
 						) : null}
 						<Splitter
 							className={styles.agentVerticalSplitter}
-							data-dock-fullscreen={activeFullscreenDock ?? undefined}
-							data-fullscreen-motion-disabled={fullscreenMotionDisabled ? "true" : undefined}
+							data-dock-fullscreen={
+								activeFullscreenDock ?? undefined
+							}
+							data-fullscreen-motion-disabled={
+								fullscreenMotionDisabled ? "true" : undefined
+							}
 							draggerIcon={null}
 							orientation="vertical"
 							collapsible={{ motion: true }}
 							onResize={handleBottomDockResize}
 							onResizeEnd={handleBottomDockResizeEnd}
 						>
-							<Splitter.Panel min={bottomDockFullscreen ? BOTTOM_DOCK_CLOSED_SIZE : 360} size={bottomDockFullscreen ? 0 : undefined}>
+							<Splitter.Panel
+								min={
+									bottomDockFullscreen
+										? BOTTOM_DOCK_CLOSED_SIZE
+										: 360
+								}
+								size={bottomDockFullscreen ? 0 : undefined}
+							>
 								<Splitter
 									className={styles.agentSplitter}
-									data-dock-fullscreen={sideDockFullscreen ? "side" : undefined}
-									data-fullscreen-motion-disabled={fullscreenMotionDisabled ? "true" : undefined}
+									data-dock-fullscreen={
+										sideDockFullscreen ? "side" : undefined
+									}
+									data-fullscreen-motion-disabled={
+										fullscreenMotionDisabled
+											? "true"
+											: undefined
+									}
 									draggerIcon={null}
 									collapsible={{ motion: true }}
 									onResize={handleSideDockResize}
 									onResizeEnd={handleSideDockResizeEnd}
 								>
-									<Splitter.Panel min={sideDockFullscreen ? SIDE_DOCK_CLOSED_SIZE : 360} size={sideDockFullscreen ? 0 : undefined}>
+									<Splitter.Panel
+										min={
+											sideDockFullscreen
+												? SIDE_DOCK_CLOSED_SIZE
+												: 360
+										}
+										size={
+											sideDockFullscreen ? 0 : undefined
+										}
+									>
 										<section className={styles.chatPanel}>
-										<header
-											className={styles.chatHeader}
-											data-side-dock-open={sideDockOpen ? "true" : undefined}
-										>
-												<div className={styles.chatTitleRow}>
-													<Typography.Text className={styles.chatText} ellipsis={{ tooltip: chatTitle }}>
+											<header
+												className={styles.chatHeader}
+												data-side-dock-open={
+													sideDockOpen
+														? "true"
+														: undefined
+												}
+											>
+												<div
+													className={
+														styles.chatTitleRow
+													}
+												>
+													<Typography.Text
+														className={
+															styles.chatText
+														}
+														ellipsis={{
+															tooltip: chatTitle,
+														}}
+													>
 														{chatTitle}
 													</Typography.Text>
-													{activeSessionMetadata?.forkedFrom !== undefined ? (
-														<Tooltip placement="bottom" title={t("chat.fork.openSourceTooltip")}>
+													{activeSessionMetadata?.forkedFrom !==
+													undefined ? (
+														<Tooltip
+															placement="bottom"
+															title={t(
+																"chat.fork.openSourceTooltip",
+															)}
+														>
 															<Button
 																type="text"
 																size="small"
 																shape="circle"
-																className={styles.forkOriginButton}
-																aria-label={t("chat.fork.openSourceAria")}
-																icon={<Icon name="fork" />}
-																disabled={isSessionLoading}
+																className={
+																	styles.forkOriginButton
+																}
+																aria-label={t(
+																	"chat.fork.openSourceAria",
+																)}
+																icon={
+																	<Icon name="fork" />
+																}
+																disabled={
+																	isSessionLoading
+																}
 																onClick={(): void => {
-																	void onForkSourceOpen(activeSessionMetadata.forkedFrom!.sessionId);
+																	void onForkSourceOpen(
+																		activeSessionMetadata
+																			.forkedFrom!
+																			.sessionId,
+																	);
 																}}
 															/>
 														</Tooltip>
 													) : null}
-											{activeSessionMetadata?.worktree !== undefined ? (
-												<Space size={4}><Tooltip
-															title={t("agentPage.worktree.source", {
-																workspace: activeSessionMetadata.worktree.sourceWorkspaceName
-															})}
-														>
-															<span className={styles.worktreeBadge}>
-																<Icon name="git-branch" />
-																{t("agentPage.worktree.label")}
-															</span>
-												</Tooltip><Dropdown menu={{ items: [
-													...((activeSessionMetadata.worktree.status ?? "ready") === "ready" ? [] : [
-														{ key: "setup-retry", label: t("agentPage.worktree.setupRetry") },
-														{ key: "setup-skip", label: t("agentPage.worktree.setupSkip") },
-														{ type: "divider" as const }
-													]),
-													{ key: "local", label: t("agentPage.worktree.handoffLocal"), disabled: (activeSessionMetadata.worktree.location ?? "worktree") === "local" },
-													{ key: "worktree", label: t("agentPage.worktree.handoffWorktree"), disabled: (activeSessionMetadata.worktree.location ?? "worktree") === "worktree" }
-												], onClick: ({ key }): void => {
-													if (key === "setup-retry" || key === "setup-skip") {
-														void onSessionWorktreeSetup(key === "setup-retry" ? "retry" : "skip");
-														return;
-													}
-													void onSessionWorktreeHandoff(key as "local" | "worktree");
-												} }}><Button type="text" size="small" icon={<Icon name="arrow-forward" />} aria-label={t("agentPage.worktree.handoff")} /></Dropdown></Space>
-											) : null}
+													{activeSessionMetadata?.worktree !==
+													undefined ? (
+														<Space size={4}>
+															<Tooltip
+																title={t(
+																	"agentPage.worktree.source",
+																	{
+																		workspace:
+																			activeSessionMetadata
+																				.worktree
+																				.sourceWorkspaceName,
+																	},
+																)}
+															>
+																<span
+																	className={
+																		styles.worktreeBadge
+																	}
+																>
+																	<Icon name="git-branch" />
+																	{t(
+																		"agentPage.worktree.label",
+																	)}
+																</span>
+															</Tooltip>
+															<Dropdown
+																menu={{
+																	items: [
+																		...((activeSessionMetadata
+																			.worktree
+																			.status ??
+																			"ready") ===
+																		"ready"
+																			? []
+																			: [
+																					{
+																						key: "setup-retry",
+																						label: t(
+																							"agentPage.worktree.setupRetry",
+																						),
+																					},
+																					{
+																						key: "setup-skip",
+																						label: t(
+																							"agentPage.worktree.setupSkip",
+																						),
+																					},
+																					{
+																						type: "divider" as const,
+																					},
+																				]),
+																		{
+																			key: "local",
+																			label: t(
+																				"agentPage.worktree.handoffLocal",
+																			),
+																			disabled:
+																				(activeSessionMetadata
+																					.worktree
+																					.location ??
+																					"worktree") ===
+																				"local",
+																		},
+																		{
+																			key: "worktree",
+																			label: t(
+																				"agentPage.worktree.handoffWorktree",
+																			),
+																			disabled:
+																				(activeSessionMetadata
+																					.worktree
+																					.location ??
+																					"worktree") ===
+																				"worktree",
+																		},
+																	],
+																	onClick: ({
+																		key,
+																	}): void => {
+																		if (
+																			key ===
+																				"setup-retry" ||
+																			key ===
+																				"setup-skip"
+																		) {
+																			void onSessionWorktreeSetup(
+																				key ===
+																					"setup-retry"
+																					? "retry"
+																					: "skip",
+																			);
+																			return;
+																		}
+																		void onSessionWorktreeHandoff(
+																			key as
+																				| "local"
+																				| "worktree",
+																		);
+																	},
+																}}
+															>
+																<Button
+																	type="text"
+																	size="small"
+																	icon={
+																		<Icon name="arrow-forward" />
+																	}
+																	aria-label={t(
+																		"agentPage.worktree.handoff",
+																	)}
+																/>
+															</Dropdown>
+														</Space>
+													) : null}
 												</div>
 											</header>
 
 											<Divider size="small" />
 
-											<div ref={chatBodyRef} className={styles.chatBody}>
+											<div
+												ref={chatBodyRef}
+												className={styles.chatBody}
+											>
 												{isHome ? (
 													<NewSessionHome
-														workspace={homeWorkspace}
-														errorMessage={sessionError}
+														workspace={
+															homeWorkspace
+														}
+														errorMessage={
+															sessionError
+														}
 														message={message}
-														onStarterSelect={handleHomeStarterSelect}
+														onStarterSelect={
+															handleHomeStarterSelect
+														}
 													/>
 												) : activeSessionId !== null ? (
-												<MarkdownResourceActionsProvider
-													value={{
-														workspaceRoots: workspaceForActions === null
-															? []
-															: [workspaceForActions.rootPath, ...workspaceForActions.sourceFolders.map((sourceFolder): string => sourceFolder.path)],
-															godotExecutablePath: effectiveGodotLaunchExecutablePath,
-															currentWorkspaceLaunch: workspaceForActions === null ? null : selectedLaunchTarget,
-															launchTargets: workspaceLaunchTargets
+													<MarkdownResourceActionsProvider
+														value={{
+															workspaceRoots:
+																workspaceForActions ===
+																null
+																	? []
+																	: [
+																			workspaceForActions.rootPath,
+																			...workspaceForActions.sourceFolders.map(
+																				(
+																					sourceFolder,
+																				): string =>
+																					sourceFolder.path,
+																			),
+																		],
+															godotExecutablePath:
+																effectiveGodotLaunchExecutablePath,
+															currentWorkspaceLaunch:
+																workspaceForActions ===
+																null
+																	? null
+																	: selectedLaunchTarget,
+															launchTargets:
+																workspaceLaunchTargets,
 														}}
 													>
 														<ConversationTimelinePane
-															ref={conversationTimelinePaneRef}
-															sessionId={activeSessionId}
-															timelineStore={timelineStore}
-															timelineNavigationEntries={timelineNavigationEntries}
-															isLoading={isSessionLoading}
-															errorMessage={sessionError}
-															isLoadingMoreBefore={isLoadingMoreBefore}
-															isLoadingMoreAfter={isLoadingMoreAfter}
-															retryDisabled={retryDisabled}
-															activeRetryRequestId={activeRetryRequestId}
-															onLoadMoreBefore={onLoadMoreBefore}
-															onLoadMoreAfter={onLoadMoreAfter}
-															onTimelineNavigationLoadEntry={onTimelineNavigationLoadEntry}
-															onTimelineSearchLoadOffset={onTimelineSearchLoadOffset}
-															onRetryEditStart={onRetryEditStart}
-															onRetryEditCancel={onRetryEditCancel}
-															onRetryFromUserMessage={onRetryFromUserMessage}
-															onForkFromUserMessage={onForkFromUserMessage}
-															onOpenForkSource={onForkSourceOpen}
-															forkDisabled={forkDisabled}
-															forkingRequestId={forkingRequestId}
-															onInlineDiffReview={openReviewPanel}
-															onAwayFromBottomChange={setScrollToBottomButtonVisible}
-															contextItems={selectionMarkerContextItems}
-															onAddContext={onAddContext}
-															initialSelectionAskThreads={selectionAskThreads}
+															ref={
+																conversationTimelinePaneRef
+															}
+															sessionId={
+																activeSessionId
+															}
+															timelineStore={
+																timelineStore
+															}
+															timelineNavigationEntries={
+																timelineNavigationEntries
+															}
+															isLoading={
+																isSessionLoading
+															}
+															errorMessage={
+																sessionError
+															}
+															isLoadingMoreBefore={
+																isLoadingMoreBefore
+															}
+															isLoadingMoreAfter={
+																isLoadingMoreAfter
+															}
+															retryDisabled={
+																retryDisabled
+															}
+															activeRetryRequestId={
+																activeRetryRequestId
+															}
+															onLoadMoreBefore={
+																onLoadMoreBefore
+															}
+															onLoadMoreAfter={
+																onLoadMoreAfter
+															}
+															onTimelineNavigationLoadEntry={
+																onTimelineNavigationLoadEntry
+															}
+															onTimelineSearchLoadOffset={
+																onTimelineSearchLoadOffset
+															}
+															onRetryEditStart={
+																onRetryEditStart
+															}
+															onRetryEditCancel={
+																onRetryEditCancel
+															}
+															onRetryFromUserMessage={
+																onRetryFromUserMessage
+															}
+															onForkFromUserMessage={
+																onForkFromUserMessage
+															}
+															onOpenForkSource={
+																onForkSourceOpen
+															}
+															forkDisabled={
+																forkDisabled
+															}
+															forkingRequestId={
+																forkingRequestId
+															}
+															onInlineDiffReview={
+																openReviewPanel
+															}
+															onAwayFromBottomChange={
+																setScrollToBottomButtonVisible
+															}
+															contextItems={
+																selectionMarkerContextItems
+															}
+															onAddContext={
+																onAddContext
+															}
+															initialSelectionAskThreads={
+																selectionAskThreads
+															}
 															goal={currentGoal}
 														/>
 													</MarkdownResourceActionsProvider>
@@ -2647,109 +3621,245 @@ function HomePage({
 											<footer className={styles.composer}>
 												{!isHome ? (
 													<Button
-														ref={scrollToBottomButtonRef}
+														ref={
+															scrollToBottomButtonRef
+														}
 														shape="circle"
-														title={t("agentPage.actions.scrollToBottom")}
-														icon={<Icon name="arrow-bottom" />}
+														title={t(
+															"agentPage.actions.scrollToBottom",
+														)}
+														icon={
+															<Icon name="arrow-bottom" />
+														}
 														tabIndex={-1}
 														className={[
 															styles.scrollToBottomButton,
-															showExecutionStatusPanel ? styles.scrollToBottomButtonAboveExecutionStatus : "",
-															styles.scrollToBottomButtonHidden
-														].filter(Boolean).join(" ")}
-														onClick={scrollMessageListToBottom}
+															showExecutionStatusPanel
+																? styles.scrollToBottomButtonAboveExecutionStatus
+																: "",
+															styles.scrollToBottomButtonHidden,
+														]
+															.filter(Boolean)
+															.join(" ")}
+														onClick={
+															scrollMessageListToBottom
+														}
 													/>
 												) : null}
-												{!isHome && pendingApproval !== null ? (
+												{!isHome &&
+												pendingApproval !== null ? (
 													<ApprovalDialog
-														pendingApproval={pendingApproval}
-														isApproving={isApproving}
-														isApprovalAutoSafeEnabling={isApprovalAutoSafeEnabling}
-														isRejecting={isRejecting}
-														errorMessage={approvalError}
-														onApprove={onApprovalApprove}
-														onApproveAndEnableAutoSafe={onApprovalApproveAndEnableAutoSafe}
-														onReject={onApprovalReject}
+														pendingApproval={
+															pendingApproval
+														}
+														isApproving={
+															isApproving
+														}
+														isApprovalAutoSafeEnabling={
+															isApprovalAutoSafeEnabling
+														}
+														isRejecting={
+															isRejecting
+														}
+														errorMessage={
+															approvalError
+														}
+														onApprove={
+															onApprovalApprove
+														}
+														onApproveAndEnableAutoSafe={
+															onApprovalApproveAndEnableAutoSafe
+														}
+														onReject={
+															onApprovalReject
+														}
 													/>
-												) : !isHome && pendingToolBudget !== null ? (
+												) : !isHome &&
+												  pendingToolBudget !== null ? (
 													<ToolBudgetDialog
-														pendingToolBudget={pendingToolBudget}
-														isContinuing={isToolBudgetContinuing}
-														isStopping={isToolBudgetStopping}
-														isCancelling={isCancelling}
-														errorMessage={toolBudgetError}
-														onContinue={onToolBudgetContinue}
-														onStop={onToolBudgetStop}
+														pendingToolBudget={
+															pendingToolBudget
+														}
+														isContinuing={
+															isToolBudgetContinuing
+														}
+														isStopping={
+															isToolBudgetStopping
+														}
+														isCancelling={
+															isCancelling
+														}
+														errorMessage={
+															toolBudgetError
+														}
+														onContinue={
+															onToolBudgetContinue
+														}
+														onStop={
+															onToolBudgetStop
+														}
 														onCancel={onCancel}
 													/>
-												) : !isHome && pendingPlanClarification !== null ? (
+												) : !isHome &&
+												  pendingPlanClarification !==
+														null ? (
 													<ClarificationDialog
-														planId={pendingPlanClarification.planId}
-														title={pendingPlanClarification.title}
-														question={pendingPlanClarification.question}
-														recommendedReplies={pendingPlanClarification.recommendedReplies}
-														isSubmitting={isPlanClarificationSubmitting}
-														errorMessage={planClarificationError}
-														onSubmit={onPlanClarificationSubmit}
-														onSkip={onPlanClarificationSkip}
+														planId={
+															pendingPlanClarification.planId
+														}
+														title={
+															pendingPlanClarification.title
+														}
+														question={
+															pendingPlanClarification.question
+														}
+														recommendedReplies={
+															pendingPlanClarification.recommendedReplies
+														}
+														isSubmitting={
+															isPlanClarificationSubmitting
+														}
+														errorMessage={
+															planClarificationError
+														}
+														onSubmit={
+															onPlanClarificationSubmit
+														}
+														onSkip={
+															onPlanClarificationSkip
+														}
 													/>
-												) : !isHome && pendingPlanApproval !== null ? (
+												) : !isHome &&
+												  pendingPlanApproval !==
+														null ? (
 													<PlanApprovalDialog
-														plan={pendingPlanApproval}
-														isApproving={isPlanApproving}
-														isRevising={isPlanRevising}
-														errorMessage={planApprovalError}
-														onApprove={onPlanApprove}
+														plan={
+															pendingPlanApproval
+														}
+														isApproving={
+															isPlanApproving
+														}
+														isRevising={
+															isPlanRevising
+														}
+														errorMessage={
+															planApprovalError
+														}
+														onApprove={
+															onPlanApprove
+														}
 														onRevise={onPlanRevise}
 													/>
 												) : (
 													<>
 														{showExecutionStatusPanel ? (
 															<TimelineWorkflowTodoPanel
-																timelineStore={timelineStore}
-																sessionId={activeSessionId!}
-																snapshot={workflowTodoSnapshot}
-																goal={currentGoal}
-																onDismiss={onWorkflowTodoDismiss}
-																onGoalChange={onGoalChange}
-																onGoalDismiss={onGoalDismiss}
+																timelineStore={
+																	timelineStore
+																}
+																sessionId={
+																	activeSessionId!
+																}
+																snapshot={
+																	workflowTodoSnapshot
+																}
+																goal={
+																	currentGoal
+																}
+																onDismiss={
+																	onWorkflowTodoDismiss
+																}
+																onGoalChange={
+																	onGoalChange
+																}
+																onGoalDismiss={
+																	onGoalDismiss
+																}
 															/>
 														) : null}
 														{!isHome ? (
 															<MessageQueuePanel
-																messageQueue={messageQueue}
-																pendingGuides={pendingGuides}
-																activeQueueItemId={activeQueueItemId}
-																onQueueRemove={onQueueMessageRemove}
-																onQueueEdit={onQueueMessageEdit}
-																onQueueReorder={onQueueMessageReorder}
-																onGuideDelete={onGuideDelete}
-																onGuideReorder={onGuideReorder}
+																messageQueue={
+																	messageQueue
+																}
+																pendingGuides={
+																	pendingGuides
+																}
+																activeQueueItemId={
+																	activeQueueItemId
+																}
+																onQueueRemove={
+																	onQueueMessageRemove
+																}
+																onQueueEdit={
+																	onQueueMessageEdit
+																}
+																onQueueReorder={
+																	onQueueMessageReorder
+																}
+																onGuideDelete={
+																	onGuideDelete
+																}
+																onGuideReorder={
+																	onGuideReorder
+																}
 															/>
 														) : null}
-														{isDockFullscreen ? null : renderComposer(false)}
+														{isDockFullscreen
+															? null
+															: renderComposer(
+																	false,
+																)}
 													</>
 												)}
 											</footer>
 										</section>
 									</Splitter.Panel>
 									<Splitter.Panel
-										size={sideDockConfig?.panel.size ?? SIDE_DOCK_CLOSED_SIZE}
-										min={sideDockConfig?.panel.min ?? SIDE_DOCK_CLOSED_SIZE}
+										size={
+											sideDockConfig?.panel.size ??
+											SIDE_DOCK_CLOSED_SIZE
+										}
+										min={
+											sideDockConfig?.panel.min ??
+											SIDE_DOCK_CLOSED_SIZE
+										}
 										max={sideDockConfig?.panel.max}
-										collapsible={{ start: true, showCollapsibleIcon: false }}
+										collapsible={{
+											start: true,
+											showCollapsibleIcon: false,
+										}}
 									>
-										{renderSideDock && sideDockConfig !== null ? <HomeDockPanel {...sideDockConfig.content} /> : null}
+										{renderSideDock &&
+										sideDockConfig !== null ? (
+											<HomeDockPanel
+												{...sideDockConfig.content}
+											/>
+										) : null}
 									</Splitter.Panel>
 								</Splitter>
 							</Splitter.Panel>
 							<Splitter.Panel
-								size={bottomDockConfig?.panel.size ?? BOTTOM_DOCK_CLOSED_SIZE}
-								min={bottomDockConfig?.panel.min ?? BOTTOM_DOCK_CLOSED_SIZE}
+								size={
+									bottomDockConfig?.panel.size ??
+									BOTTOM_DOCK_CLOSED_SIZE
+								}
+								min={
+									bottomDockConfig?.panel.min ??
+									BOTTOM_DOCK_CLOSED_SIZE
+								}
 								max={bottomDockConfig?.panel.max}
-								collapsible={{ start: true, showCollapsibleIcon: false }}
+								collapsible={{
+									start: true,
+									showCollapsibleIcon: false,
+								}}
 							>
-								{renderBottomDock && bottomDockConfig !== null ? <HomeDockPanel {...bottomDockConfig.content} /> : null}
+								{renderBottomDock &&
+								bottomDockConfig !== null ? (
+									<HomeDockPanel
+										{...bottomDockConfig.content}
+									/>
+								) : null}
 							</Splitter.Panel>
 						</Splitter>
 						{isDockFullscreen && !isFullscreenBrowserPanel ? (
@@ -2802,8 +3912,12 @@ function HomePage({
 					<Input.Search
 						allowClear
 						value={godotSceneSearch}
-						placeholder={t("agentPage.summary.godot.sceneModal.searchPlaceholder")}
-						onChange={(event: React.ChangeEvent<HTMLInputElement>): void => {
+						placeholder={t(
+							"agentPage.summary.godot.sceneModal.searchPlaceholder",
+						)}
+						onChange={(
+							event: React.ChangeEvent<HTMLInputElement>,
+						): void => {
 							setGodotSceneSearch(event.target.value);
 						}}
 					/>
@@ -2813,25 +3927,41 @@ function HomePage({
 						</div>
 					) : filteredGodotSceneFiles.length > 0 ? (
 						<div className={styles.godotSceneList}>
-							{filteredGodotSceneFiles.map((scene: GodotSceneFile): React.ReactNode => (
-								<Button
-									key={scene.relativePath}
-									type="text"
-									block
-									className={styles.godotSceneButton}
-									onClick={(): void => runGodotScene(scene)}
-								>
-									<span className={styles.godotSceneText}>
-										<span className={styles.summaryItemTitle}>{scene.name}</span>
-										<span className={styles.summaryMeta}>{scene.resourcePath}</span>
-									</span>
-								</Button>
-							))}
+							{filteredGodotSceneFiles.map(
+								(scene: GodotSceneFile): React.ReactNode => (
+									<Button
+										key={scene.relativePath}
+										type="text"
+										block
+										className={styles.godotSceneButton}
+										onClick={(): void =>
+											runGodotScene(scene)
+										}
+									>
+										<span className={styles.godotSceneText}>
+											<span
+												className={
+													styles.summaryItemTitle
+												}
+											>
+												{scene.name}
+											</span>
+											<span
+												className={styles.summaryMeta}
+											>
+												{scene.resourcePath}
+											</span>
+										</span>
+									</Button>
+								),
+							)}
 						</div>
 					) : (
 						<Empty
 							image={Empty.PRESENTED_IMAGE_SIMPLE}
-							description={t("agentPage.summary.godot.sceneModal.empty")}
+							description={t(
+								"agentPage.summary.godot.sceneModal.empty",
+							)}
 						/>
 					)}
 				</div>
