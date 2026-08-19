@@ -25,7 +25,7 @@ import {
 	type ComposerCompletionTrigger
 } from "@/domain/composer/composer-completion";
 import { parseComposerModeCommand } from "@/domain/composer/composer-mode-command";
-import { copyTextToClipboard, readTextFromClipboard } from "@/platform/electron/clipboard";
+import { copyTextToClipboard, readImageFromClipboard, readTextFromClipboard } from "@/platform/electron/clipboard";
 import {
 	normalizeContextBudgetSegments
 } from "@/domain/composer/context-budget-segments";
@@ -566,9 +566,18 @@ function Composer({
 					void copyTextToClipboard(selectedText).catch((error: unknown): void => console.error("[Composer] copy failed", error));
 				}
 				return;
-			case "paste":
-				void readTextFromClipboard()
-					.then((text: string): void => {
+			case "paste": {
+				void (async (): Promise<void> => {
+					try {
+						const image: File | null = await readImageFromClipboard();
+						if (image !== null && addContextFiles([image])) {
+							return;
+						}
+					} catch (error: unknown) {
+						console.warn("[Composer] read clipboard image failed", error);
+					}
+
+					const text: string = await readTextFromClipboard();
 						if (isLongPastedText(text) && onAddPastedTextAttachment?.({
 							content: text,
 							origin: createComposerPasteOrigin(value, selection.start, selection.end)
@@ -576,9 +585,10 @@ function Composer({
 							return;
 						}
 						replaceSelection(text);
-					})
+				})()
 					.catch((error: unknown): void => console.error("[Composer] paste failed", error));
 				return;
+			}
 			case "select-all":
 				nativeTextArea.focus();
 				nativeTextArea.select();
@@ -588,7 +598,7 @@ function Composer({
 			default:
 				return;
 		}
-	}, [onAddPastedTextAttachment, onDraftChange]);
+	}, [onAddContextFiles, onAddPastedTextAttachment, onDraftChange]);
 
 	function handleImageInputChange(event: React.ChangeEvent<HTMLInputElement>): void {
 		const files: File[] = Array.from(event.currentTarget.files ?? []);

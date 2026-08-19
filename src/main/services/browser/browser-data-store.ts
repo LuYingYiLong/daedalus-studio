@@ -16,7 +16,7 @@ type BrowserDataRepository = {
 
 const DEFAULT_REPOSITORY: BrowserDataRepository = {
 	version: 1,
-	settings: { downloadDirectory: null, askWhereToSave: false, savePasswordsEnabled: true },
+	settings: { downloadDirectory: null, askWhereToSave: false, savePasswordsEnabled: true, aiCdpEnabled: false },
 	permissions: [],
 	history: [],
 	downloads: []
@@ -30,7 +30,11 @@ export class BrowserDataStore {
 
 	async getSettings(): Promise<BrowserSettings> {
 		const repository: BrowserDataRepository = await this.load();
-		return { ...repository.settings, permissionRules: repository.permissions.map((rule: BrowserPermissionRule): BrowserPermissionRule => ({ ...rule })) };
+		return {
+			...DEFAULT_REPOSITORY.settings,
+			...repository.settings,
+			permissionRules: repository.permissions.map((rule: BrowserPermissionRule): BrowserPermissionRule => ({ ...rule }))
+		};
 	}
 
 	async updateSettings(patch: Partial<Omit<BrowserSettings, "permissionRules">>): Promise<BrowserSettings> {

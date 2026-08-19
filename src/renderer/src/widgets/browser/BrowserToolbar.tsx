@@ -1,4 +1,4 @@
-import { Button, Dropdown, Input, Space, Tooltip, type MenuProps } from "antd";
+import { Button, Dropdown, Input, Space, Spin, Tooltip, Typography, type MenuProps } from "antd";
 import { Icon } from "@/assets/icons";
 import type { BrowserViewState } from "../../../../contracts/browser";
 import styles from "./BrowserPanel.module.css";
@@ -9,6 +9,7 @@ type BrowserToolbarProps = {
 	inspecting: boolean;
 	hasCredentials: boolean;
 	menuItems: MenuProps["items"];
+	aiBusy: boolean;
 	onAddressChange: (value: string) => void;
 	onNavigate: () => void;
 	onAction: (action: "back" | "forward" | "reload" | "stop") => void;
@@ -22,6 +23,7 @@ type BrowserToolbarProps = {
 		inspect: string;
 		credentials: string;
 		more: string;
+		aiOperating: string;
 	};
 };
 
@@ -31,6 +33,7 @@ function BrowserToolbar({
 	inspecting,
 	hasCredentials,
 	menuItems,
+	aiBusy,
 	onAddressChange,
 	onNavigate,
 	onAction,
@@ -81,6 +84,12 @@ function BrowserToolbar({
 				onChange={(event): void => onAddressChange(event.target.value)}
 				onPressEnter={onNavigate}
 			/>
+			{aiBusy ? (
+				<Space size={4} className={styles.automationStatus}>
+					<Spin size="small" />
+					<Typography.Text type="secondary">{labels.aiOperating}</Typography.Text>
+				</Space>
+			) : null}
 			{state.url === null ? null : (
 				<Tooltip title={labels.inspect} mouseEnterDelay={1}>
 					<Button

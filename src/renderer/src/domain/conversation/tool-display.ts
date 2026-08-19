@@ -19,6 +19,15 @@ const TOOL_DISPLAY_TEMPLATES: Record<string, ToolDisplayTemplate> = {
 	mcp_image_generate: { label: "Generate image", iconName: "magic", target: "query" },
 	mcp_image_inspect: { label: "Inspect image", iconName: "vision", target: "file" },
 	mcp_web_search: { label: "Search the web", iconName: "global", target: "query" },
+	mcp_browser_observe: { label: "Observe page", iconName: "global" },
+	mcp_browser_navigate: { label: "Open page", iconName: "global", target: "query" },
+	mcp_browser_navigation: { label: "Navigate page", iconName: "global" },
+	mcp_browser_scroll: { label: "Scroll page", iconName: "global" },
+	mcp_browser_wait: { label: "Wait for page", iconName: "global" },
+	mcp_browser_screenshot: { label: "Capture page", iconName: "vision" },
+	mcp_browser_click: { label: "Click page element", iconName: "inspect" },
+	mcp_browser_type: { label: "Type into page", iconName: "file-edit" },
+	mcp_browser_select: { label: "Select page option", iconName: "inspect" },
 
 	mcp_workspace_list_files: { label: "Browse workspace files", iconName: "folder-search", target: "folder" },
 	mcp_workspace_read_text_file: { label: "Read file", iconName: "file-search", target: "file" },
@@ -183,7 +192,7 @@ function getTarget(args: Record<string, unknown>, target: ToolDisplayTemplate["t
 		return firstStringArg(args, ["key", "setting", "settingKey"]);
 	}
 	if (target === "query") {
-		return firstStringArg(args, ["query", "prompt", "text", "search"]);
+		return firstStringArg(args, ["query", "prompt", "text", "search", "url"]);
 	}
 	if (target === "command") {
 		return firstStringArg(args, ["command", "script", "presetName"]);

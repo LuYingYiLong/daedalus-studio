@@ -1,5 +1,6 @@
 import type { WebContents } from "electron";
 import type { BrowserElementSnapshot } from "../../../contracts/browser";
+import { BrowserCdpSession } from "./browser-cdp-session";
 
 type DebuggerMessageParams = Record<string, unknown>;
 
@@ -50,69 +51,79 @@ const SNAPSHOT_FUNCTION: string = `function () {
 
 export class BrowserInspector {
 	private active: boolean = false;
-	private messageListener: ((event: Electron.Event, method: string, params: DebuggerMessageParams) => void) | null = null;
+	private messageListener: ((method: string, params: DebuggerMessageParams) => void) | null = null;
+	private removeMessageListener: (() => void) | null = null;
 	private contextMenuListener: ((event: Electron.Event) => void) | null = null;
+	private releaseLease: (() => void) | null = null;
 
 	constructor(
 		private readonly webContents: WebContents,
+		private readonly cdp: BrowserCdpSession,
 		private readonly onSelected: (snapshot: BrowserElementSnapshot) => void,
 		private readonly onCancelled: () => void
 	) {}
+
+	isActive(): boolean { return this.active; }
 
 	async start(): Promise<void> {
 		if (this.active) {
 			await this.cancel();
 			return;
 		}
-		if (!this.webContents.debugger.isAttached()) this.webContents.debugger.attach("1.3");
-		await this.webContents.debugger.sendCommand("DOM.enable");
-		await this.webContents.debugger.sendCommand("Overlay.enable");
-		this.messageListener = (_event: Electron.Event, method: string, params: DebuggerMessageParams): void => {
-			if (method === "Overlay.inspectNodeRequested" && typeof params.backendNodeId === "number") {
-				void this.capture(params.backendNodeId);
-				return;
-			}
-			if (method === "Overlay.inspectModeCanceled") {
-				this.cleanup();
-				this.onCancelled();
-			}
-		};
-		this.webContents.debugger.on("message", this.messageListener);
-		this.contextMenuListener = (event: Electron.Event): void => {
-			event.preventDefault();
-			void this.cancel();
-		};
-		this.webContents.on("context-menu", this.contextMenuListener);
-		await this.webContents.debugger.sendCommand("Overlay.setInspectMode", {
-			mode: "searchForNode",
-			highlightConfig: {
-				showInfo: true,
-				showStyles: false,
-				contentColor: { r: 70, g: 145, b: 210, a: 0.24 },
-				borderColor: { r: 70, g: 145, b: 210, a: 0.9 },
-				marginColor: { r: 246, g: 178, b: 107, a: 0.18 }
-			}
-		});
-		this.active = true;
+		try {
+			this.releaseLease = await this.cdp.acquire("inspector");
+			await this.cdp.sendCommand("DOM.enable");
+			await this.cdp.sendCommand("Overlay.enable");
+			this.messageListener = (method: string, params: DebuggerMessageParams): void => {
+				if (method === "Overlay.inspectNodeRequested" && typeof params.backendNodeId === "number") {
+					void this.capture(params.backendNodeId);
+					return;
+				}
+				if (method === "Overlay.inspectModeCanceled") {
+					this.cleanup();
+					this.onCancelled();
+				}
+			};
+			this.removeMessageListener = this.cdp.onMessage((method, params): void => this.messageListener?.(method, params));
+			this.contextMenuListener = (event: Electron.Event): void => {
+				event.preventDefault();
+				void this.cancel();
+			};
+			this.webContents.on("context-menu", this.contextMenuListener);
+			await this.cdp.sendCommand("Overlay.setInspectMode", {
+				mode: "searchForNode",
+				highlightConfig: {
+					showInfo: true,
+					showStyles: false,
+					contentColor: { r: 70, g: 145, b: 210, a: 0.24 },
+					borderColor: { r: 70, g: 145, b: 210, a: 0.9 },
+					marginColor: { r: 246, g: 178, b: 107, a: 0.18 }
+				}
+			});
+			this.active = true;
+		} catch (error) {
+			this.cleanup();
+			throw error;
+		}
 	}
 
 	async cancel(): Promise<void> {
-		if (!this.active && !this.webContents.debugger.isAttached()) return;
-		try { await this.webContents.debugger.sendCommand("Overlay.setInspectMode", { mode: "none", highlightConfig: {} }); } catch { /* already detached */ }
+		if (!this.active && this.releaseLease === null) return;
+		try { await this.cdp.sendCommand("Overlay.setInspectMode", { mode: "none", highlightConfig: {} }); } catch { /* already detached */ }
 		this.cleanup();
 		this.onCancelled();
 	}
 
 	private async capture(backendNodeId: number): Promise<void> {
 		try {
-			const resolved = await this.webContents.debugger.sendCommand("DOM.resolveNode", { backendNodeId }) as { object?: { objectId?: string } };
+			const resolved = await this.cdp.sendCommand<{ object?: { objectId?: string } }>("DOM.resolveNode", { backendNodeId });
 			const objectId: string | undefined = resolved.object?.objectId;
 			if (objectId === undefined) throw new Error("browser_inspect_node_unavailable");
-			const result = await this.webContents.debugger.sendCommand("Runtime.callFunctionOn", {
+			const result = await this.cdp.sendCommand<{ result?: { value?: BrowserElementSnapshot } }>("Runtime.callFunctionOn", {
 				objectId,
 				functionDeclaration: SNAPSHOT_FUNCTION,
 				returnByValue: true
-			}) as { result?: { value?: BrowserElementSnapshot } };
+			});
 			const snapshot: BrowserElementSnapshot | undefined = result.result?.value;
 			if (snapshot === undefined) throw new Error("browser_inspect_snapshot_unavailable");
 			this.cleanup();
@@ -125,12 +136,12 @@ export class BrowserInspector {
 
 	private cleanup(): void {
 		this.active = false;
-		if (this.messageListener !== null) this.webContents.debugger.removeListener("message", this.messageListener);
+		this.removeMessageListener?.();
+		this.removeMessageListener = null;
 		this.messageListener = null;
 		if (this.contextMenuListener !== null) this.webContents.removeListener("context-menu", this.contextMenuListener);
 		this.contextMenuListener = null;
-		if (this.webContents.debugger.isAttached()) {
-			try { this.webContents.debugger.detach(); } catch { /* renderer already closed */ }
-		}
+		this.releaseLease?.();
+		this.releaseLease = null;
 	}
 }

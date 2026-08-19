@@ -702,6 +702,7 @@
 			"credentials": "选择已保存的账号",
 			"more": "更多浏览器操作"
 		},
+		"automation": { "operating": "AI 正在操作" },
 		"empty": { "description": "输入网址以打开网页" },
 		"errors": {
 			"navigate": "无法打开该网址",
@@ -1086,6 +1087,15 @@
 				"mcp_image_generate": "生成图片",
 				"mcp_image_inspect": "检查图片",
 				"mcp_web_search": "联网搜索",
+				"mcp_browser_observe": "观察网页",
+				"mcp_browser_navigate": "打开网页",
+				"mcp_browser_navigation": "网页导航",
+				"mcp_browser_scroll": "滚动网页",
+				"mcp_browser_wait": "等待网页",
+				"mcp_browser_screenshot": "截取网页",
+				"mcp_browser_click": "点击网页元素",
+				"mcp_browser_type": "输入网页内容",
+				"mcp_browser_select": "选择网页选项",
 				"mcp_workspace_list_files": "浏览工作区文件",
 				"mcp_workspace_read_text_file": "读取文件",
 				"mcp_workspace_search_text": "搜索工作区文本",
@@ -1327,6 +1337,14 @@
 		},
 		"browser": {
 			"title": "浏览器",
+			"aiControl": {
+				"title": "AI 浏览器控制",
+				"enable": "允许 AI 控制浏览器（CDP）",
+				"description": "允许当前会话中的 AI 观察网页并执行导航、点击、输入和选择操作。",
+				"confirmTitle": "允许 AI 控制共享浏览器？",
+				"confirmDescription": "AI 将能读取当前浏览器页面，并在审批后点击或输入。它不能读取密码库，但会使用浏览器现有的登录状态。",
+				"confirm": "允许"
+			},
 			"actions": {
 				"choose": "浏览",
 				"openDownloads": "管理下载",
@@ -1372,7 +1390,10 @@
 				"hide": "隐藏",
 				"copied": "密码已复制"
 			},
-			"errors": { "load": "加载浏览器设置失败", "save": "保存浏览器设置失败" }
+			"errors": {
+				"load": "加载浏览器设置失败",
+				"save": "保存浏览器设置失败"
+			}
 		},
 		"hooks": {
 			"title": "钩子",

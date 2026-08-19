@@ -14,6 +14,8 @@ import type {
 	BrowserPermissionRequest,
 	BrowserPermissionRule,
 	BrowserSettings,
+	BrowserAutomationRequest,
+	BrowserAutomationState,
 	BrowserViewBounds,
 	BrowserViewState
 } from "../contracts/browser";
@@ -287,6 +289,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		},
 		readText: (): Promise<{ text: string }> => {
 			return ipcRenderer.invoke("clipboard:read-text");
+		},
+		readImage: (): Promise<{ dataUrl: string | null }> => {
+			return ipcRenderer.invoke("clipboard:read-image");
 		}
 	},
 
@@ -355,6 +360,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
 				return (): void => { ipcRenderer.removeListener("browser:view-inspect-cancelled", handler); };
 			}
 		},
+		automation: {
+			execute: (request: BrowserAutomationRequest): Promise<Record<string, unknown>> => ipcRenderer.invoke("browser:automation-execute", request),
+			cancel: (browserId: string, callId?: string): Promise<void> => ipcRenderer.invoke("browser:automation-cancel", { browserId, callId }),
+			onStateChanged: (callback: (state: BrowserAutomationState) => void): (() => void) => {
+				const handler = (_event: Electron.IpcRendererEvent, state: BrowserAutomationState): void => callback(state);
+				ipcRenderer.on("browser:automation-state-changed", handler);
+				return (): void => { ipcRenderer.removeListener("browser:automation-state-changed", handler); };
+			}
+		},
 		history: {
 			list: (): Promise<BrowserHistoryEntry[]> => ipcRenderer.invoke("browser:history-list"),
 			clear: (): Promise<void> => ipcRenderer.invoke("browser:history-clear")
@@ -398,7 +412,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			get: (): Promise<BrowserSettings> => ipcRenderer.invoke("browser:settings-get"),
 			update: (patch: Partial<Omit<BrowserSettings, "permissionRules">>): Promise<BrowserSettings> => ipcRenderer.invoke("browser:settings-update", patch),
 			getDefaultDownloadDirectory: (): Promise<string> => ipcRenderer.invoke("browser:settings-get-default-download-directory"),
-			pickDownloadDirectory: (): Promise<string | null> => ipcRenderer.invoke("browser:settings-pick-download-directory")
+			pickDownloadDirectory: (): Promise<string | null> => ipcRenderer.invoke("browser:settings-pick-download-directory"),
+			onChanged: (callback: (settings: BrowserSettings) => void): (() => void) => {
+				const handler = (_event: Electron.IpcRendererEvent, settings: BrowserSettings): void => callback(settings);
+				ipcRenderer.on("browser:settings-changed", handler);
+				return (): void => { ipcRenderer.removeListener("browser:settings-changed", handler); };
+			}
 		},
 		data: {
 			clear: (options: BrowserClearDataOptions): Promise<void> => ipcRenderer.invoke("browser:data-clear", options)

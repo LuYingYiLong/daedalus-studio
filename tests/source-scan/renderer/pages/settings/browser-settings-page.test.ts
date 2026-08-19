@@ -26,4 +26,13 @@ describe("BrowserSettingsPage", () => {
 		expect(mainSource).toContain("applyNativeThemePreference(preferences)");
 		expect(mainSource).toContain("applyNativeThemePreference(nextPreferences)");
 	});
+
+	it("keeps AI CDP control off by default and requires confirmation", () => {
+		const page = readRepoFile("src", "renderer", "src", "widgets", "settings", "BrowserSettingsPage.tsx");
+		const store = readRepoFile("src", "main", "services", "browser", "browser-data-store.ts");
+		expect(page).toContain("aiCdpEnabled: false");
+		expect(page).toContain("settings.browser.aiControl.confirmTitle");
+		expect(page).toContain("modal.confirm");
+		expect(store).toContain("aiCdpEnabled: false");
+	});
 });

@@ -14,6 +14,8 @@ import {
 } from "electron";
 import type {
 	BrowserClearDataOptions,
+	BrowserAutomationRequest,
+	BrowserAutomationState,
 	BrowserElementSnapshot,
 	BrowserImportProfile,
 	BrowserPermissionRequest,
@@ -26,6 +28,8 @@ import { BrowserInspector } from "./browser-inspector";
 import { BrowserPasswordStore } from "./browser-password-store";
 import { importBrowserProfile, listBrowserImportProfiles, type DiscoveredBrowserImportProfile } from "./browser-profile-import";
 import { BrowserDownloadController } from "./browser-download-controller";
+import { BrowserCdpSession } from "./browser-cdp-session";
+import { BrowserAutomationController } from "./browser-automation-controller";
 
 type BrowserViewRecord = {
 	browserId: string;
@@ -35,6 +39,8 @@ type BrowserViewRecord = {
 	visible: boolean;
 	state: BrowserViewState;
 	inspector: BrowserInspector | null;
+	cdp: BrowserCdpSession | null;
+	automation: BrowserAutomationController | null;
 };
 
 type PendingPermission = {
@@ -99,6 +105,8 @@ export class BrowserService {
 		ipcMain.handle("browser:view-inspect", async (event, payload: unknown): Promise<void> => await this.toggleInspect(event, payload));
 		ipcMain.handle("browser:view-state", (event, payload: unknown): BrowserViewState => ({ ...this.requireOwnedRecord(event, payload).state }));
 		ipcMain.handle("browser:view-capture", async (event, payload: unknown): Promise<string | null> => await this.captureView(event, payload));
+		ipcMain.handle("browser:automation-execute", async (event, payload: unknown): Promise<Record<string, unknown>> => await this.executeAutomation(event, payload));
+		ipcMain.handle("browser:automation-cancel", (event, payload: unknown): void => this.cancelAutomation(event, payload));
 
 		ipcMain.handle("browser:history-list", async (event) => { this.assertStudioSender(event); return await this.dataStore.listHistory(); });
 		ipcMain.handle("browser:history-clear", async (event): Promise<void> => { this.assertStudioSender(event); await this.dataStore.clearHistory(); });
@@ -155,7 +163,9 @@ export class BrowserService {
 			bounds: { x: 0, y: 0, width: 0, height: 0 },
 			visible: false,
 			state: createInitialState(browserId),
-			inspector: null
+			inspector: null,
+			cdp: null,
+			automation: null
 		};
 		this.views.set(browserId, record);
 		return { ...record.state };
@@ -169,6 +179,10 @@ export class BrowserService {
 
 	private destroyRecord(record: BrowserViewRecord): void {
 		if (record.inspector !== null) void record.inspector.cancel();
+		record.automation?.cancel();
+		record.cdp?.dispose();
+		record.automation = null;
+		record.cdp = null;
 		const mainWindow: BrowserWindow | null = this.getMainWindow();
 		if (record.view !== null) {
 			try { mainWindow?.contentView.removeChildView(record.view); } catch { /* already removed */ }
@@ -258,12 +272,20 @@ export class BrowserService {
 			if (code === -3) { this.refreshNavigationState(record); return; }
 			this.updateViewState(record, { url: validatedUrl || record.state.url, isLoading: false, error: description });
 		});
-		const navigated = (_event: Electron.Event, url: string): void => { void this.handleNavigated(record, url); };
+		const navigated = (_event: Electron.Event, url: string): void => { record.automation?.invalidate(); void this.handleNavigated(record, url); };
 		view.webContents.on("did-navigate", navigated);
 		view.webContents.on("did-navigate-in-page", navigated);
 		view.webContents.on("before-input-event", (_event, input): void => {
 			if (input.type === "keyDown" && input.key === "Escape" && record.inspector !== null) void record.inspector.cancel();
 		});
+		record.cdp = new BrowserCdpSession(view.webContents);
+		record.automation = new BrowserAutomationController(
+			record.browserId,
+			view.webContents,
+			record.cdp,
+			(): boolean => record.inspector?.isActive() === true,
+			(state: BrowserAutomationState): void => this.getMainWindow()?.webContents.send("browser:automation-state-changed", state)
+		);
 		return view;
 	}
 
@@ -298,9 +320,12 @@ export class BrowserService {
 	private async toggleInspect(event: IpcMainInvokeEvent, payload: unknown): Promise<void> {
 		const record: BrowserViewRecord = this.requireOwnedRecord(event, payload);
 		if (record.view === null) throw new Error("browser_view_not_loaded");
+		if (record.automation?.isBusy() === true) throw new Error("browser_automation_active");
 		if (record.inspector === null) {
+			if (record.cdp === null) throw new Error("browser_cdp_unavailable");
 			record.inspector = new BrowserInspector(
 				record.view.webContents,
+				record.cdp,
 				(snapshot: BrowserElementSnapshot): void => {
 					record.inspector = null;
 					event.sender.send("browser:view-element-selected", { browserId: record.browserId, snapshot });
@@ -312,6 +337,31 @@ export class BrowserService {
 			);
 		}
 		await record.inspector.start();
+	}
+
+	private async executeAutomation(event: IpcMainInvokeEvent, payload: unknown): Promise<Record<string, unknown>> {
+		const record: BrowserViewRecord = this.requireOwnedRecord(event, payload);
+		if (typeof payload !== "object" || payload === null || Array.isArray(payload)) throw new Error("browser_automation_request_invalid");
+		const request = payload as Partial<BrowserAutomationRequest>;
+		if (typeof request.callId !== "string" || request.callId.length === 0 || request.callId.length > 160) throw new Error("browser_automation_request_invalid");
+		if (typeof request.toolName !== "string" || !request.toolName.startsWith("mcp_browser_")) throw new Error("browser_automation_request_invalid");
+		if (request.args === null || typeof request.args !== "object" || Array.isArray(request.args)) throw new Error("browser_automation_request_invalid");
+		const settings: BrowserSettings = await this.dataStore.getSettings();
+		if (!settings.aiCdpEnabled) throw new Error("browser_ai_control_disabled");
+		if (request.toolName === "mcp_browser_navigate") {
+			request.args.url = normalizeUrl(this.requireString(request.args.url, "browser_url_invalid"));
+		}
+		if (record.view === null && request.toolName !== "mcp_browser_navigate") throw new Error("browser_page_empty");
+		this.ensureView(record);
+		if (record.automation === null) throw new Error("browser_automation_unavailable");
+		return await record.automation.execute(request.callId, request.toolName, request.args);
+	}
+
+	private cancelAutomation(event: IpcMainInvokeEvent, payload: unknown): void {
+		const record: BrowserViewRecord = this.requireOwnedRecord(event, payload);
+		if (typeof payload !== "object" || payload === null || Array.isArray(payload)) throw new Error("browser_automation_request_invalid");
+		const callId: unknown = (payload as Record<string, unknown>).callId;
+		record.automation?.cancel(typeof callId === "string" ? callId : undefined);
 	}
 
 	private configureSession(): void {
@@ -368,7 +418,17 @@ export class BrowserService {
 		if (data.downloadDirectory === null || typeof data.downloadDirectory === "string") normalized.downloadDirectory = data.downloadDirectory as string | null;
 		if (typeof data.askWhereToSave === "boolean") normalized.askWhereToSave = data.askWhereToSave;
 		if (typeof data.savePasswordsEnabled === "boolean") normalized.savePasswordsEnabled = data.savePasswordsEnabled;
-		return await this.dataStore.updateSettings(normalized);
+		if (typeof data.aiCdpEnabled === "boolean") normalized.aiCdpEnabled = data.aiCdpEnabled;
+		const settings: BrowserSettings = await this.dataStore.updateSettings(normalized);
+		if (!settings.aiCdpEnabled) {
+			for (const record of this.views.values()) {
+				record.automation?.cancel();
+				record.automation?.invalidate();
+			}
+		}
+		this.getMainWindow()?.webContents.send("browser:settings-changed", settings);
+		this.getSettingsWindow()?.webContents.send("browser:settings-changed", settings);
+		return settings;
 	}
 
 	private async pickDownloadDirectory(event: IpcMainInvokeEvent): Promise<string | null> {

@@ -97,7 +97,21 @@ export type BrowserSettings = {
 	downloadDirectory: string | null;
 	askWhereToSave: boolean;
 	savePasswordsEnabled: boolean;
+	aiCdpEnabled: boolean;
 	permissionRules: BrowserPermissionRule[];
+};
+
+export type BrowserAutomationState = {
+	browserId: string;
+	busy: boolean;
+	toolName: string | null;
+};
+
+export type BrowserAutomationRequest = {
+	browserId: string;
+	callId: string;
+	toolName: string;
+	args: Record<string, unknown>;
 };
 
 export type BrowserClearDataOptions = {

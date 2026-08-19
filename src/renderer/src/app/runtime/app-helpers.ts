@@ -184,7 +184,7 @@ export function getDisplayedComposerModel(params: {
 }): { providerId: string | null; modelId: string | null } {
 	const fallbackProviderId: string | null = params.providerModelSelection?.activeModel.providerId ?? null;
 	const fallbackModelId: string | null = params.providerModelSelection?.activeModel.modelId ?? null;
-	return params.isNewSessionHome && params.workbench === null
+	return params.isNewSessionHome
 		? { providerId: params.homeDraft.providerId ?? fallbackProviderId, modelId: params.homeDraft.modelId ?? fallbackModelId }
 		: { providerId: params.workbench?.composer.provider ?? params.activeSessionMetadata?.provider ?? fallbackProviderId, modelId: params.workbench?.composer.model ?? params.activeSessionMetadata?.model ?? fallbackModelId };
 }

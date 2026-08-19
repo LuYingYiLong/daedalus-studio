@@ -35,4 +35,18 @@ describe("browser service security boundary", () => {
 		expect(source).toContain("void this.cancel()");
 		expect(source).toContain('this.webContents.removeListener("context-menu"');
 	});
+
+	it("shares one CDP attachment and exposes only fixed browser automation actions", () => {
+		const service = readRepoFile("src", "main", "services", "browser", "browser-service.ts");
+		const cdp = readRepoFile("src", "main", "services", "browser", "browser-cdp-session.ts");
+		const automation = readRepoFile("src", "main", "services", "browser", "browser-automation-controller.ts");
+		expect(service).toContain('ipcMain.handle("browser:automation-execute"');
+		expect(service).toContain("settings.aiCdpEnabled");
+		expect(cdp).toContain("private readonly leases");
+		expect(cdp).toContain("async acquire(owner: string)");
+		expect(automation).toContain('case "mcp_browser_observe"');
+		expect(automation).toContain('case "mcp_browser_click"');
+		expect(automation).toContain("browser_element_stale");
+		expect(automation).not.toContain("args.script");
+	});
 });

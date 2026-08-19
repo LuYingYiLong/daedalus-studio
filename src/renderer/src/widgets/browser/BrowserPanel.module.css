@@ -22,9 +22,18 @@
 .navigationButtons {
 	flex: 0 0 auto;
 }
+
+.modal {
+	user-select: none;
+}
+
 .addressInput {
 	min-width: 80px;
 	flex: 1 1 auto;
+}
+
+.automationStatus {
+	white-space: nowrap;
 }
 
 .viewport {
@@ -95,23 +104,25 @@
 	border-bottom: 1px solid var(--ds-border);
 }
 
+.managerRow:last-child {
+	border-bottom: 0;
+}
+
 .managerMeta {
 	min-width: 0;
 }
+
 .managerTitle {
 	display: block;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
+
 .managerSubtitle {
 	display: block;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-.modalFooter {
-	display: flex;
-	justify-content: flex-end;
-	gap: var(--ds-space-2);
+	user-select: text;
 }

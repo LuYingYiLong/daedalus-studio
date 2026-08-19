@@ -27,6 +27,8 @@ import {
 import styles from "./BrowserPanel.module.css";
 import { subscribeNativeViewOcclusion } from "./native-view-occlusion";
 import { Icon } from "@/assets/icons";
+import type { DockPanelPlacement } from "@/widgets/dock/DockPanelTabs";
+import { registerBrowserRuntime, updateBrowserRuntime } from "./browser-runtime-registry";
 
 type BrowserPanelProps = {
 	panelKey: string;
@@ -35,6 +37,7 @@ type BrowserPanelProps = {
 	isOpen: boolean;
 	isActive: boolean;
 	isFullscreen: boolean;
+	placement: DockPanelPlacement;
 	onLayoutChange: (layout: BrowserPanelLayoutPreferences) => void;
 	onAddContext: (item: AdditionalContextItem) => void;
 };
@@ -73,6 +76,7 @@ function BrowserPanel({
 	isOpen,
 	isActive,
 	isFullscreen,
+	placement,
 	onLayoutChange,
 	onAddContext,
 }: BrowserPanelProps): React.JSX.Element {
@@ -97,6 +101,7 @@ function BrowserPanel({
 	});
 	const [address, setAddress] = useState<string>(layout.lastUrl ?? "");
 	const [inspecting, setInspecting] = useState<boolean>(false);
+	const [automationBusy, setAutomationBusy] = useState<boolean>(false);
 	const [snapshot, setSnapshot] = useState<BrowserElementSnapshot | null>(
 		null,
 	);
@@ -200,17 +205,39 @@ function BrowserPanel({
 						setPermissionRequest(request);
 				},
 			);
+		const disposeAutomation = window.electronAPI.browser.automation.onStateChanged((nextState): void => {
+			if (nextState.browserId === browserId) setAutomationBusy(nextState.busy);
+		});
 		return (): void => {
 			disposed = true;
 			disposeState();
 			disposeSelection();
 			disposeCancelled();
 			disposePermission();
+			disposeAutomation();
 			void window.electronAPI.browser.view
 				.destroy(browserId)
 				.catch((): void => {});
 		};
 	}, [browserId]);
+
+	useEffect((): (() => void) => registerBrowserRuntime({
+		browserId,
+		panelKey,
+		sessionId,
+		placement,
+		visible: isOpen,
+		active: isActive,
+		lastInteractionAt: Date.now(),
+	}), [browserId, panelKey, placement, sessionId]);
+
+	useEffect((): void => {
+		updateBrowserRuntime(browserId, {
+			visible: isOpen,
+			active: isActive,
+			...(isActive ? { lastInteractionAt: Date.now() } : {}),
+		});
+	}, [browserId, isActive, isOpen]);
 
 	useEffect(
 		(): (() => void) =>
@@ -458,6 +485,7 @@ function BrowserPanel({
 				inspecting={inspecting}
 				hasCredentials={hasCredentials}
 				menuItems={menuItems}
+				aiBusy={automationBusy}
 				onAddressChange={setAddress}
 				onNavigate={(): void => {
 					void navigate();
@@ -495,6 +523,7 @@ function BrowserPanel({
 					inspect: t("browser.toolbar.inspect"),
 					credentials: t("browser.toolbar.credentials"),
 					more: t("browser.toolbar.more"),
+					aiOperating: t("browser.automation.operating"),
 				}}
 			/>
 			<div

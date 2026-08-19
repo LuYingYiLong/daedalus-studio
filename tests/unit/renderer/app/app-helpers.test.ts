@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	createHomeDraft,
 	getChatOutputTarget,
+	getDisplayedComposerModel,
 	getSessionSortTime,
 	insertUserBlockBeforeRequestAssistant,
 	mergeOptimisticUserBlocks,
@@ -61,6 +62,28 @@ describe("app helpers", () => {
 
 	it("defaults new session workspace launches to File Explorer", () => {
 		expect(createHomeDraft().workspaceLaunch).toBe("file-explorer");
+	});
+
+	it("keeps the NewSessionHome model authoritative while a temporary session exists", () => {
+		expect(getDisplayedComposerModel({
+			isNewSessionHome: true,
+			homeDraft: {
+				...createHomeDraft(),
+				providerId: "xiaomi-mimo",
+				modelId: "mimo-v2.5"
+			},
+			workbench: {
+				composer: {
+					provider: "deepseek",
+					model: "deepseek-v4-flash"
+				}
+			} as never,
+			activeSessionMetadata: {
+				provider: "deepseek",
+				model: "deepseek-v4-flash"
+			} as never,
+			providerModelSelection: null
+		})).toEqual({ providerId: "xiaomi-mimo", modelId: "mimo-v2.5" });
 	});
 
 	it("trims timeline content from a request boundary", () => {

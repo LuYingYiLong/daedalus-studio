@@ -42,12 +42,13 @@ const EMPTY_SETTINGS: BrowserSettings = {
 	downloadDirectory: null,
 	askWhereToSave: false,
 	savePasswordsEnabled: true,
+	aiCdpEnabled: false,
 	permissionRules: [],
 };
 
 function BrowserSettingsPage(): React.JSX.Element {
 	const { t } = useTranslation();
-	const { message } = App.useApp();
+	const { message, modal } = App.useApp();
 	const [settings, setSettings] = useState<BrowserSettings>(EMPTY_SETTINGS);
 	const [defaultDownloadDirectory, setDefaultDownloadDirectory] =
 		useState<string>("");
@@ -184,7 +185,9 @@ function BrowserSettingsPage(): React.JSX.Element {
 										"settings.browser.downloads.resetDirectory",
 									)}
 									icon={<Icon name="reload" />}
-									disabled={settings.downloadDirectory === null}
+									disabled={
+										settings.downloadDirectory === null
+									}
 									onClick={(): void => {
 										void updateSettings({
 											downloadDirectory: null,
@@ -289,6 +292,51 @@ function BrowserSettingsPage(): React.JSX.Element {
 								{t("settings.browser.actions.managePasswords")}
 							</Button>
 						</div>
+					</SettingsItem>
+				</SettingsList>
+
+				<SettingsList title={t("settings.browser.aiControl.title")}>
+					<SettingsItem
+						title={t("settings.browser.aiControl.enable")}
+						description={t(
+							"settings.browser.aiControl.description",
+						)}
+					>
+						<Switch
+							checked={settings.aiCdpEnabled}
+							onChange={(checked: boolean): void => {
+								void (async (): Promise<void> => {
+									if (checked) {
+										const confirmed =
+											await new Promise<boolean>(
+												(resolve): void => {
+													modal.confirm({
+														title: t(
+															"settings.browser.aiControl.confirmTitle",
+														),
+														content: t(
+															"settings.browser.aiControl.confirmDescription",
+														),
+														okText: t(
+															"settings.browser.aiControl.confirm",
+														),
+														cancelText:
+															t("common.cancel"),
+														onOk: (): void =>
+															resolve(true),
+														onCancel: (): void =>
+															resolve(false),
+													});
+												},
+											);
+										if (!confirmed) return;
+									}
+									await updateSettings({
+										aiCdpEnabled: checked,
+									});
+								})();
+							}}
+						/>
 					</SettingsItem>
 				</SettingsList>
 			</div>

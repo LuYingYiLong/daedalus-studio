@@ -1518,7 +1518,6 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				createWorkspaceFromSessionMetadata(created, created.workbench),
 			);
 			setWorkbench(created.workbench);
-			setHomeDraft(draft);
 			setApprovalModeState(preferredApprovalMode);
 			timelineStore.reset();
 			setIsNewSessionHome(true);
@@ -2404,7 +2403,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 
 	async function handleModeChange(nextMode: ChatMode): Promise<void> {
 		persistNewSessionComposerDefaults({ mode: nextMode });
-		if (isNewSessionHome && activeSessionId === null) {
+		if (isNewSessionHome) {
 			setHomeDraft(
 				(currentDraft: HomeDraft): HomeDraft => ({
 					...currentDraft,
@@ -2457,7 +2456,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		providerId: string,
 		modelId: string,
 	): Promise<void> {
-		if (isNewSessionHome && activeSessionId === null) {
+		if (isNewSessionHome) {
 			if (isHomeSubmitting) {
 				void messageApi.info(
 					"Model changes apply to your next message.",
@@ -2551,7 +2550,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		nextEffort: string,
 	): Promise<void> {
 		persistNewSessionComposerDefaults({ reasoningEffort: nextEffort });
-		if (isNewSessionHome && activeSessionId === null) {
+		if (isNewSessionHome) {
 			setHomeDraft(
 				(currentDraft: HomeDraft): HomeDraft => ({
 					...currentDraft,
@@ -2822,6 +2821,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		nextMessage: string,
 		modeOverride?: ChatMode,
 	): Promise<void> {
+		const isFirstTurnSubmission: boolean = isNewSessionHome;
 		if (isNewSessionHome && activeSessionId === null) {
 			await handleHomeComposerSubmit(nextMessage, modeOverride);
 			return;
@@ -2853,8 +2853,35 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		}
 		replaceComposerInput("", activeSessionId);
 
-		const currentChatMode: ChatMode = getChatMode(workbench);
+		const selectedProvider: string | undefined = isFirstTurnSubmission
+			? (homeDraft.providerId ?? workbench.composer.provider)
+			: workbench.composer.provider;
+		const selectedModel: string | undefined = isFirstTurnSubmission
+			? (homeDraft.modelId ?? workbench.composer.model)
+			: workbench.composer.model;
+		const selectedReasoningEffort: string | undefined = isFirstTurnSubmission
+			? homeDraft.reasoningEffort
+			: (workbench.composer.reasoningEffort ?? undefined);
+		const currentChatMode: ChatMode = isFirstTurnSubmission
+			? homeDraft.chatMode
+			: getChatMode(workbench);
 		const chatMode: ChatMode = modeOverride ?? currentChatMode;
+		if (isFirstTurnSubmission) {
+			setWorkbench(
+				(currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => currentWorkbench === null
+					? currentWorkbench
+					: {
+							...currentWorkbench,
+							composer: {
+								...currentWorkbench.composer,
+								chatMode,
+								...(selectedProvider === undefined ? {} : { provider: selectedProvider }),
+								...(selectedModel === undefined ? {} : { model: selectedModel }),
+								...(selectedReasoningEffort === undefined ? {} : { reasoningEffort: selectedReasoningEffort }),
+							},
+						},
+			);
+		}
 		if (modeOverride !== undefined && modeOverride !== currentChatMode) {
 			persistNewSessionComposerDefaults({ mode: chatMode });
 			setWorkbench(
@@ -2904,10 +2931,9 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				requestId,
 				message,
 				mode: chatMode,
-				provider: workbench.composer.provider ?? undefined,
-				model: workbench.composer.model ?? undefined,
-				reasoningEffort:
-					workbench.composer.reasoningEffort ?? undefined,
+				provider: selectedProvider,
+				model: selectedModel,
+				reasoningEffort: selectedReasoningEffort,
 				executionPolicy: "auto",
 				outputTarget: getChatOutputTarget(
 					chatMode,

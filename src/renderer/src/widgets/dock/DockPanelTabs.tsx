@@ -229,7 +229,9 @@ function DockPanelTabs({
 			tabs: [...layout.tabs, nextTab],
 			activeTabKey: nextTab.key
 		});
-	}, [activeKey, dockId, layout, onLayoutChange]);
+		if (kind === "files") onFilePanelChange(nextTab.key, createDefaultFilePanelLayout());
+		else if (kind === "browser") onBrowserPanelChange(nextTab.key, createDefaultBrowserPanelLayout());
+	}, [activeKey, dockId, layout, onBrowserPanelChange, onFilePanelChange, onLayoutChange]);
 
 	useEffect((): void => {
 		if (activationRequest === null || handledActivationIdRef.current === activationRequest.id) {
@@ -319,6 +321,7 @@ function DockPanelTabs({
 					isOpen={isOpen}
 					isActive={activeKey === tab.key}
 					isFullscreen={isFullscreen}
+					placement={placement}
 					onLayoutChange={(nextLayout: BrowserPanelLayoutPreferences): void => onBrowserPanelChange(tab.key, nextLayout)}
 					onAddContext={onAddContext}
 				/>

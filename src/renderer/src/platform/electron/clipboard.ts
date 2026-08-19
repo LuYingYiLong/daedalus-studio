@@ -63,3 +63,27 @@ export async function readTextFromClipboard(): Promise<string> {
 
 	throw new Error("Clipboard text cannot be read in this environment.");
 }
+
+function createFileFromDataUrl(dataUrl: string): File {
+	const match: RegExpMatchArray | null = dataUrl.match(/^data:(image\/[a-z0-9.+-]+);base64,([a-z0-9+/=]+)$/iu);
+	if (match === null) {
+		throw new Error("Clipboard image data is invalid.");
+	}
+
+	const mimeType: string = match[1] as string;
+	const binary: string = atob(match[2] as string);
+	const buffer: ArrayBuffer = new ArrayBuffer(binary.length);
+	const bytes: Uint8Array<ArrayBuffer> = new Uint8Array(buffer);
+	for (let index: number = 0; index < binary.length; index += 1) {
+		bytes[index] = binary.charCodeAt(index);
+	}
+	return new File([buffer], `clipboard-image-${Date.now()}.png`, {
+		type: mimeType,
+		lastModified: Date.now()
+	});
+}
+
+export async function readImageFromClipboard(): Promise<File | null> {
+	const result: { dataUrl: string | null } = await window.electronAPI.clipboard.readImage();
+	return result.dataUrl === null ? null : createFileFromDataUrl(result.dataUrl);
+}

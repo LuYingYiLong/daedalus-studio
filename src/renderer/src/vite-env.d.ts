@@ -16,6 +16,8 @@ import type {
 	BrowserPermissionRequest,
 	BrowserPermissionRule,
 	BrowserSettings,
+	BrowserAutomationRequest,
+	BrowserAutomationState,
 	BrowserViewBounds,
 	BrowserViewState
 } from "../../contracts/browser";
@@ -174,6 +176,7 @@ declare global {
 	interface ClipboardAPI {
 		writeText: (text: string) => Promise<{ written: true }>;
 		readText: () => Promise<{ text: string }>;
+		readImage: () => Promise<{ dataUrl: string | null }>;
 	}
 
 	type NativeNotificationKind = "run_completed" | "approval_required" | "clarification_required";
@@ -232,6 +235,11 @@ declare global {
 			onElementSelected: (callback: (event: { browserId: string; snapshot: BrowserElementSnapshot }) => void) => () => void;
 			onInspectCancelled: (callback: (event: { browserId: string }) => void) => () => void;
 		};
+		automation: {
+			execute: (request: BrowserAutomationRequest) => Promise<Record<string, unknown>>;
+			cancel: (browserId: string, callId?: string) => Promise<void>;
+			onStateChanged: (callback: (state: BrowserAutomationState) => void) => () => void;
+		};
 		history: { list: () => Promise<BrowserHistoryEntry[]>; clear: () => Promise<void> };
 		downloads: {
 			list: () => Promise<BrowserDownloadRecord[]>;
@@ -265,6 +273,7 @@ declare global {
 			update: (patch: Partial<Omit<BrowserSettings, "permissionRules">>) => Promise<BrowserSettings>;
 			getDefaultDownloadDirectory: () => Promise<string>;
 			pickDownloadDirectory: () => Promise<string | null>;
+			onChanged: (callback: (settings: BrowserSettings) => void) => () => void;
 		};
 		data: { clear: (options: BrowserClearDataOptions) => Promise<void> };
 	}

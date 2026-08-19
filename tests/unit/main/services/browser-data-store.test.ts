@@ -25,8 +25,10 @@ describe("browser data store", () => {
 			downloadDirectory: null,
 			askWhereToSave: false,
 			savePasswordsEnabled: true,
+			aiCdpEnabled: false,
 			permissionRules: []
 		});
+		await expect(store.updateSettings({ aiCdpEnabled: true })).resolves.toMatchObject({ aiCdpEnabled: true });
 		await expect(store.updateSettings({ askWhereToSave: true, downloadDirectory: "D:/Downloads" })).resolves.toMatchObject({
 			askWhereToSave: true,
 			downloadDirectory: "D:/Downloads"

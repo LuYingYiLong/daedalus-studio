@@ -7,14 +7,30 @@ const studioCapabilities: Record<string, boolean> = {
 	inlineDiffView: true,
 	editorTools: false,
 	editorUndoRedo: false,
-	inlineDiffUndo: false
+	inlineDiffUndo: false,
+	browserTools: false
 };
 
 let backendClient: BackendRpcClient | null = null;
 let backendClientPromise: Promise<BackendRpcClient> | null = null;
 const backendReconnectListeners: Set<() => void> = new Set();
+let browserSettingsListenerAttached: boolean = false;
+
+async function refreshBrowserCapability(client?: BackendRpcClient): Promise<void> {
+	try {
+		studioCapabilities.browserTools = (await window.electronAPI.browser.settings.get()).aiCdpEnabled;
+	} catch {
+		studioCapabilities.browserTools = false;
+	}
+	if (client?.isOpen()) {
+		await client.request("client.capabilities.update", {
+			capabilities: { browserTools: studioCapabilities.browserTools }
+		});
+	}
+}
 
 async function sendStudioHello(client: BackendRpcClient): Promise<void> {
+	await refreshBrowserCapability();
 	await client.request<ClientHelloResult>("client.hello", {
 		clientType: "studio",
 		clientName: "Daedalus Studio",
@@ -30,6 +46,17 @@ export function onBackendReconnected(listener: () => void): () => void {
 }
 
 export async function createBackendClient(): Promise<BackendRpcClient> {
+	if (!browserSettingsListenerAttached && window.electronAPI?.browser?.settings !== undefined) {
+		browserSettingsListenerAttached = true;
+		window.electronAPI.browser.settings.onChanged((settings): void => {
+			studioCapabilities.browserTools = settings.aiCdpEnabled;
+			if (backendClient?.isOpen()) {
+				void refreshBrowserCapability(backendClient).catch((error: unknown): void => {
+					console.error("[Daedalus browser] capability update failed", error);
+				});
+			}
+		});
+	}
 	if (backendClient?.isOpen()) {
 		return backendClient;
 	}

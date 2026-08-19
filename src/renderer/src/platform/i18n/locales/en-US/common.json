@@ -704,6 +704,7 @@
 			"credentials": "Choose a saved account",
 			"more": "More browser actions"
 		},
+		"automation": { "operating": "AI is operating" },
 		"empty": { "description": "Enter a URL to open a page" },
 		"errors": {
 			"navigate": "Could not open this URL",
@@ -1088,6 +1089,15 @@
 				"mcp_image_generate": "Generate image",
 				"mcp_image_inspect": "Inspect image",
 				"mcp_web_search": "Search the web",
+				"mcp_browser_observe": "Observe page",
+				"mcp_browser_navigate": "Open page",
+				"mcp_browser_navigation": "Navigate page",
+				"mcp_browser_scroll": "Scroll page",
+				"mcp_browser_wait": "Wait for page",
+				"mcp_browser_screenshot": "Capture page",
+				"mcp_browser_click": "Click page element",
+				"mcp_browser_type": "Type into page",
+				"mcp_browser_select": "Select page option",
 				"mcp_workspace_list_files": "Browse workspace files",
 				"mcp_workspace_read_text_file": "Read file",
 				"mcp_workspace_search_text": "Search workspace text",
@@ -1334,6 +1344,14 @@
 		},
 		"browser": {
 			"title": "Browser",
+			"aiControl": {
+				"title": "AI browser control",
+				"enable": "Allow AI to control the browser (CDP)",
+				"description": "Allows AI in the current session to observe pages and navigate, click, type, or select.",
+				"confirmTitle": "Allow AI to control the shared browser?",
+				"confirmDescription": "AI can read the current page and click or type after approval. It cannot read the password vault, but it uses the browser's existing signed-in state.",
+				"confirm": "Allow"
+			},
 			"actions": {
 				"choose": "Browse",
 				"openDownloads": "Manage downloads",
@@ -1379,7 +1397,10 @@
 				"hide": "Hide",
 				"copied": "Password copied"
 			},
-			"errors": { "load": "Failed to load browser settings", "save": "Failed to save browser settings" }
+			"errors": {
+				"load": "Failed to load browser settings",
+				"save": "Failed to save browser settings"
+			}
 		},
 		"hooks": {
 			"title": "Hooks",
