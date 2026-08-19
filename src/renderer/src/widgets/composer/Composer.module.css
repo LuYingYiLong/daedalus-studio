@@ -3,6 +3,17 @@
 	width: 100%;
 }
 
+.composerRootFloating {
+	margin-inline: auto;
+	transform-origin: center bottom;
+	transition: width 220ms cubic-bezier(0.2, 0, 0, 1);
+	will-change: width;
+}
+
+.composerRootFloatingCollapsed {
+	width: 60%;
+}
+
 .composerInputWrap {
 	position: relative;
 	display: flex;
@@ -30,6 +41,16 @@
 .composerRootCompact .composerSurface {
 	padding-top: 4px;
 	padding-bottom: 36px;
+}
+
+.composerRootFloating .composerSurface {
+	transition:
+		padding-bottom 180ms cubic-bezier(0.2, 0, 0, 1),
+		border-color 0.15s;
+}
+
+.composerRootFloatingCollapsed .composerSurface {
+	padding-bottom: var(--ds-space-2);
 }
 
 .composerRootCompact .composerToolbar {
@@ -137,6 +158,27 @@
 	display: flex;
 	align-items: center;
 	gap: 4px;
+}
+
+.composerRootFloating .composerToolbar {
+	visibility: visible;
+	opacity: 1;
+	transform: translateY(0);
+	transition:
+		opacity 130ms ease-out,
+		transform 180ms cubic-bezier(0.2, 0, 0, 1),
+		visibility 0s;
+}
+
+.composerRootFloatingCollapsed .composerToolbar {
+	pointer-events: none;
+	visibility: hidden;
+	opacity: 0;
+	transform: translateY(4px);
+	transition:
+		opacity 100ms ease-in,
+		transform 160ms cubic-bezier(0.4, 0, 1, 1),
+		visibility 0s linear 160ms;
 }
 
 .approvalModeButton {
@@ -493,4 +535,16 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.composerRootFloating,
+	.composerRootFloating .composerSurface,
+	.composerRootFloating .composerToolbar {
+		transition-duration: 120ms;
+	}
+
+	.composerRootFloating .composerToolbar {
+		transform: none;
+	}
 }

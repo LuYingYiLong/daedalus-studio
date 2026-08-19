@@ -38,7 +38,6 @@ type FilePanelProps = {
 	layout: FilePanelLayoutPreferences;
 	launchTargets: LaunchTarget[];
 	workspaceLaunchTargetId: WorkspaceLaunchTargetId;
-	isFullscreen: boolean;
 	onLayoutChange: (layout: FilePanelLayoutPreferences) => void;
 	onAddContext: (item: AdditionalContextItem) => void;
 };
@@ -51,9 +50,6 @@ const FILE_PANEL_MAX_EDITOR_SPLIT: number = 85;
 const FILE_PANEL_DEFAULT_EDITOR_SPLIT: number = 70;
 const EXPANDED_PATHS_PERSIST_DELAY_MS: number = 180;
 const MAX_DIRECTORY_CACHE_ENTRIES: number = 256;
-const EDITOR_BOTTOM_SAFE_AREA: number = 50;
-const FILE_PANEL_BOTTOM_SAFE_AREA: number = 76;
-
 function normalizeRelativePath(path: string): string {
 	return path.replaceAll("\\", "/").replace(/^\/+|\/+$/gu, "");
 }
@@ -152,7 +148,6 @@ export function FilePanel({
 	layout,
 	launchTargets,
 	workspaceLaunchTargetId,
-	isFullscreen,
 	onLayoutChange,
 	onAddContext
 }: FilePanelProps): React.JSX.Element {
@@ -727,7 +722,7 @@ export function FilePanel({
 										tabKeys={layout.tabs.map((tab: FileTabPreferences): string => tab.key)}
 										panelKey={panelKey}
 										workspace={workspace}
-										bottomSafeArea={isFullscreen ? EDITOR_BOTTOM_SAFE_AREA : 0}
+										bottomSafeArea={0}
 										onContentChange={handleEditorContentChange}
 										onAddContext={onAddContext}
 									/>
@@ -795,7 +790,6 @@ export function FilePanel({
 									}}
 								/>
 							</div>
-							{isFullscreen ? <div className={styles.treeBottomSafeArea} style={{ height: FILE_PANEL_BOTTOM_SAFE_AREA }} aria-hidden="true" /> : null}
 						</aside>
 					</Splitter.Panel> : null}
 				</Splitter>

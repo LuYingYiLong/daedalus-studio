@@ -2,13 +2,15 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../helpers/repo-paths";
 
 describe("browser native view overlays", () => {
-	it("keeps a captured page frame behind dropdowns, popovers, and annotation UI", () => {
+	it("keeps a captured page frame behind modal renderer overlays", () => {
 		const panelSource: string = readRepoFile("src", "renderer", "src", "widgets", "browser", "BrowserPanel.tsx");
 		const occlusionSource: string = readRepoFile("src", "renderer", "src", "widgets", "browser", "native-view-occlusion.ts");
 		expect(panelSource).toContain("window.electronAPI.browser.view");
 		expect(panelSource).toContain(".capture(browserId)");
 		expect(panelSource).toContain("styles.occlusionPreview");
 		expect(occlusionSource).toContain(".ant-dropdown, .ant-popover");
+		expect(occlusionSource).not.toContain(".ds-native-view-occluder");
+		expect(panelSource).not.toContain("getFullscreenComposerBottomInset");
 	});
 
 	it("positions annotation input from the inspected element viewport rectangle", () => {

@@ -472,6 +472,10 @@
 			"stopping": "Stopping...",
 			"queue": "Queue message"
 		},
+		"floating": {
+			"close": "Hide composer",
+			"open": "Show composer"
+		},
 		"contextUsage": {
 			"title": "Context usage",
 			"estimating": "Estimating context...",

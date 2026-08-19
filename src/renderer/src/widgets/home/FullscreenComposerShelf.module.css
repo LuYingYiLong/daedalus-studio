@@ -1,0 +1,115 @@
+.root {
+	position: absolute;
+	inset: 0;
+	z-index: 40;
+	pointer-events: none;
+}
+
+.drawer {
+	position: absolute;
+	left: 50%;
+	bottom: var(--ds-space-2);
+	width: min(calc(100% - 16px), 896px);
+	min-width: 0;
+	pointer-events: auto;
+	transform: translate3d(-50%, 0, 0);
+	transform-origin: center bottom;
+	transition:
+		transform 240ms cubic-bezier(0.2, 0, 0, 1),
+		opacity 160ms ease-out,
+		visibility 0s;
+}
+
+.closed .drawer {
+	pointer-events: none;
+	visibility: hidden;
+	opacity: 0;
+	transform: translate3d(-50%, calc(100% + var(--ds-space-2)), 0);
+	transition:
+		transform 200ms cubic-bezier(0.4, 0, 1, 1),
+		opacity 130ms ease-in,
+		visibility 0s linear 200ms;
+}
+
+.openButton {
+	position: absolute;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 10px;
+	border-radius: var(--ds-radius-sm) var(--ds-radius-sm) 0 0;
+	border: 1px solid var(--ds-border);
+	background: var(--ds-surface-elevated);
+	box-shadow: var(--ds-box-shadow);
+}
+
+.closeButton {
+	position: absolute;
+	top: -8px;
+	left: 50%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	min-width: 16px;
+	height: 8px;
+	padding: 0;
+	border-width: 1px 1px 0;
+	border-radius: var(--ds-radius-sm) var(--ds-radius-sm) 0 0;
+	color: var(--ds-text-secondary);
+	background: var(--ds-surface);
+	box-shadow: none;
+	transform: translateX(-50%);
+}
+
+.closeButton::before {
+	position: absolute;
+	inset: -8px;
+	content: "";
+}
+
+.closeButton :global(.daedalus-icon) {
+	width: 8px;
+	height: 8px;
+}
+
+.openButton :global(.daedalus-icon) {
+	width: 8px;
+	height: 8px;
+}
+
+.openButton {
+	left: 50%;
+	bottom: 0;
+	pointer-events: none;
+	visibility: hidden;
+	opacity: 0;
+	transform: translate3d(-50%, 10px, 0) scale(0.96);
+	transform-origin: center bottom;
+	transition:
+		transform 160ms cubic-bezier(0.4, 0, 1, 1),
+		opacity 120ms ease-in,
+		visibility 0s linear 160ms;
+}
+
+.closed .openButton {
+	pointer-events: auto;
+	visibility: visible;
+	opacity: 1;
+	transform: translate3d(-50%, 0, 0) scale(1);
+	transition:
+		transform 200ms cubic-bezier(0.2, 0, 0, 1),
+		opacity 150ms ease-out,
+		visibility 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.drawer,
+	.closed .drawer,
+	.openButton,
+	.closed .openButton {
+		transform: translate3d(-50%, 0, 0);
+		transition-duration: 120ms;
+	}
+}

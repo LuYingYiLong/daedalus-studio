@@ -253,11 +253,6 @@
 	overflow: hidden;
 }
 
-.treeBottomSafeArea {
-	flex: 0 0 auto;
-	pointer-events: none;
-}
-
 .treeTitle {
 	display: block;
 	flex: 1 1 auto;

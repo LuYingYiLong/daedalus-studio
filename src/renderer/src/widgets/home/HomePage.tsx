@@ -37,6 +37,7 @@ import ClarificationDialog from "@/widgets/clarification/ClarificationDialog";
 import PlanApprovalDialog from "@/widgets/approval/PlanApprovalDialog";
 import { createDockTab, type DockPanelActivationRequest, type DockPanelKind } from "@/widgets/dock/DockPanelTabs";
 import HomeWorkspaceSidebar from "./HomeWorkspaceSidebar";
+import FullscreenComposerShelf from "./FullscreenComposerShelf";
 import HomeDockPanel from "./HomeDockPanel";
 import {
 	listTerminalRuntimeIds,
@@ -866,6 +867,14 @@ function HomePage({
 	const bottomDockFullscreen: boolean = fullscreenDock === "bottom" && bottomDockOpen;
 	const isDockFullscreen: boolean = sideDockFullscreen || bottomDockFullscreen;
 	const activeFullscreenDock: DockFullscreenPlacement | null = isDockFullscreen ? fullscreenDock : null;
+	const fullscreenDockLayout: DockLayoutPreferences | null = activeFullscreenDock === "side"
+		? visualSessionLayout.side
+		: activeFullscreenDock === "bottom"
+			? visualSessionLayout.bottom
+			: null;
+	const isFullscreenBrowserPanel: boolean = fullscreenDockLayout?.tabs.find(
+		(tab) => tab.key === fullscreenDockLayout.activeTabKey,
+	)?.kind === "browser";
 	const selectionMarkerContextItems: AdditionalContextItem[] = useMemo((): AdditionalContextItem[] => {
 		const byId = new Map<string, AdditionalContextItem>();
 		for (const item of contextItems) {
@@ -2207,6 +2216,7 @@ function HomePage({
 			workspaceFooterDisabled={workspaceFooterDisabled}
 			showContextUsage={!isHome}
 			compact={compact}
+			floating={compact}
 			onModeChange={onModeChange}
 			onApprovalModeChange={onApprovalModeChange}
 			onProviderModelChange={onProviderModelChange}
@@ -2622,10 +2632,10 @@ function HomePage({
 								{renderBottomDock && bottomDockConfig !== null ? <HomeDockPanel {...bottomDockConfig.content} /> : null}
 							</Splitter.Panel>
 						</Splitter>
-						{isDockFullscreen ? (
-							<div className={styles.fullscreenComposer}>
+						{isDockFullscreen && !isFullscreenBrowserPanel ? (
+							<FullscreenComposerShelf>
 								{renderComposer(true)}
-							</div>
+							</FullscreenComposerShelf>
 						) : null}
 					</div>
 				</Splitter.Panel>

@@ -43,10 +43,6 @@
 	overflow: hidden;
 }
 
-.viewportFullscreen {
-	padding-bottom: 120px;
-}
-
 .nativeHost {
 	position: absolute;
 	inset: 0;
@@ -62,10 +58,6 @@
 	object-fit: fill;
 	pointer-events: none;
 	user-select: none;
-}
-
-.viewportFullscreen .nativeHost {
-	bottom: 120px;
 }
 
 .empty,

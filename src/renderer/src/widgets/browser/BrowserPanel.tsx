@@ -36,7 +36,6 @@ type BrowserPanelProps = {
 	layout: BrowserPanelLayoutPreferences;
 	isOpen: boolean;
 	isActive: boolean;
-	isFullscreen: boolean;
 	placement: DockPanelPlacement;
 	onLayoutChange: (layout: BrowserPanelLayoutPreferences) => void;
 	onAddContext: (item: AdditionalContextItem) => void;
@@ -75,7 +74,6 @@ function BrowserPanel({
 	layout,
 	isOpen,
 	isActive,
-	isFullscreen,
 	placement,
 	onLayoutChange,
 	onAddContext,
@@ -526,9 +524,7 @@ function BrowserPanel({
 					aiOperating: t("browser.automation.operating"),
 				}}
 			/>
-			<div
-				className={`${styles.viewport} ${isFullscreen ? styles.viewportFullscreen : ""}`}
-			>
+			<div className={styles.viewport}>
 				<div ref={hostRef} className={styles.nativeHost} />
 				{occlusionPreview === null ? null : (
 					<img

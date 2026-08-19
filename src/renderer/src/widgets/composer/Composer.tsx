@@ -103,6 +103,7 @@ export type ComposerProps = {
 	workspaceFooterDisabled?: boolean;
 	showContextUsage?: boolean;
 	compact?: boolean;
+	floating?: boolean;
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
 	onProviderModelChange?: (providerId: string, modelId: string) => void;
@@ -222,6 +223,7 @@ function Composer({
 	workspaceFooterDisabled = false,
 	showContextUsage = true,
 	compact = false,
+	floating = false,
 	onModeChange,
 	onApprovalModeChange,
 	onProviderModelChange,
@@ -257,6 +259,7 @@ function Composer({
 	const suppressedCompletionValueRef = useRef<string | null>(null);
 	const completionStateSignatureRef = useRef<string>("");
 	const expandingTextAttachmentIdsRef = useRef<Set<string>>(new Set());
+	const floatingBlurFrameRef = useRef<number | null>(null);
 	const [draftMessage, setDraftMessage] = useState<string>(message);
 	const [completionToken, setCompletionToken] =
 		useState<ComposerCompletionToken | null>(null);
@@ -266,10 +269,46 @@ function Composer({
 	const [selectedCompletionIndex, setSelectedCompletionIndex] =
 		useState<number>(0);
 	const [isComposing, setIsComposing] = useState<boolean>(false);
+	const [isFloatingComposerFocused, setIsFloatingComposerFocused] =
+		useState<boolean>(false);
 	const textAreaPlaceholder: string =
 		draftMessage.length === 0 && nextStepSuggestion?.trim().length
 			? nextStepSuggestion
 			: t(COMPOSER_PLACEHOLDER_KEYS[mode]);
+	useEffect((): (() => void) => {
+		if (!floating) {
+			setIsFloatingComposerFocused(false);
+		}
+
+		return (): void => {
+			if (floatingBlurFrameRef.current !== null) {
+				window.cancelAnimationFrame(floatingBlurFrameRef.current);
+			}
+		};
+	}, [floating]);
+
+	const handleFloatingComposerFocus = useCallback((): void => {
+		if (floating) {
+			setIsFloatingComposerFocused(true);
+		}
+	}, [floating]);
+
+	const handleFloatingComposerBlur = useCallback((): void => {
+		if (!floating) {
+			return;
+		}
+
+		if (floatingBlurFrameRef.current !== null) {
+			window.cancelAnimationFrame(floatingBlurFrameRef.current);
+		}
+
+		floatingBlurFrameRef.current = window.requestAnimationFrame((): void => {
+			floatingBlurFrameRef.current = null;
+			if (!rootRef.current?.contains(document.activeElement)) {
+				setIsFloatingComposerFocused(false);
+			}
+		});
+	}, [floating]);
 
 	const handleModeClick: MenuProps["onClick"] = useCallback(
 		({ key }): void => {
@@ -595,6 +634,12 @@ function Composer({
 	);
 	const hasCompletion: boolean =
 		completionToken !== null && completionOptions.length > 0;
+	const isFloatingComposerCollapsed: boolean =
+		floating &&
+		!isFloatingComposerFocused &&
+		!isSending &&
+		!isCancelling &&
+		!hasCompletion;
 
 	useEffect((): void => {
 		if (selectedCompletionIndex >= completionOptions.length) {
@@ -1290,7 +1335,19 @@ function Composer({
 	return (
 		<div
 			ref={rootRef}
-			className={`${styles.composerRoot} ${compact ? styles.composerRootCompact : ""}`}
+			className={[
+				styles.composerRoot,
+				compact ? styles.composerRootCompact : "",
+				floating ? styles.composerRootFloating : "",
+				isFloatingComposerCollapsed
+					? styles.composerRootFloatingCollapsed
+					: "",
+			]
+				.filter(Boolean)
+				.join(" ")}
+			onFocusCapture={handleFloatingComposerFocus}
+			onBlurCapture={handleFloatingComposerBlur}
+			onPointerDownCapture={handleFloatingComposerFocus}
 		>
 			<input
 				ref={imageInputRef}

@@ -470,6 +470,10 @@
 			"stopping": "正在停止...",
 			"queue": "加入队列"
 		},
+		"floating": {
+			"close": "收起输入框",
+			"open": "展开输入框"
+		},
 		"contextUsage": {
 			"title": "上下文用量",
 			"estimating": "正在估算上下文...",
