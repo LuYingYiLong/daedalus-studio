@@ -22,7 +22,9 @@
 	display: inline-flex;
 	align-items: center;
 	flex: 0 0 auto;
-	margin-inline-start: 4px;
+	margin-inline-start: var(--ds-space-1);
+	padding-right: var(--ds-space-1);
+	gap: var(--ds-space-1);
 }
 
 .panelTabs :global(.ant-tabs-tab) {
