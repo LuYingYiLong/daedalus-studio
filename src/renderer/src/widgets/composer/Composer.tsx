@@ -1,16 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-	Input,
-	Dropdown,
-	Button,
-	Divider,
-	Flex,
-	Tooltip,
-	Popover,
-	Progress,
-	Typography,
-	Spin,
-} from "antd";
+import { Input, Dropdown, Button, Divider, Flex, Tooltip, Popover, Progress, Typography, Spin, Segmented } from "antd";
 import type { MenuProps } from "antd";
 import type { TextAreaRef } from "antd/es/input/TextArea";
 import type { TFunction } from "i18next";
@@ -104,6 +93,9 @@ export type ComposerProps = {
 	showContextUsage?: boolean;
 	compact?: boolean;
 	floating?: boolean;
+	worktreeMode?: "local" | "worktree";
+	worktreeDisabledReason?: string | null;
+	isWorktreePreparing?: boolean;
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
 	onProviderModelChange?: (providerId: string, modelId: string) => void;
@@ -112,6 +104,7 @@ export type ComposerProps = {
 	onWorkspaceSelect?: (workspaceId: string) => void;
 	onWorkspaceAdd?: () => void;
 	onWorkspaceClear?: () => void;
+	onWorktreeModeChange?: (mode: "local" | "worktree") => void;
 	onAddFiles?: () => void;
 	onAddFolder?: () => void;
 	onAddImages?: (files: File[]) => void;
@@ -221,6 +214,9 @@ function Composer({
 	workspaceOptions = [],
 	selectedWorkspace = null,
 	workspaceFooterDisabled = false,
+	worktreeMode,
+	worktreeDisabledReason = null,
+	isWorktreePreparing = false,
 	showContextUsage = true,
 	compact = false,
 	floating = false,
@@ -232,6 +228,7 @@ function Composer({
 	onWorkspaceSelect,
 	onWorkspaceAdd,
 	onWorkspaceClear,
+	onWorktreeModeChange,
 	onAddFiles,
 	onAddFolder,
 	onAddImages,
@@ -1622,66 +1619,46 @@ function Composer({
 			</div>
 
 			<footer className={styles.footer}>
-				<Flex
-					align="start"
-					justify="space-between"
-					gap={8}
-					className={styles.workspaceFooterRow}
-				>
-					<Dropdown
-						disabled={workspaceFooterDisabled}
-						menu={workspaceFooterMenu}
-						trigger={["click"]}
-					>
-						<Button
-							type="text"
-							size="small"
-							disabled={workspaceFooterDisabled}
-							icon={
-								selectedWorkspace === null ? (
-									<Icon name="close" />
-								) : (
-									<WorkspaceIconView
-										workspace={selectedWorkspace}
+				<Flex align="start" justify="space-between" gap={8} className={styles.workspaceFooterRow}>
+					<Flex align="center" gap={6} className={styles.workspaceFooterControls}>
+						<Dropdown disabled={workspaceFooterDisabled || isWorktreePreparing} menu={workspaceFooterMenu} trigger={["click"]}>
+							<Button
+								type="text"
+								size="small"
+								disabled={workspaceFooterDisabled || isWorktreePreparing}
+								icon={selectedWorkspace === null ? <Icon name="close" /> : <WorkspaceIconView workspace={selectedWorkspace} />}
+								className={styles.workspaceFooterButton}
+							>
+								<span className={styles.workspaceFooterText}>{selectedWorkspaceLabel}</span>
+							</Button>
+						</Dropdown>
+						{worktreeMode !== undefined && selectedWorkspace !== null ? (
+							<Tooltip title={worktreeDisabledReason ?? undefined}>
+								<span>
+									<Segmented
+										size="small"
+										value={worktreeMode}
+										disabled={isWorktreePreparing}
+										options={[
+											{ label: t("composer.worktree.local"), value: "local" },
+											{
+												label: isWorktreePreparing ? <Spin size="small" /> : t("composer.worktree.managed"),
+												value: "worktree",
+												disabled: worktreeDisabledReason !== null
+											}
+										]}
+										onChange={(value): void => onWorktreeModeChange?.(value as "local" | "worktree")}
 									/>
-								)
-							}
-							className={styles.workspaceFooterButton}
-						>
-							<span className={styles.workspaceFooterText}>
-								{selectedWorkspaceLabel}
-							</span>
-						</Button>
-					</Dropdown>
+								</span>
+							</Tooltip>
+						) : null}
+					</Flex>
 					{showContextUsage ? (
-						<Popover
-							title={t("composer.contextUsage.title")}
-							content={contextUsageContent}
-							trigger="click"
-						>
+						<Popover title={t("composer.contextUsage.title")} content={contextUsageContent} trigger="click">
 							<span className={styles.contextUsageAnchor}>
-								<button
-									type="button"
-									className={styles.contextUsageButton}
-									aria-label={t(
-										"composer.contextUsage.title",
-									)}
-								>
-									<span
-										className={
-											styles.contextUsageButtonText
-										}
-									>
-										{Math.round(contextUsagePercent)}%
-									</span>
-									<Progress
-										type="circle"
-										percent={contextUsagePercent}
-										strokeColor="var(--ds-accent)"
-										railColor="var(--ds-border)"
-										showInfo={false}
-										size={16}
-									/>
+								<button type="button" className={styles.contextUsageButton} aria-label={t("composer.contextUsage.title")}>
+									<span className={styles.contextUsageButtonText}>{Math.round(contextUsagePercent)}%</span>
+									<Progress type="circle" percent={contextUsagePercent} strokeColor="var(--ds-accent)" railColor="var(--ds-border)" showInfo={false} size={16} />
 								</button>
 							</span>
 						</Popover>

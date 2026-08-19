@@ -7,7 +7,7 @@ import {
 	dispatchClientPreferencesChanged,
 	getCachedClientPreferences,
 	updateClientPreferences,
-	type ClientPreferences
+	type ClientPreferences,
 } from "@/platform/rpc/client-preferences-api";
 import { Icon } from "@/assets/icons";
 import AppUpdateDialog from "@/widgets/app-update/AppUpdateDialog";
@@ -17,7 +17,7 @@ import {
 	getSessionNavigationSnapshot,
 	navigateSessionHistory,
 	SESSION_NAVIGATION_EVENT,
-	subscribeToSessionNavigation
+	subscribeToSessionNavigation,
 } from "@/domain/session/session-navigation-history";
 import styles from "./Titlebar.module.css";
 
@@ -25,7 +25,8 @@ type MainTitlebarProps = {
 	appReady: boolean;
 };
 
-const LAST_SEEN_CHANGELOG_VERSION_KEY: string = "daedalus.studio.changelog.last-seen-version";
+const LAST_SEEN_CHANGELOG_VERSION_KEY: string =
+	"daedalus.studio.changelog.last-seen-version";
 
 function getLastSeenChangelogVersion(): string | null {
 	try {
@@ -58,27 +59,38 @@ function getUpdateButtonLabel(state: AppUpdateState | null): string {
 
 function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 	const { t } = useTranslation();
-	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(() => getCachedClientPreferences());
+	const [clientPreferences, setClientPreferences] =
+		useState<ClientPreferences>(() => getCachedClientPreferences());
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
 	const [updateModalOpen, setUpdateModalOpen] = useState<boolean>(false);
-	const [changelogVersion, setChangelogVersion] = useState<string | null>(null);
+	const [changelogVersion, setChangelogVersion] = useState<string | null>(
+		null,
+	);
 	const sessionNavigation = useSyncExternalStore(
 		subscribeToSessionNavigation,
 		getSessionNavigationSnapshot,
-		getSessionNavigationSnapshot
+		getSessionNavigationSnapshot,
 	);
-	const showUpdateButton: boolean = appReady && shouldShowUpdateButton(updateState);
+	const showUpdateButton: boolean =
+		appReady && shouldShowUpdateButton(updateState);
 
 	useEffect((): (() => void) => {
 		if (!appReady) {
 			return (): void => undefined;
 		}
 		let cancelled: boolean = false;
-		void window.electronAPI.appInfo.getPackageInfo().then((packageInfo: PackageInfo): void => {
-			if (!cancelled && packageInfo.version.trim().length > 0 && getLastSeenChangelogVersion() !== packageInfo.version) {
-				setChangelogVersion(packageInfo.version);
-			}
-		}).catch((): void => undefined);
+		void window.electronAPI.appInfo
+			.getPackageInfo()
+			.then((packageInfo: PackageInfo): void => {
+				if (
+					!cancelled &&
+					packageInfo.version.trim().length > 0 &&
+					getLastSeenChangelogVersion() !== packageInfo.version
+				) {
+					setChangelogVersion(packageInfo.version);
+				}
+			})
+			.catch((): void => undefined);
 		return (): void => {
 			cancelled = true;
 		};
@@ -86,46 +98,64 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
-		void window.electronAPI.appUpdate.getState().then((state: AppUpdateState): void => {
-			if (!cancelled) {
+		void window.electronAPI.appUpdate
+			.getState()
+			.then((state: AppUpdateState): void => {
+				if (!cancelled) {
+					setUpdateState(state);
+				}
+				if (
+					!cancelled &&
+					appReady &&
+					clientPreferences.autoCheckForUpdates &&
+					state.status === "idle"
+				) {
+					void window.electronAPI.appUpdate
+						.check()
+						.then((nextState: AppUpdateState): void => {
+							if (!cancelled) {
+								setUpdateState(nextState);
+							}
+						});
+				}
+			});
+		const unsubscribe = window.electronAPI.appUpdate.onStateChanged(
+			(state: AppUpdateState): void => {
 				setUpdateState(state);
-			}
-			if (
-				!cancelled
-				&& appReady
-				&& clientPreferences.autoCheckForUpdates
-				&& state.status === "idle"
-			) {
-				void window.electronAPI.appUpdate.check().then((nextState: AppUpdateState): void => {
-					if (!cancelled) {
-						setUpdateState(nextState);
-					}
-				});
-			}
-		});
-		const unsubscribe = window.electronAPI.appUpdate.onStateChanged((state: AppUpdateState): void => {
-			setUpdateState(state);
-		});
+			},
+		);
 		return (): void => {
 			cancelled = true;
 			unsubscribe();
 		};
 	}, [appReady, clientPreferences.autoCheckForUpdates]);
 
-	const handleClientPreferencesChanged = useMemoizedFn((event: Event): void => {
-		const preferences: ClientPreferences | undefined = (event as CustomEvent<ClientPreferences>).detail;
-		if (preferences !== undefined) {
-			setClientPreferences(preferences);
-		}
-	});
+	const handleClientPreferencesChanged = useMemoizedFn(
+		(event: Event): void => {
+			const preferences: ClientPreferences | undefined = (
+				event as CustomEvent<ClientPreferences>
+			).detail;
+			if (preferences !== undefined) {
+				setClientPreferences(preferences);
+			}
+		},
+	);
 
-	useEventListener(CLIENT_PREFERENCES_CHANGED_EVENT, handleClientPreferencesChanged);
+	useEventListener(
+		CLIENT_PREFERENCES_CHANGED_EVENT,
+		handleClientPreferencesChanged,
+	);
 
 	const startDownload = useMemoizedFn(async (): Promise<void> => {
-		if (!appReady || (updateState?.status !== "available" && updateState?.status !== "error")) {
+		if (
+			!appReady ||
+			(updateState?.status !== "available" &&
+				updateState?.status !== "error")
+		) {
 			return;
 		}
-		const nextState: AppUpdateState = await window.electronAPI.appUpdate.download();
+		const nextState: AppUpdateState =
+			await window.electronAPI.appUpdate.download();
 		setUpdateState(nextState);
 	});
 
@@ -136,8 +166,12 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 
 	async function handleUpdateModalClose(): Promise<void> {
 		setUpdateModalOpen(false);
-		if (updateState?.updateKind === "backend" && updateState.backend.status === "downloaded") {
-			const nextState: AppUpdateState = await window.electronAPI.appUpdate.acknowledge();
+		if (
+			updateState?.updateKind === "backend" &&
+			updateState.backend.status === "downloaded"
+		) {
+			const nextState: AppUpdateState =
+				await window.electronAPI.appUpdate.acknowledge();
 			setUpdateState(nextState);
 		}
 	}
@@ -157,18 +191,19 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 	const toggleWorkspaceSidebar = useMemoizedFn(async (): Promise<void> => {
 		const nextWorkspaceSidebar: ClientPreferences["workspaceSidebar"] = {
 			...clientPreferences.workspaceSidebar,
-			open: !clientPreferences.workspaceSidebar.open
+			open: !clientPreferences.workspaceSidebar.open,
 		};
 		const optimisticPreferences: ClientPreferences = {
 			...clientPreferences,
-			workspaceSidebar: nextWorkspaceSidebar
+			workspaceSidebar: nextWorkspaceSidebar,
 		};
 		setClientPreferences(optimisticPreferences);
 		dispatchClientPreferencesChanged(optimisticPreferences);
 		try {
-			const savedPreferences: ClientPreferences = await updateClientPreferences({
-				workspaceSidebar: nextWorkspaceSidebar
-			});
+			const savedPreferences: ClientPreferences =
+				await updateClientPreferences({
+					workspaceSidebar: nextWorkspaceSidebar,
+				});
 			setClientPreferences(savedPreferences);
 		} catch (error: unknown) {
 			console.error("[Titlebar] update workspace sidebar failed", error);
@@ -177,10 +212,13 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 		}
 	});
 
-	const workspaceSidebarLabel: string = clientPreferences.workspaceSidebar.open
+	const workspaceSidebarLabel: string = clientPreferences.workspaceSidebar
+		.open
 		? t("agentPage.workspaceSidebar.close")
 		: t("agentPage.workspaceSidebar.open");
-	const previousSessionLabel: string = t("agentPage.sessionNavigation.previous");
+	const previousSessionLabel: string = t(
+		"agentPage.sessionNavigation.previous",
+	);
 	const nextSessionLabel: string = t("agentPage.sessionNavigation.next");
 
 	function handleSessionNavigation(direction: "back" | "forward"): void {
@@ -188,7 +226,11 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 		if (sessionId === null) {
 			return;
 		}
-		window.dispatchEvent(new CustomEvent<string>(SESSION_NAVIGATION_EVENT, { detail: sessionId }));
+		window.dispatchEvent(
+			new CustomEvent<string>(SESSION_NAVIGATION_EVENT, {
+				detail: sessionId,
+			}),
+		);
 	}
 
 	return (
@@ -201,8 +243,18 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 							shape="circle"
 							className={styles.actionButton}
 							aria-label={workspaceSidebarLabel}
-							aria-pressed={clientPreferences.workspaceSidebar.open}
-							icon={<Icon name={clientPreferences.workspaceSidebar.open ? "layout-left-toggled" : "layout-left"} />}
+							aria-pressed={
+								clientPreferences.workspaceSidebar.open
+							}
+							icon={
+								<Icon
+									name={
+										clientPreferences.workspaceSidebar.open
+											? "layout-left-toggled"
+											: "layout-left"
+									}
+								/>
+							}
 							onClick={(): void => {
 								void toggleWorkspaceSidebar();
 							}}
@@ -250,7 +302,12 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 					</Button>
 				) : null}
 			</div>
-			<AppUpdateDialog open={updateModalOpen} state={updateState} onClose={handleUpdateModalClose} onDownload={startDownload} />
+			<AppUpdateDialog
+				open={updateModalOpen}
+				state={updateState}
+				onClose={handleUpdateModalClose}
+				onDownload={startDownload}
+			/>
 			<ChangelogDialog
 				open={changelogVersion !== null}
 				version={changelogVersion}

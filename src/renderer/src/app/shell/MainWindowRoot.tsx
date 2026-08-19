@@ -1,7 +1,11 @@
 import { lazy, Suspense, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import BootSplash from "../bootstrap/BootSplash";
-import { loadBootstrapData, type BootstrapData, type BootstrapProgress } from "../bootstrap/bootstrap";
+import {
+	loadBootstrapData,
+	type BootstrapData,
+	type BootstrapProgress,
+} from "../bootstrap/bootstrap";
 import MainTitlebar from "./Titlebar";
 import OnboardingWizard from "../onboarding/OnboardingWizard";
 import styles from "./MainWindowRoot.module.css";
@@ -27,14 +31,20 @@ const App = lazy(loadAppModule);
 
 function MainWindowRoot(): React.JSX.Element {
 	const { t } = useTranslation();
-	const [bootstrapData, setBootstrapData] = useState<BootstrapData | null>(null);
-	const [appBootstrapData, setAppBootstrapData] = useState<BootstrapData | null>(null);
+	const [bootstrapData, setBootstrapData] = useState<BootstrapData | null>(
+		null,
+	);
+	const [appBootstrapData, setAppBootstrapData] =
+		useState<BootstrapData | null>(null);
 	const [handoffPhase, setHandoffPhase] = useState<AppHandoffPhase>("idle");
 	const [handoffCover, setHandoffCover] = useState<HandoffCover>("boot");
 	const rendererShellReadyReportedRef = useRef<boolean>(false);
-	const loadData = useCallback((onProgress: (progress: BootstrapProgress) => void): Promise<BootstrapData> => (
-		loadBootstrapData(onProgress, t)
-	), [t]);
+	const loadData = useCallback(
+		(
+			onProgress: (progress: BootstrapProgress) => void,
+		): Promise<BootstrapData> => loadBootstrapData(onProgress, t),
+		[t],
+	);
 	const handleBootstrapReady = useCallback((data: BootstrapData): void => {
 		setBootstrapData(data);
 		if (data.clientPreferences?.onboarding?.completed === true) {
@@ -44,14 +54,20 @@ function MainWindowRoot(): React.JSX.Element {
 			setHandoffPhase("preparing");
 		}
 	}, []);
-	const handleOnboardingComplete = useCallback((data: BootstrapData): void => {
-		setBootstrapData(data);
-		setHandoffCover("onboarding");
-		setAppBootstrapData(data);
-		setHandoffPhase("preparing");
-	}, []);
+	const handleOnboardingComplete = useCallback(
+		(data: BootstrapData): void => {
+			setBootstrapData(data);
+			setHandoffCover("onboarding");
+			setAppBootstrapData(data);
+			setHandoffPhase("preparing");
+		},
+		[],
+	);
 	const handleAppPaintReady = useCallback((): void => {
-		setHandoffPhase((currentPhase: AppHandoffPhase): AppHandoffPhase => currentPhase === "preparing" ? "entering" : currentPhase);
+		setHandoffPhase(
+			(currentPhase: AppHandoffPhase): AppHandoffPhase =>
+				currentPhase === "preparing" ? "entering" : currentPhase,
+		);
 	}, []);
 	const handleBootSplashPaintReady = useCallback((): void => {
 		if (rendererShellReadyReportedRef.current) {
@@ -60,17 +76,22 @@ function MainWindowRoot(): React.JSX.Element {
 		rendererShellReadyReportedRef.current = true;
 		window.electronAPI.windowControl.rendererReady();
 	}, []);
-	const isAppReady: boolean = handoffPhase === "entering" || handoffPhase === "ready";
-	const showBootCover: boolean = bootstrapData === null || (handoffPhase === "preparing" && handoffCover === "boot");
-	const showOnboardingCover: boolean = bootstrapData !== null && (
-		handoffPhase === "idle"
-		|| (handoffPhase === "preparing" && handoffCover === "onboarding")
-	);
+	const isAppReady: boolean =
+		handoffPhase === "entering" || handoffPhase === "ready";
+	const showBootCover: boolean =
+		bootstrapData === null ||
+		(handoffPhase === "preparing" && handoffCover === "boot");
+	const showOnboardingCover: boolean =
+		bootstrapData !== null &&
+		(handoffPhase === "idle" ||
+			(handoffPhase === "preparing" && handoffCover === "onboarding"));
 	const appLayerClassName: string = [
 		styles.appLayer,
 		handoffPhase === "preparing" ? styles.appPreparing : "",
-		handoffPhase === "entering" ? styles.appEnter : ""
-	].filter(Boolean).join(" ");
+		handoffPhase === "entering" ? styles.appEnter : "",
+	]
+		.filter(Boolean)
+		.join(" ");
 
 	return (
 		<>
@@ -80,21 +101,35 @@ function MainWindowRoot(): React.JSX.Element {
 					<Suspense fallback={null}>
 						<div
 							className={appLayerClassName}
-							aria-hidden={handoffPhase === "preparing" ? true : undefined}
-							inert={handoffPhase === "preparing" ? true : undefined}
+							aria-hidden={
+								handoffPhase === "preparing" ? true : undefined
+							}
+							inert={
+								handoffPhase === "preparing" ? true : undefined
+							}
 							onAnimationEnd={(event): void => {
-								if (event.target === event.currentTarget && handoffPhase === "entering") {
+								if (
+									event.target === event.currentTarget &&
+									handoffPhase === "entering"
+								) {
 									setHandoffPhase("ready");
 								}
 							}}
 						>
-							<App bootstrapData={appBootstrapData} onReady={handleAppPaintReady} />
+							<App
+								bootstrapData={appBootstrapData}
+								onReady={handleAppPaintReady}
+							/>
 						</div>
 					</Suspense>
 				)}
 				{showBootCover ? (
 					<div className={styles.cover} key="boot">
-						<BootSplash loadData={loadData} onReady={handleBootstrapReady} onPaintReady={handleBootSplashPaintReady} />
+						<BootSplash
+							loadData={loadData}
+							onReady={handleBootstrapReady}
+							onPaintReady={handleBootSplashPaintReady}
+						/>
 					</div>
 				) : null}
 				{showOnboardingCover && bootstrapData !== null ? (

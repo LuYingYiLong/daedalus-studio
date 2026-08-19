@@ -40,6 +40,25 @@ export type SelectWorkspaceOptions = {
 	sessionId?: string | null;
 };
 
+export type WorktreeEligibilitySource = {
+	sourceFolderId: string;
+	sourcePath: string;
+	eligible: boolean;
+	repositoryRoot: string | null;
+	commonDirectory: string | null;
+	baseCommit: string | null;
+	baseRef: string | null;
+	dirty: boolean;
+	reasonCode: string | null;
+	reason: string | null;
+};
+
+export type WorktreeEligibilityResult = {
+	workspaceId: string;
+	eligible: boolean;
+	sources: WorktreeEligibilitySource[];
+};
+
 export type WorkspaceTreeOrderPreferences = {
 	schemaVersion: 2;
 	workspaceIds: string[];
@@ -83,7 +102,10 @@ export async function updateWorkspaceTreeOrder(
 
 export async function selectWorkspace(workspaceId: string, options: SelectWorkspaceOptions = {}): Promise<WorkspaceConfig> {
 	const client = await createBackendClient();
-	const result = await client.request<{ selected: true; workspace: WorkspaceConfig }>("workspace.select", {
+	const result = await client.request<{
+		selected: true;
+		workspace: WorkspaceConfig;
+	}>("workspace.select", {
 		workspaceId,
 		...options
 	});
@@ -103,6 +125,11 @@ export async function deleteWorkspace(workspaceId: string): Promise<DeleteWorksp
 	return client.request<DeleteWorkspaceResult>("workspace.delete", {
 		workspaceId
 	});
+}
+
+export async function getWorktreeEligibility(workspaceId: string): Promise<WorktreeEligibilityResult> {
+	const client = await createBackendClient();
+	return client.request<WorktreeEligibilityResult>("workspace.worktree.eligibility.get", { workspaceId });
 }
 
 export async function updateWorkspace(params: UpdateWorkspaceParams): Promise<WorkspaceConfig> {

@@ -1,8 +1,9 @@
 import type { SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
-import type {
-	WorkspaceTreeOrderPreferences,
-	WorkspaceTreeSectionKey
-} from "@/platform/rpc/workspace-api";
+
+function getSessionProjectWorkspaceId(session: SessionMetadata): string | undefined {
+	return session.worktree?.sourceWorkspaceId ?? session.workspaceId;
+}
+import type { WorkspaceTreeOrderPreferences, WorkspaceTreeSectionKey } from "@/platform/rpc/workspace-api";
 
 export type WorkspaceTreeDropPlacement = "before" | "after";
 export type WorkspaceTreeSortableNode = {
@@ -49,34 +50,23 @@ export function reconcileWorkspaceTreeOrder(
 	const expandedWorkspaceIdSet: ReadonlySet<string> = new Set(preferences.expandedWorkspaceIds);
 	const workspaceIdSet: ReadonlySet<string> = new Set(workspaceIds);
 	const pinnedSessionIds: string[] = mergeSavedOrder(
-		sessions
-			.filter((session: SessionMetadata): boolean => session.temporary !== true && session.pinned === true)
-			.map((session: SessionMetadata): string => session.id),
+		sessions.filter((session: SessionMetadata): boolean => session.temporary !== true && session.pinned === true).map((session: SessionMetadata): string => session.id),
 		preferences.pinnedSessionIds
 	);
 	const recentSessionIds: string[] = mergeSavedOrder(
 		sessions
 			.filter((session: SessionMetadata): boolean => {
-				return session.temporary !== true
-					&& session.pinned !== true
-					&& (session.workspaceId === undefined || !workspaceIdSet.has(session.workspaceId));
+				return session.temporary !== true && session.pinned !== true && (getSessionProjectWorkspaceId(session) === undefined || !workspaceIdSet.has(getSessionProjectWorkspaceId(session)!));
 			})
 			.map((session: SessionMetadata): string => session.id),
 		preferences.recentSessionIds
 	);
-	const currentSessionIdsByWorkspace: Record<string, string[]> = Object.fromEntries(
-		workspaceIds.map((workspaceId: string): [string, string[]] => [workspaceId, []])
-	);
+	const currentSessionIdsByWorkspace: Record<string, string[]> = Object.fromEntries(workspaceIds.map((workspaceId: string): [string, string[]] => [workspaceId, []]));
 	for (const session of sessions) {
-		if (
-			session.temporary === true
-			|| session.pinned === true
-			|| session.workspaceId === undefined
-			|| !workspaceIdSet.has(session.workspaceId)
-		) {
+		if (session.temporary === true || session.pinned === true || getSessionProjectWorkspaceId(session) === undefined || !workspaceIdSet.has(getSessionProjectWorkspaceId(session)!)) {
 			continue;
 		}
-		currentSessionIdsByWorkspace[session.workspaceId]!.push(session.id);
+		currentSessionIdsByWorkspace[getSessionProjectWorkspaceId(session)!]!.push(session.id);
 	}
 
 	const sessionIdsByWorkspace: Record<string, string[]> = {};
@@ -217,53 +207,32 @@ export function moveSectionSessionInTreeOrder(
 	targetSessionId: string,
 	placement: WorkspaceTreeDropPlacement
 ): WorkspaceTreeOrderPreferences {
-	const orderKey: "pinnedSessionIds" | "recentSessionIds" = sectionKey === "pinned"
-		? "pinnedSessionIds"
-		: "recentSessionIds";
+	const orderKey: "pinnedSessionIds" | "recentSessionIds" = sectionKey === "pinned" ? "pinnedSessionIds" : "recentSessionIds";
 	return {
 		...preferences,
-		[orderKey]: moveId(
-			preferences[orderKey],
-			draggedSessionId,
-			targetSessionId,
-			placement
-		)
+		[orderKey]: moveId(preferences[orderKey], draggedSessionId, targetSessionId, placement)
 	};
 }
 
-export function sortSessionsByTreeOrder(
-	sessions: readonly SessionMetadata[],
-	sessionIds: readonly string[]
-): SessionMetadata[] {
-	const byId: ReadonlyMap<string, SessionMetadata> = new Map(
-		sessions.map((session: SessionMetadata): [string, SessionMetadata] => [session.id, session])
-	);
+export function sortSessionsByTreeOrder(sessions: readonly SessionMetadata[], sessionIds: readonly string[]): SessionMetadata[] {
+	const byId: ReadonlyMap<string, SessionMetadata> = new Map(sessions.map((session: SessionMetadata): [string, SessionMetadata] => [session.id, session]));
 	return sessionIds.flatMap((sessionId: string): SessionMetadata[] => {
 		const session: SessionMetadata | undefined = byId.get(sessionId);
 		return session === undefined ? [] : [session];
 	});
 }
 
-export function sortWorkspacesByTreeOrder(
-	workspaces: readonly WorkspaceConfig[],
-	preferences: WorkspaceTreeOrderPreferences
-): WorkspaceConfig[] {
-	const byId: ReadonlyMap<string, WorkspaceConfig> = new Map(
-		workspaces.map((workspace: WorkspaceConfig): [string, WorkspaceConfig] => [workspace.id, workspace])
-	);
+export function sortWorkspacesByTreeOrder(workspaces: readonly WorkspaceConfig[], preferences: WorkspaceTreeOrderPreferences): WorkspaceConfig[] {
+	const byId: ReadonlyMap<string, WorkspaceConfig> = new Map(workspaces.map((workspace: WorkspaceConfig): [string, WorkspaceConfig] => [workspace.id, workspace]));
 	return preferences.workspaceIds.flatMap((workspaceId: string): WorkspaceConfig[] => {
 		const workspace: WorkspaceConfig | undefined = byId.get(workspaceId);
 		return workspace === undefined ? [] : [workspace];
 	});
 }
 
-export function sortWorkspaceSessionsByTreeOrder(
-	sessions: readonly SessionMetadata[],
-	workspaceId: string,
-	preferences: WorkspaceTreeOrderPreferences
-): SessionMetadata[] {
+export function sortWorkspaceSessionsByTreeOrder(sessions: readonly SessionMetadata[], workspaceId: string, preferences: WorkspaceTreeOrderPreferences): SessionMetadata[] {
 	return sortSessionsByTreeOrder(
-		sessions.filter((session: SessionMetadata): boolean => session.workspaceId === workspaceId),
+		sessions.filter((session: SessionMetadata): boolean => getSessionProjectWorkspaceId(session) === workspaceId),
 		preferences.sessionIdsByWorkspace[workspaceId] ?? []
 	);
 }

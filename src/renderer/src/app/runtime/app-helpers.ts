@@ -58,6 +58,7 @@ export type HomeDraft = {
 	modelId: string | null;
 	reasoningEffort: string;
 	workspaceLaunch: WorkspaceLaunchTargetId;
+	executionEnvironment: "local" | "worktree";
 };
 
 export const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
@@ -116,7 +117,16 @@ export function getPendingApprovalCount(workbench: WorkbenchSnapshot | null): nu
 }
 
 export function createHomeDraft(): HomeDraft {
-	return { workspaceId: null, workspace: null, chatMode: "agent", providerId: null, modelId: null, reasoningEffort: "medium", workspaceLaunch: DEFAULT_WORKSPACE_LAUNCH_TARGET_ID };
+	return {
+		workspaceId: null,
+		workspace: null,
+		chatMode: "agent",
+		providerId: null,
+		modelId: null,
+		reasoningEffort: "medium",
+		workspaceLaunch: DEFAULT_WORKSPACE_LAUNCH_TARGET_ID,
+		executionEnvironment: "local"
+	};
 }
 
 export function findProviderModel(selection: ProviderModelSelection | null, providerId: string | null, modelId: string | null): ProviderModelInfo | null {
@@ -156,8 +166,20 @@ export function findPreferredComposerModel(preferences: ClientPreferences, selec
 	return firstProvider !== undefined && firstModelId !== undefined ? { providerId: firstProvider.provider, modelId: firstModelId } : null;
 }
 
-export function createPreferredHomeDraft(preferences: ClientPreferences, selection: ProviderModelSelection | null, workspace: WorkspaceConfig | null = null): HomeDraft {
-	const draft: HomeDraft = { ...createHomeDraft(), chatMode: preferences.newSessionComposer.mode, reasoningEffort: preferences.newSessionComposer.reasoningEffort, workspaceId: workspace?.id ?? null, workspace };
+export function createPreferredHomeDraft(
+	preferences: ClientPreferences,
+	selection: ProviderModelSelection | null,
+	workspace: WorkspaceConfig | null = null,
+	executionEnvironment: "local" | "worktree" = "local"
+): HomeDraft {
+	const draft: HomeDraft = {
+		...createHomeDraft(),
+		chatMode: preferences.newSessionComposer.mode,
+		reasoningEffort: preferences.newSessionComposer.reasoningEffort,
+		workspaceId: workspace?.id ?? null,
+		workspace,
+		executionEnvironment
+	};
 	const preferredModel = findPreferredComposerModel(preferences, selection);
 	if (preferredModel === null) return draft;
 	return {
@@ -189,24 +211,56 @@ export function getDisplayedComposerModel(params: {
 	const fallbackProviderId: string | null = params.providerModelSelection?.activeModel.providerId ?? null;
 	const fallbackModelId: string | null = params.providerModelSelection?.activeModel.modelId ?? null;
 	return params.isNewSessionHome
-		? { providerId: params.homeDraft.providerId ?? fallbackProviderId, modelId: params.homeDraft.modelId ?? fallbackModelId }
+		? {
+				providerId: params.homeDraft.providerId ?? fallbackProviderId,
+				modelId: params.homeDraft.modelId ?? fallbackModelId
+			}
 		: params.firstTurnModelTransition !== null && params.firstTurnModelTransition !== undefined
 			? params.firstTurnModelTransition
-			: { providerId: params.workbench?.composer.provider ?? params.activeSessionMetadata?.provider ?? fallbackProviderId, modelId: params.workbench?.composer.model ?? params.activeSessionMetadata?.model ?? fallbackModelId };
+			: {
+					providerId: params.workbench?.composer.provider ?? params.activeSessionMetadata?.provider ?? fallbackProviderId,
+					modelId: params.workbench?.composer.model ?? params.activeSessionMetadata?.model ?? fallbackModelId
+				};
 }
 
-export function createWorkspaceFromSessionMetadata(metadata: SessionMetadata, workbench: WorkbenchSnapshot): WorkspaceConfig | null {
+export function createWorkspaceFromSessionMetadata(metadata: SessionMetadata, workbench: WorkbenchSnapshot, sourceWorkspace?: WorkspaceConfig | undefined): WorkspaceConfig | null {
+	if (metadata.worktree !== undefined && sourceWorkspace?.id === metadata.worktree.sourceWorkspaceId) {
+		const pathsBySourceId: ReadonlyMap<string, string> = new Map(metadata.worktree.sources.map((source): [string, string] => [source.sourceFolderId, source.worktreePath]));
+		const sourceFolders = sourceWorkspace.sourceFolders.flatMap((source) => {
+			const worktreePath: string | undefined = pathsBySourceId.get(source.id);
+			return worktreePath === undefined ? [] : [{ ...source, path: worktreePath }];
+		});
+		const primary = sourceFolders.find((source): boolean => source.id === sourceWorkspace.primarySourceFolderId);
+		if (primary !== undefined && sourceFolders.length === sourceWorkspace.sourceFolders.length) {
+			return {
+				...sourceWorkspace,
+				id: metadata.worktree.runtimeWorkspaceId,
+				rootPath: primary.path,
+				sourceFolders
+			};
+		}
+	}
 	if (metadata.workspaceId !== undefined && metadata.workspaceRoot !== undefined) {
-		return createSingleSourceWorkspaceSnapshot({ id: metadata.workspaceId, name: metadata.workspaceName ?? metadata.title, kind: metadata.workspaceKind ?? "godot", rootPath: metadata.workspaceRoot, godotExecutablePath: metadata.godotExecutablePath });
+		return createSingleSourceWorkspaceSnapshot({
+			id: metadata.workspaceId,
+			name: metadata.workspaceName ?? metadata.title,
+			kind: metadata.workspaceKind ?? "godot",
+			rootPath: metadata.workspaceRoot,
+			godotExecutablePath: metadata.godotExecutablePath
+		});
 	}
 	const selection = workbench.activeSelection;
 	return typeof selection.workspaceId === "string" && typeof selection.workspaceRoot === "string"
-		? createSingleSourceWorkspaceSnapshot({ id: selection.workspaceId, name: typeof selection.workspaceName === "string" && selection.workspaceName.length > 0 ? selection.workspaceName : metadata.title, rootPath: selection.workspaceRoot })
+		? createSingleSourceWorkspaceSnapshot({
+				id: selection.workspaceId,
+				name: typeof selection.workspaceName === "string" && selection.workspaceName.length > 0 ? selection.workspaceName : metadata.title,
+				rootPath: selection.workspaceRoot
+			})
 		: null;
 }
 
-export function createWorkspaceFromSessionOpenResult(result: SessionOpenResult): WorkspaceConfig | null {
-	return createWorkspaceFromSessionMetadata(result.metadata, result.workbench);
+export function createWorkspaceFromSessionOpenResult(result: SessionOpenResult, sourceWorkspace?: WorkspaceConfig | undefined): WorkspaceConfig | null {
+	return createWorkspaceFromSessionMetadata(result.metadata, result.workbench, sourceWorkspace);
 }
 
 export function createWorkflowTodoSnapshotFromTimelineResult(result: { latestAgentSnapshot: unknown | null; latestWorkflowSnapshot: unknown | null }): WorkflowTodoSnapshot | null {
@@ -230,7 +284,12 @@ export function createOptimisticUserBlock(requestId: string, message: string, ad
 		content: message,
 		sentAtUtc: new Date().toISOString(),
 		additionalContext,
-		renderHints: { estimatedHeight: Math.max(96, Math.min(320, contentChars * 0.42) + (additionalContext.length > 0 ? 34 : 0)), contentChars, bodyPartCount: 1, heavyPartCount: 0 }
+		renderHints: {
+			estimatedHeight: Math.max(96, Math.min(320, contentChars * 0.42) + (additionalContext.length > 0 ? 34 : 0)),
+			contentChars,
+			bodyPartCount: 1,
+			heavyPartCount: 0
+		}
 	};
 }
 
@@ -256,12 +315,25 @@ export function mergeOptimisticUserBlocks(currentPage: TimelinePageState, nextPa
 	for (const optimisticBlock of missingOptimisticUserBlocks.values()) {
 		blocks = insertUserBlockBeforeRequestAssistant(blocks, optimisticBlock);
 	}
-	return { ...nextPage, sessionId: currentPage.sessionId ?? nextPage.sessionId, blocks, blockCount: nextPage.blockCount + missingOptimisticUserBlocks.size, hasMoreAfter: false };
+	return {
+		...nextPage,
+		sessionId: currentPage.sessionId ?? nextPage.sessionId,
+		blocks,
+		blockCount: nextPage.blockCount + missingOptimisticUserBlocks.size,
+		hasMoreAfter: false
+	};
 }
 
 export function trimTimelineFromRequest(page: TimelinePageState, requestId: string): TimelinePageState {
 	const firstIndex: number = page.blocks.findIndex((block): boolean => block.requestId === requestId);
-	return firstIndex < 0 ? page : { ...page, blocks: page.blocks.slice(0, firstIndex), blockCount: Math.max(0, page.blockCount - (page.blocks.length - firstIndex)), hasMoreAfter: false };
+	return firstIndex < 0
+		? page
+		: {
+				...page,
+				blocks: page.blocks.slice(0, firstIndex),
+				blockCount: Math.max(0, page.blockCount - (page.blocks.length - firstIndex)),
+				hasMoreAfter: false
+			};
 }
 
 export function getSessionSortTime(session: SessionMetadata): number {

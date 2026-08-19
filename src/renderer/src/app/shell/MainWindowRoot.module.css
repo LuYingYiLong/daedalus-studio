@@ -25,12 +25,12 @@
 }
 
 .appPreparing {
-	opacity: .001;
+	opacity: 0.001;
 	pointer-events: none;
 }
 
 .appEnter {
-	animation: app-enter 160ms cubic-bezier(.22, .61, .36, 1) both;
+	animation: app-enter 160ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
 	transform-origin: center top;
 	will-change: opacity, transform;
 }

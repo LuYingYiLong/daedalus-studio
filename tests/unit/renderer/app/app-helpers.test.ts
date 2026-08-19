@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	createHomeDraft,
+	createWorkspaceFromSessionMetadata,
 	getChatOutputTarget,
 	getDisplayedComposerModel,
 	getSessionSortTime,
@@ -31,7 +32,12 @@ function userBlock(requestId: string, id: string = requestId): TimelineBlock {
 		content: requestId,
 		sentAtUtc: "2026-08-08T00:00:00.000Z",
 		additionalContext: [],
-		renderHints: { estimatedHeight: 96, contentChars: requestId.length, bodyPartCount: 1, heavyPartCount: 0 }
+		renderHints: {
+			estimatedHeight: 96,
+			contentChars: requestId.length,
+			bodyPartCount: 1,
+			heavyPartCount: 0
+		}
 	};
 }
 
@@ -62,6 +68,69 @@ describe("app helpers", () => {
 
 	it("defaults new session workspace launches to File Explorer", () => {
 		expect(createHomeDraft().workspaceLaunch).toBe("file-explorer");
+		expect(createHomeDraft().executionEnvironment).toBe("local");
+	});
+
+	it("reconstructs every source folder from worktree session metadata", () => {
+		const sourceWorkspace = {
+			id: "workspace-source",
+			name: "Source project",
+			kind: "godot",
+			rootPath: "D:/source/main",
+			icon: 0,
+			color: 0,
+			primarySourceFolderId: "main",
+			sourceFolders: [
+				{
+					id: "main",
+					path: "D:/source/main",
+					capabilities: { git: true, godot: true }
+				},
+				{
+					id: "tools",
+					path: "D:/source/tools",
+					capabilities: { git: true, godot: false }
+				}
+			]
+		} as const;
+		const workspace = createWorkspaceFromSessionMetadata(
+			{
+				id: "session-worktree",
+				title: "Worktree",
+				workspaceId: "worktree-session-worktree",
+				createdAt: "",
+				updatedAt: "",
+				worktree: {
+					id: "managed-session-worktree",
+					sourceWorkspaceId: "workspace-source",
+					sourceWorkspaceName: "Source project",
+					runtimeWorkspaceId: "worktree-session-worktree",
+					createdAt: "2026-08-19T00:00:00.000Z",
+					sources: [
+						{
+							sourceFolderId: "main",
+							sourcePath: "D:/source/main",
+							worktreePath: "D:/managed/main",
+							baseCommit: "a",
+							baseRef: "main"
+						},
+						{
+							sourceFolderId: "tools",
+							sourcePath: "D:/source/tools",
+							worktreePath: "D:/managed/tools",
+							baseCommit: "b",
+							baseRef: "main"
+						}
+					]
+				}
+			},
+			{} as never,
+			sourceWorkspace as never
+		);
+
+		expect(workspace?.id).toBe("worktree-session-worktree");
+		expect(workspace?.rootPath).toBe("D:/managed/main");
+		expect(workspace?.sourceFolders.map((source) => source.path)).toEqual(["D:/managed/main", "D:/managed/tools"]);
 	});
 
 	it("keeps the NewSessionHome model authoritative while a temporary session exists", () => {
@@ -149,7 +218,17 @@ describe("app helpers", () => {
 	});
 
 	it("falls back to a stable timestamp for session sorting", () => {
-		expect(getSessionSortTime({ createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-02T00:00:00.000Z" } as never)).toBe(Date.parse("2026-08-02T00:00:00.000Z"));
-		expect(getSessionSortTime({ createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "invalid" } as never)).toBe(Date.parse("2026-08-01T00:00:00.000Z"));
+		expect(
+			getSessionSortTime({
+				createdAt: "2026-08-01T00:00:00.000Z",
+				updatedAt: "2026-08-02T00:00:00.000Z"
+			} as never)
+		).toBe(Date.parse("2026-08-02T00:00:00.000Z"));
+		expect(
+			getSessionSortTime({
+				createdAt: "2026-08-01T00:00:00.000Z",
+				updatedAt: "invalid"
+			} as never)
+		).toBe(Date.parse("2026-08-01T00:00:00.000Z"));
 	});
 });

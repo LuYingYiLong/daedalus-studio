@@ -267,7 +267,9 @@
 			"copySessionId": "Copy session ID",
 			"exportSession": "Export session data",
 			"delete": "Delete",
-			"newSessionInWorkspace": "New session in workspace"
+			"newSessionInWorkspace": "New session in workspace",
+			"newWorktreeSession": "New session in worktree",
+			"deleteWorktree": "Delete worktree"
 		},
 		"aria": {
 			"archiveSession": "Archive {{sessionTitle}}",
@@ -291,7 +293,8 @@
 		"status": {
 			"assistantRunning": "Assistant is responding",
 			"unreadResponse": "Unread assistant response",
-			"exportingSession": "Exporting session…"
+			"exportingSession": "Exporting session…",
+			"worktreeSession": "Worktree session"
 		},
 		"messages": {
 			"sessionIdCopied": "Session ID copied",
@@ -307,6 +310,8 @@
 			"copySessionId": "Failed to copy session ID",
 			"exportSession": "Failed to export session data",
 			"deleteWorkspace": "Failed to delete workspace",
+			"deleteWorktree": "Failed to delete worktree",
+			"worktreeTerminalActive": "Close active terminals in this worktree session before deleting it.",
 			"loadWorkspace": "Failed to load workspace",
 			"openSessionDirectory": "Failed to open session directory",
 			"openWorkspaceDirectory": "Failed to open workspace directory",
@@ -316,6 +321,10 @@
 			"sessionTitleCannotBeEmpty": "Session title cannot be empty."
 		},
 		"modals": {
+			"deleteWorktree": {
+				"title": "Delete worktree?",
+				"body": "The worktree can be deleted only when it is clean, has no active task or terminal, and has no new commits that are not saved to a branch. Conversation history is kept and rebound to the source project."
+			},
 			"deleteWorkspace": {
 				"title": "Delete workspace?",
 				"body": "Delete {{workspaceName}} from Daedalus? Project files will not be deleted.",
@@ -327,6 +336,10 @@
 		}
 	},
 	"agentPage": {
+		"worktree": {
+			"label": "Worktree",
+			"source": "Source: {{workspace}}"
+		},
 		"actions": {
 			"newSession": "New session",
 			"openSettings": "Open settings",
@@ -408,6 +421,20 @@
 		}
 	},
 	"composer": {
+		"worktree": {
+			"local": "Local",
+			"managed": "Worktree",
+			"preparing": "Creating worktree…",
+			"unavailable": "This workspace is not eligible for worktrees",
+			"reasons": {
+				"source_missing": "A source folder does not exist",
+				"not_repository_root": "Each source folder must be exactly a Git repository root",
+				"head_unavailable": "A Git repository has no usable HEAD",
+				"dirty": "A Git repository has uncommitted or untracked files",
+				"duplicate_repository": "Each source folder must belong to a different Git repository",
+				"git_unavailable": "A source folder is not a usable Git repository"
+			}
+		},
 		"placeholders": {
 			"ask": "Ask a question or explore an idea",
 			"agent": "Describe what you want me to inspect, change, or run",

@@ -13,15 +13,64 @@ import {
 } from "@/domain/workspace/workspace-tree-order";
 
 const WORKSPACES: WorkspaceConfig[] = [
-	{ id: "workspace-a", name: "A", kind: "godot", rootPath: "D:/A", icon: 0, color: 0, sourceFolders: [], primarySourceFolderId: "" },
-	{ id: "workspace-b", name: "B", kind: "godot", rootPath: "D:/B", icon: 0, color: 0, sourceFolders: [], primarySourceFolderId: "" }
+	{
+		id: "workspace-a",
+		name: "A",
+		kind: "godot",
+		rootPath: "D:/A",
+		icon: 0,
+		color: 0,
+		sourceFolders: [],
+		primarySourceFolderId: ""
+	},
+	{
+		id: "workspace-b",
+		name: "B",
+		kind: "godot",
+		rootPath: "D:/B",
+		icon: 0,
+		color: 0,
+		sourceFolders: [],
+		primarySourceFolderId: ""
+	}
 ];
 const SESSIONS: SessionMetadata[] = [
-	{ id: "session-a-new", title: "A new", workspaceId: "workspace-a", createdAt: "", updatedAt: "" },
-	{ id: "session-b", title: "B", workspaceId: "workspace-b", createdAt: "", updatedAt: "" },
-	{ id: "session-a-old", title: "A old", workspaceId: "workspace-a", createdAt: "", updatedAt: "" },
-	{ id: "session-pinned", title: "Pinned", workspaceId: "workspace-a", pinned: true, createdAt: "", updatedAt: "" },
-	{ id: "session-pinned-2", title: "Pinned 2", pinned: true, createdAt: "", updatedAt: "" },
+	{
+		id: "session-a-new",
+		title: "A new",
+		workspaceId: "workspace-a",
+		createdAt: "",
+		updatedAt: ""
+	},
+	{
+		id: "session-b",
+		title: "B",
+		workspaceId: "workspace-b",
+		createdAt: "",
+		updatedAt: ""
+	},
+	{
+		id: "session-a-old",
+		title: "A old",
+		workspaceId: "workspace-a",
+		createdAt: "",
+		updatedAt: ""
+	},
+	{
+		id: "session-pinned",
+		title: "Pinned",
+		workspaceId: "workspace-a",
+		pinned: true,
+		createdAt: "",
+		updatedAt: ""
+	},
+	{
+		id: "session-pinned-2",
+		title: "Pinned 2",
+		pinned: true,
+		createdAt: "",
+		updatedAt: ""
+	},
 	{ id: "session-recent", title: "Recent", createdAt: "", updatedAt: "" },
 	{ id: "session-recent-2", title: "Recent 2", createdAt: "", updatedAt: "" }
 ];
@@ -146,12 +195,35 @@ describe("workspace tree order", (): void => {
 				"workspace-b": ["session-b"]
 			}
 		});
-		expect(sortWorkspacesByTreeOrder(WORKSPACES, preferences).map((workspace): string => workspace.id))
-			.toEqual(["workspace-b", "workspace-a"]);
-		expect(sortWorkspaceSessionsByTreeOrder(SESSIONS, "workspace-a", preferences).map((session): string => session.id))
-			.toEqual(["session-a-old", "session-a-new"]);
-		expect(sortSessionsByTreeOrder(SESSIONS, preferences.pinnedSessionIds).map((session): string => session.id))
-			.toEqual(["session-pinned", "session-pinned-2"]);
+		expect(sortWorkspacesByTreeOrder(WORKSPACES, preferences).map((workspace): string => workspace.id)).toEqual(["workspace-b", "workspace-a"]);
+		expect(sortWorkspaceSessionsByTreeOrder(SESSIONS, "workspace-a", preferences).map((session): string => session.id)).toEqual(["session-a-old", "session-a-new"]);
+		expect(sortSessionsByTreeOrder(SESSIONS, preferences.pinnedSessionIds).map((session): string => session.id)).toEqual(["session-pinned", "session-pinned-2"]);
 		expect(WORKSPACES.map((workspace): string => workspace.id)).toEqual(["workspace-a", "workspace-b"]);
+	});
+
+	it("groups worktree sessions under their source workspace", (): void => {
+		const worktreeSession: SessionMetadata = {
+			id: "session-worktree",
+			title: "Worktree",
+			workspaceId: "worktree-session-worktree",
+			createdAt: "",
+			updatedAt: "",
+			worktree: {
+				id: "managed-session-worktree",
+				sourceWorkspaceId: "workspace-a",
+				sourceWorkspaceName: "A",
+				runtimeWorkspaceId: "worktree-session-worktree",
+				sources: [],
+				createdAt: "2026-08-19T00:00:00.000Z"
+			}
+		};
+		const preferences = order({
+			sessionIdsByWorkspace: {
+				"workspace-a": ["session-worktree", "session-a-new", "session-a-old"],
+				"workspace-b": ["session-b"]
+			}
+		});
+
+		expect(sortWorkspaceSessionsByTreeOrder([...SESSIONS, worktreeSession], "workspace-a", preferences).map((session): string => session.id)).toContain("session-worktree");
 	});
 });

@@ -537,6 +537,11 @@
 	white-space: nowrap;
 }
 
+.workspaceFooterControls {
+	min-width: 0;
+	overflow: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.composerRootFloating,
 	.composerRootFloating .composerSurface,

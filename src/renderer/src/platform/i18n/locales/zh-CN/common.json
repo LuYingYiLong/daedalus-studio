@@ -265,7 +265,9 @@
 			"copySessionId": "复制会话 ID",
 			"exportSession": "导出会话数据",
 			"delete": "删除",
-			"newSessionInWorkspace": "在 workspace 中新建会话"
+			"newSessionInWorkspace": "在 workspace 中新建会话",
+			"newWorktreeSession": "在新工作树中创建会话",
+			"deleteWorktree": "删除工作树"
 		},
 		"aria": {
 			"archiveSession": "归档 {{sessionTitle}}",
@@ -289,7 +291,8 @@
 		"status": {
 			"assistantRunning": "助手正在响应",
 			"unreadResponse": "未读助手响应",
-			"exportingSession": "正在导出会话…"
+			"exportingSession": "正在导出会话…",
+			"worktreeSession": "工作树会话"
 		},
 		"messages": {
 			"sessionIdCopied": "已复制会话 ID",
@@ -305,6 +308,8 @@
 			"copySessionId": "复制会话 ID 失败",
 			"exportSession": "导出会话数据失败",
 			"deleteWorkspace": "删除 workspace 失败",
+			"deleteWorktree": "删除工作树失败",
+			"worktreeTerminalActive": "请先关闭这个工作树会话中的活动终端。",
 			"loadWorkspace": "加载 workspace 失败",
 			"openSessionDirectory": "打开会话目录失败",
 			"openWorkspaceDirectory": "打开 workspace 目录失败",
@@ -314,6 +319,10 @@
 			"sessionTitleCannotBeEmpty": "会话标题不能为空。"
 		},
 		"modals": {
+			"deleteWorktree": {
+				"title": "删除工作树？",
+				"body": "只有工作树干净、没有活动任务或终端，且没有未保存到分支的新提交时才能删除。会话历史会保留，并重新绑定到来源项目。"
+			},
 			"deleteWorkspace": {
 				"sessionPolicy": "会话会尽量迁移到匹配的其他项目；无法匹配的会话将被永久删除。",
 				"title": "删除 workspace？",
@@ -325,6 +334,10 @@
 		}
 	},
 	"agentPage": {
+		"worktree": {
+			"label": "工作树",
+			"source": "来源：{{workspace}}"
+		},
 		"actions": {
 			"newSession": "新建会话",
 			"openSettings": "打开设置",
@@ -406,6 +419,20 @@
 		}
 	},
 	"composer": {
+		"worktree": {
+			"local": "本地",
+			"managed": "工作树",
+			"preparing": "正在创建工作树…",
+			"unavailable": "当前 workspace 不满足工作树要求",
+			"reasons": {
+				"source_missing": "源文件夹不存在",
+				"not_repository_root": "源文件夹必须正好是 Git 仓库根目录",
+				"head_unavailable": "Git 仓库没有可用的 HEAD",
+				"dirty": "Git 仓库存在未提交或未跟踪的文件",
+				"duplicate_repository": "每个源文件夹必须属于不同的 Git 仓库",
+				"git_unavailable": "源文件夹不是可用的 Git 仓库"
+			}
+		},
 		"placeholders": {
 			"ask": "问我一个问题，或一起探索一个想法",
 			"agent": "描述需要我检查、修改或执行的内容",

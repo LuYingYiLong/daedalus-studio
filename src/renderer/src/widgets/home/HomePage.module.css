@@ -230,6 +230,15 @@
 	pointer-events: auto;
 }
 
+.worktreeBadge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	flex: 0 0 auto;
+	color: var(--ant-color-text-secondary);
+	font-size: 12px;
+}
+
 .floatingActions > :global(.ant-btn) {
 	display: inline-flex;
 	align-items: center;

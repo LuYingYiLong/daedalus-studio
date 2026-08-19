@@ -58,7 +58,7 @@ function App({ bootstrapData, onReady }: AppProps): React.JSX.Element {
 		onFullTrustConfirmationTextChange,
 		workspaceProjectDialogOpen,
 		onWorkspaceProjectDialogCancel,
-		onWorkspaceProjectSaved
+		onWorkspaceProjectSaved,
 	}: AppViewModel = useAppController({ bootstrapData });
 
 	useEffect((): (() => void) => {
@@ -85,26 +85,39 @@ function App({ bootstrapData, onReady }: AppProps): React.JSX.Element {
 				cancelText={fullTrustCancelLabel}
 				okButtonProps={{
 					danger: true,
-					disabled: fullTrustConfirmationText !== fullTrustConfirmationToken
+					disabled:
+						fullTrustConfirmationText !==
+						fullTrustConfirmationToken,
 				}}
 				confirmLoading={isApprovalModeSaving}
 				onOk={onFullTrustConfirm}
 				onCancel={onFullTrustCancel}
 			>
-				<Typography.Paragraph>{fullTrustDescription}</Typography.Paragraph>
+				<Typography.Paragraph>
+					{fullTrustDescription}
+				</Typography.Paragraph>
 				<Typography.Paragraph type="secondary">
 					{fullTrustConfirmationPrefix}{" "}
-					<Typography.Text code>{fullTrustConfirmationToken}</Typography.Text>{" "}
+					<Typography.Text code>
+						{fullTrustConfirmationToken}
+					</Typography.Text>{" "}
 					{fullTrustConfirmationSuffix}
 				</Typography.Paragraph>
 				<Input
 					value={fullTrustConfirmationText}
 					placeholder={fullTrustConfirmationToken}
 					disabled={isApprovalModeSaving}
-					onChange={(event): void => onFullTrustConfirmationTextChange(event.target.value)}
+					onChange={(event): void =>
+						onFullTrustConfirmationTextChange(event.target.value)
+					}
 					onPressEnter={(): void => {
-						if (fullTrustConfirmationText !== fullTrustConfirmationToken) {
-							fullTrustConfirmationError(fullTrustConfirmationToken);
+						if (
+							fullTrustConfirmationText !==
+							fullTrustConfirmationToken
+						) {
+							fullTrustConfirmationError(
+								fullTrustConfirmationToken,
+							);
 						}
 					}}
 				/>

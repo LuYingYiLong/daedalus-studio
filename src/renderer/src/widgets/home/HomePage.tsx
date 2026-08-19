@@ -449,23 +449,28 @@ type HomePageProps = {
 	forkingRequestId: string | null;
 	forkDisabled: boolean;
 	homeWorkspace: WorkspaceConfig | null;
+	homeExecutionEnvironment: "local" | "worktree";
+	worktreeDisabledReason: string | null;
+	isWorktreePreparing: boolean;
 	workspaceFooterDisabled: boolean;
 	activeWorkspace: WorkspaceConfig | null;
 	godotLaunchExecutablePath: string | null;
 	workspaceLaunchPreference: WorkspaceLaunchTargetId;
 	onNewSession: () => void;
 	onNewUnboundSession: () => void;
-	onNewWorkspaceSession: (workspace: WorkspaceConfig) => void;
+	onNewWorkspaceSession: (workspace: WorkspaceConfig, environment?: "local" | "worktree") => void;
 	onWorkspaceRefresh: () => void;
 	onHomeWorkspaceSelect: (workspaceId: string) => void;
 	onHomeWorkspaceAdd: () => void;
 	onHomeWorkspaceClear: () => void;
+	onHomeExecutionEnvironmentChange: (environment: "local" | "worktree") => void;
 	onSessionSelect: (session: SessionMetadata) => void;
 	onSessionFork: (session: SessionMetadata) => void;
 	onForkFromUserMessage: (requestId: string) => Promise<void>;
 	onForkSourceOpen: (sessionId: string) => Promise<void>;
 	onSessionArchive: (session: SessionMetadata, context: SessionArchiveContext) => void;
 	onSessionRename: (session: SessionMetadata) => void;
+	onSessionWorktreeDelete: (session: SessionMetadata) => Promise<SessionMetadata>;
 	onSessionsChange: (sessions: SessionMetadata[]) => void;
 	onWorkspaceDelete: (result: DeleteWorkspaceResult) => void;
 	onWorkspaceUpdate: (workspace: WorkspaceConfig) => void;
@@ -585,6 +590,9 @@ function HomePage({
 	forkingRequestId,
 	forkDisabled,
 	homeWorkspace,
+	homeExecutionEnvironment,
+	worktreeDisabledReason,
+	isWorktreePreparing,
 	workspaceFooterDisabled,
 	activeWorkspace,
 	godotLaunchExecutablePath,
@@ -596,12 +604,14 @@ function HomePage({
 	onHomeWorkspaceSelect,
 	onHomeWorkspaceAdd,
 	onHomeWorkspaceClear,
+	onHomeExecutionEnvironmentChange,
 	onSessionSelect,
 	onSessionFork,
 	onForkFromUserMessage,
 	onForkSourceOpen,
 	onSessionArchive,
 	onSessionRename,
+	onSessionWorktreeDelete,
 	onSessionsChange,
 	onWorkspaceDelete,
 	onWorkspaceUpdate,
@@ -893,63 +903,82 @@ function HomePage({
 		return [...byId.values()];
 	}, [contextItems, messageQueue]);
 
-	const updateSideDock = useCallback((
-		nextSideLayout: DockLayoutPreferences,
-		persist: boolean = true
-	): void => {
-		commitSessionLayout({
-			...visualSessionLayoutRef.current,
-			side: nextSideLayout
-		}, persist);
-	}, [commitSessionLayout]);
+	const updateSideDock = useCallback(
+		(nextSideLayout: DockLayoutPreferences, persist: boolean = true): void => {
+			commitSessionLayout(
+				{
+					...visualSessionLayoutRef.current,
+					side: nextSideLayout
+				},
+				persist
+			);
+		},
+		[commitSessionLayout]
+	);
 
-	const updateBottomDock = useCallback((
-		nextBottomLayout: DockLayoutPreferences,
-		persist: boolean = true
-	): void => {
-		commitSessionLayout({
-			...visualSessionLayoutRef.current,
-			bottom: nextBottomLayout
-		}, persist);
-	}, [commitSessionLayout]);
+	const updateBottomDock = useCallback(
+		(nextBottomLayout: DockLayoutPreferences, persist: boolean = true): void => {
+			commitSessionLayout(
+				{
+					...visualSessionLayoutRef.current,
+					bottom: nextBottomLayout
+				},
+				persist
+			);
+		},
+		[commitSessionLayout]
+	);
 
-	const updateFilePanel = useCallback((panelKey: string, nextFilePanel: FilePanelLayoutPreferences | null): void => {
-		const nextFilePanels: Record<string, FilePanelLayoutPreferences> = { ...visualSessionLayoutRef.current.filePanels };
-		if (nextFilePanel === null) {
-			delete nextFilePanels[panelKey];
-		} else {
-			nextFilePanels[panelKey] = nextFilePanel;
-		}
-		commitSessionLayout({
-			...visualSessionLayoutRef.current,
-			filePanels: nextFilePanels
-		});
-	}, [commitSessionLayout]);
+	const updateFilePanel = useCallback(
+		(panelKey: string, nextFilePanel: FilePanelLayoutPreferences | null): void => {
+			const nextFilePanels: Record<string, FilePanelLayoutPreferences> = {
+				...visualSessionLayoutRef.current.filePanels
+			};
+			if (nextFilePanel === null) {
+				delete nextFilePanels[panelKey];
+			} else {
+				nextFilePanels[panelKey] = nextFilePanel;
+			}
+			commitSessionLayout({
+				...visualSessionLayoutRef.current,
+				filePanels: nextFilePanels
+			});
+		},
+		[commitSessionLayout]
+	);
 
-	const updateBrowserPanel = useCallback((panelKey: string, nextBrowserPanel: BrowserPanelLayoutPreferences | null): void => {
-		const nextBrowserPanels: Record<string, BrowserPanelLayoutPreferences> = { ...visualSessionLayoutRef.current.browserPanels };
-		if (nextBrowserPanel === null) {
-			delete nextBrowserPanels[panelKey];
-		} else {
-			nextBrowserPanels[panelKey] = nextBrowserPanel;
-		}
-		commitSessionLayout({
-			...visualSessionLayoutRef.current,
-			browserPanels: nextBrowserPanels
-		});
-	}, [commitSessionLayout]);
+	const updateBrowserPanel = useCallback(
+		(panelKey: string, nextBrowserPanel: BrowserPanelLayoutPreferences | null): void => {
+			const nextBrowserPanels: Record<string, BrowserPanelLayoutPreferences> = {
+				...visualSessionLayoutRef.current.browserPanels
+			};
+			if (nextBrowserPanel === null) {
+				delete nextBrowserPanels[panelKey];
+			} else {
+				nextBrowserPanels[panelKey] = nextBrowserPanel;
+			}
+			commitSessionLayout({
+				...visualSessionLayoutRef.current,
+				browserPanels: nextBrowserPanels
+			});
+		},
+		[commitSessionLayout]
+	);
 
-	const toggleDockFullscreen = useCallback((placement: DockFullscreenPlacement): void => {
-		const currentPlacement: DockFullscreenPlacement | null = visualSessionLayoutRef.current.fullscreenDock;
-		setFullscreenMotionDisabled(true);
-		commitSessionLayout({
-			...visualSessionLayoutRef.current,
-			fullscreenDock: currentPlacement === placement ? null : placement
-		});
-		window.requestAnimationFrame((): void => {
-			setFullscreenMotionDisabled(false);
-		});
-	}, [commitSessionLayout]);
+	const toggleDockFullscreen = useCallback(
+		(placement: DockFullscreenPlacement): void => {
+			const currentPlacement: DockFullscreenPlacement | null = visualSessionLayoutRef.current.fullscreenDock;
+			setFullscreenMotionDisabled(true);
+			commitSessionLayout({
+				...visualSessionLayoutRef.current,
+				fullscreenDock: currentPlacement === placement ? null : placement
+			});
+			window.requestAnimationFrame((): void => {
+				setFullscreenMotionDisabled(false);
+			});
+		},
+		[commitSessionLayout]
+	);
 
 	useLayoutEffect((): void => {
 		const previous = previousSessionLayoutRef.current;
@@ -1641,7 +1670,10 @@ function HomePage({
 
 	async function openWorkspaceLaunchTarget(
 		targetId: WorkspaceLaunchTargetId,
-		options: { godotRunMode?: "editor" | "project" | "scene"; godotScenePath?: string } = {}
+		options: {
+			godotRunMode?: "editor" | "project" | "scene";
+			godotScenePath?: string;
+		} = {}
 	): Promise<void> {
 		if (workspaceForActions === null) {
 			return;
@@ -1709,26 +1741,30 @@ function HomePage({
 		});
 	}, []);
 
-	const openSideDock = useCallback((kind?: DockPanelKind): void => {
-		sideDockProgrammaticOpenUntilRef.current = performance.now() + SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS;
-		const currentSideLayout: DockLayoutPreferences = visualSessionLayoutRef.current.side;
-		const defaultKind: DockPanelKind = kind ?? (workspaceForActions === null ? "browser" : "review");
-		commitSessionLayout({
-			...visualSessionLayoutRef.current,
-			side: { ...ensureDockTab(currentSideLayout, "side", defaultKind), open: true }
-		});
-		if (kind !== undefined) {
-			requestSideDockKind(kind);
-		}
-	}, [commitSessionLayout, requestSideDockKind, workspaceForActions]);
+	const openSideDock = useCallback(
+		(kind?: DockPanelKind): void => {
+			sideDockProgrammaticOpenUntilRef.current = performance.now() + SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS;
+			const currentSideLayout: DockLayoutPreferences = visualSessionLayoutRef.current.side;
+			const defaultKind: DockPanelKind = kind ?? (workspaceForActions === null ? "browser" : "review");
+			commitSessionLayout({
+				...visualSessionLayoutRef.current,
+				side: {
+					...ensureDockTab(currentSideLayout, "side", defaultKind),
+					open: true
+				}
+			});
+			if (kind !== undefined) {
+				requestSideDockKind(kind);
+			}
+		},
+		[commitSessionLayout, requestSideDockKind, workspaceForActions]
+	);
 
 	const closeSideDock = useCallback((): void => {
 		sideDockProgrammaticOpenUntilRef.current = 0;
 		commitSessionLayout({
 			...visualSessionLayoutRef.current,
-			fullscreenDock: visualSessionLayoutRef.current.fullscreenDock === "side"
-				? null
-				: visualSessionLayoutRef.current.fullscreenDock,
+			fullscreenDock: visualSessionLayoutRef.current.fullscreenDock === "side" ? null : visualSessionLayoutRef.current.fullscreenDock,
 			side: { ...visualSessionLayoutRef.current.side, open: false }
 		});
 	}, [commitSessionLayout]);
@@ -1752,7 +1788,10 @@ function HomePage({
 		const currentBottomLayout: DockLayoutPreferences = visualSessionLayoutRef.current.bottom;
 		commitSessionLayout({
 			...visualSessionLayoutRef.current,
-			bottom: { ...ensureDockTab(currentBottomLayout, "bottom", "terminal"), open: true }
+			bottom: {
+				...ensureDockTab(currentBottomLayout, "bottom", "terminal"),
+				open: true
+			}
 		});
 	}, [commitSessionLayout]);
 
@@ -1774,98 +1813,131 @@ function HomePage({
 		openBottomDock();
 	}, [bottomDockOpen, closeBottomDock, openBottomDock]);
 
-	const ensureBrowserRuntime = useCallback(async (sessionId: string): Promise<BrowserRuntimeRegistration> => {
-		const registered: BrowserRuntimeRegistration | null = findBrowserRuntime(sessionId);
-		if (registered !== null) {
-			const current: SessionLayoutPreferences = visualSessionLayoutRef.current;
-			const targetLayout: DockLayoutPreferences = registered.placement === "side" ? current.side : current.bottom;
-			commitSessionLayout({
-				...current,
-				[registered.placement]: { ...targetLayout, open: true, activeTabKey: registered.panelKey }
-			});
-			return registered;
-		}
+	const ensureBrowserRuntime = useCallback(
+		async (sessionId: string): Promise<BrowserRuntimeRegistration> => {
+			const registered: BrowserRuntimeRegistration | null = findBrowserRuntime(sessionId);
+			if (registered !== null) {
+				const current: SessionLayoutPreferences = visualSessionLayoutRef.current;
+				const targetLayout: DockLayoutPreferences = registered.placement === "side" ? current.side : current.bottom;
+				commitSessionLayout({
+					...current,
+					[registered.placement]: {
+						...targetLayout,
+						open: true,
+						activeTabKey: registered.panelKey
+					}
+				});
+				return registered;
+			}
 
-		const current: SessionLayoutPreferences = visualSessionLayoutRef.current;
-		const sideTab = current.side.tabs.find((tab): boolean => tab.kind === "browser");
-		const bottomTab = current.bottom.tabs.find((tab): boolean => tab.kind === "browser");
-		if (sideTab !== undefined || bottomTab !== undefined) {
-			const placement = sideTab !== undefined ? "side" as const : "bottom" as const;
-			const tab = sideTab ?? bottomTab!;
-			const targetLayout: DockLayoutPreferences = placement === "side" ? current.side : current.bottom;
+			const current: SessionLayoutPreferences = visualSessionLayoutRef.current;
+			const sideTab = current.side.tabs.find((tab): boolean => tab.kind === "browser");
+			const bottomTab = current.bottom.tabs.find((tab): boolean => tab.kind === "browser");
+			if (sideTab !== undefined || bottomTab !== undefined) {
+				const placement = sideTab !== undefined ? ("side" as const) : ("bottom" as const);
+				const tab = sideTab ?? bottomTab!;
+				const targetLayout: DockLayoutPreferences = placement === "side" ? current.side : current.bottom;
+				commitSessionLayout({
+					...current,
+					[placement]: { ...targetLayout, open: true, activeTabKey: tab.key }
+				});
+				return await waitForBrowserRuntime(sessionId);
+			}
+
+			const tab = createDockTab("side", "browser", 1);
 			commitSessionLayout({
 				...current,
-				[placement]: { ...targetLayout, open: true, activeTabKey: tab.key }
+				side: {
+					...current.side,
+					open: true,
+					tabs: [...current.side.tabs, tab],
+					activeTabKey: tab.key
+				},
+				browserPanels: {
+					...current.browserPanels,
+					[tab.key]: createDefaultBrowserPanelLayout()
+				}
 			});
 			return await waitForBrowserRuntime(sessionId);
-		}
-
-		const tab = createDockTab("side", "browser", 1);
-		commitSessionLayout({
-			...current,
-			side: { ...current.side, open: true, tabs: [...current.side.tabs, tab], activeTabKey: tab.key },
-			browserPanels: { ...current.browserPanels, [tab.key]: createDefaultBrowserPanelLayout() }
-		});
-		return await waitForBrowserRuntime(sessionId);
-	}, [commitSessionLayout]);
+		},
+		[commitSessionLayout]
+	);
 
 	const activeBrowserCallsRef = useRef<Map<string, string>>(new Map());
 	useEffect((): (() => void) => {
 		let disposed: boolean = false;
 		let removeListener: (() => void) | null = null;
-		void createBackendClient().then((client): void => {
-			if (disposed) return;
-			removeListener = client.addEventListener((event: BackendEvent): void => {
-				if (event.event === "browser.tool.cancel") {
-					const data = event.data as { callId?: unknown } | undefined;
-					if (typeof data?.callId !== "string") return;
-					const browserId: string | undefined = activeBrowserCallsRef.current.get(data.callId);
-					if (browserId !== undefined) void window.electronAPI.browser.automation.cancel(browserId, data.callId);
-					return;
-				}
-				if (event.event !== "browser.tool.request") return;
-				const data = event.data as {
-					callId?: unknown;
-					sessionId?: unknown;
-					toolName?: unknown;
-					args?: unknown;
-				} | undefined;
-				if (typeof data?.callId !== "string" || typeof data.sessionId !== "string" || typeof data.toolName !== "string" || data.args === null || typeof data.args !== "object" || Array.isArray(data.args)) return;
-				const callId: string = data.callId;
-				const requestSessionId: string = data.sessionId;
-				const toolName: string = data.toolName;
-				const args: Record<string, unknown> = data.args as Record<string, unknown>;
-				void (async (): Promise<void> => {
-					if (requestSessionId !== activeSessionId) throw new Error("browser_session_not_active");
-					const runtime: BrowserRuntimeRegistration = await ensureBrowserRuntime(requestSessionId);
-					activeBrowserCallsRef.current.set(callId, runtime.browserId);
-					try {
-						const result = await window.electronAPI.browser.automation.execute({
-							browserId: runtime.browserId,
-							callId,
-							toolName,
-							args
-						});
-						await client.request("browser.tool.result", { callId, ok: true, result });
-					} finally {
-						activeBrowserCallsRef.current.delete(callId);
+		void createBackendClient()
+			.then((client): void => {
+				if (disposed) return;
+				removeListener = client.addEventListener((event: BackendEvent): void => {
+					if (event.event === "browser.tool.cancel") {
+						const data = event.data as { callId?: unknown } | undefined;
+						if (typeof data?.callId !== "string") return;
+						const browserId: string | undefined = activeBrowserCallsRef.current.get(data.callId);
+						if (browserId !== undefined) void window.electronAPI.browser.automation.cancel(browserId, data.callId);
+						return;
 					}
-				})().catch((error: unknown): void => {
-					const message: string = error instanceof Error ? error.message : String(error);
-					void client.request("browser.tool.result", {
-						callId,
-						ok: false,
-						error: {
-							code: message.match(/browser_[a-z_]+/u)?.[0] ?? "browser_tool_failed",
-							message,
-							retryable: /busy|timeout|unavailable/u.test(message)
+					if (event.event !== "browser.tool.request") return;
+					const data = event.data as
+						| {
+								callId?: unknown;
+								sessionId?: unknown;
+								toolName?: unknown;
+								args?: unknown;
+						  }
+						| undefined;
+					if (
+						typeof data?.callId !== "string" ||
+						typeof data.sessionId !== "string" ||
+						typeof data.toolName !== "string" ||
+						data.args === null ||
+						typeof data.args !== "object" ||
+						Array.isArray(data.args)
+					)
+						return;
+					const callId: string = data.callId;
+					const requestSessionId: string = data.sessionId;
+					const toolName: string = data.toolName;
+					const args: Record<string, unknown> = data.args as Record<string, unknown>;
+					void (async (): Promise<void> => {
+						if (requestSessionId !== activeSessionId) throw new Error("browser_session_not_active");
+						const runtime: BrowserRuntimeRegistration = await ensureBrowserRuntime(requestSessionId);
+						activeBrowserCallsRef.current.set(callId, runtime.browserId);
+						try {
+							const result = await window.electronAPI.browser.automation.execute({
+								browserId: runtime.browserId,
+								callId,
+								toolName,
+								args
+							});
+							await client.request("browser.tool.result", {
+								callId,
+								ok: true,
+								result
+							});
+						} finally {
+							activeBrowserCallsRef.current.delete(callId);
 						}
-					}).catch((): void => {});
+					})().catch((error: unknown): void => {
+						const message: string = error instanceof Error ? error.message : String(error);
+						void client
+							.request("browser.tool.result", {
+								callId,
+								ok: false,
+								error: {
+									code: message.match(/browser_[a-z_]+/u)?.[0] ?? "browser_tool_failed",
+									message,
+									retryable: /busy|timeout|unavailable/u.test(message)
+								}
+							})
+							.catch((): void => {});
+					});
 				});
+			})
+			.catch((error: unknown): void => {
+				console.error("[HomePage] failed to attach browser tool runtime", error);
 			});
-		}).catch((error: unknown): void => {
-			console.error("[HomePage] failed to attach browser tool runtime", error);
-		});
 		return (): void => {
 			disposed = true;
 			removeListener?.();
@@ -1933,7 +2005,11 @@ function HomePage({
 				if (sessionId === null) {
 					return;
 				}
-				window.dispatchEvent(new CustomEvent<string>(SESSION_NAVIGATION_EVENT, { detail: sessionId }));
+				window.dispatchEvent(
+					new CustomEvent<string>(SESSION_NAVIGATION_EVENT, {
+						detail: sessionId
+					})
+				);
 				return;
 			}
 			if (activeSessionId === null || isHome) {
@@ -1973,12 +2049,12 @@ function HomePage({
 			return;
 		}
 
-		const normalizedSize: number = Math.min(
-			WORKSPACE_SIDEBAR_MAX_SIZE,
-			Math.max(WORKSPACE_SIDEBAR_CLOSED_SIZE, Math.trunc(nextSize))
-		);
+		const normalizedSize: number = Math.min(WORKSPACE_SIDEBAR_MAX_SIZE, Math.max(WORKSPACE_SIDEBAR_CLOSED_SIZE, Math.trunc(nextSize)));
 		if (normalizedSize < WORKSPACE_SIDEBAR_CLOSE_THRESHOLD) {
-			applyVisualWorkspaceSidebar({ ...visualWorkspaceSidebarRef.current, open: false });
+			applyVisualWorkspaceSidebar({
+				...visualWorkspaceSidebarRef.current,
+				open: false
+			});
 			return;
 		}
 
@@ -1994,7 +2070,10 @@ function HomePage({
 			return;
 		}
 		if (nextSize < WORKSPACE_SIDEBAR_CLOSE_THRESHOLD) {
-			commitWorkspaceSidebar({ ...visualWorkspaceSidebarRef.current, open: false });
+			commitWorkspaceSidebar({
+				...visualWorkspaceSidebarRef.current,
+				open: false
+			});
 			return;
 		}
 
@@ -2028,7 +2107,11 @@ function HomePage({
 		sideDockProgrammaticOpenUntilRef.current = 0;
 		applyVisualSessionLayout({
 			...visualSessionLayoutRef.current,
-			side: { ...visualSessionLayoutRef.current.side, open: true, size: normalizedSize }
+			side: {
+				...visualSessionLayoutRef.current.side,
+				open: true,
+				size: normalizedSize
+			}
 		});
 	}
 
@@ -2052,7 +2135,11 @@ function HomePage({
 		const validSize: number = Math.min(SIDE_DOCK_MAX_SIZE, Math.max(SIDE_DOCK_CLOSE_THRESHOLD, Math.trunc(nextSize)));
 		commitSessionLayout({
 			...visualSessionLayoutRef.current,
-			side: { ...visualSessionLayoutRef.current.side, open: true, size: validSize }
+			side: {
+				...visualSessionLayoutRef.current.side,
+				open: true,
+				size: validSize
+			}
 		});
 	}
 
@@ -2073,7 +2160,11 @@ function HomePage({
 
 		applyVisualSessionLayout({
 			...visualSessionLayoutRef.current,
-			bottom: { ...visualSessionLayoutRef.current.bottom, open: true, size: normalizedSize }
+			bottom: {
+				...visualSessionLayoutRef.current.bottom,
+				open: true,
+				size: normalizedSize
+			}
 		});
 	}
 
@@ -2093,7 +2184,11 @@ function HomePage({
 		const validSize: number = Math.min(BOTTOM_DOCK_MAX_SIZE, Math.max(BOTTOM_DOCK_CLOSE_THRESHOLD, Math.trunc(nextSize)));
 		commitSessionLayout({
 			...visualSessionLayoutRef.current,
-			bottom: { ...visualSessionLayoutRef.current.bottom, open: true, size: validSize }
+			bottom: {
+				...visualSessionLayoutRef.current.bottom,
+				open: true,
+				size: validSize
+			}
 		});
 	}
 
@@ -2214,6 +2309,9 @@ function HomePage({
 			workspaceOptions={workspaceOptions}
 			selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
 			workspaceFooterDisabled={workspaceFooterDisabled}
+			worktreeMode={isHome ? homeExecutionEnvironment : undefined}
+			worktreeDisabledReason={isHome ? worktreeDisabledReason : null}
+			isWorktreePreparing={isWorktreePreparing}
 			showContextUsage={!isHome}
 			compact={compact}
 			floating={compact}
@@ -2232,6 +2330,7 @@ function HomePage({
 			onWorkspaceSelect={isHome ? onHomeWorkspaceSelect : undefined}
 			onWorkspaceAdd={isHome ? onHomeWorkspaceAdd : undefined}
 			onWorkspaceClear={isHome ? onHomeWorkspaceClear : undefined}
+			onWorktreeModeChange={isHome ? onHomeExecutionEnvironmentChange : undefined}
 			onRemoveContext={onRemoveContext}
 			onPinContext={onPinContext}
 			onClearUnpinnedContext={onClearUnpinnedContext}
@@ -2259,6 +2358,7 @@ function HomePage({
 		onSessionFork,
 		onSessionArchive,
 		onSessionRename,
+		onSessionWorktreeDelete,
 		onSessionsChange,
 		onNewWorkspaceSession,
 		onWorkspaceDelete,
@@ -2286,124 +2386,102 @@ function HomePage({
 		filePanels: visualSessionLayout.filePanels,
 		onFilePanelChange: updateFilePanel,
 		browserPanels: visualSessionLayout.browserPanels,
-		onBrowserPanelChange: updateBrowserPanel,
+		onBrowserPanelChange: updateBrowserPanel
 	};
 
-	const sideDockConfig = showSideDockButton ? {
-		panel: {
-			size: sideDockFullscreen ? "100%" : sideDockOpen ? sideDockSize : SIDE_DOCK_CLOSED_SIZE,
-			min: SIDE_DOCK_CLOSED_SIZE,
-			max: sideDockFullscreen ? undefined : SIDE_DOCK_MAX_SIZE
-		},
-		content: {
-			...commonDockPanelProps,
-			dockId: "side",
-			placement: "side" as const,
-			isOpen: sideDockOpen,
-			isFullscreen: sideDockFullscreen,
-			defaultKind: "review" as const,
-			layout: visualSessionLayout.side,
-			activationRequest: sideDockActivationRequest,
-			onLayoutChange: updateSideDock,
-			onFullscreenToggle: (): void => toggleDockFullscreen("side"),
-			slotClassName: styles.sideDockSlot
-		}
-	} : null;
+	const sideDockConfig = showSideDockButton
+		? {
+				panel: {
+					size: sideDockFullscreen ? "100%" : sideDockOpen ? sideDockSize : SIDE_DOCK_CLOSED_SIZE,
+					min: SIDE_DOCK_CLOSED_SIZE,
+					max: sideDockFullscreen ? undefined : SIDE_DOCK_MAX_SIZE
+				},
+				content: {
+					...commonDockPanelProps,
+					dockId: "side",
+					placement: "side" as const,
+					isOpen: sideDockOpen,
+					isFullscreen: sideDockFullscreen,
+					defaultKind: "review" as const,
+					layout: visualSessionLayout.side,
+					activationRequest: sideDockActivationRequest,
+					onLayoutChange: updateSideDock,
+					onFullscreenToggle: (): void => toggleDockFullscreen("side"),
+					slotClassName: styles.sideDockSlot
+				}
+			}
+		: null;
 
-	const bottomDockConfig = showBottomDockButton ? {
-		panel: {
-			size: bottomDockFullscreen
-				? "100%"
-				: sideDockFullscreen
-					? BOTTOM_DOCK_CLOSED_SIZE
-					: bottomDockOpen
-						? bottomDockSize
-						: BOTTOM_DOCK_CLOSED_SIZE,
-			min: BOTTOM_DOCK_CLOSED_SIZE,
-			max: bottomDockFullscreen ? undefined : BOTTOM_DOCK_MAX_SIZE
-		},
-		content: {
-			...commonDockPanelProps,
-			dockId: "bottom",
-			placement: "bottom" as const,
-			isOpen: bottomDockOpen,
-			isFullscreen: bottomDockFullscreen,
-			defaultKind: "terminal" as const,
-			layout: visualSessionLayout.bottom,
-			onLayoutChange: updateBottomDock,
-			onFullscreenToggle: (): void => toggleDockFullscreen("bottom"),
-			slotClassName: styles.bottomDockSlot
-		}
-	} : null;
+	const bottomDockConfig = showBottomDockButton
+		? {
+				panel: {
+					size: bottomDockFullscreen ? "100%" : sideDockFullscreen ? BOTTOM_DOCK_CLOSED_SIZE : bottomDockOpen ? bottomDockSize : BOTTOM_DOCK_CLOSED_SIZE,
+					min: BOTTOM_DOCK_CLOSED_SIZE,
+					max: bottomDockFullscreen ? undefined : BOTTOM_DOCK_MAX_SIZE
+				},
+				content: {
+					...commonDockPanelProps,
+					dockId: "bottom",
+					placement: "bottom" as const,
+					isOpen: bottomDockOpen,
+					isFullscreen: bottomDockFullscreen,
+					defaultKind: "terminal" as const,
+					layout: visualSessionLayout.bottom,
+					onLayoutChange: updateBottomDock,
+					onFullscreenToggle: (): void => toggleDockFullscreen("bottom"),
+					slotClassName: styles.bottomDockSlot
+				}
+			}
+		: null;
 	// Splitter 的直接子节点必须始终是 Panel；Dock 内容可以按开关状态卸载，但 Panel 结构保持稳定。
 	const renderSideDock: boolean = sideDockConfig !== null && (sideDockOpen || sideDockFullscreen);
 	const renderBottomDock: boolean = bottomDockConfig !== null && (bottomDockOpen || bottomDockFullscreen);
-	const pageActionControls = showWorkspaceLaunchControls || showSummaryButton || showBottomDockButton || showSideDockButton ? (
-		<div className={styles.floatingActions}>
-			{showWorkspaceLaunchControls ? (
-				<Space.Compact className={styles.workspaceLaunchControls}>
-					<Button
-						loading={isOpeningLaunchTarget}
-						icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
-						onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
-					>
-						{t("agentPage.workspaceLaunch.openIn", { target: selectedLaunchTarget.label })}
-					</Button>
-					<Dropdown
-						menu={{
-							items: workspaceLaunchMenuItems,
-							selectedKeys: [selectedLaunchTarget.id],
-							onClick: handleWorkspaceLaunchMenuClick
-						}}
-						trigger={["click"]}
-					>
+	const pageActionControls =
+		showWorkspaceLaunchControls || showSummaryButton || showBottomDockButton || showSideDockButton ? (
+			<div className={styles.floatingActions}>
+				{showWorkspaceLaunchControls ? (
+					<Space.Compact className={styles.workspaceLaunchControls}>
 						<Button
-							aria-label={t("agentPage.workspaceLaunch.aria.selectTarget")}
-							icon={<Icon name="arrow-down" />}
-						/>
-					</Dropdown>
-				</Space.Compact>
-			) : null}
-			{showSummaryButton ? renderSummaryButton() : null}
-			{showBottomDockButton ? (
-				<Tooltip title={bottomDockOpen ? t("agentPage.dock.closeBottom") : t("agentPage.dock.openBottom")}>
-					<Button
-						type="text"
-						shape="circle"
-						aria-pressed={bottomDockOpen}
-						icon={<Icon name={bottomDockOpen ? "layout-bottom-toggled" : "layout-bottom"} />}
-						onClick={toggleBottomDock}
-					/>
-				</Tooltip>
-			) : null}
-			{showSideDockButton ? (
-				<Tooltip title={sideDockOpen ? t("agentPage.dock.closeSidebar") : t("agentPage.dock.openSidebar")}>
-					<Button
-						type="text"
-						shape="circle"
-						aria-pressed={sideDockOpen}
-						icon={<Icon name={sideDockOpen ? "layout-right-toggled" : "layout-right"} />}
-						onClick={toggleSideDock}
-					/>
-				</Tooltip>
-			) : null}
-		</div>
-	) : null;
+							loading={isOpeningLaunchTarget}
+							icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
+							onClick={(): void => {
+								void openWorkspaceLaunchTarget(selectedLaunchTarget.id);
+							}}
+						>
+							{t("agentPage.workspaceLaunch.openIn", {
+								target: selectedLaunchTarget.label
+							})}
+						</Button>
+						<Dropdown
+							menu={{
+								items: workspaceLaunchMenuItems,
+								selectedKeys: [selectedLaunchTarget.id],
+								onClick: handleWorkspaceLaunchMenuClick
+							}}
+							trigger={["click"]}
+						>
+							<Button aria-label={t("agentPage.workspaceLaunch.aria.selectTarget")} icon={<Icon name="arrow-down" />} />
+						</Dropdown>
+					</Space.Compact>
+				) : null}
+				{showSummaryButton ? renderSummaryButton() : null}
+				{showBottomDockButton ? (
+					<Tooltip title={bottomDockOpen ? t("agentPage.dock.closeBottom") : t("agentPage.dock.openBottom")}>
+						<Button type="text" shape="circle" aria-pressed={bottomDockOpen} icon={<Icon name={bottomDockOpen ? "layout-bottom-toggled" : "layout-bottom"} />} onClick={toggleBottomDock} />
+					</Tooltip>
+				) : null}
+				{showSideDockButton ? (
+					<Tooltip title={sideDockOpen ? t("agentPage.dock.closeSidebar") : t("agentPage.dock.openSidebar")}>
+						<Button type="text" shape="circle" aria-pressed={sideDockOpen} icon={<Icon name={sideDockOpen ? "layout-right-toggled" : "layout-right"} />} onClick={toggleSideDock} />
+					</Tooltip>
+				) : null}
+			</div>
+		) : null;
 
 	return (
-		<div
-			className={styles.page}
-			onDragOver={handlePageDragOver}
-			onDrop={handlePageDrop}
-		>
+		<div className={styles.page} onDragOver={handlePageDragOver} onDrop={handlePageDrop}>
 			{messageContextHolder}
-			<Splitter
-				className={styles.workspaceSplitter}
-				draggerIcon={null}
-				collapsible={{ motion: true }}
-				onResize={handleWorkspaceSidebarResize}
-				onResizeEnd={handleWorkspaceSidebarResizeEnd}
-			>
+			<Splitter className={styles.workspaceSplitter} draggerIcon={null} collapsible={{ motion: true }} onResize={handleWorkspaceSidebarResize} onResizeEnd={handleWorkspaceSidebarResizeEnd}>
 				<Splitter.Panel
 					size={workspaceSidebarOpen ? workspaceSidebarSize : WORKSPACE_SIDEBAR_CLOSED_SIZE}
 					min={WORKSPACE_SIDEBAR_CLOSED_SIZE}
@@ -2471,6 +2549,18 @@ function HomePage({
 																	void onForkSourceOpen(activeSessionMetadata.forkedFrom!.sessionId);
 																}}
 															/>
+														</Tooltip>
+													) : null}
+													{activeSessionMetadata?.worktree !== undefined ? (
+														<Tooltip
+															title={t("agentPage.worktree.source", {
+																workspace: activeSessionMetadata.worktree.sourceWorkspaceName
+															})}
+														>
+															<span className={styles.worktreeBadge}>
+																<Icon name="git-branch" />
+																{t("agentPage.worktree.label")}
+															</span>
 														</Tooltip>
 													) : null}
 												</div>

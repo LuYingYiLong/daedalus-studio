@@ -145,12 +145,22 @@
 }
 
 .sessionMenuItem {
+	position: relative;
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) 28px 28px;
 	padding-right: 8px;
 	align-items: center;
 	width: 100%;
 	min-width: 0;
+}
+
+.worktreeIndicator {
+	position: absolute;
+	left: -18px;
+	display: inline-flex;
+	align-items: center;
+	color: var(--ant-color-text-tertiary);
+	font-size: 12px;
 }
 
 .sessionTitle {

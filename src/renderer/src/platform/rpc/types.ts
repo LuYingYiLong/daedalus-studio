@@ -43,6 +43,23 @@ export type SessionForkOrigin = {
 	messagePreview: string;
 };
 
+export type SessionWorktreeSource = {
+	sourceFolderId: string;
+	sourcePath: string;
+	worktreePath: string;
+	baseCommit: string;
+	baseRef: string | null;
+};
+
+export type SessionWorktreeMetadata = {
+	id: string;
+	sourceWorkspaceId: string;
+	sourceWorkspaceName: string;
+	runtimeWorkspaceId: string;
+	sources: SessionWorktreeSource[];
+	createdAt: string;
+};
+
 export type SessionMetadata = {
 	id: string;
 	title: string;
@@ -63,6 +80,7 @@ export type SessionMetadata = {
 	workflowTodoDismissedKey?: string | null;
 	workspaceLaunch?: WorkspaceLaunchTargetId;
 	forkedFrom?: SessionForkOrigin;
+	worktree?: SessionWorktreeMetadata;
 	archivedAt?: string;
 	createdAt: string;
 	updatedAt: string;
@@ -301,12 +319,43 @@ export type AgentGoalState = {
 	pauseReason: "user_interruption" | "backend_restart" | "client_disconnected" | "budget_exhausted" | "readiness_blocked" | "no_progress" | null;
 	activeRunId: string | null;
 	cycle: number;
-	modelSnapshot: { provider: string; model: string; reasoningEffort: string | null; approvalMode: string; workspaceId: string | null };
+	modelSnapshot: {
+		provider: string;
+		model: string;
+		reasoningEffort: string | null;
+		approvalMode: string;
+		workspaceId: string | null;
+	};
 	budget: { maxCycles: number; maxTokens: number; maxActiveMinutes: number };
-	usage: { cycles: number; tokens: number; activeMilliseconds: number; estimatedTokens: boolean };
-	readiness: { ready: boolean; checks: Array<{ id: string; status: "passed" | "warning" | "blocked"; message: string; action?: string }>; checkedAt: string } | null;
-	evaluation: { disposition: "achieved" | "continue" | "blocked"; summary: string; evidenceToolCallIds: string[]; unmetCriteria: string[]; nextAction: string | null } | null;
-	checkpoint: { status: "available" | "partial" | "unavailable" | "rolled_back"; fileCount: number; totalBytes: number; unavailableReasons: string[] };
+	usage: {
+		cycles: number;
+		tokens: number;
+		activeMilliseconds: number;
+		estimatedTokens: boolean;
+	};
+	readiness: {
+		ready: boolean;
+		checks: Array<{
+			id: string;
+			status: "passed" | "warning" | "blocked";
+			message: string;
+			action?: string;
+		}>;
+		checkedAt: string;
+	} | null;
+	evaluation: {
+		disposition: "achieved" | "continue" | "blocked";
+		summary: string;
+		evidenceToolCallIds: string[];
+		unmetCriteria: string[];
+		nextAction: string | null;
+	} | null;
+	checkpoint: {
+		status: "available" | "partial" | "unavailable" | "rolled_back";
+		fileCount: number;
+		totalBytes: number;
+		unavailableReasons: string[];
+	};
 	createdAt: string;
 	updatedAt: string;
 	completedAt: string | null;
@@ -486,78 +535,101 @@ export type PlanApprovalState = {
 export type TimelineBodyPart =
 	| { type: "markdown"; text: string }
 	| {
-		type: "thinking";
-		text: string;
-		done: boolean;
-		activityGroupId?: string;
-		activityPartId?: string;
-		activityPartKind?: "thinking" | "tool";
-		activityGroupStats?: { editedFiles: number; commands: number; tools?: number; thoughts: number };
-	}
+			type: "thinking";
+			text: string;
+			done: boolean;
+			activityGroupId?: string;
+			activityPartId?: string;
+			activityPartKind?: "thinking" | "tool";
+			activityGroupStats?: {
+				editedFiles: number;
+				commands: number;
+				tools?: number;
+				thoughts: number;
+			};
+	  }
 	| {
-		type: "provider_reconnect";
-		reconnectId: string;
-		revision: number;
-		provider: string;
-		model: string;
-		status: "waiting" | "reconnecting" | "recovered" | "failed";
-		reason: "transport" | "idle_timeout" | "gateway" | "rate_limit" | "server";
-		attempt: number;
-		maxAttempts: 2 | 5 | 15;
-		timeoutMs: number;
-		retryAt?: string;
-		autoExtended: boolean;
-	}
+			type: "provider_reconnect";
+			reconnectId: string;
+			revision: number;
+			provider: string;
+			model: string;
+			status: "waiting" | "reconnecting" | "recovered" | "failed";
+			reason: "transport" | "idle_timeout" | "gateway" | "rate_limit" | "server";
+			attempt: number;
+			maxAttempts: 2 | 5 | 15;
+			timeoutMs: number;
+			retryAt?: string;
+			autoExtended: boolean;
+	  }
 	| {
-		type: "tool";
-		tool_call_id: string;
-		events: Record<string, unknown>[];
-		activityGroupId?: string;
-		activityPartId?: string;
-		activityPartKind?: "thinking" | "tool";
-		activityGroupStats?: { editedFiles: number; commands: number; tools?: number; thoughts: number };
-	}
-	| { type: "summary_start"; runId: string; stepId: string; stepRunId: string; title: string; foldTitle: string }
+			type: "tool";
+			tool_call_id: string;
+			events: Record<string, unknown>[];
+			activityGroupId?: string;
+			activityPartId?: string;
+			activityPartKind?: "thinking" | "tool";
+			activityGroupStats?: {
+				editedFiles: number;
+				commands: number;
+				tools?: number;
+				thoughts: number;
+			};
+	  }
 	| {
-		type: "compression";
-		compressionId: string;
-		status: "running" | "completed" | "skipped" | "failed";
-		summary: string;
-		reason: string;
-	}
+			type: "summary_start";
+			runId: string;
+			stepId: string;
+			stepRunId: string;
+			title: string;
+			foldTitle: string;
+	  }
 	| {
-		type: "image_generation";
-		status: "running" | "completed" | "failed";
-		prompt: string;
-		toolCallId?: string;
-		artifacts?: TimelineGeneratedImageArtifact[];
-		provider?: string;
-		model?: string;
-		error?: string;
-	}
+			type: "compression";
+			compressionId: string;
+			status: "running" | "completed" | "skipped" | "failed";
+			summary: string;
+			reason: string;
+	  }
 	| {
-		type: "status";
-		title: string;
-		details: string;
-		status: string;
-		code: string;
-		actionLabel?: string;
-		actionId?: string;
-		iconUid?: string;
-		planId?: string;
-		recommendedReplies?: PlanRecommendedReply[];
-	}
-	| { type: "plan"; planId: string; title: string; status: string; previewMarkdown: string }
+			type: "image_generation";
+			status: "running" | "completed" | "failed";
+			prompt: string;
+			toolCallId?: string;
+			artifacts?: TimelineGeneratedImageArtifact[];
+			provider?: string;
+			model?: string;
+			error?: string;
+	  }
 	| {
-		type: "inline_diff";
-		sessionId: string;
-		batchIds: string[];
-		editedFileCount: number;
-		additions: number;
-		deletions: number;
-		undoable: boolean;
-		editedFiles: TimelineEditedFile[];
-	};
+			type: "status";
+			title: string;
+			details: string;
+			status: string;
+			code: string;
+			actionLabel?: string;
+			actionId?: string;
+			iconUid?: string;
+			planId?: string;
+			recommendedReplies?: PlanRecommendedReply[];
+	  }
+	| {
+			type: "plan";
+			planId: string;
+			title: string;
+			status: string;
+			previewMarkdown: string;
+	  }
+	| {
+			type: "inline_diff";
+			sessionId: string;
+			batchIds: string[];
+			editedFileCount: number;
+			additions: number;
+			deletions: number;
+			undoable: boolean;
+			editedFiles: TimelineEditedFile[];
+	  };
 
 export type TimelineBlock = TimelineUserBlock | TimelineAssistantBlock | TimelineDividerBlock;
 

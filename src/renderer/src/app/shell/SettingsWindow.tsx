@@ -1,8 +1,14 @@
 import { Menu, type MenuProps, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { DEFAULT_CLIENT_PREFERENCES, type ClientPreferences } from "@/platform/rpc/client-preferences-api";
-import { DEFAULT_GENERAL_SETTINGS, type GeneralSettings } from "@/platform/rpc/general-settings-api";
+import {
+	DEFAULT_CLIENT_PREFERENCES,
+	type ClientPreferences,
+} from "@/platform/rpc/client-preferences-api";
+import {
+	DEFAULT_GENERAL_SETTINGS,
+	type GeneralSettings,
+} from "@/platform/rpc/general-settings-api";
 import { Icon } from "@/assets/icons";
 import ProviderSettingsPage from "@/widgets/settings/ProviderSettingsPage";
 import DefaultModelSettingsPage from "@/widgets/settings/DefaultModelSettingsPage";
@@ -48,65 +54,151 @@ type SettingsMenuItemConfig = {
 };
 
 const menuItemConfigs: SettingsMenuItemConfig[] = [
-	{ key: "provider", labelKey: "settings.menu.provider", icon: <Icon name="cloud" /> },
-	{ key: "default_model", labelKey: "settings.menu.defaultModel", icon: <Icon name="instance" /> },
-	{ key: "general", labelKey: "settings.menu.general", icon: <Icon name="equalizer" /> },
-	{ key: "keyboard_shortcuts", labelKey: "settings.menu.keyboardShortcuts", icon: <Icon name="keyboard" /> },
-	{ key: "search", labelKey: "settings.menu.search", icon: <Icon name="search" /> },
-	{ key: "statistics", labelKey: "settings.menu.statistics", icon: <Icon name="statistics" /> },
-	{ key: "personalization", labelKey: "settings.menu.personalization", icon: <Icon name="magic" /> },
-	{ key: "mcp_servers", labelKey: "settings.menu.mcpServers", icon: <Icon name="mcp" /> },
-	{ key: "skills", labelKey: "settings.menu.skills", icon: <Icon name="skill" /> },
-	{ key: "hooks", labelKey: "settings.menu.hooks", icon: <Icon name="hook" /> },
-	{ key: "browser", labelKey: "settings.menu.browser", icon: <Icon name="global" /> },
-	{ key: "documentation", labelKey: "settings.menu.documentation", icon: <Icon name="book" /> },
-	{ key: "godot_projects", labelKey: "settings.menu.godotProjects", icon: <Icon name="godot" /> },
-	{ key: "archived_sessions", labelKey: "settings.menu.archivedSessions", icon: <Icon name="archive" /> },
-	{ key: "import", labelKey: "settings.menu.import", icon: <Icon name="download" /> },
-	{ key: "about", labelKey: "settings.menu.about", icon: <Icon name="info" /> }
+	{
+		key: "provider",
+		labelKey: "settings.menu.provider",
+		icon: <Icon name="cloud" />,
+	},
+	{
+		key: "default_model",
+		labelKey: "settings.menu.defaultModel",
+		icon: <Icon name="instance" />,
+	},
+	{
+		key: "general",
+		labelKey: "settings.menu.general",
+		icon: <Icon name="equalizer" />,
+	},
+	{
+		key: "keyboard_shortcuts",
+		labelKey: "settings.menu.keyboardShortcuts",
+		icon: <Icon name="keyboard" />,
+	},
+	{
+		key: "search",
+		labelKey: "settings.menu.search",
+		icon: <Icon name="search" />,
+	},
+	{
+		key: "statistics",
+		labelKey: "settings.menu.statistics",
+		icon: <Icon name="statistics" />,
+	},
+	{
+		key: "personalization",
+		labelKey: "settings.menu.personalization",
+		icon: <Icon name="magic" />,
+	},
+	{
+		key: "mcp_servers",
+		labelKey: "settings.menu.mcpServers",
+		icon: <Icon name="mcp" />,
+	},
+	{
+		key: "skills",
+		labelKey: "settings.menu.skills",
+		icon: <Icon name="skill" />,
+	},
+	{
+		key: "hooks",
+		labelKey: "settings.menu.hooks",
+		icon: <Icon name="hook" />,
+	},
+	{
+		key: "browser",
+		labelKey: "settings.menu.browser",
+		icon: <Icon name="global" />,
+	},
+	{
+		key: "documentation",
+		labelKey: "settings.menu.documentation",
+		icon: <Icon name="book" />,
+	},
+	{
+		key: "godot_projects",
+		labelKey: "settings.menu.godotProjects",
+		icon: <Icon name="godot" />,
+	},
+	{
+		key: "archived_sessions",
+		labelKey: "settings.menu.archivedSessions",
+		icon: <Icon name="archive" />,
+	},
+	{
+		key: "import",
+		labelKey: "settings.menu.import",
+		icon: <Icon name="download" />,
+	},
+	{
+		key: "about",
+		labelKey: "settings.menu.about",
+		icon: <Icon name="info" />,
+	},
 ];
 
 function isSettingsPageKey(value: string): value is SettingsPageKey {
-	return menuItemConfigs.some((item: SettingsMenuItemConfig): boolean => item.key === value);
+	return menuItemConfigs.some(
+		(item: SettingsMenuItemConfig): boolean => item.key === value,
+	);
 }
 
 function createSettingsMenuItems(t: (key: string) => string): MenuItem[] {
-	return menuItemConfigs.map((item: SettingsMenuItemConfig): MenuItem => ({
-		key: item.key,
-		label: t(item.labelKey),
-		icon: item.icon
-	}));
+	return menuItemConfigs.map(
+		(item: SettingsMenuItemConfig): MenuItem => ({
+			key: item.key,
+			label: t(item.labelKey),
+			icon: item.icon,
+		}),
+	);
 }
 
-function getSettingsPageTitle(key: SettingsPageKey, t: (key: string) => string): string {
-	const item: SettingsMenuItemConfig | undefined = menuItemConfigs.find((menuItem: SettingsMenuItemConfig): boolean => menuItem.key === key);
-	return item === undefined ? t("settings.menu.fallbackTitle") : t(item.labelKey);
+function getSettingsPageTitle(
+	key: SettingsPageKey,
+	t: (key: string) => string,
+): string {
+	const item: SettingsMenuItemConfig | undefined = menuItemConfigs.find(
+		(menuItem: SettingsMenuItemConfig): boolean => menuItem.key === key,
+	);
+	return item === undefined
+		? t("settings.menu.fallbackTitle")
+		: t(item.labelKey);
 }
 
 function getInitialSettingsPage(): SettingsPageKey {
-	const page: string | null = new URLSearchParams(window.location.search).get("page");
+	const page: string | null = new URLSearchParams(window.location.search).get(
+		"page",
+	);
 	return page !== null && isSettingsPageKey(page) ? page : "provider";
 }
 
 function SettingsWindow(): React.JSX.Element {
 	const { t, i18n } = useTranslation();
-	const [activePage, setActivePage] = useState<SettingsPageKey>(() => getInitialSettingsPage());
-	const [visitedPages, setVisitedPages] = useState<Set<SettingsPageKey>>(() => new Set([getInitialSettingsPage()]));
-	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(DEFAULT_CLIENT_PREFERENCES);
-	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(DEFAULT_GENERAL_SETTINGS);
+	const [activePage, setActivePage] = useState<SettingsPageKey>(() =>
+		getInitialSettingsPage(),
+	);
+	const [visitedPages, setVisitedPages] = useState<Set<SettingsPageKey>>(
+		() => new Set([getInitialSettingsPage()]),
+	);
+	const [clientPreferences, setClientPreferences] =
+		useState<ClientPreferences>(DEFAULT_CLIENT_PREFERENCES);
+	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(
+		DEFAULT_GENERAL_SETTINGS,
+	);
 	const items: MenuItem[] = createSettingsMenuItems(t);
 
 	function selectSettingsPage(page: SettingsPageKey): void {
 		setActivePage(page);
-		setVisitedPages((currentPages: Set<SettingsPageKey>): Set<SettingsPageKey> => {
-			if (currentPages.has(page)) {
-				return currentPages;
-			}
+		setVisitedPages(
+			(currentPages: Set<SettingsPageKey>): Set<SettingsPageKey> => {
+				if (currentPages.has(page)) {
+					return currentPages;
+				}
 
-			const nextPages: Set<SettingsPageKey> = new Set(currentPages);
-			nextPages.add(page);
-			return nextPages;
-		});
+				const nextPages: Set<SettingsPageKey> = new Set(currentPages);
+				nextPages.add(page);
+				return nextPages;
+			},
+		);
 	}
 
 	function renderSettingsPage(page: SettingsPageKey): React.JSX.Element {
@@ -176,7 +268,10 @@ function SettingsWindow(): React.JSX.Element {
 				<div className={styles.placeholderHeader}>
 					<Icon name="settings" className={styles.placeholderIcon} />
 					<div>
-						<Typography.Title level={3} className={styles.placeholderTitle}>
+						<Typography.Title
+							level={3}
+							className={styles.placeholderTitle}
+						>
 							{getSettingsPageTitle(page, t)}
 						</Typography.Title>
 						<Typography.Text type="secondary">
@@ -189,11 +284,13 @@ function SettingsWindow(): React.JSX.Element {
 	}
 
 	useEffect((): (() => void) => {
-		return window.electronAPI.windowControl.onSettingsPageRequested((page: string): void => {
-			if (isSettingsPageKey(page)) {
-				selectSettingsPage(page);
-			}
-		});
+		return window.electronAPI.windowControl.onSettingsPageRequested(
+			(page: string): void => {
+				if (isSettingsPageKey(page)) {
+					selectSettingsPage(page);
+				}
+			},
+		);
 	}, []);
 
 	useEffect((): void => {
@@ -220,18 +317,27 @@ function SettingsWindow(): React.JSX.Element {
 			<div className={styles.activePage}>
 				<header className={styles.activeHeader} />
 				<div className={styles.pageViewport}>
-					{menuItemConfigs.filter((item: SettingsMenuItemConfig): boolean => visitedPages.has(item.key)).map((item: SettingsMenuItemConfig): React.JSX.Element => {
-						const isActive: boolean = item.key === activePage;
-						return (
-							<div
-								key={item.key}
-								className={`${styles.pageView} ${isActive ? styles.pageViewActive : ""}`}
-								aria-hidden={!isActive}
-							>
-								{renderSettingsPage(item.key)}
-							</div>
-						);
-					})}
+					{menuItemConfigs
+						.filter((item: SettingsMenuItemConfig): boolean =>
+							visitedPages.has(item.key),
+						)
+						.map(
+							(
+								item: SettingsMenuItemConfig,
+							): React.JSX.Element => {
+								const isActive: boolean =
+									item.key === activePage;
+								return (
+									<div
+										key={item.key}
+										className={`${styles.pageView} ${isActive ? styles.pageViewActive : ""}`}
+										aria-hidden={!isActive}
+									>
+										{renderSettingsPage(item.key)}
+									</div>
+								);
+							},
+						)}
 				</div>
 			</div>
 		</main>
