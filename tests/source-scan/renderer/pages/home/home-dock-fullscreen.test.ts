@@ -8,6 +8,8 @@ describe("Home dock fullscreen", () => {
 		const dockCss: string = readRepoFile("src", "renderer", "src", "widgets", "dock", "DockPanelTabs.module.css");
 		const homeSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
 		const normalizedHomeSource: string = homeSource.replace(/\s+/gu, " ");
+		const configSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "home-dock-panel-config.ts");
+		const normalizedConfigSource: string = configSource.replace(/\s+/gu, " ");
 		const homeCss: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.module.css");
 		const shelfSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "FullscreenComposerShelf.tsx");
 		const shelfCss: string = readRepoFile("src", "renderer", "src", "widgets", "home", "FullscreenComposerShelf.module.css");
@@ -26,8 +28,8 @@ describe("Home dock fullscreen", () => {
 		expect(homeSource).toContain("type DockFullscreenPlacement");
 		expect(homeSource).toContain("visualSessionLayout.fullscreenDock");
 		expect(homeSource).toContain("toggleDockFullscreen");
-		expect(homeSource).toContain('size: bottomDockFullscreen');
-		expect(normalizedHomeSource).toContain('size: sideDockFullscreen ? "100%"');
+		expect(normalizedConfigSource).toContain('size: bottom.isFullscreen ? "100%"');
+		expect(normalizedConfigSource).toContain('size: side.isFullscreen ? "100%"');
 		expect(normalizedHomeSource).toContain("size={ bottomDockConfig?.panel.size ?? BOTTOM_DOCK_CLOSED_SIZE }");
 		expect(normalizedHomeSource).toContain("size={ sideDockConfig?.panel.size ?? SIDE_DOCK_CLOSED_SIZE }");
 		expect(homeSource).toContain("FullscreenComposerShelf");

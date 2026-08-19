@@ -118,6 +118,7 @@ import SessionSourcePreviewDialog from "./SessionSourcePreviewDialog";
 import SessionSummaryPopover from "./SessionSummaryPopover";
 import useHomeDockLayout from "./useHomeDockLayout";
 import useSessionSummaryOverview from "./useSessionSummaryOverview";
+import { createHomeDockPanelConfigs } from "./home-dock-panel-config";
 import { formatSourceSubtitle } from "./session-overview-formatters";
 import type { TimelinePageStore } from "@/domain/workbench/timeline-page-store";
 import { useTimelineSelector } from "@/domain/workbench/timeline-page-store";
@@ -2696,69 +2697,40 @@ function HomePage({
 		onBrowserPanelChange: updateBrowserPanel,
 	};
 
-	const sideDockConfig = showSideDockButton
-		? {
-				panel: {
-					size: sideDockFullscreen
-						? "100%"
-						: sideDockOpen
-							? sideDockSize
-							: SIDE_DOCK_CLOSED_SIZE,
-					min: SIDE_DOCK_CLOSED_SIZE,
-					max: sideDockFullscreen ? undefined : SIDE_DOCK_MAX_SIZE,
-				},
-				content: {
-					...commonDockPanelProps,
-					dockId: "side",
-					placement: "side" as const,
-					isOpen: sideDockOpen,
-					isFullscreen: sideDockFullscreen,
-					defaultKind: "review" as const,
-					layout: visualSessionLayout.side,
-					activationRequest: sideDockActivationRequest,
-					onLayoutChange: updateSideDock,
-					onFullscreenToggle: (): void =>
-						toggleDockFullscreen("side"),
-					slotClassName: styles.sideDockSlot,
-				},
-			}
-		: null;
-
-	const bottomDockConfig = showBottomDockButton
-		? {
-				panel: {
-					size: bottomDockFullscreen
-						? "100%"
-						: sideDockFullscreen
-							? BOTTOM_DOCK_CLOSED_SIZE
-							: bottomDockOpen
-								? bottomDockSize
-								: BOTTOM_DOCK_CLOSED_SIZE,
-					min: BOTTOM_DOCK_CLOSED_SIZE,
-					max: bottomDockFullscreen
-						? undefined
-						: BOTTOM_DOCK_MAX_SIZE,
-				},
-				content: {
-					...commonDockPanelProps,
-					dockId: "bottom",
-					placement: "bottom" as const,
-					isOpen: bottomDockOpen,
-					isFullscreen: bottomDockFullscreen,
-					defaultKind: "terminal" as const,
-					layout: visualSessionLayout.bottom,
-					onLayoutChange: updateBottomDock,
-					onFullscreenToggle: (): void =>
-						toggleDockFullscreen("bottom"),
-					slotClassName: styles.bottomDockSlot,
-				},
-			}
-		: null;
-	// Splitter 的直接子节点必须始终是 Panel；Dock 内容可以按开关状态卸载，但 Panel 结构保持稳定。
-	const renderSideDock: boolean =
-		sideDockConfig !== null && (sideDockOpen || sideDockFullscreen);
-	const renderBottomDock: boolean =
-		bottomDockConfig !== null && (bottomDockOpen || bottomDockFullscreen);
+	const {
+		sideDockConfig,
+		bottomDockConfig,
+		renderSideDock,
+		renderBottomDock,
+	} = createHomeDockPanelConfigs({
+		sharedProps: commonDockPanelProps,
+		side: {
+			enabled: showSideDockButton,
+			isOpen: sideDockOpen,
+			size: sideDockSize,
+			isFullscreen: sideDockFullscreen,
+			layout: visualSessionLayout.side,
+			activationRequest: sideDockActivationRequest,
+			onLayoutChange: updateSideDock,
+			onFullscreenToggle: (): void => toggleDockFullscreen("side"),
+			slotClassName: styles.sideDockSlot,
+			closedSize: SIDE_DOCK_CLOSED_SIZE,
+			maxSize: SIDE_DOCK_MAX_SIZE,
+		},
+		bottom: {
+			enabled: showBottomDockButton,
+			isOpen: bottomDockOpen,
+			size: bottomDockSize,
+			isFullscreen: bottomDockFullscreen,
+			isSideFullscreen: sideDockFullscreen,
+			layout: visualSessionLayout.bottom,
+			onLayoutChange: updateBottomDock,
+			onFullscreenToggle: (): void => toggleDockFullscreen("bottom"),
+			slotClassName: styles.bottomDockSlot,
+			closedSize: BOTTOM_DOCK_CLOSED_SIZE,
+			maxSize: BOTTOM_DOCK_MAX_SIZE,
+		},
+	});
 	const pageActionControls =
 		showWorkspaceLaunchControls ||
 		showSummaryButton ||
