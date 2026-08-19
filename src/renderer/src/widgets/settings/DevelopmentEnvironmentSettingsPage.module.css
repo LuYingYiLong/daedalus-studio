@@ -1,0 +1,168 @@
+.page {
+	display: grid;
+	grid-template-rows: auto auto minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+	padding: 0 var(--ds-space-2) var(--ds-space-2);
+	overflow: hidden;
+}
+
+.header {
+	display: grid;
+	gap: 8px;
+	user-select: none;
+}
+
+.title {
+	display: flex;
+	align-items: center;
+	margin: 0 !important;
+}
+
+.errorText {
+	display: block;
+	padding: 8px 0;
+}
+
+.menuScroller {
+	min-height: 0;
+	padding-top: 8px;
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
+.projectMenu {
+	border-inline-end: 0 !important;
+}
+
+.projectMenu :global(.ant-menu-item) {
+	height: auto !important;
+	width: 100% !important;
+	min-height: 44px;
+	margin-inline: 0 !important;
+	padding-block: 0 !important;
+	line-height: normal !important;
+}
+
+.projectMenu :global(.ant-menu-title-content) {
+	min-width: 0;
+	line-height: normal;
+}
+
+.projectMenuItem {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	min-width: 0;
+}
+
+.projectText,
+.reviewMeta,
+.profileList,
+.actionList {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+
+.projectTitle,
+.projectMeta,
+.reviewMeta :global(.ant-typography) {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.projectMeta,
+.fieldHint {
+	color: var(--ant-color-text-tertiary);
+	font-size: 12px;
+	line-height: 16px;
+}
+
+.modalLoading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 220px;
+}
+
+.profileList,
+.actionList {
+	gap: var(--ds-space-2);
+}
+
+.profileEditor {
+	display: grid;
+	gap: var(--ds-space-2);
+	padding: var(--ds-space-2);
+	border: 1px solid var(--ds-border-subtle);
+	border-radius: var(--ds-radius-lg);
+}
+
+.profileHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.profileFields,
+.actionEditor {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
+	gap: var(--ds-space-2);
+	align-items: start;
+}
+
+.profileFields :global(.ant-form-item),
+.actionEditor :global(.ant-form-item) {
+	margin-bottom: 0;
+}
+
+.fullWidth,
+.actionScript {
+	grid-column: 1 / -1;
+}
+
+.networkControl {
+	justify-self: end;
+}
+
+.script {
+	font-family: var(--ds-font-family-code);
+}
+
+.reviewItem {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--ds-space-2);
+	padding: var(--ds-space-2) 0;
+}
+
+.reviewItem + .reviewItem {
+	border-top: 1px solid var(--ds-border-subtle);
+}
+
+.modal {
+	user-select: none;
+}
+
+@media (max-width: 720px) {
+	.profileFields,
+	.actionEditor,
+	.reviewItem {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.fullWidth,
+	.actionScript {
+		grid-column: auto;
+	}
+
+	.networkControl {
+		justify-self: start;
+	}
+}

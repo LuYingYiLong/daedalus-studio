@@ -1,18 +1,22 @@
+import type { MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	App,
 	Button,
 	Empty,
 	Form,
 	Input,
+	Menu,
 	Modal,
 	Select,
 	Space,
 	Spin,
 	Switch,
+	Tag,
 	Tooltip,
 	Typography,
 } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import {
@@ -27,299 +31,278 @@ import type {
 	LocalEnvironmentProfile,
 	WorkspaceConfig,
 } from "@/platform/rpc/types";
-import SettingsItem from "@/ui/SettingsItem";
-import SettingsList from "@/ui/SettingsList";
 import pageMotionStyles from "./SettingsPageMotion.module.css";
-import styles from "./WorktreeSettings.module.css";
+import styles from "./DevelopmentEnvironmentSettingsPage.module.css";
 
-type ProfileFormValues = {
+type ActionForm = {
+	id: string;
+	name: string;
+	script?: string;
+	network: boolean;
+};
+type ProfileForm = {
 	id: string;
 	name: string;
 	description?: string;
 	setupScript?: string;
 	setupNetwork: boolean;
-	actions: Array<{
-		id: string;
-		name: string;
-		script?: string;
-		network: boolean;
-	}>;
+	actions: ActionForm[];
 };
+type EditorForm = {
+	defaultEnvironmentId?: string;
+	environments: ProfileForm[];
+};
+type MenuItems = NonNullable<MenuProps["items"]>;
 
-function createProfile(index: number): LocalEnvironmentProfile {
+function createProfile(index: number): ProfileForm {
 	return {
 		id: `environment-${index + 1}`,
 		name: `Environment ${index + 1}`,
 		actions: [],
+		setupNetwork: false,
 	};
 }
 
-function profileToFormValues(
-	profile: LocalEnvironmentProfile,
-): ProfileFormValues {
+function toForm(config: LocalEnvironmentConfig): EditorForm {
 	return {
-		id: profile.id,
-		name: profile.name,
-		description: profile.description,
-		setupScript: profile.setup?.scripts.default,
-		setupNetwork: profile.setup?.network === true,
-		actions: profile.actions.map((action) => ({
-			id: action.id,
-			name: action.name,
-			script: action.scripts.default,
-			network: action.network === true,
+		defaultEnvironmentId: config.defaultEnvironmentId ?? undefined,
+		environments: config.environments.map((profile) => ({
+			id: profile.id,
+			name: profile.name,
+			description: profile.description,
+			setupScript: profile.setup?.scripts.default,
+			setupNetwork: profile.setup?.network === true,
+			actions: profile.actions.map((action) => ({
+				id: action.id,
+				name: action.name,
+				script: action.scripts.default,
+				network: action.network === true,
+			})),
 		})),
 	};
 }
 
-function formValuesToProfile(
-	values: ProfileFormValues,
-	previous: LocalEnvironmentProfile | undefined,
-): LocalEnvironmentProfile {
-	const setupScript: string = values.setupScript?.trim() ?? "";
+function toConfig(values: EditorForm): LocalEnvironmentConfig {
 	return {
-		id: values.id.trim(),
-		name: values.name.trim(),
-		description: values.description?.trim() || undefined,
-		setup:
-			setupScript === ""
-				? undefined
-				: {
-						scripts: { default: setupScript },
-						timeoutSeconds: previous?.setup?.timeoutSeconds ?? 600,
-						network: values.setupNetwork,
-					},
-		actions: values.actions.map((action) => ({
-			id: action.id.trim(),
-			name: action.name.trim(),
-			scripts: { default: action.script?.trim() ?? "" },
-			network: action.network,
-		})),
+		version: 1,
+		defaultEnvironmentId: values.defaultEnvironmentId?.trim() || null,
+		environments: values.environments.map(
+			(profile): LocalEnvironmentProfile => {
+				const setupScript = profile.setupScript?.trim() ?? "";
+				return {
+					id: profile.id.trim(),
+					name: profile.name.trim(),
+					description: profile.description?.trim() || undefined,
+					setup:
+						setupScript === ""
+							? undefined
+							: {
+									scripts: { default: setupScript },
+									timeoutSeconds: 600,
+									network: profile.setupNetwork,
+								},
+					actions: profile.actions.map((action) => ({
+						id: action.id.trim(),
+						name: action.name.trim(),
+						scripts: { default: action.script?.trim() ?? "" },
+						network: action.network,
+					})),
+				};
+			},
+		),
 	};
 }
 
-function DevelopmentEnvironmentSettingsPage(): React.JSX.Element {
+function DevelopmentEnvironmentSettingsPage(): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const { message, modal } = App.useApp();
-	const [form] = Form.useForm<ProfileFormValues>();
+	const [form] = Form.useForm<EditorForm>();
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([]);
 	const [workspaceId, setWorkspaceId] = useState<string | null>(null);
 	const [sourceFolderId, setSourceFolderId] = useState<string | null>(null);
 	const [document, setDocument] =
 		useState<LocalEnvironmentConfigDocument | null>(null);
-	const [config, setConfig] = useState<LocalEnvironmentConfig>({
-		version: 1,
-		defaultEnvironmentId: null,
-		environments: [],
-	});
-	const [loading, setLoading] = useState<boolean>(true);
-	const [saving, setSaving] = useState<boolean>(false);
-	const [editingProfileIndex, setEditingProfileIndex] = useState<
-		number | null
-	>(null);
-	const [profileEditorOpen, setProfileEditorOpen] = useState<boolean>(false);
+	const [loadingProjects, setLoadingProjects] = useState(true);
+	const [loadingDocument, setLoadingDocument] = useState(false);
+	const [saving, setSaving] = useState(false);
+	const [editorOpen, setEditorOpen] = useState(false);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const workspace = useMemo(
-		(): WorkspaceConfig | undefined =>
-			workspaces.find((item): boolean => item.id === workspaceId),
+		() => workspaces.find((candidate) => candidate.id === workspaceId),
 		[workspaceId, workspaces],
 	);
-	const selectedSource = useMemo(
-		() =>
-			workspace?.sourceFolders.find(
-				(source): boolean => source.id === sourceFolderId,
-			),
-		[sourceFolderId, workspace?.sourceFolders],
-	);
+	const profiles = Form.useWatch("environments", form) ?? [];
 
-	useEffect((): void => {
+	useEffect((): (() => void) => {
+		let cancelled = false;
 		void fetchWorkspaces()
 			.then((result): void => {
+				if (cancelled) return;
 				setWorkspaces(result.workspaces);
 				const first = result.workspaces[0];
 				setWorkspaceId(first?.id ?? null);
 				setSourceFolderId(first?.primarySourceFolderId ?? null);
 			})
 			.catch((error: unknown): void => {
-				void message.error(
-					error instanceof Error
-						? error.message
-						: t("settings.environments.errors.load"),
-				);
+				if (!cancelled)
+					setErrorMessage(
+						error instanceof Error
+							? error.message
+							: t("settings.environments.errors.load"),
+					);
 			})
-			.finally((): void => setLoading(false));
-	}, [message, t]);
+			.finally((): void => {
+				if (!cancelled) setLoadingProjects(false);
+			});
+		return (): void => {
+			cancelled = true;
+		};
+	}, [t]);
 
 	const loadDocument = useCallback(async (): Promise<void> => {
 		if (workspaceId === null || sourceFolderId === null) return;
-		setLoading(true);
+		setLoadingDocument(true);
 		try {
 			const next = await getEnvironmentConfig(
 				workspaceId,
 				sourceFolderId,
 			);
 			setDocument(next);
-			setConfig(structuredClone(next.config));
+			form.setFieldsValue(toForm(next.config));
+			setErrorMessage(null);
 		} catch (error: unknown) {
-			void message.error(
+			setErrorMessage(
 				error instanceof Error
 					? error.message
 					: t("settings.environments.errors.load"),
 			);
 		} finally {
-			setLoading(false);
+			setLoadingDocument(false);
 		}
-	}, [message, sourceFolderId, t, workspaceId]);
+	}, [form, sourceFolderId, t, workspaceId]);
 
 	useEffect((): void => {
 		void loadDocument();
 	}, [loadDocument]);
 
-	function closeProfileEditor(): void {
-		setProfileEditorOpen(false);
-		setEditingProfileIndex(null);
-		form.resetFields();
+	function selectWorkspace(nextWorkspace: WorkspaceConfig): void {
+		setWorkspaceId(nextWorkspace.id);
+		setSourceFolderId(nextWorkspace.primarySourceFolderId);
+		setDocument(null);
 	}
 
-	function openProfileEditor(index: number | null): void {
-		const profile: LocalEnvironmentProfile =
-			index === null
-				? createProfile(config.environments.length)
-				: config.environments[index];
-		form.setFieldsValue(profileToFormValues(profile));
-		setEditingProfileIndex(index);
-		setProfileEditorOpen(true);
+	function openEditor(nextWorkspace: WorkspaceConfig): void {
+		selectWorkspace(nextWorkspace);
+		setEditorOpen(true);
 	}
 
-	async function saveProfileEditor(): Promise<void> {
-		const values: ProfileFormValues = await form.validateFields();
-		const previous =
-			editingProfileIndex === null
-				? undefined
-				: config.environments[editingProfileIndex];
-		const profile = formValuesToProfile(values, previous);
-		setConfig(
-			(current): LocalEnvironmentConfig => ({
-				...current,
-				environments:
-					editingProfileIndex === null
-						? [...current.environments, profile]
-						: current.environments.map((candidate, index) =>
-								index === editingProfileIndex
-									? profile
-									: candidate,
-							),
-			}),
-		);
-		closeProfileEditor();
-	}
-
-	function removeProfile(index: number): void {
-		setConfig((current): LocalEnvironmentConfig => {
-			const profileId: string = current.environments[index].id;
-			return {
-				...current,
-				defaultEnvironmentId:
-					current.defaultEnvironmentId === profileId
-						? null
-						: current.defaultEnvironmentId,
-				environments: current.environments.filter(
-					(_, profileIndex): boolean => profileIndex !== index,
+	const menuItems = useMemo(
+		(): MenuItems =>
+			workspaces.map((candidate) => ({
+				key: candidate.id,
+				label: (
+					<span className={styles.projectMenuItem}>
+						<span className={styles.projectText}>
+							<span className={styles.projectTitle}>
+								{candidate.name}
+							</span>
+							<span className={styles.projectMeta}>
+								{candidate.sourceFolders.find(
+									(source) =>
+										source.id ===
+										candidate.primarySourceFolderId,
+								)?.path ?? ""}
+							</span>
+						</span>
+						<Tooltip title={t("settings.environments.editProject")}>
+							<Button
+								type="text"
+								shape="circle"
+								aria-label={t(
+									"settings.environments.editProject",
+								)}
+								icon={<Icon name="pencil" />}
+								onClick={(
+									event: MouseEvent<HTMLElement>,
+								): void => {
+									event.preventDefault();
+									event.stopPropagation();
+									openEditor(candidate);
+								}}
+							/>
+						</Tooltip>
+					</span>
 				),
-			};
-		});
-	}
+			})),
+		[t, workspaces],
+	);
 
 	async function save(): Promise<void> {
 		if (document === null) return;
+		const values = await form.validateFields();
 		setSaving(true);
 		try {
 			const next = await updateEnvironmentConfig({
 				workspaceId: document.workspaceId,
 				sourceFolderId: document.sourceFolderId,
-				content: JSON.stringify(config, null, "\t"),
+				content: JSON.stringify(toConfig(values), null, "\t"),
 				expectedRevision: document.revision,
 			});
 			setDocument(next);
-			setConfig(structuredClone(next.config));
-			if (next.profiles.length > 0) {
+			form.setFieldsValue(toForm(next.config));
+			setEditorOpen(false);
+			void message.success(t("settings.environments.saved"));
+			if (next.profiles.length > 0)
 				modal.info({
 					title: t("settings.environments.review.title"),
 					width: 680,
-					content: (
-						<div className={styles.reviewList}>
-							{next.profiles.map((profile) => (
-								<div
-									className={styles.reviewItem}
-									key={profile.id}
+					content: next.profiles.map((profile) => (
+						<div className={styles.reviewItem} key={profile.id}>
+							<div className={styles.reviewMeta}>
+								<Typography.Text strong>
+									{profile.name}
+								</Typography.Text>
+								<Typography.Text type="secondary">
+									{profile.resolvedSetupScript ??
+										t("settings.environments.noSetup")}
+								</Typography.Text>
+							</div>
+							<Space.Compact>
+								<Button
+									onClick={(): void => {
+										void updateEnvironmentTrust({
+											workspaceId: next.workspaceId,
+											sourceFolderId: next.sourceFolderId,
+											fingerprint: profile.fingerprint,
+											status: "trusted",
+										}).then(setDocument);
+									}}
 								>
-									<div className={styles.reviewMeta}>
-										<Typography.Text strong>
-											{profile.name}
-										</Typography.Text>
-										<Typography.Text code>
-											{profile.resolvedSetupScript ??
-												t(
-													"settings.environments.noSetup",
-												)}
-										</Typography.Text>
-										<Typography.Text type="secondary">
-											{profile.setup?.network === true
-												? t(
-														"settings.environments.review.networkEnabled",
-													)
-												: t(
-														"settings.environments.review.networkDisabled",
-													)}
-										</Typography.Text>
-									</div>
-									<Space.Compact>
-										<Button
-											onClick={(): void => {
-												void updateEnvironmentTrust({
-													workspaceId:
-														next.workspaceId,
-													sourceFolderId:
-														next.sourceFolderId,
-													fingerprint:
-														profile.fingerprint,
-													status: "trusted",
-												}).then(setDocument);
-											}}
-										>
-											{t(
-												"settings.environments.review.trust",
-											)}
-										</Button>
-										{profile.setup?.network === true ? (
-											<Button
-												type="primary"
-												onClick={(): void => {
-													void updateEnvironmentTrust(
-														{
-															workspaceId:
-																next.workspaceId,
-															sourceFolderId:
-																next.sourceFolderId,
-															fingerprint:
-																profile.fingerprint,
-															status: "network-approved",
-														},
-													).then(setDocument);
-												}}
-											>
-												{t(
-													"settings.environments.review.trustNetwork",
-												)}
-											</Button>
-										) : null}
-									</Space.Compact>
-								</div>
-							))}
+									{t("settings.environments.review.trust")}
+								</Button>
+								{profile.setup?.network === true ? (
+									<Button
+										type="primary"
+										onClick={(): void => {
+											void updateEnvironmentTrust({
+												workspaceId: next.workspaceId,
+												sourceFolderId:
+													next.sourceFolderId,
+												fingerprint:
+													profile.fingerprint,
+												status: "network-approved",
+											}).then(setDocument);
+										}}
+									>
+										{t(
+											"settings.environments.review.trustNetwork",
+										)}
+									</Button>
+								) : null}
+							</Space.Compact>
 						</div>
-					),
+					)),
 				});
-			}
-			void message.success(t("settings.environments.saved"));
 		} catch (error: unknown) {
 			void message.error(
 				error instanceof Error
@@ -331,38 +314,66 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element {
 		}
 	}
 
+	if (loadingProjects) return null;
+
 	return (
 		<section className={`${styles.page} ${pageMotionStyles.enter}`}>
 			<header className={styles.header}>
-				<Typography.Title level={3} className={styles.title}>
-					{t("settings.environments.title")}
-				</Typography.Title>
+				<Space>
+					<Typography.Title level={3} className={styles.title}>
+						{t("settings.environments.title")}
+					</Typography.Title>
+					<Tag>{workspaces.length}</Tag>
+				</Space>
 			</header>
-			<div className={styles.content}>
-				<SettingsList title={t("settings.environments.source")}>
-					<SettingsItem
-						title={
-							workspace?.name ?? t("settings.environments.source")
-						}
-						description={selectedSource?.path ?? ""}
-					>
-						<Space.Compact className={styles.sourceControls}>
-							<Select
-								value={workspaceId ?? undefined}
-								options={workspaces.map((item) => ({
-									value: item.id,
-									label: item.name,
-								}))}
-								onChange={(value: string): void => {
-									const next = workspaces.find(
-										(item): boolean => item.id === value,
-									);
-									setWorkspaceId(value);
-									setSourceFolderId(
-										next?.primarySourceFolderId ?? null,
-									);
-								}}
-							/>
+			{errorMessage === null ? null : (
+				<Typography.Text type="danger" className={styles.errorText}>
+					{errorMessage}
+				</Typography.Text>
+			)}
+			<div className={styles.menuScroller}>
+				{workspaces.length === 0 ? (
+					<Empty description={t("settings.environments.empty")} />
+				) : (
+					<Menu
+						className={styles.projectMenu}
+						selectable={false}
+						inlineIndent={8}
+						mode="inline"
+						items={menuItems}
+						onClick={({ key }): void => {
+							const nextWorkspace = workspaces.find(
+								(candidate) => candidate.id === key,
+							);
+							if (nextWorkspace !== undefined)
+								selectWorkspace(nextWorkspace);
+						}}
+					/>
+				)}
+			</div>
+			<Modal
+				title={t("settings.environments.editorTitle", {
+					workspace: workspace?.name ?? "",
+				})}
+				open={editorOpen}
+				width={760}
+				confirmLoading={saving}
+				onCancel={(): void => setEditorOpen(false)}
+				onOk={(): void => {
+					void save();
+				}}
+				mask={{ closable: false }}
+				className={styles.modal}
+			>
+				{loadingDocument || document === null ? (
+					<div className={styles.modalLoading}>
+						<Spin />
+					</div>
+				) : (
+					<Form form={form} layout="vertical" preserve={false}>
+						<Form.Item
+							label={t("settings.environments.sourceFolder")}
+						>
 							<Select
 								value={sourceFolderId ?? undefined}
 								options={(workspace?.sourceFolders ?? []).map(
@@ -371,276 +382,296 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element {
 										label: source.path,
 									}),
 								)}
-								onChange={setSourceFolderId}
+								onChange={(value: string): void => {
+									setSourceFolderId(value);
+									setDocument(null);
+								}}
 							/>
-						</Space.Compact>
-					</SettingsItem>
-				</SettingsList>
-
-				{loading ? (
-					<div className={styles.loading}>
-						<Spin />
-					</div>
-				) : document === null ? (
-					<Empty />
-				) : (
-					<SettingsList title={t("settings.environments.profiles")}>
-						<SettingsItem
-							title={t(
-								"settings.environments.defaultEnvironment",
-							)}
-							description={t(
+						</Form.Item>
+						<Form.Item
+							name="defaultEnvironmentId"
+							label={t(
 								"settings.environments.defaultEnvironment",
 							)}
 						>
 							<Select
-								className={styles.selectControl}
 								allowClear
-								value={config.defaultEnvironmentId ?? undefined}
-								placeholder={t(
-									"settings.environments.defaultEnvironment",
-								)}
-								options={config.environments.map((profile) => ({
-									value: profile.id,
-									label: profile.name,
+								options={profiles.map((profile) => ({
+									value: profile?.id,
+									label: profile?.name,
 								}))}
-								onChange={(value: string | undefined): void =>
-									setConfig(
-										(current): LocalEnvironmentConfig => ({
-											...current,
-											defaultEnvironmentId: value ?? null,
-										}),
-									)
-								}
 							/>
-						</SettingsItem>
-						{config.environments.length === 0 ? (
-							<div className={styles.emptyState}>
-								<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
-							</div>
-						) : (
-							config.environments.map((profile, index) => (
-								<SettingsItem
-									key={profile.id}
-									title={profile.name}
-									description={
-										profile.description ||
-										(profile.setup?.scripts.default ??
-											t("settings.environments.noSetup"))
-									}
-								>
-									<Space.Compact>
-										<Tooltip
-											title={t("settings.common.edit")}
+						</Form.Item>
+						<Form.List name="environments">
+							{(fields, { add, remove }) => (
+								<div className={styles.profileList}>
+									{fields.map((field) => (
+										<div
+											className={styles.profileEditor}
+											key={field.key}
 										>
-											<Button
-												aria-label={t(
-													"settings.common.edit",
+											<div
+												className={styles.profileHeader}
+											>
+												<Typography.Text strong>
+													{t(
+														"settings.environments.profiles",
+													)}
+												</Typography.Text>
+												<Button
+													danger
+													type="text"
+													shape="circle"
+													aria-label={t(
+														"settings.common.delete",
+													)}
+													icon={
+														<Icon name="remove" />
+													}
+													onClick={(): void =>
+														remove(field.name)
+													}
+												/>
+											</div>
+											<div
+												className={styles.profileFields}
+											>
+												<Form.Item
+													name={[field.name, "name"]}
+													rules={[
+														{
+															required: true,
+															whitespace: true,
+														},
+													]}
+												>
+													<Input
+														placeholder={t(
+															"settings.environments.profileName",
+														)}
+													/>
+												</Form.Item>
+												<Form.Item
+													name={[field.name, "id"]}
+													rules={[
+														{
+															required: true,
+															whitespace: true,
+														},
+													]}
+												>
+													<Input placeholder="ID" />
+												</Form.Item>
+												<Form.Item
+													className={styles.fullWidth}
+													name={[
+														field.name,
+														"description",
+													]}
+												>
+													<Input
+														placeholder={t(
+															"settings.environments.profileDescription",
+														)}
+													/>
+												</Form.Item>
+												<Form.Item
+													className={styles.fullWidth}
+													name={[
+														field.name,
+														"setupScript",
+													]}
+												>
+													<Input.TextArea
+														className={
+															styles.script
+														}
+														autoSize={{
+															minRows: 2,
+															maxRows: 6,
+														}}
+														placeholder={t(
+															"settings.environments.setupScript",
+														)}
+													/>
+												</Form.Item>
+												<Form.Item
+													className={
+														styles.networkControl
+													}
+													name={[
+														field.name,
+														"setupNetwork",
+													]}
+													valuePropName="checked"
+												>
+													<Switch
+														aria-label={t(
+															"settings.environments.network",
+														)}
+													/>
+												</Form.Item>
+											</div>
+											<Typography.Text
+												type="secondary"
+												className={styles.fieldHint}
+											>
+												{t(
+													"settings.environments.network",
 												)}
-												icon={<Icon name="pencil" />}
-												onClick={(): void =>
-													openProfileEditor(index)
-												}
-											/>
-										</Tooltip>
-										<Tooltip
-											title={t("settings.common.delete")}
-										>
-											<Button
-												danger
-												aria-label={t(
-													"settings.common.delete",
+											</Typography.Text>
+											<Form.List
+												name={[field.name, "actions"]}
+											>
+												{(
+													actionFields,
+													actionOperation,
+												) => (
+													<div
+														className={
+															styles.actionList
+														}
+													>
+														<Typography.Text strong>
+															{t(
+																"settings.environments.actions",
+															)}
+														</Typography.Text>
+														{actionFields.map(
+															(actionField) => (
+																<div
+																	className={
+																		styles.actionEditor
+																	}
+																	key={
+																		actionField.key
+																	}
+																>
+																	<Form.Item
+																		name={[
+																			actionField.name,
+																			"name",
+																		]}
+																		rules={[
+																			{
+																				required: true,
+																				whitespace: true,
+																			},
+																		]}
+																	>
+																		<Input
+																			placeholder={t(
+																				"settings.environments.actionName",
+																			)}
+																		/>
+																	</Form.Item>
+																	<Form.Item
+																		name={[
+																			actionField.name,
+																			"id",
+																		]}
+																		rules={[
+																			{
+																				required: true,
+																				whitespace: true,
+																			},
+																		]}
+																	>
+																		<Input placeholder="ID" />
+																	</Form.Item>
+																	<Form.Item
+																		name={[
+																			actionField.name,
+																			"network",
+																		]}
+																		valuePropName="checked"
+																	>
+																		<Switch
+																			aria-label={t(
+																				"settings.environments.actionNetwork",
+																			)}
+																		/>
+																	</Form.Item>
+																	<Button
+																		danger
+																		type="text"
+																		shape="circle"
+																		aria-label={t(
+																			"settings.common.delete",
+																		)}
+																		icon={
+																			<Icon name="remove" />
+																		}
+																		onClick={(): void =>
+																			actionOperation.remove(
+																				actionField.name,
+																			)
+																		}
+																	/>
+																	<Form.Item
+																		className={
+																			styles.actionScript
+																		}
+																		name={[
+																			actionField.name,
+																			"script",
+																		]}
+																	>
+																		<Input.TextArea
+																			className={
+																				styles.script
+																			}
+																			autoSize={{
+																				minRows: 2,
+																				maxRows: 6,
+																			}}
+																			placeholder={t(
+																				"settings.environments.actionScript",
+																			)}
+																		/>
+																	</Form.Item>
+																</div>
+															),
+														)}
+														<Button
+															type="dashed"
+															icon={
+																<Icon name="add" />
+															}
+															onClick={(): void =>
+																actionOperation.add(
+																	{
+																		id: `action-${actionFields.length + 1}`,
+																		name: `Action ${actionFields.length + 1}`,
+																		script: "npm test",
+																		network: false,
+																	},
+																)
+															}
+														>
+															{t(
+																"settings.environments.addAction",
+															)}
+														</Button>
+													</div>
 												)}
-												icon={<Icon name="remove" />}
-												onClick={(): void =>
-													removeProfile(index)
-												}
-											/>
-										</Tooltip>
-									</Space.Compact>
-								</SettingsItem>
-							))
-						)}
-						<SettingsItem
-							title={t("settings.environments.add")}
-							description={t("settings.environments.description")}
-						>
-							<Button
-								icon={<Icon name="add" />}
-								onClick={(): void => openProfileEditor(null)}
-							>
-								{t("settings.environments.add")}
-							</Button>
-						</SettingsItem>
-					</SettingsList>
-				)}
-
-				{document === null ? null : (
-					<SettingsList>
-						<SettingsItem
-							title={t("settings.common.save")}
-							description={document.path}
-						>
-							<Button
-								type="primary"
-								loading={saving}
-								onClick={(): void => {
-									void save();
-								}}
-							>
-								{t("settings.common.save")}
-							</Button>
-						</SettingsItem>
-					</SettingsList>
-				)}
-			</div>
-
-			<Modal
-				title={t(
-					editingProfileIndex === null
-						? "settings.environments.add"
-						: "settings.common.edit",
-				)}
-				open={profileEditorOpen}
-				onCancel={closeProfileEditor}
-				onOk={(): void => {
-					void saveProfileEditor();
-				}}
-				mask={{ closable: false }}
-			>
-				<Form form={form} layout="vertical" preserve={false}>
-					<Form.Item
-						name="name"
-						label={t("settings.environments.profiles")}
-						rules={[{ required: true, whitespace: true }]}
-					>
-						<Input />
-					</Form.Item>
-					<Form.Item
-						name="id"
-						label="ID"
-						rules={[{ required: true, whitespace: true }]}
-					>
-						<Input />
-					</Form.Item>
-					<Form.Item
-						name="description"
-						label={t("settings.environments.profileDescription")}
-					>
-						<Input />
-					</Form.Item>
-					<Form.Item
-						name="setupScript"
-						label={t("settings.environments.setupScript")}
-					>
-						<Input.TextArea
-							className={styles.script}
-							autoSize={{ minRows: 3, maxRows: 8 }}
-						/>
-					</Form.Item>
-					<Form.Item
-						name="setupNetwork"
-						label={t("settings.environments.network")}
-						valuePropName="checked"
-					>
-						<Switch />
-					</Form.Item>
-					<Typography.Title
-						level={5}
-						className={styles.modalSectionTitle}
-					>
-						{t("settings.environments.actions")}
-					</Typography.Title>
-					<Form.List name="actions">
-						{(fields, { add, remove }) => (
-							<div className={styles.actionList}>
-								{fields.map((field) => (
-									<div
-										className={styles.actionEditor}
-										key={field.key}
+											</Form.List>
+										</div>
+									))}
+									<Button
+										type="dashed"
+										icon={<Icon name="add" />}
+										onClick={(): void =>
+											add(createProfile(fields.length))
+										}
 									>
-										<Form.Item
-											name={[field.name, "name"]}
-											rules={[
-												{
-													required: true,
-													whitespace: true,
-												},
-											]}
-										>
-											<Input
-												placeholder={t(
-													"settings.environments.actionName",
-												)}
-											/>
-										</Form.Item>
-										<Form.Item
-											name={[field.name, "id"]}
-											rules={[
-												{
-													required: true,
-													whitespace: true,
-												},
-											]}
-										>
-											<Input placeholder="ID" />
-										</Form.Item>
-										<Form.Item
-											name={[field.name, "network"]}
-											valuePropName="checked"
-										>
-											<Switch
-												aria-label={t(
-													"settings.environments.actionNetwork",
-												)}
-											/>
-										</Form.Item>
-										<Button
-											danger
-											type="text"
-											aria-label={t(
-												"settings.common.delete",
-											)}
-											icon={<Icon name="remove" />}
-											onClick={(): void =>
-												remove(field.name)
-											}
-										/>
-										<Form.Item
-											className={styles.actionScript}
-											name={[field.name, "script"]}
-										>
-											<Input.TextArea
-												className={styles.script}
-												autoSize={{
-													minRows: 2,
-													maxRows: 6,
-												}}
-												placeholder={t(
-													"settings.environments.actionScript",
-												)}
-											/>
-										</Form.Item>
-									</div>
-								))}
-								<Button
-									type="dashed"
-									icon={<Icon name="add" />}
-									onClick={(): void =>
-										add({
-											id: `action-${fields.length + 1}`,
-											name: `Action ${fields.length + 1}`,
-											script: "npm test",
-											network: false,
-										})
-									}
-								>
-									{t("settings.environments.addAction")}
-								</Button>
-							</div>
-						)}
-					</Form.List>
-				</Form>
+										{t("settings.environments.add")}
+									</Button>
+								</div>
+							)}
+						</Form.List>
+					</Form>
+				)}
 			</Modal>
 		</section>
 	);
