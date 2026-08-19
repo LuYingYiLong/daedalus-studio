@@ -18,8 +18,6 @@ import {
 	Spin,
 	Splitter,
 	Typography,
-	Popover,
-	Collapse,
 	Tooltip,
 } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
@@ -118,6 +116,7 @@ import SessionPlansDialog from "./SessionPlansDialog";
 import SessionPlanPreviewDialog from "./SessionPlanPreviewDialog";
 import SessionSourcesDialog from "./SessionSourcesDialog";
 import SessionSourcePreviewDialog from "./SessionSourcePreviewDialog";
+import SessionSummaryPopover from "./SessionSummaryPopover";
 import { formatSourceSubtitle } from "./session-overview-formatters";
 import type { TimelinePageStore } from "@/domain/workbench/timeline-page-store";
 import { useTimelineSelector } from "@/domain/workbench/timeline-page-store";
@@ -2847,108 +2846,20 @@ function HomePage({
 		}
 	}
 
-	const summaryPopoverContent: React.ReactNode = useMemo(
-		(): React.ReactNode => (
-			<div className={styles.summaryPanel}>
-				{isSummaryLoading && summaryOverview === null ? (
-					<div className={styles.summaryLoading}>
-						<Spin />
-					</div>
-				) : summaryError !== null ? (
-					<div className={styles.summaryEmpty}>
-						<Typography.Text type="danger">
-							{summaryError}
-						</Typography.Text>
-						<Button
-							type="text"
-							icon={<Icon name="refresh" />}
-							onClick={(): void => {
-								void loadSummaryOverview();
-							}}
-						>
-							{t("agentPage.summary.actions.retry")}
-						</Button>
-					</div>
-				) : summaryCollapseItems.length > 0 ? (
-					summaryCollapseItems.map(
-						(item, index): React.ReactNode => (
-							<div key={String(item?.key ?? index)}>
-								{index > 0 ? <Divider size="small" /> : null}
-								<Collapse
-									size="small"
-									bordered={false}
-									items={item === undefined ? [] : [item]}
-									className={styles.summaryCollapse}
-									defaultActiveKey={[String(item?.key ?? "")]}
-									onChange={(
-										activeKeys: string | string[],
-									): void => {
-										const key: string = String(
-											item?.key ?? "",
-										);
-										const expanded: boolean = Array.isArray(
-											activeKeys,
-										)
-											? activeKeys.includes(key)
-											: activeKeys === key;
-										if (
-											expanded &&
-											key.startsWith("env_info:")
-										) {
-											void loadSummaryOverview(
-												SUMMARY_PREVIEW_LIMIT,
-												SUMMARY_PREVIEW_LIMIT,
-												true,
-											);
-										}
-									}}
-								/>
-							</div>
-						),
-					)
-				) : (
-					<Empty
-						image={Empty.PRESENTED_IMAGE_SIMPLE}
-						description={t("agentPage.summary.empty")}
-						className={styles.summaryEmpty}
-					/>
-				)}
-			</div>
-		),
-		[
-			isSummaryLoading,
-			loadSummaryOverview,
-			summaryCollapseItems,
-			summaryError,
-			summaryOverview,
-			t,
-		],
-	);
-
 	function renderSummaryButton(): React.ReactNode {
 		return (
-			<Popover
-				trigger={["click"]}
-				placement="bottom"
+			<SessionSummaryPopover
 				open={summaryOpen}
 				onOpenChange={handleSummaryOpenChange}
-				fresh
-				className={styles.summaryPopver}
-				content={summaryPopoverContent}
-			>
-				<Tooltip
-					title={t("agentPage.summary.tooltip")}
-					placement="bottom"
-				>
-					<Button
-						type="text"
-						shape="circle"
-						aria-label={t("agentPage.summary.aria.open")}
-						aria-pressed={summaryOpen}
-						icon={<Icon name="list-check" />}
-					/>
-				</Tooltip>
-			</Popover>
+				isLoading={isSummaryLoading}
+				hasOverview={summaryOverview !== null}
+				error={summaryError}
+				items={summaryCollapseItems}
+				onReload={(): void => { void loadSummaryOverview(); }}
+				onExpandEnvironment={(): void => {
+					void loadSummaryOverview(SUMMARY_PREVIEW_LIMIT, SUMMARY_PREVIEW_LIMIT, true);
+				}}
+			/>
 		);
 	}
 
