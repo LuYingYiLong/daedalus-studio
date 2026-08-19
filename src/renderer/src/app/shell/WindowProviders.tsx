@@ -88,6 +88,9 @@ function WindowProviders({
 			tabs={{
 				moreIcon: <Icon name="more-h" />,
 			}}
+			menu={{
+				expandIcon: <Icon name="arrow-forward" />,
+			}}
 		>
 			<AntdApp component="div" className={styles.root}>
 				{children}

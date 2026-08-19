@@ -9,6 +9,9 @@ describe("Composer context-menu image paste", () => {
 
 		expect(mainClipboard).toContain('ipcMain.handle("clipboard:read-image"');
 		expect(mainClipboard).toContain("clipboard.readImage()");
+		expect(mainClipboard).toContain("clipboard.availableFormats()");
+		expect(mainClipboard).toContain('format.toLowerCase() === "text/uri-list"');
+		expect(mainClipboard).toContain('format.toLowerCase() === "filenamew"');
 		expect(preload).toContain('ipcRenderer.invoke("clipboard:read-image")');
 		expect(composer).toContain("readImageFromClipboard()");
 		expect(composer).toContain("addContextFiles([image])");

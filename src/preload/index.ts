@@ -290,7 +290,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		readText: (): Promise<{ text: string }> => {
 			return ipcRenderer.invoke("clipboard:read-text");
 		},
-		readImage: (): Promise<{ dataUrl: string | null }> => {
+		readImage: (): Promise<{ dataUrl: string | null; fileName?: string }> => {
 			return ipcRenderer.invoke("clipboard:read-image");
 		}
 	},
