@@ -235,6 +235,11 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	const isAddingTextAttachment: boolean = pendingTextAttachmentCount > 0;
 	const [isHomeSubmitting, setIsHomeSubmitting] = useState<boolean>(false);
 	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+	const [firstTurnModelTransition, setFirstTurnModelTransition] = useState<{
+		sessionId: string;
+		providerId: string;
+		modelId: string;
+	} | null>(null);
 	const [sessionLayouts, setSessionLayouts] = useState<SessionLayoutMap>(
 		() => bootstrapData.sessionLayouts,
 	);
@@ -918,6 +923,15 @@ export default function useAppController({ bootstrapData }: AppProps) {
 
 	const applyWorkbench = useCallback(
 		(nextWorkbench: WorkbenchSnapshot): void => {
+			setFirstTurnModelTransition(
+				(currentTransition): typeof currentTransition => {
+					return currentTransition?.sessionId === nextWorkbench.sessionId
+						&& currentTransition.providerId === nextWorkbench.composer.provider
+						&& currentTransition.modelId === nextWorkbench.composer.model
+						? null
+						: currentTransition;
+				},
+			);
 			setWorkbench(
 				(
 					currentWorkbench: WorkbenchSnapshot | null,
@@ -2867,6 +2881,13 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			: getChatMode(workbench);
 		const chatMode: ChatMode = modeOverride ?? currentChatMode;
 		if (isFirstTurnSubmission) {
+			if (selectedProvider !== undefined && selectedModel !== undefined) {
+				setFirstTurnModelTransition({
+					sessionId: activeSessionId,
+					providerId: selectedProvider,
+					modelId: selectedModel,
+				});
+			}
 			setWorkbench(
 				(currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => currentWorkbench === null
 					? currentWorkbench
@@ -2919,6 +2940,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			},
 		);
 		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
+		let firstTurnRequestAccepted: boolean = false;
 
 		try {
 			setSessionError(null);
@@ -2942,6 +2964,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				additionalContext,
 				skillRefs,
 			});
+			firstTurnRequestAccepted = true;
 			if (chatMode !== "goal") {
 				await refreshLatestTimeline();
 			}
@@ -3008,6 +3031,15 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			}
 			console.error("[App] send message failed", error);
 		} finally {
+			if (isFirstTurnSubmission && !firstTurnRequestAccepted) {
+				setFirstTurnModelTransition(
+					(currentTransition): typeof currentTransition => {
+						return currentTransition?.sessionId === activeSessionId
+							? null
+							: currentTransition;
+					},
+				);
+			}
 			cancelledChatRequestIdsRef.current.delete(requestId);
 			if (activeChatRequestIdRef.current === requestId) {
 				activeChatRequestIdRef.current = null;
@@ -3717,6 +3749,10 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		workbench,
 		activeSessionMetadata,
 		providerModelSelection,
+		firstTurnModelTransition:
+			firstTurnModelTransition?.sessionId === activeSessionId
+				? firstTurnModelTransition
+				: null,
 	});
 	const selectedProviderId: string | null = displayedComposerModel.providerId;
 	const selectedModelId: string | null = displayedComposerModel.modelId;

@@ -86,6 +86,28 @@ describe("app helpers", () => {
 		})).toEqual({ providerId: "xiaomi-mimo", modelId: "mimo-v2.5" });
 	});
 
+	it("keeps the submitted home model visible until the first session snapshot confirms it", () => {
+		expect(getDisplayedComposerModel({
+			isNewSessionHome: false,
+			homeDraft: createHomeDraft(),
+			workbench: {
+				composer: {
+					provider: "deepseek",
+					model: "deepseek-v4-flash"
+				}
+			} as never,
+			activeSessionMetadata: {
+				provider: "deepseek",
+				model: "deepseek-v4-flash"
+			} as never,
+			providerModelSelection: null,
+			firstTurnModelTransition: {
+				providerId: "xiaomi-mimo",
+				modelId: "mimo-v2.5-pro"
+			}
+		})).toEqual({ providerId: "xiaomi-mimo", modelId: "mimo-v2.5-pro" });
+	});
+
 	it("trims timeline content from a request boundary", () => {
 		const result = trimTimelineFromRequest(page([userBlock("first"), userBlock("second"), userBlock("third")]), "second");
 

@@ -181,12 +181,18 @@ export function getDisplayedComposerModel(params: {
 	workbench: WorkbenchSnapshot | null;
 	activeSessionMetadata: SessionMetadata | null;
 	providerModelSelection: ProviderModelSelection | null;
+	firstTurnModelTransition?: {
+		providerId: string;
+		modelId: string;
+	} | null;
 }): { providerId: string | null; modelId: string | null } {
 	const fallbackProviderId: string | null = params.providerModelSelection?.activeModel.providerId ?? null;
 	const fallbackModelId: string | null = params.providerModelSelection?.activeModel.modelId ?? null;
 	return params.isNewSessionHome
 		? { providerId: params.homeDraft.providerId ?? fallbackProviderId, modelId: params.homeDraft.modelId ?? fallbackModelId }
-		: { providerId: params.workbench?.composer.provider ?? params.activeSessionMetadata?.provider ?? fallbackProviderId, modelId: params.workbench?.composer.model ?? params.activeSessionMetadata?.model ?? fallbackModelId };
+		: params.firstTurnModelTransition !== null && params.firstTurnModelTransition !== undefined
+			? params.firstTurnModelTransition
+			: { providerId: params.workbench?.composer.provider ?? params.activeSessionMetadata?.provider ?? fallbackProviderId, modelId: params.workbench?.composer.model ?? params.activeSessionMetadata?.model ?? fallbackModelId };
 }
 
 export function createWorkspaceFromSessionMetadata(metadata: SessionMetadata, workbench: WorkbenchSnapshot): WorkspaceConfig | null {
