@@ -2338,6 +2338,57 @@ function HomePage({
 	// Splitter 的直接子节点必须始终是 Panel；Dock 内容可以按开关状态卸载，但 Panel 结构保持稳定。
 	const renderSideDock: boolean = sideDockConfig !== null && (sideDockOpen || sideDockFullscreen);
 	const renderBottomDock: boolean = bottomDockConfig !== null && (bottomDockOpen || bottomDockFullscreen);
+	const pageActionControls = showWorkspaceLaunchControls || showSummaryButton || showBottomDockButton || showSideDockButton ? (
+		<div className={styles.floatingActions}>
+			{showWorkspaceLaunchControls ? (
+				<Space.Compact className={styles.workspaceLaunchControls}>
+					<Button
+						loading={isOpeningLaunchTarget}
+						icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
+						onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
+					>
+						{t("agentPage.workspaceLaunch.openIn", { target: selectedLaunchTarget.label })}
+					</Button>
+					<Dropdown
+						menu={{
+							items: workspaceLaunchMenuItems,
+							selectedKeys: [selectedLaunchTarget.id],
+							onClick: handleWorkspaceLaunchMenuClick
+						}}
+						trigger={["click"]}
+					>
+						<Button
+							aria-label={t("agentPage.workspaceLaunch.aria.selectTarget")}
+							icon={<Icon name="arrow-down" />}
+						/>
+					</Dropdown>
+				</Space.Compact>
+			) : null}
+			{showSummaryButton ? renderSummaryButton() : null}
+			{showBottomDockButton ? (
+				<Tooltip title={bottomDockOpen ? t("agentPage.dock.closeBottom") : t("agentPage.dock.openBottom")}>
+					<Button
+						type="text"
+						shape="circle"
+						aria-pressed={bottomDockOpen}
+						icon={<Icon name={bottomDockOpen ? "layout-bottom-toggled" : "layout-bottom"} />}
+						onClick={toggleBottomDock}
+					/>
+				</Tooltip>
+			) : null}
+			{showSideDockButton ? (
+				<Tooltip title={sideDockOpen ? t("agentPage.dock.closeSidebar") : t("agentPage.dock.openSidebar")}>
+					<Button
+						type="text"
+						shape="circle"
+						aria-pressed={sideDockOpen}
+						icon={<Icon name={sideDockOpen ? "layout-right-toggled" : "layout-right"} />}
+						onClick={toggleSideDock}
+					/>
+				</Tooltip>
+			) : null}
+		</div>
+	) : null;
 
 	return (
 		<div
@@ -2371,57 +2422,9 @@ function HomePage({
 
 				<Splitter.Panel min={360}>
 					<div className={styles.agentMain} data-dock-fullscreen={activeFullscreenDock ?? undefined}>
-						{showWorkspaceLaunchControls || showSummaryButton || showBottomDockButton || showSideDockButton ? (
+						{pageActionControls !== null ? (
 							<div className={styles.floatingActionSlot}>
-								<div className={styles.floatingActions}>
-									{showWorkspaceLaunchControls ? (
-										<Space.Compact className={styles.workspaceLaunchControls}>
-											<Button
-												loading={isOpeningLaunchTarget}
-												icon={getWorkspaceLaunchIcon(selectedLaunchTarget.id)}
-												onClick={(): void => { void openWorkspaceLaunchTarget(selectedLaunchTarget.id); }}
-											>
-												{t("agentPage.workspaceLaunch.openIn", { target: selectedLaunchTarget.label })}
-											</Button>
-											<Dropdown
-												menu={{
-													items: workspaceLaunchMenuItems,
-													selectedKeys: [selectedLaunchTarget.id],
-													onClick: handleWorkspaceLaunchMenuClick
-												}}
-												trigger={["click"]}
-											>
-												<Button
-													aria-label={t("agentPage.workspaceLaunch.aria.selectTarget")}
-													icon={<Icon name="arrow-down" />}
-												/>
-											</Dropdown>
-										</Space.Compact>
-									) : null}
-									{showSummaryButton ? renderSummaryButton() : null}
-									{showBottomDockButton ? (
-										<Tooltip title={bottomDockOpen ? t("agentPage.dock.closeBottom") : t("agentPage.dock.openBottom")}>
-											<Button
-												type="text"
-												shape="circle"
-												aria-pressed={bottomDockOpen}
-												icon={<Icon name={bottomDockOpen ? "layout-bottom-toggled" : "layout-bottom"} />}
-												onClick={toggleBottomDock}
-											/>
-										</Tooltip>
-									) : null}
-									{showSideDockButton ? (
-										<Tooltip title={sideDockOpen ? t("agentPage.dock.closeSidebar") : t("agentPage.dock.openSidebar")}>
-											<Button
-												type="text"
-												shape="circle"
-												aria-pressed={sideDockOpen}
-												icon={<Icon name={sideDockOpen ? "layout-right-toggled" : "layout-right"} />}
-												onClick={toggleSideDock}
-											/>
-										</Tooltip>
-									) : null}
-								</div>
+								{pageActionControls}
 							</div>
 						) : null}
 						<Splitter
@@ -2446,7 +2449,10 @@ function HomePage({
 								>
 									<Splitter.Panel min={sideDockFullscreen ? SIDE_DOCK_CLOSED_SIZE : 360} size={sideDockFullscreen ? 0 : undefined}>
 										<section className={styles.chatPanel}>
-											<header className={styles.chatHeader}>
+										<header
+											className={styles.chatHeader}
+											data-side-dock-open={sideDockOpen ? "true" : undefined}
+										>
 												<div className={styles.chatTitleRow}>
 													<Typography.Text className={styles.chatText} ellipsis={{ tooltip: chatTitle }}>
 														{chatTitle}

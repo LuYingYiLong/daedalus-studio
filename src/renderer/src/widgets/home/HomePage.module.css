@@ -185,6 +185,10 @@
 	user-select: none;
 }
 
+.chatHeader[data-side-dock-open="true"] {
+	padding-right: var(--ds-space-2);
+}
+
 .chatTitleRow {
 	display: flex;
 	align-items: center;
