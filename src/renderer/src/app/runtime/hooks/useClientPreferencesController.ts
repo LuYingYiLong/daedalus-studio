@@ -30,6 +30,9 @@ export type ClientPreferencesController = {
 	resolvedLanguage: ResolvedLanguage;
 	fontFamily: string;
 	fontFamilyCode: string;
+	animationsEnabled: boolean;
+	uiFontSize: number;
+	codeFontSize: number;
 };
 
 function useClientPreferencesController(): ClientPreferencesController {
@@ -37,6 +40,9 @@ function useClientPreferencesController(): ClientPreferencesController {
 	const [themeColor, setThemeColor] = useState<string>(() => getCachedClientPreferences().themeColor);
 	const [fontFamily, setFontFamily] = useState<string>(() => getCachedClientPreferences().fontFamily);
 	const [fontFamilyCode, setFontFamilyCode] = useState<string>(() => getCachedClientPreferences().fontFamilyCode);
+	const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => getCachedClientPreferences().animationsEnabled);
+	const [uiFontSize, setUiFontSize] = useState<number>(() => getCachedClientPreferences().uiFontSize);
+	const [codeFontSize, setCodeFontSize] = useState<number>(() => getCachedClientPreferences().codeFontSize);
 	const [languagePreference, setLanguagePreference] = useState<LanguagePreference>(() => getCachedClientPreferences().language);
 	const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() => getCurrentSystemTheme());
 
@@ -45,6 +51,9 @@ function useClientPreferencesController(): ClientPreferencesController {
 		setThemeColor(preferences.themeColor);
 		setFontFamily(preferences.fontFamily);
 		setFontFamilyCode(preferences.fontFamilyCode);
+		setAnimationsEnabled(preferences.animationsEnabled);
+		setUiFontSize(preferences.uiFontSize);
+		setCodeFontSize(preferences.codeFontSize);
 		setLanguagePreference(preferences.language);
 	});
 
@@ -86,7 +95,10 @@ function useClientPreferencesController(): ClientPreferencesController {
 		resolvedTheme: resolveThemePreference(themePreference, systemTheme),
 		resolvedLanguage: resolveLanguagePreference(languagePreference),
 		fontFamily,
-		fontFamilyCode
+		fontFamilyCode,
+		animationsEnabled,
+		uiFontSize,
+		codeFontSize
 	};
 }
 

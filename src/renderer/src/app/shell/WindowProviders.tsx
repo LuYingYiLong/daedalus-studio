@@ -26,6 +26,9 @@ function WindowProviders({
 		themeColor,
 		fontFamily,
 		fontFamilyCode,
+		animationsEnabled,
+		uiFontSize,
+		codeFontSize,
 	} = useClientPreferencesController();
 	const studioTheme: ThemeConfig = useMemo(
 		(): ThemeConfig =>
@@ -34,8 +37,9 @@ function WindowProviders({
 				themeColor,
 				fontFamily,
 				fontFamilyCode,
+				uiFontSize,
 			),
-		[fontFamily, fontFamilyCode, resolvedTheme, themeColor],
+		[fontFamily, fontFamilyCode, resolvedTheme, themeColor, uiFontSize],
 	);
 	const antdLocale = resolvedLanguage === "zh-CN" ? zhCN : enUS;
 
@@ -58,8 +62,14 @@ function WindowProviders({
 			document.documentElement.style,
 			fontFamily,
 			fontFamilyCode,
+			uiFontSize,
+			codeFontSize,
 		);
-	}, [fontFamily, fontFamilyCode]);
+	}, [codeFontSize, fontFamily, fontFamilyCode, uiFontSize]);
+
+	useEffect((): void => {
+		document.documentElement.dataset.motion = animationsEnabled ? "on" : "off";
+	}, [animationsEnabled]);
 
 	return (
 		<ConfigProvider

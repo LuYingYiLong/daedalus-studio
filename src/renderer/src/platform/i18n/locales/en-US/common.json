@@ -2459,6 +2459,17 @@
 					"description": "Customize the Studio accent and primary control color."
 				}
 			},
+			"interface": {
+				"title": "Interface",
+				"motion": {
+					"title": "Dynamic effects",
+					"description": "Enable interface transitions and animations."
+				},
+				"uiFontSize": {
+					"title": "UI font size",
+					"description": "Adjust the baseline font size used throughout Daedalus Studio."
+				}
+			},
 			"fonts": {
 				"title": "Fonts",
 				"body": {
@@ -2472,6 +2483,10 @@
 					"description": "Customize the font family used by code, terminals, and the file editor.",
 					"placeholder": "e.g. \"JetBrains Mono\", Consolas, monospace",
 					"reset": "Restore default code font"
+				},
+				"codeSize": {
+					"title": "Code font size",
+					"description": "Adjust the baseline size of code in chats and diffs."
 				}
 			},
 			"errors": {

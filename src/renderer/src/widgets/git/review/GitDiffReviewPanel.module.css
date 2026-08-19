@@ -10,6 +10,7 @@
 	--diff-background-color: var(--ds-bg);
 	--diff-text-color: var(--ds-text-primary);
 	--diff-font-family: var(--ds-font-family-code);
+	--diff-font-size: var(--ds-font-size-code);
 	--diff-gutter-insert-background-color: var(--ds-git-addition-bg);
 	--diff-gutter-delete-background-color: var(--ds-git-deletion-bg);
 	--diff-code-insert-background-color: var(--ds-git-addition-bg);
@@ -161,7 +162,7 @@
 
 .diffTable {
 	width: 100%;
-	font-size: 12px;
+	font-size: var(--diff-font-size);
 	line-height: 1.55;
 	background: var(--diff-background-color);
 	color: var(--diff-text-color);
@@ -268,7 +269,7 @@
 	padding: 3px 8px;
 	color: var(--ds-text-muted);
 	font-family: var(--ds-font-family-code);
-	font-size: 12px;
+	font-size: var(--diff-font-size);
 	font-weight: 500;
 }
 
@@ -280,7 +281,7 @@
 	background: var(--ds-surface);
 	color: var(--ds-text-primary);
 	font-family: var(--ds-font-family-code);
-	font-size: 12px;
+	font-size: var(--diff-font-size);
 	font-weight: 500;
 	line-height: 1.55;
 	overflow: auto;

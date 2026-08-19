@@ -5,8 +5,10 @@ import {
 	Button,
 	ColorPicker,
 	Input,
+	InputNumber,
 	Segmented,
 	Space,
+	Switch,
 	Tooltip,
 	Typography,
 } from "antd";
@@ -33,7 +35,13 @@ type AppearanceSettingsPageProps = {
 };
 
 type FontFamilyKey = "fontFamily" | "fontFamilyCode";
-type SettingKey = FontFamilyKey | "theme" | "themeColor";
+type SettingKey =
+	| FontFamilyKey
+	| "theme"
+	| "themeColor"
+	| "animationsEnabled"
+	| "uiFontSize"
+	| "codeFontSize";
 
 const DEFAULT_FONT_FAMILIES: Record<FontFamilyKey, string> = {
 	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
@@ -86,7 +94,10 @@ function AppearanceSettingsPage({
 		};
 	}, [onClientPreferencesChange, t]);
 
-	async function save(patch: Partial<ClientPreferences>, key: SettingKey): Promise<void> {
+	async function save(
+		patch: Partial<ClientPreferences>,
+		key: SettingKey,
+	): Promise<void> {
 		if (savingKey !== null) return;
 		const previous = draft;
 		const optimistic = { ...previous, ...patch };
@@ -102,7 +113,9 @@ function AppearanceSettingsPage({
 			setDraft(previous);
 			onClientPreferencesChange(previous);
 			setErrorMessage(
-				error instanceof Error ? error.message : t("settings.appearance.errors.save"),
+				error instanceof Error
+					? error.message
+					: t("settings.appearance.errors.save"),
 			);
 		} finally {
 			setSavingKey(null);
@@ -110,10 +123,12 @@ function AppearanceSettingsPage({
 	}
 
 	function updateFont(key: FontFamilyKey, value: string): void {
-		setDraft((preferences: ClientPreferences): ClientPreferences => ({
-			...preferences,
-			[key]: value,
-		}));
+		setDraft(
+			(preferences: ClientPreferences): ClientPreferences => ({
+				...preferences,
+				[key]: value,
+			}),
+		);
 	}
 
 	function saveFont(key: FontFamilyKey): void {
@@ -121,6 +136,14 @@ function AppearanceSettingsPage({
 		if (value !== clientPreferences[key].trim()) {
 			void save({ [key]: value }, key);
 		}
+	}
+
+	function saveFontSize(
+		key: "uiFontSize" | "codeFontSize",
+		value: number | null,
+	): void {
+		if (value === null || value === draft[key]) return;
+		void save({ [key]: value }, key);
 	}
 
 	if (isLoading) return null;
@@ -138,26 +161,57 @@ function AppearanceSettingsPage({
 						type="warning"
 						showIcon={true}
 						description={errorMessage}
-						closable={{ onClose: (): void => setErrorMessage(null) }}
+						closable={{
+							onClose: (): void => setErrorMessage(null),
+						}}
 						className={styles.alert}
 					/>
 				)}
 				<SettingsList title={t("settings.appearance.theme.title")}>
 					<div className={styles.preferenceList}>
-						<SettingsItem title={t("settings.appearance.theme.mode.title")} description={t("settings.appearance.theme.mode.description")}>
+						<SettingsItem
+							title={t("settings.appearance.theme.mode.title")}
+							description={t(
+								"settings.appearance.theme.mode.description",
+							)}
+						>
 							<Segmented<ClientPreferences["theme"]>
 								className={styles.themeControl}
 								value={draft.theme}
-								disabled={savingKey !== null && savingKey !== "theme"}
+								disabled={
+									savingKey !== null && savingKey !== "theme"
+								}
 								options={[
-									{ label: t("settings.appearance.theme.mode.system"), value: "system" },
-									{ label: t("settings.appearance.theme.mode.light"), value: "light" },
-									{ label: t("settings.appearance.theme.mode.dark"), value: "dark" },
+									{
+										label: t(
+											"settings.appearance.theme.mode.system",
+										),
+										value: "system",
+									},
+									{
+										label: t(
+											"settings.appearance.theme.mode.light",
+										),
+										value: "light",
+									},
+									{
+										label: t(
+											"settings.appearance.theme.mode.dark",
+										),
+										value: "dark",
+									},
 								]}
-								onChange={(theme): void => { void save({ theme }, "theme"); }}
+								onChange={(theme): void => {
+									void save({ theme }, "theme");
+								}}
 							/>
 						</SettingsItem>
-						<SettingsItem title={t("settings.appearance.theme.color.title")} description={t("settings.appearance.theme.color.description")}>
+						<SettingsItem
+							title={t("settings.appearance.theme.color.title")}
+							description={t(
+								"settings.appearance.theme.color.description",
+							)}
+						>
 							<Space.Compact>
 								<ColorPicker
 									{...colorPickerProps}
@@ -165,36 +219,188 @@ function AppearanceSettingsPage({
 									format="hex"
 									disabledAlpha={true}
 									disabledFormat={true}
-									showText={(color): React.ReactNode => color.toHexString().toUpperCase()}
+									showText={(color): React.ReactNode =>
+										color.toHexString().toUpperCase()
+									}
 									disabled={savingKey !== null}
 									onChange={(color): void => {
 										const themeColor = color.toHexString();
-										setDraft((preferences: ClientPreferences): ClientPreferences => ({
-											...preferences,
-											themeColor,
-										}));
+										setDraft(
+											(
+												preferences: ClientPreferences,
+											): ClientPreferences => ({
+												...preferences,
+												themeColor,
+											}),
+										);
 									}}
 									onChangeComplete={(color): void => {
-										void save({ themeColor: color.toHexString() }, "themeColor");
+										void save(
+											{ themeColor: color.toHexString() },
+											"themeColor",
+										);
 									}}
 								/>
-								<Button icon={<Icon name="reload" />} loading={savingKey === "themeColor"} disabled={savingKey !== null || draft.themeColor === DEFAULT_THEME_COLOR} onClick={(): void => { void save({ themeColor: DEFAULT_THEME_COLOR }, "themeColor"); }} />
+								<Button
+									icon={<Icon name="reload" />}
+									loading={savingKey === "themeColor"}
+									disabled={
+										savingKey !== null ||
+										draft.themeColor === DEFAULT_THEME_COLOR
+									}
+									onClick={(): void => {
+										void save(
+											{ themeColor: DEFAULT_THEME_COLOR },
+											"themeColor",
+										);
+									}}
+								/>
 							</Space.Compact>
+						</SettingsItem>
+					</div>
+				</SettingsList>
+				<SettingsList title={t("settings.appearance.interface.title")}>
+					<div className={styles.preferenceList}>
+						<SettingsItem
+							title={t(
+								"settings.appearance.interface.motion.title",
+							)}
+							description={t(
+								"settings.appearance.interface.motion.description",
+							)}
+						>
+							<Switch
+								checked={draft.animationsEnabled}
+								loading={savingKey === "animationsEnabled"}
+								disabled={
+									savingKey !== null &&
+									savingKey !== "animationsEnabled"
+								}
+								onChange={(
+									animationsEnabled: boolean,
+								): void => {
+									void save(
+										{ animationsEnabled },
+										"animationsEnabled",
+									);
+								}}
+							/>
+						</SettingsItem>
+						<SettingsItem
+							title={t(
+								"settings.appearance.interface.uiFontSize.title",
+							)}
+							description={t(
+								"settings.appearance.interface.uiFontSize.description",
+							)}
+						>
+							<InputNumber
+								className={styles.fontSizeInput}
+								value={draft.uiFontSize}
+								min={12}
+								max={18}
+								precision={0}
+								suffix="px"
+								disabled={savingKey !== null}
+								onChange={(value: number | null): void =>
+									saveFontSize("uiFontSize", value)
+								}
+							/>
 						</SettingsItem>
 					</div>
 				</SettingsList>
 				<SettingsList title={t("settings.appearance.fonts.title")}>
 					<div className={styles.preferenceList}>
-						{(["fontFamily", "fontFamilyCode"] as const).map((key): React.JSX.Element => (
-							<SettingsItem key={key} title={t(`settings.appearance.fonts.${key === "fontFamily" ? "body" : "code"}.title`)} description={t(`settings.appearance.fonts.${key === "fontFamily" ? "body" : "code"}.description`)}>
-								<Space.Compact>
-									<Input className={styles.fontFamilyInput} value={draft[key]} maxLength={512} allowClear placeholder={t(`settings.appearance.fonts.${key === "fontFamily" ? "body" : "code"}.placeholder`)} disabled={savingKey !== null} onChange={(event): void => updateFont(key, event.target.value)} onBlur={(): void => saveFont(key)} onPressEnter={(event): void => event.currentTarget.blur()} />
-									<Tooltip title={t(`settings.appearance.fonts.${key === "fontFamily" ? "body" : "code"}.reset`)}>
-										<Button aria-label={t(`settings.appearance.fonts.${key === "fontFamily" ? "body" : "code"}.reset`)} icon={<Icon name="reload" />} loading={savingKey === key} disabled={savingKey !== null || draft[key] === DEFAULT_FONT_FAMILIES[key]} onMouseDown={(event): void => event.preventDefault()} onClick={(): void => { void save({ [key]: DEFAULT_FONT_FAMILIES[key] }, key); }} />
-									</Tooltip>
-								</Space.Compact>
-							</SettingsItem>
-						))}
+						{(["fontFamily", "fontFamilyCode"] as const).map(
+							(key): React.JSX.Element => (
+								<SettingsItem
+									key={key}
+									title={t(
+										`settings.appearance.fonts.${key === "fontFamily" ? "body" : "code"}.title`,
+									)}
+									description={t(
+										`settings.appearance.fonts.${key === "fontFamily" ? "body" : "code"}.description`,
+									)}
+								>
+									<Space.Compact>
+										<Input
+											className={styles.fontFamilyInput}
+											value={draft[key]}
+											maxLength={512}
+											allowClear
+											placeholder={t(
+												`settings.appearance.fonts.${key === "fontFamily" ? "body" : "code"}.placeholder`,
+											)}
+											disabled={savingKey !== null}
+											onChange={(event): void =>
+												updateFont(
+													key,
+													event.target.value,
+												)
+											}
+											onBlur={(): void => saveFont(key)}
+											onPressEnter={(event): void =>
+												event.currentTarget.blur()
+											}
+										/>
+										<Tooltip
+											title={t(
+												`settings.appearance.fonts.${key === "fontFamily" ? "body" : "code"}.reset`,
+											)}
+										>
+											<Button
+												aria-label={t(
+													`settings.appearance.fonts.${key === "fontFamily" ? "body" : "code"}.reset`,
+												)}
+												icon={<Icon name="reload" />}
+												loading={savingKey === key}
+												disabled={
+													savingKey !== null ||
+													draft[key] ===
+														DEFAULT_FONT_FAMILIES[
+															key
+														]
+												}
+												onMouseDown={(event): void =>
+													event.preventDefault()
+												}
+												onClick={(): void => {
+													void save(
+														{
+															[key]: DEFAULT_FONT_FAMILIES[
+																key
+															],
+														},
+														key,
+													);
+												}}
+											/>
+										</Tooltip>
+									</Space.Compact>
+								</SettingsItem>
+							),
+						)}
+						<SettingsItem
+							title={t(
+								"settings.appearance.fonts.codeSize.title",
+							)}
+							description={t(
+								"settings.appearance.fonts.codeSize.description",
+							)}
+						>
+							<InputNumber
+								className={styles.fontSizeInput}
+								value={draft.codeFontSize}
+								min={11}
+								max={20}
+								precision={0}
+								suffix="px"
+								disabled={savingKey !== null}
+								onChange={(value: number | null): void =>
+									saveFontSize("codeFontSize", value)
+								}
+							/>
+						</SettingsItem>
 					</div>
 				</SettingsList>
 			</div>

@@ -40,9 +40,14 @@
 	width: min(380px, 42vw);
 }
 
+.fontSizeInput {
+	width: 112px;
+}
+
 @media (max-width: 720px) {
 	.themeControl,
-	.fontFamilyInput {
+	.fontFamilyInput,
+	.fontSizeInput {
 		width: 100%;
 	}
 }

@@ -2452,6 +2452,17 @@
 					"description": "自定义 Studio 的强调色和主要控件颜色。"
 				}
 			},
+			"interface": {
+				"title": "界面",
+				"motion": {
+					"title": "动态效果",
+					"description": "开启界面中的过渡和动画效果。"
+				},
+				"uiFontSize": {
+					"title": "UI 字号",
+					"description": "调整 Daedalus Studio 使用的基准字号。"
+				}
+			},
 			"fonts": {
 				"title": "字体",
 				"body": {
@@ -2465,6 +2476,10 @@
 					"description": "自定义代码、终端和文件编辑器使用的字体族。",
 					"placeholder": "例如：\"JetBrains Mono\", Consolas, monospace",
 					"reset": "恢复默认代码字体"
+				},
+				"codeSize": {
+					"title": "代码字号",
+					"description": "调整聊天和差异视图中代码使用的基础字号。"
 				}
 			},
 			"errors": {

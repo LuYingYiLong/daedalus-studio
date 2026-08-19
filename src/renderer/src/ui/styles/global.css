@@ -169,8 +169,11 @@
 		"Liberation Mono", Menlo, Courier, "Mona Sans", "Wen Yuan Sans SC",
 		"Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system,
 		BlinkMacSystemFont, "Segoe UI", monospace;
+	--ds-font-size: 14px;
+	--ds-font-size-code: 13px;
 	color-scheme: dark;
 	font-family: var(--ds-font-family);
+	font-size: var(--ds-font-size);
 	background: transparent;
 	color: var(--ds-text-primary);
 	text-rendering: optimizeLegibility;
@@ -235,6 +238,23 @@ body {
 
 body {
 	overflow: hidden;
+}
+
+:root[data-motion="off"] {
+	--ant-motion-duration-fast: 0s;
+	--ant-motion-duration-mid: 0s;
+	--ant-motion-duration-slow: 0s;
+}
+
+:root[data-motion="off"] *,
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+	animation-duration: 0.001ms !important;
+	animation-delay: 0s !important;
+	animation-iteration-count: 1 !important;
+	transition-duration: 0s !important;
+	transition-delay: 0s !important;
+	scroll-behavior: auto !important;
 }
 
 ::-webkit-scrollbar {

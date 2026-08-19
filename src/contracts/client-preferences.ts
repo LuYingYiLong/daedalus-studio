@@ -15,6 +15,9 @@ export type ClientPreferences = {
 	minimizeToTrayOnClose: boolean;
 	theme: "system" | "light" | "dark";
 	themeColor: string;
+	animationsEnabled: boolean;
+	uiFontSize: number;
+	codeFontSize: number;
 	fontFamily: string;
 	fontFamilyCode: string;
 	language: LanguagePreference;

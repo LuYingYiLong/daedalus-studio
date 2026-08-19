@@ -7,10 +7,17 @@ import {
 } from "../../contracts/keyboard-shortcuts";
 import { DEFAULT_STUDIO_THEME_COLOR, normalizeStudioThemeColor } from "../../contracts/theme-color";
 import {
+	DEFAULT_STUDIO_CODE_FONT_SIZE,
 	DEFAULT_STUDIO_FONT_FAMILY,
 	DEFAULT_STUDIO_FONT_FAMILY_CODE,
+	DEFAULT_STUDIO_UI_FONT_SIZE,
+	MAX_STUDIO_CODE_FONT_SIZE,
+	MAX_STUDIO_UI_FONT_SIZE,
+	MIN_STUDIO_CODE_FONT_SIZE,
+	MIN_STUDIO_UI_FONT_SIZE,
 	normalizeStudioFontFamily,
-	normalizeStudioFontFamilyPatch
+	normalizeStudioFontFamilyPatch,
+	normalizeStudioFontSize
 } from "../../contracts/studio-fonts";
 import type { ClientPreferences, ClientPreferencesPatch } from "../../contracts/client-preferences";
 import {
@@ -37,6 +44,9 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	minimizeToTrayOnClose: false,
 	theme: "system",
 	themeColor: DEFAULT_THEME_COLOR,
+	animationsEnabled: true,
+	uiFontSize: DEFAULT_STUDIO_UI_FONT_SIZE,
+	codeFontSize: DEFAULT_STUDIO_CODE_FONT_SIZE,
 	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
 	fontFamilyCode: DEFAULT_STUDIO_FONT_FAMILY_CODE,
 	language: "system",
@@ -191,6 +201,21 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			? value.theme
 			: DEFAULT_CLIENT_PREFERENCES.theme;
 	const themeColor: string = normalizeStudioThemeColor(value.themeColor);
+	const animationsEnabled: boolean = typeof value.animationsEnabled === "boolean"
+		? value.animationsEnabled
+		: DEFAULT_CLIENT_PREFERENCES.animationsEnabled;
+	const uiFontSize: number = normalizeStudioFontSize(
+		value.uiFontSize,
+		DEFAULT_CLIENT_PREFERENCES.uiFontSize,
+		MIN_STUDIO_UI_FONT_SIZE,
+		MAX_STUDIO_UI_FONT_SIZE
+	);
+	const codeFontSize: number = normalizeStudioFontSize(
+		value.codeFontSize,
+		DEFAULT_CLIENT_PREFERENCES.codeFontSize,
+		MIN_STUDIO_CODE_FONT_SIZE,
+		MAX_STUDIO_CODE_FONT_SIZE
+	);
 	const fontFamily: string = normalizeStudioFontFamily(value.fontFamily, DEFAULT_CLIENT_PREFERENCES.fontFamily);
 	const fontFamilyCode: string = normalizeStudioFontFamily(value.fontFamilyCode, DEFAULT_CLIENT_PREFERENCES.fontFamilyCode);
 	const languagePreference: ClientPreferences["language"] =
@@ -216,6 +241,9 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			minimizeToTrayOnClose,
 			theme: themePreference,
 			themeColor,
+			animationsEnabled,
+			uiFontSize,
+			codeFontSize,
 			fontFamily,
 			fontFamilyCode,
 			language: languagePreference,
@@ -230,6 +258,9 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			|| value.minimizeToTrayOnClose !== minimizeToTrayOnClose
 			|| value.theme !== themePreference
 			|| value.themeColor !== themeColor
+			|| value.animationsEnabled !== animationsEnabled
+			|| value.uiFontSize !== uiFontSize
+			|| value.codeFontSize !== codeFontSize
 			|| value.fontFamily !== fontFamily
 			|| value.fontFamilyCode !== fontFamilyCode
 			|| value.language !== languagePreference
@@ -244,6 +275,9 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 				"minimizeToTrayOnClose",
 				"theme",
 				"themeColor",
+				"animationsEnabled",
+				"uiFontSize",
+				"codeFontSize",
 				"fontFamily",
 				"fontFamilyCode",
 				"language",
@@ -276,6 +310,25 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	}
 	if (typeof value.themeColor === "string" && /^#[0-9a-fA-F]{6}$/.test(value.themeColor.trim())) {
 		patch.themeColor = normalizeStudioThemeColor(value.themeColor);
+	}
+	if (typeof value.animationsEnabled === "boolean") {
+		patch.animationsEnabled = value.animationsEnabled;
+	}
+	if (typeof value.uiFontSize === "number" && Number.isFinite(value.uiFontSize)) {
+		patch.uiFontSize = normalizeStudioFontSize(
+			value.uiFontSize,
+			DEFAULT_CLIENT_PREFERENCES.uiFontSize,
+			MIN_STUDIO_UI_FONT_SIZE,
+			MAX_STUDIO_UI_FONT_SIZE
+		);
+	}
+	if (typeof value.codeFontSize === "number" && Number.isFinite(value.codeFontSize)) {
+		patch.codeFontSize = normalizeStudioFontSize(
+			value.codeFontSize,
+			DEFAULT_CLIENT_PREFERENCES.codeFontSize,
+			MIN_STUDIO_CODE_FONT_SIZE,
+			MAX_STUDIO_CODE_FONT_SIZE
+		);
 	}
 	if (typeof value.fontFamily === "string") {
 		patch.fontFamily = normalizeStudioFontFamilyPatch(value.fontFamily, DEFAULT_CLIENT_PREFERENCES.fontFamily, "fontFamily");

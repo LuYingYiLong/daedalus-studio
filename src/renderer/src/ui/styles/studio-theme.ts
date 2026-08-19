@@ -8,8 +8,12 @@ import {
 import {
 	DEFAULT_STUDIO_FONT_FAMILY,
 	DEFAULT_STUDIO_FONT_FAMILY_CODE,
+	DEFAULT_STUDIO_UI_FONT_SIZE,
+	MAX_STUDIO_UI_FONT_SIZE,
+	MIN_STUDIO_UI_FONT_SIZE,
 	applyStudioFontVariables,
-	normalizeStudioFontFamily
+	normalizeStudioFontFamily,
+	normalizeStudioFontSize
 } from "../../../../contracts/studio-fonts";
 
 export { createStudioAccentPalette, DEFAULT_STUDIO_THEME_COLOR } from "../../../../contracts/theme-color";
@@ -55,6 +59,7 @@ const studioThemeColors: Record<ResolvedTheme, StudioThemeColors> = {
 export {
 	DEFAULT_STUDIO_FONT_FAMILY,
 	DEFAULT_STUDIO_FONT_FAMILY_CODE,
+	DEFAULT_STUDIO_UI_FONT_SIZE,
 	applyStudioFontVariables
 } from "../../../../contracts/studio-fonts";
 
@@ -66,12 +71,19 @@ export function createStudioTheme(
 	resolvedTheme: ResolvedTheme,
 	themeColor: string = DEFAULT_STUDIO_THEME_COLOR,
 	fontFamily?: string,
-	fontFamilyCode?: string
+	fontFamilyCode?: string,
+	uiFontSize?: number
 ): ThemeConfig {
 	const dsColors: StudioThemeColors = studioThemeColors[resolvedTheme];
 	const accent: StudioAccentPalette = createStudioAccentPalette(resolvedTheme, themeColor);
 	const resolvedFontFamily: string = normalizeStudioFontFamily(fontFamily, DEFAULT_STUDIO_FONT_FAMILY);
 	const resolvedFontFamilyCode: string = normalizeStudioFontFamily(fontFamilyCode, DEFAULT_STUDIO_FONT_FAMILY_CODE);
+	const resolvedUiFontSize: number = normalizeStudioFontSize(
+		uiFontSize,
+		DEFAULT_STUDIO_UI_FONT_SIZE,
+		MIN_STUDIO_UI_FONT_SIZE,
+		MAX_STUDIO_UI_FONT_SIZE
+	);
 
 	return {
 		algorithm: resolvedTheme === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
@@ -98,6 +110,7 @@ export function createStudioTheme(
 			controlHeightSM: 24,
 			fontFamily: resolvedFontFamily,
 			fontFamilyCode: resolvedFontFamilyCode,
+			fontSize: resolvedUiFontSize,
 			padding: 8,
 			margin: 8,
 			marginXS: 4,

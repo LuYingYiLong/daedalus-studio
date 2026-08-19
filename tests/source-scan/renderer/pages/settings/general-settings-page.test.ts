@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("GeneralSettingsPage", () => {
-	it("renders general options with appearance preferences stored in Studio", () => {
+	it("keeps general options separate from Studio appearance preferences", () => {
 		const pageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "GeneralSettingsPage.tsx");
+		const appearancePageSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "AppearanceSettingsPage.tsx");
 		const cssSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "GeneralSettingsPage.module.css");
 		const motionCssSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "SettingsPageMotion.module.css");
 		const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "client-preferences-api.ts");
@@ -29,27 +30,25 @@ describe("GeneralSettingsPage", () => {
 		expect(pageSource).toContain("settings.general.notifications.runCompleted.title");
 		expect(pageSource).toContain("settings.general.general.autoCheckForUpdates.title");
 		expect(pageSource).toContain("settings.general.general.minimizeToTrayOnClose.title");
-		expect(pageSource).toContain("settings.general.display.title");
-		expect(pageSource).toContain("settings.general.display.theme.title");
 		expect(pageSource).toContain("settings.general.display.language.title");
-		expect(pageSource).toContain("settings.general.fonts.title");
-		expect(pageSource).toContain("settings.general.fonts.body.title");
-		expect(pageSource).toContain("settings.general.fonts.code.title");
-		expect(pageSource).toContain("settings.general.fonts.body.reset");
-		expect(pageSource).toContain("settings.general.fonts.code.reset");
-		expect(pageSource).toContain("handleResetFontFamily");
-		expect(pageSource).toContain("onMouseDown={(event): void =>");
-		expect(pageSource).toContain("event.preventDefault()");
-		expect(pageSource).toContain("DEFAULT_STUDIO_FONT_FAMILY_CODE");
 		expect(pageSource).toContain("Select<LanguagePreference>");
 		expect(pageSource).toContain("languageOptions");
-		expect(pageSource).toContain("updateClientPreferences");
 		expect(pageSource).toContain("updateGeneralSettings");
 		expect(pageSource).toContain("settings.general.godot.executable");
 		expect(pageSource).toContain("draftGeneralSettings.godotExecutablePath?.trim()");
 		expect(pageSource).toContain("<SettingsItem");
 		expect(pageSource).toContain("pageMotionStyles.enter");
-		expect(pageSource).toContain("<Input");
+		expect(pageSource).not.toContain("<Input");
+		expect(appearancePageSource).toContain("settings.appearance.theme.title");
+		expect(appearancePageSource).toContain("settings.appearance.fonts.${key === \"fontFamily\" ? \"body\" : \"code\"}");
+		expect(appearancePageSource).toContain("settings.appearance.interface.motion.title");
+		expect(appearancePageSource).toContain("settings.appearance.interface.uiFontSize.title");
+		expect(appearancePageSource).toContain("settings.appearance.fonts.codeSize.title");
+		expect(appearancePageSource).toContain("<Switch");
+		expect(appearancePageSource).toContain("<InputNumber");
+		expect(appearancePageSource).toContain("<Input");
+		expect(appearancePageSource).toContain("updateClientPreferences");
+		expect(appearancePageSource).toContain("event.preventDefault()");
 		expect(pageSource).not.toContain("<Tag");
 		expect(pageSource).toContain("window.electronAPI.pickGodotExecutable()");
 		expect(apiSource).toContain('"../../../../contracts/client-preferences"');
@@ -57,6 +56,9 @@ describe("GeneralSettingsPage", () => {
 		expect(clientPreferencesContractSource).toContain("notifyOnRunCompleted: boolean;");
 		expect(clientPreferencesContractSource).toContain("fontFamily: string;");
 		expect(clientPreferencesContractSource).toContain("fontFamilyCode: string;");
+		expect(clientPreferencesContractSource).toContain("animationsEnabled: boolean;");
+		expect(clientPreferencesContractSource).toContain("uiFontSize: number;");
+		expect(clientPreferencesContractSource).toContain("codeFontSize: number;");
 		expect(clientPreferencesContractSource).toContain("export type ClientPreferencesPatch = Partial<ClientPreferences>;");
 		expect(generalApiSource).toContain("godotExecutablePath: null");
 		expect(generalSettingsContractSource).toContain("nextStepHintsEnabled: boolean;");
@@ -83,7 +85,9 @@ describe("GeneralSettingsPage", () => {
 		expect(preloadSource).toContain("client-preferences:changed");
 		expect(preloadSource).toContain('"../contracts/client-preferences"');
 		expect(preloadSource).toContain("applyRendererTheme(preferences)");
-		expect(preloadSource).toContain("applyStudioFontVariables(rootElement.style, preferences.fontFamily, preferences.fontFamilyCode)");
+		expect(preloadSource).toContain("preferences.uiFontSize");
+		expect(preloadSource).toContain("preferences.codeFontSize");
+		expect(preloadSource).toContain("preferences.animationsEnabled");
 		expect(mainSource).toContain("broadcastClientPreferencesChanged(nextPreferences)");
 		expect(mainSource).toContain('ipcMain.on("general-settings:changed"');
 		expect(preferencesControllerSource).toContain("window.electronAPI.clientPreferences.onChanged");

@@ -181,7 +181,14 @@ function applyRendererTheme(preferences: ClientPreferences = cachedClientPrefere
 	const resolvedTheme: "light" | "dark" = resolveRendererTheme(preferences.theme);
 	rootElement.dataset.theme = resolvedTheme;
 	applyStudioAccentVariables(rootElement.style, resolvedTheme, preferences.themeColor);
-	applyStudioFontVariables(rootElement.style, preferences.fontFamily, preferences.fontFamilyCode);
+	applyStudioFontVariables(
+		rootElement.style,
+		preferences.fontFamily,
+		preferences.fontFamilyCode,
+		preferences.uiFontSize,
+		preferences.codeFontSize
+	);
+	rootElement.dataset.motion = preferences.animationsEnabled !== false ? "on" : "off";
 }
 
 applyRendererTheme();

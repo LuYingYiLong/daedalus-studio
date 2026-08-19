@@ -21,7 +21,17 @@
 .settingsSideBar {
 	min-height: 0;
 	padding: 36px var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);
+	overflow-x: hidden;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	-ms-overflow-style: none;
+	scrollbar-width: none;
 	-webkit-app-region: drag;
+}
+
+.settingsSideBar::-webkit-scrollbar {
+	width: 0;
+	height: 0;
 }
 
 .settingsMenu {

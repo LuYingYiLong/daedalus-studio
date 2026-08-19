@@ -84,7 +84,7 @@
 	background: transparent !important;
 	color: var(--ds-text-primary);
 	font-family: var(--ds-font-family-code);
-	font-size: 13px;
+	font-size: var(--ds-font-size-code);
 	font-weight: 500;
 	line-height: 1.65;
 	white-space: pre;

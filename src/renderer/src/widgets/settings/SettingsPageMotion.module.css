@@ -4,6 +4,12 @@
 	animation: settingsPageContentEnter 160ms ease-out both;
 }
 
+:global(:root[data-motion="off"]) .enter {
+	opacity: 1;
+	transform: none;
+	animation: none;
+}
+
 @keyframes settingsPageContentEnter {
 	from {
 		opacity: 0;

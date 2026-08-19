@@ -62,6 +62,9 @@ describe("client preferences store", () => {
 				minimizeToTrayOnClose: false,
 				theme: "system",
 				themeColor: DEFAULT_THEME_COLOR,
+				animationsEnabled: true,
+				uiFontSize: 14,
+				codeFontSize: 13,
 				fontFamily: DEFAULT_CLIENT_PREFERENCES.fontFamily,
 				fontFamilyCode: DEFAULT_CLIENT_PREFERENCES.fontFamilyCode,
 				language: "system",
@@ -105,6 +108,9 @@ describe("client preferences store", () => {
 			minimizeToTrayOnClose: true,
 			theme: "system",
 			themeColor: DEFAULT_THEME_COLOR,
+			animationsEnabled: true,
+			uiFontSize: 14,
+			codeFontSize: 13,
 			fontFamily: DEFAULT_CLIENT_PREFERENCES.fontFamily,
 			fontFamilyCode: DEFAULT_CLIENT_PREFERENCES.fontFamilyCode,
 			language: "system",
@@ -158,6 +164,19 @@ describe("client preferences store", () => {
 		await expect(updateClientPreferencesFile("prefs.json", {
 			fontFamily: "Inter; color: red"
 		}, memory.io)).rejects.toThrow(/fontFamily contains invalid CSS/u);
+	});
+
+	it("persists and bounds appearance motion and font sizes", async () => {
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
+			animationsEnabled: false,
+			uiFontSize: 99,
+			codeFontSize: 10.6
+		}, memory.io);
+
+		expect(nextPreferences.animationsEnabled).toBe(false);
+		expect(nextPreferences.uiFontSize).toBe(18);
+		expect(nextPreferences.codeFontSize).toBe(11);
 	});
 
 	it("persists and normalizes new-session composer defaults", async () => {

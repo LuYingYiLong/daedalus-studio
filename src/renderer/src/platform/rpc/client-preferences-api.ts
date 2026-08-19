@@ -1,7 +1,9 @@
 import { DEFAULT_STUDIO_THEME_COLOR } from "../../../../contracts/theme-color";
 import {
+	DEFAULT_STUDIO_CODE_FONT_SIZE,
 	DEFAULT_STUDIO_FONT_FAMILY,
-	DEFAULT_STUDIO_FONT_FAMILY_CODE
+	DEFAULT_STUDIO_FONT_FAMILY_CODE,
+	DEFAULT_STUDIO_UI_FONT_SIZE
 } from "../../../../contracts/studio-fonts";
 import { createDefaultOnboardingPreferences } from "../../../../contracts/onboarding";
 import {
@@ -31,6 +33,9 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	minimizeToTrayOnClose: false,
 	theme: "system",
 	themeColor: DEFAULT_THEME_COLOR,
+	animationsEnabled: true,
+	uiFontSize: DEFAULT_STUDIO_UI_FONT_SIZE,
+	codeFontSize: DEFAULT_STUDIO_CODE_FONT_SIZE,
 	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
 	fontFamilyCode: DEFAULT_STUDIO_FONT_FAMILY_CODE,
 	language: "system",
