@@ -16,12 +16,14 @@ describe("global workspace sidebar layout", () => {
 	});
 
 	it("uses text buttons and state-specific layout icons", () => {
+		const normalizedTitlebarSource: string = titlebarSource.replace(/\s+/gu, " ");
+		const normalizedHomeSource: string = homeSource.replace(/\s+/gu, " ");
 		expect(titlebarSource).toContain('type="text"');
 		expect(titlebarSource).toContain('shape="circle"');
-		expect(titlebarSource).toContain('"layout-left-toggled" : "layout-left"');
+		expect(normalizedTitlebarSource).toContain('"layout-left-toggled" : "layout-left"');
 		expect(homeSource).toContain('type="text"');
-		expect(homeSource).toContain('"layout-right-toggled" : "layout-right"');
-		expect(homeSource).toContain('"layout-bottom-toggled" : "layout-bottom"');
+		expect(normalizedHomeSource).toContain('"layout-right-toggled" : "layout-right"');
+		expect(normalizedHomeSource).toContain('"layout-bottom-toggled" : "layout-bottom"');
 		expect(homeSource).not.toContain('type={summaryOpen ? "primary" : "text"}');
 	});
 });

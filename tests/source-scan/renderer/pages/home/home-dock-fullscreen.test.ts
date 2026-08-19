@@ -7,6 +7,7 @@ describe("Home dock fullscreen", () => {
 		const dockSource: string = readRepoFile("src", "renderer", "src", "widgets", "dock", "DockPanelTabs.tsx");
 		const dockCss: string = readRepoFile("src", "renderer", "src", "widgets", "dock", "DockPanelTabs.module.css");
 		const homeSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+		const normalizedHomeSource: string = homeSource.replace(/\s+/gu, " ");
 		const homeCss: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.module.css");
 		const shelfSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "FullscreenComposerShelf.tsx");
 		const shelfCss: string = readRepoFile("src", "renderer", "src", "widgets", "home", "FullscreenComposerShelf.module.css");
@@ -26,9 +27,9 @@ describe("Home dock fullscreen", () => {
 		expect(homeSource).toContain("visualSessionLayout.fullscreenDock");
 		expect(homeSource).toContain("toggleDockFullscreen");
 		expect(homeSource).toContain('size: bottomDockFullscreen');
-		expect(homeSource).toContain('size: sideDockFullscreen ? "100%"');
-		expect(homeSource).toContain("size={bottomDockConfig?.panel.size ?? BOTTOM_DOCK_CLOSED_SIZE}");
-		expect(homeSource).toContain("size={sideDockConfig?.panel.size ?? SIDE_DOCK_CLOSED_SIZE}");
+		expect(normalizedHomeSource).toContain('size: sideDockFullscreen ? "100%"');
+		expect(normalizedHomeSource).toContain("size={ bottomDockConfig?.panel.size ?? BOTTOM_DOCK_CLOSED_SIZE }");
+		expect(normalizedHomeSource).toContain("size={ sideDockConfig?.panel.size ?? SIDE_DOCK_CLOSED_SIZE }");
 		expect(homeSource).toContain("FullscreenComposerShelf");
 		expect(homeSource).toContain("renderComposer(true)");
 		expect(homeSource).toContain("isFullscreenBrowserPanel");
@@ -50,7 +51,7 @@ describe("Home dock fullscreen", () => {
 		expect(filePanelSource).toContain("bottomSafeArea={0}");
 		expect(filePanelSource).not.toContain("EDITOR_BOTTOM_SAFE_AREA");
 		expect(browserCss).not.toContain("viewportFullscreen");
-		expect(homeSource).toContain("data-dock-fullscreen={activeFullscreenDock ?? undefined}");
+		expect(normalizedHomeSource).toContain("data-dock-fullscreen={ activeFullscreenDock ?? undefined }");
 		expect(homeCss).toContain("data-fullscreen-motion-disabled=\"true\"");
 	});
 });

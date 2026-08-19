@@ -4,28 +4,27 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 describe("HomePage summary popover source", () => {
 	const source: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
 	const popoverSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "SessionSummaryPopover.tsx");
+	const controllerSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "useSessionSummaryOverview.ts");
 	const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "session-overview-api.ts");
 	const styles: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.module.css");
 
 	it("uses one overview model for sessions and the NewSessionHome workspace", () => {
 		expect(apiSource).toContain('"session.overview.get"');
-		expect(source).toContain("fetchSessionOverview");
-		expect(source).toContain("fetchWorkspaceOverview");
+		expect(source).toContain("useSessionSummaryOverview");
+		expect(controllerSource).toContain("fetchSessionOverview");
+		expect(controllerSource).toContain("fetchWorkspaceOverview");
 		expect(apiSource).toContain("workspace.sourceFolders");
 		expect(apiSource).toContain("fetchWorkspaceGitDiffSummary");
 		expect(source).toContain("loadSummaryOverview");
 	});
 
 	it("prewarms and reuses the current session overview", () => {
-		expect(source).toContain("const summaryRequestIdRef = useRef<number>(0);");
-		expect(source).toContain("summaryOverviewTargetRef.current.sessionId !== null");
-		expect(source).toContain("summaryOverviewTargetRef.current.workspace !== null");
-		expect(source).toContain("summaryOverview === null");
-		expect(source).toContain("summaryError === null");
-		expect(source).toContain("!isSummaryLoading");
-		expect(source).toContain("loadSummaryOverview(SUMMARY_PREVIEW_LIMIT, SUMMARY_PREVIEW_LIMIT, true)");
-		expect(source).toContain("silent: boolean = false");
-		expect(source).toContain("requestId !== summaryRequestIdRef.current");
+		expect(controllerSource).toContain("const requestIdRef = useRef<number>(0);");
+		expect(controllerSource).toContain("target.sessionId === null && target.workspace === null");
+		expect(controllerSource).toContain("summaryOverview === null && summaryError === null && !isSummaryLoading");
+		expect(controllerSource).toContain("loadSummaryOverview(previewLimit, previewLimit, true)");
+		expect(controllerSource).toContain("silent: boolean = false");
+		expect(controllerSource).toContain("requestId !== requestIdRef.current");
 		expect(source).toContain("SessionSummaryPopover");
 		expect(popoverSource).toContain("fresh");
 	});

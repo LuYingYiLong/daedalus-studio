@@ -60,7 +60,6 @@ import {
 } from "@/platform/rpc/keyboard-shortcuts";
 import {
 	fetchSessionOverview,
-	fetchWorkspaceOverview,
 	type SessionOverviewGitInfo,
 	type SessionOverviewPlanItem,
 	type SessionOverviewResult,
@@ -117,6 +116,8 @@ import SessionPlanPreviewDialog from "./SessionPlanPreviewDialog";
 import SessionSourcesDialog from "./SessionSourcesDialog";
 import SessionSourcePreviewDialog from "./SessionSourcePreviewDialog";
 import SessionSummaryPopover from "./SessionSummaryPopover";
+import useHomeDockLayout from "./useHomeDockLayout";
+import useSessionSummaryOverview from "./useSessionSummaryOverview";
 import { formatSourceSubtitle } from "./session-overview-formatters";
 import type { TimelinePageStore } from "@/domain/workbench/timeline-page-store";
 import { useTimelineSelector } from "@/domain/workbench/timeline-page-store";
@@ -156,12 +157,6 @@ type SummaryGitActionRequest = {
 	sourceFolderId: string;
 };
 
-type SummaryOverviewTarget = {
-	scopeKey: string;
-	sessionId: string | null;
-	workspace: WorkspaceConfig | null;
-};
-
 const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 	{ id: "file-explorer", label: "File Explorer" },
 	{ id: "terminal", label: "Terminal" },
@@ -183,50 +178,6 @@ const BOTTOM_DOCK_DEFAULT_SIZE: number = 280;
 const BOTTOM_DOCK_MAX_SIZE: number = 520;
 const BOTTOM_DOCK_CLOSE_THRESHOLD: number = 120;
 const MAX_SELECTED_SEARCH_QUERY_LENGTH: number = 500;
-const PANEL_LAYOUT_PERSIST_DELAY_MS: number = 360;
-
-function areWorkspaceSidebarPreferencesEqual(
-	left: WorkspaceSidebarPreferences,
-	right: WorkspaceSidebarPreferences,
-): boolean {
-	return left.open === right.open && left.size === right.size;
-}
-
-function areDockLayoutPreferencesEqual(
-	left: DockLayoutPreferences,
-	right: DockLayoutPreferences,
-): boolean {
-	return (
-		left.open === right.open &&
-		left.size === right.size &&
-		left.activeTabKey === right.activeTabKey &&
-		left.tabs.length === right.tabs.length &&
-		left.tabs.every((tab, index): boolean => {
-			const candidate = right.tabs[index];
-			return (
-				candidate !== undefined &&
-				tab.key === candidate.key &&
-				tab.kind === candidate.kind &&
-				tab.index === candidate.index
-			);
-		})
-	);
-}
-
-function areSessionLayoutPreferencesEqual(
-	left: SessionLayoutPreferences,
-	right: SessionLayoutPreferences,
-): boolean {
-	return (
-		left.fullscreenDock === right.fullscreenDock &&
-		areDockLayoutPreferencesEqual(left.side, right.side) &&
-		areDockLayoutPreferencesEqual(left.bottom, right.bottom) &&
-		JSON.stringify(left.filePanels) === JSON.stringify(right.filePanels) &&
-		JSON.stringify(left.browserPanels) ===
-			JSON.stringify(right.browserPanels)
-	);
-}
-
 function ensureDockTab(
 	layout: DockLayoutPreferences,
 	dockId: string,
@@ -847,11 +798,6 @@ function HomePage({
 		useState<WorkspaceLaunchTargetId>(workspaceLaunchPreference);
 	const [isOpeningLaunchTarget, setIsOpeningLaunchTarget] =
 		useState<boolean>(false);
-	const [summaryOpen, setSummaryOpen] = useState<boolean>(false);
-	const [summaryOverview, setSummaryOverview] =
-		useState<SessionOverviewResult | null>(null);
-	const [isSummaryLoading, setIsSummaryLoading] = useState<boolean>(false);
-	const [summaryError, setSummaryError] = useState<string | null>(null);
 	const [summaryGitSourceFolderId, setSummaryGitSourceFolderId] = useState<
 		string | null
 	>(null);
@@ -894,15 +840,27 @@ function HomePage({
 	const [godotSceneSearch, setGodotSceneSearch] = useState<string>("");
 	const [composerInputRequest, setComposerInputRequest] =
 		useState<ComposerInputRequest | null>(null);
-	const [visualWorkspaceSidebar, setVisualWorkspaceSidebar] =
-		useState<WorkspaceSidebarPreferences>(workspaceSidebar);
-	const [visualSessionLayout, setVisualSessionLayout] =
-		useState<SessionLayoutPreferences>(sessionLayout);
+	const {
+		visualWorkspaceSidebar,
+		visualSessionLayout,
+		visualWorkspaceSidebarRef,
+		visualSessionLayoutRef,
+		applyVisualWorkspaceSidebar,
+		applyVisualSessionLayout,
+		commitWorkspaceSidebar,
+		commitSessionLayout,
+		scheduleWorkspaceSidebarSave,
+		scheduleSessionLayoutSave,
+	} = useHomeDockLayout({
+		workspaceSidebar,
+		sessionLayout,
+		onWorkspaceSidebarChange,
+		onSessionLayoutChange,
+	});
 	const [fullscreenMotionDisabled, setFullscreenMotionDisabled] =
 		useState<boolean>(false);
 	const dockActivationRequestIdRef = useRef<number>(0);
 	const sideDockProgrammaticOpenUntilRef = useRef<number>(0);
-	const summaryRequestIdRef = useRef<number>(0);
 	const summaryGitActionRequestIdRef = useRef<number>(0);
 	const planPreviewRequestIdRef = useRef<number>(0);
 	const [sideDockActivationRequest, setSideDockActivationRequest] =
@@ -919,34 +877,6 @@ function HomePage({
 	const chatBodyRef = useRef<HTMLDivElement | null>(null);
 	const scrollToBottomButtonRef = useRef<HTMLButtonElement | null>(null);
 	const scrollToBottomButtonVisibleRef = useRef<boolean>(false);
-	const visualWorkspaceSidebarRef =
-		useRef<WorkspaceSidebarPreferences>(workspaceSidebar);
-	const visualSessionLayoutRef =
-		useRef<SessionLayoutPreferences>(sessionLayout);
-	const workspaceSidebarSaveTimerRef = useRef<number | null>(null);
-	const sessionLayoutSaveTimerRef = useRef<number | null>(null);
-	const pendingWorkspaceSidebarSaveRef = useRef<{
-		value: WorkspaceSidebarPreferences;
-		save: HomePageProps["onWorkspaceSidebarChange"];
-	} | null>(null);
-	const pendingSessionLayoutSaveRef = useRef<{
-		value: SessionLayoutPreferences;
-		save: HomePageProps["onSessionLayoutChange"];
-	} | null>(null);
-
-	function applyVisualWorkspaceSidebar(
-		nextWorkspaceSidebar: WorkspaceSidebarPreferences,
-	): void {
-		visualWorkspaceSidebarRef.current = nextWorkspaceSidebar;
-		setVisualWorkspaceSidebar(nextWorkspaceSidebar);
-	}
-
-	function applyVisualSessionLayout(
-		nextSessionLayout: SessionLayoutPreferences,
-	): void {
-		visualSessionLayoutRef.current = nextSessionLayout;
-		setVisualSessionLayout(nextSessionLayout);
-	}
 
 	const handleHomeStarterSelect = useCallback((prompt: string): void => {
 		setComposerInputRequest(
@@ -959,116 +889,6 @@ function HomePage({
 		);
 	}, []);
 
-	function clearWorkspaceSidebarSave(): void {
-		if (workspaceSidebarSaveTimerRef.current !== null) {
-			window.clearTimeout(workspaceSidebarSaveTimerRef.current);
-			workspaceSidebarSaveTimerRef.current = null;
-		}
-		pendingWorkspaceSidebarSaveRef.current = null;
-	}
-
-	function clearSessionLayoutSave(): void {
-		if (sessionLayoutSaveTimerRef.current !== null) {
-			window.clearTimeout(sessionLayoutSaveTimerRef.current);
-			sessionLayoutSaveTimerRef.current = null;
-		}
-		pendingSessionLayoutSaveRef.current = null;
-	}
-
-	function flushWorkspaceSidebarSave(): void {
-		const pendingSave = pendingWorkspaceSidebarSaveRef.current;
-		clearWorkspaceSidebarSave();
-		pendingSave?.save(pendingSave.value);
-	}
-
-	function flushSessionLayoutSave(): void {
-		const pendingSave = pendingSessionLayoutSaveRef.current;
-		clearSessionLayoutSave();
-		pendingSave?.save(pendingSave.value);
-	}
-
-	function commitWorkspaceSidebar(
-		nextWorkspaceSidebar: WorkspaceSidebarPreferences,
-		persist: boolean = true,
-	): void {
-		clearWorkspaceSidebarSave();
-		applyVisualWorkspaceSidebar(nextWorkspaceSidebar);
-		onWorkspaceSidebarChange(nextWorkspaceSidebar, { persist });
-	}
-
-	function commitSessionLayout(
-		nextSessionLayout: SessionLayoutPreferences,
-		persist: boolean = true,
-	): void {
-		clearSessionLayoutSave();
-		applyVisualSessionLayout(nextSessionLayout);
-		onSessionLayoutChange(nextSessionLayout, { persist });
-	}
-
-	function scheduleWorkspaceSidebarSave(
-		nextWorkspaceSidebar: WorkspaceSidebarPreferences,
-	): void {
-		applyVisualWorkspaceSidebar(nextWorkspaceSidebar);
-		clearWorkspaceSidebarSave();
-		pendingWorkspaceSidebarSaveRef.current = {
-			value: nextWorkspaceSidebar,
-			save: onWorkspaceSidebarChange,
-		};
-		workspaceSidebarSaveTimerRef.current = window.setTimeout((): void => {
-			const pendingSave = pendingWorkspaceSidebarSaveRef.current;
-			workspaceSidebarSaveTimerRef.current = null;
-			pendingWorkspaceSidebarSaveRef.current = null;
-			pendingSave?.save(pendingSave.value);
-		}, PANEL_LAYOUT_PERSIST_DELAY_MS);
-	}
-
-	function scheduleSessionLayoutSave(
-		nextSessionLayout: SessionLayoutPreferences,
-	): void {
-		applyVisualSessionLayout(nextSessionLayout);
-		clearSessionLayoutSave();
-		pendingSessionLayoutSaveRef.current = {
-			value: nextSessionLayout,
-			save: onSessionLayoutChange,
-		};
-		sessionLayoutSaveTimerRef.current = window.setTimeout((): void => {
-			const pendingSave = pendingSessionLayoutSaveRef.current;
-			sessionLayoutSaveTimerRef.current = null;
-			pendingSessionLayoutSaveRef.current = null;
-			pendingSave?.save(pendingSave.value);
-		}, PANEL_LAYOUT_PERSIST_DELAY_MS);
-	}
-
-	useEffect((): void => {
-		if (
-			!areWorkspaceSidebarPreferencesEqual(
-				visualWorkspaceSidebarRef.current,
-				workspaceSidebar,
-			)
-		) {
-			flushWorkspaceSidebarSave();
-			applyVisualWorkspaceSidebar(workspaceSidebar);
-		}
-	}, [workspaceSidebar]);
-
-	useEffect((): void => {
-		if (
-			!areSessionLayoutPreferencesEqual(
-				visualSessionLayoutRef.current,
-				sessionLayout,
-			)
-		) {
-			flushSessionLayoutSave();
-			applyVisualSessionLayout(sessionLayout);
-		}
-	}, [sessionLayout]);
-
-	useEffect((): (() => void) => {
-		return (): void => {
-			flushWorkspaceSidebarSave();
-			flushSessionLayoutSave();
-		};
-	}, []);
 	const workspaceSnapshotForActions: WorkspaceConfig | null =
 		activeWorkspace ?? (isHome ? homeWorkspace : null);
 	const workspaceForActions: WorkspaceConfig | null =
@@ -1081,16 +901,20 @@ function HomePage({
 	const summarySessionId: string | null = isHome ? null : activeSessionId;
 	const summaryScopeKey: string =
 		summarySessionId ?? `workspace:${workspaceForActions?.id ?? "none"}`;
-	const summaryOverviewTargetRef = useRef<SummaryOverviewTarget>({
+	const {
+		summaryOpen,
+		summaryOverview,
+		isSummaryLoading,
+		summaryError,
+		setSummaryOpen,
+		loadSummaryOverview,
+		handleSummaryOpenChange,
+	} = useSessionSummaryOverview({
 		scopeKey: summaryScopeKey,
 		sessionId: summarySessionId,
 		workspace: workspaceForActions,
+		previewLimit: SUMMARY_PREVIEW_LIMIT,
 	});
-	summaryOverviewTargetRef.current = {
-		scopeKey: summaryScopeKey,
-		sessionId: summarySessionId,
-		workspace: workspaceForActions,
-	};
 	const showDockControls: boolean = true;
 	const showWorkspaceLaunchControls: boolean = workspaceForActions !== null;
 	const showSummaryButton: boolean = true;
@@ -1449,11 +1273,6 @@ function HomePage({
 	}, [effectiveGodotLaunchExecutablePath, workspaceForActions]);
 
 	useEffect((): void => {
-		summaryRequestIdRef.current += 1;
-		setSummaryOpen(false);
-		setSummaryOverview(null);
-		setIsSummaryLoading(false);
-		setSummaryError(null);
 		setSummaryGitSourceFolderId(null);
 		setSummaryGitActionRequest(null);
 		setPlansModalOpen(false);
@@ -1472,79 +1291,6 @@ function HomePage({
 		setPlanPreviewError(null);
 		planPreviewRequestIdRef.current += 1;
 	}, [summaryScopeKey]);
-
-	const loadSummaryOverview = useCallback(
-		async (
-			planLimit: number = SUMMARY_PREVIEW_LIMIT,
-			sourceLimit: number = SUMMARY_PREVIEW_LIMIT,
-			silent: boolean = false,
-		): Promise<SessionOverviewResult | null> => {
-			const target: SummaryOverviewTarget =
-				summaryOverviewTargetRef.current;
-			if (target.sessionId === null && target.workspace === null) {
-				return null;
-			}
-
-			const requestId: number = ++summaryRequestIdRef.current;
-			if (!silent) {
-				setIsSummaryLoading(true);
-				setSummaryError(null);
-			}
-			try {
-				const result: SessionOverviewResult =
-					target.sessionId !== null
-						? await fetchSessionOverview({
-								sessionId: target.sessionId,
-								planLimit,
-								sourceLimit,
-							})
-						: await fetchWorkspaceOverview(target.workspace!);
-				if (
-					requestId !== summaryRequestIdRef.current ||
-					target.scopeKey !==
-						summaryOverviewTargetRef.current.scopeKey
-				) {
-					return null;
-				}
-				setSummaryOverview(result);
-				return result;
-			} catch (error: unknown) {
-				if (
-					requestId !== summaryRequestIdRef.current ||
-					target.scopeKey !==
-						summaryOverviewTargetRef.current.scopeKey
-				) {
-					return null;
-				}
-				console.error(
-					"[HomePage] failed to load session overview",
-					error,
-				);
-				if (!silent) {
-					setSummaryError(
-						error instanceof Error
-							? error.message
-							: t("agentPage.summary.errors.load"),
-					);
-				}
-				return null;
-			} finally {
-				if (!silent && requestId === summaryRequestIdRef.current) {
-					setIsSummaryLoading(false);
-				}
-			}
-		},
-		[t],
-	);
-
-	useEffect((): void => {
-		if (
-			summaryOverviewTargetRef.current.sessionId !== null ||
-			summaryOverviewTargetRef.current.workspace !== null
-		) {
-			void loadSummaryOverview();
-		}
-	}, [loadSummaryOverview, summaryScopeKey]);
 
 	useEffect((): (() => void) | void => {
 		if (!plansModalOpen || activeSessionId === null) {
@@ -1639,29 +1385,6 @@ function HomePage({
 		};
 	}, [activeSessionId, sourcesModalOpen, t]);
 
-	const handleSummaryOpenChange = useCallback(
-		(open: boolean): void => {
-			setSummaryOpen(open);
-			if (!open) {
-				return;
-			}
-			if (
-				summaryOverview === null &&
-				summaryError === null &&
-				!isSummaryLoading
-			) {
-				void loadSummaryOverview();
-				return;
-			}
-			// 先显示缓存，再静默读取当前 Git 工作区状态，避免 diff 长时间停留在旧快照。
-			void loadSummaryOverview(
-				SUMMARY_PREVIEW_LIMIT,
-				SUMMARY_PREVIEW_LIMIT,
-				true,
-			);
-		},
-		[isSummaryLoading, loadSummaryOverview, summaryError, summaryOverview],
-	);
 	const handleDockGitStateChange = useCallback(async (): Promise<void> => {
 		setGitStateRevision((current: number): number => current + 1);
 		onWorkspaceRefresh();
