@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ProviderModelInfo } from "@/platform/rpc/provider-api";
-import { isImageTaskModel } from "@/domain/settings/provider-model-filters";
+import { isImageTaskModel, isVisionModel } from "@/domain/settings/provider-model-filters";
 
 function createModel(capabilities: ProviderModelInfo["capabilities"]): ProviderModelInfo {
 	return {
@@ -24,5 +24,14 @@ describe("isImageTaskModel", () => {
 	it("rejects non-image task models", () => {
 		expect(isImageTaskModel(createModel({ vision: true }))).toBe(false);
 		expect(isImageTaskModel(createModel({}))).toBe(false);
+	});
+});
+
+describe("isVisionModel", () => {
+	it("accepts only models with image input enabled", () => {
+		expect(isVisionModel(createModel({ imageInput: true }))).toBe(true);
+		expect(isVisionModel(createModel({ vision: true }))).toBe(false);
+		expect(isVisionModel(createModel({ imageGeneration: true }))).toBe(false);
+		expect(isVisionModel(createModel({}))).toBe(false);
 	});
 });

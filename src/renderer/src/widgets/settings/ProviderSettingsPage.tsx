@@ -102,7 +102,7 @@ type EditableCapability = {
 
 const CAPABILITY_BADGES: CapabilityBadge[] = [
 	{
-		key: "vision",
+		key: "imageInput",
 		labelKey: "settings.provider.capabilities.vision",
 		icon: "vision",
 		color: "purple",
@@ -130,7 +130,7 @@ const CAPABILITY_BADGES: CapabilityBadge[] = [
 const EDITABLE_CAPABILITIES: EditableCapability[] = [
 	{
 		key: "imageInput",
-		labelKey: "settings.provider.capabilities.imageInput",
+		labelKey: "settings.provider.capabilities.vision",
 	},
 	{
 		key: "videoInput",
@@ -224,6 +224,43 @@ function createReasoningEffortFormValues(
 			default: effort.default === true,
 		}),
 	);
+}
+
+function createAddModelFormValues(): ModelFormValues {
+	return {
+		id: "",
+		displayName: "",
+		inheritDisplayName: false,
+		contextWindowTokens: 128_000,
+		inheritContextWindowTokens: false,
+		maxOutputTokens: 8_192,
+		inheritMaxOutputTokens: false,
+		capabilities: createCapabilityFormValues(null, false),
+		inheritReasoningEfforts: false,
+		reasoningEfforts: [],
+	};
+}
+
+function createEditModelFormValues(model: ProviderModelInfo): ModelFormValues {
+	const isCustomModel: boolean = model.customization?.source === "custom";
+	return {
+		id: model.id,
+		displayName: model.displayName,
+		inheritDisplayName:
+			!isCustomModel && model.customization?.displayName === undefined,
+		contextWindowTokens: model.contextWindowTokens,
+		inheritContextWindowTokens:
+			!isCustomModel &&
+			model.customization?.contextWindowTokens === undefined,
+		maxOutputTokens: model.maxOutputTokens,
+		inheritMaxOutputTokens:
+			!isCustomModel && model.customization?.maxOutputTokens === undefined,
+		capabilities: createCapabilityFormValues(model, !isCustomModel),
+		inheritReasoningEfforts:
+			!isCustomModel &&
+			model.customization?.reasoningEfforts === undefined,
+		reasoningEfforts: createReasoningEffortFormValues(model),
+	};
 }
 
 function toReasoningEffortOptions(
@@ -1206,45 +1243,14 @@ function ProviderSettingsPage({
 	function openAddModelDialog(): void {
 		setDialogError(null);
 		setEditingModel(null);
-		modelForm.setFieldsValue({
-			id: "",
-			displayName: "",
-			inheritDisplayName: false,
-			contextWindowTokens: 128_000,
-			inheritContextWindowTokens: false,
-			maxOutputTokens: 8_192,
-			inheritMaxOutputTokens: false,
-			capabilities: createCapabilityFormValues(null, false),
-			inheritReasoningEfforts: false,
-			reasoningEfforts: [],
-		});
+		modelForm.setFieldsValue(createAddModelFormValues());
 		setModelDialogMode("add");
 	}
 
 	function openEditModelDialog(model: ProviderModelInfo): void {
 		setDialogError(null);
 		setEditingModel(model);
-		const isCustomModel: boolean = model.customization?.source === "custom";
-		modelForm.setFieldsValue({
-			id: model.id,
-			displayName: model.displayName,
-			inheritDisplayName:
-				!isCustomModel &&
-				model.customization?.displayName === undefined,
-			contextWindowTokens: model.contextWindowTokens,
-			inheritContextWindowTokens:
-				!isCustomModel &&
-				model.customization?.contextWindowTokens === undefined,
-			maxOutputTokens: model.maxOutputTokens,
-			inheritMaxOutputTokens:
-				!isCustomModel &&
-				model.customization?.maxOutputTokens === undefined,
-			capabilities: createCapabilityFormValues(model, !isCustomModel),
-			inheritReasoningEfforts:
-				!isCustomModel &&
-				model.customization?.reasoningEfforts === undefined,
-			reasoningEfforts: createReasoningEffortFormValues(model),
-		});
+		modelForm.setFieldsValue(createEditModelFormValues(model));
 		setModelDialogMode("edit");
 	}
 
@@ -2240,6 +2246,20 @@ function ProviderSettingsPage({
 				cancelText={t("settings.common.cancel")}
 				confirmLoading={isDialogSaving}
 				forceRender={true}
+				afterOpenChange={(open: boolean): void => {
+					if (!open) {
+						return;
+					}
+					const values: ModelFormValues =
+						modelDialogMode === "edit" && editingModel !== null
+							? createEditModelFormValues(editingModel)
+							: createAddModelFormValues();
+					modelForm.setFieldsValue(values);
+					modelForm.setFieldValue(
+						"reasoningEfforts",
+						values.reasoningEfforts,
+					);
+				}}
 				onCancel={(): void => {
 					setModelDialogMode(null);
 					setEditingModel(null);

@@ -17,6 +17,10 @@ describe("external dropped context files", () => {
 	});
 
 	it("preserves dragged image source paths with session image attachments", () => {
+		expect(appSource).toContain("ensureActiveSessionId");
+		expect(appSource).toContain("await params.ensureActiveSessionId()");
+		expect(appSource).toContain("resolveSupportedImageMimeType(file)");
+		expect(appSource).toContain('normalizedMimeType === "image/jpg"');
 		expect(appSource).toContain("sourcePath: sourcePath ?? undefined");
 		expect(imageAttachmentApiSource).toContain("sourcePath?: string");
 	});

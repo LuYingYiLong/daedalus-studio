@@ -95,6 +95,31 @@ export function isSupportedImageMimeType(value: string): value is SupportedImage
 	return SUPPORTED_IMAGE_MIME_TYPES.includes(value as SupportedImageMimeType);
 }
 
+export function resolveSupportedImageMimeType(file: File): SupportedImageMimeType | null {
+	const normalizedMimeType: string = file.type.trim().toLowerCase();
+	if (normalizedMimeType === "image/jpg") {
+		return "image/jpeg";
+	}
+	if (isSupportedImageMimeType(normalizedMimeType)) {
+		return normalizedMimeType;
+	}
+
+	const extension: string = file.name.trim().toLowerCase().split(".").at(-1) ?? "";
+	switch (extension) {
+		case "png":
+			return "image/png";
+		case "jpg":
+		case "jpeg":
+			return "image/jpeg";
+		case "webp":
+			return "image/webp";
+		case "gif":
+			return "image/gif";
+		default:
+			return null;
+	}
+}
+
 export function getLocalPathForFile(file: File): string | null {
 	try {
 		const filePath: string = window.electronAPI.workspaceFs.getPathForFile(file);
@@ -109,10 +134,21 @@ export function createContextFileSignature(file: File): string {
 	return [getLocalPathForFile(file) ?? "", file.name, file.type, String(file.size), String(file.lastModified)].join("\u0000");
 }
 
-export function readFileAsDataUrl(file: File): Promise<string> {
+export function readFileAsDataUrl(file: File, mimeType: SupportedImageMimeType = file.type as SupportedImageMimeType): Promise<string> {
 	return new Promise((resolve, reject): void => {
 		const reader = new FileReader();
-		reader.addEventListener("load", (): void => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Failed to read image file.")));
+		reader.addEventListener("load", (): void => {
+			if (typeof reader.result !== "string") {
+				reject(new Error("Failed to read image file."));
+				return;
+			}
+			const separatorIndex: number = reader.result.indexOf(",");
+			if (separatorIndex < 0) {
+				reject(new Error("Failed to encode image file."));
+				return;
+			}
+			resolve(`data:${mimeType};base64,${reader.result.slice(separatorIndex + 1)}`);
+		});
 		reader.addEventListener("error", (): void => reject(reader.error ?? new Error("Failed to read image file.")));
 		reader.readAsDataURL(file);
 	});

@@ -82,7 +82,6 @@
     "remotion": "^4.0.506",
     "three": "^0.185.1",
     "unified": "^11.0.5",
-    "vanilla-jsoneditor": "^3.13.0",
     "ws": "^8.21.0"
   },
   "allowScripts": {

@@ -12,7 +12,7 @@ import {
 	type ProviderModelSelectionProvider,
 	type ProviderTaskModelRef,
 } from "@/platform/rpc/provider-api";
-import { isImageTaskModel } from "@/domain/settings/provider-model-filters";
+import { isImageTaskModel, isVisionModel } from "@/domain/settings/provider-model-filters";
 import styles from "./DefaultModelSettingsPage.module.css";
 
 type RoutingKey = keyof ProviderModelRouting;
@@ -59,6 +59,7 @@ const ROUTING_OPTIONS: RoutingOption[] = [
 		titleKey: "settings.defaultModel.routing.imageRecognition.title",
 		descriptionKey:
 			"settings.defaultModel.routing.imageRecognition.description",
+		filterModel: isVisionModel,
 	},
 	{
 		key: "imageGeneration",

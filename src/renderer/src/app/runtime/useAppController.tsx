@@ -3695,7 +3695,16 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		handleAddWorkspaceContext,
 		handleAddContextFiles,
 	} = useWorkspaceContextController({
-		activeSessionId,
+		ensureActiveSessionId: async (): Promise<string | null> => {
+			if (activeSessionIdRef.current !== null) {
+				return activeSessionIdRef.current;
+			}
+			if (!isNewSessionHome) {
+				return null;
+			}
+			await createTemporarySession(homeDraft.workspace);
+			return activeSessionIdRef.current;
+		},
 		activeWorkspace,
 		activeSessionMetadata,
 		queueWorkbenchPatch,

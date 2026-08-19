@@ -13,15 +13,16 @@ import {
 	createContextFileSignature,
 	getLocalPathForFile,
 	isLocalPathInsideWorkspace,
-	isSupportedImageMimeType,
+	resolveSupportedImageMimeType,
 	readFileAsDataUrl,
-	readImageDimensions
+	readImageDimensions,
+	type SupportedImageMimeType,
 } from "./context-helpers";
 
 type ContextPatchAction = NonNullable<WorkbenchPatch["additionalContextAction"]>;
 
 export type WorkspaceContextControllerParams = {
-	activeSessionId: string | null;
+	ensureActiveSessionId: () => Promise<string | null>;
 	activeWorkspace: WorkspaceConfig | null;
 	activeSessionMetadata: {
 		workspaceId?: string;
@@ -51,25 +52,27 @@ export default function useWorkspaceContextController(params: WorkspaceContextCo
 	}
 
 	async function handleAddImageFiles(files: File[]): Promise<void> {
-		if (params.activeSessionId === null) {
+		const sessionId: string | null = await params.ensureActiveSessionId();
+		if (sessionId === null) {
 			params.showTransientError("Please open a session before adding images.");
 			return;
 		}
 
 		try {
 			for (const file of files.slice(0, 3)) {
-				if (!isSupportedImageMimeType(file.type)) {
+				const mimeType: SupportedImageMimeType | null = resolveSupportedImageMimeType(file);
+				if (mimeType === null) {
 					throw new Error(`Unsupported image type: ${file.type || file.name}`);
 				}
 				if (file.size <= 0 || file.size > MAX_IMAGE_ATTACHMENT_BYTES) {
 					throw new Error(`${file.name} is larger than 5 MiB.`);
 				}
-				const dataUrl: string = await readFileAsDataUrl(file);
+				const dataUrl: string = await readFileAsDataUrl(file, mimeType);
 				const dimensions = await readImageDimensions(dataUrl);
 				const sourcePath: string | null = getLocalPathForFile(file);
 				const result = await saveImageAttachment({
-					sessionId: params.activeSessionId,
-					mimeType: file.type,
+					sessionId,
+					mimeType,
 					dataUrl,
 					byteSize: file.size,
 					width: dimensions.width,
@@ -86,12 +89,14 @@ export default function useWorkspaceContextController(params: WorkspaceContextCo
 	}
 
 	function handleAddPastedTextAttachment(input: PastedTextAttachmentInput): boolean {
-		if (params.activeSessionId === null) {
-			return false;
-		}
-
 		params.setPendingTextAttachmentCount((count: number): number => count + 1);
-		void saveTextAttachment({ sessionId: params.activeSessionId, content: input.content })
+		void params.ensureActiveSessionId()
+			.then((sessionId: string | null) => {
+				if (sessionId === null) {
+					throw new Error("Please open a session before adding pasted text.");
+				}
+				return saveTextAttachment({ sessionId, content: input.content });
+			})
 			.then((result): void => {
 				const data: Record<string, unknown> = typeof result.attachment.data === "object" && result.attachment.data !== null && !Array.isArray(result.attachment.data)
 					? result.attachment.data as Record<string, unknown>
@@ -131,7 +136,7 @@ export default function useWorkspaceContextController(params: WorkspaceContextCo
 	}
 
 	async function handleAddWorkspaceContext(kind: "files" | "folder"): Promise<void> {
-		if (params.activeSessionId === null) {
+		if (await params.ensureActiveSessionId() === null) {
 			params.showTransientError("Please open a session before adding files or folders.");
 			return;
 		}
@@ -158,6 +163,11 @@ export default function useWorkspaceContextController(params: WorkspaceContextCo
 	}
 
 	async function handleAddContextFiles(files: File[]): Promise<void> {
+		if (await params.ensureActiveSessionId() === null) {
+			params.showTransientError("Please open a session before adding files.");
+			return;
+		}
+
 		const now: number = Date.now();
 		for (const [signature, timestamp] of recentContextFileSignaturesRef.current) {
 			if (now - timestamp > RECENT_CONTEXT_FILE_WINDOW_MS) {
@@ -177,15 +187,11 @@ export default function useWorkspaceContextController(params: WorkspaceContextCo
 		if (nextFiles.length === 0) {
 			return;
 		}
-		if (params.activeSessionId === null) {
-			params.showTransientError("Please open a session before adding files.");
-			return;
-		}
 
 		const imageFiles: File[] = [];
 		const workspaceFiles: File[] = [];
 		for (const file of nextFiles) {
-			if (isSupportedImageMimeType(file.type)) imageFiles.push(file);
+			if (resolveSupportedImageMimeType(file) !== null) imageFiles.push(file);
 			else workspaceFiles.push(file);
 		}
 
@@ -232,4 +238,3 @@ export default function useWorkspaceContextController(params: WorkspaceContextCo
 		handleAddContextFiles
 	};
 }
-

@@ -57,6 +57,7 @@ export type ProviderModelCapabilities = {
 	reasoningEfforts?: ProviderReasoningEffortOption[] | undefined;
 	tools?: boolean | undefined;
 	webSearch?: boolean | undefined;
+	/** @deprecated Use imageInput for the user-facing Vision capability. */
 	vision?: boolean | undefined;
 	imageGeneration?: boolean | undefined;
 	imageEdit?: boolean | undefined;
