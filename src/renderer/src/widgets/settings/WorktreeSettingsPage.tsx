@@ -1,38 +1,52 @@
+import type { MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	App,
 	Button,
 	Empty,
+	Input,
+	InputNumber,
+	Menu,
+	Modal,
 	Popconfirm,
 	Space,
 	Spin,
+	Switch,
 	Tag,
+	Tooltip,
 	Typography,
 } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import {
+	createPermanentWorktree,
 	deletePermanentWorktree,
+	getWorktreeSettings,
 	listWorktreeStatuses,
-	repairWorktree,
+	updateWorktreeSettings,
 	type WorktreeHealthSnapshot,
+	type WorktreeSettings,
 } from "@/platform/rpc/environment-api";
+import { deleteSessionWorktree } from "@/platform/rpc/session-api";
+import type { SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
 import SettingsItem from "@/ui/SettingsItem";
 import SettingsList from "@/ui/SettingsList";
 import pageMotionStyles from "./SettingsPageMotion.module.css";
 import styles from "./WorktreeSettings.module.css";
 
 type StatusResult = Awaited<ReturnType<typeof listWorktreeStatuses>>;
+type WorktreeMenuItem = {
+	key: string;
+	kind: "session" | "permanent";
+	title: string;
+	sourceWorkspaceId: string;
+	health: WorktreeHealthSnapshot;
+	session?: SessionMetadata;
+	workspace?: WorkspaceConfig;
+};
 
-function formatBytes(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
-	if (bytes < 1024 * 1024 * 1024)
-		return `${(bytes / 1024 / 1024).toFixed(1)} MiB`;
-	return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GiB`;
-}
-
-function getHealthColor(
+function healthColor(
 	status: WorktreeHealthSnapshot["status"],
 ): "success" | "warning" | "error" {
 	return status === "healthy"
@@ -41,27 +55,33 @@ function getHealthColor(
 			? "warning"
 			: "error";
 }
-
-function getHealthDescription(health: WorktreeHealthSnapshot): string {
-	const issue: string | undefined = health.issues[0]?.message;
-	return issue === undefined
-		? formatBytes(health.diskBytes)
-		: `${formatBytes(health.diskBytes)} · ${issue}`;
+function description(health: WorktreeHealthSnapshot): string {
+	return (
+		health.issues[0]?.message ??
+		`${(health.diskBytes / 1024 / 1024).toFixed(1)} MiB`
+	);
 }
 
 function WorktreeSettingsPage(): React.JSX.Element {
 	const { t } = useTranslation();
 	const { message } = App.useApp();
 	const [result, setResult] = useState<StatusResult | null>(null);
-	const [loading, setLoading] = useState<boolean>(true);
-	const [repairing, setRepairing] = useState<string | null>(null);
-	const [deletingPermanent, setDeletingPermanent] = useState<string | null>(
+	const [settings, setSettings] = useState<WorktreeSettings | null>(null);
+	const [loading, setLoading] = useState(true);
+	const [busyKey, setBusyKey] = useState<string | null>(null);
+	const [createTarget, setCreateTarget] = useState<WorktreeMenuItem | null>(
 		null,
 	);
+	const [newName, setNewName] = useState("");
 	const load = useCallback(async (): Promise<void> => {
 		setLoading(true);
 		try {
-			setResult(await listWorktreeStatuses());
+			const [nextStatus, nextSettings] = await Promise.all([
+				listWorktreeStatuses(),
+				getWorktreeSettings(),
+			]);
+			setResult(nextStatus);
+			setSettings(nextSettings);
 		} catch (error: unknown) {
 			void message.error(
 				error instanceof Error
@@ -72,31 +92,79 @@ function WorktreeSettingsPage(): React.JSX.Element {
 			setLoading(false);
 		}
 	}, [message, t]);
-
 	useEffect((): void => {
 		void load();
 	}, [load]);
-
-	async function repair(sessionId: string): Promise<void> {
-		setRepairing(sessionId);
+	const items = useMemo(
+		(): WorktreeMenuItem[] =>
+			result === null
+				? []
+				: [
+						...result.sessions.map(
+							(item): WorktreeMenuItem => ({
+								key: `session:${item.session.id}`,
+								kind: "session",
+								title: item.session.title,
+								sourceWorkspaceId:
+									(
+										item.session.worktree as
+											| { sourceWorkspaceId?: string }
+											| undefined
+									)?.sourceWorkspaceId ?? "",
+								health: item.health,
+								session: item.session as SessionMetadata,
+							}),
+						),
+						...result.permanent.map(
+							(item): WorktreeMenuItem => ({
+								key: `permanent:${item.workspace.id}`,
+								kind: "permanent",
+								title: item.workspace.name,
+								sourceWorkspaceId:
+									item.workspace.permanentWorktree
+										?.sourceWorkspaceId ?? "",
+								health: item.health,
+								workspace: item.workspace,
+							}),
+						),
+					],
+		[result],
+	);
+	async function updateSettings(
+		patch: Omit<Partial<WorktreeSettings>, "rootDirectory"> & {
+			rootDirectory?: string | null;
+		},
+	): Promise<void> {
+		if (settings === null) return;
+		const previous = settings;
+		const { rootDirectory, ...otherPatch } = patch;
+		if (rootDirectory === null) {
+			setSettings(previous);
+		} else {
+			setSettings({
+				...previous,
+				...otherPatch,
+				...(rootDirectory === undefined ? {} : { rootDirectory }),
+			});
+		}
 		try {
-			await repairWorktree(sessionId);
-			await load();
+			setSettings(await updateWorktreeSettings(patch));
 		} catch (error: unknown) {
+			setSettings(previous);
 			void message.error(
 				error instanceof Error
 					? error.message
-					: t("settings.worktrees.errors.repair"),
+					: t("settings.worktrees.errors.save"),
 			);
-		} finally {
-			setRepairing(null);
 		}
 	}
-
-	async function deletePermanent(workspaceId: string): Promise<void> {
-		setDeletingPermanent(workspaceId);
+	async function remove(item: WorktreeMenuItem): Promise<void> {
+		setBusyKey(item.key);
 		try {
-			await deletePermanentWorktree(workspaceId);
+			if (item.kind === "session" && item.session !== undefined)
+				await deleteSessionWorktree(item.session.id);
+			else if (item.workspace !== undefined)
+				await deletePermanentWorktree(item.workspace.id);
 			await load();
 		} catch (error: unknown) {
 			void message.error(
@@ -105,10 +173,86 @@ function WorktreeSettingsPage(): React.JSX.Element {
 					: t("settings.worktrees.errors.delete"),
 			);
 		} finally {
-			setDeletingPermanent(null);
+			setBusyKey(null);
 		}
 	}
-
+	async function create(): Promise<void> {
+		if (
+			createTarget === null ||
+			createTarget.sourceWorkspaceId === "" ||
+			newName.trim() === ""
+		)
+			return;
+		setBusyKey(createTarget.key);
+		try {
+			await createPermanentWorktree({
+				workspaceId: createTarget.sourceWorkspaceId,
+				name: newName.trim(),
+			});
+			setCreateTarget(null);
+			setNewName("");
+			await load();
+		} catch (error: unknown) {
+			void message.error(
+				error instanceof Error
+					? error.message
+					: t("settings.worktrees.errors.create"),
+			);
+		} finally {
+			setBusyKey(null);
+		}
+	}
+	const menuItems: MenuProps["items"] = items.map((item) => ({
+		key: item.key,
+		label: (
+			<span className={styles.worktreeMenuItem}>
+				<span className={styles.worktreeText}>
+					<span className={styles.worktreeTitle}>{item.title}</span>
+					<span className={styles.worktreeMeta}>
+						{description(item.health)}
+					</span>
+				</span>
+				<span className={styles.worktreeActions}>
+					<Tag color={item.kind === "permanent" ? "blue" : "default"}>
+						{t(`settings.worktrees.kind.${item.kind}`)}
+					</Tag>
+					<Tag color={healthColor(item.health.status)}>
+						{item.health.status}
+					</Tag>
+					<Tooltip title={t("settings.worktrees.create")}>
+						<Button
+							type="text"
+							size="small"
+							icon={<Icon name="add" />}
+							onClick={(event: MouseEvent<HTMLElement>): void => {
+								event.preventDefault();
+								event.stopPropagation();
+								setCreateTarget(item);
+								setNewName(`${item.title} worktree`);
+							}}
+						/>
+					</Tooltip>
+					<Popconfirm
+						title={t("settings.worktrees.deleteTitle")}
+						description={t("settings.worktrees.deleteDescription")}
+						onConfirm={(): Promise<void> => remove(item)}
+					>
+						<Button
+							danger
+							type="text"
+							size="small"
+							loading={busyKey === item.key}
+							icon={<Icon name="remove" />}
+							onClick={(event: MouseEvent<HTMLElement>): void => {
+								event.preventDefault();
+								event.stopPropagation();
+							}}
+						/>
+					</Popconfirm>
+				</span>
+			</span>
+		),
+	}));
 	return (
 		<section className={`${styles.page} ${pageMotionStyles.enter}`}>
 			<header className={styles.header}>
@@ -117,178 +261,125 @@ function WorktreeSettingsPage(): React.JSX.Element {
 				</Typography.Title>
 			</header>
 			<div className={styles.content}>
+				{settings === null ? null : (
+					<SettingsList title={t("settings.worktrees.preferences")}>
+						<SettingsItem
+							title={t("settings.worktrees.rootDirectory")}
+							description={settings.rootDirectory}
+						>
+							<Space.Compact>
+								<Button
+									icon={<Icon name="folder-open" />}
+									onClick={(): void => {
+										void window.electronAPI.workspaceFs
+											.pickWorkspaceDirectory()
+											.then((directory: string | null): void => {
+												if (directory !== null) {
+													void updateSettings({
+														rootDirectory: directory,
+													});
+												}
+											});
+									}}
+								>
+									{t("settings.worktrees.browseRootDirectory")}
+								</Button>
+								<Tooltip title={t("settings.worktrees.resetRootDirectory")}>
+									<Button
+										aria-label={t(
+											"settings.worktrees.resetRootDirectory",
+										)}
+										icon={<Icon name="reload" />}
+										onClick={(): void => {
+											void updateSettings({ rootDirectory: null });
+										}}
+									/>
+								</Tooltip>
+							</Space.Compact>
+						</SettingsItem>
+						<SettingsItem
+							title={t("settings.worktrees.fetchBeforeCreate")}
+							description={t(
+								"settings.worktrees.fetchBeforeCreateDescription",
+							)}
+						>
+							<Switch
+								checked={settings.fetchBeforeCreate}
+								onChange={(value): void => {
+									void updateSettings({
+										fetchBeforeCreate: value,
+									});
+								}}
+							/>
+						</SettingsItem>
+						<SettingsItem
+							title={t("settings.worktrees.autoDelete")}
+							description={t(
+								"settings.worktrees.autoDeleteDescription",
+							)}
+						>
+							<Switch
+								checked={settings.autoDeleteManaged}
+								onChange={(value): void => {
+									void updateSettings({
+										autoDeleteManaged: value,
+									});
+								}}
+							/>
+						</SettingsItem>
+						<SettingsItem
+							title={t("settings.worktrees.autoDeleteLimit")}
+							description={t(
+								"settings.worktrees.autoDeleteLimitDescription",
+							)}
+						>
+							<InputNumber
+								min={1}
+								max={100}
+								value={settings.autoDeleteLimit}
+								disabled={!settings.autoDeleteManaged}
+								onChange={(value): void => {
+									if (typeof value === "number")
+										void updateSettings({
+											autoDeleteLimit: value,
+										});
+								}}
+							/>
+						</SettingsItem>
+					</SettingsList>
+				)}
 				{loading ? (
 					<div className={styles.loading}>
 						<Spin />
 					</div>
-				) : result === null ? (
-					<Empty />
+				) : items.length === 0 ? (
+					<Empty description={t("settings.worktrees.empty")} />
 				) : (
-					<>
-						<SettingsList title={t("settings.worktrees.sessions")}>
-							{result.sessions.length === 0 ? (
-								<div className={styles.emptyState}>
-									<Empty
-										image={Empty.PRESENTED_IMAGE_SIMPLE}
-										description={t(
-											"settings.worktrees.empty",
-										)}
-									/>
-								</div>
-							) : (
-								result.sessions.map((item) => (
-									<SettingsItem
-										key={item.session.id}
-										title={item.session.title}
-										description={getHealthDescription(
-											item.health,
-										)}
-									>
-										<Space.Compact>
-											<Tag
-												color={getHealthColor(
-													item.health.status,
-												)}
-											>
-												{item.health.status}
-											</Tag>
-											<Button
-												icon={<Icon name="reload" />}
-												loading={
-													repairing ===
-													item.session.id
-												}
-												onClick={(): void => {
-													void repair(
-														item.session.id,
-													);
-												}}
-											>
-												{t("settings.worktrees.repair")}
-											</Button>
-										</Space.Compact>
-									</SettingsItem>
-								))
-							)}
-						</SettingsList>
-
-						{result.operations.length > 0 ? (
-							<SettingsList
-								title={t("settings.worktrees.operations")}
-							>
-								{result.operations.map((operation) => (
-									<SettingsItem
-										key={operation.id}
-										title={`${operation.type} · ${operation.stage}`}
-										description={
-											operation.error?.message ??
-											operation.message ??
-											`${Math.round(operation.progress * 100)}%`
-										}
-									>
-										<Tag
-											color={
-												operation.status === "succeeded"
-													? "success"
-													: operation.status ===
-														  "running"
-														? "processing"
-														: operation.status ===
-															  "failed"
-															? "error"
-															: "default"
-											}
-										>
-											{operation.status}
-										</Tag>
-									</SettingsItem>
-								))}
-							</SettingsList>
-						) : null}
-
-						<SettingsList title={t("settings.worktrees.permanent")}>
-							{result.permanent.length === 0 ? (
-								<div className={styles.emptyState}>
-									<Empty
-										image={Empty.PRESENTED_IMAGE_SIMPLE}
-										description={t(
-											"settings.worktrees.emptyPermanent",
-										)}
-									/>
-								</div>
-							) : (
-								result.permanent.map((item) => (
-									<SettingsItem
-										key={item.workspace.id}
-										title={item.workspace.name}
-										description={getHealthDescription(
-											item.health,
-										)}
-									>
-										<Space.Compact>
-											<Tag
-												color={getHealthColor(
-													item.health.status,
-												)}
-											>
-												{item.health.status}
-											</Tag>
-											<Popconfirm
-												title={t(
-													"settings.worktrees.deletePermanentTitle",
-												)}
-												description={t(
-													"settings.worktrees.deletePermanentDescription",
-												)}
-												onConfirm={(): Promise<void> =>
-													deletePermanent(
-														item.workspace.id,
-													)
-												}
-											>
-												<Button
-													danger
-													icon={
-														<Icon name="remove" />
-													}
-													loading={
-														deletingPermanent ===
-														item.workspace.id
-													}
-												>
-													{t(
-														"settings.common.delete",
-													)}
-												</Button>
-											</Popconfirm>
-										</Space.Compact>
-									</SettingsItem>
-								))
-							)}
-						</SettingsList>
-
-						{result.orphans.length > 0 ? (
-							<SettingsList
-								title={t("settings.worktrees.orphans")}
-							>
-								{result.orphans.map((path) => (
-									<SettingsItem
-										key={path}
-										title={path}
-										description={path}
-									>
-										<Typography.Text
-											copyable={{ text: path }}
-										>
-											{t("filePanel.editorMenu.copy")}
-										</Typography.Text>
-									</SettingsItem>
-								))}
-							</SettingsList>
-						) : null}
-					</>
+					<Menu
+						className={styles.worktreeMenu}
+						inlineIndent={8}
+						mode="inline"
+						selectable={false}
+						items={menuItems}
+					/>
 				)}
 			</div>
+			<Modal
+				title={t("settings.worktrees.createTitle")}
+				open={createTarget !== null}
+				confirmLoading={busyKey === createTarget?.key}
+				onCancel={(): void => setCreateTarget(null)}
+				onOk={(): void => {
+					void create();
+				}}
+				mask={{ closable: false }}
+			>
+				<Input
+					value={newName}
+					onChange={(event): void => setNewName(event.target.value)}
+					placeholder={t("settings.worktrees.createPlaceholder")}
+				/>
+			</Modal>
 		</section>
 	);
 }

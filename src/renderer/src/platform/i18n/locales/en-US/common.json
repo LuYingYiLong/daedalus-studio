@@ -1427,6 +1427,22 @@
 		"worktrees": {
 			"title": "Worktrees",
 			"description": "Inspect managed and permanent worktrees, disk usage, setup state, and Git registration health.",
+			"preferences": "Worktree preferences",
+			"rootDirectory": "Worktree root directory",
+			"browseRootDirectory": "Browse",
+			"resetRootDirectory": "Restore default worktree root directory",
+			"fetchBeforeCreate": "Fetch upstream before creating",
+			"fetchBeforeCreateDescription": "Runs git fetch --all --prune for every source repository before the worktree is created.",
+			"autoDelete": "Automatically delete old managed worktrees",
+			"autoDeleteDescription": "After creating a worktree, clean archived session worktrees are removed oldest first when the limit is exceeded. Permanent worktrees are never removed automatically.",
+			"autoDeleteLimit": "Managed worktree limit",
+			"autoDeleteLimitDescription": "The maximum number of managed worktrees to retain before automatic cleanup.",
+			"create": "Create worktree",
+			"createTitle": "Create permanent worktree",
+			"createPlaceholder": "Worktree name",
+			"deleteTitle": "Delete worktree?",
+			"deleteDescription": "Deletion is allowed only when the worktree is clean and has no unnamed commits.",
+			"kind": { "session": "Session", "permanent": "Permanent" },
 			"sessions": "Session worktrees",
 			"operations": "Recent operations",
 			"permanent": "Permanent worktrees",
@@ -1436,7 +1452,7 @@
 			"repair": "Repair",
 			"deletePermanentTitle": "Delete permanent worktree?",
 			"deletePermanentDescription": "Deletion requires a clean worktree with no active session or terminal and no unnamed commits.",
-			"errors": { "load": "Failed to load worktree status", "repair": "Failed to repair worktree", "delete": "Failed to delete permanent worktree" }
+			"errors": { "load": "Failed to load worktree status", "repair": "Failed to repair worktree", "delete": "Failed to delete worktree", "create": "Failed to create worktree", "save": "Failed to save worktree preferences" }
 		},
 		"browser": {
 			"title": "Browser",

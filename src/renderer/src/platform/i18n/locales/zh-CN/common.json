@@ -1420,6 +1420,22 @@
 		"worktrees": {
 			"title": "工作树",
 			"description": "检查托管与永久工作树的磁盘占用、Setup 状态和 Git 注册健康状态。",
+			"preferences": "工作树偏好",
+			"rootDirectory": "工作树根目录",
+			"browseRootDirectory": "浏览",
+			"resetRootDirectory": "恢复默认工作树根目录",
+			"fetchBeforeCreate": "创建前始终获取上游更新",
+			"fetchBeforeCreateDescription": "创建工作树前，对每个源仓库执行 git fetch --all --prune。",
+			"autoDelete": "自动删除旧的托管工作树",
+			"autoDeleteDescription": "创建后若超过限制，将按最早创建时间清理干净的已归档会话工作树。永久工作树永不自动删除。",
+			"autoDeleteLimit": "托管工作树数量限制",
+			"autoDeleteLimitDescription": "自动清理前允许保留的托管工作树最大数量。",
+			"create": "创建工作树",
+			"createTitle": "创建永久工作树",
+			"createPlaceholder": "工作树名称",
+			"deleteTitle": "删除工作树？",
+			"deleteDescription": "仅在工作树干净且没有未命名提交时才能删除。",
+			"kind": { "session": "会话", "permanent": "永久" },
 			"sessions": "会话工作树",
 			"operations": "最近操作",
 			"permanent": "永久工作树",
@@ -1429,7 +1445,7 @@
 			"repair": "修复",
 			"deletePermanentTitle": "删除永久工作树？",
 			"deletePermanentDescription": "仅当工作树干净、没有活动会话或终端，且没有未保存到分支的新提交时才能删除。",
-			"errors": { "load": "加载工作树状态失败", "repair": "修复工作树失败", "delete": "删除永久工作树失败" }
+			"errors": { "load": "加载工作树状态失败", "repair": "修复工作树失败", "delete": "删除工作树失败", "create": "创建工作树失败", "save": "保存工作树偏好失败" }
 		},
 		"browser": {
 			"title": "浏览器",

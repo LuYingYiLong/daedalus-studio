@@ -1,6 +1,13 @@
 import { createBackendClient } from "./transport/backend-client";
 import type { EnvironmentTrustStatus, LocalEnvironmentConfigDocument, WorkspaceConfig } from "./types";
 
+export type WorktreeSettings = {
+	rootDirectory: string;
+	fetchBeforeCreate: boolean;
+	autoDeleteManaged: boolean;
+	autoDeleteLimit: number;
+};
+
 export async function getEnvironmentConfig(workspaceId: string, sourceFolderId: string): Promise<LocalEnvironmentConfigDocument> {
 	return (await createBackendClient()).request("environment.config.get", { workspaceId, sourceFolderId });
 }
@@ -24,6 +31,14 @@ export async function listWorktreeStatuses(): Promise<{
 	operations: Array<{ id: string; type: string; status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted"; stage: string; progress: number; message?: string; error?: { code: string; message: string }; updatedAt: string }>;
 }> {
 	return (await createBackendClient()).request("workspace.worktree.status.list", {});
+}
+
+export async function getWorktreeSettings(): Promise<WorktreeSettings> {
+	return (await createBackendClient()).request("workspace.worktree.settings.get", {});
+}
+
+export async function updateWorktreeSettings(patch: Omit<Partial<WorktreeSettings>, "rootDirectory"> & { rootDirectory?: string | null }): Promise<WorktreeSettings> {
+	return (await createBackendClient()).request("workspace.worktree.settings.update", patch);
 }
 
 export type WorktreeHealthSnapshot = {
