@@ -3,59 +3,46 @@
 	grid-template-rows: auto minmax(0, 1fr);
 	min-width: 0;
 	min-height: 0;
-	padding: 0px 0px var(--ds-space-2) var(--ds-space-2);
+	padding: 0 0 var(--ds-space-2) var(--ds-space-2);
 	overflow: hidden;
 	user-select: none;
 }
 
 .header {
 	display: grid;
-	gap: 8px;
 	padding-right: var(--ds-space-2);
 }
 
-.titleRow {
-	display: flex;
-	align-items: center;
-	justify-content: flex-start;
-	gap: 8px;
+.title {
+	margin: 0 0 8px !important;
 }
 
-.title {
-	display: flex;
-	align-items: center;
-	margin: 0px 0px 8px 0px !important;
+.settingsStack {
+	display: grid;
+	align-content: start;
+	gap: var(--ds-space-2);
+	min-height: 0;
+	padding-right: var(--ds-space-2);
+	overflow-x: hidden;
+	overflow-y: auto;
 }
 
 .alert {
 	margin-bottom: 12px;
 }
 
-.settingsStack {
-	display: grid;
-	gap: var(--ds-space-2);
-	min-height: 0;
-	padding-right: var(--ds-space-2);
-	overflow-x: hidden;
-	overflow-y: auto;
-	align-content: start;
-}
-
-.loading {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	min-height: 120px;
-}
-
 .preferenceList {
 	display: grid;
-	gap: 0;
 	min-width: 0;
 }
 
+.fontFamilyInput {
+	width: min(380px, 42vw);
+}
+
 @media (max-width: 720px) {
-	.preferenceControl {
+	.themeControl,
+	.fontFamilyInput {
 		width: 100%;
 	}
 }

@@ -5,26 +5,18 @@ import pageMotionStyles from "./SettingsPageMotion.module.css";
 import {
 	Alert,
 	Button,
-	ColorPicker,
-	Input,
-	Segmented,
 	Select,
 	Space,
 	Switch,
 	Tooltip,
 	Typography,
 } from "antd";
-import type { ColorPickerProps, SelectProps } from "antd";
+import type { SelectProps } from "antd";
 import { Icon } from "@/assets/icons";
 import SettingsItem from "@/ui/SettingsItem";
 import SettingsList from "@/ui/SettingsList";
 import {
-	DEFAULT_STUDIO_FONT_FAMILY,
-	DEFAULT_STUDIO_FONT_FAMILY_CODE,
-} from "../../../../contracts/studio-fonts";
-import {
 	fetchClientPreferences,
-	DEFAULT_THEME_COLOR,
 	updateClientPreferences,
 	type ClientPreferences,
 	type LanguagePreference,
@@ -42,35 +34,13 @@ type GeneralSettingsPageProps = {
 	onGeneralSettingsChange: (settings: GeneralSettings) => void;
 };
 
-type FontFamilyKey = "fontFamily" | "fontFamilyCode";
 type SettingKey =
 	| "autoCheckForUpdates"
-	| FontFamilyKey
 	| "godotExecutablePath"
 	| "language"
 	| "minimizeToTrayOnClose"
 	| "nextStepHintsEnabled"
-	| "notifyOnRunCompleted"
-	| "theme"
-	| "themeColor";
-type ThemePreference = ClientPreferences["theme"];
-
-const DEFAULT_FONT_FAMILIES: Record<FontFamilyKey, string> = {
-	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
-	fontFamilyCode: DEFAULT_STUDIO_FONT_FAMILY_CODE,
-};
-
-const colorPickerProps: ColorPickerProps = {
-	styles: {
-		root: {
-			height: 20,
-		},
-		body: {
-			height: 20,
-			width: 20,
-		},
-	},
-};
+	| "notifyOnRunCompleted";
 
 function GeneralSettingsPage({
 	clientPreferences,
@@ -202,72 +172,6 @@ function GeneralSettingsPage({
 		}
 	}
 
-	async function saveFontFamily(key: FontFamilyKey): Promise<void> {
-		const previousPreferences: ClientPreferences = draftClientPreferences;
-		const value: string = draftClientPreferences[key].trim();
-		if (value === clientPreferences[key].trim() || savingKey !== null) {
-			return;
-		}
-		try {
-			setSavingKey(key);
-			setErrorMessage(null);
-			const optimisticPreferences: ClientPreferences = {
-				...previousPreferences,
-				[key]: value,
-			};
-			setDraftClientPreferences(optimisticPreferences);
-			onClientPreferencesChange(optimisticPreferences);
-			const savedPreferences: ClientPreferences =
-				await updateClientPreferences({ [key]: value });
-			setDraftClientPreferences(savedPreferences);
-			onClientPreferencesChange(savedPreferences);
-		} catch (error: unknown) {
-			setDraftClientPreferences(previousPreferences);
-			onClientPreferencesChange(previousPreferences);
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: t("settings.general.errors.save"),
-			);
-		} finally {
-			setSavingKey(null);
-		}
-	}
-
-	async function handleResetFontFamily(key: FontFamilyKey): Promise<void> {
-		const previousPreferences: ClientPreferences = draftClientPreferences;
-		const defaultValue: string = DEFAULT_FONT_FAMILIES[key];
-		if (previousPreferences[key] === defaultValue || savingKey !== null) {
-			return;
-		}
-
-		const optimisticPreferences: ClientPreferences = {
-			...previousPreferences,
-			[key]: defaultValue,
-		};
-
-		try {
-			setSavingKey(key);
-			setErrorMessage(null);
-			setDraftClientPreferences(optimisticPreferences);
-			onClientPreferencesChange(optimisticPreferences);
-			const savedPreferences: ClientPreferences =
-				await updateClientPreferences({ [key]: defaultValue });
-			setDraftClientPreferences(savedPreferences);
-			onClientPreferencesChange(savedPreferences);
-		} catch (error: unknown) {
-			setDraftClientPreferences(previousPreferences);
-			onClientPreferencesChange(previousPreferences);
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: t("settings.general.errors.save"),
-			);
-		} finally {
-			setSavingKey(null);
-		}
-	}
-
 	async function handleGodotExecutablePick(): Promise<void> {
 		try {
 			setSavingKey("godotExecutablePath");
@@ -344,75 +248,6 @@ function GeneralSettingsPage({
 		}
 	}
 
-	async function handleThemeChange(
-		themePreference: ThemePreference,
-	): Promise<void> {
-		const previousPreferences: ClientPreferences = draftClientPreferences;
-		const optimisticPreferences: ClientPreferences = {
-			...previousPreferences,
-			theme: themePreference,
-		};
-
-		try {
-			setSavingKey("theme");
-			setErrorMessage(null);
-			setDraftClientPreferences(optimisticPreferences);
-			onClientPreferencesChange(optimisticPreferences);
-			const savedPreferences: ClientPreferences =
-				await updateClientPreferences({ theme: themePreference });
-			setDraftClientPreferences(savedPreferences);
-			onClientPreferencesChange(savedPreferences);
-		} catch (error: unknown) {
-			setDraftClientPreferences(previousPreferences);
-			onClientPreferencesChange(previousPreferences);
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: t("settings.general.errors.save"),
-			);
-		} finally {
-			setSavingKey(null);
-		}
-	}
-
-	function handleThemeColorPreview(themeColor: string): void {
-		setDraftClientPreferences(
-			(preferences: ClientPreferences): ClientPreferences => ({
-				...preferences,
-				themeColor,
-			}),
-		);
-	}
-
-	async function handleThemeColorChange(themeColor: string): Promise<void> {
-		const previousPreferences: ClientPreferences = clientPreferences;
-		const optimisticPreferences: ClientPreferences = {
-			...draftClientPreferences,
-			themeColor,
-		};
-
-		try {
-			setSavingKey("themeColor");
-			setErrorMessage(null);
-			setDraftClientPreferences(optimisticPreferences);
-			onClientPreferencesChange(optimisticPreferences);
-			const savedPreferences: ClientPreferences =
-				await updateClientPreferences({ themeColor });
-			setDraftClientPreferences(savedPreferences);
-			onClientPreferencesChange(savedPreferences);
-		} catch (error: unknown) {
-			setDraftClientPreferences(previousPreferences);
-			onClientPreferencesChange(previousPreferences);
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: t("settings.general.errors.save"),
-			);
-		} finally {
-			setSavingKey(null);
-		}
-	}
-
 	async function handleLanguageChange(
 		languagePreference: LanguagePreference,
 	): Promise<void> {
@@ -474,91 +309,6 @@ function GeneralSettingsPage({
 
 					<div className={styles.preferenceList}>
 						<SettingsItem
-							title={t("settings.general.display.theme.title")}
-							description={t(
-								"settings.general.display.theme.description",
-							)}
-						>
-							<Segmented
-								className={styles.themeControl}
-								value={draftClientPreferences.theme}
-								disabled={
-									savingKey !== null && savingKey !== "theme"
-								}
-								options={[
-									{
-										label: t(
-											"settings.general.display.theme.system",
-										),
-										value: "system",
-									},
-									{
-										label: t(
-											"settings.general.display.theme.light",
-										),
-										value: "light",
-									},
-									{
-										label: t(
-											"settings.general.display.theme.dark",
-										),
-										value: "dark",
-									},
-								]}
-								onChange={(value: string | number): void => {
-									void handleThemeChange(
-										value as ThemePreference,
-									);
-								}}
-							/>
-						</SettingsItem>
-						<SettingsItem
-							title={t(
-								"settings.general.display.themeColor.title",
-							)}
-							description={t(
-								"settings.general.display.themeColor.description",
-							)}
-						>
-							<Space.Compact>
-								<ColorPicker
-									{...colorPickerProps}
-									value={draftClientPreferences.themeColor}
-									format="hex"
-									disabledAlpha={true}
-									disabledFormat={true}
-									showText={(color): React.ReactNode =>
-										color.toHexString().toUpperCase()
-									}
-									disabled={savingKey !== null}
-									onChange={(color): void => {
-										handleThemeColorPreview(
-											color.toHexString(),
-										);
-									}}
-									onChangeComplete={(color): void => {
-										void handleThemeColorChange(
-											color.toHexString(),
-										);
-									}}
-								/>
-								<Button
-									loading={savingKey === "themeColor"}
-									disabled={
-										savingKey !== null ||
-										draftClientPreferences.themeColor ===
-											DEFAULT_THEME_COLOR
-									}
-									onClick={(): void => {
-										void handleThemeColorChange(
-											DEFAULT_THEME_COLOR,
-										);
-									}}
-									icon={<Icon name="reload" />}
-								/>
-							</Space.Compact>
-						</SettingsItem>
-						<SettingsItem
 							title={t("settings.general.display.language.title")}
 							description={t(
 								"settings.general.display.language.description",
@@ -581,137 +331,6 @@ function GeneralSettingsPage({
 						</SettingsItem>
 					</div>
 				</SettingsList>
-
-				<SettingsList title={t("settings.general.fonts.title")}>
-					<div className={styles.preferenceList}>
-						<SettingsItem
-							title={t("settings.general.fonts.body.title")}
-							description={t(
-								"settings.general.fonts.body.description",
-							)}
-						>
-							<Space.Compact>
-								<Input
-									className={styles.fontFamilyInput}
-									value={draftClientPreferences.fontFamily}
-									maxLength={512}
-									allowClear
-									placeholder={t(
-										"settings.general.fonts.body.placeholder",
-									)}
-									disabled={savingKey !== null}
-									onChange={(event): void =>
-										setDraftClientPreferences(
-											(
-												preferences,
-											): ClientPreferences => ({
-												...preferences,
-												fontFamily: event.target.value,
-											}),
-										)
-									}
-									onBlur={(): void => {
-										void saveFontFamily("fontFamily");
-									}}
-									onPressEnter={(event): void =>
-										event.currentTarget.blur()
-									}
-								/>
-								<Tooltip
-									title={t(
-										"settings.general.fonts.body.reset",
-									)}
-								>
-									<Button
-										aria-label={t(
-											"settings.general.fonts.body.reset",
-										)}
-										icon={<Icon name="reload" />}
-										loading={savingKey === "fontFamily"}
-										disabled={
-											savingKey !== null ||
-											draftClientPreferences.fontFamily ===
-												DEFAULT_FONT_FAMILIES.fontFamily
-										}
-										onMouseDown={(event): void =>
-											event.preventDefault()
-										}
-										onClick={(): void => {
-											void handleResetFontFamily(
-												"fontFamily",
-											);
-										}}
-									/>
-								</Tooltip>
-							</Space.Compact>
-						</SettingsItem>
-						<SettingsItem
-							title={t("settings.general.fonts.code.title")}
-							description={t(
-								"settings.general.fonts.code.description",
-							)}
-						>
-							<Space.Compact>
-								<Input
-									className={styles.fontFamilyInput}
-									value={
-										draftClientPreferences.fontFamilyCode
-									}
-									maxLength={512}
-									allowClear
-									placeholder={t(
-										"settings.general.fonts.code.placeholder",
-									)}
-									disabled={savingKey !== null}
-									onChange={(event): void =>
-										setDraftClientPreferences(
-											(
-												preferences,
-											): ClientPreferences => ({
-												...preferences,
-												fontFamilyCode:
-													event.target.value,
-											}),
-										)
-									}
-									onBlur={(): void => {
-										void saveFontFamily("fontFamilyCode");
-									}}
-									onPressEnter={(event): void =>
-										event.currentTarget.blur()
-									}
-								/>
-								<Tooltip
-									title={t(
-										"settings.general.fonts.code.reset",
-									)}
-								>
-									<Button
-										aria-label={t(
-											"settings.general.fonts.code.reset",
-										)}
-										icon={<Icon name="reload" />}
-										loading={savingKey === "fontFamilyCode"}
-										disabled={
-											savingKey !== null ||
-											draftClientPreferences.fontFamilyCode ===
-												DEFAULT_FONT_FAMILIES.fontFamilyCode
-										}
-										onMouseDown={(event): void =>
-											event.preventDefault()
-										}
-										onClick={(): void => {
-											void handleResetFontFamily(
-												"fontFamilyCode",
-											);
-										}}
-									/>
-								</Tooltip>
-							</Space.Compact>
-						</SettingsItem>
-					</div>
-				</SettingsList>
-
 				<SettingsList title={t("settings.general.godot.title")}>
 					<div className={styles.preferenceList}>
 						<SettingsItem

@@ -1368,6 +1368,7 @@
 			"provider": "Provider",
 			"defaultModel": "Default model",
 			"general": "General",
+			"appearance": "Appearance",
 			"keyboardShortcuts": "Keyboard shortcuts",
 			"search": "Search",
 			"statistics": "Statistics",
@@ -2440,6 +2441,42 @@
 				"load": "Failed to load general settings",
 				"save": "Failed to save general settings",
 				"godotExecutable": "Failed to validate the Godot executable"
+			}
+		},
+		"appearance": {
+			"title": "Appearance",
+			"theme": {
+				"title": "Theme",
+				"mode": {
+					"title": "Color mode",
+					"description": "Choose the Studio color theme for this device.",
+					"system": "System",
+					"light": "Light",
+					"dark": "Dark"
+				},
+				"color": {
+					"title": "Theme color",
+					"description": "Customize the Studio accent and primary control color."
+				}
+			},
+			"fonts": {
+				"title": "Fonts",
+				"body": {
+					"title": "Body font family",
+					"description": "Customize the font family used by regular Studio text.",
+					"placeholder": "e.g. \"Inter\", \"Microsoft YaHei\", sans-serif",
+					"reset": "Restore default body font"
+				},
+				"code": {
+					"title": "Code font family",
+					"description": "Customize the font family used by code, terminals, and the file editor.",
+					"placeholder": "e.g. \"JetBrains Mono\", Consolas, monospace",
+					"reset": "Restore default code font"
+				}
+			},
+			"errors": {
+				"load": "Failed to load appearance preferences",
+				"save": "Failed to save appearance preferences"
 			}
 		}
 	},

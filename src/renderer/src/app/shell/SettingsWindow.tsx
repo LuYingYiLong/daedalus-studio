@@ -18,6 +18,7 @@ import ImportSettingsPage from "@/widgets/settings/ImportSettingsPage";
 import McpServersSettingsPage from "@/widgets/settings/McpServersSettingsPage";
 import SkillsSettingsPage from "@/widgets/settings/SkillsSettingsPage";
 import GeneralSettingsPage from "@/widgets/settings/GeneralSettingsPage";
+import AppearanceSettingsPage from "@/widgets/settings/AppearanceSettingsPage";
 import SearchSettingsPage from "@/widgets/settings/SearchSettingsPage";
 import StatisticsSettingsPage from "@/widgets/settings/StatisticsSettingsPage";
 import AboutSettingsPage from "@/widgets/settings/AboutSettingsPage";
@@ -35,6 +36,7 @@ type SettingsPageKey =
 	| "provider"
 	| "default_model"
 	| "general"
+	| "appearance"
 	| "keyboard_shortcuts"
 	| "search"
 	| "statistics"
@@ -72,6 +74,11 @@ const menuItemConfigs: SettingsMenuItemConfig[] = [
 		key: "general",
 		labelKey: "settings.menu.general",
 		icon: <Icon name="equalizer" />,
+	},
+	{
+		key: "appearance",
+		labelKey: "settings.menu.appearance",
+		icon: <Icon name="appearance" />,
 	},
 	{
 		key: "keyboard_shortcuts",
@@ -229,6 +236,14 @@ function SettingsWindow(): React.JSX.Element {
 					generalSettings={generalSettings}
 					onClientPreferencesChange={setClientPreferences}
 					onGeneralSettingsChange={setGeneralSettings}
+				/>
+			);
+		}
+		if (page === "appearance") {
+			return (
+				<AppearanceSettingsPage
+					clientPreferences={clientPreferences}
+					onClientPreferencesChange={setClientPreferences}
 				/>
 			);
 		}

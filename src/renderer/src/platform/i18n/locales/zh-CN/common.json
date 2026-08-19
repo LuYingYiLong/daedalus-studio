@@ -1361,6 +1361,7 @@
 			"provider": "供应商",
 			"defaultModel": "默认模型",
 			"general": "通用",
+			"appearance": "外观",
 			"keyboardShortcuts": "键盘快捷键",
 			"search": "搜索",
 			"statistics": "统计",
@@ -2433,6 +2434,42 @@
 				"load": "加载通用设置失败",
 				"save": "保存通用设置失败",
 				"godotExecutable": "验证 Godot 可执行文件失败"
+			}
+		},
+		"appearance": {
+			"title": "外观",
+			"theme": {
+				"title": "主题",
+				"mode": {
+					"title": "颜色模式",
+					"description": "选择此设备上的 Studio 颜色主题。",
+					"system": "跟随系统",
+					"light": "浅色",
+					"dark": "深色"
+				},
+				"color": {
+					"title": "主题色",
+					"description": "自定义 Studio 的强调色和主要控件颜色。"
+				}
+			},
+			"fonts": {
+				"title": "字体",
+				"body": {
+					"title": "正文字体族",
+					"description": "自定义 Studio 普通文本使用的字体族。",
+					"placeholder": "例如：\"Microsoft YaHei\", sans-serif",
+					"reset": "恢复默认正文字体"
+				},
+				"code": {
+					"title": "代码字体族",
+					"description": "自定义代码、终端和文件编辑器使用的字体族。",
+					"placeholder": "例如：\"JetBrains Mono\", Consolas, monospace",
+					"reset": "恢复默认代码字体"
+				}
+			},
+			"errors": {
+				"load": "加载外观偏好失败",
+				"save": "保存外观偏好失败"
 			}
 		}
 	},
