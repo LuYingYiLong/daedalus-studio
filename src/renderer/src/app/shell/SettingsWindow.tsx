@@ -26,6 +26,8 @@ import DocumentationSettingsPage from "@/widgets/settings/DocumentationSettingsP
 import KeyboardShortcutsSettingsPage from "@/widgets/settings/KeyboardShortcutsSettingsPage";
 import HooksSettingsPage from "@/widgets/settings/HooksSettingsPage";
 import BrowserSettingsPage from "@/widgets/settings/BrowserSettingsPage";
+import DevelopmentEnvironmentSettingsPage from "@/widgets/settings/DevelopmentEnvironmentSettingsPage";
+import WorktreeSettingsPage from "@/widgets/settings/WorktreeSettingsPage";
 import styles from "./SettingsWindow.module.css";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -41,6 +43,8 @@ type SettingsPageKey =
 	| "skills"
 	| "hooks"
 	| "browser"
+	| "environments"
+	| "worktrees"
 	| "documentation"
 	| "godot_projects"
 	| "archived_sessions"
@@ -108,6 +112,16 @@ const menuItemConfigs: SettingsMenuItemConfig[] = [
 		key: "browser",
 		labelKey: "settings.menu.browser",
 		icon: <Icon name="global" />,
+	},
+	{
+		key: "environments",
+		labelKey: "settings.menu.environments",
+		icon: <Icon name="environment" />,
+	},
+	{
+		key: "worktrees",
+		labelKey: "settings.menu.worktrees",
+		icon: <Icon name="worktree" />,
 	},
 	{
 		key: "documentation",
@@ -246,6 +260,12 @@ function SettingsWindow(): React.JSX.Element {
 		}
 		if (page === "browser") {
 			return <BrowserSettingsPage />;
+		}
+		if (page === "environments") {
+			return <DevelopmentEnvironmentSettingsPage />;
+		}
+		if (page === "worktrees") {
+			return <WorktreeSettingsPage />;
 		}
 		if (page === "documentation") {
 			return <DocumentationSettingsPage />;

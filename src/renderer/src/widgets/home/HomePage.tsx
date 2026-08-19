@@ -450,6 +450,7 @@ type HomePageProps = {
 	forkDisabled: boolean;
 	homeWorkspace: WorkspaceConfig | null;
 	homeExecutionEnvironment: "local" | "worktree";
+	homeWorktreeSources: Record<string, { startingState?: import("@/platform/rpc/types").WorktreeStartingState; environmentId?: string | null; environmentFingerprint?: string | null }>;
 	worktreeDisabledReason: string | null;
 	isWorktreePreparing: boolean;
 	workspaceFooterDisabled: boolean;
@@ -464,6 +465,7 @@ type HomePageProps = {
 	onHomeWorkspaceAdd: () => void;
 	onHomeWorkspaceClear: () => void;
 	onHomeExecutionEnvironmentChange: (environment: "local" | "worktree") => void;
+	onHomeWorktreeSourcesChange: (value: Record<string, { startingState?: import("@/platform/rpc/types").WorktreeStartingState; environmentId?: string | null; environmentFingerprint?: string | null }>) => void;
 	onSessionSelect: (session: SessionMetadata) => void;
 	onSessionFork: (session: SessionMetadata) => void;
 	onForkFromUserMessage: (requestId: string) => Promise<void>;
@@ -471,6 +473,8 @@ type HomePageProps = {
 	onSessionArchive: (session: SessionMetadata, context: SessionArchiveContext) => void;
 	onSessionRename: (session: SessionMetadata) => void;
 	onSessionWorktreeDelete: (session: SessionMetadata) => Promise<SessionMetadata>;
+	onSessionWorktreeHandoff: (target: "local" | "worktree") => Promise<void>;
+	onSessionWorktreeSetup: (action: "retry" | "skip") => Promise<void>;
 	onSessionsChange: (sessions: SessionMetadata[]) => void;
 	onWorkspaceDelete: (result: DeleteWorkspaceResult) => void;
 	onWorkspaceUpdate: (workspace: WorkspaceConfig) => void;
@@ -591,6 +595,7 @@ function HomePage({
 	forkDisabled,
 	homeWorkspace,
 	homeExecutionEnvironment,
+	homeWorktreeSources,
 	worktreeDisabledReason,
 	isWorktreePreparing,
 	workspaceFooterDisabled,
@@ -605,6 +610,7 @@ function HomePage({
 	onHomeWorkspaceAdd,
 	onHomeWorkspaceClear,
 	onHomeExecutionEnvironmentChange,
+	onHomeWorktreeSourcesChange,
 	onSessionSelect,
 	onSessionFork,
 	onForkFromUserMessage,
@@ -612,6 +618,8 @@ function HomePage({
 	onSessionArchive,
 	onSessionRename,
 	onSessionWorktreeDelete,
+	onSessionWorktreeHandoff,
+	onSessionWorktreeSetup,
 	onSessionsChange,
 	onWorkspaceDelete,
 	onWorkspaceUpdate,
@@ -2310,6 +2318,7 @@ function HomePage({
 			selectedWorkspace={isHome ? homeWorkspace : activeWorkspace}
 			workspaceFooterDisabled={workspaceFooterDisabled}
 			worktreeMode={isHome ? homeExecutionEnvironment : undefined}
+			worktreeSourceOptions={isHome ? homeWorktreeSources : undefined}
 			worktreeDisabledReason={isHome ? worktreeDisabledReason : null}
 			isWorktreePreparing={isWorktreePreparing}
 			showContextUsage={!isHome}
@@ -2331,6 +2340,7 @@ function HomePage({
 			onWorkspaceAdd={isHome ? onHomeWorkspaceAdd : undefined}
 			onWorkspaceClear={isHome ? onHomeWorkspaceClear : undefined}
 			onWorktreeModeChange={isHome ? onHomeExecutionEnvironmentChange : undefined}
+			onWorktreeSourceOptionsChange={isHome ? onHomeWorktreeSourcesChange : undefined}
 			onRemoveContext={onRemoveContext}
 			onPinContext={onPinContext}
 			onClearUnpinnedContext={onClearUnpinnedContext}
@@ -2551,8 +2561,8 @@ function HomePage({
 															/>
 														</Tooltip>
 													) : null}
-													{activeSessionMetadata?.worktree !== undefined ? (
-														<Tooltip
+											{activeSessionMetadata?.worktree !== undefined ? (
+												<Space size={4}><Tooltip
 															title={t("agentPage.worktree.source", {
 																workspace: activeSessionMetadata.worktree.sourceWorkspaceName
 															})}
@@ -2561,8 +2571,22 @@ function HomePage({
 																<Icon name="git-branch" />
 																{t("agentPage.worktree.label")}
 															</span>
-														</Tooltip>
-													) : null}
+												</Tooltip><Dropdown menu={{ items: [
+													...((activeSessionMetadata.worktree.status ?? "ready") === "ready" ? [] : [
+														{ key: "setup-retry", label: t("agentPage.worktree.setupRetry") },
+														{ key: "setup-skip", label: t("agentPage.worktree.setupSkip") },
+														{ type: "divider" as const }
+													]),
+													{ key: "local", label: t("agentPage.worktree.handoffLocal"), disabled: (activeSessionMetadata.worktree.location ?? "worktree") === "local" },
+													{ key: "worktree", label: t("agentPage.worktree.handoffWorktree"), disabled: (activeSessionMetadata.worktree.location ?? "worktree") === "worktree" }
+												], onClick: ({ key }): void => {
+													if (key === "setup-retry" || key === "setup-skip") {
+														void onSessionWorktreeSetup(key === "setup-retry" ? "retry" : "skip");
+														return;
+													}
+													void onSessionWorktreeHandoff(key as "local" | "worktree");
+												} }}><Button type="text" size="small" icon={<Icon name="arrow-forward" />} aria-label={t("agentPage.worktree.handoff")} /></Dropdown></Space>
+											) : null}
 												</div>
 											</header>
 

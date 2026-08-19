@@ -6,23 +6,25 @@ import styles from "./BootSplash.module.css";
 import { waitForRendererPaint } from "../runtime/renderer-paint";
 
 type BootSplashProps<TBootstrapData> = {
-	loadData: (onProgress: (progress: BootstrapProgress) => void) => Promise<TBootstrapData>;
+	loadData: (
+		onProgress: (progress: BootstrapProgress) => void,
+	) => Promise<TBootstrapData>;
 	onReady: (data: TBootstrapData) => void;
 	onPaintReady?: () => void;
 };
 
 type BootstrapState =
 	| {
-		status: "loading";
-		progress: BootstrapProgress;
-	}
+			status: "loading";
+			progress: BootstrapProgress;
+	  }
 	| {
-		status: "error";
-		title: string;
-		details: string;
-		suggestedAction: string | null;
-		backendState: BackendBootstrapState | null;
-	};
+			status: "error";
+			title: string;
+			details: string;
+			suggestedAction: string | null;
+			backendState: BackendBootstrapState | null;
+	  };
 
 type Translate = (key: string) => string;
 
@@ -31,7 +33,7 @@ const BACKEND_BOOTSTRAP_PROGRESS_WEIGHT: number = 70;
 function createInitialProgress(t: Translate): BootstrapProgress {
 	return {
 		label: t("app.boot.progress.starting"),
-		percent: 0
+		percent: 0,
 	};
 }
 
@@ -39,7 +41,10 @@ function getErrorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
-function getBackendBootstrapProgress(state: BackendBootstrapState, t: Translate): BootstrapProgress {
+function getBackendBootstrapProgress(
+	state: BackendBootstrapState,
+	t: Translate,
+): BootstrapProgress {
 	const labelByPhase: Record<BackendBootstrapPhase, string> = {
 		detect: t("app.boot.progress.checkingBackend"),
 		recover: t("app.boot.progress.checkingBackend"),
@@ -50,7 +55,7 @@ function getBackendBootstrapProgress(state: BackendBootstrapState, t: Translate)
 		health_check: t("app.boot.progress.checkingBackendHealth"),
 		rollback: t("app.boot.progress.preparingBackend"),
 		ready: t("app.boot.progress.backendReady"),
-		error: t("app.boot.progress.backendStartupFailed")
+		error: t("app.boot.progress.backendStartupFailed"),
 	};
 	return {
 		label: labelByPhase[state.phase],
@@ -58,13 +63,17 @@ function getBackendBootstrapProgress(state: BackendBootstrapState, t: Translate)
 			0,
 			Math.min(
 				BACKEND_BOOTSTRAP_PROGRESS_WEIGHT,
-				Math.round(state.progress * BACKEND_BOOTSTRAP_PROGRESS_WEIGHT / 100)
-			)
-		)
+				Math.round(
+					(state.progress * BACKEND_BOOTSTRAP_PROGRESS_WEIGHT) / 100,
+				),
+			),
+		),
 	};
 }
 
-function getFirstScreenProgress(progress: BootstrapProgress): BootstrapProgress {
+function getFirstScreenProgress(
+	progress: BootstrapProgress,
+): BootstrapProgress {
 	return {
 		label: progress.label,
 		percent: Math.max(
@@ -72,15 +81,20 @@ function getFirstScreenProgress(progress: BootstrapProgress): BootstrapProgress 
 			Math.min(
 				100,
 				Math.round(
-					BACKEND_BOOTSTRAP_PROGRESS_WEIGHT
-					+ progress.percent * (100 - BACKEND_BOOTSTRAP_PROGRESS_WEIGHT) / 100
-				)
-			)
-		)
+					BACKEND_BOOTSTRAP_PROGRESS_WEIGHT +
+						(progress.percent *
+							(100 - BACKEND_BOOTSTRAP_PROGRESS_WEIGHT)) /
+							100,
+				),
+			),
+		),
 	};
 }
 
-function getBackendErrorTitle(state: BackendBootstrapState, t: Translate): string {
+function getBackendErrorTitle(
+	state: BackendBootstrapState,
+	t: Translate,
+): string {
 	if (state.status === "unsupported") {
 		return t("app.boot.error.developmentBackendNotRunning");
 	}
@@ -99,24 +113,32 @@ function getBackendErrorTitle(state: BackendBootstrapState, t: Translate): strin
 	return t("app.boot.error.studioStartFailed");
 }
 
-function createBackendErrorState(backendState: BackendBootstrapState, t: Translate): BootstrapState {
+function createBackendErrorState(
+	backendState: BackendBootstrapState,
+	t: Translate,
+): BootstrapState {
 	return {
 		status: "error",
 		title: getBackendErrorTitle(backendState, t),
-		details: backendState.errorMessage ?? t("app.boot.error.bootstrapFailed"),
+		details:
+			backendState.errorMessage ?? t("app.boot.error.bootstrapFailed"),
 		suggestedAction: backendState.suggestedAction,
-		backendState
+		backendState,
 	};
 }
 
-function BootSplash<TBootstrapData>({ loadData, onReady, onPaintReady }: BootSplashProps<TBootstrapData>): React.JSX.Element {
+function BootSplash<TBootstrapData>({
+	loadData,
+	onReady,
+	onPaintReady,
+}: BootSplashProps<TBootstrapData>): React.JSX.Element {
 	const { t } = useTranslation();
 	const paintReadyReportedRef = useRef<boolean>(false);
 	const [runId, setRunId] = useState<number>(0);
 	const [actionKey, setActionKey] = useState<string | null>(null);
 	const [state, setState] = useState<BootstrapState>({
 		status: "loading",
-		progress: createInitialProgress(t)
+		progress: createInitialProgress(t),
 	});
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -131,45 +153,80 @@ function BootSplash<TBootstrapData>({ loadData, onReady, onPaintReady }: BootSpl
 			cancelled = true;
 		};
 	}, [onPaintReady]);
-	const loadingProgress: BootstrapProgress = state.status === "loading" ? state.progress : createInitialProgress(t);
-	const runBootstrapAction = useCallback(async (action: "repair" | "retry-start"): Promise<void> => {
-		setActionKey(action);
-		try {
-			const backendState: BackendBootstrapState = action === "repair"
-				? await window.electronAPI.backendBootstrap.repair()
-				: await window.electronAPI.backendBootstrap.retryStart();
-			if (backendState.status === "healthy") {
-				setRunId((currentRunId: number): number => currentRunId + 1);
-				return;
+	const loadingProgress: BootstrapProgress =
+		state.status === "loading" ? state.progress : createInitialProgress(t);
+	const runBootstrapAction = useCallback(
+		async (action: "repair" | "retry-start"): Promise<void> => {
+			setActionKey(action);
+			try {
+				const backendState: BackendBootstrapState =
+					action === "repair"
+						? await window.electronAPI.backendBootstrap.repair()
+						: await window.electronAPI.backendBootstrap.retryStart();
+				if (backendState.status === "healthy") {
+					setRunId(
+						(currentRunId: number): number => currentRunId + 1,
+					);
+					return;
+				}
+				setState(createBackendErrorState(backendState, t));
+			} finally {
+				setActionKey(null);
 			}
-			setState(createBackendErrorState(backendState, t));
-		} finally {
-			setActionKey(null);
-		}
-	}, [t]);
+		},
+		[t],
+	);
 	const resultExtra = useMemo((): React.ReactNode[] => {
 		if (state.status !== "error") {
 			return [];
 		}
 		const backendState: BackendBootstrapState | null = state.backendState;
 		const actions: React.ReactNode[] = [
-			<Button key="retry" type="primary" onClick={(): void => setRunId((currentRunId: number): number => currentRunId + 1)}>
+			<Button
+				key="retry"
+				type="primary"
+				onClick={(): void =>
+					setRunId((currentRunId: number): number => currentRunId + 1)
+				}
+			>
 				{t("app.boot.actions.retry")}
-			</Button>
+			</Button>,
 		];
-		if (backendState?.packaged === true && backendState.errorCode === "install_failed") {
+		if (
+			backendState?.packaged === true &&
+			backendState.errorCode === "install_failed"
+		) {
 			actions.unshift(
-				<Button key="retry-install" loading={actionKey === "repair"} onClick={(): void => { void runBootstrapAction("repair"); }}>
+				<Button
+					key="retry-install"
+					loading={actionKey === "repair"}
+					onClick={(): void => {
+						void runBootstrapAction("repair");
+					}}
+				>
 					{t("app.boot.actions.retryInstall")}
-				</Button>
+				</Button>,
 			);
-		} else if (backendState?.packaged === true && (backendState.errorCode === "backend_missing" || backendState.errorCode === "marked_backend_missing")) {
+		} else if (
+			backendState?.packaged === true &&
+			(backendState.errorCode === "backend_missing" ||
+				backendState.errorCode === "marked_backend_missing")
+		) {
 			actions.unshift(
-				<Button key="repair-backend" loading={actionKey === "repair"} onClick={(): void => { void runBootstrapAction("repair"); }}>
+				<Button
+					key="repair-backend"
+					loading={actionKey === "repair"}
+					onClick={(): void => {
+						void runBootstrapAction("repair");
+					}}
+				>
 					{t("app.boot.actions.repairBackend")}
-				</Button>
+				</Button>,
 			);
-		} else if (backendState?.packaged === true && backendState.errorCode === "health_failed") {
+		} else if (
+			backendState?.packaged === true &&
+			backendState.errorCode === "health_failed"
+		) {
 			actions.unshift(
 				<Button
 					key="restart-backend"
@@ -180,9 +237,15 @@ function BootSplash<TBootstrapData>({ loadData, onReady, onPaintReady }: BootSpl
 				>
 					{t("app.boot.actions.restartBackend")}
 				</Button>,
-				<Button key="repair-backend" loading={actionKey === "repair"} onClick={(): void => { void runBootstrapAction("repair"); }}>
+				<Button
+					key="repair-backend"
+					loading={actionKey === "repair"}
+					onClick={(): void => {
+						void runBootstrapAction("repair");
+					}}
+				>
 					{t("app.boot.actions.repairBackend")}
-				</Button>
+				</Button>,
 			);
 		}
 		return actions;
@@ -190,56 +253,68 @@ function BootSplash<TBootstrapData>({ loadData, onReady, onPaintReady }: BootSpl
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
-		const unsubscribe = window.electronAPI.backendBootstrap.onStateChanged((backendState: BackendBootstrapState): void => {
-			if (cancelled) {
-				return;
-			}
-			if (backendState.status === "error" || backendState.status === "unsupported") {
-				setState(createBackendErrorState(backendState, t));
-				return;
-			}
-			setState({
-				status: "loading",
-				progress: getBackendBootstrapProgress(backendState, t)
-			});
-		});
-		setState({
-			status: "loading",
-			progress: createInitialProgress(t)
-		});
-		void window.electronAPI.backendBootstrap.prepare().then(async (backendState: BackendBootstrapState): Promise<void> => {
-			if (cancelled) {
-				return;
-			}
-			if (backendState.status !== "healthy") {
-				setState(createBackendErrorState(backendState, t));
-				return;
-			}
-			const data: TBootstrapData = await loadData((progress: BootstrapProgress): void => {
+		const unsubscribe = window.electronAPI.backendBootstrap.onStateChanged(
+			(backendState: BackendBootstrapState): void => {
 				if (cancelled) {
+					return;
+				}
+				if (
+					backendState.status === "error" ||
+					backendState.status === "unsupported"
+				) {
+					setState(createBackendErrorState(backendState, t));
 					return;
 				}
 				setState({
 					status: "loading",
-					progress: getFirstScreenProgress(progress)
+					progress: getBackendBootstrapProgress(backendState, t),
+				});
+			},
+		);
+		setState({
+			status: "loading",
+			progress: createInitialProgress(t),
+		});
+		void window.electronAPI.backendBootstrap
+			.prepare()
+			.then(
+				async (backendState: BackendBootstrapState): Promise<void> => {
+					if (cancelled) {
+						return;
+					}
+					if (backendState.status !== "healthy") {
+						setState(createBackendErrorState(backendState, t));
+						return;
+					}
+					const data: TBootstrapData = await loadData(
+						(progress: BootstrapProgress): void => {
+							if (cancelled) {
+								return;
+							}
+							setState({
+								status: "loading",
+								progress: getFirstScreenProgress(progress),
+							});
+						},
+					);
+					if (!cancelled) {
+						onReady(data);
+					}
+				},
+			)
+			.catch((error: unknown): void => {
+				if (cancelled) {
+					return;
+				}
+				const details: string = getErrorMessage(error);
+				setState({
+					status: "error",
+					title: t("app.boot.error.studioStartFailed"),
+					details,
+					suggestedAction: null,
+					backendState: null,
 				});
 			});
-			if (!cancelled) {
-				onReady(data);
-			}
-		}).catch((error: unknown): void => {
-			if (cancelled) {
-				return;
-			}
-			const details: string = getErrorMessage(error);
-			setState({
-				status: "error",
-				title: t("app.boot.error.studioStartFailed"),
-				details,
-				suggestedAction: null,
-				backendState: null
-			});
-		});
 
 		return (): void => {
 			cancelled = true;
@@ -252,14 +327,23 @@ function BootSplash<TBootstrapData>({ loadData, onReady, onPaintReady }: BootSpl
 			<main className={styles.root} data-studio-boot-splash="ready">
 				<Result
 					className={styles.result}
-					status={state.backendState === null || state.backendState.status === "unsupported" ? "error" : "500"}
+					status={
+						state.backendState === null ||
+						state.backendState.status === "unsupported"
+							? "error"
+							: "500"
+					}
 					title={state.title}
-					subTitle={(
+					subTitle={
 						<div className={styles.resultDetails}>
 							<Typography.Text>{state.details}</Typography.Text>
-							{state.suggestedAction === null ? null : <Typography.Text type="secondary">{state.suggestedAction}</Typography.Text>}
+							{state.suggestedAction === null ? null : (
+								<Typography.Text type="secondary">
+									{state.suggestedAction}
+								</Typography.Text>
+							)}
 						</div>
-					)}
+					}
 					extra={resultExtra}
 				/>
 			</main>
@@ -270,11 +354,18 @@ function BootSplash<TBootstrapData>({ loadData, onReady, onPaintReady }: BootSpl
 		<main className={styles.root} data-studio-boot-splash="ready">
 			<section className={styles.panel}>
 				<div className={styles.brand}>
-					<Typography.Title level={3}>Daedalus Studio</Typography.Title>
-					<Typography.Text type="secondary">{loadingProgress.label}</Typography.Text>
+					<Typography.Title level={3} className={styles.title}>
+						Daedalus Studio
+					</Typography.Title>
+					<Typography.Text type="secondary">
+						{loadingProgress.label}
+					</Typography.Text>
 				</div>
 				<div className={styles.progress}>
-					<Progress percent={loadingProgress.percent} status="active" />
+					<Progress
+						percent={loadingProgress.percent}
+						status="active"
+					/>
 				</div>
 			</section>
 		</main>

@@ -1,0 +1,127 @@
+.page {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	min-width: 0;
+	min-height: 0;
+	padding: 0 0 var(--ds-space-2) var(--ds-space-2);
+	overflow: hidden;
+	user-select: none;
+}
+
+.header {
+	display: grid;
+	gap: 8px;
+	padding-right: var(--ds-space-2);
+}
+
+.title {
+	margin: 0 0 8px !important;
+}
+
+.content {
+	display: grid;
+	align-content: start;
+	gap: var(--ds-space-2);
+	min-width: 0;
+	min-height: 0;
+	padding-right: var(--ds-space-2);
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
+.loading,
+.emptyState {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 120px;
+}
+
+.sourceControls {
+	max-width: min(560px, 52vw);
+}
+
+.sourceControls :global(.ant-select:first-child) {
+	width: min(220px, 24vw);
+}
+
+.sourceControls :global(.ant-select:last-child) {
+	width: min(320px, 28vw);
+}
+
+.selectControl {
+	width: min(320px, 34vw);
+}
+
+.script {
+	font-family: var(--ds-font-family-code);
+}
+
+.reviewList,
+.reviewMeta,
+.actionList {
+	display: grid;
+	gap: var(--ds-space-2);
+}
+
+.reviewItem {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) max-content;
+	gap: var(--ds-space-2);
+	align-items: center;
+	padding: var(--ds-space-2) 0;
+}
+
+.reviewItem + .reviewItem {
+	border-top: 1px solid var(--ds-border-subtle);
+}
+
+.reviewMeta :global(.ant-typography) {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.modalSectionTitle {
+	margin: var(--ds-space-4) 0 var(--ds-space-2) !important;
+}
+
+.actionEditor {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
+	gap: var(--ds-space-2);
+	align-items: start;
+	padding: var(--ds-space-2);
+	border: 1px solid var(--ds-border-subtle);
+	border-radius: var(--ds-radius-md);
+}
+
+.actionEditor :global(.ant-form-item) {
+	margin-bottom: 0;
+}
+
+.actionScript {
+	grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+	.sourceControls,
+	.selectControl {
+		width: 100%;
+		max-width: none;
+	}
+
+	.sourceControls :global(.ant-select:first-child),
+	.sourceControls :global(.ant-select:last-child) {
+		width: 50%;
+	}
+
+	.reviewItem,
+	.actionEditor {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.actionScript {
+		grid-column: auto;
+	}
+}

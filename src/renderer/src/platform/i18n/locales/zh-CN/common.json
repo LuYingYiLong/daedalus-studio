@@ -267,6 +267,7 @@
 			"delete": "删除",
 			"newSessionInWorkspace": "在 workspace 中新建会话",
 			"newWorktreeSession": "在新工作树中创建会话",
+			"createPermanentWorktree": "创建永久工作树",
 			"deleteWorktree": "删除工作树"
 		},
 		"aria": {
@@ -309,6 +310,7 @@
 			"exportSession": "导出会话数据失败",
 			"deleteWorkspace": "删除 workspace 失败",
 			"deleteWorktree": "删除工作树失败",
+			"createPermanentWorktree": "创建永久工作树失败",
 			"worktreeTerminalActive": "请先关闭这个工作树会话中的活动终端。",
 			"loadWorkspace": "加载 workspace 失败",
 			"openSessionDirectory": "打开会话目录失败",
@@ -319,6 +321,11 @@
 			"sessionTitleCannotBeEmpty": "会话标题不能为空。"
 		},
 		"modals": {
+			"createPermanentWorktree": {
+				"title": "创建永久工作树",
+				"create": "创建",
+				"placeholder": "工作树名称"
+			},
 			"deleteWorktree": {
 				"title": "删除工作树？",
 				"body": "只有工作树干净、没有活动任务或终端，且没有未保存到分支的新提交时才能删除。会话历史会保留，并重新绑定到来源项目。"
@@ -336,7 +343,12 @@
 	"agentPage": {
 		"worktree": {
 			"label": "工作树",
-			"source": "来源：{{workspace}}"
+			"source": "来源：{{workspace}}",
+			"handoff": "转移工作区状态",
+			"handoffLocal": "转移到本地 checkout",
+			"handoffWorktree": "转移到工作树",
+			"setupRetry": "重试环境设置",
+			"setupSkip": "跳过环境设置"
 		},
 		"actions": {
 			"newSession": "新建会话",
@@ -424,6 +436,16 @@
 			"managed": "工作树",
 			"preparing": "正在创建工作树…",
 			"unavailable": "当前 workspace 不满足工作树要求",
+			"options": {
+				"button": "环境",
+				"title": "工作树起始状态与开发环境",
+				"head": "当前 HEAD",
+				"workingTree": "当前工作状态",
+				"branch": "分支",
+				"environment": "开发环境",
+				"reviewRequired": "需要审核",
+				"loadFailed": "加载工作树选项失败"
+			},
 			"reasons": {
 				"source_missing": "源文件夹不存在",
 				"not_repository_root": "源文件夹必须正好是 Git 仓库根目录",
@@ -707,6 +729,8 @@
 			"files": "文件",
 			"filesIndexed": "文件 {{index}}",
 			"browser": "浏览器",
+			"environments": "开发环境",
+			"worktrees": "工作树",
 			"browserIndexed": "浏览器 {{index}}",
 			"enterFullscreen": "展开面板",
 			"exitFullscreen": "恢复面板"
@@ -1345,6 +1369,8 @@
 			"skills": "技能",
 			"hooks": "钩子",
 			"browser": "浏览器",
+			"environments": "开发环境",
+			"worktrees": "工作树",
 			"documentation": "文档",
 			"godotProjects": "Godot 项目",
 			"archivedSessions": "已归档会话",
@@ -1365,6 +1391,40 @@
 			"save": "保存",
 			"close": "关闭",
 			"update": "更新"
+		},
+		"environments": {
+			"title": "开发环境",
+			"description": "为托管工作树配置可提交的 setup 脚本和集成终端 actions。",
+			"source": "配置来源",
+			"profiles": "环境配置",
+			"defaultEnvironment": "默认环境",
+			"profileDescription": "环境说明",
+			"setupScript": "Setup 脚本",
+			"network": "Setup 期间允许联网",
+			"actions": "终端 Actions",
+			"actionName": "Action 名称",
+			"actionScript": "Action 脚本",
+			"actionNetwork": "Action 期间允许联网",
+			"addAction": "添加 Action",
+			"add": "添加环境",
+			"noSetup": "无需 Setup",
+			"saved": "开发环境配置已保存",
+			"review": { "title": "审核环境命令", "trust": "信任", "trustNetwork": "信任并允许联网", "networkEnabled": "该环境声明需要网络访问；文件系统仍受沙箱限制。", "networkDisabled": "网络访问已禁用，脚本仅能写入工作树和隔离缓存。" },
+			"errors": { "load": "加载开发环境失败", "save": "保存开发环境失败" }
+		},
+		"worktrees": {
+			"title": "工作树",
+			"description": "检查托管与永久工作树的磁盘占用、Setup 状态和 Git 注册健康状态。",
+			"sessions": "会话工作树",
+			"operations": "最近操作",
+			"permanent": "永久工作树",
+			"orphans": "孤立的托管目录",
+			"empty": "暂无会话工作树",
+			"emptyPermanent": "暂无永久工作树",
+			"repair": "修复",
+			"deletePermanentTitle": "删除永久工作树？",
+			"deletePermanentDescription": "仅当工作树干净、没有活动会话或终端，且没有未保存到分支的新提交时才能删除。",
+			"errors": { "load": "加载工作树状态失败", "repair": "修复工作树失败", "delete": "删除永久工作树失败" }
 		},
 		"browser": {
 			"title": "浏览器",

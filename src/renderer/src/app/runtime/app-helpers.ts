@@ -10,6 +10,7 @@ import type {
 	WorkbenchSnapshot,
 	WorkspaceConfig
 } from "@/platform/rpc/types";
+import type { WorktreeStartingState } from "@/platform/rpc/types";
 import type {
 	ProviderModelInfo,
 	ProviderModelSelection,
@@ -59,6 +60,7 @@ export type HomeDraft = {
 	reasoningEffort: string;
 	workspaceLaunch: WorkspaceLaunchTargetId;
 	executionEnvironment: "local" | "worktree";
+	worktreeSources: Record<string, { startingState?: WorktreeStartingState; environmentId?: string | null; environmentFingerprint?: string | null }>;
 };
 
 export const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
@@ -125,7 +127,8 @@ export function createHomeDraft(): HomeDraft {
 		modelId: null,
 		reasoningEffort: "medium",
 		workspaceLaunch: DEFAULT_WORKSPACE_LAUNCH_TARGET_ID,
-		executionEnvironment: "local"
+		executionEnvironment: "local",
+		worktreeSources: {}
 	};
 }
 

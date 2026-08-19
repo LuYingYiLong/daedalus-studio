@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useEventListener, useLatest } from "ahooks";
-import { Input, message as antdMessage, Spin } from "antd";
+import { Input, message as antdMessage, Modal, Spin } from "antd";
 import { useTranslation } from "react-i18next";
 import { useDiskSpaceCheck } from "@/app/runtime/hooks/useDiskSpaceCheck";
 import { onBackendReconnected } from "@/platform/rpc/transport/backend-client";
@@ -43,9 +43,13 @@ import {
 	forkSession,
 	createSessionWorktree,
 	deleteSessionWorktree,
+	executeSessionWorktreeHandoff,
 	openSession,
+	previewSessionWorktreeHandoff,
+	retrySessionWorktreeSetup,
 	saveSessionUiMetadata,
 	setSessionModel,
+	skipSessionWorktreeSetup,
 	type SaveSessionUiMetadataParams,
 	type SessionIntegrityCheckResult,
 } from "@/platform/rpc/session-api";
@@ -1997,6 +2001,54 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		return result.metadata;
 	}
 
+	async function handleSessionWorktreeHandoff(target: "local" | "worktree"): Promise<void> {
+		if (activeSessionMetadata?.worktree === undefined) return;
+		try {
+			let preview = await previewSessionWorktreeHandoff({ sessionId: activeSessionMetadata.id, target });
+			const branchBySource: Record<string, string> = Object.fromEntries(preview.sources.flatMap((source): Array<[string, string]> => source.newCommits > 0 && source.branch !== null ? [[source.sourceFolderId, source.branch]] : []));
+			if (!preview.allowed && Object.keys(branchBySource).length > 0) {
+				preview = await previewSessionWorktreeHandoff({ sessionId: activeSessionMetadata.id, target, branchBySource });
+			}
+			if (!preview.allowed) {
+				throw new Error(preview.sources.find((source) => source.blockedReason !== null)?.blockedReason ?? "Handoff is blocked.");
+			}
+			const confirmed = await new Promise<boolean>((resolve): void => {
+				Modal.confirm({
+					title: target === "local" ? "Hand off to local checkout?" : "Hand off to worktree?",
+					content: `${preview.sources.reduce((count, source) => count + source.modifiedFiles.length, 0)} changed files will move between checkouts. The target must remain clean.`,
+					onOk: (): void => resolve(true),
+					onCancel: (): void => resolve(false)
+				});
+			});
+			if (!confirmed) return;
+			const result = await executeSessionWorktreeHandoff({ sessionId: activeSessionMetadata.id, target, branchBySource });
+			setActiveSessionMetadata(result.metadata);
+			setActiveWorkspace(result.workspace);
+			if (result.workbench !== null) setWorkbench(result.workbench);
+			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		} catch (error: unknown) {
+			void messageApi.error(error instanceof Error ? error.message : "Failed to hand off worktree");
+		}
+	}
+
+	async function handleSessionWorktreeSetup(action: "retry" | "skip"): Promise<void> {
+		if (activeSessionMetadata?.worktree === undefined) return;
+		try {
+			const result = action === "retry"
+				? await retrySessionWorktreeSetup(activeSessionMetadata.id)
+				: await skipSessionWorktreeSetup(activeSessionMetadata.id);
+			setActiveSessionMetadata(result.metadata);
+			setActiveWorkspace(result.workspace);
+			if (result.workbench !== null) setWorkbench(result.workbench);
+			setSessionError((result.metadata.worktree?.status ?? "ready") === "ready"
+				? null
+				: "Worktree setup is not ready.");
+			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		} catch (error: unknown) {
+			void messageApi.error(error instanceof Error ? error.message : "Failed to update worktree setup");
+		}
+	}
+
 	async function handleForkSourceOpen(sessionId: string): Promise<void> {
 		try {
 			const sessionList = await fetchSessions();
@@ -2667,7 +2719,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 					throw new Error(t("composer.worktree.unavailable"));
 				}
 				setIsWorktreePreparing(true);
-				const worktreeResult = await createSessionWorktree(created.id, homeDraft.workspaceId);
+				const worktreeResult = await createSessionWorktree(created.id, homeDraft.workspaceId, homeDraft.worktreeSources);
 				if (worktreeResult.workbench === null) {
 					throw new Error("Worktree session did not return a workbench.");
 				}
@@ -2676,6 +2728,17 @@ export default function useAppController({ bootstrapData }: AppProps) {
 					workbench: worktreeResult.workbench
 				};
 				createdRuntimeWorkspace = worktreeResult.workspace;
+				if ((worktreeResult.metadata.worktree?.status ?? "ready") !== "ready") {
+					setIsNewSessionHome(false);
+					enteredSession = true;
+					setActiveSessionId(created.id);
+					setActiveSessionMetadata(created);
+					setActiveWorkspace(worktreeResult.workspace);
+					setWorkbench(created.workbench);
+					replaceComposerInput(message, created.id);
+					setSessionError(worktreeResult.metadata.worktree?.status === "setup-failed" ? "Worktree setup failed. Retry, skip, or delete the worktree before sending." : "Review and trust the selected development environment before setup can continue.");
+					return;
+				}
 			}
 
 			setIsNewSessionHome(false);
@@ -2777,7 +2840,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			try {
 				setIsWorktreePreparing(true);
 				setSessionError(null);
-				const worktreeResult = await createSessionWorktree(activeSessionId, homeDraft.workspaceId);
+				const worktreeResult = await createSessionWorktree(activeSessionId, homeDraft.workspaceId, homeDraft.worktreeSources);
 				if (worktreeResult.workbench === null) {
 					throw new Error("Worktree session did not return a workbench.");
 				}
@@ -2786,6 +2849,11 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				setActiveSessionMetadata(worktreeResult.metadata);
 				setActiveWorkspace(worktreeResult.workspace);
 				setWorkbench(worktreeResult.workbench);
+				if ((worktreeResult.metadata.worktree?.status ?? "ready") !== "ready") {
+					replaceComposerInput(nextMessage, activeSessionId);
+					setSessionError(worktreeResult.metadata.worktree?.status === "setup-failed" ? "Worktree setup failed. Retry, skip, or delete the worktree before sending." : "Review and trust the selected development environment before setup can continue.");
+					return;
+				}
 			} catch (error: unknown) {
 				setSessionError(error instanceof Error ? error.message : "Failed to create worktree");
 				return;
@@ -3934,6 +4002,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		forkDisabled: composerIsSending || isSessionLoading || forkingSourceSessionId !== null,
 		homeWorkspace: homeDraft.workspace,
 		homeExecutionEnvironment: homeDraft.executionEnvironment,
+		homeWorktreeSources: homeDraft.worktreeSources,
 		worktreeDisabledReason,
 		isWorktreePreparing,
 		workspaceFooterDisabled: isHomeSubmitting || isWorktreePreparing || composerWorkspaceLocked || isSessionLoading,
@@ -3966,6 +4035,9 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				})
 			);
 		},
+		onHomeWorktreeSourcesChange: (worktreeSources: HomeDraft["worktreeSources"]): void => {
+			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({ ...currentDraft, worktreeSources }));
+		},
 		onSessionSelect: handleSessionSelect,
 		onSessionFork: (session: SessionMetadata): void => {
 			void handleSessionFork(session);
@@ -3980,6 +4052,8 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		onSessionArchive: handleSessionArchive,
 		onSessionRename: handleSessionRename,
 		onSessionWorktreeDelete: handleSessionWorktreeDelete,
+		onSessionWorktreeHandoff: handleSessionWorktreeHandoff,
+		onSessionWorktreeSetup: handleSessionWorktreeSetup,
 		onSessionsChange: handleSessionsChange,
 		onWorkspaceDelete: handleWorkspaceDelete,
 		onWorkspaceUpdate: handleWorkspaceUpdate,

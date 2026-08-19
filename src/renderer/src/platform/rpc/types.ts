@@ -27,6 +27,7 @@ export type WorkspaceConfig = {
 	sourceFolders: WorkspaceSourceFolder[];
 	primarySourceFolderId: string;
 	godotExecutablePath?: string;
+	permanentWorktree?: SessionWorktreeMetadata;
 };
 
 export type WorkspaceListResult = {
@@ -49,7 +50,18 @@ export type SessionWorktreeSource = {
 	worktreePath: string;
 	baseCommit: string;
 	baseRef: string | null;
+	startingState?: WorktreeStartingState;
+	environmentId?: string | null;
+	environmentFingerprint?: string | null;
+	setupState?: WorktreeSetupState;
+	setupSummary?: WorktreeSetupSummary;
+	sensitiveIncludedPaths?: string[];
 };
+
+export type WorktreeStartingState = { type: "head" } | { type: "branch"; ref: string } | { type: "working-tree" };
+export type WorktreeSetupState = "not-required" | "pending-trust" | "running" | "ready" | "failed" | "skipped" | "interrupted";
+export type WorktreeLifecycleStatus = "creating" | "setting-up" | "ready" | "setup-failed" | "handoff" | "unavailable" | "recovery-required";
+export type WorktreeSetupSummary = { startedAt?: string; finishedAt?: string; exitCode?: number | null; durationMs?: number; message?: string; logPath?: string };
 
 export type SessionWorktreeMetadata = {
 	id: string;
@@ -58,6 +70,26 @@ export type SessionWorktreeMetadata = {
 	runtimeWorkspaceId: string;
 	sources: SessionWorktreeSource[];
 	createdAt: string;
+	location?: "local" | "worktree";
+	status?: WorktreeLifecycleStatus;
+	permanent?: boolean;
+	displayName?: string;
+};
+
+export type PlatformScripts = { default?: string; windows?: string; macos?: string; linux?: string };
+export type LocalEnvironmentAction = { id: string; name: string; icon?: string; scripts: PlatformScripts; network?: boolean };
+export type LocalEnvironmentProfile = { id: string; name: string; description?: string; setup?: { scripts: PlatformScripts; timeoutSeconds?: number; network?: boolean }; actions: LocalEnvironmentAction[] };
+export type LocalEnvironmentConfig = { version: 1; defaultEnvironmentId?: string | null; environments: LocalEnvironmentProfile[] };
+export type EnvironmentTrustStatus = "trusted" | "network-approved" | "disabled" | "review-required";
+export type LocalEnvironmentConfigDocument = {
+	workspaceId: string;
+	sourceFolderId: string;
+	path: string;
+	exists: boolean;
+	content: string;
+	revision: string;
+	config: LocalEnvironmentConfig;
+	profiles: Array<LocalEnvironmentProfile & { fingerprint: string; trust: EnvironmentTrustStatus; resolvedSetupScript: string | null }>;
 };
 
 export type SessionMetadata = {

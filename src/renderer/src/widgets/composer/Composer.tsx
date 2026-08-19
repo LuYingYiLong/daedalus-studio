@@ -68,6 +68,7 @@ import {
 	type SelectedModel,
 } from "./composer-menu-items";
 import useComposerContextUsage, { formatTokenCount } from "./useComposerContextUsage";
+import WorktreeCreationOptions, { type WorktreeSourceOptions } from "./WorktreeCreationOptions";
 
 export type ComposerProps = {
 	providerModelSelection: ProviderModelSelection | null;
@@ -96,6 +97,7 @@ export type ComposerProps = {
 	worktreeMode?: "local" | "worktree";
 	worktreeDisabledReason?: string | null;
 	isWorktreePreparing?: boolean;
+	worktreeSourceOptions?: Record<string, WorktreeSourceOptions>;
 	onModeChange?: (mode: ChatMode) => void;
 	onApprovalModeChange?: (mode: ApprovalMode) => void;
 	onProviderModelChange?: (providerId: string, modelId: string) => void;
@@ -105,6 +107,7 @@ export type ComposerProps = {
 	onWorkspaceAdd?: () => void;
 	onWorkspaceClear?: () => void;
 	onWorktreeModeChange?: (mode: "local" | "worktree") => void;
+	onWorktreeSourceOptionsChange?: (value: Record<string, WorktreeSourceOptions>) => void;
 	onAddFiles?: () => void;
 	onAddFolder?: () => void;
 	onAddImages?: (files: File[]) => void;
@@ -217,6 +220,7 @@ function Composer({
 	worktreeMode,
 	worktreeDisabledReason = null,
 	isWorktreePreparing = false,
+	worktreeSourceOptions = {},
 	showContextUsage = true,
 	compact = false,
 	floating = false,
@@ -229,6 +233,7 @@ function Composer({
 	onWorkspaceAdd,
 	onWorkspaceClear,
 	onWorktreeModeChange,
+	onWorktreeSourceOptionsChange,
 	onAddFiles,
 	onAddFolder,
 	onAddImages,
@@ -1651,6 +1656,9 @@ function Composer({
 									/>
 								</span>
 							</Tooltip>
+						) : null}
+						{worktreeMode === "worktree" && selectedWorkspace !== null && onWorktreeSourceOptionsChange !== undefined ? (
+							<WorktreeCreationOptions workspace={selectedWorkspace} value={worktreeSourceOptions} disabled={isWorktreePreparing} onChange={onWorktreeSourceOptionsChange} />
 						) : null}
 					</Flex>
 					{showContextUsage ? (

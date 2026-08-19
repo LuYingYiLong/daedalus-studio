@@ -37,6 +37,8 @@ import {
 import type { CollapseProps, MenuProps, TreeDataNode, TreeProps } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
 import { Icon } from "@/assets/icons";
+import { createPermanentWorktree } from "@/platform/rpc/environment-api";
+import WorktreeCreationOptions, { type WorktreeSourceOptions } from "@/widgets/composer/WorktreeCreationOptions";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import DeleteWorkspaceDialog from "./DeleteWorkspaceDialog";
 import WorkspaceProjectDialog from "./WorkspaceProjectDialog";
@@ -138,6 +140,7 @@ type WorkspaceTreeLabels = {
 	newSession: string;
 	newSessionInWorkspace: string;
 	newWorktreeSession: string;
+	createPermanentWorktree: string;
 	newProject: string;
 	noPinnedSessions: string;
 	noProjects: string;
@@ -232,6 +235,7 @@ type CreateWorkspaceMenuItemOptions = CreateSessionMenuItemOptions & {
 	onOpenWorkspaceInExplorer: (workspace: WorkspaceConfig) => void;
 	onEditWorkspace: (workspace: WorkspaceConfig) => void;
 	onDeleteWorkspace: (workspace: WorkspaceConfig) => void;
+	onCreatePermanentWorktree: (workspace: WorkspaceConfig) => void;
 };
 
 function createSessionTreePresentation(
@@ -543,6 +547,12 @@ function createProjectTreeData(
 					icon: <Icon name="worktree" />,
 				},
 				{
+					key: "create-permanent-worktree",
+					label: labels.createPermanentWorktree,
+					icon: <Icon name="git-branch" />,
+					disabled: workspace.permanentWorktree !== undefined,
+				},
+				{
 					key: "open",
 					label: labels.openInExplorer,
 					icon: <Icon name="folder-open" />,
@@ -565,6 +575,10 @@ function createProjectTreeData(
 						domEvent as unknown as MouseEvent<HTMLElement>,
 						"worktree",
 					);
+					return;
+				}
+				if (key === "create-permanent-worktree") {
+					options.onCreatePermanentWorktree(workspace);
 					return;
 				}
 				if (key === "edit") {
@@ -790,6 +804,14 @@ function WorkspaceTree({
 		useState<WorkspaceConfig | null>(null);
 	const [editTargetWorkspace, setEditTargetWorkspace] =
 		useState<WorkspaceConfig | null>(null);
+	const [permanentWorktreeTarget, setPermanentWorktreeTarget] =
+		useState<WorkspaceConfig | null>(null);
+	const [permanentWorktreeName, setPermanentWorktreeName] =
+		useState<string>("");
+	const [permanentWorktreeSources, setPermanentWorktreeSources] =
+		useState<Record<string, WorktreeSourceOptions>>({});
+	const [isCreatingPermanentWorktree, setIsCreatingPermanentWorktree] =
+		useState<boolean>(false);
 	const [deletingWorkspaceId, setDeletingWorkspaceId] = useState<
 		string | null
 	>(null);
@@ -872,6 +894,7 @@ function WorkspaceTree({
 				"workspaceTree.actions.newSessionInWorkspace",
 			),
 			newWorktreeSession: t("workspaceTree.actions.newWorktreeSession"),
+			createPermanentWorktree: t("workspaceTree.actions.createPermanentWorktree"),
 			newProject: t("workspaceTree.actions.newProject"),
 			noPinnedSessions: t("workspaceTree.empty.noPinnedSessions"),
 			noProjects: t("workspaceTree.empty.noProjects"),
@@ -1781,6 +1804,11 @@ function WorkspaceTree({
 					onDeleteWorkspace: (workspace: WorkspaceConfig): void => {
 						setDeleteTargetWorkspace(workspace);
 					},
+					onCreatePermanentWorktree: (workspace: WorkspaceConfig): void => {
+						setPermanentWorktreeTarget(workspace);
+						setPermanentWorktreeName(`${workspace.name} Worktree`);
+						setPermanentWorktreeSources({});
+					},
 				},
 			);
 		}, [
@@ -2194,6 +2222,52 @@ function WorkspaceTree({
 					setDeleteTargetWorkspace(workspace)
 				}
 			/>
+
+			<Modal
+				open={permanentWorktreeTarget !== null}
+				title={t("workspaceTree.modals.createPermanentWorktree.title")}
+				okText={t("workspaceTree.modals.createPermanentWorktree.create")}
+				cancelText={t("workspaceTree.common.cancel")}
+				confirmLoading={isCreatingPermanentWorktree}
+				okButtonProps={{ disabled: permanentWorktreeName.trim().length === 0 }}
+				onCancel={(): void => {
+					if (!isCreatingPermanentWorktree) setPermanentWorktreeTarget(null);
+				}}
+				onOk={(): void => {
+					if (permanentWorktreeTarget === null || permanentWorktreeName.trim().length === 0) return;
+					setIsCreatingPermanentWorktree(true);
+					void createPermanentWorktree({
+						workspaceId: permanentWorktreeTarget.id,
+						name: permanentWorktreeName.trim(),
+						sources: permanentWorktreeSources,
+					}).then(({ workspace }): void => {
+						setWorkspaces((current): WorkspaceConfig[] => [...current, workspace]);
+						setPermanentWorktreeTarget(null);
+						onWorkspaceProjectCreated?.(workspace);
+					}).catch((error: unknown): void => {
+						showWorkspaceOperationError(error, t("workspaceTree.errors.createPermanentWorktree"));
+					}).finally((): void => setIsCreatingPermanentWorktree(false));
+				}}
+			>
+				<Input
+					value={permanentWorktreeName}
+					placeholder={t("workspaceTree.modals.createPermanentWorktree.placeholder")}
+					disabled={isCreatingPermanentWorktree}
+					onChange={(event): void => setPermanentWorktreeName(event.target.value)}
+					onPressEnter={(): void => {
+						const footerButton = document.querySelector<HTMLButtonElement>(".ant-modal-footer .ant-btn-primary");
+						footerButton?.click();
+					}}
+				/>
+				{permanentWorktreeTarget === null ? null : (
+					<WorktreeCreationOptions
+						workspace={permanentWorktreeTarget}
+						value={permanentWorktreeSources}
+						disabled={isCreatingPermanentWorktree}
+						onChange={setPermanentWorktreeSources}
+					/>
+				)}
+			</Modal>
 
 			<WorkspaceProjectDialog
 				open={isCreateProjectOpen}

@@ -269,6 +269,7 @@
 			"delete": "Delete",
 			"newSessionInWorkspace": "New session in workspace",
 			"newWorktreeSession": "New session in worktree",
+			"createPermanentWorktree": "Create permanent worktree",
 			"deleteWorktree": "Delete worktree"
 		},
 		"aria": {
@@ -311,6 +312,7 @@
 			"exportSession": "Failed to export session data",
 			"deleteWorkspace": "Failed to delete workspace",
 			"deleteWorktree": "Failed to delete worktree",
+			"createPermanentWorktree": "Failed to create permanent worktree",
 			"worktreeTerminalActive": "Close active terminals in this worktree session before deleting it.",
 			"loadWorkspace": "Failed to load workspace",
 			"openSessionDirectory": "Failed to open session directory",
@@ -321,6 +323,11 @@
 			"sessionTitleCannotBeEmpty": "Session title cannot be empty."
 		},
 		"modals": {
+			"createPermanentWorktree": {
+				"title": "Create permanent worktree",
+				"create": "Create",
+				"placeholder": "Worktree name"
+			},
 			"deleteWorktree": {
 				"title": "Delete worktree?",
 				"body": "The worktree can be deleted only when it is clean, has no active task or terminal, and has no new commits that are not saved to a branch. Conversation history is kept and rebound to the source project."
@@ -338,7 +345,12 @@
 	"agentPage": {
 		"worktree": {
 			"label": "Worktree",
-			"source": "Source: {{workspace}}"
+			"source": "Source: {{workspace}}",
+			"handoff": "Hand off checkout",
+			"handoffLocal": "Hand off to local checkout",
+			"handoffWorktree": "Hand off to worktree",
+			"setupRetry": "Retry environment setup",
+			"setupSkip": "Skip environment setup"
 		},
 		"actions": {
 			"newSession": "New session",
@@ -426,6 +438,16 @@
 			"managed": "Worktree",
 			"preparing": "Creating worktree…",
 			"unavailable": "This workspace is not eligible for worktrees",
+			"options": {
+				"button": "Environment",
+				"title": "Worktree starting state and environment",
+				"head": "Current HEAD",
+				"workingTree": "Current working state",
+				"branch": "Branch",
+				"environment": "Development environment",
+				"reviewRequired": "review required",
+				"loadFailed": "Failed to load worktree options"
+			},
 			"reasons": {
 				"source_missing": "A source folder does not exist",
 				"not_repository_root": "Each source folder must be exactly a Git repository root",
@@ -709,6 +731,8 @@
 			"files": "Files",
 			"filesIndexed": "Files {{index}}",
 			"browser": "Browser",
+			"environments": "Development environments",
+			"worktrees": "Worktrees",
 			"browserIndexed": "Browser {{index}}",
 			"enterFullscreen": "Expand panel",
 			"exitFullscreen": "Restore panel"
@@ -1352,6 +1376,8 @@
 			"skills": "Skills",
 			"hooks": "Hooks",
 			"browser": "Browser",
+			"environments": "Development environments",
+			"worktrees": "Worktrees",
 			"documentation": "Documentation",
 			"godotProjects": "Godot projects",
 			"archivedSessions": "Archived sessions",
@@ -1372,6 +1398,40 @@
 			"save": "Save",
 			"close": "Close",
 			"update": "Update"
+		},
+		"environments": {
+			"title": "Development environments",
+			"description": "Configure checked-in setup scripts and integrated terminal actions for managed worktrees.",
+			"source": "Configuration source",
+			"profiles": "Environment profiles",
+			"defaultEnvironment": "Default environment",
+			"profileDescription": "Description",
+			"setupScript": "Setup script",
+			"network": "Allow network during setup",
+			"actions": "Terminal actions",
+			"actionName": "Action name",
+			"actionScript": "Action script",
+			"actionNetwork": "Allow network for action",
+			"addAction": "Add action",
+			"add": "Add environment",
+			"noSetup": "No setup script",
+			"saved": "Environment configuration saved",
+			"review": { "title": "Review environment commands", "trust": "Trust", "trustNetwork": "Trust and allow network", "networkEnabled": "This environment requests network access; filesystem access remains sandboxed.", "networkDisabled": "Network access is disabled and scripts can write only to the worktree and isolated cache." },
+			"errors": { "load": "Failed to load environments", "save": "Failed to save environments" }
+		},
+		"worktrees": {
+			"title": "Worktrees",
+			"description": "Inspect managed and permanent worktrees, disk usage, setup state, and Git registration health.",
+			"sessions": "Session worktrees",
+			"operations": "Recent operations",
+			"permanent": "Permanent worktrees",
+			"orphans": "Orphaned managed directories",
+			"empty": "No managed session worktrees",
+			"emptyPermanent": "No permanent worktrees",
+			"repair": "Repair",
+			"deletePermanentTitle": "Delete permanent worktree?",
+			"deletePermanentDescription": "Deletion requires a clean worktree with no active session or terminal and no unnamed commits.",
+			"errors": { "load": "Failed to load worktree status", "repair": "Failed to repair worktree", "delete": "Failed to delete permanent worktree" }
 		},
 		"browser": {
 			"title": "Browser",

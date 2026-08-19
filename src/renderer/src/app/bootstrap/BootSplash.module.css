@@ -9,6 +9,10 @@
 	user-select: none;
 }
 
+.title {
+	margin: 0 !important;
+}
+
 .panel {
 	display: grid;
 	width: min(460px, 100%);

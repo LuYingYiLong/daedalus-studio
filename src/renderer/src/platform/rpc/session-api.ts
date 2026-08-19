@@ -153,12 +153,29 @@ export async function forkSession(params: ForkSessionParams): Promise<SessionFor
 	return client.request<SessionForkResult>("session.fork", params);
 }
 
-export async function createSessionWorktree(sessionId: string, workspaceId: string): Promise<SessionWorktreeResult> {
+export async function createSessionWorktree(sessionId: string, workspaceId: string, sources?: Record<string, { startingState?: import("./types").WorktreeStartingState; environmentId?: string | null; environmentFingerprint?: string | null }>): Promise<SessionWorktreeResult> {
 	const client = await createBackendClient();
 	return client.request<SessionWorktreeResult>("session.worktree.create", {
 		sessionId,
-		workspaceId
+		workspaceId,
+		sources
 	});
+}
+
+export async function retrySessionWorktreeSetup(sessionId: string): Promise<SessionWorktreeResult> {
+	return (await createBackendClient()).request("session.worktree.setup.retry", { sessionId });
+}
+
+export async function skipSessionWorktreeSetup(sessionId: string): Promise<SessionWorktreeResult> {
+	return (await createBackendClient()).request("session.worktree.setup.skip", { sessionId });
+}
+
+export async function previewSessionWorktreeHandoff(params: { sessionId: string; target: "local" | "worktree"; branchBySource?: Record<string, string> }): Promise<{ allowed: boolean; from: "local" | "worktree"; target: "local" | "worktree"; sources: Array<{ sourceFolderId: string; branch: string | null; modifiedFiles: string[]; newCommits: number; blockedReason: string | null }> }> {
+	return (await createBackendClient()).request("session.worktree.handoff.preview", params);
+}
+
+export async function executeSessionWorktreeHandoff(params: { sessionId: string; target: "local" | "worktree"; branchBySource?: Record<string, string> }): Promise<SessionWorktreeResult> {
+	return (await createBackendClient()).request("session.worktree.handoff.execute", params);
 }
 
 export async function deleteSessionWorktree(sessionId: string): Promise<SessionWorktreeResult> {
