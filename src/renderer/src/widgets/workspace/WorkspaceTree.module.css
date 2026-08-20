@@ -126,6 +126,15 @@
 	width: 100%;
 	min-width: 0;
 	padding-inline-end: 8px;
+	border-radius: var(--ant-border-radius);
+	transition:
+		background-color var(--ant-motion-duration-mid),
+		box-shadow var(--ant-motion-duration-mid);
+}
+
+.workspaceSessionDropTarget {
+	background: var(--ds-accent-muted);
+	box-shadow: inset 0 0 0 1px var(--ant-color-primary);
 }
 
 .workspaceTitle {

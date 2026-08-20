@@ -258,6 +258,7 @@
 			"newProject": "New project",
 			"rename": "Rename",
 			"renameSession": "Rename session",
+			"moveSession": "Move session to...",
 			"forkSession": "Fork session",
 			"pinSession": "Pin session",
 			"unpinSession": "Unpin session",
@@ -277,7 +278,8 @@
 			"pinSession": "Pin {{sessionTitle}}",
 			"unpinSession": "Unpin {{sessionTitle}}",
 			"workspaceActions": "Workspace actions for {{workspaceName}}",
-			"newSessionInWorkspace": "New session in {{workspaceName}}"
+			"newSessionInWorkspace": "New session in {{workspaceName}}",
+			"moveSessionToWorkspace": "Move session to {{workspaceName}}"
 		},
 		"empty": {
 			"noWorkspace": "No workspace",
@@ -293,6 +295,10 @@
 		},
 		"status": {
 			"assistantRunning": "Assistant is responding",
+			"movingSession": "Moving session",
+			"moveSessionRunningBlocked": "Wait for the assistant response to finish before moving this session",
+			"moveSessionWorktreeBlocked": "Hand off or delete the managed worktree before moving this session",
+			"moveSessionNoTargets": "There are no other projects to move this session to",
 			"unreadResponse": "Unread assistant response",
 			"exportingSession": "Exporting session…",
 			"worktreeSession": "Worktree session"
@@ -319,6 +325,15 @@
 			"openWorkspaceDirectory": "Failed to open workspace directory",
 			"pinSession": "Failed to update pinned session",
 			"renameSession": "Failed to rename session",
+			"moveSession": "Failed to move session",
+			"moveSessionTerminalActive": "Close active terminals in this session before moving it.",
+			"moveSessionDirtyFiles": "Save or discard unsaved file changes in this session before moving it.",
+			"moveSessionBusy": "Wait for the session to become fully idle before moving it.",
+			"moveSessionContextPending": "Remove file and code context from the old project in the Composer before moving.",
+			"moveSessionManagedWorktree": "Hand off or delete the managed worktree before moving this session.",
+			"moveSessionWorkspaceNotFound": "The target project no longer exists.",
+			"moveSessionUnchanged": "The session already belongs to this project.",
+			"moveSessionLayoutSave": "The session was moved, but its file panel state could not be saved. It will be reconciled on reload.",
 			"saveOrder": "Failed to save workspace order",
 			"sessionTitleCannotBeEmpty": "Session title cannot be empty."
 		},

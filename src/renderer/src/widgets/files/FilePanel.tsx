@@ -10,7 +10,7 @@ import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import type { AdditionalContextItem, WorkspaceConfig, WorkspaceSourceFolder } from "@/platform/rpc/types";
 import { createContextId } from "@/features/workspace/controllers/context-helpers";
 import MonacoFileEditor, { type FileBuffer } from "./MonacoFileEditor";
-import { FileRuntimeBufferCache } from "./file-runtime-buffer-cache";
+import { FILE_RUNTIME_BUFFERS } from "./file-runtime-buffers";
 import styles from "./FilePanel.module.css";
 
 type WorkspaceFsEntry = {
@@ -42,7 +42,7 @@ type FilePanelProps = {
 	onAddContext: (item: AdditionalContextItem) => void;
 };
 
-const RUNTIME_BUFFERS: FileRuntimeBufferCache<FileBuffer> = new FileRuntimeBufferCache();
+const RUNTIME_BUFFERS = FILE_RUNTIME_BUFFERS;
 const MAX_SELECTION_CHARS: number = 8000;
 const EXTERNAL_CHANGE_POLL_MS: number = 2500;
 const FILE_PANEL_MIN_EDITOR_SPLIT: number = 25;

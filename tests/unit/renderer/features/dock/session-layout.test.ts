@@ -3,7 +3,8 @@ import {
 	createDefaultSessionLayout,
 	createDefaultBrowserPanelLayout,
 	createTerminalRuntimeId,
-	listTerminalRuntimeIds
+	listTerminalRuntimeIds,
+	resetSessionFilePanelWorkspaceState
 } from "@/domain/session/session-layout";
 import {
 	createDockTab,
@@ -54,5 +55,31 @@ describe("session dock layout", () => {
 		]);
 		expect(createTerminalRuntimeId(`session-${"x".repeat(100)}`, `bottom:terminal:${"9".repeat(80)}`))
 			.toHaveLength(80);
+	});
+
+	it("clears workspace-specific file panel state while preserving panel geometry", () => {
+		const layout = createDefaultSessionLayout();
+		layout.filePanels["side:files:1"] = {
+			sidebarOpen: false,
+			splitSize: 64,
+			selectedSourceFolderId: "source-a",
+			expandedPathsBySourceFolder: { "source-a": ["src"] },
+			tabs: [{ key: "source-a:src/index.ts", sourceFolderId: "source-a", relativePath: "src/index.ts", pinned: true }],
+			activeTabKey: "source-a:src/index.ts",
+			previewTabKey: null
+		};
+		layout.browserPanels["side:browser:1"] = { lastUrl: "https://example.com" };
+
+		const result = resetSessionFilePanelWorkspaceState(layout);
+		expect(result.filePanels["side:files:1"]).toMatchObject({
+			sidebarOpen: false,
+			splitSize: 64,
+			selectedSourceFolderId: null,
+			expandedPathsBySourceFolder: {},
+			tabs: [],
+			activeTabKey: null,
+			previewTabKey: null
+		});
+		expect(result.browserPanels["side:browser:1"]?.lastUrl).toBe("https://example.com");
 	});
 });

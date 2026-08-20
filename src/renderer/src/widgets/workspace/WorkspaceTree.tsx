@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Key, MouseEvent, ReactNode } from "react";
+import type { DragEvent, Key, MouseEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	archiveSession,
@@ -8,7 +8,7 @@ import {
 	renameSession,
 	setSessionPinned,
 } from "@/platform/rpc/session-api";
-import type { ExportSessionResult } from "@/platform/rpc/session-api";
+import type { ExportSessionResult, MoveSessionWorkspaceResult } from "@/platform/rpc/session-api";
 import {
 	deleteWorkspace,
 	fetchWorkspaces,
@@ -54,6 +54,7 @@ import {
 	createEmptyWorkspaceTreeOrder,
 	moveSectionSessionInTreeOrder,
 	moveSessionInTreeOrder,
+	moveSessionToWorkspaceInTreeOrder,
 	moveWorkspaceInTreeOrder,
 	reconcileWorkspaceTreeOrder,
 	sortSessionsByTreeOrder,
@@ -82,6 +83,10 @@ export type WorkspaceTreeProps = {
 		context: SessionArchiveContext,
 	) => void;
 	onSessionRename?: (session: SessionMetadata) => void;
+	onSessionWorkspaceMove?: (
+		session: SessionMetadata,
+		workspace: WorkspaceConfig,
+	) => Promise<MoveSessionWorkspaceResult>;
 	onSessionWorktreeDelete?: (
 		session: SessionMetadata,
 	) => Promise<SessionMetadata>;
@@ -138,6 +143,7 @@ type WorkspaceTreeLabels = {
 	failedOpenWorkspaceDirectory: string;
 	failedPinSession: string;
 	failedRenameSession: string;
+	failedMoveSession: string;
 	failedSaveOrder: string;
 	newSession: string;
 	newSessionInWorkspace: string;
@@ -157,6 +163,11 @@ type WorkspaceTreeLabels = {
 	recent: string;
 	rename: string;
 	renameSession: string;
+	moveSession: string;
+	movingSession: string;
+	moveSessionRunningBlocked: string;
+	moveSessionWorktreeBlocked: string;
+	moveSessionNoTargets: string;
 	sessionIdCopied: string;
 	sessionExported: string;
 	sessionExportedWithMissingFiles: (count: number) => string;
@@ -170,6 +181,7 @@ type WorkspaceTreeLabels = {
 	pinSessionAria: (sessionTitle: string, pinned: boolean) => string;
 	newSessionInWorkspaceAria: (workspaceName: string) => string;
 	workspaceActionsAria: (workspaceName: string) => string;
+	moveSessionToWorkspaceAria: (workspaceName: string) => string;
 };
 
 function getWorkspaceTreeSwitcherIcon(
@@ -205,6 +217,8 @@ type CreateSessionMenuItemOptions = {
 	exportingSessionId: string | null;
 	forkingSessionId: string | null;
 	pinningSessionId: string | null;
+	movingSessionId: string | null;
+	moveWorkspaces: WorkspaceConfig[];
 	runningSessionIds: ReadonlySet<string>;
 	unreadSessionIds: ReadonlySet<string>;
 	labels: WorkspaceTreeLabels;
@@ -218,6 +232,7 @@ type CreateSessionMenuItemOptions = {
 	) => void;
 	onPin: (session: SessionMetadata) => void;
 	onRename: (session: SessionMetadata) => void;
+	onMove: (session: SessionMetadata, workspace: WorkspaceConfig) => void;
 	onArchive: (session: SessionMetadata) => void;
 	canOpenSessionWorkspace: (session: SessionMetadata) => boolean;
 	onOpenSessionWorkspaceInExplorer: (session: SessionMetadata) => void;
@@ -238,6 +253,12 @@ type CreateWorkspaceMenuItemOptions = CreateSessionMenuItemOptions & {
 	onEditWorkspace: (workspace: WorkspaceConfig) => void;
 	onDeleteWorkspace: (workspace: WorkspaceConfig) => void;
 	onCreatePermanentWorktree: (workspace: WorkspaceConfig) => void;
+	draggingSessionId: string | null;
+	dropTargetWorkspaceId: string | null;
+	canDropSessionOnWorkspace: (sessionId: string, workspace: WorkspaceConfig) => boolean;
+	onWorkspaceDragEnter: (sessionId: string, workspace: WorkspaceConfig) => void;
+	onWorkspaceDragLeave: (workspaceId: string) => void;
+	onWorkspaceDrop: (sessionId: string, workspace: WorkspaceConfig) => void;
 };
 
 function createSessionTreePresentation(
@@ -248,11 +269,27 @@ function createSessionTreePresentation(
 	const isPinning: boolean = options.pinningSessionId === session.id;
 	const isExporting: boolean = options.exportingSessionId === session.id;
 	const isRunning: boolean = options.runningSessionIds.has(session.id);
+	const isMoving: boolean = options.movingSessionId === session.id;
 	const isUnread: boolean = options.unreadSessionIds.has(session.id);
 	const isDeletingWorktree: boolean =
 		options.deletingWorktreeSessionId === session.id;
 	const isPinned: boolean = session.pinned === true;
 	const labels: WorkspaceTreeLabels = options.labels;
+	const currentWorkspaceId: string | undefined = getSessionProjectWorkspaceId(session);
+	const canMove: boolean =
+		session.worktree === undefined
+		&& !isRunning
+		&& options.movingSessionId === null
+		&& options.moveWorkspaces.some((workspace: WorkspaceConfig): boolean => workspace.id !== currentWorkspaceId);
+	const moveDisabledReason: string | null = session.worktree !== undefined
+		? labels.moveSessionWorktreeBlocked
+		: isRunning
+			? labels.moveSessionRunningBlocked
+			: options.movingSessionId !== null
+				? labels.movingSession
+				: options.moveWorkspaces.every((workspace: WorkspaceConfig): boolean => workspace.id === currentWorkspaceId)
+				? labels.moveSessionNoTargets
+				: null;
 	const actionMenu: MenuProps = {
 		items: [
 			{
@@ -265,6 +302,20 @@ function createSessionTreePresentation(
 				key: "rename",
 				label: labels.renameSession,
 				icon: <Icon name="pencil" />,
+			},
+			{
+				key: "move",
+				label: moveDisabledReason === null
+					? labels.moveSession
+					: <Tooltip title={moveDisabledReason}>{labels.moveSession}</Tooltip>,
+				icon: <Icon name="move-session" />,
+				disabled: !canMove,
+				children: options.moveWorkspaces.map((workspace: WorkspaceConfig) => ({
+					key: `move:${workspace.id}`,
+					label: workspace.name,
+					icon: getWorkspaceTreeSwitcherIcon(workspace, false),
+					disabled: workspace.id === currentWorkspaceId || options.movingSessionId !== null,
+				})),
 			},
 			{
 				key: "fork",
@@ -329,6 +380,15 @@ function createSessionTreePresentation(
 			}
 			if (key === "rename") {
 				options.onRename(session);
+				return;
+			}
+			if (key.startsWith("move:")) {
+				const workspace: WorkspaceConfig | undefined = options.moveWorkspaces.find(
+					(candidate: WorkspaceConfig): boolean => candidate.id === key.slice("move:".length),
+				);
+				if (workspace !== undefined) {
+					options.onMove(session, workspace);
+				}
 				return;
 			}
 			if (key === "fork") {
@@ -416,11 +476,11 @@ function createSessionTreePresentation(
 							}
 						/>
 					</Tooltip>
-					{isRunning ? (
-						<Tooltip title={labels.assistantRunning}>
+					{isRunning || isMoving ? (
+						<Tooltip title={isMoving ? labels.movingSession : labels.assistantRunning}>
 							<span
 								className={styles.sessionRunIndicator}
-								aria-label={labels.assistantRunning}
+								aria-label={isMoving ? labels.movingSession : labels.assistantRunning}
 							>
 								<Spin size="small" />
 							</span>
@@ -536,6 +596,10 @@ function createProjectTreeData(
 		);
 		const isDeleting: boolean =
 			options.deletingWorkspaceId === workspace.id;
+		const isSessionDropTarget: boolean =
+			options.draggingSessionId !== null
+			&& options.dropTargetWorkspaceId === workspace.id
+			&& options.canDropSessionOnWorkspace(options.draggingSessionId, workspace);
 		const actionMenu: MenuProps = {
 			items: [
 				{
@@ -601,7 +665,33 @@ function createProjectTreeData(
 			key: `workspace:${workspace.id}`,
 			title: (
 				<Dropdown menu={actionMenu} trigger={["contextMenu"]}>
-					<span className={styles.workspaceMenuItem}>
+					<span
+						className={`${styles.workspaceMenuItem} ${isSessionDropTarget ? styles.workspaceSessionDropTarget : ""}`}
+						aria-label={options.draggingSessionId === null ? undefined : labels.moveSessionToWorkspaceAria(workspace.name)}
+						onDragEnter={(event: DragEvent<HTMLSpanElement>): void => {
+							const sessionId: string = event.dataTransfer.getData("application/x-daedalus-session-id") || options.draggingSessionId || "";
+							if (sessionId.length === 0 || !options.canDropSessionOnWorkspace(sessionId, workspace)) return;
+							event.preventDefault();
+							options.onWorkspaceDragEnter(sessionId, workspace);
+						}}
+						onDragOver={(event: DragEvent<HTMLSpanElement>): void => {
+							const sessionId: string = event.dataTransfer.getData("application/x-daedalus-session-id") || options.draggingSessionId || "";
+							if (sessionId.length === 0 || !options.canDropSessionOnWorkspace(sessionId, workspace)) return;
+							event.preventDefault();
+							event.dataTransfer.dropEffect = "move";
+						}}
+						onDragLeave={(event: DragEvent<HTMLSpanElement>): void => {
+							if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
+							options.onWorkspaceDragLeave(workspace.id);
+						}}
+						onDrop={(event: DragEvent<HTMLSpanElement>): void => {
+							const sessionId: string = event.dataTransfer.getData("application/x-daedalus-session-id") || options.draggingSessionId || "";
+							if (sessionId.length === 0 || !options.canDropSessionOnWorkspace(sessionId, workspace)) return;
+							event.preventDefault();
+							event.stopPropagation();
+							options.onWorkspaceDrop(sessionId, workspace);
+						}}
+					>
 						<span className={styles.workspaceTitle}>
 							{workspace.name}
 						</span>
@@ -751,6 +841,7 @@ function WorkspaceTree({
 	onSessionFork,
 	onSessionArchive,
 	onSessionRename,
+	onSessionWorkspaceMove,
 	onSessionWorktreeDelete,
 	onSessionsChange,
 	onNewSession,
@@ -830,6 +921,9 @@ function WorkspaceTree({
 	const [renamingSessionId, setRenamingSessionId] = useState<string | null>(
 		null,
 	);
+	const [movingSessionId, setMovingSessionId] = useState<string | null>(null);
+	const [draggingSessionId, setDraggingSessionId] = useState<string | null>(null);
+	const [dropTargetWorkspaceId, setDropTargetWorkspaceId] = useState<string | null>(null);
 	const workspaceTreeOrderRef =
 		useRef<WorkspaceTreeOrderPreferences>(workspaceTreeOrder);
 	const expandedWorkspaceIdsRef = useRef<string[]>(expandedWorkspaceIds);
@@ -839,6 +933,8 @@ function WorkspaceTree({
 	const orderSaveRevisionRef = useRef<number>(0);
 	const expansionSaveTimerRef = useRef<number | null>(null);
 	const isMountedRef = useRef<boolean>(true);
+	const draggingSessionIdRef = useRef<string | null>(null);
+	const movingSessionIdRef = useRef<string | null>(null);
 	const runningSessionIdSet: ReadonlySet<string> = useMemo(
 		(): ReadonlySet<string> => new Set(runningSessionIds),
 		[runningSessionIds],
@@ -889,6 +985,7 @@ function WorkspaceTree({
 			),
 			failedPinSession: t("workspaceTree.errors.pinSession"),
 			failedRenameSession: t("workspaceTree.errors.renameSession"),
+			failedMoveSession: t("workspaceTree.errors.moveSession"),
 			failedSaveOrder: t("workspaceTree.errors.saveOrder", {
 				defaultValue: "Failed to save workspace order",
 			}),
@@ -916,6 +1013,11 @@ function WorkspaceTree({
 			recent: t("workspaceTree.groups.recent"),
 			rename: t("workspaceTree.actions.rename"),
 			renameSession: t("workspaceTree.actions.renameSession"),
+			moveSession: t("workspaceTree.actions.moveSession"),
+			movingSession: t("workspaceTree.status.movingSession"),
+			moveSessionRunningBlocked: t("workspaceTree.status.moveSessionRunningBlocked"),
+			moveSessionWorktreeBlocked: t("workspaceTree.status.moveSessionWorktreeBlocked"),
+			moveSessionNoTargets: t("workspaceTree.status.moveSessionNoTargets"),
 			sessionIdCopied: t("workspaceTree.messages.sessionIdCopied"),
 			sessionExported: t("workspaceTree.messages.sessionExported"),
 			sessionExportedWithMissingFiles: (count: number): string =>
@@ -951,6 +1053,8 @@ function WorkspaceTree({
 			worktreeSession: t("workspaceTree.status.worktreeSession"),
 			workspaceActionsAria: (workspaceName: string): string =>
 				t("workspaceTree.aria.workspaceActions", { workspaceName }),
+			moveSessionToWorkspaceAria: (workspaceName: string): string =>
+				t("workspaceTree.aria.moveSessionToWorkspace", { workspaceName }),
 		};
 	}, [t]);
 
@@ -1331,6 +1435,61 @@ function WorkspaceTree({
 		}
 	}
 
+	function canMoveSessionToWorkspace(sessionId: string, workspace: WorkspaceConfig): boolean {
+		const targetSession: SessionMetadata | undefined = sessionsRef.current.find(
+			(candidate: SessionMetadata): boolean => candidate.id === sessionId,
+		);
+		return targetSession !== undefined
+			&& targetSession.worktree === undefined
+			&& !runningSessionIdSet.has(sessionId)
+			&& movingSessionIdRef.current === null
+			&& getSessionProjectWorkspaceId(targetSession) !== workspace.id;
+	}
+
+	async function handleMoveSessionToWorkspace(
+		targetSession: SessionMetadata,
+		workspace: WorkspaceConfig,
+	): Promise<void> {
+		if (
+			movingSessionIdRef.current !== null
+			|| onSessionWorkspaceMove === undefined
+			|| !canMoveSessionToWorkspace(targetSession.id, workspace)
+		) {
+			return;
+		}
+		try {
+			movingSessionIdRef.current = targetSession.id;
+			setMovingSessionId(targetSession.id);
+			const result: MoveSessionWorkspaceResult = await onSessionWorkspaceMove(targetSession, workspace);
+			const nextSessions: SessionMetadata[] = sessionsRef.current.map(
+				(session: SessionMetadata): SessionMetadata => session.id === result.metadata.id ? result.metadata : session,
+			);
+			sessionsRef.current = nextSessions;
+			setSessions(nextSessions);
+			const reconciledOrder: WorkspaceTreeOrderPreferences = reconcileWorkspaceTreeOrder(
+				workspaceTreeOrderRef.current,
+				workspacesRef.current,
+				nextSessions,
+			);
+			persistWorkspaceTreeOrder(
+				moveSessionToWorkspaceInTreeOrder(
+					reconciledOrder,
+					result.metadata.id,
+					workspace.id,
+					result.metadata.pinned === true,
+				),
+			);
+		} catch (error: unknown) {
+			showWorkspaceOperationError(error, labels.failedMoveSession);
+		} finally {
+			movingSessionIdRef.current = null;
+			setMovingSessionId(null);
+			draggingSessionIdRef.current = null;
+			setDraggingSessionId(null);
+			setDropTargetWorkspaceId(null);
+		}
+	}
+
 	async function handleOpenSessionWorkspaceInExplorer(
 		session: SessionMetadata,
 	): Promise<void> {
@@ -1630,6 +1789,11 @@ function WorkspaceTree({
 				exportingSessionId,
 				forkingSessionId,
 				pinningSessionId,
+				movingSessionId,
+				moveWorkspaces: sortWorkspacesByTreeOrder(
+					workspaces,
+					reconcileWorkspaceTreeOrder(workspaceTreeOrder, workspaces, sessions),
+				),
 				runningSessionIds: runningSessionIdSet,
 				unreadSessionIds: unreadSessionIdSet,
 				labels,
@@ -1650,6 +1814,9 @@ function WorkspaceTree({
 				},
 				onRename: (session: SessionMetadata): void => {
 					handleRenameSessionStart(session);
+				},
+				onMove: (session: SessionMetadata, workspace: WorkspaceConfig): void => {
+					void handleMoveSessionToWorkspace(session, workspace);
 				},
 				onFork: (session: SessionMetadata): void => {
 					onSessionFork?.(session);
@@ -1683,11 +1850,15 @@ function WorkspaceTree({
 			exportingSessionId,
 			forkingSessionId,
 			labels,
+			movingSessionId,
 			onSessionFork,
 			pinningSessionId,
 			runningSessionIdSet,
+			sessions,
 			unreadSessionIdSet,
 			workspaceById,
+			workspaceTreeOrder,
+			workspaces,
 		]);
 	const sessionGroups = useMemo((): {
 		pinnedSessions: SessionMetadata[];
@@ -1797,6 +1968,25 @@ function WorkspaceTree({
 				{
 					...sessionMenuOptions,
 					deletingWorkspaceId,
+					draggingSessionId,
+					dropTargetWorkspaceId,
+					canDropSessionOnWorkspace: canMoveSessionToWorkspace,
+					onWorkspaceDragEnter: (sessionId: string, workspace: WorkspaceConfig): void => {
+						if (canMoveSessionToWorkspace(sessionId, workspace)) {
+							setDropTargetWorkspaceId(workspace.id);
+						}
+					},
+					onWorkspaceDragLeave: (workspaceId: string): void => {
+						setDropTargetWorkspaceId((currentId: string | null): string | null => currentId === workspaceId ? null : currentId);
+					},
+					onWorkspaceDrop: (sessionId: string, workspace: WorkspaceConfig): void => {
+						const targetSession: SessionMetadata | undefined = sessionsRef.current.find(
+							(candidate: SessionMetadata): boolean => candidate.id === sessionId,
+						);
+						if (targetSession !== undefined) {
+							void handleMoveSessionToWorkspace(targetSession, workspace);
+						}
+					},
 					onNewWorkspaceSession: handleNewWorkspaceSession,
 					onOpenWorkspaceInExplorer: (
 						workspace: WorkspaceConfig,
@@ -1820,6 +2010,8 @@ function WorkspaceTree({
 			);
 		}, [
 			deletingWorkspaceId,
+			draggingSessionId,
+			dropTargetWorkspaceId,
 			orderedProjectSessions,
 			orderedWorkspaces,
 			sessionMenuOptions,
@@ -1978,6 +2170,21 @@ function WorkspaceTree({
 			);
 		}
 	};
+	const handleTreeDragStart: NonNullable<TreeProps<ProjectTreeNode>["onDragStart"]> = ({ event, node }): void => {
+		const treeNode: ProjectTreeNode = node;
+		if (treeNode.kind !== "session" || treeNode.sessionId === undefined) {
+			return;
+		}
+		draggingSessionIdRef.current = treeNode.sessionId;
+		setDraggingSessionId(treeNode.sessionId);
+		event.dataTransfer.setData("application/x-daedalus-session-id", treeNode.sessionId);
+		event.dataTransfer.effectAllowed = "move";
+	};
+	const handleTreeDragEnd: NonNullable<TreeProps<ProjectTreeNode>["onDragEnd"]> = (): void => {
+		draggingSessionIdRef.current = null;
+		setDraggingSessionId(null);
+		setDropTargetWorkspaceId(null);
+	};
 	const isTreeNodeDraggable = (node: TreeDataNode): boolean => {
 		const treeNode: ProjectTreeNode = node as ProjectTreeNode;
 		if (treeNode.kind === "workspace") {
@@ -1986,13 +2193,24 @@ function WorkspaceTree({
 		if (treeNode.kind !== "session" || treeNode.sectionKey === undefined) {
 			return false;
 		}
+		const targetSession: SessionMetadata | undefined = sessions.find(
+			(candidate: SessionMetadata): boolean => candidate.id === treeNode.sessionId,
+		);
+		const movableToAnotherWorkspace: boolean =
+			targetSession !== undefined
+			&& targetSession.worktree === undefined
+			&& !runningSessionIdSet.has(targetSession.id)
+			&& movingSessionId === null
+			&& orderedWorkspaces.some(
+				(workspace: WorkspaceConfig): boolean => workspace.id !== getSessionProjectWorkspaceId(targetSession),
+			);
 		if (treeNode.sectionKey === "pinned") {
-			return effectiveWorkspaceTreeOrder.pinnedSessionIds.length > 1;
+			return movableToAnotherWorkspace || effectiveWorkspaceTreeOrder.pinnedSessionIds.length > 1;
 		}
 		if (treeNode.sectionKey === "recent") {
-			return effectiveWorkspaceTreeOrder.recentSessionIds.length > 1;
+			return movableToAnotherWorkspace || effectiveWorkspaceTreeOrder.recentSessionIds.length > 1;
 		}
-		return (
+		return movableToAnotherWorkspace || (
 			treeNode.workspaceId !== undefined &&
 			(effectiveWorkspaceTreeOrder.sessionIdsByWorkspace[
 				treeNode.workspaceId
@@ -2022,6 +2240,8 @@ function WorkspaceTree({
 					allowDrop={allowTreeDrop}
 					onSelect={handleProjectTreeSelect}
 					onDrop={handleTreeDrop}
+					onDragStart={handleTreeDragStart}
+					onDragEnd={handleTreeDragEnd}
 				/>
 			),
 		},
@@ -2066,6 +2286,8 @@ function WorkspaceTree({
 					onExpand={handleProjectTreeExpand}
 					onSelect={handleProjectTreeSelect}
 					onDrop={handleTreeDrop}
+					onDragStart={handleTreeDragStart}
+					onDragEnd={handleTreeDragEnd}
 					switcherIcon={(nodeProps) => {
 						const workspace: WorkspaceConfig | undefined = (
 							nodeProps as { workspace?: WorkspaceConfig }
@@ -2120,6 +2342,8 @@ function WorkspaceTree({
 					allowDrop={allowTreeDrop}
 					onSelect={handleProjectTreeSelect}
 					onDrop={handleTreeDrop}
+					onDragStart={handleTreeDragStart}
+					onDragEnd={handleTreeDragEnd}
 				/>
 			),
 		},

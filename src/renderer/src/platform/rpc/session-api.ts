@@ -69,6 +69,18 @@ export type RenameSessionResult = SessionMetadata;
 
 export type SetSessionPinnedResult = SessionMetadata;
 
+export type MoveSessionWorkspaceParams = {
+	sessionId: string;
+	workspaceId: string;
+};
+
+export type MoveSessionWorkspaceResult = {
+	moved: true;
+	metadata: SessionMetadata;
+	workspace: import("./types").WorkspaceConfig;
+	workbench: WorkbenchSnapshot | null;
+};
+
 export type ArchivedSessionListResult = {
 	archivedSessions: SessionMetadata[];
 };
@@ -264,6 +276,11 @@ export async function renameSession(sessionId: string, title: string): Promise<R
 		sessionId,
 		title
 	});
+}
+
+export async function moveSessionWorkspace(params: MoveSessionWorkspaceParams): Promise<MoveSessionWorkspaceResult> {
+	const client = await createBackendClient();
+	return client.request<MoveSessionWorkspaceResult>("session.workspace.move", params);
 }
 
 export async function fetchArchivedSessions(): Promise<ArchivedSessionListResult> {

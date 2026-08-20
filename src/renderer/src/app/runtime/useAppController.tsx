@@ -4,7 +4,7 @@ import { Input, message as antdMessage, Modal, Spin } from "antd";
 import { useTranslation } from "react-i18next";
 import { useDiskSpaceCheck } from "@/app/runtime/hooks/useDiskSpaceCheck";
 import { onBackendReconnected } from "@/platform/rpc/transport/backend-client";
-import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
+import { BackendRpcError, type BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
 import useNativeTaskNotifications from "./hooks/useNativeTaskNotifications";
 import useAppEventBridge from "./hooks/useAppEventBridge";
 import useTimelineStreamBuffer from "./hooks/useTimelineStreamBuffer";
@@ -45,6 +45,7 @@ import {
 	deleteSessionWorktree,
 	executeSessionWorktreeHandoff,
 	openSession,
+	moveSessionWorkspace,
 	previewSessionWorktreeHandoff,
 	retrySessionWorktreeSetup,
 	saveSessionUiMetadata,
@@ -52,6 +53,7 @@ import {
 	skipSessionWorktreeSetup,
 	type SaveSessionUiMetadataParams,
 	type SessionIntegrityCheckResult,
+	type MoveSessionWorkspaceResult,
 } from "@/platform/rpc/session-api";
 import type { RetryUserMessagePayload } from "@/widgets/conversation/UserBubble";
 import {
@@ -128,10 +130,11 @@ import {
 	type WorkspaceSidebarPreferences
 } from "@/platform/rpc/client-preferences-api";
 import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/platform/rpc/general-settings-api";
-import { createDefaultSessionLayout, listTerminalRuntimeIds, type SessionLayoutMap, type SessionLayoutPreferences } from "@/domain/session/session-layout";
+import { createDefaultSessionLayout, listTerminalRuntimeIds, resetSessionFilePanelWorkspaceState, type SessionLayoutMap, type SessionLayoutPreferences } from "@/domain/session/session-layout";
 import { applyResponseFinished, getUnreadResponseSessionId, markActiveSessionRead, removeUnreadSessions } from "@/domain/workspace/session-unread";
 import { applyRunningSessionEvent, markRunStopped, markSessionRunStarted, removeRunningSessions, syncSessionRunFromOpen, type RunningSessionState } from "@/domain/workspace/session-running";
 import type { SessionArchiveContext } from "@/widgets/workspace/WorkspaceTree";
+import { clearCleanFilePanelBuffersForSession, hasDirtyFilePanelBuffersForSession } from "@/widgets/files/file-runtime-buffers";
 import { recordOpenedSession, removeSessionFromNavigationHistory, SESSION_NAVIGATION_EVENT } from "@/domain/session/session-navigation-history";
 import {
 	type AppProps,
@@ -1999,6 +2002,69 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		}
 		setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
 		return result.metadata;
+	}
+
+	async function handleSessionWorkspaceMove(
+		targetSession: SessionMetadata,
+		workspace: WorkspaceConfig,
+	): Promise<MoveSessionWorkspaceResult> {
+		const sessionLayout: SessionLayoutPreferences = sessionLayouts[targetSession.id] ?? DEFAULT_SESSION_LAYOUT;
+		for (const terminalId of listTerminalRuntimeIds(targetSession.id, sessionLayout)) {
+			const terminalState = await window.electronAPI.terminal.getState({ terminalId });
+			if (terminalState?.running === true) {
+				throw new Error(t("workspaceTree.errors.moveSessionTerminalActive"));
+			}
+		}
+		if (hasDirtyFilePanelBuffersForSession(targetSession.id)) {
+			throw new Error(t("workspaceTree.errors.moveSessionDirtyFiles"));
+		}
+
+		let result: MoveSessionWorkspaceResult;
+		try {
+			result = await moveSessionWorkspace({
+				sessionId: targetSession.id,
+				workspaceId: workspace.id,
+			});
+		} catch (error: unknown) {
+			if (error instanceof BackendRpcError) {
+				const translationKeyByCode: Readonly<Record<string, string>> = {
+					session_workspace_move_busy: "workspaceTree.errors.moveSessionBusy",
+					session_workspace_context_pending: "workspaceTree.errors.moveSessionContextPending",
+					session_workspace_managed_worktree: "workspaceTree.errors.moveSessionManagedWorktree",
+					session_workspace_not_found: "workspaceTree.errors.moveSessionWorkspaceNotFound",
+					session_workspace_unchanged: "workspaceTree.errors.moveSessionUnchanged",
+				};
+				const translationKey: string | undefined = translationKeyByCode[error.code];
+				if (translationKey !== undefined) {
+					throw new Error(t(translationKey));
+				}
+			}
+			throw error;
+		}
+		const nextLayout: SessionLayoutPreferences = resetSessionFilePanelWorkspaceState(sessionLayout);
+		clearCleanFilePanelBuffersForSession(targetSession.id);
+		setSessionLayouts((currentLayouts: SessionLayoutMap): SessionLayoutMap => ({
+			...currentLayouts,
+			[targetSession.id]: nextLayout,
+		}));
+		void window.electronAPI.sessionLayout.save({
+			sessionId: targetSession.id,
+			layout: nextLayout,
+		}).catch((error: unknown): void => {
+			console.error("[App] reset moved session file panel layout failed", error);
+			void messageApi.warning(t("workspaceTree.errors.moveSessionLayoutSave"));
+		});
+
+		if (activeSessionIdRef.current === targetSession.id) {
+			setActiveSessionMetadata(result.metadata);
+			setActiveWorkspace(result.workspace);
+			if (result.workbench !== null) {
+				setWorkbench(result.workbench);
+			}
+		}
+		setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		window.electronAPI.sessionCatalog.notifyChanged();
+		return result;
 	}
 
 	async function handleSessionWorktreeHandoff(target: "local" | "worktree"): Promise<void> {
@@ -4051,6 +4117,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		onForkSourceOpen: handleForkSourceOpen,
 		onSessionArchive: handleSessionArchive,
 		onSessionRename: handleSessionRename,
+		onSessionWorkspaceMove: handleSessionWorkspaceMove,
 		onSessionWorktreeDelete: handleSessionWorktreeDelete,
 		onSessionWorktreeHandoff: handleSessionWorktreeHandoff,
 		onSessionWorktreeSetup: handleSessionWorktreeSetup,

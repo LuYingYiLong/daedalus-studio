@@ -256,6 +256,7 @@
 			"newProject": "新建项目",
 			"rename": "重命名",
 			"renameSession": "重命名会话",
+			"moveSession": "移动会话到...",
 			"forkSession": "分叉会话",
 			"pinSession": "置顶会话",
 			"unpinSession": "取消置顶会话",
@@ -275,7 +276,8 @@
 			"pinSession": "置顶 {{sessionTitle}}",
 			"unpinSession": "取消置顶 {{sessionTitle}}",
 			"workspaceActions": "{{workspaceName}} 的 workspace 操作",
-			"newSessionInWorkspace": "在 {{workspaceName}} 中新建会话"
+			"newSessionInWorkspace": "在 {{workspaceName}} 中新建会话",
+			"moveSessionToWorkspace": "将会话移动到 {{workspaceName}}"
 		},
 		"empty": {
 			"noWorkspace": "暂无 workspace",
@@ -291,6 +293,10 @@
 		},
 		"status": {
 			"assistantRunning": "助手正在响应",
+			"movingSession": "正在移动会话",
+			"moveSessionRunningBlocked": "请等待助手响应结束后再移动会话",
+			"moveSessionWorktreeBlocked": "托管工作树会话需要先 Handoff 或删除工作树",
+			"moveSessionNoTargets": "没有其他可移动到的项目",
 			"unreadResponse": "未读助手响应",
 			"exportingSession": "正在导出会话…",
 			"worktreeSession": "工作树会话"
@@ -317,6 +323,15 @@
 			"openWorkspaceDirectory": "打开 workspace 目录失败",
 			"pinSession": "更新置顶会话失败",
 			"renameSession": "重命名会话失败",
+			"moveSession": "移动会话失败",
+			"moveSessionTerminalActive": "请先关闭这个会话中的活动终端。",
+			"moveSessionDirtyFiles": "请先保存或放弃这个会话中未保存的文件修改。",
+			"moveSessionBusy": "请等待会话完全空闲后再移动。",
+			"moveSessionContextPending": "请先移除 Composer 中属于旧项目的文件和代码上下文。",
+			"moveSessionManagedWorktree": "请先 Handoff 或删除托管工作树，再移动这个会话。",
+			"moveSessionWorkspaceNotFound": "目标项目不存在或已被删除。",
+			"moveSessionUnchanged": "会话已属于这个项目。",
+			"moveSessionLayoutSave": "会话已经移动，但文件面板状态保存失败；下次加载时会自动协调。",
 			"saveOrder": "保存 workspace 排序失败",
 			"sessionTitleCannotBeEmpty": "会话标题不能为空。"
 		},

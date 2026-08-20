@@ -72,6 +72,25 @@ export function createDefaultBrowserPanelLayout(): BrowserPanelLayoutPreferences
 	};
 }
 
+export function resetSessionFilePanelWorkspaceState(layout: SessionLayoutPreferences): SessionLayoutPreferences {
+	return {
+		...cloneSessionLayout(layout),
+		filePanels: Object.fromEntries(
+			Object.entries(layout.filePanels).map(([panelKey, filePanel]): [string, FilePanelLayoutPreferences] => [
+				panelKey,
+				{
+					...filePanel,
+					selectedSourceFolderId: null,
+					expandedPathsBySourceFolder: {},
+					tabs: [],
+					activeTabKey: null,
+					previewTabKey: null
+				}
+			])
+		)
+	};
+}
+
 export function createDefaultSessionLayout(): SessionLayoutPreferences {
 	return {
 		fullscreenDock: null,

@@ -34,4 +34,17 @@ describe("FileRuntimeBufferCache", () => {
 		cache.delete("clean");
 		expect(cache.stats()).toMatchObject({ entryCount: 1, cleanEntryCount: 0, cleanBytes: 0 });
 	});
+
+	it("detects dirty entries and selectively clears matching clean entries", () => {
+		const cache = new FileRuntimeBufferCache<TestBuffer>(16, 1000);
+		cache.set("session-a:clean", clean("clean"));
+		cache.set("session-a:dirty", dirty("changed", "original"));
+		cache.set("session-b:clean", clean("other"));
+
+		expect(cache.hasDirtyWhere((key): boolean => key.startsWith("session-a:"))).toBe(true);
+		cache.deleteCleanWhere((key): boolean => key.startsWith("session-a:"));
+		expect(cache.get("session-a:clean")).toBeUndefined();
+		expect(cache.get("session-a:dirty")?.isDirty).toBe(true);
+		expect(cache.get("session-b:clean")?.content).toBe("other");
+	});
 });

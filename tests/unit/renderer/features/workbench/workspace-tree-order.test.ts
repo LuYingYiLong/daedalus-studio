@@ -5,6 +5,7 @@ import {
 	canDropWorkspaceTreeNode,
 	moveSectionSessionInTreeOrder,
 	moveSessionInTreeOrder,
+	moveSessionToWorkspaceInTreeOrder,
 	moveWorkspaceInTreeOrder,
 	reconcileWorkspaceTreeOrder,
 	sortSessionsByTreeOrder,
@@ -145,6 +146,32 @@ describe("workspace tree order", (): void => {
 		);
 		expect(pinnedResult.pinnedSessionIds).toEqual(["session-pinned-2", "session-pinned"]);
 		expect(pinnedResult.recentSessionIds).toEqual(["session-recent", "session-recent-2"]);
+	});
+
+	it("moves a session to the destination project and expands it", (): void => {
+		const result = moveSessionToWorkspaceInTreeOrder(
+			order(),
+			"session-a-old",
+			"workspace-b",
+			false
+		);
+		expect(result.sessionIdsByWorkspace["workspace-a"]).toEqual(["session-a-new"]);
+		expect(result.sessionIdsByWorkspace["workspace-b"]).toEqual(["session-a-old", "session-b"]);
+		expect(result.recentSessionIds).not.toContain("session-a-old");
+		expect(result.expandedSectionKeys).toContain("projects");
+		expect(result.expandedWorkspaceIds).toContain("workspace-b");
+	});
+
+	it("updates a pinned session project without adding it to the project list", (): void => {
+		const result = moveSessionToWorkspaceInTreeOrder(
+			order(),
+			"session-pinned",
+			"workspace-b",
+			true
+		);
+		expect(result.pinnedSessionIds).toContain("session-pinned");
+		expect(result.sessionIdsByWorkspace["workspace-a"]).not.toContain("session-pinned");
+		expect(result.sessionIdsByWorkspace["workspace-b"]).not.toContain("session-pinned");
 	});
 
 	it("only allows root workspace gaps and same-workspace session gaps", (): void => {

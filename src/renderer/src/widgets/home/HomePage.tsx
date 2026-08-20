@@ -585,6 +585,10 @@ type HomePageProps = {
 		context: SessionArchiveContext,
 	) => void;
 	onSessionRename: (session: SessionMetadata) => void;
+	onSessionWorkspaceMove: (
+		session: SessionMetadata,
+		workspace: WorkspaceConfig,
+	) => Promise<import("@/platform/rpc/session-api").MoveSessionWorkspaceResult>;
 	onSessionWorktreeDelete: (
 		session: SessionMetadata,
 	) => Promise<SessionMetadata>;
@@ -739,6 +743,7 @@ function HomePage({
 	onForkSourceOpen,
 	onSessionArchive,
 	onSessionRename,
+	onSessionWorkspaceMove,
 	onSessionWorktreeDelete,
 	onSessionWorktreeHandoff,
 	onSessionWorktreeSetup,
@@ -2665,6 +2670,7 @@ function HomePage({
 		onSessionFork,
 		onSessionArchive,
 		onSessionRename,
+		onSessionWorkspaceMove,
 		onSessionWorktreeDelete,
 		onSessionsChange,
 		onNewWorkspaceSession,

@@ -65,6 +65,23 @@ export class FileRuntimeBufferCache<T extends RuntimeBuffer> {
 		this.cleanBytes = 0;
 	}
 
+	public hasDirtyWhere(predicate: (key: string) => boolean): boolean {
+		for (const [key, entry] of this.entries) {
+			if (entry.value.isDirty && predicate(key)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public deleteCleanWhere(predicate: (key: string) => boolean): void {
+		for (const [key, entry] of this.entries) {
+			if (!entry.value.isDirty && predicate(key)) {
+				this.delete(key);
+			}
+		}
+	}
+
 	public stats(): RuntimeBufferCacheStats {
 		let cleanEntryCount: number = 0;
 		for (const entry of this.entries.values()) {
