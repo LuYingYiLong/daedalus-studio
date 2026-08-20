@@ -1562,8 +1562,9 @@
 		},
 		"plugins": {
 			"title": "Plugins",
-			"description": "Discover, review, and run native plugins in an isolated worker.",
 			"empty": "No plugins installed",
+			"noMatches": "No matching plugins",
+			"searchPlaceholder": "Search plugins",
 			"selectPrompt": "Select a plugin to inspect its compatibility and trust state.",
 			"yes": "Yes",
 			"no": "No",
@@ -1649,7 +1650,6 @@
 			},
 			"runtime": {
 				"title": "Runtime",
-				"description": "Native plugins run only after trust approval, inside an isolated OS sandbox worker.",
 				"status": { "stopped": "Stopped", "starting": "Starting", "ready": "Ready", "failed": "Failed", "disabled": "Disabled" },
 				"capabilities": "Registered tools: {{tools}} · skills: {{skills}} · hooks: {{hooks}} · MCP servers: {{mcp}}",
 				"restart": "Restart runtime",

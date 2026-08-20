@@ -12,7 +12,7 @@ import styles from "./plugins.module.css";
 export function PluginDetailPane({ plugin, busy, onToggle, onTrust, onRequestTrust, onRemove, onRestart, onStop, onInstallDependencies, logs }: { plugin?: PluginRecord; busy: boolean; onToggle: (plugin: PluginRecord) => void; onTrust: (plugin: PluginRecord, status: "trusted" | "disabled") => void; onRequestTrust: (plugin: PluginRecord) => void; onRemove: (plugin: PluginRecord) => void; onRestart: () => void; onStop: () => void; onInstallDependencies: () => void; logs: import("@/platform/rpc/plugin-api").PluginRuntimeLog[] }): React.JSX.Element {
 	const { t } = useTranslation();
 	if (plugin === undefined) return <div className={styles.emptyDetail}><Typography.Text type="secondary">{t("settings.plugins.selectPrompt")}</Typography.Text></div>;
-	return <div className={styles.detailPane}>
+	return <div className={styles.pluginDetailPane}>
 		<div className={styles.detailHeader}><div><Typography.Title level={4} className={styles.detailTitle}>{plugin.packageName}</Typography.Title><Typography.Text type="secondary">{plugin.version}</Typography.Text></div><Tag color={classificationColor(plugin.compatibility.classification)}>{t(`settings.plugins.classification.${plugin.compatibility.classification}`)}</Tag></div>
 		<SettingsList title={t("settings.plugins.sections.status")}>
 			<SettingsItem title={t("settings.plugins.items.source")} description={sourceLabel(plugin.source)}><Tag>{plugin.source.type}</Tag></SettingsItem>

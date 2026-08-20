@@ -1,4 +1,4 @@
-import { Alert, App, Button, Flex, Space, Typography } from "antd";
+import { Alert, App, Button, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
@@ -226,51 +226,31 @@ function PluginsSettingsPage(): React.JSX.Element {
 
 	return (
 		<section className={styles.page}>
-			<header className={styles.header}>
-				<Flex justify="space-between" align="flex-start" gap={16}>
-					<div>
-						<Typography.Title level={3} className={styles.title}>
-							{t("settings.plugins.title")}
-						</Typography.Title>
-					</div>
-					<Space>
-						<Button
-							icon={<Icon name="reload" />}
-							onClick={(): void => {
-								setLoading(true);
-								void refresh();
-							}}
-						>
-							{t("settings.plugins.actions.refresh")}
-						</Button>
-						<Button
-							type="primary"
-							icon={<Icon name="add" />}
-							onClick={(): void => setInstallOpen(true)}
-						>
-							{t("settings.plugins.actions.add")}
-						</Button>
-					</Space>
-				</Flex>
-			</header>
-			{error !== null ? (
-				<Alert
-					type="error"
-					showIcon
-					className={styles.alert}
-					message={error}
+			<aside className={styles.listPane}>
+				<PluginListPane
+					catalog={catalog}
+					loading={loading}
+					selectedId={selectedId}
+					onSelect={setSelectedId}
+					onAdd={(): void => setInstallOpen(true)}
 				/>
-			) : null}
-			<div className={styles.content}>
-				<div className={styles.listPane}>
-					<PluginListPane
-						catalog={catalog}
-						loading={loading}
-						selectedId={selectedId}
-						onSelect={setSelectedId}
+			</aside>
+			<section className={styles.detailPane}>
+				<header className={styles.detailToolbar}>
+					<Typography.Title level={3} className={styles.title}>
+						{t("settings.plugins.title")}
+					</Typography.Title>
+					<Button
+						aria-label={t("settings.plugins.actions.refresh")}
+						icon={<Icon name="reload" />}
+						onClick={(): void => {
+							setLoading(true);
+							void refresh();
+						}}
 					/>
-				</div>
-				<div className={styles.detailPane}>
+				</header>
+				{error !== null ? <Alert type="error" showIcon className={styles.alert} message={error} /> : null}
+				<div className={styles.detailScroll}>
 					<PluginDetailPane
 						plugin={selectedPlugin}
 						busy={busyPluginId === selectedPlugin?.id}
@@ -294,7 +274,7 @@ function PluginsSettingsPage(): React.JSX.Element {
 						logs={logs}
 					/>
 				</div>
-			</div>
+			</section>
 			<PluginInstallModal
 				open={installOpen}
 				loading={installing}

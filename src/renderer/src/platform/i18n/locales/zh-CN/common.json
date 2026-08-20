@@ -1555,8 +1555,9 @@
 		},
 		"plugins": {
 			"title": "插件",
-			"description": "发现、审核并在隔离 Worker 中运行原生插件。",
 			"empty": "暂无已安装插件",
+			"noMatches": "没有匹配的插件",
+			"searchPlaceholder": "搜索插件",
 			"selectPrompt": "选择一个插件查看兼容性和信任状态。",
 			"yes": "是",
 			"no": "否",
@@ -1642,7 +1643,6 @@
 			},
 			"runtime": {
 				"title": "运行时",
-				"description": "原生插件只有在信任审核后才会运行，并始终位于隔离的 OS 沙箱 Worker 中。",
 				"status": { "stopped": "已停止", "starting": "启动中", "ready": "运行中", "failed": "失败", "disabled": "已禁用" },
 				"capabilities": "已注册工具：{{tools}} · Skills：{{skills}} · Hooks：{{hooks}} · MCP 服务：{{mcp}}",
 				"restart": "重启运行时",
