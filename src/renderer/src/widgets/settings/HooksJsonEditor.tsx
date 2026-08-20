@@ -54,7 +54,10 @@ function HooksJsonEditor({
 			panelKey="hooks-settings"
 			workspace={null}
 			bottomSafeArea={0}
-			onContentChange={(_tab: FileTabPreferences, content: string): void => onChange(content)}
+			onContentChange={(
+				_tab: FileTabPreferences,
+				content: string,
+			): void => onChange(content)}
 			onAddContext={(): void => undefined}
 			editorHandleRef={editorRef}
 			ariaLabel="hooks.json"

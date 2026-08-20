@@ -409,9 +409,11 @@ function HooksSettingsPage(): React.JSX.Element {
 										<Typography.Text strong>
 											{document.source.displayName}
 										</Typography.Text>
-											<Typography.Text
-												type="secondary"
-												copyable={createStudioCopyableConfig({ text: document.source.path })}
+										<Typography.Text
+											type="secondary"
+											copyable={createStudioCopyableConfig(
+												{ text: document.source.path },
+											)}
 											ellipsis
 										>
 											{document.source.path}
@@ -602,7 +604,9 @@ function HooksSettingsPage(): React.JSX.Element {
 										</Typography.Text>
 										<Typography.Text
 											type="secondary"
-												copyable={createStudioCopyableConfig({ text: handler.fingerprint })}
+											copyable={createStudioCopyableConfig(
+												{ text: handler.fingerprint },
+											)}
 										>
 											{t(
 												"settings.hooks.review.fingerprint",
