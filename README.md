@@ -138,6 +138,7 @@ Please report vulnerabilities privately according to the [security policy](SECUR
 
 - [Daedalus Backend](https://github.com/LuYingYiLong/daedalus-backend) — runtime, sessions, providers, workflows, tools, MCP, and Godot services.
 - [Godot Daedalus](https://github.com/LuYingYiLong/godot-daedalus) — Godot editor plugin and Editor Bridge.
+- [Daedalus Docs](https://daedalus-docs.readthedocs.io/en/latest/) —Daedalus Docs.
 
 ## License
 
