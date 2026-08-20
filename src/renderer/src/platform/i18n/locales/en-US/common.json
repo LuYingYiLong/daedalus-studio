@@ -1562,7 +1562,7 @@
 		},
 		"plugins": {
 			"title": "Plugins",
-			"description": "Discover and manage Daedalus and DeepSeek Harness plugin packages. Plugins are not executed in this version.",
+			"description": "Discover, review, and run native plugins in an isolated worker.",
 			"empty": "No plugins installed",
 			"selectPrompt": "Select a plugin to inspect its compatibility and trust state.",
 			"yes": "Yes",
@@ -1585,19 +1585,22 @@
 			},
 			"sections": {
 				"status": "Status",
-				"compatibility": "Compatibility"
+				"compatibility": "Compatibility",
+				"nativeRuntime": "Native runtime"
 			},
 			"items": {
 				"source": "Source",
 				"trust": "Trust",
 				"enabled": "Profile status",
-				"enabledDescription": "Enablement is stored for the active profile. Runtime activation will arrive in a later version.",
+				"enabledDescription": "Enablement is stored for the active profile. Trusted plugins start only when their capability is first used.",
 				"harnessBundle": "DeepSeek Harness Bundle",
 				"harnessClient": "DeepSeek Harness Client",
 				"harnessClientDescription": "Client packages require a Harness-compatible client runtime.",
 				"entry": "Declared entry points",
 				"notDeclared": "Not declared",
-				"fingerprint": "Fingerprint"
+				"fingerprint": "Fingerprint",
+				"nativeEntry": "Native entry",
+				"capabilities": "Capabilities"
 			},
 			"actions": {
 				"add": "Add plugin",
@@ -1641,7 +1644,36 @@
 				"install": "Failed to install plugin package.",
 				"remove": "Failed to remove plugin package.",
 				"trust": "Failed to update plugin trust.",
-				"profile": "Failed to update plugin profile."
+				"profile": "Failed to update plugin profile.",
+				"runtime": "Failed to update plugin runtime."
+			},
+			"runtime": {
+				"title": "Runtime",
+				"description": "Native plugins run only after trust approval, inside an isolated OS sandbox worker.",
+				"status": { "stopped": "Stopped", "starting": "Starting", "ready": "Ready", "failed": "Failed", "disabled": "Disabled" },
+				"capabilities": "Registered tools: {{tools}} · skills: {{skills}} · hooks: {{hooks}} · MCP servers: {{mcp}}",
+				"restart": "Restart runtime",
+				"stop": "Stop plugin",
+				"installDependencies": "Install dependencies",
+				"networkTitle": "Allow one-time network access?",
+				"networkDescription": "Download the exact locked dependencies for {{name}} once. Plugin execution remains sandboxed and network-disabled.",
+				"allowNetwork": "Allow download",
+				"logs": "Recent runtime logs",
+				"noLogs": "No runtime logs yet"
+			},
+			"trustReview": {
+				"title": "Review plugin capabilities",
+				"description": "Trust {{name}} to enable its declared native capabilities in an isolated worker.",
+				"confirm": "Trust and enable",
+				"capabilities": "Declared capabilities",
+				"workspace": "Workspace access",
+				"workspaceValue": "Only the authorized runtime workspace and managed plugin directory",
+				"network": "Network access",
+				"networkValue": "Disabled during plugin execution",
+				"dependencies": "Dependency lock",
+				"locked": "Pinned lockfile detected",
+				"none": "None",
+				"harnessNotice": "DeepSeek Harness metadata remains static compatibility information; Cordis patches and Harness UI are not executed."
 			}
 		},
 		"hooks": {

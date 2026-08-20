@@ -33,6 +33,33 @@ export type PluginRecord = {
 	installedAt: string;
 	updatedAt: string;
 	lastError?: string;
+	nativePlugin?: { apiVersion: number; entry: string; capabilities: Array<"tools" | "skills" | "hooks" | "mcp"> };
+	dependencyLockHash?: string;
+	runtime?: PluginRuntimeSnapshot;
+};
+
+export type PluginRuntimeSnapshot = {
+	pluginId: string;
+	status: "stopped" | "starting" | "ready" | "failed" | "disabled";
+	activeSessions: number;
+	registeredTools: number;
+	registeredSkills: number;
+	registeredHooks: number;
+	registeredMcpServers: number;
+	dependencyStatus: "not_required" | "pending" | "ready" | "needs_network" | "failed";
+	lastError?: string;
+	updatedAt: string;
+};
+
+export type PluginRuntimeLog = {
+	id: string;
+	pluginId: string;
+	sessionId?: string;
+	event: string;
+	status: string;
+	message?: string;
+	durationMs?: number;
+	createdAt: string;
 };
 
 export type PluginProfile = {
@@ -86,4 +113,29 @@ export async function updatePluginTrust(pluginId: string, fingerprint: string, s
 export async function updatePluginProfile(pluginIds: string[]): Promise<PluginCatalogResult> {
 	const client = await createBackendClient();
 	return client.request<PluginCatalogResult>("plugin.profile.update", { pluginIds });
+}
+
+export async function fetchPluginRuntimeList(): Promise<{ runtimes: PluginRuntimeSnapshot[] }> {
+	const client = await createBackendClient();
+	return client.request("plugin.runtime.list", {});
+}
+
+export async function restartPluginRuntime(pluginId: string): Promise<PluginRuntimeSnapshot | null> {
+	const client = await createBackendClient();
+	return client.request("plugin.runtime.restart", { pluginId });
+}
+
+export async function stopPluginRuntime(pluginId: string): Promise<PluginRuntimeSnapshot | null> {
+	const client = await createBackendClient();
+	return client.request("plugin.runtime.disable", { pluginId });
+}
+
+export async function fetchPluginRuntimeLogs(pluginId?: string, limit?: number): Promise<PluginRuntimeLog[]> {
+	const client = await createBackendClient();
+	return client.request("plugin.runtime.logs.list", { pluginId, limit });
+}
+
+export async function installPluginDependencies(pluginId: string, allowNetwork: boolean): Promise<PluginRuntimeSnapshot> {
+	const client = await createBackendClient();
+	return client.request("plugin.runtime.dependencies.install", { pluginId, allowNetwork });
 }
