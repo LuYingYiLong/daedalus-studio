@@ -31,7 +31,9 @@ type ComposerContextUsageController = {
 const CONTEXT_USAGE_REFRESH_INTERVAL_MS: number = 5_000;
 
 function getErrorMessage(error: unknown, t: TFunction<"common">): string {
-	return error instanceof Error ? error.message : t("composer.contextUsage.errors.estimate");
+	return error instanceof Error
+		? error.message
+		: t("composer.contextUsage.errors.estimate");
 }
 
 export function formatTokenCount(tokens: number): string {
@@ -59,21 +61,36 @@ export default function useComposerContextUsage({
 }: UseComposerContextUsageParams): ComposerContextUsageController {
 	const requestIdRef = useRef<number>(0);
 	const paramsRef = useRef<EstimateContextUsageParams>({});
-	const [contextUsage, setContextUsage] = useState<ContextUsageEstimate | null>(null);
-	const [contextUsageError, setContextUsageError] = useState<string | null>(null);
-	const [isCompressingContext, setIsCompressingContext] = useState<boolean>(false);
-	const [contextCompressionNotice, setContextCompressionNotice] = useState<string | null>(null);
+	const [contextUsage, setContextUsage] =
+		useState<ContextUsageEstimate | null>(null);
+	const [contextUsageError, setContextUsageError] = useState<string | null>(
+		null,
+	);
+	const [isCompressingContext, setIsCompressingContext] =
+		useState<boolean>(false);
+	const [contextCompressionNotice, setContextCompressionNotice] = useState<
+		string | null
+	>(null);
 
-	paramsRef.current = { message, mode, provider, model, additionalContext: [...additionalContext] };
+	paramsRef.current = {
+		message,
+		mode,
+		provider,
+		model,
+		additionalContext: [...additionalContext],
+	};
 
 	const refreshContextUsage = useCallback(async (): Promise<void> => {
 		setContextUsageError(null);
 		const requestId: number = ++requestIdRef.current;
 		try {
-			const usage: ContextUsageEstimate = await estimateContextUsage(paramsRef.current);
+			const usage: ContextUsageEstimate = await estimateContextUsage(
+				paramsRef.current,
+			);
 			if (requestId === requestIdRef.current) setContextUsage(usage);
 		} catch (error: unknown) {
-			if (requestId === requestIdRef.current) setContextUsageError(getErrorMessage(error, t));
+			if (requestId === requestIdRef.current)
+				setContextUsageError(getErrorMessage(error, t));
 		}
 	}, [t]);
 
@@ -90,20 +107,26 @@ export default function useComposerContextUsage({
 			inFlight = true;
 			const requestId: number = ++requestIdRef.current;
 			try {
-				const usage: ContextUsageEstimate = await estimateContextUsage(paramsRef.current);
+				const usage: ContextUsageEstimate = await estimateContextUsage(
+					paramsRef.current,
+				);
 				if (!disposed && requestId === requestIdRef.current) {
 					setContextUsage(usage);
 					setContextUsageError(null);
 				}
 			} catch (error: unknown) {
-				if (!disposed && requestId === requestIdRef.current) setContextUsageError(getErrorMessage(error, t));
+				if (!disposed && requestId === requestIdRef.current)
+					setContextUsageError(getErrorMessage(error, t));
 			} finally {
 				inFlight = false;
 			}
 		};
 		setContextUsageError(null);
 		void pollContextUsage();
-		const timer: number = window.setInterval((): void => void pollContextUsage(), CONTEXT_USAGE_REFRESH_INTERVAL_MS);
+		const timer: number = window.setInterval(
+			(): void => void pollContextUsage(),
+			CONTEXT_USAGE_REFRESH_INTERVAL_MS,
+		);
 		return (): void => {
 			disposed = true;
 			requestIdRef.current += 1;
@@ -120,12 +143,14 @@ export default function useComposerContextUsage({
 			if (!result.compressed && result.reason !== undefined) {
 				setContextUsageError(result.reason);
 			} else if (result.compressed) {
-				setContextCompressionNotice(t("composer.contextUsage.compressionResult", {
-					before: formatTokenCount(result.beforeTokens ?? 0),
-					after: formatTokenCount(result.afterTokens ?? 0),
-					saved: formatTokenCount(result.savedTokens ?? 0),
-					restorable: result.restorableBlockCount ?? 0,
-				}));
+				setContextCompressionNotice(
+					t("composer.contextUsage.compressionResult", {
+						before: formatTokenCount(result.beforeTokens ?? 0),
+						after: formatTokenCount(result.afterTokens ?? 0),
+						saved: formatTokenCount(result.savedTokens ?? 0),
+						restorable: result.restorableBlockCount ?? 0,
+					}),
+				);
 			}
 			await refreshContextUsage();
 		} catch (error: unknown) {

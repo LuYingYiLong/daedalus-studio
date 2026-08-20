@@ -295,7 +295,12 @@
 		max-width 0.16s ease,
 		opacity 0.12s ease,
 		transform 0.16s ease;
-	mask-image: linear-gradient(to right, transparent 0, rgb(0 0 0 / 45%) 35%, rgb(0 0 0) 100%);
+	mask-image: linear-gradient(
+		to right,
+		transparent 0,
+		rgb(0 0 0 / 45%) 35%,
+		rgb(0 0 0) 100%
+	);
 }
 
 .contextUsageButton:hover .contextUsageButtonText,

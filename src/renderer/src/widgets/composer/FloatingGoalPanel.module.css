@@ -15,18 +15,78 @@
 	transform: translateX(-50%);
 	user-select: none;
 }
-.trigger { min-width: 0; }
-.diff { display: inline-flex; gap: 4px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.diff span:first-child { color: var(--ds-git-addition); }
-.diff span:last-child { color: var(--ds-git-deletion); }
-.content { display: grid; gap: 10px; width: min(440px, 78vw); user-select: none; }
-.metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; }
-.metrics div { display: flex; justify-content: space-between; gap: 8px; }
-.metrics span { color: var(--ds-text-muted); }
-.section { display: grid; gap: 3px; max-height: 160px; overflow-y: auto; }
-.section :global(.ant-typography) { margin: 0; }
-.workflowHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.workflowProgress { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 6px; border-top: 1px solid var(--ds-border-subtle); }
-.budgetFields { display: grid; gap: 12px; user-select: none; }
-.budgetFields label { display: grid; grid-template-columns: minmax(0, 1fr) 160px; align-items: center; gap: 12px; }
+.trigger {
+	min-width: 0;
+}
+.diff {
+	display: inline-flex;
+	gap: 4px;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+.diff span:first-child {
+	color: var(--ds-git-addition);
+}
+.diff span:last-child {
+	color: var(--ds-git-deletion);
+}
+.content {
+	display: grid;
+	gap: 10px;
+	width: min(440px, 78vw);
+	user-select: none;
+}
+.metrics {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 6px 14px;
+}
+.metrics div {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+}
+.metrics span {
+	color: var(--ds-text-muted);
+}
+.section {
+	display: grid;
+	gap: 3px;
+	max-height: 160px;
+	overflow-y: auto;
+}
+.section :global(.ant-typography) {
+	margin: 0;
+}
+.workflowHeading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+.workflowProgress {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+.footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding-top: 6px;
+	border-top: 1px solid var(--ds-border-subtle);
+}
+.budgetFields {
+	display: grid;
+	gap: 12px;
+	user-select: none;
+}
+.budgetFields label {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 160px;
+	align-items: center;
+	gap: 12px;
+}

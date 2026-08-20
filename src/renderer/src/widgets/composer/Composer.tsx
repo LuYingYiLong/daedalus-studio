@@ -1,5 +1,17 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Input, Dropdown, Button, Divider, Flex, Tooltip, Popover, Progress, Typography, Spin, Segmented } from "antd";
+import {
+	Input,
+	Dropdown,
+	Button,
+	Divider,
+	Flex,
+	Tooltip,
+	Popover,
+	Progress,
+	Typography,
+	Spin,
+	Segmented,
+} from "antd";
 import type { MenuProps } from "antd";
 import type { TextAreaRef } from "antd/es/input/TextArea";
 import type { TFunction } from "i18next";
@@ -67,8 +79,12 @@ import {
 	resolveDisplayedReasoningEffort,
 	type SelectedModel,
 } from "./composer-menu-items";
-import useComposerContextUsage, { formatTokenCount } from "./useComposerContextUsage";
-import WorktreeCreationOptions, { type WorktreeSourceOptions } from "./WorktreeCreationOptions";
+import useComposerContextUsage, {
+	formatTokenCount,
+} from "./useComposerContextUsage";
+import WorktreeCreationOptions, {
+	type WorktreeSourceOptions,
+} from "./WorktreeCreationOptions";
 
 export type ComposerProps = {
 	providerModelSelection: ProviderModelSelection | null;
@@ -107,7 +123,9 @@ export type ComposerProps = {
 	onWorkspaceAdd?: () => void;
 	onWorkspaceClear?: () => void;
 	onWorktreeModeChange?: (mode: "local" | "worktree") => void;
-	onWorktreeSourceOptionsChange?: (value: Record<string, WorktreeSourceOptions>) => void;
+	onWorktreeSourceOptionsChange?: (
+		value: Record<string, WorktreeSourceOptions>,
+	) => void;
 	onAddFiles?: () => void;
 	onAddFolder?: () => void;
 	onAddImages?: (files: File[]) => void;
@@ -304,12 +322,14 @@ function Composer({
 			window.cancelAnimationFrame(floatingBlurFrameRef.current);
 		}
 
-		floatingBlurFrameRef.current = window.requestAnimationFrame((): void => {
-			floatingBlurFrameRef.current = null;
-			if (!rootRef.current?.contains(document.activeElement)) {
-				setIsFloatingComposerFocused(false);
-			}
-		});
+		floatingBlurFrameRef.current = window.requestAnimationFrame(
+			(): void => {
+				floatingBlurFrameRef.current = null;
+				if (!rootRef.current?.contains(document.activeElement)) {
+					setIsFloatingComposerFocused(false);
+				}
+			},
+		);
 	}, [floating]);
 
 	const handleModeClick: MenuProps["onClick"] = useCallback(
@@ -516,7 +536,8 @@ function Composer({
 		visible: showContextUsage,
 		t,
 	});
-	const contextUsagePercent: number = contextUsage?.committedPercent ?? contextUsage?.percent ?? 0;
+	const contextUsagePercent: number =
+		contextUsage?.committedPercent ?? contextUsage?.percent ?? 0;
 	const contextSegmentAllocation = normalizeContextBudgetSegments({
 		committedPercent: contextUsagePercent,
 		inputPercent: contextUsage?.inputPercent ?? contextUsagePercent,
@@ -527,7 +548,10 @@ function Composer({
 	const compressDisabledReason: string | null = isSending
 		? t("composer.contextUsage.compressDisabled.sending")
 		: contextUsage?.canCompress === false
-			? (localizeContextCompressionReason(contextUsage.compressReason, t) ?? t("composer.contextUsage.compressDisabled.unavailable"))
+			? (localizeContextCompressionReason(
+					contextUsage.compressReason,
+					t,
+				) ?? t("composer.contextUsage.compressDisabled.unavailable"))
 			: null;
 	const selectedModelKey: string | undefined =
 		selectedModel === null
@@ -1624,49 +1648,127 @@ function Composer({
 			</div>
 
 			<footer className={styles.footer}>
-				<Flex align="start" justify="space-between" gap={8} className={styles.workspaceFooterRow}>
-					<Flex align="center" gap={6} className={styles.workspaceFooterControls}>
-						<Dropdown disabled={workspaceFooterDisabled || isWorktreePreparing} menu={workspaceFooterMenu} trigger={["click"]}>
+				<Flex
+					align="start"
+					justify="space-between"
+					gap={8}
+					className={styles.workspaceFooterRow}
+				>
+					<Flex
+						align="center"
+						gap={6}
+						className={styles.workspaceFooterControls}
+					>
+						<Dropdown
+							disabled={
+								workspaceFooterDisabled || isWorktreePreparing
+							}
+							menu={workspaceFooterMenu}
+							trigger={["click"]}
+						>
 							<Button
 								type="text"
 								size="small"
-								disabled={workspaceFooterDisabled || isWorktreePreparing}
-								icon={selectedWorkspace === null ? <Icon name="close" /> : <WorkspaceIconView workspace={selectedWorkspace} />}
+								disabled={
+									workspaceFooterDisabled ||
+									isWorktreePreparing
+								}
+								icon={
+									selectedWorkspace === null ? (
+										<Icon name="close" />
+									) : (
+										<WorkspaceIconView
+											workspace={selectedWorkspace}
+										/>
+									)
+								}
 								className={styles.workspaceFooterButton}
 							>
-								<span className={styles.workspaceFooterText}>{selectedWorkspaceLabel}</span>
+								<span className={styles.workspaceFooterText}>
+									{selectedWorkspaceLabel}
+								</span>
 							</Button>
 						</Dropdown>
-						{worktreeMode !== undefined && selectedWorkspace !== null ? (
-							<Tooltip title={worktreeDisabledReason ?? undefined}>
+						{worktreeMode !== undefined &&
+						selectedWorkspace !== null ? (
+							<Tooltip
+								title={worktreeDisabledReason ?? undefined}
+							>
 								<span>
 									<Segmented
 										size="small"
 										value={worktreeMode}
 										disabled={isWorktreePreparing}
 										options={[
-											{ label: t("composer.worktree.local"), value: "local" },
 											{
-												label: isWorktreePreparing ? <Spin size="small" /> : t("composer.worktree.managed"),
+												label: t(
+													"composer.worktree.local",
+												),
+												value: "local",
+											},
+											{
+												label: isWorktreePreparing ? (
+													<Spin size="small" />
+												) : (
+													t(
+														"composer.worktree.managed",
+													)
+												),
 												value: "worktree",
-												disabled: worktreeDisabledReason !== null
-											}
+												disabled:
+													worktreeDisabledReason !==
+													null,
+											},
 										]}
-										onChange={(value): void => onWorktreeModeChange?.(value as "local" | "worktree")}
+										onChange={(value): void =>
+											onWorktreeModeChange?.(
+												value as "local" | "worktree",
+											)
+										}
 									/>
 								</span>
 							</Tooltip>
 						) : null}
-						{worktreeMode === "worktree" && selectedWorkspace !== null && onWorktreeSourceOptionsChange !== undefined ? (
-							<WorktreeCreationOptions workspace={selectedWorkspace} value={worktreeSourceOptions} disabled={isWorktreePreparing} onChange={onWorktreeSourceOptionsChange} />
+						{worktreeMode === "worktree" &&
+						selectedWorkspace !== null &&
+						onWorktreeSourceOptionsChange !== undefined ? (
+							<WorktreeCreationOptions
+								workspace={selectedWorkspace}
+								value={worktreeSourceOptions}
+								disabled={isWorktreePreparing}
+								onChange={onWorktreeSourceOptionsChange}
+							/>
 						) : null}
 					</Flex>
 					{showContextUsage ? (
-						<Popover title={t("composer.contextUsage.title")} content={contextUsageContent} trigger="click">
+						<Popover
+							title={t("composer.contextUsage.title")}
+							content={contextUsageContent}
+							trigger="click"
+						>
 							<span className={styles.contextUsageAnchor}>
-								<button type="button" className={styles.contextUsageButton} aria-label={t("composer.contextUsage.title")}>
-									<span className={styles.contextUsageButtonText}>{Math.round(contextUsagePercent)}%</span>
-									<Progress type="circle" percent={contextUsagePercent} strokeColor="var(--ds-accent)" railColor="var(--ds-border)" showInfo={false} size={16} />
+								<button
+									type="button"
+									className={styles.contextUsageButton}
+									aria-label={t(
+										"composer.contextUsage.title",
+									)}
+								>
+									<span
+										className={
+											styles.contextUsageButtonText
+										}
+									>
+										{Math.round(contextUsagePercent)}%
+									</span>
+									<Progress
+										type="circle"
+										percent={contextUsagePercent}
+										strokeColor="var(--ds-accent)"
+										railColor="var(--ds-border)"
+										showInfo={false}
+										size={16}
+									/>
 								</button>
 							</span>
 						</Popover>
