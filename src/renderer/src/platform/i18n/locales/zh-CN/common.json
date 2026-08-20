@@ -836,6 +836,7 @@
 			"cookies": "导入 Cookie 和站点登录状态",
 			"passwords": "导入已保存的密码",
 			"completed": "已导入 {{cookies}} 个 Cookie、{{passwords}} 个密码，跳过 {{skipped}} 项（其中 {{unsupported}} 项受系统加密保护）",
+			"completedAppBound": "已导入 {{cookies}} 个 Cookie、{{passwords}} 个密码；Edge 的 App-Bound 加密项目无法由 Daedalus 解密，已安全跳过 {{unsupported}} 项",
 			"failed": "导入失败"
 		},
 		"clear": {

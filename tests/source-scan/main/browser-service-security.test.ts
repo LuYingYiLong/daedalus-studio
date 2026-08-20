@@ -36,6 +36,17 @@ describe("browser service security boundary", () => {
 		expect(source).toContain('this.webContents.removeListener("context-menu"');
 	});
 
+	it("passes Windows DPAPI blobs without exposing them to PowerShell parsing", () => {
+		const source = readRepoFile("src", "main", "services", "browser", "browser-profile-import.ts");
+		expect(source).toContain('"-EncodedCommand"');
+		expect(source).toContain("DAEDALUS_DPAPI_BLOB");
+		expect(source).toContain('Buffer.from(script, "utf16le")');
+		expect(source).not.toContain("$args[0]");
+		expect(source).toContain("browser_import_dpapi_failed");
+		expect(source).toContain("app_bound_encrypted_key");
+		expect(source).toContain("browser_import_app_bound_encryption");
+	});
+
 	it("shares one CDP attachment and exposes only fixed browser automation actions", () => {
 		const service = readRepoFile("src", "main", "services", "browser", "browser-service.ts");
 		const cdp = readRepoFile("src", "main", "services", "browser", "browser-cdp-session.ts");

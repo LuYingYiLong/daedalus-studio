@@ -303,14 +303,22 @@ export function BrowserImportModal({
 				includeCookies,
 				includePasswords,
 			});
-			void message.success(
-				t("browser.import.completed", {
-					cookies: result.cookiesImported,
-					passwords: result.passwordsImported,
-					skipped: result.skipped + result.unsupported,
-					unsupported: result.unsupported,
-				}),
-			);
+			const messageKey: string = result.errors.includes(
+				"browser_import_app_bound_encryption",
+			)
+				? "browser.import.completedAppBound"
+				: "browser.import.completed";
+			const messageOptions = {
+				cookies: result.cookiesImported,
+				passwords: result.passwordsImported,
+				skipped: result.skipped + result.unsupported,
+				unsupported: result.unsupported,
+			};
+			if (messageKey === "browser.import.completedAppBound") {
+				void message.warning(t(messageKey, messageOptions));
+			} else {
+				void message.success(t(messageKey, messageOptions));
+			}
 			onClose();
 		} catch (error: unknown) {
 			void message.error(

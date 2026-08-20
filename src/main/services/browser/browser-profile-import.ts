@@ -24,22 +24,43 @@ function getBrowserRoot(source: BrowserProfileSource): string {
 }
 
 async function unprotectWindowsData(value: Buffer): Promise<Buffer> {
-	const script: string = "[Convert]::ToBase64String([Security.Cryptography.ProtectedData]::Unprotect([Convert]::FromBase64String($args[0]),$null,[Security.Cryptography.DataProtectionScope]::CurrentUser))";
-	const { stdout } = await execFileAsync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script, value.toString("base64")], {
-		windowsHide: true,
-		maxBuffer: 64 * 1024
-	});
-	return Buffer.from(stdout.trim(), "base64");
+	const script: string = "$payload = [Convert]::FromBase64String($env:DAEDALUS_DPAPI_BLOB); [Convert]::ToBase64String([Security.Cryptography.ProtectedData]::Unprotect($payload,$null,[Security.Cryptography.DataProtectionScope]::CurrentUser))";
+	const encodedCommand: string = Buffer.from(script, "utf16le").toString("base64");
+	try {
+		const { stdout } = await execFileAsync("powershell.exe", ["-NoProfile", "-NonInteractive", "-EncodedCommand", encodedCommand], {
+			windowsHide: true,
+			maxBuffer: 64 * 1024,
+			env: {
+				...process.env,
+				DAEDALUS_DPAPI_BLOB: value.toString("base64")
+			}
+		});
+		const decoded: Buffer = Buffer.from(stdout.trim(), "base64");
+		if (decoded.length === 0) throw new Error("browser_import_key_empty");
+		return decoded;
+	} catch {
+		throw new Error("browser_import_dpapi_failed");
+	}
 }
 
-async function decodeMasterKey(localState: Record<string, unknown>): Promise<Buffer> {
+async function decodeMasterKey(localState: Record<string, unknown>): Promise<Buffer | null> {
 	const osCrypt: unknown = localState.os_crypt;
 	if (typeof osCrypt !== "object" || osCrypt === null || Array.isArray(osCrypt)) throw new Error("browser_import_key_missing");
-	const encryptedKey: unknown = (osCrypt as Record<string, unknown>).encrypted_key;
-	if (typeof encryptedKey !== "string") throw new Error("browser_import_key_missing");
+	const osCryptRecord: Record<string, unknown> = osCrypt as Record<string, unknown>;
+	const encryptedKey: unknown = osCryptRecord.encrypted_key;
+	const appBoundEncryptedKey: unknown = osCryptRecord.app_bound_encrypted_key;
+	if (typeof encryptedKey !== "string") {
+		if (typeof appBoundEncryptedKey === "string" && appBoundEncryptedKey.length > 0) return null;
+		throw new Error("browser_import_key_missing");
+	}
 	const raw: Buffer = Buffer.from(encryptedKey, "base64");
 	const payload: Buffer = raw.subarray(raw.subarray(0, 5).toString("ascii") === "DPAPI" ? 5 : 0);
-	return await unprotectWindowsData(payload);
+	try {
+		return await unprotectWindowsData(payload);
+	} catch (error: unknown) {
+		if (typeof appBoundEncryptedKey === "string" && appBoundEncryptedKey.length > 0) return null;
+		throw error;
+	}
 }
 
 function decryptChromiumValue(value: Buffer, masterKey: Buffer): { value: Buffer | null; unsupported: boolean } {
@@ -109,7 +130,9 @@ export async function importBrowserProfile(params: {
 	if (params.includePasswords && !isBrowserPasswordEncryptionAvailable()) throw new Error("browser_password_encryption_unavailable");
 	const root: string = getBrowserRoot(params.profile.source);
 	const localState = JSON.parse(await readFile(join(root, "Local State"), "utf8")) as Record<string, unknown>;
-	const masterKey: Buffer = await decodeMasterKey(localState);
+	const masterKey: Buffer | null = await decodeMasterKey(localState);
+	const appBoundEncryptionUnavailable: boolean = masterKey === null;
+	if (appBoundEncryptionUnavailable) result.errors.push("browser_import_app_bound_encryption");
 
 	if (params.includeCookies) {
 		const sourcePath: string = join(params.profile.profilePath, "Network", "Cookies");
@@ -120,6 +143,7 @@ export async function importBrowserProfile(params: {
 			const rows = database.prepare("SELECT host_key, name, path, encrypted_value, expires_utc, is_secure, is_httponly, samesite FROM cookies LIMIT 20000").all() as Array<Record<string, unknown>>;
 			database.close();
 			for (const row of rows) {
+				if (masterKey === null) { result.unsupported += 1; continue; }
 				const decrypted = decryptChromiumValue(Buffer.from(row.encrypted_value as Uint8Array), masterKey);
 				if (decrypted.unsupported) { result.unsupported += 1; continue; }
 				if (decrypted.value === null) { result.skipped += 1; continue; }
@@ -155,6 +179,7 @@ export async function importBrowserProfile(params: {
 			const rows = database.prepare("SELECT origin_url, username_value, password_value FROM logins LIMIT 5000").all() as Array<Record<string, unknown>>;
 			database.close();
 			for (const row of rows) {
+				if (masterKey === null) { result.unsupported += 1; continue; }
 				const decrypted = decryptChromiumValue(Buffer.from(row.password_value as Uint8Array), masterKey);
 				if (decrypted.unsupported) { result.unsupported += 1; continue; }
 				if (decrypted.value === null || decrypted.value.length === 0) { result.skipped += 1; continue; }

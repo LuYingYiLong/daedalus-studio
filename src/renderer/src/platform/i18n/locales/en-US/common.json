@@ -838,6 +838,7 @@
 			"cookies": "Import cookies and signed-in sessions",
 			"passwords": "Import saved passwords",
 			"completed": "Imported {{cookies}} cookies and {{passwords}} passwords; skipped {{skipped}} items ({{unsupported}} protected by system encryption)",
+			"completedAppBound": "Imported {{cookies}} cookies and {{passwords}} passwords; Edge App-Bound encrypted items cannot be decrypted by Daedalus and {{unsupported}} items were safely skipped",
 			"failed": "Import failed"
 		},
 		"clear": {
