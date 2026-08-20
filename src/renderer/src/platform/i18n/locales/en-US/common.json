@@ -1,4 +1,32 @@
 {
+	"titlebar": {
+		"menu": {
+			"ariaLabel": "Application menu",
+			"file": {
+				"label": "File",
+				"newSession": "New session",
+				"settings": "Open settings"
+			},
+			"edit": {
+				"label": "Edit",
+				"undo": "Undo",
+				"redo": "Redo",
+				"cut": "Cut",
+				"copy": "Copy",
+				"paste": "Paste"
+			},
+			"view": {
+				"label": "View",
+				"appearance": "Appearance settings"
+			},
+			"help": {
+				"label": "Help",
+				"documentation": "Documentation",
+				"checkForUpdates": "Check for updates",
+				"about": "About"
+			}
+		}
+	},
 	"app": {
 		"boot": {
 			"progress": {

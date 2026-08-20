@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+	<rect id="矩形 20" width="7.000000" height="9.000000" x="13.000000" y="11.000000" rx="1.000000" stroke="currentColor" stroke-width="2.000000" />
+	<rect id="矩形 22" width="7.000000" height="4.000000" x="7.000000" y="2.000000" rx="1.000000" fill="currentColor" />
+	<path id="减去顶层" d="M16 3L5 3C3.89543 3 3 3.89543 3 5L3 19C3 20.1046 3.89543 21 5 21L11.3924 21C10.5469 20.4905 9.81787 19.8074 9.25469 19L5 19L5 5L16 5L16 8.07089C16.7061 8.1719 17.3783 8.37829 18 8.67363L18 5C18 3.89543 17.1046 3 16 3Z" fill="currentColor" fill-rule="evenodd" />
+</svg>

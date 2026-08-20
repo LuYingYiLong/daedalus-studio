@@ -19,6 +19,18 @@
 	gap: var(--ds-space-1);
 }
 
+.applicationMenus {
+	display: flex;
+	align-items: center;
+	gap: var(--ds-space-1);
+	margin-left: var(--ds-space-2);
+	-webkit-app-region: no-drag;
+}
+
+.menuButton {
+	-webkit-app-region: no-drag;
+}
+
 .actionButton {
 	position: relative;
 	z-index: 1;

@@ -1,4 +1,5 @@
 export const SESSION_NAVIGATION_EVENT: string = "daedalus:session-navigation";
+export const NEW_SESSION_EVENT: string = "daedalus:new-session";
 
 export type SessionNavigationSnapshot = {
 	sessionIds: readonly string[];

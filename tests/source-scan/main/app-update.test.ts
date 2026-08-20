@@ -128,4 +128,18 @@ describe("app update source", () => {
 		expect(titlebarCss).toContain(".updateButton");
 		expect(serviceSource).toContain("browserWindow.webContents.isDestroyed()");
 	});
+
+	it("provides localized titlebar menus and documentation links", () => {
+		expect(titlebarSource).toContain("<Dropdown");
+		expect(titlebarSource).toContain('titlebar.menu.file.label');
+		expect(titlebarSource).toContain('titlebar.menu.edit.label');
+		expect(titlebarSource).toContain('titlebar.menu.view.label');
+		expect(titlebarSource).toContain('titlebar.menu.help.label');
+		expect(titlebarSource).toContain("NEW_SESSION_EVENT");
+		expect(titlebarSource).toContain("ENGLISH_DOCUMENTATION_URL");
+		expect(titlebarSource).toContain("SIMPLIFIED_CHINESE_DOCUMENTATION_URL");
+		expect(titlebarSource).toContain("window.electronAPI.windowControl.openExternal(");
+		expect(titlebarSource).toContain('open={openMenuKey === "file"}');
+		expect(titlebarSource).toContain("handleMenuTriggerMouseEnter");
+	});
 });

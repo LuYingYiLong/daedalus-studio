@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+	<circle id="椭圆 35" cx="6.5" cy="6.5" r="2.5" stroke="currentColor" stroke-width="2.000000" />
+	<circle id="椭圆 36" cx="6.5" cy="17.5" r="2.5" stroke="currentColor" stroke-width="2.000000" />
+	<path id="矢量 175" d="M8.5 15.5L19 5" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path id="矢量 176" d="M0 10.5L10.5 0" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" transform="matrix(-1,0,0,1,19,8.5)" />
+</svg>

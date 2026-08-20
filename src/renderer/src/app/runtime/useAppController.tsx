@@ -135,7 +135,7 @@ import { applyResponseFinished, getUnreadResponseSessionId, markActiveSessionRea
 import { applyRunningSessionEvent, markRunStopped, markSessionRunStarted, removeRunningSessions, syncSessionRunFromOpen, type RunningSessionState } from "@/domain/workspace/session-running";
 import type { SessionArchiveContext } from "@/widgets/workspace/WorkspaceTree";
 import { clearCleanFilePanelBuffersForSession, hasDirtyFilePanelBuffersForSession } from "@/widgets/files/file-runtime-buffers";
-import { recordOpenedSession, removeSessionFromNavigationHistory, SESSION_NAVIGATION_EVENT } from "@/domain/session/session-navigation-history";
+import { NEW_SESSION_EVENT, recordOpenedSession, removeSessionFromNavigationHistory, SESSION_NAVIGATION_EVENT } from "@/domain/session/session-navigation-history";
 import {
 	type AppProps,
 	type HomeDraft,
@@ -1714,6 +1714,16 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		await createTemporarySession(preferredWorkspace);
 		void loadHomeWorkspaces();
 	}
+
+	useEffect((): (() => void) => {
+		const handleNewSessionMenu = (): void => {
+			void handleNewSession();
+		};
+		window.addEventListener(NEW_SESSION_EVENT, handleNewSessionMenu);
+		return (): void => {
+			window.removeEventListener(NEW_SESSION_EVENT, handleNewSessionMenu);
+		};
+	}, [handleNewSession]);
 
 	useEffect((): void => {
 		void createTemporarySession().catch((error: unknown): void => {
