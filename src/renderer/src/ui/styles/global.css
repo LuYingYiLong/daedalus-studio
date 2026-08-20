@@ -333,6 +333,41 @@ body {
 	height: 16px;
 }
 
+/* 统一 Menu 与 Dropdown 菜单中图标、文字和展开箭头的垂直对齐。 */
+.ant-menu-item,
+.ant-menu-submenu-title,
+.ant-dropdown-menu-item,
+.ant-dropdown-menu-submenu-title {
+	display: flex !important;
+	align-items: center;
+}
+
+.ant-menu-item > .ant-menu-title-content,
+.ant-menu-submenu-title > .ant-menu-title-content,
+.ant-dropdown-menu-item > .ant-dropdown-menu-title-content,
+.ant-dropdown-menu-submenu-title > .ant-dropdown-menu-title-content {
+	line-height: normal;
+}
+
+.ant-menu-item-icon.daedalus-icon,
+.ant-dropdown-menu-item-icon.daedalus-icon,
+.ant-menu-submenu-title > .daedalus-icon,
+.ant-dropdown-menu-submenu-title > .daedalus-icon {
+	display: inline-flex !important;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	line-height: 0;
+	vertical-align: middle;
+}
+
+.ant-menu-submenu-expand-icon.daedalus-icon,
+.ant-dropdown-menu-submenu-expand-icon.daedalus-icon {
+	display: block !important;
+	top: 50% !important;
+	transform: translateY(-50%) !important;
+}
+
 .ant-btn > .ant-btn-icon {
 	display: inline-flex;
 	align-items: center;
