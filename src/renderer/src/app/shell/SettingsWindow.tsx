@@ -29,6 +29,7 @@ import HooksSettingsPage from "@/widgets/settings/HooksSettingsPage";
 import BrowserSettingsPage from "@/widgets/settings/BrowserSettingsPage";
 import DevelopmentEnvironmentSettingsPage from "@/widgets/settings/DevelopmentEnvironmentSettingsPage";
 import WorktreeSettingsPage from "@/widgets/settings/WorktreeSettingsPage";
+import PluginsSettingsPage from "@/widgets/settings/PluginsSettingsPage";
 import styles from "./SettingsWindow.module.css";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -47,6 +48,7 @@ type SettingsPageKey =
 	| "browser"
 	| "environments"
 	| "worktrees"
+	| "plugins"
 	| "documentation"
 	| "godot_projects"
 	| "archived_sessions"
@@ -114,6 +116,11 @@ const menuItemConfigs: SettingsMenuItemConfig[] = [
 		key: "hooks",
 		labelKey: "settings.menu.hooks",
 		icon: <Icon name="hook" />,
+	},
+	{
+		key: "plugins",
+		labelKey: "settings.menu.plugins",
+		icon: <Icon name="plugin" />,
 	},
 	{
 		key: "browser",
@@ -272,6 +279,9 @@ function SettingsWindow(): React.JSX.Element {
 		}
 		if (page === "hooks") {
 			return <HooksSettingsPage />;
+		}
+		if (page === "plugins") {
+			return <PluginsSettingsPage />;
 		}
 		if (page === "browser") {
 			return <BrowserSettingsPage />;

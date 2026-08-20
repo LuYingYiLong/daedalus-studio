@@ -1413,6 +1413,7 @@
 			"mcpServers": "MCP 服务器",
 			"skills": "技能",
 			"hooks": "钩子",
+			"plugins": "插件",
 			"browser": "浏览器",
 			"environments": "开发环境",
 			"worktrees": "工作树",
@@ -1550,6 +1551,90 @@
 			"errors": {
 				"load": "加载浏览器设置失败",
 				"save": "保存浏览器设置失败"
+			}
+		},
+		"plugins": {
+			"title": "插件",
+			"description": "发现和管理 Daedalus 与 DeepSeek Harness 插件包。当前版本不会执行插件代码。",
+			"empty": "暂无已安装插件",
+			"selectPrompt": "选择一个插件查看兼容性和信任状态。",
+			"yes": "是",
+			"no": "否",
+			"scanned": "已扫描",
+			"unsupported": "该插件使用了 Daedalus 当前尚未支持的能力。",
+			"warnings": "兼容性提示",
+			"classification": {
+				"native": "Daedalus 原生",
+				"harness-bundle": "Harness Bundle",
+				"harness-client": "Harness Client",
+				"both": "Daedalus + Harness",
+				"metadata-only": "仅元数据",
+				"unsupported": "不支持"
+			},
+			"trust": {
+				"trusted": "已信任",
+				"review_required": "待审核",
+				"disabled": "已禁用"
+			},
+			"sections": {
+				"status": "状态",
+				"compatibility": "兼容性"
+			},
+			"items": {
+				"source": "来源",
+				"trust": "信任状态",
+				"enabled": "Profile 状态",
+				"enabledDescription": "启用状态仅保存到当前 Profile；运行时激活将在后续版本提供。",
+				"harnessBundle": "DeepSeek Harness Bundle",
+				"harnessClient": "DeepSeek Harness Client",
+				"harnessClientDescription": "Client 插件需要兼容 Harness 的前端运行时。",
+				"entry": "声明的入口",
+				"notDeclared": "未声明",
+				"fingerprint": "指纹"
+			},
+			"actions": {
+				"add": "添加插件",
+				"install": "安装",
+				"refresh": "刷新",
+				"choose": "选择",
+				"chooseFile": "选择插件包",
+				"trust": "信任",
+				"disable": "禁用",
+				"remove": "移除"
+			},
+			"install": {
+				"title": "添加插件包",
+				"sourceType": "来源类型",
+				"local": "本地文件夹",
+				"tarball": "压缩包（.tgz）",
+				"npm": "npm 包",
+				"git": "Git 仓库",
+				"path": "路径",
+				"pathPlaceholder": "选择插件文件夹或压缩包",
+				"sha256": "SHA-256",
+				"packageName": "包名称",
+				"version": "精确版本",
+				"url": "仓库网址",
+				"commit": "Commit SHA",
+				"noExecution": "不会执行安装脚本或插件代码。插件只会被复制、计算哈希并进行静态检查。"
+			},
+			"confirm": {
+				"removeTitle": "移除插件包？",
+				"removeDescription": "要从 Daedalus 管理目录中移除 {{name}} 吗？"
+			},
+			"messages": {
+				"installed": "插件包已安装，等待审核。",
+				"removed": "插件包已移除。",
+				"trusted": "插件包已信任。",
+				"disabled": "插件包已禁用。",
+				"trustRequired": "请先审核并信任插件，再启用它。"
+			},
+			"errors": {
+				"load": "加载插件目录失败。",
+				"install": "安装插件包失败。",
+				"remove": "移除插件包失败。",
+				"trust": "更新插件信任状态失败。",
+				"profile": "更新插件 Profile 失败。"
 			}
 		},
 		"hooks": {

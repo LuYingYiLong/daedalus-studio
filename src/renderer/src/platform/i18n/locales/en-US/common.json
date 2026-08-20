@@ -1420,6 +1420,7 @@
 			"mcpServers": "MCP Servers",
 			"skills": "Skills",
 			"hooks": "Hooks",
+			"plugins": "Plugins",
 			"browser": "Browser",
 			"environments": "Development environments",
 			"worktrees": "Worktrees",
@@ -1557,6 +1558,90 @@
 			"errors": {
 				"load": "Failed to load browser settings",
 				"save": "Failed to save browser settings"
+			}
+		},
+		"plugins": {
+			"title": "Plugins",
+			"description": "Discover and manage Daedalus and DeepSeek Harness plugin packages. Plugins are not executed in this version.",
+			"empty": "No plugins installed",
+			"selectPrompt": "Select a plugin to inspect its compatibility and trust state.",
+			"yes": "Yes",
+			"no": "No",
+			"scanned": "Scanned",
+			"unsupported": "This package uses capabilities that Daedalus cannot run yet.",
+			"warnings": "Compatibility notes",
+			"classification": {
+				"native": "Daedalus Native",
+				"harness-bundle": "Harness Bundle",
+				"harness-client": "Harness Client",
+				"both": "Daedalus + Harness",
+				"metadata-only": "Metadata only",
+				"unsupported": "Unsupported"
+			},
+			"trust": {
+				"trusted": "Trusted",
+				"review_required": "Review required",
+				"disabled": "Disabled"
+			},
+			"sections": {
+				"status": "Status",
+				"compatibility": "Compatibility"
+			},
+			"items": {
+				"source": "Source",
+				"trust": "Trust",
+				"enabled": "Profile status",
+				"enabledDescription": "Enablement is stored for the active profile. Runtime activation will arrive in a later version.",
+				"harnessBundle": "DeepSeek Harness Bundle",
+				"harnessClient": "DeepSeek Harness Client",
+				"harnessClientDescription": "Client packages require a Harness-compatible client runtime.",
+				"entry": "Declared entry points",
+				"notDeclared": "Not declared",
+				"fingerprint": "Fingerprint"
+			},
+			"actions": {
+				"add": "Add plugin",
+				"install": "Install",
+				"refresh": "Refresh",
+				"choose": "Choose",
+				"chooseFile": "Choose plugin package",
+				"trust": "Trust",
+				"disable": "Disable",
+				"remove": "Remove"
+			},
+			"install": {
+				"title": "Add plugin package",
+				"sourceType": "Source type",
+				"local": "Local folder",
+				"tarball": "Tarball (.tgz)",
+				"npm": "npm package",
+				"git": "Git repository",
+				"path": "Path",
+				"pathPlaceholder": "Select a plugin folder or archive",
+				"sha256": "SHA-256",
+				"packageName": "Package name",
+				"version": "Exact version",
+				"url": "Repository URL",
+				"commit": "Commit SHA",
+				"noExecution": "Installation scripts and plugin code are not executed. The package will be copied, hashed, and statically inspected."
+			},
+			"confirm": {
+				"removeTitle": "Remove plugin package?",
+				"removeDescription": "Remove {{name}} from Daedalus managed storage?"
+			},
+			"messages": {
+				"installed": "Plugin package installed and queued for review.",
+				"removed": "Plugin package removed.",
+				"trusted": "Plugin package trusted.",
+				"disabled": "Plugin package disabled.",
+				"trustRequired": "Review and trust the plugin before enabling it."
+			},
+			"errors": {
+				"load": "Failed to load plugin catalog.",
+				"install": "Failed to install plugin package.",
+				"remove": "Failed to remove plugin package.",
+				"trust": "Failed to update plugin trust.",
+				"profile": "Failed to update plugin profile."
 			}
 		},
 		"hooks": {
