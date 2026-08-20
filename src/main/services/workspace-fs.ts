@@ -104,6 +104,7 @@ export type WorkspaceLaunchDetectionOptions = {
 	godotScenePath?: string | undefined;
 	pathExists?: ((path: string) => Promise<boolean>) | undefined;
 	findOnPath?: ((command: string) => Promise<string | null>) | undefined;
+	runCommand?: ((command: string, args: string[]) => Promise<string | null>) | undefined;
 	readDirectory?: typeof readdir | undefined;
 };
 export type WorkspaceLaunchSpawnOptions = WorkspaceLaunchDetectionOptions & {
@@ -382,6 +383,14 @@ async function defaultFindOnPath(command: string, platform: NodeJS.Platform): Pr
 	});
 }
 
+async function defaultRunCommand(command: string, args: string[]): Promise<string | null> {
+	return new Promise<string | null>((resolveCommand): void => {
+		execFile(command, args, { windowsHide: true }, (error, stdout): void => {
+			resolveCommand(error === null ? stdout : null);
+		});
+	});
+}
+
 async function findFirstExistingPath(paths: readonly string[], pathExists: (path: string) => Promise<boolean>): Promise<string | null> {
 	for (const candidatePath of paths) {
 		if (await pathExists(candidatePath)) {
@@ -423,11 +432,60 @@ async function findGitHubDesktopPath(options: Required<Pick<WorkspaceLaunchDetec
 	return null;
 }
 
+async function findVisualStudioPath(options: Required<Pick<WorkspaceLaunchDetectionOptions, "env" | "pathExists" | "findOnPath" | "runCommand">>): Promise<string | null> {
+	const programFiles: string | undefined = getEnvValue(options.env, "ProgramFiles");
+	const programFilesX86: string | undefined = getEnvValue(options.env, "ProgramFiles(x86)");
+	const vswherePath: string | null = await findFirstExistingPath(compactPaths([
+		programFilesX86 === undefined ? undefined : join(programFilesX86, "Microsoft Visual Studio", "Installer", "vswhere.exe"),
+		programFiles === undefined ? undefined : join(programFiles, "Microsoft Visual Studio", "Installer", "vswhere.exe"),
+		await options.findOnPath("vswhere.exe")
+	]), options.pathExists);
+
+	if (vswherePath !== null) {
+		const output: string | null = await options.runCommand(vswherePath, [
+			"-latest",
+			"-products",
+			"*",
+			"-requires",
+			"Microsoft.VisualStudio.Component.CoreEditor",
+			"-property",
+			"installationPath"
+		]);
+		const installPath: string | undefined = output
+			?.split(/\r?\n/u)
+			.map((line: string): string => line.trim())
+			.find((line: string): boolean => line.length > 0);
+		if (installPath !== undefined) {
+			const devenvPath: string = join(installPath, "Common7", "IDE", "devenv.exe");
+			if (await options.pathExists(devenvPath)) {
+				return devenvPath;
+			}
+		}
+	}
+
+	const editions: string[] = ["Enterprise", "Professional", "Community", "Preview"];
+	const years: string[] = ["2022", "2019", "2017"];
+	const candidates: string[] = compactPaths(
+		years.flatMap((year: string): Array<string | undefined> =>
+			editions.flatMap((edition: string): Array<string | undefined> => [
+				programFiles === undefined
+					? undefined
+					: join(programFiles, "Microsoft Visual Studio", year, edition, "Common7", "IDE", "devenv.exe"),
+				programFilesX86 === undefined
+					? undefined
+					: join(programFilesX86, "Microsoft Visual Studio", year, edition, "Common7", "IDE", "devenv.exe")
+			])
+		)
+	);
+	return findFirstExistingPath(candidates, options.pathExists);
+}
+
 async function resolveWorkspaceLaunchTarget(targetId: WorkspaceLaunchTargetId, options: WorkspaceLaunchDetectionOptions = {}): Promise<ResolvedWorkspaceLaunchTarget | null> {
 	const platform: NodeJS.Platform = options.platform ?? process.platform;
 	const env: NodeJS.ProcessEnv = options.env ?? process.env;
 	const pathExists: (path: string) => Promise<boolean> = options.pathExists ?? defaultPathExists;
 	const findOnPath: (command: string) => Promise<string | null> = options.findOnPath ?? ((command: string): Promise<string | null> => defaultFindOnPath(command, platform));
+	const runCommand: (command: string, args: string[]) => Promise<string | null> = options.runCommand ?? defaultRunCommand;
 	const readDirectory: typeof readdir = options.readDirectory ?? readdir;
 	const localAppData: string | undefined = getEnvValue(env, "LOCALAPPDATA");
 	const programFiles: string | undefined = getEnvValue(env, "ProgramFiles");
@@ -462,15 +520,10 @@ async function resolveWorkspaceLaunchTarget(targetId: WorkspaceLaunchTargetId, o
 		return codePath === null ? null : { id: "vscode", label: "Visual Studio Code", command: codePath, args: [], useShell: /\.cmd$/iu.test(codePath) };
 	}
 	if (targetId === "visual-studio") {
-		const editions: string[] = ["Enterprise", "Professional", "Community"];
-		const years: string[] = ["2022", "2019"];
-		const candidates: string[] = compactPaths([
-			...years.flatMap((year: string): string[] => editions.flatMap((edition: string): string[] => compactPaths([
-				programFiles === undefined ? undefined : join(programFiles, "Microsoft Visual Studio", year, edition, "Common7", "IDE", "devenv.exe"),
-				programFilesX86 === undefined ? undefined : join(programFilesX86, "Microsoft Visual Studio", year, edition, "Common7", "IDE", "devenv.exe")
-			])))
-		]);
-		const visualStudioPath: string | null = await findFirstExistingPath(candidates, pathExists);
+		if (platform !== "win32") {
+			return null;
+		}
+		const visualStudioPath: string | null = await findVisualStudioPath({ env, pathExists, findOnPath, runCommand });
 		return visualStudioPath === null ? null : { id: "visual-studio", label: "Visual Studio", command: visualStudioPath, args: [] };
 	}
 	if (targetId === "github-desktop") {

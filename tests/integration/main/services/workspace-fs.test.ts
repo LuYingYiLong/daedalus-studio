@@ -210,6 +210,28 @@ describe("workspace-fs", () => {
 		]);
 	});
 
+	it("detects Visual Studio through vswhere before fixed installation paths", async () => {
+		const programFilesX86: string = "C:/Program Files (x86)";
+		const vswherePath: string = join(programFilesX86, "Microsoft Visual Studio", "Installer", "vswhere.exe");
+		const installPath: string = "D:/Apps/Visual Studio/2022/Preview";
+		const devenvPath: string = join(installPath, "Common7", "IDE", "devenv.exe");
+		const existingPaths: Set<string> = new Set([vswherePath, devenvPath]);
+
+		const targets = await listWorkspaceLaunchTargets({
+			platform: "win32",
+			env: { "ProgramFiles(x86)": programFilesX86 },
+			pathExists: async (targetPath: string): Promise<boolean> => existingPaths.has(targetPath),
+			findOnPath: async (): Promise<string | null> => null,
+			runCommand: async (command: string, args: string[]): Promise<string | null> => {
+				expect(command).toBe(vswherePath);
+				expect(args).toContain("Microsoft.VisualStudio.Component.CoreEditor");
+				return `${installPath}\r\n`;
+			}
+		});
+
+		expect(targets.map((target) => target.id)).toContain("visual-studio");
+	});
+
 	it("opens files and directories inside the workspace while keeping reveal file-only", async () => {
 		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
 		const filePath: string = join(root, "README.md");
