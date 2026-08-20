@@ -138,6 +138,7 @@ Daedalus Studio 正在积极开发中。会话和项目数据以持久、可恢�
 
 - [Daedalus Backend](https://github.com/LuYingYiLong/daedalus-backend)：运行时、会话、供应商、Workflow、工具、MCP 与 Godot 服务。
 - [Godot Daedalus](https://github.com/LuYingYiLong/godot-daedalus)：Godot 编辑器插件与 Editor Bridge。
+- [Daedalus docs](https://daedalus-docs.readthedocs.io/zh-cn/latest/)：Daedalus文档
 
 ## 许可证
 
