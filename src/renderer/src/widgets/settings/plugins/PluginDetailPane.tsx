@@ -1,14 +1,8 @@
-import {
-	Alert,
-	Button,
-	Flex,
-	Space,
-	Tabs,
-	TabsProps,
-	Tag,
-	Typography,
-} from "antd";
+import { Alert, Button, Empty, Flex, Space, Tabs, Tag, Typography } from "antd";
+import type { TabsProps } from "antd";
 import { useTranslation } from "react-i18next";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Icon } from "@/assets/icons";
 import SettingsItem from "@/ui/SettingsItem";
 import SettingsList from "@/ui/SettingsList";
@@ -21,21 +15,6 @@ import {
 import { PluginRuntimeSection } from "./PluginRuntimeSection";
 import { PluginLogList } from "./PluginLogList";
 import styles from "./plugins.module.css";
-import { t } from "i18next";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-
-const tabItems: TabsProps["items"] = [
-	{
-		key: "details",
-		label: t("settings.plugins.details"),
-		children: (
-			<section>
-				<Markdown remarkPlugins={[remarkGfm]}></Markdown>
-			</section>
-		),
-	},
-];
 
 export function PluginDetailPane({
 	plugin,
@@ -61,7 +40,7 @@ export function PluginDetailPane({
 	logs: import("@/platform/rpc/plugin-api").PluginRuntimeLog[];
 }): React.JSX.Element {
 	const { t } = useTranslation();
-	if (plugin === undefined)
+	if (plugin === undefined) {
 		return (
 			<div className={styles.emptyDetail}>
 				<Typography.Text type="secondary">
@@ -69,43 +48,40 @@ export function PluginDetailPane({
 				</Typography.Text>
 			</div>
 		);
-	return (
-		<div className={styles.pluginDetailPane}>
-			<div className={styles.detailHeader}>
-				<Flex justify="space-between" align="center">
-					<Typography.Title level={3} className={styles.detailTitle}>
-						{plugin.packageName}
-					</Typography.Title>
-					<Tag
-						color={classificationColor(
-							plugin.compatibility.classification,
-						)}
-					>
-						{t(
-							`settings.plugins.classification.${plugin.compatibility.classification}`,
-						)}
-					</Tag>
-				</Flex>
+	}
 
-				<Typography.Text type="secondary">
-					{plugin.version}
-				</Typography.Text>
+	const presentation = plugin.presentation;
+	const description: string | undefined =
+		presentation?.description?.trim() || undefined;
+	const readme: string | undefined =
+		presentation?.readme?.trim() || undefined;
+	const changelog: string | undefined =
+		presentation?.changelog?.trim() || undefined;
 
-				<Flex gap="small">
-					<Button
-						danger
-						size="small"
-						type="primary"
-						icon={<Icon name="remove" />}
-						loading={busy}
-						onClick={(): void => onRemove(plugin)}
-					>
-						{t("settings.plugins.actions.remove")}
-					</Button>
-				</Flex>
-			</div>
-
-			<Tabs defaultActiveKey="details" items={tabItems} />
+	const featureContent: React.JSX.Element = (
+		<div className={styles.featureContent}>
+			<SettingsList title={t("settings.plugins.sections.impact")}>
+				<SettingsItem
+					title={t("settings.plugins.items.impactCapabilities")}
+					description={t(
+						"settings.plugins.items.impactCapabilitiesDescription",
+					)}
+				>
+					{plugin.nativePlugin ? (
+						<Space>
+							{plugin.nativePlugin.capabilities.map(
+								(capability): React.JSX.Element => (
+									<Tag key={capability}>{capability}</Tag>
+								),
+							)}
+						</Space>
+					) : (
+						<Typography.Text type="secondary">
+							{t("settings.plugins.items.notDeclared")}
+						</Typography.Text>
+					)}
+				</SettingsItem>
+			</SettingsList>
 
 			<SettingsList title={t("settings.plugins.sections.status")}>
 				<SettingsItem
@@ -155,6 +131,7 @@ export function PluginDetailPane({
 					</Button>
 				</SettingsItem>
 			</SettingsList>
+
 			<SettingsList title={t("settings.plugins.sections.nativeRuntime")}>
 				<SettingsItem
 					title={t("settings.plugins.items.nativeEntry")}
@@ -183,6 +160,7 @@ export function PluginDetailPane({
 					</Tag>
 				</SettingsItem>
 			</SettingsList>
+
 			<PluginRuntimeSection
 				plugin={plugin}
 				busy={busy}
@@ -190,6 +168,7 @@ export function PluginDetailPane({
 				onStop={onStop}
 				onInstallDependencies={onInstallDependencies}
 			/>
+
 			<SettingsList title={t("settings.plugins.sections.compatibility")}>
 				<SettingsItem
 					title={t("settings.plugins.items.harnessBundle")}
@@ -238,6 +217,7 @@ export function PluginDetailPane({
 					<Tag color="success">{t("settings.plugins.scanned")}</Tag>
 				</SettingsItem>
 			</SettingsList>
+
 			{plugin.compatibility.unsupportedFeatures.length > 0 ? (
 				<Alert
 					type="warning"
@@ -270,6 +250,7 @@ export function PluginDetailPane({
 					}
 				/>
 			) : null}
+
 			<SettingsList title={t("settings.plugins.runtime.logs")}>
 				<PluginLogList logs={logs} />
 			</SettingsList>
@@ -286,6 +267,118 @@ export function PluginDetailPane({
 					{plugin.fingerprint.slice(0, 12)}…
 				</Typography.Text>
 			</Flex>
+		</div>
+	);
+
+	const tabItems: TabsProps["items"] = [
+		{
+			key: "details",
+			label: t("settings.plugins.details"),
+			children: (
+				<div className={styles.markdownPane}>
+					{description ? (
+						<Typography.Paragraph type="secondary">
+							{description}
+						</Typography.Paragraph>
+					) : null}
+					{readme ? (
+						<Markdown remarkPlugins={[remarkGfm]}>
+							{readme}
+						</Markdown>
+					) : (
+						<Empty
+							image={Empty.PRESENTED_IMAGE_SIMPLE}
+							description={t("settings.plugins.noReadme")}
+						/>
+					)}
+				</div>
+			),
+		},
+		{
+			key: "features",
+			label: t("settings.plugins.features"),
+			children: featureContent,
+		},
+		{
+			key: "changelog",
+			label: t("settings.plugins.changelog"),
+			children: changelog ? (
+				<div className={styles.markdownPane}>
+					<Markdown remarkPlugins={[remarkGfm]}>{changelog}</Markdown>
+				</div>
+			) : (
+				<Empty
+					image={Empty.PRESENTED_IMAGE_SIMPLE}
+					description={t("settings.plugins.noChangelog")}
+				/>
+			),
+		},
+	];
+
+	return (
+		<div className={styles.pluginDetailPane}>
+			<div className={styles.detailHeader}>
+				<Flex justify="space-between" align="center" gap="middle">
+					<Flex
+						align="center"
+						gap="small"
+						className={styles.identity}
+					>
+						<div className={styles.pluginIcon} aria-hidden="true">
+							{presentation?.iconDataUrl ? (
+								<img
+									src={presentation.iconDataUrl}
+									alt=""
+									className={styles.pluginIconImage}
+								/>
+							) : (
+								<Icon
+									name="plugin"
+									className={styles.pluginIconFallback}
+								/>
+							)}
+						</div>
+						<div className={styles.identityText}>
+							<Flex align="center" gap="small">
+								<Typography.Title
+									level={3}
+									className={styles.detailTitle}
+								>
+									{plugin.packageName}
+								</Typography.Title>
+							</Flex>
+							<Flex align="center" gap="small">
+								<Typography.Text type="secondary">
+									{plugin.version}
+								</Typography.Text>
+								<Tag
+									color={classificationColor(
+										plugin.compatibility.classification,
+									)}
+								>
+									{t(
+										`settings.plugins.classification.${plugin.compatibility.classification}`,
+									)}
+								</Tag>
+							</Flex>
+							<Space>
+								<Button
+									danger
+									size="small"
+									type="primary"
+									icon={<Icon name="remove" />}
+									loading={busy}
+									onClick={(): void => onRemove(plugin)}
+								>
+									{t("settings.plugins.actions.remove")}
+								</Button>
+							</Space>
+						</div>
+					</Flex>
+				</Flex>
+			</div>
+
+			<Tabs defaultActiveKey="details" items={tabItems} />
 		</div>
 	);
 }

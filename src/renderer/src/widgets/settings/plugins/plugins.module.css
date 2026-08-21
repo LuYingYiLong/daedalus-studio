@@ -94,6 +94,59 @@
 	padding: 0 var(--ds-space-2) var(--ds-space-2) 0;
 }
 
+.identity {
+	min-width: 0;
+}
+
+.identityText {
+	display: grid;
+	gap: var(--ds-space-1);
+	min-width: 0;
+}
+
+.pluginIcon {
+	display: grid;
+	place-items: center;
+	flex: 0 0 40px;
+	min-width: 80px;
+	min-height: 80px;
+	overflow: hidden;
+	border-radius: var(--ds-radius-sm);
+}
+
+.pluginIconImage {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+.pluginIconFallback {
+	width: 80px !important;
+	height: 80px !important;
+	color: var(--ant-color-primary);
+}
+
+.featureContent {
+	display: grid;
+	align-content: start;
+	min-width: 0;
+}
+
+.markdownPane {
+	min-width: 0;
+	padding: 8px 0 16px;
+}
+
+.markdownPane :global(.ant-typography) {
+	max-width: 100%;
+}
+
+.markdownPane :global(pre) {
+	max-width: 100%;
+	overflow: auto;
+}
+
 .title,
 .detailTitle {
 	margin: 0 !important;

@@ -18,6 +18,13 @@ export type PluginCompatibility = {
 	classification: "native" | "harness-bundle" | "harness-client" | "both" | "metadata-only" | "unsupported";
 };
 
+export type PluginPresentation = {
+	description?: string;
+	readme?: string;
+	changelog?: string;
+	iconDataUrl?: string;
+};
+
 export type PluginRecord = {
 	id: string;
 	packageName: string;
@@ -33,6 +40,7 @@ export type PluginRecord = {
 	installedAt: string;
 	updatedAt: string;
 	lastError?: string;
+	presentation?: PluginPresentation;
 	nativePlugin?: { apiVersion: number; entry: string; capabilities: Array<"tools" | "skills" | "hooks" | "mcp"> };
 	dependencyLockHash?: string;
 	runtime?: PluginRuntimeSnapshot;
@@ -83,6 +91,7 @@ export type PluginScanResult = {
 	manifestHash: string;
 	contentHash: string;
 	compatibility: PluginCompatibility;
+	presentation?: PluginPresentation;
 };
 
 export async function fetchPluginCatalog(): Promise<PluginCatalogResult> {

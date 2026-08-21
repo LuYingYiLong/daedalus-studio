@@ -1559,6 +1559,11 @@
 			"noMatches": "没有匹配的插件",
 			"searchPlaceholder": "搜索插件",
 			"selectPrompt": "选择一个插件查看兼容性和信任状态。",
+			"details": "详情",
+			"features": "功能",
+			"changelog": "更新日志",
+			"noReadme": "暂无 README.md",
+			"noChangelog": "暂无 CHANGELOG.md",
 			"yes": "是",
 			"no": "否",
 			"scanned": "已扫描",
@@ -1580,10 +1585,13 @@
 			"sections": {
 				"status": "状态",
 				"compatibility": "兼容性",
-				"nativeRuntime": "原生运行时"
+				"nativeRuntime": "原生运行时",
+				"impact": "插件会修改什么"
 			},
 			"items": {
 				"source": "来源",
+				"impactCapabilities": "接入能力",
+				"impactCapabilitiesDescription": "这些能力描述插件可能接入的 Daedalus 区域；实际调用仍受信任状态、工具策略和审批控制。",
 				"trust": "信任状态",
 				"enabled": "Profile 状态",
 				"enabledDescription": "启用状态保存到当前 Profile；已信任插件只会在首次使用能力时启动。",

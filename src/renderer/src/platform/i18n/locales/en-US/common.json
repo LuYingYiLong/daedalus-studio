@@ -1566,6 +1566,11 @@
 			"noMatches": "No matching plugins",
 			"searchPlaceholder": "Search plugins",
 			"selectPrompt": "Select a plugin to inspect its compatibility and trust state.",
+			"details": "Details",
+			"features": "Features",
+			"changelog": "Changelog",
+			"noReadme": "No README.md available",
+			"noChangelog": "No CHANGELOG.md available",
 			"yes": "Yes",
 			"no": "No",
 			"scanned": "Scanned",
@@ -1587,10 +1592,13 @@
 			"sections": {
 				"status": "Status",
 				"compatibility": "Compatibility",
-				"nativeRuntime": "Native runtime"
+				"nativeRuntime": "Native runtime",
+				"impact": "What this plugin can change"
 			},
 			"items": {
 				"source": "Source",
+				"impactCapabilities": "Declared capabilities",
+				"impactCapabilitiesDescription": "These capabilities describe the Daedalus areas the plugin may connect to. Trust, tool policy, and approval still control actual calls.",
 				"trust": "Trust",
 				"enabled": "Profile status",
 				"enabledDescription": "Enablement is stored for the active profile. Trusted plugins start only when their capability is first used.",
