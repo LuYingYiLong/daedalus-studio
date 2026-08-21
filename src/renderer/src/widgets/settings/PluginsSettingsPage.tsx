@@ -1,4 +1,4 @@
-import { Alert, App, Button, Typography } from "antd";
+import { Alert, App, Button, Tooltip, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
@@ -236,20 +236,14 @@ function PluginsSettingsPage(): React.JSX.Element {
 				/>
 			</aside>
 			<section className={styles.detailPane}>
-				<header className={styles.detailToolbar}>
-					<Typography.Title level={3} className={styles.title}>
-						{t("settings.plugins.title")}
-					</Typography.Title>
-					<Button
-						aria-label={t("settings.plugins.actions.refresh")}
-						icon={<Icon name="reload" />}
-						onClick={(): void => {
-							setLoading(true);
-							void refresh();
-						}}
+				{error !== null ? (
+					<Alert
+						type="error"
+						showIcon
+						className={styles.alert}
+						title={error}
 					/>
-				</header>
-				{error !== null ? <Alert type="error" showIcon className={styles.alert} message={error} /> : null}
+				) : null}
 				<div className={styles.detailScroll}>
 					<PluginDetailPane
 						plugin={selectedPlugin}

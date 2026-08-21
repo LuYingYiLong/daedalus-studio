@@ -1,4 +1,8 @@
-import type { PluginCatalogResult, PluginRecord, PluginSource } from "@/platform/rpc/plugin-api";
+import type {
+	PluginCatalogResult,
+	PluginRecord,
+	PluginSource,
+} from "@/platform/rpc/plugin-api";
 
 export type InstallSourceType = PluginSource["type"];
 export type PluginPageProps = {
