@@ -15,16 +15,22 @@ import {
 	Typography,
 } from "antd";
 import { useTranslation } from "react-i18next";
+import type { MenuProps } from "antd";
 import { Icon } from "@/assets/icons";
 import type {
 	ScheduledTask,
 	ScheduledTaskRun,
 } from "../../../../contracts/scheduled-tasks";
 import styles from "./ScheduledTasksPage.module.css";
+import ManualScheduledTaskModal from "./ManualScheduledTaskModal";
 
 type Props = {
 	onCreate: () => void;
 	onOpenSession: (sessionId: string) => void;
+	defaultWorkspaceId: string | null;
+	defaultProviderId: string | null;
+	defaultModelId: string | null;
+	defaultReasoningEffort: string | null;
 };
 
 function formatDate(value: string | null, locale: string): string {
@@ -39,6 +45,10 @@ function formatDate(value: string | null, locale: string): string {
 export default function ScheduledTasksPage({
 	onCreate,
 	onOpenSession,
+	defaultWorkspaceId,
+	defaultProviderId,
+	defaultModelId,
+	defaultReasoningEffort,
 }: Props): React.JSX.Element {
 	const { t, i18n } = useTranslation();
 	const { message } = App.useApp();
@@ -51,6 +61,7 @@ export default function ScheduledTasksPage({
 	>("all");
 	const [loadingId, setLoadingId] = useState<string | null>(null);
 	const [platformSupported, setPlatformSupported] = useState(true);
+	const [manualCreateOpen, setManualCreateOpen] = useState(false);
 
 	const load = useCallback(async (): Promise<void> => {
 		const [result, nextRuns] = await Promise.all([
@@ -121,6 +132,14 @@ export default function ScheduledTasksPage({
 			}),
 		[filter, query, runs, tasks],
 	);
+	const createMenuItems: MenuProps["items"] = [
+		{ key: "ai", label: t("scheduledTasks.createWithAi") },
+		{ key: "manual", label: t("scheduledTasks.createManually") },
+	];
+	const handleCreateMenu: MenuProps["onClick"] = ({ key }): void => {
+		if (key === "ai") onCreate();
+		else if (key === "manual") setManualCreateOpen(true);
+	};
 
 	const action = async (
 		task: ScheduledTask,
@@ -184,9 +203,9 @@ export default function ScheduledTasksPage({
 							disabled={!platformSupported}
 							onClick={onCreate}
 						>
-							{t("scheduledTasks.create")}
+							{t("scheduledTasks.createWithAi")}
 						</Button>
-						<Dropdown trigger={["click"]}>
+						<Dropdown trigger={["click"]} menu={{ items: createMenuItems, onClick: handleCreateMenu }}>
 							<Button
 								type="primary"
 								icon={<Icon name="arrow-down" />}
@@ -364,7 +383,9 @@ export default function ScheduledTasksPage({
 								{t("scheduledTasks.environment")}
 							</Typography.Title>
 							<Typography.Paragraph type="secondary">
-								{selected.context === null
+								{selected.target?.kind === "existing_session"
+									? t("scheduledTasks.existingSessionTarget", { sessionId: selected.target.sessionId })
+									: selected.context === null
 									? t("scheduledTasks.noModel")
 									: `${selected.context.workspaceId ?? t("scheduledTasks.noWorkspace")} · ${selected.context.provider}/${selected.context.model}${selected.context.reasoningEffort === null ? "" : ` · ${selected.context.reasoningEffort}`} · ${selected.context.executionPolicy === "auto_safe" ? t("scheduledTasks.autoSafe") : t("scheduledTasks.readOnly")}`}
 							</Typography.Paragraph>
@@ -427,6 +448,19 @@ export default function ScheduledTasksPage({
 					</div>
 				) : null}
 			</Drawer>
+			<ManualScheduledTaskModal
+				open={manualCreateOpen}
+				defaultWorkspaceId={defaultWorkspaceId}
+				defaultProviderId={defaultProviderId}
+				defaultModelId={defaultModelId}
+				defaultReasoningEffort={defaultReasoningEffort}
+				onCancel={(): void => setManualCreateOpen(false)}
+				onCreated={async (): Promise<void> => {
+					setManualCreateOpen(false);
+					await load();
+					void message.success(t("scheduledTasks.manual.created"));
+				}}
+			/>
 		</section>
 	);
 }

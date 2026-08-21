@@ -5,6 +5,7 @@ import { backendManager } from "../backend-manager";
 
 type RunOutcome = {
 	sessionId: string;
+	queueId?: number;
 	summary: string;
 	awaitingApproval: boolean;
 	report: { changed: boolean; summary: string } | null;
@@ -31,8 +32,14 @@ function readRecord(value: unknown): Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
-export async function runScheduledTaskWithBackend(task: ScheduledTask, runId: string, scheduledAt: string): Promise<RunOutcome> {
-	if (task.context === null) throw new Error("scheduled_task_context_missing");
+export async function runScheduledTaskWithBackend(
+	task: ScheduledTask,
+	runId: string,
+	scheduledAt: string,
+	onQueueState?: (state: { queueId: number; started: boolean }) => void | Promise<void>,
+): Promise<RunOutcome> {
+	const target = task.target ?? (task.context === null ? null : { kind: "new_session" as const, context: task.context });
+	if (target === null) throw new Error("scheduled_task_target_missing");
 	let connection: Awaited<ReturnType<typeof backendManager.getReadyConnectionInfo>>;
 	try {
 		connection = await backendManager.getReadyConnectionInfo();
@@ -47,6 +54,8 @@ export async function runScheduledTaskWithBackend(task: ScheduledTask, runId: st
 	let agentError: string | null = null;
 	const reportState: { value: { changed: boolean; summary: string } | null } = { value: null };
 	let finishRun: (() => void) | null = null;
+	let queueId: number | undefined;
+	let queueStarted: boolean = target.kind === "new_session";
 
 	const request = <T>(method: string, params: Record<string, unknown> = {}): Promise<T> => {
 		const id: string = `scheduler-${randomUUID()}`;
@@ -79,14 +88,28 @@ export async function runScheduledTaskWithBackend(task: ScheduledTask, runId: st
 			}
 			return;
 		}
-		if (message.event === "agent.message.done") {
+		if (message.event === "message.queue.updated" && queueId !== undefined) {
+			const data = readRecord(message.data);
+			const items = Array.isArray(data.messageQueue) ? data.messageQueue : [];
+			const own = items.map(readRecord).find((item): boolean => item.id === queueId);
+			if ((own?.status === "sending" || own?.status === "approval") && !queueStarted) {
+				queueStarted = true;
+				void onQueueState?.({ queueId, started: true });
+			}
+			if (own?.status === "failed" || own?.status === "cancelled" || own?.status === "rejected") {
+				agentError = `scheduled_task_queue_${String(own.status)}`;
+				finishRun?.();
+			}
+			return;
+		}
+		if (message.event === "agent.message.done" && queueStarted) {
 			const data = readRecord(message.data);
 			if (typeof data.text === "string") finalText = data.text;
 			finishRun?.();
-		} else if (message.event === "agent.tool.approval_required") {
+		} else if (message.event === "agent.tool.approval_required" && queueStarted) {
 			awaitingApproval = true;
 			finishRun?.();
-		} else if (message.event === "agent.run.error") {
+		} else if (message.event === "agent.run.error" && queueStarted) {
 			const data = readRecord(message.data);
 			agentError = typeof data.message === "string" ? data.message : "Scheduled Agent run failed.";
 			finishRun?.();
@@ -109,17 +132,26 @@ export async function runScheduledTaskWithBackend(task: ScheduledTask, runId: st
 			clientName: "Daedalus Studio Scheduler",
 			capabilities: { scheduledTaskReport: task.kind === "monitor" },
 		});
-		const created = readRecord(await request("session.create", {
-			title: task.title,
-			workspaceId: task.context.workspaceId,
-			provider: task.context.provider,
-			model: task.context.model,
-			reasoningEffort: task.context.reasoningEffort ?? undefined,
-			chatMode: "agent",
-			approvalMode: task.context.executionPolicy === "auto_safe" ? "auto-safe" : "manual",
-			scheduledTaskOrigin: { taskId: task.id, runId, kind: task.kind, scheduledAt, executionPolicy: task.context.executionPolicy },
-		}));
-		sessionId = typeof created.id === "string" ? created.id : "";
+		if (target.kind === "new_session") {
+			const created = readRecord(await request("session.create", {
+				title: task.title,
+				workspaceId: target.context.workspaceId,
+				provider: target.context.provider,
+				model: target.context.model,
+				reasoningEffort: target.context.reasoningEffort ?? undefined,
+				chatMode: "agent",
+				approvalMode: target.context.executionPolicy === "auto_safe" ? "auto-safe" : "manual",
+				scheduledTaskOrigin: { taskId: task.id, runId, kind: task.kind, scheduledAt, executionPolicy: target.context.executionPolicy },
+			}));
+			sessionId = typeof created.id === "string" ? created.id : "";
+		} else {
+			const opened = readRecord(await request("session.open", { sessionId: target.sessionId, limit: 1 }));
+			const metadata = readRecord(opened.metadata);
+			if (metadata.archivedAt !== undefined) throw new Error("scheduled_task_target_archived");
+			const worktree = readRecord(metadata.worktree);
+			if (worktree.status === "unavailable" || worktree.status === "recovery-required") throw new Error("scheduled_task_target_worktree_unavailable");
+			sessionId = target.sessionId;
+		}
 		if (sessionId.length === 0) throw new Error("scheduled_task_session_create_invalid");
 
 		let completionTimer: ReturnType<typeof setTimeout> | null = null;
@@ -127,30 +159,48 @@ export async function runScheduledTaskWithBackend(task: ScheduledTask, runId: st
 			finishRun = resolve;
 			completionTimer = setTimeout((): void => reject(new Error("scheduled_task_agent_timeout")), 30 * 60_000);
 		});
-		const chatRequest = request("ai.chat", {
-			message: task.prompt,
-			mode: "agent",
-			provider: task.context.provider,
-			model: task.context.model,
-			options: {
-				stream: true,
-				reasoningEffort: task.context.reasoningEffort ?? undefined,
-				executionPolicy: task.context.executionPolicy === "auto_safe" ? "auto" : "read_only",
+		const chatRequest = target.kind === "new_session"
+			? request("ai.chat", {
+				message: task.prompt,
+				mode: "agent",
+				provider: target.context.provider,
+				model: target.context.model,
+				options: {
+					stream: true,
+					reasoningEffort: target.context.reasoningEffort ?? undefined,
+					executionPolicy: target.context.executionPolicy === "auto_safe" ? "auto" : "read_only",
+					outputTarget: "chat",
+				},
+			})
+			: request<Record<string, unknown>>("message.queue.add", {
+				text: task.prompt,
+				mode: "agent",
+				executionPolicy: "read_only",
 				outputTarget: "chat",
-			},
-		});
+				scheduledTaskOrigin: { taskId: task.id, runId, kind: task.kind, scheduledAt, executionPolicy: "read_only" },
+			}).then((result): Record<string, unknown> => {
+				const item = readRecord(result.item);
+				if (typeof item.id !== "number") throw new Error("scheduled_task_queue_add_invalid");
+				queueId = item.id;
+				void onQueueState?.({ queueId, started: false });
+				return result;
+			});
 		void chatRequest.catch((error: unknown): void => {
 			finalText = error instanceof Error ? error.message : String(error);
 			finishRun?.();
 		});
 		try {
+			await chatRequest;
 			await completion;
 		} finally {
 			if (completionTimer !== null) clearTimeout(completionTimer);
 		}
 		if (agentError !== null) throw new Error(agentError);
 		const monitorReport: { changed: boolean; summary: string } | null = reportState.value;
-		return { sessionId, summary: (monitorReport === null ? finalText : monitorReport.summary).slice(0, 4000), awaitingApproval, report: monitorReport };
+		return { sessionId, ...(queueId === undefined ? {} : { queueId }), summary: (monitorReport === null ? finalText : monitorReport.summary).slice(0, 4000), awaitingApproval, report: monitorReport };
+	} catch (error: unknown) {
+		if (queueId !== undefined && !queueStarted) await request("message.queue.remove", { queueId }).catch((): void => {});
+		throw error;
 	} finally {
 		for (const entry of pending.values()) entry.reject(new Error("scheduled_task_backend_disconnected"));
 		pending.clear();

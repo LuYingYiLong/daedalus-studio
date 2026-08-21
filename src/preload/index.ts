@@ -19,7 +19,7 @@ import type {
 	BrowserViewBounds,
 	BrowserViewState
 } from "../contracts/browser";
-import type { ScheduledTask, ScheduledTaskListResult, ScheduledTaskRun, ScheduledTaskToolRequest } from "../contracts/scheduled-tasks";
+import type { ManualScheduledTaskCreateInput, ScheduledTask, ScheduledTaskListResult, ScheduledTaskRun, ScheduledTaskToolRequest } from "../contracts/scheduled-tasks";
 
 type AppUpdateState = {
 	status: "idle" | "checking" | "available" | "downloading" | "downloaded" | "installing" | "not_available" | "error" | "unsupported";
@@ -294,6 +294,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
 	scheduledTasks: {
 		list: (): Promise<ScheduledTaskListResult> => ipcRenderer.invoke("scheduled-tasks:list"),
+		create: (input: ManualScheduledTaskCreateInput): Promise<ScheduledTask> => ipcRenderer.invoke("scheduled-tasks:create", input),
 		get: (taskId: string): Promise<ScheduledTask> => ipcRenderer.invoke("scheduled-tasks:get", taskId),
 		pause: (taskId: string): Promise<ScheduledTask> => ipcRenderer.invoke("scheduled-tasks:pause", taskId),
 		resume: (taskId: string): Promise<ScheduledTask> => ipcRenderer.invoke("scheduled-tasks:resume", taskId),

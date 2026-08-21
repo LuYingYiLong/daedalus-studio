@@ -2,6 +2,39 @@ export type ScheduledTaskKind = "reminder" | "agent" | "monitor";
 
 export type ScheduledTaskExecutionPolicy = "read_only" | "auto_safe";
 
+export type ScheduledTaskNotificationPolicy =
+	| "important_updates"
+	| "failures_only";
+
+export type ScheduledTaskTarget =
+	| {
+		kind: "new_session";
+		context: ScheduledTaskContextSnapshot;
+	}
+	| {
+		kind: "existing_session";
+		sessionId: string;
+	};
+
+export type ScheduledTaskRecurrenceFilter =
+	| {
+		unit: "day";
+		interval: number;
+		anchorDate: string;
+	}
+	| {
+		unit: "week";
+		interval: number;
+		anchorDate: string;
+		weekdays: number[];
+	}
+	| {
+		unit: "month";
+		interval: number;
+		anchorDate: string;
+		dayOfMonth: number;
+	};
+
 export type ScheduledTaskSchedule =
 	| {
 		kind: "once";
@@ -12,6 +45,7 @@ export type ScheduledTaskSchedule =
 		kind: "recurring";
 		cron: string;
 		timezone: string;
+		recurrence?: ScheduledTaskRecurrenceFilter;
 	};
 
 export type ScheduledTaskContextSnapshot = {
@@ -29,8 +63,11 @@ export type ScheduledTask = {
 	prompt: string;
 	scheduleDescription: string;
 	schedule: ScheduledTaskSchedule;
+	target: ScheduledTaskTarget | null;
+	notificationPolicy: ScheduledTaskNotificationPolicy;
+	/** @deprecated Read-only compatibility field for tasks created before targets existed. */
 	context: ScheduledTaskContextSnapshot | null;
-	createdBySessionId: string;
+	createdBySessionId: string | null;
 	enabled: boolean;
 	nextRunAt: string | null;
 	createdAt: string;
@@ -59,6 +96,8 @@ export type ScheduledTaskRun = {
 	startedAt?: string;
 	finishedAt?: string;
 	sessionId?: string;
+	targetSessionId?: string;
+	queueId?: number;
 	summary?: string;
 	error?: string;
 };
@@ -87,18 +126,27 @@ export type ScheduledTaskCreateInput = {
 	prompt: string;
 	scheduleDescription: string;
 	schedule: ScheduledTaskSchedule;
+	target: ScheduledTaskTarget | null;
+	notificationPolicy: ScheduledTaskNotificationPolicy;
 	context: ScheduledTaskContextSnapshot | null;
-	createdBySessionId: string;
+	createdBySessionId: string | null;
 };
 
 export type ScheduledTaskUpdateInput = Partial<
 	Pick<
 		ScheduledTask,
-		"title" | "kind" | "prompt" | "scheduleDescription" | "schedule" | "context"
+		"title" | "kind" | "prompt" | "scheduleDescription" | "schedule" | "target" | "notificationPolicy" | "context"
 	>
 > & {
 	taskId: string;
 	expectedRevision?: string;
+};
+
+export type ManualScheduledTaskCreateInput = Omit<
+	ScheduledTaskCreateInput,
+	"context" | "createdBySessionId"
+> & {
+	context?: ScheduledTaskContextSnapshot | null;
 };
 
 export type ScheduledTaskToolRequest = {
@@ -119,4 +167,3 @@ export type ScheduledTaskToolResult = {
 		retryable: boolean;
 	};
 };
-

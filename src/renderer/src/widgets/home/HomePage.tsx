@@ -3514,7 +3514,22 @@ function HomePage({
 								{renderComposer(true)}
 							</FullscreenComposerShelf>
 						) : null}
-						{mainSurface === "scheduledTasks" ? <div className={styles.scheduledTasksOverlay}><ScheduledTasksPage onCreate={createScheduledTask} onOpenSession={openScheduledTaskSession} /></div> : null}
+						{mainSurface === "scheduledTasks" ? (
+							<div className={styles.scheduledTasksOverlay}>
+								<ScheduledTasksPage
+									onCreate={createScheduledTask}
+									onOpenSession={openScheduledTaskSession}
+									defaultWorkspaceId={
+										isHome
+											? (homeWorkspace?.id ?? null)
+											: activeWorkspaceId
+									}
+									defaultProviderId={selectedProviderId}
+									defaultModelId={selectedModelId}
+									defaultReasoningEffort={reasoningEffort}
+								/>
+							</div>
+						) : null}
 					</div>
 				</Splitter.Panel>
 			</Splitter>

@@ -28,11 +28,22 @@
 		}
 	},
 	"scheduledTasks": {
-		"title": "定时任务", "search": "搜索任务...", "create": "新建任务", "prefill": "帮我安排一个定时任务：", "empty": "暂无定时任务", "windowsOnly": "后台调度首版仅支持 Windows；当前平台只能查看任务。",
+		"title": "定时任务", "search": "搜索任务...", "create": "新建任务", "createWithAi": "使用 AI 创建", "createManually": "手动创建", "prefill": "帮我安排一个定时任务：", "empty": "暂无定时任务", "windowsOnly": "后台调度首版仅支持 Windows；当前平台只能查看任务。",
 		"filters": { "all": "全部", "enabled": "已启用", "paused": "已暂停", "attention": "需处理" },
 		"kind": { "reminder": "提醒", "agent": "AI 任务", "monitor": "AI 监测" },
 		"nextRun": "下次：{{time}}", "runNow": "立即运行", "pause": "暂停", "resume": "恢复", "deleteConfirm": "删除此定时任务？", "enabled": "已启用", "paused": "已暂停",
-		"prompt": "任务内容", "environment": "固定环境", "noWorkspace": "无工作区", "noModel": "提醒任务不调用模型", "autoSafe": "自动安全", "readOnly": "只读", "history": "运行历史", "noRuns": "尚无运行记录", "openSession": "打开会话",
+		"prompt": "任务内容", "environment": "固定环境", "noWorkspace": "无项目", "noModel": "提醒任务不调用模型", "existingSessionTarget": "现有会话 · {{sessionId}}", "autoSafe": "自动安全", "readOnly": "只读", "history": "运行历史", "noRuns": "尚无运行记录", "openSession": "打开会话",
+		"manual": {
+			"title": "手动创建定时任务", "create": "创建任务", "cancel": "取消", "retry": "重试", "created": "定时任务已创建",
+			"fields": { "title": "任务标题", "prompt": "描述 AI 应该做什么", "kind": "任务类型", "runIn": "运行于", "workspace": "项目", "model": "模型", "reasoningEffort": "推理强度", "session": "会话", "repeat": "重复", "time": "时间", "customUnit": "重复单位", "interval": "间隔", "weekdays": "星期", "notification": "通知" },
+			"target": { "new_session": "新会话", "existing_session": "现有会话" },
+			"repeat": { "once": "不重复", "daily": "每天", "weekdays": "每个工作日", "weekly": "每周", "monthly": "每月", "custom": "自定义" },
+			"unit": { "day": "天", "week": "周", "month": "月" },
+			"weekday": { "0": "周日", "1": "周一", "2": "周二", "3": "周三", "4": "周四", "5": "周五", "6": "周六" },
+			"notification": { "important_updates": "重要更新", "failures_only": "仅限未成功运行" },
+			"validation": { "future": "请选择未来时间" },
+			"schedule": { "onceDescription": "{{time}} 运行一次", "dailyDescription": "每天 {{time}}", "weekdaysDescription": "每个工作日 {{time}}", "weeklyDescription": "每周（锚点 {{time}}）", "monthlyDescription": "每月 {{day}} 日 {{time}}", "customDayDescription": "每 {{interval}} 天 {{time}}", "customWeekDescription": "每 {{interval}} 周 {{time}}", "customMonthDescription": "每 {{interval}} 个月的 {{day}} 日 {{time}}" }
+		},
 		"status": { "queued": "排队中", "running": "运行中", "succeeded": "已完成", "unchanged": "无变化", "changed": "有变化", "awaiting_approval": "等待审批", "failed": "失败", "cancelled": "已取消" }
 	},
 	"app": {

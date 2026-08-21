@@ -28,11 +28,22 @@
 		}
 	},
 	"scheduledTasks": {
-		"title": "Scheduled tasks", "search": "Search tasks...", "create": "New task", "prefill": "Help me schedule a task: ", "empty": "No scheduled tasks", "windowsOnly": "Background scheduling is available on Windows in this release; this platform can only view tasks.",
+		"title": "Scheduled tasks", "search": "Search tasks...", "create": "New task", "createWithAi": "Create with AI", "createManually": "Create manually", "prefill": "Help me schedule a task: ", "empty": "No scheduled tasks", "windowsOnly": "Background scheduling is available on Windows in this release; this platform can only view tasks.",
 		"filters": { "all": "All", "enabled": "Enabled", "paused": "Paused", "attention": "Needs attention" },
 		"kind": { "reminder": "Reminder", "agent": "AI task", "monitor": "AI monitor" },
 		"nextRun": "Next: {{time}}", "runNow": "Run now", "pause": "Pause", "resume": "Resume", "deleteConfirm": "Delete this scheduled task?", "enabled": "Enabled", "paused": "Paused",
-		"prompt": "Task prompt", "environment": "Pinned environment", "noWorkspace": "No workspace", "noModel": "Reminders do not call a model", "autoSafe": "Auto safe", "readOnly": "Read only", "history": "Run history", "noRuns": "No runs yet", "openSession": "Open session",
+		"prompt": "Task prompt", "environment": "Pinned environment", "noWorkspace": "No project", "noModel": "Reminders do not call a model", "existingSessionTarget": "Existing session · {{sessionId}}", "autoSafe": "Auto safe", "readOnly": "Read only", "history": "Run history", "noRuns": "No runs yet", "openSession": "Open session",
+		"manual": {
+			"title": "Create scheduled task manually", "create": "Create task", "cancel": "Cancel", "retry": "Retry", "created": "Scheduled task created",
+			"fields": { "title": "Task title", "prompt": "Describe what the AI should do", "kind": "Task type", "runIn": "Run in", "workspace": "Project", "model": "Model", "reasoningEffort": "Reasoning effort", "session": "Session", "repeat": "Repeat", "time": "Time", "customUnit": "Repeat unit", "interval": "Interval", "weekdays": "Weekdays", "notification": "Notifications" },
+			"target": { "new_session": "New session", "existing_session": "Existing session" },
+			"repeat": { "once": "Does not repeat", "daily": "Daily", "weekdays": "Every weekday", "weekly": "Weekly", "monthly": "Monthly", "custom": "Custom" },
+			"unit": { "day": "Day", "week": "Week", "month": "Month" },
+			"weekday": { "0": "Sunday", "1": "Monday", "2": "Tuesday", "3": "Wednesday", "4": "Thursday", "5": "Friday", "6": "Saturday" },
+			"notification": { "important_updates": "Important updates", "failures_only": "Only unsuccessful runs" },
+			"validation": { "future": "Choose a future time" },
+			"schedule": { "onceDescription": "Once at {{time}}", "dailyDescription": "Daily at {{time}}", "weekdaysDescription": "Every weekday at {{time}}", "weeklyDescription": "Weekly (anchor {{time}})", "monthlyDescription": "Monthly on day {{day}} at {{time}}", "customDayDescription": "Every {{interval}} days at {{time}}", "customWeekDescription": "Every {{interval}} weeks at {{time}}", "customMonthDescription": "Every {{interval}} months on day {{day}} at {{time}}" }
+		},
 		"status": { "queued": "Queued", "running": "Running", "succeeded": "Succeeded", "unchanged": "Unchanged", "changed": "Changed", "awaiting_approval": "Awaiting approval", "failed": "Failed", "cancelled": "Cancelled" }
 	},
 	"app": {

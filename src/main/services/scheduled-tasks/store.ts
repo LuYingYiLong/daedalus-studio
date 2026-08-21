@@ -27,6 +27,22 @@ function computeRevision(task: Omit<ScheduledTask, "revision">): string {
 	return createHash("sha256").update(JSON.stringify(task)).digest("hex");
 }
 
+function normalizeContext(value: unknown): ScheduledTask["context"] {
+	if (!isRecord(value)) return null;
+	if (
+		typeof value.provider !== "string"
+		|| typeof value.model !== "string"
+		|| (value.executionPolicy !== "read_only" && value.executionPolicy !== "auto_safe")
+	) return null;
+	return {
+		workspaceId: typeof value.workspaceId === "string" ? value.workspaceId : null,
+		provider: value.provider,
+		model: value.model,
+		reasoningEffort: typeof value.reasoningEffort === "string" ? value.reasoningEffort : null,
+		executionPolicy: value.executionPolicy,
+	};
+}
+
 function normalizeTask(value: unknown): ScheduledTask | null {
 	if (!isRecord(value)) return null;
 	if (
@@ -36,7 +52,7 @@ function normalizeTask(value: unknown): ScheduledTask | null {
 		typeof value.prompt !== "string" ||
 		typeof value.scheduleDescription !== "string" ||
 		!isRecord(value.schedule) ||
-		typeof value.createdBySessionId !== "string" ||
+		(value.createdBySessionId !== null && typeof value.createdBySessionId !== "string") ||
 		typeof value.enabled !== "boolean" ||
 		typeof value.createdAt !== "string" ||
 		typeof value.updatedAt !== "string" ||
@@ -47,7 +63,24 @@ function normalizeTask(value: unknown): ScheduledTask | null {
 		(schedule.kind === "once" && typeof schedule.runAt === "string" && typeof schedule.timezone === "string") ||
 		(schedule.kind === "recurring" && typeof schedule.cron === "string" && typeof schedule.timezone === "string")
 	) {
-		return value as ScheduledTask;
+		const context = normalizeContext(value.context);
+		let target: ScheduledTask["target"] = null;
+		if (isRecord(value.target) && value.target.kind === "existing_session" && typeof value.target.sessionId === "string") {
+			target = { kind: "existing_session", sessionId: value.target.sessionId };
+		} else if (isRecord(value.target) && value.target.kind === "new_session") {
+			const targetContext = normalizeContext(value.target.context);
+			if (targetContext !== null) target = { kind: "new_session", context: targetContext };
+		} else if (context !== null) {
+			target = { kind: "new_session", context };
+		}
+		if (value.kind !== "reminder" && target === null) return null;
+		return {
+			...(value as unknown as ScheduledTask),
+			target,
+			notificationPolicy: value.notificationPolicy === "failures_only" ? "failures_only" : "important_updates",
+			context: target?.kind === "new_session" ? target.context : context,
+			createdBySessionId: typeof value.createdBySessionId === "string" ? value.createdBySessionId : null,
+		};
 	}
 	return null;
 }
@@ -128,9 +161,14 @@ export class ScheduledTaskStore {
 			}
 			const { taskId: _taskId, expectedRevision: _revision, ...patch } = input;
 			const nextSchedule = patch.schedule ?? current.schedule;
+			const nextTarget = patch.target
+				?? (patch.context !== undefined && patch.context !== null ? { kind: "new_session" as const, context: patch.context } : current.target);
+			const nextContext = nextTarget?.kind === "new_session" ? nextTarget.context : patch.context ?? current.context;
 			const base: Omit<ScheduledTask, "revision"> = {
 				...current,
 				...structuredClone(patch),
+				target: structuredClone(nextTarget),
+				context: structuredClone(nextContext),
 				nextRunAt: calculateNextRunAt(nextSchedule),
 				updatedAt: new Date().toISOString(),
 			};

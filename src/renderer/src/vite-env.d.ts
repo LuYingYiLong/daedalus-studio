@@ -21,7 +21,7 @@ import type {
 	BrowserViewBounds,
 	BrowserViewState
 } from "../../contracts/browser";
-import type { ScheduledTask, ScheduledTaskListResult, ScheduledTaskRun, ScheduledTaskToolRequest } from "../../contracts/scheduled-tasks";
+import type { ManualScheduledTaskCreateInput, ScheduledTask, ScheduledTaskListResult, ScheduledTaskRun, ScheduledTaskToolRequest } from "../../contracts/scheduled-tasks";
 
 export {};
 
@@ -444,6 +444,7 @@ declare global {
 		sessionCatalog: SessionCatalogAPI;
 		scheduledTasks: {
 			list: () => Promise<ScheduledTaskListResult>;
+			create: (input: ManualScheduledTaskCreateInput) => Promise<ScheduledTask>;
 			get: (taskId: string) => Promise<ScheduledTask>;
 			pause: (taskId: string) => Promise<ScheduledTask>;
 			resume: (taskId: string) => Promise<ScheduledTask>;

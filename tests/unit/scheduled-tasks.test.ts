@@ -22,6 +22,8 @@ describe("scheduled task storage and scheduling", (): void => {
 			prompt: "Check the build",
 			scheduleDescription: "Tomorrow",
 			schedule: { kind: "once", runAt: "2030-01-01T00:00:00.000Z", timezone: "UTC" },
+			target: null,
+			notificationPolicy: "important_updates",
 			context: null,
 			createdBySessionId: "session-test",
 		});
@@ -29,6 +31,26 @@ describe("scheduled task storage and scheduling", (): void => {
 		expect(advanced.enabled).toBe(false);
 		expect(advanced.nextRunAt).toBeNull();
 		expect(JSON.parse(await readFile(tasksPath, "utf8")).tasks).toHaveLength(1);
+	});
+
+	it("filters custom recurring schedules by their anchor interval", (): void => {
+		const next = calculateNextRunAt({
+			kind: "recurring",
+			cron: "0 9 * * *",
+			timezone: "UTC",
+			recurrence: { unit: "day", interval: 3, anchorDate: "2026-08-20" },
+		}, new Date("2026-08-21T10:00:00.000Z"));
+		expect(next).toBe("2026-08-23T09:00:00.000Z");
+	});
+
+	it("skips months that do not contain the configured day", (): void => {
+		const next = calculateNextRunAt({
+			kind: "recurring",
+			cron: "0 9 31 * *",
+			timezone: "UTC",
+			recurrence: { unit: "month", interval: 1, anchorDate: "2026-01-31", dayOfMonth: 31 },
+		}, new Date("2026-03-31T10:00:00.000Z"));
+		expect(next).toBe("2026-05-31T09:00:00.000Z");
 	});
 
 	it("keeps user content out of the Windows command line", (): void => {

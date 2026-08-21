@@ -5,6 +5,7 @@ import type {
 	ScheduledTask,
 	ScheduledTaskCreateInput,
 	ScheduledTaskListResult,
+	ManualScheduledTaskCreateInput,
 	ScheduledTaskRun,
 	ScheduledTaskRunTrigger,
 	ScheduledTaskToolRequest,
@@ -53,6 +54,13 @@ export class ScheduledTaskService {
 		this.registered = true;
 		ipcMain.handle("scheduled-tasks:list", async (event): Promise<ScheduledTaskListResult> => { assertAllowedSender(event.sender); return await this.list(); });
 		ipcMain.handle("scheduled-tasks:get", async (event, taskId: string): Promise<ScheduledTask> => { assertAllowedSender(event.sender); return await this.store.getTask(taskId); });
+		ipcMain.handle("scheduled-tasks:create", async (event, value: unknown): Promise<ScheduledTask> => {
+			assertAllowedSender(event.sender);
+			if (process.platform !== "win32") throw new Error("scheduled_tasks_windows_only");
+			const task = await this.store.create(this.readManualCreate(value));
+			await this.changed();
+			return task;
+		});
 		ipcMain.handle("scheduled-tasks:pause", async (event, taskId: string): Promise<ScheduledTask> => { assertAllowedSender(event.sender); return await this.setEnabled(taskId, false); });
 		ipcMain.handle("scheduled-tasks:resume", async (event, taskId: string): Promise<ScheduledTask> => { assertAllowedSender(event.sender); return await this.setEnabled(taskId, true); });
 		ipcMain.handle("scheduled-tasks:run-now", async (event, taskId: string): Promise<{ queued: true }> => {
@@ -109,7 +117,7 @@ export class ScheduledTaskService {
 				const taskId = text(args.taskId, "id", 160);
 				const patch: ScheduledTaskUpdateInput = { taskId };
 				if (typeof args.expectedRevision === "string") patch.expectedRevision = args.expectedRevision;
-				for (const key of ["title", "kind", "prompt", "scheduleDescription", "schedule", "context"] as const) if (Object.hasOwn(args, key)) (patch as Record<string, unknown>)[key] = args[key];
+				for (const key of ["title", "kind", "prompt", "scheduleDescription", "schedule", "target", "notificationPolicy", "context"] as const) if (Object.hasOwn(args, key)) (patch as Record<string, unknown>)[key] = args[key];
 				const task = await this.store.update(patch);
 				await this.changed();
 				return { updated: true, task };
@@ -125,7 +133,7 @@ export class ScheduledTaskService {
 				const task = await this.store.getTask(run.taskId);
 				if (task.kind !== "monitor") throw new Error("scheduled_task_report_not_monitor");
 				const next = await this.store.updateRun(run.id, { status: args.changed ? "changed" : "unchanged", summary, finishedAt: new Date().toISOString() });
-				if (args.changed) this.notify(task, next, "scheduled_changed", task.title, summary);
+				if (args.changed && task.notificationPolicy === "important_updates") this.notify(task, next, "scheduled_changed", task.title, summary);
 				this.broadcastRun(next);
 				await this.changed();
 				return { accepted: true };
@@ -149,7 +157,64 @@ export class ScheduledTaskService {
 			context = { workspaceId: typeof value.workspaceId === "string" ? value.workspaceId : null, provider: text(value.provider, "provider", 80), model: text(value.model, "model", 200), reasoningEffort: typeof value.reasoningEffort === "string" ? value.reasoningEffort : null, executionPolicy: value.executionPolicy };
 		}
 		if (args.kind !== "reminder" && context === null) throw new Error("scheduled_task_context_required");
-		return { title: text(args.title, "title", 120), kind: args.kind, prompt: text(args.prompt, "prompt", 20_000), scheduleDescription: text(args.scheduleDescription, "schedule_description", 500), schedule: parsedSchedule, context, createdBySessionId: sessionId };
+		return {
+			title: text(args.title, "title", 120),
+			kind: args.kind,
+			prompt: text(args.prompt, "prompt", 20_000),
+			scheduleDescription: text(args.scheduleDescription, "schedule_description", 500),
+			schedule: parsedSchedule,
+			target: context === null ? null : { kind: "new_session", context },
+			notificationPolicy: "important_updates",
+			context,
+			createdBySessionId: sessionId,
+		};
+	}
+
+	private readManualCreate(value: unknown): ScheduledTaskCreateInput {
+		const input = asRecord(value) as Partial<ManualScheduledTaskCreateInput>;
+		if (input.kind !== "agent" && input.kind !== "monitor") throw new Error("scheduled_task_kind_invalid");
+		if (input.notificationPolicy !== "important_updates" && input.notificationPolicy !== "failures_only") throw new Error("scheduled_task_notification_policy_invalid");
+		const scheduleValue = asRecord(input.schedule);
+		const recurrence = scheduleValue.recurrence;
+		const schedule = scheduleValue.kind === "once"
+			? { kind: "once" as const, runAt: text(scheduleValue.runAt, "run_at", 100), timezone: text(scheduleValue.timezone, "timezone", 100) }
+			: scheduleValue.kind === "recurring"
+				? {
+					kind: "recurring" as const,
+					cron: text(scheduleValue.cron, "cron", 120),
+					timezone: text(scheduleValue.timezone, "timezone", 100),
+					...(recurrence === undefined ? {} : { recurrence: structuredClone(recurrence) as NonNullable<Extract<ScheduledTaskCreateInput["schedule"], { kind: "recurring" }>["recurrence"]> }),
+				}
+				: (() => { throw new Error("scheduled_task_schedule_invalid"); })();
+		const targetValue = asRecord(input.target);
+		let target: ScheduledTaskCreateInput["target"];
+		if (targetValue.kind === "existing_session") {
+			target = { kind: "existing_session", sessionId: text(targetValue.sessionId, "session_id", 160) };
+		} else if (targetValue.kind === "new_session") {
+			const contextValue = asRecord(targetValue.context);
+			if ((contextValue.executionPolicy !== "read_only" && contextValue.executionPolicy !== "auto_safe") || typeof contextValue.provider !== "string" || typeof contextValue.model !== "string") throw new Error("scheduled_task_context_invalid");
+			target = {
+				kind: "new_session",
+				context: {
+					workspaceId: typeof contextValue.workspaceId === "string" ? contextValue.workspaceId : null,
+					provider: text(contextValue.provider, "provider", 80),
+					model: text(contextValue.model, "model", 200),
+					reasoningEffort: typeof contextValue.reasoningEffort === "string" ? contextValue.reasoningEffort : null,
+					executionPolicy: contextValue.executionPolicy,
+				},
+			};
+		} else throw new Error("scheduled_task_target_invalid");
+		return {
+			title: text(input.title, "title", 120),
+			kind: input.kind,
+			prompt: text(input.prompt, "prompt", 20_000),
+			scheduleDescription: text(input.scheduleDescription, "schedule_description", 500),
+			schedule,
+			target,
+			notificationPolicy: input.notificationPolicy,
+			context: target.kind === "new_session" ? target.context : null,
+			createdBySessionId: null,
+		};
 	}
 
 	private async setEnabled(taskId: string, enabled: boolean): Promise<ScheduledTask> {
@@ -166,7 +231,7 @@ export class ScheduledTaskService {
 		if (task.kind === "monitor" && (run.status === "changed" || run.status === "unchanged") && input.status === "succeeded") return { reconciled: true };
 		const summary = typeof input.summary === "string" ? input.summary.slice(0, 4000) : undefined;
 		const next = await this.store.updateRun(run.id, { status: input.status, ...(input.status === "failed" ? { error: summary ?? "Scheduled run failed." } : { summary }), ...(input.status === "awaiting_approval" ? {} : { finishedAt: new Date().toISOString() }) });
-		if (input.status === "succeeded") this.notify(task, next, "scheduled_completed", task.title, summary ?? "Scheduled task completed.");
+		if (input.status === "succeeded" && task.notificationPolicy === "important_updates") this.notify(task, next, "scheduled_completed", task.title, summary ?? "Scheduled task completed.");
 		else if (input.status === "failed") this.notify(task, next, "scheduled_failed", task.title, summary ?? "Scheduled task failed.");
 		else this.notify(task, next, "scheduled_approval_required", task.title, "This task needs your approval to continue.");
 		this.broadcastRun(next); await this.changed(); return { reconciled: true };
@@ -175,7 +240,10 @@ export class ScheduledTaskService {
 
 	private async runTask(task: ScheduledTask, trigger: ScheduledTaskRunTrigger): Promise<void> {
 		const scheduledAt = task.nextRunAt ?? new Date().toISOString();
-		const run: ScheduledTaskRun = { id: `run-${randomUUID()}`, taskId: task.id, trigger, status: "running", scheduledAt, startedAt: new Date().toISOString() };
+		const activeRun = (await this.store.listRuns(task.id)).find((candidate): boolean => candidate.status === "queued" || candidate.status === "running" || candidate.status === "awaiting_approval");
+		if (activeRun !== undefined) return;
+		const targetSessionId = task.target?.kind === "existing_session" ? task.target.sessionId : undefined;
+		const run: ScheduledTaskRun = { id: `run-${randomUUID()}`, taskId: task.id, trigger, status: "running", scheduledAt, startedAt: new Date().toISOString(), ...(targetSessionId === undefined ? {} : { targetSessionId }) };
 		await this.store.appendRun(run); this.broadcastRun(run);
 		if (trigger !== "manual") await this.store.advance(task.id, new Date());
 		try {
@@ -186,7 +254,10 @@ export class ScheduledTaskService {
 			} else {
 				let result: Awaited<ReturnType<typeof runScheduledTaskWithBackend>>;
 				try {
-					result = await runScheduledTaskWithBackend(task, run.id, scheduledAt);
+					result = await runScheduledTaskWithBackend(task, run.id, scheduledAt, async (state): Promise<void> => {
+						const updated = await this.store.updateRun(run.id, { queueId: state.queueId, status: state.started ? "running" : "queued" });
+						this.broadcastRun(updated);
+					});
 				} catch (error: unknown) {
 					if (trigger === "manual" || !(error instanceof ScheduledTaskBackendStartupError)) throw error;
 					const queued = await this.store.updateRun(run.id, { status: "queued", error: error.message.slice(0, 4000) });
@@ -195,20 +266,26 @@ export class ScheduledTaskService {
 					await this.store.getTask(task.id);
 					const retrying = await this.store.updateRun(run.id, { status: "running", startedAt: new Date().toISOString() });
 					this.broadcastRun(retrying);
-					result = await runScheduledTaskWithBackend(task, run.id, scheduledAt);
+					result = await runScheduledTaskWithBackend(task, run.id, scheduledAt, async (state): Promise<void> => {
+						const updated = await this.store.updateRun(run.id, { queueId: state.queueId, status: state.started ? "running" : "queued" });
+						this.broadcastRun(updated);
+					});
 				}
 				if (task.kind === "monitor" && result.report === null) throw new Error("scheduled_task_monitor_report_missing");
 				const status = result.awaitingApproval ? "awaiting_approval" : task.kind === "monitor" ? (result.report?.changed ? "changed" : "unchanged") : "succeeded";
-				const done = await this.store.updateRun(run.id, { status, sessionId: result.sessionId, summary: result.summary, finishedAt: new Date().toISOString() });
-				if (status === "changed") this.notify(task, done, "scheduled_changed", task.title, result.summary);
+				const done = await this.store.updateRun(run.id, { status, sessionId: result.sessionId, ...(result.queueId === undefined ? {} : { queueId: result.queueId }), summary: result.summary, finishedAt: new Date().toISOString() });
+				if (status === "changed" && task.notificationPolicy === "important_updates") this.notify(task, done, "scheduled_changed", task.title, result.summary);
 				else if (status === "awaiting_approval") this.notify(task, done, "scheduled_approval_required", task.title, "This task needs your approval to continue.");
-				else if (status === "succeeded") this.notify(task, done, "scheduled_completed", task.title, result.summary || "Scheduled task completed.");
+				else if (status === "succeeded" && task.notificationPolicy === "important_updates") this.notify(task, done, "scheduled_completed", task.title, result.summary || "Scheduled task completed.");
 				for (const window of BrowserWindow.getAllWindows()) if (!window.isDestroyed()) window.webContents.send("session-catalog:changed");
 				this.broadcastRun(done);
 			}
 		} catch (error: unknown) {
 			const message = error instanceof Error ? error.message : String(error);
 			const failed = await this.store.updateRun(run.id, { status: "failed", error: message.slice(0, 4000), finishedAt: new Date().toISOString() });
+			if (task.target?.kind === "existing_session" && /(?:session_not_found|target_archived|worktree_unavailable)/u.test(message)) {
+				await this.store.setEnabled(task.id, false);
+			}
 			this.notify(task, failed, "scheduled_failed", task.title, message);
 			this.broadcastRun(failed);
 		}

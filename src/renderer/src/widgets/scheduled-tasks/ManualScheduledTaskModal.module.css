@@ -1,0 +1,18 @@
+.modalBody {
+	max-height: min(680px, calc(100vh - 220px));
+	overflow: auto;
+	padding-inline-end: 4px;
+}
+
+.inlineFields {
+	display: flex;
+	flex-direction: column;
+}
+
+.fullWidth {
+	width: 100%;
+}
+
+.error {
+	margin-block-end: var(--ds-space-3);
+}
