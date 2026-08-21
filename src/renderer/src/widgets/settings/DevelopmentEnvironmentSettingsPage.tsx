@@ -252,7 +252,9 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element | null {
 		try {
 			setRuntimeBusy(true);
 			setErrorMessage(null);
-			setGeneralSettings(await updateGeneralSettings({ godotExecutablePath: path }));
+			setGeneralSettings(
+				await updateGeneralSettings({ godotExecutablePath: path }),
+			);
 			void message.success(t("settings.environments.runtime.godotSaved"));
 		} catch (error: unknown) {
 			void message.error(
@@ -295,7 +297,9 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element | null {
 			setHarnessConfig(next);
 			setHarnessOpen(false);
 			if (next.trustInvalidated)
-				void message.warning(t("settings.plugins.harness.trustInvalidated"));
+				void message.warning(
+					t("settings.plugins.harness.trustInvalidated"),
+				);
 		} catch (error: unknown) {
 			void message.error(
 				error instanceof Error
@@ -307,7 +311,9 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element | null {
 		}
 	}
 
-	async function detectHarnessDraft(draft: HarnessConfigDraft): Promise<void> {
+	async function detectHarnessDraft(
+		draft: HarnessConfigDraft,
+	): Promise<void> {
 		try {
 			setRuntimeBusy(true);
 			setHarnessConfig(await detectHarness(draft));
@@ -445,12 +451,9 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element | null {
 	return (
 		<section className={`${styles.page} ${pageMotionStyles.enter}`}>
 			<header className={styles.header}>
-				<Space>
-					<Typography.Title level={3} className={styles.title}>
-						{t("settings.environments.title")}
-					</Typography.Title>
-					<Tag>{workspaces.length}</Tag>
-				</Space>
+				<Typography.Title level={3} className={styles.title}>
+					{t("settings.environments.title")}
+				</Typography.Title>
 			</header>
 			{errorMessage === null ? null : (
 				<Typography.Text type="danger" className={styles.errorText}>
@@ -461,61 +464,96 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element | null {
 				<SettingsList title={t("settings.environments.runtime.title")}>
 					<div className={styles.preferenceList}>
 						<SettingsItem
-							title={t("settings.environments.runtime.godot.title")}
+							title={t(
+								"settings.environments.runtime.godot.title",
+							)}
 							description={
 								generalSettings?.godotExecutablePath?.trim() ||
-								t("settings.environments.runtime.godot.notConfigured")
+								t(
+									"settings.environments.runtime.godot.notConfigured",
+								)
 							}
 						>
 							<Space.Compact>
 								<Button
 									icon={<Icon name="folder-open" />}
 									loading={runtimeBusy}
-									disabled={runtimeLoading || generalSettings === null}
+									disabled={
+										runtimeLoading ||
+										generalSettings === null
+									}
 									onClick={(): void => {
 										void pickGodotExecutable();
 									}}
 								>
-									{t("settings.environments.runtime.godot.browse")}
+									{t(
+										"settings.environments.runtime.godot.browse",
+									)}
 								</Button>
-								<Tooltip title={t("settings.environments.runtime.godot.reset")}>
+								<Tooltip
+									title={t(
+										"settings.environments.runtime.godot.reset",
+									)}
+								>
 									<Button
-										aria-label={t("settings.environments.runtime.godot.reset")}
+										aria-label={t(
+											"settings.environments.runtime.godot.reset",
+										)}
 										icon={<Icon name="reload" />}
 										loading={runtimeBusy}
-										disabled={runtimeLoading || generalSettings === null || generalSettings.godotExecutablePath === null}
+										disabled={
+											runtimeLoading ||
+											generalSettings === null ||
+											generalSettings.godotExecutablePath ===
+												null
+										}
 										onClick={(): void => {
-										void saveGodotExecutable(null);
+											void saveGodotExecutable(null);
 										}}
 									/>
 								</Tooltip>
 							</Space.Compact>
 						</SettingsItem>
 						<SettingsItem
-							title={t("settings.environments.runtime.harness.title")}
-							description={t("settings.environments.runtime.harness.description")}
+							title={t(
+								"settings.environments.runtime.harness.title",
+							)}
+							description={t(
+								"settings.environments.runtime.harness.description",
+							)}
 						>
 							<Space size="small">
 								<Tag>
 									{runtimeLoading || harnessConfig === null
-										? t("settings.environments.runtime.loading")
-										: t(`settings.plugins.harness.statuses.${harnessConfig.installation.status}`)}
+										? t(
+												"settings.environments.runtime.loading",
+											)
+										: t(
+												`settings.plugins.harness.statuses.${harnessConfig.installation.status}`,
+											)}
 								</Tag>
 								<Button
 									icon={<Icon name="settings" />}
 									loading={runtimeBusy}
-									disabled={runtimeLoading || harnessConfig === null}
+									disabled={
+										runtimeLoading || harnessConfig === null
+									}
 									onClick={(): void => setHarnessOpen(true)}
 								>
-									{t("settings.environments.runtime.harness.configure")}
+									{t(
+										"settings.environments.runtime.harness.configure",
+									)}
 								</Button>
 							</Space>
 						</SettingsItem>
 					</div>
 				</SettingsList>
-				<Typography.Title level={4} className={styles.sectionTitle}>
-					{t("settings.environments.projectsTitle")}
-				</Typography.Title>
+				<Space>
+					<Typography.Title level={4} className={styles.sectionTitle}>
+						{t("settings.environments.projectsTitle")}
+					</Typography.Title>
+					<Tag>{workspaces.length}</Tag>
+				</Space>
 				{workspaces.length === 0 ? (
 					<Empty description={t("settings.environments.empty")} />
 				) : (

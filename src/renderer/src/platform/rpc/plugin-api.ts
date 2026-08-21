@@ -147,6 +147,9 @@ export type PluginScanResult = {
 	contentHash: string;
 	compatibility: PluginCompatibility;
 	presentation?: PluginPresentation;
+	nativePlugin?: PluginRecord["nativePlugin"];
+	dependencyLockHash?: string;
+	harnessBundle?: PluginRecord["harnessBundle"];
 };
 
 export async function fetchPluginCatalog(): Promise<PluginCatalogResult> {

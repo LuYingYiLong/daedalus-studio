@@ -10,7 +10,11 @@ import { Icon } from "@/assets/icons";
 import { classificationColor } from "./plugin-formatters";
 import styles from "./plugins.module.css";
 
-function PluginMenuIcon({ plugin }: { plugin: PluginRecord }): React.JSX.Element {
+function PluginMenuIcon({
+	plugin,
+}: {
+	plugin: PluginRecord;
+}): React.JSX.Element {
 	const [failed, setFailed] = useState(false);
 	const iconDataUrl = plugin.presentation?.iconDataUrl;
 	if (iconDataUrl === undefined || failed) {

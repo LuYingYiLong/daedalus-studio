@@ -22,8 +22,10 @@ export function PluginInstallModal({
 	async function browsePath(): Promise<void> {
 		const path =
 			sourceType === "local"
-				? await window.electronAPI.workspaceFs.pickWorkspaceDirectory()
-				: await window.electronAPI.sessionFs.pickImportSource({
+				? await window.electronAPI.pluginFs.pickDirectory()
+				: sourceType === "tarball"
+					? await window.electronAPI.pluginFs.pickTarball()
+					: await window.electronAPI.sessionFs.pickImportSource({
 						dialogTitle: t("settings.plugins.actions.chooseFile"),
 						buttonLabel: t("settings.plugins.actions.choose"),
 					});

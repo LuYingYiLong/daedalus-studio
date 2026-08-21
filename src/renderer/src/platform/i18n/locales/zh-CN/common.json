@@ -2109,7 +2109,39 @@
 					"successArchived": "已导入归档会话：{{title}}",
 					"resultDescription_other": "会话 ID：{{sessionId}} · 已恢复 {{files}} 个文件"
 				}
-			}
+			},
+			"plugin": {
+				"sectionTitle": "插件包",
+				"title": "导入 Daedalus 或 DeepSeek Harness 插件",
+				"description": "导入 Native Plugin 或 Harness Bundle。导入阶段不会执行插件代码、Cordis JavaScript 或安装脚本。Harness Runtime 需要在开发环境页单独配置。",
+				"native": "Daedalus 原生",
+				"harness": "Harness Bundle",
+				"harnessClientStatic": "Harness Client（仅识别）",
+				"action": "导入插件",
+				"configureHarness": "配置 Harness Runtime",
+				"modalTitle": "分析插件包",
+				"scan": "分析插件",
+				"scanFailed": "分析插件失败。",
+				"pathRequired": "请选择插件目录或压缩包。",
+				"noExecution": "不会执行安装脚本、Cordis JavaScript 或插件代码；只会复制、计算哈希并进行静态分析。",
+				"reviewTitle": "确认导入：{{name}}",
+				"install": "确认导入",
+				"hash": "内容哈希",
+				"source": "来源",
+				"patchPath": "Patch 路径",
+				"patchRows": "可桥接行 / 总行数",
+				"patchOperations": "Patch 操作",
+				"readme": "README.md",
+				"changelog": "CHANGELOG.md",
+				"icon": "插件图标",
+				"lockfile": "依赖锁文件",
+				"available": "已检测",
+				"placeholderIcon": "使用默认图标",
+				"skippedRows": "已跳过 {{count}} 行 Patch",
+				"reviewNotice": "安装后插件默认为待审核。只有显式信任后，才可能在隔离运行时中启用。",
+				"harnessRuntimeRequired": "请先在开发环境页配置并检测 Harness Runtime，再信任 Harness Bundle。"
+			},
+			"errors": { "import": "导入失败。" }
 		},
 		"archivedSessions": {
 			"title": "已归档会话",

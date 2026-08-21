@@ -584,6 +584,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			return ipcRenderer.invoke("skill-fs:pick-directory");
 		}
 	},
+
+	pluginFs: {
+		pickDirectory: (): Promise<string | null> => ipcRenderer.invoke("plugin-fs:pick-directory"),
+		pickTarball: (): Promise<string | null> => ipcRenderer.invoke("plugin-fs:pick-tarball"),
+	},
 	godotDocumentationFs: {
 		pickDirectory: (): Promise<string | null> => {
 			return ipcRenderer.invoke("godot-documentation-fs:pick-directory");

@@ -552,6 +552,10 @@ declare global {
 			pickSkillZip: () => Promise<string | null>;
 			pickSkillDirectory: () => Promise<string | null>;
 		};
+		pluginFs: {
+			pickDirectory: () => Promise<string | null>;
+			pickTarball: () => Promise<string | null>;
+		};
 		godotDocumentationFs: {
 			pickDirectory: () => Promise<string | null>;
 			pickZip: () => Promise<string | null>;

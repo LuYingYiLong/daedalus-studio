@@ -2116,7 +2116,39 @@
 					"successArchived": "Imported archived session: {{title}}",
 					"resultDescription_other": "Session ID: {{sessionId}} · {{files}} files restored"
 				}
-			}
+			},
+			"plugin": {
+				"sectionTitle": "Plugin packages",
+				"title": "Import a Daedalus or DeepSeek Harness plugin",
+				"description": "Import a Native Plugin or Harness Bundle. Plugin code, Cordis JavaScript, and install scripts are not executed during import. Configure the Harness Runtime separately on the Development environments page.",
+				"native": "Daedalus Native",
+				"harness": "Harness Bundle",
+				"harnessClientStatic": "Harness Client (metadata only)",
+				"action": "Import plugin",
+				"configureHarness": "Configure Harness Runtime",
+				"modalTitle": "Analyze plugin package",
+				"scan": "Analyze plugin",
+				"scanFailed": "Failed to analyze plugin.",
+				"pathRequired": "Select a plugin directory or archive.",
+				"noExecution": "Installation scripts, Cordis JavaScript, and plugin code are not executed; the package is only copied, hashed, and statically inspected.",
+				"reviewTitle": "Review import: {{name}}",
+				"install": "Confirm import",
+				"hash": "Content hash",
+				"source": "Source",
+				"patchPath": "Patch path",
+				"patchRows": "Bridgeable rows / total rows",
+				"patchOperations": "Patch operations",
+				"readme": "README.md",
+				"changelog": "CHANGELOG.md",
+				"icon": "Plugin icon",
+				"lockfile": "Dependency lockfile",
+				"available": "Detected",
+				"placeholderIcon": "Default icon will be used",
+				"skippedRows": "Skipped {{count}} Patch rows",
+				"reviewNotice": "The package is installed as review-required. It can run in an isolated runtime only after explicit trust.",
+				"harnessRuntimeRequired": "Configure and detect the Harness Runtime on the Development environments page before trusting this Bundle."
+			},
+			"errors": { "import": "Import failed." }
 		},
 		"archivedSessions": {
 			"title": "Archived sessions",
