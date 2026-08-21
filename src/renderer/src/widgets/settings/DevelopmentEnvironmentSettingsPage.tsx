@@ -19,11 +19,25 @@ import {
 import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
+import SettingsItem from "@/ui/SettingsItem";
+import SettingsList from "@/ui/SettingsList";
 import {
 	getEnvironmentConfig,
 	updateEnvironmentConfig,
 	updateEnvironmentTrust,
 } from "@/platform/rpc/environment-api";
+import {
+	fetchGeneralSettings,
+	updateGeneralSettings,
+	type GeneralSettings,
+} from "@/platform/rpc/general-settings-api";
+import {
+	detectHarness,
+	fetchHarnessConfig,
+	updateHarnessConfig,
+	type HarnessConfigDraft,
+	type HarnessConfigResult,
+} from "@/platform/rpc/plugin-api";
 import { fetchWorkspaces } from "@/platform/rpc/workspace-api";
 import type {
 	LocalEnvironmentConfig,
@@ -33,6 +47,7 @@ import type {
 } from "@/platform/rpc/types";
 import pageMotionStyles from "./SettingsPageMotion.module.css";
 import styles from "./DevelopmentEnvironmentSettingsPage.module.css";
+import { HarnessRuntimeModal } from "./plugins/HarnessRuntimeModal";
 
 type ActionForm = {
 	id: string;
@@ -51,6 +66,12 @@ type ProfileForm = {
 type EditorForm = {
 	defaultEnvironmentId?: string;
 	environments: ProfileForm[];
+};
+type HarnessFormValues = {
+	enabled: boolean;
+	launchMode: "installed" | "source";
+	executablePath?: string;
+	sourceRoot?: string;
 };
 type MenuItems = NonNullable<MenuProps["items"]>;
 
@@ -125,6 +146,13 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element | null {
 	const [loadingProjects, setLoadingProjects] = useState(true);
 	const [loadingDocument, setLoadingDocument] = useState(false);
 	const [saving, setSaving] = useState(false);
+	const [generalSettings, setGeneralSettings] =
+		useState<GeneralSettings | null>(null);
+	const [harnessConfig, setHarnessConfig] =
+		useState<HarnessConfigResult | null>(null);
+	const [runtimeLoading, setRuntimeLoading] = useState(true);
+	const [runtimeBusy, setRuntimeBusy] = useState(false);
+	const [harnessOpen, setHarnessOpen] = useState(false);
 	const [editorOpen, setEditorOpen] = useState(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const workspace = useMemo(
@@ -153,6 +181,30 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element | null {
 			})
 			.finally((): void => {
 				if (!cancelled) setLoadingProjects(false);
+			});
+		return (): void => {
+			cancelled = true;
+		};
+	}, [t]);
+
+	useEffect((): (() => void) => {
+		let cancelled = false;
+		void Promise.all([fetchGeneralSettings(), fetchHarnessConfig()])
+			.then(([nextGeneralSettings, nextHarnessConfig]): void => {
+				if (cancelled) return;
+				setGeneralSettings(nextGeneralSettings);
+				setHarnessConfig(nextHarnessConfig);
+			})
+			.catch((error: unknown): void => {
+				if (!cancelled)
+					setErrorMessage(
+						error instanceof Error
+							? error.message
+							: t("settings.environments.errors.runtimeLoad"),
+					);
+			})
+			.finally((): void => {
+				if (!cancelled) setRuntimeLoading(false);
 			});
 		return (): void => {
 			cancelled = true;
@@ -194,6 +246,80 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element | null {
 	function openEditor(nextWorkspace: WorkspaceConfig): void {
 		selectWorkspace(nextWorkspace);
 		setEditorOpen(true);
+	}
+
+	async function saveGodotExecutable(path: string | null): Promise<void> {
+		try {
+			setRuntimeBusy(true);
+			setErrorMessage(null);
+			setGeneralSettings(await updateGeneralSettings({ godotExecutablePath: path }));
+			void message.success(t("settings.environments.runtime.godotSaved"));
+		} catch (error: unknown) {
+			void message.error(
+				error instanceof Error
+					? error.message
+					: t("settings.environments.errors.runtimeSave"),
+			);
+		} finally {
+			setRuntimeBusy(false);
+		}
+	}
+
+	async function pickGodotExecutable(): Promise<void> {
+		try {
+			setRuntimeBusy(true);
+			const path = await window.electronAPI.pickGodotExecutable();
+			if (path !== null) await saveGodotExecutable(path);
+		} catch (error: unknown) {
+			void message.error(
+				error instanceof Error
+					? error.message
+					: t("settings.environments.errors.runtimeSave"),
+			);
+		} finally {
+			setRuntimeBusy(false);
+		}
+	}
+
+	async function saveHarness(values: HarnessFormValues): Promise<void> {
+		if (harnessConfig === null) return;
+		try {
+			setRuntimeBusy(true);
+			const next = await updateHarnessConfig({
+				expectedRevision: harnessConfig.config.revision,
+				enabled: values.enabled,
+				launchMode: values.launchMode,
+				executablePath: values.executablePath?.trim() || null,
+				sourceRoot: values.sourceRoot?.trim() || null,
+			});
+			setHarnessConfig(next);
+			setHarnessOpen(false);
+			if (next.trustInvalidated)
+				void message.warning(t("settings.plugins.harness.trustInvalidated"));
+		} catch (error: unknown) {
+			void message.error(
+				error instanceof Error
+					? error.message
+					: t("settings.environments.errors.runtimeSave"),
+			);
+		} finally {
+			setRuntimeBusy(false);
+		}
+	}
+
+	async function detectHarnessDraft(draft: HarnessConfigDraft): Promise<void> {
+		try {
+			setRuntimeBusy(true);
+			setHarnessConfig(await detectHarness(draft));
+		} catch (error: unknown) {
+			void message.error(
+				error instanceof Error
+					? error.message
+					: t("settings.plugins.harness.detectFailed"),
+			);
+		} finally {
+			setRuntimeBusy(false);
+		}
 	}
 
 	const menuItems = useMemo(
@@ -332,6 +458,64 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element | null {
 				</Typography.Text>
 			)}
 			<div className={styles.menuScroller}>
+				<SettingsList title={t("settings.environments.runtime.title")}>
+					<div className={styles.preferenceList}>
+						<SettingsItem
+							title={t("settings.environments.runtime.godot.title")}
+							description={
+								generalSettings?.godotExecutablePath?.trim() ||
+								t("settings.environments.runtime.godot.notConfigured")
+							}
+						>
+							<Space.Compact>
+								<Button
+									icon={<Icon name="folder-open" />}
+									loading={runtimeBusy}
+									disabled={runtimeLoading || generalSettings === null}
+									onClick={(): void => {
+										void pickGodotExecutable();
+									}}
+								>
+									{t("settings.environments.runtime.godot.browse")}
+								</Button>
+								<Tooltip title={t("settings.environments.runtime.godot.reset")}>
+									<Button
+										aria-label={t("settings.environments.runtime.godot.reset")}
+										icon={<Icon name="reload" />}
+										loading={runtimeBusy}
+										disabled={runtimeLoading || generalSettings === null || generalSettings.godotExecutablePath === null}
+										onClick={(): void => {
+										void saveGodotExecutable(null);
+										}}
+									/>
+								</Tooltip>
+							</Space.Compact>
+						</SettingsItem>
+						<SettingsItem
+							title={t("settings.environments.runtime.harness.title")}
+							description={t("settings.environments.runtime.harness.description")}
+						>
+							<Space size="small">
+								<Tag>
+									{runtimeLoading || harnessConfig === null
+										? t("settings.environments.runtime.loading")
+										: t(`settings.plugins.harness.statuses.${harnessConfig.installation.status}`)}
+								</Tag>
+								<Button
+									icon={<Icon name="settings" />}
+									loading={runtimeBusy}
+									disabled={runtimeLoading || harnessConfig === null}
+									onClick={(): void => setHarnessOpen(true)}
+								>
+									{t("settings.environments.runtime.harness.configure")}
+								</Button>
+							</Space>
+						</SettingsItem>
+					</div>
+				</SettingsList>
+				<Typography.Title level={4} className={styles.sectionTitle}>
+					{t("settings.environments.projectsTitle")}
+				</Typography.Title>
 				{workspaces.length === 0 ? (
 					<Empty description={t("settings.environments.empty")} />
 				) : (
@@ -673,6 +857,14 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element | null {
 					</Form>
 				)}
 			</Modal>
+			<HarnessRuntimeModal
+				open={harnessOpen}
+				value={harnessConfig}
+				loading={runtimeBusy}
+				onCancel={(): void => setHarnessOpen(false)}
+				onDetect={detectHarnessDraft}
+				onSave={saveHarness}
+			/>
 		</section>
 	);
 }

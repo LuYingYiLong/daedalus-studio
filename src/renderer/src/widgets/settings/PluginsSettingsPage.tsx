@@ -5,14 +5,11 @@ import { Icon } from "@/assets/icons";
 import {
 	fetchPluginCatalog,
 	fetchPluginRuntimeLogs,
-	fetchHarnessConfig,
-	detectHarness,
 	previewHarnessBundle,
 	installPlugin,
 	installPluginDependencies,
 	removePlugin,
 	restartPluginRuntime,
-	updateHarnessConfig,
 	updatePluginProfile,
 	updatePluginTrust,
 	type PluginCatalogResult,
@@ -20,13 +17,11 @@ import {
 	type PluginRuntimeLog,
 	type PluginSource,
 	type HarnessBundleSummary,
-	type HarnessConfigResult,
 } from "@/platform/rpc/plugin-api";
 import { PluginListPane } from "./plugins/PluginListPane";
 import { PluginDetailPane } from "./plugins/PluginDetailPane";
 import { PluginInstallModal } from "./plugins/PluginInstallModal";
 import { PluginTrustModal } from "./plugins/PluginTrustModal";
-import { HarnessRuntimeModal } from "./plugins/HarnessRuntimeModal";
 import { HarnessBundlePreview } from "./plugins/HarnessBundlePreview";
 import styles from "./plugins/plugins.module.css";
 
@@ -45,9 +40,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 	>();
 	const [trustMode, setTrustMode] = useState<"trusted" | "disabled">("trusted");
 	const [logs, setLogs] = useState<PluginRuntimeLog[]>([]);
-	const [harnessConfig, setHarnessConfig] = useState<HarnessConfigResult | null>(null);
-	const [harnessOpen, setHarnessOpen] = useState(false);
-	const [harnessBusy, setHarnessBusy] = useState(false);
 	const [previewOpen, setPreviewOpen] = useState(false);
 	const [previewLoading, setPreviewLoading] = useState(false);
 	const [previewSummary, setPreviewSummary] = useState<HarnessBundleSummary | null>(null);
@@ -78,7 +70,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 	}
 	useEffect((): void => {
 		void refresh();
-		void fetchHarnessConfig().then(setHarnessConfig).catch((): void => setHarnessConfig(null));
 	}, []);
 	useEffect((): void => {
 		if (selectedId !== null)
@@ -229,32 +220,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 			},
 		});
 	}
-	async function saveHarness(values: { enabled: boolean; launchMode: "installed" | "source"; executablePath: string; sourceRoot: string }): Promise<void> {
-		if (harnessConfig === null) return;
-		try {
-			setHarnessBusy(true);
-			const result = await updateHarnessConfig({
-				expectedRevision: harnessConfig.config.revision,
-				enabled: values.enabled,
-				launchMode: values.launchMode,
-				executablePath: values.executablePath.trim() || null,
-				sourceRoot: values.sourceRoot.trim() || null,
-			});
-			setHarnessConfig(result);
-			setHarnessOpen(false);
-			if (result.trustInvalidated) {
-				message.warning(t("settings.plugins.harness.trustInvalidated"));
-				await refresh();
-			}
-		} catch (caught: unknown) {
-			message.error(caught instanceof Error ? caught.message : t("settings.plugins.harness.saveFailed"));
-		} finally { setHarnessBusy(false); }
-	}
-	async function runHarnessDetection(): Promise<void> {
-		try { setHarnessBusy(true); setHarnessConfig(await detectHarness()); }
-		catch (caught: unknown) { message.error(caught instanceof Error ? caught.message : t("settings.plugins.harness.detectFailed")); }
-		finally { setHarnessBusy(false); }
-	}
 	async function openHarnessPreview(): Promise<void> {
 		if (selectedPlugin === undefined) return;
 		setPreviewOpen(true);
@@ -273,7 +238,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 					selectedId={selectedId}
 					onSelect={setSelectedId}
 					onAdd={(): void => setInstallOpen(true)}
-					onConfigureHarness={(): void => setHarnessOpen(true)}
 				/>
 			</aside>
 			<section className={styles.detailPane}>
@@ -327,14 +291,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 						});
 					}
 				}}
-			/>
-			<HarnessRuntimeModal
-				open={harnessOpen}
-				value={harnessConfig}
-				loading={harnessBusy}
-				onCancel={(): void => setHarnessOpen(false)}
-				onDetect={runHarnessDetection}
-				onSave={saveHarness}
 			/>
 			<HarnessBundlePreview
 				plugin={selectedPlugin}

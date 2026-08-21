@@ -1,15 +1,18 @@
 import { Button, Form, Input, Modal, Select, Space, Switch } from "antd";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import type { HarnessConfigResult } from "@/platform/rpc/plugin-api";
+import type {
+	HarnessConfigDraft,
+	HarnessConfigResult,
+} from "@/platform/rpc/plugin-api";
 import { HarnessRuntimeSettings } from "./HarnessRuntimeSettings";
 import styles from "./plugins.module.css";
 
 type HarnessFormValues = {
 	enabled: boolean;
 	launchMode: "installed" | "source";
-	executablePath: string;
-	sourceRoot: string;
+	executablePath?: string;
+	sourceRoot?: string;
 };
 
 export function HarnessRuntimeModal({
@@ -24,7 +27,7 @@ export function HarnessRuntimeModal({
 	value: HarnessConfigResult | null;
 	loading: boolean;
 	onCancel: () => void;
-	onDetect: () => Promise<void>;
+	onDetect: (draft: HarnessConfigDraft) => Promise<void>;
 	onSave: (values: HarnessFormValues) => Promise<void>;
 }): React.JSX.Element {
 	const { t } = useTranslation();
@@ -40,10 +43,20 @@ export function HarnessRuntimeModal({
 		});
 	}, [form, open, value]);
 	async function browse(): Promise<void> {
-		const path = launchMode === "source"
-			? await window.electronAPI.workspaceFs.pickWorkspaceDirectory()
-			: await window.electronAPI.sessionFs.pickImportSource({ dialogTitle: t("settings.plugins.harness.chooseExecutable"), buttonLabel: t("settings.plugins.actions.choose") });
-		if (path !== null) form.setFieldValue(launchMode === "source" ? "sourceRoot" : "executablePath", path);
+		const path =
+			launchMode === "source"
+				? await window.electronAPI.workspaceFs.pickWorkspaceDirectory()
+				: await window.electronAPI.sessionFs.pickImportSource({
+						dialogTitle: t(
+							"settings.plugins.harness.chooseExecutable",
+						),
+						buttonLabel: t("settings.plugins.actions.choose"),
+					});
+		if (path !== null)
+			form.setFieldValue(
+				launchMode === "source" ? "sourceRoot" : "executablePath",
+				path,
+			);
 	}
 	return (
 		<Modal
@@ -53,32 +66,96 @@ export function HarnessRuntimeModal({
 			cancelText={t("settings.common.cancel")}
 			confirmLoading={loading}
 			onCancel={onCancel}
-			onOk={(): void => { void form.validateFields().then(onSave); }}
+			onOk={(): void => {
+				void form.validateFields().then(onSave);
+			}}
 		>
-			<Form form={form} layout="vertical" initialValues={{ enabled: false, launchMode: "installed", executablePath: "", sourceRoot: "" }}>
-				<Form.Item name="enabled" label={t("settings.plugins.harness.enabled")} valuePropName="checked">
+			<Form
+				form={form}
+				layout="vertical"
+				initialValues={{
+					enabled: false,
+					launchMode: "installed",
+					executablePath: "",
+					sourceRoot: "",
+				}}
+			>
+				<Form.Item
+					name="enabled"
+					label={t("settings.plugins.harness.enabled")}
+					valuePropName="checked"
+				>
 					<Switch />
 				</Form.Item>
-				<Form.Item name="launchMode" label={t("settings.plugins.harness.launchMode")}>
-					<Select options={[
-						{ value: "installed", label: t("settings.plugins.harness.installed") },
-						{ value: "source", label: t("settings.plugins.harness.source") },
-					]} />
+				<Form.Item
+					name="launchMode"
+					label={t("settings.plugins.harness.launchMode")}
+				>
+					<Select
+						options={[
+							{
+								value: "installed",
+								label: t("settings.plugins.harness.installed"),
+							},
+							{
+								value: "source",
+								label: t("settings.plugins.harness.source"),
+							},
+						]}
+					/>
 				</Form.Item>
-				<Form.Item label={t(launchMode === "source" ? "settings.plugins.harness.sourceRoot" : "settings.plugins.harness.executablePath")}>
+				<Form.Item
+					label={t(
+						launchMode === "source"
+							? "settings.plugins.harness.sourceRoot"
+							: "settings.plugins.harness.executablePath",
+					)}
+				>
 					<Space.Compact className={styles.fullWidth}>
 						<Form.Item
 							noStyle
-							name={launchMode === "source" ? "sourceRoot" : "executablePath"}
-							rules={[{ required: true, message: t("settings.plugins.harness.pathRequired") }]}
+							name={
+								launchMode === "source"
+									? "sourceRoot"
+									: "executablePath"
+							}
+							rules={[
+								{
+									required: true,
+									message: t(
+										"settings.plugins.harness.pathRequired",
+									),
+								},
+							]}
 						>
 							<Input />
 						</Form.Item>
-						<Button onClick={(): void => { void browse(); }}>{t("settings.plugins.actions.choose")}</Button>
+						<Button
+							onClick={(): void => {
+								void browse();
+							}}
+						>
+							{t("settings.plugins.actions.choose")}
+						</Button>
 					</Space.Compact>
 				</Form.Item>
 				<Space orientation="vertical" className={styles.fullWidth}>
-					<Button loading={loading} onClick={(): void => { void onDetect(); }}>{t("settings.plugins.harness.detect")}</Button>
+					<Button
+						block
+						loading={loading}
+						onClick={(): void => {
+							const draft = form.getFieldsValue();
+							void onDetect({
+								enabled: draft.enabled === true,
+								launchMode: draft.launchMode,
+								executablePath:
+									draft.executablePath?.trim() || null,
+								sourceRoot: draft.sourceRoot?.trim() || null,
+							});
+						}}
+					>
+						{t("settings.plugins.harness.detect")}
+					</Button>
 					<HarnessRuntimeSettings value={value} />
 				</Space>
 			</Form>

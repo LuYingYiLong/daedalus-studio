@@ -4,15 +4,11 @@ import styles from "./GeneralSettingsPage.module.css";
 import pageMotionStyles from "./SettingsPageMotion.module.css";
 import {
 	Alert,
-	Button,
 	Select,
-	Space,
 	Switch,
-	Tooltip,
 	Typography,
 } from "antd";
 import type { SelectProps } from "antd";
-import { Icon } from "@/assets/icons";
 import SettingsItem from "@/ui/SettingsItem";
 import SettingsList from "@/ui/SettingsList";
 import {
@@ -36,7 +32,6 @@ type GeneralSettingsPageProps = {
 
 type SettingKey =
 	| "autoCheckForUpdates"
-	| "godotExecutablePath"
 	| "language"
 	| "minimizeToTrayOnClose"
 	| "nextStepHintsEnabled"
@@ -146,51 +141,6 @@ function GeneralSettingsPage({
 				error instanceof Error
 					? error.message
 					: t("settings.general.errors.save"),
-			);
-		} finally {
-			setSavingKey(null);
-		}
-	}
-
-	async function saveGodotExecutablePath(path: string | null): Promise<void> {
-		try {
-			setSavingKey("godotExecutablePath");
-			setErrorMessage(null);
-			const savedSettings: GeneralSettings = await updateGeneralSettings({
-				godotExecutablePath: path,
-			});
-			setDraftGeneralSettings(savedSettings);
-			onGeneralSettingsChange(savedSettings);
-		} catch (error: unknown) {
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: t("settings.general.errors.godotExecutable"),
-			);
-		} finally {
-			setSavingKey(null);
-		}
-	}
-
-	async function handleGodotExecutablePick(): Promise<void> {
-		try {
-			setSavingKey("godotExecutablePath");
-			setErrorMessage(null);
-			const path: string | null =
-				await window.electronAPI.pickGodotExecutable();
-			if (path === null) {
-				return;
-			}
-			const savedSettings: GeneralSettings = await updateGeneralSettings({
-				godotExecutablePath: path,
-			});
-			setDraftGeneralSettings(savedSettings);
-			onGeneralSettingsChange(savedSettings);
-		} catch (error: unknown) {
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: t("settings.general.errors.godotExecutable"),
 			);
 		} finally {
 			setSavingKey(null);
@@ -331,54 +281,6 @@ function GeneralSettingsPage({
 						</SettingsItem>
 					</div>
 				</SettingsList>
-				<SettingsList title={t("settings.general.godot.title")}>
-					<div className={styles.preferenceList}>
-						<SettingsItem
-							title={t("settings.general.godot.executable")}
-							description={
-								draftGeneralSettings.godotExecutablePath?.trim() ||
-								t("settings.general.godot.placeholder")
-							}
-						>
-							<Space.Compact>
-								<Button
-									icon={<Icon name="folder-open" />}
-									loading={
-										savingKey === "godotExecutablePath"
-									}
-									disabled={
-										savingKey !== null &&
-										savingKey !== "godotExecutablePath"
-									}
-									onClick={(): void => {
-										void handleGodotExecutablePick();
-									}}
-								>
-									{t("settings.general.godot.browse")}
-								</Button>
-								<Tooltip
-									title={t("settings.general.godot.clear")}
-								>
-									<Button
-										aria-label={t(
-											"settings.general.godot.clear",
-										)}
-										icon={<Icon name="clear" />}
-										disabled={
-											savingKey !== null ||
-											draftGeneralSettings.godotExecutablePath ===
-												null
-										}
-										onClick={(): void => {
-											void saveGodotExecutablePath(null);
-										}}
-									/>
-								</Tooltip>
-							</Space.Compact>
-						</SettingsItem>
-					</div>
-				</SettingsList>
-
 				<SettingsList title={t("settings.general.notifications.title")}>
 					<div className={styles.preferenceList}>
 						<SettingsItem

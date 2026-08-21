@@ -40,14 +40,12 @@ export function PluginListPane({
 	selectedId,
 	onSelect,
 	onAdd,
-	onConfigureHarness,
 }: {
 	catalog: PluginCatalogResult | null;
 	loading: boolean;
 	selectedId: string | null;
 	onSelect: (id: string) => void;
 	onAdd: () => void;
-	onConfigureHarness: () => void;
 }): React.JSX.Element {
 	const { t } = useTranslation();
 	const [query, setQuery] = useState("");
@@ -88,7 +86,6 @@ export function PluginListPane({
 					value={query}
 					onChange={(event): void => setQuery(event.target.value)}
 				/>
-				<Button aria-label={t("settings.plugins.harness.title")} icon={<Icon name="settings" />} onClick={onConfigureHarness} />
 			</Space.Compact>
 			{loading ? (
 				<div className={styles.center}>

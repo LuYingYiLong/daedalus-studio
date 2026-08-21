@@ -5,6 +5,7 @@
 	min-height: 0;
 	padding: 0 var(--ds-space-2) var(--ds-space-2);
 	overflow: hidden;
+	user-select: none;
 }
 
 .header {
@@ -29,6 +30,16 @@
 	padding-top: 8px;
 	overflow-x: hidden;
 	overflow-y: auto;
+}
+
+.preferenceList {
+	display: grid;
+	gap: 0;
+	min-width: 0;
+}
+
+.sectionTitle {
+	margin: var(--ds-space-3) 0 var(--ds-space-2) !important;
 }
 
 .projectMenu {

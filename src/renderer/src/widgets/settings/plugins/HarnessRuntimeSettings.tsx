@@ -23,7 +23,9 @@ export function HarnessRuntimeSettings({ value }: { value: HarnessConfigResult |
 					<Typography.Text type="secondary">{t("settings.plugins.harness.networkDisabled")}</Typography.Text>
 				</Descriptions.Item>
 			</Descriptions>
-			{installation.error ? <Alert type={installation.status === "needs_setup" ? "warning" : "error"} showIcon title={installation.error} /> : null}
+			{installation.error && (config.enabled || installation.status !== "unconfigured") ? (
+				<Alert type={installation.status === "needs_setup" ? "warning" : "error"} showIcon title={installation.error} />
+			) : null}
 		</Space>
 	);
 }

@@ -1440,7 +1440,24 @@
 		},
 		"environments": {
 			"title": "开发环境",
-			"description": "为托管工作树配置可提交的 setup 脚本和集成终端 actions。",
+			"description": "管理全局开发运行时，以及项目和托管工作树使用的 setup 脚本与终端 actions。",
+			"projectsTitle": "项目开发环境",
+			"runtime": {
+				"title": "全局运行时",
+				"loading": "加载中...",
+				"godot": {
+					"title": "Godot 可执行文件",
+					"notConfigured": "未设置全局默认值；工作区或会话配置优先。",
+					"browse": "浏览",
+					"reset": "恢复默认"
+				},
+				"harness": {
+					"title": "DeepSeek Harness",
+					"description": "配置 Harness Bundle 的全局 Sidecar 运行时；插件信任和能力仍在插件页管理。",
+					"configure": "配置运行时"
+				},
+				"godotSaved": "Godot 可执行文件已更新"
+			},
 			"source": "配置来源",
 			"sourceFolder": "源文件夹",
 			"editorTitle": "编辑 {{workspace}} 的开发环境",
@@ -1461,7 +1478,7 @@
 			"noSetup": "无需 Setup",
 			"saved": "开发环境配置已保存",
 			"review": { "title": "审核环境命令", "trust": "信任", "trustNetwork": "信任并允许联网", "networkEnabled": "该环境声明需要网络访问；文件系统仍受沙箱限制。", "networkDisabled": "网络访问已禁用，脚本仅能写入工作树和隔离缓存。" },
-			"errors": { "load": "加载开发环境失败", "save": "保存开发环境失败" }
+			"errors": { "load": "加载开发环境失败", "save": "保存开发环境失败", "runtimeLoad": "加载全局运行时失败", "runtimeSave": "保存全局运行时失败" }
 		},
 		"worktrees": {
 			"title": "工作树",

@@ -72,6 +72,8 @@ export type HarnessConfigResult = {
 	trustInvalidated?: boolean;
 };
 
+export type HarnessConfigDraft = Pick<HarnessRuntimeConfig, "enabled" | "executablePath" | "sourceRoot" | "launchMode">;
+
 export type PluginRecord = {
 	id: string;
 	packageName: string;
@@ -218,9 +220,9 @@ export async function updateHarnessConfig(params: {
 	return client.request("plugin.harness.config.update", params);
 }
 
-export async function detectHarness(): Promise<HarnessConfigResult> {
+export async function detectHarness(draft?: HarnessConfigDraft): Promise<HarnessConfigResult> {
 	const client = await createBackendClient();
-	return client.request("plugin.harness.detect", {});
+	return client.request("plugin.harness.detect", draft === undefined ? {} : { draft });
 }
 
 export async function previewHarnessBundle(pluginId: string): Promise<HarnessBundleSummary> {

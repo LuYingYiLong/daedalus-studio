@@ -1447,7 +1447,24 @@
 		},
 		"environments": {
 			"title": "Development environments",
-			"description": "Configure checked-in setup scripts and integrated terminal actions for managed worktrees.",
+			"description": "Manage global development runtimes, project environments, and setup scripts and terminal actions for managed worktrees.",
+			"projectsTitle": "Project environments",
+			"runtime": {
+				"title": "Global runtimes",
+				"loading": "Loading...",
+				"godot": {
+					"title": "Godot executable",
+					"notConfigured": "No global default; workspace or session settings take precedence.",
+					"browse": "Browse",
+					"reset": "Reset default"
+				},
+				"harness": {
+					"title": "DeepSeek Harness",
+					"description": "Configure the global Sidecar runtime for Harness Bundles; plugin trust and capabilities remain on the Plugins page.",
+					"configure": "Configure runtime"
+				},
+				"godotSaved": "Godot executable updated"
+			},
 			"source": "Configuration source",
 			"sourceFolder": "Source folder",
 			"editorTitle": "Edit {{workspace}} environment",
@@ -1468,7 +1485,7 @@
 			"noSetup": "No setup script",
 			"saved": "Environment configuration saved",
 			"review": { "title": "Review environment commands", "trust": "Trust", "trustNetwork": "Trust and allow network", "networkEnabled": "This environment requests network access; filesystem access remains sandboxed.", "networkDisabled": "Network access is disabled and scripts can write only to the worktree and isolated cache." },
-			"errors": { "load": "Failed to load environments", "save": "Failed to save environments" }
+			"errors": { "load": "Failed to load environments", "save": "Failed to save environments", "runtimeLoad": "Failed to load global runtimes", "runtimeSave": "Failed to save global runtime" }
 		},
 		"worktrees": {
 			"title": "Worktrees",
