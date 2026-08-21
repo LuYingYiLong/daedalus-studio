@@ -113,6 +113,7 @@ export type SessionMetadata = {
 	workspaceLaunch?: WorkspaceLaunchTargetId;
 	forkedFrom?: SessionForkOrigin;
 	worktree?: SessionWorktreeMetadata;
+	scheduledTaskOrigin?: { taskId: string; runId: string; kind: "agent" | "monitor"; scheduledAt: string; executionPolicy: "read_only" | "auto_safe" };
 	archivedAt?: string;
 	createdAt: string;
 	updatedAt: string;

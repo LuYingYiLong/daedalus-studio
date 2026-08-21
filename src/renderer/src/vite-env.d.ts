@@ -21,6 +21,7 @@ import type {
 	BrowserViewBounds,
 	BrowserViewState
 } from "../../contracts/browser";
+import type { ScheduledTask, ScheduledTaskListResult, ScheduledTaskRun, ScheduledTaskToolRequest } from "../../contracts/scheduled-tasks";
 
 export {};
 
@@ -179,12 +180,13 @@ declare global {
 		readImage: () => Promise<{ dataUrl: string | null; fileName?: string }>;
 	}
 
-	type NativeNotificationKind = "run_completed" | "approval_required" | "clarification_required";
+	type NativeNotificationKind = "run_completed" | "approval_required" | "clarification_required" | "scheduled_reminder" | "scheduled_completed" | "scheduled_changed" | "scheduled_failed" | "scheduled_approval_required";
 
 	interface NativeNotificationPayload {
 		kind: NativeNotificationKind;
 		sessionId?: string | null;
 		requestId?: string | null;
+		taskId?: string | null;
 		title: string;
 		body: string;
 		dedupeKey: string;
@@ -198,6 +200,7 @@ declare global {
 	interface NativeNotificationAPI {
 		show: (payload: NativeNotificationPayload) => Promise<NativeNotificationResult>;
 		clearAttention: () => Promise<{ cleared: true }>;
+		onForeground: (callback: (payload: NativeNotificationPayload) => void) => () => void;
 	}
 
 	interface TrayRecentSession {
@@ -439,6 +442,20 @@ declare global {
 		clientPreferences: ClientPreferencesAPI;
 		generalSettings: GeneralSettingsAPI;
 		sessionCatalog: SessionCatalogAPI;
+		scheduledTasks: {
+			list: () => Promise<ScheduledTaskListResult>;
+			get: (taskId: string) => Promise<ScheduledTask>;
+			pause: (taskId: string) => Promise<ScheduledTask>;
+			resume: (taskId: string) => Promise<ScheduledTask>;
+			runNow: (taskId: string) => Promise<{ queued: true }>;
+			delete: (taskId: string) => Promise<{ deleted: true }>;
+			listRuns: (taskId?: string) => Promise<ScheduledTaskRun[]>;
+			executeTool: (request: ScheduledTaskToolRequest) => Promise<Record<string, unknown>>;
+			reconcileSessionRun: (input: { sessionId: string; status: "succeeded" | "failed" | "awaiting_approval"; summary?: string }) => Promise<{ reconciled: boolean }>;
+			onChanged: (callback: () => void) => () => void;
+			onRunUpdated: (callback: (run: ScheduledTaskRun) => void) => () => void;
+			onNavigate: (callback: (target: { taskId: string; sessionId: string | null }) => void) => () => void;
+		};
 		clipboard: ClipboardAPI;
 		nativeNotifications: NativeNotificationAPI;
 		tray: TrayAPI;

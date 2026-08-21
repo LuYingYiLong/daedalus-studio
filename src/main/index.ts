@@ -32,6 +32,7 @@ import type { GeneralSettings } from "../contracts/general-settings";
 import { BrowserService } from "./services/browser/browser-service";
 import { BrowserDataStore } from "./services/browser/browser-data-store";
 import { BrowserPasswordStore } from "./services/browser/browser-password-store";
+import { scheduledTaskService } from "./services/scheduled-tasks/service";
 
 const logger = createLogger("main");
 const MEMORY_DIAGNOSTICS_INTERVAL_MS: number = 30_000;
@@ -55,6 +56,7 @@ registerSystemInfoIpc();
 registerTerminalPtyIpc();
 appUpdateService.registerIpc();
 nativeNotificationService.registerIpc();
+scheduledTaskService.registerIpc();
 godotProjectsService.registerIpc();
 sessionLayoutService.registerIpc();
 
@@ -76,6 +78,7 @@ ipcMain.handle("app-data:reset-all", async (event): Promise<{ reset: true }> => 
 
 configureAppIdentity();
 
+const isScheduledTaskRunner: boolean = process.argv.includes("--scheduled-task-runner");
 const hasSingleInstanceLock: boolean = app.requestSingleInstanceLock();
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 let mainWindow: BrowserWindow | null = null;
@@ -658,7 +661,11 @@ function createWindow(): void {
 if (!hasSingleInstanceLock) {
 	app.quit();
 } else {
-	app.on("second-instance", (): void => {
+	app.on("second-instance", (_event, argv): void => {
+		if (argv.includes("--scheduled-task-runner")) {
+			void scheduledTaskService.runDueTasks();
+			return;
+		}
 		activateMainWindow();
 	});
 
@@ -677,6 +684,14 @@ if (!hasSingleInstanceLock) {
 		nativeTheme.on("updated", (): void => {
 			applyWindowThemeToAllWindows();
 		});
+		await scheduledTaskService.start();
+		if (isScheduledTaskRunner) {
+			await scheduledTaskService.runDueTasks();
+			await releaseBackendBeforeQuit();
+			allowAppQuit = true;
+			app.quit();
+			return;
+		}
 		createWindow();
 		let checkedStartupUpdates: boolean = false;
 		const checkStartupUpdates = (state: ReturnType<typeof backendBootstrapService.getState>): void => {
@@ -708,6 +723,7 @@ if (!hasSingleInstanceLock) {
 		cancelSettingsWindowPrewarm();
 		windowLifecycleController.markQuitting();
 		terminalPtyService.dispose();
+		void scheduledTaskService.stop();
 		gracefulQuitPromise ??= releaseBackendBeforeQuit().finally((): void => {
 			allowAppQuit = true;
 			app.quit();

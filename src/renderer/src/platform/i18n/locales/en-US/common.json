@@ -27,6 +27,14 @@
 			}
 		}
 	},
+	"scheduledTasks": {
+		"title": "Scheduled tasks", "search": "Search tasks...", "create": "New task", "prefill": "Help me schedule a task: ", "empty": "No scheduled tasks", "windowsOnly": "Background scheduling is available on Windows in this release; this platform can only view tasks.",
+		"filters": { "all": "All", "enabled": "Enabled", "paused": "Paused", "attention": "Needs attention" },
+		"kind": { "reminder": "Reminder", "agent": "AI task", "monitor": "AI monitor" },
+		"nextRun": "Next: {{time}}", "runNow": "Run now", "pause": "Pause", "resume": "Resume", "deleteConfirm": "Delete this scheduled task?", "enabled": "Enabled", "paused": "Paused",
+		"prompt": "Task prompt", "environment": "Pinned environment", "noWorkspace": "No workspace", "noModel": "Reminders do not call a model", "autoSafe": "Auto safe", "readOnly": "Read only", "history": "Run history", "noRuns": "No runs yet", "openSession": "Open session",
+		"status": { "queued": "Queued", "running": "Running", "succeeded": "Succeeded", "unchanged": "Unchanged", "changed": "Changed", "awaiting_approval": "Awaiting approval", "failed": "Failed", "cancelled": "Cancelled" }
+	},
 	"app": {
 		"boot": {
 			"progress": {

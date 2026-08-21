@@ -1,0 +1,128 @@
+.page {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+	padding: 64px;
+	user-select: none;
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ds-space-2);
+	min-width: 0;
+	padding: var(--ds-space-3);
+}
+
+.content {
+	min-height: 0;
+	overflow: auto;
+	padding: var(--ds-space-3);
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	max-width: 1080px;
+	margin: 0 auto;
+	border: 1px solid var(--ds-border-subtle);
+	border-radius: var(--ds-radius-lg);
+	overflow: hidden;
+	background: var(--ds-bg-container);
+}
+
+.row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--ds-space-3);
+	min-height: 72px;
+	padding: var(--ds-space-3);
+	cursor: pointer;
+}
+
+.row + .row {
+	border-top: 1px solid var(--ds-border-subtle);
+}
+
+.row:hover {
+	background: var(--ds-bg-hover);
+}
+
+.rowMain {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	gap: 4px;
+}
+
+.rowMeta {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--ds-space-2);
+	min-width: 0;
+	color: var(--ds-text-secondary);
+}
+
+.actions {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+
+.empty {
+	display: grid;
+	place-items: center;
+	height: 100%;
+}
+
+.drawerBody {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ds-space-4);
+}
+
+.prompt {
+	white-space: pre-wrap;
+	word-break: break-word;
+	padding: var(--ds-space-3);
+	background: var(--ds-bg-tint);
+	border-radius: var(--ds-radius-md);
+}
+
+.run {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	align-items: start;
+	gap: var(--ds-space-2);
+	padding: var(--ds-space-2) 0;
+}
+
+.run + .run {
+	border-top: 1px solid var(--ds-border-subtle);
+}
+
+@media (max-width: 760px) {
+	.header {
+		flex-wrap: wrap;
+	}
+
+	.header :global(.ant-input-affix-wrapper) {
+		order: 3;
+		width: 100% !important;
+	}
+
+	.row {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.actions {
+		justify-content: flex-end;
+	}
+}

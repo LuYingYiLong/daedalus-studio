@@ -37,8 +37,14 @@
 }
 
 .workspaceHeader {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
 	padding-bottom: var(--ds-space-2);
 }
+
+.sidebarActionLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sidebarAttentionBadge { min-width: 18px; height: 18px; margin-left: auto; padding: 0 5px; border-radius: 9px; color: var(--ds-color-error); background: color-mix(in srgb, var(--ds-color-error) 14%, transparent); font-size: 11px; line-height: 18px; text-align: center; }
 
 .workspaceFooter {
 	padding: var(--ds-space-2) 0px;
@@ -83,6 +89,9 @@
 	background-color: var(--ds-bg-tint);
 	border-radius: var(--ds-space-2);
 }
+
+.scheduledTasksOverlay { position: absolute; inset: 0; z-index: 30; min-width: 0; min-height: 0; }
+.agentMain[data-main-surface="scheduledTasks"] > :not(.scheduledTasksOverlay) { visibility: hidden; pointer-events: none; }
 
 .agentMain[data-dock-fullscreen] > .floatingActionSlot {
 	display: none;

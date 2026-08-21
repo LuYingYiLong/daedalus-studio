@@ -19,6 +19,7 @@ import type {
 	BrowserViewBounds,
 	BrowserViewState
 } from "../contracts/browser";
+import type { ScheduledTask, ScheduledTaskListResult, ScheduledTaskRun, ScheduledTaskToolRequest } from "../contracts/scheduled-tasks";
 
 type AppUpdateState = {
 	status: "idle" | "checking" | "available" | "downloading" | "downloaded" | "installing" | "not_available" | "error" | "unsupported";
@@ -77,9 +78,10 @@ type BackendLogTail = {
 };
 
 type NativeNotificationPayload = {
-	kind: "run_completed" | "approval_required" | "clarification_required";
+	kind: "run_completed" | "approval_required" | "clarification_required" | "scheduled_reminder" | "scheduled_completed" | "scheduled_changed" | "scheduled_failed" | "scheduled_approval_required";
 	sessionId?: string | null;
 	requestId?: string | null;
+	taskId?: string | null;
 	title: string;
 	body: string;
 	dedupeKey: string;
@@ -290,6 +292,33 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		}
 	},
 
+	scheduledTasks: {
+		list: (): Promise<ScheduledTaskListResult> => ipcRenderer.invoke("scheduled-tasks:list"),
+		get: (taskId: string): Promise<ScheduledTask> => ipcRenderer.invoke("scheduled-tasks:get", taskId),
+		pause: (taskId: string): Promise<ScheduledTask> => ipcRenderer.invoke("scheduled-tasks:pause", taskId),
+		resume: (taskId: string): Promise<ScheduledTask> => ipcRenderer.invoke("scheduled-tasks:resume", taskId),
+		runNow: (taskId: string): Promise<{ queued: true }> => ipcRenderer.invoke("scheduled-tasks:run-now", taskId),
+		delete: (taskId: string): Promise<{ deleted: true }> => ipcRenderer.invoke("scheduled-tasks:delete", taskId),
+		listRuns: (taskId?: string): Promise<ScheduledTaskRun[]> => ipcRenderer.invoke("scheduled-tasks:runs-list", taskId),
+		executeTool: (request: ScheduledTaskToolRequest): Promise<Record<string, unknown>> => ipcRenderer.invoke("scheduled-tasks:execute-tool", request),
+		reconcileSessionRun: (input: { sessionId: string; status: "succeeded" | "failed" | "awaiting_approval"; summary?: string }): Promise<{ reconciled: boolean }> => ipcRenderer.invoke("scheduled-tasks:reconcile-session-run", input),
+		onChanged: (callback: () => void): (() => void) => {
+			const handler = (): void => callback();
+			ipcRenderer.on("scheduled-tasks:changed", handler);
+			return (): void => { ipcRenderer.removeListener("scheduled-tasks:changed", handler); };
+		},
+		onRunUpdated: (callback: (run: ScheduledTaskRun) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, run: ScheduledTaskRun): void => callback(run);
+			ipcRenderer.on("scheduled-task-run:updated", handler);
+			return (): void => { ipcRenderer.removeListener("scheduled-task-run:updated", handler); };
+		},
+		onNavigate: (callback: (target: { taskId: string; sessionId: string | null }) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, target: { taskId: string; sessionId: string | null }): void => callback(target);
+			ipcRenderer.on("scheduled-task:navigate", handler);
+			return (): void => { ipcRenderer.removeListener("scheduled-task:navigate", handler); };
+		},
+	},
+
 	clipboard: {
 		writeText: (text: string): Promise<{ written: true }> => {
 			return ipcRenderer.invoke("clipboard:write-text", text);
@@ -308,7 +337,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		},
 		clearAttention: (): Promise<{ cleared: true }> => {
 			return ipcRenderer.invoke("native-notification:clear-attention");
-		}
+		},
+		onForeground: (callback: (payload: NativeNotificationPayload) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, payload: NativeNotificationPayload): void => callback(payload);
+			ipcRenderer.on("native-notification:foreground", handler);
+			return (): void => { ipcRenderer.removeListener("native-notification:foreground", handler); };
+		},
 	},
 
 	tray: {

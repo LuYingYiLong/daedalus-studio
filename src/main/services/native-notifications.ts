@@ -1,12 +1,13 @@
 import { app, BrowserWindow, ipcMain, nativeImage, Notification } from "electron";
 import { APP_NAME, getAppIconImage } from "./app-identity";
 
-export type NativeNotificationKind = "run_completed" | "approval_required" | "clarification_required";
+export type NativeNotificationKind = "run_completed" | "approval_required" | "clarification_required" | "scheduled_reminder" | "scheduled_completed" | "scheduled_changed" | "scheduled_failed" | "scheduled_approval_required";
 
 export type NativeNotificationPayload = {
 	kind: NativeNotificationKind;
 	sessionId?: string | null;
 	requestId?: string | null;
+	taskId?: string | null;
 	title: string;
 	body: string;
 	dedupeKey: string;
@@ -30,7 +31,7 @@ function isNativeNotificationPayload(value: unknown): value is NativeNotificatio
 	}
 
 	const payload = value as Partial<NativeNotificationPayload>;
-	return (payload.kind === "run_completed" || payload.kind === "approval_required" || payload.kind === "clarification_required")
+	return (["run_completed", "approval_required", "clarification_required", "scheduled_reminder", "scheduled_completed", "scheduled_changed", "scheduled_failed", "scheduled_approval_required"] as string[]).includes(String(payload.kind))
 		&& typeof payload.title === "string"
 		&& payload.title.trim().length > 0
 		&& typeof payload.body === "string"
@@ -67,7 +68,7 @@ export class NativeNotificationService {
 		});
 	}
 
-	private show(payload: unknown): NativeNotificationResult {
+	show(payload: unknown): NativeNotificationResult {
 		if (!isNativeNotificationPayload(payload)) {
 			return { shown: false, reason: "invalid" };
 		}
@@ -76,14 +77,16 @@ export class NativeNotificationService {
 		}
 
 		const mainWindow = this.mainWindow;
-		if (mainWindow === null || mainWindow.isDestroyed()) {
-			return { shown: false, reason: "no_window" };
-		}
-		if (this.isForeground(mainWindow)) {
+		if (mainWindow !== null && !mainWindow.isDestroyed() && this.isForeground(mainWindow)) {
+			if (payload.kind.startsWith("scheduled_")) {
+				mainWindow.webContents.send("native-notification:foreground", payload);
+				this.shownDedupeKeys.add(payload.dedupeKey);
+				return { shown: true };
+			}
 			return { shown: false, reason: "foreground" };
 		}
 		if (!Notification.isSupported()) {
-			this.requestAttention(mainWindow);
+			if (mainWindow !== null && !mainWindow.isDestroyed()) this.requestAttention(mainWindow);
 			this.shownDedupeKeys.add(payload.dedupeKey);
 			return { shown: false, reason: "unsupported" };
 		}
@@ -98,16 +101,19 @@ export class NativeNotificationService {
 				...(icon === null ? {} : { icon })
 			});
 			notification.on("click", (): void => {
-				this.showWindow(mainWindow);
+				if (mainWindow !== null && !mainWindow.isDestroyed()) {
+					this.showWindow(mainWindow);
+					if (payload.taskId !== undefined) mainWindow.webContents.send("scheduled-task:navigate", { taskId: payload.taskId, sessionId: payload.sessionId ?? null });
+				}
 				this.clearAttention();
 			});
 			notification.show();
-			this.requestAttention(mainWindow);
+			if (mainWindow !== null && !mainWindow.isDestroyed()) this.requestAttention(mainWindow);
 			this.shownDedupeKeys.add(payload.dedupeKey);
 			return { shown: true };
 		} catch (error: unknown) {
 			console.error("[NativeNotification] failed to show notification", error);
-			this.requestAttention(mainWindow);
+			if (mainWindow !== null && !mainWindow.isDestroyed()) this.requestAttention(mainWindow);
 			this.shownDedupeKeys.add(payload.dedupeKey);
 			return { shown: false, reason: "failed" };
 		}

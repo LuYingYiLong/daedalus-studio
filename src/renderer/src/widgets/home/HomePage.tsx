@@ -50,6 +50,7 @@ import type {
 	WorkspaceTreeOrderPreferences,
 } from "@/platform/rpc/workspace-api";
 import type { SkillSummary } from "@/platform/rpc/skill-api";
+import { fetchSessions } from "@/platform/rpc/session-api";
 import type { WorkspaceSidebarPreferences } from "@/platform/rpc/client-preferences-api";
 import {
 	detectShortcutPlatform,
@@ -96,6 +97,7 @@ import {
 	type DockPanelKind,
 } from "@/widgets/dock/DockPanelTabs";
 import HomeWorkspaceSidebar from "./HomeWorkspaceSidebar";
+import ScheduledTasksPage from "@/widgets/scheduled-tasks/ScheduledTasksPage";
 import FullscreenComposerShelf from "./FullscreenComposerShelf";
 import HomeDockPanel from "./HomeDockPanel";
 import {
@@ -846,6 +848,8 @@ function HomePage({
 	const [godotSceneSearch, setGodotSceneSearch] = useState<string>("");
 	const [composerInputRequest, setComposerInputRequest] =
 		useState<ComposerInputRequest | null>(null);
+	const [mainSurface, setMainSurface] = useState<"chat" | "scheduledTasks">("chat");
+	const [scheduledTaskAttentionCount, setScheduledTaskAttentionCount] = useState<number>(0);
 	const {
 		visualWorkspaceSidebar,
 		visualSessionLayout,
@@ -894,6 +898,33 @@ function HomePage({
 			}),
 		);
 	}, []);
+
+	const openScheduledTaskSession = useCallback((sessionId: string): void => {
+		void fetchSessions().then((result): void => {
+			const session = result.sessions.find((candidate): boolean => candidate.id === sessionId);
+			if (session !== undefined) { setMainSurface("chat"); onSessionSelect(session); }
+		}).catch((): void => {});
+	}, [onSessionSelect]);
+
+	useEffect((): (() => void) => {
+		const refresh = (): void => { void window.electronAPI.scheduledTasks.list().then((result): void => setScheduledTaskAttentionCount(result.attentionCount)); };
+		refresh();
+		const offChanged = window.electronAPI.scheduledTasks.onChanged(refresh);
+		const offNavigate = window.electronAPI.scheduledTasks.onNavigate((target): void => {
+			if (target.sessionId !== null) {
+				openScheduledTaskSession(target.sessionId);
+				return;
+			}
+			setMainSurface("scheduledTasks");
+		});
+		return (): void => { offChanged(); offNavigate(); };
+	}, [openScheduledTaskSession]);
+
+	const createScheduledTask = useCallback((): void => {
+		setMainSurface("chat");
+		onNewSession();
+		handleHomeStarterSelect(t("scheduledTasks.prefill", { defaultValue: "帮我安排一个定时任务：" }));
+	}, [handleHomeStarterSelect, onNewSession, t]);
 
 	const workspaceSnapshotForActions: WorkspaceConfig | null =
 		activeWorkspace ?? (isHome ? homeWorkspace : null);
@@ -2655,7 +2686,7 @@ function HomePage({
 
 	const workspaceTreeProps: WorkspaceTreeProps = {
 		refreshToken: workspaceRefreshToken,
-		selectedSessionId: activeSessionId,
+		selectedSessionId: mainSurface === "chat" ? activeSessionId : null,
 		selectedWorkspaceId: activeWorkspaceId,
 		initialWorkspaces,
 		initialSessions,
@@ -2665,8 +2696,8 @@ function HomePage({
 		unreadSessionIds,
 		forkingSessionId,
 		sessionUpdate: activeSessionMetadata,
-		onNewSession: onNewUnboundSession,
-		onSessionSelect,
+		onNewSession: (): void => { setMainSurface("chat"); onNewUnboundSession(); },
+		onSessionSelect: (session): void => { setMainSurface("chat"); onSessionSelect(session); },
 		onSessionFork,
 		onSessionArchive,
 		onSessionRename,
@@ -2860,7 +2891,10 @@ function HomePage({
 					<HomeWorkspaceSidebar
 						treeProps={workspaceTreeProps}
 						isOpen={workspaceSidebarOpen}
-						onNewSession={onNewSession}
+						onNewSession={(): void => { setMainSurface("chat"); onNewSession(); }}
+						onOpenScheduledTasks={(): void => setMainSurface("scheduledTasks")}
+						scheduledTasksActive={mainSurface === "scheduledTasks"}
+						scheduledTaskAttentionCount={scheduledTaskAttentionCount}
 						onOpenSettings={(): void => {
 							void window.electronAPI.windowControl.openSettings();
 						}}
@@ -2870,6 +2904,7 @@ function HomePage({
 				<Splitter.Panel min={360}>
 					<div
 						className={styles.agentMain}
+						data-main-surface={mainSurface}
 						data-dock-fullscreen={activeFullscreenDock ?? undefined}
 					>
 						{pageActionControls !== null ? (
@@ -3479,6 +3514,7 @@ function HomePage({
 								{renderComposer(true)}
 							</FullscreenComposerShelf>
 						) : null}
+						{mainSurface === "scheduledTasks" ? <div className={styles.scheduledTasksOverlay}><ScheduledTasksPage onCreate={createScheduledTask} onOpenSession={openScheduledTaskSession} /></div> : null}
 					</div>
 				</Splitter.Panel>
 			</Splitter>

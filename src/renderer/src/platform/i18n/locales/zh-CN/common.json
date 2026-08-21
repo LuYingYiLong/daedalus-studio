@@ -27,6 +27,14 @@
 			}
 		}
 	},
+	"scheduledTasks": {
+		"title": "定时任务", "search": "搜索任务...", "create": "新建任务", "prefill": "帮我安排一个定时任务：", "empty": "暂无定时任务", "windowsOnly": "后台调度首版仅支持 Windows；当前平台只能查看任务。",
+		"filters": { "all": "全部", "enabled": "已启用", "paused": "已暂停", "attention": "需处理" },
+		"kind": { "reminder": "提醒", "agent": "AI 任务", "monitor": "AI 监测" },
+		"nextRun": "下次：{{time}}", "runNow": "立即运行", "pause": "暂停", "resume": "恢复", "deleteConfirm": "删除此定时任务？", "enabled": "已启用", "paused": "已暂停",
+		"prompt": "任务内容", "environment": "固定环境", "noWorkspace": "无工作区", "noModel": "提醒任务不调用模型", "autoSafe": "自动安全", "readOnly": "只读", "history": "运行历史", "noRuns": "尚无运行记录", "openSession": "打开会话",
+		"status": { "queued": "排队中", "running": "运行中", "succeeded": "已完成", "unchanged": "无变化", "changed": "有变化", "awaiting_approval": "等待审批", "failed": "失败", "cancelled": "已取消" }
+	},
 	"app": {
 		"boot": {
 			"progress": {

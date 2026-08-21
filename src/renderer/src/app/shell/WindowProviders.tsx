@@ -17,6 +17,23 @@ type WindowProvidersProps = {
 	children: React.ReactNode;
 };
 
+function ForegroundScheduledNotificationBridge(): null {
+	const { notification } = AntdApp.useApp();
+
+	useEffect((): (() => void) => {
+		return window.electronAPI.nativeNotifications.onForeground((payload): void => {
+			notification.open({
+				key: payload.dedupeKey,
+				message: payload.title,
+				description: payload.body,
+				placement: "bottomRight",
+			});
+		});
+	}, [notification]);
+
+	return null;
+}
+
 function WindowProviders({
 	children,
 }: WindowProvidersProps): React.JSX.Element {
@@ -103,6 +120,7 @@ function WindowProviders({
 			}}
 		>
 			<AntdApp component="div" className={styles.root}>
+				<ForegroundScheduledNotificationBridge />
 				{children}
 				<InputContextMenu />
 			</AntdApp>

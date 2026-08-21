@@ -1,5 +1,6 @@
 import { BackendRpcClient } from "@/platform/rpc/transport/backend-rpc-client";
 import type { ClientHelloResult } from "@/platform/rpc/types";
+import { attachScheduledTaskToolRuntime } from "./scheduled-task-tool-runtime";
 
 const studioCapabilities: Record<string, boolean> = {
 	sessionSubscribe: true,
@@ -8,7 +9,8 @@ const studioCapabilities: Record<string, boolean> = {
 	editorTools: false,
 	editorUndoRedo: false,
 	inlineDiffUndo: false,
-	browserTools: false
+	browserTools: false,
+	scheduledTasks: true
 };
 
 let backendClient: BackendRpcClient | null = null;
@@ -24,7 +26,7 @@ async function refreshBrowserCapability(client?: BackendRpcClient): Promise<void
 	}
 	if (client?.isOpen()) {
 		await client.request("client.capabilities.update", {
-			capabilities: { browserTools: studioCapabilities.browserTools }
+			capabilities: { browserTools: studioCapabilities.browserTools, scheduledTasks: true }
 		});
 	}
 }
@@ -100,6 +102,7 @@ async function connectBackendClient(): Promise<BackendRpcClient> {
 	});
 	await client.connect();
 	await sendStudioHello(client);
+	attachScheduledTaskToolRuntime(client);
 
 	return client;
 }

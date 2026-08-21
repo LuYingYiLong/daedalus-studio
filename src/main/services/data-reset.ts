@@ -7,6 +7,8 @@ const PRESERVED_BACKEND_DIRECTORY: string = "versions";
 const STUDIO_DATA_ENTRIES: readonly string[] = [
 	"client-preferences.json",
 	"session-layouts.json",
+	"scheduled-tasks.json",
+	"scheduled-task-runs.json",
 	"godot-projects.json",
 	"daedalus-bridge-staging"
 ];
