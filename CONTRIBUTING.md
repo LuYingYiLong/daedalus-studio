@@ -1,3 +1,4 @@
+<a href="./CONTRIBUTING-CN.md">简体中文
 # Contributing to Daedalus Studio
 
 This guide contains the local development, validation, and packaging instructions for Daedalus Studio. The README files link here so these commands have one canonical home.
