@@ -1,38 +1,63 @@
 import { Alert, Descriptions, Modal, Tag, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import type { PluginRecord } from "@/platform/rpc/plugin-api";
+import { HarnessTrustSummary } from "./HarnessTrustSummary";
 
 export function PluginTrustModal({
 	plugin,
 	open,
+	mode: trustMode = "trusted",
 	loading,
 	onCancel,
 	onConfirm,
 }: {
 	plugin?: PluginRecord;
 	open: boolean;
+	mode?: "trusted" | "disabled";
 	loading: boolean;
 	onCancel: () => void;
 	onConfirm: () => void;
 }): React.JSX.Element {
 	const { t } = useTranslation();
 	if (plugin === undefined) return <></>;
+	const mode: "trusted" | "disabled" = trustMode;
 	const capabilities = plugin.nativePlugin?.capabilities ?? [];
 	return (
 		<Modal
 			open={open}
-			title={t("settings.plugins.trustReview.title")}
-			okText={t("settings.plugins.trustReview.confirm")}
+			title={t(
+				mode === "trusted"
+					? "settings.plugins.trustReview.title"
+					: "settings.plugins.trustReview.revokeTitle",
+			)}
+			okText={t(
+				mode === "trusted"
+					? "settings.plugins.trustReview.confirm"
+					: "settings.plugins.trustReview.revokeConfirm",
+			)}
+			okButtonProps={mode === "disabled" ? { danger: true } : undefined}
 			cancelText={t("settings.common.cancel")}
 			confirmLoading={loading}
 			onCancel={onCancel}
 			onOk={onConfirm}
 		>
 			<Typography.Paragraph type="secondary">
-				{t("settings.plugins.trustReview.description", {
-					name: plugin.packageName,
-				})}
+				{t(
+					mode === "trusted"
+						? "settings.plugins.trustReview.description"
+						: "settings.plugins.trustReview.revokeDescription",
+					{
+						name: plugin.packageName,
+					},
+				)}
 			</Typography.Paragraph>
+			{mode === "trusted" ? (
+				<Typography.Paragraph>
+					<strong>{t("settings.plugins.trustReview.impactTitle")}</strong>
+					<br />
+					{t("settings.plugins.trustReview.impactDescription")}
+				</Typography.Paragraph>
+			) : null}
 			<Descriptions column={1} size="small" bordered>
 				<Descriptions.Item
 					label={t("settings.plugins.trustReview.capabilities")}
@@ -61,14 +86,8 @@ export function PluginTrustModal({
 						: t("settings.plugins.trustReview.none")}
 				</Descriptions.Item>
 			</Descriptions>
-			{plugin.compatibility.harnessBundle ||
-			plugin.compatibility.harnessClient ? (
-				<Alert
-					style={{ marginTop: 12 }}
-					type="info"
-					showIcon
-					message={t("settings.plugins.trustReview.harnessNotice")}
-				/>
+			{mode === "trusted" && plugin.compatibility.harnessBundle ? <HarnessTrustSummary plugin={plugin} /> : plugin.compatibility.harnessClient ? (
+				<Alert style={{ marginTop: 12 }} type="info" showIcon title={t("settings.plugins.trustReview.harnessNotice")} />
 			) : null}
 		</Modal>
 	);

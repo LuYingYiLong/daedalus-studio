@@ -81,9 +81,16 @@ export function PluginInstallModal({
 					/>
 				</Form.Item>
 				{sourceType === "local" || sourceType === "tarball" ? (
-					<Form.Item label={t("settings.plugins.install.path")} required>
+					<Form.Item
+						label={t("settings.plugins.install.path")}
+						required
+					>
 						<Space.Compact className={styles.fullWidth}>
-							<Form.Item name="path" noStyle rules={[{ required: true }]}>
+							<Form.Item
+								name="path"
+								noStyle
+								rules={[{ required: true }]}
+							>
 								<Input
 									placeholder={t(
 										"settings.plugins.install.pathPlaceholder",
@@ -148,7 +155,7 @@ export function PluginInstallModal({
 				<Alert
 					type="info"
 					showIcon
-					message={t("settings.plugins.install.noExecution")}
+					title={t("settings.plugins.install.noExecution")}
 				/>
 			</Form>
 		</Modal>

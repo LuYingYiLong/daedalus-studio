@@ -8,13 +8,11 @@ export function PluginRuntimeSection({
 	plugin,
 	busy,
 	onRestart,
-	onStop,
 	onInstallDependencies,
 }: {
 	plugin: PluginRecord;
 	busy: boolean;
 	onRestart: () => void;
-	onStop: () => void;
 	onInstallDependencies: () => void;
 }): React.JSX.Element {
 	const { t } = useTranslation();
@@ -62,9 +60,6 @@ export function PluginRuntimeSection({
 					onClick={onRestart}
 				>
 					{t("settings.plugins.runtime.restart")}
-				</Button>
-				<Button loading={busy} onClick={onStop}>
-					{t("settings.plugins.runtime.stop")}
 				</Button>
 				{runtime?.dependencyStatus === "needs_network" ? (
 					<Button

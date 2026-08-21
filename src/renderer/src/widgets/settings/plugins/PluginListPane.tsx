@@ -1,4 +1,4 @@
-import { Button, Empty, Input, Menu, Spin, Tag, Typography } from "antd";
+import { Button, Empty, Input, Menu, Space, Spin, Typography } from "antd";
 import { useMemo, useState } from "react";
 import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
@@ -10,18 +10,44 @@ import { Icon } from "@/assets/icons";
 import { classificationColor } from "./plugin-formatters";
 import styles from "./plugins.module.css";
 
+function PluginMenuIcon({ plugin }: { plugin: PluginRecord }): React.JSX.Element {
+	const [failed, setFailed] = useState(false);
+	const iconDataUrl = plugin.presentation?.iconDataUrl;
+	if (iconDataUrl === undefined || failed) {
+		return (
+			<span className={styles.menuIconBox} aria-hidden="true">
+				<Icon name="plugin-large" className={styles.menuIconFallback} />
+			</span>
+		);
+	}
+	return (
+		<span className={styles.menuIconBox} aria-hidden="true">
+			<img
+				className={styles.menuIcon}
+				src={iconDataUrl}
+				alt=""
+				loading="lazy"
+				decoding="async"
+				onError={(): void => setFailed(true)}
+			/>
+		</span>
+	);
+}
+
 export function PluginListPane({
 	catalog,
 	loading,
 	selectedId,
 	onSelect,
 	onAdd,
+	onConfigureHarness,
 }: {
 	catalog: PluginCatalogResult | null;
 	loading: boolean;
 	selectedId: string | null;
 	onSelect: (id: string) => void;
 	onAdd: () => void;
+	onConfigureHarness: () => void;
 }): React.JSX.Element {
 	const { t } = useTranslation();
 	const [query, setQuery] = useState("");
@@ -40,6 +66,7 @@ export function PluginListPane({
 		key: plugin.id,
 		label: (
 			<div className={styles.menuItem}>
+				<PluginMenuIcon plugin={plugin} />
 				<div className={styles.menuText}>
 					<Typography.Text strong ellipsis>
 						{plugin.packageName}
@@ -53,13 +80,16 @@ export function PluginListPane({
 	}));
 	return (
 		<div className={styles.listContent}>
-			<Input
-				prefix={<Icon name="search" />}
-				allowClear
-				placeholder={t("settings.plugins.searchPlaceholder")}
-				value={query}
-				onChange={(event): void => setQuery(event.target.value)}
-			/>
+			<Space.Compact className={styles.fullWidth}>
+				<Input
+					prefix={<Icon name="search" />}
+					allowClear
+					placeholder={t("settings.plugins.searchPlaceholder")}
+					value={query}
+					onChange={(event): void => setQuery(event.target.value)}
+				/>
+				<Button aria-label={t("settings.plugins.harness.title")} icon={<Icon name="settings" />} onClick={onConfigureHarness} />
+			</Space.Compact>
 			{loading ? (
 				<div className={styles.center}>
 					<Spin />

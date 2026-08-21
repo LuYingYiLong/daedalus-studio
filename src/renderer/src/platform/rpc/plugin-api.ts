@@ -25,6 +25,53 @@ export type PluginPresentation = {
 	iconDataUrl?: string;
 };
 
+export type HarnessRuntimeStatus =
+	| "unconfigured"
+	| "detected"
+	| "needs_setup"
+	| "ready"
+	| "running"
+	| "failed"
+	| "disabled";
+
+export type HarnessBundleSummary = {
+	patchPath?: string;
+	totalRows: number;
+	bridgeableRows: number;
+	skippedRows: Array<{ index: number; id?: string; name?: string; reason: string }>;
+	operations: Array<"insert" | "replace" | "override">;
+	warnings: string[];
+	dangerousConstructs: string[];
+	contentHash: string;
+};
+
+export type HarnessRuntimeConfig = {
+	enabled: boolean;
+	executablePath: string | null;
+	sourceRoot: string | null;
+	launchMode: "installed" | "source";
+	bridgeProtocolVersion: number;
+	network: "disabled";
+	revision: string;
+	updatedAt: string;
+};
+
+export type HarnessInstallationStatus = {
+	status: "unconfigured" | "detected" | "needs_setup" | "failed";
+	launchMode: "installed" | "source";
+	version?: string;
+	bridgeProtocolVersion: number;
+	bridgeCompatible: boolean;
+	dependenciesReady: boolean;
+	error?: string;
+};
+
+export type HarnessConfigResult = {
+	config: HarnessRuntimeConfig;
+	installation: HarnessInstallationStatus;
+	trustInvalidated?: boolean;
+};
+
 export type PluginRecord = {
 	id: string;
 	packageName: string;
@@ -43,11 +90,13 @@ export type PluginRecord = {
 	presentation?: PluginPresentation;
 	nativePlugin?: { apiVersion: number; entry: string; capabilities: Array<"tools" | "skills" | "hooks" | "mcp"> };
 	dependencyLockHash?: string;
+	harnessBundle?: HarnessBundleSummary;
 	runtime?: PluginRuntimeSnapshot;
 };
 
 export type PluginRuntimeSnapshot = {
 	pluginId: string;
+	runtimeKind?: "native" | "harness";
 	status: "stopped" | "starting" | "ready" | "failed" | "disabled";
 	activeSessions: number;
 	registeredTools: number;
@@ -55,6 +104,10 @@ export type PluginRuntimeSnapshot = {
 	registeredHooks: number;
 	registeredMcpServers: number;
 	dependencyStatus: "not_required" | "pending" | "ready" | "needs_network" | "failed";
+	harnessStatus?: HarnessRuntimeStatus;
+	harnessVersion?: string;
+	bridgeProtocolVersion?: number;
+	bundleSummary?: HarnessBundleSummary;
 	lastError?: string;
 	updatedAt: string;
 };
@@ -147,4 +200,35 @@ export async function fetchPluginRuntimeLogs(pluginId?: string, limit?: number):
 export async function installPluginDependencies(pluginId: string, allowNetwork: boolean): Promise<PluginRuntimeSnapshot> {
 	const client = await createBackendClient();
 	return client.request("plugin.runtime.dependencies.install", { pluginId, allowNetwork });
+}
+
+export async function fetchHarnessConfig(): Promise<HarnessConfigResult> {
+	const client = await createBackendClient();
+	return client.request("plugin.harness.config.get", {});
+}
+
+export async function updateHarnessConfig(params: {
+	expectedRevision: string;
+	enabled: boolean;
+	executablePath: string | null;
+	sourceRoot: string | null;
+	launchMode: "installed" | "source";
+}): Promise<HarnessConfigResult> {
+	const client = await createBackendClient();
+	return client.request("plugin.harness.config.update", params);
+}
+
+export async function detectHarness(): Promise<HarnessConfigResult> {
+	const client = await createBackendClient();
+	return client.request("plugin.harness.detect", {});
+}
+
+export async function previewHarnessBundle(pluginId: string): Promise<HarnessBundleSummary> {
+	const client = await createBackendClient();
+	return client.request("plugin.harness.preview", { pluginId });
+}
+
+export async function fetchHarnessRuntimeStatus(pluginId: string): Promise<{ runtime: PluginRuntimeSnapshot | null; installation: HarnessInstallationStatus }> {
+	const client = await createBackendClient();
+	return client.request("plugin.harness.runtime.status", { pluginId });
 }

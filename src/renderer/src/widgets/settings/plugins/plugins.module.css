@@ -44,23 +44,55 @@
 
 .menuItem {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
+	grid-template-columns: 40px minmax(0, 1fr);
 	align-items: center;
-	gap: 8px;
+	gap: var(--ds-space-1);
 	width: 100%;
 	min-width: 0;
+}
+
+.menuIconBox {
+	display: grid;
+	place-items: center;
+	align-self: center;
+	width: 28px;
+	height: 28px;
+	min-width: 28px;
+	overflow: hidden;
+}
+
+.menuIcon,
+.menuIconFallback {
+	display: block;
+	width: 100%;
+	height: 100%;
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+	-webkit-user-drag: none;
+}
+
+.menuIconFallback {
+	color: var(--ant-color-primary);
+}
+
+.menuIconBox :global(.daedalus-icon) {
+	width: 100%;
+	height: 100%;
 }
 
 .menuText {
 	display: grid;
 	min-width: 0;
 }
+
 .addButton {
 	width: 100%;
 }
 
 .detailPane {
-	display: grid;
+	display: flex;
+	flex-direction: column;
 	align-self: stretch;
 	min-width: 0;
 	min-height: 0;
@@ -75,23 +107,65 @@
 }
 
 .detailScroll {
+	display: flex;
+	flex: 1 1 auto;
 	min-width: 0;
 	min-height: 0;
 	overflow-x: hidden;
-	overflow-y: auto;
-	padding: 0 4px 24px;
+	overflow-y: hidden;
+	padding: 0 0 var(--ds-space-2);
+}
+
+.detailScroll > .pluginDetailPane {
+	flex: 1 1 0;
 }
 
 .pluginDetailPane {
-	display: grid;
-	align-content: start;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
 	gap: 0;
 	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
 }
 
 .detailHeader {
+	flex: 0 0 auto;
+	min-width: 0;
 	gap: var(--ds-space-1);
 	padding: 0 var(--ds-space-2) var(--ds-space-2) 0;
+}
+
+.detailTabs {
+	flex: 0 0 auto;
+	min-width: 0;
+	min-height: 0;
+}
+
+.detailTabs :global(.ant-tabs-nav) {
+	flex: 0 0 auto;
+}
+
+.detailTabs :global(.ant-tabs-content-holder) {
+	display: none;
+}
+
+.tabViewport {
+	flex: 1 1 0;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.tabScroll {
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	box-sizing: border-box;
+	overflow-x: hidden;
+	overflow-y: auto;
 }
 
 .identity {
@@ -133,9 +207,24 @@
 	min-width: 0;
 }
 
+.featureDescriptions {
+	width: 100%;
+}
+
+.featureDescriptions :global(.ant-descriptions-item-content) {
+	min-width: 0;
+}
+
+.fingerprintValue {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: wrap;
+}
+
 .markdownPane {
 	min-width: 0;
-	padding: 8px 0 16px;
+	user-select: text;
 }
 
 .markdownPane :global(.ant-typography) {

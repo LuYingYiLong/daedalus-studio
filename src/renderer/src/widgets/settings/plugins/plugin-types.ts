@@ -11,7 +11,7 @@ export type PluginPageProps = {
 	busyPluginId: string | null;
 	onSelect: (pluginId: string) => void;
 	onToggle: (plugin: PluginRecord) => void;
-	onTrust: (plugin: PluginRecord, status: "trusted" | "disabled") => void;
+	onRequestTrust: (plugin: PluginRecord, status: "trusted" | "disabled") => void;
 	onRemove: (plugin: PluginRecord) => void;
 	onRefresh: () => void;
 };

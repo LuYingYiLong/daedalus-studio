@@ -5,22 +5,29 @@ import { Icon } from "@/assets/icons";
 import {
 	fetchPluginCatalog,
 	fetchPluginRuntimeLogs,
+	fetchHarnessConfig,
+	detectHarness,
+	previewHarnessBundle,
 	installPlugin,
 	installPluginDependencies,
 	removePlugin,
 	restartPluginRuntime,
-	stopPluginRuntime,
+	updateHarnessConfig,
 	updatePluginProfile,
 	updatePluginTrust,
 	type PluginCatalogResult,
 	type PluginRecord,
 	type PluginRuntimeLog,
 	type PluginSource,
+	type HarnessBundleSummary,
+	type HarnessConfigResult,
 } from "@/platform/rpc/plugin-api";
 import { PluginListPane } from "./plugins/PluginListPane";
 import { PluginDetailPane } from "./plugins/PluginDetailPane";
 import { PluginInstallModal } from "./plugins/PluginInstallModal";
 import { PluginTrustModal } from "./plugins/PluginTrustModal";
+import { HarnessRuntimeModal } from "./plugins/HarnessRuntimeModal";
+import { HarnessBundlePreview } from "./plugins/HarnessBundlePreview";
 import styles from "./plugins/plugins.module.css";
 
 function PluginsSettingsPage(): React.JSX.Element {
@@ -36,7 +43,14 @@ function PluginsSettingsPage(): React.JSX.Element {
 	const [trustCandidate, setTrustCandidate] = useState<
 		PluginRecord | undefined
 	>();
+	const [trustMode, setTrustMode] = useState<"trusted" | "disabled">("trusted");
 	const [logs, setLogs] = useState<PluginRuntimeLog[]>([]);
+	const [harnessConfig, setHarnessConfig] = useState<HarnessConfigResult | null>(null);
+	const [harnessOpen, setHarnessOpen] = useState(false);
+	const [harnessBusy, setHarnessBusy] = useState(false);
+	const [previewOpen, setPreviewOpen] = useState(false);
+	const [previewLoading, setPreviewLoading] = useState(false);
+	const [previewSummary, setPreviewSummary] = useState<HarnessBundleSummary | null>(null);
 	const selectedPlugin = catalog?.plugins.find(
 		(plugin): boolean => plugin.id === selectedId,
 	);
@@ -64,6 +78,7 @@ function PluginsSettingsPage(): React.JSX.Element {
 	}
 	useEffect((): void => {
 		void refresh();
+		void fetchHarnessConfig().then(setHarnessConfig).catch((): void => setHarnessConfig(null));
 	}, []);
 	useEffect((): void => {
 		if (selectedId !== null)
@@ -81,6 +96,10 @@ function PluginsSettingsPage(): React.JSX.Element {
 			setSelectedId(result.plugin.id);
 			setInstallOpen(false);
 			message.success(t("settings.plugins.messages.installed"));
+			if (result.plugin.trust === "review_required") {
+				setTrustMode("trusted");
+				setTrustCandidate(result.plugin);
+			}
 		} catch (caught: unknown) {
 			message.error(
 				caught instanceof Error
@@ -114,7 +133,7 @@ function PluginsSettingsPage(): React.JSX.Element {
 	async function trust(
 		plugin: PluginRecord,
 		status: "trusted" | "disabled",
-	): Promise<void> {
+	): Promise<boolean> {
 		try {
 			setBusyPluginId(plugin.id);
 			await updatePluginTrust(plugin.id, plugin.fingerprint, status);
@@ -127,17 +146,20 @@ function PluginsSettingsPage(): React.JSX.Element {
 						: "settings.plugins.messages.disabled",
 				),
 			);
+			return true;
 		} catch (caught: unknown) {
 			message.error(
 				caught instanceof Error
 					? caught.message
 					: t("settings.plugins.errors.trust"),
 			);
+			return false;
 		} finally {
 			setBusyPluginId(null);
 		}
 	}
-	function requestTrust(plugin: PluginRecord): void {
+	function requestTrust(plugin: PluginRecord, status: "trusted" | "disabled"): void {
+		setTrustMode(status);
 		setTrustCandidate(plugin);
 	}
 	function remove(plugin: PluginRecord): void {
@@ -181,22 +203,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 			setBusyPluginId(null);
 		}
 	}
-	async function stop(): Promise<void> {
-		if (selectedPlugin === undefined) return;
-		try {
-			setBusyPluginId(selectedPlugin.id);
-			await stopPluginRuntime(selectedPlugin.id);
-			await refresh();
-		} catch (caught: unknown) {
-			message.error(
-				caught instanceof Error
-					? caught.message
-					: t("settings.plugins.runtime.error"),
-			);
-		} finally {
-			setBusyPluginId(null);
-		}
-	}
 	function dependencies(): void {
 		if (selectedPlugin === undefined) return;
 		const plugin = selectedPlugin;
@@ -223,6 +229,40 @@ function PluginsSettingsPage(): React.JSX.Element {
 			},
 		});
 	}
+	async function saveHarness(values: { enabled: boolean; launchMode: "installed" | "source"; executablePath: string; sourceRoot: string }): Promise<void> {
+		if (harnessConfig === null) return;
+		try {
+			setHarnessBusy(true);
+			const result = await updateHarnessConfig({
+				expectedRevision: harnessConfig.config.revision,
+				enabled: values.enabled,
+				launchMode: values.launchMode,
+				executablePath: values.executablePath.trim() || null,
+				sourceRoot: values.sourceRoot.trim() || null,
+			});
+			setHarnessConfig(result);
+			setHarnessOpen(false);
+			if (result.trustInvalidated) {
+				message.warning(t("settings.plugins.harness.trustInvalidated"));
+				await refresh();
+			}
+		} catch (caught: unknown) {
+			message.error(caught instanceof Error ? caught.message : t("settings.plugins.harness.saveFailed"));
+		} finally { setHarnessBusy(false); }
+	}
+	async function runHarnessDetection(): Promise<void> {
+		try { setHarnessBusy(true); setHarnessConfig(await detectHarness()); }
+		catch (caught: unknown) { message.error(caught instanceof Error ? caught.message : t("settings.plugins.harness.detectFailed")); }
+		finally { setHarnessBusy(false); }
+	}
+	async function openHarnessPreview(): Promise<void> {
+		if (selectedPlugin === undefined) return;
+		setPreviewOpen(true);
+		setPreviewSummary(null);
+		try { setPreviewLoading(true); setPreviewSummary(await previewHarnessBundle(selectedPlugin.id)); }
+		catch (caught: unknown) { message.error(caught instanceof Error ? caught.message : t("settings.plugins.harness.previewFailed")); }
+		finally { setPreviewLoading(false); }
+	}
 
 	return (
 		<section className={styles.page}>
@@ -233,6 +273,7 @@ function PluginsSettingsPage(): React.JSX.Element {
 					selectedId={selectedId}
 					onSelect={setSelectedId}
 					onAdd={(): void => setInstallOpen(true)}
+					onConfigureHarness={(): void => setHarnessOpen(true)}
 				/>
 			</aside>
 			<section className={styles.detailPane}>
@@ -251,20 +292,15 @@ function PluginsSettingsPage(): React.JSX.Element {
 						onToggle={(plugin): void => {
 							void toggle(plugin);
 						}}
-						onTrust={(plugin, status): void => {
-							void trust(plugin, status);
-						}}
 						onRequestTrust={requestTrust}
 						onRemove={remove}
 						onRestart={(): void => {
 							void restart();
 						}}
-						onStop={(): void => {
-							void stop();
-						}}
 						onInstallDependencies={(): void => {
 							void dependencies();
 						}}
+						onPreviewHarness={(): void => { void openHarnessPreview(); }}
 						logs={logs}
 					/>
 				</div>
@@ -278,6 +314,7 @@ function PluginsSettingsPage(): React.JSX.Element {
 			<PluginTrustModal
 				plugin={trustCandidate}
 				open={trustCandidate !== undefined}
+				mode={trustMode}
 				loading={
 					trustCandidate !== undefined &&
 					busyPluginId === trustCandidate.id
@@ -285,11 +322,26 @@ function PluginsSettingsPage(): React.JSX.Element {
 				onCancel={(): void => setTrustCandidate(undefined)}
 				onConfirm={(): void => {
 					if (trustCandidate !== undefined) {
-						void trust(trustCandidate, "trusted").then((): void =>
-							setTrustCandidate(undefined),
-						);
+						void trust(trustCandidate, trustMode).then((success): void => {
+							if (success) setTrustCandidate(undefined);
+						});
 					}
 				}}
+			/>
+			<HarnessRuntimeModal
+				open={harnessOpen}
+				value={harnessConfig}
+				loading={harnessBusy}
+				onCancel={(): void => setHarnessOpen(false)}
+				onDetect={runHarnessDetection}
+				onSave={saveHarness}
+			/>
+			<HarnessBundlePreview
+				plugin={selectedPlugin}
+				summary={previewSummary}
+				open={previewOpen}
+				loading={previewLoading}
+				onClose={(): void => setPreviewOpen(false)}
 			/>
 		</section>
 	);
