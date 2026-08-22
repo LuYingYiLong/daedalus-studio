@@ -15,6 +15,12 @@ export type BackendExecutableManifest = {
 	sha256: string;
 };
 
+export type BackendSandboxHelperManifest = {
+	fileName: "daedalus-windows-sandbox-helper.exe";
+	size: number;
+	sha256: string;
+};
+
 export type BackendPayloadManifestV1 = {
 	schemaVersion: 1;
 	version: string;
@@ -29,6 +35,7 @@ export type BackendPayloadManifestV1 = {
 	publishedAt: string;
 	authenticode: BackendAuthenticodeStatus;
 	executable: BackendExecutableManifest;
+	sandboxHelper: BackendSandboxHelperManifest;
 };
 
 export type BackendReleaseManifestV1 = BackendPayloadManifestV1 & {
@@ -107,6 +114,7 @@ function parsePayloadManifestRecord(record: Record<string, unknown>): BackendPay
 		throw new Error("Backend manifest field \"publishedAt\" must be an ISO timestamp.");
 	}
 	const executableRecord: Record<string, unknown> = requireRecord(record.executable, "Backend executable manifest");
+	const sandboxHelperRecord: Record<string, unknown> = requireRecord(record.sandboxHelper, "Backend sandbox helper manifest");
 
 	return {
 		schemaVersion: requireLiteral(record, "schemaVersion", BACKEND_BINARY_MANIFEST_SCHEMA_VERSION),
@@ -125,6 +133,11 @@ function parsePayloadManifestRecord(record: Record<string, unknown>): BackendPay
 			fileName: requireLiteral(executableRecord, "fileName", "daedalus-backend.exe"),
 			size: requirePositiveInteger(executableRecord, "size"),
 			sha256: requireSha256(executableRecord, "sha256")
+		},
+		sandboxHelper: {
+			fileName: requireLiteral(sandboxHelperRecord, "fileName", "daedalus-windows-sandbox-helper.exe"),
+			size: requirePositiveInteger(sandboxHelperRecord, "size"),
+			sha256: requireSha256(sandboxHelperRecord, "sha256")
 		}
 	};
 }
@@ -216,5 +229,8 @@ export function payloadManifestsMatch(
 		&& left.authenticode === right.authenticode
 		&& left.executable.fileName === right.executable.fileName
 		&& left.executable.size === right.executable.size
-		&& left.executable.sha256 === right.executable.sha256;
+		&& left.executable.sha256 === right.executable.sha256
+		&& left.sandboxHelper.fileName === right.sandboxHelper.fileName
+		&& left.sandboxHelper.size === right.sandboxHelper.size
+		&& left.sandboxHelper.sha256 === right.sandboxHelper.sha256;
 }

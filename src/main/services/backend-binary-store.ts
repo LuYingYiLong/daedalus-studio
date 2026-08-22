@@ -28,6 +28,7 @@ const BACKEND_RELEASE_BASE_URL: string =
 const RELEASE_MANIFEST_FILE_NAME: string = "daedalus-backend-win32-x64.json";
 const PAYLOAD_MANIFEST_FILE_NAME: string = "backend-manifest.json";
 const EXECUTABLE_FILE_NAME: string = "daedalus-backend.exe";
+const SANDBOX_HELPER_FILE_NAME: string = "daedalus-windows-sandbox-helper.exe";
 const MAX_MANIFEST_BYTES: number = 1024 * 1024;
 const MAX_ARCHIVE_BYTES: number = 256 * 1024 * 1024;
 const SELF_TEST_TIMEOUT_MS: number = 30000;
@@ -56,6 +57,7 @@ export type InstalledBackendBinary = {
 	version: string;
 	versionDir: string;
 	executablePath: string;
+	sandboxHelperPath: string;
 	manifestPath: string;
 	manifest: BackendPayloadManifestV1;
 };
@@ -378,6 +380,7 @@ export async function inspectInstalledBackend(versionDir: string): Promise<Insta
 	const safeVersionDir: string = assertInside(getManagedBackendVersionsDir(), versionDir);
 	const manifestPath: string = join(safeVersionDir, PAYLOAD_MANIFEST_FILE_NAME);
 	const executablePath: string = join(safeVersionDir, EXECUTABLE_FILE_NAME);
+	const sandboxHelperPath: string = join(safeVersionDir, SANDBOX_HELPER_FILE_NAME);
 	const manifest: BackendPayloadManifestV1 = parseBackendPayloadManifest(
 		JSON.parse(await readFile(manifestPath, "utf8")) as unknown
 	);
@@ -393,10 +396,17 @@ export async function inspectInstalledBackend(versionDir: string): Promise<Insta
 		manifest.executable.sha256,
 		"Backend executable"
 	);
+	await verifyFile(
+		sandboxHelperPath,
+		manifest.sandboxHelper.size,
+		manifest.sandboxHelper.sha256,
+		"Backend Windows sandbox helper"
+	);
 	return {
 		version: manifest.version,
 		versionDir: safeVersionDir,
 		executablePath,
+		sandboxHelperPath,
 		manifestPath,
 		manifest
 	};
@@ -425,6 +435,7 @@ export async function inspectBundledBackend(): Promise<InstalledBackendBinary> {
 	const bundleDir: string = getBundledBackendDir();
 	const manifestPath: string = join(bundleDir, PAYLOAD_MANIFEST_FILE_NAME);
 	const executablePath: string = join(bundleDir, EXECUTABLE_FILE_NAME);
+	const sandboxHelperPath: string = join(bundleDir, SANDBOX_HELPER_FILE_NAME);
 	const manifest: BackendPayloadManifestV1 = parseBackendPayloadManifest(
 		JSON.parse(await readFile(manifestPath, "utf8")) as unknown
 	);
@@ -440,10 +451,17 @@ export async function inspectBundledBackend(): Promise<InstalledBackendBinary> {
 		manifest.executable.sha256,
 		"Bundled backend executable"
 	);
+	await verifyFile(
+		sandboxHelperPath,
+		manifest.sandboxHelper.size,
+		manifest.sandboxHelper.sha256,
+		"Bundled Windows sandbox helper"
+	);
 	return {
 		version: manifest.version,
 		versionDir: bundleDir,
 		executablePath,
+		sandboxHelperPath,
 		manifestPath,
 		manifest
 	};
@@ -554,7 +572,7 @@ const POWERSHELL_EXTRACT_SCRIPT: string = [
 	"Add-Type -AssemblyName System.IO.Compression.FileSystem",
 	"$archive = [System.IO.Compression.ZipFile]::OpenRead($env:DAEDALUS_ARCHIVE_PATH)",
 	"try {",
-	"  $allowed = @('daedalus-backend.exe', 'backend-manifest.json')",
+	"  $allowed = @('daedalus-backend.exe', 'daedalus-windows-sandbox-helper.exe', 'backend-manifest.json')",
 	"  $seen = @{}",
 	"  foreach ($entry in $archive.Entries) {",
 	"    if ($entry.FullName -notin $allowed -or $seen.ContainsKey($entry.FullName)) {",
@@ -602,11 +620,18 @@ async function finalizeStagingDirectory(
 		throw new Error("Backend payload manifest does not match its release manifest.");
 	}
 	const stagingExecutablePath: string = join(stagingDir, EXECUTABLE_FILE_NAME);
+	const stagingSandboxHelperPath: string = join(stagingDir, SANDBOX_HELPER_FILE_NAME);
 	await verifyFile(
 		stagingExecutablePath,
 		payloadManifest.executable.size,
 		payloadManifest.executable.sha256,
 		"Backend executable"
+	);
+	await verifyFile(
+		stagingSandboxHelperPath,
+		payloadManifest.sandboxHelper.size,
+		payloadManifest.sandboxHelper.sha256,
+		"Backend Windows sandbox helper"
 	);
 
 	const versionDir: string = assertInside(
@@ -680,6 +705,7 @@ export async function stageBundledBackend(): Promise<InstalledBackendBinary> {
 	await mkdir(stagingDir, { recursive: true });
 	try {
 		await copyFile(bundled.executablePath, join(stagingDir, EXECUTABLE_FILE_NAME));
+		await copyFile(bundled.sandboxHelperPath, join(stagingDir, SANDBOX_HELPER_FILE_NAME));
 		await writeFile(join(stagingDir, PAYLOAD_MANIFEST_FILE_NAME), manifestBytes);
 		return await finalizeStagingDirectory(stagingDir, bundled.manifest);
 	} catch (error: unknown) {

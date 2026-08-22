@@ -19,6 +19,7 @@ const version = process.env.BACKEND_BOOTSTRAP_VERSION || packageJson.backendBoot
 const targetDir = join(projectRoot, "build", "backend-bootstrap");
 const manifestName = "backend-manifest.json";
 const executableName = "daedalus-backend.exe";
+const sandboxHelperName = "daedalus-windows-sandbox-helper.exe";
 const releaseManifestName = "daedalus-backend-win32-x64.json";
 const releaseBaseUrl = "https://github.com/LuYingYiLong/daedalus-backend/releases";
 const maxArchiveBytes = 256 * 1024 * 1024;
@@ -134,6 +135,10 @@ function assertPayloadManifest(manifest) {
 		|| !Number.isSafeInteger(manifest.executable?.size)
 		|| manifest.executable.size <= 0
 		|| !/^[a-f0-9]{64}$/.test(manifest.executable?.sha256)
+		|| manifest.sandboxHelper?.fileName !== sandboxHelperName
+		|| !Number.isSafeInteger(manifest.sandboxHelper?.size)
+		|| manifest.sandboxHelper.size <= 0
+		|| !/^[a-f0-9]{64}$/.test(manifest.sandboxHelper?.sha256)
 	) {
 		fail("Backend payload manifest is invalid or incompatible with this Studio build.");
 	}
@@ -152,7 +157,8 @@ function payloadManifestFieldsMatch(left, right) {
 		&& left.minStudioVersion === right.minStudioVersion
 		&& left.publishedAt === right.publishedAt
 		&& left.authenticode === right.authenticode
-		&& JSON.stringify(left.executable) === JSON.stringify(right.executable);
+		&& JSON.stringify(left.executable) === JSON.stringify(right.executable)
+		&& JSON.stringify(left.sandboxHelper) === JSON.stringify(right.sandboxHelper);
 }
 
 function assertInside(parentDir, childPath) {
@@ -185,7 +191,8 @@ function sha256File(filePath) {
 function readPayloadManifest(payloadDir) {
 	const manifestPath = join(payloadDir, manifestName);
 	const executablePath = join(payloadDir, executableName);
-	if (!existsSync(manifestPath) || !existsSync(executablePath)) {
+	const sandboxHelperPath = join(payloadDir, sandboxHelperName);
+	if (!existsSync(manifestPath) || !existsSync(executablePath) || !existsSync(sandboxHelperPath)) {
 		fail(`Backend payload is incomplete at ${payloadDir}.`);
 	}
 	const manifestBytes = readFileSync(manifestPath);
@@ -198,7 +205,15 @@ function readPayloadManifest(payloadDir) {
 	) {
 		fail("Backend payload executable failed size or SHA-256 verification.");
 	}
-	return { manifest, manifestBytes, manifestPath, executablePath };
+	const sandboxHelperStat = statSync(sandboxHelperPath);
+	if (
+		!sandboxHelperStat.isFile()
+		|| sandboxHelperStat.size !== manifest.sandboxHelper.size
+		|| sha256File(sandboxHelperPath) !== manifest.sandboxHelper.sha256
+	) {
+		fail("Backend Windows sandbox helper failed size or SHA-256 verification.");
+	}
+	return { manifest, manifestBytes, manifestPath, executablePath, sandboxHelperPath };
 }
 
 function installPayload(payloadDir) {
@@ -207,6 +222,7 @@ function installPayload(payloadDir) {
 	rmSync(tempDir, { recursive: true, force: true });
 	mkdirSync(tempDir, { recursive: true });
 	copyFileSync(payload.executablePath, join(tempDir, executableName));
+	copyFileSync(payload.sandboxHelperPath, join(tempDir, sandboxHelperName));
 	writeFileSync(join(tempDir, manifestName), payload.manifestBytes);
 	rmSync(targetDir, { recursive: true, force: true });
 	renameSync(tempDir, targetDir);
@@ -281,7 +297,7 @@ function extractArchive(archivePath, destinationDir) {
 		"Add-Type -AssemblyName System.IO.Compression.FileSystem",
 		"$archive = [System.IO.Compression.ZipFile]::OpenRead($env:DAEDALUS_ARCHIVE_PATH)",
 		"try {",
-		"  $allowed = @('daedalus-backend.exe', 'backend-manifest.json')",
+		"  $allowed = @('daedalus-backend.exe', 'daedalus-windows-sandbox-helper.exe', 'backend-manifest.json')",
 		"  $seen = @{}",
 		"  foreach ($entry in $archive.Entries) {",
 		"    if ($entry.FullName -notin $allowed -or $seen.ContainsKey($entry.FullName)) {",

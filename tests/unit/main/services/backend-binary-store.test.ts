@@ -30,14 +30,17 @@ async function pathExists(filePath: string): Promise<boolean> {
 async function createInstalledBackend(version: string): Promise<InstalledBackendBinary> {
 	const versionDir: string = join(getManagedBackendVersionsDir(), version);
 	const executablePath: string = join(versionDir, "daedalus-backend.exe");
+	const sandboxHelperPath: string = join(versionDir, "daedalus-windows-sandbox-helper.exe");
 	const manifestPath: string = join(versionDir, "backend-manifest.json");
 	await mkdir(versionDir, { recursive: true });
 	await writeFile(executablePath, `fake backend ${version}`, "utf8");
+	await writeFile(sandboxHelperPath, `fake sandbox helper ${version}`, "utf8");
 	await writeFile(manifestPath, JSON.stringify({ version }), "utf8");
 	return {
 		version,
 		versionDir,
 		executablePath,
+		sandboxHelperPath,
 		manifestPath,
 		manifest: {
 			schemaVersion: 1,
@@ -56,6 +59,11 @@ async function createInstalledBackend(version: string): Promise<InstalledBackend
 				fileName: "daedalus-backend.exe",
 				size: 1,
 				sha256: "a".repeat(64)
+			},
+			sandboxHelper: {
+				fileName: "daedalus-windows-sandbox-helper.exe",
+				size: 1,
+				sha256: "d".repeat(64)
 			}
 		}
 	};

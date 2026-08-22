@@ -30,6 +30,11 @@ function createPayloadManifest(
 			size: 1024,
 			sha256: "a".repeat(64)
 		},
+		sandboxHelper: {
+			fileName: "daedalus-windows-sandbox-helper.exe",
+			size: 2048,
+			sha256: "d".repeat(64)
+		},
 		...patch
 	};
 }

@@ -527,6 +527,11 @@ class BackendManager {
 			cwd: launchTarget.cwd,
 			env: {
 				...process.env,
+				...(process.platform === "win32"
+					&& !(process.env.DAEDALUS_WINDOWS_SANDBOX_HELPER?.trim())
+					&& existsSync(join(launchTarget.cwd, "daedalus-windows-sandbox-helper.exe"))
+					? { DAEDALUS_WINDOWS_SANDBOX_HELPER: join(launchTarget.cwd, "daedalus-windows-sandbox-helper.exe") }
+					: {}),
 				NODE_USE_SYSTEM_CA: process.env.NODE_USE_SYSTEM_CA ?? "1"
 			},
 			windowsHide: true,

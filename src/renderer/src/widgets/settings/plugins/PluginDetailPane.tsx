@@ -368,11 +368,6 @@ export function PluginDetailPane({
 
 	const detailsContent: React.JSX.Element = (
 		<div className={`${styles.tabScroll} ${styles.markdownPane}`}>
-			{description ? (
-				<Typography.Paragraph type="secondary">
-					{description}
-				</Typography.Paragraph>
-			) : null}
 			{readme ? (
 				<Markdown remarkPlugins={[remarkGfm]}>{readme}</Markdown>
 			) : (
@@ -417,7 +412,7 @@ export function PluginDetailPane({
 	return (
 		<div className={styles.pluginDetailPane}>
 			<div className={styles.detailHeader}>
-				<Flex justify="space-between" align="center" gap="middle">
+				<Flex justify="space-between" align="center">
 					<Flex
 						align="center"
 						gap="small"
@@ -438,14 +433,17 @@ export function PluginDetailPane({
 							)}
 						</div>
 						<div className={styles.identityText}>
-							<Flex align="center" gap="small">
-								<Typography.Title
-									level={3}
-									className={styles.detailTitle}
-								>
-									{plugin.packageName}
-								</Typography.Title>
-							</Flex>
+							<Typography.Title
+								level={3}
+								className={styles.detailTitle}
+							>
+								{plugin.packageName}
+							</Typography.Title>
+							{description ? (
+								<Typography.Paragraph type="secondary">
+									{description}
+								</Typography.Paragraph>
+							) : null}
 							<Flex align="center" gap="small">
 								<Typography.Text type="secondary">
 									{plugin.version}
@@ -460,138 +458,121 @@ export function PluginDetailPane({
 									)}
 								</Tag>
 							</Flex>
-							<Space size="small" wrap>
-								<Space.Compact>
-									<Button
-										size="small"
-										disabled={plugin.trust !== "trusted"}
-										loading={busy}
-										onClick={(): void => onToggle(plugin)}
-									>
-										{plugin.enabled
-											? t("settings.plugins.actions.stop")
-											: t(
-													"settings.plugins.actions.start",
-												)}
-									</Button>
-									<Dropdown
-										trigger={["click"]}
-										menu={{
-											items: [
-												{
-													key: "restart-runtime",
-													icon: (
-														<Icon name="reload" />
-													),
-													label: t(
-														"settings.plugins.runtime.restart",
-													),
-													disabled:
-														busy ||
-														plugin.trust !==
-															"trusted",
-													onClick: onRestart,
-												},
-												{
-													key: "update-plugin",
-													icon: (
-														<Icon name="download" />
-													),
-													label: t(
-														"settings.plugins.actions.update",
-													),
-													disabled:
-														busy ||
-														plugin.trust !==
-															"trusted",
-													onClick: onUpdate,
-												},
-												...(runtime?.isolation
-													?.status === "quarantined"
-													? [
-															{
-																key: "clear-quarantine",
-																icon: (
-																	<Icon name="reload" />
-																),
-																label: t(
-																	"settings.plugins.actions.clearQuarantine",
-																),
-																disabled: busy,
-																onClick:
-																	onClearQuarantine,
-															},
-														]
-													: []),
-												{
-													key: "rollback-plugin",
-													icon: (
-														<Icon name="reload" />
-													),
-													label: t(
-														"settings.plugins.actions.rollback",
-													),
-													disabled: busy,
-													onClick: onRollback,
-												},
-												...(plugin.compatibility
-													.harnessBundle
-													? [
-															{
-																key: "preview-harness",
-																icon: (
-																	<Icon name="search" />
-																),
-																label: t(
-																	"settings.plugins.harness.preview",
-																),
-																disabled: busy,
-																onClick:
-																	onPreviewHarness,
-															},
-														]
-													: []),
-											],
-										}}
-									>
-										<Button
-											size="small"
-											icon={<Icon name="arrow-down" />}
-										/>
-									</Dropdown>
-								</Space.Compact>
-								<Button
-									danger
-									size="small"
-									type="primary"
-									icon={<Icon name="remove" />}
-									loading={busy}
-									onClick={(): void => onRemove(plugin)}
-								>
-									{t("settings.plugins.actions.remove")}
-								</Button>
-								<Button
-									size="small"
-									loading={busy}
-									danger={plugin.trust === "trusted"}
-									onClick={(): void =>
-										onRequestTrust(
-											plugin,
-											plugin.trust === "trusted"
-												? "disabled"
-												: "trusted",
-										)
-									}
-								>
-									{plugin.trust === "trusted"
-										? t("settings.plugins.actions.trusted")
-										: t(
-												"settings.plugins.actions.untrusted",
-											)}
-								</Button>
-							</Space>
 						</div>
 					</Flex>
+				</Flex>
+				<Flex gap="small">
+					<Space.Compact>
+						<Button
+							size="small"
+							disabled={plugin.trust !== "trusted"}
+							loading={busy}
+							onClick={(): void => onToggle(plugin)}
+						>
+							{plugin.enabled
+								? t("settings.plugins.actions.stop")
+								: t("settings.plugins.actions.start")}
+						</Button>
+						<Dropdown
+							trigger={["click"]}
+							menu={{
+								items: [
+									{
+										key: "restart-runtime",
+										icon: <Icon name="reload" />,
+										label: t(
+											"settings.plugins.runtime.restart",
+										),
+										disabled:
+											busy || plugin.trust !== "trusted",
+										onClick: onRestart,
+									},
+									{
+										key: "update-plugin",
+										icon: <Icon name="download" />,
+										label: t(
+											"settings.plugins.actions.update",
+										),
+										disabled:
+											busy || plugin.trust !== "trusted",
+										onClick: onUpdate,
+									},
+									...(runtime?.isolation?.status ===
+									"quarantined"
+										? [
+												{
+													key: "clear-quarantine",
+													icon: (
+														<Icon name="reload" />
+													),
+													label: t(
+														"settings.plugins.actions.clearQuarantine",
+													),
+													disabled: busy,
+													onClick: onClearQuarantine,
+												},
+											]
+										: []),
+									{
+										key: "rollback-plugin",
+										icon: <Icon name="reload" />,
+										label: t(
+											"settings.plugins.actions.rollback",
+										),
+										disabled: busy,
+										onClick: onRollback,
+									},
+									...(plugin.compatibility.harnessBundle
+										? [
+												{
+													key: "preview-harness",
+													icon: (
+														<Icon name="search" />
+													),
+													label: t(
+														"settings.plugins.harness.preview",
+													),
+													disabled: busy,
+													onClick: onPreviewHarness,
+												},
+											]
+										: []),
+								],
+							}}
+						>
+							<Button
+								size="small"
+								icon={<Icon name="arrow-down" />}
+							/>
+						</Dropdown>
+					</Space.Compact>
+					<Button
+						danger
+						size="small"
+						type="primary"
+						icon={<Icon name="remove" />}
+						loading={busy}
+						onClick={(): void => onRemove(plugin)}
+					>
+						{t("settings.plugins.actions.remove")}
+					</Button>
+					<Button
+						size="small"
+						loading={busy}
+						danger={plugin.trust === "trusted"}
+						onClick={(): void =>
+							onRequestTrust(
+								plugin,
+								plugin.trust === "trusted"
+									? "disabled"
+									: "trusted",
+							)
+						}
+					>
+						{plugin.trust === "trusted"
+							? t("settings.plugins.actions.trusted")
+							: t("settings.plugins.actions.untrusted")}
+					</Button>
 				</Flex>
 			</div>
 
