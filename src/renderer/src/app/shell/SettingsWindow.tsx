@@ -61,6 +61,12 @@ type SettingsMenuItemConfig = {
 	icon: React.ReactNode;
 };
 
+type SettingsMenuGroupConfig = {
+	key: string;
+	labelKey: string;
+	items: readonly SettingsPageKey[];
+};
+
 const menuItemConfigs: SettingsMenuItemConfig[] = [
 	{
 		key: "provider",
@@ -164,6 +170,41 @@ const menuItemConfigs: SettingsMenuItemConfig[] = [
 	},
 ];
 
+const menuGroupConfigs: SettingsMenuGroupConfig[] = [
+	{
+		key: "models",
+		labelKey: "settings.menu.groups.models",
+		items: ["provider", "default_model"],
+	},
+	{
+		key: "studio",
+		labelKey: "settings.menu.groups.studio",
+		items: [
+			"general",
+			"appearance",
+			"keyboard_shortcuts",
+			"search",
+			"statistics",
+			"personalization",
+		],
+	},
+	{
+		key: "extensions",
+		labelKey: "settings.menu.groups.extensions",
+		items: ["mcp_servers", "skills", "hooks", "plugins"],
+	},
+	{
+		key: "workspace",
+		labelKey: "settings.menu.groups.workspace",
+		items: ["browser", "environments", "worktrees", "godot_projects"],
+	},
+	{
+		key: "resources",
+		labelKey: "settings.menu.groups.resources",
+		items: ["documentation", "archived_sessions", "import", "about"],
+	},
+];
+
 function isSettingsPageKey(value: string): value is SettingsPageKey {
 	return menuItemConfigs.some(
 		(item: SettingsMenuItemConfig): boolean => item.key === value,
@@ -171,11 +212,34 @@ function isSettingsPageKey(value: string): value is SettingsPageKey {
 }
 
 function createSettingsMenuItems(t: (key: string) => string): MenuItem[] {
-	return menuItemConfigs.map(
-		(item: SettingsMenuItemConfig): MenuItem => ({
-			key: item.key,
-			label: t(item.labelKey),
-			icon: item.icon,
+	const itemsByKey: Map<SettingsPageKey, SettingsMenuItemConfig> = new Map(
+		menuItemConfigs.map(
+			(
+				item: SettingsMenuItemConfig,
+			): [SettingsPageKey, SettingsMenuItemConfig] => [item.key, item],
+		),
+	);
+
+	return menuGroupConfigs.map(
+		(group: SettingsMenuGroupConfig): MenuItem => ({
+			type: "group",
+			key: `group:${group.key}`,
+			label: t(group.labelKey),
+			children: group.items.flatMap(
+				(key: SettingsPageKey): MenuItem[] => {
+					const item: SettingsMenuItemConfig | undefined =
+						itemsByKey.get(key);
+					return item === undefined
+						? []
+						: [
+								{
+									key: item.key,
+									label: t(item.labelKey),
+									icon: item.icon,
+								},
+							];
+				},
+			),
 		}),
 	);
 }

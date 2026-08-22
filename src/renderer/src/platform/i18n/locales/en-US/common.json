@@ -1428,6 +1428,13 @@
 	},
 	"settings": {
 		"menu": {
+			"groups": {
+				"models": "Models & services",
+				"studio": "Studio",
+				"extensions": "Extensions",
+				"workspace": "Workspace",
+				"resources": "Resources & help"
+			},
 			"provider": "Provider",
 			"defaultModel": "Default model",
 			"general": "General",

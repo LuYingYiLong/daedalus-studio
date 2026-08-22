@@ -1421,6 +1421,13 @@
 	},
 	"settings": {
 		"menu": {
+			"groups": {
+				"models": "模型与服务",
+				"studio": "Studio",
+				"extensions": "扩展",
+				"workspace": "工作区",
+				"resources": "资源与帮助"
+			},
 			"provider": "供应商",
 			"defaultModel": "默认模型",
 			"general": "通用",
