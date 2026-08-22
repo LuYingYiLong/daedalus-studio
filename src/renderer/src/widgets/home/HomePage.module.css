@@ -42,24 +42,6 @@
 	gap: var(--ds-space-1);
 }
 
-.sidebarActionLabel {
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-.sidebarAttentionBadge {
-	min-width: 18px;
-	height: 18px;
-	margin-left: auto;
-	padding: 0 5px;
-	border-radius: 9px;
-	color: var(--ds-color-error);
-	background: color-mix(in srgb, var(--ds-color-error) 14%, transparent);
-	font-size: 11px;
-	line-height: 18px;
-	text-align: center;
-}
-
 .workspaceFooter {
 	padding: var(--ds-space-2) 0px;
 }
@@ -110,10 +92,31 @@
 	z-index: 30;
 	min-width: 0;
 	min-height: 0;
+	background: var(--ds-bg);
+	pointer-events: none;
+	opacity: 0;
+	transform: translate3d(0, 16px, 0);
+	transition:
+		opacity 180ms var(--ant-motion-ease-out, ease-out),
+		transform 260ms var(--ant-motion-ease-out, ease-out);
 }
+
+.scheduledTasksOverlayActive {
+	pointer-events: auto;
+	opacity: 1;
+	transform: none;
+}
+
 .agentMain[data-main-surface="scheduledTasks"] > :not(.scheduledTasksOverlay) {
 	visibility: hidden;
 	pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.scheduledTasksOverlay {
+		transform: none;
+		transition: opacity 120ms ease;
+	}
 }
 
 .agentMain[data-dock-fullscreen] > .floatingActionSlot {

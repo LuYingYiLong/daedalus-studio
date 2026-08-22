@@ -321,7 +321,7 @@ function BrowserSettingsPage(): React.JSX.Element {
 															"settings.browser.aiControl.confirm",
 														),
 														cancelText:
-															t("common.cancel"),
+															t("settings.common.cancel"),
 														onOk: (): void =>
 															resolve(true),
 														onCancel: (): void =>

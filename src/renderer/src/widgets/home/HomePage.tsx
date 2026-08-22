@@ -5,6 +5,7 @@ import {
 	useMemo,
 	useRef,
 	useState,
+	type TransitionEvent,
 } from "react";
 import {
 	Button,
@@ -176,6 +177,8 @@ const SIDE_DOCK_DEFAULT_SIZE: number = 520;
 const SIDE_DOCK_MAX_SIZE: number = 720;
 const SIDE_DOCK_CLOSE_THRESHOLD: number = 150;
 const SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS: number = 400;
+const CHAT_SURFACE_POST_TRANSITION_DELAY_MS: number = 80;
+const CHAT_SURFACE_TRANSITION_FALLBACK_MS: number = 500;
 const BOTTOM_DOCK_CLOSED_SIZE: number = 0;
 const BOTTOM_DOCK_DEFAULT_SIZE: number = 280;
 const BOTTOM_DOCK_MAX_SIZE: number = 520;
@@ -849,6 +852,9 @@ function HomePage({
 	const [composerInputRequest, setComposerInputRequest] =
 		useState<ComposerInputRequest | null>(null);
 	const [mainSurface, setMainSurface] = useState<"chat" | "scheduledTasks">("chat");
+	const [chatSurfaceRevealPending, setChatSurfaceRevealPending] =
+		useState<boolean>(false);
+	const [chatSurfaceSettled, setChatSurfaceSettled] = useState<boolean>(true);
 	const [scheduledTaskAttentionCount, setScheduledTaskAttentionCount] = useState<number>(0);
 	const {
 		visualWorkspaceSidebar,
@@ -870,6 +876,7 @@ function HomePage({
 	const [fullscreenMotionDisabled, setFullscreenMotionDisabled] =
 		useState<boolean>(false);
 	const dockActivationRequestIdRef = useRef<number>(0);
+	const chatSurfaceSettleTimerRef = useRef<number | null>(null);
 	const sideDockProgrammaticOpenUntilRef = useRef<number>(0);
 	const summaryGitActionRequestIdRef = useRef<number>(0);
 	const planPreviewRequestIdRef = useRef<number>(0);
@@ -899,12 +906,147 @@ function HomePage({
 		);
 	}, []);
 
+	const clearChatSurfaceSettleTimer = useCallback((): void => {
+		if (chatSurfaceSettleTimerRef.current === null) return;
+		window.clearTimeout(chatSurfaceSettleTimerRef.current);
+		chatSurfaceSettleTimerRef.current = null;
+	}, []);
+
+	const transitionToChatSurface = useCallback((): void => {
+		const wasScheduledTasksSurface: boolean = mainSurface === "scheduledTasks";
+		clearChatSurfaceSettleTimer();
+		setMainSurface("chat");
+
+		if (!wasScheduledTasksSurface) {
+			setChatSurfaceSettled(true);
+			return;
+		}
+
+		// The overlay fades out for 260ms. Keep the starter actions unmounted
+		// until that compositor transition has finished and the chat surface has
+		// had one more frame to settle.
+		setChatSurfaceSettled(false);
+		chatSurfaceSettleTimerRef.current = window.setTimeout((): void => {
+			chatSurfaceSettleTimerRef.current = null;
+			setChatSurfaceSettled(true);
+		}, CHAT_SURFACE_TRANSITION_FALLBACK_MS);
+	}, [clearChatSurfaceSettleTimer, mainSurface]);
+
+	const showScheduledTasksSurface = useCallback((): void => {
+		clearChatSurfaceSettleTimer();
+		setChatSurfaceSettled(false);
+		setChatSurfaceRevealPending(false);
+		setMainSurface("scheduledTasks");
+	}, [clearChatSurfaceSettleTimer]);
+
+	const handleScheduledTasksOverlayTransitionEnd = useCallback(
+		(event: TransitionEvent<HTMLDivElement>): void => {
+			if (
+				event.target !== event.currentTarget ||
+				mainSurface !== "chat"
+			) {
+				return;
+			}
+			if (event.propertyName === "opacity") {
+				// In the normal motion path the slide finishes after opacity. Only
+				// accept the opacity event when there is no transform transition left.
+				if (window.getComputedStyle(event.currentTarget).transform !== "none") {
+					return;
+				}
+			} else if (event.propertyName !== "transform") {
+				return;
+			}
+
+			clearChatSurfaceSettleTimer();
+			chatSurfaceSettleTimerRef.current = window.setTimeout((): void => {
+				chatSurfaceSettleTimerRef.current = null;
+				setChatSurfaceSettled(true);
+			}, CHAT_SURFACE_POST_TRANSITION_DELAY_MS);
+		},
+		[clearChatSurfaceSettleTimer, mainSurface],
+	);
+
+	useEffect((): (() => void) => {
+		return (): void => {
+			clearChatSurfaceSettleTimer();
+		};
+	}, [clearChatSurfaceSettleTimer]);
+
+	const requestNewSessionSurface = useCallback((): void => {
+		if (mainSurface === "scheduledTasks") {
+			setChatSurfaceRevealPending(true);
+			setChatSurfaceSettled(false);
+		} else {
+			transitionToChatSurface();
+		}
+		onNewSession();
+	}, [mainSurface, onNewSession, transitionToChatSurface]);
+
+	const requestNewUnboundSessionSurface = useCallback((): void => {
+		if (mainSurface === "scheduledTasks") {
+			setChatSurfaceRevealPending(true);
+			setChatSurfaceSettled(false);
+		} else {
+			transitionToChatSurface();
+		}
+		onNewUnboundSession();
+	}, [mainSurface, onNewUnboundSession, transitionToChatSurface]);
+
+	const requestNewWorkspaceSessionSurface = useCallback(
+		(
+			workspace: WorkspaceConfig,
+			environment: "local" | "worktree" = "local",
+		): void => {
+			if (mainSurface === "scheduledTasks") {
+				setChatSurfaceRevealPending(true);
+				setChatSurfaceSettled(false);
+			} else {
+				transitionToChatSurface();
+			}
+			onNewWorkspaceSession(workspace, environment);
+		},
+		[mainSurface, onNewWorkspaceSession, transitionToChatSurface],
+	);
+
+	useEffect((): (() => void) | undefined => {
+		if (
+			!chatSurfaceRevealPending ||
+			mainSurface !== "scheduledTasks" ||
+			!isHome ||
+			isSessionLoading ||
+			activeSessionMetadata?.temporary !== true
+		) {
+			return undefined;
+		}
+
+		let secondFrame: number | null = null;
+		const firstFrame: number = window.requestAnimationFrame((): void => {
+			secondFrame = window.requestAnimationFrame((): void => {
+				setChatSurfaceRevealPending(false);
+				transitionToChatSurface();
+			});
+		});
+
+		return (): void => {
+			window.cancelAnimationFrame(firstFrame);
+			if (secondFrame !== null) window.cancelAnimationFrame(secondFrame);
+		};
+	}, [
+		activeSessionMetadata?.temporary,
+		chatSurfaceRevealPending,
+		isHome,
+		isSessionLoading,
+		mainSurface,
+		transitionToChatSurface,
+	]);
+
 	const openScheduledTaskSession = useCallback((sessionId: string): void => {
+		setChatSurfaceRevealPending(false);
 		void fetchSessions().then((result): void => {
 			const session = result.sessions.find((candidate): boolean => candidate.id === sessionId);
-			if (session !== undefined) { setMainSurface("chat"); onSessionSelect(session); }
+			if (session !== undefined) { transitionToChatSurface(); onSessionSelect(session); }
 		}).catch((): void => {});
-	}, [onSessionSelect]);
+	}, [onSessionSelect, transitionToChatSurface]);
 
 	useEffect((): (() => void) => {
 		const refresh = (): void => { void window.electronAPI.scheduledTasks.list().then((result): void => setScheduledTaskAttentionCount(result.attentionCount)); };
@@ -915,16 +1057,15 @@ function HomePage({
 				openScheduledTaskSession(target.sessionId);
 				return;
 			}
-			setMainSurface("scheduledTasks");
+			showScheduledTasksSurface();
 		});
 		return (): void => { offChanged(); offNavigate(); };
-	}, [openScheduledTaskSession]);
+	}, [openScheduledTaskSession, showScheduledTasksSurface]);
 
 	const createScheduledTask = useCallback((): void => {
-		setMainSurface("chat");
-		onNewSession();
+		requestNewSessionSurface();
 		handleHomeStarterSelect(t("scheduledTasks.prefill", { defaultValue: "帮我安排一个定时任务：" }));
-	}, [handleHomeStarterSelect, onNewSession, t]);
+	}, [handleHomeStarterSelect, requestNewSessionSurface, t]);
 
 	const workspaceSnapshotForActions: WorkspaceConfig | null =
 		activeWorkspace ?? (isHome ? homeWorkspace : null);
@@ -2358,7 +2499,7 @@ function HomePage({
 			}
 			if (commandId === "session.new") {
 				event.preventDefault();
-				onNewSession();
+				requestNewSessionSurface();
 				return;
 			}
 			if (
@@ -2408,7 +2549,7 @@ function HomePage({
 		showBottomDockButton,
 		showSideDockButton,
 		timelineNavigationEntries.length,
-		onNewSession,
+		requestNewSessionSurface,
 		toggleBottomDock,
 		toggleSideDock,
 		toggleWorkspaceSidebar,
@@ -2696,15 +2837,19 @@ function HomePage({
 		unreadSessionIds,
 		forkingSessionId,
 		sessionUpdate: activeSessionMetadata,
-		onNewSession: (): void => { setMainSurface("chat"); onNewUnboundSession(); },
-		onSessionSelect: (session): void => { setMainSurface("chat"); onSessionSelect(session); },
+		onNewSession: requestNewUnboundSessionSurface,
+		onSessionSelect: (session): void => {
+			setChatSurfaceRevealPending(false);
+			transitionToChatSurface();
+			onSessionSelect(session);
+		},
 		onSessionFork,
 		onSessionArchive,
 		onSessionRename,
 		onSessionWorkspaceMove,
 		onSessionWorktreeDelete,
 		onSessionsChange,
-		onNewWorkspaceSession,
+		onNewWorkspaceSession: requestNewWorkspaceSessionSurface,
 		onWorkspaceDelete,
 		onWorkspaceUpdate,
 		onWorkspaceProjectCreated,
@@ -2891,8 +3036,8 @@ function HomePage({
 					<HomeWorkspaceSidebar
 						treeProps={workspaceTreeProps}
 						isOpen={workspaceSidebarOpen}
-						onNewSession={(): void => { setMainSurface("chat"); onNewSession(); }}
-						onOpenScheduledTasks={(): void => setMainSurface("scheduledTasks")}
+						onNewSession={requestNewSessionSurface}
+						onOpenScheduledTasks={showScheduledTasksSurface}
 						scheduledTasksActive={mainSurface === "scheduledTasks"}
 						scheduledTaskAttentionCount={scheduledTaskAttentionCount}
 						onOpenSettings={(): void => {
@@ -3149,6 +3294,7 @@ function HomePage({
 															sessionError
 														}
 														message={message}
+														showStarters={chatSurfaceSettled}
 														onStarterSelect={
 															handleHomeStarterSelect
 														}
@@ -3514,22 +3660,31 @@ function HomePage({
 								{renderComposer(true)}
 							</FullscreenComposerShelf>
 						) : null}
-						{mainSurface === "scheduledTasks" ? (
-							<div className={styles.scheduledTasksOverlay}>
-								<ScheduledTasksPage
-									onCreate={createScheduledTask}
-									onOpenSession={openScheduledTaskSession}
-									defaultWorkspaceId={
-										isHome
-											? (homeWorkspace?.id ?? null)
-											: activeWorkspaceId
-									}
-									defaultProviderId={selectedProviderId}
-									defaultModelId={selectedModelId}
-									defaultReasoningEffort={reasoningEffort}
-								/>
-							</div>
-						) : null}
+						<div
+							className={[
+								styles.scheduledTasksOverlay,
+								mainSurface === "scheduledTasks"
+									? styles.scheduledTasksOverlayActive
+									: "",
+							]
+								.filter(Boolean)
+								.join(" ")}
+							onTransitionEnd={handleScheduledTasksOverlayTransitionEnd}
+							aria-hidden={mainSurface !== "scheduledTasks"}
+						>
+							<ScheduledTasksPage
+								onCreate={createScheduledTask}
+								onOpenSession={openScheduledTaskSession}
+								defaultWorkspaceId={
+									isHome
+										? (homeWorkspace?.id ?? null)
+										: activeWorkspaceId
+								}
+								defaultProviderId={selectedProviderId}
+								defaultModelId={selectedModelId}
+								defaultReasoningEffort={reasoningEffort}
+							/>
+						</div>
 					</div>
 				</Splitter.Panel>
 			</Splitter>

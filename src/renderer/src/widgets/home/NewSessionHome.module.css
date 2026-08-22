@@ -72,6 +72,13 @@
 	width: 100%;
 	min-width: 0;
 	text-align: center;
+	opacity: 0;
+	visibility: hidden;
+	transform: translateY(4px);
+}
+
+.starterGroupVisible {
+	visibility: visible;
 	animation: starter-group-enter 160ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 
@@ -142,7 +149,9 @@
 
 @media (prefers-reduced-motion: reduce) {
 	.homeContent,
-	.starterGroup {
+	.starterGroupVisible {
 		animation: none;
+		opacity: 1;
+		transform: none;
 	}
 }
