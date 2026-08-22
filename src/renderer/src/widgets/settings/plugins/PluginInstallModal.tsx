@@ -10,11 +10,15 @@ export function PluginInstallModal({
 	loading,
 	onCancel,
 	onSubmit,
+	title,
+	submitLabel,
 }: {
 	open: boolean;
 	loading: boolean;
 	onCancel: () => void;
 	onSubmit: (source: PluginSource) => Promise<void>;
+	title?: string;
+	submitLabel?: string;
 }): React.JSX.Element {
 	const { t } = useTranslation();
 	const [sourceType, setSourceType] = useState<InstallSourceType>("local");
@@ -57,9 +61,9 @@ export function PluginInstallModal({
 	};
 	return (
 		<Modal
-			title={t("settings.plugins.install.title")}
+			title={title ?? t("settings.plugins.install.title")}
 			open={open}
-			okText={t("settings.plugins.actions.install")}
+			okText={submitLabel ?? t("settings.plugins.actions.install")}
 			confirmLoading={loading}
 			onCancel={onCancel}
 			onOk={(): void => {

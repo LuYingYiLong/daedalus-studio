@@ -1666,7 +1666,11 @@
 				"start": "Start",
 				"stop": "Disable",
 				"disable": "Disable",
-				"remove": "Remove"
+				"remove": "Remove",
+				"update": "Update plugin",
+				"versions": "Previous versions",
+				"rollback": "Rollback",
+				"clearQuarantine": "Clear quarantine and retry"
 			},
 			"install": {
 				"title": "Add plugin package",
@@ -1690,6 +1694,7 @@
 			},
 			"messages": {
 				"installed": "Plugin package installed and queued for review.",
+				"updated": "Plugin package updated. The previous version was retained.",
 				"removed": "Plugin package removed.",
 				"trusted": "Plugin package trusted.",
 				"disabled": "Plugin package disabled.",
@@ -1705,7 +1710,7 @@
 			},
 			"runtime": {
 				"title": "Runtime",
-				"status": { "stopped": "Stopped", "starting": "Starting", "ready": "Ready", "failed": "Failed", "disabled": "Disabled" },
+				"status": { "stopped": "Stopped", "starting": "Starting", "ready": "Ready", "failed": "Failed", "disabled": "Disabled", "quarantined": "Quarantined" },
 				"capabilities": "Registered tools: {{tools}} · skills: {{skills}} · hooks: {{hooks}} · MCP servers: {{mcp}}",
 				"restart": "Restart runtime",
 				"stop": "Stop plugin",
@@ -1714,7 +1719,19 @@
 				"networkDescription": "Download the exact locked dependencies for {{name}} once. Plugin execution remains sandboxed and network-disabled.",
 				"allowNetwork": "Allow download",
 				"logs": "Recent runtime logs",
-				"noLogs": "No runtime logs yet"
+				"noLogs": "No runtime logs yet",
+				"securityTitle": "Security and stability",
+				"sandbox": "OS sandbox",
+				"sandboxValue": "Only the plugin, isolated runtime, and authorized workspace are accessible",
+				"network": "Network",
+				"networkValue": "Always disabled during plugin execution",
+				"resource": "Resource usage",
+				"resourceValue": "{{active}} active · {{pending}} queued · RSS {{rss}} MiB",
+				"quarantineReason": "Quarantine reason: {{reason}}",
+				"versionsTitle": "Previous versions",
+				"versionsEmpty": "No rollback versions available",
+				"rollbackConfirm": "Roll back to {{version}}? The current version will be kept.",
+				"quarantineCleared": "Plugin quarantine cleared."
 			},
 			"harness": {
 				"title": "DeepSeek Harness runtime",

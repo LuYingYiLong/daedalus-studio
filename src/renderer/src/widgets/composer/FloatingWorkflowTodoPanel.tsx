@@ -26,12 +26,12 @@ export type WorkflowTodoStepListProps = {
 
 function getWorkflowTodoIconName(status: string): string {
 	if (status === "done" || status === "completed" || status === "success") {
-		return "status-success";
+		return "success";
 	}
 	if (status === "failed" || status === "error" || status === "cancelled") {
-		return "status-failed";
+		return "failed";
 	}
-	return "status-unchecked";
+	return "unchecked";
 }
 
 function getStepTitle(

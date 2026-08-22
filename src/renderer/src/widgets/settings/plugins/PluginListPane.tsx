@@ -1,4 +1,4 @@
-import { Button, Empty, Input, Menu, Space, Spin, Typography } from "antd";
+import { Button, Empty, Input, Menu, Space, Spin, Tag, Typography } from "antd";
 import { useMemo, useState } from "react";
 import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";

@@ -1659,7 +1659,11 @@
 				"start": "启动",
 				"stop": "禁用",
 				"disable": "禁用",
-				"remove": "移除"
+				"remove": "移除",
+				"update": "更新插件",
+				"versions": "历史版本",
+				"rollback": "回滚上一版本",
+				"clearQuarantine": "解除隔离并重试"
 			},
 			"install": {
 				"title": "添加插件包",
@@ -1683,6 +1687,7 @@
 			},
 			"messages": {
 				"installed": "插件包已安装，等待审核。",
+				"updated": "插件包已更新，旧版本已保留。",
 				"removed": "插件包已移除。",
 				"trusted": "插件包已信任。",
 				"disabled": "插件包已禁用。",
@@ -1698,7 +1703,7 @@
 			},
 			"runtime": {
 				"title": "运行时",
-				"status": { "stopped": "已停止", "starting": "启动中", "ready": "运行中", "failed": "失败", "disabled": "已禁用" },
+				"status": { "stopped": "已停止", "starting": "启动中", "ready": "运行中", "failed": "失败", "disabled": "已禁用", "quarantined": "隔离中" },
 				"capabilities": "已注册工具：{{tools}} · Skills：{{skills}} · Hooks：{{hooks}} · MCP 服务：{{mcp}}",
 				"restart": "重启运行时",
 				"stop": "停止插件",
@@ -1707,7 +1712,19 @@
 				"networkDescription": "仅为 {{name}} 下载精确锁定的依赖一次；插件运行仍在沙箱内且保持禁网。",
 				"allowNetwork": "允许下载",
 				"logs": "最近运行日志",
-				"noLogs": "暂无运行日志"
+				"noLogs": "暂无运行日志",
+				"securityTitle": "安全与稳定性",
+				"sandbox": "OS 沙箱",
+				"sandboxValue": "仅允许访问插件目录、隔离运行目录和授权工作区",
+				"network": "网络",
+				"networkValue": "插件运行期间始终禁用",
+				"resource": "资源占用",
+				"resourceValue": "活动调用 {{active}} · 排队调用 {{pending}} · RSS {{rss}} MiB",
+				"quarantineReason": "隔离原因：{{reason}}",
+				"versionsTitle": "历史版本",
+				"versionsEmpty": "暂无可回滚版本",
+				"rollbackConfirm": "确定回滚到 {{version}} 吗？当前版本会被保留。",
+				"quarantineCleared": "插件已解除隔离。"
 			},
 			"harness": {
 				"title": "DeepSeek Harness 运行时",

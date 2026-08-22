@@ -27,7 +27,7 @@ export function PluginRuntimeSection({
 					color={
 						runtime?.status === "ready"
 							? "success"
-							: runtime?.status === "failed"
+							: runtime?.status === "failed" || runtime?.status === "quarantined"
 								? "error"
 								: "default"
 					}

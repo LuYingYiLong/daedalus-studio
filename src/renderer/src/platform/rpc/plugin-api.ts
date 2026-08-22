@@ -94,12 +94,13 @@ export type PluginRecord = {
 	dependencyLockHash?: string;
 	harnessBundle?: HarnessBundleSummary;
 	runtime?: PluginRuntimeSnapshot;
+	isolation?: PluginRuntimeSnapshot["isolation"];
 };
 
 export type PluginRuntimeSnapshot = {
 	pluginId: string;
 	runtimeKind?: "native" | "harness";
-	status: "stopped" | "starting" | "ready" | "failed" | "disabled";
+	status: "stopped" | "starting" | "ready" | "failed" | "disabled" | "quarantined";
 	activeSessions: number;
 	registeredTools: number;
 	registeredSkills: number;
@@ -111,6 +112,32 @@ export type PluginRuntimeSnapshot = {
 	bridgeProtocolVersion?: number;
 	bundleSummary?: HarnessBundleSummary;
 	lastError?: string;
+	isolation?: {
+		status: "none" | "quarantined";
+		reason?: string;
+		failureCount: number;
+		windowStartedAt?: string;
+		lastFailureAt?: string;
+		updatedAt: string;
+	};
+	resourceUsage?: {
+		activeCalls: number;
+		pendingCalls: number;
+		rssBytes?: number;
+		lastMeasuredAt?: string;
+	};
+	lastExitCode?: number | null;
+	updatedAt: string;
+};
+
+export type PluginVersionRecord = {
+	fingerprint: string;
+	packageRoot: string;
+	packageName: string;
+	version: string;
+	contentHash: string;
+	manifestHash: string;
+	installedAt: string;
 	updatedAt: string;
 };
 
@@ -182,6 +209,21 @@ export async function updatePluginProfile(pluginIds: string[]): Promise<PluginCa
 	return client.request<PluginCatalogResult>("plugin.profile.update", { pluginIds });
 }
 
+export async function updatePlugin(pluginId: string, source: PluginSource, expectedFingerprint: string): Promise<PluginRecord> {
+	const client = await createBackendClient();
+	return client.request<PluginRecord>("plugin.update.install", { pluginId, source, expectedFingerprint });
+}
+
+export async function fetchPluginVersions(pluginId: string): Promise<PluginVersionRecord[]> {
+	const client = await createBackendClient();
+	return client.request<PluginVersionRecord[]>("plugin.versions.list", { pluginId });
+}
+
+export async function rollbackPlugin(pluginId: string, fingerprint: string): Promise<PluginRecord> {
+	const client = await createBackendClient();
+	return client.request<PluginRecord>("plugin.rollback", { pluginId, fingerprint });
+}
+
 export async function fetchPluginRuntimeList(): Promise<{ runtimes: PluginRuntimeSnapshot[] }> {
 	const client = await createBackendClient();
 	return client.request("plugin.runtime.list", {});
@@ -195,6 +237,11 @@ export async function restartPluginRuntime(pluginId: string): Promise<PluginRunt
 export async function stopPluginRuntime(pluginId: string): Promise<PluginRuntimeSnapshot | null> {
 	const client = await createBackendClient();
 	return client.request("plugin.runtime.disable", { pluginId });
+}
+
+export async function clearPluginRuntimeQuarantine(pluginId: string, sessionId?: string): Promise<PluginRuntimeSnapshot | null> {
+	const client = await createBackendClient();
+	return client.request("plugin.runtime.clear_quarantine", { pluginId, sessionId });
 }
 
 export async function fetchPluginRuntimeLogs(pluginId?: string, limit?: number): Promise<PluginRuntimeLog[]> {

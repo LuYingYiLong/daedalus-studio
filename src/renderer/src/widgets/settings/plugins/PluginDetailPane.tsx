@@ -1,4 +1,5 @@
 import {
+	Alert,
 	Button,
 	Descriptions,
 	Dropdown,
@@ -27,6 +28,9 @@ export function PluginDetailPane({
 	onRequestTrust,
 	onRemove,
 	onRestart,
+	onUpdate,
+	onClearQuarantine,
+	onRollback,
 	onInstallDependencies,
 	onPreviewHarness,
 	logs,
@@ -40,6 +44,9 @@ export function PluginDetailPane({
 	) => void;
 	onRemove: (plugin: PluginRecord) => void;
 	onRestart: () => void;
+	onUpdate: () => void;
+	onClearQuarantine: () => void;
+	onRollback: () => void;
 	onInstallDependencies: () => void;
 	onPreviewHarness: () => void;
 	logs: import("@/platform/rpc/plugin-api").PluginRuntimeLog[];
@@ -64,6 +71,7 @@ export function PluginDetailPane({
 	const changelog: string | undefined =
 		presentation?.changelog?.trim() || undefined;
 	const runtime = plugin.runtime;
+	const rssMb = runtime?.resourceUsage?.rssBytes === undefined ? null : (runtime.resourceUsage.rssBytes / (1024 * 1024)).toFixed(1);
 	const capabilities = plugin.nativePlugin?.capabilities ?? (plugin.compatibility.harnessBundle ? ["tools", "skills", "hooks", "mcp"] : []);
 
 	const featureContent: React.JSX.Element = (
@@ -137,7 +145,7 @@ export function PluginDetailPane({
 								color={
 									runtime?.status === "ready"
 										? "success"
-										: runtime?.status === "failed"
+											: runtime?.status === "failed" || runtime?.status === "quarantined"
 											? "error"
 											: "default"
 								}
@@ -173,6 +181,22 @@ export function PluginDetailPane({
 								{runtime.lastError}
 							</Typography.Text>
 						) : null}
+					</Flex>
+				</Descriptions.Item>
+				<Descriptions.Item label={t("settings.plugins.runtime.securityTitle")}>
+					<Flex vertical gap="small">
+						<Descriptions size="small" column={1}>
+							<Descriptions.Item label={t("settings.plugins.runtime.sandbox")}>
+								<Typography.Text type="secondary">{t("settings.plugins.runtime.sandboxValue")}</Typography.Text>
+							</Descriptions.Item>
+							<Descriptions.Item label={t("settings.plugins.runtime.network")}>
+								<Typography.Text type="secondary">{t("settings.plugins.runtime.networkValue")}</Typography.Text>
+							</Descriptions.Item>
+							<Descriptions.Item label={t("settings.plugins.runtime.resource")}>
+								<Typography.Text type="secondary">{t("settings.plugins.runtime.resourceValue", { active: runtime?.resourceUsage?.activeCalls ?? 0, pending: runtime?.resourceUsage?.pendingCalls ?? 0, rss: rssMb ?? "—" })}</Typography.Text>
+							</Descriptions.Item>
+						</Descriptions>
+						{runtime?.isolation?.status === "quarantined" ? <Alert type="warning" showIcon message={t("settings.plugins.runtime.quarantineReason", { reason: runtime.isolation.reason ?? t("settings.plugins.runtime.status.quarantined") })} /> : null}
 					</Flex>
 				</Descriptions.Item>
 				<Descriptions.Item
@@ -383,20 +407,42 @@ export function PluginDetailPane({
 										trigger={["click"]}
 										menu={{
 											items: [
-													{
-												key: "restart-runtime",
+															{
+																key: "restart-runtime",
 												icon: <Icon name="reload" />,
 												label: t(
 													"settings.plugins.runtime.restart",
 												),
-												disabled: plugin.trust !== "trusted",
-												onClick: onRestart,
-											},
+																				disabled: busy || plugin.trust !== "trusted",
+																onClick: onRestart,
+															},
+															{
+																key: "update-plugin",
+																icon: <Icon name="download" />,
+																label: t("settings.plugins.actions.update"),
+																				disabled: busy || plugin.trust !== "trusted",
+																onClick: onUpdate,
+															},
+															...(runtime?.isolation?.status === "quarantined" ? [{
+																key: "clear-quarantine",
+																icon: <Icon name="reload" />,
+																label: t("settings.plugins.actions.clearQuarantine"),
+																				disabled: busy,
+																				onClick: onClearQuarantine,
+															}] : []),
+															{
+																key: "rollback-plugin",
+																icon: <Icon name="reload" />,
+																label: t("settings.plugins.actions.rollback"),
+																				disabled: busy,
+																				onClick: onRollback,
+															},
 											...(plugin.compatibility.harnessBundle ? [{
 												key: "preview-harness",
 												icon: <Icon name="search" />,
 												label: t("settings.plugins.harness.preview"),
-												onClick: onPreviewHarness,
+																				disabled: busy,
+																				onClick: onPreviewHarness,
 											}] : []),
 											],
 										}}

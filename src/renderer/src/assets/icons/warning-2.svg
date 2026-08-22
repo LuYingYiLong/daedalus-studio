@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+	<rect id="warning" width="24.000000" height="24.000000" x="0.000000" y="0.000000" />
 	<circle id="椭圆 14" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.000000" />
 	<path id="矢量 164" d="M12 7L12 13" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
 	<circle id="椭圆 31" cx="12" cy="16" r="1" fill="currentColor" />
