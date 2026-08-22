@@ -108,16 +108,22 @@ const SETTINGS_PAGE_KEYS: readonly string[] = [
 	"provider",
 	"default_model",
 	"general",
+	"appearance",
 	"keyboard_shortcuts",
 	"search",
 	"statistics",
 	"personalization",
 	"mcp_servers",
 	"skills",
+	"hooks",
+	"plugins",
 	"browser",
+	"environments",
+	"worktrees",
 	"documentation",
 	"godot_projects",
 	"archived_sessions",
+	"import",
 	"about"
 ];
 windowLifecycleController.registerIpc();

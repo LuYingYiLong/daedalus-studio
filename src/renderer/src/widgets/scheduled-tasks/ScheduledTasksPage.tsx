@@ -205,7 +205,13 @@ export default function ScheduledTasksPage({
 						>
 							{t("scheduledTasks.createWithAi")}
 						</Button>
-						<Dropdown trigger={["click"]} menu={{ items: createMenuItems, onClick: handleCreateMenu }}>
+						<Dropdown
+							trigger={["click"]}
+							menu={{
+								items: createMenuItems,
+								onClick: handleCreateMenu,
+							}}
+						>
 							<Button
 								type="primary"
 								icon={<Icon name="arrow-down" />}
@@ -353,7 +359,7 @@ export default function ScheduledTasksPage({
 				open={selected !== null}
 				onClose={(): void => setSelected(null)}
 				title={selected?.title}
-				width={520}
+				size={520}
 				styles={{ body: { padding: 20 } }}
 			>
 				{selected !== null ? (
@@ -384,10 +390,16 @@ export default function ScheduledTasksPage({
 							</Typography.Title>
 							<Typography.Paragraph type="secondary">
 								{selected.target?.kind === "existing_session"
-									? t("scheduledTasks.existingSessionTarget", { sessionId: selected.target.sessionId })
+									? t(
+											"scheduledTasks.existingSessionTarget",
+											{
+												sessionId:
+													selected.target.sessionId,
+											},
+										)
 									: selected.context === null
-									? t("scheduledTasks.noModel")
-									: `${selected.context.workspaceId ?? t("scheduledTasks.noWorkspace")} · ${selected.context.provider}/${selected.context.model}${selected.context.reasoningEffort === null ? "" : ` · ${selected.context.reasoningEffort}`} · ${selected.context.executionPolicy === "auto_safe" ? t("scheduledTasks.autoSafe") : t("scheduledTasks.readOnly")}`}
+										? t("scheduledTasks.noModel")
+										: `${selected.context.workspaceId ?? t("scheduledTasks.noWorkspace")} · ${selected.context.provider}/${selected.context.model}${selected.context.reasoningEffort === null ? "" : ` · ${selected.context.reasoningEffort}`} · ${selected.context.executionPolicy === "auto_safe" ? t("scheduledTasks.autoSafe") : t("scheduledTasks.readOnly")}`}
 							</Typography.Paragraph>
 						</div>
 						<div>

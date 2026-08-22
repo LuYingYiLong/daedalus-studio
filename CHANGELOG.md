@@ -1,91 +1,91 @@
-# Daedalus Studio 更新日志
+# Daedalus Studio Changelog
 
-> 范围：v1.0.8（`81eb465`）→ 当前版本（v1.1.4）。
-> 说明：仓库本地没有 v1.0.8 tag（克隆时无 tag 引用，packed-refs 仅有 origin/main），因此以 package.json `version` 首次变为 1.0.8 的提交 `81eb465`（2026-08-01）作为基线；各版本边界以 package.json 版本字段的取值为准。
+> Scope: v1.0.8 (`81eb465`) → Current version (v1.1.4).
+> Note: The repository does not have a local v1.0.8 tag (no tag references were fetched during cloning; packed-refs only contains origin/main). Therefore, the commit `81eb465` (2026-08-01), where `package.json` `version` first became 1.0.8, is used as the baseline. Version boundaries are determined by the `version` field in `package.json`.
 
 ## [1.1.4] - 2026-08-16
 
-### 新增
-- 文件面板与 Monaco 编辑器，支持文件树、标签页、文本编辑和工作区上下文选区
-- 会话分叉与来源提示，方便使用不同模型复现同一问题
-- 供应商官网、供应商编辑和模型能力配置
-- 工作区布局偏好、Dock 全屏和 Composer 紧凑布局持久化
-- 通用设置支持自定义正文字体和代码字体
+### Added
+- File panel and Monaco editor, with support for file tree, tabs, text editing, and workspace context selection
+- Session forking and source hints, making it easy to reproduce the same issue with different models
+- Vendor official website, vendor editing, and model capability configuration
+- Persistence for workspace layout preferences, Dock fullscreen, and Composer compact layout
+- General settings support for custom body font and code font
 
-### 修复
-- 改进文件树懒加载、滚动性能和编辑器底部安全区域
-- 修复设置窗口修改字体后主窗口不同步的问题
-- 更新流程在活动 LLM 响应期间自动等待，避免中断正在进行的响应
+### Fixed
+- Improved file tree lazy loading, scrolling performance, and editor bottom safe area
+- Fixed issue where main window did not sync after modifying fonts in settings window
+- Update flow now automatically waits during active LLM responses to avoid interrupting ongoing responses
 
 ## [1.1.0] - 2026-08-06
 
-### 新增
-- 时间线工具活动折叠分组，支持收起/展开摘要（`f1fb68e`、`91d06d3`、`bb994b0`）
-- 文件写入活动与变更统计展示（`18e5f73`）
-- 时间线展示上下文压缩与文件编辑 diff（`941e6f3`）
-- 文件编辑工具部分展示 source folder id（`05194ed`）
-- 会话支持从 SQLite 文件导入（`df7efa5`）
-- Full Trust 对话框、上下文条与工具标签本地化（`85b30e7`、`04b3f90`）
-- 终端滚动交接与工具结果显示优化（`c920e35`）
+### Added
+- Timeline tool activity collapse grouping with expand/collapse summaries (`f1fb68e`, `91d06d3`, `bb994b0`)
+- File write activity with change statistics display (`18e5f73`)
+- Timeline display of context compression and file editing diffs (`941e6f3`)
+- File editing tool partial display of source folder id (`05194ed`)
+- Session import from SQLite file (`df7efa5`)
+- Full Trust dialog, context bar, and tool tag localization (`85b30e7`, `04b3f90`)
+- Terminal scroll handoff and improved tool result display (`c920e35`)
 
-### 修复
-- 清理陈旧运行会话指示器（`959b7b6`）
-- 退出前等待后端完全关闭（`eaf567b`）
-- 归档活动会话时恢复工作区上下文（`63e8ab6`）
-- 去重重放的 backend 事件（`13dcb07`）
-- 强制 shiny 文本字体族（`76ff5d8`）
-- 展示最新非空 tool-call 参数（`deb06c1`）
+### Fixed
+- Cleaned up stale running session indicators (`959b7b6`)
+- Wait for backend to fully shut down before exiting (`eaf567b`)
+- Restore workspace context when archiving active sessions (`63e8ab6`)
+- Deduplicate replayed backend events (`13dcb07`)
+- Force shiny text font family (`76ff5d8`)
+- Display latest non-empty tool-call arguments (`deb06c1`)
 
-### 重构
-- 重做会话布局状态与 UI 打磨（`32e20a8`）
-- 设置页卡片改为 SettingsList 并修复布局（`2377f5a`）
+### Refactored
+- Reworked session layout state and UI polish (`32e20a8`)
+- Changed settings page cards to SettingsList and fixed layout (`2377f5a`)
 
-### 文档
-- 更新 README 并修复终端部分样式（`721a2e6`）
+### Documentation
+- Updated README and fixed terminal section styles (`721a2e6`)
 
 ## [1.0.9] - 2026-08-04
 
-### 新增
-- Goal 模式：执行面板与评估模型（`aec5952`）
-- Composer 斜杠命令与 Goal 关闭（`9207e3a`）
-- 上下文用量轮询与 Goal 遥测刷新（`e45074a`）
-- 本地 Godot 文档导入与分支检出提交流程（`d938ca1`）
-- 文档索引健康检查与修复（`3f7ac07`）
-- 首次运行引导向导（`debc90c`）
-- 会话数据导出为 SQLite 文件（`88185eb`）
-- 新会话 composer 默认值持久化（`6203900`）
-- 会话导航历史与输入上下文菜单（`8e4359a`）
-- 完成状态展示与后端管理操作（`1303529`）
-- 聊天：选择 Ask 线程删除操作（`5c79677`）、全选改为复制全部（`351b836`）、终端命令渲染（`4fd9f7a`）、时间线搜索流式结果（`70061a5`）、导航器与滚动同步（`3732a15`）、provider 重连状态展示（`37b96e3`）、代码块头部吸顶（`7f8edd3`）、文本域右键菜单（`a1e8941`）
-- 工作区：运行中会话 agent run 跟踪（`c99edd1`）
-- Git：提交/分支变更后刷新工作区与 diff review（`c5e4bc6`、`7a65ae6`）
-- 设置：归档会话与主题图表刷新（`b3aa6bc`）
-- Home：会话计划与源图片渐进加载（`e7191e9`）、摘要静默刷新（`605dc22`）
-- Composer：上下文用量布局与摘要预预热（`dfb8891`）、草稿按会话保存在 renderer 内存（`94f5d1e`）
+### Added
+- Goal mode: execution panel and evaluation model (`aec5952`)
+- Composer slash commands and Goal dismissal (`9207e3a`)
+- Context usage polling and Goal telemetry refresh (`e45074a`)
+- Local Godot documentation import and branch checkout commit workflow (`d938ca1`)
+- Document index health check and repair (`3f7ac07`)
+- First-run onboarding wizard (`debc90c`)
+- Session data export as SQLite file (`88185eb`)
+- Persistence of new session composer defaults (`6203900`)
+- Session navigation history and input context menu (`8e4359a`)
+- Completion status display and backend management actions (`1303529`)
+- Chat: Ask thread delete action (`5c79677`), changed select all to copy all (`351b836`), terminal command rendering (`4fd9f7a`), timeline search streaming results (`70061a5`), navigator and scroll sync (`3732a15`), provider reconnection status display (`37b96e3`), code block header sticky (`7f8edd3`), textarea context menu (`a1e8941`)
+- Workspace: running session agent run tracking (`c99edd1`)
+- Git: refresh workspace and diff review after commit/branch changes (`c5e4bc6`, `7a65ae6`)
+- Settings: archive sessions and theme chart refresh (`b3aa6bc`)
+- Home: session plans and progressive source image loading (`e7191e9`), summary silent refresh (`605dc22`)
+- Composer: context usage layout and summary pre-warming (`dfb8891`), draft saved per session in renderer memory (`94f5d1e`)
 
-### 修复
-- 防止过期 Goal 快照覆盖新状态（`d9a85d6`）
-- 会话导航器与活动 turn 同步（`a3fc913`）
-- 首次绘制后再显示 renderer（`b4e239e`）
-- 修正 overscan 行过滤（`0799fc5`）
-- Home 无变更时隐藏 diff 统计（`2135790`）
-- 布局持久化防抖与 review 评论表单重置（`3931ebb`）
+### Fixed
+- Prevent expired Goal snapshots from overwriting new state (`d9a85d6`)
+- Session navigator and active turn sync (`a3fc913`)
+- Show renderer after first paint (`b4e239e`)
+- Corrected overscan line filtering (`0799fc5`)
+- Hide diff stats when no changes in Home (`2135790`)
+- Layout persistence debounce and review comment form reset (`3931ebb`)
 
-### 重构
-- `updatesEnabled` 更名 `appReady` 并门控侧栏按钮（`a26aa14`）
-- 提取执行状态面板可见性逻辑（`c0ce63b`）
-- Git 分支列表替换为 antd Menu（`6709f98`）
+### Refactored
+- Renamed `updatesEnabled` to `appReady` and gated sidebar buttons (`a26aa14`)
+- Extracted execution status panel visibility logic (`c0ce63b`)
+- Replaced Git branch list with antd Menu (`6709f98`)
 
-### 样式
-- 统一 box-shadow 使用（`c604d3a`）
-- 重命名 translucent 背景 token 并更新图标（`cafd94b`）
-- 摘要内容重排与下沉背景调整（`07361f6`）
+### Styling
+- Unified box-shadow usage (`c604d3a`)
+- Renamed translucent background token and updated icons (`cafd94b`)
+- Summary content rearrangement and lowered background adjustment (`07361f6`)
 
 ---
 
-## 版本边界
+## Version Boundaries
 
-| 版本 | 首个版本提交 | package.json version | 日期 |
+| Version | First Version Commit | package.json version | Date |
 |---|---|---|---|
 | v1.0.8 | `81eb465` | 1.0.8 | 2026-08-01 |
 | v1.0.9 | `a1e8941` | 1.0.9 | 2026-08-04 |
