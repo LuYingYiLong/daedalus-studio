@@ -92,7 +92,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 			setSelectedId(result.plugin.id);
 			setInstallOpen(false);
 			setUpdateTarget(null);
-			message.success(t(updateTarget === null ? "settings.plugins.messages.installed" : "settings.plugins.messages.updated"));
 			if (result.plugin.trust === "review_required") {
 				setTrustMode("trusted");
 				setTrustCandidate(result.plugin);
@@ -140,13 +139,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 			await updatePluginTrust(plugin.id, plugin.fingerprint, status);
 			const next = await fetchPluginCatalog();
 			setCatalog(next);
-			message.success(
-				t(
-					status === "trusted"
-						? "settings.plugins.messages.trusted"
-						: "settings.plugins.messages.disabled",
-				),
-			);
 			return true;
 		} catch (caught: unknown) {
 			message.error(

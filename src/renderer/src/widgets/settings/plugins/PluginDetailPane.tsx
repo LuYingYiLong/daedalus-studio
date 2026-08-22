@@ -56,9 +56,10 @@ export function PluginDetailPane({
 	if (plugin === undefined) {
 		return (
 			<div className={styles.emptyDetail}>
-				<Typography.Text type="secondary">
-					{t("settings.plugins.selectPrompt")}
-				</Typography.Text>
+				<Empty
+					image={Empty.PRESENTED_IMAGE_SIMPLE}
+					description={t("settings.plugins.selectPrompt")}
+				/>
 			</div>
 		);
 	}
@@ -71,8 +72,15 @@ export function PluginDetailPane({
 	const changelog: string | undefined =
 		presentation?.changelog?.trim() || undefined;
 	const runtime = plugin.runtime;
-	const rssMb = runtime?.resourceUsage?.rssBytes === undefined ? null : (runtime.resourceUsage.rssBytes / (1024 * 1024)).toFixed(1);
-	const capabilities = plugin.nativePlugin?.capabilities ?? (plugin.compatibility.harnessBundle ? ["tools", "skills", "hooks", "mcp"] : []);
+	const rssMb =
+		runtime?.resourceUsage?.rssBytes === undefined
+			? null
+			: (runtime.resourceUsage.rssBytes / (1024 * 1024)).toFixed(1);
+	const capabilities =
+		plugin.nativePlugin?.capabilities ??
+		(plugin.compatibility.harnessBundle
+			? ["tools", "skills", "hooks", "mcp"]
+			: []);
 	const p2Declarations = plugin.p2?.declarations ?? {};
 
 	const featureContent: React.JSX.Element = (
@@ -139,10 +147,25 @@ export function PluginDetailPane({
 						? capabilities.join(", ")
 						: t("settings.plugins.items.notDeclared")}
 				</Descriptions.Item>
-				<Descriptions.Item label={t("settings.plugins.items.p2Capabilities")}>
+				<Descriptions.Item
+					label={t("settings.plugins.items.p2Capabilities")}
+				>
 					<Space wrap>
-						{Object.entries(p2Declarations).map(([key, value]) => <Tag key={key}>{key}: {Array.isArray(value) ? value.length : value === undefined ? 0 : 1}</Tag>)}
-						{Object.keys(p2Declarations).length === 0 ? <Typography.Text type="secondary">{t("settings.plugins.items.notDeclared")}</Typography.Text> : null}
+						{Object.entries(p2Declarations).map(([key, value]) => (
+							<Tag key={key}>
+								{key}:{" "}
+								{Array.isArray(value)
+									? value.length
+									: value === undefined
+										? 0
+										: 1}
+							</Tag>
+						))}
+						{Object.keys(p2Declarations).length === 0 ? (
+							<Typography.Text type="secondary">
+								{t("settings.plugins.items.notDeclared")}
+							</Typography.Text>
+						) : null}
 					</Space>
 				</Descriptions.Item>
 				<Descriptions.Item label={t("settings.plugins.runtime.title")}>
@@ -152,7 +175,8 @@ export function PluginDetailPane({
 								color={
 									runtime?.status === "ready"
 										? "success"
-											: runtime?.status === "failed" || runtime?.status === "quarantined"
+										: runtime?.status === "failed" ||
+											  runtime?.status === "quarantined"
 											? "error"
 											: "default"
 								}
@@ -190,20 +214,60 @@ export function PluginDetailPane({
 						) : null}
 					</Flex>
 				</Descriptions.Item>
-				<Descriptions.Item label={t("settings.plugins.runtime.securityTitle")}>
+				<Descriptions.Item
+					label={t("settings.plugins.runtime.securityTitle")}
+				>
 					<Flex vertical gap="small">
 						<Descriptions size="small" column={1}>
-							<Descriptions.Item label={t("settings.plugins.runtime.sandbox")}>
-								<Typography.Text type="secondary">{t("settings.plugins.runtime.sandboxValue")}</Typography.Text>
+							<Descriptions.Item
+								label={t("settings.plugins.runtime.sandbox")}
+							>
+								<Typography.Text type="secondary">
+									{t("settings.plugins.runtime.sandboxValue")}
+								</Typography.Text>
 							</Descriptions.Item>
-							<Descriptions.Item label={t("settings.plugins.runtime.network")}>
-								<Typography.Text type="secondary">{t("settings.plugins.runtime.networkValue")}</Typography.Text>
+							<Descriptions.Item
+								label={t("settings.plugins.runtime.network")}
+							>
+								<Typography.Text type="secondary">
+									{t("settings.plugins.runtime.networkValue")}
+								</Typography.Text>
 							</Descriptions.Item>
-							<Descriptions.Item label={t("settings.plugins.runtime.resource")}>
-								<Typography.Text type="secondary">{t("settings.plugins.runtime.resourceValue", { active: runtime?.resourceUsage?.activeCalls ?? 0, pending: runtime?.resourceUsage?.pendingCalls ?? 0, rss: rssMb ?? "—" })}</Typography.Text>
+							<Descriptions.Item
+								label={t("settings.plugins.runtime.resource")}
+							>
+								<Typography.Text type="secondary">
+									{t(
+										"settings.plugins.runtime.resourceValue",
+										{
+											active:
+												runtime?.resourceUsage
+													?.activeCalls ?? 0,
+											pending:
+												runtime?.resourceUsage
+													?.pendingCalls ?? 0,
+											rss: rssMb ?? "—",
+										},
+									)}
+								</Typography.Text>
 							</Descriptions.Item>
 						</Descriptions>
-						{runtime?.isolation?.status === "quarantined" ? <Alert type="warning" showIcon message={t("settings.plugins.runtime.quarantineReason", { reason: runtime.isolation.reason ?? t("settings.plugins.runtime.status.quarantined") })} /> : null}
+						{runtime?.isolation?.status === "quarantined" ? (
+							<Alert
+								type="warning"
+								showIcon
+								message={t(
+									"settings.plugins.runtime.quarantineReason",
+									{
+										reason:
+											runtime.isolation.reason ??
+											t(
+												"settings.plugins.runtime.status.quarantined",
+											),
+									},
+								)}
+							/>
+						) : null}
 					</Flex>
 				</Descriptions.Item>
 				<Descriptions.Item
@@ -290,13 +354,13 @@ export function PluginDetailPane({
 				<Descriptions.Item
 					label={t("settings.plugins.items.fingerprint")}
 				>
-						<Typography.Text
-							className={styles.fingerprintValue}
-							type="secondary"
-							copyable={{ text: plugin.fingerprint }}
-						>
-							{plugin.fingerprint}
-						</Typography.Text>
+					<Typography.Text
+						className={styles.fingerprintValue}
+						type="secondary"
+						copyable={{ text: plugin.fingerprint }}
+					>
+						{plugin.fingerprint}
+					</Typography.Text>
 				</Descriptions.Item>
 			</Descriptions>
 		</div>
@@ -333,7 +397,7 @@ export function PluginDetailPane({
 	);
 
 	const tabItems: TabsProps["items"] = [
-											{
+		{
 			key: "details",
 			label: t("settings.plugins.details"),
 			children: null,
@@ -414,43 +478,79 @@ export function PluginDetailPane({
 										trigger={["click"]}
 										menu={{
 											items: [
+												{
+													key: "restart-runtime",
+													icon: (
+														<Icon name="reload" />
+													),
+													label: t(
+														"settings.plugins.runtime.restart",
+													),
+													disabled:
+														busy ||
+														plugin.trust !==
+															"trusted",
+													onClick: onRestart,
+												},
+												{
+													key: "update-plugin",
+													icon: (
+														<Icon name="download" />
+													),
+													label: t(
+														"settings.plugins.actions.update",
+													),
+													disabled:
+														busy ||
+														plugin.trust !==
+															"trusted",
+													onClick: onUpdate,
+												},
+												...(runtime?.isolation
+													?.status === "quarantined"
+													? [
 															{
-																key: "restart-runtime",
-												icon: <Icon name="reload" />,
-												label: t(
-													"settings.plugins.runtime.restart",
-												),
-																				disabled: busy || plugin.trust !== "trusted",
-																onClick: onRestart,
-															},
-															{
-																key: "update-plugin",
-																icon: <Icon name="download" />,
-																label: t("settings.plugins.actions.update"),
-																				disabled: busy || plugin.trust !== "trusted",
-																onClick: onUpdate,
-															},
-															...(runtime?.isolation?.status === "quarantined" ? [{
 																key: "clear-quarantine",
-																icon: <Icon name="reload" />,
-																label: t("settings.plugins.actions.clearQuarantine"),
-																				disabled: busy,
-																				onClick: onClearQuarantine,
-															}] : []),
-															{
-																key: "rollback-plugin",
-																icon: <Icon name="reload" />,
-																label: t("settings.plugins.actions.rollback"),
-																				disabled: busy,
-																				onClick: onRollback,
+																icon: (
+																	<Icon name="reload" />
+																),
+																label: t(
+																	"settings.plugins.actions.clearQuarantine",
+																),
+																disabled: busy,
+																onClick:
+																	onClearQuarantine,
 															},
-											...(plugin.compatibility.harnessBundle ? [{
-												key: "preview-harness",
-												icon: <Icon name="search" />,
-												label: t("settings.plugins.harness.preview"),
-																				disabled: busy,
-																				onClick: onPreviewHarness,
-											}] : []),
+														]
+													: []),
+												{
+													key: "rollback-plugin",
+													icon: (
+														<Icon name="reload" />
+													),
+													label: t(
+														"settings.plugins.actions.rollback",
+													),
+													disabled: busy,
+													onClick: onRollback,
+												},
+												...(plugin.compatibility
+													.harnessBundle
+													? [
+															{
+																key: "preview-harness",
+																icon: (
+																	<Icon name="search" />
+																),
+																label: t(
+																	"settings.plugins.harness.preview",
+																),
+																disabled: busy,
+																onClick:
+																	onPreviewHarness,
+															},
+														]
+													: []),
 											],
 										}}
 									>

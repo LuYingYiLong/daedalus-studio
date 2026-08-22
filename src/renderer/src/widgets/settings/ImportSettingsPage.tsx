@@ -90,7 +90,6 @@ function ImportSettingsPage(): React.JSX.Element {
 				}
 			}
 			setTrustModalOpen(true);
-			void message.success(t("settings.plugins.messages.installed"));
 		} catch (error: unknown) {
 			const nextErrorMessage: string = getErrorMessage(error, t("settings.plugins.errors.install"));
 			setErrorMessage(nextErrorMessage);
@@ -106,7 +105,6 @@ function ImportSettingsPage(): React.JSX.Element {
 		try {
 			await updatePluginTrust(installedPlugin.id, installedPlugin.fingerprint, "trusted");
 			setTrustModalOpen(false);
-			void message.success(t("settings.plugins.messages.trusted"));
 		} catch (error: unknown) {
 			const nextErrorMessage: string = getErrorMessage(error, t("settings.plugins.errors.trust"));
 			setErrorMessage(nextErrorMessage);

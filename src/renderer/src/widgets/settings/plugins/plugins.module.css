@@ -247,9 +247,10 @@
 
 .center,
 .emptyDetail {
-	display: grid;
-	place-items: center;
-	min-height: 160px;
+	display: flex;
+	width: 100%;
+	align-items: center;
+	justify-content: center;
 }
 
 .emptyList {
