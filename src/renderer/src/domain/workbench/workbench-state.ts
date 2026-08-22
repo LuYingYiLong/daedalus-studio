@@ -572,6 +572,25 @@ function appendCompressionPart(parts: TimelineBodyPart[], event: BackendEvent): 
 	));
 }
 
+function appendPluginTimelinePart(parts: TimelineBodyPart[], event: BackendEvent): TimelineBodyPart[] {
+	const data: Record<string, unknown> = getEventData(event);
+	const pluginId: string = getStringValue(data, "pluginId");
+	const partType: string = getStringValue(data, "partType");
+	const payload: unknown = data.data;
+	if (pluginId.length === 0 || partType.length === 0 || !isRecord(payload)) return parts;
+	const nextPart: Extract<TimelineBodyPart, { type: "plugin_part" }> = {
+		type: "plugin_part",
+		pluginId: pluginId.slice(0, 240),
+		partType: partType.slice(0, 240),
+		...(getStringValue(data, "title").length === 0 ? {} : { title: getStringValue(data, "title").slice(0, 200) }),
+		...(getStringValue(data, "summary").length === 0 ? {} : { summary: getStringValue(data, "summary").slice(0, 1200) }),
+		...(getStringValue(data, "icon").length === 0 ? {} : { icon: getStringValue(data, "icon").slice(0, 80) }),
+		...(["info", "success", "warning", "error"].includes(getStringValue(data, "status")) ? { status: getStringValue(data, "status") as "info" | "success" | "warning" | "error" } : {}),
+		data: Object.fromEntries(Object.entries(payload).slice(0, 64))
+	};
+	return [...parts, nextPart];
+}
+
 function getAssistantContent(parts: TimelineBodyPart[], fallback: string): string {
 	const content: string = parts
 		.filter((part: TimelineBodyPart): part is Extract<TimelineBodyPart, { type: "markdown" }> => part.type === "markdown")
@@ -819,6 +838,8 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		nextParts = appendSummaryStartPart(nextParts, event);
 	} else if (event.event === "agent.context.compression") {
 		nextParts = appendCompressionPart(nextParts, event);
+	} else if (event.event === "plugin.timeline.part") {
+		nextParts = appendPluginTimelinePart(nextParts, event);
 	} else if (event.event === "agent.status") {
 		const title: string = getStringValue(data, "title") || getStringValue(data, "stage");
 		const details: string = getStringValue(data, "details") || getStringValue(data, "detail") || getStringValue(data, "message");
@@ -883,6 +904,7 @@ function shouldCreateAssistantBlock(event: BackendEvent): boolean {
 		|| event.event === "agent.provider.reconnect"
 		|| event.event === "agent.summary.started"
 		|| event.event === "agent.context.compression"
+		|| event.event === "plugin.timeline.part"
 		|| event.event.startsWith("agent.tool.")
 		|| event.event === "agent.status"
 		|| event.event === "plan.generated"

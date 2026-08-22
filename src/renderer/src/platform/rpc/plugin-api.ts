@@ -91,6 +91,11 @@ export type PluginRecord = {
 	lastError?: string;
 	presentation?: PluginPresentation;
 	nativePlugin?: { apiVersion: number; entry: string; capabilities: Array<"tools" | "skills" | "hooks" | "mcp"> };
+	p2?: {
+		apiVersion: number;
+		capabilities: Record<string, number | undefined>;
+		declarations: Record<string, unknown>;
+	};
 	dependencyLockHash?: string;
 	harnessBundle?: HarnessBundleSummary;
 	runtime?: PluginRuntimeSnapshot;
@@ -175,6 +180,7 @@ export type PluginScanResult = {
 	compatibility: PluginCompatibility;
 	presentation?: PluginPresentation;
 	nativePlugin?: PluginRecord["nativePlugin"];
+	p2?: PluginRecord["p2"];
 	dependencyLockHash?: string;
 	harnessBundle?: PluginRecord["harnessBundle"];
 };

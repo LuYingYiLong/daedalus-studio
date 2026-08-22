@@ -1652,7 +1652,8 @@
 				"notDeclared": "Not declared",
 				"fingerprint": "Fingerprint",
 				"nativeEntry": "Native entry",
-				"capabilities": "Capabilities"
+				"capabilities": "Capabilities",
+				"p2Capabilities": "P2 extension capabilities"
 			},
 			"actions": {
 				"add": "Add plugin",

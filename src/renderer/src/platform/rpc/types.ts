@@ -662,6 +662,16 @@ export type TimelineBodyPart =
 			deletions: number;
 			undoable: boolean;
 			editedFiles: TimelineEditedFile[];
+	  }
+	| {
+			type: "plugin_part";
+			pluginId: string;
+			partType: string;
+			title?: string;
+			summary?: string;
+			icon?: string;
+			status?: "info" | "success" | "warning" | "error";
+			data: Record<string, unknown>;
 	  };
 
 export type TimelineBlock = TimelineUserBlock | TimelineAssistantBlock | TimelineDividerBlock;

@@ -7,7 +7,6 @@ import type {
 	PluginRecord,
 } from "@/platform/rpc/plugin-api";
 import { Icon } from "@/assets/icons";
-import { classificationColor } from "./plugin-formatters";
 import styles from "./plugins.module.css";
 
 function PluginMenuIcon({

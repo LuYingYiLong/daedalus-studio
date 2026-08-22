@@ -1645,7 +1645,8 @@
 				"notDeclared": "未声明",
 				"fingerprint": "指纹",
 				"nativeEntry": "原生入口",
-				"capabilities": "能力"
+				"capabilities": "能力",
+				"p2Capabilities": "P2 扩展能力"
 			},
 			"actions": {
 				"add": "添加插件",

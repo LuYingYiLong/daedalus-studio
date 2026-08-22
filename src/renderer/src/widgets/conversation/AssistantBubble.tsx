@@ -13,6 +13,7 @@ import ThinkingPart from "./ThinkingPart";
 import ImageGenerationPart from "./ImageGenerationPart";
 import ProviderReconnectPart from "./ProviderReconnectPart";
 import CompressionPart from "./CompressionPart";
+import PluginTimelinePart from "./PluginTimelinePart";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import MarkdownContent from "../markdown/MarkdownContent";
 import { useTimelineDisclosure } from "@/features/conversation/timeline-disclosure-state";
@@ -219,6 +220,10 @@ function AssistantBubble({
 
 		if (part.type === "summary_start") {
 			return null;
+		}
+
+		if (part.type === "plugin_part") {
+			return <PluginTimelinePart key={partKey} part={part} />;
 		}
 
 		return (

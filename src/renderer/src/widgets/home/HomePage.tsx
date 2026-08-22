@@ -2806,6 +2806,29 @@ function HomePage({
 			onAddImages={onAddImages}
 			onAddPastedTextAttachment={onAddPastedTextAttachment}
 			onAddContextFiles={onAddContextFiles}
+			onAddPluginContext={(value: Record<string, unknown>): void => {
+				const content = typeof value.content === "string"
+					? value.content.slice(0, 1_000_000)
+					: JSON.stringify(value).slice(0, 1_000_000);
+				const providerId = typeof value.providerId === "string" ? value.providerId : "plugin-context";
+				onAddContext({
+					id: `plugin-context:${providerId}:${Date.now().toString(36)}`,
+					kind: "text_attachment",
+					title: typeof value.title === "string" && value.title.trim().length > 0
+						? value.title.slice(0, 200)
+						: "Plugin context",
+					subtitle: typeof value.source === "string" ? value.source.slice(0, 400) : undefined,
+					source: "manual",
+					data: {
+						attachmentId: `plugin-context-${Date.now().toString(36)}`,
+						mimeType: "text/plain",
+						byteSize: new TextEncoder().encode(content).byteLength,
+						fileName: `${providerId.replace(/[^a-z0-9._-]+/giu, "-").slice(0, 80) || "plugin-context"}.txt`,
+						content
+					},
+					summary: typeof value.title === "string" ? value.title.slice(0, 1200) : undefined
+				});
+			}}
 			onWorkspaceSelect={isHome ? onHomeWorkspaceSelect : undefined}
 			onWorkspaceAdd={isHome ? onHomeWorkspaceAdd : undefined}
 			onWorkspaceClear={isHome ? onHomeWorkspaceClear : undefined}

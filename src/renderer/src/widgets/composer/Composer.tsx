@@ -85,6 +85,7 @@ import useComposerContextUsage, {
 import WorktreeCreationOptions, {
 	type WorktreeSourceOptions,
 } from "./WorktreeCreationOptions";
+import PluginContextProviderPicker from "@/widgets/plugins/PluginContextProviderPicker";
 
 export type ComposerProps = {
 	providerModelSelection: ProviderModelSelection | null;
@@ -130,6 +131,7 @@ export type ComposerProps = {
 	onAddFolder?: () => void;
 	onAddImages?: (files: File[]) => void;
 	onAddContextFiles?: (files: File[]) => void;
+	onAddPluginContext?: (value: Record<string, unknown>) => void;
 	onAddPastedTextAttachment?: (input: PastedTextAttachmentInput) => boolean;
 	onRemoveContext?: (contextId: string) => void;
 	onPinContext?: (contextId: string, pinned: boolean) => void;
@@ -256,6 +258,7 @@ function Composer({
 	onAddFolder,
 	onAddImages,
 	onAddContextFiles,
+	onAddPluginContext,
 	onAddPastedTextAttachment,
 	onRemoveContext,
 	onPinContext,
@@ -1519,6 +1522,9 @@ function Composer({
 								/>
 							</Dropdown>
 						</Tooltip>
+						{onAddPluginContext === undefined ? null : (
+							<PluginContextProviderPicker onAddContext={onAddPluginContext} />
+						)}
 
 						<Divider vertical={true} />
 

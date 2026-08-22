@@ -73,6 +73,7 @@ export function PluginDetailPane({
 	const runtime = plugin.runtime;
 	const rssMb = runtime?.resourceUsage?.rssBytes === undefined ? null : (runtime.resourceUsage.rssBytes / (1024 * 1024)).toFixed(1);
 	const capabilities = plugin.nativePlugin?.capabilities ?? (plugin.compatibility.harnessBundle ? ["tools", "skills", "hooks", "mcp"] : []);
+	const p2Declarations = plugin.p2?.declarations ?? {};
 
 	const featureContent: React.JSX.Element = (
 		<div className={`${styles.tabScroll} ${styles.featureContent}`}>
@@ -137,6 +138,12 @@ export function PluginDetailPane({
 					{capabilities.length > 0
 						? capabilities.join(", ")
 						: t("settings.plugins.items.notDeclared")}
+				</Descriptions.Item>
+				<Descriptions.Item label={t("settings.plugins.items.p2Capabilities")}>
+					<Space wrap>
+						{Object.entries(p2Declarations).map(([key, value]) => <Tag key={key}>{key}: {Array.isArray(value) ? value.length : value === undefined ? 0 : 1}</Tag>)}
+						{Object.keys(p2Declarations).length === 0 ? <Typography.Text type="secondary">{t("settings.plugins.items.notDeclared")}</Typography.Text> : null}
+					</Space>
 				</Descriptions.Item>
 				<Descriptions.Item label={t("settings.plugins.runtime.title")}>
 					<Flex vertical gap="small">
