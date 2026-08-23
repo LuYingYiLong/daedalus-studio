@@ -52,7 +52,10 @@ import type {
 } from "@/platform/rpc/workspace-api";
 import type { SkillSummary } from "@/platform/rpc/skill-api";
 import { fetchSessions } from "@/platform/rpc/session-api";
-import type { WorkspaceSidebarPreferences } from "@/platform/rpc/client-preferences-api";
+import {
+	getCachedClientPreferences,
+	type WorkspaceSidebarPreferences,
+} from "@/platform/rpc/client-preferences-api";
 import {
 	detectShortcutPlatform,
 	findMatchingShortcutCommand,
@@ -2337,6 +2340,37 @@ function HomePage({
 		[commitSessionLayout],
 	);
 
+	const openMessageWebUrl = useCallback(
+		(url: string): void => {
+			const rawUrl: string = url.trim();
+			let parsed: URL;
+			try {
+				parsed = new URL(rawUrl);
+			} catch {
+				return;
+			}
+			if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+				return;
+			}
+
+			const preferences = getCachedClientPreferences();
+			if (preferences.webLinkOpenMode === "external" || activeSessionId === null) {
+				void window.electronAPI.windowControl.openExternal(rawUrl);
+				return;
+			}
+
+			void ensureBrowserRuntime(activeSessionId)
+				.then((runtime: BrowserRuntimeRegistration): Promise<unknown> =>
+					window.electronAPI.browser.view.navigate(runtime.browserId, rawUrl),
+				)
+				.catch((error: unknown): void => {
+					console.error("[HomePage] failed to open web link in integrated browser", error);
+					messageApi.error(t("chat.markdownResource.openWebLinkFailed"));
+				});
+		},
+		[activeSessionId, ensureBrowserRuntime, messageApi, t],
+	);
+
 	const activeBrowserCallsRef = useRef<Map<string, string>>(new Map());
 	useEffect((): (() => void) => {
 		let disposed: boolean = false;
@@ -3347,6 +3381,7 @@ function HomePage({
 																	: selectedLaunchTarget,
 															launchTargets:
 																workspaceLaunchTargets,
+															openWebUrl: openMessageWebUrl,
 														}}
 													>
 														<ConversationTimelinePane

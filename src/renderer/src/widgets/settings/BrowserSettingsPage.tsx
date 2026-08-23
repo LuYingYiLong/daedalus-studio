@@ -6,6 +6,7 @@ import {
 	Form,
 	Input,
 	Modal,
+	Segmented,
 	Space,
 	Switch,
 	Tooltip,
@@ -20,6 +21,12 @@ import type {
 	BrowserPermissionRule,
 	BrowserSettings,
 } from "../../../../contracts/browser";
+import {
+	fetchClientPreferences,
+	getCachedClientPreferences,
+	updateClientPreferences,
+	type ClientPreferences,
+} from "@/platform/rpc/client-preferences-api";
 import {
 	BrowserClearDataModal,
 	BrowserDownloadsModal,
@@ -50,6 +57,9 @@ function BrowserSettingsPage(): React.JSX.Element {
 	const { t } = useTranslation();
 	const { message, modal } = App.useApp();
 	const [settings, setSettings] = useState<BrowserSettings>(EMPTY_SETTINGS);
+	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(
+		getCachedClientPreferences(),
+	);
 	const [defaultDownloadDirectory, setDefaultDownloadDirectory] =
 		useState<string>("");
 	const [manager, setManager] = useState<ManagerKind>(null);
@@ -84,6 +94,18 @@ function BrowserSettingsPage(): React.JSX.Element {
 	}, [message, t]);
 
 	useEffect((): void => {
+		void fetchClientPreferences()
+			.then(setClientPreferences)
+			.catch((error: unknown): void => {
+				void message.error(
+					error instanceof Error
+						? error.message
+						: t("settings.browser.errors.load"),
+				);
+			});
+	}, [message, t]);
+
+	useEffect((): void => {
 		if (manager === "passwords")
 			void window.electronAPI.browser.passwords
 				.list()
@@ -103,6 +125,20 @@ function BrowserSettingsPage(): React.JSX.Element {
 			setSettings(
 				await window.electronAPI.browser.settings.update(patch),
 			);
+		} catch (error: unknown) {
+			void message.error(
+				error instanceof Error
+					? error.message
+					: t("settings.browser.errors.save"),
+			);
+		}
+	}
+
+	async function updateWebLinkOpenMode(
+		webLinkOpenMode: ClientPreferences["webLinkOpenMode"],
+	): Promise<void> {
+		try {
+			setClientPreferences(await updateClientPreferences({ webLinkOpenMode }));
 		} catch (error: unknown) {
 			void message.error(
 				error instanceof Error
@@ -221,6 +257,32 @@ function BrowserSettingsPage(): React.JSX.Element {
 						<Button onClick={(): void => setManager("downloads")}>
 							{t("settings.browser.actions.openDownloads")}
 						</Button>
+					</SettingsItem>
+				</SettingsList>
+
+				<SettingsList title={t("settings.browser.links.title")}>
+					<SettingsItem
+						title={t("settings.browser.links.openMode")}
+						description={t(
+							"settings.browser.links.openModeDescription",
+						)}
+					>
+						<Segmented<ClientPreferences["webLinkOpenMode"]>
+							value={clientPreferences.webLinkOpenMode}
+							options={[
+								{
+									label: t("settings.browser.links.external"),
+									value: "external",
+								},
+								{
+									label: t("settings.browser.links.integrated"),
+									value: "integrated",
+								},
+							]}
+							onChange={(value): void => {
+								void updateWebLinkOpenMode(value);
+							}}
+						/>
 					</SettingsItem>
 				</SettingsList>
 

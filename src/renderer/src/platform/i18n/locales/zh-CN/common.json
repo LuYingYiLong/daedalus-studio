@@ -1096,7 +1096,8 @@
 			"revealInExplorer": "在资源管理器中打开",
 			"savedAs": "文件已保存",
 			"noWorkspace": "请先选择工作区，再打开此文件",
-			"outsideWorkspace": "该文件不属于当前项目的源文件夹"
+			"outsideWorkspace": "该文件不属于当前项目的源文件夹",
+			"openWebLinkFailed": "无法在集成浏览器中打开网页链接。"
 		},
 		"mermaid": {
 			"title": "Mermaid 图表",
@@ -1564,6 +1565,13 @@
 				"askEveryTimeDescription": "开始下载时选择文件名和目录。",
 				"manage": "下载管理器",
 				"manageDescription": "查看进度、打开文件或清除下载记录。"
+			},
+			"links": {
+				"title": "网页链接",
+				"openMode": "链接打开方式",
+				"openModeDescription": "决定在消息列表中点击网页 URL 时使用哪个浏览器。",
+				"external": "从外部打开",
+				"integrated": "使用集成浏览器打开"
 			},
 			"privacy": {
 				"title": "隐私和网站数据",

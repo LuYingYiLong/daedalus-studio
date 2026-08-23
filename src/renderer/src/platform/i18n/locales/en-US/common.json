@@ -1098,7 +1098,8 @@
 			"revealInExplorer": "Show in File Explorer",
 			"savedAs": "File saved",
 			"noWorkspace": "Select a workspace before opening this file",
-			"outsideWorkspace": "This file is not inside a source folder of the current project"
+			"outsideWorkspace": "This file is not inside a source folder of the current project",
+			"openWebLinkFailed": "Could not open the web link in the integrated browser."
 		},
 		"mermaid": {
 			"title": "Mermaid diagram",
@@ -1571,6 +1572,13 @@
 				"askEveryTimeDescription": "Choose a file name and folder when a download starts.",
 				"manage": "Download manager",
 				"manageDescription": "View progress, open files, or clear download records."
+			},
+			"links": {
+				"title": "Web links",
+				"openMode": "Link opening",
+				"openModeDescription": "Choose which browser opens web URLs clicked in the message list.",
+				"external": "Open externally",
+				"integrated": "Open in integrated browser"
 			},
 			"privacy": {
 				"title": "Privacy and site data",

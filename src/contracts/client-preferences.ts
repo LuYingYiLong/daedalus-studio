@@ -4,6 +4,8 @@ import type { OnboardingPreferences } from "./onboarding";
 
 export type LanguagePreference = "system" | "en-US" | "zh-CN";
 
+export type WebLinkOpenMode = "external" | "integrated";
+
 export type WorkspaceSidebarPreferences = {
 	open: boolean;
 	size: number;
@@ -21,6 +23,7 @@ export type ClientPreferences = {
 	fontFamily: string;
 	fontFamilyCode: string;
 	language: LanguagePreference;
+	webLinkOpenMode: WebLinkOpenMode;
 	workspaceSidebar: WorkspaceSidebarPreferences;
 	keyboardShortcuts: KeyboardShortcutOverrides;
 	lastComposerModel: {

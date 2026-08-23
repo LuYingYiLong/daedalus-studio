@@ -50,6 +50,7 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
 	fontFamilyCode: DEFAULT_STUDIO_FONT_FAMILY_CODE,
 	language: "system",
+	webLinkOpenMode: "integrated",
 	workspaceSidebar: {
 		open: true,
 		size: 260
@@ -222,6 +223,10 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 		value.language === "en-US" || value.language === "zh-CN" || value.language === "system"
 			? value.language
 			: DEFAULT_CLIENT_PREFERENCES.language;
+	const webLinkOpenMode: ClientPreferences["webLinkOpenMode"] =
+		value.webLinkOpenMode === "external" || value.webLinkOpenMode === "integrated"
+			? value.webLinkOpenMode
+			: DEFAULT_CLIENT_PREFERENCES.webLinkOpenMode;
 	const workspaceSidebar: ClientPreferences["workspaceSidebar"] = normalizeWorkspaceSidebar(value.workspaceSidebar);
 	const keyboardShortcuts: KeyboardShortcutOverrides = normalizeKeyboardShortcutOverrides(
 		value.keyboardShortcuts,
@@ -247,6 +252,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			fontFamily,
 			fontFamilyCode,
 			language: languagePreference,
+			webLinkOpenMode,
 			workspaceSidebar,
 			keyboardShortcuts,
 			lastComposerModel,
@@ -264,6 +270,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			|| value.fontFamily !== fontFamily
 			|| value.fontFamilyCode !== fontFamilyCode
 			|| value.language !== languagePreference
+			|| value.webLinkOpenMode !== webLinkOpenMode
 			|| JSON.stringify(value.workspaceSidebar ?? null) !== JSON.stringify(workspaceSidebar)
 			|| JSON.stringify(value.keyboardShortcuts ?? null) !== JSON.stringify(keyboardShortcuts)
 			|| JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel)
@@ -281,6 +288,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 				"fontFamily",
 				"fontFamilyCode",
 				"language",
+				"webLinkOpenMode",
 				"workspaceSidebar",
 				"keyboardShortcuts",
 				"lastComposerModel",
@@ -338,6 +346,9 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	}
 	if (value.language === "en-US" || value.language === "zh-CN" || value.language === "system") {
 		patch.language = value.language;
+	}
+	if (value.webLinkOpenMode === "external" || value.webLinkOpenMode === "integrated") {
+		patch.webLinkOpenMode = value.webLinkOpenMode;
 	}
 	if (
 		isRecord(value.workspaceSidebar)

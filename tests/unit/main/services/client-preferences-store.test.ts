@@ -68,6 +68,7 @@ describe("client preferences store", () => {
 				fontFamily: DEFAULT_CLIENT_PREFERENCES.fontFamily,
 				fontFamilyCode: DEFAULT_CLIENT_PREFERENCES.fontFamilyCode,
 				language: "system",
+				webLinkOpenMode: "integrated",
 				workspaceSidebar: {
 					open: true,
 					size: 260
@@ -114,6 +115,7 @@ describe("client preferences store", () => {
 			fontFamily: DEFAULT_CLIENT_PREFERENCES.fontFamily,
 			fontFamilyCode: DEFAULT_CLIENT_PREFERENCES.fontFamilyCode,
 			language: "system",
+			webLinkOpenMode: "integrated",
 			workspaceSidebar: {
 				open: true,
 				size: 260

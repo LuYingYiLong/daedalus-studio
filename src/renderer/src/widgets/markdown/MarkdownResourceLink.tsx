@@ -36,6 +36,15 @@ function getErrorMessage(error: unknown): string {
 	return error instanceof Error && error.message.trim().length > 0 ? error.message : "Unknown error";
 }
 
+function isWebUrl(value: string): boolean {
+	try {
+		const url: URL = new URL(value);
+		return url.protocol === "http:" || url.protocol === "https:";
+	} catch {
+		return false;
+	}
+}
+
 function WorkspaceResourceLink({ resource, children, className }: MarkdownResourceLinkProps): React.JSX.Element {
 	const { message } = App.useApp();
 	const { t } = useTranslation();
@@ -232,9 +241,29 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 }
 
 export function MarkdownLink({ href, children, node: _node, ...props }: React.ComponentProps<"a"> & { node?: unknown }): React.JSX.Element {
+	const actions = useMarkdownResourceActions();
 	const resource: MarkdownResourceRef | null = parseMarkdownResourceHref(href);
 	if (resource === null || href === undefined) {
-		return <a href={href} {...props}>{children}</a>;
+		const webUrl: string | undefined = href;
+		if (webUrl === undefined || !isWebUrl(webUrl) || actions?.openWebUrl === undefined) {
+			return <a href={webUrl} {...props}>{children}</a>;
+		}
+		const handleClick = (event: React.MouseEvent<HTMLAnchorElement>): void => {
+			props.onClick?.(event);
+			if (
+				event.defaultPrevented
+				|| event.button !== 0
+				|| event.metaKey
+				|| event.ctrlKey
+				|| event.shiftKey
+				|| event.altKey
+			) {
+				return;
+			}
+			event.preventDefault();
+			actions.openWebUrl(webUrl);
+		};
+		return <a href={href} {...props} onClick={handleClick}>{children}</a>;
 	}
 
 	return <WorkspaceResourceLink resource={resource} className={props.className}>{children}</WorkspaceResourceLink>;

@@ -12,6 +12,7 @@ export type MarkdownResourceActionsContextValue = {
 	godotExecutablePath: string | null;
 	currentWorkspaceLaunch: MarkdownWorkspaceLaunchTarget | null;
 	launchTargets: readonly MarkdownWorkspaceLaunchTarget[];
+	openWebUrl: (url: string) => void;
 };
 
 const MarkdownResourceActionsContext = createContext<MarkdownResourceActionsContextValue | null>(null);

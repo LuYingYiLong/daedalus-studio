@@ -14,6 +14,7 @@ import type {
 	ClientPreferences,
 	ClientPreferencesPatch,
 	LanguagePreference,
+	WebLinkOpenMode,
 	WorkspaceSidebarPreferences
 } from "../../../../contracts/client-preferences";
 
@@ -21,6 +22,7 @@ export type {
 	ClientPreferences,
 	ClientPreferencesPatch,
 	LanguagePreference,
+	WebLinkOpenMode,
 	WorkspaceSidebarPreferences
 } from "../../../../contracts/client-preferences";
 export type { NewSessionComposerPreferences } from "../../../../contracts/new-session-composer-preferences";
@@ -39,6 +41,7 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
 	fontFamilyCode: DEFAULT_STUDIO_FONT_FAMILY_CODE,
 	language: "system",
+	webLinkOpenMode: "integrated",
 	workspaceSidebar: {
 		open: true,
 		size: 260
