@@ -16,25 +16,37 @@ describe("Composer draft lifetime", () => {
 		expect(appSource).toContain("const [homeComposerMessage, setHomeComposerMessage] = useState<string>(\"\")");
 		expect(appSource).toContain("if (isNewSessionHome) {");
 		expect(appSource).toContain("setHomeComposerMessage(text);");
-		expect(appSource).toContain("const composerMessage: string = isNewSessionHome ? homeComposerMessage : storedComposerMessage;");
+		expect(appSource).toMatch(
+			/const composerMessage: string = isNewSessionHome\s*\? homeComposerMessage\s*:\s*storedComposerMessage;/u,
+		);
 		expect(homePageSource).toContain("onDraftChange={onDraftChange}");
 		expect(composerSource).toContain("onDraftChange?.(nextMessage)");
 	});
 
-	it("restores drafts by conversation and keeps typed temporary sessions alive", () => {
+	it("keeps new-session text local and materializes a temporary session only for context", () => {
 		expect(appSource).toContain("composerInstanceKey");
 		expect(homePageSource).toContain("key={composerInstanceKey}");
 		expect(composerSource).toContain("const [draftMessage, setDraftMessage] = useState<string>(message)");
 		expect(appSource).toContain("draftText.trim().length > 0");
 		expect(appSource).toContain("composerDraftsRef.current.delete(sessionId)");
+		expect(appSource).toContain("function beginLocalNewSessionDraft(");
+		expect(appSource).toContain('replaceComposerInput(initialDraft, "home");');
+		expect(appSource).toContain("await createTemporarySession(homeDraft.workspace);");
+		expect(appSource).not.toContain("void createTemporarySession().catch");
+		expect(homePageSource).toContain("initialDraft: prompt,");
+		expect(homePageSource).not.toContain("scheduledTaskPrefillRef");
 	});
 
 	it("uses a server suggestion only as an empty composer placeholder", () => {
-		expect(appSource).toContain("const nextStepSuggestionCandidate: unknown = workbench?.nextStepHints?.hints?.[0]?.message;");
+		expect(appSource).toMatch(
+			/const nextStepSuggestionCandidate: unknown =\s*workbench\?\.nextStepHints\?\.hints\?\.\[0\]\?\.message;/u,
+		);
 		expect(appSource).toContain("nextStepSuggestion,");
 		expect(homePageSource).toContain("nextStepSuggestion={nextStepSuggestion}");
 		expect(composerSource).toContain("nextStepSuggestion?: string | null;");
-		expect(composerSource).toContain("const textAreaPlaceholder: string = draftMessage.length === 0");
+		expect(composerSource).toMatch(
+			/const textAreaPlaceholder: string =\s*draftMessage.length === 0/u,
+		);
 		expect(composerSource).toContain("placeholder={textAreaPlaceholder}");
 		expect(composerSource).not.toContain("setDraftMessage(nextStepSuggestion");
 	});

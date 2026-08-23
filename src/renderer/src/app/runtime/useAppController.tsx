@@ -193,6 +193,8 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	const [isNewSessionHome, setIsNewSessionHome] = useState<boolean>(true);
 	const [homeComposerMessage, setHomeComposerMessage] = useState<string>("");
 	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() => createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection));
+	const homeComposerMessageRef = useLatest(homeComposerMessage);
+	const homeDraftRef = useLatest(homeDraft);
 	const [homeWorkspaceOptions, setHomeWorkspaceOptions] = useState<WorkspaceConfig[]>(() => bootstrapData.workspaceList.workspaces);
 	const [isWorkspaceProjectDialogOpen, setIsWorkspaceProjectDialogOpen] = useState<boolean>(false);
 	const [isWorkspaceSessionCreating, setIsWorkspaceSessionCreating] = useState<boolean>(false);
@@ -935,7 +937,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		} else {
 			composerDraftsRef.current.set(scopeId, text);
 		}
-		if (isNewSessionHome) {
+		if (scopeId === "home" || isNewSessionHome) {
 			setHomeComposerMessage(text);
 		}
 		setComposerInputReset(
@@ -1435,20 +1437,11 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		return onBackendReconnected((): void => {
 			takePendingWorkbenchPatch();
 			const sessionId: string | null = activeSessionIdRef.current;
-			if (activeSessionMetadata?.temporary === true) {
-				temporaryDraftSessionIdRef.current = null;
-				activeSessionIdRef.current = null;
-				setActiveSessionId(null);
-				setActiveSessionMetadata(null);
-				resetSessionPresentationState();
-				setIsNewSessionHome(true);
-				void createTemporarySession().catch((error: unknown): void => {
-					setSessionError(
-						error instanceof Error
-							? error.message
-							: "Failed to restore New session",
-					);
-				});
+			if (
+				activeSessionMetadata?.temporary === true &&
+				sessionId !== null
+			) {
+				void restoreMaterializedHomeDraftSession(sessionId);
 				return;
 			}
 			if (sessionId !== null) {
@@ -1504,11 +1497,15 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		}
 		const currentPreferences: ClientPreferences =
 			clientPreferencesRef.current;
-		const draft: HomeDraft = createPreferredHomeDraft(
-			currentPreferences,
-			providerModelSelection,
-			workspace,
-		);
+		const currentDraft: HomeDraft = homeDraftRef.current;
+		const draft: HomeDraft =
+			workspace === null
+				? currentDraft
+				: {
+						...currentDraft,
+						workspaceId: workspace.id,
+						workspace,
+					};
 		const preferredApprovalMode: ApprovalMode =
 			currentPreferences.newSessionComposer.approvalMode;
 		const createOperation: Promise<void> = (async (): Promise<void> => {
@@ -1523,6 +1520,10 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				approvalMode: preferredApprovalMode,
 				workspaceLaunch: draft.workspaceLaunch,
 			});
+			const currentDraftText: string = homeComposerMessageRef.current;
+			if (currentDraftText.length > 0) {
+				composerDraftsRef.current.set(created.id, currentDraftText);
+			}
 			temporaryDraftSessionIdRef.current = created.id;
 			activeSessionIdRef.current = created.id;
 			setActiveSessionId(created.id);
@@ -1541,6 +1542,50 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			await createOperation;
 		} finally {
 			temporarySessionCreationRef.current = null;
+		}
+	}
+
+	async function restoreMaterializedHomeDraftSession(
+		sessionId: string,
+	): Promise<void> {
+		setIsSessionLoading(true);
+		try {
+			const result: SessionOpenResult = await openSession(sessionId);
+			if (activeSessionIdRef.current !== sessionId) {
+				return;
+			}
+			temporaryDraftSessionIdRef.current = sessionId;
+			setActiveSessionMetadata(result.metadata);
+			setWorkbench({
+				...result.workbench,
+				composer: {
+					...result.workbench.composer,
+					text: "",
+				},
+			});
+			setActiveWorkspace(
+				createWorkspaceFromSessionOpenResult(result),
+			);
+			setIsNewSessionHome(true);
+			setSessionError(null);
+		} catch (error: unknown) {
+			const currentDraft: HomeDraft = homeDraftRef.current;
+			const currentText: string =
+				composerDraftsRef.current.get(sessionId) ??
+				homeComposerMessageRef.current;
+			beginLocalNewSessionDraft(
+				currentDraft.workspace,
+				currentText,
+				currentDraft.executionEnvironment,
+			);
+			void deleteSessionWithLayout(sessionId).catch((): void => {});
+			setSessionError(
+				error instanceof Error
+					? error.message
+					: "Failed to restore New session",
+			);
+		} finally {
+			setIsSessionLoading(false);
 		}
 	}
 
@@ -1637,6 +1682,9 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			temporaryDraft ?? ({ id: temporaryDraftId } as SessionMetadata),
 			{ recordNavigation: false },
 		);
+		setHomeComposerMessage(
+			composerDraftsRef.current.get(temporaryDraftId) ?? "",
+		);
 		setIsNewSessionHome(true);
 		if (
 			sessionListLoaded &&
@@ -1648,17 +1696,49 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		return true;
 	}
 
+	function beginLocalNewSessionDraft(
+		workspace: WorkspaceConfig | null,
+		initialDraft: string = "",
+		executionEnvironment: "local" | "worktree" = "local",
+	): void {
+		navigationVersionRef.current += 1;
+		temporaryDraftSessionIdRef.current = null;
+		activeSessionIdRef.current = null;
+		setActiveSessionId(null);
+		setActiveSessionMetadata(null);
+		setSelectionAskThreads([]);
+		setIsNewSessionHome(true);
+		setHomeDraft(
+			createPreferredHomeDraft(
+				clientPreferencesRef.current,
+				providerModelSelection,
+				workspace,
+				executionEnvironment,
+			),
+		);
+		setActiveWorkspace(workspace);
+		resetSessionPresentationState();
+		setFirstTurnModelTransition(null);
+		setSessionError(null);
+		setApprovalModeState(
+			clientPreferencesRef.current.newSessionComposer.approvalMode,
+		);
+		replaceComposerInput(initialDraft, "home");
+	}
+
 	async function handleNewSession(
 		options: {
 			restoreTemporaryDraft?: boolean;
 			workspace?: WorkspaceConfig | null;
+			initialDraft?: string;
 		} = {},
 	): Promise<void> {
 		const preferredWorkspace: WorkspaceConfig | null =
 			options.workspace ?? null;
+		const initialDraft: string = options.initialDraft ?? "";
 		if (activeSessionMetadata?.temporary === true) {
 			const temporaryId: string | null = activeSessionId;
-			temporaryDraftSessionIdRef.current = null;
+			beginLocalNewSessionDraft(preferredWorkspace, initialDraft);
 			if (temporaryId !== null) {
 				await deleteSessionWithLayout(temporaryId).catch(
 					(error: unknown): void => {
@@ -1669,16 +1749,13 @@ export default function useAppController({ bootstrapData }: AppProps) {
 					},
 				);
 			}
-			activeSessionIdRef.current = null;
-			setActiveSessionId(null);
-			setActiveSessionMetadata(null);
-			resetSessionPresentationState();
-			await createTemporarySession();
+			void loadHomeWorkspaces();
 			return;
 		}
 		if (
 			temporaryDraftSessionIdRef.current !== null &&
-			options.restoreTemporaryDraft !== false
+			options.restoreTemporaryDraft !== false &&
+			options.initialDraft === undefined
 		) {
 			if (
 				await restoreTemporaryDraftOnNewSessionHome(preferredWorkspace)
@@ -1686,10 +1763,14 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				return;
 			}
 		}
-		if (temporaryDraftSessionIdRef.current !== null) {
-			const temporaryId: string = temporaryDraftSessionIdRef.current;
-			temporaryDraftSessionIdRef.current = null;
-			await deleteSessionWithLayout(temporaryId).catch(
+		const staleTemporaryId: string | null =
+			temporaryDraftSessionIdRef.current;
+		const pendingWorkbenchPersistence: Promise<void> =
+			persistPendingWorkbenchPatchBeforeNavigation();
+		beginLocalNewSessionDraft(preferredWorkspace, initialDraft);
+		await pendingWorkbenchPersistence;
+		if (staleTemporaryId !== null) {
+			await deleteSessionWithLayout(staleTemporaryId).catch(
 				(error: unknown): void => {
 					console.warn(
 						"[App] discard temporary session failed",
@@ -1698,20 +1779,6 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				},
 			);
 		}
-		navigationVersionRef.current += 1;
-		await persistPendingWorkbenchPatchBeforeNavigation();
-		setIsNewSessionHome(true);
-		setHomeDraft(
-			createPreferredHomeDraft(
-				clientPreferences,
-				providerModelSelection,
-				preferredWorkspace,
-			),
-		);
-		setActiveWorkspace(preferredWorkspace);
-		resetSessionPresentationState();
-		setSessionError(null);
-		await createTemporarySession(preferredWorkspace);
 		void loadHomeWorkspaces();
 	}
 
@@ -1725,27 +1792,14 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		};
 	}, [handleNewSession]);
 
-	useEffect((): void => {
-		void createTemporarySession().catch((error: unknown): void => {
-			setSessionError(error instanceof Error ? error.message : "Failed to create a temporary session");
-		});
-	}, []);
-
 	async function handleNewWorkspaceSession(workspace: WorkspaceConfig, executionEnvironment: "local" | "worktree" = "local"): Promise<void> {
 		setIsWorkspaceSessionCreating(true);
 		try {
-			if (activeSessionMetadata?.temporary === true && activeSessionId !== null) {
-				await deleteSessionWithLayout(activeSessionId).catch((error: unknown): void => {
-					console.warn("[App] discard temporary session failed", error);
-				});
-			}
-			temporaryDraftSessionIdRef.current = null;
-			activeSessionIdRef.current = null;
-			setActiveSessionId(null);
-			setActiveSessionMetadata(null);
-			resetSessionPresentationState();
-			setActiveWorkspace(workspace);
-			setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection, workspace, executionEnvironment));
+			const temporaryId: string | null =
+				activeSessionMetadata?.temporary === true
+					? activeSessionId
+					: temporaryDraftSessionIdRef.current;
+			beginLocalNewSessionDraft(workspace, "", executionEnvironment);
 			setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
 				if (currentWorkspaces.some((currentWorkspace: WorkspaceConfig): boolean => currentWorkspace.id === workspace.id)) {
 					return currentWorkspaces;
@@ -1753,7 +1807,11 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				return [...currentWorkspaces, workspace];
 			});
 
-			await createTemporarySession(workspace);
+			if (temporaryId !== null) {
+				await deleteSessionWithLayout(temporaryId).catch((error: unknown): void => {
+					console.warn("[App] discard temporary session failed", error);
+				});
+			}
 		} finally {
 			setIsWorkspaceSessionCreating(false);
 		}
@@ -2203,25 +2261,8 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	}, [handleSessionSelect]);
 
 	function resetToNewSessionHome(): void {
-		navigationVersionRef.current += 1;
 		takePendingWorkbenchPatch();
-		activeSessionIdRef.current = null;
-		setActiveSessionId(null);
-		setActiveSessionMetadata(null);
-		setSelectionAskThreads([]);
-		resetSessionPresentationState();
-		setActiveWorkspace(null);
-		setSessionError(null);
-		setIsNewSessionHome(true);
-		setHomeDraft(
-			createPreferredHomeDraft(
-				clientPreferencesRef.current,
-				providerModelSelection,
-			),
-		);
-		setApprovalModeState(
-			clientPreferencesRef.current.newSessionComposer.approvalMode,
-		);
+		beginLocalNewSessionDraft(null);
 	}
 
 	async function handleSessionArchive(
@@ -3908,13 +3949,6 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				);
 			});
 	}, [appUpdateRuntimeBusy]);
-
-	useEffect((): void => {
-		if (!isNewSessionHome) {
-			return;
-		}
-		setHomeComposerMessage(storedComposerMessage);
-	}, [activeSessionId, isNewSessionHome, storedComposerMessage]);
 
 	useEffect((): void => {
 		activeSessionTitleRef.current = chatTitle;

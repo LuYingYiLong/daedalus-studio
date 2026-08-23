@@ -60,9 +60,9 @@ describe("Composer workflow todo visibility", () => {
 
 		expect(handlerStart).toBeGreaterThanOrEqual(0);
 		expect(handlerEnd).toBeGreaterThan(handlerStart);
-		expect(handlerSource).toContain("resetSessionPresentationState();");
-		expect(handlerSource.indexOf("resetSessionPresentationState();")).toBeLessThan(
-			handlerSource.indexOf("await createTemporarySession(workspace);")
+		expect(handlerSource).toContain(
+			'beginLocalNewSessionDraft(workspace, "", executionEnvironment);',
 		);
+		expect(handlerSource).not.toContain("createTemporarySession(workspace)");
 	});
 });

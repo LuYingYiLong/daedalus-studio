@@ -164,6 +164,11 @@ type SummaryGitActionRequest = {
 	sourceFolderId: string;
 };
 
+type NewSessionOptions = {
+	restoreTemporaryDraft?: boolean;
+	initialDraft?: string;
+};
+
 const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 	{ id: "file-explorer", label: "File Explorer" },
 	{ id: "terminal", label: "Terminal" },
@@ -561,7 +566,7 @@ type HomePageProps = {
 	activeWorkspace: WorkspaceConfig | null;
 	godotLaunchExecutablePath: string | null;
 	workspaceLaunchPreference: WorkspaceLaunchTargetId;
-	onNewSession: () => void;
+	onNewSession: (options?: NewSessionOptions) => void;
 	onNewUnboundSession: () => void;
 	onNewWorkspaceSession: (
 		workspace: WorkspaceConfig,
@@ -596,7 +601,9 @@ type HomePageProps = {
 	onSessionWorkspaceMove: (
 		session: SessionMetadata,
 		workspace: WorkspaceConfig,
-	) => Promise<import("@/platform/rpc/session-api").MoveSessionWorkspaceResult>;
+	) => Promise<
+		import("@/platform/rpc/session-api").MoveSessionWorkspaceResult
+	>;
 	onSessionWorktreeDelete: (
 		session: SessionMetadata,
 	) => Promise<SessionMetadata>;
@@ -854,12 +861,12 @@ function HomePage({
 	const [godotSceneSearch, setGodotSceneSearch] = useState<string>("");
 	const [composerInputRequest, setComposerInputRequest] =
 		useState<ComposerInputRequest | null>(null);
-	const [mainSurface, setMainSurface] = useState<"chat" | "scheduledTasks">("chat");
-	const [chatSurfaceRevealPending, setChatSurfaceRevealPending] =
-		useState<boolean>(false);
+	const [mainSurface, setMainSurface] = useState<"chat" | "scheduledTasks">(
+		"chat",
+	);
 	const [chatSurfaceSettled, setChatSurfaceSettled] = useState<boolean>(true);
-	const [scheduledTaskAttentionCount, setScheduledTaskAttentionCount] = useState<number>(0);
-	const scheduledTaskPrefillRef = useRef<string | null>(null);
+	const [scheduledTaskAttentionCount, setScheduledTaskAttentionCount] =
+		useState<number>(0);
 	const {
 		visualWorkspaceSidebar,
 		visualSessionLayout,
@@ -917,7 +924,8 @@ function HomePage({
 	}, []);
 
 	const transitionToChatSurface = useCallback((): void => {
-		const wasScheduledTasksSurface: boolean = mainSurface === "scheduledTasks";
+		const wasScheduledTasksSurface: boolean =
+			mainSurface === "scheduledTasks";
 		clearChatSurfaceSettleTimer();
 		setMainSurface("chat");
 
@@ -939,7 +947,6 @@ function HomePage({
 	const showScheduledTasksSurface = useCallback((): void => {
 		clearChatSurfaceSettleTimer();
 		setChatSurfaceSettled(false);
-		setChatSurfaceRevealPending(false);
 		setMainSurface("scheduledTasks");
 	}, [clearChatSurfaceSettleTimer]);
 
@@ -954,7 +961,10 @@ function HomePage({
 			if (event.propertyName === "opacity") {
 				// In the normal motion path the slide finishes after opacity. Only
 				// accept the opacity event when there is no transform transition left.
-				if (window.getComputedStyle(event.currentTarget).transform !== "none") {
+				if (
+					window.getComputedStyle(event.currentTarget).transform !==
+					"none"
+				) {
 					return;
 				}
 			} else if (event.propertyName !== "transform") {
@@ -976,131 +986,84 @@ function HomePage({
 		};
 	}, [clearChatSurfaceSettleTimer]);
 
-	useEffect((): (() => void) | undefined => {
-		const prompt: string | null = scheduledTaskPrefillRef.current;
-		if (
-			prompt === null ||
-			mainSurface !== "chat" ||
-			!isHome ||
-			!chatSurfaceSettled ||
-			activeSessionMetadata?.temporary !== true
-		) {
-			return undefined;
-		}
-
-		const frameId: number = window.requestAnimationFrame((): void => {
-			if (scheduledTaskPrefillRef.current !== prompt) return;
-			scheduledTaskPrefillRef.current = null;
-			handleHomeStarterSelect(prompt);
-		});
-		return (): void => window.cancelAnimationFrame(frameId);
-	}, [activeSessionMetadata?.temporary, chatSurfaceSettled, handleHomeStarterSelect, isHome, mainSurface]);
-
-	const beginNewSessionSurface = useCallback((): Promise<void> => {
-		if (mainSurface === "scheduledTasks") {
-			setChatSurfaceRevealPending(true);
-			setChatSurfaceSettled(false);
-		} else {
+	const beginNewSessionSurface = useCallback(
+		(options?: NewSessionOptions): void => {
 			transitionToChatSurface();
-		}
-		return Promise.resolve(onNewSession());
-	}, [mainSurface, onNewSession, transitionToChatSurface]);
+			onNewSession(options);
+		},
+		[onNewSession, transitionToChatSurface],
+	);
 
 	const requestNewSessionSurface = useCallback((): void => {
-		void beginNewSessionSurface().catch((error: unknown): void => {
-			console.error("[HomePage] failed to prepare new session", error);
-		});
+		beginNewSessionSurface();
 	}, [beginNewSessionSurface]);
 
 	const requestNewUnboundSessionSurface = useCallback((): void => {
-		if (mainSurface === "scheduledTasks") {
-			setChatSurfaceRevealPending(true);
-			setChatSurfaceSettled(false);
-		} else {
-			transitionToChatSurface();
-		}
+		transitionToChatSurface();
 		onNewUnboundSession();
-	}, [mainSurface, onNewUnboundSession, transitionToChatSurface]);
+	}, [onNewUnboundSession, transitionToChatSurface]);
 
 	const requestNewWorkspaceSessionSurface = useCallback(
 		(
 			workspace: WorkspaceConfig,
 			environment: "local" | "worktree" = "local",
 		): void => {
-			if (mainSurface === "scheduledTasks") {
-				setChatSurfaceRevealPending(true);
-				setChatSurfaceSettled(false);
-			} else {
-				transitionToChatSurface();
-			}
+			transitionToChatSurface();
 			onNewWorkspaceSession(workspace, environment);
 		},
-		[mainSurface, onNewWorkspaceSession, transitionToChatSurface],
+		[onNewWorkspaceSession, transitionToChatSurface],
 	);
 
-	useEffect((): (() => void) | undefined => {
-		if (
-			!chatSurfaceRevealPending ||
-			mainSurface !== "scheduledTasks" ||
-			!isHome ||
-			isSessionLoading ||
-			activeSessionMetadata?.temporary !== true
-		) {
-			return undefined;
-		}
-
-		let secondFrame: number | null = null;
-		const firstFrame: number = window.requestAnimationFrame((): void => {
-			secondFrame = window.requestAnimationFrame((): void => {
-				setChatSurfaceRevealPending(false);
-				transitionToChatSurface();
-			});
-		});
-
-		return (): void => {
-			window.cancelAnimationFrame(firstFrame);
-			if (secondFrame !== null) window.cancelAnimationFrame(secondFrame);
-		};
-	}, [
-		activeSessionMetadata?.temporary,
-		chatSurfaceRevealPending,
-		isHome,
-		isSessionLoading,
-		mainSurface,
-		transitionToChatSurface,
-	]);
-
-	const openScheduledTaskSession = useCallback((sessionId: string): void => {
-		scheduledTaskPrefillRef.current = null;
-		setChatSurfaceRevealPending(false);
-		void fetchSessions().then((result): void => {
-			const session = result.sessions.find((candidate): boolean => candidate.id === sessionId);
-			if (session !== undefined) { transitionToChatSurface(); onSessionSelect(session); }
-		}).catch((): void => {});
-	}, [onSessionSelect, transitionToChatSurface]);
+	const openScheduledTaskSession = useCallback(
+		(sessionId: string): void => {
+			void fetchSessions()
+				.then((result): void => {
+					const session = result.sessions.find(
+						(candidate): boolean => candidate.id === sessionId,
+					);
+					if (session !== undefined) {
+						transitionToChatSurface();
+						onSessionSelect(session);
+					}
+				})
+				.catch((): void => {});
+		},
+		[onSessionSelect, transitionToChatSurface],
+	);
 
 	useEffect((): (() => void) => {
-		const refresh = (): void => { void window.electronAPI.scheduledTasks.list().then((result): void => setScheduledTaskAttentionCount(result.attentionCount)); };
+		const refresh = (): void => {
+			void window.electronAPI.scheduledTasks
+				.list()
+				.then((result): void =>
+					setScheduledTaskAttentionCount(result.attentionCount),
+				);
+		};
 		refresh();
 		const offChanged = window.electronAPI.scheduledTasks.onChanged(refresh);
-		const offNavigate = window.electronAPI.scheduledTasks.onNavigate((target): void => {
-			if (target.sessionId !== null) {
-				openScheduledTaskSession(target.sessionId);
-				return;
-			}
-			showScheduledTasksSurface();
-		});
-		return (): void => { offChanged(); offNavigate(); };
+		const offNavigate = window.electronAPI.scheduledTasks.onNavigate(
+			(target): void => {
+				if (target.sessionId !== null) {
+					openScheduledTaskSession(target.sessionId);
+					return;
+				}
+				showScheduledTasksSurface();
+			},
+		);
+		return (): void => {
+			offChanged();
+			offNavigate();
+		};
 	}, [openScheduledTaskSession, showScheduledTasksSurface]);
 
 	const createScheduledTask = useCallback((): void => {
-		const prompt: string = t("scheduledTasks.prefill", { defaultValue: "帮我安排一个定时任务：" });
-		scheduledTaskPrefillRef.current = prompt;
-		void beginNewSessionSurface()
-			.catch((error: unknown): void => {
-				scheduledTaskPrefillRef.current = null;
-				console.error("[HomePage] failed to prepare scheduled task composer", error);
-			});
+		const prompt: string = t("scheduledTasks.prefill", {
+			defaultValue: "帮我安排一个定时任务：",
+		});
+		beginNewSessionSurface({
+			restoreTemporaryDraft: false,
+			initialDraft: prompt,
+		});
 	}, [beginNewSessionSurface, t]);
 
 	const workspaceSnapshotForActions: WorkspaceConfig | null =
@@ -2387,18 +2350,30 @@ function HomePage({
 			}
 
 			const preferences = getCachedClientPreferences();
-			if (preferences.webLinkOpenMode === "external" || activeSessionId === null) {
+			if (
+				preferences.webLinkOpenMode === "external" ||
+				activeSessionId === null
+			) {
 				void window.electronAPI.windowControl.openExternal(rawUrl);
 				return;
 			}
 
 			void ensureBrowserRuntime(activeSessionId)
-				.then((runtime: BrowserRuntimeRegistration): Promise<unknown> =>
-					window.electronAPI.browser.view.navigate(runtime.browserId, rawUrl),
+				.then(
+					(runtime: BrowserRuntimeRegistration): Promise<unknown> =>
+						window.electronAPI.browser.view.navigate(
+							runtime.browserId,
+							rawUrl,
+						),
 				)
 				.catch((error: unknown): void => {
-					console.error("[HomePage] failed to open web link in integrated browser", error);
-					messageApi.error(t("chat.markdownResource.openWebLinkFailed"));
+					console.error(
+						"[HomePage] failed to open web link in integrated browser",
+						error,
+					);
+					messageApi.error(
+						t("chat.markdownResource.openWebLinkFailed"),
+					);
 				});
 		},
 		[activeSessionId, ensureBrowserRuntime, messageApi, t],
@@ -2407,21 +2382,40 @@ function HomePage({
 	const openMessageHtmlFile = useCallback(
 		(params: { workspaceRoot: string; filePath: string }): void => {
 			const preferences = getCachedClientPreferences();
-			if (preferences.webLinkOpenMode === "external" || activeSessionId === null) {
-				void window.electronAPI.workspaceFs.openFile(params).catch((error: unknown): void => {
-					console.error("[HomePage] failed to open HTML file externally", error);
-					messageApi.error(t("chat.markdownResource.openWebLinkFailed"));
-				});
+			if (
+				preferences.webLinkOpenMode === "external" ||
+				activeSessionId === null
+			) {
+				void window.electronAPI.workspaceFs
+					.openFile(params)
+					.catch((error: unknown): void => {
+						console.error(
+							"[HomePage] failed to open HTML file externally",
+							error,
+						);
+						messageApi.error(
+							t("chat.markdownResource.openWebLinkFailed"),
+						);
+					});
 				return;
 			}
 
 			void ensureBrowserRuntime(activeSessionId)
-				.then((runtime: BrowserRuntimeRegistration): Promise<unknown> =>
-					window.electronAPI.browser.view.openFile(runtime.browserId, params),
+				.then(
+					(runtime: BrowserRuntimeRegistration): Promise<unknown> =>
+						window.electronAPI.browser.view.openFile(
+							runtime.browserId,
+							params,
+						),
 				)
 				.catch((error: unknown): void => {
-					console.error("[HomePage] failed to open HTML file in integrated browser", error);
-					messageApi.error(t("chat.markdownResource.openWebLinkFailed"));
+					console.error(
+						"[HomePage] failed to open HTML file in integrated browser",
+						error,
+					);
+					messageApi.error(
+						t("chat.markdownResource.openWebLinkFailed"),
+					);
 				});
 		},
 		[activeSessionId, ensureBrowserRuntime, messageApi, t],
@@ -2846,9 +2840,15 @@ function HomePage({
 				hasOverview={summaryOverview !== null}
 				error={summaryError}
 				items={summaryCollapseItems}
-				onReload={(): void => { void loadSummaryOverview(); }}
+				onReload={(): void => {
+					void loadSummaryOverview();
+				}}
 				onExpandEnvironment={(): void => {
-					void loadSummaryOverview(SUMMARY_PREVIEW_LIMIT, SUMMARY_PREVIEW_LIMIT, true);
+					void loadSummaryOverview(
+						SUMMARY_PREVIEW_LIMIT,
+						SUMMARY_PREVIEW_LIMIT,
+						true,
+					);
 				}}
 			/>
 		);
@@ -2897,26 +2897,38 @@ function HomePage({
 			onAddPastedTextAttachment={onAddPastedTextAttachment}
 			onAddContextFiles={onAddContextFiles}
 			onAddPluginContext={(value: Record<string, unknown>): void => {
-				const content = typeof value.content === "string"
-					? value.content.slice(0, 1_000_000)
-					: JSON.stringify(value).slice(0, 1_000_000);
-				const providerId = typeof value.providerId === "string" ? value.providerId : "plugin-context";
+				const content =
+					typeof value.content === "string"
+						? value.content.slice(0, 1_000_000)
+						: JSON.stringify(value).slice(0, 1_000_000);
+				const providerId =
+					typeof value.providerId === "string"
+						? value.providerId
+						: "plugin-context";
 				onAddContext({
 					id: `plugin-context:${providerId}:${Date.now().toString(36)}`,
 					kind: "text_attachment",
-					title: typeof value.title === "string" && value.title.trim().length > 0
-						? value.title.slice(0, 200)
-						: "Plugin context",
-					subtitle: typeof value.source === "string" ? value.source.slice(0, 400) : undefined,
+					title:
+						typeof value.title === "string" &&
+						value.title.trim().length > 0
+							? value.title.slice(0, 200)
+							: "Plugin context",
+					subtitle:
+						typeof value.source === "string"
+							? value.source.slice(0, 400)
+							: undefined,
 					source: "manual",
 					data: {
 						attachmentId: `plugin-context-${Date.now().toString(36)}`,
 						mimeType: "text/plain",
 						byteSize: new TextEncoder().encode(content).byteLength,
 						fileName: `${providerId.replace(/[^a-z0-9._-]+/giu, "-").slice(0, 80) || "plugin-context"}.txt`,
-						content
+						content,
 					},
-					summary: typeof value.title === "string" ? value.title.slice(0, 1200) : undefined
+					summary:
+						typeof value.title === "string"
+							? value.title.slice(0, 1200)
+							: undefined,
 				});
 			}}
 			onWorkspaceSelect={isHome ? onHomeWorkspaceSelect : undefined}
@@ -2952,8 +2964,6 @@ function HomePage({
 		sessionUpdate: activeSessionMetadata,
 		onNewSession: requestNewUnboundSessionSurface,
 		onSessionSelect: (session): void => {
-			scheduledTaskPrefillRef.current = null;
-			setChatSurfaceRevealPending(false);
 			transitionToChatSurface();
 			onSessionSelect(session);
 		},
@@ -3153,7 +3163,9 @@ function HomePage({
 						onNewSession={requestNewSessionSurface}
 						onOpenScheduledTasks={showScheduledTasksSurface}
 						scheduledTasksActive={mainSurface === "scheduledTasks"}
-						scheduledTaskAttentionCount={scheduledTaskAttentionCount}
+						scheduledTaskAttentionCount={
+							scheduledTaskAttentionCount
+						}
 						onOpenSettings={(): void => {
 							void window.electronAPI.windowControl.openSettings();
 						}}
@@ -3408,7 +3420,9 @@ function HomePage({
 															sessionError
 														}
 														message={message}
-														showStarters={chatSurfaceSettled}
+														showStarters={
+															chatSurfaceSettled
+														}
 														onStarterSelect={
 															handleHomeStarterSelect
 														}
@@ -3438,8 +3452,10 @@ function HomePage({
 																	: selectedLaunchTarget,
 															launchTargets:
 																workspaceLaunchTargets,
-															openWebUrl: openMessageWebUrl,
-															openHtmlFile: openMessageHtmlFile,
+															openWebUrl:
+																openMessageWebUrl,
+															openHtmlFile:
+																openMessageHtmlFile,
 														}}
 													>
 														<ConversationTimelinePane
@@ -3785,7 +3801,9 @@ function HomePage({
 							]
 								.filter(Boolean)
 								.join(" ")}
-							onTransitionEnd={handleScheduledTasksOverlayTransitionEnd}
+							onTransitionEnd={
+								handleScheduledTasksOverlayTransitionEnd
+							}
 							aria-hidden={mainSurface !== "scheduledTasks"}
 						>
 							<ScheduledTasksPage
