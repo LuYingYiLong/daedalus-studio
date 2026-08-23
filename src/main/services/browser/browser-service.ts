@@ -12,6 +12,10 @@ import {
 	type Session,
 	type WebContents
 } from "electron";
+import { realpathSync } from "node:fs";
+import { lstat, realpath } from "node:fs/promises";
+import { extname, isAbsolute, join, relative, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type {
 	BrowserClearDataOptions,
 	BrowserAutomationRequest,
@@ -38,6 +42,7 @@ type BrowserViewRecord = {
 	bounds: BrowserViewBounds;
 	visible: boolean;
 	state: BrowserViewState;
+	localFileRoot: string | null;
 	inspector: BrowserInspector | null;
 	cdp: BrowserCdpSession | null;
 	automation: BrowserAutomationController | null;
@@ -75,6 +80,28 @@ function normalizeUrl(rawUrl: string): string {
 	return parsed.toString();
 }
 
+function isPathInside(root: string, target: string): boolean {
+	const relativePath: string = relative(root, target);
+	return relativePath.length === 0 || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
+}
+
+function isHtmlPath(filePath: string): boolean {
+	const extension: string = extname(filePath).toLowerCase();
+	return extension === ".html" || extension === ".htm";
+}
+
+function allowedLocalFileNavigation(rawUrl: string, root: string | null): boolean {
+	if (root === null) return false;
+	try {
+		const url: URL = new URL(rawUrl);
+		if (url.protocol !== "file:") return false;
+		const target: string = realpathSync(resolve(fileURLToPath(url)));
+		return isHtmlPath(target) && isPathInside(root, target);
+	} catch {
+		return false;
+	}
+}
+
 function createInitialState(browserId: string): BrowserViewState {
 	return { browserId, url: null, title: "", isLoading: false, canGoBack: false, canGoForward: false, error: null };
 }
@@ -101,6 +128,7 @@ export class BrowserService {
 		ipcMain.handle("browser:view-bounds", (event, payload: unknown): void => this.setBounds(event, payload));
 		ipcMain.handle("browser:view-visible", (event, payload: unknown): void => this.setVisible(event, payload));
 		ipcMain.handle("browser:view-navigate", async (event, payload: unknown): Promise<BrowserViewState> => await this.navigate(event, payload));
+		ipcMain.handle("browser:view-open-file", async (event, payload: unknown): Promise<BrowserViewState> => await this.openLocalHtmlFile(event, payload));
 		ipcMain.handle("browser:view-action", (event, payload: unknown): BrowserViewState => this.runNavigationAction(event, payload));
 		ipcMain.handle("browser:view-inspect", async (event, payload: unknown): Promise<void> => await this.toggleInspect(event, payload));
 		ipcMain.handle("browser:view-state", (event, payload: unknown): BrowserViewState => ({ ...this.requireOwnedRecord(event, payload).state }));
@@ -163,6 +191,7 @@ export class BrowserService {
 			bounds: { x: 0, y: 0, width: 0, height: 0 },
 			visible: false,
 			state: createInitialState(browserId),
+			localFileRoot: null,
 			inspector: null,
 			cdp: null,
 			automation: null
@@ -229,9 +258,30 @@ export class BrowserService {
 		if (typeof payload !== "object" || payload === null || Array.isArray(payload)) throw new Error("browser_url_invalid");
 		const url: string = normalizeUrl(this.requireString((payload as Record<string, unknown>).url, "browser_url_invalid"));
 		const view: WebContentsView = this.ensureView(record);
+		record.localFileRoot = null;
 		record.state = { ...record.state, url, error: null, isLoading: true };
 		this.emitState(record);
 		await view.webContents.loadURL(url);
+		return { ...record.state };
+	}
+
+	private async openLocalHtmlFile(event: IpcMainInvokeEvent, payload: unknown): Promise<BrowserViewState> {
+		const record: BrowserViewRecord = this.requireOwnedRecord(event, payload);
+		if (typeof payload !== "object" || payload === null || Array.isArray(payload)) throw new Error("browser_file_invalid");
+		const input: Record<string, unknown> = payload as Record<string, unknown>;
+		if (typeof input.workspaceRoot !== "string" || typeof input.filePath !== "string") throw new Error("browser_file_invalid");
+		const root: string = await realpath(resolve(input.workspaceRoot));
+		const target: string = await realpath(resolve(isAbsolute(input.filePath) ? input.filePath : join(root, input.filePath)));
+		if (!isPathInside(root, target) || !isHtmlPath(target)) throw new Error("browser_file_not_allowed");
+		const fileStats = await lstat(target);
+		if (!fileStats.isFile()) throw new Error("browser_file_not_allowed");
+
+		const view: WebContentsView = this.ensureView(record);
+		record.localFileRoot = root;
+		const url: string = pathToFileURL(target).toString();
+		record.state = { ...record.state, url, error: null, isLoading: true };
+		this.emitState(record);
+		await view.webContents.loadFile(target);
 		return { ...record.state };
 	}
 
@@ -262,7 +312,12 @@ export class BrowserService {
 			return { action: "deny" };
 		});
 		view.webContents.on("will-navigate", (navigationEvent, url: string): void => {
-			try { normalizeUrl(url); } catch { navigationEvent.preventDefault(); void this.confirmExternalUrl(url); }
+			try { normalizeUrl(url); } catch {
+				if (!allowedLocalFileNavigation(url, record.localFileRoot)) {
+					navigationEvent.preventDefault();
+					void this.confirmExternalUrl(url);
+				}
+			}
 		});
 		view.webContents.on("did-start-loading", (): void => this.updateViewState(record, { isLoading: true, error: null }));
 		view.webContents.on("did-stop-loading", (): void => this.refreshNavigationState(record));

@@ -13,6 +13,7 @@ export type MarkdownResourceActionsContextValue = {
 	currentWorkspaceLaunch: MarkdownWorkspaceLaunchTarget | null;
 	launchTargets: readonly MarkdownWorkspaceLaunchTarget[];
 	openWebUrl: (url: string) => void;
+	openHtmlFile: (params: { workspaceRoot: string; filePath: string }) => void;
 };
 
 const MarkdownResourceActionsContext = createContext<MarkdownResourceActionsContextValue | null>(null);

@@ -382,6 +382,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			setBounds: (browserId: string, bounds: BrowserViewBounds): Promise<void> => ipcRenderer.invoke("browser:view-bounds", { browserId, bounds }),
 			setVisible: (browserId: string, visible: boolean): Promise<void> => ipcRenderer.invoke("browser:view-visible", { browserId, visible }),
 			navigate: (browserId: string, url: string): Promise<BrowserViewState> => ipcRenderer.invoke("browser:view-navigate", { browserId, url }),
+			openFile: (browserId: string, params: { workspaceRoot: string; filePath: string }): Promise<BrowserViewState> => ipcRenderer.invoke("browser:view-open-file", { browserId, ...params }),
 			action: (browserId: string, action: "back" | "forward" | "reload" | "stop"): Promise<BrowserViewState> => ipcRenderer.invoke("browser:view-action", { browserId, action }),
 			inspect: (browserId: string): Promise<void> => ipcRenderer.invoke("browser:view-inspect", { browserId }),
 			getState: (browserId: string): Promise<BrowserViewState> => ipcRenderer.invoke("browser:view-state", { browserId }),

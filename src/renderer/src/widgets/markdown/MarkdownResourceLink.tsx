@@ -45,6 +45,11 @@ function isWebUrl(value: string): boolean {
 	}
 }
 
+function isHtmlResource(resource: MarkdownResourceRef): boolean {
+	const fileName: string = resource.fileName.toLowerCase();
+	return fileName.endsWith(".html") || fileName.endsWith(".htm");
+}
+
 function WorkspaceResourceLink({ resource, children, className }: MarkdownResourceLinkProps): React.JSX.Element {
 	const { message } = App.useApp();
 	const { t } = useTranslation();
@@ -84,6 +89,10 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 		return runAction(async (): Promise<void> => {
 			const params = workspaceFileParams();
 			if (params !== null) {
+				if (isHtmlResource(resource) && actions?.openHtmlFile !== undefined) {
+					actions.openHtmlFile(params);
+					return;
+				}
 				await window.electronAPI.workspaceFs.openFile(params);
 			}
 		});

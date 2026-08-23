@@ -2371,6 +2371,29 @@ function HomePage({
 		[activeSessionId, ensureBrowserRuntime, messageApi, t],
 	);
 
+	const openMessageHtmlFile = useCallback(
+		(params: { workspaceRoot: string; filePath: string }): void => {
+			const preferences = getCachedClientPreferences();
+			if (preferences.webLinkOpenMode === "external" || activeSessionId === null) {
+				void window.electronAPI.workspaceFs.openFile(params).catch((error: unknown): void => {
+					console.error("[HomePage] failed to open HTML file externally", error);
+					messageApi.error(t("chat.markdownResource.openWebLinkFailed"));
+				});
+				return;
+			}
+
+			void ensureBrowserRuntime(activeSessionId)
+				.then((runtime: BrowserRuntimeRegistration): Promise<unknown> =>
+					window.electronAPI.browser.view.openFile(runtime.browserId, params),
+				)
+				.catch((error: unknown): void => {
+					console.error("[HomePage] failed to open HTML file in integrated browser", error);
+					messageApi.error(t("chat.markdownResource.openWebLinkFailed"));
+				});
+		},
+		[activeSessionId, ensureBrowserRuntime, messageApi, t],
+	);
+
 	const activeBrowserCallsRef = useRef<Map<string, string>>(new Map());
 	useEffect((): (() => void) => {
 		let disposed: boolean = false;
@@ -3382,6 +3405,7 @@ function HomePage({
 															launchTargets:
 																workspaceLaunchTargets,
 															openWebUrl: openMessageWebUrl,
+															openHtmlFile: openMessageHtmlFile,
 														}}
 													>
 														<ConversationTimelinePane

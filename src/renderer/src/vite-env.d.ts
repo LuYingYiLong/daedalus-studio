@@ -230,6 +230,7 @@ declare global {
 			setBounds: (browserId: string, bounds: BrowserViewBounds) => Promise<void>;
 			setVisible: (browserId: string, visible: boolean) => Promise<void>;
 			navigate: (browserId: string, url: string) => Promise<BrowserViewState>;
+			openFile: (browserId: string, params: { workspaceRoot: string; filePath: string }) => Promise<BrowserViewState>;
 			action: (browserId: string, action: "back" | "forward" | "reload" | "stop") => Promise<BrowserViewState>;
 			inspect: (browserId: string) => Promise<void>;
 			getState: (browserId: string) => Promise<BrowserViewState>;
