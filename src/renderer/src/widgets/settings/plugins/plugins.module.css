@@ -204,6 +204,8 @@
 	display: grid;
 	align-content: start;
 	min-width: 0;
+	gap: var(--ds-space-3);
+	padding: 0 var(--ds-space-2) var(--ds-space-4) 0;
 }
 
 .featureDescriptions {
@@ -212,6 +214,63 @@
 
 .featureDescriptions :global(.ant-descriptions-item-content) {
 	min-width: 0;
+}
+
+.featureSection {
+	display: grid;
+	min-width: 0;
+	gap: var(--ds-space-2);
+	padding-bottom: var(--ds-space-3);
+	border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.featureSection:last-child {
+	padding-bottom: 0;
+	border-bottom: 0;
+}
+
+.featureSectionHeader {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--ds-space-2);
+}
+
+.featureSectionTitle {
+	margin: 0 !important;
+}
+
+.capabilityGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: var(--ds-space-2);
+}
+
+.capabilityItem {
+	display: flex;
+	align-items: center;
+	gap: var(--ds-space-2);
+	min-width: 0;
+	padding: var(--ds-space-2);
+	border: 1px solid var(--ant-color-border-secondary);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ant-color-fill-quaternary);
+}
+
+.capabilityIcon {
+	flex: 0 0 auto;
+	width: 18px;
+	height: 18px;
+	color: var(--ant-color-primary);
+}
+
+.featureAction {
+	justify-self: start;
+	padding-inline: 0 !important;
+}
+
+.featureAlert {
+	margin-top: var(--ds-space-1);
 }
 
 .fingerprintValue {

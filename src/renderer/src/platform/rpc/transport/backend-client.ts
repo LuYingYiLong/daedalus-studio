@@ -1,4 +1,4 @@
-import { BackendRpcClient } from "@/platform/rpc/transport/backend-rpc-client";
+import { BackendRpcClient, type BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
 import type { ClientHelloResult } from "@/platform/rpc/types";
 import { attachScheduledTaskToolRuntime } from "./scheduled-task-tool-runtime";
 
@@ -45,6 +45,12 @@ export function onBackendReconnected(listener: () => void): () => void {
 	return (): void => {
 		backendReconnectListeners.delete(listener);
 	};
+}
+
+/** Subscribe to backend events using the shared Studio connection. */
+export async function onBackendEvent(listener: (event: BackendEvent) => void): Promise<() => void> {
+	const client = await createBackendClient();
+	return client.addEventListener(listener);
 }
 
 export async function createBackendClient(): Promise<BackendRpcClient> {

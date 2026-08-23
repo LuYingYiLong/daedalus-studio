@@ -2,25 +2,25 @@ import { Alert, App, Button, Tooltip, Typography } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
+import { onBackendEvent } from "@/platform/rpc/transport/backend-client";
 import {
 	fetchPluginCatalog,
 	fetchPluginRuntimeLogs,
-	fetchPluginVersions,
 	previewHarnessBundle,
 	installPlugin,
 	installPluginDependencies,
 	removePlugin,
 	restartPluginRuntime,
-	rollbackPlugin,
 	clearPluginRuntimeQuarantine,
 	deferPluginReview,
-	updatePlugin,
 	updatePluginProfile,
 	updatePluginTrust,
+	fetchPluginDevelopmentStatus,
 	type PluginCatalogResult,
 	type PluginRecord,
 	type PluginRuntimeLog,
 	type PluginSource,
+	type PluginDevelopmentStatus,
 	type HarnessBundleSummary,
 } from "@/platform/rpc/plugin-api";
 import { PluginListPane } from "./plugins/PluginListPane";
@@ -38,7 +38,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 	const [error, setError] = useState<string | null>(null);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [installOpen, setInstallOpen] = useState(false);
-	const [updateTarget, setUpdateTarget] = useState<PluginRecord | null>(null);
 	const [installing, setInstalling] = useState(false);
 	const [busyPluginId, setBusyPluginId] = useState<string | null>(null);
 	const [trustCandidate, setTrustCandidate] = useState<
@@ -51,15 +50,23 @@ function PluginsSettingsPage(): React.JSX.Element {
 	const [previewOpen, setPreviewOpen] = useState(false);
 	const [previewLoading, setPreviewLoading] = useState(false);
 	const [previewSummary, setPreviewSummary] = useState<HarnessBundleSummary | null>(null);
+	const [developmentStatuses, setDevelopmentStatuses] = useState<PluginDevelopmentStatus[]>([]);
 	const selectedPlugin = catalog?.plugins.find(
 		(plugin): boolean => plugin.id === selectedId,
 	);
+	function normalizeDevelopmentStatuses(value: Awaited<ReturnType<typeof fetchPluginDevelopmentStatus>>): PluginDevelopmentStatus[] {
+		if (Array.isArray(value)) return value;
+		if (value !== null && "statuses" in value) return value.statuses;
+		return [];
+	}
 
 	async function refresh(): Promise<void> {
 		try {
 			setError(null);
 			const next = await fetchPluginCatalog();
 			setCatalog(next);
+			const statuses = await fetchPluginDevelopmentStatus();
+			setDevelopmentStatuses(normalizeDevelopmentStatuses(statuses));
 			setSelectedId((current): string | null =>
 				current !== null &&
 				next.plugins.some((plugin): boolean => plugin.id === current)
@@ -118,15 +125,38 @@ function PluginsSettingsPage(): React.JSX.Element {
 				.catch((): void => setLogs([]));
 		else setLogs([]);
 	}, [selectedId, catalog]);
+	useEffect((): (() => void) => {
+		const timer = window.setInterval((): void => {
+			void fetchPluginDevelopmentStatus().then((value): void => setDevelopmentStatuses(normalizeDevelopmentStatuses(value))).catch((): void => undefined);
+		}, 5_000);
+		return (): void => window.clearInterval(timer);
+	}, []);
+	useEffect((): (() => void) => {
+		let disposed = false;
+		let unsubscribe: (() => void) | undefined;
+		void onBackendEvent((event): void => {
+			if (event.event !== "plugin.development.updated") return;
+			void fetchPluginDevelopmentStatus().then((value): void => {
+				if (!disposed) setDevelopmentStatuses(normalizeDevelopmentStatuses(value));
+			}).catch((): void => undefined);
+		}).then((remove): void => {
+			if (disposed) remove();
+			else unsubscribe = remove;
+		}).catch((): void => undefined);
+		return (): void => {
+			disposed = true;
+			unsubscribe?.();
+		};
+	}, []);
+	const developmentStatus = selectedPlugin === undefined ? null : developmentStatuses.find((status): boolean => status.slug === selectedPlugin.packageName || status.slug === selectedPlugin.packageName.replace(/^@/u, "").replaceAll("/", "-")) ?? null;
 
 	async function handleInstall(source: PluginSource): Promise<void> {
 		try {
 			setInstalling(true);
-			const result = updateTarget === null ? await installPlugin(source) : { plugin: await updatePlugin(updateTarget.id, source, updateTarget.fingerprint), catalog: await fetchPluginCatalog() };
+			const result = await installPlugin(source);
 			setCatalog(result.catalog);
 			setSelectedId(result.plugin.id);
 			setInstallOpen(false);
-			setUpdateTarget(null);
 			if (result.plugin.trust === "review_required") {
 				setTrustMode("trusted");
 				setTrustCandidate(result.plugin);
@@ -140,10 +170,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 		} finally {
 			setInstalling(false);
 		}
-	}
-	function openUpdate(plugin: PluginRecord): void {
-		setUpdateTarget(plugin);
-		setInstallOpen(true);
 	}
 	async function toggle(plugin: PluginRecord): Promise<void> {
 		if (catalog === null || plugin.trust !== "trusted") return;
@@ -246,25 +272,15 @@ function PluginsSettingsPage(): React.JSX.Element {
 			message.error(caught instanceof Error ? caught.message : t("settings.plugins.errors.runtime"));
 		} finally { setBusyPluginId(null); }
 	}
-	async function rollback(): Promise<void> {
+	async function openPluginDirectory(): Promise<void> {
 		if (selectedPlugin === undefined) return;
 		try {
-			const versions = await fetchPluginVersions(selectedPlugin.id);
-			const version = versions[0];
-			if (version === undefined) { message.info(t("settings.plugins.runtime.versionsEmpty")); return; }
-			modal.confirm({
-				title: t("settings.plugins.actions.rollback"),
-				content: t("settings.plugins.runtime.rollbackConfirm", { version: version.version }),
-				onOk: async (): Promise<void> => {
-					try {
-						setBusyPluginId(selectedPlugin.id);
-						await rollbackPlugin(selectedPlugin.id, version.fingerprint);
-						await refresh();
-					} catch (caught: unknown) { message.error(caught instanceof Error ? caught.message : t("settings.plugins.errors.runtime")); }
-					finally { setBusyPluginId(null); }
-				},
-			});
-		} catch (caught: unknown) { message.error(caught instanceof Error ? caught.message : t("settings.plugins.errors.runtime")); }
+			const directoryName = selectedPlugin.packageRoot.split("/").filter(Boolean).pop();
+			if (directoryName === undefined) throw new Error(t("settings.plugins.errors.directory"));
+			await window.electronAPI.pluginFs.openDirectory(directoryName);
+		} catch (caught: unknown) {
+			message.error(caught instanceof Error ? caught.message : t("settings.plugins.errors.directory"));
+		}
 	}
 	function dependencies(): void {
 		if (selectedPlugin === undefined) return;
@@ -333,24 +349,22 @@ function PluginsSettingsPage(): React.JSX.Element {
 							onRestart={(): void => {
 							void restart();
 						}}
-						onUpdate={(): void => { if (selectedPlugin !== undefined) openUpdate(selectedPlugin); }}
 						onClearQuarantine={(): void => { void clearQuarantine(); }}
-						onRollback={(): void => { void rollback(); }}
+						onOpenDirectory={(): void => { void openPluginDirectory(); }}
 						onInstallDependencies={(): void => {
 							void dependencies();
 						}}
 						onPreviewHarness={(): void => { void openHarnessPreview(); }}
 						logs={logs}
+						developmentStatus={developmentStatus}
 					/>
 				</div>
 			</section>
 			<PluginInstallModal
 				open={installOpen}
 				loading={installing}
-				onCancel={(): void => { setInstallOpen(false); setUpdateTarget(null); }}
+				onCancel={(): void => { setInstallOpen(false); }}
 				onSubmit={handleInstall}
-				title={updateTarget === null ? undefined : t("settings.plugins.actions.update")}
-				submitLabel={updateTarget === null ? undefined : t("settings.plugins.actions.update")}
 			/>
 			<PluginTrustModal
 				plugin={trustCandidate}

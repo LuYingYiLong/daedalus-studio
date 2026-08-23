@@ -1674,10 +1674,8 @@
 				"stop": "禁用",
 				"disable": "禁用",
 				"remove": "移除",
-				"update": "更新插件",
-				"versions": "历史版本",
-				"rollback": "回滚上一版本",
-				"clearQuarantine": "解除隔离并重试"
+				"clearQuarantine": "解除隔离并重试",
+				"openDirectory": "打开插件目录"
 			},
 			"install": {
 				"title": "添加插件包",
@@ -1701,7 +1699,6 @@
 			},
 			"messages": {
 				"installed": "插件包已安装，等待审核。",
-				"updated": "插件包已更新，旧版本已保留。",
 				"removed": "插件包已移除。",
 				"trusted": "插件包已信任。",
 				"disabled": "插件包已禁用。",
@@ -1714,7 +1711,8 @@
 				"trust": "更新插件信任状态失败。",
 				"profile": "更新插件 Profile 失败。",
 				"runtime": "更新插件运行时失败。",
-				"reviewUnavailable": "生成的插件已发生变化或不存在，本次审核已结束。"
+				"reviewUnavailable": "生成的插件已发生变化或不存在，本次审核已结束。",
+				"directory": "打开插件目录失败。"
 			},
 			"runtime": {
 				"title": "运行时",
@@ -1736,10 +1734,24 @@
 				"resource": "资源占用",
 				"resourceValue": "活动调用 {{active}} · 排队调用 {{pending}} · RSS {{rss}} MiB",
 				"quarantineReason": "隔离原因：{{reason}}",
-				"versionsTitle": "历史版本",
-				"versionsEmpty": "暂无可回滚版本",
-				"rollbackConfirm": "确定回滚到 {{version}} 吗？当前版本会被保留。",
 				"quarantineCleared": "插件已解除隔离。"
+			},
+			"development": {
+				"title": "开发测试",
+				"phase": "阶段",
+				"sandbox": "沙箱测试",
+				"sandboxAvailable": "隔离测试宿主可用",
+				"sandboxUnavailable": "沙箱不可用，插件未执行",
+				"networkDisabled": "网络已关闭",
+				"attempts": "静态 {{static}}/3 · 运行 {{runtime}}/3",
+				"remaining": "剩余静态 {{static}} · 运行 {{runtime}}",
+				"passed": "通过 {{count}}",
+				"failed": "失败 {{count}}",
+				"diagnostics": "诊断",
+				"retryable": "可重试",
+				"notRetryable": "不可重试",
+				"noDiagnostics": "暂无诊断",
+				"phases": { "idle": "空闲", "preparing": "准备中", "validating": "校验中", "awaiting_install": "等待安装审批", "awaiting_trust": "等待整包信任", "testing": "沙箱测试中", "passed": "测试通过", "failed": "测试失败", "exhausted": "已达到修复上限", "cancelled": "已取消", "interrupted": "后端重启后中断" }
 			},
 			"harness": {
 				"title": "DeepSeek Harness 运行时",

@@ -1681,10 +1681,8 @@
 				"stop": "Disable",
 				"disable": "Disable",
 				"remove": "Remove",
-				"update": "Update plugin",
-				"versions": "Previous versions",
-				"rollback": "Rollback",
-				"clearQuarantine": "Clear quarantine and retry"
+				"clearQuarantine": "Clear quarantine and retry",
+				"openDirectory": "Open plugin directory"
 			},
 			"install": {
 				"title": "Add plugin package",
@@ -1708,7 +1706,6 @@
 			},
 			"messages": {
 				"installed": "Plugin package installed and queued for review.",
-				"updated": "Plugin package updated. The previous version was retained.",
 				"removed": "Plugin package removed.",
 				"trusted": "Plugin package trusted.",
 				"disabled": "Plugin package disabled.",
@@ -1721,7 +1718,8 @@
 				"trust": "Failed to update plugin trust.",
 				"profile": "Failed to update plugin profile.",
 				"runtime": "Failed to update plugin runtime.",
-				"reviewUnavailable": "The generated plugin changed or no longer exists, so this review was closed."
+				"reviewUnavailable": "The generated plugin changed or no longer exists, so this review was closed.",
+				"directory": "Failed to open the plugin directory."
 			},
 			"runtime": {
 				"title": "Runtime",
@@ -1743,10 +1741,24 @@
 				"resource": "Resource usage",
 				"resourceValue": "{{active}} active · {{pending}} queued · RSS {{rss}} MiB",
 				"quarantineReason": "Quarantine reason: {{reason}}",
-				"versionsTitle": "Previous versions",
-				"versionsEmpty": "No rollback versions available",
-				"rollbackConfirm": "Roll back to {{version}}? The current version will be kept.",
 				"quarantineCleared": "Plugin quarantine cleared."
+			},
+			"development": {
+				"title": "Development tests",
+				"phase": "Phase",
+				"sandbox": "Sandbox test",
+				"sandboxAvailable": "Isolated test host available",
+				"sandboxUnavailable": "Sandbox unavailable; plugin was not executed",
+				"networkDisabled": "Network disabled",
+				"attempts": "Static {{static}}/3 · runtime {{runtime}}/3",
+				"remaining": "Remaining static {{static}} · runtime {{runtime}}",
+				"passed": "Passed {{count}}",
+				"failed": "Failed {{count}}",
+				"diagnostics": "Diagnostics",
+				"retryable": "Retryable",
+				"notRetryable": "Not retryable",
+				"noDiagnostics": "No diagnostics",
+				"phases": { "idle": "Idle", "preparing": "Preparing", "validating": "Validating", "awaiting_install": "Awaiting install approval", "awaiting_trust": "Awaiting package trust", "testing": "Sandbox testing", "passed": "Tests passed", "failed": "Tests failed", "exhausted": "Repair budget exhausted", "cancelled": "Cancelled", "interrupted": "Interrupted after backend restart" }
 			},
 			"harness": {
 				"title": "DeepSeek Harness runtime",

@@ -631,6 +631,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	pluginFs: {
 		pickDirectory: (): Promise<string | null> => ipcRenderer.invoke("plugin-fs:pick-directory"),
 		pickTarball: (): Promise<string | null> => ipcRenderer.invoke("plugin-fs:pick-tarball"),
+		openDirectory: (directoryName: string): Promise<void> => ipcRenderer.invoke("plugin-fs:open-directory", directoryName),
 	},
 	godotDocumentationFs: {
 		pickDirectory: (): Promise<string | null> => {

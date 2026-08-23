@@ -1,7 +1,5 @@
 import {
-	Alert,
 	Button,
-	Descriptions,
 	Dropdown,
 	Empty,
 	Flex,
@@ -16,9 +14,12 @@ import { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Icon } from "@/assets/icons";
-import type { PluginRecord } from "@/platform/rpc/plugin-api";
-import { classificationColor, sourceLabel } from "./plugin-formatters";
-import { PluginLogList } from "./PluginLogList";
+import type {
+	PluginDevelopmentStatus,
+	PluginRecord,
+} from "@/platform/rpc/plugin-api";
+import { classificationColor } from "./plugin-formatters";
+import { PluginFeaturePane } from "./PluginFeaturePane";
 import styles from "./plugins.module.css";
 
 export function PluginDetailPane({
@@ -28,12 +29,12 @@ export function PluginDetailPane({
 	onRequestTrust,
 	onRemove,
 	onRestart,
-	onUpdate,
 	onClearQuarantine,
-	onRollback,
+	onOpenDirectory,
 	onInstallDependencies,
 	onPreviewHarness,
 	logs,
+	developmentStatus,
 }: {
 	plugin?: PluginRecord;
 	busy: boolean;
@@ -44,12 +45,12 @@ export function PluginDetailPane({
 	) => void;
 	onRemove: (plugin: PluginRecord) => void;
 	onRestart: () => void;
-	onUpdate: () => void;
 	onClearQuarantine: () => void;
-	onRollback: () => void;
+	onOpenDirectory: () => void;
 	onInstallDependencies: () => void;
 	onPreviewHarness: () => void;
 	logs: import("@/platform/rpc/plugin-api").PluginRuntimeLog[];
+	developmentStatus?: PluginDevelopmentStatus | null;
 }): React.JSX.Element {
 	const { t } = useTranslation();
 	const [activeTabKey, setActiveTabKey] = useState("details");
@@ -72,298 +73,15 @@ export function PluginDetailPane({
 	const changelog: string | undefined =
 		presentation?.changelog?.trim() || undefined;
 	const runtime = plugin.runtime;
-	const rssMb =
-		runtime?.resourceUsage?.rssBytes === undefined
-			? null
-			: (runtime.resourceUsage.rssBytes / (1024 * 1024)).toFixed(1);
-	const capabilities =
-		plugin.nativePlugin?.capabilities ??
-		(plugin.compatibility.harnessBundle
-			? ["tools", "skills", "hooks", "mcp"]
-			: []);
-	const p2Declarations = plugin.p2?.declarations ?? {};
 
 	const featureContent: React.JSX.Element = (
-		<div className={`${styles.tabScroll} ${styles.featureContent}`}>
-			<Descriptions
-				className={styles.featureDescriptions}
-				bordered
-				column={1}
-				size="small"
-			>
-				<Descriptions.Item
-					label={t("settings.plugins.items.impactCapabilities")}
-				>
-					<Flex vertical gap="small">
-						<Typography.Text type="secondary">
-							{t(
-								"settings.plugins.items.impactCapabilitiesDescription",
-							)}
-						</Typography.Text>
-						{capabilities.length > 0 ? (
-							<Space wrap>
-								{capabilities.map(
-									(capability): React.JSX.Element => (
-										<Tag key={capability}>{capability}</Tag>
-									),
-								)}
-							</Space>
-						) : (
-							<Typography.Text type="secondary">
-								{t("settings.plugins.items.notDeclared")}
-							</Typography.Text>
-						)}
-					</Flex>
-				</Descriptions.Item>
-				<Descriptions.Item label={t("settings.plugins.items.source")}>
-					<Space>
-						<Tag>{plugin.source.type}</Tag>
-						<Typography.Text type="secondary">
-							{sourceLabel(plugin.source)}
-						</Typography.Text>
-					</Space>
-				</Descriptions.Item>
-				<Descriptions.Item
-					label={t("settings.plugins.items.nativeEntry")}
-				>
-					<Space>
-						<Tag
-							color={plugin.nativePlugin ? "success" : "default"}
-						>
-							{plugin.nativePlugin
-								? t("settings.plugins.yes")
-								: t("settings.plugins.no")}
-						</Tag>
-						<Typography.Text code>
-							{plugin.nativePlugin?.entry ??
-								t("settings.plugins.items.notDeclared")}
-						</Typography.Text>
-					</Space>
-				</Descriptions.Item>
-				<Descriptions.Item
-					label={t("settings.plugins.items.capabilities")}
-				>
-					{capabilities.length > 0
-						? capabilities.join(", ")
-						: t("settings.plugins.items.notDeclared")}
-				</Descriptions.Item>
-				<Descriptions.Item
-					label={t("settings.plugins.items.p2Capabilities")}
-				>
-					<Space wrap>
-						{Object.entries(p2Declarations).map(([key, value]) => (
-							<Tag key={key}>
-								{key}:{" "}
-								{Array.isArray(value)
-									? value.length
-									: value === undefined
-										? 0
-										: 1}
-							</Tag>
-						))}
-						{Object.keys(p2Declarations).length === 0 ? (
-							<Typography.Text type="secondary">
-								{t("settings.plugins.items.notDeclared")}
-							</Typography.Text>
-						) : null}
-					</Space>
-				</Descriptions.Item>
-				<Descriptions.Item label={t("settings.plugins.runtime.title")}>
-					<Flex vertical gap="small">
-						<Space wrap>
-							<Tag
-								color={
-									runtime?.status === "ready"
-										? "success"
-										: runtime?.status === "failed" ||
-											  runtime?.status === "quarantined"
-											? "error"
-											: "default"
-								}
-							>
-								{t(
-									`settings.plugins.runtime.status.${runtime?.status ?? "stopped"}`,
-								)}
-							</Tag>
-							<Typography.Text type="secondary">
-								{t("settings.plugins.runtime.capabilities", {
-									tools: runtime?.registeredTools ?? 0,
-									skills: runtime?.registeredSkills ?? 0,
-									hooks: runtime?.registeredHooks ?? 0,
-									mcp: runtime?.registeredMcpServers ?? 0,
-								})}
-							</Typography.Text>
-						</Space>
-						<Space wrap>
-							{runtime?.dependencyStatus === "needs_network" ? (
-								<Button
-									type="primary"
-									loading={busy}
-									onClick={onInstallDependencies}
-								>
-									{t(
-										"settings.plugins.runtime.installDependencies",
-									)}
-								</Button>
-							) : null}
-						</Space>
-						{runtime?.lastError ? (
-							<Typography.Text type="danger">
-								{runtime.lastError}
-							</Typography.Text>
-						) : null}
-					</Flex>
-				</Descriptions.Item>
-				<Descriptions.Item
-					label={t("settings.plugins.runtime.securityTitle")}
-				>
-					<Flex vertical gap="small">
-						<Descriptions size="small" column={1}>
-							<Descriptions.Item
-								label={t("settings.plugins.runtime.sandbox")}
-							>
-								<Typography.Text type="secondary">
-									{t("settings.plugins.runtime.sandboxValue")}
-								</Typography.Text>
-							</Descriptions.Item>
-							<Descriptions.Item
-								label={t("settings.plugins.runtime.network")}
-							>
-								<Typography.Text type="secondary">
-									{t("settings.plugins.runtime.networkValue")}
-								</Typography.Text>
-							</Descriptions.Item>
-							<Descriptions.Item
-								label={t("settings.plugins.runtime.resource")}
-							>
-								<Typography.Text type="secondary">
-									{t(
-										"settings.plugins.runtime.resourceValue",
-										{
-											active:
-												runtime?.resourceUsage
-													?.activeCalls ?? 0,
-											pending:
-												runtime?.resourceUsage
-													?.pendingCalls ?? 0,
-											rss: rssMb ?? "—",
-										},
-									)}
-								</Typography.Text>
-							</Descriptions.Item>
-						</Descriptions>
-						{runtime?.isolation?.status === "quarantined" ? (
-							<Alert
-								type="warning"
-								showIcon
-								message={t(
-									"settings.plugins.runtime.quarantineReason",
-									{
-										reason:
-											runtime.isolation.reason ??
-											t(
-												"settings.plugins.runtime.status.quarantined",
-											),
-									},
-								)}
-							/>
-						) : null}
-					</Flex>
-				</Descriptions.Item>
-				<Descriptions.Item
-					label={t("settings.plugins.items.harnessBundle")}
-				>
-					<Space>
-						<Tag
-							color={
-								plugin.compatibility.harnessBundle
-									? "processing"
-									: "default"
-							}
-						>
-							{plugin.compatibility.harnessBundle
-								? t("settings.plugins.yes")
-								: t("settings.plugins.no")}
-						</Tag>
-						<Typography.Text type="secondary">
-							{plugin.compatibility.patchPath ??
-								t("settings.plugins.items.notDeclared")}
-						</Typography.Text>
-					</Space>
-				</Descriptions.Item>
-				<Descriptions.Item
-					label={t("settings.plugins.items.harnessClient")}
-				>
-					<Space>
-						<Tag
-							color={
-								plugin.compatibility.harnessClient
-									? "processing"
-									: "default"
-							}
-						>
-							{plugin.compatibility.harnessClient
-								? t("settings.plugins.yes")
-								: t("settings.plugins.no")}
-						</Tag>
-						<Typography.Text type="secondary">
-							{t(
-								"settings.plugins.items.harnessClientDescription",
-							)}
-						</Typography.Text>
-					</Space>
-				</Descriptions.Item>
-				<Descriptions.Item label={t("settings.plugins.items.entry")}>
-					<Flex vertical gap="small">
-						<Tag color="success">
-							{t("settings.plugins.scanned")}
-						</Tag>
-						<Typography.Text code>
-							{plugin.compatibility.entryPaths.join(", ") ||
-								t("settings.plugins.items.notDeclared")}
-						</Typography.Text>
-					</Flex>
-				</Descriptions.Item>
-				{plugin.compatibility.unsupportedFeatures.length > 0 ? (
-					<Descriptions.Item
-						label={t("settings.plugins.unsupported")}
-					>
-						<ul className={styles.warningList}>
-							{plugin.compatibility.unsupportedFeatures.map(
-								(item): React.JSX.Element => (
-									<li key={item}>{item}</li>
-								),
-							)}
-						</ul>
-					</Descriptions.Item>
-				) : null}
-				{plugin.compatibility.warnings.length > 0 ? (
-					<Descriptions.Item label={t("settings.plugins.warnings")}>
-						<ul className={styles.warningList}>
-							{plugin.compatibility.warnings.map(
-								(item): React.JSX.Element => (
-									<li key={item}>{item}</li>
-								),
-							)}
-						</ul>
-					</Descriptions.Item>
-				) : null}
-				<Descriptions.Item label={t("settings.plugins.runtime.logs")}>
-					<PluginLogList logs={logs} />
-				</Descriptions.Item>
-				<Descriptions.Item
-					label={t("settings.plugins.items.fingerprint")}
-				>
-					<Typography.Text
-						className={styles.fingerprintValue}
-						type="secondary"
-						copyable={{ text: plugin.fingerprint }}
-					>
-						{plugin.fingerprint}
-					</Typography.Text>
-				</Descriptions.Item>
-			</Descriptions>
-		</div>
+		<PluginFeaturePane
+			plugin={plugin}
+			busy={busy}
+			logs={logs}
+			developmentStatus={developmentStatus}
+			onInstallDependencies={onInstallDependencies}
+		/>
 	);
 
 	const detailsContent: React.JSX.Element = (
@@ -488,14 +206,11 @@ export function PluginDetailPane({
 										onClick: onRestart,
 									},
 									{
-										key: "update-plugin",
-										icon: <Icon name="reload" />,
-										label: t(
-											"settings.plugins.actions.update",
-										),
-										disabled:
-											busy || plugin.trust !== "trusted",
-										onClick: onUpdate,
+										key: "open-plugin-directory",
+										icon: <Icon name="folder-open" />,
+										label: t("settings.plugins.actions.openDirectory"),
+										disabled: busy,
+										onClick: onOpenDirectory,
 									},
 									...(runtime?.isolation?.status ===
 									"quarantined"
@@ -513,15 +228,6 @@ export function PluginDetailPane({
 												},
 											]
 										: []),
-									{
-										key: "rollback-plugin",
-										icon: <Icon name="undo" />,
-										label: t(
-											"settings.plugins.actions.rollback",
-										),
-										disabled: busy,
-										onClick: onRollback,
-									},
 									...(plugin.compatibility.harnessBundle
 										? [
 												{

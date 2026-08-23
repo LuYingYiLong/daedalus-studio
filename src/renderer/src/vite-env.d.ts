@@ -589,6 +589,7 @@ declare global {
 		pluginFs: {
 			pickDirectory: () => Promise<string | null>;
 			pickTarball: () => Promise<string | null>;
+			openDirectory: (directoryName: string) => Promise<void>;
 		};
 		godotDocumentationFs: {
 			pickDirectory: () => Promise<string | null>;

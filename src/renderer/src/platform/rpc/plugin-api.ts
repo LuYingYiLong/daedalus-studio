@@ -135,17 +135,6 @@ export type PluginRuntimeSnapshot = {
 	updatedAt: string;
 };
 
-export type PluginVersionRecord = {
-	fingerprint: string;
-	packageRoot: string;
-	packageName: string;
-	version: string;
-	contentHash: string;
-	manifestHash: string;
-	installedAt: string;
-	updatedAt: string;
-};
-
 export type PluginRuntimeLog = {
 	id: string;
 	pluginId: string;
@@ -155,6 +144,45 @@ export type PluginRuntimeLog = {
 	message?: string;
 	durationMs?: number;
 	createdAt: string;
+};
+
+export type PluginDevelopmentDiagnostic = {
+	code: string;
+	message: string;
+	severity: "info" | "warning" | "error";
+	stage: "static" | "sandbox" | "registration" | "test" | "protocol" | "timeout" | "cleanup";
+	retryable: boolean;
+	path?: string;
+	caseId?: string;
+	capability?: string;
+	hint?: string;
+	details?: Record<string, string>;
+};
+
+export type PluginDevelopmentTestResult = {
+	runId: string;
+	ok: boolean;
+	pluginId: string;
+	revision: string;
+	durationMs: number;
+	sandbox: { available: boolean; mode: "windows-helper" | "bubblewrap" | "sandbox-exec" | "unavailable"; network: "disabled"; workspaceDisplay: string };
+	passed: number;
+	failed: number;
+	cases: Array<{ id: string; capability: string; target?: string; status: "passed" | "failed" | "skipped"; durationMs: number; message?: string; code?: string; retryable: boolean }>;
+	diagnostics: PluginDevelopmentDiagnostic[];
+};
+
+export type PluginDevelopmentStatus = {
+	slug: string;
+	revision: string;
+	phase: "idle" | "preparing" | "validating" | "awaiting_install" | "awaiting_trust" | "testing" | "passed" | "failed" | "exhausted" | "cancelled" | "interrupted";
+	staticAttempt: number;
+	runtimeAttempt: number;
+	staticAttemptsRemaining: number;
+	runtimeAttemptsRemaining: number;
+	lastDiagnostics: PluginDevelopmentDiagnostic[];
+	lastTest?: PluginDevelopmentTestResult;
+	updatedAt: string;
 };
 
 export type PluginProfile = {
@@ -220,21 +248,6 @@ export async function updatePluginProfile(pluginIds: string[]): Promise<PluginCa
 	return client.request<PluginCatalogResult>("plugin.profile.update", { pluginIds });
 }
 
-export async function updatePlugin(pluginId: string, source: PluginSource, expectedFingerprint: string): Promise<PluginRecord> {
-	const client = await createBackendClient();
-	return client.request<PluginRecord>("plugin.update.install", { pluginId, source, expectedFingerprint });
-}
-
-export async function fetchPluginVersions(pluginId: string): Promise<PluginVersionRecord[]> {
-	const client = await createBackendClient();
-	return client.request<PluginVersionRecord[]>("plugin.versions.list", { pluginId });
-}
-
-export async function rollbackPlugin(pluginId: string, fingerprint: string): Promise<PluginRecord> {
-	const client = await createBackendClient();
-	return client.request<PluginRecord>("plugin.rollback", { pluginId, fingerprint });
-}
-
 export async function fetchPluginRuntimeList(): Promise<{ runtimes: PluginRuntimeSnapshot[] }> {
 	const client = await createBackendClient();
 	return client.request("plugin.runtime.list", {});
@@ -294,4 +307,9 @@ export async function previewHarnessBundle(pluginId: string): Promise<HarnessBun
 export async function fetchHarnessRuntimeStatus(pluginId: string): Promise<{ runtime: PluginRuntimeSnapshot | null; installation: HarnessInstallationStatus }> {
 	const client = await createBackendClient();
 	return client.request("plugin.harness.runtime.status", { pluginId });
+}
+
+export async function fetchPluginDevelopmentStatus(slug?: string): Promise<PluginDevelopmentStatus | { statuses: PluginDevelopmentStatus[] } | null> {
+	const client = await createBackendClient();
+	return client.request("plugin.development.status.get", slug === undefined ? {} : { slug });
 }
