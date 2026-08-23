@@ -464,6 +464,7 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element | null {
 				<SettingsList title={t("settings.environments.runtime.title")}>
 					<div className={styles.preferenceList}>
 						<SettingsItem
+							searchKey="item:environments.godot"
 							title={t(
 								"settings.environments.runtime.godot.title",
 							)}
@@ -515,6 +516,7 @@ function DevelopmentEnvironmentSettingsPage(): React.JSX.Element | null {
 							</Space.Compact>
 						</SettingsItem>
 						<SettingsItem
+							searchKey="item:environments.harness"
 							title={t(
 								"settings.environments.runtime.harness.title",
 							)}

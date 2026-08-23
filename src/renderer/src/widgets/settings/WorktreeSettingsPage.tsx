@@ -264,6 +264,7 @@ function WorktreeSettingsPage(): React.JSX.Element {
 				{settings === null ? null : (
 					<SettingsList title={t("settings.worktrees.preferences")}>
 						<SettingsItem
+							searchKey="item:worktrees.rootDirectory"
 							title={t("settings.worktrees.rootDirectory")}
 							description={settings.rootDirectory}
 						>
@@ -298,6 +299,7 @@ function WorktreeSettingsPage(): React.JSX.Element {
 							</Space.Compact>
 						</SettingsItem>
 						<SettingsItem
+							searchKey="item:worktrees.fetchBeforeCreate"
 							title={t("settings.worktrees.fetchBeforeCreate")}
 							description={t(
 								"settings.worktrees.fetchBeforeCreateDescription",
@@ -313,6 +315,7 @@ function WorktreeSettingsPage(): React.JSX.Element {
 							/>
 						</SettingsItem>
 						<SettingsItem
+							searchKey="item:worktrees.autoDelete"
 							title={t("settings.worktrees.autoDelete")}
 							description={t(
 								"settings.worktrees.autoDeleteDescription",
@@ -328,6 +331,7 @@ function WorktreeSettingsPage(): React.JSX.Element {
 							/>
 						</SettingsItem>
 						<SettingsItem
+							searchKey="item:worktrees.autoDeleteLimit"
 							title={t("settings.worktrees.autoDeleteLimit")}
 							description={t(
 								"settings.worktrees.autoDeleteLimitDescription",

@@ -259,6 +259,7 @@ function GeneralSettingsPage({
 
 					<div className={styles.preferenceList}>
 						<SettingsItem
+							searchKey="item:general.language"
 							title={t("settings.general.display.language.title")}
 							description={t(
 								"settings.general.display.language.description",
@@ -284,6 +285,7 @@ function GeneralSettingsPage({
 				<SettingsList title={t("settings.general.notifications.title")}>
 					<div className={styles.preferenceList}>
 						<SettingsItem
+							searchKey="item:general.notifyOnRunCompleted"
 							title={t(
 								"settings.general.notifications.runCompleted.title",
 							)}
@@ -353,6 +355,7 @@ function GeneralSettingsPage({
 							(item): React.JSX.Element => (
 								<SettingsItem
 									key={item.key}
+									searchKey={`item:general.${item.key}`}
 									title={item.title}
 									description={item.description}
 								>

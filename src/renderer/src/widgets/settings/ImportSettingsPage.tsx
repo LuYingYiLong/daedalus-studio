@@ -123,6 +123,7 @@ function ImportSettingsPage(): React.JSX.Element {
 				{errorMessage !== null ? <div role="alert" className={styles.error}>{errorMessage}</div> : null}
 				<SettingsList title={t("settings.import.session.title")}>
 					<SettingsItem
+						searchKey="item:import.session"
 						title={t("settings.import.session.importSession.title")}
 						description={t("settings.import.session.importSession.description")}
 					>
@@ -133,6 +134,7 @@ function ImportSettingsPage(): React.JSX.Element {
 				</SettingsList>
 				<SettingsList title={t("settings.import.plugin.sectionTitle")}>
 					<SettingsItem
+						searchKey="item:import.plugin"
 						title={t("settings.import.plugin.title")}
 						description={t("settings.import.plugin.description")}
 					>

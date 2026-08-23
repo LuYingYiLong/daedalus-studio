@@ -1462,6 +1462,7 @@
 			"import": "Import",
 			"about": "About",
 			"fallbackTitle": "Settings",
+			"searchPlaceholder": "Search settings or options",
 			"placeholder": "This settings section will be implemented later."
 		},
 		"common": {

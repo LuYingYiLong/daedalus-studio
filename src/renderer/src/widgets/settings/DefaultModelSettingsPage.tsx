@@ -1,8 +1,9 @@
-import { Alert, Button, Select, Typography } from "antd";
+import { Alert, Button, Select } from "antd";
 import type { SelectProps } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
+import SettingsItem from "@/ui/SettingsItem";
 import {
 	fetchProviderModelSelection,
 	saveProviderConfig,
@@ -321,22 +322,14 @@ function DefaultModelSettingsPage({
 								: encodeModelRef(routedModel);
 
 						return (
-							<article key={option.key} className={styles.card}>
-								<div className={styles.cardHeader}>
-									<Typography.Title
-										level={4}
-										className={styles.cardTitle}
-									>
-										{t(option.titleKey)}
-									</Typography.Title>
-									<Typography.Text
-										type="secondary"
-										className={styles.description}
-									>
-										{t(option.descriptionKey)}
-									</Typography.Text>
-								</div>
-								<div className={styles.controlRow}>
+			<SettingsItem
+								key={option.key}
+								searchKey={`item:default_model.${option.key}`}
+								vertical={true}
+								ghost={true}
+								title={t(option.titleKey)}
+								description={t(option.descriptionKey)}
+							>
 									<Select
 										className={styles.modelSelect}
 										options={createModelSelectOptions(
@@ -373,8 +366,7 @@ function DefaultModelSettingsPage({
 											);
 										}}
 									/>
-								</div>
-							</article>
+							</SettingsItem>
 						);
 					},
 				)}

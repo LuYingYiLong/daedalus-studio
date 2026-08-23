@@ -19,6 +19,16 @@
 	padding-bottom: var(--ds-space-2);
 }
 
+.searchBox {
+	width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
+}
+
+.searchBox :global(.ant-input-affix-wrapper) {
+	min-width: 0;
+}
+
 .providerListPane::after {
 	position: absolute;
 	top: 0;

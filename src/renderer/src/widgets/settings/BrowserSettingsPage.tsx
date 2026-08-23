@@ -183,6 +183,7 @@ function BrowserSettingsPage(): React.JSX.Element {
 			<div className={styles.content}>
 				<SettingsList title={t("settings.browser.downloads.title")}>
 					<SettingsItem
+						searchKey="item:browser.downloadDirectory"
 						title={t("settings.browser.downloads.directory")}
 						description={
 							settings.downloadDirectory ??
@@ -234,6 +235,7 @@ function BrowserSettingsPage(): React.JSX.Element {
 						</Space.Compact>
 					</SettingsItem>
 					<SettingsItem
+						searchKey="item:browser.askEveryTime"
 						title={t("settings.browser.downloads.askEveryTime")}
 						description={t(
 							"settings.browser.downloads.askEveryTimeDescription",
@@ -249,6 +251,7 @@ function BrowserSettingsPage(): React.JSX.Element {
 						/>
 					</SettingsItem>
 					<SettingsItem
+						searchKey="item:browser.manageDownloads"
 						title={t("settings.browser.downloads.manage")}
 						description={t(
 							"settings.browser.downloads.manageDescription",
@@ -262,6 +265,7 @@ function BrowserSettingsPage(): React.JSX.Element {
 
 				<SettingsList title={t("settings.browser.links.title")}>
 					<SettingsItem
+						searchKey="item:browser.openMode"
 						title={t("settings.browser.links.openMode")}
 						description={t(
 							"settings.browser.links.openModeDescription",
@@ -288,6 +292,7 @@ function BrowserSettingsPage(): React.JSX.Element {
 
 				<SettingsList title={t("settings.browser.privacy.title")}>
 					<SettingsItem
+						searchKey="item:browser.history"
 						title={t("settings.browser.privacy.history")}
 						description={t(
 							"settings.browser.privacy.historyDescription",
@@ -298,6 +303,7 @@ function BrowserSettingsPage(): React.JSX.Element {
 						</Button>
 					</SettingsItem>
 					<SettingsItem
+						searchKey="item:browser.permissions"
 						title={t("settings.browser.privacy.permissions")}
 						description={t(
 							"settings.browser.privacy.permissionsDescription",
@@ -308,6 +314,7 @@ function BrowserSettingsPage(): React.JSX.Element {
 						</Button>
 					</SettingsItem>
 					<SettingsItem
+						searchKey="item:browser.clearData"
 						title={t("settings.browser.privacy.clearData")}
 						description={t(
 							"settings.browser.privacy.clearDataDescription",
@@ -324,6 +331,7 @@ function BrowserSettingsPage(): React.JSX.Element {
 
 				<SettingsList title={t("settings.browser.passwords.title")}>
 					<SettingsItem
+						searchKey="item:browser.savePasswords"
 						title={t("settings.browser.passwords.save")}
 						description={t(
 							"settings.browser.passwords.saveDescription",
@@ -339,6 +347,7 @@ function BrowserSettingsPage(): React.JSX.Element {
 						/>
 					</SettingsItem>
 					<SettingsItem
+						searchKey="item:browser.managePasswords"
 						title={t("settings.browser.passwords.manage")}
 						description={t(
 							"settings.browser.passwords.manageDescription",
@@ -359,6 +368,7 @@ function BrowserSettingsPage(): React.JSX.Element {
 
 				<SettingsList title={t("settings.browser.aiControl.title")}>
 					<SettingsItem
+						searchKey="item:browser.aiCdp"
 						title={t("settings.browser.aiControl.enable")}
 						description={t(
 							"settings.browser.aiControl.description",

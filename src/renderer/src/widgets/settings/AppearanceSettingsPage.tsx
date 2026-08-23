@@ -170,6 +170,7 @@ function AppearanceSettingsPage({
 				<SettingsList title={t("settings.appearance.theme.title")}>
 					<div className={styles.preferenceList}>
 						<SettingsItem
+							searchKey="item:appearance.themeMode"
 							title={t("settings.appearance.theme.mode.title")}
 							description={t(
 								"settings.appearance.theme.mode.description",
@@ -207,6 +208,7 @@ function AppearanceSettingsPage({
 							/>
 						</SettingsItem>
 						<SettingsItem
+							searchKey="item:appearance.themeColor"
 							title={t("settings.appearance.theme.color.title")}
 							description={t(
 								"settings.appearance.theme.color.description",
@@ -262,6 +264,7 @@ function AppearanceSettingsPage({
 				<SettingsList title={t("settings.appearance.interface.title")}>
 					<div className={styles.preferenceList}>
 						<SettingsItem
+							searchKey="item:appearance.motion"
 							title={t(
 								"settings.appearance.interface.motion.title",
 							)}
@@ -287,6 +290,7 @@ function AppearanceSettingsPage({
 							/>
 						</SettingsItem>
 						<SettingsItem
+							searchKey="item:appearance.uiFontSize"
 							title={t(
 								"settings.appearance.interface.uiFontSize.title",
 							)}
@@ -315,6 +319,7 @@ function AppearanceSettingsPage({
 							(key): React.JSX.Element => (
 								<SettingsItem
 									key={key}
+									searchKey={`item:appearance.${key}`}
 									title={t(
 										`settings.appearance.fonts.${key === "fontFamily" ? "body" : "code"}.title`,
 									)}
@@ -381,6 +386,7 @@ function AppearanceSettingsPage({
 							),
 						)}
 						<SettingsItem
+							searchKey="item:appearance.codeFontSize"
 							title={t(
 								"settings.appearance.fonts.codeSize.title",
 							)}

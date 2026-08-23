@@ -1,9 +1,10 @@
-import { Alert, Button, Input, Typography } from "antd";
+import { Alert, Button, Input } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import { fetchUserPromptConfig, saveUserPrompt, type UserPromptConfig } from "@/platform/rpc/user-prompt-api";
+import SettingsItem from "@/ui/SettingsItem";
 import styles from "./PersonalizationSettingsPage.module.css";
 
 function PersonalizationSettingsPage(): React.JSX.Element | null {
@@ -108,15 +109,6 @@ function PersonalizationSettingsPage(): React.JSX.Element | null {
 	return (
 		<section className={styles.page}>
 			<article className={styles.card}>
-				<div className={styles.header}>
-					<Typography.Title level={4} className={styles.title}>
-						{t("settings.personalization.userPrompt.title")}
-					</Typography.Title>
-					<Typography.Text type="secondary" className={styles.description}>
-						{t("settings.personalization.userPrompt.description")}
-					</Typography.Text>
-				</div>
-
 				{errorMessage !== null ? (
 					<Alert
 						type="warning"
@@ -134,6 +126,13 @@ function PersonalizationSettingsPage(): React.JSX.Element | null {
 				) : null}
 
 				<>
+					<SettingsItem
+						searchKey="item:personalization.userPrompt"
+						vertical={true}
+						ghost={true}
+						title={t("settings.personalization.userPrompt.title")}
+						description={t("settings.personalization.userPrompt.description")}
+					>
 						<Input.TextArea
 							className={styles.textarea}
 							value={draftPrompt}
@@ -144,16 +143,15 @@ function PersonalizationSettingsPage(): React.JSX.Element | null {
 								setDraftPrompt(event.target.value);
 							}}
 						/>
+					</SettingsItem>
 
-						<div className={styles.header}>
-							<Typography.Title level={4} className={styles.title}>
-								{t("settings.personalization.gitCommitPrompt.title")}
-							</Typography.Title>
-							<Typography.Text type="secondary" className={styles.description}>
-								{t("settings.personalization.gitCommitPrompt.description")}
-							</Typography.Text>
-						</div>
-
+					<SettingsItem
+						searchKey="item:personalization.gitCommitPrompt"
+						vertical={true}
+						ghost={true}
+						title={t("settings.personalization.gitCommitPrompt.title")}
+						description={t("settings.personalization.gitCommitPrompt.description")}
+					>
 						<Input.TextArea
 							className={styles.textarea}
 							value={draftGitCommitPrompt}
@@ -164,16 +162,15 @@ function PersonalizationSettingsPage(): React.JSX.Element | null {
 								setDraftGitCommitPrompt(event.target.value);
 							}}
 						/>
+					</SettingsItem>
 
-						<div className={styles.header}>
-							<Typography.Title level={4} className={styles.title}>
-								{t("settings.personalization.commandReviewPrompt.title")}
-							</Typography.Title>
-							<Typography.Text type="secondary" className={styles.description}>
-								{t("settings.personalization.commandReviewPrompt.description")}
-							</Typography.Text>
-						</div>
-
+					<SettingsItem
+						searchKey="item:personalization.commandReviewPrompt"
+						vertical={true}
+						ghost={true}
+						title={t("settings.personalization.commandReviewPrompt.title")}
+						description={t("settings.personalization.commandReviewPrompt.description")}
+					>
 						<Input.TextArea
 							className={styles.textarea}
 							value={draftCommandReviewPrompt}
@@ -185,15 +182,16 @@ function PersonalizationSettingsPage(): React.JSX.Element | null {
 								setDraftCommandReviewPrompt(event.target.value);
 							}}
 						/>
+					</SettingsItem>
 
-						<div className={styles.footer}>
-							<Button disabled={!isDirty || isSaving} onClick={handleCancel}>
-								{t("settings.common.cancel")}
-							</Button>
-							<Button type="primary" disabled={!isDirty} loading={isSaving} onClick={(): void => void handleSave()}>
-								{t("settings.common.save")}
-							</Button>
-						</div>
+					<div className={styles.footer}>
+						<Button disabled={!isDirty || isSaving} onClick={handleCancel}>
+							{t("settings.common.cancel")}
+						</Button>
+						<Button type="primary" disabled={!isDirty} loading={isSaving} onClick={(): void => void handleSave()}>
+							{t("settings.common.save")}
+						</Button>
+					</div>
 				</>
 			</article>
 		</section>

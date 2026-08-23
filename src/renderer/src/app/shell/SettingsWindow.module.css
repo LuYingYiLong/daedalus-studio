@@ -19,17 +19,91 @@
 }
 
 .settingsSideBar {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
 	min-height: 0;
 	padding: 36px var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);
-	overflow-x: hidden;
-	overflow-y: auto;
-	overscroll-behavior: contain;
+	overflow: hidden;
 	-ms-overflow-style: none;
 	scrollbar-width: none;
 	-webkit-app-region: drag;
 }
 
 .settingsSideBar::-webkit-scrollbar {
+	width: 0;
+	height: 0;
+}
+
+.settingsSearchBar {
+	min-width: 0;
+	padding-bottom: var(--ds-space-2);
+	-webkit-app-region: none;
+}
+
+.settingsSearch {
+	display: inline-flex;
+	width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
+	flex: 1 1 auto;
+	flex-wrap: nowrap;
+	align-items: center;
+}
+
+.settingsSearch :global(.ant-select-prefix) {
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+}
+
+.settingsSearch :global(.ant-select-content),
+.settingsSearch :global(.ant-select-selection-search) {
+	flex: 1 1 auto;
+	min-width: 0;
+	max-width: 100%;
+	overflow: hidden;
+}
+
+.settingsSearch :global(.ant-select-placeholder) {
+	display: block;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.settingsSearchOption {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--ds-space-2);
+	min-width: 0;
+}
+
+.settingsSearchOption > * {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.settingsSearchOption > :last-child {
+	flex: 0 0 auto;
+	max-width: 45%;
+}
+
+.settingsMenuScroller {
+	min-width: 0;
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+	-webkit-app-region: none;
+}
+
+.settingsMenuScroller::-webkit-scrollbar {
 	width: 0;
 	height: 0;
 }

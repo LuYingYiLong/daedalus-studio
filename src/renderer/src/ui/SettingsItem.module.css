@@ -11,6 +11,36 @@
 	border-top: 1px solid var(--ds-border-subtle);
 }
 
+.vertical {
+	grid-template-columns: minmax(0, 1fr);
+	align-items: start;
+	gap: var(--ds-space-2);
+}
+
+.vertical .action {
+	justify-content: flex-start;
+}
+
+.vertical .description {
+	white-space: normal;
+	overflow: visible;
+	text-overflow: clip;
+}
+
+.ghost {
+	padding: 0;
+	border-top: 0 !important;
+	background: transparent;
+}
+
+.ghost .meta {
+	padding-inline: 0;
+}
+
+.ghost .action {
+	padding-right: 0;
+}
+
 .meta {
 	display: grid;
 	gap: 2px;

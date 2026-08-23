@@ -11,28 +11,12 @@
 	width: 100%;
 }
 
-.header {
-	user-select: none;
-}
-
-.title {
-	margin: 0px !important;
-}
-
-.loading {
-	display: grid;
-	min-height: 180px;
-	align-items: center;
-	justify-items: center;
-}
-
 .textarea {
-	font-family: inherit;
-	margin-bottom: 8px;
+	margin-bottom: var(--ds-space-1);
 }
 
 .footer {
 	display: flex;
 	justify-content: end;
-	gap: 4px;
+	gap: var(--ds-space-1);
 }

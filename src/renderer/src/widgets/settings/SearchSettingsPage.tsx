@@ -327,6 +327,7 @@ function SearchSettingsPage(): React.JSX.Element | null {
 								(item): React.JSX.Element => (
 									<SettingsItem
 										key={item.key}
+										searchKey={`item:search.${item.key}`}
 										title={item.title}
 										description={item.description}
 									>
@@ -336,6 +337,7 @@ function SearchSettingsPage(): React.JSX.Element | null {
 							)}
 							{maxKeywordsConfig !== undefined ? (
 								<SettingsItem
+									searchKey="item:search.maxKeywords"
 									title={t(
 										"settings.search.maxKeywords.title",
 									)}

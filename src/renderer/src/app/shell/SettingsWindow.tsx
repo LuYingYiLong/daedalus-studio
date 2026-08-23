@@ -1,5 +1,5 @@
-import { Menu, type MenuProps, Typography } from "antd";
-import { useEffect, useState } from "react";
+import { AutoComplete, Menu, type MenuProps, Typography } from "antd";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	DEFAULT_CLIENT_PREFERENCES,
@@ -30,31 +30,14 @@ import BrowserSettingsPage from "@/widgets/settings/BrowserSettingsPage";
 import DevelopmentEnvironmentSettingsPage from "@/widgets/settings/DevelopmentEnvironmentSettingsPage";
 import WorktreeSettingsPage from "@/widgets/settings/WorktreeSettingsPage";
 import PluginsSettingsPage from "@/widgets/settings/PluginsSettingsPage";
+import {
+	SETTINGS_SEARCH_ENTRIES,
+	type SettingsPageKey,
+	type SettingsSearchEntry,
+} from "@/widgets/settings/settings-search-catalog";
 import styles from "./SettingsWindow.module.css";
 
 type MenuItem = Required<MenuProps>["items"][number];
-type SettingsPageKey =
-	| "provider"
-	| "default_model"
-	| "general"
-	| "appearance"
-	| "keyboard_shortcuts"
-	| "search"
-	| "statistics"
-	| "personalization"
-	| "mcp_servers"
-	| "skills"
-	| "hooks"
-	| "browser"
-	| "environments"
-	| "worktrees"
-	| "plugins"
-	| "documentation"
-	| "godot_projects"
-	| "archived_sessions"
-	| "import"
-	| "about";
-
 type SettingsMenuItemConfig = {
 	key: SettingsPageKey;
 	labelKey: string;
@@ -65,6 +48,14 @@ type SettingsMenuGroupConfig = {
 	key: string;
 	labelKey: string;
 	items: readonly SettingsPageKey[];
+};
+
+type SettingsSearchOption = {
+	value: string;
+	page: SettingsPageKey;
+	searchKey?: string;
+	searchText: string;
+	label: React.ReactNode;
 };
 
 const menuItemConfigs: SettingsMenuItemConfig[] = [
@@ -263,6 +254,54 @@ function getInitialSettingsPage(): SettingsPageKey {
 	return page !== null && isSettingsPageKey(page) ? page : "provider";
 }
 
+function normalizeSearchText(value: string): string {
+	return value.trim().toLocaleLowerCase();
+}
+
+function createSettingsSearchOptions(
+	t: (key: string) => string,
+	query: string,
+): SettingsSearchOption[] {
+	const normalizedQuery: string = normalizeSearchText(query);
+	return SETTINGS_SEARCH_ENTRIES.flatMap(
+		(entry: SettingsSearchEntry): SettingsSearchOption[] => {
+			const pageTitle: string = getSettingsPageTitle(entry.page, t);
+			const title: string = t(entry.titleKey);
+			const description: string =
+				entry.descriptionKey === undefined
+					? ""
+					: t(entry.descriptionKey);
+			const searchText: string = normalizeSearchText(
+				[pageTitle, title, description].join(" "),
+			);
+			if (
+				normalizedQuery.length > 0 &&
+				!searchText.includes(normalizedQuery)
+			) {
+				return [];
+			}
+			return [
+				{
+					value: entry.key,
+					page: entry.page,
+					searchKey: entry.key.startsWith("item:")
+						? entry.key
+						: undefined,
+					searchText,
+					label: (
+						<div className={styles.settingsSearchOption}>
+							<Typography.Text>{title}</Typography.Text>
+							<Typography.Text type="secondary">
+								{pageTitle}
+							</Typography.Text>
+						</div>
+					),
+				},
+			];
+		},
+	);
+}
+
 function SettingsWindow(): React.JSX.Element {
 	const { t, i18n } = useTranslation();
 	const [activePage, setActivePage] = useState<SettingsPageKey>(() =>
@@ -276,7 +315,14 @@ function SettingsWindow(): React.JSX.Element {
 	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(
 		DEFAULT_GENERAL_SETTINGS,
 	);
+	const [settingsSearchQuery, setSettingsSearchQuery] = useState<string>("");
+	const settingsSearchScrollTimer = useRef<number | null>(null);
 	const items: MenuItem[] = createSettingsMenuItems(t);
+	const settingsSearchOptions: SettingsSearchOption[] = useMemo(
+		(): SettingsSearchOption[] =>
+			createSettingsSearchOptions(t, settingsSearchQuery),
+		[settingsSearchQuery, t],
+	);
 
 	function selectSettingsPage(page: SettingsPageKey): void {
 		setActivePage(page);
@@ -291,6 +337,62 @@ function SettingsWindow(): React.JSX.Element {
 				return nextPages;
 			},
 		);
+	}
+
+	function scrollToSettingsItem(searchKey: string): void {
+		if (settingsSearchScrollTimer.current !== null) {
+			window.clearTimeout(settingsSearchScrollTimer.current);
+			settingsSearchScrollTimer.current = null;
+		}
+
+		const deadline: number = Date.now() + 5000;
+		const attemptScroll: () => void = (): void => {
+			const activePage: Element | null = document.querySelector(
+				`.${styles.pageViewActive}`,
+			);
+			const target: HTMLElement | undefined =
+				activePage === null
+					? undefined
+					: Array.from(
+							activePage.querySelectorAll<HTMLElement>(
+								"[data-settings-search-key]",
+							),
+						).find(
+							(element: HTMLElement): boolean =>
+								element.dataset.settingsSearchKey === searchKey,
+						);
+			if (target !== undefined) {
+				target.scrollIntoView({ behavior: "smooth", block: "center" });
+				settingsSearchScrollTimer.current = null;
+				return;
+			}
+			if (Date.now() >= deadline) {
+				settingsSearchScrollTimer.current = null;
+				return;
+			}
+			settingsSearchScrollTimer.current = window.setTimeout(
+				attemptScroll,
+				100,
+			);
+		};
+
+		attemptScroll();
+	}
+
+	function handleSettingsSearchSelect(value: string): void {
+		const option: SettingsSearchOption | undefined =
+			settingsSearchOptions.find(
+				(candidate: SettingsSearchOption): boolean =>
+					candidate.value === value,
+			);
+		if (option === undefined) {
+			return;
+		}
+		selectSettingsPage(option.page);
+		setSettingsSearchQuery("");
+		if (option.searchKey !== undefined) {
+			scrollToSettingsItem(option.searchKey);
+		}
 	}
 
 	function renderSettingsPage(page: SettingsPageKey): React.JSX.Element {
@@ -402,6 +504,14 @@ function SettingsWindow(): React.JSX.Element {
 		);
 	}, []);
 
+	useEffect((): (() => void) => {
+		return (): void => {
+			if (settingsSearchScrollTimer.current !== null) {
+				window.clearTimeout(settingsSearchScrollTimer.current);
+			}
+		};
+	}, []);
+
 	useEffect((): void => {
 		document.title = t("settings.menu.fallbackTitle");
 	}, [i18n.resolvedLanguage, t]);
@@ -409,18 +519,37 @@ function SettingsWindow(): React.JSX.Element {
 	return (
 		<main className={styles.surface}>
 			<aside className={styles.settingsSideBar}>
-				<Menu
-					className={`${styles.settingsMenu} "daedalus-compact-menu daedalus-compact-menu-flush"`}
-					inlineIndent={8}
-					mode="inline"
-					items={items}
-					selectedKeys={[activePage]}
-					onClick={({ key }): void => {
-						if (isSettingsPageKey(key)) {
-							selectSettingsPage(key);
+				<div className={styles.settingsSearchBar}>
+					<AutoComplete
+						prefix={<Icon name="search" />}
+						className={styles.settingsSearch}
+						value={settingsSearchQuery}
+						options={settingsSearchOptions}
+						showSearch={false}
+						allowClear={true}
+						placeholder={t("settings.menu.searchPlaceholder")}
+						onChange={(value: string): void =>
+							setSettingsSearchQuery(value)
 						}
-					}}
-				/>
+						onSelect={(value: string): void =>
+							handleSettingsSearchSelect(value)
+						}
+					/>
+				</div>
+				<div className={styles.settingsMenuScroller}>
+					<Menu
+						className={styles.settingsMenu}
+						inlineIndent={8}
+						mode="inline"
+						items={items}
+						selectedKeys={[activePage]}
+						onClick={({ key }): void => {
+							if (isSettingsPageKey(key)) {
+								selectSettingsPage(key);
+							}
+						}}
+					/>
+				</div>
 			</aside>
 
 			<div className={styles.activePage}>

@@ -11,25 +11,6 @@
 	gap: 16px;
 }
 
-.card {
-	display: grid;
-	gap: 14px;
-}
-
-.cardHeader {
-	user-select: none;
-}
-
-.cardTitle {
-	margin: 0px !important;
-}
-
-.controlRow {
-	grid-template-columns: minmax(280px, 460px) auto;
-	gap: 10px;
-	align-items: center;
-}
-
 .modelSelect {
 	width: 100%;
 	min-width: 0;
@@ -41,19 +22,9 @@
 	height: 18px;
 }
 
-.description {
-	margin: 0px !important;
-}
-
 .loading {
 	display: grid;
 	min-height: 200px;
 	align-items: center;
 	justify-items: center;
-}
-
-@media (max-width: 720px) {
-	.controlRow {
-		grid-template-columns: minmax(0, 1fr);
-	}
 }
