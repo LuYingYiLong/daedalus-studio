@@ -859,6 +859,7 @@ function HomePage({
 		useState<boolean>(false);
 	const [chatSurfaceSettled, setChatSurfaceSettled] = useState<boolean>(true);
 	const [scheduledTaskAttentionCount, setScheduledTaskAttentionCount] = useState<number>(0);
+	const scheduledTaskPrefillRef = useRef<string | null>(null);
 	const {
 		visualWorkspaceSidebar,
 		visualSessionLayout,
@@ -975,15 +976,41 @@ function HomePage({
 		};
 	}, [clearChatSurfaceSettleTimer]);
 
-	const requestNewSessionSurface = useCallback((): void => {
+	useEffect((): (() => void) | undefined => {
+		const prompt: string | null = scheduledTaskPrefillRef.current;
+		if (
+			prompt === null ||
+			mainSurface !== "chat" ||
+			!isHome ||
+			!chatSurfaceSettled ||
+			activeSessionMetadata?.temporary !== true
+		) {
+			return undefined;
+		}
+
+		const frameId: number = window.requestAnimationFrame((): void => {
+			if (scheduledTaskPrefillRef.current !== prompt) return;
+			scheduledTaskPrefillRef.current = null;
+			handleHomeStarterSelect(prompt);
+		});
+		return (): void => window.cancelAnimationFrame(frameId);
+	}, [activeSessionMetadata?.temporary, chatSurfaceSettled, handleHomeStarterSelect, isHome, mainSurface]);
+
+	const beginNewSessionSurface = useCallback((): Promise<void> => {
 		if (mainSurface === "scheduledTasks") {
 			setChatSurfaceRevealPending(true);
 			setChatSurfaceSettled(false);
 		} else {
 			transitionToChatSurface();
 		}
-		onNewSession();
+		return Promise.resolve(onNewSession());
 	}, [mainSurface, onNewSession, transitionToChatSurface]);
+
+	const requestNewSessionSurface = useCallback((): void => {
+		void beginNewSessionSurface().catch((error: unknown): void => {
+			console.error("[HomePage] failed to prepare new session", error);
+		});
+	}, [beginNewSessionSurface]);
 
 	const requestNewUnboundSessionSurface = useCallback((): void => {
 		if (mainSurface === "scheduledTasks") {
@@ -1044,6 +1071,7 @@ function HomePage({
 	]);
 
 	const openScheduledTaskSession = useCallback((sessionId: string): void => {
+		scheduledTaskPrefillRef.current = null;
 		setChatSurfaceRevealPending(false);
 		void fetchSessions().then((result): void => {
 			const session = result.sessions.find((candidate): boolean => candidate.id === sessionId);
@@ -1066,9 +1094,14 @@ function HomePage({
 	}, [openScheduledTaskSession, showScheduledTasksSurface]);
 
 	const createScheduledTask = useCallback((): void => {
-		requestNewSessionSurface();
-		handleHomeStarterSelect(t("scheduledTasks.prefill", { defaultValue: "帮我安排一个定时任务：" }));
-	}, [handleHomeStarterSelect, requestNewSessionSurface, t]);
+		const prompt: string = t("scheduledTasks.prefill", { defaultValue: "帮我安排一个定时任务：" });
+		scheduledTaskPrefillRef.current = prompt;
+		void beginNewSessionSurface()
+			.catch((error: unknown): void => {
+				scheduledTaskPrefillRef.current = null;
+				console.error("[HomePage] failed to prepare scheduled task composer", error);
+			});
+	}, [beginNewSessionSurface, t]);
 
 	const workspaceSnapshotForActions: WorkspaceConfig | null =
 		activeWorkspace ?? (isHome ? homeWorkspace : null);
@@ -2919,6 +2952,7 @@ function HomePage({
 		sessionUpdate: activeSessionMetadata,
 		onNewSession: requestNewUnboundSessionSurface,
 		onSessionSelect: (session): void => {
+			scheduledTaskPrefillRef.current = null;
 			setChatSurfaceRevealPending(false);
 			transitionToChatSurface();
 			onSessionSelect(session);
