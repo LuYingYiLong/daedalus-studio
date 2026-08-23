@@ -75,6 +75,10 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 
 	const handleBackendEvent = useMemoizedFn((event: BackendEvent): void => {
 		params.onEventObserved?.(event);
+		if (event.event === "plugin.review.request" && typeof event.data === "object" && event.data !== null && !Array.isArray(event.data)) {
+			void window.electronAPI.windowControl.openPluginReview(event.data as PluginReviewRequest);
+			return;
+		}
 		const eventSessionId: string | null = getBackendEventSessionId(event);
 		const activeSessionId: string | null = params.activeSessionIdRef.current;
 		if (isSessionScopedBackendEvent(event) && (eventSessionId === null || eventSessionId !== activeSessionId)) {

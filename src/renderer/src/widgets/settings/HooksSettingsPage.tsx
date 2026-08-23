@@ -155,12 +155,14 @@ function HooksSettingsPage(): React.JSX.Element {
 
 	useEffect((): (() => void) => {
 		const listener = (event: BeforeUnloadEvent): void => {
-			if (!dirty) return;
+			// 只在编辑器仍打开且存在未保存内容时拦截窗口关闭。关闭编辑器
+			// 并选择放弃后，dirty 会被重置，SettingsWindow 不应再被卡住。
+			if (!editOpen || !dirty) return;
 			event.preventDefault();
 		};
 		window.addEventListener("beforeunload", listener);
 		return (): void => window.removeEventListener("beforeunload", listener);
-	}, [dirty]);
+	}, [dirty, editOpen]);
 
 	async function selectSource(
 		sourceDocument: HookConfigDocument,
@@ -207,6 +209,11 @@ function HooksSettingsPage(): React.JSX.Element {
 		setEditOpen(true);
 	}
 
+	function discardEditorChanges(): void {
+		if (document !== null) setContent(document.content);
+		setEditOpen(false);
+	}
+
 	function closeEditor(): void {
 		if (saving) return;
 		if (!dirty) {
@@ -218,7 +225,7 @@ function HooksSettingsPage(): React.JSX.Element {
 			content: t("settings.hooks.dirty.description"),
 			okText: t("settings.hooks.dirty.discard"),
 			cancelText: t("settings.common.cancel"),
-			onOk: (): void => setEditOpen(false),
+			onOk: discardEditorChanges,
 		});
 	}
 

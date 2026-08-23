@@ -1203,6 +1203,11 @@
 				"mcp_skills_load": "加载技能",
 				"mcp_skills_propose_create": "草拟技能",
 				"mcp_skills_create": "创建技能",
+				"mcp_plugin_dev_prepare": "设计插件",
+				"mcp_plugin_dev_apply": "生成插件工程",
+				"mcp_plugin_dev_validate": "验证插件",
+				"mcp_plugin_dev_install": "安装插件",
+				"mcp_plugin_dev_test": "测试插件",
 				"mcp_image_generate": "生成图片",
 				"mcp_image_inspect": "检查图片",
 				"mcp_web_search": "联网搜索",
@@ -1708,7 +1713,8 @@
 				"remove": "移除插件包失败。",
 				"trust": "更新插件信任状态失败。",
 				"profile": "更新插件 Profile 失败。",
-				"runtime": "更新插件运行时失败。"
+				"runtime": "更新插件运行时失败。",
+				"reviewUnavailable": "生成的插件已发生变化或不存在，本次审核已结束。"
 			},
 			"runtime": {
 				"title": "运行时",
@@ -1768,6 +1774,9 @@
 				"previewFailed": "检查 Harness Bundle 失败。"
 			},
 			"trustReview": {
+				"generatedTitle": "由 @plugin-creator 生成",
+				"generatedDescription": "这是生成流程中的独立整包审核。信任后将继续执行 {{count}} 项隔离测试；源码再次变化时仍需重新审核。",
+				"later": "稍后处理",
 				"title": "审核插件能力",
 				"description": "信任 {{name}} 后，插件声明的原生能力会在隔离 Worker 中启用。",
 				"confirm": "我信任",

@@ -1,5 +1,5 @@
 import { Alert, App, Button, Tooltip, Typography } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import {
@@ -13,6 +13,7 @@ import {
 	restartPluginRuntime,
 	rollbackPlugin,
 	clearPluginRuntimeQuarantine,
+	deferPluginReview,
 	updatePlugin,
 	updatePluginProfile,
 	updatePluginTrust,
@@ -44,6 +45,8 @@ function PluginsSettingsPage(): React.JSX.Element {
 		PluginRecord | undefined
 	>();
 	const [trustMode, setTrustMode] = useState<"trusted" | "disabled">("trusted");
+	const [developmentReview, setDevelopmentReview] = useState<PluginReviewRequest | null>(null);
+	const developmentReviewRef = useRef<PluginReviewRequest | null>(null);
 	const [logs, setLogs] = useState<PluginRuntimeLog[]>([]);
 	const [previewOpen, setPreviewOpen] = useState(false);
 	const [previewLoading, setPreviewLoading] = useState(false);
@@ -73,8 +76,40 @@ function PluginsSettingsPage(): React.JSX.Element {
 			setLoading(false);
 		}
 	}
+	async function consumeDevelopmentReview(): Promise<void> {
+		const review = await window.electronAPI.windowControl.consumePluginReview();
+		if (review === null || developmentReviewRef.current?.reviewId === review.reviewId) return;
+		setDevelopmentReview(review);
+		developmentReviewRef.current = review;
+		const next = await fetchPluginCatalog();
+		setCatalog(next);
+		setSelectedId(review.pluginId);
+		const plugin = next.plugins.find((candidate): boolean => candidate.id === review.pluginId && candidate.fingerprint === review.fingerprint);
+		if (plugin !== undefined) {
+			setTrustMode("trusted");
+			setTrustCandidate(plugin);
+			return;
+		}
+		developmentReviewRef.current = null;
+		setDevelopmentReview(null);
+		await deferPluginReview(review.reviewId, review.pluginId, review.fingerprint);
+		setError(t("settings.plugins.errors.reviewUnavailable"));
+	}
 	useEffect((): void => {
 		void refresh();
+	}, []);
+	useEffect((): (() => void) => {
+		const consume = (): void => {
+			void consumeDevelopmentReview().catch((caught: unknown): void => {
+			setError(caught instanceof Error ? caught.message : t("settings.plugins.errors.load"));
+			});
+		};
+		consume();
+		return window.electronAPI.windowControl.onPluginReviewRequested(consume);
+	}, []);
+	useEffect((): (() => void) => (): void => {
+		const review = developmentReviewRef.current;
+		if (review !== null) void deferPluginReview(review.reviewId, review.pluginId, review.fingerprint).catch((): void => undefined);
 	}, []);
 	useEffect((): void => {
 		if (selectedId !== null)
@@ -136,9 +171,13 @@ function PluginsSettingsPage(): React.JSX.Element {
 	): Promise<boolean> {
 		try {
 			setBusyPluginId(plugin.id);
-			await updatePluginTrust(plugin.id, plugin.fingerprint, status);
+			await updatePluginTrust(plugin.id, plugin.fingerprint, status, developmentReview?.pluginId === plugin.id ? developmentReview.reviewId : undefined);
 			const next = await fetchPluginCatalog();
 			setCatalog(next);
+			if (developmentReview?.pluginId === plugin.id) {
+				setDevelopmentReview(null);
+				developmentReviewRef.current = null;
+			}
 			return true;
 		} catch (caught: unknown) {
 			message.error(
@@ -308,7 +347,7 @@ function PluginsSettingsPage(): React.JSX.Element {
 			<PluginInstallModal
 				open={installOpen}
 				loading={installing}
-		onCancel={(): void => { setInstallOpen(false); setUpdateTarget(null); }}
+				onCancel={(): void => { setInstallOpen(false); setUpdateTarget(null); }}
 				onSubmit={handleInstall}
 				title={updateTarget === null ? undefined : t("settings.plugins.actions.update")}
 				submitLabel={updateTarget === null ? undefined : t("settings.plugins.actions.update")}
@@ -321,7 +360,14 @@ function PluginsSettingsPage(): React.JSX.Element {
 					trustCandidate !== undefined &&
 					busyPluginId === trustCandidate.id
 				}
-				onCancel={(): void => setTrustCandidate(undefined)}
+				developmentReview={developmentReview !== null && developmentReview.pluginId === trustCandidate?.id ? developmentReview : undefined}
+				onCancel={(): void => {
+					const review = developmentReview;
+					setTrustCandidate(undefined);
+					setDevelopmentReview(null);
+					developmentReviewRef.current = null;
+					if (review !== null) void deferPluginReview(review.reviewId, review.pluginId, review.fingerprint).catch((): void => undefined);
+				}}
 				onConfirm={(): void => {
 					if (trustCandidate !== undefined) {
 						void trust(trustCandidate, trustMode).then((success): void => {

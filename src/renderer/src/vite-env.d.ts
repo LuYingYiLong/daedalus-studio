@@ -216,11 +216,26 @@ declare global {
 
 	interface WindowControlAPI {
 		openSettings: (page?: string) => Promise<void>;
+		openPluginReview: (payload: PluginReviewRequest) => Promise<void>;
+		consumePluginReview: () => Promise<PluginReviewRequest | null>;
+		onPluginReviewRequested: (callback: () => void) => () => void;
 		openExternal: (url: string) => Promise<void>;
 		relaunch: (options?: { forceProcess?: boolean }) => Promise<void>;
 		rendererShellReady: () => void;
 		rendererReady: () => void;
 		onSettingsPageRequested: (callback: (page: string) => void) => () => void;
+	}
+
+	interface PluginReviewRequest {
+		reviewId: string;
+		sessionId: string;
+		pluginId: string;
+		fingerprint: string;
+		packageName: string;
+		version: string;
+		revision: string;
+		testCaseCount: number;
+		origin: "plugin_creator";
 	}
 
 	interface BrowserAPI {

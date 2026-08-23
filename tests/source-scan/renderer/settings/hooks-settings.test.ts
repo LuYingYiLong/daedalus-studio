@@ -15,6 +15,8 @@ describe("Hooks settings integration", () => {
 		expect(source).toContain("updateHookTrust(");
 		expect(source).toContain("toTarget(document)");
 		expect(source).toContain('mask={{ closable: false }}');
+		expect(source).toContain("if (document !== null) setContent(document.content)");
+		expect(source).toContain("onOk: discardEditorChanges");
 	});
 
 	it("reuses the shared Monaco editor lifecycle", (): void => {

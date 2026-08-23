@@ -11,6 +11,7 @@ export function PluginTrustModal({
 	confirmDisabled = false,
 	confirmDisabledReason,
 	onConfigureHarness,
+	developmentReview,
 	onCancel,
 	onConfirm,
 }: {
@@ -21,6 +22,7 @@ export function PluginTrustModal({
 	confirmDisabled?: boolean;
 	confirmDisabledReason?: string;
 	onConfigureHarness?: () => void;
+	developmentReview?: PluginReviewRequest;
 	onCancel: () => void;
 	onConfirm: () => void;
 }): React.JSX.Element {
@@ -45,11 +47,20 @@ export function PluginTrustModal({
 				...(mode === "disabled" ? { danger: true } : {}),
 				...(confirmDisabled ? { disabled: true } : {}),
 			}}
-			cancelText={t("settings.common.cancel")}
+			cancelText={t(developmentReview === undefined ? "settings.common.cancel" : "settings.plugins.trustReview.later")}
 			confirmLoading={loading}
 			onCancel={onCancel}
 			onOk={onConfirm}
 		>
+			{developmentReview !== undefined ? (
+				<Alert
+					style={{ marginBottom: 12 }}
+					type="info"
+					showIcon
+					title={t("settings.plugins.trustReview.generatedTitle")}
+					description={t("settings.plugins.trustReview.generatedDescription", { count: developmentReview.testCaseCount })}
+				/>
+			) : null}
 			<Typography.Paragraph type="secondary">
 				{t(
 					mode === "trusted"

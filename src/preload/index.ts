@@ -364,6 +364,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
 	windowControl: {
 		openSettings: (page?: string): Promise<void> => ipcRenderer.invoke("window:open-settings", page),
+		openPluginReview: (payload: unknown): Promise<void> => ipcRenderer.invoke("window:open-plugin-review", payload),
+		consumePluginReview: (): Promise<unknown> => ipcRenderer.invoke("window:consume-plugin-review"),
+		onPluginReviewRequested: (callback: () => void): (() => void) => {
+			const handler = (): void => callback();
+			ipcRenderer.on("window:plugin-review-requested", handler);
+			return (): void => { ipcRenderer.removeListener("window:plugin-review-requested", handler); };
+		},
 		openExternal: (url: string): Promise<void> => ipcRenderer.invoke("window:open-external", url),
 		relaunch: (options?: { forceProcess?: boolean }): Promise<void> => ipcRenderer.invoke("window:relaunch", options),
 		rendererShellReady: (): void => ipcRenderer.send("window:renderer-shell-ready"),

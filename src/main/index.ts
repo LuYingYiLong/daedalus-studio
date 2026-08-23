@@ -104,6 +104,18 @@ let preserveBackendForClientInstall: boolean = false;
 let gracefulQuitPromise: Promise<void> | null = null;
 let isDevelopmentRendererReloading: boolean = false;
 let pendingSettingsPage: string = "provider";
+type PluginReviewRequest = {
+	reviewId: string;
+	sessionId: string;
+	pluginId: string;
+	fingerprint: string;
+	packageName: string;
+	version: string;
+	revision: string;
+	testCaseCount: number;
+	origin: "plugin_creator";
+};
+let pendingPluginReview: PluginReviewRequest | null = null;
 const SETTINGS_PAGE_KEYS: readonly string[] = [
 	"provider",
 	"default_model",
@@ -365,6 +377,7 @@ ipcMain.on("window:renderer-ready", (event): void => {
 			setImmediate((): void => {
 				if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
 					settingsWindow.webContents.send("window:open-settings", pendingSettingsPage);
+					if (pendingPluginReview !== null) settingsWindow.webContents.send("window:plugin-review-requested");
 				}
 			});
 		}
@@ -500,6 +513,38 @@ function scheduleSettingsWindowPrewarm(): void {
 
 ipcMain.handle("window:open-settings", (_event, page?: unknown): void => {
 	openSettingsWindow(isSettingsPageKey(page) ? page : "provider");
+});
+
+ipcMain.handle("window:open-plugin-review", (event, value: unknown): void => {
+	if (BrowserWindow.fromWebContents(event.sender) !== mainWindow || value === null || typeof value !== "object") {
+		throw new Error("plugin_review_request_not_allowed");
+	}
+	const request = value as Partial<PluginReviewRequest>;
+	if (
+		typeof request.reviewId !== "string"
+		|| typeof request.sessionId !== "string"
+		|| typeof request.pluginId !== "string"
+		|| typeof request.fingerprint !== "string"
+		|| typeof request.packageName !== "string"
+		|| typeof request.version !== "string"
+		|| typeof request.revision !== "string"
+		|| typeof request.testCaseCount !== "number"
+		|| request.origin !== "plugin_creator"
+	) {
+		throw new Error("plugin_review_request_invalid");
+	}
+	pendingPluginReview = request as PluginReviewRequest;
+	openSettingsWindow("plugins");
+	if (settingsWindow !== null && !settingsWindow.isDestroyed() && rendererReadyWindows.has(settingsWindow)) {
+		settingsWindow.webContents.send("window:plugin-review-requested");
+	}
+});
+
+ipcMain.handle("window:consume-plugin-review", (event): PluginReviewRequest | null => {
+	if (BrowserWindow.fromWebContents(event.sender) !== settingsWindow) throw new Error("plugin_review_consume_not_allowed");
+	const request = pendingPluginReview;
+	pendingPluginReview = null;
+	return request;
 });
 
 ipcMain.handle("window:open-external", async (event, rawUrl: unknown): Promise<void> => {

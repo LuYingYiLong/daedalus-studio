@@ -205,9 +205,14 @@ export async function removePlugin(pluginId: string): Promise<PluginCatalogResul
 	return client.request<PluginCatalogResult>("plugin.remove", { pluginId });
 }
 
-export async function updatePluginTrust(pluginId: string, fingerprint: string, status: "trusted" | "disabled"): Promise<{ plugin: PluginRecord; fingerprint: string }> {
+export async function updatePluginTrust(pluginId: string, fingerprint: string, status: "trusted" | "disabled", reviewId?: string): Promise<{ plugin: PluginRecord; fingerprint: string }> {
 	const client = await createBackendClient();
-	return client.request<{ plugin: PluginRecord; fingerprint: string }>("plugin.trust.update", { pluginId, fingerprint, status });
+	return client.request<{ plugin: PluginRecord; fingerprint: string }>("plugin.trust.update", { pluginId, fingerprint, status, ...(reviewId === undefined ? {} : { reviewId }) });
+}
+
+export async function deferPluginReview(reviewId: string, pluginId: string, fingerprint: string): Promise<{ resolved: true }> {
+	const client = await createBackendClient();
+	return client.request<{ resolved: true }>("plugin.review.resolve", { reviewId, pluginId, fingerprint, status: "deferred" });
 }
 
 export async function updatePluginProfile(pluginIds: string[]): Promise<PluginCatalogResult> {
