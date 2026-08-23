@@ -5,8 +5,15 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import { FileIcon } from "./file-icon";
-import { useMarkdownResourceActions, type MarkdownWorkspaceLaunchTargetId } from "./markdown-resource-actions";
-import { formatMarkdownResourceLabel, parseMarkdownResourceHref, type MarkdownResourceRef } from "@/domain/markdown/markdown-resource-path";
+import {
+	useMarkdownResourceActions,
+	type MarkdownWorkspaceLaunchTargetId,
+} from "./markdown-resource-actions";
+import {
+	formatMarkdownResourceLabel,
+	parseMarkdownResourceHref,
+	type MarkdownResourceRef,
+} from "@/domain/markdown/markdown-resource-path";
 import { resolveMarkdownResourceWorkspaceRoot } from "@/domain/markdown/markdown-resource-workspace";
 import styles from "./MarkdownResourceLink.module.css";
 
@@ -16,7 +23,9 @@ type MarkdownResourceLinkProps = {
 	className?: string;
 };
 
-function getLaunchTargetIcon(targetId: MarkdownWorkspaceLaunchTargetId): React.JSX.Element {
+function getLaunchTargetIcon(
+	targetId: MarkdownWorkspaceLaunchTargetId,
+): React.JSX.Element {
 	if (targetId === "file-explorer") {
 		return <Icon name="folder" />;
 	}
@@ -33,7 +42,9 @@ function getLaunchTargetIcon(targetId: MarkdownWorkspaceLaunchTargetId): React.J
 }
 
 function getErrorMessage(error: unknown): string {
-	return error instanceof Error && error.message.trim().length > 0 ? error.message : "Unknown error";
+	return error instanceof Error && error.message.trim().length > 0
+		? error.message
+		: "Unknown error";
 }
 
 function isWebUrl(value: string): boolean {
@@ -50,15 +61,20 @@ function isHtmlResource(resource: MarkdownResourceRef): boolean {
 	return fileName.endsWith(".html") || fileName.endsWith(".htm");
 }
 
-function WorkspaceResourceLink({ resource, children, className }: MarkdownResourceLinkProps): React.JSX.Element {
+function WorkspaceResourceLink({
+	resource,
+	children,
+	className,
+}: MarkdownResourceLinkProps): React.JSX.Element {
 	const { message } = App.useApp();
 	const { t } = useTranslation();
 	const actions = useMarkdownResourceActions();
 	const [menuOpen, setMenuOpen] = useState<boolean>(false);
 	const hasWorkspace: boolean = (actions?.workspaceRoots.length ?? 0) > 0;
-	const resourceLabel: React.ReactNode = typeof children === "string"
-		? formatMarkdownResourceLabel(resource, children)
-		: children;
+	const resourceLabel: React.ReactNode =
+		typeof children === "string"
+			? formatMarkdownResourceLabel(resource, children)
+			: children;
 
 	async function runAction(action: () => Promise<void>): Promise<void> {
 		try {
@@ -69,15 +85,19 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 		}
 	}
 
-	function workspaceFileParams(): { workspaceRoot: string; filePath: string } | null {
+	function workspaceFileParams(): {
+		workspaceRoot: string;
+		filePath: string;
+	} | null {
 		if (!hasWorkspace || actions === null) {
 			message.warning(t("chat.markdownResource.noWorkspace"));
 			return null;
 		}
-		const workspaceRoot: string | null = resolveMarkdownResourceWorkspaceRoot(
-			resource.absolutePath,
-			actions.workspaceRoots,
-		);
+		const workspaceRoot: string | null =
+			resolveMarkdownResourceWorkspaceRoot(
+				resource.absolutePath,
+				actions.workspaceRoots,
+			);
 		if (workspaceRoot === null) {
 			message.error(t("chat.markdownResource.outsideWorkspace"));
 			return null;
@@ -89,7 +109,10 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 		return runAction(async (): Promise<void> => {
 			const params = workspaceFileParams();
 			if (params !== null) {
-				if (isHtmlResource(resource) && actions?.openHtmlFile !== undefined) {
+				if (
+					isHtmlResource(resource) &&
+					actions?.openHtmlFile !== undefined
+				) {
 					actions.openHtmlFile(params);
 					return;
 				}
@@ -98,7 +121,9 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 		});
 	}
 
-	function openInTarget(targetId: MarkdownWorkspaceLaunchTargetId): Promise<void> {
+	function openInTarget(
+		targetId: MarkdownWorkspaceLaunchTargetId,
+	): Promise<void> {
 		return runAction(async (): Promise<void> => {
 			const params = workspaceFileParams();
 			if (params === null) {
@@ -107,7 +132,10 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 			await window.electronAPI.workspaceFs.openLaunchTarget({
 				...params,
 				targetId,
-				godotExecutablePath: targetId === "godot" ? actions?.godotExecutablePath : undefined
+				godotExecutablePath:
+					targetId === "godot"
+						? actions?.godotExecutablePath
+						: undefined,
 			});
 		});
 	}
@@ -116,7 +144,8 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 		return runAction(async (): Promise<void> => {
 			const params = workspaceFileParams();
 			if (params !== null) {
-				const result = await window.electronAPI.workspaceFs.saveFileAs(params);
+				const result =
+					await window.electronAPI.workspaceFs.saveFileAs(params);
 				if (result.saved) {
 					message.success(t("chat.markdownResource.savedAs"));
 				}
@@ -133,55 +162,71 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 		});
 	}
 
-	const targetItems: NonNullable<MenuProps["items"]> = (actions?.launchTargets ?? []).map((target) => ({
+	const targetItems: NonNullable<MenuProps["items"]> = (
+		actions?.launchTargets ?? []
+	).map((target) => ({
 		key: `open-with:${target.id}`,
 		icon: getLaunchTargetIcon(target.id),
 		label: target.label,
-		disabled: !hasWorkspace
+		disabled: !hasWorkspace,
 	}));
-	const menuItems: MenuProps["items"] = useMemo((): MenuProps["items"] => [
-		{
-			key: "open-file",
-			icon: <Icon name="file" />,
-			label: t("chat.markdownResource.openFile"),
-			disabled: !hasWorkspace
-		},
-		{
-			key: "open-current",
-			icon: actions?.currentWorkspaceLaunch === null || actions?.currentWorkspaceLaunch === undefined
-				? <Icon name="external-link" />
-				: getLaunchTargetIcon(actions.currentWorkspaceLaunch.id),
-			label: actions?.currentWorkspaceLaunch === null || actions?.currentWorkspaceLaunch === undefined
-				? t("chat.markdownResource.openInCurrentTarget")
-				: t("chat.markdownResource.openInCurrentTargetNamed", { target: actions.currentWorkspaceLaunch.label }),
-			disabled: !hasWorkspace || actions?.currentWorkspaceLaunch === null || actions?.currentWorkspaceLaunch === undefined
-		},
-		{
-			key: "open-with",
-			icon: <Icon name="external-link" />,
-			label: t("chat.markdownResource.openWith"),
-			disabled: !hasWorkspace || targetItems.length === 0,
-			children: targetItems
-		},
-		{ type: "divider" },
-		{
-			key: "save-as",
-			icon: <Icon name="download" />,
-			label: t("chat.markdownResource.saveAs"),
-			disabled: !hasWorkspace
-		},
-		{
-			key: "copy-path",
-			icon: <Icon name="copy" />,
-			label: t("chat.markdownResource.copyPath")
-		},
-		{
-			key: "reveal-file",
-			icon: <Icon name="folder" />,
-			label: t("chat.markdownResource.revealInExplorer"),
-			disabled: !hasWorkspace
-		}
-	], [actions, hasWorkspace, t, targetItems.length]);
+	const menuItems: MenuProps["items"] = useMemo(
+		(): MenuProps["items"] => [
+			{
+				key: "open-file",
+				icon: <Icon name="file" />,
+				label: t("chat.markdownResource.openFile"),
+				disabled: !hasWorkspace,
+			},
+			{
+				key: "open-current",
+				icon:
+					actions?.currentWorkspaceLaunch === null ||
+					actions?.currentWorkspaceLaunch === undefined ? (
+						<Icon name="external-link" />
+					) : (
+						getLaunchTargetIcon(actions.currentWorkspaceLaunch.id)
+					),
+				label:
+					actions?.currentWorkspaceLaunch === null ||
+					actions?.currentWorkspaceLaunch === undefined
+						? t("chat.markdownResource.openInCurrentTarget")
+						: t("chat.markdownResource.openInCurrentTargetNamed", {
+								target: actions.currentWorkspaceLaunch.label,
+							}),
+				disabled:
+					!hasWorkspace ||
+					actions?.currentWorkspaceLaunch === null ||
+					actions?.currentWorkspaceLaunch === undefined,
+			},
+			{
+				key: "open-with",
+				icon: <Icon name="external-link" />,
+				label: t("chat.markdownResource.openWith"),
+				disabled: !hasWorkspace || targetItems.length === 0,
+				children: targetItems,
+			},
+			{ type: "divider" },
+			{
+				key: "save-as",
+				icon: <Icon name="download" />,
+				label: t("chat.markdownResource.saveAs"),
+				disabled: !hasWorkspace,
+			},
+			{
+				key: "copy-path",
+				icon: <Icon name="copy" />,
+				label: t("chat.markdownResource.copyPath"),
+			},
+			{
+				key: "reveal-file",
+				icon: <Icon name="folder-open" />,
+				label: t("chat.markdownResource.revealInExplorer"),
+				disabled: !hasWorkspace,
+			},
+		],
+		[actions, hasWorkspace, t, targetItems.length],
+	);
 
 	const handleMenuClick: MenuProps["onClick"] = ({ key }): void => {
 		setMenuOpen(false);
@@ -190,12 +235,20 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 			void openFile();
 			return;
 		}
-		if (menuKey === "open-current" && actions?.currentWorkspaceLaunch !== null && actions?.currentWorkspaceLaunch !== undefined) {
+		if (
+			menuKey === "open-current" &&
+			actions?.currentWorkspaceLaunch !== null &&
+			actions?.currentWorkspaceLaunch !== undefined
+		) {
 			void openInTarget(actions.currentWorkspaceLaunch.id);
 			return;
 		}
 		if (menuKey.startsWith("open-with:")) {
-			void openInTarget(menuKey.slice("open-with:".length) as MarkdownWorkspaceLaunchTargetId);
+			void openInTarget(
+				menuKey.slice(
+					"open-with:".length,
+				) as MarkdownWorkspaceLaunchTargetId,
+			);
 			return;
 		}
 		if (menuKey === "save-as") {
@@ -203,12 +256,17 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 			return;
 		}
 		if (menuKey === "copy-path") {
-			void copyTextToClipboard(resource.absolutePath).then((): void => {
-				message.success(t("chat.markdownResource.pathCopied"));
-			}).catch((error: unknown): void => {
-				console.error("[MarkdownResourceLink] copy path failed", error);
-				message.error(getErrorMessage(error));
-			});
+			void copyTextToClipboard(resource.absolutePath)
+				.then((): void => {
+					message.success(t("chat.markdownResource.pathCopied"));
+				})
+				.catch((error: unknown): void => {
+					console.error(
+						"[MarkdownResourceLink] copy path failed",
+						error,
+					);
+					message.error(getErrorMessage(error));
+				});
 			return;
 		}
 		if (menuKey === "reveal-file") {
@@ -225,7 +283,14 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 		>
 			<Tooltip title={resource.displayPath}>
 				<span
-					className={[styles.resourceLink, className].filter(Boolean).join(" ")}
+					className={[styles.resourceLink, className]
+						.filter(Boolean)
+						.join(" ")}
+					onContextMenu={(event): void => {
+						// MessageList has a document-level context menu for message actions.
+						// Keep this nested menu as the only menu for resource links.
+						event.stopPropagation();
+					}}
 					role="link"
 					tabIndex={0}
 					aria-label={resource.displayPath}
@@ -241,39 +306,68 @@ function WorkspaceResourceLink({ resource, children, className }: MarkdownResour
 						}
 					}}
 				>
-					<FileIcon path={resource.fileName} className={styles.resourceIcon} />
-					<span className={styles.resourceLabel}>{resourceLabel}</span>
+					<FileIcon
+						path={resource.fileName}
+						className={styles.resourceIcon}
+					/>
+					<span className={styles.resourceLabel}>
+						{resourceLabel}
+					</span>
 				</span>
 			</Tooltip>
 		</Dropdown>
 	);
 }
 
-export function MarkdownLink({ href, children, node: _node, ...props }: React.ComponentProps<"a"> & { node?: unknown }): React.JSX.Element {
+export function MarkdownLink({
+	href,
+	children,
+	node: _node,
+	...props
+}: React.ComponentProps<"a"> & { node?: unknown }): React.JSX.Element {
 	const actions = useMarkdownResourceActions();
-	const resource: MarkdownResourceRef | null = parseMarkdownResourceHref(href);
+	const resource: MarkdownResourceRef | null =
+		parseMarkdownResourceHref(href);
 	if (resource === null || href === undefined) {
 		const webUrl: string | undefined = href;
-		if (webUrl === undefined || !isWebUrl(webUrl) || actions?.openWebUrl === undefined) {
-			return <a href={webUrl} {...props}>{children}</a>;
+		if (
+			webUrl === undefined ||
+			!isWebUrl(webUrl) ||
+			actions?.openWebUrl === undefined
+		) {
+			return (
+				<a href={webUrl} {...props}>
+					{children}
+				</a>
+			);
 		}
-		const handleClick = (event: React.MouseEvent<HTMLAnchorElement>): void => {
+		const handleClick = (
+			event: React.MouseEvent<HTMLAnchorElement>,
+		): void => {
 			props.onClick?.(event);
 			if (
-				event.defaultPrevented
-				|| event.button !== 0
-				|| event.metaKey
-				|| event.ctrlKey
-				|| event.shiftKey
-				|| event.altKey
+				event.defaultPrevented ||
+				event.button !== 0 ||
+				event.metaKey ||
+				event.ctrlKey ||
+				event.shiftKey ||
+				event.altKey
 			) {
 				return;
 			}
 			event.preventDefault();
 			actions.openWebUrl(webUrl);
 		};
-		return <a href={href} {...props} onClick={handleClick}>{children}</a>;
+		return (
+			<a href={href} {...props} onClick={handleClick}>
+				{children}
+			</a>
+		);
 	}
 
-	return <WorkspaceResourceLink resource={resource} className={props.className}>{children}</WorkspaceResourceLink>;
+	return (
+		<WorkspaceResourceLink resource={resource} className={props.className}>
+			{children}
+		</WorkspaceResourceLink>
+	);
 }
