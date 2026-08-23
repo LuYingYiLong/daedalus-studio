@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+	<rect id="矩形 33" width="2.000000" height="2.000000" x="9.000000" y="3.000000" fill="currentColor" />
+	<rect id="矩形 34" width="2.000000" height="2.000000" x="13.000000" y="3.000000" fill="currentColor" />
+	<path id="矩形 36" d="M5 3L8 3L8 5L7 5L7 6L5.00002 6L5 3Z" fill="currentColor" fill-rule="evenodd" />
+	<path id="矩形 47" d="M0 0L3 1.75275e-06L3 2L2 2L2 3L1.70115e-05 3L0 0Z" fill="currentColor" fill-rule="evenodd" transform="matrix(-1,0,0,1,19,3)" />
+	<path id="矩形 48" d="M0 0L3 1.75275e-06L3 2L2 2L2 3L1.70115e-05 3L0 0Z" fill="currentColor" fill-rule="evenodd" transform="matrix(-0,-1,-1,0,19,21)" />
+	<path id="矩形 49" d="M0 0L3 1.75275e-06L3 2L2 2L2 3L1.70115e-05 3L0 0Z" fill="currentColor" fill-rule="evenodd" transform="matrix(0,-1,1,0,5,21)" />
+	<rect id="矩形 37" width="2.000000" height="2.000000" x="5.000000" y="7.000000" fill="currentColor" />
+	<rect id="矩形 38" width="2.000000" height="2.000000" x="5.000000" y="11.000000" fill="currentColor" />
+	<rect id="矩形 39" width="2.000000" height="2.000000" x="5.000000" y="15.000000" fill="currentColor" />
+	<rect id="矩形 41" width="2.000000" height="2.000000" x="9.000000" y="19.000000" fill="currentColor" />
+	<rect id="矩形 42" width="2.000000" height="2.000000" x="13.000000" y="19.000000" fill="currentColor" />
+	<rect id="矩形 44" width="2.000000" height="2.000000" x="17.000000" y="15.000000" fill="currentColor" />
+	<rect id="矩形 45" width="2.000000" height="2.000000" x="17.000000" y="11.000000" fill="currentColor" />
+	<rect id="矩形 46" width="2.000000" height="2.000000" x="17.000000" y="7.000000" fill="currentColor" />
+</svg>

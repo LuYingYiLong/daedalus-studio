@@ -489,7 +489,7 @@ export function PluginDetailPane({
 									},
 									{
 										key: "update-plugin",
-										icon: <Icon name="download" />,
+										icon: <Icon name="reload" />,
 										label: t(
 											"settings.plugins.actions.update",
 										),
@@ -515,7 +515,7 @@ export function PluginDetailPane({
 										: []),
 									{
 										key: "rollback-plugin",
-										icon: <Icon name="reload" />,
+										icon: <Icon name="undo" />,
 										label: t(
 											"settings.plugins.actions.rollback",
 										),
@@ -527,7 +527,7 @@ export function PluginDetailPane({
 												{
 													key: "preview-harness",
 													icon: (
-														<Icon name="search" />
+														<Icon name="vision" />
 													),
 													label: t(
 														"settings.plugins.harness.preview",

@@ -79,7 +79,7 @@
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
-	gap: 8px;
+	gap: var(--ds-space-1);
 	width: 100%;
 	min-width: 0;
 }
