@@ -22,11 +22,17 @@ export type GeneratedImageDataResult = {
 	metadata: GeneratedImageArtifact;
 };
 
-export async function fetchGeneratedImageDataUrl(sessionId: string, imageId: string): Promise<GeneratedImageDataResult> {
+export async function fetchGeneratedImageDataUrl(
+	sessionId: string,
+	imageId: string,
+): Promise<GeneratedImageDataResult> {
 	const client = await createBackendClient();
 
-	return client.request<GeneratedImageDataResult>("attachment.image.generated.get", {
-		sessionId,
-		imageId
-	});
+	return client.request<GeneratedImageDataResult>(
+		"attachment.image.generated.get",
+		{
+			sessionId,
+			imageId,
+		},
+	);
 }

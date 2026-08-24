@@ -48,7 +48,10 @@ export type ProviderModelInfo = {
 
 export type ProviderId = string;
 
-export type EndpointType = "openai-chat-completions" | "openai-responses" | "anthropic-messages";
+export type EndpointType =
+	| "openai-chat-completions"
+	| "openai-responses"
+	| "anthropic-messages";
 
 export type ProviderModelCapabilities = {
 	imageInput?: boolean | undefined;
@@ -63,10 +66,18 @@ export type ProviderModelCapabilities = {
 	imageEdit?: boolean | undefined;
 };
 
-export type ProviderModelCapabilityOverrides = Partial<Pick<
-	ProviderModelCapabilities,
-	"imageInput" | "videoInput" | "reasoning" | "tools" | "webSearch" | "imageGeneration" | "imageEdit"
->>;
+export type ProviderModelCapabilityOverrides = Partial<
+	Pick<
+		ProviderModelCapabilities,
+		| "imageInput"
+		| "videoInput"
+		| "reasoning"
+		| "tools"
+		| "webSearch"
+		| "imageGeneration"
+		| "imageEdit"
+	>
+>;
 
 export type ProviderModelCustomizationInfo = {
 	source: "custom" | "override";
@@ -144,7 +155,10 @@ export type ProviderModelsListResult = {
 	error?: string | undefined;
 };
 
-export type DiscoveredProviderModel = Omit<ProviderModelInfo, "provider" | "endpointType" | "customization">;
+export type DiscoveredProviderModel = Omit<
+	ProviderModelInfo,
+	"provider" | "endpointType" | "customization"
+>;
 
 export type ProviderTaskModelKind = keyof ProviderModelRouting;
 
@@ -210,32 +224,43 @@ export type SaveProviderConfigParams = {
 export async function fetchProviderModelSelection(): Promise<ProviderModelSelection> {
 	const client = await createBackendClient();
 
-	return client.request<ProviderModelSelection>("provider.modelSelection.get");
+	return client.request<ProviderModelSelection>(
+		"provider.modelSelection.get",
+	);
 }
 
-export async function saveProviderModelSelection(params: SaveProviderModelSelectionParams): Promise<unknown> {
+export async function saveProviderModelSelection(
+	params: SaveProviderModelSelectionParams,
+): Promise<unknown> {
 	const client = await createBackendClient();
 
 	return client.request("provider.config.set", {
 		provider: params.provider,
 		model: params.model,
-		activate: params.activate ?? true
+		activate: params.activate ?? true,
 	});
 }
 
-export async function saveProviderConfig(params: SaveProviderConfigParams): Promise<ProviderModelSelection> {
+export async function saveProviderConfig(
+	params: SaveProviderConfigParams,
+): Promise<ProviderModelSelection> {
 	const client = await createBackendClient();
 
 	await client.request("provider.config.set", params);
-	return client.request<ProviderModelSelection>("provider.modelSelection.get");
+	return client.request<ProviderModelSelection>(
+		"provider.modelSelection.get",
+	);
 }
 
-export async function listProviderModels(provider: string, refresh: boolean = false): Promise<ProviderModelsListResult> {
+export async function listProviderModels(
+	provider: string,
+	refresh: boolean = false,
+): Promise<ProviderModelsListResult> {
 	const client = await createBackendClient();
 
 	return client.request<ProviderModelsListResult>("provider.models.list", {
 		provider,
-		refresh
+		refresh,
 	});
 }
 
@@ -245,7 +270,10 @@ export async function discoverProviderModels(params: {
 	baseUrl?: string | null | undefined;
 }): Promise<ProviderModelsDiscoverResult> {
 	const client = await createBackendClient();
-	return client.request<ProviderModelsDiscoverResult>("provider.models.discover", params);
+	return client.request<ProviderModelsDiscoverResult>(
+		"provider.models.discover",
+		params,
+	);
 }
 
 export async function importProviderModels(params: {
@@ -253,7 +281,10 @@ export async function importProviderModels(params: {
 	models: DiscoveredProviderModel[];
 }): Promise<ProviderModelSelection> {
 	const client = await createBackendClient();
-	return client.request<ProviderModelSelection>("provider.models.import", params);
+	return client.request<ProviderModelSelection>(
+		"provider.models.import",
+		params,
+	);
 }
 
 export async function syncProviderModels(params: {
@@ -263,7 +294,10 @@ export async function syncProviderModels(params: {
 	removeModelIds: string[];
 }): Promise<ProviderModelSelection> {
 	const client = await createBackendClient();
-	return client.request<ProviderModelSelection>("provider.models.sync", params);
+	return client.request<ProviderModelSelection>(
+		"provider.models.sync",
+		params,
+	);
 }
 
 export async function addCustomProvider(params: {
@@ -293,12 +327,16 @@ export async function setProviderEnabled(params: {
 	return client.request("provider.setEnabled", params);
 }
 
-export async function getProviderUsage(provider: string): Promise<ProviderUsageResult> {
+export async function getProviderUsage(
+	provider: string,
+): Promise<ProviderUsageResult> {
 	const client = await createBackendClient();
 	return client.request("provider.usage.get", { provider });
 }
 
-export async function removeCustomProvider(provider: string): Promise<ProviderMutationResult> {
+export async function removeCustomProvider(
+	provider: string,
+): Promise<ProviderMutationResult> {
 	const client = await createBackendClient();
 	return client.request("provider.custom.remove", { provider });
 }

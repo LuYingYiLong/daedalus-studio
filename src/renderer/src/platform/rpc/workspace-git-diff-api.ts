@@ -13,7 +13,12 @@ export type WorkspaceGitDiffResult = {
 	generatedAt: string;
 };
 
-export type WorkspaceGitDiffFileType = "add" | "delete" | "modify" | "rename" | "copy";
+export type WorkspaceGitDiffFileType =
+	| "add"
+	| "delete"
+	| "modify"
+	| "rename"
+	| "copy";
 
 export type WorkspaceGitDiffFileSummary = {
 	path: string;
@@ -54,18 +59,33 @@ export type FetchWorkspaceGitDiffParams = {
 	sourceFolderId?: string | undefined;
 };
 
-export async function fetchWorkspaceGitDiff(params: FetchWorkspaceGitDiffParams): Promise<WorkspaceGitDiffResult> {
+export async function fetchWorkspaceGitDiff(
+	params: FetchWorkspaceGitDiffParams,
+): Promise<WorkspaceGitDiffResult> {
 	const client = await createBackendClient();
 
-	return client.request<WorkspaceGitDiffResult>("workspace.git.diff.get", params);
+	return client.request<WorkspaceGitDiffResult>(
+		"workspace.git.diff.get",
+		params,
+	);
 }
 
-export async function fetchWorkspaceGitDiffSummary(params: FetchWorkspaceGitDiffParams & { cursor?: number; limit?: number }): Promise<WorkspaceGitDiffSummaryResult> {
+export async function fetchWorkspaceGitDiffSummary(
+	params: FetchWorkspaceGitDiffParams & { cursor?: number; limit?: number },
+): Promise<WorkspaceGitDiffSummaryResult> {
 	const client = await createBackendClient();
-	return client.request<WorkspaceGitDiffSummaryResult>("workspace.git.diff.summary.get", params);
+	return client.request<WorkspaceGitDiffSummaryResult>(
+		"workspace.git.diff.summary.get",
+		params,
+	);
 }
 
-export async function fetchWorkspaceGitDiffFile(params: FetchWorkspaceGitDiffParams & { path: string }): Promise<WorkspaceGitDiffFileResult> {
+export async function fetchWorkspaceGitDiffFile(
+	params: FetchWorkspaceGitDiffParams & { path: string },
+): Promise<WorkspaceGitDiffFileResult> {
 	const client = await createBackendClient();
-	return client.request<WorkspaceGitDiffFileResult>("workspace.git.diff.file.get", params);
+	return client.request<WorkspaceGitDiffFileResult>(
+		"workspace.git.diff.file.get",
+		params,
+	);
 }

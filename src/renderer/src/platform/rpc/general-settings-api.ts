@@ -15,29 +15,41 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
 	godotExecutableVersion: null,
 	godotExecutableStatus: "unconfigured",
 	godotExecutableError: null,
-	updatedAt: ""
+	updatedAt: "",
 };
 
-export const GENERAL_SETTINGS_CHANGED_EVENT: string = "daedalus:general-settings-changed";
+export const GENERAL_SETTINGS_CHANGED_EVENT: string =
+	"daedalus:general-settings-changed";
 
-export function dispatchGeneralSettingsChanged(settings: GeneralSettings): void {
-	window.dispatchEvent(new CustomEvent<GeneralSettings>(GENERAL_SETTINGS_CHANGED_EVENT, {
-		detail: settings
-	}));
+export function dispatchGeneralSettingsChanged(
+	settings: GeneralSettings,
+): void {
+	window.dispatchEvent(
+		new CustomEvent<GeneralSettings>(GENERAL_SETTINGS_CHANGED_EVENT, {
+			detail: settings,
+		}),
+	);
 }
 
 export async function fetchGeneralSettings(): Promise<GeneralSettings> {
 	const client = await createBackendClient();
 
-	const settings: GeneralSettings = await client.request<GeneralSettings>("generalSettings.get");
+	const settings: GeneralSettings = await client.request<GeneralSettings>(
+		"generalSettings.get",
+	);
 	dispatchGeneralSettingsChanged(settings);
 	return settings;
 }
 
-export async function updateGeneralSettings(patch: GeneralSettingsPatch): Promise<GeneralSettings> {
+export async function updateGeneralSettings(
+	patch: GeneralSettingsPatch,
+): Promise<GeneralSettings> {
 	const client = await createBackendClient();
 
-	const settings: GeneralSettings = await client.request<GeneralSettings>("generalSettings.update", patch);
+	const settings: GeneralSettings = await client.request<GeneralSettings>(
+		"generalSettings.update",
+		patch,
+	);
 	dispatchGeneralSettingsChanged(settings);
 	window.electronAPI.generalSettings?.notifyChanged(settings);
 	return settings;

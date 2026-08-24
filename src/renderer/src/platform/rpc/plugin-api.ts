@@ -15,7 +15,13 @@ export type PluginCompatibility = {
 	entryPaths: string[];
 	unsupportedFeatures: string[];
 	warnings: string[];
-	classification: "native" | "harness-bundle" | "harness-client" | "both" | "metadata-only" | "unsupported";
+	classification:
+		| "native"
+		| "harness-bundle"
+		| "harness-client"
+		| "both"
+		| "metadata-only"
+		| "unsupported";
 };
 
 export type PluginPresentation = {
@@ -38,7 +44,12 @@ export type HarnessBundleSummary = {
 	patchPath?: string;
 	totalRows: number;
 	bridgeableRows: number;
-	skippedRows: Array<{ index: number; id?: string; name?: string; reason: string }>;
+	skippedRows: Array<{
+		index: number;
+		id?: string;
+		name?: string;
+		reason: string;
+	}>;
 	operations: Array<"insert" | "replace" | "override">;
 	warnings: string[];
 	dangerousConstructs: string[];
@@ -72,7 +83,10 @@ export type HarnessConfigResult = {
 	trustInvalidated?: boolean;
 };
 
-export type HarnessConfigDraft = Pick<HarnessRuntimeConfig, "enabled" | "executablePath" | "sourceRoot" | "launchMode">;
+export type HarnessConfigDraft = Pick<
+	HarnessRuntimeConfig,
+	"enabled" | "executablePath" | "sourceRoot" | "launchMode"
+>;
 
 export type PluginRecord = {
 	id: string;
@@ -90,7 +104,11 @@ export type PluginRecord = {
 	updatedAt: string;
 	lastError?: string;
 	presentation?: PluginPresentation;
-	nativePlugin?: { apiVersion: number; entry: string; capabilities: Array<"tools" | "skills" | "hooks" | "mcp"> };
+	nativePlugin?: {
+		apiVersion: number;
+		entry: string;
+		capabilities: Array<"tools" | "skills" | "hooks" | "mcp">;
+	};
 	p2?: {
 		apiVersion: number;
 		capabilities: Record<string, number | undefined>;
@@ -105,13 +123,24 @@ export type PluginRecord = {
 export type PluginRuntimeSnapshot = {
 	pluginId: string;
 	runtimeKind?: "native" | "harness";
-	status: "stopped" | "starting" | "ready" | "failed" | "disabled" | "quarantined";
+	status:
+		| "stopped"
+		| "starting"
+		| "ready"
+		| "failed"
+		| "disabled"
+		| "quarantined";
 	activeSessions: number;
 	registeredTools: number;
 	registeredSkills: number;
 	registeredHooks: number;
 	registeredMcpServers: number;
-	dependencyStatus: "not_required" | "pending" | "ready" | "needs_network" | "failed";
+	dependencyStatus:
+		| "not_required"
+		| "pending"
+		| "ready"
+		| "needs_network"
+		| "failed";
 	harnessStatus?: HarnessRuntimeStatus;
 	harnessVersion?: string;
 	bridgeProtocolVersion?: number;
@@ -150,7 +179,14 @@ export type PluginDevelopmentDiagnostic = {
 	code: string;
 	message: string;
 	severity: "info" | "warning" | "error";
-	stage: "static" | "sandbox" | "registration" | "test" | "protocol" | "timeout" | "cleanup";
+	stage:
+		| "static"
+		| "sandbox"
+		| "registration"
+		| "test"
+		| "protocol"
+		| "timeout"
+		| "cleanup";
 	retryable: boolean;
 	path?: string;
 	caseId?: string;
@@ -165,17 +201,42 @@ export type PluginDevelopmentTestResult = {
 	pluginId: string;
 	revision: string;
 	durationMs: number;
-	sandbox: { available: boolean; mode: "windows-helper" | "bubblewrap" | "sandbox-exec" | "unavailable"; network: "disabled"; workspaceDisplay: string };
+	sandbox: {
+		available: boolean;
+		mode: "windows-helper" | "bubblewrap" | "sandbox-exec" | "unavailable";
+		network: "disabled";
+		workspaceDisplay: string;
+	};
 	passed: number;
 	failed: number;
-	cases: Array<{ id: string; capability: string; target?: string; status: "passed" | "failed" | "skipped"; durationMs: number; message?: string; code?: string; retryable: boolean }>;
+	cases: Array<{
+		id: string;
+		capability: string;
+		target?: string;
+		status: "passed" | "failed" | "skipped";
+		durationMs: number;
+		message?: string;
+		code?: string;
+		retryable: boolean;
+	}>;
 	diagnostics: PluginDevelopmentDiagnostic[];
 };
 
 export type PluginDevelopmentStatus = {
 	slug: string;
 	revision: string;
-	phase: "idle" | "preparing" | "validating" | "awaiting_install" | "awaiting_trust" | "testing" | "passed" | "failed" | "exhausted" | "cancelled" | "interrupted";
+	phase:
+		| "idle"
+		| "preparing"
+		| "validating"
+		| "awaiting_install"
+		| "awaiting_trust"
+		| "testing"
+		| "passed"
+		| "failed"
+		| "exhausted"
+		| "cancelled"
+		| "interrupted";
 	staticAttempt: number;
 	runtimeAttempt: number;
 	staticAttemptsRemaining: number;
@@ -218,64 +279,120 @@ export async function fetchPluginCatalog(): Promise<PluginCatalogResult> {
 	return client.request<PluginCatalogResult>("plugin.catalog.list", {});
 }
 
-export async function scanPlugin(source: PluginSource): Promise<PluginScanResult> {
+export async function scanPlugin(
+	source: PluginSource,
+): Promise<PluginScanResult> {
 	const client = await createBackendClient();
 	return client.request<PluginScanResult>("plugin.scan", { source });
 }
 
-export async function installPlugin(source: PluginSource): Promise<{ plugin: PluginRecord; catalog: PluginCatalogResult }> {
+export async function installPlugin(
+	source: PluginSource,
+): Promise<{ plugin: PluginRecord; catalog: PluginCatalogResult }> {
 	const client = await createBackendClient();
-	return client.request<{ plugin: PluginRecord; catalog: PluginCatalogResult }>("plugin.install", { source });
+	return client.request<{
+		plugin: PluginRecord;
+		catalog: PluginCatalogResult;
+	}>("plugin.install", { source });
 }
 
-export async function removePlugin(pluginId: string): Promise<PluginCatalogResult> {
+export async function removePlugin(
+	pluginId: string,
+): Promise<PluginCatalogResult> {
 	const client = await createBackendClient();
 	return client.request<PluginCatalogResult>("plugin.remove", { pluginId });
 }
 
-export async function updatePluginTrust(pluginId: string, fingerprint: string, status: "trusted" | "disabled", reviewId?: string): Promise<{ plugin: PluginRecord; fingerprint: string }> {
+export async function updatePluginTrust(
+	pluginId: string,
+	fingerprint: string,
+	status: "trusted" | "disabled",
+	reviewId?: string,
+): Promise<{ plugin: PluginRecord; fingerprint: string }> {
 	const client = await createBackendClient();
-	return client.request<{ plugin: PluginRecord; fingerprint: string }>("plugin.trust.update", { pluginId, fingerprint, status, ...(reviewId === undefined ? {} : { reviewId }) });
+	return client.request<{ plugin: PluginRecord; fingerprint: string }>(
+		"plugin.trust.update",
+		{
+			pluginId,
+			fingerprint,
+			status,
+			...(reviewId === undefined ? {} : { reviewId }),
+		},
+	);
 }
 
-export async function deferPluginReview(reviewId: string, pluginId: string, fingerprint: string): Promise<{ resolved: true }> {
+export async function deferPluginReview(
+	reviewId: string,
+	pluginId: string,
+	fingerprint: string,
+): Promise<{ resolved: true }> {
 	const client = await createBackendClient();
-	return client.request<{ resolved: true }>("plugin.review.resolve", { reviewId, pluginId, fingerprint, status: "deferred" });
+	return client.request<{ resolved: true }>("plugin.review.resolve", {
+		reviewId,
+		pluginId,
+		fingerprint,
+		status: "deferred",
+	});
 }
 
-export async function updatePluginProfile(pluginIds: string[]): Promise<PluginCatalogResult> {
+export async function updatePluginProfile(
+	pluginIds: string[],
+): Promise<PluginCatalogResult> {
 	const client = await createBackendClient();
-	return client.request<PluginCatalogResult>("plugin.profile.update", { pluginIds });
+	return client.request<PluginCatalogResult>("plugin.profile.update", {
+		pluginIds,
+	});
 }
 
-export async function fetchPluginRuntimeList(): Promise<{ runtimes: PluginRuntimeSnapshot[] }> {
+export async function fetchPluginRuntimeList(): Promise<{
+	runtimes: PluginRuntimeSnapshot[];
+}> {
 	const client = await createBackendClient();
 	return client.request("plugin.runtime.list", {});
 }
 
-export async function restartPluginRuntime(pluginId: string): Promise<PluginRuntimeSnapshot | null> {
+export async function restartPluginRuntime(
+	pluginId: string,
+): Promise<PluginRuntimeSnapshot | null> {
 	const client = await createBackendClient();
 	return client.request("plugin.runtime.restart", { pluginId });
 }
 
-export async function stopPluginRuntime(pluginId: string): Promise<PluginRuntimeSnapshot | null> {
+export async function stopPluginRuntime(
+	pluginId: string,
+): Promise<PluginRuntimeSnapshot | null> {
 	const client = await createBackendClient();
 	return client.request("plugin.runtime.disable", { pluginId });
 }
 
-export async function clearPluginRuntimeQuarantine(pluginId: string, sessionId?: string): Promise<PluginRuntimeSnapshot | null> {
+export async function clearPluginRuntimeQuarantine(
+	pluginId: string,
+	sessionId?: string,
+): Promise<PluginRuntimeSnapshot | null> {
 	const client = await createBackendClient();
-	return client.request("plugin.runtime.clear_quarantine", { pluginId, sessionId });
+	return client.request("plugin.runtime.clear_quarantine", {
+		pluginId,
+		sessionId,
+	});
 }
 
-export async function fetchPluginRuntimeLogs(pluginId?: string, limit?: number): Promise<PluginRuntimeLog[]> {
+export async function fetchPluginRuntimeLogs(
+	pluginId?: string,
+	limit?: number,
+): Promise<PluginRuntimeLog[]> {
 	const client = await createBackendClient();
 	return client.request("plugin.runtime.logs.list", { pluginId, limit });
 }
 
-export async function installPluginDependencies(pluginId: string, allowNetwork: boolean): Promise<PluginRuntimeSnapshot> {
+export async function installPluginDependencies(
+	pluginId: string,
+	allowNetwork: boolean,
+): Promise<PluginRuntimeSnapshot> {
 	const client = await createBackendClient();
-	return client.request("plugin.runtime.dependencies.install", { pluginId, allowNetwork });
+	return client.request("plugin.runtime.dependencies.install", {
+		pluginId,
+		allowNetwork,
+	});
 }
 
 export async function fetchHarnessConfig(): Promise<HarnessConfigResult> {
@@ -294,22 +411,41 @@ export async function updateHarnessConfig(params: {
 	return client.request("plugin.harness.config.update", params);
 }
 
-export async function detectHarness(draft?: HarnessConfigDraft): Promise<HarnessConfigResult> {
+export async function detectHarness(
+	draft?: HarnessConfigDraft,
+): Promise<HarnessConfigResult> {
 	const client = await createBackendClient();
-	return client.request("plugin.harness.detect", draft === undefined ? {} : { draft });
+	return client.request(
+		"plugin.harness.detect",
+		draft === undefined ? {} : { draft },
+	);
 }
 
-export async function previewHarnessBundle(pluginId: string): Promise<HarnessBundleSummary> {
+export async function previewHarnessBundle(
+	pluginId: string,
+): Promise<HarnessBundleSummary> {
 	const client = await createBackendClient();
 	return client.request("plugin.harness.preview", { pluginId });
 }
 
-export async function fetchHarnessRuntimeStatus(pluginId: string): Promise<{ runtime: PluginRuntimeSnapshot | null; installation: HarnessInstallationStatus }> {
+export async function fetchHarnessRuntimeStatus(
+	pluginId: string,
+): Promise<{
+	runtime: PluginRuntimeSnapshot | null;
+	installation: HarnessInstallationStatus;
+}> {
 	const client = await createBackendClient();
 	return client.request("plugin.harness.runtime.status", { pluginId });
 }
 
-export async function fetchPluginDevelopmentStatus(slug?: string): Promise<PluginDevelopmentStatus | { statuses: PluginDevelopmentStatus[] } | null> {
+export async function fetchPluginDevelopmentStatus(
+	slug?: string,
+): Promise<
+	PluginDevelopmentStatus | { statuses: PluginDevelopmentStatus[] } | null
+> {
 	const client = await createBackendClient();
-	return client.request("plugin.development.status.get", slug === undefined ? {} : { slug });
+	return client.request(
+		"plugin.development.status.get",
+		slug === undefined ? {} : { slug },
+	);
 }

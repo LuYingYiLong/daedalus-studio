@@ -1,5 +1,8 @@
 import type { ReconnectConfig } from "./reconnection-strategy";
-import { ReconnectionManager, DEFAULT_RECONNECT_CONFIG } from "./reconnection-strategy";
+import {
+	ReconnectionManager,
+	DEFAULT_RECONNECT_CONFIG,
+} from "./reconnection-strategy";
 
 type BackendRequest = {
 	protocolVersion: 3;
@@ -11,20 +14,20 @@ type BackendRequest = {
 
 type BackendResponse =
 	| {
-		type: "response";
-		id: string;
-		ok: true;
-		result: unknown;
-	}
+			type: "response";
+			id: string;
+			ok: true;
+			result: unknown;
+	  }
 	| {
-		type: "response";
-		id: string;
-		ok: false;
-		error: {
-			code: string;
-			message: string;
-		};
-	};
+			type: "response";
+			id: string;
+			ok: false;
+			error: {
+				code: string;
+				message: string;
+			};
+	  };
 
 export type BackendEvent = {
 	protocolVersion?: 3;
@@ -54,7 +57,11 @@ export type BackendConnectionEvent = {
 
 type BackendConnectionListener = (event: BackendConnectionEvent) => void;
 
-type ConnectionState = "disconnected" | "connecting" | "connected" | "reconnecting";
+type ConnectionState =
+	| "disconnected"
+	| "connecting"
+	| "connected"
+	| "reconnecting";
 
 export class BackendRpcError extends Error {
 	readonly code: string;
@@ -67,12 +74,14 @@ export class BackendRpcError extends Error {
 }
 
 export class BackendConnectionError extends Error {
-	readonly code: "backend_connection_failed" | "backend_connection_closed" | "backend_connection_timeout" | "backend_connection_not_open" | "backend_connection_manually_closed";
+	readonly code:
+		| "backend_connection_failed"
+		| "backend_connection_closed"
+		| "backend_connection_timeout"
+		| "backend_connection_not_open"
+		| "backend_connection_manually_closed";
 
-	constructor(
-		code: BackendConnectionError["code"],
-		message: string
-	) {
+	constructor(code: BackendConnectionError["code"], message: string) {
 		super(message);
 		this.name = "BackendConnectionError";
 		this.code = code;
@@ -90,7 +99,7 @@ const DEFAULT_CLIENT_CONFIG: ClientConfig = {
 	enableReconnect: true,
 	reconnectConfig: DEFAULT_RECONNECT_CONFIG,
 	connectionTimeout: 10000,
-	authProtocol: null
+	authProtocol: null,
 };
 
 const MAX_REMEMBERED_EVENT_IDS: number = 8192;
@@ -101,31 +110,39 @@ function createRequestParams(method: string, params: unknown): unknown {
 	}
 
 	return {
-		...(typeof params === "object" && params !== null && !Array.isArray(params) ? params : {}),
-		protocolVersion: 3
+		...(typeof params === "object" &&
+		params !== null &&
+		!Array.isArray(params)
+			? params
+			: {}),
+		protocolVersion: 3,
 	};
 }
 
 function isBackendResponse(message: unknown): message is BackendResponse {
-	return typeof message === "object"
-		&& message !== null
-		&& (message as { type?: unknown }).type === "response"
-		&& typeof (message as { id?: unknown }).id === "string"
-		&& typeof (message as { ok?: unknown }).ok === "boolean";
+	return (
+		typeof message === "object" &&
+		message !== null &&
+		(message as { type?: unknown }).type === "response" &&
+		typeof (message as { id?: unknown }).id === "string" &&
+		typeof (message as { ok?: unknown }).ok === "boolean"
+	);
 }
 
 function isBackendEvent(message: unknown): message is BackendEvent {
-	return typeof message === "object"
-		&& message !== null
-		&& (message as { protocolVersion?: unknown }).protocolVersion === 3
-		&& (message as { type?: unknown }).type === "event"
-		&& typeof (message as { eventId?: unknown }).eventId === "string"
-		&& typeof (message as { event?: unknown }).event === "string"
-		&& typeof (message as { sessionId?: unknown }).sessionId === "string"
-		&& typeof (message as { requestId?: unknown }).requestId === "string"
-		&& typeof (message as { runId?: unknown }).runId === "string"
-		&& typeof (message as { sequence?: unknown }).sequence === "number"
-		&& typeof (message as { createdAt?: unknown }).createdAt === "string";
+	return (
+		typeof message === "object" &&
+		message !== null &&
+		(message as { protocolVersion?: unknown }).protocolVersion === 3 &&
+		(message as { type?: unknown }).type === "event" &&
+		typeof (message as { eventId?: unknown }).eventId === "string" &&
+		typeof (message as { event?: unknown }).event === "string" &&
+		typeof (message as { sessionId?: unknown }).sessionId === "string" &&
+		typeof (message as { requestId?: unknown }).requestId === "string" &&
+		typeof (message as { runId?: unknown }).runId === "string" &&
+		typeof (message as { sequence?: unknown }).sequence === "number" &&
+		typeof (message as { createdAt?: unknown }).createdAt === "string"
+	);
 }
 
 export class BackendRpcClient {
@@ -136,7 +153,8 @@ export class BackendRpcClient {
 	private readonly pendingRequests: Map<string, PendingRequest> = new Map();
 	private readonly receivedEventIds: Set<string> = new Set();
 	private readonly eventListeners: Set<BackendEventListener> = new Set();
-	private readonly connectionListeners: Set<BackendConnectionListener> = new Set();
+	private readonly connectionListeners: Set<BackendConnectionListener> =
+		new Set();
 	private hasConnectedOnce: boolean = false;
 	private state: ConnectionState = "disconnected";
 	private reconnectManager: ReconnectionManager | null = null;
@@ -153,8 +171,11 @@ export class BackendRpcClient {
 			this.reconnectManager = new ReconnectionManager(
 				this.config.reconnectConfig,
 				(message: string, context?: Record<string, unknown>): void => {
-					console.debug(`[Daedalus backend:reconnect] ${message}`, context ?? "");
-				}
+					console.debug(
+						`[Daedalus backend:reconnect] ${message}`,
+						context ?? "",
+					);
+				},
 			);
 		}
 	}
@@ -172,28 +193,35 @@ export class BackendRpcClient {
 		}
 
 		this.manualClose = false;
-		const reconnectAttempt: number = this.reconnectManager?.getAttempt() ?? 0;
+		const reconnectAttempt: number =
+			this.reconnectManager?.getAttempt() ?? 0;
 		this.state = reconnectAttempt > 0 ? "reconnecting" : "connecting";
 
-		console.info(`[Daedalus backend] ${this.state === "reconnecting" ? "重连" : "连接"}中`, {
-			url: this.url,
-			attempt: this.reconnectManager?.getAttempt() ?? 0
-		});
+		console.info(
+			`[Daedalus backend] ${this.state === "reconnecting" ? "reconnecting" : "connecting"}`,
+			{
+				url: this.url,
+				attempt: this.reconnectManager?.getAttempt() ?? 0,
+			},
+		);
 
 		return this.createConnection();
 	}
 
 	private createConnection(): Promise<void> {
 		return new Promise((resolve, reject): void => {
-			const socket: WebSocket = this.config.authProtocol === null
-				? new WebSocket(this.url)
-				: new WebSocket(this.url, this.config.authProtocol);
+			const socket: WebSocket =
+				this.config.authProtocol === null
+					? new WebSocket(this.url)
+					: new WebSocket(this.url, this.config.authProtocol);
 			this.socket = socket;
 			this.connectResolve = resolve;
 			this.connectReject = reject;
 
 			socket.addEventListener("open", this.handleOpen);
-			socket.addEventListener("message", (event: MessageEvent): void => this.handleMessage(event.data));
+			socket.addEventListener("message", (event: MessageEvent): void =>
+				this.handleMessage(event.data),
+			);
 			socket.addEventListener("error", this.handleError);
 			socket.addEventListener("close", this.handleClose);
 
@@ -216,7 +244,9 @@ export class BackendRpcClient {
 		this.state = "connected";
 		this.reconnectManager?.reset();
 
-		console.info("[Daedalus backend] 连接已建立", { url: this.url });
+		console.info("[Daedalus backend] Connection established", {
+			url: this.url,
+		});
 
 		if (this.connectResolve) {
 			this.connectResolve();
@@ -233,10 +263,13 @@ export class BackendRpcClient {
 
 		const error: BackendConnectionError = new BackendConnectionError(
 			"backend_connection_failed",
-			`无法连接后端：${this.url}`
+			`Can't connect to the backend: ${this.url}`,
 		);
 
-		console.error("[Daedalus backend] 连接错误", { url: this.url, error });
+		console.error("[Daedalus backend] Connection error", {
+			url: this.url,
+			error,
+		});
 
 		if (this.connectReject) {
 			this.connectReject(error);
@@ -248,24 +281,37 @@ export class BackendRpcClient {
 	private handleClose = (): void => {
 		this.clearConnectionTimer();
 		this.socket = null;
-		this.rejectPendingRequests(new BackendConnectionError("backend_connection_closed", "后端连接已关闭"));
+		this.rejectPendingRequests(
+			new BackendConnectionError(
+				"backend_connection_closed",
+				"Backend connection has been closed",
+			),
+		);
 
 		const wasManualClose: boolean = this.manualClose;
 
-		console.debug("[Daedalus backend] 连接已关闭", { manualClose: wasManualClose });
+		console.debug("[Daedalus backend] Connection closed", {
+			manualClose: wasManualClose,
+		});
 
-		if (!wasManualClose && this.config.enableReconnect && this.reconnectManager) {
+		if (
+			!wasManualClose &&
+			this.config.enableReconnect &&
+			this.reconnectManager
+		) {
 			this.state = "reconnecting";
 
 			if (this.reconnectManager.isExhausted()) {
-				console.error("[Daedalus backend] 重连失败，已达最大尝试次数");
+				console.error(
+					"[Daedalus backend] Reconnect failed, maximum number of attempts reached",
+				);
 				this.state = "disconnected";
 				return;
 			}
 
 			this.reconnectManager.scheduleReconnect((): void => {
 				this.connect().catch((error: Error): void => {
-					console.error("[Daedalus backend] 重连失败", error);
+					console.error("[Daedalus backend] Reconnect failed", error);
 				});
 			});
 		} else {
@@ -276,16 +322,21 @@ export class BackendRpcClient {
 	private handleConnectionTimeout(): void {
 		this.clearConnectionTimer();
 
-		console.warn("[Daedalus backend] 连接超时", { url: this.url, timeout: this.config.connectionTimeout });
+		console.warn("[Daedalus backend] Connection timed out", {
+			url: this.url,
+			timeout: this.config.connectionTimeout,
+		});
 
 		this.socket?.close();
 		this.state = "disconnected";
 
 		if (this.connectReject) {
-			this.connectReject(new BackendConnectionError(
-				"backend_connection_timeout",
-				`连接超时：${this.config.connectionTimeout}ms`
-			));
+			this.connectReject(
+				new BackendConnectionError(
+					"backend_connection_timeout",
+					`Connection timed out: ${this.config.connectionTimeout}ms`,
+				),
+			);
 			this.connectReject = null;
 			this.connectResolve = null;
 		}
@@ -299,23 +350,32 @@ export class BackendRpcClient {
 	}
 
 	request<TResult>(method: string, params?: unknown): Promise<TResult> {
-		const id: string = `studio-${Date.now()}-${this.requestIndex += 1}`;
+		const id: string = `studio-${Date.now()}-${(this.requestIndex += 1)}`;
 
 		return this.requestWithId<TResult>(id, method, params);
 	}
 
-	requestWithId<TResult>(id: string, method: string, params?: unknown): Promise<TResult> {
+	requestWithId<TResult>(
+		id: string,
+		method: string,
+		params?: unknown,
+	): Promise<TResult> {
 		const socket: WebSocket | null = this.socket;
 
 		if (!socket || socket.readyState !== WebSocket.OPEN) {
-			return Promise.reject(new BackendConnectionError("backend_connection_not_open", "后端连接尚未打开"));
+			return Promise.reject(
+				new BackendConnectionError(
+					"backend_connection_not_open",
+					"Backend connection hasn't been opened yet",
+				),
+			);
 		}
 
 		const request: BackendRequest = {
 			protocolVersion: 3,
 			type: "request",
 			id,
-			method
+			method,
 		};
 
 		const requestParams: unknown = createRequestParams(method, params);
@@ -327,7 +387,7 @@ export class BackendRpcClient {
 		return new Promise<TResult>((resolve, reject): void => {
 			this.pendingRequests.set(id, {
 				resolve: (value: unknown): void => resolve(value as TResult),
-				reject
+				reject,
 			});
 			socket.send(JSON.stringify(request));
 		});
@@ -356,11 +416,19 @@ export class BackendRpcClient {
 		this.socket?.close();
 		this.socket = null;
 		this.state = "disconnected";
-		this.rejectPendingRequests(new BackendConnectionError("backend_connection_manually_closed", "后端连接已手动关闭"));
+		this.rejectPendingRequests(
+			new BackendConnectionError(
+				"backend_connection_manually_closed",
+				"Backend connection has been manually closed",
+			),
+		);
 	}
 
 	isOpen(): boolean {
-		return this.state === "connected" && this.socket?.readyState === WebSocket.OPEN;
+		return (
+			this.state === "connected" &&
+			this.socket?.readyState === WebSocket.OPEN
+		);
 	}
 
 	getState(): ConnectionState {
@@ -373,7 +441,11 @@ export class BackendRpcClient {
 		try {
 			message = JSON.parse(rawMessage) as unknown;
 		} catch (error: unknown) {
-			console.warn("[Daedalus backend] 收到无法解析的消息", error, rawMessage);
+			console.warn(
+				"[Daedalus backend] Received an unparseable message",
+				error,
+				rawMessage,
+			);
 			return;
 		}
 
@@ -382,20 +454,25 @@ export class BackendRpcClient {
 			if (eventId.length > 0 && this.receivedEventIds.has(eventId)) {
 				console.debug("[Daedalus backend:event] duplicate ignored", {
 					eventId,
-					event: message.event
+					event: message.event,
 				});
 				return;
 			}
 			if (eventId.length > 0) {
 				this.receivedEventIds.add(eventId);
 				if (this.receivedEventIds.size > MAX_REMEMBERED_EVENT_IDS) {
-					const oldestEventId: string | undefined = this.receivedEventIds.values().next().value;
+					const oldestEventId: string | undefined =
+						this.receivedEventIds.values().next().value;
 					if (oldestEventId !== undefined) {
 						this.receivedEventIds.delete(oldestEventId);
 					}
 				}
 			}
-			console.debug("[Daedalus backend:event]", message.event, message.data);
+			console.debug(
+				"[Daedalus backend:event]",
+				message.event,
+				message.data,
+			);
 			for (const listener of this.eventListeners) {
 				listener(message);
 			}
@@ -403,14 +480,21 @@ export class BackendRpcClient {
 		}
 
 		if (!isBackendResponse(message)) {
-			console.warn("[Daedalus backend] 收到未知消息", message);
+			console.warn(
+				"[Daedalus backend] Received an unknown message",
+				message,
+			);
 			return;
 		}
 
-		const pendingRequest: PendingRequest | undefined = this.pendingRequests.get(message.id);
+		const pendingRequest: PendingRequest | undefined =
+			this.pendingRequests.get(message.id);
 
 		if (!pendingRequest) {
-			console.debug("[Daedalus backend] 收到未匹配响应", message);
+			console.debug(
+				"[Daedalus backend] Received an unmatched response",
+				message,
+			);
 			return;
 		}
 
@@ -421,7 +505,9 @@ export class BackendRpcClient {
 			return;
 		}
 
-		pendingRequest.reject(new BackendRpcError(message.error.code, message.error.message));
+		pendingRequest.reject(
+			new BackendRpcError(message.error.code, message.error.message),
+		);
 	}
 
 	private rejectPendingRequests(error: Error): void {
@@ -431,5 +517,4 @@ export class BackendRpcClient {
 
 		this.pendingRequests.clear();
 	}
-
 }

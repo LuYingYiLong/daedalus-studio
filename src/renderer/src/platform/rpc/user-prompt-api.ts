@@ -22,7 +22,9 @@ export async function fetchUserPromptConfig(): Promise<UserPromptConfig> {
 	return client.request<UserPromptConfig>("userPrompt.get");
 }
 
-export async function saveUserPrompt(patch: UserPromptConfigPatch): Promise<UserPromptConfig> {
+export async function saveUserPrompt(
+	patch: UserPromptConfigPatch,
+): Promise<UserPromptConfig> {
 	const client = await createBackendClient();
 
 	return client.request<UserPromptConfig>("userPrompt.set", patch);

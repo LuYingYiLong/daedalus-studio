@@ -9,18 +9,21 @@ export const DEFAULT_RECONNECT_CONFIG: ReconnectConfig = {
 	maxAttempts: 10,
 	initialDelay: 1000,
 	maxDelay: 30000,
-	backoffMultiplier: 2
+	backoffMultiplier: 2,
 };
 
 export class ReconnectionManager {
 	private attempt: number = 0;
 	private timer: ReturnType<typeof setTimeout> | null = null;
 	private readonly config: ReconnectConfig;
-	private readonly logger: (message: string, context?: Record<string, unknown>) => void;
+	private readonly logger: (
+		message: string,
+		context?: Record<string, unknown>,
+	) => void;
 
 	constructor(
 		config: ReconnectConfig = DEFAULT_RECONNECT_CONFIG,
-		logger?: (message: string, context?: Record<string, unknown>) => void
+		logger?: (message: string, context?: Record<string, unknown>) => void,
 	) {
 		this.config = config;
 		this.logger = logger ?? ((_: string): void => {});
@@ -32,13 +35,22 @@ export class ReconnectionManager {
 		}
 
 		if (this.attempt >= this.config.maxAttempts) {
-			this.logger("重连次数已达上限", { attempt: this.attempt, maxAttempts: this.config.maxAttempts });
+			this.logger(
+				"The number of reconnection attempts has reached the limit",
+				{
+					attempt: this.attempt,
+					maxAttempts: this.config.maxAttempts,
+				},
+			);
 			return;
 		}
 
 		const delay: number = this.calculateDelay();
 
-		this.logger("调度重连", { attempt: this.attempt + 1, delay });
+		this.logger("Scheduling Reconnection", {
+			attempt: this.attempt + 1,
+			delay,
+		});
 
 		this.timer = setTimeout((): void => {
 			this.attempt += 1;
@@ -52,12 +64,13 @@ export class ReconnectionManager {
 			this.timer = null;
 		}
 		this.attempt = 0;
-		this.logger("重连策略已重置");
+		this.logger("Reconnect strategy has been reset");
 	}
 
 	private calculateDelay(): number {
 		const baseDelay: number = this.config.initialDelay;
-		const exponentialDelay: number = baseDelay * Math.pow(this.config.backoffMultiplier, this.attempt);
+		const exponentialDelay: number =
+			baseDelay * Math.pow(this.config.backoffMultiplier, this.attempt);
 		const jitter: number = exponentialDelay * 0.1 * Math.random();
 
 		return Math.min(exponentialDelay + jitter, this.config.maxDelay);

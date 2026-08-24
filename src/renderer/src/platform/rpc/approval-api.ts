@@ -62,33 +62,38 @@ export async function fetchApprovalList(): Promise<ApprovalListResult> {
 	return client.request<ApprovalListResult>("approval.list");
 }
 
-export async function setApprovalMode(mode: ApprovalMode, confirmationText?: string): Promise<SetApprovalModeResult> {
+export async function setApprovalMode(
+	mode: ApprovalMode,
+	confirmationText?: string,
+): Promise<SetApprovalModeResult> {
 	const client = await createBackendClient();
 
 	return client.request<SetApprovalModeResult>("approval.mode.set", {
 		mode,
-		confirmationText
+		confirmationText,
 	});
 }
 
 export async function approveApproval(
 	approvalId: string,
 	consentText?: string,
-	options?: { enableAutoSafe?: boolean }
+	options?: { enableAutoSafe?: boolean },
 ): Promise<ApproveApprovalResult> {
 	const client = await createBackendClient();
 
 	return client.request<ApproveApprovalResult>("approval.approve", {
 		approvalId,
 		consentText,
-		...(options?.enableAutoSafe === true ? { enableAutoSafe: true } : {})
+		...(options?.enableAutoSafe === true ? { enableAutoSafe: true } : {}),
 	});
 }
 
-export async function rejectApproval(approvalId: string): Promise<RejectApprovalResult> {
+export async function rejectApproval(
+	approvalId: string,
+): Promise<RejectApprovalResult> {
 	const client = await createBackendClient();
 
 	return client.request<RejectApprovalResult>("approval.reject", {
-		approvalId
+		approvalId,
 	});
 }

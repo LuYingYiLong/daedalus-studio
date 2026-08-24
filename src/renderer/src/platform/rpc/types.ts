@@ -58,10 +58,34 @@ export type SessionWorktreeSource = {
 	sensitiveIncludedPaths?: string[];
 };
 
-export type WorktreeStartingState = { type: "head" } | { type: "branch"; ref: string } | { type: "working-tree" };
-export type WorktreeSetupState = "not-required" | "pending-trust" | "running" | "ready" | "failed" | "skipped" | "interrupted";
-export type WorktreeLifecycleStatus = "creating" | "setting-up" | "ready" | "setup-failed" | "handoff" | "unavailable" | "recovery-required";
-export type WorktreeSetupSummary = { startedAt?: string; finishedAt?: string; exitCode?: number | null; durationMs?: number; message?: string; logPath?: string };
+export type WorktreeStartingState =
+	| { type: "head" }
+	| { type: "branch"; ref: string }
+	| { type: "working-tree" };
+export type WorktreeSetupState =
+	| "not-required"
+	| "pending-trust"
+	| "running"
+	| "ready"
+	| "failed"
+	| "skipped"
+	| "interrupted";
+export type WorktreeLifecycleStatus =
+	| "creating"
+	| "setting-up"
+	| "ready"
+	| "setup-failed"
+	| "handoff"
+	| "unavailable"
+	| "recovery-required";
+export type WorktreeSetupSummary = {
+	startedAt?: string;
+	finishedAt?: string;
+	exitCode?: number | null;
+	durationMs?: number;
+	message?: string;
+	logPath?: string;
+};
 
 export type SessionWorktreeMetadata = {
 	id: string;
@@ -76,11 +100,40 @@ export type SessionWorktreeMetadata = {
 	displayName?: string;
 };
 
-export type PlatformScripts = { default?: string; windows?: string; macos?: string; linux?: string };
-export type LocalEnvironmentAction = { id: string; name: string; icon?: string; scripts: PlatformScripts; network?: boolean };
-export type LocalEnvironmentProfile = { id: string; name: string; description?: string; setup?: { scripts: PlatformScripts; timeoutSeconds?: number; network?: boolean }; actions: LocalEnvironmentAction[] };
-export type LocalEnvironmentConfig = { version: 1; defaultEnvironmentId?: string | null; environments: LocalEnvironmentProfile[] };
-export type EnvironmentTrustStatus = "trusted" | "network-approved" | "disabled" | "review-required";
+export type PlatformScripts = {
+	default?: string;
+	windows?: string;
+	macos?: string;
+	linux?: string;
+};
+export type LocalEnvironmentAction = {
+	id: string;
+	name: string;
+	icon?: string;
+	scripts: PlatformScripts;
+	network?: boolean;
+};
+export type LocalEnvironmentProfile = {
+	id: string;
+	name: string;
+	description?: string;
+	setup?: {
+		scripts: PlatformScripts;
+		timeoutSeconds?: number;
+		network?: boolean;
+	};
+	actions: LocalEnvironmentAction[];
+};
+export type LocalEnvironmentConfig = {
+	version: 1;
+	defaultEnvironmentId?: string | null;
+	environments: LocalEnvironmentProfile[];
+};
+export type EnvironmentTrustStatus =
+	| "trusted"
+	| "network-approved"
+	| "disabled"
+	| "review-required";
 export type LocalEnvironmentConfigDocument = {
 	workspaceId: string;
 	sourceFolderId: string;
@@ -89,7 +142,13 @@ export type LocalEnvironmentConfigDocument = {
 	content: string;
 	revision: string;
 	config: LocalEnvironmentConfig;
-	profiles: Array<LocalEnvironmentProfile & { fingerprint: string; trust: EnvironmentTrustStatus; resolvedSetupScript: string | null }>;
+	profiles: Array<
+		LocalEnvironmentProfile & {
+			fingerprint: string;
+			trust: EnvironmentTrustStatus;
+			resolvedSetupScript: string | null;
+		}
+	>;
 };
 
 export type SessionMetadata = {
@@ -113,7 +172,13 @@ export type SessionMetadata = {
 	workspaceLaunch?: WorkspaceLaunchTargetId;
 	forkedFrom?: SessionForkOrigin;
 	worktree?: SessionWorktreeMetadata;
-	scheduledTaskOrigin?: { taskId: string; runId: string; kind: "agent" | "monitor"; scheduledAt: string; executionPolicy: "read_only" | "auto_safe" };
+	scheduledTaskOrigin?: {
+		taskId: string;
+		runId: string;
+		kind: "agent" | "monitor";
+		scheduledAt: string;
+		executionPolicy: "read_only" | "auto_safe";
+	};
 	archivedAt?: string;
 	createdAt: string;
 	updatedAt: string;
@@ -125,7 +190,21 @@ export type SessionListResult = {
 
 export type AdditionalContextItem = {
 	id: string;
-	kind: "editor_selection" | "scene" | "node" | "file" | "folder" | "script" | "script_selection" | "filesystem_selection" | "image" | "text_attachment" | "git_diff_comment" | "message_selection" | "file_selection" | "web_element";
+	kind:
+		| "editor_selection"
+		| "scene"
+		| "node"
+		| "file"
+		| "folder"
+		| "script"
+		| "script_selection"
+		| "filesystem_selection"
+		| "image"
+		| "text_attachment"
+		| "git_diff_comment"
+		| "message_selection"
+		| "file_selection"
+		| "web_element";
 	title: string;
 	subtitle?: string;
 	pinned?: boolean;
@@ -138,7 +217,13 @@ export type AdditionalContextItem = {
 	data?: unknown;
 };
 
-export type MessageQueueStatus = "pending" | "sending" | "approval" | "failed" | "cancelled" | "rejected";
+export type MessageQueueStatus =
+	| "pending"
+	| "sending"
+	| "approval"
+	| "failed"
+	| "cancelled"
+	| "rejected";
 
 export type MessageQueueItem = {
 	id: number;
@@ -207,7 +292,14 @@ export type WorkbenchNextStepHint = {
 	[key: string]: unknown;
 };
 
-export type WorkflowTodoStatus = "pending" | "running" | "in_progress" | "done" | "failed" | "paused" | string;
+export type WorkflowTodoStatus =
+	| "pending"
+	| "running"
+	| "in_progress"
+	| "done"
+	| "failed"
+	| "paused"
+	| string;
 
 export type WorkflowTodoStep = {
 	id: string;
@@ -241,8 +333,16 @@ export type MessageTextAnchor = {
 	contextAfter: string;
 };
 
-export type SelectionAskThreadStatus = "idle" | "running" | "failed" | "interrupted";
-export type SelectionAskMessageStatus = "completed" | "running" | "failed" | "interrupted";
+export type SelectionAskThreadStatus =
+	| "idle"
+	| "running"
+	| "failed"
+	| "interrupted";
+export type SelectionAskMessageStatus =
+	| "completed"
+	| "running"
+	| "failed"
+	| "interrupted";
 
 export type SelectionAskThread = {
 	threadId: string;
@@ -300,7 +400,14 @@ export type AgentRunState = {
 	revision: number;
 	intent: "answer" | "inspect" | "mutate";
 	scope: "bounded" | "unknown" | "complex";
-	lane: "direct" | "read" | "agent_loop" | "tool_assisted" | "probe" | "lightweight" | "workflow";
+	lane:
+		| "direct"
+		| "read"
+		| "agent_loop"
+		| "tool_assisted"
+		| "probe"
+		| "lightweight"
+		| "workflow";
 	stage: AgentRunStage;
 	title: string;
 	planId: string | null;
@@ -314,7 +421,12 @@ export type AgentRunState = {
 	verificationStatus: "verified" | "unverified" | "failed" | null;
 	warnings: string[];
 	terminal: {
-		resultStatus: "completed" | "completed_with_warnings" | "blocked" | "failed" | "cancelled";
+		resultStatus:
+			| "completed"
+			| "completed_with_warnings"
+			| "blocked"
+			| "failed"
+			| "cancelled";
 		message?: string;
 		completedAt: string;
 	} | null;
@@ -339,7 +451,17 @@ export type AgentRunState = {
 	updatedAt: string;
 };
 
-export type AgentGoalStage = "readiness" | "running" | "evaluating" | "pausing" | "awaiting_approval" | "awaiting_tool_budget" | "paused" | "achieved" | "failed" | "cancelled";
+export type AgentGoalStage =
+	| "readiness"
+	| "running"
+	| "evaluating"
+	| "pausing"
+	| "awaiting_approval"
+	| "awaiting_tool_budget"
+	| "paused"
+	| "achieved"
+	| "failed"
+	| "cancelled";
 export type AgentGoalState = {
 	schemaVersion: 1;
 	goalId: string;
@@ -349,7 +471,14 @@ export type AgentGoalState = {
 	title: string;
 	condition: string;
 	stage: AgentGoalStage;
-	pauseReason: "user_interruption" | "backend_restart" | "client_disconnected" | "budget_exhausted" | "readiness_blocked" | "no_progress" | null;
+	pauseReason:
+		| "user_interruption"
+		| "backend_restart"
+		| "client_disconnected"
+		| "budget_exhausted"
+		| "readiness_blocked"
+		| "no_progress"
+		| null;
 	activeRunId: string | null;
 	cycle: number;
 	modelSnapshot: {
@@ -588,7 +717,12 @@ export type TimelineBodyPart =
 			provider: string;
 			model: string;
 			status: "waiting" | "reconnecting" | "recovered" | "failed";
-			reason: "transport" | "idle_timeout" | "gateway" | "rate_limit" | "server";
+			reason:
+				| "transport"
+				| "idle_timeout"
+				| "gateway"
+				| "rate_limit"
+				| "server";
 			attempt: number;
 			maxAttempts: 2 | 5 | 15;
 			timeoutMs: number;
@@ -674,7 +808,10 @@ export type TimelineBodyPart =
 			data: Record<string, unknown>;
 	  };
 
-export type TimelineBlock = TimelineUserBlock | TimelineAssistantBlock | TimelineDividerBlock;
+export type TimelineBlock =
+	| TimelineUserBlock
+	| TimelineAssistantBlock
+	| TimelineDividerBlock;
 
 export type SessionTimelineNavigationEntry = {
 	entryId: string;
@@ -713,9 +850,21 @@ export type SessionTimelineSearchIndexPage = {
 	retryAfterMs?: number;
 };
 
-export type SessionSearchPage = Required<Pick<SessionTimelineSearchIndexPage,
-	"searchId" | "sessionId" | "generationId" | "sourceRevision" | "status" | "blockCount" | "indexedThroughOffset" | "documents" | "nextOffset" | "pending"
->> & { retryAfterMs?: number };
+export type SessionSearchPage = Required<
+	Pick<
+		SessionTimelineSearchIndexPage,
+		| "searchId"
+		| "sessionId"
+		| "generationId"
+		| "sourceRevision"
+		| "status"
+		| "blockCount"
+		| "indexedThroughOffset"
+		| "documents"
+		| "nextOffset"
+		| "pending"
+	>
+> & { retryAfterMs?: number };
 
 export type SessionOpenResult = {
 	opened: true;

@@ -13,22 +13,28 @@ export type GuideResult = {
 	workbench: WorkbenchSnapshot;
 };
 
-export async function addGuide(text: string, anchorRequestId?: string): Promise<GuideResult> {
+export async function addGuide(
+	text: string,
+	anchorRequestId?: string,
+): Promise<GuideResult> {
 	const client = await createBackendClient();
 
 	return client.request<GuideResult>("session.guide.add", {
 		clientGuideId: `guide-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
 		text,
-		anchorRequestId
+		anchorRequestId,
 	});
 }
 
-export async function updateGuide(guideId: string, text: string): Promise<GuideResult> {
+export async function updateGuide(
+	guideId: string,
+	text: string,
+): Promise<GuideResult> {
 	const client = await createBackendClient();
 
 	return client.request<GuideResult>("session.guide.update", {
 		guideId,
-		text
+		text,
 	});
 }
 
@@ -36,7 +42,7 @@ export async function deleteGuide(guideId: string): Promise<GuideResult> {
 	const client = await createBackendClient();
 
 	return client.request<GuideResult>("session.guide.delete", {
-		guideId
+		guideId,
 	});
 }
 
@@ -44,6 +50,6 @@ export async function reorderGuides(guideIds: string[]): Promise<GuideResult> {
 	const client = await createBackendClient();
 
 	return client.request<GuideResult>("session.guide.reorder", {
-		guideIds
+		guideIds,
 	});
 }

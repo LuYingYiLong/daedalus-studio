@@ -56,7 +56,13 @@ export type HookRunRecord = {
 	event: HookEventName;
 	sourceId: string;
 	fingerprint: string;
-	status: "completed" | "blocked" | "failed" | "timed_out" | "cancelled" | "queued";
+	status:
+		| "completed"
+		| "blocked"
+		| "failed"
+		| "timed_out"
+		| "cancelled"
+		| "queued";
 	startedAt: string;
 	durationMs: number;
 	exitCode: number | null;
@@ -65,33 +71,57 @@ export type HookRunRecord = {
 	stderr?: string;
 };
 
-export async function listHookConfigSources(workspaceId?: string): Promise<HookConfigDocument[]> {
+export async function listHookConfigSources(
+	workspaceId?: string,
+): Promise<HookConfigDocument[]> {
 	const client = await createBackendClient();
-	const result = await client.request<{ sources: HookConfigDocument[] }>("hooks.config.sources.list", workspaceId === undefined ? {} : { workspaceId });
+	const result = await client.request<{ sources: HookConfigDocument[] }>(
+		"hooks.config.sources.list",
+		workspaceId === undefined ? {} : { workspaceId },
+	);
 	return result.sources;
 }
 
-export async function getHookConfig(target: HookConfigTarget): Promise<HookConfigDocument> {
+export async function getHookConfig(
+	target: HookConfigTarget,
+): Promise<HookConfigDocument> {
 	const client = await createBackendClient();
 	return client.request<HookConfigDocument>("hooks.config.get", target);
 }
 
-export async function updateHookConfig(target: HookConfigTarget, content: string, expectedRevision: string): Promise<HookConfigDocument> {
+export async function updateHookConfig(
+	target: HookConfigTarget,
+	content: string,
+	expectedRevision: string,
+): Promise<HookConfigDocument> {
 	const client = await createBackendClient();
-	return client.request<HookConfigDocument>("hooks.config.update", { ...target, content, expectedRevision });
+	return client.request<HookConfigDocument>("hooks.config.update", {
+		...target,
+		content,
+		expectedRevision,
+	});
 }
 
 export async function updateHookTrust(
 	target: HookConfigTarget,
 	fingerprint: string,
-	status: "trusted" | "disabled"
+	status: "trusted" | "disabled",
 ): Promise<HookConfigDocument> {
 	const client = await createBackendClient();
-	return client.request<HookConfigDocument>("hooks.trust.update", { ...target, fingerprint, status });
+	return client.request<HookConfigDocument>("hooks.trust.update", {
+		...target,
+		fingerprint,
+		status,
+	});
 }
 
-export async function listHookRuns(limit: number = 100): Promise<HookRunRecord[]> {
+export async function listHookRuns(
+	limit: number = 100,
+): Promise<HookRunRecord[]> {
 	const client = await createBackendClient();
-	const result = await client.request<{ runs: HookRunRecord[] }>("hooks.runs.list", { limit });
+	const result = await client.request<{ runs: HookRunRecord[] }>(
+		"hooks.runs.list",
+		{ limit },
+	);
 	return result.runs;
 }

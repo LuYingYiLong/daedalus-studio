@@ -1,5 +1,19 @@
 import { createBackendClient } from "@/platform/rpc/transport/backend-client";
-import type { MessageTextAnchor, SelectionAskMessage, SelectionAskThread, SelectionAskThreadPage, SessionForkResult, SessionListResult, SessionMetadata, SessionOpenResult, SessionSearchPage, SessionTimelineNavigationIndexResult, SessionTimelineResult, SessionTimelineSearchIndexPage, WorkbenchSnapshot } from "./types";
+import type {
+	MessageTextAnchor,
+	SelectionAskMessage,
+	SelectionAskThread,
+	SelectionAskThreadPage,
+	SessionForkResult,
+	SessionListResult,
+	SessionMetadata,
+	SessionOpenResult,
+	SessionSearchPage,
+	SessionTimelineNavigationIndexResult,
+	SessionTimelineResult,
+	SessionTimelineSearchIndexPage,
+	WorkbenchSnapshot,
+} from "./types";
 import type { ChatMode } from "./chat-api";
 import type { WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launch";
 
@@ -132,7 +146,12 @@ export type DismissWorkflowTodoResult = {
 };
 
 export type SessionIntegrityIssue = {
-	file: "messages" | "events" | "approval-events" | "workflow-events" | "agent-events";
+	file:
+		| "messages"
+		| "events"
+		| "approval-events"
+		| "workflow-events"
+		| "agent-events";
 	line: number;
 	expectedSessionId: string;
 	actualSessionId: string;
@@ -153,134 +172,224 @@ export async function fetchSessions(): Promise<SessionListResult> {
 	return client.request<SessionListResult>("session.list");
 }
 
-export async function createSession(params: CreateSessionParams): Promise<CreateSessionResult> {
+export async function createSession(
+	params: CreateSessionParams,
+): Promise<CreateSessionResult> {
 	const client = await createBackendClient();
 
 	return client.request<CreateSessionResult>("session.create", params);
 }
 
-export async function forkSession(params: ForkSessionParams): Promise<SessionForkResult> {
+export async function forkSession(
+	params: ForkSessionParams,
+): Promise<SessionForkResult> {
 	const client = await createBackendClient();
 
 	return client.request<SessionForkResult>("session.fork", params);
 }
 
-export async function createSessionWorktree(sessionId: string, workspaceId: string, sources?: Record<string, { startingState?: import("./types").WorktreeStartingState; environmentId?: string | null; environmentFingerprint?: string | null }>): Promise<SessionWorktreeResult> {
+export async function createSessionWorktree(
+	sessionId: string,
+	workspaceId: string,
+	sources?: Record<
+		string,
+		{
+			startingState?: import("./types").WorktreeStartingState;
+			environmentId?: string | null;
+			environmentFingerprint?: string | null;
+		}
+	>,
+): Promise<SessionWorktreeResult> {
 	const client = await createBackendClient();
 	return client.request<SessionWorktreeResult>("session.worktree.create", {
 		sessionId,
 		workspaceId,
-		sources
+		sources,
 	});
 }
 
-export async function retrySessionWorktreeSetup(sessionId: string): Promise<SessionWorktreeResult> {
-	return (await createBackendClient()).request("session.worktree.setup.retry", { sessionId });
+export async function retrySessionWorktreeSetup(
+	sessionId: string,
+): Promise<SessionWorktreeResult> {
+	return (await createBackendClient()).request(
+		"session.worktree.setup.retry",
+		{ sessionId },
+	);
 }
 
-export async function skipSessionWorktreeSetup(sessionId: string): Promise<SessionWorktreeResult> {
-	return (await createBackendClient()).request("session.worktree.setup.skip", { sessionId });
+export async function skipSessionWorktreeSetup(
+	sessionId: string,
+): Promise<SessionWorktreeResult> {
+	return (await createBackendClient()).request(
+		"session.worktree.setup.skip",
+		{ sessionId },
+	);
 }
 
-export async function previewSessionWorktreeHandoff(params: { sessionId: string; target: "local" | "worktree"; branchBySource?: Record<string, string> }): Promise<{ allowed: boolean; from: "local" | "worktree"; target: "local" | "worktree"; sources: Array<{ sourceFolderId: string; branch: string | null; modifiedFiles: string[]; newCommits: number; blockedReason: string | null }> }> {
-	return (await createBackendClient()).request("session.worktree.handoff.preview", params);
+export async function previewSessionWorktreeHandoff(params: {
+	sessionId: string;
+	target: "local" | "worktree";
+	branchBySource?: Record<string, string>;
+}): Promise<{
+	allowed: boolean;
+	from: "local" | "worktree";
+	target: "local" | "worktree";
+	sources: Array<{
+		sourceFolderId: string;
+		branch: string | null;
+		modifiedFiles: string[];
+		newCommits: number;
+		blockedReason: string | null;
+	}>;
+}> {
+	return (await createBackendClient()).request(
+		"session.worktree.handoff.preview",
+		params,
+	);
 }
 
-export async function executeSessionWorktreeHandoff(params: { sessionId: string; target: "local" | "worktree"; branchBySource?: Record<string, string> }): Promise<SessionWorktreeResult> {
-	return (await createBackendClient()).request("session.worktree.handoff.execute", params);
+export async function executeSessionWorktreeHandoff(params: {
+	sessionId: string;
+	target: "local" | "worktree";
+	branchBySource?: Record<string, string>;
+}): Promise<SessionWorktreeResult> {
+	return (await createBackendClient()).request(
+		"session.worktree.handoff.execute",
+		params,
+	);
 }
 
-export async function deleteSessionWorktree(sessionId: string): Promise<SessionWorktreeResult> {
+export async function deleteSessionWorktree(
+	sessionId: string,
+): Promise<SessionWorktreeResult> {
 	const client = await createBackendClient();
 	return client.request<SessionWorktreeResult>("session.worktree.delete", {
-		sessionId
+		sessionId,
 	});
 }
 
-export async function openSession(sessionId: string, limit: number = 100): Promise<SessionOpenResult> {
+export async function openSession(
+	sessionId: string,
+	limit: number = 100,
+): Promise<SessionOpenResult> {
 	const client = await createBackendClient();
 
 	return client.request<SessionOpenResult>("session.open", {
 		sessionId,
-		limit
+		limit,
 	});
 }
 
-export async function fetchSessionTimeline(sessionId: string, limit: number = 100): Promise<SessionTimelineResult> {
+export async function fetchSessionTimeline(
+	sessionId: string,
+	limit: number = 100,
+): Promise<SessionTimelineResult> {
 	const client = await createBackendClient();
 
 	return client.request<SessionTimelineResult>("session.timeline", {
 		sessionId,
-		limit
+		limit,
 	});
 }
 
-export async function fetchSessionTimelineBefore(sessionId: string, beforeOffset: number, limit: number = 80): Promise<SessionTimelineResult> {
+export async function fetchSessionTimelineBefore(
+	sessionId: string,
+	beforeOffset: number,
+	limit: number = 80,
+): Promise<SessionTimelineResult> {
 	const client = await createBackendClient();
 
 	return client.request<SessionTimelineResult>("session.timeline", {
 		sessionId,
 		beforeOffset,
-		limit
+		limit,
 	});
 }
 
-export async function fetchSessionTimelineAfter(sessionId: string, afterOffset: number, limit: number = 80): Promise<SessionTimelineResult> {
+export async function fetchSessionTimelineAfter(
+	sessionId: string,
+	afterOffset: number,
+	limit: number = 80,
+): Promise<SessionTimelineResult> {
 	const client = await createBackendClient();
 
 	return client.request<SessionTimelineResult>("session.timeline", {
 		sessionId,
 		afterOffset,
-		limit
+		limit,
 	});
 }
 
-export async function checkSessionIntegrity(sessionId: string): Promise<SessionIntegrityCheckResult> {
+export async function checkSessionIntegrity(
+	sessionId: string,
+): Promise<SessionIntegrityCheckResult> {
 	const client = await createBackendClient();
 
-	return client.request<SessionIntegrityCheckResult>("session.integrity.check", {
-		sessionId
-	});
+	return client.request<SessionIntegrityCheckResult>(
+		"session.integrity.check",
+		{
+			sessionId,
+		},
+	);
 }
 
-export async function saveSessionUiMetadata(params: SaveSessionUiMetadataParams): Promise<SaveSessionResult> {
+export async function saveSessionUiMetadata(
+	params: SaveSessionUiMetadataParams,
+): Promise<SaveSessionResult> {
 	const client = await createBackendClient();
 
 	return client.request<SaveSessionResult>("session.save", params);
 }
 
-export async function setSessionModel(params: SetSessionModelParams): Promise<SetSessionModelResult> {
+export async function setSessionModel(
+	params: SetSessionModelParams,
+): Promise<SetSessionModelResult> {
 	const client = await createBackendClient();
 
 	return client.request<SetSessionModelResult>("session.model.set", params);
 }
 
-export async function dismissWorkflowTodo(params: DismissWorkflowTodoParams = {}): Promise<DismissWorkflowTodoResult> {
+export async function dismissWorkflowTodo(
+	params: DismissWorkflowTodoParams = {},
+): Promise<DismissWorkflowTodoResult> {
 	const client = await createBackendClient();
 
-	return client.request<DismissWorkflowTodoResult>("session.workflow.todo.dismiss", params);
+	return client.request<DismissWorkflowTodoResult>(
+		"session.workflow.todo.dismiss",
+		params,
+	);
 }
 
-export async function archiveSession(sessionId: string): Promise<ArchiveSessionResult> {
+export async function archiveSession(
+	sessionId: string,
+): Promise<ArchiveSessionResult> {
 	const client = await createBackendClient();
 
 	return client.request<ArchiveSessionResult>("session.archive", {
-		sessionId
+		sessionId,
 	});
 }
 
-export async function renameSession(sessionId: string, title: string): Promise<RenameSessionResult> {
+export async function renameSession(
+	sessionId: string,
+	title: string,
+): Promise<RenameSessionResult> {
 	const client = await createBackendClient();
 
 	return client.request<RenameSessionResult>("session.rename", {
 		sessionId,
-		title
+		title,
 	});
 }
 
-export async function moveSessionWorkspace(params: MoveSessionWorkspaceParams): Promise<MoveSessionWorkspaceResult> {
+export async function moveSessionWorkspace(
+	params: MoveSessionWorkspaceParams,
+): Promise<MoveSessionWorkspaceResult> {
 	const client = await createBackendClient();
-	return client.request<MoveSessionWorkspaceResult>("session.workspace.move", params);
+	return client.request<MoveSessionWorkspaceResult>(
+		"session.workspace.move",
+		params,
+	);
 }
 
 export async function fetchArchivedSessions(): Promise<ArchivedSessionListResult> {
@@ -289,134 +398,200 @@ export async function fetchArchivedSessions(): Promise<ArchivedSessionListResult
 	return client.request<ArchivedSessionListResult>("session.archived.list");
 }
 
-export async function restoreArchivedSession(sessionId: string): Promise<RestoreArchivedSessionResult> {
+export async function restoreArchivedSession(
+	sessionId: string,
+): Promise<RestoreArchivedSessionResult> {
 	const client = await createBackendClient();
 
-	return client.request<RestoreArchivedSessionResult>("session.archived.restore", {
-		sessionId
-	});
+	return client.request<RestoreArchivedSessionResult>(
+		"session.archived.restore",
+		{
+			sessionId,
+		},
+	);
 }
 
-export async function deleteArchivedSession(sessionId: string): Promise<DeleteArchivedSessionResult> {
+export async function deleteArchivedSession(
+	sessionId: string,
+): Promise<DeleteArchivedSessionResult> {
 	const client = await createBackendClient();
 
-	return client.request<DeleteArchivedSessionResult>("session.archived.delete", {
-		sessionId
-	});
+	return client.request<DeleteArchivedSessionResult>(
+		"session.archived.delete",
+		{
+			sessionId,
+		},
+	);
 }
 
-export async function exportSession(sessionId: string, destinationPath: string): Promise<ExportSessionResult> {
+export async function exportSession(
+	sessionId: string,
+	destinationPath: string,
+): Promise<ExportSessionResult> {
 	const client = await createBackendClient();
 	return client.request<ExportSessionResult>("session.export", {
 		sessionId,
-		destinationPath
+		destinationPath,
 	});
 }
 
-export async function importSession(sourcePath: string): Promise<ImportSessionResult> {
+export async function importSession(
+	sourcePath: string,
+): Promise<ImportSessionResult> {
 	const client = await createBackendClient();
-	return client.request<ImportSessionResult>("session.import", { sourcePath });
+	return client.request<ImportSessionResult>("session.import", {
+		sourcePath,
+	});
 }
 
-export async function fetchSessionTimelineIndex(sessionId: string): Promise<SessionTimelineNavigationIndexResult> {
+export async function fetchSessionTimelineIndex(
+	sessionId: string,
+): Promise<SessionTimelineNavigationIndexResult> {
 	const client = await createBackendClient();
 
-	return client.request<SessionTimelineNavigationIndexResult>("session.timeline.index", { sessionId });
+	return client.request<SessionTimelineNavigationIndexResult>(
+		"session.timeline.index",
+		{ sessionId },
+	);
 }
 
 export async function fetchSessionTimelineSearchIndex(
 	sessionId: string,
 	afterOffset: number = 0,
-	limit: number = 120
+	limit: number = 120,
 ): Promise<SessionTimelineSearchIndexPage> {
 	const client = await createBackendClient();
 
-	return client.request<SessionTimelineSearchIndexPage>("session.timeline.search.index", {
-		sessionId,
-		afterOffset,
-		limit
-	});
+	return client.request<SessionTimelineSearchIndexPage>(
+		"session.timeline.search.index",
+		{
+			sessionId,
+			afterOffset,
+			limit,
+		},
+	);
 }
 
-export async function startSessionTimelineSearch(sessionId: string): Promise<SessionSearchPage> {
+export async function startSessionTimelineSearch(
+	sessionId: string,
+): Promise<SessionSearchPage> {
 	const client = await createBackendClient();
 	return client.request<SessionSearchPage>("session.timeline.search.start", {
-		sessionId
+		sessionId,
 	});
 }
 
-export async function fetchSessionTimelineSearchPage(searchId: string, afterOffset: number = 0, limit: number = 400): Promise<SessionSearchPage> {
+export async function fetchSessionTimelineSearchPage(
+	searchId: string,
+	afterOffset: number = 0,
+	limit: number = 400,
+): Promise<SessionSearchPage> {
 	const client = await createBackendClient();
 	return client.request<SessionSearchPage>("session.timeline.search.page", {
 		searchId,
 		afterOffset,
-		limit
+		limit,
 	});
 }
 
-export async function cancelSessionTimelineSearch(searchId: string): Promise<void> {
+export async function cancelSessionTimelineSearch(
+	searchId: string,
+): Promise<void> {
 	const client = await createBackendClient();
 	await client.request("session.timeline.search.cancel", { searchId });
 }
 
-export async function listSelectionAskThreads(sessionId: string): Promise<{ sessionId: string; threads: SelectionAskThread[] }> {
+export async function listSelectionAskThreads(
+	sessionId: string,
+): Promise<{ sessionId: string; threads: SelectionAskThread[] }> {
 	const client = await createBackendClient();
 	return client.request("session.selectionAsk.list", { sessionId });
 }
 
-export async function getSelectionAskThread(sessionId: string, threadId: string, beforeSequence?: number): Promise<SelectionAskThreadPage> {
+export async function getSelectionAskThread(
+	sessionId: string,
+	threadId: string,
+	beforeSequence?: number,
+): Promise<SelectionAskThreadPage> {
 	const client = await createBackendClient();
 	return client.request("session.selectionAsk.get", {
 		sessionId,
 		threadId,
 		...(beforeSequence === undefined ? {} : { beforeSequence }),
-		limit: 100
+		limit: 100,
 	});
 }
 
-export async function createSelectionAskThread(sessionId: string, anchor: MessageTextAnchor, locale: "zh-CN" | "en-US"): Promise<SelectionAskThreadPage & { created: boolean }> {
+export async function createSelectionAskThread(
+	sessionId: string,
+	anchor: MessageTextAnchor,
+	locale: "zh-CN" | "en-US",
+): Promise<SelectionAskThreadPage & { created: boolean }> {
 	const client = await createBackendClient();
 	return client.request("session.selectionAsk.create", {
 		sessionId,
 		anchor,
-		locale
+		locale,
 	});
 }
 
-export async function sendSelectionAskMessage(sessionId: string, threadId: string, message: string): Promise<{ thread: SelectionAskThread; messages: SelectionAskMessage[] }> {
+export async function sendSelectionAskMessage(
+	sessionId: string,
+	threadId: string,
+	message: string,
+): Promise<{ thread: SelectionAskThread; messages: SelectionAskMessage[] }> {
 	const client = await createBackendClient();
 	return client.request("session.selectionAsk.send", {
 		sessionId,
 		threadId,
-		message
+		message,
 	});
 }
 
-export async function cancelSelectionAskResponse(sessionId: string, threadId: string): Promise<{ threadId: string; cancelled: boolean }> {
+export async function cancelSelectionAskResponse(
+	sessionId: string,
+	threadId: string,
+): Promise<{ threadId: string; cancelled: boolean }> {
 	const client = await createBackendClient();
-	return client.request("session.selectionAsk.cancel", { sessionId, threadId });
+	return client.request("session.selectionAsk.cancel", {
+		sessionId,
+		threadId,
+	});
 }
 
-export async function deleteSelectionAskThread(sessionId: string, threadId: string): Promise<{ threadId: string; deleted: boolean }> {
+export async function deleteSelectionAskThread(
+	sessionId: string,
+	threadId: string,
+): Promise<{ threadId: string; deleted: boolean }> {
 	const client = await createBackendClient();
-	return client.request("session.selectionAsk.delete", { sessionId, threadId });
+	return client.request("session.selectionAsk.delete", {
+		sessionId,
+		threadId,
+	});
 }
 
-export async function deleteAllSelectionAskThreads(sessionId: string): Promise<{ deletedCount: number }> {
+export async function deleteAllSelectionAskThreads(
+	sessionId: string,
+): Promise<{ deletedCount: number }> {
 	const client = await createBackendClient();
 	return client.request("session.selectionAsk.deleteAll", { sessionId });
 }
 
-export async function setSessionPinned(sessionId: string, pinned: boolean): Promise<SetSessionPinnedResult> {
+export async function setSessionPinned(
+	sessionId: string,
+	pinned: boolean,
+): Promise<SetSessionPinnedResult> {
 	const client = await createBackendClient();
 
 	return client.request<SetSessionPinnedResult>("session.pin.set", {
 		sessionId,
-		pinned
+		pinned,
 	});
 }
 
-export async function deleteSession(sessionId: string): Promise<DeleteSessionResult> {
+export async function deleteSession(
+	sessionId: string,
+): Promise<DeleteSessionResult> {
 	const client = await createBackendClient();
 
 	return client.request<DeleteSessionResult>("session.delete", { sessionId });

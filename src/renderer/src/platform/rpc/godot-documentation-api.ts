@@ -18,7 +18,12 @@ export type GodotDocumentationRecord = {
 		message: string | null;
 		checkedAt: string | null;
 	};
-	repairAvailability: "rollback" | "cached_source" | "network_required" | "source_required" | "none";
+	repairAvailability:
+		| "rollback"
+		| "cached_source"
+		| "network_required"
+		| "source_required"
+		| "none";
 	installedAt: string;
 	updatedAt: string;
 	documentCount: number;
@@ -79,52 +84,103 @@ export async function fetchGodotDocumentation(): Promise<GodotDocumentationState
 	return client.request<GodotDocumentationState>("godotDocumentation.get");
 }
 
-export async function fetchGodotDocumentationBranches(refresh: boolean = false): Promise<GodotDocumentationBranchList> {
+export async function fetchGodotDocumentationBranches(
+	refresh: boolean = false,
+): Promise<GodotDocumentationBranchList> {
 	const client = await createBackendClient();
-	return client.request<GodotDocumentationBranchList>("godotDocumentation.branches.list", { refresh });
+	return client.request<GodotDocumentationBranchList>(
+		"godotDocumentation.branches.list",
+		{ refresh },
+	);
 }
 
-export async function installGodotDocumentation(branch: string): Promise<GodotDocumentationJob> {
+export async function installGodotDocumentation(
+	branch: string,
+): Promise<GodotDocumentationJob> {
 	const client = await createBackendClient();
-	return client.request<GodotDocumentationJob>("godotDocumentation.install", { branch });
+	return client.request<GodotDocumentationJob>("godotDocumentation.install", {
+		branch,
+	});
 }
 
-export async function importLocalGodotDocumentation(branch: string, sourcePath: string): Promise<GodotDocumentationJob> {
+export async function importLocalGodotDocumentation(
+	branch: string,
+	sourcePath: string,
+): Promise<GodotDocumentationJob> {
 	const client = await createBackendClient();
-	return client.request<GodotDocumentationJob>("godotDocumentation.importLocal", { branch, sourcePath });
+	return client.request<GodotDocumentationJob>(
+		"godotDocumentation.importLocal",
+		{ branch, sourcePath },
+	);
 }
 
-export async function updateGodotDocumentation(documentId: string): Promise<GodotDocumentationJob> {
+export async function updateGodotDocumentation(
+	documentId: string,
+): Promise<GodotDocumentationJob> {
 	const client = await createBackendClient();
-	return client.request<GodotDocumentationJob>("godotDocumentation.update", { documentId });
+	return client.request<GodotDocumentationJob>("godotDocumentation.update", {
+		documentId,
+	});
 }
 
-export async function checkGodotDocumentationHealth(documentId: string, deep: boolean = true): Promise<GodotDocumentationJob> {
+export async function checkGodotDocumentationHealth(
+	documentId: string,
+	deep: boolean = true,
+): Promise<GodotDocumentationJob> {
 	const client = await createBackendClient();
-	return client.request<GodotDocumentationJob>("godotDocumentation.health.check", { documentId, deep });
+	return client.request<GodotDocumentationJob>(
+		"godotDocumentation.health.check",
+		{ documentId, deep },
+	);
 }
 
-export async function repairGodotDocumentation(documentId: string, allowNetwork: boolean): Promise<GodotDocumentationJob> {
+export async function repairGodotDocumentation(
+	documentId: string,
+	allowNetwork: boolean,
+): Promise<GodotDocumentationJob> {
 	const client = await createBackendClient();
-	return client.request<GodotDocumentationJob>("godotDocumentation.repair", { documentId, allowNetwork });
+	return client.request<GodotDocumentationJob>("godotDocumentation.repair", {
+		documentId,
+		allowNetwork,
+	});
 }
 
-export async function removeGodotDocumentation(documentId: string): Promise<GodotDocumentationState> {
+export async function removeGodotDocumentation(
+	documentId: string,
+): Promise<GodotDocumentationState> {
 	const client = await createBackendClient();
-	return client.request<GodotDocumentationState>("godotDocumentation.remove", { documentId });
+	return client.request<GodotDocumentationState>(
+		"godotDocumentation.remove",
+		{ documentId },
+	);
 }
 
-export async function setGodotDocumentationEnabled(enabled: boolean): Promise<GodotDocumentationState> {
+export async function setGodotDocumentationEnabled(
+	enabled: boolean,
+): Promise<GodotDocumentationState> {
 	const client = await createBackendClient();
-	return client.request<GodotDocumentationState>("godotDocumentation.setEnabled", { enabled });
+	return client.request<GodotDocumentationState>(
+		"godotDocumentation.setEnabled",
+		{ enabled },
+	);
 }
 
-export async function fetchGodotDocumentationJob(jobId: string): Promise<GodotDocumentationJob | null> {
+export async function fetchGodotDocumentationJob(
+	jobId: string,
+): Promise<GodotDocumentationJob | null> {
 	const client = await createBackendClient();
-	return client.request<GodotDocumentationJob | null>("godotDocumentation.job.get", { jobId });
+	return client.request<GodotDocumentationJob | null>(
+		"godotDocumentation.job.get",
+		{ jobId },
+	);
 }
 
-export async function cancelGodotDocumentationJob(jobId: string): Promise<GodotDocumentationJob | null> {
+export async function cancelGodotDocumentationJob(
+	jobId: string,
+): Promise<GodotDocumentationJob | null> {
 	const client = await createBackendClient();
-	return client.request<GodotDocumentationJob | null>("godotDocumentation.job.cancel", { jobId });
+	return client.request<GodotDocumentationJob | null>(
+		"godotDocumentation.job.cancel",
+		{ jobId },
+	);
 }

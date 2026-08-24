@@ -277,6 +277,41 @@ body {
 	background: var(--ds-text-muted);
 }
 
+/*
+ * Ant Design 的 Select / AutoComplete 使用 rc-virtual-list 绘制自己的
+ * 滚动条，不会命中上面的原生 ::-webkit-scrollbar 规则。统一覆盖这些
+ * 下拉层，保持与 Composer 模型二级菜单相同的轨道、宽度和滑块视觉。
+ */
+.ant-select-dropdown .rc-virtual-list-scrollbar,
+.ant-select-tree-dropdown .rc-virtual-list-scrollbar {
+	width: 10px !important;
+	background: var(--ds-bg);
+}
+
+.ant-select-dropdown .rc-virtual-list-scrollbar-thumb,
+.ant-select-tree-dropdown .rc-virtual-list-scrollbar-thumb {
+	box-sizing: border-box;
+	border: 2px solid var(--ds-bg);
+	border-radius: var(--ds-radius-sm);
+	background: var(--ds-border) !important;
+}
+
+.ant-select-dropdown .rc-virtual-list-scrollbar:hover .rc-virtual-list-scrollbar-thumb,
+.ant-select-tree-dropdown .rc-virtual-list-scrollbar:hover .rc-virtual-list-scrollbar-thumb {
+	background: var(--ds-text-muted) !important;
+}
+
+/* 其余输入类下拉层使用原生滚动条时，也复用 Composer 的 Firefox 配色。 */
+.ant-select-dropdown,
+.ant-select-tree-dropdown,
+.ant-cascader-dropdown,
+.ant-mentions-dropdown,
+.ant-cascader-dropdown .ant-cascader-menu,
+.ant-mentions-dropdown .ant-mentions-dropdown-menu {
+	scrollbar-color: var(--ds-border) var(--ds-bg);
+	scrollbar-gutter: auto;
+}
+
 .ant-tag {
 	border-radius: var(--ds-radius-sm);
 }

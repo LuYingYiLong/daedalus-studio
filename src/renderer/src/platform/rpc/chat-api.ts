@@ -40,7 +40,9 @@ export type RetryAgentRunResult = {
 	context?: unknown;
 };
 
-export async function sendChatMessage(params: SendChatMessageParams): Promise<unknown> {
+export async function sendChatMessage(
+	params: SendChatMessageParams,
+): Promise<unknown> {
 	const client = await createBackendClient();
 
 	return client.requestWithId(params.requestId, "ai.chat", {
@@ -54,37 +56,45 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<un
 			stream: true,
 			reasoningEffort: params.reasoningEffort,
 			executionPolicy: params.executionPolicy ?? "auto",
-			outputTarget: params.outputTarget ?? "chat"
+			outputTarget: params.outputTarget ?? "chat",
 		},
-		additionalContext: params.additionalContext
+		additionalContext: params.additionalContext,
 	});
 }
 
-export async function cancelChatMessage(requestId: string): Promise<CancelChatMessageResult> {
+export async function cancelChatMessage(
+	requestId: string,
+): Promise<CancelChatMessageResult> {
 	const client = await createBackendClient();
 
 	return client.request<CancelChatMessageResult>("ai.cancel", {
-		requestId
+		requestId,
 	});
 }
 
-export async function continueToolBudget(budgetId: string): Promise<ToolBudgetDecisionResult> {
+export async function continueToolBudget(
+	budgetId: string,
+): Promise<ToolBudgetDecisionResult> {
 	const client = await createBackendClient();
 
 	return client.request<ToolBudgetDecisionResult>("ai.toolBudget.continue", {
-		budgetId
+		budgetId,
 	});
 }
 
-export async function stopToolBudget(budgetId: string): Promise<ToolBudgetDecisionResult> {
+export async function stopToolBudget(
+	budgetId: string,
+): Promise<ToolBudgetDecisionResult> {
 	const client = await createBackendClient();
 
 	return client.request<ToolBudgetDecisionResult>("ai.toolBudget.stop", {
-		budgetId
+		budgetId,
 	});
 }
 
-export async function retryAgentRun(runId: string): Promise<RetryAgentRunResult> {
+export async function retryAgentRun(
+	runId: string,
+): Promise<RetryAgentRunResult> {
 	const client = await createBackendClient();
 	return client.request<RetryAgentRunResult>("agent.run.retry", { runId });
 }

@@ -25,15 +25,35 @@ export type ContextUsageEstimate = {
 	compressReason?: string | null;
 	summaryActive: boolean;
 	contextGeneration?: number | undefined;
-	contextCompressionLevel?: "capture" | "distill" | "condense" | null | undefined;
+	contextCompressionLevel?:
+		| "capture"
+		| "distill"
+		| "condense"
+		| null
+		| undefined;
 	restorableBlockCount?: number | undefined;
 	breakdown: Array<{
-		kind: "base_system" | "custom_instructions" | "skills" | "mcp_context" | "tool_definitions" | "history" | "summary" | "current_message" | "additional_context" | "output_reserve" | "safety_margin";
+		kind:
+			| "base_system"
+			| "custom_instructions"
+			| "skills"
+			| "mcp_context"
+			| "tool_definitions"
+			| "history"
+			| "summary"
+			| "current_message"
+			| "additional_context"
+			| "output_reserve"
+			| "safety_margin";
 		tokens: number;
 		percent: number;
 	}>;
 	pressure: "low" | "moderate" | "high" | "critical";
-	largestContributor: { kind: ContextUsageEstimate["breakdown"][number]["kind"]; tokens: number; percent: number } | null;
+	largestContributor: {
+		kind: ContextUsageEstimate["breakdown"][number]["kind"];
+		tokens: number;
+		percent: number;
+	} | null;
 };
 
 export type EstimateContextUsageParams = {
@@ -61,12 +81,21 @@ export type CompressSessionResult = {
 	warning?: string | undefined;
 };
 
-export async function estimateContextUsage(params: EstimateContextUsageParams): Promise<ContextUsageEstimate> {
+export async function estimateContextUsage(
+	params: EstimateContextUsageParams,
+): Promise<ContextUsageEstimate> {
 	const client = await createBackendClient();
-	return client.request<ContextUsageEstimate>("session.context.estimate", params);
+	return client.request<ContextUsageEstimate>(
+		"session.context.estimate",
+		params,
+	);
 }
 
-export async function compressSession(keepRecent: number = 8): Promise<CompressSessionResult> {
+export async function compressSession(
+	keepRecent: number = 8,
+): Promise<CompressSessionResult> {
 	const client = await createBackendClient();
-	return client.request<CompressSessionResult>("session.compress", { keepRecent });
+	return client.request<CompressSessionResult>("session.compress", {
+		keepRecent,
+	});
 }

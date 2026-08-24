@@ -2,7 +2,12 @@ import { createBackendClient } from "@/platform/rpc/transport/backend-client";
 
 export type McpTransport = "stdio" | "http";
 export type McpPlanAccess = "disabled" | "read";
-export type McpRuntimeStatus = "connected" | "connecting" | "failed" | "disabled" | string;
+export type McpRuntimeStatus =
+	| "connected"
+	| "connecting"
+	| "failed"
+	| "disabled"
+	| string;
 
 export type CustomMcpServer = {
 	id: string;
@@ -51,9 +56,14 @@ export type AddHttpMcpServerParams = {
 	headers?: Record<string, string> | undefined;
 };
 
-export type AddMcpServerParams = AddStdioMcpServerParams | AddHttpMcpServerParams;
+export type AddMcpServerParams =
+	| AddStdioMcpServerParams
+	| AddHttpMcpServerParams;
 
-export type UpdateStdioMcpServerParams = Omit<AddStdioMcpServerParams, "name"> & {
+export type UpdateStdioMcpServerParams = Omit<
+	AddStdioMcpServerParams,
+	"name"
+> & {
 	serverId: string;
 };
 
@@ -61,7 +71,9 @@ export type UpdateHttpMcpServerParams = Omit<AddHttpMcpServerParams, "name"> & {
 	serverId: string;
 };
 
-export type UpdateMcpServerParams = UpdateStdioMcpServerParams | UpdateHttpMcpServerParams;
+export type UpdateMcpServerParams =
+	| UpdateStdioMcpServerParams
+	| UpdateHttpMcpServerParams;
 
 export type McpConfigMutationResult = McpConfigListResult & {
 	added?: boolean | undefined;
@@ -76,22 +88,36 @@ export async function fetchMcpConfig(): Promise<McpConfigListResult> {
 	return client.request<McpConfigListResult>("mcp.config.list");
 }
 
-export async function addMcpServer(params: AddMcpServerParams): Promise<McpConfigMutationResult> {
+export async function addMcpServer(
+	params: AddMcpServerParams,
+): Promise<McpConfigMutationResult> {
 	const client = await createBackendClient();
 	return client.request<McpConfigMutationResult>("mcp.config.add", params);
 }
 
-export async function updateMcpServer(params: UpdateMcpServerParams): Promise<McpConfigMutationResult> {
+export async function updateMcpServer(
+	params: UpdateMcpServerParams,
+): Promise<McpConfigMutationResult> {
 	const client = await createBackendClient();
 	return client.request<McpConfigMutationResult>("mcp.config.update", params);
 }
 
-export async function removeMcpServer(serverId: string): Promise<McpConfigMutationResult> {
+export async function removeMcpServer(
+	serverId: string,
+): Promise<McpConfigMutationResult> {
 	const client = await createBackendClient();
-	return client.request<McpConfigMutationResult>("mcp.config.remove", { serverId });
+	return client.request<McpConfigMutationResult>("mcp.config.remove", {
+		serverId,
+	});
 }
 
-export async function setMcpServerEnabled(serverId: string, enabled: boolean): Promise<McpConfigMutationResult> {
+export async function setMcpServerEnabled(
+	serverId: string,
+	enabled: boolean,
+): Promise<McpConfigMutationResult> {
 	const client = await createBackendClient();
-	return client.request<McpConfigMutationResult>("mcp.config.setEnabled", { serverId, enabled });
+	return client.request<McpConfigMutationResult>("mcp.config.setEnabled", {
+		serverId,
+		enabled,
+	});
 }

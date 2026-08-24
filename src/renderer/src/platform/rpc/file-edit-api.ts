@@ -20,7 +20,13 @@ export type FileEditBatchDetail = {
 	};
 };
 
-export async function fetchFileEditBatch(sessionId: string, batchId: string): Promise<FileEditBatchDetail> {
+export async function fetchFileEditBatch(
+	sessionId: string,
+	batchId: string,
+): Promise<FileEditBatchDetail> {
 	const client = await createBackendClient();
-	return client.request<FileEditBatchDetail>("fileEdit.batch.get", { sessionId, batchId });
+	return client.request<FileEditBatchDetail>("fileEdit.batch.get", {
+		sessionId,
+		batchId,
+	});
 }

@@ -1,7 +1,11 @@
 import { createBackendClient } from "@/platform/rpc/transport/backend-client";
 import type { PlanRecommendedReply, WorkbenchSnapshot } from "./types";
 
-export type PlanStatus = "clarification_required" | "ready" | "approved" | "executing";
+export type PlanStatus =
+	| "clarification_required"
+	| "ready"
+	| "approved"
+	| "executing";
 
 export type PlanResult = {
 	planId: string;
@@ -30,30 +34,39 @@ export type PlanApprovalResult = {
 	workbench: WorkbenchSnapshot;
 };
 
-export async function getPlan(planId: string, sessionId?: string): Promise<PlanResult> {
+export async function getPlan(
+	planId: string,
+	sessionId?: string,
+): Promise<PlanResult> {
 	const client = await createBackendClient();
 
 	return client.request<PlanResult>("plan.get", {
 		planId,
-		sessionId
+		sessionId,
 	});
 }
 
-export async function submitPlanClarification(planId: string, submission: PlanClarificationSubmission): Promise<PlanResult> {
+export async function submitPlanClarification(
+	planId: string,
+	submission: PlanClarificationSubmission,
+): Promise<PlanResult> {
 	const client = await createBackendClient();
 
 	return client.request<PlanResult>("plan.clarify", {
 		planId,
-		...submission
+		...submission,
 	});
 }
 
-export async function revisePlan(planId: string, feedback: string): Promise<PlanResult> {
+export async function revisePlan(
+	planId: string,
+	feedback: string,
+): Promise<PlanResult> {
 	const client = await createBackendClient();
 
 	return client.request<PlanResult>("plan.revise", {
 		planId,
-		feedback
+		feedback,
 	});
 }
 
@@ -61,6 +74,6 @@ export async function approvePlan(planId: string): Promise<PlanApprovalResult> {
 	const client = await createBackendClient();
 
 	return client.request<PlanApprovalResult>("plan.approve", {
-		planId
+		planId,
 	});
 }

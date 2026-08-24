@@ -1,6 +1,6 @@
 import { Button, List, Modal, Spin, Tooltip, Typography } from "antd";
 import React from "react";
-import { listPluginContextProviders, resolvePluginContextProvider } from "@/platform/rpc/plugin-p2-api";
+import { listPluginContextProviders, resolvePluginContextProvider } from "@/platform/rpc/plugin-extensions-api";
 import { Icon } from "@/assets/icons";
 
 type PluginContextProviderPickerProps = {

@@ -65,16 +65,26 @@ export type WorkspaceGitBranchOperationResult = {
 	stderr: string;
 };
 
-export async function generateGitCommitMessage(params: GenerateGitCommitMessageParams): Promise<GenerateGitCommitMessageResult> {
+export async function generateGitCommitMessage(
+	params: GenerateGitCommitMessageParams,
+): Promise<GenerateGitCommitMessageResult> {
 	const client = await createBackendClient();
 
-	return client.request<GenerateGitCommitMessageResult>("workspace.git.commit.message.generate", params);
+	return client.request<GenerateGitCommitMessageResult>(
+		"workspace.git.commit.message.generate",
+		params,
+	);
 }
 
-export async function commitOrPushGit(params: CommitOrPushParams): Promise<CommitOrPushResult> {
+export async function commitOrPushGit(
+	params: CommitOrPushParams,
+): Promise<CommitOrPushResult> {
 	const client = await createBackendClient();
 
-	return client.request<CommitOrPushResult>("workspace.git.commitOrPush", params);
+	return client.request<CommitOrPushResult>(
+		"workspace.git.commitOrPush",
+		params,
+	);
 }
 
 export async function listWorkspaceGitBranches(params: {
@@ -83,7 +93,10 @@ export async function listWorkspaceGitBranches(params: {
 }): Promise<WorkspaceGitBranchesResult> {
 	const client = await createBackendClient();
 
-	return client.request<WorkspaceGitBranchesResult>("workspace.git.branches.list", params);
+	return client.request<WorkspaceGitBranchesResult>(
+		"workspace.git.branches.list",
+		params,
+	);
 }
 
 export async function checkoutWorkspaceGitBranch(params: {
@@ -93,7 +106,10 @@ export async function checkoutWorkspaceGitBranch(params: {
 }): Promise<WorkspaceGitBranchOperationResult> {
 	const client = await createBackendClient();
 
-	return client.request<WorkspaceGitBranchOperationResult>("workspace.git.branch.checkout", params);
+	return client.request<WorkspaceGitBranchOperationResult>(
+		"workspace.git.branch.checkout",
+		params,
+	);
 }
 
 export async function createWorkspaceGitBranch(params: {
@@ -104,5 +120,8 @@ export async function createWorkspaceGitBranch(params: {
 }): Promise<WorkspaceGitBranchOperationResult> {
 	const client = await createBackendClient();
 
-	return client.request<WorkspaceGitBranchOperationResult>("workspace.git.branch.create", params);
+	return client.request<WorkspaceGitBranchOperationResult>(
+		"workspace.git.branch.create",
+		params,
+	);
 }

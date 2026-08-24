@@ -12,7 +12,7 @@ export {
 	matchesShortcutKeyboardEvent,
 	normalizeKeyboardShortcutOverrides,
 	normalizeShortcutBinding,
-	shortcutBindingFromKeyboardEvent
+	shortcutBindingFromKeyboardEvent,
 } from "../../../../contracts/keyboard-shortcuts";
 
 export type {
@@ -20,5 +20,5 @@ export type {
 	ShortcutCommandId,
 	ShortcutDefinition,
 	ShortcutKeyboardEvent,
-	ShortcutPlatform
+	ShortcutPlatform,
 } from "../../../../contracts/keyboard-shortcuts";
