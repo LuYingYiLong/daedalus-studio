@@ -1,12 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Empty, Flex, Input, Menu, Modal, Popconfirm, Select, Space, Tag, Tooltip, Typography } from "antd";
+import {
+	Button,
+	Empty,
+	Flex,
+	Input,
+	Menu,
+	Modal,
+	Popconfirm,
+	Select,
+	Space,
+	Tag,
+	Tooltip,
+	Typography,
+} from "antd";
 import type { MenuProps } from "antd";
-import { deleteArchivedSession, deleteSessionWorktree, fetchArchivedSessions, restoreArchivedSession } from "@/platform/rpc/session-api";
+import {
+	deleteArchivedSession,
+	deleteSessionWorktree,
+	fetchArchivedSessions,
+	restoreArchivedSession,
+} from "@/platform/rpc/session-api";
 import { fetchWorkspaces } from "@/platform/rpc/workspace-api";
 import type { SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
-import { createDefaultSessionLayout, listTerminalRuntimeIds } from "@/domain/session/session-layout";
+import {
+	createDefaultSessionLayout,
+	listTerminalRuntimeIds,
+} from "@/domain/session/session-layout";
 import { Icon } from "@/assets/icons";
 import styles from "./ArchivedSessionSettingsPage.module.css";
 
@@ -36,16 +57,30 @@ type ArchivedSessionLabels = {
 };
 
 function getWorkspaceFilterKey(session: SessionMetadata): string {
-	return session.worktree?.sourceWorkspaceId ?? session.workspaceId ?? UNKNOWN_WORKSPACE_KEY;
+	return (
+		session.worktree?.sourceWorkspaceId ??
+		session.workspaceId ??
+		UNKNOWN_WORKSPACE_KEY
+	);
 }
 
-function getWorkspaceLabel(session: SessionMetadata, workspacesById: Map<string, WorkspaceConfig>, noWorkspaceLabel: string): string {
-	const workspaceId: string | undefined = session.worktree?.sourceWorkspaceId ?? session.workspaceId;
+function getWorkspaceLabel(
+	session: SessionMetadata,
+	workspacesById: Map<string, WorkspaceConfig>,
+	noWorkspaceLabel: string,
+): string {
+	const workspaceId: string | undefined =
+		session.worktree?.sourceWorkspaceId ?? session.workspaceId;
 	if (workspaceId === undefined) {
 		return noWorkspaceLabel;
 	}
 
-	return session.worktree?.sourceWorkspaceName ?? session.workspaceName ?? workspacesById.get(workspaceId)?.name ?? workspaceId;
+	return (
+		session.worktree?.sourceWorkspaceName ??
+		session.workspaceName ??
+		workspacesById.get(workspaceId)?.name ??
+		workspaceId
+	);
 }
 
 function formatArchivedAt(session: SessionMetadata): string {
@@ -57,15 +92,32 @@ type CreateArchivedSessionMenuItemOptions = {
 	busySessionId: string | null;
 	busyAction: SessionAction | null;
 	labels: ArchivedSessionLabels;
-	onRestore: (session: SessionMetadata, event: MouseEvent<HTMLElement>) => void;
-	onDelete: (session: SessionMetadata, event?: MouseEvent<HTMLElement>) => void;
-	onDeleteWorktree: (session: SessionMetadata, event?: MouseEvent<HTMLElement>) => void;
+	onRestore: (
+		session: SessionMetadata,
+		event: MouseEvent<HTMLElement>,
+	) => void;
+	onDelete: (
+		session: SessionMetadata,
+		event?: MouseEvent<HTMLElement>,
+	) => void;
+	onDeleteWorktree: (
+		session: SessionMetadata,
+		event?: MouseEvent<HTMLElement>,
+	) => void;
 };
 
-function createArchivedSessionMenuItem(session: SessionMetadata, options: CreateArchivedSessionMenuItemOptions): ArchivedSessionMenuItem {
-	const isRestoring: boolean = options.busySessionId === session.id && options.busyAction === "restore";
-	const isDeleting: boolean = options.busySessionId === session.id && options.busyAction === "delete";
-	const isDeletingWorktree: boolean = options.busySessionId === session.id && options.busyAction === "delete-worktree";
+function createArchivedSessionMenuItem(
+	session: SessionMetadata,
+	options: CreateArchivedSessionMenuItemOptions,
+): ArchivedSessionMenuItem {
+	const isRestoring: boolean =
+		options.busySessionId === session.id &&
+		options.busyAction === "restore";
+	const isDeleting: boolean =
+		options.busySessionId === session.id && options.busyAction === "delete";
+	const isDeletingWorktree: boolean =
+		options.busySessionId === session.id &&
+		options.busyAction === "delete-worktree";
 
 	return {
 		key: `archived:${session.id}`,
@@ -86,12 +138,28 @@ function createArchivedSessionMenuItem(session: SessionMetadata, options: Create
 					{session.worktree !== undefined ? (
 						<Popconfirm
 							title={options.labels.deleteWorktree}
-							description={options.labels.deleteConfirmDescription}
+							description={
+								options.labels.deleteConfirmDescription
+							}
 							okText={options.labels.deleteWorktree}
-							okButtonProps={{ danger: true, loading: isDeletingWorktree }}
-							onConfirm={(): void => options.onDeleteWorktree(session)}
+							okButtonProps={{
+								danger: true,
+								loading: isDeletingWorktree,
+							}}
+							onConfirm={(): void =>
+								options.onDeleteWorktree(session)
+							}
 						>
-							<Button type="text" size="small" danger={true} loading={isDeletingWorktree} disabled={options.busySessionId !== null && !isDeletingWorktree}>
+							<Button
+								type="text"
+								size="small"
+								danger={true}
+								loading={isDeletingWorktree}
+								disabled={
+									options.busySessionId !== null &&
+									!isDeletingWorktree
+								}
+							>
 								{options.labels.deleteWorktree}
 							</Button>
 						</Popconfirm>
@@ -126,10 +194,16 @@ function createArchivedSessionMenuItem(session: SessionMetadata, options: Create
 							size="small"
 							shape="circle"
 							danger={true}
-							aria-label={options.labels.deleteAria(session.title)}
+							aria-label={options.labels.deleteAria(
+								session.title,
+							)}
 							icon={<Icon name="remove" width={16} height={16} />}
 							loading={isDeleting}
-							disabled={(options.busySessionId !== null && !isDeleting) || session.worktree !== undefined}
+							disabled={
+								(options.busySessionId !== null &&
+									!isDeleting) ||
+								session.worktree !== undefined
+							}
 							onClick={(event: MouseEvent<HTMLElement>): void => {
 								event.preventDefault();
 								event.stopPropagation();
@@ -140,6 +214,44 @@ function createArchivedSessionMenuItem(session: SessionMetadata, options: Create
 			</span>
 		),
 	};
+}
+
+function createArchivedSessionMenuGroups(
+	sessions: SessionMetadata[],
+	options: CreateArchivedSessionMenuItemOptions,
+): ArchivedSessionMenuItems {
+	const groups: Map<string, { label: string; sessions: SessionMetadata[] }> =
+		new Map();
+
+	for (const session of sessions) {
+		const workspaceKey: string = getWorkspaceFilterKey(session);
+		const existingGroup = groups.get(workspaceKey);
+		if (existingGroup !== undefined) {
+			existingGroup.sessions.push(session);
+			continue;
+		}
+
+		groups.set(workspaceKey, {
+			label: getWorkspaceLabel(
+				session,
+				options.workspacesById,
+				options.labels.noWorkspace,
+			),
+			sessions: [session],
+		});
+	}
+
+	return Array.from(groups.entries()).map(
+		([workspaceKey, group]): ArchivedSessionMenuItem => ({
+			type: "group",
+			key: `archived-workspace:${workspaceKey}`,
+			label: group.label,
+			children: group.sessions.map(
+				(session: SessionMetadata): ArchivedSessionMenuItem =>
+					createArchivedSessionMenuItem(session, options),
+			),
+		}),
+	);
 }
 
 function ArchivedSessionSettingsPage(): React.JSX.Element | null {
@@ -163,24 +275,34 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 			all: t("settings.archivedSessions.filters.all"),
 			delete: t("settings.archivedSessions.actions.delete"),
 			deleteAll: t("settings.archivedSessions.actions.deleteAll"),
-			deleteConfirmDescription: t("settings.archivedSessions.confirm.deleteSession.description"),
-			deleteConfirmTitle: t("settings.archivedSessions.confirm.deleteSession.title"),
+			deleteConfirmDescription: t(
+				"settings.archivedSessions.confirm.deleteSession.description",
+			),
+			deleteConfirmTitle: t(
+				"settings.archivedSessions.confirm.deleteSession.title",
+			),
 			failedDeleteAll: t("settings.archivedSessions.errors.deleteAll"),
-			failedDeleteSession: t("settings.archivedSessions.errors.deleteSession"),
+			failedDeleteSession: t(
+				"settings.archivedSessions.errors.deleteSession",
+			),
 			failedLoad: t("settings.archivedSessions.errors.load"),
 			failedRestore: t("settings.archivedSessions.errors.restore"),
 			deleteWorktree: t("workspaceTree.actions.deleteWorktree"),
 			failedDeleteWorktree: t("workspaceTree.errors.deleteWorktree"),
 			noWorkspace: t("settings.archivedSessions.filters.noWorkspace"),
 			restore: t("settings.archivedSessions.actions.restore"),
-			deleteAria: (sessionTitle: string): string => t("settings.archivedSessions.aria.delete", { sessionTitle }),
-			restoreAria: (sessionTitle: string): string => t("settings.archivedSessions.aria.restore", { sessionTitle })
+			deleteAria: (sessionTitle: string): string =>
+				t("settings.archivedSessions.aria.delete", { sessionTitle }),
+			restoreAria: (sessionTitle: string): string =>
+				t("settings.archivedSessions.aria.restore", { sessionTitle }),
 		};
 	}, [t]);
 
 	useEffect((): (() => void) => {
 		return window.electronAPI.sessionCatalog.onChanged((): void => {
-			setCatalogRevision((currentRevision: number): number => currentRevision + 1);
+			setCatalogRevision(
+				(currentRevision: number): number => currentRevision + 1,
+			);
 		});
 	}, []);
 
@@ -249,7 +371,8 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 		const seenWorkspaceIds: Set<string> = new Set<string>();
 
 		for (const session of archivedSessions) {
-			const workspaceId: string | undefined = session.worktree?.sourceWorkspaceId ?? session.workspaceId;
+			const workspaceId: string | undefined =
+				session.worktree?.sourceWorkspaceId ?? session.workspaceId;
 			if (workspaceId === undefined) {
 				continue;
 			}
@@ -260,59 +383,95 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 			options.push({
 				label:
 					workspacesById.get(workspaceId)?.name ??
-					archivedSessions.find((session: SessionMetadata): boolean => getWorkspaceFilterKey(session) === workspaceId)?.worktree?.sourceWorkspaceName ??
-					archivedSessions.find((session: SessionMetadata): boolean => getWorkspaceFilterKey(session) === workspaceId)?.workspaceName ??
+					archivedSessions.find(
+						(session: SessionMetadata): boolean =>
+							getWorkspaceFilterKey(session) === workspaceId,
+					)?.worktree?.sourceWorkspaceName ??
+					archivedSessions.find(
+						(session: SessionMetadata): boolean =>
+							getWorkspaceFilterKey(session) === workspaceId,
+					)?.workspaceName ??
 					workspaceId,
-				value: workspaceId
+				value: workspaceId,
 			});
 		}
 
-		if (archivedSessions.some((session: SessionMetadata): boolean => getWorkspaceFilterKey(session) === UNKNOWN_WORKSPACE_KEY)) {
+		if (
+			archivedSessions.some(
+				(session: SessionMetadata): boolean =>
+					getWorkspaceFilterKey(session) === UNKNOWN_WORKSPACE_KEY,
+			)
+		) {
 			options.push({
 				label: labels.noWorkspace,
-				value: UNKNOWN_WORKSPACE_KEY
+				value: UNKNOWN_WORKSPACE_KEY,
 			});
 		}
 
 		return options;
 	}, [archivedSessions, labels.all, labels.noWorkspace, workspacesById]);
 
-	const filteredSessions: SessionMetadata[] = useMemo((): SessionMetadata[] => {
-		const normalizedSearch: string = searchText.trim().toLowerCase();
+	const filteredSessions: SessionMetadata[] =
+		useMemo((): SessionMetadata[] => {
+			const normalizedSearch: string = searchText.trim().toLowerCase();
 
-		return archivedSessions.filter((session: SessionMetadata): boolean => {
-			if (workspaceFilter !== ALL_WORKSPACES_KEY && getWorkspaceFilterKey(session) !== workspaceFilter) {
-				return false;
-			}
-			if (normalizedSearch.length === 0) {
-				return true;
-			}
+			return archivedSessions.filter(
+				(session: SessionMetadata): boolean => {
+					if (
+						workspaceFilter !== ALL_WORKSPACES_KEY &&
+						getWorkspaceFilterKey(session) !== workspaceFilter
+					) {
+						return false;
+					}
+					if (normalizedSearch.length === 0) {
+						return true;
+					}
 
-			return session.title.toLowerCase().includes(normalizedSearch);
-		});
-	}, [archivedSessions, searchText, workspaceFilter]);
+					return session.title
+						.toLowerCase()
+						.includes(normalizedSearch);
+				},
+			);
+		}, [archivedSessions, searchText, workspaceFilter]);
 
-	const menuItems: ArchivedSessionMenuItems = useMemo((): ArchivedSessionMenuItems => {
-		return filteredSessions.map((session: SessionMetadata): ArchivedSessionMenuItem => {
-			return createArchivedSessionMenuItem(session, {
+	const menuItems: ArchivedSessionMenuItems =
+		useMemo((): ArchivedSessionMenuItems => {
+			return createArchivedSessionMenuGroups(filteredSessions, {
 				workspacesById,
 				busySessionId,
 				busyAction,
 				labels,
-				onRestore: (targetSession: SessionMetadata, event: MouseEvent<HTMLElement>): void => {
+				onRestore: (
+					targetSession: SessionMetadata,
+					event: MouseEvent<HTMLElement>,
+				): void => {
 					void handleRestoreSession(targetSession, event);
 				},
-				onDelete: (targetSession: SessionMetadata, event?: MouseEvent<HTMLElement>): void => {
+				onDelete: (
+					targetSession: SessionMetadata,
+					event?: MouseEvent<HTMLElement>,
+				): void => {
 					void handleDeleteSession(targetSession, event);
 				},
-				onDeleteWorktree: (targetSession: SessionMetadata, event?: MouseEvent<HTMLElement>): void => {
+				onDeleteWorktree: (
+					targetSession: SessionMetadata,
+					event?: MouseEvent<HTMLElement>,
+				): void => {
 					void handleDeleteWorktree(targetSession, event);
-				}
+				},
 			});
-		});
-	}, [busyAction, busySessionId, filteredSessions, labels, workspacesById]);
+		}, [
+			busyAction,
+			busySessionId,
+			filteredSessions,
+			labels,
+			workspacesById,
+		]);
 
-	async function handleRestoreSession(session: SessionMetadata, event: MouseEvent<HTMLElement>): Promise<void> {
+	async function handleRestoreSession(
+		session: SessionMetadata,
+		event: MouseEvent<HTMLElement>,
+	): Promise<void> {
 		event.preventDefault();
 		event.stopPropagation();
 
@@ -388,7 +547,10 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 		}
 	}
 
-	async function handleDeleteWorktree(session: SessionMetadata, event?: MouseEvent<HTMLElement>): Promise<void> {
+	async function handleDeleteWorktree(
+		session: SessionMetadata,
+		event?: MouseEvent<HTMLElement>,
+	): Promise<void> {
 		event?.preventDefault();
 		event?.stopPropagation();
 		if (busySessionId !== null || isDeletingAll) {
@@ -400,20 +562,35 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 			setErrorMessage(null);
 			const layouts = await window.electronAPI.sessionLayout.getAll();
 			const layout = layouts[session.id] ?? createDefaultSessionLayout();
-			for (const terminalId of listTerminalRuntimeIds(session.id, layout)) {
-				const terminalState = await window.electronAPI.terminal.getState({
-					terminalId
-				});
+			for (const terminalId of listTerminalRuntimeIds(
+				session.id,
+				layout,
+			)) {
+				const terminalState =
+					await window.electronAPI.terminal.getState({
+						terminalId,
+					});
 				if (terminalState?.running === true) {
-					throw new Error(t("workspaceTree.errors.worktreeTerminalActive"));
+					throw new Error(
+						t("workspaceTree.errors.worktreeTerminalActive"),
+					);
 				}
 			}
 			const result = await deleteSessionWorktree(session.id);
 			setArchivedSessions((currentSessions): SessionMetadata[] =>
-				currentSessions.map((currentSession): SessionMetadata => (currentSession.id === result.metadata.id ? result.metadata : currentSession))
+				currentSessions.map(
+					(currentSession): SessionMetadata =>
+						currentSession.id === result.metadata.id
+							? result.metadata
+							: currentSession,
+				),
 			);
 		} catch (error: unknown) {
-			setErrorMessage(error instanceof Error ? error.message : labels.failedDeleteWorktree);
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: labels.failedDeleteWorktree,
+			);
 		} finally {
 			setBusySessionId(null);
 			setBusyAction(null);
@@ -425,7 +602,12 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 			setDeleteAllOpen(false);
 			return;
 		}
-		if (filteredSessions.some((session: SessionMetadata): boolean => session.worktree !== undefined)) {
+		if (
+			filteredSessions.some(
+				(session: SessionMetadata): boolean =>
+					session.worktree !== undefined,
+			)
+		) {
 			setErrorMessage(labels.failedDeleteAll);
 			setDeleteAllOpen(false);
 			return;
@@ -489,17 +671,36 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 					<Input
 						allowClear={true}
 						prefix={<Icon name="search" />}
-						placeholder={t("settings.archivedSessions.searchPlaceholder")}
+						placeholder={t(
+							"settings.archivedSessions.searchPlaceholder",
+						)}
 						value={searchText}
 						className={styles.searchBox}
-						onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setSearchText(event.target.value)}
+						onChange={(
+							event: React.ChangeEvent<HTMLInputElement>,
+						): void => setSearchText(event.target.value)}
 					/>
-					<Select className={styles.selectBox} value={workspaceFilter} options={workspaceOptions} onChange={(value: string): void => setWorkspaceFilter(value)} />
+					<Select
+						className={styles.selectBox}
+						value={workspaceFilter}
+						options={workspaceOptions}
+						onChange={(value: string): void =>
+							setWorkspaceFilter(value)
+						}
+					/>
 					<Button
 						color="danger"
 						variant="solid"
 						icon={<Icon name="remove" />}
-						disabled={filteredSessions.length === 0 || filteredSessions.some((session: SessionMetadata): boolean => session.worktree !== undefined) || isLoading || busySessionId !== null}
+						disabled={
+							filteredSessions.length === 0 ||
+							filteredSessions.some(
+								(session: SessionMetadata): boolean =>
+									session.worktree !== undefined,
+							) ||
+							isLoading ||
+							busySessionId !== null
+						}
 						onClick={(): void => setDeleteAllOpen(true)}
 					>
 						{labels.deleteAll}
