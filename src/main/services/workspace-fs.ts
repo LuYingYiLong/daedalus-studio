@@ -4,6 +4,7 @@ import { execFile, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { TextDecoder } from "node:util";
+import { createWorkspaceMediaUrl, getWorkspaceMediaDescriptor, getWorkspaceMediaMaxByteSize, type WorkspaceMediaUrlResult } from "./workspace-media";
 
 export type WorkspaceFsEntry = {
 	name: string;
@@ -70,6 +71,7 @@ export type WorkspaceFsReadTextFileResult = WorkspaceFsFileRevision & {
 	relativePath: string;
 	content?: string;
 };
+export type WorkspaceFsCreateMediaUrlResult = WorkspaceMediaUrlResult;
 export type WorkspaceFsWriteTextFileParams = WorkspaceFsFileParams & {
 	content: string;
 	expectedSha256: string;
@@ -254,6 +256,32 @@ export async function readWorkspaceTextFile(params: WorkspaceFsFileParams): Prom
 
 export async function statWorkspaceFile(params: WorkspaceFsFileParams): Promise<WorkspaceFsReadTextFileResult> {
 	return inspectWorkspaceTextFile(params, false);
+}
+
+export async function createWorkspaceMediaFileUrl(params: WorkspaceFsFileParams): Promise<WorkspaceFsCreateMediaUrlResult> {
+	const resolvedFile = await resolveWorkspaceFile(params);
+	const fileStats = await stat(resolvedFile.target);
+	const descriptor = getWorkspaceMediaDescriptor(resolvedFile.relativePath);
+	const baseResult: WorkspaceFsCreateMediaUrlResult = {
+		supported: false,
+		byteSize: fileStats.size,
+		modifiedAtMs: fileStats.mtimeMs,
+		relativePath: resolvedFile.relativePath
+	};
+	if (descriptor === null || fileStats.size > getWorkspaceMediaMaxByteSize()) return baseResult;
+	return {
+		...baseResult,
+		supported: true,
+		kind: descriptor.kind,
+		mimeType: descriptor.mimeType,
+		url: createWorkspaceMediaUrl({
+			target: resolvedFile.target,
+			relativePath: resolvedFile.relativePath,
+			descriptor,
+			byteSize: fileStats.size,
+			modifiedAtMs: fileStats.mtimeMs
+		})
+	};
 }
 
 export async function writeWorkspaceTextFile(params: WorkspaceFsWriteTextFileParams): Promise<WorkspaceFsWriteTextFileResult> {
@@ -947,6 +975,9 @@ export function registerWorkspaceFsIpc(): void {
 	});
 	ipcMain.handle("workspace-fs:stat-file", async (_event, params: WorkspaceFsFileParams): Promise<WorkspaceFsReadTextFileResult> => {
 		return statWorkspaceFile(params);
+	});
+	ipcMain.handle("workspace-fs:create-media-url", async (_event, params: WorkspaceFsFileParams): Promise<WorkspaceFsCreateMediaUrlResult> => {
+		return createWorkspaceMediaFileUrl(params);
 	});
 	ipcMain.handle("workspace-fs:write-text-file", async (_event, params: WorkspaceFsWriteTextFileParams): Promise<WorkspaceFsWriteTextFileResult> => {
 		return writeWorkspaceTextFile(params);

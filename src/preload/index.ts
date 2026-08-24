@@ -590,6 +590,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		statFile: (params: { workspaceRoot: string; filePath: string }): Promise<{ readable: boolean; binary: boolean; oversized: boolean; byteSize: number; modifiedAtMs: number; sha256: string; relativePath: string }> => {
 			return ipcRenderer.invoke("workspace-fs:stat-file", params);
 		},
+		createMediaUrl: (params: { workspaceRoot: string; filePath: string }): Promise<{ supported: boolean; kind?: "image" | "audio" | "video"; mimeType?: string; url?: string; byteSize: number; modifiedAtMs: number; relativePath: string }> => {
+			return ipcRenderer.invoke("workspace-fs:create-media-url", params);
+		},
 		writeTextFile: (params: { workspaceRoot: string; filePath: string; content: string; expectedSha256: string; expectedModifiedAtMs: number }): Promise<{ saved: true; byteSize: number; modifiedAtMs: number; sha256: string; relativePath: string }> => {
 			return ipcRenderer.invoke("workspace-fs:write-text-file", params);
 		},

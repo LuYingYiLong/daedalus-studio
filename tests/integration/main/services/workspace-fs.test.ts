@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtempSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, getPickedWorkspaceDirectory, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceFile, openWorkspaceLaunchTarget, readWorkspaceTextFile, revealWorkspaceFile, searchWorkspaceEntries, statWorkspaceFile, writeWorkspaceTextFile } from "@main/services/workspace-fs";
+import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, createWorkspaceMediaFileUrl, getPickedWorkspaceDirectory, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceFile, openWorkspaceLaunchTarget, readWorkspaceTextFile, revealWorkspaceFile, searchWorkspaceEntries, statWorkspaceFile, writeWorkspaceTextFile } from "@main/services/workspace-fs";
 
 describe("workspace-fs", () => {
 	it("reads UTF-8 text with a stable fingerprint and rejects binary or oversized editor input", async () => {
@@ -20,6 +20,19 @@ describe("workspace-fs", () => {
 		expect("content" in statResult).toBe(false);
 		await expect(readWorkspaceTextFile({ workspaceRoot: root, filePath: "binary.dat" })).resolves.toMatchObject({ readable: false, binary: true });
 		await expect(readWorkspaceTextFile({ workspaceRoot: root, filePath: "large.txt" })).resolves.toMatchObject({ readable: false, oversized: true });
+	});
+
+	it("creates scoped media URLs for supported files without exposing their filesystem paths", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		await writeFile(join(root, "preview.mp4"), Buffer.from([0, 1, 2, 3]));
+		await writeFile(join(root, "notes.bin"), Buffer.from([0, 1, 2, 3]));
+
+		const media = await createWorkspaceMediaFileUrl({ workspaceRoot: root, filePath: "preview.mp4" });
+		expect(media).toMatchObject({ supported: true, kind: "video", mimeType: "video/mp4", relativePath: "preview.mp4", byteSize: 4 });
+		expect(media.url).toMatch(/^daedalus-media:\/\/file\/[^/]+\/preview\.mp4$/u);
+		expect(media.url).not.toContain(root);
+		await expect(createWorkspaceMediaFileUrl({ workspaceRoot: root, filePath: "notes.bin" })).resolves.toMatchObject({ supported: false });
+		await expect(createWorkspaceMediaFileUrl({ workspaceRoot: root, filePath: "../preview.mp4" })).rejects.toThrow();
 	});
 
 	it("writes text atomically and refuses stale file revisions", async () => {

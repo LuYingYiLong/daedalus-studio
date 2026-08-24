@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, shell, type BrowserWindowConstructorOptions, type WebContents } from "electron";
+import { app, BrowserWindow, ipcMain, nativeTheme, protocol, shell, type BrowserWindowConstructorOptions, type WebContents } from "electron";
 import { join } from "node:path";
 import { backendManager } from "./services/backend-manager";
 import { backendBootstrapService } from "./services/backend-bootstrap";
@@ -33,11 +33,22 @@ import { BrowserService } from "./services/browser/browser-service";
 import { BrowserDataStore } from "./services/browser/browser-data-store";
 import { BrowserPasswordStore } from "./services/browser/browser-password-store";
 import { scheduledTaskService } from "./services/scheduled-tasks/service";
+import { registerWorkspaceMediaProtocol } from "./services/workspace-media";
 
 const logger = createLogger("main");
 const MEMORY_DIAGNOSTICS_INTERVAL_MS: number = 30_000;
 const MEMORY_DIAGNOSTICS_ENABLED: boolean = !app.isPackaged || process.env.DAEDALUS_MEMORY_DIAGNOSTICS === "1";
 let memoryDiagnosticsTimer: ReturnType<typeof setInterval> | null = null;
+
+protocol.registerSchemesAsPrivileged([{
+	scheme: "daedalus-media",
+	privileges: {
+		standard: true,
+		secure: true,
+		supportFetchAPI: true,
+		stream: true
+	}
+}]);
 
 backendManager.registerIpc();
 backendBootstrapService.registerIpc();
@@ -721,6 +732,7 @@ if (!hasSingleInstanceLock) {
 	});
 
 	void app.whenReady().then(async (): Promise<void> => {
+		registerWorkspaceMediaProtocol();
 		await publishStudioExecutableRecord().catch((): void => {
 			// Bridge launch metadata is a convenience; failure must not block Studio startup.
 		});

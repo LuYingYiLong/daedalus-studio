@@ -538,6 +538,15 @@ declare global {
 				sha256: string;
 				relativePath: string;
 			}>;
+			createMediaUrl: (params: { workspaceRoot: string; filePath: string }) => Promise<{
+				supported: boolean;
+				kind?: "image" | "audio" | "video";
+				mimeType?: string;
+				url?: string;
+				byteSize: number;
+				modifiedAtMs: number;
+				relativePath: string;
+			}>;
 			writeTextFile: (params: { workspaceRoot: string; filePath: string; content: string; expectedSha256: string; expectedModifiedAtMs: number }) => Promise<{
 				saved: true;
 				byteSize: number;

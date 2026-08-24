@@ -910,6 +910,7 @@
 		"binary": "This file is not editable UTF-8 text",
 		"oversized": "Files larger than 2 MiB cannot be edited in the Files panel",
 		"openExternal": "Open in external app",
+		"mediaPlaybackError": "This media could not be played in the built-in preview. Try opening it externally.",
 		"showSidebar": "Show file sidebar",
 		"hideSidebar": "Hide file sidebar",
 		"conflict": "The file changed outside Studio. Reload the disk version or save the current draft as a new file.",

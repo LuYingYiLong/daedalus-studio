@@ -24,6 +24,9 @@ export type FileBuffer = {
 	saving: boolean;
 	conflict: boolean;
 	error: string | null;
+	mediaUrl?: string;
+	mediaMimeType?: string;
+	mediaKind?: "image" | "audio" | "video";
 };
 
 type MonacoApi = typeof MonacoNamespace;

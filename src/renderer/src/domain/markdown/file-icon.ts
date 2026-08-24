@@ -44,13 +44,21 @@ const LANGUAGE_FILE_EXTENSIONS: Readonly<Record<string, string>> = {
 };
 
 export function normalizeHighlightLanguage(language: string): string {
-	const normalized: string = language.trim().toLowerCase().replace(/^hljs-/u, "");
+	const normalized: string = language
+		.trim()
+		.toLowerCase()
+		.replace(/^hljs-/u, "");
 	return HIGHLIGHT_LANGUAGE_ALIASES[normalized] ?? normalized;
 }
 
 export function getFileExtensionForLanguage(language: string): string {
 	const normalized: string = normalizeHighlightLanguage(language);
-	return LANGUAGE_FILE_EXTENSIONS[normalized] ?? (normalized.length > 0 && /^[a-z0-9]+$/u.test(normalized) ? normalized : "txt");
+	return (
+		LANGUAGE_FILE_EXTENSIONS[normalized] ??
+		(normalized.length > 0 && /^[a-z0-9]+$/u.test(normalized)
+			? normalized
+			: "txt")
+	);
 }
 
 function getPathExtension(path: string | undefined): string {
@@ -134,6 +142,36 @@ export function getFileIconName(path: string | undefined): string {
 			return "toml";
 		case "xml":
 			return "xml";
+		case "aac":
+		case "flac":
+		case "m4a":
+		case "mp3":
+		case "oga":
+		case "ogg":
+		case "opus":
+		case "wav":
+		case "m4v":
+		case "mov":
+		case "mp4":
+		case "ogv":
+		case "webm":
+			return "file-media";
+		case "svif":
+		case "gif":
+		case "jpeg":
+		case "jpg":
+		case "png":
+		case "webp":
+			return "image";
+		case "r":
+			return "r";
+		case "vb":
+			return "visual-basic";
+		case "scala":
+		case "sc":
+			return "scala";
+		case "zig":
+			return "zig";
 		default:
 			return "file";
 	}

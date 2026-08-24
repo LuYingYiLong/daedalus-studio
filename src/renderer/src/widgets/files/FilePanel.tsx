@@ -10,6 +10,7 @@ import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import type { AdditionalContextItem, WorkspaceConfig, WorkspaceSourceFolder } from "@/platform/rpc/types";
 import { createContextId } from "@/features/workspace/controllers/context-helpers";
 import MonacoFileEditor, { type FileBuffer } from "./MonacoFileEditor";
+import FileMediaPreview from "./FileMediaPreview";
 import { FILE_RUNTIME_BUFFERS } from "./file-runtime-buffers";
 import styles from "./FilePanel.module.css";
 
@@ -263,6 +264,7 @@ export function FilePanel({
 		setBuffers((current) => ({ ...current, [tab.key]: { ...(current[tab.key] ?? createEmptyBuffer()), loading: true, error: null } }));
 		try {
 			const result = await window.electronAPI.workspaceFs.readTextFile({ workspaceRoot: sourceFolder.path, filePath: tab.relativePath });
+			const media = result.readable ? null : await window.electronAPI.workspaceFs.createMediaUrl({ workspaceRoot: sourceFolder.path, filePath: tab.relativePath });
 			const content: string = result.content ?? "";
 			const next: FileBuffer = {
 				content,
@@ -276,7 +278,10 @@ export function FilePanel({
 				loading: false,
 				saving: false,
 				conflict: false,
-				error: null
+				error: null,
+				...(media?.supported && media.url !== undefined && media.kind !== undefined && media.mimeType !== undefined
+					? { mediaUrl: media.url, mediaKind: media.kind, mediaMimeType: media.mimeType }
+					: {})
 			};
 			if (!layoutRef.current.tabs.some((candidate: FileTabPreferences): boolean => candidate.key === tab.key)) return;
 			RUNTIME_BUFFERS.set(runtimeKey, next);
@@ -672,7 +677,23 @@ export function FilePanel({
 				<Splitter onResize={handleSplitterResize} onResizeEnd={handleSplitterResizeEnd}>
 					<Splitter.Panel min={`${FILE_PANEL_MIN_EDITOR_SPLIT}%`} size={layout.sidebarOpen ? `${editorSplitSize}%` : "100%"}>
 						<div className={styles.editorPane}>
-							{activeTab === null ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("files.noFileSelected")} /> : activeBuffer?.loading ? <Typography.Text type="secondary">{t("files.loading")}</Typography.Text> : activeBuffer?.error !== null && activeBuffer?.error !== undefined ? <Alert type="error" showIcon message={activeBuffer.error} /> : activeBuffer?.readable !== true ? (
+							{activeTab === null ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("files.noFileSelected")} /> : activeBuffer?.loading ? <Typography.Text type="secondary">{t("files.loading")}</Typography.Text> : activeBuffer?.error !== null && activeBuffer?.error !== undefined ? <Alert type="error" showIcon message={activeBuffer.error} /> : activeBuffer?.mediaUrl !== undefined && activeBuffer.mediaKind !== undefined && activeBuffer.mediaMimeType !== undefined ? (
+								<FileMediaPreview
+									url={activeBuffer.mediaUrl}
+									kind={activeBuffer.mediaKind}
+									mimeType={activeBuffer.mediaMimeType}
+									fileName={getFileName(activeTab.relativePath)}
+									onOpenExternal={(): void => {
+										const entry: WorkspaceFsEntry = {
+											name: getFileName(activeTab.relativePath),
+											relativePath: activeTab.relativePath,
+											resourcePath: `res://${activeTab.relativePath}`,
+											kind: "file"
+										};
+										void openWith(entry, workspaceLaunchTargetId);
+									}}
+								/>
+							) : activeBuffer?.readable !== true ? (
 								<Empty
 									description={
 										activeBuffer?.oversized ? t("files.oversized") : t("files.binary")

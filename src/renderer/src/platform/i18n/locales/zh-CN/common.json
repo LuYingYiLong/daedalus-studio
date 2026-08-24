@@ -908,6 +908,7 @@
 		"binary": "该文件不是可编辑的 UTF-8 文本文件",
 		"oversized": "文件超过 2 MiB，无法在文件面板中编辑",
 		"openExternal": "在外部应用中打开",
+		"mediaPlaybackError": "内置预览无法播放此媒体，请尝试使用外部应用打开。",
 		"showSidebar": "显示文件边栏",
 		"hideSidebar": "隐藏文件边栏",
 		"conflict": "文件已被外部修改。重新加载磁盘版本，或将当前草稿另存为。",
