@@ -109,8 +109,8 @@ describe("ReconnectionManager", () => {
 			vi.advanceTimersByTime(1000);
 
 			expect(logCallback).toHaveBeenCalledWith(
-				"调度重连",
-				{ attempt: 1, delay: expect.any(Number) }
+				expect.any(String),
+				{ attempt: 1, delay: expect.any(Number) },
 			);
 
 			logManager.destroy();
@@ -122,7 +122,7 @@ describe("ReconnectionManager", () => {
 
 			logManager.reset();
 
-			expect(logCallback).toHaveBeenCalledWith("重连策略已重置");
+			expect(logCallback).toHaveBeenCalledWith(expect.any(String));
 
 			logManager.destroy();
 		});

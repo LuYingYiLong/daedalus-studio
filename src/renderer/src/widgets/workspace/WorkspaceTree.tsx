@@ -65,6 +65,12 @@ import {
 	sortWorkspaceSessionsByTreeOrder,
 	type WorkspaceTreeDropPlacement,
 } from "@/domain/workspace/workspace-tree-order";
+import {
+	areStringListsEqual,
+	filterVisibleSessions,
+	getSelectedMenuKeys,
+	getSessionProjectWorkspaceId,
+} from "./workspace-tree-model";
 import styles from "./WorkspaceTree.module.css";
 
 export type WorkspaceTreeProps = {
@@ -200,18 +206,6 @@ function getWorkspaceTreeSwitcherIcon(
 	return (
 		<Icon name={iconName} style={getWorkspaceIconStyle(workspace.color)} />
 	);
-}
-
-function filterVisibleSessions(sessions: SessionMetadata[]): SessionMetadata[] {
-	return sessions.filter(
-		(session: SessionMetadata): boolean => session.temporary !== true,
-	);
-}
-
-function getSessionProjectWorkspaceId(
-	session: SessionMetadata,
-): string | undefined {
-	return session.worktree?.sourceWorkspaceId ?? session.workspaceId;
 }
 
 type CreateSessionMenuItemOptions = {
@@ -891,34 +885,6 @@ function createProjectTreeData(
 						],
 		};
 	});
-}
-
-function getSelectedMenuKeys(
-	selectedSessionId: string | null,
-	selectedWorkspaceId: string | null,
-	fallbackKeys: string[],
-): string[] {
-	if (selectedSessionId !== null) {
-		return [`session:${selectedSessionId}`];
-	}
-
-	if (selectedWorkspaceId !== null) {
-		return [`workspace:${selectedWorkspaceId}`];
-	}
-
-	return fallbackKeys;
-}
-
-function areStringListsEqual(
-	left: readonly string[],
-	right: readonly string[],
-): boolean {
-	return (
-		left.length === right.length &&
-		left.every(
-			(value: string, index: number): boolean => value === right[index],
-		)
-	);
 }
 
 function WorkspaceTree({
@@ -2415,6 +2381,7 @@ function WorkspaceTree({
 						className={styles.sectionAddButton}
 						icon={<Icon name="add" />}
 						aria-label={labels.newProject}
+						data-studio-new-project="true"
 						onClick={(event: MouseEvent<HTMLElement>): void => {
 							event.preventDefault();
 							event.stopPropagation();
@@ -2544,7 +2511,7 @@ function WorkspaceTree({
 	}, [selectedSessionId, selectedWorkspaceId]);
 
 	return (
-		<div className={styles.workspaceTreeRegion}>
+		<div className={styles.workspaceTreeRegion} data-studio-workspace-tree="true">
 			{messageContextHolder}
 
 			{workspaceError !== null ? (

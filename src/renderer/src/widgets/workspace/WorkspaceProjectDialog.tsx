@@ -244,6 +244,7 @@ export default function WorkspaceProjectDialog({
 			title={workspace === null ? t("workspaceTree.actions.newProject") : t("workspaceTree.actions.editProject")}
 			confirmLoading={saving}
 			okText={t("workspaceTree.projectEditor.confirm")}
+			okButtonProps={{ "data-studio-project-confirm": "true" }}
 			cancelText={t("workspaceTree.projectEditor.cancel")}
 			onOk={(): void => void handleSave()}
 			onCancel={(): void => {

@@ -667,7 +667,7 @@ export function MonacoFileEditor({
 					aria-hidden="true"
 				/>
 			</Dropdown> : null}
-			<div ref={editorContainerRef} className={styles.monacoEditor} aria-label={ariaLabel ?? t("files.editorAriaLabel")} />
+			<div ref={editorContainerRef} className={styles.monacoEditor} aria-label={ariaLabel ?? t("files.editorAriaLabel")} data-studio-monaco-editor="true" />
 			{monacoError !== null ? <Alert className={styles.editorError} type="error" showIcon title={monacoError} /> : null}
 			{enableSelectionTools && selection !== null ? <div className={styles.selectionTools} style={{ top: selection.top, left: selection.left }} onMouseDown={(event): void => event.preventDefault()}>
 				{commenting

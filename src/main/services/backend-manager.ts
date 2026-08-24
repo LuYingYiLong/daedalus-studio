@@ -241,7 +241,12 @@ class BackendManager {
 	private connectionInfoPromise: Promise<BackendConnectionInfo> | null = null;
 
 	public constructor() {
-		this.port = app?.isPackaged === true ? PROD_PORT : DEV_PORT;
+		const e2ePort: number = Number(process.env.DAEDALUS_E2E_BACKEND_PORT);
+		this.port = app?.isPackaged === true
+			? PROD_PORT
+			: Number.isInteger(e2ePort) && e2ePort >= 1024 && e2ePort <= 65535
+				? e2ePort
+				: DEV_PORT;
 		this.config = {
 			maxRestartAttempts: MAX_RESTART_ATTEMPTS,
 			restartDelay: RESTART_DELAY,

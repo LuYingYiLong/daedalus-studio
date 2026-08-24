@@ -119,7 +119,10 @@ describe("BackendRpcClient", () => {
 
 			vi.advanceTimersByTime(1000);
 
-			await expect(connectPromise).rejects.toThrow("连接超时");
+			await expect(connectPromise).rejects.toMatchObject({
+				name: "BackendConnectionError",
+				code: "backend_connection_timeout",
+			});
 		});
 
 		it("应支持手动关闭", () => {
@@ -184,9 +187,11 @@ describe("BackendRpcClient", () => {
 
 			simulateClose();
 
-			await expect(requestPromise).rejects.toThrow("连接已关闭");
 			await expect(requestPromise).rejects.toBeInstanceOf(BackendConnectionError);
-			await expect(requestPromise).rejects.toMatchObject({ code: "backend_connection_closed" });
+			await expect(requestPromise).rejects.toMatchObject({
+				name: "BackendConnectionError",
+				code: "backend_connection_closed",
+			});
 		});
 	});
 

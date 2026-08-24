@@ -34,6 +34,7 @@ function HomeWorkspaceSidebar({
 					type="text"
 					block
 					icon={<Icon name="add" />}
+					data-studio-new-session="true"
 					className={styles.createSessionButton}
 					onClick={onNewSession}
 				>
@@ -64,6 +65,7 @@ function HomeWorkspaceSidebar({
 					block
 					className={styles.openSettingsButton}
 					aria-label={t("agentPage.actions.openSettings")}
+					data-studio-open-settings="true"
 					onClick={onOpenSettings}
 				>
 					{t("agentPage.actions.openSettings")}

@@ -1364,6 +1364,7 @@ function Composer({
 	return (
 		<div
 			ref={rootRef}
+			data-studio-composer="true"
 			className={[
 				styles.composerRoot,
 				compact ? styles.composerRootCompact : "",

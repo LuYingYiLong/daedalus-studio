@@ -1482,7 +1482,7 @@ function OnboardingWizard({
 		configuredByStep[currentConfigurableStep];
 
 	return (
-		<main className={styles.root} aria-label={t("onboarding.ariaLabel")}>
+		<main className={styles.root} data-studio-onboarding="true" aria-label={t("onboarding.ariaLabel")}>
 			<div className={styles.shell}>
 				<header className={styles.progressHeader}>
 					<div className={styles.progressMeta}>

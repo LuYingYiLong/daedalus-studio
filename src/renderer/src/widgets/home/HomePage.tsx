@@ -113,6 +113,12 @@ import {
 	type FilePanelLayoutPreferences,
 	type SessionLayoutPreferences,
 } from "@/domain/session/session-layout";
+import {
+	ensureDockTab,
+	getPathBasename,
+	isGodotScenePath,
+	isWorkspaceLaunchTargetId,
+} from "./home-layout-model";
 import BranchActionDialog from "@/widgets/git/BranchActionDialog";
 import CommitActionDialog from "@/widgets/git/CommitActionDialog";
 import CreateBranchDialog from "@/widgets/git/CreateBranchDialog";
@@ -192,27 +198,6 @@ const BOTTOM_DOCK_DEFAULT_SIZE: number = 280;
 const BOTTOM_DOCK_MAX_SIZE: number = 520;
 const BOTTOM_DOCK_CLOSE_THRESHOLD: number = 120;
 const MAX_SELECTED_SEARCH_QUERY_LENGTH: number = 500;
-function ensureDockTab(
-	layout: DockLayoutPreferences,
-	dockId: string,
-	defaultKind: DockPanelKind,
-): DockLayoutPreferences {
-	const firstTab: DockLayoutPreferences["tabs"][number] | undefined =
-		layout.tabs[0];
-	if (firstTab !== undefined) {
-		const activeTabKey: string | null = layout.tabs.some(
-			(tab): boolean => tab.key === layout.activeTabKey,
-		)
-			? layout.activeTabKey
-			: firstTab.key;
-		return activeTabKey === layout.activeTabKey
-			? layout
-			: { ...layout, activeTabKey };
-	}
-	const tab = createDockTab(dockId, defaultKind, 1);
-	return { ...layout, tabs: [tab], activeTabKey: tab.key };
-}
-
 function getSelectedConversationSearchQuery(
 	container: HTMLElement | null,
 ): string | undefined {
@@ -281,20 +266,6 @@ function shouldIgnoreGlobalShortcut(event: KeyboardEvent): boolean {
 	);
 }
 
-function isWorkspaceLaunchTargetId(
-	value: string,
-): value is WorkspaceLaunchTargetId {
-	return (
-		value === "file-explorer" ||
-		value === "terminal" ||
-		value === "vscode" ||
-		value === "visual-studio" ||
-		value === "github-desktop" ||
-		value === "git-bash" ||
-		value === "godot"
-	);
-}
-
 function getWorkspaceLaunchIcon(
 	targetId: WorkspaceLaunchTargetId,
 ): React.ReactNode {
@@ -313,11 +284,6 @@ function getWorkspaceLaunchIcon(
 	return <Icon name="external-link" />;
 }
 
-function isGodotScenePath(relativePath: string): boolean {
-	const normalizedPath: string = relativePath.toLowerCase();
-	return normalizedPath.endsWith(".tscn") || normalizedPath.endsWith(".scn");
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -330,10 +296,6 @@ function getRecordString(record: Record<string, unknown>, key: string): string {
 function getRecordNumber(record: Record<string, unknown>, key: string): number {
 	const value: unknown = record[key];
 	return typeof value === "number" && Number.isFinite(value) ? value : 0;
-}
-
-function getPathBasename(inputPath: string): string {
-	return inputPath.split(/[\\/]/u).filter(Boolean).at(-1) ?? inputPath;
 }
 
 type WorkflowFileChangeContribution = WorkflowFileChangeSummary & {
@@ -3090,6 +3052,7 @@ function HomePage({
 						<Button
 							type="text"
 							shape="circle"
+							data-studio-open-bottom-dock="true"
 							aria-pressed={bottomDockOpen}
 							icon={
 								<Icon
@@ -3116,6 +3079,7 @@ function HomePage({
 						<Button
 							type="text"
 							shape="circle"
+							data-studio-open-side-dock="true"
 							aria-pressed={sideDockOpen}
 							icon={
 								<Icon
@@ -3136,6 +3100,7 @@ function HomePage({
 	return (
 		<div
 			className={styles.page}
+			data-studio-home="true"
 			onDragOver={handlePageDragOver}
 			onDrop={handlePageDrop}
 		>

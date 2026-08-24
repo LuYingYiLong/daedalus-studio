@@ -63,7 +63,7 @@ function ApprovalDialog({
 	];
 
 	return (
-		<div className={styles.approvalDialog}>
+		<div className={styles.approvalDialog} data-studio-approval="true">
 			<header className={styles.header}>
 				<div className={styles.titleGroup}>
 					<Typography.Title level={4} className={styles.title}>
@@ -137,6 +137,7 @@ function ApprovalDialog({
 					disabled={isBusy}
 					loading={isRejecting}
 					className={styles.approvalActionButton}
+					data-studio-approval-reject="true"
 					onClick={(): void => {
 						onReject?.(pendingApproval.approvalId);
 					}}
@@ -149,6 +150,7 @@ function ApprovalDialog({
 						disabled={isBusy || !isConsentSatisfied}
 						loading={isApproving}
 						className={styles.approvalActionButton}
+						data-studio-approval-approve="true"
 						onClick={(): void => {
 							onApprove?.(
 								pendingApproval.approvalId,

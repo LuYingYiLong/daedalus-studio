@@ -634,7 +634,7 @@ export function FilePanel({
 	});
 
 	return (
-		<div className={styles.panel}>
+		<div className={styles.panel} data-studio-files-panel="true">
 			{messageHolder}
 			<header className={styles.header}>
 				<Breadcrumb className={styles.breadcrumb} items={breadcrumbItems} />

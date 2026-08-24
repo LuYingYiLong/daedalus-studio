@@ -10,14 +10,25 @@ export default defineConfig({
 		}
 	},
 	test: {
-		include: ["tests/**/*.test.ts"],
+		include: [
+			"tests/unit/**/*.test.ts",
+			"tests/integration/**/*.test.ts",
+			"tests/renderer/**/*.test.ts",
+			"tests/static/**/*.test.ts",
+			"tests/goal-state.test.ts",
+			"tests/onboarding.test.ts",
+		],
 		globals: true,
 		environment: "node",
 		coverage: {
 			provider: "v8",
 			reporter: ["text", "json", "html"],
-			include: ["src/**/*.ts"],
-			exclude: ["node_modules/", "src/renderer/"]
+			include: [
+				"src/**/*.ts",
+				"src/renderer/src/app/runtime/**/*.tsx",
+				"src/renderer/src/platform/rpc/**/*.ts",
+			],
+			exclude: ["node_modules/"]
 		}
 	}
 });

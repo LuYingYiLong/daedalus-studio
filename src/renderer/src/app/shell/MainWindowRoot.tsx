@@ -96,11 +96,12 @@ function MainWindowRoot(): React.JSX.Element {
 	return (
 		<>
 			<MainTitlebar appReady={isAppReady} />
-			<div className={styles.content}>
+			<div className={styles.content} data-studio-main-window="true">
 				{appBootstrapData === null ? null : (
 					<Suspense fallback={null}>
 						<div
 							className={appLayerClassName}
+							data-studio-app-layer="true"
 							aria-hidden={
 								handoffPhase === "preparing" ? true : undefined
 							}

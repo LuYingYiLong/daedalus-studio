@@ -209,6 +209,7 @@ function PanelTabs({
 								type="text"
 								shape="circle"
 								aria-label={addLabel}
+								data-studio-dock-add="true"
 								className={styles.addButton}
 								icon={<Icon name="add" />}
 							/>

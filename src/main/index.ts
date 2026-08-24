@@ -500,6 +500,7 @@ function cancelSettingsWindowPrewarm(): void {
 function scheduleSettingsWindowPrewarm(): void {
 	if (
 		isAppQuitting
+		|| process.env.DAEDALUS_E2E === "1"
 		|| isDevelopmentRendererReloading
 		|| settingsWindowPrewarmTimer !== null
 		|| mainWindow === null
@@ -693,7 +694,7 @@ function createWindow(): void {
 	});
 	applyWindowTheme(mainWindow, clientPreferencesService.getCachedPreferences());
 
-	if (!app.isPackaged) {
+	if (!app.isPackaged && process.env.DAEDALUS_E2E !== "1") {
 		mainWindow.webContents.openDevTools({ mode: "detach" });
 	}
 

@@ -517,7 +517,7 @@ function SettingsWindow(): React.JSX.Element {
 	}, [i18n.resolvedLanguage, t]);
 
 	return (
-		<main className={styles.surface}>
+		<main className={styles.surface} data-studio-settings-window="true">
 			<aside className={styles.settingsSideBar}>
 				<div className={styles.settingsSearchBar}>
 					<AutoComplete

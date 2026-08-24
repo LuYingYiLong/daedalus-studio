@@ -546,10 +546,7 @@ function AboutSettingsPage(): React.JSX.Element | null {
 													"settings.about.bridge.title",
 												)}
 											</Typography.Title>
-											<Tag
-												color="green"
-												className={styles.versionTag}
-											>
+											<Tag className={styles.versionTag}>
 												{packageInfo.godotBridgeVersion
 													? `v${packageInfo.godotBridgeVersion}`
 													: unavailableLabel}

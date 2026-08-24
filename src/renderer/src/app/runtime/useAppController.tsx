@@ -4,9 +4,10 @@ import { Input, message as antdMessage, Modal, Spin } from "antd";
 import { useTranslation } from "react-i18next";
 import { useDiskSpaceCheck } from "@/app/runtime/hooks/useDiskSpaceCheck";
 import { onBackendReconnected } from "@/platform/rpc/transport/backend-client";
-import { BackendRpcError, type BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
+import { BackendRpcError } from "@/platform/rpc/transport/backend-rpc-client";
 import useNativeTaskNotifications from "./hooks/useNativeTaskNotifications";
 import useAppEventBridge from "./hooks/useAppEventBridge";
+import useSessionRuntimeEvents from "./hooks/useSessionRuntimeEvents";
 import useTimelineStreamBuffer from "./hooks/useTimelineStreamBuffer";
 import useWorkbenchPatchQueue, { mergeWorkbenchPatch } from "./hooks/useWorkbenchPatchQueue";
 import useWorkspaceContextController from "@/features/workspace/controllers/useWorkspaceContextController";
@@ -131,8 +132,8 @@ import {
 } from "@/platform/rpc/client-preferences-api";
 import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/platform/rpc/general-settings-api";
 import { createDefaultSessionLayout, listTerminalRuntimeIds, resetSessionFilePanelWorkspaceState, type SessionLayoutMap, type SessionLayoutPreferences } from "@/domain/session/session-layout";
-import { applyResponseFinished, getUnreadResponseSessionId, markActiveSessionRead, removeUnreadSessions } from "@/domain/workspace/session-unread";
-import { applyRunningSessionEvent, markRunStopped, markSessionRunStarted, removeRunningSessions, syncSessionRunFromOpen, type RunningSessionState } from "@/domain/workspace/session-running";
+import { markActiveSessionRead, removeUnreadSessions } from "@/domain/workspace/session-unread";
+import { markRunStopped, markSessionRunStarted, removeRunningSessions, syncSessionRunFromOpen, type RunningSessionState } from "@/domain/workspace/session-running";
 import type { SessionArchiveContext } from "@/widgets/workspace/WorkspaceTree";
 import { clearCleanFilePanelBuffersForSession, hasDirtyFilePanelBuffersForSession } from "@/widgets/files/file-runtime-buffers";
 import { NEW_SESSION_EVENT, recordOpenedSession, removeSessionFromNavigationHistory, SESSION_NAVIGATION_EVENT } from "@/domain/session/session-navigation-history";
@@ -1342,42 +1343,13 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		);
 	}, [activeSessionId]);
 
-	const handleBackendEventObserved = useCallback(
-		(event: BackendEvent): void => {
-			setRunningSessionState(
-				(current: RunningSessionState): RunningSessionState => {
-					return applyRunningSessionEvent(current, event);
-				},
-			);
-			const responseSessionId: string | null =
-				getUnreadResponseSessionId(event);
-			if (responseSessionId === null) {
-				return;
-			}
-			if (
-				event.event === "agent.goal.state" &&
-				activeWorkbenchRef.current?.messageQueue.some(
-					(item: MessageQueueItem): boolean =>
-						item.status === "pending" || item.status === "sending",
-				) === true
-			) {
-				return;
-			}
-
-			setUnreadSessionIds(
-				(
-					currentSessionIds: ReadonlySet<string>,
-				): ReadonlySet<string> => {
-					return applyResponseFinished(currentSessionIds, {
-						sessionId: responseSessionId,
-						activeSessionId: activeSessionIdRef.current,
-						windowFocused: windowFocusedRef.current,
-					});
-				},
-			);
-		},
-		[],
-	);
+	const handleBackendEventObserved = useSessionRuntimeEvents({
+		activeSessionIdRef,
+		activeWorkbenchRef,
+		windowFocusedRef,
+		setRunningSessionState,
+		setUnreadSessionIds,
+	});
 
 	useEffect((): void => {
 		const workspace: WorkspaceConfig | null =
