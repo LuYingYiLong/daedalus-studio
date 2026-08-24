@@ -14,6 +14,8 @@ export interface PackageInfo {
   description: string;
   license: string;
   author: string;
+  godotBridgeVersion: string;
+  godotBridgeProtocolVersion: number | null;
 }
 
 export interface ElectronAPI {

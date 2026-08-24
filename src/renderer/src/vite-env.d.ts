@@ -396,6 +396,8 @@ declare global {
 		description: string;
 		license: string;
 		author: string;
+		godotBridgeVersion: string;
+		godotBridgeProtocolVersion: number | null;
 	}
 
 	interface AppInfoAPI {

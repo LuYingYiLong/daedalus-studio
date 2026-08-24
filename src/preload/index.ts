@@ -675,7 +675,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	},
 
 	appInfo: {
-		getPackageInfo: (): Promise<{ name: string; version: string; description: string; license: string; author: string }> => {
+		getPackageInfo: (): Promise<{
+			name: string;
+			version: string;
+			description: string;
+			license: string;
+			author: string;
+			godotBridgeVersion: string;
+			godotBridgeProtocolVersion: number | null;
+		}> => {
 			return ipcRenderer.invoke("app:get-package-info");
 		}
 	}

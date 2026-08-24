@@ -6,6 +6,7 @@ import {
 	Descriptions,
 	Space,
 	Tag,
+	Tooltip,
 	Typography,
 } from "antd";
 import { useEffect, useState } from "react";
@@ -15,6 +16,7 @@ import { createBackendClient } from "@/platform/rpc/transport/backend-client";
 import type { BackendHealthResult } from "@/app/bootstrap/bootstrap";
 import { Icon } from "@/assets/icons";
 import backendColorfulIconUrl from "@/assets/icons/backend-colorful.svg?url";
+import bridgeColorfulIconUrl from "@/assets/icons/bridge-colorful.svg?url";
 import daedalusColorfulIconUrl from "@/assets/icons/icon-colorful.svg";
 import AppUpdateDialog from "@/widgets/app-update/AppUpdateDialog";
 import ChangelogDialog from "@/widgets/changelog/ChangelogDialog";
@@ -29,6 +31,8 @@ type PackageInfo = {
 	description: string;
 	license: string;
 	author: string;
+	godotBridgeVersion: string;
+	godotBridgeProtocolVersion: number | null;
 };
 
 type BackendDetails = {
@@ -78,6 +82,27 @@ function getBackendStatusLabel(
 		default:
 			return t("settings.about.backend.status.unknown");
 	}
+}
+
+function RepositoryButton({
+	url,
+	label,
+}: {
+	url: string;
+	label: string;
+}): React.JSX.Element {
+	return (
+		<Tooltip title={label}>
+			<Button
+				shape="circle"
+				type="text"
+				icon={<Icon name="github" />}
+				href={url}
+				target="_blank"
+				rel="noopener noreferrer"
+			/>
+		</Tooltip>
+	);
 }
 
 async function loadBackendDetails(
@@ -385,6 +410,8 @@ function AboutSettingsPage(): React.JSX.Element | null {
 	}
 
 	const gitHubUrl = "https://github.com/LuYingYiLong/daedalus-studio";
+	const backendGitHubUrl = "https://github.com/LuYingYiLong/daedalus-backend";
+	const bridgeGitHubUrl = "https://github.com/LuYingYiLong/daedalus-bridge";
 	const packageInfo: PackageInfo | null = data?.packageInfo ?? null;
 	const backendDetails: BackendDetails | null = data?.backendDetails ?? null;
 	const errorMessage: string | null =
@@ -452,34 +479,103 @@ function AboutSettingsPage(): React.JSX.Element | null {
 							className={styles.infoCard}
 							classNames={{ body: styles.overviewCardBody }}
 						>
-							<div className={styles.appHeader}>
-								<img
-									src={daedalusColorfulIconUrl}
-									alt=""
-									className={styles.largeIcon}
-									draggable={false}
-								/>
-								<div className={styles.appInfo}>
-									<Space>
-										<Typography.Title
-											level={3}
-											className={styles.appName}
-										>
-											Daedalus Studio
-										</Typography.Title>
-										<Tag className={styles.versionTag}>
-											v{packageInfo.version || "1.0.0"}
-										</Tag>
-									</Space>
-									{packageInfo.description ? (
+							<div className={styles.overviewCardRow}>
+								<div className={styles.appHeader}>
+									<img
+										src={daedalusColorfulIconUrl}
+										alt=""
+										className={styles.largeIcon}
+										draggable={false}
+									/>
+									<div className={styles.appInfo}>
+										<Space>
+											<Typography.Title
+												level={3}
+												className={styles.appName}
+											>
+												Daedalus Studio
+											</Typography.Title>
+											<Tag className={styles.versionTag}>
+												v
+												{packageInfo.version || "1.0.0"}
+											</Tag>
+										</Space>
 										<Typography.Text
 											type="secondary"
 											className={styles.description}
 										>
-											{packageInfo.description}
+											{t(
+												"settings.about.studio.description",
+											)}
 										</Typography.Text>
-									) : null}
+									</div>
 								</div>
+								<RepositoryButton
+									url={gitHubUrl}
+									label={t(
+										"settings.about.repositories.open",
+										{
+											name: t(
+												"settings.about.repositories.studio",
+											),
+										},
+									)}
+								/>
+							</div>
+						</Card>
+
+						<Card
+							className={styles.bridgeCard}
+							classNames={{ body: styles.overviewCardBody }}
+						>
+							<div className={styles.overviewCardRow}>
+								<div className={styles.backendHeader}>
+									<img
+										src={bridgeColorfulIconUrl}
+										alt=""
+										className={styles.largeIcon}
+										draggable={false}
+									/>
+									<div className={styles.backendInfo}>
+										<Space>
+											<Typography.Title
+												level={3}
+												className={styles.appName}
+											>
+												{t(
+													"settings.about.bridge.title",
+												)}
+											</Typography.Title>
+											<Tag
+												color="green"
+												className={styles.versionTag}
+											>
+												{packageInfo.godotBridgeVersion
+													? `v${packageInfo.godotBridgeVersion}`
+													: unavailableLabel}
+											</Tag>
+										</Space>
+										<Typography.Text
+											type="secondary"
+											className={styles.description}
+										>
+											{t(
+												"settings.about.bridge.description",
+											)}
+										</Typography.Text>
+									</div>
+								</div>
+								<RepositoryButton
+									url={bridgeGitHubUrl}
+									label={t(
+										"settings.about.repositories.open",
+										{
+											name: t(
+												"settings.about.repositories.bridge",
+											),
+										},
+									)}
+								/>
 							</div>
 						</Card>
 
@@ -487,39 +583,52 @@ function AboutSettingsPage(): React.JSX.Element | null {
 							className={styles.backendCard}
 							classNames={{ body: styles.overviewCardBody }}
 						>
-							<div className={styles.backendHeader}>
-								<img
-									src={backendColorfulIconUrl}
-									alt=""
-									className={styles.largeIcon}
-									draggable={false}
-								/>
-								<div className={styles.backendInfo}>
-									<Space>
-										<Typography.Title
-											level={3}
-											className={styles.appName}
+							<div className={styles.overviewCardRow}>
+								<div className={styles.backendHeader}>
+									<img
+										src={backendColorfulIconUrl}
+										alt=""
+										className={styles.largeIcon}
+										draggable={false}
+									/>
+									<div className={styles.backendInfo}>
+										<Space>
+											<Typography.Title
+												level={3}
+												className={styles.appName}
+											>
+												Daedalus Backend
+											</Typography.Title>
+											<Tag
+												color={getBackendStatusColor(
+													backendStatus,
+												)}
+												className={styles.versionTag}
+											>
+												{backendStatusLabel}
+											</Tag>
+										</Space>
+										<Typography.Text
+											type="secondary"
+											className={styles.description}
 										>
-											Daedalus Backend
-										</Typography.Title>
-										<Tag
-											color={getBackendStatusColor(
-												backendStatus,
+											{t(
+												"settings.about.backend.description",
 											)}
-											className={styles.versionTag}
-										>
-											{backendStatusLabel}
-										</Tag>
-									</Space>
-									<Typography.Text
-										type="secondary"
-										className={styles.description}
-									>
-										{t(
-											"settings.about.backend.description",
-										)}
-									</Typography.Text>
+										</Typography.Text>
+									</div>
 								</div>
+								<RepositoryButton
+									url={backendGitHubUrl}
+									label={t(
+										"settings.about.repositories.open",
+										{
+											name: t(
+												"settings.about.repositories.backend",
+											),
+										},
+									)}
+								/>
 							</div>
 						</Card>
 
@@ -770,29 +879,6 @@ function AboutSettingsPage(): React.JSX.Element | null {
 									)}
 								</Descriptions.Item>
 							</Descriptions>
-						</Card>
-
-						<Card
-							title={t("settings.about.sourceCode")}
-							className={styles.githubCard}
-						>
-							<Typography.Paragraph>
-								<Typography.Link
-									href={gitHubUrl}
-									target="_blank"
-									rel="noopener noreferrer"
-									className={styles.githubLink}
-								>
-									<Icon
-										name="external-link"
-										className={styles.linkIcon}
-									/>
-									{gitHubUrl}
-								</Typography.Link>
-							</Typography.Paragraph>
-							<Typography.Text type="secondary">
-								{t("settings.about.sourceDescription")}
-							</Typography.Text>
 						</Card>
 
 						<Card

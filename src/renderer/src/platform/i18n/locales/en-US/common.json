@@ -2115,9 +2115,22 @@
 		"about": {
 			"title": "About",
 			"unavailable": "Unavailable",
+			"studio": {
+				"description": "A standalone AI workbench with optional Godot Editor Bridge integration."
+			},
+			"bridge": {
+				"title": "Daedalus Bridge",
+				"description": "An optional integration bridge connecting Daedalus Studio with the Godot editor."
+			},
 			"applicationInformation": "Application Information",
 			"sourceCode": "Source Code",
 			"sourceDescription": "Visit our GitHub repository for source code, issues, and contributions.",
+			"repositories": {
+				"studio": "Daedalus Studio",
+				"backend": "Daedalus Backend",
+				"bridge": "Daedalus Bridge",
+				"open": "Open the {{name}} GitHub repository"
+			},
 			"backend": {
 				"description": "Local RPC, workflow, MCP, and Godot integration service.",
 				"detailsTitle": "Backend Details",

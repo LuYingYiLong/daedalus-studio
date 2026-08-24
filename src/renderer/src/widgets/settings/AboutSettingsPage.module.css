@@ -58,9 +58,29 @@
 	min-height: 82px;
 }
 
+.bridgeCard {
+	display: grid;
+	gap: var(--ds-space-2);
+	min-height: 82px;
+}
+
 .overviewCardBody {
 	min-height: 112px;
 	padding: 0 var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);
+}
+
+.overviewCardRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-width: 0;
+	gap: var(--ds-space-2);
+}
+
+.overviewCardRow .appHeader,
+.overviewCardRow .backendHeader {
+	flex: 1;
+	min-width: 0;
 }
 
 .appHeader {
@@ -153,13 +173,6 @@
 	word-break: break-all;
 }
 
-.githubLink {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 16px;
-}
-
 .onboardingRow {
 	display: flex;
 	align-items: center;
@@ -174,7 +187,3 @@
 	}
 }
 
-.linkIcon {
-	width: 16px;
-	height: 16px;
-}

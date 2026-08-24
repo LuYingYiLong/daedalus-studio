@@ -2108,9 +2108,22 @@
 		"about": {
 			"title": "关于",
 			"unavailable": "不可用",
+			"studio": {
+				"description": "独立的 AI 工作台，可选集成 Godot 编辑器桥接。"
+			},
+			"bridge": {
+				"title": "Daedalus Bridge",
+				"description": "连接 Daedalus Studio 与 Godot 编辑器的可选集成桥接插件。"
+			},
 			"applicationInformation": "应用信息",
 			"sourceCode": "源代码",
 			"sourceDescription": "访问 GitHub 仓库查看源代码、问题和贡献方式。",
+			"repositories": {
+				"studio": "Daedalus Studio",
+				"backend": "Daedalus Backend",
+				"bridge": "Daedalus Bridge",
+				"open": "打开 {{name}} GitHub 仓库"
+			},
 			"backend": {
 				"description": "本地 RPC、workflow、MCP 和 Godot 集成服务。",
 				"detailsTitle": "后端详情",

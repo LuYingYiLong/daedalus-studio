@@ -18,6 +18,8 @@ export interface PackageInfo {
   description: string;
   license: string;
   author: string;
+  godotBridgeVersion: string;
+  godotBridgeProtocolVersion: number | null;
 }
 
 /**
@@ -56,7 +58,11 @@ export function registerSystemInfoIpc(): void {
         version: packageJson.version || '1.0.0',
         description: packageJson.description || '',
         license: packageJson.license || 'GPL-3.0-only',
-        author: packageJson.author || 'LuYingYiLong'
+        author: packageJson.author || 'LuYingYiLong',
+        godotBridgeVersion: packageJson.godotBridgeVersion || '',
+        godotBridgeProtocolVersion: Number.isSafeInteger(packageJson.godotBridgeProtocolVersion)
+          ? packageJson.godotBridgeProtocolVersion
+          : null
       };
     } catch (error) {
       console.error('Failed to read package.json:', error);
@@ -65,7 +71,9 @@ export function registerSystemInfoIpc(): void {
         version: '1.0.0',
         description: '',
         license: 'GPL-3.0-only',
-        author: 'LuYingYiLong'
+        author: 'LuYingYiLong',
+        godotBridgeVersion: '',
+        godotBridgeProtocolVersion: null
       };
     }
   });
