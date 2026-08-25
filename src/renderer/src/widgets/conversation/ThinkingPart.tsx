@@ -45,6 +45,7 @@ function containScrollableWheel(event: React.WheelEvent<HTMLDivElement>): void {
 
 function ThinkingPart({ part, disclosureKey = "thinking" }: ThinkingPartProps): React.JSX.Element | null {
 	const { t } = useTranslation();
+	const isCompacted: boolean = part.detailLevel === "compacted";
 	const contentRef = useRef<HTMLDivElement | null>(null);
 	const bodyRef = useRef<HTMLDivElement | null>(null);
 	const autoFollowRef = useRef<boolean>(true);
@@ -125,7 +126,7 @@ function ThinkingPart({ part, disclosureKey = "thinking" }: ThinkingPartProps): 
 		}
 	}, [open, part.text, scheduleAutoFollowScroll]);
 
-	if (part.done && part.text.trim().length === 0) {
+	if (!isCompacted && part.done && part.text.trim().length === 0) {
 		return null;
 	}
 
@@ -150,7 +151,9 @@ function ThinkingPart({ part, disclosureKey = "thinking" }: ThinkingPartProps): 
 			items={[
 				{
 					key: "thinking",
-					label: part.done
+					label: isCompacted
+						? t("chat.thinking.compactedLabel")
+						: part.done
 						? t("chat.thinking.label")
 						: <ShinyText text={t("chat.thinking.activeLabel")} speed={2.4} />,
 					children: (
@@ -193,7 +196,9 @@ function ThinkingPart({ part, disclosureKey = "thinking" }: ThinkingPartProps): 
 							}}
 						>
 							<div ref={bodyRef} className={styles.thinkingBody}>
-								{part.text.trim().length === 0 ? null : (
+								{isCompacted ? (
+									<div>{part.compactedSummary ?? t("chat.thinking.compactedSummary")}</div>
+								) : part.text.trim().length === 0 ? null : (
 									<MarkdownContent streaming={!part.done}>{part.text}</MarkdownContent>
 								)}
 							</div>

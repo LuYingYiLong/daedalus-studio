@@ -1,6 +1,7 @@
 export type GeneralSettings = {
-	schemaVersion: 3;
+	schemaVersion: 4;
 	nextStepHintsEnabled: boolean;
+	autoCompactActivityDetails: boolean;
 	godotExecutablePath: string | null;
 	godotExecutableVersion: string | null;
 	godotExecutableStatus: "unconfigured" | "ready" | "unavailable";

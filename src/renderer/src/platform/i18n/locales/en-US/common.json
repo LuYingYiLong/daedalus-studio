@@ -1323,6 +1323,7 @@
 				"pending": "The tool has not started.",
 				"writing": "Writing now: {{tool}}"
 			},
+			"compactedDetails": "Details compacted; tool status and key summaries were retained.",
 			"recovery": {
 				"failed": "Recovery attempt {{attempt}}/{{max}} failed. The assistant may adjust the same structured target and try again.",
 				"recovered": "Recovered after {{attempt}}/{{max}} failed attempts.",
@@ -1376,7 +1377,9 @@
 		},
 		"thinking": {
 			"label": "Thought process",
-			"activeLabel": "Thinking"
+			"activeLabel": "Thinking",
+			"compactedLabel": "Thought details compacted",
+			"compactedSummary": "The original thought content was removed; activity status was retained."
 		},
 		"activityGroup": {
 			"activeThinking": "Thinking",
@@ -1416,6 +1419,8 @@
 			"modelFallback": "Image generation",
 			"generating": "Generating images",
 			"generated": "Generated images",
+			"compactedLabel": "Image details compacted",
+			"compactedSummary": "The original prompt and image data were removed.",
 			"failed": "Image generation failed",
 			"previewUnavailable": "Image preview unavailable",
 			"loading": "Loading",

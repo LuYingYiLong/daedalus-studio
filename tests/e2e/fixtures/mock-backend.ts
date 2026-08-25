@@ -61,6 +61,8 @@ function createEmptyWorkbench(sessionId: string | null = null): Record<string, u
 }
 
 function createDefaultHandlers(): Record<string, MockRpcHandler> {
+	let nextStepHintsEnabled: boolean = false;
+	let autoCompactActivityDetails: boolean = true;
 	const provider = {
 		provider: "openai",
 		displayName: "OpenAI",
@@ -117,23 +119,34 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 		}),
 		"client.capabilities.update": () => ({ updated: true }),
 		"generalSettings.get": () => ({
-			schemaVersion: 3,
-			nextStepHintsEnabled: false,
+			schemaVersion: 4,
+			nextStepHintsEnabled,
+			autoCompactActivityDetails,
 			godotExecutablePath: null,
 			godotExecutableVersion: null,
 			godotExecutableStatus: "unconfigured",
 			godotExecutableError: null,
 			updatedAt: MOCK_NOW,
 		}),
-		"generalSettings.update": ({ params }) => ({
-			schemaVersion: 3,
-			nextStepHintsEnabled: (params as { nextStepHintsEnabled?: boolean } | undefined)?.nextStepHintsEnabled ?? false,
-			godotExecutablePath: null,
-			godotExecutableVersion: null,
-			godotExecutableStatus: "unconfigured",
-			godotExecutableError: null,
-			updatedAt: MOCK_NOW,
-		}),
+		"generalSettings.update": ({ params }) => {
+			const patch = (params ?? {}) as { nextStepHintsEnabled?: boolean; autoCompactActivityDetails?: boolean };
+			if (patch.nextStepHintsEnabled !== undefined) {
+				nextStepHintsEnabled = patch.nextStepHintsEnabled;
+			}
+			if (patch.autoCompactActivityDetails !== undefined) {
+				autoCompactActivityDetails = patch.autoCompactActivityDetails;
+			}
+			return {
+				schemaVersion: 4,
+				nextStepHintsEnabled,
+				autoCompactActivityDetails,
+				godotExecutablePath: null,
+				godotExecutableVersion: null,
+				godotExecutableStatus: "unconfigured",
+				godotExecutableError: null,
+				updatedAt: MOCK_NOW,
+			};
+		},
 		"godotDocumentation.get": () => ({
 			schemaVersion: 2,
 			enabled: false,
@@ -225,8 +238,9 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 			envInfo: null,
 			envInfos: [],
 			plans: { total: 0, items: [] },
-			sources: { total: 0, items: [] },
+			 sources: { total: 0, items: [] },
 		}),
+		"session.integrity.check": () => ({ ok: true, issues: [] }),
 		"command.list": () => ({ commands: [] }),
 		"skill.list": () => ({ skills: [], revision: "e2e-skills" }),
 		"approval.list": () => ({ mode: "manual", pending: [] }),

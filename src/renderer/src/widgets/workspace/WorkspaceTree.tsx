@@ -613,6 +613,7 @@ function createProjectTreeData(
 			{
 				key: "projects:empty",
 				title: labels.noProjects,
+				className: styles.treeItemPaddingLeft,
 				disabled: true,
 				selectable: false,
 				kind: "empty",

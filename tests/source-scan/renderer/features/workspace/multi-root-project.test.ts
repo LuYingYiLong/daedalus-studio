@@ -44,6 +44,7 @@ describe("multi-root workspace projects", () => {
 
 	it("uses project names and appearance in the tree and Composer", () => {
 		expect(treeSource).toContain("getWorkspaceTreeSwitcherIcon(workspace, nodeProps.expanded)");
+		expect(treeSource).toContain("className: styles.treeItemPaddingLeft");
 		expect(treeSource).toContain("switcherIcon={(nodeProps) =>");
 		expect(treeSource).not.toContain("icon: <WorkspaceIconView");
 		expect(treeSource).toContain("<Tree<ProjectTreeNode>");

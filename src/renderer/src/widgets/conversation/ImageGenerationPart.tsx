@@ -158,6 +158,15 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 		);
 	}
 
+	if (part.detailLevel === "compacted") {
+		return (
+			<section className={styles.root}>
+				<Typography.Title level={4} className={styles.title}>{t("chat.imageGeneration.compactedLabel")}</Typography.Title>
+				<Typography.Text type="secondary">{part.compactedSummary ?? t("chat.imageGeneration.compactedSummary")}</Typography.Text>
+			</section>
+		);
+	}
+
 	return (
 		<section className={styles.root}>
 			{contextHolder}

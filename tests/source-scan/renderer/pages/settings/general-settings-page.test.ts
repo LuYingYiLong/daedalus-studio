@@ -26,6 +26,7 @@ describe("GeneralSettingsPage", () => {
 
 		expect(pageSource).toContain("useTranslation");
 		expect(pageSource).toContain("settings.general.general.nextStepHintsEnabled.title");
+		expect(pageSource).toContain("settings.general.general.autoCompactActivityDetails.title");
 		expect(pageSource).toContain("settings.general.notifications.title");
 		expect(pageSource).toContain("settings.general.notifications.runCompleted.title");
 		expect(pageSource).toContain("settings.general.general.autoCheckForUpdates.title");
@@ -62,9 +63,10 @@ describe("GeneralSettingsPage", () => {
 		expect(clientPreferencesContractSource).toContain("export type ClientPreferencesPatch = Partial<ClientPreferences>;");
 		expect(generalApiSource).toContain("godotExecutablePath: null");
 		expect(generalSettingsContractSource).toContain("nextStepHintsEnabled: boolean;");
+		expect(generalSettingsContractSource).toContain("autoCompactActivityDetails: boolean;");
 		expect(generalSettingsContractSource).not.toContain("fontFamily: string;");
 		expect(generalSettingsContractSource).not.toContain("fontFamilyCode: string;");
-		expect(generalSettingsContractSource).toContain("schemaVersion: 3;");
+		expect(generalSettingsContractSource).toContain("schemaVersion: 4;");
 		expect(generalSettingsContractSource).toContain("godotExecutableVersion: string | null;");
 		expect(generalSettingsContractSource).toContain('godotExecutableStatus: "unconfigured" | "ready" | "unavailable";');
 		expect(pageSource).not.toContain("<List");

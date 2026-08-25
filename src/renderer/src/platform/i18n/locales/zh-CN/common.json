@@ -1321,6 +1321,7 @@
 				"pending": "工具尚未开始执行。",
 				"writing": "正在写入：{{tool}}"
 			},
+			"compactedDetails": "详情已精简，工具状态和关键摘要仍保留。",
 			"recovery": {
 				"failed": "第 {{attempt}}/{{max}} 次恢复尝试失败，AI 可以调整同一结构化目标后重试。",
 				"recovered": "此前失败 {{attempt}}/{{max}} 次，本次已恢复。",
@@ -1373,7 +1374,9 @@
 		},
 		"thinking": {
 			"label": "思考过程",
-			"activeLabel": "正在思考"
+			"activeLabel": "正在思考",
+			"compactedLabel": "思考详情已精简",
+			"compactedSummary": "原始思考内容已移除，仅保留活动状态。"
 		},
 		"activityGroup": {
 			"activeThinking": "正在思考",
@@ -1409,6 +1412,8 @@
 			"modelFallback": "图像生成",
 			"generating": "正在生成图片",
 			"generated": "已生成图片",
+			"compactedLabel": "图片详情已精简",
+			"compactedSummary": "原始提示词和图片数据已移除。",
 			"failed": "图像生成失败",
 			"previewUnavailable": "图片预览不可用",
 			"loading": "加载中",
@@ -2764,6 +2769,10 @@
 			},
 			"general": {
 				"title": "常规设置",
+				"autoCompactActivityDetails": {
+					"title": "自动精简旧会话活动详情",
+					"description": "保留最近 10 轮完整详情。更早的 thinking、工具参数和工具输出会被永久移除，但工具状态、审批结果和关键摘要会保留；关闭开关不会恢复已经精简的历史内容。"
+				},
 				"nextStepHintsEnabled": {
 					"title": "开启下一步建议",
 					"description": "每次回复完成后，让 Daedalus 在输入框中提示一个可能的下一步。"

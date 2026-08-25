@@ -244,17 +244,143 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 		await settingsWindow.waitForLoadState("domcontentloaded");
 		await expect(settingsWindow.locator("[data-studio-settings-window=\"true\"]")).toBeVisible();
 		await settingsWindow.getByRole("menuitem", { name: /General|常规|通用/ }).click();
-		const preferenceSwitch = settingsWindow.getByRole("switch").nth(2);
+		const preferenceSwitch = settingsWindow.locator("[data-settings-search-key=\"item:general.autoCompactActivityDetails\"] .ant-switch");
 		const wasChecked: boolean = await preferenceSwitch.isChecked();
+		expect(wasChecked).toBe(true);
 		await preferenceSwitch.click();
-		await expect.poll(() => mockBackend.getRequests("backend.health").length).toBeGreaterThan(0);
+		await expect.poll(() => mockBackend.getRequests("generalSettings.update").length).toBeGreaterThan(0);
 		await settingsWindow.close();
 		const reopenedSettingsPromise = electronApp.waitForEvent("window");
 		await mainWindow.locator("[data-studio-open-settings=\"true\"]").click();
 		const reopenedSettings = await reopenedSettingsPromise;
 		await reopenedSettings.waitForLoadState("domcontentloaded");
 		await reopenedSettings.getByRole("menuitem", { name: /General|常规|通用/ }).click();
-		await expect(reopenedSettings.getByRole("switch").nth(1)).toBeChecked({ checked: !wasChecked });
+		await expect(reopenedSettings.locator("[data-settings-search-key=\"item:general.autoCompactActivityDetails\"] .ant-switch")).toBeChecked({ checked: !wasChecked });
+	});
+
+	test("超过十轮后时间线显示精简状态并保留最近一轮详情", async ({ launchStudio, mockBackend }) => {
+		const timelineBlocks: Record<string, unknown>[] = [];
+		for (let index: number = 1; index <= 11; index += 1) {
+			const requestId: string = `compact-request-${index}`;
+			const compacted: boolean = index === 1;
+			timelineBlocks.push({
+				id: `user-${index}`,
+				type: "user",
+				requestId,
+				content: `Turn ${index}`,
+				sentAtUtc: "2026-08-24T00:00:01.000Z",
+			});
+			timelineBlocks.push({
+				id: `assistant-${index}`,
+				type: "assistant",
+				requestId,
+				content: `Reply ${index}`,
+				startedAtUtc: "2026-08-24T00:00:01.000Z",
+				completedAtUtc: "2026-08-24T00:00:02.000Z",
+				completionStatus: "responded",
+				bodyParts: compacted
+					? [
+						{ type: "thinking", text: "compacted raw thought", done: true, detailLevel: "compacted", compactedSummary: "详情已精简" },
+						{
+							type: "tool",
+							tool_call_id: "compact-tool-1",
+							detailLevel: "compacted",
+							compactedSummary: "详情已精简",
+							events: [
+								{ type: "tool.call", toolName: "mcp_workspace_read_text_file", toolCallId: "compact-tool-1", args: { path: "secret.txt" } },
+								{ type: "tool.result", toolName: "mcp_workspace_read_text_file", toolCallId: "compact-tool-1", ok: true },
+							],
+						},
+						{ type: "markdown", text: "Reply 1" },
+					]
+					: [
+						{ type: "thinking", text: `full thought ${index}`, done: true },
+						{
+							type: "tool",
+							tool_call_id: `full-tool-${index}`,
+							events: [
+								{ type: "tool.call", toolName: "mcp_workspace_read_text_file", toolCallId: `full-tool-${index}`, args: { path: `full-${index}.txt` } },
+								{ type: "tool.result", toolName: "mcp_workspace_read_text_file", toolCallId: `full-tool-${index}`, ok: true, summary: `full tool output turn ${index}` },
+							],
+						},
+						{ type: "markdown", text: `Reply ${index}` },
+					],
+			});
+		}
+		mockBackend.setHandler("session.timeline", ({ params }) => ({
+			timeline: true,
+			sessionId: (params as { sessionId?: string } | undefined)?.sessionId ?? MOCK_SESSION_ID,
+			blockCount: timelineBlocks.length,
+			blockOffset: 0,
+			eventCount: 55,
+			limit: 100,
+			hasMoreBefore: false,
+			hasMoreAfter: false,
+			timelineBlocks,
+			latestWorkflowSnapshot: null,
+			latestAgentSnapshot: null,
+			latestPlanClarification: null,
+			latestPlanApproval: null,
+		}));
+		const sessionMetadata = {
+			id: MOCK_SESSION_ID,
+			title: "Compaction session",
+			temporary: false,
+			createdAt: "2026-08-24T00:00:00.000Z",
+			updatedAt: "2026-08-24T00:00:02.000Z",
+		};
+		mockBackend.setHandler("session.list", () => ({ sessions: [sessionMetadata] }));
+		mockBackend.setHandler("session.open", () => ({
+			opened: true,
+			metadata: sessionMetadata,
+			blockCount: timelineBlocks.length,
+			blockOffset: 0,
+			eventCount: 55,
+			limit: 100,
+			hasMoreBefore: false,
+			hasMoreAfter: false,
+			timelineBlocks,
+			latestWorkflowSnapshot: null,
+			latestAgentSnapshot: null,
+			latestPlanClarification: null,
+			latestPlanApproval: null,
+			pendingGuides: [],
+			messageQueue: [],
+			selectionAskThreads: [],
+			workbench: createWorkbench(),
+			agentRuns: [],
+			activeAgentRun: null,
+			currentGoal: null,
+			workspaceWarning: null,
+		}));
+		const { mainWindow } = await launchStudio();
+		await mainWindow.getByText("Compaction session", { exact: true }).click();
+		await expect(mainWindow.getByText("Reply 11", { exact: true })).toBeVisible({ timeout: 15_000 });
+		const timelineScroller = mainWindow.locator("[class*='messageList']").first();
+		await timelineScroller.evaluate((element): void => {
+			element.dispatchEvent(new WheelEvent("wheel", { deltaY: -1000, bubbles: true }));
+			(element as HTMLElement).scrollTop = 0;
+			element.dispatchEvent(new Event("scroll", { bubbles: true }));
+		});
+		await mainWindow.mouse.move(1000, 300);
+		await mainWindow.mouse.wheel(0, -20_000);
+		await mainWindow.mouse.click(1000, 300);
+		await mainWindow.keyboard.press("Home");
+		await mainWindow.waitForTimeout(500);
+		await expect(mainWindow.getByText(/Thought details compacted|思考详情已精简/)).toBeVisible({ timeout: 15_000 });
+		await expect(mainWindow.getByText("compacted raw thought")).toHaveCount(0);
+		const toolLabels = mainWindow.getByText(/Read file|读取文件/);
+		await toolLabels.first().click();
+		await expect(mainWindow.getByText("详情已精简", { exact: true })).toBeVisible();
+		await timelineScroller.evaluate((element): void => {
+			(element as HTMLElement).scrollTop = (element as HTMLElement).scrollHeight;
+			element.dispatchEvent(new Event("scroll", { bubbles: true }));
+		});
+		await mainWindow.mouse.move(1000, 300);
+		await mainWindow.mouse.wheel(0, 20_000);
+		await expect(mainWindow.getByText("Reply 11", { exact: true })).toBeVisible();
+		await mainWindow.getByRole("button", { name: /full-11\.txt/ }).click();
+		await expect(mainWindow.getByText("full tool output turn 11")).toBeVisible();
 	});
 
 	test("Backend 断连后自动重连并重新发送 hello", async ({ launchStudio, mockBackend }) => {

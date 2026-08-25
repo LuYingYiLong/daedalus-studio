@@ -9,6 +9,8 @@ describe("ThinkingPart source", () => {
 		expect(source).toContain('t("chat.thinking.activeLabel")');
 		expect(source).toContain('<ShinyText text={t("chat.thinking.activeLabel")} speed={2.4} />');
 		expect(source).toContain('? t("chat.thinking.label")');
+		expect(source).toContain('part.detailLevel === "compacted"');
+		expect(source).toContain('t("chat.thinking.compactedLabel")');
 	});
 
 	it("follows the rendered markdown height without treating programmatic scrolling as user intent", () => {

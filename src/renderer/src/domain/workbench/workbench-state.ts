@@ -165,6 +165,8 @@ function appendFinalMarkdownPart(parts: TimelineBodyPart[], text: string): Timel
 }
 
 type TimelineActivityMetadata = {
+	detailLevel?: "full" | "compacted";
+	compactedSummary?: string;
 	activityGroupId?: string;
 	activityPartId?: string;
 	activityPartKind?: "thinking" | "tool";
@@ -175,8 +177,12 @@ function getActivityMetadata(data: Record<string, unknown>): TimelineActivityMet
 	const activityGroupId: string = getStringValue(data, "activityGroupId");
 	const activityPartId: string = getStringValue(data, "activityPartId");
 	const activityPartKind: string = getStringValue(data, "activityPartKind");
+	const detailLevel: string = getStringValue(data, "detailLevel");
+	const compactedSummary: string = getStringValue(data, "compactedSummary");
 	const stats: Record<string, unknown> = isRecord(data.activityGroupStats) ? data.activityGroupStats : {};
 	return {
+		...(detailLevel === "compacted" ? { detailLevel: "compacted" as const } : {}),
+		...(compactedSummary.length === 0 ? {} : { compactedSummary }),
 		...(activityGroupId.length === 0 ? {} : { activityGroupId }),
 		...(activityPartId.length === 0 ? {} : { activityPartId }),
 		...(activityPartKind === "thinking" || activityPartKind === "tool" ? { activityPartKind } : {}),
@@ -195,6 +201,9 @@ function mergeToolActivityMetadata(
 	current: TimelineActivityMetadata,
 	incoming: TimelineActivityMetadata
 ): TimelineActivityMetadata {
+	if (incoming.detailLevel === "compacted") {
+		return { ...current, ...incoming };
+	}
 	if (current.activityGroupId === undefined || current.activityPartId === undefined) {
 		return incoming;
 	}

@@ -57,6 +57,37 @@ function getToolResultText(events: Record<string, unknown>[]): string {
 	return getStringValue(error, "message") ?? "";
 }
 
+function getCompactedFilePaths(events: Record<string, unknown>[]): string[] {
+	for (const event of [...events].reverse()) {
+		if (!Array.isArray(event.filePaths)) {
+			continue;
+		}
+		return event.filePaths.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0);
+	}
+	return [];
+}
+
+function getCompactedSummary(events: Record<string, unknown>[]): string {
+	const latest: Record<string, unknown> | undefined = [...events].reverse().find((event: Record<string, unknown>): boolean => (
+		typeof event.summary === "string"
+		|| Array.isArray(event.failedChecks)
+		|| typeof event.message === "string"
+		|| typeof event.reason === "string"
+	));
+	if (latest === undefined) {
+		return "";
+	}
+	const failedChecks: string[] = Array.isArray(latest.failedChecks)
+		? latest.failedChecks.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0)
+		: [];
+	return [
+		getStringValue(latest, "summary"),
+		...failedChecks,
+		getStringValue(latest, "message"),
+		getStringValue(latest, "reason")
+	].filter((value: string | undefined): value is string => value !== undefined).join("\n");
+}
+
 function getToolStatus(events: Record<string, unknown>[]): ToolStatus {
 	const latestTerminalIndex: number = [...events].map((event: Record<string, unknown>, index: number): number => (
 		isTimelineToolEventType(event, "tool.result") || isTimelineToolEventType(event, "tool.error") ? index : -1
@@ -101,6 +132,7 @@ export type ToolPartProps = {
 
 function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.Element {
 	const { t } = useTranslation();
+	const isCompacted: boolean = part.detailLevel === "compacted";
 	const toolDisplay = getToolDisplayInfo(part.events, t);
 	const isFileWriteTool: boolean = FILE_WRITE_TOOL_NAMES.has(toolDisplay.rawName);
 	const [open, setOpen] = useTimelineDisclosure(disclosureKey, false);
@@ -125,7 +157,9 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 			{isActiveStatus ? <ShinyText text={statusText[status]} speed={2.4} color="currentColor" /> : statusText[status]}
 		</Tag>
 	)
-	const resultText: string = useMemo((): string => getToolResultText(part.events), [part.events]);
+	const resultText: string = useMemo((): string => isCompacted ? "" : getToolResultText(part.events), [isCompacted, part.events]);
+	const compactedFilePaths: string[] = useMemo((): string[] => isCompacted ? getCompactedFilePaths(part.events) : [], [isCompacted, part.events]);
+	const compactedResultSummary: string = useMemo((): string => isCompacted ? getCompactedSummary(part.events) : "", [isCompacted, part.events]);
 	const fileEditBatch: FileEditBatchSummary | undefined = useMemo((): FileEditBatchSummary | undefined => getFileEditBatch(part.events), [part.events]);
 	const recovery: ToolRecoveryDisplay | undefined = useMemo((): ToolRecoveryDisplay | undefined => getToolRecovery(part.events), [part.events]);
 	const recoveryText: string | undefined = recovery === undefined
@@ -156,7 +190,7 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 		: status === "pending"
 			? t("chat.tool.activity.pending")
 		: undefined;
-	const hasDetails: boolean = activityText !== undefined || resultText.length > 0 || fileEditBatch !== undefined || recoveryText !== undefined;
+	const hasDetails: boolean = isCompacted || activityText !== undefined || resultText.length > 0 || fileEditBatch !== undefined || recoveryText !== undefined;
 
 	return (
 		<Collapse
@@ -178,6 +212,13 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 					label,
 					children: !hasDetails ? null : (
 						<div className={styles.details}>
+							{isCompacted ? <div className={styles.activityText}>{part.compactedSummary ?? t("chat.tool.compactedDetails")}</div> : null}
+							{compactedResultSummary.length === 0 ? null : <div className={styles.resultText}>{compactedResultSummary}</div>}
+							{compactedFilePaths.length === 0 ? null : (
+								<ul className={styles.fileList}>
+									{compactedFilePaths.map((filePath: string): React.JSX.Element => <li key={filePath} className={styles.fileItem}>{filePath}</li>)}
+								</ul>
+							)}
 							{activityText === undefined ? null : <div className={styles.activityText}>{activityText}</div>}
 							{recoveryText === undefined ? null : <div className={styles.recoveryText}>{recoveryText}</div>}
 							{resultText.length === 0 ? null : <div className={styles.resultText}>{resultText}</div>}
@@ -190,7 +231,7 @@ function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.El
 											<span className={styles.deletions}>-{fileEditBatch.deletions}</span>
 										</span>
 									</div>
-									{fileEditBatch.sessionId === undefined ? (
+									{fileEditBatch.sessionId === undefined || isCompacted ? (
 										<ul className={styles.fileList}>
 											{fileEditBatch.editedFiles.map((file: FileEditSummaryItem): React.JSX.Element => (
 																				<li key={`${file.sourceFolderId ?? ""}:${file.path}`} className={styles.fileItem}>{file.sourceFolderId === undefined ? file.path : `[${file.sourceFolderId}] ${file.path}`}</li>

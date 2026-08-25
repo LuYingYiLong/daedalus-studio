@@ -700,6 +700,8 @@ export type TimelineBodyPart =
 			type: "thinking";
 			text: string;
 			done: boolean;
+			detailLevel?: "full" | "compacted";
+			compactedSummary?: string;
 			activityGroupId?: string;
 			activityPartId?: string;
 			activityPartKind?: "thinking" | "tool";
@@ -733,6 +735,8 @@ export type TimelineBodyPart =
 			type: "tool";
 			tool_call_id: string;
 			events: Record<string, unknown>[];
+			detailLevel?: "full" | "compacted";
+			compactedSummary?: string;
 			activityGroupId?: string;
 			activityPartId?: string;
 			activityPartKind?: "thinking" | "tool";
@@ -762,6 +766,8 @@ export type TimelineBodyPart =
 			type: "image_generation";
 			status: "running" | "completed" | "failed";
 			prompt: string;
+			detailLevel?: "full" | "compacted";
+			compactedSummary?: string;
 			toolCallId?: string;
 			artifacts?: TimelineGeneratedImageArtifact[];
 			provider?: string;

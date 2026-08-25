@@ -92,7 +92,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: var(--ds-space-3);
+	gap: var(--ds-space-1);
 }
 
 .pathBlock {

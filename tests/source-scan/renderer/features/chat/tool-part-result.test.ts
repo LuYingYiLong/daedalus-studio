@@ -9,6 +9,8 @@ describe("ToolPart result rendering", () => {
 		expect(source).toContain('getLatestEvent(events, "tool.result")');
 		expect(source).toContain("className={styles.resultText}");
 		expect(source).not.toContain("JSON.stringify(part.events");
+		expect(source).toContain('t("chat.tool.compactedDetails")');
+		expect(source).toContain("fileEditBatch.sessionId === undefined || isCompacted");
 	});
 
 	it("keeps file writes visible while running and renders structured file change statistics", () => {

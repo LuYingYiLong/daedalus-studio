@@ -34,6 +34,7 @@ type SettingKey =
 	| "autoCheckForUpdates"
 	| "language"
 	| "minimizeToTrayOnClose"
+	| "autoCompactActivityDetails"
 	| "nextStepHintsEnabled"
 	| "notifyOnRunCompleted";
 
@@ -131,6 +132,38 @@ function GeneralSettingsPage({
 			onGeneralSettingsChange(optimisticSettings);
 			const savedSettings: GeneralSettings = await updateGeneralSettings({
 				nextStepHintsEnabled: checked,
+			});
+			setDraftGeneralSettings(savedSettings);
+			onGeneralSettingsChange(savedSettings);
+		} catch (error: unknown) {
+			setDraftGeneralSettings(previousSettings);
+			onGeneralSettingsChange(previousSettings);
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: t("settings.general.errors.save"),
+			);
+		} finally {
+			setSavingKey(null);
+		}
+	}
+
+	async function handleAutoCompactActivityDetailsChange(
+		checked: boolean,
+	): Promise<void> {
+		const previousSettings: GeneralSettings = draftGeneralSettings;
+		const optimisticSettings: GeneralSettings = {
+			...previousSettings,
+			autoCompactActivityDetails: checked,
+		};
+
+		try {
+			setSavingKey("autoCompactActivityDetails");
+			setErrorMessage(null);
+			setDraftGeneralSettings(optimisticSettings);
+			onGeneralSettingsChange(optimisticSettings);
+			const savedSettings: GeneralSettings = await updateGeneralSettings({
+				autoCompactActivityDetails: checked,
 			});
 			setDraftGeneralSettings(savedSettings);
 			onGeneralSettingsChange(savedSettings);
@@ -315,6 +348,18 @@ function GeneralSettingsPage({
 				<SettingsList title={t("settings.general.general.title")}>
 					<div className={styles.preferenceList}>
 						{[
+							{
+								key: "autoCompactActivityDetails" as const,
+								title: t(
+									"settings.general.general.autoCompactActivityDetails.title",
+								),
+								description: t(
+									"settings.general.general.autoCompactActivityDetails.description",
+								),
+								checked:
+									draftGeneralSettings.autoCompactActivityDetails,
+								onChange: handleAutoCompactActivityDetailsChange,
+							},
 							{
 								key: "nextStepHintsEnabled" as const,
 								title: t(
