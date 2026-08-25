@@ -8,14 +8,21 @@ import { BackendRpcError } from "@/platform/rpc/transport/backend-rpc-client";
 import useNativeTaskNotifications from "./hooks/useNativeTaskNotifications";
 import useAppEventBridge from "./hooks/useAppEventBridge";
 import useSessionRuntimeEvents from "./hooks/useSessionRuntimeEvents";
+import useSessionNavigationController from "./hooks/useSessionNavigationController";
 import useTimelineStreamBuffer from "./hooks/useTimelineStreamBuffer";
-import useWorkbenchPatchQueue, { mergeWorkbenchPatch } from "./hooks/useWorkbenchPatchQueue";
+import useWorkbenchPatchQueue, {
+	mergeWorkbenchPatch,
+} from "./hooks/useWorkbenchPatchQueue";
 import useWorkspaceContextController from "@/features/workspace/controllers/useWorkspaceContextController";
 import useApprovalController from "@/features/approval/controllers/useApprovalController";
 import usePlanGoalController from "@/features/composer/controllers/usePlanGoalController";
 import useTimelineController from "@/features/conversation/controllers/useTimelineController";
-import { fetchWorkspaces, getWorktreeEligibility, selectWorkspace, type DeleteWorkspaceResult } from "@/platform/rpc/workspace-api";
-import styles from "../shell/App.module.css";
+import {
+	fetchWorkspaces,
+	getWorktreeEligibility,
+	selectWorkspace,
+	type DeleteWorkspaceResult,
+} from "@/platform/rpc/workspace-api";
 import type {
 	AdditionalContextItem,
 	MessageQueueItem,
@@ -128,15 +135,41 @@ import {
 	updateClientPreferences,
 	type ClientPreferences,
 	type NewSessionComposerPreferences,
-	type WorkspaceSidebarPreferences
+	type WorkspaceSidebarPreferences,
 } from "@/platform/rpc/client-preferences-api";
-import { DEFAULT_GENERAL_SETTINGS, fetchGeneralSettings, type GeneralSettings } from "@/platform/rpc/general-settings-api";
-import { createDefaultSessionLayout, listTerminalRuntimeIds, resetSessionFilePanelWorkspaceState, type SessionLayoutMap, type SessionLayoutPreferences } from "@/domain/session/session-layout";
-import { markActiveSessionRead, removeUnreadSessions } from "@/domain/workspace/session-unread";
-import { markRunStopped, markSessionRunStarted, removeRunningSessions, syncSessionRunFromOpen, type RunningSessionState } from "@/domain/workspace/session-running";
+import {
+	DEFAULT_GENERAL_SETTINGS,
+	fetchGeneralSettings,
+	type GeneralSettings,
+} from "@/platform/rpc/general-settings-api";
+import {
+	createDefaultSessionLayout,
+	listTerminalRuntimeIds,
+	resetSessionFilePanelWorkspaceState,
+	type SessionLayoutMap,
+	type SessionLayoutPreferences,
+} from "@/domain/session/session-layout";
+import {
+	markActiveSessionRead,
+	removeUnreadSessions,
+} from "@/domain/workspace/session-unread";
+import {
+	markRunStopped,
+	markSessionRunStarted,
+	removeRunningSessions,
+	syncSessionRunFromOpen,
+	type RunningSessionState,
+} from "@/domain/workspace/session-running";
 import type { SessionArchiveContext } from "@/widgets/workspace/WorkspaceTree";
-import { clearCleanFilePanelBuffersForSession, hasDirtyFilePanelBuffersForSession } from "@/widgets/files/file-runtime-buffers";
-import { NEW_SESSION_EVENT, recordOpenedSession, removeSessionFromNavigationHistory, SESSION_NAVIGATION_EVENT } from "@/domain/session/session-navigation-history";
+import {
+	clearCleanFilePanelBuffersForSession,
+	hasDirtyFilePanelBuffersForSession,
+} from "@/widgets/files/file-runtime-buffers";
+import {
+	NEW_SESSION_EVENT,
+	recordOpenedSession,
+	removeSessionFromNavigationHistory,
+} from "@/domain/session/session-navigation-history";
 import {
 	type AppProps,
 	type HomeDraft,
@@ -184,26 +217,43 @@ import {
 	readFileAsDataUrl,
 	readImageDimensions,
 	resolveReasoningEffortForComposerModelChange,
-	trimTimelineFromRequest
+	trimTimelineFromRequest,
 } from "./app-helpers";
-import { DEFAULT_WORKSPACE_LAUNCH_TARGET_ID, type WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launch";
+import {
+	DEFAULT_WORKSPACE_LAUNCH_TARGET_ID,
+	type WorkspaceLaunchTargetId,
+} from "@/domain/workspace/workspace-launch";
 
 export default function useAppController({ bootstrapData }: AppProps) {
 	const { t } = useTranslation();
-	const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState<number>(0);
+	const [workspaceRefreshToken, setWorkspaceRefreshToken] =
+		useState<number>(0);
 	const [isNewSessionHome, setIsNewSessionHome] = useState<boolean>(true);
 	const [homeComposerMessage, setHomeComposerMessage] = useState<string>("");
-	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() => createPreferredHomeDraft(bootstrapData.clientPreferences, bootstrapData.providerModelSelection));
+	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() =>
+		createPreferredHomeDraft(
+			bootstrapData.clientPreferences,
+			bootstrapData.providerModelSelection,
+		),
+	);
 	const homeComposerMessageRef = useLatest(homeComposerMessage);
 	const homeDraftRef = useLatest(homeDraft);
-	const [homeWorkspaceOptions, setHomeWorkspaceOptions] = useState<WorkspaceConfig[]>(() => bootstrapData.workspaceList.workspaces);
-	const [isWorkspaceProjectDialogOpen, setIsWorkspaceProjectDialogOpen] = useState<boolean>(false);
-	const [isWorkspaceSessionCreating, setIsWorkspaceSessionCreating] = useState<boolean>(false);
-	const [pendingTextAttachmentCount, setPendingTextAttachmentCount] = useState<number>(0);
+	const [homeWorkspaceOptions, setHomeWorkspaceOptions] = useState<
+		WorkspaceConfig[]
+	>(() => bootstrapData.workspaceList.workspaces);
+	const [isWorkspaceProjectDialogOpen, setIsWorkspaceProjectDialogOpen] =
+		useState<boolean>(false);
+	const [isWorkspaceSessionCreating, setIsWorkspaceSessionCreating] =
+		useState<boolean>(false);
+	const [pendingTextAttachmentCount, setPendingTextAttachmentCount] =
+		useState<number>(0);
 	const isAddingTextAttachment: boolean = pendingTextAttachmentCount > 0;
 	const [isHomeSubmitting, setIsHomeSubmitting] = useState<boolean>(false);
-	const [isWorktreePreparing, setIsWorktreePreparing] = useState<boolean>(false);
-	const [worktreeDisabledReason, setWorktreeDisabledReason] = useState<string | null>(null);
+	const [isWorktreePreparing, setIsWorktreePreparing] =
+		useState<boolean>(false);
+	const [worktreeDisabledReason, setWorktreeDisabledReason] = useState<
+		string | null
+	>(null);
 	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 	const [firstTurnModelTransition, setFirstTurnModelTransition] = useState<{
 		sessionId: string;
@@ -895,9 +945,12 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		(nextWorkbench: WorkbenchSnapshot): void => {
 			setFirstTurnModelTransition(
 				(currentTransition): typeof currentTransition => {
-					return currentTransition?.sessionId === nextWorkbench.sessionId
-						&& currentTransition.providerId === nextWorkbench.composer.provider
-						&& currentTransition.modelId === nextWorkbench.composer.model
+					return currentTransition?.sessionId ===
+						nextWorkbench.sessionId &&
+						currentTransition.providerId ===
+							nextWorkbench.composer.provider &&
+						currentTransition.modelId ===
+							nextWorkbench.composer.model
 						? null
 						: currentTransition;
 				},
@@ -1276,21 +1329,36 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		void getWorktreeEligibility(homeDraft.workspaceId)
 			.then((result): void => {
 				if (!cancelled) {
-					const unavailableSource = result.sources.find((source): boolean => !source.eligible);
+					const unavailableSource = result.sources.find(
+						(source): boolean => !source.eligible,
+					);
 					setWorktreeDisabledReason(
 						result.eligible
 							? null
-							: unavailableSource?.reasonCode === null || unavailableSource?.reasonCode === undefined
-								? (unavailableSource?.reason ?? t("composer.worktree.unavailable"))
-								: t(`composer.worktree.reasons.${unavailableSource.reasonCode}`, {
-										defaultValue: unavailableSource.reason ?? t("composer.worktree.unavailable")
-									})
+							: unavailableSource?.reasonCode === null ||
+								  unavailableSource?.reasonCode === undefined
+								? (unavailableSource?.reason ??
+									t("composer.worktree.unavailable"))
+								: t(
+										`composer.worktree.reasons.${unavailableSource.reasonCode}`,
+										{
+											defaultValue:
+												unavailableSource.reason ??
+												t(
+													"composer.worktree.unavailable",
+												),
+										},
+									),
 					);
 				}
 			})
 			.catch((error: unknown): void => {
 				if (!cancelled) {
-					setWorktreeDisabledReason(error instanceof Error ? error.message : t("composer.worktree.unavailable"));
+					setWorktreeDisabledReason(
+						error instanceof Error
+							? error.message
+							: t("composer.worktree.unavailable"),
+					);
 				}
 			});
 		return (): void => {
@@ -1535,9 +1603,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 					text: "",
 				},
 			});
-			setActiveWorkspace(
-				createWorkspaceFromSessionOpenResult(result),
-			);
+			setActiveWorkspace(createWorkspaceFromSessionOpenResult(result));
 			setIsNewSessionHome(true);
 			setSessionError(null);
 		} catch (error: unknown) {
@@ -1764,7 +1830,10 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		};
 	}, [handleNewSession]);
 
-	async function handleNewWorkspaceSession(workspace: WorkspaceConfig, executionEnvironment: "local" | "worktree" = "local"): Promise<void> {
+	async function handleNewWorkspaceSession(
+		workspace: WorkspaceConfig,
+		executionEnvironment: "local" | "worktree" = "local",
+	): Promise<void> {
 		setIsWorkspaceSessionCreating(true);
 		try {
 			const temporaryId: string | null =
@@ -1772,17 +1841,29 @@ export default function useAppController({ bootstrapData }: AppProps) {
 					? activeSessionId
 					: temporaryDraftSessionIdRef.current;
 			beginLocalNewSessionDraft(workspace, "", executionEnvironment);
-			setHomeWorkspaceOptions((currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
-				if (currentWorkspaces.some((currentWorkspace: WorkspaceConfig): boolean => currentWorkspace.id === workspace.id)) {
-					return currentWorkspaces;
-				}
-				return [...currentWorkspaces, workspace];
-			});
+			setHomeWorkspaceOptions(
+				(currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
+					if (
+						currentWorkspaces.some(
+							(currentWorkspace: WorkspaceConfig): boolean =>
+								currentWorkspace.id === workspace.id,
+						)
+					) {
+						return currentWorkspaces;
+					}
+					return [...currentWorkspaces, workspace];
+				},
+			);
 
 			if (temporaryId !== null) {
-				await deleteSessionWithLayout(temporaryId).catch((error: unknown): void => {
-					console.warn("[App] discard temporary session failed", error);
-				});
+				await deleteSessionWithLayout(temporaryId).catch(
+					(error: unknown): void => {
+						console.warn(
+							"[App] discard temporary session failed",
+							error,
+						);
+					},
+				);
 			}
 		} finally {
 			setIsWorkspaceSessionCreating(false);
@@ -1860,8 +1941,8 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				...currentDraft,
 				workspaceId: null,
 				workspace: null,
-				executionEnvironment: "local"
-			})
+				executionEnvironment: "local",
+			}),
 		);
 		setActiveWorkspace(null);
 	}
@@ -1909,42 +1990,85 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				...result.workbench,
 				composer: {
 					...result.workbench.composer,
-					text: ""
-				}
+					text: "",
+				},
 			};
 			setWorkbench(openedWorkbench);
 			setRunState(
 				(currentState: RunControllerState): RunControllerState =>
-					result.activeAgentRun === null ? createIdleRunState(currentState.sequence) : applyAgentRunState(currentState, result.activeAgentRun)
+					result.activeAgentRun === null
+						? createIdleRunState(currentState.sequence)
+						: applyAgentRunState(
+								currentState,
+								result.activeAgentRun,
+							),
 			);
-			setRunningSessionState((current: RunningSessionState): RunningSessionState => {
-				return syncSessionRunFromOpen(current, sessionId, result.activeAgentRun);
-			});
-			const openedGoalDismissed: boolean = result.currentGoal !== null && isAgentGoalDismissed(result.currentGoal, dismissedTerminalGoalIdsRef.current);
-			setCurrentGoal(result.currentGoal === null || openedGoalDismissed ? null : result.currentGoal);
+			setRunningSessionState(
+				(current: RunningSessionState): RunningSessionState => {
+					return syncSessionRunFromOpen(
+						current,
+						sessionId,
+						result.activeAgentRun,
+					);
+				},
+			);
+			const openedGoalDismissed: boolean =
+				result.currentGoal !== null &&
+				isAgentGoalDismissed(
+					result.currentGoal,
+					dismissedTerminalGoalIdsRef.current,
+				);
+			setCurrentGoal(
+				result.currentGoal === null || openedGoalDismissed
+					? null
+					: result.currentGoal,
+			);
 			setApprovalModeState(result.metadata.approvalMode ?? "manual");
 			setActiveWorkspace(
 				createWorkspaceFromSessionOpenResult(
 					result,
-					result.metadata.worktree === undefined ? undefined : homeWorkspaceOptions.find((workspace): boolean => workspace.id === result.metadata.worktree!.sourceWorkspaceId)
-				)
+					result.metadata.worktree === undefined
+						? undefined
+						: homeWorkspaceOptions.find(
+								(workspace): boolean =>
+									workspace.id ===
+									result.metadata.worktree!.sourceWorkspaceId,
+							),
+				),
 			);
-			if (options.recordNavigation !== false && result.metadata.temporary !== true) {
+			if (
+				options.recordNavigation !== false &&
+				result.metadata.temporary !== true
+			) {
 				recordOpenedSession(sessionId);
 			}
-			const workflowTodo: WorkflowTodoSnapshot | null = openedGoalDismissed ? null : createWorkflowTodoSnapshotFromTimelineResult(result);
+			const workflowTodo: WorkflowTodoSnapshot | null =
+				openedGoalDismissed
+					? null
+					: createWorkflowTodoSnapshotFromTimelineResult(result);
 			setWorkflowTodoSnapshot(workflowTodo);
 			rememberLoadedWorkflowTodo(workflowTodo);
-			if (workflowTodo !== null && isWorkflowTodoActive(workflowTodo) && result.metadata.workflowTodoDismissedKey !== getWorkflowTodoSnapshotKey(workflowTodo)) {
+			if (
+				workflowTodo !== null &&
+				isWorkflowTodoActive(workflowTodo) &&
+				result.metadata.workflowTodoDismissedKey !==
+					getWorkflowTodoSnapshotKey(workflowTodo)
+			) {
 				expandWorkflowTodoPanel();
 			}
 
 			if (result.workspaceWarning) {
-				console.warn("[App] session workspace warning", result.workspaceWarning);
+				console.warn(
+					"[App] session workspace warning",
+					result.workspaceWarning,
+				);
 			}
 			void checkActiveSessionIntegrity(sessionId);
 		} catch (error: unknown) {
-			const message: string = error instanceof Error ? error.message : "Failed to open session";
+			const message: string =
+				error instanceof Error
+					? error.message
+					: "Failed to open session";
 
 			setSessionError(message);
 			console.error("[App] open session failed", error);
@@ -2022,14 +2146,22 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		}
 	}
 
-	async function handleSessionWorktreeDelete(session: SessionMetadata): Promise<SessionMetadata> {
-		const sessionLayout: SessionLayoutPreferences = sessionLayouts[session.id] ?? DEFAULT_SESSION_LAYOUT;
-		for (const terminalId of listTerminalRuntimeIds(session.id, sessionLayout)) {
+	async function handleSessionWorktreeDelete(
+		session: SessionMetadata,
+	): Promise<SessionMetadata> {
+		const sessionLayout: SessionLayoutPreferences =
+			sessionLayouts[session.id] ?? DEFAULT_SESSION_LAYOUT;
+		for (const terminalId of listTerminalRuntimeIds(
+			session.id,
+			sessionLayout,
+		)) {
 			const terminalState = await window.electronAPI.terminal.getState({
-				terminalId
+				terminalId,
 			});
 			if (terminalState?.running === true) {
-				throw new Error(t("workspaceTree.errors.worktreeTerminalActive"));
+				throw new Error(
+					t("workspaceTree.errors.worktreeTerminalActive"),
+				);
 			}
 		}
 		const result = await deleteSessionWorktree(session.id);
@@ -2040,7 +2172,9 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				setWorkbench(result.workbench);
 			}
 		}
-		setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		setWorkspaceRefreshToken(
+			(currentToken: number): number => currentToken + 1,
+		);
 		return result.metadata;
 	}
 
@@ -2048,11 +2182,19 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		targetSession: SessionMetadata,
 		workspace: WorkspaceConfig,
 	): Promise<MoveSessionWorkspaceResult> {
-		const sessionLayout: SessionLayoutPreferences = sessionLayouts[targetSession.id] ?? DEFAULT_SESSION_LAYOUT;
-		for (const terminalId of listTerminalRuntimeIds(targetSession.id, sessionLayout)) {
-			const terminalState = await window.electronAPI.terminal.getState({ terminalId });
+		const sessionLayout: SessionLayoutPreferences =
+			sessionLayouts[targetSession.id] ?? DEFAULT_SESSION_LAYOUT;
+		for (const terminalId of listTerminalRuntimeIds(
+			targetSession.id,
+			sessionLayout,
+		)) {
+			const terminalState = await window.electronAPI.terminal.getState({
+				terminalId,
+			});
 			if (terminalState?.running === true) {
-				throw new Error(t("workspaceTree.errors.moveSessionTerminalActive"));
+				throw new Error(
+					t("workspaceTree.errors.moveSessionTerminalActive"),
+				);
 			}
 		}
 		if (hasDirtyFilePanelBuffersForSession(targetSession.id)) {
@@ -2068,32 +2210,48 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		} catch (error: unknown) {
 			if (error instanceof BackendRpcError) {
 				const translationKeyByCode: Readonly<Record<string, string>> = {
-					session_workspace_move_busy: "workspaceTree.errors.moveSessionBusy",
-					session_workspace_context_pending: "workspaceTree.errors.moveSessionContextPending",
-					session_workspace_managed_worktree: "workspaceTree.errors.moveSessionManagedWorktree",
-					session_workspace_not_found: "workspaceTree.errors.moveSessionWorkspaceNotFound",
-					session_workspace_unchanged: "workspaceTree.errors.moveSessionUnchanged",
+					session_workspace_move_busy:
+						"workspaceTree.errors.moveSessionBusy",
+					session_workspace_context_pending:
+						"workspaceTree.errors.moveSessionContextPending",
+					session_workspace_managed_worktree:
+						"workspaceTree.errors.moveSessionManagedWorktree",
+					session_workspace_not_found:
+						"workspaceTree.errors.moveSessionWorkspaceNotFound",
+					session_workspace_unchanged:
+						"workspaceTree.errors.moveSessionUnchanged",
 				};
-				const translationKey: string | undefined = translationKeyByCode[error.code];
+				const translationKey: string | undefined =
+					translationKeyByCode[error.code];
 				if (translationKey !== undefined) {
 					throw new Error(t(translationKey));
 				}
 			}
 			throw error;
 		}
-		const nextLayout: SessionLayoutPreferences = resetSessionFilePanelWorkspaceState(sessionLayout);
+		const nextLayout: SessionLayoutPreferences =
+			resetSessionFilePanelWorkspaceState(sessionLayout);
 		clearCleanFilePanelBuffersForSession(targetSession.id);
-		setSessionLayouts((currentLayouts: SessionLayoutMap): SessionLayoutMap => ({
-			...currentLayouts,
-			[targetSession.id]: nextLayout,
-		}));
-		void window.electronAPI.sessionLayout.save({
-			sessionId: targetSession.id,
-			layout: nextLayout,
-		}).catch((error: unknown): void => {
-			console.error("[App] reset moved session file panel layout failed", error);
-			void messageApi.warning(t("workspaceTree.errors.moveSessionLayoutSave"));
-		});
+		setSessionLayouts(
+			(currentLayouts: SessionLayoutMap): SessionLayoutMap => ({
+				...currentLayouts,
+				[targetSession.id]: nextLayout,
+			}),
+		);
+		void window.electronAPI.sessionLayout
+			.save({
+				sessionId: targetSession.id,
+				layout: nextLayout,
+			})
+			.catch((error: unknown): void => {
+				console.error(
+					"[App] reset moved session file panel layout failed",
+					error,
+				);
+				void messageApi.warning(
+					t("workspaceTree.errors.moveSessionLayoutSave"),
+				);
+			});
 
 		if (activeSessionIdRef.current === targetSession.id) {
 			setActiveSessionMetadata(result.metadata);
@@ -2102,135 +2260,117 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				setWorkbench(result.workbench);
 			}
 		}
-		setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+		setWorkspaceRefreshToken(
+			(currentToken: number): number => currentToken + 1,
+		);
 		window.electronAPI.sessionCatalog.notifyChanged();
 		return result;
 	}
 
-	async function handleSessionWorktreeHandoff(target: "local" | "worktree"): Promise<void> {
+	async function handleSessionWorktreeHandoff(
+		target: "local" | "worktree",
+	): Promise<void> {
 		if (activeSessionMetadata?.worktree === undefined) return;
 		try {
-			let preview = await previewSessionWorktreeHandoff({ sessionId: activeSessionMetadata.id, target });
-			const branchBySource: Record<string, string> = Object.fromEntries(preview.sources.flatMap((source): Array<[string, string]> => source.newCommits > 0 && source.branch !== null ? [[source.sourceFolderId, source.branch]] : []));
+			let preview = await previewSessionWorktreeHandoff({
+				sessionId: activeSessionMetadata.id,
+				target,
+			});
+			const branchBySource: Record<string, string> = Object.fromEntries(
+				preview.sources.flatMap(
+					(source): Array<[string, string]> =>
+						source.newCommits > 0 && source.branch !== null
+							? [[source.sourceFolderId, source.branch]]
+							: [],
+				),
+			);
 			if (!preview.allowed && Object.keys(branchBySource).length > 0) {
-				preview = await previewSessionWorktreeHandoff({ sessionId: activeSessionMetadata.id, target, branchBySource });
+				preview = await previewSessionWorktreeHandoff({
+					sessionId: activeSessionMetadata.id,
+					target,
+					branchBySource,
+				});
 			}
 			if (!preview.allowed) {
-				throw new Error(preview.sources.find((source) => source.blockedReason !== null)?.blockedReason ?? "Handoff is blocked.");
+				throw new Error(
+					preview.sources.find(
+						(source) => source.blockedReason !== null,
+					)?.blockedReason ?? "Handoff is blocked.",
+				);
 			}
 			const confirmed = await new Promise<boolean>((resolve): void => {
 				Modal.confirm({
-					title: target === "local" ? "Hand off to local checkout?" : "Hand off to worktree?",
+					title:
+						target === "local"
+							? "Hand off to local checkout?"
+							: "Hand off to worktree?",
 					content: `${preview.sources.reduce((count, source) => count + source.modifiedFiles.length, 0)} changed files will move between checkouts. The target must remain clean.`,
 					onOk: (): void => resolve(true),
-					onCancel: (): void => resolve(false)
+					onCancel: (): void => resolve(false),
 				});
 			});
 			if (!confirmed) return;
-			const result = await executeSessionWorktreeHandoff({ sessionId: activeSessionMetadata.id, target, branchBySource });
+			const result = await executeSessionWorktreeHandoff({
+				sessionId: activeSessionMetadata.id,
+				target,
+				branchBySource,
+			});
 			setActiveSessionMetadata(result.metadata);
 			setActiveWorkspace(result.workspace);
 			if (result.workbench !== null) setWorkbench(result.workbench);
-			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+			setWorkspaceRefreshToken(
+				(currentToken: number): number => currentToken + 1,
+			);
 		} catch (error: unknown) {
-			void messageApi.error(error instanceof Error ? error.message : "Failed to hand off worktree");
-		}
-	}
-
-	async function handleSessionWorktreeSetup(action: "retry" | "skip"): Promise<void> {
-		if (activeSessionMetadata?.worktree === undefined) return;
-		try {
-			const result = action === "retry"
-				? await retrySessionWorktreeSetup(activeSessionMetadata.id)
-				: await skipSessionWorktreeSetup(activeSessionMetadata.id);
-			setActiveSessionMetadata(result.metadata);
-			setActiveWorkspace(result.workspace);
-			if (result.workbench !== null) setWorkbench(result.workbench);
-			setSessionError((result.metadata.worktree?.status ?? "ready") === "ready"
-				? null
-				: "Worktree setup is not ready.");
-			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
-		} catch (error: unknown) {
-			void messageApi.error(error instanceof Error ? error.message : "Failed to update worktree setup");
-		}
-	}
-
-	async function handleForkSourceOpen(sessionId: string): Promise<void> {
-		try {
-			const sessionList = await fetchSessions();
-			const source: SessionMetadata | undefined =
-				sessionList.sessions.find(
-					(session: SessionMetadata): boolean =>
-						session.id === sessionId,
-				);
-			if (source === undefined) {
-				void messageApi.info(t("chat.fork.errors.sourceUnavailable"));
-				return;
-			}
-			await handleSessionSelect(source);
-		} catch (error: unknown) {
-			console.error("[App] open fork source failed", error);
 			void messageApi.error(
 				error instanceof Error
 					? error.message
-					: t("chat.fork.errors.openSource"),
+					: "Failed to hand off worktree",
 			);
 		}
 	}
 
-	useEffect((): (() => void) => {
-		function handleSessionNavigation(event: Event): void {
-			const sessionId: unknown = (event as CustomEvent<unknown>).detail;
-			if (
-				typeof sessionId !== "string" ||
-				sessionId.length === 0 ||
-				sessionId === activeSessionIdRef.current
-			) {
-				return;
-			}
-
-			void (async (): Promise<void> => {
-				try {
-					const sessionList = await fetchSessions();
-					const session: SessionMetadata | undefined =
-						sessionList.sessions.find(
-							(candidate: SessionMetadata): boolean =>
-								candidate.id === sessionId,
-						);
-					if (session === undefined) {
-						removeSessionFromNavigationHistory(sessionId);
-						showTransientError("Session not found");
-						return;
-					}
-					setRecentSessions(getRecentSessions(sessionList.sessions));
-					await handleSessionSelect(session, {
-						recordNavigation: false,
-					});
-				} catch (error: unknown) {
-					showTransientError(
-						error instanceof Error
-							? error.message
-							: "Failed to open session",
-					);
-					console.error(
-						"[App] navigate session history failed",
-						error,
-					);
-				}
-			})();
-		}
-
-		window.addEventListener(
-			SESSION_NAVIGATION_EVENT,
-			handleSessionNavigation,
-		);
-		return (): void => {
-			window.removeEventListener(
-				SESSION_NAVIGATION_EVENT,
-				handleSessionNavigation,
+	async function handleSessionWorktreeSetup(
+		action: "retry" | "skip",
+	): Promise<void> {
+		if (activeSessionMetadata?.worktree === undefined) return;
+		try {
+			const result =
+				action === "retry"
+					? await retrySessionWorktreeSetup(activeSessionMetadata.id)
+					: await skipSessionWorktreeSetup(activeSessionMetadata.id);
+			setActiveSessionMetadata(result.metadata);
+			setActiveWorkspace(result.workspace);
+			if (result.workbench !== null) setWorkbench(result.workbench);
+			setSessionError(
+				(result.metadata.worktree?.status ?? "ready") === "ready"
+					? null
+					: "Worktree setup is not ready.",
 			);
-		};
-	}, [handleSessionSelect]);
+			setWorkspaceRefreshToken(
+				(currentToken: number): number => currentToken + 1,
+			);
+		} catch (error: unknown) {
+			void messageApi.error(
+				error instanceof Error
+					? error.message
+					: "Failed to update worktree setup",
+			);
+		}
+	}
+
+	const { openForkSource } = useSessionNavigationController({
+		activeSessionIdRef,
+		setRecentSessions,
+		onSessionSelect: handleSessionSelect,
+		showTransientError,
+		onInfo: (message: string): void => {
+			void messageApi.info(message);
+		},
+		onError: (message: string): void => {
+			void messageApi.error(message);
+		},
+	});
 
 	function resetToNewSessionHome(): void {
 		takePendingWorkbenchPatch();
@@ -2771,13 +2911,19 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			setHomeDraft(
 				(currentDraft: HomeDraft): HomeDraft => ({
 					...currentDraft,
-					chatMode: modeOverride
-				})
+					chatMode: modeOverride,
+				}),
 			);
 		}
 		const requestId: string = createChatRequestId();
-		const providerId: string | null = homeDraft.providerId ?? providerModelSelection?.activeModel.providerId ?? null;
-		const modelId: string | null = homeDraft.modelId ?? providerModelSelection?.activeModel.modelId ?? null;
+		const providerId: string | null =
+			homeDraft.providerId ??
+			providerModelSelection?.activeModel.providerId ??
+			null;
+		const modelId: string | null =
+			homeDraft.modelId ??
+			providerModelSelection?.activeModel.modelId ??
+			null;
 		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
 		let sessionCreated: boolean = false;
 		let enteredSession: boolean = false;
@@ -2799,7 +2945,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				reasoningEffort: homeDraft.reasoningEffort,
 				chatMode,
 				approvalMode,
-				workspaceLaunch: homeDraft.workspaceLaunch
+				workspaceLaunch: homeDraft.workspaceLaunch,
 			});
 			sessionCreated = true;
 			activeSessionIdRef.current = created.id;
@@ -2808,16 +2954,25 @@ export default function useAppController({ bootstrapData }: AppProps) {
 					throw new Error(t("composer.worktree.unavailable"));
 				}
 				setIsWorktreePreparing(true);
-				const worktreeResult = await createSessionWorktree(created.id, homeDraft.workspaceId, homeDraft.worktreeSources);
+				const worktreeResult = await createSessionWorktree(
+					created.id,
+					homeDraft.workspaceId,
+					homeDraft.worktreeSources,
+				);
 				if (worktreeResult.workbench === null) {
-					throw new Error("Worktree session did not return a workbench.");
+					throw new Error(
+						"Worktree session did not return a workbench.",
+					);
 				}
 				created = {
 					...worktreeResult.metadata,
-					workbench: worktreeResult.workbench
+					workbench: worktreeResult.workbench,
 				};
 				createdRuntimeWorkspace = worktreeResult.workspace;
-				if ((worktreeResult.metadata.worktree?.status ?? "ready") !== "ready") {
+				if (
+					(worktreeResult.metadata.worktree?.status ?? "ready") !==
+					"ready"
+				) {
 					setIsNewSessionHome(false);
 					enteredSession = true;
 					setActiveSessionId(created.id);
@@ -2825,7 +2980,12 @@ export default function useAppController({ bootstrapData }: AppProps) {
 					setActiveWorkspace(worktreeResult.workspace);
 					setWorkbench(created.workbench);
 					replaceComposerInput(message, created.id);
-					setSessionError(worktreeResult.metadata.worktree?.status === "setup-failed" ? "Worktree setup failed. Retry, skip, or delete the worktree before sending." : "Review and trust the selected development environment before setup can continue.");
+					setSessionError(
+						worktreeResult.metadata.worktree?.status ===
+							"setup-failed"
+							? "Worktree setup failed. Retry, skip, or delete the worktree before sending."
+							: "Review and trust the selected development environment before setup can continue.",
+					);
 					return;
 				}
 			}
@@ -2835,30 +2995,50 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			setActiveSessionId(created.id);
 			setActiveSessionMetadata(created);
 			recordOpenedSession(created.id);
-			setActiveWorkspace(createdRuntimeWorkspace ?? createWorkspaceFromSessionMetadata(created, created.workbench));
+			setActiveWorkspace(
+				createdRuntimeWorkspace ??
+					createWorkspaceFromSessionMetadata(
+						created,
+						created.workbench,
+					),
+			);
 			timelineStore.reset();
 			setWorkbench(created.workbench);
 			setWorkflowTodoSnapshot(null);
 			rememberLoadedWorkflowTodo(null);
-			setHomeDraft(createPreferredHomeDraft(clientPreferences, providerModelSelection));
+			setHomeDraft(
+				createPreferredHomeDraft(
+					clientPreferences,
+					providerModelSelection,
+				),
+			);
 			if (cancelledChatRequestIdsRef.current.has(requestId)) {
 				replaceComposerInput(message, created.id);
 				return;
 			}
-			applyOptimisticSend(requestId, message, created.workbench.composer.additionalContext);
+			applyOptimisticSend(
+				requestId,
+				message,
+				created.workbench.composer.additionalContext,
+			);
 
-			const createdChatMode: ChatMode = created.workbench.composer.chatMode ?? chatMode;
+			const createdChatMode: ChatMode =
+				created.workbench.composer.chatMode ?? chatMode;
 			await sendChatMessage({
 				requestId,
 				message,
 				mode: createdChatMode,
 				provider: providerId ?? undefined,
 				model: modelId ?? undefined,
-				reasoningEffort: created.workbench.composer.reasoningEffort ?? undefined,
+				reasoningEffort:
+					created.workbench.composer.reasoningEffort ?? undefined,
 				executionPolicy: "auto",
-				outputTarget: getChatOutputTarget(createdChatMode, created.workspaceId ?? homeDraft.workspaceId),
+				outputTarget: getChatOutputTarget(
+					createdChatMode,
+					created.workspaceId ?? homeDraft.workspaceId,
+				),
 				additionalContext: created.workbench.composer.additionalContext,
-				skillRefs
+				skillRefs,
 			});
 			if (createdChatMode !== "goal") {
 				await refreshLatestTimeline(created.id);
@@ -2869,7 +3049,10 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				setSessionError(null);
 				return;
 			}
-			const errorMessage: string = error instanceof Error ? error.message : "Failed to start new session";
+			const errorMessage: string =
+				error instanceof Error
+					? error.message
+					: "Failed to start new session";
 
 			if (enteredSession && activeSessionIdRef.current !== null) {
 				replaceComposerInput(message, activeSessionIdRef.current);
@@ -2877,26 +3060,50 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				setIsNewSessionHome(true);
 				replaceComposerInput(message, "home");
 			}
-			setRunState((currentState: RunControllerState): RunControllerState => finishOptimisticRunState(currentState, requestId));
-			setRunningSessionState((current: RunningSessionState): RunningSessionState => {
-				return markRunStopped(current, requestId);
-			});
-			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null => {
-				return currentWorkbench === null
-					? currentWorkbench
-					: {
-							...currentWorkbench,
-							activeRun: currentWorkbench.activeRun.requestId === requestId ? { status: "idle" } : currentWorkbench.activeRun
-						};
-			});
+			setRunState(
+				(currentState: RunControllerState): RunControllerState =>
+					finishOptimisticRunState(currentState, requestId),
+			);
+			setRunningSessionState(
+				(current: RunningSessionState): RunningSessionState => {
+					return markRunStopped(current, requestId);
+				},
+			);
+			setWorkbench(
+				(
+					currentWorkbench: WorkbenchSnapshot | null,
+				): WorkbenchSnapshot | null => {
+					return currentWorkbench === null
+						? currentWorkbench
+						: {
+								...currentWorkbench,
+								activeRun:
+									currentWorkbench.activeRun.requestId ===
+									requestId
+										? { status: "idle" }
+										: currentWorkbench.activeRun,
+							};
+				},
+			);
 			setSessionError(errorMessage);
 			if (sessionCreated && !isBackendRpcErrorMessage(errorMessage)) {
-				timelineStore.update((currentPage: TimelinePageState): TimelinePageState => {
-					return {
-						...currentPage,
-						blocks: applyBackendEventToTimeline(currentPage.blocks, createFrontendFailedRunEvent(requestId, currentPage.sessionId ?? activeSessionIdRef.current ?? "", errorMessage))
-					};
-				});
+				timelineStore.update(
+					(currentPage: TimelinePageState): TimelinePageState => {
+						return {
+							...currentPage,
+							blocks: applyBackendEventToTimeline(
+								currentPage.blocks,
+								createFrontendFailedRunEvent(
+									requestId,
+									currentPage.sessionId ??
+										activeSessionIdRef.current ??
+										"",
+									errorMessage,
+								),
+							),
+						};
+					},
+				);
 			}
 			console.error("[App] start new session failed", error);
 		} finally {
@@ -2921,7 +3128,10 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		}
 		let effectiveWorkbench: WorkbenchSnapshot | null = workbench;
 		let effectiveWorkspace: WorkspaceConfig | null = activeWorkspace;
-		if (isFirstTurnSubmission && homeDraft.executionEnvironment === "worktree") {
+		if (
+			isFirstTurnSubmission &&
+			homeDraft.executionEnvironment === "worktree"
+		) {
 			if (activeSessionId === null || homeDraft.workspaceId === null) {
 				setSessionError(t("composer.worktree.unavailable"));
 				return;
@@ -2929,22 +3139,40 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			try {
 				setIsWorktreePreparing(true);
 				setSessionError(null);
-				const worktreeResult = await createSessionWorktree(activeSessionId, homeDraft.workspaceId, homeDraft.worktreeSources);
+				const worktreeResult = await createSessionWorktree(
+					activeSessionId,
+					homeDraft.workspaceId,
+					homeDraft.worktreeSources,
+				);
 				if (worktreeResult.workbench === null) {
-					throw new Error("Worktree session did not return a workbench.");
+					throw new Error(
+						"Worktree session did not return a workbench.",
+					);
 				}
 				effectiveWorkbench = worktreeResult.workbench;
 				effectiveWorkspace = worktreeResult.workspace;
 				setActiveSessionMetadata(worktreeResult.metadata);
 				setActiveWorkspace(worktreeResult.workspace);
 				setWorkbench(worktreeResult.workbench);
-				if ((worktreeResult.metadata.worktree?.status ?? "ready") !== "ready") {
+				if (
+					(worktreeResult.metadata.worktree?.status ?? "ready") !==
+					"ready"
+				) {
 					replaceComposerInput(nextMessage, activeSessionId);
-					setSessionError(worktreeResult.metadata.worktree?.status === "setup-failed" ? "Worktree setup failed. Retry, skip, or delete the worktree before sending." : "Review and trust the selected development environment before setup can continue.");
+					setSessionError(
+						worktreeResult.metadata.worktree?.status ===
+							"setup-failed"
+							? "Worktree setup failed. Retry, skip, or delete the worktree before sending."
+							: "Review and trust the selected development environment before setup can continue.",
+					);
 					return;
 				}
 			} catch (error: unknown) {
-				setSessionError(error instanceof Error ? error.message : "Failed to create worktree");
+				setSessionError(
+					error instanceof Error
+						? error.message
+						: "Failed to create worktree",
+				);
 				return;
 			} finally {
 				setIsWorktreePreparing(false);
@@ -2953,49 +3181,77 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		if (isNewSessionHome) {
 			setIsNewSessionHome(false);
 			temporaryDraftSessionIdRef.current = null;
-			setActiveSessionMetadata((metadata: SessionMetadata | null): SessionMetadata | null => {
-				return metadata?.temporary === true ? { ...metadata, temporary: false } : metadata;
-			});
+			setActiveSessionMetadata(
+				(metadata: SessionMetadata | null): SessionMetadata | null => {
+					return metadata?.temporary === true
+						? { ...metadata, temporary: false }
+						: metadata;
+				},
+			);
 		}
 
 		if (activeSessionId === null || effectiveWorkbench === null) {
-			setSessionError("Please open session first before sending a message");
+			setSessionError(
+				"Please open session first before sending a message",
+			);
 			return;
 		}
 
 		const message: string = nextMessage.trim();
-		const additionalContext: AdditionalContextItem[] = effectiveWorkbench.composer.additionalContext;
+		const additionalContext: AdditionalContextItem[] =
+			effectiveWorkbench.composer.additionalContext;
 		if (message.length === 0 && additionalContext.length === 0) {
 			return;
 		}
 		replaceComposerInput("", activeSessionId);
 
-		const selectedProvider: string | undefined = isFirstTurnSubmission ? (homeDraft.providerId ?? effectiveWorkbench.composer.provider) : effectiveWorkbench.composer.provider;
-		const selectedModel: string | undefined = isFirstTurnSubmission ? (homeDraft.modelId ?? effectiveWorkbench.composer.model) : effectiveWorkbench.composer.model;
-		const selectedReasoningEffort: string | undefined = isFirstTurnSubmission ? homeDraft.reasoningEffort : (effectiveWorkbench.composer.reasoningEffort ?? undefined);
-		const currentChatMode: ChatMode = isFirstTurnSubmission ? homeDraft.chatMode : getChatMode(effectiveWorkbench);
+		const selectedProvider: string | undefined = isFirstTurnSubmission
+			? (homeDraft.providerId ?? effectiveWorkbench.composer.provider)
+			: effectiveWorkbench.composer.provider;
+		const selectedModel: string | undefined = isFirstTurnSubmission
+			? (homeDraft.modelId ?? effectiveWorkbench.composer.model)
+			: effectiveWorkbench.composer.model;
+		const selectedReasoningEffort: string | undefined =
+			isFirstTurnSubmission
+				? homeDraft.reasoningEffort
+				: (effectiveWorkbench.composer.reasoningEffort ?? undefined);
+		const currentChatMode: ChatMode = isFirstTurnSubmission
+			? homeDraft.chatMode
+			: getChatMode(effectiveWorkbench);
 		const chatMode: ChatMode = modeOverride ?? currentChatMode;
 		if (isFirstTurnSubmission) {
 			if (selectedProvider !== undefined && selectedModel !== undefined) {
 				setFirstTurnModelTransition({
 					sessionId: activeSessionId,
 					providerId: selectedProvider,
-					modelId: selectedModel
+					modelId: selectedModel,
 				});
 			}
-			setWorkbench((currentWorkbench: WorkbenchSnapshot | null): WorkbenchSnapshot | null =>
-				currentWorkbench === null
-					? currentWorkbench
-					: {
-							...currentWorkbench,
-							composer: {
-								...currentWorkbench.composer,
-								chatMode,
-								...(selectedProvider === undefined ? {} : { provider: selectedProvider }),
-								...(selectedModel === undefined ? {} : { model: selectedModel }),
-								...(selectedReasoningEffort === undefined ? {} : { reasoningEffort: selectedReasoningEffort }),
+			setWorkbench(
+				(
+					currentWorkbench: WorkbenchSnapshot | null,
+				): WorkbenchSnapshot | null =>
+					currentWorkbench === null
+						? currentWorkbench
+						: {
+								...currentWorkbench,
+								composer: {
+									...currentWorkbench.composer,
+									chatMode,
+									...(selectedProvider === undefined
+										? {}
+										: { provider: selectedProvider }),
+									...(selectedModel === undefined
+										? {}
+										: { model: selectedModel }),
+									...(selectedReasoningEffort === undefined
+										? {}
+										: {
+												reasoningEffort:
+													selectedReasoningEffort,
+											}),
+								},
 							},
-						},
 			);
 		}
 		if (modeOverride !== undefined && modeOverride !== currentChatMode) {
@@ -3052,9 +3308,15 @@ export default function useAppController({ bootstrapData }: AppProps) {
 				model: selectedModel,
 				reasoningEffort: selectedReasoningEffort,
 				executionPolicy: "auto",
-				outputTarget: getChatOutputTarget(chatMode, getCurrentWorkspaceId(effectiveWorkspace, effectiveWorkbench)),
+				outputTarget: getChatOutputTarget(
+					chatMode,
+					getCurrentWorkspaceId(
+						effectiveWorkspace,
+						effectiveWorkbench,
+					),
+				),
 				additionalContext,
-				skillRefs
+				skillRefs,
 			});
 			firstTurnRequestAccepted = true;
 			if (chatMode !== "goal") {
@@ -4081,44 +4343,72 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		unreadSessionIds: [...unreadSessionIds],
 		forkingSessionId: forkingSourceSessionId,
 		forkingRequestId,
-		forkDisabled: composerIsSending || isSessionLoading || forkingSourceSessionId !== null,
+		forkDisabled:
+			composerIsSending ||
+			isSessionLoading ||
+			forkingSourceSessionId !== null,
 		homeWorkspace: homeDraft.workspace,
 		homeExecutionEnvironment: homeDraft.executionEnvironment,
 		homeWorktreeSources: homeDraft.worktreeSources,
 		worktreeDisabledReason,
 		isWorktreePreparing,
-		workspaceFooterDisabled: isHomeSubmitting || isWorktreePreparing || composerWorkspaceLocked || isSessionLoading,
+		workspaceFooterDisabled:
+			isHomeSubmitting ||
+			isWorktreePreparing ||
+			composerWorkspaceLocked ||
+			isSessionLoading,
 		activeWorkspace: displayedWorkspace,
 		godotLaunchExecutablePath,
-		workspaceLaunchPreference: activeSessionId === null ? homeDraft.workspaceLaunch : (activeSessionMetadata?.workspaceLaunch ?? DEFAULT_WORKSPACE_LAUNCH_TARGET_ID),
+		workspaceLaunchPreference:
+			activeSessionId === null
+				? homeDraft.workspaceLaunch
+				: (activeSessionMetadata?.workspaceLaunch ??
+					DEFAULT_WORKSPACE_LAUNCH_TARGET_ID),
 		onNewSession: handleNewSession,
 		onNewUnboundSession: (): void => {
 			void handleNewSession({ restoreTemporaryDraft: false });
 		},
-		onNewWorkspaceSession: (workspace: WorkspaceConfig, environment: "local" | "worktree" = "local"): void => {
+		onNewWorkspaceSession: (
+			workspace: WorkspaceConfig,
+			environment: "local" | "worktree" = "local",
+		): void => {
 			void handleNewWorkspaceSession(workspace, environment);
 		},
 		onWorkspaceRefresh: (): void => {
-			setWorkspaceRefreshToken((currentToken: number): number => currentToken + 1);
+			setWorkspaceRefreshToken(
+				(currentToken: number): number => currentToken + 1,
+			);
 		},
 		onHomeWorkspaceSelect: (workspaceId: string): void => {
 			void handleHomeWorkspaceSelect(workspaceId);
 		},
 		onHomeWorkspaceAdd: handleHomeWorkspaceAdd,
 		onHomeWorkspaceClear: handleHomeWorkspaceClear,
-		onHomeExecutionEnvironmentChange: (executionEnvironment: "local" | "worktree"): void => {
-			if (executionEnvironment === "worktree" && worktreeDisabledReason !== null) {
+		onHomeExecutionEnvironmentChange: (
+			executionEnvironment: "local" | "worktree",
+		): void => {
+			if (
+				executionEnvironment === "worktree" &&
+				worktreeDisabledReason !== null
+			) {
 				return;
 			}
 			setHomeDraft(
 				(currentDraft: HomeDraft): HomeDraft => ({
 					...currentDraft,
-					executionEnvironment
-				})
+					executionEnvironment,
+				}),
 			);
 		},
-		onHomeWorktreeSourcesChange: (worktreeSources: HomeDraft["worktreeSources"]): void => {
-			setHomeDraft((currentDraft: HomeDraft): HomeDraft => ({ ...currentDraft, worktreeSources }));
+		onHomeWorktreeSourcesChange: (
+			worktreeSources: HomeDraft["worktreeSources"],
+		): void => {
+			setHomeDraft(
+				(currentDraft: HomeDraft): HomeDraft => ({
+					...currentDraft,
+					worktreeSources,
+				}),
+			);
 		},
 		onSessionSelect: handleSessionSelect,
 		onSessionFork: (session: SessionMetadata): void => {
@@ -4130,7 +4420,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			}
 			await handleSessionFork(activeSessionMetadata, requestId);
 		},
-		onForkSourceOpen: handleForkSourceOpen,
+		onForkSourceOpen: openForkSource,
 		onSessionArchive: handleSessionArchive,
 		onSessionRename: handleSessionRename,
 		onSessionWorkspaceMove: handleSessionWorkspaceMove,
@@ -4167,8 +4457,14 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		onApprovalApprove: (approvalId: string, consentText?: string): void => {
 			void handleApprovalApprove(approvalId, consentText);
 		},
-		onApprovalApproveAndEnableAutoSafe: (approvalId: string, consentText?: string): void => {
-			void handleApprovalApproveAndEnableAutoSafe(approvalId, consentText);
+		onApprovalApproveAndEnableAutoSafe: (
+			approvalId: string,
+			consentText?: string,
+		): void => {
+			void handleApprovalApproveAndEnableAutoSafe(
+				approvalId,
+				consentText,
+			);
 		},
 		onApprovalReject: (approvalId: string): void => {
 			void handleApprovalReject(approvalId);

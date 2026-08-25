@@ -54,9 +54,7 @@ import ProviderRequestConfigModal from "./ProviderRequestConfigModal";
 import {
 	EDITABLE_CAPABILITIES,
 	createAddModelFormValues,
-	createCapabilityFormValues,
 	createEditModelFormValues,
-	createReasoningEffortFormValues,
 	createUniformCapabilityFormValues,
 	getCustomizationErrorMessage,
 	getDiscoveryFailureMessage,
@@ -83,7 +81,6 @@ type AddProviderFormValues = {
 	providerType: CustomProviderType;
 	websiteUrl?: string | null;
 };
-
 
 function renderCapabilityTags(
 	capabilities: ProviderModelCapabilities,

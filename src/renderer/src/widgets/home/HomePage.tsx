@@ -5,11 +5,9 @@ import {
 	useMemo,
 	useRef,
 	useState,
-	type TransitionEvent,
 } from "react";
 import {
 	Button,
-	Divider,
 	Dropdown,
 	Empty,
 	Input,
@@ -18,7 +16,6 @@ import {
 	Space,
 	Spin,
 	Splitter,
-	Typography,
 	Tooltip,
 } from "antd";
 import type { CollapseProps, MenuProps } from "antd";
@@ -51,7 +48,6 @@ import type {
 	WorkspaceTreeOrderPreferences,
 } from "@/platform/rpc/workspace-api";
 import type { SkillSummary } from "@/platform/rpc/skill-api";
-import { fetchSessions } from "@/platform/rpc/session-api";
 import {
 	getCachedClientPreferences,
 	type WorkspaceSidebarPreferences,
@@ -74,36 +70,28 @@ import {
 	type SessionArchiveContext,
 	type WorkspaceTreeProps,
 } from "@/widgets/workspace/WorkspaceTree";
-import ConversationTimelinePane, {
-	type ConversationTimelinePaneHandle,
-} from "@/widgets/conversation/ConversationTimelinePane";
-import Composer, {
-	type ComposerInputRequest,
-} from "@/widgets/composer/Composer";
+import type { ConversationTimelinePaneHandle } from "@/widgets/conversation/ConversationTimelinePane";
+import Composer from "@/widgets/composer/Composer";
 import FloatingWorkflowTodoPanel, {
 	type WorkflowFileChangeSummary,
 } from "@/widgets/composer/FloatingWorkflowTodoPanel";
 import FloatingGoalPanel from "@/widgets/composer/FloatingGoalPanel";
-import MessageQueuePanel from "@/widgets/composer/MessageQueuePanel";
-import NewSessionHome from "./NewSessionHome";
-import ApprovalDialog from "@/widgets/approval/ApprovalDialog";
-import ToolBudgetDialog from "@/widgets/approval/ToolBudgetDialog";
 import type { ComposerCompletionTrigger } from "@/domain/composer/composer-completion";
 import type { PastedTextAttachmentInput } from "@/features/conversation/pasted-text-attachment";
 import type { RetryUserMessagePayload } from "@/widgets/conversation/UserBubble";
 import styles from "./HomePage.module.css";
 import { Icon } from "@/assets/icons";
-import ClarificationDialog from "@/widgets/clarification/ClarificationDialog";
-import PlanApprovalDialog from "@/widgets/approval/PlanApprovalDialog";
 import {
 	createDockTab,
 	type DockPanelActivationRequest,
 	type DockPanelKind,
 } from "@/widgets/dock/DockPanelTabs";
-import HomeWorkspaceSidebar from "./HomeWorkspaceSidebar";
+import HomeWorkspaceSidebar from "./workspace/HomeWorkspaceSidebar";
+import HomePageShell from "./surface/HomePageShell";
+import HomeChatSurface from "./surface/HomeChatSurface";
 import ScheduledTasksPage from "@/widgets/scheduled-tasks/ScheduledTasksPage";
-import FullscreenComposerShelf from "./FullscreenComposerShelf";
-import HomeDockPanel from "./HomeDockPanel";
+import FullscreenComposerShelf from "./surface/FullscreenComposerShelf";
+import HomeDockPanel from "./dock/HomeDockPanel";
 import {
 	listTerminalRuntimeIds,
 	createDefaultBrowserPanelLayout,
@@ -118,23 +106,25 @@ import {
 	getPathBasename,
 	isGodotScenePath,
 	isWorkspaceLaunchTargetId,
-} from "./home-layout-model";
+} from "./layout/home-layout-model";
 import BranchActionDialog from "@/widgets/git/BranchActionDialog";
 import CommitActionDialog from "@/widgets/git/CommitActionDialog";
 import CreateBranchDialog from "@/widgets/git/CreateBranchDialog";
 import { useGitActionDialogController } from "@/features/git/useGitActionDialogController";
-import SessionPlansDialog from "./SessionPlansDialog";
-import SessionPlanPreviewDialog from "./SessionPlanPreviewDialog";
-import SessionSourcesDialog from "./SessionSourcesDialog";
-import SessionSourcePreviewDialog from "./SessionSourcePreviewDialog";
-import SessionSummaryPopover from "./SessionSummaryPopover";
-import useHomeDockLayout from "./useHomeDockLayout";
-import useSessionSummaryOverview from "./useSessionSummaryOverview";
-import { createHomeDockPanelConfigs } from "./home-dock-panel-config";
-import { formatSourceSubtitle } from "./session-overview-formatters";
+import SessionPlansDialog from "./summary/SessionPlansDialog";
+import SessionPlanPreviewDialog from "./summary/SessionPlanPreviewDialog";
+import SessionSourcesDialog from "./summary/SessionSourcesDialog";
+import SessionSourcePreviewDialog from "./summary/SessionSourcePreviewDialog";
+import SessionSummaryPopover from "./summary/SessionSummaryPopover";
+import useHomeDockLayout from "./dock/useHomeDockLayout";
+import useSessionSummaryOverview from "./summary/useSessionSummaryOverview";
+import { createHomeDockPanelConfigs } from "./dock/home-dock-panel-config";
+import useHomeSurfaceController, {
+	type NewSessionOptions,
+} from "./surface/useHomeSurfaceController";
+import { formatSourceSubtitle } from "./summary/session-overview-formatters";
 import type { TimelinePageStore } from "@/domain/workbench/timeline-page-store";
 import { useTimelineSelector } from "@/domain/workbench/timeline-page-store";
-import { MarkdownResourceActionsProvider } from "@/widgets/markdown/markdown-resource-actions";
 import {
 	DEFAULT_WORKSPACE_LAUNCH_TARGET_ID,
 	type WorkspaceLaunchTargetId,
@@ -170,11 +160,6 @@ type SummaryGitActionRequest = {
 	sourceFolderId: string;
 };
 
-type NewSessionOptions = {
-	restoreTemporaryDraft?: boolean;
-	initialDraft?: string;
-};
-
 const FALLBACK_WORKSPACE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
 	{ id: "file-explorer", label: "File Explorer" },
 	{ id: "terminal", label: "Terminal" },
@@ -191,8 +176,6 @@ const SIDE_DOCK_DEFAULT_SIZE: number = 520;
 const SIDE_DOCK_MAX_SIZE: number = 720;
 const SIDE_DOCK_CLOSE_THRESHOLD: number = 150;
 const SIDE_DOCK_PROGRAMMATIC_OPEN_GUARD_MS: number = 400;
-const CHAT_SURFACE_POST_TRANSITION_DELAY_MS: number = 80;
-const CHAT_SURFACE_TRANSITION_FALLBACK_MS: number = 500;
 const BOTTOM_DOCK_CLOSED_SIZE: number = 0;
 const BOTTOM_DOCK_DEFAULT_SIZE: number = 280;
 const BOTTOM_DOCK_MAX_SIZE: number = 520;
@@ -821,14 +804,27 @@ function HomePage({
 	const [isGodotSceneLoading, setIsGodotSceneLoading] =
 		useState<boolean>(false);
 	const [godotSceneSearch, setGodotSceneSearch] = useState<string>("");
-	const [composerInputRequest, setComposerInputRequest] =
-		useState<ComposerInputRequest | null>(null);
-	const [mainSurface, setMainSurface] = useState<"chat" | "scheduledTasks">(
-		"chat",
-	);
-	const [chatSurfaceSettled, setChatSurfaceSettled] = useState<boolean>(true);
-	const [scheduledTaskAttentionCount, setScheduledTaskAttentionCount] =
-		useState<number>(0);
+	const {
+		mainSurface,
+		chatSurfaceSettled,
+		scheduledTaskAttentionCount,
+		composerInputRequest,
+		handleHomeStarterSelect,
+		transitionToChatSurface,
+		showScheduledTasksSurface,
+		handleScheduledTasksOverlayTransitionEnd,
+		beginNewSessionSurface,
+		requestNewSessionSurface,
+		requestNewUnboundSessionSurface,
+		requestNewWorkspaceSessionSurface,
+		openScheduledTaskSession,
+		createScheduledTask,
+	} = useHomeSurfaceController({
+		onNewSession,
+		onNewUnboundSession,
+		onNewWorkspaceSession,
+		onSessionSelect,
+	});
 	const {
 		visualWorkspaceSidebar,
 		visualSessionLayout,
@@ -849,7 +845,6 @@ function HomePage({
 	const [fullscreenMotionDisabled, setFullscreenMotionDisabled] =
 		useState<boolean>(false);
 	const dockActivationRequestIdRef = useRef<number>(0);
-	const chatSurfaceSettleTimerRef = useRef<number | null>(null);
 	const sideDockProgrammaticOpenUntilRef = useRef<number>(0);
 	const summaryGitActionRequestIdRef = useRef<number>(0);
 	const planPreviewRequestIdRef = useRef<number>(0);
@@ -867,166 +862,6 @@ function HomePage({
 	const chatBodyRef = useRef<HTMLDivElement | null>(null);
 	const scrollToBottomButtonRef = useRef<HTMLButtonElement | null>(null);
 	const scrollToBottomButtonVisibleRef = useRef<boolean>(false);
-
-	const handleHomeStarterSelect = useCallback((prompt: string): void => {
-		setComposerInputRequest(
-			(
-				currentRequest: ComposerInputRequest | null,
-			): ComposerInputRequest => ({
-				requestId: (currentRequest?.requestId ?? 0) + 1,
-				message: prompt,
-			}),
-		);
-	}, []);
-
-	const clearChatSurfaceSettleTimer = useCallback((): void => {
-		if (chatSurfaceSettleTimerRef.current === null) return;
-		window.clearTimeout(chatSurfaceSettleTimerRef.current);
-		chatSurfaceSettleTimerRef.current = null;
-	}, []);
-
-	const transitionToChatSurface = useCallback((): void => {
-		const wasScheduledTasksSurface: boolean =
-			mainSurface === "scheduledTasks";
-		clearChatSurfaceSettleTimer();
-		setMainSurface("chat");
-
-		if (!wasScheduledTasksSurface) {
-			setChatSurfaceSettled(true);
-			return;
-		}
-
-		// The overlay fades out for 260ms. Keep the starter actions unmounted
-		// until that compositor transition has finished and the chat surface has
-		// had one more frame to settle.
-		setChatSurfaceSettled(false);
-		chatSurfaceSettleTimerRef.current = window.setTimeout((): void => {
-			chatSurfaceSettleTimerRef.current = null;
-			setChatSurfaceSettled(true);
-		}, CHAT_SURFACE_TRANSITION_FALLBACK_MS);
-	}, [clearChatSurfaceSettleTimer, mainSurface]);
-
-	const showScheduledTasksSurface = useCallback((): void => {
-		clearChatSurfaceSettleTimer();
-		setChatSurfaceSettled(false);
-		setMainSurface("scheduledTasks");
-	}, [clearChatSurfaceSettleTimer]);
-
-	const handleScheduledTasksOverlayTransitionEnd = useCallback(
-		(event: TransitionEvent<HTMLDivElement>): void => {
-			if (
-				event.target !== event.currentTarget ||
-				mainSurface !== "chat"
-			) {
-				return;
-			}
-			if (event.propertyName === "opacity") {
-				// In the normal motion path the slide finishes after opacity. Only
-				// accept the opacity event when there is no transform transition left.
-				if (
-					window.getComputedStyle(event.currentTarget).transform !==
-					"none"
-				) {
-					return;
-				}
-			} else if (event.propertyName !== "transform") {
-				return;
-			}
-
-			clearChatSurfaceSettleTimer();
-			chatSurfaceSettleTimerRef.current = window.setTimeout((): void => {
-				chatSurfaceSettleTimerRef.current = null;
-				setChatSurfaceSettled(true);
-			}, CHAT_SURFACE_POST_TRANSITION_DELAY_MS);
-		},
-		[clearChatSurfaceSettleTimer, mainSurface],
-	);
-
-	useEffect((): (() => void) => {
-		return (): void => {
-			clearChatSurfaceSettleTimer();
-		};
-	}, [clearChatSurfaceSettleTimer]);
-
-	const beginNewSessionSurface = useCallback(
-		(options?: NewSessionOptions): void => {
-			transitionToChatSurface();
-			onNewSession(options);
-		},
-		[onNewSession, transitionToChatSurface],
-	);
-
-	const requestNewSessionSurface = useCallback((): void => {
-		beginNewSessionSurface();
-	}, [beginNewSessionSurface]);
-
-	const requestNewUnboundSessionSurface = useCallback((): void => {
-		transitionToChatSurface();
-		onNewUnboundSession();
-	}, [onNewUnboundSession, transitionToChatSurface]);
-
-	const requestNewWorkspaceSessionSurface = useCallback(
-		(
-			workspace: WorkspaceConfig,
-			environment: "local" | "worktree" = "local",
-		): void => {
-			transitionToChatSurface();
-			onNewWorkspaceSession(workspace, environment);
-		},
-		[onNewWorkspaceSession, transitionToChatSurface],
-	);
-
-	const openScheduledTaskSession = useCallback(
-		(sessionId: string): void => {
-			void fetchSessions()
-				.then((result): void => {
-					const session = result.sessions.find(
-						(candidate): boolean => candidate.id === sessionId,
-					);
-					if (session !== undefined) {
-						transitionToChatSurface();
-						onSessionSelect(session);
-					}
-				})
-				.catch((): void => {});
-		},
-		[onSessionSelect, transitionToChatSurface],
-	);
-
-	useEffect((): (() => void) => {
-		const refresh = (): void => {
-			void window.electronAPI.scheduledTasks
-				.list()
-				.then((result): void =>
-					setScheduledTaskAttentionCount(result.attentionCount),
-				);
-		};
-		refresh();
-		const offChanged = window.electronAPI.scheduledTasks.onChanged(refresh);
-		const offNavigate = window.electronAPI.scheduledTasks.onNavigate(
-			(target): void => {
-				if (target.sessionId !== null) {
-					openScheduledTaskSession(target.sessionId);
-					return;
-				}
-				showScheduledTasksSurface();
-			},
-		);
-		return (): void => {
-			offChanged();
-			offNavigate();
-		};
-	}, [openScheduledTaskSession, showScheduledTasksSurface]);
-
-	const createScheduledTask = useCallback((): void => {
-		const prompt: string = t("scheduledTasks.prefill", {
-			defaultValue: "帮我安排一个定时任务：",
-		});
-		beginNewSessionSurface({
-			restoreTemporaryDraft: false,
-			initialDraft: prompt,
-		});
-	}, [beginNewSessionSurface, t]);
 
 	const workspaceSnapshotForActions: WorkspaceConfig | null =
 		activeWorkspace ?? (isHome ? homeWorkspace : null);
@@ -1079,7 +914,6 @@ function HomePage({
 		effectiveGodotLaunchExecutablePath !== null &&
 		isGodotProject;
 	const workspaceSidebarOpen: boolean = visualWorkspaceSidebar.open;
-	const workspaceSidebarSize: number = visualWorkspaceSidebar.size;
 	const sideDockOpen: boolean = visualSessionLayout.side.open;
 	const sideDockSize: number = visualSessionLayout.side.size;
 	const bottomDockOpen: boolean = visualSessionLayout.bottom.open;
@@ -2997,8 +2831,106 @@ function HomePage({
 			slotClassName: styles.bottomDockSlot,
 			closedSize: BOTTOM_DOCK_CLOSED_SIZE,
 			maxSize: BOTTOM_DOCK_MAX_SIZE,
-		},
-	});
+				},
+			});
+	const executionStatusPanel: React.ReactNode = showExecutionStatusPanel ? (
+		<TimelineWorkflowTodoPanel
+			timelineStore={timelineStore}
+			sessionId={activeSessionId!}
+			snapshot={workflowTodoSnapshot}
+			goal={currentGoal}
+			onDismiss={onWorkflowTodoDismiss}
+			onGoalChange={onGoalChange}
+			onGoalDismiss={onGoalDismiss}
+		/>
+	) : null;
+	const chatSurfaceProps = {
+		activeSessionMetadata,
+		isSessionLoading,
+		onForkSourceOpen,
+		onSessionWorktreeSetup,
+		onSessionWorktreeHandoff,
+		chatTitle,
+		sideDockOpen,
+		isHome,
+		chatBodyRef,
+		homeWorkspace,
+		sessionError,
+		message,
+		chatSurfaceSettled,
+		handleHomeStarterSelect,
+		activeSessionId,
+		workspaceForActions,
+		effectiveGodotLaunchExecutablePath,
+		selectedLaunchTarget,
+		workspaceLaunchTargets,
+		openMessageWebUrl,
+		openMessageHtmlFile,
+		conversationTimelinePaneRef,
+		timelineStore,
+		timelineNavigationEntries,
+		isLoadingMoreBefore,
+		isLoadingMoreAfter,
+		retryDisabled,
+		activeRetryRequestId,
+		onLoadMoreBefore,
+		onLoadMoreAfter,
+		onTimelineNavigationLoadEntry,
+		onTimelineSearchLoadOffset,
+		onRetryEditStart,
+		onRetryEditCancel,
+		onRetryFromUserMessage,
+		onForkFromUserMessage,
+		forkDisabled,
+		forkingRequestId,
+		openReviewPanel,
+		setScrollToBottomButtonVisible,
+		selectionMarkerContextItems,
+		onAddContext,
+		selectionAskThreads,
+		currentGoal,
+		scrollToBottomButtonRef,
+		showExecutionStatusPanel,
+		executionStatusPanel,
+		isDockFullscreen,
+		scrollMessageListToBottom,
+		pendingApproval,
+		isApproving,
+		isApprovalAutoSafeEnabling,
+		isRejecting,
+		approvalError,
+		onApprovalApprove,
+		onApprovalApproveAndEnableAutoSafe,
+		onApprovalReject,
+		pendingToolBudget,
+		isToolBudgetContinuing,
+		isToolBudgetStopping,
+		isCancelling,
+		toolBudgetError,
+		onToolBudgetContinue,
+		onToolBudgetStop,
+		onCancel,
+		pendingPlanClarification,
+		isPlanClarificationSubmitting,
+		planClarificationError,
+		onPlanClarificationSubmit,
+		onPlanClarificationSkip,
+		pendingPlanApproval,
+		isPlanApproving,
+		isPlanRevising,
+		planApprovalError,
+		onPlanApprove,
+		onPlanRevise,
+		messageQueue,
+		pendingGuides,
+		activeQueueItemId,
+		onQueueMessageRemove,
+		onQueueMessageEdit,
+		onQueueMessageReorder,
+		onGuideDelete,
+		onGuideReorder,
+		renderComposer,
+	};
 	const pageActionControls =
 		showWorkspaceLaunchControls ||
 		showSummaryButton ||
@@ -3098,30 +3030,15 @@ function HomePage({
 		) : null;
 
 	return (
-		<div
-			className={styles.page}
-			data-studio-home="true"
+		<>
+			<HomePageShell
+			messageContextHolder={messageContextHolder}
+			workspaceSidebarPreferences={visualWorkspaceSidebar}
 			onDragOver={handlePageDragOver}
 			onDrop={handlePageDrop}
-		>
-			{messageContextHolder}
-			<Splitter
-				className={styles.workspaceSplitter}
-				draggerIcon={null}
-				collapsible={{ motion: true }}
-				onResize={handleWorkspaceSidebarResize}
-				onResizeEnd={handleWorkspaceSidebarResizeEnd}
-			>
-				<Splitter.Panel
-					size={
-						workspaceSidebarOpen
-							? workspaceSidebarSize
-							: WORKSPACE_SIDEBAR_CLOSED_SIZE
-					}
-					min={WORKSPACE_SIDEBAR_CLOSED_SIZE}
-					max={WORKSPACE_SIDEBAR_MAX_SIZE}
-					collapsible={{ end: true, showCollapsibleIcon: false }}
-				>
+			onWorkspaceSidebarResize={handleWorkspaceSidebarResize}
+			onWorkspaceSidebarResizeEnd={handleWorkspaceSidebarResizeEnd}
+			workspaceSidebar={
 					<HomeWorkspaceSidebar
 						treeProps={workspaceTreeProps}
 						isOpen={workspaceSidebarOpen}
@@ -3135,9 +3052,8 @@ function HomePage({
 							void window.electronAPI.windowControl.openSettings();
 						}}
 					/>
-				</Splitter.Panel>
-
-				<Splitter.Panel min={360}>
+			}
+		>
 					<div
 						className={styles.agentMain}
 						data-main-surface={mainSurface}
@@ -3195,515 +3111,9 @@ function HomePage({
 											sideDockFullscreen ? 0 : undefined
 										}
 									>
-										<section className={styles.chatPanel}>
-											<header
-												className={styles.chatHeader}
-												data-side-dock-open={
-													sideDockOpen
-														? "true"
-														: undefined
-												}
-											>
-												<div
-													className={
-														styles.chatTitleRow
-													}
-												>
-													<Typography.Text
-														className={
-															styles.chatText
-														}
-														ellipsis={{
-															tooltip: chatTitle,
-														}}
-													>
-														{chatTitle}
-													</Typography.Text>
-													{activeSessionMetadata?.forkedFrom !==
-													undefined ? (
-														<Tooltip
-															placement="bottom"
-															title={t(
-																"chat.fork.openSourceTooltip",
-															)}
-														>
-															<Button
-																type="text"
-																size="small"
-																shape="circle"
-																className={
-																	styles.forkOriginButton
-																}
-																aria-label={t(
-																	"chat.fork.openSourceAria",
-																)}
-																icon={
-																	<Icon name="fork" />
-																}
-																disabled={
-																	isSessionLoading
-																}
-																onClick={(): void => {
-																	void onForkSourceOpen(
-																		activeSessionMetadata
-																			.forkedFrom!
-																			.sessionId,
-																	);
-																}}
-															/>
-														</Tooltip>
-													) : null}
-													{activeSessionMetadata?.worktree !==
-													undefined ? (
-														<Space size={4}>
-															<Tooltip
-																title={t(
-																	"agentPage.worktree.source",
-																	{
-																		workspace:
-																			activeSessionMetadata
-																				.worktree
-																				.sourceWorkspaceName,
-																	},
-																)}
-															>
-																<span
-																	className={
-																		styles.worktreeBadge
-																	}
-																>
-																	<Icon name="git-branch" />
-																	{t(
-																		"agentPage.worktree.label",
-																	)}
-																</span>
-															</Tooltip>
-															<Dropdown
-																menu={{
-																	items: [
-																		...((activeSessionMetadata
-																			.worktree
-																			.status ??
-																			"ready") ===
-																		"ready"
-																			? []
-																			: [
-																					{
-																						key: "setup-retry",
-																						label: t(
-																							"agentPage.worktree.setupRetry",
-																						),
-																					},
-																					{
-																						key: "setup-skip",
-																						label: t(
-																							"agentPage.worktree.setupSkip",
-																						),
-																					},
-																					{
-																						type: "divider" as const,
-																					},
-																				]),
-																		{
-																			key: "local",
-																			label: t(
-																				"agentPage.worktree.handoffLocal",
-																			),
-																			disabled:
-																				(activeSessionMetadata
-																					.worktree
-																					.location ??
-																					"worktree") ===
-																				"local",
-																		},
-																		{
-																			key: "worktree",
-																			label: t(
-																				"agentPage.worktree.handoffWorktree",
-																			),
-																			disabled:
-																				(activeSessionMetadata
-																					.worktree
-																					.location ??
-																					"worktree") ===
-																				"worktree",
-																		},
-																	],
-																	onClick: ({
-																		key,
-																	}): void => {
-																		if (
-																			key ===
-																				"setup-retry" ||
-																			key ===
-																				"setup-skip"
-																		) {
-																			void onSessionWorktreeSetup(
-																				key ===
-																					"setup-retry"
-																					? "retry"
-																					: "skip",
-																			);
-																			return;
-																		}
-																		void onSessionWorktreeHandoff(
-																			key as
-																				| "local"
-																				| "worktree",
-																		);
-																	},
-																}}
-															>
-																<Button
-																	type="text"
-																	size="small"
-																	icon={
-																		<Icon name="arrow-forward" />
-																	}
-																	aria-label={t(
-																		"agentPage.worktree.handoff",
-																	)}
-																/>
-															</Dropdown>
-														</Space>
-													) : null}
-												</div>
-											</header>
-
-											<Divider size="small" />
-
-											<div
-												ref={chatBodyRef}
-												className={styles.chatBody}
-											>
-												{isHome ? (
-													<NewSessionHome
-														workspace={
-															homeWorkspace
-														}
-														errorMessage={
-															sessionError
-														}
-														message={message}
-														showStarters={
-															chatSurfaceSettled
-														}
-														onStarterSelect={
-															handleHomeStarterSelect
-														}
-													/>
-												) : activeSessionId !== null ? (
-													<MarkdownResourceActionsProvider
-														value={{
-															workspaceRoots:
-																workspaceForActions ===
-																null
-																	? []
-																	: [
-																			workspaceForActions.rootPath,
-																			...workspaceForActions.sourceFolders.map(
-																				(
-																					sourceFolder,
-																				): string =>
-																					sourceFolder.path,
-																			),
-																		],
-															godotExecutablePath:
-																effectiveGodotLaunchExecutablePath,
-															currentWorkspaceLaunch:
-																workspaceForActions ===
-																null
-																	? null
-																	: selectedLaunchTarget,
-															launchTargets:
-																workspaceLaunchTargets,
-															openWebUrl:
-																openMessageWebUrl,
-															openHtmlFile:
-																openMessageHtmlFile,
-														}}
-													>
-														<ConversationTimelinePane
-															ref={
-																conversationTimelinePaneRef
-															}
-															sessionId={
-																activeSessionId
-															}
-															timelineStore={
-																timelineStore
-															}
-															timelineNavigationEntries={
-																timelineNavigationEntries
-															}
-															isLoading={
-																isSessionLoading
-															}
-															errorMessage={
-																sessionError
-															}
-															isLoadingMoreBefore={
-																isLoadingMoreBefore
-															}
-															isLoadingMoreAfter={
-																isLoadingMoreAfter
-															}
-															retryDisabled={
-																retryDisabled
-															}
-															activeRetryRequestId={
-																activeRetryRequestId
-															}
-															onLoadMoreBefore={
-																onLoadMoreBefore
-															}
-															onLoadMoreAfter={
-																onLoadMoreAfter
-															}
-															onTimelineNavigationLoadEntry={
-																onTimelineNavigationLoadEntry
-															}
-															onTimelineSearchLoadOffset={
-																onTimelineSearchLoadOffset
-															}
-															onRetryEditStart={
-																onRetryEditStart
-															}
-															onRetryEditCancel={
-																onRetryEditCancel
-															}
-															onRetryFromUserMessage={
-																onRetryFromUserMessage
-															}
-															onForkFromUserMessage={
-																onForkFromUserMessage
-															}
-															onOpenForkSource={
-																onForkSourceOpen
-															}
-															forkDisabled={
-																forkDisabled
-															}
-															forkingRequestId={
-																forkingRequestId
-															}
-															onInlineDiffReview={
-																openReviewPanel
-															}
-															onAwayFromBottomChange={
-																setScrollToBottomButtonVisible
-															}
-															contextItems={
-																selectionMarkerContextItems
-															}
-															onAddContext={
-																onAddContext
-															}
-															initialSelectionAskThreads={
-																selectionAskThreads
-															}
-															goal={currentGoal}
-														/>
-													</MarkdownResourceActionsProvider>
-												) : null}
-											</div>
-
-											<footer className={styles.composer}>
-												{!isHome ? (
-													<Button
-														ref={
-															scrollToBottomButtonRef
-														}
-														shape="circle"
-														title={t(
-															"agentPage.actions.scrollToBottom",
-														)}
-														icon={
-															<Icon name="arrow-bottom" />
-														}
-														tabIndex={-1}
-														className={[
-															styles.scrollToBottomButton,
-															showExecutionStatusPanel
-																? styles.scrollToBottomButtonAboveExecutionStatus
-																: "",
-															styles.scrollToBottomButtonHidden,
-														]
-															.filter(Boolean)
-															.join(" ")}
-														onClick={
-															scrollMessageListToBottom
-														}
-													/>
-												) : null}
-												{!isHome &&
-												pendingApproval !== null ? (
-													<ApprovalDialog
-														pendingApproval={
-															pendingApproval
-														}
-														isApproving={
-															isApproving
-														}
-														isApprovalAutoSafeEnabling={
-															isApprovalAutoSafeEnabling
-														}
-														isRejecting={
-															isRejecting
-														}
-														errorMessage={
-															approvalError
-														}
-														onApprove={
-															onApprovalApprove
-														}
-														onApproveAndEnableAutoSafe={
-															onApprovalApproveAndEnableAutoSafe
-														}
-														onReject={
-															onApprovalReject
-														}
-													/>
-												) : !isHome &&
-												  pendingToolBudget !== null ? (
-													<ToolBudgetDialog
-														pendingToolBudget={
-															pendingToolBudget
-														}
-														isContinuing={
-															isToolBudgetContinuing
-														}
-														isStopping={
-															isToolBudgetStopping
-														}
-														isCancelling={
-															isCancelling
-														}
-														errorMessage={
-															toolBudgetError
-														}
-														onContinue={
-															onToolBudgetContinue
-														}
-														onStop={
-															onToolBudgetStop
-														}
-														onCancel={onCancel}
-													/>
-												) : !isHome &&
-												  pendingPlanClarification !==
-														null ? (
-													<ClarificationDialog
-														planId={
-															pendingPlanClarification.planId
-														}
-														title={
-															pendingPlanClarification.title
-														}
-														question={
-															pendingPlanClarification.question
-														}
-														recommendedReplies={
-															pendingPlanClarification.recommendedReplies
-														}
-														isSubmitting={
-															isPlanClarificationSubmitting
-														}
-														errorMessage={
-															planClarificationError
-														}
-														onSubmit={
-															onPlanClarificationSubmit
-														}
-														onSkip={
-															onPlanClarificationSkip
-														}
-													/>
-												) : !isHome &&
-												  pendingPlanApproval !==
-														null ? (
-													<PlanApprovalDialog
-														plan={
-															pendingPlanApproval
-														}
-														isApproving={
-															isPlanApproving
-														}
-														isRevising={
-															isPlanRevising
-														}
-														errorMessage={
-															planApprovalError
-														}
-														onApprove={
-															onPlanApprove
-														}
-														onRevise={onPlanRevise}
-													/>
-												) : (
-													<>
-														{showExecutionStatusPanel ? (
-															<TimelineWorkflowTodoPanel
-																timelineStore={
-																	timelineStore
-																}
-																sessionId={
-																	activeSessionId!
-																}
-																snapshot={
-																	workflowTodoSnapshot
-																}
-																goal={
-																	currentGoal
-																}
-																onDismiss={
-																	onWorkflowTodoDismiss
-																}
-																onGoalChange={
-																	onGoalChange
-																}
-																onGoalDismiss={
-																	onGoalDismiss
-																}
-															/>
-														) : null}
-														{!isHome ? (
-															<MessageQueuePanel
-																messageQueue={
-																	messageQueue
-																}
-																pendingGuides={
-																	pendingGuides
-																}
-																activeQueueItemId={
-																	activeQueueItemId
-																}
-																onQueueRemove={
-																	onQueueMessageRemove
-																}
-																onQueueEdit={
-																	onQueueMessageEdit
-																}
-																onQueueReorder={
-																	onQueueMessageReorder
-																}
-																onGuideDelete={
-																	onGuideDelete
-																}
-																onGuideReorder={
-																	onGuideReorder
-																}
-															/>
-														) : null}
-														{isDockFullscreen
-															? null
-															: renderComposer(
-																	false,
-																)}
-													</>
-												)}
-											</footer>
-										</section>
+										<HomeChatSurface
+											{...chatSurfaceProps}
+										/>
 									</Splitter.Panel>
 									<Splitter.Panel
 										size={
@@ -3785,8 +3195,7 @@ function HomePage({
 							/>
 						</div>
 					</div>
-				</Splitter.Panel>
-			</Splitter>
+			</HomePageShell>
 			<SessionPlansDialog
 				overview={plansDialogOverview}
 				open={plansModalOpen}
@@ -3886,7 +3295,7 @@ function HomePage({
 			<CommitActionDialog {...gitActions.commitDialogProps} />
 			<BranchActionDialog {...gitActions.branchDialogProps} />
 			<CreateBranchDialog {...gitActions.createBranchDialogProps} />
-		</div>
+		</>
 	);
 }
 

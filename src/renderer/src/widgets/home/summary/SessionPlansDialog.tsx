@@ -2,7 +2,7 @@ import type { JSX } from "react";
 import { Alert, Button, Modal, Spin } from "antd";
 import { useTranslation } from "react-i18next";
 import type { SessionOverviewPlanItem, SessionOverviewResult } from "@/platform/rpc/session-overview-api";
-import styles from "./HomePage.module.css";
+import styles from "../HomePage.module.css";
 
 type SessionPlansDialogProps = {
 	overview: SessionOverviewResult | null;

@@ -5,7 +5,7 @@ import { Icon } from "@/assets/icons";
 import {
 	cloneProviderRequestOverrides,
 	EMPTY_PROVIDER_REQUEST_OVERRIDES,
-	parseProviderRequestOverrides
+	parseProviderRequestOverrides,
 } from "@/domain/settings/provider-request-overrides";
 import type { ProviderRequestOverrides } from "@/platform/rpc/provider-api";
 import ProviderRequestJsonEditor, {
@@ -30,17 +30,24 @@ function ProviderRequestConfigModal({
 	saving,
 	errorMessage,
 	onCancel,
-	onSave
+	onSave,
 }: ProviderRequestConfigModalProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const editorRef = useRef<ProviderRequestJsonEditorHandle | null>(null);
-	const initialValueKey: string = useMemo((): string => JSON.stringify(initialValue ?? EMPTY_PROVIDER_REQUEST_OVERRIDES), [initialValue]);
+	const initialValueKey: string = useMemo(
+		(): string =>
+			JSON.stringify(initialValue ?? EMPTY_PROVIDER_REQUEST_OVERRIDES),
+		[initialValue],
+	);
 	const initialContent: ProviderRequestOverrides = useMemo(
-		(): ProviderRequestOverrides => cloneProviderRequestOverrides(initialValue),
-		[initialValueKey]
+		(): ProviderRequestOverrides =>
+			cloneProviderRequestOverrides(initialValue),
+		[initialValueKey],
 	);
 	const [draft, setDraft] = useState<ProviderRequestOverrides | null>(null);
-	const [validationErrorKey, setValidationErrorKey] = useState<string | null>(null);
+	const [validationErrorKey, setValidationErrorKey] = useState<string | null>(
+		null,
+	);
 	const [textValue, setTextValue] = useState<string>("");
 
 	const applyDraft = useCallback((value: unknown): void => {
@@ -60,63 +67,101 @@ function ProviderRequestConfigModal({
 	}, [initialContent, open]);
 
 	function resetValue(): void {
-		const nextValue: ProviderRequestOverrides = cloneProviderRequestOverrides(undefined);
+		const nextValue: ProviderRequestOverrides =
+			cloneProviderRequestOverrides(undefined);
 		setDraft(nextValue);
 		setTextValue(JSON.stringify(nextValue, null, 2));
 		setValidationErrorKey(null);
 	}
 
-	const handleTextChange = useCallback((nextText: string): void => {
-		setTextValue(nextText);
-		try {
-			applyDraft(JSON.parse(nextText) as unknown);
-		} catch {
-			setDraft(null);
-			setValidationErrorKey("settings.provider.requestConfiguration.validation.json");
-		}
-	}, [applyDraft]);
+	const handleTextChange = useCallback(
+		(nextText: string): void => {
+			setTextValue(nextText);
+			try {
+				applyDraft(JSON.parse(nextText) as unknown);
+			} catch {
+				setDraft(null);
+				setValidationErrorKey(
+					"settings.provider.requestConfiguration.validation.json",
+				);
+			}
+		},
+		[applyDraft],
+	);
 
-	const displayedError: string | null = validationErrorKey === null ? errorMessage : t(validationErrorKey);
+	const displayedError: string | null =
+		validationErrorKey === null ? errorMessage : t(validationErrorKey);
 
 	return (
 		<Modal
 			open={open}
-			title={t("settings.provider.requestConfiguration.title", { provider: providerName })}
+			title={t("settings.provider.requestConfiguration.title", {
+				provider: providerName,
+			})}
 			width={780}
 			destroyOnHidden={true}
 			forceRender={true}
 			closable={!saving}
 			keyboard={!saving}
 			mask={{ closable: !saving }}
-			footer={(
+			footer={
 				<Flex justify="space-between" align="center" gap="small">
-					<Button disabled={saving} onClick={resetValue}>{t("settings.provider.requestConfiguration.reset")}</Button>
+					<Button disabled={saving} onClick={resetValue}>
+						{t("settings.provider.requestConfiguration.reset")}
+					</Button>
 					<Flex gap="small">
-						<Button disabled={saving} onClick={onCancel}>{t("settings.common.cancel")}</Button>
-						<Button type="primary" loading={saving} disabled={draft === null} onClick={(): void => {
-							if (draft !== null) {
-								onSave(draft);
-							}
-						}}>
+						<Button disabled={saving} onClick={onCancel}>
+							{t("settings.common.cancel")}
+						</Button>
+						<Button
+							type="primary"
+							loading={saving}
+							disabled={draft === null}
+							onClick={(): void => {
+								if (draft !== null) {
+									onSave(draft);
+								}
+							}}
+						>
 							{t("settings.common.save")}
 						</Button>
 					</Flex>
 				</Flex>
-			)}
+			}
 			onCancel={onCancel}
 			className={styles.modal}
 		>
 			<div className={styles.content}>
-				<Typography.Paragraph type="secondary" className={styles.description}>
+				<Typography.Paragraph
+					type="secondary"
+					className={styles.description}
+				>
 					{t("settings.provider.requestConfiguration.description")}
 				</Typography.Paragraph>
-				<Alert type="info" showIcon={true} description={t("settings.provider.requestConfiguration.safetyHint")} />
-				{displayedError !== null ? <Alert type="error" showIcon={true} description={displayedError} /> : null}
-				<Flex justify="space-between" align="center" gap="small" className={styles.editorToolbar}>
-					<Typography.Text type="secondary">{t("settings.provider.requestConfiguration.editorHint")}</Typography.Text>
+				<Alert
+					type="info"
+					showIcon={true}
+					description={t(
+						"settings.provider.requestConfiguration.safetyHint",
+					)}
+				/>
+				{displayedError !== null ? (
+					<Alert
+						type="error"
+						showIcon={true}
+						description={displayedError}
+					/>
+				) : null}
+				<Flex
+					justify="space-between"
+					align="center"
+					gap="small"
+					className={styles.editorToolbar}
+				>
+					<Typography.Text type="secondary">
+						{t("settings.provider.requestConfiguration.editorHint")}
+					</Typography.Text>
 					<Button
-						type="text"
-						size="small"
 						icon={<Icon name="format" />}
 						disabled={saving}
 						onClick={(): void => void editorRef.current?.format()}
@@ -130,7 +175,9 @@ function ProviderRequestConfigModal({
 						readOnly={saving}
 						onChange={handleTextChange}
 						editorRef={editorRef}
-						ariaLabel={t("settings.provider.requestConfiguration.editorAriaLabel")}
+						ariaLabel={t(
+							"settings.provider.requestConfiguration.editorAriaLabel",
+						)}
 					/>
 				</div>
 			</div>

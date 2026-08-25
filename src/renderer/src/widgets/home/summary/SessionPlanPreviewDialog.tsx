@@ -3,7 +3,7 @@ import { Alert, Modal, Spin, theme } from "antd";
 import { useTranslation } from "react-i18next";
 import type { SessionOverviewPlanItem } from "@/platform/rpc/session-overview-api";
 import MarkdownContent from "@/widgets/markdown/MarkdownContent";
-import styles from "./HomePage.module.css";
+import styles from "../HomePage.module.css";
 
 type SessionPlanPreviewDialogProps = {
 	plan: SessionOverviewPlanItem | null;

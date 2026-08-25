@@ -4,7 +4,7 @@ import { Icon } from "@/assets/icons";
 import WorkspaceTree, {
 	type WorkspaceTreeProps,
 } from "@/widgets/workspace/WorkspaceTree";
-import styles from "./HomePage.module.css";
+import styles from "../HomePage.module.css";
 
 export type HomeWorkspaceSidebarProps = {
 	treeProps: WorkspaceTreeProps;

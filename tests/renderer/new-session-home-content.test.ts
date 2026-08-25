@@ -3,7 +3,7 @@ import {
 	getNewSessionGreetingPeriod,
 	UNBOUND_STARTER_IDS,
 	WORKSPACE_STARTER_IDS
-} from "@/widgets/home/new-session-home-content";
+} from "@/widgets/home/surface/new-session-home-content";
 
 describe("new session home content", () => {
 	it("selects a human greeting for each part of the day", () => {

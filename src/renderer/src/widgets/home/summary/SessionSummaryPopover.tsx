@@ -2,7 +2,7 @@ import { Button, Collapse, Divider, Empty, Popover, Spin, Tooltip, Typography } 
 import type { CollapseProps } from "antd";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
-import styles from "./HomePage.module.css";
+import styles from "../HomePage.module.css";
 
 type SessionSummaryPopoverProps = {
 	open: boolean;

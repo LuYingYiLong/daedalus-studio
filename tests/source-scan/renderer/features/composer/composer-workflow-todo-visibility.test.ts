@@ -6,7 +6,10 @@ describe("Composer workflow todo visibility", () => {
 		const composerSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.tsx");
 		const appSource: string = readAppImplementation();
 		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useBackendEventStream.ts");
-		const agentSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
+		const agentSource: string = [
+			readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx"),
+			readRepoFile("src", "renderer", "src", "widgets", "home", "surface", "HomeChatSurface.tsx"),
+		].join("\n");
 		const floatingTodoSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "FloatingWorkflowTodoPanel.tsx");
 		const floatingGoalSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "FloatingGoalPanel.tsx");
 		const globalCss: string = readRepoFile("src", "renderer", "src", "ui", "styles", "global.css");
