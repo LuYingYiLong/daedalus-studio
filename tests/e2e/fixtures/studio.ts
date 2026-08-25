@@ -40,9 +40,12 @@ function completedPreferences(): Record<string, unknown> {
 async function dismissReleaseNotesIfPresent(page: Page): Promise<void> {
 	const acknowledgeButton = page.getByRole("button", { name: /Got it|知道了/ });
 	try {
-		await acknowledgeButton.click({ timeout: 5_000 });
+		await acknowledgeButton.waitFor({ state: "visible", timeout: 15_000 });
+		await acknowledgeButton.click();
+		await acknowledgeButton.waitFor({ state: "hidden", timeout: 5_000 });
 	} catch {
-		// The changelog dialog is only shown for a fresh local profile.
+		// The changelog dialog is only shown for a fresh local profile. Its
+		// appearance is asynchronous because it waits for appReady and package info.
 	}
 }
 
