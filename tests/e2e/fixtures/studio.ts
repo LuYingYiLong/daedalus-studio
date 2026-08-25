@@ -9,6 +9,8 @@ import { MockBackend } from "./mock-backend";
 const repositoryRoot: string = resolve(__dirname, "..", "..", "..");
 const builtEntryPoint: string = join(repositoryRoot, "out", "main", "index.js");
 const electronExecutablePath: string = createRequire(__filename)("electron") as string;
+const LAST_SEEN_CHANGELOG_VERSION_KEY: string =
+	"daedalus.studio.changelog.last-seen-version";
 
 export type LaunchOptions = {
 	completedOnboarding?: boolean;
@@ -38,9 +40,31 @@ function completedPreferences(): Record<string, unknown> {
 }
 
 async function dismissReleaseNotesIfPresent(page: Page): Promise<void> {
+	try {
+		const packageInfo: { version: string } = await page.evaluate(
+			async (): Promise<{ version: string }> => {
+				const info = await window.electronAPI.appInfo.getPackageInfo();
+				return { version: info.version };
+			},
+		);
+		if (packageInfo.version.trim().length > 0) {
+			await page.evaluate(
+				({ key, version }): void => {
+					window.localStorage.setItem(key, version);
+				},
+				{
+					key: LAST_SEEN_CHANGELOG_VERSION_KEY,
+					version: packageInfo.version,
+				},
+			);
+		}
+	} catch {
+		// Continue with the visible-dialog fallback if package info is unavailable.
+	}
+
 	const acknowledgeButton = page.getByRole("button", { name: /Got it|知道了/ });
 	try {
-		await acknowledgeButton.waitFor({ state: "visible", timeout: 15_000 });
+		await acknowledgeButton.waitFor({ state: "visible", timeout: 2_000 });
 		await acknowledgeButton.click();
 		await acknowledgeButton.waitFor({ state: "hidden", timeout: 5_000 });
 	} catch {
