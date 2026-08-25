@@ -1,180 +1,60 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useEventListener, useLatest } from "ahooks";
-import { Input, message as antdMessage, Modal, Spin } from "antd";
+import { useCallback, useRef, useState } from "react";
+import { Input, message as antdMessage, Spin } from "antd";
 import { useTranslation } from "react-i18next";
-import { useDiskSpaceCheck } from "@/app/runtime/hooks/useDiskSpaceCheck";
-import { onBackendReconnected } from "@/platform/rpc/transport/backend-client";
-import { BackendRpcError } from "@/platform/rpc/transport/backend-rpc-client";
-import useNativeTaskNotifications from "./hooks/useNativeTaskNotifications";
-import useAppEventBridge from "./hooks/useAppEventBridge";
-import useSessionRuntimeEvents from "./hooks/useSessionRuntimeEvents";
+import useAppRuntimeEventController from "./hooks/useAppRuntimeEventController";
 import useSessionNavigationController from "./hooks/useSessionNavigationController";
-import useTimelineStreamBuffer from "./hooks/useTimelineStreamBuffer";
-import useWorkbenchPatchQueue, {
-	mergeWorkbenchPatch,
-} from "./hooks/useWorkbenchPatchQueue";
+import useComposerInteractionController from "./hooks/useComposerInteractionController";
+import useComposerTimelineRuntimeController from "./hooks/useComposerTimelineRuntimeController";
+import useHomeWorkspaceResourcesController from "./hooks/useHomeWorkspaceResourcesController";
+import useAppPreferencesController from "./hooks/useAppPreferencesController";
+import useSessionActivationController from "./hooks/useSessionActivationController";
+import useTemporarySessionController from "./hooks/useTemporarySessionController";
+import useSessionForkController from "./hooks/useSessionForkController";
+import useSessionWorktreeController from "./hooks/useSessionWorktreeController";
+import useSessionLifecycleController from "./hooks/useSessionLifecycleController";
+import useWorkspaceMutationController from "./hooks/useWorkspaceMutationController";
+import useSessionPreferenceController from "./hooks/useSessionPreferenceController";
+import useTimelineRefreshController from "./hooks/useTimelineRefreshController";
+import useWorkflowTodoPresentationController from "./hooks/useWorkflowTodoPresentationController";
+import useComposerViewModel from "./hooks/useComposerViewModel";
+import useAppRuntimeNotificationEffects from "./hooks/useAppRuntimeNotificationEffects";
+import useHomeWorkspaceNavigationController from "./hooks/useHomeWorkspaceNavigationController";
+import useSessionHomeNavigationController, {
+	type NewSessionLifecycleOptions,
+} from "./hooks/useSessionHomeNavigationController";
+import useSessionPresentationResetController from "./hooks/useSessionPresentationResetController";
+import useTraySessionIntegration from "./hooks/useTraySessionIntegration";
+import useAppSessionBackendEffects from "./hooks/useAppSessionBackendEffects";
+import useSessionLayoutController from "./hooks/useSessionLayoutController";
+import useWorkbenchNavigationPersistenceController from "./hooks/useWorkbenchNavigationPersistenceController";
+import useFullTrustConfirmationController from "./hooks/useFullTrustConfirmationController";
+import useAppSessionStateController from "./hooks/useAppSessionStateController";
+import { createHomePageViewModelFromRuntime } from "./home-page-view-model";
+import {
+	createHomePageActions,
+	createHomePageDirectActionHandlers,
+} from "./home-page-actions";
 import useWorkspaceContextController from "@/features/workspace/controllers/useWorkspaceContextController";
 import useApprovalController from "@/features/approval/controllers/useApprovalController";
 import usePlanGoalController from "@/features/composer/controllers/usePlanGoalController";
 import useTimelineController from "@/features/conversation/controllers/useTimelineController";
-import {
-	fetchWorkspaces,
-	getWorktreeEligibility,
-	selectWorkspace,
-	type DeleteWorkspaceResult,
-} from "@/platform/rpc/workspace-api";
 import type {
-	AdditionalContextItem,
-	MessageQueueItem,
-	PendingGuide,
-	PendingToolBudget,
-	SelectionAskThread,
-	SessionForkResult,
 	SessionMetadata,
-	SessionOpenResult,
-	SessionTimelineNavigationEntry,
-	SessionTimelineResult,
-	TimelineBlock,
-	WorkbenchPatch,
-	WorkbenchSnapshot,
 	WorkflowTodoSnapshot,
-	WorkspaceConfig,
 } from "@/platform/rpc/types";
-import { isAgentGoalDismissed } from "@/domain/composer/goal-display";
 import {
-	checkSessionIntegrity,
-	createSession,
-	deleteSession,
 	dismissWorkflowTodo,
-	fetchSessions,
-	fetchSessionTimeline,
-	forkSession,
-	createSessionWorktree,
-	deleteSessionWorktree,
-	executeSessionWorktreeHandoff,
-	openSession,
-	moveSessionWorkspace,
-	previewSessionWorktreeHandoff,
-	retrySessionWorktreeSetup,
-	saveSessionUiMetadata,
-	setSessionModel,
-	skipSessionWorktreeSetup,
-	type SaveSessionUiMetadataParams,
-	type SessionIntegrityCheckResult,
-	type MoveSessionWorkspaceResult,
 } from "@/platform/rpc/session-api";
-import type { RetryUserMessagePayload } from "@/widgets/conversation/UserBubble";
-import {
-	fetchProviderModelSelection,
-	type ProviderModelSelection,
-} from "@/platform/rpc/provider-api";
-import type {
-	ProviderModelInfo,
-	ProviderModelSelectionProvider,
-} from "@/platform/rpc/provider-api";
-import {
-	cancelChatMessage,
-	retryAgentRun,
-	sendChatMessage,
-	type ChatMode,
-} from "@/platform/rpc/chat-api";
-import {
-	fetchSlashCommands,
-	type SlashCommandDefinition,
-} from "@/platform/rpc/command-api";
-import {
-	fetchSkills,
-	type SkillSummary,
-	type SkillTarget,
-} from "@/platform/rpc/skill-api";
-import type { ApprovalMode } from "@/platform/rpc/approval-api";
 import {
 	applyBackendEventToTimeline,
-	applyWorkbenchSnapshot,
-	createTimelinePageFromOpenResult,
-	createTimelinePageFromTimelineResult,
-	type TimelinePageState,
 } from "@/domain/workbench/workbench-state";
+import { createIdleRunState, type RunControllerState } from "@/domain/workbench/run-state";
 import {
-	createTimelinePageStore,
-	useTimelineSelector,
-	type TimelinePageStore,
-} from "@/domain/workbench/timeline-page-store";
-import {
-	applyRunStateFromWorkbench,
-	applyAgentRunState,
-	createIdleRunState,
-	createOptimisticRunState,
-	finishOptimisticRunState,
-	getRunControllerRequestId,
-	isRunControllerActive,
-	type RunControllerState,
-} from "@/domain/workbench/run-state";
-import { addGuide, deleteGuide, reorderGuides } from "@/platform/rpc/guide-api";
-import {
-	addQueuedMessage,
-	removeQueuedMessage,
-	reorderQueuedMessages,
-} from "@/platform/rpc/message-queue-api";
-import { getSessionTitle } from "./session-title";
-import {
-	extractEnabledSkillRefs,
-	type ComposerCompletionTrigger,
-} from "@/domain/composer/composer-completion";
-import { createComposerReasoningEffortUpdate } from "@/domain/composer/composer-reasoning-effort";
-import { isComposerWorkspaceSelectionLocked } from "@/domain/composer/composer-workspace-lock";
-import {
-	getWorkflowTodoSnapshotKey,
-	isWorkflowTodoActive,
-} from "@/domain/composer/workflow-todo";
-import {
-	CLIENT_PREFERENCES_CHANGED_EVENT,
-	DEFAULT_CLIENT_PREFERENCES,
-	dispatchClientPreferencesChanged,
-	fetchClientPreferences,
-	updateClientPreferences,
-	type ClientPreferences,
-	type NewSessionComposerPreferences,
-	type WorkspaceSidebarPreferences,
-} from "@/platform/rpc/client-preferences-api";
-import {
-	DEFAULT_GENERAL_SETTINGS,
-	fetchGeneralSettings,
-	type GeneralSettings,
-} from "@/platform/rpc/general-settings-api";
-import {
-	createDefaultSessionLayout,
-	listTerminalRuntimeIds,
-	resetSessionFilePanelWorkspaceState,
-	type SessionLayoutMap,
 	type SessionLayoutPreferences,
 } from "@/domain/session/session-layout";
-import {
-	markActiveSessionRead,
-	removeUnreadSessions,
-} from "@/domain/workspace/session-unread";
-import {
-	markRunStopped,
-	markSessionRunStarted,
-	removeRunningSessions,
-	syncSessionRunFromOpen,
-	type RunningSessionState,
-} from "@/domain/workspace/session-running";
-import type { SessionArchiveContext } from "@/widgets/workspace/WorkspaceTree";
-import {
-	clearCleanFilePanelBuffersForSession,
-	hasDirtyFilePanelBuffersForSession,
-} from "@/widgets/files/file-runtime-buffers";
-import {
-	NEW_SESSION_EVENT,
-	recordOpenedSession,
-	removeSessionFromNavigationHistory,
-} from "@/domain/session/session-navigation-history";
+import type { RunningSessionState } from "@/domain/workspace/session-running";
 import {
 	type AppProps,
-	type HomeDraft,
-	type SupportedImageMimeType,
-	type WorkspacePickedEntry,
 	CONTEXT_SUBTITLE_MAX_CHARS,
 	DEFAULT_SESSION_LAYOUT,
 	FULL_TRUST_CONFIRMATION_TEXT,
@@ -186,118 +66,93 @@ import {
 	createContextId,
 	createFrontendFailedRunEvent,
 	createHomeDraft,
-	createOptimisticUserBlock,
-	createPreferredHomeDraft,
-	createSingleSourceWorkspaceSnapshot,
-	createWorkspaceFromSessionMetadata,
-	createWorkspaceFromSessionOpenResult,
-	createWorkflowTodoSnapshotFromTimelineResult,
 	createWorkspacePathContextItem,
 	createExternalFileContextItem,
-	findPreferredComposerModel,
 	findProviderModel,
-	getChatMode,
 	getChatOutputTarget,
 	getContextTitle,
 	getCurrentWorkspaceId,
-	getDisplayedComposerModel,
 	getFileNameFromLocalPath,
 	getLocalPathForFile,
-	getPendingApprovalCount,
 	getRecentSessions,
 	getSessionSortTime,
 	getWorkflowTodoSnapshotIdentity,
 	isBackendRpcErrorMessage,
 	isLocalPathInsideWorkspace,
-	isSameWorkflowTodoSnapshot,
 	isSupportedImageMimeType,
-	insertUserBlockBeforeRequestAssistant,
-	mergeOptimisticUserBlocks,
 	normalizeLocalPathForCompare,
 	readFileAsDataUrl,
 	readImageDimensions,
-	resolveReasoningEffortForComposerModelChange,
-	trimTimelineFromRequest,
 } from "./app-helpers";
 import {
 	DEFAULT_WORKSPACE_LAUNCH_TARGET_ID,
-	type WorkspaceLaunchTargetId,
 } from "@/domain/workspace/workspace-launch";
 
 export default function useAppController({ bootstrapData }: AppProps) {
 	const { t } = useTranslation();
-	const [workspaceRefreshToken, setWorkspaceRefreshToken] =
-		useState<number>(0);
-	const [isNewSessionHome, setIsNewSessionHome] = useState<boolean>(true);
-	const [homeComposerMessage, setHomeComposerMessage] = useState<string>("");
-	const [homeDraft, setHomeDraft] = useState<HomeDraft>(() =>
-		createPreferredHomeDraft(
-			bootstrapData.clientPreferences,
-			bootstrapData.providerModelSelection,
-		),
-	);
-	const homeComposerMessageRef = useLatest(homeComposerMessage);
-	const homeDraftRef = useLatest(homeDraft);
-	const [homeWorkspaceOptions, setHomeWorkspaceOptions] = useState<
-		WorkspaceConfig[]
-	>(() => bootstrapData.workspaceList.workspaces);
-	const [isWorkspaceProjectDialogOpen, setIsWorkspaceProjectDialogOpen] =
-		useState<boolean>(false);
-	const [isWorkspaceSessionCreating, setIsWorkspaceSessionCreating] =
-		useState<boolean>(false);
-	const [pendingTextAttachmentCount, setPendingTextAttachmentCount] =
-		useState<number>(0);
-	const isAddingTextAttachment: boolean = pendingTextAttachmentCount > 0;
-	const [isHomeSubmitting, setIsHomeSubmitting] = useState<boolean>(false);
-	const [isWorktreePreparing, setIsWorktreePreparing] =
-		useState<boolean>(false);
-	const [worktreeDisabledReason, setWorktreeDisabledReason] = useState<
-		string | null
-	>(null);
-	const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-	const [firstTurnModelTransition, setFirstTurnModelTransition] = useState<{
-		sessionId: string;
-		providerId: string;
-		modelId: string;
-	} | null>(null);
-	const [sessionLayouts, setSessionLayouts] = useState<SessionLayoutMap>(
-		() => bootstrapData.sessionLayouts,
-	);
-	const [temporarySessionLayout, setTemporarySessionLayout] =
-		useState<SessionLayoutPreferences>(() => createDefaultSessionLayout());
-	const activeSessionIdRef = useRef<string | null>(null);
-	const temporaryDraftSessionIdRef = useRef<string | null>(null);
-	const temporarySessionCreationRef = useRef<Promise<void> | null>(null);
-	const [activeSessionMetadata, setActiveSessionMetadata] =
-		useState<SessionMetadata | null>(null);
-	const [recentSessions, setRecentSessions] = useState<SessionMetadata[]>(
-		() => getRecentSessions(bootstrapData.sessionList.sessions),
-	);
-	const recentSessionsRef = useLatest(recentSessions);
-	useEffect((): (() => void) => {
-		return window.electronAPI.sessionCatalog.onChanged((): void => {
-			setWorkspaceRefreshToken(
-				(currentToken: number): number => currentToken + 1,
-			);
-		});
-	}, []);
-	const [activeWorkspace, setActiveWorkspace] =
-		useState<WorkspaceConfig | null>(null);
-	const timelineStoreRef = useRef<TimelinePageStore | null>(null);
-	if (timelineStoreRef.current === null) {
-		timelineStoreRef.current = createTimelinePageStore();
-	}
-	const timelineStore: TimelinePageStore = timelineStoreRef.current;
-	const timelineBlockCount: number = useTimelineSelector(
+	const {
+		workspaceRefreshToken,
+		setWorkspaceRefreshToken,
+		isNewSessionHome,
+		setIsNewSessionHome,
+		homeComposerMessage,
+		setHomeComposerMessage,
+		homeComposerMessageRef,
+		homeDraft,
+		setHomeDraft,
+		homeDraftRef,
+		homeWorkspaceOptions,
+		setHomeWorkspaceOptions,
+		isWorkspaceProjectDialogOpen,
+		setIsWorkspaceProjectDialogOpen,
+		isWorkspaceSessionCreating,
+		setIsWorkspaceSessionCreating,
+		setPendingTextAttachmentCount,
+		isAddingTextAttachment,
+		isHomeSubmitting,
+		setIsHomeSubmitting,
+		isWorktreePreparing,
+		setIsWorktreePreparing,
+		activeSessionId,
+		setActiveSessionId,
+		firstTurnModelTransition,
+		setFirstTurnModelTransition,
+		sessionLayouts,
+		setSessionLayouts,
+		temporarySessionLayout,
+		setTemporarySessionLayout,
+		activeSessionIdRef,
+		temporaryDraftSessionIdRef,
+		temporarySessionCreationRef,
+		activeSessionMetadata,
+		setActiveSessionMetadata,
+		recentSessions,
+		setRecentSessions,
+		recentSessionsRef,
+		activeWorkspace,
+		setActiveWorkspace,
 		timelineStore,
-		(page: TimelinePageState): number => page.blockCount,
-	);
-	const [selectionAskThreads, setSelectionAskThreads] = useState<
-		SelectionAskThread[]
-	>([]);
-	const [workbench, setWorkbench] = useState<WorkbenchSnapshot | null>(null);
-	const activeWorkbenchRef = useLatest(workbench);
-	const [sessionError, setSessionError] = useState<string | null>(null);
+		timelineBlockCount,
+		selectionAskThreads,
+		setSelectionAskThreads,
+		workbench,
+		setWorkbench,
+		activeWorkbenchRef,
+		sessionError,
+		setSessionError,
+	} = useAppSessionStateController({ bootstrapData });
+	const {
+		workflowTodoSnapshot,
+		setWorkflowTodoSnapshot,
+		rememberLoadedWorkflowTodo,
+		clearWorkflowTodoUiState,
+		expandWorkflowTodoPanel,
+		showWorkflowTodo,
+		applyInitialWorkflowTodoPreference,
+	} = useWorkflowTodoPresentationController({
+		activeSessionMetadata,
+		setActiveSessionMetadata,
+	});
 	const timelineController = useTimelineController({
 		activeSessionId,
 		activeSessionIdRef,
@@ -317,21 +172,24 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		resetTimelineUiState,
 	} = timelineController;
 	const [isSessionLoading, setIsSessionLoading] = useState(false);
-	const [providerModelSelection, setProviderModelSelection] =
-		useState<ProviderModelSelection | null>(
-			bootstrapData.providerModelSelection,
-		);
-	const [slashCommands, setSlashCommands] = useState<
-		SlashCommandDefinition[]
-	>(() => bootstrapData.slashCommands);
-	const [skills, setSkills] = useState<SkillSummary[]>(
-		() => bootstrapData.skills,
-	);
+	const {
+		providerModelSelection,
+		slashCommands,
+		skills,
+		loadSlashCommands,
+		loadSkills,
+		handleCompletionOpen,
+		clientPreferences,
+		setClientPreferences,
+		clientPreferencesRef,
+		generalSettings,
+	} = useAppPreferencesController({
+		bootstrapData,
+		activeSessionId,
+		workspaceId: (activeWorkspace ?? homeDraft.workspace)?.id ?? null,
+	});
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
-	const [isFullTrustModalOpen, setIsFullTrustModalOpen] =
-		useState<boolean>(false);
-	const [fullTrustConfirmationText, setFullTrustConfirmationText] =
-		useState<string>("");
+	const fullTrustOpenRef = useRef<() => void>(() => undefined);
 	const [activeRetryRequestId, setActiveRetryRequestId] = useState<
 		string | null
 	>(null);
@@ -342,8 +200,6 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		null,
 	);
 	const forkOperationRef = useRef<boolean>(false);
-	const [workflowTodoSnapshot, setWorkflowTodoSnapshot] =
-		useState<WorkflowTodoSnapshot | null>(null);
 	const dismissedTerminalGoalIdsRef = useRef<Set<string>>(new Set());
 	const [runState, setRunState] = useState<RunControllerState>(() =>
 		createIdleRunState(),
@@ -354,14 +210,6 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		ReadonlySet<string>
 	>(() => new Set<string>());
 	const windowFocusedRef = useRef<boolean>(document.hasFocus());
-	const [clientPreferences, setClientPreferences] =
-		useState<ClientPreferences>(
-			bootstrapData.clientPreferences ?? DEFAULT_CLIENT_PREFERENCES,
-		);
-	const clientPreferencesRef = useLatest(clientPreferences);
-	const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(
-		bootstrapData.generalSettings ?? DEFAULT_GENERAL_SETTINGS,
-	);
 	const navigationVersionRef = useRef<number>(0);
 	const activeChatRequestIdRef = useRef<string | null>(null);
 	const cancelledChatRequestIdsRef = useRef<Set<string>>(new Set());
@@ -374,21 +222,54 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		scopeId: "home",
 		revision: 0,
 	});
-	const slashCommandsLoadingRef = useRef<boolean>(false);
-	const skillsLoadingTargetKeyRef = useRef<string | null>(null);
-	const skillsLoadVersionRef = useRef<number>(0);
-	const skillTargetRef = useRef<SkillTarget>({});
-	const slashCommandsRetryAtRef = useRef<number>(0);
-	const skillsRetryAtRef = useRef<number>(0);
-	const skillsRetryTargetKeyRef = useRef<string | null>(null);
-	const initializedWorkflowTodoKeyRef = useRef<string>("");
-	const expandedActiveWorkflowTodoKeyRef = useRef<string>("");
+	const {
+		loadHomeWorkspaces,
+		worktreeDisabledReason,
+	} = useHomeWorkspaceResourcesController({
+		isNewSessionHome,
+		activeSessionId,
+		workspaceId: homeDraft.workspaceId,
+		workspaceRefreshToken,
+		setHomeWorkspaceOptions,
+	});
 	const pendingUserActionRequestIdsRef = useRef<Set<string>>(new Set());
 	const activeSessionTitleRef = useRef<string>("Daedalus session");
 	const activeSessionLayout: SessionLayoutPreferences =
 		activeSessionId === null
 			? temporarySessionLayout
 			: (sessionLayouts[activeSessionId] ?? DEFAULT_SESSION_LAYOUT);
+	const {
+		applyWorkbench,
+		takePendingWorkbenchPatch,
+		sendWorkbenchPatch,
+		queueWorkbenchPatch,
+		replaceComposerInput,
+		handleComposerDraftChange,
+		applyOptimisticActiveRun,
+		appendOptimisticUserBlock,
+		applyOptimisticSend,
+		appendQueuedRunUserBlock,
+		finishOptimisticActiveRun,
+		applyOptimisticRetry,
+	} = useComposerTimelineRuntimeController({
+		activeSessionIdRef,
+		composerDraftsRef,
+		isNewSessionHome,
+		runState,
+		timelineStore,
+		setComposerInputReset,
+		setFirstTurnModelTransition,
+		setHomeComposerMessage,
+		setRunningSessionState,
+		setRunState,
+		setWorkbench,
+		clearWorkflowTodoUiState,
+	});
+	const { persistPendingWorkbenchPatchBeforeNavigation } =
+		useWorkbenchNavigationPersistenceController({
+			takePendingWorkbenchPatch,
+			sendWorkbenchPatch,
+		});
 	const planGoalController = usePlanGoalController({
 		activeSessionId,
 		activeChatRequestIdRef,
@@ -444,6 +325,65 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		handlePlanRevise,
 		handleTerminalGoalDismiss,
 	} = planGoalController;
+	const { resetSessionPresentationState } =
+		useSessionPresentationResetController({
+			timelineStore,
+			resetTimelineUiState,
+			clearWorkflowTodoUiState,
+			resetPlanGoalUiState,
+			setWorkbench,
+			setActiveRetryRequestId,
+			setRunState,
+		});
+	const {
+		refreshLatestTimeline,
+		handleWorkflowTodoDismiss,
+	} = useTimelineRefreshController({
+		activeSessionId,
+		activeSessionIdRef,
+		activeChatRequestIdRef,
+		activeSessionMetadata,
+		runState,
+		timelineStore,
+		refreshTimelineNavigationEntries,
+		rememberLoadedWorkflowTodo,
+		expandWorkflowTodoPanel,
+		setLatestPlanClarification,
+		setLatestPlanApproval,
+		setWorkflowTodoSnapshot,
+		setActiveSessionMetadata,
+		setActiveWorkspace,
+		setSessionError,
+	});
+	const {
+		persistSessionUiMetadata,
+		handleWorkspaceLaunchChange,
+		handleModeChange,
+		handleProviderModelChange,
+		handleReasoningEffortChange,
+		persistNewSessionComposerDefaults,
+	} = useSessionPreferenceController({
+		activeSessionId,
+		activeSessionIdRef,
+		isNewSessionHome,
+		isHomeSubmitting,
+		homeDraft,
+		workbench,
+		runState,
+		activeSessionMetadata,
+		providerModelSelection,
+		clientPreferencesRef,
+		setClientPreferences,
+		setHomeDraft,
+		setWorkbench,
+		setActiveSessionMetadata,
+		setSessionError,
+		queueWorkbenchPatch,
+		applyWorkbench,
+		onInfo: (message: string): void => {
+			void messageApi.info(message);
+		},
+	});
 	const approvalController = useApprovalController({
 		initialMode:
 			bootstrapData.clientPreferences.newSessionComposer.approvalMode,
@@ -455,8 +395,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		refreshLatestTimeline,
 		setSessionError,
 		onFullTrustRequested: (): void => {
-			setFullTrustConfirmationText("");
-			setIsFullTrustModalOpen(true);
+			fullTrustOpenRef.current();
 		},
 	});
 	const {
@@ -482,206 +421,93 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		handleToolBudgetContinue,
 		handleToolBudgetStop,
 	} = approvalController;
-
-	useEventListener(CLIENT_PREFERENCES_CHANGED_EVENT, (event: Event): void => {
-		const preferences: ClientPreferences | undefined = (
-			event as CustomEvent<ClientPreferences>
-		).detail;
-		if (preferences !== undefined) {
-			clientPreferencesRef.current = preferences;
-			setClientPreferences(preferences);
-		}
+	const fullTrustController = useFullTrustConfirmationController({
+		confirmationToken: FULL_TRUST_CONFIRMATION_TEXT,
+		isSaving: isApprovalModeSaving,
+		saveApprovalMode,
+		onInvalidConfirmation: (confirmationToken: string): void => {
+			void messageApi.error(
+				t("app.fullTrust.errors.confirmation", { confirmationText: confirmationToken }),
+			);
+		},
 	});
+	fullTrustOpenRef.current = fullTrustController.open;
 
-	useEventListener("daedalus:retry-agent-run", (event: Event): void => {
-		const detail: unknown = (event as CustomEvent<unknown>).detail;
-		if (
-			typeof detail !== "object" ||
-			detail === null ||
-			!("runId" in detail) ||
-			typeof (detail as { runId?: unknown }).runId !== "string"
-		) {
-			return;
-		}
-		void handleInterruptedRunRetry((detail as { runId: string }).runId);
-	});
-
-	const handleWorkspaceSidebarChange = useCallback(
-		(
-			workspaceSidebar: WorkspaceSidebarPreferences,
-			options: { persist?: boolean } = {},
-		): void => {
-			const nextPreferences: ClientPreferences = {
-				...clientPreferencesRef.current,
-				workspaceSidebar,
-			};
-			clientPreferencesRef.current = nextPreferences;
-			setClientPreferences(nextPreferences);
-			dispatchClientPreferencesChanged(nextPreferences);
-			if (options.persist === false) {
-				return;
-			}
-			void updateClientPreferences({ workspaceSidebar })
-				.then((savedPreferences: ClientPreferences): void => {
-					clientPreferencesRef.current = savedPreferences;
-					setClientPreferences(savedPreferences);
-				})
-				.catch((error: unknown): void => {
-					console.error(
-						"[App] save workspace sidebar preference failed",
-						error,
-					);
-				});
-		},
-		[clientPreferencesRef],
-	);
-
-	const handleSessionLayoutChange = useCallback(
-		(
-			layout: SessionLayoutPreferences,
-			options: { persist?: boolean } = {},
-		): void => {
-			const sessionId: string | null = activeSessionId;
-			if (sessionId === null) {
-				setTemporarySessionLayout(layout);
-				return;
-			}
-
-			setSessionLayouts(
-				(currentLayouts: SessionLayoutMap): SessionLayoutMap => ({
-					...currentLayouts,
-					[sessionId]: layout,
-				}),
-			);
-			if (options.persist === false) {
-				return;
-			}
-			void window.electronAPI.sessionLayout
-				.save({ sessionId, layout })
-				.catch((error: unknown): void => {
-					console.error("[App] save session layout failed", error);
-				});
-		},
-		[activeSessionId],
-	);
-
-	const removeStoredSessionLayouts = useCallback(
-		(sessionIds: string[]): void => {
-			if (sessionIds.length === 0) {
-				return;
-			}
-			const removedIds: Set<string> = new Set(sessionIds);
-			setSessionLayouts(
-				(currentLayouts: SessionLayoutMap): SessionLayoutMap => {
-					return Object.fromEntries(
-						Object.entries(currentLayouts).filter(
-							([sessionId]): boolean =>
-								!removedIds.has(sessionId),
-						),
-					);
-				},
-			);
-			void window.electronAPI.sessionLayout
-				.remove({ sessionIds: [...removedIds] })
-				.catch((error: unknown): void => {
-					console.error("[App] remove session layouts failed", error);
-				});
-		},
-		[],
-	);
-
-	const deleteSessionWithLayout = useCallback(
-		async (sessionId: string): Promise<void> => {
-			await deleteSession(sessionId);
-			removeSessionFromNavigationHistory(sessionId);
-			composerDraftsRef.current.delete(sessionId);
-			removeStoredSessionLayouts([sessionId]);
-			setRunningSessionState(
-				(current: RunningSessionState): RunningSessionState => {
-					return removeRunningSessions(current, [sessionId]);
-				},
-			);
-			setUnreadSessionIds(
-				(
-					currentSessionIds: ReadonlySet<string>,
-				): ReadonlySet<string> => {
-					return removeUnreadSessions(currentSessionIds, [sessionId]);
-				},
-			);
-		},
-		[removeStoredSessionLayouts],
-	);
-
-	useDiskSpaceCheck();
-	const { showNativeTaskNotification, clearNativeTaskNotificationAttention } =
-		useNativeTaskNotifications();
 	const {
-		discardPendingTimelineEvents,
-		flushPendingTimelineEvents,
-		enqueueTimelineStreamingEvent,
-	} = useTimelineStreamBuffer({ activeSessionIdRef, timelineStore });
+		handleWorkspaceSidebarChange,
+		handleSessionLayoutChange,
+		removeStoredSessionLayouts,
+		deleteSessionWithLayout,
+	} = useSessionLayoutController({
+		activeSessionId,
+		clientPreferencesRef,
+		composerDraftsRef,
+		setClientPreferences,
+		setSessionLayouts,
+		setTemporarySessionLayout,
+		setRunningSessionState,
+		setUnreadSessionIds,
+	});
+	const {
+		createTemporarySession,
+		restoreMaterializedHomeDraftSession,
+		discardTemporarySessionIfEmpty,
+		beginLocalNewSessionDraft,
+	} = useTemporarySessionController({
+		activeSessionId,
+		activeSessionMetadata,
+		activeSessionIdRef,
+		homeComposerMessageRef,
+		homeDraftRef,
+		clientPreferencesRef,
+		providerModelSelection,
+		workbench,
+		composerDraftsRef,
+		temporaryDraftSessionIdRef,
+		temporarySessionCreationRef,
+		navigationVersionRef,
+		timelineStore,
+		deleteSessionWithLayout,
+		setActiveSessionId,
+		setActiveSessionMetadata,
+		setSelectionAskThreads,
+		setHomeDraft,
+		setActiveWorkspace,
+		setWorkbench,
+		setApprovalModeState,
+		setIsNewSessionHome,
+		setIsSessionLoading,
+		setSessionError,
+		setFirstTurnModelTransition,
+		resetSessionPresentationState,
+		replaceComposerInput,
+	});
 
-	useEffect((): void => {
-		void window.electronAPI.tray
-			.updateRecentSessions(
-				recentSessions.map(
-					(session: SessionMetadata): TrayRecentSession => ({
-						id: session.id,
-						title: getSessionTitle(session, session.id),
-					}),
-				),
-			)
-			.catch((error: unknown): void => {
-				console.error("[App] tray recent session update failed", error);
-			});
-	}, [recentSessions]);
-
-	useEffect((): (() => void) => {
-		const removeNewChatListener: () => void =
-			window.electronAPI.tray.onNewChat((): void => {
-				void handleNewSession();
-			});
-		const removeOpenSessionListener: () => void =
-			window.electronAPI.tray.onOpenSession((sessionId: string): void => {
-				void (async (): Promise<void> => {
-					const cachedSession: SessionMetadata | undefined =
-						recentSessionsRef.current.find(
-							(session: SessionMetadata): boolean =>
-								session.id === sessionId,
-						);
-					if (cachedSession !== undefined) {
-						await handleSessionSelect(cachedSession);
-						return;
-					}
-
-					const sessionList = await fetchSessions();
-					setRecentSessions(getRecentSessions(sessionList.sessions));
-					const session: SessionMetadata | undefined =
-						sessionList.sessions.find(
-							(item: SessionMetadata): boolean =>
-								item.id === sessionId,
-						);
-					if (session === undefined) {
-						showTransientError("Session not found");
-						return;
-					}
-
-					await handleSessionSelect(session);
-				})().catch((error: unknown): void => {
-					showTransientError(
-						error instanceof Error
-							? error.message
-							: "Failed to open session",
-					);
-					console.error("[App] tray open session failed", error);
-				});
-			});
-
-		return (): void => {
-			removeNewChatListener();
-			removeOpenSessionListener();
-		};
-	}, []);
+	const {
+		handleNewWorkspaceSession,
+		handleHomeWorkspaceSelect,
+		handleHomeWorkspaceClear,
+		handleHomeWorkspaceAdd,
+		resetToNewSessionHome,
+	} = useHomeWorkspaceNavigationController({
+		activeSessionId,
+		activeSessionMetadata,
+		activeSessionIdRef,
+		temporaryDraftSessionIdRef,
+		navigationVersionRef,
+		homeWorkspaceOptions,
+		setHomeWorkspaceOptions,
+		setHomeDraft,
+		setActiveWorkspace,
+		setActiveSessionMetadata,
+		setSessionError,
+		setIsWorkspaceProjectDialogOpen,
+		setIsWorkspaceSessionCreating,
+		beginLocalNewSessionDraft,
+		deleteSessionWithLayout,
+		takePendingWorkbenchPatch,
+		onError: showTransientError,
+	});
 
 	const handleSessionsChange = useCallback(
 		(sessions: SessionMetadata[]): void => {
@@ -690,1674 +516,150 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		[],
 	);
 
-	useEffect((): void => {
-		if (runState.status === "idle") {
-			activeChatRequestIdRef.current = null;
-			setIsHomeSubmitting(false);
-		}
-	}, [runState.status]);
-
-	useEffect((): void => {
-		setRunState(
-			(currentState: RunControllerState): RunControllerState =>
-				applyRunStateFromWorkbench(
-					currentState,
-					workbench,
-					cancelledChatRequestIdsRef.current,
-				),
-		);
-	}, [workbench]);
-
-	const loadSlashCommands = useCallback(async (): Promise<void> => {
-		if (
-			slashCommandsLoadingRef.current ||
-			Date.now() < slashCommandsRetryAtRef.current
-		) {
-			return;
-		}
-
-		slashCommandsLoadingRef.current = true;
-		try {
-			setSlashCommands(await fetchSlashCommands());
-			slashCommandsRetryAtRef.current = 0;
-		} catch (error: unknown) {
-			slashCommandsRetryAtRef.current = Date.now() + 3000;
-			console.error("[App] load slash commands failed", error);
-		} finally {
-			slashCommandsLoadingRef.current = false;
-		}
-	}, []);
-
-	const loadSkills = useCallback(
-		async (target: SkillTarget = skillTargetRef.current): Promise<void> => {
-			const targetKey: string = `${target.workspaceId ?? "global"}\u0000${target.sourceFolderId ?? "all"}`;
-			if (
-				skillsLoadingTargetKeyRef.current === targetKey ||
-				(skillsRetryTargetKeyRef.current === targetKey &&
-					Date.now() < skillsRetryAtRef.current)
-			) {
-				return;
-			}
-
-			const loadVersion: number = skillsLoadVersionRef.current + 1;
-			skillsLoadVersionRef.current = loadVersion;
-			skillsLoadingTargetKeyRef.current = targetKey;
-			try {
-				const result = await fetchSkills(target);
-				if (skillsLoadVersionRef.current !== loadVersion) {
-					return;
-				}
-				setSkills(result.skills);
-				skillsRetryAtRef.current = 0;
-				skillsRetryTargetKeyRef.current = null;
-			} catch (error: unknown) {
-				if (skillsLoadVersionRef.current !== loadVersion) {
-					return;
-				}
-				setSkills([]);
-				skillsRetryAtRef.current = Date.now() + 3000;
-				skillsRetryTargetKeyRef.current = targetKey;
-				console.error("[App] load skills failed", error);
-			} finally {
-				if (skillsLoadVersionRef.current === loadVersion) {
-					skillsLoadingTargetKeyRef.current = null;
-				}
-			}
-		},
-		[],
-	);
-
-	const loadHomeWorkspaces = useCallback(async (): Promise<void> => {
-		try {
-			const result = await fetchWorkspaces();
-
-			setHomeWorkspaceOptions(result.workspaces);
-		} catch (error: unknown) {
-			console.error("[App] load home workspaces failed", error);
-		}
-	}, []);
-
-	function rememberLoadedWorkflowTodo(
-		snapshot: WorkflowTodoSnapshot | null,
-	): void {
-		initializedWorkflowTodoKeyRef.current =
-			snapshot === null ? "" : getWorkflowTodoSnapshotKey(snapshot);
-		if (snapshot === null) {
-			expandedActiveWorkflowTodoKeyRef.current = "";
-		}
-	}
-
-	function clearWorkflowTodoUiState(
-		options: { preservePlanSnapshot?: boolean } = {},
-	): void {
-		if (options.preservePlanSnapshot === true) {
-			setWorkflowTodoSnapshot(
-				(
-					currentSnapshot: WorkflowTodoSnapshot | null,
-				): WorkflowTodoSnapshot | null => {
-					if (currentSnapshot?.source === "plan") {
-						return currentSnapshot;
-					}
-
-					rememberLoadedWorkflowTodo(null);
-					return null;
-				},
-			);
-			return;
-		}
-
-		setWorkflowTodoSnapshot(null);
-		rememberLoadedWorkflowTodo(null);
-	}
-
-	function expandWorkflowTodoPanel(): void {
-		setActiveSessionMetadata(
-			(
-				currentMetadata: SessionMetadata | null,
-			): SessionMetadata | null => {
-				return currentMetadata === null
-					? currentMetadata
-					: {
-							...currentMetadata,
-							workflowTodoCollapsed: false,
-						};
-			},
-		);
-	}
-
-	function showWorkflowTodo(
-		snapshot: WorkflowTodoSnapshot | null,
-		forceExpand: boolean = false,
-	): void {
-		setWorkflowTodoSnapshot(snapshot);
-		rememberLoadedWorkflowTodo(snapshot);
-		if (snapshot !== null && forceExpand) {
-			expandWorkflowTodoPanel();
-		}
-	}
-
-	function resetSessionPresentationState(): void {
-		timelineStore.reset();
-		resetTimelineUiState();
-		setWorkbench(null);
-		clearWorkflowTodoUiState();
-		resetPlanGoalUiState();
-		setActiveRetryRequestId(null);
-		setRunState(
-			(currentState: RunControllerState): RunControllerState =>
-				createIdleRunState(currentState.sequence),
-		);
-	}
-
-	function applyInitialWorkflowTodoPreference(
-		snapshot: WorkflowTodoSnapshot | null,
-	): void {
-		if (snapshot === null) {
-			initializedWorkflowTodoKeyRef.current = "";
-			return;
-		}
-
-		const workflowTodoKey: string = getWorkflowTodoSnapshotKey(snapshot);
-		const workflowTodoIsActive: boolean = isWorkflowTodoActive(snapshot);
-		if (
-			activeSessionMetadata?.workflowTodoDismissedKey === workflowTodoKey
-		) {
-			initializedWorkflowTodoKeyRef.current = workflowTodoKey;
-			return;
-		}
-		if (initializedWorkflowTodoKeyRef.current === workflowTodoKey) {
-			if (
-				!workflowTodoIsActive ||
-				expandedActiveWorkflowTodoKeyRef.current === workflowTodoKey
-			) {
-				return;
-			}
-		}
-
-		initializedWorkflowTodoKeyRef.current = workflowTodoKey;
-		if (workflowTodoIsActive) {
-			expandedActiveWorkflowTodoKeyRef.current = workflowTodoKey;
-		}
-		const workflowTodoCollapsed: boolean = !workflowTodoIsActive;
-		setActiveSessionMetadata(
-			(
-				currentMetadata: SessionMetadata | null,
-			): SessionMetadata | null => {
-				return currentMetadata === null
-					? currentMetadata
-					: {
-							...currentMetadata,
-							workflowTodoCollapsed,
-							workflowTodoDismissedKey: null,
-						};
-			},
-		);
-		void saveSessionUiMetadata({
-			workflowTodoCollapsed,
-			workflowTodoDismissedKey: null,
-		}).catch((error: unknown): void => {
-			console.error(
-				"[App] save initial workflow todo collapsed state failed",
-				error,
-			);
-		});
-	}
-
-	useEffect((): (() => void) => {
-		let cancelled: boolean = false;
-
-		async function loadPreferences(): Promise<void> {
-			try {
-				const [preferences, settings] = await Promise.all([
-					fetchClientPreferences(),
-					fetchGeneralSettings(),
-				]);
-				if (!cancelled) {
-					setClientPreferences(preferences);
-					setGeneralSettings(settings);
-				}
-			} catch (error: unknown) {
-				console.error("[App] load preferences failed", error);
-			}
-		}
-
-		void loadPreferences();
-
-		return (): void => {
-			cancelled = true;
-		};
-	}, []);
-
-	const handleCompletionOpen = useCallback(
-		(trigger: ComposerCompletionTrigger): void => {
-			if (trigger === "/" && slashCommands.length === 0) {
-				void loadSlashCommands();
-			}
-
-			if (trigger === "@" && skills.length === 0) {
-				void loadSkills();
-			}
-		},
-		[loadSkills, loadSlashCommands, skills.length, slashCommands.length],
-	);
-
-	const applyWorkbench = useCallback(
-		(nextWorkbench: WorkbenchSnapshot): void => {
-			setFirstTurnModelTransition(
-				(currentTransition): typeof currentTransition => {
-					return currentTransition?.sessionId ===
-						nextWorkbench.sessionId &&
-						currentTransition.providerId ===
-							nextWorkbench.composer.provider &&
-						currentTransition.modelId ===
-							nextWorkbench.composer.model
-						? null
-						: currentTransition;
-				},
-			);
-			setWorkbench(
-				(
-					currentWorkbench: WorkbenchSnapshot | null,
-				): WorkbenchSnapshot => {
-					const normalizedWorkbench: WorkbenchSnapshot = {
-						...nextWorkbench,
-						composer: {
-							...nextWorkbench.composer,
-							text: "",
-						},
-					};
-					return applyWorkbenchSnapshot(
-						currentWorkbench,
-						normalizedWorkbench,
-					);
-				},
-			);
-		},
-		[],
-	);
+	const handleNewSession = async (
+		options: NewSessionLifecycleOptions = {},
+	): Promise<void> => {
+		await handleNewSessionFromController(options);
+	};
 
 	const {
-		takePendingWorkbenchPatch,
-		sendWorkbenchPatch,
-		queueWorkbenchPatch,
-	} = useWorkbenchPatchQueue(applyWorkbench);
-
-	function replaceComposerInput(
-		text: string,
-		scopeId: string = activeSessionIdRef.current ?? "home",
-	): void {
-		if (text.length === 0) {
-			composerDraftsRef.current.delete(scopeId);
-		} else {
-			composerDraftsRef.current.set(scopeId, text);
-		}
-		if (scopeId === "home" || isNewSessionHome) {
-			setHomeComposerMessage(text);
-		}
-		setComposerInputReset(
-			(current): { scopeId: string; revision: number } => ({
-				scopeId,
-				revision: current.revision + 1,
-			}),
-		);
-	}
-
-	function handleComposerDraftChange(text: string): void {
-		const scopeId: string = activeSessionIdRef.current ?? "home";
-		if (text.length === 0) {
-			composerDraftsRef.current.delete(scopeId);
-			if (isNewSessionHome) {
-				setHomeComposerMessage("");
-			}
-			return;
-		}
-		composerDraftsRef.current.set(scopeId, text);
-		if (isNewSessionHome) {
-			setHomeComposerMessage(text);
-		}
-	}
-
-	function applyOptimisticActiveRun(
-		requestId: string,
-		clearComposerText: boolean,
-		clearComposerContext: boolean = false,
-		preserveWorkflowTodo: boolean = false,
-	): void {
-		const startedAt: string = new Date().toISOString();
-		const sequence: number = runState.sequence + 1;
-		setRunningSessionState(
-			(current: RunningSessionState): RunningSessionState => {
-				return markSessionRunStarted(
-					current,
-					activeSessionIdRef.current,
-					requestId,
-				);
-			},
-		);
-
-		clearWorkflowTodoUiState({
-			preservePlanSnapshot: preserveWorkflowTodo,
-		});
-		setRunState(
-			(currentState: RunControllerState): RunControllerState =>
-				createOptimisticRunState(currentState, requestId, startedAt),
-		);
-		setWorkbench(
-			(
-				currentWorkbench: WorkbenchSnapshot | null,
-			): WorkbenchSnapshot | null => {
-				return currentWorkbench === null
-					? currentWorkbench
-					: {
-							...currentWorkbench,
-							composer: {
-								...currentWorkbench.composer,
-								text: clearComposerText
-									? ""
-									: currentWorkbench.composer.text,
-								additionalContext: clearComposerContext
-									? []
-									: currentWorkbench.composer
-											.additionalContext,
-							},
-							activeRun: {
-								status: "streaming",
-								requestId,
-								startedAt,
-								sequence,
-							},
-						};
-			},
-		);
-	}
-
-	function appendOptimisticUserBlock(
-		requestId: string,
-		message: string,
-		additionalContext: AdditionalContextItem[],
-	): void {
-		timelineStore.update(
-			(currentPage: TimelinePageState): TimelinePageState => {
-				const sessionId: string | null = activeSessionIdRef.current;
-				const hasUserBlock: boolean = currentPage.blocks.some(
-					(block: TimelineBlock): boolean => {
-						return (
-							block.type === "user" &&
-							block.requestId === requestId
-						);
-					},
-				);
-
-				if (hasUserBlock) {
-					return currentPage;
-				}
-				const blocks: TimelineBlock[] =
-					insertUserBlockBeforeRequestAssistant(
-						currentPage.blocks,
-						createOptimisticUserBlock(
-							requestId,
-							message,
-							additionalContext,
-						),
-					);
-
-				return {
-					...currentPage,
-					sessionId: currentPage.sessionId ?? sessionId,
-					blocks,
-					blockCount: currentPage.blockCount + 1,
-					hasMoreAfter: false,
-				};
-			},
-		);
-	}
-
-	function applyOptimisticSend(
-		requestId: string,
-		message: string,
-		additionalContext: AdditionalContextItem[],
-		clearComposerText: boolean = true,
-		preserveWorkflowTodo: boolean = false,
-	): void {
-		applyOptimisticActiveRun(
-			requestId,
-			clearComposerText,
-			true,
-			preserveWorkflowTodo,
-		);
-		appendOptimisticUserBlock(requestId, message, additionalContext);
-	}
-
-	function appendQueuedRunUserBlock(
-		workbenchSnapshot: WorkbenchSnapshot,
-	): void {
-		const requestId: string | undefined =
-			workbenchSnapshot.activeRun.requestId;
-		const queueItemId: number | undefined =
-			workbenchSnapshot.activeRun.queueItemId;
-		if (requestId === undefined || queueItemId === undefined) {
-			return;
-		}
-
-		const queueItem: MessageQueueItem | undefined =
-			workbenchSnapshot.messageQueue.find(
-				(item: MessageQueueItem): boolean => {
-					return (
-						item.id === queueItemId &&
-						(item.status === "sending" ||
-							item.status === "approval")
-					);
-				},
-			);
-		if (queueItem === undefined) {
-			return;
-		}
-
-		appendOptimisticUserBlock(
-			requestId,
-			queueItem.text,
-			queueItem.additionalContext,
-		);
-	}
-
-	function finishOptimisticActiveRun(requestId: string): void {
-		setRunningSessionState(
-			(current: RunningSessionState): RunningSessionState => {
-				return markRunStopped(current, requestId);
-			},
-		);
-		setRunState(
-			(currentState: RunControllerState): RunControllerState =>
-				finishOptimisticRunState(currentState, requestId),
-		);
-		setWorkbench(
-			(
-				currentWorkbench: WorkbenchSnapshot | null,
-			): WorkbenchSnapshot | null => {
-				if (
-					currentWorkbench === null ||
-					currentWorkbench.activeRun.requestId !== requestId
-				) {
-					return currentWorkbench;
-				}
-				if (currentWorkbench.activeRun.status === "approval") {
-					return currentWorkbench;
-				}
-				return {
-					...currentWorkbench,
-					activeRun: { status: "idle" },
-				};
-			},
-		);
-	}
-
-	function applyOptimisticRetry(
-		retryFromRequestId: string,
-		requestId: string,
-		message: string,
-		additionalContext: AdditionalContextItem[],
-	): void {
-		applyOptimisticActiveRun(requestId, false, false);
-		timelineStore.update(
-			(currentPage: TimelinePageState): TimelinePageState => {
-				const sessionId: string | null = activeSessionIdRef.current;
-				const trimmedPage: TimelinePageState = trimTimelineFromRequest(
-					currentPage,
-					retryFromRequestId,
-				);
-
-				return {
-					...trimmedPage,
-					sessionId: trimmedPage.sessionId ?? sessionId,
-					blocks: insertUserBlockBeforeRequestAssistant(
-						trimmedPage.blocks,
-						createOptimisticUserBlock(
-							requestId,
-							message,
-							additionalContext,
-						),
-					),
-					blockCount: trimmedPage.blockCount + 1,
-					hasMoreAfter: false,
-				};
-			},
-		);
-	}
-
-	useEffect((): void => {
-		discardPendingTimelineEvents();
-		activeSessionIdRef.current = activeSessionId;
-	}, [activeSessionId, discardPendingTimelineEvents]);
-
-	useEffect((): void => {
-		if (!isNewSessionHome) {
-			return;
-		}
-
-		setHomeDraft((currentDraft: HomeDraft): HomeDraft => {
-			const currentProvider: ProviderModelSelectionProvider | undefined =
-				providerModelSelection?.providers.find(
-					(provider: ProviderModelSelectionProvider): boolean => {
-						return (
-							provider.configured &&
-							provider.enabled !== false &&
-							provider.provider === currentDraft.providerId &&
-							provider.models.some(
-								(model: ProviderModelInfo): boolean =>
-									model.id === currentDraft.modelId,
-							)
-						);
-					},
-				);
-			if (currentProvider !== undefined) {
-				return currentDraft;
-			}
-
-			const preferredModel = findPreferredComposerModel(
-				clientPreferences,
-				providerModelSelection,
-			);
-			if (preferredModel === null) {
-				return {
-					...currentDraft,
-					providerId: null,
-					modelId: null,
-				};
-			}
-
-			return {
-				...currentDraft,
-				providerId: preferredModel.providerId,
-				modelId: preferredModel.modelId,
-			};
-		});
-	}, [clientPreferences, isNewSessionHome, providerModelSelection]);
-
-	useEffect((): (() => void) => {
-		return (): void => {
-			discardPendingTimelineEvents();
-		};
-	}, [discardPendingTimelineEvents]);
-
-	useEffect((): (() => void) => {
-		let cancelled: boolean = false;
-		async function loadProviderModelSelection(): Promise<void> {
-			try {
-				const result: ProviderModelSelection =
-					await fetchProviderModelSelection();
-
-				if (!cancelled) {
-					setProviderModelSelection(result);
-				}
-			} catch (error: unknown) {
-				console.error(
-					"[App] load provider model selection failed",
-					error,
-				);
-			}
-		}
-
-		function handleWindowFocus(): void {
-			void loadProviderModelSelection();
-		}
-
-		void loadProviderModelSelection();
-		window.addEventListener("focus", handleWindowFocus);
-		return (): void => {
-			cancelled = true;
-			window.removeEventListener("focus", handleWindowFocus);
-		};
-	}, []);
-
-	useEffect((): void => {
-		void loadSlashCommands();
-	}, [loadSlashCommands]);
-
-	useEffect((): void => {
-		if (isNewSessionHome && activeSessionId === null) {
-			void loadHomeWorkspaces();
-		}
-	}, [isNewSessionHome, loadHomeWorkspaces, workspaceRefreshToken]);
-
-	useEffect((): (() => void) | void => {
-		if (!isNewSessionHome || homeDraft.workspaceId === null) {
-			setWorktreeDisabledReason(null);
-			return;
-		}
-		let cancelled: boolean = false;
-		setWorktreeDisabledReason(null);
-		void getWorktreeEligibility(homeDraft.workspaceId)
-			.then((result): void => {
-				if (!cancelled) {
-					const unavailableSource = result.sources.find(
-						(source): boolean => !source.eligible,
-					);
-					setWorktreeDisabledReason(
-						result.eligible
-							? null
-							: unavailableSource?.reasonCode === null ||
-								  unavailableSource?.reasonCode === undefined
-								? (unavailableSource?.reason ??
-									t("composer.worktree.unavailable"))
-								: t(
-										`composer.worktree.reasons.${unavailableSource.reasonCode}`,
-										{
-											defaultValue:
-												unavailableSource.reason ??
-												t(
-													"composer.worktree.unavailable",
-												),
-										},
-									),
-					);
-				}
-			})
-			.catch((error: unknown): void => {
-				if (!cancelled) {
-					setWorktreeDisabledReason(
-						error instanceof Error
-							? error.message
-							: t("composer.worktree.unavailable"),
-					);
-				}
-			});
-		return (): void => {
-			cancelled = true;
-		};
-	}, [homeDraft.workspaceId, isNewSessionHome, t]);
-
-	useEffect((): (() => void) => {
-		const handleWindowFocus = (): void => {
-			windowFocusedRef.current = true;
-			setUnreadSessionIds(
-				(
-					currentSessionIds: ReadonlySet<string>,
-				): ReadonlySet<string> => {
-					return markActiveSessionRead(
-						currentSessionIds,
-						activeSessionIdRef.current,
-						true,
-					);
-				},
-			);
-		};
-		const handleWindowBlur = (): void => {
-			windowFocusedRef.current = false;
-		};
-
-		window.addEventListener("focus", handleWindowFocus);
-		window.addEventListener("blur", handleWindowBlur);
-		if (document.hasFocus()) {
-			handleWindowFocus();
-		} else {
-			handleWindowBlur();
-		}
-
-		return (): void => {
-			window.removeEventListener("focus", handleWindowFocus);
-			window.removeEventListener("blur", handleWindowBlur);
-		};
-	}, []);
-
-	useEffect((): void => {
-		setUnreadSessionIds(
-			(currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
-				return markActiveSessionRead(
-					currentSessionIds,
-					activeSessionId,
-					windowFocusedRef.current,
-				);
-			},
-		);
-	}, [activeSessionId]);
-
-	const handleBackendEventObserved = useSessionRuntimeEvents({
+		handleSessionWorktreeDelete,
+		handleSessionWorkspaceMove,
+		handleSessionWorktreeHandoff,
+		handleSessionWorktreeSetup,
+	} = useSessionWorktreeController({
 		activeSessionIdRef,
-		activeWorkbenchRef,
-		windowFocusedRef,
+		activeSessionMetadata,
+		sessionLayouts,
+		setSessionLayouts,
+		setActiveSessionMetadata,
+		setActiveWorkspace,
+		setWorkbench,
+		setWorkspaceRefreshToken,
+		setSessionError,
+		onError: (message: string): void => {
+			void messageApi.error(message);
+		},
+		onWarning: (message: string): void => {
+			void messageApi.warning(message);
+		},
+	});
+
+	const {
+		findWorkspaceForSession,
+		handleSessionArchive,
+		handleSessionRename,
+		checkActiveSessionIntegrity,
+	} = useSessionLifecycleController({
+		activeSessionId,
+		activeSessionIdRef,
+		activeWorkspace,
+		activeSessionMetadata,
+		homeWorkspaceOptions,
+		handleNewSession,
 		setRunningSessionState,
 		setUnreadSessionIds,
+		setActiveSessionMetadata,
+		setSessionError,
 	});
 
-	useEffect((): void => {
-		const workspace: WorkspaceConfig | null =
-			activeWorkspace ?? homeDraft.workspace;
-		skillTargetRef.current =
-			workspace === null ? {} : { workspaceId: workspace.id };
-		if (activeSessionId === null && workspace === null) {
-			setSkills([]);
-			return;
-		}
-
-		void loadSkills(skillTargetRef.current);
-	}, [
+	const {
+		handleWorkspaceDelete,
+		handleWorkspaceUpdate,
+		handleWorkspaceProjectCreated,
+		handleWorkspaceTreeProjectCreated,
+	} = useWorkspaceMutationController({
 		activeSessionId,
-		activeWorkspace?.id,
-		homeDraft.workspace?.id,
-		loadSkills,
-	]);
-
-	useAppEventBridge({
-		activeSessionIdRef,
-		activeChatRequestIdRef,
-		cancelledChatRequestIdsRef,
-		pendingUserActionRequestIdsRef,
-		activeSessionTitleRef,
-		activeWorkbenchRef,
-		onEventObserved: handleBackendEventObserved,
-		applyWorkbench,
-		appendQueuedRunUserBlock,
-		loadSkills,
-		clearWorkflowTodoUiState,
-		rememberLoadedWorkflowTodo,
-		applyInitialWorkflowTodoPreference,
-		showWorkflowTodo,
-		expandWorkflowTodoPanel,
-		enqueueTimelineStreamingEvent,
-		flushPendingTimelineEvents,
-		refreshLatestTimeline,
-		showNativeTaskNotification,
-		runCompletionNotificationsEnabled:
-			clientPreferences.notifyOnRunCompleted,
+		activeSessionMetadata,
+		composerDraftsRef,
+		removeStoredSessionLayouts,
+		resetToNewSessionHome,
+		handleHomeWorkspaceSelect,
+		handleNewWorkspaceSession,
+		isNewSessionHome,
+		setUnreadSessionIds,
+		setHomeWorkspaceOptions,
+		setHomeDraft,
+		setActiveWorkspace,
 		setActiveSessionMetadata,
-		setRunState,
+		setWorkspaceRefreshToken,
+		setIsWorkspaceProjectDialogOpen,
+		showTransientError,
+	});
+
+	const { handleSessionFork } = useSessionForkController({
+		forkOperationRef,
+		navigationVersionRef,
+		activeSessionIdRef,
 		timelineStore,
-		setWorkflowTodoSnapshot,
-		applyCurrentGoalSnapshot,
+		discardTemporarySessionIfEmpty,
+		persistPendingWorkbenchPatchBeforeNavigation,
+		resetSessionPresentationState,
+		rememberLoadedWorkflowTodo,
+		checkActiveSessionIntegrity,
+		setForkingSourceSessionId,
+		setForkingRequestId,
+		setIsNewSessionHome,
+		setActiveSessionId,
+		setActiveSessionMetadata,
+		setSelectionAskThreads,
+		setWorkbench,
 		setLatestPlanClarification,
 		setLatestPlanApproval,
-		setPlanClarificationError,
-		setIsPlanClarificationSubmitting,
-		setPlanApprovalError,
-		setIsPlanApproving,
-		setIsPlanRevising,
+		setRunState,
+		setRunningSessionState,
+		setCurrentGoal,
+		setWorkflowTodoSnapshot,
+		setApprovalModeState,
+		setActiveWorkspace,
+		setSessionError,
+		setWorkspaceRefreshToken,
+		onError: (message: string): void => {
+			void messageApi.error(message);
+		},
 	});
 
-	useEffect((): (() => void) => {
-		return onBackendReconnected((): void => {
-			takePendingWorkbenchPatch();
-			const sessionId: string | null = activeSessionIdRef.current;
-			if (
-				activeSessionMetadata?.temporary === true &&
-				sessionId !== null
-			) {
-				void restoreMaterializedHomeDraftSession(sessionId);
-				return;
-			}
-			if (sessionId !== null) {
-				void handleSessionSelect({ id: sessionId } as SessionMetadata);
-			}
-		});
-	}, [activeSessionId, activeSessionMetadata?.temporary]);
-
-	useEffect((): void => {
-		if (
-			isNewSessionHome ||
-			activeSessionId === null ||
-			getPendingApprovalCount(workbench) === 0
-		) {
-			setPendingApproval(null);
-			clearApprovalError();
-			return;
-		}
-
-		void refreshPendingApproval();
-	}, [
+	const { handleSessionSelect } = useSessionActivationController({
+		activeSessionIdRef,
+		navigationVersionRef,
+		dismissedTerminalGoalIdsRef,
+		homeWorkspaceOptions,
+		timelineStore,
+		discardTemporarySessionIfEmpty,
+		persistPendingWorkbenchPatchBeforeNavigation,
+		resetSessionPresentationState,
+		rememberLoadedWorkflowTodo,
+		expandWorkflowTodoPanel,
+		checkActiveSessionIntegrity,
+		setIsSessionLoading,
+		setSessionError,
+		setIsNewSessionHome,
+		setActiveSessionId,
+		setActiveSessionMetadata,
+		setSelectionAskThreads,
+		setActiveWorkspace,
+		setLatestPlanClarification,
+		setLatestPlanApproval,
+		setWorkbench,
+		setRunState,
+		setRunningSessionState,
+		setCurrentGoal,
+		setApprovalModeState,
+		setWorkflowTodoSnapshot,
+	});
+	useAppSessionBackendEffects({
 		activeSessionId,
-		clearApprovalError,
+		activeSessionMetadata,
+		activeSessionIdRef,
 		isNewSessionHome,
+		workbench,
+		takePendingWorkbenchPatch,
+		restoreMaterializedHomeDraftSession,
+		handleSessionSelect,
+		setPendingApproval,
+		clearApprovalError,
 		refreshPendingApproval,
-		workbench?.pendingApproval?.count,
-		workbench?.pendingApproval?.first?.approvalId,
-	]);
-
-	async function handleWorkspaceSelect(workspaceId: string): Promise<void> {
-		try {
-			const workspace = await selectWorkspace(workspaceId, {
-				sessionId: activeSessionIdRef.current,
-			});
-
-			setActiveWorkspace(workspace);
-			console.info("[App] workspace selected", workspace);
-		} catch (error: unknown) {
-			showTransientError(
-				error instanceof Error
-					? error.message
-					: "Failed to select workspace",
-			);
-			console.error("[App] select workspace failed", error);
-		}
-	}
-
-	async function createTemporarySession(
-		workspace: WorkspaceConfig | null = null,
-	): Promise<void> {
-		if (temporarySessionCreationRef.current !== null) {
-			return temporarySessionCreationRef.current;
-		}
-		const currentPreferences: ClientPreferences =
-			clientPreferencesRef.current;
-		const currentDraft: HomeDraft = homeDraftRef.current;
-		const draft: HomeDraft =
-			workspace === null
-				? currentDraft
-				: {
-						...currentDraft,
-						workspaceId: workspace.id,
-						workspace,
-					};
-		const preferredApprovalMode: ApprovalMode =
-			currentPreferences.newSessionComposer.approvalMode;
-		const createOperation: Promise<void> = (async (): Promise<void> => {
-			const created = await createSession({
-				title: "New session",
-				temporary: true,
-				workspaceId: draft.workspaceId,
-				provider: draft.providerId ?? undefined,
-				model: draft.modelId ?? undefined,
-				reasoningEffort: draft.reasoningEffort,
-				chatMode: draft.chatMode,
-				approvalMode: preferredApprovalMode,
-				workspaceLaunch: draft.workspaceLaunch,
-			});
-			const currentDraftText: string = homeComposerMessageRef.current;
-			if (currentDraftText.length > 0) {
-				composerDraftsRef.current.set(created.id, currentDraftText);
-			}
-			temporaryDraftSessionIdRef.current = created.id;
-			activeSessionIdRef.current = created.id;
-			setActiveSessionId(created.id);
-			setActiveSessionMetadata(created);
-			setActiveWorkspace(
-				createWorkspaceFromSessionMetadata(created, created.workbench),
-			);
-			setWorkbench(created.workbench);
-			setApprovalModeState(preferredApprovalMode);
-			timelineStore.reset();
-			setIsNewSessionHome(true);
-			setSessionError(null);
-		})();
-		temporarySessionCreationRef.current = createOperation;
-		try {
-			await createOperation;
-		} finally {
-			temporarySessionCreationRef.current = null;
-		}
-	}
-
-	async function restoreMaterializedHomeDraftSession(
-		sessionId: string,
-	): Promise<void> {
-		setIsSessionLoading(true);
-		try {
-			const result: SessionOpenResult = await openSession(sessionId);
-			if (activeSessionIdRef.current !== sessionId) {
-				return;
-			}
-			temporaryDraftSessionIdRef.current = sessionId;
-			setActiveSessionMetadata(result.metadata);
-			setWorkbench({
-				...result.workbench,
-				composer: {
-					...result.workbench.composer,
-					text: "",
-				},
-			});
-			setActiveWorkspace(createWorkspaceFromSessionOpenResult(result));
-			setIsNewSessionHome(true);
-			setSessionError(null);
-		} catch (error: unknown) {
-			const currentDraft: HomeDraft = homeDraftRef.current;
-			const currentText: string =
-				composerDraftsRef.current.get(sessionId) ??
-				homeComposerMessageRef.current;
-			beginLocalNewSessionDraft(
-				currentDraft.workspace,
-				currentText,
-				currentDraft.executionEnvironment,
-			);
-			void deleteSessionWithLayout(sessionId).catch((): void => {});
-			setSessionError(
-				error instanceof Error
-					? error.message
-					: "Failed to restore New session",
-			);
-		} finally {
-			setIsSessionLoading(false);
-		}
-	}
-
-	async function discardTemporarySessionIfEmpty(): Promise<void> {
-		if (
-			activeSessionMetadata?.temporary !== true ||
-			activeSessionId === null
-		) {
-			return;
-		}
-		const draftText: string =
-			composerDraftsRef.current.get(activeSessionId) ?? "";
-		const hasDraft: boolean =
-			draftText.trim().length > 0 ||
-			(workbench?.composer.additionalContext.length ?? 0) > 0;
-		if (hasDraft) {
-			temporaryDraftSessionIdRef.current = activeSessionId;
-			return;
-		}
-		const temporaryId: string = activeSessionId;
-		temporaryDraftSessionIdRef.current = null;
-		await deleteSessionWithLayout(temporaryId).catch(
-			(error: unknown): void => {
-				console.warn(
-					"[App] delete empty temporary session failed",
-					error,
-				);
-			},
-		);
-	}
-
-	function findWorkspaceForSession(
-		session: SessionMetadata,
-	): WorkspaceConfig | null {
-		if (session.workspaceId === undefined) {
-			return null;
-		}
-		if (activeWorkspace?.id === session.workspaceId) {
-			return activeWorkspace;
-		}
-
-		const knownWorkspace: WorkspaceConfig | undefined =
-			homeWorkspaceOptions.find(
-				(workspace: WorkspaceConfig): boolean =>
-					workspace.id === session.workspaceId,
-			);
-		if (knownWorkspace !== undefined) {
-			return knownWorkspace;
-		}
-		if (session.workspaceRoot === undefined) {
-			return null;
-		}
-
-		return createSingleSourceWorkspaceSnapshot({
-			id: session.workspaceId,
-			name: session.workspaceName ?? session.title,
-			kind: session.workspaceKind ?? "godot",
-			rootPath: session.workspaceRoot,
-			godotExecutablePath: session.godotExecutablePath,
-		});
-	}
-
-	async function restoreTemporaryDraftOnNewSessionHome(
-		workspace: WorkspaceConfig | null,
-	): Promise<boolean> {
-		const temporaryDraftId: string | null =
-			temporaryDraftSessionIdRef.current;
-		if (temporaryDraftId === null) {
-			return false;
-		}
-
-		let temporaryDraft: SessionMetadata | undefined;
-		let sessionListLoaded: boolean = false;
-		try {
-			const sessionList = await fetchSessions();
-			sessionListLoaded = true;
-			temporaryDraft = sessionList.sessions.find(
-				(session: SessionMetadata): boolean =>
-					session.id === temporaryDraftId,
-			);
-		} catch (error: unknown) {
-			console.warn(
-				"[App] load temporary draft before returning home failed",
-				error,
-			);
-		}
-
-		if (sessionListLoaded && temporaryDraft === undefined) {
-			temporaryDraftSessionIdRef.current = null;
-			return false;
-		}
-
-		await handleSessionSelect(
-			temporaryDraft ?? ({ id: temporaryDraftId } as SessionMetadata),
-			{ recordNavigation: false },
-		);
-		setHomeComposerMessage(
-			composerDraftsRef.current.get(temporaryDraftId) ?? "",
-		);
-		setIsNewSessionHome(true);
-		if (
-			sessionListLoaded &&
-			temporaryDraft?.workspaceId === undefined &&
-			workspace !== null
-		) {
-			await handleHomeWorkspaceSelect(workspace.id);
-		}
-		return true;
-	}
-
-	function beginLocalNewSessionDraft(
-		workspace: WorkspaceConfig | null,
-		initialDraft: string = "",
-		executionEnvironment: "local" | "worktree" = "local",
-	): void {
-		navigationVersionRef.current += 1;
-		temporaryDraftSessionIdRef.current = null;
-		activeSessionIdRef.current = null;
-		setActiveSessionId(null);
-		setActiveSessionMetadata(null);
-		setSelectionAskThreads([]);
-		setIsNewSessionHome(true);
-		setHomeDraft(
-			createPreferredHomeDraft(
-				clientPreferencesRef.current,
-				providerModelSelection,
-				workspace,
-				executionEnvironment,
-			),
-		);
-		setActiveWorkspace(workspace);
-		resetSessionPresentationState();
-		setFirstTurnModelTransition(null);
-		setSessionError(null);
-		setApprovalModeState(
-			clientPreferencesRef.current.newSessionComposer.approvalMode,
-		);
-		replaceComposerInput(initialDraft, "home");
-	}
-
-	async function handleNewSession(
-		options: {
-			restoreTemporaryDraft?: boolean;
-			workspace?: WorkspaceConfig | null;
-			initialDraft?: string;
-		} = {},
-	): Promise<void> {
-		const preferredWorkspace: WorkspaceConfig | null =
-			options.workspace ?? null;
-		const initialDraft: string = options.initialDraft ?? "";
-		if (activeSessionMetadata?.temporary === true) {
-			const temporaryId: string | null = activeSessionId;
-			beginLocalNewSessionDraft(preferredWorkspace, initialDraft);
-			if (temporaryId !== null) {
-				await deleteSessionWithLayout(temporaryId).catch(
-					(error: unknown): void => {
-						console.warn(
-							"[App] discard temporary session failed",
-							error,
-						);
-					},
-				);
-			}
-			void loadHomeWorkspaces();
-			return;
-		}
-		if (
-			temporaryDraftSessionIdRef.current !== null &&
-			options.restoreTemporaryDraft !== false &&
-			options.initialDraft === undefined
-		) {
-			if (
-				await restoreTemporaryDraftOnNewSessionHome(preferredWorkspace)
-			) {
-				return;
-			}
-		}
-		const staleTemporaryId: string | null =
-			temporaryDraftSessionIdRef.current;
-		const pendingWorkbenchPersistence: Promise<void> =
-			persistPendingWorkbenchPatchBeforeNavigation();
-		beginLocalNewSessionDraft(preferredWorkspace, initialDraft);
-		await pendingWorkbenchPersistence;
-		if (staleTemporaryId !== null) {
-			await deleteSessionWithLayout(staleTemporaryId).catch(
-				(error: unknown): void => {
-					console.warn(
-						"[App] discard temporary session failed",
-						error,
-					);
-				},
-			);
-		}
-		void loadHomeWorkspaces();
-	}
-
-	useEffect((): (() => void) => {
-		const handleNewSessionMenu = (): void => {
-			void handleNewSession();
-		};
-		window.addEventListener(NEW_SESSION_EVENT, handleNewSessionMenu);
-		return (): void => {
-			window.removeEventListener(NEW_SESSION_EVENT, handleNewSessionMenu);
-		};
-	}, [handleNewSession]);
-
-	async function handleNewWorkspaceSession(
-		workspace: WorkspaceConfig,
-		executionEnvironment: "local" | "worktree" = "local",
-	): Promise<void> {
-		setIsWorkspaceSessionCreating(true);
-		try {
-			const temporaryId: string | null =
-				activeSessionMetadata?.temporary === true
-					? activeSessionId
-					: temporaryDraftSessionIdRef.current;
-			beginLocalNewSessionDraft(workspace, "", executionEnvironment);
-			setHomeWorkspaceOptions(
-				(currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
-					if (
-						currentWorkspaces.some(
-							(currentWorkspace: WorkspaceConfig): boolean =>
-								currentWorkspace.id === workspace.id,
-						)
-					) {
-						return currentWorkspaces;
-					}
-					return [...currentWorkspaces, workspace];
-				},
-			);
-
-			if (temporaryId !== null) {
-				await deleteSessionWithLayout(temporaryId).catch(
-					(error: unknown): void => {
-						console.warn(
-							"[App] discard temporary session failed",
-							error,
-						);
-					},
-				);
-			}
-		} finally {
-			setIsWorkspaceSessionCreating(false);
-		}
-	}
-
-	async function handleHomeWorkspaceSelect(
-		workspaceId: string,
-	): Promise<void> {
-		const navigationVersion: number = navigationVersionRef.current + 1;
-		navigationVersionRef.current = navigationVersion;
-		const optimisticWorkspace: WorkspaceConfig | undefined =
-			homeWorkspaceOptions.find(
-				(workspace: WorkspaceConfig): boolean =>
-					workspace.id === workspaceId,
-			);
-		if (optimisticWorkspace !== undefined) {
-			setHomeDraft(
-				(currentDraft: HomeDraft): HomeDraft => ({
-					...currentDraft,
-					workspaceId: optimisticWorkspace.id,
-					workspace: optimisticWorkspace,
-				}),
-			);
-			setActiveWorkspace(optimisticWorkspace);
-			setSessionError(null);
-		}
-
-		try {
-			const workspace = await selectWorkspace(workspaceId, {
-				sessionId: activeSessionIdRef.current,
-			});
-			if (navigationVersionRef.current !== navigationVersion) {
-				return;
-			}
-
-			setHomeDraft(
-				(currentDraft: HomeDraft): HomeDraft => ({
-					...currentDraft,
-					workspaceId: workspace.id,
-					workspace,
-				}),
-			);
-			setActiveWorkspace(workspace);
-			setActiveSessionMetadata(
-				(metadata: SessionMetadata | null): SessionMetadata | null => {
-					return metadata === null
-						? metadata
-						: {
-								...metadata,
-								workspaceId: workspace.id,
-								workspaceName: workspace.name,
-								workspaceKind: workspace.kind,
-								workspaceRoot: workspace.rootPath,
-								godotExecutablePath:
-									workspace.godotExecutablePath,
-							};
-				},
-			);
-			setSessionError(null);
-		} catch (error: unknown) {
-			showTransientError(
-				error instanceof Error
-					? error.message
-					: "Failed to select workspace",
-			);
-			console.error("[App] select home workspace failed", error);
-		}
-	}
-
-	function handleHomeWorkspaceClear(): void {
-		navigationVersionRef.current += 1;
-		setHomeDraft(
-			(currentDraft: HomeDraft): HomeDraft => ({
-				...currentDraft,
-				workspaceId: null,
-				workspace: null,
-				executionEnvironment: "local",
-			}),
-		);
-		setActiveWorkspace(null);
-	}
-
-	function handleHomeWorkspaceAdd(): void {
-		setIsWorkspaceProjectDialogOpen(true);
-	}
-
-	async function handleSessionSelect(
-		session: SessionMetadata,
-		options: { recordNavigation?: boolean } = {},
-	): Promise<void> {
-		const navigationVersion: number = navigationVersionRef.current + 1;
-		navigationVersionRef.current = navigationVersion;
-		await discardTemporarySessionIfEmpty();
-		await persistPendingWorkbenchPatchBeforeNavigation();
-		const sessionId: string = session.id;
-		console.info("[App] session selected", { sessionId });
-
-		try {
-			setIsSessionLoading(true);
-			setSessionError(null);
-			setIsNewSessionHome(false);
-			activeSessionIdRef.current = sessionId;
-			setActiveSessionId(sessionId);
-			setActiveSessionMetadata(session);
-			setSelectionAskThreads([]);
-			setActiveWorkspace(null);
-			resetSessionPresentationState();
-
-			const result: SessionOpenResult = await openSession(sessionId);
-			if (
-				navigationVersionRef.current !== navigationVersion ||
-				activeSessionIdRef.current !== sessionId
-			) {
-				return;
-			}
-
-			timelineStore.replace(createTimelinePageFromOpenResult(result));
-			setLatestPlanClarification(result.latestPlanClarification);
-			setLatestPlanApproval(result.latestPlanApproval);
-			setActiveSessionMetadata(result.metadata);
-			setSelectionAskThreads(result.selectionAskThreads);
-			const openedWorkbench: WorkbenchSnapshot = {
-				...result.workbench,
-				composer: {
-					...result.workbench.composer,
-					text: "",
-				},
-			};
-			setWorkbench(openedWorkbench);
-			setRunState(
-				(currentState: RunControllerState): RunControllerState =>
-					result.activeAgentRun === null
-						? createIdleRunState(currentState.sequence)
-						: applyAgentRunState(
-								currentState,
-								result.activeAgentRun,
-							),
-			);
-			setRunningSessionState(
-				(current: RunningSessionState): RunningSessionState => {
-					return syncSessionRunFromOpen(
-						current,
-						sessionId,
-						result.activeAgentRun,
-					);
-				},
-			);
-			const openedGoalDismissed: boolean =
-				result.currentGoal !== null &&
-				isAgentGoalDismissed(
-					result.currentGoal,
-					dismissedTerminalGoalIdsRef.current,
-				);
-			setCurrentGoal(
-				result.currentGoal === null || openedGoalDismissed
-					? null
-					: result.currentGoal,
-			);
-			setApprovalModeState(result.metadata.approvalMode ?? "manual");
-			setActiveWorkspace(
-				createWorkspaceFromSessionOpenResult(
-					result,
-					result.metadata.worktree === undefined
-						? undefined
-						: homeWorkspaceOptions.find(
-								(workspace): boolean =>
-									workspace.id ===
-									result.metadata.worktree!.sourceWorkspaceId,
-							),
-				),
-			);
-			if (
-				options.recordNavigation !== false &&
-				result.metadata.temporary !== true
-			) {
-				recordOpenedSession(sessionId);
-			}
-			const workflowTodo: WorkflowTodoSnapshot | null =
-				openedGoalDismissed
-					? null
-					: createWorkflowTodoSnapshotFromTimelineResult(result);
-			setWorkflowTodoSnapshot(workflowTodo);
-			rememberLoadedWorkflowTodo(workflowTodo);
-			if (
-				workflowTodo !== null &&
-				isWorkflowTodoActive(workflowTodo) &&
-				result.metadata.workflowTodoDismissedKey !==
-					getWorkflowTodoSnapshotKey(workflowTodo)
-			) {
-				expandWorkflowTodoPanel();
-			}
-
-			if (result.workspaceWarning) {
-				console.warn(
-					"[App] session workspace warning",
-					result.workspaceWarning,
-				);
-			}
-			void checkActiveSessionIntegrity(sessionId);
-		} catch (error: unknown) {
-			const message: string =
-				error instanceof Error
-					? error.message
-					: "Failed to open session";
-
-			setSessionError(message);
-			console.error("[App] open session failed", error);
-		} finally {
-			setIsSessionLoading(false);
-		}
-	}
-
-	async function handleSessionFork(
-		source: SessionMetadata,
-		sourceRequestId?: string,
-	): Promise<void> {
-		if (forkOperationRef.current) {
-			return;
-		}
-		forkOperationRef.current = true;
-		setForkingSourceSessionId(source.id);
-		setForkingRequestId(sourceRequestId ?? null);
-		try {
-			await discardTemporarySessionIfEmpty();
-			await persistPendingWorkbenchPatchBeforeNavigation();
-			const titleSuffix: string = t("chat.fork.titleSuffix");
-			const sourceTitle: string =
-				source.title.trim() || t("chat.fork.untitledSource");
-			const forkTitle: string = `${sourceTitle.slice(0, Math.max(1, 200 - titleSuffix.length))}${titleSuffix}`;
-			const result: SessionForkResult = await forkSession({
-				sourceSessionId: source.id,
-				...(sourceRequestId === undefined ? {} : { sourceRequestId }),
-				title: forkTitle,
-			});
-			const sessionId: string = result.metadata.id;
-			navigationVersionRef.current += 1;
-			activeSessionIdRef.current = sessionId;
-			setIsNewSessionHome(false);
-			setActiveSessionId(sessionId);
-			resetSessionPresentationState();
-			timelineStore.replace(createTimelinePageFromOpenResult(result));
-			setActiveSessionMetadata(result.metadata);
-			setSelectionAskThreads([]);
-			setWorkbench(result.workbench);
-			setLatestPlanClarification(null);
-			setLatestPlanApproval(null);
-			setRunState(
-				(currentState: RunControllerState): RunControllerState =>
-					createIdleRunState(currentState.sequence),
-			);
-			setRunningSessionState(
-				(current: RunningSessionState): RunningSessionState => {
-					return syncSessionRunFromOpen(current, sessionId, null);
-				},
-			);
-			setCurrentGoal(null);
-			setWorkflowTodoSnapshot(null);
-			rememberLoadedWorkflowTodo(null);
-			setApprovalModeState(result.metadata.approvalMode ?? "manual");
-			setActiveWorkspace(createWorkspaceFromSessionOpenResult(result));
-			setSessionError(null);
-			recordOpenedSession(sessionId);
-			setWorkspaceRefreshToken(
-				(currentToken: number): number => currentToken + 1,
-			);
-			window.electronAPI.sessionCatalog.notifyChanged();
-			void checkActiveSessionIntegrity(sessionId);
-		} catch (error: unknown) {
-			const errorMessage: string =
-				error instanceof Error
-					? error.message
-					: t("chat.fork.errors.create");
-			console.error("[App] fork session failed", error);
-			void messageApi.error(errorMessage);
-		} finally {
-			forkOperationRef.current = false;
-			setForkingSourceSessionId(null);
-			setForkingRequestId(null);
-		}
-	}
-
-	async function handleSessionWorktreeDelete(
-		session: SessionMetadata,
-	): Promise<SessionMetadata> {
-		const sessionLayout: SessionLayoutPreferences =
-			sessionLayouts[session.id] ?? DEFAULT_SESSION_LAYOUT;
-		for (const terminalId of listTerminalRuntimeIds(
-			session.id,
-			sessionLayout,
-		)) {
-			const terminalState = await window.electronAPI.terminal.getState({
-				terminalId,
-			});
-			if (terminalState?.running === true) {
-				throw new Error(
-					t("workspaceTree.errors.worktreeTerminalActive"),
-				);
-			}
-		}
-		const result = await deleteSessionWorktree(session.id);
-		if (activeSessionIdRef.current === session.id) {
-			setActiveSessionMetadata(result.metadata);
-			setActiveWorkspace(result.workspace);
-			if (result.workbench !== null) {
-				setWorkbench(result.workbench);
-			}
-		}
-		setWorkspaceRefreshToken(
-			(currentToken: number): number => currentToken + 1,
-		);
-		return result.metadata;
-	}
-
-	async function handleSessionWorkspaceMove(
-		targetSession: SessionMetadata,
-		workspace: WorkspaceConfig,
-	): Promise<MoveSessionWorkspaceResult> {
-		const sessionLayout: SessionLayoutPreferences =
-			sessionLayouts[targetSession.id] ?? DEFAULT_SESSION_LAYOUT;
-		for (const terminalId of listTerminalRuntimeIds(
-			targetSession.id,
-			sessionLayout,
-		)) {
-			const terminalState = await window.electronAPI.terminal.getState({
-				terminalId,
-			});
-			if (terminalState?.running === true) {
-				throw new Error(
-					t("workspaceTree.errors.moveSessionTerminalActive"),
-				);
-			}
-		}
-		if (hasDirtyFilePanelBuffersForSession(targetSession.id)) {
-			throw new Error(t("workspaceTree.errors.moveSessionDirtyFiles"));
-		}
-
-		let result: MoveSessionWorkspaceResult;
-		try {
-			result = await moveSessionWorkspace({
-				sessionId: targetSession.id,
-				workspaceId: workspace.id,
-			});
-		} catch (error: unknown) {
-			if (error instanceof BackendRpcError) {
-				const translationKeyByCode: Readonly<Record<string, string>> = {
-					session_workspace_move_busy:
-						"workspaceTree.errors.moveSessionBusy",
-					session_workspace_context_pending:
-						"workspaceTree.errors.moveSessionContextPending",
-					session_workspace_managed_worktree:
-						"workspaceTree.errors.moveSessionManagedWorktree",
-					session_workspace_not_found:
-						"workspaceTree.errors.moveSessionWorkspaceNotFound",
-					session_workspace_unchanged:
-						"workspaceTree.errors.moveSessionUnchanged",
-				};
-				const translationKey: string | undefined =
-					translationKeyByCode[error.code];
-				if (translationKey !== undefined) {
-					throw new Error(t(translationKey));
-				}
-			}
-			throw error;
-		}
-		const nextLayout: SessionLayoutPreferences =
-			resetSessionFilePanelWorkspaceState(sessionLayout);
-		clearCleanFilePanelBuffersForSession(targetSession.id);
-		setSessionLayouts(
-			(currentLayouts: SessionLayoutMap): SessionLayoutMap => ({
-				...currentLayouts,
-				[targetSession.id]: nextLayout,
-			}),
-		);
-		void window.electronAPI.sessionLayout
-			.save({
-				sessionId: targetSession.id,
-				layout: nextLayout,
-			})
-			.catch((error: unknown): void => {
-				console.error(
-					"[App] reset moved session file panel layout failed",
-					error,
-				);
-				void messageApi.warning(
-					t("workspaceTree.errors.moveSessionLayoutSave"),
-				);
-			});
-
-		if (activeSessionIdRef.current === targetSession.id) {
-			setActiveSessionMetadata(result.metadata);
-			setActiveWorkspace(result.workspace);
-			if (result.workbench !== null) {
-				setWorkbench(result.workbench);
-			}
-		}
-		setWorkspaceRefreshToken(
-			(currentToken: number): number => currentToken + 1,
-		);
-		window.electronAPI.sessionCatalog.notifyChanged();
-		return result;
-	}
-
-	async function handleSessionWorktreeHandoff(
-		target: "local" | "worktree",
-	): Promise<void> {
-		if (activeSessionMetadata?.worktree === undefined) return;
-		try {
-			let preview = await previewSessionWorktreeHandoff({
-				sessionId: activeSessionMetadata.id,
-				target,
-			});
-			const branchBySource: Record<string, string> = Object.fromEntries(
-				preview.sources.flatMap(
-					(source): Array<[string, string]> =>
-						source.newCommits > 0 && source.branch !== null
-							? [[source.sourceFolderId, source.branch]]
-							: [],
-				),
-			);
-			if (!preview.allowed && Object.keys(branchBySource).length > 0) {
-				preview = await previewSessionWorktreeHandoff({
-					sessionId: activeSessionMetadata.id,
-					target,
-					branchBySource,
-				});
-			}
-			if (!preview.allowed) {
-				throw new Error(
-					preview.sources.find(
-						(source) => source.blockedReason !== null,
-					)?.blockedReason ?? "Handoff is blocked.",
-				);
-			}
-			const confirmed = await new Promise<boolean>((resolve): void => {
-				Modal.confirm({
-					title:
-						target === "local"
-							? "Hand off to local checkout?"
-							: "Hand off to worktree?",
-					content: `${preview.sources.reduce((count, source) => count + source.modifiedFiles.length, 0)} changed files will move between checkouts. The target must remain clean.`,
-					onOk: (): void => resolve(true),
-					onCancel: (): void => resolve(false),
-				});
-			});
-			if (!confirmed) return;
-			const result = await executeSessionWorktreeHandoff({
-				sessionId: activeSessionMetadata.id,
-				target,
-				branchBySource,
-			});
-			setActiveSessionMetadata(result.metadata);
-			setActiveWorkspace(result.workspace);
-			if (result.workbench !== null) setWorkbench(result.workbench);
-			setWorkspaceRefreshToken(
-				(currentToken: number): number => currentToken + 1,
-			);
-		} catch (error: unknown) {
-			void messageApi.error(
-				error instanceof Error
-					? error.message
-					: "Failed to hand off worktree",
-			);
-		}
-	}
-
-	async function handleSessionWorktreeSetup(
-		action: "retry" | "skip",
-	): Promise<void> {
-		if (activeSessionMetadata?.worktree === undefined) return;
-		try {
-			const result =
-				action === "retry"
-					? await retrySessionWorktreeSetup(activeSessionMetadata.id)
-					: await skipSessionWorktreeSetup(activeSessionMetadata.id);
-			setActiveSessionMetadata(result.metadata);
-			setActiveWorkspace(result.workspace);
-			if (result.workbench !== null) setWorkbench(result.workbench);
-			setSessionError(
-				(result.metadata.worktree?.status ?? "ready") === "ready"
-					? null
-					: "Worktree setup is not ready.",
-			);
-			setWorkspaceRefreshToken(
-				(currentToken: number): number => currentToken + 1,
-			);
-		} catch (error: unknown) {
-			void messageApi.error(
-				error instanceof Error
-					? error.message
-					: "Failed to update worktree setup",
-			);
-		}
-	}
+	});
 
 	const { openForkSource } = useSessionNavigationController({
 		activeSessionIdRef,
@@ -2372,1708 +674,110 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		},
 	});
 
-	function resetToNewSessionHome(): void {
-		takePendingWorkbenchPatch();
-		beginLocalNewSessionDraft(null);
-	}
-
-	async function handleSessionArchive(
-		session: SessionMetadata,
-		context: SessionArchiveContext,
-	): Promise<void> {
-		setRunningSessionState(
-			(current: RunningSessionState): RunningSessionState => {
-				return removeRunningSessions(current, [session.id]);
-			},
-		);
-		setUnreadSessionIds(
-			(currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
-				return removeUnreadSessions(currentSessionIds, [session.id]);
-			},
-		);
-		if (!context.wasActive || session.id !== activeSessionIdRef.current) {
-			return;
-		}
-
-		const workspace: WorkspaceConfig | null =
-			findWorkspaceForSession(session);
-		try {
-			await handleNewSession({
-				restoreTemporaryDraft: true,
-				workspace,
-			});
-		} catch (error: unknown) {
-			const errorMessage: string =
-				error instanceof Error
-					? error.message
-					: "Failed to open New session";
-			setSessionError(errorMessage);
-			console.error(
-				"[App] return to New session after archive failed",
-				error,
-			);
-		}
-	}
-
-	function handleSessionRename(session: SessionMetadata): void {
-		if (session.id !== activeSessionId) {
-			return;
-		}
-
-		setActiveSessionMetadata(session);
-	}
-
-	async function checkActiveSessionIntegrity(
-		sessionId: string,
-	): Promise<void> {
-		try {
-			const result: SessionIntegrityCheckResult =
-				await checkSessionIntegrity(sessionId);
-			if (activeSessionIdRef.current !== sessionId || result.ok) {
-				return;
-			}
-
-			setSessionError(
-				`Session integrity warning: found ${result.issues.length} cross-session record${result.issues.length === 1 ? "" : "s"}. Existing data was not modified.`,
-			);
-		} catch (error: unknown) {
-			console.warn("[App] session integrity check failed", error);
-		}
-	}
-
-	function handleWorkspaceDelete(result: DeleteWorkspaceResult): void {
-		for (const sessionId of [
-			...result.deletedSessionIds,
-			...result.deletedArchivedSessionIds,
-		]) {
-			composerDraftsRef.current.delete(sessionId);
-		}
-		setUnreadSessionIds(
-			(currentSessionIds: ReadonlySet<string>): ReadonlySet<string> => {
-				return removeUnreadSessions(currentSessionIds, [
-					...result.deletedSessionIds,
-					...result.deletedArchivedSessionIds,
-				]);
-			},
-		);
-		removeStoredSessionLayouts([
-			...result.deletedSessionIds,
-			...result.deletedArchivedSessionIds,
-		]);
-		const activeMove =
-			activeSessionId === null
-				? undefined
-				: result.movedSessions.find(
-						(move): boolean => move.sessionId === activeSessionId,
-					);
-		setHomeWorkspaceOptions(
-			(currentWorkspaces: WorkspaceConfig[]): WorkspaceConfig[] => {
-				return currentWorkspaces.filter(
-					(workspace: WorkspaceConfig): boolean =>
-						workspace.id !== result.workspaceId,
-				);
-			},
-		);
-		setHomeDraft((currentDraft: HomeDraft): HomeDraft => {
-			if (currentDraft.workspaceId !== result.workspaceId) {
-				return currentDraft;
-			}
-
-			return {
-				...currentDraft,
-				workspaceId: null,
-				workspace: null,
-			};
-		});
-		setActiveWorkspace(
-			(
-				currentWorkspace: WorkspaceConfig | null,
-			): WorkspaceConfig | null => {
-				return currentWorkspace?.id === result.workspaceId
-					? null
-					: currentWorkspace;
-			},
-		);
-
-		const activeSessionDeleted: boolean =
-			activeSessionId !== null &&
-			result.deletedSessionIds.includes(activeSessionId);
-		const activeWorkspaceDeleted: boolean =
-			activeSessionMetadata?.workspaceId === result.workspaceId;
-		if (activeMove !== undefined) {
-			void fetchWorkspaces()
-				.then((workspaceList): void => {
-					const destination: WorkspaceConfig | undefined =
-						workspaceList.workspaces.find(
-							(workspace): boolean =>
-								workspace.id === activeMove.workspaceId,
-						);
-					if (destination === undefined) {
-						resetToNewSessionHome();
-						return;
-					}
-					setHomeWorkspaceOptions(workspaceList.workspaces);
-					setActiveWorkspace(destination);
-					setActiveSessionMetadata(
-						(metadata): SessionMetadata | null =>
-							metadata === null
-								? null
-								: {
-										...metadata,
-										workspaceId: destination.id,
-										workspaceName: destination.name,
-										workspaceKind: destination.kind,
-										workspaceRoot: destination.rootPath,
-										godotExecutablePath:
-											destination.godotExecutablePath,
-									},
-					);
-				})
-				.catch((): void => resetToNewSessionHome());
-		} else if (activeSessionDeleted || activeWorkspaceDeleted) {
-			resetToNewSessionHome();
-		}
-	}
-
-	function handleWorkspaceUpdate(workspace: WorkspaceConfig): void {
-		setHomeWorkspaceOptions((currentWorkspaces): WorkspaceConfig[] => {
-			const existingIndex: number = currentWorkspaces.findIndex(
-				(currentWorkspace: WorkspaceConfig): boolean =>
-					currentWorkspace.id === workspace.id,
-			);
-			if (existingIndex < 0) {
-				return [...currentWorkspaces, workspace];
-			}
-			return currentWorkspaces.map(
-				(currentWorkspace: WorkspaceConfig): WorkspaceConfig =>
-					currentWorkspace.id === workspace.id
-						? workspace
-						: currentWorkspace,
-			);
-		});
-		setHomeDraft(
-			(currentDraft): HomeDraft =>
-				currentDraft.workspaceId === workspace.id
-					? { ...currentDraft, workspace }
-					: currentDraft,
-		);
-		setActiveWorkspace((currentWorkspace): WorkspaceConfig | null =>
-			currentWorkspace?.id === workspace.id
-				? workspace
-				: currentWorkspace,
-		);
-		setActiveSessionMetadata((metadata): SessionMetadata | null =>
-			metadata?.workspaceId === workspace.id
-				? {
-						...metadata,
-						workspaceName: workspace.name,
-						workspaceRoot: workspace.rootPath,
-						godotExecutablePath: workspace.godotExecutablePath,
-					}
-				: metadata,
-		);
-	}
-
-	function handleWorkspaceProjectCreated(workspace: WorkspaceConfig): void {
-		handleWorkspaceUpdate(workspace);
-		setWorkspaceRefreshToken(
-			(currentToken: number): number => currentToken + 1,
-		);
-		setIsWorkspaceProjectDialogOpen(false);
-		if (isNewSessionHome) {
-			void handleHomeWorkspaceSelect(workspace.id);
-		}
-	}
-
-	function handleWorkspaceTreeProjectCreated(
-		workspace: WorkspaceConfig,
-	): void {
-		setWorkspaceRefreshToken(
-			(currentToken: number): number => currentToken + 1,
-		);
-		void handleNewWorkspaceSession(workspace).catch(
-			(error: unknown): void => {
-				showTransientError(
-					error instanceof Error
-						? error.message
-						: "Failed to open the new project",
-				);
-				console.error(
-					"[App] open workspace tree project failed",
-					error,
-				);
-			},
-		);
-	}
-
-	async function persistSessionUiMetadata(
-		params: SaveSessionUiMetadataParams,
-	): Promise<void> {
-		const sessionId: string | null = activeSessionId;
-		if (sessionId === null) {
-			return;
-		}
-
-		try {
-			await saveSessionUiMetadata(params);
-			setActiveSessionMetadata(
-				(
-					currentMetadata: SessionMetadata | null,
-				): SessionMetadata | null => {
-					return currentMetadata === null ||
-						currentMetadata.id !== sessionId
-						? currentMetadata
-						: {
-								...currentMetadata,
-								...params,
-							};
-				},
-			);
-		} catch (error: unknown) {
-			const message: string =
-				error instanceof Error
-					? error.message
-					: "Failed to save session UI state";
-
-			setSessionError(message);
-			console.error("[App] save session UI metadata failed", error);
-		}
-	}
-
-	function handleWorkspaceLaunchChange(
-		targetId: WorkspaceLaunchTargetId,
-	): void {
-		setHomeDraft(
-			(currentDraft: HomeDraft): HomeDraft => ({
-				...currentDraft,
-				workspaceLaunch: targetId,
-			}),
-		);
-		void persistSessionUiMetadata({ workspaceLaunch: targetId });
-	}
-
-	async function handleModeChange(nextMode: ChatMode): Promise<void> {
-		persistNewSessionComposerDefaults({ mode: nextMode });
-		if (isNewSessionHome) {
-			setHomeDraft(
-				(currentDraft: HomeDraft): HomeDraft => ({
-					...currentDraft,
-					chatMode: nextMode,
-				}),
-			);
-			return;
-		}
-
-		setWorkbench(
-			(
-				currentWorkbench: WorkbenchSnapshot | null,
-			): WorkbenchSnapshot | null => {
-				return currentWorkbench === null
-					? currentWorkbench
-					: {
-							...currentWorkbench,
-							composer: {
-								...currentWorkbench.composer,
-								chatMode: nextMode,
-							},
-						};
-			},
-		);
-		queueWorkbenchPatch({ composer: { chatMode: nextMode } }, true);
-		await persistSessionUiMetadata({ chatMode: nextMode });
-	}
-
-	async function handleFullTrustConfirm(): Promise<void> {
-		if (fullTrustConfirmationText !== FULL_TRUST_CONFIRMATION_TEXT) {
-			void messageApi.error(
-				t("app.fullTrust.errors.confirmation", {
-					confirmationText: FULL_TRUST_CONFIRMATION_TEXT,
-				}),
-			);
-			return;
-		}
-
-		const didSave: boolean = await saveApprovalMode(
-			"full-trust",
-			fullTrustConfirmationText,
-		);
-		if (didSave) {
-			setIsFullTrustModalOpen(false);
-			setFullTrustConfirmationText("");
-		}
-	}
-
-	async function handleProviderModelChange(
-		providerId: string,
-		modelId: string,
-	): Promise<void> {
-		if (isNewSessionHome) {
-			if (isHomeSubmitting) {
-				void messageApi.info(
-					"Model changes apply to your next message.",
-				);
-			}
-			const nextReasoningEffort: string =
-				resolveReasoningEffortForComposerModelChange({
-					selection: providerModelSelection,
-					previousProviderId: homeDraft.providerId,
-					previousModelId: homeDraft.modelId,
-					previousEffort: homeDraft.reasoningEffort,
-					nextProviderId: providerId,
-					nextModelId: modelId,
-				});
-			setHomeDraft(
-				(currentDraft: HomeDraft): HomeDraft => ({
-					...currentDraft,
-					providerId,
-					modelId,
-					reasoningEffort: nextReasoningEffort,
-				}),
-			);
-			persistNewSessionComposerDefaults({
-				model: { providerId, modelId },
-				reasoningEffort: nextReasoningEffort,
-			});
-			return;
-		}
-
-		const sessionId: string | null = activeSessionId;
-		if (sessionId === null) {
-			return;
-		}
-
-		if (isRunControllerActive(runState)) {
-			void messageApi.info("Model changes apply to your next message.");
-		}
-
-		const previousWorkbench: WorkbenchSnapshot | null = workbench;
-		setWorkbench(
-			(
-				currentWorkbench: WorkbenchSnapshot | null,
-			): WorkbenchSnapshot | null => {
-				return currentWorkbench === null
-					? currentWorkbench
-					: {
-							...currentWorkbench,
-							composer: {
-								...currentWorkbench.composer,
-								provider: providerId,
-								model: modelId,
-							},
-						};
-			},
-		);
-
-		try {
-			const result = await setSessionModel({
-				provider: providerId,
-				model: modelId,
-			});
-			if (activeSessionIdRef.current !== sessionId) {
-				return;
-			}
-			setActiveSessionMetadata(result.metadata);
-			applyWorkbench(result.workbench);
-			persistNewSessionComposerDefaults({
-				model: { providerId, modelId },
-				reasoningEffort:
-					result.workbench.composer.reasoningEffort ??
-					clientPreferencesRef.current.newSessionComposer
-						.reasoningEffort,
-			});
-		} catch (error: unknown) {
-			if (
-				activeSessionIdRef.current === sessionId &&
-				previousWorkbench !== null
-			) {
-				setWorkbench(previousWorkbench);
-			}
-			const message: string =
-				error instanceof Error
-					? error.message
-					: "Failed to save session model";
-			setSessionError(message);
-			console.error("[App] save session model failed", error);
-		}
-	}
-
-	async function handleReasoningEffortChange(
-		nextEffort: string,
-	): Promise<void> {
-		persistNewSessionComposerDefaults({ reasoningEffort: nextEffort });
-		if (isNewSessionHome) {
-			setHomeDraft(
-				(currentDraft: HomeDraft): HomeDraft => ({
-					...currentDraft,
-					reasoningEffort: nextEffort,
-				}),
-			);
-			return;
-		}
-
-		setWorkbench(
-			(
-				currentWorkbench: WorkbenchSnapshot | null,
-			): WorkbenchSnapshot | null => {
-				return currentWorkbench === null
-					? currentWorkbench
-					: {
-							...currentWorkbench,
-							composer: {
-								...currentWorkbench.composer,
-								reasoningEffort: nextEffort,
-							},
-						};
-			},
-		);
-		const currentModel = getDisplayedComposerModel({
-			isNewSessionHome,
-			homeDraft,
-			workbench,
-			activeSessionMetadata,
-			providerModelSelection,
-		});
-		const update = createComposerReasoningEffortUpdate(
-			currentModel.providerId,
-			currentModel.modelId,
-			nextEffort,
-		);
-		queueWorkbenchPatch(update.workbenchPatch, true);
-		await persistSessionUiMetadata(update.sessionMetadata);
-	}
-
-	function persistNewSessionComposerDefaults(
-		patch: Partial<NewSessionComposerPreferences>,
-	): void {
-		const currentPreferences: ClientPreferences =
-			clientPreferencesRef.current;
-		const newSessionComposer: NewSessionComposerPreferences = {
-			...currentPreferences.newSessionComposer,
-			...patch,
-		};
-		const nextPreferences: ClientPreferences = {
-			...currentPreferences,
-			lastComposerModel: newSessionComposer.model,
-			newSessionComposer,
-		};
-		clientPreferencesRef.current = nextPreferences;
-		setClientPreferences(nextPreferences);
-		dispatchClientPreferencesChanged(nextPreferences);
-		void updateClientPreferences({
-			lastComposerModel: nextPreferences.lastComposerModel,
-			newSessionComposer,
-		})
-			.then((savedPreferences: ClientPreferences): void => {
-				clientPreferencesRef.current = savedPreferences;
-				setClientPreferences(savedPreferences);
-			})
-			.catch((error: unknown): void => {
-				console.error(
-					"[App] save new-session composer defaults failed",
-					error,
-				);
-			});
-	}
-
 	function showTransientError(errorMessage: string): void {
 		void messageApi.error(errorMessage);
 	}
 
-	async function persistPendingWorkbenchPatchBeforeNavigation(): Promise<void> {
-		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
-		if (Object.keys(pendingPatch).length === 0) {
-			return;
-		}
+	const {
+		handleNewSession: handleNewSessionFromController,
+	} = useSessionHomeNavigationController({
+		activeSessionId,
+		activeSessionMetadata,
+		temporaryDraftSessionIdRef,
+		composerDraftsRef,
+		setHomeComposerMessage,
+		setIsNewSessionHome,
+		onSessionSelect: handleSessionSelect,
+		onHomeWorkspaceSelect: handleHomeWorkspaceSelect,
+		beginLocalNewSessionDraft,
+		deleteSessionWithLayout,
+		persistPendingWorkbenchPatchBeforeNavigation,
+		loadHomeWorkspaces,
+	});
+	useTraySessionIntegration({
+		recentSessions,
+		recentSessionsRef,
+		handleNewSession,
+		handleSessionSelect,
+		setRecentSessions,
+		showTransientError,
+	});
 
-		try {
-			await sendWorkbenchPatch(pendingPatch, false);
-		} catch (error: unknown) {
-			console.warn(
-				"[App] persist pending workbench patch before navigation failed",
-				error,
-			);
-		}
-	}
-
-	async function handleHomeComposerSubmit(
-		nextMessage: string,
-		modeOverride?: ChatMode,
-	): Promise<void> {
-		const message: string = nextMessage.trim();
-		if (message.length === 0 || homeSubmissionPendingRef.current) {
-			return;
-		}
-		homeSubmissionPendingRef.current = true;
-
-		const chatMode: ChatMode = modeOverride ?? homeDraft.chatMode;
-		if (modeOverride !== undefined && modeOverride !== homeDraft.chatMode) {
-			persistNewSessionComposerDefaults({ mode: modeOverride });
-			setHomeDraft(
-				(currentDraft: HomeDraft): HomeDraft => ({
-					...currentDraft,
-					chatMode: modeOverride,
-				}),
-			);
-		}
-		const requestId: string = createChatRequestId();
-		const providerId: string | null =
-			homeDraft.providerId ??
-			providerModelSelection?.activeModel.providerId ??
-			null;
-		const modelId: string | null =
-			homeDraft.modelId ??
-			providerModelSelection?.activeModel.modelId ??
-			null;
-		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		let sessionCreated: boolean = false;
-		let enteredSession: boolean = false;
-		let createdRuntimeWorkspace: WorkspaceConfig | null = null;
-		replaceComposerInput("", "home");
-
-		try {
-			setIsHomeSubmitting(true);
-			setSessionError(null);
-			setActiveRetryRequestId(null);
-			activeChatRequestIdRef.current = requestId;
-
-			let created = await createSession({
-				title: "New session",
-				temporary: homeDraft.executionEnvironment === "worktree",
-				workspaceId: homeDraft.workspaceId,
-				provider: providerId ?? undefined,
-				model: modelId ?? undefined,
-				reasoningEffort: homeDraft.reasoningEffort,
-				chatMode,
-				approvalMode,
-				workspaceLaunch: homeDraft.workspaceLaunch,
-			});
-			sessionCreated = true;
-			activeSessionIdRef.current = created.id;
-			if (homeDraft.executionEnvironment === "worktree") {
-				if (homeDraft.workspaceId === null) {
-					throw new Error(t("composer.worktree.unavailable"));
-				}
-				setIsWorktreePreparing(true);
-				const worktreeResult = await createSessionWorktree(
-					created.id,
-					homeDraft.workspaceId,
-					homeDraft.worktreeSources,
-				);
-				if (worktreeResult.workbench === null) {
-					throw new Error(
-						"Worktree session did not return a workbench.",
-					);
-				}
-				created = {
-					...worktreeResult.metadata,
-					workbench: worktreeResult.workbench,
-				};
-				createdRuntimeWorkspace = worktreeResult.workspace;
-				if (
-					(worktreeResult.metadata.worktree?.status ?? "ready") !==
-					"ready"
-				) {
-					setIsNewSessionHome(false);
-					enteredSession = true;
-					setActiveSessionId(created.id);
-					setActiveSessionMetadata(created);
-					setActiveWorkspace(worktreeResult.workspace);
-					setWorkbench(created.workbench);
-					replaceComposerInput(message, created.id);
-					setSessionError(
-						worktreeResult.metadata.worktree?.status ===
-							"setup-failed"
-							? "Worktree setup failed. Retry, skip, or delete the worktree before sending."
-							: "Review and trust the selected development environment before setup can continue.",
-					);
-					return;
-				}
-			}
-
-			setIsNewSessionHome(false);
-			enteredSession = true;
-			setActiveSessionId(created.id);
-			setActiveSessionMetadata(created);
-			recordOpenedSession(created.id);
-			setActiveWorkspace(
-				createdRuntimeWorkspace ??
-					createWorkspaceFromSessionMetadata(
-						created,
-						created.workbench,
-					),
-			);
-			timelineStore.reset();
-			setWorkbench(created.workbench);
-			setWorkflowTodoSnapshot(null);
-			rememberLoadedWorkflowTodo(null);
-			setHomeDraft(
-				createPreferredHomeDraft(
-					clientPreferences,
-					providerModelSelection,
-				),
-			);
-			if (cancelledChatRequestIdsRef.current.has(requestId)) {
-				replaceComposerInput(message, created.id);
-				return;
-			}
-			applyOptimisticSend(
-				requestId,
-				message,
-				created.workbench.composer.additionalContext,
-			);
-
-			const createdChatMode: ChatMode =
-				created.workbench.composer.chatMode ?? chatMode;
-			await sendChatMessage({
-				requestId,
-				message,
-				mode: createdChatMode,
-				provider: providerId ?? undefined,
-				model: modelId ?? undefined,
-				reasoningEffort:
-					created.workbench.composer.reasoningEffort ?? undefined,
-				executionPolicy: "auto",
-				outputTarget: getChatOutputTarget(
-					createdChatMode,
-					created.workspaceId ?? homeDraft.workspaceId,
-				),
-				additionalContext: created.workbench.composer.additionalContext,
-				skillRefs,
-			});
-			if (createdChatMode !== "goal") {
-				await refreshLatestTimeline(created.id);
-			}
-		} catch (error: unknown) {
-			if (cancelledChatRequestIdsRef.current.has(requestId)) {
-				finishOptimisticActiveRun(requestId);
-				setSessionError(null);
-				return;
-			}
-			const errorMessage: string =
-				error instanceof Error
-					? error.message
-					: "Failed to start new session";
-
-			if (enteredSession && activeSessionIdRef.current !== null) {
-				replaceComposerInput(message, activeSessionIdRef.current);
-			} else {
-				setIsNewSessionHome(true);
-				replaceComposerInput(message, "home");
-			}
-			setRunState(
-				(currentState: RunControllerState): RunControllerState =>
-					finishOptimisticRunState(currentState, requestId),
-			);
-			setRunningSessionState(
-				(current: RunningSessionState): RunningSessionState => {
-					return markRunStopped(current, requestId);
-				},
-			);
-			setWorkbench(
-				(
-					currentWorkbench: WorkbenchSnapshot | null,
-				): WorkbenchSnapshot | null => {
-					return currentWorkbench === null
-						? currentWorkbench
-						: {
-								...currentWorkbench,
-								activeRun:
-									currentWorkbench.activeRun.requestId ===
-									requestId
-										? { status: "idle" }
-										: currentWorkbench.activeRun,
-							};
-				},
-			);
-			setSessionError(errorMessage);
-			if (sessionCreated && !isBackendRpcErrorMessage(errorMessage)) {
-				timelineStore.update(
-					(currentPage: TimelinePageState): TimelinePageState => {
-						return {
-							...currentPage,
-							blocks: applyBackendEventToTimeline(
-								currentPage.blocks,
-								createFrontendFailedRunEvent(
-									requestId,
-									currentPage.sessionId ??
-										activeSessionIdRef.current ??
-										"",
-									errorMessage,
-								),
-							),
-						};
-					},
-				);
-			}
-			console.error("[App] start new session failed", error);
-		} finally {
-			setIsWorktreePreparing(false);
-			homeSubmissionPendingRef.current = false;
-			cancelledChatRequestIdsRef.current.delete(requestId);
-			if (activeChatRequestIdRef.current === requestId) {
-				activeChatRequestIdRef.current = null;
-			}
-			setIsHomeSubmitting(false);
-		}
-	}
-
-	async function handleComposerSubmit(
-		nextMessage: string,
-		modeOverride?: ChatMode,
-	): Promise<void> {
-		const isFirstTurnSubmission: boolean = isNewSessionHome;
-		if (isNewSessionHome && activeSessionId === null) {
-			await handleHomeComposerSubmit(nextMessage, modeOverride);
-			return;
-		}
-		let effectiveWorkbench: WorkbenchSnapshot | null = workbench;
-		let effectiveWorkspace: WorkspaceConfig | null = activeWorkspace;
-		if (
-			isFirstTurnSubmission &&
-			homeDraft.executionEnvironment === "worktree"
-		) {
-			if (activeSessionId === null || homeDraft.workspaceId === null) {
-				setSessionError(t("composer.worktree.unavailable"));
-				return;
-			}
-			try {
-				setIsWorktreePreparing(true);
-				setSessionError(null);
-				const worktreeResult = await createSessionWorktree(
-					activeSessionId,
-					homeDraft.workspaceId,
-					homeDraft.worktreeSources,
-				);
-				if (worktreeResult.workbench === null) {
-					throw new Error(
-						"Worktree session did not return a workbench.",
-					);
-				}
-				effectiveWorkbench = worktreeResult.workbench;
-				effectiveWorkspace = worktreeResult.workspace;
-				setActiveSessionMetadata(worktreeResult.metadata);
-				setActiveWorkspace(worktreeResult.workspace);
-				setWorkbench(worktreeResult.workbench);
-				if (
-					(worktreeResult.metadata.worktree?.status ?? "ready") !==
-					"ready"
-				) {
-					replaceComposerInput(nextMessage, activeSessionId);
-					setSessionError(
-						worktreeResult.metadata.worktree?.status ===
-							"setup-failed"
-							? "Worktree setup failed. Retry, skip, or delete the worktree before sending."
-							: "Review and trust the selected development environment before setup can continue.",
-					);
-					return;
-				}
-			} catch (error: unknown) {
-				setSessionError(
-					error instanceof Error
-						? error.message
-						: "Failed to create worktree",
-				);
-				return;
-			} finally {
-				setIsWorktreePreparing(false);
-			}
-		}
-		if (isNewSessionHome) {
-			setIsNewSessionHome(false);
-			temporaryDraftSessionIdRef.current = null;
-			setActiveSessionMetadata(
-				(metadata: SessionMetadata | null): SessionMetadata | null => {
-					return metadata?.temporary === true
-						? { ...metadata, temporary: false }
-						: metadata;
-				},
-			);
-		}
-
-		if (activeSessionId === null || effectiveWorkbench === null) {
-			setSessionError(
-				"Please open session first before sending a message",
-			);
-			return;
-		}
-
-		const message: string = nextMessage.trim();
-		const additionalContext: AdditionalContextItem[] =
-			effectiveWorkbench.composer.additionalContext;
-		if (message.length === 0 && additionalContext.length === 0) {
-			return;
-		}
-		replaceComposerInput("", activeSessionId);
-
-		const selectedProvider: string | undefined = isFirstTurnSubmission
-			? (homeDraft.providerId ?? effectiveWorkbench.composer.provider)
-			: effectiveWorkbench.composer.provider;
-		const selectedModel: string | undefined = isFirstTurnSubmission
-			? (homeDraft.modelId ?? effectiveWorkbench.composer.model)
-			: effectiveWorkbench.composer.model;
-		const selectedReasoningEffort: string | undefined =
-			isFirstTurnSubmission
-				? homeDraft.reasoningEffort
-				: (effectiveWorkbench.composer.reasoningEffort ?? undefined);
-		const currentChatMode: ChatMode = isFirstTurnSubmission
-			? homeDraft.chatMode
-			: getChatMode(effectiveWorkbench);
-		const chatMode: ChatMode = modeOverride ?? currentChatMode;
-		if (isFirstTurnSubmission) {
-			if (selectedProvider !== undefined && selectedModel !== undefined) {
-				setFirstTurnModelTransition({
-					sessionId: activeSessionId,
-					providerId: selectedProvider,
-					modelId: selectedModel,
-				});
-			}
-			setWorkbench(
-				(
-					currentWorkbench: WorkbenchSnapshot | null,
-				): WorkbenchSnapshot | null =>
-					currentWorkbench === null
-						? currentWorkbench
-						: {
-								...currentWorkbench,
-								composer: {
-									...currentWorkbench.composer,
-									chatMode,
-									...(selectedProvider === undefined
-										? {}
-										: { provider: selectedProvider }),
-									...(selectedModel === undefined
-										? {}
-										: { model: selectedModel }),
-									...(selectedReasoningEffort === undefined
-										? {}
-										: {
-												reasoningEffort:
-													selectedReasoningEffort,
-											}),
-								},
-							},
-			);
-		}
-		if (modeOverride !== undefined && modeOverride !== currentChatMode) {
-			persistNewSessionComposerDefaults({ mode: chatMode });
-			setWorkbench(
-				(
-					currentWorkbench: WorkbenchSnapshot | null,
-				): WorkbenchSnapshot | null => {
-					return currentWorkbench === null
-						? currentWorkbench
-						: {
-								...currentWorkbench,
-								composer: {
-									...currentWorkbench.composer,
-									chatMode,
-								},
-							};
-				},
-			);
-			void persistSessionUiMetadata({ chatMode });
-		}
-
-		if (isRunControllerActive(runState)) {
-			await handleQueueMessageSubmit(message, modeOverride);
-			return;
-		}
-
-		const requestId: string = createChatRequestId();
-		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(
-			mergeWorkbenchPatch(
-				takePendingWorkbenchPatch(),
-				modeOverride === undefined ? {} : { composer: { chatMode } },
-			),
-			{
-				additionalContextAction: { action: "clearUnpinned" },
+	const {
+		handleQueueMessageSubmit,
+		handleGuideSubmit,
+		handleQueueMessageRemove,
+		handleQueueMessageEdit,
+		handleQueueMessageReorder,
+		handleGuideDelete,
+		handleGuideReorder,
+		handleRetryFromUserMessage,
+		handleInterruptedRunRetry,
+		handleComposerCancel,
+		submitComposerMessage,
+		handleHomeComposerSubmit,
+		prepareFirstTurnWorktree,
+		handleComposerSubmit,
+	} = useComposerInteractionController({
+		state: {
+			activeSessionId,
+			isNewSessionHome,
+			homeDraft,
+			clientPreferences,
+			providerModelSelection,
+			approvalMode,
+			skills,
+			activeWorkspace,
+			workbench,
+			runState,
+			isSessionLoading,
+		},
+		refs: {
+			activeSessionIdRef,
+			activeChatRequestIdRef,
+			cancelledChatRequestIdsRef,
+			homeSubmissionPendingRef,
+			temporaryDraftSessionIdRef,
+		},
+		setters: {
+			setHomeDraft,
+			setIsHomeSubmitting,
+			setIsWorktreePreparing,
+			setIsNewSessionHome,
+			setActiveSessionId,
+			setActiveSessionMetadata,
+			setActiveWorkspace,
+			setWorkbench,
+			setWorkflowTodoSnapshot,
+			setSessionError,
+			setActiveRetryRequestId,
+			setRunState,
+			setRunningSessionState,
+			setFirstTurnModelTransition,
+		},
+		runtime: {
+			getWorktreeUnavailableMessage: (): string =>
+				t("composer.worktree.unavailable"),
+			persistNewSessionComposerDefaults,
+			persistSessionUiMetadata,
+			applyWorkbench,
+			takePendingWorkbenchPatch,
+			sendWorkbenchPatch,
+			replaceComposerInput,
+			applyOptimisticSend,
+			finishOptimisticActiveRun,
+			refreshLatestTimeline,
+			applyOptimisticRetry,
+			resetPlanClarificationUiState,
+			resetPlanApprovalUiState,
+			rememberLoadedWorkflowTodo,
+			showTransientError,
+			onInfo: (message: string): void => {
+				void messageApi.info(message);
 			},
-		);
-		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
-		let firstTurnRequestAccepted: boolean = false;
-
-		try {
-			setSessionError(null);
-			setActiveRetryRequestId(null);
-			activeChatRequestIdRef.current = requestId;
-			applyOptimisticSend(requestId, message, additionalContext);
-
-			await flushPendingPatch;
-			await sendChatMessage({
-				requestId,
-				message,
-				mode: chatMode,
-				provider: selectedProvider,
-				model: selectedModel,
-				reasoningEffort: selectedReasoningEffort,
-				executionPolicy: "auto",
-				outputTarget: getChatOutputTarget(
-					chatMode,
-					getCurrentWorkspaceId(
-						effectiveWorkspace,
-						effectiveWorkbench,
-					),
-				),
-				additionalContext,
-				skillRefs,
-			});
-			firstTurnRequestAccepted = true;
-			if (chatMode !== "goal") {
-				await refreshLatestTimeline();
-			}
-		} catch (error: unknown) {
-			if (cancelledChatRequestIdsRef.current.has(requestId)) {
-				finishOptimisticActiveRun(requestId);
-				setSessionError(null);
-				return;
-			}
-			const errorMessage: string =
-				error instanceof Error
-					? error.message
-					: "Failed to send message";
-
-			replaceComposerInput(message, activeSessionId);
-			setRunState(
-				(currentState: RunControllerState): RunControllerState =>
-					finishOptimisticRunState(currentState, requestId),
-			);
-			setRunningSessionState(
-				(current: RunningSessionState): RunningSessionState => {
-					return markRunStopped(current, requestId);
-				},
-			);
-			setWorkbench(
-				(
-					currentWorkbench: WorkbenchSnapshot | null,
-				): WorkbenchSnapshot | null => {
-					return currentWorkbench === null
-						? currentWorkbench
-						: {
-								...currentWorkbench,
-								composer: {
-									...currentWorkbench.composer,
-									additionalContext,
-								},
-								activeRun:
-									currentWorkbench.activeRun.requestId ===
-									requestId
-										? { status: "idle" }
-										: currentWorkbench.activeRun,
-							};
-				},
-			);
-			setSessionError(errorMessage);
-			if (!isBackendRpcErrorMessage(errorMessage)) {
-				timelineStore.update(
-					(currentPage: TimelinePageState): TimelinePageState => {
-						return {
-							...currentPage,
-							blocks: applyBackendEventToTimeline(
-								currentPage.blocks,
-								createFrontendFailedRunEvent(
-									requestId,
-									currentPage.sessionId ??
-										activeSessionId ??
-										"",
-									errorMessage,
-								),
-							),
-						};
-					},
-				);
-			}
-			console.error("[App] send message failed", error);
-		} finally {
-			if (isFirstTurnSubmission && !firstTurnRequestAccepted) {
-				setFirstTurnModelTransition(
-					(currentTransition): typeof currentTransition => {
-						return currentTransition?.sessionId === activeSessionId
-							? null
-							: currentTransition;
-					},
-				);
-			}
-			cancelledChatRequestIdsRef.current.delete(requestId);
-			if (activeChatRequestIdRef.current === requestId) {
-				activeChatRequestIdRef.current = null;
-			}
-		}
-	}
-
-	async function handleQueueMessageSubmit(
-		nextMessage: string,
-		modeOverride?: ChatMode,
-	): Promise<void> {
-		if (activeSessionId === null || workbench === null) {
-			setSessionError(
-				"Please open session first before queueing a message",
-			);
-			return;
-		}
-		const message: string = nextMessage.trim();
-		const additionalContext: AdditionalContextItem[] =
-			workbench.composer.additionalContext;
-		if (message.length === 0 && additionalContext.length === 0) {
-			return;
-		}
-
-		const previousWorkbench: WorkbenchSnapshot = workbench;
-		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const chatMode: ChatMode = modeOverride ?? getChatMode(workbench);
-		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(
-			mergeWorkbenchPatch(
-				takePendingWorkbenchPatch(),
-				modeOverride === undefined ? {} : { composer: { chatMode } },
-			),
-			{
-				additionalContextAction: { action: "clearUnpinned" },
-			},
-		);
-
-		setWorkbench(
-			(
-				currentWorkbench: WorkbenchSnapshot | null,
-			): WorkbenchSnapshot | null => {
-				return currentWorkbench === null
-					? currentWorkbench
-					: {
-							...currentWorkbench,
-							composer: {
-								...currentWorkbench.composer,
-								additionalContext:
-									currentWorkbench.composer.additionalContext.filter(
-										(
-											item: AdditionalContextItem,
-										): boolean => item.pinned === true,
-									),
-							},
-						};
-			},
-		);
-
-		try {
-			await sendWorkbenchPatch(pendingPatch, false);
-			const result = await addQueuedMessage({
-				text: message,
-				additionalContext,
-				mode: chatMode,
-				provider: workbench.composer.provider,
-				model: workbench.composer.model,
-				reasoningEffort:
-					workbench.composer.reasoningEffort ?? undefined,
-				executionPolicy: "auto",
-				outputTarget: getChatOutputTarget(
-					chatMode,
-					getCurrentWorkspaceId(activeWorkspace, workbench),
-				),
-				skillRefs,
-			});
-			applyWorkbench(result.workbench);
-			setSessionError(null);
-		} catch (error: unknown) {
-			setWorkbench(previousWorkbench);
-			replaceComposerInput(message, activeSessionId);
-			const errorMessage: string =
-				error instanceof Error
-					? error.message
-					: "Failed to queue message";
-			setSessionError(errorMessage);
-			console.error("[App] queue message failed", error);
-		}
-	}
-
-	async function handleGuideSubmit(nextMessage: string): Promise<void> {
-		if (isNewSessionHome && activeSessionId === null) {
-			replaceComposerInput(nextMessage, "home");
-			void messageApi.info("Guides can be added after a session starts.");
-			return;
-		}
-		if (activeSessionId === null || workbench === null) {
-			setSessionError("Please open session first before adding a guide");
-			return;
-		}
-		const message: string = nextMessage.trim();
-		if (message.length === 0) {
-			return;
-		}
-		replaceComposerInput("", activeSessionId);
-
-		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
-
-		try {
-			await sendWorkbenchPatch(pendingPatch, false);
-			const result = await addGuide(
-				message,
-				getRunControllerRequestId(runState) ?? undefined,
-			);
-			applyWorkbench(result.workbench);
-			setSessionError(null);
-		} catch (error: unknown) {
-			replaceComposerInput(message, activeSessionId);
-			const errorMessage: string =
-				error instanceof Error ? error.message : "Failed to add guide";
-			setSessionError(errorMessage);
-			console.error("[App] add guide failed", error);
-		}
-	}
-
-	async function handleQueueMessageRemove(queueId: number): Promise<void> {
-		if (workbench === null) {
-			return;
-		}
-		const previousWorkbench: WorkbenchSnapshot = workbench;
-		setWorkbench(
-			(
-				currentWorkbench: WorkbenchSnapshot | null,
-			): WorkbenchSnapshot | null => {
-				return currentWorkbench === null
-					? currentWorkbench
-					: {
-							...currentWorkbench,
-							messageQueue: currentWorkbench.messageQueue.filter(
-								(item: MessageQueueItem): boolean =>
-									item.id !== queueId,
-							),
-						};
-			},
-		);
-		try {
-			const result = await removeQueuedMessage(queueId);
-			applyWorkbench(result.workbench);
-		} catch (error: unknown) {
-			setWorkbench(previousWorkbench);
-			const errorMessage: string =
-				error instanceof Error
-					? error.message
-					: "Failed to remove queued message";
-			setSessionError(errorMessage);
-			console.error("[App] remove queued message failed", error);
-		}
-	}
-
-	async function handleQueueMessageEdit(
-		item: MessageQueueItem,
-	): Promise<void> {
-		if (workbench === null) {
-			return;
-		}
-
-		const previousWorkbench: WorkbenchSnapshot = workbench;
-		const additionalContext: AdditionalContextItem[] =
-			item.additionalContext ?? [];
-		const pendingPatch: WorkbenchPatch = mergeWorkbenchPatch(
-			takePendingWorkbenchPatch(),
-			{
-				composer: {
-					additionalContext,
-				},
-			},
-		);
-		replaceComposerInput(item.text, activeSessionIdRef.current ?? "home");
-
-		setWorkbench(
-			(
-				currentWorkbench: WorkbenchSnapshot | null,
-			): WorkbenchSnapshot | null => {
-				return currentWorkbench === null
-					? currentWorkbench
-					: {
-							...currentWorkbench,
-							composer: {
-								...currentWorkbench.composer,
-								additionalContext,
-							},
-							messageQueue: currentWorkbench.messageQueue.filter(
-								(queueItem: MessageQueueItem): boolean =>
-									queueItem.id !== item.id,
-							),
-						};
-			},
-		);
-
-		try {
-			await sendWorkbenchPatch(pendingPatch, false);
-			const result = await removeQueuedMessage(item.id);
-			applyWorkbench(result.workbench);
-			setSessionError(null);
-		} catch (error: unknown) {
-			setWorkbench(previousWorkbench);
-			const errorMessage: string =
-				error instanceof Error
-					? error.message
-					: "Failed to edit queued message";
-			setSessionError(errorMessage);
-			console.error("[App] edit queued message failed", error);
-		}
-	}
-
-	async function handleQueueMessageReorder(
-		queueIds: number[],
-	): Promise<void> {
-		if (workbench === null) {
-			return;
-		}
-		const previousWorkbench: WorkbenchSnapshot = workbench;
-		const pendingItemsById: Map<number, MessageQueueItem> = new Map(
-			workbench.messageQueue
-				.filter(
-					(item: MessageQueueItem): boolean =>
-						item.status === "pending",
-				)
-				.map((item: MessageQueueItem): [number, MessageQueueItem] => [
-					item.id,
-					item,
-				]),
-		);
-		let pendingIndex: number = 0;
-		const nextPendingItems: MessageQueueItem[] = queueIds.map(
-			(queueId: number): MessageQueueItem =>
-				pendingItemsById.get(queueId) as MessageQueueItem,
-		);
-		setWorkbench({
-			...workbench,
-			messageQueue: workbench.messageQueue.map(
-				(item: MessageQueueItem): MessageQueueItem => {
-					if (item.status !== "pending") {
-						return item;
-					}
-					const nextItem: MessageQueueItem =
-						nextPendingItems[pendingIndex] ?? item;
-					pendingIndex += 1;
-					return nextItem;
-				},
-			),
-		});
-		try {
-			const result = await reorderQueuedMessages(queueIds);
-			applyWorkbench(result.workbench);
-		} catch (error: unknown) {
-			setWorkbench(previousWorkbench);
-			const errorMessage: string =
-				error instanceof Error
-					? error.message
-					: "Failed to reorder queued messages";
-			setSessionError(errorMessage);
-			console.error("[App] reorder queued messages failed", error);
-		}
-	}
-
-	async function handleGuideDelete(guideId: string): Promise<void> {
-		if (workbench === null) {
-			return;
-		}
-		const previousWorkbench: WorkbenchSnapshot = workbench;
-		setWorkbench({
-			...workbench,
-			pendingGuides: workbench.pendingGuides.filter(
-				(guide: PendingGuide): boolean => guide.guideId !== guideId,
-			),
-		});
-		try {
-			const result = await deleteGuide(guideId);
-			applyWorkbench(result.workbench);
-		} catch (error: unknown) {
-			setWorkbench(previousWorkbench);
-			const errorMessage: string =
-				error instanceof Error
-					? error.message
-					: "Failed to delete guide";
-			setSessionError(errorMessage);
-			console.error("[App] delete guide failed", error);
-		}
-	}
-
-	async function handleGuideReorder(guideIds: string[]): Promise<void> {
-		if (workbench === null) {
-			return;
-		}
-		const previousWorkbench: WorkbenchSnapshot = workbench;
-		const guidesById: Map<string, PendingGuide> = new Map(
-			workbench.pendingGuides.map(
-				(guide: PendingGuide): [string, PendingGuide] => [
-					guide.guideId,
-					guide,
-				],
-			),
-		);
-		setWorkbench({
-			...workbench,
-			pendingGuides: guideIds.map(
-				(guideId: string): PendingGuide =>
-					guidesById.get(guideId) as PendingGuide,
-			),
-		});
-		try {
-			const result = await reorderGuides(guideIds);
-			applyWorkbench(result.workbench);
-		} catch (error: unknown) {
-			setWorkbench(previousWorkbench);
-			const errorMessage: string =
-				error instanceof Error
-					? error.message
-					: "Failed to reorder guides";
-			setSessionError(errorMessage);
-			console.error("[App] reorder guides failed", error);
-		}
-	}
-
-	async function handleRetryFromUserMessage(
-		payload: RetryUserMessagePayload,
-	): Promise<boolean> {
-		if (activeSessionId === null || workbench === null) {
-			setSessionError("Please open a session before retrying.");
-			return false;
-		}
-
-		if (isRunControllerActive(runState) || isSessionLoading) {
-			return false;
-		}
-
-		const message: string = payload.message.trim();
-		if (message.length === 0 && payload.additionalContext.length === 0) {
-			return false;
-		}
-
-		const requestId: string = createChatRequestId();
-		const chatMode: ChatMode = getChatMode(workbench);
-		const skillRefs: string[] = extractEnabledSkillRefs(message, skills);
-		const pendingPatch: WorkbenchPatch = takePendingWorkbenchPatch();
-		const flushPendingPatch = sendWorkbenchPatch(pendingPatch, false);
-
-		try {
-			setSessionError(null);
-			activeChatRequestIdRef.current = requestId;
-			applyOptimisticRetry(
-				payload.requestId,
-				requestId,
-				message,
-				payload.additionalContext,
-			);
-			setActiveRetryRequestId(null);
-
-			await flushPendingPatch;
-			await sendChatMessage({
-				requestId,
-				message,
-				mode: chatMode,
-				provider: workbench.composer.provider ?? undefined,
-				model: workbench.composer.model ?? undefined,
-				reasoningEffort:
-					workbench.composer.reasoningEffort ?? undefined,
-				executionPolicy: "auto",
-				outputTarget: getChatOutputTarget(
-					chatMode,
-					getCurrentWorkspaceId(activeWorkspace, workbench),
-				),
-				retryFromRequestId: payload.requestId,
-				additionalContext: payload.additionalContext,
-				skillRefs,
-			});
-			if (chatMode !== "goal") {
-				await refreshLatestTimeline();
-			}
-			return true;
-		} catch (error: unknown) {
-			if (cancelledChatRequestIdsRef.current.has(requestId)) {
-				finishOptimisticActiveRun(requestId);
-				setSessionError(null);
-				return true;
-			}
-			const errorMessage: string =
-				error instanceof Error
-					? error.message
-					: "Failed to retry message";
-
-			setRunState(
-				(currentState: RunControllerState): RunControllerState =>
-					finishOptimisticRunState(currentState, requestId),
-			);
-			setWorkbench(
-				(
-					currentWorkbench: WorkbenchSnapshot | null,
-				): WorkbenchSnapshot | null => {
-					return currentWorkbench === null
-						? currentWorkbench
-						: {
-								...currentWorkbench,
-								activeRun:
-									currentWorkbench.activeRun.requestId ===
-									requestId
-										? { status: "idle" }
-										: currentWorkbench.activeRun,
-							};
-				},
-			);
-			setSessionError(errorMessage);
-			await refreshLatestTimeline().catch(
-				(refreshError: unknown): void => {
-					console.error(
-						"[App] refresh timeline after retry failure failed",
-						refreshError,
-					);
-				},
-			);
-			console.error("[App] retry message failed", error);
-			return false;
-		} finally {
-			cancelledChatRequestIdsRef.current.delete(requestId);
-			if (activeChatRequestIdRef.current === requestId) {
-				activeChatRequestIdRef.current = null;
-			}
-		}
-	}
-
-	async function handleInterruptedRunRetry(runId: string): Promise<void> {
-		if (
-			activeSessionIdRef.current === null ||
-			isSessionLoading ||
-			isRunControllerActive(runState)
-		) {
-			return;
-		}
-		try {
-			setSessionError(null);
-			await retryAgentRun(runId);
-			await refreshLatestTimeline();
-		} catch (error: unknown) {
-			const message: string =
-				error instanceof Error
-					? error.message
-					: "Failed to retry interrupted run";
-			setSessionError(message);
-			console.error("[App] retry interrupted run failed", error);
-		}
-	}
-
-	async function handleComposerCancel(): Promise<void> {
-		const requestId: string | null = getRunControllerRequestId(runState);
-		const cancellationRequestId: string | null =
-			requestId ?? activeChatRequestIdRef.current;
-		if (cancellationRequestId === null) {
-			return;
-		}
-		if (
-			runState.status === "cancelling" ||
-			cancelledChatRequestIdsRef.current.has(cancellationRequestId)
-		) {
-			return;
-		}
-
-		const wasCreatingSession: boolean = homeSubmissionPendingRef.current;
-		const previousRunState: RunControllerState = runState;
-		cancelledChatRequestIdsRef.current.add(cancellationRequestId);
-		setRunState(
-			(currentState: RunControllerState): RunControllerState => ({
-				...currentState,
-				status: "cancelling",
-				requestId: cancellationRequestId,
-				startedAt: currentState.startedAt ?? new Date().toISOString(),
-			}),
-		);
-		try {
-			activeChatRequestIdRef.current = cancellationRequestId;
-			const result = await cancelChatMessage(cancellationRequestId);
-			if (
-				result.cancelled ||
-				result.alreadyFinished ||
-				wasCreatingSession
-			) {
-				// The cancellation response is authoritative. Terminal events remain the
-				// persisted source of truth, but the Composer must not stay in a stopping
-				// state while waiting for an event that may already have been delivered.
-				if (activeChatRequestIdRef.current === cancellationRequestId) {
-					activeChatRequestIdRef.current = null;
-				}
-				if (result.alreadyFinished === true) {
-					cancelledChatRequestIdsRef.current.delete(
-						cancellationRequestId,
-					);
-				}
-				finishOptimisticActiveRun(cancellationRequestId);
-				setIsHomeSubmitting(false);
-				resetPlanClarificationUiState();
-				resetPlanApprovalUiState();
-				return;
-			}
-			if (
-				!result.cancelled &&
-				!result.alreadyFinished &&
-				!wasCreatingSession
-			) {
-				throw new Error(
-					"The backend did not accept the cancellation request.",
-				);
-			}
-		} catch (error: unknown) {
-			console.error("[App] cancel chat failed", error);
-			if (wasCreatingSession) {
-				if (activeChatRequestIdRef.current === cancellationRequestId) {
-					activeChatRequestIdRef.current = null;
-				}
-				finishOptimisticActiveRun(cancellationRequestId);
-				setIsHomeSubmitting(false);
-				resetPlanClarificationUiState();
-				resetPlanApprovalUiState();
-				return;
-			}
-			cancelledChatRequestIdsRef.current.delete(cancellationRequestId);
-			setRunState(
-				(currentState: RunControllerState): RunControllerState =>
-					currentState.requestId === cancellationRequestId
-						? previousRunState
-						: currentState,
-			);
-			showTransientError(
-				error instanceof Error
-					? error.message
-					: "Failed to stop the response",
-			);
-		}
-	}
-
-	async function refreshLatestTimeline(
-		sessionIdOverride?: string,
-	): Promise<void> {
-		const sessionId: string | null = sessionIdOverride ?? activeSessionId;
-		if (sessionId === null) {
-			return;
-		}
-
-		const timeline: SessionTimelineResult =
-			await fetchSessionTimeline(sessionId);
-		if (
-			activeSessionIdRef.current !== sessionId ||
-			timeline.sessionId !== sessionId
-		) {
-			console.warn("[App] ignored latest timeline for inactive session", {
-				requestedSessionId: sessionId,
-				activeSessionId: activeSessionIdRef.current,
-				resultSessionId: timeline.sessionId,
-			});
-			return;
-		}
-
-		const activeOptimisticRequestId: string | null =
-			activeChatRequestIdRef.current ??
-			getRunControllerRequestId(runState);
-		timelineStore.update(
-			(currentPage: TimelinePageState): TimelinePageState => {
-				return mergeOptimisticUserBlocks(
-					currentPage,
-					createTimelinePageFromTimelineResult(timeline),
-					activeOptimisticRequestId,
-				);
-			},
-		);
-		await refreshTimelineNavigationEntries(sessionId);
-		setLatestPlanClarification(timeline.latestPlanClarification);
-		setLatestPlanApproval(timeline.latestPlanApproval);
-		const workflowTodo: WorkflowTodoSnapshot | null =
-			createWorkflowTodoSnapshotFromTimelineResult(timeline);
-		setWorkflowTodoSnapshot(workflowTodo);
-		rememberLoadedWorkflowTodo(workflowTodo);
-		if (
-			workflowTodo !== null &&
-			isWorkflowTodoActive(workflowTodo) &&
-			activeSessionMetadata?.workflowTodoDismissedKey !==
-				getWorkflowTodoSnapshotKey(workflowTodo)
-		) {
-			expandWorkflowTodoPanel();
-		}
-
-		const sessionList = await fetchSessions();
-		const metadata: SessionMetadata | undefined = sessionList.sessions.find(
-			(session: SessionMetadata): boolean => session.id === sessionId,
-		);
-		if (metadata !== undefined) {
-			setActiveSessionMetadata(metadata);
-			setActiveWorkspace(
-				(
-					currentWorkspace: WorkspaceConfig | null,
-				): WorkspaceConfig | null => {
-					if (
-						metadata.workspaceId === undefined ||
-						metadata.workspaceRoot === undefined
-					) {
-						return null;
-					}
-					if (currentWorkspace?.id === metadata.workspaceId) {
-						return currentWorkspace;
-					}
-
-					return createSingleSourceWorkspaceSnapshot({
-						id: metadata.workspaceId,
-						name: metadata.workspaceName ?? metadata.title,
-						kind: metadata.workspaceKind ?? "godot",
-						rootPath: metadata.workspaceRoot,
-						godotExecutablePath: metadata.godotExecutablePath,
-					});
-				},
-			);
-		}
-	}
-
-	async function handleWorkflowTodoDismiss(
-		snapshot: WorkflowTodoSnapshot,
-	): Promise<void> {
-		const dismissedKey: string = getWorkflowTodoSnapshotKey(snapshot);
-		const params: { workflowId?: string; runId?: string } = {};
-		if (snapshot.workflowId !== undefined) {
-			params.workflowId = snapshot.workflowId;
-		}
-		if (snapshot.runId !== undefined) {
-			params.runId = snapshot.runId;
-		}
-
-		try {
-			await dismissWorkflowTodo(params);
-			setActiveSessionMetadata(
-				(
-					currentMetadata: SessionMetadata | null,
-				): SessionMetadata | null => {
-					return currentMetadata === null
-						? currentMetadata
-						: {
-								...currentMetadata,
-								workflowTodoCollapsed: true,
-								workflowTodoDismissedKey: dismissedKey,
-							};
-				},
-			);
-			void saveSessionUiMetadata({
-				workflowTodoCollapsed: true,
-				workflowTodoDismissedKey: dismissedKey,
-			}).catch((error: unknown): void => {
-				console.error(
-					"[App] save dismissed workflow todo state failed",
-					error,
-				);
-			});
-			setWorkflowTodoSnapshot(
-				(
-					currentSnapshot: WorkflowTodoSnapshot | null,
-				): WorkflowTodoSnapshot | null => {
-					if (
-						currentSnapshot === null ||
-						isSameWorkflowTodoSnapshot(currentSnapshot, snapshot)
-					) {
-						return null;
-					}
-
-					return currentSnapshot;
-				},
-			);
-		} catch (error: unknown) {
-			const message: string =
-				error instanceof Error
-					? error.message
-					: "Failed to dismiss workflow todo";
-			setSessionError(message);
-			console.error("[App] dismiss workflow todo failed", error);
-		}
-	}
-
+			timelineStore,
+		},
+	});
 	const {
 		patchContext,
 		handleAddImageFiles,
@@ -4097,462 +801,285 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		setPendingTextAttachmentCount,
 		showTransientError,
 	});
-	const displayedComposerModel = getDisplayedComposerModel({
-		isNewSessionHome,
-		homeDraft,
-		workbench,
-		activeSessionMetadata,
-		providerModelSelection,
-		firstTurnModelTransition:
-			firstTurnModelTransition?.sessionId === activeSessionId
-				? firstTurnModelTransition
-				: null,
-	});
-	const selectedProviderId: string | null = displayedComposerModel.providerId;
-	const selectedModelId: string | null = displayedComposerModel.modelId;
-	const pendingToolBudget: PendingToolBudget | null =
-		workbench?.pendingToolBudget ?? null;
-	const chatTitle: string = isNewSessionHome
-		? "New session"
-		: getSessionTitle(activeSessionMetadata, activeSessionId);
-	const composerScopeId: string = activeSessionId ?? "home";
-	const storedComposerMessage: string =
-		composerDraftsRef.current.get(composerScopeId) ?? "";
-	const composerMessage: string = isNewSessionHome
-		? homeComposerMessage
-		: storedComposerMessage;
-	const composerInstanceKey: string = `${composerScopeId}:${composerInputReset.scopeId === composerScopeId ? composerInputReset.revision : 0}`;
-	const composerMode: ChatMode =
-		activeSessionId === null ? homeDraft.chatMode : getChatMode(workbench);
-	const composerReasoningEffort: string | null =
-		activeSessionId === null
-			? homeDraft.reasoningEffort
-			: (workbench?.composer.reasoningEffort ??
-				activeSessionMetadata?.reasoningEffort ??
-				null);
-	const composerContextItems: AdditionalContextItem[] =
-		activeSessionId === null
-			? []
-			: (workbench?.composer.additionalContext ?? []);
-	const composerMessageQueue: MessageQueueItem[] =
-		activeSessionId === null ? [] : (workbench?.messageQueue ?? []);
-	const composerPendingGuides: PendingGuide[] =
-		activeSessionId === null ? [] : (workbench?.pendingGuides ?? []);
-	const currentSessionWorkspaceId: string | null =
-		activeSessionMetadata?.workspaceId ?? null;
-	const composerWorkspaceLocked: boolean =
-		isWorkspaceSessionCreating ||
-		isComposerWorkspaceSelectionLocked(
-			activeSessionId,
-			activeSessionMetadata,
-		);
-	const displayedWorkspace: WorkspaceConfig | null =
-		activeSessionId === null
-			? homeDraft.workspace
-			: currentSessionWorkspaceId === null
-				? null
-				: activeWorkspace;
-	const godotLaunchExecutablePath: string | null =
-		displayedWorkspace?.godotExecutablePath ??
-		activeSessionMetadata?.godotExecutablePath ??
-		(generalSettings.godotExecutableStatus === "ready"
-			? generalSettings.godotExecutablePath
-			: null);
-	const composerIsSending: boolean =
-		isRunControllerActive(runState) || isHomeSubmitting;
-	const composerIsCancelling: boolean = runState.status === "cancelling";
-	const appUpdateRuntimeBusy: boolean =
-		composerIsSending || runningSessionState.size > 0;
-	const nextStepSuggestionCandidate: unknown =
-		workbench?.nextStepHints?.hints?.[0]?.message;
-	const nextStepSuggestion: string | null =
-		activeSessionId === null ||
-		composerIsSending ||
-		typeof nextStepSuggestionCandidate !== "string"
-			? null
-			: nextStepSuggestionCandidate.trim() || null;
-	const runningSessionIds: string[] = [...runningSessionState.keys()];
-
-	useEffect((): void => {
-		void window.electronAPI.appUpdate
-			.setRuntimeBusy(appUpdateRuntimeBusy)
-			.catch((error: unknown): void => {
-				console.warn(
-					"[App] failed to publish runtime activity to update service",
-					error,
-				);
-			});
-	}, [appUpdateRuntimeBusy]);
-
-	useEffect((): void => {
-		activeSessionTitleRef.current = chatTitle;
-	}, [chatTitle]);
-
-	useEffect((): void => {
-		pendingUserActionRequestIdsRef.current.clear();
-		clearNativeTaskNotificationAttention();
-	}, [activeSessionId, clearNativeTaskNotificationAttention]);
-
-	useEffect((): void => {
-		if (activeSessionId === null || pendingApproval === null) {
-			return;
-		}
-
-		showNativeTaskNotification({
-			kind: "approval_required",
-			sessionId: activeSessionId,
-			requestId: pendingApproval.requestId,
-			title: t("nativeNotifications.approvalTitle"),
-			body: t("nativeNotifications.toolApprovalBody"),
-			dedupeKey: `approval_required:${activeSessionId}:tool:${pendingApproval.approvalId}`,
-		});
-	}, [
-		activeSessionId,
-		pendingApproval?.approvalId,
-		pendingApproval?.requestId,
-	]);
-
-	useEffect((): void => {
-		if (activeSessionId === null || pendingToolBudget === null) {
-			return;
-		}
-
-		showNativeTaskNotification({
-			kind: "approval_required",
-			sessionId: activeSessionId,
-			requestId: pendingToolBudget.requestId,
-			title: t("nativeNotifications.approvalTitle"),
-			body: t("nativeNotifications.toolBudgetBody"),
-			dedupeKey: `approval_required:${activeSessionId}:tool_budget:${pendingToolBudget.budgetId}`,
-		});
-	}, [
-		activeSessionId,
-		pendingToolBudget?.budgetId,
-		pendingToolBudget?.requestId,
-	]);
-
-	useEffect((): void => {
-		if (activeSessionId === null || pendingPlanApproval === null) {
-			return;
-		}
-
-		showNativeTaskNotification({
-			kind: "approval_required",
-			sessionId: activeSessionId,
-			requestId: pendingPlanApproval.requestId,
-			title: t("nativeNotifications.approvalTitle"),
-			body: t("nativeNotifications.planApprovalBody"),
-			dedupeKey: `approval_required:${activeSessionId}:plan:${pendingPlanApproval.planId}:${pendingPlanApproval.updatedAt}`,
-		});
-	}, [
-		activeSessionId,
-		pendingPlanApproval?.planId,
-		pendingPlanApproval?.requestId,
-		pendingPlanApproval?.updatedAt,
-	]);
-
-	useEffect((): void => {
-		if (activeSessionId === null || pendingPlanClarification === null) {
-			return;
-		}
-
-		showNativeTaskNotification({
-			kind: "clarification_required",
-			sessionId: activeSessionId,
-			requestId: pendingPlanClarification.requestId,
-			title: t("nativeNotifications.clarificationTitle"),
-			body: t("nativeNotifications.clarificationBody"),
-			dedupeKey: `clarification_required:${activeSessionId}:${pendingPlanClarification.planId}:${pendingPlanClarification.question}`,
-		});
-	}, [
-		activeSessionId,
-		pendingPlanClarification?.planId,
-		pendingPlanClarification?.question,
-		pendingPlanClarification?.requestId,
-	]);
-
-	const homePageProps = {
-		workspaceRefreshToken,
-		isHome: isNewSessionHome,
-		activeSessionId,
-		workspaceSidebar: clientPreferences.workspaceSidebar,
-		keyboardShortcuts: clientPreferences.keyboardShortcuts,
-		onWorkspaceSidebarChange: handleWorkspaceSidebarChange,
-		sessionLayout: activeSessionLayout,
-		onSessionLayoutChange: handleSessionLayoutChange,
-		activeSessionMetadata,
-		activeWorkspaceId:
-			activeSessionId === null
-				? homeDraft.workspaceId
-				: currentSessionWorkspaceId,
-		chatTitle,
-		timelineStore,
-		timelineNavigationEntries,
-		isSessionLoading,
-		sessionError,
-		isLoadingMoreBefore: isTimelineLoadingBefore,
-		isLoadingMoreAfter: isTimelineLoadingAfter,
-		retryDisabled: composerIsSending || isSessionLoading,
-		activeRetryRequestId,
-		providerModelSelection,
+	const {
 		selectedProviderId,
 		selectedModelId,
-		reasoningEffort: composerReasoningEffort,
-		composerInstanceKey,
-		message: composerMessage,
-		nextStepSuggestion,
-		onDraftChange: handleComposerDraftChange,
-		contextItems: composerContextItems,
-		selectionAskThreads,
-		messageQueue: composerMessageQueue,
-		pendingGuides: composerPendingGuides,
-		workflowTodoSnapshot,
-		currentGoal,
-		workflowTodoCollapsed:
-			activeSessionMetadata?.workflowTodoCollapsed === true,
-		mode: composerMode,
-		approvalMode,
-		pendingApproval,
-		isApproving,
-		isApprovalAutoSafeEnabling,
-		isRejecting,
-		approvalError,
 		pendingToolBudget,
-		isToolBudgetContinuing,
-		isToolBudgetStopping,
-		toolBudgetError,
-		pendingPlanClarification,
-		isPlanClarificationSubmitting,
-		planClarificationError,
-		pendingPlanApproval,
-		isPlanApproving,
-		isPlanRevising,
-		planApprovalError,
-		slashCommands,
-		skills,
-		isSending: composerIsSending,
-		isCancelling: composerIsCancelling,
-		isAddingTextAttachment,
-		isApprovalModeSaving,
-		workspaceOptions: homeWorkspaceOptions,
-		initialWorkspaces: bootstrapData.workspaceList.workspaces,
-		initialSessions: bootstrapData.sessionList.sessions,
-		initialActiveWorkspaceId: bootstrapData.workspaceList.active,
-		initialWorkspaceTreeOrder: bootstrapData.workspaceTreeOrder,
-		runningSessionIds,
-		unreadSessionIds: [...unreadSessionIds],
-		forkingSessionId: forkingSourceSessionId,
-		forkingRequestId,
-		forkDisabled:
-			composerIsSending ||
-			isSessionLoading ||
-			forkingSourceSessionId !== null,
-		homeWorkspace: homeDraft.workspace,
-		homeExecutionEnvironment: homeDraft.executionEnvironment,
-		homeWorktreeSources: homeDraft.worktreeSources,
-		worktreeDisabledReason,
-		isWorktreePreparing,
-		workspaceFooterDisabled:
-			isHomeSubmitting ||
-			isWorktreePreparing ||
-			composerWorkspaceLocked ||
-			isSessionLoading,
-		activeWorkspace: displayedWorkspace,
+		chatTitle,
+		composerMessage,
+		composerInstanceKey,
+		composerMode,
+		composerReasoningEffort,
+		composerContextItems,
+		composerMessageQueue,
+		composerPendingGuides,
+		currentSessionWorkspaceId,
+		composerWorkspaceLocked,
+		displayedWorkspace,
 		godotLaunchExecutablePath,
-		workspaceLaunchPreference:
-			activeSessionId === null
-				? homeDraft.workspaceLaunch
-				: (activeSessionMetadata?.workspaceLaunch ??
-					DEFAULT_WORKSPACE_LAUNCH_TARGET_ID),
-		onNewSession: handleNewSession,
-		onNewUnboundSession: (): void => {
-			void handleNewSession({ restoreTemporaryDraft: false });
+		composerIsSending,
+		composerIsCancelling,
+		appUpdateRuntimeBusy,
+		nextStepSuggestion,
+		runningSessionIds,
+	} = useComposerViewModel({
+		isNewSessionHome,
+		activeSessionId,
+		homeDraft,
+		workbench,
+		activeWorkspace,
+		activeSessionMetadata,
+		providerModelSelection,
+		firstTurnModelTransition,
+		composerInputReset,
+		composerDraftsRef,
+		homeComposerMessage,
+		isWorkspaceSessionCreating,
+		generalSettings,
+		runState,
+		isHomeSubmitting,
+		runningSessionState,
+	});
+
+	useAppRuntimeEventController({
+		state: {
+			activeSessionId,
+			isNewSessionHome,
+			providerModelSelection,
+			clientPreferences,
+			workbench,
+			runState,
+			chatTitle,
+			appUpdateRuntimeBusy,
 		},
-		onNewWorkspaceSession: (
-			workspace: WorkspaceConfig,
-			environment: "local" | "worktree" = "local",
-		): void => {
-			void handleNewWorkspaceSession(workspace, environment);
+		refs: {
+			activeSessionIdRef,
+			activeChatRequestIdRef,
+			cancelledChatRequestIdsRef,
+			pendingUserActionRequestIdsRef,
+			activeSessionTitleRef,
+			activeWorkbenchRef,
+			windowFocusedRef,
+			clientPreferencesRef,
 		},
-		onWorkspaceRefresh: (): void => {
-			setWorkspaceRefreshToken(
-				(currentToken: number): number => currentToken + 1,
-			);
+		setters: {
+			setRunState,
+			setIsHomeSubmitting,
+			setHomeDraft,
+			setUnreadSessionIds,
+			setRunningSessionState,
+			setClientPreferences,
+			setActiveSessionMetadata,
+			setWorkflowTodoSnapshot,
+			setCurrentGoalSnapshot: applyCurrentGoalSnapshot,
+			setLatestPlanClarification,
+			setLatestPlanApproval,
+			setPlanClarificationError,
+			setIsPlanClarificationSubmitting,
+			setPlanApprovalError,
+			setIsPlanApproving,
+			setIsPlanRevising,
 		},
-		onHomeWorkspaceSelect: (workspaceId: string): void => {
-			void handleHomeWorkspaceSelect(workspaceId);
+		timeline: {
+			timelineStore,
+			applyWorkbench,
+			appendQueuedRunUserBlock,
+			loadSkills,
+			clearWorkflowTodoUiState,
+			rememberLoadedWorkflowTodo,
+			applyInitialWorkflowTodoPreference,
+			showWorkflowTodo,
+			expandWorkflowTodoPanel,
+			refreshLatestTimeline,
 		},
-		onHomeWorkspaceAdd: handleHomeWorkspaceAdd,
-		onHomeWorkspaceClear: handleHomeWorkspaceClear,
-		onHomeExecutionEnvironmentChange: (
-			executionEnvironment: "local" | "worktree",
-		): void => {
-			if (
-				executionEnvironment === "worktree" &&
-				worktreeDisabledReason !== null
-			) {
-				return;
-			}
-			setHomeDraft(
-				(currentDraft: HomeDraft): HomeDraft => ({
-					...currentDraft,
-					executionEnvironment,
-				}),
-			);
+		interaction: {
+			handleInterruptedRunRetry,
+			handleNewSession,
+			runCompletionNotificationsEnabled:
+				clientPreferences.notifyOnRunCompleted,
+			pendingApproval,
+			pendingToolBudget,
+			pendingPlanApproval,
+			pendingPlanClarification,
 		},
-		onHomeWorktreeSourcesChange: (
-			worktreeSources: HomeDraft["worktreeSources"],
-		): void => {
-			setHomeDraft(
-				(currentDraft: HomeDraft): HomeDraft => ({
-					...currentDraft,
-					worktreeSources,
-				}),
-			);
+		notificationCopy: {
+			approvalTitle: t("nativeNotifications.approvalTitle"),
+			toolApprovalBody: t("nativeNotifications.toolApprovalBody"),
+			toolBudgetBody: t("nativeNotifications.toolBudgetBody"),
+			planApprovalBody: t("nativeNotifications.planApprovalBody"),
+			clarificationTitle: t("nativeNotifications.clarificationTitle"),
+			clarificationBody: t("nativeNotifications.clarificationBody"),
 		},
-		onSessionSelect: handleSessionSelect,
-		onSessionFork: (session: SessionMetadata): void => {
-			void handleSessionFork(session);
+	});
+
+	const homePageProps = createHomePageViewModelFromRuntime({
+		layout: {
+			workspaceRefreshToken,
+			isNewSessionHome,
+			activeSessionId,
+			clientPreferences,
+			onWorkspaceSidebarChange: handleWorkspaceSidebarChange,
+			activeSessionLayout,
+			onSessionLayoutChange: handleSessionLayoutChange,
+			activeSessionMetadata,
+			homeWorkspaceId: homeDraft.workspaceId,
+			currentSessionWorkspaceId,
+			chatTitle,
+			timelineStore,
+			timelineNavigationEntries,
+			isSessionLoading,
+			sessionError,
+			isLoadingMoreBefore: isTimelineLoadingBefore,
+			isLoadingMoreAfter: isTimelineLoadingAfter,
+			isSending: composerIsSending,
+			activeRetryRequestId,
 		},
-		onForkFromUserMessage: async (requestId: string): Promise<void> => {
-			if (activeSessionMetadata === null) {
-				return;
-			}
-			await handleSessionFork(activeSessionMetadata, requestId);
+		composer: {
+			providerModelSelection,
+			selectedProviderId,
+			selectedModelId,
+			reasoningEffort: composerReasoningEffort,
+			composerInstanceKey,
+			message: composerMessage,
+			nextStepSuggestion,
+			onDraftChange: handleComposerDraftChange,
+			contextItems: composerContextItems,
+			selectionAskThreads,
+			messageQueue: composerMessageQueue,
+			pendingGuides: composerPendingGuides,
+			workflowTodoSnapshot,
+			currentGoal,
+			activeSessionMetadata,
+			mode: composerMode,
+			approvalMode,
+			pendingApproval,
+			isApproving,
+			isApprovalAutoSafeEnabling,
+			isRejecting,
+			approvalError,
+			pendingToolBudget,
+			isToolBudgetContinuing,
+			isToolBudgetStopping,
+			toolBudgetError,
+			pendingPlanClarification,
+			isPlanClarificationSubmitting,
+			planClarificationError,
+			pendingPlanApproval,
+			isPlanApproving,
+			isPlanRevising,
+			planApprovalError,
+			slashCommands,
+			skills,
+			isSending: composerIsSending,
+			isCancelling: composerIsCancelling,
+			isAddingTextAttachment,
+			isApprovalModeSaving,
+			activeQueueItemId: workbench?.activeRun.queueItemId ?? null,
 		},
-		onForkSourceOpen: openForkSource,
-		onSessionArchive: handleSessionArchive,
-		onSessionRename: handleSessionRename,
-		onSessionWorkspaceMove: handleSessionWorkspaceMove,
-		onSessionWorktreeDelete: handleSessionWorktreeDelete,
-		onSessionWorktreeHandoff: handleSessionWorktreeHandoff,
-		onSessionWorktreeSetup: handleSessionWorktreeSetup,
-		onSessionsChange: handleSessionsChange,
-		onWorkspaceDelete: handleWorkspaceDelete,
-		onWorkspaceUpdate: handleWorkspaceUpdate,
-		onWorkspaceProjectCreated: handleWorkspaceTreeProjectCreated,
-		onLoadMoreBefore: handleLoadMoreBefore,
-		onLoadMoreAfter: handleLoadMoreAfter,
-		onTimelineNavigationLoadEntry: handleTimelineNavigationLoadEntry,
-		onTimelineSearchLoadOffset: handleTimelineSearchLoadOffset,
-		onRetryEditStart: (requestId: string): void => {
-			setActiveRetryRequestId(requestId);
+		workspace: {
+			workspaceOptions: homeWorkspaceOptions,
+			initialWorkspaces: bootstrapData.workspaceList.workspaces,
+			initialSessions: bootstrapData.sessionList.sessions,
+			initialActiveWorkspaceId: bootstrapData.workspaceList.active,
+			initialWorkspaceTreeOrder: bootstrapData.workspaceTreeOrder,
+			runningSessionIds,
+			unreadSessionIds,
+			forkingSessionId: forkingSourceSessionId,
+			forkingRequestId,
+			isSending: composerIsSending,
+			isSessionLoading,
+			hasForkingSession: forkingSourceSessionId !== null,
+			homeWorkspace: homeDraft.workspace,
+			homeExecutionEnvironment: homeDraft.executionEnvironment,
+			homeWorktreeSources: homeDraft.worktreeSources,
+			worktreeDisabledReason,
+			isWorktreePreparing,
+			isHomeSubmitting,
+			composerWorkspaceLocked,
+			activeWorkspace: displayedWorkspace,
+			godotLaunchExecutablePath,
+			activeSessionId,
+			activeSessionMetadata,
+			homeWorkspaceLaunchPreference: homeDraft.workspaceLaunch,
+			defaultWorkspaceLaunchPreference:
+				DEFAULT_WORKSPACE_LAUNCH_TARGET_ID,
 		},
-		onRetryEditCancel: (requestId: string): void => {
-			setActiveRetryRequestId(
-				(currentRequestId: string | null): string | null => {
-					return currentRequestId === requestId
-						? null
-						: currentRequestId;
+		actions: createHomePageActions({
+			activeSessionMetadata,
+			worktreeDisabledReason,
+			setWorkspaceRefreshToken,
+			setHomeDraft,
+			setActiveRetryRequestId,
+			handlers: createHomePageDirectActionHandlers({
+				navigation: {
+					handleNewSession,
+					handleNewWorkspaceSession,
+					handleHomeWorkspaceSelect,
+					handleHomeWorkspaceAdd,
+					handleHomeWorkspaceClear,
+					handleSessionSelect,
+					handleSessionFork,
+					onForkSourceOpen: openForkSource,
+					handleSessionArchive,
+					handleSessionRename,
+					handleSessionWorkspaceMove,
+					handleSessionWorktreeDelete,
+					handleSessionWorktreeHandoff,
+					handleSessionWorktreeSetup,
+					handleSessionsChange,
+					handleWorkspaceDelete,
+					handleWorkspaceUpdate,
+					handleWorkspaceProjectCreated: handleWorkspaceTreeProjectCreated,
 				},
-			);
-		},
-		onRetryFromUserMessage: handleRetryFromUserMessage,
-		onModeChange: (mode: ChatMode): void => {
-			void handleModeChange(mode);
-		},
-		onApprovalModeChange: (mode: ApprovalMode): void => {
-			void handleApprovalModeChange(mode);
-		},
-		onApprovalApprove: (approvalId: string, consentText?: string): void => {
-			void handleApprovalApprove(approvalId, consentText);
-		},
-		onApprovalApproveAndEnableAutoSafe: (
-			approvalId: string,
-			consentText?: string,
-		): void => {
-			void handleApprovalApproveAndEnableAutoSafe(
-				approvalId,
-				consentText,
-			);
-		},
-		onApprovalReject: (approvalId: string): void => {
-			void handleApprovalReject(approvalId);
-		},
-		onToolBudgetContinue: (budgetId: string): void => {
-			void handleToolBudgetContinue(budgetId);
-		},
-		onToolBudgetStop: (budgetId: string): void => {
-			void handleToolBudgetStop(budgetId);
-		},
-		onPlanClarificationSubmit: (reply: string): void => {
-			void handlePlanClarificationSubmit(reply);
-		},
-		onPlanClarificationSkip: (): void => {
-			void handlePlanClarificationSubmit(undefined, true);
-		},
-		onPlanApprove: (planId: string): void => {
-			void handlePlanApprove(planId);
-		},
-		onPlanRevise: (planId: string, feedback: string): void => {
-			void handlePlanRevise(planId, feedback);
-		},
-		onProviderModelChange: (providerId: string, modelId: string): void => {
-			void handleProviderModelChange(providerId, modelId);
-		},
-		onReasoningEffortChange: (effort: string): void => {
-			void handleReasoningEffortChange(effort);
-		},
-		onWorkspaceLaunchChange: handleWorkspaceLaunchChange,
-		onAddFiles: (): void => {
-			void handleAddWorkspaceContext("files");
-		},
-		onAddFolder: (): void => {
-			void handleAddWorkspaceContext("folder");
-		},
-		onAddImages: (files: File[]): void => {
-			void handleAddImageFiles(files);
-		},
-		onAddPastedTextAttachment: handleAddPastedTextAttachment,
-		onAddContextFiles: (files: File[]): void => {
-			void handleAddContextFiles(files);
-		},
-		onAddContext: (item: AdditionalContextItem): void =>
-			patchContext({ action: "addOrReplace", item }),
-		onRemoveContext: (contextId: string): void =>
-			patchContext({ action: "remove", contextId }),
-		onPinContext: (contextId: string, pinned: boolean): void =>
-			patchContext({ action: "pin", contextId, pinned }),
-		onClearUnpinnedContext: (): void =>
-			patchContext({ action: "clearUnpinned" }),
-		onCancel: (): void => {
-			void handleComposerCancel();
-		},
-		onSubmit: (message: string, modeOverride?: ChatMode): void => {
-			void handleComposerSubmit(message, modeOverride);
-		},
-		onGuideSubmit: (message: string): void => {
-			void handleGuideSubmit(message);
-		},
-		activeQueueItemId: workbench?.activeRun.queueItemId ?? null,
-		onQueueMessageRemove: (queueId: number): void => {
-			void handleQueueMessageRemove(queueId);
-		},
-		onQueueMessageEdit: (item: MessageQueueItem): void => {
-			void handleQueueMessageEdit(item);
-		},
-		onQueueMessageReorder: (queueIds: number[]): void => {
-			void handleQueueMessageReorder(queueIds);
-		},
-		onGuideDelete: (guideId: string): void => {
-			void handleGuideDelete(guideId);
-		},
-		onGuideReorder: (guideIds: string[]): void => {
-			void handleGuideReorder(guideIds);
-		},
-		onWorkflowTodoDismiss: (snapshot: WorkflowTodoSnapshot): void => {
-			void handleWorkflowTodoDismiss(snapshot);
-		},
-		onGoalChange: applyCurrentGoalSnapshot,
-		onGoalDismiss: handleTerminalGoalDismiss,
-		onCompletionOpen: handleCompletionOpen,
-	};
+				timeline: {
+					handleLoadMoreBefore,
+					handleLoadMoreAfter,
+					handleTimelineNavigationLoadEntry,
+					handleTimelineSearchLoadOffset,
+					handleRetryFromUserMessage,
+					handlePlanClarificationSubmit,
+					handlePlanApprove,
+					handlePlanRevise,
+					handleWorkflowTodoDismiss,
+					applyCurrentGoalSnapshot,
+					handleTerminalGoalDismiss,
+					handleCompletionOpen,
+				},
+				settings: {
+					handleModeChange,
+					handleApprovalModeChange,
+					handleApprovalApprove,
+					handleApprovalApproveAndEnableAutoSafe,
+					handleApprovalReject,
+					handleToolBudgetContinue,
+					handleToolBudgetStop,
+					handleProviderModelChange,
+					handleReasoningEffortChange,
+					handleWorkspaceLaunchChange,
+					handleAddPastedTextAttachment,
+				},
+			}),
+			handleSessionFork,
+			handleAddWorkspaceContext,
+			handleAddImageFiles,
+			handleAddContextFiles,
+			patchContext,
+			handleComposerCancel,
+			handleComposerSubmit,
+			handleGuideSubmit,
+			handleQueueMessageRemove,
+			handleQueueMessageEdit,
+			handleQueueMessageReorder,
+			handleGuideDelete,
+			handleGuideReorder,
+		}),
+	});
 
 	return {
 		messageContextHolder,
 		homePageProps,
-		fullTrustOpen: isFullTrustModalOpen,
-		fullTrustConfirmationText,
+		fullTrustOpen: fullTrustController.isOpen,
+		fullTrustConfirmationText: fullTrustController.confirmationText,
 		isApprovalModeSaving,
 		fullTrustConfirmationToken: FULL_TRUST_CONFIRMATION_TEXT,
 		fullTrustTitle: t("app.fullTrust.title"),
@@ -4567,17 +1094,10 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			);
 		},
 		onFullTrustConfirm: (): void => {
-			void handleFullTrustConfirm();
+			void fullTrustController.confirm();
 		},
-		onFullTrustCancel: (): void => {
-			if (!isApprovalModeSaving) {
-				setIsFullTrustModalOpen(false);
-				setFullTrustConfirmationText("");
-			}
-		},
-		onFullTrustConfirmationTextChange: (value: string): void => {
-			setFullTrustConfirmationText(value);
-		},
+		onFullTrustCancel: fullTrustController.cancel,
+		onFullTrustConfirmationTextChange: fullTrustController.setConfirmationText,
 		workspaceProjectDialogOpen: isWorkspaceProjectDialogOpen,
 		onWorkspaceProjectDialogCancel: (): void =>
 			setIsWorkspaceProjectDialogOpen(false),

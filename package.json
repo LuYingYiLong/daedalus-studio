@@ -28,13 +28,13 @@
     "dist": "npm run build:win",
     "preview": "node scripts/electron-vite.cjs preview",
     "preview:concept-video": "remotion studio src/renderer/src/app/onboarding/concept-video/RemotionRoot.tsx --no-open",
-    "test:unit": "vitest run tests/unit tests/integration tests/renderer tests/goal-state.test.ts tests/onboarding.test.ts",
-    "test:static": "vitest run tests/static",
+		"test:unit": "vitest run --configLoader runner tests/unit tests/integration tests/renderer tests/goal-state.test.ts tests/onboarding.test.ts",
+		"test:static": "vitest run --configLoader runner tests/static",
     "test": "npm run test:unit && npm run test:static",
     "test:e2e": "npm run build && npm run test:e2e:built",
     "test:e2e:built": "playwright test",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+		"test:watch": "vitest --configLoader runner",
+		"test:coverage": "vitest run --configLoader runner --coverage"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

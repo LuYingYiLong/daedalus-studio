@@ -36,7 +36,7 @@ type WorkspaceLaunchTarget = {
 	label: string;
 };
 
-type HomeChatSurfaceProps = {
+export type HomeChatSurfaceProps = {
 	activeSessionMetadata: SessionMetadata | null;
 	isSessionLoading: boolean;
 	onForkSourceOpen: (sessionId: string) => Promise<void>;

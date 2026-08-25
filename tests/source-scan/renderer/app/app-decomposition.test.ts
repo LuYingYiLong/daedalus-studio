@@ -19,7 +19,7 @@ describe("App decomposition", () => {
 		const controllerSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "useAppController.tsx");
 		expect(controllerSource).toContain("useApprovalController");
 		expect(controllerSource).toContain("useWorkspaceContextController");
-		expect(controllerSource).toContain("useAppEventBridge");
+		expect(controllerSource).toContain("useAppRuntimeEventController");
 		expect(controllerSource).toContain("usePlanGoalController");
 		expect(controllerSource).toContain("useTimelineController");
 		expect(controllerSource).toContain("@/features/approval/controllers/useApprovalController");

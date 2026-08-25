@@ -3,7 +3,10 @@ import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-pa
 
 describe("Run state source", () => {
 	it("centralizes Composer run controls through run-state helpers", () => {
-		const appSource: string = readAppImplementation();
+		const appSource: string = [
+			readAppImplementation(),
+			readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useComposerRunController.ts"),
+		].join("\n");
 		const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useBackendEventStream.ts");
 		const runStateSource: string = readRepoFile("src", "renderer", "src", "domain", "workbench", "run-state.ts");
 

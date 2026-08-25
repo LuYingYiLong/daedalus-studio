@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { readAppImplementation, readRepoFile } from "../../../../helpers/repo-paths";
 
 describe("Composer draft lifetime", () => {
-	const appSource: string = readAppImplementation();
+	const appSource: string = [
+		readAppImplementation(),
+		readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useComposerTimelineRuntimeController.ts"),
+	].join("\n");
 	const composerSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.tsx");
 	const homePageSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
 

@@ -5,7 +5,10 @@ describe("MessageQueuePanel source", () => {
 	const panelSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "MessageQueuePanel.tsx");
 	const panelStyleSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "MessageQueuePanel.module.css");
 	const composerSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.tsx");
-	const appSource: string = readAppImplementation();
+	const appSource: string = [
+		readAppImplementation(),
+		readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useComposerQueueController.ts"),
+	].join("\n");
 	const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useBackendEventStream.ts");
 	const agentSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
 	const queueApiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "message-queue-api.ts");

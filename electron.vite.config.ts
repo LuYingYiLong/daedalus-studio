@@ -1,7 +1,10 @@
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "electron-vite";
 import svgr from "vite-plugin-svgr";
+
+const projectDirectory = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
 	main: {
@@ -9,7 +12,7 @@ export default defineConfig({
 			rollupOptions: {
 				external: ["node-pty"],
 				input: {
-					index: resolve(__dirname, "src/main/index.ts")
+					index: resolve(projectDirectory, "src/main/index.ts")
 				}
 			}
 		}
@@ -18,34 +21,34 @@ export default defineConfig({
 		build: {
 			rollupOptions: {
 				input: {
-					index: resolve(__dirname, "src/preload/index.ts")
+					index: resolve(projectDirectory, "src/preload/index.ts")
 				}
 			}
 		}
 	},
 	renderer: {
-		root: resolve(__dirname, "src/renderer"),
+		root: resolve(projectDirectory, "src/renderer"),
 		plugins: [react(), svgr()],
 		resolve: {
 			alias: [
 				{
 					find: /^decode-named-character-reference$/,
-					replacement: resolve(__dirname, "node_modules/decode-named-character-reference/index.js")
+					replacement: resolve(projectDirectory, "node_modules/decode-named-character-reference/index.js")
 				},
 				{
 					find: "@",
-					replacement: resolve(__dirname, "src/renderer/src")
+					replacement: resolve(projectDirectory, "src/renderer/src")
 				},
 				{
 					find: "@renderer",
-					replacement: resolve(__dirname, "src/renderer/src")
+					replacement: resolve(projectDirectory, "src/renderer/src")
 				}
 			]
 		},
 		build: {
 			rollupOptions: {
 				input: {
-					index: resolve(__dirname, "src/renderer/index.html")
+					index: resolve(projectDirectory, "src/renderer/index.html")
 				}
 			}
 		}

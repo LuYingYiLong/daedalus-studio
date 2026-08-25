@@ -40,7 +40,7 @@ function completedPreferences(): Record<string, unknown> {
 async function dismissReleaseNotesIfPresent(page: Page): Promise<void> {
 	const acknowledgeButton = page.getByRole("button", { name: /Got it|知道了/ });
 	try {
-		await acknowledgeButton.click({ timeout: 2_000 });
+		await acknowledgeButton.click({ timeout: 5_000 });
 	} catch {
 		// The changelog dialog is only shown for a fresh local profile.
 	}

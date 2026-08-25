@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths";
 
 describe("App plan clarification source", () => {
-	const source: string = readAppImplementation();
+	const source: string = [
+		readAppImplementation(),
+		readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useComposerTimelineRuntimeController.ts"),
+	].join("\n");
 	const backendEventStateSource: string = readRepoFile("src", "renderer", "src", "domain", "run", "backend-event-state.ts");
 	const backendEventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useBackendEventStream.ts");
 

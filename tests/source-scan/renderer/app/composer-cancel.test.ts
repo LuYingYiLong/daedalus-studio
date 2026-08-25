@@ -3,7 +3,12 @@ import { readAppImplementation, readRepoFile } from "../../../helpers/repo-paths
 
 describe("Composer cancellation source", () => {
 	it("can cancel while a new session is being created and blocks the pending chat RPC", () => {
-		const appSource: string = readAppImplementation();
+		const appSource: string = [
+			readAppImplementation(),
+			readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useHomeComposerController.ts"),
+			readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useComposerRunController.ts"),
+			readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useComposerTimelineRuntimeController.ts"),
+		].join("\n");
 		const composerSource: string = readRepoFile("src", "renderer", "src", "widgets", "composer", "Composer.tsx");
 		const eventStreamSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "hooks", "useBackendEventStream.ts");
 
@@ -12,7 +17,9 @@ describe("Composer cancellation source", () => {
 		expect(appSource).toContain("cancelledChatRequestIdsRef.current.add(cancellationRequestId);");
 		expect(appSource).toContain("cancelledChatRequestIdsRef.current.has(cancellationRequestId)");
 		expect(appSource).toContain("!result.alreadyFinished");
-		expect(appSource).toContain("if (result.cancelled || result.alreadyFinished || wasCreatingSession)");
+		expect(appSource).toContain("result.cancelled ||");
+		expect(appSource).toContain("result.alreadyFinished ||");
+		expect(appSource).toContain("wasCreatingSession");
 		expect(appSource).toContain("finishOptimisticActiveRun(cancellationRequestId);");
 		expect(appSource).toContain("setIsHomeSubmitting(false);");
 		expect(appSource).toContain("homeSubmissionPendingRef.current");
