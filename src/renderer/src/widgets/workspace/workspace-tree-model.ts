@@ -1,4 +1,6 @@
-import type { SessionMetadata } from "@/platform/rpc/types";
+import type { SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
+
+export type SessionOriginKind = "fork" | "worktree" | "permanent-worktree";
 
 export function filterVisibleSessions(
 	sessions: readonly SessionMetadata[],
@@ -12,6 +14,25 @@ export function getSessionProjectWorkspaceId(
 	session: SessionMetadata,
 ): string | undefined {
 	return session.worktree?.sourceWorkspaceId ?? session.workspaceId;
+}
+
+export function getSessionOriginKind(
+	session: SessionMetadata,
+	workspace: WorkspaceConfig | undefined,
+): SessionOriginKind | null {
+	if (session.forkedFrom !== undefined) {
+		return "fork";
+	}
+	if (
+		session.worktree?.permanent === true ||
+		(session.worktree === undefined && workspace?.permanentWorktree !== undefined)
+	) {
+		return "permanent-worktree";
+	}
+	if (session.worktree !== undefined) {
+		return "worktree";
+	}
+	return null;
 }
 
 export function getSelectedMenuKeys(

@@ -3,6 +3,7 @@ import {
 	areStringListsEqual,
 	filterVisibleSessions,
 	getSelectedMenuKeys,
+	getSessionOriginKind,
 	getSessionProjectWorkspaceId,
 } from "@/widgets/workspace/workspace-tree-model";
 
@@ -32,5 +33,28 @@ describe("workspace tree model", () => {
 		expect(getSelectedMenuKeys(null, null, ["projects"])).toEqual(["projects"]);
 		expect(areStringListsEqual(["a", "b"], ["a", "b"])).toBe(true);
 		expect(areStringListsEqual(["a"], ["b"])).toBe(false);
+	});
+
+	it("identifies fork, worktree, and permanent worktree origins", (): void => {
+		const permanentWorkspace = {
+			id: "permanent-workspace",
+			permanentWorktree: { id: "permanent-worktree" },
+		} as never;
+
+		expect(
+			getSessionOriginKind(
+				{ forkedFrom: { sessionId: "source" } } as never,
+				undefined,
+			),
+		).toBe("fork");
+		expect(
+			getSessionOriginKind(
+				{ worktree: { permanent: false } } as never,
+				undefined,
+			),
+		).toBe("worktree");
+		expect(
+			getSessionOriginKind({} as never, permanentWorkspace),
+		).toBe("permanent-worktree");
 	});
 });

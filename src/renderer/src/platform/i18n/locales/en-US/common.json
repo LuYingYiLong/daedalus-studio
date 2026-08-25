@@ -348,7 +348,9 @@
 			"moveSessionNoTargets": "There are no other projects to move this session to",
 			"unreadResponse": "Unread assistant response",
 			"exportingSession": "Exporting session…",
-			"worktreeSession": "Worktree session"
+			"forkedSession": "Forked session",
+			"worktreeSession": "Worktree session",
+			"permanentWorktreeSession": "Permanent worktree session"
 		},
 		"messages": {
 			"sessionIdCopied": "Session ID copied",
@@ -1144,7 +1146,6 @@
 			}
 		},
 		"fork": {
-			"titleSuffix": " · Fork",
 			"untitledSource": "Untitled session",
 			"originLabel": "Forked from",
 			"openSourceTooltip": "Open source session",

@@ -346,7 +346,9 @@
 			"moveSessionNoTargets": "没有其他可移动到的项目",
 			"unreadResponse": "未读助手响应",
 			"exportingSession": "正在导出会话…",
-			"worktreeSession": "工作树会话"
+			"forkedSession": "分叉会话",
+			"worktreeSession": "工作树会话",
+			"permanentWorktreeSession": "永久工作树会话"
 		},
 		"messages": {
 			"sessionIdCopied": "已复制会话 ID",
@@ -1142,7 +1144,6 @@
 			}
 		},
 		"fork": {
-			"titleSuffix": " · 分叉",
 			"untitledSource": "未命名会话",
 			"originLabel": "分叉自",
 			"openSourceTooltip": "打开来源会话",

@@ -117,10 +117,9 @@ export default function useSessionForkController({
 		try {
 			await discardTemporarySessionIfEmpty();
 			await persistPendingWorkbenchPatchBeforeNavigation();
-			const titleSuffix: string = t("chat.fork.titleSuffix");
 			const sourceTitle: string =
 				source.title.trim() || t("chat.fork.untitledSource");
-			const forkTitle: string = `${sourceTitle.slice(0, Math.max(1, 200 - titleSuffix.length))}${titleSuffix}`;
+			const forkTitle: string = sourceTitle.slice(0, 200);
 			const result: SessionForkResult = await forkSession({
 				sourceSessionId: source.id,
 				...(sourceRequestId === undefined ? {} : { sourceRequestId }),

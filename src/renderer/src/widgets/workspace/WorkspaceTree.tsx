@@ -69,7 +69,9 @@ import {
 	areStringListsEqual,
 	filterVisibleSessions,
 	getSelectedMenuKeys,
+	getSessionOriginKind,
 	getSessionProjectWorkspaceId,
+	type SessionOriginKind,
 } from "./workspace-tree-model";
 import styles from "./WorkspaceTree.module.css";
 
@@ -185,7 +187,9 @@ type WorkspaceTreeLabels = {
 	unpinSession: string;
 	assistantRunning: string;
 	unreadResponse: string;
+	forkedSession: string;
 	worktreeSession: string;
+	permanentWorktreeSession: string;
 	archiveSessionAria: (sessionTitle: string) => string;
 	pinSessionAria: (sessionTitle: string, pinned: boolean) => string;
 	newSessionInWorkspaceAria: (workspaceName: string) => string;
@@ -216,6 +220,7 @@ type CreateSessionMenuItemOptions = {
 	pinningSessionId: string | null;
 	movingSessionId: string | null;
 	moveWorkspaces: WorkspaceConfig[];
+	workspaceById: ReadonlyMap<string, WorkspaceConfig>;
 	runningSessionIds: ReadonlySet<string>;
 	unreadSessionIds: ReadonlySet<string>;
 	labels: WorkspaceTreeLabels;
@@ -278,6 +283,24 @@ function createSessionTreePresentation(
 		options.deletingWorktreeSessionId === session.id;
 	const isPinned: boolean = session.pinned === true;
 	const labels: WorkspaceTreeLabels = options.labels;
+	const originKind: SessionOriginKind | null = getSessionOriginKind(
+		session,
+		options.workspaceById.get(session.workspaceId ?? ""),
+	);
+	const originPresentation: {
+		iconName: string;
+		label: string;
+	} | null =
+		originKind === "fork"
+			? { iconName: "fork", label: labels.forkedSession }
+			: originKind === "permanent-worktree"
+				? {
+						iconName: "permanent-worktree",
+						label: labels.permanentWorktreeSession,
+					}
+				: originKind === "worktree"
+					? { iconName: "worktree", label: labels.worktreeSession }
+					: null;
 	const currentWorkspaceId: string | undefined =
 		getSessionProjectWorkspaceId(session);
 	const canMove: boolean =
@@ -445,13 +468,6 @@ function createSessionTreePresentation(
 		label: (
 			<Dropdown menu={actionMenu} trigger={["contextMenu"]}>
 				<span className={styles.sessionMenuItem}>
-					{session.worktree !== undefined ? (
-						<Tooltip title={labels.worktreeSession}>
-							<span className={styles.worktreeIndicator}>
-								<Icon name="git-branch" />
-							</span>
-						</Tooltip>
-					) : null}
 					<Badge
 						dot={isUnread}
 						color="var(--ant-color-primary)"
@@ -499,53 +515,71 @@ function createSessionTreePresentation(
 							}
 						/>
 					</Tooltip>
-					{isRunning || isMoving ? (
-						<Tooltip
-							title={
-								isMoving
-									? labels.movingSession
-									: labels.assistantRunning
-							}
-						>
-							<span
-								className={styles.sessionRunIndicator}
-								aria-label={
+					<span
+						className={`${styles.sessionEndSlot} ${
+							isRunning || isMoving
+								? styles.sessionEndSlotRunning
+								: ""
+						}`}
+					>
+						{originPresentation === null ? null : (
+							<Tooltip title={originPresentation.label}>
+								<span
+									className={styles.sessionOriginIndicator}
+									aria-label={originPresentation.label}
+								>
+									<Icon name={originPresentation.iconName} />
+								</span>
+							</Tooltip>
+						)}
+						{isRunning || isMoving ? (
+							<Tooltip
+								title={
 									isMoving
 										? labels.movingSession
 										: labels.assistantRunning
-								}
+									}
 							>
-								<Spin size="small" />
-							</span>
-						</Tooltip>
-					) : (
-						<Tooltip title={labels.archiveSession}>
-							<Button
-								type="text"
-								shape="circle"
-								size="small"
-								aria-label={labels.archiveSessionAria(
-									session.title,
-								)}
-								className={styles.archiveButton}
-								icon={<Icon name="archive" />}
-								loading={isArchiving}
-								draggable={false}
-								onMouseDown={(event): void =>
-									event.stopPropagation()
-								}
-								onDragStart={(event): void => {
-									event.preventDefault();
-									event.stopPropagation();
-								}}
-								onClick={(
-									event: MouseEvent<HTMLElement>,
-								): void =>
-									options.onArchiveButton(session, event)
-								}
-							/>
-						</Tooltip>
-					)}
+								<span
+									className={styles.sessionRunIndicator}
+									aria-label={
+										isMoving
+											? labels.movingSession
+											: labels.assistantRunning
+									}
+								>
+									<Spin size="small" />
+								</span>
+							</Tooltip>
+						) : (
+							<Tooltip title={labels.archiveSession}>
+								<Button
+									type="text"
+									shape="circle"
+									size="small"
+									aria-label={labels.archiveSessionAria(
+										session.title,
+									)}
+									className={styles.archiveButton}
+									icon={<Icon name="archive" />}
+									loading={isArchiving}
+									draggable={false}
+									onMouseDown={(event): void =>
+										event.stopPropagation()
+									}
+									onDragStart={(event): void => {
+										event.preventDefault();
+										event.stopPropagation();
+									}}
+									onClick={(
+										event: MouseEvent<HTMLElement>,
+									): void =>
+										options.onArchiveButton(session, event)
+									}
+								/>
+							</Tooltip>
+						)}
+					</span>
 				</span>
 			</Dropdown>
 		),
@@ -1123,7 +1157,11 @@ function WorkspaceTree({
 			unreadResponse: t("workspaceTree.status.unreadResponse", {
 				defaultValue: "Unread assistant response",
 			}),
+			forkedSession: t("workspaceTree.status.forkedSession"),
 			worktreeSession: t("workspaceTree.status.worktreeSession"),
+			permanentWorktreeSession: t(
+				"workspaceTree.status.permanentWorktreeSession",
+			),
 			workspaceActionsAria: (workspaceName: string): string =>
 				t("workspaceTree.aria.workspaceActions", { workspaceName }),
 			moveSessionToWorkspaceAria: (workspaceName: string): string =>
@@ -1885,6 +1923,7 @@ function WorkspaceTree({
 						sessions,
 					),
 				),
+				workspaceById,
 				runningSessionIds: runningSessionIdSet,
 				unreadSessionIds: unreadSessionIdSet,
 				labels,
