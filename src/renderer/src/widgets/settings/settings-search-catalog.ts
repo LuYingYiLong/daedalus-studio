@@ -62,6 +62,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 	{ key: "item:general.language", page: "general", titleKey: "settings.general.display.language.title", descriptionKey: "settings.general.display.language.description" },
 	{ key: "item:general.notifyOnRunCompleted", page: "general", titleKey: "settings.general.notifications.runCompleted.title", descriptionKey: "settings.general.notifications.runCompleted.description" },
 	{ key: "item:general.autoCompactActivityDetails", page: "general", titleKey: "settings.general.general.autoCompactActivityDetails.title", descriptionKey: "settings.general.general.autoCompactActivityDetails.description" },
+	{ key: "item:general.developerMode", page: "general", titleKey: "settings.general.general.developerMode.title", descriptionKey: "settings.general.general.developerMode.description" },
 	{ key: "item:general.nextStepHintsEnabled", page: "general", titleKey: "settings.general.general.nextStepHintsEnabled.title", descriptionKey: "settings.general.general.nextStepHintsEnabled.description" },
 	{ key: "item:general.autoCheckForUpdates", page: "general", titleKey: "settings.general.general.autoCheckForUpdates.title", descriptionKey: "settings.general.general.autoCheckForUpdates.description" },
 	{ key: "item:general.minimizeToTrayOnClose", page: "general", titleKey: "settings.general.general.minimizeToTrayOnClose.title", descriptionKey: "settings.general.general.minimizeToTrayOnClose.description" },

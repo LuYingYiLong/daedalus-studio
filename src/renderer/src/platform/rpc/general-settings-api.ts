@@ -6,13 +6,15 @@ export type { GeneralSettings } from "../../../../contracts/general-settings";
 export type GeneralSettingsPatch = {
 	nextStepHintsEnabled?: boolean;
 	autoCompactActivityDetails?: boolean;
+	developerMode?: boolean;
 	godotExecutablePath?: string | null;
 };
 
 export const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
-	schemaVersion: 4,
+	schemaVersion: 5,
 	nextStepHintsEnabled: false,
 	autoCompactActivityDetails: true,
+	developerMode: import.meta.env.DEV,
 	godotExecutablePath: null,
 	godotExecutableVersion: null,
 	godotExecutableStatus: "unconfigured",

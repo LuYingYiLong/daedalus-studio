@@ -63,6 +63,7 @@ function createEmptyWorkbench(sessionId: string | null = null): Record<string, u
 function createDefaultHandlers(): Record<string, MockRpcHandler> {
 	let nextStepHintsEnabled: boolean = false;
 	let autoCompactActivityDetails: boolean = true;
+	let developerMode: boolean = true;
 	const provider = {
 		provider: "openai",
 		displayName: "OpenAI",
@@ -119,9 +120,10 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 		}),
 		"client.capabilities.update": () => ({ updated: true }),
 		"generalSettings.get": () => ({
-			schemaVersion: 4,
+			schemaVersion: 5,
 			nextStepHintsEnabled,
 			autoCompactActivityDetails,
+			developerMode,
 			godotExecutablePath: null,
 			godotExecutableVersion: null,
 			godotExecutableStatus: "unconfigured",
@@ -129,17 +131,21 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 			updatedAt: MOCK_NOW,
 		}),
 		"generalSettings.update": ({ params }) => {
-			const patch = (params ?? {}) as { nextStepHintsEnabled?: boolean; autoCompactActivityDetails?: boolean };
+			const patch = (params ?? {}) as { nextStepHintsEnabled?: boolean; autoCompactActivityDetails?: boolean; developerMode?: boolean };
 			if (patch.nextStepHintsEnabled !== undefined) {
 				nextStepHintsEnabled = patch.nextStepHintsEnabled;
 			}
 			if (patch.autoCompactActivityDetails !== undefined) {
 				autoCompactActivityDetails = patch.autoCompactActivityDetails;
 			}
+			if (patch.developerMode !== undefined) {
+				developerMode = patch.developerMode;
+			}
 			return {
-				schemaVersion: 4,
+				schemaVersion: 5,
 				nextStepHintsEnabled,
 				autoCompactActivityDetails,
+				developerMode,
 				godotExecutablePath: null,
 				godotExecutableVersion: null,
 				godotExecutableStatus: "unconfigured",
@@ -214,7 +220,7 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 		"session.list": () => ({ sessions: [] }),
 		"session.timeline": ({ params }) => ({
 			timeline: true,
-			sessionId: (params as { sessionId?: string } | undefined)?.sessionId ?? "e2e-session",
+			sessionId: (params as { sessionId?: string } | undefined)?.sessionId ?? "session-e2e",
 			blockCount: 0,
 			blockOffset: 0,
 			eventCount: 0,
@@ -233,8 +239,40 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 			blockCount: 0,
 			entries: [],
 		}),
+		"session.trace.summary": () => ({
+			revision: 0,
+			turnCount: 0,
+			modelCallCount: 0,
+			toolCallCount: 0,
+			errorCount: 0,
+			durationMs: 0,
+			inputTokens: 0,
+			outputTokens: 0,
+			hasDetails: false,
+		}),
+		"session.trace.page": () => ({ revision: 0, records: [] }),
+		"session.trace.detail": ({ params }) => ({
+			record: {
+				recordId: (params as { recordId?: string } | undefined)?.recordId ?? "missing",
+				sessionId: "session-e2e-1",
+				sequence: 0,
+				turn: 1,
+				kind: "prompt",
+				status: "success",
+				requestId: "e2e-request",
+				startedAt: MOCK_NOW,
+				detailLevel: "summary",
+				summary: {},
+				truncated: false,
+				hasDetails: false,
+				revision: 0,
+			},
+			promptSections: [],
+			redactions: [],
+			detailLevel: "summary",
+		}),
 		"session.overview.get": ({ params }) => ({
-			sessionId: (params as { sessionId?: string } | undefined)?.sessionId ?? "e2e-session-1",
+			sessionId: (params as { sessionId?: string } | undefined)?.sessionId ?? "session-e2e-1",
 			envInfo: null,
 			envInfos: [],
 			plans: { total: 0, items: [] },
@@ -254,7 +292,7 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 		"usageMetrics.trends.get": () => ({ points: [] }),
 		"session.create": ({ params }) => {
 			const input = (params ?? {}) as { title?: string; workspaceId?: string | null };
-			const sessionId: string = "e2e-session-1";
+			const sessionId: string = "session-e2e-1";
 			return {
 				id: sessionId,
 				title: input.title ?? "E2E Session",
@@ -268,7 +306,7 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 		"session.open": ({ params }) => ({
 			opened: true,
 			metadata: {
-				id: (params as { sessionId?: string } | undefined)?.sessionId ?? "e2e-session-1",
+				id: (params as { sessionId?: string } | undefined)?.sessionId ?? "session-e2e-1",
 				title: "E2E Session",
 				createdAt: MOCK_NOW,
 				updatedAt: MOCK_NOW,
@@ -287,7 +325,7 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 			pendingGuides: [],
 			messageQueue: [],
 			selectionAskThreads: [],
-			workbench: createEmptyWorkbench("e2e-session-1"),
+			workbench: createEmptyWorkbench("session-e2e-1"),
 			agentRuns: [],
 			activeAgentRun: null,
 			currentGoal: null,
@@ -295,8 +333,8 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 		}),
 		"workbench.get": ({ params }) => ({ workbench: createEmptyWorkbench((params as { sessionId?: string } | undefined)?.sessionId ?? null) }),
 		"workbench.patch": ({ params }) => ({ changed: true, workbench: createEmptyWorkbench(null), ...(params ? {} : {}) }),
-		"session.save": () => ({ saved: true, sessionId: "e2e-session-1", messageCount: 0 }),
-		"session.model.set": () => ({ metadata: { id: "e2e-session-1", title: "E2E Session", createdAt: MOCK_NOW, updatedAt: MOCK_NOW }, workbench: createEmptyWorkbench("e2e-session-1") }),
+		"session.save": () => ({ saved: true, sessionId: "session-e2e-1", messageCount: 0 }),
+		"session.model.set": () => ({ metadata: { id: "session-e2e-1", title: "E2E Session", createdAt: MOCK_NOW, updatedAt: MOCK_NOW }, workbench: createEmptyWorkbench("session-e2e-1") }),
 		"ai.cancel": () => ({ cancelled: true }),
 		"ai.chat": () => ({ accepted: true }),
 		"approval.mode.set": () => ({ mode: "manual", updated: true }),
@@ -407,7 +445,7 @@ export class MockBackend {
 	}
 
 	sendEvent(event: string, data: unknown, options: { sessionId?: string; requestId?: string; runId?: string } = {}): void {
-		const sessionId: string = options.sessionId ?? "e2e-session-1";
+		const sessionId: string = options.sessionId ?? "session-e2e-1";
 		const sequence: number = (this.eventSequences.get(sessionId) ?? 0) + 1;
 		this.eventSequences.set(sessionId, sequence);
 		const envelope = {

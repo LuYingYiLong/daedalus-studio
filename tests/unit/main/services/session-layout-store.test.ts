@@ -83,6 +83,21 @@ describe("session layout store", () => {
 		expect(normalized.fullscreenDock).toBe("side");
 	});
 
+	it("accepts trajectory tabs without changing the default dock order", () => {
+		const defaults = createDefaultSessionLayout();
+		const normalized = normalizeSessionLayout({
+			...defaults,
+			side: {
+				...defaults.side,
+				tabs: [...defaults.side.tabs, { key: "side:trajectory:1", kind: "trajectory", index: 1 }],
+				activeTabKey: "side:trajectory:1"
+			}
+		});
+		expect(defaults.side.tabs).toEqual([{ key: "side:review:1", kind: "review", index: 1 }]);
+		expect(normalized.side.tabs.at(-1)).toEqual({ key: "side:trajectory:1", kind: "trajectory", index: 1 });
+		expect(normalized.side.activeTabKey).toBe("side:trajectory:1");
+	});
+
 	it("normalizes file panel tabs and removes orphaned panel state", () => {
 		const defaults = createDefaultSessionLayout();
 		const normalized = normalizeSessionLayout({

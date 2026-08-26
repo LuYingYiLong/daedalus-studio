@@ -1,0 +1,231 @@
+.panel {
+	display: grid;
+	grid-template-rows: auto auto auto minmax(0, 1fr);
+	gap: var(--ds-space-1);
+	box-sizing: border-box;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+	padding: var(--ds-space-2);
+	container-type: inline-size;
+}
+
+.stats {
+	display: grid;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+	border: 1px solid var(--ds-border);
+	background: var(--ds-surface);
+	border-radius: var(--ds-radius-lg);
+	padding: var(--ds-space-2);
+}
+
+.metricCard {
+	min-width: 0;
+	padding-inline: clamp(6px, 1.25cqi, 16px);
+}
+
+.metricCard + .metricCard {
+	border-inline-start: 1px solid var(--ds-border);
+}
+
+.metricTitle {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.metricContent {
+	display: flex;
+	align-items: baseline;
+	min-width: 0;
+	overflow: hidden;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.metricValue {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.metricSuffix {
+	flex: 0 0 auto;
+	font-size: 0.55em;
+}
+
+.toolbar {
+	display: grid;
+	grid-template-columns: minmax(120px, 0.35fr) minmax(180px, 1fr);
+	gap: 8px;
+}
+.kindSelect {
+	width: 100%;
+}
+
+.content {
+	display: grid;
+	grid-template-columns: minmax(300px, 1fr);
+	gap: 10px;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.ledger,
+.inspector {
+	min-width: 0;
+	min-height: 0;
+	overflow: auto;
+}
+
+.inspector {
+	padding: 10px;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+}
+
+.turnGroup {
+	margin-bottom: 12px;
+}
+
+.turnGroup > header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	padding: 5px 4px;
+}
+
+.turnGroup > header > :last-child {
+	min-width: 0;
+}
+
+.recordRow {
+	display: grid;
+	grid-template-columns: 20px minmax(120px, 1fr) auto auto auto;
+	align-items: center;
+	gap: 7px;
+	box-sizing: border-box;
+	width: 100%;
+	min-width: 0;
+	margin: 1px 0;
+	padding: 7px 8px;
+	border: 0;
+	border-radius: var(--ds-radius-sm);
+	color: inherit;
+	background: transparent;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.recordRow:hover {
+	background: var(--ds-surface-hover);
+}
+
+.recordRow.selected {
+	background: var(--ds-accent-subtle);
+}
+
+.recordRow time {
+	color: var(--ds-text-secondary);
+	font-variant-numeric: tabular-nums;
+	font-size: 11px;
+}
+
+.recordIcon {
+	display: inline-flex;
+	color: var(--ds-text-secondary);
+}
+
+.recordIcon svg {
+	width: 14px;
+	height: 14px;
+}
+
+.recordMain {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.recordMain strong,
+.recordMain small {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.recordMain small {
+	color: var(--ds-text-secondary);
+}
+
+.inspectorBody {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ds-space-1);
+}
+
+.inspectorState {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-height: 120px;
+	color: var(--ds-text-secondary);
+}
+
+.recordId {
+	display: block;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.codeBlock {
+	max-height: 360px;
+	margin: 0;
+	padding: 10px;
+	overflow: auto;
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-bg-sunken);
+	font-family: var(--ds-font-family-code);
+	font-size: 12px;
+	line-height: 1.55;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+@container (min-width: 840px) {
+	.content {
+		grid-template-columns: minmax(360px, 1fr) minmax(300px, 0.7fr);
+	}
+}
+
+@container (max-width: 620px) {
+	.stats {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+	.metricCard {
+		padding-inline: 6px;
+	}
+	.metricTitle {
+		margin-bottom: 3px;
+	}
+	.metricSuffix {
+		display: none;
+	}
+	.toolbar {
+		grid-template-columns: 1fr;
+	}
+	.recordRow {
+		grid-template-columns: 20px minmax(100px, 1fr) auto;
+	}
+	.recordRow > :nth-last-child(2),
+	.recordRow time {
+		display: none;
+	}
+}

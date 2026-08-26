@@ -793,6 +793,8 @@
 			"files": "文件",
 			"filesIndexed": "文件 {{index}}",
 			"browser": "浏览器",
+			"trajectory": "轨迹",
+			"trajectoryIndexed": "轨迹 {{index}}",
 			"environments": "开发环境",
 			"worktrees": "工作树",
 			"browserIndexed": "浏览器 {{index}}",
@@ -804,11 +806,33 @@
 			"reviewPanel": "变更审阅面板",
 			"terminalPanel": "终端面板",
 			"filesPanel": "文件面板",
-			"browserPanel": "浏览器面板"
+			"browserPanel": "浏览器面板",
+			"trajectoryPanel": "轨迹面板"
 		},
 		"empty": {
 			"noWorkspaceSelected": "未选择 workspace"
 		}
+	},
+	"trajectory": {
+		"stats": { "duration": "耗时", "turns": "轮次", "calls": "调用", "tools": "工具", "tokens": "Token", "errors": "错误" },
+		"filter": { "all": "全部", "placeholder": "搜索 requestId、runId 或 toolCallId" },
+		"turn": "第 {{turn}} 轮",
+		"loadMore": "加载更早记录",
+		"empty": "当前会话还没有轨迹记录",
+		"noSession": "请先打开一个会话",
+		"unavailable": "当前 Backend 不支持轨迹功能",
+		"loadingDetail": "正在加载详情",
+		"details": "详情",
+		"compacted": "详情已精简",
+		"hidden": "开发者模式已关闭，正文详情暂时隐藏",
+		"redactions": "已脱敏字段",
+		"promptSections": "Prompt 分段",
+		"request": "请求",
+		"response": "响应",
+		"timing": "时间与 Token",
+		"copyId": "复制标识",
+		"kind": { "turn": "轮次", "prompt": "Prompt", "model_call": "模型调用", "thinking": "Thinking", "tool_call": "工具", "approval": "审批", "retry": "重试", "step": "步骤", "provider_reconnect": "Provider 重连", "final_response": "最终回复", "error": "错误" },
+		"status": { "pending": "等待中", "running": "进行中", "success": "完成", "error": "失败", "cancelled": "已取消", "approval_required": "等待审批" }
 	},
 	"browser": {
 		"toolbar": {
@@ -2773,6 +2797,10 @@
 				"autoCompactActivityDetails": {
 					"title": "自动精简旧会话活动详情",
 					"description": "保留最近 10 轮完整详情。更早的 thinking、工具参数和工具输出会被永久移除，但工具状态、审批结果和关键摘要会保留；关闭开关不会恢复已经精简的历史内容。"
+				},
+				"developerMode": {
+					"title": "开发者模式",
+					"description": "保存并显示脱敏后的 Prompt、模型请求、工具参数与结果，以及供应商实际返回的 thinking。关闭后新调用只记录结构化摘要并隐藏已有详情，但不会立即删除尚未精简的历史正文。"
 				},
 				"nextStepHintsEnabled": {
 					"title": "开启下一步建议",

@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "./fixtures/studio";
 
-const MOCK_SESSION_ID: string = "e2e-session-1";
+const MOCK_SESSION_ID: string = "session-e2e-1";
 
 function createWorkbench(overrides: Record<string, unknown> = {}): Record<string, unknown> {
 	return {
@@ -245,9 +245,12 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 		await expect(settingsWindow.locator("[data-studio-settings-window=\"true\"]")).toBeVisible();
 		await settingsWindow.getByRole("menuitem", { name: /General|常规|通用/ }).click();
 		const preferenceSwitch = settingsWindow.locator("[data-settings-search-key=\"item:general.autoCompactActivityDetails\"] .ant-switch");
+		const developerModeSwitch = settingsWindow.locator("[data-settings-search-key=\"item:general.developerMode\"] .ant-switch");
 		const wasChecked: boolean = await preferenceSwitch.isChecked();
 		expect(wasChecked).toBe(true);
+		await expect(developerModeSwitch).toBeChecked();
 		await preferenceSwitch.click();
+		await developerModeSwitch.click();
 		await expect.poll(() => mockBackend.getRequests("generalSettings.update").length).toBeGreaterThan(0);
 		await settingsWindow.close();
 		const reopenedSettingsPromise = electronApp.waitForEvent("window");
@@ -256,6 +259,124 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 		await reopenedSettings.waitForLoadState("domcontentloaded");
 		await reopenedSettings.getByRole("menuitem", { name: /General|常规|通用/ }).click();
 		await expect(reopenedSettings.locator("[data-settings-search-key=\"item:general.autoCompactActivityDetails\"] .ant-switch")).toBeChecked({ checked: !wasChecked });
+		await expect(reopenedSettings.locator("[data-settings-search-key=\"item:general.developerMode\"] .ant-switch")).not.toBeChecked();
+	});
+
+	test("轨迹 Dock 展示 Prompt、精简记录、实时更新和开发者模式摘要", async ({ launchStudio, mockBackend }) => {
+		let developerMode: boolean = true;
+		let revision: number = 12;
+		const records: Record<string, unknown>[] = [
+			{
+				recordId: "trace-turn-1", sessionId: MOCK_SESSION_ID, sequence: 1, turn: 1, kind: "turn", status: "success",
+				requestId: "trace-request-1", startedAt: "2026-08-24T00:00:01.000Z", finishedAt: "2026-08-24T00:00:02.000Z",
+				durationMs: 1000, detailLevel: "summary", summary: {}, truncated: false, hasDetails: false, revision: 1,
+			},
+			{
+				recordId: "trace-tool-old", parentId: "trace-turn-1", sessionId: MOCK_SESSION_ID, sequence: 2, turn: 1, kind: "tool_call", status: "success",
+				requestId: "trace-request-1", runId: "trace-run-1", toolCallId: "trace-tool-call-old", startedAt: "2026-08-24T00:00:01.100Z", finishedAt: "2026-08-24T00:00:01.300Z",
+				durationMs: 200, detailLevel: "compacted", summary: { toolName: "workspace.read_file" }, truncated: false, hasDetails: false, revision: 2,
+			},
+			{
+				recordId: "trace-turn-11", sessionId: MOCK_SESSION_ID, sequence: 3, turn: 11, kind: "turn", status: "success",
+				requestId: "trace-request-11", startedAt: "2026-08-24T00:00:11.000Z", finishedAt: "2026-08-24T00:00:12.000Z",
+				durationMs: 1000, detailLevel: "summary", summary: {}, truncated: false, hasDetails: false, revision: 3,
+			},
+			{
+				recordId: "trace-prompt-11", parentId: "trace-turn-11", sessionId: MOCK_SESSION_ID, sequence: 4, turn: 11, kind: "prompt", status: "success",
+				requestId: "trace-request-11", runId: "trace-run-11", provider: "openai", model: "gpt-4o-mini", startedAt: "2026-08-24T00:00:11.010Z", finishedAt: "2026-08-24T00:00:11.020Z",
+				durationMs: 10, inputTokens: 120, outputTokens: 0, detailLevel: "full", summary: { sectionCount: 2 }, truncated: false, hasDetails: true, revision: 4,
+			},
+			{
+				recordId: "trace-approval-11", parentId: "trace-turn-11", sessionId: MOCK_SESSION_ID, sequence: 5, turn: 11, kind: "approval", status: "success",
+				requestId: "trace-request-11", runId: "trace-run-11", toolCallId: "trace-tool-call-11", startedAt: "2026-08-24T00:00:11.200Z", finishedAt: "2026-08-24T00:00:11.500Z",
+				durationMs: 300, detailLevel: "summary", summary: { approvalId: "approval-11" }, truncated: false, hasDetails: false, revision: 5,
+			},
+			{
+				recordId: "trace-retry-11", parentId: "trace-turn-11", sessionId: MOCK_SESSION_ID, sequence: 6, turn: 11, kind: "retry", status: "success",
+				requestId: "trace-request-11", runId: "trace-run-11", startedAt: "2026-08-24T00:00:11.500Z", finishedAt: "2026-08-24T00:00:11.600Z",
+				durationMs: 100, detailLevel: "summary", summary: { reason: "transport" }, truncated: false, hasDetails: false, revision: 6,
+			},
+			{
+				recordId: "trace-final-11", parentId: "trace-turn-11", sessionId: MOCK_SESSION_ID, sequence: 7, turn: 11, kind: "final_response", status: "success",
+				requestId: "trace-request-11", runId: "trace-run-11", startedAt: "2026-08-24T00:00:11.700Z", finishedAt: "2026-08-24T00:00:12.000Z",
+				durationMs: 300, outputTokens: 44, detailLevel: "full", summary: {}, truncated: false, hasDetails: true, revision: 7,
+			},
+		];
+		const generalSettings = (): Record<string, unknown> => ({
+			schemaVersion: 5, nextStepHintsEnabled: false, autoCompactActivityDetails: true, developerMode,
+			godotExecutablePath: null, godotExecutableVersion: null, godotExecutableStatus: "unconfigured", godotExecutableError: null,
+			updatedAt: "2026-08-24T00:00:00.000Z",
+		});
+		mockBackend.setHandler("generalSettings.get", generalSettings);
+		mockBackend.setHandler("generalSettings.update", ({ params }) => {
+			const patch = params as { developerMode?: boolean };
+			if (patch.developerMode !== undefined) developerMode = patch.developerMode;
+			return generalSettings();
+		});
+		mockBackend.setHandler("session.trace.summary", () => ({
+			revision, turnCount: 11, modelCallCount: records.filter((record) => record.kind === "model_call").length,
+			toolCallCount: 2, errorCount: 0, durationMs: 11_000, inputTokens: 480, outputTokens: 96, hasDetails: true,
+		}));
+		mockBackend.setHandler("session.trace.page", () => ({ revision, records }));
+		mockBackend.setHandler("session.trace.detail", ({ params }) => {
+			const recordId: string = (params as { recordId: string }).recordId;
+			const record = records.find((candidate) => candidate.recordId === recordId);
+			if (record === undefined) throw new Error(`Unknown trace ${recordId}`);
+			if (record.detailLevel === "compacted") return { record, promptSections: [], redactions: [], detailLevel: "compacted" };
+			if (!developerMode) return { record, promptSections: [], redactions: [], detailLevel: record.detailLevel, detailsHidden: true };
+			return {
+				record,
+				promptSections: recordId === "trace-prompt-11" ? [{ id: "system", kind: "system", label: "System Prompt", content: "System policy from E2E", charCount: 22, contentHash: "hash", truncated: false }] : [],
+				request: { temperature: 0.2, Authorization: "[redacted]" },
+				response: recordId === "trace-final-11" ? "Final response from E2E" : { ok: true },
+				redactions: ["request.Authorization"],
+				detailLevel: record.detailLevel,
+			};
+		});
+
+		const { electronApp, mainWindow } = await launchStudio();
+		await openSessionSurface(mainWindow);
+		const composer = mainWindow.locator("[data-studio-composer=\"true\"] textarea");
+		await composer.fill("Create trajectory session");
+		await composer.press("Enter");
+		await mockBackend.waitForRequest("session.create");
+		await mainWindow.locator("[data-studio-open-side-dock=\"true\"]").click();
+		await mainWindow.locator("[data-studio-dock-add=\"true\"]").click();
+		await mainWindow.getByRole("menuitem", { name: /Trajectory panel|轨迹面板/ }).click();
+
+		const panel = mainWindow.locator("[data-testid=\"trajectory-panel\"]");
+		await expect(panel).toBeVisible();
+		await expect(panel.getByText(/Turn 11|第 11 轮/)).toBeVisible();
+		await expect(panel.locator("[data-testid=\"trajectory-record-trace-tool-old\"]")).toContainText(/Details compacted|详情已精简/);
+		await panel.locator("[data-testid=\"trajectory-record-trace-prompt-11\"]").click();
+		await expect(panel.getByText("System Prompt")).toBeVisible();
+		await panel.getByText("System Prompt").click();
+		await expect(panel.getByText("System policy from E2E")).toBeVisible();
+		await expect(panel.getByText("request.Authorization")).toBeVisible();
+
+		const liveRecord = {
+			recordId: "trace-model-live", parentId: "trace-turn-11", sessionId: MOCK_SESSION_ID, sequence: 8, turn: 11, kind: "model_call", status: "success",
+			requestId: "trace-request-11", runId: "trace-run-11", provider: "openai", model: "gpt-4o-mini", startedAt: "2026-08-24T00:00:11.100Z", finishedAt: "2026-08-24T00:00:11.900Z",
+			durationMs: 800, inputTokens: 360, outputTokens: 52, detailLevel: "full", summary: {}, truncated: false, hasDetails: true, revision: ++revision,
+		};
+		records.push(liveRecord);
+		mockBackend.sendEvent("session.trace.updated", { revision, recordId: liveRecord.recordId, changeType: "completed", record: liveRecord }, { sessionId: MOCK_SESSION_ID, requestId: "trace-request-11", runId: "trace-run-11" });
+		await expect(panel.locator("[data-testid=\"trajectory-record-trace-model-live\"]")).toBeVisible();
+
+		const settingsWindowPromise = electronApp.waitForEvent("window");
+		await mainWindow.locator("[data-studio-open-settings=\"true\"]").click();
+		const settingsWindow = await settingsWindowPromise;
+		await settingsWindow.waitForLoadState("domcontentloaded");
+		await settingsWindow.getByRole("menuitem", { name: /General|常规|通用/ }).click();
+		await settingsWindow.locator("[data-settings-search-key=\"item:general.developerMode\"] .ant-switch").click();
+		await expect.poll(() => developerMode).toBe(false);
+		await settingsWindow.close();
+		await panel.locator("[data-testid=\"trajectory-record-trace-model-live\"]").click();
+		await expect(panel.getByText(/Developer mode is off|开发者模式已关闭/)).toBeVisible();
+
+		mockBackend.closeConnections();
+		await expect.poll(() => mockBackend.getRequests("client.hello").length, { timeout: 20_000 }).toBeGreaterThan(1);
+		await expect(panel.locator("[data-testid=\"trajectory-record-trace-model-live\"]")).toBeVisible();
 	});
 
 	test("超过十轮后时间线显示精简状态并保留最近一轮详情", async ({ launchStudio, mockBackend }) => {

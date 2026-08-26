@@ -35,6 +35,7 @@ describe("session dock layout", () => {
 		const second = createDockTab("side", "terminal", 1);
 		const third = createDockTab("side", "review", 2);
 		const browser = createDockTab("side", "browser", 1);
+		const trajectory = createDockTab("side", "trajectory", 1);
 		expect(getNextDockTabIndex([first, second, third], "review")).toBe(3);
 		expect(reorderDockTabs([first, second, third], first.key, third.key)).toEqual([
 			second,
@@ -42,6 +43,7 @@ describe("session dock layout", () => {
 			first
 		]);
 		expect(browser).toEqual({ key: "side:browser:1", kind: "browser", index: 1 });
+		expect(trajectory).toEqual({ key: "side:trajectory:1", kind: "trajectory", index: 1 });
 	});
 
 	it("scopes terminal runtime ids to their session", () => {

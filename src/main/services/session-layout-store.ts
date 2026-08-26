@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute } from "node:path";
 
-export type DockTabKind = "review" | "terminal" | "files" | "browser";
+export type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory";
 
 export type DockTabPreferences = {
 	key: string;
@@ -139,7 +139,7 @@ function normalizeDockLayout(
 	for (const candidate of value.tabs) {
 		if (
 			!isRecord(candidate)
-			|| (candidate.kind !== "review" && candidate.kind !== "terminal" && candidate.kind !== "files" && candidate.kind !== "browser")
+			|| (candidate.kind !== "review" && candidate.kind !== "terminal" && candidate.kind !== "files" && candidate.kind !== "browser" && candidate.kind !== "trajectory")
 			|| typeof candidate.key !== "string"
 			|| !TAB_KEY_PATTERN.test(candidate.key)
 			|| typeof candidate.index !== "number"

@@ -8,6 +8,7 @@ import GitDiffReviewPanel from "@/widgets/git/review/GitDiffReviewPanel";
 import TerminalPanel from "@/widgets/terminal/TerminalPanel";
 import FilePanel from "@/widgets/files/FilePanel";
 import BrowserPanel from "@/widgets/browser/BrowserPanel";
+import TrajectoryPanel from "@/widgets/home/trajectory/TrajectoryPanel";
 import type { AdditionalContextItem, WorkspaceConfig, WorkspaceSourceFolder } from "@/platform/rpc/types";
 import type { WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launch";
 import {
@@ -67,6 +68,7 @@ const ADD_REVIEW_KEY: DockPanelKind = "review";
 const ADD_TERMINAL_KEY: DockPanelKind = "terminal";
 const ADD_FILES_KEY: DockPanelKind = "files";
 const ADD_BROWSER_KEY: DockPanelKind = "browser";
+const ADD_TRAJECTORY_KEY: DockPanelKind = "trajectory";
 
 function getPanelTitle(kind: DockPanelKind, index: number, t: TFunction<"common">): string {
 	if (kind === "review") {
@@ -77,6 +79,9 @@ function getPanelTitle(kind: DockPanelKind, index: number, t: TFunction<"common"
 	}
 	if (kind === "files") {
 		return index === 1 ? t("dock.tabs.files") : t("dock.tabs.filesIndexed", { index });
+	}
+	if (kind === "trajectory") {
+		return index === 1 ? t("dock.tabs.trajectory") : t("dock.tabs.trajectoryIndexed", { index });
 	}
 	return index === 1 ? t("dock.tabs.browser") : t("dock.tabs.browserIndexed", { index });
 }
@@ -122,7 +127,9 @@ function getTabIconName(kind: DockPanelKind): string {
 			? "terminal"
 			: kind === "files"
 				? "file-system"
-				: "global";
+				: kind === "trajectory"
+					? "statistics"
+					: "global";
 }
 
 function DockPanelTabs({
@@ -184,11 +191,17 @@ function DockPanelTabs({
 			key: ADD_BROWSER_KEY,
 			label: t("dock.add.browserPanel"),
 			icon: <Icon name="global" />
+		},
+		{
+			key: ADD_TRAJECTORY_KEY,
+			label: t("dock.add.trajectoryPanel"),
+			icon: <Icon name="statistics" />,
+			disabled: sessionId === null
 		}
-	], [canOpenReview, t]);
+	], [canOpenReview, sessionId, t]);
 
 	const addPanelTab = useCallback((kind: DockPanelKind): void => {
-		if ((kind === "review" || kind === "files") && workspaceId === null) {
+		if (((kind === "review" || kind === "files") && workspaceId === null) || (kind === "trajectory" && sessionId === null)) {
 			return;
 		}
 		const nextTab: DockTabPreferences = createDockTab(
@@ -206,7 +219,7 @@ function DockPanelTabs({
 		} else if (kind === "browser") {
 			onBrowserPanelChange(nextTab.key, createDefaultBrowserPanelLayout());
 		}
-	}, [dockId, layout, onBrowserPanelChange, onFilePanelChange, onLayoutChange, workspaceId]);
+	}, [dockId, layout, onBrowserPanelChange, onFilePanelChange, onLayoutChange, sessionId, workspaceId]);
 
 	const ensurePanelTab = useCallback((kind: DockPanelKind): void => {
 		const existingTab: DockTabPreferences | undefined = layout.tabs.find(
@@ -281,7 +294,7 @@ function DockPanelTabs({
 	}
 
 	function handleAdd(kind: string): void {
-		if (kind === ADD_REVIEW_KEY || kind === ADD_TERMINAL_KEY || kind === ADD_FILES_KEY || kind === ADD_BROWSER_KEY) {
+		if (kind === ADD_REVIEW_KEY || kind === ADD_TERMINAL_KEY || kind === ADD_FILES_KEY || kind === ADD_BROWSER_KEY || kind === ADD_TRAJECTORY_KEY) {
 			addPanelTab(kind);
 		}
 	}
@@ -324,6 +337,10 @@ function DockPanelTabs({
 					onAddContext={onAddContext}
 				/>
 			);
+		}
+
+		if (tab.kind === "trajectory") {
+			return <TrajectoryPanel sessionId={sessionId} isActive={isOpen && activeKey === tab.key} />;
 		}
 
 		return (

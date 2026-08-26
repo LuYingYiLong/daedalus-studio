@@ -71,7 +71,6 @@
 .metricTitle {
 	margin-bottom: 6px;
 	overflow: hidden;
-	font-size: clamp(11px, 1.4cqi, 14px);
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
@@ -81,7 +80,6 @@
 	align-items: baseline;
 	min-width: 0;
 	overflow: hidden;
-	font-size: clamp(16px, 2.6cqi, 28px);
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 }

@@ -102,7 +102,7 @@ type DockLayoutPreferences = {
 	size: number;
 	tabs: Array<{
 		key: string;
-		kind: "review" | "terminal" | "files" | "browser";
+		kind: "review" | "terminal" | "files" | "browser" | "trajectory";
 		index: number;
 	}>;
 	activeTabKey: string | null;

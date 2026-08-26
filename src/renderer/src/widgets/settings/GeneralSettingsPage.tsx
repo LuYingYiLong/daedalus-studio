@@ -35,6 +35,7 @@ type SettingKey =
 	| "language"
 	| "minimizeToTrayOnClose"
 	| "autoCompactActivityDetails"
+	| "developerMode"
 	| "nextStepHintsEnabled"
 	| "notifyOnRunCompleted";
 
@@ -175,6 +176,26 @@ function GeneralSettingsPage({
 					? error.message
 					: t("settings.general.errors.save"),
 			);
+		} finally {
+			setSavingKey(null);
+		}
+	}
+
+	async function handleDeveloperModeChange(checked: boolean): Promise<void> {
+		const previousSettings: GeneralSettings = draftGeneralSettings;
+		const optimisticSettings: GeneralSettings = { ...previousSettings, developerMode: checked };
+		try {
+			setSavingKey("developerMode");
+			setErrorMessage(null);
+			setDraftGeneralSettings(optimisticSettings);
+			onGeneralSettingsChange(optimisticSettings);
+			const savedSettings: GeneralSettings = await updateGeneralSettings({ developerMode: checked });
+			setDraftGeneralSettings(savedSettings);
+			onGeneralSettingsChange(savedSettings);
+		} catch (error: unknown) {
+			setDraftGeneralSettings(previousSettings);
+			onGeneralSettingsChange(previousSettings);
+			setErrorMessage(error instanceof Error ? error.message : t("settings.general.errors.save"));
 		} finally {
 			setSavingKey(null);
 		}
@@ -348,6 +369,13 @@ function GeneralSettingsPage({
 				<SettingsList title={t("settings.general.general.title")}>
 					<div className={styles.preferenceList}>
 						{[
+							{
+								key: "developerMode" as const,
+								title: t("settings.general.general.developerMode.title"),
+								description: t("settings.general.general.developerMode.description"),
+								checked: draftGeneralSettings.developerMode,
+								onChange: handleDeveloperModeChange,
+							},
 							{
 								key: "autoCompactActivityDetails" as const,
 								title: t(

@@ -795,6 +795,8 @@
 			"files": "Files",
 			"filesIndexed": "Files {{index}}",
 			"browser": "Browser",
+			"trajectory": "Trajectory",
+			"trajectoryIndexed": "Trajectory {{index}}",
 			"environments": "Development environments",
 			"worktrees": "Worktrees",
 			"browserIndexed": "Browser {{index}}",
@@ -806,11 +808,33 @@
 			"reviewPanel": "Review panel",
 			"terminalPanel": "Terminal panel",
 			"filesPanel": "Files panel",
-			"browserPanel": "Browser panel"
+			"browserPanel": "Browser panel",
+			"trajectoryPanel": "Trajectory panel"
 		},
 		"empty": {
 			"noWorkspaceSelected": "No workspace selected"
 		}
+	},
+	"trajectory": {
+		"stats": { "duration": "Duration", "turns": "Turns", "calls": "Calls", "tools": "Tools", "tokens": "Tokens", "errors": "Errors" },
+		"filter": { "all": "All", "placeholder": "Search requestId, runId, or toolCallId" },
+		"turn": "Turn {{turn}}",
+		"loadMore": "Load earlier records",
+		"empty": "This session has no trajectory records yet",
+		"noSession": "Open a session first",
+		"unavailable": "The current Backend does not support trajectories",
+		"loadingDetail": "Loading details",
+		"details": "Details",
+		"compacted": "Details compacted",
+		"hidden": "Developer mode is off, so body details are hidden",
+		"redactions": "Redacted fields",
+		"promptSections": "Prompt sections",
+		"request": "Request",
+		"response": "Response",
+		"timing": "Timing and tokens",
+		"copyId": "Copy identifier",
+		"kind": { "turn": "Turn", "prompt": "Prompt", "model_call": "Model call", "thinking": "Thinking", "tool_call": "Tool", "approval": "Approval", "retry": "Retry", "step": "Step", "provider_reconnect": "Provider reconnect", "final_response": "Final response", "error": "Error" },
+		"status": { "pending": "Pending", "running": "Running", "success": "Completed", "error": "Failed", "cancelled": "Cancelled", "approval_required": "Approval required" }
 	},
 	"browser": {
 		"toolbar": {
@@ -2777,6 +2801,14 @@
 			},
 			"general": {
 				"title": "General settings",
+				"autoCompactActivityDetails": {
+					"title": "Automatically compact old activity details",
+					"description": "Keep full details for the latest 10 turns. Older thinking, tool arguments, and tool output are permanently removed while statuses, approval outcomes, and key summaries remain. Turning this off does not restore compacted details."
+				},
+				"developerMode": {
+					"title": "Developer mode",
+					"description": "Store and show redacted prompts, model requests, tool inputs and outputs, and thinking actually returned by the provider. When off, new calls keep summaries only and existing details are hidden without being immediately deleted."
+				},
 				"nextStepHintsEnabled": {
 					"title": "Suggest the next step",
 					"description": "After a completed reply, let Daedalus suggest a useful next action in the composer."
