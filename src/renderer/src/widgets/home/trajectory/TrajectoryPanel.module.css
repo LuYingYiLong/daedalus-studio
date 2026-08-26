@@ -1,13 +1,23 @@
 .panel {
 	display: grid;
-	grid-template-rows: auto auto auto minmax(0, 1fr);
-	gap: var(--ds-space-1);
+	grid-template-rows: auto minmax(0, 1fr);
 	box-sizing: border-box;
 	height: 100%;
 	min-width: 0;
 	min-height: 0;
-	padding: var(--ds-space-2);
 	container-type: inline-size;
+}
+
+.header {
+	background-color: var(--ds-surface);
+	padding: var(--ds-space-1);
+	border-bottom: 1px solid var(--ds-border);
+}
+
+.context {
+	display: grid;
+	padding: var(--ds-space-2);
+	gap: var(--ds-space-1);
 }
 
 .stats {
@@ -58,8 +68,9 @@
 .toolbar {
 	display: grid;
 	grid-template-columns: minmax(120px, 0.35fr) minmax(180px, 1fr);
-	gap: 8px;
+	gap: var(--ds-space-1);
 }
+
 .kindSelect {
 	width: 100%;
 }
@@ -67,6 +78,7 @@
 .content {
 	display: grid;
 	grid-template-columns: minmax(300px, 1fr);
+	grid-row: 5;
 	gap: 10px;
 	min-width: 0;
 	min-height: 0;
@@ -81,9 +93,9 @@
 }
 
 .inspector {
-	padding: 10px;
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
+	padding: var(--ds-space-2);
 }
 
 .turnGroup {
@@ -186,17 +198,14 @@
 }
 
 .codeBlock {
-	max-height: 360px;
+	max-height: 512px;
 	margin: 0;
-	padding: 10px;
 	overflow: auto;
-	border-radius: var(--ds-radius-lg);
-	background: var(--ds-bg-sunken);
 	font-family: var(--ds-font-family-code);
-	font-size: 12px;
 	line-height: 1.55;
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
+	user-select: text;
 }
 
 @container (min-width: 840px) {
@@ -209,21 +218,27 @@
 	.stats {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
+
 	.metricCard {
 		padding-inline: 6px;
 	}
+
 	.metricTitle {
 		margin-bottom: 3px;
 	}
+
 	.metricSuffix {
 		display: none;
 	}
+
 	.toolbar {
 		grid-template-columns: 1fr;
 	}
+
 	.recordRow {
 		grid-template-columns: 20px minmax(100px, 1fr) auto;
 	}
+
 	.recordRow > :nth-last-child(2),
 	.recordRow time {
 		display: none;

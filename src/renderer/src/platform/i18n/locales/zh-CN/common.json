@@ -28,23 +28,112 @@
 		}
 	},
 	"scheduledTasks": {
-		"title": "定时任务", "search": "搜索任务...", "create": "新建任务", "createWithAi": "使用 AI 创建", "createManually": "手动创建", "prefill": "帮我安排一个定时任务：", "empty": "暂无定时任务", "windowsOnly": "后台调度首版仅支持 Windows；当前平台只能查看任务。",
-		"filters": { "all": "全部", "enabled": "已启用", "paused": "已暂停", "attention": "需处理" },
-		"kind": { "reminder": "提醒", "agent": "AI 任务", "monitor": "AI 监测" },
-		"nextRun": "下次：{{time}}", "runNow": "立即运行", "pause": "暂停", "resume": "恢复", "deleteConfirm": "删除此定时任务？", "enabled": "已启用", "paused": "已暂停",
-		"prompt": "任务内容", "environment": "固定环境", "noWorkspace": "无项目", "noModel": "提醒任务不调用模型", "existingSessionTarget": "现有会话 · {{sessionId}}", "autoSafe": "自动安全", "readOnly": "只读", "history": "运行历史", "noRuns": "尚无运行记录", "openSession": "打开会话",
-		"manual": {
-			"title": "手动创建定时任务", "create": "创建任务", "cancel": "取消", "retry": "重试", "created": "定时任务已创建",
-			"fields": { "title": "任务标题", "prompt": "描述 AI 应该做什么", "kind": "任务类型", "runIn": "运行于", "workspace": "项目", "model": "模型", "reasoningEffort": "推理强度", "session": "会话", "repeat": "重复", "time": "时间", "customUnit": "重复单位", "interval": "间隔", "weekdays": "星期", "notification": "通知" },
-			"target": { "new_session": "新会话", "existing_session": "现有会话" },
-			"repeat": { "once": "不重复", "daily": "每天", "weekdays": "每个工作日", "weekly": "每周", "monthly": "每月", "custom": "自定义" },
-			"unit": { "day": "天", "week": "周", "month": "月" },
-			"weekday": { "0": "周日", "1": "周一", "2": "周二", "3": "周三", "4": "周四", "5": "周五", "6": "周六" },
-			"notification": { "important_updates": "重要更新", "failures_only": "仅限未成功运行" },
-			"validation": { "future": "请选择未来时间" },
-			"schedule": { "onceDescription": "{{time}} 运行一次", "dailyDescription": "每天 {{time}}", "weekdaysDescription": "每个工作日 {{time}}", "weeklyDescription": "每周（锚点 {{time}}）", "monthlyDescription": "每月 {{day}} 日 {{time}}", "customDayDescription": "每 {{interval}} 天 {{time}}", "customWeekDescription": "每 {{interval}} 周 {{time}}", "customMonthDescription": "每 {{interval}} 个月的 {{day}} 日 {{time}}" }
+		"title": "定时任务",
+		"search": "搜索任务...",
+		"create": "新建任务",
+		"createWithAi": "使用 AI 创建",
+		"createManually": "手动创建",
+		"prefill": "帮我安排一个定时任务：",
+		"empty": "暂无定时任务",
+		"windowsOnly": "后台调度首版仅支持 Windows；当前平台只能查看任务。",
+		"filters": {
+			"all": "全部",
+			"enabled": "已启用",
+			"paused": "已暂停",
+			"attention": "需处理"
 		},
-		"status": { "queued": "排队中", "running": "运行中", "succeeded": "已完成", "unchanged": "无变化", "changed": "有变化", "awaiting_approval": "等待审批", "failed": "失败", "cancelled": "已取消" }
+		"kind": {
+			"reminder": "提醒",
+			"agent": "AI 任务",
+			"monitor": "AI 监测"
+		},
+		"nextRun": "下次：{{time}}",
+		"runNow": "立即运行",
+		"pause": "暂停",
+		"resume": "恢复",
+		"deleteConfirm": "删除此定时任务？",
+		"enabled": "已启用",
+		"paused": "已暂停",
+		"prompt": "任务内容",
+		"environment": "固定环境",
+		"noWorkspace": "无项目",
+		"noModel": "提醒任务不调用模型",
+		"existingSessionTarget": "现有会话 · {{sessionId}}",
+		"autoSafe": "自动安全",
+		"readOnly": "只读",
+		"history": "运行历史",
+		"noRuns": "尚无运行记录",
+		"openSession": "打开会话",
+		"manual": {
+			"title": "手动创建定时任务",
+			"create": "创建任务",
+			"cancel": "取消",
+			"retry": "重试",
+			"created": "定时任务已创建",
+			"fields": {
+				"title": "任务标题",
+				"prompt": "描述 AI 应该做什么",
+				"kind": "任务类型",
+				"runIn": "运行于",
+				"workspace": "项目",
+				"model": "模型",
+				"reasoningEffort": "推理强度",
+				"session": "会话",
+				"repeat": "重复",
+				"time": "时间",
+				"customUnit": "重复单位",
+				"interval": "间隔",
+				"weekdays": "星期",
+				"notification": "通知"
+			},
+			"target": {
+				"new_session": "新会话",
+				"existing_session": "现有会话"
+			},
+			"repeat": {
+				"once": "不重复",
+				"daily": "每天",
+				"weekdays": "每个工作日",
+				"weekly": "每周",
+				"monthly": "每月",
+				"custom": "自定义"
+			},
+			"unit": { "day": "天", "week": "周", "month": "月" },
+			"weekday": {
+				"0": "周日",
+				"1": "周一",
+				"2": "周二",
+				"3": "周三",
+				"4": "周四",
+				"5": "周五",
+				"6": "周六"
+			},
+			"notification": {
+				"important_updates": "重要更新",
+				"failures_only": "仅限未成功运行"
+			},
+			"validation": { "future": "请选择未来时间" },
+			"schedule": {
+				"onceDescription": "{{time}} 运行一次",
+				"dailyDescription": "每天 {{time}}",
+				"weekdaysDescription": "每个工作日 {{time}}",
+				"weeklyDescription": "每周（锚点 {{time}}）",
+				"monthlyDescription": "每月 {{day}} 日 {{time}}",
+				"customDayDescription": "每 {{interval}} 天 {{time}}",
+				"customWeekDescription": "每 {{interval}} 周 {{time}}",
+				"customMonthDescription": "每 {{interval}} 个月的 {{day}} 日 {{time}}"
+			}
+		},
+		"status": {
+			"queued": "排队中",
+			"running": "运行中",
+			"succeeded": "已完成",
+			"unchanged": "无变化",
+			"changed": "有变化",
+			"awaiting_approval": "等待审批",
+			"failed": "失败",
+			"cancelled": "已取消"
+		}
 	},
 	"app": {
 		"boot": {
@@ -814,8 +903,18 @@
 		}
 	},
 	"trajectory": {
-		"stats": { "duration": "耗时", "turns": "轮次", "calls": "调用", "tools": "工具", "tokens": "Token", "errors": "错误" },
-		"filter": { "all": "全部", "placeholder": "搜索 requestId、runId 或 toolCallId" },
+		"stats": {
+			"duration": "耗时",
+			"turns": "轮次",
+			"calls": "调用",
+			"tools": "工具",
+			"tokens": "Token",
+			"errors": "错误"
+		},
+		"filter": {
+			"all": "全部",
+			"placeholder": "搜索 requestId、runId 或 toolCallId"
+		},
 		"turn": "第 {{turn}} 轮",
 		"loadMore": "加载更早记录",
 		"empty": "当前会话还没有轨迹记录",
@@ -831,8 +930,32 @@
 		"response": "响应",
 		"timing": "时间与 Token",
 		"copyId": "复制标识",
-		"kind": { "turn": "轮次", "prompt": "Prompt", "model_call": "模型调用", "thinking": "Thinking", "tool_call": "工具", "approval": "审批", "retry": "重试", "step": "步骤", "provider_reconnect": "Provider 重连", "final_response": "最终回复", "error": "错误" },
-		"status": { "pending": "等待中", "running": "进行中", "success": "完成", "error": "失败", "cancelled": "已取消", "approval_required": "等待审批" }
+		"kind": {
+			"turn": "轮次",
+			"prompt": "Prompt",
+			"model_call": "模型调用",
+			"thinking": "Thinking",
+			"tool_call": "工具",
+			"approval": "审批",
+			"retry": "重试",
+			"step": "步骤",
+			"provider_reconnect": "Provider 重连",
+			"final_response": "最终回复",
+			"error": "错误"
+		},
+		"status": {
+			"pending": "等待中",
+			"running": "进行中",
+			"success": "完成",
+			"error": "失败",
+			"cancelled": "已取消",
+			"approval_required": "等待审批"
+		},
+		"gantt": {
+			"empty": "暂无可展示的时间数据",
+			"duration": "耗时",
+			"filterLabel": "阶段筛选"
+		}
 	},
 	"browser": {
 		"toolbar": {
@@ -1541,8 +1664,19 @@
 			"add": "添加环境",
 			"noSetup": "无需 Setup",
 			"saved": "开发环境配置已保存",
-			"review": { "title": "审核环境命令", "trust": "信任", "trustNetwork": "信任并允许联网", "networkEnabled": "该环境声明需要网络访问；文件系统仍受沙箱限制。", "networkDisabled": "网络访问已禁用，脚本仅能写入工作树和隔离缓存。" },
-			"errors": { "load": "加载开发环境失败", "save": "保存开发环境失败", "runtimeLoad": "加载全局运行时失败", "runtimeSave": "保存全局运行时失败" }
+			"review": {
+				"title": "审核环境命令",
+				"trust": "信任",
+				"trustNetwork": "信任并允许联网",
+				"networkEnabled": "该环境声明需要网络访问；文件系统仍受沙箱限制。",
+				"networkDisabled": "网络访问已禁用，脚本仅能写入工作树和隔离缓存。"
+			},
+			"errors": {
+				"load": "加载开发环境失败",
+				"save": "保存开发环境失败",
+				"runtimeLoad": "加载全局运行时失败",
+				"runtimeSave": "保存全局运行时失败"
+			}
 		},
 		"worktrees": {
 			"title": "工作树",
@@ -1572,7 +1706,13 @@
 			"repair": "修复",
 			"deletePermanentTitle": "删除永久工作树？",
 			"deletePermanentDescription": "仅当工作树干净、没有活动会话或终端，且没有未保存到分支的新提交时才能删除。",
-			"errors": { "load": "加载工作树状态失败", "repair": "修复工作树失败", "delete": "删除工作树失败", "create": "创建工作树失败", "save": "保存工作树偏好失败" }
+			"errors": {
+				"load": "加载工作树状态失败",
+				"repair": "修复工作树失败",
+				"delete": "删除工作树失败",
+				"create": "创建工作树失败",
+				"save": "保存工作树偏好失败"
+			}
 		},
 		"browser": {
 			"title": "浏览器",
@@ -1748,7 +1888,14 @@
 			},
 			"runtime": {
 				"title": "运行时",
-				"status": { "stopped": "已停止", "starting": "启动中", "ready": "运行中", "failed": "失败", "disabled": "已禁用", "quarantined": "隔离中" },
+				"status": {
+					"stopped": "已停止",
+					"starting": "启动中",
+					"ready": "运行中",
+					"failed": "失败",
+					"disabled": "已禁用",
+					"quarantined": "隔离中"
+				},
 				"capabilities": "已注册工具：{{tools}} · Skills：{{skills}} · Hooks：{{hooks}} · MCP 服务：{{mcp}}",
 				"restart": "重启运行时",
 				"stop": "停止插件",
@@ -1783,7 +1930,19 @@
 				"retryable": "可重试",
 				"notRetryable": "不可重试",
 				"noDiagnostics": "暂无诊断",
-				"phases": { "idle": "空闲", "preparing": "准备中", "validating": "校验中", "awaiting_install": "等待安装审批", "awaiting_trust": "等待整包信任", "testing": "沙箱测试中", "passed": "测试通过", "failed": "测试失败", "exhausted": "已达到修复上限", "cancelled": "已取消", "interrupted": "后端重启后中断" }
+				"phases": {
+					"idle": "空闲",
+					"preparing": "准备中",
+					"validating": "校验中",
+					"awaiting_install": "等待安装审批",
+					"awaiting_trust": "等待整包信任",
+					"testing": "沙箱测试中",
+					"passed": "测试通过",
+					"failed": "测试失败",
+					"exhausted": "已达到修复上限",
+					"cancelled": "已取消",
+					"interrupted": "后端重启后中断"
+				}
 			},
 			"harness": {
 				"title": "DeepSeek Harness 运行时",
@@ -1797,7 +1956,12 @@
 				"chooseExecutable": "选择 dsh 可执行文件",
 				"detect": "检测 Harness",
 				"status": "检测状态",
-				"statuses": { "unconfigured": "未配置", "detected": "已检测", "needs_setup": "需要准备", "failed": "检测失败" },
+				"statuses": {
+					"unconfigured": "未配置",
+					"detected": "已检测",
+					"needs_setup": "需要准备",
+					"failed": "检测失败"
+				},
 				"version": "Harness 版本",
 				"bridgeVersion": "Bridge 协议",
 				"network": "网络",

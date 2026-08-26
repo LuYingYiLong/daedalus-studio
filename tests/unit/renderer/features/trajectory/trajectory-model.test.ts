@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterTraceRecords, formatTraceDuration, groupTraceRecords, mergeTraceRecords } from "@/domain/trajectory/trajectory-model";
+import { buildTraceGanttSegments, filterTraceRecords, formatTraceDuration, groupTraceRecords, mergeTraceRecords } from "@/domain/trajectory/trajectory-model";
 import type { TraceRecord } from "@/platform/rpc/trace-api";
 
 function record(overrides: Partial<TraceRecord> = {}): TraceRecord {
@@ -51,5 +51,20 @@ describe("trajectory model", () => {
 		expect(filterTraceRecords(records, "tool_call", "needle")).toEqual([records[1]]);
 		expect(filterTraceRecords(records, "prompt", "needle")).toEqual([]);
 		expect(formatTraceDuration(61_200)).toBe("1m 1s");
+	});
+
+	it("projects records into relative Gantt intervals", () => {
+		const result = buildTraceGanttSegments([
+			record({ recordId: "first", sequence: 1, startedAt: "2026-08-26T00:00:00.000Z", finishedAt: "2026-08-26T00:00:00.150Z", durationMs: 150 }),
+			record({ recordId: "second", sequence: 2, startedAt: "2026-08-26T00:00:00.050Z", finishedAt: "2026-08-26T00:00:00.100Z", durationMs: 50 }),
+		]);
+		expect(result.map((item): string => item.recordId)).toEqual(["first", "second"]);
+		expect(result[0]).toMatchObject({ startOffsetMs: 0, endOffsetMs: 150, durationMs: 150 });
+		expect(result[1]).toMatchObject({ startOffsetMs: 50, endOffsetMs: 100, durationMs: 50 });
+	});
+
+	it("keeps an instant record visible on the Gantt chart", () => {
+		const result = buildTraceGanttSegments([record({ durationMs: 0 })]);
+		expect(result[0]?.endOffsetMs).toBe(1);
 	});
 });

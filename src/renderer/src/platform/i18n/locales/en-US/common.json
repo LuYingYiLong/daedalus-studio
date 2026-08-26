@@ -28,23 +28,112 @@
 		}
 	},
 	"scheduledTasks": {
-		"title": "Scheduled tasks", "search": "Search tasks...", "create": "New task", "createWithAi": "Create with AI", "createManually": "Create manually", "prefill": "Help me schedule a task: ", "empty": "No scheduled tasks", "windowsOnly": "Background scheduling is available on Windows in this release; this platform can only view tasks.",
-		"filters": { "all": "All", "enabled": "Enabled", "paused": "Paused", "attention": "Needs attention" },
-		"kind": { "reminder": "Reminder", "agent": "AI task", "monitor": "AI monitor" },
-		"nextRun": "Next: {{time}}", "runNow": "Run now", "pause": "Pause", "resume": "Resume", "deleteConfirm": "Delete this scheduled task?", "enabled": "Enabled", "paused": "Paused",
-		"prompt": "Task prompt", "environment": "Pinned environment", "noWorkspace": "No project", "noModel": "Reminders do not call a model", "existingSessionTarget": "Existing session · {{sessionId}}", "autoSafe": "Auto safe", "readOnly": "Read only", "history": "Run history", "noRuns": "No runs yet", "openSession": "Open session",
-		"manual": {
-			"title": "Create scheduled task manually", "create": "Create task", "cancel": "Cancel", "retry": "Retry", "created": "Scheduled task created",
-			"fields": { "title": "Task title", "prompt": "Describe what the AI should do", "kind": "Task type", "runIn": "Run in", "workspace": "Project", "model": "Model", "reasoningEffort": "Reasoning effort", "session": "Session", "repeat": "Repeat", "time": "Time", "customUnit": "Repeat unit", "interval": "Interval", "weekdays": "Weekdays", "notification": "Notifications" },
-			"target": { "new_session": "New session", "existing_session": "Existing session" },
-			"repeat": { "once": "Does not repeat", "daily": "Daily", "weekdays": "Every weekday", "weekly": "Weekly", "monthly": "Monthly", "custom": "Custom" },
-			"unit": { "day": "Day", "week": "Week", "month": "Month" },
-			"weekday": { "0": "Sunday", "1": "Monday", "2": "Tuesday", "3": "Wednesday", "4": "Thursday", "5": "Friday", "6": "Saturday" },
-			"notification": { "important_updates": "Important updates", "failures_only": "Only unsuccessful runs" },
-			"validation": { "future": "Choose a future time" },
-			"schedule": { "onceDescription": "Once at {{time}}", "dailyDescription": "Daily at {{time}}", "weekdaysDescription": "Every weekday at {{time}}", "weeklyDescription": "Weekly (anchor {{time}})", "monthlyDescription": "Monthly on day {{day}} at {{time}}", "customDayDescription": "Every {{interval}} days at {{time}}", "customWeekDescription": "Every {{interval}} weeks at {{time}}", "customMonthDescription": "Every {{interval}} months on day {{day}} at {{time}}" }
+		"title": "Scheduled tasks",
+		"search": "Search tasks...",
+		"create": "New task",
+		"createWithAi": "Create with AI",
+		"createManually": "Create manually",
+		"prefill": "Help me schedule a task: ",
+		"empty": "No scheduled tasks",
+		"windowsOnly": "Background scheduling is available on Windows in this release; this platform can only view tasks.",
+		"filters": {
+			"all": "All",
+			"enabled": "Enabled",
+			"paused": "Paused",
+			"attention": "Needs attention"
 		},
-		"status": { "queued": "Queued", "running": "Running", "succeeded": "Succeeded", "unchanged": "Unchanged", "changed": "Changed", "awaiting_approval": "Awaiting approval", "failed": "Failed", "cancelled": "Cancelled" }
+		"kind": {
+			"reminder": "Reminder",
+			"agent": "AI task",
+			"monitor": "AI monitor"
+		},
+		"nextRun": "Next: {{time}}",
+		"runNow": "Run now",
+		"pause": "Pause",
+		"resume": "Resume",
+		"deleteConfirm": "Delete this scheduled task?",
+		"enabled": "Enabled",
+		"paused": "Paused",
+		"prompt": "Task prompt",
+		"environment": "Pinned environment",
+		"noWorkspace": "No project",
+		"noModel": "Reminders do not call a model",
+		"existingSessionTarget": "Existing session · {{sessionId}}",
+		"autoSafe": "Auto safe",
+		"readOnly": "Read only",
+		"history": "Run history",
+		"noRuns": "No runs yet",
+		"openSession": "Open session",
+		"manual": {
+			"title": "Create scheduled task manually",
+			"create": "Create task",
+			"cancel": "Cancel",
+			"retry": "Retry",
+			"created": "Scheduled task created",
+			"fields": {
+				"title": "Task title",
+				"prompt": "Describe what the AI should do",
+				"kind": "Task type",
+				"runIn": "Run in",
+				"workspace": "Project",
+				"model": "Model",
+				"reasoningEffort": "Reasoning effort",
+				"session": "Session",
+				"repeat": "Repeat",
+				"time": "Time",
+				"customUnit": "Repeat unit",
+				"interval": "Interval",
+				"weekdays": "Weekdays",
+				"notification": "Notifications"
+			},
+			"target": {
+				"new_session": "New session",
+				"existing_session": "Existing session"
+			},
+			"repeat": {
+				"once": "Does not repeat",
+				"daily": "Daily",
+				"weekdays": "Every weekday",
+				"weekly": "Weekly",
+				"monthly": "Monthly",
+				"custom": "Custom"
+			},
+			"unit": { "day": "Day", "week": "Week", "month": "Month" },
+			"weekday": {
+				"0": "Sunday",
+				"1": "Monday",
+				"2": "Tuesday",
+				"3": "Wednesday",
+				"4": "Thursday",
+				"5": "Friday",
+				"6": "Saturday"
+			},
+			"notification": {
+				"important_updates": "Important updates",
+				"failures_only": "Only unsuccessful runs"
+			},
+			"validation": { "future": "Choose a future time" },
+			"schedule": {
+				"onceDescription": "Once at {{time}}",
+				"dailyDescription": "Daily at {{time}}",
+				"weekdaysDescription": "Every weekday at {{time}}",
+				"weeklyDescription": "Weekly (anchor {{time}})",
+				"monthlyDescription": "Monthly on day {{day}} at {{time}}",
+				"customDayDescription": "Every {{interval}} days at {{time}}",
+				"customWeekDescription": "Every {{interval}} weeks at {{time}}",
+				"customMonthDescription": "Every {{interval}} months on day {{day}} at {{time}}"
+			}
+		},
+		"status": {
+			"queued": "Queued",
+			"running": "Running",
+			"succeeded": "Succeeded",
+			"unchanged": "Unchanged",
+			"changed": "Changed",
+			"awaiting_approval": "Awaiting approval",
+			"failed": "Failed",
+			"cancelled": "Cancelled"
+		}
 	},
 	"app": {
 		"boot": {
@@ -816,8 +905,18 @@
 		}
 	},
 	"trajectory": {
-		"stats": { "duration": "Duration", "turns": "Turns", "calls": "Calls", "tools": "Tools", "tokens": "Tokens", "errors": "Errors" },
-		"filter": { "all": "All", "placeholder": "Search requestId, runId, or toolCallId" },
+		"stats": {
+			"duration": "Duration",
+			"turns": "Turns",
+			"calls": "Calls",
+			"tools": "Tools",
+			"tokens": "Tokens",
+			"errors": "Errors"
+		},
+		"filter": {
+			"all": "All",
+			"placeholder": "Search requestId, runId, or toolCallId"
+		},
 		"turn": "Turn {{turn}}",
 		"loadMore": "Load earlier records",
 		"empty": "This session has no trajectory records yet",
@@ -833,8 +932,32 @@
 		"response": "Response",
 		"timing": "Timing and tokens",
 		"copyId": "Copy identifier",
-		"kind": { "turn": "Turn", "prompt": "Prompt", "model_call": "Model call", "thinking": "Thinking", "tool_call": "Tool", "approval": "Approval", "retry": "Retry", "step": "Step", "provider_reconnect": "Provider reconnect", "final_response": "Final response", "error": "Error" },
-		"status": { "pending": "Pending", "running": "Running", "success": "Completed", "error": "Failed", "cancelled": "Cancelled", "approval_required": "Approval required" }
+		"kind": {
+			"turn": "Turn",
+			"prompt": "Prompt",
+			"model_call": "Model call",
+			"thinking": "Thinking",
+			"tool_call": "Tool",
+			"approval": "Approval",
+			"retry": "Retry",
+			"step": "Step",
+			"provider_reconnect": "Provider reconnect",
+			"final_response": "Final response",
+			"error": "Error"
+		},
+		"status": {
+			"pending": "Pending",
+			"running": "Running",
+			"success": "Completed",
+			"error": "Failed",
+			"cancelled": "Cancelled",
+			"approval_required": "Approval required"
+		},
+		"gantt": {
+			"empty": "No timing data to display",
+			"duration": "Duration",
+			"filterLabel": "Phase filters"
+		}
 	},
 	"browser": {
 		"toolbar": {
@@ -1548,8 +1671,19 @@
 			"add": "Add environment",
 			"noSetup": "No setup script",
 			"saved": "Environment configuration saved",
-			"review": { "title": "Review environment commands", "trust": "Trust", "trustNetwork": "Trust and allow network", "networkEnabled": "This environment requests network access; filesystem access remains sandboxed.", "networkDisabled": "Network access is disabled and scripts can write only to the worktree and isolated cache." },
-			"errors": { "load": "Failed to load environments", "save": "Failed to save environments", "runtimeLoad": "Failed to load global runtimes", "runtimeSave": "Failed to save global runtime" }
+			"review": {
+				"title": "Review environment commands",
+				"trust": "Trust",
+				"trustNetwork": "Trust and allow network",
+				"networkEnabled": "This environment requests network access; filesystem access remains sandboxed.",
+				"networkDisabled": "Network access is disabled and scripts can write only to the worktree and isolated cache."
+			},
+			"errors": {
+				"load": "Failed to load environments",
+				"save": "Failed to save environments",
+				"runtimeLoad": "Failed to load global runtimes",
+				"runtimeSave": "Failed to save global runtime"
+			}
 		},
 		"worktrees": {
 			"title": "Worktrees",
@@ -1579,7 +1713,13 @@
 			"repair": "Repair",
 			"deletePermanentTitle": "Delete permanent worktree?",
 			"deletePermanentDescription": "Deletion requires a clean worktree with no active session or terminal and no unnamed commits.",
-			"errors": { "load": "Failed to load worktree status", "repair": "Failed to repair worktree", "delete": "Failed to delete worktree", "create": "Failed to create worktree", "save": "Failed to save worktree preferences" }
+			"errors": {
+				"load": "Failed to load worktree status",
+				"repair": "Failed to repair worktree",
+				"delete": "Failed to delete worktree",
+				"create": "Failed to create worktree",
+				"save": "Failed to save worktree preferences"
+			}
 		},
 		"browser": {
 			"title": "Browser",
@@ -1755,7 +1895,14 @@
 			},
 			"runtime": {
 				"title": "Runtime",
-				"status": { "stopped": "Stopped", "starting": "Starting", "ready": "Ready", "failed": "Failed", "disabled": "Disabled", "quarantined": "Quarantined" },
+				"status": {
+					"stopped": "Stopped",
+					"starting": "Starting",
+					"ready": "Ready",
+					"failed": "Failed",
+					"disabled": "Disabled",
+					"quarantined": "Quarantined"
+				},
 				"capabilities": "Registered tools: {{tools}} · skills: {{skills}} · hooks: {{hooks}} · MCP servers: {{mcp}}",
 				"restart": "Restart runtime",
 				"stop": "Stop plugin",
@@ -1790,7 +1937,19 @@
 				"retryable": "Retryable",
 				"notRetryable": "Not retryable",
 				"noDiagnostics": "No diagnostics",
-				"phases": { "idle": "Idle", "preparing": "Preparing", "validating": "Validating", "awaiting_install": "Awaiting install approval", "awaiting_trust": "Awaiting package trust", "testing": "Sandbox testing", "passed": "Tests passed", "failed": "Tests failed", "exhausted": "Repair budget exhausted", "cancelled": "Cancelled", "interrupted": "Interrupted after backend restart" }
+				"phases": {
+					"idle": "Idle",
+					"preparing": "Preparing",
+					"validating": "Validating",
+					"awaiting_install": "Awaiting install approval",
+					"awaiting_trust": "Awaiting package trust",
+					"testing": "Sandbox testing",
+					"passed": "Tests passed",
+					"failed": "Tests failed",
+					"exhausted": "Repair budget exhausted",
+					"cancelled": "Cancelled",
+					"interrupted": "Interrupted after backend restart"
+				}
 			},
 			"harness": {
 				"title": "DeepSeek Harness runtime",
@@ -1804,7 +1963,12 @@
 				"chooseExecutable": "Choose the dsh executable",
 				"detect": "Detect Harness",
 				"status": "Detection status",
-				"statuses": { "unconfigured": "Not configured", "detected": "Detected", "needs_setup": "Setup required", "failed": "Detection failed" },
+				"statuses": {
+					"unconfigured": "Not configured",
+					"detected": "Detected",
+					"needs_setup": "Setup required",
+					"failed": "Detection failed"
+				},
 				"version": "Harness version",
 				"bridgeVersion": "Bridge protocol",
 				"network": "Network",

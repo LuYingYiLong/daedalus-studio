@@ -29,6 +29,7 @@ import type {
 } from "@/platform/rpc/trace-api";
 import { Icon } from "@/assets/icons";
 import { useTrajectoryController } from "./useTrajectoryController";
+import TraceGantt from "./TrajectoryGantt";
 import styles from "./TrajectoryPanel.module.css";
 
 const TRACE_METRIC_CLASS_NAMES = {
@@ -98,7 +99,7 @@ function TraceInspector({
 	const collapseItems = detail.promptSections.map((section) => ({
 		key: section.id,
 		label: (
-			<Flex align="center" gap={8}>
+			<Flex align="center" gap="small">
 				<Tag>{section.kind}</Tag>
 				<span>{section.label}</span>
 				<Typography.Text type="secondary">
@@ -131,9 +132,9 @@ function TraceInspector({
 						key: "request",
 						label: t("trajectory.request"),
 						children: (
-							<pre className={styles.codeBlock}>
+							<Typography.Text>
 								{serializeDetail(detail.request)}
-							</pre>
+							</Typography.Text>
 						),
 					},
 				]),
@@ -144,9 +145,9 @@ function TraceInspector({
 						key: "response",
 						label: t("trajectory.response"),
 						children: (
-							<pre className={styles.codeBlock}>
+							<Typography.Text>
 								{serializeDetail(detail.response)}
-							</pre>
+							</Typography.Text>
 						),
 					},
 				]),
@@ -215,7 +216,14 @@ function TraceInspector({
 				]}
 			/>
 			{inspectorItems.length > 0 ? (
-				<Collapse size="small" items={inspectorItems} />
+				<Collapse
+					size="small"
+					defaultActiveKey={inspectorItems.flatMap(
+						(item): string[] =>
+							item.key === undefined ? [] : [String(item.key)],
+					)}
+					items={inspectorItems}
+				/>
 			) : null}
 		</div>
 	);
@@ -300,178 +308,183 @@ function TrajectoryPanel({
 
 	return (
 		<section className={styles.panel} data-testid="trajectory-panel">
-			<div className={styles.stats}>
-				{stats.map(
-					(stat): React.JSX.Element => (
-						<Statistic
-							key={stat.key}
-							classNames={TRACE_METRIC_CLASS_NAMES}
-							title={t(`trajectory.stats.${stat.key}`)}
-							value={stat.value}
-						/>
-					),
-				)}
-			</div>
-			<div className={styles.toolbar}>
-				<Select
-					value={kind}
-					options={kindOptions}
-					onChange={setKind}
-					className={styles.kindSelect}
-					aria-label={t("trajectory.filter.all")}
-				/>
-				<Input.Search
-					allowClear
-					value={query}
-					onChange={(event): void => setQuery(event.target.value)}
-					placeholder={t("trajectory.filter.placeholder")}
-				/>
-			</div>
-			{controller.error !== null && !controller.unavailable ? (
-				<Alert
-					type="warning"
-					showIcon={true}
-					closable={true}
-					message={controller.error}
-				/>
-			) : null}
-			<div className={styles.content}>
-				<div
-					className={styles.ledger}
-					role="list"
-					aria-label={t("dock.tabs.trajectory")}
-				>
-					<Spin spinning={controller.isLoading}>
-						{groups.length === 0 && !controller.isLoading ? (
-							<Empty
-								image={Empty.PRESENTED_IMAGE_SIMPLE}
-								description={t("trajectory.empty")}
+			<header className={styles.header}>
+				<div className={styles.toolbar}>
+					<Select
+						value={kind}
+						options={kindOptions}
+						onChange={setKind}
+						className={styles.kindSelect}
+					/>
+					<Input
+						prefix={<Icon name="search" />}
+						allowClear
+						value={query}
+						onChange={(event): void => setQuery(event.target.value)}
+						placeholder={t("trajectory.filter.placeholder")}
+					/>
+				</div>
+				<TraceGantt records={filteredRecords} />
+			</header>
+			<div className={styles.context}>
+				<div className={styles.stats}>
+					{stats.map(
+						(stat): React.JSX.Element => (
+							<Statistic
+								key={stat.key}
+								classNames={TRACE_METRIC_CLASS_NAMES}
+								title={t(`trajectory.stats.${stat.key}`)}
+								value={stat.value}
 							/>
-						) : (
-							groups.map(
-								(group): React.JSX.Element => (
-									<section
-										key={`${group.turn}:${group.requestId}`}
-										className={styles.turnGroup}
-									>
-										<header>
-											<Typography.Text strong>
-												{t("trajectory.turn", {
-													turn: group.turn,
-												})}
-											</Typography.Text>
-											<Typography.Text
-												copyable={{
-													text: group.requestId,
-												}}
-												type="secondary"
-												ellipsis
-											>
-												{group.requestId}
-											</Typography.Text>
-										</header>
-										{group.records.map(
-											(record): React.JSX.Element => (
-												<button
-													key={record.recordId}
-													type="button"
-													role="listitem"
-													data-testid={`trajectory-record-${record.recordId}`}
-													className={`${styles.recordRow} ${controller.selectedRecordId === record.recordId ? styles.selected : ""}`}
-													onClick={(): void =>
-														controller.selectRecord(
-															record.recordId,
-														)
-													}
+						),
+					)}
+				</div>
+				{controller.error !== null && !controller.unavailable ? (
+					<Alert
+						type="warning"
+						showIcon={true}
+						closable={true}
+						title={controller.error}
+					/>
+				) : null}
+				<div className={styles.content}>
+					<div
+						className={styles.ledger}
+						role="list"
+						aria-label={t("dock.tabs.trajectory")}
+					>
+						<Spin spinning={controller.isLoading}>
+							{groups.length === 0 && !controller.isLoading ? (
+								<Empty
+									image={Empty.PRESENTED_IMAGE_SIMPLE}
+									description={t("trajectory.empty")}
+								/>
+							) : (
+								groups.map(
+									(group): React.JSX.Element => (
+										<section
+											key={`${group.turn}:${group.requestId}`}
+											className={styles.turnGroup}
+										>
+											<header>
+												<Typography.Text strong>
+													{t("trajectory.turn", {
+														turn: group.turn,
+													})}
+												</Typography.Text>
+												<Typography.Text
+													copyable={{
+														text: group.requestId,
+													}}
+													type="secondary"
+													ellipsis
 												>
-													<span
-														className={
-															styles.recordIcon
+													{group.requestId}
+												</Typography.Text>
+											</header>
+											{group.records.map(
+												(record): React.JSX.Element => (
+													<button
+														key={record.recordId}
+														type="button"
+														role="listitem"
+														data-testid={`trajectory-record-${record.recordId}`}
+														className={`${styles.recordRow} ${controller.selectedRecordId === record.recordId ? styles.selected : ""}`}
+														onClick={(): void =>
+															controller.selectRecord(
+																record.recordId,
+															)
 														}
 													>
-														<Icon
-															name={
-																record.kind ===
-																"tool_call"
-																	? "tools"
-																	: record.kind ===
-																		  "thinking"
-																		? "thinking"
-																		: record.kind ===
-																			  "error"
-																			? "error"
-																			: "inspect"
+														<span
+															className={
+																styles.recordIcon
 															}
-														/>
-													</span>
-													<span
-														className={
-															styles.recordMain
-														}
-													>
-														<strong>
-															{t(
-																`trajectory.kind.${record.kind}`,
+														>
+															<Icon
+																name={
+																	record.kind ===
+																	"tool_call"
+																		? "mcp"
+																		: record.kind ===
+																			  "thinking"
+																			? "thinking"
+																			: record.kind ===
+																				  "error"
+																				? "error"
+																				: "info"
+																}
+															/>
+														</span>
+														<span
+															className={
+																styles.recordMain
+															}
+														>
+															<strong>
+																{t(
+																	`trajectory.kind.${record.kind}`,
+																)}
+															</strong>
+															<small>
+																{getTraceRecordTitle(
+																	record,
+																)}
+															</small>
+														</span>
+														{record.detailLevel ===
+														"compacted" ? (
+															<Tag>
+																{t(
+																	"trajectory.compacted",
+																)}
+															</Tag>
+														) : null}
+														<Tag
+															color={statusColor(
+																record.status,
 															)}
-														</strong>
-														<small>
-															{getTraceRecordTitle(
-																record,
-															)}
-														</small>
-													</span>
-													{record.detailLevel ===
-													"compacted" ? (
-														<Tag>
+														>
 															{t(
-																"trajectory.compacted",
+																`trajectory.status.${record.status}`,
 															)}
 														</Tag>
-													) : null}
-													<Tag
-														color={statusColor(
-															record.status,
-														)}
-													>
-														{t(
-															`trajectory.status.${record.status}`,
-														)}
-													</Tag>
-													<time>
-														{formatTraceDuration(
-															record.durationMs ??
-																0,
-														)}
-													</time>
-												</button>
-											),
-										)}
-									</section>
-								),
-							)
-						)}
-						{controller.nextCursor !== undefined ? (
-							<Button
-								block
-								loading={controller.isLoadingMore}
-								onClick={(): void => {
-									void controller.loadMore();
-								}}
-							>
-								{t("trajectory.loadMore")}
-							</Button>
-						) : null}
-					</Spin>
+														<time>
+															{formatTraceDuration(
+																record.durationMs ??
+																	0,
+															)}
+														</time>
+													</button>
+												),
+											)}
+										</section>
+									),
+								)
+							)}
+							{controller.nextCursor !== undefined ? (
+								<Button
+									block
+									loading={controller.isLoadingMore}
+									onClick={(): void => {
+										void controller.loadMore();
+									}}
+								>
+									{t("trajectory.loadMore")}
+								</Button>
+							) : null}
+						</Spin>
+					</div>
+					<aside
+						className={styles.inspector}
+						aria-label={t("trajectory.details")}
+					>
+						<TraceInspector
+							detail={selectedDetail}
+							loading={controller.isLoadingDetail}
+						/>
+					</aside>
 				</div>
-				<aside
-					className={styles.inspector}
-					aria-label={t("trajectory.details")}
-				>
-					<TraceInspector
-						detail={selectedDetail}
-						loading={controller.isLoadingDetail}
-					/>
-				</aside>
 			</div>
 		</section>
 	);

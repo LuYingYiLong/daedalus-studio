@@ -346,6 +346,8 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 
 		const panel = mainWindow.locator("[data-testid=\"trajectory-panel\"]");
 		await expect(panel).toBeVisible();
+		await expect(panel.locator("[data-testid=\"trajectory-gantt\"]")).toBeVisible();
+		await expect(panel.getByText(/Phase filters|阶段筛选/)).toBeVisible();
 		await expect(panel.getByText(/Turn 11|第 11 轮/)).toBeVisible();
 		await expect(panel.locator("[data-testid=\"trajectory-record-trace-tool-old\"]")).toContainText(/Details compacted|详情已精简/);
 		await panel.locator("[data-testid=\"trajectory-record-trace-prompt-11\"]").click();

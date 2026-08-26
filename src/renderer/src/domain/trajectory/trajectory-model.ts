@@ -6,6 +6,20 @@ export type TraceTurnGroup = {
 	records: TraceRecord[];
 };
 
+export type TraceGanttSegment = {
+	recordId: string;
+	requestId: string;
+	sequence: number;
+	turn: number;
+	kind: TraceRecordKind;
+	status: TraceRecord["status"];
+	startedAt: string;
+	finishedAt?: string;
+	startOffsetMs: number;
+	endOffsetMs: number;
+	durationMs: number;
+};
+
 export const EMPTY_TRACE_SUMMARY: TraceSummary = {
 	revision: 0,
 	turnCount: 0,
@@ -38,6 +52,61 @@ export function groupTraceRecords(records: readonly TraceRecord[]): TraceTurnGro
 		if (record.kind !== "turn") group.records.push(record);
 	}
 	return [...byTurn.values()].sort((left, right): number => left.turn - right.turn);
+}
+
+export function buildTraceGanttSegments(records: readonly TraceRecord[]): TraceGanttSegment[] {
+	const parsedRecords: Array<{
+		record: TraceRecord;
+		startedAtMs: number;
+		finishedAtMs?: number;
+		durationMs: number;
+	}> = records.flatMap((record): Array<{
+		record: TraceRecord;
+		startedAtMs: number;
+		finishedAtMs?: number;
+		durationMs: number;
+	}> => {
+		const startedAtMs: number = Date.parse(record.startedAt);
+		if (!Number.isFinite(startedAtMs)) return [];
+		const parsedFinishedAtMs: number = record.finishedAt === undefined ? Number.NaN : Date.parse(record.finishedAt);
+		const finishedAtMs: number | undefined = Number.isFinite(parsedFinishedAtMs) ? parsedFinishedAtMs : undefined;
+		const measuredDurationMs: number = finishedAtMs === undefined ? 0 : Math.max(0, finishedAtMs - startedAtMs);
+		const declaredDurationMs: number = typeof record.durationMs === "number" && Number.isFinite(record.durationMs)
+			? Math.max(0, record.durationMs)
+			: 0;
+		return [{
+			record,
+			startedAtMs,
+			finishedAtMs,
+			durationMs: Math.max(declaredDurationMs, measuredDurationMs),
+		}];
+	});
+	if (parsedRecords.length === 0) return [];
+
+	const originMs: number = Math.min(...parsedRecords.map((item): number => item.startedAtMs));
+	return parsedRecords
+		.sort((left, right): number => left.startedAtMs - right.startedAtMs || left.record.sequence - right.record.sequence)
+		.map((item): TraceGanttSegment => {
+			const startOffsetMs: number = Math.max(0, item.startedAtMs - originMs);
+			const endOffsetMs: number = Math.max(
+				startOffsetMs + 1,
+				item.finishedAtMs === undefined ? startOffsetMs + item.durationMs : item.finishedAtMs - originMs,
+				startOffsetMs + item.durationMs,
+			);
+			return {
+				recordId: item.record.recordId,
+				requestId: item.record.requestId,
+				sequence: item.record.sequence,
+				turn: item.record.turn,
+				kind: item.record.kind,
+				status: item.record.status,
+				startedAt: item.record.startedAt,
+				...(item.record.finishedAt === undefined ? {} : { finishedAt: item.record.finishedAt }),
+				startOffsetMs,
+				endOffsetMs,
+				durationMs: item.durationMs,
+			};
+		});
 }
 
 export function filterTraceRecords(records: readonly TraceRecord[], kind: TraceRecordKind | "all", query: string): TraceRecord[] {
