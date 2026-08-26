@@ -4,6 +4,7 @@ import type {
 	SetStateAction,
 } from "react";
 import { selectWorkspace } from "@/platform/rpc/workspace-api";
+import { workspaceSupportsWorktrees } from "@/domain/workspace/worktree-capability";
 import type {
 	SessionMetadata,
 	WorkspaceConfig,
@@ -68,6 +69,12 @@ export default function useHomeWorkspaceNavigationController({
 		workspace: WorkspaceConfig,
 		executionEnvironment: "local" | "worktree" = "local",
 	): Promise<void> {
+		if (
+			executionEnvironment === "worktree" &&
+			!workspaceSupportsWorktrees(workspace)
+		) {
+			return;
+		}
 		setIsWorkspaceSessionCreating(true);
 		try {
 			const temporaryId: string | null =
@@ -120,6 +127,11 @@ export default function useHomeWorkspaceNavigationController({
 					...currentDraft,
 					workspaceId: optimisticWorkspace.id,
 					workspace: optimisticWorkspace,
+					executionEnvironment: workspaceSupportsWorktrees(
+						optimisticWorkspace,
+					)
+						? currentDraft.executionEnvironment
+						: "local",
 				}),
 			);
 			setActiveWorkspace(optimisticWorkspace);
@@ -139,6 +151,9 @@ export default function useHomeWorkspaceNavigationController({
 					...currentDraft,
 					workspaceId: workspace.id,
 					workspace,
+					executionEnvironment: workspaceSupportsWorktrees(workspace)
+						? currentDraft.executionEnvironment
+						: "local",
 				}),
 			);
 			setActiveWorkspace(workspace);

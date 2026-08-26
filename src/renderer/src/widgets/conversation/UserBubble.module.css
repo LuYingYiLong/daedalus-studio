@@ -34,7 +34,7 @@
 	padding: var(--ds-space-1) var(--ds-space-2);
 	overflow: hidden;
 	border-radius: var(--ds-radius-lg);
-	background: var(--ds-accent);
+	background: var(--ds-surface-active);
 	cursor: text;
 }
 

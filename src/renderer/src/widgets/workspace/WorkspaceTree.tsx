@@ -45,6 +45,7 @@ import WorktreeCreationOptions, {
 	type WorktreeSourceOptions,
 } from "@/widgets/composer/WorktreeCreationOptions";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
+import { workspaceSupportsWorktrees } from "@/domain/workspace/worktree-capability";
 import DeleteWorkspaceDialog from "./DeleteWorkspaceDialog";
 import WorkspaceProjectDialog from "./WorkspaceProjectDialog";
 import {
@@ -467,14 +468,14 @@ function createSessionTreePresentation(
 		key: `session:${session.id}`,
 		label: (
 			<Dropdown menu={actionMenu} trigger={["contextMenu"]}>
-				<span className={styles.sessionMenuItem}>
-					<Badge
-						dot={isUnread}
-						color="var(--ant-color-primary)"
-						offset={[-2, 4]}
-						title={isUnread ? labels.unreadResponse : undefined}
-						className={styles.sessionTitleBadge}
-					>
+				<Badge
+					dot={isUnread}
+					color="var(--ant-color-primary)"
+					offset={[-2, 4]}
+					title={isUnread ? labels.unreadResponse : undefined}
+					className={styles.sessionBadge}
+				>
+					<span className={styles.sessionMenuItem}>
 						<span
 							className={styles.sessionTitle}
 							aria-label={
@@ -485,102 +486,102 @@ function createSessionTreePresentation(
 						>
 							{session.title}
 						</span>
-					</Badge>
-					<Tooltip
-						title={
-							isPinned ? labels.unpinSession : labels.pinSession
-						}
-					>
-						<Button
-							type="text"
-							shape="circle"
-							size="small"
-							aria-label={labels.pinSessionAria(
-								session.title,
-								isPinned,
+						<Tooltip
+							title={
+								isPinned ? labels.unpinSession : labels.pinSession
+							}
+						>
+							<Button
+								type="text"
+								shape="circle"
+								size="small"
+								aria-label={labels.pinSessionAria(
+									session.title,
+									isPinned,
+								)}
+								className={styles.pinButton}
+								icon={<Icon name={isPinned ? "pinned" : "pin"} />}
+								loading={isPinning}
+								draggable={false}
+								onMouseDown={(event): void =>
+									event.stopPropagation()
+								}
+								onDragStart={(event): void => {
+									event.preventDefault();
+									event.stopPropagation();
+								}}
+								onClick={(event: MouseEvent<HTMLElement>): void =>
+									options.onPinButton(session, event)
+								}
+							/>
+						</Tooltip>
+						<span
+							className={`${styles.sessionEndSlot} ${
+								isRunning || isMoving
+									? styles.sessionEndSlotRunning
+									: ""
+							}`}
+						>
+							{originPresentation === null ? null : (
+								<Tooltip title={originPresentation.label}>
+									<span
+										className={styles.sessionOriginIndicator}
+										aria-label={originPresentation.label}
+									>
+										<Icon name={originPresentation.iconName} />
+									</span>
+								</Tooltip>
 							)}
-							className={styles.pinButton}
-							icon={<Icon name={isPinned ? "pinned" : "pin"} />}
-							loading={isPinning}
-							draggable={false}
-							onMouseDown={(event): void =>
-								event.stopPropagation()
-							}
-							onDragStart={(event): void => {
-								event.preventDefault();
-								event.stopPropagation();
-							}}
-							onClick={(event: MouseEvent<HTMLElement>): void =>
-								options.onPinButton(session, event)
-							}
-						/>
-					</Tooltip>
-					<span
-						className={`${styles.sessionEndSlot} ${
-							isRunning || isMoving
-								? styles.sessionEndSlotRunning
-								: ""
-						}`}
-					>
-						{originPresentation === null ? null : (
-							<Tooltip title={originPresentation.label}>
-								<span
-									className={styles.sessionOriginIndicator}
-									aria-label={originPresentation.label}
-								>
-									<Icon name={originPresentation.iconName} />
-								</span>
-							</Tooltip>
-						)}
-						{isRunning || isMoving ? (
-							<Tooltip
-								title={
-									isMoving
-										? labels.movingSession
-										: labels.assistantRunning
-									}
-							>
-								<span
-									className={styles.sessionRunIndicator}
-									aria-label={
+							{isRunning || isMoving ? (
+								<Tooltip
+									title={
 										isMoving
 											? labels.movingSession
 											: labels.assistantRunning
 									}
 								>
-									<Spin size="small" />
-								</span>
-							</Tooltip>
-						) : (
-							<Tooltip title={labels.archiveSession}>
-								<Button
-									type="text"
-									shape="circle"
-									size="small"
-									aria-label={labels.archiveSessionAria(
-										session.title,
-									)}
-									className={styles.archiveButton}
-									icon={<Icon name="archive" />}
-									loading={isArchiving}
-									draggable={false}
-									onMouseDown={(event): void =>
-										event.stopPropagation()
-									}
-									onDragStart={(event): void => {
-										event.preventDefault();
-										event.stopPropagation();
-									}}
-									onClick={(
-										event: MouseEvent<HTMLElement>,
-									): void =>
-										options.onArchiveButton(session, event)
-									}
-								/>
-							</Tooltip>
-						)}
+									<span
+										className={styles.sessionRunIndicator}
+										aria-label={
+											isMoving
+												? labels.movingSession
+												: labels.assistantRunning
+										}
+									>
+										<Spin size="small" />
+									</span>
+								</Tooltip>
+							) : (
+								<Tooltip title={labels.archiveSession}>
+									<Button
+										type="text"
+										shape="circle"
+										size="small"
+										aria-label={labels.archiveSessionAria(
+											session.title,
+										)}
+										className={styles.archiveButton}
+										icon={<Icon name="archive" />}
+										loading={isArchiving}
+										draggable={false}
+										onMouseDown={(event): void =>
+											event.stopPropagation()
+										}
+										onDragStart={(event): void => {
+											event.preventDefault();
+											event.stopPropagation();
+										}}
+										onClick={(
+											event: MouseEvent<HTMLElement>,
+										): void =>
+											options.onArchiveButton(session, event)
+										}
+									/>
+								</Tooltip>
+							)}
+						</span>
 					</span>
-				</span>
+				</Badge>
 			</Dropdown>
 		),
 	};
@@ -671,6 +672,8 @@ function createProjectTreeData(
 				options.draggingSessionId,
 				workspace,
 			);
+		const canCreateWorktrees: boolean =
+			workspaceSupportsWorktrees(workspace);
 		const actionMenu: MenuProps = {
 			items: [
 				{
@@ -678,17 +681,22 @@ function createProjectTreeData(
 					label: labels.editProject,
 					icon: <Icon name="folder-edit" />,
 				},
-				{
-					key: "new-worktree-session",
-					label: labels.newWorktreeSession,
-					icon: <Icon name="worktree" />,
-				},
-				{
-					key: "create-permanent-worktree",
-					label: labels.createPermanentWorktree,
-					icon: <Icon name="permanent-worktree" />,
-					disabled: workspace.permanentWorktree !== undefined,
-				},
+				...(canCreateWorktrees
+					? [
+							{
+								key: "new-worktree-session",
+								label: labels.newWorktreeSession,
+								icon: <Icon name="worktree" />,
+							},
+							{
+								key: "create-permanent-worktree",
+								label: labels.createPermanentWorktree,
+								icon: <Icon name="permanent-worktree" />,
+								disabled:
+									workspace.permanentWorktree !== undefined,
+							},
+						]
+					: []),
 				{
 					key: "open",
 					label: labels.openInExplorer,
@@ -706,7 +714,7 @@ function createProjectTreeData(
 				domEvent.preventDefault();
 				domEvent.stopPropagation();
 
-				if (key === "new-worktree-session") {
+				if (key === "new-worktree-session" && canCreateWorktrees) {
 					options.onNewWorkspaceSession(
 						workspace,
 						domEvent as unknown as MouseEvent<HTMLElement>,
@@ -714,7 +722,7 @@ function createProjectTreeData(
 					);
 					return;
 				}
-				if (key === "create-permanent-worktree") {
+				if (key === "create-permanent-worktree" && canCreateWorktrees) {
 					options.onCreatePermanentWorktree(workspace);
 					return;
 				}

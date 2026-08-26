@@ -296,8 +296,12 @@ body {
 	background: var(--ds-border) !important;
 }
 
-.ant-select-dropdown .rc-virtual-list-scrollbar:hover .rc-virtual-list-scrollbar-thumb,
-.ant-select-tree-dropdown .rc-virtual-list-scrollbar:hover .rc-virtual-list-scrollbar-thumb {
+.ant-select-dropdown
+	.rc-virtual-list-scrollbar:hover
+	.rc-virtual-list-scrollbar-thumb,
+.ant-select-tree-dropdown
+	.rc-virtual-list-scrollbar:hover
+	.rc-virtual-list-scrollbar-thumb {
 	background: var(--ds-text-muted) !important;
 }
 
@@ -428,7 +432,6 @@ body {
 	display: block;
 	width: 1em;
 	height: 1em;
-	vertical-align: middle;
 }
 
 ::highlight(daedalus-conversation-search) {

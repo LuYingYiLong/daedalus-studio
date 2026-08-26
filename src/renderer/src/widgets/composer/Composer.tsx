@@ -17,6 +17,7 @@ import type { TextAreaRef } from "antd/es/input/TextArea";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
+import { workspaceSupportsWorktrees } from "@/domain/workspace/worktree-capability";
 import styles from "./Composer.module.css";
 import type { ApprovalMode } from "@/platform/rpc/approval-api";
 import type { ChatMode } from "@/platform/rpc/chat-api";
@@ -586,6 +587,8 @@ function Composer({
 			: createWorkspaceKey(selectedWorkspace.id);
 	const selectedWorkspaceLabel: string =
 		selectedWorkspace?.name ?? t("composer.workspace.noWorkspace");
+	const canUseWorktrees: boolean =
+		workspaceSupportsWorktrees(selectedWorkspace);
 	const approvalModeLabel: string =
 		approvalMode === "full-trust"
 			? t("composer.approvalMode.fullTrust")
@@ -1524,7 +1527,9 @@ function Composer({
 							</Dropdown>
 						</Tooltip>
 						{onAddPluginContext === undefined ? null : (
-							<PluginContextProviderPicker onAddContext={onAddPluginContext} />
+							<PluginContextProviderPicker
+								onAddContext={onAddPluginContext}
+							/>
 						)}
 
 						<Divider vertical={true} />
@@ -1697,13 +1702,13 @@ function Composer({
 							</Button>
 						</Dropdown>
 						{worktreeMode !== undefined &&
-						selectedWorkspace !== null ? (
+						selectedWorkspace !== null &&
+						canUseWorktrees ? (
 							<Tooltip
 								title={worktreeDisabledReason ?? undefined}
 							>
 								<span>
 									<Segmented
-										size="small"
 										value={worktreeMode}
 										disabled={isWorktreePreparing}
 										options={[
@@ -1738,6 +1743,7 @@ function Composer({
 						) : null}
 						{worktreeMode === "worktree" &&
 						selectedWorkspace !== null &&
+						canUseWorktrees &&
 						onWorktreeSourceOptionsChange !== undefined ? (
 							<WorktreeCreationOptions
 								workspace={selectedWorkspace}

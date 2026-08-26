@@ -229,6 +229,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		isNewSessionHome,
 		activeSessionId,
 		workspaceId: homeDraft.workspaceId,
+		workspace: homeDraft.workspace,
 		workspaceRefreshToken,
 		setHomeWorkspaceOptions,
 	});

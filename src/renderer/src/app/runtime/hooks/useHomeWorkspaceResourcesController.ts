@@ -6,6 +6,7 @@ import {
 	type SetStateAction,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { workspaceSupportsWorktrees } from "@/domain/workspace/worktree-capability";
 import {
 	fetchWorkspaces,
 	getWorktreeEligibility,
@@ -18,6 +19,7 @@ export type HomeWorkspaceResourcesControllerParams = {
 	isNewSessionHome: boolean;
 	activeSessionId: string | null;
 	workspaceId: string | null;
+	workspace: WorkspaceConfig | null;
 	workspaceRefreshToken: number;
 	setHomeWorkspaceOptions: Dispatch<SetStateAction<WorkspaceConfig[]>>;
 };
@@ -56,6 +58,7 @@ export default function useHomeWorkspaceResourcesController({
 	isNewSessionHome,
 	activeSessionId,
 	workspaceId,
+	workspace,
 	workspaceRefreshToken,
 	setHomeWorkspaceOptions,
 }: HomeWorkspaceResourcesControllerParams): HomeWorkspaceResourcesController {
@@ -102,6 +105,14 @@ export default function useHomeWorkspaceResourcesController({
 			setWorktreeDisabledReason(null);
 			return;
 		}
+		if (
+			workspace !== null &&
+			workspace.id === workspaceId &&
+			!workspaceSupportsWorktrees(workspace)
+		) {
+			setWorktreeDisabledReason(getUnavailableMessage());
+			return;
+		}
 
 		let cancelled: boolean = false;
 		setWorktreeDisabledReason(null);
@@ -135,6 +146,7 @@ export default function useHomeWorkspaceResourcesController({
 		getReasonMessage,
 		getUnavailableMessage,
 		isNewSessionHome,
+		workspace,
 		workspaceId,
 	]);
 

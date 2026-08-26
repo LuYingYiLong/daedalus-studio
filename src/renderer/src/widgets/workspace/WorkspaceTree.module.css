@@ -180,15 +180,14 @@
 	white-space: nowrap;
 }
 
-.sessionTitleBadge {
+.sessionBadge {
 	display: block;
-	grid-column: 1;
+	width: 100%;
 	min-width: 0;
 	max-width: 100%;
-	justify-self: start;
 }
 
-.sessionTitleBadge :global(.ant-badge-dot) {
+.sessionBadge :global(.ant-badge-dot) {
 	box-shadow: var(--ds-box-shadow);
 }
 

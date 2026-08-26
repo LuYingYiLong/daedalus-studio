@@ -125,7 +125,6 @@ function WorktreeCreationOptions({
 		<>
 			<Button
 				type="text"
-				size="small"
 				disabled={disabled}
 				icon={<Icon name="settings" />}
 				onClick={(): void => {
