@@ -12,6 +12,7 @@ import type {
 	HomePageSummaryController,
 } from "./useHomePageSummaryController";
 import styles from "../HomePage.module.css";
+import { Icon } from "@/assets/icons";
 
 export type HomePageDialogsProps = {
 	summaryController: HomePageSummaryController;
@@ -85,8 +86,9 @@ function HomePageDialogs({
 				onCancel={closeGodotSceneModal}
 			>
 				<div className={styles.godotSceneModalBody}>
-					<Input.Search
+					<Input
 						allowClear
+						prefix={<Icon name="search" />}
 						value={godotSceneSearch}
 						placeholder={t(
 							"agentPage.summary.godot.sceneModal.searchPlaceholder",
@@ -110,15 +112,21 @@ function HomePageDialogs({
 										type="text"
 										block
 										className={styles.godotSceneButton}
-										onClick={(): void => runGodotScene(scene)}
+										onClick={(): void =>
+											runGodotScene(scene)
+										}
 									>
 										<span className={styles.godotSceneText}>
 											<span
-												className={styles.summaryItemTitle}
+												className={
+													styles.summaryItemTitle
+												}
 											>
 												{scene.name}
 											</span>
-											<span className={styles.summaryMeta}>
+											<span
+												className={styles.summaryMeta}
+											>
 												{scene.resourcePath}
 											</span>
 										</span>

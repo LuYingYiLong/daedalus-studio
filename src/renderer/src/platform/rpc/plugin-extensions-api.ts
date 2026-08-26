@@ -9,7 +9,6 @@ function namespacedId(pluginId: string, localId: string): string {
 export type PluginP2RegistrySnapshot = {
 	apiVersion: number;
 	commands: Array<Record<string, unknown>>;
-	contextProviders: Array<Record<string, unknown>>;
 	panels: Array<Record<string, unknown>>;
 	settings: Array<Record<string, unknown>>;
 	timelineParts: Array<Record<string, unknown>>;
@@ -35,26 +34,6 @@ export async function resolvePluginCommand(
 		command,
 		args,
 	});
-}
-
-export async function listPluginContextProviders(): Promise<{
-	providers: Array<Record<string, unknown>>;
-}> {
-	const client = await createBackendClient();
-	return client.request<{ providers: Array<Record<string, unknown>> }>(
-		"plugin.context-provider.list",
-	);
-}
-
-export async function resolvePluginContextProvider(
-	providerId: string,
-	args: Record<string, unknown> = {},
-): Promise<Record<string, unknown>> {
-	const client = await createBackendClient();
-	return client.request<Record<string, unknown>>(
-		"plugin.context-provider.resolve",
-		{ providerId, args },
-	);
 }
 
 export async function getPluginPanelState(

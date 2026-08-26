@@ -23,8 +23,9 @@ describe("HomePage Composer controller source", () => {
 	it("keeps Composer prop adaptation outside the page component", () => {
 		expect(pageSource).toContain("useHomePageComposerController({");
 		expect(pageSource).not.toContain("<Composer");
-		expect(pageSource).not.toContain("onAddPluginContext={(value");
-		expect(controllerSource).toContain("createPluginContextItem");
+		expect(pageSource).not.toContain("PluginContextProviderPicker");
+		expect(controllerSource).not.toContain("createPluginContextItem");
+		expect(controllerSource).not.toContain("onAddPluginContext");
 		expect(controllerSource).toContain("compact={compact}");
 		expect(controllerSource).toContain("floating={compact}");
 	});

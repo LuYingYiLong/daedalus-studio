@@ -745,7 +745,6 @@ function HomePage({
 			onAddImages,
 			onAddPastedTextAttachment,
 			onAddContextFiles,
-			onAddContext,
 			onHomeWorkspaceSelect,
 			onHomeWorkspaceAdd,
 			onHomeWorkspaceClear,

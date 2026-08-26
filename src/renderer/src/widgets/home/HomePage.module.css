@@ -482,7 +482,7 @@
 
 .godotSceneModalBody {
 	display: grid;
-	gap: 8px;
+	gap: var(--ds-space-1);
 }
 
 .godotSceneLoading {
@@ -493,7 +493,7 @@
 
 .godotSceneList {
 	display: grid;
-	gap: 4px;
+	gap: var(--ds-space-1);
 	max-height: min(520px, 62vh);
 	overflow-y: auto;
 }

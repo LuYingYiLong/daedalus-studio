@@ -2,7 +2,6 @@ import { useCallback, useMemo } from "react";
 import Composer, {
 	type ComposerProps,
 } from "@/widgets/composer/Composer";
-import type { AdditionalContextItem } from "@/platform/rpc/types";
 
 type ComposerActionKeys =
 	| "onDraftChange"
@@ -53,7 +52,6 @@ export type HomePageComposerControllerParams = {
 		isWorktreePreparing: boolean;
 	};
 	actions: Pick<ComposerProps, ComposerActionKeys> & {
-		onAddContext: (item: AdditionalContextItem) => void;
 		onHomeWorkspaceSelect: NonNullable<ComposerProps["onWorkspaceSelect"]>;
 		onHomeWorkspaceAdd: NonNullable<ComposerProps["onWorkspaceAdd"]>;
 		onHomeWorkspaceClear: NonNullable<ComposerProps["onWorkspaceClear"]>;
@@ -69,46 +67,6 @@ export type HomePageComposerControllerParams = {
 export type HomePageComposerController = {
 	renderComposer: (compact: boolean) => React.JSX.Element;
 };
-
-function createPluginContextItem(
-	value: Record<string, unknown>,
-): AdditionalContextItem {
-	const content =
-		typeof value.content === "string"
-			? value.content.slice(0, 1_000_000)
-			: JSON.stringify(value).slice(0, 1_000_000);
-	const providerId =
-		typeof value.providerId === "string"
-			? value.providerId
-			: "plugin-context";
-	const timestamp = Date.now().toString(36);
-	const title =
-		typeof value.title === "string" && value.title.trim().length > 0
-			? value.title.slice(0, 200)
-			: "Plugin context";
-
-	return {
-		id: `plugin-context:${providerId}:${timestamp}`,
-		kind: "text_attachment",
-		title,
-		subtitle:
-			typeof value.source === "string"
-				? value.source.slice(0, 400)
-				: undefined,
-		source: "manual",
-		data: {
-			attachmentId: `plugin-context-${timestamp}`,
-			mimeType: "text/plain",
-			byteSize: new TextEncoder().encode(content).byteLength,
-			fileName: `${providerId.replace(/[^a-z0-9._-]+/giu, "-").slice(0, 80) || "plugin-context"}.txt`,
-			content,
-		},
-		summary:
-			typeof value.title === "string"
-				? value.title.slice(0, 1200)
-				: undefined,
-	};
-}
 
 export default function useHomePageComposerController({
 	state,
@@ -161,9 +119,6 @@ export default function useHomePageComposerController({
 			onAddImages: actions.onAddImages,
 			onAddPastedTextAttachment: actions.onAddPastedTextAttachment,
 			onAddContextFiles: actions.onAddContextFiles,
-			onAddPluginContext: (value: Record<string, unknown>): void => {
-				actions.onAddContext(createPluginContextItem(value));
-			},
 			onWorkspaceSelect: state.isHome
 				? actions.onHomeWorkspaceSelect
 				: undefined,
