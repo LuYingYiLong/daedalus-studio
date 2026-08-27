@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import {
 	Alert,
 	Button,
@@ -7,11 +7,13 @@ import {
 	Empty,
 	Flex,
 	Input,
+	Menu,
+	Splitter,
 	Spin,
 	Tag,
 	Typography,
 } from "antd";
-import type { CollapseProps } from "antd";
+import type { CollapseProps, MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 import {
 	filterTraceRecords,
@@ -28,6 +30,8 @@ import { useTrajectoryController } from "./useTrajectoryController";
 import TraceGantt from "./TrajectoryGantt";
 import styles from "./TrajectoryPanel.module.css";
 
+const ReactJsonView = lazy(() => import("@microlink/react-json-view"));
+
 type TrajectoryPanelProps = {
 	sessionId: string | null;
 	isActive: boolean;
@@ -40,6 +44,75 @@ function serializeDetail(value: unknown): string {
 	} catch {
 		return String(value);
 	}
+}
+
+function getJsonObject(value: unknown): object | null {
+	if (value !== null && typeof value === "object") return value;
+	if (typeof value !== "string") return null;
+
+	const trimmed = value.trim();
+	if (trimmed.length < 2 || (trimmed[0] !== "{" && trimmed[0] !== "[")) {
+		return null;
+	}
+
+	try {
+		const parsed: unknown = JSON.parse(trimmed);
+		return parsed !== null && typeof parsed === "object" ? parsed : null;
+	} catch {
+		return null;
+	}
+}
+
+function JsonDetail({ value }: { value: unknown }): React.JSX.Element {
+	const source = getJsonObject(value);
+	if (source === null) {
+		return <pre className={styles.codeBlock}>{serializeDetail(value)}</pre>;
+	}
+
+	return (
+		<div className={styles.jsonView} data-testid="trajectory-json-view">
+			<Suspense
+				fallback={
+					<pre className={styles.codeBlock}>
+						{serializeDetail(value)}
+					</pre>
+				}
+			>
+				<ReactJsonView
+					src={source}
+					name={false}
+					style={{
+						display: "block",
+						width: "100%",
+						maxHeight: 512,
+						overflow: "auto",
+						boxSizing: "border-box",
+						fontFamily: "var(--ds-font-family-code)",
+						fontSize: 12,
+						lineHeight: 1.5,
+						backgroundColor: "transparent",
+					}}
+					theme="rjv-default"
+					iconStyle="triangle"
+					indentWidth={2}
+					collapsed={2}
+					collapseStringsAfterLength={240}
+					groupArraysAfterLength={20}
+					displayObjectSize={true}
+					displayDataTypes={false}
+					displayArrayKey={true}
+					enableClipboard={true}
+					onEdit={false}
+					onAdd={false}
+					onDelete={false}
+					sortKeys={false}
+					quotesOnKeys={true}
+					escapeStrings={true}
+					showComma={true}
+				/>
+			</Suspense>
+		</div>
+	);
 }
 
 function statusColor(status: TraceRecord["status"]): string {
@@ -95,11 +168,7 @@ function TraceInspector({
 				</Typography.Text>
 			</Flex>
 		),
-		children: (
-			<pre className={styles.codeBlock}>
-				{serializeDetail(section.content)}
-			</pre>
-		),
+		children: <JsonDetail value={section.content} />,
 	}));
 	const inspectorItems: NonNullable<CollapseProps["items"]> = [
 		...(collapseItems.length > 0
@@ -108,7 +177,12 @@ function TraceInspector({
 						key: "prompt-sections",
 						label: t("trajectory.promptSections"),
 						children: (
-							<Collapse size="small" items={collapseItems} />
+							<Collapse
+								size="small"
+								items={collapseItems}
+								className={styles.collapse}
+								ghost
+							/>
 						),
 					},
 				]
@@ -119,11 +193,7 @@ function TraceInspector({
 					{
 						key: "request",
 						label: t("trajectory.request"),
-						children: (
-							<Typography.Text>
-								{serializeDetail(detail.request)}
-							</Typography.Text>
-						),
+						children: <JsonDetail value={detail.request} />,
 					},
 				]),
 		...(detail.response === undefined
@@ -132,11 +202,7 @@ function TraceInspector({
 					{
 						key: "response",
 						label: t("trajectory.response"),
-						children: (
-							<Typography.Text>
-								{serializeDetail(detail.response)}
-							</Typography.Text>
-						),
+						children: <JsonDetail value={detail.response} />,
 					},
 				]),
 		...(detail.redactions.length > 0
@@ -157,51 +223,68 @@ function TraceInspector({
 				]
 			: []),
 	];
+	const metadataItems: NonNullable<CollapseProps["items"]> = [
+		{
+			key: "metadata",
+			label: t("trajectory.metadata"),
+			children: (
+				<div className={styles.metadataBody}>
+					<Typography.Text
+						copyable={{ text: detail.record.recordId }}
+						className={styles.recordId}
+					>
+						{detail.record.recordId}
+					</Typography.Text>
+					<Descriptions
+						size="small"
+						column={1}
+						items={[
+							{
+								key: "request",
+								label: "requestId",
+								children: detail.record.requestId,
+							},
+							...(detail.record.runId === undefined
+								? []
+								: [
+										{
+											key: "run",
+											label: "runId",
+											children: detail.record.runId,
+										},
+									]),
+							...(detail.record.toolCallId === undefined
+								? []
+								: [
+										{
+											key: "tool",
+											label: "toolCallId",
+											children: detail.record.toolCallId,
+										},
+									]),
+							{
+								key: "timing",
+								label: t("trajectory.timing"),
+								children: `${detail.record.durationMs ?? 0} ms · ${detail.record.inputTokens ?? 0}/${detail.record.outputTokens ?? 0}`,
+							},
+						]}
+					/>
+				</div>
+			),
+		},
+	];
 
 	return (
 		<div
 			className={styles.inspectorBody}
 			data-testid="trajectory-inspector"
 		>
-			<Typography.Text
-				copyable={{ text: detail.record.recordId }}
-				className={styles.recordId}
-			>
-				{detail.record.recordId}
-			</Typography.Text>
-			<Descriptions
+			<Collapse
 				size="small"
-				column={1}
-				items={[
-					{
-						key: "request",
-						label: "requestId",
-						children: detail.record.requestId,
-					},
-					...(detail.record.runId === undefined
-						? []
-						: [
-								{
-									key: "run",
-									label: "runId",
-									children: detail.record.runId,
-								},
-							]),
-					...(detail.record.toolCallId === undefined
-						? []
-						: [
-								{
-									key: "tool",
-									label: "toolCallId",
-									children: detail.record.toolCallId,
-								},
-							]),
-					{
-						key: "timing",
-						label: t("trajectory.timing"),
-						children: `${detail.record.durationMs ?? 0} ms · ${detail.record.inputTokens ?? 0}/${detail.record.outputTokens ?? 0}`,
-					},
-				]}
+				defaultActiveKey={["metadata"]}
+				items={metadataItems}
+				className={styles.collapse}
+				bordered={false}
 			/>
 			{inspectorItems.length > 0 ? (
 				<Collapse
@@ -211,6 +294,8 @@ function TraceInspector({
 							item.key === undefined ? [] : [String(item.key)],
 					)}
 					items={inspectorItems}
+					className={styles.collapse}
+					bordered={false}
 				/>
 			) : null}
 		</div>
@@ -241,6 +326,70 @@ function TrajectoryPanel({
 	const groups = useMemo(
 		() => groupTraceRecords(timeFilteredRecords),
 		[timeFilteredRecords],
+	);
+	const ledgerItems: MenuProps["items"] = useMemo(
+		(): MenuProps["items"] =>
+			groups.map((group): NonNullable<MenuProps["items"]>[number] => ({
+				type: "group",
+				key: `${group.turn}:${group.requestId}`,
+				label: (
+					<div className={styles.menuGroupLabel}>
+						<Typography.Text strong>
+							{t("trajectory.turn", { turn: group.turn })}
+						</Typography.Text>
+						<Typography.Text
+							copyable={{ text: group.requestId }}
+							type="secondary"
+							ellipsis
+						>
+							{group.requestId}
+						</Typography.Text>
+					</div>
+				),
+				children: group.records.map(
+					(record): NonNullable<MenuProps["items"]>[number] => ({
+						key: record.recordId,
+						"data-testid": `trajectory-record-${record.recordId}`,
+						label: (
+							<div className={styles.recordRow}>
+								<span className={styles.recordIcon}>
+									<Icon
+										name={
+											record.kind === "tool_call"
+												? "mcp"
+												: record.kind === "thinking"
+													? "thinking"
+													: record.kind === "error"
+														? "error"
+														: "info"
+										}
+									/>
+								</span>
+								<Flex gap="small" align="center">
+									<strong>
+										{t(`trajectory.kind.${record.kind}`)}
+									</strong>
+									<p className={styles.traceRecordTitle}>
+										{getTraceRecordTitle(record)}
+									</p>
+								</Flex>
+								{record.detailLevel === "compacted" ? (
+									<Tag>{t("trajectory.compacted")}</Tag>
+								) : null}
+								<Tag color={statusColor(record.status)}>
+									{t(`trajectory.status.${record.status}`)}
+								</Tag>
+								<time>
+									{formatTraceDuration(
+										record.durationMs ?? 0,
+									)}
+								</time>
+							</div>
+						),
+					}),
+				),
+			})),
+		[groups, t],
 	);
 	const selectedDetail: TraceDetail | null =
 		controller.detail?.record.recordId === controller.selectedRecordId
@@ -326,142 +475,75 @@ function TrajectoryPanel({
 					/>
 				) : null}
 				<div className={styles.content}>
-					<div
-						className={styles.ledger}
-						role="list"
-						aria-label={t("dock.tabs.trajectory")}
+					<Splitter
+						className={styles.splitter}
+						orientation="horizontal"
+						draggerIcon={null}
 					>
-						<Spin spinning={controller.isLoading}>
-							{groups.length === 0 && !controller.isLoading ? (
-								<Empty
-									image={Empty.PRESENTED_IMAGE_SIMPLE}
-									description={t("trajectory.empty")}
-								/>
-							) : (
-								groups.map(
-									(group): React.JSX.Element => (
-										<section
-											key={`${group.turn}:${group.requestId}`}
-											className={styles.turnGroup}
-										>
-											<header>
-												<Typography.Text strong>
-													{t("trajectory.turn", {
-														turn: group.turn,
-													})}
-												</Typography.Text>
-												<Typography.Text
-													copyable={{
-														text: group.requestId,
-													}}
-													type="secondary"
-													ellipsis
-												>
-													{group.requestId}
-												</Typography.Text>
-											</header>
-											{group.records.map(
-												(record): React.JSX.Element => (
-													<button
-														key={record.recordId}
-														type="button"
-														role="listitem"
-														data-testid={`trajectory-record-${record.recordId}`}
-														className={`${styles.recordRow} ${controller.selectedRecordId === record.recordId ? styles.selected : ""}`}
-														onClick={(): void =>
-															controller.selectRecord(
-																record.recordId,
-															)
-														}
-													>
-														<span
-															className={
-																styles.recordIcon
-															}
-														>
-															<Icon
-																name={
-																	record.kind ===
-																	"tool_call"
-																		? "mcp"
-																		: record.kind ===
-																			  "thinking"
-																			? "thinking"
-																			: record.kind ===
-																				  "error"
-																				? "error"
-																				: "info"
-																}
-															/>
-														</span>
-														<span
-															className={
-																styles.recordMain
-															}
-														>
-															<strong>
-																{t(
-																	`trajectory.kind.${record.kind}`,
-																)}
-															</strong>
-															<small>
-																{getTraceRecordTitle(
-																	record,
-																)}
-															</small>
-														</span>
-														{record.detailLevel ===
-														"compacted" ? (
-															<Tag>
-																{t(
-																	"trajectory.compacted",
-																)}
-															</Tag>
-														) : null}
-														<Tag
-															color={statusColor(
-																record.status,
-															)}
-														>
-															{t(
-																`trajectory.status.${record.status}`,
-															)}
-														</Tag>
-														<time>
-															{formatTraceDuration(
-																record.durationMs ??
-																	0,
-															)}
-														</time>
-													</button>
-												),
+						<Splitter.Panel
+							defaultSize="60%"
+							min={280}
+							className={styles.ledgerPanel}
+						>
+							<div className={styles.ledger}>
+								<Spin spinning={controller.isLoading}>
+									{groups.length === 0 &&
+									!controller.isLoading ? (
+										<Empty
+											image={Empty.PRESENTED_IMAGE_SIMPLE}
+											description={t("trajectory.empty")}
+										/>
+									) : (
+										<Menu
+											className={styles.ledgerMenu}
+											mode="inline"
+											items={ledgerItems}
+											selectedKeys={
+												controller.selectedRecordId ===
+												null
+													? []
+													: [
+															controller.selectedRecordId,
+														]
+											}
+											onClick={({ key }): void =>
+												controller.selectRecord(key)
+											}
+											aria-label={t(
+												"dock.tabs.trajectory",
 											)}
-										</section>
-									),
-								)
-							)}
-							{controller.nextCursor !== undefined ? (
-								<Button
-									block
-									loading={controller.isLoadingMore}
-									onClick={(): void => {
-										void controller.loadMore();
-									}}
-								>
-									{t("trajectory.loadMore")}
-								</Button>
-							) : null}
-						</Spin>
-					</div>
-					<aside
-						className={styles.inspector}
-						aria-label={t("trajectory.details")}
-					>
-						<TraceInspector
-							detail={selectedDetail}
-							loading={controller.isLoadingDetail}
-						/>
-					</aside>
+										/>
+									)}
+									{controller.nextCursor !== undefined ? (
+										<Button
+											block
+											loading={controller.isLoadingMore}
+											onClick={(): void => {
+												void controller.loadMore();
+											}}
+										>
+											{t("trajectory.loadMore")}
+										</Button>
+									) : null}
+								</Spin>
+							</div>
+						</Splitter.Panel>
+						<Splitter.Panel
+							defaultSize="40%"
+							min={280}
+							className={styles.inspectorPanel}
+						>
+							<aside
+								className={styles.inspector}
+								aria-label={t("trajectory.details")}
+							>
+								<TraceInspector
+									detail={selectedDetail}
+									loading={controller.isLoadingDetail}
+								/>
+							</aside>
+						</Splitter.Panel>
+					</Splitter>
 				</div>
 			</div>
 		</section>

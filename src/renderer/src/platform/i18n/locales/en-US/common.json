@@ -926,6 +926,7 @@
 		"details": "Details",
 		"compacted": "Details compacted",
 		"hidden": "Developer mode is off, so body details are hidden",
+		"metadata": "Record metadata",
 		"redactions": "Redacted fields",
 		"promptSections": "Prompt sections",
 		"request": "Request",

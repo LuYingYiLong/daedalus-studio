@@ -924,6 +924,7 @@
 		"details": "详情",
 		"compacted": "详情已精简",
 		"hidden": "开发者模式已关闭，正文详情暂时隐藏",
+		"metadata": "记录元数据",
 		"redactions": "已脱敏字段",
 		"promptSections": "Prompt 分段",
 		"request": "请求",

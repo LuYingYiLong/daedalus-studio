@@ -38,8 +38,7 @@
 	top: var(--ds-space-1);
 	bottom: 0;
 	z-index: 2;
-	border-right: 1px solid var(--ds-accent, var(--ds-primary));
-	border-left: 1px solid var(--ds-accent, var(--ds-primary));
+	border: 1px solid var(--ds-accent, var(--ds-primary));
 	background-color: color-mix(
 		in srgb,
 		var(--ds-accent, var(--ds-primary)) 12%,
