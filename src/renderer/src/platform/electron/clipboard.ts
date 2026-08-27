@@ -36,8 +36,9 @@ export async function copyTextToClipboard(text: string): Promise<void> {
 	}
 
 	try {
-		if (window.electronAPI?.clipboard?.writeText !== undefined) {
-			await window.electronAPI.clipboard.writeText(text);
+		const clipboard = getPlatformRuntime().system?.clipboard;
+		if (clipboard !== undefined) {
+			await clipboard.writeText(text);
 			return;
 		}
 	} catch {
@@ -56,9 +57,9 @@ export async function readTextFromClipboard(): Promise<string> {
 		// Electron renderer 可能没有 Clipboard API 权限，继续尝试主进程剪贴板。
 	}
 
-	if (window.electronAPI?.clipboard?.readText !== undefined) {
-		const result: { text: string } = await window.electronAPI.clipboard.readText();
-		return result.text;
+	const clipboard = getPlatformRuntime().system?.clipboard;
+	if (clipboard !== undefined) {
+		return await clipboard.readText();
 	}
 
 	throw new Error("Clipboard text cannot be read in this environment.");
@@ -84,6 +85,9 @@ function createFileFromDataUrl(dataUrl: string, fileName?: string): File {
 }
 
 export async function readImageFromClipboard(): Promise<File | null> {
-	const result: { dataUrl: string | null; fileName?: string } = await window.electronAPI.clipboard.readImage();
+	const clipboard = getPlatformRuntime().system?.clipboard;
+	if (clipboard === undefined) throw new Error("Clipboard images are unavailable in this environment.");
+	const result: { dataUrl: string | null; fileName?: string } = await clipboard.readImage();
 	return result.dataUrl === null ? null : createFileFromDataUrl(result.dataUrl, result.fileName);
 }
+import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";

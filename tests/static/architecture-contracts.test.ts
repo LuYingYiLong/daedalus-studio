@@ -75,4 +75,16 @@ describe("静态架构契约", () => {
 		expect(browserSource).toMatch(/nodeIntegration\s*:\s*false/);
 		expect(browserSource).toMatch(/webSecurity\s*:\s*true/);
 	});
+
+	it("移动入口不直接依赖 Electron，Service Worker 不缓存业务接口", () => {
+		const remoteFiles: string[] = collectSourceFiles("src/renderer/src/remote");
+		const remoteSource: string = remoteFiles.map((filePath: string): string => readFileSync(filePath, "utf8")).join("\n");
+		const serviceWorkerSource: string = readSource("src/renderer/public/remote-sw.js");
+
+		expect(remoteSource).not.toContain("electronAPI");
+		expect(remoteSource).not.toContain("desktopPlatformRuntime");
+		expect(remoteSource).toContain("remotePlatformRuntime");
+		expect(serviceWorkerSource).toContain('url.pathname.startsWith("/api/")');
+		expect(serviceWorkerSource).not.toMatch(/cache\.put\([^\n]*\/api\//u);
+	});
 });

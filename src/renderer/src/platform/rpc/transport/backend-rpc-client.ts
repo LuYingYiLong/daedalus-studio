@@ -53,6 +53,7 @@ type BackendEventListener = (event: BackendEvent) => void;
 
 export type BackendConnectionEvent = {
 	reconnected: boolean;
+	state: "connected" | "disconnected";
 };
 
 type BackendConnectionListener = (event: BackendConnectionEvent) => void;
@@ -254,7 +255,7 @@ export class BackendRpcClient {
 			this.connectReject = null;
 		}
 		for (const listener of this.connectionListeners) {
-			listener({ reconnected });
+			listener({ reconnected, state: "connected" });
 		}
 	};
 
@@ -289,6 +290,9 @@ export class BackendRpcClient {
 		);
 
 		const wasManualClose: boolean = this.manualClose;
+		for (const listener of this.connectionListeners) {
+			listener({ reconnected: false, state: "disconnected" });
+		}
 
 		console.debug("[Daedalus backend] Connection closed", {
 			manualClose: wasManualClose,
@@ -310,6 +314,10 @@ export class BackendRpcClient {
 			}
 
 			this.reconnectManager.scheduleReconnect((): void => {
+				// The scheduled backoff is no longer an in-flight connection. Reset
+				// the state so connect() creates a fresh WebSocket instead of waiting
+				// on the socket that already closed.
+				this.state = "disconnected";
 				this.connect().catch((error: Error): void => {
 					console.error("[Daedalus backend] Reconnect failed", error);
 				});

@@ -11,6 +11,7 @@ export type SettingsPageKey =
 	| "skills"
 	| "hooks"
 	| "browser"
+	| "remote_access"
 	| "environments"
 	| "worktrees"
 	| "plugins"
@@ -42,6 +43,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 	{ key: "page:hooks", page: "hooks", titleKey: "settings.menu.hooks" },
 	{ key: "page:plugins", page: "plugins", titleKey: "settings.menu.plugins" },
 	{ key: "page:browser", page: "browser", titleKey: "settings.menu.browser" },
+	{ key: "page:remote_access", page: "remote_access", titleKey: "settings.menu.remoteAccess" },
 	{ key: "page:environments", page: "environments", titleKey: "settings.menu.environments" },
 	{ key: "page:worktrees", page: "worktrees", titleKey: "settings.menu.worktrees" },
 	{ key: "page:documentation", page: "documentation", titleKey: "settings.menu.documentation" },
@@ -49,6 +51,10 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 	{ key: "page:archived_sessions", page: "archived_sessions", titleKey: "settings.menu.archivedSessions" },
 	{ key: "page:import", page: "import", titleKey: "settings.menu.import" },
 	{ key: "page:about", page: "about", titleKey: "settings.menu.about" },
+
+	{ key: "item:remote_access.enabled", page: "remote_access", titleKey: "settings.remoteAccess.enabled.title", descriptionKey: "settings.remoteAccess.enabled.description" },
+	{ key: "item:remote_access.pairing", page: "remote_access", titleKey: "settings.remoteAccess.pairing.title", descriptionKey: "settings.remoteAccess.pairing.description" },
+	{ key: "item:remote_access.devices", page: "remote_access", titleKey: "settings.remoteAccess.devices.title", descriptionKey: "settings.remoteAccess.devices.description" },
 
 	{ key: "item:default_model.sessionTitle", page: "default_model", titleKey: "settings.defaultModel.routing.sessionTitle.title", descriptionKey: "settings.defaultModel.routing.sessionTitle.description" },
 	{ key: "item:default_model.nextStepHints", page: "default_model", titleKey: "settings.defaultModel.routing.nextStepHints.title", descriptionKey: "settings.defaultModel.routing.nextStepHints.description" },

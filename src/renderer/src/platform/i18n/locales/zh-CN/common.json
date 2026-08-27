@@ -1587,6 +1587,86 @@
 			}
 		}
 	},
+	"remote": {
+		"connecting": "正在连接 Studio…",
+		"sessions": "会话",
+		"home": {
+			"eyebrow": "局域网远程",
+			"title": "继续你的工作",
+			"subtitle": "从手机查看进度、回复消息，并处理需要你确认的操作。",
+			"searchPlaceholder": "搜索会话或项目",
+			"recent": "最近会话",
+			"projects": "全部项目",
+			"noSearchResults": "没有匹配的会话或项目",
+			"openSessionFirst": "请先打开一个会话"
+		},
+		"navigation": {
+			"label": "主要导航",
+			"sessions": "会话",
+			"conversation": "对话",
+			"approvals": "审批",
+			"trajectory": "轨迹"
+		},
+		"actions": {
+			"more": "更多操作",
+			"refresh": "刷新",
+			"switchStudio": "更换 Studio"
+		},
+		"activity": {
+			"ready": "可以发送",
+			"running": "正在处理"
+		},
+		"newSession": "新建会话",
+		"newSessionTitle": "移动会话",
+		"chooseProject": "选择已有项目",
+		"create": "创建普通会话",
+		"noProjects": "Studio 中暂无可用项目",
+		"noSessions": "暂无会话",
+		"back": "返回会话列表",
+		"trace": "轨迹",
+		"loadMore": "加载更多",
+		"connectionError": "连接异常",
+		"connection": {
+			"connected": "已连接",
+			"disconnected": "已断开",
+			"connecting": "连接中",
+			"pairing_required": "未配对"
+		},
+		"pairingRequired": {
+			"title": "此设备尚未配对",
+			"description": "请在电脑端打开 Studio 设置 → 远程访问，生成配对二维码后使用本机扫描。"
+		},
+		"mode": { "ask": "询问", "agent": "Agent", "plan": "计划" },
+		"composerPlaceholder": "给 Studio 中的 AI 发送消息",
+		"approval": {
+			"title": "审批",
+			"mode": "审批模式",
+			"modeHint": "控制工具操作的确认范围",
+			"description": "待确认的工具操作会集中显示在这里，电脑端和手机端任一端处理后都会同步。",
+			"pending": "等待审批：{{tool}}",
+			"empty": "目前没有待审批操作"
+		},
+		"toolBudget": { "title": "工具预算" },
+		"plan": {
+			"title": "计划",
+			"open": "查看计划：{{title}}",
+			"feedback": "输入澄清回复或修改意见",
+			"clarify": "提交澄清",
+			"revise": "修改计划",
+			"approve": "批准计划"
+		},
+		"traceStats": {
+			"turns": "轮次",
+			"calls": "调用",
+			"tools": "工具",
+			"errors": "错误"
+		},
+		"trajectory": {
+			"description": "只读查看当前会话中的提示词、模型调用、工具和审批轨迹。",
+			"empty": "这个会话还没有轨迹记录",
+			"detail": "轨迹详情"
+		}
+	},
 	"settings": {
 		"menu": {
 			"groups": {
@@ -1609,6 +1689,7 @@
 			"hooks": "钩子",
 			"plugins": "插件",
 			"browser": "浏览器",
+			"remoteAccess": "远程访问",
 			"environments": "开发环境",
 			"worktrees": "工作树",
 			"documentation": "文档",
@@ -1632,6 +1713,61 @@
 			"save": "保存",
 			"close": "关闭",
 			"update": "更新"
+		},
+		"remoteAccess": {
+			"title": "远程访问",
+			"risk": {
+				"title": "远程设备可以批准高风险操作",
+				"description": "只与可信设备配对。手机端保留原有审批文本和二次确认，但获得授权的设备能够发送消息、停止运行并作出完整审批决定。"
+			},
+			"service": { "title": "远程服务" },
+			"enabled": {
+				"title": "允许局域网远程控制",
+				"description": "默认关闭。开启后只监听当前私有 IPv4 地址，Backend 仍仅监听 127.0.0.1。"
+			},
+			"status": {
+				"disabled": "已关闭",
+				"starting": "正在启动",
+				"running": "运行中",
+				"error": "启动失败"
+			},
+			"addresses": {
+				"title": "访问地址与证书指纹",
+				"empty": "未发现可用的私有 IPv4 地址"
+			},
+			"ports": {
+				"title": "固定端口",
+				"description": "端口冲突时服务会失败，不会随机切换。修改端口或 IP 后需要重新扫码配对。",
+				"saved": "远程端口已更新"
+			},
+			"pairing": {
+				"title": "证书与设备配对",
+				"actionTitle": "生成限时配对二维码",
+				"description": "二维码中的一次性秘密在 5 分钟后过期且只能使用一次。",
+				"generate": "生成二维码",
+				"installCertificate": "1. 安装本地根证书",
+				"scanPairing": "2. 扫描并配对",
+				"copyLink": "复制 APK 配对链接",
+				"expires": "有效期至 {{time}}",
+				"instructions": "Android：先扫描左侧二维码下载证书，在系统设置中将其安装为 CA 证书并核对指纹；随后扫描右侧二维码，或将配对链接粘贴到 Daedalus Remote APK。不要把二维码或链接转发给其他人。"
+			},
+			"devices": {
+				"title": "已配对设备",
+				"description": "撤销全部设备会立即断开现有连接，并轮换远程身份。",
+				"empty": "暂无已配对设备",
+				"lastSeen": "最后连接：{{time}}",
+				"revoke": "撤销",
+				"revokeTitle": "撤销 {{name}}？",
+				"revokeDescription": "该设备的现有连接会立即关闭，之后必须重新扫码才能访问。",
+				"revokeAll": "撤销全部并轮换身份",
+				"revokeAllTitle": "撤销所有远程设备？",
+				"revokeAllDescription": "所有设备会立即失效，根证书身份也会轮换；设备需要重新安装证书并配对。"
+			},
+			"errors": {
+				"start": "远程服务启动失败",
+				"save": "保存远程访问设置失败",
+				"pairing": "无法生成配对二维码"
+			}
 		},
 		"environments": {
 			"title": "开发环境",

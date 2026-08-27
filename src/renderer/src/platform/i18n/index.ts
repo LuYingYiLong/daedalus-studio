@@ -1,9 +1,6 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import {
-	getCachedClientPreferences,
-	type LanguagePreference
-} from "@/platform/rpc/client-preferences-api";
+import type { LanguagePreference } from "../../../../contracts/client-preferences";
 import enUS from "./locales/en-US/common.json";
 import zhCN from "./locales/zh-CN/common.json";
 
@@ -28,7 +25,7 @@ void i18n
 				common: zhCN
 			}
 		},
-		lng: resolveLanguagePreference(getCachedClientPreferences().language),
+		lng: resolveSystemLanguage(),
 		fallbackLng: "en-US",
 		defaultNS: "common",
 		interpolation: {

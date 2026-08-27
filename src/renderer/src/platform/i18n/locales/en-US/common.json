@@ -1594,6 +1594,86 @@
 			}
 		}
 	},
+	"remote": {
+		"connecting": "Connecting to Studio…",
+		"sessions": "Sessions",
+		"home": {
+			"eyebrow": "LAN remote",
+			"title": "Continue your work",
+			"subtitle": "Check progress, reply, and handle operations that need your confirmation from your phone.",
+			"searchPlaceholder": "Search sessions or projects",
+			"recent": "Recent sessions",
+			"projects": "All projects",
+			"noSearchResults": "No matching session or project",
+			"openSessionFirst": "Open a session first"
+		},
+		"navigation": {
+			"label": "Primary navigation",
+			"sessions": "Sessions",
+			"conversation": "Chat",
+			"approvals": "Approvals",
+			"trajectory": "Trajectory"
+		},
+		"actions": {
+			"more": "More actions",
+			"refresh": "Refresh",
+			"switchStudio": "Switch Studio"
+		},
+		"activity": {
+			"ready": "Ready",
+			"running": "Working"
+		},
+		"newSession": "New session",
+		"newSessionTitle": "Mobile session",
+		"chooseProject": "Choose an existing project",
+		"create": "Create local session",
+		"noProjects": "No projects are available in Studio",
+		"noSessions": "No sessions",
+		"back": "Back to sessions",
+		"trace": "Trajectory",
+		"loadMore": "Load more",
+		"connectionError": "Connection problem",
+		"connection": {
+			"connected": "Connected",
+			"disconnected": "Disconnected",
+			"connecting": "Connecting",
+			"pairing_required": "Not paired"
+		},
+		"pairingRequired": {
+			"title": "This device is not paired",
+			"description": "On the computer, open Studio Settings → Remote access, generate a pairing QR code, and scan it with this device."
+		},
+		"mode": { "ask": "Ask", "agent": "Agent", "plan": "Plan" },
+		"composerPlaceholder": "Send a message to the AI in Studio",
+		"approval": {
+			"title": "Approval",
+			"mode": "Approval mode",
+			"modeHint": "Controls which tool operations need confirmation",
+			"description": "Tool operations that need a decision appear here. Handling one on desktop or mobile updates both clients.",
+			"pending": "Approval required: {{tool}}",
+			"empty": "No operations need approval"
+		},
+		"toolBudget": { "title": "Tool budget" },
+		"plan": {
+			"title": "Plan",
+			"open": "Open plan: {{title}}",
+			"feedback": "Enter a clarification reply or revision feedback",
+			"clarify": "Submit clarification",
+			"revise": "Revise plan",
+			"approve": "Approve plan"
+		},
+		"traceStats": {
+			"turns": "Turns",
+			"calls": "Calls",
+			"tools": "Tools",
+			"errors": "Errors"
+		},
+		"trajectory": {
+			"description": "Read-only prompt, model-call, tool, and approval traces for the current session.",
+			"empty": "This session has no trajectory records yet",
+			"detail": "Trajectory detail"
+		}
+	},
 	"settings": {
 		"menu": {
 			"groups": {
@@ -1616,6 +1696,7 @@
 			"hooks": "Hooks",
 			"plugins": "Plugins",
 			"browser": "Browser",
+			"remoteAccess": "Remote access",
 			"environments": "Development environments",
 			"worktrees": "Worktrees",
 			"documentation": "Documentation",
@@ -1639,6 +1720,61 @@
 			"save": "Save",
 			"close": "Close",
 			"update": "Update"
+		},
+		"remoteAccess": {
+			"title": "Remote access",
+			"risk": {
+				"title": "Remote devices can approve high-risk operations",
+				"description": "Pair only trusted devices. The mobile client preserves approval text and secondary confirmation, but an authorized device can send messages, stop runs, and make full approval decisions."
+			},
+			"service": { "title": "Remote service" },
+			"enabled": {
+				"title": "Allow LAN remote control",
+				"description": "Off by default. When enabled, Studio listens only on current private IPv4 addresses; Backend remains bound to 127.0.0.1."
+			},
+			"status": {
+				"disabled": "Off",
+				"starting": "Starting",
+				"running": "Running",
+				"error": "Failed"
+			},
+			"addresses": {
+				"title": "Access addresses and certificate fingerprint",
+				"empty": "No private IPv4 address is available"
+			},
+			"ports": {
+				"title": "Fixed ports",
+				"description": "The service fails on a port conflict and never switches randomly. Scan a new pairing code after changing the port or IP.",
+				"saved": "Remote ports updated"
+			},
+			"pairing": {
+				"title": "Certificate and device pairing",
+				"actionTitle": "Generate expiring pairing QR codes",
+				"description": "The one-time secret in the QR code expires after five minutes and can be used once.",
+				"generate": "Generate QR codes",
+				"installCertificate": "1. Install the local root certificate",
+				"scanPairing": "2. Scan and pair",
+				"copyLink": "Copy APK pairing link",
+				"expires": "Expires {{time}}",
+				"instructions": "Android: scan the left code, install the downloaded CA certificate in system settings, and verify its fingerprint. Then scan the right code, or paste the pairing link into the Daedalus Remote APK. Do not forward the pairing QR code or link."
+			},
+			"devices": {
+				"title": "Paired devices",
+				"description": "Revoking all devices immediately closes active connections and rotates the remote identity.",
+				"empty": "No paired devices",
+				"lastSeen": "Last connected: {{time}}",
+				"revoke": "Revoke",
+				"revokeTitle": "Revoke {{name}}?",
+				"revokeDescription": "The device connection closes immediately and it must scan a new code before reconnecting.",
+				"revokeAll": "Revoke all and rotate identity",
+				"revokeAllTitle": "Revoke every remote device?",
+				"revokeAllDescription": "All devices become invalid immediately and the root identity rotates. Devices must install the new certificate and pair again."
+			},
+			"errors": {
+				"start": "Remote service failed to start",
+				"save": "Failed to save remote access settings",
+				"pairing": "Could not create pairing QR codes"
+			}
 		},
 		"environments": {
 			"title": "Development environments",

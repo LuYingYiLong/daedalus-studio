@@ -10,6 +10,10 @@ import "./ui/styles/global.css";
 import "./ui/styles/markdown.css";
 import { waitForStudioFonts } from "./ui/styles/studio-fonts";
 import { waitForGlobalStyles, waitForRendererPaint } from "./app/runtime/renderer-paint";
+import { configurePlatformRuntime } from "./platform/runtime/platform-runtime";
+import { desktopPlatformRuntime } from "./platform/runtime/desktop-platform-runtime";
+
+configurePlatformRuntime(desktopPlatformRuntime);
 
 const rootElement = document.getElementById("root");
 

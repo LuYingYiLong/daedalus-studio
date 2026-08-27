@@ -4,6 +4,11 @@ import { applyStudioFontVariables } from "../contracts/studio-fonts";
 import type { ClientPreferences, ClientPreferencesPatch } from "../contracts/client-preferences";
 import type { GeneralSettings } from "../contracts/general-settings";
 import type {
+	RemoteAccessPairingSession,
+	RemoteAccessPortPatch,
+	RemoteAccessState,
+} from "../contracts/remote-access";
+import type {
 	BrowserClearDataOptions,
 	BrowserCredentialSummary,
 	BrowserDownloadRecord,
@@ -277,6 +282,32 @@ contextBridge.exposeInMainWorld("electronAPI", {
 				ipcRenderer.removeListener("general-settings:changed", handler);
 			};
 		}
+	},
+
+	remoteAccess: {
+		getState: (): Promise<RemoteAccessState> => ipcRenderer.invoke("remote-access:get-state"),
+		setEnabled: (enabled: boolean): Promise<RemoteAccessState> => {
+			return ipcRenderer.invoke("remote-access:set-enabled", enabled);
+		},
+		updatePorts: (patch: RemoteAccessPortPatch): Promise<RemoteAccessState> => {
+			return ipcRenderer.invoke("remote-access:update-ports", patch);
+		},
+		beginPairing: (): Promise<RemoteAccessPairingSession> => {
+			return ipcRenderer.invoke("remote-access:begin-pairing");
+		},
+		revokeDevice: (deviceId: string): Promise<RemoteAccessState> => {
+			return ipcRenderer.invoke("remote-access:revoke-device", deviceId);
+		},
+		revokeAll: (rotateIdentity: boolean): Promise<RemoteAccessState> => {
+			return ipcRenderer.invoke("remote-access:revoke-all", rotateIdentity);
+		},
+		onStateChanged: (callback: (state: RemoteAccessState) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, state: RemoteAccessState): void => callback(state);
+			ipcRenderer.on("remote-access:state-changed", handler);
+			return (): void => {
+				ipcRenderer.removeListener("remote-access:state-changed", handler);
+			};
+		},
 	},
 
 	sessionCatalog: {

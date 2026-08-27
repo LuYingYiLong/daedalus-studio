@@ -34,6 +34,7 @@ import { BrowserDataStore } from "./services/browser/browser-data-store";
 import { BrowserPasswordStore } from "./services/browser/browser-password-store";
 import { scheduledTaskService } from "./services/scheduled-tasks/service";
 import { registerWorkspaceMediaProtocol } from "./services/workspace-media";
+import { remoteAccessService } from "./services/remote-access";
 
 const logger = createLogger("main");
 const MEMORY_DIAGNOSTICS_INTERVAL_MS: number = 30_000;
@@ -70,6 +71,7 @@ nativeNotificationService.registerIpc();
 scheduledTaskService.registerIpc();
 godotProjectsService.registerIpc();
 sessionLayoutService.registerIpc();
+remoteAccessService.registerIpc();
 
 ipcMain.handle("app-data:reset-all", async (event): Promise<{ reset: true }> => {
 	const senderWindow: BrowserWindow | null = BrowserWindow.fromWebContents(event.sender);
@@ -78,6 +80,7 @@ ipcMain.handle("app-data:reset-all", async (event): Promise<{ reset: true }> => 
 	}
 
 	// 先停止后端再清理 SQLite、运行时状态和配置，避免 Windows 文件锁留下半套数据。
+	await remoteAccessService.stop();
 	await backendManager.stopAndWait();
 	await resetDaedalusData({
 		daedalusRoot: getDaedalusDir(),
@@ -90,7 +93,8 @@ ipcMain.handle("app-data:reset-all", async (event): Promise<{ reset: true }> => 
 configureAppIdentity();
 
 const isScheduledTaskRunner: boolean = process.argv.includes("--scheduled-task-runner");
-const hasSingleInstanceLock: boolean = app.requestSingleInstanceLock();
+const hasSingleInstanceLock: boolean = process.env.DAEDALUS_E2E === "1"
+	|| app.requestSingleInstanceLock();
 const windowLifecycleController = new WindowLifecycleController(clientPreferencesService);
 let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
@@ -141,6 +145,7 @@ const SETTINGS_PAGE_KEYS: readonly string[] = [
 	"hooks",
 	"plugins",
 	"browser",
+	"remote_access",
 	"environments",
 	"worktrees",
 	"documentation",
@@ -158,6 +163,7 @@ appUpdateService.setBeforeClientInstall(async (): Promise<void> => {
 	windowLifecycleController.markQuitting();
 	terminalPtyService.dispose();
 	browserService.destroyAll();
+	await remoteAccessService.stop();
 	backendManager.detach();
 });
 appUpdateService.setRuntimeBusyHandler((runtimeBusy: boolean): void => {
@@ -165,6 +171,7 @@ appUpdateService.setRuntimeBusyHandler((runtimeBusy: boolean): void => {
 });
 
 async function releaseBackendBeforeQuit(): Promise<void> {
+	await remoteAccessService.stop();
 	if (preserveBackendForClientInstall) {
 		// 客户端更新由更新流程接管运行时，不能在这里终止后端。
 		backendManager.detach();
@@ -756,6 +763,7 @@ if (!hasSingleInstanceLock) {
 			app.quit();
 			return;
 		}
+		await remoteAccessService.start();
 		createWindow();
 		let checkedStartupUpdates: boolean = false;
 		const checkStartupUpdates = (state: ReturnType<typeof backendBootstrapService.getState>): void => {

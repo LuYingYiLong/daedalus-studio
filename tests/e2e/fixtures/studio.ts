@@ -87,6 +87,7 @@ export const test = base.extend<StudioFixtures>({
 	},
 	launchStudio: async ({ mockBackend, userDataDir }, use): Promise<void> => {
 		let launched: LaunchedStudio | null = null;
+		let launchingApp: ElectronApplication | null = null;
 		const launchStudio = async (options: LaunchOptions = {}): Promise<LaunchedStudio> => {
 			if (launched !== null) {
 				return launched;
@@ -115,6 +116,14 @@ export const test = base.extend<StudioFixtures>({
 					ELECTRON_DISABLE_SECURITY_WARNINGS: "true",
 				},
 			});
+			launchingApp = electronApp;
+			const electronProcess = electronApp.process();
+			electronProcess.stdout?.on("data", (chunk: Buffer): void => {
+				console.log(`[electron:stdout] ${chunk.toString().trimEnd()}`);
+			});
+			electronProcess.stderr?.on("data", (chunk: Buffer): void => {
+				console.log(`[electron:stderr] ${chunk.toString().trimEnd()}`);
+			});
 			const mainWindow: Page = await electronApp.firstWindow();
 			mainWindow.on("console", (message): void => {
 				console.log(`[renderer:${message.type()}] ${message.text()}`);
@@ -125,12 +134,16 @@ export const test = base.extend<StudioFixtures>({
 			await mainWindow.waitForLoadState("domcontentloaded");
 			await dismissReleaseNotesIfPresent(mainWindow);
 			launched = { electronApp, mainWindow };
+			launchingApp = null;
 			return launched;
 		};
 		await use(launchStudio);
 		const completedLaunch: LaunchedStudio | null = launched as LaunchedStudio | null;
+		const incompleteApp: ElectronApplication | null = launchingApp as ElectronApplication | null;
 		if (completedLaunch !== null) {
 			await completedLaunch.electronApp.close();
+		} else if (incompleteApp !== null) {
+			await incompleteApp.close();
 		}
 	},
 });

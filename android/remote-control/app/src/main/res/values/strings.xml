@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">Daedalus Remote</string>
+	<string name="screen_title">Daedalus Studio Remote</string>
+	<string name="connect_title">Connect to Studio</string>
+	<string name="connect_description">Enable remote access in Studio, install its local CA certificate, then paste the expiring APK pairing link.</string>
+	<string name="endpoint_hint">https://192.168.1.10:38190/remote.html#pair=…</string>
+	<string name="connect">Connect</string>
+	<string name="reload">Reload</string>
+	<string name="change_studio">Change</string>
+	<string name="invalid_endpoint">Enter an HTTPS pairing URL that uses a private IPv4 address.</string>
+	<string name="blocked_navigation">Navigation outside the paired Studio origin was blocked.</string>
+	<string name="connection_failed">Could not connect to Studio. Make sure it is running on the same LAN.</string>
+	<string name="certificate_failed">The Studio certificate is not trusted. Install its CA certificate and verify the fingerprint before retrying.</string>
+	<string name="app_start_failed">Studio was reached, but the Remote page did not start. Update Android System WebView, then connect again.</string>
+</resources>

@@ -106,6 +106,42 @@ describe("BackendRpcClient", () => {
 			expect(client.isOpen()).toBe(true);
 		});
 
+		it("应报告连接和断开状态", async () => {
+			const listener = vi.fn();
+			client.addConnectionListener(listener);
+			const connectPromise = client.connect();
+
+			simulateOpen();
+			await connectPromise;
+			simulateClose();
+
+			expect(listener).toHaveBeenNthCalledWith(1, { reconnected: false, state: "connected" });
+			expect(listener).toHaveBeenNthCalledWith(2, { reconnected: false, state: "disconnected" });
+		});
+
+		it("自动重连会创建新的 WebSocket", async () => {
+			client.close();
+			client = new BackendRpcClient("ws://localhost:38181", {
+				enableReconnect: true,
+				connectionTimeout: 1000,
+				reconnectConfig: {
+					maxAttempts: 2,
+					initialDelay: 10,
+					maxDelay: 10,
+					backoffMultiplier: 1,
+				},
+			});
+			const connectPromise = client.connect();
+			simulateOpen();
+			await connectPromise;
+
+			simulateClose();
+			await vi.advanceTimersByTimeAsync(20);
+
+			expect(global.WebSocket).toHaveBeenCalledTimes(2);
+			expect(client.getState()).toBe("reconnecting");
+		});
+
 		it("连接失败应拒绝", async () => {
 			const connectPromise = client.connect();
 

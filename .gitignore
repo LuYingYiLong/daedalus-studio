@@ -151,3 +151,10 @@ vite.config.ts.timestamp-*
 # Playwright diagnostics
 test-results/
 playwright-report/
+
+# Local Android build toolchain and outputs
+.android-toolchain/
+android/remote-control/.gradle/
+android/remote-control/local.properties
+android/remote-control/build/
+android/remote-control/app/build/

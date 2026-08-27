@@ -14,6 +14,7 @@ import { MarkdownLink } from "./MarkdownResourceLink";
 import { transformMarkdownUrl } from "@/domain/markdown/markdown-url-transform";
 import { getFileExtensionForLanguage, normalizeHighlightLanguage as normalizeMarkdownHighlightLanguage } from "@/domain/markdown/file-icon";
 import { useTimelineScrollFrameCoordinator } from "@/features/conversation/timeline-scroll-frame-context";
+import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";
 import MermaidBlock from "./MermaidBlock";
 import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
@@ -157,9 +158,11 @@ function CodeBlock({ code, language, highlight, stickyHeader }: CodeBlockProps):
 	const highlightedCode: string | null = highlight ? highlightCode(code, language) : null;
 	const { blockRef, headerRef, isPinned } = useStickyCodeHeader(stickyHeader);
 	const fileExtension: string = getFileExtensionForLanguage(language);
+	const saveText = getPlatformRuntime().system?.saveText;
 
 	const exportCodeAsFile = (): void => {
-		void window.electronAPI.fileExport.saveText({
+		if (saveText === undefined) return;
+		void saveText({
 			defaultFileName: `snippet.${fileExtension}`,
 			content: code
 		}).then((result): void => {
@@ -184,7 +187,7 @@ function CodeBlock({ code, language, highlight, stickyHeader }: CodeBlockProps):
 						<span>{label}</span>
 					</div>
 					<div className={styles.codeActions}>
-						<Tooltip title={t("chat.codeBlock.exportAsFile")}>
+						{saveText === undefined ? null : <Tooltip title={t("chat.codeBlock.exportAsFile")}>
 							<Button
 								type="text"
 								shape="circle"
@@ -193,7 +196,7 @@ function CodeBlock({ code, language, highlight, stickyHeader }: CodeBlockProps):
 								icon={<Icon name="download" />}
 								onClick={exportCodeAsFile}
 							/>
-						</Tooltip>
+						</Tooltip>}
 						<Tooltip title={t("chat.codeBlock.copy")}>
 							<Button
 								type="text"

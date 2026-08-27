@@ -3,50 +3,27 @@ import {
 	type BackendEvent,
 } from "@/platform/rpc/transport/backend-rpc-client";
 import type { ClientHelloResult } from "@/platform/rpc/types";
-import { attachScheduledTaskToolRuntime } from "./scheduled-task-tool-runtime";
-
-const studioCapabilities: Record<string, boolean> = {
-	sessionSubscribe: true,
-	approval: true,
-	inlineDiffView: true,
-	editorTools: false,
-	editorUndoRedo: false,
-	inlineDiffUndo: false,
-	browserTools: false,
-	scheduledTasks: true,
-};
+import {
+	getPlatformRuntime,
+	type BackendTransport,
+	type PlatformRuntime,
+	type RuntimeClientHello,
+} from "@/platform/runtime/platform-runtime";
 
 let backendClient: BackendRpcClient | null = null;
 let backendClientPromise: Promise<BackendRpcClient> | null = null;
 const backendReconnectListeners: Set<() => void> = new Set();
-let browserSettingsListenerAttached: boolean = false;
+const backendConnectionStateListeners: Set<(state: "connected" | "disconnected") => void> = new Set();
+let capabilityListenerAttached: boolean = false;
 
-async function refreshBrowserCapability(
-	client?: BackendRpcClient,
-): Promise<void> {
-	try {
-		studioCapabilities.browserTools = (
-			await window.electronAPI.browser.settings.get()
-		).aiCdpEnabled;
-	} catch {
-		studioCapabilities.browserTools = false;
-	}
-	if (client?.isOpen()) {
-		await client.request("client.capabilities.update", {
-			capabilities: {
-				browserTools: studioCapabilities.browserTools,
-				scheduledTasks: true,
-			},
-		});
-	}
+function notifyConnectionState(state: "connected" | "disconnected"): void {
+	for (const listener of backendConnectionStateListeners) listener(state);
 }
 
-async function sendStudioHello(client: BackendRpcClient): Promise<void> {
-	await refreshBrowserCapability();
+async function sendClientHello(client: BackendRpcClient): Promise<void> {
+	const hello: RuntimeClientHello = await getPlatformRuntime().getClientHello();
 	await client.request<ClientHelloResult>("client.hello", {
-		clientType: "studio",
-		clientName: "Daedalus Studio",
-		capabilities: studioCapabilities,
+		...hello,
 	});
 }
 
@@ -54,6 +31,15 @@ export function onBackendReconnected(listener: () => void): () => void {
 	backendReconnectListeners.add(listener);
 	return (): void => {
 		backendReconnectListeners.delete(listener);
+	};
+}
+
+export function onBackendConnectionStateChanged(
+	listener: (state: "connected" | "disconnected") => void,
+): () => void {
+	backendConnectionStateListeners.add(listener);
+	return (): void => {
+		backendConnectionStateListeners.delete(listener);
 	};
 }
 
@@ -66,18 +52,15 @@ export async function onBackendEvent(
 }
 
 export async function createBackendClient(): Promise<BackendRpcClient> {
-	if (
-		!browserSettingsListenerAttached &&
-		window.electronAPI?.browser?.settings !== undefined
-	) {
-		browserSettingsListenerAttached = true;
-		window.electronAPI.browser.settings.onChanged((settings): void => {
-			studioCapabilities.browserTools = settings.aiCdpEnabled;
+	const runtime: PlatformRuntime = getPlatformRuntime();
+	if (!capabilityListenerAttached && runtime.onCapabilitiesChanged !== undefined) {
+		capabilityListenerAttached = true;
+		runtime.onCapabilitiesChanged((): void => {
 			if (backendClient?.isOpen()) {
-				void refreshBrowserCapability(backendClient).catch(
+				void sendClientHello(backendClient).catch(
 					(error: unknown): void => {
 						console.error(
-							"[Daedalus browser] capability update failed",
+							"[Daedalus backend] capability update failed",
 							error,
 						);
 					},
@@ -104,27 +87,29 @@ export async function createBackendClient(): Promise<BackendRpcClient> {
 }
 
 async function connectBackendClient(): Promise<BackendRpcClient> {
-	if (!window.electronAPI?.backend) {
-		throw new Error(
-			"Current environment hasn't exposed electronAPI.backend",
-		);
-	}
-
-	const connection = await window.electronAPI.backend.getConnectionInfo();
+	const runtime: PlatformRuntime = getPlatformRuntime();
+	const transport: BackendTransport = await runtime.getBackendTransport();
 	const client: BackendRpcClient = new BackendRpcClient(
-		`ws://127.0.0.1:${connection.port}`,
+		transport.url,
 		{
-			authProtocol: connection.authProtocol,
+			authProtocol: transport.authProtocol,
 		},
 	);
 
-	console.info("[Daedalus backend] connecting", { port: connection.port });
-	client.addConnectionListener(({ reconnected }): void => {
+	console.info("[Daedalus backend] connecting", { runtime: runtime.kind });
+	client.addConnectionListener(({ reconnected, state }): void => {
+		if (state === "disconnected") {
+			notifyConnectionState("disconnected");
+			return;
+		}
+		// A WebSocket open event only confirms the Gateway transport. Remote UI
+		// must not report a healthy Backend until client.hello also succeeds.
 		if (!reconnected) {
 			return;
 		}
-		void sendStudioHello(client)
+		void sendClientHello(client)
 			.then((): void => {
+				notifyConnectionState("connected");
 				for (const listener of backendReconnectListeners) {
 					listener();
 				}
@@ -137,8 +122,14 @@ async function connectBackendClient(): Promise<BackendRpcClient> {
 			});
 	});
 	await client.connect();
-	await sendStudioHello(client);
-	attachScheduledTaskToolRuntime(client);
+	try {
+		await sendClientHello(client);
+	} catch (error: unknown) {
+		client.close();
+		throw error;
+	}
+	notifyConnectionState("connected");
+	runtime.onBackendConnected?.(client);
 
 	return client;
 }

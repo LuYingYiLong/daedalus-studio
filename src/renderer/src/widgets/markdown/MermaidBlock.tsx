@@ -10,6 +10,7 @@ import {
 	type MermaidRenderAppearance
 } from "./mermaid-renderer";
 import { renderMermaidPng } from "./mermaid-png-export";
+import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";
 import styles from "./MermaidBlock.module.css";
 
 type MermaidBlockProps = {
@@ -83,6 +84,7 @@ function MermaidBlock({ source }: MermaidBlockProps): React.JSX.Element {
 		error: null
 	});
 	const [exporting, setExporting] = useState<boolean>(false);
+	const savePng = getPlatformRuntime().system?.savePng;
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -128,7 +130,7 @@ function MermaidBlock({ source }: MermaidBlockProps): React.JSX.Element {
 	};
 
 	const exportPng = async (): Promise<void> => {
-		if (renderState.status !== "ready" || exporting) {
+		if (renderState.status !== "ready" || exporting || savePng === undefined) {
 			return;
 		}
 		setExporting(true);
@@ -141,7 +143,7 @@ function MermaidBlock({ source }: MermaidBlockProps): React.JSX.Element {
 				viewportHeight: viewport?.clientHeight,
 				pixelRatio: window.devicePixelRatio
 			});
-			const result = await window.electronAPI.imageExport.savePng({
+			const result = await savePng({
 				defaultFileName: "mermaid-diagram.png",
 				bytes
 			});
@@ -163,7 +165,7 @@ function MermaidBlock({ source }: MermaidBlockProps): React.JSX.Element {
 					<span>{t("chat.mermaid.title")}</span>
 				</div>
 				<div className={styles.actions}>
-					<Tooltip title={t("chat.mermaid.exportPng")}>
+					{savePng === undefined ? null : <Tooltip title={t("chat.mermaid.exportPng")}>
 						<Button
 							type="text"
 							shape="circle"
@@ -174,7 +176,7 @@ function MermaidBlock({ source }: MermaidBlockProps): React.JSX.Element {
 							disabled={renderState.status !== "ready"}
 							onClick={() => void exportPng()}
 						/>
-					</Tooltip>
+					</Tooltip>}
 					<Tooltip title={t("chat.mermaid.copySource")}>
 						<Button
 							type="text"

@@ -46,9 +46,13 @@ export default defineConfig({
 			]
 		},
 		build: {
+			// remote.html is consumed by Android Chrome/WebView as well as Electron.
+			// Keep the shared renderer syntax at Vite's broadly available baseline.
+			target: "chrome111",
 			rollupOptions: {
 				input: {
-					index: resolve(projectDirectory, "src/renderer/index.html")
+					index: resolve(projectDirectory, "src/renderer/index.html"),
+					remote: resolve(projectDirectory, "src/renderer/remote.html")
 				}
 			}
 		}

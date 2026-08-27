@@ -15,6 +15,7 @@ import {
 	type MarkdownResourceRef,
 } from "@/domain/markdown/markdown-resource-path";
 import { resolveMarkdownResourceWorkspaceRoot } from "@/domain/markdown/markdown-resource-workspace";
+import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";
 import styles from "./MarkdownResourceLink.module.css";
 
 type MarkdownResourceLinkProps = {
@@ -69,8 +70,9 @@ function WorkspaceResourceLink({
 	const { message } = App.useApp();
 	const { t } = useTranslation();
 	const actions = useMarkdownResourceActions();
+	const workspaceFiles = getPlatformRuntime().system?.workspaceFiles;
 	const [menuOpen, setMenuOpen] = useState<boolean>(false);
-	const hasWorkspace: boolean = (actions?.workspaceRoots.length ?? 0) > 0;
+	const hasWorkspace: boolean = workspaceFiles !== undefined && (actions?.workspaceRoots.length ?? 0) > 0;
 	const resourceLabel: React.ReactNode =
 		typeof children === "string"
 			? formatMarkdownResourceLabel(resource, children)
@@ -116,7 +118,7 @@ function WorkspaceResourceLink({
 					actions.openHtmlFile(params);
 					return;
 				}
-				await window.electronAPI.workspaceFs.openFile(params);
+				await workspaceFiles?.openFile(params);
 			}
 		});
 	}
@@ -129,12 +131,12 @@ function WorkspaceResourceLink({
 			if (params === null) {
 				return;
 			}
-			await window.electronAPI.workspaceFs.openLaunchTarget({
+			await workspaceFiles?.openLaunchTarget({
 				...params,
 				targetId,
 				godotExecutablePath:
 					targetId === "godot"
-						? actions?.godotExecutablePath
+						? actions?.godotExecutablePath ?? undefined
 						: undefined,
 			});
 		});
@@ -144,9 +146,8 @@ function WorkspaceResourceLink({
 		return runAction(async (): Promise<void> => {
 			const params = workspaceFileParams();
 			if (params !== null) {
-				const result =
-					await window.electronAPI.workspaceFs.saveFileAs(params);
-				if (result.saved) {
+				const result = await workspaceFiles?.saveFileAs(params);
+				if (result?.saved === true) {
 					message.success(t("chat.markdownResource.savedAs"));
 				}
 			}
@@ -157,7 +158,7 @@ function WorkspaceResourceLink({
 		return runAction(async (): Promise<void> => {
 			const params = workspaceFileParams();
 			if (params !== null) {
-				await window.electronAPI.workspaceFs.revealFile(params);
+				await workspaceFiles?.revealFile(params);
 			}
 		});
 	}

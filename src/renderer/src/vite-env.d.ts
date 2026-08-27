@@ -2,6 +2,11 @@
 
 import type { GeneralSettings } from "../../contracts/general-settings";
 import type {
+	RemoteAccessPairingSession,
+	RemoteAccessPortPatch,
+	RemoteAccessState,
+} from "../../contracts/remote-access";
+import type {
 	ClientPreferences as StudioClientPreferences,
 	ClientPreferencesPatch as StudioClientPreferencesPatch
 } from "../../contracts/client-preferences";
@@ -102,6 +107,16 @@ declare global {
 	interface GeneralSettingsAPI {
 		notifyChanged: (settings: GeneralSettings) => void;
 		onChanged: (callback: (settings: GeneralSettings) => void) => () => void;
+	}
+
+	interface RemoteAccessAPI {
+		getState: () => Promise<RemoteAccessState>;
+		setEnabled: (enabled: boolean) => Promise<RemoteAccessState>;
+		updatePorts: (patch: RemoteAccessPortPatch) => Promise<RemoteAccessState>;
+		beginPairing: () => Promise<RemoteAccessPairingSession>;
+		revokeDevice: (deviceId: string) => Promise<RemoteAccessState>;
+		revokeAll: (rotateIdentity: boolean) => Promise<RemoteAccessState>;
+		onStateChanged: (callback: (state: RemoteAccessState) => void) => () => void;
 	}
 
 	interface BackendDiagnostics {
@@ -459,6 +474,7 @@ declare global {
 		};
 		clientPreferences: ClientPreferencesAPI;
 		generalSettings: GeneralSettingsAPI;
+		remoteAccess: RemoteAccessAPI;
 		sessionCatalog: SessionCatalogAPI;
 		scheduledTasks: {
 			list: () => Promise<ScheduledTaskListResult>;

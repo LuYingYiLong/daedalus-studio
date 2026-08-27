@@ -27,6 +27,7 @@ import DocumentationSettingsPage from "@/widgets/settings/DocumentationSettingsP
 import KeyboardShortcutsSettingsPage from "@/widgets/settings/KeyboardShortcutsSettingsPage";
 import HooksSettingsPage from "@/widgets/settings/HooksSettingsPage";
 import BrowserSettingsPage from "@/widgets/settings/BrowserSettingsPage";
+import RemoteAccessSettingsPage from "@/widgets/settings/RemoteAccessSettingsPage";
 import DevelopmentEnvironmentSettingsPage from "@/widgets/settings/DevelopmentEnvironmentSettingsPage";
 import WorktreeSettingsPage from "@/widgets/settings/WorktreeSettingsPage";
 import PluginsSettingsPage from "@/widgets/settings/PluginsSettingsPage";
@@ -125,6 +126,11 @@ const menuItemConfigs: SettingsMenuItemConfig[] = [
 		icon: <Icon name="global" />,
 	},
 	{
+		key: "remote_access",
+		labelKey: "settings.menu.remoteAccess",
+		icon: <Icon name="remote" />,
+	},
+	{
 		key: "environments",
 		labelKey: "settings.menu.environments",
 		icon: <Icon name="environment" />,
@@ -187,7 +193,7 @@ const menuGroupConfigs: SettingsMenuGroupConfig[] = [
 	{
 		key: "workspace",
 		labelKey: "settings.menu.groups.workspace",
-		items: ["browser", "environments", "worktrees", "godot_projects"],
+		items: ["browser", "remote_access", "environments", "worktrees", "godot_projects"],
 	},
 	{
 		key: "resources",
@@ -451,6 +457,9 @@ function SettingsWindow(): React.JSX.Element {
 		}
 		if (page === "browser") {
 			return <BrowserSettingsPage />;
+		}
+		if (page === "remote_access") {
+			return <RemoteAccessSettingsPage />;
 		}
 		if (page === "environments") {
 			return <DevelopmentEnvironmentSettingsPage />;

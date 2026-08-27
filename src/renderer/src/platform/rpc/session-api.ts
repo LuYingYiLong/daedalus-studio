@@ -320,6 +320,14 @@ export async function fetchSessionTimelineAfter(
 	});
 }
 
+export async function subscribeSession(sessionId: string): Promise<{ subscribed: true; sessionId: string }> {
+	return (await createBackendClient()).request("session.subscribe", { sessionId });
+}
+
+export async function unsubscribeSession(sessionId: string): Promise<{ unsubscribed: true; sessionId: string }> {
+	return (await createBackendClient()).request("session.unsubscribe", { sessionId });
+}
+
 export async function checkSessionIntegrity(
 	sessionId: string,
 ): Promise<SessionIntegrityCheckResult> {

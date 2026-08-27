@@ -2,6 +2,7 @@ import { Alert, Button } from "antd";
 import type { AlertProps } from "antd";
 import type { TimelineBodyPart } from "@/platform/rpc/types";
 import { memo } from "react";
+import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";
 import styles from "./StatusPart.module.css"
 
 export type TimelineStatusPart = Extract<TimelineBodyPart, {type: "status"}>;
@@ -26,8 +27,8 @@ function getAlertType(status: string): AlertProps["type"] {
 }
 
 function handleStatusAction(actionId: string | undefined): void {
-	if (actionId === "configure_godot") {
-		void window.electronAPI.windowControl.openSettings("general");
+	if (actionId === "configure_godot" && getPlatformRuntime().system !== undefined) {
+		void getPlatformRuntime().system!.openSettings("general");
 		return;
 	}
 	if (actionId?.startsWith("retry_agent_run:")) {
@@ -54,7 +55,7 @@ function StatusPart({ part }: StatusPartProps): React.JSX.Element | null {
 			type={getAlertType(part.status)}
 			title={title}
 			description={details.length > 0 ? details : undefined}
-			action={part.actionLabel === undefined ? undefined : (
+			action={part.actionLabel === undefined || (part.actionId === "configure_godot" && getPlatformRuntime().system === undefined) ? undefined : (
 				<Button
 					size="small"
 					type="link"
