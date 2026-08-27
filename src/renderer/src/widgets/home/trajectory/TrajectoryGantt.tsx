@@ -1,17 +1,19 @@
 import { Column } from "@ant-design/charts";
 import { Checkbox, Empty, theme as antdTheme, Typography } from "antd";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	buildTraceGanttSegments,
 	formatTraceDuration,
 	getTraceRecordTitle,
 } from "@/domain/trajectory/trajectory-model";
+import type { TraceTimeRange } from "@/domain/trajectory/trajectory-model";
 import type { TraceRecord, TraceRecordKind } from "@/platform/rpc/trace-api";
 import styles from "./TrajectoryGantt.module.css";
 
 type TraceGanttProps = {
 	records: readonly TraceRecord[];
+	onTimeRangeChange?: (timeRange: TraceTimeRange | null) => void;
 };
 
 type TraceGanttDatum = ReturnType<typeof buildTraceGanttSegments>[number] & {
@@ -38,12 +40,25 @@ function shortenLabel(value: string, maxLength: number): string {
 		: `${value.slice(0, maxLength - 1)}…`;
 }
 
-function TraceGantt({ records }: TraceGanttProps): React.JSX.Element {
+function TraceGantt({
+	records,
+	onTimeRangeChange,
+}: TraceGanttProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const { token } = antdTheme.useToken();
-	const [visibleKinds, setVisibleKinds] = useState<TraceRecordKind[]>(
-		TRACE_GANTT_KINDS,
-	);
+	const pointerSelectionRef = useRef<{
+		pointerId: number;
+		startX: number;
+		currentX: number;
+		width: number;
+	} | null>(null);
+	const [selection, setSelection] = useState<{
+		startX: number;
+		endX: number;
+		width: number;
+	} | null>(null);
+	const [visibleKinds, setVisibleKinds] =
+		useState<TraceRecordKind[]>(TRACE_GANTT_KINDS);
 	const allSegments = useMemo((): TraceGanttDatum[] => {
 		const recordById: Map<string, TraceRecord> = new Map(
 			records.map((record): [string, TraceRecord] => [
@@ -74,17 +89,82 @@ function TraceGantt({ records }: TraceGanttProps): React.JSX.Element {
 			),
 		[allSegments, visibleKinds],
 	);
+	const originMs: number | null = useMemo((): number | null => {
+		const timestamps: number[] = allSegments
+			.map((segment): number => Date.parse(segment.startedAt))
+			.filter((value): boolean => Number.isFinite(value));
+		return timestamps.length === 0 ? null : Math.min(...timestamps);
+	}, [allSegments]);
+	const maxOffsetMs: number = useMemo(
+		(): number =>
+			Math.max(
+				1,
+				...segments.map(
+					(segment): number => segment.endOffsetMs,
+				),
+			),
+		[segments],
+	);
+	const getPointerX = (
+		event: React.PointerEvent<HTMLDivElement>,
+	): { x: number; width: number } => {
+		const bounds: DOMRect = event.currentTarget.getBoundingClientRect();
+		return {
+			x: Math.max(0, Math.min(bounds.width, event.clientX - bounds.left)),
+			width: bounds.width,
+		};
+	};
+	const updatePointerSelection = (
+		event: React.PointerEvent<HTMLDivElement>,
+	): void => {
+		const currentSelection = pointerSelectionRef.current;
+		if (currentSelection === null) return;
+		const { x } = getPointerX(event);
+		pointerSelectionRef.current = { ...currentSelection, currentX: x };
+		setSelection({
+			startX: currentSelection.startX,
+			endX: x,
+			width: currentSelection.width,
+		});
+	};
+	const finishPointerSelection = (
+		event: React.PointerEvent<HTMLDivElement>,
+	): void => {
+		const currentSelection = pointerSelectionRef.current;
+		if (currentSelection === null) return;
+		const { x, width } = getPointerX(event);
+		const startX: number = Math.min(currentSelection.startX, x);
+		const endX: number = Math.max(currentSelection.startX, x);
+		pointerSelectionRef.current = null;
+		if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+			event.currentTarget.releasePointerCapture(event.pointerId);
+		}
+		if (endX - startX < 4 || width <= 0 || originMs === null) {
+			setSelection(null);
+			onTimeRangeChange?.(null);
+			return;
+		}
+		setSelection({ startX, endX, width });
+		const startOffsetMs: number = (startX / width) * maxOffsetMs;
+		const endOffsetMs: number = (endX / width) * maxOffsetMs;
+		onTimeRangeChange?.([
+			originMs + startOffsetMs,
+			originMs + endOffsetMs,
+		]);
+	};
 	const kindOptions = useMemo(
 		() =>
-			TRACE_GANTT_KINDS.map((kind): { label: string; value: TraceRecordKind } => ({
-				label: t(`trajectory.kind.${kind}`),
-				value: kind,
-			})),
+			TRACE_GANTT_KINDS.map(
+				(kind): { label: string; value: TraceRecordKind } => ({
+					label: t(`trajectory.kind.${kind}`),
+					value: kind,
+				}),
+			),
 		[t],
 	);
 	const chartHeight: number = Math.min(
-		420,
-		Math.max(160, segments.length * 28 + 56),
+		128,
+		Math.max(48, segments.length * 4 + 32),
 	);
 	const chartTheme = useMemo(
 		() => ({
@@ -127,7 +207,9 @@ function TraceGantt({ records }: TraceGanttProps): React.JSX.Element {
 					options={kindOptions}
 					value={visibleKinds}
 					onChange={(values): void => {
-						const selectedKinds: Set<TraceRecordKind> = new Set(values);
+						const selectedKinds: Set<TraceRecordKind> = new Set(
+							values,
+						);
 						setVisibleKinds(
 							TRACE_GANTT_KINDS.filter((kind): boolean =>
 								selectedKinds.has(kind),
@@ -153,11 +235,15 @@ function TraceGantt({ records }: TraceGanttProps): React.JSX.Element {
 						yField={["startOffsetMs", "endOffsetMs"]}
 						coordinate={{ transform: [{ type: "transpose" }] }}
 						colorField="kind"
+						style={{ minWidth: 2, maxWidth: 2 }}
+						state={{ inactive: { opacity: 1 } }}
 						scale={{
 							x: {
 								domain: segments.map(
 									(segment): string => segment.label,
 								),
+								paddingInner: 0,
+								paddingOuter: 0,
 							},
 							color: {
 								domain: TRACE_GANTT_KINDS,
@@ -170,6 +256,8 @@ function TraceGantt({ records }: TraceGanttProps): React.JSX.Element {
 						axis={{
 							x: false,
 							y: {
+								position: "top",
+								labelAutoRotate: false,
 								labelFormatter: (value: string): string =>
 									formatTraceDuration(Number(value)),
 							},
@@ -194,6 +282,45 @@ function TraceGantt({ records }: TraceGanttProps): React.JSX.Element {
 							],
 						}}
 					/>
+					<div
+						className={styles.selectionLayer}
+						role="slider"
+						aria-label={t("trajectory.gantt.rangeHint")}
+						aria-valuemin={0}
+						aria-valuemax={maxOffsetMs}
+						tabIndex={0}
+						onPointerDown={(event): void => {
+							if (event.button !== 0) return;
+							const { x, width } = getPointerX(event);
+							pointerSelectionRef.current = {
+								pointerId: event.pointerId,
+								startX: x,
+								currentX: x,
+								width,
+							};
+							setSelection({ startX: x, endX: x, width });
+							event.currentTarget.setPointerCapture(event.pointerId);
+						}}
+						onPointerMove={updatePointerSelection}
+						onPointerUp={finishPointerSelection}
+						onPointerCancel={(event): void => {
+							pointerSelectionRef.current = null;
+							setSelection(null);
+							onTimeRangeChange?.(null);
+							if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+								event.currentTarget.releasePointerCapture(event.pointerId);
+							}
+						}}
+					/>
+					{selection === null ? null : (
+						<div
+							className={styles.selection}
+							style={{
+								left: Math.min(selection.startX, selection.endX),
+								width: Math.abs(selection.endX - selection.startX),
+							}}
+						/>
+					)}
 				</div>
 			)}
 		</section>

@@ -14,75 +14,37 @@
 	border-bottom: 1px solid var(--ds-border);
 }
 
-.context {
-	display: grid;
-	padding: var(--ds-space-2);
-	gap: var(--ds-space-1);
-}
-
-.stats {
-	display: grid;
-	grid-template-columns: repeat(6, minmax(0, 1fr));
-	border: 1px solid var(--ds-border);
-	background: var(--ds-surface);
-	border-radius: var(--ds-radius-lg);
-	padding: var(--ds-space-2);
-}
-
-.metricCard {
-	min-width: 0;
-	padding-inline: clamp(6px, 1.25cqi, 16px);
-}
-
-.metricCard + .metricCard {
-	border-inline-start: 1px solid var(--ds-border);
-}
-
-.metricTitle {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.metricContent {
+.body {
 	display: flex;
-	align-items: baseline;
-	min-width: 0;
-	overflow: hidden;
-	font-variant-numeric: tabular-nums;
-	white-space: nowrap;
-}
-
-.metricValue {
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.metricSuffix {
-	flex: 0 0 auto;
-	font-size: 0.55em;
+	flex-direction: column;
+	gap: var(--ds-space-1);
+	min-height: 0;
+	padding: var(--ds-space-2);
 }
 
 .toolbar {
 	display: grid;
-	grid-template-columns: minmax(120px, 0.35fr) minmax(180px, 1fr);
+	grid-template-columns: minmax(120px, 0.75fr) minmax(180px, 0.35fr);
 	gap: var(--ds-space-1);
 }
 
-.kindSelect {
-	width: 100%;
+.statsLine {
+	display: block;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
 }
 
 .content {
 	display: grid;
 	grid-template-columns: minmax(300px, 1fr);
-	grid-row: 5;
-	gap: 10px;
+	gap: var(--ds-space-1);
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
+	flex: 1 1 auto;
 }
 
 .ledger,
@@ -215,22 +177,6 @@
 }
 
 @container (max-width: 620px) {
-	.stats {
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-	}
-
-	.metricCard {
-		padding-inline: 6px;
-	}
-
-	.metricTitle {
-		margin-bottom: 3px;
-	}
-
-	.metricSuffix {
-		display: none;
-	}
-
 	.toolbar {
 		grid-template-columns: 1fr;
 	}

@@ -954,7 +954,8 @@
 		"gantt": {
 			"empty": "暂无可展示的时间数据",
 			"duration": "耗时",
-			"filterLabel": "阶段筛选"
+			"filterLabel": "阶段筛选",
+			"rangeHint": "拖拽选择时间区间"
 		}
 	},
 	"browser": {

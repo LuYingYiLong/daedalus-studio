@@ -350,6 +350,21 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 		await expect(panel.getByText(/Phase filters|阶段筛选/)).toBeVisible();
 		await expect(panel.getByText(/Turn 11|第 11 轮/)).toBeVisible();
 		await expect(panel.locator("[data-testid=\"trajectory-record-trace-tool-old\"]")).toContainText(/Details compacted|详情已精简/);
+		const chartSurface = panel.locator("canvas").first();
+		const chartBounds = await chartSurface.boundingBox();
+		if (chartBounds === null) throw new Error("Trajectory Gantt surface is not visible");
+		await mainWindow.mouse.move(
+			chartBounds.x + chartBounds.width * 0.25,
+			chartBounds.y + chartBounds.height / 2,
+		);
+		await mainWindow.mouse.down();
+		await mainWindow.mouse.move(
+			chartBounds.x + chartBounds.width * 0.96,
+			chartBounds.y + chartBounds.height / 2,
+		);
+		await mainWindow.mouse.up();
+		await expect(panel.locator("[data-testid=\"trajectory-record-trace-tool-old\"]")).toHaveCount(0);
+		await expect(panel.locator("[data-testid=\"trajectory-record-trace-prompt-11\"]")).toBeVisible();
 		await panel.locator("[data-testid=\"trajectory-record-trace-prompt-11\"]").click();
 		await expect(panel.getByText("System Prompt")).toBeVisible();
 		await panel.getByText("System Prompt").click();

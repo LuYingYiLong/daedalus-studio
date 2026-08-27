@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTraceGanttSegments, filterTraceRecords, formatTraceDuration, groupTraceRecords, mergeTraceRecords } from "@/domain/trajectory/trajectory-model";
+import { buildTraceGanttSegments, filterTraceRecords, filterTraceRecordsByTimeRange, formatTraceDuration, groupTraceRecords, mergeTraceRecords } from "@/domain/trajectory/trajectory-model";
 import type { TraceRecord } from "@/platform/rpc/trace-api";
 
 function record(overrides: Partial<TraceRecord> = {}): TraceRecord {
@@ -51,6 +51,27 @@ describe("trajectory model", () => {
 		expect(filterTraceRecords(records, "tool_call", "needle")).toEqual([records[1]]);
 		expect(filterTraceRecords(records, "prompt", "needle")).toEqual([]);
 		expect(formatTraceDuration(61_200)).toBe("1m 1s");
+	});
+
+	it("filters timeline records by an overlapping Gantt time range", () => {
+		const records = [
+			record({
+				recordId: "first",
+				startedAt: "2026-08-26T00:00:00.000Z",
+				finishedAt: "2026-08-26T00:00:00.100Z",
+				durationMs: 100,
+			}),
+			record({
+				recordId: "second",
+				startedAt: "2026-08-26T00:00:00.200Z",
+				finishedAt: "2026-08-26T00:00:00.300Z",
+				durationMs: 100,
+				sequence: 2,
+			}),
+		];
+		const rangeStartMs: number = Date.parse("2026-08-26T00:00:00.050Z");
+		const rangeEndMs: number = Date.parse("2026-08-26T00:00:00.250Z");
+		expect(filterTraceRecordsByTimeRange(records, [rangeStartMs, rangeEndMs]).map((item): string => item.recordId)).toEqual(["first", "second"]);
 	});
 
 	it("projects records into relative Gantt intervals", () => {

@@ -18,10 +18,34 @@
 }
 
 .chart {
+	position: relative;
 	min-width: 0;
 	max-height: 128px;
 	padding: var(--ds-space-1) var(--ds-space-2) 0;
 	overflow: auto;
+}
+
+.selectionLayer {
+	position: absolute;
+	inset: var(--ds-space-1) var(--ds-space-2) 0;
+	z-index: 1;
+	touch-action: none;
+	cursor: crosshair;
+}
+
+.selection {
+	position: absolute;
+	top: var(--ds-space-1);
+	bottom: 0;
+	z-index: 2;
+	border-right: 1px solid var(--ds-accent, var(--ds-primary));
+	border-left: 1px solid var(--ds-accent, var(--ds-primary));
+	background-color: color-mix(
+		in srgb,
+		var(--ds-accent, var(--ds-primary)) 12%,
+		transparent
+	);
+	pointer-events: none;
 }
 
 .empty {

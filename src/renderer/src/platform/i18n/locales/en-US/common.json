@@ -956,7 +956,8 @@
 		"gantt": {
 			"empty": "No timing data to display",
 			"duration": "Duration",
-			"filterLabel": "Phase filters"
+			"filterLabel": "Phase filters",
+			"rangeHint": "Drag to select a time range"
 		}
 	},
 	"browser": {

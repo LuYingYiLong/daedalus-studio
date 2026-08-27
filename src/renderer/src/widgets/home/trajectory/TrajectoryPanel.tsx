@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
 	Alert,
 	Button,
@@ -7,9 +7,7 @@ import {
 	Empty,
 	Flex,
 	Input,
-	Select,
 	Spin,
-	Statistic,
 	Tag,
 	Typography,
 } from "antd";
@@ -17,28 +15,18 @@ import type { CollapseProps } from "antd";
 import { useTranslation } from "react-i18next";
 import {
 	filterTraceRecords,
+	filterTraceRecordsByTimeRange,
 	formatTraceDuration,
 	formatTraceTokens,
 	getTraceRecordTitle,
 	groupTraceRecords,
 } from "@/domain/trajectory/trajectory-model";
-import type {
-	TraceDetail,
-	TraceRecord,
-	TraceRecordKind,
-} from "@/platform/rpc/trace-api";
+import type { TraceTimeRange } from "@/domain/trajectory/trajectory-model";
+import type { TraceDetail, TraceRecord } from "@/platform/rpc/trace-api";
 import { Icon } from "@/assets/icons";
 import { useTrajectoryController } from "./useTrajectoryController";
 import TraceGantt from "./TrajectoryGantt";
 import styles from "./TrajectoryPanel.module.css";
-
-const TRACE_METRIC_CLASS_NAMES = {
-	root: styles.metricCard,
-	title: styles.metricTitle,
-	content: styles.metricContent,
-	value: styles.metricValue,
-	suffix: styles.metricSuffix,
-};
 
 type TrajectoryPanelProps = {
 	sessionId: string | null;
@@ -235,44 +223,29 @@ function TrajectoryPanel({
 }: TrajectoryPanelProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const controller = useTrajectoryController(sessionId, isActive);
-	const [kind, setKind] = useState<TraceRecordKind | "all">("all");
 	const [query, setQuery] = useState<string>("");
+	const [timeRange, setTimeRange] = useState<TraceTimeRange | null>(null);
+	useEffect((): void => {
+		setTimeRange(null);
+	}, [sessionId]);
 	const filteredRecords: TraceRecord[] = useMemo(
 		(): TraceRecord[] =>
-			filterTraceRecords(controller.records, kind, query),
-		[controller.records, kind, query],
+			filterTraceRecords(controller.records, "all", query),
+		[controller.records, query],
+	);
+	const timeFilteredRecords: TraceRecord[] = useMemo(
+		(): TraceRecord[] =>
+			filterTraceRecordsByTimeRange(filteredRecords, timeRange),
+		[filteredRecords, timeRange],
 	);
 	const groups = useMemo(
-		() => groupTraceRecords(filteredRecords),
-		[filteredRecords],
+		() => groupTraceRecords(timeFilteredRecords),
+		[timeFilteredRecords],
 	);
 	const selectedDetail: TraceDetail | null =
 		controller.detail?.record.recordId === controller.selectedRecordId
 			? controller.detail
 			: null;
-	const kindOptions: Array<{
-		value: TraceRecordKind | "all";
-		label: string;
-	}> = [
-		"all",
-		"prompt",
-		"model_call",
-		"thinking",
-		"tool_call",
-		"approval",
-		"retry",
-		"step",
-		"provider_reconnect",
-		"final_response",
-		"error",
-	].map((value): { value: TraceRecordKind | "all"; label: string } => ({
-		value: value as TraceRecordKind | "all",
-		label:
-			value === "all"
-				? t("trajectory.filter.all")
-				: t(`trajectory.kind.${value}`),
-	}));
-
 	if (sessionId === null)
 		return (
 			<Empty
@@ -310,12 +283,26 @@ function TrajectoryPanel({
 		<section className={styles.panel} data-testid="trajectory-panel">
 			<header className={styles.header}>
 				<div className={styles.toolbar}>
-					<Select
-						value={kind}
-						options={kindOptions}
-						onChange={setKind}
-						className={styles.kindSelect}
-					/>
+					<Typography.Text
+						type="secondary"
+						className={styles.statsLine}
+						title={stats
+							.map(
+								(stat): string =>
+									`${t(`trajectory.stats.${stat.key}`)} ${stat.value}`,
+							)
+							.join(" / ")}
+					>
+						{stats.map(
+							(stat, index): React.JSX.Element => (
+								<span key={stat.key}>
+									{index > 0 ? " / " : null}
+									{t(`trajectory.stats.${stat.key}`)}{" "}
+									{stat.value}
+								</span>
+							),
+						)}
+					</Typography.Text>
 					<Input
 						prefix={<Icon name="search" />}
 						allowClear
@@ -324,21 +311,12 @@ function TrajectoryPanel({
 						placeholder={t("trajectory.filter.placeholder")}
 					/>
 				</div>
-				<TraceGantt records={filteredRecords} />
+				<TraceGantt
+					records={filteredRecords}
+					onTimeRangeChange={setTimeRange}
+				/>
 			</header>
-			<div className={styles.context}>
-				<div className={styles.stats}>
-					{stats.map(
-						(stat): React.JSX.Element => (
-							<Statistic
-								key={stat.key}
-								classNames={TRACE_METRIC_CLASS_NAMES}
-								title={t(`trajectory.stats.${stat.key}`)}
-								value={stat.value}
-							/>
-						),
-					)}
-				</div>
+			<div className={styles.body}>
 				{controller.error !== null && !controller.unavailable ? (
 					<Alert
 						type="warning"

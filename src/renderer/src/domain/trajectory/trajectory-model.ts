@@ -6,6 +6,8 @@ export type TraceTurnGroup = {
 	records: TraceRecord[];
 };
 
+export type TraceTimeRange = readonly [number, number];
+
 export type TraceGanttSegment = {
 	recordId: string;
 	requestId: string;
@@ -116,6 +118,39 @@ export function filterTraceRecords(records: readonly TraceRecord[], kind: TraceR
 		if (normalizedQuery.length === 0) return true;
 		return [record.recordId, record.requestId, record.runId, record.stepId, record.toolCallId, record.provider, record.model]
 			.some((value): boolean => value?.toLocaleLowerCase().includes(normalizedQuery) === true);
+	});
+}
+
+export function filterTraceRecordsByTimeRange(
+	records: readonly TraceRecord[],
+	timeRange: TraceTimeRange | null,
+): TraceRecord[] {
+	if (timeRange === null) return [...records];
+	const [rangeStartMs, rangeEndMs]: [number, number] =
+		timeRange[0] <= timeRange[1]
+			? [timeRange[0], timeRange[1]]
+			: [timeRange[1], timeRange[0]];
+	return records.filter((record): boolean => {
+		const startedAtMs: number = Date.parse(record.startedAt);
+		if (!Number.isFinite(startedAtMs)) return false;
+		const parsedFinishedAtMs: number =
+			record.finishedAt === undefined
+				? Number.NaN
+				: Date.parse(record.finishedAt);
+		const finishedAtMs: number = Number.isFinite(parsedFinishedAtMs)
+			? parsedFinishedAtMs
+			: startedAtMs;
+		const durationMs: number =
+			typeof record.durationMs === "number" &&
+			Number.isFinite(record.durationMs)
+				? Math.max(0, record.durationMs)
+				: 0;
+		const recordEndMs: number = Math.max(
+			startedAtMs,
+			finishedAtMs,
+			startedAtMs + durationMs,
+		);
+		return startedAtMs <= rangeEndMs && recordEndMs >= rangeStartMs;
 	});
 }
 
