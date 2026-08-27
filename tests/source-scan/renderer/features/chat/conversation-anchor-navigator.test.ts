@@ -19,6 +19,11 @@ describe("ConversationAnchorNavigator source", () => {
 		expect(navigatorSource).toContain("entries.map");
 		expect(navigatorSource).toContain("getCurrentAnchor");
 		expect(navigatorSource).toContain("data-conversation-anchor-active");
+		expect(navigatorSource).toContain("setPointerCapture");
+		expect(navigatorSource).toContain("getIndexAtClientY");
+		expect(navigatorSource).toContain("onPointerMove");
+		expect(navigatorSource).toContain("onLostPointerCapture");
+		expect(navigatorSource).toContain("suppressNextClickRef");
 		expect(navigatorSource).toContain("navigator.scrollTop");
 		expect(navigatorSource).not.toContain("resolveViewportActiveEntryId");
 		expect(navigatorSource).not.toContain("ResizeObserver");
@@ -31,6 +36,8 @@ describe("ConversationAnchorNavigator source", () => {
 		expect(navigatorStyles).toContain("position: absolute");
 		expect(navigatorStyles).toContain("max-height: 80%");
 		expect(navigatorStyles).toContain("scrollbar-width: none");
+		expect(navigatorStyles).toContain("touch-action: none");
+		expect(navigatorStyles).toContain("data-conversation-anchor-dragging");
 		expect(navigatorStyles).toContain(":global(.ant-anchor)::before");
 		expect(navigatorStyles).toContain("height: 4px !important");
 		expect(navigatorStyles).toContain("justify-content: flex-end");

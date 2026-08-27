@@ -7,6 +7,8 @@ const MAX_TEXT_BYTES: number = 32 * 1024 * 1024;
 export type SaveTextFileParams = {
 	defaultFileName: string;
 	content: string;
+	dialogTitle?: string;
+	buttonLabel?: string;
 };
 
 export type SaveTextFileResult =
@@ -41,11 +43,17 @@ export function registerFileExportIpc(): void {
 		if (contentBytes > MAX_TEXT_BYTES) {
 			throw new Error("file_export_content_too_large");
 		}
+		const dialogTitle: string = typeof record.dialogTitle === "string" && record.dialogTitle.trim().length > 0
+			? record.dialogTitle.trim().slice(0, 120)
+			: "Export code as file";
+		const buttonLabel: string = typeof record.buttonLabel === "string" && record.buttonLabel.trim().length > 0
+			? record.buttonLabel.trim().slice(0, 40)
+			: "Export";
 
 		const result: Electron.SaveDialogReturnValue = await dialog.showSaveDialog(owner, {
-			title: "Export code as file",
+			title: dialogTitle,
 			defaultPath: join(app.getPath("documents"), normalizeFileName(record.defaultFileName)),
-			buttonLabel: "Export",
+			buttonLabel,
 			properties: ["createDirectory", "showOverwriteConfirmation"]
 		});
 		if (result.canceled || typeof result.filePath !== "string" || result.filePath.length === 0) {

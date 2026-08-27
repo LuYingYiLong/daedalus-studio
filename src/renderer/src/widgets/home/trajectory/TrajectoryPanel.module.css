@@ -27,6 +27,15 @@
 	gap: var(--ds-space-1);
 }
 
+.toolbarActions {
+	min-width: 0;
+}
+
+.toolbarActions :global(.ant-input-affix-wrapper) {
+	min-width: 120px;
+	flex: 1 1 auto;
+}
+
 .statsLine {
 	display: block;
 	min-width: 0;

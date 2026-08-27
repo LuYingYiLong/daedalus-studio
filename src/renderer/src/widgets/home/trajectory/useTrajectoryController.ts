@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { serializeTraceLog } from "@/domain/trajectory/trajectory-export";
 import { EMPTY_TRACE_SUMMARY, mergeTraceRecords } from "@/domain/trajectory/trajectory-model";
 import { onBackendEvent, onBackendReconnected } from "@/platform/rpc/transport/backend-client";
 import { fetchTraceDetail, fetchTracePage, fetchTraceSummary, type TraceDetail, type TraceRecord, type TraceSummary } from "@/platform/rpc/trace-api";
 
 type TraceUpdatedData = { revision?: unknown; record?: unknown };
+type TraceExportOptions = { dialogTitle?: string; buttonLabel?: string };
+type TraceExportResult = { saved: true; filePath: string } | { saved: false };
 
 function isTraceRecord(value: unknown): value is TraceRecord {
 	return typeof value === "object" && value !== null
@@ -20,10 +23,12 @@ export type TrajectoryController = {
 	isLoading: boolean;
 	isLoadingMore: boolean;
 	isLoadingDetail: boolean;
+	isExporting: boolean;
 	unavailable: boolean;
 	error: string | null;
 	selectRecord: (recordId: string) => void;
 	loadMore: () => Promise<void>;
+	exportLog: (options?: TraceExportOptions) => Promise<TraceExportResult>;
 	reload: () => Promise<void>;
 };
 
@@ -36,9 +41,11 @@ export function useTrajectoryController(sessionId: string | null, isActive: bool
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 	const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(false);
+	const [isExporting, setIsExporting] = useState<boolean>(false);
 	const [unavailable, setUnavailable] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 	const summaryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const exportingRef = useRef<boolean>(false);
 
 	const reload = useCallback(async (): Promise<void> => {
 		if (sessionId === null) return;
@@ -74,6 +81,68 @@ export function useTrajectoryController(sessionId: string | null, isActive: bool
 			setIsLoadingMore(false);
 		}
 	}, [isLoadingMore, nextCursor, sessionId]);
+
+	const exportLog = useCallback(async (options: TraceExportOptions = {}): Promise<TraceExportResult> => {
+		if (sessionId === null || exportingRef.current) return { saved: false };
+		exportingRef.current = true;
+		setIsExporting(true);
+		try {
+			const exportSummary: TraceSummary = await fetchTraceSummary(sessionId);
+			const pageRecords: TraceRecord[] = [];
+			let cursor: string | undefined;
+			const visitedCursors: Set<string> = new Set();
+			do {
+				const page = await fetchTracePage({ sessionId, cursor, limit: 200 });
+				pageRecords.push(...page.records);
+				const nextPageCursor: string | undefined = page.nextCursor;
+				if (
+					nextPageCursor === undefined ||
+					visitedCursors.has(nextPageCursor)
+				) {
+					cursor = undefined;
+					break;
+				}
+				visitedCursors.add(nextPageCursor);
+				cursor = nextPageCursor;
+			} while (cursor !== undefined);
+
+			const records: TraceRecord[] = mergeTraceRecords([], pageRecords);
+			const recordsWithDetails: TraceRecord[] = records.filter(
+				(record): boolean => record.hasDetails,
+			);
+			const details: TraceDetail[] = [];
+			for (let start: number = 0; start < recordsWithDetails.length; start += 8) {
+				const batch: TraceRecord[] = recordsWithDetails.slice(start, start + 8);
+				details.push(
+					...(await Promise.all(
+						batch.map((record): Promise<TraceDetail> =>
+							fetchTraceDetail(sessionId, record.recordId),
+						),
+					)),
+				);
+			}
+
+			const content: string = serializeTraceLog({
+				sessionId,
+				summary: exportSummary,
+				records,
+				details,
+			});
+			return await window.electronAPI.fileExport.saveText({
+				defaultFileName: `daedalus-trajectory-${sessionId}.json`,
+				content,
+				dialogTitle: options.dialogTitle,
+				buttonLabel: options.buttonLabel,
+			});
+		} catch (exportError: unknown) {
+			const message: string = exportError instanceof Error ? exportError.message : String(exportError);
+			setError(message);
+			throw exportError;
+		} finally {
+			exportingRef.current = false;
+			setIsExporting(false);
+		}
+	}, [sessionId]);
 
 	useEffect((): void => {
 		setSummary(EMPTY_TRACE_SUMMARY);
@@ -125,5 +194,5 @@ export function useTrajectoryController(sessionId: string | null, isActive: bool
 		return (): void => { cancelled = true; };
 	}, [selectedRecordId, sessionId]);
 
-	return { summary, records, selectedRecordId, detail, nextCursor, isLoading, isLoadingMore, isLoadingDetail, unavailable, error, selectRecord, loadMore, reload };
+	return { summary, records, selectedRecordId, detail, nextCursor, isLoading, isLoadingMore, isLoadingDetail, isExporting, unavailable, error, selectRecord, loadMore, exportLog, reload };
 }

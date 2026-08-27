@@ -931,6 +931,12 @@
 		"promptSections": "Prompt sections",
 		"request": "Request",
 		"response": "Response",
+		"exportLog": "Export session log",
+		"exportingLog": "Exporting session log…",
+		"exportDialogTitle": "Export session log",
+		"exportDialogButton": "Export",
+		"logExported": "Session log exported",
+		"exportFailed": "Failed to export session log",
 		"timing": "Timing and tokens",
 		"copyId": "Copy identifier",
 		"kind": {

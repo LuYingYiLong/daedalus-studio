@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import {
 	Alert,
+	App,
 	Button,
 	Collapse,
 	Descriptions,
@@ -307,6 +308,7 @@ function TrajectoryPanel({
 	isActive,
 }: TrajectoryPanelProps): React.JSX.Element {
 	const { t } = useTranslation();
+	const { message } = App.useApp();
 	const controller = useTrajectoryController(sessionId, isActive);
 	const [query, setQuery] = useState<string>("");
 	const [timeRange, setTimeRange] = useState<TraceTimeRange | null>(null);
@@ -427,6 +429,20 @@ function TrajectoryPanel({
 		},
 		{ key: "errors", value: controller.summary.errorCount },
 	];
+	const handleExportLog = (): void => {
+		void controller
+			.exportLog({
+				dialogTitle: t("trajectory.exportDialogTitle"),
+				buttonLabel: t("trajectory.exportDialogButton"),
+			})
+			.then((result): void => {
+				if (result.saved) message.success(t("trajectory.logExported"));
+			})
+			.catch((error: unknown): void => {
+				console.error("[TrajectoryPanel] export log failed", error);
+				message.error(t("trajectory.exportFailed"));
+			});
+	};
 
 	return (
 		<section className={styles.panel} data-testid="trajectory-panel">
@@ -452,13 +468,29 @@ function TrajectoryPanel({
 							),
 						)}
 					</Typography.Text>
-					<Input
-						prefix={<Icon name="search" />}
-						allowClear
-						value={query}
-						onChange={(event): void => setQuery(event.target.value)}
-						placeholder={t("trajectory.filter.placeholder")}
-					/>
+					<Flex className={styles.toolbarActions} gap="small" align="center">
+						<Button
+							type="text"
+							icon={<Icon name="export" />}
+							loading={controller.isExporting}
+							disabled={
+								controller.isLoading ||
+								controller.records.length === 0
+							}
+							onClick={handleExportLog}
+						>
+							{controller.isExporting
+								? t("trajectory.exportingLog")
+								: t("trajectory.exportLog")}
+						</Button>
+						<Input
+							prefix={<Icon name="search" />}
+							allowClear
+							value={query}
+							onChange={(event): void => setQuery(event.target.value)}
+							placeholder={t("trajectory.filter.placeholder")}
+						/>
+					</Flex>
 				</div>
 				<TraceGantt
 					records={filteredRecords}

@@ -10,6 +10,12 @@
 	overflow-x: hidden;
 	transform: translateY(-50%);
 	scrollbar-width: none;
+	touch-action: none;
+}
+
+.navigator[data-conversation-anchor-dragging="true"] {
+	user-select: none;
+	cursor: grabbing;
 }
 
 .navigator::-webkit-scrollbar {
@@ -114,6 +120,8 @@
 	box-sizing: border-box;
 	padding: 1px 0;
 	opacity: 0.3;
+	cursor: pointer;
+	touch-action: none;
 	transition: width 180ms ease, opacity 180ms ease, transform 180ms ease;
 }
 

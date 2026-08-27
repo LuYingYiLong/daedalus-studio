@@ -591,6 +591,8 @@ declare global {
 			saveText: (params: {
 				defaultFileName: string;
 				content: string;
+				dialogTitle?: string;
+				buttonLabel?: string;
 			}) => Promise<{ saved: true; filePath: string } | { saved: false }>;
 		};
 		skillFs: {

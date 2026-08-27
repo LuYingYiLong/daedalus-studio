@@ -929,6 +929,12 @@
 		"promptSections": "Prompt 分段",
 		"request": "请求",
 		"response": "响应",
+		"exportLog": "导出会话日志",
+		"exportingLog": "正在导出会话日志…",
+		"exportDialogTitle": "导出会话日志",
+		"exportDialogButton": "导出",
+		"logExported": "会话日志已导出",
+		"exportFailed": "导出会话日志失败",
 		"timing": "时间与 Token",
 		"copyId": "复制标识",
 		"kind": {
