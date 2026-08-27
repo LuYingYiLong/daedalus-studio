@@ -38,6 +38,7 @@ export type TemporarySessionControllerParams = {
 	navigationVersionRef: MutableRefObject<number>;
 	timelineStore: TimelinePageStore;
 	deleteSessionWithLayout: (sessionId: string) => Promise<void>;
+	materializeTemporarySessionLayout: (sessionId: string) => void;
 	setActiveSessionId: Dispatch<SetStateAction<string | null>>;
 	setActiveSessionMetadata: Dispatch<SetStateAction<SessionMetadata | null>>;
 	setSelectionAskThreads: Dispatch<SetStateAction<SelectionAskThread[]>>;
@@ -85,6 +86,7 @@ export default function useTemporarySessionController({
 	navigationVersionRef,
 	timelineStore,
 	deleteSessionWithLayout,
+	materializeTemporarySessionLayout,
 	setActiveSessionId,
 	setActiveSessionMetadata,
 	setSelectionAskThreads,
@@ -161,6 +163,7 @@ export default function useTemporarySessionController({
 				approvalMode: preferredApprovalMode,
 				workspaceLaunch: draft.workspaceLaunch,
 			});
+			materializeTemporarySessionLayout(created.id);
 			const currentDraftText: string = homeComposerMessageRef.current;
 			if (currentDraftText.length > 0) {
 				composerDraftsRef.current.set(created.id, currentDraftText);

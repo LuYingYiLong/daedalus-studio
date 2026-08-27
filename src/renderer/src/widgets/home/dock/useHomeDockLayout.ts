@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from "react";
 import type { WorkspaceSidebarPreferences } from "@/platform/rpc/client-preferences-api";
 import type { DockLayoutPreferences, SessionLayoutPreferences } from "@/domain/session/session-layout";
 
@@ -11,6 +17,7 @@ type PersistOptions = {
 type UseHomeDockLayoutParams = {
 	workspaceSidebar: WorkspaceSidebarPreferences;
 	sessionLayout: SessionLayoutPreferences;
+	sessionLayoutScopeId: string | null;
 	onWorkspaceSidebarChange: (
 		workspaceSidebar: WorkspaceSidebarPreferences,
 		options?: PersistOptions,
@@ -74,6 +81,7 @@ function areSessionLayoutPreferencesEqual(
 function useHomeDockLayout({
 	workspaceSidebar,
 	sessionLayout,
+	sessionLayoutScopeId,
 	onWorkspaceSidebarChange,
 	onSessionLayoutChange,
 }: UseHomeDockLayoutParams): HomeDockLayoutController {
@@ -83,6 +91,7 @@ function useHomeDockLayout({
 		useState<SessionLayoutPreferences>(sessionLayout);
 	const visualWorkspaceSidebarRef = useRef<WorkspaceSidebarPreferences>(workspaceSidebar);
 	const visualSessionLayoutRef = useRef<SessionLayoutPreferences>(sessionLayout);
+	const previousSessionLayoutScopeIdRef = useRef<string | null>(sessionLayoutScopeId);
 	const workspaceSidebarSaveTimerRef = useRef<number | null>(null);
 	const sessionLayoutSaveTimerRef = useRef<number | null>(null);
 	const pendingWorkspaceSidebarSaveRef = useRef<{
@@ -165,12 +174,15 @@ function useHomeDockLayout({
 			applyVisualWorkspaceSidebar(workspaceSidebar);
 		}
 	}, [applyVisualWorkspaceSidebar, flushWorkspaceSidebarSave, workspaceSidebar]);
-	useEffect((): void => {
-		if (!areSessionLayoutPreferencesEqual(visualSessionLayoutRef.current, sessionLayout)) {
+	useLayoutEffect((): void => {
+		const sessionScopeChanged: boolean =
+			previousSessionLayoutScopeIdRef.current !== sessionLayoutScopeId;
+		previousSessionLayoutScopeIdRef.current = sessionLayoutScopeId;
+		if (sessionScopeChanged || !areSessionLayoutPreferencesEqual(visualSessionLayoutRef.current, sessionLayout)) {
 			flushSessionLayoutSave();
 			applyVisualSessionLayout(sessionLayout);
 		}
-	}, [applyVisualSessionLayout, flushSessionLayoutSave, sessionLayout]);
+	}, [applyVisualSessionLayout, flushSessionLayoutSave, sessionLayout, sessionLayoutScopeId]);
 	useEffect((): (() => void) => {
 		return (): void => {
 			flushWorkspaceSidebarSave();

@@ -53,6 +53,7 @@ export type HomeComposerControllerParams = {
 	setIsHomeSubmitting: Dispatch<SetStateAction<boolean>>;
 	setIsWorktreePreparing: Dispatch<SetStateAction<boolean>>;
 	setIsNewSessionHome: Dispatch<SetStateAction<boolean>>;
+	materializeTemporarySessionLayout: (sessionId: string) => void;
 	setActiveSessionId: Dispatch<SetStateAction<string | null>>;
 	activeSessionIdRef: MutableRefObject<string | null>;
 	setActiveSessionMetadata: Dispatch<SetStateAction<SessionMetadata | null>>;
@@ -99,6 +100,7 @@ function useHomeComposerController({
 	setIsHomeSubmitting,
 	setIsWorktreePreparing,
 	setIsNewSessionHome,
+	materializeTemporarySessionLayout,
 	setActiveSessionId,
 	activeSessionIdRef,
 	setActiveSessionMetadata,
@@ -173,6 +175,7 @@ function useHomeComposerController({
 			});
 			sessionCreated = true;
 			const activeSessionId: string = created.id;
+			materializeTemporarySessionLayout(activeSessionId);
 			activeSessionIdRef.current = activeSessionId;
 			if (homeDraft.executionEnvironment === "worktree") {
 				if (homeDraft.workspaceId === null) {

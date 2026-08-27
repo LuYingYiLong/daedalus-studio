@@ -100,6 +100,7 @@ function useHomePageDockController({
 	const layoutController: HomeDockLayoutController = useHomeDockLayout({
 		workspaceSidebar,
 		sessionLayout,
+		sessionLayoutScopeId: activeSessionId,
 		onWorkspaceSidebarChange,
 		onSessionLayoutChange,
 	});

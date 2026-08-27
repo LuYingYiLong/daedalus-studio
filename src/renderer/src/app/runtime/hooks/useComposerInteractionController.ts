@@ -86,6 +86,7 @@ export type ComposerInteractionControllerParams = {
 	};
 	runtime: {
 		getWorktreeUnavailableMessage: () => string;
+		materializeTemporarySessionLayout: (sessionId: string) => void;
 		persistNewSessionComposerDefaults: (
 			patch: Partial<ClientPreferences["newSessionComposer"]>,
 		) => void;
@@ -182,6 +183,8 @@ export default function useComposerInteractionController({
 		approvalMode: state.approvalMode,
 		skills: state.skills,
 		getWorktreeUnavailableMessage: runtime.getWorktreeUnavailableMessage,
+		materializeTemporarySessionLayout:
+			runtime.materializeTemporarySessionLayout,
 		persistNewSessionComposerDefaults:
 			runtime.persistNewSessionComposerDefaults,
 		setHomeDraft: setters.setHomeDraft,

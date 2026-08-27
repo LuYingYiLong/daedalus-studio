@@ -13,7 +13,11 @@ import {
 	updateClientPreferences,
 } from "@/platform/rpc/client-preferences-api";
 import { deleteSession } from "@/platform/rpc/session-api";
-import type { SessionLayoutMap, SessionLayoutPreferences } from "@/domain/session/session-layout";
+import {
+	cloneSessionLayout,
+	type SessionLayoutMap,
+	type SessionLayoutPreferences,
+} from "@/domain/session/session-layout";
 import {
 	removeSessionFromNavigationHistory,
 } from "@/domain/session/session-navigation-history";
@@ -31,6 +35,7 @@ export type SessionLayoutControllerParams = {
 	composerDraftsRef: MutableRefObject<Map<string, string>>;
 	setClientPreferences: Dispatch<SetStateAction<ClientPreferences>>;
 	setSessionLayouts: Dispatch<SetStateAction<SessionLayoutMap>>;
+	activeSessionLayout: SessionLayoutPreferences;
 	setTemporarySessionLayout: Dispatch<
 		SetStateAction<SessionLayoutPreferences>
 	>;
@@ -47,6 +52,7 @@ export type SessionLayoutController = {
 		layout: SessionLayoutPreferences,
 		options?: { persist?: boolean },
 	) => void;
+	materializeTemporarySessionLayout: (sessionId: string) => void;
 	removeStoredSessionLayouts: (sessionIds: string[]) => void;
 	deleteSessionWithLayout: (sessionId: string) => Promise<void>;
 };
@@ -57,6 +63,7 @@ export default function useSessionLayoutController({
 	composerDraftsRef,
 	setClientPreferences,
 	setSessionLayouts,
+	activeSessionLayout,
 	setTemporarySessionLayout,
 	setRunningSessionState,
 	setUnreadSessionIds,
@@ -137,6 +144,33 @@ export default function useSessionLayoutController({
 			});
 	}, []);
 
+	const materializeTemporarySessionLayout = useCallback(
+		(sessionId: string): void => {
+			const layout: SessionLayoutPreferences =
+				cloneSessionLayout(activeSessionLayout);
+			setSessionLayouts(
+				(currentLayouts: SessionLayoutMap): SessionLayoutMap => {
+					if (currentLayouts[sessionId] !== undefined) {
+						return currentLayouts;
+					}
+					return {
+						...currentLayouts,
+						[sessionId]: layout,
+					};
+				},
+			);
+			void window.electronAPI.sessionLayout
+				.save({ sessionId, layout })
+				.catch((error: unknown): void => {
+					console.error(
+						"[App] save materialized session layout failed",
+						error,
+					);
+				});
+		},
+		[activeSessionLayout, setSessionLayouts],
+	);
+
 	const deleteSessionWithLayout = useCallback(
 	async (sessionId: string): Promise<void> => {
 		await deleteSession(sessionId);
@@ -158,6 +192,7 @@ export default function useSessionLayoutController({
 	return {
 		handleWorkspaceSidebarChange,
 		handleSessionLayoutChange,
+		materializeTemporarySessionLayout,
 		removeStoredSessionLayouts,
 		deleteSessionWithLayout,
 	};

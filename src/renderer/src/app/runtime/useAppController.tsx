@@ -437,6 +437,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	const {
 		handleWorkspaceSidebarChange,
 		handleSessionLayoutChange,
+		materializeTemporarySessionLayout,
 		removeStoredSessionLayouts,
 		deleteSessionWithLayout,
 	} = useSessionLayoutController({
@@ -445,6 +446,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		composerDraftsRef,
 		setClientPreferences,
 		setSessionLayouts,
+		activeSessionLayout,
 		setTemporarySessionLayout,
 		setRunningSessionState,
 		setUnreadSessionIds,
@@ -469,6 +471,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		navigationVersionRef,
 		timelineStore,
 		deleteSessionWithLayout,
+		materializeTemporarySessionLayout,
 		setActiveSessionId,
 		setActiveSessionMetadata,
 		setSelectionAskThreads,
@@ -759,6 +762,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		runtime: {
 			getWorktreeUnavailableMessage: (): string =>
 				t("composer.worktree.unavailable"),
+			materializeTemporarySessionLayout,
 			persistNewSessionComposerDefaults,
 			persistSessionUiMetadata,
 			applyWorkbench,
