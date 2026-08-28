@@ -287,7 +287,10 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 		}), { timeout: 20_000 }).toBe(false);
 		await expect.poll((): boolean => mockBackend.getRequests("client.hello").some((request) => (request.params as { clientType?: string }).clientType === "studio_remote"), { timeout: 20_000 }).toBe(true);
 		await expect(page.locator("[data-remote-app=\"true\"]")).toBeVisible({ timeout: 20_000 });
-		await expect(page.getByText("Remote E2E Project")).toBeVisible();
+		await expect(page.getByTestId("remote-session-home")).toBeVisible();
+		await page.getByRole("button", { name: /打开导航|Open navigation/ }).click();
+		await expect(page.getByText("Remote E2E Project").first()).toBeVisible();
+		await page.getByRole("menuitem", { name: /主页|Home/ }).click();
 		if (previewMode) {
 			console.log(`\nDaedalus Remote preview is ready at ${page.url()}`);
 			console.log("Use the visible mobile window freely. Close it or press Ctrl+C to stop.\n");
@@ -378,7 +381,8 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 		await page.getByRole("button", { name: /批准并执行|Approve and Execute/ }).click();
 		await mockBackend.waitForRequest("plan.approve");
 
-		await page.getByRole("button", { name: /轨迹|Trajectory/ }).click();
+		await page.getByRole("button", { name: /打开导航|Open navigation/ }).click();
+		await page.getByRole("menuitem", { name: /轨迹|Trajectory/ }).click();
 		await expect(page.getByText("prompt · success")).toBeVisible();
 		await expect(page.getByText("tool_call · success")).toBeVisible();
 		await page.getByText("prompt · success").click();

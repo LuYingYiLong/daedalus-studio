@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	Alert,
 	App,
+	Badge,
 	Button,
 	Dropdown,
 	Drawer,
@@ -13,8 +14,10 @@ import {
 	Tag,
 	Typography,
 } from "antd";
+import type { BadgeProps } from "antd";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
+import BreadcrumbsIcon from "@/assets/icons/breadcrumbs.svg?react";
 import MessageList from "@/widgets/conversation/MessageList";
 import Composer from "@/widgets/composer/Composer";
 import NewSessionHome from "@/widgets/home/surface/NewSessionHome";
@@ -94,7 +97,7 @@ import {
 	pairFromLocationFragment,
 } from "./remote-bootstrap";
 import { notifyNativeBridge } from "./native-bridge";
-import RemoteBottomNavigation from "./RemoteBottomNavigation";
+import RemoteNavigationDrawer from "./RemoteNavigationDrawer";
 import RemoteSessionHome from "./RemoteSessionHome";
 import RemoteTraceScreen from "./RemoteTraceScreen";
 import { RemoteRefreshScheduler } from "./remote-refresh-scheduler";
@@ -113,6 +116,16 @@ type ConnectionStatus =
 
 const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
 const ACTIVE_SESSION_REFRESH_INTERVAL_MS: number = 2_000;
+
+function getConnectionBadgeStatus(
+	status: ConnectionStatus,
+): NonNullable<BadgeProps["status"]> {
+	if (status === "connected") return "success";
+	if (status === "connecting") return "processing";
+	if (status === "pairing_required") return "warning";
+	return "error";
+}
+
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
@@ -136,6 +149,7 @@ function RemoteApp(): React.JSX.Element {
 	);
 	const [activeScreen, setActiveScreen] =
 		useState<RemotePrimaryScreen>("sessions");
+	const [navigationOpen, setNavigationOpen] = useState<boolean>(false);
 	const [timeline, setTimeline] = useState<TimelineBlock[]>([]);
 	const [workbench, setWorkbench] = useState<WorkbenchSnapshot | null>(null);
 	const [approvals, setApprovals] = useState<ApprovalListResult>({
@@ -165,13 +179,18 @@ function RemoteApp(): React.JSX.Element {
 	const [traceBusy, setTraceBusy] = useState<boolean>(false);
 	const activeSessionIdRef = useRef<string | null>(null);
 	const pendingApprovalCountRef = useRef<number>(0);
-	const describeError = useCallback((caught: unknown): string => {
-		if (caught instanceof BackendRpcError
-			&& caught.code === "remote_rate_limited") {
-			return t("remote.errors.rateLimited");
-		}
-		return errorMessage(caught);
-	}, [t]);
+	const describeError = useCallback(
+		(caught: unknown): string => {
+			if (
+				caught instanceof BackendRpcError &&
+				caught.code === "remote_rate_limited"
+			) {
+				return t("remote.errors.rateLimited");
+			}
+			return errorMessage(caught);
+		},
+		[t],
+	);
 
 	const showScreen = useCallback(
 		(
@@ -345,8 +364,9 @@ function RemoteApp(): React.JSX.Element {
 				await refreshCatalog();
 				removeEventListener = await onBackendEvent((event): void => {
 					if (event.event === "session.catalog.updated") {
-						void refreshCatalog().catch((catalogError: unknown): void =>
-							setError(describeError(catalogError)),
+						void refreshCatalog().catch(
+							(catalogError: unknown): void =>
+								setError(describeError(catalogError)),
 						);
 					}
 					const selectedId: string | null =
@@ -660,12 +680,10 @@ function RemoteApp(): React.JSX.Element {
 			: t(
 					`remote.navigation.${activeScreen === "trajectory" ? "trajectory" : activeScreen}`,
 				);
-	const backTarget: RemotePrimaryScreen =
-		activeScreen === "conversation"
-			? "sessions"
-			: activeSession === null
-				? "sessions"
-				: "conversation";
+	const headerTitle: string =
+		activeScreen === "sessions"
+			? t("remote.title")
+			: (activeSession?.title ?? screenTitle);
 	const isAndroidShell: boolean =
 		navigator.userAgent.includes("DaedalusRemote/");
 
@@ -694,35 +712,23 @@ function RemoteApp(): React.JSX.Element {
 	return (
 		<main className={styles.shell} data-remote-app="true">
 			<header className={styles.topBar}>
-				{activeScreen === "sessions" ? (
-					<span className={styles.logoMark} aria-hidden="true">
-						<Icon name="remote" />
-					</span>
-				) : (
-					<Button
-						type="text"
-						aria-label={t("remote.back")}
-						icon={<Icon name="arrow-left" />}
-						onClick={(): void => showScreen(backTarget)}
-					/>
-				)}
+				<Button
+					type="text"
+					className={styles.breadcrumbButton}
+					aria-label={t("remote.navigation.open")}
+					icon={<BreadcrumbsIcon aria-hidden="true" />}
+					onClick={(): void => setNavigationOpen(true)}
+				/>
 				<Typography.Text strong ellipsis className={styles.topTitle}>
-					{activeScreen === "sessions"
-						? "Daedalus Remote"
-						: screenTitle}
+					{headerTitle}
 				</Typography.Text>
 				<div className={styles.topActions}>
 					<span
-						className={styles.connectionState}
+						className={styles.connectionStatus}
 						role="status"
 						aria-label={t(`remote.connection.${connectionStatus}`)}
 					>
-						<span
-							className={`${styles.connectionDot} ${connectionStatus === "connected" ? styles.connectionDotConnected : ""}`}
-						/>
-						<span>
-							{t(`remote.connection.${connectionStatus}`)}
-						</span>
+						<Badge status={getConnectionBadgeStatus(connectionStatus)} />
 					</span>
 					<Dropdown
 						trigger={["click"]}
@@ -1058,22 +1064,31 @@ function RemoteApp(): React.JSX.Element {
 				)}
 			</div>
 
-			<RemoteBottomNavigation
+			<RemoteNavigationDrawer
+				open={navigationOpen}
 				activeScreen={activeScreen}
-				hasActiveSession={activeSession !== null}
-				pendingApprovalCount={approvals.pending.length}
+				activeSessionId={activeSession?.id}
+				sessions={sessions}
+				workspaces={workspaces}
+				onClose={(): void => setNavigationOpen(false)}
 				onNavigate={handlePrimaryNavigation}
+				onOpenSession={(session: SessionMetadata): void => {
+					void openRemoteSession(session).catch(
+						(openError: unknown): void =>
+							setError(describeError(openError)),
+					);
+				}}
 			/>
 
 			<Drawer
 				title={t("remote.newSession")}
 				open={createOpen}
 				placement="bottom"
-				height="auto"
+				size="auto"
 				onClose={(): void => setCreateOpen(false)}
 			>
 				<Space
-					direction="vertical"
+					orientation="vertical"
 					size="middle"
 					className={styles.drawerForm}
 				>
@@ -1132,7 +1147,7 @@ function RemoteApp(): React.JSX.Element {
 					workbench?.pendingToolBudget !== undefined
 				}
 				placement="bottom"
-				height="auto"
+				size="auto"
 				closable={false}
 			>
 				<ToolBudgetDialog
@@ -1219,7 +1234,7 @@ function RemoteApp(): React.JSX.Element {
 					/>
 				) : (
 					<Space
-						direction="vertical"
+						orientation="vertical"
 						size="middle"
 						className={styles.drawerForm}
 					>
@@ -1235,7 +1250,7 @@ function RemoteApp(): React.JSX.Element {
 				title={t("remote.trajectory.detail")}
 				open={traceDetail !== null}
 				placement="bottom"
-				height="82dvh"
+				size="82dvh"
 				onClose={(): void => setTraceDetail(null)}
 			>
 				<TraceInspector detail={traceDetail} loading={traceBusy} />

@@ -1596,19 +1596,24 @@
 	},
 	"remote": {
 		"connecting": "Connecting to Studio…",
+		"title": "Daedalus Remote",
 		"sessions": "Sessions",
 		"home": {
 			"eyebrow": "LAN remote",
 			"title": "Continue your work",
-			"subtitle": "Check progress, reply, and handle operations that need your confirmation from your phone.",
 			"searchPlaceholder": "Search sessions or projects",
 			"recent": "Recent sessions",
 			"projects": "All projects",
 			"noSearchResults": "No matching session or project",
+			"noRecentSessions": "No recent sessions",
 			"openSessionFirst": "Open a session first"
 		},
 		"navigation": {
 			"label": "Primary navigation",
+			"title": "Navigation",
+			"open": "Open navigation",
+			"home": "Home",
+			"tools": "Session tools",
 			"sessions": "Sessions",
 			"conversation": "Chat",
 			"approvals": "Approvals",

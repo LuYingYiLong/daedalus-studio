@@ -1,0 +1,94 @@
+.sessionScreen {
+	width: 100%;
+	max-width: 760px;
+	margin-inline: auto;
+	overflow-y: auto;
+	overscroll-behavior-y: contain;
+	padding: 14px max(14px, env(safe-area-inset-right)) 28px
+		max(14px, env(safe-area-inset-left));
+	scrollbar-gutter: stable;
+}
+
+.homeHero {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	min-height: 0;
+	padding: 28px 22px 24px;
+	text-align: center;
+}
+
+.remoteWelcomeIcon {
+	width: 88px;
+	height: 88px;
+	object-fit: contain;
+}
+
+.homeSection {
+	margin-top: 22px;
+}
+
+.sectionTitle {
+	margin: 0 !important;
+}
+
+.recentScroller {
+	display: grid;
+	grid-auto-flow: row;
+	gap: 8px;
+	overflow: visible;
+	padding: 2px 0;
+}
+
+.recentScroller .sessionRow {
+	padding: 10px 12px;
+	border: 1px solid var(--ds-border-subtle);
+	border-radius: 16px;
+	background: var(--ds-surface);
+}
+
+.sessionRow {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	min-height: 58px;
+	padding: 8px;
+	border: 0;
+	border-radius: 13px;
+	background: transparent;
+	text-align: left;
+}
+
+.sessionRowContent {
+	display: grid;
+	grid-template-rows: auto auto;
+}
+
+.newSessionAction {
+	min-height: 46px;
+	border-radius: 999px;
+}
+
+@media (max-width: 430px) {
+	.homeHero {
+		padding: 24px 18px 20px;
+	}
+
+	.recentScroller {
+		grid-auto-columns: auto;
+	}
+}
+
+@media (max-width: 360px) {
+	.homeHero {
+		gap: 10px;
+		padding: 16px;
+	}
+
+	.recentScroller {
+		scroll-behavior: auto;
+	}
+}

@@ -325,6 +325,11 @@ function clearSynchronizedAssets(adb, restart) {
 	if (restart) restartApp(adb);
 }
 
+function isSuccessfulBuildLine(line) {
+	return /(?:^|\s)(?:[✓✔]\s*)?built in\s+\d+(?:\.\d+)?\s*(?:ms|s)\.?\s*$/iu
+		.test(line.trim());
+}
+
 function startWatch(adb, restart) {
 	const invocation = npmInvocation(["run", "build:android:web", "--", "--watch"]);
 	const child = spawn(invocation.command, invocation.args, {
@@ -333,17 +338,18 @@ function startWatch(adb, restart) {
 		stdio: ["inherit", "pipe", "pipe"],
 		shell: false,
 	});
-	let lineBuffer = "";
+	const lineBuffers = { stdout: "", stderr: "" };
 	let syncTimer;
-	const consume = (chunk, destination) => {
+	const consume = (chunk, destination, stream) => {
 		destination.write(chunk);
-		lineBuffer += chunk.toString("utf8").replace(/\u001b\[[0-9;]*m/gu, "");
-		const lines = lineBuffer.split(/\r?\n/u);
-		lineBuffer = lines.pop() || "";
+		lineBuffers[stream] += chunk.toString("utf8").replace(/\u001b\[[0-9;]*m/gu, "");
+		const lines = lineBuffers[stream].split(/\r?\n/u);
+		lineBuffers[stream] = lines.pop() || "";
 		for (const line of lines) {
-			if (!/[✓✔]\s+built in\s+/u.test(line)) continue;
+			if (!isSuccessfulBuildLine(line)) continue;
 			clearTimeout(syncTimer);
 			syncTimer = setTimeout(() => {
+				console.log("[android-sync] Web build completed; synchronizing changed assets...");
 				try {
 					synchronize(adb, restart);
 				} catch (error) {
@@ -352,8 +358,8 @@ function startWatch(adb, restart) {
 			}, 100);
 		}
 	};
-	child.stdout.on("data", (chunk) => consume(chunk, process.stdout));
-	child.stderr.on("data", (chunk) => consume(chunk, process.stderr));
+	child.stdout.on("data", (chunk) => consume(chunk, process.stdout, "stdout"));
+	child.stderr.on("data", (chunk) => consume(chunk, process.stderr, "stderr"));
 	child.on("error", (error) => {
 		console.error(`[android-sync] Failed to start Vite watch: ${error.message}`);
 		process.exitCode = 1;
@@ -361,9 +367,29 @@ function startWatch(adb, restart) {
 	child.on("exit", (code) => {
 		if (code !== 0 && code !== null) process.exitCode = code;
 	});
+	let stopping = false;
 	const stop = () => {
+		if (stopping) return;
+		stopping = true;
 		clearTimeout(syncTimer);
-		child.kill("SIGINT");
+		if (process.platform === "win32" && child.pid !== undefined) {
+			const terminated = spawnSync(
+				"taskkill",
+				["/PID", String(child.pid), "/T", "/F"],
+				{ stdio: "ignore", shell: false },
+			);
+			if ((terminated.status ?? 1) !== 0) child.kill();
+			process.exit(0);
+		}
+		child.kill("SIGTERM");
+		const forceExitTimer = setTimeout(() => {
+			child.kill("SIGKILL");
+			process.exit(0);
+		}, 2_000);
+		child.once("exit", () => {
+			clearTimeout(forceExitTimer);
+			process.exit(0);
+		});
 	};
 	process.once("SIGINT", stop);
 	process.once("SIGTERM", stop);
@@ -405,5 +431,6 @@ if (require.main === module) {
 module.exports = {
 	diffManifests,
 	isSafeRelativePath,
+	isSuccessfulBuildLine,
 	parseArguments,
 };

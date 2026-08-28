@@ -11,6 +11,7 @@ type SyncUtilities = {
 		previous: Manifest | null,
 	): { changedPaths: string[]; removedPaths: string[] };
 	isSafeRelativePath(value: unknown): boolean;
+	isSuccessfulBuildLine(value: string): boolean;
 	parseArguments(values: string[]): {
 		watch: boolean;
 		clear: boolean;
@@ -55,5 +56,13 @@ describe("Android Remote ADB sync", () => {
 			.toThrow("--watch and --clear cannot be combined");
 		expect(utilities.parseArguments(["--watch", "--no-restart", "--serial", "device-1"]))
 			.toMatchObject({ watch: true, clear: false, restart: false, serial: "device-1" });
+	});
+
+	it("recognizes both interactive and plain Vite watch success messages", () => {
+		expect(utilities.isSuccessfulBuildLine("✓ built in 17.61s")).toBe(true);
+		expect(utilities.isSuccessfulBuildLine("built in 17612ms.")).toBe(true);
+		expect(utilities.isSuccessfulBuildLine("✔ built in 842 ms")).toBe(true);
+		expect(utilities.isSuccessfulBuildLine("Some chunks are larger than 500 kB"))
+			.toBe(false);
 	});
 });

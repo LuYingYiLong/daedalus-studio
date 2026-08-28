@@ -9,7 +9,7 @@
 
 .shell {
 	display: grid;
-	grid-template-rows: auto minmax(0, 1fr) auto;
+	grid-template-rows: auto minmax(0, 1fr);
 	height: 100dvh;
 	overflow: hidden;
 	background: var(--ds-bg);
@@ -18,14 +18,13 @@
 
 .topBar {
 	display: grid;
-	grid-template-columns: 48px minmax(0, 1fr) minmax(110px, auto);
+	grid-template-columns: auto minmax(0, 1fr) auto;
 	align-items: center;
 	gap: 4px;
 	min-height: 54px;
 	padding: 3px max(6px, env(safe-area-inset-right)) 3px
 		max(6px, env(safe-area-inset-left));
 	border-bottom: 1px solid var(--ds-border-subtle);
-	background: color-mix(in srgb, var(--ds-surface) 88%, transparent);
 	backdrop-filter: blur(18px) saturate(1.2);
 	z-index: 4;
 }
@@ -33,6 +32,66 @@
 .topBar :global(.ant-btn) {
 	min-width: 44px;
 	min-height: 44px;
+}
+
+.breadcrumbButton {
+	width: 44px;
+	padding-inline: 0 !important;
+}
+
+.breadcrumbButton svg {
+	width: 20px;
+	height: 20px;
+}
+
+.breadcrumbLabel {
+	min-width: 0;
+	overflow: hidden;
+	font-size: 13px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.navigationDrawer :global(.ant-drawer-body) {
+	padding: 8px;
+}
+
+.navigationMenu {
+	border-inline-end: 0 !important;
+	background: transparent;
+}
+
+.navigationMenu :global(.ant-menu-item),
+.navigationMenu :global(.ant-menu-submenu-title) {
+	min-height: 44px;
+	margin-block: 2px;
+	line-height: 44px;
+	border-radius: 12px;
+}
+
+.navigationWorkspaceLabel {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	min-width: 0;
+}
+
+.navigationWorkspaceLabel > span:first-child,
+.navigationSessionLabel {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.navigationSessionCount {
+	flex: 0 0 auto;
+	color: var(--ds-text-muted);
+	font-size: 12px;
+}
+
+.navigationSessionLabel {
+	display: block;
 }
 
 .logoMark {
@@ -50,6 +109,7 @@
 .topTitle {
 	min-width: 0;
 	padding-inline: 4px;
+	overflow: hidden;
 	text-align: left;
 	font-size: 16px;
 }
@@ -59,6 +119,20 @@
 	align-items: center;
 	justify-content: flex-end;
 	gap: 2px;
+	min-width: 0;
+}
+
+.connectionStatus {
+	display: grid;
+	place-items: center;
+	width: 24px;
+	height: 44px;
+}
+
+.connectionStatus :global(.ant-badge-status-dot) {
+	width: 8px;
+	height: 8px;
+	margin-inline-end: 0;
 }
 
 .connectionState {
@@ -111,7 +185,6 @@
 	background: var(--ds-bg);
 }
 
-.sessionScreen,
 .scrollScreen {
 	overflow-y: auto;
 	overscroll-behavior-y: contain;
@@ -120,28 +193,17 @@
 	scrollbar-gutter: stable;
 }
 
-.sessionScreen {
-	width: 100%;
-	max-width: 760px;
-	margin-inline: auto;
+.homeGreeting {
+	margin: 0 !important;
+	font-size: clamp(22px, 6vw, 30px) !important;
+	line-height: 1.2 !important;
+	letter-spacing: -0.035em;
 }
 
-.homeHero {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	align-items: center;
-	gap: 18px;
-	min-height: 150px;
-	padding: 22px;
-	border: 1px solid
-		color-mix(in srgb, var(--ds-accent) 17%, var(--ds-border-subtle));
-	border-radius: 24px;
-	background: linear-gradient(
-		145deg,
-		color-mix(in srgb, var(--ds-accent-subtle) 75%, var(--ds-surface)),
-		var(--ds-surface)
-	);
-	box-shadow: 0 14px 34px color-mix(in srgb, var(--ds-accent) 8%, transparent);
+.homeSubtitle {
+	max-width: 520px;
+	margin: 0 !important;
+	line-height: 1.55;
 }
 
 .homeHeroCopy {
@@ -183,30 +245,6 @@
 	margin-top: 14px;
 	border-radius: 15px;
 	background: var(--ds-surface);
-}
-
-.homeSection {
-	margin-top: 22px;
-}
-
-.sectionTitle {
-	margin: 0 0 10px 2px !important;
-	font-size: 15px !important;
-}
-
-.recentScroller {
-	display: grid;
-	grid-auto-columns: minmax(190px, 72%);
-	grid-auto-flow: column;
-	gap: 10px;
-	overflow-x: auto;
-	padding: 2px 2px 8px;
-	scroll-snap-type: x proximity;
-	scrollbar-width: none;
-}
-
-.recentScroller::-webkit-scrollbar {
-	display: none;
 }
 
 .recentCard,
@@ -294,20 +332,6 @@
 	gap: 4px;
 }
 
-.sessionRow {
-	display: grid;
-	grid-template-columns: auto minmax(0, 1fr) auto;
-	align-items: center;
-	gap: 10px;
-	width: 100%;
-	min-height: 58px;
-	padding: 8px;
-	border: 0;
-	border-radius: 13px;
-	background: transparent;
-	text-align: left;
-}
-
 .sessionRowIcon {
 	grid-row: auto;
 	width: 34px;
@@ -315,9 +339,29 @@
 	border-radius: 11px;
 }
 
-.sessionRowContent {
+.sessionRowArrow {
+	display: grid;
+	place-items: center;
+	color: var(--ds-text-secondary);
+}
+
+.newSessionSection {
+	display: grid;
+	gap: 12px;
+	margin-bottom: 14px;
+	padding: 16px;
+	border: 1px solid var(--ds-border-subtle);
+	border-radius: 18px;
+	background: var(--ds-surface);
+}
+
+.newSessionCopy .sectionTitle {
+	margin-bottom: 5px !important;
+}
+
+.newSessionHint {
 	display: block;
-	min-width: 0;
+	line-height: 1.5;
 }
 
 .emptyGroup {
@@ -352,10 +396,6 @@
 	margin: 8px max(8px, env(safe-area-inset-right)) 8px
 		max(8px, env(safe-area-inset-left));
 	padding: 8px;
-	border: 1px solid var(--ds-border-subtle);
-	border-radius: 20px;
-	background: color-mix(in srgb, var(--ds-surface) 94%, transparent);
-	box-shadow: 0 10px 30px color-mix(in srgb, #000 10%, transparent);
 	backdrop-filter: blur(16px);
 }
 
@@ -613,16 +653,7 @@
 
 @media (max-width: 430px) {
 	.topBar {
-		grid-template-columns: 46px minmax(0, 1fr) auto;
-	}
-
-	.homeHero {
-		min-height: 136px;
-		padding: 18px;
-	}
-
-	.recentScroller {
-		grid-auto-columns: 78%;
+		grid-template-columns: auto minmax(0, 1fr) auto;
 	}
 
 	.traceStats {
@@ -634,11 +665,6 @@
 	.sessionScreen,
 	.scrollScreen {
 		padding-inline: 10px;
-	}
-
-	.homeHero {
-		gap: 10px;
-		padding: 16px;
 	}
 
 	.homeHeroCopy :global(h2.ant-typography) {
@@ -654,10 +680,6 @@
 @media (prefers-reduced-motion: reduce) {
 	.runStateDotActive {
 		animation: none;
-	}
-
-	.recentScroller {
-		scroll-behavior: auto;
 	}
 
 	.recentCard,

@@ -1589,19 +1589,24 @@
 	},
 	"remote": {
 		"connecting": "正在连接 Studio…",
+		"title": "Daedalus Remote",
 		"sessions": "会话",
 		"home": {
 			"eyebrow": "局域网远程",
 			"title": "继续你的工作",
-			"subtitle": "从手机查看进度、回复消息，并处理需要你确认的操作。",
 			"searchPlaceholder": "搜索会话或项目",
 			"recent": "最近会话",
 			"projects": "全部项目",
 			"noSearchResults": "没有匹配的会话或项目",
+			"noRecentSessions": "暂无最近会话",
 			"openSessionFirst": "请先打开一个会话"
 		},
 		"navigation": {
 			"label": "主要导航",
+			"title": "导航",
+			"open": "打开导航",
+			"home": "主页",
+			"tools": "会话工具",
 			"sessions": "会话",
 			"conversation": "对话",
 			"approvals": "审批",
