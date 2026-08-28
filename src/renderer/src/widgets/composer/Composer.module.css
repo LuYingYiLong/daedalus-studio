@@ -256,10 +256,23 @@
 .modelButtonContent {
 	display: flex;
 	align-items: center;
+	gap: var(--ds-space-1);
+	max-width: 100%;
 	min-width: 0;
+	overflow: hidden;
 }
 
 .modelButtonText {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.modelButtonEffort {
+	flex: 0 0 auto;
+	color: var(--ds-text-muted);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;

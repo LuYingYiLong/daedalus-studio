@@ -355,6 +355,7 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 		await expect.poll((): boolean => mockBackend.getRequests("session.save").some((request) =>
 			(request.params as { reasoningEffort?: string }).reasoningEffort === "high",
 		)).toBe(true);
+		await expect(page.getByTestId("composer-model-button")).toHaveAccessibleName(/高|High/);
 
 		const composer = page.getByTestId("composer-input");
 		await composer.fill("Stream from mobile");

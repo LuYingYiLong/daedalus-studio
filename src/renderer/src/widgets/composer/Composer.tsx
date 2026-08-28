@@ -69,6 +69,7 @@ import {
 	createWorkspaceFooterItems,
 	createWorkspaceKey,
 	findSelectedModel,
+	getReasoningEffortLabel,
 	getSelectedModelLabel,
 	isApprovalMode,
 	isComposerMode,
@@ -571,6 +572,14 @@ function Composer({
 			reasoningEffortOptions,
 			reasoningEffort,
 		);
+	const displayedReasoningEffortLabel: string =
+		displayedReasoningEffort === null
+			? ""
+			: getReasoningEffortLabel(displayedReasoningEffort, t);
+	const modelButtonLabel: string =
+		displayedReasoningEffort === null
+			? selectedModelLabel
+			: `${selectedModelLabel} · ${displayedReasoningEffortLabel}`;
 	const selectedWorkspaceKey: string =
 		selectedWorkspace === null
 			? NO_WORKSPACE_KEY
@@ -579,16 +588,18 @@ function Composer({
 		selectedWorkspace?.name ?? t("composer.workspace.noWorkspace");
 	const canUseWorktrees: boolean =
 		workspaceSupportsWorktrees(selectedWorkspace);
-	const canAddContext: boolean = onAddFiles !== undefined
-		|| onAddFolder !== undefined
-		|| onAddImages !== undefined
-		|| onAddContextFiles !== undefined;
+	const canAddContext: boolean =
+		onAddFiles !== undefined ||
+		onAddFolder !== undefined ||
+		onAddImages !== undefined ||
+		onAddContextFiles !== undefined;
 	const canOpenComposerOptions: boolean =
 		canAddContext || onModeChange !== undefined;
-	const showWorkspaceFooter: boolean = onWorkspaceSelect !== undefined
-		|| onWorkspaceAdd !== undefined
-		|| onWorkspaceClear !== undefined
-		|| worktreeMode !== undefined;
+	const showWorkspaceFooter: boolean =
+		onWorkspaceSelect !== undefined ||
+		onWorkspaceAdd !== undefined ||
+		onWorkspaceClear !== undefined ||
+		worktreeMode !== undefined;
 	const approvalModeLabel: string =
 		approvalMode === "full-trust"
 			? t("composer.approvalMode.fullTrust")
@@ -730,9 +741,8 @@ function Composer({
 				return;
 			}
 
-			const nextSelectedModel: SelectedModel | null = parseModelKey(
-				selectedKey,
-			);
+			const nextSelectedModel: SelectedModel | null =
+				parseModelKey(selectedKey);
 
 			if (nextSelectedModel === null) {
 				return;
@@ -743,7 +753,11 @@ function Composer({
 				nextSelectedModel.model,
 			);
 		},
-		[onProviderModelChange, onReasoningEffortChange, reasoningEffortOptions],
+		[
+			onProviderModelChange,
+			onReasoningEffortChange,
+			reasoningEffortOptions,
+		],
 	);
 	const providerModelMenuItems: MenuProps["items"] = useMemo(
 		(): MenuProps["items"] =>
@@ -790,10 +804,12 @@ function Composer({
 			return;
 		}
 		const modeCommand = parseComposerModeCommand(draftMessage);
-		const allowedModeCommand = modeCommand !== null
-			&& (allowedModes === undefined || allowedModes.includes(modeCommand.mode))
-			? modeCommand
-			: null;
+		const allowedModeCommand =
+			modeCommand !== null &&
+			(allowedModes === undefined ||
+				allowedModes.includes(modeCommand.mode))
+				? modeCommand
+				: null;
 		const trimmedMessage: string =
 			allowedModeCommand?.message ?? draftMessage.trim();
 		const hasSubmittableContent: boolean =
@@ -1373,7 +1389,7 @@ function Composer({
 			type="text"
 			className={styles.modelButton}
 			data-testid="composer-model-button"
-			aria-label={selectedModelLabel}
+			aria-label={modelButtonLabel}
 			disabled={providerModelSelection === null}
 			onClick={!hasConfiguredProviders ? onConfigureProvider : undefined}
 		>
@@ -1381,12 +1397,19 @@ function Composer({
 				<span className={styles.modelButtonText}>
 					{selectedModelLabel}
 				</span>
+				{displayedReasoningEffort === null ? null : (
+					<span className={styles.modelButtonEffort}>
+						{displayedReasoningEffortLabel}
+					</span>
+				)}
 			</span>
 		</Button>
 	);
-	const isStopAction: boolean = isSending
-		&& (!allowQueue
-			|| (draftMessage.trim().length === 0 && composerContextItems.length === 0));
+	const isStopAction: boolean =
+		isSending &&
+		(!allowQueue ||
+			(draftMessage.trim().length === 0 &&
+				composerContextItems.length === 0));
 
 	return (
 		<div
@@ -1510,8 +1533,8 @@ function Composer({
 									layout === "mobile"
 										? { minRows: 1, maxRows: 5 }
 										: compact
-										? { minRows: 1, maxRows: 1 }
-										: { minRows: 4, maxRows: 6 }
+											? { minRows: 1, maxRows: 1 }
+											: { minRows: 4, maxRows: 6 }
 								}
 								disabled={isSending && !allowQueue}
 								placeholder={textAreaPlaceholder}
@@ -1542,110 +1565,109 @@ function Composer({
 					<div className={styles.composerToolbar}>
 						{canOpenComposerOptions ? (
 							<div className={styles.composerToolbarControl}>
-							<Tooltip title={t("composer.tooltips.contextAndMode")}>
-								<Dropdown
-									rootClassName={styles.composerOptionsDropdown}
-									placement="topLeft"
-									autoAdjustOverflow={true}
-									menu={composerOptionsMenu}
-									trigger={["click"]}
+								<Tooltip
+									title={t(
+										"composer.tooltips.contextAndMode",
+									)}
 								>
-									<Button
-										type="text"
-										shape="circle"
-										data-testid="composer-options-button"
-										aria-label={t(
-											"composer.tooltips.contextAndMode",
-										)}
-										icon={
-											<Icon
-												name="add"
-												className={styles.composerActionIcon}
-											/>
+									<Dropdown
+										rootClassName={
+											styles.composerOptionsDropdown
 										}
-									/>
-								</Dropdown>
-							</Tooltip>
+										placement="topLeft"
+										autoAdjustOverflow={true}
+										menu={composerOptionsMenu}
+										trigger={["click"]}
+									>
+										<Button
+											type="text"
+											shape="circle"
+											data-testid="composer-options-button"
+											aria-label={t(
+												"composer.tooltips.contextAndMode",
+											)}
+											icon={
+												<Icon
+													name="add"
+													className={
+														styles.composerActionIcon
+													}
+												/>
+											}
+										/>
+									</Dropdown>
+								</Tooltip>
 							</div>
 						) : null}
 						{canAddContext ? <Divider vertical={true} /> : null}
 
 						<div className={styles.composerToolbarControl}>
-						<Tooltip title={t("composer.tooltips.approvalMode")}>
-							<Dropdown
-								menu={approvalModeMenu}
-								disabled={isApprovalModeSaving}
-								trigger={["click"]}
+							<Tooltip
+								title={t("composer.tooltips.approvalMode")}
 							>
-								<Button
-									type="text"
-									aria-label={approvalModeLabel}
-									loading={isApprovalModeSaving}
-									icon={
-										<Icon
-											name={
-												approvalMode === "full-trust"
-													? "warning"
-													: approvalMode ===
-														  "auto-safe"
-														? "shield"
-														: "hand"
-											}
-										/>
-									}
-									className={styles.approvalModeButton}
+								<Dropdown
+									menu={approvalModeMenu}
+									disabled={isApprovalModeSaving}
+									trigger={["click"]}
 								>
-									<span className={styles.approvalModeText}>
-										{approvalModeLabel}
-									</span>
-								</Button>
-							</Dropdown>
-						</Tooltip>
+									<Button
+										type="text"
+										aria-label={approvalModeLabel}
+										loading={isApprovalModeSaving}
+										icon={
+											<Icon
+												name={
+													approvalMode ===
+													"full-trust"
+														? "warning"
+														: approvalMode ===
+															  "auto-safe"
+															? "shield"
+															: "hand"
+												}
+											/>
+										}
+										className={styles.approvalModeButton}
+									>
+										<span
+											className={styles.approvalModeText}
+										>
+											{approvalModeLabel}
+										</span>
+									</Button>
+								</Dropdown>
+							</Tooltip>
 						</div>
 
 						<Divider vertical={true} />
 
 						<div className={styles.composerToolbarModelControl}>
-						<Tooltip
-							title={
-								hasConfiguredProviders
-									? t("composer.tooltips.model")
-									: t("composer.model.configureProvider")
-							}
-						>
-							{hasConfiguredProviders ? (
-								<Dropdown
-									rootClassName={styles.modelDropdown}
-									placement="topRight"
-									autoAdjustOverflow={true}
-									menu={providerModelMenu}
-									trigger={["click"]}
-								>
-									{modelButton}
-								</Dropdown>
-							) : (
-								modelButton
-							)}
-						</Tooltip>
+							<Tooltip
+								title={
+									hasConfiguredProviders
+										? t("composer.tooltips.model")
+										: t("composer.model.configureProvider")
+								}
+							>
+								{hasConfiguredProviders ? (
+									<Dropdown
+										rootClassName={styles.modelDropdown}
+										placement="topRight"
+										autoAdjustOverflow={true}
+										menu={providerModelMenu}
+										trigger={["click"]}
+									>
+										{modelButton}
+									</Dropdown>
+								) : (
+									modelButton
+								)}
+							</Tooltip>
 						</div>
 
 						<div className={styles.composerToolbarControl}>
-						<Tooltip
-							title={
-								isCancelling
-									? t("composer.send.stopping")
-									: isSending &&
-										  isStopAction
-										? t("composer.send.stop")
-										: isSending
-											? t("composer.send.queue")
-											: t("composer.send.send")
-							}
-						>
-							<Button
-								type="text"
-								shape="circle"
-								aria-label={
+							<Tooltip
+								title={
 									isCancelling
 										? t("composer.send.stopping")
 										: isSending && isStopAction
@@ -1654,160 +1676,178 @@ function Composer({
 												? t("composer.send.queue")
 												: t("composer.send.send")
 								}
-								icon={
-									<Icon
-										name={
-											isStopAction
-												? "stop"
-												: "send"
-										}
-									/>
-								}
-								className={styles.composerSendButton}
-								disabled={
-									isCancelling ||
-									isAddingTextAttachment ||
-									(!isSending &&
-										draftMessage.trim().length === 0 &&
-										composerContextItems.length === 0)
-								}
-								onClick={submitMessage}
-							/>
-						</Tooltip>
+							>
+								<Button
+									type="text"
+									shape="circle"
+									aria-label={
+										isCancelling
+											? t("composer.send.stopping")
+											: isSending && isStopAction
+												? t("composer.send.stop")
+												: isSending
+													? t("composer.send.queue")
+													: t("composer.send.send")
+									}
+									icon={
+										<Icon
+											name={
+												isStopAction ? "stop" : "send"
+											}
+										/>
+									}
+									className={styles.composerSendButton}
+									disabled={
+										isCancelling ||
+										isAddingTextAttachment ||
+										(!isSending &&
+											draftMessage.trim().length === 0 &&
+											composerContextItems.length === 0)
+									}
+									onClick={submitMessage}
+								/>
+							</Tooltip>
 						</div>
 					</div>
 				</div>
 			</div>
 
-			{showWorkspaceFooter ? <footer className={styles.footer}>
-				<Flex
-					align="start"
-					justify="space-between"
-					gap={8}
-					className={styles.workspaceFooterRow}
-				>
+			{showWorkspaceFooter ? (
+				<footer className={styles.footer}>
 					<Flex
-						align="center"
-						gap={6}
-						className={styles.workspaceFooterControls}
+						align="start"
+						justify="space-between"
+						gap={8}
+						className={styles.workspaceFooterRow}
 					>
-						<Dropdown
-							disabled={
-								workspaceFooterDisabled || isWorktreePreparing
-							}
-							menu={workspaceFooterMenu}
-							trigger={["click"]}
+						<Flex
+							align="center"
+							gap={6}
+							className={styles.workspaceFooterControls}
 						>
-							<Button
-								type="text"
-								size="small"
+							<Dropdown
 								disabled={
 									workspaceFooterDisabled ||
 									isWorktreePreparing
 								}
-								icon={
-									selectedWorkspace === null ? (
-										<Icon name="close" />
-									) : (
-										<WorkspaceIconView
-											workspace={selectedWorkspace}
-										/>
-									)
-								}
-								className={styles.workspaceFooterButton}
+								menu={workspaceFooterMenu}
+								trigger={["click"]}
 							>
-								<span className={styles.workspaceFooterText}>
-									{selectedWorkspaceLabel}
-								</span>
-							</Button>
-						</Dropdown>
-						{worktreeMode !== undefined &&
-						selectedWorkspace !== null &&
-						canUseWorktrees ? (
-							<Tooltip
-								title={worktreeDisabledReason ?? undefined}
-							>
-								<span>
-									<Segmented
-										value={worktreeMode}
-										disabled={isWorktreePreparing}
-										options={[
-											{
-												label: t(
-													"composer.worktree.local",
-												),
-												value: "local",
-											},
-											{
-												label: isWorktreePreparing ? (
-													<Spin size="small" />
-												) : (
-													t(
-														"composer.worktree.managed",
-													)
-												),
-												value: "worktree",
-												disabled:
-													worktreeDisabledReason !==
-													null,
-											},
-										]}
-										onChange={(value): void =>
-											onWorktreeModeChange?.(
-												value as "local" | "worktree",
-											)
-										}
-									/>
-								</span>
-							</Tooltip>
-						) : null}
-						{worktreeMode === "worktree" &&
-						selectedWorkspace !== null &&
-						canUseWorktrees &&
-						onWorktreeSourceOptionsChange !== undefined ? (
-							<WorktreeCreationOptions
-								workspace={selectedWorkspace}
-								value={worktreeSourceOptions}
-								disabled={isWorktreePreparing}
-								onChange={onWorktreeSourceOptionsChange}
-							/>
-						) : null}
-					</Flex>
-					{showContextUsage ? (
-						<Popover
-							title={t("composer.contextUsage.title")}
-							content={contextUsageContent}
-							trigger="click"
-						>
-							<span className={styles.contextUsageAnchor}>
-								<button
-									type="button"
-									className={styles.contextUsageButton}
-									aria-label={t(
-										"composer.contextUsage.title",
-									)}
+								<Button
+									type="text"
+									size="small"
+									disabled={
+										workspaceFooterDisabled ||
+										isWorktreePreparing
+									}
+									icon={
+										selectedWorkspace === null ? (
+											<Icon name="close" />
+										) : (
+											<WorkspaceIconView
+												workspace={selectedWorkspace}
+											/>
+										)
+									}
+									className={styles.workspaceFooterButton}
 								>
 									<span
-										className={
-											styles.contextUsageButtonText
-										}
+										className={styles.workspaceFooterText}
 									>
-										{Math.round(contextUsagePercent)}%
+										{selectedWorkspaceLabel}
 									</span>
-									<Progress
-										type="circle"
-										percent={contextUsagePercent}
-										strokeColor="var(--ds-accent)"
-										railColor="var(--ds-border)"
-										showInfo={false}
-										size={16}
-									/>
-								</button>
-							</span>
-						</Popover>
-					) : null}
-				</Flex>
-			</footer> : null}
+								</Button>
+							</Dropdown>
+							{worktreeMode !== undefined &&
+							selectedWorkspace !== null &&
+							canUseWorktrees ? (
+								<Tooltip
+									title={worktreeDisabledReason ?? undefined}
+								>
+									<span>
+										<Segmented
+											value={worktreeMode}
+											disabled={isWorktreePreparing}
+											options={[
+												{
+													label: t(
+														"composer.worktree.local",
+													),
+													value: "local",
+												},
+												{
+													label: isWorktreePreparing ? (
+														<Spin size="small" />
+													) : (
+														t(
+															"composer.worktree.managed",
+														)
+													),
+													value: "worktree",
+													disabled:
+														worktreeDisabledReason !==
+														null,
+												},
+											]}
+											onChange={(value): void =>
+												onWorktreeModeChange?.(
+													value as
+														| "local"
+														| "worktree",
+												)
+											}
+										/>
+									</span>
+								</Tooltip>
+							) : null}
+							{worktreeMode === "worktree" &&
+							selectedWorkspace !== null &&
+							canUseWorktrees &&
+							onWorktreeSourceOptionsChange !== undefined ? (
+								<WorktreeCreationOptions
+									workspace={selectedWorkspace}
+									value={worktreeSourceOptions}
+									disabled={isWorktreePreparing}
+									onChange={onWorktreeSourceOptionsChange}
+								/>
+							) : null}
+						</Flex>
+						{showContextUsage ? (
+							<Popover
+								title={t("composer.contextUsage.title")}
+								content={contextUsageContent}
+								trigger="click"
+							>
+								<span className={styles.contextUsageAnchor}>
+									<button
+										type="button"
+										className={styles.contextUsageButton}
+										aria-label={t(
+											"composer.contextUsage.title",
+										)}
+									>
+										<span
+											className={
+												styles.contextUsageButtonText
+											}
+										>
+											{Math.round(contextUsagePercent)}%
+										</span>
+										<Progress
+											type="circle"
+											percent={contextUsagePercent}
+											strokeColor="var(--ds-accent)"
+											railColor="var(--ds-border)"
+											showInfo={false}
+											size={16}
+										/>
+									</button>
+								</span>
+							</Popover>
+						) : null}
+					</Flex>
+				</footer>
+			) : null}
 		</div>
 	);
 }
