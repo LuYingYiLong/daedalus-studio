@@ -18,6 +18,7 @@ public final class PairingLink {
 	private static final int MAX_FIELD_LENGTH = 1024;
 
 	public final String origin;
+	public final String authority;
 	public final String host;
 	public final int port;
 	public final String pairingCode;
@@ -37,6 +38,7 @@ public final class PairingLink {
 		int uiCompatibility
 	) {
 		this.origin = origin;
+		this.authority = host + ":" + port;
 		this.host = host;
 		this.port = port;
 		this.pairingCode = pairingCode;
@@ -87,7 +89,7 @@ public final class PairingLink {
 	}
 
 	public String remoteAssetUrl() {
-		StringBuilder result = new StringBuilder(origin).append("/__app__/remote.html");
+		StringBuilder result = new StringBuilder(origin).append("/__app__/native-remote.html");
 		if (!pairingCode.isEmpty()) result.append("#pair=").append(encodeComponent(pairingCode));
 		return result.toString();
 	}

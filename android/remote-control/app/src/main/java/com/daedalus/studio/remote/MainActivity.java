@@ -32,6 +32,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.HashSet;
@@ -62,6 +63,7 @@ public final class MainActivity extends Activity {
 	private PendingReply pendingScanReply;
 	private boolean bridgeRegistered;
 	private boolean autoConnectAllowed = true;
+	private boolean devUiActive;
 	private OnBackInvokedCallback backCallback;
 
 	@Override
@@ -72,6 +74,7 @@ public final class MainActivity extends Activity {
 		progress = findViewById(R.id.progress);
 		profileStore = new ProfileStore(this);
 		credentialVault = new CredentialVault(this);
+		DevUiAssets.seedPackagedManifest(BuildConfig.DEBUG, getAssets(), getFilesDir());
 		configureWebView();
 
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -249,18 +252,28 @@ public final class MainActivity extends Activity {
 		pendingInstallUrl = link.installUrl.isEmpty() && profile != null
 			? profile.installUrl
 			: link.installUrl;
-		String authority = link.host + ":" + link.port;
-		configureAssetLoader(authority);
+		// AndroidX matches Uri.getAuthority() exactly, including a non-default port.
+		configureAssetLoader(link.authority);
 		configureBridge(link.origin);
 		webView.loadUrl(link.remoteAssetUrl());
 	}
 
 	private void configureAssetLoader(String authority) {
-		assetLoader = new WebViewAssetLoader.Builder()
+		WebViewAssetLoader.Builder builder = new WebViewAssetLoader.Builder()
 			.setDomain(authority)
-			.setHttpAllowed(false)
-			.addPathHandler("/__app__/", new WebViewAssetLoader.AssetsPathHandler(this))
-			.build();
+			.setHttpAllowed(false);
+		File devUiRoot = DevUiAssets.findActiveRoot(BuildConfig.DEBUG, getFilesDir());
+		devUiActive = devUiRoot != null;
+		if (devUiRoot != null) {
+			builder.addPathHandler(
+				"/__app__/",
+				new DevUiPathHandler(this, devUiRoot)
+			);
+			webView.clearCache(true);
+		} else {
+			builder.addPathHandler("/__app__/", new WebViewAssetLoader.AssetsPathHandler(this));
+		}
+		assetLoader = builder.build();
 	}
 
 	private void configureBridge(String origin) {
@@ -319,7 +332,8 @@ public final class MainActivity extends Activity {
 					.put("platform", "android")
 					.put("startupError", startupError)
 					.put("certificateInstallUrl", pendingInstallUrl)
-					.put("autoConnectAllowed", autoConnectAllowed));
+					.put("autoConnectAllowed", autoConnectAllowed)
+					.put("devUiActive", devUiActive));
 				return;
 			case "profiles.list":
 				requireOnly(params);

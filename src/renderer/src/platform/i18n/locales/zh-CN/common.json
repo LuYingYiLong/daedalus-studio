@@ -1625,12 +1625,15 @@
 		"back": "返回会话列表",
 		"trace": "轨迹",
 		"loadMore": "加载更多",
-		"connectionError": "连接异常",
+		"connectionError": "同步异常",
 		"connection": {
 			"connected": "已连接",
 			"disconnected": "已断开",
 			"connecting": "连接中",
 			"pairing_required": "未配对"
+		},
+		"errors": {
+			"rateLimited": "同步请求过于频繁，已自动放缓刷新，请稍候。"
 		},
 		"pairingRequired": {
 			"title": "此设备尚未配对",

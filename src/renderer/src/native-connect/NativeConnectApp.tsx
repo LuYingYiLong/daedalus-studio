@@ -15,6 +15,7 @@ type AppInfo = {
 	startupError?: string;
 	certificateInstallUrl?: string;
 	autoConnectAllowed?: boolean;
+	devUiActive?: boolean;
 };
 
 function errorMessage(error: unknown): string {
@@ -162,7 +163,7 @@ function NativeConnectApp(): React.JSX.Element {
 			</section>
 
 			<Typography.Text className={styles.version} type="secondary">
-				Daedalus Remote {appInfo?.version ?? ""}
+				Daedalus Remote {appInfo?.version ?? ""}{appInfo?.devUiActive === true ? " · ADB 开发资源" : ""}
 			</Typography.Text>
 		</main>
 	);

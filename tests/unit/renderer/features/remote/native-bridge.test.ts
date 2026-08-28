@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
 	createNativeBridgeRequest,
 	NATIVE_BRIDGE_MESSAGE_LIMIT,
+	requestNativeBridge,
 } from "@/remote/native-bridge";
 import { createModeItems } from "@/widgets/composer/composer-menu-items";
 
@@ -26,6 +27,33 @@ describe("Android Remote native bridge", () => {
 			"profiles.rename",
 			{ name: "你".repeat(NATIVE_BRIDGE_MESSAGE_LIMIT) },
 		)).toThrow("native_bridge_message_too_large");
+	});
+
+	it("receives replies when Android injects the bridge without an onmessage property", async () => {
+		const schedule = globalThis.setTimeout.bind(globalThis);
+		const cancel = globalThis.clearTimeout.bind(globalThis);
+		const bridge: NonNullable<Window["DaedalusNative"]> = {
+			postMessage(message: string): void {
+				const request = JSON.parse(message) as { id: string };
+				queueMicrotask((): void => {
+					bridge.onmessage?.({
+						data: JSON.stringify({ id: request.id, result: { ok: true } }),
+					} as MessageEvent<string>);
+				});
+			},
+		};
+		vi.stubGlobal("window", {
+			DaedalusNative: bridge,
+			setTimeout: schedule,
+			clearTimeout: cancel,
+		});
+
+		try {
+			await expect(requestNativeBridge<{ ok: boolean }>("app.info", {}, 100))
+				.resolves.toEqual({ ok: true });
+		} finally {
+			vi.unstubAllGlobals();
+		}
 	});
 
 	it("projects the shared Composer mode menu to Remote capabilities", () => {

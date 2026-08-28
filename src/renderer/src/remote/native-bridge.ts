@@ -30,7 +30,7 @@ export type NativeProfilesResult = {
 
 type NativeBridgeHost = {
 	postMessage(message: string): void;
-	onmessage: ((event: MessageEvent<string>) => void) | null;
+	onmessage?: ((event: MessageEvent<string>) => void) | null;
 };
 
 type NativeBridgeResponse = {
@@ -53,7 +53,10 @@ const pendingRequests: Map<string, {
 
 function attachBridgeListener(): void {
 	const bridge: NativeBridgeHost | undefined = globalThis.window?.DaedalusNative;
-	if (bridge === undefined || bridge.onmessage !== null) return;
+	if (bridge === undefined) return;
+	// AndroidX injects this object before an onmessage property exists. Do not
+	// require a null sentinel: on real WebView builds its initial value is
+	// undefined, while test doubles and browser harnesses may use null.
 	bridge.onmessage = (event: MessageEvent<string>): void => {
 		if (typeof event.data !== "string" || event.data.length > NATIVE_BRIDGE_MESSAGE_LIMIT) return;
 		let response: NativeBridgeResponse;

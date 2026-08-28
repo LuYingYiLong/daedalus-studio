@@ -10,6 +10,7 @@ const REMOTE_COOKIE_NAME: string = "__Host-daedalus_remote";
 const MAX_REQUEST_BYTES: number = 1024 * 1024;
 const MAX_PAIR_BODY_BYTES: number = 16 * 1024;
 const MAX_MESSAGES_PER_MINUTE: number = 120;
+const MAX_MESSAGE_BURST: number = 60;
 const DISCONNECTED_IDLE_GRACE_MS: number = 60_000;
 const CONNECTED_IDLE_TIMEOUT_MS: number = 30 * 60_000;
 const HEARTBEAT_INTERVAL_MS: number = 30_000;
@@ -241,6 +242,34 @@ function isRunTerminalEvent(event: string): boolean {
 		|| event === "assistant.message.completed";
 }
 
+export class RemoteRequestRateLimiter {
+	private availableTokens: number;
+	private lastRefillAt: number;
+	private readonly refillPerMillisecond: number;
+
+	public constructor(
+		private readonly capacity: number = MAX_MESSAGE_BURST,
+		refillPerMinute: number = MAX_MESSAGES_PER_MINUTE,
+		startedAt: number = Date.now(),
+	) {
+		this.availableTokens = capacity;
+		this.lastRefillAt = startedAt;
+		this.refillPerMillisecond = refillPerMinute / 60_000;
+	}
+
+	public consume(now: number = Date.now()): boolean {
+		const elapsed: number = Math.max(0, now - this.lastRefillAt);
+		this.availableTokens = Math.min(
+			this.capacity,
+			this.availableTokens + elapsed * this.refillPerMillisecond,
+		);
+		this.lastRefillAt = Math.max(this.lastRefillAt, now);
+		if (this.availableTokens < 1) return false;
+		this.availableTokens -= 1;
+		return true;
+	}
+}
+
 export class RemoteDeviceProxy {
 	private upstream: WebSocket | null = null;
 	private upstreamSetup: Promise<void> | null = null;
@@ -249,8 +278,8 @@ export class RemoteDeviceProxy {
 	private closeTimer: ReturnType<typeof setTimeout> | null = null;
 	private idleTimer: ReturnType<typeof setTimeout> | null = null;
 	private activeRun: boolean = false;
-	private rateWindowStartedAt: number = Date.now();
-	private rateCount: number = 0;
+	private readonly requestRateLimiter: RemoteRequestRateLimiter =
+		new RemoteRequestRateLimiter();
 	private readonly pendingMethods: Map<string, string> = new Map();
 	private readonly knownWorkspaceIds: Set<string> = new Set();
 	private disposed: boolean = false;
@@ -422,13 +451,7 @@ export class RemoteDeviceProxy {
 	}
 
 	private consumeRateLimit(): boolean {
-		const now: number = Date.now();
-		if (now - this.rateWindowStartedAt >= 60_000) {
-			this.rateWindowStartedAt = now;
-			this.rateCount = 0;
-		}
-		this.rateCount += 1;
-		return this.rateCount <= MAX_MESSAGES_PER_MINUTE;
+		return this.requestRateLimiter.consume();
 	}
 
 	private trackRunState(data: string): void {

@@ -4,6 +4,7 @@ import WebSocket, { WebSocketServer } from "ws";
 import {
 	REMOTE_RPC_METHODS,
 	RemoteDeviceProxy,
+	RemoteRequestRateLimiter,
 	createRemoteHello,
 	isPrivateIpv4,
 	validateRemoteRequest,
@@ -28,6 +29,17 @@ afterEach(async () => {
 });
 
 describe("remote gateway policy", () => {
+	it("refills request capacity continuously instead of locking a device for a full minute", () => {
+		const limiter = new RemoteRequestRateLimiter(2, 60, 0);
+		expect(limiter.consume(0)).toBe(true);
+		expect(limiter.consume(0)).toBe(true);
+		expect(limiter.consume(0)).toBe(false);
+		expect(limiter.consume(500)).toBe(false);
+		expect(limiter.consume(1_000)).toBe(true);
+		expect(limiter.consume(1_500)).toBe(false);
+		expect(limiter.consume(2_000)).toBe(true);
+	});
+
 	it("accepts only private IPv4 addresses", () => {
 		expect(isPrivateIpv4("10.1.2.3")).toBe(true);
 		expect(isPrivateIpv4("172.16.0.1")).toBe(true);

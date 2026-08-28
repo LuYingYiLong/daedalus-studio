@@ -1632,12 +1632,15 @@
 		"back": "Back to sessions",
 		"trace": "Trajectory",
 		"loadMore": "Load more",
-		"connectionError": "Connection problem",
+		"connectionError": "Sync problem",
 		"connection": {
 			"connected": "Connected",
 			"disconnected": "Disconnected",
 			"connecting": "Connecting",
 			"pairing_required": "Not paired"
+		},
+		"errors": {
+			"rateLimited": "Sync requests were too frequent. Refreshing has been slowed automatically; try again shortly."
 		},
 		"pairingRequired": {
 			"title": "This device is not paired",

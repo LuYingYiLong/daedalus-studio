@@ -20,11 +20,12 @@ public final class PairingLinkTest {
 		);
 
 		assertEquals("https://192.168.10.22:38190", link.origin);
+		assertEquals("192.168.10.22:38190", link.authority);
 		assertEquals("http://192.168.10.22:38191/install", link.installUrl);
 		assertEquals(fingerprint, link.fingerprint);
 		assertTrue(link.isCompatible());
 		assertTrue(link.remoteAssetUrl().startsWith(
-			"https://192.168.10.22:38190/__app__/remote.html#pair="
+			"https://192.168.10.22:38190/__app__/native-remote.html#pair="
 		));
 	}
 

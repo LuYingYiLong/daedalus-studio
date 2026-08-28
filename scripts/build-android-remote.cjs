@@ -1,6 +1,10 @@
-const { existsSync, mkdirSync, readdirSync } = require("node:fs");
+const { existsSync, mkdirSync, readdirSync, writeFileSync } = require("node:fs");
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
+const {
+	MANIFEST_FILE_NAME,
+	createAssetManifest,
+} = require("./android-remote-manifest.cjs");
 
 const repositoryDir = path.resolve(__dirname, "..");
 const projectDir = path.join(repositoryDir, "android", "remote-control");
@@ -64,6 +68,12 @@ if (missingAssets.length > 0 || existsSync(path.join(generatedAssetsDir, "__app_
 	if (missingAssets.length > 0) console.error(`Missing assets: ${missingAssets.join(", ")}`);
 	process.exit(1);
 }
+
+writeFileSync(
+	path.join(generatedAssetsDir, MANIFEST_FILE_NAME),
+	JSON.stringify(createAssetManifest(generatedAssetsDir)),
+	"utf8",
+);
 
 run(command, [
 	"--no-daemon",

@@ -12,13 +12,7 @@
 	grid-template-rows: auto minmax(0, 1fr) auto;
 	height: 100dvh;
 	overflow: hidden;
-	background:
-		radial-gradient(
-			circle at 18% -8%,
-			color-mix(in srgb, var(--ds-accent) 11%, transparent),
-			transparent 34%
-		),
-		var(--ds-bg);
+	background: var(--ds-bg);
 	padding-top: env(safe-area-inset-top);
 }
 

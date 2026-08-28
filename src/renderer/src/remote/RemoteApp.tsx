@@ -1,9 +1,4 @@
-import {
-	useCallback,
-	useEffect,
-	useRef,
-	useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	Alert,
 	App,
@@ -83,6 +78,10 @@ import {
 	onBackendConnectionStateChanged,
 	onBackendReconnected,
 } from "@/platform/rpc/transport/backend-client";
+import {
+	BackendConnectionError,
+	BackendRpcError,
+} from "@/platform/rpc/transport/backend-rpc-client";
 import type {
 	SessionMetadata,
 	SessionOpenResult,
@@ -98,6 +97,7 @@ import { notifyNativeBridge } from "./native-bridge";
 import RemoteBottomNavigation from "./RemoteBottomNavigation";
 import RemoteSessionHome from "./RemoteSessionHome";
 import RemoteTraceScreen from "./RemoteTraceScreen";
+import { RemoteRefreshScheduler } from "./remote-refresh-scheduler";
 import {
 	getRemoteDraftStorageKey,
 	normalizeRemoteScreen,
@@ -112,6 +112,7 @@ type ConnectionStatus =
 	| "pairing_required";
 
 const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
+const ACTIVE_SESSION_REFRESH_INTERVAL_MS: number = 2_000;
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
@@ -164,7 +165,13 @@ function RemoteApp(): React.JSX.Element {
 	const [traceBusy, setTraceBusy] = useState<boolean>(false);
 	const activeSessionIdRef = useRef<string | null>(null);
 	const pendingApprovalCountRef = useRef<number>(0);
-	const refreshTimerRef = useRef<number | null>(null);
+	const describeError = useCallback((caught: unknown): string => {
+		if (caught instanceof BackendRpcError
+			&& caught.code === "remote_rate_limited") {
+			return t("remote.errors.rateLimited");
+		}
+		return errorMessage(caught);
+	}, [t]);
 
 	const showScreen = useCallback(
 		(
@@ -196,11 +203,12 @@ function RemoteApp(): React.JSX.Element {
 	);
 
 	const refreshCatalog = useCallback(async (): Promise<void> => {
-		const [sessionResult, workspaceResult, modelSelection] = await Promise.all([
-			fetchSessions(),
-			fetchWorkspaces(),
-			fetchProviderModelSelection(),
-		]);
+		const [sessionResult, workspaceResult, modelSelection] =
+			await Promise.all([
+				fetchSessions(),
+				fetchWorkspaces(),
+				fetchProviderModelSelection(),
+			]);
 		setSessions(sessionResult.sessions);
 		setWorkspaces(workspaceResult.workspaces);
 		setProviderModelSelection(modelSelection);
@@ -252,24 +260,28 @@ function RemoteApp(): React.JSX.Element {
 				setConnectionStatus("connected");
 				setError(null);
 			} catch (refreshError: unknown) {
-				setConnectionStatus("disconnected");
-				setError(errorMessage(refreshError));
+				if (refreshError instanceof BackendConnectionError) {
+					setConnectionStatus("disconnected");
+				}
+				setError(describeError(refreshError));
 			}
 		},
-		[loadPlanFromOpenResult],
+		[describeError, loadPlanFromOpenResult],
 	);
 
-	const scheduleRefresh = useCallback(
-		(sessionId: string): void => {
-			if (refreshTimerRef.current !== null)
-				window.clearTimeout(refreshTimerRef.current);
-			refreshTimerRef.current = window.setTimeout((): void => {
-				refreshTimerRef.current = null;
-				void refreshActiveSession(sessionId);
-			}, 90);
-		},
-		[refreshActiveSession],
-	);
+	const refreshCallbackRef = useRef(refreshActiveSession);
+	refreshCallbackRef.current = refreshActiveSession;
+	const refreshSchedulerRef = useRef<RemoteRefreshScheduler | null>(null);
+	if (refreshSchedulerRef.current === null) {
+		refreshSchedulerRef.current = new RemoteRefreshScheduler(
+			async (sessionId: string): Promise<void> =>
+				await refreshCallbackRef.current(sessionId),
+			ACTIVE_SESSION_REFRESH_INTERVAL_MS,
+		);
+	}
+	const scheduleRefresh = useCallback((sessionId: string): void => {
+		refreshSchedulerRef.current?.schedule(sessionId);
+	}, []);
 
 	const openRemoteSession = useCallback(
 		async (session: SessionMetadata): Promise<void> => {
@@ -324,15 +336,19 @@ function RemoteApp(): React.JSX.Element {
 				notifyNativeBridge("remote.ready", {
 					name: gateway.name,
 					protocolVersion: gateway.protocolVersion,
-					remoteUiCompatibilityVersion: gateway.remoteUiCompatibilityVersion,
+					remoteUiCompatibilityVersion:
+						gateway.remoteUiCompatibilityVersion,
 					studioVersion: gateway.studioVersion,
 					certificateFingerprint: gateway.certificateFingerprint,
 				});
 				setConnectionStatus("connected");
 				await refreshCatalog();
 				removeEventListener = await onBackendEvent((event): void => {
-					if (event.event === "session.catalog.updated")
-						void refreshCatalog();
+					if (event.event === "session.catalog.updated") {
+						void refreshCatalog().catch((catalogError: unknown): void =>
+							setError(describeError(catalogError)),
+						);
+					}
 					const selectedId: string | null =
 						activeSessionIdRef.current;
 					if (selectedId !== null && event.sessionId === selectedId)
@@ -341,7 +357,7 @@ function RemoteApp(): React.JSX.Element {
 			} catch (startupError: unknown) {
 				if (disposed) return;
 				setConnectionStatus("disconnected");
-				setError(errorMessage(startupError));
+				setError(describeError(startupError));
 			}
 		};
 		void start();
@@ -353,9 +369,14 @@ function RemoteApp(): React.JSX.Element {
 						(): Promise<{ subscribed: true; sessionId: string }> =>
 							subscribeSession(selectedId),
 					)
-					.then((): void => scheduleRefresh(selectedId));
+					.then((): void => scheduleRefresh(selectedId))
+					.catch((reconnectError: unknown): void =>
+						setError(describeError(reconnectError)),
+					);
 			} else {
-				void refreshCatalog();
+				void refreshCatalog().catch((catalogError: unknown): void =>
+					setError(describeError(catalogError)),
+				);
 			}
 		});
 		const removeConnectionState = onBackendConnectionStateChanged(
@@ -374,8 +395,10 @@ function RemoteApp(): React.JSX.Element {
 					else void refreshCatalog();
 				})
 				.catch((visibilityError: unknown): void => {
-					setConnectionStatus("disconnected");
-					setError(errorMessage(visibilityError));
+					if (visibilityError instanceof BackendConnectionError) {
+						setConnectionStatus("disconnected");
+					}
+					setError(describeError(visibilityError));
 				});
 		};
 		const onPopState = (event: PopStateEvent): void => {
@@ -405,10 +428,9 @@ function RemoteApp(): React.JSX.Element {
 			removeEventListener?.();
 			document.removeEventListener("visibilitychange", onVisibility);
 			window.removeEventListener("popstate", onPopState);
-			if (refreshTimerRef.current !== null)
-				window.clearTimeout(refreshTimerRef.current);
+			refreshSchedulerRef.current?.dispose();
 		};
-	}, [refreshCatalog, scheduleRefresh, showScreen]);
+	}, [describeError, refreshCatalog, scheduleRefresh, showScreen]);
 
 	useEffect((): (() => void) => {
 		const handleRetryAgentRun = (event: Event): void => {
@@ -485,7 +507,7 @@ function RemoteApp(): React.JSX.Element {
 					getRemoteDraftStorageKey(activeSession.id),
 					trimmed,
 				);
-				setError(errorMessage(sendError));
+				setError(describeError(sendError));
 				void message.error(errorMessage(sendError));
 			})
 			.finally((): void => {
@@ -508,28 +530,35 @@ function RemoteApp(): React.JSX.Element {
 		if (nextMode === "goal") return;
 		setChatMode(nextMode);
 		await saveSessionUiMetadata({ chatMode: nextMode });
-		setActiveSession((current): SessionMetadata | null => current === null
-			? null
-			: { ...current, chatMode: nextMode });
+		setActiveSession((current): SessionMetadata | null =>
+			current === null ? null : { ...current, chatMode: nextMode },
+		);
 	}
 
-	async function updateSessionModel(provider: string, model: string): Promise<void> {
+	async function updateSessionModel(
+		provider: string,
+		model: string,
+	): Promise<void> {
 		const result = await setSessionModel({ provider, model });
 		setActiveSession(result.metadata);
 		setWorkbench(result.workbench);
 	}
 
-	async function updateReasoningEffort(reasoningEffort: string): Promise<void> {
+	async function updateReasoningEffort(
+		reasoningEffort: string,
+	): Promise<void> {
 		await saveSessionUiMetadata({ reasoningEffort });
-		setActiveSession((current): SessionMetadata | null => current === null
-			? null
-			: { ...current, reasoningEffort });
-		setWorkbench((current): WorkbenchSnapshot | null => current === null
-			? null
-			: {
-				...current,
-				composer: { ...current.composer, reasoningEffort },
-			});
+		setActiveSession((current): SessionMetadata | null =>
+			current === null ? null : { ...current, reasoningEffort },
+		);
+		setWorkbench((current): WorkbenchSnapshot | null =>
+			current === null
+				? null
+				: {
+						...current,
+						composer: { ...current.composer, reasoningEffort },
+					},
+		);
 	}
 
 	async function decideApproval(
@@ -620,9 +649,11 @@ function RemoteApp(): React.JSX.Element {
 		workbench?.activeRun.status !== undefined &&
 		workbench.activeRun.status !== "idle";
 	const pendingApproval = approvals.pending[0] ?? null;
-	const selectedWorkspace: WorkspaceConfig | null = workspaces.find(
-		(workspace: WorkspaceConfig): boolean => workspace.id === activeSession?.workspaceId,
-	) ?? null;
+	const selectedWorkspace: WorkspaceConfig | null =
+		workspaces.find(
+			(workspace: WorkspaceConfig): boolean =>
+				workspace.id === activeSession?.workspaceId,
+		) ?? null;
 	const screenTitle: string =
 		activeScreen === "conversation"
 			? (activeSession?.title ?? t("remote.navigation.conversation"))
@@ -676,7 +707,9 @@ function RemoteApp(): React.JSX.Element {
 					/>
 				)}
 				<Typography.Text strong ellipsis className={styles.topTitle}>
-					{activeScreen === "sessions" ? "Daedalus" : screenTitle}
+					{activeScreen === "sessions"
+						? "Daedalus Remote"
+						: screenTitle}
 				</Typography.Text>
 				<div className={styles.topActions}>
 					<span
@@ -727,7 +760,7 @@ function RemoteApp(): React.JSX.Element {
 										else scheduleRefresh(sessionId);
 									})
 									.catch((refreshError: unknown): void =>
-										setError(errorMessage(refreshError)),
+										setError(describeError(refreshError)),
 									);
 							},
 						}}
@@ -764,7 +797,7 @@ function RemoteApp(): React.JSX.Element {
 						onOpenSession={(session: SessionMetadata): void => {
 							void openRemoteSession(session).catch(
 								(openError: unknown): void =>
-									setError(errorMessage(openError)),
+									setError(describeError(openError)),
 							);
 						}}
 					/>
@@ -786,8 +819,14 @@ function RemoteApp(): React.JSX.Element {
 									retryDisabled={running}
 									forkDisabled={true}
 									hideInlineDiff={true}
-									onRetryFromUserMessage={async (payload): Promise<boolean> =>
-										await submitMessage(payload.message, payload.requestId)}
+									onRetryFromUserMessage={async (
+										payload,
+									): Promise<boolean> =>
+										await submitMessage(
+											payload.message,
+											payload.requestId,
+										)
+									}
 								/>
 							)}
 						</div>
@@ -817,40 +856,75 @@ function RemoteApp(): React.JSX.Element {
 						<div className={styles.composer}>
 							<Composer
 								providerModelSelection={providerModelSelection}
-								selectedProviderId={activeSession.provider ?? workbench?.composer.provider ?? null}
-								selectedModelId={activeSession.model ?? workbench?.composer.model ?? null}
-								reasoningEffort={activeSession.reasoningEffort ?? workbench?.composer.reasoningEffort}
+								selectedProviderId={
+									activeSession.provider ??
+									workbench?.composer.provider ??
+									null
+								}
+								selectedModelId={
+									activeSession.model ??
+									workbench?.composer.model ??
+									null
+								}
+								reasoningEffort={
+									activeSession.reasoningEffort ??
+									workbench?.composer.reasoningEffort
+								}
 								message={composerText}
 								mode={chatMode}
 								approvalMode={approvals.mode}
 								isSending={running || sending}
-								isCancelling={workbench?.activeRun.status === "cancelling"}
+								isCancelling={
+									workbench?.activeRun.status === "cancelling"
+								}
 								selectedWorkspace={selectedWorkspace}
 								showContextUsage={false}
 								allowedModes={["ask", "agent", "plan"]}
 								allowQueue={false}
 								layout="mobile"
 								onDraftChange={updateComposerText}
-								onModeChange={(mode): void => { void updateSessionMode(mode); }}
+								onModeChange={(mode): void => {
+									void updateSessionMode(mode);
+								}}
 								onApprovalModeChange={requestApprovalMode}
-								onProviderModelChange={(provider, model): void => {
-									void updateSessionModel(provider, model).catch((modelError: unknown): void => {
-										void message.error(errorMessage(modelError));
+								onProviderModelChange={(
+									provider,
+									model,
+								): void => {
+									void updateSessionModel(
+										provider,
+										model,
+									).catch((modelError: unknown): void => {
+										void message.error(
+											errorMessage(modelError),
+										);
 									});
 								}}
 								onReasoningEffortChange={(effort): void => {
-									void updateReasoningEffort(effort).catch((reasoningError: unknown): void => {
-										void message.error(errorMessage(reasoningError));
-									});
-								}}
-								onCancel={(): void => {
-									const requestId = workbench?.activeRun.requestId;
-									if (requestId !== undefined) void cancelChatMessage(requestId).finally(
-										(): void => scheduleRefresh(activeSession.id),
+									void updateReasoningEffort(effort).catch(
+										(reasoningError: unknown): void => {
+											void message.error(
+												errorMessage(reasoningError),
+											);
+										},
 									);
 								}}
+								onCancel={(): void => {
+									const requestId =
+										workbench?.activeRun.requestId;
+									if (requestId !== undefined)
+										void cancelChatMessage(
+											requestId,
+										).finally((): void =>
+											scheduleRefresh(activeSession.id),
+										);
+								}}
 								onSubmit={(text, modeOverride): void => {
-									void submitMessage(text, undefined, modeOverride);
+									void submitMessage(
+										text,
+										undefined,
+										modeOverride,
+									);
 								}}
 							/>
 						</div>
@@ -1113,7 +1187,9 @@ function RemoteApp(): React.JSX.Element {
 						}}
 						onSkip={(): void => {
 							setPlanBusy(true);
-							void submitPlanClarification(plan.planId, { skip: true })
+							void submitPlanClarification(plan.planId, {
+								skip: true,
+							})
 								.then(setPlan)
 								.finally((): void => setPlanBusy(false));
 						}}
@@ -1135,7 +1211,8 @@ function RemoteApp(): React.JSX.Element {
 							void approvePlan(planId)
 								.then((): void => {
 									setPlanOpen(false);
-									if (activeSession !== null) scheduleRefresh(activeSession.id);
+									if (activeSession !== null)
+										scheduleRefresh(activeSession.id);
 								})
 								.finally((): void => setPlanBusy(false));
 						}}
