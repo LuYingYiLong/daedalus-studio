@@ -33,7 +33,7 @@
   |
   <a href="./README.md">English</a>
   |
-  <a href="./android/README.md">Android</a>
+  <a href="./android/remote-control/README.md">Android</a>
 </p>
 
 ![Daedalus Studio 工作区](./docs/images/daedalus-studio-workflow.png)
