@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	Alert,
 	App,
 	Button,
 	Empty,
 	InputNumber,
-	List,
+	Modal,
 	QRCode,
 	Select,
 	Space,
@@ -48,6 +48,7 @@ function RemoteAccessSettingsPage(): React.JSX.Element {
 	const [httpsPort, setHttpsPort] = useState<number>(38190);
 	const [bootstrapPort, setBootstrapPort] = useState<number>(38191);
 	const [busy, setBusy] = useState<boolean>(false);
+	const pairingDeviceIdsRef = useRef<Set<string> | null>(null);
 
 	useEffect((): (() => void) => {
 		void window.electronAPI.remoteAccess
@@ -66,6 +67,17 @@ function RemoteAccessSettingsPage(): React.JSX.Element {
 		);
 	}, []);
 
+	useEffect((): void => {
+		if (pairing === null || pairingDeviceIdsRef.current === null) return;
+		const hasNewDevice: boolean = (state?.devices ?? []).some(
+			(device: RemoteAccessDevice): boolean =>
+				!pairingDeviceIdsRef.current!.has(device.id),
+		);
+		if (!hasNewDevice) return;
+		pairingDeviceIdsRef.current = null;
+		setPairing(null);
+	}, [pairing, state?.devices]);
+
 	const addressOptions = useMemo(
 		() =>
 			(state?.addresses ?? []).map((address: string, index: number) => ({
@@ -77,6 +89,7 @@ function RemoteAccessSettingsPage(): React.JSX.Element {
 
 	async function changeEnabled(enabled: boolean): Promise<void> {
 		setBusy(true);
+		pairingDeviceIdsRef.current = null;
 		setPairing(null);
 		try {
 			const nextState: RemoteAccessState =
@@ -119,6 +132,11 @@ function RemoteAccessSettingsPage(): React.JSX.Element {
 	}
 
 	async function beginPairing(): Promise<void> {
+		pairingDeviceIdsRef.current = new Set(
+			(state?.devices ?? []).map(
+				(device: RemoteAccessDevice): string => device.id,
+			),
+		);
 		setBusy(true);
 		try {
 			const nextPairing: RemoteAccessPairingSession =
@@ -126,6 +144,7 @@ function RemoteAccessSettingsPage(): React.JSX.Element {
 			setPairing(nextPairing);
 			setAddressIndex(0);
 		} catch (error: unknown) {
+			pairingDeviceIdsRef.current = null;
 			void message.error(
 				error instanceof Error
 					? error.message
@@ -160,6 +179,7 @@ function RemoteAccessSettingsPage(): React.JSX.Element {
 			okButtonProps: { danger: true },
 			onOk: async (): Promise<void> => {
 				setState(await window.electronAPI.remoteAccess.revokeAll(true));
+				pairingDeviceIdsRef.current = null;
 				setPairing(null);
 			},
 		});
@@ -184,24 +204,13 @@ function RemoteAccessSettingsPage(): React.JSX.Element {
 							"settings.remoteAccess.enabled.description",
 						)}
 					>
-						<Space>
-							<Tag
-								color={
-									STATUS_COLORS[state?.status ?? "disabled"]
-								}
-							>
-								{t(
-									`settings.remoteAccess.status.${state?.status ?? "disabled"}`,
-								)}
-							</Tag>
-							<Switch
-								loading={busy || state?.status === "starting"}
-								checked={state?.enabled ?? false}
-								onChange={(checked: boolean): void => {
-									void changeEnabled(checked);
-								}}
-							/>
-						</Space>
+						<Switch
+							loading={busy || state?.status === "starting"}
+							checked={state?.enabled ?? false}
+							onChange={(checked: boolean): void => {
+								void changeEnabled(checked);
+							}}
+						/>
 					</SettingsItem>
 					<SettingsItem
 						title={t("settings.remoteAccess.addresses.title")}
@@ -242,6 +251,7 @@ function RemoteAccessSettingsPage(): React.JSX.Element {
 								min={1024}
 								max={65535}
 								value={httpsPort}
+								style={{ width: 150 }}
 								suffix="HTTPS/WSS"
 								onChange={(value: number | null): void =>
 									setHttpsPort(value ?? 38190)
@@ -251,6 +261,7 @@ function RemoteAccessSettingsPage(): React.JSX.Element {
 								min={1024}
 								max={65535}
 								value={bootstrapPort}
+								style={{ width: 150 }}
 								suffix="HTTP"
 								onChange={(value: number | null): void =>
 									setBootstrapPort(value ?? 38191)
@@ -288,129 +299,130 @@ function RemoteAccessSettingsPage(): React.JSX.Element {
 							{t("settings.remoteAccess.pairing.generate")}
 						</Button>
 					</SettingsItem>
-					{pairing !== null &&
-					installUrl !== undefined &&
-					pairingUrl !== undefined ? (
-						<div className={styles.pairingPanel}>
-							<Select
-								value={addressIndex}
-								options={addressOptions}
-								onChange={setAddressIndex}
-								className={styles.addressSelect}
-							/>
-							<div className={styles.qrGrid}>
-								<div className={styles.qrCard}>
-									<Typography.Text strong>
-										{t(
-											"settings.remoteAccess.pairing.installCertificate",
-										)}
-									</Typography.Text>
-									<QRCode
-										value={installUrl}
-										type="svg"
-										size={208}
-										marginSize={4}
-										bgColor="#ffffff"
-										color="#000000"
-									/>
-									<Typography.Text type="secondary">
-										{installUrl}
-									</Typography.Text>
-								</div>
-								<div className={styles.qrCard}>
-									<Typography.Text strong>
-										{t(
-											"settings.remoteAccess.pairing.scanPairing",
-										)}
-									</Typography.Text>
-									<QRCode
-										value={pairingUrl}
-										type="svg"
-										size={280}
-										marginSize={4}
-										errorLevel="M"
-										boostLevel={false}
-										bgColor="#ffffff"
-										color="#000000"
-									/>
-									<Typography.Text
-										copyable={{ text: pairingUrl }}
-									>
-										{t(
-											"settings.remoteAccess.pairing.copyLink",
-										)}
-									</Typography.Text>
-									<Typography.Text type="secondary">
-										{t(
-											"settings.remoteAccess.pairing.expires",
-											{
-												time: formatDate(
-													pairing.expiresAt,
-												),
-											},
-										)}
-									</Typography.Text>
-								</div>
-							</div>
-							<Typography.Text
-								type="secondary"
-								className={styles.instructions}
-							>
-								{t(
-									"settings.remoteAccess.pairing.instructions",
-								)}
-							</Typography.Text>
-						</div>
-					) : null}
-				</SettingsList>
-
-				<SettingsList title={t("settings.remoteAccess.devices.title")}>
-					<div data-settings-search-key="item:remote_access.devices">
-						{(state?.devices.length ?? 0) === 0 ? (
-							<Empty
-								image={Empty.PRESENTED_IMAGE_SIMPLE}
-								description={t(
-									"settings.remoteAccess.devices.empty",
-								)}
-							/>
-						) : (
-							<List
-								dataSource={state?.devices ?? []}
-								renderItem={(
-									device: RemoteAccessDevice,
-								): React.JSX.Element => (
-									<List.Item
-										actions={[
-											<Button
-												key="revoke"
-												danger
-												type="text"
-												onClick={(): void =>
-													revokeDevice(device)
-												}
-											>
-												{t(
-													"settings.remoteAccess.devices.revoke",
-												)}
-											</Button>,
-										]}
-									>
-										<List.Item.Meta
-											title={device.name}
-											description={t(
-												"settings.remoteAccess.devices.lastSeen",
+					<Modal
+						open={pairing !== null}
+						title={t("settings.remoteAccess.pairing.title")}
+						footer={null}
+						onCancel={(): void => {
+							pairingDeviceIdsRef.current = null;
+							setPairing(null);
+						}}
+						width={1024}
+					>
+						{pairing !== null &&
+						installUrl !== undefined &&
+						pairingUrl !== undefined ? (
+							<div className={styles.pairingPanel}>
+								<Select
+									value={addressIndex}
+									options={addressOptions}
+									onChange={setAddressIndex}
+									className={styles.addressSelect}
+								/>
+								<div className={styles.qrGrid}>
+									<div className={styles.qrCard}>
+										<Typography.Text strong>
+											{t(
+												"settings.remoteAccess.pairing.installCertificate",
+											)}
+										</Typography.Text>
+										<QRCode
+											value={installUrl}
+											type="svg"
+											size={208}
+											marginSize={4}
+											bgColor="#ffffff"
+											color="#000000"
+										/>
+										<Typography.Text type="secondary">
+											{installUrl}
+										</Typography.Text>
+									</div>
+									<div className={styles.qrCard}>
+										<Typography.Text strong>
+											{t(
+												"settings.remoteAccess.pairing.scanPairing",
+											)}
+										</Typography.Text>
+										<QRCode
+											value={pairingUrl}
+											type="svg"
+											size={280}
+											marginSize={4}
+											errorLevel="M"
+											boostLevel={false}
+											bgColor="#ffffff"
+											color="#000000"
+										/>
+										<Typography.Text
+											copyable={{ text: pairingUrl }}
+										>
+											{t(
+												"settings.remoteAccess.pairing.copyLink",
+											)}
+										</Typography.Text>
+										<Typography.Text type="secondary">
+											{t(
+												"settings.remoteAccess.pairing.expires",
 												{
 													time: formatDate(
-														device.lastSeenAt,
+														pairing.expiresAt,
 													),
 												},
 											)}
-										/>
-									</List.Item>
-								)}
-							/>
-						)}
-					</div>
+										</Typography.Text>
+									</div>
+								</div>
+								<Typography.Text
+									type="secondary"
+									className={styles.instructions}
+								>
+									{t(
+										"settings.remoteAccess.pairing.instructions",
+									)}
+								</Typography.Text>
+							</div>
+						) : null}
+					</Modal>
+				</SettingsList>
+
+				<SettingsList title={t("settings.remoteAccess.devices.title")}>
+					{(state?.devices.length ?? 0) === 0 ? (
+						<Empty
+							image={Empty.PRESENTED_IMAGE_SIMPLE}
+							description={t(
+								"settings.remoteAccess.devices.empty",
+							)}
+						/>
+					) : (
+						(state?.devices ?? []).map(
+							(device: RemoteAccessDevice): React.JSX.Element => (
+								<SettingsItem
+									key={device.id}
+									searchKey="item:remote_access.devices"
+									title={device.name}
+									description={t(
+										"settings.remoteAccess.devices.lastSeen",
+										{
+											time: formatDate(device.lastSeenAt),
+										},
+									)}
+								>
+									<Button
+										danger
+										type="text"
+										onClick={(): void =>
+											revokeDevice(device)
+										}
+									>
+										{t(
+											"settings.remoteAccess.devices.revoke",
+										)}
+									</Button>
+								</SettingsItem>
+							),
+						)
+					)}
 					<SettingsItem
 						title={t(
 							"settings.remoteAccess.devices.revokeAllTitle",

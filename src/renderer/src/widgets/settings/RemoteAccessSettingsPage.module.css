@@ -44,12 +44,10 @@
 .pairingPanel {
 	display: grid;
 	gap: var(--ds-space-1);
-	padding: var(--ds-space-2);
-	border-top: 1px solid var(--ds-border);
 }
 
 .addressSelect {
-	width: min(320px, 100%);
+	width: 100%;
 }
 
 .qrGrid {
@@ -63,7 +61,7 @@
 	justify-items: center;
 	gap: 10px;
 	min-width: 0;
-	padding: 16px;
+	padding: var(--ds-space-2);
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-space-2);
 	background: var(--ds-surface);
