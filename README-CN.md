@@ -32,6 +32,8 @@
   <a href="https://github.com/LuYingYiLong/daedalus-backend">后端</a>
   |
   <a href="./README.md">English</a>
+  |
+  <a href="./android/remote-control/README.md">Android</a>
 </p>
 
 ![Daedalus Studio 工作区](./docs/images/daedalus-studio-workflow.png)
