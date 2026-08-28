@@ -13,4 +13,7 @@
 	<string name="connection_failed">Could not connect to Studio. Make sure it is running on the same LAN.</string>
 	<string name="certificate_failed">The Studio certificate is not trusted. Install its CA certificate and verify the fingerprint before retrying.</string>
 	<string name="app_start_failed">Studio was reached, but the Remote page did not start. Update Android System WebView, then connect again.</string>
+	<string name="scanner_hint">Fit the whole QR code inside the frame. Tap to focus or pinch to zoom.</string>
+	<string name="scanner_focusing">Focusing…</string>
+	<string name="scanner_invalid_code">This is not a Daedalus Studio pairing QR code.</string>
 </resources>

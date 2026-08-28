@@ -1,6 +1,8 @@
 export type RemoteGatewayStatus = {
 	name: string;
 	protocolVersion: 3;
+	remoteUiCompatibilityVersion: 1;
+	studioVersion: string;
 	pairingRequired: boolean;
 	certificateFingerprint: string;
 };

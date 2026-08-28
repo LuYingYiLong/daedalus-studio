@@ -224,6 +224,7 @@ class RemoteAccessService {
 				serverPrivateKeyPem: bundle.server.privateKeyPem,
 				caCertificatePem: bundle.ca.certificatePem,
 				certificateFingerprint: bundle.fingerprint,
+				studioVersion: app.getVersion(),
 				assetsDirectory: join(__dirname, "../renderer"),
 				getBackendConnectionInfo: async () => await backendManager.getReadyConnectionInfo(),
 				authenticate: async (credential: string, origin: string) => await this.authenticate(credential, origin),
@@ -262,13 +263,18 @@ class RemoteAccessService {
 			expiresAt,
 		};
 		await this.gateway.beginBootstrap(expiresAt);
+		const installUrlFor = (address: string): string => (
+			`http://${address}:${this.config.bootstrapPort}/install`
+		);
 		return {
 			expiresAt: new Date(expiresAt).toISOString(),
-			installUrls: this.addresses.map((address: string): string => (
-				`http://${address}:${this.config.bootstrapPort}/install`
-			)),
+			installUrls: this.addresses.map(installUrlFor),
 			pairingUrls: this.addresses.map((address: string): string => (
-				`https://${address}:${this.config.httpsPort}/remote.html#pair=${code}`
+				`https://${address}:${this.config.httpsPort}/remote.html`
+				+ `#pair=${encodeURIComponent(code)}`
+				+ `&install=${encodeURIComponent(installUrlFor(address))}`
+				+ `&fingerprint=${encodeURIComponent(this.secrets!.certificateFingerprint)}`
+				+ "&protocol=3&ui=1"
 			)),
 			certificateFingerprint: this.secrets.certificateFingerprint,
 		};

@@ -124,7 +124,7 @@ function statusColor(status: TraceRecord["status"]): string {
 	return "processing";
 }
 
-function TraceInspector({
+export function TraceInspector({
 	detail,
 	loading,
 }: {

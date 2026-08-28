@@ -1,133 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
-	android:fitsSystemWindows="true"
-	android:orientation="vertical">
+	android:fitsSystemWindows="true">
 
-	<LinearLayout
-		android:id="@+id/app_bar"
+	<WebView
+		android:id="@+id/web_view"
 		android:layout_width="match_parent"
-		android:layout_height="56dp"
-		android:gravity="center_vertical"
-		android:orientation="horizontal"
-		android:paddingStart="16dp"
-		android:paddingEnd="8dp">
+		android:layout_height="match_parent" />
 
-		<ImageView
-			android:layout_width="28dp"
-			android:layout_height="28dp"
-			android:contentDescription="@null"
-			android:src="@drawable/ic_remote" />
-
-		<TextView
-			android:layout_width="0dp"
-			android:layout_height="wrap_content"
-			android:layout_marginStart="10dp"
-			android:layout_weight="1"
-			android:text="@string/screen_title"
-			android:textSize="18sp"
-			android:textStyle="bold" />
-
-		<Button
-			android:id="@+id/reload_button"
-			style="?android:attr/borderlessButtonStyle"
-			android:layout_width="wrap_content"
-			android:layout_height="48dp"
-			android:text="@string/reload" />
-
-		<Button
-			android:id="@+id/change_button"
-			style="?android:attr/borderlessButtonStyle"
-			android:layout_width="wrap_content"
-			android:layout_height="48dp"
-			android:text="@string/change_studio" />
-	</LinearLayout>
-
-	<FrameLayout
+	<ProgressBar
+		android:id="@+id/progress"
+		style="?android:attr/progressBarStyleHorizontal"
 		android:layout_width="match_parent"
-		android:layout_height="0dp"
-		android:layout_weight="1">
-
-		<ScrollView
-			android:id="@+id/connect_panel"
-			android:layout_width="match_parent"
-			android:layout_height="match_parent"
-			android:fillViewport="true">
-
-			<LinearLayout
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:layout_gravity="center"
-				android:gravity="center_horizontal"
-				android:orientation="vertical"
-				android:padding="24dp">
-
-				<ImageView
-					android:layout_width="72dp"
-					android:layout_height="72dp"
-					android:contentDescription="@null"
-					android:src="@drawable/ic_remote" />
-
-				<TextView
-					android:layout_width="wrap_content"
-					android:layout_height="wrap_content"
-					android:layout_marginTop="20dp"
-					android:text="@string/connect_title"
-					android:textSize="24sp"
-					android:textStyle="bold" />
-
-				<TextView
-					android:layout_width="match_parent"
-					android:layout_height="wrap_content"
-					android:layout_marginTop="12dp"
-					android:gravity="center"
-					android:text="@string/connect_description"
-					android:textSize="15sp" />
-
-				<EditText
-					android:id="@+id/endpoint_input"
-					android:layout_width="match_parent"
-					android:layout_height="wrap_content"
-					android:layout_marginTop="24dp"
-					android:hint="@string/endpoint_hint"
-					android:importantForAutofill="no"
-					android:inputType="textUri"
-					android:maxLines="4"
-					android:minHeight="52dp"
-					android:padding="12dp" />
-
-				<Button
-					android:id="@+id/connect_button"
-					android:layout_width="match_parent"
-					android:layout_height="52dp"
-					android:layout_marginTop="16dp"
-					android:text="@string/connect" />
-
-				<TextView
-					android:id="@+id/error_text"
-					android:layout_width="match_parent"
-					android:layout_height="wrap_content"
-					android:layout_marginTop="12dp"
-					android:gravity="center"
-					android:textColor="#D4380D"
-					android:visibility="gone" />
-			</LinearLayout>
-		</ScrollView>
-
-		<WebView
-			android:id="@+id/web_view"
-			android:layout_width="match_parent"
-			android:layout_height="match_parent"
-			android:visibility="gone" />
-
-		<ProgressBar
-			android:id="@+id/progress"
-			style="?android:attr/progressBarStyleHorizontal"
-			android:layout_width="match_parent"
-			android:layout_height="3dp"
-			android:layout_gravity="top"
-			android:indeterminate="true"
-			android:visibility="gone" />
-	</FrameLayout>
-</LinearLayout>
+		android:layout_height="3dp"
+		android:layout_gravity="top"
+		android:indeterminate="true"
+		android:visibility="gone" />
+</FrameLayout>

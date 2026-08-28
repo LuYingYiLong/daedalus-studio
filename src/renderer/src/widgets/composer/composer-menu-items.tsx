@@ -67,8 +67,11 @@ export function createApprovalModeItems(
 	];
 }
 
-export function createModeItems(t: TFunction<"common">): MenuProps["items"] {
-	return [
+export function createModeItems(
+	t: TFunction<"common">,
+	allowedModes?: readonly ChatMode[],
+): MenuProps["items"] {
+	const items: NonNullable<MenuProps["items"]> = [
 		{
 			key: "ask",
 			label: t("composer.mode.ask"),
@@ -90,6 +93,13 @@ export function createModeItems(t: TFunction<"common">): MenuProps["items"] {
 			icon: <Icon name="goal" />,
 		},
 	];
+	if (allowedModes === undefined) return items;
+	return items.filter((item): boolean => (
+		item !== null
+		&& typeof item === "object"
+		&& "key" in item
+		&& allowedModes.includes(String(item.key) as ChatMode)
+	));
 }
 
 export function isComposerMode(value: string): value is ChatMode {

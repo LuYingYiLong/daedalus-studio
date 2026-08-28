@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ComponentProps, type ReactNode } from "react";
-import { Input, Modal, Typography } from "antd";
 import HomePage from "@/widgets/home/HomePage";
+import FullTrustConfirmationModal from "@/widgets/approval/FullTrustConfirmationModal";
 import WorkspaceProjectDialog from "@/widgets/workspace/WorkspaceProjectDialog";
 import type { WorkspaceConfig } from "@/platform/rpc/types";
 import styles from "./App.module.css";
@@ -78,50 +78,22 @@ function App({ bootstrapData, onReady }: AppProps): React.JSX.Element {
 	return (
 		<main className={styles.shell}>
 			{messageContextHolder}
-			<Modal
+			<FullTrustConfirmationModal
 				open={fullTrustOpen}
+				value={fullTrustConfirmationText}
+				token={fullTrustConfirmationToken}
+				loading={isApprovalModeSaving}
 				title={fullTrustTitle}
-				okText={fullTrustEnableLabel}
-				cancelText={fullTrustCancelLabel}
-				okButtonProps={{
-					danger: true,
-					disabled:
-						fullTrustConfirmationText !==
-						fullTrustConfirmationToken,
-				}}
-				confirmLoading={isApprovalModeSaving}
-				onOk={onFullTrustConfirm}
+				enableLabel={fullTrustEnableLabel}
+				cancelLabel={fullTrustCancelLabel}
+				description={fullTrustDescription}
+				confirmationPrefix={fullTrustConfirmationPrefix}
+				confirmationSuffix={fullTrustConfirmationSuffix}
+				onChange={onFullTrustConfirmationTextChange}
+				onConfirm={onFullTrustConfirm}
 				onCancel={onFullTrustCancel}
-			>
-				<Typography.Paragraph>
-					{fullTrustDescription}
-				</Typography.Paragraph>
-				<Typography.Paragraph type="secondary">
-					{fullTrustConfirmationPrefix}{" "}
-					<Typography.Text code>
-						{fullTrustConfirmationToken}
-					</Typography.Text>{" "}
-					{fullTrustConfirmationSuffix}
-				</Typography.Paragraph>
-				<Input
-					value={fullTrustConfirmationText}
-					placeholder={fullTrustConfirmationToken}
-					disabled={isApprovalModeSaving}
-					onChange={(event): void =>
-						onFullTrustConfirmationTextChange(event.target.value)
-					}
-					onPressEnter={(): void => {
-						if (
-							fullTrustConfirmationText !==
-							fullTrustConfirmationToken
-						) {
-							fullTrustConfirmationError(
-								fullTrustConfirmationToken,
-							);
-						}
-					}}
-				/>
-			</Modal>
+				onInvalidConfirmation={fullTrustConfirmationError}
+			/>
 			<WorkspaceProjectDialog
 				open={workspaceProjectDialogOpen}
 				workspace={null}

@@ -1,0 +1,66 @@
+.shell {
+	min-height: 100dvh;
+	padding: max(32px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+	background: var(--ant-color-bg-layout);
+}
+
+.hero {
+	max-width: 560px;
+	margin: 0 auto 20px;
+	text-align: center;
+}
+
+.hero :global(.ant-typography) {
+	margin-bottom: 8px;
+}
+
+.logo {
+	display: grid;
+	place-items: center;
+	width: 64px;
+	height: 64px;
+	margin: 0 auto 18px;
+	border-radius: 18px;
+	color: var(--ant-color-primary);
+	background: var(--ant-color-primary-bg);
+	font-size: 30px;
+}
+
+.actionCard,
+.savedSection,
+.installButton,
+.shell > :global(.ant-alert) {
+	max-width: 560px;
+	margin: 0 auto 16px;
+}
+
+.fullWidth {
+	width: 100%;
+}
+
+.manualRow {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 8px;
+}
+
+.savedSection {
+	padding-top: 8px;
+}
+
+.profileItem {
+	min-height: 72px;
+	padding-inline: 0 !important;
+}
+
+.version {
+	display: block;
+	margin-top: 24px;
+	text-align: center;
+}
+
+@media (max-width: 420px) {
+	.manualRow {
+		grid-template-columns: 1fr;
+	}
+}

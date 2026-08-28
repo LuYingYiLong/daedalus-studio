@@ -147,7 +147,13 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 		});
 		mockBackend.setHandler("plan.get", () => plan);
 		mockBackend.setHandler("plan.clarify", ({ params }) => {
-			plan = { ...plan, question: `Clarified: ${(params as { reply: string }).reply}`, updatedAt: NOW };
+			plan = {
+				...plan,
+				status: "ready",
+				previewMarkdown: `Clarified: ${(params as { reply: string }).reply}`,
+				question: "",
+				updatedAt: NOW,
+			};
 			return plan;
 		});
 		mockBackend.setHandler("plan.revise", ({ params }) => {
@@ -298,7 +304,7 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 		expect(createRequest.params).not.toHaveProperty("workspaceLaunch");
 		await expect(page.getByText(/移动会话|Mobile session/).first()).toBeVisible();
 
-		const composer = page.getByPlaceholder(/给 Studio 中的 AI 发送消息|Send a message to the AI in Studio/);
+		const composer = page.getByTestId("composer-input");
 		await composer.fill("Stream from mobile");
 		await page.getByRole("button", { name: /发送|Send/ }).click();
 		await expect(page.getByText("Remote streamed reply")).toBeVisible({ timeout: 15_000 });
@@ -360,15 +366,16 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 		latestPlanId = plan.planId;
 		mockBackend.sendEvent("plan.clarification.requested", { planId: plan.planId }, { sessionId: "session-remote-e2e", requestId: plan.requestId });
 		await page.getByRole("button", { name: /查看计划|Open plan/ }).click();
-		const planInput = page.getByPlaceholder(/输入澄清回复或修改意见|Enter (?:a )?clarification reply or revision feedback/);
-		await planInput.fill("Use the safe scope");
-		await page.getByRole("button", { name: /提交澄清|Submit clarification/ }).click();
+		const clarificationInput = page.getByPlaceholder(/告诉助手接下来怎么做|Tell the assistant how to proceed/);
+		await clarificationInput.fill("Use the safe scope");
+		await page.getByRole("button", { name: /^提交$|^Submit$/ }).click();
 		await mockBackend.waitForRequest("plan.clarify");
-		await planInput.fill("Tighten the scope");
-		await page.getByRole("button", { name: /修改计划|Revise plan/ }).click();
+		const revisionInput = page.getByPlaceholder(/告诉助手如何修改计划|Tell the assistant how to change the plan/);
+		await revisionInput.fill("Tighten the scope");
+		await page.getByRole("button", { name: /^修改$|^Revise$/ }).click();
 		await mockBackend.waitForRequest("plan.revise");
-		await expect(page.getByRole("button", { name: /批准计划|Approve plan/ })).toBeEnabled();
-		await page.getByRole("button", { name: /批准计划|Approve plan/ }).click();
+		await expect(page.getByRole("button", { name: /批准并执行|Approve and Execute/ })).toBeEnabled();
+		await page.getByRole("button", { name: /批准并执行|Approve and Execute/ }).click();
 		await mockBackend.waitForRequest("plan.approve");
 
 		await page.getByRole("button", { name: /轨迹|Trajectory/ }).click();
@@ -376,6 +383,7 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 		await expect(page.getByText("tool_call · success")).toBeVisible();
 		await page.getByText("prompt · success").click();
 		await expect(page.getByText("remote-trace-prompt")).toBeVisible();
+		await page.getByRole("button", { name: /system\s+System\s+22/ }).click();
 		await expect(page.getByText(/redacted mobile prompt/)).toBeVisible();
 		await page.keyboard.press("Escape");
 

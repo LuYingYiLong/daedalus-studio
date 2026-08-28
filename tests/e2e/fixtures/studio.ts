@@ -103,7 +103,13 @@ export const test = base.extend<StudioFixtures>({
 			}
 			const electronApp: ElectronApplication = await electron.launch({
 				executablePath: electronExecutablePath,
-				args: [builtEntryPoint, `--user-data-dir=${isolatedProfileRoot}`],
+				args: [
+					"--disable-gpu",
+					"--disable-software-rasterizer",
+					"--in-process-gpu",
+					builtEntryPoint,
+					`--user-data-dir=${isolatedProfileRoot}`,
+				],
 				env: {
 					...process.env,
 					USERPROFILE: userDataDir,

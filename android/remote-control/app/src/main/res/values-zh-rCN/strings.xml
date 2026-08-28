@@ -13,4 +13,7 @@
 	<string name="connection_failed">无法连接 Studio，请确认它正在同一局域网内运行。</string>
 	<string name="certificate_failed">不信任 Studio 证书。请先安装其 CA 证书、核对指纹，然后重试。</string>
 	<string name="app_start_failed">已连接到 Studio，但遥控页面未能启动。请更新 Android System WebView 后重新连接。</string>
+	<string name="scanner_hint">将完整二维码放入框内；可点按对焦或双指缩放。</string>
+	<string name="scanner_focusing">正在对焦…</string>
+	<string name="scanner_invalid_code">这不是 Daedalus Studio 的配对二维码。</string>
 </resources>

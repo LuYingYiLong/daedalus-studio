@@ -69,6 +69,7 @@ export type RemoteGatewayOptions = {
 	serverPrivateKeyPem: string;
 	caCertificatePem: string;
 	certificateFingerprint: string;
+	studioVersion: string;
 	assetsDirectory: string;
 	getBackendConnectionInfo: () => Promise<BackendConnectionInfo>;
 	authenticate: (credential: string, origin: string) => Promise<RemoteGatewayDevice | null>;
@@ -581,6 +582,8 @@ export class RemoteGateway {
 			sendJson(response, 200, {
 				name: "Daedalus Studio Remote",
 				protocolVersion: 3,
+				remoteUiCompatibilityVersion: 1,
+				studioVersion: this.options.studioVersion,
 				pairingRequired: pairedDevice === null,
 				certificateFingerprint: this.options.certificateFingerprint,
 			});

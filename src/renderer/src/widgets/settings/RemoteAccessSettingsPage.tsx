@@ -305,7 +305,14 @@ function RemoteAccessSettingsPage(): React.JSX.Element {
 											"settings.remoteAccess.pairing.installCertificate",
 										)}
 									</Typography.Text>
-									<QRCode value={installUrl} size={176} />
+									<QRCode
+										value={installUrl}
+										type="svg"
+										size={208}
+										marginSize={4}
+										bgColor="#ffffff"
+										color="#000000"
+									/>
 									<Typography.Text type="secondary">
 										{installUrl}
 									</Typography.Text>
@@ -316,7 +323,16 @@ function RemoteAccessSettingsPage(): React.JSX.Element {
 											"settings.remoteAccess.pairing.scanPairing",
 										)}
 									</Typography.Text>
-									<QRCode value={pairingUrl} size={176} />
+									<QRCode
+										value={pairingUrl}
+										type="svg"
+										size={280}
+										marginSize={4}
+										errorLevel="M"
+										boostLevel={false}
+										bgColor="#ffffff"
+										color="#000000"
+									/>
 									<Typography.Text
 										copyable={{ text: pairingUrl }}
 									>

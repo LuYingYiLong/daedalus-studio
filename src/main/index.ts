@@ -41,6 +41,10 @@ const MEMORY_DIAGNOSTICS_INTERVAL_MS: number = 30_000;
 const MEMORY_DIAGNOSTICS_ENABLED: boolean = !app.isPackaged || process.env.DAEDALUS_MEMORY_DIAGNOSTICS === "1";
 let memoryDiagnosticsTimer: ReturnType<typeof setInterval> | null = null;
 
+if (process.env.DAEDALUS_E2E === "1") {
+	app.disableHardwareAcceleration();
+}
+
 protocol.registerSchemesAsPrivileged([{
 	scheme: "daedalus-media",
 	privileges: {

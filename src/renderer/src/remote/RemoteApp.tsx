@@ -1,6 +1,4 @@
 import {
-	lazy,
-	Suspense,
 	useCallback,
 	useEffect,
 	useRef,
@@ -10,13 +8,10 @@ import {
 	Alert,
 	App,
 	Button,
-	Descriptions,
 	Dropdown,
 	Drawer,
 	Empty,
 	Input,
-	Modal,
-	Segmented,
 	Select,
 	Space,
 	Spin,
@@ -26,8 +21,14 @@ import {
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import MessageList from "@/widgets/conversation/MessageList";
+import Composer from "@/widgets/composer/Composer";
+import NewSessionHome from "@/widgets/home/surface/NewSessionHome";
+import { TraceInspector } from "@/widgets/home/trajectory/TrajectoryPanel";
 import ApprovalDialog from "@/widgets/approval/ApprovalDialog";
 import ToolBudgetDialog from "@/widgets/approval/ToolBudgetDialog";
+import PlanApprovalDialog from "@/widgets/approval/PlanApprovalDialog";
+import FullTrustConfirmationModal from "@/widgets/approval/FullTrustConfirmationModal";
+import ClarificationDialog from "@/widgets/clarification/ClarificationDialog";
 import {
 	approveApproval,
 	fetchApprovalList,
@@ -49,9 +50,15 @@ import {
 	fetchSessionTimeline,
 	fetchSessions,
 	openSession,
+	saveSessionUiMetadata,
+	setSessionModel,
 	subscribeSession,
 	unsubscribeSession,
 } from "@/platform/rpc/session-api";
+import {
+	fetchProviderModelSelection,
+	type ProviderModelSelection,
+} from "@/platform/rpc/provider-api";
 import { fetchWorkspaces } from "@/platform/rpc/workspace-api";
 import { fetchWorkbench } from "@/platform/rpc/workbench-api";
 import {
@@ -87,6 +94,7 @@ import {
 	fetchRemoteGatewayStatus,
 	pairFromLocationFragment,
 } from "./remote-bootstrap";
+import { notifyNativeBridge } from "./native-bridge";
 import RemoteBottomNavigation from "./RemoteBottomNavigation";
 import RemoteSessionHome from "./RemoteSessionHome";
 import RemoteTraceScreen from "./RemoteTraceScreen";
@@ -104,8 +112,6 @@ type ConnectionStatus =
 	| "pairing_required";
 
 const FULL_TRUST_CONFIRMATION_TEXT: string = "ENABLE FULL TRUST";
-const ReactJsonView = lazy(() => import("@microlink/react-json-view"));
-
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
@@ -122,6 +128,8 @@ function RemoteApp(): React.JSX.Element {
 	const [error, setError] = useState<string | null>(null);
 	const [sessions, setSessions] = useState<SessionMetadata[]>([]);
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([]);
+	const [providerModelSelection, setProviderModelSelection] =
+		useState<ProviderModelSelection | null>(null);
 	const [activeSession, setActiveSession] = useState<SessionMetadata | null>(
 		null,
 	);
@@ -149,7 +157,6 @@ function RemoteApp(): React.JSX.Element {
 	const [fullTrustText, setFullTrustText] = useState<string>("");
 	const [planOpen, setPlanOpen] = useState<boolean>(false);
 	const [plan, setPlan] = useState<PlanResult | null>(null);
-	const [planInput, setPlanInput] = useState<string>("");
 	const [planBusy, setPlanBusy] = useState<boolean>(false);
 	const [traceSummary, setTraceSummary] = useState<TraceSummary | null>(null);
 	const [tracePage, setTracePage] = useState<TracePage | null>(null);
@@ -189,12 +196,14 @@ function RemoteApp(): React.JSX.Element {
 	);
 
 	const refreshCatalog = useCallback(async (): Promise<void> => {
-		const [sessionResult, workspaceResult] = await Promise.all([
+		const [sessionResult, workspaceResult, modelSelection] = await Promise.all([
 			fetchSessions(),
 			fetchWorkspaces(),
+			fetchProviderModelSelection(),
 		]);
 		setSessions(sessionResult.sessions);
 		setWorkspaces(workspaceResult.workspaces);
+		setProviderModelSelection(modelSelection);
 		setCreateWorkspaceId(
 			(current: string | undefined): string | undefined =>
 				current ?? workspaceResult.workspaces[0]?.id,
@@ -312,6 +321,13 @@ function RemoteApp(): React.JSX.Element {
 				}
 				await createBackendClient();
 				if (disposed) return;
+				notifyNativeBridge("remote.ready", {
+					name: gateway.name,
+					protocolVersion: gateway.protocolVersion,
+					remoteUiCompatibilityVersion: gateway.remoteUiCompatibilityVersion,
+					studioVersion: gateway.studioVersion,
+					certificateFingerprint: gateway.certificateFingerprint,
+				});
 				setConnectionStatus("connected");
 				await refreshCatalog();
 				removeEventListener = await onBackendEvent((event): void => {
@@ -345,6 +361,7 @@ function RemoteApp(): React.JSX.Element {
 		const removeConnectionState = onBackendConnectionStateChanged(
 			(state): void => {
 				setConnectionStatus(state);
+				notifyNativeBridge("remote.connectionState", { state });
 			},
 		);
 		const onVisibility = (): void => {
@@ -448,6 +465,7 @@ function RemoteApp(): React.JSX.Element {
 	async function submitMessage(
 		text: string,
 		retryFromRequestId?: string,
+		modeOverride?: ChatMode,
 	): Promise<boolean> {
 		const trimmed: string = text.trim();
 		if (activeSession === null || trimmed.length === 0) return false;
@@ -458,7 +476,7 @@ function RemoteApp(): React.JSX.Element {
 		void sendChatMessage({
 			requestId,
 			message: trimmed,
-			mode: chatMode,
+			mode: modeOverride ?? chatMode,
 			retryFromRequestId,
 		})
 			.catch((sendError: unknown): void => {
@@ -484,6 +502,34 @@ function RemoteApp(): React.JSX.Element {
 		const storageKey: string = getRemoteDraftStorageKey(activeSession.id);
 		if (value.length === 0) sessionStorage.removeItem(storageKey);
 		else sessionStorage.setItem(storageKey, value);
+	}
+
+	async function updateSessionMode(nextMode: ChatMode): Promise<void> {
+		if (nextMode === "goal") return;
+		setChatMode(nextMode);
+		await saveSessionUiMetadata({ chatMode: nextMode });
+		setActiveSession((current): SessionMetadata | null => current === null
+			? null
+			: { ...current, chatMode: nextMode });
+	}
+
+	async function updateSessionModel(provider: string, model: string): Promise<void> {
+		const result = await setSessionModel({ provider, model });
+		setActiveSession(result.metadata);
+		setWorkbench(result.workbench);
+	}
+
+	async function updateReasoningEffort(reasoningEffort: string): Promise<void> {
+		await saveSessionUiMetadata({ reasoningEffort });
+		setActiveSession((current): SessionMetadata | null => current === null
+			? null
+			: { ...current, reasoningEffort });
+		setWorkbench((current): WorkbenchSnapshot | null => current === null
+			? null
+			: {
+				...current,
+				composer: { ...current.composer, reasoningEffort },
+			});
 	}
 
 	async function decideApproval(
@@ -574,6 +620,9 @@ function RemoteApp(): React.JSX.Element {
 		workbench?.activeRun.status !== undefined &&
 		workbench.activeRun.status !== "idle";
 	const pendingApproval = approvals.pending[0] ?? null;
+	const selectedWorkspace: WorkspaceConfig | null = workspaces.find(
+		(workspace: WorkspaceConfig): boolean => workspace.id === activeSession?.workspaceId,
+	) ?? null;
 	const screenTitle: string =
 		activeScreen === "conversation"
 			? (activeSession?.title ?? t("remote.navigation.conversation"))
@@ -723,20 +772,24 @@ function RemoteApp(): React.JSX.Element {
 				  activeSession !== null ? (
 					<section className={styles.conversationScreen}>
 						<div className={styles.timeline}>
-							<MessageList
-								blocks={timeline}
-								retryDisabled={running}
-								forkDisabled={true}
-								hideInlineDiff={true}
-								onRetryFromUserMessage={async (
-									payload,
-								): Promise<boolean> =>
-									await submitMessage(
-										payload.message,
-										payload.requestId,
-									)
-								}
-							/>
+							{timeline.length === 0 ? (
+								<NewSessionHome
+									workspace={selectedWorkspace}
+									errorMessage={error}
+									message={composerText}
+									showStarters={true}
+									onStarterSelect={updateComposerText}
+								/>
+							) : (
+								<MessageList
+									blocks={timeline}
+									retryDisabled={running}
+									forkDisabled={true}
+									hideInlineDiff={true}
+									onRetryFromUserMessage={async (payload): Promise<boolean> =>
+										await submitMessage(payload.message, payload.requestId)}
+								/>
+							)}
 						</div>
 						{plan !== null ? (
 							<Button
@@ -762,88 +815,44 @@ function RemoteApp(): React.JSX.Element {
 							</Button>
 						) : null}
 						<div className={styles.composer}>
-							<div className={styles.composerMeta}>
-								<Segmented<Exclude<ChatMode, "goal">>
-									value={chatMode}
-									disabled={running || sending}
-									options={[
-										{
-											value: "ask",
-											label: t("remote.mode.ask"),
-										},
-										{
-											value: "agent",
-											label: t("remote.mode.agent"),
-										},
-										{
-											value: "plan",
-											label: t("remote.mode.plan"),
-										},
-									]}
-									onChange={setChatMode}
-								/>
-								<Typography.Text
-									type="secondary"
-									className={styles.runState}
-								>
-									<span
-										className={`${styles.runStateDot} ${running ? styles.runStateDotActive : ""}`}
-									/>
-									{t(
-										running
-											? "remote.activity.running"
-											: "remote.activity.ready",
-									)}
-								</Typography.Text>
-							</div>
-							<div className={styles.composerRow}>
-								<Input.TextArea
-									variant="borderless"
-									value={composerText}
-									autoSize={{ minRows: 1, maxRows: 6 }}
-									placeholder={t(
-										"remote.composerPlaceholder",
-									)}
-									disabled={running || sending}
-									onChange={(event): void =>
-										updateComposerText(event.target.value)
-									}
-								/>
-								{running &&
-								workbench?.activeRun.requestId !== undefined ? (
-									<Button
-										aria-label={t("composer.send.stop")}
-										danger
-										shape="circle"
-										size="large"
-										icon={<Icon name="stop" />}
-										onClick={(): void => {
-											void cancelChatMessage(
-												workbench.activeRun.requestId!,
-											).finally((): void =>
-												scheduleRefresh(
-													activeSession.id,
-												),
-											);
-										}}
-									/>
-								) : (
-									<Button
-										aria-label={t("composer.send.send")}
-										type="primary"
-										shape="circle"
-										size="large"
-										icon={<Icon name="send" />}
-										loading={sending}
-										disabled={
-											composerText.trim().length === 0
-										}
-										onClick={(): void => {
-											void submitMessage(composerText);
-										}}
-									/>
-								)}
-							</div>
+							<Composer
+								providerModelSelection={providerModelSelection}
+								selectedProviderId={activeSession.provider ?? workbench?.composer.provider ?? null}
+								selectedModelId={activeSession.model ?? workbench?.composer.model ?? null}
+								reasoningEffort={activeSession.reasoningEffort ?? workbench?.composer.reasoningEffort}
+								message={composerText}
+								mode={chatMode}
+								approvalMode={approvals.mode}
+								isSending={running || sending}
+								isCancelling={workbench?.activeRun.status === "cancelling"}
+								selectedWorkspace={selectedWorkspace}
+								showContextUsage={false}
+								allowedModes={["ask", "agent", "plan"]}
+								allowQueue={false}
+								layout="mobile"
+								onDraftChange={updateComposerText}
+								onModeChange={(mode): void => { void updateSessionMode(mode); }}
+								onApprovalModeChange={requestApprovalMode}
+								onProviderModelChange={(provider, model): void => {
+									void updateSessionModel(provider, model).catch((modelError: unknown): void => {
+										void message.error(errorMessage(modelError));
+									});
+								}}
+								onReasoningEffortChange={(effort): void => {
+									void updateReasoningEffort(effort).catch((reasoningError: unknown): void => {
+										void message.error(errorMessage(reasoningError));
+									});
+								}}
+								onCancel={(): void => {
+									const requestId = workbench?.activeRun.requestId;
+									if (requestId !== undefined) void cancelChatMessage(requestId).finally(
+										(): void => scheduleRefresh(activeSession.id),
+									);
+								}}
+								onSubmit={(text, modeOverride): void => {
+									void submitMessage(text, undefined, modeOverride);
+								}}
+							/>
 						</div>
 					</section>
 				) : activeScreen === "approvals" ? (
@@ -1021,43 +1030,26 @@ function RemoteApp(): React.JSX.Element {
 				</Space>
 			</Drawer>
 
-			<Modal
+			<FullTrustConfirmationModal
 				open={fullTrustOpen}
+				value={fullTrustText}
+				token={FULL_TRUST_CONFIRMATION_TEXT}
+				loading={approvalModeBusy}
 				title={t("app.fullTrust.title")}
-				okText={t("app.fullTrust.actions.enable")}
-				cancelText={t("app.fullTrust.actions.cancel")}
-				okButtonProps={{
-					danger: true,
-					disabled: fullTrustText !== FULL_TRUST_CONFIRMATION_TEXT,
-				}}
-				confirmLoading={approvalModeBusy}
-				onOk={(): void => {
+				enableLabel={t("app.fullTrust.actions.enable")}
+				cancelLabel={t("app.fullTrust.actions.cancel")}
+				description={t("app.fullTrust.description")}
+				confirmationPrefix={t("app.fullTrust.confirmationPrefix")}
+				confirmationSuffix={t("app.fullTrust.confirmationSuffix")}
+				onChange={setFullTrustText}
+				onConfirm={(): void => {
 					void saveApprovalMode("full-trust", fullTrustText);
 				}}
 				onCancel={(): void => {
 					setFullTrustOpen(false);
 					setFullTrustText("");
 				}}
-			>
-				<Typography.Paragraph>
-					{t("app.fullTrust.description")}
-				</Typography.Paragraph>
-				<Typography.Paragraph type="secondary">
-					{t("app.fullTrust.confirmationPrefix")}{" "}
-					<Typography.Text code>
-						{FULL_TRUST_CONFIRMATION_TEXT}
-					</Typography.Text>{" "}
-					{t("app.fullTrust.confirmationSuffix")}
-				</Typography.Paragraph>
-				<Input
-					value={fullTrustText}
-					placeholder={FULL_TRUST_CONFIRMATION_TEXT}
-					disabled={approvalModeBusy}
-					onChange={(event): void =>
-						setFullTrustText(event.target.value)
-					}
-				/>
-			</Modal>
+			/>
 
 			<Drawer
 				title={t("remote.toolBudget.title")}
@@ -1105,6 +1097,49 @@ function RemoteApp(): React.JSX.Element {
 			>
 				{plan === null ? (
 					<Empty />
+				) : plan.status === "clarification_required" ? (
+					<ClarificationDialog
+						planId={plan.planId}
+						title={plan.title}
+						question={plan.question}
+						recommendedReplies={plan.recommendedReplies}
+						isSubmitting={planBusy}
+						errorMessage={null}
+						onSubmit={(reply): void => {
+							setPlanBusy(true);
+							void submitPlanClarification(plan.planId, { reply })
+								.then(setPlan)
+								.finally((): void => setPlanBusy(false));
+						}}
+						onSkip={(): void => {
+							setPlanBusy(true);
+							void submitPlanClarification(plan.planId, { skip: true })
+								.then(setPlan)
+								.finally((): void => setPlanBusy(false));
+						}}
+					/>
+				) : plan.status === "ready" ? (
+					<PlanApprovalDialog
+						plan={plan}
+						isApproving={planBusy}
+						isRevising={planBusy}
+						errorMessage={null}
+						onRevise={(planId, feedback): void => {
+							setPlanBusy(true);
+							void revisePlan(planId, feedback)
+								.then(setPlan)
+								.finally((): void => setPlanBusy(false));
+						}}
+						onApprove={(planId): void => {
+							setPlanBusy(true);
+							void approvePlan(planId)
+								.then((): void => {
+									setPlanOpen(false);
+									if (activeSession !== null) scheduleRefresh(activeSession.id);
+								})
+								.finally((): void => setPlanBusy(false));
+						}}
+					/>
 				) : (
 					<Space
 						direction="vertical"
@@ -1115,82 +1150,6 @@ function RemoteApp(): React.JSX.Element {
 						<Typography.Paragraph className={styles.planMarkdown}>
 							{plan.markdown ?? plan.previewMarkdown}
 						</Typography.Paragraph>
-						{plan.question.length > 0 ? (
-							<Alert type="info" showIcon title={plan.question} />
-						) : null}
-						{plan.recommendedReplies.map((reply) => (
-							<Button
-								key={reply.text}
-								block
-								onClick={(): void => setPlanInput(reply.text)}
-							>
-								{reply.label}
-							</Button>
-						))}
-						<Input.TextArea
-							value={planInput}
-							autoSize={{ minRows: 2, maxRows: 6 }}
-							onChange={(event): void =>
-								setPlanInput(event.target.value)
-							}
-							placeholder={t("remote.plan.feedback")}
-						/>
-						<Space wrap>
-							<Button
-								loading={planBusy}
-								disabled={planInput.trim().length === 0}
-								onClick={(): void => {
-									setPlanBusy(true);
-									void submitPlanClarification(plan.planId, {
-										reply: planInput.trim(),
-									})
-										.then(setPlan)
-										.finally((): void =>
-											setPlanBusy(false),
-										);
-								}}
-							>
-								{t("remote.plan.clarify")}
-							</Button>
-							<Button
-								loading={planBusy}
-								disabled={planInput.trim().length === 0}
-								onClick={(): void => {
-									setPlanBusy(true);
-									void revisePlan(
-										plan.planId,
-										planInput.trim(),
-									)
-										.then(setPlan)
-										.finally((): void =>
-											setPlanBusy(false),
-										);
-								}}
-							>
-								{t("remote.plan.revise")}
-							</Button>
-							<Button
-								type="primary"
-								loading={planBusy}
-								disabled={plan.status !== "ready"}
-								onClick={(): void => {
-									setPlanBusy(true);
-									void approvePlan(plan.planId)
-										.then((): void => {
-											setPlanOpen(false);
-											if (activeSession !== null)
-												scheduleRefresh(
-													activeSession.id,
-												);
-										})
-										.finally((): void =>
-											setPlanBusy(false),
-										);
-								}}
-							>
-								{t("remote.plan.approve")}
-							</Button>
-						</Space>
 					</Space>
 				)}
 			</Drawer>
@@ -1202,65 +1161,7 @@ function RemoteApp(): React.JSX.Element {
 				height="82dvh"
 				onClose={(): void => setTraceDetail(null)}
 			>
-				{traceDetail !== null ? (
-					<div className={styles.traceDetail}>
-						<Descriptions
-							column={1}
-							size="small"
-							items={[
-								{
-									key: "id",
-									label: "recordId",
-									children: traceDetail.record.recordId,
-								},
-								{
-									key: "request",
-									label: "requestId",
-									children: traceDetail.record.requestId,
-								},
-								{
-									key: "level",
-									label: "detailLevel",
-									children: traceDetail.detailLevel,
-								},
-							]}
-						/>
-						<div className={styles.traceJson}>
-							<Suspense fallback={<Spin />}>
-								<ReactJsonView
-									src={{
-										promptSections:
-											traceDetail.promptSections,
-										request: traceDetail.request,
-										response: traceDetail.response,
-										redactions: traceDetail.redactions,
-									}}
-									name={false}
-									style={{
-										width: "100%",
-										maxHeight: "52dvh",
-										overflow: "auto",
-										backgroundColor: "transparent",
-										fontFamily:
-											"var(--ds-font-family-code)",
-										fontSize: 12,
-										lineHeight: 1.5,
-									}}
-									theme="rjv-default"
-									iconStyle="triangle"
-									indentWidth={2}
-									collapsed={false}
-									collapseStringsAfterLength={240}
-									displayDataTypes={false}
-									enableClipboard={true}
-									onEdit={false}
-									onAdd={false}
-									onDelete={false}
-								/>
-							</Suspense>
-						</div>
-					</div>
-				) : null}
+				<TraceInspector detail={traceDetail} loading={traceBusy} />
 			</Drawer>
 		</main>
 	);

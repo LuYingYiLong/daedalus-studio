@@ -111,6 +111,9 @@ export type ComposerProps = {
 	showContextUsage?: boolean;
 	compact?: boolean;
 	floating?: boolean;
+	allowedModes?: readonly ChatMode[];
+	allowQueue?: boolean;
+	layout?: "standard" | "mobile";
 	worktreeMode?: "local" | "worktree";
 	worktreeDisabledReason?: string | null;
 	isWorktreePreparing?: boolean;
@@ -243,6 +246,9 @@ function Composer({
 	showContextUsage = true,
 	compact = false,
 	floating = false,
+	allowedModes,
+	allowQueue = true,
+	layout = "standard",
 	onModeChange,
 	onApprovalModeChange,
 	onProviderModelChange,
@@ -586,6 +592,14 @@ function Composer({
 		selectedWorkspace?.name ?? t("composer.workspace.noWorkspace");
 	const canUseWorktrees: boolean =
 		workspaceSupportsWorktrees(selectedWorkspace);
+	const canAddContext: boolean = onAddFiles !== undefined
+		|| onAddFolder !== undefined
+		|| onAddImages !== undefined
+		|| onAddContextFiles !== undefined;
+	const showWorkspaceFooter: boolean = onWorkspaceSelect !== undefined
+		|| onWorkspaceAdd !== undefined
+		|| onWorkspaceClear !== undefined
+		|| worktreeMode !== undefined;
 	const approvalModeLabel: string =
 		approvalMode === "full-trust"
 			? t("composer.approvalMode.fullTrust")
@@ -616,11 +630,11 @@ function Composer({
 	);
 	const modeMenu: MenuProps = useMemo(
 		(): MenuProps => ({
-			items: createModeItems(t),
+			items: createModeItems(t, allowedModes),
 			selectedKeys: [mode],
 			onClick: handleModeClick,
 		}),
-		[handleModeClick, mode, t],
+		[allowedModes, handleModeClick, mode, t],
 	);
 	const approvalModeMenu: MenuProps = useMemo(
 		(): MenuProps => ({
@@ -771,14 +785,22 @@ function Composer({
 		if (isAddingTextAttachment) {
 			return;
 		}
+		if (isSending && !allowQueue) {
+			if (!isCancelling) onCancel?.();
+			return;
+		}
 		const modeCommand = parseComposerModeCommand(draftMessage);
+		const allowedModeCommand = modeCommand !== null
+			&& (allowedModes === undefined || allowedModes.includes(modeCommand.mode))
+			? modeCommand
+			: null;
 		const trimmedMessage: string =
-			modeCommand?.message ?? draftMessage.trim();
+			allowedModeCommand?.message ?? draftMessage.trim();
 		const hasSubmittableContent: boolean =
 			trimmedMessage.length > 0 || composerContextItems.length > 0;
-		if (!hasSubmittableContent && modeCommand !== null) {
+		if (!hasSubmittableContent && allowedModeCommand !== null) {
 			clearDraftMessage();
-			onModeChange?.(modeCommand.mode);
+			onModeChange?.(allowedModeCommand.mode);
 			return;
 		}
 		if (!hasSubmittableContent && isSending) {
@@ -793,7 +815,7 @@ function Composer({
 		}
 
 		clearDraftMessage();
-		onSubmit?.(trimmedMessage, modeCommand?.mode);
+		onSubmit?.(trimmedMessage, allowedModeCommand?.mode);
 	}
 
 	function submitGuideMessage(): void {
@@ -1360,6 +1382,9 @@ function Composer({
 			</span>
 		</Button>
 	);
+	const isStopAction: boolean = isSending
+		&& (!allowQueue
+			|| (draftMessage.trim().length === 0 && composerContextItems.length === 0));
 
 	return (
 		<div
@@ -1367,6 +1392,7 @@ function Composer({
 			data-studio-composer="true"
 			className={[
 				styles.composerRoot,
+				layout === "mobile" ? styles.composerRootMobile : "",
 				compact ? styles.composerRootCompact : "",
 				floating ? styles.composerRootFloating : "",
 				isFloatingComposerCollapsed
@@ -1475,12 +1501,17 @@ function Composer({
 						>
 							<Input.TextArea
 								ref={textAreaRef}
+								data-testid="composer-input"
+								aria-label={textAreaPlaceholder}
 								value={draftMessage}
 								autoSize={
-									compact
+									layout === "mobile"
+										? { minRows: 1, maxRows: 5 }
+										: compact
 										? { minRows: 1, maxRows: 1 }
 										: { minRows: 4, maxRows: 6 }
 								}
+								disabled={isSending && !allowQueue}
 								placeholder={textAreaPlaceholder}
 								className={styles.composerTextArea}
 								onChange={handleTextAreaChange}
@@ -1507,23 +1538,23 @@ function Composer({
 						</div>
 					</Dropdown>
 					<div className={styles.composerToolbar}>
-						<Tooltip title={t("composer.tooltips.addContext")}>
-							<Dropdown menu={contextMenu} trigger={["click"]}>
-								<Button
-									type="text"
-									shape="circle"
-									icon={
-										<Icon
-											name="add"
-											className={
-												styles.composerActionIcon
-											}
-										/>
-									}
-								/>
-							</Dropdown>
-						</Tooltip>
-						<Divider vertical={true} />
+						{canAddContext ? (
+							<Tooltip title={t("composer.tooltips.addContext")}>
+								<Dropdown menu={contextMenu} trigger={["click"]}>
+									<Button
+										type="text"
+										shape="circle"
+										icon={
+											<Icon
+												name="add"
+												className={styles.composerActionIcon}
+											/>
+										}
+									/>
+								</Dropdown>
+							</Tooltip>
+						) : null}
+						{canAddContext ? <Divider vertical={true} /> : null}
 
 						<Tooltip title={t("composer.tooltips.mode")}>
 							<Dropdown menu={modeMenu} trigger={["click"]}>
@@ -1613,8 +1644,7 @@ function Composer({
 								isCancelling
 									? t("composer.send.stopping")
 									: isSending &&
-										  draftMessage.trim().length === 0 &&
-										  composerContextItems.length === 0
+										  isStopAction
 										? t("composer.send.stop")
 										: isSending
 											? t("composer.send.queue")
@@ -1624,12 +1654,19 @@ function Composer({
 							<Button
 								type="text"
 								shape="circle"
+								aria-label={
+									isCancelling
+										? t("composer.send.stopping")
+										: isSending && isStopAction
+											? t("composer.send.stop")
+											: isSending
+												? t("composer.send.queue")
+												: t("composer.send.send")
+								}
 								icon={
 									<Icon
 										name={
-											isSending &&
-											draftMessage.trim().length === 0 &&
-											composerContextItems.length === 0
+											isStopAction
 												? "stop"
 												: "send"
 										}
@@ -1650,7 +1687,7 @@ function Composer({
 				</div>
 			</div>
 
-			<footer className={styles.footer}>
+			{showWorkspaceFooter ? <footer className={styles.footer}>
 				<Flex
 					align="start"
 					justify="space-between"
@@ -1778,7 +1815,7 @@ function Composer({
 						</Popover>
 					) : null}
 				</Flex>
-			</footer>
+			</footer> : null}
 		</div>
 	);
 }

@@ -3,6 +3,27 @@
 	width: 100%;
 }
 
+.composerRootMobile .composerSurface {
+	padding: 6px 6px 48px;
+	border-radius: 18px;
+}
+
+.composerRootMobile .composerToolbar {
+	left: 6px;
+	right: 6px;
+	bottom: 4px;
+	gap: 2px;
+}
+
+.composerRootMobile .composerToolbar :global(.ant-btn) {
+	min-width: 44px;
+	min-height: 44px;
+}
+
+.composerRootMobile .composerTextArea {
+	font-size: 16px;
+}
+
 .composerRootFloating {
 	margin-inline: auto;
 	transform-origin: center bottom;
