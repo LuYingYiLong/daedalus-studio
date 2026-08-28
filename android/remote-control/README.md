@@ -1,5 +1,6 @@
 # Daedalus Remote Android shell
 [简体中文](./README-CN.md)
+
 Daedalus Remote is a hybrid Android application. The APK bundles the React UI, uses an origin-restricted native bridge for scanning and secure profile storage, and connects only to a paired Studio Remote Gateway. It does not bundle or expose the Backend, bypass TLS errors, or allow public hosts.
 
 ## Build
