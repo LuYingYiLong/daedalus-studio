@@ -13,11 +13,39 @@
 	right: 6px;
 	bottom: 4px;
 	gap: 2px;
+	min-width: 0;
 }
 
 .composerRootMobile .composerToolbar :global(.ant-btn) {
 	min-width: 44px;
 	min-height: 44px;
+}
+
+.composerToolbarControl,
+.composerToolbarModelControl {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+}
+
+.composerToolbarControl {
+	flex: 0 0 auto;
+}
+
+.composerToolbarModelControl {
+	flex: 1 1 auto;
+	overflow: hidden;
+}
+
+.composerToolbarModelControl > * {
+	flex: 1 1 auto;
+	width: 100%;
+	min-width: 0;
+}
+
+.composerRootMobile .composerToolbarModelControl :global(.ant-btn) {
+	width: 100%;
+	min-width: 0;
 }
 
 .composerRootMobile .composerTextArea {
@@ -179,6 +207,7 @@
 	display: flex;
 	align-items: center;
 	gap: 4px;
+	min-width: 0;
 }
 
 .composerRootFloating .composerToolbar {
@@ -215,9 +244,13 @@
 }
 
 .modelButton {
-	max-width: min(360px, 45vw);
-	height: 28px;
+	max-width: min(256px, 45vw);
 	padding: 0 8px;
+}
+
+.composerToolbarModelControl .modelButton {
+	min-width: 0;
+	overflow: hidden;
 }
 
 .modelButtonContent {
@@ -238,6 +271,15 @@
 	overscroll-behavior: contain;
 }
 
+.composerOptionsDropdown :global(.ant-dropdown-menu),
+.modelDropdown :global(.ant-dropdown-menu) {
+	max-width: calc(100vw - 16px);
+	max-height: min(520px, calc(100dvh - 112px));
+	overflow-x: hidden;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
 .modelSubmenuPopup {
 	max-height: min(360px, calc(100vh - 96px));
 	overflow: hidden;
@@ -245,6 +287,7 @@
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
 	background: var(--ds-surface-elevated);
+	max-width: min(320px, calc(100vw - 16px));
 }
 
 .modelSubmenuPopup :global(.ant-dropdown-menu) {
@@ -551,16 +594,15 @@
 	white-space: nowrap;
 }
 
-.reasoningEffortButton {
-	height: 28px;
-	max-width: 104px;
-	padding: 0 8px;
-}
+@media (max-width: 360px) {
+	.composerRootMobile .approvalModeButton {
+		width: 44px;
+		padding-inline: 0;
+	}
 
-.reasoningEffortButton span {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	.composerRootMobile .approvalModeText {
+		display: none;
+	}
 }
 
 .workspaceFooterControls {

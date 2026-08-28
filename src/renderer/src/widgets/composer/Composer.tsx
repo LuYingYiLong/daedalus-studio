@@ -63,21 +63,21 @@ import {
 	ADD_WORKSPACE_KEY,
 	COMPOSER_PLACEHOLDER_KEYS,
 	createApprovalModeItems,
-	createContextItems,
+	createComposerOptionsItems,
 	createModelKey,
-	createModeItems,
-	createProviderModelItems,
+	createProviderModelAndReasoningItems,
 	createWorkspaceFooterItems,
 	createWorkspaceKey,
 	findSelectedModel,
-	getReasoningEffortLabel,
 	getSelectedModelLabel,
 	isApprovalMode,
 	isComposerMode,
 	NO_WORKSPACE_KEY,
 	parseModelKey,
+	parseReasoningEffortKey,
 	parseWorkspaceKey,
 	resolveDisplayedReasoningEffort,
+	createReasoningEffortKey,
 	type SelectedModel,
 } from "./composer-menu-items";
 import useComposerContextUsage, {
@@ -339,15 +339,6 @@ function Composer({
 		);
 	}, [floating]);
 
-	const handleModeClick: MenuProps["onClick"] = useCallback(
-		({ key }): void => {
-			if (isComposerMode(key)) {
-				onModeChange?.(key);
-			}
-		},
-		[onModeChange],
-	);
-
 	const handleApprovalModeClick: MenuProps["onClick"] = useCallback(
 		({ key }): void => {
 			if (isApprovalMode(key)) {
@@ -386,9 +377,13 @@ function Composer({
 		],
 	);
 
-	const handleContextItemClick: MenuProps["onClick"] = useCallback(
+	const handleComposerOptionsClick: MenuProps["onClick"] = useCallback(
 		({ key }): void => {
 			const selectedKey: string = String(key);
+			if (isComposerMode(selectedKey)) {
+				onModeChange?.(selectedKey);
+				return;
+			}
 			if (selectedKey === "files") {
 				onAddFiles?.();
 				return;
@@ -401,7 +396,7 @@ function Composer({
 				imageInputRef.current?.click();
 			}
 		},
-		[onAddFiles, onAddFolder],
+		[onAddFiles, onAddFolder, onModeChange],
 	);
 
 	const handleTextAreaContextAction: MenuProps["onClick"] = useCallback(
@@ -507,10 +502,6 @@ function Composer({
 		onAddImages?.(files);
 	}
 
-	const providerModelItems: MenuProps["items"] =
-		useMemo((): MenuProps["items"] => {
-			return createProviderModelItems(providerModelSelection, t);
-		}, [providerModelSelection, t]);
 	const hasConfiguredProviders: boolean =
 		providerModelSelection?.providers.some(
 			(provider: ProviderModelSelectionProvider): boolean =>
@@ -580,10 +571,6 @@ function Composer({
 			reasoningEffortOptions,
 			reasoningEffort,
 		);
-	const displayedReasoningEffortLabel: string =
-		displayedReasoningEffort === null
-			? ""
-			: getReasoningEffortLabel(displayedReasoningEffort, t);
 	const selectedWorkspaceKey: string =
 		selectedWorkspace === null
 			? NO_WORKSPACE_KEY
@@ -596,6 +583,8 @@ function Composer({
 		|| onAddFolder !== undefined
 		|| onAddImages !== undefined
 		|| onAddContextFiles !== undefined;
+	const canOpenComposerOptions: boolean =
+		canAddContext || onModeChange !== undefined;
 	const showWorkspaceFooter: boolean = onWorkspaceSelect !== undefined
 		|| onWorkspaceAdd !== undefined
 		|| onWorkspaceClear !== undefined
@@ -606,12 +595,22 @@ function Composer({
 			: approvalMode === "auto-safe"
 				? t("composer.approvalMode.autoSafe")
 				: t("composer.approvalMode.manual");
-	const contextMenu: MenuProps = useMemo(
+	const composerOptionsMenu: MenuProps = useMemo(
 		(): MenuProps => ({
-			items: createContextItems(t),
-			onClick: handleContextItemClick,
+			items: createComposerOptionsItems(t, {
+				includeContext: canAddContext,
+				includeMode: onModeChange !== undefined,
+				allowedModes,
+			}),
+			onClick: handleComposerOptionsClick,
 		}),
-		[handleContextItemClick, t],
+		[
+			allowedModes,
+			canAddContext,
+			handleComposerOptionsClick,
+			onModeChange,
+			t,
+		],
 	);
 	const textAreaContextMenu: MenuProps = useMemo(
 		(): MenuProps => ({
@@ -628,14 +627,6 @@ function Composer({
 		}),
 		[handleTextAreaContextAction, t],
 	);
-	const modeMenu: MenuProps = useMemo(
-		(): MenuProps => ({
-			items: createModeItems(t, allowedModes),
-			selectedKeys: [mode],
-			onClick: handleModeClick,
-		}),
-		[allowedModes, handleModeClick, mode, t],
-	);
 	const approvalModeMenu: MenuProps = useMemo(
 		(): MenuProps => ({
 			items: createApprovalModeItems(t),
@@ -643,29 +634,6 @@ function Composer({
 			onClick: handleApprovalModeClick,
 		}),
 		[approvalMode, handleApprovalModeClick, t],
-	);
-	const reasoningEffortMenu: MenuProps = useMemo(
-		(): MenuProps => ({
-			items: reasoningEffortOptions.map(
-				(option: ProviderReasoningEffortOption) => ({
-					key: option.id,
-					label: getReasoningEffortLabel(option.id, t),
-				}),
-			),
-			selectedKeys:
-				displayedReasoningEffort === null
-					? []
-					: [displayedReasoningEffort],
-			onClick: ({ key }): void => {
-				onReasoningEffortChange?.(String(key));
-			},
-		}),
-		[
-			displayedReasoningEffort,
-			onReasoningEffortChange,
-			reasoningEffortOptions,
-			t,
-		],
 	);
 	const workspaceFooterMenu: MenuProps = useMemo(
 		(): MenuProps => ({
@@ -748,8 +716,22 @@ function Composer({
 
 	const handleProviderModelClick: MenuProps["onClick"] = useCallback(
 		({ key }): void => {
+			const selectedKey: string = String(key);
+			const nextReasoningEffort: string | null =
+				parseReasoningEffortKey(selectedKey);
+			if (
+				nextReasoningEffort !== null &&
+				reasoningEffortOptions.some(
+					(option: ProviderReasoningEffortOption): boolean =>
+						option.id === nextReasoningEffort,
+				)
+			) {
+				onReasoningEffortChange?.(nextReasoningEffort);
+				return;
+			}
+
 			const nextSelectedModel: SelectedModel | null = parseModelKey(
-				String(key),
+				selectedKey,
 			);
 
 			if (nextSelectedModel === null) {
@@ -761,17 +743,35 @@ function Composer({
 				nextSelectedModel.model,
 			);
 		},
-		[onProviderModelChange],
+		[onProviderModelChange, onReasoningEffortChange, reasoningEffortOptions],
+	);
+	const providerModelMenuItems: MenuProps["items"] = useMemo(
+		(): MenuProps["items"] =>
+			createProviderModelAndReasoningItems(
+				providerModelSelection,
+				reasoningEffortOptions,
+				t,
+			),
+		[providerModelSelection, reasoningEffortOptions, t],
 	);
 	const providerModelMenu: MenuProps = useMemo(
 		(): MenuProps => ({
-			items: providerModelItems,
-			selectedKeys:
-				selectedModelKey === undefined ? [] : [selectedModelKey],
+			items: providerModelMenuItems,
+			selectedKeys: [
+				...(selectedModelKey === undefined ? [] : [selectedModelKey]),
+				...(displayedReasoningEffort === null
+					? []
+					: [createReasoningEffortKey(displayedReasoningEffort)]),
+			],
 			onClick: handleProviderModelClick,
 			expandIcon: <Icon name="arrow-forward" />,
 		}),
-		[handleProviderModelClick, providerModelItems, selectedModelKey],
+		[
+			displayedReasoningEffort,
+			handleProviderModelClick,
+			providerModelMenuItems,
+			selectedModelKey,
+		],
 	);
 
 	function clearDraftMessage(): void {
@@ -1372,6 +1372,8 @@ function Composer({
 		<Button
 			type="text"
 			className={styles.modelButton}
+			data-testid="composer-model-button"
+			aria-label={selectedModelLabel}
 			disabled={providerModelSelection === null}
 			onClick={!hasConfiguredProviders ? onConfigureProvider : undefined}
 		>
@@ -1538,12 +1540,23 @@ function Composer({
 						</div>
 					</Dropdown>
 					<div className={styles.composerToolbar}>
-						{canAddContext ? (
-							<Tooltip title={t("composer.tooltips.addContext")}>
-								<Dropdown menu={contextMenu} trigger={["click"]}>
+						{canOpenComposerOptions ? (
+							<div className={styles.composerToolbarControl}>
+							<Tooltip title={t("composer.tooltips.contextAndMode")}>
+								<Dropdown
+									rootClassName={styles.composerOptionsDropdown}
+									placement="topLeft"
+									autoAdjustOverflow={true}
+									menu={composerOptionsMenu}
+									trigger={["click"]}
+								>
 									<Button
 										type="text"
 										shape="circle"
+										data-testid="composer-options-button"
+										aria-label={t(
+											"composer.tooltips.contextAndMode",
+										)}
 										icon={
 											<Icon
 												name="add"
@@ -1553,18 +1566,11 @@ function Composer({
 									/>
 								</Dropdown>
 							</Tooltip>
+							</div>
 						) : null}
 						{canAddContext ? <Divider vertical={true} /> : null}
 
-						<Tooltip title={t("composer.tooltips.mode")}>
-							<Dropdown menu={modeMenu} trigger={["click"]}>
-								<Button
-									type="text"
-									shape="circle"
-									icon={<Icon name={mode} />}
-								/>
-							</Dropdown>
-						</Tooltip>
+						<div className={styles.composerToolbarControl}>
 						<Tooltip title={t("composer.tooltips.approvalMode")}>
 							<Dropdown
 								menu={approvalModeMenu}
@@ -1573,6 +1579,7 @@ function Composer({
 							>
 								<Button
 									type="text"
+									aria-label={approvalModeLabel}
 									loading={isApprovalModeSaving}
 									icon={
 										<Icon
@@ -1594,9 +1601,11 @@ function Composer({
 								</Button>
 							</Dropdown>
 						</Tooltip>
+						</div>
 
 						<Divider vertical={true} />
 
+						<div className={styles.composerToolbarModelControl}>
 						<Tooltip
 							title={
 								hasConfiguredProviders
@@ -1607,6 +1616,7 @@ function Composer({
 							{hasConfiguredProviders ? (
 								<Dropdown
 									rootClassName={styles.modelDropdown}
+									placement="topRight"
 									autoAdjustOverflow={true}
 									menu={providerModelMenu}
 									trigger={["click"]}
@@ -1617,28 +1627,9 @@ function Composer({
 								modelButton
 							)}
 						</Tooltip>
+						</div>
 
-						{displayedReasoningEffort === null ? null : (
-							<Tooltip
-								title={t("composer.tooltips.reasoningEffort")}
-							>
-								<Dropdown
-									menu={reasoningEffortMenu}
-									trigger={["click"]}
-								>
-									<Button
-										type="text"
-										className={styles.reasoningEffortButton}
-										icon={<Icon name="brain" />}
-									>
-										<span>
-											{displayedReasoningEffortLabel}
-										</span>
-									</Button>
-								</Dropdown>
-							</Tooltip>
-						)}
-
+						<div className={styles.composerToolbarControl}>
 						<Tooltip
 							title={
 								isCancelling
@@ -1683,6 +1674,7 @@ function Composer({
 								onClick={submitMessage}
 							/>
 						</Tooltip>
+						</div>
 					</div>
 				</div>
 			</div>

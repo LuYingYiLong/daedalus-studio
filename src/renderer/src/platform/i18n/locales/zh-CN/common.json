@@ -625,6 +625,11 @@
 			"addFolder": "添加文件夹",
 			"addImages": "添加图片"
 		},
+		"menu": {
+			"context": "上下文",
+			"mode": "模式",
+			"reasoningEffort": "推理强度"
+		},
 		"mode": {
 			"ask": "问答",
 			"agent": "Agent",
@@ -661,6 +666,7 @@
 		},
 		"tooltips": {
 			"addContext": "添加附加上下文",
+			"contextAndMode": "上下文与模式",
 			"mode": "模式",
 			"approvalMode": "审批模式",
 			"model": "模型",

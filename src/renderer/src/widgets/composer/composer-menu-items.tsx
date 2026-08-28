@@ -45,6 +45,42 @@ export function createContextItems(t: TFunction<"common">): MenuProps["items"] {
 	];
 }
 
+export type ComposerOptionsMenuOptions = {
+	includeContext: boolean;
+	includeMode: boolean;
+	allowedModes?: readonly ChatMode[];
+};
+
+export function createComposerOptionsItems(
+	t: TFunction<"common">,
+	options: ComposerOptionsMenuOptions,
+): MenuProps["items"] {
+	const items: NonNullable<MenuProps["items"]> = [];
+	if (options.includeContext) {
+		items.push({
+			type: "group",
+			key: "context",
+			label: t("composer.menu.context"),
+			children: createContextItems(t),
+		});
+	}
+	if (options.includeMode) {
+		const modeItems: MenuProps["items"] = createModeItems(
+			t,
+			options.allowedModes,
+		);
+		if (modeItems !== undefined && modeItems.length > 0) {
+			items.push({
+				type: "group",
+				key: "mode",
+				label: t("composer.menu.mode"),
+				children: modeItems,
+			});
+		}
+	}
+	return items;
+}
+
 export function createApprovalModeItems(
 	t: TFunction<"common">,
 ): MenuProps["items"] {
@@ -195,6 +231,27 @@ export function getReasoningEffortLabel(
 	return t(`composer.reasoning.efforts.${effort}`, { defaultValue: effort });
 }
 
+export function createReasoningEffortKey(effort: string): string {
+	return `reasoning:${effort}`;
+}
+
+export function parseReasoningEffortKey(key: string): string | null {
+	const prefix: string = "reasoning:";
+	if (!key.startsWith(prefix)) return null;
+	const effort: string = key.slice(prefix.length);
+	return effort.length > 0 ? effort : null;
+}
+
+export function createReasoningEffortItems(
+	options: readonly ProviderReasoningEffortOption[],
+	t: TFunction<"common">,
+): MenuProps["items"] {
+	return options.map((option: ProviderReasoningEffortOption) => ({
+		key: createReasoningEffortKey(option.id),
+		label: getReasoningEffortLabel(option.id, t),
+	}));
+}
+
 export function resolveDisplayedReasoningEffort(
 	options: readonly ProviderReasoningEffortOption[],
 	requested: string | null | undefined,
@@ -265,6 +322,32 @@ export function createProviderModelItems(
 				};
 			}),
 		}));
+}
+
+export function createProviderModelAndReasoningItems(
+	selection: ProviderModelSelection | null,
+	reasoningEffortOptions: readonly ProviderReasoningEffortOption[],
+	t: TFunction<"common">,
+): MenuProps["items"] {
+	const items: NonNullable<MenuProps["items"]> = [
+		...(createProviderModelItems(selection, t) ?? []),
+	];
+	const reasoningItems: MenuProps["items"] = createReasoningEffortItems(
+		reasoningEffortOptions,
+		t,
+	);
+	if (reasoningItems !== undefined && reasoningItems.length > 0) {
+		if (items.length > 0) {
+			items.push({ type: "divider" });
+		}
+		items.push({
+			type: "group",
+			key: "reasoning-effort",
+			label: t("composer.menu.reasoningEffort"),
+			children: reasoningItems,
+		});
+	}
+	return items;
 }
 
 export function createWorkspaceKey(workspaceId: string): string {

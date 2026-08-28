@@ -7,7 +7,14 @@ function createRemoteWorkbench(activeRun: Record<string, unknown> = { status: "i
 	return {
 		revision: 1,
 		sessionId: "session-remote-e2e",
-		composer: { text: "", chatMode: "agent", additionalContext: [] },
+		composer: {
+			text: "",
+			chatMode: "agent",
+			provider: "openai",
+			model: "gpt-4o-mini",
+			reasoningEffort: "medium",
+			additionalContext: [],
+		},
 		messageQueue: [],
 		pendingGuides: [],
 		activeRun,
@@ -86,7 +93,14 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 				workbench: {
 					revision: 0,
 					sessionId: metadata.id,
-					composer: { text: "", chatMode: input.chatMode, additionalContext: [] },
+					composer: {
+						text: "",
+						chatMode: input.chatMode,
+						provider: "openai",
+						model: "gpt-4o-mini",
+						reasoningEffort: "medium",
+						additionalContext: [],
+					},
 					messageQueue: [], pendingGuides: [], activeRun: { status: "idle" }, pendingApproval: { count: 0, first: null }, pendingToolBudget: null, nextStepHints: { hints: [] }, activeSelection: { workspaceId: workspace.id, workspaceName: workspace.name, workspaceRoot: workspace.rootPath },
 				},
 			};
@@ -306,6 +320,41 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 		expect(createRequest.params).toMatchObject({ workspaceId: workspace.id, chatMode: "agent" });
 		expect(createRequest.params).not.toHaveProperty("workspaceLaunch");
 		await expect(page.getByText(/移动会话|Mobile session/).first()).toBeVisible();
+		if (context !== null) {
+			for (const width of [320, 360, 412, 430]) {
+				await page.setViewportSize({ width, height: 915 });
+				await expect(page.getByTestId("composer-options-button")).toBeVisible();
+				const hasHorizontalOverflow: boolean = await page.evaluate((): boolean =>
+					document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+					|| document.body.scrollWidth > document.body.clientWidth + 1,
+				);
+				expect(hasHorizontalOverflow).toBe(false);
+			}
+			await page.setViewportSize({ width: 412, height: 915 });
+		}
+
+		await page.getByTestId("composer-options-button").click();
+		await expect(page.getByRole("menuitem", { name: /问答|Ask/ })).toBeVisible();
+		await expect(page.getByRole("menuitem", { name: /Agent/ })).toBeVisible();
+		await expect(page.getByRole("menuitem", { name: /计划|Plan/ })).toBeVisible();
+		expect(await page.getByRole("menuitem", { name: /添加文件|Add files/ }).count()).toBe(0);
+		expect(await page.getByRole("menuitem", { name: /Goal/ }).count()).toBe(0);
+		await page.getByRole("menuitem", { name: /计划|Plan/ }).click();
+		await expect.poll((): boolean => mockBackend.getRequests("session.save").some((request) =>
+			(request.params as { chatMode?: string }).chatMode === "plan",
+		)).toBe(true);
+		await page.getByTestId("composer-options-button").click();
+		await page.getByRole("menuitem", { name: /Agent/ }).click();
+		await expect.poll((): boolean => mockBackend.getRequests("session.save").some((request) =>
+			(request.params as { chatMode?: string }).chatMode === "agent",
+		)).toBe(true);
+
+		await page.getByTestId("composer-model-button").click();
+		await expect(page.getByRole("menuitem", { name: /高|High/ })).toBeVisible();
+		await page.getByRole("menuitem", { name: /高|High/ }).click();
+		await expect.poll((): boolean => mockBackend.getRequests("session.save").some((request) =>
+			(request.params as { reasoningEffort?: string }).reasoningEffort === "high",
+		)).toBe(true);
 
 		const composer = page.getByTestId("composer-input");
 		await composer.fill("Stream from mobile");
@@ -394,7 +443,7 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 		const helloCountBeforeReconnect: number = mockBackend.getRequests("client.hello").filter((request) => (request.params as { clientType?: string }).clientType === "studio_remote").length;
 		mockBackend.closeConnections();
 		await expect.poll((): number => mockBackend.getRequests("client.hello").filter((request) => (request.params as { clientType?: string }).clientType === "studio_remote").length, { timeout: 20_000 }).toBeGreaterThan(helloCountBeforeReconnect);
-		await expect(page.getByText(/已连接|Connected/)).toBeVisible({ timeout: 20_000 });
+		await expect(page.getByRole("status", { name: /已连接|Connected/ })).toBeVisible({ timeout: 20_000 });
 
 		const remoteHello = mockBackend.getRequests("client.hello").find((request) => (request.params as { clientType?: string }).clientType === "studio_remote");
 		expect(remoteHello?.params).toMatchObject({ clientType: "studio_remote", capabilities: { remoteControl: true, browserTools: false, scheduledTasks: false } });
@@ -424,7 +473,7 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 			const response = await fetch("/api/v1/status", { credentials: "include", cache: "no-store" });
 			return response.ok && ((await response.json()) as { pairingRequired: boolean }).pairingRequired;
 		})).toBe(true);
-		await expect(page.getByText(/已断开|Disconnected/)).toBeVisible({ timeout: 20_000 });
+		await expect(page.getByRole("status", { name: /已断开|Disconnected/ })).toBeVisible({ timeout: 20_000 });
 		await context?.close();
 		await remoteBrowser?.close();
 	});

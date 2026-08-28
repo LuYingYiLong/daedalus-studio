@@ -87,7 +87,15 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 				endpointType: "openai-chat-completions",
 				contextWindowTokens: 128000,
 				maxOutputTokens: 4096,
-				capabilities: { tools: true, reasoning: false },
+				capabilities: {
+					tools: true,
+					reasoning: true,
+					reasoningEfforts: [
+						{ id: "low", fallback: "low" },
+						{ id: "medium", fallback: "medium", default: true },
+						{ id: "high", fallback: "high" },
+					],
+				},
 			},
 		],
 	};

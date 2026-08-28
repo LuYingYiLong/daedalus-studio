@@ -627,6 +627,11 @@
 			"addFolder": "Add folder",
 			"addImages": "Add images"
 		},
+		"menu": {
+			"context": "Context",
+			"mode": "Mode",
+			"reasoningEffort": "Reasoning effort"
+		},
 		"mode": {
 			"ask": "Ask",
 			"agent": "Agent",
@@ -663,6 +668,7 @@
 		},
 		"tooltips": {
 			"addContext": "Add additional context",
+			"contextAndMode": "Context and mode",
 			"mode": "Mode",
 			"approvalMode": "Approval mode",
 			"model": "Model",
