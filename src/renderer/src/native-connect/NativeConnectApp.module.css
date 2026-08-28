@@ -1,6 +1,6 @@
 .shell {
 	min-height: 100dvh;
-	padding: max(32px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+	padding: max(32px, var(--ds-safe-area-top)) 16px max(24px, var(--ds-safe-area-bottom));
 	background: var(--ant-color-bg-layout);
 }
 

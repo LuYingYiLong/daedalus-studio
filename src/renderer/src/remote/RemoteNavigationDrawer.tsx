@@ -1,4 +1,4 @@
-import { Drawer, Menu } from "antd";
+import { ConfigProvider, Drawer, Menu } from "antd";
 import type { MenuProps } from "antd";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -138,21 +138,35 @@ function RemoteNavigationDrawer({
 	return (
 		<Drawer
 			className={styles.navigationDrawer}
+			classNames={{
+				body: styles.navigationDrawerBody,
+			}}
 			open={open}
 			placement="left"
-			width="min(88vw, 360px)"
-			title={t("remote.navigation.title")}
+			size="min(88vw, 360px)"
+			closable={false}
 			onClose={onClose}
 		>
-			<Menu
-				className={styles.navigationMenu}
-				mode="inline"
-				items={items}
-				selectedKeys={
-					activeScreen === "sessions" ? ["sessions"] : [activeScreen]
-				}
-				onClick={handleClick}
-			/>
+			<ConfigProvider
+				theme={{
+					components: {
+						Menu: {
+							itemActiveBg: "transparent",
+							itemSelectedBg: "transparent",
+						},
+					},
+				}}
+			>
+				<Menu
+					className={styles.navigationMenu}
+					mode="inline"
+					items={items}
+					selectedKeys={
+						activeScreen === "sessions" ? ["sessions"] : [activeScreen]
+					}
+					onClick={handleClick}
+				/>
+			</ConfigProvider>
 		</Drawer>
 	);
 }

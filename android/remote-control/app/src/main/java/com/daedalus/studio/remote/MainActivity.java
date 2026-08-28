@@ -2,8 +2,10 @@ package com.daedalus.studio.remote;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.res.Configuration;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
@@ -22,6 +24,11 @@ import android.widget.ProgressBar;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
 
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.webkit.JavaScriptReplyProxy;
 import androidx.webkit.WebMessageCompat;
 import androidx.webkit.WebViewAssetLoader;
@@ -65,13 +72,20 @@ public final class MainActivity extends Activity {
 	private boolean autoConnectAllowed = true;
 	private boolean devUiActive;
 	private OnBackInvokedCallback backCallback;
+	private int safeAreaTop;
+	private int safeAreaRight;
+	private int safeAreaBottom;
+	private int safeAreaLeft;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 		setContentView(R.layout.activity_main);
 		webView = findViewById(R.id.web_view);
 		progress = findViewById(R.id.progress);
+		configureSystemBars();
+		configureWindowInsets();
 		profileStore = new ProfileStore(this);
 		credentialVault = new CredentialVault(this);
 		DevUiAssets.seedPackagedManifest(BuildConfig.DEBUG, getAssets(), getFilesDir());
@@ -167,6 +181,7 @@ public final class MainActivity extends Activity {
 			@Override
 			public void onPageFinished(WebView view, String url) {
 				progress.setVisibility(View.GONE);
+				applySafeAreaToWebView();
 			}
 
 			@Override
@@ -198,6 +213,55 @@ public final class MainActivity extends Activity {
 				showConnections(false);
 			}
 		});
+	}
+
+	private void configureSystemBars() {
+		getWindow().setStatusBarColor(Color.TRANSPARENT);
+		getWindow().setNavigationBarColor(Color.TRANSPARENT);
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+			getWindow().setStatusBarContrastEnforced(false);
+			getWindow().setNavigationBarContrastEnforced(false);
+		}
+		WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), webView);
+		boolean darkMode = (getResources().getConfiguration().uiMode
+			& Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+		controller.setAppearanceLightStatusBars(!darkMode);
+		controller.setAppearanceLightNavigationBars(!darkMode);
+	}
+
+	private void configureWindowInsets() {
+		ViewCompat.setOnApplyWindowInsetsListener(webView, (view, insets) -> {
+			Insets systemBars = insets.getInsets(
+				WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
+			);
+			safeAreaTop = systemBars.top;
+			safeAreaRight = systemBars.right;
+			safeAreaBottom = systemBars.bottom;
+			safeAreaLeft = systemBars.left;
+			applySafeAreaToWebView();
+			return insets;
+		});
+		ViewCompat.requestApplyInsets(webView);
+	}
+
+	private void applySafeAreaToWebView() {
+		if (webView == null) return;
+		String top = safeAreaCssValue(safeAreaTop);
+		String right = safeAreaCssValue(safeAreaRight);
+		String bottom = safeAreaCssValue(safeAreaBottom);
+		String left = safeAreaCssValue(safeAreaLeft);
+		String script = "(function(){const root=document.documentElement;"
+			+ "root.style.setProperty('--android-safe-area-top','" + top + "');"
+			+ "root.style.setProperty('--android-safe-area-right','" + right + "');"
+			+ "root.style.setProperty('--android-safe-area-bottom','" + bottom + "');"
+			+ "root.style.setProperty('--android-safe-area-left','" + left + "');"
+			+ "})();";
+		webView.evaluateJavascript(script, null);
+	}
+
+	private String safeAreaCssValue(int pixels) {
+		float density = getResources().getDisplayMetrics().density;
+		return String.format(Locale.US, "%.2fpx", pixels / density);
 	}
 
 	private void showConnections(boolean allowAutoConnect) {

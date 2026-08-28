@@ -17,7 +17,6 @@ import {
 import type { BadgeProps } from "antd";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
-import BreadcrumbsIcon from "@/assets/icons/breadcrumbs.svg?react";
 import MessageList from "@/widgets/conversation/MessageList";
 import Composer from "@/widgets/composer/Composer";
 import NewSessionHome from "@/widgets/home/surface/NewSessionHome";
@@ -714,9 +713,9 @@ function RemoteApp(): React.JSX.Element {
 			<header className={styles.topBar}>
 				<Button
 					type="text"
-					className={styles.breadcrumbButton}
-					aria-label={t("remote.navigation.open")}
-					icon={<BreadcrumbsIcon aria-hidden="true" />}
+						className={styles.breadcrumbButton}
+						aria-label={t("remote.navigation.open")}
+						icon={<Icon name="breadcrumbs" />}
 					onClick={(): void => setNavigationOpen(true)}
 				/>
 				<Typography.Text strong ellipsis className={styles.topTitle}>

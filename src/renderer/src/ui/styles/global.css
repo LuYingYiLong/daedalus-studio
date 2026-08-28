@@ -123,6 +123,26 @@
 }
 
 :root {
+	--android-safe-area-top: 0px;
+	--android-safe-area-right: 0px;
+	--android-safe-area-bottom: 0px;
+	--android-safe-area-left: 0px;
+	--ds-safe-area-top: max(
+		env(safe-area-inset-top, 0px),
+		var(--android-safe-area-top)
+	);
+	--ds-safe-area-right: max(
+		env(safe-area-inset-right, 0px),
+		var(--android-safe-area-right)
+	);
+	--ds-safe-area-bottom: max(
+		env(safe-area-inset-bottom, 0px),
+		var(--android-safe-area-bottom)
+	);
+	--ds-safe-area-left: max(
+		env(safe-area-inset-left, 0px),
+		var(--android-safe-area-left)
+	);
 	--ds-bg: #141414;
 	--ds-bg-tint: rgba(20, 20, 20, 0.75);
 	--ds-code-bg: #ffffff1d;

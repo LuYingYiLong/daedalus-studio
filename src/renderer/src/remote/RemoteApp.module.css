@@ -13,7 +13,7 @@
 	height: 100dvh;
 	overflow: hidden;
 	background: var(--ds-bg);
-	padding-top: env(safe-area-inset-top);
+	padding-top: var(--ds-safe-area-top);
 }
 
 .topBar {
@@ -22,8 +22,8 @@
 	align-items: center;
 	gap: 4px;
 	min-height: 54px;
-	padding: 3px max(6px, env(safe-area-inset-right)) 3px
-		max(6px, env(safe-area-inset-left));
+	padding: 3px max(6px, var(--ds-safe-area-right)) 3px
+		max(6px, var(--ds-safe-area-left));
 	border-bottom: 1px solid var(--ds-border-subtle);
 	backdrop-filter: blur(18px) saturate(1.2);
 	z-index: 4;
@@ -52,8 +52,11 @@
 	white-space: nowrap;
 }
 
-.navigationDrawer :global(.ant-drawer-body) {
-	padding: 8px;
+.navigationDrawerBody {
+	padding: calc(8px + var(--ds-safe-area-top))
+		calc(8px + var(--ds-safe-area-right))
+		calc(8px + var(--ds-safe-area-bottom))
+		calc(8px + var(--ds-safe-area-left)) !important;
 }
 
 .navigationMenu {
@@ -67,6 +70,7 @@
 	margin-block: 2px;
 	line-height: 44px;
 	border-radius: 12px;
+	-webkit-tap-highlight-color: transparent;
 }
 
 .navigationWorkspaceLabel {
@@ -169,8 +173,8 @@
 .connectionAlert {
 	position: absolute;
 	top: 8px;
-	left: max(10px, env(safe-area-inset-left));
-	right: max(10px, env(safe-area-inset-right));
+	left: max(10px, var(--ds-safe-area-left));
+	right: max(10px, var(--ds-safe-area-right));
 	z-index: 8;
 	box-shadow: var(--ds-shadow-lg);
 }
@@ -188,8 +192,8 @@
 .scrollScreen {
 	overflow-y: auto;
 	overscroll-behavior-y: contain;
-	padding: 14px max(14px, env(safe-area-inset-right)) 28px
-		max(14px, env(safe-area-inset-left));
+	padding: 14px max(14px, var(--ds-safe-area-right)) 28px
+		max(14px, var(--ds-safe-area-left));
 	scrollbar-gutter: stable;
 }
 
@@ -384,8 +388,8 @@
 .approvalBanner {
 	justify-content: flex-start !important;
 	min-height: 40px;
-	margin: 3px max(10px, env(safe-area-inset-right)) 0
-		max(10px, env(safe-area-inset-left));
+	margin: 3px max(10px, var(--ds-safe-area-right)) 0
+		max(10px, var(--ds-safe-area-left));
 	border-radius: 12px;
 	background: var(--ds-surface-muted);
 }
@@ -393,8 +397,8 @@
 .composer {
 	display: grid;
 	gap: 6px;
-	margin: 8px max(8px, env(safe-area-inset-right)) 8px
-		max(8px, env(safe-area-inset-left));
+	margin: 8px max(8px, var(--ds-safe-area-right)) 8px
+		max(8px, var(--ds-safe-area-left));
 	padding: 8px;
 	backdrop-filter: blur(16px);
 }
@@ -452,9 +456,9 @@
 .bottomNavigation {
 	display: grid;
 	grid-template-columns: repeat(4, minmax(0, 1fr));
-	min-height: calc(58px + env(safe-area-inset-bottom));
-	padding: 4px max(6px, env(safe-area-inset-right))
-		env(safe-area-inset-bottom) max(6px, env(safe-area-inset-left));
+	min-height: calc(58px + var(--ds-safe-area-bottom));
+	padding: 4px max(6px, var(--ds-safe-area-right))
+		var(--ds-safe-area-bottom) max(6px, var(--ds-safe-area-left));
 	border-top: 1px solid var(--ds-border-subtle);
 	background: color-mix(in srgb, var(--ds-surface) 91%, transparent);
 	backdrop-filter: blur(20px) saturate(1.3);
