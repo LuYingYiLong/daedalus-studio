@@ -84,7 +84,19 @@
 	border-radius: var(--ds-radius-lg);
 	background: var(--ds-surface);
 	box-shadow: var(--ds-box-shadow);
-	transition: border-color 0.15s;
+	transition:
+		border-color 0.15s,
+		padding-bottom 220ms cubic-bezier(0.32, 0.72, 0, 1),
+		margin-bottom 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.composerSurfaceCoversWorkspaceFooter {
+	--composer-workspace-footer-cover-height: 36px;
+	z-index: 1;
+	padding-bottom: calc(
+		42px + var(--composer-workspace-footer-cover-height)
+	);
+	margin-bottom: calc(-1 * var(--composer-workspace-footer-cover-height));
 }
 
 .composerRootCompact .composerSurface {
@@ -95,6 +107,7 @@
 .composerRootFloating .composerSurface {
 	transition:
 		padding-bottom 180ms cubic-bezier(0.2, 0, 0, 1),
+		margin-bottom 180ms cubic-bezier(0.2, 0, 0, 1),
 		border-color 0.15s;
 }
 

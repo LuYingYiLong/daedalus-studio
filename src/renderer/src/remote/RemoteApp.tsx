@@ -103,6 +103,7 @@ import { RemoteRefreshScheduler } from "./remote-refresh-scheduler";
 import {
 	getRemoteDraftStorageKey,
 	normalizeRemoteScreen,
+	resolveRemoteBackAction,
 	type RemotePrimaryScreen,
 } from "./remote-model";
 import styles from "./RemoteApp.module.css";
@@ -663,6 +664,62 @@ function RemoteApp(): React.JSX.Element {
 		}
 		showScreen(screen);
 	}
+
+	const handleRemoteBack = useCallback((): boolean => {
+		const action = resolveRemoteBackAction({
+			navigationOpen,
+			createOpen,
+			fullTrustOpen,
+			planOpen,
+			traceDetailOpen: traceDetail !== null,
+			toolBudgetOpen: workbench?.pendingToolBudget !== null
+				&& workbench?.pendingToolBudget !== undefined,
+			activeScreen,
+		});
+		switch (action) {
+			case "close-navigation":
+				setNavigationOpen(false);
+				return true;
+			case "close-create":
+				setCreateOpen(false);
+				return true;
+			case "close-full-trust":
+				setFullTrustOpen(false);
+				setFullTrustText("");
+				return true;
+			case "close-plan":
+				setPlanOpen(false);
+				return true;
+			case "close-trace-detail":
+				setTraceDetail(null);
+				return true;
+			case "block-tool-budget":
+				return true;
+			case "show-sessions":
+				showScreen("sessions");
+				return true;
+			case "exit":
+				return false;
+		}
+	}, [
+		activeScreen,
+		createOpen,
+		fullTrustOpen,
+		navigationOpen,
+		planOpen,
+		showScreen,
+		traceDetail,
+		workbench?.pendingToolBudget,
+	]);
+
+	useEffect((): (() => void) => {
+		if (typeof window === "undefined") return (): void => {};
+		window.__daedalusRemoteHandleBack = handleRemoteBack;
+		return (): void => {
+			if (window.__daedalusRemoteHandleBack === handleRemoteBack)
+				delete window.__daedalusRemoteHandleBack;
+		};
+	}, [handleRemoteBack]);
 
 	const running: boolean =
 		workbench?.activeRun.status !== undefined &&

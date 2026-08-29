@@ -70,7 +70,9 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 		useState<ClientPreferences>(() => getCachedClientPreferences());
 	const [updateState, setUpdateState] = useState<AppUpdateState | null>(null);
 	const [updateModalOpen, setUpdateModalOpen] = useState<boolean>(false);
-	const [openMenuKey, setOpenMenuKey] = useState<TitlebarMenuKey | null>(null);
+	const [openMenuKey, setOpenMenuKey] = useState<TitlebarMenuKey | null>(
+		null,
+	);
 	const openMenuKeyRef = useRef<TitlebarMenuKey | null>(null);
 	const [changelogVersion, setChangelogVersion] = useState<string | null>(
 		null,
@@ -566,7 +568,6 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 				</div>
 			) : null}
 			<div className={styles.brandCluster}>
-				<p className={styles.brandName}>Daedalus Studio</p>
 				{showUpdateButton ? (
 					<Button
 						type="primary"

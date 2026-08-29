@@ -5,6 +5,7 @@ import {
 	getRecentRemoteSessions,
 	getRemoteDraftStorageKey,
 	normalizeRemoteScreen,
+	resolveRemoteBackAction,
 } from "../../src/renderer/src/remote/remote-model";
 
 const workspaces: WorkspaceConfig[] = [
@@ -23,6 +24,22 @@ describe("remote mobile model", () => {
 		expect(normalizeRemoteScreen("trajectory", false)).toBe("sessions");
 		expect(normalizeRemoteScreen("conversation", true)).toBe("conversation");
 		expect(normalizeRemoteScreen("approvals", false)).toBe("approvals");
+	});
+
+	it("prioritizes closing transient mobile surfaces before leaving the session", () => {
+		const base = {
+			navigationOpen: false,
+			createOpen: false,
+			fullTrustOpen: false,
+			planOpen: false,
+			traceDetailOpen: false,
+			toolBudgetOpen: false,
+			activeScreen: "conversation" as const,
+		};
+		expect(resolveRemoteBackAction({ ...base, navigationOpen: true })).toBe("close-navigation");
+		expect(resolveRemoteBackAction({ ...base, planOpen: true })).toBe("close-plan");
+		expect(resolveRemoteBackAction({ ...base, activeScreen: "conversation" })).toBe("show-sessions");
+		expect(resolveRemoteBackAction({ ...base, activeScreen: "sessions" })).toBe("exit");
 	});
 
 	it("filters by project or session title without changing project membership", () => {

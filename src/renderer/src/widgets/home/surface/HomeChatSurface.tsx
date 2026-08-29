@@ -57,7 +57,10 @@ export type HomeChatSurfaceProps = {
 	selectedLaunchTarget: WorkspaceLaunchTarget;
 	workspaceLaunchTargets: readonly WorkspaceLaunchTarget[];
 	openMessageWebUrl: (url: string) => void;
-	openMessageHtmlFile: (params: { workspaceRoot: string; filePath: string }) => void;
+	openMessageHtmlFile: (params: {
+		workspaceRoot: string;
+		filePath: string;
+	}) => void;
 	conversationTimelinePaneRef: MutableRefObject<ConversationTimelinePaneHandle | null>;
 	timelineStore: TimelinePageStore;
 	timelineNavigationEntries: SessionTimelineNavigationEntry[];
@@ -67,11 +70,15 @@ export type HomeChatSurfaceProps = {
 	activeRetryRequestId: string | null;
 	onLoadMoreBefore: () => void;
 	onLoadMoreAfter: () => void;
-	onTimelineNavigationLoadEntry: (entry: SessionTimelineNavigationEntry) => Promise<void>;
+	onTimelineNavigationLoadEntry: (
+		entry: SessionTimelineNavigationEntry,
+	) => Promise<void>;
 	onTimelineSearchLoadOffset: (blockOffset: number) => Promise<void>;
 	onRetryEditStart: (requestId: string) => void;
 	onRetryEditCancel: (requestId: string) => void;
-	onRetryFromUserMessage: (payload: RetryUserMessagePayload) => Promise<boolean>;
+	onRetryFromUserMessage: (
+		payload: RetryUserMessagePayload,
+	) => Promise<boolean>;
 	onForkFromUserMessage: (requestId: string) => Promise<void>;
 	forkDisabled: boolean;
 	forkingRequestId: string | null;
@@ -92,7 +99,10 @@ export type HomeChatSurfaceProps = {
 	isRejecting: boolean;
 	approvalError: string | null;
 	onApprovalApprove: (approvalId: string, consentText?: string) => void;
-	onApprovalApproveAndEnableAutoSafe: (approvalId: string, consentText?: string) => void;
+	onApprovalApproveAndEnableAutoSafe: (
+		approvalId: string,
+		consentText?: string,
+	) => void;
 	onApprovalReject: (approvalId: string) => void;
 	pendingToolBudget: PendingToolBudget | null;
 	isToolBudgetContinuing: boolean;
@@ -214,493 +224,292 @@ function HomeChatSurface({
 	const { t } = useTranslation();
 
 	return (
-										<section className={styles.chatPanel}>
-											<header
-												className={styles.chatHeader}
-												data-side-dock-open={
-													sideDockOpen
-														? "true"
-														: undefined
-												}
-											>
-												<div
-													className={
-														styles.chatTitleRow
-													}
-												>
-													<Typography.Text
-														className={
-															styles.chatText
-														}
-														ellipsis={{
-															tooltip: chatTitle,
-														}}
-													>
-														{chatTitle}
-													</Typography.Text>
-													{activeSessionMetadata?.forkedFrom !==
-													undefined ? (
-														<Tooltip
-															placement="bottom"
-															title={t(
-																"chat.fork.openSourceTooltip",
-															)}
-														>
-															<Button
-																type="text"
-																size="small"
-																shape="circle"
-																className={
-																	styles.forkOriginButton
-																}
-																aria-label={t(
-																	"chat.fork.openSourceAria",
-																)}
-																icon={
-																	<Icon name="fork" />
-																}
-																disabled={
-																	isSessionLoading
-																}
-																onClick={(): void => {
-																	void onForkSourceOpen(
-																		activeSessionMetadata
-																			.forkedFrom!
-																			.sessionId,
-																	);
-																}}
-															/>
-														</Tooltip>
-													) : null}
-													{activeSessionMetadata?.worktree !==
-													undefined ? (
-														<Space size={4}>
-															<Tooltip
-																title={t(
-																	"agentPage.worktree.source",
-																	{
-																		workspace:
-																			activeSessionMetadata
-																				.worktree
-																				.sourceWorkspaceName,
-																	},
-																)}
-															>
-																<span
-																	className={
-																		styles.worktreeBadge
-																	}
-																>
-																	<Icon name="git-branch" />
-																	{t(
-																		"agentPage.worktree.label",
-																	)}
-																</span>
-															</Tooltip>
-															<Dropdown
-																menu={{
-																	items: [
-																		...((activeSessionMetadata
-																			.worktree
-																			.status ??
-																			"ready") ===
-																		"ready"
-																			? []
-																			: [
-																					{
-																						key: "setup-retry",
-																						label: t(
-																							"agentPage.worktree.setupRetry",
-																						),
-																					},
-																					{
-																						key: "setup-skip",
-																						label: t(
-																							"agentPage.worktree.setupSkip",
-																						),
-																					},
-																					{
-																						type: "divider" as const,
-																					},
-																				]),
-																		{
-																			key: "local",
-																			label: t(
-																				"agentPage.worktree.handoffLocal",
-																			),
-																			disabled:
-																				(activeSessionMetadata
-																					.worktree
-																					.location ??
-																					"worktree") ===
-																				"local",
-																		},
-																		{
-																			key: "worktree",
-																			label: t(
-																				"agentPage.worktree.handoffWorktree",
-																			),
-																			disabled:
-																				(activeSessionMetadata
-																					.worktree
-																					.location ??
-																					"worktree") ===
-																				"worktree",
-																		},
-																	],
-																	onClick: ({
-																		key,
-																	}): void => {
-																		if (
-																			key ===
-																				"setup-retry" ||
-																			key ===
-																				"setup-skip"
-																		) {
-																			void onSessionWorktreeSetup(
-																				key ===
-																					"setup-retry"
-																					? "retry"
-																					: "skip",
-																			);
-																			return;
-																		}
-																		void onSessionWorktreeHandoff(
-																			key as
-																				| "local"
-																				| "worktree",
-																		);
-																	},
-																}}
-															>
-																<Button
-																	type="text"
-																	size="small"
-																	icon={
-																		<Icon name="arrow-forward" />
-																	}
-																	aria-label={t(
-																		"agentPage.worktree.handoff",
-																	)}
-																/>
-															</Dropdown>
-														</Space>
-													) : null}
-												</div>
-											</header>
+		<section className={styles.chatPanel}>
+			<header
+				className={styles.chatHeader}
+				data-side-dock-open={sideDockOpen ? "true" : undefined}
+			>
+				<div className={styles.chatTitleRow}>
+					<Typography.Text
+						className={styles.chatText}
+						ellipsis={{
+							tooltip: chatTitle,
+						}}
+					>
+						{chatTitle}
+					</Typography.Text>
+					{activeSessionMetadata?.forkedFrom !== undefined ? (
+						<Tooltip
+							placement="bottom"
+							title={t("chat.fork.openSourceTooltip")}
+						>
+							<Button
+								type="text"
+								size="small"
+								shape="circle"
+								className={styles.forkOriginButton}
+								aria-label={t("chat.fork.openSourceAria")}
+								icon={<Icon name="fork" />}
+								disabled={isSessionLoading}
+								onClick={(): void => {
+									void onForkSourceOpen(
+										activeSessionMetadata.forkedFrom!
+											.sessionId,
+									);
+								}}
+							/>
+						</Tooltip>
+					) : null}
+					{activeSessionMetadata?.worktree !== undefined ? (
+						<Space size={4}>
+							<Tooltip
+								title={t("agentPage.worktree.source", {
+									workspace:
+										activeSessionMetadata.worktree
+											.sourceWorkspaceName,
+								})}
+							>
+								<span className={styles.worktreeBadge}>
+									<Icon name="git-branch" />
+									{t("agentPage.worktree.label")}
+								</span>
+							</Tooltip>
+							<Dropdown
+								menu={{
+									items: [
+										...((activeSessionMetadata.worktree
+											.status ?? "ready") === "ready"
+											? []
+											: [
+													{
+														key: "setup-retry",
+														label: t(
+															"agentPage.worktree.setupRetry",
+														),
+													},
+													{
+														key: "setup-skip",
+														label: t(
+															"agentPage.worktree.setupSkip",
+														),
+													},
+													{
+														type: "divider" as const,
+													},
+												]),
+										{
+											key: "local",
+											label: t(
+												"agentPage.worktree.handoffLocal",
+											),
+											disabled:
+												(activeSessionMetadata.worktree
+													.location ?? "worktree") ===
+												"local",
+										},
+										{
+											key: "worktree",
+											label: t(
+												"agentPage.worktree.handoffWorktree",
+											),
+											disabled:
+												(activeSessionMetadata.worktree
+													.location ?? "worktree") ===
+												"worktree",
+										},
+									],
+									onClick: ({ key }): void => {
+										if (
+											key === "setup-retry" ||
+											key === "setup-skip"
+										) {
+											void onSessionWorktreeSetup(
+												key === "setup-retry"
+													? "retry"
+													: "skip",
+											);
+											return;
+										}
+										void onSessionWorktreeHandoff(
+											key as "local" | "worktree",
+										);
+									},
+								}}
+							>
+								<Button
+									type="text"
+									size="small"
+									icon={<Icon name="arrow-forward" />}
+									aria-label={t("agentPage.worktree.handoff")}
+								/>
+							</Dropdown>
+						</Space>
+					) : null}
+				</div>
+			</header>
 
-											<Divider size="small" />
+			<Divider size="small" />
 
-											<div
-												ref={chatBodyRef}
-												className={styles.chatBody}
-											>
-												{isHome ? (
-													<NewSessionHome
-														workspace={
-															homeWorkspace
-														}
-														errorMessage={
-															sessionError
-														}
-														message={message}
-														showStarters={
-															chatSurfaceSettled
-														}
-														onStarterSelect={
-															handleHomeStarterSelect
-														}
-													/>
-												) : activeSessionId !== null ? (
-													<MarkdownResourceActionsProvider
-														value={{
-															workspaceRoots:
-																workspaceForActions ===
-																null
-																	? []
-																	: [
-																			workspaceForActions.rootPath,
-																			...workspaceForActions.sourceFolders.map(
-																				(
-																					sourceFolder,
-																				): string =>
-																					sourceFolder.path,
-																			),
-																		],
-															godotExecutablePath:
-																effectiveGodotLaunchExecutablePath,
-															currentWorkspaceLaunch:
-																workspaceForActions ===
-																null
-																	? null
-																	: selectedLaunchTarget,
-															launchTargets:
-																workspaceLaunchTargets,
-															openWebUrl:
-																openMessageWebUrl,
-															openHtmlFile:
-																openMessageHtmlFile,
-														}}
-													>
-														<ConversationTimelinePane
-															ref={
-																conversationTimelinePaneRef
-															}
-															sessionId={
-																activeSessionId
-															}
-															timelineStore={
-																timelineStore
-															}
-															timelineNavigationEntries={
-																timelineNavigationEntries
-															}
-															isLoading={
-																isSessionLoading
-															}
-															errorMessage={
-																sessionError
-															}
-															isLoadingMoreBefore={
-																isLoadingMoreBefore
-															}
-															isLoadingMoreAfter={
-																isLoadingMoreAfter
-															}
-															retryDisabled={
-																retryDisabled
-															}
-															activeRetryRequestId={
-																activeRetryRequestId
-															}
-															onLoadMoreBefore={
-																onLoadMoreBefore
-															}
-															onLoadMoreAfter={
-																onLoadMoreAfter
-															}
-															onTimelineNavigationLoadEntry={
-																onTimelineNavigationLoadEntry
-															}
-															onTimelineSearchLoadOffset={
-																onTimelineSearchLoadOffset
-															}
-															onRetryEditStart={
-																onRetryEditStart
-															}
-															onRetryEditCancel={
-																onRetryEditCancel
-															}
-															onRetryFromUserMessage={
-																onRetryFromUserMessage
-															}
-															onForkFromUserMessage={
-																onForkFromUserMessage
-															}
-															onOpenForkSource={
-																onForkSourceOpen
-															}
-															forkDisabled={
-																forkDisabled
-															}
-															forkingRequestId={
-																forkingRequestId
-															}
-															onInlineDiffReview={
-																openReviewPanel
-															}
-															onAwayFromBottomChange={
-																setScrollToBottomButtonVisible
-															}
-															contextItems={
-																selectionMarkerContextItems
-															}
-															onAddContext={
-																onAddContext
-															}
-															initialSelectionAskThreads={
-																selectionAskThreads
-															}
-															goal={currentGoal}
-														/>
-													</MarkdownResourceActionsProvider>
-												) : null}
-											</div>
+			<div ref={chatBodyRef} className={styles.chatBody}>
+				{isHome ? (
+					<NewSessionHome
+						workspace={homeWorkspace}
+						errorMessage={sessionError}
+						message={message}
+						showStarters={chatSurfaceSettled}
+						onStarterSelect={handleHomeStarterSelect}
+					/>
+				) : activeSessionId !== null ? (
+					<MarkdownResourceActionsProvider
+						value={{
+							workspaceRoots:
+								workspaceForActions === null
+									? []
+									: [
+											workspaceForActions.rootPath,
+											...workspaceForActions.sourceFolders.map(
+												(sourceFolder): string =>
+													sourceFolder.path,
+											),
+										],
+							godotExecutablePath:
+								effectiveGodotLaunchExecutablePath,
+							currentWorkspaceLaunch:
+								workspaceForActions === null
+									? null
+									: selectedLaunchTarget,
+							launchTargets: workspaceLaunchTargets,
+							openWebUrl: openMessageWebUrl,
+							openHtmlFile: openMessageHtmlFile,
+						}}
+					>
+						<ConversationTimelinePane
+							ref={conversationTimelinePaneRef}
+							sessionId={activeSessionId}
+							timelineStore={timelineStore}
+							timelineNavigationEntries={
+								timelineNavigationEntries
+							}
+							isLoading={isSessionLoading}
+							errorMessage={sessionError}
+							isLoadingMoreBefore={isLoadingMoreBefore}
+							isLoadingMoreAfter={isLoadingMoreAfter}
+							retryDisabled={retryDisabled}
+							activeRetryRequestId={activeRetryRequestId}
+							onLoadMoreBefore={onLoadMoreBefore}
+							onLoadMoreAfter={onLoadMoreAfter}
+							onTimelineNavigationLoadEntry={
+								onTimelineNavigationLoadEntry
+							}
+							onTimelineSearchLoadOffset={
+								onTimelineSearchLoadOffset
+							}
+							onRetryEditStart={onRetryEditStart}
+							onRetryEditCancel={onRetryEditCancel}
+							onRetryFromUserMessage={onRetryFromUserMessage}
+							onForkFromUserMessage={onForkFromUserMessage}
+							onOpenForkSource={onForkSourceOpen}
+							forkDisabled={forkDisabled}
+							forkingRequestId={forkingRequestId}
+							onInlineDiffReview={openReviewPanel}
+							onAwayFromBottomChange={
+								setScrollToBottomButtonVisible
+							}
+							contextItems={selectionMarkerContextItems}
+							onAddContext={onAddContext}
+							initialSelectionAskThreads={selectionAskThreads}
+							goal={currentGoal}
+						/>
+					</MarkdownResourceActionsProvider>
+				) : null}
+			</div>
 
-											<footer className={styles.composer}>
-												{!isHome ? (
-													<Button
-														ref={
-															scrollToBottomButtonRef
-														}
-														shape="circle"
-														title={t(
-															"agentPage.actions.scrollToBottom",
-														)}
-														icon={
-															<Icon name="arrow-bottom" />
-														}
-														tabIndex={-1}
-														className={[
-															styles.scrollToBottomButton,
-															showExecutionStatusPanel
-																? styles.scrollToBottomButtonAboveExecutionStatus
-																: "",
-															styles.scrollToBottomButtonHidden,
-														]
-															.filter(Boolean)
-															.join(" ")}
-														onClick={
-															scrollMessageListToBottom
-														}
-													/>
-												) : null}
-												{!isHome &&
-												pendingApproval !== null ? (
-													<ApprovalDialog
-														pendingApproval={
-															pendingApproval
-														}
-														isApproving={
-															isApproving
-														}
-														isApprovalAutoSafeEnabling={
-															isApprovalAutoSafeEnabling
-														}
-														isRejecting={
-															isRejecting
-														}
-														errorMessage={
-															approvalError
-														}
-														onApprove={
-															onApprovalApprove
-														}
-														onApproveAndEnableAutoSafe={
-															onApprovalApproveAndEnableAutoSafe
-														}
-														onReject={
-															onApprovalReject
-														}
-													/>
-												) : !isHome &&
-												  pendingToolBudget !== null ? (
-													<ToolBudgetDialog
-														pendingToolBudget={
-															pendingToolBudget
-														}
-														isContinuing={
-															isToolBudgetContinuing
-														}
-														isStopping={
-															isToolBudgetStopping
-														}
-														isCancelling={
-															isCancelling
-														}
-														errorMessage={
-															toolBudgetError
-														}
-														onContinue={
-															onToolBudgetContinue
-														}
-														onStop={
-															onToolBudgetStop
-														}
-														onCancel={onCancel}
-													/>
-												) : !isHome &&
-												  pendingPlanClarification !==
-														null ? (
-													<ClarificationDialog
-														planId={
-															pendingPlanClarification.planId
-														}
-														title={
-															pendingPlanClarification.title
-														}
-														question={
-															pendingPlanClarification.question
-														}
-														recommendedReplies={
-															pendingPlanClarification.recommendedReplies
-														}
-														isSubmitting={
-															isPlanClarificationSubmitting
-														}
-														errorMessage={
-															planClarificationError
-														}
-														onSubmit={
-															onPlanClarificationSubmit
-														}
-														onSkip={
-															onPlanClarificationSkip
-														}
-													/>
-												) : !isHome &&
-												  pendingPlanApproval !==
-														null ? (
-													<PlanApprovalDialog
-														plan={
-															pendingPlanApproval
-														}
-														isApproving={
-															isPlanApproving
-														}
-														isRevising={
-															isPlanRevising
-														}
-														errorMessage={
-															planApprovalError
-														}
-														onApprove={
-															onPlanApprove
-														}
-														onRevise={onPlanRevise}
-													/>
-												) : (
-													<>
-																{showExecutionStatusPanel
-																	? executionStatusPanel
-																	: null}
-														{!isHome ? (
-															<MessageQueuePanel
-																messageQueue={
-																	messageQueue
-																}
-																pendingGuides={
-																	pendingGuides
-																}
-																activeQueueItemId={
-																	activeQueueItemId
-																}
-																onQueueRemove={
-																	onQueueMessageRemove
-																}
-																onQueueEdit={
-																	onQueueMessageEdit
-																}
-																onQueueReorder={
-																	onQueueMessageReorder
-																}
-																onGuideDelete={
-																	onGuideDelete
-																}
-																onGuideReorder={
-																	onGuideReorder
-																}
-															/>
-														) : null}
-														{isDockFullscreen
-															? null
-															: renderComposer(
-																	false,
-																)}
-													</>
-												)}
-											</footer>
-										</section>
+			<footer className={styles.composer}>
+				{!isHome ? (
+					<Button
+						ref={scrollToBottomButtonRef}
+						shape="circle"
+						title={t("agentPage.actions.scrollToBottom")}
+						icon={<Icon name="arrow-bottom" />}
+						tabIndex={-1}
+						className={[
+							styles.scrollToBottomButton,
+							showExecutionStatusPanel
+								? styles.scrollToBottomButtonAboveExecutionStatus
+								: "",
+							styles.scrollToBottomButtonHidden,
+						]
+							.filter(Boolean)
+							.join(" ")}
+						onClick={scrollMessageListToBottom}
+					/>
+				) : null}
+				{!isHome && pendingApproval !== null ? (
+					<ApprovalDialog
+						pendingApproval={pendingApproval}
+						isApproving={isApproving}
+						isApprovalAutoSafeEnabling={isApprovalAutoSafeEnabling}
+						isRejecting={isRejecting}
+						errorMessage={approvalError}
+						onApprove={onApprovalApprove}
+						onApproveAndEnableAutoSafe={
+							onApprovalApproveAndEnableAutoSafe
+						}
+						onReject={onApprovalReject}
+					/>
+				) : !isHome && pendingToolBudget !== null ? (
+					<ToolBudgetDialog
+						pendingToolBudget={pendingToolBudget}
+						isContinuing={isToolBudgetContinuing}
+						isStopping={isToolBudgetStopping}
+						isCancelling={isCancelling}
+						errorMessage={toolBudgetError}
+						onContinue={onToolBudgetContinue}
+						onStop={onToolBudgetStop}
+						onCancel={onCancel}
+					/>
+				) : !isHome && pendingPlanClarification !== null ? (
+					<ClarificationDialog
+						planId={pendingPlanClarification.planId}
+						title={pendingPlanClarification.title}
+						question={pendingPlanClarification.question}
+						recommendedReplies={
+							pendingPlanClarification.recommendedReplies
+						}
+						isSubmitting={isPlanClarificationSubmitting}
+						errorMessage={planClarificationError}
+						onSubmit={onPlanClarificationSubmit}
+						onSkip={onPlanClarificationSkip}
+					/>
+				) : !isHome && pendingPlanApproval !== null ? (
+					<PlanApprovalDialog
+						plan={pendingPlanApproval}
+						isApproving={isPlanApproving}
+						isRevising={isPlanRevising}
+						errorMessage={planApprovalError}
+						onApprove={onPlanApprove}
+						onRevise={onPlanRevise}
+					/>
+				) : (
+					<>
+						{showExecutionStatusPanel ? executionStatusPanel : null}
+						{!isHome ? (
+							<MessageQueuePanel
+								messageQueue={messageQueue}
+								pendingGuides={pendingGuides}
+								activeQueueItemId={activeQueueItemId}
+								onQueueRemove={onQueueMessageRemove}
+								onQueueEdit={onQueueMessageEdit}
+								onQueueReorder={onQueueMessageReorder}
+								onGuideDelete={onGuideDelete}
+								onGuideReorder={onGuideReorder}
+							/>
+						) : null}
+						{isDockFullscreen ? null : renderComposer(false)}
+					</>
+				)}
+			</footer>
+		</section>
 	);
 }
 

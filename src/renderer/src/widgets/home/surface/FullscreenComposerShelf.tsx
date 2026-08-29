@@ -25,6 +25,7 @@ function FullscreenComposerShelf({
 		>
 			<div
 				className={styles.drawer}
+				data-drawer-open={isOpen ? "true" : "false"}
 			>
 				<Tooltip
 					title={t("composer.floating.close")}
@@ -33,11 +34,13 @@ function FullscreenComposerShelf({
 					<Button
 						className={styles.closeButton}
 						aria-label={t("composer.floating.close")}
-					icon={<Icon name="arrow-down" />}
+						icon={<Icon name="arrow-down" />}
 						onClick={(): void => setIsOpen(false)}
 					/>
 				</Tooltip>
-				{children}
+				<div className={styles.footer} aria-hidden={!isOpen}>
+					{children}
+				</div>
 			</div>
 			<Tooltip title={t("composer.floating.open")} mouseEnterDelay={0.5}>
 				<Button

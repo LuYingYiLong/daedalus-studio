@@ -47,18 +47,10 @@
 	-webkit-app-region: no-drag;
 }
 
-.brandName {
-	margin: 0;
-	font-size: 16px;
-	line-height: 36px;
-	white-space: nowrap;
-	-webkit-app-region: drag;
-}
-
 .updateButton {
 	position: absolute;
 	top: 50%;
-	left: calc(100% + 8px);
+	left: 100%;
 	z-index: 1;
 	height: 24px;
 	line-height: 22px;

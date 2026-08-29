@@ -2,10 +2,49 @@ import type { SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
 
 export type RemotePrimaryScreen = "sessions" | "conversation" | "approvals" | "trajectory";
 
+export type RemoteBackAction =
+	| "close-navigation"
+	| "close-create"
+	| "close-full-trust"
+	| "close-plan"
+	| "close-trace-detail"
+	| "block-tool-budget"
+	| "show-sessions"
+	| "exit";
+
+export type RemoteBackNavigationState = {
+	navigationOpen: boolean;
+	createOpen: boolean;
+	fullTrustOpen: boolean;
+	planOpen: boolean;
+	traceDetailOpen: boolean;
+	toolBudgetOpen: boolean;
+	activeScreen: RemotePrimaryScreen;
+};
+
+export type RemoteBackHandler = () => boolean;
+
+declare global {
+	interface Window {
+		__daedalusRemoteHandleBack?: RemoteBackHandler;
+	}
+}
+
 export type RemoteSessionGroup = {
 	workspace: WorkspaceConfig;
 	sessions: SessionMetadata[];
 };
+
+export function resolveRemoteBackAction(state: RemoteBackNavigationState): RemoteBackAction {
+	if (state.navigationOpen) return "close-navigation";
+	if (state.createOpen) return "close-create";
+	if (state.fullTrustOpen) return "close-full-trust";
+	if (state.planOpen) return "close-plan";
+	if (state.traceDetailOpen) return "close-trace-detail";
+	if (state.toolBudgetOpen) return "block-tool-budget";
+	if (state.activeScreen !== "sessions") return "show-sessions";
+	return "exit";
+}
 
 export function normalizeRemoteScreen(screen: RemotePrimaryScreen, hasActiveSession: boolean): RemotePrimaryScreen {
 	if (hasActiveSession || screen === "sessions" || screen === "approvals") return screen;

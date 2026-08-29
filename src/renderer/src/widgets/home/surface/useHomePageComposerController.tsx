@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Composer, {
 	type ComposerProps,
 } from "@/widgets/composer/Composer";
@@ -68,10 +68,34 @@ export type HomePageComposerController = {
 	renderComposer: (compact: boolean) => React.JSX.Element;
 };
 
+const COMPOSER_FOOTER_COVER_TRANSITION_MS = 220;
+
 export default function useHomePageComposerController({
 	state,
 	actions,
 }: HomePageComposerControllerParams): HomePageComposerController {
+	const [keepWorkspaceFooter, setKeepWorkspaceFooter] = useState(
+		state.isHome,
+	);
+
+	useEffect((): (() => void) | void => {
+		if (state.isHome) {
+			setKeepWorkspaceFooter(true);
+			return;
+		}
+		if (!keepWorkspaceFooter) {
+			return;
+		}
+
+		const timeoutId: number = window.setTimeout((): void => {
+			setKeepWorkspaceFooter(false);
+		}, COMPOSER_FOOTER_COVER_TRANSITION_MS);
+		return (): void => {
+			window.clearTimeout(timeoutId);
+		};
+	}, [keepWorkspaceFooter, state.isHome]);
+
+	const showWorkspaceFooter: boolean = state.isHome || keepWorkspaceFooter;
 	const composerProps: ComposerProps = useMemo<ComposerProps>(() => {
 		return {
 			providerModelSelection: state.providerModelSelection,
@@ -92,21 +116,21 @@ export default function useHomePageComposerController({
 			isAddingTextAttachment: state.isAddingTextAttachment,
 			isApprovalModeSaving: state.isApprovalModeSaving,
 			workspaceOptions: state.workspaceOptions,
-			selectedWorkspace: state.isHome
+			selectedWorkspace: showWorkspaceFooter
 				? state.homeWorkspace
 				: state.activeWorkspace,
 			workspaceFooterDisabled: state.workspaceFooterDisabled,
-			worktreeMode: state.isHome
+			worktreeMode: showWorkspaceFooter
 				? state.homeExecutionEnvironment
 				: undefined,
-			worktreeSourceOptions: state.isHome
+			worktreeSourceOptions: showWorkspaceFooter
 				? state.homeWorktreeSources
 				: undefined,
-			worktreeDisabledReason: state.isHome
+			worktreeDisabledReason: showWorkspaceFooter
 				? state.worktreeDisabledReason
 				: null,
 			isWorktreePreparing: state.isWorktreePreparing,
-			showContextUsage: !state.isHome,
+			showContextUsage: !state.isHome && !keepWorkspaceFooter,
 			onModeChange: actions.onModeChange,
 			onApprovalModeChange: actions.onApprovalModeChange,
 			onProviderModelChange: actions.onProviderModelChange,
@@ -119,19 +143,19 @@ export default function useHomePageComposerController({
 			onAddImages: actions.onAddImages,
 			onAddPastedTextAttachment: actions.onAddPastedTextAttachment,
 			onAddContextFiles: actions.onAddContextFiles,
-			onWorkspaceSelect: state.isHome
+			onWorkspaceSelect: showWorkspaceFooter
 				? actions.onHomeWorkspaceSelect
 				: undefined,
-			onWorkspaceAdd: state.isHome
+			onWorkspaceAdd: showWorkspaceFooter
 				? actions.onHomeWorkspaceAdd
 				: undefined,
-			onWorkspaceClear: state.isHome
+			onWorkspaceClear: showWorkspaceFooter
 				? actions.onHomeWorkspaceClear
 				: undefined,
-			onWorktreeModeChange: state.isHome
+			onWorktreeModeChange: showWorkspaceFooter
 				? actions.onHomeWorktreeModeChange
 				: undefined,
-			onWorktreeSourceOptionsChange: state.isHome
+			onWorktreeSourceOptionsChange: showWorkspaceFooter
 				? actions.onHomeWorktreeSourceOptionsChange
 				: undefined,
 			onRemoveContext: actions.onRemoveContext,
@@ -142,14 +166,17 @@ export default function useHomePageComposerController({
 			onGuideSubmit: actions.onGuideSubmit,
 			onCompletionOpen: actions.onCompletionOpen,
 		};
-	}, [actions, state]);
+	}, [actions, keepWorkspaceFooter, showWorkspaceFooter, state]);
 
 	const renderComposer = useCallback(
 		(compact: boolean): React.JSX.Element => {
 			return (
 				<Composer
-					key={state.composerInstanceKey}
+					key={compact ? state.composerInstanceKey : "home-page-composer"}
 					{...composerProps}
+					resetKey={state.composerInstanceKey}
+					preserveWorkspaceFooter={!compact}
+					coverWorkspaceFooter={!compact && !state.isHome}
 					compact={compact}
 					floating={compact}
 				/>

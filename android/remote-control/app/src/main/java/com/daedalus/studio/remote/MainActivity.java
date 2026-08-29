@@ -53,6 +53,9 @@ public final class MainActivity extends Activity {
 	private static final String LOCAL_AUTHORITY = "appassets.androidplatform.net";
 	private static final String LOCAL_ORIGIN = "https://" + LOCAL_AUTHORITY;
 	private static final String LOCAL_CONNECT_URL = LOCAL_ORIGIN + "/__app__/connect.html";
+	private static final String REMOTE_BACK_HANDLER_SCRIPT =
+		"(function(){try{return typeof window.__daedalusRemoteHandleBack === 'function' "
+			+ "&& window.__daedalusRemoteHandleBack() === true;}catch(error){return false;}})();";
 	private static final String REMOTE_COOKIE_NAME = "__Host-daedalus_remote";
 	private static final int MAX_BRIDGE_MESSAGE_BYTES = 16 * 1024;
 	private static final int SCAN_REQUEST = 312;
@@ -526,7 +529,9 @@ public final class MainActivity extends Activity {
 
 	private void handleBack() {
 		if (!LOCAL_ORIGIN.equals(currentBridgeOrigin)) {
-			showConnections(false);
+			webView.evaluateJavascript(REMOTE_BACK_HANDLER_SCRIPT, result -> {
+				if (!"true".equals(result)) showConnections(false);
+			});
 			return;
 		}
 		if (webView.canGoBack()) webView.goBack();

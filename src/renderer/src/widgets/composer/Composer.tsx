@@ -94,6 +94,7 @@ export type ComposerProps = {
 	selectedModelId: string | null;
 	reasoningEffort?: string | null;
 	message: string;
+	resetKey?: string;
 	nextStepSuggestion?: string | null;
 	inputRequest?: ComposerInputRequest;
 	onDraftChange?: (message: string) => void;
@@ -115,6 +116,8 @@ export type ComposerProps = {
 	allowedModes?: readonly ChatMode[];
 	allowQueue?: boolean;
 	layout?: "standard" | "mobile";
+	preserveWorkspaceFooter?: boolean;
+	coverWorkspaceFooter?: boolean;
 	worktreeMode?: "local" | "worktree";
 	worktreeDisabledReason?: string | null;
 	isWorktreePreparing?: boolean;
@@ -226,6 +229,7 @@ function Composer({
 	selectedModelId,
 	reasoningEffort,
 	message,
+	resetKey,
 	nextStepSuggestion,
 	inputRequest,
 	contextItems: composerContextItems = EMPTY_CONTEXT_ITEMS,
@@ -250,6 +254,8 @@ function Composer({
 	allowedModes,
 	allowQueue = true,
 	layout = "standard",
+	preserveWorkspaceFooter = false,
+	coverWorkspaceFooter = false,
 	onModeChange,
 	onApprovalModeChange,
 	onProviderModelChange,
@@ -600,6 +606,8 @@ function Composer({
 		onWorkspaceAdd !== undefined ||
 		onWorkspaceClear !== undefined ||
 		worktreeMode !== undefined;
+	const shouldRenderWorkspaceFooter: boolean =
+		showWorkspaceFooter || preserveWorkspaceFooter;
 	const approvalModeLabel: string =
 		approvalMode === "full-trust"
 			? t("composer.approvalMode.fullTrust")
@@ -689,7 +697,7 @@ function Composer({
 		setDraftMessage(message);
 		suppressedCompletionValueRef.current = null;
 		hideCompletion();
-	}, [message]);
+	}, [message, resetKey]);
 
 	useEffect((): (() => void) | void => {
 		if (
@@ -1442,7 +1450,17 @@ function Composer({
 				onChange={handleImageInputChange}
 			/>
 			<div className={styles.composerInputWrap}>
-				<div className={styles.composerSurface}>
+				<div
+					className={[
+						styles.composerSurface,
+						coverWorkspaceFooter
+							? styles.composerSurfaceCoversWorkspaceFooter
+							: "",
+					]
+						.filter(Boolean)
+						.join(" ")}
+					data-studio-composer-surface="true"
+				>
 					{hasCompletion ? (
 						<div
 							className={styles.completionPanel}
@@ -1737,9 +1755,10 @@ function Composer({
 				</div>
 			</div>
 
-			{showWorkspaceFooter ? (
+			{shouldRenderWorkspaceFooter ? (
 				<footer className={styles.footer}>
-					<Flex
+					{showWorkspaceFooter ? (
+						<Flex
 						align="start"
 						justify="space-between"
 						gap={8}
@@ -1870,7 +1889,8 @@ function Composer({
 								</span>
 							</Popover>
 						) : null}
-					</Flex>
+						</Flex>
+					) : null}
 				</footer>
 			) : null}
 		</div>
