@@ -3,6 +3,7 @@
 	padding: max(32px, var(--ds-safe-area-top)) 16px
 		max(24px, var(--ds-safe-area-bottom));
 	background: var(--ant-color-bg-layout);
+	user-select: none;
 }
 
 .shell :global(button),

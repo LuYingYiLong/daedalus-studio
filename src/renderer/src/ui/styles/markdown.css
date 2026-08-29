@@ -151,7 +151,7 @@
 	border-collapse: separate;
 	border-spacing: 0;
 	border: 1px solid var(--ds-border);
-	border-radius: var(--ds-radius-sm);
+	border-radius: var(--ds-radius-lg);
 	overflow: hidden;
 }
 

@@ -129,7 +129,6 @@ function RemoteSessionHome({
 					type="primary"
 					size="large"
 					block
-					className={styles.newSessionAction}
 					icon={<Icon name="add" />}
 					disabled={workspaces.length === 0}
 					onClick={onCreate}

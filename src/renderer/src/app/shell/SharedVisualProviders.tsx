@@ -3,7 +3,11 @@ import { App as AntdApp, ConfigProvider, type ThemeConfig } from "antd";
 import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
 import i18n, { type ResolvedLanguage } from "@/platform/i18n";
-import { createStudioTheme, type ResolvedTheme } from "@/ui/styles/studio-theme";
+import {
+	createStudioTheme,
+	type ResolvedTheme,
+	type StudioThemeVariant,
+} from "@/ui/styles/studio-theme";
 import { applyStudioAccentVariables } from "../../../../contracts/theme-color";
 import { applyStudioFontVariables } from "../../../../contracts/studio-fonts";
 import { Icon } from "@/assets/icons";
@@ -18,6 +22,7 @@ export type SharedVisualProvidersProps = {
 	uiFontSize: number;
 	codeFontSize: number;
 	animationsEnabled: boolean;
+	themeVariant?: StudioThemeVariant;
 	className?: string;
 };
 
@@ -31,6 +36,7 @@ function SharedVisualProviders({
 	uiFontSize,
 	codeFontSize,
 	animationsEnabled,
+	themeVariant = "desktop",
 	className,
 }: SharedVisualProvidersProps): React.JSX.Element {
 	const studioTheme: ThemeConfig = useMemo((): ThemeConfig => createStudioTheme(
@@ -39,7 +45,8 @@ function SharedVisualProviders({
 		fontFamily,
 		fontFamilyCode,
 		uiFontSize,
-	), [fontFamily, fontFamilyCode, resolvedTheme, themeColor, uiFontSize]);
+		themeVariant,
+	), [fontFamily, fontFamilyCode, resolvedTheme, themeColor, themeVariant, uiFontSize]);
 	const antdLocale = resolvedLanguage === "zh-CN" ? zhCN : enUS;
 
 	useEffect((): void => {

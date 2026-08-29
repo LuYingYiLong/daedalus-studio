@@ -1,6 +1,7 @@
 .divider {
 	margin: 12px 0;
 	color: var(--ant-color-text-tertiary);
+	user-select: none;
 }
 
 .content {

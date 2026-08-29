@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+	<path id="矢量 204" d="M4 9L4 6C4 4.89543 4.89543 4 6 4L9 4" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path id="矢量 206" d="M0 5L0 2C0 0.89543 0.89543 0 2 0L5 0" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" transform="matrix(-1,0,0,1,20,4)" />
+	<path id="矢量 207" d="M0 5L0 2C0 0.89543 0.89543 0 2 0L5 0" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" transform="matrix(-0,-1,-1,0,20,20)" />
+	<path id="矢量 208" d="M0 5L0 2C0 0.89543 0.89543 0 2 0L5 0" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" transform="matrix(0,-1,1,0,4,20)" />
+	<path id="矢量 205" d="M6 12L18 12" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+</svg>

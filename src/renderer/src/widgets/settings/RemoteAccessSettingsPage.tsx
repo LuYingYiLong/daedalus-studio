@@ -289,7 +289,7 @@ function RemoteAccessSettingsPage(): React.JSX.Element {
 					>
 						<Button
 							type="primary"
-							icon={<Icon name="remote" />}
+							icon={<Icon name="qrcode" />}
 							disabled={state?.status !== "running"}
 							loading={busy}
 							onClick={(): void => {

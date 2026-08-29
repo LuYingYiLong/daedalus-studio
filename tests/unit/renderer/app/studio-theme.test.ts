@@ -14,6 +14,14 @@ describe("Studio theme color", () => {
 		expect(theme.token?.colorPrimaryActive).not.toBe("#c05a91");
 	});
 
+	it("uses the mobile geometry variant without changing the desktop default", () => {
+		const desktopTheme = createStudioTheme("light");
+		const mobileTheme = createStudioTheme("light", undefined, undefined, undefined, undefined, "mobile");
+
+		expect(desktopTheme.token?.borderRadiusLG).toBe(8);
+		expect(mobileTheme.token?.borderRadiusLG).toBe(64);
+	});
+
 	it("derives custom CSS accent colors and readable contrast text", () => {
 		const darkAccent = createStudioAccentPalette("dark", "#ffffff");
 		const lightAccent = createStudioAccentPalette("light", "invalid");

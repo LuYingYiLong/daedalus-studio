@@ -36,6 +36,7 @@ function RemoteProviders({ children }: { children: React.ReactNode }): React.JSX
 			uiFontSize={Math.max(15, DEFAULT_STUDIO_UI_FONT_SIZE)}
 			codeFontSize={DEFAULT_STUDIO_CODE_FONT_SIZE}
 			animationsEnabled={true}
+			themeVariant="mobile"
 			className={styles.root}
 		>
 			{children}

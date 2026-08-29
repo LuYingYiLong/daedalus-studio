@@ -3,7 +3,7 @@ import {
 	createStudioAccentPalette,
 	DEFAULT_STUDIO_THEME_COLOR,
 	type ResolvedStudioTheme,
-	type StudioAccentPalette
+	type StudioAccentPalette,
 } from "../../../../contracts/theme-color";
 import {
 	DEFAULT_STUDIO_FONT_FAMILY,
@@ -13,14 +13,18 @@ import {
 	MIN_STUDIO_UI_FONT_SIZE,
 	applyStudioFontVariables,
 	normalizeStudioFontFamily,
-	normalizeStudioFontSize
+	normalizeStudioFontSize,
 } from "../../../../contracts/studio-fonts";
 
-export { createStudioAccentPalette, DEFAULT_STUDIO_THEME_COLOR } from "../../../../contracts/theme-color";
+export {
+	createStudioAccentPalette,
+	DEFAULT_STUDIO_THEME_COLOR,
+} from "../../../../contracts/theme-color";
 export type { StudioAccentPalette } from "../../../../contracts/theme-color";
 
 export type ResolvedTheme = ResolvedStudioTheme;
 export type ThemePreference = ResolvedTheme | "system";
+export type StudioThemeVariant = "desktop" | "mobile";
 
 type StudioThemeColors = {
 	bg: string;
@@ -42,7 +46,7 @@ const studioThemeColors: Record<ResolvedTheme, StudioThemeColors> = {
 		border: "#3b3b3b",
 		textPrimary: "#e8e8e8",
 		textSecondary: "#b8b8b8",
-		textMuted: "#8c8c8c"
+		textMuted: "#8c8c8c",
 	},
 	light: {
 		bg: "#f5f5f5",
@@ -52,18 +56,21 @@ const studioThemeColors: Record<ResolvedTheme, StudioThemeColors> = {
 		border: "#d6d6d6",
 		textPrimary: "#141414",
 		textSecondary: "#4f4f4f",
-		textMuted: "#737373"
-	}
+		textMuted: "#737373",
+	},
 };
 
 export {
 	DEFAULT_STUDIO_FONT_FAMILY,
 	DEFAULT_STUDIO_FONT_FAMILY_CODE,
 	DEFAULT_STUDIO_UI_FONT_SIZE,
-	applyStudioFontVariables
+	applyStudioFontVariables,
 } from "../../../../contracts/studio-fonts";
 
-export function resolveThemePreference(themePreference: ThemePreference, systemTheme: ResolvedTheme): ResolvedTheme {
+export function resolveThemePreference(
+	themePreference: ThemePreference,
+	systemTheme: ResolvedTheme,
+): ResolvedTheme {
 	return themePreference === "system" ? systemTheme : themePreference;
 }
 
@@ -72,26 +79,40 @@ export function createStudioTheme(
 	themeColor: string = DEFAULT_STUDIO_THEME_COLOR,
 	fontFamily?: string,
 	fontFamilyCode?: string,
-	uiFontSize?: number
+	uiFontSize?: number,
+	variant: StudioThemeVariant = "desktop",
 ): ThemeConfig {
+	const isMobile: boolean = variant === "mobile";
 	const dsColors: StudioThemeColors = studioThemeColors[resolvedTheme];
-	const accent: StudioAccentPalette = createStudioAccentPalette(resolvedTheme, themeColor);
-	const resolvedFontFamily: string = normalizeStudioFontFamily(fontFamily, DEFAULT_STUDIO_FONT_FAMILY);
-	const resolvedFontFamilyCode: string = normalizeStudioFontFamily(fontFamilyCode, DEFAULT_STUDIO_FONT_FAMILY_CODE);
+	const accent: StudioAccentPalette = createStudioAccentPalette(
+		resolvedTheme,
+		themeColor,
+	);
+	const resolvedFontFamily: string = normalizeStudioFontFamily(
+		fontFamily,
+		DEFAULT_STUDIO_FONT_FAMILY,
+	);
+	const resolvedFontFamilyCode: string = normalizeStudioFontFamily(
+		fontFamilyCode,
+		DEFAULT_STUDIO_FONT_FAMILY_CODE,
+	);
 	const resolvedUiFontSize: number = normalizeStudioFontSize(
 		uiFontSize,
 		DEFAULT_STUDIO_UI_FONT_SIZE,
 		MIN_STUDIO_UI_FONT_SIZE,
-		MAX_STUDIO_UI_FONT_SIZE
+		MAX_STUDIO_UI_FONT_SIZE,
 	);
 
 	return {
-		algorithm: resolvedTheme === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+		algorithm:
+			resolvedTheme === "dark"
+				? antdTheme.darkAlgorithm
+				: antdTheme.defaultAlgorithm,
 		token: {
 			borderRadiusXS: 4,
 			borderRadiusSM: 6,
 			borderRadius: 6,
-			borderRadiusLG: 8,
+			borderRadiusLG: isMobile ? 64 : 8,
 			colorBgBase: dsColors.bg,
 			colorBgContainer: dsColors.surface,
 			colorBgElevated: dsColors.surfaceElevated,
@@ -106,7 +127,7 @@ export function createStudioTheme(
 			colorTextSecondary: dsColors.textSecondary,
 			colorTextTertiary: dsColors.textMuted,
 			controlHeight: 28,
-			controlHeightLG: 32,
+			controlHeightLG: 40,
 			controlHeightSM: 24,
 			fontFamily: resolvedFontFamily,
 			fontFamilyCode: resolvedFontFamilyCode,
@@ -127,11 +148,11 @@ export function createStudioTheme(
 				iconGap: 4,
 				paddingInline: 8,
 				paddingInlineLG: 8,
-				primaryShadow: "none"
+				primaryShadow: "none",
 			},
 			Tree: {
 				indentSize: 24,
-				nodeSelectedBg: accent.muted
+				nodeSelectedBg: accent.muted,
 			},
 			Menu: {
 				darkItemBg: "transparent",
@@ -144,34 +165,34 @@ export function createStudioTheme(
 				itemHoverBg: dsColors.surfaceHover,
 				itemPaddingInline: 8,
 				itemSelectedBg: accent.muted,
-				subMenuItemBg: "transparent"
+				subMenuItemBg: "transparent",
 			},
 			Alert: {
 				defaultPadding: 6,
-				withDescriptionPadding: 6
+				withDescriptionPadding: 6,
 			},
 			Form: {
-				itemMarginBottom: 4
+				itemMarginBottom: 4,
 			},
 			Table: {
 				cellPaddingBlock: 8,
-				cellPaddingInline: 8
+				cellPaddingInline: 8,
 			},
 			Progress: {
-				lineBorderRadius: 4
+				lineBorderRadius: 4,
 			},
 			Steps: {
-				iconFontSize: 8
+				iconFontSize: 8,
 			},
 			Modal: {
-				padding: 8
+				padding: 8,
 			},
 			Card: {
 				bodyPaddingSM: 8,
 				bodyPadding: 8,
 				headerPadding: 8,
-				headerPaddingSM: 8
-			}
-		}
+				headerPaddingSM: 8,
+			},
+		},
 	};
 }
