@@ -1,7 +1,14 @@
 .shell {
 	min-height: 100dvh;
-	padding: max(32px, var(--ds-safe-area-top)) 16px max(24px, var(--ds-safe-area-bottom));
+	padding: max(32px, var(--ds-safe-area-top)) 16px
+		max(24px, var(--ds-safe-area-bottom));
 	background: var(--ant-color-bg-layout);
+}
+
+.shell :global(button),
+.shell :global(a),
+.shell :global([role="button"]) {
+	-webkit-tap-highlight-color: transparent;
 }
 
 .hero {
@@ -15,15 +22,9 @@
 }
 
 .logo {
-	display: grid;
-	place-items: center;
-	width: 64px;
-	height: 64px;
-	margin: 0 auto 18px;
-	border-radius: 18px;
-	color: var(--ant-color-primary);
-	background: var(--ant-color-primary-bg);
-	font-size: 30px;
+	width: 88px;
+	height: 88px;
+	object-fit: contain;
 }
 
 .actionCard,

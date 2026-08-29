@@ -80,7 +80,7 @@ function RemoteSessionHome({
 		>
 			<div className={styles.homeHero}>
 				<img
-					className={styles.remoteWelcomeIcon}
+					className={styles.welcomeIcon}
 					src={remoteColorfulIconUrl}
 					alt=""
 					aria-hidden="true"

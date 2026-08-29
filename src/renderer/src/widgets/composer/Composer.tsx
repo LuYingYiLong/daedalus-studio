@@ -1569,9 +1569,13 @@ function Composer({
 						{canOpenComposerOptions ? (
 							<div className={styles.composerToolbarControl}>
 								<Tooltip
-									title={t(
-										"composer.tooltips.contextAndMode",
-									)}
+									title={
+										layout === "standard"
+											? t(
+													"composer.tooltips.contextAndMode",
+												)
+											: ""
+									}
 								>
 									<Dropdown
 										rootClassName={[
@@ -1609,7 +1613,11 @@ function Composer({
 
 						<div className={styles.composerToolbarControl}>
 							<Tooltip
-								title={t("composer.tooltips.approvalMode")}
+								title={
+									layout === "standard"
+										? t("composer.tooltips.approvalMode")
+										: ""
+								}
 							>
 								<Dropdown
 									menu={approvalModeMenu}
@@ -1650,9 +1658,13 @@ function Composer({
 						<div className={styles.composerToolbarModelControl}>
 							<Tooltip
 								title={
-									hasConfiguredProviders
-										? t("composer.tooltips.model")
-										: t("composer.model.configureProvider")
+									layout === "standard"
+										? hasConfiguredProviders
+											? t("composer.tooltips.model")
+											: t(
+													"composer.model.configureProvider",
+												)
+										: ""
 								}
 							>
 								{hasConfiguredProviders ? (
@@ -1679,13 +1691,15 @@ function Composer({
 						<div className={styles.composerToolbarControl}>
 							<Tooltip
 								title={
-									isCancelling
-										? t("composer.send.stopping")
-										: isSending && isStopAction
-											? t("composer.send.stop")
-											: isSending
-												? t("composer.send.queue")
-												: t("composer.send.send")
+									layout === "standard"
+										? isCancelling
+											? t("composer.send.stopping")
+											: isSending && isStopAction
+												? t("composer.send.stop")
+												: isSending
+													? t("composer.send.queue")
+													: t("composer.send.send")
+										: ""
 								}
 							>
 								<Button
