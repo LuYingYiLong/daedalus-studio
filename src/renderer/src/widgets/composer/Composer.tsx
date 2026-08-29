@@ -765,9 +765,12 @@ function Composer({
 				providerModelSelection,
 				reasoningEffortOptions,
 				t,
+				{ flattenProviders: layout === "mobile" },
 			),
-		[providerModelSelection, reasoningEffortOptions, t],
+		[layout, providerModelSelection, reasoningEffortOptions, t],
 	);
+	const mobileMenuRootClassName: string =
+		layout === "mobile" ? styles.mobileMenuRoot : "";
 	const providerModelMenu: MenuProps = useMemo(
 		(): MenuProps => ({
 			items: providerModelMenuItems,
@@ -1531,7 +1534,7 @@ function Composer({
 								value={draftMessage}
 								autoSize={
 									layout === "mobile"
-										? { minRows: 1, maxRows: 5 }
+										? { minRows: 2, maxRows: 5 }
 										: compact
 											? { minRows: 1, maxRows: 1 }
 											: { minRows: 4, maxRows: 6 }
@@ -1571,9 +1574,12 @@ function Composer({
 									)}
 								>
 									<Dropdown
-										rootClassName={
-											styles.composerOptionsDropdown
-										}
+										rootClassName={[
+											styles.composerOptionsDropdown,
+											mobileMenuRootClassName,
+										]
+											.filter(Boolean)
+											.join(" ")}
 										placement="topLeft"
 										autoAdjustOverflow={true}
 										menu={composerOptionsMenu}
@@ -1651,7 +1657,12 @@ function Composer({
 							>
 								{hasConfiguredProviders ? (
 									<Dropdown
-										rootClassName={styles.modelDropdown}
+										rootClassName={[
+											styles.modelDropdown,
+											mobileMenuRootClassName,
+										]
+											.filter(Boolean)
+											.join(" ")}
 										placement="topRight"
 										autoAdjustOverflow={true}
 										menu={providerModelMenu}

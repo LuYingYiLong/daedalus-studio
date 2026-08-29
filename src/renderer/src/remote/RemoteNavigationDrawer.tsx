@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
 import type { RemotePrimaryScreen } from "./remote-model";
-import styles from "./RemoteApp.module.css";
+import styles from "./RemoteNavigationDrawer.module.css";
 
 type RemoteNavigationDrawerProps = {
 	open: boolean;
@@ -40,14 +40,7 @@ function RemoteNavigationDrawer({
 				return {
 					key: `workspace:${workspace.id}`,
 					icon: <Icon name="folder" />,
-					label: (
-						<span className={styles.navigationWorkspaceLabel}>
-							<span>{workspace.name}</span>
-							<span className={styles.navigationSessionCount}>
-								{workspaceSessions.length}
-							</span>
-						</span>
-					),
+					label: workspace.name,
 					children:
 						workspaceSessions.length === 0
 							? [
@@ -57,15 +50,12 @@ function RemoteNavigationDrawer({
 										disabled: true,
 									},
 								]
-							: workspaceSessions.map((session: SessionMetadata) => ({
-									key: `session:${session.id}`,
-									icon: <Icon name="chat" />,
-									label: (
-										<span className={styles.navigationSessionLabel}>
-											{session.title}
-										</span>
-									),
-								})),
+							: workspaceSessions.map(
+									(session: SessionMetadata) => ({
+										key: `session:${session.id}`,
+										label: session.title,
+									}),
+								),
 				};
 			},
 		);
@@ -76,14 +66,12 @@ function RemoteNavigationDrawer({
 				icon: <Icon name="remote" />,
 				label: t("remote.navigation.home"),
 			},
-			{ type: "divider" },
 			{
 				type: "group",
 				key: "projects-group",
 				label: t("remote.home.projects"),
 				children: workspaceItems,
 			},
-			{ type: "divider" },
 			{
 				type: "group",
 				key: "tools-group",
@@ -115,7 +103,8 @@ function RemoteNavigationDrawer({
 		if (key.startsWith("session:")) {
 			const sessionId: string = key.slice("session:".length);
 			const session: SessionMetadata | undefined = sessions.find(
-				(candidate: SessionMetadata): boolean => candidate.id === sessionId,
+				(candidate: SessionMetadata): boolean =>
+					candidate.id === sessionId,
 			);
 			if (session !== undefined) {
 				onClose();
@@ -137,7 +126,6 @@ function RemoteNavigationDrawer({
 
 	return (
 		<Drawer
-			className={styles.navigationDrawer}
 			classNames={{
 				body: styles.navigationDrawerBody,
 			}}
@@ -162,7 +150,9 @@ function RemoteNavigationDrawer({
 					mode="inline"
 					items={items}
 					selectedKeys={
-						activeScreen === "sessions" ? ["sessions"] : [activeScreen]
+						activeScreen === "sessions"
+							? ["sessions"]
+							: [activeScreen]
 					}
 					onClick={handleClick}
 				/>

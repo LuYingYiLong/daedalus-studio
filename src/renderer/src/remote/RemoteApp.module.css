@@ -16,6 +16,12 @@
 	padding-top: var(--ds-safe-area-top);
 }
 
+.shell :global(button),
+.shell :global(a),
+.shell :global([role="button"]) {
+	-webkit-tap-highlight-color: transparent;
+}
+
 .topBar {
 	display: grid;
 	grid-template-columns: auto minmax(0, 1fr) auto;
@@ -50,27 +56,6 @@
 	font-size: 13px;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-
-.navigationDrawerBody {
-	padding: calc(8px + var(--ds-safe-area-top))
-		calc(8px + var(--ds-safe-area-right))
-		calc(8px + var(--ds-safe-area-bottom))
-		calc(8px + var(--ds-safe-area-left)) !important;
-}
-
-.navigationMenu {
-	border-inline-end: 0 !important;
-	background: transparent;
-}
-
-.navigationMenu :global(.ant-menu-item),
-.navigationMenu :global(.ant-menu-submenu-title) {
-	min-height: 44px;
-	margin-block: 2px;
-	line-height: 44px;
-	border-radius: 12px;
-	-webkit-tap-highlight-color: transparent;
 }
 
 .navigationWorkspaceLabel {
@@ -194,7 +179,7 @@
 	overscroll-behavior-y: contain;
 	padding: 14px max(14px, var(--ds-safe-area-right)) 28px
 		max(14px, var(--ds-safe-area-left));
-	scrollbar-gutter: stable;
+	scrollbar-gutter: stable both-edges;
 }
 
 .homeGreeting {
@@ -457,8 +442,8 @@
 	display: grid;
 	grid-template-columns: repeat(4, minmax(0, 1fr));
 	min-height: calc(58px + var(--ds-safe-area-bottom));
-	padding: 4px max(6px, var(--ds-safe-area-right))
-		var(--ds-safe-area-bottom) max(6px, var(--ds-safe-area-left));
+	padding: 4px max(6px, var(--ds-safe-area-right)) var(--ds-safe-area-bottom)
+		max(6px, var(--ds-safe-area-left));
 	border-top: 1px solid var(--ds-border-subtle);
 	background: color-mix(in srgb, var(--ds-surface) 91%, transparent);
 	backdrop-filter: blur(20px) saturate(1.3);

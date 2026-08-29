@@ -293,6 +293,22 @@
 	overscroll-behavior: contain;
 }
 
+.mobileMenuRoot :global(.ant-menu),
+.mobileMenuRoot :global(.ant-menu-item),
+.mobileMenuRoot :global(.ant-menu-submenu-title) {
+	-webkit-tap-highlight-color: transparent;
+}
+
+.mobileMenuRoot :global(.ant-menu-item-selected),
+.mobileMenuRoot :global(.ant-menu-item-selected:hover),
+.mobileMenuRoot :global(.ant-menu-item-active),
+.mobileMenuRoot :global(.ant-menu-item:hover),
+.mobileMenuRoot :global(.ant-menu-item:active),
+.mobileMenuRoot :global(.ant-menu-submenu-selected > .ant-menu-submenu-title),
+.mobileMenuRoot :global(.ant-menu-submenu-title:hover) {
+	background-color: transparent;
+}
+
 .modelSubmenuPopup {
 	max-height: min(360px, calc(100vh - 96px));
 	overflow: hidden;

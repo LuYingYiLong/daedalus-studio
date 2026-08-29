@@ -302,6 +302,20 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 		await expect.poll((): boolean => mockBackend.getRequests("client.hello").some((request) => (request.params as { clientType?: string }).clientType === "studio_remote"), { timeout: 20_000 }).toBe(true);
 		await expect(page.locator("[data-remote-app=\"true\"]")).toBeVisible({ timeout: 20_000 });
 		await expect(page.getByTestId("remote-session-home")).toBeVisible();
+		const homeAlignment = await page.getByTestId("remote-session-home").evaluate((element) => {
+			const firstChild = element.firstElementChild;
+			if (firstChild === null) return null;
+			const container = element.getBoundingClientRect();
+			const content = firstChild.getBoundingClientRect();
+			return {
+				left: content.left - container.left,
+				right: container.right - content.right,
+			};
+		});
+		expect(homeAlignment).not.toBeNull();
+		if (homeAlignment !== null) {
+			expect(Math.abs(homeAlignment.left - homeAlignment.right)).toBeLessThan(1.5);
+		}
 		await page.getByRole("button", { name: /打开导航|Open navigation/ }).click();
 		await expect(page.getByText("Remote E2E Project").first()).toBeVisible();
 		await page.getByRole("menuitem", { name: /主页|Home/ }).click();
@@ -320,6 +334,10 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 		expect(createRequest.params).toMatchObject({ workspaceId: workspace.id, chatMode: "agent" });
 		expect(createRequest.params).not.toHaveProperty("workspaceLaunch");
 		await expect(page.getByText(/移动会话|Mobile session/).first()).toBeVisible();
+		await expect(page.getByTestId("composer-options-button")).toHaveCSS(
+			"-webkit-tap-highlight-color",
+			"rgba(0, 0, 0, 0)",
+		);
 		if (context !== null) {
 			for (const width of [320, 360, 412, 430]) {
 				await page.setViewportSize({ width, height: 915 });
@@ -350,7 +368,14 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 		)).toBe(true);
 
 		await page.getByTestId("composer-model-button").click();
+		await expect(page.getByRole("menuitem", { name: /GPT-4o mini/ })).toBeVisible();
 		await expect(page.getByRole("menuitem", { name: /高|High/ })).toBeVisible();
+		const selectedModelMenuItems = page.locator(".ant-menu-item-selected");
+		await expect(selectedModelMenuItems).toHaveCount(1);
+		await expect(selectedModelMenuItems.first()).toHaveCSS(
+			"background-color",
+			"rgba(0, 0, 0, 0)",
+		);
 		await page.getByRole("menuitem", { name: /高|High/ }).click();
 		await expect.poll((): boolean => mockBackend.getRequests("session.save").some((request) =>
 			(request.params as { reasoningEffort?: string }).reasoningEffort === "high",

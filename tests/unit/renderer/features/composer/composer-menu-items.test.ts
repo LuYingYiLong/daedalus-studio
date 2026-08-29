@@ -155,4 +155,21 @@ describe("Composer toolbar menu items", () => {
 		expect(parseReasoningEffortKey("reasoning:high")).toBe("high");
 		expect(parseReasoningEffortKey("model:deepseek:deepseek-v4")).toBeNull();
 	});
+
+	it("flattens provider menus for mobile without rendering submenus", () => {
+		const items = createProviderModelAndReasoningItems(
+			providerSelection,
+			reasoningEffortOptions,
+			translate,
+			{ flattenProviders: true },
+		);
+		const providerGroup = getMenuObjects(items).find(
+			(item): boolean => item.key === "provider-group:deepseek",
+		);
+
+		expect(providerGroup?.type).toBe("group");
+		expect(getKeys(providerGroup?.children as MenuProps["items"])).toEqual([
+			"model:deepseek:deepseek-v4",
+		]);
+	});
 });

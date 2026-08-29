@@ -1,0 +1,20 @@
+.navigationDrawerBody {
+	padding: calc(8px + var(--ds-safe-area-top))
+		calc(8px + var(--ds-safe-area-right))
+		calc(8px + var(--ds-safe-area-bottom))
+		calc(8px + var(--ds-safe-area-left)) !important;
+}
+
+.navigationMenu {
+	border-inline-end: 0 !important;
+	background: transparent;
+}
+
+.navigationMenu :global(.ant-menu-item),
+.navigationMenu :global(.ant-menu-submenu-title) {
+	min-height: 44px;
+	margin-block: 2px;
+	line-height: 44px;
+	border-radius: 12px;
+	-webkit-tap-highlight-color: transparent;
+}

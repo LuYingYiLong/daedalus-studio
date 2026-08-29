@@ -277,9 +277,14 @@ export function resolveDisplayedReasoningEffort(
 	);
 }
 
+export type ProviderModelMenuOptions = {
+	flattenProviders?: boolean;
+};
+
 export function createProviderModelItems(
 	selection: ProviderModelSelection | null,
 	t: TFunction<"common">,
+	options: ProviderModelMenuOptions = {},
 ): MenuProps["items"] {
 	if (selection === null) return [];
 	return selection.providers
@@ -287,15 +292,8 @@ export function createProviderModelItems(
 			(provider: ProviderModelSelectionProvider): boolean =>
 				provider.configured && provider.enabled !== false,
 		)
-		.map((provider: ProviderModelSelectionProvider) => ({
-			key: `provider:${provider.provider}`,
-			popupClassName: styles.modelSubmenuPopup,
-			label: (
-				<span className={styles.providerGroupLabel}>
-					{provider.displayName}
-				</span>
-			),
-			children: provider.models.map((model: ProviderModelInfo) => {
+		.map((provider: ProviderModelSelectionProvider) => {
+			const modelItems = provider.models.map((model: ProviderModelInfo) => {
 				const modelBadges: string[] = [];
 				if (model.capabilities.reasoning)
 					modelBadges.push(
@@ -320,17 +318,39 @@ export function createProviderModelItems(
 						</span>
 					),
 				};
-			}),
-		}));
+			});
+			const providerLabel = (
+				<span className={styles.providerGroupLabel}>
+					{provider.displayName}
+				</span>
+			);
+
+			if (options.flattenProviders) {
+				return {
+					type: "group",
+					key: `provider-group:${provider.provider}`,
+					label: providerLabel,
+					children: modelItems,
+				};
+			}
+
+			return {
+				key: `provider:${provider.provider}`,
+				popupClassName: styles.modelSubmenuPopup,
+				label: providerLabel,
+				children: modelItems,
+			};
+		});
 }
 
 export function createProviderModelAndReasoningItems(
 	selection: ProviderModelSelection | null,
 	reasoningEffortOptions: readonly ProviderReasoningEffortOption[],
 	t: TFunction<"common">,
+	options: ProviderModelMenuOptions = {},
 ): MenuProps["items"] {
 	const items: NonNullable<MenuProps["items"]> = [
-		...(createProviderModelItems(selection, t) ?? []),
+		...(createProviderModelItems(selection, t, options) ?? []),
 	];
 	const reasoningItems: MenuProps["items"] = createReasoningEffortItems(
 		reasoningEffortOptions,

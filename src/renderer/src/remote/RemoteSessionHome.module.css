@@ -6,7 +6,7 @@
 	overscroll-behavior-y: contain;
 	padding: 14px max(14px, env(safe-area-inset-right)) 28px
 		max(14px, env(safe-area-inset-left));
-	scrollbar-gutter: stable;
+	scrollbar-gutter: stable both-edges;
 }
 
 .homeHero {
