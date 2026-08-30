@@ -37,7 +37,7 @@ The Windows client preference is off by default. Enabling it allows a request, n
 
 Remote, scheduler, Goal and non-Windows clients do not receive the tools. The Gateway's allowlist rejects all observation/result/history methods. All window content is untrusted model evidence. Local OCR text and requested screenshots may be sent to the user's configured model service.
 
-The developer-only optional Dock is local diagnosis: it does not authorize AI, attach context, persist diagnosis or contact a model. Trace records link to desktop-only historical evidence; compacted records cannot recapture. Backend schema 10 stores observations independently, removes old bodies/PNGs in the existing ten-completed-turn compaction transaction, updates search revision and keeps authorization audit entries.
+Settings → Desktop perception contains the AI permission switch and developer-only local diagnostics. Only the registered settings window's top frame may run local diagnostics; it cannot execute AI tools or grant access. Leaving the page or closing the window clears diagnostic results without revoking Main's AI grant. Diagnostics do not authorize AI, attach context, persist evidence or contact a model. Trace records link to desktop-only historical evidence; compacted records cannot recapture. Backend schema 10 stores observations independently, removes old bodies/PNGs in the existing ten-completed-turn compaction transaction, updates search revision and keeps authorization audit entries.
 
 ## Validation boundaries
 

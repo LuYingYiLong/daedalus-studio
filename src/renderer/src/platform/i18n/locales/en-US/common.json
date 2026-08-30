@@ -3,6 +3,9 @@
     "viewEvidence": "View desktop evidence",
     "coordinates": "Physical screen area: ({{x}}, {{y}}), {{width}} × {{height}}. Overlays use image pixels, not CSS screen coordinates.",
 		"title": "Desktop perception",
+		"accessSettings": "AI access",
+		"diagnosticsTitle": "Local diagnostics",
+		"diagnosticsBusy": "A conversation is requesting or using window access. Local diagnostics are temporarily unavailable.",
 		"setting": "Allow AI to request window observation",
 		"settingDescription": "Windows desktop only. AI may ask you to select one window; each turn still needs explicit consent. No mouse or keyboard control.",
 		"consentTitle": "Allow one window for this turn",
@@ -20,7 +23,7 @@
 		"failed": "Observation failed. Check the window and retry.",
 		"saveFailed": "Could not save desktop perception settings",
 		"resourcesMissing": "Native helper or OCR resources are missing or invalid. Build or reinstall the Windows resources.",
-		"developerRequired": "Desktop perception requires Windows developer mode"
+		"developerRequired": "Enable developer mode in General settings to use local diagnostics"
 	},
 	"windowCapture": {
 		"title": "Window screenshot",

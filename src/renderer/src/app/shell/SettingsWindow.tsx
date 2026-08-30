@@ -28,11 +28,14 @@ import KeyboardShortcutsSettingsPage from "@/widgets/settings/KeyboardShortcutsS
 import HooksSettingsPage from "@/widgets/settings/HooksSettingsPage";
 import BrowserSettingsPage from "@/widgets/settings/BrowserSettingsPage";
 import RemoteAccessSettingsPage from "@/widgets/settings/RemoteAccessSettingsPage";
+import ComputerObservationSettingsPage from "@/widgets/settings/ComputerObservationSettingsPage";
+import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";
 import DevelopmentEnvironmentSettingsPage from "@/widgets/settings/DevelopmentEnvironmentSettingsPage";
 import WorktreeSettingsPage from "@/widgets/settings/WorktreeSettingsPage";
 import PluginsSettingsPage from "@/widgets/settings/PluginsSettingsPage";
 import {
 	SETTINGS_SEARCH_ENTRIES,
+	isSettingsPageAvailable,
 	type SettingsPageKey,
 	type SettingsSearchEntry,
 } from "@/widgets/settings/settings-search-catalog";
@@ -131,6 +134,11 @@ const menuItemConfigs: SettingsMenuItemConfig[] = [
 		icon: <Icon name="remote" />,
 	},
 	{
+		key: "computer_observation",
+		labelKey: "computer.title",
+		icon: <Icon name="computer-use" />,
+	},
+	{
 		key: "environments",
 		labelKey: "settings.menu.environments",
 		icon: <Icon name="environment" />,
@@ -193,7 +201,14 @@ const menuGroupConfigs: SettingsMenuGroupConfig[] = [
 	{
 		key: "workspace",
 		labelKey: "settings.menu.groups.workspace",
-		items: ["browser", "remote_access", "environments", "worktrees", "godot_projects"],
+		items: [
+			"browser",
+			"remote_access",
+			"computer_observation",
+			"environments",
+			"worktrees",
+			"godot_projects",
+		],
 	},
 	{
 		key: "resources",
@@ -202,9 +217,17 @@ const menuGroupConfigs: SettingsMenuGroupConfig[] = [
 	},
 ];
 
+function isPageAvailable(page: SettingsPageKey): boolean {
+	return isSettingsPageAvailable(
+		page,
+		!!getPlatformRuntime().system?.computerObservation,
+	);
+}
+
 function isSettingsPageKey(value: string): value is SettingsPageKey {
 	return menuItemConfigs.some(
-		(item: SettingsMenuItemConfig): boolean => item.key === value,
+		(item: SettingsMenuItemConfig): boolean =>
+			item.key === value && isPageAvailable(item.key),
 	);
 }
 
@@ -226,7 +249,7 @@ function createSettingsMenuItems(t: (key: string) => string): MenuItem[] {
 				(key: SettingsPageKey): MenuItem[] => {
 					const item: SettingsMenuItemConfig | undefined =
 						itemsByKey.get(key);
-					return item === undefined
+					return item === undefined || !isPageAvailable(item.key)
 						? []
 						: [
 								{
@@ -271,6 +294,7 @@ function createSettingsSearchOptions(
 	const normalizedQuery: string = normalizeSearchText(query);
 	return SETTINGS_SEARCH_ENTRIES.flatMap(
 		(entry: SettingsSearchEntry): SettingsSearchOption[] => {
+			if (!isPageAvailable(entry.page)) return [];
 			const pageTitle: string = getSettingsPageTitle(entry.page, t);
 			const title: string = t(entry.titleKey);
 			const description: string =
@@ -461,6 +485,13 @@ function SettingsWindow(): React.JSX.Element {
 		if (page === "remote_access") {
 			return <RemoteAccessSettingsPage />;
 		}
+		if (page === "computer_observation") {
+			return (
+				<ComputerObservationSettingsPage
+					isActive={activePage === page}
+				/>
+			);
+		}
 		if (page === "environments") {
 			return <DevelopmentEnvironmentSettingsPage />;
 		}
@@ -565,8 +596,10 @@ function SettingsWindow(): React.JSX.Element {
 				<header className={styles.activeHeader} />
 				<div className={styles.pageViewport}>
 					{menuItemConfigs
-						.filter((item: SettingsMenuItemConfig): boolean =>
-							visitedPages.has(item.key),
+						.filter(
+							(item: SettingsMenuItemConfig): boolean =>
+								visitedPages.has(item.key) &&
+								isPageAvailable(item.key),
 						)
 						.map(
 							(

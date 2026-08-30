@@ -1,79 +1,12 @@
-import { Alert, Button, Empty, Space, Tabs, Tree, Typography } from "antd";
+import { Alert, Button, Tabs, Tree, Typography } from "antd";
 import type { DataNode } from "antd/es/tree";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   ComputerObservation,
   ComputerRect,
 } from "../../../../contracts/computer-observation";
-import { useComputerState, useComputerDeveloperMode } from "./useComputerState";
-import ComputerWindowPicker from "./ComputerWindowPicker";
-import styles from "./ComputerObservationPanel.module.css";
-export default function ComputerObservationPanel({
-  isActive,
-}: {
-  isActive: boolean;
-}): React.JSX.Element {
-  const { t } = useTranslation();
-  const { api, state } = useComputerState();
-  const developer = useComputerDeveloperMode();
-  const [open, setOpen] = useState(false),
-    [local, setLocal] = useState<ComputerObservation | null>(null);
-  const load = useCallback(() => api!.listDiagnostics(), [api]);
-  useEffect(() => {
-    if (!isActive || !developer) {
-      setOpen(false);
-      setLocal(null);
-      void api?.closeDiagnostics();
-    }
-    return () => {
-      void api?.closeDiagnostics();
-    };
-  }, [api, isActive, developer]);
-  const observation = local ?? state?.observation;
-  if (!api || !developer)
-    return <Empty description={t("computer.developerRequired")} />;
-  return (
-    <div className={styles.panel} data-testid="computer-observation-panel">
-      <Space wrap>
-        <Button
-          onClick={() => setOpen(true)}
-          disabled={!state?.available || !!state.sharing || !!state.pending}
-        >
-          {t("computer.diagnose")}
-        </Button>
-        <Typography.Text type="secondary">
-          {t("computer.localOnly")}
-        </Typography.Text>
-      </Space>
-      {state?.error && (
-        <Alert type="warning" title={t("computer.resourcesMissing")} />
-      )}
-      {observation ? (
-        <ComputerObservationEvidence
-          key={observation.observationId}
-          observation={observation}
-        />
-      ) : (
-        <Empty description={t("computer.empty")} />
-      )}
-      <ComputerWindowPicker
-        open={open}
-        load={load}
-        close={() => {
-          setOpen(false);
-          void api.closeDiagnostics();
-        }}
-        choose={async (id) => {
-          const result = await api.diagnose(id);
-          setLocal(result);
-          setOpen(false);
-          await api.closeDiagnostics();
-        }}
-      />
-    </div>
-  );
-}
+import styles from "./ComputerObservationEvidence.module.css";
 
 export function ComputerObservationEvidence({
   observation,

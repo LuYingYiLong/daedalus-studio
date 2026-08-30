@@ -12,6 +12,7 @@ export type SettingsPageKey =
 	| "hooks"
 	| "browser"
 	| "remote_access"
+	| "computer_observation"
 	| "environments"
 	| "worktrees"
 	| "plugins"
@@ -27,6 +28,10 @@ export type SettingsSearchEntry = {
 	titleKey: string;
 	descriptionKey?: string;
 };
+
+export function isSettingsPageAvailable(page: SettingsPageKey, computerObservationSupported: boolean): boolean {
+	return page !== "computer_observation" || computerObservationSupported;
+}
 
 /** Static index for pages that are not mounted until selected. */
 export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
@@ -44,6 +49,9 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 	{ key: "page:plugins", page: "plugins", titleKey: "settings.menu.plugins" },
 	{ key: "page:browser", page: "browser", titleKey: "settings.menu.browser" },
 	{ key: "page:remote_access", page: "remote_access", titleKey: "settings.menu.remoteAccess" },
+	{ key: "page:computer_observation", page: "computer_observation", titleKey: "computer.title" },
+	{ key: "item:computer_observation.enabled", page: "computer_observation", titleKey: "computer.setting", descriptionKey: "computer.settingDescription" },
+	{ key: "item:computer_observation.diagnostics", page: "computer_observation", titleKey: "computer.diagnose", descriptionKey: "computer.localOnly" },
 	{ key: "page:environments", page: "environments", titleKey: "settings.menu.environments" },
 	{ key: "page:worktrees", page: "worktrees", titleKey: "settings.menu.worktrees" },
 	{ key: "page:documentation", page: "documentation", titleKey: "settings.menu.documentation" },

@@ -71,6 +71,8 @@ export type ComputerState = {
   pending: ComputerConsent | null;
   sharing: { title: string; sessionId: string; requestId: string } | null;
   observation: ComputerObservation | null;
+  /** 设置页仅获知诊断是否被会话占用，不暴露授权身份或观察正文 */
+  diagnosticsBlocked?: boolean;
 };
 export type ComputerAPI = {
   getState(): Promise<ComputerState>;

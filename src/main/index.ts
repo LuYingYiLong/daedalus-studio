@@ -154,6 +154,7 @@ const SETTINGS_PAGE_KEYS: readonly string[] = [
 	"plugins",
 	"browser",
 	"remote_access",
+	"computer_observation",
 	"environments",
 	"worktrees",
 	"documentation",

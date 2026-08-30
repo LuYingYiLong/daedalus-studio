@@ -12,8 +12,6 @@ import TerminalPanel from "@/widgets/terminal/TerminalPanel";
 import FilePanel from "@/widgets/files/FilePanel";
 import BrowserPanel from "@/widgets/browser/BrowserPanel";
 import TrajectoryPanel from "@/widgets/home/trajectory/TrajectoryPanel";
-import ComputerObservationPanel from "@/features/computer-observation/ComputerObservationPanel";
-import { useComputerDeveloperMode } from "@/features/computer-observation/useComputerState";
 import type {
 	AdditionalContextItem,
 	WorkspaceConfig,
@@ -90,7 +88,6 @@ function getPanelTitle(
 	index: number,
 	t: TFunction<"common">,
 ): string {
-	if (kind === "computer") return t("computer.title");
 	if (kind === "review") {
 		return index === 1
 			? t("dock.tabs.changes")
@@ -211,7 +208,6 @@ function DockPanelTabs({
 	const { t } = useTranslation();
 	const handledActivationIdRef = useRef<number | null>(null);
 	const canOpenReview: boolean = workspaceId !== null;
-	const computerAvailable = useComputerDeveloperMode();
 	const activeKey: string = layout.tabs.some(
 		(tab: DockTabPreferences): boolean => tab.key === layout.activeTabKey,
 	)
@@ -219,7 +215,6 @@ function DockPanelTabs({
 		: (layout.tabs[0]?.key ?? "");
 	const addItems: PanelTabsAddItem[] = useMemo(
 		(): PanelTabsAddItem[] => [
-			...(computerAvailable ? [{ key: "computer", label: t("computer.title"), icon: <Icon name="window" /> }] : []),
 			{
 				key: ADD_REVIEW_KEY,
 				label: t("dock.add.reviewPanel"),
@@ -249,7 +244,7 @@ function DockPanelTabs({
 				disabled: sessionId === null,
 			},
 		],
-		[canOpenReview, sessionId, t, computerAvailable],
+		[canOpenReview, sessionId, t],
 	);
 
 	const addPanelTab = useCallback(
@@ -396,7 +391,6 @@ function DockPanelTabs({
 	}
 
 	function handleAdd(kind: string): void {
-		if (kind === "computer" && computerAvailable) { addPanelTab(kind); return; }
 		if (
 			kind === ADD_REVIEW_KEY ||
 			kind === ADD_TERMINAL_KEY ||
@@ -409,7 +403,6 @@ function DockPanelTabs({
 	}
 
 	function renderTabContent(tab: DockTabPreferences): React.ReactNode {
-		if (tab.kind === "computer") return <ComputerObservationPanel isActive={isOpen && activeKey === tab.key} />;
 		if (tab.kind === "review") {
 			if (workspaceId === null) {
 				return (

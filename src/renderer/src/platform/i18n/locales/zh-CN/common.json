@@ -3,6 +3,9 @@
     "viewEvidence": "查看桌面观察证据",
     "coordinates": "屏幕物理区域：({{x}}, {{y}})，{{width}} × {{height}}。叠加框使用图片像素，不是 CSS 屏幕坐标。",
 		"title": "桌面感知",
+		"accessSettings": "AI 访问权限",
+		"diagnosticsTitle": "本地诊断",
+		"diagnosticsBusy": "会话正在申请或使用窗口授权，暂时不能运行本地诊断",
 		"setting": "允许 AI 请求观察窗口",
 		"settingDescription": "仅 Windows 桌面可用。开启后 AI 可以请求你选择一个窗口；每轮仍需单独授权，不包含点击或键盘控制。",
 		"consentTitle": "允许本轮观察一个窗口",
@@ -20,7 +23,7 @@
 		"failed": "观察失败，请检查窗口状态后重试",
 		"saveFailed": "无法保存桌面感知设置",
 		"resourcesMissing": "原生助手或 OCR 资源缺失／校验失败，请构建或重新安装 Windows 感知资源",
-		"developerRequired": "仅 Windows 开发者模式提供桌面感知面板"
+		"developerRequired": "在常规设置中开启开发者模式后，可使用本地诊断"
 	},
 	"windowCapture": {
 		"title": "窗口截图",

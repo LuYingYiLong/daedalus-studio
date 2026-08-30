@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute } from "node:path";
 
-export type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory" | "computer";
+export type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory";
 
 export type DockTabPreferences = {
 	key: string;
@@ -137,9 +137,11 @@ function normalizeDockLayout(
 	const tabs: DockTabPreferences[] = [];
 	const seenKeys: Set<string> = new Set();
 	for (const candidate of value.tabs) {
+		// 桌面感知已移入设置，只移除旧面板，不重置同一会话的其他布局
+		if (isRecord(candidate) && candidate.kind === "computer") continue;
 		if (
 			!isRecord(candidate)
-			|| (candidate.kind !== "review" && candidate.kind !== "terminal" && candidate.kind !== "files" && candidate.kind !== "browser" && candidate.kind !== "trajectory" && candidate.kind !== "computer")
+			|| (candidate.kind !== "review" && candidate.kind !== "terminal" && candidate.kind !== "files" && candidate.kind !== "browser" && candidate.kind !== "trajectory")
 			|| typeof candidate.key !== "string"
 			|| !TAB_KEY_PATTERN.test(candidate.key)
 			|| typeof candidate.index !== "number"
@@ -170,7 +172,7 @@ function normalizeDockLayout(
 		: tabs[0]?.key ?? null;
 
 	return {
-		open: value.open,
+		open: value.open && tabs.length > 0,
 		size: clamp(rawSize, minimumSize, maximumSize),
 		tabs,
 		activeTabKey
@@ -280,7 +282,7 @@ export function normalizeSessionLayout(value: unknown): SessionLayoutPreferences
 		return defaults;
 	}
 
-	const fullscreenDock: DockFullscreenPlacement | null = value.fullscreenDock === "side" || value.fullscreenDock === "bottom"
+	const fullscreenDock: DockFullscreenPlacement | null = (value.fullscreenDock === "side" && side.tabs.length > 0) || (value.fullscreenDock === "bottom" && bottom.tabs.length > 0)
 		? value.fullscreenDock
 		: null;
 	const fileTabKeys: Set<string> = new Set([...side.tabs, ...bottom.tabs]

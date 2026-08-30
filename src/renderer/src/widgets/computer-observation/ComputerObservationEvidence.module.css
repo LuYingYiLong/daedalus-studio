@@ -1,0 +1,24 @@
+.frame {
+	position: relative;
+	width: 100%;
+	flex: none;
+}
+.frame img {
+	width: 100%;
+	display: block;
+}
+.highlight {
+	position: absolute;
+	border: 2px solid var(--ant-color-primary);
+	background: color-mix(in srgb, var(--ant-color-primary) 15%, transparent);
+	pointer-events: none;
+}
+.evidence {
+	min-height: 160px;
+	max-height: 400px;
+	overflow: auto;
+}
+.text {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}

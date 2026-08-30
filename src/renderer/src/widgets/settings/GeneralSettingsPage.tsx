@@ -11,7 +11,6 @@ import {
 import type { SelectProps } from "antd";
 import SettingsItem from "@/ui/SettingsItem";
 import SettingsList from "@/ui/SettingsList";
-import ComputerObservationSetting from "@/features/computer-observation/ComputerObservationSetting";
 import {
 	fetchClientPreferences,
 	updateClientPreferences,
@@ -368,7 +367,6 @@ function GeneralSettingsPage({
 				</SettingsList>
 
 				<SettingsList title={t("settings.general.general.title")}>
-					<ComputerObservationSetting />
 					<div className={styles.preferenceList}>
 						{[
 							{

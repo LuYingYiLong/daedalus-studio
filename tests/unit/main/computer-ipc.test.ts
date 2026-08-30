@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   on: vi.fn(),
   stop: vi.fn(),
   verify: vi.fn(),
+  request: vi.fn(),
 }));
 vi.mock("electron", () => ({
   app: { getAppPath: () => "/fixture", whenReady: mocks.ready, on: mocks.on },
@@ -28,9 +29,7 @@ vi.mock(
     NativeComputerHelper: class {
       stop = mocks.stop;
       async request(method: string) {
-        return method === "list"
-          ? { sources: [{ sourceId: "source", title: "Fixture" }] }
-          : { valid: true };
+        return mocks.request(method);
       }
     },
   }),
@@ -67,8 +66,183 @@ describe.skipIf(process.platform !== "win32" || process.arch !== "x64")(
       vi.clearAllMocks();
       mocks.ready.mockResolvedValue(undefined);
       mocks.verify.mockResolvedValue(undefined);
+      mocks.request.mockImplementation(async (method: string) =>
+        method === "list"
+          ? { sources: [{ sourceId: "source", title: "Fixture" }] }
+          : method === "observe"
+            ? {
+                observationId: "observation",
+                capturedAt: "2026-08-30T00:00:00Z",
+                uiaCapturedAt: "2026-08-30T00:00:00Z",
+                screenBounds: { x: 0, y: 0, width: 1, height: 1 },
+                width: 1,
+                height: 1,
+                dpi: 96,
+                nodes: [],
+                texts: [],
+                durationMs: 1,
+                truncated: false,
+              }
+            : { valid: true },
+      );
     });
     afterEach(() => vi.useRealTimers());
+
+    function invoke(
+      window: ReturnType<typeof windowFixture>,
+      method: string,
+      input?: unknown,
+      frame = window.contents.mainFrame,
+    ): unknown {
+      const handler = mocks.handle.mock.calls.find(
+        ([channel]) => channel === `computer:${method}`,
+      )![1];
+      return handler({ sender: window.contents, senderFrame: frame }, input);
+    }
+
+    it("only admits settings diagnostics, never AI authorization or tool execution", async () => {
+      const main = windowFixture(),
+        settings = windowFixture(),
+        other = windowFixture();
+      registerComputerIpc(
+        () => main.window,
+        () => settings.window,
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      for (const method of [
+        "listDiagnostics",
+        "diagnose",
+        "closeDiagnostics",
+      ]) {
+        expect(() => invoke(main, method, "source")).toThrow(
+          "computer_sender_not_allowed",
+        );
+        expect(() => invoke(other, method, "source")).toThrow(
+          "computer_sender_not_allowed",
+        );
+        expect(() => invoke(settings, method, "source", {})).toThrow(
+          "computer_sender_not_allowed",
+        );
+      }
+      for (const method of [
+        "setContext",
+        "execute",
+        "decide",
+        "list",
+        "cancel",
+        "revoke",
+        "finish",
+      ]) {
+        expect(() => invoke(settings, method)).toThrow(
+          "computer_sender_not_allowed",
+        );
+      }
+      await expect(invoke(settings, "listDiagnostics")).resolves.toEqual([
+        { sourceId: "source", title: "Fixture" },
+      ]);
+      await expect(invoke(settings, "diagnose", "unknown")).rejects.toThrow(
+        "computer_window_unavailable",
+      );
+      await expect(
+        invoke(settings, "diagnose", "source"),
+      ).resolves.toMatchObject({ observationId: "observation" });
+      expect(invoke(main, "getState")).toMatchObject({
+        pending: null,
+        sharing: null,
+        observation: null,
+      });
+      invoke(settings, "closeDiagnostics");
+      await expect(invoke(settings, "diagnose", "source")).rejects.toThrow(
+        "computer_window_unavailable",
+      );
+    });
+
+    it.each(["destroyed", "render-process-gone", "did-start-navigation"])(
+      "clears diagnostics on settings %s and drops late results",
+      async (event) => {
+        const main = windowFixture(),
+          settings = windowFixture();
+        registerComputerIpc(
+          () => main.window,
+          () => settings.window,
+        );
+        await vi.advanceTimersByTimeAsync(0);
+        await invoke(settings, "listDiagnostics");
+        let resolve!: (value: object) => void;
+        mocks.request.mockImplementation(async (method: string) =>
+          method === "observe"
+            ? new Promise((done) => {
+                resolve = done;
+              })
+            : {},
+        );
+        const pending = expect(
+          invoke(settings, "diagnose", "source"),
+        ).rejects.toThrow("computer_cancelled");
+        await vi.advanceTimersByTimeAsync(0);
+        mocks.stop.mockClear();
+        settings.contents.emit(event, {}, "about:blank", false, true);
+        expect(mocks.stop).toHaveBeenCalledOnce();
+        resolve({
+          observationId: "observation",
+          capturedAt: "2026-08-30T00:00:00Z",
+          uiaCapturedAt: "2026-08-30T00:00:00Z",
+          screenBounds: { x: 0, y: 0, width: 1, height: 1 },
+          width: 1,
+          height: 1,
+          dpi: 96,
+          nodes: [],
+          texts: [],
+          durationMs: 1,
+          truncated: false,
+        });
+        await pending;
+        expect(vi.getTimerCount()).toBe(0);
+      },
+    );
+
+    it("does not disclose or revoke Main's grant when settings closes", async () => {
+      const main = windowFixture(),
+        settings = windowFixture();
+      registerComputerIpc(
+        () => main.window,
+        () => settings.window,
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      invoke(main, "setContext", {
+        connectionId: "connection",
+        sessionId: "session",
+        workspaceId: null,
+      });
+      const access = invoke(main, "execute", {
+        connectionId: "connection",
+        sessionId: "session",
+        requestId: "turn",
+        runId: "run",
+        toolCallId: "tool",
+        callId: "call",
+        toolName: "mcp_computer_request_access",
+        args: { reason: "Fixture" },
+      });
+      await invoke(main, "list");
+      await invoke(main, "decide", { callId: "call", sourceId: "source" });
+      await access;
+      expect(invoke(settings, "getState")).toMatchObject({
+        pending: null,
+        sharing: null,
+        observation: null,
+        diagnosticsBlocked: true,
+      });
+      await expect(invoke(settings, "listDiagnostics")).rejects.toThrow(
+        "computer_busy",
+      );
+      settings.destroyContents();
+      expect(invoke(main, "getState")).toMatchObject({
+        sharing: { sessionId: "session" },
+      });
+      main.destroyContents();
+      expect(vi.getTimerCount()).toBe(0);
+    });
 
     it.each(["idle", "pending", "sharing"])(
       "revokes %s state when WebContents dies before BrowserWindow",

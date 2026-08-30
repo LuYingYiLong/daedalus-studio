@@ -32,7 +32,7 @@ import TraceGantt from "./TrajectoryGantt";
 import styles from "./TrajectoryPanel.module.css";
 
 const ReactJsonView = lazy(() => import("@microlink/react-json-view"));
-const ComputerObservationHistory = lazy(() => import("@/features/computer-observation/ComputerObservationHistory"));
+const ComputerObservationHistory = lazy(() => import("@/widgets/computer-observation/ComputerObservationHistory"));
 
 type TrajectoryPanelProps = {
 	sessionId: string | null;

@@ -2,6 +2,17 @@
 
 日期：2026-08-30。环境：Windows x64、Node 24.18.0、Electron 43.0.0、MSVC / Windows SDK。本次只验证本机源码和测试产物，没有发布版本或配置签名。
 
+## 设置页迁移复核
+
+桌面感知的权限开关和本地诊断已集中到 SettingsMenu 的独立设置页，旧 Dock 项在布局读取时移除，其他面板、尺寸和顺序保持不变。会话授权、停止共享和轨迹中的历史证据保留。
+
+- 本地诊断仅在 Windows 开发者模式下显示；离开页面或关闭设置窗口清理临时结果，关闭设置窗口不会撤销主会话的有效授权。
+- Settings IPC 只增加本地诊断能力；授权申请、决定、执行和撤销仍拒绝设置窗口调用。设置窗口只接收诊断忙碌状态，不接收会话授权身份或观察正文。
+- `npm run typecheck`、`npm run build` 通过；`npm test`：529 项 unit/integration/renderer + 6 项 static，共 535 项通过。
+- 最终完整 `npm run test:e2e:built`：17/17 通过（2.2 分钟），继续启用主进程异常及正常退出门禁。新增设置导航、权限持久化、本地诊断、离页清理、旧 Dock 入口移除以及关闭设置不影响会话授权的检查；实际截图已核对。
+- 日志：`.cache/computer-settings-unit.log`、`.cache/computer-settings-typecheck.log`、`.cache/computer-settings-final-build.log`、`.cache/computer-settings-final-e2e.log`。仅使用 Mock Backend 和模拟感知助手，没有读取真实窗口或调用模型。
+- 本次未改 Backend 和原生助手，也未重新打包安装程序；下方 Backend 阻断项与实机覆盖边界仍然适用。
+
 ## 退出异常复核
 
 用户反馈 E2E 反复弹出主进程 `Object has been destroyed` 错误后，撤销此前“17/17 通过即可验收”的结论。旧 fixture 只检查 UI，退出超时后强制终止 Electron 却不判失败，遗漏了窗口销毁期间的主进程异常。

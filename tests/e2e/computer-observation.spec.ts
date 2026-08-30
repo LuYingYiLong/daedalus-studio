@@ -41,9 +41,23 @@ test("Windows per-turn consent, same-frame screenshot, revocation and reconnect"
         (await window.electronAPI.computerObservation!.getState()).enabled,
     ),
   ).toBe(false);
-  await mainWindow.evaluate(() =>
-    window.electronAPI.computerObservation!.setEnabled(true),
-  );
+  async function openSettings() {
+    const opened = electronApp.waitForEvent("window");
+    await mainWindow.locator('[data-studio-open-settings="true"]').click();
+    const page = await opened;
+    await page
+      .getByRole("menuitem", { name: /Desktop perception|桌面感知/ })
+      .click();
+    return page;
+  }
+  const initialSettings = await openSettings();
+  const accessSwitch = initialSettings.getByRole("switch", {
+    name: /Allow AI to request window observation|允许 AI 请求观察窗口/,
+  });
+  await expect(accessSwitch).not.toBeChecked();
+  await accessSwitch.click();
+  await expect(accessSwitch).toBeChecked();
+  await initialSettings.close();
   await mainWindow.getByText("Screenshot history", { exact: true }).click();
   await expect(mainWindow.getByTestId("composer-input")).toBeVisible();
   await expect
@@ -186,24 +200,55 @@ test("Windows per-turn consent, same-frame screenshot, revocation and reconnect"
     "computer_access_denied",
   );
   // 本地诊断不创建 AI 授权、不保存附件，也不发起模型请求
-  await mainWindow.locator('[data-studio-open-side-dock="true"]').click();
-  await mainWindow.locator('[data-studio-dock-add="true"]').click();
-  await mainWindow
-    .getByRole("menuitem", { name: /Desktop perception|桌面感知/ })
-    .click();
-  const perception = mainWindow.getByTestId("computer-observation-panel");
+  const settingsWindow = await openSettings();
+  await expect(
+    settingsWindow.getByRole("switch", {
+      name: /Allow AI to request window observation|允许 AI 请求观察窗口/,
+    }),
+  ).toBeChecked();
+  const perception = settingsWindow.getByTestId(
+    "computer-observation-settings",
+  );
   await perception
     .getByRole("button", {
       name: /Select window for local diagnostics|选择窗口进行本地诊断/,
     })
     .click();
-  await dialog
+  const diagnosticDialog = settingsWindow.getByRole("dialog");
+  await diagnosticDialog
     .getByRole("option", { name: "Local perception fixture" })
     .click();
-  await dialog.getByRole("button", { name: /Observe|观\s*察/ }).click();
+  await diagnosticDialog
+    .getByRole("button", { name: /Observe|观\s*察/ })
+    .click();
   await expect(
     perception.getByRole("img", { name: /Static frame|静态/ }),
   ).toBeVisible();
+  await expect(diagnosticDialog).not.toBeVisible();
+  await settingsWindow.screenshot({
+    path: test.info().outputPath("computer-observation-settings.png"),
+  });
+  await settingsWindow
+    .getByRole("menuitem", { name: /General|常规|通用/ })
+    .click();
+  await expect(
+    settingsWindow.getByRole("switch", {
+      name: /Allow AI to request window observation|允许 AI 请求观察窗口/,
+    }),
+  ).not.toBeVisible();
+  await settingsWindow
+    .getByRole("menuitem", { name: /Desktop perception|桌面感知/ })
+    .click();
+  await expect(
+    perception.getByRole("img", { name: /Static frame|静态/ }),
+  ).toHaveCount(0);
+  await settingsWindow.close();
+  await mainWindow.locator('[data-studio-open-side-dock="true"]').click();
+  await mainWindow.locator('[data-studio-dock-add="true"]').click();
+  await expect(
+    mainWindow.getByRole("menuitem", { name: /Desktop perception|桌面感知/ }),
+  ).toHaveCount(0);
+  await mainWindow.keyboard.press("Escape");
   expect(
     await mainWindow.evaluate(
       async () =>
@@ -318,6 +363,23 @@ test("Windows per-turn consent, same-frame screenshot, revocation and reconnect"
     .getByRole("button", { name: /Allow this turn|允许本轮观察/ })
     .click();
   expect((await result(closingGrant)).ok).toBe(true);
+  const sharingSettings = await openSettings();
+  expect(
+    await sharingSettings.evaluate(() =>
+      window.electronAPI.computerObservation!.getState(),
+    ),
+  ).toMatchObject({
+    pending: null,
+    sharing: null,
+    observation: null,
+    diagnosticsBlocked: true,
+  });
+  await expect(
+    sharingSettings.getByRole("button", {
+      name: /Select window for local diagnostics|选择窗口进行本地诊断/,
+    }),
+  ).toBeDisabled();
+  await sharingSettings.close();
   await expect(
     mainWindow.getByRole("button", { name: /Stop sharing|停止共享/ }),
   ).toBeVisible();

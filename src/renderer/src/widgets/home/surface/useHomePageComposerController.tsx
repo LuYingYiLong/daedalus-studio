@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ComputerSharingIndicator } from "@/features/computer-observation/ComputerObservationBoundary";
+import { ComputerSharingIndicator } from "@/widgets/computer-observation/ComputerObservationBoundary";
 import Composer, {
 	type ComposerProps,
 } from "@/widgets/composer/Composer";

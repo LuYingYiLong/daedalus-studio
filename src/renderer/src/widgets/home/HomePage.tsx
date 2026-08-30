@@ -1,4 +1,4 @@
-import ComputerObservationBoundary from "@/features/computer-observation/ComputerObservationBoundary";
+import ComputerObservationBoundary from "@/widgets/computer-observation/ComputerObservationBoundary";
 import {
 	useCallback,
 	useLayoutEffect,

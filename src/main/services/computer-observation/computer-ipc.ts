@@ -37,6 +37,16 @@ function sendToWindow(
   }
 }
 
+function settingsState(state: ComputerState): ComputerState {
+  return {
+    ...state,
+    observation: null,
+    sharing: null,
+    pending: null,
+    diagnosticsBlocked: !!state.sharing || !!state.pending,
+  };
+}
+
 export function registerComputerIpc(
   getMain: () => BrowserWindow | null,
   getSettings: () => BrowserWindow | null,
@@ -62,12 +72,7 @@ export function registerComputerIpc(
     const main = getMain(),
       settings = getSettings();
     sendToWindow(main, "computer:state", state);
-    sendToWindow(settings, "computer:state", {
-      ...state,
-      observation: null,
-      sharing: null,
-      pending: null,
-    });
+    sendToWindow(settings, "computer:state", settingsState(state));
   };
   const service = new ComputerService(
     helper,
@@ -95,6 +100,16 @@ export function registerComputerIpc(
             if (mainFrame && !inPlace) revoke();
           },
         );
+      } else {
+        // 设置页只持有本地诊断；关闭或导航不能撤销主会话的 AI 授权
+        event.sender.on("destroyed", closeDiagnostics);
+        event.sender.on("render-process-gone", closeDiagnostics);
+        event.sender.on(
+          "did-start-navigation",
+          (_event, _url, inPlace, mainFrame) => {
+            if (mainFrame && !inPlace) closeDiagnostics();
+          },
+        );
       }
     }
   };
@@ -113,12 +128,7 @@ export function registerComputerIpc(
     (_input, event) =>
       event.sender === getMain()?.webContents
         ? service.getState()
-        : {
-            ...service.getState(),
-            observation: null,
-            pending: null,
-            sharing: null,
-          },
+        : settingsState(service.getState()),
     true,
   );
   handle(
@@ -174,7 +184,21 @@ export function registerComputerIpc(
       p.sourceId === null ? null : computerId(p.sourceId),
     );
   });
-  handle("listDiagnostics", async () => {
+  const handleDiagnostic = (
+    method: string,
+    operation: (input: unknown) => unknown,
+  ): void => {
+    handle(
+      method,
+      (input, event) => {
+        // 仅登记的设置窗口顶层 frame 可运行诊断，不借此开放 AI 执行/授权接口
+        assertComputerSender(event, null, getSettings());
+        return operation(input);
+      },
+      true,
+    );
+  };
+  handleDiagnostic("listDiagnostics", async () => {
     if (service.getState().sharing || service.getState().pending)
       throw new Error("computer_busy");
     closeDiagnostics();
@@ -195,7 +219,7 @@ export function registerComputerIpc(
     diagnosticSources = new Set(sources.map((source) => source.sourceId));
     return sources;
   });
-  handle("diagnose", async (input) => {
+  handleDiagnostic("diagnose", async (input) => {
     if (
       service.getState().sharing ||
       service.getState().pending ||
@@ -216,7 +240,7 @@ export function registerComputerIpc(
       clearTimeout(deadline);
     }
   });
-  handle("closeDiagnostics", closeDiagnostics);
+  handleDiagnostic("closeDiagnostics", closeDiagnostics);
   app.on("before-quit", () => {
     service.revoke();
     closeDiagnostics();
