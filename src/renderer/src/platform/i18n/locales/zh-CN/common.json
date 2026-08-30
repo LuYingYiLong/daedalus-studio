@@ -243,7 +243,7 @@
 			"provider": "供应商",
 			"godot_executable": "Godot",
 			"documentation": "文档",
-			"godot_plugin": "插件",
+			"godot_bridge": "编辑器桥接",
 			"complete": "完成"
 		},
 		"actions": {
@@ -334,7 +334,7 @@
 				"toggle": "更新文档查询状态失败。"
 			}
 		},
-		"godotPlugin": {
+		"godotBridge": {
 			"title": "安装 Daedalus Bridge",
 			"description": "选择一个或多个 Godot 项目。插件会把编辑器连接到 Daedalus 工具和诊断服务。",
 			"ready": "至少一个项目已安装 Daedalus Bridge。",

@@ -144,7 +144,7 @@ const ONBOARDING_CONFIGURABLE_STEP_IDS: readonly OnboardingConfigurableStepId[] 
 	"provider",
 	"godot_executable",
 	"documentation",
-	"godot_plugin"
+	"godot_bridge"
 ];
 
 function normalizeOnboardingPreferences(value: unknown): OnboardingPreferences {

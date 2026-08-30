@@ -87,7 +87,7 @@ type DocumentationStepProps = {
 	onBusyChange: (busy: boolean) => void;
 };
 
-type GodotPluginStepProps = {
+type GodotBridgeStepProps = {
 	onConfiguredChange: (configured: boolean) => void;
 	onBusyChange: (busy: boolean) => void;
 };
@@ -96,7 +96,7 @@ const CONFIGURABLE_STEPS: readonly OnboardingConfigurableStepId[] = [
 	"provider",
 	"godot_executable",
 	"documentation",
-	"godot_plugin",
+	"godot_bridge",
 ];
 
 const TERMINAL_DOCUMENTATION_JOB_STAGES: ReadonlySet<
@@ -883,10 +883,10 @@ function DocumentationOnboardingStep({
 	);
 }
 
-function GodotPluginOnboardingStep({
+function GodotBridgeOnboardingStep({
 	onConfiguredChange,
 	onBusyChange,
-}: GodotPluginStepProps): React.JSX.Element {
+}: GodotBridgeStepProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [result, setResult] = useState<GodotProjectScanResult | null>(null);
 	const [selectedIds, setSelectedIds] = useState<React.Key[]>([]);
@@ -903,7 +903,7 @@ function GodotPluginOnboardingStep({
 			setError(
 				getErrorMessage(
 					scanError,
-					t("onboarding.godotPlugin.errors.scan"),
+					t("onboarding.godotBridge.errors.scan"),
 				),
 			);
 		} finally {
@@ -932,7 +932,7 @@ function GodotPluginOnboardingStep({
 			setError(
 				getErrorMessage(
 					addError,
-					t("onboarding.godotPlugin.errors.add"),
+					t("onboarding.godotBridge.errors.add"),
 				),
 			);
 		} finally {
@@ -975,7 +975,7 @@ function GodotPluginOnboardingStep({
 				setResult(nextResult);
 			} catch (installError: unknown) {
 				failures.push(
-					`${project.name}: ${getErrorMessage(installError, t("onboarding.godotPlugin.errors.install"))}`,
+					`${project.name}: ${getErrorMessage(installError, t("onboarding.godotBridge.errors.install"))}`,
 				);
 			}
 		}
@@ -991,7 +991,7 @@ function GodotPluginOnboardingStep({
 
 	const columns: TableProps<GodotProjectInfo>["columns"] = [
 		{
-			title: t("onboarding.godotPlugin.columns.project"),
+			title: t("onboarding.godotBridge.columns.project"),
 			key: "project",
 			render: (_value, project): React.JSX.Element => (
 				<div className={styles.projectCell}>
@@ -1011,13 +1011,13 @@ function GodotPluginOnboardingStep({
 			),
 		},
 		{
-			title: t("onboarding.godotPlugin.columns.godot"),
+			title: t("onboarding.godotBridge.columns.godot"),
 			dataIndex: "godotVersion",
 			width: 100,
 			render: (value: string | null): React.ReactNode => value ?? "-",
 		},
 		{
-			title: t("onboarding.godotPlugin.columns.status"),
+			title: t("onboarding.godotBridge.columns.status"),
 			key: "status",
 			width: 160,
 			render: (_value, project): React.JSX.Element => (
@@ -1027,7 +1027,7 @@ function GodotPluginOnboardingStep({
 					</Tag>
 					{!isGodotVersionCompatible(project.godotVersion) ? (
 						<Typography.Text type="danger">
-							{t("onboarding.godotPlugin.incompatible")}
+							{t("onboarding.godotBridge.incompatible")}
 						</Typography.Text>
 					) : null}
 				</div>
@@ -1041,10 +1041,10 @@ function GodotPluginOnboardingStep({
 				<Icon name="godot" className={styles.stepIcon} />
 				<div>
 					<Typography.Title level={2}>
-						{t("onboarding.godotPlugin.title")}
+						{t("onboarding.godotBridge.title")}
 					</Typography.Title>
 					<Typography.Paragraph type="secondary">
-						{t("onboarding.godotPlugin.description")}
+						{t("onboarding.godotBridge.description")}
 					</Typography.Paragraph>
 				</div>
 			</div>
@@ -1052,7 +1052,7 @@ function GodotPluginOnboardingStep({
 				<Alert
 					showIcon
 					type="success"
-					title={t("onboarding.godotPlugin.ready")}
+					title={t("onboarding.godotBridge.ready")}
 				/>
 			) : null}
 			{result?.plugin.errorMessage ? (
@@ -1068,7 +1068,7 @@ function GodotPluginOnboardingStep({
 				<Alert
 					showIcon
 					type="warning"
-					title={t("onboarding.godotPlugin.pendingRestart")}
+					title={t("onboarding.godotBridge.pendingRestart")}
 				/>
 			) : null}
 			{error !== null ? (
@@ -1082,7 +1082,7 @@ function GodotPluginOnboardingStep({
 			) : null}
 			<Flex justify="space-between" align="center" gap="small" wrap>
 				<Typography.Text type="secondary">
-					{t("onboarding.godotPlugin.selected", {
+					{t("onboarding.godotBridge.selected", {
 						count: selectedIds.length,
 					})}
 				</Typography.Text>
@@ -1095,7 +1095,7 @@ function GodotPluginOnboardingStep({
 							void loadProjects();
 						}}
 					>
-						{t("onboarding.godotPlugin.actions.scan")}
+						{t("onboarding.godotBridge.actions.scan")}
 					</Button>
 					<Button
 						icon={<Icon name="add" />}
@@ -1104,7 +1104,7 @@ function GodotPluginOnboardingStep({
 							void addProject();
 						}}
 					>
-						{t("onboarding.godotPlugin.actions.add")}
+						{t("onboarding.godotBridge.actions.add")}
 					</Button>
 					<Button
 						type="primary"
@@ -1117,7 +1117,7 @@ function GodotPluginOnboardingStep({
 							void installSelected();
 						}}
 					>
-						{t("onboarding.godotPlugin.actions.install")}
+						{t("onboarding.godotBridge.actions.install")}
 					</Button>
 				</Space>
 			</Flex>
@@ -1143,7 +1143,7 @@ function GodotPluginOnboardingStep({
 					emptyText: (
 						<Empty
 							image={Empty.PRESENTED_IMAGE_SIMPLE}
-							description={t("onboarding.godotPlugin.empty")}
+							description={t("onboarding.godotBridge.empty")}
 						/>
 					),
 				}}
@@ -1174,10 +1174,10 @@ function OnboardingWizard({
 		useState<ProviderModelSelection>(bootstrapData.providerModelSelection);
 	const [documentationConfigured, setDocumentationConfigured] =
 		useState<boolean>(false);
-	const [pluginConfigured, setPluginConfigured] = useState<boolean>(false);
+	const [bridgeConfigured, setBridgeConfigured] = useState<boolean>(false);
 	const [providerBusy, setProviderBusy] = useState<boolean>(false);
 	const [documentationBusy, setDocumentationBusy] = useState<boolean>(false);
-	const [pluginBusy, setPluginBusy] = useState<boolean>(false);
+	const [bridgeBusy, setBridgeBusy] = useState<boolean>(false);
 	const [pendingCheckpointCount, setPendingCheckpointCount] =
 		useState<number>(0);
 	const [navigationError, setNavigationError] = useState<string | null>(null);
@@ -1220,15 +1220,15 @@ function OnboardingWizard({
 		provider: isProviderConfigured(providerSelection),
 		godot_executable: generalSettings.godotExecutableStatus === "ready",
 		documentation: documentationConfigured,
-		godot_plugin: pluginConfigured,
+		godot_bridge: bridgeConfigured,
 	};
 	const activeOperation: boolean =
 		currentStep === "provider"
 			? providerBusy
 			: currentStep === "documentation"
 				? documentationBusy
-				: currentStep === "godot_plugin"
-					? pluginBusy
+				: currentStep === "godot_bridge"
+					? bridgeBusy
 					: false;
 	useEffect((): void => {
 		if (currentStep === "complete") {
@@ -1419,11 +1419,11 @@ function OnboardingWizard({
 				onBusyChange={setDocumentationBusy}
 			/>
 		);
-	} else if (currentStep === "godot_plugin") {
+	} else if (currentStep === "godot_bridge") {
 		content = (
-			<GodotPluginOnboardingStep
-				onConfiguredChange={setPluginConfigured}
-				onBusyChange={setPluginBusy}
+			<GodotBridgeOnboardingStep
+				onConfiguredChange={setBridgeConfigured}
+				onBusyChange={setBridgeBusy}
 			/>
 		);
 	} else {

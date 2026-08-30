@@ -93,7 +93,7 @@ export default function useSessionLifecycleController({
 		return createSingleSourceWorkspaceSnapshot({
 			id: session.workspaceId,
 			name: session.workspaceName ?? session.title,
-			kind: session.workspaceKind ?? "godot",
+			kind: session.workspaceKind ?? "workspace",
 			rootPath: session.workspaceRoot,
 			godotExecutablePath: session.godotExecutablePath,
 		});

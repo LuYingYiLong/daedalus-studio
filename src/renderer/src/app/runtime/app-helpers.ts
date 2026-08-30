@@ -247,7 +247,7 @@ export function createWorkspaceFromSessionMetadata(metadata: SessionMetadata, wo
 		return createSingleSourceWorkspaceSnapshot({
 			id: metadata.workspaceId,
 			name: metadata.workspaceName ?? metadata.title,
-			kind: metadata.workspaceKind ?? "godot",
+			kind: metadata.workspaceKind ?? "workspace",
 			rootPath: metadata.workspaceRoot,
 			godotExecutablePath: metadata.godotExecutablePath
 		});

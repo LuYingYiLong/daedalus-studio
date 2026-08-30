@@ -1,7 +1,7 @@
 {
 	"name": "daedalus-studio",
 	"version": "1.1.4",
-	"description": "Standalone AI workbench with an optional Godot Editor Bridge",
+	"description": "Standalone AI workbench with an optional Daedalus Bridge",
 	"license": "GPL-3.0-only",
 	"author": "LuYingYiLong",
 	"backendBootstrapVersion": "1.4.0",

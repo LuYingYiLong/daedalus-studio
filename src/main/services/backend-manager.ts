@@ -93,7 +93,7 @@ type BackendHealthResult = {
 	clients?: {
 		total?: unknown;
 		byType?: {
-			godot_plugin?: unknown;
+			godot_editor_bridge?: unknown;
 		};
 	};
 };
@@ -397,7 +397,7 @@ class BackendManager {
 
 	public async getConnectedGodotClientCount(): Promise<number> {
 		const health: BackendHealthResult = await this.requestRpc<BackendHealthResult>("backend.health");
-		const count: unknown = health.clients?.byType?.godot_plugin;
+		const count: unknown = health.clients?.byType?.godot_editor_bridge;
 		return typeof count === "number" && Number.isSafeInteger(count) && count > 0 ? count : 0;
 	}
 

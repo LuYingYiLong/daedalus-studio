@@ -3,6 +3,7 @@ import type { WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launc
 // 工作区
 export type WorkspaceIcon = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type WorkspaceColor = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type WorkspaceKind = "workspace" | "godot";
 
 export type WorkspaceSourceFolder = {
 	id: string;
@@ -20,7 +21,7 @@ export type WorkspaceSourceFolder = {
 export type WorkspaceConfig = {
 	id: string;
 	name: string;
-	kind: "godot";
+	kind: WorkspaceKind;
 	rootPath: string;
 	icon: WorkspaceIcon;
 	color: WorkspaceColor;
@@ -158,7 +159,7 @@ export type SessionMetadata = {
 	pinned?: boolean;
 	workspaceId?: string;
 	workspaceName?: string;
-	workspaceKind?: "godot";
+	workspaceKind?: WorkspaceKind;
 	workspaceRoot?: string;
 	godotExecutablePath?: string;
 	activeSkillId?: string;

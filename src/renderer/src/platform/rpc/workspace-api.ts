@@ -6,19 +6,22 @@ import type {
 	WorkspaceListResult,
 } from "./types";
 
-export type ConfigureEnvironmentParams = {
-	godotProjectPath: string;
+export type ConfigureWorkspaceParams = {
+	workspaceRoot: string;
 	godotExecutablePath?: string;
 	sessionId?: string | null;
 };
 
-export type ConfigureEnvironmentResult = {
+export type ConfigureWorkspaceResult = {
 	configured: true;
 	godotExecutablePath: string | null;
-	godotProjectPath: string | null;
+	workspaceRoot: string | null;
 	workspaceId: string | null;
 	workspace: WorkspaceConfig | null;
 };
+
+export type ConfigureEnvironmentParams = ConfigureWorkspaceParams;
+export type ConfigureEnvironmentResult = ConfigureWorkspaceResult;
 
 export type DeleteWorkspaceResult = {
 	deleted: true;

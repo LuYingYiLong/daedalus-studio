@@ -102,7 +102,7 @@ async function readJsonFile<TValue>(filePath: string): Promise<TValue | null> {
 	}
 }
 
-async function lacksSharedRuntimeCompatibilityMetadata(
+async function lacksBridgeCompatibilityMetadata(
 	current: BackendCurrentFileV2
 ): Promise<boolean> {
 	const manifest: unknown | null = await readJsonFile<unknown>(current.manifestPath);
@@ -110,8 +110,8 @@ async function lacksSharedRuntimeCompatibilityMetadata(
 		return false;
 	}
 	const record: Record<string, unknown> = manifest as Record<string, unknown>;
-	return !Number.isSafeInteger(record.minPluginProtocolVersion)
-		|| !Number.isSafeInteger(record.maxPluginProtocolVersion);
+	return !Number.isSafeInteger(record.minBridgeProtocolVersion)
+		|| !Number.isSafeInteger(record.maxBridgeProtocolVersion);
 }
 
 async function writeJsonFileAtomic(filePath: string, value: unknown): Promise<void> {
@@ -279,7 +279,7 @@ export class BackendBootstrapService {
 			} catch (error: unknown) {
 				if (
 					error instanceof BackendManifestCompatibilityError
-					|| await lacksSharedRuntimeCompatibilityMetadata(current)
+					|| await lacksBridgeCompatibilityMetadata(current)
 				) {
 					logger.info("Replacing an incompatible managed backend with the bundled backend.", {
 						version: current.version,

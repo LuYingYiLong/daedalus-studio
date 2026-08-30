@@ -127,7 +127,7 @@ export default function useWorkspaceContextController(params: WorkspaceContextCo
 			return createSingleSourceWorkspaceSnapshot({
 				id: params.activeSessionMetadata.workspaceId,
 				name: params.activeSessionMetadata.workspaceName ?? params.activeSessionMetadata.workspaceId,
-				kind: params.activeSessionMetadata.workspaceKind ?? "godot",
+				kind: params.activeSessionMetadata.workspaceKind ?? "workspace",
 				rootPath: params.activeSessionMetadata.workspaceRoot,
 				godotExecutablePath: params.activeSessionMetadata.godotExecutablePath
 			});

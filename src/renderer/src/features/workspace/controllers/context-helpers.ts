@@ -1,4 +1,4 @@
-import type { AdditionalContextItem, WorkspaceConfig } from "@/platform/rpc/types";
+import type { AdditionalContextItem, WorkspaceConfig, WorkspaceKind } from "@/platform/rpc/types";
 import type { SaveImageAttachmentParams } from "@/platform/rpc/image-attachment-api";
 
 export type SupportedImageMimeType = SaveImageAttachmentParams["mimeType"];
@@ -15,16 +15,17 @@ export const MAX_IMAGE_ATTACHMENT_BYTES: number = 5 * 1024 * 1024;
 export const RECENT_CONTEXT_FILE_WINDOW_MS: number = 2000;
 export const CONTEXT_SUBTITLE_MAX_CHARS: number = 400;
 
-export function createSingleSourceWorkspaceSnapshot(params: { id: string; name: string; rootPath: string; kind?: "godot"; godotExecutablePath?: string }): WorkspaceConfig {
+export function createSingleSourceWorkspaceSnapshot(params: { id: string; name: string; rootPath: string; kind?: WorkspaceKind; godotExecutablePath?: string }): WorkspaceConfig {
 	const primarySourceFolderId = "primary";
+	const kind: WorkspaceKind = params.kind ?? "workspace";
 	return {
 		id: params.id,
 		name: params.name,
-		kind: params.kind ?? "godot",
+		kind,
 		rootPath: params.rootPath,
 		icon: 0,
 		color: 0,
-		sourceFolders: [{ id: primarySourceFolderId, path: params.rootPath, capabilities: { git: false, godot: (params.kind ?? "godot") === "godot" } }],
+		sourceFolders: [{ id: primarySourceFolderId, path: params.rootPath, capabilities: { git: false, godot: kind === "godot" } }],
 		primarySourceFolderId,
 		godotExecutablePath: params.godotExecutablePath
 	};

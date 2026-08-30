@@ -3,7 +3,7 @@ export const ONBOARDING_STEP_IDS = [
 	"provider",
 	"godot_executable",
 	"documentation",
-	"godot_plugin",
+	"godot_bridge",
 	"complete"
 ] as const;
 
@@ -38,7 +38,7 @@ export function isOnboardingPreferences(value: unknown): value is OnboardingPref
 	if (!isRecord(value.stepOutcomes)) {
 		return false;
 	}
-	for (const stepId of ["provider", "godot_executable", "documentation", "godot_plugin"] as const) {
+	for (const stepId of ["provider", "godot_executable", "documentation", "godot_bridge"] as const) {
 		const outcome: unknown = value.stepOutcomes?.[stepId];
 		if (outcome !== undefined && outcome !== "configured" && outcome !== "skipped") {
 			return false;

@@ -243,7 +243,7 @@
 			"provider": "Provider",
 			"godot_executable": "Godot",
 			"documentation": "Documentation",
-			"godot_plugin": "Plugin",
+			"godot_bridge": "Editor Bridge",
 			"complete": "Complete"
 		},
 		"actions": {
@@ -335,7 +335,7 @@
 				"toggle": "Failed to update documentation search."
 			}
 		},
-		"godotPlugin": {
+		"godotBridge": {
 			"title": "Install Daedalus Bridge",
 			"description": "Choose one or more Godot projects. The plugin connects their editors to Daedalus tools and diagnostics.",
 			"ready": "Daedalus Bridge is installed for at least one project.",

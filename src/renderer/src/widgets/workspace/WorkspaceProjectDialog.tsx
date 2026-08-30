@@ -211,7 +211,7 @@ export default function WorkspaceProjectDialog({
 			let workspaceToSave: WorkspaceConfig;
 			if (workspace === null) {
 				const configured = await configureEnvironment({
-					godotProjectPath: primarySourceFolder.path,
+					workspaceRoot: primarySourceFolder.path,
 					sessionId: null
 				});
 				if (configured.workspace === null) {

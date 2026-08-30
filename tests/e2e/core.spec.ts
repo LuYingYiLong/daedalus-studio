@@ -49,7 +49,7 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 		await expect(mainWindow.locator("[data-step=\"documentation\"]")).toBeVisible();
 		await mainWindow.waitForTimeout(250);
 		await mainWindow.getByRole("button", { name: /Skip|跳过/ }).click();
-		await expect(mainWindow.locator("[data-step=\"godot_plugin\"]")).toBeVisible();
+		await expect(mainWindow.locator("[data-step=\"godot_bridge\"]")).toBeVisible();
 		await mainWindow.waitForTimeout(250);
 		await mainWindow.getByRole("button", { name: /Skip|跳过/ }).click();
 		await expect(mainWindow.locator("[data-step=\"complete\"]")).toBeVisible();
@@ -536,7 +536,7 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 		mockBackend.setHandler("environment.configure", ({ params }) => ({
 			configured: true,
 			godotExecutablePath: null,
-			godotProjectPath: (params as { godotProjectPath: string }).godotProjectPath,
+			workspaceRoot: (params as { workspaceRoot: string }).workspaceRoot,
 			workspaceId: "workspace-e2e",
 			workspace: {
 				id: "workspace-e2e",
@@ -594,7 +594,7 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 		mockBackend.setHandler("environment.configure", () => ({
 			configured: true,
 			godotExecutablePath: null,
-			godotProjectPath: projectDirectory,
+			workspaceRoot: projectDirectory,
 			workspaceId: workspace.id,
 			workspace,
 		}));
