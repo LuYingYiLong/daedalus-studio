@@ -422,6 +422,10 @@ export class MockBackend {
 		return this.requests.filter((request: MockRpcRequest): boolean => method === undefined || request.method === method);
 	}
 
+	getUnhandledRequests(): MockRpcRequest[] {
+		return this.requests.filter((request) => !this.handlers.has(request.method));
+	}
+
 	waitForRequest(method: string, timeoutMs: number = 10_000): Promise<MockRpcRequest> {
 		const existing: MockRpcRequest | undefined = this.requests.find((request: MockRpcRequest): boolean => request.method === method);
 		if (existing !== undefined) {
@@ -453,6 +457,10 @@ export class MockBackend {
 
 	setResponseError(method: string, code: string, message: string): void {
 		this.responseErrors.set(method, { code, message });
+	}
+
+	clearResponseError(method: string): void {
+		this.responseErrors.delete(method);
 	}
 
 	sendEvent(event: string, data: unknown, options: { sessionId?: string; requestId?: string; runId?: string } = {}): void {

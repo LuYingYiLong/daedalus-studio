@@ -1,10 +1,10 @@
 import { useRef, type Dispatch, type SetStateAction } from "react";
 import { saveImageAttachment, saveTextAttachment } from "@/platform/rpc/image-attachment-api";
-import type { AdditionalContextItem, WorkbenchPatch, WorkspaceConfig } from "@/platform/rpc/types";
+import type { AdditionalContextItem, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkspaceConfig } from "@/platform/rpc/types";
+import { createImageImportTask, prepareImageFile, type ImageImport } from "./image-import";
 import type { PastedTextAttachmentInput } from "@/features/conversation/pasted-text-attachment";
 import {
 	CONTEXT_SUBTITLE_MAX_CHARS,
-	MAX_IMAGE_ATTACHMENT_BYTES,
 	RECENT_CONTEXT_FILE_WINDOW_MS,
 	type WorkspacePickedEntry,
 	createExternalFileContextItem,
@@ -14,14 +14,16 @@ import {
 	getLocalPathForFile,
 	isLocalPathInsideWorkspace,
 	resolveSupportedImageMimeType,
-	readFileAsDataUrl,
-	readImageDimensions,
-	type SupportedImageMimeType,
 } from "./context-helpers";
 
 type ContextPatchAction = NonNullable<WorkbenchPatch["additionalContextAction"]>;
 
 export type WorkspaceContextControllerParams = {
+	getNavigationVersion: () => number;
+	getActiveSessionId: () => string | null;
+	getWorkbench: () => WorkbenchSnapshot | null;
+	sendWorkbenchPatch: (patch: WorkbenchPatch, applyResult?: boolean, beforeSend?: () => void) => Promise<WorkbenchPatchResult | null>;
+	applyWorkbench: (workbench: WorkbenchSnapshot) => void;
 	ensureActiveSessionId: () => Promise<string | null>;
 	activeWorkspace: WorkspaceConfig | null;
 	activeSessionMetadata: {
@@ -37,6 +39,7 @@ export type WorkspaceContextControllerParams = {
 };
 
 export type WorkspaceContextController = {
+	createImageImport: () => ImageImport;
 	patchContext: (action: ContextPatchAction) => void;
 	handleAddImageFiles: (files: File[]) => Promise<void>;
 	handleAddPastedTextAttachment: (input: PastedTextAttachmentInput) => boolean;
@@ -46,41 +49,44 @@ export type WorkspaceContextController = {
 
 export default function useWorkspaceContextController(params: WorkspaceContextControllerParams): WorkspaceContextController {
 	const recentContextFileSignaturesRef = useRef<Map<string, number>>(new Map());
+	const latest = useRef(params);
+	latest.current = params;
+	const imageQueue = useRef<Promise<unknown>>(Promise.resolve());
+
+	function createImageImport(): ImageImport {
+		const version = params.getNavigationVersion();
+		const task = createImageImportTask({
+			assertCurrent: () => {
+				if (latest.current.getNavigationVersion() !== version) throw new Error("image_import_scope_changed");
+			},
+			getSessionId: () => latest.current.getActiveSessionId(),
+			ensureSession: () => latest.current.ensureActiveSessionId(),
+			getItems: () => latest.current.getWorkbench()?.composer.additionalContext ?? [],
+			save: saveImageAttachment,
+			commit: async (item, assertCurrent) => {
+				assertCurrent();
+				const result = await latest.current.sendWorkbenchPatch({ additionalContextAction: { action: "addOrReplace", item } }, false, assertCurrent);
+				assertCurrent();
+				if (!result || result.workbench.sessionId !== latest.current.getActiveSessionId()) throw new Error("image_import_scope_changed");
+				latest.current.applyWorkbench(result.workbench);
+			},
+		});
+		return (image, isCancelled) => {
+			const result = imageQueue.current.then(() => task(image, isCancelled));
+			imageQueue.current = result.catch(() => undefined);
+			return result;
+		};
+	}
 
 	function patchContext(action: ContextPatchAction): void {
 		params.queueWorkbenchPatch({ additionalContextAction: action }, true);
 	}
 
 	async function handleAddImageFiles(files: File[]): Promise<void> {
-		const sessionId: string | null = await params.ensureActiveSessionId();
-		if (sessionId === null) {
-			params.showTransientError("Please open a session before adding images.");
-			return;
-		}
-
+		const importImage = createImageImport();
 		try {
-			for (const file of files.slice(0, 3)) {
-				const mimeType: SupportedImageMimeType | null = resolveSupportedImageMimeType(file);
-				if (mimeType === null) {
-					throw new Error(`Unsupported image type: ${file.type || file.name}`);
-				}
-				if (file.size <= 0 || file.size > MAX_IMAGE_ATTACHMENT_BYTES) {
-					throw new Error(`${file.name} is larger than 5 MiB.`);
-				}
-				const dataUrl: string = await readFileAsDataUrl(file, mimeType);
-				const dimensions = await readImageDimensions(dataUrl);
-				const sourcePath: string | null = getLocalPathForFile(file);
-				const result = await saveImageAttachment({
-					sessionId,
-					mimeType,
-					dataUrl,
-					byteSize: file.size,
-					width: dimensions.width,
-					height: dimensions.height,
-					title: file.name,
-					sourcePath: sourcePath ?? undefined
-				});
-				patchContext({ action: "addOrReplace", item: result.attachment });
+			for (const file of files) {
+				await importImage(await prepareImageFile(file));
 			}
 		} catch (error: unknown) {
 			params.showTransientError(error instanceof Error ? error.message : "Failed to add image");
@@ -231,6 +237,7 @@ export default function useWorkspaceContextController(params: WorkspaceContextCo
 	}
 
 	return {
+		createImageImport,
 		patchContext,
 		handleAddImageFiles,
 		handleAddPastedTextAttachment,

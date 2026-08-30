@@ -8,6 +8,7 @@ import type { HomeDraft } from "./app-helpers";
 import type { HomePageActionProps } from "./home-page-view-model";
 
 export type HomePageWorkspaceActionParams = {
+	onAddWindowScreenshot?: () => void;
 	activeSessionMetadata: SessionMetadata | null;
 	worktreeDisabledReason: string | null;
 	setWorkspaceRefreshToken: Dispatch<SetStateAction<number>>;
@@ -33,6 +34,7 @@ export type HomePageWorkspaceActions = Pick<
 	| "onAddFiles"
 	| "onAddFolder"
 	| "onAddImages"
+	| "onAddWindowScreenshot"
 	| "onAddContextFiles"
 	| "onAddContext"
 	| "onRemoveContext"
@@ -41,6 +43,7 @@ export type HomePageWorkspaceActions = Pick<
 >;
 
 export function createHomePageWorkspaceActions({
+	onAddWindowScreenshot,
 	activeSessionMetadata,
 	worktreeDisabledReason,
 	setWorkspaceRefreshToken,
@@ -52,6 +55,7 @@ export function createHomePageWorkspaceActions({
 	patchContext,
 }: HomePageWorkspaceActionParams): HomePageWorkspaceActions {
 	return {
+		onAddWindowScreenshot,
 		onForkFromUserMessage: async (requestId: string): Promise<void> => {
 			if (activeSessionMetadata === null) {
 				return;

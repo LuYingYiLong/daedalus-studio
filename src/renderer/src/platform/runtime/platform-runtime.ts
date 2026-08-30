@@ -1,4 +1,5 @@
 import type { BackendRpcClient } from "@/platform/rpc/transport/backend-rpc-client";
+import type { WindowCaptureAPI } from "../../../../contracts/window-capture";
 
 export type BackendTransport = {
 	url: string;
@@ -12,6 +13,7 @@ export type RuntimeClientHello = {
 };
 
 export type PlatformSystemRuntime = {
+	windowCapture?: WindowCaptureAPI;
 	clipboard: {
 		writeText: (text: string) => Promise<void>;
 		readText: () => Promise<string>;

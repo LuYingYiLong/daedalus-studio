@@ -1,4 +1,34 @@
 {
+	"windowCapture": {
+		"title": "窗口截图",
+		"filename": "窗口截图",
+		"add": "添加到上下文",
+		"cancel": "取消",
+		"search": "搜索窗口标题",
+		"refresh": "刷新列表",
+		"recapture": "重新截图",
+		"windows": "可用窗口",
+		"preview": "截图预览",
+		"noPreview": "暂无预览",
+		"empty": "暂无可捕获的其他应用窗口",
+		"noMatches": "没有匹配的窗口",
+		"privacy": "仅将你确认的截图加入当前上下文；发送消息后，图片可能交由配置的模型服务处理。",
+		"limitations": "这是静态预览。最小化或受保护窗口可能无法捕获，请恢复窗口后重试；截图不会激活或移动窗口。",
+		"errors": {
+			"window_capture_failed": "无法捕获窗口，请恢复目标窗口后刷新重试。",
+			"window_capture_empty": "窗口没有可用图像，请恢复窗口后重新截图。",
+			"window_capture_timeout": "窗口捕获超时，请刷新列表后重试。",
+			"window_capture_window_closed": "目标窗口已关闭，请刷新列表后重新选择。",
+			"window_capture_source_expired": "窗口选择已失效，请刷新列表后重新选择。",
+			"window_capture_too_large": "截图无法压缩到 5 MiB 以内，请重试。",
+			"image_import_failed": "附件保存或上下文更新失败，请重试。",
+			"image_import_scope_changed": "当前会话或草稿已切换，请重新打开截图选择器。",
+			"image_import_no_session": "无法创建会话，请重试。",
+			"image_import_count_limit": "每条消息最多添加 3 张图片，请先移除一张。",
+			"image_import_size_limit": "单张图片不得超过 5 MiB。",
+			"image_import_total_limit": "图片总大小不得超过 12 MiB，请先移除部分图片。"
+		}
+	},
 	"titlebar": {
 		"menu": {
 			"ariaLabel": "应用菜单",
@@ -623,7 +653,8 @@
 		"context": {
 			"addFiles": "添加文件",
 			"addFolder": "添加文件夹",
-			"addImages": "添加图片"
+			"addImages": "添加图片",
+			"windowScreenshot": "窗口截图"
 		},
 		"menu": {
 			"context": "上下文",

@@ -20,6 +20,15 @@ type MenuObject = {
 
 const translate = ((key: string): string => key) as never;
 
+it("only offers window capture when the optional desktop capability is supplied", () => {
+	const desktop = createComposerOptionsItems(translate, { includeContext: true, includeMode: true, includeWindowScreenshot: true });
+	expect(JSON.stringify(desktop)).toContain("windowScreenshot");
+	const unsupported = createComposerOptionsItems(translate, { includeContext: true, includeMode: true });
+	expect(JSON.stringify(unsupported)).not.toContain("windowScreenshot");
+	const remote = createComposerOptionsItems(translate, { includeContext: false, includeMode: true, allowedModes: ["ask", "agent", "plan"] });
+	expect(JSON.stringify(remote)).not.toContain("windowScreenshot");
+});
+
 function getMenuObjects(items: MenuProps["items"]): MenuObject[] {
 	return (items ?? [])
 		.filter((item): boolean => item !== null && typeof item === "object")

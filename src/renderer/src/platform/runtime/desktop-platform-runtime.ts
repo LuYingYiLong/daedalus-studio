@@ -43,6 +43,7 @@ export const desktopPlatformRuntime: PlatformRuntime = {
 	},
 	onBackendConnected: attachScheduledTaskToolRuntime,
 	system: {
+		get windowCapture() { return window.electronAPI.windowCapture; },
 		clipboard: {
 			writeText: async (text: string): Promise<void> => { await window.electronAPI.clipboard.writeText(text); },
 			readText: async (): Promise<string> => (await window.electronAPI.clipboard.readText()).text,

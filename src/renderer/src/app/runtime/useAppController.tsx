@@ -35,6 +35,7 @@ import {
 	createHomePageDirectActionHandlers,
 } from "./home-page-actions";
 import useWorkspaceContextController from "@/features/workspace/controllers/useWorkspaceContextController";
+import useWindowScreenshot from "@/features/window-capture/useWindowScreenshot";
 import useApprovalController from "@/features/approval/controllers/useApprovalController";
 import usePlanGoalController from "@/features/composer/controllers/usePlanGoalController";
 import useTimelineController from "@/features/conversation/controllers/useTimelineController";
@@ -785,11 +786,17 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	});
 	const {
 		patchContext,
+		createImageImport,
 		handleAddImageFiles,
 		handleAddPastedTextAttachment,
 		handleAddWorkspaceContext,
 		handleAddContextFiles,
 	} = useWorkspaceContextController({
+		getNavigationVersion: () => navigationVersionRef.current,
+		getActiveSessionId: () => activeSessionIdRef.current,
+		getWorkbench: () => activeWorkbenchRef.current?.sessionId === activeSessionIdRef.current ? activeWorkbenchRef.current : null,
+		sendWorkbenchPatch,
+		applyWorkbench: (next) => { activeWorkbenchRef.current = next; applyWorkbench(next); },
 		ensureActiveSessionId: async (): Promise<string | null> => {
 			if (activeSessionIdRef.current !== null) {
 				return activeSessionIdRef.current;
@@ -805,6 +812,10 @@ export default function useAppController({ bootstrapData }: AppProps) {
 		queueWorkbenchPatch,
 		setPendingTextAttachmentCount,
 		showTransientError,
+	});
+	const { onAddWindowScreenshot, windowScreenshotDialog } = useWindowScreenshot({
+		getScope: () => navigationVersionRef.current,
+		createImport: createImageImport,
 	});
 	const {
 		selectedProviderId,
@@ -1067,6 +1078,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 			handleSessionFork,
 			handleAddWorkspaceContext,
 			handleAddImageFiles,
+			onAddWindowScreenshot,
 			handleAddContextFiles,
 			patchContext,
 			handleComposerCancel,
@@ -1081,6 +1093,7 @@ export default function useAppController({ bootstrapData }: AppProps) {
 	});
 
 	return {
+		windowScreenshotDialog,
 		messageContextHolder,
 		homePageProps,
 		fullTrustOpen: fullTrustController.isOpen,

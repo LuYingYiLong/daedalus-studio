@@ -137,6 +137,7 @@ export type ComposerProps = {
 	onAddFiles?: () => void;
 	onAddFolder?: () => void;
 	onAddImages?: (files: File[]) => void;
+	onAddWindowScreenshot?: () => void;
 	onAddContextFiles?: (files: File[]) => void;
 	onAddPastedTextAttachment?: (input: PastedTextAttachmentInput) => boolean;
 	onRemoveContext?: (contextId: string) => void;
@@ -269,6 +270,7 @@ function Composer({
 	onAddFiles,
 	onAddFolder,
 	onAddImages,
+	onAddWindowScreenshot,
 	onAddContextFiles,
 	onAddPastedTextAttachment,
 	onRemoveContext,
@@ -402,8 +404,9 @@ function Composer({
 			if (selectedKey === "images") {
 				imageInputRef.current?.click();
 			}
+			if (selectedKey === "windowScreenshot") onAddWindowScreenshot?.();
 		},
-		[onAddFiles, onAddFolder, onModeChange],
+		[onAddFiles, onAddFolder, onModeChange, onAddWindowScreenshot],
 	);
 
 	const handleTextAreaContextAction: MenuProps["onClick"] = useCallback(
@@ -598,6 +601,7 @@ function Composer({
 		onAddFiles !== undefined ||
 		onAddFolder !== undefined ||
 		onAddImages !== undefined ||
+		onAddWindowScreenshot !== undefined ||
 		onAddContextFiles !== undefined;
 	const canOpenComposerOptions: boolean =
 		canAddContext || onModeChange !== undefined;
@@ -618,6 +622,7 @@ function Composer({
 		(): MenuProps => ({
 			items: createComposerOptionsItems(t, {
 				includeContext: canAddContext,
+				includeWindowScreenshot: onAddWindowScreenshot !== undefined,
 				includeMode: onModeChange !== undefined,
 				allowedModes,
 			}),
@@ -626,6 +631,7 @@ function Composer({
 		[
 			allowedModes,
 			canAddContext,
+			onAddWindowScreenshot,
 			handleComposerOptionsClick,
 			onModeChange,
 			t,

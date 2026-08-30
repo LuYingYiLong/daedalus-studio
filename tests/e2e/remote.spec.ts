@@ -352,6 +352,7 @@ test.describe("Daedalus Studio Android Remote PWA", () => {
 		}
 
 		await page.getByTestId("composer-options-button").click();
+		await expect(page.getByRole("menuitem", { name: /Window screenshot|窗口截图/ })).toHaveCount(0);
 		await expect(page.getByRole("menuitem", { name: /问答|Ask/ })).toBeVisible();
 		await expect(page.getByRole("menuitem", { name: /Agent/ })).toBeVisible();
 		await expect(page.getByRole("menuitem", { name: /计划|Plan/ })).toBeVisible();

@@ -105,6 +105,7 @@ export type HomePageActionAdapterParams = {
 	& Omit<HomePageDraftActionParams, "onNewSession">;
 
 export function createHomePageActions({
+	onAddWindowScreenshot,
 	activeSessionMetadata,
 	worktreeDisabledReason,
 	handlers,
@@ -132,6 +133,7 @@ export function createHomePageActions({
 			setActiveRetryRequestId,
 		}),
 		...createHomePageWorkspaceActions({
+			onAddWindowScreenshot,
 			activeSessionMetadata,
 			worktreeDisabledReason,
 			setWorkspaceRefreshToken,

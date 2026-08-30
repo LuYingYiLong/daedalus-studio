@@ -1,6 +1,7 @@
 /// <reference types="vite-plugin-svgr/client" />
 
 import type { GeneralSettings } from "../../contracts/general-settings";
+import type { WindowCaptureAPI } from "../../contracts/window-capture";
 import type {
 	RemoteAccessPairingSession,
 	RemoteAccessPortPatch,
@@ -466,6 +467,7 @@ declare global {
 	}
 
 	interface ElectronAPI {
+		windowCapture?: WindowCaptureAPI;
 		versions: ElectronVersions;
 		backend: BackendAPI;
 		backendBootstrap: BackendBootstrapAPI;

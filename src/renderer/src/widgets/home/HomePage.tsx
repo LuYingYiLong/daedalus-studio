@@ -243,6 +243,7 @@ type HomePageProps = {
 	onAddFiles: () => void;
 	onAddFolder: () => void;
 	onAddImages: (files: File[]) => void;
+	onAddWindowScreenshot?: () => void;
 	onAddPastedTextAttachment: (input: PastedTextAttachmentInput) => boolean;
 	onAddContextFiles: (files: File[]) => void;
 	onAddContext: (item: AdditionalContextItem) => void;
@@ -389,6 +390,7 @@ function HomePage({
 	onAddFiles,
 	onAddFolder,
 	onAddImages,
+	onAddWindowScreenshot,
 	onAddPastedTextAttachment,
 	onAddContextFiles,
 	onAddContext,
@@ -743,6 +745,7 @@ function HomePage({
 			onAddFiles,
 			onAddFolder,
 			onAddImages,
+			onAddWindowScreenshot,
 			onAddPastedTextAttachment,
 			onAddContextFiles,
 			onHomeWorkspaceSelect,

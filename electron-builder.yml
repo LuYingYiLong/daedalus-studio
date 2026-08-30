@@ -21,6 +21,7 @@ extraResources:
     to: backend-bootstrap
     filter:
       - daedalus-backend.exe
+      - daedalus-windows-sandbox-helper.exe
       - backend-manifest.json
   - from: build/daedalus-bridge
     to: daedalus-bridge

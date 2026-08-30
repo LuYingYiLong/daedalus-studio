@@ -38,8 +38,10 @@ export type TextAttachmentContentResult = {
 
 export async function saveImageAttachment(
 	params: SaveImageAttachmentParams,
+	beforeSend?: () => void,
 ): Promise<SaveImageAttachmentResult> {
 	const client = await createBackendClient();
+	beforeSend?.();
 
 	return client.request<SaveImageAttachmentResult>(
 		"attachment.image.save",

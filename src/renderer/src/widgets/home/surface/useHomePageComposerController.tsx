@@ -12,6 +12,7 @@ type ComposerActionKeys =
 	| "onAddFiles"
 	| "onAddFolder"
 	| "onAddImages"
+	| "onAddWindowScreenshot"
 	| "onAddPastedTextAttachment"
 	| "onAddContextFiles"
 	| "onRemoveContext"
@@ -141,6 +142,7 @@ export default function useHomePageComposerController({
 			onAddFiles: actions.onAddFiles,
 			onAddFolder: actions.onAddFolder,
 			onAddImages: actions.onAddImages,
+			onAddWindowScreenshot: actions.onAddWindowScreenshot,
 			onAddPastedTextAttachment: actions.onAddPastedTextAttachment,
 			onAddContextFiles: actions.onAddContextFiles,
 			onWorkspaceSelect: showWorkspaceFooter

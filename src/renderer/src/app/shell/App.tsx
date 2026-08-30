@@ -16,6 +16,7 @@ type AppProps = {
 type HomePageProps = ComponentProps<typeof HomePage>;
 
 type AppViewModel = {
+	windowScreenshotDialog: ReactNode;
 	messageContextHolder: ReactNode;
 	homePageProps: HomePageProps;
 	fullTrustOpen: boolean;
@@ -40,6 +41,7 @@ type AppViewModel = {
 function App({ bootstrapData, onReady }: AppProps): React.JSX.Element {
 	const readyReportedRef = useRef<boolean>(false);
 	const {
+		windowScreenshotDialog,
 		messageContextHolder,
 		homePageProps,
 		fullTrustOpen,
@@ -78,6 +80,7 @@ function App({ bootstrapData, onReady }: AppProps): React.JSX.Element {
 	return (
 		<main className={styles.shell}>
 			{messageContextHolder}
+			{windowScreenshotDialog}
 			<FullTrustConfirmationModal
 				open={fullTrustOpen}
 				value={fullTrustConfirmationText}

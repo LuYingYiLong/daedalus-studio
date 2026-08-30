@@ -17,7 +17,7 @@ export function mergeWorkbenchPatch(left: WorkbenchPatch, right: WorkbenchPatch)
 
 export type WorkbenchPatchQueueController = {
 	takePendingWorkbenchPatch: () => WorkbenchPatch;
-	sendWorkbenchPatch: (patch: WorkbenchPatch, applyResult?: boolean) => Promise<WorkbenchPatchResult | null>;
+	sendWorkbenchPatch: (patch: WorkbenchPatch, applyResult?: boolean, beforeSend?: () => void) => Promise<WorkbenchPatchResult | null>;
 	sendPendingWorkbenchPatch: () => Promise<void>;
 	queueWorkbenchPatch: (patch: WorkbenchPatch, immediate?: boolean) => void;
 };
@@ -39,7 +39,7 @@ function useWorkbenchPatchQueue(applyWorkbench: (nextWorkbench: WorkbenchSnapsho
 		return pendingPatch;
 	}, []);
 
-	const sendWorkbenchPatch = useCallback(async (patch: WorkbenchPatch, applyResult: boolean = true): Promise<WorkbenchPatchResult | null> => {
+	const sendWorkbenchPatch = useCallback(async (patch: WorkbenchPatch, applyResult: boolean = true, beforeSend?: () => void): Promise<WorkbenchPatchResult | null> => {
 		if (Object.keys(patch).length === 0) {
 			return null;
 		}
@@ -47,7 +47,7 @@ function useWorkbenchPatchQueue(applyWorkbench: (nextWorkbench: WorkbenchSnapsho
 		const result = await patchWorkbench({
 			...patch,
 			clientSequence: patchSequenceRef.current += 1
-		});
+		}, beforeSend);
 
 		if (applyResult) {
 			applyWorkbench(result.workbench);

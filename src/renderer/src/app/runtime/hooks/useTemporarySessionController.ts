@@ -140,6 +140,7 @@ export default function useTemporarySessionController({
 
 		const currentPreferences: ClientPreferences =
 			clientPreferencesRef.current;
+		const navigationVersion = navigationVersionRef.current;
 		const currentDraft: HomeDraft = homeDraftRef.current;
 		const draft: HomeDraft =
 			workspace === null
@@ -163,6 +164,7 @@ export default function useTemporarySessionController({
 				approvalMode: preferredApprovalMode,
 				workspaceLaunch: draft.workspaceLaunch,
 			});
+			if (navigationVersionRef.current !== navigationVersion) return;
 			materializeTemporarySessionLayout(created.id);
 			const currentDraftText: string = homeComposerMessageRef.current;
 			if (currentDraftText.length > 0) {

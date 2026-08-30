@@ -37,15 +37,17 @@ export const COMPOSER_PLACEHOLDER_KEYS: Record<
 export const NO_WORKSPACE_KEY: string = "workspace:none";
 export const ADD_WORKSPACE_KEY: string = "workspace:add";
 
-export function createContextItems(t: TFunction<"common">): MenuProps["items"] {
+export function createContextItems(t: TFunction<"common">, includeWindowScreenshot = false): MenuProps["items"] {
 	return [
 		{ key: "files", label: t("composer.context.addFiles") },
 		{ key: "folder", label: t("composer.context.addFolder") },
 		{ key: "images", label: t("composer.context.addImages") },
+		...(includeWindowScreenshot ? [{ key: "windowScreenshot", label: t("composer.context.windowScreenshot") }] : []),
 	];
 }
 
 export type ComposerOptionsMenuOptions = {
+	includeWindowScreenshot?: boolean;
 	includeContext: boolean;
 	includeMode: boolean;
 	allowedModes?: readonly ChatMode[];
@@ -61,7 +63,7 @@ export function createComposerOptionsItems(
 			type: "group",
 			key: "context",
 			label: t("composer.menu.context"),
-			children: createContextItems(t),
+			children: createContextItems(t, options.includeWindowScreenshot),
 		});
 	}
 	if (options.includeMode) {

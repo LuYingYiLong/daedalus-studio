@@ -1,4 +1,34 @@
 {
+	"windowCapture": {
+		"title": "Window screenshot",
+		"filename": "Window screenshot",
+		"add": "Add to context",
+		"cancel": "Cancel",
+		"search": "Search window titles",
+		"refresh": "Refresh windows",
+		"recapture": "Capture again",
+		"windows": "Available windows",
+		"preview": "Screenshot preview",
+		"noPreview": "No preview",
+		"empty": "No other application windows available",
+		"noMatches": "No matching windows",
+		"privacy": "Only the screenshot you confirm is added to the current context. After you send a message, the image may be processed by your configured model service.",
+		"limitations": "This is a static preview. Minimized or protected windows may not be captured; restore the window and retry. Capture never activates or moves a window.",
+		"errors": {
+			"window_capture_failed": "Could not capture this window. Restore it, refresh the list and retry.",
+			"window_capture_empty": "No image available. Restore the window and capture again.",
+			"window_capture_timeout": "Capture timed out. Refresh the window list and retry.",
+			"window_capture_window_closed": "The window has closed. Refresh the list and choose another window.",
+			"window_capture_source_expired": "The selection has expired. Refresh the list and select a window again.",
+			"window_capture_too_large": "Could not reduce the screenshot below 5 MiB. Please retry.",
+			"image_import_failed": "Could not save the attachment or update context. Please retry.",
+			"image_import_scope_changed": "The session or draft changed. Reopen the screenshot picker.",
+			"image_import_no_session": "Could not create a session. Please retry.",
+			"image_import_count_limit": "A message can contain up to 3 images. Remove an image first.",
+			"image_import_size_limit": "Each image must be no larger than 5 MiB.",
+			"image_import_total_limit": "Images must total no more than 12 MiB. Remove some images first."
+		}
+	},
 	"titlebar": {
 		"menu": {
 			"ariaLabel": "Application menu",
@@ -625,7 +655,8 @@
 		"context": {
 			"addFiles": "Add files",
 			"addFolder": "Add folder",
-			"addImages": "Add images"
+			"addImages": "Add images",
+			"windowScreenshot": "Window screenshot"
 		},
 		"menu": {
 			"context": "Context",

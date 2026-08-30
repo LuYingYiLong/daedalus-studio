@@ -21,8 +21,10 @@ export async function fetchWorkbench(): Promise<WorkbenchSnapshot> {
 
 export async function patchWorkbench(
 	patch: WorkbenchPatch,
+	beforeSend?: () => void,
 ): Promise<WorkbenchPatchResult> {
 	const client = await createBackendClient();
+	beforeSend?.();
 
 	return client.request<WorkbenchPatchResult>(
 		"session.workbench.patch",

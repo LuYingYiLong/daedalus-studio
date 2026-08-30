@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
+import type { WindowCaptureAPI } from "../contracts/window-capture";
 import { applyStudioAccentVariables } from "../contracts/theme-color";
 import { applyStudioFontVariables } from "../contracts/studio-fonts";
 import type { ClientPreferences, ClientPreferencesPatch } from "../contracts/client-preferences";
@@ -362,6 +363,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			return ipcRenderer.invoke("clipboard:read-image");
 		}
 	},
+
+	...(process.platform === "win32" ? { windowCapture: {
+		list: (params) => ipcRenderer.invoke("window-capture:list", params),
+		capture: (params) => ipcRenderer.invoke("window-capture:capture", params),
+		release: (params) => ipcRenderer.invoke("window-capture:release", params),
+	} satisfies WindowCaptureAPI } : {}),
 
 	nativeNotifications: {
 		show: (payload: NativeNotificationPayload): Promise<NativeNotificationResult> => {
