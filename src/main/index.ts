@@ -28,6 +28,7 @@ import { registerImageExportIpc } from "./services/image-export";
 import { registerFileExportIpc } from "./services/file-export";
 import { registerPluginFsIpc } from "./services/plugin-fs";
 import { createLogger } from "./services/logger";
+import { runShutdownSteps } from "./services/shutdown";
 import type { GeneralSettings } from "../contracts/general-settings";
 import { BrowserService } from "./services/browser/browser-service";
 import { BrowserDataStore } from "./services/browser/browser-data-store";
@@ -180,20 +181,25 @@ appUpdateService.setRuntimeBusyHandler((runtimeBusy: boolean): void => {
 });
 
 async function releaseBackendBeforeQuit(): Promise<void> {
-	await remoteAccessService.stop();
-	if (preserveBackendForClientInstall) {
-		// 客户端更新由更新流程接管运行时，不能在这里终止后端。
-		backendManager.detach();
-		return;
-	}
-
-	try {
-		// 必须等待 shutdown RPC 和运行时 lease 关闭完成；仅 detach 会留下短暂的旧 38180 实例。
-		await backendManager.stopAndWait();
-	} catch {
-		// 退出不能被不可达的旧后端阻塞，仍释放本地引用以便下次启动重新获取运行时。
-		backendManager.detach();
-	}
+	await runShutdownSteps([
+		{
+			name: "remote-gateway", timeoutMs: 3_000,
+			run: (): Promise<void> => remoteAccessService.stop(),
+			force: (): void => remoteAccessService.forceStop(),
+		},
+		{
+			name: "backend", timeoutMs: 9_000,
+			run: async (): Promise<void> => {
+				// 客户端更新由更新流程接管运行时，不终止后端
+				if (preserveBackendForClientInstall) backendManager.detach();
+				else await backendManager.stopAndWait();
+			},
+			force: (): void => {
+				if (preserveBackendForClientInstall) backendManager.detach();
+				else backendManager.forceStop();
+			},
+		},
+	], (step): void => { logger.warn("shutdown_step_failed", { step }); });
 }
 
 function getWindowIconPath(): string | undefined {

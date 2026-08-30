@@ -11,6 +11,16 @@ export type ComputerRect = {
   width: number;
   height: number;
 };
+export type ComputerOverlayPreviewAction = "running" | "paused" | "click" | "stop";
+export type ComputerOverlayPreview = {
+  connectionId: string;
+  sessionId: string;
+  requestId: string;
+  action: ComputerOverlayPreviewAction;
+};
+export type ComputerOverlayViewState = Pick<ComputerControlState, "state" | "code" | "resuming"> & {
+  preview?: boolean;
+};
 export type ComputerNode = {
   id: string;
   parentId: string | null;
@@ -56,6 +66,8 @@ export type ComputerControlState = ComputerScope & {
   generation: number;
   state: "running" | "paused" | "cancelled";
   code?: string;
+  /** 仅用于本地 UI；恢复完成前仍向 Backend 发送旧代次的暂停心跳 */
+  resuming?: boolean;
 };
 export type ComputerAction =
   | { type: "click"; x: number; y: number; count: 1 | 2 }
@@ -100,6 +112,7 @@ export type ComputerState = {
   diagnosticsBlocked?: boolean;
 };
 export type ComputerAPI = {
+  previewOverlay?(request: ComputerOverlayPreview): Promise<void>;
   getState(): Promise<ComputerState>;
   onState(listener: (state: ComputerState) => void): () => void;
   onRevoked(listener: (value: ComputerRevocation) => void): () => void;
@@ -133,6 +146,13 @@ export function computerId(value: unknown): string {
   if (typeof value !== "string" || !ID.test(value))
     throw new Error("computer_invalid_request");
   return value;
+}
+export function parseComputerOverlayPreview(value: unknown): ComputerOverlayPreview {
+  const v = computerObject(value, ["connectionId", "sessionId", "requestId", "action"]);
+  for (const key of ["connectionId", "sessionId", "requestId"]) computerId(v[key]);
+  if (!["running", "paused", "click", "stop"].includes(String(v.action)))
+    throw new Error("computer_invalid_request");
+  return v as ComputerOverlayPreview;
 }
 export function parseComputerRequest(value: unknown): ComputerToolRequest {
   if (!value || typeof value !== "object" || Array.isArray(value))

@@ -24,7 +24,7 @@ private:
   void validate(HWND target, const Json &frame, const POINT *point);
   DWORD parent;
   std::function<void(const Json &)> notify;
-  std::atomic<bool> active{false}, quitting{false}, ready{false};
+  std::atomic<bool> active{false}, arming{false}, quitting{false}, ready{false};
   std::atomic<unsigned> generation{0};
   std::atomic<ULONGLONG> heartbeatAt{0};
   std::atomic<HWND> window{nullptr};

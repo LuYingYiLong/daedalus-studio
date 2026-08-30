@@ -170,6 +170,7 @@ function AssistantBubble({
 				<ToolPart
 					key={partKey}
 					part={part}
+					stopped={completionStatus === "stopped"}
 					disclosureKey={`${partKey}:tool`}
 				/>
 			);

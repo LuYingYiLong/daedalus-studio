@@ -28,8 +28,10 @@ const frame = {
 function setup(mode: "manual" | "auto-safe" | "full-trust" = "manual") {
   vi.useFakeTimers();
   let sequence = 0;
+  let notify: (event: { event: string; code: string; generation: number }) => void = () => {};
   const helper = {
     stop: vi.fn(),
+    onControl: (listener: typeof notify) => { notify = listener; return () => {}; },
     request: vi.fn(
       async (
         method: string,
@@ -105,10 +107,91 @@ function setup(mode: "manual" | "auto-safe" | "full-trust" = "manual") {
     await service.decide(r.callId, "source");
     return pending;
   };
-  return { service, helper, presentation, revoked, request, grant };
+  return { service, helper, presentation, revoked, request, grant, notify: (event: Parameters<typeof notify>[0]) => notify(event) };
 }
 afterEach(() => vi.useRealTimers());
 describe("computer control safety", () => {
+  it.each(["list", "select", "control.start"])("serializes observation-to-control upgrade against the idle monitor during %s", async (delayedMethod) => {
+    const { service, request, helper, presentation, revoked } = setup();
+    service.setControlEnabled(true);
+    const read = request("mcp_computer_request_access", { reason: "first observe", mode: "observe" });
+    const readResult = service.execute(read);
+    await service.list();
+    await service.decide(read.callId, "source");
+    await readResult;
+    await service.execute(request("mcp_computer_observe", {}));
+    const original = helper.request.getMockImplementation()!;
+    let busy = false;
+    helper.request.mockImplementation(async (method, params) => {
+      if (["control.stop", "control.pause", "control.heartbeat"].includes(method)) return original(method, params);
+      if (busy) throw new Error("computer_busy");
+      busy = true;
+      try {
+        if (method === delayedMethod) await new Promise(resolve => setTimeout(resolve, 1500));
+        return await original(method, params);
+      } finally { busy = false; }
+    });
+    revoked.mockClear(); presentation.close.mockClear(); helper.stop.mockClear();
+    const control = request("mcp_computer_request_access", { reason: "then control", mode: "control" });
+    const result = service.execute(control).then(value => ({ value }), error => ({ error }));
+    const listing = service.list().then(value => ({ value }), error => ({ error }));
+    await vi.advanceTimersByTimeAsync(1600);
+    expect(await listing).toHaveProperty("value");
+    const deciding = service.decide(control.callId, "source").then(() => null, error => error);
+    await vi.advanceTimersByTimeAsync(1600);
+    expect(await deciding).toBeNull();
+    expect(await result).toMatchObject({ value: { granted: true, mode: "control" } });
+    expect(service.getState().control?.state).toBe("running");
+    expect(revoked).not.toHaveBeenCalled();
+    expect(helper.stop).not.toHaveBeenCalled();
+    expect(presentation.close).not.toHaveBeenCalled();
+    service.revoke();
+  });
+  it.each([false, true])("waits for in-flight validation before listing an upgrade (cancel=%s)", async (cancel) => {
+    const { service, request, helper } = setup();
+    service.setControlEnabled(true);
+    const read = request("mcp_computer_request_access", { reason: "observe", mode: "observe" });
+    const readResult = service.execute(read);
+    await service.list(); await service.decide(read.callId, "source"); await readResult;
+    const original = helper.request.getMockImplementation()!;
+    let complete!: (value: Record<string, unknown>) => void;
+    helper.request.mockImplementation((method, params) => method === "validate"
+      ? new Promise(resolve => { complete = resolve; }) : original(method, params));
+    await vi.advanceTimersByTimeAsync(1000);
+    const control = request("mcp_computer_request_access", { reason: "upgrade", mode: "control" });
+    const result = service.execute(control).then(value => ({ value }), error => ({ error }));
+    const listing = service.list().then(value => ({ value }), error => ({ error }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(helper.request.mock.calls.filter(([method]) => method === "list")).toHaveLength(1);
+    if (cancel) service.revoke();
+    complete({ valid: true });
+    if (cancel) {
+      expect(await listing).toMatchObject({ error: new Error("computer_cancelled") });
+      expect(helper.request.mock.calls.filter(([method]) => method === "list")).toHaveLength(1);
+      expect(await result).toHaveProperty("error");
+    } else {
+      expect(await listing).toHaveProperty("value");
+      await service.decide(control.callId, "source");
+      expect(await result).toMatchObject({ value: { mode: "control" } });
+    }
+    service.revoke();
+  });
+  it("skips a busy monitor probe but still revokes a genuinely invalid window", async () => {
+    const { service, grant, helper, revoked } = setup();
+    service.setControlEnabled(true); await grant(); revoked.mockClear();
+    const original = helper.request.getMockImplementation()!;
+    let valid = true;
+    helper.request.mockImplementation((method, params) => method === "validate"
+      ? valid ? Promise.reject(new Error("computer_busy")) : Promise.resolve({ valid: false })
+      : original(method, params));
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(service.getState().control?.state).toBe("running");
+    expect(revoked).not.toHaveBeenCalled();
+    valid = false;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(service.getState().control).toMatchObject({ state: "cancelled", code: "computer_window_unavailable" });
+    expect(revoked).toHaveBeenCalledOnce(); service.revoke();
+  });
   it("does not enable input with an older Backend", async () => {
     const { service, request } = setup();
     service.setControlEnabled(true);
@@ -148,13 +231,17 @@ describe("computer control safety", () => {
         : original(method, params),
     );
     service.pause();
+    const pausedGeneration = service.getState().control!.generation;
     const resuming = service.resume();
     await vi.advanceTimersByTimeAsync(0);
     expect(service.getState().control?.state).toBe("paused");
-    await expect(service.resume()).rejects.toThrow("computer_busy");
+    expect(service.getState().control?.generation).toBe(pausedGeneration);
+    expect(service.getState().control?.resuming).toBe(true);
+    expect(service.resume()).toBe(resuming);
     complete(frame);
     await resuming;
     expect(service.getState().control?.state).toBe("running");
+    expect(service.getState().control!.generation).toBeGreaterThan(pausedGeneration);
     expect(Object.keys(service.getState().control!).sort()).toEqual(
       [
         "connectionId",
@@ -166,6 +253,99 @@ describe("computer control safety", () => {
       ].sort(),
     );
     service.revoke();
+  });
+  it("explains activation failure and never observes until activation succeeds", async () => {
+    const { service, grant, helper } = setup();
+    service.setControlEnabled(true);
+    const original = helper.request.getMockImplementation()!;
+    helper.request.mockImplementation((method, params) => method === "control.start"
+      ? Promise.resolve({ active: false, code: "computer_activation_required" }) : original(method, params));
+    await grant();
+    await service.resume();
+    expect(service.getState().control).toMatchObject({ state: "paused", code: "computer_activation_required" });
+    expect(helper.request.mock.calls.filter(([method]) => method === "observe")).toHaveLength(0);
+    expect(service.getState().control?.resuming).not.toBe(true);
+    helper.request.mockImplementation(original);
+    await service.resume();
+    expect(service.getState().control?.state).toBe("running");
+    service.revoke();
+  });
+  it("does not lose a native pause that precedes the initial start response", async () => {
+    const { service, grant, helper, notify } = setup();
+    service.setControlEnabled(true);
+    const original = helper.request.getMockImplementation()!;
+    helper.request.mockImplementation(async (method, params) => {
+      if (method === "control.start") {
+        notify({ event: "paused", code: "computer_user_takeover", generation: Number(params!.generation) + 1 });
+        return { active: true };
+      }
+      return original(method, params);
+    });
+    await grant();
+    expect(service.getState().control).toMatchObject({ state: "paused", code: "computer_user_takeover" });
+    service.revoke();
+  });
+  it("retains the real error when a fresh observation fails, then permits retry", async () => {
+    const { service, grant, helper } = setup();
+    service.setControlEnabled(true);
+    await grant();
+    service.pause();
+    const original = helper.request.getMockImplementation()!;
+    helper.request.mockImplementation((method, params) => method === "observe"
+      ? Promise.reject(new Error("computer_window_unavailable")) : original(method, params));
+    await expect(service.resume()).rejects.toThrow("computer_window_unavailable");
+    expect(service.getState().control).toMatchObject({ state: "paused", code: "computer_window_unavailable" });
+    expect(service.getState().control?.resuming).not.toBe(true);
+    helper.request.mockImplementation(original);
+    await service.resume();
+    expect(service.getState().control?.state).toBe("running");
+    service.revoke();
+  });
+  it.each(["computer_cancelled", "computer_user_takeover"])("discards a fresh frame after %s during resume", async (code) => {
+    const { service, grant, helper, notify } = setup();
+    service.setControlEnabled(true);
+    await grant();
+    service.pause();
+    const original = helper.request.getMockImplementation()!;
+    let complete!: (value: typeof frame) => void;
+    helper.request.mockImplementation((method, params) => method === "observe"
+      ? new Promise(resolve => { complete = resolve; }) : original(method, params));
+    const pending = service.resume();
+    const rejected = expect(pending).rejects.toThrow("computer_cancelled");
+    await vi.advanceTimersByTimeAsync(0);
+    if (code === "computer_cancelled") service.revoke(code);
+    else notify({ event: "paused", code, generation: Number(helper.request.mock.calls.filter(([m]) => m === "control.start").at(-1)![1]!.generation) + 1 });
+    complete(frame);
+    await rejected;
+    expect(service.getState().observation).toBeNull();
+    expect(service.getState().control?.code).toBe(code);
+    expect(service.getState().control?.state).not.toBe("running");
+    service.revoke();
+  });
+  it("a finished turn's pending resume and deadline cannot cancel the next turn", async () => {
+    const { service, grant, helper } = setup();
+    service.setControlEnabled(true);
+    await grant();
+    service.pause();
+    const original = helper.request.getMockImplementation()!;
+    let complete!: (value: typeof frame) => void;
+    helper.request.mockImplementation((method, params) => method === "observe"
+      ? new Promise(resolve => { complete = resolve; }) : original(method, params));
+    const resume = service.resume();
+    const rejected = expect(resume).rejects.toThrow("computer_cancelled");
+    await vi.advanceTimersByTimeAsync(0);
+    service.finish(scope);
+    const next = { ...scope, requestId: "next-turn", runId: "next-run" };
+    await grant(next);
+    const heartbeat = setInterval(() => service.heartbeat(next), 250);
+    try {
+      await vi.advanceTimersByTimeAsync(20_100);
+      expect(service.getState().control).toMatchObject({ state: "running", requestId: "next-turn" });
+      complete(frame);
+      await rejected;
+      expect(service.getState().observation).toBeNull();
+      expect(service.getState().control).toMatchObject({ state: "running", requestId: "next-turn" });
+    } finally { clearInterval(heartbeat); service.revoke(); }
   });
   it("ignores a cancellation acknowledgement for another turn", async () => {
     const { service, grant } = setup();

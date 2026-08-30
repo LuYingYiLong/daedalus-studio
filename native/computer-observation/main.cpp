@@ -1,5 +1,6 @@
 #include "perception.h"
 #include "control.h"
+#include "control-activation.h"
 #include <condition_variable>
 #include <deque>
 #include <mutex>
@@ -104,6 +105,17 @@ int wmain(int argc, wchar_t **argv) {
       return 0;
     }
     if (argc == 2 && std::wstring(argv[1]) == L"--self-test") {
+      ControlActivationGate delayed(0);
+      if (delayed.sample(0, true, false, true) != ActivationStatus::Waiting ||
+          delayed.sample(400, true, true, false) != ActivationStatus::Waiting ||
+          delayed.sample(500, true, true, true) != ActivationStatus::Waiting ||
+          delayed.sample(600, true, true, true) != ActivationStatus::Ready) return 1;
+      ControlActivationGate denied(0), busy(0), cancelled(0), lost(0);
+      if (denied.sample(1500, true, false, true) != ActivationStatus::FocusRequired ||
+          busy.sample(1500, true, true, false) != ActivationStatus::UserBusy ||
+          cancelled.sample(0, false, true, true) != ActivationStatus::Cancelled ||
+          lost.sample(0, true, true, true) != ActivationStatus::Waiting ||
+          lost.sample(50, true, false, true) != ActivationStatus::FocusRequired) return 1;
       Pixels p{2, 1, {0, 0, 255, 255, 255, 0, 0, 255}};
       const auto scaled = resizePixels(p, 1, 1);
       if (scaled.width != 1 || scaled.bgra.size() != 4 ||

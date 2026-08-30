@@ -1,16 +1,14 @@
 {
-  "computer": {
-    "controlUnavailable": "电脑操作需要连接支持此功能的 Backend；不可用时请更新 Backend。",
-    "controlSetting": "允许 AI 请求操作窗口",
-    "controlDescription": "默认关闭。允许在 Agent 或已批准计划执行期间点击、输入和滚动。非完全信任模式每轮需要审批。随时按 Ctrl+Alt+Esc 紧急停止。",
-    "controlConsentTitle": "允许本轮操作一个窗口",
-    "controlPrivacy": "AI 可以在所选窗口内点击、输入和滚动，可能修改文件或外部状态。窗口授权不是文件系统沙箱，也不保证完整回滚。OCR 在本机执行；文字和按需截图可能发送给配置的模型服务。可随时取消并终止本轮响应。",
-    "allowControl": "允许本轮操作",
-    "selectTarget": "选择此窗口",
-    "target": "已选择窗口：{{title}}",
-    "changeTarget": "更换窗口",
-    "viewEvidence": "查看桌面观察证据",
-    "coordinates": "屏幕物理区域：({{x}}, {{y}})，{{width}} × {{height}}。叠加框使用图片像素，不是 CSS 屏幕坐标。",
+	"computer": {
+		"controlUnavailable": "电脑操作需要连接支持此功能的 Backend；不可用时请更新 Backend。",
+		"controlSetting": "允许 AI 请求操作窗口",
+		"controlDescription": "允许在 Agent 或已批准计划执行期间点击、输入和滚动。非完全信任模式每轮需要审批。随时按 Ctrl+Alt+Esc 紧急停止。",
+		"controlConsentTitle": "允许本轮操作一个窗口",
+		"controlPrivacy": "AI 可以在所选窗口内点击、输入和滚动，可能修改文件或外部状态。窗口授权不是文件系统沙箱，也不保证完整回滚。OCR 在本机执行；文字和按需截图可能发送给配置的模型服务。可随时取消并终止本轮响应。",
+		"allowControl": "允许本轮操作",
+		"selectTarget": "选择此窗口",
+		"viewEvidence": "查看桌面观察证据",
+		"coordinates": "屏幕物理区域：({{x}}, {{y}})，{{width}} × {{height}}。叠加框使用图片像素，不是 CSS 屏幕坐标。",
 		"title": "电脑操作",
 		"accessSettings": "AI 访问权限",
 		"diagnosticsTitle": "本地诊断",
@@ -1542,6 +1540,7 @@
 				"done": "完成",
 				"failed": "失败",
 				"approvalRequired": "需要批准",
+				"stopped": "已停止",
 				"pending": "待执行"
 			},
 			"activity": {
@@ -1803,7 +1802,7 @@
 			"service": { "title": "远程服务" },
 			"enabled": {
 				"title": "允许局域网远程控制",
-				"description": "默认关闭。开启后只监听当前私有 IPv4 地址，Backend 仍仅监听 127.0.0.1。"
+				"description": "开启后只监听当前私有 IPv4 地址，Backend 仍仅监听 127.0.0.1。"
 			},
 			"status": {
 				"disabled": "已关闭",

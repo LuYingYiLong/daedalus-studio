@@ -5,6 +5,8 @@ export type ComputerOverlayState = {
   cursor: { x: number; y: number };
   clickSequence: number;
   code?: string;
+  resuming?: boolean;
+  preview?: boolean;
 };
 declare global {
   interface Window {

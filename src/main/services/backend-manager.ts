@@ -351,6 +351,15 @@ class BackendManager {
 		this.setStatus("stopped");
 	}
 
+	public forceStop(): void {
+		// 只终止本实例创建的进程，不按端口或进程名清理用户独立启动的 Backend
+		const ownedProcess = this.process;
+		this.detach();
+		if (ownedProcess !== null && ownedProcess.exitCode === null && ownedProcess.signalCode === null) {
+			ownedProcess.kill();
+		}
+	}
+
 	public getPort(): number {
 		return this.port;
 	}

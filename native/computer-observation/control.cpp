@@ -1,10 +1,12 @@
 #include "control.h"
+#include "control-activation.h"
 #include <dwmapi.h>
 #include <objbase.h>
 #include <oaidl.h>
 #include <uiautomation.h>
 #include <cmath>
 #include <map>
+#include <chrono>
 
 static constexpr ULONG_PTR INPUT_TAG = 0xDAEDA105;
 InputController *InputController::instance = nullptr;
@@ -21,13 +23,14 @@ InputController::~InputController() {
 void InputController::heartbeat() { heartbeatAt = GetTickCount64(); }
 void InputController::stop() {
   std::lock_guard lock(inputMutex);
-  active = false; ++generation; window = nullptr;
+  active = false; arming = false; ++generation; window = nullptr;
 }
 void InputController::pause(const std::string &code) {
   unsigned current;
   {
     std::lock_guard lock(inputMutex);
-    if (!active.exchange(false)) return;
+    const bool wasActive = active.exchange(false), wasArming = arming.exchange(false);
+    if (!wasActive && !wasArming) return;
     current = ++generation;
   }
   Json value;
@@ -84,7 +87,12 @@ void InputController::watch() {
   if (keyboard) UnhookWindowsHookEx(keyboard);
 }
 Json InputController::start(HWND target, const Json &params) {
-  stop();
+  unsigned startingGeneration;
+  {
+    std::lock_guard lock(inputMutex);
+    active = false; arming = false; window = nullptr;
+    startingGeneration = ++generation;
+  }
   if (!ready) throw std::runtime_error("computer_input_monitor_unavailable");
   const auto overlays = params.GetNamedArray(L"overlays");
   if (overlays.Size() != 2) throw std::runtime_error("computer_overlay_unavailable");
@@ -97,16 +105,38 @@ Json InputController::start(HWND target, const Json &params) {
   }
   auto next = static_cast<unsigned>(params.GetNamedNumber(L"generation"));
   if (next == 0) throw std::runtime_error("computer_invalid_request");
-  window = target;
-  SetForegroundWindow(target);
-  if (GetAncestor(GetForegroundWindow(), GA_ROOT) != target) {
-    Json result; jsonBoolean(result, L"active", false); return result;
-  }
   {
     std::lock_guard lock(inputMutex);
-    GetCursorPos(&anchor); generation = next; heartbeat(); active = true;
+    if (generation != startingGeneration) throw std::runtime_error("computer_cancelled");
+    window = target; generation = next; arming = true;
   }
-  Json result; jsonBoolean(result, L"active", true); return result;
+  // 跨线程激活可能异步完成；批准按钮的鼠标/按键释放不能算作接管
+  if (GetAncestor(GetForegroundWindow(), GA_ROOT) != target) SetForegroundWindow(target);
+  ControlActivationGate gate(GetTickCount64());
+  for (;;) {
+    LASTINPUTINFO last{sizeof(LASTINPUTINFO)};
+    bool released = GetLastInputInfo(&last) && DWORD(GetTickCount() - last.dwTime) >= 100;
+    for (int key = 1; released && key < 256; ++key)
+      if (GetAsyncKeyState(key) & 0x8000) released = false;
+    const auto status = gate.sample(GetTickCount64(), arming && generation == next && window == target && IsWindow(target),
+      GetAncestor(GetForegroundWindow(), GA_ROOT) == target, released);
+    if (status == ActivationStatus::Waiting) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      continue;
+    }
+    std::lock_guard lock(inputMutex);
+    if (status == ActivationStatus::Ready && arming && generation == next && window == target &&
+        GetAncestor(GetForegroundWindow(), GA_ROOT) == target) {
+      GetCursorPos(&anchor); heartbeat(); arming = false; active = true;
+      Json result; jsonBoolean(result, L"active", true); return result;
+    }
+    // stop/pause 可以在工作线程等待时立即使代次失效，不能在这里重新启用
+    if (generation == next) arming = false;
+    Json result; jsonBoolean(result, L"active", false);
+    text(result, L"code", status == ActivationStatus::Cancelled ? "computer_paused" :
+      status == ActivationStatus::UserBusy ? "computer_user_takeover" : "computer_activation_required");
+    return result;
+  }
 }
 void InputController::validate(HWND target, const Json &frame, const POINT *point) {
   if (target != window || !IsWindowVisible(target) || IsIconic(target) || GetAncestor(GetForegroundWindow(), GA_ROOT) != target)

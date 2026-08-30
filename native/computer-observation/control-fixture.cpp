@@ -2,6 +2,7 @@
 #include <dwmapi.h>
 #include <future>
 #include <chrono>
+#include <iostream>
 
 // 只创建自己的测试窗口，不枚举、读取或操作任何用户应用
 void testControlFixture() {
@@ -15,17 +16,27 @@ void testControlFixture() {
     overlay = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, L"STATIC", L"", WS_POPUP, 0, 0, 1, 1, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
     if (!SetWindowDisplayAffinity(overlay, WDA_EXCLUDEFROMCAPTURE)) throw std::runtime_error("computer_capture_exclusion_failed");
   }
+  // windowsHide 的启动显示参数会覆盖 WS_VISIBLE，只显式显示本测试窗口
+  ShowWindow(target, SW_SHOWNORMAL);
+  if (!IsWindowVisible(target)) throw std::runtime_error("computer_fixture_window_hidden");
   SetForegroundWindow(target); SetFocus(edit);
   auto future = std::async(std::launch::async, [=] {
     winrt::init_apartment(winrt::apartment_type::multi_threaded);
     std::atomic<bool> paused{false};
-    InputController input(GetCurrentProcessId(), [&](const Json &event) { paused = event.GetNamedString(L"event") == L"paused"; });
+    InputController input(GetCurrentProcessId(), [&](const Json &event) {
+      paused = event.GetNamedString(L"event") == L"paused";
+      if (paused) std::cerr << "input fixture pause: " << utf8(event.GetNamedString(L"code")) << "\n";
+    });
     Json start; Array handles;
     for (HWND overlay : overlays) handles.Append(winrt::Windows::Data::Json::JsonValue::CreateStringValue(std::to_wstring(reinterpret_cast<uintptr_t>(overlay))));
     start.SetNamedValue(L"overlays", handles); number(start, L"generation", 100);
     bool started = false;
     for (int attempt = 0; attempt < 100 && !started; ++attempt) {
-      try { started = input.start(target, start).GetNamedBoolean(L"active"); }
+      try {
+        const auto result = input.start(target, start);
+        started = result.GetNamedBoolean(L"active");
+        if (!started) throw std::runtime_error(utf8(result.GetNamedString(L"code")));
+      }
       catch (const std::runtime_error &e) { if (std::string(e.what()) != "computer_input_monitor_unavailable") throw; }
       if (!started) std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
@@ -37,11 +48,26 @@ void testControlFixture() {
       number(value, L"width", r.right-r.left); number(value, L"height", r.bottom-r.top); number(value, L"dpi", GetDpiForWindow(target));
       return value;
     };
+    int actionIndex = 0;
     auto execute = [&](const Json &action) {
       input.heartbeat();
       Json params; text(params, L"actionId", "fixture-action"); text(params, L"observationId", "fixture-frame");
       number(params, L"generation", 100); params.SetNamedValue(L"action", action);
-      return input.action(target, frame(), params);
+      ++actionIndex;
+      try { return input.action(target, frame(), params); }
+      catch (const std::runtime_error &error) {
+        if (std::string(error.what()) != "computer_focus_changed") {
+          if (actionIndex < 6) std::cerr << "input fixture action " << actionIndex << ": " << error.what() << "\n";
+          throw;
+        }
+        GUITHREADINFO gui{sizeof(GUITHREADINFO)};
+        const bool found = GetGUIThreadInfo(GetWindowThreadProcessId(target, nullptr), &gui);
+        std::cerr << "input fixture action " << actionIndex << ": foreground="
+          << (GetAncestor(GetForegroundWindow(), GA_ROOT) == target) << ", gui=" << found
+          << ", focusInside=" << (found && gui.hwndFocus && GetAncestor(gui.hwndFocus, GA_ROOT) == target)
+          << ", flags=" << gui.flags << ", visible=" << IsWindowVisible(target) << ", iconic=" << IsIconic(target) << "\n";
+        throw;
+      }
     };
     auto click = [&](HWND child, int count) {
       RECT r{}; GetWindowRect(child, &r);

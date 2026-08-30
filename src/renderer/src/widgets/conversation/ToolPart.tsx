@@ -6,13 +6,12 @@ import { Collapse, Tag } from "antd";
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { getToolDisplayInfo } from "@/domain/conversation/tool-display";
+import { getToolStatus, type ToolStatus } from "@/domain/conversation/tool-status";
 import { useTimelineDisclosure } from "@/features/conversation/timeline-disclosure-state";
 import ToolFileDiff from "./ToolFileDiff";
 import { getFileEditBatch, getSourceFolderId, getToolRecovery, isTimelineToolEventType, type FileEditBatchSummary, type FileEditSummaryItem, type ToolRecoveryDisplay } from "@/domain/conversation/tool-part-data";
 
 export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
-
-type ToolStatus = "pending" | "running" | "success" | "error" | "approval";
 
 const FILE_WRITE_TOOL_NAMES: ReadonlySet<string> = new Set<string>([
 	"mcp_workspace_create_text_file",
@@ -88,68 +87,34 @@ function getCompactedSummary(events: Record<string, unknown>[]): string {
 	].filter((value: string | undefined): value is string => value !== undefined).join("\n");
 }
 
-function getToolStatus(events: Record<string, unknown>[]): ToolStatus {
-	const latestTerminalIndex: number = [...events].map((event: Record<string, unknown>, index: number): number => (
-		isTimelineToolEventType(event, "tool.result") || isTimelineToolEventType(event, "tool.error") ? index : -1
-	)).reduce((latest: number, index: number): number => Math.max(latest, index), -1);
-	const latestResult: Record<string, unknown> | undefined = getLatestEvent(events, "tool.result");
-	const latestError: Record<string, unknown> | undefined = getLatestEvent(events, "tool.error");
-	if (latestTerminalIndex >= 0 && latestError !== undefined && (latestResult === undefined || events.lastIndexOf(latestError) > events.lastIndexOf(latestResult))) {
-		return "error";
-	}
-
-	if (latestTerminalIndex >= 0 && latestResult !== undefined && (latestError === undefined || events.lastIndexOf(latestResult) > events.lastIndexOf(latestError))) {
-		return latestResult.ok === false || latestResult.validationStatus === "failed" || latestResult.failure !== undefined
-			? "error"
-			: "success";
-	}
-
-	const latestApprovalIndex: number = [...events].map((event: Record<string, unknown>, index: number): number => (
-		isTimelineToolEventType(event, "tool.approval_required") ? index : -1
-	)).reduce((latest: number, index: number): number => Math.max(latest, index), -1);
-	const latestExecutionIndex: number = [...events].map((event: Record<string, unknown>, index: number): number => (
-		(isTimelineToolEventType(event, "tool.approved") || isTimelineToolEventType(event, "tool.call") && event.preview !== true || isTimelineToolEventType(event, "tool.progress")) ? index : -1
-	)).reduce((latest: number, index: number): number => Math.max(latest, index), -1);
-	if (latestApprovalIndex > latestExecutionIndex) {
-		return "approval";
-	}
-
-	if (latestExecutionIndex >= 0) {
-		return "running";
-	}
-
-	if (events.some((event: Record<string, unknown>): boolean => isTimelineToolEventType(event, "tool.call") && event.preview === true)) {
-		return "pending";
-	}
-
-	return "pending";
-}
-
 export type ToolPartProps = {
 	part: TimelineToolPart;
 	disclosureKey?: string;
+	stopped?: boolean;
 }
 
-function ToolPart({ part, disclosureKey = "tool" }: ToolPartProps): React.JSX.Element {
+function ToolPart({ part, disclosureKey = "tool", stopped = false }: ToolPartProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const isCompacted: boolean = part.detailLevel === "compacted";
 	const toolDisplay = getToolDisplayInfo(part.events, t);
 	const isFileWriteTool: boolean = FILE_WRITE_TOOL_NAMES.has(toolDisplay.rawName);
 	const [open, setOpen] = useTimelineDisclosure(disclosureKey, false);
-	const status = getToolStatus(part.events);
+	const status = getToolStatus(part.events, stopped);
 	const statusText: Record<ToolStatus, string> = {
 		pending: t("chat.tool.status.pending"),
 		running: t("chat.tool.status.running"),
 		success: t("chat.tool.status.done"),
 		error: t("chat.tool.status.failed"),
 		approval: t("chat.tool.status.approvalRequired"),
+		stopped: t("chat.tool.status.stopped"),
 	}
 	const statusColor: Record<ToolStatus, string> = {
 		pending: "default",
 		running: "lime",
 		success: "green",
 		error: "red",
-		approval: "gold"
+		approval: "gold",
+		stopped: "default"
 	}
 	const isActiveStatus: boolean = status === "running" || status === "approval";
 	const genStatusTag = () => (

@@ -1,5 +1,5 @@
 .body {
-  max-height: calc(100dvh - 180px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+	max-height: calc(100dvh - 180px);
+	overflow-y: auto;
+	overscroll-behavior: contain;
 }

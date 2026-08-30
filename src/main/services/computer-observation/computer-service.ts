@@ -52,6 +52,11 @@ export class ComputerService {
   private context: Context | null = null;
   private access: Access | null = null;
   private generation = 0;
+  private resuming: Promise<void> | null = null;
+  private nativeStart: {
+    generation: number;
+    paused?: { code: string; generation: number };
+  } | null = null;
   private target: { title: string; scope: ComputerScope } | null = null;
   private actions = new Map<string, Promise<Record<string, unknown>>>();
   private startingAccess: {
@@ -98,7 +103,14 @@ export class ComputerService {
     private readonly presentation?: ComputerPresentation,
   ) {
     helper.onControl?.((event) => {
-      if (event.event === "paused") this.pause(event.code, event.generation);
+      if (event.event === "paused") {
+        // 助手的暂停通知可能先于 control.start 响应到达，不能被初始空状态吞掉
+        if (this.nativeStart && event.generation >= this.nativeStart.generation) {
+          this.nativeStart.paused = event;
+          return;
+        }
+        this.pause(event.code, event.generation);
+      }
       else if (event.event === "cancelled") this.revoke(event.code);
     });
   }
@@ -174,6 +186,7 @@ export class ComputerService {
       code,
       generation: this.generation,
     };
+    delete next.resuming;
     this.presentation?.update(next);
     this.publish({ control: next, observation: null });
     void this.helper
@@ -193,21 +206,33 @@ export class ComputerService {
     );
     if (generation !== this.generation || !this.access)
       throw new Error("computer_cancelled");
-    const result = await this.helper.request("control.start", {
-      overlays,
-      generation,
-    });
+    const start: NonNullable<ComputerService["nativeStart"]> = { generation };
+    this.nativeStart = start;
+    let result: Record<string, unknown>;
+    try {
+      result = await this.helper.request("control.start", { overlays, generation });
+    } finally {
+      if (this.nativeStart === start) this.nativeStart = null;
+    }
     if (generation !== this.generation || !this.access)
       throw new Error("computer_cancelled");
+    if (typeof result.active !== "boolean")
+      throw new Error("computer_protocol_invalid");
+    const paused = start.paused;
+    if (paused) this.generation = Math.max(this.generation, paused.generation);
+    const active = result.active && !paused;
+    const code = paused?.code ?? (
+      typeof result.code === "string" && /^computer_[a-z_]+$/.test(result.code)
+        ? result.code : "computer_activation_required"
+    );
     const control: ComputerControlState = {
       ...this.access.scope,
-      generation,
-      state: result.active ? "running" : "paused",
-      ...(!result.active ? { code: "computer_focus_changed" } : {}),
+      generation: this.generation,
+      state: active ? "running" : "paused",
+      ...(!active ? { code } : {}),
     };
-    this.publish({
-      control: holdPaused ? { ...control, state: "paused" } : control,
-    });
+    // 不提前公布新代次的 paused；否则 Backend 会拒绝随后同代次的 running
+    if (!holdPaused || !active) this.publish({ control });
     this.presentation.update(this.state.control!);
     if (this.nativeHeartbeat) clearInterval(this.nativeHeartbeat);
     this.rendererHeartbeatAt = this.now();
@@ -222,37 +247,65 @@ export class ComputerService {
     }, 500);
     return control;
   }
-  async resume(): Promise<void> {
+  resume(): Promise<void> {
+    if (this.resuming) return this.resuming;
     if (this.state.control?.state !== "paused" || !this.access)
-      throw new Error("computer_access_revoked");
-    if (this.activeCall) throw new Error("computer_busy");
+      return Promise.reject(new Error("computer_access_revoked"));
+    if (this.activeCall) return Promise.reject(new Error("computer_busy"));
     this.activeCall = "resume";
     this.observations.clear();
-    const deadline = setTimeout(() => this.revoke("computer_timeout"), 20_000);
-    try {
-      const control = await this.startControl(true);
-      if (control.state !== "running") return;
-      const observation = parseComputerObservation(
-        await this.helper.request("observe"),
-      );
-      if (control.generation !== this.generation || !this.access)
-        throw new Error("computer_cancelled");
-      this.observations.set(observation.observationId, observation);
-      // 新帧完成前不唤醒 Backend 的工具/模型等待点
-      this.publish({ observation, control });
-      this.presentation?.update(control);
-    } catch (error) {
-      this.pause("computer_resume_failed");
-      throw error;
-    } finally {
-      clearTimeout(deadline);
-      if (this.activeCall === "resume") this.activeCall = null;
-    }
+    const access = this.access;
+    this.publish({ control: { ...this.state.control, resuming: true } });
+    this.presentation?.update(this.state.control!);
+    let operation!: Promise<void>;
+    operation = (async () => {
+      const deadline = setTimeout(() => {
+        if (this.access === access) this.revoke("computer_timeout");
+      }, 20_000);
+      let generation = this.generation + 1;
+      try {
+        const control = await this.startControl(true);
+        generation = control.generation;
+        if (control.state !== "running") return;
+        const observation = parseComputerObservation(await this.helper.request("observe"));
+        if (generation !== this.generation || this.access !== access)
+          throw new Error("computer_cancelled");
+        this.observations.set(observation.observationId, observation);
+        // 新帧完成后才公布新代次并唤醒 Backend
+        this.publish({ observation, control });
+        this.presentation?.update(control);
+      } catch (error) {
+        if (this.access === access && generation === this.generation) {
+          const code = error instanceof Error && /^computer_[a-z_]+$/.test(error.message)
+            ? error.message : "computer_resume_failed";
+          if (["computer_protocol_invalid", "computer_helper_stopped", "computer_timeout"].includes(code)) this.revoke(code);
+          else this.pause(code);
+        }
+        throw error;
+      } finally {
+        clearTimeout(deadline);
+        if (this.resuming === operation) {
+          this.resuming = null;
+          if (this.activeCall === "resume") this.activeCall = null;
+          if (this.state.control?.resuming) {
+            const { resuming: _, ...control } = this.state.control;
+            this.publish({ control });
+            this.presentation?.update(control);
+          }
+        }
+      }
+    })();
+    this.resuming = operation;
+    return operation;
   }
   setContext(context: Context | null): void {
     if (JSON.stringify(context) !== JSON.stringify(this.context)) this.revoke();
     this.context = context;
     this.publish({ controlSupported: context?.controlSupported === true });
+  }
+  assertPreviewContext(connectionId: string, sessionId: string): void {
+    if (this.context?.connectionId !== connectionId || this.context.sessionId !== sessionId)
+      throw new Error("computer_context_changed");
   }
   private assertScope(scope: ComputerScope): void {
     if (!this.state.enabled || !this.state.available)
@@ -266,9 +319,12 @@ export class ComputerService {
   }
   async list(): Promise<ComputerSource[]> {
     if (!this.state.pending) throw new Error("computer_consent_required");
-    const generation = this.generation;
+    const generation = this.generation, pending = this.state.pending;
+    await this.healthCheck;
+    if (generation !== this.generation || this.state.pending !== pending)
+      throw new Error("computer_cancelled");
     const result = await this.helper.request("list");
-    if (generation !== this.generation || !this.state.pending)
+    if (generation !== this.generation || this.state.pending !== pending)
       throw new Error("computer_cancelled");
     const sources = result.sources as ComputerSource[];
     if (
@@ -533,6 +589,9 @@ export class ComputerService {
     if (!source) throw new Error("computer_window_unavailable");
     const generation = this.generation,
       decision = this.decision;
+    await this.healthCheck;
+    if (generation !== this.generation || decision !== this.decision)
+      throw new Error("computer_cancelled");
     await this.helper.request("select", { sourceId });
     if (generation !== this.generation || decision !== this.decision)
       throw new Error("computer_cancelled");
@@ -576,7 +635,8 @@ export class ComputerService {
     });
     if (this.monitor) clearInterval(this.monitor);
     this.monitor = setInterval(() => {
-      if (this.activeCall || (!this.access && !this.target)) return;
+      // 观察升级为控制时旧巡检仍存在；选择/启动与助手共用串行通道
+      if (this.activeCall || this.decision || this.startingAccess || (!this.access && !this.target)) return;
       const generation = this.generation;
       if (this.healthCheck) return;
       this.healthCheck = this.helper
@@ -585,7 +645,9 @@ export class ComputerService {
           if (generation === this.generation && !result.valid)
             this.revoke("computer_window_unavailable");
         })
-        .catch(() => {
+        .catch((error: unknown) => {
+          // 忙碌不是窗口销毁，不得因此撤销授权并取消整个模型运行
+          if (error instanceof Error && error.message === "computer_busy") return;
           if (generation === this.generation)
             this.revoke("computer_window_unavailable");
         })
@@ -605,6 +667,9 @@ export class ComputerService {
     ) {
       const ended = this.access?.scope;
       this.generation++;
+      this.resuming = null;
+      this.nativeStart = null;
+      if (this.activeCall === "resume") this.activeCall = null;
       if (this.nativeHeartbeat) clearInterval(this.nativeHeartbeat);
       this.nativeHeartbeat = null;
       void this.helper
@@ -636,6 +701,8 @@ export class ComputerService {
   revoke(code = "computer_access_revoked"): void {
     const revokedScope = this.access?.scope;
     const control = this.state.control;
+    this.resuming = null;
+    this.nativeStart = null;
     if (this.nativeHeartbeat) clearInterval(this.nativeHeartbeat);
     this.nativeHeartbeat = null;
     this.target = null;

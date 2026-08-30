@@ -31,6 +31,15 @@ npm run dev
 
 开发模式下的 Studio 连接到端口 38181 上的后端。如果仓库不是同级目录，请在 Studio 的启动设置中设置开发后端目录。
 
+### 退出开发环境
+
+- 开启“关闭时最小化到托盘”后，点击 × 只隐藏窗口，开发终端继续运行属于正常行为；请用托盘的“退出”，或关闭该设置。
+- 真正退出 Studio 后，`electron-vite` 和开发启动器会结束。Ctrl+C 只终止这次 Studio 启动的进程树，不终止另一个终端中独立启动的 Backend。
+- Windows 开发启动器使用系统自带 Windows PowerShell 和 Job Object，将 Vite/Electron 及子进程绑定到同一生命周期。启动器被强制结束、开发命令异常退出时同样回收子进程；如果系统策略禁止创建 Job Object 或 PowerShell 编译本地监督代码，启动失败并显示错误，不降级为无监督运行。
+- Gateway 的 HTTP/TLS/升级连接最多保留 1.5 秒关闭宽限期；应用退出清理为 Gateway 和 Backend 分别设置 3 秒、9 秒截止时间，某一步失败不会跳过后续清理。此逻辑不修改远程访问和托盘的持久化设置。
+
+相关回归测试包括 `managed-command.test.ts`、`managed-electron-exit.test.ts` 和 `remote-gateway-shutdown.test.ts`，只启动临时模拟进程、空白 Electron 窗口及 loopback 服务。
+
 推荐的开发目录结构为：
 
 ```text

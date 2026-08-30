@@ -9,6 +9,7 @@ import {
 import { join } from "node:path";
 import type {
   ComputerControlState,
+  ComputerOverlayViewState,
   ComputerRect,
 } from "../../../contracts/computer-observation";
 import type { ComputerPresentation } from "./computer-service";
@@ -16,7 +17,7 @@ import type { ComputerPresentation } from "./computer-service";
 const STOP_KEY = "Control+Alt+Escape";
 export class ComputerOverlay implements ComputerPresentation {
   private windows: BrowserWindow[] = [];
-  private state: ComputerControlState | null = null;
+  private state: ComputerOverlayViewState | null = null;
   private pulses = new Map<number, number>();
   private ready = new Map<number, () => void>();
   private tick: ReturnType<typeof setInterval> | null = null;
@@ -24,6 +25,8 @@ export class ComputerOverlay implements ComputerPresentation {
   private clickSequence = 0;
   private layoutDirty = false;
   private pendingReady: Promise<string[]> | null = null;
+  private resuming = false;
+  private resumeError: string | undefined;
   constructor(
     private readonly cancel: () => void,
     private readonly resume: () => Promise<void>,
@@ -49,8 +52,22 @@ export class ComputerOverlay implements ComputerPresentation {
       if (trusted(event)) this.cancel();
     });
     ipcMain.on("computer-overlay:resume", (event) => {
-      if (trusted(event) && this.state?.state === "paused")
-        void this.resume().catch(() => this.pause());
+      if (!trusted(event) || this.state?.state !== "paused" || this.resuming || this.state.resuming) return;
+      const generation = this.generation;
+      this.resuming = true;
+      this.resumeError = undefined;
+      this.publish();
+      void this.resume().catch((error: unknown) => {
+        if (generation === this.generation && this.state?.state === "paused") {
+          const code = error instanceof Error && /^computer_[a-z_]+$/.test(error.message)
+            ? error.message : "computer_resume_failed";
+          if (code === "computer_busy" || !this.state.code) this.resumeError = code;
+        }
+      }).finally(() => {
+        if (generation !== this.generation) return;
+        this.resuming = false;
+        this.publish();
+      });
     });
     void app.whenReady().then(() => {
       const changed = (): void => {
@@ -99,7 +116,7 @@ export class ComputerOverlay implements ComputerPresentation {
     );
     const work = display.workArea;
     const width = Math.min(440, work.width - 24),
-      height = 64;
+      height = 104;
     return [
       display.bounds,
       {
@@ -188,12 +205,14 @@ export class ComputerOverlay implements ComputerPresentation {
             await ready;
             if (generation !== this.generation || window.isDestroyed())
               throw new Error("computer_cancelled");
-            window.showInactive();
           } finally {
             clearTimeout(timer!);
           }
         }),
       );
+      // 固定显示顺序，状态条始终位于穿透层之上，且不抢目标窗口焦点
+      for (const window of this.windows) window.showInactive();
+      this.windows[1]!.moveTop();
       this.tick = setInterval(() => {
         if (
           this.windows.some(
@@ -213,8 +232,9 @@ export class ComputerOverlay implements ComputerPresentation {
       throw error;
     }
   }
-  update(state: ComputerControlState | null): void {
+  update(state: ComputerOverlayViewState | ComputerControlState | null): void {
     this.state = state;
+    this.resumeError = undefined;
     this.publish();
   }
   click(): void {
@@ -229,9 +249,11 @@ export class ComputerOverlay implements ComputerPresentation {
       try {
         window.webContents.send("computer-overlay:state", {
           state: this.state?.state ?? "starting",
-          code: this.state?.code,
+          code: this.resumeError ?? this.state?.code,
+          resuming: this.state?.state === "paused" && (this.resuming || !!this.state.resuming),
           cursor: { x: cursor.x - bounds.x, y: cursor.y - bounds.y },
           clickSequence: this.clickSequence,
+          preview: this.state?.preview === true,
         });
       } catch {
         if (!window.webContents.isDestroyed()) this.cancel();
@@ -243,6 +265,9 @@ export class ComputerOverlay implements ComputerPresentation {
     if (this.tick) clearInterval(this.tick);
     this.tick = null;
     this.state = null;
+    this.resuming = false;
+    this.resumeError = undefined;
+    this.clickSequence = 0;
     globalShortcut.unregister(STOP_KEY);
     const windows = this.windows;
     this.windows = [];

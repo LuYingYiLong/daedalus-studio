@@ -2,6 +2,7 @@ import {
   app,
   ipcMain,
   powerMonitor,
+  screen,
   type BrowserWindow,
   type IpcMainInvokeEvent,
   type WebContents,
@@ -11,6 +12,7 @@ import {
   computerId,
   computerObject,
   parseComputerObservation,
+  parseComputerOverlayPreview,
   type ComputerScope,
   type ComputerSource,
   type ComputerState,
@@ -18,6 +20,7 @@ import {
 import { clientPreferencesService } from "../client-preferences";
 import { ComputerService } from "./computer-service";
 import { ComputerOverlay } from "./computer-overlay";
+import { ComputerOverlayPreviewController } from "./computer-overlay-preview";
 import { NativeComputerHelper, verifyComputerResources } from "./helper-client";
 import { assertComputerSender } from "./sender-guard";
 
@@ -78,10 +81,11 @@ export function registerComputerIpc(
     sendToWindow(settings, "computer:state", settingsState(state));
   };
   const overlay: ComputerOverlay = new ComputerOverlay(
-    () => service.revoke("computer_cancelled"),
-    () => service.resume(),
-    () => service.pause("computer_display_changed"),
+    () => preview.active ? preview.close() : service.revoke("computer_cancelled"),
+    () => preview.active ? preview.resume() : service.resume(),
+    () => preview.active ? preview.pause() : service.pause("computer_display_changed"),
   );
+  const preview = new ComputerOverlayPreviewController(overlay);
   const service: ComputerService = new ComputerService(
     helper,
     broadcast,
@@ -89,7 +93,12 @@ export function registerComputerIpc(
     (scope, code) => {
       sendToWindow(getMain(), "computer:revoked", { ...scope, code });
     },
-    overlay,
+    {
+      prepare: (bounds) => { preview.close(); return overlay.prepare(bounds); },
+      update: (state) => { if (!preview.active) overlay.update(state); },
+      click: () => { if (!preview.active) overlay.click(); },
+      close: () => { if (!preview.active) overlay.close(); },
+    },
   );
   const observed = new WeakSet<WebContents>();
   const guard = (event: IpcMainInvokeEvent, settings = false): void => {
@@ -98,6 +107,7 @@ export function registerComputerIpc(
       observed.add(event.sender);
       if (event.sender === getMain()?.webContents) {
         const revoke = (): void => {
+          preview.close();
           service.revoke();
           overlay.close();
           closeDiagnostics();
@@ -169,6 +179,16 @@ export function registerComputerIpc(
     true,
   );
   handle("resume", () => service.resume());
+  handle("previewOverlay", (input) => {
+    if (app.isPackaged) throw new Error("computer_preview_development_only");
+    const request = parseComputerOverlayPreview(input);
+    service.assertPreviewContext(request.connectionId, request.sessionId);
+    const state = service.getState();
+    if (request.action !== "stop" && (state.sharing || state.pending || state.control))
+      throw new Error("computer_busy");
+    const main = getMain()!;
+    return preview.show(request.action, screen.dipToScreenRect(main, main.getBounds()));
+  });
   handle("clearTarget", () => service.clearTarget());
   handle("acknowledgeControl", (input) => {
     const scope = computerObject(input, [
@@ -193,6 +213,7 @@ export function registerComputerIpc(
     service.heartbeat(scope as ComputerScope);
   });
   handle("setContext", (input) => {
+    preview.close();
     if (input === null) return service.setContext(null);
     const context = computerObject(input, [
       "connectionId",
@@ -215,6 +236,7 @@ export function registerComputerIpc(
     });
   });
   handle("execute", (input) => {
+    preview.close();
     closeDiagnostics();
     return service.execute(input as Parameters<ComputerService["execute"]>[0]);
   });
@@ -297,6 +319,7 @@ export function registerComputerIpc(
   });
   handleDiagnostic("closeDiagnostics", closeDiagnostics);
   app.on("before-quit", () => {
+    preview.close();
     service.revoke();
     overlay.close();
     closeDiagnostics();
@@ -304,10 +327,12 @@ export function registerComputerIpc(
   void app.whenReady().then(async () => {
     if (process.platform !== "win32" || process.arch !== "x64") return;
     powerMonitor.on("lock-screen", () => {
+      preview.close();
       service.revoke();
       closeDiagnostics();
     });
     powerMonitor.on("suspend", () => {
+      preview.close();
       service.revoke();
       closeDiagnostics();
     });

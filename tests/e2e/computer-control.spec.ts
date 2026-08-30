@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import { test, expect } from "./fixtures/studio";
 import { installImageAttachmentScenario } from "./fixtures/image-attachments";
 
-test("single-window control overlay, fresh resume, cancellation and full-trust target reuse", async ({
+test("observation-to-control upgrade, fresh resume, cancellation and full-trust target reuse", async ({
   launchStudio,
   mockBackend,
 }) => {
@@ -14,6 +14,20 @@ test("single-window control overlay, fresh resume, cancellation and full-trust t
     "computer.control.update",
   ])
     mockBackend.setHandler(method, () => ({ accepted: true }));
+  const controlStates = new Map<string, { state: string; generation: number; sequence: number }>();
+  const staleUpdates: string[] = [];
+  mockBackend.setHandler("computer.control.update", ({ params }) => {
+    const value = params as { requestId: string; state: string; generation: number; sequence: number };
+    const old = controlStates.get(value.requestId);
+    // 与实际 Backend 相同：不能用已经发布过 paused 的代次恢复
+    if (old && (value.sequence <= old.sequence || value.generation < old.generation ||
+      (old.state === "paused" && value.state === "running" && value.generation <= old.generation))) {
+      staleUpdates.push(value.requestId);
+      throw new Error("computer_update_stale");
+    }
+    controlStates.set(value.requestId, value);
+    return { accepted: true };
+  });
   const { mainWindow, electronApp } = await launchStudio();
   await electronApp.evaluate(
     ({ app }, fixture) => {
@@ -24,7 +38,7 @@ test("single-window control overlay, fresh resume, cancellation and full-trust t
         file.endsWith("daedalus-computer-helper.exe")
           ? original(process.execPath, [fixture], {
               ...options,
-              env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+              env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", COMPUTER_FIXTURE_FAIL_ACTIVATION: "1", COMPUTER_FIXTURE_START_DELAY_MS: "1600", COMPUTER_FIXTURE_OBSERVE_DELAY_MS: "750" },
             })
           : original(file, args, options)) as typeof original;
     },
@@ -112,11 +126,29 @@ test("single-window control overlay, fresh resume, cancellation and full-trust t
     }),
   );
   expect(denied.ok).toBe(false);
+  // 先观察再升级：旧巡检已启动，control.start 故意跨过巡检周期
+  const dialog = mainWindow.getByRole("dialog");
+  const read = invoke("mcp_computer_request_access", { reason: "Observe before controlling", mode: "observe" });
+  await dialog.getByRole("option", { name: "Local perception fixture" }).click();
+  await dialog.getByRole("button", { name: /Allow this turn|允许本轮观察/ }).click();
+  expect((await result(read)).result.mode).toBe("observe");
+  await expect(dialog).not.toBeVisible();
+  await expect(mainWindow.getByRole("button", { name: /Stop sharing|停止共享/ })).toBeVisible();
+  expect((await result(invoke("mcp_computer_observe"))).ok).toBe(true);
+  expect(electronApp.windows().filter(w => w.url().includes("surface="))).toHaveLength(0);
+  // Modal 关闭不得把焦点重新送回 Studio；拦截测试按钮的 focus，不碰系统前台窗口
+  await mainWindow.evaluate(() => {
+    const sentinel = document.createElement("button");
+    sentinel.id = "control-focus-sentinel";
+    sentinel.textContent = "Control focus fixture";
+    document.body.append(sentinel);
+    sentinel.focus();
+    sentinel.focus = () => { sentinel.dataset.restored = "yes"; };
+  });
   const call = invoke("mcp_computer_request_access", {
     reason: "Control the mock fixture only",
     mode: "control",
   });
-  const dialog = mainWindow.getByRole("dialog");
   await dialog
     .getByRole("option", { name: "Local perception fixture" })
     .click();
@@ -124,14 +156,30 @@ test("single-window control overlay, fresh resume, cancellation and full-trust t
     .getByRole("button", { name: /Allow control for this turn|允许本轮操作/ })
     .click();
   expect((await result(call)).result.mode).toBe("control");
+  await expect(mainWindow.evaluate(async (scope) => {
+    await window.electronAPI.computerObservation!.previewOverlay!({ ...scope, action: "running" });
+  }, { connectionId, sessionId: "session-history", requestId: "preview-while-controlling" })).rejects.toThrow("computer_busy");
+  expect(mockBackend.getRequests("computer.access.revoked")).toHaveLength(0);
   await expect(dialog).not.toBeVisible();
+  await expect(mainWindow.locator("#control-focus-sentinel")).not.toHaveAttribute("data-restored", "yes");
+  await mainWindow.locator("#control-focus-sentinel").evaluate(node => node.remove());
   const bar = electronApp
     .windows()
     .find((w) => w.url().includes("surface=bar"))!;
   const edge = electronApp
     .windows()
     .find((w) => w.url().includes("surface=edge"))!;
+  await expect(bar.getByRole("status")).toContainText("等待窗口激活");
+  await expect(bar.getByRole("status")).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(bar.getByRole("status")).toContainText("请手动切换到授权窗口");
+  await expect(edge.getByTestId("computer-ai-cursor")).toHaveCount(0);
+  await expect.poll(() => controlStates.get(turn)?.state).toBe("paused");
+  await bar.getByRole("button", { name: "继续" }).click();
+  await expect(bar.getByRole("button", { name: "恢复中…" })).toBeDisabled();
+  await bar.evaluate(() => { window.computerOverlay.resume(); window.computerOverlay.resume(); });
   await expect(bar.getByRole("status")).toContainText("AI正在使用你的电脑");
+  await expect(edge.getByTestId("computer-ai-cursor")).toBeVisible();
+  await expect.poll(() => controlStates.get(turn)?.state).toBe("running");
   expect(await bar.evaluate(() => "electronAPI" in window)).toBe(false);
   expect(await bar.evaluate(() => Object.keys(window.computerOverlay))).toEqual(
     ["ready", "pulse", "cancel", "resume", "subscribe"],
@@ -171,6 +219,7 @@ test("single-window control overlay, fresh resume, cancellation and full-trust t
     .toBe(true);
   await bar.getByRole("button", { name: "继续" }).click();
   await expect(bar.getByRole("status")).toContainText("AI正在使用你的电脑");
+  await expect.poll(() => controlStates.get(turn)?.state).toBe("running");
   await expect
     .poll(() =>
       mainWindow.evaluate(
@@ -232,6 +281,11 @@ test("single-window control overlay, fresh resume, cancellation and full-trust t
       ),
     )
     .toBeNull();
+  expect(await mainWindow.evaluate(async () =>
+    (await window.electronAPI.computerObservation!.getState()).rememberedTarget,
+  )).toBe("Local perception fixture");
+  await expect(mainWindow.getByText(/Selected window:|已选择窗口：/)).toHaveCount(0);
+  await expect(mainWindow.getByRole("button", { name: /Change window|更换窗口|Stop sharing|停止共享/ })).toHaveCount(0);
   turn = "trust-next";
   runId = "trust-next-run";
   expect(
@@ -258,5 +312,31 @@ test("single-window control overlay, fresh resume, cancellation and full-trust t
     )
     .toBeNull();
   expect(mockBackend.getRequests("ai.chat")).toHaveLength(0);
+  expect(staleUpdates).toEqual([]);
   expect(mockBackend.getUnhandledRequests()).toEqual([]);
+});
+
+test("cancelled historical turns do not leave an unfinished computer tool running", async ({ launchStudio, mockBackend }) => {
+  const { timelines } = installImageAttachmentScenario(mockBackend);
+  const time = "2026-08-30T00:00:00.000Z";
+  timelines.set("session-history", [{
+    id: "cancelled-assistant", type: "assistant", requestId: "cancelled-turn", content: "",
+    startedAtUtc: time, completedAtUtc: time, status: "stopped", completionStatus: "stopped",
+    bodyParts: [
+      { type: "tool", tool_call_id: "finished-observation", events: [
+        { type: "agent.tool.call", toolName: "mcp_computer_observe" },
+        { type: "agent.tool.result", toolName: "mcp_computer_observe", summary: "Observed fixture" },
+      ] },
+      { type: "tool", tool_call_id: "cancelled-access", events: [
+        { type: "agent.tool.call", toolName: "mcp_computer_request_access" },
+      ] },
+    ],
+  }]);
+  const { mainWindow } = await launchStudio();
+  await mainWindow.getByText("Screenshot history", { exact: true }).click();
+  const stopped = mainWindow.getByRole("button", { name: /Computer Request Access/ });
+  await expect(stopped).toContainText(/Stopped|已停止/);
+  await expect(stopped).not.toContainText(/Running|运行中/);
+  await expect(mainWindow.getByRole("button", { name: /Computer Observe/ })).toContainText(/Done|完成/);
+  expect(mockBackend.getRequests("ai.chat")).toHaveLength(0);
 });

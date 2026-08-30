@@ -87,6 +87,7 @@ function toPublicDevice(device: PersistedRemoteDevice): RemoteAccessDevice {
 }
 
 class RemoteAccessService {
+	private lifecycleGeneration = 0;
 	private store: RemoteAccessStore | null = null;
 	private config: RemoteAccessConfig = { ...DEFAULT_REMOTE_ACCESS_CONFIG, devices: [] };
 	private secrets: RemoteAccessSecrets | null = null;
@@ -128,17 +129,28 @@ class RemoteAccessService {
 	}
 
 	public async start(): Promise<void> {
+		const generation = this.lifecycleGeneration;
 		await this.load();
+		if (generation !== this.lifecycleGeneration) return;
 		if (this.config.enabled) await this.startGateway();
 	}
 
 	public async stop(): Promise<void> {
+		const generation = ++this.lifecycleGeneration;
 		this.pendingPairing = null;
 		await this.gateway?.stop();
+		if (generation !== this.lifecycleGeneration) return;
 		this.gateway = null;
 		this.status = this.config.enabled ? "error" : "disabled";
 		this.addresses = [];
 		this.broadcast();
+	}
+
+	public forceStop(): void {
+		this.lifecycleGeneration += 1;
+		this.pendingPairing = null;
+		this.gateway?.forceStop();
+		this.gateway = null;
 	}
 
 	public getState(): RemoteAccessState {
@@ -174,13 +186,10 @@ class RemoteAccessService {
 		if (this.config.enabled === enabled
 			&& ((enabled && this.gateway !== null) || (!enabled && this.gateway === null))) return;
 		this.config = { ...this.config, enabled };
+		if (!enabled) this.lifecycleGeneration += 1;
 		await this.persistConfig();
 		if (!enabled) {
-			this.pendingPairing = null;
-			await this.gateway?.stop();
-			this.gateway = null;
-			this.addresses = [];
-			this.status = "disabled";
+			await this.stop();
 			this.error = null;
 			this.broadcast();
 			return;
@@ -196,13 +205,13 @@ class RemoteAccessService {
 		this.config = { ...this.config, ...patch };
 		await this.persistConfig();
 		if (this.gateway !== null) {
-			await this.gateway.stop();
-			this.gateway = null;
+			await this.stop();
 			await this.startGateway();
 		}
 	}
 
 	private async startGateway(forceCertificateRotation: boolean = false): Promise<void> {
+		const generation = this.lifecycleGeneration;
 		this.status = "starting";
 		this.error = null;
 		this.broadcast();
@@ -216,6 +225,7 @@ class RemoteAccessService {
 				addresses,
 				forceCertificateRotation,
 			);
+			if (generation !== this.lifecycleGeneration) return;
 			const gateway = new RemoteGateway({
 				addresses,
 				httpsPort: this.config.httpsPort,
@@ -231,13 +241,15 @@ class RemoteAccessService {
 				pair: async (code: string, deviceName: string, origin: string) => await this.consumePairing(code, deviceName, origin),
 				onDeviceSeen: (deviceId: string): void => this.markDeviceSeen(deviceId),
 			});
-			await gateway.start();
 			this.gateway = gateway;
+			await gateway.start();
+			if (generation !== this.lifecycleGeneration) { await gateway.stop(); return; }
 			this.addresses = addresses;
 			this.status = "running";
 			this.error = null;
 			logger.info("started", { addresses, port: this.config.httpsPort });
 		} catch (error: unknown) {
+			if (generation !== this.lifecycleGeneration) return;
 			this.gateway = null;
 			this.addresses = [];
 			this.status = "error";

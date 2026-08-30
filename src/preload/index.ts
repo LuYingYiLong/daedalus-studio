@@ -371,6 +371,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		release: (params) => ipcRenderer.invoke("window-capture:release", params),
 	} satisfies WindowCaptureAPI } : {}),
 	...(process.platform === "win32" && process.arch === "x64" ? { computerObservation: {
+    previewOverlay: (request) => ipcRenderer.invoke("computer:previewOverlay", request),
 		onRevoked: (listener) => { const handler = (_event: Electron.IpcRendererEvent, value: Parameters<typeof listener>[0]): void => listener(value); ipcRenderer.on("computer:revoked", handler); return () => { ipcRenderer.removeListener("computer:revoked", handler); }; },
 		getState: () => ipcRenderer.invoke("computer:getState"),
 		onState: (listener) => { const handler = (_event: Electron.IpcRendererEvent, state: ComputerState): void => listener(state); ipcRenderer.on("computer:state", handler); return () => { ipcRenderer.removeListener("computer:state", handler); }; },

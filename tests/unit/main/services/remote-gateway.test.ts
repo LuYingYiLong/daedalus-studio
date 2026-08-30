@@ -1,9 +1,13 @@
 import { once } from "node:events";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { IncomingMessage } from "node:http";
+import type { Socket } from "node:net";
 import WebSocket, { WebSocketServer } from "ws";
 import {
 	REMOTE_RPC_METHODS,
 	RemoteDeviceProxy,
+	RemoteGateway,
+	type RemoteGatewayOptions,
 	RemoteRequestRateLimiter,
 	createRemoteHello,
 	isPrivateIpv4,
@@ -29,6 +33,41 @@ afterEach(async () => {
 });
 
 describe("remote gateway policy", () => {
+	it("does not resurrect a proxy when authentication completes after stop", async () => {
+		let authenticate!: (value: { id: string; name: string }) => void;
+		const seen = vi.fn();
+		const gateway = new RemoteGateway({
+			addresses: [], httpsPort: 38190,
+			authenticate: () => new Promise((resolve) => { authenticate = resolve; }),
+			onDeviceSeen: seen,
+		} as unknown as RemoteGatewayOptions);
+		const socket = { destroyed: false, destroy: vi.fn(), write: vi.fn() };
+		const websocketServer = { handleUpgrade: vi.fn() };
+		const handler = gateway as unknown as { handleUpgrade(...args: unknown[]): Promise<void> };
+		const pending = handler.handleUpgrade("192.168.1.2", {
+			url: "/api/v1/rpc", headers: { host: "192.168.1.2:38190", origin: "https://192.168.1.2:38190", cookie: "__Host-daedalus_remote=test" },
+			socket: { remoteAddress: "192.168.1.3" },
+		} as unknown as IncomingMessage, socket as unknown as Socket, Buffer.alloc(0), websocketServer, new WeakMap());
+		const stopping = gateway.stop();
+		expect(gateway.stop()).toBe(stopping);
+		await stopping;
+		authenticate({ id: "device", name: "test" });
+		await pending;
+		expect(socket.destroy).toHaveBeenCalled();
+		expect(websocketServer.handleUpgrade).not.toHaveBeenCalled();
+		expect(seen).not.toHaveBeenCalled();
+	});
+
+	it("terminates both sides even if a close handshake was already started", () => {
+		const proxy = new RemoteDeviceProxy({ id: "device", name: "test" }, async () => ({ port: 1, authProtocol: null }), vi.fn());
+		const closing = () => ({ readyState: WebSocket.CLOSING, terminate: vi.fn(), close: vi.fn() });
+		const downstream = closing(); const upstream = closing();
+		Object.assign(proxy, { downstream, upstream });
+		proxy.close(); proxy.close();
+		expect(downstream.terminate).toHaveBeenCalledOnce();
+		expect(upstream.terminate).toHaveBeenCalledOnce();
+	});
+
 	it("refills request capacity continuously instead of locking a device for a full minute", () => {
 		const limiter = new RemoteRequestRateLimiter(2, 60, 0);
 		expect(limiter.consume(0)).toBe(true);

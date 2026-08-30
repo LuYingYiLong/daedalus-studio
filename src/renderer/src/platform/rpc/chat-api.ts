@@ -1,6 +1,7 @@
 import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";
 import { createBackendClient } from "@/platform/rpc/transport/backend-client";
 import type { AdditionalContextItem } from "./types";
+import { parseComputerOverlayPreview } from "../../../../contracts/computer-observation";
 
 export type ChatMode = "ask" | "agent" | "plan" | "goal";
 export type ExecutionPolicy = "auto" | "read_only";
@@ -46,7 +47,7 @@ export async function sendChatMessage(
 ): Promise<unknown> {
 	const client = await createBackendClient();
 
-	return client.requestWithId(params.requestId, "ai.chat", {
+	const result = await client.requestWithId(params.requestId, "ai.chat", {
 		message: params.message,
 		mode: params.mode,
 		provider: params.provider,
@@ -61,6 +62,14 @@ export async function sendChatMessage(
 		},
 		additionalContext: params.additionalContext,
 	});
+	if (/^\/test-computer-overlay(?:\s|$)/iu.test(params.message.trim()) && result && typeof result === "object" && "computerOverlayPreview" in result) {
+		const preview = parseComputerOverlayPreview(result.computerOverlayPreview);
+		if (preview.requestId !== params.requestId) throw new Error("computer_invalid_request");
+		const api = getPlatformRuntime().system?.computerObservation;
+		if (!api?.previewOverlay) throw new Error("computer_preview_requires_windows_studio");
+		await api.previewOverlay(preview);
+	}
+	return result;
 }
 
 export async function cancelChatMessage(

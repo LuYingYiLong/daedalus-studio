@@ -18,6 +18,7 @@ type TestBackendManager = {
 	connectionInfoPromise: Promise<unknown> | null;
 	ping: () => Promise<boolean>;
 	ensureRuntimeLease: () => Promise<void>;
+	process: { exitCode: number | null; signalCode: string | null; kill: () => void } | null;
 };
 
 describe("BackendManager runtime lease recovery", () => {
@@ -27,6 +28,7 @@ describe("BackendManager runtime lease recovery", () => {
 		vi.restoreAllMocks();
 		manager.authToken = "test-auth-token";
 		manager.connectionInfoPromise = null;
+		manager.process = null;
 	});
 
 	it("returns connection details only after recovering an unavailable runtime", async () => {
@@ -40,6 +42,23 @@ describe("BackendManager runtime lease recovery", () => {
 		});
 		expect(restart).toHaveBeenCalledOnce();
 		expect(ensureLease).toHaveBeenCalledOnce();
+	});
+
+	it("force stop only kills a live process owned by Studio", () => {
+		const kill = vi.fn();
+		manager.process = { exitCode: null, signalCode: null, kill };
+		backendManager.forceStop();
+		expect(kill).toHaveBeenCalledOnce();
+		expect(manager.process).toBeNull();
+		backendManager.forceStop();
+		expect(kill).toHaveBeenCalledOnce();
+	});
+
+	it("force stop does not send a signal to an exited process", () => {
+		const kill = vi.fn();
+		manager.process = { exitCode: 0, signalCode: null, kill };
+		backendManager.forceStop();
+		expect(kill).not.toHaveBeenCalled();
 	});
 
 	it("reuses a healthy runtime while restoring its main-process lease", async () => {

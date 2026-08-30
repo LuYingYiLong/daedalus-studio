@@ -32,6 +32,14 @@ npm run dev
 
 Development Studio connects to the backend on port `38181`. If the repositories are not siblings, set the development backend directory in Studio's startup settings.
 
+### Stopping development
+
+Closing the window hides it when minimize-to-tray is enabled; use the tray's Exit command to quit. A real application exit also ends electron-vite and its launcher. Ctrl+C only stops this Studio process tree, not an independently started Backend.
+
+On Windows, the launcher uses built-in Windows PowerShell and a kill-on-close Job Object to contain Vite, Electron and their descendants, including on abnormal command exit or launcher termination. If local policy prevents the supervisor from starting, startup fails explicitly instead of falling back to an unsupervised process. No extra npm package or downloaded helper is required.
+
+Gateway connections have a 1.5-second closing grace period. Application shutdown bounds Gateway and Backend cleanup to 3 and 9 seconds respectively and continues cleanup after a failed step. Tray and remote-access preferences are unchanged. Regression tests cover real process trees, an isolated blank Electron window and loopback connections.
+
 The recommended development layout is:
 
 ```text

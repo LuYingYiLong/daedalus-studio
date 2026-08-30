@@ -246,5 +246,5 @@ export function installImageAttachmentScenario(backend: MockBackend) {
 		]);
 		return { accepted: true };
 	});
-	return { images, workbenches };
+	return { images, workbenches, timelines };
 }

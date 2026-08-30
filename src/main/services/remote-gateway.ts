@@ -5,6 +5,7 @@ import { extname, resolve, sep } from "node:path";
 import type { Socket } from "node:net";
 import WebSocket, { WebSocketServer, type RawData } from "ws";
 import type { BackendConnectionInfo } from "./backend-manager";
+import { HttpServerLifetime } from "./http-server-lifetime";
 
 const REMOTE_COOKIE_NAME: string = "__Host-daedalus_remote";
 const MAX_REQUEST_BYTES: number = 1024 * 1024;
@@ -319,12 +320,12 @@ export class RemoteDeviceProxy {
 		this.disposed = true;
 		this.clearCloseTimer();
 		this.clearIdleTimer();
-		if (this.downstream !== null && this.downstream.readyState < WebSocket.CLOSING) {
-			this.downstream.close(code, reason);
+		if (this.downstream !== null && this.downstream.readyState !== WebSocket.CLOSED) {
+			if (this.downstream.readyState === WebSocket.OPEN) this.downstream.close(code, reason);
 			this.downstream.terminate();
 		}
-		if (this.upstream !== null && this.upstream.readyState < WebSocket.CLOSING) {
-			this.upstream.close(code, reason);
+		if (this.upstream !== null && this.upstream.readyState !== WebSocket.CLOSED) {
+			if (this.upstream.readyState === WebSocket.OPEN) this.upstream.close(code, reason);
 			this.upstream.terminate();
 		}
 		this.downstream = null;
@@ -512,18 +513,24 @@ export class RemoteGateway {
 	private readonly deviceProxies: Map<string, RemoteDeviceProxy> = new Map();
 	private readonly pairingAttempts: Map<string, number[]> = new Map();
 	private bootstrapTimer: ReturnType<typeof setTimeout> | null = null;
+	private readonly serverLifetimes = new Map<HttpServer | HttpsServer, HttpServerLifetime>();
+	private stopPromise: Promise<void> | null = null;
+	private stopping = false;
 
 	public constructor(private readonly options: RemoteGatewayOptions) {}
 
 	public async start(): Promise<void> {
+		if (this.stopping) throw new Error("remote_gateway_stopped");
 		try {
 			await Promise.all(this.options.addresses.map(async (address: string): Promise<void> => {
 			const server: HttpsServer = createHttpsServer({
 				cert: this.options.serverCertificatePem,
 				key: this.options.serverPrivateKeyPem,
 			}, (request: IncomingMessage, response: ServerResponse): void => {
-				void this.handleHttpsRequest(address, request, response);
+				void this.handleHttpsRequest(address, request, response).catch((): void => { response.destroy(); });
 			});
+			this.serverLifetimes.set(server, new HttpServerLifetime(server));
+			this.httpsServers.push(server);
 			const websocketServer = new WebSocketServer({
 				noServer: true,
 				maxPayload: MAX_REQUEST_BYTES,
@@ -544,10 +551,9 @@ export class RemoteGateway {
 			heartbeatTimer.unref();
 			this.heartbeatTimers.push(heartbeatTimer);
 			server.on("upgrade", (request: IncomingMessage, socket: Socket, head: Buffer): void => {
-				void this.handleUpgrade(address, request, socket, head, websocketServer, alive);
+				void this.handleUpgrade(address, request, socket, head, websocketServer, alive).catch((): void => { socket.destroy(); });
 			});
 			await this.listen(server, address, this.options.httpsPort);
-			this.httpsServers.push(server);
 			}));
 		} catch (error: unknown) {
 			await this.stop();
@@ -557,18 +563,21 @@ export class RemoteGateway {
 
 	public async beginBootstrap(expiresAt: number): Promise<void> {
 		await this.stopBootstrap();
+		if (this.stopping) throw new Error("remote_gateway_stopped");
 		try {
 			await Promise.all(this.options.addresses.map(async (address: string): Promise<void> => {
 			const server: HttpServer = createHttpServer((request: IncomingMessage, response: ServerResponse): void => {
 				this.handleBootstrapRequest(address, request, response);
 			});
-			await this.listen(server, address, this.options.bootstrapPort);
+			this.serverLifetimes.set(server, new HttpServerLifetime(server));
 			this.bootstrapServers.push(server);
+			await this.listen(server, address, this.options.bootstrapPort);
 			}));
 		} catch (error: unknown) {
 			await this.stopBootstrap();
 			throw error;
 		}
+		if (this.stopping) return;
 		this.bootstrapTimer = setTimeout((): void => {
 			void this.stopBootstrap();
 		}, Math.max(1, expiresAt - Date.now()));
@@ -579,21 +588,35 @@ export class RemoteGateway {
 		this.deviceProxies.get(deviceId)?.close(4001, "remote_device_revoked");
 	}
 
-	public async stop(): Promise<void> {
-		await this.stopBootstrap();
+	public stop(): Promise<void> {
+		if (this.stopPromise !== null) return this.stopPromise;
+		this.stopping = true;
 		for (const timer of this.heartbeatTimers.splice(0)) clearInterval(timer);
 		for (const proxy of [...this.deviceProxies.values()]) proxy.close();
-		await Promise.all(this.websocketServers.splice(0).map(async (server: WebSocketServer): Promise<void> => {
-			await new Promise<void>((resolveClose): void => server.close((): void => resolveClose()));
-		}));
-		await Promise.all(this.httpsServers.splice(0).map(async (server: HttpsServer): Promise<void> => {
-			await new Promise<void>((resolveClose): void => {
-				server.close((): void => resolveClose());
-			});
-		}));
+		// 未挂到 proxy 的握手中连接、已处于 CLOSING 的连接也必须回收
+		for (const server of this.websocketServers.splice(0)) {
+			for (const client of server.clients) client.terminate();
+			server.close();
+		}
+		this.stopPromise = Promise.all([
+			this.stopBootstrap(),
+			...this.httpsServers.splice(0).map((server): Promise<void> => this.closeHttpServer(server)),
+		]).then((): void => {});
+		return this.stopPromise;
+	}
+
+	public forceStop(): void {
+		void this.stop();
+		for (const lifetime of this.serverLifetimes.values()) lifetime.forceClose();
+	}
+
+	private async closeHttpServer(server: HttpServer | HttpsServer): Promise<void> {
+		await this.serverLifetimes.get(server)?.close();
+		this.serverLifetimes.delete(server);
 	}
 
 	private async handleHttpsRequest(address: string, request: IncomingMessage, response: ServerResponse): Promise<void> {
+		if (this.stopping) { response.writeHead(503).end(); return; }
 		if (!this.isValidHttpsRequest(address, request) || !isAllowedRemoteAddress(request.socket.remoteAddress)) {
 			sendJson(response, 403, { error: "remote_origin_not_allowed" });
 			return;
@@ -675,6 +698,7 @@ export class RemoteGateway {
 		websocketServer: WebSocketServer,
 		alive: WeakMap<WebSocket, boolean>,
 	): Promise<void> {
+		if (this.stopping || socket.destroyed) { socket.destroy(); return; }
 		const expectedOrigin: string = `https://${address}:${this.options.httpsPort}`;
 		const url = new URL(request.url ?? "/", expectedOrigin);
 		if (url.pathname !== "/api/v1/rpc"
@@ -688,6 +712,7 @@ export class RemoteGateway {
 		const device: RemoteGatewayDevice | null = credential === null
 			? null
 			: await this.options.authenticate(credential, expectedOrigin);
+		if (this.stopping || socket.destroyed) { socket.destroy(); return; }
 		if (device === null) {
 			socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
 			socket.destroy();
@@ -812,10 +837,16 @@ export class RemoteGateway {
 
 	private async listen(server: HttpServer | HttpsServer, host: string, port: number): Promise<void> {
 		await new Promise<void>((resolveListen, rejectListen): void => {
-			const handleError = (error: Error): void => rejectListen(error);
-			server.once("error", handleError);
-			server.listen(port, host, (): void => {
+			const cleanup = (): void => {
 				server.off("error", handleError);
+				server.off("close", handleClose);
+			};
+			const handleError = (error: Error): void => { cleanup(); rejectListen(error); };
+			const handleClose = (): void => { cleanup(); rejectListen(new Error("remote_gateway_stopped")); };
+			server.once("error", handleError);
+			server.once("close", handleClose);
+			server.listen(port, host, (): void => {
+				cleanup();
 				resolveListen();
 			});
 		});
@@ -826,10 +857,6 @@ export class RemoteGateway {
 			clearTimeout(this.bootstrapTimer);
 			this.bootstrapTimer = null;
 		}
-		await Promise.all(this.bootstrapServers.splice(0).map(async (server: HttpServer): Promise<void> => {
-			await new Promise<void>((resolveClose): void => {
-				server.close((): void => resolveClose());
-			});
-		}));
+		await Promise.all(this.bootstrapServers.splice(0).map((server): Promise<void> => this.closeHttpServer(server)));
 	}
 }
