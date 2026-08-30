@@ -43,7 +43,10 @@ export function useComputerObservationHistory(
 					detailLevel: "full" | "summary" | "compacted";
 					observation?: unknown;
 					dataUrl?: string;
-				}>("session.computerObservation.get", { sessionId, observationId }),
+				}>("session.computerObservation.get", {
+					sessionId,
+					observationId,
+				}),
 			)
 			.then((value) => {
 				if (!active) return;
@@ -51,7 +54,9 @@ export function useComputerObservationHistory(
 					setObservation(
 						parseComputerObservation({
 							...(value.observation as object),
-							...(value.dataUrl ? { dataUrl: value.dataUrl } : {}),
+							...(value.dataUrl
+								? { dataUrl: value.dataUrl }
+								: {}),
 						}),
 					);
 				setState(value.detailLevel);
