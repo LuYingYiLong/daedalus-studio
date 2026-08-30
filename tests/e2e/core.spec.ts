@@ -494,7 +494,7 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 		const { mainWindow } = await launchStudio();
 		await mainWindow.getByText("Compaction session", { exact: true }).click();
 		await expect(mainWindow.getByText("Reply 11", { exact: true })).toBeVisible({ timeout: 15_000 });
-		const timelineScroller = mainWindow.locator("[class*='messageList']").first();
+		const timelineScroller = mainWindow.locator('[data-virtuoso-scroller="true"]').first();
 		await timelineScroller.evaluate((element): void => {
 			element.dispatchEvent(new WheelEvent("wheel", { deltaY: -1000, bubbles: true }));
 			(element as HTMLElement).scrollTop = 0;

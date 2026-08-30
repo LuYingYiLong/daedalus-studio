@@ -79,8 +79,10 @@ web_modules/
 out
 release/
 build/backend-bootstrap/
+build/computer-observation/
 build/godot-plugin/
 build/daedalus-bridge/
+build/.app-icons-*/
 
 # Nuxt.js build / generate output
 .nuxt

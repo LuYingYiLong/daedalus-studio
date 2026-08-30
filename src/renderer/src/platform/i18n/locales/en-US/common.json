@@ -1,4 +1,27 @@
 {
+  "computer": {
+    "viewEvidence": "View desktop evidence",
+    "coordinates": "Physical screen area: ({{x}}, {{y}}), {{width}} × {{height}}. Overlays use image pixels, not CSS screen coordinates.",
+		"title": "Desktop perception",
+		"setting": "Allow AI to request window observation",
+		"settingDescription": "Windows desktop only. AI may ask you to select one window; each turn still needs explicit consent. No mouse or keyboard control.",
+		"consentTitle": "Allow one window for this turn",
+		"privacy": "OCR runs locally. Text and requested screenshots may be sent to your configured model provider. Not all sensitive content can be detected. Consent lasts only for this turn and can be revoked at any time.",
+		"allow": "Allow for this turn",
+		"cancel": "Cancel",
+		"observe": "Observe",
+		"diagnose": "Select window for local diagnostics",
+		"localOnly": "Local diagnostics do not authorize AI, attach context or send to a model",
+		"sharing": "Sharing this turn: {{title}}",
+		"stop": "Stop sharing",
+		"empty": "No observations yet",
+		"truncated": "Capture limits reached; this result is incomplete",
+		"frame": "Static frame of the selected window",
+		"failed": "Observation failed. Check the window and retry.",
+		"saveFailed": "Could not save desktop perception settings",
+		"resourcesMissing": "Native helper or OCR resources are missing or invalid. Build or reinstall the Windows resources.",
+		"developerRequired": "Desktop perception requires Windows developer mode"
+	},
 	"windowCapture": {
 		"title": "Window screenshot",
 		"filename": "Window screenshot",

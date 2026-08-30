@@ -116,9 +116,10 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 			multiClient: { enabled: true, protocolVersion: 3 },
 			logPath: null,
 		}),
-		"client.hello": () => ({
+		"client.info": ({ connectionId }) => ({ connection: { connectionId } }),
+		"client.hello": ({ connectionId }) => ({
 			connection: {
-				connectionId: "e2e-connection",
+				connectionId,
 				clientType: "studio",
 				clientName: "Daedalus Studio",
 				connectedAt: MOCK_NOW,
@@ -408,7 +409,7 @@ export class MockBackend {
 
 	async stop(): Promise<void> {
 		for (const connection of this.connections.values()) {
-			connection.socket.close();
+			connection.socket.terminate();
 		}
 		this.connections.clear();
 		const server: WebSocketServer | null = this.server;

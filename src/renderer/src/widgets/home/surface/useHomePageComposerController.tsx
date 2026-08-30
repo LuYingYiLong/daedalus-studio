@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ComputerSharingIndicator } from "@/features/computer-observation/ComputerObservationBoundary";
 import Composer, {
 	type ComposerProps,
 } from "@/widgets/composer/Composer";
@@ -163,7 +164,7 @@ export default function useHomePageComposerController({
 			onRemoveContext: actions.onRemoveContext,
 			onPinContext: actions.onPinContext,
 			onClearUnpinnedContext: actions.onClearUnpinnedContext,
-			onCancel: actions.onCancel,
+			onCancel: () => { void window.electronAPI.computerObservation?.revoke(); actions.onCancel?.(); },
 			onSubmit: actions.onSubmit,
 			onGuideSubmit: actions.onGuideSubmit,
 			onCompletionOpen: actions.onCompletionOpen,
@@ -173,6 +174,7 @@ export default function useHomePageComposerController({
 	const renderComposer = useCallback(
 		(compact: boolean): React.JSX.Element => {
 			return (
+				<><ComputerSharingIndicator />
 				<Composer
 					key={compact ? state.composerInstanceKey : "home-page-composer"}
 					{...composerProps}
@@ -182,6 +184,7 @@ export default function useHomePageComposerController({
 					compact={compact}
 					floating={compact}
 				/>
+				</>
 			);
 		},
 		[composerProps, state.composerInstanceKey],

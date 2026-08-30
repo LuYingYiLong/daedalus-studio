@@ -50,7 +50,7 @@ describe("remote gateway policy", () => {
 		expect(isPrivateIpv4("172.32.0.1")).toBe(false);
 	});
 
-	it("keeps destructive desktop RPC outside the allowlist", () => {
+	it("keeps desktop-only and destructive RPC outside the allowlist", () => {
 		for (const method of [
 			"backend.shutdown",
 			"session.fork",
@@ -60,7 +60,13 @@ describe("remote gateway policy", () => {
 			"browser.navigate",
 			"provider.config.set",
 			"plugin.install",
-		]) expect(REMOTE_RPC_METHODS.has(method)).toBe(false);
+			"computer.tool.result",
+			"computer.access.revoked",
+			"session.computerObservation.get",
+		]) {
+			expect(REMOTE_RPC_METHODS.has(method)).toBe(false);
+			expect(validateRemoteRequest({ type: "request", id: "denied", method, params: {} })).toBe("remote_method_not_allowed");
+		}
 	});
 
 	it("rejects unsupported chat modes, context and unbound session creation", () => {
@@ -78,7 +84,7 @@ describe("remote gateway policy", () => {
 			type: "request",
 			id: "hello",
 			method: "client.hello",
-			params: { clientType: "studio", clientName: "Forged" },
+			params: { clientType: "studio", clientName: "Forged", capabilities: { computerObservation: true } },
 		}, { id: "device-a", name: "Pixel" });
 		expect(hello.params).toMatchObject({
 			clientType: "studio_remote",
@@ -86,6 +92,7 @@ describe("remote gateway policy", () => {
 			capabilities: {
 				remoteControl: true,
 				browserTools: false,
+				computerObservation: false,
 				scheduledTasks: false,
 			},
 		});

@@ -2,13 +2,21 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
-import { test as base, expect, type ElectronApplication, type Page } from "@playwright/test";
+import {
+	test as base,
+	expect,
+	type ElectronApplication,
+	type Page,
+} from "@playwright/test";
 import { _electron as electron } from "playwright";
 import { MockBackend } from "./mock-backend";
+import { closeElectronAndCheckHealth } from "./electron-health";
 
 const repositoryRoot: string = resolve(__dirname, "..", "..", "..");
 const builtEntryPoint: string = join(repositoryRoot, "out", "main", "index.js");
-const electronExecutablePath: string = createRequire(__filename)("electron") as string;
+const electronExecutablePath: string = createRequire(__filename)(
+	"electron",
+) as string;
 const LAST_SEEN_CHANGELOG_VERSION_KEY: string =
 	"daedalus.studio.changelog.last-seen-version";
 
@@ -81,14 +89,30 @@ export const test = base.extend<StudioFixtures>({
 		await backend.stop();
 	},
 	userDataDir: async ({}, use): Promise<void> => {
-		const directory: string = await mkdtemp(join(tmpdir(), "daedalus-studio-e2e-"));
+		const directory: string = await mkdtemp(
+			join(tmpdir(), "daedalus-studio-e2e-"),
+		);
 		await use(directory);
-		await rm(directory, { recursive: true, force: true });
+		await rm(directory, {
+			recursive: true,
+			force: true,
+			maxRetries: 10,
+			retryDelay: 100,
+		});
 	},
-	launchStudio: async ({ mockBackend, userDataDir }, use): Promise<void> => {
+	launchStudio: async (
+		{ mockBackend, userDataDir },
+		use,
+		testInfo,
+	): Promise<void> => {
 		let launched: LaunchedStudio | null = null;
 		let launchingApp: ElectronApplication | null = null;
-		const launchStudio = async (options: LaunchOptions = {}): Promise<LaunchedStudio> => {
+		const healthLog = testInfo.outputPath("electron-main-health.jsonl");
+		await mkdir(testInfo.outputDir, { recursive: true });
+		const rendererErrors: string[] = [];
+		const launchStudio = async (
+			options: LaunchOptions = {},
+		): Promise<LaunchedStudio> => {
 			if (launched !== null) {
 				return launched;
 			}
@@ -104,6 +128,8 @@ export const test = base.extend<StudioFixtures>({
 			const electronApp: ElectronApplication = await electron.launch({
 				executablePath: electronExecutablePath,
 				args: [
+					"-r",
+					join(__dirname, "electron-health.cjs"),
 					"--disable-gpu",
 					"--disable-software-rasterizer",
 					"--in-process-gpu",
@@ -118,6 +144,7 @@ export const test = base.extend<StudioFixtures>({
 					TEMP: userDataDir,
 					TMP: userDataDir,
 					DAEDALUS_E2E: "1",
+					DAEDALUS_E2E_HEALTH_LOG: healthLog,
 					DAEDALUS_E2E_BACKEND_PORT: String(mockBackend.getPort()),
 					ELECTRON_DISABLE_SECURITY_WARNINGS: "true",
 				},
@@ -130,12 +157,21 @@ export const test = base.extend<StudioFixtures>({
 			electronProcess.stderr?.on("data", (chunk: Buffer): void => {
 				console.log(`[electron:stderr] ${chunk.toString().trimEnd()}`);
 			});
+			const watchedPages = new WeakSet<Page>();
+			const watchPage = (page: Page): void => {
+				if (watchedPages.has(page)) return;
+				watchedPages.add(page);
+				page.on("pageerror", (error) =>
+					rendererErrors.push(error.stack ?? error.message),
+				);
+				page.on("crash", () => rendererErrors.push("Renderer process crashed"));
+			};
+			electronApp.on("window", watchPage);
+			for (const page of electronApp.windows()) watchPage(page);
 			const mainWindow: Page = await electronApp.firstWindow();
+			watchPage(mainWindow);
 			mainWindow.on("console", (message): void => {
 				console.log(`[renderer:${message.type()}] ${message.text()}`);
-			});
-			mainWindow.on("pageerror", (error): void => {
-				console.log(`[renderer:pageerror] ${error.message}`);
 			});
 			await mainWindow.waitForLoadState("domcontentloaded");
 			await dismissReleaseNotesIfPresent(mainWindow);
@@ -143,13 +179,24 @@ export const test = base.extend<StudioFixtures>({
 			launchingApp = null;
 			return launched;
 		};
-		await use(launchStudio);
-		const completedLaunch: LaunchedStudio | null = launched as LaunchedStudio | null;
-		const incompleteApp: ElectronApplication | null = launchingApp as ElectronApplication | null;
-		if (completedLaunch !== null) {
-			await completedLaunch.electronApp.close();
-		} else if (incompleteApp !== null) {
-			await incompleteApp.close();
+		try {
+			await use(launchStudio);
+		} finally {
+			const completedLaunch: LaunchedStudio | null =
+				launched as LaunchedStudio | null;
+			const incompleteApp: ElectronApplication | null =
+				launchingApp as ElectronApplication | null;
+			const closing = completedLaunch?.electronApp ?? incompleteApp;
+			if (closing) {
+				try {
+					await closeElectronAndCheckHealth(closing, healthLog, rendererErrors);
+				} finally {
+					await testInfo.attach("electron-main-health", {
+						path: healthLog,
+						contentType: "application/x-ndjson",
+					});
+				}
+			}
 		}
 	},
 });

@@ -34,6 +34,10 @@ asarUnpack:
   - node_modules/node-pty/**/*
 
 win:
+  # Windows-only assets are not included in Android or other desktop targets
+  extraResources:
+    - from: build/computer-observation
+      to: computer-observation
   icon: build/icon.ico
   target:
     - target: nsis

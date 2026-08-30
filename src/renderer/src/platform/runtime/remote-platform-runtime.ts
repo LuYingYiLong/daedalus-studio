@@ -15,6 +15,7 @@ export const remotePlatformRuntime: PlatformRuntime = {
 			approval: true,
 			inlineDiffView: false,
 			browserTools: false,
+			computerObservation: false,
 			scheduledTasks: false,
 		},
 	}),

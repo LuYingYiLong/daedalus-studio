@@ -90,4 +90,12 @@ npm run pack:win
 - If a sibling repository is absent, set `DAEDALUS_BACKEND_SOURCE` to the backend repository root and `DAEDALUS_BRIDGE_SOURCE` to the Bridge repository or addon root. Sibling repositories intentionally take priority over these variables.
 - If no source repository is available, packaging retains the verified fallback paths: `DAEDALUS_BACKEND_BOOTSTRAP_DIR` for a prepared backend payload, then the fixed backend and Bridge GitHub releases. All packaged artifacts are still checked for versions, manifests, hashes, protocols, and backend self-tests. A missing or unverifiable Bridge remains a packaging error; only the unbundled development server can continue without it.
 
+### Application icon
+
+Edit `src/renderer/src/assets/icons/icon-colorful.svg` as the single source for the Studio application icon. The onboarding page, About page, and desktop renderer favicon use it directly. Run `npm run prepare:icons` to update the tracked `build/icon.svg` and multi-resolution `build/icon.ico` used by the window, tray, executable, and installer. Commit these two icon resources together with the source SVG.
+
+Development startup and desktop builds also run this step automatically. Unchanged resources are reused without downloading tools; the first conversion uses electron-builder's checksum-verified icon toolset and its normal cache. Use `npm run prepare:icons -- --force` to regenerate after upgrading the converter. Remote's separate branding is not changed.
+
+Restart Studio to see the new window/tray icon. An existing executable or installed shortcut requires a new Windows package; changing the source does not patch an already installed application.
+
 Do not commit generated dependencies, build output, release artifacts, logs, or local configuration. Keep changes focused and include the relevant typecheck, test, or build result when opening a change for review.

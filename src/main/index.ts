@@ -36,6 +36,7 @@ import { scheduledTaskService } from "./services/scheduled-tasks/service";
 import { registerWorkspaceMediaProtocol } from "./services/workspace-media";
 import { remoteAccessService } from "./services/remote-access";
 import { registerWindowCaptureIpc } from "./services/window-capture/window-capture-ipc";
+import { registerComputerIpc } from "./services/computer-observation/computer-ipc";
 
 const logger = createLogger("main");
 const MEMORY_DIAGNOSTICS_INTERVAL_MS: number = 30_000;
@@ -111,6 +112,7 @@ const browserService = new BrowserService(
 );
 browserService.registerIpc();
 registerWindowCaptureIpc(() => mainWindow);
+registerComputerIpc(() => mainWindow, () => settingsWindow);
 const rendererReadyWindows: WeakSet<BrowserWindow> = new WeakSet();
 const rendererShellReadyWindows: WeakSet<BrowserWindow> = new WeakSet();
 const rendererPaintReadyWindows: WeakSet<BrowserWindow> = new WeakSet();

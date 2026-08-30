@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import type { WindowCaptureAPI } from "../contracts/window-capture";
+import type { ComputerAPI, ComputerState } from "../contracts/computer-observation";
 import { applyStudioAccentVariables } from "../contracts/theme-color";
 import { applyStudioFontVariables } from "../contracts/studio-fonts";
 import type { ClientPreferences, ClientPreferencesPatch } from "../contracts/client-preferences";
@@ -108,7 +109,7 @@ type DockLayoutPreferences = {
 	size: number;
 	tabs: Array<{
 		key: string;
-		kind: "review" | "terminal" | "files" | "browser" | "trajectory";
+		kind: "review" | "terminal" | "files" | "browser" | "trajectory" | "computer";
 		index: number;
 	}>;
 	activeTabKey: string | null;
@@ -369,6 +370,22 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		capture: (params) => ipcRenderer.invoke("window-capture:capture", params),
 		release: (params) => ipcRenderer.invoke("window-capture:release", params),
 	} satisfies WindowCaptureAPI } : {}),
+	...(process.platform === "win32" && process.arch === "x64" ? { computerObservation: {
+		onRevoked: (listener) => { const handler = (_event: Electron.IpcRendererEvent, value: Parameters<typeof listener>[0]): void => listener(value); ipcRenderer.on("computer:revoked", handler); return () => { ipcRenderer.removeListener("computer:revoked", handler); }; },
+		getState: () => ipcRenderer.invoke("computer:getState"),
+		onState: (listener) => { const handler = (_event: Electron.IpcRendererEvent, state: ComputerState): void => listener(state); ipcRenderer.on("computer:state", handler); return () => { ipcRenderer.removeListener("computer:state", handler); }; },
+		setEnabled: (enabled) => ipcRenderer.invoke("computer:setEnabled", enabled),
+		setContext: (context) => ipcRenderer.invoke("computer:setContext", context),
+		execute: (request) => ipcRenderer.invoke("computer:execute", request),
+		cancel: (callId) => ipcRenderer.invoke("computer:cancel", callId),
+		finish: (scope) => ipcRenderer.invoke("computer:finish", scope),
+		list: () => ipcRenderer.invoke("computer:list"),
+		decide: (params) => ipcRenderer.invoke("computer:decide", params),
+		revoke: () => ipcRenderer.invoke("computer:revoke"),
+		diagnose: (sourceId) => ipcRenderer.invoke("computer:diagnose", sourceId),
+		listDiagnostics: () => ipcRenderer.invoke("computer:listDiagnostics"),
+		closeDiagnostics: () => ipcRenderer.invoke("computer:closeDiagnostics"),
+	} satisfies ComputerAPI } : {}),
 
 	nativeNotifications: {
 		show: (payload: NativeNotificationPayload): Promise<NativeNotificationResult> => {

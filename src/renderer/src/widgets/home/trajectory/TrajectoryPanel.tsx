@@ -32,6 +32,7 @@ import TraceGantt from "./TrajectoryGantt";
 import styles from "./TrajectoryPanel.module.css";
 
 const ReactJsonView = lazy(() => import("@microlink/react-json-view"));
+const ComputerObservationHistory = lazy(() => import("@/features/computer-observation/ComputerObservationHistory"));
 
 type TrajectoryPanelProps = {
 	sessionId: string | null;
@@ -172,6 +173,7 @@ export function TraceInspector({
 		children: <JsonDetail value={section.content} />,
 	}));
 	const inspectorItems: NonNullable<CollapseProps["items"]> = [
+		...(typeof detail.record.summary.observationId === "string" ? [{ key: "computer-observation", label: t("computer.viewEvidence"), children: <Suspense fallback={<Spin />}><ComputerObservationHistory key={detail.record.recordId} sessionId={detail.record.sessionId} observationId={detail.record.summary.observationId} /></Suspense> }] : []),
 		...(collapseItems.length > 0
 			? [
 					{

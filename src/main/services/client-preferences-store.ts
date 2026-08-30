@@ -39,6 +39,7 @@ export type { ClientPreferences, ClientPreferencesPatch } from "../../contracts/
 export const DEFAULT_THEME_COLOR: string = DEFAULT_STUDIO_THEME_COLOR;
 
 export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
+	allowComputerObservation: false,
 	autoCheckForUpdates: true,
 	notifyOnRunCompleted: true,
 	minimizeToTrayOnClose: false,
@@ -244,6 +245,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			autoCheckForUpdates,
 			notifyOnRunCompleted,
 			minimizeToTrayOnClose,
+			allowComputerObservation: value.allowComputerObservation === true,
 			theme: themePreference,
 			themeColor,
 			animationsEnabled,
@@ -260,6 +262,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			onboarding
 		},
 		normalized: value.autoCheckForUpdates !== autoCheckForUpdates
+			|| typeof value.allowComputerObservation !== "boolean"
 			|| value.notifyOnRunCompleted !== notifyOnRunCompleted
 			|| value.minimizeToTrayOnClose !== minimizeToTrayOnClose
 			|| value.theme !== themePreference
@@ -277,6 +280,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			|| JSON.stringify(value.newSessionComposer ?? null) !== JSON.stringify(newSessionComposer)
 			|| JSON.stringify(value.onboarding ?? null) !== JSON.stringify(onboarding)
 			|| Object.keys(value).some((key: string): boolean => ![
+				"allowComputerObservation",
 				"autoCheckForUpdates",
 				"notifyOnRunCompleted",
 				"minimizeToTrayOnClose",
@@ -313,6 +317,7 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	if (typeof value.minimizeToTrayOnClose === "boolean") {
 		patch.minimizeToTrayOnClose = value.minimizeToTrayOnClose;
 	}
+	if (typeof value.allowComputerObservation === "boolean") patch.allowComputerObservation = value.allowComputerObservation;
 	if (value.theme === "light" || value.theme === "dark" || value.theme === "system") {
 		patch.theme = value.theme;
 	}

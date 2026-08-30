@@ -46,6 +46,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Build and test Windows perception helper
+        run: |
+          npm run build:computer
+          npm run test:computer
+
       - name: Unit and static tests
         run: npm test
 

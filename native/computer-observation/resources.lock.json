@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "onnxRuntimeVersion": "1.25.0",
+  "modelVersion": "RapidOCR-v3.9.2-PP-OCRv5-mobile",
+  "vcRuntimeVersion": "14.44.35211.0",
+  "resources": [
+    {"name":"RapidOCR-LICENSE.txt","url":"https://raw.githubusercontent.com/RapidAI/RapidOCR/v3.9.2/LICENSE","sha256":"3e0af25fdd06aa9586ae97adb00ea927ebe5a3805ac77d2d3a81ce5f55693333"},
+    {"name":"PaddleOCR-LICENSE.txt","url":"https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/v3.3.2/LICENSE","sha256":"3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e"},
+    {"name":"vcredist.exe","url":"https://download.visualstudio.microsoft.com/download/pr/73aabf2e-9532-4f68-99f7-3247081a619c/CC0FF0EB1DC3F5188AE6300FAEF32BF5BEEBA4BDD6E8E445A9184072096B713B/VC_redist.x64.exe","sha256":"cc0ff0eb1dc3f5188ae6300faef32bf5beeba4bdd6e8e445a9184072096b713b"},
+    {"name":"ort.zip","url":"https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime/1.25.0/microsoft.ml.onnxruntime.1.25.0.nupkg","sha256":"c12a4e043c7ae1cee4ef99a347193eceabe2f6c828eb04f6d58ab21bcccddd8d"},
+    {"name":"det.onnx","url":"https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/det/ch_PP-OCRv5_det_mobile.onnx","sha256":"4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae"},
+    {"name":"rec.onnx","url":"https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile.onnx","sha256":"5825fc7ebf84ae7a412be049820b4d86d77620f204a041697b0494669b1742c5"}
+  ]
+}

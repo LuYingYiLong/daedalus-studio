@@ -103,6 +103,9 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Build and test Windows perception runtime
+        run: npm run build:computer && npm run test:computer
+
       - name: Build Electron app for E2E smoke gate
         run: npm run build
 

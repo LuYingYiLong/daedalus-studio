@@ -1,3 +1,4 @@
+import ComputerObservationBoundary from "@/features/computer-observation/ComputerObservationBoundary";
 import {
 	useCallback,
 	useLayoutEffect,
@@ -969,6 +970,7 @@ function HomePage({
 
 	return (
 		<>
+			<ComputerObservationBoundary sessionId={mainSurface === "chat" ? activeSessionId : null} workspaceId={workspaceForActions?.id ?? null} />
 			<HomePageShell
 			messageContextHolder={messageContextHolder}
 			workspaceSidebarPreferences={visualWorkspaceSidebar}

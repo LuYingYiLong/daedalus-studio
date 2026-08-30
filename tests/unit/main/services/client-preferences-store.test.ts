@@ -57,6 +57,7 @@ describe("client preferences store", () => {
 			extra: true
 		})).toEqual({
 			preferences: {
+				allowComputerObservation: false,
 				autoCheckForUpdates: true,
 				notifyOnRunCompleted: true,
 				minimizeToTrayOnClose: false,
@@ -104,6 +105,7 @@ describe("client preferences store", () => {
 		}, memory.io);
 
 		expect(nextPreferences).toEqual({
+			allowComputerObservation: false,
 			autoCheckForUpdates: true,
 			notifyOnRunCompleted: true,
 			minimizeToTrayOnClose: true,

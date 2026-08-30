@@ -2,6 +2,7 @@
 
 import type { GeneralSettings } from "../../contracts/general-settings";
 import type { WindowCaptureAPI } from "../../contracts/window-capture";
+import type { ComputerAPI } from "../../contracts/computer-observation";
 import type {
 	RemoteAccessPairingSession,
 	RemoteAccessPortPatch,
@@ -355,7 +356,7 @@ declare global {
 		}) => Promise<string | null>;
 	}
 
-	type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory";
+	type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory" | "computer";
 
 	interface DockTabPreferences {
 		key: string;
@@ -468,6 +469,7 @@ declare global {
 
 	interface ElectronAPI {
 		windowCapture?: WindowCaptureAPI;
+		computerObservation?: ComputerAPI;
 		versions: ElectronVersions;
 		backend: BackendAPI;
 		backendBootstrap: BackendBootstrapAPI;
