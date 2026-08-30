@@ -565,21 +565,19 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 							</Button>
 						</Dropdown>
 					</nav>
+					{showUpdateButton ? (
+						<Button
+							type="primary"
+							size="small"
+							className={styles.updateButton}
+							loading={updateState?.status === "downloading"}
+							onClick={handleUpdateClick}
+						>
+							{getUpdateButtonLabel(updateState)}
+						</Button>
+					) : null}
 				</div>
 			) : null}
-			<div className={styles.brandCluster}>
-				{showUpdateButton ? (
-					<Button
-						type="primary"
-						size="small"
-						className={styles.updateButton}
-						loading={updateState?.status === "downloading"}
-						onClick={handleUpdateClick}
-					>
-						{getUpdateButtonLabel(updateState)}
-					</Button>
-				) : null}
-			</div>
 			<AppUpdateDialog
 				open={updateModalOpen}
 				state={updateState}

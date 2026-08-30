@@ -124,8 +124,11 @@ describe("app update source", () => {
 		expect(aboutSettingsSource).toContain("window.electronAPI.appUpdate.check()");
 		expect(aboutSettingsSource).toContain("settings.about.actions.checkForUpdates");
 		expect(titlebarCss).toContain("-webkit-app-region: no-drag;");
-		expect(titlebarCss).toContain(".brandCluster");
 		expect(titlebarCss).toContain(".updateButton");
+		expect(titlebarSource).toContain("</nav>");
+		expect(titlebarSource).toContain("className={styles.updateButton}");
+		expect(titlebarCss).toContain("margin-left: var(--ds-space-2);");
+		expect(titlebarCss).not.toContain(".brandCluster");
 		expect(serviceSource).toContain("browserWindow.webContents.isDestroyed()");
 	});
 

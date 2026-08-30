@@ -37,24 +37,10 @@
 	-webkit-app-region: no-drag;
 }
 
-.brandCluster {
-	position: absolute;
-	left: 50%;
-	display: inline-flex;
-	align-items: center;
-	height: 36px;
-	transform: translateX(-50%);
-	-webkit-app-region: no-drag;
-}
-
 .updateButton {
-	position: absolute;
-	top: 50%;
-	left: 100%;
-	z-index: 1;
+	margin-left: var(--ds-space-2);
 	height: 24px;
 	line-height: 22px;
-	transform: translateY(-50%);
 	white-space: nowrap;
 	pointer-events: auto;
 	-webkit-app-region: no-drag;
