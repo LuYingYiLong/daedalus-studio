@@ -1,6 +1,7 @@
 .frame {
 	position: relative;
-	width: 100%;
+	width: min(100%, calc(40vh * var(--frame-ratio, 1)));
+	margin-inline: auto;
 	flex: none;
 }
 .frame img {

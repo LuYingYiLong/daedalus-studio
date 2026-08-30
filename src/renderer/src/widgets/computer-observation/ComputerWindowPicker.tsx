@@ -3,15 +3,22 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ComputerSource } from "../../../../contracts/computer-observation";
 import styles from "@/features/window-capture/WindowScreenshotDialog.module.css";
+import pickerStyles from "./ComputerWindowPicker.module.css";
 export default function ComputerWindowPicker({
   open,
   reason,
+  control = false,
+  autoApproved = false,
+  children,
   load,
   choose,
   close,
 }: {
   open: boolean;
   reason?: string;
+  control?: boolean;
+  autoApproved?: boolean;
+  children?: React.ReactNode;
   load(): Promise<ComputerSource[]>;
   choose(sourceId: string): Promise<void>;
   close(): void;
@@ -52,9 +59,15 @@ export default function ComputerWindowPicker({
     <Modal
       open={open}
       title={t(
-        reason === undefined ? "computer.diagnose" : "computer.consentTitle",
+        reason === undefined
+          ? "computer.diagnose"
+          : control
+            ? "computer.controlConsentTitle"
+            : "computer.consentTitle",
       )}
       width={800}
+      centered
+      classNames={{ body: pickerStyles.body }}
       onCancel={close}
       destroyOnHidden
       footer={
@@ -73,7 +86,15 @@ export default function ComputerWindowPicker({
                 .finally(() => setSaving(false));
             }}
           >
-            {t(reason === undefined ? "computer.observe" : "computer.allow")}
+            {t(
+              reason === undefined
+                ? "computer.observe"
+                : control
+                  ? autoApproved
+                    ? "computer.selectTarget"
+                    : "computer.allowControl"
+                  : "computer.allow",
+            )}
           </Button>
         </>
       }
@@ -82,7 +103,12 @@ export default function ComputerWindowPicker({
         {reason !== undefined && (
           <>
             <Typography.Paragraph>{reason}</Typography.Paragraph>
-            <Alert type="warning" title={t("computer.privacy")} />
+            <Alert
+              type="warning"
+              title={t(
+                control ? "computer.controlPrivacy" : "computer.privacy",
+              )}
+            />
           </>
         )}
         {error && <Alert type="error" title={error} />}
@@ -134,6 +160,7 @@ export default function ComputerWindowPicker({
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
           )}
         </Spin>
+        {children}
       </div>
     </Modal>
   );

@@ -40,6 +40,7 @@ export const DEFAULT_THEME_COLOR: string = DEFAULT_STUDIO_THEME_COLOR;
 
 export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	allowComputerObservation: false,
+	allowComputerControl: false,
 	autoCheckForUpdates: true,
 	notifyOnRunCompleted: true,
 	minimizeToTrayOnClose: false,
@@ -246,6 +247,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			notifyOnRunCompleted,
 			minimizeToTrayOnClose,
 			allowComputerObservation: value.allowComputerObservation === true,
+			allowComputerControl: value.allowComputerObservation === true && value.allowComputerControl === true,
 			theme: themePreference,
 			themeColor,
 			animationsEnabled,
@@ -263,6 +265,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 		},
 		normalized: value.autoCheckForUpdates !== autoCheckForUpdates
 			|| typeof value.allowComputerObservation !== "boolean"
+			|| value.allowComputerControl !== (value.allowComputerObservation === true && value.allowComputerControl === true)
 			|| value.notifyOnRunCompleted !== notifyOnRunCompleted
 			|| value.minimizeToTrayOnClose !== minimizeToTrayOnClose
 			|| value.theme !== themePreference
@@ -281,6 +284,7 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			|| JSON.stringify(value.onboarding ?? null) !== JSON.stringify(onboarding)
 			|| Object.keys(value).some((key: string): boolean => ![
 				"allowComputerObservation",
+				"allowComputerControl",
 				"autoCheckForUpdates",
 				"notifyOnRunCompleted",
 				"minimizeToTrayOnClose",
@@ -318,6 +322,7 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 		patch.minimizeToTrayOnClose = value.minimizeToTrayOnClose;
 	}
 	if (typeof value.allowComputerObservation === "boolean") patch.allowComputerObservation = value.allowComputerObservation;
+	if (typeof value.allowComputerControl === "boolean") patch.allowComputerControl = value.allowComputerControl;
 	if (value.theme === "light" || value.theme === "dark" || value.theme === "system") {
 		patch.theme = value.theme;
 	}

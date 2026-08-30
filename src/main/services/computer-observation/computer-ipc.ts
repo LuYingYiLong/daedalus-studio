@@ -17,6 +17,7 @@ import {
 } from "../../../contracts/computer-observation";
 import { clientPreferencesService } from "../client-preferences";
 import { ComputerService } from "./computer-service";
+import { ComputerOverlay } from "./computer-overlay";
 import { NativeComputerHelper, verifyComputerResources } from "./helper-client";
 import { assertComputerSender } from "./sender-guard";
 
@@ -40,6 +41,8 @@ function sendToWindow(
 function settingsState(state: ComputerState): ComputerState {
   return {
     ...state,
+    control: null,
+    rememberedTarget: null,
     observation: null,
     sharing: null,
     pending: null,
@@ -74,13 +77,19 @@ export function registerComputerIpc(
     sendToWindow(main, "computer:state", state);
     sendToWindow(settings, "computer:state", settingsState(state));
   };
-  const service = new ComputerService(
+  const overlay: ComputerOverlay = new ComputerOverlay(
+    () => service.revoke("computer_cancelled"),
+    () => service.resume(),
+    () => service.pause("computer_display_changed"),
+  );
+  const service: ComputerService = new ComputerService(
     helper,
     broadcast,
     Date.now,
     (scope, code) => {
       sendToWindow(getMain(), "computer:revoked", { ...scope, code });
     },
+    overlay,
   );
   const observed = new WeakSet<WebContents>();
   const guard = (event: IpcMainInvokeEvent, settings = false): void => {
@@ -90,6 +99,7 @@ export function registerComputerIpc(
       if (event.sender === getMain()?.webContents) {
         const revoke = (): void => {
           service.revoke();
+          overlay.close();
           closeDiagnostics();
         };
         event.sender.on("destroyed", revoke);
@@ -139,19 +149,64 @@ export function registerComputerIpc(
       if (!input) service.setEnabled(false);
       await clientPreferencesService.update({
         allowComputerObservation: input,
+        ...(!input ? { allowComputerControl: false } : {}),
       });
       service.setEnabled(input);
     },
     true,
   );
+  handle(
+    "setControlEnabled",
+    async (input) => {
+      if (typeof input !== "boolean")
+        throw new Error("computer_invalid_request");
+      if (input && !service.getState().enabled)
+        throw new Error("computer_observation_required");
+      if (!input) service.setControlEnabled(false);
+      await clientPreferencesService.update({ allowComputerControl: input });
+      service.setControlEnabled(input);
+    },
+    true,
+  );
+  handle("resume", () => service.resume());
+  handle("clearTarget", () => service.clearTarget());
+  handle("acknowledgeControl", (input) => {
+    const scope = computerObject(input, [
+      "connectionId",
+      "sessionId",
+      "requestId",
+      "runId",
+    ]);
+    for (const key of ["connectionId", "sessionId", "requestId", "runId"])
+      computerId(scope[key]);
+    service.acknowledgeControl(scope as ComputerScope);
+  });
+  handle("heartbeat", (input) => {
+    const scope = computerObject(input, [
+      "connectionId",
+      "sessionId",
+      "requestId",
+      "runId",
+    ]);
+    for (const key of ["connectionId", "sessionId", "requestId", "runId"])
+      computerId(scope[key]);
+    service.heartbeat(scope as ComputerScope);
+  });
   handle("setContext", (input) => {
     if (input === null) return service.setContext(null);
     const context = computerObject(input, [
       "connectionId",
       "sessionId",
       "workspaceId",
+      "controlSupported",
     ]);
+    if (
+      context.controlSupported !== undefined &&
+      typeof context.controlSupported !== "boolean"
+    )
+      throw new Error("computer_invalid_request");
     service.setContext({
+      controlSupported: context.controlSupported === true,
       connectionId: computerId(context.connectionId),
       sessionId:
         context.sessionId === null ? null : computerId(context.sessionId),
@@ -243,6 +298,7 @@ export function registerComputerIpc(
   handleDiagnostic("closeDiagnostics", closeDiagnostics);
   app.on("before-quit", () => {
     service.revoke();
+    overlay.close();
     closeDiagnostics();
   });
   void app.whenReady().then(async () => {
@@ -255,8 +311,11 @@ export function registerComputerIpc(
       service.revoke();
       closeDiagnostics();
     });
-    service.setEnabled(
-      (await clientPreferencesService.load()).allowComputerObservation === true,
+    const preferences = await clientPreferencesService.load();
+    service.setEnabled(preferences.allowComputerObservation === true);
+    service.setControlEnabled(
+      preferences.allowComputerObservation === true &&
+        preferences.allowComputerControl === true,
     );
     try {
       await verifyComputerResources(directory);

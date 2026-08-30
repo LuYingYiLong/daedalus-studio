@@ -13,7 +13,9 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("electron", () => ({
   app: { getAppPath: () => "/fixture", whenReady: mocks.ready, on: mocks.on },
-  ipcMain: { handle: mocks.handle },
+  ipcMain: { handle: mocks.handle, on: vi.fn() },
+  screen: { on: vi.fn() },
+  globalShortcut: { register: vi.fn(() => true), unregister: vi.fn() },
   powerMonitor: { on: vi.fn() },
 }));
 vi.mock("../../../src/main/services/client-preferences", () => ({

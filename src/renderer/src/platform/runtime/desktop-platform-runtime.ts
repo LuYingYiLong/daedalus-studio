@@ -4,8 +4,8 @@ import { attachScheduledTaskToolRuntime } from "@/platform/rpc/transport/schedul
 let browserToolsEnabled: boolean = false;
 
 async function getDesktopHello(): Promise<RuntimeClientHello> {
-	let computerObservation = false;
-	try { const state = await window.electronAPI.computerObservation?.getState(); computerObservation = state?.enabled === true && state.available; } catch { /* optional Windows capability */ }
+	let computerObservation = false, computerControl = false;
+	try { const state = await window.electronAPI.computerObservation?.getState(); computerObservation = state?.enabled === true && state.available; computerControl = computerObservation && state?.controlEnabled === true && state.controlSupported === true; } catch { /* optional Windows capability */ }
 	try {
 		browserToolsEnabled = (await window.electronAPI.browser.settings.get()).aiCdpEnabled;
 	} catch {
@@ -23,6 +23,7 @@ async function getDesktopHello(): Promise<RuntimeClientHello> {
 			inlineDiffUndo: false,
 			browserTools: browserToolsEnabled,
 			computerObservation,
+			computerControl,
 			scheduledTasks: true,
 		},
 	};
@@ -40,7 +41,7 @@ export const desktopPlatformRuntime: PlatformRuntime = {
 	getClientHello: getDesktopHello,
 	onCapabilitiesChanged: (listener: () => void): (() => void) => {
 		let computerCapability = "";
-		const disposeComputer = window.electronAPI.computerObservation?.onState(state => { const value = `${state.enabled}:${state.available}`; if (value !== computerCapability) { computerCapability = value; listener(); } });
+		const disposeComputer = window.electronAPI.computerObservation?.onState(state => { const value = `${state.enabled}:${state.available}:${state.controlEnabled}:${state.controlSupported}`; if (value !== computerCapability) { computerCapability = value; listener(); } });
 		const disposeBrowser = window.electronAPI.browser.settings.onChanged((settings): void => {
 			browserToolsEnabled = settings.aiCdpEnabled;
 			listener();

@@ -5,8 +5,8 @@ import SettingsList from "@/ui/SettingsList";
 import SettingsItem from "@/ui/SettingsItem";
 import ComputerObservationDiagnostics from "@/widgets/computer-observation/ComputerObservationDiagnostics";
 import {
-	useComputerDeveloperMode,
-	useComputerState,
+  useComputerDeveloperMode,
+  useComputerState,
 } from "@/features/computer-observation/useComputerState";
 import styles from "./ComputerObservationSettingsPage.module.css";
 
@@ -49,6 +49,30 @@ export default function ComputerObservationSettingsPage({
                     setError(false);
                     void api
                       .setEnabled(checked)
+                      .catch(() => setError(true))
+                      .finally(() => setSaving(false));
+                  }}
+                />
+              </SettingsItem>
+              <SettingsItem
+                searchKey="item:computer_observation.control"
+                title={t("computer.controlSetting")}
+                description={t(
+                  state?.controlSupported
+                    ? "computer.controlDescription"
+                    : "computer.controlUnavailable",
+                )}
+              >
+                <Switch
+                  aria-label={t("computer.controlSetting")}
+                  checked={state?.controlEnabled ?? false}
+                  disabled={!state?.enabled || !state.controlSupported}
+                  loading={saving}
+                  onChange={(checked) => {
+                    setSaving(true);
+                    setError(false);
+                    void api
+                      .setControlEnabled(checked)
                       .catch(() => setError(true))
                       .finally(() => setSaving(false));
                   }}

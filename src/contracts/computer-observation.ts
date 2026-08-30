@@ -1,9 +1,10 @@
-export const COMPUTER_PROTOCOL_VERSION = 1;
+export const COMPUTER_PROTOCOL_VERSION = 2;
 export const COMPUTER_MAX_MESSAGE_BYTES = 8 * 1024 * 1024;
 export type ComputerToolName =
   | "mcp_computer_request_access"
   | "mcp_computer_observe"
-  | "mcp_computer_screenshot";
+  | "mcp_computer_screenshot"
+  | "mcp_computer_action";
 export type ComputerRect = {
   x: number;
   y: number;
@@ -51,21 +52,45 @@ export type ComputerScope = {
   requestId: string;
   runId: string;
 };
+export type ComputerControlState = ComputerScope & {
+  generation: number;
+  state: "running" | "paused" | "cancelled";
+  code?: string;
+};
+export type ComputerAction =
+  | { type: "click"; x: number; y: number; count: 1 | 2 }
+  | { type: "text"; text: string }
+  | {
+      type: "scroll";
+      x: number;
+      y: number;
+      axis: "horizontal" | "vertical";
+      amount: number;
+    }
+  | { type: "key"; key: string };
 export type ComputerRevocation = ComputerScope & { code: string };
 export type ComputerToolRequest = ComputerScope & {
   callId: string;
   toolCallId: string;
   toolName: ComputerToolName;
   args: Record<string, unknown>;
+  authorization?: { approvalMode: "manual" | "auto-safe" | "full-trust" };
+  actionId?: string;
 };
 export type ComputerConsent = {
   callId: string;
   reason: string;
   sessionId: string;
   expiresAt: number;
+  mode?: "observe" | "control";
+  approvalMode?: "manual" | "auto-safe" | "full-trust";
 };
 export type ComputerState = {
   enabled: boolean;
+  controlEnabled?: boolean;
+  controlSupported?: boolean;
+  control?: ComputerControlState | null;
+  rememberedTarget?: string | null;
   available: boolean;
   error: string | null;
   pending: ComputerConsent | null;
@@ -79,11 +104,17 @@ export type ComputerAPI = {
   onState(listener: (state: ComputerState) => void): () => void;
   onRevoked(listener: (value: ComputerRevocation) => void): () => void;
   setEnabled(enabled: boolean): Promise<void>;
+  setControlEnabled(enabled: boolean): Promise<void>;
+  resume(): Promise<void>;
+  clearTarget(): Promise<void>;
+  acknowledgeControl(scope: ComputerScope): Promise<void>;
+  heartbeat(scope: ComputerScope): Promise<void>;
   setContext(
     context: {
       connectionId: string;
       sessionId: string | null;
       workspaceId: string | null;
+      controlSupported?: boolean;
     } | null,
   ): Promise<void>;
   execute(request: ComputerToolRequest): Promise<Record<string, unknown>>;
@@ -118,7 +149,9 @@ export function parseComputerRequest(value: unknown): ComputerToolRequest {
     "args",
   ];
   if (
-    Object.keys(v).some((k) => !keys.includes(k)) ||
+    Object.keys(v).some(
+      (k) => ![...keys, "authorization", "actionId"].includes(k),
+    ) ||
     keys.some((k) => !(k in v))
   )
     throw new Error("computer_invalid_request");
@@ -128,6 +161,7 @@ export function parseComputerRequest(value: unknown): ComputerToolRequest {
       "mcp_computer_request_access",
       "mcp_computer_observe",
       "mcp_computer_screenshot",
+      "mcp_computer_action",
     ].includes(String(v.toolName))
   )
     throw new Error("computer_tool_not_supported");
@@ -136,10 +170,12 @@ export function parseComputerRequest(value: unknown): ComputerToolRequest {
   const args = v.args as Record<string, unknown>;
   const allowed =
     v.toolName === "mcp_computer_request_access"
-      ? ["reason"]
+      ? ["reason", "mode"]
       : v.toolName === "mcp_computer_screenshot"
         ? ["observationId"]
-        : [];
+        : v.toolName === "mcp_computer_action"
+          ? ["observationId", "action"]
+          : [];
   if (Object.keys(args).some((k) => !allowed.includes(k)))
     throw new Error("computer_invalid_request");
   if (
@@ -149,7 +185,34 @@ export function parseComputerRequest(value: unknown): ComputerToolRequest {
       args.reason.length > 2000)
   )
     throw new Error("computer_invalid_request");
-  if (v.toolName === "mcp_computer_screenshot") computerId(args.observationId);
+  if (
+    args.mode !== undefined &&
+    args.mode !== "observe" &&
+    args.mode !== "control"
+  )
+    throw new Error("computer_invalid_request");
+  if (v.authorization !== undefined) {
+    const auth = computerObject(v.authorization, ["approvalMode"]);
+    if (
+      !["manual", "auto-safe", "full-trust"].includes(String(auth.approvalMode))
+    )
+      throw new Error("computer_invalid_request");
+  }
+  if (
+    v.toolName === "mcp_computer_screenshot" ||
+    v.toolName === "mcp_computer_action"
+  )
+    computerId(args.observationId);
+  if (v.toolName === "mcp_computer_action") {
+    computerId(v.actionId);
+    parseComputerAction(args.action);
+  } else if (v.actionId !== undefined)
+    throw new Error("computer_invalid_request");
+  if (
+    (v.toolName === "mcp_computer_action" || args.mode === "control") &&
+    !v.authorization
+  )
+    throw new Error("computer_consent_required");
   return v as ComputerToolRequest;
 }
 
@@ -163,6 +226,85 @@ export function computerObject(
   if (Object.keys(record).some((key) => !keys.includes(key)))
     throw new Error("computer_invalid_request");
   return record;
+}
+
+export function parseComputerAction(value: unknown): ComputerAction {
+  const v = computerObject(value, [
+    "type",
+    "x",
+    "y",
+    "count",
+    "text",
+    "axis",
+    "amount",
+    "key",
+  ]);
+  const exact = (keys: string[]): void => {
+    if (Object.keys(v).length !== keys.length || keys.some((k) => !(k in v)))
+      throw new Error("computer_invalid_request");
+  };
+  if (v.type === "click" || v.type === "scroll") {
+    for (const key of ["x", "y"])
+      if (
+        typeof v[key] !== "number" ||
+        !Number.isFinite(v[key]) ||
+        (v[key] as number) < 0 ||
+        (v[key] as number) >= 2560
+      )
+        throw new Error("computer_invalid_request");
+  }
+  switch (v.type) {
+    case "click":
+      exact(["type", "x", "y", "count"]);
+      if (v.count !== 1 && v.count !== 2)
+        throw new Error("computer_invalid_request");
+      break;
+    case "scroll":
+      exact(["type", "x", "y", "axis", "amount"]);
+      if (
+        !["horizontal", "vertical"].includes(String(v.axis)) ||
+        !Number.isInteger(v.amount) ||
+        Math.abs(v.amount as number) > 10 ||
+        v.amount === 0
+      )
+        throw new Error("computer_invalid_request");
+      break;
+    case "text":
+      exact(["type", "text"]);
+      if (typeof v.text !== "string" || !v.text.length || v.text.length > 4096)
+        throw new Error("computer_invalid_request");
+      break;
+    case "key":
+      exact(["type", "key"]);
+      if (
+        ![
+          "Enter",
+          "Tab",
+          "Shift+Tab",
+          "Escape",
+          "Backspace",
+          "Delete",
+          "ArrowLeft",
+          "ArrowRight",
+          "ArrowUp",
+          "ArrowDown",
+          "Home",
+          "End",
+          "PageUp",
+          "PageDown",
+          "Ctrl+A",
+          "Ctrl+F",
+          "Ctrl+S",
+          "Ctrl+Z",
+          "Ctrl+Y",
+        ].includes(String(v.key))
+      )
+        throw new Error("computer_invalid_request");
+      break;
+    default:
+      throw new Error("computer_invalid_request");
+  }
+  return v as ComputerAction;
 }
 
 export function parseComputerObservation(value: unknown): ComputerObservation {

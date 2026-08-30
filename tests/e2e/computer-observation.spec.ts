@@ -46,7 +46,7 @@ test("Windows per-turn consent, same-frame screenshot, revocation and reconnect"
     await mainWindow.locator('[data-studio-open-settings="true"]').click();
     const page = await opened;
     await page
-      .getByRole("menuitem", { name: /Desktop perception|桌面感知/ })
+      .getByRole("menuitem", { name: /Computer use|电脑操作/ })
       .click();
     return page;
   }
@@ -222,8 +222,13 @@ test("Windows per-turn consent, same-frame screenshot, revocation and reconnect"
     .getByRole("button", { name: /Observe|观\s*察/ })
     .click();
   await expect(
-    perception.getByRole("img", { name: /Static frame|静态/ }),
+    diagnosticDialog.getByRole("img", { name: /Static frame|静态/ }),
   ).toBeVisible();
+  await expect(diagnosticDialog).toBeVisible();
+  await settingsWindow.screenshot({
+    path: test.info().outputPath("computer-local-diagnostics.png"),
+  });
+  await diagnosticDialog.getByRole("button", { name: /Cancel|取\s*消/ }).click();
   await expect(diagnosticDialog).not.toBeVisible();
   await settingsWindow.screenshot({
     path: test.info().outputPath("computer-observation-settings.png"),
@@ -237,7 +242,7 @@ test("Windows per-turn consent, same-frame screenshot, revocation and reconnect"
     }),
   ).not.toBeVisible();
   await settingsWindow
-    .getByRole("menuitem", { name: /Desktop perception|桌面感知/ })
+    .getByRole("menuitem", { name: /Computer use|电脑操作/ })
     .click();
   await expect(
     perception.getByRole("img", { name: /Static frame|静态/ }),
@@ -246,7 +251,7 @@ test("Windows per-turn consent, same-frame screenshot, revocation and reconnect"
   await mainWindow.locator('[data-studio-open-side-dock="true"]').click();
   await mainWindow.locator('[data-studio-dock-add="true"]').click();
   await expect(
-    mainWindow.getByRole("menuitem", { name: /Desktop perception|桌面感知/ }),
+    mainWindow.getByRole("menuitem", { name: /Computer use|电脑操作/ }),
   ).toHaveCount(0);
   await mainWindow.keyboard.press("Escape");
   expect(

@@ -10,6 +10,13 @@ export interface ComputerHelper {
     params?: Record<string, unknown>,
   ): Promise<Record<string, unknown>>;
   stop(): void;
+  onControl?(
+    listener: (state: {
+      event: string;
+      code: string;
+      generation: number;
+    }) => void,
+  ): () => void;
 }
 export async function verifyComputerResources(
   directory: string,
@@ -18,7 +25,7 @@ export async function verifyComputerResources(
     await readFile(join(directory, "manifest.json"), "utf8"),
   );
   if (
-    manifest.protocolVersion !== 1 ||
+    manifest.protocolVersion !== 2 ||
     !manifest.files ||
     typeof manifest.files !== "object"
   )
@@ -59,8 +66,22 @@ export class NativeComputerHelper implements ComputerHelper {
       resolve(value: Record<string, unknown>): void;
       reject(error: Error): void;
       timer: ReturnType<typeof setTimeout>;
+      priority: boolean;
     }
   >();
+  private listeners = new Set<
+    (state: { event: string; code: string; generation: number }) => void
+  >();
+  onControl(
+    listener: (state: {
+      event: string;
+      code: string;
+      generation: number;
+    }) => void,
+  ): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
   constructor(private readonly directory: string) {}
   private async start(): Promise<void> {
     if (this.process) return;
@@ -104,10 +125,19 @@ export class NativeComputerHelper implements ComputerHelper {
   ): Promise<Record<string, unknown>> {
     await this.start();
     if (!this.process) throw new Error("computer_helper_stopped");
-    if (this.pending.size) throw new Error("computer_busy");
+    const priority = [
+      "control.stop",
+      "control.pause",
+      "control.heartbeat",
+    ].includes(method);
+    if (
+      (!priority && [...this.pending.values()].some((p) => !p.priority)) ||
+      this.pending.size >= 8
+    )
+      throw new Error("computer_busy");
     const id = randomUUID();
     const body = Buffer.from(
-      JSON.stringify({ version: 1, id, method, params }),
+      JSON.stringify({ version: 2, id, method, params }),
     );
     if (body.length > 16384) throw new Error("computer_invalid_request");
     const header = Buffer.alloc(4);
@@ -116,7 +146,7 @@ export class NativeComputerHelper implements ComputerHelper {
       const timer = setTimeout(() => {
         this.stop("computer_timeout");
       }, 20_000);
-      this.pending.set(id, { resolve, reject, timer });
+      this.pending.set(id, { resolve, reject, timer, priority });
       this.process?.stdin.write(Buffer.concat([header, body]));
     });
   }
@@ -134,8 +164,18 @@ export class NativeComputerHelper implements ComputerHelper {
           this.buffer.subarray(4, size + 4).toString("utf8"),
         );
         this.buffer = this.buffer.subarray(size + 4);
+        if (
+          result.event === "control" &&
+          result.version === 2 &&
+          ["paused", "cancelled"].includes(result.state?.event) &&
+          /^computer_[a-z_]+$/.test(result.state.code) &&
+          Number.isSafeInteger(result.state.generation)
+        ) {
+          for (const listener of this.listeners) listener(result.state);
+          continue;
+        }
         const pending = this.pending.get(result.id);
-        if (!pending || result.version !== 1 || typeof result.ok !== "boolean")
+        if (!pending || result.version !== 2 || typeof result.ok !== "boolean")
           return this.stop("computer_protocol_invalid");
         clearTimeout(pending.timer);
         this.pending.delete(result.id);

@@ -53,6 +53,7 @@ public:
   Json observe();
   void release();
   bool targetValid();
+  HWND controlTarget() { if (!targetValid()) throw std::runtime_error("computer_window_unavailable"); return selected->hwnd; }
 
 private:
   DWORD excludedPid;

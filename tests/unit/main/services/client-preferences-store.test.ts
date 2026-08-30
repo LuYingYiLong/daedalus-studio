@@ -58,6 +58,7 @@ describe("client preferences store", () => {
 		})).toEqual({
 			preferences: {
 				allowComputerObservation: false,
+			allowComputerControl: false,
 				autoCheckForUpdates: true,
 				notifyOnRunCompleted: true,
 				minimizeToTrayOnClose: false,
@@ -106,6 +107,7 @@ describe("client preferences store", () => {
 
 		expect(nextPreferences).toEqual({
 			allowComputerObservation: false,
+			allowComputerControl: false,
 			autoCheckForUpdates: true,
 			notifyOnRunCompleted: true,
 			minimizeToTrayOnClose: true,

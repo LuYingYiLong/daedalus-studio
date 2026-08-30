@@ -127,7 +127,7 @@ export function createStudioTheme(
 			colorTextSecondary: dsColors.textSecondary,
 			colorTextTertiary: dsColors.textMuted,
 			controlHeight: 28,
-			controlHeightLG: 40,
+			controlHeightLG: isMobile ? 40 : 36,
 			controlHeightSM: 24,
 			fontFamily: resolvedFontFamily,
 			fontFamilyCode: resolvedFontFamilyCode,

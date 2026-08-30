@@ -479,7 +479,7 @@ export class BackendRpcClient {
 			console.debug(
 				"[Daedalus backend:event]",
 				message.event,
-				message.data,
+				message.event.startsWith("computer.") ? { sessionId: message.sessionId, requestId: message.requestId, runId: message.runId } : message.data,
 			);
 			for (const listener of this.eventListeners) {
 				listener(message);

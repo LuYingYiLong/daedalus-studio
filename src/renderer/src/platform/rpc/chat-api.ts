@@ -1,3 +1,4 @@
+import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";
 import { createBackendClient } from "@/platform/rpc/transport/backend-client";
 import type { AdditionalContextItem } from "./types";
 
@@ -65,6 +66,20 @@ export async function sendChatMessage(
 export async function cancelChatMessage(
 	requestId: string,
 ): Promise<CancelChatMessageResult> {
+  const computer = getPlatformRuntime().system?.computerObservation;
+  if (computer) {
+    const state = await computer.getState();
+    if (state.control && (state.control.requestId === requestId || state.control.runId === requestId)) {
+      const { connectionId, sessionId, requestId: turn, runId } = state.control;
+      await computer.revoke();
+      const client = await createBackendClient();
+      // 不再调用可回退到下一活动轮次的通用 ai.cancel
+      await client.request("computer.access.revoked", { connectionId, sessionId, requestId: turn, runId, code: "computer_cancelled" });
+      await computer.acknowledgeControl({ connectionId, sessionId, requestId: turn, runId });
+      return { cancelled: true, cancellationRequested: true, requestId };
+    }
+    if (state.sharing?.requestId === requestId) await computer.revoke();
+  }
 	const client = await createBackendClient();
 
 	return client.request<CancelChatMessageResult>("ai.cancel", {

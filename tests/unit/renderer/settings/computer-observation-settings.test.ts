@@ -18,6 +18,7 @@ describe("desktop perception settings navigation", () => {
     );
     expect(entries.map((entry) => entry.key)).toEqual([
       "page:computer_observation",
+      "item:computer_observation.control",
       "item:computer_observation.enabled",
       "item:computer_observation.diagnostics",
     ]);

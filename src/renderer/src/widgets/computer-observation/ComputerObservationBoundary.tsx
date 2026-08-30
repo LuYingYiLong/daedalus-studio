@@ -6,19 +6,21 @@ import { useComputerObservationSession } from "@/features/computer-observation/u
 import ComputerWindowPicker from "./ComputerWindowPicker";
 export default function ComputerObservationBoundary({
   sessionId,
-	workspaceId,
+  workspaceId,
 }: {
   sessionId: string | null;
   workspaceId: string | null;
 }): React.JSX.Element | null {
-	const { api, state } = useComputerState();
-	useComputerObservationSession(sessionId, workspaceId);
+  const { api, state } = useComputerState();
+  useComputerObservationSession(sessionId, workspaceId);
   const load = useCallback(() => api!.list(), [api]);
   if (!api) return null;
   return (
     <ComputerWindowPicker
       open={!!state?.pending}
       reason={state?.pending?.reason}
+      control={state?.pending?.mode === "control"}
+      autoApproved={state?.pending?.approvalMode === "full-trust"}
       load={load}
       close={() => {
         void api.revoke();
@@ -33,7 +35,20 @@ export default function ComputerObservationBoundary({
 export function ComputerSharingIndicator(): React.JSX.Element | null {
   const { t } = useTranslation();
   const { api, state } = useComputerState();
-  if (!state?.sharing || !api) return null;
+  if (!api || !state) return null;
+  if (!state.sharing && state.rememberedTarget)
+    return (
+      <Alert
+        type="info"
+        title={t("computer.target", { title: state.rememberedTarget })}
+        action={
+          <Button size="small" onClick={() => void api.clearTarget()}>
+            {t("computer.changeTarget")}
+          </Button>
+        }
+      />
+    );
+  if (!state.sharing) return null;
   return (
     <Alert
       type="info"

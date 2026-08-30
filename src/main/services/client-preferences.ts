@@ -83,7 +83,7 @@ class ClientPreferencesService {
 		});
 		ipcMain.handle("client-preferences:get", async (): Promise<ClientPreferences> => await this.load());
 		ipcMain.handle("client-preferences:update", async (_event, patch: unknown): Promise<ClientPreferences> => {
-			if (patch && typeof patch === "object" && "allowComputerObservation" in patch) throw new Error("computer_settings_sender_not_allowed");
+			if (patch && typeof patch === "object" && ("allowComputerObservation" in patch || "allowComputerControl" in patch)) throw new Error("computer_settings_sender_not_allowed");
 			return await this.update(normalizeClientPreferencesPatch(patch));
 		});
 	}

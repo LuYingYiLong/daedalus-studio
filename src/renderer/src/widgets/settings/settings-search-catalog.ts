@@ -50,6 +50,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 	{ key: "page:browser", page: "browser", titleKey: "settings.menu.browser" },
 	{ key: "page:remote_access", page: "remote_access", titleKey: "settings.menu.remoteAccess" },
 	{ key: "page:computer_observation", page: "computer_observation", titleKey: "computer.title" },
+	{ key: "item:computer_observation.control", page: "computer_observation", titleKey: "computer.controlSetting", descriptionKey: "computer.controlDescription" },
 	{ key: "item:computer_observation.enabled", page: "computer_observation", titleKey: "computer.setting", descriptionKey: "computer.settingDescription" },
 	{ key: "item:computer_observation.diagnostics", page: "computer_observation", titleKey: "computer.diagnose", descriptionKey: "computer.localOnly" },
 	{ key: "page:environments", page: "environments", titleKey: "settings.menu.environments" },

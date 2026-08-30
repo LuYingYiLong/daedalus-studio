@@ -21,7 +21,8 @@ export default defineConfig({
 		build: {
 			rollupOptions: {
 				input: {
-					index: resolve(projectDirectory, "src/preload/index.ts")
+					index: resolve(projectDirectory, "src/preload/index.ts"),
+					"computer-overlay": resolve(projectDirectory, "src/preload/computer-overlay.ts")
 				}
 			}
 		}
@@ -52,7 +53,8 @@ export default defineConfig({
 			rollupOptions: {
 				input: {
 					index: resolve(projectDirectory, "src/renderer/index.html"),
-					remote: resolve(projectDirectory, "src/renderer/remote.html")
+					remote: resolve(projectDirectory, "src/renderer/remote.html"),
+					"computer-overlay": resolve(projectDirectory, "src/renderer/computer-overlay.html")
 				}
 			}
 		}

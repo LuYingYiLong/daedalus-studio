@@ -1,0 +1,120 @@
+:global(html),
+:global(body),
+:global(#root) {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+.edge {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  border: 2px solid #7769ed;
+  box-shadow: inset 0 0 12px #3f8cfa55;
+  animation: entrance 500ms ease-out both;
+  pointer-events: none;
+}
+.edge[data-paused="true"] {
+  border-color: #a9a9b0;
+  box-shadow: none;
+}
+.bar {
+  margin: 6px;
+  min-height: 48px;
+  box-sizing: border-box;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 4px 16px;
+  background: #232334f5;
+  color: white;
+  font:
+    14px/1.5 "Segoe UI Variable",
+    "Microsoft YaHei",
+    sans-serif;
+  border: 1px solid #aaa8d366;
+}
+.bar button {
+  min-height: 40px;
+  min-width: 48px;
+  border: 0;
+  border-radius: 18px;
+  padding: 4px 12px;
+  background: #ffffff20;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.bar button:focus-visible {
+  outline: 2px solid #b7adff;
+  outline-offset: 2px;
+}
+.bar button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+.cursor img {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 1px 3px #0008);
+}
+.ripple {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  left: -10px;
+  top: -10px;
+  border: 2px solid #8b70ff;
+  border-radius: 50%;
+  animation: ripple 380ms ease-out forwards;
+}
+@keyframes entrance {
+  from {
+    box-shadow:
+      inset 0 0 80px #367dff88,
+      inset 0 0 160px #9b57f755;
+    border-width: 6px;
+  }
+  to {
+    box-shadow: inset 0 0 12px #3f8cfa55;
+    border-width: 2px;
+  }
+}
+@keyframes ripple {
+  from {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .edge {
+    animation: none;
+  }
+  .ripple {
+    animation: none;
+    display: none;
+  }
+}
+@media (forced-colors: active) {
+  .bar {
+    forced-color-adjust: auto;
+    border: 2px solid CanvasText;
+  }
+  .edge {
+    border-color: Highlight;
+  }
+}

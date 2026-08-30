@@ -116,7 +116,7 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 			multiClient: { enabled: true, protocolVersion: 3 },
 			logPath: null,
 		}),
-		"client.info": ({ connectionId }) => ({ connection: { connectionId } }),
+		"client.info": ({ connectionId }) => ({ connection: { connectionId }, features: { computerControl: 2 } }),
 		"client.hello": ({ connectionId }) => ({
 			connection: {
 				connectionId,

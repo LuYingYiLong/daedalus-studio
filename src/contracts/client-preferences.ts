@@ -13,6 +13,7 @@ export type WorkspaceSidebarPreferences = {
 
 export type ClientPreferences = {
 	allowComputerObservation?: boolean;
+	allowComputerControl?: boolean;
 	autoCheckForUpdates: boolean;
 	notifyOnRunCompleted: boolean;
 	minimizeToTrayOnClose: boolean;

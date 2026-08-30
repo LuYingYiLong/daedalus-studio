@@ -1,6 +1,6 @@
 import { Alert, Button, Tabs, Tree, Typography } from "antd";
 import type { DataNode } from "antd/es/tree";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   ComputerObservation,
@@ -49,7 +49,7 @@ export function ComputerObservationEvidence({
         <Alert type="warning" title={t("computer.truncated")} />
       )}
       {observation.dataUrl && (
-        <div className={styles.frame}>
+        <div className={styles.frame} style={{ "--frame-ratio": observation.width / observation.height } as CSSProperties}>
           <img alt={t("computer.frame")} src={observation.dataUrl} />
           {box && (
             <div

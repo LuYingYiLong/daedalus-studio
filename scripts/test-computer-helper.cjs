@@ -54,7 +54,7 @@ async function main() {
     );
   }
   const checks = [["--self-test"], ["--test-uia"], ["--test-ocr", directory]];
-  if (process.argv.includes("--hardware")) checks.push(["--test-capture"]);
+  if (process.argv.includes("--hardware")) checks.push(["--test-capture"], ["--test-input"]);
   for (const args of checks) {
     const result = spawnSync(executable, args, {
       windowsHide: true,
@@ -64,12 +64,12 @@ async function main() {
     assert.equal(result.status, 0);
   }
   assert.deepEqual(
-    await exchange({ version: 1, id: "test", method: "hello", params: {} }),
+    await exchange({ version: 2, id: "test", method: "hello", params: {} }),
     {
       id: "test",
-      version: 1,
+      version: 2,
       ok: true,
-      result: { version: 1, readOnly: true },
+      result: { version: 2, computerControl: true },
     },
   );
   for (const [method, params, code] of [
@@ -79,7 +79,7 @@ async function main() {
     ["hello", { hwnd: 1 }, "computer_invalid_request"],
   ])
     assert.equal(
-      (await exchange({ version: 1, id: "test", method, params })).error,
+      (await exchange({ version: 2, id: "test", method, params })).error,
       code,
     );
   assert.equal(
@@ -115,7 +115,7 @@ async function main() {
         resolve();
       });
       supervised.stdin.write(
-        frame({ version: 1, id: "parent", method: "hello", params: {} }),
+        frame({ version: 2, id: "parent", method: "hello", params: {} }),
       );
     });
     const exited = new Promise((resolve, reject) => {
@@ -135,7 +135,7 @@ async function main() {
     parent.kill();
   }
   console.log(
-    "Native resource hashes, offline OCR and read-only protocol tests passed (no user windows read).",
+    "Native resource hashes, offline OCR and control protocol tests passed (no user windows read).",
   );
 }
 main().catch((error) => {

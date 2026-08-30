@@ -73,7 +73,7 @@ describe("computer observation boundaries", () => {
     const manifest = () =>
       writeFile(
         join(directory, "manifest.json"),
-        JSON.stringify({ protocolVersion: 1, files }),
+        JSON.stringify({ protocolVersion: 2, files }),
       );
     try {
       await Promise.all(

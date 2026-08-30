@@ -16,6 +16,7 @@ export const remotePlatformRuntime: PlatformRuntime = {
 			inlineDiffView: false,
 			browserTools: false,
 			computerObservation: false,
+			computerControl: false,
 			scheduledTasks: false,
 		},
 	}),

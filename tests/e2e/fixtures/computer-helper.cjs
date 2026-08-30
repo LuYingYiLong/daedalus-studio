@@ -8,9 +8,12 @@ process.stdin.on('data', chunk => {
     let result;
     if (request.method === 'list') result = { sources: [{ sourceId: 'fixture-window', title: 'Local perception fixture' }] };
     else if (request.method === 'select') { selected = true; result = { title: 'Local perception fixture' }; }
+    else if (request.method.startsWith('control.')) result = { active: true };
+    else if (request.method === 'target') result = { screenBounds: { x: 100, y: 100, width: 800, height: 600 } };
+    else if (request.method === 'action') result = { actionId: request.params.actionId, observationId: request.params.observationId, generation: request.params.generation, status: 'dispatched', dispatchedAt: new Date().toISOString() };
     else if (request.method === 'validate') result = { valid: selected };
     else if (request.method === 'observe') result = { observationId: `observation-${++sequence}`, capturedAt: '2026-08-30T00:00:00.000Z', uiaCapturedAt: '2026-08-30T00:00:00.000Z', screenBounds: { x: -200, y: 20, width: 1, height: 1 }, width: 1, height: 1, dpi: 144, nodes: [{ id: 'node-1', parentId: null, name: 'Fixture button', automationId: 'fixture', controlType: 'Button', enabled: true, password: false, bounds: { x: 0, y: 0, width: 1, height: 1 } }], texts: [{ id: 'text-1', text: '本地 OCR fixture', confidence: .99, bounds: { x: 0, y: 0, width: 1, height: 1 } }], truncated: false, durationMs: 10, dataUrl: PNG };
     else throw new Error('unexpected_fixture_method');
-    const bytes = Buffer.from(JSON.stringify({ version: 1, id: request.id, ok: true, result })); const header = Buffer.alloc(4); header.writeUInt32LE(bytes.length); process.stdout.write(Buffer.concat([header, bytes]));
+    const bytes = Buffer.from(JSON.stringify({ version: 2, id: request.id, ok: true, result })); const header = Buffer.alloc(4); header.writeUInt32LE(bytes.length); process.stdout.write(Buffer.concat([header, bytes]));
   }
 });
