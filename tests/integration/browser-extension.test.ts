@@ -7,7 +7,13 @@ import {
 	type CDPSession,
 } from "playwright";
 import { createServer, type Server } from "node:http";
+import { readFileSync } from "node:fs";
 import { createExternalDomRuntime } from "../../src/main/services/browser/external-dom-runtime";
+
+const cursorSvg = readFileSync(
+	new URL("../../src/renderer/src/assets/icons/ai-cursor.svg", import.meta.url),
+	"utf8",
+);
 describe("isolated browser execution against a local form", () => {
 	let browser: Browser, context: BrowserContext, server: Server, origin: string;
 	beforeAll(async () => {
@@ -38,6 +44,7 @@ describe("isolated browser execution against a local form", () => {
 		page: Page;
 		cdp: CDPSession;
 		call(op: string, args?: object): Promise<Record<string, any>>;
+		setVisibility(hidden: boolean): Promise<void>;
 	}> {
 		const page = await context.newPage();
 		await page.goto(origin);
@@ -49,7 +56,7 @@ describe("isolated browser execution against a local form", () => {
 			});
 		await cdp.send("Runtime.evaluate", {
 			contextId: world.executionContextId,
-			expression: `(${createExternalDomRuntime.toString()})()`,
+			expression: `(${createExternalDomRuntime.toString()})(${JSON.stringify({ cursorSvg, color: "#488fc1" })})`,
 		});
 		const call = async (
 			op: string,
@@ -66,8 +73,116 @@ describe("isolated browser execution against a local form", () => {
 				);
 			return result.result.value;
 		};
-		return { page, cdp, call };
+		await call("activate", { generation: "test-generation" });
+		const setVisibility = async (hidden: boolean): Promise<void> => {
+			// Headless Chromium 不模拟标签页遮挡；仅在测试隔离 world 注入可见性事件
+			await cdp.send("Runtime.evaluate", {
+				contextId: world.executionContextId,
+				expression: `Object.defineProperty(document, 'hidden', { configurable: true, value: ${hidden} }); document.dispatchEvent(new Event('visibilitychange'))`,
+			});
+		};
+		return { page, cdp, call, setVisibility };
 	}
+	it("keeps the read-only cursor visible across idle periods and scrolling while its lease is alive", async () => {
+		const { page, cdp, call } = await pageRuntime();
+		const feedback = page.locator('[data-daedalus-feedback="true"]');
+		await feedback.waitFor({ state: "visible" });
+		expect(await feedback.getAttribute("data-activity")).toBe("reading");
+		// 检查 closed shadow 内真正的 SVG，不只检查空宿主节点存在
+		const { root } = await cdp.send("DOM.getDocument", {
+			depth: -1,
+			pierce: true,
+		});
+		const findFeedback = (node: typeof root): typeof root | undefined =>
+			node.attributes?.includes("data-daedalus-feedback")
+				? node
+				: node.children?.map(findFeedback).find(Boolean);
+		const shadow = findFeedback(root)?.shadowRoots?.[0];
+		expect(shadow?.shadowRootType).toBe("closed");
+		expect(JSON.stringify(shadow)).toContain('"localName":"svg"');
+		expect(JSON.stringify(shadow)).toContain('"nodeValue":"AI"');
+		await page.screenshot({
+			path: "test-results/browser-feedback/reading.png",
+		});
+		const first = await feedback.elementHandle();
+		for (let i = 0; i < 4; i++) {
+			await new Promise((resolve) => setTimeout(resolve, 1500));
+			await call("heartbeat", { generation: "test-generation" });
+			expect(await feedback.isVisible()).toBe(true);
+		}
+		await call("wait", { condition: "load" });
+		expect(await feedback.getAttribute("data-activity")).toBe("waiting");
+		await page.evaluate(() => {
+			document.body.style.height = "5000px";
+		});
+		await call("scroll", { direction: "down", pages: 0.5 });
+		expect(await feedback.getAttribute("data-activity")).toBe("scroll");
+		await page.screenshot({
+			path: "test-results/browser-feedback/scrolling.png",
+		});
+		await call("observe");
+		expect(await first!.evaluate((element) => element.isConnected)).toBe(true);
+		expect(await feedback.count()).toBe(1);
+		await call("hide");
+		expect(await first!.isVisible()).toBe(false);
+		await call("heartbeat", { generation: "test-generation" });
+		expect(await first!.isVisible()).toBe(false);
+		await call("show");
+		expect(await first!.isVisible()).toBe(true);
+		await page.close();
+	}, 15000);
+	it("clears on finish and rejects late show, heartbeat and activation from the old turn", async () => {
+		const { page, call } = await pageRuntime();
+		const feedback = page.locator('[data-daedalus-feedback="true"]');
+		await call("hide");
+		await call("suspend");
+		await call("show");
+		await call("heartbeat", { generation: "test-generation" });
+		expect(await feedback.count()).toBe(0);
+		await expect(
+			call("activate", { generation: "test-generation" }),
+		).rejects.toThrow("browser_scope_stale");
+		await call("activate", { generation: "next-generation" });
+		expect(await feedback.isVisible()).toBe(true);
+		await call("clear");
+		await call("heartbeat", { generation: "next-generation" });
+		expect(await feedback.count()).toBe(0);
+		await page.close();
+	});
+	it("hides only the target tab feedback on tab switches and restores it without replay", async () => {
+		const { page, call, setVisibility } = await pageRuntime();
+		const feedback = page.locator('[data-daedalus-feedback="true"]');
+		await page.bringToFront();
+		expect(await feedback.isVisible()).toBe(true);
+		const other = await context.newPage();
+		await other.goto(origin);
+		await other.bringToFront();
+		await setVisibility(true);
+		expect(await feedback.isVisible()).toBe(false);
+		expect(await other.locator('[data-daedalus-feedback="true"]').count()).toBe(
+			0,
+		);
+		await call("heartbeat", { generation: "test-generation" });
+		await page.bringToFront();
+		await setVisibility(false);
+		await feedback.waitFor({ state: "visible" });
+		expect(await feedback.getAttribute("data-activity")).toBe("reading");
+		await other.close();
+		await page.close();
+	});
+	it("expires an orphaned cursor even if a stale generation keeps sending heartbeats", async () => {
+		const { page, call } = await pageRuntime();
+		await call("heartbeat", { generation: "old-generation" });
+		await page
+			.locator('[data-daedalus-feedback="true"]')
+			.waitFor({ state: "detached", timeout: 7500 });
+		await call("heartbeat", { generation: "test-generation" });
+		await call("show");
+		expect(await page.locator('[data-daedalus-feedback="true"]').count()).toBe(
+			0,
+		);
+		await page.close();
+	}, 10000);
 	it("wait checks visible evidence and scroll uses bounded viewport pages", async () => {
 		const { page, call } = await pageRuntime();
 		expect((await call("wait", { condition: "load" })).ready).toBe(true);
@@ -119,12 +234,12 @@ describe("isolated browser execution against a local form", () => {
 					prepareId: prepared.prepareId,
 					stepId: "fill",
 					actionId: "fill",
-					cursorSvg: "<svg></svg>",
 				})
 			).status,
 		).toBe("dispatched");
 		await expect(page.locator("#name").inputValue()).resolves.toBe("Ada");
 		expect(await page.evaluate(() => (window as any).submits)).toBe(0);
+		await page.screenshot({ path: "test-results/browser-feedback/input.png" });
 		await call("execute", {
 			prepareId: prepared.prepareId,
 			stepId: "submit",

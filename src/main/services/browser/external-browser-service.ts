@@ -21,6 +21,7 @@ type Target = {
 	url: string;
 	scope: ExternalBrowserScope;
 	world?: number;
+	feedbackGeneration?: string;
 	pendingUntil?: number;
 };
 type Preparation = {
@@ -216,7 +217,10 @@ export class ExternalBrowserService {
 			target.world = world.executionContextId;
 			await cdp.sendCommand("Runtime.evaluate", {
 				contextId: target.world,
-				expression: `(${createExternalDomRuntime.toString()})()`,
+				expression: `(${createExternalDomRuntime.toString()})(${JSON.stringify({
+					cursorSvg,
+					color: clientPreferencesService.getCachedPreferences().themeColor,
+				})})`,
 				returnByValue: true,
 			});
 		}
@@ -225,7 +229,7 @@ export class ExternalBrowserService {
 			exceptionDetails?: { exception?: { description?: string } };
 		}>("Runtime.evaluate", {
 			contextId: target.world,
-			expression: `globalThis.__daedalusExternal(${JSON.stringify(op)}, ${JSON.stringify(args)})`,
+			expression: `${target.feedbackGeneration === scope.generation ? "" : `globalThis.__daedalusExternal('activate', ${JSON.stringify({ generation: scope.generation })});`}globalThis.__daedalusExternal(${JSON.stringify(op)}, ${JSON.stringify(args)})`,
 			returnByValue: true,
 			awaitPromise: false,
 		});
@@ -236,6 +240,7 @@ export class ExternalBrowserService {
 				)?.[0];
 			throw new Error(code || "browser_dom_unavailable");
 		}
+		target.feedbackGeneration = scope.generation;
 		return browserObject(response.result?.value);
 	}
 	async execute(raw: ExternalBrowserRequest): Promise<Record<string, unknown>> {
@@ -358,12 +363,20 @@ export class ExternalBrowserService {
 					scope,
 				);
 				this.valid(scope);
-				if (result.targetId && result.url === url)
+				if (result.targetId && result.url === url) {
 					this.targets.set(browserId(result.targetId), {
 						peer: peer.peer,
 						url,
 						scope,
 					});
+					const [id, target] = this.target(result.targetId, scope);
+					await this.evaluate(id, target, scope, "activate", {
+						generation: scope.generation,
+					}).catch(() => {
+						// 新建标签页可能尚未导航完成，首次读取时再初始化显示
+						this.valid(scope);
+					});
+				}
 				return result;
 			}
 			const key = browserId(args.targetId),
@@ -484,8 +497,6 @@ export class ExternalBrowserService {
 						prepareId: preparation.id,
 						actionId,
 						stepId: step.id,
-						cursorSvg,
-						color: clientPreferencesService.getCachedPreferences().themeColor,
 					});
 					this.results.set(actionId, result);
 					return result;

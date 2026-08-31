@@ -212,7 +212,11 @@ test("external extension + native host: read, retained proposal, background acti
 				.poll(() => replies.has(callId), { timeout: 25000 })
 				.toBe(true);
 			const reply = replies.get(callId)!;
-			await expect(mainWindow.getByText(/AI is working in a browser tab|AI 正在处理浏览器标签页/)).toHaveCount(0);
+			await expect(
+				mainWindow.getByText(
+					/AI is working in a browser tab|AI 正在处理浏览器标签页/,
+				),
+			).toHaveCount(0);
 			if (expectedError) {
 				expect(reply).toMatchObject({
 					ok: false,
@@ -255,6 +259,24 @@ test("external extension + native host: read, retained proposal, background acti
 		expect(context.pages().filter((page) => page.url() === url)).toHaveLength(
 			1,
 		);
+		const feedback = target.locator('[data-daedalus-feedback="true"]');
+		// 临时测试浏览器中模拟用户查看目标标签，不由 AI 激活真实浏览器
+		await target.bringToFront();
+		await expect(feedback).toBeVisible();
+		await expect(feedback).toHaveAttribute("data-activity", "reading");
+		// 无新工具调用时，仅依靠真实扩展心跳维持显示，超过旧 5 秒隐藏时间
+		await new Promise((resolve) => setTimeout(resolve, 6200));
+		await expect(feedback).toBeVisible();
+		await target.screenshot({
+			path: test.info().outputPath("browser-cursor-reading.png"),
+		});
+		await other.bringToFront();
+		// Headless 不模拟文档遮挡；可见性事件另由 DOM 集成测试覆盖
+		await expect(other.locator('[data-daedalus-feedback="true"]')).toHaveCount(
+			0,
+		);
+		await target.bringToFront();
+		await expect(feedback).toBeVisible();
 		await invoke(
 			"wait",
 			{
@@ -314,6 +336,8 @@ test("external extension + native host: read, retained proposal, background acti
 				),
 			)
 			.toBeNull();
+		await expect(feedback).toHaveCount(0);
+		await other.bringToFront();
 		scope = {
 			...scope,
 			requestId: "external-turn-2",
@@ -332,11 +356,19 @@ test("external extension + native host: read, retained proposal, background acti
 		expect(await target.evaluate(() => (window as any).sent)).toBe(0);
 		expect(await target.locator("[data-daedalus-feedback]").count()).toBe(1);
 		expect(await other.locator("[data-daedalus-feedback]").count()).toBe(0);
-		await mainWindow.screenshot({ path: test.info().outputPath("browser-control-no-banner.png") });
+		await target.bringToFront();
+		await expect(feedback).toBeVisible();
+		await target.screenshot({
+			path: test.info().outputPath("browser-cursor-input.png"),
+		});
+		await mainWindow.screenshot({
+			path: test.info().outputPath("browser-control-no-banner.png"),
+		});
 		const screenshot = await invoke("screenshot", {
 			targetId: connected.targetId,
 		});
 		expect(screenshot.dataUrl).toMatch(/^data:image\/png;base64,/u);
+		await expect(feedback).toBeVisible();
 		await invoke("execute", execute);
 		expect(await target.evaluate(() => (window as any).sent)).toBe(0);
 		await status.locator("#stop").click();
@@ -348,6 +380,7 @@ test("external extension + native host: read, retained proposal, background acti
 				),
 			)
 			.toBeNull();
+		await expect(feedback).toHaveCount(0);
 		await expect
 			.poll(() =>
 				mockBackend

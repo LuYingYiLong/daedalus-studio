@@ -1,5 +1,8 @@
 // 此函数只在 CDP 创建的隔离 world 中运行；不要闭包引用主进程变量
-export function createExternalDomRuntime(): void {
+export function createExternalDomRuntime(presentation: {
+	cursorSvg: string;
+	color: string;
+}): void {
 	const state = globalThis as typeof globalThis & {
 		__daedalusExternal?: (op: string, args: Record<string, unknown>) => unknown;
 	};
@@ -25,14 +28,114 @@ export function createExternalDomRuntime(): void {
 	>();
 	const seen = new Map<string, Record<string, unknown>>();
 	let screenshotMask: HTMLElement | null = null;
-	let visualExpiry: ReturnType<typeof setTimeout> | undefined;
+	let cursor: HTMLElement | null = null,
+		outline: HTMLElement | null = null,
+		badge: HTMLElement | null = null,
+		generation: string | null = null,
+		deadline = 0,
+		screenshotHidden = false,
+		point = { x: 0, y: 0 };
+	const retired = new Set<string>();
+	const color = /^#[\da-f]{6}$/iu.test(presentation.color)
+		? presentation.color
+		: "#488fc1";
+	let leaseTimer: ReturnType<typeof setTimeout> | undefined,
+		activityTimer: ReturnType<typeof setTimeout> | undefined;
+	const animations = new Set<Animation>();
+	const cancelAnimations = (): void => {
+		for (const animation of animations) animation.cancel();
+		animations.clear();
+	};
 	const clearVisuals = (): void => {
-		clearTimeout(visualExpiry);
+		clearTimeout(leaseTimer);
+		clearTimeout(activityTimer);
+		cancelAnimations();
+		if (generation) retired.add(generation);
+		generation = null;
+		if (retired.size > 32) retired.delete(retired.values().next().value!);
 		screenshotMask?.remove();
 		host?.remove();
 		screenshotMask = null;
 		host = null;
+		cursor = outline = badge = null;
+		screenshotHidden = false;
 	};
+	const positionCursor = (): void => {
+		point.x = Math.max(8, Math.min(point.x, innerWidth - 80));
+		point.y = Math.max(8, Math.min(point.y, innerHeight - 44));
+		if (cursor)
+			cursor.style.transform = `translate(${point.x}px, ${point.y}px)`;
+	};
+	const syncVisibility = (): void => {
+		if (generation && Date.now() >= deadline) clearVisuals();
+		if (!host) return;
+		const hidden = document.hidden || screenshotHidden;
+		host.style.setProperty("display", hidden ? "none" : "block", "important");
+		if (hidden) cancelAnimations();
+	};
+	const renewVisualLease = (): void => {
+		clearTimeout(leaseTimer);
+		deadline = Date.now() + 5000;
+		// 只清理失联残影，不再按最后一次工具调用的时间隐藏光标
+		leaseTimer = setTimeout(clearVisuals, 5000);
+	};
+	const activity = (kind: string, symbol = ""): void => {
+		if (!host) return;
+		clearTimeout(activityTimer);
+		host.dataset.activity = kind;
+		if (badge) badge.textContent = symbol ? `AI ${symbol}` : "AI";
+		if (symbol)
+			activityTimer = setTimeout(() => {
+				if (badge) badge.textContent = "AI";
+				if (host) host.dataset.activity = "waiting";
+			}, 900);
+	};
+	const activate = (next: string): void => {
+		if (retired.has(next)) fail("browser_scope_stale");
+		if (generation === next) return;
+		clearVisuals();
+		generation = next;
+		renewVisualLease();
+		host = document.createElement("div");
+		host.setAttribute("data-daedalus-feedback", "true");
+		host.setAttribute("aria-hidden", "true");
+		host.style.cssText =
+			"all:initial!important;position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;pointer-events:none!important;z-index:2147483647!important;contain:strict!important";
+		const shadow = host.attachShadow({ mode: "closed" });
+		outline = document.createElement("div");
+		outline.style.cssText = `position:absolute;display:none;box-sizing:border-box;border:2px solid ${color};border-radius:4px;pointer-events:none`;
+		cursor = document.createElement("div");
+		cursor.style.cssText =
+			"position:absolute;left:0;top:0;display:flex;align-items:flex-end;gap:2px;pointer-events:none;filter:drop-shadow(0 1px 3px #0006)";
+		const icon = document.createElement("div");
+		icon.style.cssText = "width:28px;height:28px;flex:none";
+		// SVG 只来自 Studio 打包资源，网页和模型不能提供标记
+		icon.innerHTML = presentation.cursorSvg;
+		const svg = icon.querySelector("svg");
+		if (svg) {
+			svg.style.width = "100%";
+			svg.style.height = "100%";
+		}
+		badge = document.createElement("span");
+		badge.style.cssText = `font:600 11px/20px system-ui,sans-serif;white-space:nowrap;color:white;background:${color};padding:0 6px;border:1px solid #fff9;border-radius:6px`;
+		cursor.append(icon, badge);
+		shadow.append(outline, cursor);
+		document.documentElement.append(host);
+		// 尚未操作具体控件时停靠右上角，不暗示正在点击某个目标
+		point = { x: innerWidth - 100, y: 24 };
+		positionCursor();
+		activity("reading");
+		syncVisibility();
+	};
+	document.addEventListener("visibilitychange", syncVisibility);
+	window.addEventListener("resize", positionCursor);
+	window.addEventListener(
+		"scroll",
+		() => {
+			if (outline) outline.style.display = "none";
+		},
+		true,
+	);
 	function fail(code: string): never {
 		throw new Error(code);
 	}
@@ -255,35 +358,54 @@ export function createExternalDomRuntime(): void {
 		walk(document);
 		return regions;
 	};
-	const highlight = (
-		item: Item,
-		cursorSvg: string,
-		color: string,
-		clicked: boolean,
-	): void => {
-		clearVisuals();
-		visualExpiry = setTimeout(clearVisuals, 5000);
-		host = document.createElement("div");
-		host.setAttribute("data-daedalus-feedback", "true");
-		host.setAttribute("aria-hidden", "true");
-		host.style.cssText =
-			"position:fixed;inset:0;pointer-events:none;z-index:2147483647;contain:strict";
-		const shadow = host.attachShadow({ mode: "closed" }),
-			box = document.createElement("div"),
-			cursor = document.createElement("div");
+	const highlight = (item: Item, clicked: boolean): void => {
+		if (!host || !outline) return;
+		cancelAnimations();
 		const { x, y, width, height } = item.rect;
-		box.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:${width}px;height:${height}px;box-sizing:border-box;border:2px solid ${color};border-radius:4px;pointer-events:none`;
-		cursor.style.cssText = `position:absolute;left:${x + width / 2}px;top:${y + height / 2}px;width:28px;height:28px;pointer-events:none`;
-		// SVG 来自打包资源，外部页面和模型不能提供标记
-		cursor.innerHTML = cursorSvg;
-		shadow.append(box, cursor);
-		document.documentElement.append(host);
-		if (clicked && !matchMedia("(prefers-reduced-motion: reduce)").matches)
-			box.animate([{ opacity: 1 }, { opacity: 0.35 }, { opacity: 1 }], {
-				duration: 350,
-			});
+		Object.assign(outline.style, {
+			display: "block",
+			left: `${x}px`,
+			top: `${y}px`,
+			width: `${width}px`,
+			height: `${height}px`,
+		});
+		point = { x: x + width / 2 - 7, y: y + height / 2 - 4 };
+		positionCursor();
+		activity(clicked ? "click" : "input");
+		if (
+			clicked &&
+			!document.hidden &&
+			!screenshotHidden &&
+			!matchMedia("(prefers-reduced-motion: reduce)").matches
+		) {
+			const animation = outline.animate(
+				[{ opacity: 1 }, { opacity: 0.35 }, { opacity: 1 }],
+				{
+					duration: 240,
+					easing: "cubic-bezier(0.23, 1, 0.32, 1)",
+				},
+			);
+			animations.add(animation);
+			animation.onfinish = () => animations.delete(animation);
+		}
 	};
 	state.__daedalusExternal = (op, args) => {
+		if (op === "activate") {
+			if (
+				typeof args.generation !== "string" ||
+				!args.generation ||
+				args.generation.length > 200
+			)
+				fail("browser_scope_stale");
+			activate(args.generation as string);
+			return {};
+		}
+		if (op === "heartbeat") {
+			// 心跳只延长已有显示，旧代次和结束后的迟到心跳不能复活光标
+			if (generation && Date.now() >= deadline) clearVisuals();
+			if (generation && args.generation === generation) renewVisualLease();
+			return {};
+		}
 		if (op === "clear") {
 			clearVisuals();
 			plans.clear();
@@ -296,7 +418,8 @@ export function createExternalDomRuntime(): void {
 			return {};
 		}
 		if (op === "hide") {
-			if (host) host.style.display = "none";
+			screenshotHidden = true;
+			syncVisibility();
 			screenshotMask?.remove();
 			screenshotMask = document.createElement("div");
 			screenshotMask.setAttribute("data-daedalus-feedback", "true");
@@ -314,10 +437,13 @@ export function createExternalDomRuntime(): void {
 		if (op === "show") {
 			screenshotMask?.remove();
 			screenshotMask = null;
-			if (host) host.style.display = "";
+			screenshotHidden = false;
+			syncVisibility();
 			return {};
 		}
 		if (op === "observe") {
+			activity("reading");
+			if (outline) outline.style.display = "none";
 			const result = collect();
 			items = result.nodes;
 			observationId = crypto.randomUUID();
@@ -358,11 +484,13 @@ export function createExternalDomRuntime(): void {
 				top: (direction === "up" ? -1 : 1) * innerHeight * pages,
 				behavior: "instant",
 			});
+			activity("scroll", direction === "up" ? "↑" : "↓");
 			observationId = "";
 			items = [];
 			return { url: location.href, scrollY, pages };
 		}
 		if (op === "wait") {
+			activity("waiting");
 			if (args.condition === "load" || args.condition === "network_idle")
 				return { ready: document.readyState === "complete" };
 			if (
@@ -504,14 +632,7 @@ export function createExternalDomRuntime(): void {
 				} else if (step.action === "click" || step.action === "submit")
 					el.click();
 				else fail("browser_action_invalid");
-				highlight(
-					item,
-					String(args.cursorSvg || ""),
-					/^#[\da-f]{6}$/iu.test(String(args.color))
-						? String(args.color)
-						: "#488fc1",
-					step.action === "click" || step.action === "submit",
-				);
+				highlight(item, step.action === "click" || step.action === "submit");
 				// 只更新自身已批准字段的值；新增字段或其他字段变化要求新方案
 				const expected = JSON.parse(plan.form) as Record<string, unknown>[];
 				const ownIndex = latest.indexOf(item);

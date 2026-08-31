@@ -155,7 +155,18 @@ async function operation(
 		return {};
 	}
 	if (op === "heartbeat") {
-		if (!target.suspended) target.deadline = Date.now() + 5000;
+		if (!target.suspended) {
+			target.deadline = Date.now() + 5000;
+			if (target.world)
+				await chrome.debugger.sendCommand(
+					{ tabId: target.tabId },
+					"Runtime.evaluate",
+					{
+						contextId: target.world,
+						expression: `globalThis.__daedalusExternal?.('heartbeat', ${JSON.stringify({ generation: scope.generation })})`,
+					},
+				);
+		}
 		return {};
 	}
 	if (op === "finish") {
