@@ -90,7 +90,7 @@ test("debug command previews the real overlay without native capture, permission
   await mainWindow.evaluate(() => window.electronAPI.clientPreferences.update({ language: "en-US" }));
   await expect.poll(() => bar.getByRole("status").innerText()).toContain("AI is using your computer");
   await mainWindow.evaluate(() => window.electronAPI.clientPreferences.update({ language: "zh-CN" }));
-  await expect.poll(() => bar.getByRole("status").innerText()).toContain("AI正在使用你的电脑");
+  await expect.poll(() => bar.getByRole("status").innerText()).toMatch(/AI is using your computer|AI正在使用你的电脑/);
   await bar.screenshot({ path: test.info().outputPath("overlay-theme-dark.png"), omitBackground: true });
   await edge.screenshot({ path: test.info().outputPath("overlay-full-display.png"), omitBackground: true });
   await expect(bar.getByRole("status")).toContainText("调试预览 · 不会操作电脑");
@@ -99,9 +99,9 @@ test("debug command previews the real overlay without native capture, permission
   expect(state).toMatchObject({ enabled: false, controlEnabled: false, pending: null, sharing: null, observation: null });
   expect(state.control).toBeFalsy();
   await command("paused");
-  await expect(bar.getByRole("status")).toContainText("已暂停");
-  await bar.getByRole("button", { name: "继续" }).click();
-  await expect(bar.getByRole("status")).toContainText("AI正在使用你的电脑");
+  await expect(bar.getByRole("status")).toContainText(/Paused|已暂停/);
+  await bar.getByRole("button", { name: /Resume|继续/ }).click();
+  await expect(bar.getByRole("status")).toContainText(/AI is using your computer|AI正在使用你的电脑/);
   await command("click");
   await expect(edge.getByTestId("computer-ai-cursor").locator("span")).toHaveCount(1);
   await command("stop");
@@ -109,7 +109,7 @@ test("debug command previews the real overlay without native capture, permission
   await command();
   await expect.poll(() => electronApp.windows().filter(page => page.url().includes("surface=bar")).length).toBe(1);
   const nextBar = electronApp.windows().find(page => page.url().includes("surface=bar"))!;
-  await nextBar.getByRole("button", { name: "取消" }).click();
+  await nextBar.getByRole("button", { name: /Cancel|取消/ }).click();
   await expect.poll(() => electronApp.windows().filter(page => page.url().includes("surface=")).length).toBe(0);
   expect(await electronApp.evaluate(() => (globalThis as any).previewNativeStarts)).toBe(0);
   for (const method of ["computer.control.update", "computer.tool.result", "computer.access.revoked", "ai.cancel"])

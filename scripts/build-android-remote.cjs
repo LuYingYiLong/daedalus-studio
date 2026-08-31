@@ -43,7 +43,9 @@ if (!environment.JAVA_HOME && existsSync(toolchainDir)) {
 	const localJdk = readdirSync(toolchainDir).find((entry) => entry.startsWith("jdk-17") && existsSync(path.join(toolchainDir, entry, "bin", javaExecutable)));
 	if (localJdk) environment.JAVA_HOME = path.join(toolchainDir, localJdk);
 }
-if (!environment.GRADLE_OPTS) environment.GRADLE_OPTS = "-Xmx2048m -Dfile.encoding=UTF-8";
+// Android packaging handles the bundled web assets in a separate worker. Keep
+// enough heap for that step, while still allowing callers/CI to override it.
+if (!environment.GRADLE_OPTS) environment.GRADLE_OPTS = "-Xmx4096m -Dfile.encoding=UTF-8";
 const javaSocketOption = `-Djdk.net.unixdomain.tmpdir="${javaSocketDir}"`;
 environment.JAVA_TOOL_OPTIONS = [environment.JAVA_TOOL_OPTIONS, javaSocketOption]
 	.filter(Boolean)
@@ -77,6 +79,8 @@ writeFileSync(
 
 run(command, [
 	"--no-daemon",
+	"--no-parallel",
+	"--stacktrace",
 	":app:testDebugUnitTest",
 	":app:lintDebug",
 	":app:assembleDebug",

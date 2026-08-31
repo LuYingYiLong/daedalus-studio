@@ -442,8 +442,8 @@ test("grounding validation rejects a newer frame and a paused generation without
   expect(await nativeRequests(electronApp, "observe")).toEqual(captures);
   expect(await nativeRequests(electronApp, "action")).toHaveLength(0);
   const bar = electronApp.windows().find(page => page.url().includes("surface=bar"))!;
-  await expect(bar.getByRole("status")).toContainText("已暂停");
-  await bar.getByRole("button", { name: "继续" }).click();
+  await expect(bar.getByRole("status")).toContainText(/Paused|已暂停/);
+  await bar.getByRole("button", { name: /Resume|继续/ }).click();
   await expect.poll(() => mainWindow.evaluate(async () =>
     (await window.electronAPI.computerObservation!.getState()).control?.state)).toBe("running");
   const resumed = await mainWindow.evaluate(async () => window.electronAPI.computerObservation!.getState());

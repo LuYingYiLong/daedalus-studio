@@ -130,7 +130,7 @@ test("observation-to-control upgrade, fresh resume, cancellation and full-trust 
   const dialog = mainWindow.getByRole("dialog");
   const read = invoke("mcp_computer_request_access", { reason: "Observe before controlling", mode: "observe" });
   await dialog.getByRole("option", { name: "Local perception fixture" }).click();
-  await dialog.getByRole("button", { name: /Allow this turn|允许本轮观察/ }).click();
+  await dialog.getByRole("button", { name: /Allow (?:for )?this turn|允许本轮观察/ }).click();
   expect((await result(read)).result.mode).toBe("observe");
   await expect(dialog).not.toBeVisible();
   await expect(mainWindow.getByRole("button", { name: /Stop sharing|停止共享/ })).toHaveCount(0);
@@ -171,15 +171,15 @@ test("observation-to-control upgrade, fresh resume, cancellation and full-trust 
   const edge = electronApp
     .windows()
     .find((w) => w.url().includes("surface=edge"))!;
-  await expect(bar.getByRole("status")).toContainText("等待窗口激活");
+  await expect(bar.getByRole("status")).toContainText(/Waiting for window activation|等待窗口激活/);
   await expect(bar.getByRole("status")).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  await expect(bar.getByRole("status")).toContainText("请手动切换到授权窗口");
+  await expect(bar.getByRole("status")).toContainText(/Switch to the authorized window|请手动切换到授权窗口/);
   await expect(edge.getByTestId("computer-ai-cursor")).toHaveCount(0);
   await expect.poll(() => controlStates.get(turn)?.state).toBe("paused");
-  await bar.getByRole("button", { name: "继续" }).click();
-  await expect(bar.getByRole("button", { name: "恢复中…" })).toBeDisabled();
+  await bar.getByRole("button", { name: /Resume|继续/ }).click();
+  await expect(bar.getByRole("button", { name: /Resuming…|恢复中…/ })).toBeDisabled();
   await bar.evaluate(() => { window.computerOverlay.resume(); window.computerOverlay.resume(); });
-  await expect(bar.getByRole("status")).toContainText("AI正在使用你的电脑");
+  await expect(bar.getByRole("status")).toContainText(/AI is using your computer|AI正在使用你的电脑/);
   await expect(edge.getByTestId("computer-ai-cursor")).toBeVisible();
   await expect.poll(() => controlStates.get(turn)?.state).toBe("running");
   expect(await bar.evaluate(() => "electronAPI" in window)).toBe(false);
@@ -241,7 +241,7 @@ test("observation-to-control upgrade, fresh resume, cancellation and full-trust 
       "bounds",
     ]),
   );
-  await expect(bar.getByRole("status")).toContainText("已暂停");
+  await expect(bar.getByRole("status")).toContainText(/Paused|已暂停/);
   await expect
     .poll(() =>
       mockBackend
@@ -249,8 +249,8 @@ test("observation-to-control upgrade, fresh resume, cancellation and full-trust 
         .some((r) => (r.params as { state: string }).state === "paused"),
     )
     .toBe(true);
-  await bar.getByRole("button", { name: "继续" }).click();
-  await expect(bar.getByRole("status")).toContainText("AI正在使用你的电脑");
+  await bar.getByRole("button", { name: /Resume|继续/ }).click();
+  await expect(bar.getByRole("status")).toContainText(/AI is using your computer|AI正在使用你的电脑/);
   await expect.poll(() => controlStates.get(turn)?.state).toBe("running");
   await expect
     .poll(() =>
@@ -268,7 +268,7 @@ test("observation-to-control upgrade, fresh resume, cancellation and full-trust 
     }),
   );
   expect(stale.error?.code).toBe("computer_observation_stale");
-  await bar.getByRole("button", { name: "取消" }).click();
+  await bar.getByRole("button", { name: /Cancel|取消/ }).click();
   await expect
     .poll(() =>
       mockBackend

@@ -121,7 +121,7 @@ test("Windows per-turn consent, same-frame screenshot, revocation and reconnect"
     .getByRole("option", { name: "Local perception fixture" })
     .click();
   await dialog
-    .getByRole("button", { name: /Allow this turn|允许本轮观察/ })
+    .getByRole("button", { name: /Allow (?:for )?this turn|允许本轮观察/ })
     .click();
   expect((await result(grantCall)).ok).toBe(true);
   await expect(dialog).not.toBeVisible();
@@ -181,7 +181,7 @@ test("Windows per-turn consent, same-frame screenshot, revocation and reconnect"
     .getByRole("option", { name: "Local perception fixture" })
     .click();
   await dialog
-    .getByRole("button", { name: /Allow this turn|允许本轮观察/ })
+    .getByRole("button", { name: /Allow (?:for )?this turn|允许本轮观察/ })
     .click();
   expect((await result(terminalGrant)).ok).toBe(true);
   mockBackend.sendEvent(
@@ -367,7 +367,7 @@ test("Windows per-turn consent, same-frame screenshot, revocation and reconnect"
     .getByRole("option", { name: "Local perception fixture" })
     .click();
   await dialog
-    .getByRole("button", { name: /Allow this turn|允许本轮观察/ })
+    .getByRole("button", { name: /Allow (?:for )?this turn|允许本轮观察/ })
     .click();
   expect((await result(closingGrant)).ok).toBe(true);
   const sharingSettings = await openSettings();
