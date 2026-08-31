@@ -41,6 +41,7 @@ export type PlatformRuntime = {
 	kind: "desktop" | "remote";
 	getBackendTransport: () => Promise<BackendTransport>;
 	getClientHello: () => Promise<RuntimeClientHello>;
+	getCapabilityUpdate?: (features: Record<string, unknown>) => Promise<Record<string, boolean>>;
 	onCapabilitiesChanged?: (listener: () => void) => () => void;
 	onBackendConnected?: (client: BackendRpcClient) => void;
 	system?: PlatformSystemRuntime;

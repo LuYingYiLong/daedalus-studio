@@ -102,6 +102,9 @@ describe("remote gateway policy", () => {
 			"computer.tool.result",
 			"computer.access.revoked",
 			"session.computerObservation.get",
+			"client.capabilities.update",
+			"grounding.prepare",
+			"grounding.validate",
 		]) {
 			expect(REMOTE_RPC_METHODS.has(method)).toBe(false);
 			expect(validateRemoteRequest({ type: "request", id: "denied", method, params: {} })).toBe("remote_method_not_allowed");
@@ -123,7 +126,7 @@ describe("remote gateway policy", () => {
 			type: "request",
 			id: "hello",
 			method: "client.hello",
-			params: { clientType: "studio", clientName: "Forged", capabilities: { computerObservation: true } },
+			params: { clientType: "studio", clientName: "Forged", capabilities: { computerObservation: true, computerGrounding: true } },
 		}, { id: "device-a", name: "Pixel" });
 		expect(hello.params).toMatchObject({
 			clientType: "studio_remote",
@@ -132,6 +135,7 @@ describe("remote gateway policy", () => {
 				remoteControl: true,
 				browserTools: false,
 				computerObservation: false,
+				computerGrounding: false,
 				scheduledTasks: false,
 			},
 		});

@@ -4,9 +4,14 @@ import {
 } from "@/platform/rpc/transport/backend-client";
 import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";
 import {
+  computerId,
   parseComputerRequest,
   type ComputerScope,
 } from "../../../../contracts/computer-observation";
+import {
+  parseComputerGroundingPreparation,
+  parseComputerGroundingValidation,
+} from "../../../../contracts/computer-grounding";
 
 export function bindComputerRuntime(
   sessionId: string | null,
@@ -19,6 +24,7 @@ export function bindComputerRuntime(
     connectionId: string | null = null;
   let disposeEvents: (() => void) | undefined;
   let inputV3 = false;
+  let groundingV1 = false;
   let sequence = 0,
     heartbeatBusy = false;
   let control:
@@ -111,16 +117,18 @@ export function bindComputerRuntime(
     const current = ++revision;
     connectionId = null;
     inputV3 = false;
+    groundingV1 = false;
     ready = (async () => {
       await api.setContext(null);
       const client = await createBackendClient();
       const info = await client.request<{
         connection: { connectionId: string };
-        features?: { computerControl?: number };
+        features?: { computerControl?: number; computerGrounding?: number };
       }>("client.info");
       if (!alive || current !== revision) return;
       connectionId = info.connection.connectionId;
       inputV3 = info.features?.computerControl === 3;
+      groundingV1 = info.features?.computerGrounding === 1;
       await api.setContext({
         connectionId,
         sessionId,
@@ -211,25 +219,38 @@ export function bindComputerRuntime(
         if (event.event !== "computer.tool.request") return;
         void (async () => {
           await ready;
-          const request = parseComputerRequest(event.data);
+          const data = event.data as Record<string, unknown> | undefined;
           if (
             !alive ||
-            request.connectionId !== connectionId ||
-            handled.has(request.callId)
+            !data || data.connectionId !== connectionId || data.sessionId !== sessionId
           )
             return;
-          handled.add(request.callId);
+          const callId = computerId(data.callId);
+          if (handled.has(callId)) return;
+          handled.add(callId);
           if (handled.size > 512)
             handled.delete(handled.values().next().value!);
           const generation = revision;
           try {
+            const request = parseComputerRequest(data);
+            if ((request.toolName === "grounding.prepare" || request.toolName === "grounding.validate") && !groundingV1)
+              throw new Error("computer_tool_not_supported");
             const rawResult = await api.execute(request);
+            if (request.toolName === "grounding.prepare") {
+              const prepared = parseComputerGroundingPreparation(rawResult);
+              if (prepared.observation.observationId !== request.args.observationId)
+                throw new Error("computer_observation_stale");
+            } else if (request.toolName === "grounding.validate") {
+              const validated = parseComputerGroundingValidation(rawResult);
+              if (validated.observationId !== request.args.observationId || validated.generation !== request.args.generation)
+                throw new Error("computer_observation_stale");
+            }
             const result = !inputV3 && Array.isArray(rawResult.nodes)
               ? { ...rawResult, nodes: rawResult.nodes.map(({ supportedActions: _actions, ...node }: import("../../../../contracts/computer-observation").ComputerNode) => node) }
               : rawResult;
             if (alive && generation === revision)
               await client.request("computer.tool.result", {
-                callId: request.callId,
+                callId,
                 ok: true,
                 result,
               });
@@ -245,7 +266,7 @@ export function bindComputerRuntime(
                 : "computer_failed";
             if (alive && generation === revision && client.isOpen())
               await client.request("computer.tool.result", {
-                callId: request.callId,
+                callId,
                 ok: false,
                 error: {
                   code,

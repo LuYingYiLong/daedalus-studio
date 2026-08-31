@@ -8,6 +8,9 @@ export type ComputerToolName =
   | "mcp_computer_observe"
   | "mcp_computer_screenshot"
   | "mcp_computer_action";
+/** Backend 内部转发操作；不属于模型工具，也不交给原生助手 */
+export type ComputerGroundingOperation = "grounding.prepare" | "grounding.validate";
+export type ComputerOperationName = ComputerToolName | ComputerGroundingOperation;
 export type ComputerRect = {
   x: number;
   y: number;
@@ -94,6 +97,9 @@ export type ComputerToolRequest = ComputerScope & {
   authorization?: { approvalMode: "manual" | "auto-safe" | "full-trust" };
   actionId?: string;
 };
+export type ComputerForwardedRequest = Omit<ComputerToolRequest, "toolName"> & {
+  toolName: ComputerOperationName;
+};
 export type ComputerConsent = {
   callId: string;
   reason: string;
@@ -104,6 +110,8 @@ export type ComputerConsent = {
 };
 export type ComputerState = {
   enabled: boolean;
+  /** Main 实现支持；与 Backend 特性和用户开关分别协商 */
+  groundingSupported?: boolean;
   controlEnabled?: boolean;
   controlSupported?: boolean;
   control?: ComputerControlState | null;
@@ -135,7 +143,7 @@ export type ComputerAPI = {
       controlSupported?: boolean;
     } | null,
   ): Promise<void>;
-  execute(request: ComputerToolRequest): Promise<Record<string, unknown>>;
+  execute(request: ComputerForwardedRequest): Promise<Record<string, unknown>>;
   cancel(callId: string): Promise<void>;
   finish(scope: ComputerScope): Promise<void>;
   list(): Promise<ComputerSource[]>;
@@ -159,7 +167,12 @@ export function parseComputerOverlayPreview(value: unknown): ComputerOverlayPrev
     throw new Error("computer_invalid_request");
   return v as ComputerOverlayPreview;
 }
-export function parseComputerRequest(value: unknown): ComputerToolRequest {
+export function computerGeneration(value: unknown): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0)
+    throw new Error("computer_invalid_request");
+  return value;
+}
+export function parseComputerRequest(value: unknown): ComputerForwardedRequest {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("computer_invalid_request");
   const v = value as Record<string, unknown>;
@@ -182,12 +195,14 @@ export function parseComputerRequest(value: unknown): ComputerToolRequest {
     throw new Error("computer_invalid_request");
   for (const key of keys.slice(0, 6)) computerId(v[key]);
   if (
-    ![
+    typeof v.toolName !== "string" || ![
       "mcp_computer_request_access",
       "mcp_computer_observe",
       "mcp_computer_screenshot",
       "mcp_computer_action",
-    ].includes(String(v.toolName))
+      "grounding.prepare",
+      "grounding.validate",
+    ].includes(v.toolName)
   )
     throw new Error("computer_tool_not_supported");
   if (!v.args || typeof v.args !== "object" || Array.isArray(v.args))
@@ -196,11 +211,13 @@ export function parseComputerRequest(value: unknown): ComputerToolRequest {
   const allowed =
     v.toolName === "mcp_computer_request_access"
       ? ["reason", "mode"]
-      : v.toolName === "mcp_computer_screenshot"
+      : v.toolName === "mcp_computer_screenshot" || v.toolName === "grounding.prepare"
         ? ["observationId"]
-        : v.toolName === "mcp_computer_action"
-          ? ["observationId", "action"]
-          : [];
+        : v.toolName === "grounding.validate"
+          ? ["observationId", "generation"]
+          : v.toolName === "mcp_computer_action"
+            ? ["observationId", "action", "groundingId"]
+            : [];
   if (Object.keys(args).some((k) => !allowed.includes(k)))
     throw new Error("computer_invalid_request");
   if (
@@ -225,11 +242,15 @@ export function parseComputerRequest(value: unknown): ComputerToolRequest {
   }
   if (
     v.toolName === "mcp_computer_screenshot" ||
-    v.toolName === "mcp_computer_action"
+    v.toolName === "mcp_computer_action" ||
+    v.toolName === "grounding.prepare" ||
+    v.toolName === "grounding.validate"
   )
     computerId(args.observationId);
+  if (v.toolName === "grounding.validate") computerGeneration(args.generation);
   if (v.toolName === "mcp_computer_action") {
     computerId(v.actionId);
+    if (args.groundingId !== undefined) computerId(args.groundingId);
     parseComputerAction(args.action);
   } else if (v.actionId !== undefined)
     throw new Error("computer_invalid_request");
@@ -238,7 +259,7 @@ export function parseComputerRequest(value: unknown): ComputerToolRequest {
     !v.authorization
   )
     throw new Error("computer_consent_required");
-  return v as ComputerToolRequest;
+  return v as ComputerForwardedRequest;
 }
 
 export function computerObject(

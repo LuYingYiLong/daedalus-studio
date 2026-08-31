@@ -12,6 +12,8 @@ Opt-in Windows x64 observation and separately authorized input. There is no netw
 
 ## Build and verify
 
+Visual grounding is a Backend/Studio addition negotiated through `computerGrounding: 1`; it does not change this helper's protocol or input profile. Studio forwards internal `grounding.prepare` / `grounding.validate` requests to Main, which supplies and validates the existing frame without recapturing. A vision result can only identify an existing UIA node; ambiguous or visual-only candidates never become coordinate input. The session evidence inspector can show saved grounding boxes without operating the target, while local diagnostics remain offline.
+
 Install Visual Studio C++ desktop tools (MSVC, CMake, Windows SDK). Node 24 and the existing Studio dependencies are required at build time. No Python/.NET runtime is shipped.
 
 ```powershell
@@ -51,7 +53,7 @@ The Windows client preference is off by default. Enabling it allows a request, n
 
 Remote, scheduler, Goal and non-Windows clients do not receive the tools. The Gateway's allowlist rejects all observation/result/history methods. All window content is untrusted model evidence. Local OCR text and requested screenshots may be sent to the user's configured model service.
 
-Settings → Computer use contains separate observation/input switches and a developer-only, read-only diagnostics Modal. Only the registered settings window's top frame may run local diagnostics; it cannot execute AI tools or grant access. Leaving the page or closing the window clears diagnostic results without revoking Main's AI grant. Diagnostics do not authorize AI, attach context, persist evidence or contact a model. Trace records link to desktop-only historical evidence; compacted records cannot recapture. Backend schema 10 stores observations independently, removes old bodies/PNGs in the existing ten-completed-turn compaction transaction, updates search revision and keeps authorization audit entries.
+Settings → Computer use contains separate observation/input switches and a developer-only, read-only diagnostics Modal. Only the registered settings window's top frame may run local diagnostics; it cannot execute AI tools or grant access. Leaving the page or closing the window clears diagnostic results without revoking Main's AI grant. Diagnostics do not authorize AI, attach context, persist evidence or contact a model. Trace records link to desktop-only historical evidence; compacted records cannot recapture. Backend schema 11 stores observations and grounding details independently, removes old bodies/PNGs in the existing ten-completed-turn compaction transaction, updates search revision and keeps authorization audit entries.
 
 ## Validation boundaries
 

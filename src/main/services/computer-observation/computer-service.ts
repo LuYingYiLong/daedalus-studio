@@ -8,7 +8,7 @@ import type {
   ComputerScope,
   ComputerSource,
   ComputerState,
-  ComputerToolRequest,
+  ComputerForwardedRequest,
 } from "../../../contracts/computer-observation";
 import {
   parseComputerObservation,
@@ -82,7 +82,7 @@ export class ComputerService {
   private observations = new Map<string, ComputerObservation>();
   private decision: {
     scope: ComputerScope;
-    request: ComputerToolRequest;
+    request: ComputerForwardedRequest;
     promise: Promise<Record<string, unknown>>;
     resolve(value: Record<string, unknown>): void;
     reject(error: Error): void;
@@ -90,6 +90,7 @@ export class ComputerService {
   } | null = null;
   private state: ComputerState = {
     enabled: false,
+    groundingSupported: true,
     controlEnabled: false,
     control: null,
     rememberedTarget: null,
@@ -366,9 +367,11 @@ export class ComputerService {
     this.sources = new Map(sources.map((s) => [s.sourceId, s]));
     return sources;
   }
-  execute(value: ComputerToolRequest): Promise<Record<string, unknown>> {
+  execute(value: ComputerForwardedRequest): Promise<Record<string, unknown>> {
     const request = parseComputerRequest(value);
     this.assertScope(request);
+    if (request.toolName === "grounding.prepare" || request.toolName === "grounding.validate")
+      this.requireGroundingFrame(request);
     const existing = request.actionId
       ? this.actions.get(request.actionId)
       : this.calls.get(request.callId);
@@ -381,7 +384,7 @@ export class ComputerService {
     return operation;
   }
   private async executeOnce(
-    request: ComputerToolRequest,
+    request: ComputerForwardedRequest,
   ): Promise<Record<string, unknown>> {
     const key = scopeKey(request);
     const mode = request.args.mode === "control" ? "control" : "observe";
@@ -532,17 +535,30 @@ export class ComputerService {
       throw new Error("computer_paused");
     if (this.activeCall) throw new Error("computer_busy");
     const generation = this.generation;
+    const access = this.access;
+    const groundingFrame = request.toolName === "grounding.prepare" || request.toolName === "grounding.validate"
+      ? this.requireGroundingFrame(request) : null;
     this.activeCall = request.callId;
     const deadline = setTimeout(() => this.revoke("computer_timeout"), 20_000);
     try {
       await this.healthCheck;
       if (generation !== this.generation) throw new Error("computer_cancelled");
       const valid = await this.helper.request("validate");
-      if (!valid.valid) {
+      if (valid.valid !== true) {
         this.revoke("computer_window_unavailable");
         throw new Error("computer_window_unavailable");
       }
       if (generation !== this.generation) throw new Error("computer_cancelled");
+      if (groundingFrame) {
+        this.assertScope(request);
+        if (this.access !== access) throw new Error("computer_access_revoked");
+        if (this.requireGroundingFrame(request) !== groundingFrame)
+          throw new Error("computer_observation_stale");
+        // 模型等待发生在 Backend；这里只校验现有帧，随即释放原生串行通道
+        return request.toolName === "grounding.prepare"
+          ? { observation: structuredClone(groundingFrame), generation }
+          : { observationId: groundingFrame.observationId, generation, valid: true };
+      }
       if (request.toolName === "mcp_computer_action") {
         if (
           this.access?.mode !== "control" ||
@@ -561,7 +577,8 @@ export class ComputerService {
         this.presentation?.highlight?.(null);
         this.activeAction = { id: request.actionId!, generation, action, observation };
         const result = await this.helper.request("action", {
-          ...request.args,
+          observationId,
+          action,
           actionId: request.actionId,
           generation,
         });
@@ -585,6 +602,8 @@ export class ComputerService {
           throw new Error("computer_observation_stale");
         return { ...observation };
       }
+      if (request.toolName !== "mcp_computer_observe")
+        throw new Error("computer_tool_not_supported");
       if (this.now() - this.lastObservationAt < 1000)
         throw new Error("computer_rate_limited");
       this.lastObservationAt = this.now();
@@ -631,6 +650,17 @@ export class ComputerService {
       clearTimeout(deadline);
       if (this.activeCall === request.callId) this.activeCall = null;
     }
+  }
+  private requireGroundingFrame(request: ComputerForwardedRequest): ComputerObservation {
+    if (!this.access || scopeKey(this.access.scope) !== scopeKey(request) || this.access.scope.runId !== request.runId)
+      throw new Error("computer_consent_required");
+    if (this.state.control?.state === "paused") throw new Error("computer_paused");
+    const observationId = request.args.observationId as string;
+    const frame = this.observations.get(observationId);
+    if (!frame?.dataUrl || this.state.observation !== frame ||
+      (request.toolName === "grounding.validate" && request.args.generation !== this.generation))
+      throw new Error("computer_observation_stale");
+    return frame;
   }
   async decide(callId: string, sourceId: string | null): Promise<void> {
     if (this.state.pending?.callId !== callId || !this.decision)

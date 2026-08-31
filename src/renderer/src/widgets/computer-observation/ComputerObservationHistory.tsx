@@ -11,8 +11,15 @@ export default function ComputerObservationHistory({
 	observationId: string;
 }): React.JSX.Element | null {
 	const { t } = useTranslation();
-	const { available, developer, requested, state, observation, request } =
-		useComputerObservationHistory(sessionId, observationId);
+	const {
+		available,
+		developer,
+		requested,
+		state,
+		observation,
+		groundings,
+		request,
+	} = useComputerObservationHistory(sessionId, observationId);
 	if (!available) return null;
 	if (!developer) return <Alert type="info" title={t("trajectory.hidden")} />;
 	if (!requested)
@@ -23,8 +30,9 @@ export default function ComputerObservationHistory({
 			<>
 				<Typography.Text copyable>{observationId}</Typography.Text>
 				<ComputerObservationEvidence
-					key={observationId}
+					key={`${sessionId}:${observationId}`}
 					observation={observation}
+					groundings={groundings}
 				/>
 			</>
 		);

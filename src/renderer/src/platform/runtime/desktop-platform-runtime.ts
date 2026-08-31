@@ -39,9 +39,26 @@ export const desktopPlatformRuntime: PlatformRuntime = {
 		};
 	},
 	getClientHello: getDesktopHello,
+	getCapabilityUpdate: async (features) => {
+		const { capabilities } = await getDesktopHello();
+		const updates: Record<string, boolean> = {};
+		for (const key of ["browserTools", "computerObservation", "computerControl", "scheduledTasks"])
+			updates[key] = capabilities[key];
+		// 新字段仅出现在已协商的更新中，不放进首次 hello
+		if (features.computerGrounding === 1) {
+			updates.computerGrounding = false;
+			try {
+				const state = await window.electronAPI.computerObservation?.getState();
+				updates.computerObservation = state?.enabled === true && state.available;
+				updates.computerControl = updates.computerObservation && state?.controlEnabled === true && state.controlSupported === true;
+				updates.computerGrounding = updates.computerObservation && state?.groundingSupported === true;
+			} catch { /* 无法核验 Main 状态时不宣告 grounding */ }
+		}
+		return updates;
+	},
 	onCapabilitiesChanged: (listener: () => void): (() => void) => {
 		let computerCapability = "";
-		const disposeComputer = window.electronAPI.computerObservation?.onState(state => { const value = `${state.enabled}:${state.available}:${state.controlEnabled}:${state.controlSupported}`; if (value !== computerCapability) { computerCapability = value; listener(); } });
+		const disposeComputer = window.electronAPI.computerObservation?.onState(state => { const value = `${state.enabled}:${state.available}:${state.controlEnabled}:${state.controlSupported}:${state.groundingSupported}`; if (value !== computerCapability) { computerCapability = value; listener(); } });
 		const disposeBrowser = window.electronAPI.browser.settings.onChanged((settings): void => {
 			browserToolsEnabled = settings.aiCdpEnabled;
 			listener();

@@ -3,6 +3,7 @@
 	width: min(100%, calc(40vh * var(--frame-ratio, 1)));
 	margin-inline: auto;
 	flex: none;
+	overflow: hidden;
 }
 .frame img {
 	width: 100%;
@@ -20,6 +21,47 @@
 	overflow: auto;
 }
 .text {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+.grounding {
+	padding-block: var(--ant-padding-sm);
+	border-block-start: 1px solid var(--ant-color-border-secondary);
+}
+.groundingMetadata {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: var(--ant-padding-xxs) var(--ant-padding-sm);
+	margin-block: 0 var(--ant-padding-sm);
+}
+.groundingMetadata dt {
+	color: var(--ant-color-text-secondary);
+}
+.groundingMetadata dd {
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+.groundingCandidates {
+	margin: 0;
+	padding-inline-start: var(--ant-padding-lg);
+}
+.groundingCandidate {
+	display: flex;
+	justify-content: flex-start;
+	flex-wrap: wrap;
+	width: 100%;
+	height: auto;
+	min-height: var(--ant-control-height);
+	text-align: start;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+.groundingCandidate > span {
+	min-width: 0;
+	max-width: 100%;
+}
+.candidateDetails {
+	padding-inline: var(--ant-padding-sm);
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 }
