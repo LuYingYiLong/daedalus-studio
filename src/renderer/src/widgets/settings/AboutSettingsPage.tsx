@@ -20,6 +20,7 @@ import bridgeColorfulIconUrl from "@/assets/icons/bridge-colorful.svg?url";
 import daedalusColorfulIconUrl from "@/assets/icons/icon-colorful.svg";
 import AppUpdateDialog from "@/widgets/app-update/AppUpdateDialog";
 import ChangelogDialog from "@/widgets/changelog/ChangelogDialog";
+import AboutCreditsModal from "./AboutCreditsModal";
 import { updateClientPreferences } from "@/platform/rpc/client-preferences-api";
 import { createDefaultOnboardingPreferences } from "../../../../contracts/onboarding";
 import styles from "./AboutSettingsPage.module.css";
@@ -144,6 +145,7 @@ function AboutSettingsPage(): React.JSX.Element | null {
 	const [isUpdateDialogOpen, setIsUpdateDialogOpen] =
 		useState<boolean>(false);
 	const [isChangelogOpen, setIsChangelogOpen] = useState<boolean>(false);
+	const [isCreditsOpen, setIsCreditsOpen] = useState<boolean>(false);
 	const [isResettingOnboarding, setIsResettingOnboarding] =
 		useState<boolean>(false);
 	const [isRepairingBackend, setIsRepairingBackend] =
@@ -633,14 +635,24 @@ function AboutSettingsPage(): React.JSX.Element | null {
 							title={t("settings.about.applicationInformation")}
 							className={styles.detailsCard}
 							extra={
-								<Button
-									icon={<Icon name="change-log" />}
-									onClick={(): void => {
-										setIsChangelogOpen(true);
-									}}
-								>
-									{t("settings.about.actions.viewChangelog")}
-								</Button>
+								<Space size="small">
+									<Button
+										icon={<Icon name="book" />}
+										onClick={(): void => {
+											setIsCreditsOpen(true);
+										}}
+									>
+										{t("settings.about.actions.viewCredits")}
+									</Button>
+									<Button
+										icon={<Icon name="change-log" />}
+										onClick={(): void => {
+											setIsChangelogOpen(true);
+										}}
+									>
+										{t("settings.about.actions.viewChangelog")}
+									</Button>
+								</Space>
 							}
 						>
 							<Descriptions column={1}>
@@ -913,6 +925,12 @@ function AboutSettingsPage(): React.JSX.Element | null {
 				full={true}
 				onClose={(): void => {
 					setIsChangelogOpen(false);
+				}}
+			/>
+			<AboutCreditsModal
+				open={isCreditsOpen}
+				onClose={(): void => {
+					setIsCreditsOpen(false);
 				}}
 			/>
 		</section>

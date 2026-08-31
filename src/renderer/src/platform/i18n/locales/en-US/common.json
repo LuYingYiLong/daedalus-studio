@@ -2563,6 +2563,14 @@
 				"description": "An optional integration bridge connecting Daedalus Studio with the Godot editor."
 			},
 			"applicationInformation": "Application Information",
+			"credits": {
+				"title": "Credits",
+				"description": "Daedalus Studio is built with these direct open-source dependencies. Versions shown are the ranges declared by this release.",
+				"groups": {
+					"runtime": "Runtime dependencies",
+					"development": "Development dependencies"
+				}
+			},
 			"sourceCode": "Source Code",
 			"sourceDescription": "Visit our GitHub repository for source code, issues, and contributions.",
 			"repositories": {
@@ -2592,6 +2600,7 @@
 			},
 			"actions": {
 				"refresh": "Refresh",
+				"viewCredits": "Credits",
 				"viewChangelog": "View update history",
 				"checkForUpdates": "Check for updates",
 				"updateBackend": "Update backend",

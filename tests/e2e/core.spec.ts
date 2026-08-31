@@ -262,6 +262,25 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 		await expect(reopenedSettings.locator("[data-settings-search-key=\"item:general.developerMode\"] .ant-switch")).not.toBeChecked();
 	});
 
+	test("关于页可以查看第三方库 Credits", async ({ launchStudio }) => {
+		const { electronApp, mainWindow } = await launchStudio();
+		const settingsWindowPromise = electronApp.waitForEvent("window");
+		await mainWindow.locator("[data-studio-open-settings=\"true\"]").click();
+		const settingsWindow = await settingsWindowPromise;
+		await settingsWindow.waitForLoadState("domcontentloaded");
+		await expect(settingsWindow.locator("[data-studio-settings-window=\"true\"]")).toBeVisible();
+		await settingsWindow.getByRole("menuitem", { name: /About|关于/ }).click();
+
+		await settingsWindow.getByRole("button", { name: /^Credits$|^第三方库$/ }).click();
+		const creditsDialog = settingsWindow.getByRole("dialog");
+		await expect(creditsDialog).toBeVisible();
+		await expect(creditsDialog.locator(".ant-modal-title")).toHaveText("Credits");
+		await expect(creditsDialog.getByText("react", { exact: true })).toBeVisible();
+		await expect(creditsDialog.getByText("antd", { exact: true })).toBeVisible();
+		await creditsDialog.getByRole("button", { name: /Close|关闭/ }).click();
+		await expect(creditsDialog).toBeHidden();
+	});
+
 	test("轨迹 Dock 展示 Prompt、精简记录、实时更新和开发者模式摘要", async ({ launchStudio, mockBackend }) => {
 		let developerMode: boolean = true;
 		let revision: number = 12;

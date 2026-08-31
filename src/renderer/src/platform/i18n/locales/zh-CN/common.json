@@ -2556,6 +2556,14 @@
 				"description": "连接 Daedalus Studio 与 Godot 编辑器的可选集成桥接插件。"
 			},
 			"applicationInformation": "应用信息",
+			"credits": {
+				"title": "Credits",
+				"description": "Daedalus Studio 使用了以下直接开源依赖。版本显示为本次发布在 package.json 中声明的范围。",
+				"groups": {
+					"runtime": "运行时依赖",
+					"development": "开发与构建依赖"
+				}
+			},
 			"sourceCode": "源代码",
 			"sourceDescription": "访问 GitHub 仓库查看源代码、问题和贡献方式。",
 			"repositories": {
@@ -2585,6 +2593,7 @@
 			},
 			"actions": {
 				"refresh": "刷新",
+				"viewCredits": "Credits",
 				"viewChangelog": "查看更新日志",
 				"checkForUpdates": "检查更新",
 				"updateBackend": "更新后端",
