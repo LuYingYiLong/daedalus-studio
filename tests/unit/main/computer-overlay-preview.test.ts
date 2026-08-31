@@ -4,7 +4,7 @@ import { parseComputerOverlayPreview } from "../../../src/contracts/computer-obs
 
 const bounds = { x: -1000, y: 0, width: 800, height: 600 };
 function fixture() {
-  const surface = { prepare: vi.fn(async () => [] as string[]), update: vi.fn(), click: vi.fn(), close: vi.fn() };
+  const surface = { prepare: vi.fn(async () => [] as string[]), update: vi.fn(), moveCursor: vi.fn(), click: vi.fn(), close: vi.fn() };
   return { surface, preview: new ComputerOverlayPreviewController(surface) };
 }
 afterEach(() => vi.useRealTimers());

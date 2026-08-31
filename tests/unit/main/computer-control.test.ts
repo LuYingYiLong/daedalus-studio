@@ -65,6 +65,7 @@ function setup(mode: "manual" | "auto-safe" | "full-trust" = "manual") {
   const presentation = {
     prepare: vi.fn(async () => ["1", "2"]),
     update: vi.fn(),
+    moveCursor: vi.fn(),
     click: vi.fn(),
     close: vi.fn(),
   };
@@ -451,6 +452,7 @@ describe("computer control safety", () => {
       helper.request.mock.calls.filter(([method]) => method === "action"),
     ).toHaveLength(1);
     expect(presentation.click).toHaveBeenCalledOnce();
+    expect(presentation.moveCursor).toHaveBeenCalledWith({ x: -1190, y: 10 });
     service.pause();
     expect(service.getState().control?.state).toBe("paused");
     await expect(

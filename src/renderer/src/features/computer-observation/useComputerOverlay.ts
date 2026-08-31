@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 export type ComputerOverlayState = {
   state: "starting" | "running" | "paused" | "cancelled";
   cursor: { x: number; y: number };
+  cursorVisible: boolean;
   clickSequence: number;
   code?: string;
   resuming?: boolean;
@@ -24,6 +25,7 @@ export function useComputerOverlay(): ComputerOverlayState {
   const [state, setState] = useState<ComputerOverlayState>({
     state: "starting",
     cursor: { x: -100, y: -100 },
+    cursorVisible: false,
     clickSequence: 0,
   });
   useEffect(() => {

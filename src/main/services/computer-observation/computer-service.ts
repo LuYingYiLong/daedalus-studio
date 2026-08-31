@@ -1,8 +1,10 @@
 import type {
   ComputerConsent,
   ComputerControlState,
+  ComputerAction,
   ComputerRect,
   ComputerObservation,
+  ComputerScreenPoint,
   ComputerScope,
   ComputerSource,
   ComputerState,
@@ -30,9 +32,26 @@ type Access = {
 export type ComputerPresentation = {
   prepare(bounds: ComputerRect): Promise<string[]>;
   update(state: ComputerControlState | null): void;
+  moveCursor(point: ComputerScreenPoint): void;
   click(): void;
   close(): void;
 };
+function actionScreenPoint(
+  observation: ComputerObservation,
+  action: ComputerAction,
+): ComputerScreenPoint | null {
+  if (action.type !== "click" && action.type !== "scroll") return null;
+  return {
+    x: Math.round(
+      observation.screenBounds.x +
+        (action.x * observation.screenBounds.width) / observation.width,
+    ),
+    y: Math.round(
+      observation.screenBounds.y +
+        (action.y * observation.screenBounds.height) / observation.height,
+    ),
+  };
+}
 function scopeOnly(scope: ComputerScope): ComputerScope {
   return {
     connectionId: scope.connectionId,
@@ -507,6 +526,10 @@ export class ComputerService {
           this.state.observation?.observationId !== observationId
         )
           throw new Error("computer_observation_stale");
+        const action = request.args.action as ComputerAction;
+        const observation = this.observations.get(observationId)!;
+        const cursor = actionScreenPoint(observation, action);
+        if (cursor) this.presentation?.moveCursor(cursor);
         const result = await this.helper.request("action", {
           ...request.args,
           actionId: request.actionId,
@@ -520,7 +543,7 @@ export class ComputerService {
           result.status !== "dispatched"
         )
           throw new Error("computer_action_unknown");
-        if ((request.args.action as { type: string }).type === "click")
+        if (action.type === "click")
           this.presentation?.click();
         this.publish({ observation: null });
         return result;

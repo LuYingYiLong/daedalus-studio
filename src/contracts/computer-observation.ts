@@ -11,6 +11,11 @@ export type ComputerRect = {
   width: number;
   height: number;
 };
+/** Windows 屏幕物理坐标；仅用于把 AI 目标投影到 Overlay，不代表系统鼠标位置 */
+export type ComputerScreenPoint = {
+  x: number;
+  y: number;
+};
 export type ComputerOverlayPreviewAction = "running" | "paused" | "click" | "stop";
 export type ComputerOverlayPreview = {
   connectionId: string;

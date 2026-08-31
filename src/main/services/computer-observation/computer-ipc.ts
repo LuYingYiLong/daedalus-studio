@@ -96,6 +96,7 @@ export function registerComputerIpc(
     {
       prepare: (bounds) => { preview.close(); return overlay.prepare(bounds); },
       update: (state) => { if (!preview.active) overlay.update(state); },
+      moveCursor: (point) => { if (!preview.active) overlay.moveCursor(point); },
       click: () => { if (!preview.active) overlay.click(); },
       close: () => { if (!preview.active) overlay.close(); },
     },

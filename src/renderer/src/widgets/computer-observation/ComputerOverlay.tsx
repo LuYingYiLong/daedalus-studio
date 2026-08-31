@@ -58,7 +58,7 @@ export default function ComputerOverlay(): React.JSX.Element {
 			data-paused={state.state !== "running"}
 			aria-hidden="true"
 		>
-			{state.state === "running" && (
+			{state.state === "running" && state.cursorVisible && (
 				<div
 					className={styles.cursor}
 					data-testid="computer-ai-cursor"

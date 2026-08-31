@@ -7,8 +7,9 @@ vi.mock("electron", () => ({
   ipcMain: { on: (key: string, handler: (...args: any[]) => void) => mock.handlers.set(key, handler) },
   globalShortcut: { register: () => true, unregister: vi.fn() },
   screen: { on: vi.fn(), screenToDipRect: (_: unknown, r: unknown) => r,
+    screenToDipPoint: (point: unknown) => point,
     getDisplayMatching: () => ({ bounds: { x: 0, y: 0, width: 800, height: 600 }, workArea: { x: 0, y: 0, width: 800, height: 560 } }),
-    getCursorScreenPoint: () => ({ x: 12, y: 34 }) },
+    getCursorScreenPoint: () => { throw new Error("system cursor must not drive the AI cursor"); } },
   BrowserWindow: class {
     id = mock.windows.length + 1;
     destroyed = false;
@@ -24,7 +25,7 @@ vi.mock("electron", () => ({
     setIgnoreMouseEvents = vi.fn();
     showInactive = vi.fn();
     moveTop = vi.fn();
-    async loadFile() { mock.handlers.get("computer-overlay:ready")!({ sender: this.webContents, senderFrame: this.webContents.mainFrame }); }
+    async loadURL() { mock.handlers.get("computer-overlay:ready")!({ sender: this.webContents, senderFrame: this.webContents.mainFrame }); }
   },
 }));
 afterEach(() => { vi.useRealTimers(); mock.windows.length = 0; mock.handlers.clear(); });
@@ -43,6 +44,11 @@ it("keeps the bar clickable above the transparent edge and coalesces repeated co
     expect(bar.options.focusable).toBe(false);
     expect(bar.moveTop).toHaveBeenCalledOnce();
     expect(edge.showInactive.mock.invocationCallOrder[0]).toBeLessThan(bar.showInactive.mock.invocationCallOrder[0]);
+    overlay.moveCursor({ x: 100, y: 200 });
+    expect(edge.webContents.send.mock.lastCall[1]).toMatchObject({
+      cursor: { x: 100, y: 200 },
+      cursorVisible: true,
+    });
     const state = { connectionId: "fixture", sessionId: "session", requestId: "turn", runId: "run", generation: 2, state: "paused" as const, code: "computer_activation_required" };
     overlay.update(state);
     const event = { sender: bar.webContents, senderFrame: bar.webContents.mainFrame };

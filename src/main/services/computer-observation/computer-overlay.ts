@@ -7,10 +7,12 @@ import {
   type IpcMainEvent,
 } from "electron";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import type {
   ComputerControlState,
   ComputerOverlayViewState,
   ComputerRect,
+  ComputerScreenPoint,
 } from "../../../contracts/computer-observation";
 import type { ComputerPresentation } from "./computer-service";
 
@@ -27,6 +29,7 @@ export class ComputerOverlay implements ComputerPresentation {
   private pendingReady: Promise<string[]> | null = null;
   private resuming = false;
   private resumeError: string | undefined;
+  private virtualCursor: ComputerScreenPoint | null = null;
   constructor(
     private readonly cancel: () => void,
     private readonly resume: () => Promise<void>,
@@ -90,6 +93,7 @@ export class ComputerOverlay implements ComputerPresentation {
         this.windows.forEach((window, index) =>
           window.setBounds(rects[index]!),
         );
+        this.setCursorToTargetCenter(bounds);
         this.layoutDirty = false;
       }
       return Promise.resolve(this.handles());
@@ -137,6 +141,7 @@ export class ComputerOverlay implements ComputerPresentation {
   }
   private async create(bounds: ComputerRect): Promise<string[]> {
     this.close();
+    this.setCursorToTargetCenter(bounds);
     const generation = this.generation;
     if (!globalShortcut.register(STOP_KEY, this.cancel))
       throw new Error("computer_stop_shortcut_unavailable");
@@ -197,11 +202,14 @@ export class ComputerOverlay implements ComputerPresentation {
               );
               url.searchParams.set("surface", index === 0 ? "edge" : "bar");
               await window.loadURL(url.toString());
-            } else
-              await window.loadFile(
+            } else {
+              // Windows 下 loadFile 的 query 组合可能保留反斜杠，生成无法加载的 file URL
+              const url = pathToFileURL(
                 join(__dirname, "../renderer/computer-overlay.html"),
-                { query: { surface: index === 0 ? "edge" : "bar" } },
               );
+              url.searchParams.set("surface", index === 0 ? "edge" : "bar");
+              await window.loadURL(url.toString());
+            }
             await ready;
             if (generation !== this.generation || window.isDestroyed())
               throw new Error("computer_cancelled");
@@ -237,6 +245,17 @@ export class ComputerOverlay implements ComputerPresentation {
     this.resumeError = undefined;
     this.publish();
   }
+  moveCursor(point: ComputerScreenPoint): void {
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+    this.virtualCursor = screen.screenToDipPoint(point);
+    this.publish();
+  }
+  private setCursorToTargetCenter(bounds: ComputerRect): void {
+    this.virtualCursor = screen.screenToDipPoint({
+      x: bounds.x + bounds.width / 2,
+      y: bounds.y + bounds.height / 2,
+    });
+  }
   click(): void {
     this.clickSequence++;
     this.publish();
@@ -244,14 +263,17 @@ export class ComputerOverlay implements ComputerPresentation {
   private publish(): void {
     for (const window of this.windows) {
       if (window.isDestroyed() || window.webContents.isDestroyed()) continue;
-      const bounds = window.getBounds(),
-        cursor = screen.getCursorScreenPoint();
+      const bounds = window.getBounds();
+      const cursor = this.virtualCursor;
       try {
         window.webContents.send("computer-overlay:state", {
           state: this.state?.state ?? "starting",
           code: this.resumeError ?? this.state?.code,
           resuming: this.state?.state === "paused" && (this.resuming || !!this.state.resuming),
-          cursor: { x: cursor.x - bounds.x, y: cursor.y - bounds.y },
+          cursor: cursor === null
+            ? { x: -100, y: -100 }
+            : { x: cursor.x - bounds.x, y: cursor.y - bounds.y },
+          cursorVisible: cursor !== null,
           clickSequence: this.clickSequence,
           preview: this.state?.preview === true,
         });
@@ -268,6 +290,7 @@ export class ComputerOverlay implements ComputerPresentation {
     this.resuming = false;
     this.resumeError = undefined;
     this.clickSequence = 0;
+    this.virtualCursor = null;
     globalShortcut.unregister(STOP_KEY);
     const windows = this.windows;
     this.windows = [];

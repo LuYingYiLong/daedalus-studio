@@ -1,8 +1,9 @@
-import type { ComputerOverlayPreviewAction, ComputerOverlayViewState, ComputerRect } from "../../../contracts/computer-observation";
+import type { ComputerOverlayPreviewAction, ComputerOverlayViewState, ComputerRect, ComputerScreenPoint } from "../../../contracts/computer-observation";
 
 type PreviewSurface = {
   prepare(bounds: ComputerRect): Promise<string[]>;
   update(state: ComputerOverlayViewState | null): void;
+  moveCursor(point: ComputerScreenPoint): void;
   click(): void;
   close(): void;
 };
@@ -29,6 +30,10 @@ export class ComputerOverlayPreviewController {
     try {
       await pending;
       if (!this.active || generation !== this.generation) throw new Error("computer_cancelled");
+      this.surface.moveCursor({
+        x: bounds.x + bounds.width / 2,
+        y: bounds.y + bounds.height / 2,
+      });
       this.surface.update({ state: action === "paused" ? "paused" : "running", preview: true });
       if (action === "click") this.surface.click();
       if (this.expiry) clearTimeout(this.expiry);
