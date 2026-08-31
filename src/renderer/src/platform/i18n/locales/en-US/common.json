@@ -1047,6 +1047,8 @@
 		},
 		"filter": {
 			"all": "All",
+			"allTurns": "All turns",
+			"turn": "Turn filter",
 			"placeholder": "Search requestId, runId, or toolCallId"
 		},
 		"turn": "Turn {{turn}}",

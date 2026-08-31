@@ -17,6 +17,12 @@
 	overflow: auto;
 }
 
+.turnFilter {
+	flex: 0 0 150px;
+	min-width: 116px;
+	margin-inline-start: auto;
+}
+
 .chart {
 	position: relative;
 	min-width: 0;

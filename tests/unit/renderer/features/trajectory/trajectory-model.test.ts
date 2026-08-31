@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTraceGanttSegments, filterTraceRecords, filterTraceRecordsByTimeRange, formatTraceDuration, groupTraceRecords, mergeTraceRecords } from "@/domain/trajectory/trajectory-model";
+import { buildTraceGanttSegments, filterTraceRecords, filterTraceRecordsByTimeRange, filterTraceRecordsByTurn, formatTraceDuration, groupTraceRecords, mergeTraceRecords } from "@/domain/trajectory/trajectory-model";
 import type { TraceRecord } from "@/platform/rpc/trace-api";
 
 function record(overrides: Partial<TraceRecord> = {}): TraceRecord {
@@ -51,6 +51,15 @@ describe("trajectory model", () => {
 		expect(filterTraceRecords(records, "tool_call", "needle")).toEqual([records[1]]);
 		expect(filterTraceRecords(records, "prompt", "needle")).toEqual([]);
 		expect(formatTraceDuration(61_200)).toBe("1m 1s");
+	});
+
+	it("filters timeline records by conversation turn", () => {
+		const records = [
+			record({ recordId: "turn-1", turn: 1 }),
+			record({ recordId: "turn-2", turn: 2, sequence: 2 }),
+		];
+		expect(filterTraceRecordsByTurn(records, 2).map((item): string => item.recordId)).toEqual(["turn-2"]);
+		expect(filterTraceRecordsByTurn(records, null)).toEqual(records);
 	});
 
 	it("filters timeline records by an overlapping Gantt time range", () => {

@@ -1,5 +1,6 @@
 import { Column } from "@ant-design/charts";
-import { Checkbox, Empty, theme as antdTheme, Typography } from "antd";
+import { Checkbox, Empty, Select, theme as antdTheme, Typography } from "antd";
+import type { SelectProps } from "antd";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -13,6 +14,9 @@ import styles from "./TrajectoryGantt.module.css";
 
 type TraceGanttProps = {
 	records: readonly TraceRecord[];
+	turns: readonly number[];
+	selectedTurn: number | null;
+	onTurnChange: (turn: number | null) => void;
 	onTimeRangeChange?: (timeRange: TraceTimeRange | null) => void;
 };
 
@@ -42,6 +46,9 @@ function shortenLabel(value: string, maxLength: number): string {
 
 function TraceGantt({
 	records,
+	turns,
+	selectedTurn,
+	onTurnChange,
 	onTimeRangeChange,
 }: TraceGanttProps): React.JSX.Element {
 	const { t } = useTranslation();
@@ -162,6 +169,14 @@ function TraceGantt({
 			),
 		[t],
 	);
+	const turnOptions: SelectProps<number>["options"] = useMemo(
+		(): SelectProps<number>["options"] =>
+			turns.map((turn): { label: string; value: number } => ({
+				label: t("trajectory.turn", { turn }),
+				value: turn,
+			})),
+		[turns, t],
+	);
 	const chartHeight: number = Math.min(
 		128,
 		Math.max(48, segments.length * 4 + 32),
@@ -217,6 +232,16 @@ function TraceGantt({
 						);
 					}}
 					aria-label={t("trajectory.gantt.filterLabel")}
+				/>
+				<Select<number>
+					allowClear
+					aria-label={t("trajectory.filter.turn")}
+					className={styles.turnFilter}
+					options={turnOptions}
+					placeholder={t("trajectory.filter.allTurns")}
+					value={selectedTurn ?? undefined}
+					onChange={(value: number | undefined): void =>
+						onTurnChange(value ?? null)}
 				/>
 			</div>
 			{segments.length === 0 ? (

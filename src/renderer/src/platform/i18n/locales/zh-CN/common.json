@@ -1045,6 +1045,8 @@
 		},
 		"filter": {
 			"all": "全部",
+			"allTurns": "全部轮次",
+			"turn": "轮次筛选",
 			"placeholder": "搜索 requestId、runId 或 toolCallId"
 		},
 		"turn": "第 {{turn}} 轮",

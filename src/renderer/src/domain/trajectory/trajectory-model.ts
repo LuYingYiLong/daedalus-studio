@@ -121,6 +121,14 @@ export function filterTraceRecords(records: readonly TraceRecord[], kind: TraceR
 	});
 }
 
+export function filterTraceRecordsByTurn(
+	records: readonly TraceRecord[],
+	turn: number | null,
+): TraceRecord[] {
+	if (turn === null) return [...records];
+	return records.filter((record): boolean => record.turn === turn);
+}
+
 export function filterTraceRecordsByTimeRange(
 	records: readonly TraceRecord[],
 	timeRange: TraceTimeRange | null,

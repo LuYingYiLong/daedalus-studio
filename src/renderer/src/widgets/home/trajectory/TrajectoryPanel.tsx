@@ -18,6 +18,7 @@ import type { CollapseProps, MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 import {
 	filterTraceRecords,
+	filterTraceRecordsByTurn,
 	filterTraceRecordsByTimeRange,
 	formatTraceDuration,
 	formatTraceTokens,
@@ -315,14 +316,28 @@ function TrajectoryPanel({
 	const { message } = App.useApp();
 	const controller = useTrajectoryController(sessionId, isActive);
 	const [query, setQuery] = useState<string>("");
+	const [turnFilter, setTurnFilter] = useState<number | null>(null);
 	const [timeRange, setTimeRange] = useState<TraceTimeRange | null>(null);
 	useEffect((): void => {
+		setTurnFilter(null);
 		setTimeRange(null);
 	}, [sessionId]);
+	const turns: number[] = useMemo(
+		(): number[] =>
+			[...new Set(controller.records.map((record): number => record.turn))].sort(
+				(left, right): number => left - right,
+			),
+		[controller.records],
+	);
+	const turnFilteredRecords: TraceRecord[] = useMemo(
+		(): TraceRecord[] =>
+			filterTraceRecordsByTurn(controller.records, turnFilter),
+		[controller.records, turnFilter],
+	);
 	const filteredRecords: TraceRecord[] = useMemo(
 		(): TraceRecord[] =>
-			filterTraceRecords(controller.records, "all", query),
-		[controller.records, query],
+			filterTraceRecords(turnFilteredRecords, "all", query),
+		[turnFilteredRecords, query],
 	);
 	const timeFilteredRecords: TraceRecord[] = useMemo(
 		(): TraceRecord[] =>
@@ -498,6 +513,12 @@ function TrajectoryPanel({
 				</div>
 				<TraceGantt
 					records={filteredRecords}
+					turns={turns}
+					selectedTurn={turnFilter}
+					onTurnChange={(value: number | null): void => {
+						setTurnFilter(value);
+						setTimeRange(null);
+					}}
 					onTimeRangeChange={setTimeRange}
 				/>
 			</header>

@@ -28,6 +28,7 @@
 }
 
 .toolbarActions {
+	flex-wrap: nowrap;
 	min-width: 0;
 }
 
