@@ -1,5 +1,7 @@
 #pragma once
 #include <chrono>
+#include <atomic>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -35,6 +37,7 @@ std::string pngDataUrl(const Pixels &pixels);
 Pixels resizePixels(const Pixels &input, int w, int h);
 std::vector<float> normalizedPixels(const Pixels &input, int w, int h);
 void testUiaFixture(bool testCapture = false);
+void testUiaActions(HWND target, HWND edit, HWND password, HWND checkbox);
 class Ocr {
 public:
   explicit Ocr(const std::wstring &directory);
@@ -52,15 +55,21 @@ public:
   Json select(const std::string &id);
   Json observe();
   void release();
+  void invalidateNodes() { ++nodeEpoch; }
+  void performUia(const std::string &observationId, const Json &action, const std::function<void(POINT)> &validate);
   bool targetValid();
   HWND controlTarget() { if (!targetValid()) throw std::runtime_error("computer_window_unavailable"); return selected->hwnd; }
 
 private:
+  friend void testUiaActions(HWND target, HWND edit, HWND password, HWND checkbox);
   DWORD excludedPid;
   std::wstring directory;
   std::vector<Target> targets;
   std::unique_ptr<Target> selected;
   std::unique_ptr<Ocr> ocr;
+  struct UiaCache;
+  std::shared_ptr<UiaCache> uiaCache;
+  std::atomic<unsigned> nodeEpoch{0};
   // 捕获项的 Closed 事件会使已授权窗口失效，包括句柄复用
   struct WindowLife;
   std::shared_ptr<WindowLife> life;

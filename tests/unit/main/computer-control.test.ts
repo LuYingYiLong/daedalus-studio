@@ -5,6 +5,7 @@ import {
   type ComputerToolRequest,
 } from "../../../src/contracts/computer-observation";
 import { normalizeClientPreferences } from "../../../src/main/services/client-preferences-store";
+import type { NativeControlEvent } from "../../../src/main/services/computer-observation/helper-client";
 
 const scope = {
   connectionId: "connection",
@@ -20,7 +21,7 @@ const frame = {
   width: 200,
   height: 100,
   dpi: 144,
-  nodes: [],
+  nodes: [{ id: "button", parentId: null, name: "Button", automationId: "", controlType: "Button", enabled: true, password: false, supportedActions: ["uia_invoke"], bounds: { x: 0, y: 0, width: 100, height: 50 } }],
   texts: [],
   truncated: false,
   durationMs: 5,
@@ -28,7 +29,7 @@ const frame = {
 function setup(mode: "manual" | "auto-safe" | "full-trust" = "manual") {
   vi.useFakeTimers();
   let sequence = 0;
-  let notify: (event: { event: string; code: string; generation: number }) => void = () => {};
+  let notify: (event: NativeControlEvent) => void = () => {};
   const helper = {
     stop: vi.fn(),
     onControl: (listener: typeof notify) => { notify = listener; return () => {}; },
@@ -49,11 +50,15 @@ function setup(mode: "manual" | "auto-safe" | "full-trust" = "manual") {
           case "observe":
             return { ...frame, observationId: `frame-${++sequence}` };
           case "action":
+            if ((params!.action as {type: string}).type.startsWith("uia_")) {
+              notify({ event: "progress", code: "computer_progress", generation: params!.generation as number, actionId: params!.actionId as string, x: -1190, y: 10, phase: "semantic" });
+            }
             return {
               actionId: params!.actionId,
               observationId: params!.observationId,
               generation: params!.generation,
               status: "dispatched",
+              transport: (params!.action as {type: string}).type.startsWith("uia_") ? "uia" : "keyboard",
               dispatchedAt: new Date().toISOString(),
             };
           default:
@@ -112,6 +117,101 @@ function setup(mode: "manual" | "auto-safe" | "full-trust" = "manual") {
 }
 afterEach(() => vi.useRealTimers());
 describe("computer control safety", () => {
+  it.each(["cancel", "finish"] as const)("%s during readiness cannot open late consent", async (ending) => {
+    const { service, helper, request, presentation } = setup();
+    let complete!: () => void;
+    Object.assign(helper, { assertControlReady: vi.fn(() => new Promise<void>(resolve => { complete = resolve; })) });
+    service.setControlEnabled(true);
+    const req = request("mcp_computer_request_access", { reason: "fixture", mode: "control" });
+    const pending = service.execute(req);
+    const rejected = expect(pending).rejects.toThrow("computer_cancelled");
+    await vi.advanceTimersByTimeAsync(0);
+    if (ending === "cancel") service.cancel(req.callId); else service.finish(scope);
+    complete(); await rejected;
+    expect(service.getState().pending).toBeNull();
+    expect(presentation.prepare).not.toHaveBeenCalled();
+    await expect(service.execute({ ...req, callId: "retry" })).rejects.toThrow("computer_access_denied");
+    service.revoke();
+  });
+  it("serializes readiness with observation monitoring", async () => {
+    const { service, helper, request } = setup();
+    service.setControlEnabled(true);
+    const read = request("mcp_computer_request_access", { reason: "read", mode: "observe" });
+    const granted = service.execute(read);
+    await service.list(); await service.decide(read.callId, "source"); await granted;
+    const original = helper.request.getMockImplementation()!;
+    let finishValidation!: (value: Record<string, unknown>) => void;
+    helper.request.mockImplementation((method, params) => method === "validate" ? new Promise(resolve => { finishValidation = resolve; }) : original(method, params));
+    await vi.advanceTimersByTimeAsync(1000);
+    let finishReadiness!: () => void;
+    const readiness = vi.fn(() => new Promise<void>(resolve => { finishReadiness = resolve; }));
+    Object.assign(helper, { assertControlReady: readiness });
+    const upgrade = request("mcp_computer_request_access", { reason: "upgrade", mode: "control" });
+    const pending = service.execute(upgrade);
+    const rejected = expect(pending).rejects.toThrow("computer_access_revoked");
+    await vi.advanceTimersByTimeAsync(0); expect(readiness).not.toHaveBeenCalled();
+    finishValidation({ valid: true }); await vi.advanceTimersByTimeAsync(0);
+    const validations = helper.request.mock.calls.filter(([method]) => method === "validate").length;
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(helper.request.mock.calls.filter(([method]) => method === "validate")).toHaveLength(validations);
+    finishReadiness(); await vi.advanceTimersByTimeAsync(0);
+    expect(service.getState().pending?.callId).toBe(upgrade.callId);
+    service.revoke(); await rejected;
+  });
+  it("rejects unvalidated native input before opening consent or showing the overlay", async () => {
+    const { service, helper, request, presentation } = setup("full-trust");
+    Object.assign(helper, { assertControlReady: async () => { throw new Error("computer_pointer_independence_unavailable"); } });
+    service.setControlEnabled(true);
+    await expect(service.execute(request("mcp_computer_request_access", { reason: "fixture", mode: "control" }))).rejects.toThrow("computer_pointer_independence_unavailable");
+    expect(service.getState().pending).toBeNull();
+    expect(presentation.prepare).not.toHaveBeenCalled();
+    expect(helper.request).not.toHaveBeenCalledWith("control.start", expect.anything());
+    const read = request("mcp_computer_request_access", { reason: "read-only fixture", mode: "observe" });
+    const pending = service.execute(read);
+    await service.list(); await service.decide(read.callId, "source");
+    await expect(pending).resolves.toMatchObject({ mode: "observe", granted: true });
+    service.revoke();
+  });
+  it("only accepts progress for the active action and drops late progress after pause", async () => {
+    const { service, grant, request, helper, notify, presentation } = setup();
+    service.setControlEnabled(true); await grant();
+    const observed = await service.execute(request("mcp_computer_observe", {}));
+    const original = helper.request.getMockImplementation()!;
+    let complete!: (result: Record<string, unknown>) => void;
+    helper.request.mockImplementation((method, params) => method === "action" ? new Promise(resolve => { complete = resolve; }) : original(method, params));
+    const action = request("mcp_computer_action", { observationId: observed.observationId, action: { type: "uia_invoke", nodeId: "button" } }, { actionId: "progress-test" });
+    const pending = service.execute(action);
+    const rejected = expect(pending).rejects.toThrow("computer_action_unknown");
+    await vi.advanceTimersByTimeAsync(0);
+    const generation = service.getState().control!.generation;
+    const event: NativeControlEvent = { event: "progress", code: "computer_progress", actionId: "progress-test", generation, x: -1190, y: 10, phase: "semantic" };
+    notify({ ...event, actionId: "old-action" }); notify({ ...event, generation: generation - 1 });
+    expect(presentation.click).not.toHaveBeenCalled();
+    notify({ ...event, phase: "tap" }); expect(presentation.moveCursor).not.toHaveBeenCalled();
+    notify(event); expect(presentation.moveCursor).toHaveBeenCalledOnce();
+    service.pause(); notify(event); expect(presentation.moveCursor).toHaveBeenCalledOnce();
+    expect(presentation.click).not.toHaveBeenCalled();
+    complete({ actionId: action.actionId, observationId: observed.observationId, status: "dispatched", generation, transport: "uia" });
+    await rejected; service.revoke();
+  });
+  it("dispatches explicit supported UIA actions without touch ripples or fallback", async () => {
+    const { service, grant, request, helper, notify, presentation } = setup();
+    const original = helper.request.getMockImplementation()!;
+    helper.request.mockImplementation(async (method, params) => {
+      if (method === "observe") return { ...frame, nodes: [{ id: "edit", parentId: null, name: "Edit", automationId: "", controlType: "Edit", enabled: true, password: false, bounds: { x: 0, y: 0, width: 100, height: 50 }, supportedActions: ["uia_set_value"] }] };
+      if (method === "action") notify({ event: "progress", code: "computer_progress", generation: params!.generation as number, actionId: params!.actionId as string, x: -1150, y: 25, phase: "semantic" });
+      return original(method, params);
+    });
+    service.setControlEnabled(true); await grant();
+    await service.execute(request("mcp_computer_observe", {}));
+    const action = request("mcp_computer_action", { observationId: "frame", action: { type: "uia_set_value", nodeId: "edit", value: "" } }, { actionId: "uia-test" });
+    expect(await service.execute(action)).toMatchObject({ transport: "uia", status: "dispatched" });
+    expect(presentation.click).not.toHaveBeenCalled();
+    expect(presentation.moveCursor).toHaveBeenCalledWith({ x: -1150, y: 25 });
+    await service.execute({ ...action, callId: "duplicate" });
+    expect(helper.request.mock.calls.filter(([method]) => method === "action")).toHaveLength(1);
+    service.revoke();
+  });
   it.each(["list", "select", "control.start"])("serializes observation-to-control upgrade against the idle monitor during %s", async (delayedMethod) => {
     const { service, request, helper, presentation, revoked } = setup();
     service.setControlEnabled(true);
@@ -431,7 +531,7 @@ describe("computer control safety", () => {
     });
     expect(service.getState().rememberedTarget).toBeNull();
   });
-  it("deduplicates inputs and invalidates coordinates on pause/resume", async () => {
+  it("deduplicates inputs and invalidates node identities on pause/resume", async () => {
     const { service, request, grant, helper, presentation } = setup();
     service.setControlEnabled(true);
     await grant();
@@ -440,7 +540,7 @@ describe("computer control safety", () => {
       "mcp_computer_action",
       {
         observationId: observed.observationId,
-        action: { type: "click", x: 10, y: 10, count: 1 },
+        action: { type: "uia_invoke", nodeId: "button" },
       },
       { actionId: "action-1" },
     );
@@ -451,7 +551,7 @@ describe("computer control safety", () => {
     expect(
       helper.request.mock.calls.filter(([method]) => method === "action"),
     ).toHaveLength(1);
-    expect(presentation.click).toHaveBeenCalledOnce();
+    expect(presentation.click).not.toHaveBeenCalled();
     expect(presentation.moveCursor).toHaveBeenCalledWith({ x: -1190, y: 10 });
     service.pause();
     expect(service.getState().control?.state).toBe("paused");

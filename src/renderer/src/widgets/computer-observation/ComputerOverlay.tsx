@@ -1,21 +1,31 @@
+import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useComputerOverlay } from "@/features/computer-observation/useComputerOverlay";
 import cursor from "@/assets/icons/ai-cursor.svg";
-import { computerPauseHint } from "@/domain/computer-observation/control-feedback";
+import { computerPauseHintKey } from "@/domain/computer-observation/control-feedback";
+import i18n from "@/platform/i18n";
 import styles from "./ComputerOverlay.module.css";
 
 export default function ComputerOverlay(): React.JSX.Element {
 	const state = useComputerOverlay();
+	const { t } = useTranslation();
+	useEffect(() => {
+		const language = state.appearance?.resolvedLanguage;
+		if (!language) return;
+		document.documentElement.lang = language;
+		void i18n.changeLanguage(language);
+	}, [state.appearance?.resolvedLanguage]);
 	const bar = new URLSearchParams(location.search).get("surface") === "bar";
 	const label = state.resuming
-		? "正在恢复…"
+		? t("computer.overlay.resuming")
 		: {
-				starting: "正在准备电脑操作…",
-				running: "AI正在使用你的电脑",
+				starting: t("computer.overlay.starting"),
+				running: t("computer.overlay.running"),
 				paused:
 					state.code === "computer_activation_required"
-						? "等待窗口激活"
-						: "已暂停",
-				cancelled: "正在取消…",
+						? t("computer.overlay.activationRequired")
+						: t("computer.overlay.paused"),
+				cancelled: t("computer.overlay.cancelled"),
 			}[state.state];
 	if (bar)
 		return (
@@ -26,12 +36,12 @@ export default function ComputerOverlay(): React.JSX.Element {
 			>
 				<div className={styles.message}>
 					<span>{label}</span>
-					{state.preview && <small>调试预览 · 不会操作电脑</small>}
+					{state.preview && <small>{t("computer.overlay.preview")}</small>}
 					{state.state === "paused" && (
 						<small>
 							{state.resuming
-								? "正在验证目标窗口并获取新画面，请稍候。"
-								: computerPauseHint(state.code)}
+								? t("computer.overlay.resumeHint")
+								: t(computerPauseHintKey(state.code))}
 						</small>
 					)}
 				</div>
@@ -39,16 +49,18 @@ export default function ComputerOverlay(): React.JSX.Element {
 					<button
 						disabled={state.resuming}
 						aria-busy={state.resuming}
+						aria-label={t(state.resuming ? "computer.overlay.resumingShort" : "computer.overlay.resume")}
 						onClick={() => window.computerOverlay.resume()}
 					>
-						{state.resuming ? "恢复中…" : "继续"}
+						{state.resuming ? t("computer.overlay.resumingShort") : t("computer.overlay.resume")}
 					</button>
 				)}
 				<button
+					aria-label={t("computer.overlay.cancel")}
 					onClick={() => window.computerOverlay.cancel()}
 					disabled={state.state === "cancelled"}
 				>
-					取消
+					{t("computer.overlay.cancel")}
 				</button>
 			</div>
 		);
@@ -58,6 +70,7 @@ export default function ComputerOverlay(): React.JSX.Element {
 			data-paused={state.state !== "running"}
 			aria-hidden="true"
 		>
+			{state.state === "running" && state.highlight && <div className={styles.highlight} style={{ left: state.highlight.x, top: state.highlight.y, width: state.highlight.width, height: state.highlight.height }} />}
 			{state.state === "running" && state.cursorVisible && (
 				<div
 					className={styles.cursor}

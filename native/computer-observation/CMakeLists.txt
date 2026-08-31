@@ -11,6 +11,6 @@ add_executable(daedalus-computer-helper main.cpp perception.cpp control.cpp cont
 target_compile_definitions(daedalus-computer-helper PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0A00)
 target_compile_options(daedalus-computer-helper PRIVATE /utf-8 /EHsc /W4)
 target_include_directories(daedalus-computer-helper PRIVATE "${ORT_ROOT}/build/native/include")
-target_link_libraries(daedalus-computer-helper PRIVATE windowsapp d3d11 dxgi dwmapi ole32 oleaut32 uiautomationcore windowscodecs crypt32 advapi32 user32 gdi32 "${ORT_ROOT}/runtimes/win-x64/native/onnxruntime.lib")
+target_link_libraries(daedalus-computer-helper PRIVATE windowsapp d3d11 dxgi dwmapi ole32 oleaut32 uiautomationcore windowscodecs crypt32 advapi32 user32 gdi32 comctl32 "${ORT_ROOT}/runtimes/win-x64/native/onnxruntime.lib")
 enable_testing()
 add_test(NAME helper-self-test COMMAND daedalus-computer-helper --self-test)

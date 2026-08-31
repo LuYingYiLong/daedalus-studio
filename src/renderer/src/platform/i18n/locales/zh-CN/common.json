@@ -2,9 +2,9 @@
 	"computer": {
 		"controlUnavailable": "电脑操作需要连接支持此功能的 Backend；不可用时请更新 Backend。",
 		"controlSetting": "允许 AI 请求操作窗口",
-		"controlDescription": "允许在 Agent 或已批准计划执行期间点击、输入和滚动。非完全信任模式每轮需要审批。随时按 Ctrl+Alt+Esc 紧急停止。",
+		"controlDescription": "允许在 Agent 或已批准计划执行期间使用 UIA 控件操作和受限键盘输入。不支持触摸或坐标点击。非完全信任模式每轮需要审批。随时按 Ctrl+Alt+Esc 紧急停止。",
 		"controlConsentTitle": "允许本轮操作一个窗口",
-		"controlPrivacy": "AI 可以在所选窗口内点击、输入和滚动，可能修改文件或外部状态。窗口授权不是文件系统沙箱，也不保证完整回滚。OCR 在本机执行；文字和按需截图可能发送给配置的模型服务。可随时取消并终止本轮响应。",
+		"controlPrivacy": "AI 可以在所选窗口内使用 UIA 控件操作和受限键盘输入。UIA 可以直接激活控件、修改内容或状态，以及滚动受支持的容器。不支持触摸、坐标点击或鼠标回退。这些操作可能修改文件或外部状态，窗口授权不是文件系统沙箱，也不保证完整回滚。OCR 在本机执行；文字和按需截图可能发送给配置的模型服务。仅移动鼠标不会暂停；点击、滚轮或按键会暂停。可随时取消并终止本轮响应。",
 		"allowControl": "允许本轮操作",
 		"selectTarget": "选择此窗口",
 		"viewEvidence": "查看桌面观察证据",
@@ -30,7 +30,30 @@
 		"failed": "观察失败，请检查窗口状态后重试",
 		"saveFailed": "无法保存电脑操作设置",
 		"resourcesMissing": "原生助手或 OCR 资源缺失／校验失败，请构建或重新安装 Windows 感知资源",
-		"developerRequired": "在常规设置中开启开发者模式后，可使用本地诊断"
+		"developerRequired": "在常规设置中开启开发者模式后，可使用本地诊断",
+		"overlay": {
+			"starting": "正在准备电脑操作…",
+			"running": "AI正在使用你的电脑",
+			"paused": "已暂停",
+			"activationRequired": "等待窗口激活",
+			"cancelled": "正在取消…",
+			"resuming": "正在恢复…",
+			"resumingShort": "恢复中…",
+			"preview": "调试预览 · 不会操作电脑",
+			"resumeHint": "正在验证目标窗口并获取新画面，请稍候。",
+			"resume": "继续",
+			"cancel": "取消",
+			"pauseHints": {
+				"activation": "请手动切换到授权窗口，然后点击继续。",
+				"userTakeover": "检测到你的操作；准备好后点击继续，AI 会重新观察窗口。",
+				"displayChanged": "窗口或显示器状态已变化，点击继续重新观察。",
+				"targetOccluded": "目标区域被遮挡，请移开遮挡窗口后继续。",
+				"passwordProtected": "不能操作密码控件，请手动处理后继续。",
+				"busy": "上一项操作尚未结束，请稍后重试。",
+				"windowUnavailable": "授权窗口不可用，请恢复窗口；窗口已关闭时需取消后重新授权。",
+				"default": "恢复未完成，可重试或取消；AI 不会在暂停期间继续输入。"
+			}
+		}
 	},
 	"windowCapture": {
 		"title": "窗口截图",

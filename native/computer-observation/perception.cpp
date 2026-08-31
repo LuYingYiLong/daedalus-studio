@@ -3,6 +3,8 @@
 #include <atomic>
 #include <cmath>
 #include <condition_variable>
+#include <commctrl.h>
+#include <iostream>
 #include <d3d11.h>
 #include <dwmapi.h>
 #include <dxgi.h>
@@ -192,6 +194,7 @@ struct Perception::WindowLife {
 Perception::Perception(DWORD pid, const std::wstring &dir)
     : excludedPid(pid), directory(dir) {}
 void Perception::release() {
+  invalidateNodes(); uiaCache.reset();
   selected.reset();
   life.reset();
   targets.clear();
@@ -451,11 +454,66 @@ static Pixels capture(const GraphicsCaptureItem &item, bool diagnostics = false)
   pool.Close();
   return p;
 }
+struct UiaEntry {
+  winrt::com_ptr<IUIAutomationElement> element;
+  std::vector<LONG> runtimeId;
+  RECT bounds;
+  Array actions;
+};
+static std::vector<LONG> runtimeIdentity(IUIAutomationElement *element) {
+  SAFEARRAY *raw = nullptr;
+  winrt::check_hresult(element->GetRuntimeId(&raw));
+  if (!raw) throw std::runtime_error("computer_uia_identity_unavailable");
+  LONG first = 0, last = -1;
+  SafeArrayGetLBound(raw, 1, &first); SafeArrayGetUBound(raw, 1, &last);
+  std::vector<LONG> id;
+  for (LONG i = first; i <= last && i-first < 128; ++i) {
+    LONG value = 0; SafeArrayGetElement(raw, &i, &value); id.push_back(value);
+  }
+  SafeArrayDestroy(raw);
+  if (id.empty() || last-first >= 128) throw std::runtime_error("computer_uia_identity_unavailable");
+  return id;
+}
+template<class T> static winrt::com_ptr<T> pattern(IUIAutomationElement *element, PATTERNID id) {
+  winrt::com_ptr<T> value;
+  element->GetCurrentPatternAs(id, __uuidof(T), value.put_void());
+  return value;
+}
+static Array supportedActions(IUIAutomationElement *element) {
+  Array actions;
+  BOOL enabled = FALSE, password = TRUE, off = TRUE;
+  element->get_CurrentIsEnabled(&enabled); element->get_CurrentIsPassword(&password); element->get_CurrentIsOffscreen(&off);
+  if (!enabled || password || off) return actions;
+  auto add = [&](const wchar_t *name) { actions.Append(Value::CreateStringValue(name)); };
+  if (pattern<IUIAutomationInvokePattern>(element, UIA_InvokePatternId)) add(L"uia_invoke");
+  if (pattern<IUIAutomationTogglePattern>(element, UIA_TogglePatternId)) add(L"uia_toggle");
+  if (pattern<IUIAutomationSelectionItemPattern>(element, UIA_SelectionItemPatternId)) add(L"uia_select");
+  if (auto scroll = pattern<IUIAutomationScrollPattern>(element, UIA_ScrollPatternId)) {
+    BOOL horizontal = FALSE, vertical = FALSE;
+    scroll->get_CurrentHorizontallyScrollable(&horizontal); scroll->get_CurrentVerticallyScrollable(&vertical);
+    if (horizontal || vertical) add(L"uia_scroll");
+  }
+  if (auto expand = pattern<IUIAutomationExpandCollapsePattern>(element, UIA_ExpandCollapsePatternId)) {
+    ExpandCollapseState state = ExpandCollapseState_LeafNode;
+    if (SUCCEEDED(expand->get_CurrentExpandCollapseState(&state)) && state != ExpandCollapseState_LeafNode) add(L"uia_expand_collapse");
+  }
+  CONTROLTYPEID type = 0; element->get_CurrentControlType(&type);
+  auto value = pattern<IUIAutomationValuePattern>(element, UIA_ValuePatternId);
+  BOOL readOnly = TRUE;
+  if (type == UIA_EditControlTypeId && value && SUCCEEDED(value->get_CurrentIsReadOnly(&readOnly)) && !readOnly) add(L"uia_set_value");
+  return actions;
+}
 struct UiaSnapshot {
   Array nodes;
+  std::unordered_map<std::string, UiaEntry> entries;
   std::vector<RECT> passwords;
   bool truncated = false;
   std::string at;
+};
+struct Perception::UiaCache {
+  UiaSnapshot snapshot;
+  std::string observationId;
+  unsigned epoch;
 };
 static UiaSnapshot readUia(HWND hwnd, const RECT &bounds) {
   winrt::init_apartment(winrt::apartment_type::multi_threaded);
@@ -535,6 +593,13 @@ static UiaSnapshot readUia(HWND hwnd, const RECT &bounds) {
     text(node, L"name", name);
     text(node, L"automationId", id);
     result.nodes.Append(node);
+    auto actions = supportedActions(entry.element.get());
+    if (actions.Size()) {
+      try {
+        result.entries.emplace(std::to_string(i), UiaEntry{entry.element, runtimeIdentity(entry.element.get()), r, actions});
+        node.SetNamedValue(L"supportedActions", actions);
+      } catch (...) { /* 身份不可核验的节点只提供只读观察 */ }
+    }
     if (entry.depth >= 20) {
       result.truncated = true;
       continue;
@@ -629,6 +694,8 @@ void testUiaFixture(bool testCapture) {
   DestroyWindow(hwnd);
 }
 Json Perception::observe() {
+  invalidateNodes(); uiaCache.reset();
+  const unsigned epoch = nodeEpoch;
   if (!targetValid())
     throw std::runtime_error("computer_window_unavailable");
   auto started = std::chrono::steady_clock::now();
@@ -636,11 +703,10 @@ Json Perception::observe() {
   RECT before = windowBounds(hwnd);
   UINT dpi = GetDpiForWindow(hwnd);
   GeometryGuard geometry(hwnd, selected->pid, before, dpi);
-  auto uiaFuture = std::async(std::launch::async,
-                              [hwnd, before] { return readUia(hwnd, before); });
+  // 与后续 UIA 操作共用长期 MTA 工作线程，不把 COM 节点留在短命 async 线程
+  auto uia = readUia(hwnd, before);
   auto pixels = capture(life->item);
   auto capturedAt = nowIso();
-  auto uia = uiaFuture.get();
   RECT after = windowBounds(hwnd);
   if (!targetValid() || !EqualRect(&before, &after) ||
       dpi != GetDpiForWindow(hwnd))
@@ -714,7 +780,8 @@ Json Perception::observe() {
       dpi != GetDpiForWindow(hwnd))
     throw std::runtime_error("computer_observation_stale");
   Json result;
-  text(result, L"observationId", uuid());
+  const auto observationId = uuid();
+  text(result, L"observationId", observationId);
   text(result, L"capturedAt", capturedAt);
   text(result, L"uiaCapturedAt", uia.at);
   result.SetNamedValue(L"screenBounds", rectJson(before.left, before.top,
@@ -731,5 +798,151 @@ Json Perception::observe() {
              std::chrono::steady_clock::now() - started)
              .count());
   text(result, L"dataUrl", png);
+  if (nodeEpoch == epoch) uiaCache = std::make_shared<UiaCache>(UiaCache{std::move(uia), observationId, epoch});
   return result;
+}
+
+void Perception::performUia(const std::string &observationId, const Json &action, const std::function<void(POINT)> &validate) {
+  auto cache = std::move(uiaCache);
+  if (!cache || cache->epoch != nodeEpoch || cache->observationId != observationId || !targetValid())
+    throw std::runtime_error("computer_observation_stale");
+  const auto kind = action.GetNamedString(L"type");
+  const auto id = utf8(action.GetNamedString(L"nodeId"));
+  if (!cache->snapshot.entries.contains(id)) throw std::runtime_error("computer_uia_unsupported");
+  auto &entry = cache->snapshot.entries.at(id);
+  const bool hasValue = kind == L"uia_set_value", hasScroll = kind == L"uia_scroll", hasState = kind == L"uia_expand_collapse";
+  if (action.Size() != (hasScroll ? 4u : hasValue || hasState ? 3u : 2u)) throw std::runtime_error("computer_invalid_request");
+  if (hasValue && (!action.HasKey(L"value") || action.GetNamedString(L"value").size() > 4096)) throw std::runtime_error("computer_invalid_request");
+  if (hasState && action.GetNamedString(L"state") != L"expanded" && action.GetNamedString(L"state") != L"collapsed") throw std::runtime_error("computer_invalid_request");
+  auto supports = [&](const Array &actions) { for (auto v : actions) if (v.GetString() == kind) return true; return false; };
+  if (!supports(entry.actions) || !supports(supportedActions(entry.element.get()))) throw std::runtime_error("computer_uia_unsupported");
+  if (runtimeIdentity(entry.element.get()) != entry.runtimeId) throw std::runtime_error("computer_observation_stale");
+  RECT current{}; winrt::check_hresult(entry.element->get_CurrentBoundingRectangle(&current));
+  if (!EqualRect(&current, &entry.bounds)) throw std::runtime_error("computer_observation_stale");
+  winrt::com_ptr<IUIAutomation> automation;
+  winrt::check_hresult(CoCreateInstance(CLSID_CUIAutomation8, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(automation.put())));
+  auto timeout = automation.as<IUIAutomation2>(); timeout->put_ConnectionTimeout(500); timeout->put_TransactionTimeout(1000);
+  winrt::com_ptr<IUIAutomationElement> root; winrt::check_hresult(automation->ElementFromHandle(controlTarget(), root.put()));
+  winrt::com_ptr<IUIAutomationTreeWalker> walker; winrt::check_hresult(automation->get_ControlViewWalker(walker.put()));
+  auto ancestor = entry.element; bool belongs = false;
+  for (int depth = 0; ancestor && depth <= 20; ++depth) {
+    BOOL same = FALSE; winrt::check_hresult(automation->CompareElements(root.get(), ancestor.get(), &same));
+    if (same) { belongs = true; break; }
+    winrt::com_ptr<IUIAutomationElement> parent; walker->GetParentElement(ancestor.get(), parent.put()); ancestor = std::move(parent);
+  }
+  if (!belongs) throw std::runtime_error("computer_observation_stale");
+  ScrollAmount amount = ScrollAmount_NoAmount;
+  auto axis = hasScroll ? action.GetNamedString(L"axis") : L"vertical";
+  if (hasScroll) {
+    auto input = action.GetNamedString(L"amount");
+    if (input == L"small_increment") amount = ScrollAmount_SmallIncrement;
+    else if (input == L"small_decrement") amount = ScrollAmount_SmallDecrement;
+    else if (input == L"large_increment") amount = ScrollAmount_LargeIncrement;
+    else if (input == L"large_decrement") amount = ScrollAmount_LargeDecrement;
+    if (amount == ScrollAmount_NoAmount || (axis != L"horizontal" && axis != L"vertical")) throw std::runtime_error("computer_invalid_request");
+  }
+  if (cache->epoch != nodeEpoch) throw std::runtime_error("computer_observation_stale");
+  const auto beforeDispatch = [&] {
+    if (cache->epoch != nodeEpoch) throw std::runtime_error("computer_observation_stale");
+    validate({current.left + (current.right-current.left)/2, current.top + (current.bottom-current.top)/2});
+  };
+  // 方法返回失败也可能已经触发应用行为，不能自动重试或换输入通道
+  HRESULT dispatched = E_FAIL;
+  if (kind == L"uia_invoke") { auto p = pattern<IUIAutomationInvokePattern>(entry.element.get(), UIA_InvokePatternId); if (p) { beforeDispatch(); dispatched = p->Invoke(); } }
+  else if (kind == L"uia_toggle") { auto p = pattern<IUIAutomationTogglePattern>(entry.element.get(), UIA_TogglePatternId); if (p) { beforeDispatch(); dispatched = p->Toggle(); } }
+  else if (kind == L"uia_select") { auto p = pattern<IUIAutomationSelectionItemPattern>(entry.element.get(), UIA_SelectionItemPatternId); if (p) { beforeDispatch(); dispatched = p->Select(); } }
+  else if (hasValue) {
+    auto p = pattern<IUIAutomationValuePattern>(entry.element.get(), UIA_ValuePatternId);
+    const auto value = action.GetNamedString(L"value");
+    BSTR buffer = SysAllocStringLen(value.c_str(), value.size());
+    if (!buffer) throw std::runtime_error("computer_native_failed");
+    try { if (p) { beforeDispatch(); dispatched = p->SetValue(buffer); } }
+    catch (...) { SecureZeroMemory(buffer, value.size() * sizeof(wchar_t)); SysFreeString(buffer); throw; }
+    SecureZeroMemory(buffer, value.size() * sizeof(wchar_t)); SysFreeString(buffer);
+  }
+  else if (hasState) { auto p = pattern<IUIAutomationExpandCollapsePattern>(entry.element.get(), UIA_ExpandCollapsePatternId); if (p) { beforeDispatch(); dispatched = action.GetNamedString(L"state") == L"expanded" ? p->Expand() : p->Collapse(); } }
+  else if (hasScroll) { auto p = pattern<IUIAutomationScrollPattern>(entry.element.get(), UIA_ScrollPatternId); if (p) { beforeDispatch(); dispatched = p->Scroll(axis == L"horizontal" ? amount : ScrollAmount_NoAmount, axis == L"vertical" ? amount : ScrollAmount_NoAmount); } }
+  if (FAILED(dispatched) || cache->epoch != nodeEpoch) throw std::runtime_error("computer_action_unknown");
+}
+
+// 仅由 --test-input 调用，目标全部来自同进程专用窗口，不枚举真实应用
+void testUiaActions(HWND target, HWND edit, HWND password, HWND checkbox) {
+  Perception perception(0, L"");
+  const auto pid = GetCurrentProcessId();
+  perception.selected = std::make_unique<Target>(Target{target, pid, processStart(pid), "fixture", L"fixture"});
+  perception.life = std::make_shared<Perception::WindowLife>();
+  auto prepare = [&](HWND child, CONTROLTYPEID expectedType = 0) {
+    perception.invalidateNodes();
+    auto snapshot = readUia(target, windowBounds(target));
+    std::string id;
+    for (auto &[key, entry] : snapshot.entries) {
+      UIA_HWND handle = nullptr;
+      entry.element->get_CurrentNativeWindowHandle(&handle);
+      if (expectedType == 0 && reinterpret_cast<HWND>(handle) == child) id = key;
+      if (expectedType != 0) {
+        CONTROLTYPEID type = 0; entry.element->get_CurrentControlType(&type);
+        RECT container{}; GetWindowRect(child, &container);
+        bool expandable = expectedType != UIA_TreeItemControlTypeId;
+        for (auto operation : entry.actions) if (operation.GetString() == L"uia_expand_collapse") expandable = true;
+        if (type == expectedType && entry.bounds.left >= container.left && entry.bounds.right <= container.right &&
+            entry.bounds.top >= container.top && entry.bounds.bottom <= container.bottom && entry.actions.Size() && expandable) id = key;
+      }
+    }
+    perception.uiaCache = std::make_shared<Perception::UiaCache>(Perception::UiaCache{std::move(snapshot), "fixture-uia", perception.nodeEpoch.load()});
+    return id;
+  };
+  auto run = [&](Json action) {
+    std::cerr << "UIA fixture: " << utf8(action.GetNamedString(L"type")) << " node=" << utf8(action.GetNamedString(L"nodeId")) << "\n";
+    perception.performUia("fixture-uia", action, [&](POINT point) {
+      if (GetAncestor(GetForegroundWindow(), GA_ROOT) != target || GetAncestor(WindowFromPoint(point), GA_ROOT) != target)
+        throw std::runtime_error("computer_fixture_focus_failed");
+    });
+  };
+  for (const std::string value : {"UIA fixture replacement", ""}) {
+    auto id = prepare(edit); if (id.empty()) throw std::runtime_error("computer_fixture_uia_value_missing");
+    Json action; text(action, L"type", "uia_set_value"); text(action, L"nodeId", id); text(action, L"value", value); run(action);
+    wchar_t actual[100]{}; SendMessageW(edit, WM_GETTEXT, 100, reinterpret_cast<LPARAM>(actual));
+    if (utf8(winrt::hstring(actual)) != value) throw std::runtime_error("computer_fixture_uia_value_failed");
+    bool stale = false; try { run(action); } catch (...) { stale = true; }
+    if (!stale) throw std::runtime_error("computer_fixture_uia_replayed");
+  }
+  auto id = prepare(checkbox);
+  if (id.empty()) throw std::runtime_error("computer_fixture_uia_toggle_missing");
+  Json toggle; text(toggle, L"type", "uia_toggle"); text(toggle, L"nodeId", id); run(toggle);
+  if (SendMessageW(checkbox, BM_GETCHECK, 0, 0) != BST_CHECKED) throw std::runtime_error("computer_fixture_uia_toggle_failed");
+  id = prepare(GetDlgItem(target, 101));
+  Json invoke; text(invoke, L"type", "uia_invoke"); text(invoke, L"nodeId", id); run(invoke);
+  wchar_t title[100]{};
+  for (int attempt = 0; attempt < 100; ++attempt) {
+    GetWindowTextW(target, title, 100);
+    if (std::wstring(title) == L"UIA invoke completed") break;
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  if (std::wstring(title) != L"UIA invoke completed") throw std::runtime_error("computer_fixture_uia_invoke_failed");
+  HWND list = GetDlgItem(target, 103);
+  id = prepare(list, UIA_ListItemControlTypeId);
+  Json select; text(select, L"type", "uia_select"); text(select, L"nodeId", id); run(select);
+  if (SendMessageW(list, LB_GETCURSEL, 0, 0) == LB_ERR) throw std::runtime_error("computer_fixture_uia_select_failed");
+  SendMessageW(list, LB_SETTOPINDEX, 0, 0);
+  id = prepare(list);
+  Json scroll; text(scroll, L"type", "uia_scroll"); text(scroll, L"nodeId", id); text(scroll, L"axis", "vertical"); text(scroll, L"amount", "large_increment"); run(scroll);
+  if (SendMessageW(list, LB_GETTOPINDEX, 0, 0) <= 0) throw std::runtime_error("computer_fixture_uia_scroll_failed");
+  HWND tree = GetDlgItem(target, 104);
+  for (const char *state : {"expanded", "collapsed"}) {
+    id = prepare(tree, UIA_TreeItemControlTypeId);
+    Json expand; text(expand, L"type", "uia_expand_collapse"); text(expand, L"nodeId", id); text(expand, L"state", state); run(expand);
+    const bool expanded = (TreeView_GetItemState(tree, TreeView_GetRoot(tree), TVIS_EXPANDED) & TVIS_EXPANDED) != 0;
+    if (expanded != (std::string(state) == "expanded")) throw std::runtime_error("computer_fixture_uia_expand_failed");
+  }
+  if (!prepare(password).empty()) throw std::runtime_error("computer_fixture_uia_password_exposed");
+  id = prepare(edit);
+  Json action; text(action, L"type", "uia_set_value"); text(action, L"nodeId", id); text(action, L"value", "must-not-write");
+  SendMessageW(edit, EM_SETREADONLY, TRUE, 0);
+  bool rejected = false; try { run(action); } catch (...) { rejected = true; }
+  SendMessageW(edit, EM_SETREADONLY, FALSE, 0);
+  if (!rejected) throw std::runtime_error("computer_fixture_uia_readonly_failed");
+  id = prepare(edit); text(action, L"nodeId", id); perception.invalidateNodes();
+  rejected = false; try { run(action); } catch (...) { rejected = true; }
+  if (!rejected) throw std::runtime_error("computer_fixture_uia_revocation_failed");
+  std::cout << "UIA invoke/toggle/select/set-value/scroll/expand, stale identity and readonly rejection passed\n";
 }

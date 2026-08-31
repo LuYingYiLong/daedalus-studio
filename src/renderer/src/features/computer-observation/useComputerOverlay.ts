@@ -1,14 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
+import type { ComputerOverlayState } from "../../../../contracts/computer-overlay";
+import { applyStudioAccentVariables } from "../../../../contracts/theme-color";
+import { applyStudioFontVariables } from "../../../../contracts/studio-fonts";
 
-export type ComputerOverlayState = {
-  state: "starting" | "running" | "paused" | "cancelled";
-  cursor: { x: number; y: number };
-  cursorVisible: boolean;
-  clickSequence: number;
-  code?: string;
-  resuming?: boolean;
-  preview?: boolean;
-};
+export type { ComputerOverlayState } from "../../../../contracts/computer-overlay";
 declare global {
   interface Window {
     computerOverlay: {
@@ -28,6 +23,15 @@ export function useComputerOverlay(): ComputerOverlayState {
     cursorVisible: false,
     clickSequence: 0,
   });
+  const appearance = state.appearance;
+  useLayoutEffect(() => {
+    if (!appearance) return;
+    const root = document.documentElement;
+    root.dataset.theme = appearance.resolvedTheme;
+    root.dataset.motion = appearance.animationsEnabled ? "on" : "off";
+    applyStudioAccentVariables(root.style, appearance.resolvedTheme, appearance.themeColor);
+    applyStudioFontVariables(root.style, appearance.fontFamily, appearance.fontFamilyCode, appearance.uiFontSize, appearance.codeFontSize);
+  }, [appearance?.resolvedTheme, appearance?.themeColor, appearance?.fontFamily, appearance?.fontFamilyCode, appearance?.uiFontSize, appearance?.codeFontSize, appearance?.animationsEnabled]);
   useEffect(() => {
     const unsubscribe = window.computerOverlay.subscribe(setState);
     window.computerOverlay.ready();

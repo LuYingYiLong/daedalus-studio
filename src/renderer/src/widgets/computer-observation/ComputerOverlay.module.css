@@ -8,51 +8,62 @@
 	background: transparent;
 }
 
+:global(:root:not([data-theme])) {
+	visibility: hidden;
+}
+
 .edge {
 	position: fixed;
 	inset: 0;
 	box-sizing: border-box;
-	box-shadow: inset 0 0 64px #4487b8;
+	border: 2px solid var(--ds-accent);
+	box-shadow: inset 0 0 12px var(--ds-accent-muted);
 	animation: entrance 500ms ease-out both;
 	pointer-events: none;
 }
 
 .edge[data-paused="true"] {
-	border-color: #a9a9b0;
+	border-color: var(--ds-border);
 	box-shadow: none;
+	animation: none;
 }
 
 .bar {
 	margin: 6px;
 	min-height: 48px;
 	box-sizing: border-box;
-	border-radius: 24px;
+	border-radius: 999px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: var(--ds-space-1, 4px);
-	padding: 4px 16px;
-	/* 覆盖层是独立入口，没有主窗口的主题变量 */
-	background: #232334f5;
-	color: white;
-	font:
-		14px/1.5 "Segoe UI Variable",
-		"Microsoft YaHei",
-		sans-serif;
-	border: 1px solid #aaa8d366;
+	gap: var(--ds-space-1);
+	padding: var(--ds-space-1) var(--ds-space-2) var(--ds-space-1)
+		var(--ds-space-3);
+	background: var(--ds-surface-elevated);
+	color: var(--ds-text-primary);
+	font: var(--ds-font-size)/1.5 var(--ds-font-family);
+	border: 1px solid var(--ds-border);
 }
 
 .bar button {
 	flex-shrink: 0;
-	min-height: 40px;
+	min-height: 36px;
 	min-width: 48px;
 	border: 0;
 	border-radius: 99px;
-	padding: 4px 12px;
-	background: #ffffff20;
+	padding: var(--ds-space-1) var(--ds-space-3);
+	background: var(--ds-surface-hover);
 	color: inherit;
 	font: inherit;
 	cursor: pointer;
+}
+
+.bar button:hover:not(:disabled) {
+	background: var(--ds-surface-active);
+}
+
+.bar button:active:not(:disabled) {
+	background: var(--ds-accent-muted);
 }
 
 .message {
@@ -64,13 +75,13 @@
 }
 
 .message small {
-	font-size: 12px;
+	font-size: max(12px, calc(var(--ds-font-size) - 2px));
 	line-height: 1.4;
-	color: #d7d5e7;
+	color: var(--ds-text-secondary);
 }
 
 .bar button:focus-visible {
-	outline: 2px solid #b7adff;
+	outline: 2px solid var(--ds-accent);
 	outline-offset: 2px;
 }
 
@@ -89,7 +100,6 @@
 .cursor img {
 	width: 28px;
 	height: 28px;
-	filter: drop-shadow(0 1px 3px #0008);
 }
 
 .ripple {
@@ -98,7 +108,7 @@
 	height: 24px;
 	left: -10px;
 	top: -10px;
-	border: 2px solid #8b70ff;
+	border: 2px solid var(--ds-accent);
 	border-radius: 50%;
 	animation: ripple 380ms ease-out forwards;
 }
@@ -106,12 +116,12 @@
 @keyframes entrance {
 	from {
 		box-shadow:
-			inset 0 0 80px #367dff88,
-			inset 0 0 160px #9b57f755;
-		border-width: 6px;
+			inset 0 0 160px var(--ds-accent-muted),
+			inset 0 0 240px var(--ds-accent-subtle);
+		border-width: 12px;
 	}
 	to {
-		box-shadow: inset 0 0 12px #3f8cfa55;
+		box-shadow: inset 0 0 32px var(--ds-accent-muted);
 		border-width: 2px;
 	}
 }
@@ -137,6 +147,15 @@
 	}
 }
 
+:global(:root[data-motion="off"]) .edge {
+	animation: none;
+}
+
+:global(:root[data-motion="off"]) .ripple {
+	animation: none;
+	display: none;
+}
+
 @media (forced-colors: active) {
 	.bar {
 		forced-color-adjust: auto;
@@ -145,4 +164,13 @@
 	.edge {
 		border-color: Highlight;
 	}
+}
+
+.highlight {
+	position: absolute;
+	box-sizing: border-box;
+	border: 2px solid var(--ds-accent);
+	border-radius: var(--ds-radius-sm);
+	background: var(--ds-accent-subtle);
+	pointer-events: none;
 }

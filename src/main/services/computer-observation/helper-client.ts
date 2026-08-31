@@ -2,20 +2,19 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { COMPUTER_MAX_MESSAGE_BYTES } from "../../../contracts/computer-observation";
+import { COMPUTER_MAX_MESSAGE_BYTES, COMPUTER_PROTOCOL_VERSION } from "../../../contracts/computer-observation";
+
+export type NativeControlEvent = { event: string; code: string; generation: number; actionId?: string; x?: number; y?: number; phase?: "move" | "tap" | "semantic" };
 
 export interface ComputerHelper {
+  assertControlReady?(): Promise<void>;
   request(
     method: string,
     params?: Record<string, unknown>,
   ): Promise<Record<string, unknown>>;
   stop(): void;
   onControl?(
-    listener: (state: {
-      event: string;
-      code: string;
-      generation: number;
-    }) => void,
+    listener: (state: NativeControlEvent) => void,
   ): () => void;
 }
 export async function verifyComputerResources(
@@ -25,7 +24,7 @@ export async function verifyComputerResources(
     await readFile(join(directory, "manifest.json"), "utf8"),
   );
   if (
-    manifest.protocolVersion !== 2 ||
+    manifest.protocolVersion !== COMPUTER_PROTOCOL_VERSION ||
     !manifest.files ||
     typeof manifest.files !== "object"
   )
@@ -70,19 +69,27 @@ export class NativeComputerHelper implements ComputerHelper {
     }
   >();
   private listeners = new Set<
-    (state: { event: string; code: string; generation: number }) => void
+    (state: NativeControlEvent) => void
   >();
   onControl(
-    listener: (state: {
-      event: string;
-      code: string;
-      generation: number;
-    }) => void,
+    listener: (state: NativeControlEvent) => void,
   ): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
   constructor(private readonly directory: string) {}
+  async assertControlReady(): Promise<void> {
+    const info = await this.request("hello");
+    if (info.version !== COMPUTER_PROTOCOL_VERSION) throw new Error("computer_protocol_mismatch");
+    if (info.computerControl !== true) {
+      throw new Error(info.controlUnavailableReason === "computer_pointer_independence_unavailable"
+        ? info.controlUnavailableReason : "computer_control_disabled");
+    }
+    if (!Array.isArray(info.inputTransports) || info.inputTransports.length !== 2 ||
+        !info.inputTransports.includes("uia") || !info.inputTransports.includes("keyboard")) {
+      throw new Error("computer_protocol_mismatch");
+    }
+  }
   private async start(): Promise<void> {
     if (this.process) return;
     if (this.startPromise) return this.startPromise;
@@ -137,7 +144,7 @@ export class NativeComputerHelper implements ComputerHelper {
       throw new Error("computer_busy");
     const id = randomUUID();
     const body = Buffer.from(
-      JSON.stringify({ version: 2, id, method, params }),
+      JSON.stringify({ version: COMPUTER_PROTOCOL_VERSION, id, method, params }),
     );
     if (body.length > 16384) throw new Error("computer_invalid_request");
     const header = Buffer.alloc(4);
@@ -166,16 +173,21 @@ export class NativeComputerHelper implements ComputerHelper {
         this.buffer = this.buffer.subarray(size + 4);
         if (
           result.event === "control" &&
-          result.version === 2 &&
-          ["paused", "cancelled"].includes(result.state?.event) &&
+          result.version === COMPUTER_PROTOCOL_VERSION &&
+          ["paused", "cancelled", "progress"].includes(result.state?.event) &&
           /^computer_[a-z_]+$/.test(result.state.code) &&
           Number.isSafeInteger(result.state.generation)
         ) {
+          if (result.state.event === "progress" && (
+            !/^[a-zA-Z0-9_-]{1,160}$/.test(result.state.actionId) ||
+            !["move", "tap", "semantic"].includes(result.state.phase) ||
+            ![result.state.x, result.state.y].every((n: unknown) => typeof n === "number" && Number.isFinite(n) && Math.abs(n) <= 100000)
+          )) return this.stop("computer_protocol_invalid");
           for (const listener of this.listeners) listener(result.state);
           continue;
         }
         const pending = this.pending.get(result.id);
-        if (!pending || result.version !== 2 || typeof result.ok !== "boolean")
+        if (!pending || result.version !== COMPUTER_PROTOCOL_VERSION || typeof result.ok !== "boolean")
           return this.stop("computer_protocol_invalid");
         clearTimeout(pending.timer);
         this.pending.delete(result.id);

@@ -66,7 +66,7 @@ async function main() {
     output,
   ]);
   const manifest = {
-    protocolVersion: 2,
+    protocolVersion: 3,
     modelVersion: lock.modelVersion,
     files: {},
   };

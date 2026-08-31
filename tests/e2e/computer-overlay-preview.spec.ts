@@ -46,10 +46,53 @@ test("debug command previews the real overlay without native capture, permission
     await input.press("Escape");
     await input.press("Enter");
   };
+  await mainWindow.evaluate(() => window.electronAPI.clientPreferences.update({
+    theme: "light", themeColor: "#d45c32", fontFamily: "Arial, sans-serif", uiFontSize: 16, animationsEnabled: false,
+  }));
   await command();
   await expect.poll(() => electronApp.windows().filter(page => page.url().includes("surface=")).length).toBe(2);
   const bar = electronApp.windows().find(page => page.url().includes("surface=bar"))!;
   const edge = electronApp.windows().find(page => page.url().includes("surface=edge"))!;
+  const geometry = await electronApp.evaluate(({ BrowserWindow, screen }, mainUrl) => {
+    const windows = BrowserWindow.getAllWindows();
+    const main = windows.find(window => window.webContents.getURL() === mainUrl)!;
+    const edge = windows.find(window => window.webContents.getURL().includes("surface=edge"))!;
+    return { expected: screen.getDisplayMatching(main.getBounds()).bounds, actual: edge.getContentBounds(), focused: edge.isFocused(), alwaysOnTop: edge.isAlwaysOnTop() };
+  }, mainWindow.url());
+  expect(geometry.actual).toEqual(geometry.expected);
+  expect(geometry.focused).toBe(false);
+  expect(geometry.alwaysOnTop).toBe(true);
+  const variables = ["--ds-accent", "--ds-text-primary", "--ds-border", "--ds-surface-elevated", "--ds-font-family", "--ds-font-size"];
+  const mainVariables = await mainWindow.evaluate(names => {
+    const style = getComputedStyle(document.documentElement);
+    return names.map(name => style.getPropertyValue(name).trim());
+  }, variables);
+  for (const page of [bar, edge]) {
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect.poll(() => page.evaluate(names => {
+      const style = getComputedStyle(document.documentElement);
+      return names.map(name => style.getPropertyValue(name).trim());
+    }, variables)).toEqual(mainVariables);
+  }
+  await expect(bar.getByRole("status")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(edge.locator("[aria-hidden='true']").first()).toHaveCSS("animation-name", "none");
+  await bar.screenshot({ path: test.info().outputPath("overlay-theme-light.png"), omitBackground: true });
+  // 运行中同步主题，不能给无标题栏 Overlay 设置 titleBarOverlay 或取消控制
+  await mainWindow.evaluate(() => window.electronAPI.clientPreferences.update({
+    theme: "dark", themeColor: "#52a871", uiFontSize: 14, animationsEnabled: true,
+  }));
+  for (const page of [bar, edge]) {
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--ds-accent").trim())).toBe("#52a871");
+  }
+  await expect(bar.getByRole("status")).toHaveCSS("background-color", "rgb(31, 31, 31)");
+  await expect(bar.getByRole("status")).toHaveCSS("font-size", "14px");
+  await mainWindow.evaluate(() => window.electronAPI.clientPreferences.update({ language: "en-US" }));
+  await expect.poll(() => bar.getByRole("status").innerText()).toContain("AI is using your computer");
+  await mainWindow.evaluate(() => window.electronAPI.clientPreferences.update({ language: "zh-CN" }));
+  await expect.poll(() => bar.getByRole("status").innerText()).toContain("AI正在使用你的电脑");
+  await bar.screenshot({ path: test.info().outputPath("overlay-theme-dark.png"), omitBackground: true });
+  await edge.screenshot({ path: test.info().outputPath("overlay-full-display.png"), omitBackground: true });
   await expect(bar.getByRole("status")).toContainText("调试预览 · 不会操作电脑");
   await expect(edge.getByTestId("computer-ai-cursor")).toBeVisible();
   const state = await mainWindow.evaluate(() => window.electronAPI.computerObservation!.getState());

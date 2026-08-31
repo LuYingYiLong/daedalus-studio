@@ -34,24 +34,9 @@ export type ComputerPresentation = {
   update(state: ComputerControlState | null): void;
   moveCursor(point: ComputerScreenPoint): void;
   click(): void;
+  highlight?(bounds: ComputerRect | null): void;
   close(): void;
 };
-function actionScreenPoint(
-  observation: ComputerObservation,
-  action: ComputerAction,
-): ComputerScreenPoint | null {
-  if (action.type !== "click" && action.type !== "scroll") return null;
-  return {
-    x: Math.round(
-      observation.screenBounds.x +
-        (action.x * observation.screenBounds.width) / observation.width,
-    ),
-    y: Math.round(
-      observation.screenBounds.y +
-        (action.y * observation.screenBounds.height) / observation.height,
-    ),
-  };
-}
 function scopeOnly(scope: ComputerScope): ComputerScope {
   return {
     connectionId: scope.connectionId,
@@ -88,8 +73,11 @@ export class ComputerService {
   private sources = new Map<string, ComputerSource>();
   private calls = new Map<string, Promise<Record<string, unknown>>>();
   private activeCall: string | null = null;
+  private activeAction: { id: string; generation: number; action: ComputerAction; observation: ComputerObservation } | null = null;
   private monitor: ReturnType<typeof setInterval> | null = null;
   private healthCheck: Promise<void> | null = null;
+  private inputReadiness: Promise<void> | null = null;
+  private checkingInput = new Map<string, ComputerScope>();
   private lastObservationAt = -Infinity;
   private observations = new Map<string, ComputerObservation>();
   private decision: {
@@ -122,6 +110,27 @@ export class ComputerService {
     private readonly presentation?: ComputerPresentation,
   ) {
     helper.onControl?.((event) => {
+      if (event.event === "progress") {
+        const current = this.activeAction;
+        if (!current || event.actionId !== current.id || event.generation !== current.generation || event.generation !== this.generation || this.state.control?.state !== "running") return;
+        if (typeof event.x !== "number" || typeof event.y !== "number" || !Number.isFinite(event.x) || !Number.isFinite(event.y)) return;
+        const { screenBounds: b } = current.observation;
+        if (event.x < b.x || event.y < b.y || event.x >= b.x+b.width || event.y >= b.y+b.height) return;
+        const semantic = "nodeId" in current.action;
+        if (!semantic || event.phase !== "semantic") return;
+        this.presentation?.moveCursor({ x: event.x, y: event.y });
+        if (semantic && "nodeId" in current.action) {
+          const nodeId = current.action.nodeId;
+          const node = current.observation.nodes.find(node => node.id === nodeId);
+          if (node) this.presentation?.highlight?.({
+            x: b.x + node.bounds.x * b.width / current.observation.width,
+            y: b.y + node.bounds.y * b.height / current.observation.height,
+            width: node.bounds.width * b.width / current.observation.width,
+            height: node.bounds.height * b.height / current.observation.height,
+          });
+        }
+        return;
+      }
       if (event.event === "paused") {
         // 助手的暂停通知可能先于 control.start 响应到达，不能被初始空状态吞掉
         if (this.nativeStart && event.generation >= this.nativeStart.generation) {
@@ -381,6 +390,26 @@ export class ComputerService {
       (!this.state.controlEnabled || !this.state.controlSupported)
     )
       throw new Error("computer_control_disabled");
+    if (this.denied.has(turnKey(request))) throw new Error("computer_access_denied");
+    if ((mode === "control" || request.toolName === "mcp_computer_action") && this.helper.assertControlReady) {
+      // 在打开授权弹窗前核验助手，Backend 版本和开关不能单独证明输入可用
+      const generation = this.generation;
+      this.checkingInput.set(request.callId, request);
+      try {
+        if (!this.inputReadiness) {
+          const flight = (async () => {
+            await this.healthCheck;
+            if (generation !== this.generation) throw new Error("computer_cancelled");
+            await this.helper.assertControlReady!();
+          })();
+          this.inputReadiness = flight;
+          void flight.finally(() => { if (this.inputReadiness === flight) this.inputReadiness = null; }).catch(() => {});
+        }
+        await this.inputReadiness;
+        if (generation !== this.generation) throw new Error("computer_cancelled");
+        this.assertScope(request);
+      } finally { this.checkingInput.delete(request.callId); }
+    }
     if (this.denied.has(turnKey(request)))
       throw new Error("computer_access_denied");
     if (request.toolName === "mcp_computer_request_access") {
@@ -528,8 +557,9 @@ export class ComputerService {
           throw new Error("computer_observation_stale");
         const action = request.args.action as ComputerAction;
         const observation = this.observations.get(observationId)!;
-        const cursor = actionScreenPoint(observation, action);
-        if (cursor) this.presentation?.moveCursor(cursor);
+        if ("nodeId" in action && !observation.nodes.some(node => node.id === action.nodeId && node.supportedActions?.includes(action.type))) throw new Error("computer_uia_unsupported");
+        this.presentation?.highlight?.(null);
+        this.activeAction = { id: request.actionId!, generation, action, observation };
         const result = await this.helper.request("action", {
           ...request.args,
           actionId: request.actionId,
@@ -540,11 +570,10 @@ export class ComputerService {
         if (
           result.actionId !== request.actionId ||
           result.observationId !== observationId ||
-          result.status !== "dispatched"
+          result.status !== "dispatched" || result.generation !== generation ||
+          result.transport !== ("nodeId" in action ? "uia" : "keyboard")
         )
           throw new Error("computer_action_unknown");
-        if (action.type === "click")
-          this.presentation?.click();
         this.publish({ observation: null });
         return result;
       }
@@ -579,6 +608,7 @@ export class ComputerService {
       return result;
     } catch (error) {
       if (request.toolName === "mcp_computer_action") {
+        this.publish({ observation: null });
         this.pause(
           error instanceof Error && /^computer_[a-z_]+$/.test(error.message)
             ? error.message
@@ -597,6 +627,7 @@ export class ComputerService {
         this.revoke(error.message);
       throw error;
     } finally {
+      if (this.activeAction?.id === request.actionId) this.activeAction = null;
       clearTimeout(deadline);
       if (this.activeCall === request.callId) this.activeCall = null;
     }
@@ -659,7 +690,7 @@ export class ComputerService {
     if (this.monitor) clearInterval(this.monitor);
     this.monitor = setInterval(() => {
       // 观察升级为控制时旧巡检仍存在；选择/启动与助手共用串行通道
-      if (this.activeCall || this.decision || this.startingAccess || (!this.access && !this.target)) return;
+      if (this.activeCall || this.decision || this.startingAccess || this.checkingInput.size || (!this.access && !this.target)) return;
       const generation = this.generation;
       if (this.healthCheck) return;
       this.healthCheck = this.helper
@@ -686,9 +717,11 @@ export class ComputerService {
       (current.requestId === scope.requestId || current.runId === scope.runId);
     if (
       (this.access && matches(this.access.scope)) ||
-      (this.decision && matches(this.decision.scope))
+      (this.decision && matches(this.decision.scope)) ||
+      [...this.checkingInput.values()].some(matches)
     ) {
       const ended = this.access?.scope;
+      for (const pending of this.checkingInput.values()) if (matches(pending)) this.denied.add(turnKey(pending));
       this.generation++;
       this.resuming = null;
       this.nativeStart = null;
@@ -726,6 +759,9 @@ export class ComputerService {
     const control = this.state.control;
     this.resuming = null;
     this.nativeStart = null;
+    this.inputReadiness = null;
+    for (const pending of this.checkingInput.values()) this.denied.add(turnKey(pending));
+    this.checkingInput.clear();
     if (this.nativeHeartbeat) clearInterval(this.nativeHeartbeat);
     this.nativeHeartbeat = null;
     this.target = null;

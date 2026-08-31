@@ -15,6 +15,8 @@ import type {
   ComputerScreenPoint,
 } from "../../../contracts/computer-observation";
 import type { ComputerPresentation } from "./computer-service";
+import type { ComputerOverlayState } from "../../../contracts/computer-overlay";
+import { getComputerOverlayAppearance } from "./overlay-appearance";
 
 const STOP_KEY = "Control+Alt+Escape";
 export class ComputerOverlay implements ComputerPresentation {
@@ -23,6 +25,7 @@ export class ComputerOverlay implements ComputerPresentation {
   private pulses = new Map<number, number>();
   private ready = new Map<number, () => void>();
   private tick: ReturnType<typeof setInterval> | null = null;
+  private stopShortcutRegistered = false;
   private generation = 0;
   private clickSequence = 0;
   private layoutDirty = false;
@@ -30,6 +33,7 @@ export class ComputerOverlay implements ComputerPresentation {
   private resuming = false;
   private resumeError: string | undefined;
   private virtualCursor: ComputerScreenPoint | null = null;
+  private semanticBounds: ComputerRect | null = null;
   constructor(
     private readonly cancel: () => void,
     private readonly resume: () => Promise<void>,
@@ -45,6 +49,7 @@ export class ComputerOverlay implements ComputerPresentation {
     ipcMain.on("computer-overlay:ready", (event) => {
       if (trusted(event)) {
         this.pulses.set(event.sender.id, Date.now());
+        this.publish();
         this.ready.get(event.sender.id)?.();
       }
     });
@@ -83,6 +88,7 @@ export class ComputerOverlay implements ComputerPresentation {
     });
   }
   prepare(bounds: ComputerRect): Promise<string[]> {
+    if (!app.isReady()) return Promise.reject(new Error("computer_app_not_ready"));
     if (this.pendingReady) return this.pendingReady;
     if (
       this.windows.length === 2 &&
@@ -145,6 +151,7 @@ export class ComputerOverlay implements ComputerPresentation {
     const generation = this.generation;
     if (!globalShortcut.register(STOP_KEY, this.cancel))
       throw new Error("computer_stop_shortcut_unavailable");
+    this.stopShortcutRegistered = true;
     try {
       this.layoutDirty = false;
       for (const [index, rect] of this.rectangles(bounds).entries()) {
@@ -158,6 +165,12 @@ export class ComputerOverlay implements ComputerPresentation {
           skipTaskbar: true,
           focusable: false,
           resizable: false,
+          movable: false,
+          minimizable: false,
+          maximizable: false,
+          fullscreenable: false,
+          thickFrame: false,
+          roundedCorners: false,
           hasShadow: false,
           webPreferences: {
             preload: join(__dirname, "../preload/computer-overlay.js"),
@@ -168,6 +181,10 @@ export class ComputerOverlay implements ComputerPresentation {
           },
         });
         this.windows.push(window);
+        // 使用显示器完整 bounds 的无边框覆盖，而非会改变焦点的独占全屏
+        // 默认 floating 置顶仍在 Windows 任务栏下方
+        window.setAlwaysOnTop(true, "screen-saver");
+        window.setBounds(rect);
         window.setContentProtection(true);
         window.setIgnoreMouseEvents(index === 0);
         window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
@@ -242,12 +259,19 @@ export class ComputerOverlay implements ComputerPresentation {
   }
   update(state: ComputerOverlayViewState | ComputerControlState | null): void {
     this.state = state;
+    if (state?.state !== "running") this.semanticBounds = null;
     this.resumeError = undefined;
     this.publish();
   }
   moveCursor(point: ComputerScreenPoint): void {
     if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
     this.virtualCursor = screen.screenToDipPoint(point);
+    this.publish();
+  }
+  highlight(bounds: ComputerRect | null): void {
+    this.semanticBounds = bounds ? screen.screenToDipRect(null, {
+      x: Math.round(bounds.x), y: Math.round(bounds.y), width: Math.round(bounds.width), height: Math.round(bounds.height),
+    }) : null;
     this.publish();
   }
   private setCursorToTargetCenter(bounds: ComputerRect): void {
@@ -261,6 +285,8 @@ export class ComputerOverlay implements ComputerPresentation {
     this.publish();
   }
   private publish(): void {
+    if (this.windows.length === 0) return;
+    const appearance = getComputerOverlayAppearance();
     for (const window of this.windows) {
       if (window.isDestroyed() || window.webContents.isDestroyed()) continue;
       const bounds = window.getBounds();
@@ -275,8 +301,10 @@ export class ComputerOverlay implements ComputerPresentation {
             : { x: cursor.x - bounds.x, y: cursor.y - bounds.y },
           cursorVisible: cursor !== null,
           clickSequence: this.clickSequence,
+          highlight: this.semanticBounds ? { ...this.semanticBounds, x: this.semanticBounds.x - bounds.x, y: this.semanticBounds.y - bounds.y } : null,
           preview: this.state?.preview === true,
-        });
+          appearance,
+        } satisfies ComputerOverlayState);
       } catch {
         if (!window.webContents.isDestroyed()) this.cancel();
       }
@@ -291,7 +319,12 @@ export class ComputerOverlay implements ComputerPresentation {
     this.resumeError = undefined;
     this.clickSequence = 0;
     this.virtualCursor = null;
-    globalShortcut.unregister(STOP_KEY);
+    this.semanticBounds = null;
+    // 第二实例可能在 ready 前退出；只释放本实例实际注册过的快捷键
+    if (this.stopShortcutRegistered) {
+      this.stopShortcutRegistered = false;
+      if (app.isReady()) globalShortcut.unregister(STOP_KEY);
+    }
     const windows = this.windows;
     this.windows = [];
     this.pulses.clear();

@@ -18,6 +18,7 @@ export function bindComputerRuntime(
     revision = 0,
     connectionId: string | null = null;
   let disposeEvents: (() => void) | undefined;
+  let inputV3 = false;
   let sequence = 0,
     heartbeatBusy = false;
   let control:
@@ -109,6 +110,7 @@ export function bindComputerRuntime(
   const refresh = (): void => {
     const current = ++revision;
     connectionId = null;
+    inputV3 = false;
     ready = (async () => {
       await api.setContext(null);
       const client = await createBackendClient();
@@ -118,11 +120,12 @@ export function bindComputerRuntime(
       }>("client.info");
       if (!alive || current !== revision) return;
       connectionId = info.connection.connectionId;
+      inputV3 = info.features?.computerControl === 3;
       await api.setContext({
         connectionId,
         sessionId,
         workspaceId,
-        controlSupported: info.features?.computerControl === 2,
+        controlSupported: inputV3,
       });
     })().catch(() => {});
   };
@@ -220,7 +223,10 @@ export function bindComputerRuntime(
             handled.delete(handled.values().next().value!);
           const generation = revision;
           try {
-            const result = await api.execute(request);
+            const rawResult = await api.execute(request);
+            const result = !inputV3 && Array.isArray(rawResult.nodes)
+              ? { ...rawResult, nodes: rawResult.nodes.map(({ supportedActions: _actions, ...node }: import("../../../../contracts/computer-observation").ComputerNode) => node) }
+              : rawResult;
             if (alive && generation === revision)
               await client.request("computer.tool.result", {
                 callId: request.callId,

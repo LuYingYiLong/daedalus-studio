@@ -59,17 +59,17 @@ async function main() {
     const result = spawnSync(executable, args, {
       windowsHide: true,
       stdio: "inherit",
-      timeout: 20000,
+      timeout: args[0] === "--test-input" ? 45000 : 20000,
     });
     assert.equal(result.status, 0);
   }
   assert.deepEqual(
-    await exchange({ version: 2, id: "test", method: "hello", params: {} }),
+    await exchange({ version: 3, id: "test", method: "hello", params: {} }),
     {
       id: "test",
-      version: 2,
+      version: 3,
       ok: true,
-      result: { version: 2, computerControl: true },
+      result: { version: 3, computerControl: true, inputTransports: ["uia", "keyboard"] },
     },
   );
   for (const [method, params, code] of [
@@ -77,9 +77,12 @@ async function main() {
     ["select", { sourceId: "unknown" }, "computer_window_unavailable"],
     ["observe", {}, "computer_window_unavailable"],
     ["hello", { hwnd: 1 }, "computer_invalid_request"],
+    ["control.start", { overlays: [], generation: 1 }, "computer_window_unavailable"],
+    ["action", { observationId: "fixture", actionId: "fixture", action: { type: "click", x: 0, y: 0, count: 1 }, generation: 1 }, "computer_action_not_supported"],
+    ["action", { observationId: "fixture", actionId: "fixture", action: { type: "scroll", x: 0, y: 0, axis: "vertical", amount: 1 }, generation: 1 }, "computer_action_not_supported"],
   ])
     assert.equal(
-      (await exchange({ version: 2, id: "test", method, params })).error,
+      (await exchange({ version: 3, id: "test", method, params })).error,
       code,
     );
   assert.equal(
@@ -115,7 +118,7 @@ async function main() {
         resolve();
       });
       supervised.stdin.write(
-        frame({ version: 2, id: "parent", method: "hello", params: {} }),
+        frame({ version: 3, id: "parent", method: "hello", params: {} }),
       );
     });
     const exited = new Promise((resolve, reject) => {

@@ -2,9 +2,9 @@
 	"computer": {
 		"controlUnavailable": "Computer input requires a connected Backend with computer-control support. Update Backend if unavailable.",
 		"controlSetting": "Allow AI to request window control",
-		"controlDescription": "Allow clicking, typing and scrolling in Agent or approved-plan execution. Each turn requires approval unless full trust is enabled. Ctrl+Alt+Esc always stops control.",
+		"controlDescription": "Allow UIA control operations and restricted keyboard input in Agent or approved-plan execution. Touch and coordinate clicks are unavailable. Each turn requires approval unless full trust is enabled. Ctrl+Alt+Esc always stops control.",
 		"controlConsentTitle": "Allow control of one window for this turn",
-		"controlPrivacy": "AI may click, type and scroll in the selected window, changing files or external state. Window authorization is not a filesystem sandbox and does not guarantee rollback. OCR runs locally; text and requested screenshots may be sent to your model provider. Cancel at any time to stop this turn.",
+		"controlPrivacy": "AI may use UIA operations and restricted keyboard input in the selected window. UIA may activate controls, change values or state, and scroll supported containers. Touch, coordinate clicks and mouse fallback are unavailable. These actions may change files or external state. Window authorization is not a filesystem sandbox and does not guarantee rollback. OCR runs locally; text and requested screenshots may be sent to your model provider. Moving your mouse alone does not pause control; clicking, scrolling or pressing a key does. Cancel at any time to stop this turn.",
 		"allowControl": "Allow control for this turn",
 		"selectTarget": "Select this window",
 		"viewEvidence": "View desktop evidence",
@@ -30,7 +30,30 @@
 		"failed": "Observation failed. Check the window and retry.",
 		"saveFailed": "Could not save computer use settings",
 		"resourcesMissing": "Native helper or OCR resources are missing or invalid. Build or reinstall the Windows resources.",
-		"developerRequired": "Enable developer mode in General settings to use local diagnostics"
+		"developerRequired": "Enable developer mode in General settings to use local diagnostics",
+		"overlay": {
+			"starting": "Preparing computer use…",
+			"running": "AI is using your computer",
+			"paused": "Paused",
+			"activationRequired": "Waiting for window activation",
+			"cancelled": "Cancelling…",
+			"resuming": "Resuming…",
+			"resumingShort": "Resuming…",
+			"preview": "Debug preview · Computer input disabled",
+			"resumeHint": "Verifying the target window and getting a fresh view. Please wait.",
+			"resume": "Resume",
+			"cancel": "Cancel",
+			"pauseHints": {
+				"activation": "Switch to the authorized window, then select Resume.",
+				"userTakeover": "Your input was detected. Select Resume when ready; AI will observe the window again.",
+				"displayChanged": "The window or display changed. Select Resume to observe it again.",
+				"targetOccluded": "The target area is obstructed. Move the obstructing window and select Resume.",
+				"passwordProtected": "Password controls cannot be operated. Handle them manually, then select Resume.",
+				"busy": "The previous action has not finished. Try again shortly.",
+				"windowUnavailable": "The authorized window is unavailable. Restore it, or cancel and authorize it again if it was closed.",
+				"default": "Resume was not completed. Try again or cancel; AI will not enter input while paused."
+			}
+		}
 	},
 	"windowCapture": {
 		"title": "Window screenshot",

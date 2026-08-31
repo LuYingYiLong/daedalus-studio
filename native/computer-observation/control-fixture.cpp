@@ -3,14 +3,32 @@
 #include <future>
 #include <chrono>
 #include <iostream>
+#include <commctrl.h>
+
+static LRESULT CALLBACK fixtureProc(HWND hwnd, UINT message, WPARAM w, LPARAM l) {
+  if (message == WM_COMMAND && LOWORD(w) == 101) { SetWindowTextW(hwnd, L"UIA invoke completed"); return 0; }
+  if (message == WM_APP) { SetFocus(GetDlgItem(hwnd, static_cast<int>(w))); return 0; }
+  return DefWindowProcW(hwnd, message, w, l);
+}
 
 // 只创建自己的测试窗口，不枚举、读取或操作任何用户应用
 void testControlFixture() {
-  HWND target = CreateWindowExW(0, L"STATIC", L"Daedalus input test fixture",
-      WS_OVERLAPPEDWINDOW | WS_VISIBLE, 160, 160, 520, 320, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
+  INITCOMMONCONTROLSEX controls{sizeof(controls), ICC_TREEVIEW_CLASSES}; InitCommonControlsEx(&controls);
+  WNDCLASSW cls{}; cls.lpfnWndProc = fixtureProc; cls.hInstance = GetModuleHandleW(nullptr); cls.lpszClassName = L"DaedalusUiaInputFixture";
+  RegisterClassW(&cls);
+  HWND target = CreateWindowExW(0, cls.lpszClassName, L"Daedalus UIA/keyboard test fixture",
+      WS_OVERLAPPEDWINDOW | WS_VISIBLE, 160, 160, 720, 520, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
   if (!target) throw std::runtime_error("computer_fixture_window_failed");
-  HWND edit = CreateWindowExW(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL, 20, 20, 400, 40, target, nullptr, GetModuleHandleW(nullptr), nullptr);
-  HWND password = CreateWindowExW(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_PASSWORD, 20, 80, 400, 40, target, nullptr, GetModuleHandleW(nullptr), nullptr);
+  HWND edit = CreateWindowExW(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL, 20, 20, 400, 40, target, reinterpret_cast<HMENU>(100), GetModuleHandleW(nullptr), nullptr);
+  HWND password = CreateWindowExW(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_PASSWORD, 20, 80, 400, 40, target, reinterpret_cast<HMENU>(102), GetModuleHandleW(nullptr), nullptr);
+  HWND checkbox = CreateWindowExW(0, L"BUTTON", L"UIA toggle", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 450, 20, 160, 40, target, nullptr, GetModuleHandleW(nullptr), nullptr);
+  CreateWindowExW(0, L"BUTTON", L"Invoke fixture", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 450, 80, 160, 40, target, reinterpret_cast<HMENU>(101), cls.hInstance, nullptr);
+  HWND list = CreateWindowExW(0, L"LISTBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY, 20, 160, 280, 180, target, reinterpret_cast<HMENU>(103), cls.hInstance, nullptr);
+  for (int i = 0; i < 40; ++i) { auto name = L"Fixture item " + std::to_wstring(i); SendMessageW(list, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(name.c_str())); }
+  HWND tree = CreateWindowExW(0, WC_TREEVIEWW, L"", WS_CHILD | WS_VISIBLE | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT, 340, 160, 280, 180, target, reinterpret_cast<HMENU>(104), cls.hInstance, nullptr);
+  TVINSERTSTRUCTW item{}; item.hInsertAfter = TVI_ROOT; item.item.mask = TVIF_TEXT; item.item.pszText = const_cast<wchar_t *>(L"Fixture parent");
+  HTREEITEM parentItem = TreeView_InsertItem(tree, &item);
+  item.hParent = parentItem; item.hInsertAfter = TVI_LAST; item.item.pszText = const_cast<wchar_t *>(L"Fixture child"); TreeView_InsertItem(tree, &item);
   HWND overlays[2];
   for (auto &overlay : overlays) {
     overlay = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, L"STATIC", L"", WS_POPUP, 0, 0, 1, 1, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
@@ -20,12 +38,32 @@ void testControlFixture() {
   ShowWindow(target, SW_SHOWNORMAL);
   if (!IsWindowVisible(target)) throw std::runtime_error("computer_fixture_window_hidden");
   SetForegroundWindow(target); SetFocus(edit);
+  // 测试进程可能没有 Windows 前台激活权；只等待用户选择本窗口，不抢其他应用焦点
+  if (GetAncestor(GetForegroundWindow(), GA_ROOT) != target) {
+    SetWindowTextW(target, L"Daedalus input test - click this window to start (30s)");
+    const auto deadline = GetTickCount64() + 30000;
+    while (GetAncestor(GetForegroundWindow(), GA_ROOT) != target && GetTickCount64() < deadline) {
+      MSG message;
+      while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)) { TranslateMessage(&message); DispatchMessageW(&message); }
+      MsgWaitForMultipleObjects(0, nullptr, FALSE, 10, QS_ALLINPUT);
+    }
+    if (GetAncestor(GetForegroundWindow(), GA_ROOT) != target) {
+      DestroyWindow(target); for (auto overlay : overlays) DestroyWindow(overlay);
+      throw std::runtime_error("computer_fixture_manual_activation_required");
+    }
+    SetFocus(edit);
+  }
   auto future = std::async(std::launch::async, [=] {
     winrt::init_apartment(winrt::apartment_type::multi_threaded);
     std::atomic<bool> paused{false};
     InputController input(GetCurrentProcessId(), [&](const Json &event) {
-      paused = event.GetNamedString(L"event") == L"paused";
-      if (paused) std::cerr << "input fixture pause: " << utf8(event.GetNamedString(L"code")) << "\n";
+      if (event.GetNamedString(L"event") == L"paused") {
+        paused = true;
+        std::cerr << "input fixture pause: " << utf8(event.GetNamedString(L"code")) << "\n";
+      }
+    });
+    std::jthread heartbeat([&](std::stop_token stop) {
+      while (!stop.stop_requested()) { input.heartbeat(); std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
     });
     Json start; Array handles;
     for (HWND overlay : overlays) handles.Append(winrt::Windows::Data::Json::JsonValue::CreateStringValue(std::to_wstring(reinterpret_cast<uintptr_t>(overlay))));
@@ -41,6 +79,14 @@ void testControlFixture() {
       if (!started) std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     if (!started) throw std::runtime_error("computer_fixture_focus_failed");
+    POINT cursorBefore{};
+    if (!GetCursorPos(&cursorBefore)) throw std::runtime_error("computer_fixture_cursor_failed");
+    const LONG cursorDelta = cursorBefore.x < GetSystemMetrics(SM_CXSCREEN) - 40 ? 32 : -32;
+    if (!SetCursorPos(cursorBefore.x + cursorDelta, cursorBefore.y))
+      throw std::runtime_error("computer_fixture_cursor_failed");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    if (paused) throw std::runtime_error("computer_fixture_mouse_move_paused");
+    SetCursorPos(cursorBefore.x, cursorBefore.y);
     auto frame = [&] {
       RECT r{}; winrt::check_hresult(DwmGetWindowAttribute(target, DWMWA_EXTENDED_FRAME_BOUNDS, &r, sizeof(r)));
       Json value; text(value, L"observationId", "fixture-frame");
@@ -69,14 +115,17 @@ void testControlFixture() {
         throw;
       }
     };
-    auto click = [&](HWND child, int count) {
-      RECT r{}; GetWindowRect(child, &r);
-      auto f = frame().GetNamedObject(L"screenBounds");
-      Json action; text(action, L"type", "click"); number(action, L"count", count);
-      number(action, L"x", r.left + 8 - f.GetNamedNumber(L"x")); number(action, L"y", r.top + 8 - f.GetNamedNumber(L"y"));
-      execute(action);
-    };
-    click(edit, 1);
+    // 触摸/坐标动作在执行器边界拒绝，不能创建接触或回退鼠标
+    for (const char *kind : {"click", "scroll"}) {
+      Json action; text(action, L"type", kind);
+      bool rejected = false;
+      try { execute(action); } catch (const std::runtime_error &e) { rejected = std::string(e.what()) == "computer_action_not_supported"; }
+      if (!rejected) throw std::runtime_error("computer_fixture_coordinate_action_enabled");
+    }
+    const auto movesBefore = input.physicalMoves.load();
+    GetCursorPos(&cursorBefore);
+    testUiaActions(target, edit, password, checkbox);
+    SendMessageW(target, WM_APP, 100, 0);
     Json typing; text(typing, L"type", "text"); text(typing, L"text", "Daedalus 测试");
     execute(typing);
     // SendInput 只确认派发，通过测试窗口读取结果确认应用确实收到
@@ -88,14 +137,17 @@ void testControlFixture() {
     }
     if (std::wstring(buffer) != L"Daedalus 测试") throw std::runtime_error("computer_fixture_text_failed");
     Json key; text(key, L"type", "key"); text(key, L"key", "ArrowLeft"); execute(key);
-    click(edit, 2);
-    Json scroll; text(scroll, L"type", "scroll"); text(scroll, L"axis", "vertical"); number(scroll, L"amount", -1);
-    RECT r{}; GetWindowRect(edit, &r); auto b = frame().GetNamedObject(L"screenBounds");
-    number(scroll, L"x", r.left+8-b.GetNamedNumber(L"x")); number(scroll, L"y", r.top+8-b.GetNamedNumber(L"y")); execute(scroll);
+    SendMessageW(target, WM_APP, 102, 0);
     bool protectedPassword = false;
-    try { click(password, 1); } catch (const std::runtime_error &e) { protectedPassword = std::string(e.what()) == "computer_password_protected"; }
+    try { execute(typing); } catch (const std::runtime_error &e) { protectedPassword = std::string(e.what()) == "computer_password_protected"; }
+    SendMessageW(target, WM_APP, 100, 0);
     if (!protectedPassword) throw std::runtime_error("computer_fixture_password_failed");
     if (paused) throw std::runtime_error("computer_fixture_injection_misclassified");
+    POINT after{}; GetCursorPos(&after);
+    if (after.x != cursorBefore.x || after.y != cursorBefore.y) {
+      if (input.physicalMoves != movesBefore) throw std::runtime_error("computer_fixture_user_moved_mouse_retry");
+      throw std::runtime_error("computer_fixture_uia_keyboard_moved_mouse");
+    }
     // 在本测试窗口中模拟用户按键，验证人工接管；不记录实际按键
     INPUT user[2]{}; user[0].type = user[1].type = INPUT_KEYBOARD; user[0].ki.wVk = user[1].ki.wVk = VK_RIGHT; user[1].ki.dwFlags = KEYEVENTF_KEYUP;
     if (GetAncestor(GetForegroundWindow(), GA_ROOT) != target) throw std::runtime_error("computer_fixture_focus_failed");

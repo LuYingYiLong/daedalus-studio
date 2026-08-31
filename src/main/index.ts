@@ -253,8 +253,9 @@ function applyWindowTheme(mainWindow: BrowserWindow, preferences: ClientPreferen
 
 function applyWindowThemeToAllWindows(): void {
 	const preferences: ClientPreferences = clientPreferencesService.getCachedPreferences();
-	for (const browserWindow of BrowserWindow.getAllWindows()) {
-		applyWindowTheme(browserWindow, preferences);
+	// 仅 Studio 主窗口和设置窗口使用自绘标题栏；Overlay 必须保持无边框透明
+	for (const browserWindow of [mainWindow, settingsWindow]) {
+		if (browserWindow && !browserWindow.isDestroyed()) applyWindowTheme(browserWindow, preferences);
 	}
 }
 

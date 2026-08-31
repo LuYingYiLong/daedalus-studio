@@ -14,21 +14,26 @@ public:
   void pause(const std::string &code);
   void stop();
   void heartbeat();
-  Json action(HWND target, const Json &frame, const Json &params);
+  Json action(HWND target, const Json &frame, const Json &params,
+    const std::function<void(const Json &, const std::function<void(POINT)> &)> &uia = {});
 private:
+  friend void testControlFixture();
   static LRESULT CALLBACK mouseHook(int, WPARAM, LPARAM);
   static LRESULT CALLBACK keyHook(int, WPARAM, LPARAM);
+  static LRESULT CALLBACK rawWindow(HWND, UINT, WPARAM, LPARAM);
   static InputController *instance;
   void watch();
   void injected(const std::vector<INPUT> &events, unsigned generation);
-  void validate(HWND target, const Json &frame, const POINT *point);
+  void validate(HWND target, const Json &frame, const POINT *point, bool passwordCheck = true);
+  void progress(const Json &params, POINT point, const char *phase);
   DWORD parent;
   std::function<void(const Json &)> notify;
   std::atomic<bool> active{false}, arming{false}, quitting{false}, ready{false};
   std::atomic<unsigned> generation{0};
   std::atomic<ULONGLONG> heartbeatAt{0};
+  std::atomic<ULONGLONG> userActivityAt{0};
+  std::atomic<unsigned long long> physicalMoves{0};
   std::atomic<HWND> window{nullptr};
   std::mutex inputMutex;
-  POINT anchor{};
   std::thread watcher;
 };

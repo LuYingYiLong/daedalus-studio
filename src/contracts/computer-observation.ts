@@ -1,4 +1,7 @@
-export const COMPUTER_PROTOCOL_VERSION = 2;
+export const COMPUTER_PROTOCOL_VERSION = 3;
+export const COMPUTER_UIA_ACTIONS = ["uia_invoke", "uia_toggle", "uia_select", "uia_set_value", "uia_scroll", "uia_expand_collapse"] as const;
+export type ComputerUiaAction = typeof COMPUTER_UIA_ACTIONS[number];
+export type ComputerInputTransport = "uia" | "keyboard";
 export const COMPUTER_MAX_MESSAGE_BYTES = 8 * 1024 * 1024;
 export type ComputerToolName =
   | "mcp_computer_request_access"
@@ -35,6 +38,7 @@ export type ComputerNode = {
   bounds: ComputerRect;
   enabled: boolean;
   password: boolean;
+  supportedActions?: ComputerUiaAction[];
 };
 export type ComputerText = {
   id: string;
@@ -75,16 +79,12 @@ export type ComputerControlState = ComputerScope & {
   resuming?: boolean;
 };
 export type ComputerAction =
-  | { type: "click"; x: number; y: number; count: 1 | 2 }
   | { type: "text"; text: string }
-  | {
-      type: "scroll";
-      x: number;
-      y: number;
-      axis: "horizontal" | "vertical";
-      amount: number;
-    }
-  | { type: "key"; key: string };
+  | { type: "key"; key: string }
+  | { type: "uia_invoke" | "uia_toggle" | "uia_select"; nodeId: string }
+  | { type: "uia_set_value"; nodeId: string; value: string }
+  | { type: "uia_scroll"; nodeId: string; axis: "horizontal" | "vertical"; amount: "small_increment" | "small_decrement" | "large_increment" | "large_decrement" }
+  | { type: "uia_expand_collapse"; nodeId: string; state: "expanded" | "collapsed" };
 export type ComputerRevocation = ComputerScope & { code: string };
 export type ComputerToolRequest = ComputerScope & {
   callId: string;
@@ -256,43 +256,33 @@ export function computerObject(
 export function parseComputerAction(value: unknown): ComputerAction {
   const v = computerObject(value, [
     "type",
-    "x",
-    "y",
-    "count",
     "text",
     "axis",
     "amount",
     "key",
+    "nodeId", "value", "state",
   ]);
   const exact = (keys: string[]): void => {
     if (Object.keys(v).length !== keys.length || keys.some((k) => !(k in v)))
       throw new Error("computer_invalid_request");
   };
-  if (v.type === "click" || v.type === "scroll") {
-    for (const key of ["x", "y"])
-      if (
-        typeof v[key] !== "number" ||
-        !Number.isFinite(v[key]) ||
-        (v[key] as number) < 0 ||
-        (v[key] as number) >= 2560
-      )
-        throw new Error("computer_invalid_request");
-  }
   switch (v.type) {
-    case "click":
-      exact(["type", "x", "y", "count"]);
-      if (v.count !== 1 && v.count !== 2)
-        throw new Error("computer_invalid_request");
+    case "uia_invoke":
+    case "uia_toggle":
+    case "uia_select":
+      exact(["type", "nodeId"]); computerId(v.nodeId);
       break;
-    case "scroll":
-      exact(["type", "x", "y", "axis", "amount"]);
-      if (
-        !["horizontal", "vertical"].includes(String(v.axis)) ||
-        !Number.isInteger(v.amount) ||
-        Math.abs(v.amount as number) > 10 ||
-        v.amount === 0
-      )
-        throw new Error("computer_invalid_request");
+    case "uia_set_value":
+      exact(["type", "nodeId", "value"]); computerId(v.nodeId);
+      if (typeof v.value !== "string" || v.value.length > 4096) throw new Error("computer_invalid_request");
+      break;
+    case "uia_scroll":
+      exact(["type", "nodeId", "axis", "amount"]); computerId(v.nodeId);
+      if (!["horizontal", "vertical"].includes(String(v.axis)) || !["small_increment", "small_decrement", "large_increment", "large_decrement"].includes(String(v.amount))) throw new Error("computer_invalid_request");
+      break;
+    case "uia_expand_collapse":
+      exact(["type", "nodeId", "state"]); computerId(v.nodeId);
+      if (v.state !== "expanded" && v.state !== "collapsed") throw new Error("computer_invalid_request");
       break;
     case "text":
       exact(["type", "text"]);
@@ -398,8 +388,13 @@ export function parseComputerObservation(value: unknown): ComputerObservation {
       "bounds",
       "enabled",
       "password",
+      "supportedActions",
     ]);
     const id = computerId(node.id);
+    if (node.supportedActions !== undefined && (!Array.isArray(node.supportedActions) || node.supportedActions.length > 6 ||
+      new Set(node.supportedActions).size !== node.supportedActions.length ||
+      node.supportedActions.some((action) => !(COMPUTER_UIA_ACTIONS as readonly unknown[]).includes(action)) ||
+      ((node.password || !node.enabled) && node.supportedActions.length > 0))) throw new Error("computer_protocol_invalid");
     if (ids.has(id)) throw new Error("computer_protocol_invalid");
     ids.add(id);
     if (

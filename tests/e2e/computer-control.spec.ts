@@ -115,7 +115,7 @@ test("observation-to-control upgrade, fresh resume, cancellation and full-trust 
       .find((r) => (r.params as { callId: string }).callId === callId)!
       .params as {
       ok: boolean;
-      result: { observationId: string; status?: string; mode?: string };
+      result: { observationId: string; status?: string; mode?: string; transport?: string };
       error?: { code: string };
     };
   }
@@ -185,12 +185,33 @@ test("observation-to-control upgrade, fresh resume, cancellation and full-trust 
     ["ready", "pulse", "cancel", "resume", "subscribe"],
   );
   const observed = (await result(invoke("mcp_computer_observe"))).result;
+  for (const action of [
+    { type: "click", x: 0, y: 0, count: 1 },
+    { type: "click", x: 0, y: 0, count: 2 },
+    { type: "scroll", x: 0, y: 0, axis: "vertical", amount: 1 },
+  ]) {
+    // 无效 Backend 事件在 renderer 解析时即丢弃；这里直接验证 Main IPC 也拒绝坐标输入
+    const request = {
+      ...identity(),
+      callId: `unsupported-${++index}`,
+      toolCallId: `tool-${index}`,
+      actionId: `action-${index}`,
+      toolName: "mcp_computer_action",
+      args: { observationId: observed.observationId, action },
+      authorization: { approvalMode: "manual" },
+    };
+    await expect(mainWindow.evaluate(async (input) => {
+      return window.electronAPI.computerObservation!.execute(
+        input as unknown as Parameters<NonNullable<typeof window.electronAPI.computerObservation>["execute"]>[0],
+      );
+    }, request)).rejects.toThrow("computer_invalid_request");
+  }
   expect(
     (
       await result(
         invoke("mcp_computer_action", {
           observationId: observed.observationId,
-          action: { type: "click", x: 0, y: 0, count: 1 },
+          action: { type: "key", key: "Tab" },
         }),
       )
     ).result.status,
@@ -203,6 +224,14 @@ test("observation-to-control upgrade, fresh resume, cancellation and full-trust 
     path: test.info().outputPath("computer-control-edge.png"),
     omitBackground: true,
   });
+  // Fresh frame for every explicit UIA action; no real native input in E2E.
+  for (const action of [{ type: "uia_invoke", nodeId: "node-1" }, { type: "uia_set_value", nodeId: "node-1", value: "" }]) {
+    await mainWindow.waitForTimeout(1100);
+    const fresh = await result(invoke("mcp_computer_observe"));
+    const applied = await result(invoke("mcp_computer_action", { observationId: fresh.result.observationId, action }));
+    expect(applied.ok).toBe(true);
+    expect(applied.result).toMatchObject({ status: "dispatched", transport: "uia" });
+  }
   // Simulate display invalidation, never touch an actual target or inject system input.
   await electronApp.evaluate(({ screen }) =>
     screen.emit("display-metrics-changed", {}, screen.getPrimaryDisplay(), [

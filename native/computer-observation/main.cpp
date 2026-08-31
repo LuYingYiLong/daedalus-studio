@@ -142,8 +142,9 @@ int wmain(int argc, wchar_t **argv) {
     _setmode(_fileno(stdin), _O_BINARY);
     _setmode(_fileno(stdout), _O_BINARY);
     Perception perception(parent, argv[4]);
-    InputController control(parent, [](const Json &state) {
-      Json event; number(event, L"version", 2); text(event, L"event", "control");
+    InputController control(parent, [&](const Json &state) {
+      if (state.GetNamedString(L"event") != L"progress") perception.invalidateNodes();
+      Json event; number(event, L"version", 3); text(event, L"event", "control");
       event.SetNamedValue(L"state", state); reply(event);
     });
     Json lastFrame;
@@ -155,13 +156,13 @@ int wmain(int argc, wchar_t **argv) {
     auto execute = [&](const std::string &input) {
       Json response;
       text(response, L"id", "invalid");
-      number(response, L"version", 2);
+      number(response, L"version", 3);
       try {
         Json request = Json::Parse(winrt::to_hstring(input));
         exact(request, {L"version", L"id", L"method", L"params"});
         const auto id = request.GetNamedString(L"id");
         if (id.empty() || id.size() > 160 ||
-            request.GetNamedNumber(L"version") != 2)
+            request.GetNamedNumber(L"version") != 3)
           throw std::runtime_error("computer_protocol_mismatch");
         response.SetNamedValue(L"id", Value::CreateStringValue(id));
         const auto method = request.GetNamedString(L"method");
@@ -170,14 +171,17 @@ int wmain(int argc, wchar_t **argv) {
         if (method == L"control.stop" || method == L"control.pause" || method == L"control.heartbeat") {
           exact(params, {});
           if (method == L"control.heartbeat") control.heartbeat();
-          else if (method == L"control.pause") control.pause("computer_paused");
-          else control.stop();
+          else if (method == L"control.pause") { perception.invalidateNodes(); control.pause("computer_paused"); }
+          else { perception.invalidateNodes(); control.stop(); }
         } else if (method == L"control.start") {
           exact(params, {L"overlays", L"generation"});
           lastFrame = Json{};
+          perception.invalidateNodes();
           result = control.start(perception.controlTarget(), params);
         } else if (method == L"action") {
           exact(params, {L"observationId", L"actionId", L"action", L"generation"});
+          const auto actionKind = params.GetNamedObject(L"action").GetNamedString(L"type");
+          if (actionKind == L"click" || actionKind == L"scroll") throw std::runtime_error("computer_action_not_supported");
           auto frame = lastFrame; lastFrame = Json{};
           if (!frame.HasKey(L"observationId")) throw std::runtime_error("computer_observation_stale");
           HWND target = perception.controlTarget();
@@ -187,7 +191,10 @@ int wmain(int argc, wchar_t **argv) {
             if (!lastFocus || !GetGUIThreadInfo(GetWindowThreadProcessId(target, nullptr), &gui) || gui.hwndFocus != lastFocus)
               throw std::runtime_error("computer_observation_stale");
           }
-          result = control.action(target, frame, params);
+          struct Invalidate { Perception &value; ~Invalidate() { value.invalidateNodes(); } } invalidate{perception};
+          result = control.action(target, frame, params, [&](const Json &action, const std::function<void(POINT)> &validate) {
+            perception.performUia(utf8(params.GetNamedString(L"observationId")), action, validate);
+          });
         } else if (method == L"select") {
           control.stop(); lastFrame = Json{};
           exact(params, {L"sourceId"});
@@ -195,8 +202,10 @@ int wmain(int argc, wchar_t **argv) {
         } else {
           exact(params, {});
           if (method == L"hello") {
-            number(result, L"version", 2);
+            number(result, L"version", 3);
             jsonBoolean(result, L"computerControl", true);
+            Array transports; transports.Append(Value::CreateStringValue(L"uia")); transports.Append(Value::CreateStringValue(L"keyboard"));
+            result.SetNamedValue(L"inputTransports", transports);
           } else if (method == L"target") {
             auto hwnd = perception.controlTarget(); RECT r{};
             if (!GetWindowRect(hwnd, &r)) throw std::runtime_error("computer_window_unavailable");

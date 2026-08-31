@@ -1,5 +1,13 @@
 # Windows single-window computer use
 
+## Shipping input profile (2026-08-31)
+
+The delivered profile is **UIA + restricted keyboard only**. Coordinate click/double-click, touch swipe and mouse-wheel injection are rejected by Backend schemas, Studio contracts and the native boundary. No mouse or touch fallback is available. The input setting remains off by default; turn authorization, foreground/identity checks, pause/resume, emergency stop and cancellation remain mandatory.
+
+Synthetic touch is deferred: an earlier dedicated Win32 EDIT test moved the system cursor to the injected primary touch with zero physical Raw Input movements. The experimental `touch-input.h` / `touch-tests.h` are retained for research but are not included in the product helper or its self-test. Neither input startup nor UIA/keyboard execution creates a touch device.
+
+Native hello reports protocol 3, `computerControl: true` and `inputTransports: ["uia", "keyboard"]`. Main verifies the exact profile before consent and serializes the handshake against idle validation. A late handshake cannot reopen consent after cancellation or turn completion. Legacy helpers and incompatible Backends fail closed; read-only observation and manual screenshot attachments remain independent.
+
 Opt-in Windows x64 observation and separately authorized input. There is no network listener, elevation, UIAccess, desktop-wide target, clipboard or scripting interface. The existing manual window-screenshot attachment flow is independent and unchanged.
 
 ## Build and verify
@@ -23,7 +31,7 @@ npm run test:e2e:built -- --project=electron tests/e2e/computer-observation.spec
 
 ## Runtime contracts
 
-- Binary LE uint32 length followed by UTF-8 JSON. Version 2, matching request ID; 16 KiB request / 8 MiB response maximum. Stdout contains frames only. Stderr is drained without recording native exception text.
+- Binary LE uint32 length followed by UTF-8 JSON. Version 3, matching request ID; 16 KiB request / 8 MiB response maximum. Stdout contains frames only. Stderr is drained without recording native exception text.
 - Parent-process watchdog; lazy startup, one normal request in flight, priority stop/pause/heartbeat on the pipe reader and input monitoring on an independent thread, hard 20-second observation deadline, kill on invalid frames/timeouts/crashes. No service or background acquisition.
 - Window identities combine a short-lived registry ID, PID/process start time and a WGC item with a Closed listener. HWNDs/PIDs never cross into renderer/tool arguments. Window discovery occurs only for an open picker/refresh.
 - MTA UI Automation reads only the selected Control View. Depth 20, 1,000 nodes, 500 OCR blocks, combined UTF-8 text 64 KiB. Password names/IDs are omitted and trustworthy rectangles masked before OCR and PNG encoding. Truncation is explicit. This is not a guarantee that arbitrary applications expose all sensitive fields correctly.
@@ -33,7 +41,7 @@ npm run test:e2e:built -- --project=electron tests/e2e/computer-observation.spec
 
 ## Input safety
 
-Only click/double-click, Unicode text, wheel and an explicit key allowlist are accepted. Every action consumes the latest frame and revalidates target identity, geometry/DPI, foreground, focus/hit and password protection. Input pairs are not held across calls. Partial dispatch is unknown and cannot be replayed. Human input pauses, own tagged injection is ignored; cursor movement above 8 DIP counts as takeover. A two-second native watchdog and independent emergency-key handling stop input even while OCR/UIA is busy. Main also stops when the controller renderer heartbeat expires.
+The executor accepts explicit UIA actions, Unicode text and an explicit key allowlist. Every action consumes the latest frame and revalidates target identity, geometry/DPI, foreground, focus/hit and password protection. Input pairs are not held across calls. Partial dispatch is unknown and cannot be replayed. Mouse movement is treated as observation and does not pause control; human clicks, wheel input and keyboard input pause it, while own tagged keyboard input is recognized (Raw Input still independently detects physical buttons/wheel/keys). No injected mouse/touch events are exempted from takeover handling. A two-second native watchdog and independent emergency-key handling stop input even while OCR/UIA is busy. Main also stops when the controller renderer heartbeat expires.
 
 Two protected overlay HWNDs are accepted only from Main, checked against its PID and WDA_EXCLUDEFROMCAPTURE. These HWNDs are never model/renderer tool arguments. The overlay cannot authorize or execute input. Backend mirrors the verified lease, gates model/tool starts and reconnect attempts, and expires missing heartbeats after five seconds.
 
@@ -49,6 +57,16 @@ Settings → Computer use contains separate observation/input switches and a dev
 
 `test:computer` verifies resource hashes, real offline Chinese/English OCR on generated memory images, a dedicated UIA window with a password field, and framed-protocol rejection. It does not enumerate the user's windows. Playwright uses a fake helper process with real framing, real Electron IPC/Main consent and a Mock Backend.
 
-`test:computer:hardware` additionally captures a dedicated window with WGC and runs `--test-input`, which creates its own edit/password fields to test click, Unicode input, scroll, key dispatch and takeover. Input checks require OS foreground permission; a focus failure must not be bypassed with elevated privileges. It never enumerates the user's windows. This check is separate from CI because hosted runners may not provide a capturable desktop.
+`test:computer:hardware` additionally captures a dedicated window with WGC and runs `--test-input`, which creates edit/password fields, a button, a checkbox, a list and a tree to test UIA invoke/toggle/select/set-value/scroll/expand-collapse, Unicode input, key dispatch, unsupported coordinate rejection and takeover. Input checks require OS foreground permission; a focus failure must not be bypassed with elevated privileges. It never enumerates the user's windows. This check is separate from CI because hosted runners may not provide a capturable desktop.
 
 Before release, manually check WGC and OCR on dedicated, non-sensitive windows on multiple monitors at 100%/150%/200% scaling, negative screen coordinates, move/resize, minimize/close, high-integrity/protected windows, lock/unlock and helper termination. Mock E2E and the dedicated-window check are not evidence that all these hardware/driver combinations have passed. Do not disable protections to make a test pass.
+
+## UIA and keyboard (input v3)
+
+No coordinate action is exposed to the model. UIA operations target a fresh observation node ID; keyboard operations target the observed focus and remain restricted to Unicode typing and the existing key allowlist. If an application (for example, a custom-rendered game) exposes no supported UIA controls and cannot be navigated with the allowed keys, report that limitation and ask the user to act. Do not infer a clickable target from OCR boxes or switch to another input channel. Production never reads or restores the system cursor to position the AI cursor.
+
+UIA nodes optionally advertise supportedActions. Explicit node actions are invoke, toggle, select, replace editable non-password text (empty clears), small/large scroll increments, and expand/collapse. They use retained COM identities on the normal long-lived MTA worker, not names/AutomationId lookup. All writes keep foreground, window lifetime, generation and fresh-observation checks. SetValue text is redacted just like typed text. A completed native API call only means dispatched; observe again to verify the application effect. Cancellation cannot retract an operation already received by the application.
+
+The backend remains protocol v3 but advertises client.info.features.computerControl=3. Old/new input implementations fail closed on feature mismatch; read-only observations project away optional action metadata for old backends. Models and the native helper remain outside ASAR; no HID driver, admin rights, Python or new npm dependency is required.
+
+The self-test and normal CI do not inject real input. Hardware tests alone execute UIA/keyboard operations in dedicated windows and compare GetCursorPos before/after. If Windows refuses foreground activation, click the dedicated test window within 30 seconds and avoid additional input during the check. Physical mouse activity makes a stationary-cursor assertion inconclusive and requires a retry; it is not treated as a pass. No production focus or takeover protection is bypassed. Multi-monitor/DPI, physical concurrent input and nonstandard applications remain separate manual acceptance checks.
