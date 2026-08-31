@@ -133,7 +133,8 @@ test("observation-to-control upgrade, fresh resume, cancellation and full-trust 
   await dialog.getByRole("button", { name: /Allow this turn|允许本轮观察/ }).click();
   expect((await result(read)).result.mode).toBe("observe");
   await expect(dialog).not.toBeVisible();
-  await expect(mainWindow.getByRole("button", { name: /Stop sharing|停止共享/ })).toBeVisible();
+  await expect(mainWindow.getByRole("button", { name: /Stop sharing|停止共享/ })).toHaveCount(0);
+  await expect(mainWindow.getByRole("alert").filter({ hasText: /Sharing this turn|本轮正在共享/ })).toHaveCount(0);
   expect((await result(invoke("mcp_computer_observe"))).ok).toBe(true);
   expect(electronApp.windows().filter(w => w.url().includes("surface="))).toHaveLength(0);
   // Modal 关闭不得把焦点重新送回 Studio；拦截测试按钮的 focus，不碰系统前台窗口
@@ -156,6 +157,7 @@ test("observation-to-control upgrade, fresh resume, cancellation and full-trust 
     .getByRole("button", { name: /Allow control for this turn|允许本轮操作/ })
     .click();
   expect((await result(call)).result.mode).toBe("control");
+  await expect(mainWindow.getByRole("alert").filter({ hasText: /Sharing this turn|本轮正在共享/ })).toHaveCount(0);
   await expect(mainWindow.evaluate(async (scope) => {
     await window.electronAPI.computerObservation!.previewOverlay!({ ...scope, action: "running" });
   }, { connectionId, sessionId: "session-history", requestId: "preview-while-controlling" })).rejects.toThrow("computer_busy");
@@ -224,6 +226,7 @@ test("observation-to-control upgrade, fresh resume, cancellation and full-trust 
     path: test.info().outputPath("computer-control-edge.png"),
     omitBackground: true,
   });
+  await mainWindow.screenshot({ path: test.info().outputPath("computer-control-no-composer-alert.png") });
   // Fresh frame for every explicit UIA action; no real native input in E2E.
   for (const action of [{ type: "uia_invoke", nodeId: "node-1" }, { type: "uia_set_value", nodeId: "node-1", value: "" }]) {
     await mainWindow.waitForTimeout(1100);

@@ -1,4 +1,22 @@
 {
+	"externalBrowser": {
+		"evidence": "浏览器授权与操作记录",
+		"title": "外部浏览器",
+		"enabled": "允许外部浏览器任务",
+		"privacy": "页面内容可能交给配置的模型服务处理。需要在 Windows Chrome 或 Edge 安装 Daedalus 扩展。",
+		"install": "安装浏览器扩展",
+		"installButton": "注册主机并打开扩展目录",
+		"instructions": "先开启上方“允许外部浏览器任务”。注册主机后，在 chrome://extensions 或 edge://extensions 开启开发者模式并加载此处打开的扩展目录，再勾选扩展中的“连接 Studio”。开发版与正式版须对应，两端都要开启。",
+		"connection": "连接状态",
+		"default": "默认浏览器连接",
+		"connected": "已连接",
+		"disconnected": "暂无已连接扩展",
+		"disabled": "Studio 尚未启用此功能，请先开启上方“允许外部浏览器任务”，再连接扩展。",
+		"waiting": "等待扩展握手。请在对应开发版/正式版扩展中开启“连接 Studio”；重新打开扩展状态页可重试。",
+		"disconnect": "断开并关闭功能",
+		"unavailable": "外部浏览器不可用",
+		"confirmation": "AI 首先只读查看，以最终回复询问授权。下一条消息可批准全部或部分步骤，完全信任也不跳过确认。页面变化、目标不明确或连接中断时停止执行。"
+	},
 	"computer": {
 		"controlUnavailable": "电脑操作需要连接支持此功能的 Backend；不可用时请更新 Backend。",
 		"controlSetting": "允许 AI 请求操作窗口",
@@ -45,8 +63,6 @@
 		"observe": "观察",
 		"diagnose": "选择窗口进行本地诊断",
 		"localOnly": "本地诊断不会授权 AI、添加上下文或发送模型",
-		"sharing": "本轮正在共享：{{title}}",
-		"stop": "停止共享",
 		"empty": "尚无观察记录",
 		"truncated": "已达到采集限制，当前结果不完整",
 		"frame": "所选窗口的静态画面",

@@ -7,6 +7,7 @@ import {
 	Input,
 	Modal,
 	Segmented,
+	Select,
 	Space,
 	Switch,
 	Tooltip,
@@ -34,6 +35,7 @@ import {
 	BrowserImportModal,
 } from "@/widgets/browser/BrowserManagerModals";
 import styles from "./BrowserSettingsPage.module.css";
+import { useExternalBrowserState } from "@/features/external-browser/useExternalBrowserState";
 
 type ManagerKind =
 	| "history"
@@ -56,6 +58,8 @@ const EMPTY_SETTINGS: BrowserSettings = {
 function BrowserSettingsPage(): React.JSX.Element {
 	const { t } = useTranslation();
 	const { message, modal } = App.useApp();
+	const { state: externalState, api: externalApi } = useExternalBrowserState();
+	const [externalBusy, setExternalBusy] = useState(false);
 	const [settings, setSettings] = useState<BrowserSettings>(EMPTY_SETTINGS);
 	const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(
 		getCachedClientPreferences(),
@@ -117,6 +121,24 @@ function BrowserSettingsPage(): React.JSX.Element {
 		const timer = window.setTimeout((): void => setRevealed({}), 10_000);
 		return (): void => window.clearTimeout(timer);
 	}, [revealed]);
+
+	async function invokeExternal(
+		operation: () => Promise<unknown>,
+	): Promise<void> {
+		if (externalBusy) return;
+		setExternalBusy(true);
+		try {
+			await operation();
+		} catch (error) {
+			void message.error(
+				error instanceof Error
+					? error.message
+					: t("externalBrowser.unavailable"),
+			);
+		} finally {
+			setExternalBusy(false);
+		}
+	}
 
 	async function updateSettings(
 		patch: Partial<Omit<BrowserSettings, "permissionRules">>,
@@ -181,6 +203,77 @@ function BrowserSettingsPage(): React.JSX.Element {
 				</Typography.Title>
 			</header>
 			<div className={styles.content}>
+				{externalApi && externalState?.available && (
+					<SettingsList title={t("externalBrowser.title")}>
+						<SettingsItem
+							title={t("externalBrowser.enabled")}
+							description={t("externalBrowser.privacy")}
+						>
+							<Switch
+								aria-label={t("externalBrowser.enabled")}
+								checked={externalState.enabled}
+								loading={externalBusy}
+								onChange={(enabled) =>
+									void invokeExternal(() => externalApi.configure({ enabled }))
+								}
+							/>
+						</SettingsItem>
+						<SettingsItem
+							title={t("externalBrowser.install")}
+							description={t("externalBrowser.instructions")}
+						>
+							<Button
+								disabled={externalBusy}
+								onClick={() => void invokeExternal(() => externalApi.install())}
+							>
+								{t("externalBrowser.installButton")}
+							</Button>
+						</SettingsItem>
+						<SettingsItem
+							title={t("externalBrowser.connection")}
+							description={
+								externalState.error ||
+								(!externalState.enabled
+									? t("externalBrowser.disabled")
+									: externalState.connections.length
+										? t("externalBrowser.connected")
+										: t("externalBrowser.waiting"))
+							}
+						>
+							<Space wrap>
+								<Select
+									aria-label={t("externalBrowser.default")}
+									placeholder={t("externalBrowser.default")}
+									value={externalState.defaultConnectionId}
+									disabled={
+										externalBusy ||
+										!externalState.enabled ||
+										externalState.connections.length === 0
+									}
+									options={externalState.connections.map((c) => ({
+										value: c.id,
+										label: `${c.name} (${c.id.slice(0, 8)})`,
+									}))}
+									onChange={(defaultConnectionId) =>
+										void invokeExternal(() =>
+											externalApi.configure({ defaultConnectionId }),
+										)
+									}
+								/>
+								<Button
+									disabled={externalBusy || !externalState.enabled}
+									onClick={() =>
+										void invokeExternal(() =>
+											externalApi.configure({ enabled: false }),
+										)
+									}
+								>
+									{t("externalBrowser.disconnect")}
+								</Button>
+							</Space>
+						</SettingsItem>
+					</SettingsList>
+				)}
 				<SettingsList title={t("settings.browser.downloads.title")}>
 					<SettingsItem
 						searchKey="item:browser.downloadDirectory"

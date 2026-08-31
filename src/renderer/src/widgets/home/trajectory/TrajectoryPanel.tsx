@@ -33,6 +33,7 @@ import styles from "./TrajectoryPanel.module.css";
 
 const ReactJsonView = lazy(() => import("@microlink/react-json-view"));
 const ComputerObservationHistory = lazy(() => import("@/widgets/computer-observation/ComputerObservationHistory"));
+const BrowserActivityHistory = lazy(() => import("@/widgets/browser/BrowserActivityHistory"));
 
 type TrajectoryPanelProps = {
 	sessionId: string | null;
@@ -173,6 +174,7 @@ export function TraceInspector({
 		children: <JsonDetail value={section.content} />,
 	}));
 	const inspectorItems: NonNullable<CollapseProps["items"]> = [
+		...(detail.record.summary.externalBrowser === true && typeof detail.record.summary.activityId === "string" ? [{ key: "browser-activity", label: t("externalBrowser.evidence"), children: <Suspense fallback={<Spin />}><BrowserActivityHistory key={detail.record.recordId} sessionId={detail.record.sessionId} activityId={detail.record.summary.activityId} renderDetail={value => <JsonDetail value={value} />} /></Suspense> }] : []),
 		...(typeof detail.record.summary.observationId === "string" ? [{ key: "computer-observation", label: t("computer.viewEvidence"), children: <Suspense fallback={<Spin />}><ComputerObservationHistory key={detail.record.recordId} sessionId={detail.record.sessionId} observationId={detail.record.summary.observationId} /></Suspense> }] : []),
 		...(collapseItems.length > 0
 			? [

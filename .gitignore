@@ -80,6 +80,8 @@ out
 release/
 build/backend-bootstrap/
 build/computer-observation/
+build/browser-host/
+build/browser-extension/
 build/godot-plugin/
 build/daedalus-bridge/
 build/.app-icons-*/

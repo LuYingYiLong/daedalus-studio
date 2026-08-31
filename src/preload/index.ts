@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
+import { externalBrowserBridge } from "./external-browser";
 import type { WindowCaptureAPI } from "../contracts/window-capture";
 import type { ComputerAPI, ComputerState } from "../contracts/computer-observation";
 import { applyStudioAccentVariables } from "../contracts/theme-color";
@@ -370,7 +371,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		capture: (params) => ipcRenderer.invoke("window-capture:capture", params),
 		release: (params) => ipcRenderer.invoke("window-capture:release", params),
 	} satisfies WindowCaptureAPI } : {}),
-	...(process.platform === "win32" && process.arch === "x64" ? { computerObservation: {
+	...(process.platform === "win32" && process.arch === "x64" ? { externalBrowser: externalBrowserBridge, computerObservation: {
+
     previewOverlay: (request) => ipcRenderer.invoke("computer:previewOverlay", request),
 		onRevoked: (listener) => { const handler = (_event: Electron.IpcRendererEvent, value: Parameters<typeof listener>[0]): void => listener(value); ipcRenderer.on("computer:revoked", handler); return () => { ipcRenderer.removeListener("computer:revoked", handler); }; },
 		getState: () => ipcRenderer.invoke("computer:getState"),

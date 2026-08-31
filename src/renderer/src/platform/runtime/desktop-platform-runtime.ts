@@ -42,6 +42,10 @@ export const desktopPlatformRuntime: PlatformRuntime = {
 	getCapabilityUpdate: async (features) => {
 		const { capabilities } = await getDesktopHello();
 		const updates: Record<string, boolean> = {};
+		if (features.externalBrowser === 1) {
+			updates.externalBrowser = false;
+			try { const state = await window.electronAPI.externalBrowser?.getState(); updates.externalBrowser = state?.enabled === true && state.available; } catch { /* 可选扩展能力失败时关闭 */ }
+		}
 		for (const key of ["browserTools", "computerObservation", "computerControl", "scheduledTasks"])
 			updates[key] = capabilities[key];
 		// 新字段仅出现在已协商的更新中，不放进首次 hello
@@ -58,17 +62,20 @@ export const desktopPlatformRuntime: PlatformRuntime = {
 	},
 	onCapabilitiesChanged: (listener: () => void): (() => void) => {
 		let computerCapability = "";
+		let externalCapability = "";
+		const disposeExternal = window.electronAPI.externalBrowser?.onState(state => { const value = `${state.enabled}:${state.available}`; if (value !== externalCapability) { externalCapability = value; listener(); } });
 		const disposeComputer = window.electronAPI.computerObservation?.onState(state => { const value = `${state.enabled}:${state.available}:${state.controlEnabled}:${state.controlSupported}:${state.groundingSupported}`; if (value !== computerCapability) { computerCapability = value; listener(); } });
 		const disposeBrowser = window.electronAPI.browser.settings.onChanged((settings): void => {
 			browserToolsEnabled = settings.aiCdpEnabled;
 			listener();
 		});
-		return () => { disposeComputer?.(); disposeBrowser(); };
+		return () => { disposeComputer?.(); disposeBrowser(); disposeExternal?.(); };
 	},
 	onBackendConnected: attachScheduledTaskToolRuntime,
 	system: {
 		get windowCapture() { return window.electronAPI.windowCapture; },
 		get computerObservation() { return window.electronAPI.computerObservation; },
+		get externalBrowser() { return window.electronAPI.externalBrowser; },
 		clipboard: {
 			writeText: async (text: string): Promise<void> => { await window.electronAPI.clipboard.writeText(text); },
 			readText: async (): Promise<string> => (await window.electronAPI.clipboard.readText()).text,

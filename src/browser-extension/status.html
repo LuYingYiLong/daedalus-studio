@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Daedalus Browser</title>
+	</head>
+	<body>
+		<main>
+			<h1>Daedalus Browser</h1>
+			<p id="state" role="status"></p>
+			<p id="channel"></p>
+			<label
+				><input id="enabled" type="checkbox" />
+				<span id="label">Connect to Studio</span></label
+			>
+			<p id="notice"></p>
+			<p id="error" role="alert" hidden></p>
+			<button id="retry" type="button">Reconnect</button>
+			<button id="stop" type="button">Stop</button>
+		</main>
+		<script type="module" src="./status.ts"></script>
+	</body>
+</html>

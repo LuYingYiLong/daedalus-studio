@@ -109,11 +109,20 @@ jobs:
       - name: Build Electron app for E2E smoke gate
         run: npm run build
 
+      - name: Build and test external browser host and extension
+        run: |
+          npm run build:browser:host
+          npm run test:browser:host
+          npm run test:browser
+
       - name: Run Electron E2E smoke gate
         run: npm run test:e2e:built
 
       - name: Build Windows installer
         run: npm run build:win
+
+      - name: Verify packaged browser resources
+        run: node scripts/verify-browser-package.cjs release/win-unpacked/resources
 
       - name: List release files
         shell: pwsh
@@ -150,8 +159,15 @@ jobs:
             throw "Packaged backend does not support bundled Editor Bridge Protocol $expectedBridgeProtocolVersion."
           }
           $files = @(Get-ChildItem -LiteralPath $backendDir -File)
-          if ($files.Count -ne 2) {
-            throw "Packaged backend bootstrap must contain exactly the EXE and manifest."
+          if ($files.Count -ne 3) {
+            throw "Packaged backend bootstrap must contain exactly the backend, sandbox helper and manifest."
+          }
+          $sandboxPath = Join-Path $backendDir "daedalus-windows-sandbox-helper.exe"
+          if (
+            -not (Test-Path -LiteralPath $sandboxPath -PathType Leaf) `
+            -or (Get-FileHash -LiteralPath $sandboxPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $manifest.sandboxHelper.sha256
+          ) {
+            throw "Packaged backend sandbox helper SHA-256 verification failed."
           }
           $selfTestJson = & $executablePath self-test --json
           if ($LASTEXITCODE -ne 0) {
@@ -232,6 +248,7 @@ jobs:
             release/*.exe
             release/*.blockmap
             release/latest.yml
+            build/browser-extension/daedalus-browser-stable.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -247,3 +264,4 @@ jobs:
             release/*.exe
             release/*.blockmap
             release/latest.yml
+            build/browser-extension/daedalus-browser-stable.zip

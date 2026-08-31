@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../../../helpers/repo-paths";
 
-describe("HomePage browser controller source", () => {
+describe("Integrated browser session feature source", () => {
 	const pageSource: string = readRepoFile(
 		"src",
 		"renderer",
@@ -14,14 +14,13 @@ describe("HomePage browser controller source", () => {
 		"src",
 		"renderer",
 		"src",
-		"widgets",
-		"home",
-		"surface",
-		"useHomePageBrowserController.ts",
+		"features",
+		"browser",
+		"useIntegratedBrowserSession.ts",
 	);
 
 	it("keeps browser runtime event wiring outside the page component", () => {
-		expect(pageSource).toContain("useHomePageBrowserController({");
+		expect(pageSource).toContain("useIntegratedBrowserSession({");
 		expect(pageSource).not.toContain("createBackendClient()");
 		expect(pageSource).not.toContain('event.event === "browser.tool.request"');
 		expect(controllerSource).toContain("ensureBrowserRuntime");

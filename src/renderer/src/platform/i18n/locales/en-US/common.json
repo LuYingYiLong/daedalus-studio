@@ -1,4 +1,22 @@
 {
+	"externalBrowser": {
+		"evidence": "Browser authorization and activity",
+		"title": "External browser",
+		"enabled": "Allow external browser tasks",
+		"privacy": "Page content may be sent to your configured model. Requires the Daedalus extension in Chrome or Edge on Windows.",
+		"install": "Install browser extension",
+		"installButton": "Register host and open extension folder",
+		"instructions": "First enable Allow external browser tasks above. Register the host, then load the unpacked extension at chrome://extensions or edge://extensions. Enable Connect to Studio in the extension. Development and installed Studio use different extensions; both sides must be enabled.",
+		"connection": "Connections",
+		"default": "Default browser connection",
+		"connected": "Connected",
+		"disconnected": "No connected extension",
+		"disabled": "Disabled in Studio. Enable Allow external browser tasks above before connecting the extension.",
+		"waiting": "Waiting for an extension handshake. Enable Connect to Studio in the matching development/stable extension; reopen its status page to retry.",
+		"disconnect": "Disconnect and disable",
+		"unavailable": "External browser unavailable",
+		"confirmation": "AI first inspects read-only and finishes its reply asking for permission. Your next message may approve all or a subset. Full trust does not skip this confirmation. Changes, ambiguity or lost connections stop execution."
+	},
 	"computer": {
 		"controlUnavailable": "Computer input requires a connected Backend with computer-control support. Update Backend if unavailable.",
 		"controlSetting": "Allow AI to request window control",
@@ -45,8 +63,6 @@
 		"observe": "Observe",
 		"diagnose": "Select window for local diagnostics",
 		"localOnly": "Local diagnostics do not authorize AI, attach context or send to a model",
-		"sharing": "Sharing this turn: {{title}}",
-		"stop": "Stop sharing",
 		"empty": "No observations yet",
 		"truncated": "Capture limits reached; this result is incomplete",
 		"frame": "Static frame of the selected window",

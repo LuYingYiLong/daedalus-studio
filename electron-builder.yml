@@ -38,6 +38,10 @@ win:
   extraResources:
     - from: build/computer-observation
       to: computer-observation
+    - from: build/browser-host
+      to: browser-host
+    - from: build/browser-extension/stable
+      to: browser-extension/stable
   icon: build/icon.ico
   target:
     - target: nsis

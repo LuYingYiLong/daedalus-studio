@@ -1,6 +1,5 @@
-import type { WebContents } from "electron";
+import type { BrowserAutomationPage, BrowserCdpTransport } from "./browser-transport";
 import type { BrowserAutomationState } from "../../../contracts/browser";
-import { BrowserCdpSession } from "./browser-cdp-session";
 
 const MAX_SCREENSHOT_BYTES: number = 2 * 1024 * 1024;
 const MAX_VISIBLE_TEXT: number = 32 * 1024;
@@ -74,8 +73,8 @@ export class BrowserAutomationController {
 
 	constructor(
 		private readonly browserId: string,
-		private readonly webContents: WebContents,
-		private readonly cdp: BrowserCdpSession,
+		private readonly webContents: BrowserAutomationPage,
+		private readonly cdp: BrowserCdpTransport,
 		private readonly isManualInspectionActive: () => boolean,
 		private readonly onStateChanged: (
 			state: BrowserAutomationState,

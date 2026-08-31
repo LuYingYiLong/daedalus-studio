@@ -1,4 +1,5 @@
 import ComputerObservationBoundary from "@/widgets/computer-observation/ComputerObservationBoundary";
+import { useExternalBrowserSession } from "@/features/external-browser/useExternalBrowserSession";
 import {
 	useCallback,
 	useLayoutEffect,
@@ -64,7 +65,7 @@ import useHomeSurfaceController, {
 	type NewSessionOptions,
 } from "./surface/useHomeSurfaceController";
 import useHomePageComposerController from "./surface/useHomePageComposerController";
-import useHomePageBrowserController from "./surface/useHomePageBrowserController";
+import useIntegratedBrowserSession from "@/features/browser/useIntegratedBrowserSession";
 import useHomePageLaunchController from "./surface/useHomePageLaunchController";
 import useHomePageKeyboardShortcuts from "./surface/useHomePageKeyboardShortcuts";
 import HomePageActionBar from "./surface/HomePageActionBar";
@@ -637,12 +638,16 @@ function HomePage({
 	}, [setScrollToBottomButtonVisible]);
 
 	const { openMessageWebUrl, openMessageHtmlFile } =
-		useHomePageBrowserController({
+		useIntegratedBrowserSession({
 			activeSessionId,
 			visualSessionLayoutRef,
 			commitSessionLayout,
 			messageApi,
 		});
+	useExternalBrowserSession(
+		mainSurface === "chat" ? activeSessionId : null,
+		workspaceForActions?.id ?? null,
+	);
 
 	const toggleWorkspaceSidebar = useCallback((): void => {
 		scheduleWorkspaceSidebarSave({

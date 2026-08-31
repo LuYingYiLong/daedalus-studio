@@ -3,6 +3,7 @@
 import type { GeneralSettings } from "../../contracts/general-settings";
 import type { WindowCaptureAPI } from "../../contracts/window-capture";
 import type { ComputerAPI } from "../../contracts/computer-observation";
+import type { ExternalBrowserApi } from "../../contracts/external-browser";
 import type {
 	RemoteAccessPairingSession,
 	RemoteAccessPortPatch,
@@ -470,6 +471,7 @@ declare global {
 	interface ElectronAPI {
 		windowCapture?: WindowCaptureAPI;
 		computerObservation?: ComputerAPI;
+		externalBrowser?: ExternalBrowserApi;
 		versions: ElectronVersions;
 		backend: BackendAPI;
 		backendBootstrap: BackendBootstrapAPI;

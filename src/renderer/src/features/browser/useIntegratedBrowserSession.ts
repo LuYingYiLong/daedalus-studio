@@ -16,14 +16,14 @@ import {
 } from "@/widgets/browser/browser-runtime-registry";
 import { getCachedClientPreferences } from "@/platform/rpc/client-preferences-api";
 
-export type HomePageBrowserControllerParams = {
+export type IntegratedBrowserSessionParams = {
 	activeSessionId: string | null;
 	visualSessionLayoutRef: { current: SessionLayoutPreferences };
 	commitSessionLayout: (layout: SessionLayoutPreferences) => void;
 	messageApi: MessageInstance;
 };
 
-export type HomePageBrowserController = {
+export type IntegratedBrowserSession = {
 	openMessageWebUrl: (url: string) => void;
 	openMessageHtmlFile: (params: {
 		workspaceRoot: string;
@@ -31,12 +31,12 @@ export type HomePageBrowserController = {
 	}) => void;
 };
 
-export default function useHomePageBrowserController({
+export default function useIntegratedBrowserSession({
 	activeSessionId,
 	visualSessionLayoutRef,
 	commitSessionLayout,
 	messageApi,
-}: HomePageBrowserControllerParams): HomePageBrowserController {
+}: IntegratedBrowserSessionParams): IntegratedBrowserSession {
 	const { t } = useTranslation();
 
 	const ensureBrowserRuntime = useCallback(
@@ -197,6 +197,7 @@ export default function useHomePageBrowserController({
 				if (disposed) return;
 				removeListener = client.addEventListener(
 					(event: BackendEvent): void => {
+						if (event.data && typeof event.data === "object" && (event.data as Record<string, unknown>).external === true) return;
 						if (event.event === "browser.tool.cancel") {
 							const data = event.data as
 								| { callId?: unknown }

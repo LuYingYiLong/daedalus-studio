@@ -75,6 +75,15 @@ export async function sendChatMessage(
 export async function cancelChatMessage(
 	requestId: string,
 ): Promise<CancelChatMessageResult> {
+	const browser = getPlatformRuntime().system?.externalBrowser;
+	if (browser) {
+		const { active } = await browser.getState();
+		if (active && (active.runId === requestId || active.requestId === requestId)) {
+			await browser.stop(); const client = await createBackendClient();
+			await client.request("browser.external.update", { sessionId: active.sessionId, runId: active.runId, generation: active.generation, state: "revoke" });
+			return { cancelled: true, cancellationRequested: true, requestId };
+		}
+	}
   const computer = getPlatformRuntime().system?.computerObservation;
   if (computer) {
     const state = await computer.getState();

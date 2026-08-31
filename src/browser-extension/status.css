@@ -1,0 +1,28 @@
+:root {
+	color-scheme: light dark;
+	font: 14px system-ui;
+}
+body {
+	margin: 0;
+	min-width: 300px;
+	max-width: 480px;
+}
+main {
+	padding: 20px;
+}
+h1 {
+	font-size: 20px;
+}
+p {
+	line-height: 1.5;
+}
+button {
+	min-height: 44px;
+	min-width: 80px;
+}
+label {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	min-height: 44px;
+}

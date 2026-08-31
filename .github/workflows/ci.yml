@@ -54,11 +54,28 @@ jobs:
       - name: Unit and static tests
         run: npm test
 
+      - name: Build external browser extension and native relay
+        run: |
+          npm run build:browser:host
+          npm run build:browser:extension
+          npm run test:browser:host
+          npm run test:browser
+
       - name: Build renderer and main process
         run: npm run build
 
       - name: Electron E2E smoke suite
         run: npm run test:e2e:built
+
+      - name: Upload external browser extension and native relay
+        uses: actions/upload-artifact@v4
+        with:
+          name: daedalus-browser-windows-${{ github.run_id }}
+          path: |
+            build/browser-extension/*.zip
+            build/browser-host/*.exe
+            build/browser-host/manifest.json
+          if-no-files-found: error
 
       - name: Upload E2E diagnostics
         if: failure()

@@ -213,6 +213,7 @@ export function createRemoteHello(request: RemoteRequest, device: RemoteGatewayD
 				computerObservation: false,
 				computerControl: false,
 				computerGrounding: false,
+				externalBrowser: false,
 				scheduledTasks: false,
 			},
 		},

@@ -141,9 +141,10 @@ test("Windows per-turn consent, same-frame screenshot, revocation and reconnect"
   const { dataUrl, ...frame } = screenshot;
   expect(frame).toEqual(observation);
   expect(dataUrl).toMatch(/^data:image\/png;base64,/);
-  await mainWindow
-    .getByRole("button", { name: /Stop sharing|停止共享/ })
-    .click();
+  await expect(mainWindow.getByRole("button", { name: /Stop sharing|停止共享/ })).toHaveCount(0);
+  await expect(mainWindow.getByRole("alert").filter({ hasText: /Sharing this turn|本轮正在共享/ })).toHaveCount(0);
+  // Composer 上方不再提供单独提示条；显式撤销通道仍然生效
+  await mainWindow.evaluate(() => window.electronAPI.computerObservation!.revoke());
   expect(
     (
       await result(
@@ -196,6 +197,7 @@ test("Windows per-turn consent, same-frame screenshot, revocation and reconnect"
   await expect(
     mainWindow.getByRole("button", { name: /Stop sharing|停止共享/ }),
   ).not.toBeVisible();
+  await expect.poll(() => mainWindow.evaluate(async () => (await window.electronAPI.computerObservation!.getState()).sharing)).toBeNull();
   expect((await result(await invoke("mcp_computer_observe"))).error.code).toBe(
     "computer_access_denied",
   );
@@ -385,7 +387,8 @@ test("Windows per-turn consent, same-frame screenshot, revocation and reconnect"
     }),
   ).toBeDisabled();
   await sharingSettings.close();
+  expect(await mainWindow.evaluate(async () => (await window.electronAPI.computerObservation!.getState()).sharing)).not.toBeNull();
   await expect(
     mainWindow.getByRole("button", { name: /Stop sharing|停止共享/ }),
-  ).toBeVisible();
+  ).toHaveCount(0);
 });
