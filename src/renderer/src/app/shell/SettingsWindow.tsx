@@ -10,35 +10,35 @@ import {
 	type GeneralSettings,
 } from "@/platform/rpc/general-settings-api";
 import { Icon } from "@/assets/icons";
-import ProviderSettingsPage from "@/widgets/settings/ProviderSettingsPage";
-import DefaultModelSettingsPage from "@/widgets/settings/DefaultModelSettingsPage";
-import PersonalizationSettingsPage from "@/widgets/settings/PersonalizationSettingsPage";
-import ArchivedSessionSettingsPage from "@/widgets/settings/ArchivedSessionSettingsPage";
-import ImportSettingsPage from "@/widgets/settings/ImportSettingsPage";
-import McpServersSettingsPage from "@/widgets/settings/McpServersSettingsPage";
-import SkillsSettingsPage from "@/widgets/settings/SkillsSettingsPage";
-import GeneralSettingsPage from "@/widgets/settings/GeneralSettingsPage";
-import AppearanceSettingsPage from "@/widgets/settings/AppearanceSettingsPage";
-import SearchSettingsPage from "@/widgets/settings/SearchSettingsPage";
-import StatisticsSettingsPage from "@/widgets/settings/StatisticsSettingsPage";
-import AboutSettingsPage from "@/widgets/settings/AboutSettingsPage";
-import GodotProjectsSettingsPage from "@/widgets/settings/GodotProjectsSettingsPage";
-import DocumentationSettingsPage from "@/widgets/settings/DocumentationSettingsPage";
-import KeyboardShortcutsSettingsPage from "@/widgets/settings/KeyboardShortcutsSettingsPage";
-import HooksSettingsPage from "@/widgets/settings/HooksSettingsPage";
-import BrowserSettingsPage from "@/widgets/settings/BrowserSettingsPage";
-import RemoteAccessSettingsPage from "@/widgets/settings/RemoteAccessSettingsPage";
-import ComputerObservationSettingsPage from "@/widgets/settings/ComputerObservationSettingsPage";
+import ProviderSettingsPage from "@/widgets/settings/pages/models/ProviderSettingsPage";
+import DefaultModelSettingsPage from "@/widgets/settings/pages/models/DefaultModelSettingsPage";
+import PersonalizationSettingsPage from "@/widgets/settings/pages/studio/PersonalizationSettingsPage";
+import ArchivedSessionSettingsPage from "@/widgets/settings/pages/resources/ArchivedSessionSettingsPage";
+import ImportSettingsPage from "@/widgets/settings/pages/resources/ImportSettingsPage";
+import McpServersSettingsPage from "@/widgets/settings/pages/extensions/McpServersSettingsPage";
+import SkillsSettingsPage from "@/widgets/settings/pages/extensions/SkillsSettingsPage";
+import GeneralSettingsPage from "@/widgets/settings/pages/studio/GeneralSettingsPage";
+import AppearanceSettingsPage from "@/widgets/settings/pages/studio/AppearanceSettingsPage";
+import SearchSettingsPage from "@/widgets/settings/pages/studio/SearchSettingsPage";
+import StatisticsSettingsPage from "@/widgets/settings/pages/studio/StatisticsSettingsPage";
+import AboutSettingsPage from "@/widgets/settings/pages/resources/AboutSettingsPage";
+import GodotProjectsSettingsPage from "@/widgets/settings/pages/workspace/GodotProjectsSettingsPage";
+import DocumentationSettingsPage from "@/widgets/settings/pages/resources/DocumentationSettingsPage";
+import KeyboardShortcutsSettingsPage from "@/widgets/settings/pages/studio/KeyboardShortcutsSettingsPage";
+import HooksSettingsPage from "@/widgets/settings/pages/extensions/HooksSettingsPage";
+import BrowserSettingsPage from "@/widgets/settings/pages/workspace/BrowserSettingsPage";
+import RemoteAccessSettingsPage from "@/widgets/settings/pages/workspace/RemoteAccessSettingsPage";
+import ComputerObservationSettingsPage from "@/widgets/settings/pages/workspace/ComputerObservationSettingsPage";
 import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";
-import DevelopmentEnvironmentSettingsPage from "@/widgets/settings/DevelopmentEnvironmentSettingsPage";
-import WorktreeSettingsPage from "@/widgets/settings/WorktreeSettingsPage";
-import PluginsSettingsPage from "@/widgets/settings/PluginsSettingsPage";
+import DevelopmentEnvironmentSettingsPage from "@/widgets/settings/pages/workspace/DevelopmentEnvironmentSettingsPage";
+import WorktreeSettingsPage from "@/widgets/settings/pages/workspace/WorktreeSettingsPage";
+import PluginsSettingsPage from "@/widgets/settings/pages/extensions/PluginsSettingsPage";
 import {
 	SETTINGS_SEARCH_ENTRIES,
 	isSettingsPageAvailable,
 	type SettingsPageKey,
 	type SettingsSearchEntry,
-} from "@/widgets/settings/settings-search-catalog";
+} from "@/widgets/settings/registry/settings-search-catalog";
 import styles from "./SettingsWindow.module.css";
 
 type MenuItem = Required<MenuProps>["items"][number];

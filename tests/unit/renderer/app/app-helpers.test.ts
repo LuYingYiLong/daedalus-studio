@@ -7,9 +7,9 @@ import {
 	getSessionSortTime,
 	insertUserBlockBeforeRequestAssistant,
 	mergeOptimisticUserBlocks,
-	normalizeLocalPathForCompare,
 	trimTimelineFromRequest
-} from "@/app/runtime/app-helpers";
+} from "@/domain/application/app-helpers";
+import { normalizeLocalPathForCompare } from "@/features/workspace/controllers/context-helpers";
 import type { TimelinePageState } from "@/domain/workbench/workbench-state";
 import type { TimelineBlock } from "@/platform/rpc/types";
 

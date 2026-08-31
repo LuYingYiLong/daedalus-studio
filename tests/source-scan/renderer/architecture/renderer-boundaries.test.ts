@@ -46,7 +46,7 @@ describe("renderer architecture boundaries", () => {
 	});
 
 	it("uses feature-owned controller entrypoints", () => {
-		const appController: string = readRepoFile("src", "renderer", "src", "app", "runtime", "useAppController.tsx");
+		const appController: string = readRepoFile("src", "renderer", "src", "app", "composition", "useAppController.tsx");
 		expect(appController).toContain("@/features/approval/controllers/useApprovalController");
 		expect(appController).toContain("@/features/workspace/controllers/useWorkspaceContextController");
 		expect(appController).toContain("@/features/composer/controllers/usePlanGoalController");

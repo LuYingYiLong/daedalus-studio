@@ -2,7 +2,7 @@ import { useRef, type Dispatch, type SetStateAction } from "react";
 import { saveImageAttachment, saveTextAttachment } from "@/platform/rpc/image-attachment-api";
 import type { AdditionalContextItem, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkspaceConfig } from "@/platform/rpc/types";
 import { createImageImportTask, prepareImageFile, type ImageImport } from "./image-import";
-import type { PastedTextAttachmentInput } from "@/features/conversation/pasted-text-attachment";
+import type { PastedTextAttachmentInput } from "@/domain/conversation/pasted-text-attachment";
 import {
 	CONTEXT_SUBTITLE_MAX_CHARS,
 	RECENT_CONTEXT_FILE_WINDOW_MS,

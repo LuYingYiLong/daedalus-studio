@@ -20,7 +20,7 @@ import ConversationTimelinePane, {
 } from "@/widgets/conversation/ConversationTimelinePane";
 import type { RetryUserMessagePayload } from "@/widgets/conversation/UserBubble";
 import MessageQueuePanel from "@/widgets/composer/MessageQueuePanel";
-import NewSessionHome from "./NewSessionHome";
+import NewSessionHome from "@/widgets/session-home/NewSessionHome";
 import ApprovalDialog from "@/widgets/approval/ApprovalDialog";
 import ToolBudgetDialog from "@/widgets/approval/ToolBudgetDialog";
 import ClarificationDialog from "@/widgets/clarification/ClarificationDialog";

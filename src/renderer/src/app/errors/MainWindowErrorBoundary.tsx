@@ -3,7 +3,7 @@ import {
 	createCompletedOnboardingPreferences,
 	createDefaultOnboardingPreferences
 } from "../../../../contracts/onboarding";
-import { waitForRendererPaint } from "../runtime/renderer-paint";
+import { waitForRendererPaint } from "../composition/renderer-paint";
 import styles from "./MainWindowErrorBoundary.module.css";
 
 const STUDIO_GITHUB_URL: string = "https://github.com/LuYingYiLong/daedalus-studio";

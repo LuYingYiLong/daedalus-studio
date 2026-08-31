@@ -9,7 +9,7 @@ import type { HomeDockPanelConfigs } from "../dock/home-dock-panel-config";
 import {
 	BOTTOM_DOCK_CLOSED_SIZE,
 	SIDE_DOCK_CLOSED_SIZE,
-} from "../dock/useHomePageDockController";
+} from "@/features/home/dock/useHomePageDockController";
 import ScheduledTasksPage from "@/widgets/scheduled-tasks/ScheduledTasksPage";
 import styles from "../HomePage.module.css";
 

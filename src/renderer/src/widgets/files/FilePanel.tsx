@@ -36,7 +36,7 @@ import type {
 import { createContextId } from "@/features/workspace/controllers/context-helpers";
 import MonacoFileEditor, { type FileBuffer } from "./MonacoFileEditor";
 import FileMediaPreview from "./FileMediaPreview";
-import { FILE_RUNTIME_BUFFERS } from "./file-runtime-buffers";
+import { FILE_RUNTIME_BUFFERS } from "@/features/files/file-runtime-buffers";
 import styles from "./FilePanel.module.css";
 
 type WorkspaceFsEntry = {

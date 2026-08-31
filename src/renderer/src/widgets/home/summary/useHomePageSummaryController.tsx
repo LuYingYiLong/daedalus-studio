@@ -18,10 +18,10 @@ import type { WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launc
 import type { MessageInstance } from "antd/es/message/interface";
 import { Icon } from "@/assets/icons";
 import { useGitActionDialogController } from "@/features/git/useGitActionDialogController";
-import { isGodotScenePath, getPathBasename } from "../layout/home-layout-model";
-import useSessionSummaryOverview from "./useSessionSummaryOverview";
-import { formatSourceSubtitle } from "./session-overview-formatters";
-import styles from "../HomePage.module.css";
+import { isGodotScenePath, getPathBasename } from "@/domain/session/home-layout-model";
+import useSessionSummaryOverview from "@/features/home/summary/useSessionSummaryOverview";
+import { formatSourceSubtitle } from "@/domain/session/session-overview-formatters";
+import styles from "@/widgets/home/HomePage.module.css";
 
 export const SUMMARY_PREVIEW_LIMIT: number = 3;
 export const SUMMARY_SEE_MORE_LIMIT: number = 100;

@@ -12,7 +12,7 @@ describe("KeyboardShortcutsSettingsPage", () => {
 			"settings",
 			"KeyboardShortcutsSettingsPage.tsx"
 		);
-		const motionCssSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "SettingsPageMotion.module.css");
+		const motionCssSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "components", "SettingsPageMotion.module.css");
 		const main: string = readRepoFile("src", "main", "index.ts");
 
 		expect(settingsWindow).toContain('"keyboard_shortcuts"');

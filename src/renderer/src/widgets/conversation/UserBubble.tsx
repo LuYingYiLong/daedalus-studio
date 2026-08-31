@@ -7,12 +7,8 @@ import type { AdditionalContextItem } from "@/platform/rpc/types";
 import AdditionalContextStrip from "./AdditionalContextStrip";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import MarkdownContent from "../markdown/MarkdownContent";
-
-export type RetryUserMessagePayload = {
-	requestId: string;
-	message: string;
-	additionalContext: AdditionalContextItem[];
-};
+import type { RetryUserMessagePayload } from "@/domain/conversation/retry-user-message";
+export type { RetryUserMessagePayload } from "@/domain/conversation/retry-user-message";
 
 export type UserBubbleProps = {
 	entryId?: string;

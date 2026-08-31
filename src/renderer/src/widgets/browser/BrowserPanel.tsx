@@ -27,8 +27,8 @@ import {
 import styles from "./BrowserPanel.module.css";
 import { subscribeNativeViewOcclusion } from "./native-view-occlusion";
 import { Icon } from "@/assets/icons";
-import type { DockPanelPlacement } from "@/widgets/dock/DockPanelTabs";
-import { registerBrowserRuntime, updateBrowserRuntime } from "./browser-runtime-registry";
+import type { DockPanelPlacement } from "@/domain/session/dock-panels";
+import { registerBrowserRuntime, updateBrowserRuntime } from "@/features/browser/browser-runtime-registry";
 
 type BrowserPanelProps = {
 	panelKey: string;

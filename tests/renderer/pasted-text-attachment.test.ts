@@ -6,7 +6,7 @@ import {
 	getComposerPasteOrigin,
 	isLongPastedText,
 	resolveComposerPasteRange
-} from "@/features/conversation/pasted-text-attachment";
+} from "@/domain/conversation/pasted-text-attachment";
 
 describe("pasted text attachments", () => {
 	it("uses a 256 character long-text threshold", () => {

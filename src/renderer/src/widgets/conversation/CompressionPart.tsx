@@ -5,7 +5,7 @@ import { Collapse, Typography } from "antd";
 import React, { memo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import MarkdownContent from "../markdown/MarkdownContent";
-import { useTimelineDisclosure } from "@/features/conversation/timeline-disclosure-state";
+import { useTimelineDisclosure } from "@/widgets/conversation/state/timeline-disclosure-state";
 import styles from "./CompressionPart.module.css";
 
 export type TimelineCompressionPart = Extract<

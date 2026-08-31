@@ -56,6 +56,7 @@ describe("DefaultModelSettingsPage", () => {
 		expect(pageSource).toContain("disabled={!hasConfiguredProviders}");
 		expect(pageSource).toContain('t("settings.defaultModel.configureProvider")');
 		expect(pageSource).toContain("activate: false");
+		expect(pageSource).not.toContain("saveParams.model");
 	});
 
 	it("keeps the model routing page scrollable inside the preserved settings viewport", () => {

@@ -7,7 +7,7 @@ import {
 	type SessionOverviewResult,
 	type SessionOverviewSourceItem
 } from "@/platform/rpc/session-overview-api";
-import { formatSourceSubtitle } from "./session-overview-formatters";
+import { formatSourceSubtitle } from "@/domain/session/session-overview-formatters";
 import styles from "./SessionSourcesDialog.module.css";
 
 type SessionSourcesDialogProps = {

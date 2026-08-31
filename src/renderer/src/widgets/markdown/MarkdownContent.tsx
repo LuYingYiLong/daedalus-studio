@@ -13,7 +13,7 @@ import styles from "./MarkdownContent.module.css";
 import { MarkdownLink } from "./MarkdownResourceLink";
 import { transformMarkdownUrl } from "@/domain/markdown/markdown-url-transform";
 import { getFileExtensionForLanguage, normalizeHighlightLanguage as normalizeMarkdownHighlightLanguage } from "@/domain/markdown/file-icon";
-import { useTimelineScrollFrameCoordinator } from "@/features/conversation/timeline-scroll-frame-context";
+import { useTimelineScrollFrameCoordinator } from "@/widgets/conversation/state/timeline-scroll-frame-context";
 import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";
 import MermaidBlock from "./MermaidBlock";
 import "highlight.js/styles/github-dark.css";

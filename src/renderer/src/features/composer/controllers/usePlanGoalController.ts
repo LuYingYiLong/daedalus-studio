@@ -3,7 +3,7 @@ import type { AdditionalContextItem, AgentGoalState, PlanApprovalState, PlanClar
 import { approvePlan, revisePlan, submitPlanClarification, type PlanClarificationSubmission, type PlanResult } from "@/platform/rpc/plan-api";
 import { dismissGoal } from "@/platform/rpc/goal-api";
 import { getPlanApprovalFromResult, normalizePlanClarification } from "@/domain/run/backend-event-state";
-import { createPlanApprovalKey, createPlanClarificationKey } from "./plan-helpers";
+import { createPlanApprovalKey, createPlanClarificationKey } from "@/domain/composer/plan-helpers";
 import { createWorkflowTodoSnapshotFromPlanData } from "@/domain/composer/workflow-todo";
 import { isAgentGoalDismissed, isAgentGoalTerminal } from "@/domain/composer/goal-display";
 import { selectLatestGoalState } from "@/domain/composer/goal-state";
@@ -240,4 +240,3 @@ export default function usePlanGoalController(params: PlanGoalControllerParams):
 		handleTerminalGoalDismiss
 	};
 }
-

@@ -3,7 +3,7 @@ import { Icon } from "@/assets/icons";
 import { Collapse, Flex, Typography } from "antd";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { useTimelineDisclosure } from "@/features/conversation/timeline-disclosure-state";
+import { useTimelineDisclosure } from "@/widgets/conversation/state/timeline-disclosure-state";
 import styles from "./ProviderReconnectPart.module.css";
 
 export type TimelineProviderReconnectPart = Extract<TimelineBodyPart, { type: "provider_reconnect" }>;

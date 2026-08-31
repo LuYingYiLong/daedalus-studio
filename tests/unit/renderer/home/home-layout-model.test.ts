@@ -3,7 +3,7 @@ import {
 	getPathBasename,
 	isGodotScenePath,
 	isWorkspaceLaunchTargetId,
-} from "@/widgets/home/layout/home-layout-model";
+} from "@/domain/session/home-layout-model";
 
 describe("home layout model", () => {
 	it("recognizes supported launch targets and Godot scene files", () => {

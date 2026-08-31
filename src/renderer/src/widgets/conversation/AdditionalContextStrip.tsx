@@ -3,8 +3,8 @@ import { Icon } from "@/assets/icons";
 import { Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 import styles from "./AdditionalContextStrip.module.css";
-import { summarizeAdditionalContextItem } from "@/features/conversation/additional-context-display";
-import { AdditionalContextIcon } from "@/features/conversation/context-item-icon";
+import { summarizeAdditionalContextItem } from "@/domain/conversation/additional-context-display";
+import { AdditionalContextIcon } from "@/widgets/conversation/ContextItemIcon";
 
 export type AdditionalContextStripProps = {
 	items: AdditionalContextItem[];

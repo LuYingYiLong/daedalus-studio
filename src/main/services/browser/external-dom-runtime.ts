@@ -30,7 +30,6 @@ export function createExternalDomRuntime(presentation: {
 	let screenshotMask: HTMLElement | null = null;
 	let cursor: HTMLElement | null = null,
 		outline: HTMLElement | null = null,
-		badge: HTMLElement | null = null,
 		generation: string | null = null,
 		deadline = 0,
 		screenshotHidden = false,
@@ -57,7 +56,7 @@ export function createExternalDomRuntime(presentation: {
 		host?.remove();
 		screenshotMask = null;
 		host = null;
-		cursor = outline = badge = null;
+		cursor = outline = null;
 		screenshotHidden = false;
 	};
 	const positionCursor = (): void => {
@@ -79,14 +78,12 @@ export function createExternalDomRuntime(presentation: {
 		// 只清理失联残影，不再按最后一次工具调用的时间隐藏光标
 		leaseTimer = setTimeout(clearVisuals, 5000);
 	};
-	const activity = (kind: string, symbol = ""): void => {
+	const activity = (kind: string, settle = false): void => {
 		if (!host) return;
 		clearTimeout(activityTimer);
 		host.dataset.activity = kind;
-		if (badge) badge.textContent = symbol ? `AI ${symbol}` : "AI";
-		if (symbol)
+		if (settle)
 			activityTimer = setTimeout(() => {
-				if (badge) badge.textContent = "AI";
 				if (host) host.dataset.activity = "waiting";
 			}, 900);
 	};
@@ -106,9 +103,9 @@ export function createExternalDomRuntime(presentation: {
 		outline.style.cssText = `position:absolute;display:none;box-sizing:border-box;border:2px solid ${color};border-radius:4px;pointer-events:none`;
 		cursor = document.createElement("div");
 		cursor.style.cssText =
-			"position:absolute;left:0;top:0;display:flex;align-items:flex-end;gap:2px;pointer-events:none;filter:drop-shadow(0 1px 3px #0006)";
+			"position:absolute;left:0;top:0;will-change:transform;pointer-events:none";
 		const icon = document.createElement("div");
-		icon.style.cssText = "width:28px;height:28px;flex:none";
+		icon.style.cssText = "width:28px;height:28px;line-height:0";
 		// SVG 只来自 Studio 打包资源，网页和模型不能提供标记
 		icon.innerHTML = presentation.cursorSvg;
 		const svg = icon.querySelector("svg");
@@ -116,9 +113,7 @@ export function createExternalDomRuntime(presentation: {
 			svg.style.width = "100%";
 			svg.style.height = "100%";
 		}
-		badge = document.createElement("span");
-		badge.style.cssText = `font:600 11px/20px system-ui,sans-serif;white-space:nowrap;color:white;background:${color};padding:0 6px;border:1px solid #fff9;border-radius:6px`;
-		cursor.append(icon, badge);
+		cursor.append(icon);
 		shadow.append(outline, cursor);
 		document.documentElement.append(host);
 		// 尚未操作具体控件时停靠右上角，不暗示正在点击某个目标
@@ -484,7 +479,7 @@ export function createExternalDomRuntime(presentation: {
 				top: (direction === "up" ? -1 : 1) * innerHeight * pages,
 				behavior: "instant",
 			});
-			activity("scroll", direction === "up" ? "↑" : "↓");
+			activity("scroll", true);
 			observationId = "";
 			items = [];
 			return { url: location.href, scrollY, pages };

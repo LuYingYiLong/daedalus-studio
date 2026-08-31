@@ -3,7 +3,7 @@ import { Button, Progress, Result, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import type { BootstrapProgress } from "../bootstrap/bootstrap";
 import styles from "./BootSplash.module.css";
-import { waitForRendererPaint } from "../runtime/renderer-paint";
+import { waitForRendererPaint } from "../composition/renderer-paint";
 
 type BootSplashProps<TBootstrapData> = {
 	loadData: (

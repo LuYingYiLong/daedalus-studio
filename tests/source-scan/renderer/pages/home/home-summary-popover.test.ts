@@ -4,7 +4,7 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 describe("HomePage summary popover source", () => {
 	const source: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
 	const popoverSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "SessionSummaryPopover.tsx");
-	const controllerSource: string = readRepoFile("src", "renderer", "src", "widgets", "home", "useSessionSummaryOverview.ts");
+	const controllerSource: string = readRepoFile("src", "renderer", "src", "features", "home", "summary", "useSessionSummaryOverview.ts");
 	const apiSource: string = readRepoFile("src", "renderer", "src", "platform", "rpc", "session-overview-api.ts");
 	const styles: string = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.module.css");
 

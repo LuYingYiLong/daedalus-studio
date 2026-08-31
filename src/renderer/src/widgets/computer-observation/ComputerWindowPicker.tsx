@@ -2,7 +2,7 @@ import { Alert, Button, Empty, Input, Modal, Spin, Typography } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ComputerSource } from "../../../../contracts/computer-observation";
-import styles from "@/features/window-capture/WindowScreenshotDialog.module.css";
+import styles from "@/widgets/window-capture/WindowScreenshotDialog.module.css";
 import pickerStyles from "./ComputerWindowPicker.module.css";
 export default function ComputerWindowPicker({
 	open,

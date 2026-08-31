@@ -16,7 +16,7 @@ import CompressionPart from "./CompressionPart";
 import PluginTimelinePart from "./PluginTimelinePart";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import MarkdownContent from "../markdown/MarkdownContent";
-import { useTimelineDisclosure } from "@/features/conversation/timeline-disclosure-state";
+import { useTimelineDisclosure } from "@/widgets/conversation/state/timeline-disclosure-state";
 import TimelineActivityGroup from "./TimelineActivityGroup";
 import {
 	getTimelinePartKey,

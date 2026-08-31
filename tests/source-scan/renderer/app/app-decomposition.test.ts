@@ -7,7 +7,7 @@ describe("App decomposition", () => {
 		const lines: number = source.split(/\r?\n/).length;
 
 		expect(lines).toBeLessThan(180);
-		expect(source).toContain('from "../runtime/useAppController"');
+		expect(source).toContain('from "../composition/useAppController"');
 		expect(source).toContain("<HomePage {...homePageProps} />");
 		expect(source).toContain("<WorkspaceProjectDialog");
 		expect(source).not.toContain("@/platform/rpc/session-api");
@@ -16,7 +16,7 @@ describe("App decomposition", () => {
 	});
 
 	it("keeps domain controllers outside App", () => {
-		const controllerSource: string = readRepoFile("src", "renderer", "src", "app", "runtime", "useAppController.tsx");
+		const controllerSource: string = readRepoFile("src", "renderer", "src", "app", "composition", "useAppController.tsx");
 		expect(controllerSource).toContain("useApprovalController");
 		expect(controllerSource).toContain("useWorkspaceContextController");
 		expect(controllerSource).toContain("useAppRuntimeEventController");

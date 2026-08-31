@@ -5,8 +5,8 @@ import WorkspaceProjectDialog from "@/widgets/workspace/WorkspaceProjectDialog";
 import type { WorkspaceConfig } from "@/platform/rpc/types";
 import styles from "./App.module.css";
 import type { BootstrapData } from "../bootstrap/bootstrap";
-import useAppController from "../runtime/useAppController";
-import { waitForRendererPaint } from "../runtime/renderer-paint";
+import useAppController from "../composition/useAppController";
+import { waitForRendererPaint } from "../composition/renderer-paint";
 
 type AppProps = {
 	bootstrapData: BootstrapData;

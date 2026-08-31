@@ -1,7 +1,7 @@
 import { Alert, Button, Descriptions, Input, List, Select, Space, Switch, Tag, Typography } from "antd";
 import type React from "react";
-import type { PluginUiNode } from "./plugin-ui-schema";
-import { parsePluginUiView } from "./plugin-ui-schema";
+import type { PluginUiNode } from "@/features/plugins/plugin-ui-schema";
+import { parsePluginUiView } from "@/features/plugins/plugin-ui-schema";
 
 export default function PluginPanelHost({ view, onAction }: { view: unknown; onAction?: (action: string, value?: unknown) => void }): React.JSX.Element {
 	return <Space direction="vertical" size="small" style={{ width: "100%" }}>{parsePluginUiView(view).map((node, index) => {

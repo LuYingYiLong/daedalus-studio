@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isSettingsPageAvailable,
   SETTINGS_SEARCH_ENTRIES,
-} from "@/widgets/settings/settings-search-catalog";
+} from "@/widgets/settings/registry/settings-search-catalog";
 import en from "../../../../src/renderer/src/platform/i18n/locales/en-US/common.json";
 import zh from "../../../../src/renderer/src/platform/i18n/locales/zh-CN/common.json";
 

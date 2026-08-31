@@ -6,7 +6,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import MarkdownContent from "../markdown/MarkdownContent";
 import styles from "./ThinkingPart.module.css";
-import { useTimelineDisclosure } from "@/features/conversation/timeline-disclosure-state";
+import { useTimelineDisclosure } from "@/widgets/conversation/state/timeline-disclosure-state";
 
 export type TimelineThinkingPart = Extract<TimelineBodyPart, { type: "thinking" }>;
 

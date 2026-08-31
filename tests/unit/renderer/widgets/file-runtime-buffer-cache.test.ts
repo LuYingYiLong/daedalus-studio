@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FileRuntimeBufferCache } from "@/widgets/files/file-runtime-buffer-cache";
+import { FileRuntimeBufferCache } from "@/features/files/file-runtime-buffer-cache";
 
 type TestBuffer = { content: string; savedContent?: string; isDirty: boolean };
 

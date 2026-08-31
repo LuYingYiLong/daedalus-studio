@@ -4,7 +4,7 @@ import { Button, Collapse, Spin, Tag, Tooltip } from "antd";
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getToolRecovery, readTerminalDisplay as readSharedTerminalDisplay, isTerminalCommandPart, isTimelineToolEventType, type TerminalDisplay as SharedTerminalDisplay, type TimelineToolPart, type ToolRecoveryDisplay } from "@/domain/conversation/tool-part-data";
-import { useTimelineDisclosure } from "@/features/conversation/timeline-disclosure-state";
+import { useTimelineDisclosure } from "@/widgets/conversation/state/timeline-disclosure-state";
 import styles from "./TerminalPart.module.css";
 
 type TerminalStatus = "approval" | "running" | "success" | "failed" | "timed_out" | "cancelled" | "background";

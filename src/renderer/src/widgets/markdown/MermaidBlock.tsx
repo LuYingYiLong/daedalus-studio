@@ -3,7 +3,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "rea
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
-import { useTimelineScrollFrameCoordinator } from "@/features/conversation/timeline-scroll-frame-context";
+import { useTimelineScrollFrameCoordinator } from "@/widgets/conversation/state/timeline-scroll-frame-context";
 import {
 	getMermaidRenderErrorMessage,
 	renderMermaidDiagram,

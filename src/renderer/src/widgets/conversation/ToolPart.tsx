@@ -7,7 +7,7 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { getToolDisplayInfo } from "@/domain/conversation/tool-display";
 import { getToolStatus, type ToolStatus } from "@/domain/conversation/tool-status";
-import { useTimelineDisclosure } from "@/features/conversation/timeline-disclosure-state";
+import { useTimelineDisclosure } from "@/widgets/conversation/state/timeline-disclosure-state";
 import ToolFileDiff from "./ToolFileDiff";
 import { getFileEditBatch, getSourceFolderId, getToolRecovery, isTimelineToolEventType, type FileEditBatchSummary, type FileEditSummaryItem, type ToolRecoveryDisplay } from "@/domain/conversation/tool-part-data";
 

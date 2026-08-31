@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TFunction } from "i18next";
 import type { AdditionalContextItem } from "@/platform/rpc/types";
-import { summarizeAdditionalContextItem } from "@/features/conversation/additional-context-display";
+import { summarizeAdditionalContextItem } from "@/domain/conversation/additional-context-display";
 
 const EN_DISPLAY: Record<string, string> = {
 	"chat.contextStrip.display.selection": "Selection",

@@ -31,8 +31,8 @@ import {
 } from "@/domain/conversation/conversation-search-highlight";
 import styles from "./MessageList.module.css";
 import { isNearBottomByMetrics } from "@/domain/conversation/message-list-virtual";
-import { TimelineDisclosureProvider } from "@/features/conversation/timeline-disclosure-state";
-import { TimelineScrollFrameProvider } from "@/features/conversation/timeline-scroll-frame-context";
+import { TimelineDisclosureProvider } from "@/widgets/conversation/state/timeline-disclosure-state";
+import { TimelineScrollFrameProvider } from "@/widgets/conversation/state/timeline-scroll-frame-context";
 import UserBubble, { type RetryUserMessagePayload } from "./UserBubble";
 import MessageSelectionOverlay from "./MessageSelectionOverlay";
 import DividerPart from "./DividerPart";

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import SharedVisualProviders from "@/app/shell/SharedVisualProviders";
 import { resolveSystemLanguage, type ResolvedLanguage } from "@/platform/i18n";
-import type { ResolvedTheme } from "@/ui/styles/studio-theme";
+import type { ResolvedTheme } from "@/domain/theme/studio-theme-preference";
 import { DEFAULT_STUDIO_THEME_COLOR } from "../../../contracts/theme-color";
 import {
 	DEFAULT_STUDIO_CODE_FONT_SIZE,

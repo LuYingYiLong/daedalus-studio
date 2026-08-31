@@ -4,30 +4,14 @@ import type * as MonacoNamespace from "monaco-editor";
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FileTabPreferences } from "@/domain/session/session-layout";
+import type { FileBuffer } from "@/domain/files/file-buffer";
 import { createContextId } from "@/features/workspace/controllers/context-helpers";
 import { copyTextToClipboard, readTextFromClipboard } from "@/platform/electron/clipboard";
 import type { AdditionalContextItem, WorkspaceConfig } from "@/platform/rpc/types";
 import { Icon } from "@/assets/icons";
 import styles from "./MonacoFileEditor.module.css";
 
-export type FileBuffer = {
-	content: string;
-	savedContent?: string;
-	isDirty: boolean;
-	sha256: string;
-	modifiedAtMs: number;
-	byteSize: number;
-	readable: boolean;
-	binary: boolean;
-	oversized: boolean;
-	loading: boolean;
-	saving: boolean;
-	conflict: boolean;
-	error: string | null;
-	mediaUrl?: string;
-	mediaMimeType?: string;
-	mediaKind?: "image" | "audio" | "video";
-};
+export type { FileBuffer } from "@/domain/files/file-buffer";
 
 type MonacoApi = typeof MonacoNamespace;
 

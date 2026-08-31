@@ -3,7 +3,7 @@ import type {
 	WorktreeEligibilityResult,
 	WorktreeEligibilitySource,
 } from "@/platform/rpc/workspace-api";
-import { resolveWorktreeDisabledReason } from "@/app/runtime/hooks/useHomeWorkspaceResourcesController";
+import { resolveWorktreeDisabledReason } from "@/features/workspace/controllers/useHomeWorkspaceResourcesController";
 
 function createSource(
 	overrides: Partial<WorktreeEligibilitySource> = {},

@@ -46,6 +46,7 @@ import WorktreeCreationOptions, {
 } from "@/widgets/composer/WorktreeCreationOptions";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import { workspaceSupportsWorktrees } from "@/domain/workspace/worktree-capability";
+import type { SessionArchiveContext } from "@/domain/workspace/session-archive-context";
 import DeleteWorkspaceDialog from "./DeleteWorkspaceDialog";
 import WorkspaceProjectDialog from "./WorkspaceProjectDialog";
 import {
@@ -73,7 +74,7 @@ import {
 	getSessionOriginKind,
 	getSessionProjectWorkspaceId,
 	type SessionOriginKind,
-} from "./workspace-tree-model";
+} from "@/domain/workspace/workspace-tree-model";
 import styles from "./WorkspaceTree.module.css";
 
 export type WorkspaceTreeProps = {
@@ -113,9 +114,7 @@ export type WorkspaceTreeProps = {
 	onWorkspaceProjectCreated?: (workspace: WorkspaceConfig) => void;
 };
 
-export type SessionArchiveContext = {
-	wasActive: boolean;
-};
+export type { SessionArchiveContext } from "@/domain/workspace/session-archive-context";
 
 type ProjectTreeNode = TreeDataNode & {
 	kind: "workspace" | "session" | "empty";

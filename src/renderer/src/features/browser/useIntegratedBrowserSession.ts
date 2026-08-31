@@ -6,14 +6,14 @@ import {
 	type DockLayoutPreferences,
 	type SessionLayoutPreferences,
 } from "@/domain/session/session-layout";
-import { createDockTab } from "@/widgets/dock/DockPanelTabs";
+import { createDockTab } from "@/domain/session/dock-panels";
 import { createBackendClient } from "@/platform/rpc/transport/backend-client";
 import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
 import {
 	findBrowserRuntime,
 	waitForBrowserRuntime,
 	type BrowserRuntimeRegistration,
-} from "@/widgets/browser/browser-runtime-registry";
+} from "@/features/browser/browser-runtime-registry";
 import { getCachedClientPreferences } from "@/platform/rpc/client-preferences-api";
 
 export type IntegratedBrowserSessionParams = {

@@ -2,7 +2,6 @@ import { theme as antdTheme, type ThemeConfig } from "antd";
 import {
 	createStudioAccentPalette,
 	DEFAULT_STUDIO_THEME_COLOR,
-	type ResolvedStudioTheme,
 	type StudioAccentPalette,
 } from "../../../../contracts/theme-color";
 import {
@@ -15,6 +14,11 @@ import {
 	normalizeStudioFontFamily,
 	normalizeStudioFontSize,
 } from "../../../../contracts/studio-fonts";
+import {
+	resolveThemePreference,
+	type ResolvedTheme,
+	type ThemePreference,
+} from "@/domain/theme/studio-theme-preference";
 
 export {
 	createStudioAccentPalette,
@@ -22,9 +26,13 @@ export {
 } from "../../../../contracts/theme-color";
 export type { StudioAccentPalette } from "../../../../contracts/theme-color";
 
-export type ResolvedTheme = ResolvedStudioTheme;
-export type ThemePreference = ResolvedTheme | "system";
 export type StudioThemeVariant = "desktop" | "mobile";
+
+export {
+	resolveThemePreference,
+	type ResolvedTheme,
+	type ThemePreference,
+} from "@/domain/theme/studio-theme-preference";
 
 type StudioThemeColors = {
 	bg: string;
@@ -66,13 +74,6 @@ export {
 	DEFAULT_STUDIO_UI_FONT_SIZE,
 	applyStudioFontVariables,
 } from "../../../../contracts/studio-fonts";
-
-export function resolveThemePreference(
-	themePreference: ThemePreference,
-	systemTheme: ResolvedTheme,
-): ResolvedTheme {
-	return themePreference === "system" ? systemTheme : themePreference;
-}
 
 export function createStudioTheme(
 	resolvedTheme: ResolvedTheme,

@@ -3,7 +3,7 @@ import ShinyText from "@/ui/ShinyText";
 import { Collapse, CollapseProps, GetProp } from "antd";
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useTimelineDisclosure } from "@/features/conversation/timeline-disclosure-state";
+import { useTimelineDisclosure } from "@/widgets/conversation/state/timeline-disclosure-state";
 import {
 	getTimelineActivityLabel,
 	type TimelineActivityGroupSegment,

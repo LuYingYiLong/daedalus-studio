@@ -8,7 +8,7 @@ import type { WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launc
 import {
 	DEFAULT_WORKSPACE_LAUNCH_TARGET_ID,
 } from "@/domain/workspace/workspace-launch";
-import { isWorkspaceLaunchTargetId } from "../layout/home-layout-model";
+import { isWorkspaceLaunchTargetId } from "@/domain/session/home-layout-model";
 
 export type WorkspaceLaunchTarget = {
 	id: WorkspaceLaunchTargetId;

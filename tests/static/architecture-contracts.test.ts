@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -25,6 +25,62 @@ function collectSourceFiles(directory: string): string[] {
 }
 
 describe("静态架构契约", () => {
+	it("维护 renderer 分层的依赖方向", () => {
+		const rules: Array<{ directory: string; forbidden: RegExp }> = [
+			{ directory: "domain", forbidden: /@\/(?:app|features|widgets|ui|platform\/(?:runtime|electron))\//u },
+			{ directory: "features", forbidden: /@\/(?:app|widgets)\//u },
+			{ directory: "widgets", forbidden: /@\/app\//u },
+			{ directory: "ui", forbidden: /@\/(?:app|features|widgets)\//u },
+		];
+		const violations: string[] = [];
+		for (const rule of rules) {
+			for (const filePath of collectSourceFiles(`src/renderer/src/${rule.directory}`)) {
+				const source: string = readFileSync(filePath, "utf8");
+				if (rule.forbidden.test(source)) {
+					violations.push(`${relative(repositoryRoot, filePath)}:${rule.directory}`);
+				}
+			}
+		}
+		expect(violations).toEqual([]);
+	});
+
+	it("Settings 页面按产品域分组，Home 仅负责页面组装", () => {
+		const settingsRoot: string = join(repositoryRoot, "src/renderer/src/widgets/settings");
+		const rootPages: string[] = readdirSync(settingsRoot).filter((entry: string): boolean => /SettingsPage\.tsx$/u.test(entry));
+		expect(rootPages).toEqual([]);
+		for (const section of ["models", "studio", "extensions", "workspace", "resources"]) {
+			expect(statSync(join(settingsRoot, "pages", section)).isDirectory()).toBe(true);
+		}
+
+		const homePage: string = readSource("src/renderer/src/widgets/home/HomePage.tsx");
+		expect(homePage).toContain("@/features/home/dock/useHomePageDockController");
+		expect(homePage).toContain("@/features/home/surface/useHomeSurfaceController");
+		const homeSurface: string = readSource("src/renderer/src/widgets/home/surface/HomeChatSurface.tsx");
+		expect(homeSurface).toContain("@/widgets/session-home/NewSessionHome");
+	});
+
+	it("应用级 runtime 不重新成为业务 controller 垃圾桶", () => {
+		const legacyRuntime: string = join(
+			repositoryRoot,
+			"src/renderer/src/app/runtime",
+		);
+		expect(existsSync(legacyRuntime)).toBe(false);
+
+		const applicationHooks: string[] = collectSourceFiles(
+			"src/renderer/src/features/application/hooks",
+		);
+		expect(applicationHooks.some((filePath: string): boolean =>
+			filePath.endsWith("useAppRuntimeEventController.ts")
+		)).toBe(true);
+
+		const composerControllers: string[] = collectSourceFiles(
+			"src/renderer/src/features/composer/controllers",
+		);
+		expect(composerControllers.some((filePath: string): boolean =>
+			filePath.endsWith("useComposerRunController.ts")
+		)).toBe(true);
+	});
+
 	it("所有 Electron 窗口都启用隔离并关闭 Node 集成", () => {
 		const mainSource: string = readSource("src/main/index.ts");
 

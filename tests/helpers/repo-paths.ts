@@ -19,7 +19,7 @@ export function readAppImplementation(): string {
 		["src", "renderer", "src", "features", "workspace", "controllers", "context-helpers.ts"],
 		["src", "renderer", "src", "app", "runtime", "hooks", "useAppEventBridge.ts"],
 		["src", "renderer", "src", "features", "composer", "controllers", "usePlanGoalController.ts"],
-		["src", "renderer", "src", "features", "composer", "controllers", "plan-helpers.ts"],
+		["src", "renderer", "src", "domain", "composer", "plan-helpers.ts"],
 		["src", "renderer", "src", "features", "conversation", "controllers", "useTimelineController.ts"],
 		["src", "renderer", "src", "domain", "run", "backend-event-state.ts"]
 	];

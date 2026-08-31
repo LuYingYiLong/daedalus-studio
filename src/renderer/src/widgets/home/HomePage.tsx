@@ -42,7 +42,7 @@ import {
 } from "@/widgets/workspace/WorkspaceTree";
 import type { ConversationTimelinePaneHandle } from "@/widgets/conversation/ConversationTimelinePane";
 import type { ComposerCompletionTrigger } from "@/domain/composer/composer-completion";
-import type { PastedTextAttachmentInput } from "@/features/conversation/pasted-text-attachment";
+import type { PastedTextAttachmentInput } from "@/domain/conversation/pasted-text-attachment";
 import type { RetryUserMessagePayload } from "@/widgets/conversation/UserBubble";
 import styles from "./HomePage.module.css";
 import HomeWorkspaceSidebar from "./workspace/HomeWorkspaceSidebar";
@@ -55,7 +55,7 @@ import useHomePageDockController, {
 	BOTTOM_DOCK_MAX_SIZE,
 	SIDE_DOCK_CLOSED_SIZE,
 	SIDE_DOCK_MAX_SIZE,
-} from "./dock/useHomePageDockController";
+} from "@/features/home/dock/useHomePageDockController";
 import useHomePageSummaryController, {
 	SUMMARY_PREVIEW_LIMIT,
 } from "./summary/useHomePageSummaryController";
@@ -63,7 +63,7 @@ import HomePageDialogs from "./summary/HomePageDialogs";
 import { createHomeDockPanelConfigs } from "./dock/home-dock-panel-config";
 import useHomeSurfaceController, {
 	type NewSessionOptions,
-} from "./surface/useHomeSurfaceController";
+} from "@/features/home/surface/useHomeSurfaceController";
 import useHomePageComposerController from "./surface/useHomePageComposerController";
 import useIntegratedBrowserSession from "@/features/browser/useIntegratedBrowserSession";
 import useHomePageLaunchController from "./surface/useHomePageLaunchController";

@@ -5,7 +5,7 @@ import {
 	getSelectedMenuKeys,
 	getSessionOriginKind,
 	getSessionProjectWorkspaceId,
-} from "@/widgets/workspace/workspace-tree-model";
+} from "@/domain/workspace/workspace-tree-model";
 
 describe("workspace tree model", () => {
 	it("filters temporary sessions and resolves worktree ownership", () => {

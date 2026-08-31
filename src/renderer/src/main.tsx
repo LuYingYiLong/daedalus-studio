@@ -9,7 +9,7 @@ import "react-diff-view/style/index.css";
 import "./ui/styles/global.css";
 import "./ui/styles/markdown.css";
 import { waitForStudioFonts } from "./ui/styles/studio-fonts";
-import { waitForGlobalStyles, waitForRendererPaint } from "./app/runtime/renderer-paint";
+import { waitForGlobalStyles, waitForRendererPaint } from "./app/composition/renderer-paint";
 import { configurePlatformRuntime } from "./platform/runtime/platform-runtime";
 import { desktopPlatformRuntime } from "./platform/runtime/desktop-platform-runtime";
 

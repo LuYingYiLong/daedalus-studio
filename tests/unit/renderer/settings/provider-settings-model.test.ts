@@ -6,7 +6,7 @@ import {
 	getVisibleCapabilities,
 	toCustomModelCapabilities,
 	toEditableCapabilities,
-} from "@/widgets/settings/provider-settings-model";
+} from "@/domain/settings/provider-settings-model";
 
 describe("provider settings model", () => {
 	it("creates an explicit default model form", () => {

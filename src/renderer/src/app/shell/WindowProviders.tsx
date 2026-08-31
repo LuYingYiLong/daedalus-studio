@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { App as AntdApp } from "antd";
-import useClientPreferencesController from "../runtime/hooks/useClientPreferencesController";
+import useClientPreferencesController from "@/features/application/hooks/useClientPreferencesController";
 import InputContextMenu from "@/ui/InputContextMenu";
 import styles from "./WindowProviders.module.css";
 import SharedVisualProviders from "./SharedVisualProviders";

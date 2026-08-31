@@ -14,7 +14,7 @@ describe("HomePage dock controller source", () => {
 		"src",
 		"renderer",
 		"src",
-		"widgets",
+		"features",
 		"home",
 		"dock",
 		"useHomePageDockController.ts",

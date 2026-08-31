@@ -11,33 +11,12 @@ import { fetchSessions } from "@/platform/rpc/session-api";
 import { fetchSlashCommands, type SlashCommandDefinition } from "@/platform/rpc/command-api";
 import { fetchSkills, type SkillSummary } from "@/platform/rpc/skill-api";
 import type { SessionListResult, WorkspaceListResult } from "@/platform/rpc/types";
+import type { BackendHealthResult } from "@/platform/rpc/bootstrap-api";
+import type { BootstrapData } from "@/domain/application/bootstrap-data";
 import type { SessionLayoutMap } from "@/domain/session/session-layout";
 
-export type BackendHealthResult = {
-	name: string;
-	version: string;
-	pid: number;
-	mode: string;
-	port: number;
-	multiClient: {
-		enabled: boolean;
-		protocolVersion: number;
-	};
-	logPath: string | null;
-};
-
-export type BootstrapData = {
-	backendHealth: BackendHealthResult;
-	clientPreferences: ClientPreferences;
-	generalSettings: GeneralSettings;
-	providerModelSelection: ProviderModelSelection;
-	workspaceList: WorkspaceListResult;
-	sessionList: SessionListResult;
-	slashCommands: SlashCommandDefinition[];
-	skills: SkillSummary[];
-	sessionLayouts: SessionLayoutMap;
-	workspaceTreeOrder: WorkspaceTreeOrderPreferences;
-};
+export type { BackendHealthResult } from "@/platform/rpc/bootstrap-api";
+export type { BootstrapData } from "@/domain/application/bootstrap-data";
 
 type InitialSettingsData = Pick<BootstrapData,
 	"clientPreferences"

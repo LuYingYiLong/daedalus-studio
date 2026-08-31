@@ -8,7 +8,7 @@ Composer 的“上下文与模式 → 窗口截图”仅在 Windows 桌面 Studi
 
 - `src/contracts/window-capture.ts`：可选平台能力。没有 Backend RPC、LLM 工具或 Remote 权限扩展。
 - `src/main/services/window-capture/`：可注入的捕获适配器、串行队列、超时、临时来源映射，以及 Windows / Studio 主窗口顶层 frame 的 IPC 门禁。
-- `src/renderer/src/features/window-capture/`：独立状态控制器、选择器和 CSS Module。来源标题、缩略图及 ID 仅在选择期间驻留内存。
+- `src/renderer/src/widgets/window-capture/`：窗口截图选择器、预览和 CSS Module；窗口捕获运行时由 `features/window-capture` 相关平台控制器提供，来源标题、缩略图及 ID 仅在选择期间驻留内存。
 - `features/workspace/controllers/image-import.ts`：可等待、带导航校验的单图导入；复用普通附件保存和 workbench context。每张最多 5 MiB，每条消息最多 3 张、合计 12 MiB。
 - 捕获只请求 `types: ["window"]`，排除 Studio 进程与自身窗口。不移动、激活或恢复窗口，不绕过受保护内容。
 - Electron 必须枚举来源才能取得缩略图。高分辨率枚举结果仅序列化所选图像，不保留未选中的大图；PNG 尺寸使用实际输出尺寸，最长边 2560、不放大。

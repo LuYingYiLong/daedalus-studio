@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasQueuedFollowUpResponse } from "@/app/runtime/run-completion-notification";
+import { hasQueuedFollowUpResponse } from "@/domain/run/run-completion-notification";
 import type { MessageQueueStatus } from "@/platform/rpc/types";
 
 function createQueueState(

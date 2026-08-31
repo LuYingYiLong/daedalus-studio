@@ -100,7 +100,7 @@ describe("isolated browser execution against a local form", () => {
 		const shadow = findFeedback(root)?.shadowRoots?.[0];
 		expect(shadow?.shadowRootType).toBe("closed");
 		expect(JSON.stringify(shadow)).toContain('"localName":"svg"');
-		expect(JSON.stringify(shadow)).toContain('"nodeValue":"AI"');
+		expect(JSON.stringify(shadow)).not.toContain('"nodeValue":"AI"');
 		await page.screenshot({
 			path: "test-results/browser-feedback/reading.png",
 		});

@@ -5,7 +5,7 @@ import type { InputRef, MenuProps } from "antd";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createMessageTextAnchor, getMessageAnchorKey, getMessageSelectionContextId, resolveMessageTextAnchor } from "@/domain/conversation/message-text-anchor";
-import { useTimelineScrollFrameCoordinator } from "@/features/conversation/timeline-scroll-frame-context";
+import { useTimelineScrollFrameCoordinator } from "@/widgets/conversation/state/timeline-scroll-frame-context";
 import styles from "./MessageSelectionOverlay.module.css";
 
 type PositionedAnchor = { anchor: MessageTextAnchor; left: number; top: number };

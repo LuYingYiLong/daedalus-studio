@@ -5,9 +5,9 @@ import zhCN from "antd/locale/zh_CN";
 import i18n, { type ResolvedLanguage } from "@/platform/i18n";
 import {
 	createStudioTheme,
-	type ResolvedTheme,
 	type StudioThemeVariant,
 } from "@/ui/styles/studio-theme";
+import type { ResolvedTheme } from "@/domain/theme/studio-theme-preference";
 import { applyStudioAccentVariables } from "../../../../contracts/theme-color";
 import { applyStudioFontVariables } from "../../../../contracts/studio-fonts";
 import { Icon } from "@/assets/icons";

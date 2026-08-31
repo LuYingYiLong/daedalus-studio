@@ -58,7 +58,7 @@ import {
 	isLongPastedText,
 	resolveComposerPasteRange,
 	type PastedTextAttachmentInput,
-} from "@/features/conversation/pasted-text-attachment";
+} from "@/domain/conversation/pasted-text-attachment";
 import {
 	ADD_WORKSPACE_KEY,
 	COMPOSER_PLACEHOLDER_KEYS,

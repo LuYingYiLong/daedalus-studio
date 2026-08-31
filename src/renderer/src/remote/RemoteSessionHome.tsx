@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import remoteColorfulIconUrl from "@/assets/icons/remote-colorful.svg?url";
 import { Icon } from "@/assets/icons";
 import type { SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
-import { getNewSessionGreetingPeriod } from "@/widgets/home/surface/new-session-home-content";
+import { getNewSessionGreetingPeriod } from "@/domain/session/new-session-home-content";
 import { getRecentRemoteSessions } from "./remote-model";
 import styles from "./RemoteSessionHome.module.css";
 

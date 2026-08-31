@@ -11,7 +11,7 @@ import GitDiffReviewPanel from "@/widgets/git/review/GitDiffReviewPanel";
 import TerminalPanel from "@/widgets/terminal/TerminalPanel";
 import FilePanel from "@/widgets/files/FilePanel";
 import BrowserPanel from "@/widgets/browser/BrowserPanel";
-import TrajectoryPanel from "@/widgets/home/trajectory/TrajectoryPanel";
+import TrajectoryPanel from "@/widgets/trajectory/TrajectoryPanel";
 import type {
 	AdditionalContextItem,
 	WorkspaceConfig,
@@ -24,20 +24,21 @@ import {
 	createTerminalRuntimeId,
 	type BrowserPanelLayoutPreferences,
 	type DockLayoutPreferences,
-	type DockTabKind,
 	type DockTabPreferences,
 	type FilePanelLayoutPreferences,
 } from "@/domain/session/session-layout";
+import {
+	createDockTab,
+	getNextDockTabIndex,
+	reorderDockTabs,
+	type DockPanelActivationRequest,
+	type DockPanelKind,
+	type DockPanelPlacement,
+} from "@/domain/session/dock-panels";
 import styles from "./DockPanelTabs.module.css";
 
-export type DockPanelKind = DockTabKind;
-
-export type DockPanelPlacement = "side" | "bottom";
-
-export type DockPanelActivationRequest = {
-	id: number;
-	kind: DockPanelKind;
-};
+export type { DockPanelActivationRequest, DockPanelKind, DockPanelPlacement } from "@/domain/session/dock-panels";
+export { createDockTab, getNextDockTabIndex, reorderDockTabs } from "@/domain/session/dock-panels";
 
 export type DockPanelTabsProps = {
 	dockId: string;
@@ -111,55 +112,6 @@ function getPanelTitle(
 	return index === 1
 		? t("dock.tabs.browser")
 		: t("dock.tabs.browserIndexed", { index });
-}
-
-export function createDockTab(
-	dockId: string,
-	kind: DockPanelKind,
-	index: number,
-): DockTabPreferences {
-	return {
-		key: `${dockId}:${kind}:${index}`,
-		kind,
-		index,
-	};
-}
-
-export function getNextDockTabIndex(
-	tabs: DockTabPreferences[],
-	kind: DockPanelKind,
-): number {
-	return tabs
-		.filter((tab: DockTabPreferences): boolean => tab.kind === kind)
-		.reduce(
-			(nextIndex: number, tab: DockTabPreferences): number =>
-				Math.max(nextIndex, tab.index + 1),
-			1,
-		);
-}
-
-export function reorderDockTabs(
-	tabs: DockTabPreferences[],
-	sourceKey: string,
-	targetKey: string,
-): DockTabPreferences[] {
-	const sourceIndex: number = tabs.findIndex(
-		(tab: DockTabPreferences): boolean => tab.key === sourceKey,
-	);
-	const targetIndex: number = tabs.findIndex(
-		(tab: DockTabPreferences): boolean => tab.key === targetKey,
-	);
-	if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) {
-		return tabs;
-	}
-
-	const nextTabs: DockTabPreferences[] = [...tabs];
-	const [movedTab] = nextTabs.splice(sourceIndex, 1);
-	if (movedTab === undefined) {
-		return tabs;
-	}
-	nextTabs.splice(targetIndex, 0, movedTab);
-	return nextTabs;
 }
 
 function getTabIconName(kind: DockPanelKind): string {
