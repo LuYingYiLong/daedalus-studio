@@ -9,7 +9,11 @@ const mock = vi.hoisted(() => ({
   capabilities: {} as Record<string, boolean>,
   computerChanged: (_state: ComputerState): void => {},
   browserChanged: (_settings: { aiCdpEnabled: boolean }): void => {},
-  connectionChanged: (_event: { reconnected: boolean; state: "connected" | "disconnected" }): void => {},
+  connectionListeners: [] as Array<(event: { reconnected: boolean; state: "connected" | "disconnected" }) => void>,
+  connectionChanged: (event: { reconnected: boolean; state: "connected" | "disconnected" }): void => {
+    for (const listener of mock.connectionListeners) listener(event);
+  },
+  eventReceived: (_event: unknown): void => {},
   open: true,
 }));
 vi.mock("@/platform/rpc/transport/scheduled-task-tool-runtime", () => ({ attachScheduledTaskToolRuntime: vi.fn() }));
@@ -19,7 +23,11 @@ vi.mock("@/platform/rpc/transport/backend-rpc-client", () => ({
     close = () => { mock.open = false; };
     isOpen = () => mock.open;
     request = mock.request;
-    addConnectionListener = (listener: typeof mock.connectionChanged) => { mock.connectionChanged = listener; };
+    addConnectionListener = (listener: typeof mock.connectionChanged) => {
+      mock.connectionListeners.push(listener);
+      return () => { mock.connectionListeners = mock.connectionListeners.filter(candidate => candidate !== listener); };
+    };
+    addEventListener = (listener: typeof mock.eventReceived) => { mock.eventReceived = listener; return () => {}; };
   },
 }));
 
@@ -27,6 +35,7 @@ beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
   mock.open = true;
+  mock.connectionListeners = [];
   mock.features = { computerGrounding: 1, computerControl: 3 };
   mock.capabilities = {};
   mock.state = { enabled: true, available: true, groundingSupported: true, controlEnabled: false,
@@ -61,6 +70,7 @@ describe("computer grounding capability negotiation", () => {
     expect(mock.request.mock.calls.map(([method]) => method)).toEqual(["client.hello", "client.info", "client.capabilities.update"]);
     const hello = mock.request.mock.calls[0][1];
     expect(hello.capabilities).not.toHaveProperty("computerGrounding");
+		expect(hello.capabilities.godotRuntimeTest).toBe(true);
     expect(mock.capabilities).toMatchObject({ computerObservation: true, computerControl: false, computerGrounding: true });
   });
 
@@ -118,6 +128,7 @@ describe("computer grounding capability negotiation", () => {
     expect(updates().at(-1)?.[1].capabilities).not.toHaveProperty("computerGrounding");
     for (const [, params] of mock.request.mock.calls.filter(([method]) => method === "client.hello"))
       expect(params.capabilities).not.toHaveProperty("computerGrounding");
+		expect(mock.request.mock.calls.find(([method]) => method === "client.hello")?.[1].capabilities.godotRuntimeTest).toBe(true);
   });
 
   it("discards an old connection's pending capability calculation", async () => {

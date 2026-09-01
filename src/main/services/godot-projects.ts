@@ -17,6 +17,8 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 
 const PLUGIN_RESOURCE_PATH: string = "res://addons/daedalus_bridge/plugin.cfg";
 const PLUGIN_RELATIVE_ROOT: string = "addons/daedalus_bridge";
+const RUNTIME_TEST_AUTOLOAD_NAME: string = "DaedalusRuntimeTest";
+const RUNTIME_TEST_AUTOLOAD_RESOURCE_PATH: string = "res://addons/daedalus_bridge/scripts/runtime/runtime_test_agent.gd";
 const PROJECT_STATE_SCHEMA_VERSION: 2 = 2;
 const MAX_ARCHIVE_BYTES: number = 64 * 1024 * 1024;
 const MAX_FILE_COUNT: number = 2_000;
@@ -442,6 +444,49 @@ export function updateEditorPluginEnabled(
 		? section.text.replace(enabledPattern, valueLine)
 		: `${section.text.trimEnd()}${lineEnding}${valueLine}${lineEnding}${lineEnding}`;
 	return `${projectText.slice(0, section.start)}${nextSection}${projectText.slice(section.end)}`;
+}
+
+export function updateAutoloadSingleton(
+	projectText: string,
+	autoloadName: string,
+	resourcePath: string,
+	enabled: boolean
+): string {
+	const lineEnding: string = projectText.includes("\r\n") ? "\r\n" : "\n";
+	const escapedName: string = autoloadName.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+	const settingPattern: RegExp = new RegExp(`^[^\\S\\r\\n]*${escapedName}[^\\S\\r\\n]*=.*$`, "mu");
+	const valueLine: string = `${autoloadName}=${JSON.stringify(`*${resourcePath}`)}`;
+	const section: ProjectSection | null = findProjectSection(projectText, "autoload");
+	if (section === null) {
+		if (!enabled) return projectText;
+		return `${projectText.trimEnd()}${lineEnding}${lineEnding}[autoload]${lineEnding}${valueLine}${lineEnding}`;
+	}
+	if (!enabled) {
+		const nextSection: string = section.text.replace(settingPattern, "");
+		return `${projectText.slice(0, section.start)}${nextSection}${projectText.slice(section.end)}`;
+	}
+	const nextSection: string = settingPattern.test(section.text)
+		? section.text.replace(settingPattern, valueLine)
+		: `${section.text.trimEnd()}${lineEnding}${valueLine}${lineEnding}${lineEnding}`;
+	return `${projectText.slice(0, section.start)}${nextSection}${projectText.slice(section.end)}`;
+}
+
+export function updateDaedalusBridgeEnabled(projectText: string, enabled: boolean): string {
+	if (enabled) {
+		const autoloadSection: ProjectSection | null = findProjectSection(projectText, "autoload");
+		const existingAutoload: RegExpMatchArray | null = autoloadSection?.text.match(
+			new RegExp(`^[^\\S\\r\\n]*${RUNTIME_TEST_AUTOLOAD_NAME}[^\\S\\r\\n]*=[^\\S\\r\\n]*"\\*?([^"]+)"`, "mu")
+		) ?? null;
+		if (existingAutoload !== null && existingAutoload[1] !== RUNTIME_TEST_AUTOLOAD_RESOURCE_PATH) {
+			throw new Error(`${RUNTIME_TEST_AUTOLOAD_NAME} is already assigned to another script.`);
+		}
+	}
+	return updateAutoloadSingleton(
+		updateEditorPluginEnabled(projectText, PLUGIN_RESOURCE_PATH, enabled),
+		RUNTIME_TEST_AUTOLOAD_NAME,
+		RUNTIME_TEST_AUTOLOAD_RESOURCE_PATH,
+		enabled
+	);
 }
 
 function readPluginVersion(pluginConfigText: string): string | null {
@@ -1053,7 +1098,7 @@ class GodotProjectsService {
 			}
 			await this.writeProjectFileAtomic(
 				projectFile,
-				updateEditorPluginEnabled(originalProjectText, PLUGIN_RESOURCE_PATH, enabled)
+				updateDaedalusBridgeEnabled(originalProjectText, enabled)
 			);
 			projectFileUpdated = true;
 			await rm(backupPlugin, { recursive: true, force: true });
@@ -1111,7 +1156,7 @@ class GodotProjectsService {
 		const original: string = await readFile(projectFile, "utf8");
 		await this.writeProjectFileAtomic(
 			projectFile,
-			updateEditorPluginEnabled(original, PLUGIN_RESOURCE_PATH, enabled)
+			updateDaedalusBridgeEnabled(original, enabled)
 		);
 	}
 
@@ -1124,6 +1169,25 @@ class GodotProjectsService {
 		delete this.state.pendingErrors[projectPath];
 		await this.saveState();
 		return await this.scan();
+	}
+
+	public async prepareRuntimeTest(projectPathInput: string): Promise<{ prepared: true }> {
+		const projectPath: string | null = await this.normalizeProjectPath(projectPathInput);
+		if (projectPath === null) throw new Error("Godot project is unavailable.");
+		if (
+			!existsSync(join(projectPath, PLUGIN_RELATIVE_ROOT, "plugin.cfg"))
+			|| !existsSync(join(projectPath, PLUGIN_RELATIVE_ROOT, "scripts", "runtime", "runtime_test_agent.gd"))
+		) {
+			throw new Error("Daedalus Bridge with Runtime Test support is not installed in this project.");
+		}
+		const projectFile: string = join(projectPath, "project.godot");
+		const original: string = await readFile(projectFile, "utf8");
+		if (!readEnabledPlugins(original).includes(PLUGIN_RESOURCE_PATH)) {
+			throw new Error("Daedalus Bridge must be enabled before starting a runtime test.");
+		}
+		const updated: string = updateDaedalusBridgeEnabled(original, true);
+		if (updated !== original) await this.writeProjectFileAtomic(projectFile, updated);
+		return { prepared: true };
 	}
 
 	private async applyUninstall(projectPath: string): Promise<void> {
@@ -1148,7 +1212,7 @@ class GodotProjectsService {
 			}
 			await this.writeProjectFileAtomic(
 				projectFile,
-				updateEditorPluginEnabled(original, PLUGIN_RESOURCE_PATH, false)
+				updateDaedalusBridgeEnabled(original, false)
 			);
 			projectFileUpdated = true;
 			await rm(trashPlugin, { recursive: true, force: true });
@@ -1297,6 +1361,9 @@ class GodotProjectsService {
 		);
 		ipcMain.handle("godot-projects:set-enabled", async (_event, projectPath: string, enabled: boolean): Promise<GodotProjectScanResult> =>
 			await this.setEnabled(projectPath, enabled)
+		);
+		ipcMain.handle("godot-projects:prepare-runtime-test", async (_event, projectPath: string): Promise<{ prepared: true }> =>
+			await this.prepareRuntimeTest(projectPath)
 		);
 		ipcMain.handle("godot-projects:upgrade-all", async (): Promise<GodotProjectScanResult> => await this.upgradeAll());
 		ipcMain.handle("godot-projects:retry-pending", async (): Promise<GodotProjectScanResult> => await this.retryPending());

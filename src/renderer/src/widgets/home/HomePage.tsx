@@ -648,7 +648,6 @@ function HomePage({
 		mainSurface === "chat" ? activeSessionId : null,
 		workspaceForActions?.id ?? null,
 	);
-
 	const toggleWorkspaceSidebar = useCallback((): void => {
 		scheduleWorkspaceSidebarSave({
 			...visualWorkspaceSidebarRef.current,

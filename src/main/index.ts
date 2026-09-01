@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, nativeTheme, protocol, shell, type Browser
 import { join } from "node:path";
 import { backendManager } from "./services/backend-manager";
 import { backendBootstrapService } from "./services/backend-bootstrap";
-import { registerWorkspaceFsIpc } from "./services/workspace-fs";
+import { registerWorkspaceFsIpc, stopAllGodotRuntimeTestProcesses } from "./services/workspace-fs";
 import { registerSessionFsIpc } from "./services/session-fs";
 import { registerSkillFsIpc } from "./services/skill-fs";
 import { registerGodotDocumentationFsIpc } from "./services/godot-documentation-fs";
@@ -175,6 +175,7 @@ appUpdateService.setBeforeClientInstall(async (): Promise<void> => {
 	windowLifecycleController.markQuitting();
 	terminalPtyService.dispose();
 	browserService.destroyAll();
+	stopAllGodotRuntimeTestProcesses();
 	await remoteAccessService.stop();
 	backendManager.detach();
 });
@@ -184,6 +185,11 @@ appUpdateService.setRuntimeBusyHandler((runtimeBusy: boolean): void => {
 
 async function releaseBackendBeforeQuit(): Promise<void> {
 	await runShutdownSteps([
+		{
+			name: "godot-runtime-tests", timeoutMs: 1_000,
+			run: (): void => stopAllGodotRuntimeTestProcesses(),
+			force: (): void => stopAllGodotRuntimeTestProcesses(),
+		},
 		{
 			name: "remote-gateway", timeoutMs: 3_000,
 			run: (): Promise<void> => remoteAccessService.stop(),
@@ -759,7 +765,7 @@ if (!hasSingleInstanceLock) {
 
 	void app.whenReady().then(async (): Promise<void> => {
 		registerWorkspaceMediaProtocol();
-		await publishStudioExecutableRecord().catch((): void => {
+		await publishStudioExecutableRecord(backendManager.getPort()).catch((): void => {
 			// Bridge launch metadata is a convenience; failure must not block Studio startup.
 		});
 		const preferences: ClientPreferences = await clientPreferencesService.load();

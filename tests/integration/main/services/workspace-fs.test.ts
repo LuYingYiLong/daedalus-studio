@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtempSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, createWorkspaceMediaFileUrl, getPickedWorkspaceDirectory, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceFile, openWorkspaceLaunchTarget, readWorkspaceTextFile, revealWorkspaceFile, searchWorkspaceEntries, statWorkspaceFile, writeWorkspaceTextFile } from "@main/services/workspace-fs";
+import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, createWorkspaceMediaFileUrl, getPickedWorkspaceDirectory, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceFile, openWorkspaceLaunchTarget, readWorkspaceTextFile, revealWorkspaceFile, searchWorkspaceEntries, statWorkspaceFile, stopGodotRuntimeTestProcess, writeWorkspaceTextFile, type WorkspaceLaunchSpawnOptions } from "@main/services/workspace-fs";
 
 describe("workspace-fs", () => {
 	it("reads UTF-8 text with a stable fingerprint and rejects binary or oversized editor input", async () => {
@@ -346,6 +346,58 @@ describe("workspace-fs", () => {
 			],
 			cwd: resolve(root),
 		}]);
+	});
+
+	it("keeps visible Godot runtime tests attached and stops the managed process", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const godotPath: string = "C:/Program Files/Godot/Godot.exe";
+		const testSessionId: string = "godot-test-managed-12345678";
+		let detached: boolean | null = null;
+		let unrefCalled: boolean = false;
+		let killed: boolean = false;
+		let exitListener: (() => void) | undefined;
+		const child: {
+			exitCode: null;
+			killed: boolean;
+			unref(): void;
+			kill(): boolean;
+			once(event: string, listener: () => void): unknown;
+		} = {
+			exitCode: null,
+			killed: false,
+			unref(): void { unrefCalled = true; },
+			kill(): boolean {
+				killed = true;
+				this.killed = true;
+				exitListener?.();
+				return true;
+			},
+			once(_event: string, listener: () => void): unknown {
+				exitListener = listener;
+				return child;
+			},
+		};
+		const spawnProcess = ((_command: string, _args: string[], options: { detached: boolean }) => {
+			detached = options.detached;
+			return child;
+		}) as unknown as NonNullable<WorkspaceLaunchSpawnOptions["spawnProcess"]>;
+
+		await openWorkspaceLaunchTarget(root, "godot", {
+			godotExecutablePath: godotPath,
+			godotRunMode: "project",
+			godotRuntimeTest: {
+				testSessionId,
+				testSessionToken: "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG",
+			},
+			pathExists: async (targetPath: string): Promise<boolean> => targetPath === godotPath,
+			spawnProcess,
+		});
+
+		expect(detached).toBe(false);
+		expect(unrefCalled).toBe(false);
+		expect(stopGodotRuntimeTestProcess(testSessionId)).toEqual({ stopped: true });
+		expect(killed).toBe(true);
+		expect(stopGodotRuntimeTestProcess(testSessionId)).toEqual({ stopped: false });
 	});
 
 	it("runs a Godot project through its configured main scene", async () => {

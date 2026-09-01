@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute } from "node:path";
 
-export type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory" | "godot-runtime-test";
+export type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory";
 
 export type DockTabPreferences = {
 	key: string;
@@ -137,11 +137,11 @@ function normalizeDockLayout(
 	const tabs: DockTabPreferences[] = [];
 	const seenKeys: Set<string> = new Set();
 	for (const candidate of value.tabs) {
-		// 桌面感知已移入设置，只移除旧面板，不重置同一会话的其他布局
-		if (isRecord(candidate) && candidate.kind === "computer") continue;
+		// 已移出 Dock 的旧面板只从布局中剔除，不重置同一会话的其他布局
+		if (isRecord(candidate) && (candidate.kind === "computer" || candidate.kind === "godot-runtime-test")) continue;
 		if (
 			!isRecord(candidate)
-			|| (candidate.kind !== "review" && candidate.kind !== "terminal" && candidate.kind !== "files" && candidate.kind !== "browser" && candidate.kind !== "trajectory" && candidate.kind !== "godot-runtime-test")
+			|| (candidate.kind !== "review" && candidate.kind !== "terminal" && candidate.kind !== "files" && candidate.kind !== "browser" && candidate.kind !== "trajectory")
 			|| typeof candidate.key !== "string"
 			|| !TAB_KEY_PATTERN.test(candidate.key)
 			|| typeof candidate.index !== "number"

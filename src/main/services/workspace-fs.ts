@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { access, lstat, readFile, readdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
-import { execFile, spawn } from "node:child_process";
+import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { TextDecoder } from "node:util";
@@ -93,6 +93,9 @@ export type WorkspaceLaunchTargetResult = {
 	opened: true;
 	targetId: WorkspaceLaunchTargetId;
 };
+export type WorkspaceGodotRuntimeTestStopResult = {
+	stopped: boolean;
+};
 type ResolvedWorkspaceLaunchTarget = WorkspaceLaunchTarget & {
 	command?: string | undefined;
 	args?: string[] | undefined;
@@ -115,7 +118,14 @@ export type WorkspaceLaunchDetectionOptions = {
 };
 export type WorkspaceLaunchSpawnOptions = WorkspaceLaunchDetectionOptions & {
 	filePath?: string;
-	spawnProcess?: ((command: string, args: string[], options: { cwd: string; detached: true; stdio: "ignore"; windowsHide: false; shell?: boolean | undefined }) => { unref(): void }) | undefined;
+	spawnProcess?: ((command: string, args: string[], options: { cwd: string; detached: boolean; stdio: "ignore"; windowsHide: false; shell?: boolean | undefined }) => WorkspaceLaunchChildProcess) | undefined;
+};
+
+type WorkspaceLaunchChildProcess = Pick<ChildProcess, "unref"> & Partial<Pick<ChildProcess, "exitCode" | "kill" | "killed" | "once" | "pid">>;
+
+type ManagedGodotRuntimeProcess = {
+	child: WorkspaceLaunchChildProcess;
+	workspaceRoot: string;
 };
 
 const BASE_LAUNCH_TARGETS: WorkspaceLaunchTarget[] = [
@@ -130,6 +140,41 @@ const MAX_SEARCH_QUERY_CHARS: number = 200;
 const MAX_SEARCHED_ENTRIES: number = 50_000;
 const UTF8_DECODER: TextDecoder = new TextDecoder("utf-8", { fatal: true });
 const WORKSPACE_ENTRY_NAME_COLLATOR: Intl.Collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+const GODOT_RUNTIME_TEST_SESSION_PATTERN: RegExp = /^godot-test-[A-Za-z0-9-]{1,160}$/u;
+const managedGodotRuntimeProcesses: Map<string, ManagedGodotRuntimeProcess> = new Map();
+
+function forgetManagedGodotRuntimeProcess(testSessionId: string, child: WorkspaceLaunchChildProcess): void {
+	if (managedGodotRuntimeProcesses.get(testSessionId)?.child === child) {
+		managedGodotRuntimeProcesses.delete(testSessionId);
+	}
+}
+
+function terminateManagedGodotRuntimeProcess(testSessionId: string): boolean {
+	const managed: ManagedGodotRuntimeProcess | undefined = managedGodotRuntimeProcesses.get(testSessionId);
+	if (managed === undefined) return false;
+	managedGodotRuntimeProcesses.delete(testSessionId);
+	if (managed.child.exitCode !== null && managed.child.exitCode !== undefined) return true;
+	if (managed.child.killed === true || managed.child.kill === undefined) return true;
+	try {
+		managed.child.kill();
+	} catch {
+		// The process may have exited between the state check and kill.
+	}
+	return true;
+}
+
+export function stopGodotRuntimeTestProcess(testSessionId: string): WorkspaceGodotRuntimeTestStopResult {
+	if (!GODOT_RUNTIME_TEST_SESSION_PATTERN.test(testSessionId)) {
+		throw new Error("Invalid Godot runtime test session id.");
+	}
+	return { stopped: terminateManagedGodotRuntimeProcess(testSessionId) };
+}
+
+export function stopAllGodotRuntimeTestProcesses(): void {
+	for (const testSessionId of [...managedGodotRuntimeProcesses.keys()]) {
+		terminateManagedGodotRuntimeProcess(testSessionId);
+	}
+}
 
 function isPathInside(root: string, target: string): boolean {
 	const relativePath: string = relative(root, target);
@@ -910,8 +955,8 @@ export async function openWorkspaceLaunchTarget(
 		throw new Error("Launch target is not available.");
 	}
 
-	const spawnProcess = options.spawnProcess ?? ((command: string, args: string[], spawnOptions: { cwd: string; detached: true; stdio: "ignore"; windowsHide: false; shell?: boolean | undefined }) => {
-		return spawn(command, args, spawnOptions) as { unref(): void };
+	const spawnProcess = options.spawnProcess ?? ((command: string, args: string[], spawnOptions: { cwd: string; detached: boolean; stdio: "ignore"; windowsHide: false; shell?: boolean | undefined }): WorkspaceLaunchChildProcess => {
+		return spawn(command, args, spawnOptions);
 	});
 	const godotRunMode: "editor" | "project" | "scene" = options.godotRunMode ?? "editor";
 	const godotProjectScenePath: string | null = target.id === "godot" && godotRunMode === "project"
@@ -933,9 +978,13 @@ export async function openWorkspaceLaunchTarget(
 						? ["--path", root]
 						: ["--path", root, godotProjectScenePath]
 					: ["--editor", "--path", root]
-				: [...(target.args ?? []), target.id === "vscode" || target.id === "visual-studio" ? resolvedEntry?.target ?? root : root];
+			: [...(target.args ?? []), target.id === "vscode" || target.id === "visual-studio" ? resolvedEntry?.target ?? root : root];
+	if (options.godotRuntimeTest !== undefined && target.id !== "godot") {
+		throw new Error("Godot runtime test arguments are only valid for the Godot launch target.");
+	}
 	if (target.id === "godot" && options.godotRuntimeTest !== undefined) {
-		if (!/^godot-test-[A-Za-z0-9-]{1,160}$/u.test(options.godotRuntimeTest.testSessionId)) throw new Error("Invalid Godot runtime test session id.");
+		if (godotRunMode !== "project") throw new Error("Godot runtime tests must launch the visible project window.");
+		if (!GODOT_RUNTIME_TEST_SESSION_PATTERN.test(options.godotRuntimeTest.testSessionId)) throw new Error("Invalid Godot runtime test session id.");
 		if (!/^[A-Za-z0-9_-]{32,256}$/u.test(options.godotRuntimeTest.testSessionToken)) throw new Error("Invalid Godot runtime test session token.");
 		args.push(
 			"--",
@@ -943,14 +992,29 @@ export async function openWorkspaceLaunchTarget(
 			`--daedalus-runtime-token=${options.godotRuntimeTest.testSessionToken}`,
 		);
 	}
+	if (options.godotRuntimeTest !== undefined) {
+		for (const [testSessionId, managed] of managedGodotRuntimeProcesses) {
+			if (managed.workspaceRoot === root) terminateManagedGodotRuntimeProcess(testSessionId);
+		}
+	}
+	const managedRuntimeTest: boolean = target.id === "godot" && options.godotRuntimeTest !== undefined;
 	const child = spawnProcess(target.command, args, {
 		cwd: root,
-		detached: true,
+		detached: !managedRuntimeTest,
 		stdio: "ignore",
 		windowsHide: false,
 		shell: target.useShell
 	});
-	child.unref();
+	if (managedRuntimeTest) {
+		const testSessionId: string = options.godotRuntimeTest!.testSessionId;
+		if (child.kill !== undefined) {
+			managedGodotRuntimeProcesses.set(testSessionId, { child, workspaceRoot: root });
+			child.once?.("exit", (): void => forgetManagedGodotRuntimeProcess(testSessionId, child));
+			child.once?.("error", (): void => forgetManagedGodotRuntimeProcess(testSessionId, child));
+		}
+	} else {
+		child.unref();
+	}
 
 	return { opened: true, targetId };
 }
@@ -1014,5 +1078,8 @@ export function registerWorkspaceFsIpc(): void {
 			godotScenePath: params.godotScenePath,
 			godotRuntimeTest: params.godotRuntimeTest,
 		});
+	});
+	ipcMain.handle("workspace-fs:stop-godot-runtime-test", (_event, testSessionId: string): WorkspaceGodotRuntimeTestStopResult => {
+		return stopGodotRuntimeTestProcess(testSessionId);
 	});
 }

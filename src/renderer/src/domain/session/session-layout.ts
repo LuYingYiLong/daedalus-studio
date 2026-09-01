@@ -1,4 +1,4 @@
-export type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory" | "godot-runtime-test";
+export type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory";
 
 export type DockTabPreferences = {
 	key: string;

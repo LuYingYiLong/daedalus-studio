@@ -40,19 +40,20 @@ afterEach(async (): Promise<void> => {
 });
 
 describe("session layout store", () => {
-	it("removes retired perception tabs without resetting unrelated panels or sizes", () => {
+	it("removes retired background-service tabs without resetting unrelated panels or sizes", () => {
 		const defaults = createDefaultSessionLayout();
 		const raw = {
 			...defaults,
 			side: { ...defaults.side, open: true, size: 630, tabs: [
 				{ key: "side:computer:1", kind: "computer", index: 1 },
+				{ key: "side:godot-runtime-test:1", kind: "godot-runtime-test", index: 1 },
 				{ key: "side:trajectory:1", kind: "trajectory", index: 1 },
 			], activeTabKey: "side:computer:1" },
 			bottom: { ...defaults.bottom, size: 320 },
 			fullscreenDock: "side",
 		};
 		const normalized = normalizeSessionLayout(raw);
-		expect(normalized.side).toEqual({ ...raw.side, tabs: [raw.side.tabs[1]], activeTabKey: "side:trajectory:1" });
+		expect(normalized.side).toEqual({ ...raw.side, tabs: [raw.side.tabs[2]], activeTabKey: "side:trajectory:1" });
 		expect(normalized.bottom).toEqual(raw.bottom);
 		expect(normalized.fullscreenDock).toBe("side");
 		const empty = normalizeSessionLayout({ ...raw, side: { ...raw.side, tabs: [raw.side.tabs[0]] } });

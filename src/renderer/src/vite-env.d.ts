@@ -357,7 +357,7 @@ declare global {
 		}) => Promise<string | null>;
 	}
 
-	type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory" | "godot-runtime-test";
+	type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory";
 
 	interface DockTabPreferences {
 		key: string;
@@ -464,6 +464,7 @@ declare global {
 		repair: (projectPath: string) => Promise<GodotProjectScanResult>;
 		uninstall: (projectPath: string) => Promise<GodotProjectScanResult>;
 		setEnabled: (projectPath: string, enabled: boolean) => Promise<GodotProjectScanResult>;
+		prepareRuntimeTest: (projectPath: string) => Promise<{ prepared: true }>;
 		upgradeAll: () => Promise<GodotProjectScanResult>;
 		retryPending: () => Promise<GodotProjectScanResult>;
 	}
@@ -606,6 +607,7 @@ declare global {
 					testSessionToken: string;
 				};
 			}) => Promise<{ opened: true; targetId: WorkspaceLaunchTargetId }>;
+			stopGodotRuntimeTest: (testSessionId: string) => Promise<{ stopped: boolean }>;
 		};
 		imageExport: {
 			savePng: (params: {

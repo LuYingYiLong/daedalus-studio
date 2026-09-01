@@ -1,5 +1,6 @@
 import type { PlatformRuntime, RuntimeClientHello } from "./platform-runtime";
 import { attachScheduledTaskToolRuntime } from "@/platform/rpc/transport/scheduled-task-tool-runtime";
+import { bindGodotRuntimeTestRuntime } from "@/features/godot-runtime-test/godot-runtime-test-runtime";
 
 let browserToolsEnabled: boolean = false;
 
@@ -18,6 +19,10 @@ async function getDesktopHello(): Promise<RuntimeClientHello> {
 			sessionSubscribe: true,
 			approval: true,
 			inlineDiffView: true,
+			// Runtime Test startup is implemented by the desktop shell itself. It
+			// must be available in the initial hello so a chat request cannot race
+			// the optional post-handshake capability update.
+			godotRuntimeTest: true,
 			editorTools: false,
 			editorUndoRedo: false,
 			inlineDiffUndo: false,
@@ -72,7 +77,13 @@ export const desktopPlatformRuntime: PlatformRuntime = {
 		});
 		return () => { disposeComputer?.(); disposeBrowser(); disposeExternal?.(); };
 	},
-	onBackendConnected: attachScheduledTaskToolRuntime,
+	onBackendConnected: (client): void => {
+		attachScheduledTaskToolRuntime(client);
+		// The launch listener belongs to the Backend transport lifetime. Keeping
+		// it in App's React tree allowed remounts and startup timing to leave the
+		// Backend-advertised Runtime Test operation without a receiver.
+		bindGodotRuntimeTestRuntime(client);
+	},
 	system: {
 		get windowCapture() { return window.electronAPI.windowCapture; },
 		get computerObservation() { return window.electronAPI.computerObservation; },

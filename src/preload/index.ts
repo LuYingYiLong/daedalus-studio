@@ -670,6 +670,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		},
 		openLaunchTarget: (params: { workspaceRoot: string; filePath?: string; targetId: "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot"; godotExecutablePath?: string | null; godotRunMode?: "editor" | "project" | "scene"; godotScenePath?: string; godotRuntimeTest?: { testSessionId: string; testSessionToken: string } }): Promise<{ opened: true; targetId: "file-explorer" | "terminal" | "vscode" | "visual-studio" | "github-desktop" | "git-bash" | "godot" }> => {
 			return ipcRenderer.invoke("workspace-fs:open-launch-target", params);
+		},
+		stopGodotRuntimeTest: (testSessionId: string): Promise<{ stopped: boolean }> => {
+			return ipcRenderer.invoke("workspace-fs:stop-godot-runtime-test", testSessionId);
 		}
 	},
 
@@ -719,6 +722,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			ipcRenderer.invoke("godot-projects:uninstall", projectPath),
 		setEnabled: (projectPath: string, enabled: boolean): Promise<GodotProjectScanResult> =>
 			ipcRenderer.invoke("godot-projects:set-enabled", projectPath, enabled),
+		prepareRuntimeTest: (projectPath: string): Promise<{ prepared: true }> =>
+			ipcRenderer.invoke("godot-projects:prepare-runtime-test", projectPath),
 		upgradeAll: (): Promise<GodotProjectScanResult> => ipcRenderer.invoke("godot-projects:upgrade-all"),
 		retryPending: (): Promise<GodotProjectScanResult> => ipcRenderer.invoke("godot-projects:retry-pending")
 	},

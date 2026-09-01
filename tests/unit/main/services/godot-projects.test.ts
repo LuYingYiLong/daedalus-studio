@@ -26,6 +26,8 @@ import {
 	inspectZipEntries,
 	isDevelopmentPluginSourceProject,
 	isGodotManagedPluginFile,
+	updateAutoloadSingleton,
+	updateDaedalusBridgeEnabled,
 	updateEditorPluginEnabled
 } from "@main/services/godot-projects";
 
@@ -89,6 +91,66 @@ describe("Godot project plugin management", () => {
 		);
 		expect(updated).toContain("[editor_plugins]");
 		expect(updated).toContain('PackedStringArray("res://addons/daedalus_bridge/plugin.cfg")');
+	});
+
+	it("adds, updates, and removes the runtime test autoload without changing other singletons", () => {
+		const source = [
+			"[application]",
+			'config/name="Demo"',
+			"",
+			"[autoload]",
+			'Existing="*res://scripts/existing.gd"',
+			"",
+			"[rendering]",
+			'renderer/rendering_method="gl_compatibility"',
+			"",
+		].join("\n");
+		const enabled = updateAutoloadSingleton(
+			source,
+			"DaedalusRuntimeTest",
+			"res://addons/daedalus_bridge/scripts/runtime/runtime_test_agent.gd",
+			true
+		);
+		expect(enabled).toContain('Existing="*res://scripts/existing.gd"');
+		expect(enabled).toContain('DaedalusRuntimeTest="*res://addons/daedalus_bridge/scripts/runtime/runtime_test_agent.gd"');
+		expect(enabled).toContain("[rendering]");
+
+		const updated = updateAutoloadSingleton(
+			enabled,
+			"DaedalusRuntimeTest",
+			"res://addons/daedalus_bridge/scripts/runtime/replacement.gd",
+			true
+		);
+		expect(updated).not.toContain("runtime_test_agent.gd");
+		expect(updated).toContain("runtime/replacement.gd");
+
+		const disabled = updateAutoloadSingleton(
+			updated,
+			"DaedalusRuntimeTest",
+			"res://addons/daedalus_bridge/scripts/runtime/replacement.gd",
+			false
+		);
+		expect(disabled).toContain('Existing="*res://scripts/existing.gd"');
+		expect(disabled).not.toContain("DaedalusRuntimeTest=");
+	});
+
+	it("adds an autoload section when the project has none", () => {
+		const updated = updateAutoloadSingleton(
+			'[application]\r\nconfig/name="Demo"\r\n',
+			"DaedalusRuntimeTest",
+			"res://addons/daedalus_bridge/scripts/runtime/runtime_test_agent.gd",
+			true
+		);
+		expect(updated).toContain("\r\n[autoload]\r\n");
+		expect(updated).toContain('DaedalusRuntimeTest="*res://addons/daedalus_bridge/scripts/runtime/runtime_test_agent.gd"');
+	});
+
+	it("does not overwrite a project-owned autoload with the runtime test singleton", () => {
+		expect(() => updateDaedalusBridgeEnabled([
+			"[autoload]",
+			'DaedalusRuntimeTest="*res://scripts/custom_runtime.gd"',
+			"",
+		].join("\n"), true)).toThrow(/already assigned/u);
 	});
 
 	it("rejects archive paths that can escape the staging directory", () => {
