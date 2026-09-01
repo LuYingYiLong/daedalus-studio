@@ -1712,6 +1712,42 @@ function Composer({
 							</Tooltip>
 						</div>
 
+						{showContextUsage ? (
+							<div className={styles.composerToolbarContextUsage}>
+								<Popover
+									title={t("composer.contextUsage.title")}
+									content={contextUsageContent}
+									trigger="click"
+								>
+									<span className={styles.contextUsageAnchor}>
+										<button
+											type="button"
+											className={styles.contextUsageButton}
+											aria-label={t(
+												"composer.contextUsage.title",
+											)}
+										>
+											<span
+												className={
+													styles.contextUsageButtonText
+												}
+											>
+												{Math.round(contextUsagePercent)}%
+											</span>
+											<Progress
+												type="circle"
+												percent={contextUsagePercent}
+												strokeColor="var(--ds-accent)"
+												railColor="var(--ds-border)"
+												showInfo={false}
+												size={16}
+											/>
+										</button>
+									</span>
+								</Popover>
+							</div>
+						) : null}
+
 						<div className={styles.composerToolbarControl}>
 							<Tooltip
 								title={
@@ -1862,39 +1898,6 @@ function Composer({
 								/>
 							) : null}
 						</Flex>
-						{showContextUsage ? (
-							<Popover
-								title={t("composer.contextUsage.title")}
-								content={contextUsageContent}
-								trigger="click"
-							>
-								<span className={styles.contextUsageAnchor}>
-									<button
-										type="button"
-										className={styles.contextUsageButton}
-										aria-label={t(
-											"composer.contextUsage.title",
-										)}
-									>
-										<span
-											className={
-												styles.contextUsageButtonText
-											}
-										>
-											{Math.round(contextUsagePercent)}%
-										</span>
-										<Progress
-											type="circle"
-											percent={contextUsagePercent}
-											strokeColor="var(--ds-accent)"
-											railColor="var(--ds-border)"
-											showInfo={false}
-											size={16}
-										/>
-									</button>
-								</span>
-							</Popover>
-						) : null}
 						</Flex>
 					) : null}
 				</footer>

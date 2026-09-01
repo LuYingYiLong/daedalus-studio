@@ -1018,6 +1018,8 @@
 			"browser": "Browser",
 			"trajectory": "Trajectory",
 			"trajectoryIndexed": "Trajectory {{index}}",
+			"godotRuntimeTest": "Runtime Test",
+			"godotRuntimeTestIndexed": "Runtime Test {{index}}",
 			"environments": "Development environments",
 			"worktrees": "Worktrees",
 			"browserIndexed": "Browser {{index}}",
@@ -1030,11 +1032,55 @@
 			"terminalPanel": "Terminal panel",
 			"filesPanel": "Files panel",
 			"browserPanel": "Browser panel",
-			"trajectoryPanel": "Trajectory panel"
+			"trajectoryPanel": "Trajectory panel",
+			"godotRuntimeTestPanel": "Godot runtime test panel"
 		},
 		"empty": {
 			"noWorkspaceSelected": "No workspace selected"
 		}
+	},
+	"godotRuntimeTest": {
+		"status": {
+			"connected": "Runtime connected",
+			"waiting": "Waiting for runtime",
+			"stopped": "Stopped"
+		},
+		"actions": {
+			"start": "Start test mode",
+			"stop": "Stop test mode",
+			"observe": "Observe",
+			"screenshot": "Screenshot",
+			"press": "Press button",
+			"toggle": "Toggle",
+			"setText": "Set text",
+			"select": "Select",
+			"key": "Send key",
+			"assertVisible": "Assert visible",
+			"waitEnabled": "Wait until enabled"
+		},
+		"messages": {
+			"started": "Godot runtime test mode started.",
+			"stopped": "Godot runtime test mode stopped."
+		},
+		"waitingDescription": "Godot is starting. The panel will connect automatically when the Runtime Test autoload completes its handshake.",
+		"empty": {
+			"noGodotWorkspace": "Select a Godot source folder to use runtime testing.",
+			"noObservation": "Start test mode, wait for the runtime connection, then observe the live Control tree.",
+			"developerModeRequired": "Enable Developer mode to use the Godot runtime test panel."
+		},
+		"tree": {
+			"title": "Runtime Control tree"
+		},
+		"node": {
+			"visible": "Visible",
+			"hidden": "Hidden",
+			"enabled": "Enabled",
+			"disabled": "Disabled"
+		},
+		"steps": {
+			"title": "Recent test steps"
+		},
+		"screenshotAlt": "Godot runtime viewport screenshot"
 	},
 	"trajectory": {
 		"stats": {

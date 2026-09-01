@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Empty } from "antd";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -12,6 +12,12 @@ import TerminalPanel from "@/widgets/terminal/TerminalPanel";
 import FilePanel from "@/widgets/files/FilePanel";
 import BrowserPanel from "@/widgets/browser/BrowserPanel";
 import TrajectoryPanel from "@/widgets/trajectory/TrajectoryPanel";
+import GodotRuntimeTestPanel from "@/widgets/godot-runtime-test/GodotRuntimeTestPanel";
+import {
+	fetchGeneralSettings,
+	GENERAL_SETTINGS_CHANGED_EVENT,
+	type GeneralSettings,
+} from "@/platform/rpc/general-settings-api";
 import type {
 	AdditionalContextItem,
 	WorkspaceConfig,
@@ -83,6 +89,7 @@ const ADD_TERMINAL_KEY: DockPanelKind = "terminal";
 const ADD_FILES_KEY: DockPanelKind = "files";
 const ADD_BROWSER_KEY: DockPanelKind = "browser";
 const ADD_TRAJECTORY_KEY: DockPanelKind = "trajectory";
+const ADD_GODOT_RUNTIME_TEST_KEY: DockPanelKind = "godot-runtime-test";
 
 function getPanelTitle(
 	kind: DockPanelKind,
@@ -109,6 +116,11 @@ function getPanelTitle(
 			? t("dock.tabs.trajectory")
 			: t("dock.tabs.trajectoryIndexed", { index });
 	}
+	if (kind === "godot-runtime-test") {
+		return index === 1
+			? t("dock.tabs.godotRuntimeTest")
+			: t("dock.tabs.godotRuntimeTestIndexed", { index });
+	}
 	return index === 1
 		? t("dock.tabs.browser")
 		: t("dock.tabs.browserIndexed", { index });
@@ -123,6 +135,8 @@ function getTabIconName(kind: DockPanelKind): string {
 				? "file-system"
 				: kind === "trajectory"
 					? "trajectory"
+					: kind === "godot-runtime-test"
+						? "godot"
 					: "global";
 }
 
@@ -159,7 +173,23 @@ function DockPanelTabs({
 }: DockPanelTabsProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const handledActivationIdRef = useRef<number | null>(null);
+	const [developerMode, setDeveloperMode] = useState<boolean>(import.meta.env.DEV);
 	const canOpenReview: boolean = workspaceId !== null;
+	const canOpenGodotRuntimeTest: boolean = workspace !== null && sourceFolders.some((source): boolean => source.capabilities.godot);
+	useEffect((): (() => void) => {
+		let active = true;
+		void fetchGeneralSettings().then((settings): void => {
+			if (active) setDeveloperMode(settings.developerMode);
+		}).catch((): void => undefined);
+		const onSettingsChanged = (event: Event): void => {
+			setDeveloperMode((event as CustomEvent<GeneralSettings>).detail.developerMode);
+		};
+		window.addEventListener(GENERAL_SETTINGS_CHANGED_EVENT, onSettingsChanged);
+		return (): void => {
+			active = false;
+			window.removeEventListener(GENERAL_SETTINGS_CHANGED_EVENT, onSettingsChanged);
+		};
+	}, []);
 	const activeKey: string = layout.tabs.some(
 		(tab: DockTabPreferences): boolean => tab.key === layout.activeTabKey,
 	)
@@ -195,8 +225,14 @@ function DockPanelTabs({
 				icon: <Icon name="trajectory" />,
 				disabled: sessionId === null,
 			},
+			...(developerMode ? [{
+				key: ADD_GODOT_RUNTIME_TEST_KEY,
+				label: t("dock.add.godotRuntimeTestPanel"),
+				icon: <Icon name="godot" />,
+				disabled: !canOpenGodotRuntimeTest,
+			}] : []),
 		],
-		[canOpenReview, sessionId, t],
+		[canOpenGodotRuntimeTest, canOpenReview, developerMode, sessionId, t],
 	);
 
 	const addPanelTab = useCallback(
@@ -205,6 +241,7 @@ function DockPanelTabs({
 				((kind === "review" || kind === "files") &&
 					workspaceId === null) ||
 				(kind === "trajectory" && sessionId === null)
+				|| (kind === "godot-runtime-test" && !canOpenGodotRuntimeTest)
 			) {
 				return;
 			}
@@ -235,6 +272,7 @@ function DockPanelTabs({
 			onLayoutChange,
 			sessionId,
 			workspaceId,
+			canOpenGodotRuntimeTest,
 		],
 	);
 
@@ -348,7 +386,8 @@ function DockPanelTabs({
 			kind === ADD_TERMINAL_KEY ||
 			kind === ADD_FILES_KEY ||
 			kind === ADD_BROWSER_KEY ||
-			kind === ADD_TRAJECTORY_KEY
+			kind === ADD_TRAJECTORY_KEY ||
+			kind === ADD_GODOT_RUNTIME_TEST_KEY
 		) {
 			addPanelTab(kind);
 		}
@@ -424,6 +463,19 @@ function DockPanelTabs({
 				<TrajectoryPanel
 					sessionId={sessionId}
 					isActive={isOpen && activeKey === tab.key}
+				/>
+			);
+		}
+
+		if (tab.kind === "godot-runtime-test") {
+			if (!developerMode) {
+				return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("godotRuntimeTest.empty.developerModeRequired")} />;
+			}
+			return (
+				<GodotRuntimeTestPanel
+					workspace={workspace}
+					sourceFolders={sourceFolders}
+					primarySourceFolderId={primarySourceFolderId}
 				/>
 			);
 		}

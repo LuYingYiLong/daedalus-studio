@@ -357,7 +357,7 @@ declare global {
 		}) => Promise<string | null>;
 	}
 
-	type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory";
+	type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory" | "godot-runtime-test";
 
 	interface DockTabPreferences {
 		key: string;
@@ -601,6 +601,10 @@ declare global {
 				godotExecutablePath?: string | null;
 				godotRunMode?: "editor" | "project" | "scene";
 				godotScenePath?: string;
+				godotRuntimeTest?: {
+					testSessionId: string;
+					testSessionToken: string;
+				};
 			}) => Promise<{ opened: true; targetId: WorkspaceLaunchTargetId }>;
 		};
 		imageExport: {

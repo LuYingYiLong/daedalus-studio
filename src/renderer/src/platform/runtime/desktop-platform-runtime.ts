@@ -46,6 +46,7 @@ export const desktopPlatformRuntime: PlatformRuntime = {
 			updates.externalBrowser = false;
 			try { const state = await window.electronAPI.externalBrowser?.getState(); updates.externalBrowser = state?.enabled === true && state.available; } catch { /* 可选扩展能力失败时关闭 */ }
 		}
+		if (features.godotRuntimeTest === 1) updates.godotRuntimeTest = true;
 		for (const key of ["browserTools", "computerObservation", "computerControl", "scheduledTasks"])
 			updates[key] = capabilities[key];
 		// 新字段仅出现在已协商的更新中，不放进首次 hello

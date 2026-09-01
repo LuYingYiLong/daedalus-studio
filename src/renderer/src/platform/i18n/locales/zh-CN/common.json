@@ -1016,6 +1016,8 @@
 			"browser": "浏览器",
 			"trajectory": "轨迹",
 			"trajectoryIndexed": "轨迹 {{index}}",
+			"godotRuntimeTest": "运行时测试",
+			"godotRuntimeTestIndexed": "运行时测试 {{index}}",
 			"environments": "开发环境",
 			"worktrees": "工作树",
 			"browserIndexed": "浏览器 {{index}}",
@@ -1028,11 +1030,55 @@
 			"terminalPanel": "终端面板",
 			"filesPanel": "文件面板",
 			"browserPanel": "浏览器面板",
-			"trajectoryPanel": "轨迹面板"
+			"trajectoryPanel": "轨迹面板",
+			"godotRuntimeTestPanel": "Godot 运行时测试面板"
 		},
 		"empty": {
 			"noWorkspaceSelected": "未选择 workspace"
 		}
+	},
+	"godotRuntimeTest": {
+		"status": {
+			"connected": "Runtime 已连接",
+			"waiting": "等待 Runtime",
+			"stopped": "已停止"
+		},
+		"actions": {
+			"start": "启动测试模式",
+			"stop": "停止测试模式",
+			"observe": "观察",
+			"screenshot": "截图",
+			"press": "按下按钮",
+			"toggle": "切换",
+			"setText": "设置文本",
+			"select": "选择",
+			"key": "发送按键",
+			"assertVisible": "断言可见",
+			"waitEnabled": "等待恢复可用"
+		},
+		"messages": {
+			"started": "Godot 运行时测试模式已启动。",
+			"stopped": "Godot 运行时测试模式已停止。"
+		},
+		"waitingDescription": "Godot 正在启动。Runtime Test Autoload 完成握手后，面板会自动连接。",
+		"empty": {
+			"noGodotWorkspace": "请选择一个 Godot 源文件夹以使用运行时测试。",
+			"noObservation": "启动测试模式，等待 Runtime 连接，然后观察实时 Control 树。",
+			"developerModeRequired": "请先启用开发者模式，再使用 Godot 运行时测试面板。"
+		},
+		"tree": {
+			"title": "Runtime Control 树"
+		},
+		"node": {
+			"visible": "可见",
+			"hidden": "隐藏",
+			"enabled": "可用",
+			"disabled": "禁用"
+		},
+		"steps": {
+			"title": "最近测试步骤"
+		},
+		"screenshotAlt": "Godot 运行时视口截图"
 	},
 	"trajectory": {
 		"stats": {

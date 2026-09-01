@@ -43,6 +43,12 @@
 	min-width: 0;
 }
 
+.composerToolbarContextUsage {
+	display: flex;
+	align-items: center;
+	flex: 0 0 auto;
+}
+
 .composerRootMobile .composerToolbarModelControl :global(.ant-btn) {
 	width: 100%;
 	min-width: 0;

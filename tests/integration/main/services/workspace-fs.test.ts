@@ -316,6 +316,38 @@ describe("workspace-fs", () => {
 		}]);
 	});
 
+	it("passes an explicit runtime test session to Godot user arguments", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const godotPath: string = "C:/Program Files/Godot/Godot.exe";
+		const spawned: Array<{ command: string; args: string[]; cwd: string }> = [];
+
+		await expect(openWorkspaceLaunchTarget(root, "godot", {
+			godotExecutablePath: godotPath,
+			godotRunMode: "project",
+			godotRuntimeTest: {
+				testSessionId: "godot-test-12345678-1234-1234-1234-123456789abc",
+				testSessionToken: "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG",
+			},
+			pathExists: async (targetPath: string): Promise<boolean> => targetPath === godotPath,
+			spawnProcess(command, args, options): { unref(): void } {
+				spawned.push({ command, args, cwd: options.cwd });
+				return { unref(): void {} };
+			},
+		})).resolves.toEqual({ opened: true, targetId: "godot" });
+
+		expect(spawned).toEqual([{
+			command: godotPath,
+			args: [
+				"--path",
+				resolve(root),
+				"--",
+				"--daedalus-runtime-test=godot-test-12345678-1234-1234-1234-123456789abc",
+				"--daedalus-runtime-token=abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG",
+			],
+			cwd: resolve(root),
+		}]);
+	});
+
 	it("runs a Godot project through its configured main scene", async () => {
 		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
 		await mkdir(join(root, "scenes"));

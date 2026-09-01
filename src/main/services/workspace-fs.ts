@@ -104,6 +104,10 @@ export type WorkspaceLaunchDetectionOptions = {
 	godotExecutablePath?: string | null | undefined;
 	godotRunMode?: "editor" | "project" | "scene" | undefined;
 	godotScenePath?: string | undefined;
+	godotRuntimeTest?: {
+		testSessionId: string;
+		testSessionToken: string;
+	} | undefined;
 	pathExists?: ((path: string) => Promise<boolean>) | undefined;
 	findOnPath?: ((command: string) => Promise<string | null>) | undefined;
 	runCommand?: ((command: string, args: string[]) => Promise<string | null>) | undefined;
@@ -930,6 +934,15 @@ export async function openWorkspaceLaunchTarget(
 						: ["--path", root, godotProjectScenePath]
 					: ["--editor", "--path", root]
 				: [...(target.args ?? []), target.id === "vscode" || target.id === "visual-studio" ? resolvedEntry?.target ?? root : root];
+	if (target.id === "godot" && options.godotRuntimeTest !== undefined) {
+		if (!/^godot-test-[A-Za-z0-9-]{1,160}$/u.test(options.godotRuntimeTest.testSessionId)) throw new Error("Invalid Godot runtime test session id.");
+		if (!/^[A-Za-z0-9_-]{32,256}$/u.test(options.godotRuntimeTest.testSessionToken)) throw new Error("Invalid Godot runtime test session token.");
+		args.push(
+			"--",
+			`--daedalus-runtime-test=${options.godotRuntimeTest.testSessionId}`,
+			`--daedalus-runtime-token=${options.godotRuntimeTest.testSessionToken}`,
+		);
+	}
 	const child = spawnProcess(target.command, args, {
 		cwd: root,
 		detached: true,
@@ -993,12 +1006,13 @@ export function registerWorkspaceFsIpc(): void {
 			godotExecutablePath: params?.godotExecutablePath
 		});
 	});
-	ipcMain.handle("workspace-fs:open-launch-target", async (_event, params: { workspaceRoot: string; targetId: WorkspaceLaunchTargetId; filePath?: string; godotExecutablePath?: string | null; godotRunMode?: "editor" | "project" | "scene"; godotScenePath?: string }): Promise<WorkspaceLaunchTargetResult> => {
+	ipcMain.handle("workspace-fs:open-launch-target", async (_event, params: { workspaceRoot: string; targetId: WorkspaceLaunchTargetId; filePath?: string; godotExecutablePath?: string | null; godotRunMode?: "editor" | "project" | "scene"; godotScenePath?: string; godotRuntimeTest?: { testSessionId: string; testSessionToken: string } }): Promise<WorkspaceLaunchTargetResult> => {
 		return openWorkspaceLaunchTarget(params.workspaceRoot, params.targetId, {
 			filePath: params.filePath,
 			godotExecutablePath: params.godotExecutablePath,
 			godotRunMode: params.godotRunMode,
-			godotScenePath: params.godotScenePath
+			godotScenePath: params.godotScenePath,
+			godotRuntimeTest: params.godotRuntimeTest,
 		});
 	});
 }
