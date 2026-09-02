@@ -177,6 +177,21 @@ describe("app helpers", () => {
 		})).toEqual({ providerId: "xiaomi-mimo", modelId: "mimo-v2.5-pro" });
 	});
 
+	it("does not replace an existing session model with the global default while snapshots load", () => {
+		expect(getDisplayedComposerModel({
+			isNewSessionHome: false,
+			homeDraft: createHomeDraft(),
+			workbench: null,
+			activeSessionMetadata: null,
+			providerModelSelection: {
+				activeModel: {
+					providerId: "deepseek",
+					modelId: "deepseek-v4-flash-vision-exp"
+				}
+			} as never
+		})).toEqual({ providerId: null, modelId: null });
+	});
+
 	it("trims timeline content from a request boundary", () => {
 		const result = trimTimelineFromRequest(page([userBlock("first"), userBlock("second"), userBlock("third")]), "second");
 

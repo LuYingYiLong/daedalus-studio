@@ -178,17 +178,29 @@ export function getDisplayedComposerModel(params: {
 }): { providerId: string | null; modelId: string | null } {
 	const fallbackProviderId: string | null = params.providerModelSelection?.activeModel.providerId ?? null;
 	const fallbackModelId: string | null = params.providerModelSelection?.activeModel.modelId ?? null;
-	return params.isNewSessionHome
-		? {
-				providerId: params.homeDraft.providerId ?? fallbackProviderId,
-				modelId: params.homeDraft.modelId ?? fallbackModelId
-			}
-		: params.firstTurnModelTransition !== null && params.firstTurnModelTransition !== undefined
-			? params.firstTurnModelTransition
-			: {
-					providerId: params.workbench?.composer.provider ?? params.activeSessionMetadata?.provider ?? fallbackProviderId,
-					modelId: params.workbench?.composer.model ?? params.activeSessionMetadata?.model ?? fallbackModelId
-				};
+	if (params.isNewSessionHome) {
+		return {
+			providerId: params.homeDraft.providerId ?? fallbackProviderId,
+			modelId: params.homeDraft.modelId ?? fallbackModelId
+		};
+	}
+	if (params.firstTurnModelTransition !== null && params.firstTurnModelTransition !== undefined) {
+		return params.firstTurnModelTransition;
+	}
+	const workbenchProviderId: string | null = params.workbench?.composer.provider ?? null;
+	const workbenchModelId: string | null = params.workbench?.composer.model ?? null;
+	if (workbenchProviderId !== null && workbenchModelId !== null) {
+		return { providerId: workbenchProviderId, modelId: workbenchModelId };
+	}
+	const metadataProviderId: string | null = params.activeSessionMetadata?.provider ?? null;
+	const metadataModelId: string | null = params.activeSessionMetadata?.model ?? null;
+	if (metadataProviderId !== null && metadataModelId !== null) {
+		return { providerId: metadataProviderId, modelId: metadataModelId };
+	}
+	// Existing sessions never inherit the global default while their own
+	// workbench snapshot is loading. Doing so makes the Composer appear to
+	// switch models and can feed a stale global model into later patches.
+	return { providerId: null, modelId: null };
 }
 
 export function createWorkspaceFromSessionMetadata(metadata: SessionMetadata, workbench: WorkbenchSnapshot, sourceWorkspace?: WorkspaceConfig | undefined): WorkspaceConfig | null {

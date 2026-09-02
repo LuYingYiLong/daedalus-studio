@@ -23,7 +23,6 @@ import {
 import type { ProviderModelSelection } from "@/platform/rpc/provider-api";
 import { createComposerReasoningEffortUpdate } from "@/domain/composer/composer-reasoning-effort";
 import {
-	getDisplayedComposerModel,
 	resolveReasoningEffortForComposerModelChange,
 	type HomeDraft,
 } from "@/domain/application/app-helpers";
@@ -290,18 +289,7 @@ export default function useSessionPreferenceController({
 						};
 			},
 		);
-		const currentModel = getDisplayedComposerModel({
-			isNewSessionHome,
-			homeDraft,
-			workbench,
-			activeSessionMetadata,
-			providerModelSelection,
-		});
-		const update = createComposerReasoningEffortUpdate(
-			currentModel.providerId,
-			currentModel.modelId,
-			nextEffort,
-		);
+		const update = createComposerReasoningEffortUpdate(nextEffort);
 		queueWorkbenchPatch(update.workbenchPatch, true);
 		await persistSessionUiMetadata(update.sessionMetadata);
 	}

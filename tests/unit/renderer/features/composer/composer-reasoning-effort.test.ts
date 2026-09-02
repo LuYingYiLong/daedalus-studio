@@ -2,16 +2,10 @@ import { describe, expect, it } from "vitest";
 import { createComposerReasoningEffortUpdate } from "@/domain/composer/composer-reasoning-effort";
 
 describe("composer reasoning effort update", () => {
-	it("keeps the selected provider and model bound to the effort change", () => {
-		expect(createComposerReasoningEffortUpdate(
-			"deepseek",
-			"deepseek-v4-pro",
-			"high"
-		)).toEqual({
+	it("updates effort without replaying a potentially stale model selection", () => {
+		expect(createComposerReasoningEffortUpdate("high")).toEqual({
 			workbenchPatch: {
 				composer: {
-					provider: "deepseek",
-					model: "deepseek-v4-pro",
 					reasoningEffort: "high"
 				}
 			},
@@ -21,8 +15,8 @@ describe("composer reasoning effort update", () => {
 		});
 	});
 
-	it("still supports an effort-only update before a model is available", () => {
-		expect(createComposerReasoningEffortUpdate(null, null, "medium")).toEqual({
+	it("supports another effort value", () => {
+		expect(createComposerReasoningEffortUpdate("medium")).toEqual({
 			workbenchPatch: {
 				composer: {
 					reasoningEffort: "medium"

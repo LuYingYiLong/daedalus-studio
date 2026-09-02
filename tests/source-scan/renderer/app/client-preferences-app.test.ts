@@ -22,8 +22,8 @@ describe("App client preferences", () => {
 		const source: string = readAppImplementation();
 
 		expect(source).toContain("function getDisplayedComposerModel");
-		expect(source).toContain("params.workbench?.composer.provider ?? params.activeSessionMetadata?.provider ?? fallbackProviderId");
-		expect(source).toContain("params.workbench?.composer.model ?? params.activeSessionMetadata?.model ?? fallbackModelId");
+		expect(source).toContain("const metadataProviderId: string | null = params.activeSessionMetadata?.provider ?? null");
+		expect(source).toContain("return { providerId: null, modelId: null }");
 		expect(source).toContain("const displayedComposerModel = getDisplayedComposerModel({");
 		expect(source).toContain("setActiveSessionMetadata(session)");
 		expect(source).toContain("setWorkbench(null)");

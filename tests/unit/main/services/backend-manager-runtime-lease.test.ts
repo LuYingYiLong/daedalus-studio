@@ -16,6 +16,7 @@ import { backendManager } from "@main/services/backend-manager";
 type TestBackendManager = {
 	authToken: string | null;
 	connectionInfoPromise: Promise<unknown> | null;
+	connectionReadyGate: (() => Promise<void>) | null;
 	ping: () => Promise<boolean>;
 	ensureRuntimeLease: () => Promise<void>;
 	process: { exitCode: number | null; signalCode: string | null; kill: () => void } | null;
@@ -28,7 +29,24 @@ describe("BackendManager runtime lease recovery", () => {
 		vi.restoreAllMocks();
 		manager.authToken = "test-auth-token";
 		manager.connectionInfoPromise = null;
+		manager.connectionReadyGate = null;
 		manager.process = null;
+	});
+
+	it("waits for the packaged bootstrap gate before inspecting the runtime", async () => {
+		const order: string[] = [];
+		backendManager.setConnectionReadyGate(async (): Promise<void> => {
+			order.push("bootstrap");
+		});
+		vi.spyOn(manager, "ping").mockImplementation(async (): Promise<boolean> => {
+			order.push("ping");
+			return true;
+		});
+		vi.spyOn(manager, "ensureRuntimeLease").mockResolvedValue();
+
+		await backendManager.getReadyConnectionInfo();
+
+		expect(order).toEqual(["bootstrap", "ping"]);
 	});
 
 	it("returns connection details only after recovering an unavailable runtime", async () => {

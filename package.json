@@ -1,10 +1,10 @@
 {
 	"name": "daedalus-studio",
-	"version": "1.1.4",
+	"version": "1.1.7",
 	"description": "Standalone AI workbench with an optional Daedalus Bridge",
 	"license": "GPL-3.0-only",
 	"author": "LuYingYiLong",
-	"backendBootstrapVersion": "1.4.0",
+	"backendBootstrapVersion": "1.4.2",
 	"godotBridgeVersion": "2.0.0",
 	"backendProtocolVersion": 3,
 	"godotBridgeProtocolVersion": 4,

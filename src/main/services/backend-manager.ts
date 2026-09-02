@@ -239,6 +239,7 @@ class BackendManager {
 	private runtimeLeaseSocket: WebSocket | null = null;
 	private runtimeLeasePromise: Promise<void> | null = null;
 	private connectionInfoPromise: Promise<BackendConnectionInfo> | null = null;
+	private connectionReadyGate: (() => Promise<void>) | null = null;
 
 	public constructor() {
 		const e2ePort: number = Number(process.env.DAEDALUS_E2E_BACKEND_PORT);
@@ -371,7 +372,12 @@ class BackendManager {
 		};
 	}
 
+	public setConnectionReadyGate(gate: (() => Promise<void>) | null): void {
+		this.connectionReadyGate = gate;
+	}
+
 	public async getReadyConnectionInfo(): Promise<BackendConnectionInfo> {
+		await this.connectionReadyGate?.();
 		if (!app.isPackaged) {
 			return this.getConnectionInfo();
 		}

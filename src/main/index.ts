@@ -788,6 +788,14 @@ if (!hasSingleInstanceLock) {
 			return;
 		}
 		await remoteAccessService.start();
+		if (app.isPackaged) {
+			backendManager.setConnectionReadyGate(async (): Promise<void> => {
+				const state = await backendBootstrapService.prepare();
+				if (state.status !== "healthy") {
+					throw new Error(state.errorMessage ?? "Backend bootstrap did not become healthy.");
+				}
+			});
+		}
 		createWindow();
 		let checkedStartupUpdates: boolean = false;
 		const checkStartupUpdates = (state: ReturnType<typeof backendBootstrapService.getState>): void => {

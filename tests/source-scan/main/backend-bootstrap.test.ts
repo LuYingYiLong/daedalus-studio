@@ -25,6 +25,8 @@ describe("backend bootstrap service", () => {
 		expect(mainSource).toContain("backendBootstrapService.attachWindow(mainWindow);");
 		expect(mainSource).toContain("backendBootstrapService.onDidChangeState(checkStartupUpdates);");
 		expect(mainSource).toContain("backendBootstrapService.prepare().then");
+		expect(mainSource).toContain("backendManager.setConnectionReadyGate");
+		expect(managerSource).toContain("await this.connectionReadyGate?.();");
 		expect(mainSource).not.toContain("backendManager.start(mainWindow)");
 		expect(managerSource).toContain("hasLaunchTarget()");
 		expect(managerSource).toContain("getLaunchTargetInfo()");
