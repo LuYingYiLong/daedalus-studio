@@ -348,6 +348,58 @@ describe("workspace-fs", () => {
 		}]);
 	});
 
+	it("pins a visible Runtime Test to the active development Backend", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const backendRoot: string = mkdtempSync(join(tmpdir(), "daedalus-backend-"));
+		const godotPath: string = "C:/Program Files/Godot/Godot.exe";
+		const spawned: Array<{ command: string; args: string[]; cwd: string }> = [];
+
+		await expect(openWorkspaceLaunchTarget(root, "godot", {
+			godotExecutablePath: godotPath,
+			godotRunMode: "project",
+			godotRuntimeTest: {
+				testSessionId: "godot-test-12345678-1234-1234-1234-123456789abc",
+				testSessionToken: "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG",
+				backendUrl: "ws://127.0.0.1:38181",
+				backendDevDir: backendRoot,
+			},
+			pathExists: async (targetPath: string): Promise<boolean> => targetPath === godotPath,
+			spawnProcess(command, args, options): { unref(): void } {
+				spawned.push({ command, args, cwd: options.cwd });
+				return { unref(): void {} };
+			},
+		})).resolves.toEqual({ opened: true, targetId: "godot" });
+
+		expect(spawned[0]?.args).toEqual([
+			"--path",
+			resolve(root),
+			"--",
+			"--daedalus-runtime-test=godot-test-12345678-1234-1234-1234-123456789abc",
+			"--daedalus-runtime-token=abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG",
+			"--daedalus-backend-url=ws://127.0.0.1:38181",
+			`--daedalus-backend-dev-dir=${resolve(backendRoot)}`,
+		]);
+	});
+
+	it("rejects non-loopback Runtime Test Backend metadata", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const backendRoot: string = mkdtempSync(join(tmpdir(), "daedalus-backend-"));
+		const godotPath: string = "C:/Program Files/Godot/Godot.exe";
+
+		await expect(openWorkspaceLaunchTarget(root, "godot", {
+			godotExecutablePath: godotPath,
+			godotRunMode: "project",
+			godotRuntimeTest: {
+				testSessionId: "godot-test-12345678-1234-1234-1234-123456789abc",
+				testSessionToken: "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG",
+				backendUrl: "ws://example.com:38181",
+				backendDevDir: backendRoot,
+			},
+			pathExists: async (targetPath: string): Promise<boolean> => targetPath === godotPath,
+			spawnProcess(): { unref(): void } { return { unref(): void {} }; },
+		})).rejects.toThrow("loopback WebSocket endpoint");
+	});
+
 	it("keeps visible Godot runtime tests attached and stops the managed process", async () => {
 		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
 		const godotPath: string = "C:/Program Files/Godot/Godot.exe";

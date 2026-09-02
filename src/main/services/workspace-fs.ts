@@ -1,10 +1,12 @@
-import { BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { existsSync } from "node:fs";
 import { access, lstat, readFile, readdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { TextDecoder } from "node:util";
 import { createWorkspaceMediaUrl, getWorkspaceMediaDescriptor, getWorkspaceMediaMaxByteSize, type WorkspaceMediaUrlResult } from "./workspace-media";
+import { backendManager } from "./backend-manager";
 
 export type WorkspaceFsEntry = {
 	name: string;
@@ -110,6 +112,8 @@ export type WorkspaceLaunchDetectionOptions = {
 	godotRuntimeTest?: {
 		testSessionId: string;
 		testSessionToken: string;
+		backendUrl?: string | undefined;
+		backendDevDir?: string | undefined;
 	} | undefined;
 	pathExists?: ((path: string) => Promise<boolean>) | undefined;
 	findOnPath?: ((command: string) => Promise<string | null>) | undefined;
@@ -991,6 +995,24 @@ export async function openWorkspaceLaunchTarget(
 			`--daedalus-runtime-test=${options.godotRuntimeTest.testSessionId}`,
 			`--daedalus-runtime-token=${options.godotRuntimeTest.testSessionToken}`,
 		);
+		const backendUrl: string | undefined = options.godotRuntimeTest.backendUrl?.trim();
+		const backendDevDir: string | undefined = options.godotRuntimeTest.backendDevDir?.trim();
+		if ((backendUrl === undefined) !== (backendDevDir === undefined)) {
+			throw new Error("Godot runtime development Backend metadata must be complete.");
+		}
+		if (backendUrl !== undefined && backendDevDir !== undefined) {
+			if (!/^ws:\/\/(?:127\.0\.0\.1|localhost):(?:[1-9]\d{0,4})$/u.test(backendUrl)) {
+				throw new Error("Godot runtime development Backend URL must be a loopback WebSocket endpoint.");
+			}
+			const backendPort: number = Number.parseInt(backendUrl.slice(backendUrl.lastIndexOf(":") + 1), 10);
+			if (backendPort > 65535 || !isAbsolute(backendDevDir)) {
+				throw new Error("Godot runtime development Backend metadata is invalid.");
+			}
+			args.push(
+				`--daedalus-backend-url=${backendUrl}`,
+				`--daedalus-backend-dev-dir=${resolve(backendDevDir)}`,
+			);
+		}
 	}
 	if (options.godotRuntimeTest !== undefined) {
 		for (const [testSessionId, managed] of managedGodotRuntimeProcesses) {
@@ -1071,12 +1093,23 @@ export function registerWorkspaceFsIpc(): void {
 		});
 	});
 	ipcMain.handle("workspace-fs:open-launch-target", async (_event, params: { workspaceRoot: string; targetId: WorkspaceLaunchTargetId; filePath?: string; godotExecutablePath?: string | null; godotRunMode?: "editor" | "project" | "scene"; godotScenePath?: string; godotRuntimeTest?: { testSessionId: string; testSessionToken: string } }): Promise<WorkspaceLaunchTargetResult> => {
+		const developmentBackendDir: string = resolve(app.getAppPath(), "..", "daedalus-backend");
+		const developmentRuntime = params.godotRuntimeTest !== undefined
+			&& !app.isPackaged
+			&& existsSync(developmentBackendDir)
+			? {
+				backendUrl: `ws://127.0.0.1:${backendManager.getPort()}`,
+				backendDevDir: developmentBackendDir,
+			}
+			: {};
 		return openWorkspaceLaunchTarget(params.workspaceRoot, params.targetId, {
 			filePath: params.filePath,
 			godotExecutablePath: params.godotExecutablePath,
 			godotRunMode: params.godotRunMode,
 			godotScenePath: params.godotScenePath,
-			godotRuntimeTest: params.godotRuntimeTest,
+			godotRuntimeTest: params.godotRuntimeTest === undefined
+				? undefined
+				: { ...params.godotRuntimeTest, ...developmentRuntime },
 		});
 	});
 	ipcMain.handle("workspace-fs:stop-godot-runtime-test", (_event, testSessionId: string): WorkspaceGodotRuntimeTestStopResult => {
