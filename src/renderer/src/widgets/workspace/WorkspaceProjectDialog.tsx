@@ -3,7 +3,7 @@ import {
 	Button,
 	Flex,
 	Input,
-	List,
+	Menu,
 	Modal,
 	Popover,
 	Space,
@@ -11,6 +11,7 @@ import {
 	Tooltip,
 	Typography
 } from "antd";
+import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 import type {
 	WorkspaceColor,
@@ -154,6 +155,60 @@ export default function WorkspaceProjectDialog({
 			</div>
 		);
 	}, [draft, t]);
+
+	const sourceFolderItems: MenuProps["items"] = draft?.sourceFolders.map((source): NonNullable<MenuProps["items"]>[number] => {
+		const primary: boolean = source.id === draft.primarySourceFolderId;
+		return {
+			key: source.id,
+			icon: <Icon name="folder" style={getWorkspaceIconStyle(draft.color)} />,
+			label: (
+				<div className={styles.sourceItemLabel}>
+					<div className={styles.sourceItemTitle}>
+						<Typography.Text ellipsis>{source.path.split(/[\\/]/u).at(-1) || source.path}</Typography.Text>
+						{primary ? <Tag color="blue">{t("workspaceTree.projectEditor.primary", { defaultValue: "Primary" })}</Tag> : null}
+						{source.capabilities.git ? <Tag>Git</Tag> : null}
+						{source.capabilities.godot ? <Tag color="cyan">Godot</Tag> : null}
+					</div>
+					<Typography.Text type="secondary" ellipsis>{source.path}</Typography.Text>
+				</div>
+			),
+			extra: (
+				<Space size={0} onClick={(event): void => event.stopPropagation()}>
+					{primary ? null : (
+						<Tooltip title={t("workspaceTree.projectEditor.makePrimary", { defaultValue: "Make primary" })}>
+							<Button
+								type="text"
+								shape="circle"
+								icon={<Icon name="pin" />}
+								aria-label={t("workspaceTree.projectEditor.makePrimary", { defaultValue: "Make primary" })}
+								onClick={(): void => setDraft((current): WorkspaceProjectDraft | null => (
+									current === null ? null : { ...current, primarySourceFolderId: source.id }
+								))}
+							/>
+						</Tooltip>
+					)}
+					{primary ? null : (
+						<Tooltip title={t("workspaceTree.projectEditor.removeFolder", { defaultValue: "Remove source folder" })}>
+							<Button
+								type="text"
+								danger
+								shape="circle"
+								icon={<Icon name="remove" />}
+								aria-label={t("workspaceTree.projectEditor.removeFolder", { defaultValue: "Remove source folder" })}
+								onClick={(): void => setDraft((current): WorkspaceProjectDraft | null => current === null
+									? null
+									: {
+										...current,
+										sourceFolders: current.sourceFolders.filter((item): boolean => item.id !== source.id)
+									})}
+							/>
+						</Tooltip>
+					)}
+				</Space>
+			),
+			title: source.path
+		};
+	});
 
 	async function handleAddFolder(): Promise<void> {
 		if (draft === null || addingFolder) {
@@ -316,61 +371,13 @@ export default function WorkspaceProjectDialog({
 								{t("workspaceTree.projectEditor.addFolder", { defaultValue: "Add folder" })}
 							</Button>
 						</Flex>
-						<List
-							className={styles.sourceList}
-							dataSource={draft.sourceFolders}
-							renderItem={(source): React.JSX.Element => {
-								const primary: boolean = source.id === draft.primarySourceFolderId;
-								return (
-									<List.Item
-										actions={[
-											primary ? null : (
-												<Tooltip key="primary" title={t("workspaceTree.projectEditor.makePrimary", { defaultValue: "Make primary" })}>
-													<Button
-														type="text"
-														shape="circle"
-														icon={<Icon name="pin" />}
-														aria-label={t("workspaceTree.projectEditor.makePrimary", { defaultValue: "Make primary" })}
-														onClick={(): void => setDraft((current): WorkspaceProjectDraft | null => (
-															current === null ? null : { ...current, primarySourceFolderId: source.id }
-														))}
-													/>
-												</Tooltip>
-											),
-											primary ? null : (
-												<Tooltip key="remove" title={t("workspaceTree.projectEditor.removeFolder", { defaultValue: "Remove source folder" })}>
-													<Button
-														type="text"
-														danger
-														shape="circle"
-														icon={<Icon name="remove" />}
-														aria-label={t("workspaceTree.projectEditor.removeFolder", { defaultValue: "Remove source folder" })}
-														onClick={(): void => setDraft((current): WorkspaceProjectDraft | null => current === null
-															? null
-															: {
-																...current,
-																sourceFolders: current.sourceFolders.filter((item): boolean => item.id !== source.id)
-															})}
-													/>
-												</Tooltip>
-											)
-										].filter((action): action is React.JSX.Element => action !== null)}
-									>
-										<List.Item.Meta
-											avatar={<Icon name="folder" style={getWorkspaceIconStyle(draft.color)} />}
-											title={(
-												<Space size={6}>
-													<Typography.Text ellipsis>{source.path.split(/[\\/]/u).at(-1) || source.path}</Typography.Text>
-													{primary ? <Tag color="blue">{t("workspaceTree.projectEditor.primary", { defaultValue: "Primary" })}</Tag> : null}
-													{source.capabilities.git ? <Tag>Git</Tag> : null}
-													{source.capabilities.godot ? <Tag color="cyan">Godot</Tag> : null}
-												</Space>
-											)}
-											description={<Typography.Text type="secondary" ellipsis>{source.path}</Typography.Text>}
-										/>
-									</List.Item>
-								);
-							}}
+						<Menu
+							className={styles.sourceMenu}
+							items={sourceFolderItems}
+							selectedKeys={[draft.primarySourceFolderId]}
+							onClick={({ key }): void => setDraft((current): WorkspaceProjectDraft | null => (
+								current === null ? null : { ...current, primarySourceFolderId: String(key) }
+							))}
 						/>
 						{error === null ? null : <Typography.Text type="danger">{error}</Typography.Text>}
 					</Flex>

@@ -33,19 +33,48 @@
 	margin: 0px !important;
 }
 
-.sourceList {
+.sourceMenu {
 	max-height: min(420px, 55vh);
 	overflow-y: auto;
+	border-inline-end: 0 !important;
+	background: transparent !important;
 }
 
-.sourceList :global(.ant-list-item) {
+.sourceMenu :global(.ant-menu-item) {
 	min-height: 56px;
+	height: auto;
+	margin-block: 2px;
+	padding-block: 6px;
 }
 
-.sourceList :global(.ant-list-item-meta) {
+.sourceMenu :global(.ant-menu-title-content) {
 	min-width: 0;
 }
 
-.sourceList :global(.ant-list-item-meta-content) {
+.sourceMenu :global(.ant-menu-item-extra) {
+	display: flex;
+	align-items: center;
+	margin-inline-start: 8px;
+}
+
+.sourceItemLabel {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.sourceItemTitle {
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	gap: 6px;
+}
+
+.sourceItemTitle :global(.ant-typography) {
+	min-width: 0;
+}
+
+.sourceItemLabel :global(.ant-typography) {
 	min-width: 0;
 }

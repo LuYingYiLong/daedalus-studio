@@ -25,6 +25,8 @@ describe("multi-root workspace projects", () => {
 		expect(treeSource).toContain('icon: <Icon name="folder-edit" />');
 		expect(treeSource).toContain("<WorkspaceProjectDialog");
 		expect(editorSource).toContain("<Space.Compact block");
+		expect(editorSource).toContain("<Menu");
+		expect(editorSource).not.toContain("<List");
 		expect(editorSource).toContain("<Popover");
 		expect(editorSource).toContain("window.electronAPI.workspaceFs.pickWorkspaceDirectory()");
 		expect(editorSource).toContain("primarySourceFolderId: source.id");
