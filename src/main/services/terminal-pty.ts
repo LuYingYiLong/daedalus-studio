@@ -4,6 +4,7 @@ import { access, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import type { IDisposable, IPty, IPtyForkOptions, IWindowsPtyForkOptions } from "node-pty";
+import { safeSendToWebContents } from "./safe-web-contents-send";
 
 export type TerminalCreateParams = {
 	terminalId?: string | null;
@@ -182,7 +183,7 @@ function broadcastTerminalEvent(channel: "terminal:data" | "terminal:exit", payl
 		if (browserWindow.isDestroyed()) {
 			continue;
 		}
-		browserWindow.webContents.send(channel, payload);
+		safeSendToWebContents(browserWindow.webContents, channel, payload);
 	}
 }
 

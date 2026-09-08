@@ -28,6 +28,7 @@ import {
 	compareSemanticVersions
 } from "./backend-binary-manifest";
 import { createLogger } from "./logger";
+import { safeSendToWebContents } from "./safe-web-contents-send";
 
 const logger = createLogger("backend-bootstrap");
 
@@ -139,7 +140,7 @@ async function writeCompletedBackendBootstrap(version: string): Promise<void> {
 function broadcastBackendBootstrapEvent(payload: BackendBootstrapState): void {
 	for (const browserWindow of BrowserWindow?.getAllWindows?.() ?? []) {
 		if (!browserWindow.isDestroyed()) {
-			browserWindow.webContents.send("backend-bootstrap:state-changed", payload);
+			safeSendToWebContents(browserWindow.webContents, "backend-bootstrap:state-changed", payload);
 		}
 	}
 }

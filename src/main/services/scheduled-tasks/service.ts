@@ -15,6 +15,7 @@ import { nativeNotificationService } from "../native-notifications";
 import { runScheduledTaskWithBackend, ScheduledTaskBackendStartupError } from "./backend-runner";
 import { ScheduledTaskStore } from "./store";
 import { WindowsSchedulerAdapter } from "./windows-scheduler";
+import { safeSendToWebContents } from "../safe-web-contents-send";
 
 const MAX_TIMER_DELAY_MS: number = 2_147_000_000;
 const BACKEND_START_RETRY_DELAY_MS: number = 5 * 60_000;
@@ -277,7 +278,7 @@ export class ScheduledTaskService {
 				if (status === "changed" && task.notificationPolicy === "important_updates") this.notify(task, done, "scheduled_changed", task.title, result.summary);
 				else if (status === "awaiting_approval") this.notify(task, done, "scheduled_approval_required", task.title, "This task needs your approval to continue.");
 				else if (status === "succeeded" && task.notificationPolicy === "important_updates") this.notify(task, done, "scheduled_completed", task.title, result.summary || "Scheduled task completed.");
-				for (const window of BrowserWindow.getAllWindows()) if (!window.isDestroyed()) window.webContents.send("session-catalog:changed");
+				for (const window of BrowserWindow.getAllWindows()) if (!window.isDestroyed()) safeSendToWebContents(window.webContents, "session-catalog:changed");
 				this.broadcastRun(done);
 			}
 		} catch (error: unknown) {
@@ -295,8 +296,8 @@ export class ScheduledTaskService {
 	private notify(task: ScheduledTask, run: ScheduledTaskRun, kind: "scheduled_reminder" | "scheduled_completed" | "scheduled_changed" | "scheduled_failed" | "scheduled_approval_required", title: string, body: string): void {
 		nativeNotificationService.show({ kind, taskId: task.id, sessionId: run.sessionId ?? null, title, body: body.slice(0, 1000), dedupeKey: `${kind}:${run.id}` });
 	}
-	private broadcastRun(run: ScheduledTaskRun): void { for (const window of BrowserWindow.getAllWindows()) if (!window.isDestroyed()) window.webContents.send("scheduled-task-run:updated", run); }
-	private async changed(): Promise<void> { for (const window of BrowserWindow.getAllWindows()) if (!window.isDestroyed()) window.webContents.send("scheduled-tasks:changed"); await this.reconcile(); }
+	private broadcastRun(run: ScheduledTaskRun): void { for (const window of BrowserWindow.getAllWindows()) if (!window.isDestroyed()) safeSendToWebContents(window.webContents, "scheduled-task-run:updated", run); }
+	private async changed(): Promise<void> { for (const window of BrowserWindow.getAllWindows()) if (!window.isDestroyed()) safeSendToWebContents(window.webContents, "scheduled-tasks:changed"); await this.reconcile(); }
 
 	private async reconcile(): Promise<void> {
 		if (this.timer !== null) clearTimeout(this.timer);

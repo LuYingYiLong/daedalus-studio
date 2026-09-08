@@ -26,6 +26,7 @@ import {
 	WORKSPACE_ICON_NAMES,
 	WorkspaceIconView
 } from "./workspace-appearance";
+import { resolveWorkspaceProjectName } from "./workspace-project-name";
 import styles from "./WorkspaceProjectDialog.module.css";
 
 type WorkspaceProjectDraft = {
@@ -191,10 +192,6 @@ export default function WorkspaceProjectDialog({
 		if (draft === null || saving) {
 			return;
 		}
-		if (draft.name.trim().length === 0) {
-			setError(t("workspaceTree.projectEditor.nameRequired", { defaultValue: "Project name cannot be empty." }));
-			return;
-		}
 		if (draft.sourceFolders.length === 0 || draft.primarySourceFolderId.length === 0) {
 			setError(t("workspaceTree.projectEditor.sourceFolderRequired", { defaultValue: "Add a source folder before saving." }));
 			return;
@@ -207,6 +204,13 @@ export default function WorkspaceProjectDialog({
 			);
 			if (primarySourceFolder === undefined) {
 				throw new Error("The primary source folder must belong to the project.");
+			}
+			const projectName: string = workspace === null
+				? resolveWorkspaceProjectName(draft.name, primarySourceFolder.path)
+				: draft.name.trim();
+			if (projectName.length === 0) {
+				setError(t("workspaceTree.projectEditor.nameRequired", { defaultValue: "Project name cannot be empty." }));
+				return;
 			}
 			let workspaceToSave: WorkspaceConfig;
 			if (workspace === null) {
@@ -223,7 +227,7 @@ export default function WorkspaceProjectDialog({
 			}
 			const updated: WorkspaceConfig = await updateWorkspace({
 				workspaceId: workspaceToSave.id,
-				name: draft.name,
+				name: projectName,
 				icon: draft.icon,
 				color: draft.color,
 				sourceFolders: draft.sourceFolders.map((source) => ({ id: source.id, path: source.path })),

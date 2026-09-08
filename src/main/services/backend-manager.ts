@@ -20,6 +20,7 @@ import {
 } from "./backend-binary-store";
 import { createLogger } from "./logger";
 import { BackendStatus } from "./types";
+import { safeSendToWebContents } from "./safe-web-contents-send";
 
 const logger = createLogger("backend-manager");
 
@@ -904,8 +905,8 @@ class BackendManager {
 		}
 		this.status = status;
 		const mainWindow: BrowserWindow | null = this.mainWindow;
-		if (mainWindow !== null && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
-			mainWindow.webContents.send("backend:status-changed", status);
+		if (mainWindow !== null && !mainWindow.isDestroyed()) {
+			safeSendToWebContents(mainWindow.webContents, "backend:status-changed", status);
 		}
 		for (const listener of this.statusListeners) {
 			listener(status);

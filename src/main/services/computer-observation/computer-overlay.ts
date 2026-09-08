@@ -17,6 +17,7 @@ import type {
 import type { ComputerPresentation } from "./computer-service";
 import type { ComputerOverlayState } from "../../../contracts/computer-overlay";
 import { getComputerOverlayAppearance } from "./overlay-appearance";
+import { safeSendToWebContents } from "../safe-web-contents-send";
 
 const STOP_KEY = "Control+Alt+Escape";
 export class ComputerOverlay implements ComputerPresentation {
@@ -292,7 +293,7 @@ export class ComputerOverlay implements ComputerPresentation {
       const bounds = window.getBounds();
       const cursor = this.virtualCursor;
       try {
-        window.webContents.send("computer-overlay:state", {
+        safeSendToWebContents(window.webContents, "computer-overlay:state", {
           state: this.state?.state ?? "starting",
           code: this.resumeError ?? this.state?.code,
           resuming: this.state?.state === "paused" && (this.resuming || !!this.state.resuming),

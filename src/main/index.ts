@@ -33,6 +33,7 @@ import type { GeneralSettings } from "../contracts/general-settings";
 import { BrowserService } from "./services/browser/browser-service";
 import { BrowserDataStore } from "./services/browser/browser-data-store";
 import { BrowserPasswordStore } from "./services/browser/browser-password-store";
+import { safeSendToWebContents } from "./services/safe-web-contents-send";
 import { scheduledTaskService } from "./services/scheduled-tasks/service";
 import { registerWorkspaceMediaProtocol } from "./services/workspace-media";
 import { remoteAccessService } from "./services/remote-access";
@@ -121,6 +122,7 @@ const rendererShellReadyWindows: WeakSet<BrowserWindow> = new WeakSet();
 const rendererPaintReadyWindows: WeakSet<BrowserWindow> = new WeakSet();
 const rendererRevealRequestedWindows: WeakSet<BrowserWindow> = new WeakSet();
 const rendererReadyFallbackTimers: Map<number, ReturnType<typeof setTimeout>> = new Map();
+const rendererRecoveryTimers: Map<number, ReturnType<typeof setTimeout>> = new Map();
 const RENDERER_READY_FALLBACK_MS: number = 3_500;
 const SETTINGS_WINDOW_PREWARM_DELAY_MS: number = 100;
 let settingsWindowPrewarmTimer: ReturnType<typeof setTimeout> | null = null;
@@ -329,6 +331,20 @@ function trackRendererWindow(browserWindow: BrowserWindow): void {
 	});
 	browserWindow.once("closed", (): void => {
 		clearRendererReadyFallback(browserWindow);
+		const recoveryTimer: ReturnType<typeof setTimeout> | undefined = rendererRecoveryTimers.get(browserWindow.id);
+		if (recoveryTimer !== undefined) clearTimeout(recoveryTimer);
+		rendererRecoveryTimers.delete(browserWindow.id);
+	});
+	browserWindow.webContents.on("render-process-gone", (_event, details): void => {
+		if (isAppQuitting || browserWindow.isDestroyed() || rendererRecoveryTimers.has(browserWindow.id)) return;
+		logger.error("renderer_process_gone", undefined, { windowId: browserWindow.id, reason: details.reason, exitCode: details.exitCode });
+		const timer: ReturnType<typeof setTimeout> = setTimeout((): void => {
+			rendererRecoveryTimers.delete(browserWindow.id);
+			if (isAppQuitting || browserWindow.isDestroyed()) return;
+			if (browserWindow === mainWindow) browserService.destroyAll();
+			try { browserWindow.webContents.reload(); } catch { /* 进程正在退出，等待窗口生命周期处理 */ }
+		}, 150);
+		rendererRecoveryTimers.set(browserWindow.id, timer);
 	});
 }
 
@@ -367,7 +383,7 @@ function markRendererWindowReady(browserWindow: BrowserWindow): void {
 function broadcastClientPreferencesChanged(preferences: ClientPreferences): void {
 	for (const browserWindow of BrowserWindow.getAllWindows()) {
 		if (!browserWindow.isDestroyed()) {
-			browserWindow.webContents.send("client-preferences:changed", preferences);
+			safeSendToWebContents(browserWindow.webContents, "client-preferences:changed", preferences);
 		}
 	}
 }
@@ -375,7 +391,7 @@ function broadcastClientPreferencesChanged(preferences: ClientPreferences): void
 function broadcastGeneralSettingsChanged(settings: GeneralSettings, senderWebContentsId: number): void {
 	for (const browserWindow of BrowserWindow.getAllWindows()) {
 		if (!browserWindow.isDestroyed() && browserWindow.webContents.id !== senderWebContentsId) {
-			browserWindow.webContents.send("general-settings:changed", settings);
+			safeSendToWebContents(browserWindow.webContents, "general-settings:changed", settings);
 		}
 	}
 }
@@ -383,7 +399,7 @@ function broadcastGeneralSettingsChanged(settings: GeneralSettings, senderWebCon
 function broadcastSessionCatalogChanged(senderWebContentsId: number): void {
 	for (const browserWindow of BrowserWindow.getAllWindows()) {
 		if (!browserWindow.isDestroyed() && browserWindow.webContents.id !== senderWebContentsId) {
-			browserWindow.webContents.send("session-catalog:changed");
+			safeSendToWebContents(browserWindow.webContents, "session-catalog:changed");
 		}
 	}
 }
@@ -418,8 +434,8 @@ ipcMain.on("window:renderer-ready", (event): void => {
 		if (browserWindow === settingsWindow) {
 			setImmediate((): void => {
 				if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
-					settingsWindow.webContents.send("window:open-settings", pendingSettingsPage);
-					if (pendingPluginReview !== null) settingsWindow.webContents.send("window:plugin-review-requested");
+					safeSendToWebContents(settingsWindow.webContents, "window:open-settings", pendingSettingsPage);
+					if (pendingPluginReview !== null) safeSendToWebContents(settingsWindow.webContents, "window:plugin-review-requested");
 				}
 			});
 		}
@@ -466,7 +482,7 @@ function createSettingsWindow(page: string): BrowserWindow | null {
 
 	if (settingsWindow !== null && !settingsWindow.isDestroyed()) {
 		if (rendererReadyWindows.has(settingsWindow)) {
-			settingsWindow.webContents.send("window:open-settings", page);
+			safeSendToWebContents(settingsWindow.webContents, "window:open-settings", page);
 		}
 		return settingsWindow;
 	}
@@ -579,7 +595,7 @@ ipcMain.handle("window:open-plugin-review", (event, value: unknown): void => {
 	pendingPluginReview = request as PluginReviewRequest;
 	openSettingsWindow("plugins");
 	if (settingsWindow !== null && !settingsWindow.isDestroyed() && rendererReadyWindows.has(settingsWindow)) {
-		settingsWindow.webContents.send("window:plugin-review-requested");
+		safeSendToWebContents(settingsWindow.webContents, "window:plugin-review-requested");
 	}
 });
 

@@ -3,6 +3,7 @@ import { basename, join } from "node:path";
 import { app, shell, type BrowserWindow, type DownloadItem, type Session, type WebContents } from "electron";
 import type { BrowserDownloadRecord, BrowserSettings } from "../../../contracts/browser";
 import type { BrowserDataStore } from "./browser-data-store";
+import { safeSendToWebContents } from "../safe-web-contents-send";
 
 export class BrowserDownloadController {
 	private readonly activeDownloads: Map<string, DownloadItem> = new Map();
@@ -91,6 +92,6 @@ export class BrowserDownloadController {
 
 	private async publish(record: BrowserDownloadRecord): Promise<void> {
 		await this.dataStore.upsertDownload({ ...record });
-		this.getMainWindow()?.webContents.send("browser:download-changed", { ...record });
+		safeSendToWebContents(this.getMainWindow()?.webContents, "browser:download-changed", { ...record });
 	}
 }

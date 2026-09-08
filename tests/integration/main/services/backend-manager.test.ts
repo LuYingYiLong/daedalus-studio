@@ -80,6 +80,16 @@ describe("BackendManager", () => {
 
 			expect(mockMainWindow.webContents.send).not.toHaveBeenCalled();
 		});
+
+		it("drops a status event when the renderer frame disappears during send", async () => {
+			const { backendManager } = await import("@main/services/backend-manager");
+			mockMainWindow.webContents.send.mockImplementation(() => {
+				throw new Error("Render frame was disposed before WebFrameMain could be accessed");
+			});
+			(backendManager as any).mainWindow = mockMainWindow;
+
+			expect(() => (backendManager as any).setStatus("healthy")).not.toThrow();
+		});
 	});
 
 	describe("健康检查", () => {

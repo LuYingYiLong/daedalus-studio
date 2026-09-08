@@ -15,6 +15,7 @@ import {
 	rollbackBackendCandidate,
 	stageBackendRelease
 } from "./backend-binary-store";
+import { safeSendToWebContents } from "./safe-web-contents-send";
 
 export type AppUpdateStatus =
 	| "idle"
@@ -402,7 +403,7 @@ function broadcastAppUpdateEvent(channel: "app-update:state-changed", payload: A
 		if (browserWindow.isDestroyed() || browserWindow.webContents.isDestroyed()) {
 			continue;
 		}
-		browserWindow.webContents.send(channel, payload);
+		safeSendToWebContents(browserWindow.webContents, channel, payload);
 	}
 }
 

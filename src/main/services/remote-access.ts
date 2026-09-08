@@ -29,6 +29,7 @@ import {
 	type RemoteGatewayPairResult,
 } from "./remote-gateway";
 import { createLogger } from "./logger";
+import { safeSendToWebContents } from "./safe-web-contents-send";
 
 const logger = createLogger("remote-access");
 const PAIRING_LIFETIME_MS: number = 5 * 60 * 1000;
@@ -442,7 +443,7 @@ class RemoteAccessService {
 	private broadcast(): void {
 		const state: RemoteAccessState = this.getState();
 		for (const window of BrowserWindow.getAllWindows()) {
-			if (!window.isDestroyed()) window.webContents.send("remote-access:state-changed", state);
+			if (!window.isDestroyed()) safeSendToWebContents(window.webContents, "remote-access:state-changed", state);
 		}
 	}
 }

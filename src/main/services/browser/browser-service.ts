@@ -34,6 +34,7 @@ import { importBrowserProfile, listBrowserImportProfiles, type DiscoveredBrowser
 import { BrowserDownloadController } from "./browser-download-controller";
 import { BrowserCdpSession } from "./browser-cdp-session";
 import { BrowserAutomationController } from "./browser-automation-controller";
+import { safeSendToWebContents } from "../safe-web-contents-send";
 
 type BrowserViewRecord = {
 	browserId: string;
@@ -215,7 +216,11 @@ export class BrowserService {
 		const mainWindow: BrowserWindow | null = this.getMainWindow();
 		if (record.view !== null) {
 			try { mainWindow?.contentView.removeChildView(record.view); } catch { /* already removed */ }
-			if (!record.view.webContents.isDestroyed()) record.view.webContents.close();
+			try {
+				if (!record.view.webContents.isDestroyed()) record.view.webContents.close();
+			} catch {
+				// 页面 renderer 已经退出时，移除 view 即可完成隔离。
+			}
 		}
 		record.view = null;
 	}
@@ -327,6 +332,31 @@ export class BrowserService {
 			if (code === -3) { this.refreshNavigationState(record); return; }
 			this.updateViewState(record, { url: validatedUrl || record.state.url, isLoading: false, error: description });
 		});
+		view.webContents.on("render-process-gone", (_event, details): void => {
+			void record.inspector?.cancel();
+			record.inspector = null;
+			record.automation?.cancel();
+			record.automation?.invalidate();
+			record.cdp?.dispose();
+			record.cdp = null;
+			record.automation = null;
+			try {
+				record.cdp = new BrowserCdpSession(view.webContents);
+				record.automation = new BrowserAutomationController(
+					record.browserId,
+					view.webContents,
+					record.cdp,
+					(): boolean => record.inspector?.isActive() === true,
+					(state: BrowserAutomationState): void => { safeSendToWebContents(this.getMainWindow()?.webContents, "browser:automation-state-changed", state); }
+				);
+			} catch {
+				// Chromium 退出与下一个导航之间的短暂失效不应传播到主窗口。
+			}
+			this.updateViewState(record, {
+				isLoading: false,
+				error: `browser_renderer_gone:${details.reason}`
+			});
+		});
 		const navigated = (_event: Electron.Event, url: string): void => { record.automation?.invalidate(); void this.handleNavigated(record, url); };
 		view.webContents.on("did-navigate", navigated);
 		view.webContents.on("did-navigate-in-page", navigated);
@@ -339,7 +369,7 @@ export class BrowserService {
 			view.webContents,
 			record.cdp,
 			(): boolean => record.inspector?.isActive() === true,
-			(state: BrowserAutomationState): void => this.getMainWindow()?.webContents.send("browser:automation-state-changed", state)
+			(state: BrowserAutomationState): void => { safeSendToWebContents(this.getMainWindow()?.webContents, "browser:automation-state-changed", state); }
 		);
 		return view;
 	}
@@ -369,7 +399,7 @@ export class BrowserService {
 
 	private emitState(record: BrowserViewRecord): void {
 		const owner: WebContents | undefined = this.getMainWindow()?.webContents;
-		if (owner !== undefined && !owner.isDestroyed() && owner.id === record.ownerWebContentsId) owner.send("browser:view-state-changed", { ...record.state });
+		if (owner !== undefined && owner.id === record.ownerWebContentsId) safeSendToWebContents(owner, "browser:view-state-changed", { ...record.state });
 	}
 
 	private async toggleInspect(event: IpcMainInvokeEvent, payload: unknown): Promise<void> {
@@ -383,11 +413,11 @@ export class BrowserService {
 				record.cdp,
 				(snapshot: BrowserElementSnapshot): void => {
 					record.inspector = null;
-					event.sender.send("browser:view-element-selected", { browserId: record.browserId, snapshot });
+					safeSendToWebContents(event.sender, "browser:view-element-selected", { browserId: record.browserId, snapshot });
 				},
 				(): void => {
 					record.inspector = null;
-					event.sender.send("browser:view-inspect-cancelled", { browserId: record.browserId });
+					safeSendToWebContents(event.sender, "browser:view-inspect-cancelled", { browserId: record.browserId });
 				}
 			);
 		}
@@ -446,7 +476,7 @@ export class BrowserService {
 			callback(false);
 		}, 30_000);
 		this.pendingPermissions.set(request.id, { request, callback, timer });
-		this.getMainWindow()?.webContents.send("browser:permission-requested", request);
+		safeSendToWebContents(this.getMainWindow()?.webContents, "browser:permission-requested", request);
 	}
 
 	private async respondPermission(payload: unknown): Promise<void> {
@@ -481,8 +511,8 @@ export class BrowserService {
 				record.automation?.invalidate();
 			}
 		}
-		this.getMainWindow()?.webContents.send("browser:settings-changed", settings);
-		this.getSettingsWindow()?.webContents.send("browser:settings-changed", settings);
+		safeSendToWebContents(this.getMainWindow()?.webContents, "browser:settings-changed", settings);
+		safeSendToWebContents(this.getSettingsWindow()?.webContents, "browser:settings-changed", settings);
 		return settings;
 	}
 

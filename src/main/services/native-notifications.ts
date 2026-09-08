@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, nativeImage, Notification } from "electron";
 import { APP_NAME, getAppIconImage } from "./app-identity";
+import { safeSendToWebContents } from "./safe-web-contents-send";
 
 export type NativeNotificationKind = "run_completed" | "approval_required" | "clarification_required" | "scheduled_reminder" | "scheduled_completed" | "scheduled_changed" | "scheduled_failed" | "scheduled_approval_required";
 
@@ -79,7 +80,7 @@ export class NativeNotificationService {
 		const mainWindow = this.mainWindow;
 		if (mainWindow !== null && !mainWindow.isDestroyed() && this.isForeground(mainWindow)) {
 			if (payload.kind.startsWith("scheduled_")) {
-				mainWindow.webContents.send("native-notification:foreground", payload);
+				safeSendToWebContents(mainWindow.webContents, "native-notification:foreground", payload);
 				this.shownDedupeKeys.add(payload.dedupeKey);
 				return { shown: true };
 			}
@@ -103,7 +104,7 @@ export class NativeNotificationService {
 			notification.on("click", (): void => {
 				if (mainWindow !== null && !mainWindow.isDestroyed()) {
 					this.showWindow(mainWindow);
-					if (payload.taskId !== undefined) mainWindow.webContents.send("scheduled-task:navigate", { taskId: payload.taskId, sessionId: payload.sessionId ?? null });
+					if (payload.taskId !== undefined) safeSendToWebContents(mainWindow.webContents, "scheduled-task:navigate", { taskId: payload.taskId, sessionId: payload.sessionId ?? null });
 				}
 				this.clearAttention();
 			});

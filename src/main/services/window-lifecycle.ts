@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, Menu, nativeImage, Tray, type MenuItemConstructorOptions } from "electron";
 import type { ClientPreferences } from "./client-preferences-store";
 import { APP_NAME, getAppIconImage } from "./app-identity";
+import { safeSendToWebContents } from "./safe-web-contents-send";
 
 type ClientPreferencesReader = {
 	getCachedPreferences(): ClientPreferences;
@@ -201,11 +202,11 @@ export class WindowLifecycleController {
 
 		this.showWindow(this.mainWindow);
 		if (sessionId === undefined) {
-			this.mainWindow.webContents.send(channel);
+			safeSendToWebContents(this.mainWindow.webContents, channel);
 			return;
 		}
 
-		this.mainWindow.webContents.send(channel, sessionId);
+		safeSendToWebContents(this.mainWindow.webContents, channel, sessionId);
 	}
 
 	private showWindow(mainWindow: BrowserWindow): void {
