@@ -1044,7 +1044,7 @@
 		"graph": "Graph",
 		"agents": "subagents",
 		"summary": "{{total}} nodes / {{running}} running / {{queued}} queued / {{waiting}} awaiting approval / {{failed}} failed",
-		"actions": { "retry": "Retry", "cancel": "Cancel node", "cancelGraph": "Cancel graph" },
+		"actions": { "retry": "Retry", "cancel": "Cancel node", "cancelGraph": "Cancel all Subagents" },
 		"queueReasons": {
 			"provider_capacity": "Waiting for provider capacity",
 			"worktree_capacity": "Waiting for worktree capacity",

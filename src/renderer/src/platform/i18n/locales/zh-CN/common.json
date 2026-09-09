@@ -1042,7 +1042,7 @@
 		"graph": "图",
 		"agents": "个 Subagent",
 		"summary": "{{total}} 个节点 / {{running}} 个运行中 / {{queued}} 个排队 / {{waiting}} 个等待审批 / {{failed}} 个失败",
-		"actions": { "retry": "重试", "cancel": "取消节点", "cancelGraph": "取消图" },
+		"actions": { "retry": "重试", "cancel": "取消节点", "cancelGraph": "取消全部 Subagent" },
 		"queueReasons": {
 			"provider_capacity": "等待模型资源",
 			"worktree_capacity": "等待工作树资源",
