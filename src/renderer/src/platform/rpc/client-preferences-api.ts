@@ -32,7 +32,7 @@ export const DEFAULT_THEME_COLOR: string = DEFAULT_STUDIO_THEME_COLOR;
 export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	autoCheckForUpdates: true,
 	notifyOnRunCompleted: true,
-	minimizeToTrayOnClose: false,
+	minimizeToTrayOnClose: true,
 	theme: "system",
 	themeColor: DEFAULT_THEME_COLOR,
 	animationsEnabled: true,

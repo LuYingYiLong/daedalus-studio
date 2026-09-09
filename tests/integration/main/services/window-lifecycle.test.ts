@@ -4,7 +4,7 @@ import { getTrayMenuLabels, shouldMinimizeToTrayOnClose } from "@main/services/w
 
 describe("window lifecycle", () => {
 	it("hides to tray only when enabled and not quitting", () => {
-		expect(shouldMinimizeToTrayOnClose(DEFAULT_CLIENT_PREFERENCES, false)).toBe(false);
+		expect(shouldMinimizeToTrayOnClose(DEFAULT_CLIENT_PREFERENCES, false)).toBe(true);
 		expect(shouldMinimizeToTrayOnClose({
 			...DEFAULT_CLIENT_PREFERENCES,
 			minimizeToTrayOnClose: true

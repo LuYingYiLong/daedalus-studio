@@ -43,7 +43,7 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	allowComputerControl: false,
 	autoCheckForUpdates: true,
 	notifyOnRunCompleted: true,
-	minimizeToTrayOnClose: false,
+	minimizeToTrayOnClose: true,
 	theme: "system",
 	themeColor: DEFAULT_THEME_COLOR,
 	animationsEnabled: true,
