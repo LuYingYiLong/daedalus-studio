@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-	<path id="椭圆 21(边框)" d="M20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 13.4435 4.38209 14.7975 5.05092 15.9666L3.5 18.8863L7.92582 18.8863C9.11904 19.5937 10.5123 20 12 20C16.4183 20 20 16.4183 20 12Z" stroke="currentColor" stroke-width="2.000000" />
-	<path id="矢量 146" d="M9.5 8C9.66667 7.66667 10.4 6.5 12 6.5C13.6 6.5 15.5 8 13.5 10C13.5 10 12 11.1 12 11.5C12 11.9 12 12.5 12 13" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
-	<circle id="椭圆 21" cx="12" cy="16" r="1" fill="currentColor" />
+	<path d="M20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 13.4435 4.38209 14.7975 5.05092 15.9666L3.5 18.8863L7.92582 18.8863C9.11904 19.5937 10.5123 20 12 20C16.4183 20 20 16.4183 20 12Z" stroke="currentColor" stroke-width="2.000000" />
+	<path d="M9.5 8C9.66667 7.66667 10.4 6.5 12 6.5C13.6 6.5 15.5 8 13.5 10C13.5 10 12 11.1 12 11.5C12 11.9 12 12.5 12 13" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<circle cx="12" cy="16" r="1" fill="currentColor" />
 </svg>

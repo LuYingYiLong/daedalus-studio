@@ -1,4 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-	<path id="矢量 35" d="M5 5L12 12L5 19" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
-	<path id="矢量 36" d="M12 19L20 19" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path d="M5 5L12 12L5 19" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path d="M12 19L20 19" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
 </svg>

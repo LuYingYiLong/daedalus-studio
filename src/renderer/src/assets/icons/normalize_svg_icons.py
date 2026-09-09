@@ -25,6 +25,7 @@ SVG_ELEMENTS_WITH_PAINT: frozenset[str] = frozenset(
     {"circle", "ellipse", "line", "path", "polygon", "polyline", "rect", "text", "use"}
 )
 URL_REFERENCE_PATTERN: re.Pattern[str] = re.compile(r"url\(\s*#([^)\s]+)\s*\)")
+FRAGMENT_REFERENCE_PATTERN: re.Pattern[str] = re.compile(r"^#([^\s]+)$")
 STYLE_COLOR_PATTERN: re.Pattern[str] = re.compile(r"(?P<name>fill|stroke)\s*:\s*(?P<value>[^;}]+)", re.IGNORECASE)
 
 
@@ -148,19 +149,35 @@ def is_empty_path(element: ET.Element) -> bool:
     return local_name(element.tag) == "path" and not element.get("d", "").strip()
 
 
-def collect_url_references(elements: Iterable[ET.Element]) -> set[str]:
-    """收集 SVG 元素属性内引用的 defs 标识。"""
+def collect_id_references(elements: Iterable[ET.Element]) -> set[str]:
+    """收集 SVG 内部引用的 ID，避免清理时破坏 clipPath、渐变或滤镜。"""
     references: set[str] = set()
     for element in elements:
-        for attribute_value in element.attrib.values():
+        for attribute_name, attribute_value in element.attrib.items():
             references.update(URL_REFERENCE_PATTERN.findall(attribute_value))
+            if local_name(attribute_name) == "href":
+                matched_reference: re.Match[str] | None = FRAGMENT_REFERENCE_PATTERN.fullmatch(attribute_value.strip())
+                if matched_reference is not None:
+                    references.add(matched_reference.group(1))
     return references
+
+
+def remove_unreferenced_ids(root: ET.Element) -> bool:
+    """移除 Pixso 导出的无引用 ID，保留 SVG 内部仍依赖的标识。"""
+    referenced_ids: set[str] = collect_id_references(root.iter())
+    changed: bool = False
+    for element in root.iter():
+        element_id: str | None = element.get("id")
+        if element_id is not None and element_id not in referenced_ids:
+            del element.attrib["id"]
+            changed = True
+    return changed
 
 
 def remove_unused_defs(root: ET.Element) -> bool:
     """删除因移除 Pixso 网格而变为无引用的 defs 条目。"""
     changed: bool = False
-    references: set[str] = collect_url_references(root.iter())
+    references: set[str] = collect_id_references(root.iter())
     for defs in list(root):
         if local_name(defs.tag) != "defs":
             continue
@@ -229,6 +246,9 @@ def convert_svg(source: str, icon_name: str) -> tuple[str, ConversionResult]:
                 warnings.append("style 仍引用渐变或图案")
 
     if remove_unused_defs(root):
+        changed = True
+
+    if remove_unreferenced_ids(root):
         changed = True
 
     normalized_svg: str = ET.tostring(root, encoding="unicode", short_empty_elements=True)

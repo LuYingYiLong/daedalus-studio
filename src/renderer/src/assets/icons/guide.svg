@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-	<circle id="椭圆 7" cx="6" cy="18" r="3" fill="currentColor" />
-	<path id="矢量 73" d="M6 18L10 18C11.1046 18 12 17.1046 12 16L12 8C12 6.89543 12.8954 6 14 6L19.5 6" stroke="currentColor" stroke-width="2.000000" />
-	<path id="矢量 74" d="M16 3L20 6L16 10" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<circle cx="6" cy="18" r="3" fill="currentColor" />
+	<path d="M6 18L10 18C11.1046 18 12 17.1046 12 16L12 8C12 6.89543 12.8954 6 14 6L19.5 6" stroke="currentColor" stroke-width="2.000000" />
+	<path d="M16 3L20 6L16 10" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
 </svg>

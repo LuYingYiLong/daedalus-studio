@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-	<path id="矢量 12" d="M11 5L20 5" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
-	<path id="矢量 13" d="M11 12L20 12" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
-	<path id="矢量 14" d="M11 19L20 19" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
-	<path id="矢量 141" d="M3 4.28571L4.81818 6L8 3" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
-	<path id="矢量 142" d="M3 11.2857L4.81818 13L8 10" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
-	<path id="矢量 143" d="M3 18.2857L4.81818 20L8 17" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path d="M11 5L20 5" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path d="M11 12L20 12" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path d="M11 19L20 19" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path d="M3 4.28571L4.81818 6L8 3" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path d="M3 11.2857L4.81818 13L8 10" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path d="M3 18.2857L4.81818 20L8 17" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
 </svg>

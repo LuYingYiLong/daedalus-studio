@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-	<path id="减去顶层" d="M6 7L4 7Q3.5 7 3.25 7.25Q3 7.5 3 8Q3 8.5 3.25 8.75Q3.5 9 4 9L6 9L6 7ZM12 9L20 9Q20.5 9 20.75 8.75Q21 8.5 21 8L21 7.99984Q21 7.49996 20.75 7.25Q20.5 7 20 7L12 7L12 9ZM4 15L12 15L12 17L4 17Q3.5 17 3.25 16.75Q3.00003 16.5 3 16.0001L3 16Q3 15.5 3.25 15.25Q3.5 15 4 15ZM20 17L18 17L18 15L20 15C20.6667 15 21 15.3333 21 16Q21 16.5 20.75 16.75Q20.5 17 20 17Z" fill="currentColor" fill-rule="evenodd" />
-	<path id="矢量 77" d="M9 6L9 10" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
-	<path id="矢量 78" d="M15 14L15 18" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path d="M6 7L4 7Q3.5 7 3.25 7.25Q3 7.5 3 8Q3 8.5 3.25 8.75Q3.5 9 4 9L6 9L6 7ZM12 9L20 9Q20.5 9 20.75 8.75Q21 8.5 21 8L21 7.99984Q21 7.49996 20.75 7.25Q20.5 7 20 7L12 7L12 9ZM4 15L12 15L12 17L4 17Q3.5 17 3.25 16.75Q3.00003 16.5 3 16.0001L3 16Q3 15.5 3.25 15.25Q3.5 15 4 15ZM20 17L18 17L18 15L20 15C20.6667 15 21 15.3333 21 16Q21 16.5 20.75 16.75Q20.5 17 20 17Z" fill="currentColor" fill-rule="evenodd" />
+	<path d="M9 6L9 10" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+	<path d="M15 14L15 18" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
 </svg>
