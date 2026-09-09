@@ -39,7 +39,7 @@ function nodeLabel(node: SubagentNode, t: (key: string) => string): React.JSX.El
 	return (
 		<div className={styles.nodeMenuItem}>
 			<div className={styles.nodeMenuTitle}>
-				<Typography.Text strong ellipsis={{ tooltip: nodeName(node) }}>{nodeName(node)}</Typography.Text>
+				<Typography.Text>{nodeName(node)}</Typography.Text>
 				<Tag color={statusColor(node.status)}>{statusLabel(node.status, t)}</Tag>
 			</div>
 		</div>
@@ -209,19 +209,35 @@ export default function SubagentPanel({ sessionId }: SubagentPanelProps): React.
 	);
 	const failedCount: number = graphs.reduce(
 		(total: number, view: SubagentGraphView): number =>
-			total + view.snapshot.nodes.filter((node: SubagentNode): boolean => node.status === "failed" || node.status === "blocked").length,
+			total +
+			view.snapshot.nodes.filter(
+				(node: SubagentNode): boolean => node.status === "failed" || node.status === "blocked",
+			).length,
 		0,
 	);
-	const graphTerminal: boolean = ["completed", "completed_with_warnings", "failed", "cancelled"].includes(selectedGraph?.snapshot.graph.status ?? "");
-	const nodeRetryable: boolean = selectedNode !== undefined && ["failed", "blocked", "cancelled"].includes(selectedNode.status);
-	const nodeCancellable: boolean = selectedNode !== undefined && ["pending", "ready", "queued", "running", "waiting_approval"].includes(selectedNode.status);
+	const graphTerminal: boolean = ["completed", "completed_with_warnings", "failed", "cancelled"].includes(
+		selectedGraph?.snapshot.graph.status ?? "",
+	);
+	const nodeRetryable: boolean =
+		selectedNode !== undefined && ["failed", "blocked", "cancelled"].includes(selectedNode.status);
+	const nodeCancellable: boolean =
+		selectedNode !== undefined &&
+		["pending", "ready", "queued", "running", "waiting_approval"].includes(selectedNode.status);
 	const runSubagentAction = async (action: () => Promise<unknown>): Promise<void> => {
 		setActionLoading(true);
 		setError(null);
 		try {
 			const result = await action();
-			if (sessionId !== null && typeof result === "object" && result !== null && "graph" in result && "nodes" in result) {
-				subagentGraphStore.replaceSession(sessionId, [result as Parameters<typeof subagentGraphStore.replaceSession>[1][number]]);
+			if (
+				sessionId !== null &&
+				typeof result === "object" &&
+				result !== null &&
+				"graph" in result &&
+				"nodes" in result
+			) {
+				subagentGraphStore.replaceSession(sessionId, [
+					result as Parameters<typeof subagentGraphStore.replaceSession>[1][number],
+				]);
 			}
 		} catch (reason: unknown) {
 			setError(reason instanceof Error ? reason.message : String(reason));
@@ -235,22 +251,52 @@ export default function SubagentPanel({ sessionId }: SubagentPanelProps): React.
 			<header className={styles.header}>
 				<div className={styles.headerTitle}>
 					<Typography.Text type="secondary">
-						{t("subagent.summary", { total: totalAgents, running: runningCount, queued: queuedCount, waiting: waitingCount, failed: failedCount })}
+						{t("subagent.summary", {
+							total: totalAgents,
+							running: runningCount,
+							queued: queuedCount,
+							waiting: waitingCount,
+							failed: failedCount,
+						})}
 					</Typography.Text>
 				</div>
 				<Space size={4}>
 					{nodeRetryable && selectedGraph !== undefined && selectedNode !== undefined ? (
-						<Button size="small" loading={actionLoading} onClick={(): void => { void runSubagentAction(() => retrySubagentNode(selectedGraph.snapshot.graph.graphId, selectedNode.nodeId)); }}>
+						<Button
+							size="small"
+							loading={actionLoading}
+							onClick={(): void => {
+								void runSubagentAction(() =>
+									retrySubagentNode(selectedGraph.snapshot.graph.graphId, selectedNode.nodeId),
+								);
+							}}
+						>
 							{t("subagent.actions.retry")}
 						</Button>
 					) : null}
 					{nodeCancellable && selectedGraph !== undefined && selectedNode !== undefined ? (
-						<Button size="small" danger loading={actionLoading} onClick={(): void => { void runSubagentAction(() => cancelSubagentGraph(selectedGraph.snapshot.graph.graphId, selectedNode.nodeId)); }}>
+						<Button
+							size="small"
+							danger
+							loading={actionLoading}
+							onClick={(): void => {
+								void runSubagentAction(() =>
+									cancelSubagentGraph(selectedGraph.snapshot.graph.graphId, selectedNode.nodeId),
+								);
+							}}
+						>
 							{t("subagent.actions.cancel")}
 						</Button>
 					) : null}
 					{!graphTerminal && selectedGraph !== undefined ? (
-						<Button size="small" danger loading={actionLoading} onClick={(): void => { void runSubagentAction(() => cancelSubagentGraph(selectedGraph.snapshot.graph.graphId)); }}>
+						<Button
+							size="small"
+							danger
+							loading={actionLoading}
+							onClick={(): void => {
+								void runSubagentAction(() => cancelSubagentGraph(selectedGraph.snapshot.graph.graphId));
+							}}
+						>
 							{t("subagent.actions.cancelGraph")}
 						</Button>
 					) : null}
@@ -273,6 +319,19 @@ export default function SubagentPanel({ sessionId }: SubagentPanelProps): React.
 				<Alert type="info" showIcon title={conversationError} className={styles.alert} />
 			) : null}
 			<div className={styles.body}>
+				<main className={styles.conversationPane}>
+					{selectedNode === undefined ? (
+						<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("subagent.noNode")} />
+					) : (
+						<MessageList
+							key={`${selectedGraph?.snapshot.graph.graphId ?? ""}:${selectedNode.nodeId}`}
+							blocks={messageBlocks}
+							isLoading={conversationBlocks.length === 0 && loading}
+							errorMessage={conversationError}
+							hideInlineDiff={true}
+						/>
+					)}
+				</main>
 				<aside className={styles.nodeList}>
 					{selectedGraph !== undefined ? (
 						<div className={styles.graphStatus}>
@@ -297,19 +356,6 @@ export default function SubagentPanel({ sessionId }: SubagentPanelProps): React.
 						className={styles.subagentMenu}
 					/>
 				</aside>
-				<main className={styles.conversationPane}>
-					{selectedNode === undefined ? (
-						<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("subagent.noNode")} />
-					) : (
-						<MessageList
-							key={`${selectedGraph?.snapshot.graph.graphId ?? ""}:${selectedNode.nodeId}`}
-							blocks={messageBlocks}
-							isLoading={conversationBlocks.length === 0 && loading}
-							errorMessage={conversationError}
-							hideInlineDiff={true}
-						/>
-					)}
-				</main>
 			</div>
 		</section>
 	);

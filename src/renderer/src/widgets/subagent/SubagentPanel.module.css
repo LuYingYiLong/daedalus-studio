@@ -42,7 +42,7 @@
 
 .body {
 	display: grid;
-	grid-template-columns: minmax(170px, 0.34fr) minmax(0, 0.66fr);
+	grid-template-columns: minmax(0, 0.66fr) minmax(170px, 0.34fr);
 	min-width: 0;
 	min-height: 0;
 }
@@ -52,7 +52,7 @@
 	min-height: 0;
 	overflow: auto;
 	padding: var(--ds-space-1) 0 var(--ds-space-1) var(--ds-space-1);
-	border-right: 1px solid var(--ds-border);
+	border-left: 1px solid var(--ds-border);
 }
 
 .graphStatus {
