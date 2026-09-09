@@ -5,7 +5,7 @@ import {
 	type TimelineEventApplyOptions,
 } from "@/domain/workbench/workbench-state";
 import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
-import type { TimelineBlock } from "@/platform/rpc/types";
+import type { TimelineAssistantBlock, TimelineBlock, TimelineBodyPart } from "@/platform/rpc/types";
 
 type StoreSnapshot = {
 	version: number;
@@ -39,6 +39,19 @@ function eventIdentity(event: BackendEvent): string {
 }
 
 function getConversationIdentity(event: BackendEvent): { sessionId: string; graphId: string; nodeId: string } | null {
+	if (
+		(event.event === "agent.subgraph.node.retry"
+			|| event.event === "agent.subgraph.node.state"
+			|| event.event === "agent.subgraph.node.approval"
+			|| event.event === "agent.subgraph.node.result")
+		&& isRecord(event.data)
+	) {
+		const data: Record<string, unknown> = event.data;
+		const sessionId: string = stringValue(event.sessionId);
+		const graphId: string = stringValue(data.graphId);
+		const nodeId: string = stringValue(data.nodeId);
+		return sessionId.length > 0 && graphId.length > 0 && nodeId.length > 0 ? { sessionId, graphId, nodeId } : null;
+	}
 	if (!isSubagentScopedEvent(event) || event.event.startsWith("agent.subgraph.")) return null;
 	const data: Record<string, unknown> = isRecord(event.data) ? event.data : {};
 	const sessionId: string = stringValue(event.sessionId) || stringValue(data.sessionId);
@@ -47,6 +60,116 @@ function getConversationIdentity(event: BackendEvent): { sessionId: string; grap
 	return sessionId.length > 0 && graphId.length > 0 && nodeId.length > 0
 		? { sessionId, graphId, nodeId }
 		: null;
+}
+
+function createRetryBlock(event: BackendEvent): TimelineAssistantBlock {
+	const data: Record<string, unknown> = isRecord(event.data) ? event.data : {};
+	const runId: string = stringValue(data.runId) || event.requestId || event.id || "subagent-retry";
+	const attempt: number = typeof data.attempt === "number" ? data.attempt : 0;
+	return {
+		id: `subagent-retry:${event.eventId ?? event.id ?? `${runId}:${event.createdAt ?? ""}`}`,
+		type: "assistant",
+		requestId: runId,
+		content: "",
+		startedAtUtc: event.createdAt ?? new Date().toISOString(),
+		completedAtUtc: event.createdAt ?? new Date().toISOString(),
+		status: "running",
+		completionStatus: "responded",
+		bodyParts: [{
+			type: "status",
+			title: "Subagent retry",
+			details: stringValue(data.reason),
+			status: "info",
+			code: "subagent_retry",
+			iconUid: attempt > 0 ? `attempt-${attempt}` : undefined
+		}]
+	};
+}
+
+function createSubagentStateBlock(event: BackendEvent): TimelineAssistantBlock | null {
+	const data: Record<string, unknown> = isRecord(event.data) ? event.data : {};
+	const node: Record<string, unknown> = isRecord(data.node) ? data.node : {};
+	const status: string = stringValue(node.status);
+	const queueReason: string = stringValue(node.queueReason);
+	const titleByStatus: Record<string, string> = {
+		queued: "Subagent queued",
+		waiting_approval: "Approval required",
+		failed: "Subagent failed",
+		blocked: "Subagent blocked",
+		cancelled: "Subagent cancelled",
+	};
+	if (!(status in titleByStatus)) return null;
+	const details: string = status === "queued" && queueReason.length > 0
+		? `Waiting for ${queueReason.replaceAll("_", " ")}.`
+		: status === "waiting_approval"
+			? "Waiting for approval before continuing."
+			: status === "failed" || status === "blocked" || status === "cancelled"
+				? stringValue(node.failure && isRecord(node.failure) ? node.failure.message : undefined) || `Subagent status: ${status}.`
+				: `Subagent status: ${status}.`;
+	const runId: string = stringValue(node.runId) || stringValue(data.runId) || event.requestId || event.id || "subagent-state";
+	return {
+		id: `subagent-state:${event.eventId ?? event.id ?? `${runId}:${event.createdAt ?? ""}:${status}`}`,
+		type: "assistant",
+		requestId: runId,
+		content: "",
+		startedAtUtc: event.createdAt ?? new Date().toISOString(),
+		completedAtUtc: event.createdAt ?? new Date().toISOString(),
+		status: status === "failed" || status === "blocked" ? "failed" : status === "cancelled" ? "stopped" : "running",
+		completionStatus: status === "cancelled" ? "stopped" : "responded",
+		bodyParts: [{
+			type: "status",
+			title: titleByStatus[status],
+			details,
+			status: status === "failed" || status === "blocked" ? "error" : status === "queued" || status === "waiting_approval" ? "warning" : "info",
+			code: `subagent_${status}`
+		}]
+	};
+}
+
+function createSubagentApprovalBlock(event: BackendEvent): TimelineAssistantBlock {
+	const data: Record<string, unknown> = isRecord(event.data) ? event.data : {};
+	const status: string = stringValue(data.status) || "requested";
+	const runId: string = stringValue(data.runId) || event.requestId || event.id || "subagent-approval";
+	return {
+		id: `subagent-approval:${event.eventId ?? event.id ?? `${runId}:${event.createdAt ?? ""}`}`,
+		type: "assistant",
+		requestId: runId,
+		content: "",
+		startedAtUtc: event.createdAt ?? new Date().toISOString(),
+		completedAtUtc: event.createdAt ?? new Date().toISOString(),
+		status: status === "rejected" || status === "cancelled" ? "stopped" : "running",
+		completionStatus: status === "rejected" || status === "cancelled" ? "stopped" : "responded",
+		bodyParts: [{
+			type: "status",
+			title: "Subagent approval",
+			details: `Approval ${status}.`,
+			status: status === "rejected" ? "error" : status === "requested" ? "warning" : "info",
+			code: `subagent_approval_${status}`
+		}]
+	};
+}
+
+function createSubagentResultBlock(event: BackendEvent): TimelineAssistantBlock | null {
+	const data: Record<string, unknown> = isRecord(event.data) ? event.data : {};
+	const result: Record<string, unknown> = isRecord(data.result) ? data.result : {};
+	const summary: string = stringValue(result.summary);
+	if (summary.length === 0) return null;
+	const resultStatus: string = stringValue(result.status) || "completed";
+	const runId: string = stringValue(data.runId) || event.requestId || event.id || "subagent-result";
+	const detailsMarkdown: string = stringValue(result.detailsMarkdown);
+	const bodyParts: TimelineBodyPart[] = [{ type: "markdown", text: summary }];
+	if (detailsMarkdown.length > 0) bodyParts.push({ type: "markdown", text: detailsMarkdown });
+	return {
+		id: `subagent-result:${event.eventId ?? event.id ?? `${runId}:${event.createdAt ?? ""}`}`,
+		type: "assistant",
+		requestId: runId,
+		content: summary,
+		startedAtUtc: event.createdAt ?? new Date().toISOString(),
+		completedAtUtc: event.createdAt ?? new Date().toISOString(),
+		status: resultStatus === "failed" ? "failed" : resultStatus === "cancelled" ? "stopped" : undefined,
+		completionStatus: resultStatus === "cancelled" ? "stopped" : "responded",
+		bodyParts
+	};
 }
 
 class SubagentConversationStore {
@@ -81,7 +204,19 @@ class SubagentConversationStore {
 
 		const key: string = conversationKey(identity.sessionId, identity.graphId, identity.nodeId);
 		const current: readonly TimelineBlock[] = this.snapshot.blocksByKey[key] ?? EMPTY_BLOCKS;
-		const next: TimelineBlock[] = applyBackendEventToTimeline([...current], event, INCLUDE_SUBAGENT);
+		const statusBlock: TimelineAssistantBlock | null = event.event === "agent.subgraph.node.state"
+			? createSubagentStateBlock(event)
+			: null;
+		const resultBlock: TimelineAssistantBlock | null = event.event === "agent.subgraph.node.result"
+			? createSubagentResultBlock(event)
+			: null;
+		const next: TimelineBlock[] = event.event === "agent.subgraph.node.retry"
+			? [...current, createRetryBlock(event)]
+			: event.event === "agent.subgraph.node.approval"
+				? [...current, createSubagentApprovalBlock(event)]
+				: resultBlock !== null
+					? [...current, resultBlock]
+					: statusBlock === null ? applyBackendEventToTimeline([...current], event, INCLUDE_SUBAGENT) : [...current, statusBlock];
 		if (next.length === current.length && next.every((block: TimelineBlock, index: number): boolean => block === current[index])) return;
 		this.publish({
 			...this.snapshot.blocksByKey,

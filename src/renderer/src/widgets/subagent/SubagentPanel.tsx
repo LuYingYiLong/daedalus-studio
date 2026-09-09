@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Empty, Menu, Select, Spin, Tag, Typography } from "antd";
+import { Alert, Button, Empty, Menu, Select, Spin, Space, Tag, Typography } from "antd";
 import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
@@ -11,6 +11,7 @@ import type { SubagentGraphView } from "@/domain/subagent/subagent-graph-store";
 import { subagentGraphStore, useSubagentGraphs } from "@/domain/subagent/subagent-graph-store";
 import { fetchSessionTimeline } from "@/platform/rpc/session-api";
 import { listSubagentGraphs } from "@/platform/rpc/subagent-api";
+import { cancelSubagentGraph, retrySubagentNode } from "@/platform/rpc/subagent-api";
 import type { SubagentNode, TimelineBlock, TimelineBodyPart, TimelineUserBlock } from "@/platform/rpc/types";
 import MessageList from "@/widgets/conversation/MessageList";
 import styles from "./SubagentPanel.module.css";
@@ -21,6 +22,7 @@ function statusColor(status: string): string {
 	if (status === "completed" || status === "merged") return "success";
 	if (status === "failed" || status === "conflicted") return "error";
 	if (status === "waiting_approval" || status === "approval_required") return "warning";
+	if (status === "queued") return "warning";
 	if (status === "running" || status === "merging") return "processing";
 	return "default";
 }
@@ -29,19 +31,17 @@ function statusLabel(status: string, t: (key: string) => string): string {
 	return t(`subagent.status.${status}`);
 }
 
-function roleLabel(role: string, t: (key: string) => string): string {
-	const translated: string = t(`subagent.roles.${role}`);
-	return translated === `subagent.roles.${role}` ? role : translated;
+function nodeName(node: SubagentNode): string {
+	return node.name;
 }
 
 function nodeLabel(node: SubagentNode, t: (key: string) => string): React.JSX.Element {
 	return (
 		<div className={styles.nodeMenuItem}>
 			<div className={styles.nodeMenuTitle}>
-				<Typography.Text strong>{roleLabel(node.role, t)}</Typography.Text>
+				<Typography.Text strong ellipsis={{ tooltip: nodeName(node) }}>{nodeName(node)}</Typography.Text>
 				<Tag color={statusColor(node.status)}>{statusLabel(node.status, t)}</Tag>
 			</div>
-			<Typography.Text type="secondary">{node.objective}</Typography.Text>
 		</div>
 	);
 }
@@ -85,6 +85,7 @@ export default function SubagentPanel({ sessionId }: SubagentPanelProps): React.
 	const [loading, setLoading] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 	const [conversationError, setConversationError] = useState<string | null>(null);
+	const [actionLoading, setActionLoading] = useState<boolean>(false);
 
 	useEffect((): (() => void) => {
 		if (sessionId === null) return (): void => undefined;
@@ -201,15 +202,59 @@ export default function SubagentPanel({ sessionId }: SubagentPanelProps): React.
 			view.snapshot.nodes.filter((node: SubagentNode): boolean => node.status === "waiting_approval").length,
 		0,
 	);
+	const queuedCount: number = graphs.reduce(
+		(total: number, view: SubagentGraphView): number =>
+			total + view.snapshot.nodes.filter((node: SubagentNode): boolean => node.status === "queued").length,
+		0,
+	);
+	const failedCount: number = graphs.reduce(
+		(total: number, view: SubagentGraphView): number =>
+			total + view.snapshot.nodes.filter((node: SubagentNode): boolean => node.status === "failed" || node.status === "blocked").length,
+		0,
+	);
+	const graphTerminal: boolean = ["completed", "completed_with_warnings", "failed", "cancelled"].includes(selectedGraph?.snapshot.graph.status ?? "");
+	const nodeRetryable: boolean = selectedNode !== undefined && ["failed", "blocked", "cancelled"].includes(selectedNode.status);
+	const nodeCancellable: boolean = selectedNode !== undefined && ["pending", "ready", "queued", "running", "waiting_approval"].includes(selectedNode.status);
+	const runSubagentAction = async (action: () => Promise<unknown>): Promise<void> => {
+		setActionLoading(true);
+		setError(null);
+		try {
+			const result = await action();
+			if (sessionId !== null && typeof result === "object" && result !== null && "graph" in result && "nodes" in result) {
+				subagentGraphStore.replaceSession(sessionId, [result as Parameters<typeof subagentGraphStore.replaceSession>[1][number]]);
+			}
+		} catch (reason: unknown) {
+			setError(reason instanceof Error ? reason.message : String(reason));
+		} finally {
+			setActionLoading(false);
+		}
+	};
 
 	return (
 		<section className={styles.panel} data-testid="subagent-panel">
 			<header className={styles.header}>
 				<div className={styles.headerTitle}>
 					<Typography.Text type="secondary">
-						{t("subagent.summary", { total: totalAgents, running: runningCount, waiting: waitingCount })}
+						{t("subagent.summary", { total: totalAgents, running: runningCount, queued: queuedCount, waiting: waitingCount, failed: failedCount })}
 					</Typography.Text>
 				</div>
+				<Space size={4}>
+					{nodeRetryable && selectedGraph !== undefined && selectedNode !== undefined ? (
+						<Button size="small" loading={actionLoading} onClick={(): void => { void runSubagentAction(() => retrySubagentNode(selectedGraph.snapshot.graph.graphId, selectedNode.nodeId)); }}>
+							{t("subagent.actions.retry")}
+						</Button>
+					) : null}
+					{nodeCancellable && selectedGraph !== undefined && selectedNode !== undefined ? (
+						<Button size="small" danger loading={actionLoading} onClick={(): void => { void runSubagentAction(() => cancelSubagentGraph(selectedGraph.snapshot.graph.graphId, selectedNode.nodeId)); }}>
+							{t("subagent.actions.cancel")}
+						</Button>
+					) : null}
+					{!graphTerminal && selectedGraph !== undefined ? (
+						<Button size="small" danger loading={actionLoading} onClick={(): void => { void runSubagentAction(() => cancelSubagentGraph(selectedGraph.snapshot.graph.graphId)); }}>
+							{t("subagent.actions.cancelGraph")}
+						</Button>
+					) : null}
+				</Space>
 				{selectedGraph !== undefined && graphs.length > 1 ? (
 					<Select
 						size="small"
@@ -238,6 +283,11 @@ export default function SubagentPanel({ sessionId }: SubagentPanelProps): React.
 								{statusLabel(selectedGraph.snapshot.graph.status, t)}
 							</Tag>
 						</div>
+					) : null}
+					{selectedNode?.status === "queued" && selectedNode.queueReason !== null ? (
+						<Typography.Text type="secondary" className={styles.queueHint}>
+							{t(`subagent.queueReasons.${selectedNode.queueReason}`)}
+						</Typography.Text>
 					) : null}
 					<Menu
 						mode="inline"

@@ -46,6 +46,7 @@ function isNode(value: unknown): value is SubagentNode {
 		&& stringValue(value.nodeId).length > 0
 		&& stringValue(value.graphId).length > 0
 		&& stringValue(value.runId).length > 0
+		&& stringValue(value.name).length > 0
 		&& stringValue(value.role).length > 0
 		&& stringValue(value.status).length > 0;
 }

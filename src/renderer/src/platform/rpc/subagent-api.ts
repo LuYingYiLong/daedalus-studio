@@ -23,3 +23,17 @@ export async function getSubagentGraph(
 	const client = await createBackendClient();
 	return client.request<SubagentGraphSnapshot>("agent.subgraph.get", { graphId });
 }
+
+export async function retrySubagentNode(graphId: string, nodeId: string): Promise<SubagentGraphSnapshot> {
+	const client = await createBackendClient();
+	return client.request<SubagentGraphSnapshot>("agent.subgraph.retry", { graphId, nodeId });
+}
+
+export async function cancelSubagentGraph(graphId: string, nodeId?: string): Promise<SubagentGraphSnapshot> {
+	const client = await createBackendClient();
+	return client.request<SubagentGraphSnapshot>("agent.subgraph.cancel", {
+		graphId,
+		...(nodeId === undefined ? {} : { nodeId }),
+		reason: "Cancelled from the Subagent panel."
+	});
+}

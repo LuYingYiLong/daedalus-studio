@@ -571,6 +571,7 @@ export type SubagentGraphStatus =
 export type SubagentNodeStatus =
 	| "pending"
 	| "ready"
+	| "queued"
 	| "running"
 	| "waiting_approval"
 	| "blocked"
@@ -590,7 +591,20 @@ export type SubagentResult = {
 	artifacts: Array<{ kind: string; id: string; label: string | null }>;
 	needsParentDecision: boolean;
 	recommendedNextAction: string | null;
+	detailsMarkdown?: string | null;
 };
+
+export type SubagentRetryPolicy = {
+	mode: "transient_only";
+	maxRetries: number;
+};
+
+export type SubagentQueueReason =
+	| "provider_capacity"
+	| "worktree_capacity"
+	| "terminal_capacity"
+	| "system_pressure"
+	| "retry_backoff";
 
 export type SubagentWorktreeMetadata = {
 	managedMetadata: {
@@ -629,10 +643,17 @@ export type SubagentNode = {
 	nodeId: string;
 	graphId: string;
 	runId: string;
+	retryOfRunId?: string | null;
+	name: string;
 	role: SubagentRole;
 	objective: string;
 	dependsOn: string[];
 	status: SubagentNodeStatus;
+	attempt: number;
+	retryPolicy: SubagentRetryPolicy;
+	queueReason: SubagentQueueReason | null;
+	queuedAt: string | null;
+	nextRetryAt: string | null;
 	contextRefs: Array<{ kind: "message" | "context_block" | "artifact" | "source_folder"; id: string }>;
 	toolScope: {
 		capabilities: string[];
