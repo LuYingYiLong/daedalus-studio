@@ -154,6 +154,19 @@ export function getBackendEventSessionMetadata(event: BackendEvent): SessionMeta
 		: null;
 }
 
+export function isSubagentRunStateEvent(event: BackendEvent): boolean {
+	return event.event === "agent.run.state"
+		&& isRecord(event.data)
+		&& (typeof event.data.subagentGraphId === "string" || typeof event.data.subagentNodeId === "string");
+}
+
+export function isSubagentScopedEvent(event: BackendEvent): boolean {
+	if (event.event.startsWith("agent.subgraph.")) return true;
+	if (!isRecord(event.data)) return false;
+	return (typeof event.data.subagentGraphId === "string" || typeof event.data.subagentNodeId === "string")
+		|| (typeof event.data.graphId === "string" && typeof event.data.nodeId === "string" && typeof event.data.parentRunId === "string");
+}
+
 export function getWorkbenchFromEvent(event: BackendEvent): WorkbenchSnapshot | null {
 	if (event.event !== "session.workbench.updated" || !isRecord(event.data)) {
 		return null;
@@ -172,6 +185,9 @@ export function getBackendEventRequestId(event: BackendEvent): string {
 }
 
 export function isRunCancellationEvent(event: BackendEvent): boolean {
+	if (isSubagentRunStateEvent(event)) {
+		return false;
+	}
 	return event.event === "agent.run.cancelled"
 		|| (
 			event.event === "agent.run.state"
@@ -181,6 +197,9 @@ export function isRunCancellationEvent(event: BackendEvent): boolean {
 }
 
 export function isRunCompletionEvent(event: BackendEvent): boolean {
+	if (isSubagentRunStateEvent(event)) {
+		return false;
+	}
 	return event.event === "agent.run.cancelled"
 		|| (
 			event.event === "agent.run.state"

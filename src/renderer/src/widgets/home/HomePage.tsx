@@ -5,6 +5,7 @@ import {
 	useLayoutEffect,
 	useMemo,
 	useRef,
+	useEffect,
 } from "react";
 import { message as antdMessage } from "antd";
 import { useTranslation } from "react-i18next";
@@ -49,6 +50,7 @@ import HomeWorkspaceSidebar from "./workspace/HomeWorkspaceSidebar";
 import HomePageShell from "./surface/HomePageShell";
 import TimelineWorkflowTodoPanel from "./surface/TimelineWorkflowTodoPanel";
 import type { SessionLayoutPreferences } from "@/domain/session/session-layout";
+import { useSubagentGraphs } from "@/domain/subagent/subagent-graph-store";
 import SessionSummaryPopover from "./summary/SessionSummaryPopover";
 import useHomePageDockController, {
 	BOTTOM_DOCK_CLOSED_SIZE,
@@ -499,6 +501,18 @@ function HomePage({
 		workspaceForActions,
 	});
 	const showDockControls: boolean = true;
+	const subagentGraphs = useSubagentGraphs(activeSessionId);
+	const openedSubagentGraphIdsRef = useRef<Set<string>>(new Set());
+	useEffect((): void => {
+		if (activeSessionId === null || subagentGraphs.length === 0) return;
+		const hasNewGraph: boolean = subagentGraphs.some((view): boolean => {
+			const graphId: string = view.snapshot.graph.graphId;
+			if (openedSubagentGraphIdsRef.current.has(graphId)) return false;
+			openedSubagentGraphIdsRef.current.add(graphId);
+			return true;
+		});
+		if (hasNewGraph) openSideDock("subagent");
+	}, [activeSessionId, openSideDock, subagentGraphs]);
 	const showWorkspaceLaunchControls: boolean = workspaceForActions !== null;
 	const showSummaryButton: boolean = true;
 	const showSideDockButton: boolean = showDockControls;

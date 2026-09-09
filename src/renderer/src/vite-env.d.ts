@@ -357,7 +357,7 @@ declare global {
 		}) => Promise<string | null>;
 	}
 
-	type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory";
+	type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory" | "subagent";
 
 	interface DockTabPreferences {
 		key: string;

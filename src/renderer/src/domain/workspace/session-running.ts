@@ -1,5 +1,6 @@
 import type { AgentRunState } from "@/platform/rpc/types";
 import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
+import { isSubagentRunStateEvent } from "@/domain/run/backend-event-state";
 
 type SessionRunIdentity = {
 	requestId: string;
@@ -178,6 +179,9 @@ export function applyRunningSessionEvent(
 	}
 
 	if (event.event !== "agent.run.state" || typeof event.sessionId !== "string" || !isRecord(event.data)) {
+		return current;
+	}
+	if (isSubagentRunStateEvent(event)) {
 		return current;
 	}
 	const sessionId: string = getEventSessionId(event);

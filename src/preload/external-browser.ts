@@ -4,6 +4,7 @@ import type {
 	ExternalBrowserScope,
 	ExternalBrowserState,
 } from "../contracts/external-browser";
+
 function subscribe<T>(
 	channel: string,
 	listener: (value: T) => void,
@@ -15,6 +16,7 @@ function subscribe<T>(
 		ipcRenderer.removeListener(channel, handler);
 	};
 }
+
 export const externalBrowserBridge: ExternalBrowserApi = {
 	getState: () => ipcRenderer.invoke("external-browser:getState"),
 	configure: (patch) => ipcRenderer.invoke("external-browser:configure", patch),

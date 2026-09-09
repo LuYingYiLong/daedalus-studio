@@ -12,6 +12,7 @@ import TerminalPanel from "@/widgets/terminal/TerminalPanel";
 import FilePanel from "@/widgets/files/FilePanel";
 import BrowserPanel from "@/widgets/browser/BrowserPanel";
 import TrajectoryPanel from "@/widgets/trajectory/TrajectoryPanel";
+import SubagentPanel from "@/widgets/subagent/SubagentPanel";
 import type {
 	AdditionalContextItem,
 	WorkspaceConfig,
@@ -83,6 +84,7 @@ const ADD_TERMINAL_KEY: DockPanelKind = "terminal";
 const ADD_FILES_KEY: DockPanelKind = "files";
 const ADD_BROWSER_KEY: DockPanelKind = "browser";
 const ADD_TRAJECTORY_KEY: DockPanelKind = "trajectory";
+const ADD_SUBAGENT_KEY: DockPanelKind = "subagent";
 
 function getPanelTitle(
 	kind: DockPanelKind,
@@ -109,6 +111,11 @@ function getPanelTitle(
 			? t("dock.tabs.trajectory")
 			: t("dock.tabs.trajectoryIndexed", { index });
 	}
+	if (kind === "subagent") {
+		return index === 1
+			? t("dock.tabs.subagent")
+			: t("dock.tabs.subagentIndexed", { index });
+	}
 	return index === 1
 		? t("dock.tabs.browser")
 		: t("dock.tabs.browserIndexed", { index });
@@ -123,6 +130,8 @@ function getTabIconName(kind: DockPanelKind): string {
 				? "file-system"
 				: kind === "trajectory"
 					? "trajectory"
+					: kind === "subagent"
+						? "subagent"
 					: "global";
 }
 
@@ -195,6 +204,12 @@ function DockPanelTabs({
 				icon: <Icon name="trajectory" />,
 				disabled: sessionId === null,
 			},
+			{
+				key: ADD_SUBAGENT_KEY,
+				label: t("dock.add.subagentPanel"),
+				icon: <Icon name="subagent" />,
+				disabled: sessionId === null,
+			},
 		],
 		[canOpenReview, sessionId, t],
 	);
@@ -204,7 +219,7 @@ function DockPanelTabs({
 			if (
 				((kind === "review" || kind === "files") &&
 					workspaceId === null) ||
-				(kind === "trajectory" && sessionId === null)
+				((kind === "trajectory" || kind === "subagent") && sessionId === null)
 			) {
 				return;
 			}
@@ -348,7 +363,8 @@ function DockPanelTabs({
 			kind === ADD_TERMINAL_KEY ||
 			kind === ADD_FILES_KEY ||
 			kind === ADD_BROWSER_KEY ||
-			kind === ADD_TRAJECTORY_KEY
+			kind === ADD_TRAJECTORY_KEY ||
+			kind === ADD_SUBAGENT_KEY
 		) {
 			addPanelTab(kind);
 		}
@@ -426,6 +442,10 @@ function DockPanelTabs({
 					isActive={isOpen && activeKey === tab.key}
 				/>
 			);
+		}
+
+		if (tab.kind === "subagent") {
+			return <SubagentPanel sessionId={sessionId} />;
 		}
 
 		return (

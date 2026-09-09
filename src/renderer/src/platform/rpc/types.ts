@@ -395,6 +395,9 @@ export type AgentRunState = {
 	sessionId: string;
 	requestId: string;
 	rootRequestId: string;
+	parentRunId?: string;
+	subagentGraphId?: string;
+	subagentNodeId?: string;
 	retryOfRunId?: string;
 	goalId?: string;
 	goalCycle?: number;
@@ -554,6 +557,112 @@ export type WorkbenchSnapshot = {
 		workspaceRoot?: string | null;
 		[key: string]: unknown;
 	};
+};
+
+export type SubagentGraphStatus =
+	| "draft"
+	| "running"
+	| "blocked"
+	| "completed"
+	| "completed_with_warnings"
+	| "failed"
+	| "cancelled";
+
+export type SubagentNodeStatus =
+	| "pending"
+	| "ready"
+	| "running"
+	| "waiting_approval"
+	| "blocked"
+	| "completed"
+	| "failed"
+	| "cancelled";
+
+export type SubagentRole = "researcher" | "planner" | "implementer" | "tester" | "reviewer";
+export type SubagentWorkspaceMode = "shared_read_only" | "managed_worktree";
+
+export type SubagentResult = {
+	status: "completed" | "partial" | "failed" | "cancelled";
+	summary: string;
+	findings: string[];
+	changedFiles: string[];
+	tests: Array<{ name: string; status: "passed" | "failed" | "skipped"; summary: string | null }>;
+	artifacts: Array<{ kind: string; id: string; label: string | null }>;
+	needsParentDecision: boolean;
+	recommendedNextAction: string | null;
+};
+
+export type SubagentWorktreeMetadata = {
+	managedMetadata: {
+		displayName?: string;
+		location?: "local" | "worktree";
+		status?: string;
+	};
+	sourceStates: Array<{
+		sourceFolderId: string;
+		headCommit: string | null;
+		branch: string | null;
+		detached: boolean;
+	}>;
+	mergeStatus: "not_requested" | "previewed" | "pending" | "merged" | "conflict" | "failed";
+	cleanupStatus: "not_requested" | "pending" | "completed" | "failed";
+};
+
+export type SubagentFailure = {
+	code: string;
+	message: string;
+	retryable: boolean;
+	failedAt: string;
+};
+
+export type SubagentGraph = {
+	graphId: string;
+	sessionId: string;
+	rootRunId: string;
+	status: SubagentGraphStatus;
+	revision: number;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type SubagentNode = {
+	nodeId: string;
+	graphId: string;
+	runId: string;
+	role: SubagentRole;
+	objective: string;
+	dependsOn: string[];
+	status: SubagentNodeStatus;
+	contextRefs: Array<{ kind: "message" | "context_block" | "artifact" | "source_folder"; id: string }>;
+	toolScope: {
+		capabilities: string[];
+		toolNames: string[];
+		sourceFolderIds: string[];
+	};
+	workspaceMode: SubagentWorkspaceMode;
+	worktreeMetadata: SubagentWorktreeMetadata | null;
+	result: SubagentResult | null;
+	failure: SubagentFailure | null;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type SubagentGraphSnapshot = {
+	graph: SubagentGraph;
+	nodes: SubagentNode[];
+};
+
+export type SubagentApprovalState = {
+	approvalId: string;
+	status: "requested" | "approved" | "rejected" | "cancelled";
+	updatedAt: string;
+};
+
+export type SubagentMergeState = {
+	status: "preview_ready" | "approval_required" | "merging" | "merged" | "conflicted" | "failed" | "cancelled";
+	fingerprint?: string | null;
+	message?: string;
+	updatedAt: string;
 };
 
 export type WorkbenchPatch = {

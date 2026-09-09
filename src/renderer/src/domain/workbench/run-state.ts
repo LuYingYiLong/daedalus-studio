@@ -1,5 +1,6 @@
 import type { AgentRunState, WorkbenchActiveRun, WorkbenchSnapshot } from "@/platform/rpc/types";
 import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
+import { isSubagentRunStateEvent } from "@/domain/run/backend-event-state";
 
 export type RunControllerStatus = WorkbenchActiveRun["status"];
 
@@ -168,6 +169,9 @@ export function applyRunStateFromBackendEvent(
 	cancelledRequestIds?: ReadonlySet<string>
 ): RunControllerState {
 	if (event.event === "agent.run.state" && isAgentRunState(event.data)) {
+		if (isSubagentRunStateEvent(event)) {
+			return current;
+		}
 		if (
 			!TERMINAL_RUN_STAGES.has(event.data.stage)
 			&& (

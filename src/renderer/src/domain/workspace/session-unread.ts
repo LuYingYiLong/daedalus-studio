@@ -1,4 +1,5 @@
 import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
+import { isSubagentRunStateEvent } from "@/domain/run/backend-event-state";
 
 export type SessionUnreadContext = {
 	activeSessionId: string | null;
@@ -46,6 +47,7 @@ export function getUnreadResponseSessionId(event: BackendEvent): string | null {
 	}
 	if (
 		event.event !== "agent.run.state"
+		|| isSubagentRunStateEvent(event)
 		|| typeof event.sessionId !== "string"
 		|| event.sessionId.length === 0
 		|| !isRecord(event.data)

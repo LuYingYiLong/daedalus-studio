@@ -166,6 +166,7 @@
 	line-height: 1.55;
 	background: var(--diff-background-color);
 	color: var(--diff-text-color);
+	user-select: text;
 }
 
 /* react-diff-view 的默认主题是浅色；在实际单元格上重复声明，避免默认 :root 变量覆盖深色主题。 */

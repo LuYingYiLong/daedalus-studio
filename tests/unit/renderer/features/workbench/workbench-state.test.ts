@@ -286,6 +286,30 @@ describe("workbench-state", () => {
 		expect(withDone[0]?.type === "assistant" ? withDone[0].status : "missing").toBeUndefined();
 	});
 
+	it("isolates subagent conversation events from the parent timeline unless explicitly included", () => {
+		const childEvent: BackendEvent = {
+			type: "event",
+			eventId: "subagent-message-1",
+			event: "agent.message.delta",
+			sessionId: "session-a",
+			requestId: "child-run",
+			createdAt: "2026-07-29T00:00:00.000Z",
+			data: {
+				runId: "child-run",
+				graphId: "graph-a",
+				nodeId: "node-a",
+				parentRunId: "parent-run",
+				text: "child response"
+			}
+		};
+
+		expect(applyBackendEventToTimeline([], childEvent)).toEqual([]);
+		const childBlocks: TimelineBlock[] = applyBackendEventToTimeline([], childEvent, { includeSubagent: true });
+		expect(childBlocks).toHaveLength(1);
+		expect(childBlocks[0]?.type).toBe("assistant");
+		expect(childBlocks[0]?.type === "assistant" ? childBlocks[0].content : "").toBe("child response");
+	});
+
 	it("keeps an arriving assistant block adjacent to its user request", () => {
 		const blocks: TimelineBlock[] = applyBackendEventToTimeline(
 			[createUserBlock("request-earlier"), createUserBlock("request-current"), createUserBlock("request-later")],

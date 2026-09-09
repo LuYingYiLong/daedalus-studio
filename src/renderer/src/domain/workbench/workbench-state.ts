@@ -1,4 +1,5 @@
 import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
+import { isSubagentScopedEvent } from "@/domain/run/backend-event-state";
 import type { SessionOpenResult, SessionTimelineResult, TimelineAssistantBlock, TimelineBlock, TimelineBodyPart, TimelineDividerBlock, TimelineDividerModelRef, WorkbenchSnapshot } from "@/platform/rpc/types";
 
 export type TimelinePageState = {
@@ -35,6 +36,10 @@ export const initialWorkbenchSessionState: WorkbenchSessionState = {
 	activeSessionId: null,
 	workbench: null,
 	timeline: emptyTimelinePage
+};
+
+export type TimelineEventApplyOptions = {
+	includeSubagent?: boolean;
 };
 
 export function applyWorkbenchSnapshot(current: WorkbenchSnapshot | null, next: WorkbenchSnapshot): WorkbenchSnapshot {
@@ -992,7 +997,14 @@ function applyModelChangeDividerEvent(blocks: TimelineBlock[], event: BackendEve
 		: [...blocks.slice(0, requestBlockIndex), divider, ...blocks.slice(requestBlockIndex)];
 }
 
-export function applyBackendEventToTimeline(blocks: TimelineBlock[], event: BackendEvent): TimelineBlock[] {
+export function applyBackendEventToTimeline(
+	blocks: TimelineBlock[],
+	event: BackendEvent,
+	options: TimelineEventApplyOptions = {}
+): TimelineBlock[] {
+	if (isSubagentScopedEvent(event) && options.includeSubagent !== true) {
+		return blocks;
+	}
 	const canonicalEvent: BackendEvent = rewriteEventForTimeline(blocks, event);
 	if (canonicalEvent.event === "session.model.changed") {
 		return applyModelChangeDividerEvent(blocks, canonicalEvent);
@@ -1018,9 +1030,13 @@ export function applyBackendEventToTimeline(blocks: TimelineBlock[], event: Back
 	return insertLiveAssistantBlockInRequestOrder(blocks, createLiveAssistantBlock(canonicalEvent));
 }
 
-export function applyBackendEventsToTimeline(blocks: TimelineBlock[], events: readonly BackendEvent[]): TimelineBlock[] {
+export function applyBackendEventsToTimeline(
+	blocks: TimelineBlock[],
+	events: readonly BackendEvent[],
+	options: TimelineEventApplyOptions = {}
+): TimelineBlock[] {
 	return coalesceTimelineStreamingEvents(events).reduce(
-		(currentBlocks: TimelineBlock[], event: BackendEvent): TimelineBlock[] => applyBackendEventToTimeline(currentBlocks, event),
+		(currentBlocks: TimelineBlock[], event: BackendEvent): TimelineBlock[] => applyBackendEventToTimeline(currentBlocks, event, options),
 		blocks
 	);
 }

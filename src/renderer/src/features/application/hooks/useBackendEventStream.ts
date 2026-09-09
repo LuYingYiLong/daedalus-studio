@@ -15,6 +15,8 @@ import {
 	getPlanClarificationFromEvent,
 	getPlanIdFromEvent,
 	getWorkbenchFromEvent,
+	isSubagentRunStateEvent,
+	isSubagentScopedEvent,
 	isRunCancellationEvent,
 	isRunCompletionEvent,
 	isSessionScopedBackendEvent,
@@ -30,6 +32,8 @@ import {
 	reconcileWorkflowTodoWithRunStage
 } from "@/domain/composer/workflow-todo";
 import { hasQueuedFollowUpResponse } from "@/domain/run/run-completion-notification";
+import { subagentGraphStore } from "@/domain/subagent/subagent-graph-store";
+import { subagentConversationStore } from "@/domain/subagent/subagent-conversation-store";
 
 type RefValue<T> = {
 	current: T;
@@ -75,6 +79,8 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 
 	const handleBackendEvent = useMemoizedFn((event: BackendEvent): void => {
 		params.onEventObserved?.(event);
+		subagentGraphStore.applyBackendEvent(event);
+		subagentConversationStore.applyBackendEvent(event);
 		if (event.event === "plugin.review.request" && typeof event.data === "object" && event.data !== null && !Array.isArray(event.data)) {
 			void window.electronAPI.windowControl.openPluginReview(event.data as PluginReviewRequest);
 			return;
@@ -85,6 +91,9 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 			return;
 		}
 		if (event.event.startsWith("session.selectionAsk.")) {
+			return;
+		}
+		if (isSubagentScopedEvent(event)) {
 			return;
 		}
 
