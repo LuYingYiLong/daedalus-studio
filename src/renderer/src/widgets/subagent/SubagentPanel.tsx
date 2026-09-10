@@ -1,14 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
-import { Alert, Button, Empty, Menu, Select, Spin, Space, Tag, Typography } from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Button, Empty, Menu, Select, Spin, Space, Splitter, Tag, Typography } from "antd";
 import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
-import { Icon } from "@/assets/icons";
 import {
 	useSubagentConversationBlocks,
 	subagentConversationStore,
 } from "@/domain/subagent/subagent-conversation-store";
 import type { SubagentGraphView } from "@/domain/subagent/subagent-graph-store";
 import { subagentGraphStore, useSubagentGraphs } from "@/domain/subagent/subagent-graph-store";
+import {
+	SUBAGENT_PANEL_DEFAULT_SPLIT,
+	SUBAGENT_PANEL_MAX_SPLIT,
+	SUBAGENT_PANEL_MIN_SPLIT,
+	type SubagentPanelLayoutPreferences,
+} from "@/domain/session/session-layout";
 import { fetchSessionTimeline } from "@/platform/rpc/session-api";
 import { listSubagentGraphs } from "@/platform/rpc/subagent-api";
 import { cancelSubagentGraph, retrySubagentNode } from "@/platform/rpc/subagent-api";
@@ -16,7 +21,29 @@ import type { SubagentNode, TimelineBlock, TimelineBodyPart, TimelineUserBlock }
 import MessageList from "@/widgets/conversation/MessageList";
 import styles from "./SubagentPanel.module.css";
 
-type SubagentPanelProps = { sessionId: string | null };
+type SubagentPanelProps = {
+	sessionId: string | null;
+	layout: SubagentPanelLayoutPreferences;
+	onLayoutChange: (layout: SubagentPanelLayoutPreferences) => void;
+};
+
+function normalizeSplitSize(value: number): number {
+	if (!Number.isFinite(value)) return SUBAGENT_PANEL_DEFAULT_SPLIT;
+	return Math.min(SUBAGENT_PANEL_MAX_SPLIT, Math.max(SUBAGENT_PANEL_MIN_SPLIT, value));
+}
+
+function getSplitSizeFromPixels(sizes: number[]): number | null {
+	const totalSize: number = sizes.reduce((total: number, size: number): number => total + size, 0);
+	const firstPanelSize: number | undefined = sizes[0];
+	if (
+		firstPanelSize === undefined ||
+		!Number.isFinite(totalSize) ||
+		totalSize <= 0 ||
+		!Number.isFinite(firstPanelSize)
+	)
+		return null;
+	return normalizeSplitSize((firstPanelSize / totalSize) * 100);
+}
 
 function statusColor(status: string): string {
 	if (status === "completed" || status === "merged") return "success";
@@ -77,8 +104,26 @@ function graphLabel(view: SubagentGraphView, index: number, t: (key: string) => 
 	return `${t("subagent.graph")} ${index + 1} · ${view.snapshot.nodes.length} ${t("subagent.agents")}`;
 }
 
-export default function SubagentPanel({ sessionId }: SubagentPanelProps): React.JSX.Element {
+export default function SubagentPanel({ sessionId, layout, onLayoutChange }: SubagentPanelProps): React.JSX.Element {
 	const { t } = useTranslation();
+	const layoutRef = useRef<SubagentPanelLayoutPreferences>(layout);
+	const onLayoutChangeRef = useRef<SubagentPanelProps["onLayoutChange"]>(onLayoutChange);
+	const [visualSplitSize, setVisualSplitSize] = useState<number>(() => normalizeSplitSize(layout.splitSize));
+	layoutRef.current = layout;
+	onLayoutChangeRef.current = onLayoutChange;
+	const handleSplitterResize = useCallback((sizes: number[]): void => {
+		const nextSplitSize: number | null = getSplitSizeFromPixels(sizes);
+		if (nextSplitSize !== null) setVisualSplitSize(nextSplitSize);
+	}, []);
+	const handleSplitterResizeEnd = useCallback((sizes: number[]): void => {
+		const nextSplitSize: number | null = getSplitSizeFromPixels(sizes);
+		if (nextSplitSize === null) return;
+		setVisualSplitSize(nextSplitSize);
+		onLayoutChangeRef.current({ ...layoutRef.current, splitSize: nextSplitSize });
+	}, []);
+	useEffect((): void => {
+		setVisualSplitSize(normalizeSplitSize(layout.splitSize));
+	}, [layout.splitSize]);
 	const graphs: readonly SubagentGraphView[] = useSubagentGraphs(sessionId);
 	const [selectedGraphId, setSelectedGraphId] = useState<string | null>(null);
 	const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -319,43 +364,63 @@ export default function SubagentPanel({ sessionId }: SubagentPanelProps): React.
 				<Alert type="info" showIcon title={conversationError} className={styles.alert} />
 			) : null}
 			<div className={styles.body}>
-				<main className={styles.conversationPane}>
-					{selectedNode === undefined ? (
-						<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("subagent.noNode")} />
-					) : (
-						<MessageList
-							key={`${selectedGraph?.snapshot.graph.graphId ?? ""}:${selectedNode.nodeId}`}
-							blocks={messageBlocks}
-							isLoading={conversationBlocks.length === 0 && loading}
-							errorMessage={conversationError}
-							hideInlineDiff={true}
-						/>
-					)}
-				</main>
-				<aside className={styles.nodeList}>
-					{selectedGraph !== undefined ? (
-						<div className={styles.graphStatus}>
-							<Typography.Text type="secondary">
-								{selectedGraph.snapshot.nodes.length} {t("subagent.agents")}
-							</Typography.Text>
-							<Tag color={statusColor(selectedGraph.snapshot.graph.status)}>
-								{statusLabel(selectedGraph.snapshot.graph.status, t)}
-							</Tag>
-						</div>
-					) : null}
-					{selectedNode?.status === "queued" && selectedNode.queueReason !== null ? (
-						<Typography.Text type="secondary" className={styles.queueHint}>
-							{t(`subagent.queueReasons.${selectedNode.queueReason}`)}
-						</Typography.Text>
-					) : null}
-					<Menu
-						mode="inline"
-						selectedKeys={selectedNode === undefined ? [] : [selectedNode.nodeId]}
-						items={nodeItems}
-						onClick={({ key }): void => setSelectedNodeId(key)}
-						className={styles.subagentMenu}
-					/>
-				</aside>
+				<Splitter
+					className={styles.splitter}
+					orientation="horizontal"
+					onResize={handleSplitterResize}
+					onResizeEnd={handleSplitterResizeEnd}
+					draggerIcon={null}
+				>
+					<Splitter.Panel
+						min={`${SUBAGENT_PANEL_MIN_SPLIT}%`}
+						size={`${visualSplitSize}%`}
+						className={styles.conversationPanel}
+					>
+						<main className={styles.conversationPane}>
+							{selectedNode === undefined ? (
+								<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("subagent.noNode")} />
+							) : (
+								<MessageList
+									key={`${selectedGraph?.snapshot.graph.graphId ?? ""}:${selectedNode.nodeId}`}
+									blocks={messageBlocks}
+									isLoading={conversationBlocks.length === 0 && loading}
+									errorMessage={conversationError}
+									hideInlineDiff={true}
+								/>
+							)}
+						</main>
+					</Splitter.Panel>
+					<Splitter.Panel
+						min={`${100 - SUBAGENT_PANEL_MAX_SPLIT}%`}
+						size={`${100 - visualSplitSize}%`}
+						className={styles.nodePanel}
+					>
+						<aside className={styles.nodeList}>
+							{selectedGraph !== undefined ? (
+								<div className={styles.graphStatus}>
+									<Typography.Text type="secondary">
+										{selectedGraph.snapshot.nodes.length} {t("subagent.agents")}
+									</Typography.Text>
+									<Tag color={statusColor(selectedGraph.snapshot.graph.status)}>
+										{statusLabel(selectedGraph.snapshot.graph.status, t)}
+									</Tag>
+								</div>
+							) : null}
+							{selectedNode?.status === "queued" && selectedNode.queueReason !== null ? (
+								<Typography.Text type="secondary" className={styles.queueHint}>
+									{t(`subagent.queueReasons.${selectedNode.queueReason}`)}
+								</Typography.Text>
+							) : null}
+							<Menu
+								mode="inline"
+								selectedKeys={selectedNode === undefined ? [] : [selectedNode.nodeId]}
+								items={nodeItems}
+								onClick={({ key }): void => setSelectedNodeId(key)}
+								className={styles.subagentMenu}
+							/>
+						</aside>
+					</Splitter.Panel>
+				</Splitter>
 			</div>
 		</section>
 	);

@@ -110,7 +110,7 @@ type DockLayoutPreferences = {
 	size: number;
 	tabs: Array<{
 		key: string;
-		kind: "review" | "terminal" | "files" | "browser" | "trajectory";
+		kind: "review" | "terminal" | "files" | "browser" | "trajectory" | "subagent";
 		index: number;
 	}>;
 	activeTabKey: string | null;
@@ -137,6 +137,7 @@ type SessionLayoutPreferences = {
 	fullscreenDock: "side" | "bottom" | null;
 	filePanels: Record<string, FilePanelLayoutPreferences>;
 	browserPanels: Record<string, { lastUrl: string | null }>;
+	subagentPanels: Record<string, { splitSize: number }>;
 };
 
 type GodotProjectPluginStatus =

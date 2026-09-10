@@ -36,12 +36,17 @@ export type BrowserPanelLayoutPreferences = {
 	lastUrl: string | null;
 };
 
+export type SubagentPanelLayoutPreferences = {
+	splitSize: number;
+};
+
 export type SessionLayoutPreferences = {
 	side: DockLayoutPreferences;
 	bottom: DockLayoutPreferences;
 	fullscreenDock: DockFullscreenPlacement | null;
 	filePanels: Record<string, FilePanelLayoutPreferences>;
 	browserPanels: Record<string, BrowserPanelLayoutPreferences>;
+	subagentPanels: Record<string, SubagentPanelLayoutPreferences>;
 };
 
 export type SessionLayoutMap = Record<string, SessionLayoutPreferences>;
@@ -52,6 +57,9 @@ export const SIDE_DOCK_DEFAULT_SIZE = 520;
 export const BOTTOM_DOCK_MIN_SIZE = 120;
 export const BOTTOM_DOCK_MAX_SIZE = 520;
 export const BOTTOM_DOCK_DEFAULT_SIZE = 280;
+export const SUBAGENT_PANEL_MIN_SPLIT = 45;
+export const SUBAGENT_PANEL_MAX_SPLIT = 80;
+export const SUBAGENT_PANEL_DEFAULT_SPLIT = 68;
 const MAX_TERMINAL_RUNTIME_ID_LENGTH = 80;
 
 export function createDefaultFilePanelLayout(): FilePanelLayoutPreferences {
@@ -69,6 +77,12 @@ export function createDefaultFilePanelLayout(): FilePanelLayoutPreferences {
 export function createDefaultBrowserPanelLayout(): BrowserPanelLayoutPreferences {
 	return {
 		lastUrl: null
+	};
+}
+
+export function createDefaultSubagentPanelLayout(): SubagentPanelLayoutPreferences {
+	return {
+		splitSize: SUBAGENT_PANEL_DEFAULT_SPLIT
 	};
 }
 
@@ -96,6 +110,7 @@ export function createDefaultSessionLayout(): SessionLayoutPreferences {
 		fullscreenDock: null,
 		filePanels: {},
 		browserPanels: {},
+		subagentPanels: {},
 		side: {
 			open: false,
 			size: SIDE_DOCK_DEFAULT_SIZE,
@@ -115,6 +130,7 @@ export function cloneSessionLayout(layout: SessionLayoutPreferences): SessionLay
 	return {
 		fullscreenDock: layout.fullscreenDock,
 		browserPanels: Object.fromEntries(Object.entries(layout.browserPanels).map(([key, browserPanel]): [string, BrowserPanelLayoutPreferences] => [key, { ...browserPanel }])),
+		subagentPanels: Object.fromEntries(Object.entries(layout.subagentPanels).map(([key, subagentPanel]): [string, SubagentPanelLayoutPreferences] => [key, { ...subagentPanel }])),
 		filePanels: Object.fromEntries(Object.entries(layout.filePanels).map(([key, filePanel]): [string, FilePanelLayoutPreferences] => [
 			key,
 			{

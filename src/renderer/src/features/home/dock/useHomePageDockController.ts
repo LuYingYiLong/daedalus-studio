@@ -7,6 +7,7 @@ import {
 	type DockFullscreenPlacement,
 	type DockLayoutPreferences,
 	type FilePanelLayoutPreferences,
+	type SubagentPanelLayoutPreferences,
 	type SessionLayoutPreferences,
 } from "@/domain/session/session-layout";
 import type { DockPanelActivationRequest, DockPanelKind } from "@/domain/session/dock-panels";
@@ -71,6 +72,10 @@ export type HomePageDockController = HomeDockLayoutController & {
 	updateBrowserPanel: (
 		panelKey: string,
 		nextBrowserPanel: BrowserPanelLayoutPreferences | null,
+	) => void;
+	updateSubagentPanel: (
+		panelKey: string,
+		nextSubagentPanel: SubagentPanelLayoutPreferences | null,
 	) => void;
 	toggleDockFullscreen: (placement: DockFullscreenPlacement) => void;
 	requestSideDockKind: (kind: DockPanelKind) => void;
@@ -228,6 +233,27 @@ function useHomePageDockController({
 			commitSessionLayout({
 				...visualSessionLayoutRef.current,
 				browserPanels: nextBrowserPanels,
+			});
+		},
+		[commitSessionLayout, visualSessionLayoutRef],
+	);
+
+	const updateSubagentPanel = useCallback(
+		(
+			panelKey: string,
+			nextSubagentPanel: SubagentPanelLayoutPreferences | null,
+		): void => {
+			const nextSubagentPanels: Record<string, SubagentPanelLayoutPreferences> = {
+				...visualSessionLayoutRef.current.subagentPanels,
+			};
+			if (nextSubagentPanel === null) {
+				delete nextSubagentPanels[panelKey];
+			} else {
+				nextSubagentPanels[panelKey] = nextSubagentPanel;
+			}
+			commitSessionLayout({
+				...visualSessionLayoutRef.current,
+				subagentPanels: nextSubagentPanels,
 			});
 		},
 		[commitSessionLayout, visualSessionLayoutRef],
@@ -574,6 +600,7 @@ function useHomePageDockController({
 		updateBottomDock,
 		updateFilePanel,
 		updateBrowserPanel,
+		updateSubagentPanel,
 		toggleDockFullscreen,
 		requestSideDockKind,
 		openSideDock,

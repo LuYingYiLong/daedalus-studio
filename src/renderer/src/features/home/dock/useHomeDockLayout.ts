@@ -74,7 +74,8 @@ function areSessionLayoutPreferencesEqual(
 		areDockLayoutPreferencesEqual(left.side, right.side) &&
 		areDockLayoutPreferencesEqual(left.bottom, right.bottom) &&
 		JSON.stringify(left.filePanels) === JSON.stringify(right.filePanels) &&
-		JSON.stringify(left.browserPanels) === JSON.stringify(right.browserPanels)
+		JSON.stringify(left.browserPanels) === JSON.stringify(right.browserPanels) &&
+		JSON.stringify(left.subagentPanels) === JSON.stringify(right.subagentPanels)
 	);
 }
 

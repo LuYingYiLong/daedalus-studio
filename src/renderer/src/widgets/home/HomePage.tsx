@@ -478,6 +478,7 @@ function HomePage({
 		updateBottomDock,
 		updateFilePanel,
 		updateBrowserPanel,
+		updateSubagentPanel,
 		toggleDockFullscreen,
 		openSideDock,
 		closeSideDock,
@@ -833,6 +834,8 @@ function HomePage({
 		onFilePanelChange: updateFilePanel,
 		browserPanels: visualSessionLayout.browserPanels,
 		onBrowserPanelChange: updateBrowserPanel,
+		subagentPanels: visualSessionLayout.subagentPanels,
+		onSubagentPanelChange: updateSubagentPanel,
 	};
 
 	const {

@@ -391,6 +391,7 @@ declare global {
 			previewTabKey: string | null;
 		}>;
 		browserPanels: Record<string, { lastUrl: string | null }>;
+		subagentPanels: Record<string, { splitSize: number }>;
 	}
 
 	interface SessionLayoutAPI {

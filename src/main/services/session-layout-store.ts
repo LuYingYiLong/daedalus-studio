@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute } from "node:path";
 
-export type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory";
+export type DockTabKind = "review" | "terminal" | "files" | "browser" | "trajectory" | "subagent";
 
 export type DockTabPreferences = {
 	key: string;
@@ -39,12 +39,17 @@ export type BrowserPanelLayoutPreferences = {
 	lastUrl: string | null;
 };
 
+export type SubagentPanelLayoutPreferences = {
+	splitSize: number;
+};
+
 export type SessionLayoutPreferences = {
 	side: DockLayoutPreferences;
 	bottom: DockLayoutPreferences;
 	fullscreenDock: DockFullscreenPlacement | null;
 	filePanels: Record<string, FilePanelLayoutPreferences>;
 	browserPanels: Record<string, BrowserPanelLayoutPreferences>;
+	subagentPanels: Record<string, SubagentPanelLayoutPreferences>;
 };
 
 export type SessionLayoutMap = Record<string, SessionLayoutPreferences>;
@@ -61,6 +66,9 @@ export const SIDE_DOCK_DEFAULT_SIZE = 520;
 export const BOTTOM_DOCK_MIN_SIZE = 120;
 export const BOTTOM_DOCK_MAX_SIZE = 520;
 export const BOTTOM_DOCK_DEFAULT_SIZE = 280;
+export const SUBAGENT_PANEL_MIN_SPLIT = 45;
+export const SUBAGENT_PANEL_MAX_SPLIT = 80;
+export const SUBAGENT_PANEL_DEFAULT_SPLIT = 68;
 
 const SESSION_ID_PATTERN: RegExp = /^session-[A-Za-z0-9_-]+$/u;
 const TAB_KEY_PATTERN: RegExp = /^[A-Za-z0-9:_-]{1,120}$/u;
@@ -87,6 +95,7 @@ export function cloneSessionLayout(layout: SessionLayoutPreferences): SessionLay
 	return {
 		fullscreenDock: layout.fullscreenDock,
 		browserPanels: Object.fromEntries(Object.entries(layout.browserPanels).map(([key, browserPanel]): [string, BrowserPanelLayoutPreferences] => [key, { ...browserPanel }])),
+		subagentPanels: Object.fromEntries(Object.entries(layout.subagentPanels).map(([key, subagentPanel]): [string, SubagentPanelLayoutPreferences] => [key, { ...subagentPanel }])),
 		filePanels: Object.fromEntries(Object.entries(layout.filePanels).map(([key, filePanel]): [string, FilePanelLayoutPreferences] => [
 			key,
 			{
@@ -105,6 +114,7 @@ export function createDefaultSessionLayout(): SessionLayoutPreferences {
 		fullscreenDock: null,
 		filePanels: {},
 		browserPanels: {},
+		subagentPanels: {},
 		side: {
 			open: false,
 			size: SIDE_DOCK_DEFAULT_SIZE,
@@ -141,7 +151,7 @@ function normalizeDockLayout(
 		if (isRecord(candidate) && (candidate.kind === "computer" || candidate.kind === "godot-runtime-test")) continue;
 		if (
 			!isRecord(candidate)
-			|| (candidate.kind !== "review" && candidate.kind !== "terminal" && candidate.kind !== "files" && candidate.kind !== "browser" && candidate.kind !== "trajectory")
+			|| (candidate.kind !== "review" && candidate.kind !== "terminal" && candidate.kind !== "files" && candidate.kind !== "browser" && candidate.kind !== "trajectory" && candidate.kind !== "subagent")
 			|| typeof candidate.key !== "string"
 			|| !TAB_KEY_PATTERN.test(candidate.key)
 			|| typeof candidate.index !== "number"
@@ -260,6 +270,15 @@ function normalizeFilePanelLayout(value: unknown): FilePanelLayoutPreferences {
 	};
 }
 
+function normalizeSubagentPanelLayout(value: unknown): SubagentPanelLayoutPreferences {
+	const rawSplitSize: number = isRecord(value) && typeof value.splitSize === "number" && Number.isFinite(value.splitSize)
+		? value.splitSize
+		: SUBAGENT_PANEL_DEFAULT_SPLIT;
+	return {
+		splitSize: clamp(rawSplitSize, SUBAGENT_PANEL_MIN_SPLIT, SUBAGENT_PANEL_MAX_SPLIT)
+	};
+}
+
 export function normalizeSessionLayout(value: unknown): SessionLayoutPreferences {
 	const defaults: SessionLayoutPreferences = createDefaultSessionLayout();
 	if (!isRecord(value)) {
@@ -313,7 +332,18 @@ export function normalizeSessionLayout(value: unknown): SessionLayoutPreferences
 			browserPanels[tabKey] = { lastUrl };
 		}
 	}
-	return { fullscreenDock, side, bottom, filePanels, browserPanels };
+	const subagentTabKeys: Set<string> = new Set([...side.tabs, ...bottom.tabs]
+		.filter((tab: DockTabPreferences): boolean => tab.kind === "subagent")
+		.map((tab: DockTabPreferences): string => tab.key));
+	const subagentPanels: Record<string, SubagentPanelLayoutPreferences> = {};
+	if (isRecord(value.subagentPanels)) {
+		for (const [tabKey, subagentPanel] of Object.entries(value.subagentPanels)) {
+			if (subagentTabKeys.has(tabKey)) {
+				subagentPanels[tabKey] = normalizeSubagentPanelLayout(subagentPanel);
+			}
+		}
+	}
+	return { fullscreenDock, side, bottom, filePanels, browserPanels, subagentPanels };
 }
 
 export function normalizeSessionLayoutRepository(value: unknown): SessionLayoutRepository {

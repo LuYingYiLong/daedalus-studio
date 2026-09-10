@@ -119,6 +119,25 @@ describe("session layout store", () => {
 		expect(normalized.side.activeTabKey).toBe("side:trajectory:1");
 	});
 
+	it("accepts subagent tabs and normalizes their panel split", () => {
+		const defaults = createDefaultSessionLayout();
+		const normalized = normalizeSessionLayout({
+			...defaults,
+			side: {
+				...defaults.side,
+				tabs: [...defaults.side.tabs, { key: "side:subagent:1", kind: "subagent", index: 1 }],
+				activeTabKey: "side:subagent:1"
+			},
+			subagentPanels: {
+				"side:subagent:1": { splitSize: 99 },
+				orphan: { splitSize: 20 }
+			}
+		});
+
+		expect(normalized.side.tabs.at(-1)).toEqual({ key: "side:subagent:1", kind: "subagent", index: 1 });
+		expect(normalized.subagentPanels).toEqual({ "side:subagent:1": { splitSize: 80 } });
+	});
+
 	it("normalizes file panel tabs and removes orphaned panel state", () => {
 		const defaults = createDefaultSessionLayout();
 		const normalized = normalizeSessionLayout({

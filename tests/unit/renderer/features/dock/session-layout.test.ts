@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	createDefaultSessionLayout,
 	createDefaultBrowserPanelLayout,
+	createDefaultSubagentPanelLayout,
 	createTerminalRuntimeId,
 	listTerminalRuntimeIds,
 	resetSessionFilePanelWorkspaceState
@@ -27,7 +28,9 @@ describe("session dock layout", () => {
 		});
 		expect(layout.fullscreenDock).toBeNull();
 		expect(layout.browserPanels).toEqual({});
+		expect(layout.subagentPanels).toEqual({});
 		expect(createDefaultBrowserPanelLayout()).toEqual({ lastUrl: null });
+		expect(createDefaultSubagentPanelLayout()).toEqual({ splitSize: 68 });
 	});
 
 	it("creates stable keys and preserves explicit tab order", () => {
@@ -71,6 +74,7 @@ describe("session dock layout", () => {
 			previewTabKey: null
 		};
 		layout.browserPanels["side:browser:1"] = { lastUrl: "https://example.com" };
+		layout.subagentPanels["side:subagent:1"] = { splitSize: 62 };
 
 		const result = resetSessionFilePanelWorkspaceState(layout);
 		expect(result.filePanels["side:files:1"]).toMatchObject({
@@ -83,5 +87,6 @@ describe("session dock layout", () => {
 			previewTabKey: null
 		});
 		expect(result.browserPanels["side:browser:1"]?.lastUrl).toBe("https://example.com");
+		expect(result.subagentPanels["side:subagent:1"]?.splitSize).toBe(62);
 	});
 });

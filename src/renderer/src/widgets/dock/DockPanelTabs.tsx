@@ -22,11 +22,13 @@ import type { WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launc
 import {
 	createDefaultFilePanelLayout,
 	createDefaultBrowserPanelLayout,
+	createDefaultSubagentPanelLayout,
 	createTerminalRuntimeId,
 	type BrowserPanelLayoutPreferences,
 	type DockLayoutPreferences,
 	type DockTabPreferences,
 	type FilePanelLayoutPreferences,
+	type SubagentPanelLayoutPreferences,
 } from "@/domain/session/session-layout";
 import {
 	createDockTab,
@@ -60,6 +62,7 @@ export type DockPanelTabsProps = {
 	layout: DockLayoutPreferences;
 	filePanels: Record<string, FilePanelLayoutPreferences>;
 	browserPanels: Record<string, BrowserPanelLayoutPreferences>;
+	subagentPanels: Record<string, SubagentPanelLayoutPreferences>;
 	activationRequest?: DockPanelActivationRequest | null;
 	isFullscreen?: boolean;
 	contextItems: AdditionalContextItem[];
@@ -75,6 +78,10 @@ export type DockPanelTabsProps = {
 	onBrowserPanelChange: (
 		panelKey: string,
 		layout: BrowserPanelLayoutPreferences | null,
+	) => void;
+	onSubagentPanelChange: (
+		panelKey: string,
+		layout: SubagentPanelLayoutPreferences | null,
 	) => void;
 	onFullscreenToggle?: () => void;
 };
@@ -154,6 +161,7 @@ function DockPanelTabs({
 	layout,
 	filePanels,
 	browserPanels,
+	subagentPanels,
 	activationRequest = null,
 	isFullscreen = false,
 	contextItems,
@@ -164,6 +172,7 @@ function DockPanelTabs({
 	onLayoutChange,
 	onFilePanelChange,
 	onBrowserPanelChange,
+	onSubagentPanelChange,
 	onFullscreenToggle,
 }: DockPanelTabsProps): React.JSX.Element {
 	const { t } = useTranslation();
@@ -240,6 +249,11 @@ function DockPanelTabs({
 					nextTab.key,
 					createDefaultBrowserPanelLayout(),
 				);
+			} else if (kind === "subagent") {
+				onSubagentPanelChange(
+					nextTab.key,
+					createDefaultSubagentPanelLayout(),
+				);
 			}
 		},
 		[
@@ -248,6 +262,7 @@ function DockPanelTabs({
 			onBrowserPanelChange,
 			onFilePanelChange,
 			onLayoutChange,
+			onSubagentPanelChange,
 			sessionId,
 			workspaceId,
 		],
@@ -286,6 +301,11 @@ function DockPanelTabs({
 					nextTab.key,
 					createDefaultBrowserPanelLayout(),
 				);
+			else if (kind === "subagent")
+				onSubagentPanelChange(
+					nextTab.key,
+					createDefaultSubagentPanelLayout(),
+				);
 		},
 		[
 			activeKey,
@@ -294,6 +314,7 @@ function DockPanelTabs({
 			onBrowserPanelChange,
 			onFilePanelChange,
 			onLayoutChange,
+			onSubagentPanelChange,
 		],
 	);
 
@@ -335,6 +356,8 @@ function DockPanelTabs({
 			onFilePanelChange(targetKey, null);
 		} else if (targetTab?.kind === "browser") {
 			onBrowserPanelChange(targetKey, null);
+		} else if (targetTab?.kind === "subagent") {
+			onSubagentPanelChange(targetKey, null);
 		}
 
 		const targetIndex: number = layout.tabs.findIndex(
@@ -445,7 +468,16 @@ function DockPanelTabs({
 		}
 
 		if (tab.kind === "subagent") {
-			return <SubagentPanel sessionId={sessionId} />;
+			return (
+				<SubagentPanel
+					sessionId={sessionId}
+					layout={
+						subagentPanels[tab.key] ?? createDefaultSubagentPanelLayout()
+					}
+					onLayoutChange={(nextLayout: SubagentPanelLayoutPreferences): void =>
+						onSubagentPanelChange(tab.key, nextLayout)}
+				/>
+			);
 		}
 
 		return (
