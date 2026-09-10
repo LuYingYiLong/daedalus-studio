@@ -2844,7 +2844,7 @@
 		"defaultModel": {
 			"selectModel": "Select a model",
 			"configureProvider": "Configure provider",
-			"notConfigured": "Not configured - always ask me",
+			"useMainModel": "Uses the main model when unset",
 			"routing": {
 				"sessionTitle": {
 					"title": "Session title model",

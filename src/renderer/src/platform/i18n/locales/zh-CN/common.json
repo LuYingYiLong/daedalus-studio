@@ -2838,7 +2838,7 @@
 		"defaultModel": {
 			"selectModel": "选择模型",
 			"configureProvider": "配置供应商",
-			"notConfigured": "未配置，始终询问我",
+			"useMainModel": "未配置时使用主模型",
 			"routing": {
 				"sessionTitle": {
 					"title": "会话标题模型",

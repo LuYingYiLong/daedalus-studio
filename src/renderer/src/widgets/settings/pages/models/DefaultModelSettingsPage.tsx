@@ -81,7 +81,7 @@ const ROUTING_OPTIONS: RoutingOption[] = [
 			"settings.defaultModel.routing.commandReview.description",
 		filterModel: (model: ProviderModelInfo): boolean =>
 			!isImageTaskModel(model),
-		placeholderKey: "settings.defaultModel.notConfigured",
+		placeholderKey: "settings.defaultModel.useMainModel",
 	},
 ];
 
