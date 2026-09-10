@@ -194,6 +194,10 @@
 	margin: 0;
 }
 
+.chatBodyWithMascot {
+	--message-list-bottom-safe-area: 81px;
+}
+
 .chatBody {
 	position: relative;
 	z-index: 1;
@@ -546,6 +550,19 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.composerAnchor {
+	position: relative;
+	z-index: 2;
+	min-width: 0;
+}
+
+.composerMascot {
+	position: absolute;
+	right: 2px;
+	bottom: 100%;
+	pointer-events: none;
 }
 
 .composer {

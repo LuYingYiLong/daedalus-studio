@@ -1,4 +1,5 @@
 import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";
+import { applyMascotPreview } from "@/domain/session/mascot-preview";
 import { createBackendClient } from "@/platform/rpc/transport/backend-client";
 import type { AdditionalContextItem } from "./types";
 import { parseComputerOverlayPreview } from "../../../../contracts/computer-observation";
@@ -68,6 +69,9 @@ export async function sendChatMessage(
 		const api = getPlatformRuntime().system?.computerObservation;
 		if (!api?.previewOverlay) throw new Error("computer_preview_requires_windows_studio");
 		await api.previewOverlay(preview);
+	}
+	if (/^\/test-mascot-status(?:\s|$)/iu.test(params.message.trim()) && result && typeof result === "object" && "mascotPreview" in result) {
+		applyMascotPreview(result.mascotPreview, params.requestId);
 	}
 	return result;
 }

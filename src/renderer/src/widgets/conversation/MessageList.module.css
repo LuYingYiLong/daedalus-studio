@@ -23,6 +23,12 @@
 	pointer-events: none;
 }
 
+.listBottomSpacer {
+	height: max(var(--agent-chat-side-padding, 8px), var(--message-list-bottom-safe-area, 0px));
+	min-height: max(var(--agent-chat-side-padding, 8px), var(--message-list-bottom-safe-area, 0px));
+	pointer-events: none;
+}
+
 .messageListContent {
 	width: min(100%, var(--agent-chat-surface-width, 896px));
 	min-width: 0;

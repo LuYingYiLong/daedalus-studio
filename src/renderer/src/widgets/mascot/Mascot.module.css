@@ -1,3 +1,18 @@
+.frame {
+	width: 176px;
+	height: 132px;
+}
+
+.compact {
+	width: 97px;
+	height: 73px;
+}
+
+.compact .mascot {
+	transform: scale(0.55);
+	transform-origin: top left;
+}
+
 .mascot {
 	position: relative;
 	width: 176px;
@@ -22,7 +37,7 @@
 		inset -2px -3px 6px rgb(0 0 0 / 35%),
 		0 0 0 1px rgb(134 161 208 / 15%);
 	transform-origin: 50% 85%;
-	animation: breathe 5.6s ease-in-out infinite;
+
 }
 
 .gaze {
@@ -43,10 +58,11 @@
 	border-radius: 999px;
 	background: linear-gradient(135deg, #fffef8, #e7e9ed);
 	box-shadow: 0 0 4px rgb(244 247 255 / 12%);
-	animation: blink 7.4s ease-in-out infinite;
+
 }
 
 .planet {
+	transition: opacity 220ms ease;
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -62,9 +78,7 @@
 	offset-path: path("M 158 80 C 158 110 18 110 18 80 C 18 50 158 50 158 80 Z");
 	offset-rotate: 0deg;
 	offset-distance: 0%;
-	animation:
-		orbit 10s linear infinite,
-		orbit-depth 10s steps(1, end) infinite;
+
 }
 
 .shadow {
@@ -76,7 +90,219 @@
 	height: 9px;
 	border-radius: 50%;
 	background: radial-gradient(ellipse, rgb(10 15 25 / 18%), transparent 70%);
+
+}
+
+.ring {
+	position: absolute;
+	inset: 0;
+	width: 176px;
+	height: 132px;
+	overflow: visible;
+	fill: none;
+	stroke: #347fff;
+	stroke-width: 7px;
+	stroke-linecap: round;
+	opacity: 0;
+	transform-origin: 88px 70px;
+	transform: rotate(-22deg);
+	transition: opacity 220ms ease;
+}
+
+.ringBack {
+	z-index: 1;
+	stroke: #205bd6;
+}
+.ringFront {
+	z-index: 3;
+}
+.ringHighlight {
+	stroke: #8abdff;
+	stroke-width: 2px;
+	stroke-dasharray: 22 180;
+}
+
+.mascot[data-state="idle"] .star {
+	animation: breathe 5.6s ease-in-out infinite;
+}
+.mascot[data-state="idle"] .eye {
+	animation: blink 7.4s ease-in-out infinite;
+}
+.mascot[data-state="idle"] .planet {
+	animation: orbit 10s linear infinite, orbit-depth 10s steps(1, end) infinite;
+}
+.mascot[data-state="idle"] .shadow {
 	animation: shadow-breathe 5.6s ease-in-out infinite;
+}
+.mascot[data-state="thinking"] .star {
+	animation: breathe 5.6s ease-in-out infinite;
+}
+.mascot[data-state="thinking"] .shadow {
+	animation: shadow-breathe 5.6s ease-in-out infinite;
+}
+.mascot[data-state="thinking"] .eye:first-child {
+	animation: blink 7.4s ease-in-out infinite;
+}
+
+.mascot[data-state="thinking"] .planet {
+	opacity: 0;
+}
+.mascot[data-state="thinking"] .gaze {
+	align-items: center;
+	gap: 14px;
+	height: 23px;
+	transform: translate(2px, -7px);
+	animation: thinking-gaze 5.6s ease-in-out infinite;
+}
+.mascot[data-state="thinking"] .eye:first-child {
+	rotate: 12deg;
+}
+.mascot[data-state="thinking"] .eye:last-child {
+	width: 22px;
+	height: 5px;
+	rotate: 6deg;
+	animation: thinking-squint 5.6s ease-in-out infinite;
+}
+.mascot[data-state="thinking"] .ring {
+	opacity: 1;
+	animation: ring-tilt 6s ease-in-out infinite;
+}
+.mascot[data-state="thinking"] .ringHighlight {
+	animation: ring-shimmer 2.6s linear infinite;
+}
+
+.mascot[data-state="executing"] .planet {
+	opacity: 0;
+}
+.mascot[data-state="executing"] .star {
+	animation: executing-breathe 2.4s ease-in-out infinite;
+}
+.mascot[data-state="executing"] .shadow {
+	animation: shadow-breathe 2.4s ease-in-out infinite;
+}
+.mascot[data-state="executing"] .gaze {
+	transform: translate(0, -4px);
+}
+.mascot[data-state="executing"] .eye {
+	height: 19px;
+	animation: blink 5.2s ease-in-out infinite;
+}
+.mascot[data-state="executing"] .ring {
+	opacity: 1;
+	transform: rotate(-28deg);
+	animation: executing-orbit 2.4s ease-in-out infinite;
+}
+.mascot[data-state="executing"] .ringHighlight {
+	stroke-dasharray: 40 162;
+	animation: ring-shimmer 0.9s linear infinite;
+}
+
+.mascot[data-state="awaiting_approval"] .planet {
+	opacity: 0;
+}
+.mascot[data-state="awaiting_approval"] .star {
+	animation: breathe 6s ease-in-out infinite;
+}
+.mascot[data-state="awaiting_approval"] .shadow {
+	animation: shadow-breathe 6s ease-in-out infinite;
+}
+.mascot[data-state="awaiting_approval"] .gaze {
+	transform: translate(0, -3px);
+}
+.mascot[data-state="awaiting_approval"] .eye {
+	animation: blink 8s ease-in-out infinite;
+}
+.mascot[data-state="awaiting_approval"] .ring {
+	opacity: 1;
+	transform: translateY(8px);
+}
+
+.mascot[data-state="completed"] .star {
+	animation: breathe 5.6s ease-in-out infinite;
+}
+.mascot[data-state="completed"] .shadow {
+	animation: shadow-breathe 5.6s ease-in-out infinite;
+}
+.mascot[data-state="completed"] .eye {
+	animation: completed-eyes 1.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.mascot[data-state="completed"] .ring {
+	opacity: 0;
+	animation: completed-ring 0.9s ease-in-out 1.2s both;
+}
+.mascot[data-state="completed"] .ringHighlight {
+	opacity: 0;
+}
+.mascot[data-state="completed"] .planet {
+	animation:
+		completed-planet 0.9s ease-in-out 1.2s both,
+		orbit 2.4s linear 2.1s both,
+		orbit-depth 2.4s steps(1, end) 2.1s both;
+}
+
+@keyframes completed-eyes {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(720deg); }
+}
+
+@keyframes completed-ring {
+	0% { opacity: 1; transform: rotate(-22deg); }
+	75% { opacity: 1; }
+	100% { opacity: 0; transform: translate(70px, 10px) rotate(-22deg) scale(0); }
+}
+
+@keyframes completed-planet {
+	0%, 35% { opacity: 0; transform: scale(0); }
+	100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes executing-breathe {
+	0%, 100% { transform: translateY(-2px) scale(1); }
+	50% { transform: translateY(-5px) scale(1.02, 0.98); }
+}
+
+@keyframes executing-orbit {
+	0%, 100% { transform: rotate(-28deg) translateY(-1px); }
+	50% { transform: rotate(-38deg) translateY(-3px); }
+}
+
+@keyframes thinking-gaze {
+	0%,
+	100% {
+		transform: translate(-3px, -6px) rotate(-2deg);
+	}
+	50% {
+		transform: translate(3px, -8px) rotate(2deg);
+	}
+}
+
+@keyframes thinking-squint {
+	0%,
+	100% {
+		transform: scale(1, 0.85);
+	}
+	50% {
+		transform: scale(1.04, 1.15);
+	}
+}
+
+@keyframes ring-tilt {
+	0%,
+	100% {
+		transform: rotate(30deg);
+	}
+	50% {
+		transform: rotate(-30deg);
+	}
+}
+
+@keyframes ring-shimmer {
+	from {
+		stroke-dashoffset: 202;
+	}
+	to {
+		stroke-dashoffset: 0;
+	}
 }
 
 @keyframes breathe {
@@ -138,8 +364,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.mascot,
-	.mascot * {
+	.mascot[data-state] :is(.star, .shadow, .gaze, .eye, .planet, .ring, .ringHighlight),
+	.mascot[data-state] .eye:first-child,
+	.mascot[data-state] .eye:last-child {
 		animation: none;
 		transition: none;
 	}

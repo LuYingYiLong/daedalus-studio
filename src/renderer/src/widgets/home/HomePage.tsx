@@ -884,6 +884,7 @@ function HomePage({
 		/>
 	) : null;
 	const chatSurfaceProps: HomeChatSurfaceProps = {
+		isSending,
 		activeSessionMetadata,
 		isSessionLoading,
 		onForkSourceOpen,

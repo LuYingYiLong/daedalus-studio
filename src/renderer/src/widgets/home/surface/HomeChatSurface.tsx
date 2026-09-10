@@ -21,6 +21,7 @@ import ConversationTimelinePane, {
 import type { RetryUserMessagePayload } from "@/widgets/conversation/UserBubble";
 import MessageQueuePanel from "@/widgets/composer/MessageQueuePanel";
 import NewSessionHome from "@/widgets/session-home/NewSessionHome";
+import Mascot from "@/widgets/mascot/Mascot";
 import ApprovalDialog from "@/widgets/approval/ApprovalDialog";
 import ToolBudgetDialog from "@/widgets/approval/ToolBudgetDialog";
 import ClarificationDialog from "@/widgets/clarification/ClarificationDialog";
@@ -37,6 +38,7 @@ type WorkspaceLaunchTarget = {
 };
 
 export type HomeChatSurfaceProps = {
+	isSending: boolean;
 	activeSessionMetadata: SessionMetadata | null;
 	isSessionLoading: boolean;
 	onForkSourceOpen: (sessionId: string) => Promise<void>;
@@ -135,6 +137,7 @@ export type HomeChatSurfaceProps = {
 };
 
 function HomeChatSurface({
+	isSending,
 	activeSessionMetadata,
 	isSessionLoading,
 	onForkSourceOpen,
@@ -222,6 +225,9 @@ function HomeChatSurface({
 	renderComposer,
 }: HomeChatSurfaceProps): React.JSX.Element {
 	const { t } = useTranslation();
+	const showComposerMascot: boolean = !isHome && activeSessionId !== null
+		&& !isDockFullscreen && pendingApproval === null && pendingToolBudget === null
+		&& pendingPlanClarification === null && pendingPlanApproval === null;
 
 	return (
 		<section className={styles.chatPanel}>
@@ -350,7 +356,7 @@ function HomeChatSurface({
 
 			<Divider size="small" />
 
-			<div ref={chatBodyRef} className={styles.chatBody}>
+			<div ref={chatBodyRef} className={`${styles.chatBody} ${showComposerMascot ? styles.chatBodyWithMascot : ""}`}>
 				{isHome ? (
 					<NewSessionHome
 						workspace={homeWorkspace}
@@ -505,7 +511,16 @@ function HomeChatSurface({
 								onGuideReorder={onGuideReorder}
 							/>
 						) : null}
-						{isDockFullscreen ? null : renderComposer(false)}
+						{isDockFullscreen ? null : (
+							<div className={styles.composerAnchor}>
+								{showComposerMascot ? (
+									<div className={styles.composerMascot}>
+										<Mascot compact sessionId={activeSessionId} status={isSending ? "thinking" : "idle"} />
+									</div>
+								) : null}
+								{renderComposer(false)}
+							</div>
+						)}
 					</>
 				)}
 			</footer>

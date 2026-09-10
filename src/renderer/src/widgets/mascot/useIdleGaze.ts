@@ -4,8 +4,10 @@ import { useEffect, type RefObject } from "react";
 export function useIdleGaze(
 	starRef: RefObject<HTMLDivElement | null>,
 	gazeRef: RefObject<HTMLDivElement | null>,
+	enabled: boolean = true,
 ): void {
 	useEffect(() => {
+		if (!enabled) return;
 		let focused: boolean = document.hasFocus();
 		let frame: number | null = null;
 		let pointer: { x: number; y: number } | null = null;
@@ -61,5 +63,5 @@ export function useIdleGaze(
 			document.documentElement.removeEventListener("pointerleave", reset);
 			reset();
 		};
-	}, [starRef, gazeRef]);
+	}, [starRef, gazeRef, enabled]);
 }

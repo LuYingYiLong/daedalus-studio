@@ -722,7 +722,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 		return (
 			<>
 				{isLoadingMoreAfter ? <div className={styles.pageLoadingIndicator}><Spin size="small" /></div> : null}
-				<div className={styles.listEdgeSpacer} aria-hidden="true" />
+				<div className={styles.listBottomSpacer} aria-hidden="true" />
 			</>
 		);
 	}, [isLoadingMoreAfter]);
