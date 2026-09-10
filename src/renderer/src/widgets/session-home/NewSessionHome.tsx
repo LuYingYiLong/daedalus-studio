@@ -1,6 +1,7 @@
 import { Alert, Button, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
+import Mascot from "@/widgets/mascot/Mascot";
 import type { WorkspaceConfig } from "@/platform/rpc/types";
 import styles from "./NewSessionHome.module.css";
 import {
@@ -64,6 +65,7 @@ function NewSessionHome({
 		>
 			<div className={styles.homeCenter}>
 				<div className={styles.homeContent}>
+					<Mascot />
 					<Typography.Title level={1} className={styles.homeTitle}>
 						<span id="new-session-home-title">{title}</span>
 					</Typography.Title>

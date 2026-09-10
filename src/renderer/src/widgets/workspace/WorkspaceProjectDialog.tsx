@@ -1,31 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-	Button,
-	Flex,
-	Input,
-	Menu,
-	Modal,
-	Popover,
-	Space,
-	Tag,
-	Tooltip,
-	Typography
-} from "antd";
+import { Button, Flex, Input, Menu, Modal, Popover, Space, Tag, Tooltip, Typography } from "antd";
 import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
-import type {
-	WorkspaceColor,
-	WorkspaceConfig,
-	WorkspaceIcon,
-	WorkspaceSourceFolder
-} from "@/platform/rpc/types";
+import type { WorkspaceColor, WorkspaceConfig, WorkspaceIcon, WorkspaceSourceFolder } from "@/platform/rpc/types";
 import { configureEnvironment, updateWorkspace } from "@/platform/rpc/workspace-api";
 import { Icon } from "@/assets/icons";
 import {
 	getWorkspaceIconStyle,
 	WORKSPACE_COLOR_VALUES,
 	WORKSPACE_ICON_NAMES,
-	WorkspaceIconView
+	WorkspaceIconView,
 } from "./workspace-appearance";
 import { resolveWorkspaceProjectName } from "./workspace-project-name";
 import styles from "./WorkspaceProjectDialog.module.css";
@@ -54,11 +38,13 @@ function createDraft(workspace: WorkspaceConfig): WorkspaceProjectDraft {
 		name: workspace.name,
 		icon: workspace.icon,
 		color: workspace.color,
-		sourceFolders: workspace.sourceFolders.map((source): WorkspaceSourceFolder => ({
-			...source,
-			capabilities: { ...source.capabilities }
-		})),
-		primarySourceFolderId: workspace.primarySourceFolderId
+		sourceFolders: workspace.sourceFolders.map(
+			(source): WorkspaceSourceFolder => ({
+				...source,
+				capabilities: { ...source.capabilities },
+			}),
+		),
+		primarySourceFolderId: workspace.primarySourceFolderId,
 	};
 }
 
@@ -68,7 +54,7 @@ function createEmptyDraft(): WorkspaceProjectDraft {
 		icon: 0,
 		color: 0,
 		sourceFolders: [],
-		primarySourceFolderId: ""
+		primarySourceFolderId: "",
 	};
 }
 
@@ -76,7 +62,7 @@ function createClientSourceFolder(path: string): WorkspaceSourceFolder {
 	return {
 		id: `source-${window.crypto.randomUUID()}`,
 		path,
-		capabilities: { git: false, godot: false }
+		capabilities: { git: false, godot: false },
 	};
 }
 
@@ -89,7 +75,7 @@ export default function WorkspaceProjectDialog({
 	workspace,
 	onCancel,
 	onSaved,
-	onRequestDelete
+	onRequestDelete,
 }: WorkspaceProjectDialogProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [draft, setDraft] = useState<WorkspaceProjectDraft | null>(null);
@@ -116,99 +102,135 @@ export default function WorkspaceProjectDialog({
 					{t("workspaceTree.projectEditor.icon", { defaultValue: "Icon" })}
 				</Typography.Text>
 				<div className={styles.optionGrid}>
-					{ICON_OPTIONS.map((icon): React.JSX.Element => (
-						<Button
-							type={draft.icon === icon ? "primary" : "text"}
-							shape="circle"
-							icon={<Icon name={WORKSPACE_ICON_NAMES[icon]} />}
-							aria-label={WORKSPACE_ICON_NAMES[icon]}
-							onClick={(): void => setDraft((current): WorkspaceProjectDraft | null => (
-								current === null ? null : { ...current, icon }
-							))}
-						/>
-					))}
+					{ICON_OPTIONS.map(
+						(icon): React.JSX.Element => (
+							<Button
+								type={draft.icon === icon ? "primary" : "text"}
+								shape="circle"
+								icon={<Icon name={WORKSPACE_ICON_NAMES[icon]} />}
+								aria-label={WORKSPACE_ICON_NAMES[icon]}
+								onClick={(): void =>
+									setDraft((current): WorkspaceProjectDraft | null =>
+										current === null ? null : { ...current, icon },
+									)
+								}
+							/>
+						),
+					)}
 				</div>
 				<Typography.Text type="secondary">
 					{t("workspaceTree.projectEditor.color", { defaultValue: "Color" })}
 				</Typography.Text>
 				<div className={styles.optionGrid}>
-					{COLOR_OPTIONS.map((color): React.JSX.Element => (
-						<Button
-							key={color}
-							type={draft.color === color ? "primary" : "text"}
-							shape="circle"
-							className={styles.colorButton}
-							aria-label={`${t("workspaceTree.projectEditor.color", { defaultValue: "Color" })} ${color}`}
-							onClick={(): void => setDraft((current): WorkspaceProjectDraft | null => (
-								current === null ? null : { ...current, color }
-							))}
-						>
-							<span
-								className={styles.colorSwatch}
-								style={{
-									background: color === 0 ? "#1f1f1f" : WORKSPACE_COLOR_VALUES[color]
-								}}
-							/>
-						</Button>
-					))}
+					{COLOR_OPTIONS.map(
+						(color): React.JSX.Element => (
+							<Button
+								key={color}
+								type={draft.color === color ? "primary" : "text"}
+								shape="circle"
+								className={styles.colorButton}
+								aria-label={`${t("workspaceTree.projectEditor.color", { defaultValue: "Color" })} ${color}`}
+								onClick={(): void =>
+									setDraft((current): WorkspaceProjectDraft | null =>
+										current === null ? null : { ...current, color },
+									)
+								}
+							>
+								<span
+									className={styles.colorSwatch}
+									style={{
+										background: color === 0 ? "#1f1f1f" : WORKSPACE_COLOR_VALUES[color],
+									}}
+								/>
+							</Button>
+						),
+					)}
 				</div>
 			</div>
 		);
 	}, [draft, t]);
 
-	const sourceFolderItems: MenuProps["items"] = draft?.sourceFolders.map((source): NonNullable<MenuProps["items"]>[number] => {
-		const primary: boolean = source.id === draft.primarySourceFolderId;
-		return {
-			key: source.id,
-			icon: <Icon name="folder" style={getWorkspaceIconStyle(draft.color)} />,
-			label: (
-				<div className={styles.sourceItemLabel}>
-					<div className={styles.sourceItemTitle}>
-						<Typography.Text ellipsis>{source.path.split(/[\\/]/u).at(-1) || source.path}</Typography.Text>
-						{primary ? <Tag color="blue">{t("workspaceTree.projectEditor.primary", { defaultValue: "Primary" })}</Tag> : null}
-						{source.capabilities.git ? <Tag>Git</Tag> : null}
-						{source.capabilities.godot ? <Tag color="cyan">Godot</Tag> : null}
+	const sourceFolderItems: MenuProps["items"] = draft?.sourceFolders.map(
+		(source): NonNullable<MenuProps["items"]>[number] => {
+			const primary: boolean = source.id === draft.primarySourceFolderId;
+			return {
+				key: source.id,
+				icon: <Icon name="folder" style={getWorkspaceIconStyle(draft.color)} />,
+				label: (
+					<div className={styles.sourceItemLabel}>
+						<div className={styles.sourceItemTitle}>
+							<Typography.Text ellipsis>
+								{source.path.split(/[\\/]/u).at(-1) || source.path}
+							</Typography.Text>
+							{primary ? (
+								<Tag color="blue">
+									{t("workspaceTree.projectEditor.primary", { defaultValue: "Primary" })}
+								</Tag>
+							) : null}
+							{source.capabilities.git ? <Tag>Git</Tag> : null}
+							{source.capabilities.godot ? <Tag color="cyan">Godot</Tag> : null}
+						</div>
+						<Typography.Text type="secondary" ellipsis>
+							{source.path}
+						</Typography.Text>
 					</div>
-					<Typography.Text type="secondary" ellipsis>{source.path}</Typography.Text>
-				</div>
-			),
-			extra: (
-				<Space size={0} onClick={(event): void => event.stopPropagation()}>
-					{primary ? null : (
-						<Tooltip title={t("workspaceTree.projectEditor.makePrimary", { defaultValue: "Make primary" })}>
-							<Button
-								type="text"
-								shape="circle"
-								icon={<Icon name="pin" />}
-								aria-label={t("workspaceTree.projectEditor.makePrimary", { defaultValue: "Make primary" })}
-								onClick={(): void => setDraft((current): WorkspaceProjectDraft | null => (
-									current === null ? null : { ...current, primarySourceFolderId: source.id }
-								))}
-							/>
-						</Tooltip>
-					)}
-					{primary ? null : (
-						<Tooltip title={t("workspaceTree.projectEditor.removeFolder", { defaultValue: "Remove source folder" })}>
-							<Button
-								type="text"
-								danger
-								shape="circle"
-								icon={<Icon name="remove" />}
-								aria-label={t("workspaceTree.projectEditor.removeFolder", { defaultValue: "Remove source folder" })}
-								onClick={(): void => setDraft((current): WorkspaceProjectDraft | null => current === null
-									? null
-									: {
-										...current,
-										sourceFolders: current.sourceFolders.filter((item): boolean => item.id !== source.id)
+				),
+				extra: (
+					<Space size={0} onClick={(event): void => event.stopPropagation()}>
+						{primary ? null : (
+							<Tooltip
+								title={t("workspaceTree.projectEditor.makePrimary", { defaultValue: "Make primary" })}
+							>
+								<Button
+									type="text"
+									shape="circle"
+									icon={<Icon name="pin" />}
+									aria-label={t("workspaceTree.projectEditor.makePrimary", {
+										defaultValue: "Make primary",
 									})}
-							/>
-						</Tooltip>
-					)}
-				</Space>
-			),
-			title: source.path
-		};
-	});
+									onClick={(): void =>
+										setDraft((current): WorkspaceProjectDraft | null =>
+											current === null ? null : { ...current, primarySourceFolderId: source.id },
+										)
+									}
+								/>
+							</Tooltip>
+						)}
+						{primary ? null : (
+							<Tooltip
+								title={t("workspaceTree.projectEditor.removeFolder", {
+									defaultValue: "Remove source folder",
+								})}
+							>
+								<Button
+									type="text"
+									danger
+									shape="circle"
+									icon={<Icon name="remove" />}
+									aria-label={t("workspaceTree.projectEditor.removeFolder", {
+										defaultValue: "Remove source folder",
+									})}
+									onClick={(): void =>
+										setDraft((current): WorkspaceProjectDraft | null =>
+											current === null
+												? null
+												: {
+														...current,
+														sourceFolders: current.sourceFolders.filter(
+															(item): boolean => item.id !== source.id,
+														),
+													},
+										)
+									}
+								/>
+							</Tooltip>
+						)}
+					</Space>
+				),
+				title: source.path,
+			};
+		},
+	);
 
 	async function handleAddFolder(): Promise<void> {
 		if (draft === null || addingFolder) {
@@ -221,7 +243,11 @@ export default function WorkspaceProjectDialog({
 				return;
 			}
 			if (draft.sourceFolders.some((source): boolean => pathKey(source.path) === pathKey(selectedPath))) {
-				setError(t("workspaceTree.projectEditor.duplicateFolder", { defaultValue: "This source folder is already in the project." }));
+				setError(
+					t("workspaceTree.projectEditor.duplicateFolder", {
+						defaultValue: "This source folder is already in the project.",
+					}),
+				);
 				return;
 			}
 			setDraft((current): WorkspaceProjectDraft | null => {
@@ -232,12 +258,16 @@ export default function WorkspaceProjectDialog({
 				return {
 					...current,
 					sourceFolders: [...current.sourceFolders, sourceFolder],
-					primarySourceFolderId: current.primarySourceFolderId || sourceFolder.id
+					primarySourceFolderId: current.primarySourceFolderId || sourceFolder.id,
 				};
 			});
 			setError(null);
 		} catch (addError: unknown) {
-			setError(addError instanceof Error ? addError.message : t("workspaceTree.projectEditor.addFailed", { defaultValue: "Failed to add source folder." }));
+			setError(
+				addError instanceof Error
+					? addError.message
+					: t("workspaceTree.projectEditor.addFailed", { defaultValue: "Failed to add source folder." }),
+			);
 		} finally {
 			setAddingFolder(false);
 		}
@@ -248,30 +278,37 @@ export default function WorkspaceProjectDialog({
 			return;
 		}
 		if (draft.sourceFolders.length === 0 || draft.primarySourceFolderId.length === 0) {
-			setError(t("workspaceTree.projectEditor.sourceFolderRequired", { defaultValue: "Add a source folder before saving." }));
+			setError(
+				t("workspaceTree.projectEditor.sourceFolderRequired", {
+					defaultValue: "Add a source folder before saving.",
+				}),
+			);
 			return;
 		}
 		try {
 			setSaving(true);
 			setError(null);
 			const primarySourceFolder: WorkspaceSourceFolder | undefined = draft.sourceFolders.find(
-				(source: WorkspaceSourceFolder): boolean => source.id === draft.primarySourceFolderId
+				(source: WorkspaceSourceFolder): boolean => source.id === draft.primarySourceFolderId,
 			);
 			if (primarySourceFolder === undefined) {
 				throw new Error("The primary source folder must belong to the project.");
 			}
-			const projectName: string = workspace === null
-				? resolveWorkspaceProjectName(draft.name, primarySourceFolder.path)
-				: draft.name.trim();
+			const projectName: string =
+				workspace === null
+					? resolveWorkspaceProjectName(draft.name, primarySourceFolder.path)
+					: draft.name.trim();
 			if (projectName.length === 0) {
-				setError(t("workspaceTree.projectEditor.nameRequired", { defaultValue: "Project name cannot be empty." }));
+				setError(
+					t("workspaceTree.projectEditor.nameRequired", { defaultValue: "Project name cannot be empty." }),
+				);
 				return;
 			}
 			let workspaceToSave: WorkspaceConfig;
 			if (workspace === null) {
 				const configured = await configureEnvironment({
 					workspaceRoot: primarySourceFolder.path,
-					sessionId: null
+					sessionId: null,
 				});
 				if (configured.workspace === null) {
 					throw new Error("Workspace registration did not return a workspace");
@@ -286,11 +323,15 @@ export default function WorkspaceProjectDialog({
 				icon: draft.icon,
 				color: draft.color,
 				sourceFolders: draft.sourceFolders.map((source) => ({ id: source.id, path: source.path })),
-				primarySourceFolderId: draft.primarySourceFolderId
+				primarySourceFolderId: draft.primarySourceFolderId,
 			});
 			onSaved(updated);
 		} catch (saveError: unknown) {
-			setError(saveError instanceof Error ? saveError.message : t("workspaceTree.projectEditor.saveFailed", { defaultValue: "Failed to save project." }));
+			setError(
+				saveError instanceof Error
+					? saveError.message
+					: t("workspaceTree.projectEditor.saveFailed", { defaultValue: "Failed to save project." }),
+			);
 		} finally {
 			setSaving(false);
 		}
@@ -313,13 +354,10 @@ export default function WorkspaceProjectDialog({
 			}}
 			footer={(_, { OkBtn, CancelBtn }): React.JSX.Element => (
 				<Flex justify="space-between" align="center">
-					{workspace === null ? <span /> : (
-						<Button
-							danger
-							type="text"
-							disabled={saving}
-							onClick={(): void => onRequestDelete?.(workspace)}
-						>
+					{workspace === null ? (
+						<span />
+					) : (
+						<Button danger type="text" disabled={saving} onClick={(): void => onRequestDelete?.(workspace)}>
 							{t("workspaceTree.actions.delete")}
 						</Button>
 					)}
@@ -342,17 +380,21 @@ export default function WorkspaceProjectDialog({
 						>
 							<Button
 								icon={<WorkspaceIconView workspace={draft} width={18} height={18} />}
-								aria-label={t("workspaceTree.projectEditor.appearance", { defaultValue: "Project appearance" })}
+								aria-label={t("workspaceTree.projectEditor.appearance", {
+									defaultValue: "Project appearance",
+								})}
 							/>
 						</Popover>
 						<Input
 							value={draft.name}
 							maxLength={120}
-							placeholder={t("workspaceTree.projectEditor.namePlaceholder", { defaultValue: "Project name" })}
+							placeholder={t("workspaceTree.projectEditor.namePlaceholder", {
+								defaultValue: "Project name",
+							})}
 							onChange={(event): void => {
-								setDraft((current): WorkspaceProjectDraft | null => current === null
-									? null
-									: { ...current, name: event.target.value });
+								setDraft((current): WorkspaceProjectDraft | null =>
+									current === null ? null : { ...current, name: event.target.value },
+								);
 								setError(null);
 							}}
 						/>
@@ -375,9 +417,11 @@ export default function WorkspaceProjectDialog({
 							className={styles.sourceMenu}
 							items={sourceFolderItems}
 							selectedKeys={[draft.primarySourceFolderId]}
-							onClick={({ key }): void => setDraft((current): WorkspaceProjectDraft | null => (
-								current === null ? null : { ...current, primarySourceFolderId: String(key) }
-							))}
+							onClick={({ key }): void =>
+								setDraft((current): WorkspaceProjectDraft | null =>
+									current === null ? null : { ...current, primarySourceFolderId: String(key) },
+								)
+							}
 						/>
 						{error === null ? null : <Typography.Text type="danger">{error}</Typography.Text>}
 					</Flex>
