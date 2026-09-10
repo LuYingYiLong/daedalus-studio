@@ -2,7 +2,7 @@ import type { TimelineBodyPart } from "@/platform/rpc/types";
 
 export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
 
-export type TimelineToolEventType = "tool.call" | "tool.result" | "tool.error" | "tool.approval_required" | "tool.approved" | "tool.rejected" | "tool.progress";
+export type TimelineToolEventType = "tool.call" | "tool.result" | "tool.error" | "tool.reviewed" | "tool.approval_required" | "tool.approved" | "tool.rejected" | "tool.progress";
 
 /** Accepts both current normalized event types and legacy persisted agent.* types. */
 export function isTimelineToolEventType(event: Record<string, unknown>, type: TimelineToolEventType): boolean {

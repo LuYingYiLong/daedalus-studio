@@ -60,7 +60,7 @@ export function Composer({ copy, theme: themeName, progress }: ComposerProps): R
 					<ComposerIcon name="sparkles" color={theme.surfaceText} />
 					<ComposerDivider color={theme.line} />
 					<ComposerIcon name="shield" color={theme.surfaceText} />
-					<span>{themeName === "dark" ? "Auto safe" : "自动安全"}</span>
+					<span>{themeName === "dark" ? "Model review" : "模型审查"}</span>
 					<ComposerDivider color={theme.line} />
 					<span style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{copy.model}</span>
 					<ComposerDivider color={theme.line} />

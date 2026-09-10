@@ -184,7 +184,7 @@
 		"noWorkspace": "无项目",
 		"noModel": "提醒任务不调用模型",
 		"existingSessionTarget": "现有会话 · {{sessionId}}",
-		"autoSafe": "自动安全",
+		"autoSafe": "模型审查",
 		"readOnly": "只读",
 		"history": "运行历史",
 		"noRuns": "尚无运行记录",
@@ -764,7 +764,7 @@
 		},
 		"approvalMode": {
 			"manual": "手动",
-			"autoSafe": "自动安全",
+			"autoSafe": "模型审查",
 			"fullTrust": "完全信任"
 		},
 		"model": {
@@ -957,7 +957,7 @@
 			"consentSuffix": "以批准这次跨 workspace 操作。",
 			"actions": {
 				"approve": "批准",
-				"approveAndEnableAutoSafe": "替我审批（开启自动安全）",
+				"approveAndEnableAutoSafe": "替我审批（开启模型审查）",
 				"reject": "拒绝"
 			}
 		},
@@ -1680,6 +1680,12 @@
 				"running": "工具正在执行。",
 				"pending": "工具尚未开始执行。",
 				"writing": "正在写入：{{tool}}"
+			},
+			"review": {
+				"modelApproved": "模型已批准：{{reason}}",
+				"modelRequested": "模型审查不可用或需要确认：{{reason}}",
+				"modelDenied": "模型已拒绝：{{reason}}",
+				"policyDenied": "静态策略已拒绝：{{reason}}"
 			},
 			"compactedDetails": "详情已精简，工具状态和关键摘要仍保留。",
 			"recovery": {
@@ -2863,8 +2869,8 @@
 					"description": "用于根据 workspace 的 Git diff 生成 commit message。未设置时默认使用主模型。"
 				},
 				"commandReview": {
-					"title": "命令审查模型",
-					"description": "在 Auto-safe 模式下审查自由终端命令。未设置时，每条命令都会请求你的审批。"
+					"title": "动作审查模型",
+					"description": "在模型审查模式下结合当前会话审查有副作用的工具调用，包括终端、写入、下载和外部控制。模型不可用时会请求你的审批。"
 				}
 			},
 			"errors": {
@@ -2928,8 +2934,8 @@
 			},
 			"commandReviewPrompt": {
 				"title": "补充审查偏好",
-				"description": "用于 Auto-safe 命令审查的额外偏好。固定安全规则始终优先。",
-				"placeholder": "添加项目相关的命令审查偏好。"
+				"description": "用于模型审查动作的额外偏好。审查模型会结合当前会话判断是否执行工具调用。",
+				"placeholder": "添加项目相关的动作审查偏好。"
 			},
 			"errors": {
 				"load": "加载个性化设置失败",

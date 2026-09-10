@@ -38,8 +38,26 @@ function getStringValue(event: Record<string, unknown> | undefined, key: string)
 	return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
-function getLatestEvent(events: Record<string, unknown>[], type: "tool.result" | "tool.error"): Record<string, unknown> | undefined {
+function getLatestEvent(events: Record<string, unknown>[], type: "tool.result" | "tool.error" | "tool.reviewed"): Record<string, unknown> | undefined {
 	return [...events].reverse().find((event: Record<string, unknown>): boolean => isTimelineToolEventType(event, type));
+}
+
+function getReviewText(events: Record<string, unknown>, t: (key: string, options?: Record<string, unknown>) => string): string | undefined {
+	const decision: string = getStringValue(events, "decision") ?? "ask_user";
+	const reason: string = getStringValue(events, "reason") ?? "";
+	const source: string = getStringValue(events, "authorizationSource") ?? "policy";
+	const scope: string = getStringValue(events, "scope") ?? "this_call";
+	const sideEffects: string = Array.isArray(events.sideEffects)
+		? events.sideEffects.filter((value: unknown): value is string => typeof value === "string" && value.length > 0).join(", ")
+		: "";
+	const details: string = [reason, scope, sideEffects].filter((value: string): boolean => value.length > 0).join(" · ");
+	if (source === "review_model") {
+		if (decision === "allow") return t("chat.tool.review.modelApproved", { reason: details });
+		if (decision === "deny") return t("chat.tool.review.modelDenied", { reason: details });
+		return t("chat.tool.review.modelRequested", { reason: details });
+	}
+	if (source === "policy" && decision === "deny") return t("chat.tool.review.policyDenied", { reason: details });
+	return undefined;
 }
 
 function getToolResultText(events: Record<string, unknown>[]): string {
@@ -133,7 +151,9 @@ function ToolPart({ part, disclosureKey = "tool", stopped = false }: ToolPartPro
 			? t("chat.tool.recovery.recovered", { attempt: recovery.attempt, max: recovery.maxAttempts })
 			: recovery.status === "exhausted"
 				? t("chat.tool.recovery.exhausted", { attempt: recovery.attempt, max: recovery.maxAttempts })
-				: t("chat.tool.recovery.failed", { attempt: recovery.attempt, max: recovery.maxAttempts });
+			: t("chat.tool.recovery.failed", { attempt: recovery.attempt, max: recovery.maxAttempts });
+	const reviewEvent: Record<string, unknown> | undefined = getLatestEvent(part.events, "tool.reviewed");
+	const reviewText: string | undefined = reviewEvent === undefined ? undefined : getReviewText(reviewEvent, t);
 	const label = (
 		<span className={styles.toolLabel} title={toolDisplay.label}>
 			<span className={styles.toolLabelText}>{((): string => {
@@ -155,7 +175,7 @@ function ToolPart({ part, disclosureKey = "tool", stopped = false }: ToolPartPro
 		: status === "pending"
 			? t("chat.tool.activity.pending")
 		: undefined;
-	const hasDetails: boolean = isCompacted || activityText !== undefined || resultText.length > 0 || fileEditBatch !== undefined || recoveryText !== undefined;
+	const hasDetails: boolean = isCompacted || activityText !== undefined || resultText.length > 0 || fileEditBatch !== undefined || recoveryText !== undefined || reviewText !== undefined;
 
 	return (
 		<Collapse
@@ -185,6 +205,7 @@ function ToolPart({ part, disclosureKey = "tool", stopped = false }: ToolPartPro
 								</ul>
 							)}
 							{activityText === undefined ? null : <div className={styles.activityText}>{activityText}</div>}
+							{reviewText === undefined ? null : <div className={styles.activityText}>{reviewText}</div>}
 							{recoveryText === undefined ? null : <div className={styles.recoveryText}>{recoveryText}</div>}
 							{resultText.length === 0 ? null : <div className={styles.resultText}>{resultText}</div>}
 							{fileEditBatch === undefined ? null : (

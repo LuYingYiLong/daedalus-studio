@@ -184,7 +184,7 @@
 		"noWorkspace": "No project",
 		"noModel": "Reminders do not call a model",
 		"existingSessionTarget": "Existing session · {{sessionId}}",
-		"autoSafe": "Auto safe",
+		"autoSafe": "Model review",
 		"readOnly": "Read only",
 		"history": "Run history",
 		"noRuns": "No runs yet",
@@ -766,7 +766,7 @@
 		},
 		"approvalMode": {
 			"manual": "Manual",
-			"autoSafe": "Auto-safe",
+			"autoSafe": "Model review",
 			"fullTrust": "Full Trust"
 		},
 		"model": {
@@ -959,7 +959,7 @@
 			"consentSuffix": "to approve this cross-workspace action.",
 			"actions": {
 				"approve": "Approve",
-				"approveAndEnableAutoSafe": "Approve for me (enable Auto-Safe)",
+				"approveAndEnableAutoSafe": "Approve for me (enable Model review)",
 				"reject": "Reject"
 			}
 		},
@@ -1681,6 +1681,12 @@
 				"running": "The tool is running.",
 				"pending": "The tool has not started.",
 				"writing": "Writing now: {{tool}}"
+			},
+			"review": {
+				"modelApproved": "Model approved: {{reason}}",
+				"modelRequested": "Model review needs your approval: {{reason}}",
+				"modelDenied": "Model denied: {{reason}}",
+				"policyDenied": "Static policy denied: {{reason}}"
 			},
 			"compactedDetails": "Details compacted; tool status and key summaries were retained.",
 			"recovery": {
@@ -2869,8 +2875,8 @@
 					"description": "Used to generate commit messages from workspace Git diffs. Defaults to the main model when unset."
 				},
 				"commandReview": {
-					"title": "Command review model",
-					"description": "Reviews free terminal commands in Auto-safe mode. When unset, every command asks for your approval."
+					"title": "Action review model",
+					"description": "Reviews side-effecting tool calls in Model review mode using the current conversation, including terminal, write, download, and external control actions. Unavailable reviews fall back to your approval."
 				}
 			},
 			"errors": {
@@ -2934,8 +2940,8 @@
 			},
 			"commandReviewPrompt": {
 				"title": "Supplemental review preferences",
-				"description": "Additional preferences for Auto-safe command review. Fixed safety rules always take precedence.",
-				"placeholder": "Add project-specific command review preferences."
+				"description": "Additional preferences for contextual action review. The review model uses the current conversation when deciding whether to run a tool call.",
+				"placeholder": "Add project-specific action review preferences."
 			},
 			"errors": {
 				"load": "Failed to load personalization settings",
