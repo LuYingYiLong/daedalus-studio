@@ -36,24 +36,28 @@ const ROUTING_OPTIONS: RoutingOption[] = [
 		titleKey: "settings.defaultModel.routing.sessionTitle.title",
 		descriptionKey:
 			"settings.defaultModel.routing.sessionTitle.description",
+		placeholderKey: "settings.defaultModel.useMainModel",
 	},
 	{
 		key: "nextStepHints",
 		titleKey: "settings.defaultModel.routing.nextStepHints.title",
 		descriptionKey:
 			"settings.defaultModel.routing.nextStepHints.description",
+		placeholderKey: "settings.defaultModel.useMainModel",
 	},
 	{
 		key: "goalEvaluator",
 		titleKey: "settings.defaultModel.routing.goalEvaluator.title",
 		descriptionKey:
 			"settings.defaultModel.routing.goalEvaluator.description",
+		placeholderKey: "settings.defaultModel.useGoalModel",
 	},
 	{
 		key: "contextCompression",
 		titleKey: "settings.defaultModel.routing.contextCompression.title",
 		descriptionKey:
 			"settings.defaultModel.routing.contextCompression.description",
+		placeholderKey: "settings.defaultModel.useMainModel",
 	},
 	{
 		key: "imageRecognition",
@@ -61,6 +65,7 @@ const ROUTING_OPTIONS: RoutingOption[] = [
 		descriptionKey:
 			"settings.defaultModel.routing.imageRecognition.description",
 		filterModel: isVisionModel,
+		placeholderKey: "settings.defaultModel.configureVisionModel",
 	},
 	{
 		key: "imageGeneration",
@@ -68,11 +73,13 @@ const ROUTING_OPTIONS: RoutingOption[] = [
 		descriptionKey:
 			"settings.defaultModel.routing.imageGeneration.description",
 		filterModel: isImageTaskModel,
+		placeholderKey: "settings.defaultModel.configureImageGenerationModel",
 	},
 	{
 		key: "gitCommit",
 		titleKey: "settings.defaultModel.routing.gitCommit.title",
 		descriptionKey: "settings.defaultModel.routing.gitCommit.description",
+		placeholderKey: "settings.defaultModel.useMainModel",
 	},
 	{
 		key: "commandReview",

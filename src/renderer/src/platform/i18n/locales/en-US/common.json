@@ -2845,6 +2845,9 @@
 			"selectModel": "Select a model",
 			"configureProvider": "Configure provider",
 			"useMainModel": "Uses the main model when unset",
+			"useGoalModel": "Uses the Goal creation model when unset",
+			"configureVisionModel": "Configure a vision model",
+			"configureImageGenerationModel": "Configure an image generation model",
 			"routing": {
 				"sessionTitle": {
 					"title": "Session title model",
@@ -2852,31 +2855,31 @@
 				},
 				"nextStepHints": {
 					"title": "Next-step suggestion model",
-					"description": "Generates one optional follow-up in the empty composer after a chat response. Follows the active model when unset and always disables reasoning."
+					"description": "Generates one optional follow-up in the empty composer after a chat response."
 				},
 				"goalEvaluator": {
 					"title": "Goal completion evaluator model",
-					"description": "Used to judge whether a Goal is complete after each execution cycle. Falls back to the Goal model when unset."
+					"description": "Used to judge whether a Goal is complete after each execution cycle."
 				},
 				"contextCompression": {
 					"title": "Context compression model",
-					"description": "Creates recoverable structured context summaries. Follows the active model when unset and always disables reasoning."
+					"description": "Creates recoverable structured context summaries."
 				},
 				"imageRecognition": {
 					"title": "Image recognition model",
-					"description": "Used when the active chat model cannot consume image context directly."
+					"description": "Used when the active chat model cannot consume image context directly; configure a vision-capable model for this route."
 				},
 				"imageGeneration": {
 					"title": "Image generation/edit model",
-					"description": "Used by @image-gen and mcp_image_generate for text-to-image or image-to-image tasks. This must be configured explicitly."
+					"description": "Used by @image-gen and mcp_image_generate for text-to-image or image-to-image tasks; configure a model that supports image generation or editing."
 				},
 				"gitCommit": {
 					"title": "Git commit model",
-					"description": "Used to generate commit messages from workspace Git diffs. Defaults to the main model when unset."
+					"description": "Used to generate commit messages from workspace Git diffs."
 				},
 				"commandReview": {
 					"title": "Action review model",
-					"description": "Reviews side-effecting tool calls in Model review mode using the current conversation, including terminal, write, download, and external control actions. Unavailable reviews fall back to your approval."
+					"description": "Reviews side-effecting tool calls in Model review mode using the current conversation, including terminal, write, download, and external control actions."
 				}
 			},
 			"errors": {
