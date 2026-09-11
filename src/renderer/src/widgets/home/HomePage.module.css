@@ -561,7 +561,8 @@
 .composerMascot {
 	position: absolute;
 	right: 2px;
-	bottom: 100%;
+	bottom: calc(100% + var(--agent-chat-side-padding, 8px));
+	z-index: 4;
 	pointer-events: none;
 }
 

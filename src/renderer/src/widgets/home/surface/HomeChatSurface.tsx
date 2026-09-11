@@ -431,6 +431,15 @@ function HomeChatSurface({
 			</div>
 
 			<footer className={styles.composer}>
+				{showComposerMascot ? (
+					<div className={styles.composerMascot}>
+						<Mascot
+							compact
+							sessionId={activeSessionId}
+							status={isSending ? "thinking" : "idle"}
+						/>
+					</div>
+				) : null}
 				{!isHome ? (
 					<Button
 						ref={scrollToBottomButtonRef}
@@ -513,11 +522,6 @@ function HomeChatSurface({
 						) : null}
 						{isDockFullscreen ? null : (
 							<div className={styles.composerAnchor}>
-								{showComposerMascot ? (
-									<div className={styles.composerMascot}>
-										<Mascot compact sessionId={activeSessionId} status={isSending ? "thinking" : "idle"} />
-									</div>
-								) : null}
 								{renderComposer(false)}
 							</div>
 						)}

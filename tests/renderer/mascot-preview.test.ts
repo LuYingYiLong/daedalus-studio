@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { applyMascotPreview, getMascotPreview, subscribeMascotPreview } from "../../src/renderer/src/domain/session/mascot-preview";
+import { finishMascotPreview, applyMascotPreview, getMascotPreview, subscribeMascotPreview } from "../../src/renderer/src/domain/session/mascot-preview";
 
 test("mascot previews are isolated by session and auto clears the override", () => {
 	let notifications = 0;
@@ -40,4 +40,22 @@ test("approval and completion previews remain isolated and resettable", () => {
 		applyMascotPreview({ requestId: "reset", sessionId: status, status: "auto" }, "reset");
 		expect(getMascotPreview(status)).toBeNull();
 	}
+});
+
+test("failure preview remains visible until explicitly reset", () => {
+	applyMascotPreview({ requestId: "failure", sessionId: "mascot-failure", status: "failed" }, "failure");
+	expect(getMascotPreview("mascot-failure")).toBe("failed");
+	applyMascotPreview({ requestId: "reset-failure", sessionId: "mascot-failure", status: "auto" }, "reset-failure");
+	expect(getMascotPreview("mascot-failure")).toBeNull();
+});
+
+
+test("completion returns preview to idle without overwriting a newer state", () => {
+	applyMascotPreview({ requestId: "done", sessionId: "done", status: "completed" }, "done");
+	finishMascotPreview("done");
+	expect(getMascotPreview("done")).toBe("idle");
+	applyMascotPreview({ requestId: "new", sessionId: "done", status: "thinking" }, "new");
+	finishMascotPreview("done");
+	expect(getMascotPreview("done")).toBe("thinking");
+	applyMascotPreview({ requestId: "clear", sessionId: "done", status: "auto" }, "clear");
 });

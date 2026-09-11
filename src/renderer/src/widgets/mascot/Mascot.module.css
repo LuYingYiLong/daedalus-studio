@@ -21,6 +21,8 @@
 	isolation: isolate;
 	pointer-events: none;
 	user-select: none;
+	perspective: 500px;
+	perspective-origin: 50% 50%;
 }
 
 .star {
@@ -37,7 +39,11 @@
 		inset -2px -3px 6px rgb(0 0 0 / 35%),
 		0 0 0 1px rgb(134 161 208 / 15%);
 	transform-origin: 50% 85%;
+}
 
+.bodyRotation {
+	position: absolute;
+	inset: 0;
 }
 
 .gaze {
@@ -58,7 +64,6 @@
 	border-radius: 999px;
 	background: linear-gradient(135deg, #fffef8, #e7e9ed);
 	box-shadow: 0 0 4px rgb(244 247 255 / 12%);
-
 }
 
 .planet {
@@ -78,7 +83,6 @@
 	offset-path: path("M 158 80 C 158 110 18 110 18 80 C 18 50 158 50 158 80 Z");
 	offset-rotate: 0deg;
 	offset-distance: 0%;
-
 }
 
 .shadow {
@@ -90,7 +94,25 @@
 	height: 9px;
 	border-radius: 50%;
 	background: radial-gradient(ellipse, rgb(10 15 25 / 18%), transparent 70%);
+}
 
+.failureMark {
+	position: absolute;
+	z-index: 4;
+	top: 39px;
+	left: 78px;
+	display: grid;
+	place-items: center;
+	width: 20px;
+	height: 46px;
+	color: #347fff;
+	font-size: 48px;
+	font-weight: 800;
+	line-height: 1;
+	text-shadow: 0 2px 5px rgb(52 127 255 / 32%);
+	opacity: 0;
+	transform: translateY(12px) scale(0.35);
+	transform-origin: 50% 100%;
 }
 
 .ring {
@@ -129,7 +151,9 @@
 	animation: blink 7.4s ease-in-out infinite;
 }
 .mascot[data-state="idle"] .planet {
-	animation: orbit 10s linear infinite, orbit-depth 10s steps(1, end) infinite;
+	animation:
+		orbit 10s linear infinite,
+		orbit-depth 10s steps(1, end) infinite;
 }
 .mascot[data-state="idle"] .shadow {
 	animation: shadow-breathe 5.6s ease-in-out infinite;
@@ -217,14 +241,49 @@
 	transform: translateY(8px);
 }
 
+.mascot[data-state="failed"] .star {
+	animation: failed-star-disappear 650ms cubic-bezier(0.55, 0, 1, 0.45) both;
+}
+.mascot[data-state="failed"] .bodyRotation,
+.mascot[data-state="failed"] .gaze {
+	animation: none;
+}
+.mascot[data-state="failed"] .gaze {
+	opacity: 0;
+}
+.mascot[data-state="failed"] .shadow {
+	animation: failed-shadow-disappear 650ms ease-in both;
+}
+.mascot[data-state="failed"] .ring {
+	opacity: 1;
+	animation: failed-ring-return 1.6s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.mascot[data-state="failed"] .ringHighlight {
+	opacity: 0;
+}
+.mascot[data-state="failed"] .planet {
+	opacity: 0;
+	animation: failed-planet-return 1.6s cubic-bezier(0.22, 0.61, 0.36, 1) 300ms both;
+}
+.mascot[data-state="failed"] .failureMark {
+	animation: failed-mark-pop 420ms cubic-bezier(0.2, 0.9, 0.25, 1.2) 600ms both;
+}
+
 .mascot[data-state="completed"] .star {
-	animation: breathe 5.6s ease-in-out infinite;
+	transform-origin: center;
+	transform-style: preserve-3d;
+	animation: completed-spin 1.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.mascot[data-state="completed"] .bodyRotation {
+	transform-style: preserve-3d;
+}
+.mascot[data-state="completed"] .gaze {
+	/* 球面保持体积，面部沿有深度的球面绕 X 轴翻转，背面不可见 */
+	transform: translateZ(51px);
+	backface-visibility: hidden;
 }
 .mascot[data-state="completed"] .shadow {
 	animation: shadow-breathe 5.6s ease-in-out infinite;
-}
-.mascot[data-state="completed"] .eye {
-	animation: completed-eyes 1.2s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 .mascot[data-state="completed"] .ring {
 	opacity: 0;
@@ -240,30 +299,131 @@
 		orbit-depth 2.4s steps(1, end) 2.1s both;
 }
 
-@keyframes completed-eyes {
-	from { transform: rotate(0deg); }
-	to { transform: rotate(720deg); }
+@keyframes completed-spin {
+	from {
+		transform: rotateY(0deg);
+	}
+	to {
+		transform: rotateY(720deg);
+	}
+}
+
+@keyframes failed-star-disappear {
+	0% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	72% {
+		opacity: 0.2;
+		transform: scale(0.18);
+	}
+	100% {
+		opacity: 0;
+		transform: scale(0);
+	}
+}
+
+@keyframes failed-shadow-disappear {
+	0% {
+		opacity: 0.8;
+		transform: scaleX(1);
+	}
+	100% {
+		opacity: 0;
+		transform: scaleX(0.25);
+	}
+}
+
+@keyframes failed-ring-return {
+	0% {
+		opacity: 1;
+		transform: rotate(-36deg) scale(1);
+	}
+	42% {
+		opacity: 0.82;
+		transform: rotate(-21deg) scale(0.92);
+	}
+	100% {
+		opacity: 0;
+		transform: rotate(-4deg) scale(0.18);
+	}
+}
+
+@keyframes failed-planet-return {
+	0% {
+		opacity: 0;
+		offset-distance: 58%;
+		transform: scale(0.45);
+	}
+	20% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 1;
+		offset-distance: 0%;
+		transform: scale(1);
+	}
+}
+
+@keyframes failed-mark-pop {
+	0% {
+		opacity: 0;
+		transform: translateY(12px) scale(0.35);
+	}
+	70% {
+		opacity: 1;
+		transform: translateY(-2px) scale(1.12);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
 }
 
 @keyframes completed-ring {
-	0% { opacity: 1; transform: rotate(-22deg); }
-	75% { opacity: 1; }
-	100% { opacity: 0; transform: translate(70px, 10px) rotate(-22deg) scale(0); }
+	0% {
+		opacity: 1;
+		transform: rotate(-22deg);
+	}
+	75% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+		transform: translate(70px, 10px) rotate(-22deg) scale(0);
+	}
 }
 
 @keyframes completed-planet {
-	0%, 35% { opacity: 0; transform: scale(0); }
-	100% { opacity: 1; transform: scale(1); }
+	0%,
+	35% {
+		opacity: 0;
+		transform: scale(0);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
 }
 
 @keyframes executing-breathe {
-	0%, 100% { transform: translateY(-2px) scale(1); }
-	50% { transform: translateY(-5px) scale(1.02, 0.98); }
+	0%,
+	100% {
+		transform: translateY(-2px) scale(1);
+	}
+	50% {
+		transform: translateY(-5px) scale(1.02, 0.98);
+	}
 }
 
 @keyframes executing-orbit {
-	0%, 100% { transform: rotate(-28deg) translateY(-1px); }
-	50% { transform: rotate(-38deg) translateY(-3px); }
+	0%,
+	100% {
+		transform: rotate(-28deg) translateY(-1px);
+	}
+	50% {
+		transform: rotate(-38deg) translateY(-3px);
+	}
 }
 
 @keyframes thinking-gaze {
@@ -364,10 +524,27 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.mascot[data-state] :is(.star, .shadow, .gaze, .eye, .planet, .ring, .ringHighlight),
+	.mascot[data-state] :is(.star, .bodyRotation, .shadow, .gaze, .eye, .planet, .ring, .ringHighlight),
 	.mascot[data-state] .eye:first-child,
 	.mascot[data-state] .eye:last-child {
 		animation: none;
 		transition: none;
+	}
+	.mascot[data-state="failed"] .star {
+		opacity: 0;
+		transform: scale(0);
+	}
+	.mascot[data-state="failed"] .gaze,
+	.mascot[data-state="failed"] .ring {
+		opacity: 0;
+	}
+	.mascot[data-state="failed"] .planet {
+		opacity: 1;
+		offset-distance: 0%;
+		transform: scale(1);
+	}
+	.mascot[data-state="failed"] .failureMark {
+		opacity: 1;
+		transform: none;
 	}
 }
