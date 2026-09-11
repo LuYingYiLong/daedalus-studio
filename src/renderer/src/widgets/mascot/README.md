@@ -1,12 +1,13 @@
 # Mascot
 
-`NewSessionHome` 显示默认尺寸的空闲角色；会话中的 `HomeChatSurface` 将角色绝对定位在底部 composer 区域右上方，不占用布局高度，消息队列出现时会随整个底部区域自动上移，鼠标事件穿透
+`NewSessionHome` 显示默认尺寸的空闲角色；会话中的 `HomeChatSurface` 将角色绝对定位在底部 composer 区域右上方，不占用布局高度，消息队列出现时会随整个底部区域自动上移，除主星交互区域外鼠标事件穿透
 
 状态切换复用同一组 DOM 节点，主星、眼睛、视线、行星和星环通过 CSS transition 连续变形；只有切换会话时才重新挂载动画层
 
 吉祥物显示时，Virtuoso 的 Footer 增加 81px 末尾留白（73px 角色高度 + 8px 间距），增加可滚动内容高度，不缩小消息视口。滚到底部时最后一条消息能停在角色上方；浏览历史时保留悬浮覆盖效果。吉祥物隐藏时恢复普通末尾间距
 
 - `idle`：蓝色行星绕行，主星呼吸；双眼由同一个眼睛组驱动同步眨眼，窗口聚焦时视线跟随鼠标
+- `enjoying`：按住左、中或右键在主星上来回抚摸后触发，双眼眯起并贴近鼠标位置，主星以轻柔节奏呼吸；松开后短暂停留再回到 idle
 - `thinking`：蓝色星环分前后两层环绕主星，左眼睁开、右眼眯成短横线；眼睛随呼吸轻微左右摆动，停止鼠标跟随
 - `executing`：双眼专注睁开，主星轻微悬浮起伏，蓝色星环快速流动；目前通过预览指令展示，尚未接入工具执行事件
 - `waiting`：双眼看向用户、缓慢呼吸与眨眼，星环放平并停止运动
@@ -19,6 +20,7 @@
 
 ```text
 /test-mascot-status thinking
+/test-mascot-status enjoying
 /test-mascot-status executing
 /test-mascot-status waiting
 /test-mascot-status completed

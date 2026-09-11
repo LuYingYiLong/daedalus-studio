@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { finishMascotPreview, getMascotPreview, subscribeMascotPreview, type MascotStatus } from "@/domain/session/mascot-preview";
 import { getBackendConnectionState, onBackendConnectionStateChanged } from "@/platform/rpc/transport/backend-client";
 import { useIdleGaze } from "./useIdleGaze";
+import { useMascotPetting } from "./useMascotPetting";
 import { useMascotSleep } from "./useMascotSleep";
 import styles from "./Mascot.module.css";
 
@@ -38,7 +39,12 @@ function MascotVisual({ status, sessionId }: { status: MascotStatus; sessionId: 
 	const [finished, setFinished] = useState(false);
 	const completedStatus: MascotStatus = status === "completed" && finished ? "idle" : status;
 	const sleeping: boolean = useMascotSleep(completedStatus === "idle");
-	const visibleStatus: MascotStatus = completedStatus === "idle" && sleeping ? "sleeping" : completedStatus;
+	const enjoying: boolean = useMascotPetting(starRef, gazeRef, completedStatus === "idle");
+	const visibleStatus: MascotStatus = enjoying
+		? "enjoying"
+		: completedStatus === "idle" && sleeping
+			? "sleeping"
+			: completedStatus;
 	useIdleGaze(starRef, gazeRef, visibleStatus === "idle");
 
 	useEffect(() => {

@@ -50,8 +50,8 @@ test("failure preview remains visible until explicitly reset", () => {
 	expect(getMascotPreview("mascot-failure")).toBeNull();
 });
 
-test("sleep and disconnection previews remain isolated and resettable", () => {
-	for (const status of ["sleeping", "disconnected"] as const) {
+test("enjoyment, sleep, and disconnection previews remain isolated and resettable", () => {
+	for (const status of ["enjoying", "sleeping", "disconnected"] as const) {
 		applyMascotPreview({ requestId: status, sessionId: status, status }, status);
 		expect(getMascotPreview(status)).toBe(status);
 		applyMascotPreview({ requestId: `reset-${status}`, sessionId: status, status: "auto" }, `reset-${status}`);

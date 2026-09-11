@@ -33,6 +33,18 @@
 		transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1),
 		filter 260ms ease,
 		opacity 260ms ease;
+	pointer-events: none;
+}
+
+.mascot[data-state="idle"] .star,
+.mascot[data-state="enjoying"] .star {
+	pointer-events: auto;
+	cursor: grab;
+	touch-action: none;
+}
+
+.mascot[data-state="enjoying"] .star {
+	cursor: grabbing;
 }
 
 .bodyRotation {
@@ -53,6 +65,7 @@
 
 .eyeGroup {
 	display: flex;
+	align-items: center;
 	justify-content: center;
 	gap: 17px;
 	transform-origin: 50% 50%;
@@ -181,6 +194,35 @@
 .mascot[data-state="idle"] .shadow {
 	animation: shadow-breathe 5.6s ease-in-out infinite;
 }
+.mascot[data-state="enjoying"] .star {
+	filter: brightness(1.08) saturate(1.08);
+	animation: enjoying-breathe 1.8s ease-in-out infinite;
+}
+.mascot[data-state="enjoying"] .shadow {
+	animation: enjoying-shadow 1.8s ease-in-out infinite;
+}
+.mascot[data-state="enjoying"] .gaze {
+	transition: transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.mascot[data-state="enjoying"] .eyeGroup {
+	gap: 14px;
+}
+.mascot[data-state="enjoying"] .eye {
+	width: 21px;
+	height: 6px;
+	animation: enjoying-eye-breathe 1.8s ease-in-out infinite;
+}
+.mascot[data-state="enjoying"] .eye:first-child {
+	transform: rotate(-9deg);
+}
+.mascot[data-state="enjoying"] .eye:last-child {
+	transform: rotate(9deg);
+}
+.mascot[data-state="enjoying"] .planet {
+	animation:
+		orbit 10s linear infinite,
+		orbit-depth 10s steps(1, end) infinite;
+}
 .mascot[data-state="sleeping"] .star {
 	filter: brightness(0.86) saturate(0.78);
 	animation: sleeping-breathe 8s ease-in-out infinite;
@@ -237,12 +279,12 @@
 	gap: 14px;
 }
 .mascot[data-state="thinking"] .eye:first-child {
-	rotate: 12deg;
+	rotate: 2deg;
 }
 .mascot[data-state="thinking"] .eye:last-child {
 	width: 22px;
 	height: 5px;
-	rotate: 6deg;
+	rotate: 0deg;
 	animation: thinking-squint 5.6s ease-in-out infinite;
 }
 .mascot[data-state="thinking"] .ring {
@@ -509,6 +551,38 @@
 	}
 	50% {
 		transform: translateY(-5px) scale(1.02, 0.98);
+	}
+}
+
+@keyframes enjoying-breathe {
+	0%,
+	100% {
+		transform: translateY(0) scale(1);
+	}
+	50% {
+		transform: translateY(-2px) scale(1.025, 0.98);
+	}
+}
+
+@keyframes enjoying-shadow {
+	0%,
+	100% {
+		transform: scaleX(1);
+		opacity: 0.75;
+	}
+	50% {
+		transform: scaleX(0.84);
+		opacity: 0.46;
+	}
+}
+
+@keyframes enjoying-eye-breathe {
+	0%,
+	100% {
+		scale: 1 0.86;
+	}
+	50% {
+		scale: 1.08 1.14;
 	}
 }
 

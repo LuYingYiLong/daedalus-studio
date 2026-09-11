@@ -34,7 +34,7 @@ export function useIdleGaze(
 			gaze.style.setProperty("--gaze-y", `${(dy / distance) * 16}px`);
 		};
 		const handlePointer = (event: PointerEvent): void => {
-			if (!focused || document.hidden || event.pointerType === "touch") return;
+			if (!focused || document.hidden || event.pointerType === "touch" || event.buttons !== 0) return;
 			pointer = { x: event.clientX, y: event.clientY };
 			if (frame === null) frame = requestAnimationFrame(update);
 		};
