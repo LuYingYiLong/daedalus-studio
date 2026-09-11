@@ -11,6 +11,9 @@ type MascotProps = {
 	sessionId?: string | null;
 };
 
+const IDLE_ORBIT_DURATION_MS: number = 10_000;
+const COMPLETED_ORBIT_DURATION_MS: number = 2_400;
+
 function subscribeBackendConnection(listener: () => void): () => void {
 	return onBackendConnectionStateChanged(() => listener());
 }
@@ -54,22 +57,54 @@ function MascotVisual({ status, sessionId }: { status: MascotStatus; sessionId: 
 	useEffect(() => {
 		if (status !== "completed") return;
 		let cancelled = false;
+		let cycleTimer: number | null = null;
 		const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+		const animations = planetRef.current?.getAnimations() ?? [];
+		const orbitAnimation: Animation | null = animations.find((animation): boolean => {
+			const animationName: unknown = (animation as Animation & { animationName?: unknown }).animationName;
+			return animationName === "orbit";
+		}) ?? null;
+		const previousPlaybackRate: number = orbitAnimation?.playbackRate ?? 1;
+		const restoreOrbitRate = (): void => {
+			if (orbitAnimation === null) return;
+			orbitAnimation.playbackRate = previousPlaybackRate;
+		};
+		if (orbitAnimation !== null) {
+			orbitAnimation.playbackRate = IDLE_ORBIT_DURATION_MS / COMPLETED_ORBIT_DURATION_MS;
+		}
 		const finish = (): void => {
 			if (cancelled) return;
+			if (cycleTimer !== null) {
+				window.clearTimeout(cycleTimer);
+				cycleTimer = null;
+			}
+			restoreOrbitRate();
 			setFinished(true);
 			finishMascotPreview(sessionId);
 		};
 		const handleMotionChange = (): void => {
 			if (reducedMotion.matches) finish();
 		};
-		// 等待行星收拢及整圈轨道实际结束，避免计时器与 CSS 节奏脱节
-		const animations = planetRef.current?.getAnimations() ?? [];
-		if (reducedMotion.matches || animations.length === 0) finish();
-		else void Promise.all(animations.map((animation) => animation.finished)).then(finish, () => {});
+		// 完成状态与 idle 共用同一个轨道动画，只临时加速一整圈，切换时不会重置位置
+		const finiteAnimations = animations.filter((animation): boolean => {
+			const endTime: CSSNumberish | null = animation.effect?.getComputedTiming().endTime ?? null;
+			return typeof endTime === "number" && Number.isFinite(endTime);
+		}) ?? [];
+		const animationFinished: Promise<unknown> = finiteAnimations.length === 0
+			? Promise.resolve()
+			: Promise.all(finiteAnimations.map((animation) => animation.finished));
+		const orbitFinished: Promise<void> = orbitAnimation === null
+			? Promise.resolve()
+			: new Promise<void>((resolve): void => {
+				cycleTimer = window.setTimeout(resolve, COMPLETED_ORBIT_DURATION_MS);
+			});
+		if (reducedMotion.matches) finish();
+		else void Promise.all([animationFinished, orbitFinished]).then(finish, () => {});
 		reducedMotion.addEventListener("change", handleMotionChange);
 		return (): void => {
 			cancelled = true;
+			if (cycleTimer !== null) window.clearTimeout(cycleTimer);
+			restoreOrbitRate();
 			reducedMotion.removeEventListener("change", handleMotionChange);
 		};
 	}, [status, sessionId]);

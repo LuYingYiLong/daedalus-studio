@@ -410,10 +410,12 @@
 .mascot[data-state="completed"] .star {
 	transform-origin: center;
 	transform-style: preserve-3d;
-	animation: completed-spin 1.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+	animation: none;
 }
 .mascot[data-state="completed"] .bodyRotation {
 	transform-style: preserve-3d;
+	transform-origin: center;
+	animation: completed-face-spin 1.2s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 .mascot[data-state="completed"] .gaze {
 	/* 球面保持体积，面部沿有深度的球面绕 Y 轴旋转，背面不可见 */
@@ -432,12 +434,12 @@
 }
 .mascot[data-state="completed"] .planet {
 	animation:
-		completed-planet 0.9s ease-in-out 1.2s both,
-		orbit 2.4s linear 2.1s both,
-		orbit-depth 2.4s steps(1, end) 2.1s both;
+		orbit 10s linear infinite,
+		orbit-depth 10s steps(1, end) infinite,
+		completed-planet 0.9s ease-in-out 1.2s both;
 }
 
-@keyframes completed-spin {
+@keyframes completed-face-spin {
 	from {
 		transform: rotateY(0deg);
 	}
