@@ -158,6 +158,33 @@
 .mascot[data-state="idle"] .shadow {
 	animation: shadow-breathe 5.6s ease-in-out infinite;
 }
+.mascot[data-state="sleeping"] .star {
+	filter: brightness(0.86) saturate(0.78);
+	animation: sleeping-breathe 8s ease-in-out infinite;
+}
+.mascot[data-state="sleeping"] .shadow {
+	animation: sleeping-shadow 8s ease-in-out infinite;
+}
+.mascot[data-state="sleeping"] .gaze {
+	align-items: center;
+	gap: 14px;
+	height: 23px;
+	transform: translateY(3px);
+}
+.mascot[data-state="sleeping"] .eye {
+	width: 22px;
+	height: 5px;
+	opacity: 0.82;
+	transform: rotate(5deg);
+}
+.mascot[data-state="sleeping"] .eye:first-child {
+	transform: rotate(-5deg);
+}
+.mascot[data-state="sleeping"] .planet {
+	opacity: 0.58;
+	filter: saturate(0.78);
+	animation: sleeping-orbit 24s ease-in-out infinite;
+}
 .mascot[data-state="thinking"] .star {
 	animation: breathe 5.6s ease-in-out infinite;
 }
@@ -239,6 +266,42 @@
 .mascot[data-state="awaiting_approval"] .ring {
 	opacity: 1;
 	transform: translateY(8px);
+}
+
+.mascot[data-state="disconnected"] .star {
+	filter: grayscale(0.82) brightness(0.72);
+	animation: disconnected-breathe 4.8s ease-in-out infinite;
+}
+.mascot[data-state="disconnected"] .shadow {
+	animation: disconnected-shadow 4.8s ease-in-out infinite;
+}
+.mascot[data-state="disconnected"] .gaze {
+	align-items: center;
+	gap: 14px;
+	height: 23px;
+	transform: translateY(2px);
+}
+.mascot[data-state="disconnected"] .eye {
+	width: 18px;
+	height: 5px;
+	opacity: 0.58;
+	transform: rotate(-6deg);
+}
+.mascot[data-state="disconnected"] .eye:last-child {
+	transform: rotate(6deg);
+}
+.mascot[data-state="disconnected"] .ring {
+	opacity: 0.28;
+	stroke-dasharray: 10 18;
+	animation: disconnected-ring 3.8s ease-in-out infinite;
+}
+.mascot[data-state="disconnected"] .ringHighlight {
+	opacity: 0;
+}
+.mascot[data-state="disconnected"] .planet {
+	opacity: 0.34;
+	filter: saturate(0.7);
+	animation: disconnected-planet 4.2s ease-in-out infinite;
 }
 
 .mascot[data-state="failed"] .star {
@@ -423,6 +486,84 @@
 	}
 	50% {
 		transform: rotate(-38deg) translateY(-3px);
+	}
+}
+
+@keyframes sleeping-breathe {
+	0%,
+	100% {
+		transform: translateY(0) scale(0.99, 1.01);
+	}
+	50% {
+		transform: translateY(-1px) scale(1.005, 0.995);
+	}
+}
+
+@keyframes sleeping-shadow {
+	0%,
+	100% {
+		transform: scaleX(0.92);
+		opacity: 0.48;
+	}
+	50% {
+		transform: scaleX(0.84);
+		opacity: 0.34;
+	}
+}
+
+@keyframes sleeping-orbit {
+	0%,
+	100% {
+		offset-distance: 0%;
+	}
+	50% {
+		offset-distance: 5%;
+	}
+}
+
+@keyframes disconnected-breathe {
+	0%,
+	100% {
+		transform: translateY(1px) scale(0.98);
+		opacity: 0.82;
+	}
+	50% {
+		transform: translateY(0) scale(0.995);
+		opacity: 0.66;
+	}
+}
+
+@keyframes disconnected-shadow {
+	0%,
+	100% {
+		transform: scaleX(0.8);
+		opacity: 0.34;
+	}
+	50% {
+		transform: scaleX(0.68);
+		opacity: 0.22;
+	}
+}
+
+@keyframes disconnected-ring {
+	0%,
+	100% {
+		transform: rotate(-22deg) translateX(0);
+	}
+	50% {
+		transform: rotate(-28deg) translateX(5px);
+	}
+}
+
+@keyframes disconnected-planet {
+	0%,
+	100% {
+		offset-distance: 68%;
+		transform: scale(0.82);
+	}
+	50% {
+		offset-distance: 76%;
+		transform: scale(0.72);
 	}
 }
 

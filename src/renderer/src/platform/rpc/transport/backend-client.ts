@@ -14,6 +14,7 @@ let backendClient: BackendRpcClient | null = null;
 let backendClientPromise: Promise<BackendRpcClient> | null = null;
 const backendReconnectListeners: Set<() => void> = new Set();
 const backendConnectionStateListeners: Set<(state: "connected" | "disconnected") => void> = new Set();
+let backendConnectionState: "connected" | "disconnected" = "disconnected";
 let capabilityListenerAttached: boolean = false;
 type CapabilityNegotiation = {
 	features: Record<string, unknown>;
@@ -23,6 +24,7 @@ type CapabilityNegotiation = {
 const capabilityNegotiations = new WeakMap<BackendRpcClient, CapabilityNegotiation>();
 
 function notifyConnectionState(state: "connected" | "disconnected"): void {
+	backendConnectionState = state;
 	for (const listener of backendConnectionStateListeners) listener(state);
 }
 
@@ -74,6 +76,10 @@ export function onBackendConnectionStateChanged(
 	return (): void => {
 		backendConnectionStateListeners.delete(listener);
 	};
+}
+
+export function getBackendConnectionState(): "connected" | "disconnected" {
+	return backendConnectionState;
 }
 
 /** Subscribe to backend events using the shared Studio connection. */

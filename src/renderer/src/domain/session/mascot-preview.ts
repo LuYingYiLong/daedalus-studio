@@ -1,4 +1,4 @@
-export type MascotStatus = "idle" | "thinking" | "executing" | "awaiting_approval" | "completed" | "failed";
+export type MascotStatus = "idle" | "thinking" | "executing" | "awaiting_approval" | "completed" | "failed" | "sleeping" | "disconnected";
 
 const previews = new Map<string, MascotStatus>();
 const listeners = new Set<() => void>();
@@ -24,7 +24,8 @@ export function applyMascotPreview(value: unknown, requestId: string): void {
 	if (preview.requestId !== requestId || typeof preview.sessionId !== "string" || !preview.sessionId
 		|| (preview.status !== "idle" && preview.status !== "thinking" && preview.status !== "executing"
 			&& preview.status !== "awaiting_approval" && preview.status !== "completed"
-			&& preview.status !== "failed" && preview.status !== "auto")) {
+			&& preview.status !== "failed" && preview.status !== "sleeping"
+			&& preview.status !== "disconnected" && preview.status !== "auto")) {
 		throw new Error("Invalid mascot preview");
 	}
 	if (preview.status === "auto") previews.delete(preview.sessionId);

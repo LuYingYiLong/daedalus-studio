@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { finishMascotPreview, getMascotPreview, subscribeMascotPreview, type MascotStatus } from "@/domain/session/mascot-preview";
+import { getBackendConnectionState, onBackendConnectionStateChanged } from "@/platform/rpc/transport/backend-client";
 import { useIdleGaze } from "./useIdleGaze";
+import { useMascotSleep } from "./useMascotSleep";
 import styles from "./Mascot.module.css";
 
 type MascotProps = {
@@ -9,9 +11,19 @@ type MascotProps = {
 	compact?: boolean;
 };
 
+function subscribeBackendConnection(listener: () => void): () => void {
+	return onBackendConnectionStateChanged(() => listener());
+}
+
 export default function Mascot({ status = "idle", sessionId = null, compact = false }: MascotProps): React.JSX.Element {
 	const preview = useSyncExternalStore(subscribeMascotPreview, () => getMascotPreview(sessionId), () => null);
-	const effectiveStatus = preview ?? status;
+	const connectionState = useSyncExternalStore(
+		subscribeBackendConnection,
+		getBackendConnectionState,
+		getBackendConnectionState,
+	);
+	const effectiveStatus: MascotStatus = preview
+		?? (connectionState === "disconnected" ? "disconnected" : status);
 	return (
 		<div className={compact ? styles.compact : styles.frame} aria-hidden="true">
 			<MascotVisual key={`${sessionId}:${effectiveStatus}`} status={effectiveStatus} sessionId={sessionId} />
@@ -25,7 +37,9 @@ function MascotVisual({ status, sessionId }: { status: MascotStatus; sessionId: 
 	const gazeRef = useRef<HTMLDivElement>(null);
 	const planetRef = useRef<HTMLDivElement>(null);
 	const [finished, setFinished] = useState(false);
-	const visibleStatus = status === "completed" && finished ? "idle" : status;
+	const completedStatus: MascotStatus = status === "completed" && finished ? "idle" : status;
+	const sleeping: boolean = useMascotSleep(completedStatus === "idle");
+	const visibleStatus: MascotStatus = completedStatus === "idle" && sleeping ? "sleeping" : completedStatus;
 	useIdleGaze(starRef, gazeRef, visibleStatus === "idle");
 
 	useEffect(() => {
