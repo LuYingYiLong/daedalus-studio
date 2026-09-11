@@ -39,6 +39,10 @@
 		inset -2px -3px 6px rgb(0 0 0 / 35%),
 		0 0 0 1px rgb(134 161 208 / 15%);
 	transform-origin: 50% 85%;
+	transition:
+		transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1),
+		filter 260ms ease,
+		opacity 260ms ease;
 }
 
 .bodyRotation {
@@ -55,7 +59,7 @@
 	gap: 17px;
 	width: 100%;
 	transform: translate(var(--gaze-x, 0px), var(--gaze-y, 0px));
-	transition: transform 180ms ease-out;
+	transition: transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .eye {
@@ -64,10 +68,15 @@
 	border-radius: 999px;
 	background: linear-gradient(135deg, #fffef8, #e7e9ed);
 	box-shadow: 0 0 4px rgb(244 247 255 / 12%);
+	transition:
+		width 220ms cubic-bezier(0.22, 0.61, 0.36, 1),
+		height 220ms cubic-bezier(0.22, 0.61, 0.36, 1),
+		transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1),
+		rotate 220ms cubic-bezier(0.22, 0.61, 0.36, 1),
+		opacity 220ms ease;
 }
 
 .planet {
-	transition: opacity 220ms ease;
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -79,6 +88,11 @@
 	box-shadow:
 		inset 1px 1px 2px rgb(196 221 255 / 35%),
 		0 2px 5px rgb(12 44 115 / 15%);
+	transition:
+		opacity 300ms cubic-bezier(0.22, 0.61, 0.36, 1),
+		filter 300ms ease,
+		transform 300ms cubic-bezier(0.22, 0.61, 0.36, 1),
+		offset-distance 300ms cubic-bezier(0.22, 0.61, 0.36, 1);
 	/* 同一条闭合轨道在前半程经过主星前方，后半程进入背面 */
 	offset-path: path("M 158 80 C 158 110 18 110 18 80 C 18 50 158 50 158 80 Z");
 	offset-rotate: 0deg;
@@ -94,6 +108,9 @@
 	height: 9px;
 	border-radius: 50%;
 	background: radial-gradient(ellipse, rgb(10 15 25 / 18%), transparent 70%);
+	transition:
+		transform 300ms cubic-bezier(0.22, 0.61, 0.36, 1),
+		opacity 300ms ease;
 }
 
 .failureMark {
@@ -113,6 +130,9 @@
 	opacity: 0;
 	transform: translateY(12px) scale(0.35);
 	transform-origin: 50% 100%;
+	transition:
+		opacity 220ms ease,
+		transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .ring {
@@ -128,7 +148,10 @@
 	opacity: 0;
 	transform-origin: 88px 70px;
 	transform: rotate(-22deg);
-	transition: opacity 220ms ease;
+	transition:
+		opacity 300ms cubic-bezier(0.22, 0.61, 0.36, 1),
+		transform 300ms cubic-bezier(0.22, 0.61, 0.36, 1),
+		stroke-dasharray 300ms ease;
 }
 
 .ringBack {
@@ -142,6 +165,9 @@
 	stroke: #8abdff;
 	stroke-width: 2px;
 	stroke-dasharray: 22 180;
+	transition:
+		opacity 260ms ease,
+		stroke-dasharray 300ms ease;
 }
 
 .mascot[data-state="idle"] .star {
@@ -341,7 +367,7 @@
 	transform-style: preserve-3d;
 }
 .mascot[data-state="completed"] .gaze {
-	/* 球面保持体积，面部沿有深度的球面绕 X 轴翻转，背面不可见 */
+	/* 球面保持体积，面部沿有深度的球面绕 Y 轴旋转，背面不可见 */
 	transform: translateZ(51px);
 	backface-visibility: hidden;
 }
@@ -665,7 +691,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.mascot[data-state] :is(.star, .bodyRotation, .shadow, .gaze, .eye, .planet, .ring, .ringHighlight),
+	.mascot[data-state] :is(.star, .bodyRotation, .shadow, .gaze, .eye, .planet, .ring, .ringHighlight, .failureMark),
 	.mascot[data-state] .eye:first-child,
 	.mascot[data-state] .eye:last-child {
 		animation: none;

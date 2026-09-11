@@ -14,7 +14,8 @@ let backendClient: BackendRpcClient | null = null;
 let backendClientPromise: Promise<BackendRpcClient> | null = null;
 const backendReconnectListeners: Set<() => void> = new Set();
 const backendConnectionStateListeners: Set<(state: "connected" | "disconnected") => void> = new Set();
-let backendConnectionState: "connected" | "disconnected" = "disconnected";
+// Renderer 初次挂载时 Backend 连接还未完成协商，先保持 live 造型，避免启动瞬间误显示断开
+let backendConnectionState: "connected" | "disconnected" = "connected";
 let capabilityListenerAttached: boolean = false;
 type CapabilityNegotiation = {
 	features: Record<string, unknown>;

@@ -26,12 +26,12 @@ export default function Mascot({ status = "idle", sessionId = null, compact = fa
 		?? (connectionState === "disconnected" ? "disconnected" : status);
 	return (
 		<div className={compact ? styles.compact : styles.frame} aria-hidden="true">
-			<MascotVisual key={`${sessionId}:${effectiveStatus}`} status={effectiveStatus} sessionId={sessionId} />
+			<MascotVisual key={sessionId ?? "home"} status={effectiveStatus} sessionId={sessionId} />
 		</div>
 	);
 }
 
-// 切换状态时重新挂载动画层，清除旧视线监听并统一重置各部位动画时钟
+// 会话切换时重新挂载动画层，状态切换保留部件节点以便 CSS 过渡连续
 function MascotVisual({ status, sessionId }: { status: MascotStatus; sessionId: string | null }): React.JSX.Element {
 	const starRef = useRef<HTMLDivElement>(null);
 	const gazeRef = useRef<HTMLDivElement>(null);
@@ -41,6 +41,10 @@ function MascotVisual({ status, sessionId }: { status: MascotStatus; sessionId: 
 	const sleeping: boolean = useMascotSleep(completedStatus === "idle");
 	const visibleStatus: MascotStatus = completedStatus === "idle" && sleeping ? "sleeping" : completedStatus;
 	useIdleGaze(starRef, gazeRef, visibleStatus === "idle");
+
+	useEffect(() => {
+		setFinished(false);
+	}, [status, sessionId]);
 
 	useEffect(() => {
 		if (status !== "completed") return;
