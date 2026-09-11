@@ -2933,6 +2933,7 @@
 			}
 		},
 		"personalization": {
+			"title": "personalization",
 			"userPrompt": {
 				"title": "User prompt",
 				"description": "Custom instructions appended to new AI requests."
@@ -2945,6 +2946,17 @@
 				"title": "Supplemental review preferences",
 				"description": "Additional preferences for contextual action review. The review model uses the current conversation when deciding whether to run a tool call.",
 				"placeholder": "Add project-specific action review preferences."
+			},
+			"mascot": {
+				"title": "Mascot",
+				"enabled": {
+					"title": "Show mascot",
+					"description": "Show the mascot on the new-session home and chat composer."
+				},
+				"size": {
+					"title": "Mascot size",
+					"description": "Adjust the mascot scale on the home page and chat composer."
+				}
 			},
 			"errors": {
 				"load": "Failed to load personalization settings",

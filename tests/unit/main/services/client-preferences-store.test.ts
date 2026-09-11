@@ -65,6 +65,8 @@ describe("client preferences store", () => {
 				theme: "system",
 				themeColor: DEFAULT_THEME_COLOR,
 				animationsEnabled: true,
+				mascotEnabled: true,
+				mascotSize: 100,
 				uiFontSize: 14,
 				codeFontSize: 13,
 				fontFamily: DEFAULT_CLIENT_PREFERENCES.fontFamily,
@@ -119,6 +121,8 @@ describe("client preferences store", () => {
 			fontFamily: DEFAULT_CLIENT_PREFERENCES.fontFamily,
 			fontFamilyCode: DEFAULT_CLIENT_PREFERENCES.fontFamilyCode,
 			language: "system",
+			mascotEnabled: true,
+			mascotSize: 100,
 			webLinkOpenMode: "integrated",
 			workspaceSidebar: {
 				open: true,
@@ -183,6 +187,17 @@ describe("client preferences store", () => {
 		expect(nextPreferences.animationsEnabled).toBe(false);
 		expect(nextPreferences.uiFontSize).toBe(18);
 		expect(nextPreferences.codeFontSize).toBe(11);
+	});
+
+	it("persists and bounds mascot preferences", async () => {
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
+			mascotEnabled: false,
+			mascotSize: 999
+		}, memory.io);
+
+		expect(nextPreferences.mascotEnabled).toBe(false);
+		expect(nextPreferences.mascotSize).toBe(140);
 	});
 
 	it("persists and normalizes new-session composer defaults", async () => {

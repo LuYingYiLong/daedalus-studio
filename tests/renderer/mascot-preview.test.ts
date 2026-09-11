@@ -19,6 +19,7 @@ test("invalid or mismatched preview responses cannot mutate mascot state", () =>
 	for (const preview of [null, {}, { requestId: "wrong", sessionId: "invalid", status: "thinking" },
 		{ requestId: "r", sessionId: "invalid", status: ["thinking"] },
 		{ requestId: "r", sessionId: "invalid", status: "working" },
+		{ requestId: "r", sessionId: "invalid", status: "awaiting_approval" },
 		{ requestId: "r", sessionId: "", status: "idle" }]) {
 		expect(() => applyMascotPreview(preview, "r")).toThrow("Invalid mascot preview");
 	}
@@ -34,7 +35,7 @@ test("executing preview can switch back to the live state", () => {
 
 
 test("approval and completion previews remain isolated and resettable", () => {
-	for (const status of ["awaiting_approval", "completed"] as const) {
+	for (const status of ["waiting", "completed"] as const) {
 		applyMascotPreview({ requestId: status, sessionId: status, status }, status);
 		expect(getMascotPreview(status)).toBe(status);
 		applyMascotPreview({ requestId: "reset", sessionId: status, status: "auto" }, "reset");

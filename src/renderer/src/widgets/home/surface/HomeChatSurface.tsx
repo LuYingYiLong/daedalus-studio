@@ -1,4 +1,4 @@
-import type { MutableRefObject } from "react";
+import type { CSSProperties, MutableRefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Divider, Dropdown, Space, Typography, Tooltip } from "antd";
 import type {
@@ -39,6 +39,8 @@ type WorkspaceLaunchTarget = {
 
 export type HomeChatSurfaceProps = {
 	isSending: boolean;
+	mascotEnabled: boolean;
+	mascotSize: number;
 	activeSessionMetadata: SessionMetadata | null;
 	isSessionLoading: boolean;
 	onForkSourceOpen: (sessionId: string) => Promise<void>;
@@ -138,6 +140,8 @@ export type HomeChatSurfaceProps = {
 
 function HomeChatSurface({
 	isSending,
+	mascotEnabled,
+	mascotSize,
 	activeSessionMetadata,
 	isSessionLoading,
 	onForkSourceOpen,
@@ -225,7 +229,7 @@ function HomeChatSurface({
 	renderComposer,
 }: HomeChatSurfaceProps): React.JSX.Element {
 	const { t } = useTranslation();
-	const showComposerMascot: boolean = !isHome && activeSessionId !== null
+	const showComposerMascot: boolean = mascotEnabled && !isHome && activeSessionId !== null
 		&& !isDockFullscreen && pendingApproval === null && pendingToolBudget === null
 		&& pendingPlanClarification === null && pendingPlanApproval === null;
 
@@ -356,7 +360,11 @@ function HomeChatSurface({
 
 			<Divider size="small" />
 
-			<div ref={chatBodyRef} className={`${styles.chatBody} ${showComposerMascot ? styles.chatBodyWithMascot : ""}`}>
+			<div
+				ref={chatBodyRef}
+				className={`${styles.chatBody} ${showComposerMascot ? styles.chatBodyWithMascot : ""}`}
+				style={{ "--mascot-scale": mascotSize / 100 } as CSSProperties}
+			>
 				{isHome ? (
 					<NewSessionHome
 						workspace={homeWorkspace}
@@ -364,6 +372,8 @@ function HomeChatSurface({
 						message={message}
 						showStarters={chatSurfaceSettled}
 						onStarterSelect={handleHomeStarterSelect}
+						mascotEnabled={mascotEnabled}
+						mascotSize={mascotSize}
 					/>
 				) : activeSessionId !== null ? (
 					<MarkdownResourceActionsProvider
@@ -432,11 +442,13 @@ function HomeChatSurface({
 
 			<footer className={styles.composer}>
 				{showComposerMascot ? (
-					<div className={styles.composerMascot}>
+					<div
+						className={styles.composerMascot}
+						style={{ "--mascot-scale": mascotSize / 100 } as CSSProperties}
+					>
 						<Mascot
-							compact
 							sessionId={activeSessionId}
-							status={isSending ? "thinking" : "idle"}
+							status={isSending && !isCancelling ? "thinking" : "idle"}
 						/>
 					</div>
 				) : null}

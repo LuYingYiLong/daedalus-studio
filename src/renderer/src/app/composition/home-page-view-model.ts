@@ -12,6 +12,8 @@ export type HomePageLayoutProps = Pick<
 	| "workspaceRefreshToken"
 	| "isHome"
 	| "activeSessionId"
+	| "mascotEnabled"
+	| "mascotSize"
 	| "workspaceSidebar"
 	| "keyboardShortcuts"
 	| "onWorkspaceSidebarChange"
@@ -115,7 +117,7 @@ export type HomePageRuntimeLayoutParams = {
 	activeSessionId: HomePageProps["activeSessionId"];
 	clientPreferences: Pick<
 		ClientPreferences,
-		"workspaceSidebar" | "keyboardShortcuts"
+		"workspaceSidebar" | "keyboardShortcuts" | "mascotEnabled" | "mascotSize"
 	>;
 	onWorkspaceSidebarChange: HomePageProps["onWorkspaceSidebarChange"];
 	activeSessionLayout: SessionLayoutPreferences;
@@ -237,6 +239,8 @@ export function createHomePageViewModelFromRuntime({
 			workspaceRefreshToken: layout.workspaceRefreshToken,
 			isHome: layout.isNewSessionHome,
 			activeSessionId: layout.activeSessionId,
+			mascotEnabled: layout.clientPreferences.mascotEnabled,
+			mascotSize: layout.clientPreferences.mascotSize,
 			workspaceSidebar: layout.clientPreferences.workspaceSidebar,
 			keyboardShortcuts: layout.clientPreferences.keyboardShortcuts,
 			onWorkspaceSidebarChange: layout.onWorkspaceSidebarChange,

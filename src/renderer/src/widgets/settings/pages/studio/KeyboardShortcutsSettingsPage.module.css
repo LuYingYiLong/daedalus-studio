@@ -30,7 +30,7 @@
 .body {
 	display: grid;
 	grid-template-rows: auto minmax(0, 1fr);
-	gap: var(--ds-space-2);
+	gap: var(--ds-space-1);
 	min-width: 0;
 	min-height: 0;
 }

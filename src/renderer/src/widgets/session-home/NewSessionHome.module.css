@@ -45,6 +45,16 @@
 	user-select: none;
 }
 
+.mascot {
+	width: calc(176px * var(--mascot-scale, 1));
+	height: calc(132px * var(--mascot-scale, 1));
+}
+
+.mascot > div {
+	transform: scale(var(--mascot-scale, 1));
+	transform-origin: top left;
+}
+
 .homeTitle {
 	margin: 0 !important;
 	max-width: 100%;

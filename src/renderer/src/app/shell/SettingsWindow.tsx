@@ -465,7 +465,12 @@ function SettingsWindow(): React.JSX.Element {
 			return <StatisticsSettingsPage />;
 		}
 		if (page === "personalization") {
-			return <PersonalizationSettingsPage />;
+			return (
+				<PersonalizationSettingsPage
+					clientPreferences={clientPreferences}
+					onClientPreferencesChange={setClientPreferences}
+				/>
+			);
 		}
 		if (page === "mcp_servers") {
 			return <McpServersSettingsPage />;

@@ -82,6 +82,8 @@ type HomePageProps = {
 	workspaceRefreshToken: number;
 	isHome: boolean;
 	activeSessionId: string | null;
+	mascotEnabled: boolean;
+	mascotSize: number;
 	workspaceSidebar: WorkspaceSidebarPreferences;
 	keyboardShortcuts: KeyboardShortcutOverrides;
 	onWorkspaceSidebarChange: (
@@ -273,6 +275,8 @@ function HomePage({
 	workspaceRefreshToken,
 	isHome,
 	activeSessionId,
+	mascotEnabled,
+	mascotSize,
 	workspaceSidebar,
 	keyboardShortcuts,
 	onWorkspaceSidebarChange,
@@ -885,6 +889,8 @@ function HomePage({
 	) : null;
 	const chatSurfaceProps: HomeChatSurfaceProps = {
 		isSending,
+		mascotEnabled,
+		mascotSize,
 		activeSessionMetadata,
 		isSessionLoading,
 		onForkSourceOpen,

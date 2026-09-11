@@ -1,4 +1,5 @@
 import { DEFAULT_STUDIO_THEME_COLOR } from "../../../../contracts/theme-color";
+import { DEFAULT_MASCOT_SIZE } from "../../../../contracts/mascot-preferences";
 import {
 	DEFAULT_STUDIO_CODE_FONT_SIZE,
 	DEFAULT_STUDIO_FONT_FAMILY,
@@ -36,6 +37,8 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	theme: "system",
 	themeColor: DEFAULT_THEME_COLOR,
 	animationsEnabled: true,
+	mascotEnabled: true,
+	mascotSize: DEFAULT_MASCOT_SIZE,
 	uiFontSize: DEFAULT_STUDIO_UI_FONT_SIZE,
 	codeFontSize: DEFAULT_STUDIO_CODE_FONT_SIZE,
 	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,

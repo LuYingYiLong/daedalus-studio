@@ -1,14 +1,56 @@
 .page {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
 	min-width: 0;
 	min-height: 0;
-	padding: 0px var(--ds-space-2) var(--ds-space-2) var(--ds-space-2);
-	overflow: auto;
+	height: 100%;
+	max-height: 100%;
+	user-select: none;
 }
 
-.card {
+.header {
 	display: grid;
-	gap: 16px;
-	width: 100%;
+	gap: var(--ds-space-2);
+	padding: 0 var(--ds-space-2) var(--ds-space-3);
+}
+
+.title {
+	margin: 0 !important;
+}
+
+.body {
+	display: grid;
+	grid-template-rows: auto;
+	gap: var(--ds-space-1);
+	min-height: 0;
+	min-width: 0;
+	padding: 0 var(--ds-space-2) var(--ds-space-2);
+	overflow-x: hidden;
+	overflow-y: auto;
+	scrollbar-gutter: auto;
+	overscroll-behavior: contain;
+}
+
+.preferenceList {
+	display: grid;
+	min-width: 0;
+}
+
+.sliderControl {
+	display: flex;
+	align-items: center;
+	gap: var(--ds-space-2);
+	width: min(280px, 38vw);
+}
+
+.slider {
+	flex: 1;
+	min-width: 150px;
+}
+
+.sliderValue {
+	min-width: 42px;
+	text-align: end;
 }
 
 .textarea {
@@ -16,6 +58,7 @@
 }
 
 .footer {
+	margin-top: var(--ds-space-4);
 	display: flex;
 	justify-content: end;
 	gap: var(--ds-space-1);

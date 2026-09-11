@@ -20,6 +20,8 @@ export type ClientPreferences = {
 	theme: "system" | "light" | "dark";
 	themeColor: string;
 	animationsEnabled: boolean;
+	mascotEnabled: boolean;
+	mascotSize: number;
 	uiFontSize: number;
 	codeFontSize: number;
 	fontFamily: string;

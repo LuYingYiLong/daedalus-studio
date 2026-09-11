@@ -8,14 +8,13 @@ import styles from "./Mascot.module.css";
 type MascotProps = {
 	status?: MascotStatus;
 	sessionId?: string | null;
-	compact?: boolean;
 };
 
 function subscribeBackendConnection(listener: () => void): () => void {
 	return onBackendConnectionStateChanged(() => listener());
 }
 
-export default function Mascot({ status = "idle", sessionId = null, compact = false }: MascotProps): React.JSX.Element {
+export default function Mascot({ status = "idle", sessionId = null }: MascotProps): React.JSX.Element {
 	const preview = useSyncExternalStore(subscribeMascotPreview, () => getMascotPreview(sessionId), () => null);
 	const connectionState = useSyncExternalStore(
 		subscribeBackendConnection,
@@ -25,7 +24,7 @@ export default function Mascot({ status = "idle", sessionId = null, compact = fa
 	const effectiveStatus: MascotStatus = preview
 		?? (connectionState === "disconnected" ? "disconnected" : status);
 	return (
-		<div className={compact ? styles.compact : styles.frame} aria-hidden="true">
+		<div className={styles.frame} aria-hidden="true">
 			<MascotVisual key={sessionId ?? "home"} status={effectiveStatus} sessionId={sessionId} />
 		</div>
 	);
@@ -78,8 +77,10 @@ function MascotVisual({ status, sessionId }: { status: MascotStatus; sessionId: 
 				<div ref={starRef} className={styles.star}>
 					<div className={styles.bodyRotation}>
 						<div ref={gazeRef} className={styles.gaze}>
-							<span className={styles.eye} />
-							<span className={styles.eye} />
+							<div className={styles.eyeGroup}>
+								<span className={styles.eye} />
+								<span className={styles.eye} />
+							</div>
 						</div>
 					</div>
 				</div>

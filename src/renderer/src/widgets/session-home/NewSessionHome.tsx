@@ -1,4 +1,5 @@
 import { Alert, Button, Typography } from "antd";
+import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import Mascot from "@/widgets/mascot/Mascot";
@@ -17,6 +18,8 @@ type NewSessionHomeProps = {
 	message: string;
 	showStarters: boolean;
 	onStarterSelect: (prompt: string) => void;
+	mascotEnabled?: boolean;
+	mascotSize?: number;
 };
 
 type NewSessionStarter = {
@@ -36,6 +39,8 @@ function NewSessionHome({
 	message,
 	showStarters,
 	onStarterSelect,
+	mascotEnabled = true,
+	mascotSize = 100,
 }: NewSessionHomeProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const hasComposerText: boolean = message.trim().length > 0;
@@ -60,7 +65,14 @@ function NewSessionHome({
 		<section className={styles.homePanel} aria-labelledby="new-session-home-title">
 			<div className={styles.homeCenter}>
 				<div className={styles.homeContent}>
-					<Mascot />
+					{mascotEnabled ? (
+						<div
+							className={styles.mascot}
+							style={{ "--mascot-scale": mascotSize / 100 } as CSSProperties}
+						>
+							<Mascot />
+						</div>
+					) : null}
 					<Typography.Title level={1} className={styles.homeTitle}>
 						<span id="new-session-home-title">{title}</span>
 					</Typography.Title>

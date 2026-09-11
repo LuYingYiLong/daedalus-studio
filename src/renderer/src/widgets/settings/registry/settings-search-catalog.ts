@@ -93,6 +93,8 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 	{ key: "item:personalization.userPrompt", page: "personalization", titleKey: "settings.personalization.userPrompt.title", descriptionKey: "settings.personalization.userPrompt.description" },
 	{ key: "item:personalization.gitCommitPrompt", page: "personalization", titleKey: "settings.personalization.gitCommitPrompt.title", descriptionKey: "settings.personalization.gitCommitPrompt.description" },
 	{ key: "item:personalization.commandReviewPrompt", page: "personalization", titleKey: "settings.personalization.commandReviewPrompt.title", descriptionKey: "settings.personalization.commandReviewPrompt.description" },
+	{ key: "item:personalization.mascotEnabled", page: "personalization", titleKey: "settings.personalization.mascot.enabled.title", descriptionKey: "settings.personalization.mascot.enabled.description" },
+	{ key: "item:personalization.mascotSize", page: "personalization", titleKey: "settings.personalization.mascot.size.title", descriptionKey: "settings.personalization.mascot.size.description" },
 
 	{ key: "item:search.enabled", page: "search", titleKey: "settings.search.enabled.title", descriptionKey: "settings.search.enabled.description" },
 	{ key: "item:search.model", page: "search", titleKey: "settings.search.model.title", descriptionKey: "settings.search.model.description" },

@@ -2927,6 +2927,7 @@
 			}
 		},
 		"personalization": {
+			"title": "个性化",
 			"userPrompt": {
 				"title": "用户提示词",
 				"description": "附加到新 AI 请求中的自定义指令。"
@@ -2939,6 +2940,17 @@
 				"title": "补充审查偏好",
 				"description": "用于模型审查动作的额外偏好。审查模型会结合当前会话判断是否执行工具调用。",
 				"placeholder": "添加项目相关的动作审查偏好。"
+			},
+			"mascot": {
+				"title": "桌宠",
+				"enabled": {
+					"title": "显示桌宠",
+					"description": "在新会话和聊天 composer 上显示桌宠。"
+				},
+				"size": {
+					"title": "桌宠大小",
+					"description": "调整桌宠在主页和会话 composer 上的显示比例。"
+				}
 			},
 			"errors": {
 				"load": "加载个性化设置失败",

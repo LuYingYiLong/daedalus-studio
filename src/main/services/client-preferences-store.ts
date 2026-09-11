@@ -21,6 +21,10 @@ import {
 } from "../../contracts/studio-fonts";
 import type { ClientPreferences, ClientPreferencesPatch } from "../../contracts/client-preferences";
 import {
+	DEFAULT_MASCOT_SIZE,
+	normalizeMascotSize
+} from "../../contracts/mascot-preferences";
+import {
 	ONBOARDING_STEP_IDS,
 	createDefaultOnboardingPreferences,
 	type OnboardingConfigurableStepId,
@@ -47,6 +51,8 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	theme: "system",
 	themeColor: DEFAULT_THEME_COLOR,
 	animationsEnabled: true,
+	mascotEnabled: true,
+	mascotSize: DEFAULT_MASCOT_SIZE,
 	uiFontSize: DEFAULT_STUDIO_UI_FONT_SIZE,
 	codeFontSize: DEFAULT_STUDIO_CODE_FONT_SIZE,
 	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
@@ -207,6 +213,13 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 	const animationsEnabled: boolean = typeof value.animationsEnabled === "boolean"
 		? value.animationsEnabled
 		: DEFAULT_CLIENT_PREFERENCES.animationsEnabled;
+	const mascotEnabled: boolean = typeof value.mascotEnabled === "boolean"
+		? value.mascotEnabled
+		: DEFAULT_CLIENT_PREFERENCES.mascotEnabled;
+	const mascotSize: number = normalizeMascotSize(
+		value.mascotSize,
+		DEFAULT_CLIENT_PREFERENCES.mascotSize
+	);
 	const uiFontSize: number = normalizeStudioFontSize(
 		value.uiFontSize,
 		DEFAULT_CLIENT_PREFERENCES.uiFontSize,
@@ -251,6 +264,8 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			theme: themePreference,
 			themeColor,
 			animationsEnabled,
+			mascotEnabled,
+			mascotSize,
 			uiFontSize,
 			codeFontSize,
 			fontFamily,
@@ -271,6 +286,8 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			|| value.theme !== themePreference
 			|| value.themeColor !== themeColor
 			|| value.animationsEnabled !== animationsEnabled
+			|| value.mascotEnabled !== mascotEnabled
+			|| value.mascotSize !== mascotSize
 			|| value.uiFontSize !== uiFontSize
 			|| value.codeFontSize !== codeFontSize
 			|| value.fontFamily !== fontFamily
@@ -291,6 +308,8 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 				"theme",
 				"themeColor",
 				"animationsEnabled",
+				"mascotEnabled",
+				"mascotSize",
 				"uiFontSize",
 				"codeFontSize",
 				"fontFamily",
@@ -331,6 +350,15 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	}
 	if (typeof value.animationsEnabled === "boolean") {
 		patch.animationsEnabled = value.animationsEnabled;
+	}
+	if (typeof value.mascotEnabled === "boolean") {
+		patch.mascotEnabled = value.mascotEnabled;
+	}
+	if (typeof value.mascotSize === "number" && Number.isFinite(value.mascotSize)) {
+		patch.mascotSize = normalizeMascotSize(
+			value.mascotSize,
+			DEFAULT_CLIENT_PREFERENCES.mascotSize
+		);
 	}
 	if (typeof value.uiFontSize === "number" && Number.isFinite(value.uiFontSize)) {
 		patch.uiFontSize = normalizeStudioFontSize(

@@ -195,7 +195,7 @@
 }
 
 .chatBodyWithMascot {
-	--message-list-bottom-safe-area: 81px;
+	--message-list-bottom-safe-area: calc(81px * var(--mascot-scale, 1));
 }
 
 .chatBody {
@@ -562,8 +562,15 @@
 	position: absolute;
 	right: 2px;
 	bottom: calc(100% + var(--agent-chat-side-padding, 8px));
+	width: calc(97px * var(--mascot-scale, 1));
+	height: calc(73px * var(--mascot-scale, 1));
 	z-index: 4;
 	pointer-events: none;
+}
+
+.composerMascot > div {
+	transform: scale(calc(0.55 * var(--mascot-scale, 1)));
+	transform-origin: top left;
 }
 
 .composer {

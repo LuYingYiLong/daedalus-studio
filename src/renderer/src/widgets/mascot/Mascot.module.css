@@ -3,16 +3,6 @@
 	height: 132px;
 }
 
-.compact {
-	width: 97px;
-	height: 73px;
-}
-
-.compact .mascot {
-	transform: scale(0.55);
-	transform-origin: top left;
-}
-
 .mascot {
 	position: relative;
 	width: 176px;
@@ -56,10 +46,16 @@
 	left: 0;
 	display: flex;
 	justify-content: center;
-	gap: 17px;
 	width: 100%;
 	transform: translate(var(--gaze-x, 0px), var(--gaze-y, 0px));
 	transition: transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.eyeGroup {
+	display: flex;
+	justify-content: center;
+	gap: 17px;
+	transform-origin: 50% 50%;
 }
 
 .eye {
@@ -174,7 +170,7 @@
 .mascot[data-state="idle"] .star {
 	animation: breathe 5.6s ease-in-out infinite;
 }
-.mascot[data-state="idle"] .eye {
+.mascot[data-state="idle"] .eyeGroup {
 	animation: blink 7.4s ease-in-out infinite;
 }
 .mascot[data-state="idle"] .planet {
@@ -194,9 +190,11 @@
 }
 .mascot[data-state="sleeping"] .gaze {
 	align-items: center;
-	gap: 14px;
 	height: 23px;
 	transform: translateY(3px);
+}
+.mascot[data-state="sleeping"] .eyeGroup {
+	gap: 14px;
 }
 .mascot[data-state="sleeping"] .eye {
 	width: 22px;
@@ -231,10 +229,12 @@
 }
 .mascot[data-state="thinking"] .gaze {
 	align-items: center;
-	gap: 14px;
 	height: 23px;
 	transform: translate(2px, -7px);
 	animation: thinking-gaze 5.6s ease-in-out infinite;
+}
+.mascot[data-state="thinking"] .eyeGroup {
+	gap: 14px;
 }
 .mascot[data-state="thinking"] .eye:first-child {
 	rotate: 12deg;
@@ -279,22 +279,22 @@
 	animation: ring-shimmer 0.9s linear infinite;
 }
 
-.mascot[data-state="awaiting_approval"] .planet {
+.mascot[data-state="waiting"] .planet {
 	opacity: 0;
 }
-.mascot[data-state="awaiting_approval"] .star {
+.mascot[data-state="waiting"] .star {
 	animation: breathe 6s ease-in-out infinite;
 }
-.mascot[data-state="awaiting_approval"] .shadow {
+.mascot[data-state="waiting"] .shadow {
 	animation: shadow-breathe 6s ease-in-out infinite;
 }
-.mascot[data-state="awaiting_approval"] .gaze {
+.mascot[data-state="waiting"] .gaze {
 	transform: translate(0, -3px);
 }
-.mascot[data-state="awaiting_approval"] .eye {
+.mascot[data-state="waiting"] .eyeGroup {
 	animation: blink 8s ease-in-out infinite;
 }
-.mascot[data-state="awaiting_approval"] .ring {
+.mascot[data-state="waiting"] .ring {
 	opacity: 1;
 	transform: translateY(8px);
 }
@@ -308,9 +308,11 @@
 }
 .mascot[data-state="disconnected"] .gaze {
 	align-items: center;
-	gap: 14px;
 	height: 23px;
 	transform: translateY(2px);
+}
+.mascot[data-state="disconnected"] .eyeGroup {
+	gap: 14px;
 }
 .mascot[data-state="disconnected"] .eye {
 	width: 18px;
@@ -706,7 +708,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.mascot[data-state] :is(.star, .bodyRotation, .shadow, .gaze, .eye, .planet, .ring, .ringHighlight, .failureMark),
+	.mascot[data-state] :is(.star, .bodyRotation, .shadow, .gaze, .eyeGroup, .eye, .planet, .ring, .ringHighlight, .failureMark),
 	.mascot[data-state] .eye:first-child,
 	.mascot[data-state] .eye:last-child {
 		animation: none;
