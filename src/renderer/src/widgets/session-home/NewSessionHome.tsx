@@ -47,10 +47,8 @@ function NewSessionHome({
 			: t("app.home.subtitleWithWorkspace", {
 					workspaceName: workspace.name,
 				});
-	const starterIds: readonly NewSessionStarterId[] =
-		workspace === null ? UNBOUND_STARTER_IDS : WORKSPACE_STARTER_IDS;
-	const starterScope: "unbound" | "workspace" =
-		workspace === null ? "unbound" : "workspace";
+	const starterIds: readonly NewSessionStarterId[] = workspace === null ? UNBOUND_STARTER_IDS : WORKSPACE_STARTER_IDS;
+	const starterScope: "unbound" | "workspace" = workspace === null ? "unbound" : "workspace";
 	const starters: NewSessionStarter[] = starterIds.map(
 		(id: NewSessionStarterId): NewSessionStarter => ({
 			id,
@@ -59,51 +57,34 @@ function NewSessionHome({
 	);
 
 	return (
-		<section
-			className={styles.homePanel}
-			aria-labelledby="new-session-home-title"
-		>
+		<section className={styles.homePanel} aria-labelledby="new-session-home-title">
 			<div className={styles.homeCenter}>
 				<div className={styles.homeContent}>
 					<Mascot />
 					<Typography.Title level={1} className={styles.homeTitle}>
 						<span id="new-session-home-title">{title}</span>
 					</Typography.Title>
-					<Typography.Text className={styles.homeSubtitle}>
-						{subtitle}
-					</Typography.Text>
 				</div>
 				{hasComposerText === false ? (
 					<div
-						className={[
-							styles.starterGroup,
-							showStarters ? styles.starterGroupVisible : "",
-						]
+						className={[styles.starterGroup, showStarters ? styles.starterGroupVisible : ""]
 							.filter(Boolean)
 							.join(" ")}
 						aria-label={t("app.home.starters.label")}
 					>
 						<div className={styles.starterList}>
 							{starters.map(
-								(
-									starter: NewSessionStarter,
-								): React.JSX.Element => (
+								(starter: NewSessionStarter): React.JSX.Element => (
 									<Button
 										key={starter.id}
 										type="text"
 										className={styles.starterButton}
 										icon={<Icon name={starter.iconName} />}
 										onClick={(): void =>
-											onStarterSelect(
-												t(
-													`app.home.starters.${starterScope}.${starter.id}.prompt`,
-												),
-											)
+											onStarterSelect(t(`app.home.starters.${starterScope}.${starter.id}.prompt`))
 										}
 									>
-										{t(
-											`app.home.starters.${starterScope}.${starter.id}.label`,
-										)}
+										{t(`app.home.starters.${starterScope}.${starter.id}.label`)}
 									</Button>
 								),
 							)}
@@ -112,12 +93,7 @@ function NewSessionHome({
 				) : null}
 			</div>
 			{errorMessage !== null ? (
-				<Alert
-					type="error"
-					showIcon={true}
-					description={errorMessage}
-					className={styles.homeError}
-				/>
+				<Alert type="error" showIcon={true} description={errorMessage} className={styles.homeError} />
 			) : null}
 		</section>
 	);

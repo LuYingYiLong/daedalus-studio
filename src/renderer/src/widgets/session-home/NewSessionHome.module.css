@@ -54,17 +54,6 @@
 	text-wrap: balance;
 }
 
-.homeSubtitle {
-	display: block;
-	width: min(100%, 34rem);
-	max-width: 34rem;
-	min-width: 0;
-	color: var(--ds-text-secondary);
-	line-height: 1.6;
-	text-wrap: balance;
-	overflow-wrap: anywhere;
-}
-
 .starterGroup {
 	display: grid;
 	justify-items: center;
