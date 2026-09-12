@@ -43,7 +43,7 @@ function isAgentRunState(value: unknown): value is AgentRunState {
 	if (!isRecord(value)) {
 		return false;
 	}
-	return value.schemaVersion === 1
+	return (value.schemaVersion === 1 || value.schemaVersion === 2 || value.schemaVersion === 3)
 		&& typeof value.runId === "string"
 		&& typeof value.requestId === "string"
 		&& typeof value.revision === "number"

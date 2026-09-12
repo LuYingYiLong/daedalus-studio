@@ -54,6 +54,7 @@ function createAgentRunEvent(
 	stage: "executing" | "completed" | "failed" | "cancelled" | "interrupted",
 	revision: number = 1,
 	options: {
+		schemaVersion?: 1 | 2 | 3;
 		message?: string;
 		verificationStatus?: "verified" | "unverified" | "failed" | null;
 		warnings?: string[];
@@ -80,7 +81,7 @@ function createAgentRunEvent(
 		sequence: revision,
 		createdAt: "2026-07-29T00:00:00.000Z",
 		data: {
-			schemaVersion: 1,
+			schemaVersion: options.schemaVersion ?? 1,
 			runId,
 			sessionId: "session-a",
 			requestId: runId,
@@ -163,6 +164,21 @@ describe("workbench-state", () => {
 		expect(afterStaleWorkbench.status).toBe("streaming");
 		expect(done.status).toBe("idle");
 		expect(done.sequence).toBe(301);
+	});
+
+	it("accepts schema v3 terminal events so the composer returns to send mode", () => {
+		const running: RunControllerState = applyRunStateFromBackendEvent(
+			createIdleRunState(),
+			createAgentRunEvent("run-v3", "executing", 1, { schemaVersion: 3 })
+		);
+		const done: RunControllerState = applyRunStateFromBackendEvent(
+			running,
+			createAgentRunEvent("run-v3", "completed", 2, { schemaVersion: 3 })
+		);
+
+		expect(running.status).toBe("streaming");
+		expect(done.status).toBe("idle");
+		expect(done.agentRun?.stage).toBe("completed");
 	});
 
 	it("releases an active run from a newer idle workbench snapshot when its terminal event is missing", () => {
