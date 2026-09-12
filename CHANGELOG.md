@@ -1,7 +1,36 @@
 # Daedalus Studio Changelog
 
-> Scope: v1.0.8 (`81eb465`) → Current version (v1.1.4).
+> Scope: v1.0.8 (`81eb465`) → Current version (v1.2.0).
 > Note: The repository does not have a local v1.0.8 tag (no tag references were fetched during cloning; packed-refs only contains origin/main). Therefore, the commit `81eb465` (2026-08-01), where `package.json` `version` first became 1.0.8, is used as the baseline. Version boundaries are determined by the `version` field in `package.json`.
+
+## [1.2.0] - 2026-09-12
+
+### Added
+- Added the Daedalus mascot to the session home and Composer, with idle, thinking, executing, waiting, completed, failed, sleeping, disconnected, and enjoying states
+- Added mascot personalization controls for visibility and size, plus petting interactions and session-scoped status previews
+- Added the Subagent DAG panel with a conversation view, resizable layout, node retry/cancel actions, and queue status
+- Added managed Godot runtime tests with a runtime test panel and session lifecycle controls
+- Added opt-in Windows computer observation, UI Automation input, restricted keyboard control, per-turn approval, and a virtual action cursor
+- Added external browser automation through the Chrome/Edge extension and native relay
+- Added Android remote control with QR pairing, mobile navigation, theme support, Android safe areas, and ADB development synchronization
+- Added trajectory timeline filters, Gantt and JSON views, anchor navigation, and session log export
+- Added plugin package import, isolated native plugin execution, update/rollback/quarantine flows, search, and detail views
+- Added unified Composer context and mode options with reasoning effort display
+- Added minimize-to-tray behavior and expanded About page information for Daedalus Bridge and third-party credits
+
+### Fixed
+- Fixed backend readiness gating and stale Composer model updates
+- Fixed external browser connection lifecycle, cursor feedback, and profile import handling
+- Fixed Android remote pairing, navigation, and transient surface handling
+- Fixed session layout transitions, workspace source-folder selection, and renderer runtime synchronization
+
+### Refactored
+- Split the renderer runtime and home page controllers into focused modules
+- Reworked the Subagent panel layout and workspace feature gating
+- Reorganized settings pages and plugin management flows
+
+### Testing
+- Added the Playwright Electron and Android remote E2E suites, browser integration checks, and computer-use helper verification
 
 ## [1.1.4] - 2026-08-16
 
@@ -91,3 +120,4 @@
 | v1.0.9 | `a1e8941` | 1.0.9 | 2026-08-04 |
 | v1.1.0 | `32e20a8` | 1.1.0 | 2026-08-06 |
 | v1.1.4 | — | 1.1.4 | 2026-08-16 |
+| v1.2.0 | — | 1.2.0 | 2026-09-12 |
