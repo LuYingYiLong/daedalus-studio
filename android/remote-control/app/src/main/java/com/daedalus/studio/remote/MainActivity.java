@@ -79,6 +79,7 @@ public final class MainActivity extends Activity {
 	private int safeAreaRight;
 	private int safeAreaBottom;
 	private int safeAreaLeft;
+	private int imeInsetBottom;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -237,10 +238,12 @@ public final class MainActivity extends Activity {
 			Insets systemBars = insets.getInsets(
 				WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
 			);
+			Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
 			safeAreaTop = systemBars.top;
 			safeAreaRight = systemBars.right;
 			safeAreaBottom = systemBars.bottom;
 			safeAreaLeft = systemBars.left;
+			imeInsetBottom = ime.bottom;
 			applySafeAreaToWebView();
 			return insets;
 		});
@@ -253,11 +256,13 @@ public final class MainActivity extends Activity {
 		String right = safeAreaCssValue(safeAreaRight);
 		String bottom = safeAreaCssValue(safeAreaBottom);
 		String left = safeAreaCssValue(safeAreaLeft);
+		String imeBottom = safeAreaCssValue(imeInsetBottom);
 		String script = "(function(){const root=document.documentElement;"
 			+ "root.style.setProperty('--android-safe-area-top','" + top + "');"
 			+ "root.style.setProperty('--android-safe-area-right','" + right + "');"
 			+ "root.style.setProperty('--android-safe-area-bottom','" + bottom + "');"
 			+ "root.style.setProperty('--android-safe-area-left','" + left + "');"
+			+ "root.style.setProperty('--android-ime-inset-bottom','" + imeBottom + "');"
 			+ "})();";
 		webView.evaluateJavascript(script, null);
 	}

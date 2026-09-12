@@ -57,8 +57,7 @@
 
 @font-face {
 	font-family: "Fira Code";
-	src: url("../../assets/fonts/fira-code/FiraCode-Light.woff2")
-		format("woff2");
+	src: url("../../assets/fonts/fira-code/FiraCode-Light.woff2") format("woff2");
 	font-weight: 300;
 	font-style: normal;
 	font-display: swap;
@@ -66,8 +65,7 @@
 
 @font-face {
 	font-family: "Fira Code";
-	src: url("../../assets/fonts/fira-code/FiraCode-Regular.woff2")
-		format("woff2");
+	src: url("../../assets/fonts/fira-code/FiraCode-Regular.woff2") format("woff2");
 	font-weight: 400;
 	font-style: normal;
 	font-display: swap;
@@ -75,8 +73,7 @@
 
 @font-face {
 	font-family: "Fira Code";
-	src: url("../../assets/fonts/fira-code/FiraCode-Medium.woff2")
-		format("woff2");
+	src: url("../../assets/fonts/fira-code/FiraCode-Medium.woff2") format("woff2");
 	font-weight: 500;
 	font-style: normal;
 	font-display: swap;
@@ -84,8 +81,7 @@
 
 @font-face {
 	font-family: "Fira Code";
-	src: url("../../assets/fonts/fira-code/FiraCode-SemiBold.woff2")
-		format("woff2");
+	src: url("../../assets/fonts/fira-code/FiraCode-SemiBold.woff2") format("woff2");
 	font-weight: 600;
 	font-style: normal;
 	font-display: swap;
@@ -104,22 +100,14 @@
 	--android-safe-area-right: 0px;
 	--android-safe-area-bottom: 0px;
 	--android-safe-area-left: 0px;
-	--ds-safe-area-top: max(
-		env(safe-area-inset-top, 0px),
-		var(--android-safe-area-top)
-	);
-	--ds-safe-area-right: max(
-		env(safe-area-inset-right, 0px),
-		var(--android-safe-area-right)
-	);
-	--ds-safe-area-bottom: max(
-		env(safe-area-inset-bottom, 0px),
-		var(--android-safe-area-bottom)
-	);
-	--ds-safe-area-left: max(
-		env(safe-area-inset-left, 0px),
-		var(--android-safe-area-left)
-	);
+	--android-ime-inset-bottom: 0px;
+	--ds-remote-viewport-height: 100dvh;
+	--ds-remote-visual-ime-inset-bottom: 0px;
+	--ds-remote-layout-resize-bottom: 0px;
+	--ds-safe-area-top: max(env(safe-area-inset-top, 0px), var(--android-safe-area-top));
+	--ds-safe-area-right: max(env(safe-area-inset-right, 0px), var(--android-safe-area-right));
+	--ds-safe-area-bottom: max(env(safe-area-inset-bottom, 0px), var(--android-safe-area-bottom));
+	--ds-safe-area-left: max(env(safe-area-inset-left, 0px), var(--android-safe-area-left));
 	--ds-bg: #141414;
 	--ds-bg-tint: rgba(20, 20, 20, 0.75);
 	--ds-code-bg: #ffffff1d;
@@ -152,20 +140,22 @@
 	--ds-space-2: 8px;
 	--ds-space-3: 12px;
 	--ds-space-4: 16px;
+	--ds-radius-xs: 2px;
 	--ds-radius-sm: 4px;
+	--ds-radius-md: 6px;
 	--ds-radius-lg: 8px;
+	--ds-radius-xl: 12px;
+	--ds-radius-pill: 999px;
 	--ds-control-height-sm: 24px;
 	--ds-control-height: 28px;
 	--ds-control-height-lg: 32px;
 	--ds-font-family:
-		"Mona Sans", "Wen Yuan Sans SC", "Microsoft YaHei UI",
-		"Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont,
-		"Segoe UI", sans-serif;
+		"Mona Sans", "Wen Yuan Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system,
+		BlinkMacSystemFont, "Segoe UI", sans-serif;
 	--ds-font-family-code:
-		"Fira Code", "Cascadia Code", "SFMono-Regular", Consolas,
-		"Liberation Mono", Menlo, Courier, "Mona Sans", "Wen Yuan Sans SC",
-		"Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system,
-		BlinkMacSystemFont, "Segoe UI", monospace;
+		"Fira Code", "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, "Mona Sans",
+		"Wen Yuan Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont,
+		"Segoe UI", monospace;
 	--ds-font-size: 14px;
 	--ds-font-size-code: 13px;
 	color-scheme: dark;
@@ -174,6 +164,15 @@
 	background: transparent;
 	color: var(--ds-text-primary);
 	text-rendering: optimizeLegibility;
+}
+
+:root[data-theme-variant="mobile"] {
+	--ds-radius-xs: 8px;
+	--ds-radius-sm: 12px;
+	--ds-radius-md: 14px;
+	--ds-radius-lg: 18px;
+	--ds-radius-xl: 22px;
+	--ds-radius-pill: 999px;
 }
 
 :root[data-theme="dark"] {

@@ -51,8 +51,9 @@ function SharedVisualProviders({
 
 	useEffect((): void => {
 		document.documentElement.dataset.theme = resolvedTheme;
+		document.documentElement.dataset.themeVariant = themeVariant;
 		applyStudioAccentVariables(document.documentElement.style, resolvedTheme, themeColor);
-	}, [resolvedTheme, themeColor]);
+	}, [resolvedTheme, themeColor, themeVariant]);
 
 	useEffect((): void => {
 		document.documentElement.lang = resolvedLanguage;

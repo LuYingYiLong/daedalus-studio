@@ -26,6 +26,61 @@ function RemoteProviders({ children }: { children: React.ReactNode }): React.JSX
 		return (): void => media.removeEventListener("change", update);
 	}, []);
 
+	useEffect((): (() => void) => {
+		const root: HTMLElement = document.documentElement;
+		const viewport: VisualViewport | null = globalThis.visualViewport ?? null;
+		let baselineLayoutHeight: number = Math.max(
+			globalThis.innerHeight,
+			viewport?.height ?? 0,
+		);
+		let frameId: number | null = null;
+
+		const updateViewportHeight = (): void => {
+			frameId = null;
+			const layoutHeight: number = globalThis.innerHeight;
+			const height: number = viewport?.height ?? layoutHeight;
+			if (!Number.isFinite(height) || height <= 0) return;
+			if (layoutHeight > baselineLayoutHeight + 80) {
+				baselineLayoutHeight = layoutHeight;
+			}
+			root.style.setProperty("--ds-remote-viewport-height", `${Math.round(height)}px`);
+			const visualViewportInset: number = Math.max(
+				0,
+				layoutHeight - height - Math.max(0, viewport?.offsetTop ?? 0),
+			);
+			const layoutResizeInset: number = Math.max(0, baselineLayoutHeight - layoutHeight);
+			root.style.setProperty(
+				"--ds-remote-visual-ime-inset-bottom",
+				`${Math.round(visualViewportInset)}px`,
+			);
+			root.style.setProperty(
+				"--ds-remote-layout-resize-bottom",
+				`${Math.round(layoutResizeInset)}px`,
+			);
+		};
+		const scheduleViewportHeightUpdate = (): void => {
+			if (frameId !== null) return;
+			frameId = globalThis.requestAnimationFrame(updateViewportHeight);
+		};
+
+		updateViewportHeight();
+		globalThis.addEventListener("resize", scheduleViewportHeightUpdate);
+		globalThis.addEventListener("orientationchange", scheduleViewportHeightUpdate);
+		viewport?.addEventListener("resize", scheduleViewportHeightUpdate);
+		viewport?.addEventListener("scroll", scheduleViewportHeightUpdate);
+
+		return (): void => {
+			globalThis.removeEventListener("resize", scheduleViewportHeightUpdate);
+			globalThis.removeEventListener("orientationchange", scheduleViewportHeightUpdate);
+			viewport?.removeEventListener("resize", scheduleViewportHeightUpdate);
+			viewport?.removeEventListener("scroll", scheduleViewportHeightUpdate);
+			if (frameId !== null) globalThis.cancelAnimationFrame(frameId);
+			root.style.removeProperty("--ds-remote-viewport-height");
+			root.style.removeProperty("--ds-remote-visual-ime-inset-bottom");
+			root.style.removeProperty("--ds-remote-layout-resize-bottom");
+		};
+	}, []);
+
 	return (
 		<SharedVisualProviders
 			resolvedTheme={theme}

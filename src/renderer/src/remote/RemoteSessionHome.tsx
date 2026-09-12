@@ -7,6 +7,7 @@ import type { SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
 import { getNewSessionGreetingPeriod } from "@/domain/session/new-session-home-content";
 import { getRecentRemoteSessions } from "./remote-model";
 import styles from "./RemoteSessionHome.module.css";
+import Mascot from "@/widgets/mascot/Mascot";
 
 type RemoteSessionHomeProps = {
 	sessions: SessionMetadata[];
@@ -45,10 +46,7 @@ function SessionRow({
 				<Typography.Text strong ellipsis>
 					{session.title}
 				</Typography.Text>
-				<Typography.Text
-					type="secondary"
-					className={styles.sessionTimestamp}
-				>
+				<Typography.Text type="secondary" className={styles.sessionTimestamp}>
 					{formatUpdatedAt(session.updatedAt)}
 				</Typography.Text>
 			</div>
@@ -74,31 +72,16 @@ function RemoteSessionHome({
 	const greetingPeriod = getNewSessionGreetingPeriod(new Date().getHours());
 
 	return (
-		<section
-			className={styles.sessionScreen}
-			data-testid="remote-session-home"
-		>
+		<section className={styles.sessionScreen} data-testid="remote-session-home">
 			<div className={styles.homeHero}>
-				<img
-					className={styles.welcomeIcon}
-					src={remoteColorfulIconUrl}
-					alt=""
-					aria-hidden="true"
-				/>
+				<Mascot status="idle" />
 				<Typography.Title level={2} className={styles.homeGreeting}>
 					{t(`app.home.greeting.${greetingPeriod}`)}
 				</Typography.Title>
 			</div>
 
-			<section
-				className={styles.homeSection}
-				aria-labelledby="remote-recent-heading"
-			>
-				<Typography.Title
-					id="remote-recent-heading"
-					level={5}
-					className={styles.sectionTitle}
-				>
+			<section className={styles.homeSection} aria-labelledby="remote-recent-heading">
+				<Typography.Title id="remote-recent-heading" level={5} className={styles.sectionTitle}>
 					{t("remote.home.recent")}
 				</Typography.Title>
 				{recentSessions.length > 0 ? (
@@ -115,16 +98,11 @@ function RemoteSessionHome({
 						)}
 					</div>
 				) : (
-					<Empty
-						image={Empty.PRESENTED_IMAGE_SIMPLE}
-						description={t("remote.home.noRecentSessions")}
-					/>
+					<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("remote.home.noRecentSessions")} />
 				)}
 			</section>
 
-			<section
-				className={`${styles.homeSection} ${styles.newSessionSection}`}
-			>
+			<section className={`${styles.homeSection} ${styles.newSessionSection}`}>
 				<Button
 					type="primary"
 					size="large"
@@ -133,9 +111,7 @@ function RemoteSessionHome({
 					disabled={workspaces.length === 0}
 					onClick={onCreate}
 				>
-					{workspaces.length === 0
-						? t("remote.noProjects")
-						: t("remote.newSession")}
+					{workspaces.length === 0 ? t("remote.noProjects") : t("remote.newSession")}
 				</Button>
 			</section>
 		</section>

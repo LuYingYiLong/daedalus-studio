@@ -19,7 +19,7 @@ describe("Studio theme color", () => {
 		const mobileTheme = createStudioTheme("light", undefined, undefined, undefined, undefined, "mobile");
 
 		expect(desktopTheme.token?.borderRadiusLG).toBe(8);
-		expect(mobileTheme.token?.borderRadiusLG).toBe(64);
+		expect(mobileTheme.token?.borderRadiusLG).toBe(32);
 	});
 
 	it("derives custom CSS accent colors and readable contrast text", () => {

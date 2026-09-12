@@ -44,7 +44,7 @@
 .recentScroller .sessionRow {
 	padding: 10px 12px;
 	border: 1px solid var(--ds-border-subtle);
-	border-radius: 16px;
+	border-radius: var(--ds-radius-lg);
 	background: var(--ds-surface);
 }
 
@@ -57,7 +57,7 @@
 	min-height: 58px;
 	padding: 8px;
 	border: 0;
-	border-radius: 13px;
+	border-radius: var(--ds-radius-sm);
 	background: transparent;
 	text-align: left;
 }

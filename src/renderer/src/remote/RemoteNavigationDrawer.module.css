@@ -15,6 +15,6 @@
 	min-height: 44px;
 	margin-block: 2px;
 	line-height: 44px;
-	border-radius: 12px;
+	border-radius: var(--ds-radius-sm);
 	-webkit-tap-highlight-color: transparent;
 }

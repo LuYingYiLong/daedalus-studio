@@ -20,10 +20,7 @@ import {
 	type ThemePreference,
 } from "@/domain/theme/studio-theme-preference";
 
-export {
-	createStudioAccentPalette,
-	DEFAULT_STUDIO_THEME_COLOR,
-} from "../../../../contracts/theme-color";
+export { createStudioAccentPalette, DEFAULT_STUDIO_THEME_COLOR } from "../../../../contracts/theme-color";
 export type { StudioAccentPalette } from "../../../../contracts/theme-color";
 
 export type StudioThemeVariant = "desktop" | "mobile";
@@ -85,18 +82,9 @@ export function createStudioTheme(
 ): ThemeConfig {
 	const isMobile: boolean = variant === "mobile";
 	const dsColors: StudioThemeColors = studioThemeColors[resolvedTheme];
-	const accent: StudioAccentPalette = createStudioAccentPalette(
-		resolvedTheme,
-		themeColor,
-	);
-	const resolvedFontFamily: string = normalizeStudioFontFamily(
-		fontFamily,
-		DEFAULT_STUDIO_FONT_FAMILY,
-	);
-	const resolvedFontFamilyCode: string = normalizeStudioFontFamily(
-		fontFamilyCode,
-		DEFAULT_STUDIO_FONT_FAMILY_CODE,
-	);
+	const accent: StudioAccentPalette = createStudioAccentPalette(resolvedTheme, themeColor);
+	const resolvedFontFamily: string = normalizeStudioFontFamily(fontFamily, DEFAULT_STUDIO_FONT_FAMILY);
+	const resolvedFontFamilyCode: string = normalizeStudioFontFamily(fontFamilyCode, DEFAULT_STUDIO_FONT_FAMILY_CODE);
 	const resolvedUiFontSize: number = normalizeStudioFontSize(
 		uiFontSize,
 		DEFAULT_STUDIO_UI_FONT_SIZE,
@@ -105,15 +93,12 @@ export function createStudioTheme(
 	);
 
 	return {
-		algorithm:
-			resolvedTheme === "dark"
-				? antdTheme.darkAlgorithm
-				: antdTheme.defaultAlgorithm,
+		algorithm: resolvedTheme === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
 		token: {
 			borderRadiusXS: 4,
 			borderRadiusSM: 6,
 			borderRadius: 6,
-			borderRadiusLG: isMobile ? 64 : 8,
+			borderRadiusLG: isMobile ? 32 : 8,
 			colorBgBase: dsColors.bg,
 			colorBgContainer: dsColors.surface,
 			colorBgElevated: dsColors.surfaceElevated,
