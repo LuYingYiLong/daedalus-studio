@@ -2687,11 +2687,11 @@
 			"title": "关于",
 			"unavailable": "不可用",
 			"studio": {
-				"description": "独立的 AI 工作台，可选集成 Godot 编辑器桥接。"
+				"description": "面向软件开发的 AI 工作台，支持项目分析、工具执行、文件修改与结果验证。"
 			},
 			"bridge": {
 				"title": "Daedalus Bridge",
-				"description": "连接 Daedalus Studio 与 Godot 编辑器的可选集成桥接插件。"
+				"description": "连接 Daedalus Studio 与外部编辑器的可选集成桥接组件。"
 			},
 			"applicationInformation": "应用信息",
 			"credits": {
@@ -2711,7 +2711,7 @@
 				"open": "打开 {{name}} GitHub 仓库"
 			},
 			"backend": {
-				"description": "本地 RPC、workflow、MCP 和 Godot 集成服务。",
+				"description": "提供本地 RPC、workflow、MCP 与工具执行能力的服务。",
 				"detailsTitle": "后端详情",
 				"repairConfirmTitle": "修复 Daedalus 后端？",
 				"repairConfirmDescription": "这会停止并重新安装当前 Studio 附带的后端。正在进行的模型响应会被中断。",
@@ -2740,7 +2740,7 @@
 			},
 			"onboarding": {
 				"title": "新手引导",
-				"description": "重新启动首次配置引导，不会删除供应商、Godot 路径、离线文档或已安装插件。",
+				"description": "重新启动首次配置引导，不会删除供应商、工作区路径、离线文档或已安装扩展。",
 				"resetAndRestart": "重置并重启",
 				"confirmTitle": "重置新手引导？",
 				"confirmDescription": "Daedalus Studio 将重启并回到欢迎页，现有配置会全部保留。",

@@ -2693,11 +2693,11 @@
 			"title": "About",
 			"unavailable": "Unavailable",
 			"studio": {
-				"description": "A standalone AI workbench with optional Godot Editor Bridge integration."
+				"description": "An AI workbench for software development with project analysis, tool execution, file editing, and verification."
 			},
 			"bridge": {
 				"title": "Daedalus Bridge",
-				"description": "An optional integration bridge connecting Daedalus Studio with the Godot editor."
+				"description": "An optional integration bridge connecting Daedalus Studio with external editors."
 			},
 			"applicationInformation": "Application Information",
 			"credits": {
@@ -2717,7 +2717,7 @@
 				"open": "Open the {{name}} GitHub repository"
 			},
 			"backend": {
-				"description": "Local RPC, workflow, MCP, and Godot integration service.",
+				"description": "A local service for RPC, workflows, MCP, and tool execution.",
 				"detailsTitle": "Backend Details",
 				"repairConfirmTitle": "Repair Daedalus backend?",
 				"repairConfirmDescription": "This stops and reinstalls the backend bundled with this Studio version. Any active model response will be interrupted.",
@@ -2746,7 +2746,7 @@
 			},
 			"onboarding": {
 				"title": "Setup guide",
-				"description": "Restart the first-run guide without removing providers, Godot paths, documentation, or installed plugins.",
+				"description": "Restart the first-run guide without removing providers, workspace paths, offline documentation, or installed extensions.",
 				"resetAndRestart": "Reset and restart",
 				"confirmTitle": "Reset the setup guide?",
 				"confirmDescription": "Daedalus Studio will restart at the welcome page. Your existing configuration will be kept.",

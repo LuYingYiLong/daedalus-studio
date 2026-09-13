@@ -270,6 +270,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	const initialBottomAnchorRef = useRef<boolean>(true);
 	const bottomFollowFrameRef = useRef<number | null>(null);
 	const lastTotalListHeightRef = useRef<number | null>(null);
+	const lastMeasuredAtBottomRef = useRef<boolean>(true);
 	const lastScrollerTopRef = useRef<number>(0);
 	const pointerScrollActiveRef = useRef<boolean>(false);
 	const userScrollAwayIntentRef = useRef<boolean>(false);
@@ -337,6 +338,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			scroller.clientHeight,
 			AT_BOTTOM_THRESHOLD
 		);
+		lastMeasuredAtBottomRef.current = atBottom;
 		if (atBottom) {
 			initialBottomAnchorRef.current = false;
 			shouldFollowBottomRef.current = true;
@@ -348,6 +350,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			scheduleBottomFollow();
 			return;
 		}
+		// 行高重新测量期间可能暂时不在底部，保留跟随标记让流式内容在下一帧恢复
 		if (shouldFollowBottomRef.current) {
 			commitBottomState(true);
 			return;
@@ -570,7 +573,9 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			return;
 		}
 		lastTotalListHeightRef.current = height;
-		if (initialBottomAnchorRef.current || shouldFollowBottomRef.current) {
+		// 折叠内容通常只改变行高；使用上一帧确认的状态，避免沿用过期的
+		// shouldFollowBottom 标记把已经离开底部的列表拉到底部
+		if (initialBottomAnchorRef.current || (shouldFollowBottomRef.current && lastMeasuredAtBottomRef.current)) {
 			commitBottomState(true);
 			scheduleBottomFollow();
 		}
@@ -606,6 +611,12 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			return;
 		}
 		const nextScrollTop: number = scroller.scrollTop;
+		lastMeasuredAtBottomRef.current = isNearBottomByMetrics(
+			scroller.scrollHeight,
+			nextScrollTop,
+			scroller.clientHeight,
+			AT_BOTTOM_THRESHOLD
+		);
 		if (
 			(pointerScrollActiveRef.current || userScrollAwayIntentRef.current)
 			&& nextScrollTop < lastScrollerTopRef.current - 1
@@ -634,6 +645,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 			initialBottomAnchorRef.current = true;
 			shouldFollowBottomRef.current = true;
 			lastTotalListHeightRef.current = null;
+			lastMeasuredAtBottomRef.current = true;
 			lastScrollerTopRef.current = scroller.scrollTop;
 			commitBottomState(true);
 		}

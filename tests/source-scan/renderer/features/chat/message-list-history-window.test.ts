@@ -39,7 +39,9 @@ describe("MessageList virtual history window source", () => {
 	});
 
 	it("does not confuse asynchronous row growth with deliberate user scrolling", () => {
-		expect(messageListSource).toContain("initialBottomAnchorRef.current || shouldFollowBottomRef.current");
+		expect(messageListSource).toContain("initialBottomAnchorRef.current || (shouldFollowBottomRef.current && lastMeasuredAtBottomRef.current)");
+		expect(messageListSource).toContain("lastMeasuredAtBottomRef.current = atBottom");
+		expect(messageListSource).toContain("lastMeasuredAtBottomRef.current = isNearBottomByMetrics(");
 		expect(messageListSource).toContain("scheduleBottomFollow();");
 		expect(messageListSource).toContain("userScrollAwayIntentRef.current");
 		expect(messageListSource).toContain("nextScrollTop < lastScrollerTopRef.current - 1");
