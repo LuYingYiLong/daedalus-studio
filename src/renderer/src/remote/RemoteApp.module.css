@@ -23,15 +23,30 @@
 }
 
 .topBar {
+	position: relative;
 	display: grid;
 	grid-template-columns: auto minmax(0, 1fr) auto;
 	align-items: center;
 	gap: 4px;
 	min-height: 54px;
 	padding: 3px max(6px, var(--ds-safe-area-right)) 3px max(6px, var(--ds-safe-area-left));
-	border-bottom: 1px solid var(--ds-border-subtle);
-	backdrop-filter: blur(18px) saturate(1.2);
 	z-index: 4;
+}
+
+.topBar::after {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	left: 0;
+	height: 24px;
+	pointer-events: none;
+	content: "";
+	background: linear-gradient(
+		to bottom,
+		color-mix(in srgb, var(--ds-bg) 92%, transparent) 0%,
+		color-mix(in srgb, var(--ds-bg) 58%, transparent) 45%,
+		transparent 100%
+	);
 }
 
 .topBar :global(.ant-btn) {
@@ -363,6 +378,7 @@
 }
 
 .timeline {
+	--message-list-top-safe-area: 24px;
 	min-height: 0;
 	overflow: hidden;
 }

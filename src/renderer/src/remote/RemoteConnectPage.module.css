@@ -1,7 +1,12 @@
 .shell {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	height: 100%;
 	min-height: 100dvh;
-	padding: max(32px, var(--ds-safe-area-top)) 16px
-		max(24px, var(--ds-safe-area-bottom));
+	padding: max(32px, var(--ds-safe-area-top)) 16px max(24px, var(--ds-safe-area-bottom));
+	overflow-x: hidden;
+	overflow-y: hidden;
 	background: var(--ant-color-bg-layout);
 	user-select: none;
 }
@@ -10,6 +15,16 @@
 .shell :global(a),
 .shell :global([role="button"]) {
 	-webkit-tap-highlight-color: transparent;
+}
+
+.content {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	justify-content: safe center;
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
 }
 
 .hero {
@@ -28,10 +43,10 @@
 	object-fit: contain;
 }
 
-.actionCard,
-.savedSection,
+.fullWidth,
+.detailSection,
 .installButton,
-.shell > :global(.ant-alert) {
+.content > :global(.ant-alert) {
 	max-width: 560px;
 	margin: 0 auto 16px;
 }
@@ -40,14 +55,20 @@
 	width: 100%;
 }
 
+.detailSection {
+	display: grid;
+	gap: var(--ds-space-2);
+	width: 100%;
+}
+
+.detailSection :global(.ant-typography) {
+	margin-top: 0;
+}
+
 .manualRow {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
 	gap: 8px;
-}
-
-.savedSection {
-	padding-top: 8px;
 }
 
 .profileItem {
@@ -56,8 +77,9 @@
 }
 
 .version {
+	flex: 0 0 auto;
 	display: block;
-	margin-top: 24px;
+	margin-top: 16px;
 	text-align: center;
 }
 

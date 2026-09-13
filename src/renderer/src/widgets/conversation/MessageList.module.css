@@ -18,8 +18,8 @@
 }
 
 .listEdgeSpacer {
-	height: var(--agent-chat-side-padding, 8px);
-	min-height: var(--agent-chat-side-padding, 8px);
+	height: max(var(--agent-chat-side-padding, 8px), var(--message-list-top-safe-area, 0px));
+	min-height: max(var(--agent-chat-side-padding, 8px), var(--message-list-top-safe-area, 0px));
 	pointer-events: none;
 }
 

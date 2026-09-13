@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { App } from "antd";
+import { useTranslation } from "react-i18next";
 import {
 	hasNativeBridge,
 	requestNativeBridge,
@@ -14,6 +15,7 @@ function errorMessage(error: unknown): string {
 
 function RemoteConnectApp(): React.JSX.Element {
 	const { message } = App.useApp();
+	const { t } = useTranslation();
 	const [profiles, setProfiles] = useState<NativeConnectionProfile[]>([]);
 	const [lastProfileId, setLastProfileId] = useState<string>();
 	const [endpoint, setEndpoint] = useState<string>("");
@@ -49,7 +51,7 @@ function RemoteConnectApp(): React.JSX.Element {
 	useEffect((): void => {
 		if (!hasNativeBridge()) {
 			setBusy(null);
-			setError("当前页面未运行在 Daedalus Remote 原生壳中");
+			setError(t("remote.connectPage.nativeShellRequired"));
 			return;
 		}
 		void Promise.all([
@@ -102,7 +104,7 @@ function RemoteConnectApp(): React.JSX.Element {
 		try {
 			await requestNativeBridge("profiles.remove", { profileId });
 			await refreshProfiles();
-			message.success("已删除本机连接资料");
+			message.success(t("remote.connectPage.profileRemoved"));
 		} catch (removeError: unknown) {
 			setError(errorMessage(removeError));
 		}

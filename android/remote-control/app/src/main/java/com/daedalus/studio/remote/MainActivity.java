@@ -533,14 +533,15 @@ public final class MainActivity extends Activity {
 	}
 
 	private void handleBack() {
-		if (!LOCAL_ORIGIN.equals(currentBridgeOrigin)) {
+		if (LOCAL_ORIGIN.equals(currentBridgeOrigin)) {
 			webView.evaluateJavascript(REMOTE_BACK_HANDLER_SCRIPT, result -> {
-				if (!"true".equals(result)) showConnections(false);
+				if (!"true".equals(result)) finish();
 			});
 			return;
 		}
-		if (webView.canGoBack()) webView.goBack();
-		else finish();
+		webView.evaluateJavascript(REMOTE_BACK_HANDLER_SCRIPT, result -> {
+			if (!"true".equals(result)) showConnections(false);
+		});
 	}
 
 	private static String originOf(Uri uri) {
