@@ -272,6 +272,7 @@ jobs:
     timeout-minutes: 30
 
     env:
+      NODE_OPTIONS: --max-old-space-size=4096
       ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
       ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
 
@@ -299,9 +300,7 @@ jobs:
         run: npm run verify:electron
 
       - name: Build Linux deb package
-        run: |
-          npm run build
-          npx --no-install electron-builder --linux deb --publish never
+        run: npm run build:linux -- --publish never
 
       - name: Verify deb package
         shell: bash

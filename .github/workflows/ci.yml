@@ -129,3 +129,49 @@ jobs:
           name: daedalus-remote-debug-${{ github.run_id }}
           path: android/remote-control/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+
+  linux-deb:
+    name: Build Linux deb package
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+      ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.x"
+          cache: npm
+
+      - name: Install Linux packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential fakeroot dpkg-dev libsecret-1-dev
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify Electron runtime
+        run: npm run verify:electron
+
+      - name: Build and verify Linux deb package
+        run: |
+          npm run build:linux -- --publish never
+          deb="$(find release -maxdepth 1 -type f -name '*.deb' -print -quit)"
+          test -n "$deb"
+          dpkg-deb --info "$deb"
+
+      - name: Upload Linux deb package
+        uses: actions/upload-artifact@v4
+        with:
+          name: daedalus-studio-linux-deb-${{ github.run_id }}
+          path: release/*.deb
+          if-no-files-found: error

@@ -13,7 +13,7 @@ import {
 } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { inflateRawSync } from "node:zlib";
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep, win32 } from "node:path";
 
 const PLUGIN_RESOURCE_PATH: string = "res://addons/daedalus_bridge/plugin.cfg";
 const PLUGIN_RELATIVE_ROOT: string = "addons/daedalus_bridge";
@@ -122,24 +122,40 @@ function isInside(parentPath: string, childPath: string): boolean {
 	return child === parent || child.startsWith(`${parent}${sep}`);
 }
 
+function isWindowsStylePath(value: string): boolean {
+        return /^[A-Za-z]:[\\/]/u.test(value) || value.includes("\\");
+}
+
+function resolveComparablePath(value: string): string {
+        return isWindowsStylePath(value) ? win32.resolve(value) : resolve(value);
+}
+
+function joinComparablePath(basePath: string, ...segments: string[]): string {
+        return isWindowsStylePath(basePath)
+                ? win32.join(basePath, ...segments)
+                : join(basePath, ...segments);
+}
+
 function normalizeComparablePath(value: string): string {
-	const normalized: string = resolve(value);
-	return process.platform === "win32" ? normalized.toLocaleLowerCase("en-US") : normalized;
+        const normalized: string = resolveComparablePath(value).replaceAll("\\", "/");
+        return process.platform === "win32" ? normalized.toLocaleLowerCase("en-US") : normalized;
 }
 
 export function isDevelopmentPluginSourceProject(
-	projectPath: string,
-	appPath: string,
-	configuredSource: string | undefined = process.env.DAEDALUS_BRIDGE_SOURCE
+        projectPath: string,
+        appPath: string,
+        configuredSource: string | undefined = process.env.DAEDALUS_BRIDGE_SOURCE
 ): boolean {
-	const explicitSource: string | null = configuredSource?.trim() || null;
-	const sourceRoots: string[] = explicitSource !== null
-		? [resolve(explicitSource)]
-		: [join(appPath, "..", "daedalus-bridge", PLUGIN_RELATIVE_ROOT)];
-	const projectBridgeRoot: string = normalizeComparablePath(join(projectPath, PLUGIN_RELATIVE_ROOT));
-	return sourceRoots.some((sourceRoot: string): boolean => (
-		projectBridgeRoot === normalizeComparablePath(sourceRoot)
-	));
+        const explicitSource: string | null = configuredSource?.trim() || null;
+        const sourceRoots: string[] = explicitSource !== null
+                ? [resolveComparablePath(explicitSource)]
+                : [joinComparablePath(appPath, "..", "daedalus-bridge", PLUGIN_RELATIVE_ROOT)];
+        const projectBridgeRoot: string = normalizeComparablePath(
+                joinComparablePath(projectPath, PLUGIN_RELATIVE_ROOT)
+        );
+        return sourceRoots.some((sourceRoot: string): boolean => (
+                projectBridgeRoot === normalizeComparablePath(sourceRoot)
+        ));
 }
 
 export function isGodotManagedPluginFile(path: string): boolean {

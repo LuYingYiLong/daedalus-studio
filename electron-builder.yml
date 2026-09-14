@@ -50,6 +50,8 @@ win:
 linux:
   icon: build/icon.svg
   category: Development
+  maintainer: l_y_y_l@icloud.com
+  syncDesktopName: true
   artifactName: "Daedalus-Studio-${version}-${arch}.${ext}"
   target:
     - target: deb
