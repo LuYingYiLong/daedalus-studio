@@ -17,25 +17,24 @@ files:
 extraResources:
   - from: build/icon.ico
     to: icon.ico
-  - from: build/backend-bootstrap
-    to: backend-bootstrap
-    filter:
-      - daedalus-backend.exe
-      - daedalus-windows-sandbox-helper.exe
-      - backend-manifest.json
-  - from: build/daedalus-bridge
-    to: daedalus-bridge
-    filter:
-      - daedalus-bridge-v*.zip
-      - plugin-manifest.json
 
 asar: true
 asarUnpack:
   - node_modules/node-pty/**/*
 
 win:
-  # Windows-only assets are not included in Android or other desktop targets
   extraResources:
+    - from: build/backend-bootstrap
+      to: backend-bootstrap
+      filter:
+        - daedalus-backend.exe
+        - daedalus-windows-sandbox-helper.exe
+        - backend-manifest.json
+    - from: build/daedalus-bridge
+      to: daedalus-bridge
+      filter:
+        - daedalus-bridge-v*.zip
+        - plugin-manifest.json
     - from: build/computer-observation
       to: computer-observation
     - from: build/browser-host
@@ -45,6 +44,15 @@ win:
   icon: build/icon.ico
   target:
     - target: nsis
+      arch:
+        - x64
+
+linux:
+  icon: build/icon.svg
+  category: Development
+  artifactName: "Daedalus-Studio-${version}-${arch}.${ext}"
+  target:
+    - target: deb
       arch:
         - x64
 
