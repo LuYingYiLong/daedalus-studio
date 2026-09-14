@@ -35,7 +35,7 @@
   <a href="./android/remote-control/README.md">Android</a>
 </p>
 
-![Daedalus Studio workspace](./docs/images/daedalus-studio-workflow.png)
+![Daedalus Studio workspace](./docs/images/lading-page.png)
 
 Daedalus Studio is a desktop AI development environment for software projects. It combines persistent sessions, reviewable tool calls, file and Git diffs, terminal validation, MCP integrations, and a managed local backend in one native desktop application.
 
