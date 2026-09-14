@@ -10,6 +10,7 @@ import {
 	type BackendPayloadManifestV1
 } from "./backend-binary-manifest";
 import {
+	getBackendExecutableFileName,
 	getBundledBackendDir,
 	getManagedBackendCurrentPath,
 	getManagedBackendVersionsDir,
@@ -177,7 +178,7 @@ export function resolveManagedBackendLaunchTarget(
 		if (
 			manifest.version !== current.version
 			|| manifest.protocolVersion !== current.protocolVersion
-			|| manifest.executable.fileName !== "daedalus-backend.exe"
+			|| manifest.executable.fileName !== getBackendExecutableFileName()
 			|| dirname(current.executablePath) !== dirname(current.manifestPath)
 		) {
 			return null;
@@ -200,7 +201,7 @@ export function resolveManagedBackendLaunchTarget(
 function resolveBundledBackendLaunchTarget(): BackendLaunchTarget | null {
 	const bundleDir: string = getBundledBackendDir();
 	const manifestPath: string = join(bundleDir, "backend-manifest.json");
-	const executablePath: string = join(bundleDir, "daedalus-backend.exe");
+	const executablePath: string = join(bundleDir, getBackendExecutableFileName());
 	if (!existsSync(manifestPath) || !existsSync(executablePath)) {
 		return null;
 	}

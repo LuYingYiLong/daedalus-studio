@@ -27,6 +27,7 @@ function run(command, args) {
 }
 
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+run(process.execPath, [join(projectRoot, "scripts", "prepare-linux-backend-bootstrap.cjs")]);
 run(npmCommand, ["run", "build"]);
 run(process.execPath, [
   join(projectRoot, "node_modules", "electron-builder", "cli.js"),

@@ -52,6 +52,12 @@ linux:
   category: Development
   maintainer: l_y_y_l@icloud.com
   syncDesktopName: true
+  extraResources:
+    - from: build/backend-bootstrap
+      to: backend-bootstrap
+      filter:
+        - daedalus-backend
+        - backend-manifest.json
   artifactName: "Daedalus-Studio-${version}-${arch}.${ext}"
   target:
     - target: deb

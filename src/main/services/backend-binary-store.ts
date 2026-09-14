@@ -10,7 +10,8 @@ import {
 	rename,
 	rm,
 	stat,
-	writeFile
+	writeFile,
+	chmod
 } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
@@ -25,13 +26,19 @@ import {
 
 const BACKEND_RELEASE_BASE_URL: string =
 	"https://github.com/LuYingYiLong/daedalus-backend/releases";
-const RELEASE_MANIFEST_FILE_NAME: string = "daedalus-backend-win32-x64.json";
+const BACKEND_PLATFORM: "win32" | "linux" = process.platform === "linux" ? "linux" : "win32";
+const RELEASE_MANIFEST_FILE_NAME: string = "daedalus-backend-" + BACKEND_PLATFORM + "-x64.json";
 const PAYLOAD_MANIFEST_FILE_NAME: string = "backend-manifest.json";
-const EXECUTABLE_FILE_NAME: string = "daedalus-backend.exe";
+const EXECUTABLE_FILE_NAME: "daedalus-backend.exe" | "daedalus-backend" =
+        BACKEND_PLATFORM === "linux" ? "daedalus-backend" : "daedalus-backend.exe";
 const SANDBOX_HELPER_FILE_NAME: string = "daedalus-windows-sandbox-helper.exe";
 const MAX_MANIFEST_BYTES: number = 1024 * 1024;
 const MAX_ARCHIVE_BYTES: number = 256 * 1024 * 1024;
 const SELF_TEST_TIMEOUT_MS: number = 30000;
+
+export function getBackendExecutableFileName(): "daedalus-backend.exe" | "daedalus-backend" {
+        return EXECUTABLE_FILE_NAME;
+}
 
 export type BackendDistribution = "binary";
 
@@ -57,7 +64,7 @@ export type InstalledBackendBinary = {
 	version: string;
 	versionDir: string;
 	executablePath: string;
-	sandboxHelperPath: string;
+	sandboxHelperPath: string | null;
 	manifestPath: string;
 	manifest: BackendPayloadManifestV1;
 };
@@ -348,7 +355,8 @@ export function assertBackendSelfTestResponse(
 		|| build.protocolVersion !== installed.manifest.protocolVersion
 		|| !passedCheckNames.has("runtime-assets")
 		|| !passedCheckNames.has("sqlite")
-		|| !passedCheckNames.has("secret-store")
+		|| (installed.manifest.platform === "win32"
+				&& !passedCheckNames.has("secret-store"))
 	) {
 		throw new Error(`Backend ${installed.version} returned an invalid self-test result.`);
 	}
@@ -377,39 +385,36 @@ export async function runBackendSelfTest(installed: InstalledBackendBinary): Pro
 }
 
 export async function inspectInstalledBackend(versionDir: string): Promise<InstalledBackendBinary> {
-	const safeVersionDir: string = assertInside(getManagedBackendVersionsDir(), versionDir);
-	const manifestPath: string = join(safeVersionDir, PAYLOAD_MANIFEST_FILE_NAME);
-	const executablePath: string = join(safeVersionDir, EXECUTABLE_FILE_NAME);
-	const sandboxHelperPath: string = join(safeVersionDir, SANDBOX_HELPER_FILE_NAME);
-	const manifest: BackendPayloadManifestV1 = parseBackendPayloadManifest(
-		JSON.parse(await readFile(manifestPath, "utf8")) as unknown
-	);
-	assertBackendManifestCompatible(manifest, getStudioVersion());
-	if (manifest.platform !== process.platform || manifest.arch !== process.arch) {
-		throw new Error(
-			`Backend ${manifest.version} targets ${manifest.platform}/${manifest.arch}, not ${process.platform}/${process.arch}.`
-		);
-	}
-	await verifyFile(
-		executablePath,
-		manifest.executable.size,
-		manifest.executable.sha256,
-		"Backend executable"
-	);
-	await verifyFile(
-		sandboxHelperPath,
-		manifest.sandboxHelper.size,
-		manifest.sandboxHelper.sha256,
-		"Backend Windows sandbox helper"
-	);
-	return {
-		version: manifest.version,
-		versionDir: safeVersionDir,
-		executablePath,
-		sandboxHelperPath,
-		manifestPath,
-		manifest
-	};
+        const safeVersionDir: string = assertInside(getManagedBackendVersionsDir(), versionDir);
+        const manifestPath: string = join(safeVersionDir, PAYLOAD_MANIFEST_FILE_NAME);
+        const executablePath: string = join(safeVersionDir, EXECUTABLE_FILE_NAME);
+        const manifest: BackendPayloadManifestV1 = parseBackendPayloadManifest(
+                JSON.parse(await readFile(manifestPath, "utf8")) as unknown
+        );
+        assertBackendManifestCompatible(manifest, getStudioVersion());
+        if (manifest.platform !== process.platform || manifest.arch !== process.arch) {
+                throw new Error("Backend target platform does not match this machine.");
+        }
+        await verifyFile(executablePath, manifest.executable.size, manifest.executable.sha256, "Backend executable");
+        const sandboxHelperPath: string | null = manifest.sandboxHelper === null
+                ? null
+                : join(safeVersionDir, manifest.sandboxHelper.fileName);
+        if (sandboxHelperPath !== null && manifest.sandboxHelper !== null) {
+                await verifyFile(
+                        sandboxHelperPath,
+                        manifest.sandboxHelper.size,
+                        manifest.sandboxHelper.sha256,
+                        "Backend Windows sandbox helper"
+                );
+        }
+        return {
+                version: manifest.version,
+                versionDir: safeVersionDir,
+                executablePath,
+                sandboxHelperPath,
+                manifestPath,
+                manifest
+        };
 }
 
 export async function inspectCurrentBackend(): Promise<InstalledBackendBinary | null> {
@@ -432,39 +437,36 @@ export async function inspectCurrentBackend(): Promise<InstalledBackendBinary | 
 }
 
 export async function inspectBundledBackend(): Promise<InstalledBackendBinary> {
-	const bundleDir: string = getBundledBackendDir();
-	const manifestPath: string = join(bundleDir, PAYLOAD_MANIFEST_FILE_NAME);
-	const executablePath: string = join(bundleDir, EXECUTABLE_FILE_NAME);
-	const sandboxHelperPath: string = join(bundleDir, SANDBOX_HELPER_FILE_NAME);
-	const manifest: BackendPayloadManifestV1 = parseBackendPayloadManifest(
-		JSON.parse(await readFile(manifestPath, "utf8")) as unknown
-	);
-	assertBackendManifestCompatible(manifest, getStudioVersion());
-	if (manifest.platform !== process.platform || manifest.arch !== process.arch) {
-		throw new Error(
-			`Bundled backend targets ${manifest.platform}/${manifest.arch}, not ${process.platform}/${process.arch}.`
-		);
-	}
-	await verifyFile(
-		executablePath,
-		manifest.executable.size,
-		manifest.executable.sha256,
-		"Bundled backend executable"
-	);
-	await verifyFile(
-		sandboxHelperPath,
-		manifest.sandboxHelper.size,
-		manifest.sandboxHelper.sha256,
-		"Bundled Windows sandbox helper"
-	);
-	return {
-		version: manifest.version,
-		versionDir: bundleDir,
-		executablePath,
-		sandboxHelperPath,
-		manifestPath,
-		manifest
-	};
+        const bundleDir: string = getBundledBackendDir();
+        const manifestPath: string = join(bundleDir, PAYLOAD_MANIFEST_FILE_NAME);
+        const executablePath: string = join(bundleDir, EXECUTABLE_FILE_NAME);
+        const manifest: BackendPayloadManifestV1 = parseBackendPayloadManifest(
+                JSON.parse(await readFile(manifestPath, "utf8")) as unknown
+        );
+        assertBackendManifestCompatible(manifest, getStudioVersion());
+        if (manifest.platform !== process.platform || manifest.arch !== process.arch) {
+                throw new Error("Bundled backend target platform does not match this machine.");
+        }
+        await verifyFile(executablePath, manifest.executable.size, manifest.executable.sha256, "Bundled backend executable");
+        const sandboxHelperPath: string | null = manifest.sandboxHelper === null
+                ? null
+                : join(bundleDir, manifest.sandboxHelper.fileName);
+        if (sandboxHelperPath !== null && manifest.sandboxHelper !== null) {
+                await verifyFile(
+                        sandboxHelperPath,
+                        manifest.sandboxHelper.size,
+                        manifest.sandboxHelper.sha256,
+                        "Bundled Windows sandbox helper"
+                );
+        }
+        return {
+                version: manifest.version,
+                versionDir: bundleDir,
+                executablePath,
+                sandboxHelperPath,
+                manifestPath,
+                manifest
+        };
 }
 
 async function fetchChecked(url: string): Promise<Response> {
@@ -589,72 +591,84 @@ const POWERSHELL_EXTRACT_SCRIPT: string = [
 ].join("\n");
 
 async function extractBackendArchive(archivePath: string, destinationDir: string): Promise<void> {
-	await mkdir(destinationDir, { recursive: true });
-	const result: CommandResult = await runCommand(
-		"powershell.exe",
-		["-NoProfile", "-NonInteractive", "-Command", POWERSHELL_EXTRACT_SCRIPT],
-		{
-			env: {
-				...process.env,
-				DAEDALUS_ARCHIVE_PATH: archivePath,
-				DAEDALUS_EXTRACT_DIR: destinationDir
-			},
-			timeoutMs: 60000
-		}
-	);
-	if (result.exitCode !== 0) {
-		throw new Error(result.stderr.trim() || result.stdout.trim() || "Failed to extract backend archive.");
-	}
+        await mkdir(destinationDir, { recursive: true });
+        if (process.platform === "linux") {
+                const listing: CommandResult = await runCommand("unzip", ["-Z1", archivePath], { env: process.env, timeoutMs: 60000 });
+                if (listing.exitCode !== 0) {
+                        throw new Error(listing.stderr.trim() || listing.stdout.trim() || "Failed to inspect backend archive.");
+                }
+                const entries: string[] = listing.stdout.split(/\r?\n/u).map((entry) => entry.trim()).filter(Boolean);
+                const allowedEntries: string[] = [EXECUTABLE_FILE_NAME, PAYLOAD_MANIFEST_FILE_NAME];
+                if (entries.length !== allowedEntries.length || entries.some((entry) => !allowedEntries.includes(entry))) {
+                        throw new Error("Unexpected backend archive entries.");
+                }
+                const result: CommandResult = await runCommand("unzip", ["-q", archivePath, "-d", destinationDir], { env: process.env, timeoutMs: 60000 });
+                if (result.exitCode !== 0) {
+                        throw new Error(result.stderr.trim() || result.stdout.trim() || "Failed to extract backend archive.");
+                }
+                await chmod(join(destinationDir, EXECUTABLE_FILE_NAME), 0o755);
+                return;
+        }
+        const result: CommandResult = await runCommand(
+                "powershell.exe",
+                ["-NoProfile", "-NonInteractive", "-Command", POWERSHELL_EXTRACT_SCRIPT],
+                {
+                        env: {
+                                ...process.env,
+                                DAEDALUS_ARCHIVE_PATH: archivePath,
+                                DAEDALUS_EXTRACT_DIR: destinationDir
+                        },
+                        timeoutMs: 60000
+                }
+        );
+        if (result.exitCode !== 0) {
+                throw new Error(result.stderr.trim() || result.stdout.trim() || "Failed to extract backend archive.");
+        }
 }
 
 async function finalizeStagingDirectory(
-	stagingDir: string,
-	expectedManifest: BackendPayloadManifestV1
+        stagingDir: string,
+        expectedManifest: BackendPayloadManifestV1
 ): Promise<InstalledBackendBinary> {
-	const payloadManifestPath: string = join(stagingDir, PAYLOAD_MANIFEST_FILE_NAME);
-	const manifestBytes: Buffer = await readFile(payloadManifestPath);
-	const payloadManifest: BackendPayloadManifestV1 = parseBackendPayloadManifest(
-		JSON.parse(manifestBytes.toString("utf8")) as unknown
-	);
-	if (!payloadManifestsMatch(payloadManifest, expectedManifest)) {
-		throw new Error("Backend payload manifest does not match its release manifest.");
-	}
-	const stagingExecutablePath: string = join(stagingDir, EXECUTABLE_FILE_NAME);
-	const stagingSandboxHelperPath: string = join(stagingDir, SANDBOX_HELPER_FILE_NAME);
-	await verifyFile(
-		stagingExecutablePath,
-		payloadManifest.executable.size,
-		payloadManifest.executable.sha256,
-		"Backend executable"
-	);
-	await verifyFile(
-		stagingSandboxHelperPath,
-		payloadManifest.sandboxHelper.size,
-		payloadManifest.sandboxHelper.sha256,
-		"Backend Windows sandbox helper"
-	);
-
-	const versionDir: string = assertInside(
-		getManagedBackendVersionsDir(),
-		join(getManagedBackendVersionsDir(), payloadManifest.version)
-	);
-	if (existsSync(versionDir)) {
-		try {
-			const installed: InstalledBackendBinary = await inspectInstalledBackend(versionDir);
-			if (installed.manifest.executable.sha256 === payloadManifest.executable.sha256) {
-				await rm(stagingDir, { recursive: true, force: true });
-				await runBackendSelfTest(installed);
-				return installed;
-			}
-		} catch {
-			// Replace only a payload that failed full validation.
-		}
-		await rm(versionDir, { recursive: true, force: true, maxRetries: 8, retryDelay: 250 });
-	}
-	await rename(stagingDir, versionDir);
-	const installed: InstalledBackendBinary = await inspectInstalledBackend(versionDir);
-	await runBackendSelfTest(installed);
-	return installed;
+        const payloadManifestPath: string = join(stagingDir, PAYLOAD_MANIFEST_FILE_NAME);
+        const manifestBytes: Buffer = await readFile(payloadManifestPath);
+        const payloadManifest: BackendPayloadManifestV1 = parseBackendPayloadManifest(
+                JSON.parse(manifestBytes.toString("utf8")) as unknown
+        );
+        if (!payloadManifestsMatch(payloadManifest, expectedManifest)) {
+                throw new Error("Backend payload manifest does not match its release manifest.");
+        }
+        const stagingExecutablePath: string = join(stagingDir, EXECUTABLE_FILE_NAME);
+        await verifyFile(stagingExecutablePath, payloadManifest.executable.size, payloadManifest.executable.sha256, "Backend executable");
+        if (payloadManifest.sandboxHelper !== null) {
+                await verifyFile(
+                        join(stagingDir, payloadManifest.sandboxHelper.fileName),
+                        payloadManifest.sandboxHelper.size,
+                        payloadManifest.sandboxHelper.sha256,
+                        "Backend Windows sandbox helper"
+                );
+        }
+        const versionDir: string = assertInside(
+                getManagedBackendVersionsDir(),
+                join(getManagedBackendVersionsDir(), payloadManifest.version)
+        );
+        if (existsSync(versionDir)) {
+                try {
+                        const installed: InstalledBackendBinary = await inspectInstalledBackend(versionDir);
+                        if (installed.manifest.executable.sha256 === payloadManifest.executable.sha256) {
+                                await rm(stagingDir, { recursive: true, force: true });
+                                await runBackendSelfTest(installed);
+                                return installed;
+                        }
+                } catch {
+                        // Replace only a payload that failed full validation.
+                }
+                await rm(versionDir, { recursive: true, force: true, maxRetries: 8, retryDelay: 250 });
+        }
+        await rename(stagingDir, versionDir);
+        const installed: InstalledBackendBinary = await inspectInstalledBackend(versionDir);
+        await runBackendSelfTest(installed);
+        return installed;
 }
 
 export async function stageBackendRelease(
@@ -693,25 +707,29 @@ export async function stageBackendRelease(
 }
 
 export async function stageBundledBackend(): Promise<InstalledBackendBinary> {
-	const bundled: InstalledBackendBinary = await inspectBundledBackend();
-	const manifestBytes: Buffer = await readFile(bundled.manifestPath);
-	const versionsDir: string = getManagedBackendVersionsDir();
-	const stagingDir: string = assertInside(
-		versionsDir,
-		join(versionsDir, `${bundled.manifest.version}.staging`)
-	);
-	await mkdir(versionsDir, { recursive: true });
-	await rm(stagingDir, { recursive: true, force: true });
-	await mkdir(stagingDir, { recursive: true });
-	try {
-		await copyFile(bundled.executablePath, join(stagingDir, EXECUTABLE_FILE_NAME));
-		await copyFile(bundled.sandboxHelperPath, join(stagingDir, SANDBOX_HELPER_FILE_NAME));
-		await writeFile(join(stagingDir, PAYLOAD_MANIFEST_FILE_NAME), manifestBytes);
-		return await finalizeStagingDirectory(stagingDir, bundled.manifest);
-	} catch (error: unknown) {
-		await rm(stagingDir, { recursive: true, force: true });
-		throw error;
-	}
+        const bundled: InstalledBackendBinary = await inspectBundledBackend();
+        const manifestBytes: Buffer = await readFile(bundled.manifestPath);
+        const versionsDir: string = getManagedBackendVersionsDir();
+        const stagingDir: string = assertInside(
+                versionsDir,
+                join(versionsDir, bundled.manifest.version + ".staging")
+        );
+        await mkdir(versionsDir, { recursive: true });
+        await rm(stagingDir, { recursive: true, force: true });
+        await mkdir(stagingDir, { recursive: true });
+        try {
+                const targetExecutablePath: string = join(stagingDir, EXECUTABLE_FILE_NAME);
+                await copyFile(bundled.executablePath, targetExecutablePath);
+                await chmod(targetExecutablePath, 0o755);
+                if (bundled.sandboxHelperPath !== null) {
+                        await copyFile(bundled.sandboxHelperPath, join(stagingDir, SANDBOX_HELPER_FILE_NAME));
+                }
+                await writeFile(join(stagingDir, PAYLOAD_MANIFEST_FILE_NAME), manifestBytes);
+                return await finalizeStagingDirectory(stagingDir, bundled.manifest);
+        } catch (error: unknown) {
+                await rm(stagingDir, { recursive: true, force: true });
+                throw error;
+        }
 }
 
 function createCurrentFile(

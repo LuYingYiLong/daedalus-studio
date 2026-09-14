@@ -140,16 +140,27 @@ jobs:
       NODE_OPTIONS: --max-old-space-size=4096
       ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
       ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
+      DAEDALUS_BACKEND_SOURCE: ${{ github.workspace }}/backend-source
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Checkout backend
+        uses: actions/checkout@v4
+        with:
+          repository: LuYingYiLong/daedalus-backend
+          ref: v1.4.3
+          path: backend-source
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24.x"
           cache: npm
+
+      - name: Install backend dependencies
+        run: npm ci --prefix "$GITHUB_WORKSPACE/backend-source"
 
       - name: Install Linux packaging dependencies
         run: |
