@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import type {
 	AdditionalContextItem,
 	AgentGoalState,
+	ConversationFlowSummary,
 	MessageQueueItem,
 	PendingGuide,
 	PendingToolBudget,
@@ -77,6 +78,7 @@ import type { TimelinePageStore } from "@/domain/workbench/timeline-page-store";
 import {
 	type WorkspaceLaunchTargetId,
 } from "@/domain/workspace/workspace-launch";
+import useHomeFlowController from "@/features/home/flow/useHomeFlowController";
 
 type HomePageProps = {
 	workspaceRefreshToken: number;
@@ -423,11 +425,13 @@ function HomePage({
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
 	const {
 		mainSurface,
+		primarySurface,
 		chatSurfaceSettled,
 		scheduledTaskAttentionCount,
 		composerInputRequest,
 		handleHomeStarterSelect,
 		transitionToChatSurface,
+		showPrimarySurface,
 		showScheduledTasksSurface,
 		handleScheduledTasksOverlayTransitionEnd,
 		beginNewSessionSurface,
@@ -442,6 +446,51 @@ function HomePage({
 		onNewWorkspaceSession,
 		onSessionSelect,
 	});
+	const defaultFlowOptions = useMemo(() => ({
+		...(homeWorkspace?.id === undefined ? {} : { workspaceId: homeWorkspace.id }),
+		...(selectedProviderId === null ? {} : { provider: selectedProviderId }),
+		...(selectedModelId === null ? {} : { model: selectedModelId }),
+		...(reasoningEffort === null ? {} : { reasoningEffort }),
+		chatMode: mode,
+		approvalMode,
+	}), [approvalMode, homeWorkspace?.id, mode, reasoningEffort, selectedModelId, selectedProviderId]);
+	const flowController = useHomeFlowController({
+		enabled: primarySurface === "flow",
+		defaultFlow: defaultFlowOptions,
+		activeSessionId,
+		activeSessionMetadata,
+		composerMessage: message,
+		isSessionLoading,
+		isSending,
+		onSessionSelect,
+		onDraftChange,
+		onSubmit: (text: string): void => onSubmit(text),
+		onOpenChat: (session: SessionMetadata): void => {
+			transitionToChatSurface();
+			onSessionSelect(session);
+		},
+	});
+	const lastChatSessionRef = useRef<SessionMetadata | null>(null);
+	useEffect((): void => {
+		if (primarySurface === "chat" && activeSessionMetadata?.surface !== "flow_branch") {
+			lastChatSessionRef.current = activeSessionMetadata;
+		}
+	}, [activeSessionMetadata, primarySurface]);
+	const handlePrimarySurfaceChange = useCallback((surface: "chat" | "flow"): void => {
+		if (surface === "chat" && activeSessionMetadata?.surface === "flow_branch") {
+			if (lastChatSessionRef.current !== null) {
+				showPrimarySurface(surface);
+				void onSessionSelect(lastChatSessionRef.current);
+				return;
+			}
+			requestNewSessionSurface();
+			return;
+		}
+		showPrimarySurface(surface);
+		if (surface === "chat" && lastChatSessionRef.current !== null) {
+			void onSessionSelect(lastChatSessionRef.current);
+		}
+	}, [activeSessionMetadata?.surface, onSessionSelect, requestNewSessionSurface, showPrimarySurface]);
 	const conversationTimelinePaneRef =
 		useRef<ConversationTimelinePaneHandle | null>(null);
 	const chatBodyRef = useRef<HTMLDivElement | null>(null);
@@ -664,7 +713,7 @@ function HomePage({
 			messageApi,
 		});
 	useExternalBrowserSession(
-		mainSurface === "chat" ? activeSessionId : null,
+		mainSurface === "scheduledTasks" ? null : activeSessionId,
 		workspaceForActions?.id ?? null,
 	);
 	const toggleWorkspaceSidebar = useCallback((): void => {
@@ -798,13 +847,18 @@ function HomePage({
 		runningSessionIds,
 		unreadSessionIds,
 		forkingSessionId,
-		sessionUpdate: activeSessionMetadata,
+		sessionUpdate: activeSessionMetadata?.surface === "flow_branch" ? null : activeSessionMetadata,
 		onNewSession: requestNewUnboundSessionSurface,
 		onSessionSelect: (session): void => {
 			transitionToChatSurface();
 			onSessionSelect(session);
 		},
 		onSessionFork,
+		onSessionCopyToFlow: (session): void => {
+			void flowController.createFromChat(session).then((created: boolean): void => {
+				if (created) showPrimarySurface("flow");
+			});
+		},
 		onSessionArchive,
 		onSessionRename,
 		onSessionWorkspaceMove,
@@ -814,6 +868,15 @@ function HomePage({
 		onWorkspaceDelete,
 		onWorkspaceUpdate,
 		onWorkspaceProjectCreated,
+	};
+	const flowTreeProps = {
+		flows: flowController.flows,
+		workspaces: workspaceOptions,
+		selectedFlowId: flowController.snapshot?.flow.flowId ?? null,
+		isLoading: flowController.isLoading,
+		isMutating: flowController.isMutating,
+		onSelect: (flowId: string): void => { void flowController.selectFlow(flowId); },
+		onArchive: (flow: ConversationFlowSummary): void => { void flowController.archiveFlowById(flow.flowId); },
 	};
 
 	const commonDockPanelProps = {
@@ -998,7 +1061,7 @@ function HomePage({
 
 	return (
 		<>
-			<ComputerObservationBoundary sessionId={mainSurface === "chat" ? activeSessionId : null} workspaceId={workspaceForActions?.id ?? null} />
+			<ComputerObservationBoundary sessionId={mainSurface === "scheduledTasks" ? null : activeSessionId} workspaceId={workspaceForActions?.id ?? null} />
 			<HomePageShell
 			messageContextHolder={messageContextHolder}
 			workspaceSidebarPreferences={visualWorkspaceSidebar}
@@ -1009,8 +1072,12 @@ function HomePage({
 			workspaceSidebar={
 					<HomeWorkspaceSidebar
 						treeProps={workspaceTreeProps}
+						flowTreeProps={flowTreeProps}
+						primarySurface={primarySurface}
 						isOpen={workspaceSidebarOpen}
 						onNewSession={requestNewSessionSurface}
+						onNewFlow={(): void => { void flowController.createNewFlow(); }}
+						onPrimarySurfaceChange={handlePrimarySurfaceChange}
 						onOpenScheduledTasks={showScheduledTasksSurface}
 						scheduledTasksActive={mainSurface === "scheduledTasks"}
 						scheduledTaskAttentionCount={
@@ -1024,6 +1091,7 @@ function HomePage({
 		>
 					<HomePageWorkbench
 						mainSurface={mainSurface}
+						primarySurface={primarySurface}
 						activeFullscreenDock={activeFullscreenDock}
 						fullscreenMotionDisabled={fullscreenMotionDisabled}
 						bottomDockFullscreen={bottomDockFullscreen}
@@ -1031,7 +1099,9 @@ function HomePage({
 						isDockFullscreen={isDockFullscreen}
 						isFullscreenBrowserPanel={isFullscreenBrowserPanel}
 						pageActionControls={pageActionControls}
+						pageActionControlsWide={showWorkspaceLaunchControls}
 						chatSurfaceProps={chatSurfaceProps}
+						flowSurfaceProps={{ controller: flowController, chatSurfaceProps }}
 						sideDockConfig={sideDockConfig}
 						bottomDockConfig={bottomDockConfig}
 						renderSideDock={renderSideDock}

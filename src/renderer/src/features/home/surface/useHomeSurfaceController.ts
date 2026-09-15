@@ -11,6 +11,9 @@ export type NewSessionOptions = {
 	initialDraft?: string;
 };
 
+export type HomePrimarySurface = "chat" | "flow";
+export type HomeMainSurface = HomePrimarySurface | "scheduledTasks";
+
 type UseHomeSurfaceControllerParams = {
 	onNewSession: (options?: NewSessionOptions) => void;
 	onNewUnboundSession: () => void;
@@ -22,12 +25,14 @@ type UseHomeSurfaceControllerParams = {
 };
 
 export type HomeSurfaceController = {
-	mainSurface: "chat" | "scheduledTasks";
+	mainSurface: HomeMainSurface;
+	primarySurface: HomePrimarySurface;
 	chatSurfaceSettled: boolean;
 	scheduledTaskAttentionCount: number;
 	composerInputRequest: { requestId: number; message: string } | null;
 	handleHomeStarterSelect: (prompt: string) => void;
 	transitionToChatSurface: () => void;
+	showPrimarySurface: (surface: HomePrimarySurface) => void;
 	showScheduledTasksSurface: () => void;
 	handleScheduledTasksOverlayTransitionEnd: (
 		event: TransitionEvent<HTMLDivElement>,
@@ -50,9 +55,8 @@ function useHomeSurfaceController({
 	onSessionSelect,
 }: UseHomeSurfaceControllerParams): HomeSurfaceController {
 	const { t } = useTranslation();
-	const [mainSurface, setMainSurface] = useState<
-		"chat" | "scheduledTasks"
-	>("chat");
+	const [mainSurface, setMainSurface] = useState<HomeMainSurface>("chat");
+	const [primarySurface, setPrimarySurface] = useState<HomePrimarySurface>("chat");
 	const [chatSurfaceSettled, setChatSurfaceSettled] =
 		useState<boolean>(true);
 	const [scheduledTaskAttentionCount, setScheduledTaskAttentionCount] =
@@ -83,6 +87,7 @@ function useHomeSurfaceController({
 			mainSurface === "scheduledTasks";
 		clearChatSurfaceSettleTimer();
 		setMainSurface("chat");
+		setPrimarySurface("chat");
 
 		if (!wasScheduledTasksSurface) {
 			setChatSurfaceSettled(true);
@@ -95,6 +100,13 @@ function useHomeSurfaceController({
 			setChatSurfaceSettled(true);
 		}, CHAT_SURFACE_TRANSITION_FALLBACK_MS);
 	}, [clearChatSurfaceSettleTimer, mainSurface]);
+
+	const showPrimarySurface = useCallback((surface: HomePrimarySurface): void => {
+		clearChatSurfaceSettleTimer();
+		setPrimarySurface(surface);
+		setMainSurface(surface);
+		setChatSurfaceSettled(true);
+	}, [clearChatSurfaceSettleTimer]);
 
 	const showScheduledTasksSurface = useCallback((): void => {
 		clearChatSurfaceSettleTimer();
@@ -220,11 +232,13 @@ function useHomeSurfaceController({
 
 	return {
 		mainSurface,
+		primarySurface,
 		chatSurfaceSettled,
 		scheduledTaskAttentionCount,
 		composerInputRequest,
 		handleHomeStarterSelect,
 		transitionToChatSurface,
+		showPrimarySurface,
 		showScheduledTasksSurface,
 		handleScheduledTasksOverlayTransitionEnd,
 		beginNewSessionSurface,

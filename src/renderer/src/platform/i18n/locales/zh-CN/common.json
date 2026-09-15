@@ -618,6 +618,41 @@
 			}
 		}
 	},
+	"flow": {
+		"surfaces": { "chat": "对话", "flow": "Flow" },
+		"defaultTitle": "未命名 Flow {{count}}",
+		"branchCount": "{{count}} 条分支",
+		"branchLabel": "分支 {{count}}",
+		"busy": "另一条分支正在运行。当前 Flow 同时只能运行一条分支。",
+		"status": {
+			"completed": "已完成",
+			"streaming": "响应中",
+			"waiting": "等待中",
+			"failed": "失败",
+			"stopped": "已停止"
+		},
+		"nodes": { "user": "用户", "assistant": "AI", "emptyResponse": "暂无回答内容" },
+		"actions": {
+			"new": "新建 Flow",
+			"details": "查看详情",
+			"regenerate": "重新生成为新分支",
+			"derive": "从此派生",
+			"copyFromChat": "复制为 Flow",
+			"copyToChat": "复制为对话",
+			"rename": "重命名",
+			"archive": "归档 Flow",
+			"more": "更多 Flow 操作",
+			"selectBranch": "选择 Flow 分支",
+			"openActiveBranch": "打开活动分支"
+		},
+		"empty": {
+			"description": "创建一个 Flow，用节点探索多条对话分支",
+			"canvas": "在下方输入第一条消息，节点会在响应时自动出现"
+		},
+		"tree": { "label": "Flow 列表", "empty": "暂无 Flow", "unbound": "未绑定项目" },
+		"details": { "title": "节点详情" },
+		"rename": { "title": "重命名 Flow" }
+	},
 	"agentPage": {
 		"worktree": {
 			"label": "工作树",

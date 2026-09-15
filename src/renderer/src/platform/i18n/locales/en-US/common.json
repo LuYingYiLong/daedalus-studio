@@ -620,6 +620,41 @@
 			}
 		}
 	},
+	"flow": {
+		"surfaces": { "chat": "Chat", "flow": "Flow" },
+		"defaultTitle": "Untitled Flow {{count}}",
+		"branchCount": "{{count}} branches",
+		"branchLabel": "Branch {{count}}",
+		"busy": "Another branch is running. A Flow can run only one branch at a time.",
+		"status": {
+			"completed": "Completed",
+			"streaming": "Streaming",
+			"waiting": "Waiting",
+			"failed": "Failed",
+			"stopped": "Stopped"
+		},
+		"nodes": { "user": "User", "assistant": "AI", "emptyResponse": "No response yet" },
+		"actions": {
+			"new": "New Flow",
+			"details": "Details",
+			"regenerate": "Regenerate as branch",
+			"derive": "Branch from here",
+			"copyFromChat": "Copy as Flow",
+			"copyToChat": "Copy as chat",
+			"rename": "Rename",
+			"archive": "Archive Flow",
+			"more": "More Flow actions",
+			"selectBranch": "Select Flow branch",
+			"openActiveBranch": "Open active branch"
+		},
+		"empty": {
+			"description": "Create a Flow to explore conversation branches as nodes",
+			"canvas": "Send the first message below and nodes will appear with the response"
+		},
+		"tree": { "label": "Flow list", "empty": "No Flows", "unbound": "No project" },
+		"details": { "title": "Node details" },
+		"rename": { "title": "Rename Flow" }
+	},
 	"agentPage": {
 		"worktree": {
 			"label": "Worktree",

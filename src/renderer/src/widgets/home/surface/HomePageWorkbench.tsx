@@ -12,9 +12,12 @@ import {
 } from "@/features/home/dock/useHomePageDockController";
 import ScheduledTasksPage from "@/widgets/scheduled-tasks/ScheduledTasksPage";
 import styles from "../HomePage.module.css";
+import HomeFlowSurface, { type HomeFlowSurfaceProps } from "@/widgets/flow/HomeFlowSurface";
+import type { HomeMainSurface, HomePrimarySurface } from "@/features/home/surface/useHomeSurfaceController";
 
 export type HomePageWorkbenchProps = {
-	mainSurface: "chat" | "scheduledTasks";
+	mainSurface: HomeMainSurface;
+	primarySurface: HomePrimarySurface;
 	activeFullscreenDock: "side" | "bottom" | null;
 	fullscreenMotionDisabled: boolean;
 	bottomDockFullscreen: boolean;
@@ -22,12 +25,14 @@ export type HomePageWorkbenchProps = {
 	isDockFullscreen: boolean;
 	isFullscreenBrowserPanel: boolean;
 	pageActionControls: ReactNode;
+	pageActionControlsWide: boolean;
 	chatSurfaceProps: HomeChatSurfaceProps;
+	flowSurfaceProps: HomeFlowSurfaceProps;
 	sideDockConfig: HomeDockPanelConfigs["sideDockConfig"];
 	bottomDockConfig: HomeDockPanelConfigs["bottomDockConfig"];
 	renderSideDock: boolean;
 	renderBottomDock: boolean;
-	renderComposer: (compact: boolean) => React.JSX.Element;
+	renderComposer: (compact: boolean, floating?: boolean) => React.JSX.Element;
 	onBottomDockResize: (sizes: number[]) => void;
 	onBottomDockResizeEnd: (sizes: number[]) => void;
 	onSideDockResize: (sizes: number[]) => void;
@@ -45,6 +50,7 @@ export type HomePageWorkbenchProps = {
 
 function HomePageWorkbench({
 	mainSurface,
+	primarySurface,
 	activeFullscreenDock,
 	fullscreenMotionDisabled,
 	bottomDockFullscreen,
@@ -52,7 +58,9 @@ function HomePageWorkbench({
 	isDockFullscreen,
 	isFullscreenBrowserPanel,
 	pageActionControls,
+	pageActionControlsWide,
 	chatSurfaceProps,
+	flowSurfaceProps,
 	sideDockConfig,
 	bottomDockConfig,
 	renderSideDock,
@@ -74,6 +82,8 @@ function HomePageWorkbench({
 		<div
 			className={styles.agentMain}
 			data-main-surface={mainSurface}
+			data-page-actions={pageActionControls !== null ? "true" : undefined}
+			data-page-actions-wide={pageActionControlsWide ? "true" : undefined}
 			data-dock-fullscreen={activeFullscreenDock ?? undefined}
 		>
 			{pageActionControls !== null ? (
@@ -122,7 +132,11 @@ function HomePageWorkbench({
 							}
 							size={sideDockFullscreen ? 0 : undefined}
 						>
-							<HomeChatSurface {...chatSurfaceProps} />
+							{primarySurface === "flow" ? (
+								<HomeFlowSurface {...flowSurfaceProps} />
+							) : (
+								<HomeChatSurface {...chatSurfaceProps} />
+							)}
 						</Splitter.Panel>
 						<Splitter.Panel
 							size={

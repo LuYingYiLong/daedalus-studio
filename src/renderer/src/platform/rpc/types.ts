@@ -155,6 +155,11 @@ export type LocalEnvironmentConfigDocument = {
 export type SessionMetadata = {
 	id: string;
 	title: string;
+	surface?: "chat" | "flow_branch";
+	flow?: {
+		flowId: string;
+		branchId: string;
+	};
 	temporary?: boolean;
 	pinned?: boolean;
 	workspaceId?: string;
@@ -187,6 +192,73 @@ export type SessionMetadata = {
 
 export type SessionListResult = {
 	sessions: SessionMetadata[];
+};
+
+export type ConversationFlowNodeRole = "user" | "assistant";
+export type ConversationFlowNodeStatus =
+	| "completed"
+	| "streaming"
+	| "waiting"
+	| "failed"
+	| "stopped";
+
+export type ConversationFlow = {
+	flowId: string;
+	title: string;
+	workspaceId: string | null;
+	rootBranchId: string;
+	revision: number;
+	activeBranchId: string | null;
+	activeRequestId: string | null;
+	archivedAt: string | null;
+	createdFromSessionId: string | null;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type ConversationFlowSummary = ConversationFlow & {
+	branchCount: number;
+};
+
+export type ConversationFlowBranch = {
+	branchId: string;
+	flowId: string;
+	sessionId: string;
+	parentBranchId: string | null;
+	forkRequestId: string | null;
+	forkRole: ConversationFlowNodeRole | null;
+	seedRequestId: string | null;
+	headNodeId: string | null;
+	pendingRegenerate: boolean;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type ConversationFlowNode = {
+	nodeId: string;
+	flowId: string;
+	branchId: string;
+	sessionId: string;
+	requestId: string;
+	role: ConversationFlowNodeRole;
+	parentNodeId: string | null;
+	status: ConversationFlowNodeStatus;
+	contentPreview: string;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type ConversationFlowNodePosition = {
+	nodeId: string;
+	x: number;
+	y: number;
+};
+
+export type ConversationFlowSnapshot = {
+	flow: ConversationFlow;
+	branches: ConversationFlowBranch[];
+	nodes: ConversationFlowNode[];
+	positions: ConversationFlowNodePosition[];
 };
 
 export type AdditionalContextItem = {

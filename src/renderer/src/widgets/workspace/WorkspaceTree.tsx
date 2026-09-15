@@ -70,6 +70,7 @@ export type WorkspaceTreeProps = {
 	forkingSessionId?: string | null;
 	onSessionSelect?: (session: SessionMetadata) => void;
 	onSessionFork?: (session: SessionMetadata) => void;
+	onSessionCopyToFlow?: (session: SessionMetadata) => void;
 	onSessionArchive?: (session: SessionMetadata, context: SessionArchiveContext) => void;
 	onSessionRename?: (session: SessionMetadata) => void;
 	onSessionWorkspaceMove?: (
@@ -116,6 +117,7 @@ type WorkspaceTreeLabels = {
 	failedCopySessionId: string;
 	failedExportSession: string;
 	forkSession: string;
+	copySessionToFlow: string;
 	deleteWorktree: string;
 	deleteWorktreeTitle: string;
 	deleteWorktreeBody: string;
@@ -197,6 +199,7 @@ type CreateSessionMenuItemOptions = {
 	onCopySessionId: (session: SessionMetadata) => void;
 	onExportSession: (session: SessionMetadata) => void;
 	onFork: (session: SessionMetadata) => void;
+	onCopyToFlow: (session: SessionMetadata) => void;
 	onDeleteWorktree: (session: SessionMetadata) => void;
 };
 
@@ -306,6 +309,12 @@ function createSessionTreePresentation(
 				disabled: isRunning || options.forkingSessionId !== null,
 			},
 			{
+				key: "copy-to-flow",
+				label: labels.copySessionToFlow,
+				icon: <Icon name="workflow" />,
+				disabled: isRunning,
+			},
+			{
 				key: "archive",
 				label: labels.archiveSession,
 				icon: <Icon name="archive" />,
@@ -363,6 +372,10 @@ function createSessionTreePresentation(
 			}
 			if (key === "fork") {
 				options.onFork(session);
+				return;
+			}
+			if (key === "copy-to-flow") {
+				options.onCopyToFlow(session);
 				return;
 			}
 			if (key === "archive") {
@@ -750,6 +763,7 @@ function WorkspaceTree({
 	forkingSessionId = null,
 	onSessionSelect,
 	onSessionFork,
+	onSessionCopyToFlow,
 	onSessionArchive,
 	onSessionRename,
 	onSessionWorkspaceMove,
@@ -845,6 +859,7 @@ function WorkspaceTree({
 			failedCopySessionId: t("workspaceTree.errors.copySessionId"),
 			failedExportSession: t("workspaceTree.errors.exportSession"),
 			forkSession: t("workspaceTree.actions.forkSession"),
+			copySessionToFlow: t("flow.actions.copyFromChat"),
 			deleteWorktree: t("workspaceTree.actions.deleteWorktree"),
 			deleteWorktreeTitle: t("workspaceTree.modals.deleteWorktree.title"),
 			deleteWorktreeBody: t("workspaceTree.modals.deleteWorktree.body"),
@@ -1503,6 +1518,9 @@ function WorkspaceTree({
 			onFork: (session: SessionMetadata): void => {
 				onSessionFork?.(session);
 			},
+			onCopyToFlow: (session: SessionMetadata): void => {
+				onSessionCopyToFlow?.(session);
+			},
 			onDeleteWorktree: (session: SessionMetadata): void => {
 				setDeleteWorktreeTarget(session);
 			},
@@ -1530,6 +1548,7 @@ function WorkspaceTree({
 		labels,
 		movingSessionId,
 		onSessionFork,
+		onSessionCopyToFlow,
 		pinningSessionId,
 		runningSessionIdSet,
 		sessions,

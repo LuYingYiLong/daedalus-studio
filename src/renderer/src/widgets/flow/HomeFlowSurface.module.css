@@ -1,0 +1,211 @@
+.flowSurface {
+	position: relative;
+	display: grid;
+	grid-template-rows: auto auto minmax(0, 1fr);
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+	background: var(--ds-bg-tint);
+}
+
+.flowHeader {
+	position: relative;
+	z-index: 3;
+	grid-row: 1;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ds-space-3);
+	width: 100%;
+	box-sizing: border-box;
+	height: 40px;
+	min-height: 40px;
+	padding: 0px var(--flow-header-action-reserve, var(--ds-space-2)) 0px var(--ds-space-2);
+	background: transparent;
+	user-select: none;
+}
+
+.flowHeader[data-side-dock-open="true"] {
+	padding-right: var(--ds-space-2);
+}
+
+.flowTitle {
+	margin: 0 !important;
+}
+
+.branchSelect {
+	min-width: 136px;
+}
+
+.flowAlert {
+	grid-row: 2;
+	margin: var(--ds-space-2) var(--ds-space-3) 0;
+}
+
+.canvasRegion {
+	grid-row: 3;
+	position: relative;
+	min-width: 0;
+	min-height: 0;
+}
+
+.canvasRegion :global(.react-flow__viewport) {
+	mask-image: linear-gradient(to bottom, transparent 0px, rgb(0 0 0 / 72%) 12px, rgb(0 0 0) 24px, rgb(0 0 0) 100%);
+	mask-repeat: no-repeat;
+	mask-size: 100% 100%;
+}
+
+.canvasRegion :global(.react-flow__minimap) {
+	top: var(--ds-space-3);
+	right: var(--ds-space-3);
+	bottom: auto;
+	background: var(--ds-bg);
+	border: 1px solid var(--ant-color-border-secondary);
+	border-radius: var(--ds-radius-md);
+}
+
+.canvasRegion :global(.react-flow__controls) {
+	overflow: hidden;
+	border: 1px solid var(--ant-color-border-secondary);
+	border-radius: var(--ds-radius-md);
+	box-shadow: var(--ant-box-shadow-tertiary);
+}
+
+.canvasRegion :global(.react-flow__controls-button) {
+	color: var(--ant-color-text);
+	background: var(--ds-bg);
+	border-color: var(--ant-color-border-secondary);
+}
+
+.canvasSpinner {
+	position: absolute;
+	top: var(--ds-space-3);
+	right: var(--ds-space-3);
+	z-index: 8;
+}
+
+.emptyCanvasHint {
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	display: grid;
+	place-items: center;
+	color: var(--ant-color-text-tertiary);
+	pointer-events: none;
+}
+
+.nodeCard {
+	position: relative;
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr) auto;
+	width: 300px;
+	height: 168px;
+	padding: 12px 14px 10px;
+	border: 1px solid var(--ant-color-border-secondary);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-bg);
+	box-shadow: var(--ant-box-shadow-tertiary);
+	transition:
+		border-color 160ms ease,
+		box-shadow 160ms ease,
+		transform 160ms ease;
+}
+
+.nodeCard:hover,
+.nodeCardActive {
+	border-color: var(--ant-color-primary);
+	box-shadow: 0 8px 24px color-mix(in srgb, var(--ant-color-primary) 18%, transparent);
+}
+
+.nodeCard[data-role="user"] {
+	background: color-mix(in srgb, var(--ant-color-primary-bg) 42%, var(--ds-bg));
+}
+
+.nodeHeader,
+.nodeRole,
+.nodeActions {
+	display: flex;
+	align-items: center;
+}
+
+.nodeHeader {
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.nodeRole {
+	gap: 6px;
+	font-weight: 600;
+}
+
+.nodePreview {
+	margin: 8px 0 !important;
+	overflow: hidden;
+	color: var(--ant-color-text-secondary);
+	white-space: pre-wrap;
+}
+
+.nodeActions {
+	justify-content: flex-end;
+	gap: 4px;
+}
+
+.nodeHandle {
+	width: 8px !important;
+	height: 8px !important;
+	border: 2px solid var(--ds-bg) !important;
+	background: var(--ant-color-primary) !important;
+}
+
+.flowComposerHost {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 6;
+	min-width: 0;
+	pointer-events: none;
+}
+
+.flowComposerHost > section {
+	pointer-events: auto;
+}
+
+.flowComposerHost :global(.ant-divider),
+.flowComposerHost > section > header,
+.flowComposerHost > section > div[class*="chatBody"] {
+	display: none;
+}
+
+.flowComposerHost > section {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+.flowComposerHost > section > footer {
+	position: relative;
+}
+
+.composerBlocker {
+	position: absolute;
+	inset: 0;
+	z-index: 20;
+	cursor: not-allowed;
+	background: color-mix(in srgb, var(--ds-bg) 28%, transparent);
+}
+
+.nodeDetail {
+	height: calc(100vh - 116px);
+	min-height: 320px;
+}
+
+.emptyState {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+}

@@ -26,6 +26,7 @@ type BackendResponse =
 			error: {
 				code: string;
 				message: string;
+				details?: Record<string, unknown>;
 			};
 	  };
 
@@ -66,11 +67,13 @@ type ConnectionState =
 
 export class BackendRpcError extends Error {
 	readonly code: string;
+	readonly details: Record<string, unknown> | undefined;
 
-	constructor(code: string, message: string) {
+	constructor(code: string, message: string, details?: Record<string, unknown>) {
 		super(`${code}: ${message}`);
 		this.name = "BackendRpcError";
 		this.code = code;
+		this.details = details;
 	}
 }
 
@@ -514,7 +517,7 @@ export class BackendRpcClient {
 		}
 
 		pendingRequest.reject(
-			new BackendRpcError(message.error.code, message.error.message),
+			new BackendRpcError(message.error.code, message.error.message, message.error.details),
 		);
 	}
 

@@ -345,6 +345,10 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 		"session.subscribe": ({ params }) => ({ subscribed: true, sessionId: (params as { sessionId?: string }).sessionId }),
 		"session.unsubscribe": ({ params }) => ({ unsubscribed: true, sessionId: (params as { sessionId?: string }).sessionId }),
 		"workbench.patch": ({ params }) => ({ changed: true, workbench: createEmptyWorkbench(null), ...(params ? {} : {}) }),
+		"session.workbench.patch": ({ params }) => ({
+			changed: true,
+			workbench: createEmptyWorkbench((params as { sessionId?: string } | undefined)?.sessionId ?? null),
+		}),
 		"session.save": () => ({ saved: true, sessionId: "session-e2e-1", messageCount: 0 }),
 		"session.model.set": () => ({ metadata: { id: "session-e2e-1", title: "E2E Session", createdAt: MOCK_NOW, updatedAt: MOCK_NOW }, workbench: createEmptyWorkbench("session-e2e-1") }),
 		"ai.cancel": () => ({ cancelled: true }),

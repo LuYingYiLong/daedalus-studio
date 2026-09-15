@@ -61,10 +61,7 @@ export type HomeChatSurfaceProps = {
 	selectedLaunchTarget: WorkspaceLaunchTarget;
 	workspaceLaunchTargets: readonly WorkspaceLaunchTarget[];
 	openMessageWebUrl: (url: string) => void;
-	openMessageHtmlFile: (params: {
-		workspaceRoot: string;
-		filePath: string;
-	}) => void;
+	openMessageHtmlFile: (params: { workspaceRoot: string; filePath: string }) => void;
 	conversationTimelinePaneRef: MutableRefObject<ConversationTimelinePaneHandle | null>;
 	timelineStore: TimelinePageStore;
 	timelineNavigationEntries: SessionTimelineNavigationEntry[];
@@ -74,15 +71,11 @@ export type HomeChatSurfaceProps = {
 	activeRetryRequestId: string | null;
 	onLoadMoreBefore: () => void;
 	onLoadMoreAfter: () => void;
-	onTimelineNavigationLoadEntry: (
-		entry: SessionTimelineNavigationEntry,
-	) => Promise<void>;
+	onTimelineNavigationLoadEntry: (entry: SessionTimelineNavigationEntry) => Promise<void>;
 	onTimelineSearchLoadOffset: (blockOffset: number) => Promise<void>;
 	onRetryEditStart: (requestId: string) => void;
 	onRetryEditCancel: (requestId: string) => void;
-	onRetryFromUserMessage: (
-		payload: RetryUserMessagePayload,
-	) => Promise<boolean>;
+	onRetryFromUserMessage: (payload: RetryUserMessagePayload) => Promise<boolean>;
 	onForkFromUserMessage: (requestId: string) => Promise<void>;
 	forkDisabled: boolean;
 	forkingRequestId: string | null;
@@ -103,10 +96,7 @@ export type HomeChatSurfaceProps = {
 	isRejecting: boolean;
 	approvalError: string | null;
 	onApprovalApprove: (approvalId: string, consentText?: string) => void;
-	onApprovalApproveAndEnableAutoSafe: (
-		approvalId: string,
-		consentText?: string,
-	) => void;
+	onApprovalApproveAndEnableAutoSafe: (approvalId: string, consentText?: string) => void;
 	onApprovalReject: (approvalId: string) => void;
 	pendingToolBudget: PendingToolBudget | null;
 	isToolBudgetContinuing: boolean;
@@ -135,7 +125,8 @@ export type HomeChatSurfaceProps = {
 	onQueueMessageReorder: (queueIds: number[]) => void;
 	onGuideDelete: (guideId: string) => void;
 	onGuideReorder: (guideIds: string[]) => void;
-	renderComposer: (compact: boolean) => React.JSX.Element;
+	renderComposer: (compact: boolean, floating?: boolean) => React.JSX.Element;
+	composerFloating?: boolean;
 };
 
 function HomeChatSurface({
@@ -227,18 +218,22 @@ function HomeChatSurface({
 	onGuideDelete,
 	onGuideReorder,
 	renderComposer,
+	composerFloating = false,
 }: HomeChatSurfaceProps): React.JSX.Element {
 	const { t } = useTranslation();
-	const showComposerMascot: boolean = mascotEnabled && !isHome && activeSessionId !== null
-		&& !isDockFullscreen && pendingApproval === null && pendingToolBudget === null
-		&& pendingPlanClarification === null && pendingPlanApproval === null;
+	const showComposerMascot: boolean =
+		mascotEnabled &&
+		!isHome &&
+		activeSessionId !== null &&
+		!isDockFullscreen &&
+		pendingApproval === null &&
+		pendingToolBudget === null &&
+		pendingPlanClarification === null &&
+		pendingPlanApproval === null;
 
 	return (
 		<section className={styles.chatPanel}>
-			<header
-				className={styles.chatHeader}
-				data-side-dock-open={sideDockOpen ? "true" : undefined}
-			>
+			<header className={styles.chatHeader} data-side-dock-open={sideDockOpen ? "true" : undefined}>
 				<div className={styles.chatTitleRow}>
 					<Typography.Text
 						className={styles.chatText}
@@ -249,10 +244,7 @@ function HomeChatSurface({
 						{chatTitle}
 					</Typography.Text>
 					{activeSessionMetadata?.forkedFrom !== undefined ? (
-						<Tooltip
-							placement="bottom"
-							title={t("chat.fork.openSourceTooltip")}
-						>
+						<Tooltip placement="bottom" title={t("chat.fork.openSourceTooltip")}>
 							<Button
 								type="text"
 								size="small"
@@ -262,10 +254,7 @@ function HomeChatSurface({
 								icon={<Icon name="fork" />}
 								disabled={isSessionLoading}
 								onClick={(): void => {
-									void onForkSourceOpen(
-										activeSessionMetadata.forkedFrom!
-											.sessionId,
-									);
+									void onForkSourceOpen(activeSessionMetadata.forkedFrom!.sessionId);
 								}}
 							/>
 						</Tooltip>
@@ -274,9 +263,7 @@ function HomeChatSurface({
 						<Space size={4}>
 							<Tooltip
 								title={t("agentPage.worktree.source", {
-									workspace:
-										activeSessionMetadata.worktree
-											.sourceWorkspaceName,
+									workspace: activeSessionMetadata.worktree.sourceWorkspaceName,
 								})}
 							>
 								<span className={styles.worktreeBadge}>
@@ -287,21 +274,16 @@ function HomeChatSurface({
 							<Dropdown
 								menu={{
 									items: [
-										...((activeSessionMetadata.worktree
-											.status ?? "ready") === "ready"
+										...((activeSessionMetadata.worktree.status ?? "ready") === "ready"
 											? []
 											: [
 													{
 														key: "setup-retry",
-														label: t(
-															"agentPage.worktree.setupRetry",
-														),
+														label: t("agentPage.worktree.setupRetry"),
 													},
 													{
 														key: "setup-skip",
-														label: t(
-															"agentPage.worktree.setupSkip",
-														),
+														label: t("agentPage.worktree.setupSkip"),
 													},
 													{
 														type: "divider" as const,
@@ -309,40 +291,23 @@ function HomeChatSurface({
 												]),
 										{
 											key: "local",
-											label: t(
-												"agentPage.worktree.handoffLocal",
-											),
+											label: t("agentPage.worktree.handoffLocal"),
 											disabled:
-												(activeSessionMetadata.worktree
-													.location ?? "worktree") ===
-												"local",
+												(activeSessionMetadata.worktree.location ?? "worktree") === "local",
 										},
 										{
 											key: "worktree",
-											label: t(
-												"agentPage.worktree.handoffWorktree",
-											),
+											label: t("agentPage.worktree.handoffWorktree"),
 											disabled:
-												(activeSessionMetadata.worktree
-													.location ?? "worktree") ===
-												"worktree",
+												(activeSessionMetadata.worktree.location ?? "worktree") === "worktree",
 										},
 									],
 									onClick: ({ key }): void => {
-										if (
-											key === "setup-retry" ||
-											key === "setup-skip"
-										) {
-											void onSessionWorktreeSetup(
-												key === "setup-retry"
-													? "retry"
-													: "skip",
-											);
+										if (key === "setup-retry" || key === "setup-skip") {
+											void onSessionWorktreeSetup(key === "setup-retry" ? "retry" : "skip");
 											return;
 										}
-										void onSessionWorktreeHandoff(
-											key as "local" | "worktree",
-										);
+										void onSessionWorktreeHandoff(key as "local" | "worktree");
 									},
 								}}
 							>
@@ -357,8 +322,6 @@ function HomeChatSurface({
 					) : null}
 				</div>
 			</header>
-
-			<Divider size="small" />
 
 			<div
 				ref={chatBodyRef}
@@ -384,16 +347,11 @@ function HomeChatSurface({
 									: [
 											workspaceForActions.rootPath,
 											...workspaceForActions.sourceFolders.map(
-												(sourceFolder): string =>
-													sourceFolder.path,
+												(sourceFolder): string => sourceFolder.path,
 											),
 										],
-							godotExecutablePath:
-								effectiveGodotLaunchExecutablePath,
-							currentWorkspaceLaunch:
-								workspaceForActions === null
-									? null
-									: selectedLaunchTarget,
+							godotExecutablePath: effectiveGodotLaunchExecutablePath,
+							currentWorkspaceLaunch: workspaceForActions === null ? null : selectedLaunchTarget,
 							launchTargets: workspaceLaunchTargets,
 							openWebUrl: openMessageWebUrl,
 							openHtmlFile: openMessageHtmlFile,
@@ -403,9 +361,7 @@ function HomeChatSurface({
 							ref={conversationTimelinePaneRef}
 							sessionId={activeSessionId}
 							timelineStore={timelineStore}
-							timelineNavigationEntries={
-								timelineNavigationEntries
-							}
+							timelineNavigationEntries={timelineNavigationEntries}
 							isLoading={isSessionLoading}
 							errorMessage={sessionError}
 							isLoadingMoreBefore={isLoadingMoreBefore}
@@ -414,12 +370,8 @@ function HomeChatSurface({
 							activeRetryRequestId={activeRetryRequestId}
 							onLoadMoreBefore={onLoadMoreBefore}
 							onLoadMoreAfter={onLoadMoreAfter}
-							onTimelineNavigationLoadEntry={
-								onTimelineNavigationLoadEntry
-							}
-							onTimelineSearchLoadOffset={
-								onTimelineSearchLoadOffset
-							}
+							onTimelineNavigationLoadEntry={onTimelineNavigationLoadEntry}
+							onTimelineSearchLoadOffset={onTimelineSearchLoadOffset}
 							onRetryEditStart={onRetryEditStart}
 							onRetryEditCancel={onRetryEditCancel}
 							onRetryFromUserMessage={onRetryFromUserMessage}
@@ -428,9 +380,7 @@ function HomeChatSurface({
 							forkDisabled={forkDisabled}
 							forkingRequestId={forkingRequestId}
 							onInlineDiffReview={openReviewPanel}
-							onAwayFromBottomChange={
-								setScrollToBottomButtonVisible
-							}
+							onAwayFromBottomChange={setScrollToBottomButtonVisible}
 							contextItems={selectionMarkerContextItems}
 							onAddContext={onAddContext}
 							initialSelectionAskThreads={selectionAskThreads}
@@ -446,10 +396,7 @@ function HomeChatSurface({
 						className={styles.composerMascot}
 						style={{ "--mascot-scale": mascotSize / 100 } as CSSProperties}
 					>
-						<Mascot
-							sessionId={activeSessionId}
-							status={isSending && !isCancelling ? "thinking" : "idle"}
-						/>
+						<Mascot sessionId={activeSessionId} status={isSending && !isCancelling ? "thinking" : "idle"} />
 					</div>
 				) : null}
 				{!isHome ? (
@@ -461,9 +408,7 @@ function HomeChatSurface({
 						tabIndex={-1}
 						className={[
 							styles.scrollToBottomButton,
-							showExecutionStatusPanel
-								? styles.scrollToBottomButtonAboveExecutionStatus
-								: "",
+							showExecutionStatusPanel ? styles.scrollToBottomButtonAboveExecutionStatus : "",
 							styles.scrollToBottomButtonHidden,
 						]
 							.filter(Boolean)
@@ -479,9 +424,7 @@ function HomeChatSurface({
 						isRejecting={isRejecting}
 						errorMessage={approvalError}
 						onApprove={onApprovalApprove}
-						onApproveAndEnableAutoSafe={
-							onApprovalApproveAndEnableAutoSafe
-						}
+						onApproveAndEnableAutoSafe={onApprovalApproveAndEnableAutoSafe}
 						onReject={onApprovalReject}
 					/>
 				) : !isHome && pendingToolBudget !== null ? (
@@ -500,9 +443,7 @@ function HomeChatSurface({
 						planId={pendingPlanClarification.planId}
 						title={pendingPlanClarification.title}
 						question={pendingPlanClarification.question}
-						recommendedReplies={
-							pendingPlanClarification.recommendedReplies
-						}
+						recommendedReplies={pendingPlanClarification.recommendedReplies}
 						isSubmitting={isPlanClarificationSubmitting}
 						errorMessage={planClarificationError}
 						onSubmit={onPlanClarificationSubmit}
@@ -533,9 +474,7 @@ function HomeChatSurface({
 							/>
 						) : null}
 						{isDockFullscreen ? null : (
-							<div className={styles.composerAnchor}>
-								{renderComposer(false)}
-							</div>
+							<div className={styles.composerAnchor}>{renderComposer(false, composerFloating)}</div>
 						)}
 					</>
 				)}

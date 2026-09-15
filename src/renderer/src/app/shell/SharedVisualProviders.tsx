@@ -3,10 +3,7 @@ import { App as AntdApp, ConfigProvider, type ThemeConfig } from "antd";
 import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
 import i18n, { type ResolvedLanguage } from "@/platform/i18n";
-import {
-	createStudioTheme,
-	type StudioThemeVariant,
-} from "@/ui/styles/studio-theme";
+import { createStudioTheme, type StudioThemeVariant } from "@/ui/styles/studio-theme";
 import type { ResolvedTheme } from "@/domain/theme/studio-theme-preference";
 import { applyStudioAccentVariables } from "../../../../contracts/theme-color";
 import { applyStudioFontVariables } from "../../../../contracts/studio-fonts";
@@ -39,14 +36,11 @@ function SharedVisualProviders({
 	themeVariant = "desktop",
 	className,
 }: SharedVisualProvidersProps): React.JSX.Element {
-	const studioTheme: ThemeConfig = useMemo((): ThemeConfig => createStudioTheme(
-		resolvedTheme,
-		themeColor,
-		fontFamily,
-		fontFamilyCode,
-		uiFontSize,
-		themeVariant,
-	), [fontFamily, fontFamilyCode, resolvedTheme, themeColor, themeVariant, uiFontSize]);
+	const studioTheme: ThemeConfig = useMemo(
+		(): ThemeConfig =>
+			createStudioTheme(resolvedTheme, themeColor, fontFamily, fontFamilyCode, uiFontSize, themeVariant),
+		[fontFamily, fontFamilyCode, resolvedTheme, themeColor, themeVariant, uiFontSize],
+	);
 	const antdLocale = resolvedLanguage === "zh-CN" ? zhCN : enUS;
 
 	useEffect((): void => {
@@ -72,14 +66,27 @@ function SharedVisualProviders({
 		<ConfigProvider
 			theme={studioTheme}
 			locale={antdLocale}
-			select={{ suffixIcon: <Icon name="arrow-down" />, removeIcon: <Icon name="clear" />, menuItemSelectedIcon: <Icon name="check" /> }}
+			select={{
+				suffixIcon: <Icon name="arrow-down" />,
+				removeIcon: <Icon name="clear" />,
+				menuItemSelectedIcon: <Icon name="check" />,
+			}}
 			spin={{ indicator: <Icon name="spin-indicator" className="spinner" /> }}
-			collapse={{ expandIcon: ({ isActive }) => <span className={`collapseExpandIcon ${isActive ? "collapseExpandIconActive" : ""}`}><Icon name="arrow-down" /></span> }}
+			notification={{ closeIcon: <Icon name="close" /> }}
+			collapse={{
+				expandIcon: ({ isActive }) => (
+					<span className={`collapseExpandIcon ${isActive ? "collapseExpandIconActive" : ""}`}>
+						<Icon name="arrow-down" />
+					</span>
+				),
+			}}
 			modal={{ closeIcon: <Icon name="close" /> }}
 			tabs={{ moreIcon: <Icon name="more-h" /> }}
 			menu={{ expandIcon: <Icon name="arrow-forward" /> }}
 		>
-			<AntdApp component="div" className={className}>{children}</AntdApp>
+			<AntdApp component="div" className={className}>
+				{children}
+			</AntdApp>
 		</ConfigProvider>
 	);
 }

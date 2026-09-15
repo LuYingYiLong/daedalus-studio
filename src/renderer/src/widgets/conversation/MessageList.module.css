@@ -15,6 +15,9 @@
 	overflow-y: auto;
 	overflow-y: overlay;
 	scrollbar-gutter: auto;
+	mask-image: var(--message-list-top-mask, none);
+	mask-repeat: no-repeat;
+	mask-size: 100% 100%;
 }
 
 .listEdgeSpacer {

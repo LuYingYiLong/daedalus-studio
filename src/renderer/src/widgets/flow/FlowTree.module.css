@@ -1,0 +1,152 @@
+.tree {
+	min-width: 0;
+	min-height: 0;
+	overflow: auto;
+	padding: var(--ds-space-2) 0;
+}
+
+.treeRoot {
+	background: transparent !important;
+	user-select: none;
+}
+
+.treeItem {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	min-width: 0;
+	min-height: 30px;
+	margin: 2px 0;
+	padding: 0 8px !important;
+	border-radius: var(--ds-radius-lg);
+	transition: background-color var(--ant-motion-duration-mid);
+}
+
+.treeItem:hover {
+	background: var(--ant-control-item-bg-hover);
+}
+
+.treeItem:global(.ant-tree-treenode-selected) {
+	background: var(--ds-accent-muted);
+}
+
+.treeItem :global(.ant-tree-node-content-wrapper) {
+	display: flex;
+	flex: 1;
+	align-items: center;
+	min-width: 0;
+	min-height: 30px;
+	padding: 0 !important;
+	background: transparent !important;
+}
+
+.treeItemTitle,
+.treeItemSwitcher {
+	min-width: 0;
+}
+
+.treeItemSwitcher {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 20px !important;
+	min-width: 20px !important;
+	margin-inline-end: 4px;
+}
+
+.treeItemSwitcher::before {
+	background: transparent !important;
+}
+
+.groupTitle {
+	display: block;
+	overflow: hidden;
+	color: var(--ant-color-text-tertiary);
+	font-size: 12px;
+	font-weight: 500;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.item {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	min-width: 0;
+	min-height: 30px;
+	color: var(--ant-color-text);
+}
+
+.itemSelected {
+	color: var(--ant-color-primary-text);
+}
+
+.itemTitle {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.itemBadge {
+	color: var(--ant-color-text-tertiary);
+	font-size: 12px;
+}
+
+.itemBadge :global(.ant-badge-count) {
+	min-width: 18px;
+	height: 18px;
+	padding-inline: 5px;
+	color: var(--ant-color-text-tertiary);
+	font-size: 11px;
+	line-height: 18px;
+	background: var(--ant-color-fill-tertiary);
+	box-shadow: none;
+}
+
+.itemEndSlot {
+	display: grid;
+	grid-template-areas: "content";
+	align-items: center;
+	justify-items: end;
+	width: 28px;
+	height: 28px;
+}
+
+.itemEndSlot > * {
+	grid-area: content;
+}
+
+.itemRunning {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	color: var(--ant-color-primary);
+}
+
+.itemRunning :global(.ant-spin) {
+	font-size: 12px;
+}
+
+.archiveButton {
+	color: var(--ant-color-text-tertiary);
+	opacity: 0;
+	transition: opacity 120ms ease;
+}
+
+.treeItem:hover .archiveButton,
+.treeItem:focus-within .archiveButton,
+.archiveButton:focus-visible {
+	opacity: 1;
+}
+
+.loading,
+.empty {
+	padding: var(--ds-space-4) var(--ds-space-2);
+	text-align: center;
+}
