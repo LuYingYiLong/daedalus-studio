@@ -35,7 +35,10 @@ import {
 	isWorkflowTodoActive,
 } from "@/domain/composer/workflow-todo";
 import { isAgentGoalDismissed } from "@/domain/composer/goal-display";
-import { recordOpenedSession } from "@/domain/session/session-navigation-history";
+import {
+	recordOpenedSession,
+	setSessionNavigationSurface,
+} from "@/domain/session/session-navigation-history";
 
 export type SessionActivationControllerParams = {
 	activeSessionIdRef: MutableRefObject<string | null>;
@@ -139,6 +142,9 @@ export default function useSessionActivationController({
 			setLatestPlanClarification(result.latestPlanClarification);
 			setLatestPlanApproval(result.latestPlanApproval);
 			setActiveSessionMetadata(result.metadata);
+			const navigationSurface =
+				result.metadata.surface === "flow_branch" ? "flow" : "chat";
+			setSessionNavigationSurface(navigationSurface);
 			setSelectionAskThreads(result.selectionAskThreads);
 			const openedWorkbench: WorkbenchSnapshot = {
 				...result.workbench,
@@ -192,7 +198,8 @@ export default function useSessionActivationController({
 			);
 			if (
 				options.recordNavigation !== false &&
-				result.metadata.temporary !== true
+				result.metadata.temporary !== true &&
+				result.metadata.surface !== "flow_branch"
 			) {
 				recordOpenedSession(sessionId);
 			}

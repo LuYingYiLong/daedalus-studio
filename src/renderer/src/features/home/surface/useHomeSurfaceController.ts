@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type TransitionEvent } from "
 import { useTranslation } from "react-i18next";
 import type { SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
 import { fetchSessions } from "@/platform/rpc/session-api";
+import { setSessionNavigationSurface } from "@/domain/session/session-navigation-history";
 
 const CHAT_SURFACE_POST_TRANSITION_DELAY_MS: number = 80;
 const CHAT_SURFACE_TRANSITION_FALLBACK_MS: number = 500;
@@ -83,6 +84,7 @@ function useHomeSurfaceController({
 	}, []);
 
 	const transitionToChatSurface = useCallback((): void => {
+		setSessionNavigationSurface("chat");
 		const wasScheduledTasksSurface: boolean =
 			mainSurface === "scheduledTasks";
 		clearChatSurfaceSettleTimer();
@@ -102,6 +104,7 @@ function useHomeSurfaceController({
 	}, [clearChatSurfaceSettleTimer, mainSurface]);
 
 	const showPrimarySurface = useCallback((surface: HomePrimarySurface): void => {
+		setSessionNavigationSurface(surface);
 		clearChatSurfaceSettleTimer();
 		setPrimarySurface(surface);
 		setMainSurface(surface);

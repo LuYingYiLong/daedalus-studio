@@ -1,6 +1,8 @@
 export const SESSION_NAVIGATION_EVENT: string = "daedalus:session-navigation";
 export const NEW_SESSION_EVENT: string = "daedalus:new-session";
 
+export type SessionNavigationSurface = "chat" | "flow";
+
 export type SessionNavigationSnapshot = {
 	sessionIds: readonly string[];
 	currentIndex: number;
@@ -14,14 +16,18 @@ const MAX_SESSION_HISTORY_ENTRIES: number = 50;
 const listeners: Set<() => void> = new Set<() => void>();
 let sessionIds: string[] = [];
 let currentIndex: number = -1;
+let activeSurface: SessionNavigationSurface = "chat";
 let snapshot: SessionNavigationSnapshot = createSnapshot();
 
 function createSnapshot(): SessionNavigationSnapshot {
 	return {
 		sessionIds,
 		currentIndex,
-		canGoBack: currentIndex > 0,
-		canGoForward: currentIndex >= 0 && currentIndex < sessionIds.length - 1
+		canGoBack: activeSurface === "chat" && currentIndex > 0,
+		canGoForward:
+			activeSurface === "chat" &&
+			currentIndex >= 0 &&
+			currentIndex < sessionIds.length - 1,
 	};
 }
 
@@ -43,7 +49,28 @@ export function subscribeToSessionNavigation(listener: () => void): () => void {
 	};
 }
 
-export function recordOpenedSession(sessionId: string): void {
+export function setSessionNavigationSurface(
+	surface: SessionNavigationSurface,
+): void {
+	if (activeSurface === surface) {
+		return;
+	}
+	activeSurface = surface;
+	publish();
+}
+
+export function recordOpenedSession(
+	sessionId: string,
+	surface: SessionNavigationSurface = "chat",
+): void {
+	if (activeSurface !== surface) {
+		activeSurface = surface;
+		publish();
+	}
+	if (surface !== "chat") {
+		// Flow 分支通过 FlowTree 和分支选择器导航，不进入通用会话历史。
+		return;
+	}
 	if (sessionId.length === 0 || sessionIds[currentIndex] === sessionId) {
 		return;
 	}
@@ -56,6 +83,9 @@ export function recordOpenedSession(sessionId: string): void {
 }
 
 export function navigateSessionHistory(direction: SessionNavigationDirection): string | null {
+	if (activeSurface !== "chat") {
+		return null;
+	}
 	const nextIndex: number = direction === "back" ? currentIndex - 1 : currentIndex + 1;
 	const sessionId: string | undefined = sessionIds[nextIndex];
 	if (sessionId === undefined) {
