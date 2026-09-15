@@ -18,6 +18,7 @@ import {
 	getSessionNavigationSnapshot,
 	navigateSessionHistory,
 	SESSION_NAVIGATION_EVENT,
+	type SessionNavigationTarget,
 	subscribeToSessionNavigation,
 } from "@/domain/session/session-navigation-history";
 import styles from "./Titlebar.module.css";
@@ -408,13 +409,14 @@ function MainTitlebar({ appReady }: MainTitlebarProps): React.JSX.Element {
 	];
 
 	function handleSessionNavigation(direction: "back" | "forward"): void {
-		const sessionId: string | null = navigateSessionHistory(direction);
-		if (sessionId === null) {
+		const target: SessionNavigationTarget | null =
+			navigateSessionHistory(direction);
+		if (target === null) {
 			return;
 		}
 		window.dispatchEvent(
-			new CustomEvent<string>(SESSION_NAVIGATION_EVENT, {
-				detail: sessionId,
+			new CustomEvent<SessionNavigationTarget>(SESSION_NAVIGATION_EVENT, {
+				detail: target,
 			}),
 		);
 	}

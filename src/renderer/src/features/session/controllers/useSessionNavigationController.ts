@@ -1,10 +1,13 @@
 import { useCallback, useEffect, type MutableRefObject } from "react";
 import { useTranslation } from "react-i18next";
 import type { SessionMetadata } from "@/platform/rpc/types";
-import { fetchSessions } from "@/platform/rpc/session-api";
+import { fetchSessions, openSession } from "@/platform/rpc/session-api";
 import {
 	removeSessionFromNavigationHistory,
 	SESSION_NAVIGATION_EVENT,
+	SESSION_SURFACE_NAVIGATION_EVENT,
+	type SessionNavigationSurface,
+	type SessionNavigationTarget,
 } from "@/domain/session/session-navigation-history";
 import { getRecentSessions } from "@/domain/application/app-helpers";
 
@@ -28,6 +31,33 @@ export type SessionNavigationController = {
 	openForkSource: (sessionId: string) => Promise<void>;
 };
 
+function parseNavigationTarget(detail: unknown): SessionNavigationTarget | null {
+	if (typeof detail === "string" && detail.length > 0) {
+		return { sessionId: detail, surface: "chat" };
+	}
+	if (typeof detail !== "object" || detail === null) {
+		return null;
+	}
+	const candidate: Record<string, unknown> = detail as Record<string, unknown>;
+	if (
+		typeof candidate.sessionId !== "string" ||
+		candidate.sessionId.length === 0 ||
+		(candidate.surface !== "chat" && candidate.surface !== "flow")
+	) {
+		return null;
+	}
+	return {
+		sessionId: candidate.sessionId,
+		surface: candidate.surface,
+	};
+}
+
+function getSessionNavigationSurface(
+	session: SessionMetadata,
+): SessionNavigationSurface {
+	return session.surface === "flow_branch" ? "flow" : "chat";
+}
+
 function useSessionNavigationController({
 	activeSessionIdRef,
 	setRecentSessions,
@@ -40,11 +70,11 @@ function useSessionNavigationController({
 
 	useEffect((): (() => void) => {
 		function handleSessionNavigation(event: Event): void {
-			const sessionId: unknown = (event as CustomEvent<unknown>).detail;
+			const navigationTarget: SessionNavigationTarget | null =
+				parseNavigationTarget((event as CustomEvent<unknown>).detail);
 			if (
-				typeof sessionId !== "string" ||
-				sessionId.length === 0 ||
-				sessionId === activeSessionIdRef.current
+				navigationTarget === null ||
+				navigationTarget.sessionId === activeSessionIdRef.current
 			) {
 				return;
 			}
@@ -52,19 +82,40 @@ function useSessionNavigationController({
 			void (async (): Promise<void> => {
 				try {
 					const sessionList = await fetchSessions();
-					const session: SessionMetadata | undefined =
-						sessionList.sessions.find(
-							(candidate: SessionMetadata): boolean =>
-								candidate.id === sessionId,
-						);
+					let session: SessionMetadata | undefined =
+						navigationTarget.surface === "flow"
+							? undefined
+							: sessionList.sessions.find(
+									(candidate: SessionMetadata): boolean =>
+										candidate.id === navigationTarget.sessionId
+								);
 					if (session === undefined) {
-						removeSessionFromNavigationHistory(sessionId);
+						const opened = await openSession(navigationTarget.sessionId);
+						session = opened.metadata;
+					}
+					if (session === undefined) {
+						removeSessionFromNavigationHistory(
+							navigationTarget.sessionId,
+						);
 						showTransientError("Session not found");
 						return;
 					}
 					setRecentSessions(getRecentSessions(sessionList.sessions));
 					await onSessionSelect(session, { recordNavigation: false });
+					window.dispatchEvent(
+						new CustomEvent<SessionNavigationSurface>(
+							SESSION_SURFACE_NAVIGATION_EVENT,
+							{
+								detail: getSessionNavigationSurface(session),
+							},
+						),
+					);
 				} catch (error: unknown) {
+					if (navigationTarget.surface === "flow") {
+						removeSessionFromNavigationHistory(
+							navigationTarget.sessionId,
+						);
+					}
 					showTransientError(
 						error instanceof Error
 							? error.message

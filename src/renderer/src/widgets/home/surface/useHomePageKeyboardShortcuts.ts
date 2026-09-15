@@ -11,6 +11,7 @@ import {
 import {
 	navigateSessionHistory,
 	SESSION_NAVIGATION_EVENT,
+	type SessionNavigationTarget,
 } from "@/domain/session/session-navigation-history";
 
 const MAX_SELECTED_SEARCH_QUERY_LENGTH: number = 500;
@@ -164,15 +165,15 @@ export default function useHomePageKeyboardShortcuts({
 				commandId === "session.next"
 			) {
 				event.preventDefault();
-				const sessionId: string | null = navigateSessionHistory(
+				const target: SessionNavigationTarget | null = navigateSessionHistory(
 					commandId === "session.previous" ? "back" : "forward",
 				);
-				if (sessionId === null) {
+				if (target === null) {
 					return;
 				}
 				window.dispatchEvent(
-					new CustomEvent<string>(SESSION_NAVIGATION_EVENT, {
-						detail: sessionId,
+					new CustomEvent<SessionNavigationTarget>(SESSION_NAVIGATION_EVENT, {
+						detail: target,
 					}),
 				);
 				return;

@@ -107,9 +107,14 @@ export default function useHomeFlowController({
 	} | null>(null);
 	const refreshTimerRef = useRef<number | null>(null);
 	const snapshotRef = useRef<ConversationFlowSnapshot | null>(snapshot);
+	const activeFlowSessionRef = useRef<NonNullable<SessionMetadata["flow"]> | null>(null);
 	const onSessionSelectRef = useRef(onSessionSelect);
 	const previousEnabledRef = useRef<boolean>(false);
 	snapshotRef.current = snapshot;
+	activeFlowSessionRef.current =
+		activeSessionMetadata?.surface === "flow_branch"
+			? activeSessionMetadata.flow ?? null
+			: null;
 	onSessionSelectRef.current = onSessionSelect;
 
 	const activateBranch = useCallback((branch: ConversationFlowBranch): void => {
@@ -160,6 +165,7 @@ export default function useHomeFlowController({
 		const enteringFlow: boolean = enabled && !previousEnabledRef.current;
 		previousEnabledRef.current = enabled;
 		if (!enteringFlow) return;
+		if (activeFlowSessionRef.current !== null) return;
 		const current = snapshotRef.current;
 		const selected = current?.branches.find((branch): boolean => branch.branchId === selectedBranchId);
 		if (selected !== undefined) {
@@ -167,6 +173,35 @@ export default function useHomeFlowController({
 		}
 		void refresh();
 	}, [activateBranch, enabled, refresh, selectedBranchId]);
+
+	useEffect((): (() => void) | void => {
+		if (!enabled || activeFlowSessionRef.current === null) return;
+		const activeFlowSession = activeFlowSessionRef.current;
+		if (activeFlowSession === null) return;
+		const { flowId, branchId } = activeFlowSession;
+		lastBranchByFlowRef.current.set(flowId, branchId);
+		const current = snapshotRef.current;
+		if (current?.flow.flowId === flowId) {
+			setSelectedBranchId(branchId);
+			return;
+		}
+
+		let cancelled: boolean = false;
+		void loadFlow(flowId, false).then((): void => {
+			if (
+				cancelled ||
+				!enabled ||
+				activeFlowSessionRef.current?.flowId !== flowId ||
+				activeFlowSessionRef.current?.branchId !== branchId
+			) {
+				return;
+			}
+			setSelectedBranchId(branchId);
+		});
+		return (): void => {
+			cancelled = true;
+		};
+	}, [activeSessionMetadata?.flow?.branchId, activeSessionMetadata?.flow?.flowId, enabled, loadFlow]);
 
 	useEffect((): (() => void) => {
 		let unsubscribe: (() => void) | undefined;
