@@ -130,6 +130,7 @@ export default function useHomeFlowController({
 	const newFlowCreationInFlightRef = useRef<boolean>(false);
 	const pendingFlowTitleRef = useRef<string | null>(null);
 	const refreshTimerRef = useRef<number | null>(null);
+	const refreshRef = useRef<() => Promise<void>>((): Promise<void> => Promise.resolve());
 	const snapshotRef = useRef<ConversationFlowSnapshot | null>(snapshot);
 	const flowOrderSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
 	const flowOrderSaveRevisionRef = useRef<number>(0);
@@ -211,6 +212,7 @@ export default function useHomeFlowController({
 			setIsLoading(false);
 		}
 	}, [beginNewFlowHome, enabled, loadFlow]);
+	refreshRef.current = refresh;
 
 	useEffect((): void => {
 		const enteringFlow: boolean = enabled && !previousEnabledRef.current;
@@ -267,18 +269,18 @@ export default function useHomeFlowController({
 			if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current);
 			refreshTimerRef.current = window.setTimeout((): void => {
 				refreshTimerRef.current = null;
-				void refresh();
+				void refreshRef.current();
 			}, event.event === "agent.message.delta" ? 180 : 20);
 		}).then((dispose): void => { unsubscribe = dispose; });
 		const offReconnect = onBackendReconnected((): void => {
-			if (enabled) void refresh();
+			if (enabled) void refreshRef.current();
 		});
 		return (): void => {
 			unsubscribe?.();
 			offReconnect();
 			if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current);
 		};
-	}, [enabled, refresh]);
+	}, [enabled]);
 
 	useEffect((): void => {
 		if (snapshot === null) return;

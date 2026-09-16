@@ -87,6 +87,7 @@ function NewSessionHome({
 									<Button
 										key={starter.id}
 										shape="round"
+										size="large"
 										icon={<Icon name={starter.iconName} />}
 										onClick={(): void =>
 											onStarterSelect(t(`app.home.starters.${starterScope}.${starter.id}.prompt`))

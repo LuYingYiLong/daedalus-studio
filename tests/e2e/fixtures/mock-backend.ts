@@ -200,18 +200,19 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 		"provider.models.list": () => ({ provider: "openai", models: provider.models, stale: false, source: "fallback" }),
 		"workspace.list": () => ({ workspaces: [], active: null, connected: [] }),
 		"workspace.tree.order.get": () => ({
-			schemaVersion: 2,
+			schemaVersion: 3,
 			workspaceIds: [],
 			sessionIdsByWorkspace: {},
 			pinnedSessionIds: [],
 			recentSessionIds: [],
+			sectionOrder: ["pinned", "projects", "recent"],
 			expandedSectionKeys: ["pinned", "projects", "recent"],
 			expandedWorkspaceIds: [],
 			updatedAt: MOCK_NOW,
 		}),
 		"workspace.tree.order.update": ({ params }) => ({
 			...(params as Record<string, unknown>),
-			schemaVersion: 2,
+			schemaVersion: 3,
 			updatedAt: MOCK_NOW,
 		}),
 		"workspace.git.diff.summary.get": ({ params }) => ({

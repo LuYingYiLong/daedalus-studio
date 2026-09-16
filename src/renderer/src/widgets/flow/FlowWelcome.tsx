@@ -49,6 +49,7 @@ function FlowWelcome({ onStarterSelect, errorMessage }: FlowWelcomeProps): React
 						<Button
 							key={starter.id}
 							shape="round"
+							size="large"
 							className={styles.flowWelcomeStarter}
 							icon={<Icon name={STARTER_ICONS[starter.id]} />}
 							onClick={(): void => onStarterSelect(t(`flow.welcome.starters.${starter.id}.prompt`))}
