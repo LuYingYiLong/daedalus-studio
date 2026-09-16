@@ -125,8 +125,9 @@ export type HomeChatSurfaceProps = {
 	onQueueMessageReorder: (queueIds: number[]) => void;
 	onGuideDelete: (guideId: string) => void;
 	onGuideReorder: (guideIds: string[]) => void;
-	renderComposer: (compact: boolean, floating?: boolean) => React.JSX.Element;
+	renderComposer: (compact: boolean, floating?: boolean, floatingWithFooter?: boolean) => React.JSX.Element;
 	composerFloating?: boolean;
+	composerFloatingWithFooter?: boolean;
 };
 
 function HomeChatSurface({
@@ -219,6 +220,7 @@ function HomeChatSurface({
 	onGuideReorder,
 	renderComposer,
 	composerFloating = false,
+	composerFloatingWithFooter = false,
 }: HomeChatSurfaceProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const showComposerMascot: boolean =
@@ -474,7 +476,7 @@ function HomeChatSurface({
 							/>
 						) : null}
 						{isDockFullscreen ? null : (
-							<div className={styles.composerAnchor}>{renderComposer(false, composerFloating)}</div>
+							<div className={styles.composerAnchor}>{renderComposer(false, composerFloating, composerFloatingWithFooter)}</div>
 						)}
 					</>
 				)}

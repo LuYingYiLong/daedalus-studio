@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { ChatMode } from "@/platform/rpc/chat-api";
 import {
 	archiveFlow,
 	copyFlowBranchToChat,
@@ -30,6 +31,7 @@ export type FlowNodeDetail = {
 export type HomeFlowController = {
 	flows: ConversationFlowSummary[];
 	snapshot: ConversationFlowSnapshot | null;
+	isNewFlowHome: boolean;
 	selectedBranchId: string | null;
 	selectedNodeDetail: FlowNodeDetail | null;
 	isLoading: boolean;
@@ -37,6 +39,7 @@ export type HomeFlowController = {
 	error: string | null;
 	refresh: () => Promise<void>;
 	createNewFlow: () => Promise<void>;
+	submitNewFlowMessage: (message: string, modeOverride?: ChatMode) => Promise<void>;
 	createFromChat: (session: SessionMetadata) => Promise<boolean>;
 	selectFlow: (flowId: string) => Promise<void>;
 	selectBranch: (branchId: string) => void;
@@ -58,7 +61,8 @@ type UseHomeFlowControllerParams = {
 	isSending: boolean;
 	onSessionSelect: (session: SessionMetadata) => void;
 	onDraftChange: (message: string) => void;
-	onSubmit: (message: string) => void;
+	onSubmit: (message: string, modeOverride?: ChatMode) => void;
+	onBeginNewFlow: () => void;
 	onOpenChat: (session: SessionMetadata) => void;
 };
 
@@ -88,11 +92,13 @@ export default function useHomeFlowController({
 	onSessionSelect,
 	onDraftChange,
 	onSubmit,
+	onBeginNewFlow,
 	onOpenChat,
 }: UseHomeFlowControllerParams): HomeFlowController {
 	const { t } = useTranslation();
 	const [flows, setFlows] = useState<ConversationFlowSummary[]>([]);
 	const [snapshot, setSnapshot] = useState<ConversationFlowSnapshot | null>(null);
+	const [isNewFlowHome, setIsNewFlowHome] = useState<boolean>(false);
 	const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
 	const [selectedNodeDetail, setSelectedNodeDetail] = useState<FlowNodeDetail | null>(null);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -105,12 +111,22 @@ export default function useHomeFlowController({
 		sessionId: string;
 		text: string;
 	} | null>(null);
+	const pendingNewFlowSubmissionRef = useRef<{
+		branchId: string;
+		modeOverride?: ChatMode;
+		sessionId: string;
+		text: string;
+	} | null>(null);
+	const newFlowCreationInFlightRef = useRef<boolean>(false);
+	const pendingFlowTitleRef = useRef<string | null>(null);
 	const refreshTimerRef = useRef<number | null>(null);
 	const snapshotRef = useRef<ConversationFlowSnapshot | null>(snapshot);
 	const activeFlowSessionRef = useRef<NonNullable<SessionMetadata["flow"]> | null>(null);
 	const onSessionSelectRef = useRef(onSessionSelect);
 	const previousEnabledRef = useRef<boolean>(false);
 	snapshotRef.current = snapshot;
+	const newFlowHomeRef = useRef<boolean>(isNewFlowHome);
+	newFlowHomeRef.current = isNewFlowHome;
 	activeFlowSessionRef.current =
 		activeSessionMetadata?.surface === "flow_branch"
 			? activeSessionMetadata.flow ?? null
@@ -150,6 +166,7 @@ export default function useHomeFlowController({
 		try {
 			const result = await fetchFlows();
 			setFlows(result.flows);
+			if (newFlowHomeRef.current) return;
 			const currentFlowId: string | undefined = snapshotRef.current?.flow.flowId;
 			if (currentFlowId !== undefined) {
 				await loadFlow(currentFlowId, false);
@@ -165,7 +182,7 @@ export default function useHomeFlowController({
 		const enteringFlow: boolean = enabled && !previousEnabledRef.current;
 		previousEnabledRef.current = enabled;
 		if (!enteringFlow) return;
-		if (activeFlowSessionRef.current !== null) return;
+		if (activeFlowSessionRef.current !== null || newFlowHomeRef.current) return;
 		const current = snapshotRef.current;
 		const selected = current?.branches.find((branch): boolean => branch.branchId === selectedBranchId);
 		if (selected !== undefined) {
@@ -175,7 +192,7 @@ export default function useHomeFlowController({
 	}, [activateBranch, enabled, refresh, selectedBranchId]);
 
 	useEffect((): (() => void) | void => {
-		if (!enabled || activeFlowSessionRef.current === null) return;
+		if (!enabled || newFlowHomeRef.current || activeFlowSessionRef.current === null) return;
 		const activeFlowSession = activeFlowSessionRef.current;
 		if (activeFlowSession === null) return;
 		const { flowId, branchId } = activeFlowSession;
@@ -249,23 +266,72 @@ export default function useHomeFlowController({
 	}, [activeSessionId, activeSessionMetadata?.flow?.branchId, composerMessage, isSending, isSessionLoading, onDraftChange, onSubmit]);
 
 	const createNewFlow = useCallback(async (): Promise<void> => {
+		if (newFlowHomeRef.current || newFlowCreationInFlightRef.current) return;
+		onBeginNewFlow();
+		pendingFlowTitleRef.current = t("flow.defaultTitle", { count: flows.length + 1 });
+		pendingNewFlowSubmissionRef.current = null;
+		setError(null);
+		setSnapshot(null);
+		setSelectedBranchId(null);
+		setSelectedNodeDetail(null);
+		setIsNewFlowHome(true);
+		newFlowHomeRef.current = true;
+	}, [flows.length, onBeginNewFlow, t]);
+
+	const submitNewFlowMessage = useCallback(async (message: string, modeOverride?: ChatMode): Promise<void> => {
+		const text: string = message.trim();
+		if (!newFlowHomeRef.current || text.length === 0 || newFlowCreationInFlightRef.current) return;
+		newFlowCreationInFlightRef.current = true;
 		setIsMutating(true);
 		setError(null);
 		try {
-			const title: string = t("flow.defaultTitle", { count: flows.length + 1 });
-			const next = await createFlow({ ...defaultFlow, title });
-			setSnapshot(next);
-			await refresh();
+			const title: string = pendingFlowTitleRef.current ?? t("flow.defaultTitle", { count: flows.length + 1 });
+			const next = await createFlow({
+				...defaultFlow,
+				...(modeOverride === undefined ? {} : { chatMode: modeOverride }),
+				title,
+			});
 			const root = next.branches.find((branch): boolean => branch.branchId === next.flow.rootBranchId);
-			if (root !== undefined) activateBranch(root);
+			if (root === undefined) throw new Error("Flow did not return a root branch.");
+			pendingNewFlowSubmissionRef.current = {
+				branchId: root.branchId,
+				modeOverride,
+				sessionId: root.sessionId,
+				text,
+			};
+			setSnapshot(next);
+			setIsNewFlowHome(false);
+			newFlowHomeRef.current = false;
+			activateBranch(root);
+			const result = await fetchFlows();
+			setFlows(result.flows);
 		} catch (mutationError: unknown) {
+			pendingNewFlowSubmissionRef.current = null;
 			setError(errorMessage(mutationError));
+			onDraftChange(text);
 		} finally {
+			newFlowCreationInFlightRef.current = false;
 			setIsMutating(false);
 		}
-	}, [activateBranch, defaultFlow, flows.length, refresh, t]);
+	}, [activateBranch, defaultFlow, flows.length, onDraftChange, t]);
+
+	useEffect((): void => {
+		const pending = pendingNewFlowSubmissionRef.current;
+		if (
+			pending === null ||
+			isMutating ||
+			isSessionLoading ||
+			isSending ||
+			activeSessionId !== pending.sessionId ||
+			activeSessionMetadata?.flow?.branchId !== pending.branchId
+		) return;
+		pendingNewFlowSubmissionRef.current = null;
+		onSubmit(pending.text, pending.modeOverride);
+	}, [activeSessionId, activeSessionMetadata?.flow?.branchId, isMutating, isSending, isSessionLoading, onSubmit]);
 
 	const createFromChat = useCallback(async (session: SessionMetadata): Promise<boolean> => {
+		newFlowHomeRef.current = false;
+		setIsNewFlowHome(false);
 		setIsMutating(true);
 		setError(null);
 		try {
@@ -284,6 +350,9 @@ export default function useHomeFlowController({
 	}, [activateBranch, refresh]);
 
 	const selectFlow = useCallback(async (flowId: string): Promise<void> => {
+		newFlowHomeRef.current = false;
+		setIsNewFlowHome(false);
+		pendingNewFlowSubmissionRef.current = null;
 		await loadFlow(flowId, true);
 	}, [loadFlow]);
 
@@ -409,6 +478,7 @@ export default function useHomeFlowController({
 	return useMemo((): HomeFlowController => ({
 		flows,
 		snapshot,
+		isNewFlowHome,
 		selectedBranchId,
 		selectedNodeDetail,
 		isLoading,
@@ -416,6 +486,7 @@ export default function useHomeFlowController({
 		error,
 		refresh,
 		createNewFlow,
+		submitNewFlowMessage,
 		createFromChat,
 		selectFlow,
 		selectBranch,
@@ -425,5 +496,5 @@ export default function useHomeFlowController({
 		renameCurrentFlow,
 		archiveFlowById,
 		archiveCurrentFlow,
-	}), [archiveCurrentFlow, archiveFlowById, copyCurrentBranchToChat, createFromChat, createNewFlow, deriveFromNode, error, flows, isLoading, isMutating, refresh, renameCurrentFlow, selectBranch, selectFlow, selectNode, selectedBranchId, selectedNodeDetail, snapshot]);
+	}), [archiveCurrentFlow, archiveFlowById, copyCurrentBranchToChat, createFromChat, createNewFlow, deriveFromNode, error, flows, isLoading, isMutating, isNewFlowHome, refresh, renameCurrentFlow, selectBranch, selectFlow, selectNode, selectedBranchId, selectedNodeDetail, snapshot, submitNewFlowMessage]);
 }

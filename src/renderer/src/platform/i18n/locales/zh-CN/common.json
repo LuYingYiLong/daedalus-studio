@@ -621,6 +621,18 @@
 	"flow": {
 		"surfaces": { "chat": "对话", "flow": "Flow" },
 		"defaultTitle": "未命名 Flow {{count}}",
+		"new": { "title": "新建 Flow" },
+		"welcome": {
+			"title": "让想法沿着不同路径展开",
+			"description": "每条消息都会成为一个节点，你可以从任意节点派生新的对话路径。",
+			"hint": "发送第一条消息，Flow 就会开始展开",
+			"starters": {
+				"label": "开始方式",
+				"explore": { "label": "探索一个问题", "prompt": "帮我探索一个问题：" },
+				"decompose": { "label": "拆解复杂任务", "prompt": "把这个复杂任务拆成可执行的步骤：" },
+				"compare": { "label": "比较两种方案", "prompt": "比较以下两种方案，并列出各自的优缺点：" }
+			}
+		},
 		"branchCount": "{{count}} 条分支",
 		"branchLabel": "分支 {{count}}",
 		"busy": "另一条分支正在运行。当前 Flow 同时只能运行一条分支。",

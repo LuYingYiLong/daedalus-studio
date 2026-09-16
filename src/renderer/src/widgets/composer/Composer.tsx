@@ -113,6 +113,7 @@ export type ComposerProps = {
 	showContextUsage?: boolean;
 	compact?: boolean;
 	floating?: boolean;
+	floatingWithFooter?: boolean;
 	allowedModes?: readonly ChatMode[];
 	allowQueue?: boolean;
 	layout?: "standard" | "mobile";
@@ -252,6 +253,7 @@ function Composer({
 	showContextUsage = true,
 	compact = false,
 	floating = false,
+	floatingWithFooter = false,
 	allowedModes,
 	allowQueue = true,
 	layout = "standard",
@@ -672,6 +674,7 @@ function Composer({
 		completionToken !== null && completionOptions.length > 0;
 	const isFloatingComposerCollapsed: boolean =
 		floating &&
+		!floatingWithFooter &&
 		!isFloatingComposerFocused &&
 		!isSending &&
 		!isCancelling &&
@@ -1437,6 +1440,7 @@ function Composer({
 				layout === "mobile" ? styles.composerRootMobile : "",
 				compact ? styles.composerRootCompact : "",
 				floating ? styles.composerRootFloating : "",
+				floatingWithFooter ? styles.composerRootFloatingWithFooter : "",
 				isFloatingComposerCollapsed
 					? styles.composerRootFloatingCollapsed
 					: "",

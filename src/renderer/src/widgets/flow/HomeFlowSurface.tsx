@@ -24,6 +24,7 @@ import HomeChatSurface, { type HomeChatSurfaceProps } from "@/widgets/home/surfa
 import MessageList from "@/widgets/conversation/MessageList";
 import ConversationSearchPanel from "@/widgets/conversation/ConversationSearchPanel";
 import { AssistantFlowNode, UserFlowNode, type FlowCanvasNode } from "./FlowNodes";
+import FlowWelcome from "./FlowWelcome";
 import styles from "./HomeFlowSurface.module.css";
 
 export type HomeFlowSurfaceProps = {
@@ -215,6 +216,24 @@ function HomeFlowSurface({ controller, chatSurfaceProps, searchHandleRef }: Home
 	}
 
 	if (snapshot === null) {
+		if (controller.isNewFlowHome) {
+			return (
+				<section className={styles.flowSurface} data-studio-flow-surface="true">
+					<header className={styles.flowHeader}>
+						<Typography.Text className={styles.flowTitle}>{t("flow.new.title")}</Typography.Text>
+					</header>
+					<div className={`${styles.canvasRegion} ${styles.flowWelcomeCanvasRegion}`}>
+						<FlowWelcome
+							errorMessage={chatSurfaceProps.sessionError ?? controller.error}
+							onStarterSelect={chatSurfaceProps.handleHomeStarterSelect}
+						/>
+					</div>
+					<div className={`${styles.flowComposerHost} ${styles.flowWelcomeComposerHost}`}>
+						{chatSurfaceProps.renderComposer(false, true, true)}
+					</div>
+				</section>
+			);
+		}
 		return (
 			<div className={styles.emptyState}>
 				<Empty description={t("flow.empty.description")}>
@@ -366,7 +385,7 @@ function HomeFlowSurface({ controller, chatSurfaceProps, searchHandleRef }: Home
 			</div>
 			<div className={styles.flowComposerHost} data-disabled={busyOtherBranch ? "true" : undefined}>
 				{busyOtherBranch ? <div className={styles.composerBlocker} aria-hidden="true" /> : null}
-				<HomeChatSurface {...chatSurfaceProps} composerFloating />
+				<HomeChatSurface {...chatSurfaceProps} composerFloating composerFloatingWithFooter />
 			</div>
 			<Drawer
 				open={controller.selectedNodeDetail !== null}

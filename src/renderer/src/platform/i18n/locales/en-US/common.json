@@ -623,6 +623,18 @@
 	"flow": {
 		"surfaces": { "chat": "Chat", "flow": "Flow" },
 		"defaultTitle": "Untitled Flow {{count}}",
+		"new": { "title": "New Flow" },
+		"welcome": {
+			"title": "Let an idea branch into new paths",
+			"description": "Each message becomes a node. Start from any point and branch into a new conversation path.",
+			"hint": "Send a message to grow your Flow",
+			"starters": {
+				"label": "Start with",
+				"explore": { "label": "Explore a question", "prompt": "Help me explore this question:" },
+				"decompose": { "label": "Break down a task", "prompt": "Break this complex task into executable steps:" },
+				"compare": { "label": "Compare two options", "prompt": "Compare these two options and list the pros and cons:" }
+			}
+		},
 		"branchCount": "{{count}} branches",
 		"branchLabel": "Branch {{count}}",
 		"busy": "Another branch is running. A Flow can run only one branch at a time.",

@@ -465,12 +465,23 @@ function HomePage({
 		isSending,
 		onSessionSelect,
 		onDraftChange,
-		onSubmit: (text: string): void => onSubmit(text),
+		onSubmit: (text: string, modeOverride?: ChatMode): void => onSubmit(text, modeOverride),
+		onBeginNewFlow: onNewSession,
 		onOpenChat: (session: SessionMetadata): void => {
 			transitionToChatSurface();
 			onSessionSelect(session);
 		},
 	});
+	const handleFlowComposerSubmit = useCallback((messageText: string, modeOverride?: ChatMode): void => {
+		if (primarySurface === "flow") {
+			if (flowController.isNewFlowHome) {
+				void flowController.submitNewFlowMessage(messageText, modeOverride);
+				return;
+			}
+			if (activeSessionMetadata?.surface !== "flow_branch") return;
+		}
+		onSubmit(messageText, modeOverride);
+	}, [activeSessionMetadata?.surface, flowController.isNewFlowHome, flowController.submitNewFlowMessage, onSubmit, primarySurface]);
 	const lastChatSessionRef = useRef<SessionMetadata | null>(null);
 	useEffect((): void => {
 		if (primarySurface === "chat" && activeSessionMetadata?.surface !== "flow_branch") {
@@ -834,7 +845,7 @@ function HomePage({
 			onPinContext,
 			onClearUnpinnedContext,
 			onCancel,
-			onSubmit,
+			onSubmit: handleFlowComposerSubmit,
 			onGuideSubmit,
 			onCompletionOpen,
 		},
@@ -1080,7 +1091,11 @@ function HomePage({
 						primarySurface={primarySurface}
 						isOpen={workspaceSidebarOpen}
 						onNewSession={requestNewSessionSurface}
-						onNewFlow={(): void => { void flowController.createNewFlow(); }}
+						onNewFlow={(): void => {
+							void flowController.createNewFlow().then((): void => {
+								showPrimarySurface("flow");
+							});
+						}}
 						onPrimarySurfaceChange={handlePrimarySurfaceChange}
 						onOpenScheduledTasks={showScheduledTasksSurface}
 						scheduledTasksActive={mainSurface === "scheduledTasks"}

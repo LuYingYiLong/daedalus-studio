@@ -65,6 +65,10 @@
 	will-change: width;
 }
 
+.composerRootFloatingWithFooter {
+	margin-inline: auto;
+}
+
 .composerRootFloatingCollapsed {
 	width: 60%;
 }

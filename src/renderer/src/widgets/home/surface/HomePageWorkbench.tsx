@@ -32,7 +32,7 @@ export type HomePageWorkbenchProps = {
 	bottomDockConfig: HomeDockPanelConfigs["bottomDockConfig"];
 	renderSideDock: boolean;
 	renderBottomDock: boolean;
-	renderComposer: (compact: boolean, floating?: boolean) => React.JSX.Element;
+	renderComposer: (compact: boolean, floating?: boolean, floatingWithFooter?: boolean) => React.JSX.Element;
 	onBottomDockResize: (sizes: number[]) => void;
 	onBottomDockResizeEnd: (sizes: number[]) => void;
 	onSideDockResize: (sizes: number[]) => void;

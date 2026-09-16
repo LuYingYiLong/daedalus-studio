@@ -66,7 +66,7 @@ export type HomePageComposerControllerParams = {
 };
 
 export type HomePageComposerController = {
-	renderComposer: (compact: boolean, floating?: boolean) => React.JSX.Element;
+	renderComposer: (compact: boolean, floating?: boolean, floatingWithFooter?: boolean) => React.JSX.Element;
 };
 
 const COMPOSER_FOOTER_COVER_TRANSITION_MS = 220;
@@ -175,7 +175,7 @@ export default function useHomePageComposerController({
 	}, [actions, keepWorkspaceFooter, showWorkspaceFooter, state]);
 
 	const renderComposer = useCallback(
-		(compact: boolean, floating: boolean = compact): React.JSX.Element => {
+		(compact: boolean, floating: boolean = compact, floatingWithFooter: boolean = false): React.JSX.Element => {
 			return (
 				<Composer
 					key={compact ? state.composerInstanceKey : "home-page-composer"}
@@ -185,6 +185,7 @@ export default function useHomePageComposerController({
 					coverWorkspaceFooter={!compact && !state.isHome}
 					compact={compact}
 					floating={floating}
+					floatingWithFooter={floatingWithFooter}
 				/>
 			);
 		},
