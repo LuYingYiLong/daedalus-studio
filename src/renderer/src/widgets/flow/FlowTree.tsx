@@ -233,17 +233,64 @@ function FlowTree({
 		[workspaces],
 	);
 	const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+	const expandedKeysRef = useRef(expandedKeys);
+	const expansionSaveTimerRef = useRef<number | null>(null);
+	const effectiveOrderRef = useRef(effectiveOrder);
+	const onOrderUpdateRef = useRef(onOrderUpdate);
+	expandedKeysRef.current = expandedKeys;
+	effectiveOrderRef.current = effectiveOrder;
+	onOrderUpdateRef.current = onOrderUpdate;
 
-	// Keep the same array reference when expansion membership is unchanged; rc-tree treats a new controlled array as a refresh and cancels its row motion
+	function getExpandedOrder(keys: readonly string[]): Pick<FlowTreeOrderUpdate, "expandedSectionKeys" | "expandedWorkspaceIds"> {
+		return {
+			expandedSectionKeys: keys.flatMap((key): FlowTreeSectionKey[] => {
+				const section = key.startsWith("section:") ? key.slice("section:".length) : "";
+				return sectionKeys.includes(section as FlowTreeSectionKey) ? [section as FlowTreeSectionKey] : [];
+			}),
+			expandedWorkspaceIds: keys.flatMap((key): string[] =>
+				key.startsWith("flow-workspace:") ? [key.slice("flow-workspace:".length)] : [],
+			),
+		};
+	}
+
+	function clearScheduledExpansionSave(): void {
+		if (expansionSaveTimerRef.current !== null) {
+			window.clearTimeout(expansionSaveTimerRef.current);
+			expansionSaveTimerRef.current = null;
+		}
+	}
+
+	function scheduleExpandedOrderSave(): void {
+		clearScheduledExpansionSave();
+		expansionSaveTimerRef.current = window.setTimeout((): void => {
+			expansionSaveTimerRef.current = null;
+			onOrderUpdateRef.current({
+				...effectiveOrderRef.current,
+				...getExpandedOrder(expandedKeysRef.current),
+			});
+		}, 300);
+	}
+
+	// Keep local expansion state authoritative while its debounced preference write is pending
 	useEffect((): void => {
+		if (expansionSaveTimerRef.current !== null) return;
 		const nextExpandedKeys: string[] = [
 			...effectiveOrder.expandedSectionKeys.map(sectionKey),
 			...effectiveOrder.expandedWorkspaceIds.map(workspaceKey),
 		];
-		setExpandedKeys((current): string[] =>
-			sameExpandedKeySet(current, nextExpandedKeys) ? current : nextExpandedKeys,
-		);
+		if (sameExpandedKeySet(expandedKeysRef.current, nextExpandedKeys)) return;
+		expandedKeysRef.current = nextExpandedKeys;
+		setExpandedKeys(nextExpandedKeys);
 	}, [effectiveOrder.expandedSectionKeys, effectiveOrder.expandedWorkspaceIds]);
+
+	useEffect((): (() => void) => (): void => {
+		if (expansionSaveTimerRef.current === null) return;
+		clearScheduledExpansionSave();
+		onOrderUpdateRef.current({
+			...effectiveOrderRef.current,
+			...getExpandedOrder(expandedKeysRef.current),
+		});
+	}, []);
 
 	const treeDataSignature: string = JSON.stringify({
 		pinnedFlowIds: effectiveOrder.pinnedFlowIds,
@@ -352,11 +399,11 @@ function FlowTree({
 					[...value],
 				]),
 			),
-			expandedSectionKeys: [...effectiveOrder.expandedSectionKeys],
-			expandedWorkspaceIds: [...effectiveOrder.expandedWorkspaceIds],
+			...getExpandedOrder(expandedKeysRef.current),
 		};
 		const targetId: string | null = dropNode.kind === "flow" ? (dropNode.flowId ?? null) : null;
 		moveFlow(next, source, destination, dragFlow.flowId, targetId, info.dropPosition > 0);
+		clearScheduledExpansionSave();
 		onOrderUpdate(next);
 	};
 
@@ -442,19 +489,9 @@ function FlowTree({
 				}}
 				onExpand={(keys): void => {
 					const nextExpandedKeys: string[] = keys.map(String);
+					expandedKeysRef.current = nextExpandedKeys;
 					setExpandedKeys(nextExpandedKeys);
-					onOrderUpdate({
-						...effectiveOrder,
-						expandedSectionKeys: nextExpandedKeys.flatMap((key): FlowTreeSectionKey[] => {
-							const section = key.startsWith("section:") ? key.slice("section:".length) : "";
-							return sectionKeys.includes(section as FlowTreeSectionKey)
-								? [section as FlowTreeSectionKey]
-								: [];
-						}),
-						expandedWorkspaceIds: nextExpandedKeys.flatMap((key): string[] =>
-							key.startsWith("flow-workspace:") ? [key.slice("flow-workspace:".length)] : [],
-						),
-					});
+					scheduleExpandedOrderSave();
 				}}
 				onSelect={(_selectedKeys: Key[], info): void => {
 					const node: FlowTreeNode = info.node as FlowTreeNode;
