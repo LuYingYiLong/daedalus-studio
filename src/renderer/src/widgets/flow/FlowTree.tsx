@@ -275,7 +275,15 @@ function FlowTree({
 		const emptyNode = (key: string, section: FlowTreeSectionKey, parentKey: string): FlowTreeNode => ({
 			key,
 			kind: "empty",
-			className: `${styles.emptyNode} ${section === "projects" ? styles.emptyProjectNode : styles.emptySectionNode}`,
+			className: [
+				styles.emptyNode,
+				section === "projects" && parentKey.startsWith("flow-workspace:")
+					? styles.emptyProjectNode
+					: "",
+				section !== "projects" ? styles.emptySectionNode : "",
+			]
+				.filter(Boolean)
+				.join(" "),
 			section,
 			parentKey,
 			title: <span className={styles.emptyItem}>{t("flow.tree.empty")}</span>,
@@ -456,7 +464,13 @@ function FlowTree({
 				switcherIcon={(nodeProps): React.JSX.Element | null => {
 					const node: FlowTreeNode = nodeProps as FlowTreeNode;
 					if (node.kind === "section") {
-						return <Icon name={nodeProps.expanded === true ? "arrow-down" : "arrow-forward"} />;
+						return (
+							<span
+								className={styles.sectionSwitcher}
+							>
+								<Icon name="arrow-forward" />
+							</span>
+						);
 					}
 					if (node.kind === "workspace") {
 						return getFlowTreeWorkspaceIcon(

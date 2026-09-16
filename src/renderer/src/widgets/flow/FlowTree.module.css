@@ -51,7 +51,6 @@
 	min-width: 0;
 }
 
-
 .treeItemTitle {
 	flex: 1;
 	overflow: visible;
@@ -64,17 +63,23 @@
 	justify-content: center;
 	width: 20px !important;
 	min-width: 20px !important;
-	margin-inline-end: var(--ds-space-1);
+	margin-inline-end: 4px;
 }
 
 .sectionNode {
-	margin-top: 0;
+	user-select: none;
 }
 
-.sectionNode .treeItemSwitcher {
-	width: 16px !important;
-	min-width: 16px !important;
-	margin-inline-end: var(--ds-space-1);
+.sectionSwitcher {
+	display: inline-flex;
+	flex: 0 0 16px;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	line-height: 0;
+	transform: rotate(90deg);
+	transform-origin: center;
 }
 
 .treeItemSwitcher::before {
@@ -87,35 +92,15 @@
 	margin-inline-end: 0 !important;
 }
 
-.workspaceNode {
-	width: 100%;
-	margin-inline-start: 0;
-}
-
-.flowNode {
-	width: 100%;
-	margin-inline-start: 0;
-}
-
+.workspaceNode,
+.flowNode,
 .emptyNode {
 	width: 100%;
-	margin-inline-start: 0;
 }
 
-/* Keep every row inside the sidebar and adjust only the visual tree indent. */
-.workspaceNode > :global(.ant-tree-indent),
-.flowNode > :global(.ant-tree-indent),
-.emptyNode > :global(.ant-tree-indent) {
-	margin-inline-start: 0;
-}
-
-.workspaceNode > :global(.ant-tree-indent),
-.flowNode:not(.flowProjectNode) > :global(.ant-tree-indent) {
-	display: none;
-}
-
-.flowProjectNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit):first-child,
-.emptyProjectNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit):first-child {
+.workspaceNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit:first-child),
+.flowProjectNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit:first-child),
+.emptyProjectNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit:first-child) {
 	display: none;
 }
 
@@ -131,7 +116,6 @@
 
 .emptyItem {
 	display: block;
-	padding: 4px 0;
 	color: var(--ant-color-text-tertiary);
 	font-size: var(--ant-font-size);
 }
@@ -144,7 +128,7 @@
 	row-gap: 8px;
 	width: 100%;
 	min-width: 0;
-	min-height: 30px;
+	min-height: 28px;
 	color: var(--ant-color-text);
 }
 

@@ -7,7 +7,7 @@ import type { WorkspaceTreeOrderPreferences, WorkspaceTreeSectionKey } from "@/p
 
 export type WorkspaceTreeDropPlacement = "before" | "after";
 export type WorkspaceTreeSortableNode = {
-	kind: "workspace" | "session" | "empty";
+	kind: "section" | "workspace" | "session" | "empty";
 	sectionKey?: WorkspaceTreeSectionKey | undefined;
 	workspaceId?: string | undefined;
 };
@@ -16,23 +16,24 @@ const WORKSPACE_TREE_SECTION_KEYS: readonly WorkspaceTreeSectionKey[] = ["pinned
 
 export function createEmptyWorkspaceTreeOrder(): WorkspaceTreeOrderPreferences {
 	return {
-		schemaVersion: 2,
+		schemaVersion: 3,
 		workspaceIds: [],
 		sessionIdsByWorkspace: {},
 		pinnedSessionIds: [],
 		recentSessionIds: [],
+		sectionOrder: [...WORKSPACE_TREE_SECTION_KEYS],
 		expandedSectionKeys: [...WORKSPACE_TREE_SECTION_KEYS],
 		expandedWorkspaceIds: [],
 		updatedAt: new Date(0).toISOString()
 	};
 }
 
-function mergeSavedOrder(currentIds: readonly string[], savedIds: readonly string[]): string[] {
-	const currentIdSet: ReadonlySet<string> = new Set(currentIds);
-	const knownSavedIds: string[] = savedIds.filter((id: string): boolean => currentIdSet.has(id));
-	const knownSavedIdSet: ReadonlySet<string> = new Set(knownSavedIds);
+function mergeSavedOrder<T extends string>(currentIds: readonly T[], savedIds: readonly T[]): T[] {
+	const currentIdSet: ReadonlySet<T> = new Set(currentIds);
+	const knownSavedIds: T[] = savedIds.filter((id: T): boolean => currentIdSet.has(id));
+	const knownSavedIdSet: ReadonlySet<T> = new Set(knownSavedIds);
 	return [
-		...currentIds.filter((id: string): boolean => !knownSavedIdSet.has(id)),
+		...currentIds.filter((id: T): boolean => !knownSavedIdSet.has(id)),
 		...knownSavedIds
 	];
 }
@@ -78,11 +79,12 @@ export function reconcileWorkspaceTreeOrder(
 	}
 
 	return {
-		schemaVersion: 2,
+		schemaVersion: 3,
 		workspaceIds,
 		sessionIdsByWorkspace,
 		pinnedSessionIds,
 		recentSessionIds,
+		sectionOrder: mergeSavedOrder([...WORKSPACE_TREE_SECTION_KEYS], preferences.sectionOrder),
 		expandedSectionKeys: preferences.expandedSectionKeys.filter(
 			(sectionKey: WorkspaceTreeSectionKey): boolean => WORKSPACE_TREE_SECTION_KEYS.includes(sectionKey)
 		),
@@ -102,6 +104,7 @@ export function areWorkspaceTreeOrdersEqual(
 		sessionIdsByWorkspace: left.sessionIdsByWorkspace,
 		pinnedSessionIds: left.pinnedSessionIds,
 		recentSessionIds: left.recentSessionIds,
+		sectionOrder: left.sectionOrder,
 		expandedSectionKeys: left.expandedSectionKeys,
 		expandedWorkspaceIds: left.expandedWorkspaceIds
 	}) === JSON.stringify({
@@ -109,6 +112,7 @@ export function areWorkspaceTreeOrdersEqual(
 		sessionIdsByWorkspace: right.sessionIdsByWorkspace,
 		pinnedSessionIds: right.pinnedSessionIds,
 		recentSessionIds: right.recentSessionIds,
+		sectionOrder: right.sectionOrder,
 		expandedSectionKeys: right.expandedSectionKeys,
 		expandedWorkspaceIds: right.expandedWorkspaceIds
 	});
@@ -122,6 +126,13 @@ export function canDropWorkspaceTreeNode(
 ): boolean {
 	if (!dropToGap || dragNode.kind === "empty" || dropNode.kind === "empty") {
 		return false;
+	}
+	if (dragNode.kind === "section" || dropNode.kind === "section") {
+		return dragNode.kind === "section"
+			&& dropNode.kind === "section"
+			&& dragNode.sectionKey !== undefined
+			&& dropNode.sectionKey !== undefined
+			&& preferences.sectionOrder.length > 1;
 	}
 	if (dragNode.kind === "workspace" || dropNode.kind === "workspace") {
 		return dragNode.kind === "workspace"
@@ -147,16 +158,28 @@ export function canDropWorkspaceTreeNode(
 		&& (preferences.sessionIdsByWorkspace[dragNode.workspaceId]?.length ?? 0) > 1;
 }
 
-function moveId(
-	ids: readonly string[],
-	draggedId: string,
-	targetId: string,
+export function moveWorkspaceTreeSectionInTreeOrder(
+	preferences: WorkspaceTreeOrderPreferences,
+	draggedSection: WorkspaceTreeSectionKey,
+	targetSection: WorkspaceTreeSectionKey,
 	placement: WorkspaceTreeDropPlacement
-): string[] {
+): WorkspaceTreeOrderPreferences {
+	return {
+		...preferences,
+		sectionOrder: moveId(preferences.sectionOrder, draggedSection, targetSection, placement)
+	};
+}
+
+function moveId<T extends string>(
+	ids: readonly T[],
+	draggedId: T,
+	targetId: T,
+	placement: WorkspaceTreeDropPlacement
+): T[] {
 	if (draggedId === targetId || !ids.includes(draggedId) || !ids.includes(targetId)) {
 		return [...ids];
 	}
-	const nextIds: string[] = ids.filter((id: string): boolean => id !== draggedId);
+	const nextIds: T[] = ids.filter((id: T): boolean => id !== draggedId);
 	const targetIndex: number = nextIds.indexOf(targetId);
 	nextIds.splice(placement === "before" ? targetIndex : targetIndex + 1, 0, draggedId);
 	return nextIds;

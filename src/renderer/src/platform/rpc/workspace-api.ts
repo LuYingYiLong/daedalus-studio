@@ -68,11 +68,12 @@ export type WorktreeEligibilityResult = {
 };
 
 export type WorkspaceTreeOrderPreferences = {
-	schemaVersion: 2;
+	schemaVersion: 3;
 	workspaceIds: string[];
 	sessionIdsByWorkspace: Record<string, string[]>;
 	pinnedSessionIds: string[];
 	recentSessionIds: string[];
+	sectionOrder: WorkspaceTreeSectionKey[];
 	expandedSectionKeys: WorkspaceTreeSectionKey[];
 	expandedWorkspaceIds: string[];
 	updatedAt: string;
@@ -86,6 +87,7 @@ export type WorkspaceTreeOrderUpdate = Pick<
 	| "sessionIdsByWorkspace"
 	| "pinnedSessionIds"
 	| "recentSessionIds"
+	| "sectionOrder"
 	| "expandedSectionKeys"
 	| "expandedWorkspaceIds"
 >;

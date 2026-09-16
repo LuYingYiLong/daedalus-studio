@@ -73,6 +73,18 @@
 	margin-inline-end: 4px;
 }
 
+.sectionTreeSwitcher {
+	display: inline-flex;
+	flex: 0 0 16px;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	line-height: 0;
+	transform: rotate(90deg);
+	transform-origin: center;
+}
+
 .projectTreeSwitcher::before {
 	background: transparent !important;
 }
@@ -83,39 +95,33 @@
 	margin-inline-end: 0 !important;
 }
 
-.workspaceTreeCollapse {
+.sectionTreeNode {
 	user-select: none;
 }
 
-.workspaceTreeCollapse :global(.ant-collapse-item) {
-	border-block-end: 0;
+.sectionTreeTitle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	min-width: 0;
 }
 
-.workspaceTreeCollapse :global(.ant-collapse-expand-icon) {
-	margin-right: 0px !important;
-	width: 20px;
-}
-
-.workspaceTreeCollapse :global(.ant-collapse-header) {
-	padding: var(--ds-space-2) !important;
-}
-
-.workspaceTreeCollapse :global(.ant-collapse-body) {
-	padding: 0px !important;
-}
-
-.sectionAddButton {
+.sectionTreeNode .sectionAddButton {
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 120ms ease;
 }
 
-.workspaceTreeCollapse :global(.ant-collapse-header:hover) .sectionAddButton,
-.workspaceTreeCollapse
-	:global(.ant-collapse-header:focus-within)
-	.sectionAddButton {
+.sectionTreeNode:hover .sectionAddButton,
+.sectionTreeNode:focus-within .sectionAddButton {
 	opacity: 1;
 	pointer-events: auto;
+}
+
+.workspaceTreeNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit:first-child),
+.projectSessionTreeNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit:first-child) {
+	display: none;
 }
 
 .workspaceMenuItem {
@@ -263,8 +269,4 @@
 .renameErrorText {
 	display: block;
 	margin-top: 8px;
-}
-
-.treeItemPaddingLeft {
-	padding-left: 26px !important;
 }

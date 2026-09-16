@@ -6,6 +6,7 @@ import {
 	moveSectionSessionInTreeOrder,
 	moveSessionInTreeOrder,
 	moveSessionToWorkspaceInTreeOrder,
+	moveWorkspaceTreeSectionInTreeOrder,
 	moveWorkspaceInTreeOrder,
 	reconcileWorkspaceTreeOrder,
 	sortSessionsByTreeOrder,
@@ -78,7 +79,7 @@ const SESSIONS: SessionMetadata[] = [
 
 function order(overrides: Partial<WorkspaceTreeOrderPreferences> = {}): WorkspaceTreeOrderPreferences {
 	return {
-		schemaVersion: 2,
+		schemaVersion: 3,
 		workspaceIds: ["workspace-a", "workspace-b"],
 		sessionIdsByWorkspace: {
 			"workspace-a": ["session-a-new", "session-a-old"],
@@ -86,6 +87,7 @@ function order(overrides: Partial<WorkspaceTreeOrderPreferences> = {}): Workspac
 		},
 		pinnedSessionIds: ["session-pinned", "session-pinned-2"],
 		recentSessionIds: ["session-recent", "session-recent-2"],
+		sectionOrder: ["pinned", "projects", "recent"],
 		expandedSectionKeys: ["pinned", "projects", "recent"],
 		expandedWorkspaceIds: ["workspace-a"],
 		updatedAt: "2026-07-30T00:00:00.000Z",
@@ -148,6 +150,13 @@ describe("workspace tree order", (): void => {
 		expect(pinnedResult.recentSessionIds).toEqual(["session-recent", "session-recent-2"]);
 	});
 
+	it("reorders pinned, projects, and recent section roots", (): void => {
+		const result = moveWorkspaceTreeSectionInTreeOrder(order(), "recent", "pinned", "before");
+		expect(result.sectionOrder).toEqual(["recent", "pinned", "projects"]);
+		expect(result.pinnedSessionIds).toEqual(["session-pinned", "session-pinned-2"]);
+		expect(result.recentSessionIds).toEqual(["session-recent", "session-recent-2"]);
+	});
+
 	it("moves a session to the destination project and expands it", (): void => {
 		const result = moveSessionToWorkspaceInTreeOrder(
 			order(),
@@ -176,6 +185,18 @@ describe("workspace tree order", (): void => {
 
 	it("only allows root workspace gaps and same-workspace session gaps", (): void => {
 		const preferences = order();
+		expect(canDropWorkspaceTreeNode(
+			{ kind: "section", sectionKey: "recent" },
+			{ kind: "section", sectionKey: "pinned" },
+			true,
+			preferences
+		)).toBe(true);
+		expect(canDropWorkspaceTreeNode(
+			{ kind: "section", sectionKey: "recent" },
+			{ kind: "session", sectionKey: "pinned" },
+			true,
+			preferences
+		)).toBe(false);
 		expect(canDropWorkspaceTreeNode(
 			{ kind: "workspace", workspaceId: "workspace-a" },
 			{ kind: "workspace", workspaceId: "workspace-b" },
