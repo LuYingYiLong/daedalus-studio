@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { MutableRefObject } from "react";
 import type { ConversationTimelinePaneHandle } from "@/widgets/conversation/ConversationTimelinePane";
+import type { FlowSearchHandle } from "@/widgets/flow/HomeFlowSurface";
 import {
 	detectShortcutPlatform,
 	findMatchingShortcutCommand,
@@ -88,8 +89,10 @@ export type HomePageKeyboardShortcutsParams = {
 	keyboardShortcuts: KeyboardShortcutOverrides;
 	activeSessionId: string | null;
 	isHome: boolean;
+	isFlowSurface: boolean;
 	timelineNavigationEntriesLength: number;
 	conversationTimelinePaneRef: MutableRefObject<ConversationTimelinePaneHandle | null>;
+	flowSearchHandleRef: MutableRefObject<FlowSearchHandle | null>;
 	chatBodyRef: MutableRefObject<HTMLDivElement | null>;
 	showBottomDockButton: boolean;
 	showSideDockButton: boolean;
@@ -103,8 +106,10 @@ export default function useHomePageKeyboardShortcuts({
 	keyboardShortcuts,
 	activeSessionId,
 	isHome,
+	isFlowSurface,
 	timelineNavigationEntriesLength,
 	conversationTimelinePaneRef,
+	flowSearchHandleRef,
 	chatBodyRef,
 	showBottomDockButton,
 	showSideDockButton,
@@ -121,7 +126,10 @@ export default function useHomePageKeyboardShortcuts({
 			}
 			if (
 				event.key === "Escape" &&
-				conversationTimelinePaneRef.current?.closeSearch() === true
+				(
+					conversationTimelinePaneRef.current?.closeSearch() === true ||
+					flowSearchHandleRef.current?.closeSearch() === true
+				)
 			) {
 				event.preventDefault();
 				return;
@@ -178,14 +186,21 @@ export default function useHomePageKeyboardShortcuts({
 				);
 				return;
 			}
-			if (activeSessionId === null || isHome) {
+			if (isHome) {
 				return;
 			}
 			if (commandId === "conversation.find") {
 				event.preventDefault();
-				conversationTimelinePaneRef.current?.openSearch(
-					getSelectedConversationSearchQuery(chatBodyRef.current),
-				);
+				if (isFlowSurface) {
+					flowSearchHandleRef.current?.openSearch();
+				} else if (activeSessionId !== null) {
+					conversationTimelinePaneRef.current?.openSearch(
+						getSelectedConversationSearchQuery(chatBodyRef.current),
+					);
+				}
+				return;
+			}
+			if (activeSessionId === null) {
 				return;
 			}
 			if (timelineNavigationEntriesLength === 0) {
@@ -204,7 +219,9 @@ export default function useHomePageKeyboardShortcuts({
 		activeSessionId,
 		chatBodyRef,
 		conversationTimelinePaneRef,
+		flowSearchHandleRef,
 		isHome,
+		isFlowSurface,
 		keyboardShortcuts,
 		requestNewSessionSurface,
 		showBottomDockButton,

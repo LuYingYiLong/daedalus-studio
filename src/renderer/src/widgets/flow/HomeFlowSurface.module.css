@@ -27,6 +27,10 @@
 	user-select: none;
 }
 
+.flowHeaderActions {
+	min-width: 0;
+}
+
 .flowHeader[data-side-dock-open="true"] {
 	padding-right: var(--ds-space-2);
 }
@@ -99,7 +103,7 @@
 .nodeCard {
 	position: relative;
 	display: grid;
-	grid-template-rows: auto minmax(0, 1fr) auto;
+	grid-template-rows: auto auto minmax(0, 1fr) auto;
 	width: 300px;
 	height: 168px;
 	padding: 12px 14px 10px;
@@ -117,6 +121,11 @@
 .nodeCardActive {
 	border-color: var(--ant-color-primary);
 	box-shadow: 0 8px 24px color-mix(in srgb, var(--ant-color-primary) 18%, transparent);
+}
+
+.nodeCardMatched {
+	border-color: var(--ant-color-warning);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--ant-color-warning) 24%, transparent);
 }
 
 .nodeCard[data-role="user"] {
@@ -140,6 +149,10 @@
 	font-weight: 600;
 }
 
+.nodeMeta {
+	font-size: 11px;
+}
+
 .nodePreview {
 	margin: 8px 0 !important;
 	overflow: hidden;
@@ -157,6 +170,11 @@
 	height: 8px !important;
 	border: 2px solid var(--ds-bg) !important;
 	background: var(--ant-color-primary) !important;
+}
+
+.activePathEdge :global(.react-flow__edge-path) {
+	stroke: var(--ant-color-primary);
+	stroke-width: 2.5;
 }
 
 .flowComposerHost {

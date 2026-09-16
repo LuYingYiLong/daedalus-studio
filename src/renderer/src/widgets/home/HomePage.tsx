@@ -74,6 +74,7 @@ import useHomePageKeyboardShortcuts from "./surface/useHomePageKeyboardShortcuts
 import HomePageActionBar from "./surface/HomePageActionBar";
 import HomePageWorkbench from "./surface/HomePageWorkbench";
 import type { HomeChatSurfaceProps } from "./surface/HomeChatSurface";
+import type { FlowSearchHandle } from "@/widgets/flow/HomeFlowSurface";
 import type { TimelinePageStore } from "@/domain/workbench/timeline-page-store";
 import {
 	type WorkspaceLaunchTargetId,
@@ -493,6 +494,7 @@ function HomePage({
 	}, [activeSessionMetadata?.surface, onSessionSelect, requestNewSessionSurface, showPrimarySurface]);
 	const conversationTimelinePaneRef =
 		useRef<ConversationTimelinePaneHandle | null>(null);
+	const flowSearchHandleRef = useRef<FlowSearchHandle | null>(null);
 	const chatBodyRef = useRef<HTMLDivElement | null>(null);
 	const scrollToBottomButtonRef = useRef<HTMLButtonElement | null>(null);
 	const scrollToBottomButtonVisibleRef = useRef<boolean>(false);
@@ -727,8 +729,10 @@ function HomePage({
 		keyboardShortcuts,
 		activeSessionId,
 		isHome,
+		isFlowSurface: primarySurface === "flow",
 		timelineNavigationEntriesLength: timelineNavigationEntries.length,
 		conversationTimelinePaneRef,
+		flowSearchHandleRef,
 		chatBodyRef,
 		showBottomDockButton,
 		showSideDockButton,
@@ -1101,7 +1105,11 @@ function HomePage({
 						pageActionControls={pageActionControls}
 						pageActionControlsWide={showWorkspaceLaunchControls}
 						chatSurfaceProps={chatSurfaceProps}
-						flowSurfaceProps={{ controller: flowController, chatSurfaceProps }}
+						flowSurfaceProps={{
+							controller: flowController,
+							chatSurfaceProps,
+							searchHandleRef: flowSearchHandleRef,
+						}}
 						sideDockConfig={sideDockConfig}
 						bottomDockConfig={bottomDockConfig}
 						renderSideDock={renderSideDock}

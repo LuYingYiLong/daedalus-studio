@@ -8,6 +8,7 @@ import styles from "./HomeFlowSurface.module.css";
 export type FlowNodeData = {
 	flowNode: ConversationFlowNode;
 	active: boolean;
+	matched: boolean;
 	disabled: boolean;
 	onOpen: (node: ConversationFlowNode) => void;
 	onDerive: (node: ConversationFlowNode) => void;
@@ -18,12 +19,19 @@ export type FlowCanvasNode = Node<FlowNodeData, "userNode" | "assistantNode">;
 function FlowNodeCard({ data }: NodeProps<FlowCanvasNode>): React.JSX.Element {
 	const { t } = useTranslation();
 	const { flowNode } = data;
+	const updatedAtTimestamp: number = Date.parse(flowNode.updatedAt);
+	const updatedAtLabel: string = Number.isNaN(updatedAtTimestamp)
+		? ""
+		: new Intl.DateTimeFormat(undefined, {
+				hour: "2-digit",
+				minute: "2-digit",
+			}).format(updatedAtTimestamp);
 	const canDerive: boolean = flowNode.role === "user"
 		? flowNode.status === "completed"
 		: ["completed", "failed", "stopped"].includes(flowNode.status) && flowNode.contentPreview.length > 0;
 	return (
 		<article
-			className={`${styles.nodeCard} ${data.active ? styles.nodeCardActive : ""}`}
+			className={`${styles.nodeCard} ${data.active ? styles.nodeCardActive : ""} ${data.matched ? styles.nodeCardMatched : ""}`}
 			data-flow-node-id={flowNode.nodeId}
 			data-role={flowNode.role}
 			data-status={flowNode.status}
@@ -39,7 +47,14 @@ function FlowNodeCard({ data }: NodeProps<FlowCanvasNode>): React.JSX.Element {
 					{t(`flow.status.${flowNode.status}`)}
 				</Tag>
 			</header>
-			<Typography.Paragraph className={styles.nodePreview} ellipsis={{ rows: 5 }}>
+			<Typography.Text className={styles.nodeMeta} type="secondary">
+				{updatedAtLabel}
+			</Typography.Text>
+			<Typography.Paragraph
+				className={styles.nodePreview}
+				data-chat-search-text="true"
+				ellipsis={{ rows: 5 }}
+			>
 				{flowNode.contentPreview || t("flow.nodes.emptyResponse")}
 			</Typography.Paragraph>
 			<footer className={styles.nodeActions}>
