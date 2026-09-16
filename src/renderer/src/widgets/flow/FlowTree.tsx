@@ -1,7 +1,7 @@
 import { Badge, Button, Spin, Tooltip, Tree } from "antd";
 import type { TreeProps } from "antd";
 import type { DragEvent, Key, MouseEvent, ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type {
@@ -28,12 +28,12 @@ export type FlowTreeProps = {
 
 type FlowTreeNode = {
 	key: string;
-	title: ReactNode;
+	title?: ReactNode;
+	flowId?: string;
 	kind: "section" | "workspace" | "flow" | "empty";
 	section?: FlowTreeSectionKey;
 	workspaceId?: string;
 	parentKey?: string;
-	flow?: ConversationFlowSummary;
 	children?: FlowTreeNode[];
 	selectable?: boolean;
 	disabled?: boolean;
@@ -42,6 +42,12 @@ type FlowTreeNode = {
 };
 
 const sectionKeys: readonly FlowTreeSectionKey[] = ["pinned", "projects", "recent"];
+
+function sameExpandedKeySet(left: readonly string[], right: readonly string[]): boolean {
+	if (left.length !== right.length) return false;
+	const rightSet: ReadonlySet<string> = new Set(right);
+	return left.every((key): boolean => rightSet.has(key));
+}
 
 function flowKey(flowId: string): string {
 	return `flow:${flowId}`;
@@ -55,7 +61,10 @@ function workspaceKey(workspaceId: string): string {
 	return `flow-workspace:${workspaceId}`;
 }
 
-function getFlowTreeWorkspaceIcon(workspace: WorkspaceConfig | undefined, expanded: boolean | undefined): React.JSX.Element {
+function getFlowTreeWorkspaceIcon(
+	workspace: WorkspaceConfig | undefined,
+	expanded: boolean | undefined,
+): React.JSX.Element {
 	if (workspace === undefined) {
 		return <Icon name={expanded === true ? "folder-open" : "folder"} />;
 	}
@@ -87,7 +96,9 @@ function mergeFlowIds(
 			result.push(flow);
 		}
 	}
-	const newFlows: ConversationFlowSummary[] = sortByUpdatedAt(candidates).filter((flow): boolean => !used.has(flow.flowId));
+	const newFlows: ConversationFlowSummary[] = sortByUpdatedAt(candidates).filter(
+		(flow): boolean => !used.has(flow.flowId),
+	);
 	for (const flow of newFlows) {
 		if (!used.has(flow.flowId)) {
 			used.add(flow.flowId);
@@ -114,7 +125,7 @@ function normalizeOrder(
 	);
 	const workspaceIds: string[] = [
 		...workspaces.map((workspace): string => workspace.id),
-		...flows.flatMap((flow): string[] => flow.workspaceId === null ? [] : [flow.workspaceId]),
+		...flows.flatMap((flow): string[] => (flow.workspaceId === null ? [] : [flow.workspaceId])),
 	].filter((workspaceId, index, all): boolean => all.indexOf(workspaceId) === index);
 	const flowIdsByWorkspace: Record<string, string[]> = {};
 	for (const workspaceId of workspaceIds) {
@@ -164,23 +175,32 @@ function setBucketIds(order: FlowTreeOrderUpdate, bucket: FlowBucket, ids: strin
 function bucketFromNode(node: FlowTreeNode): FlowBucket | null {
 	if (node.section === undefined) return null;
 	return node.section === "projects"
-		? (node.workspaceId ?? (node.parentKey?.startsWith("flow-workspace:")
-			? node.parentKey.slice("flow-workspace:".length)
-			: undefined)) === undefined
+		? (node.workspaceId ??
+				(node.parentKey?.startsWith("flow-workspace:")
+					? node.parentKey.slice("flow-workspace:".length)
+					: undefined)) === undefined
 			? null
 			: { section: "projects", workspaceId: node.workspaceId ?? node.parentKey!.slice("flow-workspace:".length) }
 		: { section: node.section };
 }
 
-function moveFlow(order: FlowTreeOrderUpdate, source: FlowBucket, destination: FlowBucket, sourceId: string, targetId: string | null, afterTarget: boolean): void {
+function moveFlow(
+	order: FlowTreeOrderUpdate,
+	source: FlowBucket,
+	destination: FlowBucket,
+	sourceId: string,
+	targetId: string | null,
+	afterTarget: boolean,
+): void {
 	const sameBucket: boolean = bucketKey(source) === bucketKey(destination);
 	const sourceIds: string[] = getBucketIds(order, source).filter((id): boolean => id !== sourceId);
 	const destinationIds: string[] = sameBucket
 		? sourceIds
 		: getBucketIds(order, destination).filter((id): boolean => id !== sourceId);
-	const targetIndex: number = targetId === null
-		? destinationIds.length
-		: Math.max(0, destinationIds.indexOf(targetId) + (afterTarget ? 1 : 0));
+	const targetIndex: number =
+		targetId === null
+			? destinationIds.length
+			: Math.max(0, destinationIds.indexOf(targetId) + (afterTarget ? 1 : 0));
 	destinationIds.splice(Math.min(targetIndex, destinationIds.length), 0, sourceId);
 	setBucketIds(order, source, sourceIds);
 	setBucketIds(order, destination, destinationIds);
@@ -202,45 +222,60 @@ function FlowTree({
 		(): FlowTreeOrderUpdate => normalizeOrder(flows, workspaces, order),
 		[flows, order, workspaces],
 	);
+	const flowById: ReadonlyMap<string, ConversationFlowSummary> = useMemo(
+		(): ReadonlyMap<string, ConversationFlowSummary> =>
+			new Map(flows.map((flow): [string, ConversationFlowSummary] => [flow.flowId, flow])),
+		[flows],
+	);
+	const workspaceById: ReadonlyMap<string, WorkspaceConfig> = useMemo(
+		(): ReadonlyMap<string, WorkspaceConfig> =>
+			new Map(workspaces.map((workspace): [string, WorkspaceConfig] => [workspace.id, workspace])),
+		[workspaces],
+	);
 	const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
 
+	// Keep the same array reference when expansion membership is unchanged; rc-tree treats a new controlled array as a refresh and cancels its row motion
 	useEffect((): void => {
-		setExpandedKeys([
+		const nextExpandedKeys: string[] = [
 			...effectiveOrder.expandedSectionKeys.map(sectionKey),
 			...effectiveOrder.expandedWorkspaceIds.map(workspaceKey),
-		]);
+		];
+		setExpandedKeys((current): string[] =>
+			sameExpandedKeySet(current, nextExpandedKeys) ? current : nextExpandedKeys,
+		);
 	}, [effectiveOrder.expandedSectionKeys, effectiveOrder.expandedWorkspaceIds]);
 
+	const treeDataSignature: string = JSON.stringify({
+		pinnedFlowIds: effectiveOrder.pinnedFlowIds,
+		recentFlowIds: effectiveOrder.recentFlowIds,
+		flowIdsByWorkspace: effectiveOrder.flowIdsByWorkspace,
+		workspaceIds: workspaces.map((workspace): string => workspace.id),
+	});
+	const treeDataInputRef = useRef(effectiveOrder);
+	treeDataInputRef.current = effectiveOrder;
+
 	const treeData = useMemo<FlowTreeNode[]>(() => {
-		const flowById: ReadonlyMap<string, ConversationFlowSummary> = new Map(
-			flows.map((flow): [string, ConversationFlowSummary] => [flow.flowId, flow]),
-		);
-		const createFlowNode = (flowId: string, parentKey: string, section: FlowTreeSectionKey, workspaceId?: string): FlowTreeNode | null => {
-			const flow: ConversationFlowSummary | undefined = flowById.get(flowId);
-			if (flow === undefined) return null;
-			return {
-				key: flowKey(flow.flowId),
-				kind: "flow",
-				className: styles.flowNode,
-				section,
-				workspaceId,
-				parentKey,
-				flow,
-				title: (
-					<FlowTreeItem
-						flow={flow}
-						isSelected={flow.flowId === selectedFlowId}
-						isMutating={isMutating}
-						onArchive={onArchive}
-					/>
-				),
-				isLeaf: true,
-			};
-		};
+		// 只在节点结构变化时重建树，行内容由 titleRender 根据最新状态渲染
+		const currentOrder: FlowTreeOrderUpdate = treeDataInputRef.current;
+		const createFlowNode = (
+			flowId: string,
+			parentKey: string,
+			section: FlowTreeSectionKey,
+			workspaceId?: string,
+		): FlowTreeNode => ({
+			key: flowKey(flowId),
+			kind: "flow",
+			className: `${styles.flowNode} ${section === "projects" ? styles.flowProjectNode : ""}`.trim(),
+			section,
+			workspaceId,
+			parentKey,
+			flowId,
+			isLeaf: true,
+		});
 		const emptyNode = (key: string, section: FlowTreeSectionKey, parentKey: string): FlowTreeNode => ({
 			key,
 			kind: "empty",
-			className: styles.emptyNode,
+			className: `${styles.emptyNode} ${section === "projects" ? styles.emptyProjectNode : styles.emptySectionNode}`,
 			section,
 			parentKey,
 			title: <span className={styles.emptyItem}>{t("flow.tree.empty")}</span>,
@@ -255,34 +290,29 @@ function FlowTree({
 			section,
 			selectable: false,
 			title: <span className={styles.groupTitle}>{t(`flow.tree.${section}`)}</span>,
-			children: children.length > 0 ? children : [emptyNode(`${sectionKey(section)}:empty`, section, sectionKey(section))],
+			children:
+				children.length > 0
+					? children
+					: [emptyNode(`${sectionKey(section)}:empty`, section, sectionKey(section))],
 		});
-		const pinnedChildren: FlowTreeNode[] = effectiveOrder.pinnedFlowIds.flatMap((flowId): FlowTreeNode[] => {
-			const node = createFlowNode(flowId, sectionKey("pinned"), "pinned");
-			return node === null ? [] : [node];
-		});
-		const recentChildren: FlowTreeNode[] = effectiveOrder.recentFlowIds.flatMap((flowId): FlowTreeNode[] => {
-			const node = createFlowNode(flowId, sectionKey("recent"), "recent");
-			return node === null ? [] : [node];
-		});
-		const workspaceNameById: ReadonlyMap<string, string> = new Map(
-			workspaces.map((workspace): [string, string] => [workspace.id, workspace.name]),
+		const pinnedChildren: FlowTreeNode[] = currentOrder.pinnedFlowIds.map(
+			(flowId): FlowTreeNode => createFlowNode(flowId, sectionKey("pinned"), "pinned"),
 		);
-		const projectChildren: FlowTreeNode[] = Object.entries(effectiveOrder.flowIdsByWorkspace).map(
+		const recentChildren: FlowTreeNode[] = currentOrder.recentFlowIds.map(
+			(flowId): FlowTreeNode => createFlowNode(flowId, sectionKey("recent"), "recent"),
+		);
+		const projectChildren: FlowTreeNode[] = Object.entries(currentOrder.flowIdsByWorkspace).map(
 			([workspaceId, flowIds]): FlowTreeNode => {
 				const parentKey: string = workspaceKey(workspaceId);
-				const children: FlowTreeNode[] = flowIds.flatMap((flowId): FlowTreeNode[] => {
-					const node = createFlowNode(flowId, parentKey, "projects", workspaceId);
-					return node === null ? [] : [node];
-				});
+				const children: FlowTreeNode[] = flowIds.map(
+					(flowId): FlowTreeNode => createFlowNode(flowId, parentKey, "projects", workspaceId),
+				);
 				return {
 					key: parentKey,
 					kind: "workspace",
 					className: styles.workspaceNode,
 					section: "projects",
 					workspaceId,
-					selectable: false,
-					title: <span className={styles.groupTitle}>{workspaceNameById.get(workspaceId) ?? workspaceId}</span>,
 					children: children.length > 0 ? children : [emptyNode(`${parentKey}:empty`, "projects", parentKey)],
 				};
 			},
@@ -292,33 +322,42 @@ function FlowTree({
 			createSectionNode("projects", projectChildren),
 			createSectionNode("recent", recentChildren),
 		];
-	}, [effectiveOrder.flowIdsByWorkspace, effectiveOrder.pinnedFlowIds, effectiveOrder.recentFlowIds, flows, isMutating, onArchive, selectedFlowId, t, workspaces]);
-
+	}, [t, treeDataSignature]);
 	const handleDrop: NonNullable<TreeProps<FlowTreeNode>["onDrop"]> = (info): void => {
 		const dragNode: FlowTreeNode = info.dragNode as FlowTreeNode;
 		const dropNode: FlowTreeNode = info.node as FlowTreeNode;
-		if (dragNode.kind !== "flow" || dragNode.flow === undefined) return;
+		if (dragNode.kind !== "flow" || dragNode.flowId === undefined) return;
 		const source = bucketFromNode(dragNode);
 		const destination = bucketFromNode(dropNode);
 		if (source === null || destination === null) return;
-		if (destination.section === "recent" && dragNode.flow.workspaceId !== null) return;
-		if (destination.section === "projects" && dragNode.flow.workspaceId !== destination.workspaceId) return;
+		const dragFlow: ConversationFlowSummary | undefined = flowById.get(dragNode.flowId);
+		if (dragFlow === undefined) return;
+		if (destination.section === "recent" && dragFlow.workspaceId !== null) return;
+		if (destination.section === "projects" && dragFlow.workspaceId !== destination.workspaceId) return;
 		if (dropNode.kind === "section" && destination.section === "projects") return;
 		const next: FlowTreeOrderUpdate = {
 			pinnedFlowIds: [...effectiveOrder.pinnedFlowIds],
 			recentFlowIds: [...effectiveOrder.recentFlowIds],
 			flowIdsByWorkspace: Object.fromEntries(
-				Object.entries(effectiveOrder.flowIdsByWorkspace).map(([key, value]): [string, string[]] => [key, [...value]]),
+				Object.entries(effectiveOrder.flowIdsByWorkspace).map(([key, value]): [string, string[]] => [
+					key,
+					[...value],
+				]),
 			),
 			expandedSectionKeys: [...effectiveOrder.expandedSectionKeys],
 			expandedWorkspaceIds: [...effectiveOrder.expandedWorkspaceIds],
 		};
-		const targetId: string | null = dropNode.kind === "flow" && dropNode.flow !== undefined ? dropNode.flow.flowId : null;
-		moveFlow(next, source, destination, dragNode.flow.flowId, targetId, info.dropPosition > 0);
+		const targetId: string | null = dropNode.kind === "flow" ? (dropNode.flowId ?? null) : null;
+		moveFlow(next, source, destination, dragFlow.flowId, targetId, info.dropPosition > 0);
 		onOrderUpdate(next);
 	};
 
-	if (isLoading && flows.length === 0) return <div className={styles.loading}><Spin size="small" /></div>;
+	if (isLoading && flows.length === 0)
+		return (
+			<div className={styles.loading}>
+				<Spin size="small" />
+			</div>
+		);
 
 	return (
 		<div className={styles.tree}>
@@ -326,6 +365,7 @@ function FlowTree({
 				aria-label={t("flow.tree.label")}
 				blockNode
 				virtual={false}
+				expandAction="click"
 				classNames={{
 					root: styles.treeRoot,
 					item: styles.treeItem,
@@ -333,6 +373,28 @@ function FlowTree({
 					itemSwitcher: styles.treeItemSwitcher,
 				}}
 				treeData={treeData}
+				titleRender={(item): ReactNode => {
+					const node = item as FlowTreeNode;
+					if (node.kind === "flow" && node.flowId !== undefined) {
+						const flow: ConversationFlowSummary | undefined = flowById.get(node.flowId);
+						return flow === undefined ? null : (
+							<FlowTreeItem
+								flow={flow}
+								isSelected={flow.flowId === selectedFlowId}
+								isMutating={isMutating}
+								onArchive={onArchive}
+							/>
+						);
+					}
+					if (node.kind === "workspace" && node.workspaceId !== undefined) {
+						return (
+							<span className={styles.groupTitle}>
+								{workspaceById.get(node.workspaceId)?.name ?? node.workspaceId}
+							</span>
+						);
+					}
+					return node.title ?? null;
+				}}
 				expandedKeys={expandedKeys}
 				selectedKeys={selectedFlowId === null ? [] : [flowKey(selectedFlowId)]}
 				draggable={{
@@ -342,19 +404,33 @@ function FlowTree({
 				allowDrop={({ dragNode, dropNode, dropPosition }): boolean => {
 					const drag = dragNode as FlowTreeNode;
 					const drop = dropNode as FlowTreeNode;
-					if (drag.kind !== "flow" || drag.flow === undefined) return false;
+					const dragFlow: ConversationFlowSummary | undefined =
+						drag.flowId === undefined ? undefined : flowById.get(drag.flowId);
+					if (drag.kind !== "flow" || dragFlow === undefined) return false;
 					if (drop.kind === "section") {
-						return drop.section === "pinned"
-							|| (drop.section === "recent" && drag.flow.workspaceId === null);
+						return (
+							drop.section === "pinned" || (drop.section === "recent" && dragFlow.workspaceId === null)
+						);
 					}
 					if (drop.kind === "workspace" || drop.kind === "empty") {
-						const workspaceId: string | undefined = drop.workspaceId ?? (drop.parentKey?.startsWith("flow-workspace:")
-							? drop.parentKey.slice("flow-workspace:".length)
-							: undefined);
-						return drop.section === "projects" && drag.flow.workspaceId === workspaceId && (drop.kind === "empty" || dropPosition === 0);
+						const workspaceId: string | undefined =
+							drop.workspaceId ??
+							(drop.parentKey?.startsWith("flow-workspace:")
+								? drop.parentKey.slice("flow-workspace:".length)
+								: undefined);
+						return (
+							drop.section === "projects" &&
+							dragFlow.workspaceId === workspaceId &&
+							(drop.kind === "empty" || dropPosition === 0)
+						);
 					}
-					if (drop.kind !== "flow" || drop.flow === undefined || dropPosition === 0) return false;
-					return drag.section === drop.section && (drag.section !== "projects" || drag.flow.workspaceId === drop.flow.workspaceId);
+					const dropFlow: ConversationFlowSummary | undefined =
+						drop.flowId === undefined ? undefined : flowById.get(drop.flowId);
+					if (drop.kind !== "flow" || dropFlow === undefined || dropPosition === 0) return false;
+					return (
+						drag.section === drop.section &&
+						(drag.section !== "projects" || dragFlow.workspaceId === dropFlow.workspaceId)
+					);
 				}}
 				onExpand={(keys): void => {
 					const nextExpandedKeys: string[] = keys.map(String);
@@ -363,7 +439,9 @@ function FlowTree({
 						...effectiveOrder,
 						expandedSectionKeys: nextExpandedKeys.flatMap((key): FlowTreeSectionKey[] => {
 							const section = key.startsWith("section:") ? key.slice("section:".length) : "";
-							return sectionKeys.includes(section as FlowTreeSectionKey) ? [section as FlowTreeSectionKey] : [];
+							return sectionKeys.includes(section as FlowTreeSectionKey)
+								? [section as FlowTreeSectionKey]
+								: [];
 						}),
 						expandedWorkspaceIds: nextExpandedKeys.flatMap((key): string[] =>
 							key.startsWith("flow-workspace:") ? [key.slice("flow-workspace:".length)] : [],
@@ -372,7 +450,7 @@ function FlowTree({
 				}}
 				onSelect={(_selectedKeys: Key[], info): void => {
 					const node: FlowTreeNode = info.node as FlowTreeNode;
-					if (node.kind === "flow" && node.flow !== undefined) onSelect(node.flow.flowId);
+					if (node.kind === "flow" && node.flowId !== undefined) onSelect(node.flowId);
 				}}
 				onDrop={handleDrop}
 				switcherIcon={(nodeProps): React.JSX.Element | null => {
@@ -404,14 +482,15 @@ function FlowTreeItem({ flow, isSelected, isMutating, onArchive }: FlowTreeItemP
 	const { t } = useTranslation();
 	const isRunning: boolean = flow.activeRequestId !== null;
 	return (
-		<span className={`${styles.item} ${isSelected ? styles.itemSelected : ""}`} data-running={isRunning ? "true" : undefined}>
-			<Icon name="workflow" />
+		<span className={styles.item} data-running={isRunning ? "true" : undefined}>
 			<span className={styles.itemTitle}>{flow.title}</span>
 			<Badge count={flow.branchCount} overflowCount={99} className={styles.itemBadge} />
 			<span className={styles.itemEndSlot}>
 				{isRunning ? (
 					<Tooltip title={t("flow.status.streaming")}>
-						<span className={styles.itemRunning} aria-label={t("flow.status.streaming")}><Spin size="small" /></span>
+						<span className={styles.itemRunning} aria-label={t("flow.status.streaming")}>
+							<Spin size="small" />
+						</span>
 					</Tooltip>
 				) : (
 					<Tooltip title={t("flow.actions.archive")}>
@@ -425,8 +504,15 @@ function FlowTreeItem({ flow, isSelected, isMutating, onArchive }: FlowTreeItemP
 							loading={isMutating && isSelected}
 							draggable={false}
 							onMouseDown={(event: MouseEvent<HTMLElement>): void => event.stopPropagation()}
-							onDragStart={(event: DragEvent<HTMLElement>): void => { event.preventDefault(); event.stopPropagation(); }}
-							onClick={(event: MouseEvent<HTMLElement>): void => { event.preventDefault(); event.stopPropagation(); onArchive(flow); }}
+							onDragStart={(event: DragEvent<HTMLElement>): void => {
+								event.preventDefault();
+								event.stopPropagation();
+							}}
+							onClick={(event: MouseEvent<HTMLElement>): void => {
+								event.preventDefault();
+								event.stopPropagation();
+								onArchive(flow);
+							}}
 						/>
 					</Tooltip>
 				)}

@@ -109,7 +109,7 @@
 	--ds-safe-area-bottom: max(env(safe-area-inset-bottom, 0px), var(--android-safe-area-bottom));
 	--ds-safe-area-left: max(env(safe-area-inset-left, 0px), var(--android-safe-area-left));
 	--ds-bg: #141414;
-	--ds-bg-tint: rgba(20, 20, 20, 0.75);
+	--ds-bg-tint: rgba(20, 20, 20, 0.9);
 	--ds-code-bg: #ffffff1d;
 	--ds-bg-sunken: #1b1b1b;
 	--ds-surface: #1b1b1b;
@@ -181,8 +181,7 @@
 
 :root[data-theme="light"] {
 	--ds-bg: #f5f5f5;
-	--ds-bg-tint: rgba(255, 255, 255, 0.75);
-	--ds-tr-bg: rgb(245, 245, 245, 0.7);
+	--ds-bg-tint: rgba(255, 255, 255, 0.9);
 	--ds-code-bg: #14141414;
 	--ds-bg-sunken: #e8e8e8;
 	--ds-surface: #ffffff;
