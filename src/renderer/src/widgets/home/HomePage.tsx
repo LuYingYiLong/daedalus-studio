@@ -36,6 +36,7 @@ import type {
 	DeleteWorkspaceResult,
 	WorkspaceTreeOrderPreferences,
 } from "@/platform/rpc/workspace-api";
+import { deleteWorkspace } from "@/platform/rpc/workspace-api";
 import type { SkillSummary } from "@/platform/rpc/skill-api";
 import type { WorkspaceSidebarPreferences } from "@/platform/rpc/client-preferences-api";
 import type { KeyboardShortcutOverrides } from "@/platform/rpc/keyboard-shortcuts";
@@ -49,6 +50,8 @@ import type { PastedTextAttachmentInput } from "@/domain/conversation/pasted-tex
 import type { RetryUserMessagePayload } from "@/widgets/conversation/UserBubble";
 import styles from "./HomePage.module.css";
 import HomeWorkspaceSidebar from "./workspace/HomeWorkspaceSidebar";
+import DeleteWorkspaceDialog from "@/widgets/workspace/DeleteWorkspaceDialog";
+import WorkspaceProjectDialog from "@/widgets/workspace/WorkspaceProjectDialog";
 import HomePageShell from "./surface/HomePageShell";
 import TimelineWorkflowTodoPanel from "./surface/TimelineWorkflowTodoPanel";
 import type { SessionLayoutPreferences } from "@/domain/session/session-layout";
@@ -429,6 +432,9 @@ function HomePage({
 	const [workspaceOrderIds, setWorkspaceOrderIds] = useState<string[]>(() => [
 		...initialWorkspaceTreeOrder.workspaceIds,
 	]);
+	const [flowWorkspaceEditTarget, setFlowWorkspaceEditTarget] = useState<WorkspaceConfig | null>(null);
+	const [flowWorkspaceDeleteTarget, setFlowWorkspaceDeleteTarget] = useState<WorkspaceConfig | null>(null);
+	const [isFlowWorkspaceDeleting, setIsFlowWorkspaceDeleting] = useState(false);
 	const handleWorkspaceOrderChange = useCallback((workspaceIds: readonly string[]): void => {
 		setWorkspaceOrderIds((currentWorkspaceIds): string[] => {
 			const hasSameOrder: boolean =
@@ -489,6 +495,33 @@ function HomePage({
 			onSessionSelect(session);
 		},
 	});
+	const handleOpenFlowWorkspace = useCallback(async (workspace: WorkspaceConfig): Promise<void> => {
+		try {
+			await window.electronAPI.workspaceFs.openWorkspaceDirectory(workspace.rootPath);
+		} catch (error: unknown) {
+			console.error("[HomePage] open Flow project directory failed", error);
+			void messageApi.error(
+				error instanceof Error ? error.message : t("workspaceTree.errors.openWorkspaceDirectory"),
+			);
+		}
+	}, [messageApi, t]);
+	const handleConfirmFlowWorkspaceDelete = useCallback(async (): Promise<void> => {
+		if (flowWorkspaceDeleteTarget === null || isFlowWorkspaceDeleting) return;
+		try {
+			setIsFlowWorkspaceDeleting(true);
+			const result: DeleteWorkspaceResult = await deleteWorkspace(flowWorkspaceDeleteTarget.id);
+			onWorkspaceDelete(result);
+			setFlowWorkspaceDeleteTarget(null);
+			void flowController.refresh();
+		} catch (error: unknown) {
+			console.error("[HomePage] delete Flow project failed", error);
+			void messageApi.error(
+				error instanceof Error ? error.message : t("workspaceTree.errors.deleteWorkspace"),
+			);
+		} finally {
+			setIsFlowWorkspaceDeleting(false);
+		}
+	}, [flowController.refresh, flowWorkspaceDeleteTarget, isFlowWorkspaceDeleting, messageApi, onWorkspaceDelete, t]);
 	const unreadFlowIds: string[] = useMemo((): string[] => {
 		const unreadSessionIdSet: ReadonlySet<string> = new Set(unreadSessionIds);
 		return Object.entries(flowController.flowBranchSessionIdsByFlow)
@@ -920,6 +953,16 @@ function HomePage({
 		onRename: flowController.renameFlowById,
 		onArchive: (flow: ConversationFlowSummary): void => { void flowController.archiveFlowById(flow.flowId); },
 		onOrderUpdate: flowController.updateFlowOrder,
+		onWorkspaceEdit: setFlowWorkspaceEditTarget,
+		onWorkspaceNewWorktree: (workspace: WorkspaceConfig): void => {
+			onNewWorkspaceSession(workspace, "worktree");
+		},
+		onWorkspaceOpen: (workspace: WorkspaceConfig): void => {
+			void handleOpenFlowWorkspace(workspace);
+		},
+		onWorkspaceDelete: (workspace: WorkspaceConfig): void => {
+			setFlowWorkspaceDeleteTarget(workspace);
+		},
 	};
 
 	const commonDockPanelProps = {
@@ -1175,6 +1218,30 @@ function HomePage({
 						defaultReasoningEffort={reasoningEffort}
 					/>
 			</HomePageShell>
+			<WorkspaceProjectDialog
+				open={flowWorkspaceEditTarget !== null}
+				workspace={flowWorkspaceEditTarget}
+				onCancel={(): void => setFlowWorkspaceEditTarget(null)}
+				onSaved={(workspace: WorkspaceConfig): void => {
+					onWorkspaceUpdate(workspace);
+					setFlowWorkspaceEditTarget(null);
+				}}
+				onRequestDelete={(workspace: WorkspaceConfig): void => {
+					setFlowWorkspaceEditTarget(null);
+					setFlowWorkspaceDeleteTarget(workspace);
+				}}
+			/>
+			<DeleteWorkspaceDialog
+				open={flowWorkspaceDeleteTarget !== null}
+				workspace={flowWorkspaceDeleteTarget}
+				loading={isFlowWorkspaceDeleting}
+				onConfirm={(): void => {
+					void handleConfirmFlowWorkspaceDelete();
+				}}
+				onCancel={(): void => {
+					if (!isFlowWorkspaceDeleting) setFlowWorkspaceDeleteTarget(null);
+				}}
+			/>
 			<HomePageDialogs summaryController={summaryController} />
 		</>
 	);

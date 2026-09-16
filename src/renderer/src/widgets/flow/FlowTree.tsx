@@ -12,6 +12,7 @@ import type {
 	WorkspaceConfig,
 } from "@/platform/rpc/types";
 import { WorkspaceTreeIconView } from "@/widgets/workspace/workspace-appearance";
+import { workspaceSupportsWorktrees } from "@/domain/workspace/worktree-capability";
 import styles from "./FlowTree.module.css";
 
 export type FlowTreeProps = {
@@ -26,6 +27,10 @@ export type FlowTreeProps = {
 	onRename: (flowId: string, title: string) => Promise<void>;
 	onArchive: (flow: ConversationFlowSummary) => void;
 	onOrderUpdate: (order: FlowTreeOrderUpdate) => Promise<void>;
+	onWorkspaceEdit: (workspace: WorkspaceConfig) => void;
+	onWorkspaceNewWorktree: (workspace: WorkspaceConfig) => void;
+	onWorkspaceOpen: (workspace: WorkspaceConfig) => void;
+	onWorkspaceDelete: (workspace: WorkspaceConfig) => void;
 };
 
 type FlowTreeNode = {
@@ -218,6 +223,10 @@ function FlowTree({
 	onRename,
 	onArchive,
 	onOrderUpdate,
+	onWorkspaceEdit,
+	onWorkspaceNewWorktree,
+	onWorkspaceOpen,
+	onWorkspaceDelete,
 }: FlowTreeProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const effectiveOrder: FlowTreeOrderUpdate = useMemo(
@@ -518,10 +527,52 @@ function FlowTree({
 						);
 					}
 					if (node.kind === "workspace" && node.workspaceId !== undefined) {
+						const workspace: WorkspaceConfig | undefined = workspaceById.get(node.workspaceId);
+						if (workspace === undefined) return node.workspaceId;
+						const canCreateWorktrees: boolean = workspaceSupportsWorktrees(workspace);
+						const workspaceMenu: MenuProps = {
+							items: [
+								{
+									key: "edit",
+									label: t("workspaceTree.actions.editProject"),
+									icon: <Icon name="folder-edit" />,
+								},
+								...(canCreateWorktrees
+									? [
+											{
+												key: "new-worktree-session",
+												label: t("workspaceTree.actions.newWorktreeSession"),
+												icon: <Icon name="worktree" />,
+											},
+										]
+									: []),
+								{
+									key: "open",
+									label: t("workspaceTree.actions.openInExplorer"),
+									icon: <Icon name="folder-open" />,
+								},
+								{
+									key: "delete",
+									label: t("workspaceTree.actions.delete"),
+									icon: <Icon name="remove" />,
+									danger: true,
+								},
+							],
+							onClick: ({ key, domEvent }): void => {
+								domEvent.preventDefault();
+								domEvent.stopPropagation();
+								if (key === "edit") onWorkspaceEdit(workspace);
+								if (key === "new-worktree-session" && canCreateWorktrees) {
+									onWorkspaceNewWorktree(workspace);
+								}
+								if (key === "open") onWorkspaceOpen(workspace);
+								if (key === "delete") onWorkspaceDelete(workspace);
+							},
+						};
 						return (
-							<span className={styles.groupTitle}>
-								{workspaceById.get(node.workspaceId)?.name ?? node.workspaceId}
-							</span>
+							<Dropdown menu={workspaceMenu} trigger={["contextMenu"]}>
+								<span className={styles.workspaceTitle}>{workspace.name}</span>
+							</Dropdown>
 						);
 					}
 					return node.title ?? null;
@@ -701,7 +752,10 @@ function FlowTreeItem({
 				className={styles.itemUnreadBadge}
 			>
 				<span className={styles.item} data-running={isRunning ? "true" : undefined}>
-					<span className={styles.itemTitle} aria-label={isUnread ? `${flow.title}, ${unreadLabel}` : undefined}>
+					<span
+						className={styles.itemTitle}
+						aria-label={isUnread ? `${flow.title}, ${unreadLabel}` : undefined}
+					>
 						{flow.title}
 					</span>
 					<Tooltip title={t(flow.pinned ? "flow.actions.unpin" : "flow.actions.pin")}>
