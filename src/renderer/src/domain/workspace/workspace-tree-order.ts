@@ -277,11 +277,17 @@ export function sortSessionsByTreeOrder(sessions: readonly SessionMetadata[], se
 }
 
 export function sortWorkspacesByTreeOrder(workspaces: readonly WorkspaceConfig[], preferences: WorkspaceTreeOrderPreferences): WorkspaceConfig[] {
+	return sortWorkspacesByIds(workspaces, preferences.workspaceIds);
+}
+
+export function sortWorkspacesByIds(workspaces: readonly WorkspaceConfig[], workspaceIds: readonly string[]): WorkspaceConfig[] {
 	const byId: ReadonlyMap<string, WorkspaceConfig> = new Map(workspaces.map((workspace: WorkspaceConfig): [string, WorkspaceConfig] => [workspace.id, workspace]));
-	return preferences.workspaceIds.flatMap((workspaceId: string): WorkspaceConfig[] => {
+	const ordered: WorkspaceConfig[] = workspaceIds.flatMap((workspaceId: string): WorkspaceConfig[] => {
 		const workspace: WorkspaceConfig | undefined = byId.get(workspaceId);
 		return workspace === undefined ? [] : [workspace];
 	});
+	const orderedIds: ReadonlySet<string> = new Set(ordered.map((workspace: WorkspaceConfig): string => workspace.id));
+	return [...ordered, ...workspaces.filter((workspace: WorkspaceConfig): boolean => !orderedIds.has(workspace.id))];
 }
 
 export function sortWorkspaceSessionsByTreeOrder(sessions: readonly SessionMetadata[], workspaceId: string, preferences: WorkspaceTreeOrderPreferences): SessionMetadata[] {

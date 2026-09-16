@@ -122,10 +122,9 @@
 
 .item {
 	display: grid;
-	grid-template-columns: auto minmax(0, 1fr) auto auto;
+	grid-template-columns: minmax(0, 1fr) 28px 28px;
 	align-items: center;
-	column-gap: var(--ds-space-1);
-	row-gap: 8px;
+	padding-right: var(--ds-space-2);
 	width: 100%;
 	min-width: 0;
 	min-height: 28px;
@@ -137,30 +136,35 @@
 }
 
 .itemTitle {
+	grid-column: 1;
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-.itemBadge {
+.pinButton {
+	grid-column: 2;
+	justify-self: end;
 	color: var(--ant-color-text-tertiary);
-	font-size: 12px;
+	opacity: 0;
+	transition: opacity 120ms ease;
 }
 
-.itemBadge :global(.ant-badge-count) {
-	min-width: 18px;
-	height: 18px;
-	padding-inline: 5px;
-	color: var(--ant-color-text-tertiary);
-	font-size: 11px;
-	line-height: 18px;
-	background: var(--ant-color-fill-tertiary);
-	box-shadow: none;
+.itemUnreadBadge {
+	display: block;
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+}
+
+.itemUnreadBadge :global(.ant-badge-dot) {
+	box-shadow: var(--ds-box-shadow);
 }
 
 .itemEndSlot {
 	display: grid;
+	grid-column: 3;
 	grid-template-areas: "content";
 	align-items: center;
 	justify-items: end;
@@ -191,10 +195,19 @@
 	transition: opacity 120ms ease;
 }
 
+.treeItem:hover .pinButton,
+.treeItem:focus-within .pinButton,
+.pinButton:focus-visible,
+.pinButton[aria-disabled="true"],
 .treeItem:hover .archiveButton,
 .treeItem:focus-within .archiveButton,
 .archiveButton:focus-visible {
 	opacity: 1;
+}
+
+.renameErrorText {
+	display: block;
+	margin-top: 8px;
 }
 
 .loading,

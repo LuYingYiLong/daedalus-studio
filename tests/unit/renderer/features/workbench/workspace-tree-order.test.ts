@@ -10,6 +10,7 @@ import {
 	moveWorkspaceInTreeOrder,
 	reconcileWorkspaceTreeOrder,
 	sortSessionsByTreeOrder,
+	sortWorkspacesByIds,
 	sortWorkspacesByTreeOrder,
 	sortWorkspaceSessionsByTreeOrder
 } from "@/domain/workspace/workspace-tree-order";
@@ -148,6 +149,25 @@ describe("workspace tree order", (): void => {
 		);
 		expect(pinnedResult.pinnedSessionIds).toEqual(["session-pinned-2", "session-pinned"]);
 		expect(pinnedResult.recentSessionIds).toEqual(["session-recent", "session-recent-2"]);
+	});
+
+	it("uses the shared workspace order and appends workspaces without saved positions", (): void => {
+		const extraWorkspace: WorkspaceConfig = {
+			id: "workspace-c",
+			name: "C",
+			kind: "godot",
+			rootPath: "D:/C",
+			icon: 0,
+			color: 0,
+			sourceFolders: [],
+			primarySourceFolderId: "",
+		};
+
+		const sortedIds: string[] = sortWorkspacesByIds(
+			[...WORKSPACES, extraWorkspace],
+			["workspace-b", "missing", "workspace-a"],
+		).map((workspace): string => workspace.id);
+		expect(sortedIds).toEqual(["workspace-b", "workspace-a", "workspace-c"]);
 	});
 
 	it("reorders pinned, projects, and recent section roots", (): void => {

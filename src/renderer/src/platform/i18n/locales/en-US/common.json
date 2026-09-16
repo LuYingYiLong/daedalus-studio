@@ -655,6 +655,8 @@
 			"copyToChat": "Copy as chat",
 			"rename": "Rename",
 			"archive": "Archive Flow",
+			"pin": "Pin Flow",
+			"unpin": "Unpin Flow",
 			"more": "More Flow actions",
 			"selectBranch": "Select Flow branch",
 			"openActiveBranch": "Open active branch"
@@ -665,7 +667,17 @@
 		},
 		"tree": { "label": "Flow list", "empty": "No Flows", "unbound": "No project", "pinned": "Pinned", "projects": "Projects", "recent": "Recent" },
 		"details": { "title": "Node details" },
-		"rename": { "title": "Rename Flow" }
+		"aria": {
+			"pin": "Pin Flow: {{title}}",
+			"unpin": "Unpin Flow: {{title}}"
+		},
+		"errors": { "notFound": "Flow not found" },
+		"rename": {
+			"title": "Rename Flow",
+			"placeholder": "Enter a Flow name",
+			"empty": "Flow name cannot be empty",
+			"failed": "Could not rename Flow"
+		}
 	},
 	"agentPage": {
 		"worktree": {

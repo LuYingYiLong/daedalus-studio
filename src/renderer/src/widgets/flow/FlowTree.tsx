@@ -1,5 +1,5 @@
-import { Badge, Button, Spin, Tooltip, Tree } from "antd";
-import type { TreeProps } from "antd";
+import { Badge, Button, Dropdown, Input, Modal, Spin, Tooltip, Tree, Typography } from "antd";
+import type { MenuProps, TreeProps } from "antd";
 import type { DragEvent, Key, MouseEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,19 +11,21 @@ import type {
 	FlowTreeOrderUpdate,
 	WorkspaceConfig,
 } from "@/platform/rpc/types";
-import { getWorkspaceIconStyle, WORKSPACE_ICON_NAMES } from "@/widgets/workspace/workspace-appearance";
+import { WorkspaceTreeIconView } from "@/widgets/workspace/workspace-appearance";
 import styles from "./FlowTree.module.css";
 
 export type FlowTreeProps = {
 	flows: ConversationFlowSummary[];
 	workspaces: WorkspaceConfig[];
 	selectedFlowId: string | null;
+	unreadFlowIds: readonly string[];
 	isLoading: boolean;
 	isMutating: boolean;
 	order: FlowTreeOrder | null;
 	onSelect: (flowId: string) => void;
+	onRename: (flowId: string, title: string) => Promise<void>;
 	onArchive: (flow: ConversationFlowSummary) => void;
-	onOrderUpdate: (order: FlowTreeOrderUpdate) => void;
+	onOrderUpdate: (order: FlowTreeOrderUpdate) => Promise<void>;
 };
 
 type FlowTreeNode = {
@@ -68,9 +70,7 @@ function getFlowTreeWorkspaceIcon(
 	if (workspace === undefined) {
 		return <Icon name={expanded === true ? "folder-open" : "folder"} />;
 	}
-	const configuredIconName: string = WORKSPACE_ICON_NAMES[workspace.icon] ?? "folder";
-	const iconName: string = configuredIconName === "folder" && expanded === true ? "folder-open" : configuredIconName;
-	return <Icon name={iconName} style={getWorkspaceIconStyle(workspace.color)} />;
+	return <WorkspaceTreeIconView workspace={workspace} expanded={expanded} />;
 }
 
 function sortByUpdatedAt(flows: readonly ConversationFlowSummary[]): ConversationFlowSummary[] {
@@ -210,10 +210,12 @@ function FlowTree({
 	flows,
 	workspaces,
 	selectedFlowId,
+	unreadFlowIds,
 	isLoading,
 	isMutating,
 	order,
 	onSelect,
+	onRename,
 	onArchive,
 	onOrderUpdate,
 }: FlowTreeProps): React.JSX.Element {
@@ -232,7 +234,17 @@ function FlowTree({
 			new Map(workspaces.map((workspace): [string, WorkspaceConfig] => [workspace.id, workspace])),
 		[workspaces],
 	);
+	const unreadFlowIdSet: ReadonlySet<string> = useMemo(
+		(): ReadonlySet<string> => new Set(unreadFlowIds),
+		[unreadFlowIds],
+	);
 	const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+	const [pinningFlowId, setPinningFlowId] = useState<string | null>(null);
+	const pinningFlowIdRef = useRef<string | null>(null);
+	const [renameTarget, setRenameTarget] = useState<ConversationFlowSummary | null>(null);
+	const [renameDraft, setRenameDraft] = useState("");
+	const [renameError, setRenameError] = useState<string | null>(null);
+	const [renamingFlowId, setRenamingFlowId] = useState<string | null>(null);
 	const expandedKeysRef = useRef(expandedKeys);
 	const expansionSaveTimerRef = useRef<number | null>(null);
 	const effectiveOrderRef = useRef(effectiveOrder);
@@ -241,7 +253,9 @@ function FlowTree({
 	effectiveOrderRef.current = effectiveOrder;
 	onOrderUpdateRef.current = onOrderUpdate;
 
-	function getExpandedOrder(keys: readonly string[]): Pick<FlowTreeOrderUpdate, "expandedSectionKeys" | "expandedWorkspaceIds"> {
+	function getExpandedOrder(
+		keys: readonly string[],
+	): Pick<FlowTreeOrderUpdate, "expandedSectionKeys" | "expandedWorkspaceIds"> {
 		return {
 			expandedSectionKeys: keys.flatMap((key): FlowTreeSectionKey[] => {
 				const section = key.startsWith("section:") ? key.slice("section:".length) : "";
@@ -264,11 +278,72 @@ function FlowTree({
 		clearScheduledExpansionSave();
 		expansionSaveTimerRef.current = window.setTimeout((): void => {
 			expansionSaveTimerRef.current = null;
-			onOrderUpdateRef.current({
+			void onOrderUpdateRef.current({
 				...effectiveOrderRef.current,
 				...getExpandedOrder(expandedKeysRef.current),
 			});
 		}, 300);
+	}
+
+	function createOrderWithCurrentExpansion(): FlowTreeOrderUpdate {
+		return {
+			pinnedFlowIds: [...effectiveOrderRef.current.pinnedFlowIds],
+			recentFlowIds: [...effectiveOrderRef.current.recentFlowIds],
+			flowIdsByWorkspace: Object.fromEntries(
+				Object.entries(effectiveOrderRef.current.flowIdsByWorkspace).map(([key, value]): [string, string[]] => [
+					key,
+					[...value],
+				]),
+			),
+			...getExpandedOrder(expandedKeysRef.current),
+		};
+	}
+
+	async function handleTogglePin(flow: ConversationFlowSummary): Promise<void> {
+		if (pinningFlowIdRef.current !== null) return;
+		const source: FlowBucket = flow.pinned
+			? { section: "pinned" }
+			: flow.workspaceId === null
+				? { section: "recent" }
+				: { section: "projects", workspaceId: flow.workspaceId };
+		const destination: FlowBucket = flow.pinned ? sourceForUnpinnedFlow(flow) : { section: "pinned" };
+		const next: FlowTreeOrderUpdate = createOrderWithCurrentExpansion();
+		moveFlow(next, source, destination, flow.flowId, null, false);
+		clearScheduledExpansionSave();
+		pinningFlowIdRef.current = flow.flowId;
+		setPinningFlowId(flow.flowId);
+		try {
+			await onOrderUpdate(next);
+		} finally {
+			pinningFlowIdRef.current = null;
+			setPinningFlowId(null);
+		}
+	}
+
+	async function handleConfirmRename(): Promise<void> {
+		if (renameTarget === null || renamingFlowId !== null) return;
+		const title: string = renameDraft.trim();
+		if (title.length === 0) {
+			setRenameError(t("flow.rename.empty"));
+			return;
+		}
+		if (title === renameTarget.title) {
+			setRenameTarget(null);
+			setRenameDraft("");
+			setRenameError(null);
+			return;
+		}
+		try {
+			setRenameError(null);
+			setRenamingFlowId(renameTarget.flowId);
+			await onRename(renameTarget.flowId, title);
+			setRenameTarget(null);
+			setRenameDraft("");
+		} catch (error: unknown) {
+			setRenameError(error instanceof Error ? error.message : t("flow.rename.failed"));
+		} finally {
+			setRenamingFlowId(null);
+		}
 	}
 
 	// Keep local expansion state authoritative while its debounced preference write is pending
@@ -283,14 +358,17 @@ function FlowTree({
 		setExpandedKeys(nextExpandedKeys);
 	}, [effectiveOrder.expandedSectionKeys, effectiveOrder.expandedWorkspaceIds]);
 
-	useEffect((): (() => void) => (): void => {
-		if (expansionSaveTimerRef.current === null) return;
-		clearScheduledExpansionSave();
-		onOrderUpdateRef.current({
-			...effectiveOrderRef.current,
-			...getExpandedOrder(expandedKeysRef.current),
-		});
-	}, []);
+	useEffect(
+		(): (() => void) => (): void => {
+			if (expansionSaveTimerRef.current === null) return;
+			clearScheduledExpansionSave();
+			void onOrderUpdateRef.current({
+				...effectiveOrderRef.current,
+				...getExpandedOrder(expandedKeysRef.current),
+			});
+		},
+		[],
+	);
 
 	const treeDataSignature: string = JSON.stringify({
 		pinnedFlowIds: effectiveOrder.pinnedFlowIds,
@@ -324,9 +402,7 @@ function FlowTree({
 			kind: "empty",
 			className: [
 				styles.emptyNode,
-				section === "projects" && parentKey.startsWith("flow-workspace:")
-					? styles.emptyProjectNode
-					: "",
+				section === "projects" && parentKey.startsWith("flow-workspace:") ? styles.emptyProjectNode : "",
 				section !== "projects" ? styles.emptySectionNode : "",
 			]
 				.filter(Boolean)
@@ -390,21 +466,11 @@ function FlowTree({
 		if (destination.section === "recent" && dragFlow.workspaceId !== null) return;
 		if (destination.section === "projects" && dragFlow.workspaceId !== destination.workspaceId) return;
 		if (dropNode.kind === "section" && destination.section === "projects") return;
-		const next: FlowTreeOrderUpdate = {
-			pinnedFlowIds: [...effectiveOrder.pinnedFlowIds],
-			recentFlowIds: [...effectiveOrder.recentFlowIds],
-			flowIdsByWorkspace: Object.fromEntries(
-				Object.entries(effectiveOrder.flowIdsByWorkspace).map(([key, value]): [string, string[]] => [
-					key,
-					[...value],
-				]),
-			),
-			...getExpandedOrder(expandedKeysRef.current),
-		};
+		const next: FlowTreeOrderUpdate = createOrderWithCurrentExpansion();
 		const targetId: string | null = dropNode.kind === "flow" ? (dropNode.flowId ?? null) : null;
 		moveFlow(next, source, destination, dragFlow.flowId, targetId, info.dropPosition > 0);
 		clearScheduledExpansionSave();
-		onOrderUpdate(next);
+		void onOrderUpdate(next);
 	};
 
 	if (isLoading && flows.length === 0)
@@ -436,7 +502,17 @@ function FlowTree({
 							<FlowTreeItem
 								flow={flow}
 								isSelected={flow.flowId === selectedFlowId}
+								isUnread={unreadFlowIdSet.has(flow.flowId)}
 								isMutating={isMutating}
+								isPinning={pinningFlowId === flow.flowId}
+								onTogglePin={(): void => {
+									void handleTogglePin(flow);
+								}}
+								onRenameStart={(): void => {
+									setRenameTarget(flow);
+									setRenameDraft(flow.title);
+									setRenameError(null);
+								}}
 								onArchive={onArchive}
 							/>
 						);
@@ -502,9 +578,7 @@ function FlowTree({
 					const node: FlowTreeNode = nodeProps as FlowTreeNode;
 					if (node.kind === "section") {
 						return (
-							<span
-								className={styles.sectionSwitcher}
-							>
+							<span className={styles.sectionSwitcher}>
 								<Icon name="arrow-forward" />
 							</span>
 						);
@@ -518,41 +592,128 @@ function FlowTree({
 					return null;
 				}}
 			/>
+			<Modal
+				title={t("flow.rename.title")}
+				open={renameTarget !== null}
+				okText={t("flow.actions.rename")}
+				confirmLoading={renamingFlowId !== null}
+				okButtonProps={{ disabled: renameDraft.trim().length === 0 }}
+				onOk={(): void => {
+					void handleConfirmRename();
+				}}
+				onCancel={(): void => {
+					if (renamingFlowId !== null) return;
+					setRenameTarget(null);
+					setRenameDraft("");
+					setRenameError(null);
+				}}
+			>
+				<Input
+					value={renameDraft}
+					maxLength={200}
+					autoFocus
+					status={renameError === null ? undefined : "error"}
+					placeholder={t("flow.rename.placeholder")}
+					onChange={(event): void => {
+						setRenameDraft(event.target.value);
+						setRenameError(null);
+					}}
+					onPressEnter={(): void => {
+						void handleConfirmRename();
+					}}
+				/>
+				{renameError === null ? null : (
+					<Typography.Text type="danger" className={styles.renameErrorText}>
+						{renameError}
+					</Typography.Text>
+				)}
+			</Modal>
 		</div>
 	);
+}
+
+function sourceForUnpinnedFlow(flow: ConversationFlowSummary): FlowBucket {
+	return flow.workspaceId === null ? { section: "recent" } : { section: "projects", workspaceId: flow.workspaceId };
 }
 
 type FlowTreeItemProps = {
 	flow: ConversationFlowSummary;
 	isSelected: boolean;
+	isUnread: boolean;
 	isMutating: boolean;
+	isPinning: boolean;
+	onTogglePin: () => void;
+	onRenameStart: () => void;
 	onArchive: (flow: ConversationFlowSummary) => void;
 };
 
-function FlowTreeItem({ flow, isSelected, isMutating, onArchive }: FlowTreeItemProps): React.JSX.Element {
+function FlowTreeItem({
+	flow,
+	isSelected,
+	isUnread,
+	isMutating,
+	isPinning,
+	onTogglePin,
+	onRenameStart,
+	onArchive,
+}: FlowTreeItemProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const isRunning: boolean = flow.activeRequestId !== null;
+	const unreadLabel: string = t("workspaceTree.status.unreadResponse", {
+		defaultValue: "Unread assistant response",
+	});
+	const actionMenu: MenuProps = {
+		items: [
+			{
+				key: "pin",
+				label: t(flow.pinned ? "flow.actions.unpin" : "flow.actions.pin"),
+				icon: <Icon name={flow.pinned ? "pinned" : "pin"} />,
+				disabled: isPinning || isMutating,
+			},
+			{
+				key: "rename",
+				label: t("flow.actions.rename"),
+				icon: <Icon name="pencil" />,
+				disabled: isMutating,
+			},
+			{
+				key: "archive",
+				label: t("flow.actions.archive"),
+				icon: <Icon name="archive" />,
+				disabled: isMutating || isRunning,
+			},
+		],
+		onClick: ({ key, domEvent }): void => {
+			domEvent.preventDefault();
+			domEvent.stopPropagation();
+			if (key === "pin") onTogglePin();
+			if (key === "rename") onRenameStart();
+			if (key === "archive") onArchive(flow);
+		},
+	};
 	return (
-		<span className={styles.item} data-running={isRunning ? "true" : undefined}>
-			<span className={styles.itemTitle}>{flow.title}</span>
-			<Badge count={flow.branchCount} overflowCount={99} className={styles.itemBadge} />
-			<span className={styles.itemEndSlot}>
-				{isRunning ? (
-					<Tooltip title={t("flow.status.streaming")}>
-						<span className={styles.itemRunning} aria-label={t("flow.status.streaming")}>
-							<Spin size="small" />
-						</span>
-					</Tooltip>
-				) : (
-					<Tooltip title={t("flow.actions.archive")}>
+		<Dropdown menu={actionMenu} trigger={["contextMenu"]}>
+			<Badge
+				dot={isUnread}
+				color="var(--ant-color-primary)"
+				offset={[-2, 4]}
+				title={isUnread ? unreadLabel : undefined}
+				className={styles.itemUnreadBadge}
+			>
+				<span className={styles.item} data-running={isRunning ? "true" : undefined}>
+					<span className={styles.itemTitle} aria-label={isUnread ? `${flow.title}, ${unreadLabel}` : undefined}>
+						{flow.title}
+					</span>
+					<Tooltip title={t(flow.pinned ? "flow.actions.unpin" : "flow.actions.pin")}>
 						<Button
 							type="text"
 							shape="circle"
 							size="small"
-							aria-label={`${t("flow.actions.archive")}: ${flow.title}`}
-							className={styles.archiveButton}
-							icon={<Icon name="archive" />}
-							loading={isMutating && isSelected}
+							aria-label={t(flow.pinned ? "flow.aria.unpin" : "flow.aria.pin", { title: flow.title })}
+							className={styles.pinButton}
+							icon={<Icon name={flow.pinned ? "pinned" : "pin"} />}
+							loading={isPinning}
+							disabled={isMutating || isPinning}
 							draggable={false}
 							onMouseDown={(event: MouseEvent<HTMLElement>): void => event.stopPropagation()}
 							onDragStart={(event: DragEvent<HTMLElement>): void => {
@@ -562,13 +723,45 @@ function FlowTreeItem({ flow, isSelected, isMutating, onArchive }: FlowTreeItemP
 							onClick={(event: MouseEvent<HTMLElement>): void => {
 								event.preventDefault();
 								event.stopPropagation();
-								onArchive(flow);
+								onTogglePin();
 							}}
 						/>
 					</Tooltip>
-				)}
-			</span>
-		</span>
+					<span className={styles.itemEndSlot}>
+						{isRunning ? (
+							<Tooltip title={t("flow.status.streaming")}>
+								<span className={styles.itemRunning} aria-label={t("flow.status.streaming")}>
+									<Spin size="small" />
+								</span>
+							</Tooltip>
+						) : (
+							<Tooltip title={t("flow.actions.archive")}>
+								<Button
+									type="text"
+									shape="circle"
+									size="small"
+									aria-label={`${t("flow.actions.archive")}: ${flow.title}`}
+									className={styles.archiveButton}
+									icon={<Icon name="archive" />}
+									loading={isMutating && isSelected}
+									draggable={false}
+									onMouseDown={(event: MouseEvent<HTMLElement>): void => event.stopPropagation()}
+									onDragStart={(event: DragEvent<HTMLElement>): void => {
+										event.preventDefault();
+										event.stopPropagation();
+									}}
+									onClick={(event: MouseEvent<HTMLElement>): void => {
+										event.preventDefault();
+										event.stopPropagation();
+										onArchive(flow);
+									}}
+								/>
+							</Tooltip>
+						)}
+					</span>
+				</span>
+			</Badge>
+		</Dropdown>
 	);
 }
 

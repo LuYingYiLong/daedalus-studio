@@ -653,6 +653,8 @@
 			"copyToChat": "复制为对话",
 			"rename": "重命名",
 			"archive": "归档 Flow",
+			"pin": "置顶 Flow",
+			"unpin": "取消置顶",
 			"more": "更多 Flow 操作",
 			"selectBranch": "选择 Flow 分支",
 			"openActiveBranch": "打开活动分支"
@@ -663,7 +665,17 @@
 		},
 		"tree": { "label": "Flow 列表", "empty": "暂无 Flow", "unbound": "未绑定项目", "pinned": "置顶", "projects": "项目", "recent": "最近" },
 		"details": { "title": "节点详情" },
-		"rename": { "title": "重命名 Flow" }
+		"aria": {
+			"pin": "置顶 Flow：{{title}}",
+			"unpin": "取消置顶：{{title}}"
+		},
+		"errors": { "notFound": "找不到此 Flow" },
+		"rename": {
+			"title": "重命名 Flow",
+			"placeholder": "输入 Flow 名称",
+			"empty": "Flow 名称不能为空",
+			"failed": "重命名 Flow 失败"
+		}
 	},
 	"agentPage": {
 		"worktree": {

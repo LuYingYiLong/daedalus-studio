@@ -24,6 +24,7 @@ import { Alert, Badge, Button, Dropdown, Input, message, Modal, Spin, Tooltip, T
 import type { MenuProps, TreeDataNode, TreeProps } from "antd";
 import type { SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
 import { Icon } from "@/assets/icons";
+import { WorkspaceTreeIconView } from "./workspace-appearance";
 import { createPermanentWorktree } from "@/platform/rpc/environment-api";
 import WorktreeCreationOptions, { type WorktreeSourceOptions } from "@/widgets/composer/WorktreeCreationOptions";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
@@ -31,7 +32,6 @@ import { workspaceSupportsWorktrees } from "@/domain/workspace/worktree-capabili
 import type { SessionArchiveContext } from "@/domain/workspace/session-archive-context";
 import DeleteWorkspaceDialog from "./DeleteWorkspaceDialog";
 import WorkspaceProjectDialog from "./WorkspaceProjectDialog";
-import { getWorkspaceIconStyle, WORKSPACE_ICON_NAMES } from "./workspace-appearance";
 import {
 	areWorkspaceTreeOrdersEqual,
 	canDropWorkspaceTreeNode,
@@ -85,6 +85,7 @@ export type WorkspaceTreeProps = {
 	onWorkspaceDelete?: (result: DeleteWorkspaceResult) => void;
 	onWorkspaceUpdate?: (workspace: WorkspaceConfig) => void;
 	onWorkspaceProjectCreated?: (workspace: WorkspaceConfig) => void;
+	onWorkspaceOrderChange?: (workspaceIds: readonly string[]) => void;
 };
 
 export type { SessionArchiveContext } from "@/domain/workspace/session-archive-context";
@@ -170,12 +171,6 @@ type WorkspaceTreeLabels = {
 	workspaceActionsAria: (workspaceName: string) => string;
 	moveSessionToWorkspaceAria: (workspaceName: string) => string;
 };
-
-function getWorkspaceTreeSwitcherIcon(workspace: WorkspaceConfig, expanded: boolean | undefined): React.JSX.Element {
-	const configuredIconName: string = WORKSPACE_ICON_NAMES[workspace.icon] ?? "folder";
-	const iconName: string = configuredIconName === "folder" && expanded === true ? "folder-open" : configuredIconName;
-	return <Icon name={iconName} style={getWorkspaceIconStyle(workspace.color)} />;
-}
 
 type CreateSessionMenuItemOptions = {
 	archivingSessionId: string | null;
@@ -299,7 +294,7 @@ function createSessionTreePresentation(
 				children: options.moveWorkspaces.map((workspace: WorkspaceConfig) => ({
 					key: `move:${workspace.id}`,
 					label: workspace.name,
-					icon: getWorkspaceTreeSwitcherIcon(workspace, false),
+					icon: <WorkspaceTreeIconView workspace={workspace} expanded={false} />,
 					disabled: workspace.id === currentWorkspaceId || options.movingSessionId !== null,
 				})),
 			},
@@ -776,6 +771,7 @@ function WorkspaceTree({
 	onWorkspaceDelete,
 	onWorkspaceUpdate,
 	onWorkspaceProjectCreated,
+	onWorkspaceOrderChange,
 }: WorkspaceTreeProps): React.JSX.Element {
 	const [messageApi, messageContextHolder] = message.useMessage();
 	const { t } = useTranslation();
@@ -1615,6 +1611,9 @@ function WorkspaceTree({
 		(): WorkspaceTreeOrderPreferences => reconcileWorkspaceTreeOrder(workspaceTreeOrder, workspaces, sessions),
 		[sessions, workspaceTreeOrder, workspaces],
 	);
+	useEffect((): void => {
+		onWorkspaceOrderChange?.(effectiveWorkspaceTreeOrder.workspaceIds);
+	}, [effectiveWorkspaceTreeOrder.workspaceIds, onWorkspaceOrderChange]);
 	const orderedWorkspaces: WorkspaceConfig[] = useMemo((): WorkspaceConfig[] => {
 		return sortWorkspacesByTreeOrder(workspaces, effectiveWorkspaceTreeOrder);
 	}, [effectiveWorkspaceTreeOrder, workspaces]);
@@ -2055,7 +2054,7 @@ function WorkspaceTree({
 						}
 						return treeNode.workspace === undefined
 							? null
-							: getWorkspaceTreeSwitcherIcon(treeNode.workspace, nodeProps.expanded);
+							: <WorkspaceTreeIconView workspace={treeNode.workspace} expanded={nodeProps.expanded} />;
 					}}
 				/>
 			</div>

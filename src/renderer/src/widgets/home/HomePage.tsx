@@ -6,6 +6,7 @@ import {
 	useMemo,
 	useRef,
 	useEffect,
+	useState,
 } from "react";
 import { message as antdMessage } from "antd";
 import { useTranslation } from "react-i18next";
@@ -79,6 +80,7 @@ import type { TimelinePageStore } from "@/domain/workbench/timeline-page-store";
 import {
 	type WorkspaceLaunchTargetId,
 } from "@/domain/workspace/workspace-launch";
+import { sortWorkspacesByIds } from "@/domain/workspace/workspace-tree-order";
 import useHomeFlowController from "@/features/home/flow/useHomeFlowController";
 
 type HomePageProps = {
@@ -424,6 +426,21 @@ function HomePage({
 }: HomePageProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
+	const [workspaceOrderIds, setWorkspaceOrderIds] = useState<string[]>(() => [
+		...initialWorkspaceTreeOrder.workspaceIds,
+	]);
+	const handleWorkspaceOrderChange = useCallback((workspaceIds: readonly string[]): void => {
+		setWorkspaceOrderIds((currentWorkspaceIds): string[] => {
+			const hasSameOrder: boolean =
+				currentWorkspaceIds.length === workspaceIds.length &&
+				currentWorkspaceIds.every((workspaceId, index): boolean => workspaceId === workspaceIds[index]);
+			return hasSameOrder ? currentWorkspaceIds : [...workspaceIds];
+		});
+	}, []);
+	const workspaceOptionsInTreeOrder: WorkspaceConfig[] = useMemo(
+		(): WorkspaceConfig[] => sortWorkspacesByIds(workspaceOptions, workspaceOrderIds),
+		[workspaceOptions, workspaceOrderIds],
+	);
 	const {
 		mainSurface,
 		primarySurface,
@@ -472,6 +489,12 @@ function HomePage({
 			onSessionSelect(session);
 		},
 	});
+	const unreadFlowIds: string[] = useMemo((): string[] => {
+		const unreadSessionIdSet: ReadonlySet<string> = new Set(unreadSessionIds);
+		return Object.entries(flowController.flowBranchSessionIdsByFlow)
+			.filter(([, sessionIds]): boolean => sessionIds.some((sessionId): boolean => unreadSessionIdSet.has(sessionId)))
+			.map(([flowId]): string => flowId);
+	}, [flowController.flowBranchSessionIdsByFlow, unreadSessionIds]);
 	const handleFlowComposerSubmit = useCallback((messageText: string, modeOverride?: ChatMode): void => {
 		if (primarySurface === "flow") {
 			if (flowController.isNewFlowHome) {
@@ -859,6 +882,7 @@ function HomePage({
 		initialSessions,
 		initialActiveWorkspaceId,
 		initialWorkspaceTreeOrder,
+		onWorkspaceOrderChange: handleWorkspaceOrderChange,
 		runningSessionIds,
 		unreadSessionIds,
 		forkingSessionId,
@@ -886,12 +910,14 @@ function HomePage({
 	};
 	const flowTreeProps = {
 		flows: flowController.flows,
-		workspaces: workspaceOptions,
+		workspaces: workspaceOptionsInTreeOrder,
 		selectedFlowId: flowController.snapshot?.flow.flowId ?? null,
+		unreadFlowIds,
 		isLoading: flowController.isLoading,
 		isMutating: flowController.isMutating,
 		order: flowController.flowOrder,
 		onSelect: (flowId: string): void => { void flowController.selectFlow(flowId); },
+		onRename: flowController.renameFlowById,
 		onArchive: (flow: ConversationFlowSummary): void => { void flowController.archiveFlowById(flow.flowId); },
 		onOrderUpdate: flowController.updateFlowOrder,
 	};

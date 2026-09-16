@@ -34,6 +34,7 @@ export type FlowNodeDetail = {
 export type HomeFlowController = {
 	flows: ConversationFlowSummary[];
 	flowOrder: FlowTreeOrder | null;
+	flowBranchSessionIdsByFlow: Readonly<Record<string, readonly string[]>>;
 	snapshot: ConversationFlowSnapshot | null;
 	isNewFlowHome: boolean;
 	selectedBranchId: string | null;
@@ -51,9 +52,10 @@ export type HomeFlowController = {
 	deriveFromNode: (node: ConversationFlowNode) => Promise<void>;
 	copyCurrentBranchToChat: () => Promise<void>;
 	renameCurrentFlow: (title: string) => Promise<void>;
+	renameFlowById: (flowId: string, title: string) => Promise<void>;
 	archiveFlowById: (flowId: string) => Promise<void>;
 	archiveCurrentFlow: () => Promise<void>;
-	updateFlowOrder: (order: FlowTreeOrderUpdate) => void;
+	updateFlowOrder: (order: FlowTreeOrderUpdate) => Promise<void>;
 };
 
 type UseHomeFlowControllerParams = {
@@ -103,6 +105,7 @@ export default function useHomeFlowController({
 	const { t } = useTranslation();
 	const [flows, setFlows] = useState<ConversationFlowSummary[]>([]);
 	const [flowOrder, setFlowOrder] = useState<FlowTreeOrder | null>(null);
+	const [flowBranchSessionIdsByFlow, setFlowBranchSessionIdsByFlow] = useState<Record<string, string[]>>({});
 	const [snapshot, setSnapshot] = useState<ConversationFlowSnapshot | null>(null);
 	const [isNewFlowHome, setIsNewFlowHome] = useState<boolean>(false);
 	const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
@@ -127,6 +130,8 @@ export default function useHomeFlowController({
 	const pendingFlowTitleRef = useRef<string | null>(null);
 	const refreshTimerRef = useRef<number | null>(null);
 	const snapshotRef = useRef<ConversationFlowSnapshot | null>(snapshot);
+	const flowOrderSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
+	const flowOrderSaveRevisionRef = useRef<number>(0);
 	const activeFlowSessionRef = useRef<NonNullable<SessionMetadata["flow"]> | null>(null);
 	const onSessionSelectRef = useRef(onSessionSelect);
 	const previousEnabledRef = useRef<boolean>(false);
@@ -254,6 +259,23 @@ export default function useHomeFlowController({
 	}, [enabled, refresh]);
 
 	useEffect((): void => {
+		if (snapshot === null) return;
+		const flowId: string = snapshot.flow.flowId;
+		const sessionIds: string[] = snapshot.branches.map((branch): string => branch.sessionId);
+		setFlowBranchSessionIdsByFlow((current): Record<string, string[]> => {
+			const previous: string[] | undefined = current[flowId];
+			if (
+				previous !== undefined &&
+				previous.length === sessionIds.length &&
+				previous.every((sessionId, index): boolean => sessionId === sessionIds[index])
+			) {
+				return current;
+			}
+			return { ...current, [flowId]: sessionIds };
+		});
+	}, [snapshot]);
+
+	useEffect((): void => {
 		const pending = pendingRegenerationRef.current;
 		if (
 			pending === null ||
@@ -323,25 +345,38 @@ export default function useHomeFlowController({
 		}
 	}, [activateBranch, defaultFlow, flows.length, onDraftChange, t]);
 
-	const updateFlowOrder = useCallback((nextOrder: FlowTreeOrderUpdate): void => {
+	const updateFlowOrder = useCallback(async (nextOrder: FlowTreeOrderUpdate): Promise<void> => {
+		const revision: number = flowOrderSaveRevisionRef.current + 1;
+		flowOrderSaveRevisionRef.current = revision;
+		const pinnedFlowIds: ReadonlySet<string> = new Set(nextOrder.pinnedFlowIds);
 		setFlowOrder((current): FlowTreeOrder => ({
 			schemaVersion: 1,
 			...nextOrder,
 			updatedAt: current?.updatedAt ?? new Date(0).toISOString(),
 		}));
-		void persistFlowTreeOrder(nextOrder)
-			.then((result): void => {
+		setFlows((current): ConversationFlowSummary[] => current.map((flow): ConversationFlowSummary => ({
+			...flow,
+			pinned: pinnedFlowIds.has(flow.flowId),
+		})));
+		const save = async (): Promise<void> => {
+			try {
+				const result = await persistFlowTreeOrder(nextOrder);
+				if (revision !== flowOrderSaveRevisionRef.current) return;
 				setFlowOrder(result.order);
 				if (result.flows.length === 0) return;
 				setFlows((current): ConversationFlowSummary[] => current.map((flow): ConversationFlowSummary => {
 					const updated = result.flows.find((candidate): boolean => candidate.flowId === flow.flowId);
 					return updated === undefined ? flow : { ...flow, ...updated };
 				}));
-			})
-			.catch((orderError: unknown): void => {
+			} catch (orderError: unknown) {
+				if (revision !== flowOrderSaveRevisionRef.current) return;
 				setError(errorMessage(orderError));
-				void refresh();
-			});
+				await refresh();
+			}
+		};
+		const queuedSave: Promise<void> = flowOrderSaveQueueRef.current.then(save, save);
+		flowOrderSaveQueueRef.current = queuedSave.catch((): void => undefined);
+		await queuedSave;
 	}, [refresh]);
 
 	useEffect((): void => {
@@ -462,6 +497,24 @@ export default function useHomeFlowController({
 		}
 	}, [onOpenChat, selectedBranchId]);
 
+	const renameFlowById = useCallback(async (flowId: string, title: string): Promise<void> => {
+		const snapshot = snapshotRef.current;
+		const current = snapshot?.flow.flowId === flowId ? snapshot.flow : null;
+		const target = current ?? flows.find((flow): boolean => flow.flowId === flowId);
+		if (target === undefined || target === null) throw new Error(t("flow.errors.notFound"));
+		setIsMutating(true);
+		setError(null);
+		try {
+			await renameFlow(target.flowId, title, target.revision);
+			await refresh();
+		} catch (mutationError: unknown) {
+			setError(errorMessage(mutationError));
+			throw mutationError;
+		} finally {
+			setIsMutating(false);
+		}
+	}, [flows, refresh, t]);
+
 	const renameCurrentFlow = useCallback(async (title: string): Promise<void> => {
 		const current = snapshotRef.current;
 		if (current === null) return;
@@ -507,6 +560,7 @@ export default function useHomeFlowController({
 	return useMemo((): HomeFlowController => ({
 		flows,
 		flowOrder,
+		flowBranchSessionIdsByFlow,
 		snapshot,
 		isNewFlowHome,
 		selectedBranchId,
@@ -524,8 +578,9 @@ export default function useHomeFlowController({
 		deriveFromNode,
 		copyCurrentBranchToChat,
 		renameCurrentFlow,
+		renameFlowById,
 		archiveFlowById,
 		archiveCurrentFlow,
 		updateFlowOrder,
-	}), [archiveCurrentFlow, archiveFlowById, copyCurrentBranchToChat, createFromChat, createNewFlow, deriveFromNode, error, flowOrder, flows, isLoading, isMutating, isNewFlowHome, refresh, renameCurrentFlow, selectBranch, selectFlow, selectNode, selectedBranchId, selectedNodeDetail, snapshot, submitNewFlowMessage, updateFlowOrder]);
+	}), [archiveCurrentFlow, archiveFlowById, copyCurrentBranchToChat, createFromChat, createNewFlow, deriveFromNode, error, flowBranchSessionIdsByFlow, flowOrder, flows, isLoading, isMutating, isNewFlowHome, refresh, renameCurrentFlow, renameFlowById, selectBranch, selectFlow, selectNode, selectedBranchId, selectedNodeDetail, snapshot, submitNewFlowMessage, updateFlowOrder]);
 }
