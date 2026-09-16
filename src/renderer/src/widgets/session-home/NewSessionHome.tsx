@@ -66,10 +66,7 @@ function NewSessionHome({
 			<div className={styles.homeCenter}>
 				<div className={styles.homeContent}>
 					{mascotEnabled ? (
-						<div
-							className={styles.mascot}
-							style={{ "--mascot-scale": mascotSize / 100 } as CSSProperties}
-						>
+						<div className={styles.mascot} style={{ "--mascot-scale": mascotSize / 100 } as CSSProperties}>
 							<Mascot />
 						</div>
 					) : null}
@@ -89,8 +86,7 @@ function NewSessionHome({
 								(starter: NewSessionStarter): React.JSX.Element => (
 									<Button
 										key={starter.id}
-										type="text"
-										className={styles.starterButton}
+										shape="round"
 										icon={<Icon name={starter.iconName} />}
 										onClick={(): void =>
 											onStarterSelect(t(`app.home.starters.${starterScope}.${starter.id}.prompt`))

@@ -88,27 +88,6 @@
 	gap: var(--ds-space-2);
 }
 
-.starterButton {
-	max-width: 100%;
-	min-height: 34px;
-	padding-inline: var(--ds-space-3);
-	border: 1px solid color-mix(in srgb, var(--ds-border) 82%, transparent);
-	border-radius: 999px;
-	color: var(--ds-text-secondary);
-	background: color-mix(in srgb, var(--ds-surface) 76%, transparent);
-	white-space: normal;
-}
-
-.starterButton:hover {
-	border-color: color-mix(in srgb, var(--ds-accent) 46%, var(--ds-border));
-	color: var(--ds-text-primary);
-	background: color-mix(in srgb, var(--ds-accent) 8%, var(--ds-surface));
-}
-
-.starterButton:active {
-	transform: scale(0.98);
-}
-
 .homeError {
 	position: absolute;
 	bottom: var(--ds-space-4, 16px);

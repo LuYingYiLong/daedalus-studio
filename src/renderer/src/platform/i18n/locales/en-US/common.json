@@ -626,13 +626,17 @@
 		"new": { "title": "New Flow" },
 		"welcome": {
 			"title": "Let an idea branch into new paths",
-			"description": "Each message becomes a node. Start from any point and branch into a new conversation path.",
-			"hint": "Send a message to grow your Flow",
 			"starters": {
 				"label": "Start with",
 				"explore": { "label": "Explore a question", "prompt": "Help me explore this question:" },
-				"decompose": { "label": "Break down a task", "prompt": "Break this complex task into executable steps:" },
-				"compare": { "label": "Compare two options", "prompt": "Compare these two options and list the pros and cons:" }
+				"decompose": {
+					"label": "Break down a task",
+					"prompt": "Break this complex task into executable steps:"
+				},
+				"compare": {
+					"label": "Compare two options",
+					"prompt": "Compare these two options and list the pros and cons:"
+				}
 			}
 		},
 		"branchCount": "{{count}} branches",
@@ -665,7 +669,14 @@
 			"description": "Create a Flow to explore conversation branches as nodes",
 			"canvas": "Send the first message below and nodes will appear with the response"
 		},
-		"tree": { "label": "Flow list", "empty": "No Flows", "unbound": "No project", "pinned": "Pinned", "projects": "Projects", "recent": "Recent" },
+		"tree": {
+			"label": "Flow list",
+			"empty": "No Flows",
+			"unbound": "No project",
+			"pinned": "Pinned",
+			"projects": "Projects",
+			"recent": "Recent"
+		},
 		"details": { "title": "Node details" },
 		"aria": {
 			"pin": "Pin Flow: {{title}}",

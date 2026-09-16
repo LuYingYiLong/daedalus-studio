@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { InputRef } from "antd";
 import type { MutableRefObject } from "react";
-import { Alert, Button, Drawer, Dropdown, Empty, Flex, Input, Modal, Select, Space, Spin, Tag, Typography } from "antd";
+import { Alert, Button, Drawer, Dropdown, Flex, Input, Modal, Select, Space, Spin, Tag, Typography } from "antd";
 import {
 	Background,
 	Controls,
@@ -236,18 +236,11 @@ function HomeFlowSurface({ controller, chatSurfaceProps, searchHandleRef }: Home
 		}
 		return (
 			<div className={styles.emptyState}>
-				<Empty description={t("flow.empty.description")}>
-					<Button
-						type="primary"
-						icon={<Icon name="add" />}
-						loading={controller.isMutating}
-						onClick={(): void => {
-							void controller.createNewFlow();
-						}}
-					>
-						{t("flow.actions.new")}
-					</Button>
-				</Empty>
+				{controller.isLoading || controller.error === null ? (
+					<Spin />
+				) : (
+					<Alert type="error" showIcon message={controller.error} />
+				)}
 			</div>
 		);
 	}

@@ -1,7 +1,7 @@
 import { Alert, Button, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
-import styles from "./HomeFlowSurface.module.css";
+import styles from "./FlowWelcome.module.css";
 
 type FlowWelcomeProps = {
 	onStarterSelect: (prompt: string) => void;
@@ -12,11 +12,7 @@ type FlowWelcomeStarter = {
 	id: "explore" | "decompose" | "compare";
 };
 
-const STARTERS: readonly FlowWelcomeStarter[] = [
-	{ id: "explore" },
-	{ id: "decompose" },
-	{ id: "compare" },
-];
+const STARTERS: readonly FlowWelcomeStarter[] = [{ id: "explore" }, { id: "decompose" }, { id: "compare" }];
 
 const STARTER_ICONS: Record<FlowWelcomeStarter["id"], string> = {
 	explore: "search",
@@ -41,30 +37,26 @@ function FlowWelcome({ onStarterSelect, errorMessage }: FlowWelcomeProps): React
 					<Icon name="fork" />
 				</div>
 			</div>
-			<Typography.Title level={2} id="flow-welcome-title" className={styles.flowWelcomeTitle}>
+			<Typography.Title level={1} id="flow-welcome-title" className={styles.flowWelcomeTitle}>
 				{t("flow.welcome.title")}
 			</Typography.Title>
-			<Typography.Paragraph className={styles.flowWelcomeDescription}>
-				{t("flow.welcome.description")}
-			</Typography.Paragraph>
-			<Typography.Text type="secondary" className={styles.flowWelcomeHint}>
-				{t("flow.welcome.hint")}
-			</Typography.Text>
 			{errorMessage !== null ? (
 				<Alert className={styles.flowWelcomeError} type="error" showIcon message={errorMessage} />
 			) : null}
 			<div className={styles.flowWelcomeStarters} aria-label={t("flow.welcome.starters.label")}>
-				{STARTERS.map((starter): React.JSX.Element => (
-					<Button
-						key={starter.id}
-						type="text"
-						className={styles.flowWelcomeStarter}
-						icon={<Icon name={STARTER_ICONS[starter.id]} />}
-						onClick={(): void => onStarterSelect(t(`flow.welcome.starters.${starter.id}.prompt`))}
-					>
-						{t(`flow.welcome.starters.${starter.id}.label`)}
-					</Button>
-				))}
+				{STARTERS.map(
+					(starter): React.JSX.Element => (
+						<Button
+							key={starter.id}
+							shape="round"
+							className={styles.flowWelcomeStarter}
+							icon={<Icon name={STARTER_ICONS[starter.id]} />}
+							onClick={(): void => onStarterSelect(t(`flow.welcome.starters.${starter.id}.prompt`))}
+						>
+							{t(`flow.welcome.starters.${starter.id}.label`)}
+						</Button>
+					),
+				)}
 			</div>
 		</section>
 	);

@@ -113,6 +113,7 @@ export default function useHomeFlowController({
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isMutating, setIsMutating] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
+	const flowsRef = useRef<ConversationFlowSummary[]>(flows);
 	const lastBranchByFlowRef = useRef<Map<string, string>>(new Map());
 	const pendingRegenerationRef = useRef<{
 		branchId: string;
@@ -136,6 +137,7 @@ export default function useHomeFlowController({
 	const onSessionSelectRef = useRef(onSessionSelect);
 	const previousEnabledRef = useRef<boolean>(false);
 	snapshotRef.current = snapshot;
+	flowsRef.current = flows;
 	const newFlowHomeRef = useRef<boolean>(isNewFlowHome);
 	newFlowHomeRef.current = isNewFlowHome;
 	activeFlowSessionRef.current =
@@ -172,23 +174,43 @@ export default function useHomeFlowController({
 			setIsLoading(false);
 		}
 	}, [activateBranch]);
+	const beginNewFlowHome = useCallback((): void => {
+		if (newFlowHomeRef.current) return;
+		onBeginNewFlow();
+		pendingFlowTitleRef.current = t("flow.defaultTitle", { count: flowsRef.current.length + 1 });
+		pendingNewFlowSubmissionRef.current = null;
+		setError(null);
+		setSnapshot(null);
+		snapshotRef.current = null;
+		setSelectedBranchId(null);
+		setSelectedNodeDetail(null);
+		setIsNewFlowHome(true);
+		newFlowHomeRef.current = true;
+	}, [onBeginNewFlow, t]);
 
 	const refresh = useCallback(async (): Promise<void> => {
+		setIsLoading(true);
 		try {
 			const result = await fetchFlows();
 			setFlows(result.flows);
 			if (result.order !== undefined) setFlowOrder(result.order);
 			if (newFlowHomeRef.current) return;
 			const currentFlowId: string | undefined = snapshotRef.current?.flow.flowId;
-			if (currentFlowId !== undefined) {
+			const currentFlowIsAvailable: boolean = currentFlowId !== undefined &&
+				result.flows.some((flow): boolean => flow.flowId === currentFlowId);
+			if (currentFlowIsAvailable && currentFlowId !== undefined) {
 				await loadFlow(currentFlowId, false);
 			} else if (enabled && result.flows[0] !== undefined) {
 				await loadFlow(result.flows[0].flowId, true);
+			} else if (enabled && result.flows.length === 0) {
+				beginNewFlowHome();
 			}
 		} catch (refreshError: unknown) {
 			setError(errorMessage(refreshError));
+		} finally {
+			setIsLoading(false);
 		}
-	}, [enabled, loadFlow]);
+	}, [beginNewFlowHome, enabled, loadFlow]);
 
 	useEffect((): void => {
 		const enteringFlow: boolean = enabled && !previousEnabledRef.current;
@@ -296,16 +318,8 @@ export default function useHomeFlowController({
 
 	const createNewFlow = useCallback(async (): Promise<void> => {
 		if (newFlowHomeRef.current || newFlowCreationInFlightRef.current) return;
-		onBeginNewFlow();
-		pendingFlowTitleRef.current = t("flow.defaultTitle", { count: flows.length + 1 });
-		pendingNewFlowSubmissionRef.current = null;
-		setError(null);
-		setSnapshot(null);
-		setSelectedBranchId(null);
-		setSelectedNodeDetail(null);
-		setIsNewFlowHome(true);
-		newFlowHomeRef.current = true;
-	}, [flows.length, onBeginNewFlow, t]);
+		beginNewFlowHome();
+	}, [beginNewFlowHome]);
 
 	const submitNewFlowMessage = useCallback(async (message: string, modeOverride?: ChatMode): Promise<void> => {
 		const text: string = message.trim();
