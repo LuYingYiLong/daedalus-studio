@@ -33,6 +33,7 @@
 	min-height: 0;
 	overflow: hidden;
 	padding: 0px var(--ds-space-2) 0px calc(var(--ds-space-2) - var(--ds-space-1));
+	gap: var(--ds-space-1);
 }
 
 .workspaceHeader {

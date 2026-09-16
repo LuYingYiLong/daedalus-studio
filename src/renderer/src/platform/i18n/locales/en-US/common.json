@@ -663,7 +663,7 @@
 			"description": "Create a Flow to explore conversation branches as nodes",
 			"canvas": "Send the first message below and nodes will appear with the response"
 		},
-		"tree": { "label": "Flow list", "empty": "No Flows", "unbound": "No project" },
+		"tree": { "label": "Flow list", "empty": "No Flows", "unbound": "No project", "pinned": "Pinned", "projects": "Projects", "recent": "Recent" },
 		"details": { "title": "Node details" },
 		"rename": { "title": "Rename Flow" }
 	},

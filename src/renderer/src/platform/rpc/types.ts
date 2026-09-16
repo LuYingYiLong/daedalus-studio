@@ -206,6 +206,7 @@ export type ConversationFlow = {
 	flowId: string;
 	title: string;
 	workspaceId: string | null;
+	pinned: boolean;
 	rootBranchId: string;
 	revision: number;
 	activeBranchId: string | null;
@@ -215,6 +216,20 @@ export type ConversationFlow = {
 	createdAt: string;
 	updatedAt: string;
 };
+
+export type FlowTreeSectionKey = "pinned" | "projects" | "recent";
+
+export type FlowTreeOrder = {
+	schemaVersion: 1;
+	pinnedFlowIds: string[];
+	recentFlowIds: string[];
+	flowIdsByWorkspace: Record<string, string[]>;
+	expandedSectionKeys: FlowTreeSectionKey[];
+	expandedWorkspaceIds: string[];
+	updatedAt: string;
+};
+
+export type FlowTreeOrderUpdate = Omit<FlowTreeOrder, "schemaVersion" | "updatedAt">;
 
 export type ConversationFlowSummary = ConversationFlow & {
 	branchCount: number;

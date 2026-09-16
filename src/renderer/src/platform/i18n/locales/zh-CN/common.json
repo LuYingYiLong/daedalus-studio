@@ -661,7 +661,7 @@
 			"description": "创建一个 Flow，用节点探索多条对话分支",
 			"canvas": "在下方输入第一条消息，节点会在响应时自动出现"
 		},
-		"tree": { "label": "Flow 列表", "empty": "暂无 Flow", "unbound": "未绑定项目" },
+		"tree": { "label": "Flow 列表", "empty": "暂无 Flow", "unbound": "未绑定项目", "pinned": "置顶", "projects": "项目", "recent": "最近" },
 		"details": { "title": "节点详情" },
 		"rename": { "title": "重命名 Flow" }
 	},

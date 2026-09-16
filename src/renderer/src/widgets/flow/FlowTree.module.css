@@ -2,7 +2,7 @@
 	min-width: 0;
 	min-height: 0;
 	overflow: auto;
-	padding: var(--ds-space-2) 0;
+	padding: 0;
 }
 
 .treeRoot {
@@ -15,10 +15,11 @@
 	align-items: center;
 	width: 100%;
 	min-width: 0;
-	min-height: 30px;
-	margin: 2px 0;
-	padding: 0 8px !important;
-	border-radius: var(--ds-radius-lg);
+	min-height: 28px;
+	margin: 4px 0;
+	padding-block: 0 !important;
+	padding-inline: 8px 0 !important;
+	border-radius: var(--ant-border-radius);
 	transition: background-color var(--ant-motion-duration-mid);
 }
 
@@ -35,14 +36,23 @@
 	flex: 1;
 	align-items: center;
 	min-width: 0;
-	min-height: 30px;
+	min-height: 28px;
 	padding: 0 !important;
 	background: transparent !important;
+}
+
+.treeRoot :global(.ant-tree-node-content-wrapper) {
+	padding: 0 !important;
 }
 
 .treeItemTitle,
 .treeItemSwitcher {
 	min-width: 0;
+}
+
+.treeItemTitle {
+	flex: 1;
+	overflow: visible;
 }
 
 .treeItemSwitcher {
@@ -52,28 +62,67 @@
 	justify-content: center;
 	width: 20px !important;
 	min-width: 20px !important;
-	margin-inline-end: 4px;
+	margin-inline-end: var(--ds-space-1);
+}
+
+.sectionNode {
+	margin-top: 0;
+}
+
+.sectionNode .treeItemSwitcher {
+	width: 16px !important;
+	min-width: 16px !important;
+	margin-inline-end: var(--ds-space-1);
 }
 
 .treeItemSwitcher::before {
 	background: transparent !important;
 }
 
+.treeItem:global(.ant-tree-treenode-leaf) .treeItemSwitcher {
+	width: 0 !important;
+	min-width: 0 !important;
+	margin-inline-end: 0 !important;
+}
+
+.workspaceNode {
+	width: calc(100% + 28px);
+	margin-inline-start: -28px;
+}
+
+.flowNode {
+	width: calc(100% + 24px);
+	margin-inline-start: -24px;
+}
+
+.emptyNode {
+	width: calc(100% + 12px);
+	margin-inline-start: -12px;
+}
+
 .groupTitle {
 	display: block;
 	overflow: hidden;
-	color: var(--ant-color-text-tertiary);
-	font-size: 12px;
-	font-weight: 500;
+	color: var(--ant-color-text);
+	font-size: var(--ant-font-size);
+	font-weight: 400;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.emptyItem {
+	display: block;
+	padding: 4px 0;
+	color: var(--ant-color-text-tertiary);
+	font-size: var(--ant-font-size);
 }
 
 .item {
 	display: grid;
 	grid-template-columns: auto minmax(0, 1fr) auto auto;
 	align-items: center;
-	gap: 8px;
+	column-gap: var(--ds-space-1);
+	row-gap: 8px;
 	width: 100%;
 	min-width: 0;
 	min-height: 30px;

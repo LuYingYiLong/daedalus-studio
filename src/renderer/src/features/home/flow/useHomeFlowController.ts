@@ -11,6 +11,7 @@ import {
 	fetchFlowNode,
 	fetchFlows,
 	renameFlow,
+	updateFlowTreeOrder as persistFlowTreeOrder,
 } from "@/platform/rpc/flow-api";
 import { onBackendEvent, onBackendReconnected } from "@/platform/rpc/transport/backend-client";
 import type {
@@ -18,6 +19,8 @@ import type {
 	ConversationFlowNode,
 	ConversationFlowSnapshot,
 	ConversationFlowSummary,
+	FlowTreeOrder,
+	FlowTreeOrderUpdate,
 	SessionMetadata,
 	TimelineBlock,
 } from "@/platform/rpc/types";
@@ -30,6 +33,7 @@ export type FlowNodeDetail = {
 
 export type HomeFlowController = {
 	flows: ConversationFlowSummary[];
+	flowOrder: FlowTreeOrder | null;
 	snapshot: ConversationFlowSnapshot | null;
 	isNewFlowHome: boolean;
 	selectedBranchId: string | null;
@@ -49,6 +53,7 @@ export type HomeFlowController = {
 	renameCurrentFlow: (title: string) => Promise<void>;
 	archiveFlowById: (flowId: string) => Promise<void>;
 	archiveCurrentFlow: () => Promise<void>;
+	updateFlowOrder: (order: FlowTreeOrderUpdate) => void;
 };
 
 type UseHomeFlowControllerParams = {
@@ -97,6 +102,7 @@ export default function useHomeFlowController({
 }: UseHomeFlowControllerParams): HomeFlowController {
 	const { t } = useTranslation();
 	const [flows, setFlows] = useState<ConversationFlowSummary[]>([]);
+	const [flowOrder, setFlowOrder] = useState<FlowTreeOrder | null>(null);
 	const [snapshot, setSnapshot] = useState<ConversationFlowSnapshot | null>(null);
 	const [isNewFlowHome, setIsNewFlowHome] = useState<boolean>(false);
 	const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
@@ -166,6 +172,7 @@ export default function useHomeFlowController({
 		try {
 			const result = await fetchFlows();
 			setFlows(result.flows);
+			if (result.order !== undefined) setFlowOrder(result.order);
 			if (newFlowHomeRef.current) return;
 			const currentFlowId: string | undefined = snapshotRef.current?.flow.flowId;
 			if (currentFlowId !== undefined) {
@@ -305,6 +312,7 @@ export default function useHomeFlowController({
 			activateBranch(root);
 			const result = await fetchFlows();
 			setFlows(result.flows);
+			if (result.order !== undefined) setFlowOrder(result.order);
 		} catch (mutationError: unknown) {
 			pendingNewFlowSubmissionRef.current = null;
 			setError(errorMessage(mutationError));
@@ -314,6 +322,27 @@ export default function useHomeFlowController({
 			setIsMutating(false);
 		}
 	}, [activateBranch, defaultFlow, flows.length, onDraftChange, t]);
+
+	const updateFlowOrder = useCallback((nextOrder: FlowTreeOrderUpdate): void => {
+		setFlowOrder((current): FlowTreeOrder => ({
+			schemaVersion: 1,
+			...nextOrder,
+			updatedAt: current?.updatedAt ?? new Date(0).toISOString(),
+		}));
+		void persistFlowTreeOrder(nextOrder)
+			.then((result): void => {
+				setFlowOrder(result.order);
+				if (result.flows.length === 0) return;
+				setFlows((current): ConversationFlowSummary[] => current.map((flow): ConversationFlowSummary => {
+					const updated = result.flows.find((candidate): boolean => candidate.flowId === flow.flowId);
+					return updated === undefined ? flow : { ...flow, ...updated };
+				}));
+			})
+			.catch((orderError: unknown): void => {
+				setError(errorMessage(orderError));
+				void refresh();
+			});
+	}, [refresh]);
 
 	useEffect((): void => {
 		const pending = pendingNewFlowSubmissionRef.current;
@@ -477,6 +506,7 @@ export default function useHomeFlowController({
 
 	return useMemo((): HomeFlowController => ({
 		flows,
+		flowOrder,
 		snapshot,
 		isNewFlowHome,
 		selectedBranchId,
@@ -496,5 +526,6 @@ export default function useHomeFlowController({
 		renameCurrentFlow,
 		archiveFlowById,
 		archiveCurrentFlow,
-	}), [archiveCurrentFlow, archiveFlowById, copyCurrentBranchToChat, createFromChat, createNewFlow, deriveFromNode, error, flows, isLoading, isMutating, isNewFlowHome, refresh, renameCurrentFlow, selectBranch, selectFlow, selectNode, selectedBranchId, selectedNodeDetail, snapshot, submitNewFlowMessage]);
+		updateFlowOrder,
+	}), [archiveCurrentFlow, archiveFlowById, copyCurrentBranchToChat, createFromChat, createNewFlow, deriveFromNode, error, flowOrder, flows, isLoading, isMutating, isNewFlowHome, refresh, renameCurrentFlow, selectBranch, selectFlow, selectNode, selectedBranchId, selectedNodeDetail, snapshot, submitNewFlowMessage, updateFlowOrder]);
 }

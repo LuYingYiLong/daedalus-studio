@@ -6,6 +6,8 @@ import type {
 	ConversationFlowNodePosition,
 	ConversationFlowSnapshot,
 	ConversationFlowSummary,
+	FlowTreeOrder,
+	FlowTreeOrderUpdate,
 	SessionMetadata,
 } from "./types";
 import type { ChatMode } from "./chat-api";
@@ -42,8 +44,19 @@ export async function createFlowFromSession(params: {
 export async function fetchFlows(params: {
 	workspaceId?: string;
 	archived?: boolean;
-} = {}): Promise<{ flows: ConversationFlowSummary[] }> {
+} = {}): Promise<{ flows: ConversationFlowSummary[]; order?: FlowTreeOrder }> {
 	return (await createBackendClient()).request("flow.list", params);
+}
+
+export async function fetchFlowTreeOrder(): Promise<FlowTreeOrder> {
+	return (await createBackendClient()).request("flow.tree.order.get", {});
+}
+
+export async function updateFlowTreeOrder(order: FlowTreeOrderUpdate): Promise<{
+	order: FlowTreeOrder;
+	flows: ConversationFlow[];
+}> {
+	return (await createBackendClient()).request("flow.tree.order.update", order);
 }
 
 export async function fetchFlow(flowId: string): Promise<ConversationFlowSnapshot> {

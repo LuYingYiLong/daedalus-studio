@@ -890,8 +890,10 @@ function HomePage({
 		selectedFlowId: flowController.snapshot?.flow.flowId ?? null,
 		isLoading: flowController.isLoading,
 		isMutating: flowController.isMutating,
+		order: flowController.flowOrder,
 		onSelect: (flowId: string): void => { void flowController.selectFlow(flowId); },
 		onArchive: (flow: ConversationFlowSummary): void => { void flowController.archiveFlowById(flow.flowId); },
+		onOrderUpdate: flowController.updateFlowOrder,
 	};
 
 	const commonDockPanelProps = {
