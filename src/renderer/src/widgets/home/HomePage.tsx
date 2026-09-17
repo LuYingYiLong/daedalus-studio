@@ -496,6 +496,25 @@ function HomePage({
 			onSessionSelect(session);
 		},
 	});
+	const isFlowWelcomeHome: boolean = primarySurface === "flow" && flowController.isNewFlowHome;
+	const flowHomeWorkspace: WorkspaceConfig | null = useMemo((): WorkspaceConfig | null => {
+		if (!isFlowWelcomeHome || flowController.newFlowWorkspaceId === null) return null;
+		return workspaceOptions.find((workspace): boolean => workspace.id === flowController.newFlowWorkspaceId) ?? null;
+	}, [flowController.newFlowWorkspaceId, isFlowWelcomeHome, workspaceOptions]);
+	const handleComposerWorkspaceSelect = useCallback((workspaceId: string): void => {
+		if (isFlowWelcomeHome) {
+			flowController.setNewFlowWorkspace(workspaceId);
+			return;
+		}
+		onHomeWorkspaceSelect(workspaceId);
+	}, [flowController, isFlowWelcomeHome, onHomeWorkspaceSelect]);
+	const handleComposerWorkspaceClear = useCallback((): void => {
+		if (isFlowWelcomeHome) {
+			flowController.setNewFlowWorkspace(null);
+			return;
+		}
+		onHomeWorkspaceClear();
+	}, [flowController, isFlowWelcomeHome, onHomeWorkspaceClear]);
 	const handleOpenFlowWorkspace = useCallback(async (workspace: WorkspaceConfig): Promise<void> => {
 		try {
 			await window.electronAPI.workspaceFs.openWorkspaceDirectory(workspace.rootPath);
@@ -867,17 +886,17 @@ function HomePage({
 			approvalMode,
 			slashCommands,
 			skills,
-			isSending,
-			isCancelling,
+			isSending: isFlowWelcomeHome ? flowController.isMutating : isSending,
+			isCancelling: isFlowWelcomeHome ? false : isCancelling,
 			isAddingTextAttachment,
 			isApprovalModeSaving,
 			workspaceOptions,
-			workspaceFooterDisabled,
-			isHome,
+			workspaceFooterDisabled: isFlowWelcomeHome ? false : workspaceFooterDisabled,
+			isHome: isHome || isFlowWelcomeHome,
 			homeExecutionEnvironment,
 			homeWorktreeSources,
 			activeWorkspace,
-			homeWorkspace,
+			homeWorkspace: isFlowWelcomeHome ? flowHomeWorkspace : homeWorkspace,
 			worktreeDisabledReason,
 			isWorktreePreparing,
 		},
@@ -893,9 +912,9 @@ function HomePage({
 			onAddWindowScreenshot,
 			onAddPastedTextAttachment,
 			onAddContextFiles,
-			onHomeWorkspaceSelect,
+			onHomeWorkspaceSelect: handleComposerWorkspaceSelect,
 			onHomeWorkspaceAdd,
-			onHomeWorkspaceClear,
+			onHomeWorkspaceClear: handleComposerWorkspaceClear,
 			onHomeWorktreeModeChange: onHomeExecutionEnvironmentChange,
 			onHomeWorktreeSourceOptionsChange: onHomeWorktreeSourcesChange,
 			onRemoveContext,
@@ -957,8 +976,10 @@ function HomePage({
 		onNewProject: (): void => setIsFlowWorkspaceCreateOpen(true),
 		onNewSession: requestNewSessionSurface,
 		onWorkspaceEdit: setFlowWorkspaceEditTarget,
-		onWorkspaceNewSession: (workspace: WorkspaceConfig): void => {
-			requestNewWorkspaceSessionSurface(workspace, "local");
+		onWorkspaceNewFlow: (workspace: WorkspaceConfig): void => {
+			void flowController.createNewFlow(workspace.id).then((): void => {
+				showPrimarySurface("flow");
+			});
 		},
 		onWorkspaceNewWorktree: (workspace: WorkspaceConfig): void => {
 			onNewWorkspaceSession(workspace, "worktree");
@@ -1169,7 +1190,7 @@ function HomePage({
 						isOpen={workspaceSidebarOpen}
 						onNewSession={requestNewSessionSurface}
 						onNewFlow={(): void => {
-							void flowController.createNewFlow().then((): void => {
+							void flowController.createNewFlow(null).then((): void => {
 								showPrimarySurface("flow");
 							});
 						}}

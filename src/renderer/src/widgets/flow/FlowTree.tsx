@@ -30,7 +30,7 @@ export type FlowTreeProps = {
 	onNewProject: () => void;
 	onNewSession: () => void;
 	onWorkspaceEdit: (workspace: WorkspaceConfig) => void;
-	onWorkspaceNewSession: (workspace: WorkspaceConfig) => void;
+	onWorkspaceNewFlow: (workspace: WorkspaceConfig) => void;
 	onWorkspaceNewWorktree: (workspace: WorkspaceConfig) => void;
 	onWorkspaceOpen: (workspace: WorkspaceConfig) => void;
 	onWorkspaceDelete: (workspace: WorkspaceConfig) => void;
@@ -229,7 +229,7 @@ function FlowTree({
 	onNewProject,
 	onNewSession,
 	onWorkspaceEdit,
-	onWorkspaceNewSession,
+	onWorkspaceNewFlow,
 	onWorkspaceNewWorktree,
 	onWorkspaceOpen,
 	onWorkspaceDelete,
@@ -639,12 +639,12 @@ function FlowTree({
 										event.stopPropagation();
 									}}
 									>
-										<Tooltip title={t("workspaceTree.actions.newSessionInWorkspace")}>
+										<Tooltip title={t("flow.actions.newInWorkspace")}>
 											<Button
 												type="text"
 												shape="circle"
 												size="small"
-												aria-label={t("workspaceTree.aria.newSessionInWorkspace", {
+														aria-label={t("flow.aria.newInWorkspace", {
 													workspaceName: workspace.name,
 												})}
 												className={styles.workspaceActionButton}
@@ -652,7 +652,7 @@ function FlowTree({
 												onClick={(event: MouseEvent<HTMLElement>): void => {
 													event.preventDefault();
 													event.stopPropagation();
-													onWorkspaceNewSession(workspace);
+															onWorkspaceNewFlow(workspace);
 												}}
 											/>
 										</Tooltip>

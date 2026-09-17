@@ -649,6 +649,7 @@
 			"derive": "从此派生",
 			"copyFromChat": "复制为 Flow",
 			"copyToChat": "复制为对话",
+			"newInWorkspace": "在此工作区新建 Flow",
 			"rename": "重命名",
 			"archive": "归档 Flow",
 			"pin": "置顶 Flow",
@@ -672,7 +673,8 @@
 		"details": { "title": "节点详情" },
 		"aria": {
 			"pin": "置顶 Flow：{{title}}",
-			"unpin": "取消置顶：{{title}}"
+			"unpin": "取消置顶：{{title}}",
+			"newInWorkspace": "在 {{workspaceName}} 中新建 Flow"
 		},
 		"errors": { "notFound": "找不到此 Flow" },
 		"rename": {

@@ -657,6 +657,7 @@
 			"derive": "Branch from here",
 			"copyFromChat": "Copy as Flow",
 			"copyToChat": "Copy as chat",
+			"newInWorkspace": "New Flow in this workspace",
 			"rename": "Rename",
 			"archive": "Archive Flow",
 			"pin": "Pin Flow",
@@ -680,7 +681,8 @@
 		"details": { "title": "Node details" },
 		"aria": {
 			"pin": "Pin Flow: {{title}}",
-			"unpin": "Unpin Flow: {{title}}"
+			"unpin": "Unpin Flow: {{title}}",
+			"newInWorkspace": "New Flow in {{workspaceName}}"
 		},
 		"errors": { "notFound": "Flow not found" },
 		"rename": {
