@@ -712,7 +712,7 @@ function createProjectTreeData(
 									size="small"
 									aria-label={labels.newSessionInWorkspaceAria(workspace.name)}
 									className={styles.workspaceActionButton}
-									icon={<Icon name="add" width={16} height={16} />}
+									icon={<Icon name="add" />}
 									onClick={(event: MouseEvent<HTMLElement>): void =>
 										options.onNewWorkspaceSession(workspace, event)
 									}
@@ -1032,8 +1032,8 @@ function WorkspaceTree({
 		nextExpandedWorkspaceIds: string[],
 	): void {
 		if (
-			areStringListsEqual(expandedSectionKeysRef.current, nextExpandedSectionKeys)
-			&& areStringListsEqual(expandedWorkspaceIdsRef.current, nextExpandedWorkspaceIds)
+			areStringListsEqual(expandedSectionKeysRef.current, nextExpandedSectionKeys) &&
+			areStringListsEqual(expandedWorkspaceIdsRef.current, nextExpandedWorkspaceIds)
 		) {
 			return;
 		}
@@ -1713,7 +1713,8 @@ function WorkspaceTree({
 		const expandedSections: WorkspaceTreeSectionKey[] = normalizedKeys.flatMap(
 			(key: string): WorkspaceTreeSectionKey[] => {
 				const sectionKey: string = key.slice("section:".length);
-				return key.startsWith("section:") && (sectionKey === "pinned" || sectionKey === "projects" || sectionKey === "recent")
+				return key.startsWith("section:") &&
+					(sectionKey === "pinned" || sectionKey === "projects" || sectionKey === "recent")
 					? [sectionKey]
 					: [];
 			},
@@ -1765,10 +1766,10 @@ function WorkspaceTree({
 		const relativeDropPosition: number = info.dropPosition - targetPosition;
 		const placement: WorkspaceTreeDropPlacement = relativeDropPosition < 0 ? "before" : "after";
 		if (
-			dragNode.kind === "section"
-			&& dropNode.kind === "section"
-			&& dragNode.sectionKey !== undefined
-			&& dropNode.sectionKey !== undefined
+			dragNode.kind === "section" &&
+			dropNode.kind === "section" &&
+			dragNode.sectionKey !== undefined &&
+			dropNode.sectionKey !== undefined
 		) {
 			persistWorkspaceTreeOrder(
 				moveWorkspaceTreeSectionInTreeOrder(
@@ -1887,18 +1888,14 @@ function WorkspaceTree({
 		);
 	};
 	const sectionTreeData: ProjectTreeNode[] = useMemo((): ProjectTreeNode[] => {
-		function createSectionAction(
-			label: string,
-			action: () => void,
-			isNewProject = false,
-		): ReactNode {
+		function createSectionAction(label: string, action: () => void, isNewProject = false): ReactNode {
 			return (
 				<Tooltip title={label}>
 					<Button
 						type="text"
 						shape="circle"
 						size="small"
-						className={styles.sectionAddButton}
+						className={`${styles.sectionAddButton} ${styles.workspaceActionButton}`}
 						icon={<Icon name="add" />}
 						aria-label={label}
 						data-studio-new-project={isNewProject ? "true" : undefined}
@@ -2045,16 +2042,14 @@ function WorkspaceTree({
 						const treeNode: ProjectTreeNode = nodeProps as ProjectTreeNode;
 						if (treeNode.kind === "section") {
 							return (
-								<span
-									className={styles.sectionTreeSwitcher}
-								>
+								<span className={styles.sectionTreeSwitcher}>
 									<Icon name="arrow-forward" />
 								</span>
 							);
 						}
-						return treeNode.workspace === undefined
-							? null
-							: <WorkspaceTreeIconView workspace={treeNode.workspace} expanded={nodeProps.expanded} />;
+						return treeNode.workspace === undefined ? null : (
+							<WorkspaceTreeIconView workspace={treeNode.workspace} expanded={nodeProps.expanded} />
+						);
 					}}
 				/>
 			</div>

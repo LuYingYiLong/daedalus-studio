@@ -27,7 +27,10 @@ export type FlowTreeProps = {
 	onRename: (flowId: string, title: string) => Promise<void>;
 	onArchive: (flow: ConversationFlowSummary) => void;
 	onOrderUpdate: (order: FlowTreeOrderUpdate) => Promise<void>;
+	onNewProject: () => void;
+	onNewSession: () => void;
 	onWorkspaceEdit: (workspace: WorkspaceConfig) => void;
+	onWorkspaceNewSession: (workspace: WorkspaceConfig) => void;
 	onWorkspaceNewWorktree: (workspace: WorkspaceConfig) => void;
 	onWorkspaceOpen: (workspace: WorkspaceConfig) => void;
 	onWorkspaceDelete: (workspace: WorkspaceConfig) => void;
@@ -223,7 +226,10 @@ function FlowTree({
 	onRename,
 	onArchive,
 	onOrderUpdate,
+	onNewProject,
+	onNewSession,
 	onWorkspaceEdit,
+	onWorkspaceNewSession,
 	onWorkspaceNewWorktree,
 	onWorkspaceOpen,
 	onWorkspaceDelete,
@@ -292,6 +298,15 @@ function FlowTree({
 				...getExpandedOrder(expandedKeysRef.current),
 			});
 		}, 300);
+	}
+
+	function ensureSectionOpen(section: FlowTreeSectionKey): void {
+		const key: string = sectionKey(section);
+		if (expandedKeysRef.current.includes(key)) return;
+		const nextExpandedKeys: string[] = [...expandedKeysRef.current, key];
+		expandedKeysRef.current = nextExpandedKeys;
+		setExpandedKeys(nextExpandedKeys);
+		scheduleExpandedOrderSave();
 	}
 
 	function createOrderWithCurrentExpansion(): FlowTreeOrderUpdate {
@@ -423,13 +438,43 @@ function FlowTree({
 			disabled: true,
 			isLeaf: true,
 		});
-		const createSectionNode = (section: FlowTreeSectionKey, children: FlowTreeNode[]): FlowTreeNode => ({
+		function createSectionAction(label: string, action: () => void, isNewProject = false): ReactNode {
+			return (
+				<Tooltip title={label}>
+					<Button
+						type="text"
+						shape="circle"
+						size="small"
+						className={`${styles.sectionAddButton} ${styles.workspaceActionButton}`}
+						icon={<Icon name="add" />}
+						aria-label={label}
+						data-studio-new-project={isNewProject ? "true" : undefined}
+						onMouseDown={(event: MouseEvent<HTMLElement>): void => event.stopPropagation()}
+						onClick={(event: MouseEvent<HTMLElement>): void => {
+							event.preventDefault();
+							event.stopPropagation();
+							action();
+						}}
+					/>
+				</Tooltip>
+			);
+		}
+		const createSectionNode = (
+			section: FlowTreeSectionKey,
+			children: FlowTreeNode[],
+			action?: ReactNode,
+		): FlowTreeNode => ({
 			key: sectionKey(section),
 			kind: "section",
 			className: styles.sectionNode,
 			section,
 			selectable: false,
-			title: <span className={styles.groupTitle}>{t(`flow.tree.${section}`)}</span>,
+			title: (
+				<div className={styles.sectionTreeTitle}>
+					<span className={styles.groupTitle}>{t(`flow.tree.${section}`)}</span>
+					{action}
+				</div>
+			),
 			children:
 				children.length > 0
 					? children
@@ -459,10 +504,21 @@ function FlowTree({
 		);
 		return [
 			createSectionNode("pinned", pinnedChildren),
-			createSectionNode("projects", projectChildren),
-			createSectionNode("recent", recentChildren),
+			createSectionNode(
+				"projects",
+				projectChildren,
+				createSectionAction(t("workspaceTree.actions.newProject"), onNewProject, true),
+			),
+			createSectionNode(
+				"recent",
+				recentChildren,
+				createSectionAction(t("workspaceTree.actions.newSession"), (): void => {
+					ensureSectionOpen("recent");
+					onNewSession();
+				}),
+			),
 		];
-	}, [t, treeDataSignature]);
+	}, [onNewProject, onNewSession, t, treeDataSignature]);
 	const handleDrop: NonNullable<TreeProps<FlowTreeNode>["onDrop"]> = (info): void => {
 		const dragNode: FlowTreeNode = info.dragNode as FlowTreeNode;
 		const dropNode: FlowTreeNode = info.node as FlowTreeNode;
@@ -571,7 +627,37 @@ function FlowTree({
 						};
 						return (
 							<Dropdown menu={workspaceMenu} trigger={["contextMenu"]}>
-								<span className={styles.workspaceTitle}>{workspace.name}</span>
+								<span className={styles.workspaceMenuItem}>
+									<span className={styles.workspaceTitle}>{workspace.name}</span>
+									<span
+									className={styles.workspaceActions}
+									draggable={false}
+									onMouseDown={(event: MouseEvent<HTMLElement>): void => event.stopPropagation()}
+									onPointerDown={(event): void => event.stopPropagation()}
+									onDragStart={(event: DragEvent<HTMLElement>): void => {
+										event.preventDefault();
+										event.stopPropagation();
+									}}
+									>
+										<Tooltip title={t("workspaceTree.actions.newSessionInWorkspace")}>
+											<Button
+												type="text"
+												shape="circle"
+												size="small"
+												aria-label={t("workspaceTree.aria.newSessionInWorkspace", {
+													workspaceName: workspace.name,
+												})}
+												className={styles.workspaceActionButton}
+												icon={<Icon name="add" />}
+												onClick={(event: MouseEvent<HTMLElement>): void => {
+													event.preventDefault();
+													event.stopPropagation();
+													onWorkspaceNewSession(workspace);
+												}}
+											/>
+										</Tooltip>
+									</span>
+								</span>
 							</Dropdown>
 						);
 					}

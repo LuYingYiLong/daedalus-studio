@@ -70,6 +70,28 @@
 	user-select: none;
 }
 
+.sectionTreeTitle {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 4px;
+	width: 100%;
+	min-width: 0;
+	padding-inline-end: 8px;
+}
+
+.sectionNode .sectionAddButton {
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease;
+}
+
+.sectionNode:hover .sectionAddButton,
+.sectionNode:focus-within .sectionAddButton {
+	opacity: 1;
+	pointer-events: auto;
+}
+
 .sectionSwitcher {
 	display: inline-flex;
 	flex: 0 0 16px;
@@ -122,6 +144,37 @@
 	color: var(--ant-color-text);
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.workspaceMenuItem {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 4px;
+	width: 100%;
+	min-width: 0;
+	padding-inline-end: 8px;
+}
+
+.workspaceActions {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	opacity: 0;
+	pointer-events: none;
+	visibility: hidden;
+	transition: opacity 120ms ease;
+}
+
+.workspaceMenuItem:hover .workspaceActions,
+.workspaceMenuItem:focus-within .workspaceActions {
+	opacity: 1;
+	pointer-events: auto;
+	visibility: visible;
+}
+
+.workspaceActionButton {
+	color: var(--ant-color-text-tertiary);
 }
 
 .emptyItem {

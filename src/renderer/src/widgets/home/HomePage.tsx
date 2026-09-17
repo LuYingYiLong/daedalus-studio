@@ -432,6 +432,7 @@ function HomePage({
 	const [workspaceOrderIds, setWorkspaceOrderIds] = useState<string[]>(() => [
 		...initialWorkspaceTreeOrder.workspaceIds,
 	]);
+	const [isFlowWorkspaceCreateOpen, setIsFlowWorkspaceCreateOpen] = useState(false);
 	const [flowWorkspaceEditTarget, setFlowWorkspaceEditTarget] = useState<WorkspaceConfig | null>(null);
 	const [flowWorkspaceDeleteTarget, setFlowWorkspaceDeleteTarget] = useState<WorkspaceConfig | null>(null);
 	const [isFlowWorkspaceDeleting, setIsFlowWorkspaceDeleting] = useState(false);
@@ -953,7 +954,12 @@ function HomePage({
 		onRename: flowController.renameFlowById,
 		onArchive: (flow: ConversationFlowSummary): void => { void flowController.archiveFlowById(flow.flowId); },
 		onOrderUpdate: flowController.updateFlowOrder,
+		onNewProject: (): void => setIsFlowWorkspaceCreateOpen(true),
+		onNewSession: requestNewSessionSurface,
 		onWorkspaceEdit: setFlowWorkspaceEditTarget,
+		onWorkspaceNewSession: (workspace: WorkspaceConfig): void => {
+			requestNewWorkspaceSessionSurface(workspace, "local");
+		},
 		onWorkspaceNewWorktree: (workspace: WorkspaceConfig): void => {
 			onNewWorkspaceSession(workspace, "worktree");
 		},
@@ -1218,6 +1224,16 @@ function HomePage({
 						defaultReasoningEffort={reasoningEffort}
 					/>
 			</HomePageShell>
+			<WorkspaceProjectDialog
+				open={isFlowWorkspaceCreateOpen}
+				workspace={null}
+				onCancel={(): void => setIsFlowWorkspaceCreateOpen(false)}
+				onSaved={(workspace: WorkspaceConfig): void => {
+					onWorkspaceUpdate(workspace);
+					onWorkspaceProjectCreated(workspace);
+					setIsFlowWorkspaceCreateOpen(false);
+				}}
+			/>
 			<WorkspaceProjectDialog
 				open={flowWorkspaceEditTarget !== null}
 				workspace={flowWorkspaceEditTarget}
