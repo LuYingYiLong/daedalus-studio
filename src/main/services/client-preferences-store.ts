@@ -1,42 +1,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import {
-	normalizeKeyboardShortcutOverrides,
-	type KeyboardShortcutOverrides,
-	type ShortcutPlatform
-} from "../../contracts/keyboard-shortcuts";
+import { normalizeKeyboardShortcutOverrides, type KeyboardShortcutOverrides, type ShortcutPlatform } from "../../contracts/keyboard-shortcuts";
 import { DEFAULT_STUDIO_THEME_COLOR, normalizeStudioThemeColor } from "../../contracts/theme-color";
-import {
-	DEFAULT_STUDIO_CODE_FONT_SIZE,
-	DEFAULT_STUDIO_FONT_FAMILY,
-	DEFAULT_STUDIO_FONT_FAMILY_CODE,
-	DEFAULT_STUDIO_UI_FONT_SIZE,
-	MAX_STUDIO_CODE_FONT_SIZE,
-	MAX_STUDIO_UI_FONT_SIZE,
-	MIN_STUDIO_CODE_FONT_SIZE,
-	MIN_STUDIO_UI_FONT_SIZE,
-	normalizeStudioFontFamily,
-	normalizeStudioFontFamilyPatch,
-	normalizeStudioFontSize
-} from "../../contracts/studio-fonts";
+import { DEFAULT_STUDIO_CODE_FONT_SIZE, DEFAULT_STUDIO_FONT_FAMILY, DEFAULT_STUDIO_FONT_FAMILY_CODE, DEFAULT_STUDIO_UI_FONT_SIZE, MAX_STUDIO_CODE_FONT_SIZE, MAX_STUDIO_UI_FONT_SIZE, MIN_STUDIO_CODE_FONT_SIZE, MIN_STUDIO_UI_FONT_SIZE, normalizeStudioFontFamily, normalizeStudioFontFamilyPatch, normalizeStudioFontSize } from "../../contracts/studio-fonts";
 import type { ClientPreferences, ClientPreferencesPatch } from "../../contracts/client-preferences";
-import {
-	DEFAULT_MASCOT_SIZE,
-	normalizeMascotSize
-} from "../../contracts/mascot-preferences";
-import {
-	ONBOARDING_STEP_IDS,
-	createDefaultOnboardingPreferences,
-	type OnboardingConfigurableStepId,
-	type OnboardingPreferences,
-	type OnboardingStepId,
-	type OnboardingStepOutcome
-} from "../../contracts/onboarding";
-import {
-	createDefaultNewSessionComposerPreferences,
-	type NewSessionComposerModel,
-	type NewSessionComposerPreferences
-} from "../../contracts/new-session-composer-preferences";
+import { DEFAULT_MASCOT_SIZE, normalizeMascotSize } from "../../contracts/mascot-preferences";
+import { ONBOARDING_STEP_IDS, createDefaultOnboardingPreferences, type OnboardingConfigurableStepId, type OnboardingPreferences, type OnboardingStepId, type OnboardingStepOutcome } from "../../contracts/onboarding";
+import { createDefaultNewSessionComposerPreferences, type NewSessionComposerModel, type NewSessionComposerPreferences } from "../../contracts/new-session-composer-preferences";
 
 export type { ClientPreferences, ClientPreferencesPatch } from "../../contracts/client-preferences";
 
@@ -61,12 +31,13 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	webLinkOpenMode: "integrated",
 	workspaceSidebar: {
 		open: true,
-		size: 260
+		size: 260,
 	},
 	keyboardShortcuts: {},
+	flowSnapToGrid: true,
 	lastComposerModel: null,
 	newSessionComposer: createDefaultNewSessionComposerPreferences(),
-	onboarding: createDefaultOnboardingPreferences()
+	onboarding: createDefaultOnboardingPreferences(),
 };
 
 const SHORTCUT_PLATFORM: ShortcutPlatform = process.platform === "darwin" ? "mac" : "other";
@@ -86,7 +57,7 @@ const DEFAULT_IO: ClientPreferencesStoreIo = {
 	},
 	async ensureDirectory(path: string): Promise<void> {
 		await mkdir(path, { recursive: true });
-	}
+	},
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -98,62 +69,38 @@ function normalizeWorkspaceSidebar(value: unknown): ClientPreferences["workspace
 		return { ...DEFAULT_CLIENT_PREFERENCES.workspaceSidebar };
 	}
 
-	const open: boolean = typeof value.open === "boolean"
-		? value.open
-		: DEFAULT_CLIENT_PREFERENCES.workspaceSidebar.open;
-	const size: number = typeof value.size === "number" && Number.isFinite(value.size)
-		? Math.min(720, Math.max(150, Math.trunc(value.size)))
-		: DEFAULT_CLIENT_PREFERENCES.workspaceSidebar.size;
+	const open: boolean = typeof value.open === "boolean" ? value.open : DEFAULT_CLIENT_PREFERENCES.workspaceSidebar.open;
+	const size: number = typeof value.size === "number" && Number.isFinite(value.size) ? Math.min(720, Math.max(150, Math.trunc(value.size))) : DEFAULT_CLIENT_PREFERENCES.workspaceSidebar.size;
 	return { open, size };
 }
 
 function normalizeComposerModel(value: unknown): NewSessionComposerModel | null {
-	return isRecord(value)
-		&& typeof value.providerId === "string"
-		&& value.providerId.trim().length > 0
-		&& typeof value.modelId === "string"
-		&& value.modelId.trim().length > 0
+	return isRecord(value) && typeof value.providerId === "string" && value.providerId.trim().length > 0 && typeof value.modelId === "string" && value.modelId.trim().length > 0
 		? {
-			providerId: value.providerId.trim(),
-			modelId: value.modelId.trim()
-		}
+				providerId: value.providerId.trim(),
+				modelId: value.modelId.trim(),
+			}
 		: null;
 }
 
-function normalizeNewSessionComposerPreferences(
-	value: unknown,
-	legacyModel: NewSessionComposerModel | null
-): NewSessionComposerPreferences {
+function normalizeNewSessionComposerPreferences(value: unknown, legacyModel: NewSessionComposerModel | null): NewSessionComposerPreferences {
 	const defaults: NewSessionComposerPreferences = createDefaultNewSessionComposerPreferences();
 	if (!isRecord(value)) {
 		return {
 			...defaults,
-			model: legacyModel
+			model: legacyModel,
 		};
 	}
 
 	return {
-		mode: value.mode === "ask" || value.mode === "agent" || value.mode === "plan" || value.mode === "goal"
-			? value.mode
-			: defaults.mode,
-		approvalMode: value.approvalMode === "manual" || value.approvalMode === "auto-safe" || value.approvalMode === "full-trust"
-			? value.approvalMode
-			: defaults.approvalMode,
+		mode: value.mode === "ask" || value.mode === "agent" || value.mode === "plan" || value.mode === "goal" ? value.mode : defaults.mode,
+		approvalMode: value.approvalMode === "manual" || value.approvalMode === "auto-safe" || value.approvalMode === "full-trust" ? value.approvalMode : defaults.approvalMode,
 		model: normalizeComposerModel(value.model) ?? legacyModel,
-		reasoningEffort: typeof value.reasoningEffort === "string"
-			&& value.reasoningEffort.trim().length > 0
-			&& value.reasoningEffort.trim().length <= 80
-			? value.reasoningEffort.trim()
-			: defaults.reasoningEffort
+		reasoningEffort: typeof value.reasoningEffort === "string" && value.reasoningEffort.trim().length > 0 && value.reasoningEffort.trim().length <= 80 ? value.reasoningEffort.trim() : defaults.reasoningEffort,
 	};
 }
 
-const ONBOARDING_CONFIGURABLE_STEP_IDS: readonly OnboardingConfigurableStepId[] = [
-	"provider",
-	"godot_executable",
-	"documentation",
-	"godot_bridge"
-];
+const ONBOARDING_CONFIGURABLE_STEP_IDS: readonly OnboardingConfigurableStepId[] = ["provider", "godot_executable", "documentation", "godot_bridge"];
 
 function normalizeOnboardingPreferences(value: unknown): OnboardingPreferences {
 	const defaults: OnboardingPreferences = createDefaultOnboardingPreferences();
@@ -162,10 +109,7 @@ function normalizeOnboardingPreferences(value: unknown): OnboardingPreferences {
 	}
 
 	const completed: boolean = value.completed === true;
-	const currentStep: OnboardingStepId = typeof value.currentStep === "string"
-		&& ONBOARDING_STEP_IDS.includes(value.currentStep as OnboardingStepId)
-		? value.currentStep as OnboardingStepId
-		: defaults.currentStep;
+	const currentStep: OnboardingStepId = typeof value.currentStep === "string" && ONBOARDING_STEP_IDS.includes(value.currentStep as OnboardingStepId) ? (value.currentStep as OnboardingStepId) : defaults.currentStep;
 	const stepOutcomes: OnboardingPreferences["stepOutcomes"] = {};
 	if (isRecord(value.stepOutcomes)) {
 		for (const stepId of ONBOARDING_CONFIGURABLE_STEP_IDS) {
@@ -175,83 +119,47 @@ function normalizeOnboardingPreferences(value: unknown): OnboardingPreferences {
 			}
 		}
 	}
-	const completedAt: string | null = completed && typeof value.completedAt === "string" && value.completedAt.trim().length > 0
-		? value.completedAt.trim()
-		: null;
+	const completedAt: string | null = completed && typeof value.completedAt === "string" && value.completedAt.trim().length > 0 ? value.completedAt.trim() : null;
 
 	return {
 		schemaVersion: 1,
 		completed,
 		currentStep: completed ? "complete" : currentStep,
 		stepOutcomes,
-		completedAt
+		completedAt,
 	};
 }
 
-export function normalizeClientPreferences(value: unknown): { preferences: ClientPreferences; normalized: boolean } {
+export function normalizeClientPreferences(value: unknown): {
+	preferences: ClientPreferences;
+	normalized: boolean;
+} {
 	if (!isRecord(value)) {
 		return {
 			preferences: { ...DEFAULT_CLIENT_PREFERENCES },
-			normalized: true
+			normalized: true,
 		};
 	}
 
-	const autoCheckForUpdates: boolean = typeof value.autoCheckForUpdates === "boolean"
-		? value.autoCheckForUpdates
-		: DEFAULT_CLIENT_PREFERENCES.autoCheckForUpdates;
-	const notifyOnRunCompleted: boolean = typeof value.notifyOnRunCompleted === "boolean"
-		? value.notifyOnRunCompleted
-		: DEFAULT_CLIENT_PREFERENCES.notifyOnRunCompleted;
-	const minimizeToTrayOnClose: boolean = typeof value.minimizeToTrayOnClose === "boolean"
-		? value.minimizeToTrayOnClose
-		: DEFAULT_CLIENT_PREFERENCES.minimizeToTrayOnClose;
-	const themePreference: ClientPreferences["theme"] =
-		value.theme === "light" || value.theme === "dark" || value.theme === "system"
-			? value.theme
-			: DEFAULT_CLIENT_PREFERENCES.theme;
+	const autoCheckForUpdates: boolean = typeof value.autoCheckForUpdates === "boolean" ? value.autoCheckForUpdates : DEFAULT_CLIENT_PREFERENCES.autoCheckForUpdates;
+	const notifyOnRunCompleted: boolean = typeof value.notifyOnRunCompleted === "boolean" ? value.notifyOnRunCompleted : DEFAULT_CLIENT_PREFERENCES.notifyOnRunCompleted;
+	const minimizeToTrayOnClose: boolean = typeof value.minimizeToTrayOnClose === "boolean" ? value.minimizeToTrayOnClose : DEFAULT_CLIENT_PREFERENCES.minimizeToTrayOnClose;
+	const themePreference: ClientPreferences["theme"] = value.theme === "light" || value.theme === "dark" || value.theme === "system" ? value.theme : DEFAULT_CLIENT_PREFERENCES.theme;
 	const themeColor: string = normalizeStudioThemeColor(value.themeColor);
-	const animationsEnabled: boolean = typeof value.animationsEnabled === "boolean"
-		? value.animationsEnabled
-		: DEFAULT_CLIENT_PREFERENCES.animationsEnabled;
-	const mascotEnabled: boolean = typeof value.mascotEnabled === "boolean"
-		? value.mascotEnabled
-		: DEFAULT_CLIENT_PREFERENCES.mascotEnabled;
-	const mascotSize: number = normalizeMascotSize(
-		value.mascotSize,
-		DEFAULT_CLIENT_PREFERENCES.mascotSize
-	);
-	const uiFontSize: number = normalizeStudioFontSize(
-		value.uiFontSize,
-		DEFAULT_CLIENT_PREFERENCES.uiFontSize,
-		MIN_STUDIO_UI_FONT_SIZE,
-		MAX_STUDIO_UI_FONT_SIZE
-	);
-	const codeFontSize: number = normalizeStudioFontSize(
-		value.codeFontSize,
-		DEFAULT_CLIENT_PREFERENCES.codeFontSize,
-		MIN_STUDIO_CODE_FONT_SIZE,
-		MAX_STUDIO_CODE_FONT_SIZE
-	);
+	const animationsEnabled: boolean = typeof value.animationsEnabled === "boolean" ? value.animationsEnabled : DEFAULT_CLIENT_PREFERENCES.animationsEnabled;
+	const mascotEnabled: boolean = typeof value.mascotEnabled === "boolean" ? value.mascotEnabled : DEFAULT_CLIENT_PREFERENCES.mascotEnabled;
+	const mascotSize: number = normalizeMascotSize(value.mascotSize, DEFAULT_CLIENT_PREFERENCES.mascotSize);
+	const uiFontSize: number = normalizeStudioFontSize(value.uiFontSize, DEFAULT_CLIENT_PREFERENCES.uiFontSize, MIN_STUDIO_UI_FONT_SIZE, MAX_STUDIO_UI_FONT_SIZE);
+	const codeFontSize: number = normalizeStudioFontSize(value.codeFontSize, DEFAULT_CLIENT_PREFERENCES.codeFontSize, MIN_STUDIO_CODE_FONT_SIZE, MAX_STUDIO_CODE_FONT_SIZE);
 	const fontFamily: string = normalizeStudioFontFamily(value.fontFamily, DEFAULT_CLIENT_PREFERENCES.fontFamily);
 	const fontFamilyCode: string = normalizeStudioFontFamily(value.fontFamilyCode, DEFAULT_CLIENT_PREFERENCES.fontFamilyCode);
-	const languagePreference: ClientPreferences["language"] =
-		value.language === "en-US" || value.language === "zh-CN" || value.language === "system"
-			? value.language
-			: DEFAULT_CLIENT_PREFERENCES.language;
-	const webLinkOpenMode: ClientPreferences["webLinkOpenMode"] =
-		value.webLinkOpenMode === "external" || value.webLinkOpenMode === "integrated"
-			? value.webLinkOpenMode
-			: DEFAULT_CLIENT_PREFERENCES.webLinkOpenMode;
+	const languagePreference: ClientPreferences["language"] = value.language === "en-US" || value.language === "zh-CN" || value.language === "system" ? value.language : DEFAULT_CLIENT_PREFERENCES.language;
+	const webLinkOpenMode: ClientPreferences["webLinkOpenMode"] = value.webLinkOpenMode === "external" || value.webLinkOpenMode === "integrated" ? value.webLinkOpenMode : DEFAULT_CLIENT_PREFERENCES.webLinkOpenMode;
 	const workspaceSidebar: ClientPreferences["workspaceSidebar"] = normalizeWorkspaceSidebar(value.workspaceSidebar);
-	const keyboardShortcuts: KeyboardShortcutOverrides = normalizeKeyboardShortcutOverrides(
-		value.keyboardShortcuts,
-		SHORTCUT_PLATFORM
-	);
+	const keyboardShortcuts: KeyboardShortcutOverrides = normalizeKeyboardShortcutOverrides(value.keyboardShortcuts, SHORTCUT_PLATFORM);
+	const flowSnapToGrid: boolean = typeof value.flowSnapToGrid === "boolean" ? value.flowSnapToGrid : DEFAULT_CLIENT_PREFERENCES.flowSnapToGrid;
 	const lastComposerModel: NewSessionComposerModel | null = normalizeComposerModel(value.lastComposerModel);
-	const newSessionComposer: NewSessionComposerPreferences = normalizeNewSessionComposerPreferences(
-		value.newSessionComposer,
-		lastComposerModel
-	);
+	const newSessionComposer: NewSessionComposerPreferences = normalizeNewSessionComposerPreferences(value.newSessionComposer, lastComposerModel);
 	const onboarding: OnboardingPreferences = normalizeOnboardingPreferences(value.onboarding);
 
 	return {
@@ -274,54 +182,35 @@ export function normalizeClientPreferences(value: unknown): { preferences: Clien
 			webLinkOpenMode,
 			workspaceSidebar,
 			keyboardShortcuts,
+			flowSnapToGrid,
 			lastComposerModel,
 			newSessionComposer,
-			onboarding
+			onboarding,
 		},
-		normalized: value.autoCheckForUpdates !== autoCheckForUpdates
-			|| typeof value.allowComputerObservation !== "boolean"
-			|| value.allowComputerControl !== (value.allowComputerObservation === true && value.allowComputerControl === true)
-			|| value.notifyOnRunCompleted !== notifyOnRunCompleted
-			|| value.minimizeToTrayOnClose !== minimizeToTrayOnClose
-			|| value.theme !== themePreference
-			|| value.themeColor !== themeColor
-			|| value.animationsEnabled !== animationsEnabled
-			|| value.mascotEnabled !== mascotEnabled
-			|| value.mascotSize !== mascotSize
-			|| value.uiFontSize !== uiFontSize
-			|| value.codeFontSize !== codeFontSize
-			|| value.fontFamily !== fontFamily
-			|| value.fontFamilyCode !== fontFamilyCode
-			|| value.language !== languagePreference
-			|| value.webLinkOpenMode !== webLinkOpenMode
-			|| JSON.stringify(value.workspaceSidebar ?? null) !== JSON.stringify(workspaceSidebar)
-			|| JSON.stringify(value.keyboardShortcuts ?? null) !== JSON.stringify(keyboardShortcuts)
-			|| JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel)
-			|| JSON.stringify(value.newSessionComposer ?? null) !== JSON.stringify(newSessionComposer)
-			|| JSON.stringify(value.onboarding ?? null) !== JSON.stringify(onboarding)
-			|| Object.keys(value).some((key: string): boolean => ![
-				"allowComputerObservation",
-				"allowComputerControl",
-				"autoCheckForUpdates",
-				"notifyOnRunCompleted",
-				"minimizeToTrayOnClose",
-				"theme",
-				"themeColor",
-				"animationsEnabled",
-				"mascotEnabled",
-				"mascotSize",
-				"uiFontSize",
-				"codeFontSize",
-				"fontFamily",
-				"fontFamilyCode",
-				"language",
-				"webLinkOpenMode",
-				"workspaceSidebar",
-				"keyboardShortcuts",
-				"lastComposerModel",
-				"newSessionComposer",
-				"onboarding"
-			].includes(key))
+		normalized:
+			value.autoCheckForUpdates !== autoCheckForUpdates ||
+			typeof value.allowComputerObservation !== "boolean" ||
+			value.allowComputerControl !== (value.allowComputerObservation === true && value.allowComputerControl === true) ||
+			value.notifyOnRunCompleted !== notifyOnRunCompleted ||
+			value.minimizeToTrayOnClose !== minimizeToTrayOnClose ||
+			value.theme !== themePreference ||
+			value.themeColor !== themeColor ||
+			value.animationsEnabled !== animationsEnabled ||
+			value.mascotEnabled !== mascotEnabled ||
+			value.mascotSize !== mascotSize ||
+			value.uiFontSize !== uiFontSize ||
+			value.codeFontSize !== codeFontSize ||
+			value.fontFamily !== fontFamily ||
+			value.fontFamilyCode !== fontFamilyCode ||
+			value.language !== languagePreference ||
+			value.webLinkOpenMode !== webLinkOpenMode ||
+			JSON.stringify(value.workspaceSidebar ?? null) !== JSON.stringify(workspaceSidebar) ||
+			JSON.stringify(value.keyboardShortcuts ?? null) !== JSON.stringify(keyboardShortcuts) ||
+			value.flowSnapToGrid !== flowSnapToGrid ||
+			JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel) ||
+			JSON.stringify(value.newSessionComposer ?? null) !== JSON.stringify(newSessionComposer) ||
+			JSON.stringify(value.onboarding ?? null) !== JSON.stringify(onboarding) ||
+			Object.keys(value).some((key: string): boolean => !["allowComputerObservation", "allowComputerControl", "autoCheckForUpdates", "notifyOnRunCompleted", "minimizeToTrayOnClose", "theme", "themeColor", "animationsEnabled", "mascotEnabled", "mascotSize", "uiFontSize", "codeFontSize", "fontFamily", "fontFamilyCode", "language", "webLinkOpenMode", "workspaceSidebar", "keyboardShortcuts", "flowSnapToGrid", "lastComposerModel", "newSessionComposer", "onboarding"].includes(key)),
 	};
 }
 
@@ -355,26 +244,13 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 		patch.mascotEnabled = value.mascotEnabled;
 	}
 	if (typeof value.mascotSize === "number" && Number.isFinite(value.mascotSize)) {
-		patch.mascotSize = normalizeMascotSize(
-			value.mascotSize,
-			DEFAULT_CLIENT_PREFERENCES.mascotSize
-		);
+		patch.mascotSize = normalizeMascotSize(value.mascotSize, DEFAULT_CLIENT_PREFERENCES.mascotSize);
 	}
 	if (typeof value.uiFontSize === "number" && Number.isFinite(value.uiFontSize)) {
-		patch.uiFontSize = normalizeStudioFontSize(
-			value.uiFontSize,
-			DEFAULT_CLIENT_PREFERENCES.uiFontSize,
-			MIN_STUDIO_UI_FONT_SIZE,
-			MAX_STUDIO_UI_FONT_SIZE
-		);
+		patch.uiFontSize = normalizeStudioFontSize(value.uiFontSize, DEFAULT_CLIENT_PREFERENCES.uiFontSize, MIN_STUDIO_UI_FONT_SIZE, MAX_STUDIO_UI_FONT_SIZE);
 	}
 	if (typeof value.codeFontSize === "number" && Number.isFinite(value.codeFontSize)) {
-		patch.codeFontSize = normalizeStudioFontSize(
-			value.codeFontSize,
-			DEFAULT_CLIENT_PREFERENCES.codeFontSize,
-			MIN_STUDIO_CODE_FONT_SIZE,
-			MAX_STUDIO_CODE_FONT_SIZE
-		);
+		patch.codeFontSize = normalizeStudioFontSize(value.codeFontSize, DEFAULT_CLIENT_PREFERENCES.codeFontSize, MIN_STUDIO_CODE_FONT_SIZE, MAX_STUDIO_CODE_FONT_SIZE);
 	}
 	if (typeof value.fontFamily === "string") {
 		patch.fontFamily = normalizeStudioFontFamilyPatch(value.fontFamily, DEFAULT_CLIENT_PREFERENCES.fontFamily, "fontFamily");
@@ -388,36 +264,25 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	if (value.webLinkOpenMode === "external" || value.webLinkOpenMode === "integrated") {
 		patch.webLinkOpenMode = value.webLinkOpenMode;
 	}
-	if (
-		isRecord(value.workspaceSidebar)
-		&& typeof value.workspaceSidebar.open === "boolean"
-		&& typeof value.workspaceSidebar.size === "number"
-		&& Number.isFinite(value.workspaceSidebar.size)
-	) {
+	if (isRecord(value.workspaceSidebar) && typeof value.workspaceSidebar.open === "boolean" && typeof value.workspaceSidebar.size === "number" && Number.isFinite(value.workspaceSidebar.size)) {
 		patch.workspaceSidebar = normalizeWorkspaceSidebar(value.workspaceSidebar);
 	}
 	if (isRecord(value.keyboardShortcuts)) {
 		patch.keyboardShortcuts = normalizeKeyboardShortcutOverrides(value.keyboardShortcuts, SHORTCUT_PLATFORM);
 	}
+	if (typeof value.flowSnapToGrid === "boolean") {
+		patch.flowSnapToGrid = value.flowSnapToGrid;
+	}
 	if (value.lastComposerModel === null) {
 		patch.lastComposerModel = null;
-	} else if (
-		isRecord(value.lastComposerModel)
-		&& typeof value.lastComposerModel.providerId === "string"
-		&& value.lastComposerModel.providerId.trim().length > 0
-		&& typeof value.lastComposerModel.modelId === "string"
-		&& value.lastComposerModel.modelId.trim().length > 0
-	) {
+	} else if (isRecord(value.lastComposerModel) && typeof value.lastComposerModel.providerId === "string" && value.lastComposerModel.providerId.trim().length > 0 && typeof value.lastComposerModel.modelId === "string" && value.lastComposerModel.modelId.trim().length > 0) {
 		patch.lastComposerModel = {
 			providerId: value.lastComposerModel.providerId.trim(),
-			modelId: value.lastComposerModel.modelId.trim()
+			modelId: value.lastComposerModel.modelId.trim(),
 		};
 	}
 	if (isRecord(value.newSessionComposer)) {
-		patch.newSessionComposer = normalizeNewSessionComposerPreferences(
-			value.newSessionComposer,
-			DEFAULT_CLIENT_PREFERENCES.newSessionComposer.model
-		);
+		patch.newSessionComposer = normalizeNewSessionComposerPreferences(value.newSessionComposer, DEFAULT_CLIENT_PREFERENCES.newSessionComposer.model);
 	}
 	if (isRecord(value.onboarding)) {
 		patch.onboarding = normalizeOnboardingPreferences(value.onboarding);
@@ -425,10 +290,7 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	return patch;
 }
 
-export async function loadClientPreferencesFile(
-	filePath: string,
-	io: ClientPreferencesStoreIo = DEFAULT_IO
-): Promise<{ preferences: ClientPreferences; normalized: boolean }> {
+export async function loadClientPreferencesFile(filePath: string, io: ClientPreferencesStoreIo = DEFAULT_IO): Promise<{ preferences: ClientPreferences; normalized: boolean }> {
 	try {
 		const rawText: string = await io.readText(filePath);
 		const parsed: unknown = JSON.parse(rawText) as unknown;
@@ -436,30 +298,22 @@ export async function loadClientPreferencesFile(
 	} catch {
 		return {
 			preferences: { ...DEFAULT_CLIENT_PREFERENCES },
-			normalized: true
+			normalized: true,
 		};
 	}
 }
 
-export async function saveClientPreferencesFile(
-	filePath: string,
-	preferences: ClientPreferences,
-	io: ClientPreferencesStoreIo = DEFAULT_IO
-): Promise<void> {
+export async function saveClientPreferencesFile(filePath: string, preferences: ClientPreferences, io: ClientPreferencesStoreIo = DEFAULT_IO): Promise<void> {
 	await io.ensureDirectory(dirname(filePath));
 	await io.writeText(filePath, `${JSON.stringify(preferences, null, 2)}\n`);
 }
 
-export async function updateClientPreferencesFile(
-	filePath: string,
-	patch: ClientPreferencesPatch,
-	io: ClientPreferencesStoreIo = DEFAULT_IO
-): Promise<ClientPreferences> {
+export async function updateClientPreferencesFile(filePath: string, patch: ClientPreferencesPatch, io: ClientPreferencesStoreIo = DEFAULT_IO): Promise<ClientPreferences> {
 	const loaded = await loadClientPreferencesFile(filePath, io);
 	const normalizedPatch: ClientPreferencesPatch = normalizeClientPreferencesPatch(patch);
 	const nextPreferences: ClientPreferences = {
 		...loaded.preferences,
-		...normalizedPatch
+		...normalizedPatch,
 	};
 	await saveClientPreferencesFile(filePath, nextPreferences, io);
 	return nextPreferences;

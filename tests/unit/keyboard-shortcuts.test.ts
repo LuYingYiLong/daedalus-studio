@@ -1,20 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-	findMatchingShortcutCommand,
-	findShortcutConflict,
-	formatShortcutBinding,
-	getEffectiveShortcutBinding,
-	matchesShortcutKeyboardEvent,
-	normalizeKeyboardShortcutOverrides,
-	normalizeShortcutBinding,
-	shortcutBindingFromKeyboardEvent,
-	type ShortcutKeyboardEvent
-} from "../../src/contracts/keyboard-shortcuts";
+import { findMatchingShortcutCommand, findShortcutConflict, formatShortcutBinding, getEffectiveShortcutBinding, matchesShortcutKeyboardEvent, normalizeKeyboardShortcutOverrides, normalizeShortcutBinding, shortcutBindingFromKeyboardEvent, type ShortcutKeyboardEvent } from "../../src/contracts/keyboard-shortcuts";
 
-function keyboardEvent(
-	code: string,
-	options: Partial<ShortcutKeyboardEvent> = {}
-): ShortcutKeyboardEvent {
+function keyboardEvent(code: string, options: Partial<ShortcutKeyboardEvent> = {}): ShortcutKeyboardEvent {
 	return {
 		key: code.startsWith("Key") ? code.slice(3).toLowerCase() : code,
 		code,
@@ -22,7 +9,7 @@ function keyboardEvent(
 		metaKey: false,
 		altKey: false,
 		shiftKey: false,
-		...options
+		...options,
 	};
 }
 
@@ -42,31 +29,47 @@ describe("keyboard shortcuts", () => {
 	});
 
 	it("matches effective shortcuts and resolves commands", () => {
-		const event: ShortcutKeyboardEvent = keyboardEvent("KeyJ", { ctrlKey: true });
+		const event: ShortcutKeyboardEvent = keyboardEvent("KeyJ", {
+			ctrlKey: true,
+		});
 		expect(matchesShortcutKeyboardEvent(event, "Mod+KeyJ", "other")).toBe(true);
 		expect(findMatchingShortcutCommand(event, {}, "other")).toBe("workbench.toggleBottomPanel");
 		expect(findMatchingShortcutCommand(keyboardEvent("KeyN", { ctrlKey: true }), {}, "other")).toBe("session.new");
 		expect(findMatchingShortcutCommand(keyboardEvent("PageUp", { ctrlKey: true }), {}, "other")).toBe("session.previous");
 		expect(findMatchingShortcutCommand(keyboardEvent("PageDown", { ctrlKey: true }), {}, "other")).toBe("session.next");
-		expect(findMatchingShortcutCommand(event, {
-			"workbench.toggleBottomPanel": "Mod+KeyK"
-		}, "other")).toBeNull();
-		expect(getEffectiveShortcutBinding({
-			"workbench.toggleBottomPanel": "Mod+KeyK"
-		}, "workbench.toggleBottomPanel")).toBe("Mod+KeyK");
+		expect(findMatchingShortcutCommand(keyboardEvent("KeyA", { shiftKey: true }), {}, "other")).toBe("flow.addNode");
+		expect(findMatchingShortcutCommand(keyboardEvent("F3"), {}, "other")).toBe("flow.searchNodes");
+		expect(findMatchingShortcutCommand(keyboardEvent("Delete"), {}, "other")).toBe("flow.deleteSelection");
+		expect(
+			findMatchingShortcutCommand(
+				event,
+				{
+					"workbench.toggleBottomPanel": "Mod+KeyK",
+				},
+				"other",
+			),
+		).toBeNull();
+		expect(
+			getEffectiveShortcutBinding(
+				{
+					"workbench.toggleBottomPanel": "Mod+KeyK",
+				},
+				"workbench.toggleBottomPanel",
+			),
+		).toBe("Mod+KeyK");
 	});
 
 	it("detects conflicts and drops invalid or conflicting persisted overrides", () => {
-		expect(findShortcutConflict(
-			{},
-			"workbench.toggleWorkspaceSidebar",
-			"Mod+KeyJ",
-			"other"
-		)?.id).toBe("workbench.toggleBottomPanel");
-		expect(normalizeKeyboardShortcutOverrides({
-			"workbench.toggleWorkspaceSidebar": "Mod+KeyJ",
-			"conversation.previousTurn": "KeyP",
-			unknown: "Mod+KeyU"
-		}, "other")).toEqual({});
+		expect(findShortcutConflict({}, "workbench.toggleWorkspaceSidebar", "Mod+KeyJ", "other")?.id).toBe("workbench.toggleBottomPanel");
+		expect(
+			normalizeKeyboardShortcutOverrides(
+				{
+					"workbench.toggleWorkspaceSidebar": "Mod+KeyJ",
+					"conversation.previousTurn": "KeyP",
+					unknown: "Mod+KeyU",
+				},
+				"other",
+			),
+		).toEqual({});
 	});
 });

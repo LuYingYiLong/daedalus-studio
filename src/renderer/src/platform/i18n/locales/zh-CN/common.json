@@ -631,8 +631,14 @@
 			"starters": {
 				"label": "开始方式",
 				"explore": { "label": "探索一个问题", "prompt": "帮我探索一个问题：" },
-				"decompose": { "label": "拆解复杂任务", "prompt": "把这个复杂任务拆成可执行的步骤：" },
-				"compare": { "label": "比较两种方案", "prompt": "比较以下两种方案，并列出各自的优缺点：" }
+				"decompose": {
+					"label": "拆解复杂任务",
+					"prompt": "把这个复杂任务拆成可执行的步骤："
+				},
+				"compare": {
+					"label": "比较两种方案",
+					"prompt": "比较以下两种方案，并列出各自的优缺点："
+				}
 			}
 		},
 		"branchCount": "{{count}} 条分支",
@@ -645,7 +651,11 @@
 			"failed": "失败",
 			"stopped": "已停止"
 		},
-		"nodes": { "user": "用户", "assistant": "AI", "emptyResponse": "暂无回答内容" },
+		"nodes": {
+			"user": "用户",
+			"assistant": "AI",
+			"emptyResponse": "暂无回答内容"
+		},
 		"actions": {
 			"new": "新建 Flow",
 			"details": "查看详情",
@@ -681,14 +691,42 @@
 			"addNode": "添加节点",
 			"search": "搜索",
 			"fitCanvas": "适应画布",
+			"enableSnap": "开启网格吸附",
+			"disableSnap": "关闭网格吸附",
 			"configure": "配置",
 			"deleteNode": "删除节点",
 			"pendingApprovals": "待审批操作",
 			"approve": "批准",
 			"reject": "拒绝",
-			"approvalModes": { "manual": "手动", "auto-safe": "自动安全", "full-trust": "完全信任" },
-			"picker": { "title": "添加 Flow 节点", "search": "搜索节点…", "empty": "没有兼容的节点", "workspaceRequired": "需要工作区", "visualOnly": "仅用于标注", "recent": "最近", "categories": { "basic": "基础", "ai": "AI", "workspace": "工作区" }, "hint": "↑↓ 选择 · Enter 添加 · Esc 关闭" },
-			"nodes": { "prompt": "提示词", "text": "文本", "template": "模板", "merge": "合并", "json_extract": "JSON 提取", "condition": "条件", "file_input": "文件输入", "llm": "大模型", "tool": "工具", "command": "命令", "output": "输出", "note": "便签" }
+			"approvalModes": {
+				"manual": "手动",
+				"auto-safe": "自动安全",
+				"full-trust": "完全信任"
+			},
+			"picker": {
+				"title": "添加 Flow 节点",
+				"search": "搜索节点…",
+				"empty": "没有兼容的节点",
+				"workspaceRequired": "需要工作区",
+				"visualOnly": "仅用于标注",
+				"recent": "最近",
+				"categories": { "basic": "基础", "ai": "AI", "workspace": "工作区" },
+				"hint": "↑↓ 选择 · Enter 添加 · Esc 关闭"
+			},
+			"nodes": {
+				"prompt": "提示词",
+				"text": "文本",
+				"template": "模板",
+				"merge": "合并",
+				"json_extract": "JSON 提取",
+				"condition": "条件",
+				"file_input": "文件输入",
+				"llm": "大模型",
+				"tool": "工具",
+				"command": "命令",
+				"output": "输出",
+				"note": "便签"
+			}
 		},
 		"aria": {
 			"pin": "置顶 Flow：{{title}}",
@@ -1127,7 +1165,11 @@
 		"graph": "图",
 		"agents": "个 Subagent",
 		"summary": "{{total}} 个节点 / {{running}} 个运行中 / {{queued}} 个排队 / {{waiting}} 个等待审批 / {{failed}} 个失败",
-		"actions": { "retry": "重试", "cancel": "取消节点", "cancelGraph": "取消全部 Subagent" },
+		"actions": {
+			"retry": "重试",
+			"cancel": "取消节点",
+			"cancelGraph": "取消全部 Subagent"
+		},
 		"queueReasons": {
 			"provider_capacity": "等待模型资源",
 			"worktree_capacity": "等待工作树资源",
@@ -1160,7 +1202,10 @@
 			"tester": "验证",
 			"reviewer": "审阅"
 		},
-		"workspaceModes": { "shared_read_only": "共享只读", "managed_worktree": "独立工作树" },
+		"workspaceModes": {
+			"shared_read_only": "共享只读",
+			"managed_worktree": "独立工作树"
+		},
 		"status": {
 			"draft": "草稿",
 			"running": "运行中",
@@ -2559,6 +2604,18 @@
 				"previousTurn": "上一个对话轮次",
 				"nextTurn": "下一个对话轮次",
 				"findInConversation": "在会话中查找"
+			},
+			"flow": {
+				"title": "Flow 画布快捷键",
+				"description": "这些快捷键仅在 Flow 视图处于活动状态且未编辑输入框时生效。",
+				"builtIn": "内置",
+				"commands": {
+					"addNode": "打开节点添加面板",
+					"searchNodes": "搜索并添加节点",
+					"fitCanvas": "适应全部节点",
+					"run": "运行当前 Flow",
+					"deleteSelection": "删除选中的节点或连线"
+				}
 			},
 			"empty": "没有匹配的快捷键动作。",
 			"editor": {

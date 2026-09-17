@@ -4,13 +4,16 @@ import { readRepoFile } from "../helpers/repo-paths";
 describe("Flow home surface", (): void => {
 	it("keeps Chat and Flow controlled and routes graph operations through dedicated RPCs", (): void => {
 		const sidebar = readRepoFile("src", "renderer", "src", "widgets", "home", "workspace", "HomeWorkspaceSidebar.tsx");
+		const home = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
 		const surface = readRepoFile("src", "renderer", "src", "widgets", "flow", "HomeFlowSurface.tsx");
 		const nodes = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodes.tsx");
 		const picker = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodePicker.tsx");
+		const shortcutSettings = readRepoFile("src", "renderer", "src", "widgets", "settings", "pages", "studio", "KeyboardShortcutsSettingsPage.tsx");
 		const controller = readRepoFile("src", "renderer", "src", "features", "home", "flow", "useHomeFlowController.ts");
 		const api = readRepoFile("src", "renderer", "src", "platform", "rpc", "flow-api.ts");
 		expect(sidebar).toContain("value={primarySurface}");
 		expect(sidebar).toContain("onPrimarySurfaceChange");
+		expect(home).toContain('mainSurface === "chat" && workspaceForActions !== null');
 		expect(surface).toContain("onConnect={onConnect}");
 		expect(surface).toContain("sourceHandle: edge.sourcePort");
 		expect(surface).toContain("targetHandle: edge.targetPort");
@@ -18,10 +21,13 @@ describe("Flow home surface", (): void => {
 		expect(surface).toContain("createConnectedNode");
 		expect(surface).toContain("viewportSaveTimerRef");
 		expect(surface).toContain("onMoveStart={onMoveStart}");
-		expect(surface).toContain("isViewportMoving ? null : <MiniMap");
+		expect(surface).not.toContain("MiniMap");
 		expect(surface).toContain("menu={approvalModeMenu}");
 		expect(surface).toContain('running ? "stop" : "play"');
-		expect(surface).toContain('deleteKeyCode={controller.isGraphLocked ? null : ["Backspace", "Delete"]}');
+		expect(surface).toContain('matchesFlowShortcut(event, "flow.deleteSelection")');
+		expect(surface).toContain("snapToGrid={snapToGrid}");
+		expect(surface).toContain('name={snapToGrid ? "snap-on" : "snap-off"}');
+		expect(surface).toContain('type: "default"');
 		expect(surface).not.toContain("renderComposer");
 		expect(surface).not.toContain("<Empty");
 		expect(controller).toContain("createFlowNode");
@@ -31,7 +37,13 @@ describe("Flow home surface", (): void => {
 		expect(controller).toContain("startFlowRun");
 		expect(nodes).toContain("resolveFlowCanvasPorts");
 		expect(nodes).toContain("id={port.id}");
+		expect(nodes).not.toContain("<Collapse");
+		expect(nodes).not.toContain("data.onDelete");
+		expect(nodes).not.toContain("draftTitle");
 		expect(picker).toContain('role="listbox"');
+		expect(shortcutSettings).toContain("SHORTCUT_DEFINITIONS");
+		expect(shortcutSettings).not.toContain("FlowShortcutReference");
+		expect(controller).toContain("const optimistic: FlowDocumentSnapshot");
 		expect(api).toContain('"flow.node.create"');
 		expect(api).toContain('"flow.run.start"');
 		expect(api).toContain('"flow.node.createConnected"');

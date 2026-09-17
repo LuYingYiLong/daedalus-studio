@@ -1,16 +1,6 @@
-export const SHORTCUT_COMMAND_IDS = [
-	"workbench.toggleWorkspaceSidebar",
-	"workbench.toggleBottomPanel",
-	"workbench.toggleSessionSidebar",
-	"session.new",
-	"session.previous",
-	"session.next",
-	"conversation.previousTurn",
-	"conversation.nextTurn",
-	"conversation.find"
-] as const;
+export const SHORTCUT_COMMAND_IDS = ["workbench.toggleWorkspaceSidebar", "workbench.toggleBottomPanel", "workbench.toggleSessionSidebar", "session.new", "session.previous", "session.next", "conversation.previousTurn", "conversation.nextTurn", "conversation.find", "flow.addNode", "flow.searchNodes", "flow.fitCanvas", "flow.run", "flow.deleteSelection"] as const;
 
-export type ShortcutCommandId = typeof SHORTCUT_COMMAND_IDS[number];
+export type ShortcutCommandId = (typeof SHORTCUT_COMMAND_IDS)[number];
 export type ShortcutPlatform = "mac" | "other";
 export type KeyboardShortcutOverrides = Partial<Record<ShortcutCommandId, string>>;
 
@@ -30,26 +20,82 @@ export type ShortcutKeyboardEvent = {
 };
 
 export const SHORTCUT_DEFINITIONS: readonly ShortcutDefinition[] = [
-	{ id: "workbench.toggleWorkspaceSidebar", labelKey: "settings.keyboardShortcuts.commands.toggleWorkspaceSidebar", defaultBinding: "Mod+KeyB" },
-	{ id: "workbench.toggleBottomPanel", labelKey: "settings.keyboardShortcuts.commands.toggleBottomPanel", defaultBinding: "Mod+KeyJ" },
-	{ id: "workbench.toggleSessionSidebar", labelKey: "settings.keyboardShortcuts.commands.toggleSessionSidebar", defaultBinding: "Mod+Alt+KeyB" },
-	{ id: "session.new", labelKey: "settings.keyboardShortcuts.commands.newSession", defaultBinding: "Mod+KeyN" },
-	{ id: "session.previous", labelKey: "settings.keyboardShortcuts.commands.previousSession", defaultBinding: "Mod+PageUp" },
-	{ id: "session.next", labelKey: "settings.keyboardShortcuts.commands.nextSession", defaultBinding: "Mod+PageDown" },
-	{ id: "conversation.previousTurn", labelKey: "settings.keyboardShortcuts.commands.previousTurn", defaultBinding: "PageUp" },
-	{ id: "conversation.nextTurn", labelKey: "settings.keyboardShortcuts.commands.nextTurn", defaultBinding: "PageDown" },
-	{ id: "conversation.find", labelKey: "settings.keyboardShortcuts.commands.findInConversation", defaultBinding: "Mod+KeyF" }
+	{
+		id: "workbench.toggleWorkspaceSidebar",
+		labelKey: "settings.keyboardShortcuts.commands.toggleWorkspaceSidebar",
+		defaultBinding: "Mod+KeyB",
+	},
+	{
+		id: "workbench.toggleBottomPanel",
+		labelKey: "settings.keyboardShortcuts.commands.toggleBottomPanel",
+		defaultBinding: "Mod+KeyJ",
+	},
+	{
+		id: "workbench.toggleSessionSidebar",
+		labelKey: "settings.keyboardShortcuts.commands.toggleSessionSidebar",
+		defaultBinding: "Mod+Alt+KeyB",
+	},
+	{
+		id: "session.new",
+		labelKey: "settings.keyboardShortcuts.commands.newSession",
+		defaultBinding: "Mod+KeyN",
+	},
+	{
+		id: "session.previous",
+		labelKey: "settings.keyboardShortcuts.commands.previousSession",
+		defaultBinding: "Mod+PageUp",
+	},
+	{
+		id: "session.next",
+		labelKey: "settings.keyboardShortcuts.commands.nextSession",
+		defaultBinding: "Mod+PageDown",
+	},
+	{
+		id: "conversation.previousTurn",
+		labelKey: "settings.keyboardShortcuts.commands.previousTurn",
+		defaultBinding: "PageUp",
+	},
+	{
+		id: "conversation.nextTurn",
+		labelKey: "settings.keyboardShortcuts.commands.nextTurn",
+		defaultBinding: "PageDown",
+	},
+	{
+		id: "conversation.find",
+		labelKey: "settings.keyboardShortcuts.commands.findInConversation",
+		defaultBinding: "Mod+KeyF",
+	},
+	{
+		id: "flow.addNode",
+		labelKey: "settings.keyboardShortcuts.flow.commands.addNode",
+		defaultBinding: "Shift+KeyA",
+	},
+	{
+		id: "flow.searchNodes",
+		labelKey: "settings.keyboardShortcuts.flow.commands.searchNodes",
+		defaultBinding: "F3",
+	},
+	{
+		id: "flow.fitCanvas",
+		labelKey: "settings.keyboardShortcuts.flow.commands.fitCanvas",
+		defaultBinding: "Home",
+	},
+	{
+		id: "flow.run",
+		labelKey: "settings.keyboardShortcuts.flow.commands.run",
+		defaultBinding: "Mod+Enter",
+	},
+	{
+		id: "flow.deleteSelection",
+		labelKey: "settings.keyboardShortcuts.flow.commands.deleteSelection",
+		defaultBinding: "Delete",
+	},
 ];
 
 const SHORTCUT_COMMAND_ID_SET: ReadonlySet<string> = new Set(SHORTCUT_COMMAND_IDS);
 const MODIFIER_TOKENS: ReadonlySet<string> = new Set(["Mod", "Ctrl", "Meta", "Alt", "Shift"]);
 const MODIFIER_ORDER: readonly string[] = ["Mod", "Ctrl", "Meta", "Alt", "Shift"];
-const NAMED_KEY_TOKENS: ReadonlySet<string> = new Set([
-	"ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "PageUp", "PageDown", "Home", "End",
-	"Insert", "Delete", "Backspace", "Enter", "Space", "Tab", "Escape", "Comma", "Period",
-	"Slash", "Semicolon", "Quote", "BracketLeft", "BracketRight", "Backslash", "Minus", "Equal",
-	"Backquote", "NumpadAdd", "NumpadSubtract", "NumpadMultiply", "NumpadDivide", "NumpadDecimal", "NumpadEnter"
-]);
+const NAMED_KEY_TOKENS: ReadonlySet<string> = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "PageUp", "PageDown", "Home", "End", "Insert", "Delete", "Backspace", "Enter", "Space", "Tab", "Escape", "Comma", "Period", "Slash", "Semicolon", "Quote", "BracketLeft", "BracketRight", "Backslash", "Minus", "Equal", "Backquote", "NumpadAdd", "NumpadSubtract", "NumpadMultiply", "NumpadDivide", "NumpadDecimal", "NumpadEnter"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -67,14 +113,7 @@ function normalizeKeyToken(value: string): string | null {
 }
 
 function isPrintableKeyToken(token: string): boolean {
-	return /^Key[A-Z]$/u.test(token)
-		|| /^Digit[0-9]$/u.test(token)
-		|| /^Numpad[0-9]$/u.test(token)
-		|| [
-			"Space", "Comma", "Period", "Slash", "Semicolon", "Quote", "BracketLeft", "BracketRight",
-			"Backslash", "Minus", "Equal", "Backquote", "NumpadAdd", "NumpadSubtract", "NumpadMultiply",
-			"NumpadDivide", "NumpadDecimal"
-		].includes(token);
+	return /^Key[A-Z]$/u.test(token) || /^Digit[0-9]$/u.test(token) || /^Numpad[0-9]$/u.test(token) || ["Space", "Comma", "Period", "Slash", "Semicolon", "Quote", "BracketLeft", "BracketRight", "Backslash", "Minus", "Equal", "Backquote", "NumpadAdd", "NumpadSubtract", "NumpadMultiply", "NumpadDivide", "NumpadDecimal"].includes(token);
 }
 
 export function isShortcutCommandId(value: string): value is ShortcutCommandId {
@@ -92,9 +131,7 @@ export function normalizeShortcutBinding(value: unknown): string | null {
 	const modifiers: Set<string> = new Set();
 	let keyToken: string | null = null;
 	for (const rawToken of rawTokens) {
-		const modifier: string | undefined = [...MODIFIER_TOKENS].find(
-			(candidate: string): boolean => candidate.toLowerCase() === rawToken.toLowerCase()
-		);
+		const modifier: string | undefined = [...MODIFIER_TOKENS].find((candidate: string): boolean => candidate.toLowerCase() === rawToken.toLowerCase());
 		if (modifier !== undefined) {
 			modifiers.add(modifier);
 			continue;
@@ -112,9 +149,7 @@ export function normalizeShortcutBinding(value: unknown): string | null {
 }
 
 export function getShortcutDefinition(commandId: ShortcutCommandId): ShortcutDefinition {
-	const definition: ShortcutDefinition | undefined = SHORTCUT_DEFINITIONS.find(
-		(candidate: ShortcutDefinition): boolean => candidate.id === commandId
-	);
+	const definition: ShortcutDefinition | undefined = SHORTCUT_DEFINITIONS.find((candidate: ShortcutDefinition): boolean => candidate.id === commandId);
 	if (definition === undefined) {
 		throw new Error(`Unknown shortcut command: ${commandId}`);
 	}
@@ -125,7 +160,10 @@ export function getEffectiveShortcutBinding(overrides: KeyboardShortcutOverrides
 	return overrides[commandId] ?? getShortcutDefinition(commandId).defaultBinding;
 }
 
-function resolveModifierState(binding: string, platform: ShortcutPlatform): {
+function resolveModifierState(
+	binding: string,
+	platform: ShortcutPlatform,
+): {
 	ctrl: boolean;
 	meta: boolean;
 	alt: boolean;
@@ -146,32 +184,22 @@ function resolveModifierState(binding: string, platform: ShortcutPlatform): {
 		meta: tokens.includes("Meta") || (tokens.includes("Mod") && platform === "mac"),
 		alt: tokens.includes("Alt"),
 		shift: tokens.includes("Shift"),
-		key
+		key,
 	};
 }
 
 export function getShortcutBindingSignature(binding: string, platform: ShortcutPlatform): string | null {
 	const state = resolveModifierState(binding, platform);
-	return state === null
-		? null
-		: `${state.ctrl ? "1" : "0"}${state.meta ? "1" : "0"}${state.alt ? "1" : "0"}${state.shift ? "1" : "0"}:${state.key}`;
+	return state === null ? null : `${state.ctrl ? "1" : "0"}${state.meta ? "1" : "0"}${state.alt ? "1" : "0"}${state.shift ? "1" : "0"}:${state.key}`;
 }
 
-export function findShortcutConflict(
-	overrides: KeyboardShortcutOverrides,
-	commandId: ShortcutCommandId,
-	binding: string,
-	platform: ShortcutPlatform
-): ShortcutDefinition | null {
+export function findShortcutConflict(overrides: KeyboardShortcutOverrides, commandId: ShortcutCommandId, binding: string, platform: ShortcutPlatform): ShortcutDefinition | null {
 	const signature: string | null = getShortcutBindingSignature(binding, platform);
 	if (signature === null) {
 		return null;
 	}
 	for (const definition of SHORTCUT_DEFINITIONS) {
-		if (
-			definition.id !== commandId
-			&& getShortcutBindingSignature(getEffectiveShortcutBinding(overrides, definition.id), platform) === signature
-		) {
+		if (definition.id !== commandId && getShortcutBindingSignature(getEffectiveShortcutBinding(overrides, definition.id), platform) === signature) {
 			return definition;
 		}
 	}
@@ -215,7 +243,7 @@ function normalizeEventKeyToken(event: ShortcutKeyboardEvent): string | null {
 		Up: "ArrowUp",
 		Down: "ArrowDown",
 		Left: "ArrowLeft",
-		Right: "ArrowRight"
+		Right: "ArrowRight",
 	};
 	return normalizeKeyToken(aliases[event.key] ?? event.key);
 }
@@ -241,26 +269,13 @@ export function shortcutBindingFromKeyboardEvent(event: ShortcutKeyboardEvent, p
 	return normalizeShortcutBinding([...modifiers, keyToken].join("+"));
 }
 
-export function matchesShortcutKeyboardEvent(
-	event: ShortcutKeyboardEvent,
-	binding: string,
-	platform: ShortcutPlatform
-): boolean {
+export function matchesShortcutKeyboardEvent(event: ShortcutKeyboardEvent, binding: string, platform: ShortcutPlatform): boolean {
 	const state = resolveModifierState(binding, platform);
 	const eventKey: string | null = normalizeEventKeyToken(event);
-	return state !== null
-		&& eventKey === state.key
-		&& event.ctrlKey === state.ctrl
-		&& event.metaKey === state.meta
-		&& event.altKey === state.alt
-		&& event.shiftKey === state.shift;
+	return state !== null && eventKey === state.key && event.ctrlKey === state.ctrl && event.metaKey === state.meta && event.altKey === state.alt && event.shiftKey === state.shift;
 }
 
-export function findMatchingShortcutCommand(
-	event: ShortcutKeyboardEvent,
-	overrides: KeyboardShortcutOverrides,
-	platform: ShortcutPlatform
-): ShortcutCommandId | null {
+export function findMatchingShortcutCommand(event: ShortcutKeyboardEvent, overrides: KeyboardShortcutOverrides, platform: ShortcutPlatform): ShortcutCommandId | null {
 	for (const definition of SHORTCUT_DEFINITIONS) {
 		if (matchesShortcutKeyboardEvent(event, getEffectiveShortcutBinding(overrides, definition.id), platform)) {
 			return definition.id;
@@ -295,7 +310,7 @@ function formatKeyToken(token: string): string {
 		NumpadMultiply: "Num *",
 		NumpadDivide: "Num /",
 		NumpadDecimal: "Num .",
-		NumpadEnter: "Num Enter"
+		NumpadEnter: "Num Enter",
 	};
 	return labels[token] ?? token;
 }
@@ -318,8 +333,6 @@ export function formatShortcutBinding(binding: string, platform: ShortcutPlatfor
 	return formatShortcutBindingParts(binding, platform).join("+");
 }
 
-export function detectShortcutPlatform(
-	platformText: string = typeof navigator === "undefined" ? "" : `${navigator.platform} ${navigator.userAgent}`
-): ShortcutPlatform {
+export function detectShortcutPlatform(platformText: string = typeof navigator === "undefined" ? "" : `${navigator.platform} ${navigator.userAgent}`): ShortcutPlatform {
 	return /Mac|iPhone|iPad|iPod/iu.test(platformText) ? "mac" : "other";
 }

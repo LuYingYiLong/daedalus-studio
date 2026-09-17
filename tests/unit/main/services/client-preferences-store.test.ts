@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	DEFAULT_CLIENT_PREFERENCES,
-	DEFAULT_THEME_COLOR,
-	loadClientPreferencesFile,
-	normalizeClientPreferences,
-	updateClientPreferencesFile
-} from "@main/services/client-preferences-store";
+import { DEFAULT_CLIENT_PREFERENCES, DEFAULT_THEME_COLOR, loadClientPreferencesFile, normalizeClientPreferences, updateClientPreferencesFile } from "@main/services/client-preferences-store";
 
 function createMemoryIo(initialText: string | null = null): {
 	writes: string[];
@@ -30,8 +24,8 @@ function createMemoryIo(initialText: string | null = null): {
 				text = nextText;
 				writes.push(nextText);
 			},
-			async ensureDirectory(): Promise<void> {}
-		}
+			async ensureDirectory(): Promise<void> {},
+		},
 	};
 }
 
@@ -39,26 +33,28 @@ describe("client preferences store", () => {
 	it("returns defaults for missing or damaged files", async () => {
 		await expect(loadClientPreferencesFile("prefs.json", createMemoryIo(null).io)).resolves.toEqual({
 			preferences: DEFAULT_CLIENT_PREFERENCES,
-			normalized: true
+			normalized: true,
 		});
 		await expect(loadClientPreferencesFile("prefs.json", createMemoryIo("{").io)).resolves.toEqual({
 			preferences: DEFAULT_CLIENT_PREFERENCES,
-			normalized: true
+			normalized: true,
 		});
 	});
 
 	it("normalizes missing fields and strips unknown fields", () => {
-		expect(normalizeClientPreferences({
-			obsoleteSetting: false,
-			lastComposerModel: {
-				providerId: "minimax",
-				modelId: "MiniMax-M3"
-			},
-			extra: true
-		})).toEqual({
+		expect(
+			normalizeClientPreferences({
+				obsoleteSetting: false,
+				lastComposerModel: {
+					providerId: "minimax",
+					modelId: "MiniMax-M3",
+				},
+				extra: true,
+			}),
+		).toEqual({
 			preferences: {
 				allowComputerObservation: false,
-			allowComputerControl: false,
+				allowComputerControl: false,
 				autoCheckForUpdates: true,
 				notifyOnRunCompleted: true,
 				minimizeToTrayOnClose: true,
@@ -75,37 +71,44 @@ describe("client preferences store", () => {
 				webLinkOpenMode: "integrated",
 				workspaceSidebar: {
 					open: true,
-					size: 260
+					size: 260,
 				},
 				keyboardShortcuts: {},
+				flowSnapToGrid: true,
 				lastComposerModel: {
 					providerId: "minimax",
-					modelId: "MiniMax-M3"
+					modelId: "MiniMax-M3",
 				},
 				newSessionComposer: {
 					mode: "agent",
 					approvalMode: "manual",
 					model: {
 						providerId: "minimax",
-						modelId: "MiniMax-M3"
+						modelId: "MiniMax-M3",
 					},
-					reasoningEffort: "medium"
+					reasoningEffort: "medium",
 				},
-				onboarding: DEFAULT_CLIENT_PREFERENCES.onboarding
+				onboarding: DEFAULT_CLIENT_PREFERENCES.onboarding,
 			},
-			normalized: true
+			normalized: true,
 		});
 	});
 
 	it("updates only requested fields and persists normalized JSON", async () => {
-		const memory = createMemoryIo(JSON.stringify({
-			obsoleteSetting: false,
-			minimizeToTrayOnClose: false
-		}));
+		const memory = createMemoryIo(
+			JSON.stringify({
+				obsoleteSetting: false,
+				minimizeToTrayOnClose: false,
+			}),
+		);
 
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			minimizeToTrayOnClose: true
-		}, memory.io);
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				minimizeToTrayOnClose: true,
+			},
+			memory.io,
+		);
 
 		expect(nextPreferences).toEqual({
 			allowComputerObservation: false,
@@ -126,12 +129,13 @@ describe("client preferences store", () => {
 			webLinkOpenMode: "integrated",
 			workspaceSidebar: {
 				open: true,
-				size: 260
+				size: 260,
 			},
 			keyboardShortcuts: {},
+			flowSnapToGrid: true,
 			lastComposerModel: null,
 			newSessionComposer: DEFAULT_CLIENT_PREFERENCES.newSessionComposer,
-			onboarding: DEFAULT_CLIENT_PREFERENCES.onboarding
+			onboarding: DEFAULT_CLIENT_PREFERENCES.onboarding,
 		});
 		expect(memory.writes.at(-1)).toBe(`${JSON.stringify(nextPreferences, null, 2)}\n`);
 	});
@@ -139,50 +143,72 @@ describe("client preferences store", () => {
 	it("updates the hidden last composer model preference", async () => {
 		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
 
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			lastComposerModel: {
-				providerId: "opencode_go",
-				modelId: "minimax-m3"
-			}
-		}, memory.io);
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				lastComposerModel: {
+					providerId: "opencode_go",
+					modelId: "minimax-m3",
+				},
+			},
+			memory.io,
+		);
 
 		expect(nextPreferences.lastComposerModel).toEqual({
 			providerId: "opencode_go",
-			modelId: "minimax-m3"
+			modelId: "minimax-m3",
 		});
 	});
 
 	it("updates the theme preference", async () => {
 		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
 
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			theme: "dark"
-		}, memory.io);
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				theme: "dark",
+			},
+			memory.io,
+		);
 
 		expect(nextPreferences.theme).toBe("dark");
 	});
 
 	it("stores custom font families in Studio preferences", async () => {
 		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			fontFamily: '"Inter", sans-serif',
-			fontFamilyCode: '"JetBrains Mono", monospace'
-		}, memory.io);
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				fontFamily: '"Inter", sans-serif',
+				fontFamilyCode: '"JetBrains Mono", monospace',
+			},
+			memory.io,
+		);
 
 		expect(nextPreferences.fontFamily).toBe('"Inter", sans-serif');
 		expect(nextPreferences.fontFamilyCode).toBe('"JetBrains Mono", monospace');
-		await expect(updateClientPreferencesFile("prefs.json", {
-			fontFamily: "Inter; color: red"
-		}, memory.io)).rejects.toThrow(/fontFamily contains invalid CSS/u);
+		await expect(
+			updateClientPreferencesFile(
+				"prefs.json",
+				{
+					fontFamily: "Inter; color: red",
+				},
+				memory.io,
+			),
+		).rejects.toThrow(/fontFamily contains invalid CSS/u);
 	});
 
 	it("persists and bounds appearance motion and font sizes", async () => {
 		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			animationsEnabled: false,
-			uiFontSize: 99,
-			codeFontSize: 10.6
-		}, memory.io);
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				animationsEnabled: false,
+				uiFontSize: 99,
+				codeFontSize: 10.6,
+			},
+			memory.io,
+		);
 
 		expect(nextPreferences.animationsEnabled).toBe(false);
 		expect(nextPreferences.uiFontSize).toBe(18);
@@ -191,10 +217,14 @@ describe("client preferences store", () => {
 
 	it("persists and bounds mascot preferences", async () => {
 		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			mascotEnabled: false,
-			mascotSize: 999
-		}, memory.io);
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				mascotEnabled: false,
+				mascotSize: 999,
+			},
+			memory.io,
+		);
 
 		expect(nextPreferences.mascotEnabled).toBe(false);
 		expect(nextPreferences.mascotSize).toBe(140);
@@ -202,26 +232,30 @@ describe("client preferences store", () => {
 
 	it("persists and normalizes new-session composer defaults", async () => {
 		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			newSessionComposer: {
-				mode: "goal",
-				approvalMode: "auto-safe",
-				model: {
-					providerId: "deepseek",
-					modelId: "deepseek-v4-pro"
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				newSessionComposer: {
+					mode: "goal",
+					approvalMode: "auto-safe",
+					model: {
+						providerId: "deepseek",
+						modelId: "deepseek-v4-pro",
+					},
+					reasoningEffort: " max ",
 				},
-				reasoningEffort: " max "
-			}
-		}, memory.io);
+			},
+			memory.io,
+		);
 
 		expect(nextPreferences.newSessionComposer).toEqual({
 			mode: "goal",
 			approvalMode: "auto-safe",
 			model: {
 				providerId: "deepseek",
-				modelId: "deepseek-v4-pro"
+				modelId: "deepseek-v4-pro",
 			},
-			reasoningEffort: "max"
+			reasoningEffort: "max",
 		});
 	});
 
@@ -229,13 +263,13 @@ describe("client preferences store", () => {
 		const preferences = normalizeClientPreferences({
 			lastComposerModel: {
 				providerId: "stepfun",
-				modelId: "step-3"
+				modelId: "step-3",
 			},
 			newSessionComposer: {
 				mode: "invalid",
 				approvalMode: "invalid",
-				reasoningEffort: ""
-			}
+				reasoningEffort: "",
+			},
 		}).preferences;
 
 		expect(preferences.newSessionComposer).toEqual({
@@ -243,9 +277,9 @@ describe("client preferences store", () => {
 			approvalMode: "manual",
 			model: {
 				providerId: "stepfun",
-				modelId: "step-3"
+				modelId: "step-3",
 			},
-			reasoningEffort: "medium"
+			reasoningEffort: "medium",
 		});
 	});
 
@@ -254,9 +288,13 @@ describe("client preferences store", () => {
 		expect(normalizeClientPreferences({ themeColor: "rgba(1, 2, 3, 0.5)" }).preferences.themeColor).toBe(DEFAULT_THEME_COLOR);
 
 		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			themeColor: "#C05A91"
-		}, memory.io);
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				themeColor: "#C05A91",
+			},
+			memory.io,
+		);
 
 		expect(nextPreferences.themeColor).toBe("#c05a91");
 	});
@@ -264,9 +302,13 @@ describe("client preferences store", () => {
 	it("updates the language preference", async () => {
 		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
 
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			language: "zh-CN"
-		}, memory.io);
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				language: "zh-CN",
+			},
+			memory.io,
+		);
 
 		expect(nextPreferences.language).toBe("zh-CN");
 	});
@@ -274,9 +316,13 @@ describe("client preferences store", () => {
 	it("updates the startup update check preference", async () => {
 		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
 
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			autoCheckForUpdates: false
-		}, memory.io);
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				autoCheckForUpdates: false,
+			},
+			memory.io,
+		);
 
 		expect(nextPreferences.autoCheckForUpdates).toBe(false);
 	});
@@ -284,9 +330,13 @@ describe("client preferences store", () => {
 	it("updates the run completion notification preference", async () => {
 		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
 
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			notifyOnRunCompleted: false
-		}, memory.io);
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				notifyOnRunCompleted: false,
+			},
+			memory.io,
+		);
 
 		expect(nextPreferences.notifyOnRunCompleted).toBe(false);
 	});
@@ -294,33 +344,55 @@ describe("client preferences store", () => {
 	it("normalizes and persists the global workspace sidebar layout", async () => {
 		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
 
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			workspaceSidebar: {
-				open: false,
-				size: 900
-			}
-		}, memory.io);
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				workspaceSidebar: {
+					open: false,
+					size: 900,
+				},
+			},
+			memory.io,
+		);
 
 		expect(nextPreferences.workspaceSidebar).toEqual({
 			open: false,
-			size: 720
+			size: 720,
 		});
 		expect(memory.writes.at(-1)).toBe(`${JSON.stringify(nextPreferences, null, 2)}\n`);
 	});
 
 	it("normalizes global keyboard shortcut overrides", async () => {
 		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			keyboardShortcuts: {
-				"workbench.toggleWorkspaceSidebar": "Alt+Mod+KeyQ",
-				"conversation.previousTurn": "KeyP",
-				unknown: "Mod+KeyU"
-			}
-		} as never, memory.io);
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				keyboardShortcuts: {
+					"workbench.toggleWorkspaceSidebar": "Alt+Mod+KeyQ",
+					"conversation.previousTurn": "KeyP",
+					unknown: "Mod+KeyU",
+				},
+			} as never,
+			memory.io,
+		);
 
 		expect(nextPreferences.keyboardShortcuts).toEqual({
-			"workbench.toggleWorkspaceSidebar": "Mod+Alt+KeyQ"
+			"workbench.toggleWorkspaceSidebar": "Mod+Alt+KeyQ",
 		});
+	});
+
+	it("persists the Flow grid snapping preference", async () => {
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				flowSnapToGrid: false,
+			},
+			memory.io,
+		);
+
+		expect(nextPreferences.flowSnapToGrid).toBe(false);
+		expect(memory.writes.at(-1)).toBe(`${JSON.stringify(nextPreferences, null, 2)}\n`);
 	});
 
 	it("starts existing users at onboarding and persists resumable progress", async () => {
@@ -329,27 +401,31 @@ describe("client preferences store", () => {
 			completed: false,
 			currentStep: "welcome",
 			stepOutcomes: {},
-			completedAt: null
+			completedAt: null,
 		});
 
 		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
-		const nextPreferences = await updateClientPreferencesFile("prefs.json", {
-			onboarding: {
-				schemaVersion: 1,
-				completed: false,
-				currentStep: "documentation",
-				stepOutcomes: {
-					provider: "configured",
-					godot_executable: "skipped"
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				onboarding: {
+					schemaVersion: 1,
+					completed: false,
+					currentStep: "documentation",
+					stepOutcomes: {
+						provider: "configured",
+						godot_executable: "skipped",
+					},
+					completedAt: null,
 				},
-				completedAt: null
-			}
-		}, memory.io);
+			},
+			memory.io,
+		);
 
 		expect(nextPreferences.onboarding.currentStep).toBe("documentation");
 		expect(nextPreferences.onboarding.stepOutcomes).toEqual({
 			provider: "configured",
-			godot_executable: "skipped"
+			godot_executable: "skipped",
 		});
 	});
 
@@ -359,8 +435,8 @@ describe("client preferences store", () => {
 			onboarding: {
 				schemaVersion: 2,
 				completed: true,
-				currentStep: "missing"
-			}
+				currentStep: "missing",
+			},
 		}).preferences;
 
 		expect(normalized.theme).toBe("dark");

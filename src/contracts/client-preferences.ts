@@ -30,6 +30,7 @@ export type ClientPreferences = {
 	webLinkOpenMode: WebLinkOpenMode;
 	workspaceSidebar: WorkspaceSidebarPreferences;
 	keyboardShortcuts: KeyboardShortcutOverrides;
+	flowSnapToGrid: boolean;
 	lastComposerModel: {
 		providerId: string;
 		modelId: string;

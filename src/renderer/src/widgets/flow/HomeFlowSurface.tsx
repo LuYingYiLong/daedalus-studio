@@ -1,30 +1,14 @@
 import { Alert, Badge, Button, Divider, Dropdown, Flex, Input, Spin, Tooltip, Typography } from "antd";
 import type { InputRef, MenuProps } from "antd";
-import {
-	Background,
-	Controls,
-	MiniMap,
-	ReactFlow,
-	applyNodeChanges,
-	type Connection,
-	type Edge,
-	type FinalConnectionState,
-	type NodeChange,
-	type OnConnectStartParams,
-	type OnNodeDrag,
-	type ReactFlowInstance,
-} from "@xyflow/react";
+import { Background, Controls, ReactFlow, applyNodeChanges, type Connection, type Edge, type FinalConnectionState, type NodeChange, type OnConnectStartParams, type OnNodeDrag, type ReactFlowInstance } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { HomeFlowController } from "@/features/home/flow/useHomeFlowController";
-import type {
-	FlowDocumentNode,
-	FlowDocumentNodeType,
-	FlowNodePortDefinition,
-	FlowNodeTypeDefinition,
-} from "@/platform/rpc/types";
+import { getCachedClientPreferences, updateClientPreferences } from "@/platform/rpc/client-preferences-api";
+import { detectShortcutPlatform, getEffectiveShortcutBinding, matchesShortcutKeyboardEvent, type KeyboardShortcutOverrides, type ShortcutCommandId } from "@/platform/rpc/keyboard-shortcuts";
+import type { FlowDocumentNode, FlowDocumentNodeType, FlowNodePortDefinition, FlowNodeTypeDefinition } from "@/platform/rpc/types";
 import ConversationSearchPanel from "@/widgets/conversation/ConversationSearchPanel";
 import { createApprovalModeItems, isApprovalMode } from "@/widgets/composer/composer-menu-items";
 import FlowNodePicker from "./FlowNodePicker";
@@ -32,13 +16,21 @@ import FlowWelcome from "./FlowWelcome";
 import { FlowDocumentNodeView, resolveFlowCanvasPorts, type FlowCanvasNode } from "./FlowNodes";
 import styles from "./HomeFlowSurface.module.css";
 
-export type FlowSearchHandle = { openSearch: (selectedQuery?: string) => void; closeSearch: () => boolean };
+export type FlowSearchHandle = {
+	openSearch: (selectedQuery?: string) => void;
+	closeSearch: () => boolean;
+};
 export type HomeFlowSurfaceProps = {
 	controller: HomeFlowController;
+	keyboardShortcuts: KeyboardShortcutOverrides;
 	searchHandleRef?: MutableRefObject<FlowSearchHandle | null>;
 	chatSurfaceProps?: unknown;
 };
-type PickerConnection = { direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string };
+type PickerConnection = {
+	direction: "from_existing" | "to_existing";
+	existingNodeId: string;
+	existingPort: string;
+};
 type PickerState = {
 	position: { x: number; y: number };
 	flowPosition: { x: number; y: number };
@@ -50,20 +42,18 @@ const nodeTypes = { flowNode: FlowDocumentNodeView };
 const FLOW_NODE_WIDTH = 320;
 const FLOW_NODE_HEIGHT = 220;
 const FLOW_NODE_GAP = 28;
+const FLOW_SNAP_GRID: [number, number] = [24, 24];
 
-function intersectsNode(
-	left: { x: number; y: number; width: number; height: number },
-	right: { x: number; y: number; width: number; height: number },
-): boolean {
-	return (
-		left.x < right.x + right.width + FLOW_NODE_GAP &&
-		left.x + left.width + FLOW_NODE_GAP > right.x &&
-		left.y < right.y + right.height + FLOW_NODE_GAP &&
-		left.y + left.height + FLOW_NODE_GAP > right.y
-	);
+function intersectsNode(left: { x: number; y: number; width: number; height: number }, right: { x: number; y: number; width: number; height: number }): boolean {
+	return left.x < right.x + right.width + FLOW_NODE_GAP && left.x + left.width + FLOW_NODE_GAP > right.x && left.y < right.y + right.height + FLOW_NODE_GAP && left.y + left.height + FLOW_NODE_GAP > right.y;
 }
 function resolveNodePositions(flowNodes: readonly FlowDocumentNode[]): Map<string, { x: number; y: number }> {
-	const occupied: Array<{ x: number; y: number; width: number; height: number }> = [];
+	const occupied: Array<{
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+	}> = [];
 	const positions = new Map<string, { x: number; y: number }>();
 	for (const node of flowNodes) {
 		const width = node.width > 0 ? node.width : FLOW_NODE_WIDTH;
@@ -86,29 +76,22 @@ function nodeText(node: FlowDocumentNode): string {
 }
 function eventPoint(event: MouseEvent | TouchEvent): { x: number; y: number } {
 	if ("changedTouches" in event && event.changedTouches[0] !== undefined)
-		return { x: event.changedTouches[0].clientX, y: event.changedTouches[0].clientY };
+		return {
+			x: event.changedTouches[0].clientX,
+			y: event.changedTouches[0].clientY,
+		};
 	return { x: (event as MouseEvent).clientX, y: (event as MouseEvent).clientY };
 }
-function portFor(
-	node: FlowDocumentNode | undefined,
-	definitions: FlowNodeTypeDefinition[],
-	id: string | null | undefined,
-	direction: "input" | "output",
-): FlowNodePortDefinition | undefined {
+function portFor(node: FlowDocumentNode | undefined, definitions: FlowNodeTypeDefinition[], id: string | null | undefined, direction: "input" | "output"): FlowNodePortDefinition | undefined {
 	if (node === undefined || id === null || id === undefined) return undefined;
 	const definition = definitions.find((candidate): boolean => candidate.type === node.type) ?? null;
-	return resolveFlowCanvasPorts(node, definition).find(
-		(port): boolean => port.id === id && port.direction === direction,
-	);
+	return resolveFlowCanvasPorts(node, definition).find((port): boolean => port.id === id && port.direction === direction);
 }
-function compatibleType(
-	source: FlowNodePortDefinition,
-	target: FlowNodePortDefinition,
-): "text" | "json" | "artifact" | null {
+function compatibleType(source: FlowNodePortDefinition, target: FlowNodePortDefinition): "text" | "json" | "artifact" | null {
 	return source.dataTypes.find((dataType): boolean => target.dataTypes.includes(dataType)) ?? null;
 }
 
-function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps): React.JSX.Element {
+function HomeFlowSurface({ controller, keyboardShortcuts, searchHandleRef }: HomeFlowSurfaceProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const snapshot = controller.snapshot;
 	const [nodes, setNodes] = useState<FlowCanvasNode[]>([]);
@@ -118,35 +101,23 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 	const [searchIndex, setSearchIndex] = useState(0);
 	const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<FlowCanvasNode, Edge> | null>(null);
 	const [isViewportMoving, setIsViewportMoving] = useState(false);
+	const [snapToGrid, setSnapToGrid] = useState<boolean>((): boolean => getCachedClientPreferences().flowSnapToGrid);
 	const [consentText, setConsentText] = useState<Record<string, string>>({});
 	const canvasRef = useRef<HTMLDivElement | null>(null);
 	const searchInputRef = useRef<InputRef | null>(null);
 	const viewportSaveTimerRef = useRef<number | null>(null);
 	const nodePositionSaveTimersRef = useRef<Map<string, number>>(new Map());
 	const connectStartRef = useRef<OnConnectStartParams | null>(null);
-	const resolvedPositions = useMemo(
-		(): Map<string, { x: number; y: number }> => resolveNodePositions(snapshot?.nodes ?? []),
-		[snapshot?.nodes],
-	);
+	const resolvedPositions = useMemo((): Map<string, { x: number; y: number }> => resolveNodePositions(snapshot?.nodes ?? []), [snapshot?.nodes]);
 	const latestRun = snapshot?.runs[0];
-	const running =
-		latestRun?.status === "running" || latestRun?.status === "queued" || latestRun?.status === "waiting";
+	const running = latestRun?.status === "running" || latestRun?.status === "queued" || latestRun?.status === "waiting";
+	const shortcutPlatform = useMemo(() => detectShortcutPlatform(), []);
 	const matchingNodes = useMemo((): FlowDocumentNode[] => {
 		const query = searchQuery.trim().toLocaleLowerCase();
-		return query.length === 0 || snapshot === null
-			? []
-			: snapshot.nodes.filter((node): boolean => nodeText(node).includes(query));
+		return query.length === 0 || snapshot === null ? [] : snapshot.nodes.filter((node): boolean => nodeText(node).includes(query));
 	}, [searchQuery, snapshot?.nodes]);
-	const matchingIds = useMemo(
-		(): Set<string> => new Set(matchingNodes.map((node): string => node.nodeId)),
-		[matchingNodes],
-	);
-	const approvalModeLabel =
-		snapshot?.flow.approvalMode === "full-trust"
-			? t("composer.approvalMode.fullTrust")
-			: snapshot?.flow.approvalMode === "auto-safe"
-				? t("composer.approvalMode.autoSafe")
-				: t("composer.approvalMode.manual");
+	const matchingIds = useMemo((): Set<string> => new Set(matchingNodes.map((node): string => node.nodeId)), [matchingNodes]);
+	const approvalModeLabel = snapshot?.flow.approvalMode === "full-trust" ? t("composer.approvalMode.fullTrust") : snapshot?.flow.approvalMode === "auto-safe" ? t("composer.approvalMode.autoSafe") : t("composer.approvalMode.manual");
 	const approvalModeMenu = useMemo<MenuProps>(
 		() => ({
 			items: createApprovalModeItems(t),
@@ -164,39 +135,25 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 				(flowNode): FlowCanvasNode => ({
 					id: flowNode.nodeId,
 					type: "flowNode",
-					position: resolvedPositions.get(flowNode.nodeId) ?? { x: flowNode.x, y: flowNode.y },
+					position: resolvedPositions.get(flowNode.nodeId) ?? {
+						x: flowNode.x,
+						y: flowNode.y,
+					},
 					data: {
 						flowNode,
-						nodeRun:
-							latestRun?.nodes.find((nodeRun): boolean => nodeRun.nodeId === flowNode.nodeId) ?? null,
-						definition:
-							controller.nodeDefinitions.find(
-								(definition): boolean => definition.type === flowNode.type,
-							) ?? null,
+						nodeRun: latestRun?.nodes.find((nodeRun): boolean => nodeRun.nodeId === flowNode.nodeId) ?? null,
+						definition: controller.nodeDefinitions.find((definition): boolean => definition.type === flowNode.type) ?? null,
 						tools: controller.tools,
 						matched: matchingIds.has(flowNode.nodeId),
 						locked: controller.isGraphLocked,
 						onUpdate: (nodeId, patch): void => {
 							void controller.updateNode(nodeId, patch);
 						},
-						onDelete: (nodeId): void => {
-							void controller.deleteNode(nodeId);
-						},
 					},
 				}),
 			),
 		);
-	}, [
-		controller.deleteNode,
-		controller.isGraphLocked,
-		controller.nodeDefinitions,
-		controller.tools,
-		controller.updateNode,
-		latestRun?.nodes,
-		matchingIds,
-		resolvedPositions,
-		snapshot?.nodes,
-	]);
+	}, [controller.isGraphLocked, controller.nodeDefinitions, controller.tools, controller.updateNode, latestRun?.nodes, matchingIds, resolvedPositions, snapshot?.nodes]);
 	const edges = useMemo(
 		(): Edge[] =>
 			(snapshot?.edges ?? []).map(
@@ -206,7 +163,7 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 					target: edge.targetNodeId,
 					sourceHandle: edge.sourcePort,
 					targetHandle: edge.targetPort,
-					type: "smoothstep",
+					type: "default",
 					animated: running,
 				}),
 			),
@@ -215,12 +172,7 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 
 	const closePicker = useCallback((): void => setPicker(null), []);
 	const openPickerAt = useCallback(
-		(
-			clientX: number,
-			clientY: number,
-			definitions = controller.nodeDefinitions,
-			connection: PickerConnection | null = null,
-		): void => {
+		(clientX: number, clientY: number, definitions = controller.nodeDefinitions, connection: PickerConnection | null = null): void => {
 			const rect = canvasRef.current?.getBoundingClientRect();
 			if (rect === undefined || flowInstance === null) return;
 			setPicker({
@@ -228,12 +180,12 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 					x: Math.max(8, Math.min(clientX - rect.left, rect.width - 360)),
 					y: Math.max(8, Math.min(clientY - rect.top, rect.height - 480)),
 				},
-				flowPosition: flowInstance.screenToFlowPosition({ x: clientX, y: clientY }),
+				flowPosition: flowInstance.screenToFlowPosition({ x: clientX, y: clientY }, { snapToGrid, snapGrid: FLOW_SNAP_GRID }),
 				definitions,
 				connection,
 			});
 		},
-		[controller.nodeDefinitions, flowInstance],
+		[controller.nodeDefinitions, flowInstance, snapToGrid],
 	);
 	const selectPickerNode = useCallback(
 		(type: FlowDocumentNodeType): void => {
@@ -243,22 +195,10 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 			else {
 				const definition = picker.definitions.find((candidate): boolean => candidate.type === type);
 				const neededDirection = connection.direction === "from_existing" ? "input" : "output";
-				const newPort = definition?.ports.find(
-					(port): boolean => port.direction === neededDirection && port.defaultConnect,
-				);
+				const newPort = definition?.ports.find((port): boolean => port.direction === neededDirection && port.defaultConnect);
 				const existingNode = snapshot?.nodes.find((node): boolean => node.nodeId === connection.existingNodeId);
-				const existingPort = portFor(
-					existingNode,
-					controller.nodeDefinitions,
-					connection.existingPort,
-					connection.direction === "from_existing" ? "output" : "input",
-				);
-				const dataType =
-					newPort === undefined || existingPort === undefined
-						? null
-						: connection.direction === "from_existing"
-							? compatibleType(existingPort, newPort)
-							: compatibleType(newPort, existingPort);
+				const existingPort = portFor(existingNode, controller.nodeDefinitions, connection.existingPort, connection.direction === "from_existing" ? "output" : "input");
+				const dataType = newPort === undefined || existingPort === undefined ? null : connection.direction === "from_existing" ? compatibleType(existingPort, newPort) : compatibleType(newPort, existingPort);
 				if (newPort !== undefined && dataType !== null)
 					void controller.createConnectedNode({
 						type,
@@ -302,28 +242,49 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 				duration: 250,
 			});
 	}, [flowInstance, matchingNodes, searchIndex]);
+	const deleteSelectedElements = useCallback((): void => {
+		if (controller.isGraphLocked || flowInstance === null) return;
+		const selectedNodes = flowInstance.getNodes().filter((node): boolean => node.selected === true);
+		const selectedNodeIds = new Set(selectedNodes.map((node): string => node.id));
+		const selectedEdges = flowInstance.getEdges().filter((edge): boolean => edge.selected === true && !selectedNodeIds.has(edge.source) && !selectedNodeIds.has(edge.target));
+		if (selectedNodes.length === 0 && selectedEdges.length === 0) return;
+		for (const node of selectedNodes) {
+			const positionTimer = nodePositionSaveTimersRef.current.get(node.id);
+			if (positionTimer !== undefined) window.clearTimeout(positionTimer);
+			nodePositionSaveTimersRef.current.delete(node.id);
+		}
+		setNodes((current): FlowCanvasNode[] => current.filter((node): boolean => !selectedNodeIds.has(node.id)));
+		for (const node of selectedNodes) void controller.deleteNode(node.id);
+		for (const edge of selectedEdges) void controller.deleteEdge(edge.id);
+	}, [controller.deleteEdge, controller.deleteNode, controller.isGraphLocked, flowInstance]);
+	const matchesFlowShortcut = useCallback((event: KeyboardEvent, commandId: ShortcutCommandId): boolean => matchesShortcutKeyboardEvent(event, getEffectiveShortcutBinding(keyboardShortcuts, commandId), shortcutPlatform), [keyboardShortcuts, shortcutPlatform]);
 	const handleKeyDown = useCallback(
 		(event: KeyboardEvent): void => {
 			const target = event.target as HTMLElement | null;
 			if (target?.matches('input, textarea, [contenteditable="true"]')) return;
-			if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+			if (matchesFlowShortcut(event, "flow.run")) {
 				event.preventDefault();
-				void controller.startRun();
+				if (running) void controller.stopRun();
+				else void controller.startRun();
 				return;
 			}
-			if (event.key === "Home") {
+			if (matchesFlowShortcut(event, "flow.fitCanvas")) {
 				event.preventDefault();
 				flowInstance?.fitView({ duration: 250, padding: 0.2 });
 				return;
 			}
-			if (event.key === "F3" || (event.shiftKey && event.key.toLowerCase() === "a")) {
+			if (matchesFlowShortcut(event, "flow.addNode") || matchesFlowShortcut(event, "flow.searchNodes")) {
 				event.preventDefault();
 				const rect = canvasRef.current?.getBoundingClientRect();
-				if (rect !== undefined)
-					openPickerAt(rect.left + rect.width / 2, rect.top + Math.min(180, rect.height / 2));
+				if (rect !== undefined) openPickerAt(rect.left + rect.width / 2, rect.top + Math.min(180, rect.height / 2));
+				return;
+			}
+			if (matchesFlowShortcut(event, "flow.deleteSelection")) {
+				event.preventDefault();
+				deleteSelectedElements();
 			}
 		},
-		[controller.startRun, flowInstance, openPickerAt],
+		[controller.startRun, controller.stopRun, deleteSelectedElements, flowInstance, matchesFlowShortcut, openPickerAt, running],
 	);
 	useEffect((): (() => void) => {
 		window.addEventListener("keydown", handleKeyDown);
@@ -332,28 +293,14 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 
 	const onConnect = useCallback(
 		(connection: Connection): void => {
-			if (
-				connection.source === null ||
-				connection.target === null ||
-				connection.sourceHandle === null ||
-				connection.targetHandle === null ||
-				snapshot === null
-			)
-				return;
+			if (connection.source === null || connection.target === null || connection.sourceHandle === null || connection.targetHandle === null || snapshot === null) return;
 			const sourceNode = snapshot.nodes.find((node): boolean => node.nodeId === connection.source);
 			const targetNode = snapshot.nodes.find((node): boolean => node.nodeId === connection.target);
 			const sourcePort = portFor(sourceNode, controller.nodeDefinitions, connection.sourceHandle, "output");
 			const targetPort = portFor(targetNode, controller.nodeDefinitions, connection.targetHandle, "input");
 			if (sourcePort === undefined || targetPort === undefined) return;
 			const dataType = compatibleType(sourcePort, targetPort);
-			if (dataType !== null)
-				void controller.createEdge(
-					connection.source,
-					connection.target,
-					connection.sourceHandle,
-					connection.targetHandle,
-					dataType,
-				);
+			if (dataType !== null) void controller.createEdge(connection.source, connection.target, connection.sourceHandle, connection.targetHandle, dataType);
 		},
 		[controller, snapshot],
 	);
@@ -361,43 +308,18 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 		(event: MouseEvent | TouchEvent, state: FinalConnectionState): void => {
 			const started = connectStartRef.current;
 			connectStartRef.current = null;
-			if (
-				state.toHandle !== null ||
-				started === null ||
-				started.nodeId === null ||
-				started.handleId === null ||
-				snapshot === null
-			)
-				return;
+			if (state.toHandle !== null || started === null || started.nodeId === null || started.handleId === null || snapshot === null) return;
 			const point = eventPoint(event);
 			const element = document.elementFromPoint(point.x, point.y);
-			if (
-				!(element instanceof Element) ||
-				element.closest(".react-flow__pane") === null ||
-				element.closest(".react-flow__node") !== null
-			)
-				return;
+			if (!(element instanceof Element) || element.closest(".react-flow__pane") === null || element.closest(".react-flow__node") !== null) return;
 			const existingNode = snapshot.nodes.find((node): boolean => node.nodeId === started.nodeId);
 			const direction = started.handleType === "source" ? "from_existing" : "to_existing";
-			const existingPort = portFor(
-				existingNode,
-				controller.nodeDefinitions,
-				started.handleId,
-				started.handleType === "source" ? "output" : "input",
-			);
+			const existingPort = portFor(existingNode, controller.nodeDefinitions, started.handleId, started.handleType === "source" ? "output" : "input");
 			if (existingPort === undefined) return;
 			const compatible = controller.nodeDefinitions.filter((definition): boolean => {
 				if (definition.workspaceRequired && snapshot.flow.workspaceId === null) return false;
-				const candidate = definition.ports.find(
-					(port): boolean =>
-						port.direction === (direction === "from_existing" ? "input" : "output") && port.defaultConnect,
-				);
-				return (
-					candidate !== undefined &&
-					(direction === "from_existing"
-						? compatibleType(existingPort, candidate)
-						: compatibleType(candidate, existingPort)) !== null
-				);
+				const candidate = definition.ports.find((port): boolean => port.direction === (direction === "from_existing" ? "input" : "output") && port.defaultConnect);
+				return candidate !== undefined && (direction === "from_existing" ? compatibleType(existingPort, candidate) : compatibleType(candidate, existingPort)) !== null;
 			});
 			if (compatible.length === 0) return;
 			openPickerAt(point.x, point.y, compatible, {
@@ -451,7 +373,9 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 			<section className={styles.flowSurface} data-studio-flow-surface="true">
 				<header className={styles.flowHeader}>
 					<Typography.Text className={styles.flowTitle}>
-						{t("flow.welcome.nodeTitle", { defaultValue: "Build a workflow from nodes" })}
+						{t("flow.welcome.nodeTitle", {
+							defaultValue: "Build a workflow from nodes",
+						})}
 					</Typography.Text>
 				</header>
 				<div className={`${styles.canvasRegion} ${styles.flowWelcomeCanvasRegion}`}>
@@ -466,22 +390,7 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 				<Flex align="center" gap="small" className={styles.flowHeaderActions}>
 					<Tooltip title={t("composer.tooltips.approvalMode")} placement="bottom">
 						<Dropdown menu={approvalModeMenu} trigger={["click"]}>
-							<Button
-								type="text"
-								aria-label={approvalModeLabel}
-								icon={
-									<Icon
-										name={
-											snapshot.flow.approvalMode === "full-trust"
-												? "warning"
-												: snapshot.flow.approvalMode === "auto-safe"
-													? "shield"
-													: "hand"
-										}
-									/>
-								}
-								className={styles.approvalModeButton}
-							>
+							<Button type="text" aria-label={approvalModeLabel} icon={<Icon name={snapshot.flow.approvalMode === "full-trust" ? "warning" : snapshot.flow.approvalMode === "auto-safe" ? "shield" : "hand"} />} className={styles.approvalModeButton}>
 								<span className={styles.approvalModeText}>{approvalModeLabel}</span>
 							</Button>
 						</Dropdown>
@@ -497,26 +406,34 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 					>
 						{running ? t("flow.editor.stop") : t("flow.editor.run")}
 					</Button>
-					<Tooltip title={t("flow.editor.search")} placement="bottom">
+					<Tooltip title={t(snapToGrid ? "flow.editor.disableSnap" : "flow.editor.enableSnap")} placement="bottom">
 						<Button
 							type="text"
 							shape="circle"
-							icon={<Icon name="search" />}
-							aria-label={t("flow.editor.search")}
-							onClick={(): void => openSearch()}
+							icon={<Icon name={snapToGrid ? "snap-on" : "snap-off"} />}
+							aria-label={t(snapToGrid ? "flow.editor.disableSnap" : "flow.editor.enableSnap")}
+							aria-pressed={snapToGrid}
+							onClick={(): void => {
+								const previous = snapToGrid;
+								const next = !previous;
+								setSnapToGrid(next);
+								void updateClientPreferences({ flowSnapToGrid: next }).catch((): void => {
+									setSnapToGrid(previous);
+								});
+							}}
 						/>
+					</Tooltip>
+					<Tooltip title={t("flow.editor.search")} placement="bottom">
+						<Button type="text" shape="circle" icon={<Icon name="search" />} aria-label={t("flow.editor.search")} onClick={(): void => openSearch()} />
 					</Tooltip>
 				</Flex>
 			</header>
-			{controller.error !== null ? (
-				<Alert className={styles.flowAlert} type="error" showIcon message={controller.error} />
-			) : null}
+			{controller.error !== null ? <Alert className={styles.flowAlert} type="error" showIcon title={controller.error} /> : null}
 			<div
 				ref={canvasRef}
 				className={`${styles.canvasRegion} ${isViewportMoving ? styles.canvasMoving : ""}`}
 				onContextMenu={(event): void => {
-					if (controller.isGraphLocked || (event.target as Element).closest(".react-flow__node") !== null)
-						return;
+					if (controller.isGraphLocked || (event.target as Element).closest(".react-flow__node") !== null) return;
 					event.preventDefault();
 					openPickerAt(event.clientX, event.clientY);
 				}}
@@ -532,18 +449,8 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 						setSearchQuery(query);
 						setSearchIndex(0);
 					}}
-					onPrevious={(): void =>
-						setSearchIndex((current): number =>
-							matchingNodes.length === 0
-								? 0
-								: (current - 1 + matchingNodes.length) % matchingNodes.length,
-						)
-					}
-					onNext={(): void =>
-						setSearchIndex((current): number =>
-							matchingNodes.length === 0 ? 0 : (current + 1) % matchingNodes.length,
-						)
-					}
+					onPrevious={(): void => setSearchIndex((current): number => (matchingNodes.length === 0 ? 0 : (current - 1 + matchingNodes.length) % matchingNodes.length))}
+					onNext={(): void => setSearchIndex((current): number => (matchingNodes.length === 0 ? 0 : (current + 1) % matchingNodes.length))}
 					onClose={closeSearch}
 				/>
 				{controller.isLoading ? <Spin className={styles.canvasSpinner} /> : null}
@@ -553,8 +460,7 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 							errorMessage={null}
 							onStarterSelect={(): void => {
 								const rect = canvasRef.current?.getBoundingClientRect();
-								if (rect !== undefined)
-									openPickerAt(rect.left + rect.width / 2, rect.top + rect.height / 2);
+								if (rect !== undefined) openPickerAt(rect.left + rect.width / 2, rect.top + rect.height / 2);
 							}}
 						/>
 					</div>
@@ -573,9 +479,7 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 										<Typography.Text type="secondary">{approval.reason}</Typography.Text>
 										{approval.requiredConsent !== null ? (
 											<>
-												<Typography.Text type="secondary">
-													{approval.requiredConsent.prompt}
-												</Typography.Text>
+												<Typography.Text type="secondary">{approval.requiredConsent.prompt}</Typography.Text>
 												<Input
 													size="small"
 													value={consentText[approval.approvalId] ?? ""}
@@ -603,17 +507,9 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 											<Button
 												size="small"
 												type="primary"
-												disabled={
-													approval.requiredConsent !== null &&
-													consentText[approval.approvalId] !==
-														approval.requiredConsent.expectedText
-												}
+												disabled={approval.requiredConsent !== null && consentText[approval.approvalId] !== approval.requiredConsent.expectedText}
 												onClick={(): void => {
-													void controller.resolveApproval(
-														approval.approvalId,
-														"approve",
-														consentText[approval.approvalId],
-													);
+													void controller.resolveApproval(approval.approvalId, "approve", consentText[approval.approvalId]);
 												}}
 											>
 												{t("flow.editor.approve")}
@@ -631,9 +527,7 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 					nodeTypes={nodeTypes}
 					defaultViewport={snapshot.flow.viewport}
 					onInit={setFlowInstance}
-					onNodesChange={(changes: NodeChange<FlowCanvasNode>[]): void =>
-						setNodes((current): FlowCanvasNode[] => applyNodeChanges(changes, current))
-					}
+					onNodesChange={(changes: NodeChange<FlowCanvasNode>[]): void => setNodes((current): FlowCanvasNode[] => applyNodeChanges(changes, current))}
 					onNodeDragStop={onNodeDragStop}
 					onConnect={onConnect}
 					onConnectStart={(_event, params): void => {
@@ -643,12 +537,6 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 					onConnectEnd={onConnectEnd}
 					onMoveStart={onMoveStart}
 					onMoveEnd={onMoveEnd}
-					onNodesDelete={(deleted): void => {
-						if (!controller.isGraphLocked) for (const node of deleted) void controller.deleteNode(node.id);
-					}}
-					onEdgesDelete={(deleted): void => {
-						if (!controller.isGraphLocked) for (const edge of deleted) void controller.deleteEdge(edge.id);
-					}}
 					nodesDraggable
 					nodesConnectable={!controller.isGraphLocked}
 					elementsSelectable
@@ -662,20 +550,14 @@ function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps):
 					fitViewOptions={{ padding: 0.2 }}
 					minZoom={0.2}
 					maxZoom={2}
-					deleteKeyCode={controller.isGraphLocked ? null : ["Backspace", "Delete"]}
+					snapToGrid={snapToGrid}
+					snapGrid={FLOW_SNAP_GRID}
+					deleteKeyCode={null}
 				>
 					<Background gap={24} size={1} />
-					{isViewportMoving ? null : <MiniMap pannable={false} zoomable={false} nodeStrokeWidth={3} />}
 					<Controls showInteractive={false} />
 				</ReactFlow>
-				<FlowNodePicker
-					open={picker !== null}
-					position={picker?.position ?? { x: 0, y: 0 }}
-					definitions={picker?.definitions ?? []}
-					workspaceAvailable={snapshot.flow.workspaceId !== null}
-					onSelect={selectPickerNode}
-					onClose={closePicker}
-				/>
+				<FlowNodePicker open={picker !== null} position={picker?.position ?? { x: 0, y: 0 }} definitions={picker?.definitions ?? []} workspaceAvailable={snapshot.flow.workspaceId !== null} onSelect={selectPickerNode} onClose={closePicker} />
 			</div>
 		</section>
 	);

@@ -4,14 +4,8 @@ import { readRepoFile } from "../../../../helpers/repo-paths";
 describe("KeyboardShortcutsSettingsPage", () => {
 	it("registers the settings page and renders controlled Ant Design inputs, table, and editor", () => {
 		const settingsWindow: string = readRepoFile("src", "renderer", "src", "app", "shell", "SettingsWindow.tsx");
-		const page: string = readRepoFile(
-			"src",
-			"renderer",
-			"src",
-			"widgets",
-			"settings",
-			"KeyboardShortcutsSettingsPage.tsx"
-		);
+		const page: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "pages", "studio", "KeyboardShortcutsSettingsPage.tsx");
+		const shortcutContracts: string = readRepoFile("src", "contracts", "keyboard-shortcuts.ts");
 		const motionCssSource: string = readRepoFile("src", "renderer", "src", "widgets", "settings", "components", "SettingsPageMotion.module.css");
 		const main: string = readRepoFile("src", "main", "index.ts");
 
@@ -19,6 +13,11 @@ describe("KeyboardShortcutsSettingsPage", () => {
 		expect(settingsWindow).toContain('name="keyboard"');
 		expect(main).toContain('"keyboard_shortcuts"');
 		expect(page).toContain("<Table<ShortcutDefinition>");
+		expect(page).toContain("SHORTCUT_DEFINITIONS");
+		expect(page).not.toContain("FlowShortcutReference");
+		expect(shortcutContracts).toContain('id: "flow.addNode"');
+		expect(shortcutContracts).toContain('id: "flow.searchNodes"');
+		expect(shortcutContracts).toContain('id: "flow.deleteSelection"');
 		expect(page).toContain("pageMotionStyles.enter");
 		expect(motionCssSource).toContain("animation: settingsPageContentEnter 160ms ease-out both;");
 		expect(page).toContain('rowKey="id"');

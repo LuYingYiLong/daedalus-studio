@@ -2,26 +2,8 @@ import { Alert, Button, Empty, Flex, Input, Modal, Space, Table, Typography } fr
 import type { TableProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-	SHORTCUT_DEFINITIONS,
-	detectShortcutPlatform,
-	findShortcutConflict,
-	formatShortcutBinding,
-	formatShortcutBindingParts,
-	getEffectiveShortcutBinding,
-	getShortcutBindingSignature,
-	getShortcutDefinition,
-	shortcutBindingFromKeyboardEvent,
-	type KeyboardShortcutOverrides,
-	type ShortcutCommandId,
-	type ShortcutDefinition,
-	type ShortcutPlatform
-} from "@/platform/rpc/keyboard-shortcuts";
-import {
-	fetchClientPreferences,
-	updateClientPreferences,
-	type ClientPreferences
-} from "@/platform/rpc/client-preferences-api";
+import { SHORTCUT_DEFINITIONS, detectShortcutPlatform, findShortcutConflict, formatShortcutBinding, formatShortcutBindingParts, getEffectiveShortcutBinding, getShortcutBindingSignature, getShortcutDefinition, shortcutBindingFromKeyboardEvent, type KeyboardShortcutOverrides, type ShortcutCommandId, type ShortcutDefinition, type ShortcutPlatform } from "@/platform/rpc/keyboard-shortcuts";
+import { fetchClientPreferences, updateClientPreferences, type ClientPreferences } from "@/platform/rpc/client-preferences-api";
 import { Icon } from "@/assets/icons";
 import styles from "./KeyboardShortcutsSettingsPage.module.css";
 import pageMotionStyles from "@/widgets/settings/components/SettingsPageMotion.module.css";
@@ -31,10 +13,7 @@ type KeyboardShortcutsSettingsPageProps = {
 	onClientPreferencesChange: (preferences: ClientPreferences) => void;
 };
 
-function KeyboardShortcutsSettingsPage({
-	clientPreferences,
-	onClientPreferencesChange
-}: KeyboardShortcutsSettingsPageProps): React.JSX.Element | null {
+function KeyboardShortcutsSettingsPage({ clientPreferences, onClientPreferencesChange }: KeyboardShortcutsSettingsPageProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const platform: ShortcutPlatform = useMemo((): ShortcutPlatform => detectShortcutPlatform(), []);
 	const [draftPreferences, setDraftPreferences] = useState<ClientPreferences>(clientPreferences);
@@ -78,27 +57,19 @@ function KeyboardShortcutsSettingsPage({
 
 	const filteredDefinitions: ShortcutDefinition[] = useMemo((): ShortcutDefinition[] => {
 		const normalizedQuery: string = actionQuery.trim().toLocaleLowerCase();
-		const mappingSignature: string | null = mappingQuery.length > 0
-			? getShortcutBindingSignature(mappingQuery, platform)
-			: null;
+		const mappingSignature: string | null = mappingQuery.length > 0 ? getShortcutBindingSignature(mappingQuery, platform) : null;
 		return SHORTCUT_DEFINITIONS.filter((definition: ShortcutDefinition): boolean => {
-			const nameMatches: boolean = normalizedQuery.length === 0
-				|| t(definition.labelKey).toLocaleLowerCase().includes(normalizedQuery);
+			const nameMatches: boolean = normalizedQuery.length === 0 || t(definition.labelKey).toLocaleLowerCase().includes(normalizedQuery);
 			const binding: string = getEffectiveShortcutBinding(draftPreferences.keyboardShortcuts, definition.id);
-			const mappingMatches: boolean = mappingQuery.length === 0
-				|| getShortcutBindingSignature(binding, platform) === mappingSignature;
+			const mappingMatches: boolean = mappingQuery.length === 0 || getShortcutBindingSignature(binding, platform) === mappingSignature;
 			return nameMatches && mappingMatches;
 		});
 	}, [actionQuery, draftPreferences.keyboardShortcuts, mappingQuery, platform, t]);
-
-	async function saveKeyboardShortcuts(
-		nextOverrides: KeyboardShortcutOverrides,
-		commandId: ShortcutCommandId
-	): Promise<boolean> {
+	async function saveKeyboardShortcuts(nextOverrides: KeyboardShortcutOverrides, commandId: ShortcutCommandId): Promise<boolean> {
 		const previousPreferences: ClientPreferences = draftPreferences;
 		const optimisticPreferences: ClientPreferences = {
 			...previousPreferences,
-			keyboardShortcuts: nextOverrides
+			keyboardShortcuts: nextOverrides,
 		};
 		try {
 			setSavingCommandId(commandId);
@@ -106,15 +77,13 @@ function KeyboardShortcutsSettingsPage({
 			setDraftPreferences(optimisticPreferences);
 			onClientPreferencesChange(optimisticPreferences);
 			const savedPreferences: ClientPreferences = await updateClientPreferences({
-				keyboardShortcuts: nextOverrides
+				keyboardShortcuts: nextOverrides,
 			});
 			setDraftPreferences(savedPreferences);
 			onClientPreferencesChange(savedPreferences);
 			return true;
 		} catch (error: unknown) {
-			const errorMessage: string = error instanceof Error
-				? error.message
-				: t("settings.keyboardShortcuts.errors.save");
+			const errorMessage: string = error instanceof Error ? error.message : t("settings.keyboardShortcuts.errors.save");
 			setDraftPreferences(previousPreferences);
 			onClientPreferencesChange(previousPreferences);
 			setPageError(errorMessage);
@@ -187,20 +156,19 @@ function KeyboardShortcutsSettingsPage({
 			setEditorError(t("settings.keyboardShortcuts.editor.required"));
 			return;
 		}
-		const conflict: ShortcutDefinition | null = findShortcutConflict(
-			draftPreferences.keyboardShortcuts,
-			editingCommandId,
-			editingBinding,
-			platform
-		);
+		const conflict: ShortcutDefinition | null = findShortcutConflict(draftPreferences.keyboardShortcuts, editingCommandId, editingBinding, platform);
 		if (conflict !== null) {
-			setEditorError(t("settings.keyboardShortcuts.editor.conflict", {
-				action: t(conflict.labelKey)
-			}));
+			setEditorError(
+				t("settings.keyboardShortcuts.editor.conflict", {
+					action: t(conflict.labelKey),
+				}),
+			);
 			return;
 		}
 		const definition: ShortcutDefinition = getShortcutDefinition(editingCommandId);
-		const nextOverrides: KeyboardShortcutOverrides = { ...draftPreferences.keyboardShortcuts };
+		const nextOverrides: KeyboardShortcutOverrides = {
+			...draftPreferences.keyboardShortcuts,
+		};
 		if (editingBinding === definition.defaultBinding) {
 			delete nextOverrides[editingCommandId];
 		} else {
@@ -215,18 +183,17 @@ function KeyboardShortcutsSettingsPage({
 		if (draftPreferences.keyboardShortcuts[commandId] === undefined) {
 			return;
 		}
-		const nextOverrides: KeyboardShortcutOverrides = { ...draftPreferences.keyboardShortcuts };
+		const nextOverrides: KeyboardShortcutOverrides = {
+			...draftPreferences.keyboardShortcuts,
+		};
 		delete nextOverrides[commandId];
-		const conflict: ShortcutDefinition | null = findShortcutConflict(
-			nextOverrides,
-			commandId,
-			getShortcutDefinition(commandId).defaultBinding,
-			platform
-		);
+		const conflict: ShortcutDefinition | null = findShortcutConflict(nextOverrides, commandId, getShortcutDefinition(commandId).defaultBinding, platform);
 		if (conflict !== null) {
-			setPageError(t("settings.keyboardShortcuts.editor.conflict", {
-				action: t(conflict.labelKey)
-			}));
+			setPageError(
+				t("settings.keyboardShortcuts.editor.conflict", {
+					action: t(conflict.labelKey),
+				}),
+			);
 			return;
 		}
 		await saveKeyboardShortcuts(nextOverrides, commandId);
@@ -237,11 +204,7 @@ function KeyboardShortcutsSettingsPage({
 			title: t("settings.keyboardShortcuts.columns.name"),
 			key: "name",
 			ellipsis: true,
-			render: (_value: unknown, definition: ShortcutDefinition): React.ReactNode => (
-				<Typography.Text ellipsis={{ tooltip: t(definition.labelKey) }}>
-					{t(definition.labelKey)}
-				</Typography.Text>
-			)
+			render: (_value: unknown, definition: ShortcutDefinition): React.ReactNode => <Typography.Text ellipsis={{ tooltip: t(definition.labelKey) }}>{t(definition.labelKey)}</Typography.Text>,
 		},
 		{
 			title: t("settings.keyboardShortcuts.columns.shortcut"),
@@ -249,14 +212,15 @@ function KeyboardShortcutsSettingsPage({
 			width: "32%",
 			render: (_value: unknown, definition: ShortcutDefinition): React.ReactNode => (
 				<span className={styles.keycapGroup}>
-					{formatShortcutBindingParts(
-						getEffectiveShortcutBinding(draftPreferences.keyboardShortcuts, definition.id),
-						platform
-					).map((part: string): React.ReactNode => (
-						<kbd className={styles.keycap} key={part}>{part}</kbd>
-					))}
+					{formatShortcutBindingParts(getEffectiveShortcutBinding(draftPreferences.keyboardShortcuts, definition.id), platform).map(
+						(part: string): React.ReactNode => (
+							<kbd className={styles.keycap} key={part}>
+								{part}
+							</kbd>
+						),
+					)}
 				</span>
-			)
+			),
 		},
 		{
 			title: t("settings.keyboardShortcuts.columns.actions"),
@@ -288,13 +252,10 @@ function KeyboardShortcutsSettingsPage({
 						{t("settings.keyboardShortcuts.actions.reset")}
 					</Button>
 				</Space>
-			)
-		}
+			),
+		},
 	];
-
-	const editingDefinition: ShortcutDefinition | null = editingCommandId === null
-		? null
-		: getShortcutDefinition(editingCommandId);
+	const editingDefinition: ShortcutDefinition | null = editingCommandId === null ? null : getShortcutDefinition(editingCommandId);
 
 	if (isLoading) {
 		return null;
@@ -307,14 +268,7 @@ function KeyboardShortcutsSettingsPage({
 					{t("settings.keyboardShortcuts.title")}
 				</Typography.Title>
 				<Flex className={styles.filterRow} gap="small" wrap={false}>
-					<Input
-						className={styles.filterInput}
-						prefix={<Icon name="search" />}
-						allowClear={true}
-						value={actionQuery}
-						placeholder={t("settings.keyboardShortcuts.search.action")}
-						onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setActionQuery(event.target.value)}
-					/>
+					<Input className={styles.filterInput} prefix={<Icon name="search" />} allowClear={true} value={actionQuery} placeholder={t("settings.keyboardShortcuts.search.action")} onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setActionQuery(event.target.value)} />
 					<Input
 						className={styles.filterInput}
 						prefix={<Icon name="keyboard" />}
@@ -353,23 +307,14 @@ function KeyboardShortcutsSettingsPage({
 								}
 							},
 							onKeyDown: (event: React.KeyboardEvent<HTMLTableRowElement>): void => {
-								if (
-									savingCommandId === null
-									&& event.target === event.currentTarget
-									&& (event.key === "Enter" || event.key === " ")
-								) {
+								if (savingCommandId === null && event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
 									event.preventDefault();
 									openEditor(definition.id);
 								}
-							}
+							},
 						})}
 						locale={{
-							emptyText: (
-								<Empty
-									image={Empty.PRESENTED_IMAGE_SIMPLE}
-									description={t("settings.keyboardShortcuts.empty")}
-								/>
-							)
+							emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("settings.keyboardShortcuts.empty")} />,
 						}}
 					/>
 				</div>
@@ -377,9 +322,13 @@ function KeyboardShortcutsSettingsPage({
 
 			<Modal
 				open={editingDefinition !== null}
-				title={editingDefinition === null ? "" : t("settings.keyboardShortcuts.editor.title", {
-					action: t(editingDefinition.labelKey)
-				})}
+				title={
+					editingDefinition === null
+						? ""
+						: t("settings.keyboardShortcuts.editor.title", {
+								action: t(editingDefinition.labelKey),
+							})
+				}
 				okText={t("settings.common.save")}
 				cancelText={t("settings.common.cancel")}
 				confirmLoading={savingCommandId !== null}
@@ -394,20 +343,9 @@ function KeyboardShortcutsSettingsPage({
 				className={styles.modal}
 			>
 				<div className={styles.editor}>
-					<Typography.Text type="secondary">
-						{t("settings.keyboardShortcuts.editor.description")}
-					</Typography.Text>
-					<Input
-						autoFocus={true}
-						readOnly={true}
-						status={editorError === null ? undefined : "error"}
-						value={editingBinding.length > 0 ? formatShortcutBinding(editingBinding, platform) : ""}
-						placeholder={t("settings.keyboardShortcuts.editor.placeholder")}
-						onKeyDown={captureEditingBinding}
-					/>
-					{editorError !== null ? (
-						<Typography.Text type="danger">{editorError}</Typography.Text>
-					) : null}
+					<Typography.Text type="secondary">{t("settings.keyboardShortcuts.editor.description")}</Typography.Text>
+					<Input autoFocus={true} readOnly={true} status={editorError === null ? undefined : "error"} value={editingBinding.length > 0 ? formatShortcutBinding(editingBinding, platform) : ""} placeholder={t("settings.keyboardShortcuts.editor.placeholder")} onKeyDown={captureEditingBinding} />
+					{editorError !== null ? <Typography.Text type="danger">{editorError}</Typography.Text> : null}
 				</div>
 			</Modal>
 		</section>

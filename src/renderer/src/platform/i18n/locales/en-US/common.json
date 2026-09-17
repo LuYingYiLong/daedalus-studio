@@ -632,7 +632,10 @@
 			"shortcuts": "Shift+A opens the node picker · Home fits the canvas · Ctrl/Cmd+Enter runs the Flow",
 			"starters": {
 				"label": "Start with",
-				"explore": { "label": "Explore a question", "prompt": "Help me explore this question:" },
+				"explore": {
+					"label": "Explore a question",
+					"prompt": "Help me explore this question:"
+				},
 				"decompose": {
 					"label": "Break down a task",
 					"prompt": "Break this complex task into executable steps:"
@@ -653,7 +656,11 @@
 			"failed": "Failed",
 			"stopped": "Stopped"
 		},
-		"nodes": { "user": "User", "assistant": "AI", "emptyResponse": "No response yet" },
+		"nodes": {
+			"user": "User",
+			"assistant": "AI",
+			"emptyResponse": "No response yet"
+		},
 		"actions": {
 			"new": "New Flow",
 			"details": "Details",
@@ -689,14 +696,46 @@
 			"addNode": "Add node",
 			"search": "Search",
 			"fitCanvas": "Fit canvas",
+			"enableSnap": "Enable grid snapping",
+			"disableSnap": "Disable grid snapping",
 			"configure": "Configure",
 			"deleteNode": "Delete node",
 			"pendingApprovals": "Pending approvals",
 			"approve": "Approve",
 			"reject": "Reject",
-			"approvalModes": { "manual": "Manual", "auto-safe": "Auto safe", "full-trust": "Full trust" },
-			"picker": { "title": "Add Flow node", "search": "Search nodes…", "empty": "No compatible nodes", "workspaceRequired": "Requires a workspace", "visualOnly": "Visual note", "recent": "Recent", "categories": { "basic": "Basic", "ai": "AI", "workspace": "Workspace" }, "hint": "↑↓ Select · Enter Add · Esc Close" },
-			"nodes": { "prompt": "Prompt", "text": "Text", "template": "Template", "merge": "Merge", "json_extract": "JSON Extract", "condition": "Condition", "file_input": "File Input", "llm": "LLM", "tool": "Tool", "command": "Command", "output": "Output", "note": "Note" }
+			"approvalModes": {
+				"manual": "Manual",
+				"auto-safe": "Auto safe",
+				"full-trust": "Full trust"
+			},
+			"picker": {
+				"title": "Add Flow node",
+				"search": "Search nodes…",
+				"empty": "No compatible nodes",
+				"workspaceRequired": "Requires a workspace",
+				"visualOnly": "Visual note",
+				"recent": "Recent",
+				"categories": {
+					"basic": "Basic",
+					"ai": "AI",
+					"workspace": "Workspace"
+				},
+				"hint": "↑↓ Select · Enter Add · Esc Close"
+			},
+			"nodes": {
+				"prompt": "Prompt",
+				"text": "Text",
+				"template": "Template",
+				"merge": "Merge",
+				"json_extract": "JSON Extract",
+				"condition": "Condition",
+				"file_input": "File Input",
+				"llm": "LLM",
+				"tool": "Tool",
+				"command": "Command",
+				"output": "Output",
+				"note": "Note"
+			}
 		},
 		"aria": {
 			"pin": "Pin Flow: {{title}}",
@@ -1135,7 +1174,11 @@
 		"graph": "Graph",
 		"agents": "subagents",
 		"summary": "{{total}} nodes / {{running}} running / {{queued}} queued / {{waiting}} awaiting approval / {{failed}} failed",
-		"actions": { "retry": "Retry", "cancel": "Cancel node", "cancelGraph": "Cancel all Subagents" },
+		"actions": {
+			"retry": "Retry",
+			"cancel": "Cancel node",
+			"cancelGraph": "Cancel all Subagents"
+		},
 		"queueReasons": {
 			"provider_capacity": "Waiting for provider capacity",
 			"worktree_capacity": "Waiting for worktree capacity",
@@ -1168,7 +1211,10 @@
 			"tester": "Verify",
 			"reviewer": "Review"
 		},
-		"workspaceModes": { "shared_read_only": "Shared read-only", "managed_worktree": "Managed worktree" },
+		"workspaceModes": {
+			"shared_read_only": "Shared read-only",
+			"managed_worktree": "Managed worktree"
+		},
 		"status": {
 			"draft": "Draft",
 			"running": "Running",
@@ -2572,6 +2618,18 @@
 				"previousTurn": "Previous conversation turn",
 				"nextTurn": "Next conversation turn",
 				"findInConversation": "Find in conversation"
+			},
+			"flow": {
+				"title": "Flow canvas shortcuts",
+				"description": "These shortcuts apply while the Flow view is active and no input is being edited.",
+				"builtIn": "Built in",
+				"commands": {
+					"addNode": "Open the node picker",
+					"searchNodes": "Search and add nodes",
+					"fitCanvas": "Fit all nodes",
+					"run": "Run the current Flow",
+					"deleteSelection": "Delete selected nodes or edges"
+				}
 			},
 			"empty": "No shortcut actions match your search.",
 			"editor": {

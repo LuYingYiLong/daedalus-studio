@@ -92,25 +92,6 @@
 	height: 100%;
 }
 
-.canvasRegion :global(.react-flow__minimap) {
-	position: absolute !important;
-	top: var(--ds-space-3) !important;
-	right: var(--ds-space-3) !important;
-	bottom: auto !important;
-	left: auto !important;
-	width: 180px !important;
-	height: 120px !important;
-	box-sizing: border-box;
-	background: var(--ds-surface) !important;
-	border: 1px solid var(--ds-border) !important;
-	border-radius: var(--ds-radius-lg);
-	box-shadow: var(--ds-box-shadow);
-}
-
-.canvasRegion :global(.react-flow__minimap-mask) {
-	fill: color-mix(in srgb, var(--ds-bg) 72%, transparent) !important;
-}
-
 .canvasRegion :global(.react-flow__attribution) {
 	display: none;
 }
