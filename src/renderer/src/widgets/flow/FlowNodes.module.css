@@ -1,127 +1,237 @@
 .nodeShell {
-  position: relative;
-  width: 320px;
-  min-height: 190px;
-  overflow: visible;
-  contain: layout style;
+	position: relative;
+	width: 320px;
+	min-height: 176px;
+	overflow: visible;
+	contain: layout style;
 }
 
 .nodeCard {
-  position: relative;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  width: 100%;
-  min-height: 190px;
-  overflow: hidden;
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-lg);
-  background: var(--ant-color-bg-container, var(--ds-surface-elevated));
-  box-shadow: var(--ds-box-shadow);
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease;
+	position: relative;
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr) auto;
+	width: 100%;
+	min-height: 176px;
+	overflow: hidden;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ant-color-bg-container, var(--ds-surface-elevated));
+	box-shadow: var(--ds-box-shadow);
+	transition:
+		border-color 160ms ease,
+		box-shadow 160ms ease;
 }
 
 .nodeCard :global(.ant-input),
 .nodeCard :global(.ant-select-selector) {
-  background: var(--ant-color-bg-container, var(--ds-surface-elevated));
+	background: var(--ant-color-bg-container, var(--ds-surface-elevated));
 }
 
 .nodeCard:hover,
 .nodeCardMatched {
-  border-color: var(--ant-color-primary);
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--ant-color-primary) 22%, transparent),
-    var(--ds-box-shadow);
+	border-color: var(--ant-color-primary);
+	box-shadow:
+		0 0 0 2px color-mix(in srgb, var(--ant-color-primary) 22%, transparent),
+		var(--ds-box-shadow);
 }
 
 .header,
 .role,
 .footer,
-.outputPreview,
-.compactFields {
-  display: flex;
-  align-items: center;
+.compactFields,
+.dynamicInputRow {
+	display: flex;
+	align-items: center;
 }
 
 .header {
-  justify-content: space-between;
-  gap: var(--ds-space-2);
-  padding: var(--ds-space-2) var(--ds-space-3);
-  color: #fff;
+	justify-content: space-between;
+	gap: var(--ds-space-2);
+	padding: var(--ds-space-2) var(--ds-space-3);
+	color: #fff;
 }
 
-.header-prompt {
-  background: #1677ff;
+.header-prompt,
+.header-text {
+	background: #1677ff;
+}
+
+.header-template {
+	background: #08979c;
+}
+
+.header-merge {
+	background: #096dd9;
+}
+
+.header-json_extract {
+	background: #531dab;
+}
+
+.header-condition {
+	background: #d46b08;
+}
+
+.header-file_input {
+	background: #237804;
 }
 
 .header-llm {
-  background: #722ed1;
+	background: #722ed1;
+}
+
+.header-tool {
+	background: #006d75;
+}
+
+.header-command {
+	background: #262626;
 }
 
 .header-output {
-  background: #389e0d;
+	background: #389e0d;
 }
 
 .header-note {
-  background: #d48806;
+	background: #d48806;
 }
 
 .role {
-  gap: 8px;
-  font-weight: 600;
+	gap: 8px;
+	font-weight: 600;
 }
 
 .body {
-  display: grid;
-  gap: var(--ds-space-2);
-  padding: var(--ds-space-3);
-  min-height: 0;
-  background: var(--ant-color-bg-container, var(--ds-surface-elevated));
+	display: grid;
+	gap: var(--ds-space-2);
+	padding: var(--ds-space-3);
+	min-height: 0;
+	background: var(--ant-color-bg-container, var(--ds-surface-elevated));
 }
 
 .titleInput {
-  padding-inline: 0 !important;
-  font-weight: 600;
+	padding-inline: 0 !important;
+	font-weight: 600;
 }
 
-.nodeEditor {
-  resize: vertical;
+.compactFields,
+.dynamicInputs {
+	display: grid;
+	gap: var(--ds-space-2);
 }
 
-.compactFields {
-  gap: var(--ds-space-2);
-  flex-direction: column;
-  align-items: stretch;
+.dynamicInputRow {
+	gap: var(--ds-space-1);
 }
 
-.outputPreview {
-  gap: var(--ds-space-2);
-  justify-content: space-between;
+.toolDescription {
+	font-size: 11px;
 }
 
-.outputPreview > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.bindingList {
+	display: grid;
+	gap: var(--ds-space-1);
+}
+
+.bindingRow {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+	gap: var(--ds-space-1);
+}
+
+.configCollapse :global(.ant-collapse-header) {
+	padding: 4px 0 !important;
+}
+
+.configCollapse :global(.ant-collapse-content-box) {
+	padding: 4px 0 0 !important;
+}
+
+.resultPreview {
+	max-height: 96px;
+	margin: 0 !important;
+	padding: var(--ds-space-2);
+	overflow: auto;
+	border-radius: var(--ds-radius-sm);
+	background: var(--ant-color-fill-quaternary);
+	font-size: 12px;
 }
 
 .footer {
-  justify-content: space-between;
-  min-height: 32px;
-  padding: var(--ds-space-1) var(--ds-space-2);
-  border-top: 1px solid var(--ds-border-secondary);
-  background: var(--ant-color-bg-container, var(--ds-surface-elevated));
+	justify-content: space-between;
+	min-height: 32px;
+	padding: var(--ds-space-1) var(--ds-space-2);
+	border-top: 1px solid var(--ds-border-secondary);
+	background: var(--ant-color-bg-container, var(--ds-surface-elevated));
 }
 
 .statusText {
-  font-size: 11px;
+	max-width: 250px;
+	overflow: hidden;
+	font-size: 11px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.portRail {
+	position: absolute;
+	z-index: 5;
+	top: 48px;
+	display: grid;
+	gap: 14px;
+	pointer-events: none;
+}
+
+.portRailLeft {
+	left: -11px;
+}
+
+.portRailRight {
+	right: -11px;
+}
+
+.portItem {
+	position: relative;
+	display: flex;
+	align-items: center;
+	min-height: 18px;
+	color: var(--ant-color-text-secondary);
+	font-size: 10px;
+	pointer-events: none;
+}
+
+.portRailLeft .portItem {
+	flex-direction: row;
+}
+
+.portRailRight .portItem {
+	flex-direction: row-reverse;
+}
+
+.portRailLeft .portItem span {
+	margin-left: 18px;
+}
+
+.portRailRight .portItem span {
+	margin-right: 18px;
 }
 
 .nodeHandle {
-  z-index: 4;
-  width: 10px !important;
-  height: 10px !important;
-  border: 1px solid var(--ds-bg) !important;
-  background: var(--ant-color-primary) !important;
+	position: absolute !important;
+	inset: auto !important;
+	z-index: 6;
+	width: 12px !important;
+	height: 12px !important;
+	border: 2px solid var(--ant-color-bg-container) !important;
+	background: var(--ant-color-primary) !important;
+	pointer-events: auto;
+	transform: none !important;
+}
+
+.portRailLeft .nodeHandle {
+	left: 5px !important;
+}
+
+.portRailRight .nodeHandle {
+	right: 5px !important;
 }

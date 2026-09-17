@@ -626,6 +626,10 @@
 		"new": { "title": "New Flow" },
 		"welcome": {
 			"title": "Let an idea branch into new paths",
+			"nodeTitle": "Build a workflow from nodes",
+			"nodeDescription": "Add prompt, model, data, tool, and output nodes, then connect them on the canvas.",
+			"addPrompt": "Add Prompt node",
+			"shortcuts": "Shift+A opens the node picker · Home fits the canvas · Ctrl/Cmd+Enter runs the Flow",
 			"starters": {
 				"label": "Start with",
 				"explore": { "label": "Explore a question", "prompt": "Help me explore this question:" },
@@ -679,6 +683,21 @@
 			"recent": "Recent"
 		},
 		"details": { "title": "Node details" },
+		"editor": {
+			"run": "Run",
+			"stop": "Stop",
+			"addNode": "Add node",
+			"search": "Search",
+			"fitCanvas": "Fit canvas",
+			"configure": "Configure",
+			"deleteNode": "Delete node",
+			"pendingApprovals": "Pending approvals",
+			"approve": "Approve",
+			"reject": "Reject",
+			"approvalModes": { "manual": "Manual", "auto-safe": "Auto safe", "full-trust": "Full trust" },
+			"picker": { "title": "Add Flow node", "search": "Search nodes…", "empty": "No compatible nodes", "workspaceRequired": "Requires a workspace", "visualOnly": "Visual note", "recent": "Recent", "categories": { "basic": "Basic", "ai": "AI", "workspace": "Workspace" }, "hint": "↑↓ Select · Enter Add · Esc Close" },
+			"nodes": { "prompt": "Prompt", "text": "Text", "template": "Template", "merge": "Merge", "json_extract": "JSON Extract", "condition": "Condition", "file_input": "File Input", "llm": "LLM", "tool": "Tool", "command": "Command", "output": "Output", "note": "Note" }
+		},
 		"aria": {
 			"pin": "Pin Flow: {{title}}",
 			"unpin": "Unpin Flow: {{title}}",

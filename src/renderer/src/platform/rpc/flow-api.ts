@@ -9,6 +9,9 @@ import type {
 	FlowDocumentNodeType,
 	FlowDocumentRun,
 	FlowDocumentSnapshot,
+	FlowNodeTypeDefinition,
+	FlowToolDefinition,
+	FlowApproval,
 	FlowTreeOrder,
 	FlowTreeOrderUpdate,
 	SessionMetadata,
@@ -56,6 +59,29 @@ export async function createFlowNode(params: { flowId: string; revision: number;
 	return (await createBackendClient()).request("flow.node.create", params);
 }
 
+export async function listFlowNodeTypes(params: { flowId?: string; workspaceId?: string } = {}): Promise<{ nodes: FlowNodeTypeDefinition[] }> {
+	return (await createBackendClient()).request("flow.node.types.list", params);
+}
+
+export async function createConnectedFlowNode(params: {
+	flowId: string;
+	revision: number;
+	type: FlowDocumentNodeType;
+	x: number;
+	y: number;
+	title?: string;
+	config?: Record<string, unknown>;
+	connection: {
+		direction: "from_existing" | "to_existing";
+		existingNodeId: string;
+		existingPort: string;
+		newPort: string;
+		dataType: FlowDocumentEdge["dataType"];
+	};
+}): Promise<{ snapshot: FlowDocumentSnapshot; nodeId: string; edgeId: string }> {
+	return (await createBackendClient()).request("flow.node.createConnected", params);
+}
+
 export async function updateFlowNode(params: { flowId: string; nodeId: string; revision: number; patch: Partial<Pick<FlowDocumentNode, "title" | "x" | "y" | "width" | "height" | "config">> }): Promise<FlowDocumentSnapshot> {
 	return (await createBackendClient()).request("flow.node.update", params);
 }
@@ -74,6 +100,22 @@ export async function deleteFlowEdge(params: { flowId: string; edgeId: string; r
 
 export async function updateFlowViewport(params: { flowId: string; revision: number; viewport: FlowDocument["viewport"] }): Promise<FlowDocument> {
 	return (await createBackendClient()).request("flow.viewport.update", params);
+}
+
+export async function updateFlowSettings(params: { flowId: string; revision: number; approvalMode: FlowDocument["approvalMode"] }): Promise<FlowDocument> {
+	return (await createBackendClient()).request("flow.settings.update", params);
+}
+
+export async function listFlowTools(flowId: string): Promise<{ tools: FlowToolDefinition[] }> {
+	return (await createBackendClient()).request("flow.tools.list", { flowId });
+}
+
+export async function listFlowApprovals(flowId: string, runId?: string): Promise<{ approvals: FlowApproval[] }> {
+	return (await createBackendClient()).request("flow.approval.list", { flowId, ...(runId === undefined ? {} : { runId }) });
+}
+
+export async function resolveFlowApproval(params: { flowId: string; runId: string; approvalId: string; decision: "approve" | "reject"; consentText?: string }): Promise<FlowDocumentRun> {
+	return (await createBackendClient()).request("flow.approval.resolve", params);
 }
 
 export async function startFlowRun(params: { flowId: string; revision: number; forceNodeIds?: string[] }): Promise<FlowDocumentRun> {

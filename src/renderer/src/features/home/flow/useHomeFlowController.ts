@@ -6,6 +6,7 @@ import {
 	createFlow,
 	createFlowEdge,
 	createFlowNode,
+	createConnectedFlowNode,
 	exportFlowToSession,
 	fetchFlow,
 	fetchFlows,
@@ -17,6 +18,11 @@ import {
 	deleteFlowNode,
 	deleteFlowEdge,
 	updateFlowViewport,
+	updateFlowSettings,
+	listFlowNodeTypes,
+	listFlowTools,
+	listFlowApprovals,
+	resolveFlowApproval,
 	updateFlowTreeOrder as persistFlowTreeOrder,
 	type CreateFlowParams,
 } from "@/platform/rpc/flow-api";
@@ -26,6 +32,10 @@ import type {
 	FlowDocument,
 	FlowDocumentNode,
 	FlowDocumentSnapshot,
+	FlowDocumentNodeType,
+	FlowNodeTypeDefinition,
+	FlowToolDefinition,
+	FlowApproval,
 	FlowTreeOrder,
 	FlowTreeOrderUpdate,
 	SessionMetadata,
@@ -54,6 +64,10 @@ export type HomeFlowController = {
 	flowBranchSessionIdsByFlow: Readonly<Record<string, readonly string[]>>;
 	flowRuntimeStatusById: Readonly<Record<string, "running" | "failed" | "completed">>;
 	snapshot: FlowDocumentSnapshot | null;
+	nodeDefinitions: FlowNodeTypeDefinition[];
+	tools: FlowToolDefinition[];
+	approvals: FlowApproval[];
+	isGraphLocked: boolean;
 	isNewFlowHome: boolean;
 	newFlowWorkspaceId: string | null;
 	selectedBranchId: string | null;
@@ -76,15 +90,18 @@ export type HomeFlowController = {
 	archiveFlowById: (flowId: string) => Promise<void>;
 	archiveCurrentFlow: () => Promise<void>;
 	updateFlowOrder: (order: FlowTreeOrderUpdate) => Promise<void>;
-	createNode: (type: "prompt" | "llm" | "output" | "note", x: number, y: number) => Promise<void>;
+	createNode: (type: FlowDocumentNodeType, x: number, y: number) => Promise<void>;
+	createConnectedNode: (params: { type: FlowDocumentNodeType; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "artifact" }) => Promise<void>;
 	updateNode: (nodeId: string, patch: Record<string, unknown>) => Promise<void>;
 	updateNodePosition: (nodeId: string, x: number, y: number) => Promise<void>;
 	deleteNode: (nodeId: string) => Promise<void>;
-	createEdge: (sourceNodeId: string, targetNodeId: string, sourcePort?: string, targetPort?: string) => Promise<void>;
+	createEdge: (sourceNodeId: string, targetNodeId: string, sourcePort?: string, targetPort?: string, dataType?: "text" | "json" | "artifact") => Promise<void>;
 	deleteEdge: (edgeId: string) => Promise<void>;
 	updateViewport: (viewport: { x: number; y: number; zoom: number }) => Promise<void>;
 	startRun: (forceNodeIds?: string[]) => Promise<void>;
 	stopRun: () => Promise<void>;
+	setApprovalMode: (mode: FlowDocument["approvalMode"]) => Promise<void>;
+	resolveApproval: (approvalId: string, decision: "approve" | "reject", consentText?: string) => Promise<void>;
 };
 
 function errorMessage(error: unknown): string {
@@ -120,6 +137,9 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	const [flowOrder, setFlowOrder] = useState<FlowTreeOrder | null>(null);
 	const [flowRuntimeStatusById, setFlowRuntimeStatusById] = useState<Record<string, "running" | "failed" | "completed">>({});
 	const [snapshot, setSnapshot] = useState<FlowDocumentSnapshot | null>(null);
+	const [nodeDefinitions, setNodeDefinitions] = useState<FlowNodeTypeDefinition[]>([]);
+	const [tools, setTools] = useState<FlowToolDefinition[]>([]);
+	const [approvals, setApprovals] = useState<FlowApproval[]>([]);
 	const [isNewFlowHome, setIsNewFlowHome] = useState<boolean>(false);
 	const [newFlowWorkspaceId, setNewFlowWorkspaceId] = useState<string | null>(null);
 	const [selectedNodeDetail, setSelectedNodeDetail] = useState<FlowNodeDetail | null>(null);
@@ -131,6 +151,19 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	const refreshRef = useRef<() => Promise<void>>(() => Promise.resolve());
 	const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
 	const ignoreFlowEventsUntilRef = useRef<number>(0);
+	const isGraphLocked = snapshot?.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting") ?? false;
+
+	const loadFlowResources = useCallback(async (flowId: string): Promise<void> => {
+		const [nodeResult, toolResult, approvalResult] = await Promise.all([
+			listFlowNodeTypes({ flowId }),
+			listFlowTools(flowId),
+			listFlowApprovals(flowId),
+		]);
+		if (selectedFlowIdRef.current !== flowId) return;
+		setNodeDefinitions(nodeResult.nodes);
+		setTools(toolResult.tools);
+		setApprovals(approvalResult.approvals);
+	}, []);
 
 	const enqueueMutation = useCallback(<T,>(operation: () => Promise<T>): Promise<T> => {
 		const next = mutationQueueRef.current.catch((): void => undefined).then(operation);
@@ -145,7 +178,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		setIsNewFlowHome(next.nodes.length === 0);
 		setNewFlowWorkspaceId(next.flow.workspaceId);
 		const latestRun = next.runs[0];
-		if (latestRun !== undefined) setFlowRuntimeStatusById((current): Record<string, "running" | "failed" | "completed"> => ({ ...current, [next.flow.flowId]: latestRun.status === "running" || latestRun.status === "queued" ? "running" : latestRun.status === "failed" ? "failed" : "completed" }));
+		if (latestRun !== undefined) setFlowRuntimeStatusById((current): Record<string, "running" | "failed" | "completed"> => ({ ...current, [next.flow.flowId]: latestRun.status === "running" || latestRun.status === "queued" || latestRun.status === "waiting" ? "running" : latestRun.status === "failed" ? "failed" : "completed" }));
 	}, []);
 
 	const refresh = useCallback(async (): Promise<void> => {
@@ -179,6 +212,16 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		if (!enabled) return;
 		void refresh();
 	}, [enabled, refresh]);
+	useEffect((): void => {
+		const flowId = snapshot?.flow.flowId;
+		if (!enabled || flowId === undefined) {
+			setNodeDefinitions([]);
+			setTools([]);
+			setApprovals([]);
+			return;
+		}
+		void loadFlowResources(flowId).catch((resourceError: unknown): void => setError(errorMessage(resourceError)));
+	}, [enabled, loadFlowResources, snapshot?.flow.flowId]);
 
 	useEffect((): (() => void) => {
 		let unsubscribe: (() => void) | undefined;
@@ -186,8 +229,11 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			const data = typeof event.data === "object" && event.data !== null ? event.data as Record<string, unknown> : {};
 			const flowId = typeof data.flowId === "string" ? data.flowId : null;
 			if (flowId === null || flowId !== selectedFlowIdRef.current) return;
-			if (Date.now() < ignoreFlowEventsUntilRef.current) return;
+			if (event.event === "flow.updated" && Date.now() < ignoreFlowEventsUntilRef.current) return;
 			window.setTimeout((): void => { void refreshRef.current(); }, event.event === "flow.node.state" ? 180 : 30);
+			if (event.event === "flow.node.state" || event.event === "flow.run.state") {
+				void listFlowApprovals(flowId).then((result): void => setApprovals(result.approvals));
+			}
 		}).then((dispose): void => { unsubscribe = dispose; });
 		const offReconnect = onBackendReconnected((): void => { if (enabled) void refreshRef.current(); });
 		return (): void => { unsubscribe?.(); offReconnect(); };
@@ -224,19 +270,19 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		setIsMutating(true);
 		setError(null);
 		try {
-			const prompt = await createFlowNode({ flowId: current.flow.flowId, revision: current.flow.revision, type: "prompt", x: 80, y: 160, title: "Prompt", config: { text } });
-			const llm = await createFlowNode({ flowId: prompt.flow.flowId, revision: prompt.flow.revision, type: "llm", x: 390, y: 160, title: "LLM", config: { provider: defaultFlow.provider ?? "", model: defaultFlow.model ?? "", reasoningEffort: defaultFlow.reasoningEffort ?? "" } });
-			const output = await createFlowNode({ flowId: llm.flow.flowId, revision: llm.flow.revision, type: "output", x: 700, y: 160, title: "Output", config: { format: "text" } });
-			const firstEdge = await createFlowEdge({ flowId: output.flow.flowId, revision: output.flow.revision, sourceNodeId: prompt.nodes[0]?.nodeId ?? "", sourcePort: "output", targetNodeId: llm.nodes[0]?.nodeId ?? "", targetPort: "input", dataType: "text" });
+			const prompt = await createFlowNode({ flowId: current.flow.flowId, revision: current.flow.graphRevision, type: "prompt", x: 80, y: 160, title: "Prompt", config: { text } });
+			const llm = await createFlowNode({ flowId: prompt.flow.flowId, revision: prompt.flow.graphRevision, type: "llm", x: 390, y: 160, title: "LLM", config: { provider: defaultFlow.provider ?? "", model: defaultFlow.model ?? "", reasoningEffort: defaultFlow.reasoningEffort ?? "" } });
+			const output = await createFlowNode({ flowId: llm.flow.flowId, revision: llm.flow.graphRevision, type: "output", x: 700, y: 160, title: "Output", config: { format: "text" } });
+			const firstEdge = await createFlowEdge({ flowId: output.flow.flowId, revision: output.flow.graphRevision, sourceNodeId: prompt.nodes[0]?.nodeId ?? "", sourcePort: "output", targetNodeId: llm.nodes[0]?.nodeId ?? "", targetPort: "input", dataType: "text" });
 			const lastPrompt = prompt.nodes.find((node): boolean => node.type === "prompt");
 			const lastLlm = llm.nodes.find((node): boolean => node.type === "llm");
 			if (lastPrompt !== undefined && lastLlm !== undefined) {
-				const final = await createFlowEdge({ flowId: output.flow.flowId, revision: firstEdge.flow.revision, sourceNodeId: lastLlm.nodeId, sourcePort: "output", targetNodeId: output.nodes.find((node): boolean => node.type === "output")?.nodeId ?? "", targetPort: "input", dataType: "text" });
+				const final = await createFlowEdge({ flowId: output.flow.flowId, revision: firstEdge.flow.graphRevision, sourceNodeId: lastLlm.nodeId, sourcePort: "output", targetNodeId: output.nodes.find((node): boolean => node.type === "output")?.nodeId ?? "", targetPort: "input", dataType: "text" });
 				applySnapshot(final);
 			} else applySnapshot(firstEdge);
 			setIsNewFlowHome(false);
 			const latest = snapshotRef.current;
-			if (latest !== null) await startFlowRun({ flowId: latest.flow.flowId, revision: latest.flow.revision });
+			if (latest !== null) await startFlowRun({ flowId: latest.flow.flowId, revision: latest.flow.graphRevision });
 			void modeOverride;
 		} catch (mutationError: unknown) {
 			setError(errorMessage(mutationError));
@@ -303,18 +349,46 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		} catch (orderError: unknown) { setError(errorMessage(orderError)); }
 	}, []);
 
-	const createNode = useCallback(async (type: "prompt" | "llm" | "output" | "note", x: number, y: number): Promise<void> => {
+	const createNode = useCallback(async (type: FlowDocumentNodeType, x: number, y: number): Promise<void> => {
 		const flowId = snapshotRef.current?.flow.flowId;
 		if (flowId === undefined) return;
 		try {
 			await enqueueMutation(async (): Promise<void> => {
 				const current = snapshotRef.current;
 				if (current === null || current.flow.flowId !== flowId) return;
-				const next = await createFlowNode({ flowId: current.flow.flowId, revision: current.flow.revision, type, x, y, title: type === "llm" ? "LLM" : type[0].toUpperCase() + type.slice(1), config: type === "prompt" ? { text: "" } : type === "note" ? { text: "" } : type === "output" ? { format: "text" } : { provider: defaultFlow.provider ?? "", model: defaultFlow.model ?? "", reasoningEffort: defaultFlow.reasoningEffort ?? "" } });
+				if (current.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting")) throw new Error("Stop the active Flow run before editing the graph.");
+				const definition = nodeDefinitions.find((candidate): boolean => candidate.type === type);
+				const config = { ...(definition?.defaultConfig ?? {}), ...(type === "llm" ? { provider: defaultFlow.provider ?? "", model: defaultFlow.model ?? "", reasoningEffort: defaultFlow.reasoningEffort ?? "" } : {}) };
+				const next = await createFlowNode({ flowId: current.flow.flowId, revision: current.flow.graphRevision, type, x, y, title: definition?.defaultTitle, config });
 				applySnapshot(next);
 			});
 		} catch (createError: unknown) { setError(errorMessage(createError)); }
-	}, [applySnapshot, defaultFlow.model, defaultFlow.provider, defaultFlow.reasoningEffort, enqueueMutation]);
+	}, [applySnapshot, defaultFlow.model, defaultFlow.provider, defaultFlow.reasoningEffort, enqueueMutation, nodeDefinitions]);
+
+	const createConnectedNode = useCallback(async (params: { type: FlowDocumentNodeType; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "artifact" }): Promise<void> => {
+		const flowId = snapshotRef.current?.flow.flowId;
+		if (flowId === undefined) return;
+		try {
+			await enqueueMutation(async (): Promise<void> => {
+				const current = snapshotRef.current;
+				if (current === null || current.flow.flowId !== flowId) return;
+				if (current.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting")) throw new Error("Stop the active Flow run before editing the graph.");
+				const definition = nodeDefinitions.find((candidate): boolean => candidate.type === params.type);
+				const config = { ...(definition?.defaultConfig ?? {}), ...(params.type === "llm" ? { provider: defaultFlow.provider ?? "", model: defaultFlow.model ?? "", reasoningEffort: defaultFlow.reasoningEffort ?? "" } : {}) };
+				const result = await createConnectedFlowNode({
+					flowId,
+					revision: current.flow.graphRevision,
+					type: params.type,
+					x: params.x,
+					y: params.y,
+					title: definition?.defaultTitle,
+					config,
+					connection: { direction: params.direction, existingNodeId: params.existingNodeId, existingPort: params.existingPort, newPort: params.newPort, dataType: params.dataType },
+				});
+				applySnapshot(result.snapshot);
+			});
+		} catch (createError: unknown) { setError(errorMessage(createError)); }
+	}, [applySnapshot, defaultFlow.model, defaultFlow.provider, defaultFlow.reasoningEffort, enqueueMutation, nodeDefinitions]);
 
 	const updateNode = useCallback(async (nodeId: string, patch: Record<string, unknown>): Promise<void> => {
 		const flowId = snapshotRef.current?.flow.flowId;
@@ -322,7 +396,8 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		try { await enqueueMutation(async (): Promise<void> => {
 			const current = snapshotRef.current;
 			if (current === null || current.flow.flowId !== flowId) return;
-			applySnapshot(await updateFlowNode({ flowId: current.flow.flowId, nodeId, revision: current.flow.revision, patch: patch as never }));
+			if (current.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting")) throw new Error("Stop the active Flow run before editing the graph.");
+			applySnapshot(await updateFlowNode({ flowId: current.flow.flowId, nodeId, revision: current.flow.graphRevision, patch: patch as never }));
 		}); }
 		catch (updateError: unknown) { setError(errorMessage(updateError)); }
 	}, [applySnapshot, enqueueMutation]);
@@ -334,7 +409,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			const current = snapshotRef.current;
 			if (current === null || current.flow.flowId !== flowId) return;
 			ignoreFlowEventsUntilRef.current = Date.now() + 1_000;
-			const next = await updateFlowNode({ flowId, nodeId, revision: current.flow.revision, patch: { x, y } });
+			const next = await updateFlowNode({ flowId, nodeId, revision: current.flow.layoutRevision, patch: { x, y } });
 			if (snapshotRef.current?.flow.flowId === flowId) snapshotRef.current = next;
 		}); }
 		catch (updateError: unknown) { setError(errorMessage(updateError)); }
@@ -346,19 +421,21 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		try { await enqueueMutation(async (): Promise<void> => {
 			const current = snapshotRef.current;
 			if (current === null || current.flow.flowId !== flowId) return;
-			applySnapshot(await deleteFlowNode({ flowId: current.flow.flowId, nodeId, revision: current.flow.revision }));
+			if (current.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting")) throw new Error("Stop the active Flow run before editing the graph.");
+			applySnapshot(await deleteFlowNode({ flowId: current.flow.flowId, nodeId, revision: current.flow.graphRevision }));
 		}); }
 		catch (deleteError: unknown) { setError(errorMessage(deleteError)); }
 	}, [applySnapshot, enqueueMutation]);
 
-	const createEdge = useCallback(async (sourceNodeId: string, targetNodeId: string, sourcePort = "output", targetPort = "input"): Promise<void> => {
+	const createEdge = useCallback(async (sourceNodeId: string, targetNodeId: string, sourcePort = "output", targetPort = "input", dataType: "text" | "json" | "artifact" = "text"): Promise<void> => {
 		const flowId = snapshotRef.current?.flow.flowId;
 		if (flowId === undefined) return;
 		setError(null);
 		try { await enqueueMutation(async (): Promise<void> => {
 			const current = snapshotRef.current;
 			if (current === null || current.flow.flowId !== flowId) return;
-			applySnapshot(await createFlowEdge({ flowId: current.flow.flowId, revision: current.flow.revision, sourceNodeId, sourcePort, targetNodeId, targetPort, dataType: "text" }));
+			if (current.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting")) throw new Error("Stop the active Flow run before editing the graph.");
+			applySnapshot(await createFlowEdge({ flowId: current.flow.flowId, revision: current.flow.graphRevision, sourceNodeId, sourcePort, targetNodeId, targetPort, dataType }));
 		}); }
 		catch (edgeError: unknown) { setError(errorMessage(edgeError)); }
 	}, [applySnapshot, enqueueMutation]);
@@ -369,7 +446,8 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		try { await enqueueMutation(async (): Promise<void> => {
 			const current = snapshotRef.current;
 			if (current === null || current.flow.flowId !== flowId) return;
-			applySnapshot(await deleteFlowEdge({ flowId: current.flow.flowId, edgeId, revision: current.flow.revision }));
+			if (current.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting")) throw new Error("Stop the active Flow run before editing the graph.");
+			applySnapshot(await deleteFlowEdge({ flowId: current.flow.flowId, edgeId, revision: current.flow.graphRevision }));
 		}); }
 		catch (edgeError: unknown) { setError(errorMessage(edgeError)); }
 	}, [applySnapshot, enqueueMutation]);
@@ -381,7 +459,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			const current = snapshotRef.current;
 			if (current === null || current.flow.flowId !== flowId) return;
 			ignoreFlowEventsUntilRef.current = Date.now() + 1_000;
-			const flow = await updateFlowViewport({ flowId: current.flow.flowId, revision: current.flow.revision, viewport });
+			const flow = await updateFlowViewport({ flowId: current.flow.flowId, revision: current.flow.layoutRevision, viewport });
 			if (snapshotRef.current?.flow.flowId === flowId) snapshotRef.current = { ...snapshotRef.current, flow };
 		}); }
 		catch (viewportError: unknown) { setError(errorMessage(viewportError)); }
@@ -390,17 +468,39 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	const startRun = useCallback(async (forceNodeIds?: string[]): Promise<void> => {
 		const current = snapshotRef.current;
 		if (current === null) return;
-		try { await startFlowRun({ flowId: current.flow.flowId, revision: current.flow.revision, ...(forceNodeIds === undefined ? {} : { forceNodeIds }) }); void refresh(); }
+		try { await startFlowRun({ flowId: current.flow.flowId, revision: current.flow.graphRevision, ...(forceNodeIds === undefined ? {} : { forceNodeIds }) }); void refresh(); }
 		catch (runError: unknown) { setError(errorMessage(runError)); }
 	}, [refresh]);
 
 	const stopRun = useCallback(async (): Promise<void> => {
 		const current = snapshotRef.current;
-		const active = current?.runs.find((run): boolean => run.status === "running" || run.status === "queued");
+		const active = current?.runs.find((run): boolean => run.status === "running" || run.status === "queued" || run.status === "waiting");
 		if (current === null || active === undefined) return;
 		try { await stopFlowRun(current.flow.flowId, active.runId); void refresh(); }
 		catch (stopError: unknown) { setError(errorMessage(stopError)); }
 	}, [refresh]);
+
+	const setApprovalMode = useCallback(async (mode: FlowDocument["approvalMode"]): Promise<void> => {
+		const current = snapshotRef.current;
+		if (current === null) return;
+		try {
+			const flow = await updateFlowSettings({ flowId: current.flow.flowId, revision: current.flow.revision, approvalMode: mode });
+			if (snapshotRef.current?.flow.flowId === flow.flowId) applySnapshot({ ...snapshotRef.current, flow });
+		} catch (settingsError: unknown) { setError(errorMessage(settingsError)); }
+	}, [applySnapshot]);
+
+	const resolveApproval = useCallback(async (approvalId: string, decision: "approve" | "reject", consentText?: string): Promise<void> => {
+		const current = snapshotRef.current;
+		if (current === null) return;
+		const approval = approvals.find((candidate): boolean => candidate.approvalId === approvalId);
+		if (approval === undefined) return;
+		try {
+			await resolveFlowApproval({ flowId: current.flow.flowId, runId: approval.runId, approvalId, decision, ...(consentText === undefined ? {} : { consentText }) });
+			const [next, approvalResult] = await Promise.all([fetchFlow(current.flow.flowId), listFlowApprovals(current.flow.flowId)]);
+			applySnapshot(next);
+			setApprovals(approvalResult.approvals);
+		} catch (approvalError: unknown) { setError(errorMessage(approvalError)); }
+	}, [applySnapshot, approvals]);
 
 	const copyCurrentBranchToChat = useCallback(async (): Promise<void> => {
 		const current = snapshotRef.current;
@@ -428,6 +528,10 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		flowBranchSessionIdsByFlow: {},
 		flowRuntimeStatusById,
 		snapshot,
+		nodeDefinitions,
+		tools,
+		approvals,
+		isGraphLocked,
 		isNewFlowHome,
 		newFlowWorkspaceId,
 		selectedBranchId: null,
@@ -451,6 +555,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		archiveCurrentFlow,
 		updateFlowOrder,
 		createNode,
+		createConnectedNode,
 		updateNode,
 		updateNodePosition,
 		deleteNode,
@@ -459,5 +564,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		updateViewport,
 		startRun,
 		stopRun,
+		setApprovalMode,
+		resolveApproval,
 	};
 }

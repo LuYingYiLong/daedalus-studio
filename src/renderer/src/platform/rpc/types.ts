@@ -277,15 +277,18 @@ export type ConversationFlowSnapshot = {
 };
 
 
-export type FlowDocumentNodeType = "prompt" | "llm" | "output" | "note";
+export type FlowDocumentNodeType = "prompt" | "text" | "template" | "merge" | "json_extract" | "condition" | "file_input" | "llm" | "tool" | "command" | "output" | "note";
 export type FlowDocumentNodeStatus = "idle" | "queued" | "running" | "waiting" | "completed" | "cached" | "failed" | "cancelled" | "skipped";
-export type FlowDocumentRunStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
+export type FlowDocumentRunStatus = "queued" | "running" | "waiting" | "completed" | "failed" | "cancelled";
 export type FlowDocument = {
 	flowId: string;
 	title: string;
 	workspaceId: string | null;
 	pinned: boolean;
 	revision: number;
+	graphRevision: number;
+	layoutRevision: number;
+	approvalMode: "manual" | "auto-safe" | "full-trust";
 	viewport: { x: number; y: number; zoom: number };
 	archivedAt: string | null;
 	createdAt: string;
@@ -708,6 +711,42 @@ export type WorkbenchSnapshot = {
 		workspaceRoot?: string | null;
 		[key: string]: unknown;
 	};
+};
+export type FlowNodePortDefinition = {
+	id: string;
+	label: string;
+	direction: "input" | "output";
+	dataTypes: Array<"text" | "json" | "artifact">;
+	required: boolean;
+	multiple: boolean;
+	defaultConnect: boolean;
+};
+export type FlowNodeTypeDefinition = {
+	type: FlowDocumentNodeType;
+	category: "basic" | "ai" | "workspace";
+	workspaceRequired: boolean;
+	sideEffecting: boolean;
+	defaultTitle: string;
+	defaultConfig: Record<string, unknown>;
+	ports: FlowNodePortDefinition[];
+};
+export type FlowToolDefinition = {
+	name: string;
+	description: string;
+	inputSchema: Record<string, unknown>;
+	risk: "read" | "verify" | "propose" | "write" | "destructive";
+};
+export type FlowApproval = {
+	approvalId: string;
+	flowId: string;
+	runId: string;
+	nodeId: string;
+	toolName: string;
+	reason: string;
+	status: "pending" | "approved" | "rejected" | "cancelled";
+	requiredConsent: { prompt: string; expectedText: string } | null;
+	createdAt: string;
+	resolvedAt: string | null;
 };
 
 export type SubagentGraphStatus =
