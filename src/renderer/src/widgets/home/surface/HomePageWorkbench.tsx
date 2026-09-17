@@ -179,7 +179,7 @@ function HomePageWorkbench({
 					) : null}
 				</Splitter.Panel>
 			</Splitter>
-			{isDockFullscreen && !isFullscreenBrowserPanel ? (
+			{isDockFullscreen && !isFullscreenBrowserPanel && primarySurface !== "flow" ? (
 				<FullscreenComposerShelf>
 					{renderComposer(true)}
 				</FullscreenComposerShelf>

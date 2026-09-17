@@ -1,64 +1,37 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ChatMode } from "@/platform/rpc/chat-api";
 import {
 	archiveFlow,
-	copyFlowBranchToChat,
 	createFlow,
-	createFlowBranch,
-	createFlowFromSession,
+	createFlowEdge,
+	createFlowNode,
+	exportFlowToSession,
 	fetchFlow,
-	fetchFlowNode,
 	fetchFlows,
+	importFlowFromSession,
 	renameFlow,
+	startFlowRun,
+	stopFlowRun,
+	updateFlowNode,
+	deleteFlowNode,
+	deleteFlowEdge,
+	updateFlowViewport,
 	updateFlowTreeOrder as persistFlowTreeOrder,
+	type CreateFlowParams,
 } from "@/platform/rpc/flow-api";
 import { onBackendEvent, onBackendReconnected } from "@/platform/rpc/transport/backend-client";
 import type {
-	ConversationFlowBranch,
-	ConversationFlowNode,
-	ConversationFlowSnapshot,
 	ConversationFlowSummary,
+	FlowDocument,
+	FlowDocumentNode,
+	FlowDocumentSnapshot,
 	FlowTreeOrder,
 	FlowTreeOrderUpdate,
 	SessionMetadata,
-	TimelineBlock,
 } from "@/platform/rpc/types";
-import type { CreateFlowParams } from "@/platform/rpc/flow-api";
 
-export type FlowNodeDetail = {
-	node: ConversationFlowNode;
-	block: TimelineBlock;
-};
-
-export type HomeFlowController = {
-	flows: ConversationFlowSummary[];
-	flowOrder: FlowTreeOrder | null;
-	flowBranchSessionIdsByFlow: Readonly<Record<string, readonly string[]>>;
-	snapshot: ConversationFlowSnapshot | null;
-	isNewFlowHome: boolean;
-	newFlowWorkspaceId: string | null;
-	selectedBranchId: string | null;
-	selectedNodeDetail: FlowNodeDetail | null;
-	isLoading: boolean;
-	isMutating: boolean;
-	error: string | null;
-	refresh: () => Promise<void>;
-	createNewFlow: (workspaceId?: string | null) => Promise<void>;
-	setNewFlowWorkspace: (workspaceId: string | null) => void;
-	submitNewFlowMessage: (message: string, modeOverride?: ChatMode) => Promise<void>;
-	createFromChat: (session: SessionMetadata) => Promise<boolean>;
-	selectFlow: (flowId: string) => Promise<void>;
-	selectBranch: (branchId: string) => void;
-	selectNode: (nodeId: string | null) => Promise<void>;
-	deriveFromNode: (node: ConversationFlowNode) => Promise<void>;
-	copyCurrentBranchToChat: () => Promise<void>;
-	renameCurrentFlow: (title: string) => Promise<void>;
-	renameFlowById: (flowId: string, title: string) => Promise<void>;
-	archiveFlowById: (flowId: string) => Promise<void>;
-	archiveCurrentFlow: () => Promise<void>;
-	updateFlowOrder: (order: FlowTreeOrderUpdate) => Promise<void>;
-};
+export type FlowNodeDetail = { node: FlowDocumentNode };
 
 type UseHomeFlowControllerParams = {
 	enabled: boolean;
@@ -75,374 +48,210 @@ type UseHomeFlowControllerParams = {
 	onOpenChat: (session: SessionMetadata) => void;
 };
 
-function asSessionReference(branch: ConversationFlowBranch): SessionMetadata {
-	return {
-		id: branch.sessionId,
-		title: "Flow branch",
-		surface: "flow_branch",
-		flow: { flowId: branch.flowId, branchId: branch.branchId },
-		createdAt: branch.createdAt,
-		updatedAt: branch.updatedAt,
-	};
-}
+export type HomeFlowController = {
+	flows: ConversationFlowSummary[];
+	flowOrder: FlowTreeOrder | null;
+	flowBranchSessionIdsByFlow: Readonly<Record<string, readonly string[]>>;
+	flowRuntimeStatusById: Readonly<Record<string, "running" | "failed" | "completed">>;
+	snapshot: FlowDocumentSnapshot | null;
+	isNewFlowHome: boolean;
+	newFlowWorkspaceId: string | null;
+	selectedBranchId: string | null;
+	selectedNodeDetail: FlowNodeDetail | null;
+	isLoading: boolean;
+	isMutating: boolean;
+	error: string | null;
+	refresh: () => Promise<void>;
+	createNewFlow: (workspaceId?: string | null) => Promise<void>;
+	setNewFlowWorkspace: (workspaceId: string | null) => void;
+	submitNewFlowMessage: (message: string, modeOverride?: ChatMode) => Promise<void>;
+	createFromChat: (session: SessionMetadata) => Promise<boolean>;
+	selectFlow: (flowId: string) => Promise<void>;
+	selectBranch: (branchId: string) => void;
+	selectNode: (nodeId: string | null) => Promise<void>;
+	deriveFromNode: (node: FlowDocumentNode) => Promise<void>;
+	copyCurrentBranchToChat: () => Promise<void>;
+	renameCurrentFlow: (title: string) => Promise<void>;
+	renameFlowById: (flowId: string, title: string) => Promise<void>;
+	archiveFlowById: (flowId: string) => Promise<void>;
+	archiveCurrentFlow: () => Promise<void>;
+	updateFlowOrder: (order: FlowTreeOrderUpdate) => Promise<void>;
+	createNode: (type: "prompt" | "llm" | "output" | "note", x: number, y: number) => Promise<void>;
+	updateNode: (nodeId: string, patch: Record<string, unknown>) => Promise<void>;
+	updateNodePosition: (nodeId: string, x: number, y: number) => Promise<void>;
+	deleteNode: (nodeId: string) => Promise<void>;
+	createEdge: (sourceNodeId: string, targetNodeId: string, sourcePort?: string, targetPort?: string) => Promise<void>;
+	deleteEdge: (edgeId: string) => Promise<void>;
+	updateViewport: (viewport: { x: number; y: number; zoom: number }) => Promise<void>;
+	startRun: (forceNodeIds?: string[]) => Promise<void>;
+	stopRun: () => Promise<void>;
+};
 
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
-export default function useHomeFlowController({
-	enabled,
-	defaultFlow,
-	activeSessionId,
-	activeSessionMetadata,
-	composerMessage,
-	isSessionLoading,
-	isSending,
-	onSessionSelect,
-	onDraftChange,
-	onSubmit,
-	onBeginNewFlow,
-	onOpenChat,
-}: UseHomeFlowControllerParams): HomeFlowController {
+function toSummary(flow: FlowDocument): ConversationFlowSummary {
+	return {
+		flowId: flow.flowId,
+		title: flow.title,
+		workspaceId: flow.workspaceId,
+		pinned: flow.pinned,
+		rootBranchId: "",
+		revision: flow.revision,
+		activeBranchId: null,
+		activeRequestId: null,
+		archivedAt: flow.archivedAt,
+		createdFromSessionId: null,
+		createdAt: flow.createdAt,
+		updatedAt: flow.updatedAt,
+		branchCount: 0,
+	};
+}
+
+export default function useHomeFlowController(params: UseHomeFlowControllerParams): HomeFlowController {
 	const { t } = useTranslation();
+	const {
+		enabled,
+		defaultFlow,
+		onOpenChat,
+	} = params;
 	const [flows, setFlows] = useState<ConversationFlowSummary[]>([]);
 	const [flowOrder, setFlowOrder] = useState<FlowTreeOrder | null>(null);
-	const [flowBranchSessionIdsByFlow, setFlowBranchSessionIdsByFlow] = useState<Record<string, string[]>>({});
-	const [snapshot, setSnapshot] = useState<ConversationFlowSnapshot | null>(null);
+	const [flowRuntimeStatusById, setFlowRuntimeStatusById] = useState<Record<string, "running" | "failed" | "completed">>({});
+	const [snapshot, setSnapshot] = useState<FlowDocumentSnapshot | null>(null);
 	const [isNewFlowHome, setIsNewFlowHome] = useState<boolean>(false);
 	const [newFlowWorkspaceId, setNewFlowWorkspaceId] = useState<string | null>(null);
-	const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
 	const [selectedNodeDetail, setSelectedNodeDetail] = useState<FlowNodeDetail | null>(null);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isMutating, setIsMutating] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
-	const flowsRef = useRef<ConversationFlowSummary[]>(flows);
-	const lastBranchByFlowRef = useRef<Map<string, string>>(new Map());
-	const pendingRegenerationRef = useRef<{
-		branchId: string;
-		draftApplied: boolean;
-		sessionId: string;
-		text: string;
-	} | null>(null);
-	const pendingNewFlowSubmissionRef = useRef<{
-		branchId: string;
-		modeOverride?: ChatMode;
-		sessionId: string;
-		text: string;
-	} | null>(null);
-	const pendingNewFlowWorkspaceIdRef = useRef<string | null | undefined>(undefined);
-	const newFlowCreationInFlightRef = useRef<boolean>(false);
-	const pendingFlowTitleRef = useRef<string | null>(null);
-	const refreshTimerRef = useRef<number | null>(null);
-	const refreshRef = useRef<() => Promise<void>>((): Promise<void> => Promise.resolve());
-	const snapshotRef = useRef<ConversationFlowSnapshot | null>(snapshot);
-	const flowOrderSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
-	const flowOrderSaveRevisionRef = useRef<number>(0);
-	const activeFlowSessionRef = useRef<NonNullable<SessionMetadata["flow"]> | null>(null);
-	const onSessionSelectRef = useRef(onSessionSelect);
-	const previousEnabledRef = useRef<boolean>(false);
-	snapshotRef.current = snapshot;
-	flowsRef.current = flows;
-	const newFlowHomeRef = useRef<boolean>(isNewFlowHome);
-	newFlowHomeRef.current = isNewFlowHome;
-	activeFlowSessionRef.current =
-		activeSessionMetadata?.surface === "flow_branch"
-			? activeSessionMetadata.flow ?? null
-			: null;
-	onSessionSelectRef.current = onSessionSelect;
+	const snapshotRef = useRef<FlowDocumentSnapshot | null>(null);
+	const selectedFlowIdRef = useRef<string | null>(null);
+	const refreshRef = useRef<() => Promise<void>>(() => Promise.resolve());
+	const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
+	const ignoreFlowEventsUntilRef = useRef<number>(0);
 
-	const activateBranch = useCallback((branch: ConversationFlowBranch): void => {
-		setSelectedBranchId(branch.branchId);
-		lastBranchByFlowRef.current.set(branch.flowId, branch.branchId);
-		onSessionSelectRef.current(asSessionReference(branch));
+	const enqueueMutation = useCallback(<T,>(operation: () => Promise<T>): Promise<T> => {
+		const next = mutationQueueRef.current.catch((): void => undefined).then(operation);
+		mutationQueueRef.current = next.then((): void => undefined, (): void => undefined);
+		return next;
 	}, []);
 
-	const loadFlow = useCallback(async (flowId: string, activate: boolean = true): Promise<void> => {
+	const applySnapshot = useCallback((next: FlowDocumentSnapshot): void => {
+		snapshotRef.current = next;
+		selectedFlowIdRef.current = next.flow.flowId;
+		setSnapshot(next);
+		setIsNewFlowHome(next.nodes.length === 0);
+		setNewFlowWorkspaceId(next.flow.workspaceId);
+		const latestRun = next.runs[0];
+		if (latestRun !== undefined) setFlowRuntimeStatusById((current): Record<string, "running" | "failed" | "completed"> => ({ ...current, [next.flow.flowId]: latestRun.status === "running" || latestRun.status === "queued" ? "running" : latestRun.status === "failed" ? "failed" : "completed" }));
+	}, []);
+
+	const refresh = useCallback(async (): Promise<void> => {
 		setIsLoading(true);
 		setError(null);
 		try {
-			const next: ConversationFlowSnapshot = await fetchFlow(flowId);
-			setSnapshot((current): ConversationFlowSnapshot => {
-				if (current?.flow.flowId === flowId && current.flow.revision > next.flow.revision) return current;
-				return next;
-			});
-			if (activate) {
-				const remembered: string | undefined = lastBranchByFlowRef.current.get(flowId);
-				const branch: ConversationFlowBranch | undefined = next.branches.find(
-					(candidate): boolean => candidate.branchId === remembered,
-				) ?? next.branches.find((candidate): boolean => candidate.branchId === next.flow.rootBranchId);
-				if (branch !== undefined) activateBranch(branch);
+			const result = await fetchFlows();
+			setFlows(result.flows.map(toSummary));
+			if (result.order !== undefined) setFlowOrder(result.order);
+			const selectedId = selectedFlowIdRef.current;
+			const selected = selectedId === null ? undefined : result.flows.find((flow): boolean => flow.flowId === selectedId);
+			if (selected !== undefined) {
+				applySnapshot(await fetchFlow(selected.flowId));
+			} else if (enabled && result.flows[0] !== undefined) {
+				applySnapshot(await fetchFlow(result.flows[0].flowId));
+			} else if (enabled && result.flows.length === 0) {
+				selectedFlowIdRef.current = null;
+				snapshotRef.current = null;
+				setSnapshot(null);
+				setIsNewFlowHome(true);
 			}
 		} catch (loadError: unknown) {
 			setError(errorMessage(loadError));
 		} finally {
 			setIsLoading(false);
 		}
-	}, [activateBranch]);
-	const beginNewFlowHome = useCallback((workspaceId: string | null = null): void => {
-		if (newFlowHomeRef.current) {
-			pendingNewFlowWorkspaceIdRef.current = workspaceId;
-			setNewFlowWorkspaceId(workspaceId);
-			return;
-		}
-		onBeginNewFlow();
-		pendingNewFlowWorkspaceIdRef.current = workspaceId;
-		setNewFlowWorkspaceId(workspaceId);
-		pendingFlowTitleRef.current = t("flow.defaultTitle", { count: flowsRef.current.length + 1 });
-		pendingNewFlowSubmissionRef.current = null;
-		setError(null);
-		setSnapshot(null);
-		snapshotRef.current = null;
-		setSelectedBranchId(null);
-		setSelectedNodeDetail(null);
-		setIsNewFlowHome(true);
-		newFlowHomeRef.current = true;
-	}, [onBeginNewFlow, t]);
-
-	const refresh = useCallback(async (): Promise<void> => {
-		setIsLoading(true);
-		try {
-			const result = await fetchFlows();
-			setFlows(result.flows);
-			if (result.order !== undefined) setFlowOrder(result.order);
-			if (newFlowHomeRef.current) return;
-			const currentFlowId: string | undefined = snapshotRef.current?.flow.flowId;
-			const currentFlowIsAvailable: boolean = currentFlowId !== undefined &&
-				result.flows.some((flow): boolean => flow.flowId === currentFlowId);
-			if (currentFlowIsAvailable && currentFlowId !== undefined) {
-				await loadFlow(currentFlowId, false);
-			} else if (enabled && result.flows[0] !== undefined) {
-				await loadFlow(result.flows[0].flowId, true);
-			} else if (enabled && result.flows.length === 0) {
-				beginNewFlowHome();
-			}
-		} catch (refreshError: unknown) {
-			setError(errorMessage(refreshError));
-		} finally {
-			setIsLoading(false);
-		}
-	}, [beginNewFlowHome, enabled, loadFlow]);
+	}, [applySnapshot, enabled]);
 	refreshRef.current = refresh;
 
 	useEffect((): void => {
-		const enteringFlow: boolean = enabled && !previousEnabledRef.current;
-		previousEnabledRef.current = enabled;
-		if (!enteringFlow) return;
-		if (activeFlowSessionRef.current !== null || newFlowHomeRef.current) return;
-		const current = snapshotRef.current;
-		const selected = current?.branches.find((branch): boolean => branch.branchId === selectedBranchId);
-		if (selected !== undefined) {
-			activateBranch(selected);
-		}
+		if (!enabled) return;
 		void refresh();
-	}, [activateBranch, enabled, refresh, selectedBranchId]);
-
-	useEffect((): (() => void) | void => {
-		if (!enabled || newFlowHomeRef.current || activeFlowSessionRef.current === null) return;
-		const activeFlowSession = activeFlowSessionRef.current;
-		if (activeFlowSession === null) return;
-		const { flowId, branchId } = activeFlowSession;
-		lastBranchByFlowRef.current.set(flowId, branchId);
-		const current = snapshotRef.current;
-		if (current?.flow.flowId === flowId) {
-			setSelectedBranchId(branchId);
-			return;
-		}
-
-		let cancelled: boolean = false;
-		void loadFlow(flowId, false).then((): void => {
-			if (
-				cancelled ||
-				!enabled ||
-				activeFlowSessionRef.current?.flowId !== flowId ||
-				activeFlowSessionRef.current?.branchId !== branchId
-			) {
-				return;
-			}
-			setSelectedBranchId(branchId);
-		});
-		return (): void => {
-			cancelled = true;
-		};
-	}, [activeSessionMetadata?.flow?.branchId, activeSessionMetadata?.flow?.flowId, enabled, loadFlow]);
+	}, [enabled, refresh]);
 
 	useEffect((): (() => void) => {
 		let unsubscribe: (() => void) | undefined;
 		void onBackendEvent((event): void => {
-			const current: ConversationFlowSnapshot | null = snapshotRef.current;
-			if (current === null) return;
-			const data = typeof event.data === "object" && event.data !== null
-				? event.data as Record<string, unknown>
-				: {};
-			const selectedSessionIds: Set<string> = new Set(current.branches.map((branch): string => branch.sessionId));
-			if (data.flowId !== current.flow.flowId && (event.sessionId === undefined || !selectedSessionIds.has(event.sessionId))) return;
-			if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current);
-			refreshTimerRef.current = window.setTimeout((): void => {
-				refreshTimerRef.current = null;
-				void refreshRef.current();
-			}, event.event === "agent.message.delta" ? 180 : 20);
+			const data = typeof event.data === "object" && event.data !== null ? event.data as Record<string, unknown> : {};
+			const flowId = typeof data.flowId === "string" ? data.flowId : null;
+			if (flowId === null || flowId !== selectedFlowIdRef.current) return;
+			if (Date.now() < ignoreFlowEventsUntilRef.current) return;
+			window.setTimeout((): void => { void refreshRef.current(); }, event.event === "flow.node.state" ? 180 : 30);
 		}).then((dispose): void => { unsubscribe = dispose; });
-		const offReconnect = onBackendReconnected((): void => {
-			if (enabled) void refreshRef.current();
-		});
-		return (): void => {
-			unsubscribe?.();
-			offReconnect();
-			if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current);
-		};
+		const offReconnect = onBackendReconnected((): void => { if (enabled) void refreshRef.current(); });
+		return (): void => { unsubscribe?.(); offReconnect(); };
 	}, [enabled]);
 
-	useEffect((): void => {
-		if (snapshot === null) return;
-		const flowId: string = snapshot.flow.flowId;
-		const sessionIds: string[] = snapshot.branches.map((branch): string => branch.sessionId);
-		setFlowBranchSessionIdsByFlow((current): Record<string, string[]> => {
-			const previous: string[] | undefined = current[flowId];
-			if (
-				previous !== undefined &&
-				previous.length === sessionIds.length &&
-				previous.every((sessionId, index): boolean => sessionId === sessionIds[index])
-			) {
-				return current;
-			}
-			return { ...current, [flowId]: sessionIds };
-		});
-	}, [snapshot]);
-
-	useEffect((): void => {
-		const pending = pendingRegenerationRef.current;
-		if (
-			pending === null ||
-			isSessionLoading ||
-			isSending ||
-			activeSessionId !== pending.sessionId ||
-			activeSessionMetadata?.flow?.branchId !== pending.branchId
-		) return;
-		if (!pending.draftApplied) {
-			pending.draftApplied = true;
-			onDraftChange(pending.text);
-			return;
-		}
-		if (composerMessage !== pending.text) return;
-		pendingRegenerationRef.current = null;
-		onSubmit(pending.text);
-	}, [activeSessionId, activeSessionMetadata?.flow?.branchId, composerMessage, isSending, isSessionLoading, onDraftChange, onSubmit]);
-
 	const createNewFlow = useCallback(async (workspaceId?: string | null): Promise<void> => {
-		if (newFlowCreationInFlightRef.current) return;
-		beginNewFlowHome(workspaceId ?? null);
-	}, [beginNewFlowHome]);
+		setIsMutating(true);
+		setError(null);
+		try {
+			const next = await createFlow({
+				title: t("flow.defaultTitle", { count: flows.length + 1 }),
+				...(workspaceId === undefined || workspaceId === null ? {} : { workspaceId }),
+			});
+			applySnapshot(next);
+			setIsNewFlowHome(true);
+			const result = await fetchFlows();
+			setFlows(result.flows.map(toSummary));
+			if (result.order !== undefined) setFlowOrder(result.order);
+		} catch (mutationError: unknown) {
+			setError(errorMessage(mutationError));
+		} finally {
+			setIsMutating(false);
+		}
+	}, [applySnapshot, flows.length, t]);
+
 	const setNewFlowWorkspace = useCallback((workspaceId: string | null): void => {
-		if (!newFlowHomeRef.current) return;
-		pendingNewFlowWorkspaceIdRef.current = workspaceId;
 		setNewFlowWorkspaceId(workspaceId);
 	}, []);
 
 	const submitNewFlowMessage = useCallback(async (message: string, modeOverride?: ChatMode): Promise<void> => {
-		const text: string = message.trim();
-		if (!newFlowHomeRef.current || text.length === 0 || newFlowCreationInFlightRef.current) return;
-		newFlowCreationInFlightRef.current = true;
+		const text = message.trim();
+		const current = snapshotRef.current;
+		if (text.length === 0 || current === null) return;
 		setIsMutating(true);
 		setError(null);
 		try {
-			const title: string = pendingFlowTitleRef.current ?? t("flow.defaultTitle", { count: flows.length + 1 });
-			const { workspaceId: defaultWorkspaceId, ...flowDefaults } = defaultFlow;
-			const selectedWorkspaceId: string | undefined =
-				pendingNewFlowWorkspaceIdRef.current === null
-					? undefined
-					: (pendingNewFlowWorkspaceIdRef.current ?? defaultWorkspaceId);
-			const next = await createFlow({
-				...flowDefaults,
-				...(selectedWorkspaceId === undefined ? {} : { workspaceId: selectedWorkspaceId }),
-				...(modeOverride === undefined ? {} : { chatMode: modeOverride }),
-				title,
-			});
-			const root = next.branches.find((branch): boolean => branch.branchId === next.flow.rootBranchId);
-			if (root === undefined) throw new Error("Flow did not return a root branch.");
-			pendingNewFlowSubmissionRef.current = {
-				branchId: root.branchId,
-				modeOverride,
-				sessionId: root.sessionId,
-				text,
-			};
-			setSnapshot(next);
+			const prompt = await createFlowNode({ flowId: current.flow.flowId, revision: current.flow.revision, type: "prompt", x: 80, y: 160, title: "Prompt", config: { text } });
+			const llm = await createFlowNode({ flowId: prompt.flow.flowId, revision: prompt.flow.revision, type: "llm", x: 390, y: 160, title: "LLM", config: { provider: defaultFlow.provider ?? "", model: defaultFlow.model ?? "", reasoningEffort: defaultFlow.reasoningEffort ?? "" } });
+			const output = await createFlowNode({ flowId: llm.flow.flowId, revision: llm.flow.revision, type: "output", x: 700, y: 160, title: "Output", config: { format: "text" } });
+			const firstEdge = await createFlowEdge({ flowId: output.flow.flowId, revision: output.flow.revision, sourceNodeId: prompt.nodes[0]?.nodeId ?? "", sourcePort: "output", targetNodeId: llm.nodes[0]?.nodeId ?? "", targetPort: "input", dataType: "text" });
+			const lastPrompt = prompt.nodes.find((node): boolean => node.type === "prompt");
+			const lastLlm = llm.nodes.find((node): boolean => node.type === "llm");
+			if (lastPrompt !== undefined && lastLlm !== undefined) {
+				const final = await createFlowEdge({ flowId: output.flow.flowId, revision: firstEdge.flow.revision, sourceNodeId: lastLlm.nodeId, sourcePort: "output", targetNodeId: output.nodes.find((node): boolean => node.type === "output")?.nodeId ?? "", targetPort: "input", dataType: "text" });
+				applySnapshot(final);
+			} else applySnapshot(firstEdge);
 			setIsNewFlowHome(false);
-			newFlowHomeRef.current = false;
-			pendingNewFlowWorkspaceIdRef.current = undefined;
-			setNewFlowWorkspaceId(null);
-			activateBranch(root);
-			const result = await fetchFlows();
-			setFlows(result.flows);
-			if (result.order !== undefined) setFlowOrder(result.order);
+			const latest = snapshotRef.current;
+			if (latest !== null) await startFlowRun({ flowId: latest.flow.flowId, revision: latest.flow.revision });
+			void modeOverride;
 		} catch (mutationError: unknown) {
-			pendingNewFlowSubmissionRef.current = null;
 			setError(errorMessage(mutationError));
-			onDraftChange(text);
 		} finally {
-			newFlowCreationInFlightRef.current = false;
 			setIsMutating(false);
 		}
-	}, [activateBranch, defaultFlow, flows.length, onDraftChange, t]);
-
-	const updateFlowOrder = useCallback(async (nextOrder: FlowTreeOrderUpdate): Promise<void> => {
-		const revision: number = flowOrderSaveRevisionRef.current + 1;
-		flowOrderSaveRevisionRef.current = revision;
-		const pinnedFlowIds: ReadonlySet<string> = new Set(nextOrder.pinnedFlowIds);
-		setFlowOrder((current): FlowTreeOrder => ({
-			schemaVersion: 1,
-			...nextOrder,
-			updatedAt: current?.updatedAt ?? new Date(0).toISOString(),
-		}));
-		setFlows((current): ConversationFlowSummary[] => current.map((flow): ConversationFlowSummary => ({
-			...flow,
-			pinned: pinnedFlowIds.has(flow.flowId),
-		})));
-		const save = async (): Promise<void> => {
-			try {
-				const result = await persistFlowTreeOrder(nextOrder);
-				if (revision !== flowOrderSaveRevisionRef.current) return;
-				setFlowOrder(result.order);
-				if (result.flows.length === 0) return;
-				setFlows((current): ConversationFlowSummary[] => current.map((flow): ConversationFlowSummary => {
-					const updated = result.flows.find((candidate): boolean => candidate.flowId === flow.flowId);
-					return updated === undefined ? flow : { ...flow, ...updated };
-				}));
-			} catch (orderError: unknown) {
-				if (revision !== flowOrderSaveRevisionRef.current) return;
-				setError(errorMessage(orderError));
-				await refresh();
-			}
-		};
-		const queuedSave: Promise<void> = flowOrderSaveQueueRef.current.then(save, save);
-		flowOrderSaveQueueRef.current = queuedSave.catch((): void => undefined);
-		await queuedSave;
-	}, [refresh]);
-
-	useEffect((): void => {
-		const pending = pendingNewFlowSubmissionRef.current;
-		if (
-			pending === null ||
-			isMutating ||
-			isSessionLoading ||
-			isSending ||
-			activeSessionId !== pending.sessionId ||
-			activeSessionMetadata?.flow?.branchId !== pending.branchId
-		) return;
-		pendingNewFlowSubmissionRef.current = null;
-		onSubmit(pending.text, pending.modeOverride);
-	}, [activeSessionId, activeSessionMetadata?.flow?.branchId, isMutating, isSending, isSessionLoading, onSubmit]);
+	}, [applySnapshot, defaultFlow.model, defaultFlow.provider, defaultFlow.reasoningEffort]);
 
 	const createFromChat = useCallback(async (session: SessionMetadata): Promise<boolean> => {
-		newFlowHomeRef.current = false;
-		setIsNewFlowHome(false);
 		setIsMutating(true);
 		setError(null);
 		try {
-			const next = await createFlowFromSession({ sourceSessionId: session.id, title: session.title });
-			setSnapshot(next);
-			await refresh();
-			const root = next.branches.find((branch): boolean => branch.branchId === next.flow.rootBranchId);
-			if (root !== undefined) activateBranch(root);
+			const next = await importFlowFromSession({ sourceSessionId: session.id, title: session.title });
+			applySnapshot(next);
+			setFlows((current): ConversationFlowSummary[] => [toSummary(next.flow), ...current.filter((flow): boolean => flow.flowId !== next.flow.flowId)]);
 			return true;
 		} catch (mutationError: unknown) {
 			setError(errorMessage(mutationError));
@@ -450,160 +259,178 @@ export default function useHomeFlowController({
 		} finally {
 			setIsMutating(false);
 		}
-	}, [activateBranch, refresh]);
+	}, [applySnapshot]);
 
 	const selectFlow = useCallback(async (flowId: string): Promise<void> => {
-		newFlowHomeRef.current = false;
-		setIsNewFlowHome(false);
-		pendingNewFlowSubmissionRef.current = null;
-		await loadFlow(flowId, true);
-	}, [loadFlow]);
-
-	const selectBranch = useCallback((branchId: string): void => {
-		const branch = snapshotRef.current?.branches.find((candidate): boolean => candidate.branchId === branchId);
-		if (branch !== undefined) activateBranch(branch);
-	}, [activateBranch]);
+		setIsLoading(true);
+		setError(null);
+		try { applySnapshot(await fetchFlow(flowId)); } catch (loadError: unknown) { setError(errorMessage(loadError)); } finally { setIsLoading(false); }
+	}, [applySnapshot]);
 
 	const selectNode = useCallback(async (nodeId: string | null): Promise<void> => {
-		if (nodeId === null || snapshotRef.current === null) {
-			setSelectedNodeDetail(null);
-			return;
-		}
-		try {
-			const detail = await fetchFlowNode(snapshotRef.current.flow.flowId, nodeId);
-			setSelectedNodeDetail(detail as FlowNodeDetail);
-		} catch (detailError: unknown) {
-			setError(errorMessage(detailError));
-		}
+		if (nodeId === null) { setSelectedNodeDetail(null); return; }
+		const node = snapshotRef.current?.nodes.find((candidate): boolean => candidate.nodeId === nodeId);
+		setSelectedNodeDetail(node === undefined ? null : { node });
 	}, []);
 
-	const deriveFromNode = useCallback(async (node: ConversationFlowNode): Promise<void> => {
+	const renameFlowById = useCallback(async (flowId: string, title: string): Promise<void> => {
+		const current = snapshotRef.current?.flow.flowId === flowId ? snapshotRef.current.flow : flows.find((flow): boolean => flow.flowId === flowId);
+		if (current === undefined) return;
+		setIsMutating(true);
+		try {
+			const updated = await renameFlow(flowId, title, current.revision);
+			setFlows((items): ConversationFlowSummary[] => items.map((flow): ConversationFlowSummary => flow.flowId === flowId ? { ...flow, ...updated } : flow));
+			if (snapshotRef.current?.flow.flowId === flowId) applySnapshot({ ...snapshotRef.current, flow: updated });
+		} catch (mutationError: unknown) { setError(errorMessage(mutationError)); } finally { setIsMutating(false); }
+	}, [applySnapshot, flows]);
+
+	const archiveFlowById = useCallback(async (flowId: string): Promise<void> => {
+		const current = snapshotRef.current?.flow.flowId === flowId ? snapshotRef.current.flow : flows.find((flow): boolean => flow.flowId === flowId);
+		if (current === undefined) return;
+		setIsMutating(true);
+		try {
+			await archiveFlow(flowId, current.revision);
+			setFlows((items): ConversationFlowSummary[] => items.filter((flow): boolean => flow.flowId !== flowId));
+			if (selectedFlowIdRef.current === flowId) { selectedFlowIdRef.current = null; snapshotRef.current = null; setSnapshot(null); setIsNewFlowHome(true); }
+		} catch (mutationError: unknown) { setError(errorMessage(mutationError)); } finally { setIsMutating(false); }
+	}, [flows]);
+
+	const updateFlowOrder = useCallback(async (order: FlowTreeOrderUpdate): Promise<void> => {
+		try {
+			const result = await persistFlowTreeOrder(order);
+			setFlowOrder(result.order);
+			setFlows(result.flows.map(toSummary));
+		} catch (orderError: unknown) { setError(errorMessage(orderError)); }
+	}, []);
+
+	const createNode = useCallback(async (type: "prompt" | "llm" | "output" | "note", x: number, y: number): Promise<void> => {
+		const flowId = snapshotRef.current?.flow.flowId;
+		if (flowId === undefined) return;
+		try {
+			await enqueueMutation(async (): Promise<void> => {
+				const current = snapshotRef.current;
+				if (current === null || current.flow.flowId !== flowId) return;
+				const next = await createFlowNode({ flowId: current.flow.flowId, revision: current.flow.revision, type, x, y, title: type === "llm" ? "LLM" : type[0].toUpperCase() + type.slice(1), config: type === "prompt" ? { text: "" } : type === "note" ? { text: "" } : type === "output" ? { format: "text" } : { provider: defaultFlow.provider ?? "", model: defaultFlow.model ?? "", reasoningEffort: defaultFlow.reasoningEffort ?? "" } });
+				applySnapshot(next);
+			});
+		} catch (createError: unknown) { setError(errorMessage(createError)); }
+	}, [applySnapshot, defaultFlow.model, defaultFlow.provider, defaultFlow.reasoningEffort, enqueueMutation]);
+
+	const updateNode = useCallback(async (nodeId: string, patch: Record<string, unknown>): Promise<void> => {
+		const flowId = snapshotRef.current?.flow.flowId;
+		if (flowId === undefined) return;
+		try { await enqueueMutation(async (): Promise<void> => {
+			const current = snapshotRef.current;
+			if (current === null || current.flow.flowId !== flowId) return;
+			applySnapshot(await updateFlowNode({ flowId: current.flow.flowId, nodeId, revision: current.flow.revision, patch: patch as never }));
+		}); }
+		catch (updateError: unknown) { setError(errorMessage(updateError)); }
+	}, [applySnapshot, enqueueMutation]);
+
+	const updateNodePosition = useCallback(async (nodeId: string, x: number, y: number): Promise<void> => {
+		const flowId = snapshotRef.current?.flow.flowId;
+		if (flowId === undefined) return;
+		try { await enqueueMutation(async (): Promise<void> => {
+			const current = snapshotRef.current;
+			if (current === null || current.flow.flowId !== flowId) return;
+			ignoreFlowEventsUntilRef.current = Date.now() + 1_000;
+			const next = await updateFlowNode({ flowId, nodeId, revision: current.flow.revision, patch: { x, y } });
+			if (snapshotRef.current?.flow.flowId === flowId) snapshotRef.current = next;
+		}); }
+		catch (updateError: unknown) { setError(errorMessage(updateError)); }
+	}, [enqueueMutation]);
+
+	const deleteNode = useCallback(async (nodeId: string): Promise<void> => {
+		const flowId = snapshotRef.current?.flow.flowId;
+		if (flowId === undefined) return;
+		try { await enqueueMutation(async (): Promise<void> => {
+			const current = snapshotRef.current;
+			if (current === null || current.flow.flowId !== flowId) return;
+			applySnapshot(await deleteFlowNode({ flowId: current.flow.flowId, nodeId, revision: current.flow.revision }));
+		}); }
+		catch (deleteError: unknown) { setError(errorMessage(deleteError)); }
+	}, [applySnapshot, enqueueMutation]);
+
+	const createEdge = useCallback(async (sourceNodeId: string, targetNodeId: string, sourcePort = "output", targetPort = "input"): Promise<void> => {
+		const flowId = snapshotRef.current?.flow.flowId;
+		if (flowId === undefined) return;
+		setError(null);
+		try { await enqueueMutation(async (): Promise<void> => {
+			const current = snapshotRef.current;
+			if (current === null || current.flow.flowId !== flowId) return;
+			applySnapshot(await createFlowEdge({ flowId: current.flow.flowId, revision: current.flow.revision, sourceNodeId, sourcePort, targetNodeId, targetPort, dataType: "text" }));
+		}); }
+		catch (edgeError: unknown) { setError(errorMessage(edgeError)); }
+	}, [applySnapshot, enqueueMutation]);
+
+	const deleteEdge = useCallback(async (edgeId: string): Promise<void> => {
+		const flowId = snapshotRef.current?.flow.flowId;
+		if (flowId === undefined) return;
+		try { await enqueueMutation(async (): Promise<void> => {
+			const current = snapshotRef.current;
+			if (current === null || current.flow.flowId !== flowId) return;
+			applySnapshot(await deleteFlowEdge({ flowId: current.flow.flowId, edgeId, revision: current.flow.revision }));
+		}); }
+		catch (edgeError: unknown) { setError(errorMessage(edgeError)); }
+	}, [applySnapshot, enqueueMutation]);
+
+	const updateViewport = useCallback(async (viewport: { x: number; y: number; zoom: number }): Promise<void> => {
+		const flowId = snapshotRef.current?.flow.flowId;
+		if (flowId === undefined) return;
+		try { await enqueueMutation(async (): Promise<void> => {
+			const current = snapshotRef.current;
+			if (current === null || current.flow.flowId !== flowId) return;
+			ignoreFlowEventsUntilRef.current = Date.now() + 1_000;
+			const flow = await updateFlowViewport({ flowId: current.flow.flowId, revision: current.flow.revision, viewport });
+			if (snapshotRef.current?.flow.flowId === flowId) snapshotRef.current = { ...snapshotRef.current, flow };
+		}); }
+		catch (viewportError: unknown) { setError(errorMessage(viewportError)); }
+	}, [enqueueMutation]);
+
+	const startRun = useCallback(async (forceNodeIds?: string[]): Promise<void> => {
 		const current = snapshotRef.current;
 		if (current === null) return;
-		setIsMutating(true);
-		setError(null);
-		try {
-			const result = await createFlowBranch({
-				flowId: current.flow.flowId,
-				parentBranchId: node.branchId,
-				sourceNodeId: node.nodeId,
-				title: current.flow.title,
-			});
-			setSnapshot(result.flow);
-			if (result.seedAction === "regenerate") {
-				pendingRegenerationRef.current = {
-					branchId: result.branch.branchId,
-					draftApplied: false,
-					sessionId: result.branch.sessionId,
-					text: result.draft.text,
-				};
-			} else {
-				onDraftChange("");
-			}
-			activateBranch(result.branch);
-			if (result.seedAction === "compose") {
-				window.setTimeout((): void => {
-					const input = document.querySelector<HTMLTextAreaElement>(
-						'[data-studio-composer="true"] textarea',
-					);
-					input?.focus({ preventScroll: true });
-				}, 0);
-			}
-			await refresh();
-		} catch (mutationError: unknown) {
-			setError(errorMessage(mutationError));
-		} finally {
-			setIsMutating(false);
-		}
-	}, [activateBranch, onDraftChange, refresh]);
+		try { await startFlowRun({ flowId: current.flow.flowId, revision: current.flow.revision, ...(forceNodeIds === undefined ? {} : { forceNodeIds }) }); void refresh(); }
+		catch (runError: unknown) { setError(errorMessage(runError)); }
+	}, [refresh]);
+
+	const stopRun = useCallback(async (): Promise<void> => {
+		const current = snapshotRef.current;
+		const active = current?.runs.find((run): boolean => run.status === "running" || run.status === "queued");
+		if (current === null || active === undefined) return;
+		try { await stopFlowRun(current.flow.flowId, active.runId); void refresh(); }
+		catch (stopError: unknown) { setError(errorMessage(stopError)); }
+	}, [refresh]);
 
 	const copyCurrentBranchToChat = useCallback(async (): Promise<void> => {
 		const current = snapshotRef.current;
-		if (current === null || selectedBranchId === null) return;
-		setIsMutating(true);
-		setError(null);
+		if (current === null) return;
+		const output = [...current.nodes].reverse().find((node): boolean => node.type === "output");
+		if (output === undefined) { setError(t("flow.export.noOutput")); return; }
 		try {
-			const result = await copyFlowBranchToChat({
-				flowId: current.flow.flowId,
-				branchId: selectedBranchId,
-				title: current.flow.title,
-			});
+			const result = await exportFlowToSession({ flowId: current.flow.flowId, outputNodeId: output.nodeId, title: current.flow.title });
 			onOpenChat(result.metadata);
-		} catch (mutationError: unknown) {
-			setError(errorMessage(mutationError));
-		} finally {
-			setIsMutating(false);
-		}
-	}, [onOpenChat, selectedBranchId]);
-
-	const renameFlowById = useCallback(async (flowId: string, title: string): Promise<void> => {
-		const snapshot = snapshotRef.current;
-		const current = snapshot?.flow.flowId === flowId ? snapshot.flow : null;
-		const target = current ?? flows.find((flow): boolean => flow.flowId === flowId);
-		if (target === undefined || target === null) throw new Error(t("flow.errors.notFound"));
-		setIsMutating(true);
-		setError(null);
-		try {
-			await renameFlow(target.flowId, title, target.revision);
-			await refresh();
-		} catch (mutationError: unknown) {
-			setError(errorMessage(mutationError));
-			throw mutationError;
-		} finally {
-			setIsMutating(false);
-		}
-	}, [flows, refresh, t]);
+		} catch (exportError: unknown) { setError(errorMessage(exportError)); }
+	}, [onOpenChat, t]);
 
 	const renameCurrentFlow = useCallback(async (title: string): Promise<void> => {
-		const current = snapshotRef.current;
-		if (current === null) return;
-		setIsMutating(true);
-		try {
-			await renameFlow(current.flow.flowId, title, current.flow.revision);
-			await refresh();
-		} catch (mutationError: unknown) {
-			setError(errorMessage(mutationError));
-		} finally {
-			setIsMutating(false);
-		}
-	}, [refresh]);
-
-	const archiveFlowById = useCallback(async (flowId: string): Promise<void> => {
-		const current = snapshotRef.current;
-		const target = current?.flow.flowId === flowId
-			? current.flow
-			: flows.find((flow): boolean => flow.flowId === flowId);
-		if (target === undefined) return;
-		setIsMutating(true);
-		setError(null);
-		try {
-			await archiveFlow(target.flowId, target.revision);
-			if (current?.flow.flowId === flowId) {
-				setSnapshot(null);
-				setSelectedBranchId(null);
-			}
-			await refresh();
-		} catch (mutationError: unknown) {
-			setError(errorMessage(mutationError));
-		} finally {
-			setIsMutating(false);
-		}
-	}, [flows, refresh]);
-
+		const flowId = snapshotRef.current?.flow.flowId;
+		if (flowId !== undefined) await renameFlowById(flowId, title);
+	}, [renameFlowById]);
 	const archiveCurrentFlow = useCallback(async (): Promise<void> => {
-		const current = snapshotRef.current;
-		if (current === null) return;
-		await archiveFlowById(current.flow.flowId);
+		const flowId = snapshotRef.current?.flow.flowId;
+		if (flowId !== undefined) await archiveFlowById(flowId);
 	}, [archiveFlowById]);
 
-	return useMemo((): HomeFlowController => ({
+	return {
 		flows,
 		flowOrder,
-		flowBranchSessionIdsByFlow,
+		flowBranchSessionIdsByFlow: {},
+		flowRuntimeStatusById,
 		snapshot,
 		isNewFlowHome,
 		newFlowWorkspaceId,
-		selectedBranchId,
+		selectedBranchId: null,
 		selectedNodeDetail,
 		isLoading,
 		isMutating,
@@ -614,14 +441,23 @@ export default function useHomeFlowController({
 		submitNewFlowMessage,
 		createFromChat,
 		selectFlow,
-		selectBranch,
+		selectBranch: (): void => undefined,
 		selectNode,
-		deriveFromNode,
+		deriveFromNode: async (): Promise<void> => undefined,
 		copyCurrentBranchToChat,
 		renameCurrentFlow,
 		renameFlowById,
 		archiveFlowById,
 		archiveCurrentFlow,
 		updateFlowOrder,
-	}), [archiveCurrentFlow, archiveFlowById, copyCurrentBranchToChat, createFromChat, createNewFlow, deriveFromNode, error, flowBranchSessionIdsByFlow, flowOrder, flows, isLoading, isMutating, isNewFlowHome, newFlowWorkspaceId, refresh, renameCurrentFlow, renameFlowById, selectBranch, selectFlow, selectNode, selectedBranchId, selectedNodeDetail, setNewFlowWorkspace, snapshot, submitNewFlowMessage, updateFlowOrder]);
+		createNode,
+		updateNode,
+		updateNodePosition,
+		deleteNode,
+		createEdge,
+		deleteEdge,
+		updateViewport,
+		startRun,
+		stopRun,
+	};
 }

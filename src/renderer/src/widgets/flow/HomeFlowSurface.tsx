@@ -1,418 +1,215 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Button, Divider, Dropdown, Flex, Spin, Tooltip, Typography } from "antd";
 import type { InputRef } from "antd";
-import type { MutableRefObject } from "react";
-import { Alert, Button, Drawer, Dropdown, Flex, Input, Modal, Select, Space, Spin, Tag, Typography } from "antd";
-import {
-	Background,
-	Controls,
-	MiniMap,
-	ReactFlow,
-	applyNodeChanges,
-	type Edge,
-	type NodeChange,
-	type NodeMouseHandler,
-	type ReactFlowInstance,
-} from "@xyflow/react";
+import { Background, Controls, MiniMap, ReactFlow, type Connection, type Edge, type NodeChange, type OnNodeDrag, type ReactFlowInstance, applyNodeChanges } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
-import { FLOW_NODE_HEIGHT, FLOW_NODE_WIDTH, layoutFlowNodes } from "@/domain/flow/flow-layout";
-import { updateFlowLayout } from "@/platform/rpc/flow-api";
-import type { ConversationFlowNode, ConversationFlowNodePosition } from "@/platform/rpc/types";
-import type { HomeFlowController } from "@/features/home/flow/useHomeFlowController";
-import HomeChatSurface, { type HomeChatSurfaceProps } from "@/widgets/home/surface/HomeChatSurface";
-import MessageList from "@/widgets/conversation/MessageList";
 import ConversationSearchPanel from "@/widgets/conversation/ConversationSearchPanel";
-import { AssistantFlowNode, UserFlowNode, type FlowCanvasNode } from "./FlowNodes";
+import type { HomeFlowController } from "@/features/home/flow/useHomeFlowController";
+import type { FlowDocumentNode } from "@/platform/rpc/types";
 import FlowWelcome from "./FlowWelcome";
+import { FlowDocumentNodeView, type FlowCanvasNode } from "./FlowNodes";
 import styles from "./HomeFlowSurface.module.css";
 
+export type FlowSearchHandle = { openSearch: (selectedQuery?: string) => void; closeSearch: () => boolean };
 export type HomeFlowSurfaceProps = {
 	controller: HomeFlowController;
-	chatSurfaceProps: HomeChatSurfaceProps;
 	searchHandleRef?: MutableRefObject<FlowSearchHandle | null>;
+	chatSurfaceProps?: unknown;
 };
 
-export type FlowSearchHandle = {
-	openSearch: (selectedQuery?: string) => void;
-	closeSearch: () => boolean;
-};
+const nodeTypes = { flowNode: FlowDocumentNodeView };
 
-const nodeTypes = { userNode: UserFlowNode, assistantNode: AssistantFlowNode };
+const FLOW_NODE_WIDTH = 320;
+const FLOW_NODE_HEIGHT = 220;
+const FLOW_NODE_GAP = 28;
 
-function HomeFlowSurface({ controller, chatSurfaceProps, searchHandleRef }: HomeFlowSurfaceProps): React.JSX.Element {
+function intersectsNode(
+	left: { x: number; y: number; width: number; height: number },
+	right: { x: number; y: number; width: number; height: number },
+): boolean {
+	return left.x < right.x + right.width + FLOW_NODE_GAP &&
+		left.x + left.width + FLOW_NODE_GAP > right.x &&
+		left.y < right.y + right.height + FLOW_NODE_GAP &&
+		left.y + left.height + FLOW_NODE_GAP > right.y;
+}
+
+function resolveNodePositions(flowNodes: readonly FlowDocumentNode[]): Map<string, { x: number; y: number }> {
+	const resolved: Array<{ x: number; y: number; width: number; height: number }> = [];
+	const positions = new Map<string, { x: number; y: number }>();
+	for (const flowNode of flowNodes) {
+		const width = flowNode.width > 0 ? flowNode.width : FLOW_NODE_WIDTH;
+		const height = flowNode.height > 0 ? flowNode.height : FLOW_NODE_HEIGHT;
+		let x = flowNode.x;
+		let y = flowNode.y;
+		let attempt = 0;
+		while (resolved.some((candidate): boolean => intersectsNode({ x, y, width, height }, candidate))) {
+			const column = attempt % 3;
+			const row = Math.floor(attempt / 3);
+			x = flowNode.x + column * (FLOW_NODE_WIDTH + FLOW_NODE_GAP);
+			y = flowNode.y + row * (FLOW_NODE_HEIGHT + FLOW_NODE_GAP);
+			attempt += 1;
+		}
+		resolved.push({ x, y, width, height });
+		positions.set(flowNode.nodeId, { x, y });
+	}
+	return positions;
+}
+
+function nodeText(node: FlowDocumentNode): string {
+	return `${node.title} ${JSON.stringify(node.config)}`.toLocaleLowerCase();
+}
+
+function HomeFlowSurface({ controller, searchHandleRef }: HomeFlowSurfaceProps): React.JSX.Element {
 	const { t } = useTranslation();
-	const [nodes, setNodes] = useState<FlowCanvasNode[]>([]);
-	const [renameOpen, setRenameOpen] = useState<boolean>(false);
-	const [renameTitle, setRenameTitle] = useState<string>("");
-	const [searchOpen, setSearchOpen] = useState<boolean>(false);
-	const [searchQuery, setSearchQuery] = useState<string>("");
-	const [activeSearchIndex, setActiveSearchIndex] = useState<number>(0);
-	const searchInputRef = useRef<InputRef | null>(null);
-	const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<FlowCanvasNode, Edge> | null>(null);
-	const renderedFlowIdRef = useRef<string | null>(null);
 	const snapshot = controller.snapshot;
-	const graphPositions = useMemo((): Map<string, { x: number; y: number }> => {
-		return layoutFlowNodes(snapshot?.nodes ?? [], snapshot?.positions ?? []);
-	}, [snapshot?.nodes, snapshot?.positions]);
-	const activePathNodeIds = useMemo((): Set<string> => {
-		const path: Set<string> = new Set<string>();
-		const branch = snapshot?.branches.find((candidate): boolean => candidate.branchId === controller.selectedBranchId);
-		const nodesById: Map<string, ConversationFlowNode> = new Map(
-			(snapshot?.nodes ?? []).map((node): [string, ConversationFlowNode] => [node.nodeId, node]),
-		);
-		let nodeId: string | null = branch?.headNodeId ?? null;
-		while (nodeId !== null && !path.has(nodeId)) {
-			path.add(nodeId);
-			nodeId = nodesById.get(nodeId)?.parentNodeId ?? null;
-		}
-		if (path.size === 0 && branch !== undefined) {
-			for (const node of snapshot?.nodes ?? []) {
-				if (node.branchId === branch.branchId) path.add(node.nodeId);
-			}
-		}
-		return path;
-	}, [controller.selectedBranchId, snapshot?.branches, snapshot?.nodes]);
-	const normalizedSearchQuery: string = searchQuery.trim().toLocaleLowerCase();
-	const matchingNodes = useMemo((): ConversationFlowNode[] => {
-		if (normalizedSearchQuery.length === 0) return [];
-		return (snapshot?.nodes ?? []).filter((node): boolean =>
-			node.contentPreview.toLocaleLowerCase().includes(normalizedSearchQuery),
-		);
-	}, [normalizedSearchQuery, snapshot?.nodes]);
-	const matchingNodeIds = useMemo((): Set<string> => {
-		return new Set(matchingNodes.map((node): string => node.nodeId));
-	}, [matchingNodes]);
-	const edges = useMemo(
-		(): Edge[] =>
-			(snapshot?.nodes ?? []).flatMap((node): Edge[] => {
-				return node.parentNodeId === null
-					? []
-					: [
-							{
-								id: `${node.parentNodeId}->${node.nodeId}`,
-								source: node.parentNodeId,
-								target: node.nodeId,
-								type: "smoothstep",
-								animated: node.status === "streaming" || node.status === "waiting",
-								className: activePathNodeIds.has(node.parentNodeId) && activePathNodeIds.has(node.nodeId)
-									? styles.activePathEdge
-									: undefined,
-							},
-						];
-			}),
-		[activePathNodeIds, snapshot?.nodes],
-	);
-	const activeBranchId: string | null = controller.selectedBranchId;
-	const busyOtherBranch: boolean =
-		snapshot?.flow.activeBranchId !== null && snapshot?.flow.activeBranchId !== activeBranchId;
+	const [nodes, setNodes] = useState<FlowCanvasNode[]>([]);
+	const [searchOpen, setSearchOpen] = useState(false);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [searchIndex, setSearchIndex] = useState(0);
+	const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<FlowCanvasNode, Edge> | null>(null);
+	const searchInputRef = useRef<InputRef | null>(null);
+	const viewportSaveTimerRef = useRef<number | null>(null);
+	const nodePositionSaveTimersRef = useRef<Map<string, number>>(new Map());
+	const createNode = controller.createNode;
+	const updateNode = controller.updateNode;
+	const updateNodePosition = controller.updateNodePosition;
+	const deleteNode = controller.deleteNode;
+	const createEdge = controller.createEdge;
+	const deleteEdge = controller.deleteEdge;
+	const updateViewport = controller.updateViewport;
+	const startRun = controller.startRun;
+	const resolvedPositions = useMemo((): Map<string, { x: number; y: number }> => resolveNodePositions(snapshot?.nodes ?? []), [snapshot?.nodes]);
+	const latestRun = snapshot?.runs[0];
+	const running = latestRun?.status === "running" || latestRun?.status === "queued";
+	const matchingNodes = useMemo((): FlowDocumentNode[] => {
+		const query = searchQuery.trim().toLocaleLowerCase();
+		return query.length === 0 || snapshot === null ? [] : snapshot.nodes.filter((node): boolean => nodeText(node).includes(query));
+	}, [searchQuery, snapshot?.nodes]);
+	const matchingIds = useMemo((): Set<string> => new Set(matchingNodes.map((node): string => node.nodeId)), [matchingNodes]);
 
 	useEffect((): void => {
-		setNodes((current): FlowCanvasNode[] => {
-			const sameFlow: boolean = renderedFlowIdRef.current === (snapshot?.flow.flowId ?? null);
-			renderedFlowIdRef.current = snapshot?.flow.flowId ?? null;
-			const currentPositions: Map<string, { x: number; y: number }> = new Map(
-				(sameFlow ? current : []).map((node): [string, { x: number; y: number }] => [node.id, node.position]),
-			);
-			return (snapshot?.nodes ?? []).map(
-				(flowNode): FlowCanvasNode => ({
-					id: flowNode.nodeId,
-					type: flowNode.role === "user" ? "userNode" : "assistantNode",
-					position: currentPositions.get(flowNode.nodeId) ??
-						graphPositions.get(flowNode.nodeId) ?? { x: 0, y: 0 },
-					data: {
-						flowNode,
-						active: activePathNodeIds.has(flowNode.nodeId),
-						matched: matchingNodeIds.has(flowNode.nodeId),
-						disabled: controller.isMutating || snapshot?.flow.activeRequestId !== null,
-						onOpen: (node): void => {
-							void controller.selectNode(node.nodeId);
-						},
-						onDerive: (node): void => {
-							void controller.deriveFromNode(node);
-						},
-					},
-				}),
-			);
-		});
-	}, [activeBranchId, activePathNodeIds, controller, graphPositions, matchingNodeIds, snapshot?.flow.activeRequestId, snapshot?.nodes]);
+		setNodes((snapshot?.nodes ?? []).map((flowNode): FlowCanvasNode => ({
+			id: flowNode.nodeId,
+			type: "flowNode",
+			position: resolvedPositions.get(flowNode.nodeId) ?? { x: flowNode.x, y: flowNode.y },
+			data: {
+				flowNode,
+				matched: matchingIds.has(flowNode.nodeId),
+				onUpdate: (nodeId, patch): void => { void updateNode(nodeId, patch); },
+				onDelete: (nodeId): void => { void deleteNode(nodeId); },
+			},
+		})));
+	}, [deleteNode, matchingIds, resolvedPositions, snapshot?.nodes, updateNode]);
 
-	const focusSearchResult = useCallback((index: number): void => {
-		const target: ConversationFlowNode | undefined = matchingNodes[index];
-		if (target === undefined || flowInstance === null) return;
-		const position = graphPositions.get(target.nodeId);
-		if (position === undefined) return;
-		flowInstance.setCenter(
-			position.x + FLOW_NODE_WIDTH / 2,
-			position.y + FLOW_NODE_HEIGHT / 2,
-			{ zoom: 1, duration: 300 },
-		);
-	}, [flowInstance, graphPositions, matchingNodes]);
+	const edges = useMemo((): Edge[] => (snapshot?.edges ?? []).map((edge): Edge => ({
+		id: edge.edgeId,
+		source: edge.sourceNodeId,
+		target: edge.targetNodeId,
+		sourceHandle: "output",
+		targetHandle: "input",
+		type: "smoothstep",
+		animated: running,
+	})), [running, snapshot?.edges]);
 
 	const openSearch = useCallback((selectedQuery?: string): void => {
-		if (selectedQuery !== undefined) {
-			setSearchQuery(selectedQuery);
-			setActiveSearchIndex(0);
-		}
+		setSearchQuery(selectedQuery ?? "");
+		setSearchIndex(0);
 		setSearchOpen(true);
-		window.setTimeout((): void => {
-			searchInputRef.current?.focus({ cursor: "end" });
-		}, 0);
+		window.setTimeout((): void => searchInputRef.current?.focus(), 0);
 	}, []);
 	const closeSearch = useCallback((): boolean => {
 		if (!searchOpen) return false;
 		setSearchOpen(false);
 		setSearchQuery("");
-		setActiveSearchIndex(0);
+		setSearchIndex(0);
 		return true;
 	}, [searchOpen]);
-	const goPreviousSearchResult = useCallback((): void => {
-		if (matchingNodes.length === 0) return;
-		setActiveSearchIndex((current): number =>
-			(current - 1 + matchingNodes.length) % matchingNodes.length,
-		);
-	}, [matchingNodes.length]);
-	const goNextSearchResult = useCallback((): void => {
-		if (matchingNodes.length === 0) return;
-		setActiveSearchIndex((current): number => (current + 1) % matchingNodes.length);
-	}, [matchingNodes.length]);
-
-	useEffect((): void => {
-		if (matchingNodes.length === 0) {
-			setActiveSearchIndex(0);
-			return;
-		}
-		if (activeSearchIndex >= matchingNodes.length) {
-			setActiveSearchIndex(0);
-			return;
-		}
-		if (searchOpen) focusSearchResult(activeSearchIndex);
-	}, [activeSearchIndex, focusSearchResult, matchingNodes.length, searchOpen]);
-
-	useEffect((): (() => void) | void => {
-		if (searchHandleRef === undefined) return;
+	useEffect((): (() => void) => {
+		if (searchHandleRef === undefined) return (): void => undefined;
 		searchHandleRef.current = { openSearch, closeSearch };
-		return (): void => {
-			if (searchHandleRef.current?.openSearch === openSearch) {
-				searchHandleRef.current = null;
-			}
-		};
+		return (): void => { if (searchHandleRef.current?.openSearch === openSearch) searchHandleRef.current = null; };
 	}, [closeSearch, openSearch, searchHandleRef]);
+	useEffect((): void => {
+		if (searchIndex >= matchingNodes.length && matchingNodes.length > 0) setSearchIndex(0);
+		const target = matchingNodes[searchIndex];
+		if (target === undefined || flowInstance === null) return;
+		flowInstance.setCenter(target.x + target.width / 2, target.y + target.height / 2, { zoom: 1, duration: 250 });
+	}, [flowInstance, matchingNodes, searchIndex]);
 
-	const handleNodeClick: NodeMouseHandler<FlowCanvasNode> = (_event, node): void => {
-		controller.selectBranch(node.data.flowNode.branchId);
-		void controller.selectNode(node.id);
-	};
+	const addNode = useCallback((type: "prompt" | "llm" | "output" | "note"): void => {
+		const center = flowInstance?.screenToFlowPosition({ x: 520, y: 300 }) ?? { x: 120 + (snapshot?.nodes.length ?? 0) * 40, y: 160 };
+		const index = snapshot?.nodes.length ?? 0;
+		const column = index % 3;
+		const row = Math.floor(index / 3);
+		void createNode(type, center.x + column * (FLOW_NODE_WIDTH + FLOW_NODE_GAP), center.y + row * (FLOW_NODE_HEIGHT + FLOW_NODE_GAP));
+	}, [createNode, flowInstance, snapshot?.nodes.length]);
+	const handleKeyDown = useCallback((event: KeyboardEvent): void => {
+		const target = event.target as HTMLElement | null;
+		if (target?.matches("input, textarea, [contenteditable=\"true\"]")) return;
+		if ((event.ctrlKey || event.metaKey) && event.key === "Enter") { event.preventDefault(); void startRun(); return; }
+		if (event.key === "Home") { event.preventDefault(); flowInstance?.fitView({ duration: 250, padding: 0.2 }); return; }
+		if (event.key === "F3" || (event.shiftKey && event.key.toLowerCase() === "a")) { event.preventDefault(); addNode("prompt"); }
+	}, [addNode, flowInstance, startRun]);
+	useEffect((): (() => void) => { window.addEventListener("keydown", handleKeyDown); return (): void => window.removeEventListener("keydown", handleKeyDown); }, [handleKeyDown]);
 
-	async function saveNodePosition(node: FlowCanvasNode): Promise<void> {
-		if (snapshot === null) return;
-		const positions: ConversationFlowNodePosition[] = [{ nodeId: node.id, x: node.position.x, y: node.position.y }];
-		try {
-			await updateFlowLayout(snapshot.flow.flowId, snapshot.flow.revision, positions);
-			await controller.refresh();
-		} catch {
-			await controller.refresh();
-		}
-	}
+	const onNodesChange = useCallback((changes: NodeChange<FlowCanvasNode>[]): void => {
+		setNodes((current): FlowCanvasNode[] => applyNodeChanges(changes, current));
+	}, []);
+	const onNodeDragStop = useCallback<OnNodeDrag<FlowCanvasNode>>((_event, node): void => {
+		const currentTimer = nodePositionSaveTimersRef.current.get(node.id);
+		if (currentTimer !== undefined) window.clearTimeout(currentTimer);
+		const { x, y } = node.position;
+		const timer = window.setTimeout((): void => {
+			nodePositionSaveTimersRef.current.delete(node.id);
+			void updateNodePosition(node.id, x, y);
+		}, 300);
+		nodePositionSaveTimersRef.current.set(node.id, timer);
+	}, [updateNodePosition]);
+	const onConnect = useCallback((connection: Connection): void => {
+		if (connection.source === null || connection.target === null) return;
+		void createEdge(connection.source, connection.target, "output", "input");
+	}, [createEdge]);
+	const onMoveEnd = useCallback((_event: unknown, viewport: { x: number; y: number; zoom: number }): void => {
+		if (viewportSaveTimerRef.current !== null) window.clearTimeout(viewportSaveTimerRef.current);
+		viewportSaveTimerRef.current = window.setTimeout((): void => {
+			viewportSaveTimerRef.current = null;
+			void updateViewport(viewport);
+		}, 450);
+	}, [updateViewport]);
+	useEffect((): (() => void) => (): void => {
+		if (viewportSaveTimerRef.current !== null) window.clearTimeout(viewportSaveTimerRef.current);
+		for (const timer of nodePositionSaveTimersRef.current.values()) window.clearTimeout(timer);
+		nodePositionSaveTimersRef.current.clear();
+	}, [snapshot?.flow.flowId]);
 
 	if (snapshot === null) {
-		if (controller.isNewFlowHome) {
-			return (
-				<section className={styles.flowSurface} data-studio-flow-surface="true">
-					<header className={styles.flowHeader}>
-						<Typography.Text className={styles.flowTitle}>{t("flow.new.title")}</Typography.Text>
-					</header>
-					<div className={`${styles.canvasRegion} ${styles.flowWelcomeCanvasRegion}`}>
-						<FlowWelcome
-							errorMessage={chatSurfaceProps.sessionError ?? controller.error}
-							onStarterSelect={chatSurfaceProps.handleHomeStarterSelect}
-						/>
-					</div>
-					<div className={`${styles.flowComposerHost} ${styles.flowWelcomeComposerHost}`}>
-						{chatSurfaceProps.renderComposer(false, true, true)}
-					</div>
-				</section>
-			);
-		}
-		return (
-			<div className={styles.emptyState}>
-				{controller.isLoading || controller.error === null ? (
-					<Spin />
-				) : (
-					<Alert type="error" showIcon message={controller.error} />
-				)}
-			</div>
-		);
+		return <section className={styles.flowSurface} data-studio-flow-surface="true"><header className={styles.flowHeader}><Typography.Text className={styles.flowTitle}>{t("flow.welcome.nodeTitle", { defaultValue: "Build a workflow from nodes" })}</Typography.Text></header><div className={`${styles.canvasRegion} ${styles.flowWelcomeCanvasRegion}`}><FlowWelcome errorMessage={controller.error} onStarterSelect={(): void => addNode("prompt")} /></div></section>;
 	}
 
 	return (
 		<section className={styles.flowSurface} data-studio-flow-surface="true">
-			<header
-				className={styles.flowHeader}
-				data-side-dock-open={chatSurfaceProps.sideDockOpen ? "true" : undefined}
-			>
-				<Flex gap="small" align="center" justify="center">
-					<Typography.Text className={styles.flowTitle}>{snapshot.flow.title}</Typography.Text>
-					<Tag>{t("flow.branchCount", { count: snapshot.branches.length })}</Tag>
+			<header className={styles.flowHeader}>
+				<Flex align="center" gap="small" className={styles.flowHeaderTitle}><Typography.Text className={styles.flowTitle}>{snapshot.flow.title}</Typography.Text><Typography.Text type="secondary">{snapshot.nodes.length} nodes</Typography.Text></Flex>
+				<Flex align="center" gap="small" className={styles.flowHeaderActions}>
+					<Button type="primary" icon={<Icon name="play" />} loading={running} onClick={(): void => { void controller.startRun(); }}>Run</Button>
+					<Button icon={<Icon name="stop" />} disabled={!running} onClick={(): void => { void controller.stopRun(); }}>Stop</Button>
+					<Divider type="vertical" />
+					<Dropdown menu={{ items: [{ key: "prompt", label: "Prompt", onClick: (): void => addNode("prompt") }, { key: "llm", label: "LLM", onClick: (): void => addNode("llm") }, { key: "output", label: "Output", onClick: (): void => addNode("output") }, { key: "note", label: "Note", onClick: (): void => addNode("note") }] }} trigger={["click"]}><Button icon={<Icon name="add" />}>Add node</Button></Dropdown>
+					<Tooltip title="Search"><Button type="text" icon={<Icon name="search" />} aria-label="Search" onClick={(): void => openSearch()} /></Tooltip>
+					<Button type="text" icon={<Icon name="layout-bottom" />} aria-label="Fit canvas" onClick={(): void => { void flowInstance?.fitView({ duration: 250, padding: 0.2 }); }} />
 				</Flex>
-				<Space className={styles.flowHeaderActions}>
-					<Button
-						type="text"
-						shape="circle"
-						icon={<Icon name="search" />}
-						aria-label={t("agentPage.conversationSearch.placeholder")}
-						onClick={(): void => openSearch()}
-					/>
-					<Select
-						value={activeBranchId ?? undefined}
-						className={styles.branchSelect}
-						aria-label={t("flow.actions.selectBranch")}
-						options={snapshot.branches.map((branch, index) => ({
-							value: branch.branchId,
-							label: t("flow.branchLabel", { count: index + 1 }),
-						}))}
-						onChange={controller.selectBranch}
-					/>
-					<Button
-						icon={<Icon name="chat" />}
-						loading={controller.isMutating}
-						onClick={(): void => {
-							void controller.copyCurrentBranchToChat();
-						}}
-					>
-						{t("flow.actions.copyToChat")}
-					</Button>
-					<Dropdown
-						trigger={["click"]}
-						menu={{
-							items: [
-								{ key: "rename", label: t("flow.actions.rename"), icon: <Icon name="pencil" /> },
-								{
-									key: "archive",
-									label: t("flow.actions.archive"),
-									icon: <Icon name="archive" />,
-									danger: true,
-									disabled: snapshot.flow.activeRequestId !== null,
-								},
-							],
-							onClick: ({ key }): void => {
-								if (key === "rename") {
-									setRenameTitle(snapshot.flow.title);
-									setRenameOpen(true);
-								} else if (key === "archive") {
-									void controller.archiveCurrentFlow();
-								}
-							},
-						}}
-					>
-						<Button
-							type="text"
-							shape="circle"
-							icon={<Icon name="more-h" />}
-							aria-label={t("flow.actions.more")}
-						/>
-					</Dropdown>
-				</Space>
 			</header>
-			{controller.error !== null ? (
-				<Alert className={styles.flowAlert} type="error" showIcon message={controller.error} />
-			) : null}
-			{busyOtherBranch ? (
-				<Alert
-					className={styles.flowAlert}
-					type="info"
-					showIcon
-					title={t("flow.busy")}
-					action={
-						<Button
-							size="small"
-							onClick={(): void => controller.selectBranch(snapshot.flow.activeBranchId!)}
-						>
-							{t("flow.actions.openActiveBranch")}
-						</Button>
-					}
-				/>
-			) : null}
+			{controller.error !== null ? <Alert className={styles.flowAlert} type="error" showIcon message={controller.error} /> : null}
 			<div className={styles.canvasRegion}>
-				<ConversationSearchPanel
-					open={searchOpen}
-					query={searchQuery}
-					current={matchingNodes.length === 0 ? 0 : activeSearchIndex + 1}
-					total={matchingNodes.length}
-					loading={false}
-					inputRef={searchInputRef}
-					onQueryChange={(query): void => {
-						setSearchQuery(query);
-						setActiveSearchIndex(0);
-					}}
-					onPrevious={goPreviousSearchResult}
-					onNext={goNextSearchResult}
-					onClose={closeSearch}
-				/>
-				{controller.isLoading ? <Spin fullscreen={false} className={styles.canvasSpinner} /> : null}
-				{nodes.length === 0 ? <div className={styles.emptyCanvasHint}>{t("flow.empty.canvas")}</div> : null}
-				<ReactFlow<FlowCanvasNode, Edge>
-					nodes={nodes}
-					edges={edges}
-					onInit={setFlowInstance}
-					nodeTypes={nodeTypes}
-					fitView
-					fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
-					minZoom={0.2}
-					maxZoom={1.8}
-					nodesConnectable={false}
-					elementsSelectable
-					deleteKeyCode={null}
-					onNodesChange={(changes: NodeChange<FlowCanvasNode>[]): void =>
-						setNodes((current): FlowCanvasNode[] => applyNodeChanges(changes, current))
-					}
-					onNodeClick={handleNodeClick}
-					onNodeDragStop={(_event, node): void => {
-						void saveNodePosition(node);
-					}}
-				>
-					<Background gap={24} size={1} />
-					<MiniMap pannable zoomable nodeStrokeWidth={3} />
-					<Controls showInteractive={false} />
+				<ConversationSearchPanel open={searchOpen} query={searchQuery} current={matchingNodes.length === 0 ? 0 : searchIndex + 1} total={matchingNodes.length} loading={false} inputRef={searchInputRef} onQueryChange={(query): void => { setSearchQuery(query); setSearchIndex(0); }} onPrevious={(): void => setSearchIndex((current): number => matchingNodes.length === 0 ? 0 : (current - 1 + matchingNodes.length) % matchingNodes.length)} onNext={(): void => setSearchIndex((current): number => matchingNodes.length === 0 ? 0 : (current + 1) % matchingNodes.length)} onClose={closeSearch} />
+				{controller.isLoading ? <Spin className={styles.canvasSpinner} /> : null}
+				{snapshot.nodes.length === 0 && nodes.length === 0 ? <div className={styles.emptyCanvasHint}><FlowWelcome errorMessage={null} onStarterSelect={(): void => addNode("prompt")} /></div> : null}
+				<ReactFlow key={snapshot.flow.flowId} nodes={nodes} edges={edges} nodeTypes={nodeTypes} defaultViewport={snapshot.flow.viewport} onInit={setFlowInstance} onNodesChange={onNodesChange} onNodeDragStop={onNodeDragStop} onConnect={onConnect} onMoveEnd={onMoveEnd} onNodesDelete={(deleted): void => { for (const node of deleted) void deleteNode(node.id); }} onEdgesDelete={(deleted): void => { for (const edge of deleted) void deleteEdge(edge.id); }} nodesDraggable nodesConnectable panOnDrag zoomOnScroll zoomOnPinch zoomOnDoubleClick selectionOnDrag={false} fitView={snapshot.nodes.length > 0} fitViewOptions={{ padding: 0.2 }} minZoom={0.2} maxZoom={2} deleteKeyCode={["Backspace", "Delete"]}>
+					<Background gap={24} size={1} /><MiniMap pannable zoomable nodeStrokeWidth={3} /><Controls showInteractive={false} />
 				</ReactFlow>
 			</div>
-			<div className={styles.flowComposerHost} data-disabled={busyOtherBranch ? "true" : undefined}>
-				{busyOtherBranch ? <div className={styles.composerBlocker} aria-hidden="true" /> : null}
-				<HomeChatSurface {...chatSurfaceProps} composerFloating composerFloatingWithFooter />
-			</div>
-			<Drawer
-				open={controller.selectedNodeDetail !== null}
-				title={t("flow.details.title")}
-				size={560}
-				destroyOnHidden
-				onClose={(): void => {
-					void controller.selectNode(null);
-				}}
-			>
-				{controller.selectedNodeDetail === null ? null : (
-					<div className={styles.nodeDetail}>
-						<MessageList blocks={[controller.selectedNodeDetail.block]} hideInlineDiff />
-					</div>
-				)}
-			</Drawer>
-			<Modal
-				open={renameOpen}
-				title={t("flow.rename.title")}
-				okText={t("flow.actions.rename")}
-				confirmLoading={controller.isMutating}
-				okButtonProps={{ disabled: renameTitle.trim().length === 0 }}
-				onCancel={(): void => setRenameOpen(false)}
-				onOk={(): void => {
-					void controller.renameCurrentFlow(renameTitle).then((): void => setRenameOpen(false));
-				}}
-			>
-				<Input
-					value={renameTitle}
-					maxLength={200}
-					autoFocus
-					onChange={(event): void => setRenameTitle(event.target.value)}
-				/>
-			</Modal>
 		</section>
 	);
 }

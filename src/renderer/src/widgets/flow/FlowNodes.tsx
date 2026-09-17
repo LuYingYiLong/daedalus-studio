@@ -1,132 +1,176 @@
-import { Button, Typography } from "antd";
+import { Button, Input, Select, Tag, Typography } from "antd";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
-import { useLayoutEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { memo, useMemo, useState } from "react";
 import { Icon } from "@/assets/icons";
-import type { ConversationFlowNode } from "@/platform/rpc/types";
+import type {
+  FlowDocumentNode,
+  FlowDocumentNodeStatus,
+  FlowDocumentNodeType,
+} from "@/platform/rpc/types";
 import styles from "./FlowNodes.module.css";
 
-function parseRgbColor(color: string): [number, number, number, number] | null {
-	const match = color.match(/^rgba?\(\s*([\d.]+)[, ]+\s*([\d.]+)[, ]+\s*([\d.]+)(?:[, /]+\s*([\d.]+))?\s*\)$/u);
-	if (match === null) return null;
-	const alpha: number = match[4] === undefined ? 1 : Number(match[4]);
-	return [Number(match[1]), Number(match[2]), Number(match[3]), alpha];
-}
-
-function getContrastingTextColor(backgroundColor: string): "#000000" | "#ffffff" {
-	const rgb: [number, number, number, number] | null = parseRgbColor(backgroundColor);
-	if (rgb === null) return "#ffffff";
-	const channels: number[] = rgb.slice(0, 3).map((channel: number): number => channel / 255);
-	const alpha: number = rgb[3];
-	const compositedChannels: number[] = channels.map((channel: number): number => channel * alpha + (1 - alpha));
-	const luminance: number = compositedChannels
-		.map((channel: number): number => (channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4))
-		.reduce(
-			(sum: number, channel: number, index: number): number => sum + channel * [0.2126, 0.7152, 0.0722][index],
-			0,
-		);
-	const blackContrast: number = (luminance + 0.05) / 0.05;
-	const whiteContrast: number = 1.05 / (luminance + 0.05);
-	return blackContrast >= whiteContrast ? "#000000" : "#ffffff";
-}
-
 export type FlowNodeData = {
-	flowNode: ConversationFlowNode;
-	active: boolean;
-	matched: boolean;
-	disabled: boolean;
-	onOpen: (node: ConversationFlowNode) => void;
-	onDerive: (node: ConversationFlowNode) => void;
+  flowNode: FlowDocumentNode;
+  matched: boolean;
+  onUpdate: (nodeId: string, patch: Record<string, unknown>) => void;
+  onDelete: (nodeId: string) => void;
 };
 
-export type FlowCanvasNode = Node<FlowNodeData, "userNode" | "assistantNode">;
+export type FlowCanvasNode = Node<FlowNodeData, "flowNode">;
+
+const roleLabels: Record<FlowDocumentNodeType, string> = {
+  prompt: "Prompt",
+  llm: "LLM",
+  output: "Output",
+  note: "Note",
+};
+
+const roleIcons: Record<FlowDocumentNodeType, string> = {
+  prompt: "user",
+  llm: "agent",
+  output: "check",
+  note: "pencil",
+};
+
+function statusLabel(status: FlowDocumentNodeStatus): string {
+  return status === "cached"
+    ? "Cached"
+    : status[0].toUpperCase() + status.slice(1);
+}
+
+function readString(config: Record<string, unknown>, key: string): string {
+  return typeof config[key] === "string" ? (config[key] as string) : "";
+}
 
 function FlowNodeCard({ data }: NodeProps<FlowCanvasNode>): React.JSX.Element {
-	const { t } = useTranslation();
-	const { flowNode } = data;
-	const headerRef = useRef<HTMLElement | null>(null);
-	const [headerTextColor, setHeaderTextColor] = useState<"#000000" | "#ffffff">("#ffffff");
-	useLayoutEffect((): (() => void) => {
-		const header: HTMLElement | null = headerRef.current;
-		if (header === null) return (): void => undefined;
-		const updateTextColor = (): void => {
-			setHeaderTextColor(getContrastingTextColor(window.getComputedStyle(header).backgroundColor));
-		};
-		updateTextColor();
-		const observer: MutationObserver = new MutationObserver(updateTextColor);
-		observer.observe(document.documentElement, {
-			attributes: true,
-			attributeFilter: ["data-theme", "data-theme-variant"],
-		});
-		return (): void => observer.disconnect();
-	}, [flowNode.role]);
-	const updatedAtTimestamp: number = Date.parse(flowNode.updatedAt);
-	const updatedAtLabel: string = Number.isNaN(updatedAtTimestamp)
-		? ""
-		: new Intl.DateTimeFormat(undefined, {
-				hour: "2-digit",
-				minute: "2-digit",
-			}).format(updatedAtTimestamp);
-	const canDerive: boolean =
-		flowNode.role === "user"
-			? flowNode.status === "completed"
-			: ["completed", "failed", "stopped"].includes(flowNode.status) && flowNode.contentPreview.length > 0;
-	return (
-		<article
-			className={`${styles.nodeCard} ${data.active ? styles.nodeCardActive : ""} ${data.matched ? styles.nodeCardMatched : ""}`}
-			data-flow-node-id={flowNode.nodeId}
-			data-role={flowNode.role}
-			data-status={flowNode.status}
-			onDoubleClick={(): void => data.onOpen(flowNode)}
-		>
-			<Handle type="target" position={Position.Left} isConnectable={false} className={styles.nodeHandle} />
-			<header
-				ref={headerRef}
-				className={styles.header}
-				data-role={flowNode.role}
-				style={{ color: headerTextColor }}
-			>
-				<span className={styles.role}>
-					<Icon name={flowNode.role === "user" ? "user" : "agent"} />
-					{t(flowNode.role === "user" ? "flow.nodes.user" : "flow.nodes.assistant")}
-				</span>
-			</header>
-			<div className={styles.body}>
-				<Typography.Text className={styles.nodeMeta} type="secondary">
-					{updatedAtLabel}
-				</Typography.Text>
-				<Typography.Paragraph
-					className={styles.nodePreview}
-					data-chat-search-text="true"
-					ellipsis={{ rows: 4 }}
-				>
-					{flowNode.contentPreview || t("flow.nodes.emptyResponse")}
-				</Typography.Paragraph>
-			</div>
-			<footer className={styles.footer}>
-				<Button type="text" size="small" onClick={(): void => data.onOpen(flowNode)}>
-					{t("flow.actions.details")}
-				</Button>
-				<Button
-					type="text"
-					size="small"
-					icon={<Icon name="fork" />}
-					disabled={!canDerive || data.disabled}
-					aria-label={t(flowNode.role === "user" ? "flow.actions.regenerate" : "flow.actions.derive")}
-					onClick={(): void => data.onDerive(flowNode)}
-				>
-					{t(flowNode.role === "user" ? "flow.actions.regenerate" : "flow.actions.derive")}
-				</Button>
-			</footer>
-			<Handle type="source" position={Position.Right} isConnectable={false} className={styles.nodeHandle} />
-		</article>
-	);
+  const { flowNode } = data;
+  const [draftTitle, setDraftTitle] = useState(flowNode.title);
+  const configText = useMemo(
+    (): string => readString(flowNode.config, "text"),
+    [flowNode.config],
+  );
+  const [draftText, setDraftText] = useState(configText);
+  const [draftProvider, setDraftProvider] = useState((): string =>
+    readString(flowNode.config, "provider"),
+  );
+  const [draftModel, setDraftModel] = useState((): string =>
+    readString(flowNode.config, "model"),
+  );
+  const update = (patch: Record<string, unknown>): void =>
+    data.onUpdate(flowNode.nodeId, patch);
+  const headerClass = `${styles.header} ${styles[`header-${flowNode.type}`]}`;
+  const hasInput = flowNode.type === "llm" || flowNode.type === "output";
+  const hasOutput = flowNode.type === "prompt" || flowNode.type === "llm";
+  return (
+    <div className={styles.nodeShell}>
+      {hasInput ? (
+        <Handle
+          id="input"
+          type="target"
+          position={Position.Left}
+          className={styles.nodeHandle}
+        />
+      ) : null}
+      <article
+        className={`${styles.nodeCard} ${data.matched ? styles.nodeCardMatched : ""}`}
+        data-node-type={flowNode.type}
+      >
+        <header className={headerClass}>
+          <span className={styles.role}>
+            <Icon name={roleIcons[flowNode.type]} />
+            {roleLabels[flowNode.type]}
+          </span>
+          <Tag>{statusLabel(flowNode.status)}</Tag>
+        </header>
+        <div className={styles.body}>
+          <Input
+            variant="borderless"
+            className={`${styles.titleInput} nodrag`}
+            value={draftTitle}
+            onChange={(event): void => setDraftTitle(event.target.value)}
+            onBlur={(): void => update({ title: draftTitle })}
+          />
+          {flowNode.type === "prompt" || flowNode.type === "note" ? (
+            <Input.TextArea
+              className={`${styles.nodeEditor} nodrag`}
+              value={draftText}
+              autoSize={{ minRows: 3, maxRows: 7 }}
+              placeholder={
+                flowNode.type === "prompt" ? "Enter a prompt…" : "Write a note…"
+              }
+              onChange={(event): void => setDraftText(event.target.value)}
+              onBlur={(): void =>
+                update({ config: { ...flowNode.config, text: draftText } })
+              }
+            />
+          ) : null}
+          {flowNode.type === "llm" ? (
+            <div className={`${styles.compactFields} nodrag`}>
+              <Input
+                size="small"
+                placeholder="Provider"
+                value={draftProvider}
+                onChange={(event): void => setDraftProvider(event.target.value)}
+                onBlur={(): void =>
+                  update({ config: { ...flowNode.config, provider: draftProvider } })
+                }
+              />
+              <Input
+                size="small"
+                placeholder="Model"
+                value={draftModel}
+                onChange={(event): void => setDraftModel(event.target.value)}
+                onBlur={(): void =>
+                  update({ config: { ...flowNode.config, model: draftModel } })
+                }
+              />
+            </div>
+          ) : null}
+          {flowNode.type === "output" ? (
+            <div className={styles.outputPreview}>
+              <Typography.Text type="secondary">
+                {readString(flowNode.config, "result") ||
+                  "Connect an input to preview output"}
+              </Typography.Text>
+              <Select
+                className="nodrag"
+                size="small"
+                value={readString(flowNode.config, "format") || "text"}
+                options={[
+                  { value: "text", label: "Text" },
+                  { value: "json", label: "JSON" },
+                ]}
+                onChange={(format): void =>
+                  update({ config: { ...flowNode.config, format } })
+                }
+              />
+            </div>
+          ) : null}
+        </div>
+        <footer className={styles.footer}>
+          <Typography.Text type="secondary" className={styles.statusText}>
+            {flowNode.status}
+          </Typography.Text>
+          <Button
+            type="text"
+            size="small"
+            icon={<Icon name="remove" />}
+            aria-label="Delete node"
+            onClick={(): void => data.onDelete(flowNode.nodeId)}
+          />
+        </footer>
+      </article>
+      {hasOutput ? (
+        <Handle
+          id="output"
+          type="source"
+          position={Position.Right}
+          className={styles.nodeHandle}
+        />
+      ) : null}
+    </div>
+  );
 }
 
-export function UserFlowNode(props: NodeProps<FlowCanvasNode>): React.JSX.Element {
-	return <FlowNodeCard {...props} />;
-}
-
-export function AssistantFlowNode(props: NodeProps<FlowCanvasNode>): React.JSX.Element {
-	return <FlowNodeCard {...props} />;
-}
+export const FlowDocumentNodeView = memo(FlowNodeCard);
+FlowDocumentNodeView.displayName = "FlowDocumentNodeView";

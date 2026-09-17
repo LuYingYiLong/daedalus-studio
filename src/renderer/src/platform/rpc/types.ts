@@ -276,6 +276,70 @@ export type ConversationFlowSnapshot = {
 	positions: ConversationFlowNodePosition[];
 };
 
+
+export type FlowDocumentNodeType = "prompt" | "llm" | "output" | "note";
+export type FlowDocumentNodeStatus = "idle" | "queued" | "running" | "waiting" | "completed" | "cached" | "failed" | "cancelled" | "skipped";
+export type FlowDocumentRunStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
+export type FlowDocument = {
+	flowId: string;
+	title: string;
+	workspaceId: string | null;
+	pinned: boolean;
+	revision: number;
+	viewport: { x: number; y: number; zoom: number };
+	archivedAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+};
+export type FlowDocumentNode = {
+	nodeId: string;
+	flowId: string;
+	type: FlowDocumentNodeType;
+	title: string;
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	config: Record<string, unknown>;
+	status: FlowDocumentNodeStatus;
+	createdAt: string;
+	updatedAt: string;
+};
+export type FlowDocumentEdge = {
+	edgeId: string;
+	flowId: string;
+	sourceNodeId: string;
+	sourcePort: string;
+	targetNodeId: string;
+	targetPort: string;
+	dataType: "text" | "json" | "artifact";
+};
+export type FlowDocumentNodeRun = {
+	runId: string;
+	nodeId: string;
+	status: FlowDocumentNodeStatus;
+	inputFingerprint: string | null;
+	output: unknown;
+	error: string | null;
+	startedAt: string | null;
+	finishedAt: string | null;
+};
+export type FlowDocumentRun = {
+	runId: string;
+	flowId: string;
+	revision: number;
+	status: FlowDocumentRunStatus;
+	startedAt: string | null;
+	finishedAt: string | null;
+	error: string | null;
+	nodes: FlowDocumentNodeRun[];
+};
+export type FlowDocumentSnapshot = {
+	flow: FlowDocument;
+	nodes: FlowDocumentNode[];
+	edges: FlowDocumentEdge[];
+	runs: FlowDocumentRun[];
+};
 export type AdditionalContextItem = {
 	id: string;
 	kind:

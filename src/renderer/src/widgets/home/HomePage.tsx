@@ -966,6 +966,7 @@ function HomePage({
 		workspaces: workspaceOptionsInTreeOrder,
 		selectedFlowId: flowController.snapshot?.flow.flowId ?? null,
 		unreadFlowIds,
+		flowRuntimeStatusById: flowController.flowRuntimeStatusById,
 		isLoading: flowController.isLoading,
 		isMutating: flowController.isMutating,
 		order: flowController.flowOrder,
@@ -974,7 +975,11 @@ function HomePage({
 		onArchive: (flow: ConversationFlowSummary): void => { void flowController.archiveFlowById(flow.flowId); },
 		onOrderUpdate: flowController.updateFlowOrder,
 		onNewProject: (): void => setIsFlowWorkspaceCreateOpen(true),
-		onNewSession: requestNewSessionSurface,
+		onNewSession: (): void => {
+			void flowController.createNewFlow(null).then((): void => {
+				showPrimarySurface("flow");
+			});
+		},
 		onWorkspaceEdit: setFlowWorkspaceEditTarget,
 		onWorkspaceNewFlow: (workspace: WorkspaceConfig): void => {
 			void flowController.createNewFlow(workspace.id).then((): void => {

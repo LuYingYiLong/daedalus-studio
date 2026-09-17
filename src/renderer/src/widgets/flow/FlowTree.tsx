@@ -20,6 +20,7 @@ export type FlowTreeProps = {
 	workspaces: WorkspaceConfig[];
 	selectedFlowId: string | null;
 	unreadFlowIds: readonly string[];
+	flowRuntimeStatusById?: Readonly<Record<string, "running" | "failed" | "completed">>;
 	isLoading: boolean;
 	isMutating: boolean;
 	order: FlowTreeOrder | null;
@@ -219,6 +220,7 @@ function FlowTree({
 	workspaces,
 	selectedFlowId,
 	unreadFlowIds,
+	flowRuntimeStatusById = {},
 	isLoading,
 	isMutating,
 	order,
@@ -512,7 +514,7 @@ function FlowTree({
 			createSectionNode(
 				"recent",
 				recentChildren,
-				createSectionAction(t("agentPage.actions.newSession"), (): void => {
+				createSectionAction(t("flow.new.title", { defaultValue: "New Flow" }), (): void => {
 					ensureSectionOpen("recent");
 					onNewSession();
 				}),
@@ -568,6 +570,7 @@ function FlowTree({
 								flow={flow}
 								isSelected={flow.flowId === selectedFlowId}
 								isUnread={unreadFlowIdSet.has(flow.flowId)}
+								runtimeStatus={flowRuntimeStatusById[flow.flowId]}
 								isMutating={isMutating}
 								isPinning={pinningFlowId === flow.flowId}
 								onTogglePin={(): void => {
@@ -777,6 +780,7 @@ type FlowTreeItemProps = {
 	flow: ConversationFlowSummary;
 	isSelected: boolean;
 	isUnread: boolean;
+	runtimeStatus?: "running" | "failed" | "completed";
 	isMutating: boolean;
 	isPinning: boolean;
 	onTogglePin: () => void;
@@ -788,6 +792,7 @@ function FlowTreeItem({
 	flow,
 	isSelected,
 	isUnread,
+	runtimeStatus,
 	isMutating,
 	isPinning,
 	onTogglePin,
@@ -795,7 +800,7 @@ function FlowTreeItem({
 	onArchive,
 }: FlowTreeItemProps): React.JSX.Element {
 	const { t } = useTranslation();
-	const isRunning: boolean = flow.activeRequestId !== null;
+	const isRunning: boolean = runtimeStatus === "running";
 	const unreadLabel: string = t("workspaceTree.status.unreadResponse", {
 		defaultValue: "Unread assistant response",
 	});
@@ -831,8 +836,8 @@ function FlowTreeItem({
 	return (
 		<Dropdown menu={actionMenu} trigger={["contextMenu"]}>
 			<Badge
-				dot={isUnread}
-				color="var(--ant-color-primary)"
+				dot={isUnread || runtimeStatus !== undefined}
+				color={runtimeStatus === "failed" ? "var(--ant-color-error)" : runtimeStatus === "completed" ? "var(--ant-color-success)" : "var(--ant-color-primary)"}
 				offset={[-2, 4]}
 				title={isUnread ? unreadLabel : undefined}
 				className={styles.itemUnreadBadge}

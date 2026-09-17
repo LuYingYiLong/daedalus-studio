@@ -8,57 +8,30 @@ type FlowWelcomeProps = {
 	errorMessage: string | null;
 };
 
-type FlowWelcomeStarter = {
-	id: "explore" | "decompose" | "compare";
-};
-
-const STARTERS: readonly FlowWelcomeStarter[] = [{ id: "explore" }, { id: "decompose" }, { id: "compare" }];
-
-const STARTER_ICONS: Record<FlowWelcomeStarter["id"], string> = {
-	explore: "search",
-	decompose: "plan",
-	compare: "fork",
-};
-
 function FlowWelcome({ onStarterSelect, errorMessage }: FlowWelcomeProps): React.JSX.Element {
 	const { t } = useTranslation();
 	return (
 		<section className={styles.flowWelcome} aria-labelledby="flow-welcome-title">
 			<div className={styles.welcomeGraph} aria-hidden="true">
-				<div className={`${styles.welcomeNode} ${styles.welcomeNodeUser}`}>
-					<Icon name="user" />
-				</div>
+				<div className={`${styles.welcomeNode} ${styles.welcomeNodeUser}`}><Icon name="user" /></div>
 				<span className={styles.welcomeEdge} />
-				<div className={`${styles.welcomeNode} ${styles.welcomeNodeAssistant}`}>
-					<Icon name="agent" />
-				</div>
+				<div className={`${styles.welcomeNode} ${styles.welcomeNodeAssistant}`}><Icon name="agent" /></div>
 				<span className={styles.welcomeBranchEdge} />
-				<div className={`${styles.welcomeNode} ${styles.welcomeNodeBranch}`}>
-					<Icon name="fork" />
-				</div>
+				<div className={`${styles.welcomeNode} ${styles.welcomeNodeBranch}`}><Icon name="check" /></div>
 			</div>
 			<Typography.Title level={1} id="flow-welcome-title" className={styles.flowWelcomeTitle}>
-				{t("flow.welcome.title")}
+				{t("flow.welcome.nodeTitle", { defaultValue: "Build a workflow from nodes" })}
 			</Typography.Title>
-			{errorMessage !== null ? (
-				<Alert className={styles.flowWelcomeError} type="error" showIcon message={errorMessage} />
-			) : null}
-			<div className={styles.flowWelcomeStarters} aria-label={t("flow.welcome.starters.label")}>
-				{STARTERS.map(
-					(starter): React.JSX.Element => (
-						<Button
-							key={starter.id}
-							shape="round"
-							size="large"
-							className={styles.flowWelcomeStarter}
-							icon={<Icon name={STARTER_ICONS[starter.id]} />}
-							onClick={(): void => onStarterSelect(t(`flow.welcome.starters.${starter.id}.prompt`))}
-						>
-							{t(`flow.welcome.starters.${starter.id}.label`)}
-						</Button>
-					),
-				)}
-			</div>
+			<Typography.Paragraph className={styles.flowWelcomeDescription}>
+				{t("flow.welcome.nodeDescription", { defaultValue: "Add Prompt, LLM, Output, and Note nodes, then connect them on the canvas." })}
+			</Typography.Paragraph>
+			{errorMessage !== null ? <Alert className={styles.flowWelcomeError} type="error" showIcon message={errorMessage} /> : null}
+			<Button shape="round" size="large" type="primary" icon={<Icon name="add" />} onClick={(): void => onStarterSelect("")}>
+				{t("flow.welcome.addPrompt", { defaultValue: "Add Prompt node" })}
+			</Button>
+			<Typography.Text type="secondary" className={styles.flowWelcomeHint}>
+				{t("flow.welcome.shortcuts", { defaultValue: "Shift+A adds a Prompt node · Home fits the canvas · Ctrl/Cmd+Enter runs the Flow" })}
+			</Typography.Text>
 		</section>
 	);
 }
