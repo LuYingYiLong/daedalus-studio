@@ -82,8 +82,8 @@
 	right: var(--ds-space-3);
 	bottom: auto;
 	background: var(--ds-bg);
-	border: 1px solid var(--ant-color-border-secondary);
-	border-radius: var(--ds-radius-md);
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
 }
 
 .canvasRegion :global(.react-flow__controls) {
@@ -114,78 +114,6 @@
 	place-items: center;
 	color: var(--ant-color-text-tertiary);
 	pointer-events: none;
-}
-
-.nodeCard {
-	position: relative;
-	display: grid;
-	grid-template-rows: auto auto minmax(0, 1fr) auto;
-	width: 300px;
-	height: 168px;
-	padding: 12px 14px 10px;
-	border: 1px solid var(--ant-color-border-secondary);
-	border-radius: var(--ds-radius-lg);
-	background: var(--ds-bg);
-	box-shadow: var(--ant-box-shadow-tertiary);
-	transition:
-		border-color 160ms ease,
-		box-shadow 160ms ease,
-		transform 160ms ease;
-}
-
-.nodeCard:hover,
-.nodeCardActive {
-	border-color: var(--ant-color-primary);
-	box-shadow: 0 8px 24px color-mix(in srgb, var(--ant-color-primary) 18%, transparent);
-}
-
-.nodeCardMatched {
-	border-color: var(--ant-color-warning);
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--ant-color-warning) 24%, transparent);
-}
-
-.nodeCard[data-role="user"] {
-	background: color-mix(in srgb, var(--ant-color-primary-bg) 42%, var(--ds-bg));
-}
-
-.nodeHeader,
-.nodeRole,
-.nodeActions {
-	display: flex;
-	align-items: center;
-}
-
-.nodeHeader {
-	justify-content: space-between;
-	gap: 8px;
-}
-
-.nodeRole {
-	gap: 6px;
-	font-weight: 600;
-}
-
-.nodeMeta {
-	font-size: 11px;
-}
-
-.nodePreview {
-	margin: 8px 0 !important;
-	overflow: hidden;
-	color: var(--ant-color-text-secondary);
-	white-space: pre-wrap;
-}
-
-.nodeActions {
-	justify-content: flex-end;
-	gap: 4px;
-}
-
-.nodeHandle {
-	width: 8px !important;
-	height: 8px !important;
-	border: 2px solid var(--ds-bg) !important;
-	background: var(--ant-color-primary) !important;
 }
 
 .activePathEdge :global(.react-flow__edge-path) {

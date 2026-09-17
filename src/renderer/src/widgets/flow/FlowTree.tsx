@@ -512,7 +512,7 @@ function FlowTree({
 			createSectionNode(
 				"recent",
 				recentChildren,
-				createSectionAction(t("workspaceTree.actions.newSession"), (): void => {
+				createSectionAction(t("agentPage.actions.newSession"), (): void => {
 					ensureSectionOpen("recent");
 					onNewSession();
 				}),
