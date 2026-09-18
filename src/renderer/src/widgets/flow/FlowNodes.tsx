@@ -10,12 +10,23 @@ import type {
 	FlowNodePortDefinition,
 	FlowNodeTypeDefinition,
 } from "@/platform/rpc/types";
+import type {
+	ProviderModelInfo,
+	ProviderModelSelection,
+} from "@/platform/rpc/provider-api";
+import MarkdownContent from "@/widgets/markdown/MarkdownContent";
 import styles from "./FlowNodes.module.css";
+
+export type FlowNodeEditorOptions = {
+	modelSelection: ProviderModelSelection | null;
+	modelsByProvider: Readonly<Record<string, ProviderModelInfo[]>>;
+};
 
 export type FlowCanvasNodeData = {
 	flowNode: FlowDocumentNode;
 	nodeRun: FlowDocumentNodeRun | null;
 	definition: FlowNodeTypeDefinition | null;
+	editorOptions: FlowNodeEditorOptions;
 	matched: boolean;
 	locked: boolean;
 	onUpdate: (nodeId: string, patch: Record<string, unknown>) => void;
@@ -26,6 +37,31 @@ export type FlowCanvasNode = Node<FlowCanvasNodeData, "flowNode">;
 
 function statusLabel(status: FlowDocumentNodeStatus): string {
 	return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function unwrapNodeOutput(output: unknown): unknown {
+	if (output !== null && typeof output === "object" && !Array.isArray(output)) {
+		const values = Object.values(output as Record<string, unknown>);
+		if (values.length === 1) return values[0];
+	}
+	return output;
+}
+
+function formatOutputMarkdown(output: unknown, format: unknown): string {
+	const value = unwrapNodeOutput(output);
+	if (value === null || value === undefined) return "";
+	if (format === "json" || typeof value === "object") {
+		let jsonValue: unknown = value;
+		if (typeof value === "string") {
+			try {
+				jsonValue = JSON.parse(value) as unknown;
+			} catch {
+				return `\`\`\`json\n${value}\n\`\`\``;
+			}
+		}
+		return `\`\`\`json\n${JSON.stringify(jsonValue, null, 2)}\n\`\`\``;
+	}
+	return String(value);
 }
 
 function headerColor(typeId: string): string {
@@ -127,25 +163,122 @@ function JsonField({
 function SchemaEditor({
 	node,
 	definition,
+	editorOptions,
 	disabled,
 	onChange,
 }: {
 	node: FlowDocumentNode;
 	definition: FlowNodeTypeDefinition;
+	editorOptions: FlowNodeEditorOptions;
 	disabled: boolean;
 	onChange: (config: Record<string, unknown>) => void;
 }): React.JSX.Element {
+	const { t } = useTranslation();
 	const [config, setConfig] = useState<Record<string, unknown>>(node.config);
-	useEffect((): void => setConfig(node.config), [node.config]);
-	const update = (key: string, value: unknown, commit = true): void => {
-		const next = { ...config, [key]: value };
-		setConfig(next);
-		if (commit) onChange(next);
+	const configRef = useRef<Record<string, unknown>>(node.config);
+	const commitTimerRef = useRef<number | null>(null);
+	useEffect((): void => {
+		configRef.current = node.config;
+		setConfig(node.config);
+	}, [node.config]);
+	useEffect((): (() => void) => (): void => {
+		if (commitTimerRef.current !== null) window.clearTimeout(commitTimerRef.current);
+	}, []);
+	const commitConfig = (next: Record<string, unknown>): void => {
+		if (commitTimerRef.current !== null) window.clearTimeout(commitTimerRef.current);
+		commitTimerRef.current = null;
+		onChange(next);
 	};
+	const update = (key: string, value: unknown, commit = true): void => {
+		const next = { ...configRef.current, [key]: value };
+		configRef.current = next;
+		setConfig(next);
+		if (commit) commitConfig(next);
+		else {
+			if (commitTimerRef.current !== null) window.clearTimeout(commitTimerRef.current);
+			commitTimerRef.current = window.setTimeout((): void => commitConfig(configRef.current), 250);
+		}
+	};
+	const providerId = typeof config.provider === "string" ? config.provider : "";
+	const modelId = typeof config.model === "string" ? config.model : "";
+	const providerOptions = (editorOptions.modelSelection?.providers ?? [])
+		.filter((provider): boolean => provider.configured || provider.provider === providerId)
+		.map((provider) => ({ value: provider.provider, label: provider.displayName }));
+	const modelCatalog = editorOptions.modelsByProvider[providerId] ?? [];
+	const modelOptions = modelCatalog.map((model) => ({ value: model.id, label: model.displayName }));
+	if (modelId.length > 0 && !modelOptions.some((option): boolean => option.value === modelId))
+		modelOptions.unshift({ value: modelId, label: modelId });
+	const selectedModel = modelCatalog.find((model): boolean => model.id === modelId);
+	const configuredEfforts = selectedModel?.customization?.reasoningEfforts ?? selectedModel?.capabilities.reasoningEfforts ?? [];
+	const currentEffort = typeof config.reasoningEffort === "string" ? config.reasoningEffort : "";
+	const effortOptions = [
+		{ value: "", label: t("flow.editor.modelDefault", { defaultValue: "Default" }) },
+		...configuredEfforts.map((effort) => ({ value: effort.id, label: effort.id })),
+	];
+	if (currentEffort.length > 0 && !effortOptions.some((option): boolean => option.value === currentEffort))
+		effortOptions.push({ value: currentEffort, label: currentEffort });
 	return (
 		<div className={styles.compactFields}>
 			{Object.entries(readSchemaProperties(definition.configSchema)).map(([key, schema]): React.JSX.Element => {
 				const title = typeof schema.title === "string" ? schema.title : key.replaceAll("_", " ");
+				const control = schema["x-daedalus-control"];
+				if (control === "provider")
+					return (
+						<Select
+							key={key}
+							className="nodrag"
+							disabled={disabled}
+							value={providerId || undefined}
+							placeholder={title}
+							options={providerOptions}
+							showSearch
+							optionFilterProp="label"
+							onChange={(value): void => {
+								const nextProvider = editorOptions.modelSelection?.providers.find(
+									(candidate): boolean => candidate.provider === value,
+								);
+								const nextModel = nextProvider?.selectedModel ?? nextProvider?.defaultModel ?? "";
+								const nextModelInfo = editorOptions.modelsByProvider[value]?.find(
+									(candidate): boolean => candidate.id === nextModel,
+								);
+								const nextEffort = (
+									nextModelInfo?.customization?.reasoningEfforts ??
+									nextModelInfo?.capabilities.reasoningEfforts ??
+									[]
+								).find((effort): boolean => effort.default === true)?.id ?? "";
+								const next = { ...configRef.current, provider: value, model: nextModel, reasoningEffort: nextEffort };
+								configRef.current = next;
+								setConfig(next);
+								commitConfig(next);
+							}}
+						/>
+					);
+				if (control === "model")
+					return (
+						<Select
+							key={key}
+							className="nodrag"
+							disabled={disabled || providerId.length === 0}
+							value={modelId || undefined}
+							placeholder={title}
+							options={modelOptions}
+							showSearch
+							optionFilterProp="label"
+							onChange={(value): void => update(key, value)}
+						/>
+					);
+				if (control === "reasoning-effort")
+					return (
+						<Select
+							key={key}
+							className="nodrag"
+							disabled={disabled || modelId.length === 0}
+							value={currentEffort}
+							placeholder={title}
+							options={effortOptions}
+							onChange={(value): void => update(key, value)}
+						/>
+					);
 				const enumValues = Array.isArray(schema.enum)
 					? schema.enum.filter(
 							(value): value is string | number => typeof value === "string" || typeof value === "number",
@@ -215,7 +348,7 @@ function SchemaEditor({
 							placeholder={title}
 							autoSize={{ minRows: 2, maxRows: 8 }}
 							onChange={(event): void => update(key, event.target.value, false)}
-							onBlur={(): void => onChange(config)}
+							onBlur={(): void => commitConfig(configRef.current)}
 						/>
 					);
 				return (
@@ -226,7 +359,7 @@ function SchemaEditor({
 						value={typeof config[key] === "string" ? config[key] : ""}
 						placeholder={title}
 						onChange={(event): void => update(key, event.target.value, false)}
-						onBlur={(): void => onChange(config)}
+						onBlur={(): void => commitConfig(configRef.current)}
 					/>
 				);
 			})}
@@ -301,12 +434,14 @@ function pluginUiHost(pluginId: string): string {
 function SandboxEditor({
 	node,
 	definition,
+	editorOptions,
 	disabled,
 	onChange,
 	onAction,
 }: {
 	node: FlowDocumentNode;
 	definition: FlowNodeTypeDefinition & { ui: { kind: "sandbox"; entry: string; actions: string[] } };
+	editorOptions: FlowNodeEditorOptions;
 	disabled: boolean;
 	onChange: (config: Record<string, unknown>) => void;
 	onAction: (action: string) => void;
@@ -370,7 +505,16 @@ function SandboxEditor({
 		window.addEventListener("message", receive);
 		return (): void => window.removeEventListener("message", receive);
 	}, [definition.configSchema, definition.ui.actions, disabled, host, node.config, onAction, onChange]);
-	if (failed) return <SchemaEditor node={node} definition={definition} disabled={disabled} onChange={onChange} />;
+	if (failed)
+		return (
+			<SchemaEditor
+				node={node}
+				definition={definition}
+				editorOptions={editorOptions}
+				disabled={disabled}
+				onChange={onChange}
+			/>
+		);
 	return (
 		<iframe
 			ref={iframeRef}
@@ -422,7 +566,8 @@ function PortRail({ ports, type }: { ports: FlowNodePortDefinition[]; type: "sou
 	);
 }
 
-function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.Element {
+function FlowNodeCard({ data }: NodeProps<FlowCanvasNode>): React.JSX.Element {
+	const { t } = useTranslation();
 	const { flowNode, definition } = data;
 	const ports = useMemo(
 		(): FlowNodePortDefinition[] => resolveFlowCanvasPorts(flowNode, definition),
@@ -437,6 +582,11 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 		[ports],
 	);
 	const portAreaHeight = Math.max(inputPorts.length, outputPorts.length) * 32;
+	const isOutputNode = flowNode.typeId === "builtin/output";
+	const outputMarkdown =
+		data.nodeRun?.output === null || data.nodeRun?.output === undefined
+			? ""
+			: formatOutputMarkdown(data.nodeRun.output, flowNode.config.format);
 	const updateConfig = (config: Record<string, unknown>): void => data.onUpdate(flowNode.nodeId, { config });
 	return (
 		<div className={styles.nodeShell} data-flow-node-id={flowNode.nodeId}>
@@ -447,7 +597,9 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 			>
 				<header className={styles.header} style={{ background: headerColor(flowNode.typeId) }}>
 					<span className={styles.role}>{flowNode.title}</span>
-					<Tag>{statusLabel(data.nodeRun?.status ?? flowNode.status)}</Tag>
+					<Tag title={data.nodeRun?.error ?? undefined}>
+						{statusLabel(data.nodeRun?.status ?? flowNode.status)}
+					</Tag>
 				</header>
 				<div className={styles.body}>
 					{portAreaHeight > 0 ? (
@@ -463,6 +615,7 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 									ui: { kind: "sandbox"; entry: string; actions: string[] };
 								}
 							}
+							editorOptions={data.editorOptions}
 							disabled={data.locked}
 							onChange={updateConfig}
 							onAction={(action): void => data.onAction(flowNode.nodeId, action)}
@@ -471,27 +624,29 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 						<SchemaEditor
 							node={flowNode}
 							definition={definition}
+							editorOptions={data.editorOptions}
 							disabled={data.locked}
 							onChange={updateConfig}
 						/>
 					)}
-					{data.nodeRun?.output !== null && data.nodeRun?.output !== undefined ? (
-						<Typography.Paragraph
-							className={styles.resultPreview}
-							ellipsis={{ rows: selected ? 6 : 2, expandable: selected }}
+					{isOutputNode ? (
+						<div
+							className={`${styles.outputResult} nodrag nowheel`}
+							role="region"
+							aria-label={t("flow.editor.outputResult", { defaultValue: "Output result" })}
 						>
-							{JSON.stringify(data.nodeRun.output)}
-						</Typography.Paragraph>
+							{outputMarkdown.length > 0 ? (
+								<MarkdownContent>{outputMarkdown}</MarkdownContent>
+							) : (
+								<Typography.Text type="secondary">
+									{t("flow.editor.outputPending", {
+										defaultValue: "Run the Flow to see its output here",
+									})}
+								</Typography.Text>
+							)}
+						</div>
 					) : null}
 				</div>
-				<footer className={styles.footer}>
-					<Typography.Text
-						type={data.nodeRun?.status === "failed" ? "danger" : "secondary"}
-						className={styles.statusText}
-					>
-						{data.nodeRun?.error ?? data.nodeRun?.status ?? flowNode.status}
-					</Typography.Text>
-				</footer>
 			</article>
 			<PortRail ports={outputPorts} type="source" />
 		</div>

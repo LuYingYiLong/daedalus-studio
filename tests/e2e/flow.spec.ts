@@ -332,7 +332,52 @@ test.describe("Daedalus Flow node workflow", () => {
 			}
 			return { flowId: FLOW_ID, graphRevision, layoutRevision, acceptedMutationIds: operations.map((operation): string => operation.mutationId), operations };
 		});
+		let runStartCount = 0;
 		mockBackend.setHandler("flow.run.start", () => {
+			runStartCount += 1;
+			if (runStartCount > 1) {
+				const runId = `run-e2e-${runStartCount}`;
+				const queuedNodes = nodes.map((node): Record<string, unknown> => ({
+					runId,
+					nodeId: node.nodeId,
+					typeId: node.typeId,
+					pluginVersion: node.pluginVersion,
+					pluginFingerprint: node.pluginFingerprint,
+					configVersion: node.configVersion,
+					status: "queued",
+					inputFingerprint: null,
+					output: null,
+					error: null,
+					startedAt: null,
+					finishedAt: null,
+				}));
+				const queuedRun = { runId, flowId: FLOW_ID, revision: graphRevision, status: "running", startedAt: NOW, finishedAt: null, error: null, nodes: queuedNodes };
+				const completedRun = {
+					...queuedRun,
+					status: "completed",
+					finishedAt: NOW,
+					nodes: queuedNodes.map((nodeRun): Record<string, unknown> => {
+						const node = nodes.find((candidate): boolean => candidate.nodeId === nodeRun.nodeId)!;
+						return {
+							...nodeRun,
+							status: "cached",
+							inputFingerprint: `fingerprint-${node.nodeId}`,
+							output: node.typeId === "builtin/output" ? { result: "cached result" } : { output: "cached result" },
+							startedAt: NOW,
+							finishedAt: NOW,
+						};
+					}),
+				};
+				runs = [completedRun];
+				setTimeout((): void => mockBackend.sendEvent("flow.run.state", {
+					flowId: FLOW_ID,
+					runId,
+					revision: graphRevision,
+					status: "completed",
+					run: completedRun,
+				}, { runId }), 0);
+				return queuedRun;
+			}
 			const runId = "run-e2e";
 			const nodeRuns = nodes.map(
 				(node): Record<string, unknown> => ({
@@ -485,6 +530,8 @@ test.describe("Daedalus Flow node workflow", () => {
 		await mainWindow.getByRole("button", { name: /Approve|批\s*准/ }).click();
 		await expect.poll(() => mockBackend.getRequests("flow.approval.resolve").length).toBe(1);
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toContainText("approved result");
+		await mainWindow.getByRole("button", { name: /Run|运行/ }).click();
+		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toContainText("cached result");
 
 		const outputNode = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])');
 		const patchCountBeforeDelete = mockBackend.getRequests("flow.patch.commit").length;

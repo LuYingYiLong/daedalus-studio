@@ -933,6 +933,7 @@ function HomePage({
 					flowSurfaceProps={{
 						controller: flowController,
 						keyboardShortcuts,
+						providerModelSelection,
 						workspaceOptions: workspaceOptionsInTreeOrder,
 						searchHandleRef: flowSearchHandleRef,
 					}}

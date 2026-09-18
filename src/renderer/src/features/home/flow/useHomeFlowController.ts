@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { archiveFlow, commitFlowPatch, createFlow, exportFlowToSession, fetchFlow, fetchFlows, importFlowFromSession, renameFlow, startFlowRun, stopFlowRun, updateFlowSettings, listFlowNodeTypes, listFlowTools, listFlowApprovals, resolveFlowApproval, updateFlowTreeOrder as persistFlowTreeOrder, type CreateFlowParams } from "@/platform/rpc/flow-api";
 import { onBackendEvent, onBackendReconnected } from "@/platform/rpc/transport/backend-client";
-import type { FlowDocumentSummary, FlowDocument, FlowDocumentEdge, FlowDocumentNode, FlowDocumentSnapshot, FlowNodeTypeId, FlowNodeTypeDefinition, FlowToolDefinition, FlowApproval, FlowOperation, FlowTreeOrder, FlowTreeOrderUpdate, SessionMetadata } from "@/platform/rpc/types";
+import type { FlowDocumentSummary, FlowDocument, FlowDocumentEdge, FlowDocumentNode, FlowDocumentNodeRun, FlowDocumentRun, FlowDocumentSnapshot, FlowNodeTypeId, FlowNodeTypeDefinition, FlowToolDefinition, FlowApproval, FlowOperation, FlowTreeOrder, FlowTreeOrderUpdate, SessionMetadata } from "@/platform/rpc/types";
 import { createFlowMutationId, flowOperationOutbox } from "@/domain/flow/flow-operation-outbox";
 
 export type FlowNodeDetail = { node: FlowDocumentNode };
@@ -59,6 +59,18 @@ type FlowHistoryCommand = { undo: FlowOperation[]; redo: FlowOperation[] };
 
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
+}
+
+function isFlowDocumentNodeRun(value: unknown): value is FlowDocumentNodeRun {
+	if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+	const candidate = value as Partial<FlowDocumentNodeRun>;
+	return typeof candidate.runId === "string" && typeof candidate.nodeId === "string" && typeof candidate.status === "string";
+}
+
+function isFlowDocumentRun(value: unknown): value is FlowDocumentRun {
+	if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+	const candidate = value as Partial<FlowDocumentRun>;
+	return typeof candidate.runId === "string" && typeof candidate.flowId === "string" && typeof candidate.status === "string" && Array.isArray(candidate.nodes) && candidate.nodes.every(isFlowDocumentNodeRun);
 }
 
 function toSummary(flow: FlowDocument): FlowDocumentSummary {
@@ -381,14 +393,36 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 				if (current !== null) {
 					const runId = typeof data.runId === "string" ? data.runId : "";
 					const status = typeof data.status === "string" ? data.status : "running";
+					const eventRun = event.event === "flow.run.state" && isFlowDocumentRun(data.run)
+						? data.run
+						: null;
+					const eventNodeRun = event.event === "flow.node.state" && isFlowDocumentNodeRun(data.nodeRun)
+						? data.nodeRun
+						: null;
 					const next = {
 						...current,
-						runs: current.runs.map((run) => run.runId !== runId ? run : event.event === "flow.run.state"
-							? { ...run, status: status as typeof run.status }
-							: { ...run, nodes: run.nodes.map((node) => node.nodeId === data.nodeId ? { ...node, status: status as typeof node.status } : node) }),
+						runs: eventRun !== null
+							? [eventRun, ...current.runs.filter((run): boolean => run.runId !== eventRun.runId)]
+							: current.runs.map((run) => run.runId !== runId ? run : event.event === "flow.run.state"
+								? { ...run, status: status as typeof run.status }
+								: {
+									...run,
+									nodes: run.nodes.map((node) => node.nodeId === data.nodeId
+										? (eventNodeRun ?? { ...node, status: status as typeof node.status })
+										: node),
+								}),
 					};
 					snapshotRef.current = next;
 					setSnapshot(next);
+					if (event.event === "flow.run.state")
+						setFlowRuntimeStatusById((values): Record<string, "running" | "failed" | "completed"> => ({
+							...values,
+							[flowId]: status === "running" || status === "queued" || status === "waiting"
+								? "running"
+								: status === "failed"
+									? "failed"
+									: "completed",
+						}));
 				}
 				void listFlowApprovals(flowId).then((result): void => setApprovals(result.approvals));
 				return;
@@ -619,7 +653,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			let current = snapshotRef.current;
 			if (current === null) return;
 			try {
-				await flowOperationOutbox.flush(current.flow.flowId);
+				await flowOperationOutbox.flushFully(current.flow.flowId);
 				current = snapshotRef.current;
 				if (current === null) return;
 				const run = await startFlowRun({
@@ -627,7 +661,10 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 					revision: current.flow.graphRevision,
 					...(forceNodeIds === undefined ? {} : { forceNodeIds }),
 				});
-				const next = { ...current, runs: [run, ...current.runs.filter((candidate): boolean => candidate.runId !== run.runId)] };
+				const latest = snapshotRef.current;
+				if (latest === null || latest.flow.flowId !== run.flowId) return;
+				const received = latest.runs.find((candidate): boolean => candidate.runId === run.runId) ?? run;
+				const next = { ...latest, runs: [received, ...latest.runs.filter((candidate): boolean => candidate.runId !== run.runId)] };
 				snapshotRef.current = next;
 				setSnapshot(next);
 			} catch (runError: unknown) {

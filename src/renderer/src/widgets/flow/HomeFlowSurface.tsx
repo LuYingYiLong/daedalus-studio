@@ -20,6 +20,11 @@ import { Icon } from "@/assets/icons";
 import type { HomeFlowController } from "@/features/home/flow/useHomeFlowController";
 import { getCachedClientPreferences, updateClientPreferences } from "@/platform/rpc/client-preferences-api";
 import {
+	listProviderModels,
+	type ProviderModelInfo,
+	type ProviderModelSelection,
+} from "@/platform/rpc/provider-api";
+import {
 	detectShortcutPlatform,
 	getEffectiveShortcutBinding,
 	matchesShortcutKeyboardEvent,
@@ -43,6 +48,7 @@ import {
 	resolveFlowCanvasPorts,
 	resolveFlowDefinitionPorts,
 	type FlowCanvasNode,
+	type FlowNodeEditorOptions,
 } from "./FlowNodes";
 import styles from "./HomeFlowSurface.module.css";
 
@@ -53,6 +59,7 @@ export type FlowSearchHandle = {
 export type HomeFlowSurfaceProps = {
 	controller: HomeFlowController;
 	keyboardShortcuts: KeyboardShortcutOverrides;
+	providerModelSelection: ProviderModelSelection | null;
 	workspaceOptions: WorkspaceConfig[];
 	searchHandleRef?: MutableRefObject<FlowSearchHandle | null>;
 };
@@ -150,6 +157,7 @@ function compatibleType(
 function HomeFlowSurface({
 	controller,
 	keyboardShortcuts,
+	providerModelSelection,
 	workspaceOptions,
 	searchHandleRef,
 }: HomeFlowSurfaceProps): React.JSX.Element {
@@ -164,10 +172,12 @@ function HomeFlowSurface({
 	const [isViewportMoving, setIsViewportMoving] = useState(false);
 	const [snapToGrid, setSnapToGrid] = useState<boolean>((): boolean => getCachedClientPreferences().flowSnapToGrid);
 	const [consentText, setConsentText] = useState<Record<string, string>>({});
+	const [modelsByProvider, setModelsByProvider] = useState<Record<string, ProviderModelInfo[]>>({});
 	const canvasRef = useRef<HTMLDivElement | null>(null);
 	const searchInputRef = useRef<InputRef | null>(null);
 	const connectStartRef = useRef<OnConnectStartParams | null>(null);
 	const interactionSampleRef = useRef<InteractionSample | null>(null);
+	const loadingProviderModelsRef = useRef<Set<string>>(new Set());
 	const resolvedPositions = useMemo(
 		(): Map<string, { x: number; y: number }> => resolveNodePositions(snapshot?.nodes ?? []),
 		[snapshot?.nodes],
@@ -181,6 +191,10 @@ function HomeFlowSurface({
 				]),
 			),
 		[controller.nodeDefinitions],
+	);
+	const editorOptions = useMemo<FlowNodeEditorOptions>(
+		(): FlowNodeEditorOptions => ({ modelSelection: providerModelSelection, modelsByProvider }),
+		[modelsByProvider, providerModelSelection],
 	);
 	const latestRun = snapshot?.runs[0];
 	const running =
@@ -212,6 +226,49 @@ function HomeFlowSurface({
 		}),
 		[controller.setApprovalMode, snapshot?.flow.approvalMode, t],
 	);
+	useEffect((): void => {
+		const providerIds = new Set<string>();
+		for (const node of snapshot?.nodes ?? []) {
+			const providerId = node.config.provider;
+			if (typeof providerId === "string" && providerId.length > 0) providerIds.add(providerId);
+		}
+		if (providerModelSelection?.activeModel.providerId !== undefined)
+			providerIds.add(providerModelSelection.activeModel.providerId);
+		for (const providerId of providerIds) {
+			if (modelsByProvider[providerId] !== undefined || loadingProviderModelsRef.current.has(providerId)) continue;
+			loadingProviderModelsRef.current.add(providerId);
+			void listProviderModels(providerId)
+				.then((result): void => {
+					setModelsByProvider((current): Record<string, ProviderModelInfo[]> => ({
+						...current,
+						[providerId]: result.models,
+					}));
+				})
+				.catch((): void => {
+					setModelsByProvider((current): Record<string, ProviderModelInfo[]> => ({
+						...current,
+						[providerId]: [],
+					}));
+				})
+				.finally((): void => {
+					loadingProviderModelsRef.current.delete(providerId);
+				});
+		}
+	}, [modelsByProvider, providerModelSelection?.activeModel.providerId, snapshot?.nodes]);
+	const commitActiveEditor = useCallback(async (): Promise<void> => {
+		const activeElement = document.activeElement;
+		if (activeElement instanceof HTMLElement && canvasRef.current?.contains(activeElement)) activeElement.blur();
+		await new Promise<void>((resolve): void => {
+			window.setTimeout(resolve, 0);
+		});
+	}, []);
+	const startRequestedRun = useCallback(
+		async (forceNodeIds?: string[]): Promise<void> => {
+			await commitActiveEditor();
+			await controller.startRun(forceNodeIds);
+		},
+		[commitActiveEditor, controller.startRun],
+	);
 	const updateCanvasNode = useCallback(
 		(nodeId: string, patch: Record<string, unknown>): void => {
 			void controller.updateNode(nodeId, patch);
@@ -220,9 +277,9 @@ function HomeFlowSurface({
 	);
 	const runCanvasNodeAction = useCallback(
 		(nodeId: string, action: string): void => {
-			if (action === "run") void controller.startRun([nodeId]);
+			if (action === "run") void startRequestedRun([nodeId]);
 		},
-		[controller.startRun],
+		[startRequestedRun],
 	);
 
 	useEffect((): void => {
@@ -244,6 +301,7 @@ function HomeFlowSurface({
 					existing !== undefined &&
 					existing.data.flowNode === flowNode &&
 					existing.data.definition === definition &&
+					existing.data.editorOptions === editorOptions &&
 					existing.data.matched === matched &&
 					existing.data.locked === controller.isGraphLocked &&
 					existing.position.x === position.x &&
@@ -259,6 +317,7 @@ function HomeFlowSurface({
 						flowNode,
 						nodeRun: existing?.data.nodeRun ?? null,
 						definition,
+						editorOptions,
 						matched,
 						locked: controller.isGraphLocked,
 						onUpdate: updateCanvasNode,
@@ -270,6 +329,7 @@ function HomeFlowSurface({
 	}, [
 		controller.isGraphLocked,
 		definitionsByType,
+		editorOptions,
 		matchingIds,
 		resolvedPositions,
 		runCanvasNodeAction,
@@ -424,13 +484,13 @@ function HomeFlowSurface({
 	const handleKeyDown = useCallback(
 		(event: KeyboardEvent): void => {
 			const target = event.target as HTMLElement | null;
-			if (target?.matches('input, textarea, [contenteditable="true"]')) return;
 			if (matchesFlowShortcut(event, "flow.run")) {
 				event.preventDefault();
 				if (running) void controller.stopRun();
-				else void controller.startRun();
+				else void startRequestedRun();
 				return;
 			}
+			if (target?.matches('input, textarea, [contenteditable="true"]')) return;
 			if (matchesFlowShortcut(event, "flow.undo")) {
 				event.preventDefault();
 				controller.undo();
@@ -460,7 +520,6 @@ function HomeFlowSurface({
 		},
 		[
 			controller.redo,
-			controller.startRun,
 			controller.stopRun,
 			controller.undo,
 			deleteSelectedElements,
@@ -468,6 +527,7 @@ function HomeFlowSurface({
 			matchesFlowShortcut,
 			openPickerAt,
 			running,
+			startRequestedRun,
 		],
 	);
 	useEffect((): (() => void) => {
@@ -717,7 +777,7 @@ function HomeFlowSurface({
 						icon={<Icon name={running ? "stop" : "play"} />}
 						onClick={(): void => {
 							if (running) void controller.stopRun();
-							else void controller.startRun();
+							else void startRequestedRun();
 						}}
 					>
 						{running ? t("flow.editor.stop") : t("flow.editor.run")}

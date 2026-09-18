@@ -90,8 +90,16 @@ export class FlowOperationOutbox {
 	async flushAll(): Promise<void> {
 		await this.hydrate();
 		await Promise.all([...this.operations.keys()].map(async (flowId): Promise<void> => {
-			await this.flush(flowId);
+			await this.flushFully(flowId);
 		}));
+	}
+
+	async flushFully(flowId: string): Promise<void> {
+		await this.hydrate();
+		while ((this.operations.get(flowId)?.length ?? 0) > 0) {
+			const acknowledged = await this.flush(flowId);
+			if (acknowledged === null) return;
+		}
 	}
 
 	hasPending(flowId: string): boolean {

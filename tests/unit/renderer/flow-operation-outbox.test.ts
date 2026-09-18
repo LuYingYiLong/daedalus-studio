@@ -101,4 +101,37 @@ describe("FlowOperationOutbox", (): void => {
 		box.disconnect();
 		expect(committer).toHaveBeenCalledTimes(1);
 	});
+
+	it("drains edits queued while an earlier batch is still committing", async (): Promise<void> => {
+		let releaseFirstCommit: (() => void) | undefined;
+		let commitCount = 0;
+		const batches: FlowOperation[][] = [];
+		const box = new FlowOperationOutbox();
+		box.connect(async (flowId, _clientId, operations): Promise<FlowPatchAck> => {
+			commitCount += 1;
+			batches.push(operations);
+			if (commitCount === 1)
+				await new Promise<void>((resolve): void => {
+					releaseFirstCommit = resolve;
+				});
+			return {
+				flowId,
+				graphRevision: commitCount + 1,
+				layoutRevision: 1,
+				acceptedMutationIds: operations.map((operation): string => operation.mutationId),
+				operations,
+			};
+		}, (error): never => { throw error; });
+		box.enqueue("flow-a", { mutationId: "mutation-first", kind: "node.update", baseGraphRevision: 1, payload: { nodeId: "node-a", config: { text: "first" } } });
+		const firstFlush = box.flush("flow-a");
+		await vi.waitFor((): void => expect(commitCount).toBe(1));
+		box.enqueue("flow-a", { mutationId: "mutation-second", kind: "node.update", baseGraphRevision: 1, payload: { nodeId: "node-a", config: { text: "second" } } });
+		const drained = box.flushFully("flow-a");
+		releaseFirstCommit?.();
+		await Promise.all([firstFlush, drained]);
+		box.disconnect();
+		expect(batches).toHaveLength(2);
+		expect(batches[1]?.map((operation): string => operation.mutationId)).toEqual(["mutation-second"]);
+		expect(box.hasPending("flow-a")).toBe(false);
+	});
 });

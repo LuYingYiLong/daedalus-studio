@@ -705,6 +705,9 @@
 			"pendingApprovals": "Pending approvals",
 			"approve": "Approve",
 			"reject": "Reject",
+			"modelDefault": "Default",
+			"outputResult": "Output result",
+			"outputPending": "Run the Flow to see its output here",
 			"approvalModes": {
 				"manual": "Manual",
 				"auto-safe": "Auto safe",

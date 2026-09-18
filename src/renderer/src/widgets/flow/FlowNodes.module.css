@@ -9,7 +9,7 @@
 .nodeCard {
 	position: relative;
 	display: grid;
-	grid-template-rows: auto minmax(0, 1fr) auto;
+	grid-template-rows: auto minmax(0, 1fr);
 	width: 100%;
 	min-height: 176px;
 	overflow: hidden;
@@ -37,7 +37,6 @@
 
 .header,
 .role,
-.footer,
 .compactFields,
 .dynamicInputRow {
 	display: flex;
@@ -139,30 +138,23 @@
 	gap: var(--ds-space-1);
 }
 
-.resultPreview {
-	max-height: 96px;
-	margin: 0 !important;
-	padding: var(--ds-space-2);
+.outputResult {
+	min-height: 112px;
+	max-height: 280px;
+	padding: var(--ds-space-2) var(--ds-space-3);
 	overflow: auto;
-	border-radius: var(--ds-radius-sm);
+	border: 1px solid var(--ds-border-secondary);
+	border-radius: var(--ds-radius-md);
 	background: var(--ant-color-fill-quaternary);
-	font-size: 12px;
+	user-select: text;
 }
 
-.footer {
-	justify-content: flex-start;
-	min-height: 32px;
-	padding: var(--ds-space-1) var(--ds-space-2);
-	border-top: 1px solid var(--ds-border-secondary);
-	background: var(--ant-color-bg-container, var(--ds-surface-elevated));
+.outputResult > :first-child {
+	margin-top: 0;
 }
 
-.statusText {
-	max-width: 250px;
-	overflow: hidden;
-	font-size: 11px;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+.outputResult > :last-child {
+	margin-bottom: 0;
 }
 
 .pluginEditor {

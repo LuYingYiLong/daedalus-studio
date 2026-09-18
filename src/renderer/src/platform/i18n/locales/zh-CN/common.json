@@ -700,6 +700,9 @@
 			"pendingApprovals": "待审批操作",
 			"approve": "批准",
 			"reject": "拒绝",
+			"modelDefault": "默认",
+			"outputResult": "输出内容",
+			"outputPending": "运行 Flow 后，输出内容会显示在这里",
 			"approvalModes": {
 				"manual": "手动",
 				"auto-safe": "自动安全",
