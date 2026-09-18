@@ -627,7 +627,9 @@
 			"nodeTitle": "用节点搭建工作流",
 			"nodeDescription": "添加提示词、模型、数据处理、工具与输出节点，然后在画布上连接它们。",
 			"addPrompt": "添加提示词节点",
-			"shortcuts": "Shift+A 打开节点面板 · Home 适应画布 · Ctrl/Cmd+Enter 运行 Flow",
+			"workspaceLabel": "工作区",
+			"noWorkspace": "无 workspace",
+			"createFlow": "创建 Flow",
 			"starters": {
 				"label": "开始方式",
 				"explore": { "label": "探索一个问题", "prompt": "帮我探索一个问题：" },
@@ -2614,7 +2616,9 @@
 					"searchNodes": "搜索并添加节点",
 					"fitCanvas": "适应全部节点",
 					"run": "运行当前 Flow",
-					"deleteSelection": "删除选中的节点或连线"
+					"deleteSelection": "删除选中的节点或连线",
+					"undo": "撤销 Flow 编辑",
+					"redo": "重做 Flow 编辑"
 				}
 			},
 			"empty": "没有匹配的快捷键动作。",

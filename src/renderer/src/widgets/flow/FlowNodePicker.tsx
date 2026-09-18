@@ -1,79 +1,187 @@
-import { Empty, Input, Tag, Typography } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Dropdown, Empty, Input } from "antd";
+import type { InputRef, MenuProps } from "antd";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { FlowDocumentNodeType, FlowNodeTypeDefinition } from "@/platform/rpc/types";
+import type { FlowNodeTypeId, FlowNodeTypeDefinition } from "@/platform/rpc/types";
 import styles from "./FlowNodePicker.module.css";
-
-const RECENT_NODE_TYPES_KEY = "daedalus.flow.recent-node-types";
-const MAX_RECENT_NODE_TYPES = 5;
+import { Icon } from "@/assets/icons";
 
 type FlowNodePickerProps = {
 	open: boolean;
 	position: { x: number; y: number };
 	definitions: FlowNodeTypeDefinition[];
 	workspaceAvailable: boolean;
-	onSelect: (type: FlowDocumentNodeType) => void;
+	onSelect: (type: FlowNodeTypeId) => void;
 	onClose: () => void;
 };
 
-function readRecentNodeTypes(): FlowDocumentNodeType[] {
-	try {
-		const value = JSON.parse(window.localStorage.getItem(RECENT_NODE_TYPES_KEY) ?? "[]") as unknown;
-		return Array.isArray(value) ? value.filter((item): item is FlowDocumentNodeType => typeof item === "string").slice(0, MAX_RECENT_NODE_TYPES) : [];
-	} catch {
-		return [];
-	}
-}
+const menuStyle: React.CSSProperties = {
+	boxShadow: "none",
+	border: 0,
+};
 
-export default function FlowNodePicker({ open, position, definitions, workspaceAvailable, onSelect, onClose }: FlowNodePickerProps): React.JSX.Element | null {
+const submenuMotion: NonNullable<MenuProps["motion"]> = {
+	motionName: "",
+	motionAppear: false,
+	motionEnter: false,
+	motionLeave: false,
+};
+
+export default function FlowNodePicker({
+	open,
+	position,
+	definitions,
+	workspaceAvailable,
+	onSelect,
+	onClose,
+}: FlowNodePickerProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [query, setQuery] = useState("");
 	const [activeIndex, setActiveIndex] = useState(0);
-	const [recentNodeTypes, setRecentNodeTypes] = useState<FlowDocumentNodeType[]>(readRecentNodeTypes);
-	const panelRef = useRef<HTMLDivElement | null>(null);
-	const inputRef = useRef<React.ComponentRef<typeof Input> | null>(null);
+	const [openCategoryKeys, setOpenCategoryKeys] = useState<string[]>([]);
+	const inputRef = useRef<InputRef | null>(null);
 	const filtered = useMemo((): FlowNodeTypeDefinition[] => {
 		const normalized = query.trim().toLocaleLowerCase();
-		const matches = definitions.filter((definition): boolean => normalized.length === 0 || `${definition.defaultTitle} ${definition.type} ${definition.category}`.toLocaleLowerCase().includes(normalized));
-		if (normalized.length > 0) return matches;
-		const recentOrder = new Map(recentNodeTypes.map((type, index): [FlowDocumentNodeType, number] => [type, index]));
-		return [...matches].sort((left, right): number => (recentOrder.get(left.type) ?? Number.MAX_SAFE_INTEGER) - (recentOrder.get(right.type) ?? Number.MAX_SAFE_INTEGER));
-	}, [definitions, query, recentNodeTypes]);
-	const selectNode = (type: FlowDocumentNodeType): void => {
-		const next = [type, ...recentNodeTypes.filter((candidate): boolean => candidate !== type)].slice(0, MAX_RECENT_NODE_TYPES);
-		setRecentNodeTypes(next);
-		try { window.localStorage.setItem(RECENT_NODE_TYPES_KEY, JSON.stringify(next)); } catch { /* The picker still works when storage is unavailable. */ }
-		onSelect(type);
+		return definitions.filter(
+			(definition): boolean =>
+				normalized.length === 0 ||
+				`${definition.defaultTitle} ${definition.typeId} ${definition.category}`
+					.toLocaleLowerCase()
+					.includes(normalized),
+		);
+	}, [definitions, query]);
+	const items = useMemo((): MenuProps["items"] => {
+		const byCategory = new Map<string, FlowNodeTypeDefinition[]>();
+		for (const definition of filtered) {
+			const category = byCategory.get(definition.category) ?? [];
+			category.push(definition);
+			byCategory.set(definition.category, category);
+		}
+		return [...byCategory].map(([category, categoryDefinitions]) => ({
+			key: `category:${category}`,
+			label: t(`flow.editor.picker.categories.${category}`, { defaultValue: category }),
+			onTitleMouseEnter: (): void => setOpenCategoryKeys([`category:${category}`]),
+			children: categoryDefinitions.map((definition) => ({
+				key: definition.typeId,
+				label: t(`flow.editor.nodes.${definition.typeId}`, { defaultValue: definition.defaultTitle }),
+				disabled: definition.workspaceRequired && !workspaceAvailable,
+			})),
+			expandIcon: <Icon name="arrow-forward" />,
+		}));
+	}, [filtered, t, workspaceAvailable]);
+	const closePicker = (): void => {
+		setOpenCategoryKeys([]);
+		onClose();
+	};
+	const selectDefinition = (key: string): void => {
+		const definition = filtered.find((candidate): boolean => candidate.typeId === key);
+		if (definition === undefined) return;
+		setOpenCategoryKeys([]);
+		onSelect(definition.typeId);
 	};
 
 	useEffect((): void => {
-		if (!open) return;
+		if (!open) {
+			setOpenCategoryKeys([]);
+			return;
+		}
 		setQuery("");
 		setActiveIndex(0);
+		setOpenCategoryKeys([]);
 		window.setTimeout((): void => inputRef.current?.focus(), 0);
 	}, [open]);
-	useEffect((): (() => void) | undefined => {
-		if (!open) return undefined;
-		const onPointerDown = (event: PointerEvent): void => { if (!panelRef.current?.contains(event.target as globalThis.Node)) onClose(); };
-		window.addEventListener("pointerdown", onPointerDown, true);
-		return (): void => window.removeEventListener("pointerdown", onPointerDown, true);
-	}, [onClose, open]);
-	if (!open) return null;
-	return <div ref={panelRef} className={styles.picker} style={{ left: position.x, top: position.y }} role="dialog" aria-label={t("flow.editor.picker.title")} onKeyDown={(event): void => {
-		if (event.key === "Escape") { event.preventDefault(); onClose(); return; }
-		if (event.key === "ArrowDown") { event.preventDefault(); setActiveIndex((current): number => filtered.length === 0 ? 0 : (current + 1) % filtered.length); return; }
-		if (event.key === "ArrowUp") { event.preventDefault(); setActiveIndex((current): number => filtered.length === 0 ? 0 : (current - 1 + filtered.length) % filtered.length); return; }
-		if (event.key === "Enter") { const definition = filtered[activeIndex]; if (definition !== undefined && (!definition.workspaceRequired || workspaceAvailable)) { event.preventDefault(); selectNode(definition.type); } }
-	}}>
-		<Input ref={inputRef} allowClear placeholder={t("flow.editor.picker.search")} value={query} onChange={(event): void => { setQuery(event.target.value); setActiveIndex(0); }} />
-		<div className={styles.list} role="listbox">{filtered.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("flow.editor.picker.empty")} /> : filtered.map((definition, index): React.JSX.Element => {
-			const disabled = definition.workspaceRequired && !workspaceAvailable;
-			const isRecent = query.trim().length === 0 && recentNodeTypes.includes(definition.type);
-			return <button key={definition.type} type="button" role="option" data-flow-node-type={definition.type} aria-selected={index === activeIndex} disabled={disabled} className={`${styles.item} ${index === activeIndex ? styles.itemActive : ""}`} onMouseEnter={(): void => setActiveIndex(index)} onClick={(): void => selectNode(definition.type)}>
-				<span className={styles.itemCopy}><Typography.Text strong>{t(`flow.editor.nodes.${definition.type}`, { defaultValue: definition.defaultTitle })}</Typography.Text><Typography.Text type="secondary" className={styles.itemDescription}>{disabled ? t("flow.editor.picker.workspaceRequired") : definition.ports.map((port): string => port.label).join(" · ") || t("flow.editor.picker.visualOnly")}</Typography.Text></span>
-				<span className={styles.itemTags}>{isRecent ? <Tag color="blue">{t("flow.editor.picker.recent")}</Tag> : null}<Tag>{t(`flow.editor.picker.categories.${definition.category}`)}</Tag></span>
-			</button>;
-		})}</div>
-		<div className={styles.hint}>{t("flow.editor.picker.hint")}</div>
-	</div>;
+	useEffect((): void => {
+		if (!open || query.trim().length === 0) return;
+		setOpenCategoryKeys([...new Set(filtered.map((definition): string => `category:${definition.category}`))]);
+	}, [filtered, open, query]);
+	return (
+		<Dropdown
+			open={open}
+			autoAdjustOverflow
+			destroyOnHidden={false}
+			placement="bottomLeft"
+			trigger={["click"]}
+			menu={{
+				items,
+				motion: submenuMotion,
+				getPopupContainer: (triggerNode): HTMLElement =>
+					triggerNode
+						.closest<HTMLElement>("[data-flow-node-picker-popup]")
+						?.querySelector<HTMLElement>("[data-flow-node-picker-submenu-host]") ?? document.body,
+				selectable: true,
+				selectedKeys: filtered[activeIndex] === undefined ? [] : [filtered[activeIndex].typeId],
+				openKeys: open ? openCategoryKeys : [],
+				triggerSubMenuAction: "click",
+				onOpenChange: (keys): void => setOpenCategoryKeys(open ? keys.map(String) : []),
+				onClick: ({ key }): void => selectDefinition(key),
+			}}
+			onOpenChange={(nextOpen): void => {
+				if (!nextOpen) closePicker();
+			}}
+			popupRender={(menu): React.ReactNode => (
+				<div
+					className={styles.pickerOverlay}
+					data-flow-node-picker-popup
+					role="dialog"
+					aria-label={t("flow.editor.picker.title")}
+					onKeyDown={(event): void => {
+						if (event.key === "Escape") {
+							event.preventDefault();
+							closePicker();
+							return;
+						}
+						if (event.key === "ArrowDown") {
+							event.preventDefault();
+							setActiveIndex((current): number =>
+								filtered.length === 0 ? 0 : (current + 1) % filtered.length,
+							);
+							return;
+						}
+						if (event.key === "ArrowUp") {
+							event.preventDefault();
+							setActiveIndex((current): number =>
+								filtered.length === 0 ? 0 : (current - 1 + filtered.length) % filtered.length,
+							);
+							return;
+						}
+						if (event.key === "Enter") {
+							const definition = filtered[activeIndex];
+							if (definition !== undefined && (!definition.workspaceRequired || workspaceAvailable)) {
+								event.preventDefault();
+								selectDefinition(definition.typeId);
+							}
+						}
+					}}
+				>
+					<Input
+						ref={inputRef}
+						allowClear
+						placeholder={t("flow.editor.picker.search")}
+						value={query}
+						onChange={(event): void => {
+							setQuery(event.target.value);
+							setActiveIndex(0);
+						}}
+					/>
+					{filtered.length === 0 ? (
+						<Empty
+							className={styles.empty}
+							image={Empty.PRESENTED_IMAGE_SIMPLE}
+							description={t("flow.editor.picker.empty")}
+						/>
+					) : (
+						React.cloneElement(
+							menu as React.ReactElement<{
+								style: React.CSSProperties;
+							}>,
+							{ style: menuStyle },
+						)
+					)}
+					<div className={styles.submenuPortalHost} data-flow-node-picker-submenu-host />
+				</div>
+			)}
+		>
+			<span className={styles.pickerAnchor} style={{ left: position.x, top: position.y }} aria-hidden />
+		</Dropdown>
+	);
 }

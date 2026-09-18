@@ -6,6 +6,7 @@ import { applyStudioAccentVariables } from "../contracts/theme-color";
 import { applyStudioFontVariables } from "../contracts/studio-fonts";
 import type { ClientPreferences, ClientPreferencesPatch } from "../contracts/client-preferences";
 import type { GeneralSettings } from "../contracts/general-settings";
+import type { FlowOperationOutboxDocument, PersistedFlowOperation } from "../contracts/flow-operation-outbox";
 import type {
 	RemoteAccessPairingSession,
 	RemoteAccessPortPatch,
@@ -702,6 +703,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		pickDirectory: (): Promise<string | null> => ipcRenderer.invoke("plugin-fs:pick-directory"),
 		pickTarball: (): Promise<string | null> => ipcRenderer.invoke("plugin-fs:pick-tarball"),
 		openDirectory: (directoryName: string): Promise<void> => ipcRenderer.invoke("plugin-fs:open-directory", directoryName),
+	},
+	flowOperationOutbox: {
+		load: (): Promise<FlowOperationOutboxDocument> => ipcRenderer.invoke("flow-operation-outbox:load"),
+		replace: (flowId: string, operations: PersistedFlowOperation[]): Promise<void> => ipcRenderer.invoke("flow-operation-outbox:replace", flowId, operations),
 	},
 	godotDocumentationFs: {
 		pickDirectory: (): Promise<string | null> => {

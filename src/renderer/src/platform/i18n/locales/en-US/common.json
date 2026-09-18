@@ -629,7 +629,9 @@
 			"nodeTitle": "Build a workflow from nodes",
 			"nodeDescription": "Add prompt, model, data, tool, and output nodes, then connect them on the canvas.",
 			"addPrompt": "Add Prompt node",
-			"shortcuts": "Shift+A opens the node picker · Home fits the canvas · Ctrl/Cmd+Enter runs the Flow",
+			"workspaceLabel": "Workspace",
+			"noWorkspace": "No workspace",
+			"createFlow": "Create Flow",
 			"starters": {
 				"label": "Start with",
 				"explore": {
@@ -2628,7 +2630,9 @@
 					"searchNodes": "Search and add nodes",
 					"fitCanvas": "Fit all nodes",
 					"run": "Run the current Flow",
-					"deleteSelection": "Delete selected nodes or edges"
+					"deleteSelection": "Delete selected nodes or edges",
+					"undo": "Undo Flow edit",
+					"redo": "Redo Flow edit"
 				}
 			},
 			"empty": "No shortcut actions match your search.",

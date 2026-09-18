@@ -1,4 +1,4 @@
-export const SHORTCUT_COMMAND_IDS = ["workbench.toggleWorkspaceSidebar", "workbench.toggleBottomPanel", "workbench.toggleSessionSidebar", "session.new", "session.previous", "session.next", "conversation.previousTurn", "conversation.nextTurn", "conversation.find", "flow.addNode", "flow.searchNodes", "flow.fitCanvas", "flow.run", "flow.deleteSelection"] as const;
+export const SHORTCUT_COMMAND_IDS = ["workbench.toggleWorkspaceSidebar", "workbench.toggleBottomPanel", "workbench.toggleSessionSidebar", "session.new", "session.previous", "session.next", "conversation.previousTurn", "conversation.nextTurn", "conversation.find", "flow.addNode", "flow.searchNodes", "flow.fitCanvas", "flow.run", "flow.deleteSelection", "flow.undo", "flow.redo"] as const;
 
 export type ShortcutCommandId = (typeof SHORTCUT_COMMAND_IDS)[number];
 export type ShortcutPlatform = "mac" | "other";
@@ -89,6 +89,16 @@ export const SHORTCUT_DEFINITIONS: readonly ShortcutDefinition[] = [
 		id: "flow.deleteSelection",
 		labelKey: "settings.keyboardShortcuts.flow.commands.deleteSelection",
 		defaultBinding: "Delete",
+	},
+	{
+		id: "flow.undo",
+		labelKey: "settings.keyboardShortcuts.flow.commands.undo",
+		defaultBinding: "Mod+KeyZ",
+	},
+	{
+		id: "flow.redo",
+		labelKey: "settings.keyboardShortcuts.flow.commands.redo",
+		defaultBinding: "Mod+Shift+KeyZ",
 	},
 ];
 

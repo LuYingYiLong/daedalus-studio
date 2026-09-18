@@ -53,9 +53,9 @@ function parseNavigationTarget(detail: unknown): SessionNavigationTarget | null 
 }
 
 function getSessionNavigationSurface(
-	session: SessionMetadata,
+	_session: SessionMetadata,
 ): SessionNavigationSurface {
-	return session.surface === "flow_branch" ? "flow" : "chat";
+	return "chat";
 }
 
 function useSessionNavigationController({

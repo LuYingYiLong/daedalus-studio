@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type {
-	ConversationFlowSummary,
+	FlowDocumentSummary,
 	FlowTreeOrder,
 	FlowTreeSectionKey,
 	FlowTreeOrderUpdate,
@@ -16,7 +16,7 @@ import { workspaceSupportsWorktrees } from "@/domain/workspace/worktree-capabili
 import styles from "./FlowTree.module.css";
 
 export type FlowTreeProps = {
-	flows: ConversationFlowSummary[];
+	flows: FlowDocumentSummary[];
 	workspaces: WorkspaceConfig[];
 	selectedFlowId: string | null;
 	unreadFlowIds: readonly string[];
@@ -26,7 +26,7 @@ export type FlowTreeProps = {
 	order: FlowTreeOrder | null;
 	onSelect: (flowId: string) => void;
 	onRename: (flowId: string, title: string) => Promise<void>;
-	onArchive: (flow: ConversationFlowSummary) => void;
+	onArchive: (flow: FlowDocumentSummary) => void;
 	onOrderUpdate: (order: FlowTreeOrderUpdate) => Promise<void>;
 	onNewProject: () => void;
 	onNewSession: () => void;
@@ -82,7 +82,7 @@ function getFlowTreeWorkspaceIcon(
 	return <WorkspaceTreeIconView workspace={workspace} expanded={expanded} />;
 }
 
-function sortByUpdatedAt(flows: readonly ConversationFlowSummary[]): ConversationFlowSummary[] {
+function sortByUpdatedAt(flows: readonly FlowDocumentSummary[]): FlowDocumentSummary[] {
 	return [...flows].sort((left, right): number => {
 		const byTime: number = right.updatedAt.localeCompare(left.updatedAt);
 		return byTime !== 0 ? byTime : left.flowId.localeCompare(right.flowId);
@@ -91,21 +91,21 @@ function sortByUpdatedAt(flows: readonly ConversationFlowSummary[]): Conversatio
 
 function mergeFlowIds(
 	orderedIds: readonly string[],
-	candidates: readonly ConversationFlowSummary[],
+	candidates: readonly FlowDocumentSummary[],
 	used: Set<string>,
-): ConversationFlowSummary[] {
-	const byId: ReadonlyMap<string, ConversationFlowSummary> = new Map(
-		candidates.map((flow): [string, ConversationFlowSummary] => [flow.flowId, flow]),
+): FlowDocumentSummary[] {
+	const byId: ReadonlyMap<string, FlowDocumentSummary> = new Map(
+		candidates.map((flow): [string, FlowDocumentSummary] => [flow.flowId, flow]),
 	);
-	const result: ConversationFlowSummary[] = [];
+	const result: FlowDocumentSummary[] = [];
 	for (const flowId of orderedIds) {
-		const flow: ConversationFlowSummary | undefined = byId.get(flowId);
+		const flow: FlowDocumentSummary | undefined = byId.get(flowId);
 		if (flow !== undefined && !used.has(flow.flowId)) {
 			used.add(flow.flowId);
 			result.push(flow);
 		}
 	}
-	const newFlows: ConversationFlowSummary[] = sortByUpdatedAt(candidates).filter(
+	const newFlows: FlowDocumentSummary[] = sortByUpdatedAt(candidates).filter(
 		(flow): boolean => !used.has(flow.flowId),
 	);
 	for (const flow of newFlows) {
@@ -117,17 +117,17 @@ function mergeFlowIds(
 }
 
 function normalizeOrder(
-	flows: readonly ConversationFlowSummary[],
+	flows: readonly FlowDocumentSummary[],
 	workspaces: readonly WorkspaceConfig[],
 	order: FlowTreeOrder | null,
 ): FlowTreeOrderUpdate {
 	const used: Set<string> = new Set();
-	const pinnedFlows: ConversationFlowSummary[] = mergeFlowIds(
+	const pinnedFlows: FlowDocumentSummary[] = mergeFlowIds(
 		order?.pinnedFlowIds ?? [],
 		flows.filter((flow): boolean => flow.pinned),
 		used,
 	);
-	const recentFlows: ConversationFlowSummary[] = mergeFlowIds(
+	const recentFlows: FlowDocumentSummary[] = mergeFlowIds(
 		order?.recentFlowIds ?? [],
 		flows.filter((flow): boolean => !flow.pinned && flow.workspaceId === null),
 		used,
@@ -138,7 +138,7 @@ function normalizeOrder(
 	].filter((workspaceId, index, all): boolean => all.indexOf(workspaceId) === index);
 	const flowIdsByWorkspace: Record<string, string[]> = {};
 	for (const workspaceId of workspaceIds) {
-		const candidates: ConversationFlowSummary[] = flows.filter(
+		const candidates: FlowDocumentSummary[] = flows.filter(
 			(flow): boolean => !flow.pinned && flow.workspaceId === workspaceId,
 		);
 		flowIdsByWorkspace[workspaceId] = mergeFlowIds(
@@ -241,9 +241,9 @@ function FlowTree({
 		(): FlowTreeOrderUpdate => normalizeOrder(flows, workspaces, order),
 		[flows, order, workspaces],
 	);
-	const flowById: ReadonlyMap<string, ConversationFlowSummary> = useMemo(
-		(): ReadonlyMap<string, ConversationFlowSummary> =>
-			new Map(flows.map((flow): [string, ConversationFlowSummary] => [flow.flowId, flow])),
+	const flowById: ReadonlyMap<string, FlowDocumentSummary> = useMemo(
+		(): ReadonlyMap<string, FlowDocumentSummary> =>
+			new Map(flows.map((flow): [string, FlowDocumentSummary] => [flow.flowId, flow])),
 		[flows],
 	);
 	const workspaceById: ReadonlyMap<string, WorkspaceConfig> = useMemo(
@@ -258,7 +258,7 @@ function FlowTree({
 	const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
 	const [pinningFlowId, setPinningFlowId] = useState<string | null>(null);
 	const pinningFlowIdRef = useRef<string | null>(null);
-	const [renameTarget, setRenameTarget] = useState<ConversationFlowSummary | null>(null);
+	const [renameTarget, setRenameTarget] = useState<FlowDocumentSummary | null>(null);
 	const [renameDraft, setRenameDraft] = useState("");
 	const [renameError, setRenameError] = useState<string | null>(null);
 	const [renamingFlowId, setRenamingFlowId] = useState<string | null>(null);
@@ -325,7 +325,7 @@ function FlowTree({
 		};
 	}
 
-	async function handleTogglePin(flow: ConversationFlowSummary): Promise<void> {
+	async function handleTogglePin(flow: FlowDocumentSummary): Promise<void> {
 		if (pinningFlowIdRef.current !== null) return;
 		const source: FlowBucket = flow.pinned
 			? { section: "pinned" }
@@ -528,7 +528,7 @@ function FlowTree({
 		const source = bucketFromNode(dragNode);
 		const destination = bucketFromNode(dropNode);
 		if (source === null || destination === null) return;
-		const dragFlow: ConversationFlowSummary | undefined = flowById.get(dragNode.flowId);
+		const dragFlow: FlowDocumentSummary | undefined = flowById.get(dragNode.flowId);
 		if (dragFlow === undefined) return;
 		if (destination.section === "recent" && dragFlow.workspaceId !== null) return;
 		if (destination.section === "projects" && dragFlow.workspaceId !== destination.workspaceId) return;
@@ -564,7 +564,7 @@ function FlowTree({
 				titleRender={(item): ReactNode => {
 					const node = item as FlowTreeNode;
 					if (node.kind === "flow" && node.flowId !== undefined) {
-						const flow: ConversationFlowSummary | undefined = flowById.get(node.flowId);
+						const flow: FlowDocumentSummary | undefined = flowById.get(node.flowId);
 						return flow === undefined ? null : (
 							<FlowTreeItem
 								flow={flow}
@@ -675,7 +675,7 @@ function FlowTree({
 				allowDrop={({ dragNode, dropNode, dropPosition }): boolean => {
 					const drag = dragNode as FlowTreeNode;
 					const drop = dropNode as FlowTreeNode;
-					const dragFlow: ConversationFlowSummary | undefined =
+					const dragFlow: FlowDocumentSummary | undefined =
 						drag.flowId === undefined ? undefined : flowById.get(drag.flowId);
 					if (drag.kind !== "flow" || dragFlow === undefined) return false;
 					if (drop.kind === "section") {
@@ -695,7 +695,7 @@ function FlowTree({
 							(drop.kind === "empty" || dropPosition === 0)
 						);
 					}
-					const dropFlow: ConversationFlowSummary | undefined =
+					const dropFlow: FlowDocumentSummary | undefined =
 						drop.flowId === undefined ? undefined : flowById.get(drop.flowId);
 					if (drop.kind !== "flow" || dropFlow === undefined || dropPosition === 0) return false;
 					return (
@@ -772,12 +772,12 @@ function FlowTree({
 	);
 }
 
-function sourceForUnpinnedFlow(flow: ConversationFlowSummary): FlowBucket {
+function sourceForUnpinnedFlow(flow: FlowDocumentSummary): FlowBucket {
 	return flow.workspaceId === null ? { section: "recent" } : { section: "projects", workspaceId: flow.workspaceId };
 }
 
 type FlowTreeItemProps = {
-	flow: ConversationFlowSummary;
+	flow: FlowDocumentSummary;
 	isSelected: boolean;
 	isUnread: boolean;
 	runtimeStatus?: "running" | "failed" | "completed";
@@ -785,7 +785,7 @@ type FlowTreeItemProps = {
 	isPinning: boolean;
 	onTogglePin: () => void;
 	onRenameStart: () => void;
-	onArchive: (flow: ConversationFlowSummary) => void;
+	onArchive: (flow: FlowDocumentSummary) => void;
 };
 
 function FlowTreeItem({

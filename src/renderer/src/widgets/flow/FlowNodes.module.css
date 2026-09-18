@@ -109,6 +109,11 @@
 	background: var(--ant-color-bg-container, var(--ds-surface-elevated));
 }
 
+.portSpacer {
+	min-height: 0;
+	pointer-events: none;
+}
+
 .compactFields,
 .dynamicInputs {
 	display: grid;
@@ -158,6 +163,26 @@
 	font-size: 11px;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.pluginEditor {
+	display: block;
+	width: 100%;
+	min-height: 120px;
+	border: 0;
+	background: transparent;
+}
+
+.nodeSummary {
+	min-height: 44px;
+	margin: 0 !important;
+	color: var(--ant-color-text-secondary);
+	white-space: pre-wrap;
+}
+
+.unknownNode {
+	border-style: dashed;
+	opacity: 0.9;
 }
 
 .portRail {

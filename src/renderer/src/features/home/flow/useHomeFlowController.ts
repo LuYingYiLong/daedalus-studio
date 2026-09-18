@@ -1,61 +1,44 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { ChatMode } from "@/platform/rpc/chat-api";
-import { archiveFlow, createFlow, createFlowEdge, createFlowNode, createConnectedFlowNode, exportFlowToSession, fetchFlow, fetchFlows, importFlowFromSession, renameFlow, startFlowRun, stopFlowRun, updateFlowNode, deleteFlowNode, deleteFlowEdge, updateFlowViewport, updateFlowSettings, listFlowNodeTypes, listFlowTools, listFlowApprovals, resolveFlowApproval, updateFlowTreeOrder as persistFlowTreeOrder, type CreateFlowParams } from "@/platform/rpc/flow-api";
+import { archiveFlow, commitFlowPatch, createFlow, exportFlowToSession, fetchFlow, fetchFlows, importFlowFromSession, renameFlow, startFlowRun, stopFlowRun, updateFlowSettings, listFlowNodeTypes, listFlowTools, listFlowApprovals, resolveFlowApproval, updateFlowTreeOrder as persistFlowTreeOrder, type CreateFlowParams } from "@/platform/rpc/flow-api";
 import { onBackendEvent, onBackendReconnected } from "@/platform/rpc/transport/backend-client";
-import type { ConversationFlowSummary, FlowDocument, FlowDocumentNode, FlowDocumentSnapshot, FlowDocumentNodeType, FlowNodeTypeDefinition, FlowToolDefinition, FlowApproval, FlowTreeOrder, FlowTreeOrderUpdate, SessionMetadata } from "@/platform/rpc/types";
+import type { FlowDocumentSummary, FlowDocument, FlowDocumentEdge, FlowDocumentNode, FlowDocumentSnapshot, FlowNodeTypeId, FlowNodeTypeDefinition, FlowToolDefinition, FlowApproval, FlowOperation, FlowTreeOrder, FlowTreeOrderUpdate, SessionMetadata } from "@/platform/rpc/types";
+import { createFlowMutationId, flowOperationOutbox } from "@/domain/flow/flow-operation-outbox";
 
 export type FlowNodeDetail = { node: FlowDocumentNode };
 
 type UseHomeFlowControllerParams = {
 	enabled: boolean;
 	defaultFlow: Omit<CreateFlowParams, "title">;
-	activeSessionId: string | null;
-	activeSessionMetadata: SessionMetadata | null;
-	composerMessage: string;
-	isSessionLoading: boolean;
-	isSending: boolean;
-	onSessionSelect: (session: SessionMetadata) => void;
-	onDraftChange: (message: string) => void;
-	onSubmit: (message: string, modeOverride?: ChatMode) => void;
-	onBeginNewFlow: () => void;
 	onOpenChat: (session: SessionMetadata) => void;
 };
 
 export type HomeFlowController = {
-	flows: ConversationFlowSummary[];
+	flows: FlowDocumentSummary[];
 	flowOrder: FlowTreeOrder | null;
-	flowBranchSessionIdsByFlow: Readonly<Record<string, readonly string[]>>;
 	flowRuntimeStatusById: Readonly<Record<string, "running" | "failed" | "completed">>;
 	snapshot: FlowDocumentSnapshot | null;
 	nodeDefinitions: FlowNodeTypeDefinition[];
 	tools: FlowToolDefinition[];
 	approvals: FlowApproval[];
 	isGraphLocked: boolean;
-	isNewFlowHome: boolean;
-	newFlowWorkspaceId: string | null;
-	selectedBranchId: string | null;
 	selectedNodeDetail: FlowNodeDetail | null;
 	isLoading: boolean;
 	isMutating: boolean;
 	error: string | null;
 	refresh: () => Promise<void>;
 	createNewFlow: (workspaceId?: string | null) => Promise<void>;
-	setNewFlowWorkspace: (workspaceId: string | null) => void;
-	submitNewFlowMessage: (message: string, modeOverride?: ChatMode) => Promise<void>;
 	createFromChat: (session: SessionMetadata) => Promise<boolean>;
 	selectFlow: (flowId: string) => Promise<void>;
-	selectBranch: (branchId: string) => void;
 	selectNode: (nodeId: string | null) => Promise<void>;
-	deriveFromNode: (node: FlowDocumentNode) => Promise<void>;
 	copyCurrentBranchToChat: () => Promise<void>;
 	renameCurrentFlow: (title: string) => Promise<void>;
 	renameFlowById: (flowId: string, title: string) => Promise<void>;
 	archiveFlowById: (flowId: string) => Promise<void>;
 	archiveCurrentFlow: () => Promise<void>;
 	updateFlowOrder: (order: FlowTreeOrderUpdate) => Promise<void>;
-	createNode: (type: FlowDocumentNodeType, x: number, y: number) => Promise<void>;
-	createConnectedNode: (params: { type: FlowDocumentNodeType; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "artifact" }) => Promise<void>;
+	createNode: (type: FlowNodeTypeId, x: number, y: number) => Promise<void>;
+	createConnectedNode: (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "artifact" }) => Promise<void>;
 	updateNode: (nodeId: string, patch: Record<string, unknown>) => Promise<void>;
 	updateNodePosition: (nodeId: string, x: number, y: number) => Promise<void>;
 	deleteNode: (nodeId: string) => Promise<void>;
@@ -66,52 +49,162 @@ export type HomeFlowController = {
 	stopRun: () => Promise<void>;
 	setApprovalMode: (mode: FlowDocument["approvalMode"]) => Promise<void>;
 	resolveApproval: (approvalId: string, decision: "approve" | "reject", consentText?: string) => Promise<void>;
+	undo: () => void;
+	redo: () => void;
+	canUndo: boolean;
+	canRedo: boolean;
 };
+
+type FlowHistoryCommand = { undo: FlowOperation[]; redo: FlowOperation[] };
 
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
-function toSummary(flow: FlowDocument): ConversationFlowSummary {
-	return {
-		flowId: flow.flowId,
-		title: flow.title,
-		workspaceId: flow.workspaceId,
-		pinned: flow.pinned,
-		rootBranchId: "",
-		revision: flow.revision,
-		activeBranchId: null,
-		activeRequestId: null,
-		archivedAt: flow.archivedAt,
-		createdFromSessionId: null,
-		createdAt: flow.createdAt,
-		updatedAt: flow.updatedAt,
-		branchCount: 0,
-	};
+function toSummary(flow: FlowDocument): FlowDocumentSummary {
+	return flow;
+}
+
+function resolveOptimisticPorts(node: FlowDocumentNode, definition: FlowNodeTypeDefinition | undefined, config: Record<string, unknown>): FlowDocumentNode["ports"] {
+	if (definition === undefined || (definition.dynamicPorts?.length ?? 0) === 0) return node.ports;
+	const ports = definition.ports.map((port) => ({ ...port, dataTypes: [...port.dataTypes] }));
+	for (const dynamic of definition.dynamicPorts ?? []) {
+		const values = config[dynamic.configField];
+		if (!Array.isArray(values)) continue;
+		for (const value of values.slice(0, 64 - ports.length)) {
+			if (typeof value !== "object" || value === null || Array.isArray(value)) continue;
+			const record = value as Record<string, unknown>;
+			const id = record[dynamic.idField];
+			if (typeof id !== "string" || id.length === 0 || ports.some((port): boolean => port.id === id && port.direction === dynamic.direction)) continue;
+			const configuredType = dynamic.dataTypeField === undefined ? undefined : record[dynamic.dataTypeField];
+			const dataTypes: FlowDocumentNode["ports"][number]["dataTypes"] = typeof configuredType === "string" && (configuredType === "text" || configuredType === "json" || configuredType === "artifact") ? [configuredType] : [...dynamic.dataTypes];
+			const label = record[dynamic.labelField];
+			ports.push({ id, label: typeof label === "string" && label.length > 0 ? label : id, direction: dynamic.direction, dataTypes, required: dynamic.required, multiple: dynamic.multiple, defaultConnect: dynamic.defaultConnect });
+		}
+	}
+	return ports;
+}
+
+function applyFlowOperation(snapshot: FlowDocumentSnapshot, operation: FlowOperation, definitions: readonly FlowNodeTypeDefinition[]): FlowDocumentSnapshot {
+	if (operation.kind === "node.create") {
+		const definition = definitions.find((candidate): boolean => candidate.typeId === operation.payload.typeId);
+		if (definition === undefined) return snapshot;
+		const timestamp = new Date().toISOString();
+		const node: FlowDocumentNode = {
+			nodeId: operation.payload.nodeId,
+			flowId: snapshot.flow.flowId,
+			typeId: operation.payload.typeId,
+			pluginId: definition.pluginId,
+			pluginVersion: definition.pluginVersion,
+			pluginFingerprint: definition.pluginFingerprint,
+			configVersion: definition.configVersion,
+			title: operation.payload.title ?? definition.defaultTitle,
+			x: operation.payload.x,
+			y: operation.payload.y,
+			width: 300,
+			height: 180,
+			config: operation.payload.config ?? definition.defaultConfig,
+			ports: definition.ports,
+			status: "idle",
+			createdAt: timestamp,
+			updatedAt: timestamp,
+		};
+		return { ...snapshot, nodes: [...snapshot.nodes, node] };
+	}
+	if (operation.kind === "node.update") {
+		const currentNode = snapshot.nodes.find((node): boolean => node.nodeId === operation.payload.nodeId);
+		if (currentNode === undefined) return snapshot;
+		const config = operation.payload.config ?? currentNode.config;
+		const updatedPorts = resolveOptimisticPorts(currentNode, definitions.find((definition): boolean => definition.typeId === currentNode.typeId), config);
+		const nodes = snapshot.nodes.map((node): FlowDocumentNode => node.nodeId === currentNode.nodeId ? { ...node, ...(operation.payload.title === undefined ? {} : { title: operation.payload.title }), config, ports: updatedPorts, updatedAt: new Date().toISOString() } : node);
+		const inputs = new Set(updatedPorts.filter((port): boolean => port.direction === "input").map((port): string => port.id));
+		const outputs = new Set(updatedPorts.filter((port): boolean => port.direction === "output").map((port): string => port.id));
+		return { ...snapshot, nodes, edges: snapshot.edges.filter((edge): boolean => edge.targetNodeId === operation.payload.nodeId ? inputs.has(edge.targetPort) : edge.sourceNodeId === operation.payload.nodeId ? outputs.has(edge.sourcePort) : true) };
+	}
+	if (operation.kind === "node.delete") return { ...snapshot, nodes: snapshot.nodes.filter((node): boolean => node.nodeId !== operation.payload.nodeId), edges: snapshot.edges.filter((edge): boolean => edge.sourceNodeId !== operation.payload.nodeId && edge.targetNodeId !== operation.payload.nodeId) };
+	if (operation.kind === "node.move") return { ...snapshot, nodes: snapshot.nodes.map((node): FlowDocumentNode => node.nodeId === operation.payload.nodeId ? { ...node, x: operation.payload.x, y: operation.payload.y } : node) };
+	if (operation.kind === "node.resize") return { ...snapshot, nodes: snapshot.nodes.map((node): FlowDocumentNode => node.nodeId === operation.payload.nodeId ? { ...node, width: operation.payload.width, height: operation.payload.height } : node) };
+	if (operation.kind === "edge.create") {
+		const edge: FlowDocumentEdge = { flowId: snapshot.flow.flowId, ...operation.payload };
+		const target = snapshot.nodes.find((node): boolean => node.nodeId === edge.targetNodeId)?.ports.find((port): boolean => port.id === edge.targetPort && port.direction === "input");
+		return { ...snapshot, edges: [...snapshot.edges.filter((candidate): boolean => target?.multiple === true || !(candidate.targetNodeId === edge.targetNodeId && candidate.targetPort === edge.targetPort)), edge] };
+	}
+	if (operation.kind === "edge.delete") return { ...snapshot, edges: snapshot.edges.filter((edge): boolean => edge.edgeId !== operation.payload.edgeId) };
+	return { ...snapshot, flow: { ...snapshot.flow, viewport: operation.payload } };
+}
+
+function inverseFlowOperations(snapshot: FlowDocumentSnapshot, operation: FlowOperation): FlowOperation[] {
+	const mutationId = "history";
+	if (operation.kind === "node.create") return [{ mutationId, kind: "node.delete", payload: { nodeId: operation.payload.nodeId } }];
+	if (operation.kind === "node.update") {
+		const node = snapshot.nodes.find((candidate): boolean => candidate.nodeId === operation.payload.nodeId);
+		if (node === undefined) return [];
+		return [{ mutationId, kind: "node.update", payload: { nodeId: node.nodeId, ...(operation.payload.title === undefined ? {} : { title: node.title }), ...(operation.payload.config === undefined ? {} : { config: structuredClone(node.config) }) } }];
+	}
+	if (operation.kind === "node.move") {
+		const node = snapshot.nodes.find((candidate): boolean => candidate.nodeId === operation.payload.nodeId);
+		return node === undefined ? [] : [{ mutationId, kind: "node.move", payload: { nodeId: node.nodeId, x: node.x, y: node.y } }];
+	}
+	if (operation.kind === "node.resize") {
+		const node = snapshot.nodes.find((candidate): boolean => candidate.nodeId === operation.payload.nodeId);
+		return node === undefined ? [] : [{ mutationId, kind: "node.resize", payload: { nodeId: node.nodeId, width: node.width, height: node.height } }];
+	}
+	if (operation.kind === "node.delete") {
+		const node = snapshot.nodes.find((candidate): boolean => candidate.nodeId === operation.payload.nodeId);
+		if (node === undefined) return [];
+		const connected = snapshot.edges.filter((edge): boolean => edge.sourceNodeId === node.nodeId || edge.targetNodeId === node.nodeId);
+		return [
+			{ mutationId, kind: "node.create", payload: { nodeId: node.nodeId, typeId: node.typeId, title: node.title, x: node.x, y: node.y, config: structuredClone(node.config) } },
+			{ mutationId, kind: "node.resize", payload: { nodeId: node.nodeId, width: node.width, height: node.height } },
+			...connected.map((edge): FlowOperation => ({ mutationId, kind: "edge.create", payload: { edgeId: edge.edgeId, sourceNodeId: edge.sourceNodeId, sourcePort: edge.sourcePort, targetNodeId: edge.targetNodeId, targetPort: edge.targetPort, dataType: edge.dataType } })),
+		];
+	}
+	if (operation.kind === "edge.create") {
+		const target = snapshot.nodes.find((node): boolean => node.nodeId === operation.payload.targetNodeId)?.ports.find((port): boolean => port.id === operation.payload.targetPort && port.direction === "input");
+		const replaced = target?.multiple === true ? undefined : snapshot.edges.find((edge): boolean => edge.targetNodeId === operation.payload.targetNodeId && edge.targetPort === operation.payload.targetPort);
+		return [
+			{ mutationId, kind: "edge.delete", payload: { edgeId: operation.payload.edgeId } },
+			...(replaced === undefined ? [] : [{ mutationId, kind: "edge.create", payload: { edgeId: replaced.edgeId, sourceNodeId: replaced.sourceNodeId, sourcePort: replaced.sourcePort, targetNodeId: replaced.targetNodeId, targetPort: replaced.targetPort, dataType: replaced.dataType } } as FlowOperation]),
+		];
+	}
+	if (operation.kind === "edge.delete") {
+		const edge = snapshot.edges.find((candidate): boolean => candidate.edgeId === operation.payload.edgeId);
+		return edge === undefined ? [] : [{ mutationId, kind: "edge.create", payload: { edgeId: edge.edgeId, sourceNodeId: edge.sourceNodeId, sourcePort: edge.sourcePort, targetNodeId: edge.targetNodeId, targetPort: edge.targetPort, dataType: edge.dataType } }];
+	}
+	return [{ mutationId, kind: "viewport.update", payload: structuredClone(snapshot.flow.viewport) }];
+}
+
+function materializeHistoryOperation(operation: FlowOperation, snapshot: FlowDocumentSnapshot): FlowOperation {
+	const mutationId = createFlowMutationId();
+	if (operation.kind === "node.move" || operation.kind === "node.resize" || operation.kind === "viewport.update") return { ...operation, mutationId, baseLayoutRevision: snapshot.flow.layoutRevision } as FlowOperation;
+	return { ...operation, mutationId, baseGraphRevision: snapshot.flow.graphRevision } as FlowOperation;
 }
 
 export default function useHomeFlowController(params: UseHomeFlowControllerParams): HomeFlowController {
 	const { t } = useTranslation();
 	const { enabled, defaultFlow, onOpenChat } = params;
-	const [flows, setFlows] = useState<ConversationFlowSummary[]>([]);
+	const [flows, setFlows] = useState<FlowDocumentSummary[]>([]);
 	const [flowOrder, setFlowOrder] = useState<FlowTreeOrder | null>(null);
 	const [flowRuntimeStatusById, setFlowRuntimeStatusById] = useState<Record<string, "running" | "failed" | "completed">>({});
 	const [snapshot, setSnapshot] = useState<FlowDocumentSnapshot | null>(null);
 	const [nodeDefinitions, setNodeDefinitions] = useState<FlowNodeTypeDefinition[]>([]);
 	const [tools, setTools] = useState<FlowToolDefinition[]>([]);
 	const [approvals, setApprovals] = useState<FlowApproval[]>([]);
-	const [isNewFlowHome, setIsNewFlowHome] = useState<boolean>(false);
-	const [newFlowWorkspaceId, setNewFlowWorkspaceId] = useState<string | null>(null);
 	const [selectedNodeDetail, setSelectedNodeDetail] = useState<FlowNodeDetail | null>(null);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isMutating, setIsMutating] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
+	const [historyRevision, setHistoryRevision] = useState<number>(0);
 	const snapshotRef = useRef<FlowDocumentSnapshot | null>(null);
+	const nodeDefinitionsRef = useRef<FlowNodeTypeDefinition[]>([]);
 	const selectedFlowIdRef = useRef<string | null>(null);
 	const refreshRef = useRef<() => Promise<void>>(() => Promise.resolve());
 	const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
 	const ignoreFlowEventsUntilRef = useRef<number>(0);
+	const undoStackRef = useRef<FlowHistoryCommand[]>([]);
+	const redoStackRef = useRef<FlowHistoryCommand[]>([]);
 	const isGraphLocked = snapshot?.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting") ?? false;
+	nodeDefinitionsRef.current = nodeDefinitions;
 
 	const loadFlowResources = useCallback(async (flowId: string): Promise<void> => {
 		const [nodeResult, toolResult, approvalResult] = await Promise.all([listFlowNodeTypes({ flowId }), listFlowTools(flowId), listFlowApprovals(flowId)]);
@@ -131,11 +224,14 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	}, []);
 
 	const applySnapshot = useCallback((next: FlowDocumentSnapshot): void => {
+		if (selectedFlowIdRef.current !== next.flow.flowId) {
+			undoStackRef.current = [];
+			redoStackRef.current = [];
+			setHistoryRevision((value): number => value + 1);
+		}
 		snapshotRef.current = next;
 		selectedFlowIdRef.current = next.flow.flowId;
 		setSnapshot(next);
-		setIsNewFlowHome(next.nodes.length === 0);
-		setNewFlowWorkspaceId(next.flow.workspaceId);
 		const latestRun = next.runs[0];
 		if (latestRun !== undefined)
 			setFlowRuntimeStatusById(
@@ -145,6 +241,80 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 				}),
 			);
 	}, []);
+
+	const applyOperations = useCallback((operations: FlowOperation[], recordHistory = true): void => {
+		const current = snapshotRef.current;
+		if (current === null) return;
+		let next = current;
+		let inverse: FlowOperation[] = [];
+		for (const operation of operations) {
+			if (recordHistory) inverse = [...inverseFlowOperations(next, operation), ...inverse];
+			next = applyFlowOperation(next, operation, nodeDefinitionsRef.current);
+			flowOperationOutbox.enqueue(current.flow.flowId, operation);
+		}
+		snapshotRef.current = next;
+		setSnapshot(next);
+		if (recordHistory && inverse.length > 0) {
+			undoStackRef.current = [...undoStackRef.current.slice(-99), { undo: inverse, redo: operations.map((operation): FlowOperation => structuredClone(operation)) }];
+			redoStackRef.current = [];
+			setHistoryRevision((value): number => value + 1);
+		}
+	}, []);
+
+	const applyOperation = useCallback((operation: FlowOperation): void => applyOperations([operation]), [applyOperations]);
+	const replayHistory = useCallback((direction: "undo" | "redo"): void => {
+		const current = snapshotRef.current;
+		if (current === null || isGraphLocked) return;
+		const source = direction === "undo" ? undoStackRef.current : redoStackRef.current;
+		const command = source.at(-1);
+		if (command === undefined) return;
+		if (direction === "undo") undoStackRef.current = source.slice(0, -1);
+		else redoStackRef.current = source.slice(0, -1);
+		const templates = direction === "undo" ? command.undo : command.redo;
+		let materializedSnapshot = current;
+		const operations = templates.map((template): FlowOperation => {
+			const operation = materializeHistoryOperation(template, materializedSnapshot);
+			materializedSnapshot = applyFlowOperation(materializedSnapshot, operation, nodeDefinitionsRef.current);
+			return operation;
+		});
+		applyOperations(operations, false);
+		if (direction === "undo") redoStackRef.current = [...redoStackRef.current, command];
+		else undoStackRef.current = [...undoStackRef.current, command];
+		setHistoryRevision((value): number => value + 1);
+	}, [applyOperations, isGraphLocked]);
+
+	useEffect((): (() => void) => {
+		flowOperationOutbox.connect(
+			async (flowId, clientId, operations) => {
+				const ack = await commitFlowPatch({ flowId, clientId, operations });
+				const current = snapshotRef.current;
+				if (current?.flow.flowId === flowId) {
+					const next = { ...current, flow: { ...current.flow, graphRevision: ack.graphRevision, layoutRevision: ack.layoutRevision, revision: Math.max(current.flow.revision, ack.graphRevision) } };
+					snapshotRef.current = next;
+					setSnapshot(next);
+				}
+				return ack;
+			},
+			(error): void => {
+				setError(errorMessage(error));
+				const flowId = selectedFlowIdRef.current;
+				if (flowId === null) return;
+				void fetchFlow(flowId).then((server): void => {
+					flowOperationOutbox.rebase(flowId, server.flow.graphRevision, server.flow.layoutRevision);
+					const replayed = flowOperationOutbox.readPending(flowId).reduce((value, operation): FlowDocumentSnapshot => applyFlowOperation(value, operation, nodeDefinitionsRef.current), server);
+					applySnapshot(replayed);
+				}).catch((loadError: unknown): void => setError(errorMessage(loadError)));
+			},
+		);
+		const flushOnBlur = (): void => {
+			void flowOperationOutbox.flushAll().catch((): void => undefined);
+		};
+		window.addEventListener("blur", flushOnBlur);
+		return (): void => {
+			window.removeEventListener("blur", flushOnBlur);
+			void flowOperationOutbox.flushAll().finally((): void => flowOperationOutbox.disconnect());
+		};
+	}, [applySnapshot]);
 
 	const refresh = useCallback(async (): Promise<void> => {
 		setIsLoading(true);
@@ -163,7 +333,6 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 				selectedFlowIdRef.current = null;
 				snapshotRef.current = null;
 				setSnapshot(null);
-				setIsNewFlowHome(true);
 			}
 		} catch (loadError: unknown) {
 			setError(errorMessage(loadError));
@@ -194,16 +363,37 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			const data = typeof event.data === "object" && event.data !== null ? (event.data as Record<string, unknown>) : {};
 			const flowId = typeof data.flowId === "string" ? data.flowId : null;
 			if (flowId === null || flowId !== selectedFlowIdRef.current) return;
-			if (event.event === "flow.updated" && Date.now() < ignoreFlowEventsUntilRef.current) return;
-			window.setTimeout(
-				(): void => {
-					void refreshRef.current();
-				},
-				event.event === "flow.node.state" ? 180 : 30,
-			);
-			if (event.event === "flow.node.state" || event.event === "flow.run.state") {
-				void listFlowApprovals(flowId).then((result): void => setApprovals(result.approvals));
+			if (event.event === "flow.patch.applied") {
+				if (data.clientId === flowOperationOutbox.clientId) return;
+				undoStackRef.current = [];
+				redoStackRef.current = [];
+				setHistoryRevision((value): number => value + 1);
+				const current = snapshotRef.current;
+				if (current === null || !Array.isArray(data.operations)) return;
+				const next = (data.operations as FlowOperation[]).reduce((value, operation): FlowDocumentSnapshot => applyFlowOperation(value, operation, nodeDefinitionsRef.current), current);
+				const patched = { ...next, flow: { ...next.flow, graphRevision: Number(data.graphRevision ?? next.flow.graphRevision), layoutRevision: Number(data.layoutRevision ?? next.flow.layoutRevision) } };
+				snapshotRef.current = patched;
+				setSnapshot(patched);
+				return;
 			}
+			if (event.event === "flow.node.state" || event.event === "flow.run.state") {
+				const current = snapshotRef.current;
+				if (current !== null) {
+					const runId = typeof data.runId === "string" ? data.runId : "";
+					const status = typeof data.status === "string" ? data.status : "running";
+					const next = {
+						...current,
+						runs: current.runs.map((run) => run.runId !== runId ? run : event.event === "flow.run.state"
+							? { ...run, status: status as typeof run.status }
+							: { ...run, nodes: run.nodes.map((node) => node.nodeId === data.nodeId ? { ...node, status: status as typeof node.status } : node) }),
+					};
+					snapshotRef.current = next;
+					setSnapshot(next);
+				}
+				void listFlowApprovals(flowId).then((result): void => setApprovals(result.approvals));
+				return;
+			}
+			window.setTimeout((): void => void refreshRef.current(), 30);
 		}).then((dispose): void => {
 			unsubscribe = dispose;
 		});
@@ -223,10 +413,14 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			try {
 				const next = await createFlow({
 					title: t("flow.defaultTitle", { count: flows.length + 1 }),
+					...(defaultFlow.provider === undefined ? {} : { provider: defaultFlow.provider }),
+					...(defaultFlow.model === undefined ? {} : { model: defaultFlow.model }),
+					...(defaultFlow.reasoningEffort === undefined ? {} : { reasoningEffort: defaultFlow.reasoningEffort }),
+					...(defaultFlow.chatMode === undefined ? {} : { chatMode: defaultFlow.chatMode }),
+					...(defaultFlow.approvalMode === undefined ? {} : { approvalMode: defaultFlow.approvalMode }),
 					...(workspaceId === undefined || workspaceId === null ? {} : { workspaceId }),
 				});
 				applySnapshot(next);
-				setIsNewFlowHome(true);
 				const result = await fetchFlows();
 				setFlows(result.flows.map(toSummary));
 				if (result.order !== undefined) setFlowOrder(result.order);
@@ -236,90 +430,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 				setIsMutating(false);
 			}
 		},
-		[applySnapshot, flows.length, t],
-	);
-
-	const setNewFlowWorkspace = useCallback((workspaceId: string | null): void => {
-		setNewFlowWorkspaceId(workspaceId);
-	}, []);
-
-	const submitNewFlowMessage = useCallback(
-		async (message: string, modeOverride?: ChatMode): Promise<void> => {
-			const text = message.trim();
-			const current = snapshotRef.current;
-			if (text.length === 0 || current === null) return;
-			setIsMutating(true);
-			setError(null);
-			try {
-				const prompt = await createFlowNode({
-					flowId: current.flow.flowId,
-					revision: current.flow.graphRevision,
-					type: "prompt",
-					x: 80,
-					y: 160,
-					title: "Prompt",
-					config: { text },
-				});
-				const llm = await createFlowNode({
-					flowId: prompt.flow.flowId,
-					revision: prompt.flow.graphRevision,
-					type: "llm",
-					x: 390,
-					y: 160,
-					title: "LLM",
-					config: {
-						provider: defaultFlow.provider ?? "",
-						model: defaultFlow.model ?? "",
-						reasoningEffort: defaultFlow.reasoningEffort ?? "",
-					},
-				});
-				const output = await createFlowNode({
-					flowId: llm.flow.flowId,
-					revision: llm.flow.graphRevision,
-					type: "output",
-					x: 700,
-					y: 160,
-					title: "Output",
-					config: { format: "text" },
-				});
-				const firstEdge = await createFlowEdge({
-					flowId: output.flow.flowId,
-					revision: output.flow.graphRevision,
-					sourceNodeId: prompt.nodes[0]?.nodeId ?? "",
-					sourcePort: "output",
-					targetNodeId: llm.nodes[0]?.nodeId ?? "",
-					targetPort: "input",
-					dataType: "text",
-				});
-				const lastPrompt = prompt.nodes.find((node): boolean => node.type === "prompt");
-				const lastLlm = llm.nodes.find((node): boolean => node.type === "llm");
-				if (lastPrompt !== undefined && lastLlm !== undefined) {
-					const final = await createFlowEdge({
-						flowId: output.flow.flowId,
-						revision: firstEdge.flow.graphRevision,
-						sourceNodeId: lastLlm.nodeId,
-						sourcePort: "output",
-						targetNodeId: output.nodes.find((node): boolean => node.type === "output")?.nodeId ?? "",
-						targetPort: "input",
-						dataType: "text",
-					});
-					applySnapshot(final);
-				} else applySnapshot(firstEdge);
-				setIsNewFlowHome(false);
-				const latest = snapshotRef.current;
-				if (latest !== null)
-					await startFlowRun({
-						flowId: latest.flow.flowId,
-						revision: latest.flow.graphRevision,
-					});
-				void modeOverride;
-			} catch (mutationError: unknown) {
-				setError(errorMessage(mutationError));
-			} finally {
-				setIsMutating(false);
-			}
-		},
-		[applySnapshot, defaultFlow.model, defaultFlow.provider, defaultFlow.reasoningEffort],
+		[applySnapshot, defaultFlow.approvalMode, defaultFlow.chatMode, defaultFlow.model, defaultFlow.provider, defaultFlow.reasoningEffort, flows.length, t],
 	);
 
 	const createFromChat = useCallback(
@@ -332,7 +443,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 					title: session.title,
 				});
 				applySnapshot(next);
-				setFlows((current): ConversationFlowSummary[] => [toSummary(next.flow), ...current.filter((flow): boolean => flow.flowId !== next.flow.flowId)]);
+				setFlows((current): FlowDocumentSummary[] => [toSummary(next.flow), ...current.filter((flow): boolean => flow.flowId !== next.flow.flowId)]);
 				return true;
 			} catch (mutationError: unknown) {
 				setError(errorMessage(mutationError));
@@ -349,6 +460,8 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			setIsLoading(true);
 			setError(null);
 			try {
+				const previousFlowId = selectedFlowIdRef.current;
+				if (previousFlowId !== null && previousFlowId !== flowId) await flowOperationOutbox.flush(previousFlowId);
 				applySnapshot(await fetchFlow(flowId));
 			} catch (loadError: unknown) {
 				setError(errorMessage(loadError));
@@ -375,7 +488,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			setIsMutating(true);
 			try {
 				const updated = await renameFlow(flowId, title, current.revision);
-				setFlows((items): ConversationFlowSummary[] => items.map((flow): ConversationFlowSummary => (flow.flowId === flowId ? { ...flow, ...updated } : flow)));
+				setFlows((items): FlowDocumentSummary[] => items.map((flow): FlowDocumentSummary => (flow.flowId === flowId ? { ...flow, ...updated } : flow)));
 				if (snapshotRef.current?.flow.flowId === flowId) applySnapshot({ ...snapshotRef.current, flow: updated });
 			} catch (mutationError: unknown) {
 				setError(errorMessage(mutationError));
@@ -393,12 +506,11 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			setIsMutating(true);
 			try {
 				await archiveFlow(flowId, current.revision);
-				setFlows((items): ConversationFlowSummary[] => items.filter((flow): boolean => flow.flowId !== flowId));
+				setFlows((items): FlowDocumentSummary[] => items.filter((flow): boolean => flow.flowId !== flowId));
 				if (selectedFlowIdRef.current === flowId) {
 					selectedFlowIdRef.current = null;
 					snapshotRef.current = null;
 					setSnapshot(null);
-					setIsNewFlowHome(true);
 				}
 			} catch (mutationError: unknown) {
 				setError(errorMessage(mutationError));
@@ -420,276 +532,109 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	}, []);
 
 	const createNode = useCallback(
-		async (type: FlowDocumentNodeType, x: number, y: number): Promise<void> => {
-			const flowId = snapshotRef.current?.flow.flowId;
-			if (flowId === undefined) return;
-			try {
-				await enqueueMutation(async (): Promise<void> => {
-					const current = snapshotRef.current;
-					if (current === null || current.flow.flowId !== flowId) return;
-					if (current.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting")) throw new Error("Stop the active Flow run before editing the graph.");
-					const definition = nodeDefinitions.find((candidate): boolean => candidate.type === type);
-					const config = {
-						...(definition?.defaultConfig ?? {}),
-						...(type === "llm"
-							? {
-									provider: defaultFlow.provider ?? "",
-									model: defaultFlow.model ?? "",
-									reasoningEffort: defaultFlow.reasoningEffort ?? "",
-								}
-							: {}),
-					};
-					const next = await createFlowNode({
-						flowId: current.flow.flowId,
-						revision: current.flow.graphRevision,
-						type,
-						x,
-						y,
-						title: definition?.defaultTitle,
-						config,
-					});
-					applySnapshot(next);
-				});
-			} catch (createError: unknown) {
-				setError(errorMessage(createError));
-			}
+		async (type: FlowNodeTypeId, x: number, y: number): Promise<void> => {
+			const current = snapshotRef.current;
+			if (current === null || isGraphLocked) return;
+			const definition = nodeDefinitions.find((candidate): boolean => candidate.typeId === type);
+			if (definition === undefined) return;
+			const config = { ...definition.defaultConfig, ...(type === "builtin/llm" ? { provider: defaultFlow.provider ?? "", model: defaultFlow.model ?? "", reasoningEffort: defaultFlow.reasoningEffort ?? "" } : {}) };
+			applyOperation({ mutationId: createFlowMutationId(), kind: "node.create", baseGraphRevision: current.flow.graphRevision, payload: { nodeId: `node-${crypto.randomUUID()}`, typeId: type, title: definition.defaultTitle, x, y, config } });
 		},
-		[applySnapshot, defaultFlow.model, defaultFlow.provider, defaultFlow.reasoningEffort, enqueueMutation, nodeDefinitions],
+		[applyOperation, defaultFlow.model, defaultFlow.provider, defaultFlow.reasoningEffort, isGraphLocked, nodeDefinitions],
 	);
 
 	const createConnectedNode = useCallback(
-		async (params: { type: FlowDocumentNodeType; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "artifact" }): Promise<void> => {
-			const flowId = snapshotRef.current?.flow.flowId;
-			if (flowId === undefined) return;
-			try {
-				await enqueueMutation(async (): Promise<void> => {
-					const current = snapshotRef.current;
-					if (current === null || current.flow.flowId !== flowId) return;
-					if (current.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting")) throw new Error("Stop the active Flow run before editing the graph.");
-					const definition = nodeDefinitions.find((candidate): boolean => candidate.type === params.type);
-					const config = {
-						...(definition?.defaultConfig ?? {}),
-						...(params.type === "llm"
-							? {
-									provider: defaultFlow.provider ?? "",
-									model: defaultFlow.model ?? "",
-									reasoningEffort: defaultFlow.reasoningEffort ?? "",
-								}
-							: {}),
-					};
-					const result = await createConnectedFlowNode({
-						flowId,
-						revision: current.flow.graphRevision,
-						type: params.type,
-						x: params.x,
-						y: params.y,
-						title: definition?.defaultTitle,
-						config,
-						connection: {
-							direction: params.direction,
-							existingNodeId: params.existingNodeId,
-							existingPort: params.existingPort,
-							newPort: params.newPort,
-							dataType: params.dataType,
-						},
-					});
-					applySnapshot(result.snapshot);
-				});
-			} catch (createError: unknown) {
-				setError(errorMessage(createError));
-			}
+		async (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "artifact" }): Promise<void> => {
+			const current = snapshotRef.current;
+			if (current === null || isGraphLocked) return;
+			const definition = nodeDefinitions.find((candidate): boolean => candidate.typeId === params.type);
+			if (definition === undefined) return;
+			const nodeId = `node-${crypto.randomUUID()}`;
+			const config = { ...definition.defaultConfig, ...(params.type === "builtin/llm" ? { provider: defaultFlow.provider ?? "", model: defaultFlow.model ?? "", reasoningEffort: defaultFlow.reasoningEffort ?? "" } : {}) };
+			const createOperation: FlowOperation = { mutationId: createFlowMutationId(), kind: "node.create", baseGraphRevision: current.flow.graphRevision, payload: { nodeId, typeId: params.type, title: definition.defaultTitle, x: params.x, y: params.y, config } };
+			const sourceNodeId = params.direction === "from_existing" ? params.existingNodeId : nodeId;
+			const targetNodeId = params.direction === "from_existing" ? nodeId : params.existingNodeId;
+			const edgeOperation: FlowOperation = { mutationId: createFlowMutationId(), kind: "edge.create", baseGraphRevision: current.flow.graphRevision, payload: { edgeId: `edge-${crypto.randomUUID()}`, sourceNodeId, sourcePort: params.direction === "from_existing" ? params.existingPort : params.newPort, targetNodeId, targetPort: params.direction === "from_existing" ? params.newPort : params.existingPort, dataType: params.dataType } };
+			applyOperations([createOperation, edgeOperation]);
 		},
-		[applySnapshot, defaultFlow.model, defaultFlow.provider, defaultFlow.reasoningEffort, enqueueMutation, nodeDefinitions],
+		[applyOperations, defaultFlow.model, defaultFlow.provider, defaultFlow.reasoningEffort, isGraphLocked, nodeDefinitions],
 	);
 
 	const updateNode = useCallback(
 		async (nodeId: string, patch: Record<string, unknown>): Promise<void> => {
-			const flowId = snapshotRef.current?.flow.flowId;
-			if (flowId === undefined) return;
-			try {
-				await enqueueMutation(async (): Promise<void> => {
-					const current = snapshotRef.current;
-					if (current === null || current.flow.flowId !== flowId) return;
-					if (current.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting")) throw new Error("Stop the active Flow run before editing the graph.");
-					applySnapshot(
-						await updateFlowNode({
-							flowId: current.flow.flowId,
-							nodeId,
-							revision: current.flow.graphRevision,
-							patch: patch as never,
-						}),
-					);
-				});
-			} catch (updateError: unknown) {
-				setError(errorMessage(updateError));
-			}
+			const current = snapshotRef.current;
+			if (current === null || isGraphLocked) return;
+			applyOperation({ mutationId: createFlowMutationId(), kind: "node.update", baseGraphRevision: current.flow.graphRevision, payload: { nodeId, ...(typeof patch.title === "string" ? { title: patch.title } : {}), ...(patch.config !== null && typeof patch.config === "object" && !Array.isArray(patch.config) ? { config: patch.config as Record<string, unknown> } : {}) } });
 		},
-		[applySnapshot, enqueueMutation],
+		[applyOperation, isGraphLocked],
 	);
 
 	const updateNodePosition = useCallback(
 		async (nodeId: string, x: number, y: number): Promise<void> => {
-			const flowId = snapshotRef.current?.flow.flowId;
-			if (flowId === undefined) return;
-			try {
-				await enqueueMutation(async (): Promise<void> => {
-					const current = snapshotRef.current;
-					if (current === null || current.flow.flowId !== flowId) return;
-					ignoreFlowEventsUntilRef.current = Date.now() + 1_000;
-					const next = await updateFlowNode({
-						flowId,
-						nodeId,
-						revision: current.flow.layoutRevision,
-						patch: { x, y },
-					});
-					if (snapshotRef.current?.flow.flowId === flowId) snapshotRef.current = next;
-				});
-			} catch (updateError: unknown) {
-				setError(errorMessage(updateError));
-			}
+			const current = snapshotRef.current;
+			if (current === null) return;
+			applyOperation({ mutationId: createFlowMutationId(), kind: "node.move", baseLayoutRevision: current.flow.layoutRevision, payload: { nodeId, x, y } });
 		},
-		[enqueueMutation],
+		[applyOperation],
 	);
 
 	const deleteNode = useCallback(
 		async (nodeId: string): Promise<void> => {
-			const flowId = snapshotRef.current?.flow.flowId;
-			if (flowId === undefined) return;
-			try {
-				await enqueueMutation(async (): Promise<void> => {
-					const current = snapshotRef.current;
-					if (current === null || current.flow.flowId !== flowId) return;
-					if (current.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting")) throw new Error("Stop the active Flow run before editing the graph.");
-					const optimistic: FlowDocumentSnapshot = {
-						...current,
-						nodes: current.nodes.filter((node): boolean => node.nodeId !== nodeId),
-						edges: current.edges.filter((edge): boolean => edge.sourceNodeId !== nodeId && edge.targetNodeId !== nodeId),
-					};
-					applySnapshot(optimistic);
-					ignoreFlowEventsUntilRef.current = Date.now() + 1_000;
-					try {
-						applySnapshot(
-							await deleteFlowNode({
-								flowId: current.flow.flowId,
-								nodeId,
-								revision: current.flow.graphRevision,
-							}),
-						);
-					} catch (deleteError: unknown) {
-						if (snapshotRef.current?.flow.flowId === flowId) applySnapshot(current);
-						throw deleteError;
-					}
-				});
-			} catch (deleteError: unknown) {
-				setError(errorMessage(deleteError));
-			}
+			const current = snapshotRef.current;
+			if (current === null || isGraphLocked) return;
+			applyOperation({ mutationId: createFlowMutationId(), kind: "node.delete", baseGraphRevision: current.flow.graphRevision, payload: { nodeId } });
 		},
-		[applySnapshot, enqueueMutation],
+		[applyOperation, isGraphLocked],
 	);
 
 	const createEdge = useCallback(
 		async (sourceNodeId: string, targetNodeId: string, sourcePort = "output", targetPort = "input", dataType: "text" | "json" | "artifact" = "text"): Promise<void> => {
-			const flowId = snapshotRef.current?.flow.flowId;
-			if (flowId === undefined) return;
-			setError(null);
-			try {
-				await enqueueMutation(async (): Promise<void> => {
-					const current = snapshotRef.current;
-					if (current === null || current.flow.flowId !== flowId) return;
-					if (current.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting")) throw new Error("Stop the active Flow run before editing the graph.");
-					applySnapshot(
-						await createFlowEdge({
-							flowId: current.flow.flowId,
-							revision: current.flow.graphRevision,
-							sourceNodeId,
-							sourcePort,
-							targetNodeId,
-							targetPort,
-							dataType,
-						}),
-					);
-				});
-			} catch (edgeError: unknown) {
-				setError(errorMessage(edgeError));
-			}
+			const current = snapshotRef.current;
+			if (current === null || isGraphLocked) return;
+			applyOperation({ mutationId: createFlowMutationId(), kind: "edge.create", baseGraphRevision: current.flow.graphRevision, payload: { edgeId: `edge-${crypto.randomUUID()}`, sourceNodeId, sourcePort, targetNodeId, targetPort, dataType } });
 		},
-		[applySnapshot, enqueueMutation],
+		[applyOperation, isGraphLocked],
 	);
 
 	const deleteEdge = useCallback(
 		async (edgeId: string): Promise<void> => {
-			const flowId = snapshotRef.current?.flow.flowId;
-			if (flowId === undefined) return;
-			try {
-				await enqueueMutation(async (): Promise<void> => {
-					const current = snapshotRef.current;
-					if (current === null || current.flow.flowId !== flowId) return;
-					if (current.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting")) throw new Error("Stop the active Flow run before editing the graph.");
-					const optimistic: FlowDocumentSnapshot = {
-						...current,
-						edges: current.edges.filter((edge): boolean => edge.edgeId !== edgeId),
-					};
-					applySnapshot(optimistic);
-					ignoreFlowEventsUntilRef.current = Date.now() + 1_000;
-					try {
-						applySnapshot(
-							await deleteFlowEdge({
-								flowId: current.flow.flowId,
-								edgeId,
-								revision: current.flow.graphRevision,
-							}),
-						);
-					} catch (deleteError: unknown) {
-						if (snapshotRef.current?.flow.flowId === flowId) applySnapshot(current);
-						throw deleteError;
-					}
-				});
-			} catch (edgeError: unknown) {
-				setError(errorMessage(edgeError));
-			}
+			const current = snapshotRef.current;
+			if (current === null || isGraphLocked) return;
+			applyOperation({ mutationId: createFlowMutationId(), kind: "edge.delete", baseGraphRevision: current.flow.graphRevision, payload: { edgeId } });
 		},
-		[applySnapshot, enqueueMutation],
+		[applyOperation, isGraphLocked],
 	);
 
 	const updateViewport = useCallback(
 		async (viewport: { x: number; y: number; zoom: number }): Promise<void> => {
-			const flowId = snapshotRef.current?.flow.flowId;
-			if (flowId === undefined) return;
-			try {
-				await enqueueMutation(async (): Promise<void> => {
-					const current = snapshotRef.current;
-					if (current === null || current.flow.flowId !== flowId) return;
-					ignoreFlowEventsUntilRef.current = Date.now() + 1_000;
-					const flow = await updateFlowViewport({
-						flowId: current.flow.flowId,
-						revision: current.flow.layoutRevision,
-						viewport,
-					});
-					if (snapshotRef.current?.flow.flowId === flowId) snapshotRef.current = { ...snapshotRef.current, flow };
-				});
-			} catch (viewportError: unknown) {
-				setError(errorMessage(viewportError));
-			}
+			const current = snapshotRef.current;
+			if (current === null) return;
+			applyOperation({ mutationId: createFlowMutationId(), kind: "viewport.update", baseLayoutRevision: current.flow.layoutRevision, payload: viewport });
 		},
-		[enqueueMutation],
+		[applyOperation],
 	);
 
 	const startRun = useCallback(
 		async (forceNodeIds?: string[]): Promise<void> => {
-			const current = snapshotRef.current;
+			let current = snapshotRef.current;
 			if (current === null) return;
 			try {
-				await startFlowRun({
+				await flowOperationOutbox.flush(current.flow.flowId);
+				current = snapshotRef.current;
+				if (current === null) return;
+				const run = await startFlowRun({
 					flowId: current.flow.flowId,
 					revision: current.flow.graphRevision,
 					...(forceNodeIds === undefined ? {} : { forceNodeIds }),
 				});
-				void refresh();
+				const next = { ...current, runs: [run, ...current.runs.filter((candidate): boolean => candidate.runId !== run.runId)] };
+				snapshotRef.current = next;
+				setSnapshot(next);
 			} catch (runError: unknown) {
 				setError(errorMessage(runError));
 			}
 		},
-		[refresh],
+		[],
 	);
 
 	const stopRun = useCallback(async (): Promise<void> => {
@@ -697,12 +642,14 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		const active = current?.runs.find((run): boolean => run.status === "running" || run.status === "queued" || run.status === "waiting");
 		if (current === null || active === undefined) return;
 		try {
-			await stopFlowRun(current.flow.flowId, active.runId);
-			void refresh();
+			const run = await stopFlowRun(current.flow.flowId, active.runId);
+			const next = { ...current, runs: current.runs.map((candidate) => candidate.runId === run.runId ? run : candidate) };
+			snapshotRef.current = next;
+			setSnapshot(next);
 		} catch (stopError: unknown) {
 			setError(errorMessage(stopError));
 		}
-	}, [refresh]);
+	}, []);
 
 	const setApprovalMode = useCallback(
 		async (mode: FlowDocument["approvalMode"]): Promise<void> => {
@@ -749,7 +696,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	const copyCurrentBranchToChat = useCallback(async (): Promise<void> => {
 		const current = snapshotRef.current;
 		if (current === null) return;
-		const output = [...current.nodes].reverse().find((node): boolean => node.type === "output");
+		const output = [...current.nodes].reverse().find((node): boolean => node.typeId === "builtin/output");
 		if (output === undefined) {
 			setError(t("flow.export.noOutput"));
 			return;
@@ -781,29 +728,21 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	return {
 		flows,
 		flowOrder,
-		flowBranchSessionIdsByFlow: {},
 		flowRuntimeStatusById,
 		snapshot,
 		nodeDefinitions,
 		tools,
 		approvals,
 		isGraphLocked,
-		isNewFlowHome,
-		newFlowWorkspaceId,
-		selectedBranchId: null,
 		selectedNodeDetail,
 		isLoading,
 		isMutating,
 		error,
 		refresh,
 		createNewFlow,
-		setNewFlowWorkspace,
-		submitNewFlowMessage,
 		createFromChat,
 		selectFlow,
-		selectBranch: (): void => undefined,
 		selectNode,
-		deriveFromNode: async (): Promise<void> => undefined,
 		copyCurrentBranchToChat,
 		renameCurrentFlow,
 		renameFlowById,
@@ -822,5 +761,9 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		stopRun,
 		setApprovalMode,
 		resolveApproval,
+		undo: (): void => replayHistory("undo"),
+		redo: (): void => replayHistory("redo"),
+		canUndo: (void historyRevision, undoStackRef.current.length > 0),
+		canRedo: (void historyRevision, redoStackRef.current.length > 0),
 	};
 }

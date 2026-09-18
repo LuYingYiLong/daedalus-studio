@@ -27,6 +27,7 @@ import { publishStudioExecutableRecord } from "./services/studio-executable-reco
 import { registerImageExportIpc } from "./services/image-export";
 import { registerFileExportIpc } from "./services/file-export";
 import { registerPluginFsIpc } from "./services/plugin-fs";
+import { registerFlowOperationOutboxIpc } from "./services/flow-operation-outbox";
 import { createLogger } from "./services/logger";
 import { runShutdownSteps } from "./services/shutdown";
 import type { GeneralSettings } from "../contracts/general-settings";
@@ -36,6 +37,7 @@ import { BrowserPasswordStore } from "./services/browser/browser-password-store"
 import { safeSendToWebContents } from "./services/safe-web-contents-send";
 import { scheduledTaskService } from "./services/scheduled-tasks/service";
 import { registerWorkspaceMediaProtocol } from "./services/workspace-media";
+import { registerPluginUiProtocol } from "./services/plugin-ui-protocol";
 import { remoteAccessService } from "./services/remote-access";
 import { registerWindowCaptureIpc } from "./services/window-capture/window-capture-ipc";
 import { registerComputerIpc } from "./services/computer-observation/computer-ipc";
@@ -58,6 +60,14 @@ protocol.registerSchemesAsPrivileged([{
 		supportFetchAPI: true,
 		stream: true
 	}
+}, {
+	scheme: "plugin-ui",
+	privileges: {
+		standard: true,
+		secure: true,
+		supportFetchAPI: false,
+		corsEnabled: false,
+	}
 }]);
 
 backendManager.registerIpc();
@@ -71,6 +81,7 @@ registerClipboardIpc();
 registerImageExportIpc();
 registerFileExportIpc();
 registerPluginFsIpc();
+registerFlowOperationOutboxIpc();
 registerGodotExecutableDialogIpc();
 clientPreferencesService.registerIpc();
 registerSystemInfoIpc();
@@ -781,6 +792,7 @@ if (!hasSingleInstanceLock) {
 
 	void app.whenReady().then(async (): Promise<void> => {
 		registerWorkspaceMediaProtocol();
+		registerPluginUiProtocol();
 		await publishStudioExecutableRecord(backendManager.getPort()).catch((): void => {
 			// Bridge launch metadata is a convenience; failure must not block Studio startup.
 		});

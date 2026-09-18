@@ -4,6 +4,18 @@ import { expect, test } from "./fixtures/studio";
 const NOW = "2026-09-17T00:00:00.000Z";
 const FLOW_ID = "flow-e2e";
 
+async function selectFlowNodeType(page: Page, category: RegExp, nodeName: string): Promise<void> {
+	await page.getByRole("menuitem", { name: category }).hover();
+	const pickerBox = await page.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ }).boundingBox();
+	expect(pickerBox?.height ?? Number.POSITIVE_INFINITY).toBeLessThan(260);
+	const option = page.getByRole("menuitem", { name: nodeName, exact: true });
+	await expect(option).toBeVisible();
+	await option.click();
+	await expect(page.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ })).toBeHidden();
+	await expect(option).toBeHidden();
+	await expect(page.locator('[data-flow-node-picker-submenu-host] [class*="-leave"]')).toHaveCount(0);
+}
+
 type Port = {
 	id: string;
 	label: string;
@@ -17,13 +29,18 @@ type Port = {
 type FlowNode = {
 	nodeId: string;
 	flowId: string;
-	type: string;
+	typeId: string;
+	pluginId: string;
+	pluginVersion: string;
+	pluginFingerprint: string;
+	configVersion: number;
 	title: string;
 	x: number;
 	y: number;
 	width: number;
 	height: number;
 	config: Record<string, unknown>;
+	ports: Port[];
 	status: string;
 	createdAt: string;
 	updatedAt: string;
@@ -65,39 +82,75 @@ function output(id: string, label: string, dataTypes: Port["dataTypes"], default
 
 const nodeDefinitions = [
 	{
-		type: "text",
+		typeId: "builtin/text",
+		pluginId: "builtin",
+		pluginVersion: "1.0.0",
+		pluginFingerprint: "builtin:text:1",
+		configVersion: 1,
 		category: "basic",
 		workspaceRequired: false,
 		sideEffecting: false,
+		executable: true,
+		cachePolicy: "always",
 		defaultTitle: "Text",
 		defaultConfig: { text: "" },
+		configSchema: { type: "object", properties: { text: { type: "string" } } },
+		summaryFields: ["text"],
+		ui: { kind: "schema" },
 		ports: [output("output", "Text", ["text"], true)],
 	},
 	{
-		type: "condition",
+		typeId: "builtin/condition",
+		pluginId: "builtin",
+		pluginVersion: "1.0.0",
+		pluginFingerprint: "builtin:condition:1",
+		configVersion: 1,
 		category: "basic",
 		workspaceRequired: false,
 		sideEffecting: false,
+		executable: true,
+		cachePolicy: "always",
 		defaultTitle: "Condition",
 		defaultConfig: { pointer: "/", operator: "equals", value: "" },
+		configSchema: { type: "object", properties: { pointer: { type: "string" }, operator: { type: "string" }, value: {} } },
+		summaryFields: ["operator", "pointer"],
+		ui: { kind: "schema" },
 		ports: [input("input", "Value", ["text", "json"], true), output("true", "True", ["text", "json"], true), output("false", "False", ["text", "json"])],
 	},
 	{
-		type: "tool",
+		typeId: "builtin/tool",
+		pluginId: "builtin",
+		pluginVersion: "1.0.0",
+		pluginFingerprint: "builtin:tool:1",
+		configVersion: 1,
 		category: "workspace",
 		workspaceRequired: false,
 		sideEffecting: true,
+		executable: true,
+		cachePolicy: "never",
 		defaultTitle: "Tool",
 		defaultConfig: { toolName: "workspace_write", args: {}, bindings: [] },
+		configSchema: { type: "object", properties: { toolName: { type: "string" }, args: { type: "object" }, bindings: { type: "array" } } },
+		summaryFields: ["toolName"],
+		ui: { kind: "schema" },
 		ports: [input("input", "Arguments", ["text", "json"], true), output("result", "Result", ["json"], true), output("text", "Text", ["text"])],
 	},
 	{
-		type: "output",
+		typeId: "builtin/output",
+		pluginId: "builtin",
+		pluginVersion: "1.0.0",
+		pluginFingerprint: "builtin:output:1",
+		configVersion: 1,
 		category: "basic",
 		workspaceRequired: false,
 		sideEffecting: false,
+		executable: true,
+		cachePolicy: "always",
 		defaultTitle: "Output",
 		defaultConfig: { format: "text" },
+		configSchema: { type: "object", properties: { format: { type: "string" } } },
+		summaryFields: ["format"],
+		ui: { kind: "schema" },
 		ports: [input("input", "Value", ["text", "json", "artifact"], true)],
 	},
 ];
@@ -156,18 +209,23 @@ test.describe("Daedalus Flow node workflow", () => {
 			edges: edges.map((edge): FlowEdge => ({ ...edge })),
 			runs,
 		});
-		const addNode = (type: string, x: number, y: number, config: Record<string, unknown> = {}): FlowNode => {
-			const definition = nodeDefinitions.find((candidate): boolean => candidate.type === type)!;
+		const addNode = (typeId: string, x: number, y: number, config: Record<string, unknown> = {}, requestedNodeId?: string): FlowNode => {
+			const definition = nodeDefinitions.find((candidate): boolean => candidate.typeId === typeId)!;
 			const node: FlowNode = {
-				nodeId: `node-${++nodeIndex}`,
+				nodeId: requestedNodeId ?? `node-${++nodeIndex}`,
 				flowId: FLOW_ID,
-				type,
+				typeId,
+				pluginId: definition.pluginId,
+				pluginVersion: definition.pluginVersion,
+				pluginFingerprint: definition.pluginFingerprint,
+				configVersion: definition.configVersion,
 				title: definition.defaultTitle,
 				x,
 				y,
 				width: 300,
 				height: 180,
 				config: { ...definition.defaultConfig, ...config },
+				ports: definition.ports,
 				status: "idle",
 				createdAt: NOW,
 				updatedAt: NOW,
@@ -175,9 +233,9 @@ test.describe("Daedalus Flow node workflow", () => {
 			nodes.push(node);
 			return node;
 		};
-		const addEdge = (sourceNodeId: string, sourcePort: string, targetNodeId: string, targetPort: string, dataType: FlowEdge["dataType"]): FlowEdge => {
+		const addEdge = (sourceNodeId: string, sourcePort: string, targetNodeId: string, targetPort: string, dataType: FlowEdge["dataType"], requestedEdgeId?: string): FlowEdge => {
 			const edge: FlowEdge = {
-				edgeId: `edge-${++edgeIndex}`,
+				edgeId: requestedEdgeId ?? `edge-${++edgeIndex}`,
 				flowId: FLOW_ID,
 				sourceNodeId,
 				sourcePort,
@@ -215,85 +273,64 @@ test.describe("Daedalus Flow node workflow", () => {
 			],
 		}));
 		mockBackend.setHandler("flow.approval.list", () => ({ approvals }));
-		mockBackend.setHandler("flow.node.create", ({ params }) => {
-			const inputParams = params as {
-				type: string;
-				x: number;
-				y: number;
-				config?: Record<string, unknown>;
-			};
-			addNode(inputParams.type, inputParams.x, inputParams.y, inputParams.config);
-			graphRevision += 1;
-			return snapshot();
-		});
-		mockBackend.setHandler("flow.node.createConnected", ({ params }) => {
-			const inputParams = params as {
-				type: string;
-				x: number;
-				y: number;
-				config?: Record<string, unknown>;
-				connection: {
-					direction: "from_existing" | "to_existing";
-					existingNodeId: string;
-					existingPort: string;
-					newPort: string;
-					dataType: FlowEdge["dataType"];
-				};
-			};
-			const connected = addNode(inputParams.type, inputParams.x, inputParams.y, inputParams.config);
-			const connection = inputParams.connection;
-			const edge = connection.direction === "from_existing" ? addEdge(connection.existingNodeId, connection.existingPort, connected.nodeId, connection.newPort, connection.dataType) : addEdge(connected.nodeId, connection.newPort, connection.existingNodeId, connection.existingPort, connection.dataType);
-			const tool = addNode("tool", connected.x + 360, connected.y, {
-				toolName: "workspace_write",
-				args: { path: "result.txt" },
-				bindings: [],
-			});
-			const result = addNode("output", connected.x + 720, connected.y, {
-				format: "text",
-			});
-			addEdge(connected.nodeId, "true", tool.nodeId, "input", "text");
-			addEdge(tool.nodeId, "text", result.nodeId, "input", "text");
-			graphRevision += 1;
-			return {
-				snapshot: snapshot(),
-				nodeId: connected.nodeId,
-				edgeId: edge.edgeId,
-			};
-		});
-		mockBackend.setHandler("flow.node.update", ({ params }) => {
-			const inputParams = params as {
-				nodeId: string;
-				patch: Partial<FlowNode> & { config?: Record<string, unknown> };
-			};
-			const node = nodes.find((candidate): boolean => candidate.nodeId === inputParams.nodeId)!;
-			Object.assign(node, inputParams.patch);
-			if (inputParams.patch.x !== undefined || inputParams.patch.y !== undefined) layoutRevision += 1;
-			else graphRevision += 1;
-			return snapshot();
-		});
-		mockBackend.setHandler("flow.node.delete", ({ params }) => {
-			const inputParams = params as { nodeId: string };
-			const nodeOffset = nodes.findIndex((candidate): boolean => candidate.nodeId === inputParams.nodeId);
-			if (nodeOffset >= 0) nodes.splice(nodeOffset, 1);
-			for (let edgeOffset = edges.length - 1; edgeOffset >= 0; edgeOffset -= 1) {
-				if (edges[edgeOffset]?.sourceNodeId === inputParams.nodeId || edges[edgeOffset]?.targetNodeId === inputParams.nodeId) edges.splice(edgeOffset, 1);
+		mockBackend.setHandler("flow.patch.commit", ({ params }) => {
+			const operations = (params as { operations: Array<{ mutationId: string; kind: string; payload: Record<string, unknown> }> }).operations;
+			for (const operation of operations) {
+				const payload = operation.payload;
+				switch (operation.kind) {
+				case "node.create":
+					addNode(String(payload.typeId), Number(payload.x), Number(payload.y), (payload.config as Record<string, unknown> | undefined) ?? {}, String(payload.nodeId));
+					graphRevision += 1;
+					break;
+				case "node.update": {
+					const node = nodes.find((candidate): boolean => candidate.nodeId === payload.nodeId);
+					if (node !== undefined) {
+						if (typeof payload.title === "string") node.title = payload.title;
+						if (typeof payload.config === "object" && payload.config !== null) node.config = payload.config as Record<string, unknown>;
+					}
+					graphRevision += 1;
+					break;
+				}
+				case "node.delete": {
+					const nodeId = String(payload.nodeId);
+					const nodeOffset = nodes.findIndex((candidate): boolean => candidate.nodeId === nodeId);
+					if (nodeOffset >= 0) nodes.splice(nodeOffset, 1);
+					for (let edgeOffset = edges.length - 1; edgeOffset >= 0; edgeOffset -= 1) {
+						if (edges[edgeOffset]?.sourceNodeId === nodeId || edges[edgeOffset]?.targetNodeId === nodeId) edges.splice(edgeOffset, 1);
+					}
+					graphRevision += 1;
+					break;
+				}
+				case "node.move": {
+					const node = nodes.find((candidate): boolean => candidate.nodeId === payload.nodeId);
+					if (node !== undefined) Object.assign(node, { x: Number(payload.x), y: Number(payload.y) });
+					layoutRevision += 1;
+					break;
+				}
+				case "node.resize": {
+					const node = nodes.find((candidate): boolean => candidate.nodeId === payload.nodeId);
+					if (node !== undefined) Object.assign(node, { width: Number(payload.width), height: Number(payload.height) });
+					layoutRevision += 1;
+					break;
+				}
+				case "edge.create":
+					edges.splice(0, edges.length, ...edges.filter((edge): boolean => edge.targetNodeId !== payload.targetNodeId || edge.targetPort !== payload.targetPort));
+					addEdge(String(payload.sourceNodeId), String(payload.sourcePort), String(payload.targetNodeId), String(payload.targetPort), payload.dataType as FlowEdge["dataType"], String(payload.edgeId));
+					graphRevision += 1;
+					break;
+				case "edge.delete": {
+					const edgeOffset = edges.findIndex((edge): boolean => edge.edgeId === payload.edgeId);
+					if (edgeOffset >= 0) edges.splice(edgeOffset, 1);
+					graphRevision += 1;
+					break;
+				}
+				case "viewport.update":
+					Object.assign(document, { viewport: payload });
+					layoutRevision += 1;
+					break;
+				}
 			}
-			graphRevision += 1;
-			return snapshot();
-		});
-		mockBackend.setHandler("flow.viewport.update", ({ params }) => {
-			const inputParams = params as {
-				viewport: { x: number; y: number; zoom: number };
-			};
-			Object.assign(document, { viewport: inputParams.viewport });
-			layoutRevision += 1;
-			return { ...document, graphRevision, layoutRevision };
-		});
-		mockBackend.setHandler("flow.edge.create", ({ params }) => {
-			const inputParams = params as Omit<FlowEdge, "edgeId">;
-			addEdge(inputParams.sourceNodeId, inputParams.sourcePort, inputParams.targetNodeId, inputParams.targetPort, inputParams.dataType);
-			graphRevision += 1;
-			return snapshot();
+			return { flowId: FLOW_ID, graphRevision, layoutRevision, acceptedMutationIds: operations.map((operation): string => operation.mutationId), operations };
 		});
 		mockBackend.setHandler("flow.run.start", () => {
 			const runId = "run-e2e";
@@ -301,12 +338,16 @@ test.describe("Daedalus Flow node workflow", () => {
 				(node): Record<string, unknown> => ({
 					runId,
 					nodeId: node.nodeId,
-					status: node.type === "tool" ? "waiting" : node.type === "output" ? "queued" : "completed",
+					typeId: node.typeId,
+					pluginVersion: node.pluginVersion,
+					pluginFingerprint: node.pluginFingerprint,
+					configVersion: node.configVersion,
+					status: node.typeId === "builtin/tool" ? "waiting" : node.typeId === "builtin/output" ? "queued" : "completed",
 					inputFingerprint: `fingerprint-${node.nodeId}`,
-					output: node.type === "text" ? { output: "hello" } : node.type === "condition" ? { true: "hello" } : null,
+					output: node.typeId === "builtin/text" ? { output: "hello" } : node.typeId === "builtin/condition" ? { true: "hello" } : null,
 					error: null,
 					startedAt: NOW,
-					finishedAt: node.type === "tool" || node.type === "output" ? null : NOW,
+					finishedAt: node.typeId === "builtin/tool" || node.typeId === "builtin/output" ? null : NOW,
 				}),
 			);
 			runs = [
@@ -321,7 +362,7 @@ test.describe("Daedalus Flow node workflow", () => {
 					nodes: nodeRuns,
 				},
 			];
-			const toolNode = nodes.find((node): boolean => node.type === "tool")!;
+			const toolNode = nodes.find((node): boolean => node.typeId === "builtin/tool")!;
 			approvals = [
 				{
 					approvalId: "approval-e2e",
@@ -363,14 +404,14 @@ test.describe("Daedalus Flow node workflow", () => {
 			const run = runs[0]!;
 			const nodeRuns = (run.nodes as Array<Record<string, unknown>>).map((nodeRun): Record<string, unknown> => {
 				const node = nodes.find((candidate): boolean => candidate.nodeId === nodeRun.nodeId)!;
-				if (node.type === "tool")
+				if (node.typeId === "builtin/tool")
 					return {
 						...nodeRun,
 						status: "completed",
 						output: { text: "approved result" },
 						finishedAt: NOW,
 					};
-				if (node.type === "output")
+				if (node.typeId === "builtin/output")
 					return {
 						...nodeRun,
 						status: "completed",
@@ -395,10 +436,11 @@ test.describe("Daedalus Flow node workflow", () => {
 
 		const pane = mainWindow.locator(".react-flow__pane");
 		await mainWindow.locator('section[aria-labelledby="flow-welcome-title"]').click({ button: "right", position: { x: 460, y: 260 } });
-		await mainWindow.locator('[data-flow-node-type="text"]').click();
-		await expect.poll(() => mockBackend.getRequests("flow.node.create").length).toBe(1);
-		const textNode = mainWindow.locator('[data-flow-node-id="node-1"]');
+		await selectFlowNodeType(mainWindow, /Basic|基础/u, "Text");
+		await expect.poll(() => mockBackend.getRequests("flow.patch.commit").length).toBeGreaterThanOrEqual(1);
+		const textNode = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/text"])');
 		await expect(textNode).toBeVisible();
+		await textNode.click();
 		await expect(textNode.locator("textarea")).toBeVisible();
 		await expect(textNode.locator("input")).toHaveCount(0);
 		await expect(textNode.locator(".ant-collapse")).toHaveCount(0);
@@ -415,13 +457,17 @@ test.describe("Daedalus Flow node workflow", () => {
 		await mainWindow.mouse.move(paneBox!.x + paneBox!.width * 0.12, paneBox!.y + paneBox!.height * 0.34, { steps: 12 });
 		await mainWindow.mouse.up();
 		await expect(mainWindow.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ })).toBeVisible();
-		await expect(mainWindow.locator('[data-flow-node-type="condition"]')).toBeVisible();
-		await mainWindow.locator('[data-flow-node-type="condition"]').click();
-		await expect.poll(() => mockBackend.getRequests("flow.node.createConnected").length).toBe(1);
-		await expect(mainWindow.locator('[data-flow-node-id="node-2"]')).toBeVisible();
-		await expect(mainWindow.locator('[data-flow-node-id="node-3"]')).toBeVisible();
-		await expect(mainWindow.locator('[data-flow-node-id="node-4"]')).toBeVisible();
-		await expect(mainWindow.locator(".react-flow__edge-default")).toHaveCount(3);
+		await selectFlowNodeType(mainWindow, /Basic|基础/u, "Condition");
+		await mainWindow.getByRole("button", { name: "Fit View" }).click();
+		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/condition"])')).toBeVisible();
+		await mainWindow.keyboard.press("Shift+A");
+		await selectFlowNodeType(mainWindow, /Workspace|工作区/u, "Tool");
+		await mainWindow.keyboard.press("Shift+A");
+		await selectFlowNodeType(mainWindow, /Basic|基础/u, "Output");
+		await mainWindow.getByRole("button", { name: "Fit View" }).click();
+		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/tool"])')).toBeVisible();
+		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toBeVisible();
+		await expect(mainWindow.locator(".react-flow__edge-default")).toHaveCount(1);
 		const snapButton = mainWindow.getByRole("button", {
 			name: /Disable grid snapping|关闭网格吸附/,
 		});
@@ -438,13 +484,14 @@ test.describe("Daedalus Flow node workflow", () => {
 		await expect(mainWindow.getByText(/Pending approvals|待审批操作/)).toBeVisible();
 		await mainWindow.getByRole("button", { name: /Approve|批\s*准/ }).click();
 		await expect.poll(() => mockBackend.getRequests("flow.approval.resolve").length).toBe(1);
-		await expect(mainWindow.locator('[data-flow-node-id="node-4"]')).toContainText("approved result");
+		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toContainText("approved result");
 
-		const outputNode = mainWindow.locator('[data-flow-node-id="node-4"]');
+		const outputNode = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])');
+		const patchCountBeforeDelete = mockBackend.getRequests("flow.patch.commit").length;
 		await outputNode.locator("header").click();
 		await mainWindow.keyboard.press("Delete");
 		await expect(outputNode).toHaveCount(0);
-		await expect.poll(() => mockBackend.getRequests("flow.node.delete").length).toBe(1);
+		await expect.poll(() => mockBackend.getRequests("flow.patch.commit").length).toBeGreaterThan(patchCountBeforeDelete);
 		await mainWindow.waitForTimeout(350);
 		await expect(outputNode).toHaveCount(0);
 	});

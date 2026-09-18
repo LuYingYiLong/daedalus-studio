@@ -155,11 +155,7 @@ export type LocalEnvironmentConfigDocument = {
 export type SessionMetadata = {
 	id: string;
 	title: string;
-	surface?: "chat" | "flow_branch";
-	flow?: {
-		flowId: string;
-		branchId: string;
-	};
+	surface?: "chat";
 	temporary?: boolean;
 	pinned?: boolean;
 	workspaceId?: string;
@@ -194,29 +190,6 @@ export type SessionListResult = {
 	sessions: SessionMetadata[];
 };
 
-export type ConversationFlowNodeRole = "user" | "assistant";
-export type ConversationFlowNodeStatus =
-	| "completed"
-	| "streaming"
-	| "waiting"
-	| "failed"
-	| "stopped";
-
-export type ConversationFlow = {
-	flowId: string;
-	title: string;
-	workspaceId: string | null;
-	pinned: boolean;
-	rootBranchId: string;
-	revision: number;
-	activeBranchId: string | null;
-	activeRequestId: string | null;
-	archivedAt: string | null;
-	createdFromSessionId: string | null;
-	createdAt: string;
-	updatedAt: string;
-};
-
 export type FlowTreeSectionKey = "pinned" | "projects" | "recent";
 
 export type FlowTreeOrder = {
@@ -231,53 +204,7 @@ export type FlowTreeOrder = {
 
 export type FlowTreeOrderUpdate = Omit<FlowTreeOrder, "schemaVersion" | "updatedAt">;
 
-export type ConversationFlowSummary = ConversationFlow & {
-	branchCount: number;
-};
-
-export type ConversationFlowBranch = {
-	branchId: string;
-	flowId: string;
-	sessionId: string;
-	parentBranchId: string | null;
-	forkRequestId: string | null;
-	forkRole: ConversationFlowNodeRole | null;
-	seedRequestId: string | null;
-	headNodeId: string | null;
-	pendingRegenerate: boolean;
-	createdAt: string;
-	updatedAt: string;
-};
-
-export type ConversationFlowNode = {
-	nodeId: string;
-	flowId: string;
-	branchId: string;
-	sessionId: string;
-	requestId: string;
-	role: ConversationFlowNodeRole;
-	parentNodeId: string | null;
-	status: ConversationFlowNodeStatus;
-	contentPreview: string;
-	createdAt: string;
-	updatedAt: string;
-};
-
-export type ConversationFlowNodePosition = {
-	nodeId: string;
-	x: number;
-	y: number;
-};
-
-export type ConversationFlowSnapshot = {
-	flow: ConversationFlow;
-	branches: ConversationFlowBranch[];
-	nodes: ConversationFlowNode[];
-	positions: ConversationFlowNodePosition[];
-};
-
-
-export type FlowDocumentNodeType = "prompt" | "text" | "template" | "merge" | "json_extract" | "condition" | "file_input" | "llm" | "tool" | "command" | "output" | "note";
+export type FlowNodeTypeId = `${string}/${string}`;
 export type FlowDocumentNodeStatus = "idle" | "queued" | "running" | "waiting" | "completed" | "cached" | "failed" | "cancelled" | "skipped";
 export type FlowDocumentRunStatus = "queued" | "running" | "waiting" | "completed" | "failed" | "cancelled";
 export type FlowDocument = {
@@ -294,16 +221,22 @@ export type FlowDocument = {
 	createdAt: string;
 	updatedAt: string;
 };
+export type FlowDocumentSummary = FlowDocument;
 export type FlowDocumentNode = {
 	nodeId: string;
 	flowId: string;
-	type: FlowDocumentNodeType;
+	typeId: FlowNodeTypeId;
+	pluginId: string;
+	pluginVersion: string;
+	pluginFingerprint: string;
+	configVersion: number;
 	title: string;
 	x: number;
 	y: number;
 	width: number;
 	height: number;
 	config: Record<string, unknown>;
+	ports: FlowNodePortDefinition[];
 	status: FlowDocumentNodeStatus;
 	createdAt: string;
 	updatedAt: string;
@@ -320,6 +253,10 @@ export type FlowDocumentEdge = {
 export type FlowDocumentNodeRun = {
 	runId: string;
 	nodeId: string;
+	typeId: FlowNodeTypeId;
+	pluginVersion: string;
+	pluginFingerprint: string;
+	configVersion: number;
 	status: FlowDocumentNodeStatus;
 	inputFingerprint: string | null;
 	output: unknown;
@@ -721,15 +658,46 @@ export type FlowNodePortDefinition = {
 	multiple: boolean;
 	defaultConnect: boolean;
 };
+export type FlowDynamicPortDefinition = {
+	configField: string;
+	direction: "input" | "output";
+	idField: string;
+	labelField: string;
+	dataTypes: Array<"text" | "json" | "artifact">;
+	dataTypeField?: string;
+	required: boolean;
+	multiple: boolean;
+	defaultConnect: boolean;
+};
 export type FlowNodeTypeDefinition = {
-	type: FlowDocumentNodeType;
-	category: "basic" | "ai" | "workspace";
+	typeId: FlowNodeTypeId;
+	pluginId: string;
+	pluginVersion: string;
+	pluginFingerprint: string;
+	configVersion: number;
+	category: string;
 	workspaceRequired: boolean;
 	sideEffecting: boolean;
+	executable: boolean;
+	cachePolicy: "always" | "read-only" | "never";
 	defaultTitle: string;
 	defaultConfig: Record<string, unknown>;
+	configSchema: Record<string, unknown>;
+	summaryFields: string[];
+	ui: { kind: "schema" } | { kind: "sandbox"; entry: string; actions: string[] };
 	ports: FlowNodePortDefinition[];
+	dynamicPorts?: FlowDynamicPortDefinition[];
 };
+export type FlowOperation =
+	| { mutationId: string; kind: "node.create"; baseGraphRevision?: number; payload: { nodeId: string; typeId: FlowNodeTypeId; title?: string; x: number; y: number; config?: Record<string, unknown> } }
+	| { mutationId: string; kind: "node.update"; baseGraphRevision?: number; payload: { nodeId: string; title?: string; config?: Record<string, unknown> } }
+	| { mutationId: string; kind: "node.delete"; baseGraphRevision?: number; payload: { nodeId: string } }
+	| { mutationId: string; kind: "node.move"; baseLayoutRevision?: number; payload: { nodeId: string; x: number; y: number } }
+	| { mutationId: string; kind: "node.resize"; baseLayoutRevision?: number; payload: { nodeId: string; width: number; height: number } }
+	| { mutationId: string; kind: "edge.create"; baseGraphRevision?: number; payload: { edgeId: string; sourceNodeId: string; sourcePort: string; targetNodeId: string; targetPort: string; dataType: FlowDocumentEdge["dataType"] } }
+	| { mutationId: string; kind: "edge.delete"; baseGraphRevision?: number; payload: { edgeId: string } }
+	| { mutationId: string; kind: "viewport.update"; baseLayoutRevision?: number; payload: FlowDocument["viewport"] };
+export type FlowPatchAck = { flowId: string; graphRevision: number; layoutRevision: number; acceptedMutationIds: string[]; operations: FlowOperation[] };
 export type FlowToolDefinition = {
 	name: string;
 	description: string;

@@ -3,7 +3,7 @@ import { useExternalBrowserSession } from "@/features/external-browser/useExtern
 import { useCallback, useLayoutEffect, useMemo, useRef, useEffect, useState } from "react";
 import { message as antdMessage } from "antd";
 import { useTranslation } from "react-i18next";
-import type { AdditionalContextItem, AgentGoalState, ConversationFlowSummary, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SelectionAskThread, SessionMetadata, SessionTimelineNavigationEntry, WorkflowTodoSnapshot, WorkspaceConfig } from "@/platform/rpc/types";
+import type { AdditionalContextItem, AgentGoalState, FlowDocumentSummary, MessageQueueItem, PendingGuide, PendingToolBudget, PlanApprovalState, PlanClarificationState, SelectionAskThread, SessionMetadata, SessionTimelineNavigationEntry, WorkflowTodoSnapshot, WorkspaceConfig } from "@/platform/rpc/types";
 import type { ChatMode } from "@/platform/rpc/chat-api";
 import type { ApprovalMode, PendingApproval } from "@/platform/rpc/approval-api";
 import type { SlashCommandDefinition } from "@/platform/rpc/command-api";
@@ -392,42 +392,11 @@ function HomePage({
 	const flowController = useHomeFlowController({
 		enabled: primarySurface === "flow",
 		defaultFlow: defaultFlowOptions,
-		activeSessionId,
-		activeSessionMetadata,
-		composerMessage: message,
-		isSessionLoading,
-		isSending,
-		onSessionSelect,
-		onDraftChange,
-		onSubmit: (text: string, modeOverride?: ChatMode): void => onSubmit(text, modeOverride),
-		onBeginNewFlow: onNewSession,
 		onOpenChat: (session: SessionMetadata): void => {
 			transitionToChatSurface();
 			onSessionSelect(session);
 		},
 	});
-	const isFlowWelcomeHome: boolean = primarySurface === "flow" && flowController.isNewFlowHome;
-	const flowHomeWorkspace: WorkspaceConfig | null = useMemo((): WorkspaceConfig | null => {
-		if (!isFlowWelcomeHome || flowController.newFlowWorkspaceId === null) return null;
-		return workspaceOptions.find((workspace): boolean => workspace.id === flowController.newFlowWorkspaceId) ?? null;
-	}, [flowController.newFlowWorkspaceId, isFlowWelcomeHome, workspaceOptions]);
-	const handleComposerWorkspaceSelect = useCallback(
-		(workspaceId: string): void => {
-			if (isFlowWelcomeHome) {
-				flowController.setNewFlowWorkspace(workspaceId);
-				return;
-			}
-			onHomeWorkspaceSelect(workspaceId);
-		},
-		[flowController, isFlowWelcomeHome, onHomeWorkspaceSelect],
-	);
-	const handleComposerWorkspaceClear = useCallback((): void => {
-		if (isFlowWelcomeHome) {
-			flowController.setNewFlowWorkspace(null);
-			return;
-		}
-		onHomeWorkspaceClear();
-	}, [flowController, isFlowWelcomeHome, onHomeWorkspaceClear]);
 	const handleOpenFlowWorkspace = useCallback(
 		async (workspace: WorkspaceConfig): Promise<void> => {
 			try {
@@ -454,48 +423,21 @@ function HomePage({
 			setIsFlowWorkspaceDeleting(false);
 		}
 	}, [flowController.refresh, flowWorkspaceDeleteTarget, isFlowWorkspaceDeleting, messageApi, onWorkspaceDelete, t]);
-	const unreadFlowIds: string[] = useMemo((): string[] => {
-		const unreadSessionIdSet: ReadonlySet<string> = new Set(unreadSessionIds);
-		return Object.entries(flowController.flowBranchSessionIdsByFlow)
-			.filter(([, sessionIds]): boolean => sessionIds.some((sessionId): boolean => unreadSessionIdSet.has(sessionId)))
-			.map(([flowId]): string => flowId);
-	}, [flowController.flowBranchSessionIdsByFlow, unreadSessionIds]);
-	const handleFlowComposerSubmit = useCallback(
-		(messageText: string, modeOverride?: ChatMode): void => {
-			if (primarySurface === "flow") {
-				if (flowController.isNewFlowHome) {
-					void flowController.submitNewFlowMessage(messageText, modeOverride);
-					return;
-				}
-				if (activeSessionMetadata?.surface !== "flow_branch") return;
-			}
-			onSubmit(messageText, modeOverride);
-		},
-		[activeSessionMetadata?.surface, flowController.isNewFlowHome, flowController.submitNewFlowMessage, onSubmit, primarySurface],
-	);
+	const unreadFlowIds: string[] = [];
 	const lastChatSessionRef = useRef<SessionMetadata | null>(null);
 	useEffect((): void => {
-		if (primarySurface === "chat" && activeSessionMetadata?.surface !== "flow_branch") {
+		if (primarySurface === "chat") {
 			lastChatSessionRef.current = activeSessionMetadata;
 		}
 	}, [activeSessionMetadata, primarySurface]);
 	const handlePrimarySurfaceChange = useCallback(
 		(surface: "chat" | "flow"): void => {
-			if (surface === "chat" && activeSessionMetadata?.surface === "flow_branch") {
-				if (lastChatSessionRef.current !== null) {
-					showPrimarySurface(surface);
-					void onSessionSelect(lastChatSessionRef.current);
-					return;
-				}
-				requestNewSessionSurface();
-				return;
-			}
 			showPrimarySurface(surface);
 			if (surface === "chat" && lastChatSessionRef.current !== null) {
 				void onSessionSelect(lastChatSessionRef.current);
 			}
 		},
-		[activeSessionMetadata?.surface, onSessionSelect, requestNewSessionSurface, showPrimarySurface],
+		[onSessionSelect, showPrimarySurface],
 	);
 	const conversationTimelinePaneRef = useRef<ConversationTimelinePaneHandle | null>(null);
 	const flowSearchHandleRef = useRef<FlowSearchHandle | null>(null);
@@ -682,17 +624,17 @@ function HomePage({
 			approvalMode,
 			slashCommands,
 			skills,
-			isSending: isFlowWelcomeHome ? flowController.isMutating : isSending,
-			isCancelling: isFlowWelcomeHome ? false : isCancelling,
+			isSending,
+			isCancelling,
 			isAddingTextAttachment,
 			isApprovalModeSaving,
 			workspaceOptions,
-			workspaceFooterDisabled: isFlowWelcomeHome ? false : workspaceFooterDisabled,
-			isHome: isHome || isFlowWelcomeHome,
+			workspaceFooterDisabled,
+			isHome,
 			homeExecutionEnvironment,
 			homeWorktreeSources,
 			activeWorkspace,
-			homeWorkspace: isFlowWelcomeHome ? flowHomeWorkspace : homeWorkspace,
+			homeWorkspace,
 			worktreeDisabledReason,
 			isWorktreePreparing,
 		},
@@ -708,16 +650,16 @@ function HomePage({
 			onAddWindowScreenshot,
 			onAddPastedTextAttachment,
 			onAddContextFiles,
-			onHomeWorkspaceSelect: handleComposerWorkspaceSelect,
+			onHomeWorkspaceSelect,
 			onHomeWorkspaceAdd,
-			onHomeWorkspaceClear: handleComposerWorkspaceClear,
+			onHomeWorkspaceClear,
 			onHomeWorktreeModeChange: onHomeExecutionEnvironmentChange,
 			onHomeWorktreeSourceOptionsChange: onHomeWorktreeSourcesChange,
 			onRemoveContext,
 			onPinContext,
 			onClearUnpinnedContext,
 			onCancel,
-			onSubmit: handleFlowComposerSubmit,
+			onSubmit,
 			onGuideSubmit,
 			onCompletionOpen,
 		},
@@ -735,7 +677,7 @@ function HomePage({
 		runningSessionIds,
 		unreadSessionIds,
 		forkingSessionId,
-		sessionUpdate: activeSessionMetadata?.surface === "flow_branch" ? null : activeSessionMetadata,
+		sessionUpdate: activeSessionMetadata,
 		onNewSession: requestNewUnboundSessionSurface,
 		onSessionSelect: (session): void => {
 			transitionToChatSurface();
@@ -770,7 +712,7 @@ function HomePage({
 			void flowController.selectFlow(flowId);
 		},
 		onRename: flowController.renameFlowById,
-		onArchive: (flow: ConversationFlowSummary): void => {
+		onArchive: (flow: FlowDocumentSummary): void => {
 			void flowController.archiveFlowById(flow.flowId);
 		},
 		onOrderUpdate: flowController.updateFlowOrder,
@@ -991,7 +933,7 @@ function HomePage({
 					flowSurfaceProps={{
 						controller: flowController,
 						keyboardShortcuts,
-						chatSurfaceProps,
+						workspaceOptions: workspaceOptionsInTreeOrder,
 						searchHandleRef: flowSearchHandleRef,
 					}}
 					sideDockConfig={sideDockConfig}

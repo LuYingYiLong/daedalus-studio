@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { readRepoFile } from "../helpers/repo-paths";
 
 describe("Flow home surface", (): void => {
-	it("keeps Chat and Flow controlled and routes graph operations through dedicated RPCs", (): void => {
+	it("keeps Chat and Flow controlled and routes graph edits through the durable operation outbox", (): void => {
 		const sidebar = readRepoFile("src", "renderer", "src", "widgets", "home", "workspace", "HomeWorkspaceSidebar.tsx");
 		const home = readRepoFile("src", "renderer", "src", "widgets", "home", "HomePage.tsx");
 		const surface = readRepoFile("src", "renderer", "src", "widgets", "flow", "HomeFlowSurface.tsx");
+		const welcome = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowWelcome.tsx");
 		const nodes = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodes.tsx");
 		const picker = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodePicker.tsx");
 		const shortcutSettings = readRepoFile("src", "renderer", "src", "widgets", "settings", "pages", "studio", "KeyboardShortcutsSettingsPage.tsx");
@@ -19,7 +20,8 @@ describe("Flow home surface", (): void => {
 		expect(surface).toContain("targetHandle: edge.targetPort");
 		expect(surface).toContain("onConnectEnd={onConnectEnd}");
 		expect(surface).toContain("createConnectedNode");
-		expect(surface).toContain("viewportSaveTimerRef");
+		expect(surface).toContain("onMoveEnd={onMoveEnd}");
+		expect(surface).not.toContain("viewportSaveTimerRef");
 		expect(surface).toContain("onMoveStart={onMoveStart}");
 		expect(surface).not.toContain("MiniMap");
 		expect(surface).toContain("menu={approvalModeMenu}");
@@ -30,8 +32,13 @@ describe("Flow home surface", (): void => {
 		expect(surface).toContain('type: "default"');
 		expect(surface).not.toContain("renderComposer");
 		expect(surface).not.toContain("<Empty");
-		expect(controller).toContain("createFlowNode");
-		expect(controller).toContain("mutationQueueRef");
+		expect(surface).toContain('mode="create"');
+		expect(surface).toContain("controller.createNewFlow(workspaceId)");
+		expect(surface).not.toContain("onStarterSelect={(): void => undefined}");
+		expect(welcome).toContain("<Select");
+		expect(welcome).toContain("props.onCreate(workspaceId.length === 0 ? null : workspaceId)");
+		expect(controller).toContain('kind: "node.create"');
+		expect(controller).toContain("flowOperationOutbox.enqueue");
 		expect(controller).toContain("updateNodePosition");
 		expect(controller).toContain("ignoreFlowEventsUntilRef");
 		expect(controller).toContain("startFlowRun");
@@ -40,12 +47,40 @@ describe("Flow home surface", (): void => {
 		expect(nodes).not.toContain("<Collapse");
 		expect(nodes).not.toContain("data.onDelete");
 		expect(nodes).not.toContain("draftTitle");
-		expect(picker).toContain('role="listbox"');
+		expect(picker).toContain("<Dropdown");
+		expect(picker).toContain("popupRender=");
+		expect(picker).toContain("children: categoryDefinitions.map");
+		expect(picker).toContain('destroyOnHidden={false}');
+		expect(picker).toContain('trigger={["click"]}');
+		expect(picker).toContain("open ? openCategoryKeys : []");
+		expect(picker).toContain("setOpenCategoryKeys([]);");
+		expect(picker).toContain("motion: submenuMotion");
+		expect(picker).toContain("motionLeave: false");
+		expect(picker).toContain("onTitleMouseEnter:");
+		expect(picker).not.toContain("flow.editor.picker.hint");
+		expect(nodes).toContain("portSpacer");
+		expect(nodes).not.toContain("selected && definition !== null");
+		expect(surface).toContain("clientX + FLOW_NODE_CREATE_OFFSET");
 		expect(shortcutSettings).toContain("SHORTCUT_DEFINITIONS");
 		expect(shortcutSettings).not.toContain("FlowShortcutReference");
-		expect(controller).toContain("const optimistic: FlowDocumentSnapshot");
-		expect(api).toContain('"flow.node.create"');
+		expect(controller).toContain("next = applyFlowOperation(next, operation");
+		expect(controller).toContain("flowOperationOutbox.enqueue");
+		expect(api).toContain('"flow.patch.commit"');
 		expect(api).toContain('"flow.run.start"');
-		expect(api).toContain('"flow.node.createConnected"');
+		expect(api).not.toContain('"flow.node.create"');
+		expect(api).not.toContain('"flow.node.createConnected"');
+	});
+
+	it("keeps plugin node editors on the local sandbox protocol", (): void => {
+		const nodes = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodes.tsx");
+		const protocol = readRepoFile("src", "main", "services", "plugin-ui-protocol.ts");
+		expect(nodes).toContain('sandbox="allow-scripts"');
+		expect(nodes).not.toMatch(/sandbox=["'][^"']*allow-same-origin/u);
+		expect(nodes).toContain("event.source !== iframeRef.current?.contentWindow");
+		expect(nodes).toContain('event.origin !== "null"');
+		expect(protocol).toContain('connect-src \'none\'');
+		expect(protocol).toContain('plugin.trust !== "trusted"');
+		expect(protocol).toContain("MAX_PLUGIN_UI_RESOURCE_BYTES");
+		expect(protocol).toContain("realpath");
 	});
 });

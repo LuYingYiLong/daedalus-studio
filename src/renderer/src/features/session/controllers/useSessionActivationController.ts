@@ -196,7 +196,7 @@ export default function useSessionActivationController({
 			) {
 				recordOpenedSession(
 					sessionId,
-					result.metadata.surface === "flow_branch" ? "flow" : "chat",
+					"chat",
 				);
 			}
 			const workflowTodo: WorkflowTodoSnapshot | null =

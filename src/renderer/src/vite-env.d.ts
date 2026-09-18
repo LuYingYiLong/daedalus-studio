@@ -633,6 +633,10 @@ declare global {
 			pickTarball: () => Promise<string | null>;
 			openDirectory: (directoryName: string) => Promise<void>;
 		};
+		flowOperationOutbox: {
+			load: () => Promise<Record<string, unknown[]>>;
+			replace: (flowId: string, operations: unknown[]) => Promise<void>;
+		};
 		godotDocumentationFs: {
 			pickDirectory: () => Promise<string | null>;
 			pickZip: () => Promise<string | null>;

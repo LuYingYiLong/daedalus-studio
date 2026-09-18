@@ -1,74 +1,48 @@
-.picker {
+.pickerAnchor {
 	position: absolute;
 	z-index: 30;
-	width: min(340px, calc(100% - 24px));
-	max-height: min(520px, calc(100% - 24px));
+	display: block;
+	width: 1px;
+	height: 1px;
+	pointer-events: none;
+}
+
+.pickerOverlay {
+	position: relative;
+	width: min(360px, calc(100vw - 24px));
+	max-height: min(540px, calc(100vh - 24px));
 	padding: var(--ds-space-2);
-	overflow: hidden;
+	overflow: visible;
 	border: 1px solid var(--ant-color-border-secondary);
 	border-radius: var(--ds-radius-lg);
 	background: var(--ant-color-bg-elevated);
 	box-shadow: var(--ant-box-shadow-secondary);
-	transform: translate(8px, 8px);
 }
 
-.list {
-	display: grid;
-	gap: 2px;
-	max-height: 380px;
+.submenuPortalHost {
+	position: absolute;
+	inset: 0;
+	overflow: visible;
+	pointer-events: none;
+}
+
+.submenuPortalHost > * {
+	pointer-events: auto;
+}
+
+.pickerOverlay > :global(.ant-dropdown-menu) {
+	max-height: 400px;
 	margin-top: var(--ds-space-2);
+	padding: 2px;
 	overflow: auto;
+	box-shadow: none;
+	margin-top: var(--ds-space-1) !important;
 }
 
-.item {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: var(--ds-space-2);
-	width: 100%;
-	padding: 8px 10px;
-	border: 0;
-	border-radius: var(--ds-radius-md);
-	color: inherit;
-	background: transparent;
-	text-align: left;
-	cursor: pointer;
+.pickerOverlay :global(.ant-dropdown-menu-submenu-title) {
+	padding-right: var(--ds-space-2) !important;
 }
 
-.item:hover,
-.itemActive {
-	background: var(--ant-color-fill-secondary);
-}
-
-.item:disabled {
-	cursor: not-allowed;
-	opacity: 0.48;
-}
-
-.itemCopy {
-	display: grid;
-	min-width: 0;
-}
-
-.itemDescription {
-	overflow: hidden;
-	font-size: 12px;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.itemTags {
-	display: flex;
-	flex: 0 0 auto;
-	gap: 4px;
-}
-
-.itemTags :global(.ant-tag) {
-	margin-inline-end: 0;
-}
-
-.hint {
-	padding: 8px 4px 0;
-	color: var(--ant-color-text-tertiary);
-	font-size: 11px;
+.empty {
+	margin-block: var(--ds-space-3) !important;
 }

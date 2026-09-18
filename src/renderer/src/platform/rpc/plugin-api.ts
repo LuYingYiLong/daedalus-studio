@@ -1,4 +1,5 @@
 import { createBackendClient } from "@/platform/rpc/transport/backend-client";
+import type { FlowNodeTypeDefinition } from "./types";
 
 export type PluginSource =
 	| { type: "local"; path: string }
@@ -107,7 +108,8 @@ export type PluginRecord = {
 	nativePlugin?: {
 		apiVersion: number;
 		entry: string;
-		capabilities: Array<"tools" | "skills" | "hooks" | "mcp">;
+		capabilities: Array<"tools" | "skills" | "hooks" | "mcp" | "flowNodes" | "flowHostTools">;
+		flowNodes?: Array<Omit<FlowNodeTypeDefinition, "pluginFingerprint"> & { handlerName: string }>;
 	};
 	p2?: {
 		apiVersion: number;

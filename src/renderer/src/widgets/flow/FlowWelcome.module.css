@@ -1,8 +1,8 @@
 .flowWelcome {
+	position: relative;
 	display: grid;
+	grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
 	justify-items: center;
-	align-content: center;
-	gap: var(--ds-space-2);
 	width: 100%;
 	height: 100%;
 	min-width: 0;
@@ -14,8 +14,34 @@
 }
 
 .flowWelcomeTitle {
+	grid-row: 2;
 	max-width: min(560px, 100%);
 	margin: 0 !important;
+}
+
+.flowWelcomeDetails {
+	grid-row: 3;
+	align-self: start;
+	display: grid;
+	justify-items: center;
+	gap: var(--ds-space-2);
+	width: min(560px, 100%);
+	min-width: 0;
+	margin-top: var(--ds-space-2);
+}
+
+.flowWelcomeCreateControls {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: var(--ds-space-2);
+	width: 100%;
+}
+
+.flowWelcomeWorkspaceSelect {
+	width: min(260px, 100%);
+	text-align: start;
 }
 
 .flowWelcomeDescription {
@@ -43,12 +69,14 @@
 }
 
 .welcomeGraph {
+	grid-row: 1;
+	align-self: end;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	width: min(420px, 100%);
 	height: 100px;
-	margin-bottom: var(--ds-space-2);
+	margin-bottom: var(--ds-space-3);
 }
 
 .welcomeNode {
