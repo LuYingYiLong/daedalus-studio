@@ -4,7 +4,7 @@ import { expect, test } from "./fixtures/studio";
 const NOW = "2026-09-17T00:00:00.000Z";
 const FLOW_ID = "flow-e2e";
 
-async function selectFlowNodeType(page: Page, category: RegExp, nodeName: string): Promise<void> {
+async function selectFlowNodeType(page: Page, category: RegExp, nodeName: RegExp): Promise<void> {
 	await page.getByRole("menuitem", { name: category }).hover();
 	const pickerBox = await page.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ }).boundingBox();
 	expect(pickerBox?.height ?? Number.POSITIVE_INFINITY).toBeLessThan(260);
@@ -518,7 +518,7 @@ test.describe("Daedalus Flow node workflow", () => {
 
 		const pane = mainWindow.locator(".react-flow__pane");
 		await mainWindow.locator('section[aria-labelledby="flow-welcome-title"]').click({ button: "right", position: { x: 460, y: 260 } });
-		await selectFlowNodeType(mainWindow, /Basic|基础/u, "Text");
+		await selectFlowNodeType(mainWindow, /Basic|基础/u, /Text|文本/u);
 		await expect.poll(() => mockBackend.getRequests("flow.patch.commit").length).toBeGreaterThanOrEqual(1);
 		const textNode = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/text"])');
 		await expect(textNode).toBeVisible();
@@ -539,13 +539,13 @@ test.describe("Daedalus Flow node workflow", () => {
 		await mainWindow.mouse.move(paneBox!.x + paneBox!.width * 0.12, paneBox!.y + paneBox!.height * 0.34, { steps: 12 });
 		await mainWindow.mouse.up();
 		await expect(mainWindow.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ })).toBeVisible();
-		await selectFlowNodeType(mainWindow, /Basic|基础/u, "Condition");
+		await selectFlowNodeType(mainWindow, /Basic|基础/u, /Condition|条件/u);
 		await mainWindow.getByRole("button", { name: "Fit View" }).click();
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/condition"])')).toBeVisible();
 		await mainWindow.keyboard.press("Shift+A");
-		await selectFlowNodeType(mainWindow, /Workspace|工作区/u, "Tool");
+		await selectFlowNodeType(mainWindow, /Workspace|工作区/u, /Tool|工具/u);
 		await mainWindow.keyboard.press("Shift+A");
-		await selectFlowNodeType(mainWindow, /Basic|基础/u, "Output");
+		await selectFlowNodeType(mainWindow, /Basic|基础/u, /Output|输出/u);
 		await mainWindow.getByRole("button", { name: "Fit View" }).click();
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/tool"])')).toBeVisible();
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toBeVisible();

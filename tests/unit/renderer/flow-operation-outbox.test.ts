@@ -134,4 +134,46 @@ describe("FlowOperationOutbox", (): void => {
 		expect(batches[1]?.map((operation): string => operation.mutationId)).toEqual(["mutation-second"]);
 		expect(box.hasPending("flow-a")).toBe(false);
 	});
+
+	it("keeps a replacement connection when an earlier effect cleanup finishes", async (): Promise<void> => {
+		const box = new FlowOperationOutbox();
+		const acknowledge = async (flowId: string, _clientId: string, operations: FlowOperation[]): Promise<FlowPatchAck> => ({
+			flowId,
+			graphRevision: 1,
+			layoutRevision: 1,
+			acceptedMutationIds: operations.map((operation): string => operation.mutationId),
+			operations,
+		});
+		const firstCommitter = vi.fn(acknowledge);
+		const secondCommitter = vi.fn(acknowledge);
+		const disconnectFirst = box.connect(firstCommitter, (error): never => { throw error; });
+		const disconnectSecond = box.connect(secondCommitter, (error): never => { throw error; });
+		disconnectFirst();
+		box.enqueue("flow-a", move(1));
+		await box.flushFully("flow-a");
+		disconnectSecond();
+
+		expect(firstCommitter).not.toHaveBeenCalled();
+		expect(secondCommitter).toHaveBeenCalledTimes(1);
+	});
+
+	it("reports the failed Flow and can discard an orphaned queue", async (): Promise<void> => {
+		const box = new FlowOperationOutbox();
+		let failedFlowId: string | null = null;
+		box.connect(
+			async (): Promise<FlowPatchAck> => {
+				throw new Error("flow_not_found");
+			},
+			(_error, flowId): void => {
+				failedFlowId = flowId;
+				if (flowId !== null) box.discard(flowId);
+			},
+		);
+		box.enqueue("flow-deleted", move(1));
+
+		await expect(box.flush("flow-deleted")).rejects.toThrow("flow_not_found");
+		expect(failedFlowId).toBe("flow-deleted");
+		expect(box.hasPending("flow-deleted")).toBe(false);
+		await vi.waitFor((): void => expect(replaceOutbox).toHaveBeenLastCalledWith("flow-deleted", []));
+	});
 });

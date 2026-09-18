@@ -4,6 +4,7 @@ const CLIENT_KEY = "daedalus.flow.client-id.v1";
 const COMMIT_DELAY_MS = 120;
 
 type Committer = (flowId: string, clientId: string, operations: FlowOperation[]) => Promise<FlowPatchAck>;
+type ErrorHandler = (error: unknown, flowId: string | null) => void;
 
 function isFlowOperation(value: unknown): value is FlowOperation {
 	return typeof value === "object" && value !== null && typeof (value as FlowOperation).mutationId === "string" && typeof (value as FlowOperation).kind === "string";
@@ -38,7 +39,8 @@ export class FlowOperationOutbox {
 	private readonly timers = new Map<string, number>();
 	private readonly flushing = new Map<string, Promise<FlowPatchAck | null>>();
 	private committer: Committer | null = null;
-	private onError: ((error: unknown) => void) | null = null;
+	private onError: ErrorHandler | null = null;
+	private connectionId: symbol | null = null;
 	private hydrated: Promise<void> | null = null;
 	private readonly persistence = new Map<string, Promise<void>>();
 
@@ -48,15 +50,20 @@ export class FlowOperationOutbox {
 		if (typeof window !== "undefined") window.localStorage.setItem(CLIENT_KEY, this.clientId);
 	}
 
-	connect(committer: Committer, onError: (error: unknown) => void): void {
+	connect(committer: Committer, onError: ErrorHandler): () => void {
+		const connectionId = Symbol("flow-operation-outbox-connection");
+		this.connectionId = connectionId;
 		this.committer = committer;
 		this.onError = onError;
 		void this.hydrate().then((): void => {
 			for (const flowId of this.operations.keys()) this.schedule(flowId, 0);
-		}).catch(onError);
+		}).catch((error: unknown): void => onError(error, null));
+		return (): void => this.disconnect(connectionId);
 	}
 
-	disconnect(): void {
+	disconnect(connectionId?: symbol): void {
+		if (connectionId !== undefined && this.connectionId !== connectionId) return;
+		this.connectionId = null;
 		this.committer = null;
 		this.onError = null;
 		for (const timer of this.timers.values()) window.clearTimeout(timer);
@@ -98,7 +105,7 @@ export class FlowOperationOutbox {
 		await this.hydrate();
 		while ((this.operations.get(flowId)?.length ?? 0) > 0) {
 			const acknowledged = await this.flush(flowId);
-			if (acknowledged === null) return;
+			if (acknowledged === null) throw new Error("flow_operation_outbox_disconnected");
 		}
 	}
 
@@ -108,6 +115,14 @@ export class FlowOperationOutbox {
 
 	readPending(flowId: string): FlowOperation[] {
 		return [...(this.operations.get(flowId) ?? [])];
+	}
+
+	discard(flowId: string): void {
+		const timer = this.timers.get(flowId);
+		if (timer !== undefined) window.clearTimeout(timer);
+		this.timers.delete(flowId);
+		this.operations.delete(flowId);
+		this.persist(flowId);
 	}
 
 	rebase(flowId: string, graphRevision: number, layoutRevision: number): void {
@@ -141,7 +156,7 @@ export class FlowOperationOutbox {
 			this.persist(flowId);
 			return ack;
 		} catch (error: unknown) {
-			this.onError?.(error);
+			this.onError?.(error, flowId);
 			throw error;
 		} finally {
 			performance.measure("daedalus.flow.patch.commit", {
@@ -178,7 +193,7 @@ export class FlowOperationOutbox {
 	private persist(flowId: string): void {
 		const persistence = window.electronAPI.flowOperationOutbox.replace(flowId, this.operations.get(flowId) ?? []);
 		this.persistence.set(flowId, persistence);
-		void persistence.catch((error: unknown): void => this.onError?.(error)).finally((): void => {
+		void persistence.catch((error: unknown): void => this.onError?.(error, flowId)).finally((): void => {
 			if (this.persistence.get(flowId) === persistence) this.persistence.delete(flowId);
 		});
 	}

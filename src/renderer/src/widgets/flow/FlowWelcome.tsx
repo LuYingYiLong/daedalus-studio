@@ -93,7 +93,7 @@ function FlowWelcome(props: FlowWelcomeProps): React.JSX.Element {
 						icon={<Icon name="add" />}
 						onClick={props.onAddPrompt}
 					>
-						{t("flow.welcome.addPrompt", { defaultValue: "Add Prompt node" })}
+						{t("flow.welcome.addNode", { defaultValue: "Add node" })}
 					</Button>
 				)}
 			</div>

@@ -75,6 +75,7 @@ describe("client preferences store", () => {
 				},
 				keyboardShortcuts: {},
 				flowSnapToGrid: true,
+				flowRunEntryByFlowId: {},
 				lastComposerModel: {
 					providerId: "minimax",
 					modelId: "MiniMax-M3",
@@ -133,6 +134,7 @@ describe("client preferences store", () => {
 			},
 			keyboardShortcuts: {},
 			flowSnapToGrid: true,
+			flowRunEntryByFlowId: {},
 			lastComposerModel: null,
 			newSessionComposer: DEFAULT_CLIENT_PREFERENCES.newSessionComposer,
 			onboarding: DEFAULT_CLIENT_PREFERENCES.onboarding,
@@ -393,6 +395,17 @@ describe("client preferences store", () => {
 
 		expect(nextPreferences.flowSnapToGrid).toBe(false);
 		expect(memory.writes.at(-1)).toBe(`${JSON.stringify(nextPreferences, null, 2)}\n`);
+	});
+
+	it("persists Flow run entry selections", async () => {
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{ flowRunEntryByFlowId: { " flow-one ": " User prompt ", invalid: "" } },
+			memory.io,
+		);
+
+		expect(nextPreferences.flowRunEntryByFlowId).toEqual({ "flow-one": "User prompt" });
 	});
 
 	it("starts existing users at onboarding and persists resumable progress", async () => {

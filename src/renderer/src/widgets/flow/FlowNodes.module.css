@@ -31,7 +31,15 @@
 		var(--ds-box-shadow);
 }
 
+.nodeCardSelected {
+	border-color: var(--ant-color-primary);
+	box-shadow:
+		0 0 0 2px color-mix(in srgb, var(--ant-color-primary) 36%, transparent),
+		var(--ds-box-shadow);
+}
+
 .header,
+.headerTitle,
 .role,
 .dynamicInputRow {
 	display: flex;
@@ -44,6 +52,42 @@
 	padding: var(--ds-space-2) var(--ds-space-3);
 	border-radius: calc(var(--ds-radius-lg) - 1px) calc(var(--ds-radius-lg) - 1px) 0 0;
 	color: #fff;
+}
+
+.headerTitle {
+	min-width: 0;
+	gap: var(--ds-space-2);
+}
+
+.runStatus {
+	width: 12px;
+	height: 12px;
+	flex: 0 0 12px;
+	border: 1px solid rgb(255 255 255 / 72%);
+	border-radius: 50%;
+}
+
+.runStatusIdle {
+	background: #8c8c8c;
+}
+
+.runStatusSuccess {
+	background: #52c41a;
+}
+
+.runStatusFailed {
+	background: #ff4d4f;
+}
+
+.runInputButton {
+	flex: none;
+	color: inherit !important;
+}
+
+.runInputButton:not(:disabled):hover,
+.runInputButton:not(:disabled):focus-visible {
+	color: inherit !important;
+	background: rgb(255 255 255 / 18%) !important;
 }
 
 .header-prompt,
@@ -92,7 +136,10 @@
 }
 
 .role {
-	gap: 8px;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	font-weight: 600;
 }
 
@@ -122,11 +169,11 @@
 }
 
 .parameterRow {
-	grid-template-columns: minmax(72px, auto) minmax(0, 1fr);
+	display: flex;
 }
 
 .parameterRowConnectionOnly {
-	grid-template-columns: minmax(0, 1fr);
+	display: flex;
 }
 
 .outputRow {
@@ -157,8 +204,20 @@
 	font-size: 16px;
 }
 
+.parameterLabel {
+	flex: 1 1 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 .outputLabel {
 	text-align: right;
+}
+
+.parameterControl {
+	flex: 1 1 0;
+	min-width: 0;
 }
 
 .parameterControl,

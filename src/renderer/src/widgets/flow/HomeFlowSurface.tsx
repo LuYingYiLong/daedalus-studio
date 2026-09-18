@@ -23,11 +23,7 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { HomeFlowController } from "@/features/home/flow/useHomeFlowController";
 import { getCachedClientPreferences, updateClientPreferences } from "@/platform/rpc/client-preferences-api";
-import {
-	listProviderModels,
-	type ProviderModelInfo,
-	type ProviderModelSelection,
-} from "@/platform/rpc/provider-api";
+import { listProviderModels, type ProviderModelInfo, type ProviderModelSelection } from "@/platform/rpc/provider-api";
 import {
 	detectShortcutPlatform,
 	getEffectiveShortcutBinding,
@@ -36,6 +32,7 @@ import {
 	type ShortcutCommandId,
 } from "@/platform/rpc/keyboard-shortcuts";
 import type {
+	FlowDocumentEdge,
 	FlowDocumentNode,
 	FlowDocumentNodeRun,
 	FlowNodeTypeId,
@@ -161,6 +158,61 @@ function compatibleType(
 	return source.dataTypes.find((dataType): boolean => target.dataTypes.includes(dataType)) ?? null;
 }
 
+type FlowRunEntryGroup = {
+	label: string;
+	nodeIds: string[];
+	targetNodeIds: string[];
+};
+
+function groupFlowRunEntries(
+	nodes: readonly FlowDocumentNode[],
+	edges: readonly FlowDocumentEdge[],
+): FlowRunEntryGroup[] {
+	const groups = new Map<string, FlowDocumentNode[]>();
+	for (const node of nodes.filter((candidate): boolean => candidate.typeId === "builtin/flow-input")) {
+		const configuredLabel = typeof node.config.label === "string" ? node.config.label.trim() : "";
+		const label = configuredLabel.length > 0 ? configuredLabel : node.title;
+		const group = groups.get(label) ?? [];
+		group.push(node);
+		groups.set(label, group);
+	}
+	return [...groups.entries()].map(([label, entries]): FlowRunEntryGroup => {
+		const nodeIds = entries.map((entry): string => entry.nodeId);
+		return {
+			label,
+			nodeIds,
+			targetNodeIds: reachableOutputNodeIds(nodeIds, nodes, edges),
+		};
+	});
+}
+
+function reachableOutputNodeIds(
+	entryNodeIds: readonly string[],
+	nodes: readonly FlowDocumentNode[],
+	edges: readonly FlowDocumentEdge[],
+): string[] {
+	const outputNodeIds = new Set(
+		nodes.filter((node): boolean => node.typeId === "builtin/output").map((node): string => node.nodeId),
+	);
+	const outgoing = new Map<string, string[]>();
+	for (const edge of edges) {
+		const targets = outgoing.get(edge.sourceNodeId) ?? [];
+		targets.push(edge.targetNodeId);
+		outgoing.set(edge.sourceNodeId, targets);
+	}
+	const reachable = new Set(entryNodeIds);
+	const queue = [...entryNodeIds];
+	while (queue.length > 0) {
+		const sourceNodeId = queue.shift()!;
+		for (const targetNodeId of outgoing.get(sourceNodeId) ?? []) {
+			if (reachable.has(targetNodeId)) continue;
+			reachable.add(targetNodeId);
+			queue.push(targetNodeId);
+		}
+	}
+	return [...reachable].filter((nodeId): boolean => outputNodeIds.has(nodeId));
+}
+
 function HomeFlowSurface({
 	controller,
 	keyboardShortcuts,
@@ -178,6 +230,9 @@ function HomeFlowSurface({
 	const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<FlowCanvasNode, Edge> | null>(null);
 	const [reconnectingEdgeId, setReconnectingEdgeId] = useState<string | null>(null);
 	const [snapToGrid, setSnapToGrid] = useState<boolean>((): boolean => getCachedClientPreferences().flowSnapToGrid);
+	const [runEntryByFlowId, setRunEntryByFlowId] = useState<Record<string, string>>(
+		(): Record<string, string> => getCachedClientPreferences().flowRunEntryByFlowId,
+	);
 	const [consentText, setConsentText] = useState<Record<string, string>>({});
 	const [modelsByProvider, setModelsByProvider] = useState<Record<string, ProviderModelInfo[]>>({});
 	const canvasRef = useRef<HTMLDivElement | null>(null);
@@ -244,6 +299,28 @@ function HomeFlowSurface({
 		}),
 		[controller.setApprovalMode, snapshot?.flow.approvalMode, t],
 	);
+	const runEntryGroups = useMemo(
+		(): FlowRunEntryGroup[] => groupFlowRunEntries(snapshot?.nodes ?? [], snapshot?.edges ?? []),
+		[snapshot?.edges, snapshot?.nodes],
+	);
+	const outputNodeIds = useMemo(
+		(): string[] =>
+			snapshot?.nodes
+				.filter((node): boolean => node.typeId === "builtin/output")
+				.map((node): string => node.nodeId) ?? [],
+		[snapshot?.nodes],
+	);
+	const selectedRunEntryGroup = useMemo((): FlowRunEntryGroup | null => {
+		if (snapshot === null) return null;
+		const savedLabel = runEntryByFlowId[snapshot.flow.flowId];
+		const saved = runEntryGroups.find((group): boolean => group.label === savedLabel);
+		return saved?.targetNodeIds.length
+			? saved
+			: (runEntryGroups.find((group): boolean => group.targetNodeIds.length > 0) ??
+					saved ??
+					runEntryGroups[0] ??
+					null);
+	}, [runEntryByFlowId, runEntryGroups, snapshot?.flow.flowId]);
 	useEffect((): void => {
 		const providerIds = new Set<string>();
 		for (const node of snapshot?.nodes ?? []) {
@@ -253,20 +330,25 @@ function HomeFlowSurface({
 		if (providerModelSelection?.activeModel.providerId !== undefined)
 			providerIds.add(providerModelSelection.activeModel.providerId);
 		for (const providerId of providerIds) {
-			if (modelsByProvider[providerId] !== undefined || loadingProviderModelsRef.current.has(providerId)) continue;
+			if (modelsByProvider[providerId] !== undefined || loadingProviderModelsRef.current.has(providerId))
+				continue;
 			loadingProviderModelsRef.current.add(providerId);
 			void listProviderModels(providerId)
 				.then((result): void => {
-					setModelsByProvider((current): Record<string, ProviderModelInfo[]> => ({
-						...current,
-						[providerId]: result.models,
-					}));
+					setModelsByProvider(
+						(current): Record<string, ProviderModelInfo[]> => ({
+							...current,
+							[providerId]: result.models,
+						}),
+					);
 				})
 				.catch((): void => {
-					setModelsByProvider((current): Record<string, ProviderModelInfo[]> => ({
-						...current,
-						[providerId]: [],
-					}));
+					setModelsByProvider(
+						(current): Record<string, ProviderModelInfo[]> => ({
+							...current,
+							[providerId]: [],
+						}),
+					);
 				})
 				.finally((): void => {
 					loadingProviderModelsRef.current.delete(providerId);
@@ -281,12 +363,74 @@ function HomeFlowSurface({
 		});
 	}, []);
 	const startRequestedRun = useCallback(
-		async (forceNodeIds?: string[]): Promise<void> => {
+		async (request?: Parameters<HomeFlowController["startRun"]>[0]): Promise<boolean> => {
 			await commitActiveEditor();
-			await controller.startRun(forceNodeIds);
+			return controller.startRun(request);
 		},
 		[commitActiveEditor, controller.startRun],
 	);
+	const rememberRunEntry = useCallback(
+		(entryLabel: string): void => {
+			if (snapshot === null || runEntryByFlowId[snapshot.flow.flowId] === entryLabel) return;
+			const previous = runEntryByFlowId;
+			const next = { ...previous, [snapshot.flow.flowId]: entryLabel };
+			setRunEntryByFlowId(next);
+			void updateClientPreferences({ flowRunEntryByFlowId: next }).catch((): void => {
+				setRunEntryByFlowId(
+					(current): Record<string, string> =>
+						current[snapshot.flow.flowId] === entryLabel ? previous : current,
+				);
+			});
+		},
+		[runEntryByFlowId, snapshot?.flow.flowId],
+	);
+	const runEntryGroup = useCallback(
+		async (group: FlowRunEntryGroup, forceNodeIds?: string[]): Promise<boolean> => {
+			rememberRunEntry(group.label);
+			return startRequestedRun({
+				entryNodeIds: group.nodeIds,
+				targetNodeIds: group.targetNodeIds,
+				forceNodeIds: forceNodeIds ?? snapshot?.nodes.map((node): string => node.nodeId) ?? [],
+			});
+		},
+		[rememberRunEntry, snapshot?.nodes, startRequestedRun],
+	);
+	const runSelectedEntry = useCallback(
+		async (forceNodeIds?: string[]): Promise<boolean> => {
+			if (selectedRunEntryGroup !== null) return runEntryGroup(selectedRunEntryGroup, forceNodeIds);
+			return startRequestedRun({
+				targetNodeIds: outputNodeIds,
+				forceNodeIds: forceNodeIds ?? snapshot?.nodes.map((node): string => node.nodeId) ?? [],
+			});
+		},
+		[outputNodeIds, runEntryGroup, selectedRunEntryGroup, snapshot?.nodes, startRequestedRun],
+	);
+	const runEntryMenu = useMemo<MenuProps>(
+		() => ({
+			items:
+				runEntryGroups.length === 0
+					? [{ key: "no-entry", label: t("flow.editor.noRunInputs"), disabled: true }]
+					: runEntryGroups.map((group): NonNullable<MenuProps["items"]>[number] => ({
+							key: group.label,
+							label:
+								group.nodeIds.length > 1
+									? t("flow.editor.runEntryConcurrent", {
+											input: group.label,
+											count: group.nodeIds.length,
+										})
+									: t("flow.editor.runEntry", { input: group.label }),
+							disabled: group.targetNodeIds.length === 0,
+						})),
+			selectedKeys: selectedRunEntryGroup === null ? [] : [selectedRunEntryGroup.label],
+			onClick: ({ key }): void => {
+				const group = runEntryGroups.find((candidate): boolean => candidate.label === key);
+				if (group !== undefined) void runEntryGroup(group);
+			},
+		}),
+		[runEntryGroup, runEntryGroups, selectedRunEntryGroup, t],
+	);
+	const canRunSelectedEntry =
+		selectedRunEntryGroup === null ? outputNodeIds.length > 0 : selectedRunEntryGroup.targetNodeIds.length > 0;
 	const updateCanvasNode = useCallback(
 		(nodeId: string, patch: Record<string, unknown>): void => {
 			void controller.updateNode(nodeId, patch);
@@ -295,14 +439,27 @@ function HomeFlowSurface({
 	);
 	const runCanvasNodeAction = useCallback(
 		(nodeId: string, action: string): void => {
-			if (action === "run") void startRequestedRun([nodeId]);
+			if (action === "run-input") {
+				const flowNodes = snapshot?.nodes ?? [];
+				const flowEdges = snapshot?.edges ?? [];
+				const node = flowNodes.find((candidate): boolean => candidate.nodeId === nodeId);
+				if (node?.typeId !== "builtin/flow-input") return;
+				void startRequestedRun({
+					entryNodeIds: [nodeId],
+					targetNodeIds: reachableOutputNodeIds([nodeId], flowNodes, flowEdges),
+					forceNodeIds: flowNodes.map((candidate): string => candidate.nodeId),
+				});
+				return;
+			}
+			if (action === "run") void runSelectedEntry([nodeId]);
 		},
-		[startRequestedRun],
+		[runSelectedEntry, snapshot?.edges, snapshot?.nodes, startRequestedRun],
 	);
 
 	useEffect((): void => {
 		setNodes((current): FlowCanvasNode[] => {
 			const currentById = new Map(current.map((node): [string, FlowCanvasNode] => [node.id, node]));
+			const runDisabled = controller.isGraphLocked || controller.runRequestStage !== "idle";
 			return (snapshot?.nodes ?? []).map((flowNode): FlowCanvasNode => {
 				const existing = currentById.get(flowNode.nodeId);
 				const position = resolvedPositions.get(flowNode.nodeId) ?? { x: flowNode.x, y: flowNode.y };
@@ -324,6 +481,7 @@ function HomeFlowSurface({
 					existing.data.connectedInputIds === connectedInputIds &&
 					existing.data.matched === matched &&
 					existing.data.locked === controller.isGraphLocked &&
+					existing.data.runDisabled === runDisabled &&
 					existing.position.x === position.x &&
 					existing.position.y === position.y
 				)
@@ -341,6 +499,7 @@ function HomeFlowSurface({
 						connectedInputIds,
 						matched,
 						locked: controller.isGraphLocked,
+						runDisabled,
 						onUpdate: updateCanvasNode,
 						onAction: runCanvasNodeAction,
 					},
@@ -349,6 +508,7 @@ function HomeFlowSurface({
 		});
 	}, [
 		controller.isGraphLocked,
+		controller.runRequestStage,
 		connectedInputIdsByNode,
 		definitionsByType,
 		editorOptions,
@@ -371,16 +531,18 @@ function HomeFlowSurface({
 	}, [latestRun?.nodes]);
 	const edges = useMemo(
 		(): Edge[] =>
-			(snapshot?.edges ?? []).filter((edge): boolean => edge.edgeId !== reconnectingEdgeId).map(
-				(edge): Edge => ({
-					id: edge.edgeId,
-					source: edge.sourceNodeId,
-					target: edge.targetNodeId,
-					sourceHandle: edge.sourcePort,
-					targetHandle: edge.targetPort,
-					type: "default",
-				}),
-			),
+			(snapshot?.edges ?? [])
+				.filter((edge): boolean => edge.edgeId !== reconnectingEdgeId)
+				.map(
+					(edge): Edge => ({
+						id: edge.edgeId,
+						source: edge.sourceNodeId,
+						target: edge.targetNodeId,
+						sourceHandle: edge.sourcePort,
+						targetHandle: edge.targetPort,
+						type: "default",
+					}),
+				),
 		[reconnectingEdgeId, snapshot?.edges],
 	);
 	const connectionLineComponent = useCallback(
@@ -409,12 +571,7 @@ function HomeFlowSurface({
 				targetPosition: props.toPosition,
 			});
 			return (
-				<path
-					d={path}
-					fill="none"
-					className="react-flow__connection-path"
-					style={props.connectionLineStyle}
-				/>
+				<path d={path} fill="none" className="react-flow__connection-path" style={props.connectionLineStyle} />
 			);
 		},
 		[flowInstance],
@@ -545,7 +702,7 @@ function HomeFlowSurface({
 			if (matchesFlowShortcut(event, "flow.run")) {
 				event.preventDefault();
 				if (running) void controller.stopRun();
-				else void startRequestedRun();
+				else if (canRunSelectedEntry) void runSelectedEntry();
 				return;
 			}
 			if (target?.matches('input, textarea, [contenteditable="true"]')) return;
@@ -585,7 +742,8 @@ function HomeFlowSurface({
 			matchesFlowShortcut,
 			openPickerAt,
 			running,
-			startRequestedRun,
+			canRunSelectedEntry,
+			runSelectedEntry,
 		],
 	);
 	useEffect((): (() => void) => {
@@ -660,7 +818,12 @@ function HomeFlowSurface({
 		[controller, snapshot],
 	);
 	const onReconnectEnd = useCallback(
-		(_event: MouseEvent | TouchEvent, edge: Edge, _handleType: "source" | "target", state: FinalConnectionState): void => {
+		(
+			_event: MouseEvent | TouchEvent,
+			edge: Edge,
+			_handleType: "source" | "target",
+			state: FinalConnectionState,
+		): void => {
 			if (state.toHandle === null) void controller.deleteEdge(edge.id);
 		},
 		[controller.deleteEdge],
@@ -673,13 +836,7 @@ function HomeFlowSurface({
 			detachedEdgeIdRef.current = null;
 			detachedConnectionSourceRef.current = null;
 			setReconnectingEdgeId(null);
-			if (
-				started === null ||
-				started.nodeId === null ||
-				started.handleId === null ||
-				snapshot === null
-			)
-				return;
+			if (started === null || started.nodeId === null || started.handleId === null || snapshot === null) return;
 			if (detachedEdgeId !== null) {
 				if (state.toHandle === null) void controller.deleteEdge(detachedEdgeId);
 				return;
@@ -745,11 +902,10 @@ function HomeFlowSurface({
 		[finishInteractionSample],
 	);
 	useEffect(
-		(): (() => void) =>
-			(): void => {
-				finishInteractionSample();
-				canvasRef.current?.removeAttribute("data-flow-moving");
-			},
+		(): (() => void) => (): void => {
+			finishInteractionSample();
+			canvasRef.current?.removeAttribute("data-flow-moving");
+		},
 		[finishInteractionSample],
 	);
 	const onNodeDragStop = useCallback<OnNodeDrag<FlowCanvasNode>>(
@@ -870,17 +1026,38 @@ function HomeFlowSurface({
 							</Button>
 						</Dropdown>
 					</Tooltip>
-					<Button
-						type="primary"
-						danger={running}
-						icon={<Icon name={running ? "stop" : "play"} />}
-						onClick={(): void => {
-							if (running) void controller.stopRun();
-							else void startRequestedRun();
-						}}
-					>
-						{running ? t("flow.editor.stop") : t("flow.editor.run")}
-					</Button>
+					{running ? (
+						<Button
+							type="primary"
+							danger
+							icon={<Icon name="stop" />}
+							onClick={(): void => {
+								void controller.stopRun();
+							}}
+						>
+							{t("flow.editor.stop")}
+						</Button>
+					) : (
+						<Dropdown.Button
+							type="primary"
+							menu={runEntryMenu}
+							trigger={["click"]}
+							loading={controller.runRequestStage !== "idle"}
+							disabled={!canRunSelectedEntry}
+							icon={<Icon name="arrow-down" />}
+							onClick={(): void => {
+								void runSelectedEntry();
+							}}
+						>
+							{controller.runRequestStage === "saving"
+								? t("flow.editor.runSaving", { defaultValue: "Saving" })
+								: controller.runRequestStage === "starting"
+									? t("flow.editor.runStarting", { defaultValue: "Starting" })
+									: selectedRunEntryGroup === null
+										? t("flow.editor.run")
+										: t("flow.editor.runEntry", { input: selectedRunEntryGroup.label })}
+						</Dropdown.Button>
+					)}
 				</Flex>
 			</header>
 			{controller.error !== null ? (
@@ -1025,9 +1202,9 @@ function HomeFlowSurface({
 						const targetPort = portFor(targetNode, controller.nodeDefinitions, params.handleId, "input");
 						if (targetPort?.multiple === true) return;
 						const detachedEdge = snapshot.edges.find(
-								(edge): boolean =>
-									edge.targetNodeId === params.nodeId && edge.targetPort === params.handleId,
-							);
+							(edge): boolean =>
+								edge.targetNodeId === params.nodeId && edge.targetPort === params.handleId,
+						);
 						if (detachedEdge === undefined) return;
 						detachedEdgeIdRef.current = detachedEdge.edgeId;
 						detachedConnectionSourceRef.current = {

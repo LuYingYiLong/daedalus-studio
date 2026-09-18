@@ -268,6 +268,9 @@ export type FlowDocumentRun = {
 	runId: string;
 	flowId: string;
 	revision: number;
+	entryNodeIds: string[];
+	targetNodeIds: string[];
+	inputValues: Record<string, unknown>;
 	status: FlowDocumentRunStatus;
 	startedAt: string | null;
 	finishedAt: string | null;

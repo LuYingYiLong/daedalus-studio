@@ -1,4 +1,4 @@
-import { Input, InputNumber, Select, Tag, Typography } from "antd";
+import { Button, Input, InputNumber, Select, Tooltip, Typography } from "antd";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Handle, Position, useUpdateNodeInternals, type Node, type NodeProps } from "@xyflow/react";
@@ -12,8 +12,10 @@ import type {
 	FlowNodeTypeDefinition,
 } from "@/platform/rpc/types";
 import type { ProviderModelInfo, ProviderModelSelection } from "@/platform/rpc/provider-api";
+import { Icon } from "@/assets/icons";
 import MarkdownContent from "@/widgets/markdown/MarkdownContent";
 import styles from "./FlowNodes.module.css";
+import { flowNodeOutputLabel, flowNodeParameterLabel, flowNodeTypeLabel } from "./flow-node-labels";
 
 export type FlowNodeEditorOptions = {
 	modelSelection: ProviderModelSelection | null;
@@ -28,14 +30,19 @@ export type FlowCanvasNodeData = {
 	connectedInputIds: ReadonlySet<string>;
 	matched: boolean;
 	locked: boolean;
+	runDisabled: boolean;
 	onUpdate: (nodeId: string, patch: Record<string, unknown>) => void;
 	onAction: (nodeId: string, action: string) => void;
 };
 
 export type FlowCanvasNode = Node<FlowCanvasNodeData, "flowNode">;
 
-function statusLabel(status: FlowDocumentNodeStatus): string {
-	return status.charAt(0).toUpperCase() + status.slice(1);
+type FlowNodeRunStatus = "idle" | "success" | "failed";
+
+export function normalizeFlowNodeRunStatus(status: FlowDocumentNodeStatus): FlowNodeRunStatus {
+	if (status === "failed") return "failed";
+	if (status === "running" || status === "completed" || status === "cached") return "success";
+	return "idle";
 }
 
 function unwrapNodeOutput(output: unknown): unknown {
@@ -400,6 +407,7 @@ function SchemaEditor({
 	return (
 		<div className={styles.parameterList}>
 			{parameters.map((parameter): React.JSX.Element => {
+				const parameterLabel = flowNodeParameterLabel(t, definition.typeId, parameter.id, parameter.label);
 				const connectable = parameter.mode !== "fixed";
 				const connected = connectable && connectedInputIds.has(parameter.id);
 				const configField = parameter.mode === "connection" ? null : parameter.configField;
@@ -426,10 +434,12 @@ function SchemaEditor({
 								/>
 							) : null}
 						</span>
-						<span className={styles.parameterLabel}>{parameter.label}</span>
+						<span className={styles.parameterLabel} title={parameterLabel}>
+							{parameterLabel}
+						</span>
 						{!hidesControl && configField !== null && schema !== undefined ? (
 							<div className={styles.parameterControl}>
-								{renderControl(configField, schema, parameter.label)}
+								{renderControl(configField, schema, parameterLabel)}
 							</div>
 						) : null}
 					</div>
@@ -446,6 +456,7 @@ function NodeSummary({
 	node: FlowDocumentNode;
 	definition: FlowNodeTypeDefinition | null;
 }): React.JSX.Element {
+	const { t } = useTranslation();
 	const values = (definition?.summaryFields ?? []).flatMap((field): string[] => {
 		const value = node.config[field];
 		return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
@@ -455,7 +466,7 @@ function NodeSummary({
 	return (
 		<Typography.Paragraph className={styles.nodeSummary} ellipsis={{ rows: 3 }}>
 			{values.join(" · ") ||
-				(definition === null ? `Missing node type: ${node.typeId}` : definition.defaultTitle)}
+				(definition === null ? `Missing node type: ${node.typeId}` : flowNodeTypeLabel(t, definition))}
 		</Typography.Paragraph>
 	);
 }
@@ -522,7 +533,7 @@ function SandboxEditor({
 	onChange: (config: Record<string, unknown>) => void;
 	onAction: (action: string) => void;
 }): React.JSX.Element {
-	const { i18n } = useTranslation();
+	const { i18n, t } = useTranslation();
 	const iframeRef = useRef<HTMLIFrameElement | null>(null);
 	const [height, setHeight] = useState(220);
 	const [failed, setFailed] = useState(false);
@@ -628,7 +639,12 @@ function SandboxEditor({
 										}
 									/>
 								</span>
-								<span className={styles.parameterLabel}>{parameter.label}</span>
+								<span
+									className={styles.parameterLabel}
+									title={flowNodeParameterLabel(t, definition.typeId, parameter.id, parameter.label)}
+								>
+									{flowNodeParameterLabel(t, definition.typeId, parameter.id, parameter.label)}
+								</span>
 							</div>
 						),
 					)}
@@ -639,7 +655,7 @@ function SandboxEditor({
 				style={{ height }}
 				src={source}
 				sandbox="allow-scripts"
-				title={definition.defaultTitle}
+				title={flowNodeTypeLabel(t, definition)}
 				onError={(): void => setFailed(true)}
 				onLoad={(): void => {
 					iframeRef.current?.contentWindow?.postMessage(
@@ -660,18 +676,26 @@ function SandboxEditor({
 	);
 }
 
-function OutputRows({ outputs }: { outputs: FlowNodeOutputDefinition[] }): React.JSX.Element | null {
+function OutputRows({
+	typeId,
+	outputs,
+}: {
+	typeId: string;
+	outputs: FlowNodeOutputDefinition[];
+}): React.JSX.Element | null {
+	const { t } = useTranslation();
 	if (outputs.length === 0) return null;
 	return (
 		<div className={styles.outputList}>
-			{outputs.map(
-				(output): React.JSX.Element => (
+			{outputs.map((output): React.JSX.Element => {
+				const outputLabel = flowNodeOutputLabel(t, typeId, output.id, output.label);
+				return (
 					<div
 						className={styles.outputRow}
 						key={output.id}
-						title={`${output.label} · ${output.dataTypes.join("/")}`}
+						title={`${outputLabel} · ${output.dataTypes.join("/")}`}
 					>
-						<span className={styles.outputLabel}>{output.label}</span>
+						<span className={styles.outputLabel}>{outputLabel}</span>
 						<span className={styles.outputSocket}>
 							<Handle
 								id={output.id}
@@ -683,13 +707,13 @@ function OutputRows({ outputs }: { outputs: FlowNodeOutputDefinition[] }): React
 							/>
 						</span>
 					</div>
-				),
-			)}
+				);
+			})}
 		</div>
 	);
 }
 
-function FlowNodeCard({ data }: NodeProps<FlowCanvasNode>): React.JSX.Element {
+function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.Element {
 	const { t } = useTranslation();
 	const { flowNode, definition } = data;
 	const updateNodeInternals = useUpdateNodeInternals();
@@ -739,20 +763,54 @@ function FlowNodeCard({ data }: NodeProps<FlowCanvasNode>): React.JSX.Element {
 			? ""
 			: formatOutputMarkdown(data.nodeRun.output, flowNode.config.format);
 	const updateConfig = (config: Record<string, unknown>): void => data.onUpdate(flowNode.nodeId, { config });
+	const nodeTitle =
+		definition !== null && flowNode.title === definition.defaultTitle
+			? flowNodeTypeLabel(t, definition)
+			: flowNode.title;
+	const runStatus = normalizeFlowNodeRunStatus(data.nodeRun?.status ?? flowNode.status);
+	const runStatusLabel = t(`flow.editor.nodeRunStatus.${runStatus}`);
+	const runInputLabel =
+		typeof flowNode.config.label === "string" && flowNode.config.label.trim().length > 0
+			? flowNode.config.label.trim()
+			: nodeTitle;
 	return (
 		<div className={styles.nodeShell} data-flow-node-id={flowNode.nodeId}>
 			<article
-				className={`${styles.nodeCard} ${data.matched ? styles.nodeCardMatched : ""} ${definition === null ? styles.unknownNode : ""}`}
+				className={`${styles.nodeCard} ${selected ? styles.nodeCardSelected : ""} ${data.matched ? styles.nodeCardMatched : ""} ${definition === null ? styles.unknownNode : ""}`}
 				data-node-type={flowNode.typeId}
 			>
 				<header className={styles.header} style={{ background: headerColor(flowNode.typeId) }}>
-					<span className={styles.role}>{flowNode.title}</span>
-					<Tag title={data.nodeRun?.error ?? undefined}>
-						{statusLabel(data.nodeRun?.status ?? flowNode.status)}
-					</Tag>
+					<div className={styles.headerTitle}>
+						<Tooltip title={data.nodeRun?.error ?? runStatusLabel}>
+							<span
+								className={`${styles.runStatus} ${styles[`runStatus${runStatus === "idle" ? "Idle" : runStatus === "success" ? "Success" : "Failed"}`]}`}
+								role="status"
+								aria-label={runStatusLabel}
+							/>
+						</Tooltip>
+						<span className={styles.role}>{nodeTitle}</span>
+					</div>
+					{flowNode.typeId === "builtin/flow-input" ? (
+						<Tooltip title={t("flow.editor.runEntry", { input: runInputLabel })}>
+							<Button
+								type="text"
+								shape="circle"
+								size="small"
+								className={`${styles.runInputButton} nodrag nopan`}
+								icon={<Icon name="play" />}
+								disabled={data.runDisabled}
+								aria-label={t("flow.editor.runEntry", { input: runInputLabel })}
+								onPointerDown={(event): void => event.stopPropagation()}
+								onClick={(event): void => {
+									event.stopPropagation();
+									data.onAction(flowNode.nodeId, "run-input");
+								}}
+							/>
+						</Tooltip>
+					) : null}
 				</header>
 				<div className={styles.body}>
-					<OutputRows outputs={outputs} />
+					<OutputRows typeId={flowNode.typeId} outputs={outputs} />
 					{definition === null ? (
 						<NodeSummary node={flowNode} definition={definition} />
 					) : definition.ui.kind === "sandbox" ? (

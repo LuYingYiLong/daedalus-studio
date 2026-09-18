@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { FlowNodeTypeId, FlowNodeTypeDefinition } from "@/platform/rpc/types";
 import styles from "./FlowNodePicker.module.css";
 import { Icon } from "@/assets/icons";
+import { flowNodeTypeLabel } from "./flow-node-labels";
 
 type FlowNodePickerProps = {
 	open: boolean;
@@ -45,11 +46,11 @@ export default function FlowNodePicker({
 		return definitions.filter(
 			(definition): boolean =>
 				normalized.length === 0 ||
-				`${definition.defaultTitle} ${definition.typeId} ${definition.category}`
+				`${flowNodeTypeLabel(t, definition)} ${definition.defaultTitle} ${definition.typeId} ${definition.category}`
 					.toLocaleLowerCase()
 					.includes(normalized),
 		);
-	}, [definitions, query]);
+	}, [definitions, query, t]);
 	const items = useMemo((): MenuProps["items"] => {
 		const byCategory = new Map<string, FlowNodeTypeDefinition[]>();
 		for (const definition of filtered) {
@@ -63,7 +64,7 @@ export default function FlowNodePicker({
 			onTitleMouseEnter: (): void => setOpenCategoryKeys([`category:${category}`]),
 			children: categoryDefinitions.map((definition) => ({
 				key: definition.typeId,
-				label: t(`flow.editor.nodes.${definition.typeId}`, { defaultValue: definition.defaultTitle }),
+				label: flowNodeTypeLabel(t, definition),
 				disabled: definition.workspaceRequired && !workspaceAvailable,
 			})),
 			expandIcon: <Icon name="arrow-forward" />,
@@ -94,13 +95,28 @@ export default function FlowNodePicker({
 		if (!open || query.trim().length === 0) return;
 		setOpenCategoryKeys([...new Set(filtered.map((definition): string => `category:${definition.category}`))]);
 	}, [filtered, open, query]);
+	useEffect((): (() => void) | undefined => {
+		if (!open) return undefined;
+		const closeOnOutsidePointerDown = (event: PointerEvent): void => {
+			const target = event.target;
+			const element = target instanceof Element
+				? target
+				: target instanceof Node
+					? target.parentElement
+					: null;
+			if (element?.closest("[data-flow-node-picker-popup]") !== null) return;
+			closePicker();
+		};
+		document.addEventListener("pointerdown", closeOnOutsidePointerDown, true);
+		return (): void => document.removeEventListener("pointerdown", closeOnOutsidePointerDown, true);
+	}, [open, onClose]);
 	return (
 		<Dropdown
 			open={open}
 			autoAdjustOverflow
 			destroyOnHidden={false}
 			placement="bottomLeft"
-			trigger={["click"]}
+			trigger={[]}
 			menu={{
 				items,
 				motion: submenuMotion,

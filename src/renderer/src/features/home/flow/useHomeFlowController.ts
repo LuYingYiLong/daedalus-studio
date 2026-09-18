@@ -2,11 +2,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { archiveFlow, commitFlowPatch, createFlow, exportFlowToSession, fetchFlow, fetchFlows, importFlowFromSession, renameFlow, startFlowRun, stopFlowRun, updateFlowSettings, listFlowNodeTypes, listFlowTools, listFlowApprovals, resolveFlowApproval, updateFlowTreeOrder as persistFlowTreeOrder, type CreateFlowParams } from "@/platform/rpc/flow-api";
 import { onBackendEvent, onBackendReconnected } from "@/platform/rpc/transport/backend-client";
+import { BackendRpcError } from "@/platform/rpc/transport/backend-rpc-client";
 import type { FlowDocumentSummary, FlowDocument, FlowDocumentEdge, FlowDocumentNode, FlowDocumentNodeRun, FlowDocumentRun, FlowDocumentSnapshot, FlowNodeTypeId, FlowNodeTypeDefinition, FlowToolDefinition, FlowApproval, FlowOperation, FlowTreeOrder, FlowTreeOrderUpdate, SessionMetadata } from "@/platform/rpc/types";
 import { createFlowMutationId, flowOperationOutbox } from "@/domain/flow/flow-operation-outbox";
 import { applyFlowRunFinished, markActiveFlowRead, removeUnreadFlows } from "@/domain/flow/flow-unread";
 
 export type FlowNodeDetail = { node: FlowDocumentNode };
+export type FlowRunRequest = {
+	forceNodeIds?: string[];
+	entryNodeIds?: string[];
+	targetNodeIds?: string[];
+	inputValues?: Record<string, unknown>;
+};
+export type FlowRunRequestStage = "idle" | "saving" | "starting";
 
 type UseHomeFlowControllerParams = {
 	enabled: boolean;
@@ -27,6 +35,7 @@ export type HomeFlowController = {
 	selectedNodeDetail: FlowNodeDetail | null;
 	isLoading: boolean;
 	isMutating: boolean;
+	runRequestStage: FlowRunRequestStage;
 	error: string | null;
 	refresh: () => Promise<void>;
 	createNewFlow: (workspaceId?: string | null) => Promise<void>;
@@ -48,7 +57,7 @@ export type HomeFlowController = {
 	reconnectEdge: (edgeId: string, sourceNodeId: string, targetNodeId: string, sourcePort: string, targetPort: string, dataType: "text" | "json" | "artifact") => Promise<void>;
 	deleteEdge: (edgeId: string) => Promise<void>;
 	updateViewport: (viewport: { x: number; y: number; zoom: number }) => Promise<void>;
-	startRun: (forceNodeIds?: string[]) => Promise<void>;
+	startRun: (request?: FlowRunRequest) => Promise<boolean>;
 	stopRun: () => Promise<void>;
 	setApprovalMode: (mode: FlowDocument["approvalMode"]) => Promise<void>;
 	resolveApproval: (approvalId: string, decision: "approve" | "reject", consentText?: string) => Promise<void>;
@@ -62,6 +71,16 @@ type FlowHistoryCommand = { undo: FlowOperation[]; redo: FlowOperation[] };
 
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
+}
+
+function waitWithTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+	return new Promise<T>((resolve, reject): void => {
+		const timeout = window.setTimeout((): void => reject(new Error(message)), timeoutMs);
+		void promise.then(
+			(value): void => { window.clearTimeout(timeout); resolve(value); },
+			(error: unknown): void => { window.clearTimeout(timeout); reject(error); },
+		);
+	});
 }
 
 function isFlowDocumentNodeRun(value: unknown): value is FlowDocumentNodeRun {
@@ -212,6 +231,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	const [selectedNodeDetail, setSelectedNodeDetail] = useState<FlowNodeDetail | null>(null);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isMutating, setIsMutating] = useState<boolean>(false);
+	const [runRequestStage, setRunRequestStage] = useState<FlowRunRequestStage>("idle");
 	const [error, setError] = useState<string | null>(null);
 	const [historyRevision, setHistoryRevision] = useState<number>(0);
 	const snapshotRef = useRef<FlowDocumentSnapshot | null>(null);
@@ -306,7 +326,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	}, [applyOperations, isGraphLocked]);
 
 	useEffect((): (() => void) => {
-		flowOperationOutbox.connect(
+		const disconnectOutbox = flowOperationOutbox.connect(
 			async (flowId, clientId, operations) => {
 				const ack = await commitFlowPatch({ flowId, clientId, operations });
 				const current = snapshotRef.current;
@@ -317,9 +337,15 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 				}
 				return ack;
 			},
-			(error): void => {
+			(error, failedFlowId): void => {
+				if (failedFlowId !== null && error instanceof BackendRpcError && error.code === "flow_not_found") {
+					flowOperationOutbox.discard(failedFlowId);
+					if (failedFlowId === selectedFlowIdRef.current) void refreshRef.current();
+					return;
+				}
+				if (failedFlowId !== null && failedFlowId !== selectedFlowIdRef.current) return;
 				setError(errorMessage(error));
-				const flowId = selectedFlowIdRef.current;
+				const flowId = failedFlowId ?? selectedFlowIdRef.current;
 				if (flowId === null) return;
 				void fetchFlow(flowId).then((server): void => {
 					flowOperationOutbox.rebase(flowId, server.flow.graphRevision, server.flow.layoutRevision);
@@ -334,7 +360,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		window.addEventListener("blur", flushOnBlur);
 		return (): void => {
 			window.removeEventListener("blur", flushOnBlur);
-			void flowOperationOutbox.flushAll().finally((): void => flowOperationOutbox.disconnect());
+			void flowOperationOutbox.flushAll().finally(disconnectOutbox);
 		};
 	}, [applySnapshot]);
 
@@ -740,29 +766,50 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	);
 
 	const startRun = useCallback(
-		async (forceNodeIds?: string[]): Promise<void> => {
+		async (request: FlowRunRequest = {}): Promise<boolean> => {
 			let current = snapshotRef.current;
-			if (current === null) return;
+			if (current === null || runRequestStage !== "idle") return false;
+			setError(null);
+			setRunRequestStage("saving");
 			try {
-				await flowOperationOutbox.flushFully(current.flow.flowId);
-				current = snapshotRef.current;
-				if (current === null) return;
+				await waitWithTimeout(
+					flowOperationOutbox.flushFully(current.flow.flowId),
+					15_000,
+					t("flow.editor.runSaveTimeout", { defaultValue: "Saving Flow changes timed out. Try running again." }),
+				);
+				const saved = await fetchFlow(current.flow.flowId);
+				const savedNodeTypes = new Map(saved.nodes.map((node): [string, string] => [node.nodeId, node.typeId]));
+				if (request.entryNodeIds?.some((nodeId): boolean => savedNodeTypes.get(nodeId) !== "builtin/flow-input") === true)
+					throw new Error(t("flow.editor.runEntryUnavailable", { defaultValue: "The selected run input has not been saved. Wait for Flow changes to finish saving and try again." }));
+				if (request.targetNodeIds?.some((nodeId): boolean => savedNodeTypes.get(nodeId) !== "builtin/output") === true)
+					throw new Error(t("flow.editor.runTargetUnavailable", { defaultValue: "A selected Output node has not been saved. Wait for Flow changes to finish saving and try again." }));
+				applySnapshot(saved);
+				current = saved;
+				setRunRequestStage("starting");
 				const run = await startFlowRun({
 					flowId: current.flow.flowId,
 					revision: current.flow.graphRevision,
-					...(forceNodeIds === undefined ? {} : { forceNodeIds }),
+					...(request.forceNodeIds === undefined ? {} : { forceNodeIds: request.forceNodeIds }),
+					...(request.entryNodeIds === undefined ? {} : { entryNodeIds: request.entryNodeIds }),
+					...(request.targetNodeIds === undefined ? {} : { targetNodeIds: request.targetNodeIds }),
+					...(request.inputValues === undefined ? {} : { inputValues: request.inputValues }),
 				});
 				const latest = snapshotRef.current;
-				if (latest === null || latest.flow.flowId !== run.flowId) return;
-				const received = latest.runs.find((candidate): boolean => candidate.runId === run.runId) ?? run;
-				const next = { ...latest, runs: [received, ...latest.runs.filter((candidate): boolean => candidate.runId !== run.runId)] };
-				snapshotRef.current = next;
-				setSnapshot(next);
+				if (latest !== null && latest.flow.flowId === run.flowId) {
+					const received = latest.runs.find((candidate): boolean => candidate.runId === run.runId) ?? run;
+					const next = { ...latest, runs: [received, ...latest.runs.filter((candidate): boolean => candidate.runId !== run.runId)] };
+					snapshotRef.current = next;
+					setSnapshot(next);
+				}
+				return true;
 			} catch (runError: unknown) {
 				setError(errorMessage(runError));
+				return false;
+			} finally {
+				setRunRequestStage("idle");
 			}
 		},
-		[],
+		[applySnapshot, runRequestStage, t],
 	);
 
 	const stopRun = useCallback(async (): Promise<void> => {
@@ -775,9 +822,19 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			snapshotRef.current = next;
 			setSnapshot(next);
 		} catch (stopError: unknown) {
+			if (stopError instanceof BackendRpcError && stopError.code === "flow_run_not_running") {
+				try {
+					const synchronized = await fetchFlow(current.flow.flowId);
+					if (selectedFlowIdRef.current === synchronized.flow.flowId) applySnapshot(synchronized);
+					setError(null);
+				} catch (synchronizeError: unknown) {
+					setError(errorMessage(synchronizeError));
+				}
+				return;
+			}
 			setError(errorMessage(stopError));
 		}
-	}, []);
+	}, [applySnapshot]);
 
 	const setApprovalMode = useCallback(
 		async (mode: FlowDocument["approvalMode"]): Promise<void> => {
@@ -866,6 +923,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		selectedNodeDetail,
 		isLoading,
 		isMutating,
+		runRequestStage,
 		error,
 		refresh,
 		createNewFlow,

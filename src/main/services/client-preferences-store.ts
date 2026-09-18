@@ -35,6 +35,7 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	},
 	keyboardShortcuts: {},
 	flowSnapToGrid: true,
+	flowRunEntryByFlowId: {},
 	lastComposerModel: null,
 	newSessionComposer: createDefaultNewSessionComposerPreferences(),
 	onboarding: createDefaultOnboardingPreferences(),
@@ -72,6 +73,19 @@ function normalizeWorkspaceSidebar(value: unknown): ClientPreferences["workspace
 	const open: boolean = typeof value.open === "boolean" ? value.open : DEFAULT_CLIENT_PREFERENCES.workspaceSidebar.open;
 	const size: number = typeof value.size === "number" && Number.isFinite(value.size) ? Math.min(720, Math.max(150, Math.trunc(value.size))) : DEFAULT_CLIENT_PREFERENCES.workspaceSidebar.size;
 	return { open, size };
+}
+
+function normalizeFlowRunEntryByFlowId(value: unknown): Record<string, string> {
+	if (!isRecord(value)) return {};
+	const entries: Array<[string, string]> = [];
+	for (const [flowId, entryLabel] of Object.entries(value)) {
+		if (entries.length >= 500) break;
+		const normalizedFlowId = flowId.trim();
+		const normalizedLabel = typeof entryLabel === "string" ? entryLabel.trim() : "";
+		if (normalizedFlowId.length === 0 || normalizedFlowId.length > 200 || normalizedLabel.length === 0 || normalizedLabel.length > 120) continue;
+		entries.push([normalizedFlowId, normalizedLabel]);
+	}
+	return Object.fromEntries(entries);
 }
 
 function normalizeComposerModel(value: unknown): NewSessionComposerModel | null {
@@ -158,6 +172,7 @@ export function normalizeClientPreferences(value: unknown): {
 	const workspaceSidebar: ClientPreferences["workspaceSidebar"] = normalizeWorkspaceSidebar(value.workspaceSidebar);
 	const keyboardShortcuts: KeyboardShortcutOverrides = normalizeKeyboardShortcutOverrides(value.keyboardShortcuts, SHORTCUT_PLATFORM);
 	const flowSnapToGrid: boolean = typeof value.flowSnapToGrid === "boolean" ? value.flowSnapToGrid : DEFAULT_CLIENT_PREFERENCES.flowSnapToGrid;
+	const flowRunEntryByFlowId = normalizeFlowRunEntryByFlowId(value.flowRunEntryByFlowId);
 	const lastComposerModel: NewSessionComposerModel | null = normalizeComposerModel(value.lastComposerModel);
 	const newSessionComposer: NewSessionComposerPreferences = normalizeNewSessionComposerPreferences(value.newSessionComposer, lastComposerModel);
 	const onboarding: OnboardingPreferences = normalizeOnboardingPreferences(value.onboarding);
@@ -183,6 +198,7 @@ export function normalizeClientPreferences(value: unknown): {
 			workspaceSidebar,
 			keyboardShortcuts,
 			flowSnapToGrid,
+			flowRunEntryByFlowId,
 			lastComposerModel,
 			newSessionComposer,
 			onboarding,
@@ -207,10 +223,11 @@ export function normalizeClientPreferences(value: unknown): {
 			JSON.stringify(value.workspaceSidebar ?? null) !== JSON.stringify(workspaceSidebar) ||
 			JSON.stringify(value.keyboardShortcuts ?? null) !== JSON.stringify(keyboardShortcuts) ||
 			value.flowSnapToGrid !== flowSnapToGrid ||
+			JSON.stringify(value.flowRunEntryByFlowId ?? null) !== JSON.stringify(flowRunEntryByFlowId) ||
 			JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel) ||
 			JSON.stringify(value.newSessionComposer ?? null) !== JSON.stringify(newSessionComposer) ||
 			JSON.stringify(value.onboarding ?? null) !== JSON.stringify(onboarding) ||
-			Object.keys(value).some((key: string): boolean => !["allowComputerObservation", "allowComputerControl", "autoCheckForUpdates", "notifyOnRunCompleted", "minimizeToTrayOnClose", "theme", "themeColor", "animationsEnabled", "mascotEnabled", "mascotSize", "uiFontSize", "codeFontSize", "fontFamily", "fontFamilyCode", "language", "webLinkOpenMode", "workspaceSidebar", "keyboardShortcuts", "flowSnapToGrid", "lastComposerModel", "newSessionComposer", "onboarding"].includes(key)),
+			Object.keys(value).some((key: string): boolean => !["allowComputerObservation", "allowComputerControl", "autoCheckForUpdates", "notifyOnRunCompleted", "minimizeToTrayOnClose", "theme", "themeColor", "animationsEnabled", "mascotEnabled", "mascotSize", "uiFontSize", "codeFontSize", "fontFamily", "fontFamilyCode", "language", "webLinkOpenMode", "workspaceSidebar", "keyboardShortcuts", "flowSnapToGrid", "flowRunEntryByFlowId", "lastComposerModel", "newSessionComposer", "onboarding"].includes(key)),
 	};
 }
 
@@ -272,6 +289,9 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	}
 	if (typeof value.flowSnapToGrid === "boolean") {
 		patch.flowSnapToGrid = value.flowSnapToGrid;
+	}
+	if (isRecord(value.flowRunEntryByFlowId)) {
+		patch.flowRunEntryByFlowId = normalizeFlowRunEntryByFlowId(value.flowRunEntryByFlowId);
 	}
 	if (value.lastComposerModel === null) {
 		patch.lastComposerModel = null;

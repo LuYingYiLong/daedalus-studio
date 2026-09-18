@@ -31,6 +31,7 @@ export type ClientPreferences = {
 	workspaceSidebar: WorkspaceSidebarPreferences;
 	keyboardShortcuts: KeyboardShortcutOverrides;
 	flowSnapToGrid: boolean;
+	flowRunEntryByFlowId: Record<string, string>;
 	lastComposerModel: {
 		providerId: string;
 		modelId: string;

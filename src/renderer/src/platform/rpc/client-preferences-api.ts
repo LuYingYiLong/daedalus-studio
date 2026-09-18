@@ -31,6 +31,7 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	},
 	keyboardShortcuts: {},
 	flowSnapToGrid: true,
+	flowRunEntryByFlowId: {},
 	lastComposerModel: null,
 	newSessionComposer: createDefaultNewSessionComposerPreferences(),
 	onboarding: createDefaultOnboardingPreferences(),

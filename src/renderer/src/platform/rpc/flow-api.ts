@@ -76,7 +76,14 @@ export async function resolveFlowApproval(params: { flowId: string; runId: strin
 	return (await createBackendClient()).request("flow.approval.resolve", params);
 }
 
-export async function startFlowRun(params: { flowId: string; revision: number; forceNodeIds?: string[] }): Promise<FlowDocumentRun> {
+export async function startFlowRun(params: {
+	flowId: string;
+	revision: number;
+	forceNodeIds?: string[];
+	entryNodeIds?: string[];
+	targetNodeIds?: string[];
+	inputValues?: Record<string, unknown>;
+}): Promise<FlowDocumentRun> {
 	return (await createBackendClient()).request("flow.run.start", params);
 }
 
