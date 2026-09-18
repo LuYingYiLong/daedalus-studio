@@ -3,14 +3,18 @@ import type { InputRef, MenuProps } from "antd";
 import {
 	Background,
 	Controls,
+	Position,
 	ReactFlow,
 	applyNodeChanges,
+	getBezierPath,
 	type Connection,
+	type ConnectionLineComponentProps,
 	type Edge,
 	type FinalConnectionState,
 	type NodeChange,
 	type OnConnectStartParams,
 	type OnNodeDrag,
+	type OnReconnect,
 	type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -77,9 +81,11 @@ type PickerState = {
 type InteractionSample = {
 	kind: "node-drag" | "viewport";
 	startedAt: number;
-	previousFrameAt: number;
-	frameDurations: number[];
-	frameRequest: number;
+};
+type DetachedConnectionSource = {
+	edgeId: string;
+	sourceNodeId: string;
+	sourcePort: string;
 };
 
 const nodeTypes = { flowNode: FlowDocumentNodeView };
@@ -88,6 +94,7 @@ const FLOW_NODE_HEIGHT = 220;
 const FLOW_NODE_GAP = 28;
 const FLOW_SNAP_GRID: [number, number] = [24, 24];
 const FLOW_NODE_CREATE_OFFSET = 32;
+const EMPTY_CONNECTED_INPUT_IDS: ReadonlySet<string> = new Set<string>();
 
 function intersectsNode(
 	left: { x: number; y: number; width: number; height: number },
@@ -169,13 +176,15 @@ function HomeFlowSurface({
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchIndex, setSearchIndex] = useState(0);
 	const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<FlowCanvasNode, Edge> | null>(null);
-	const [isViewportMoving, setIsViewportMoving] = useState(false);
+	const [reconnectingEdgeId, setReconnectingEdgeId] = useState<string | null>(null);
 	const [snapToGrid, setSnapToGrid] = useState<boolean>((): boolean => getCachedClientPreferences().flowSnapToGrid);
 	const [consentText, setConsentText] = useState<Record<string, string>>({});
 	const [modelsByProvider, setModelsByProvider] = useState<Record<string, ProviderModelInfo[]>>({});
 	const canvasRef = useRef<HTMLDivElement | null>(null);
 	const searchInputRef = useRef<InputRef | null>(null);
 	const connectStartRef = useRef<OnConnectStartParams | null>(null);
+	const detachedEdgeIdRef = useRef<string | null>(null);
+	const detachedConnectionSourceRef = useRef<DetachedConnectionSource | null>(null);
 	const interactionSampleRef = useRef<InteractionSample | null>(null);
 	const loadingProviderModelsRef = useRef<Set<string>>(new Set());
 	const resolvedPositions = useMemo(
@@ -192,6 +201,15 @@ function HomeFlowSurface({
 			),
 		[controller.nodeDefinitions],
 	);
+	const connectedInputIdsByNode = useMemo((): Map<string, ReadonlySet<string>> => {
+		const mutable = new Map<string, Set<string>>();
+		for (const edge of snapshot?.edges ?? []) {
+			const current = mutable.get(edge.targetNodeId) ?? new Set<string>();
+			current.add(edge.targetPort);
+			mutable.set(edge.targetNodeId, current);
+		}
+		return new Map(mutable);
+	}, [snapshot?.edges]);
 	const editorOptions = useMemo<FlowNodeEditorOptions>(
 		(): FlowNodeEditorOptions => ({ modelSelection: providerModelSelection, modelsByProvider }),
 		[modelsByProvider, providerModelSelection],
@@ -297,11 +315,13 @@ function HomeFlowSurface({
 						? registeredDefinition
 						: null;
 				const matched = matchingIds.has(flowNode.nodeId);
+				const connectedInputIds = connectedInputIdsByNode.get(flowNode.nodeId) ?? EMPTY_CONNECTED_INPUT_IDS;
 				if (
 					existing !== undefined &&
 					existing.data.flowNode === flowNode &&
 					existing.data.definition === definition &&
 					existing.data.editorOptions === editorOptions &&
+					existing.data.connectedInputIds === connectedInputIds &&
 					existing.data.matched === matched &&
 					existing.data.locked === controller.isGraphLocked &&
 					existing.position.x === position.x &&
@@ -318,6 +338,7 @@ function HomeFlowSurface({
 						nodeRun: existing?.data.nodeRun ?? null,
 						definition,
 						editorOptions,
+						connectedInputIds,
 						matched,
 						locked: controller.isGraphLocked,
 						onUpdate: updateCanvasNode,
@@ -328,6 +349,7 @@ function HomeFlowSurface({
 		});
 	}, [
 		controller.isGraphLocked,
+		connectedInputIdsByNode,
 		definitionsByType,
 		editorOptions,
 		matchingIds,
@@ -349,7 +371,7 @@ function HomeFlowSurface({
 	}, [latestRun?.nodes]);
 	const edges = useMemo(
 		(): Edge[] =>
-			(snapshot?.edges ?? []).map(
+			(snapshot?.edges ?? []).filter((edge): boolean => edge.edgeId !== reconnectingEdgeId).map(
 				(edge): Edge => ({
 					id: edge.edgeId,
 					source: edge.sourceNodeId,
@@ -359,7 +381,43 @@ function HomeFlowSurface({
 					type: "default",
 				}),
 			),
-		[snapshot?.edges],
+		[reconnectingEdgeId, snapshot?.edges],
+	);
+	const connectionLineComponent = useCallback(
+		(props: ConnectionLineComponentProps<FlowCanvasNode>): React.JSX.Element => {
+			const source = detachedConnectionSourceRef.current;
+			let sourceX = props.fromX;
+			let sourceY = props.fromY;
+			let sourcePosition = props.fromPosition;
+			if (source !== null) {
+				const internalNode = flowInstance?.getInternalNode(source.sourceNodeId);
+				const sourceHandle = internalNode?.internals.handleBounds?.source?.find(
+					(handle): boolean => handle.id === source.sourcePort,
+				);
+				if (internalNode !== undefined && sourceHandle !== undefined) {
+					sourceX = internalNode.internals.positionAbsolute.x + sourceHandle.x + sourceHandle.width / 2;
+					sourceY = internalNode.internals.positionAbsolute.y + sourceHandle.y + sourceHandle.height / 2;
+					sourcePosition = sourceHandle.position ?? Position.Right;
+				}
+			}
+			const [path] = getBezierPath({
+				sourceX,
+				sourceY,
+				sourcePosition,
+				targetX: props.toX,
+				targetY: props.toY,
+				targetPosition: props.toPosition,
+			});
+			return (
+				<path
+					d={path}
+					fill="none"
+					className="react-flow__connection-path"
+					style={props.connectionLineStyle}
+				/>
+			);
+		},
+		[flowInstance],
 	);
 
 	const closePicker = useCallback((): void => setPicker(null), []);
@@ -551,7 +609,18 @@ function HomeFlowSurface({
 			const targetPort = portFor(targetNode, controller.nodeDefinitions, connection.targetHandle, "input");
 			if (sourcePort === undefined || targetPort === undefined) return;
 			const dataType = compatibleType(sourcePort, targetPort);
-			if (dataType !== null)
+			if (dataType === null) return;
+			const detachedEdgeId = detachedEdgeIdRef.current;
+			if (detachedEdgeId !== null)
+				void controller.reconnectEdge(
+					detachedEdgeId,
+					connection.source,
+					connection.target,
+					connection.sourceHandle,
+					connection.targetHandle,
+					dataType,
+				);
+			else
 				void controller.createEdge(
 					connection.source,
 					connection.target,
@@ -562,18 +631,60 @@ function HomeFlowSurface({
 		},
 		[controller, snapshot],
 	);
+	const onReconnect = useCallback<OnReconnect<Edge>>(
+		(edge, connection): void => {
+			if (
+				connection.source === null ||
+				connection.target === null ||
+				connection.sourceHandle === null ||
+				connection.targetHandle === null ||
+				snapshot === null
+			)
+				return;
+			const sourceNode = snapshot.nodes.find((node): boolean => node.nodeId === connection.source);
+			const targetNode = snapshot.nodes.find((node): boolean => node.nodeId === connection.target);
+			const sourcePort = portFor(sourceNode, controller.nodeDefinitions, connection.sourceHandle, "output");
+			const targetPort = portFor(targetNode, controller.nodeDefinitions, connection.targetHandle, "input");
+			if (sourcePort === undefined || targetPort === undefined) return;
+			const dataType = compatibleType(sourcePort, targetPort);
+			if (dataType === null) return;
+			void controller.reconnectEdge(
+				edge.id,
+				connection.source,
+				connection.target,
+				connection.sourceHandle,
+				connection.targetHandle,
+				dataType,
+			);
+		},
+		[controller, snapshot],
+	);
+	const onReconnectEnd = useCallback(
+		(_event: MouseEvent | TouchEvent, edge: Edge, _handleType: "source" | "target", state: FinalConnectionState): void => {
+			if (state.toHandle === null) void controller.deleteEdge(edge.id);
+		},
+		[controller.deleteEdge],
+	);
 	const onConnectEnd = useCallback(
 		(event: MouseEvent | TouchEvent, state: FinalConnectionState): void => {
 			const started = connectStartRef.current;
+			const detachedEdgeId = detachedEdgeIdRef.current;
 			connectStartRef.current = null;
+			detachedEdgeIdRef.current = null;
+			detachedConnectionSourceRef.current = null;
+			setReconnectingEdgeId(null);
 			if (
-				state.toHandle !== null ||
 				started === null ||
 				started.nodeId === null ||
 				started.handleId === null ||
 				snapshot === null
 			)
 				return;
+			if (detachedEdgeId !== null) {
+				if (state.toHandle === null) void controller.deleteEdge(detachedEdgeId);
+				return;
+			}
+			if (state.toHandle !== null) return;
 			const point = eventPoint(event);
 			const element = document.elementFromPoint(point.x, point.y);
 			if (
@@ -611,48 +722,36 @@ function HomeFlowSurface({
 				existingPort: started.handleId,
 			});
 		},
-		[controller.nodeDefinitions, openPickerAt, snapshot],
+		[controller.deleteEdge, controller.nodeDefinitions, openPickerAt, snapshot],
 	);
 	const finishInteractionSample = useCallback((kind?: InteractionSample["kind"]): void => {
 		const sample = interactionSampleRef.current;
 		if (sample === null || (kind !== undefined && sample.kind !== kind)) return;
-		cancelAnimationFrame(sample.frameRequest);
 		interactionSampleRef.current = null;
-		const orderedFrames = [...sample.frameDurations].sort((left, right): number => left - right);
-		const p95Index = Math.max(0, Math.ceil(orderedFrames.length * 0.95) - 1);
+		performance.clearMeasures("daedalus.flow.interaction");
 		performance.measure("daedalus.flow.interaction", {
 			start: sample.startedAt,
 			end: performance.now(),
 			detail: {
 				kind: sample.kind,
-				frameCount: orderedFrames.length,
-				frameP95Ms: orderedFrames[p95Index] ?? 0,
 			},
 		});
 	}, []);
 	const startInteractionSample = useCallback(
 		(kind: InteractionSample["kind"]): void => {
 			finishInteractionSample();
-			const startedAt = performance.now();
-			const sample: InteractionSample = {
-				kind,
-				startedAt,
-				previousFrameAt: startedAt,
-				frameDurations: [],
-				frameRequest: 0,
-			};
-			const sampleFrame = (frameAt: number): void => {
-				if (interactionSampleRef.current !== sample) return;
-				sample.frameDurations.push(frameAt - sample.previousFrameAt);
-				sample.previousFrameAt = frameAt;
-				sample.frameRequest = requestAnimationFrame(sampleFrame);
-			};
-			interactionSampleRef.current = sample;
-			sample.frameRequest = requestAnimationFrame(sampleFrame);
+			interactionSampleRef.current = { kind, startedAt: performance.now() };
 		},
 		[finishInteractionSample],
 	);
-	useEffect((): (() => void) => (): void => finishInteractionSample(), [finishInteractionSample]);
+	useEffect(
+		(): (() => void) =>
+			(): void => {
+				finishInteractionSample();
+				canvasRef.current?.removeAttribute("data-flow-moving");
+			},
+		[finishInteractionSample],
+	);
 	const onNodeDragStop = useCallback<OnNodeDrag<FlowCanvasNode>>(
 		(_event, node): void => {
 			finishInteractionSample("node-drag");
@@ -663,12 +762,12 @@ function HomeFlowSurface({
 	);
 	const onMoveStart = useCallback((): void => {
 		startInteractionSample("viewport");
-		setIsViewportMoving(true);
+		canvasRef.current?.setAttribute("data-flow-moving", "true");
 	}, [startInteractionSample]);
 	const onMoveEnd = useCallback(
 		(_event: unknown, viewport: { x: number; y: number; zoom: number }): void => {
 			finishInteractionSample("viewport");
-			setIsViewportMoving(false);
+			canvasRef.current?.removeAttribute("data-flow-moving");
 			void controller.updateViewport(viewport);
 		},
 		[controller.updateViewport, finishInteractionSample],
@@ -789,7 +888,7 @@ function HomeFlowSurface({
 			) : null}
 			<div
 				ref={canvasRef}
-				className={`${styles.canvasRegion} ${isViewportMoving ? styles.canvasMoving : ""}`}
+				className={styles.canvasRegion}
 				onContextMenu={(event): void => {
 					if (controller.isGraphLocked || (event.target as Element).closest(".react-flow__node") !== null)
 						return;
@@ -917,8 +1016,34 @@ function HomeFlowSurface({
 					onConnectStart={(_event, params): void => {
 						closePicker();
 						connectStartRef.current = params;
+						detachedEdgeIdRef.current = null;
+						detachedConnectionSourceRef.current = null;
+						setReconnectingEdgeId(null);
+						if (params.handleType !== "target" || params.nodeId === null || params.handleId === null)
+							return;
+						const targetNode = snapshot.nodes.find((node): boolean => node.nodeId === params.nodeId);
+						const targetPort = portFor(targetNode, controller.nodeDefinitions, params.handleId, "input");
+						if (targetPort?.multiple === true) return;
+						const detachedEdge = snapshot.edges.find(
+								(edge): boolean =>
+									edge.targetNodeId === params.nodeId && edge.targetPort === params.handleId,
+							);
+						if (detachedEdge === undefined) return;
+						detachedEdgeIdRef.current = detachedEdge.edgeId;
+						detachedConnectionSourceRef.current = {
+							edgeId: detachedEdge.edgeId,
+							sourceNodeId: detachedEdge.sourceNodeId,
+							sourcePort: detachedEdge.sourcePort,
+						};
+						setReconnectingEdgeId(detachedEdge.edgeId);
 					}}
 					onConnectEnd={onConnectEnd}
+					connectionLineComponent={connectionLineComponent}
+					onReconnect={onReconnect}
+					onReconnectStart={closePicker}
+					onReconnectEnd={onReconnectEnd}
+					edgesReconnectable={!controller.isGraphLocked}
+					reconnectRadius={18}
 					onMoveStart={onMoveStart}
 					onMoveEnd={onMoveEnd}
 					nodesDraggable
@@ -934,7 +1059,7 @@ function HomeFlowSurface({
 					fitViewOptions={{ padding: 0.2 }}
 					minZoom={0.2}
 					maxZoom={2}
-					onlyRenderVisibleElements
+					onlyRenderVisibleElements={nodes.length >= 80}
 					snapToGrid={snapToGrid}
 					snapGrid={FLOW_SNAP_GRID}
 					deleteKeyCode={null}

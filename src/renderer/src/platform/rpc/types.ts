@@ -658,9 +658,36 @@ export type FlowNodePortDefinition = {
 	multiple: boolean;
 	defaultConnect: boolean;
 };
-export type FlowDynamicPortDefinition = {
+export type FlowNodeParameterDefinition =
+	| { id: string; label: string; mode: "fixed"; configField: string }
+	| {
+			id: string;
+			label: string;
+			mode: "connection";
+			dataTypes: Array<"text" | "json" | "artifact">;
+			required: boolean;
+			multiple: boolean;
+			defaultConnect: boolean;
+	  }
+	| {
+			id: string;
+			label: string;
+			mode: "hybrid";
+			configField: string;
+			dataTypes: Array<"text" | "json" | "artifact">;
+			required: boolean;
+			multiple: boolean;
+			defaultConnect: boolean;
+			hideControlWhenConnected: boolean;
+	  };
+export type FlowNodeOutputDefinition = {
+	id: string;
+	label: string;
+	dataTypes: Array<"text" | "json" | "artifact">;
+	defaultConnect: boolean;
+};
+export type FlowDynamicParameterDefinition = {
 	configField: string;
-	direction: "input" | "output";
 	idField: string;
 	labelField: string;
 	dataTypes: Array<"text" | "json" | "artifact">;
@@ -685,8 +712,9 @@ export type FlowNodeTypeDefinition = {
 	configSchema: Record<string, unknown>;
 	summaryFields: string[];
 	ui: { kind: "schema" } | { kind: "sandbox"; entry: string; actions: string[] };
-	ports: FlowNodePortDefinition[];
-	dynamicPorts?: FlowDynamicPortDefinition[];
+	parameters: FlowNodeParameterDefinition[];
+	outputs: FlowNodeOutputDefinition[];
+	dynamicParameters?: FlowDynamicParameterDefinition[];
 };
 export type FlowOperation =
 	| { mutationId: string; kind: "node.create"; baseGraphRevision?: number; payload: { nodeId: string; typeId: FlowNodeTypeId; title?: string; x: number; y: number; config?: Record<string, unknown> } }

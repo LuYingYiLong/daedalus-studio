@@ -26,7 +26,12 @@ function FlowWelcome(props: FlowWelcomeProps): React.JSX.Element {
 	const [workspaceId, setWorkspaceId] = useState<string>("");
 	const workspaces = props.mode === "create" ? props.workspaces : null;
 	useEffect((): void => {
-		if (workspaceId.length > 0 && workspaces !== null && !workspaces.some((workspace): boolean => workspace.id === workspaceId)) setWorkspaceId("");
+		if (
+			workspaceId.length > 0 &&
+			workspaces !== null &&
+			!workspaces.some((workspace): boolean => workspace.id === workspaceId)
+		)
+			setWorkspaceId("");
 	}, [workspaceId, workspaces]);
 	const errorMessage = props.errorMessage;
 	return (
@@ -72,8 +77,6 @@ function FlowWelcome(props: FlowWelcomeProps): React.JSX.Element {
 							onChange={setWorkspaceId}
 						/>
 						<Button
-							shape="round"
-							size="large"
 							type="primary"
 							loading={props.isCreating}
 							icon={<Icon name="add" />}

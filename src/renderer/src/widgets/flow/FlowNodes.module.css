@@ -12,14 +12,11 @@
 	grid-template-rows: auto minmax(0, 1fr);
 	width: 100%;
 	min-height: 176px;
-	overflow: hidden;
+	overflow: visible;
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
 	background: var(--ant-color-bg-container, var(--ds-surface-elevated));
 	box-shadow: var(--ds-box-shadow);
-	transition:
-		border-color 160ms ease,
-		box-shadow 160ms ease;
 }
 
 .nodeCard :global(.ant-input),
@@ -27,7 +24,6 @@
 	background: var(--ant-color-bg-container, var(--ds-surface-elevated));
 }
 
-.nodeCard:hover,
 .nodeCardMatched {
 	border-color: var(--ant-color-primary);
 	box-shadow:
@@ -37,7 +33,6 @@
 
 .header,
 .role,
-.compactFields,
 .dynamicInputRow {
 	display: flex;
 	align-items: center;
@@ -47,6 +42,7 @@
 	justify-content: space-between;
 	gap: var(--ds-space-2);
 	padding: var(--ds-space-2) var(--ds-space-3);
+	border-radius: calc(var(--ds-radius-lg) - 1px) calc(var(--ds-radius-lg) - 1px) 0 0;
 	color: #fff;
 }
 
@@ -105,18 +101,70 @@
 	gap: var(--ds-space-2);
 	padding: var(--ds-space-3);
 	min-height: 0;
+	border-radius: 0 0 calc(var(--ds-radius-lg) - 1px) calc(var(--ds-radius-lg) - 1px);
 	background: var(--ant-color-bg-container, var(--ds-surface-elevated));
 }
 
-.portSpacer {
-	min-height: 0;
-	pointer-events: none;
-}
-
-.compactFields,
+.parameterList,
+.outputList,
 .dynamicInputs {
 	display: grid;
 	gap: var(--ds-space-2);
+}
+
+.parameterRow,
+.outputRow {
+	position: relative;
+	display: grid;
+	min-height: 28px;
+	align-items: center;
+	gap: var(--ds-space-2);
+}
+
+.parameterRow {
+	grid-template-columns: minmax(72px, auto) minmax(0, 1fr);
+}
+
+.parameterRowConnectionOnly {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.outputRow {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.parameterSocket,
+.outputSocket {
+	position: absolute;
+	top: 50%;
+	display: block;
+	width: 0;
+	height: 0;
+}
+
+.parameterSocket {
+	left: calc(0px - var(--ds-space-3) - 1px);
+}
+
+.outputSocket {
+	right: calc(0px - var(--ds-space-3) - 1px);
+}
+
+.parameterLabel,
+.outputLabel {
+	min-width: 0;
+	color: var(--ant-color-text-secondary);
+	font-size: 16px;
+}
+
+.outputLabel {
+	text-align: right;
+}
+
+.parameterControl,
+.parameterControl :global(.ant-input-number),
+.parameterControl :global(.ant-select) {
+	width: 100%;
 }
 
 .dynamicInputRow {
@@ -146,6 +194,7 @@
 	border: 1px solid var(--ds-border-secondary);
 	border-radius: var(--ds-radius-md);
 	background: var(--ant-color-fill-quaternary);
+	cursor: text;
 	user-select: text;
 }
 
@@ -177,65 +226,29 @@
 	opacity: 0.9;
 }
 
-.portRail {
-	position: absolute;
-	z-index: 5;
-	top: 48px;
-	display: grid;
-	gap: 14px;
-	pointer-events: none;
-}
-
-.portRailLeft {
-	left: -11px;
-}
-
-.portRailRight {
-	right: -11px;
-}
-
-.portItem {
-	position: relative;
-	display: flex;
-	align-items: center;
-	min-height: 18px;
-	color: var(--ant-color-text-secondary);
-	font-size: 10px;
-	pointer-events: none;
-}
-
-.portRailLeft .portItem {
-	flex-direction: row;
-}
-
-.portRailRight .portItem {
-	flex-direction: row-reverse;
-}
-
-.portRailLeft .portItem span {
-	margin-left: 18px;
-}
-
-.portRailRight .portItem span {
-	margin-right: 18px;
-}
-
-.nodeHandle {
+.parameterHandle {
 	position: absolute !important;
 	inset: auto !important;
 	z-index: 6;
+	top: 50% !important;
 	width: 12px !important;
 	height: 12px !important;
 	border: 2px solid var(--ant-color-bg-container) !important;
 	background: var(--ant-color-primary) !important;
 	pointer-events: auto;
-	transform: none !important;
+	transform: translate(-50%, -50%) !important;
 }
 
-.portRailLeft .nodeHandle {
-	left: 5px !important;
+.parameterSocket .parameterHandle,
+.outputSocket .parameterHandle {
+	left: 0 !important;
+	right: auto !important;
 }
 
-.portRailRight .nodeHandle {
-	right: 5px !important;
+.parameterHandle[data-flow-port-type="json"] {
+	background: #722ed1 !important;
+}
+
+.parameterHandle[data-flow-port-type="artifact"] {
+	background: #d46b08 !important;
 }

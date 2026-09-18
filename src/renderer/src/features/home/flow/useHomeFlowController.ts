@@ -43,6 +43,7 @@ export type HomeFlowController = {
 	updateNodePosition: (nodeId: string, x: number, y: number) => Promise<void>;
 	deleteNode: (nodeId: string) => Promise<void>;
 	createEdge: (sourceNodeId: string, targetNodeId: string, sourcePort?: string, targetPort?: string, dataType?: "text" | "json" | "artifact") => Promise<void>;
+	reconnectEdge: (edgeId: string, sourceNodeId: string, targetNodeId: string, sourcePort: string, targetPort: string, dataType: "text" | "json" | "artifact") => Promise<void>;
 	deleteEdge: (edgeId: string) => Promise<void>;
 	updateViewport: (viewport: { x: number; y: number; zoom: number }) => Promise<void>;
 	startRun: (forceNodeIds?: string[]) => Promise<void>;
@@ -77,24 +78,27 @@ function toSummary(flow: FlowDocument): FlowDocumentSummary {
 	return flow;
 }
 
-function resolveOptimisticPorts(node: FlowDocumentNode, definition: FlowNodeTypeDefinition | undefined, config: Record<string, unknown>): FlowDocumentNode["ports"] {
-	if (definition === undefined || (definition.dynamicPorts?.length ?? 0) === 0) return node.ports;
-	const ports = definition.ports.map((port) => ({ ...port, dataTypes: [...port.dataTypes] }));
-	for (const dynamic of definition.dynamicPorts ?? []) {
+function resolveOptimisticPorts(node: Pick<FlowDocumentNode, "ports" | "typeId" | "config">, definition: FlowNodeTypeDefinition | undefined, config: Record<string, unknown>): FlowDocumentNode["ports"] {
+	if (definition === undefined) return node.ports;
+	const parameters = definition.parameters.map((parameter) => structuredClone(parameter));
+	for (const dynamic of definition.dynamicParameters ?? []) {
 		const values = config[dynamic.configField];
 		if (!Array.isArray(values)) continue;
-		for (const value of values.slice(0, 64 - ports.length)) {
+		for (const value of values.slice(0, 64 - parameters.length)) {
 			if (typeof value !== "object" || value === null || Array.isArray(value)) continue;
 			const record = value as Record<string, unknown>;
 			const id = record[dynamic.idField];
-			if (typeof id !== "string" || id.length === 0 || ports.some((port): boolean => port.id === id && port.direction === dynamic.direction)) continue;
+			if (typeof id !== "string" || id.length === 0 || parameters.some((parameter): boolean => parameter.id === id)) continue;
 			const configuredType = dynamic.dataTypeField === undefined ? undefined : record[dynamic.dataTypeField];
 			const dataTypes: FlowDocumentNode["ports"][number]["dataTypes"] = typeof configuredType === "string" && (configuredType === "text" || configuredType === "json" || configuredType === "artifact") ? [configuredType] : [...dynamic.dataTypes];
 			const label = record[dynamic.labelField];
-			ports.push({ id, label: typeof label === "string" && label.length > 0 ? label : id, direction: dynamic.direction, dataTypes, required: dynamic.required, multiple: dynamic.multiple, defaultConnect: dynamic.defaultConnect });
+			parameters.push({ id, label: typeof label === "string" && label.length > 0 ? label : id, mode: "connection", dataTypes, required: dynamic.required, multiple: dynamic.multiple, defaultConnect: dynamic.defaultConnect });
 		}
 	}
-	return ports;
+	return [
+		...parameters.flatMap((parameter): FlowDocumentNode["ports"] => parameter.mode === "fixed" ? [] : [{ id: parameter.id, label: parameter.label, direction: "input", dataTypes: [...parameter.dataTypes], required: parameter.required, multiple: parameter.multiple, defaultConnect: parameter.defaultConnect }]),
+		...definition.outputs.map((output): FlowDocumentNode["ports"][number] => ({ id: output.id, label: output.label, direction: "output", dataTypes: [...output.dataTypes], required: false, multiple: true, defaultConnect: output.defaultConnect })),
+	];
 }
 
 function applyFlowOperation(snapshot: FlowDocumentSnapshot, operation: FlowOperation, definitions: readonly FlowNodeTypeDefinition[]): FlowDocumentSnapshot {
@@ -116,7 +120,7 @@ function applyFlowOperation(snapshot: FlowDocumentSnapshot, operation: FlowOpera
 			width: 300,
 			height: 180,
 			config: operation.payload.config ?? definition.defaultConfig,
-			ports: definition.ports,
+			ports: resolveOptimisticPorts({ ports: [], typeId: definition.typeId, config: operation.payload.config ?? definition.defaultConfig }, definition, operation.payload.config ?? definition.defaultConfig),
 			status: "idle",
 			createdAt: timestamp,
 			updatedAt: timestamp,
@@ -630,6 +634,36 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		[applyOperation, isGraphLocked],
 	);
 
+	const reconnectEdge = useCallback(
+		async (
+			edgeId: string,
+			sourceNodeId: string,
+			targetNodeId: string,
+			sourcePort: string,
+			targetPort: string,
+			dataType: "text" | "json" | "artifact",
+		): Promise<void> => {
+			const current = snapshotRef.current;
+			if (current === null || isGraphLocked) return;
+			const baseGraphRevision = current.flow.graphRevision;
+			applyOperations([
+				{
+					mutationId: createFlowMutationId(),
+					kind: "edge.delete",
+					baseGraphRevision,
+					payload: { edgeId },
+				},
+				{
+					mutationId: createFlowMutationId(),
+					kind: "edge.create",
+					baseGraphRevision,
+					payload: { edgeId, sourceNodeId, sourcePort, targetNodeId, targetPort, dataType },
+				},
+			]);
+		},
+		[applyOperations, isGraphLocked],
+	);
+
 	const deleteEdge = useCallback(
 		async (edgeId: string): Promise<void> => {
 			const current = snapshotRef.current;
@@ -792,6 +826,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		updateNodePosition,
 		deleteNode,
 		createEdge,
+		reconnectEdge,
 		deleteEdge,
 		updateViewport,
 		startRun,

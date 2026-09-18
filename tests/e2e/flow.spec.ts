@@ -80,6 +80,20 @@ function output(id: string, label: string, dataTypes: Port["dataTypes"], default
 	};
 }
 
+type DefinitionParameter =
+	| { id: string; label: string; mode: "fixed"; configField: string }
+	| { id: string; label: string; mode: "connection"; dataTypes: Port["dataTypes"]; required: boolean; multiple: boolean; defaultConnect: boolean }
+	| { id: string; label: string; mode: "hybrid"; configField: string; dataTypes: Port["dataTypes"]; required: boolean; multiple: boolean; defaultConnect: boolean; hideControlWhenConnected: boolean };
+
+function definitionPorts(definition: { parameters: DefinitionParameter[]; outputs: Array<{ id: string; label: string; dataTypes: Port["dataTypes"]; defaultConnect: boolean }> }): Port[] {
+	return [
+		...definition.parameters.flatMap((parameter): Port[] => parameter.mode === "fixed"
+			? []
+			: [input(parameter.id, parameter.label, parameter.dataTypes, parameter.defaultConnect)]),
+		...definition.outputs.map((item): Port => output(item.id, item.label, item.dataTypes, item.defaultConnect)),
+	];
+}
+
 const nodeDefinitions = [
 	{
 		typeId: "builtin/text",
@@ -97,7 +111,8 @@ const nodeDefinitions = [
 		configSchema: { type: "object", properties: { text: { type: "string" } } },
 		summaryFields: ["text"],
 		ui: { kind: "schema" },
-		ports: [output("output", "Text", ["text"], true)],
+		parameters: [{ id: "text", label: "Text", mode: "fixed", configField: "text" }] satisfies DefinitionParameter[],
+		outputs: [{ id: "output", label: "Text", dataTypes: ["text"] as Port["dataTypes"], defaultConnect: true }],
 	},
 	{
 		typeId: "builtin/condition",
@@ -115,7 +130,16 @@ const nodeDefinitions = [
 		configSchema: { type: "object", properties: { pointer: { type: "string" }, operator: { type: "string" }, value: {} } },
 		summaryFields: ["operator", "pointer"],
 		ui: { kind: "schema" },
-		ports: [input("input", "Value", ["text", "json"], true), output("true", "True", ["text", "json"], true), output("false", "False", ["text", "json"])],
+		parameters: [
+			{ id: "input", label: "Value", mode: "connection", dataTypes: ["text", "json"], required: false, multiple: false, defaultConnect: true },
+			{ id: "pointer", label: "JSON Pointer", mode: "fixed", configField: "pointer" },
+			{ id: "operator", label: "Operator", mode: "fixed", configField: "operator" },
+			{ id: "value", label: "Compare value", mode: "fixed", configField: "value" },
+		] satisfies DefinitionParameter[],
+		outputs: [
+			{ id: "true", label: "True", dataTypes: ["text", "json"] as Port["dataTypes"], defaultConnect: true },
+			{ id: "false", label: "False", dataTypes: ["text", "json"] as Port["dataTypes"], defaultConnect: false },
+		],
 	},
 	{
 		typeId: "builtin/tool",
@@ -133,7 +157,16 @@ const nodeDefinitions = [
 		configSchema: { type: "object", properties: { toolName: { type: "string" }, args: { type: "object" }, bindings: { type: "array" } } },
 		summaryFields: ["toolName"],
 		ui: { kind: "schema" },
-		ports: [input("input", "Arguments", ["text", "json"], true), output("result", "Result", ["json"], true), output("text", "Text", ["text"])],
+		parameters: [
+			{ id: "input", label: "Arguments", mode: "connection", dataTypes: ["text", "json"], required: false, multiple: false, defaultConnect: true },
+			{ id: "toolName", label: "Tool", mode: "fixed", configField: "toolName" },
+			{ id: "args", label: "Arguments", mode: "fixed", configField: "args" },
+			{ id: "bindings", label: "Bindings", mode: "fixed", configField: "bindings" },
+		] satisfies DefinitionParameter[],
+		outputs: [
+			{ id: "result", label: "Result", dataTypes: ["json"] as Port["dataTypes"], defaultConnect: true },
+			{ id: "text", label: "Text", dataTypes: ["text"] as Port["dataTypes"], defaultConnect: false },
+		],
 	},
 	{
 		typeId: "builtin/output",
@@ -151,7 +184,11 @@ const nodeDefinitions = [
 		configSchema: { type: "object", properties: { format: { type: "string" } } },
 		summaryFields: ["format"],
 		ui: { kind: "schema" },
-		ports: [input("input", "Value", ["text", "json", "artifact"], true)],
+		parameters: [
+			{ id: "input", label: "Value", mode: "connection", dataTypes: ["text", "json", "artifact"], required: false, multiple: false, defaultConnect: true },
+			{ id: "format", label: "Format", mode: "fixed", configField: "format" },
+		] satisfies DefinitionParameter[],
+		outputs: [],
 	},
 ];
 
@@ -225,7 +262,7 @@ test.describe("Daedalus Flow node workflow", () => {
 				width: 300,
 				height: 180,
 				config: { ...definition.defaultConfig, ...config },
-				ports: definition.ports,
+				ports: definitionPorts(definition),
 				status: "idle",
 				createdAt: NOW,
 				updatedAt: NOW,
@@ -513,6 +550,40 @@ test.describe("Daedalus Flow node workflow", () => {
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/tool"])')).toBeVisible();
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toBeVisible();
 		await expect(mainWindow.locator(".react-flow__edge-default")).toHaveCount(1);
+		const conditionInput = mainWindow
+			.locator('.react-flow__node:has([data-node-type="builtin/condition"])')
+			.locator('[data-flow-port-id="input"]');
+		const conditionInputBox = await conditionInput.boundingBox();
+		expect(conditionInputBox).not.toBeNull();
+		await mainWindow.mouse.move(
+			conditionInputBox!.x + conditionInputBox!.width / 2,
+			conditionInputBox!.y + conditionInputBox!.height / 2,
+		);
+		await mainWindow.mouse.down();
+		await mainWindow.mouse.move(paneBox!.x + paneBox!.width * 0.78, paneBox!.y + paneBox!.height * 0.78, {
+			steps: 12,
+		});
+		await expect(mainWindow.locator(".react-flow__edge-default")).toHaveCount(0);
+		await expect(mainWindow.locator(".react-flow__connection-path")).toHaveCount(1);
+		const currentSourceBox = await source.boundingBox();
+		expect(currentSourceBox).not.toBeNull();
+		const connectionStart = await mainWindow.locator(".react-flow__connection-path").evaluate((path): { x: number; y: number } => {
+			const svgPath = path as SVGPathElement;
+			const matrix = svgPath.getScreenCTM();
+			const point = svgPath.getPointAtLength(0);
+			if (matrix === null) throw new Error("Connection path has no screen transform");
+			const screenPoint = new DOMPoint(point.x, point.y).matrixTransform(matrix);
+			return { x: screenPoint.x, y: screenPoint.y };
+		});
+		const sourceCenter = {
+			x: currentSourceBox!.x + currentSourceBox!.width / 2,
+			y: currentSourceBox!.y + currentSourceBox!.height / 2,
+		};
+		expect(Math.abs(connectionStart.x - sourceCenter.x)).toBeLessThan(2);
+		expect(Math.abs(connectionStart.y - sourceCenter.y)).toBeLessThan(2);
+		await mainWindow.mouse.up();
+		await expect(mainWindow.locator(".react-flow__edge-default")).toHaveCount(0);
+		await expect(mainWindow.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ })).toHaveCount(0);
 		const snapButton = mainWindow.getByRole("button", {
 			name: /Disable grid snapping|关闭网格吸附/,
 		});

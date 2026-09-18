@@ -1,19 +1,17 @@
 import { Input, InputNumber, Select, Tag, Typography } from "antd";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
-import { Icon } from "@/assets/icons";
+import { Handle, Position, useUpdateNodeInternals, type Node, type NodeProps } from "@xyflow/react";
 import type {
 	FlowDocumentNode,
 	FlowDocumentNodeRun,
 	FlowDocumentNodeStatus,
+	FlowNodeOutputDefinition,
+	FlowNodeParameterDefinition,
 	FlowNodePortDefinition,
 	FlowNodeTypeDefinition,
 } from "@/platform/rpc/types";
-import type {
-	ProviderModelInfo,
-	ProviderModelSelection,
-} from "@/platform/rpc/provider-api";
+import type { ProviderModelInfo, ProviderModelSelection } from "@/platform/rpc/provider-api";
 import MarkdownContent from "@/widgets/markdown/MarkdownContent";
 import styles from "./FlowNodes.module.css";
 
@@ -27,6 +25,7 @@ export type FlowCanvasNodeData = {
 	nodeRun: FlowDocumentNodeRun | null;
 	definition: FlowNodeTypeDefinition | null;
 	editorOptions: FlowNodeEditorOptions;
+	connectedInputIds: ReadonlySet<string>;
 	matched: boolean;
 	locked: boolean;
 	onUpdate: (nodeId: string, patch: Record<string, unknown>) => void;
@@ -70,22 +69,24 @@ function headerColor(typeId: string): string {
 	return `hsl(${Math.abs(hash) % 360} 68% 38%)`;
 }
 
-export function resolveFlowDefinitionPorts(
+export function resolveFlowDefinitionParameters(
 	definition: FlowNodeTypeDefinition,
 	config: Record<string, unknown>,
-): FlowNodePortDefinition[] {
-	const ports = definition.ports.map((port): FlowNodePortDefinition => ({ ...port, dataTypes: [...port.dataTypes] }));
-	for (const dynamic of definition.dynamicPorts ?? []) {
+): FlowNodeParameterDefinition[] {
+	const parameters = definition.parameters.map(
+		(parameter): FlowNodeParameterDefinition => structuredClone(parameter),
+	);
+	for (const dynamic of definition.dynamicParameters ?? []) {
 		const values = config[dynamic.configField];
 		if (!Array.isArray(values)) continue;
-		for (const value of values.slice(0, 64 - ports.length)) {
+		for (const value of values.slice(0, 64 - parameters.length)) {
 			if (typeof value !== "object" || value === null || Array.isArray(value)) continue;
 			const record = value as Record<string, unknown>;
 			const id = record[dynamic.idField];
 			if (
 				typeof id !== "string" ||
 				id.length === 0 ||
-				ports.some((port): boolean => port.id === id && port.direction === dynamic.direction)
+				parameters.some((parameter): boolean => parameter.id === id)
 			)
 				continue;
 			const configuredType = dynamic.dataTypeField === undefined ? undefined : record[dynamic.dataTypeField];
@@ -95,10 +96,10 @@ export function resolveFlowDefinitionPorts(
 					? [configuredType]
 					: [...dynamic.dataTypes];
 			const label = record[dynamic.labelField];
-			ports.push({
+			parameters.push({
 				id,
 				label: typeof label === "string" && label.length > 0 ? label : id,
-				direction: dynamic.direction,
+				mode: "connection",
 				dataTypes,
 				required: dynamic.required,
 				multiple: dynamic.multiple,
@@ -106,6 +107,38 @@ export function resolveFlowDefinitionPorts(
 			});
 		}
 	}
+	return parameters;
+}
+
+export function resolveFlowDefinitionPorts(
+	definition: FlowNodeTypeDefinition,
+	config: Record<string, unknown>,
+): FlowNodePortDefinition[] {
+	const ports = resolveFlowDefinitionParameters(definition, config).flatMap((parameter): FlowNodePortDefinition[] =>
+		parameter.mode === "fixed"
+			? []
+			: [
+					{
+						id: parameter.id,
+						label: parameter.label,
+						direction: "input",
+						dataTypes: [...parameter.dataTypes],
+						required: parameter.required,
+						multiple: parameter.multiple,
+						defaultConnect: parameter.defaultConnect,
+					},
+				],
+	);
+	for (const output of definition.outputs)
+		ports.push({
+			id: output.id,
+			label: output.label,
+			direction: "output",
+			dataTypes: [...output.dataTypes],
+			required: false,
+			multiple: true,
+			defaultConnect: output.defaultConnect,
+		});
 	return ports;
 }
 
@@ -113,8 +146,7 @@ export function resolveFlowCanvasPorts(
 	node: FlowDocumentNode,
 	definition: FlowNodeTypeDefinition | null,
 ): FlowNodePortDefinition[] {
-	if (definition === null || (definition.dynamicPorts?.length ?? 0) === 0)
-		return node.ports.length > 0 ? node.ports : (definition?.ports ?? []);
+	if (definition === null) return node.ports;
 	return resolveFlowDefinitionPorts(definition, node.config);
 }
 
@@ -163,12 +195,16 @@ function JsonField({
 function SchemaEditor({
 	node,
 	definition,
+	parameters,
+	connectedInputIds,
 	editorOptions,
 	disabled,
 	onChange,
 }: {
 	node: FlowDocumentNode;
 	definition: FlowNodeTypeDefinition;
+	parameters: FlowNodeParameterDefinition[];
+	connectedInputIds: ReadonlySet<string>;
 	editorOptions: FlowNodeEditorOptions;
 	disabled: boolean;
 	onChange: (config: Record<string, unknown>) => void;
@@ -181,9 +217,12 @@ function SchemaEditor({
 		configRef.current = node.config;
 		setConfig(node.config);
 	}, [node.config]);
-	useEffect((): (() => void) => (): void => {
-		if (commitTimerRef.current !== null) window.clearTimeout(commitTimerRef.current);
-	}, []);
+	useEffect(
+		(): (() => void) => (): void => {
+			if (commitTimerRef.current !== null) window.clearTimeout(commitTimerRef.current);
+		},
+		[],
+	);
 	const commitConfig = (next: Record<string, unknown>): void => {
 		if (commitTimerRef.current !== null) window.clearTimeout(commitTimerRef.current);
 		commitTimerRef.current = null;
@@ -209,7 +248,8 @@ function SchemaEditor({
 	if (modelId.length > 0 && !modelOptions.some((option): boolean => option.value === modelId))
 		modelOptions.unshift({ value: modelId, label: modelId });
 	const selectedModel = modelCatalog.find((model): boolean => model.id === modelId);
-	const configuredEfforts = selectedModel?.customization?.reasoningEfforts ?? selectedModel?.capabilities.reasoningEfforts ?? [];
+	const configuredEfforts =
+		selectedModel?.customization?.reasoningEfforts ?? selectedModel?.capabilities.reasoningEfforts ?? [];
 	const currentEffort = typeof config.reasoningEffort === "string" ? config.reasoningEffort : "";
 	const effortOptions = [
 		{ value: "", label: t("flow.editor.modelDefault", { defaultValue: "Default" }) },
@@ -217,150 +257,182 @@ function SchemaEditor({
 	];
 	if (currentEffort.length > 0 && !effortOptions.some((option): boolean => option.value === currentEffort))
 		effortOptions.push({ value: currentEffort, label: currentEffort });
+	const properties = readSchemaProperties(definition.configSchema);
+	const renderControl = (key: string, schema: Record<string, unknown>, title: string): React.JSX.Element => {
+		const control = schema["x-daedalus-control"];
+		if (control === "provider")
+			return (
+				<Select
+					className="nodrag"
+					disabled={disabled}
+					value={providerId || undefined}
+					placeholder={title}
+					options={providerOptions}
+					showSearch
+					onChange={(value): void => {
+						const nextProvider = editorOptions.modelSelection?.providers.find(
+							(candidate): boolean => candidate.provider === value,
+						);
+						const nextModel = nextProvider?.selectedModel ?? nextProvider?.defaultModel ?? "";
+						const nextModelInfo = editorOptions.modelsByProvider[value]?.find(
+							(candidate): boolean => candidate.id === nextModel,
+						);
+						const nextEffort =
+							(
+								nextModelInfo?.customization?.reasoningEfforts ??
+								nextModelInfo?.capabilities.reasoningEfforts ??
+								[]
+							).find((effort): boolean => effort.default === true)?.id ?? "";
+						const next = {
+							...configRef.current,
+							provider: value,
+							model: nextModel,
+							reasoningEffort: nextEffort,
+						};
+						configRef.current = next;
+						setConfig(next);
+						commitConfig(next);
+					}}
+				/>
+			);
+		if (control === "model")
+			return (
+				<Select
+					className="nodrag"
+					disabled={disabled || providerId.length === 0}
+					value={modelId || undefined}
+					placeholder={title}
+					options={modelOptions}
+					showSearch
+					onChange={(value): void => update(key, value)}
+				/>
+			);
+		if (control === "reasoning-effort")
+			return (
+				<Select
+					className="nodrag"
+					disabled={disabled || modelId.length === 0}
+					value={currentEffort}
+					placeholder={title}
+					options={effortOptions}
+					onChange={(value): void => update(key, value)}
+				/>
+			);
+		const enumValues = Array.isArray(schema.enum)
+			? schema.enum.filter(
+					(value): value is string | number => typeof value === "string" || typeof value === "number",
+				)
+			: [];
+		if (enumValues.length > 0)
+			return (
+				<Select
+					className="nodrag"
+					disabled={disabled}
+					value={config[key] as string | number | undefined}
+					placeholder={title}
+					options={enumValues.map((value) => ({ value, label: String(value) }))}
+					onChange={(value): void => update(key, value)}
+				/>
+			);
+		if (schema.type === "boolean")
+			return (
+				<Select
+					className="nodrag"
+					disabled={disabled}
+					value={typeof config[key] === "boolean" ? config[key] : undefined}
+					placeholder={title}
+					options={[
+						{ value: true, label: `${title}: true` },
+						{ value: false, label: `${title}: false` },
+					]}
+					onChange={(value): void => update(key, value)}
+				/>
+			);
+		if (schema.type === "number" || schema.type === "integer")
+			return (
+				<InputNumber
+					className="nodrag"
+					disabled={disabled}
+					value={typeof config[key] === "number" ? config[key] : undefined}
+					placeholder={title}
+					min={typeof schema.minimum === "number" ? schema.minimum : undefined}
+					max={typeof schema.maximum === "number" ? schema.maximum : undefined}
+					onChange={(value): void => update(key, value)}
+				/>
+			);
+		if (schema.type === "object" || schema.type === "array")
+			return (
+				<JsonField
+					name={title}
+					value={config[key]}
+					disabled={disabled}
+					onChange={(value): void => update(key, value)}
+				/>
+			);
+		const multiline =
+			key.toLocaleLowerCase().includes("text") ||
+			key.toLocaleLowerCase().includes("prompt") ||
+			key.toLocaleLowerCase().includes("template") ||
+			key === "stdin";
+		if (multiline)
+			return (
+				<Input.TextArea
+					className="nodrag"
+					disabled={disabled}
+					value={typeof config[key] === "string" ? config[key] : ""}
+					placeholder={title}
+					autoSize={{ minRows: 2, maxRows: 8 }}
+					onChange={(event): void => update(key, event.target.value, false)}
+					onBlur={(): void => commitConfig(configRef.current)}
+				/>
+			);
+		return (
+			<Input
+				className="nodrag"
+				disabled={disabled}
+				value={typeof config[key] === "string" ? config[key] : ""}
+				placeholder={title}
+				onChange={(event): void => update(key, event.target.value, false)}
+				onBlur={(): void => commitConfig(configRef.current)}
+			/>
+		);
+	};
 	return (
-		<div className={styles.compactFields}>
-			{Object.entries(readSchemaProperties(definition.configSchema)).map(([key, schema]): React.JSX.Element => {
-				const title = typeof schema.title === "string" ? schema.title : key.replaceAll("_", " ");
-				const control = schema["x-daedalus-control"];
-				if (control === "provider")
-					return (
-						<Select
-							key={key}
-							className="nodrag"
-							disabled={disabled}
-							value={providerId || undefined}
-							placeholder={title}
-							options={providerOptions}
-							showSearch
-							optionFilterProp="label"
-							onChange={(value): void => {
-								const nextProvider = editorOptions.modelSelection?.providers.find(
-									(candidate): boolean => candidate.provider === value,
-								);
-								const nextModel = nextProvider?.selectedModel ?? nextProvider?.defaultModel ?? "";
-								const nextModelInfo = editorOptions.modelsByProvider[value]?.find(
-									(candidate): boolean => candidate.id === nextModel,
-								);
-								const nextEffort = (
-									nextModelInfo?.customization?.reasoningEfforts ??
-									nextModelInfo?.capabilities.reasoningEfforts ??
-									[]
-								).find((effort): boolean => effort.default === true)?.id ?? "";
-								const next = { ...configRef.current, provider: value, model: nextModel, reasoningEffort: nextEffort };
-								configRef.current = next;
-								setConfig(next);
-								commitConfig(next);
-							}}
-						/>
-					);
-				if (control === "model")
-					return (
-						<Select
-							key={key}
-							className="nodrag"
-							disabled={disabled || providerId.length === 0}
-							value={modelId || undefined}
-							placeholder={title}
-							options={modelOptions}
-							showSearch
-							optionFilterProp="label"
-							onChange={(value): void => update(key, value)}
-						/>
-					);
-				if (control === "reasoning-effort")
-					return (
-						<Select
-							key={key}
-							className="nodrag"
-							disabled={disabled || modelId.length === 0}
-							value={currentEffort}
-							placeholder={title}
-							options={effortOptions}
-							onChange={(value): void => update(key, value)}
-						/>
-					);
-				const enumValues = Array.isArray(schema.enum)
-					? schema.enum.filter(
-							(value): value is string | number => typeof value === "string" || typeof value === "number",
-						)
-					: [];
-				if (enumValues.length > 0)
-					return (
-						<Select
-							key={key}
-							className="nodrag"
-							disabled={disabled}
-							value={config[key] as string | number | undefined}
-							placeholder={title}
-							options={enumValues.map((value) => ({ value, label: String(value) }))}
-							onChange={(value): void => update(key, value)}
-						/>
-					);
-				if (schema.type === "boolean")
-					return (
-						<Select
-							key={key}
-							className="nodrag"
-							disabled={disabled}
-							value={typeof config[key] === "boolean" ? config[key] : undefined}
-							placeholder={title}
-							options={[
-								{ value: true, label: `${title}: true` },
-								{ value: false, label: `${title}: false` },
-							]}
-							onChange={(value): void => update(key, value)}
-						/>
-					);
-				if (schema.type === "number" || schema.type === "integer")
-					return (
-						<InputNumber
-							key={key}
-							className="nodrag"
-							disabled={disabled}
-							value={typeof config[key] === "number" ? config[key] : undefined}
-							placeholder={title}
-							min={typeof schema.minimum === "number" ? schema.minimum : undefined}
-							max={typeof schema.maximum === "number" ? schema.maximum : undefined}
-							onChange={(value): void => update(key, value)}
-						/>
-					);
-				if (schema.type === "object" || schema.type === "array")
-					return (
-						<JsonField
-							key={key}
-							name={title}
-							value={config[key]}
-							disabled={disabled}
-							onChange={(value): void => update(key, value)}
-						/>
-					);
-				const multiline =
-					key.toLocaleLowerCase().includes("text") ||
-					key.toLocaleLowerCase().includes("prompt") ||
-					key.toLocaleLowerCase().includes("template");
-				if (multiline)
-					return (
-						<Input.TextArea
-							key={key}
-							className="nodrag"
-							disabled={disabled}
-							value={typeof config[key] === "string" ? config[key] : ""}
-							placeholder={title}
-							autoSize={{ minRows: 2, maxRows: 8 }}
-							onChange={(event): void => update(key, event.target.value, false)}
-							onBlur={(): void => commitConfig(configRef.current)}
-						/>
-					);
+		<div className={styles.parameterList}>
+			{parameters.map((parameter): React.JSX.Element => {
+				const connectable = parameter.mode !== "fixed";
+				const connected = connectable && connectedInputIds.has(parameter.id);
+				const configField = parameter.mode === "connection" ? null : parameter.configField;
+				const schema = configField === null ? undefined : properties[configField];
+				const hidesControl =
+					parameter.mode === "connection" ||
+					(parameter.mode === "hybrid" && connected && parameter.hideControlWhenConnected);
 				return (
-					<Input
-						key={key}
-						className="nodrag"
-						disabled={disabled}
-						value={typeof config[key] === "string" ? config[key] : ""}
-						placeholder={title}
-						onChange={(event): void => update(key, event.target.value, false)}
-						onBlur={(): void => commitConfig(configRef.current)}
-					/>
+					<div
+						key={parameter.id}
+						className={`${styles.parameterRow} ${hidesControl ? styles.parameterRowConnectionOnly : ""}`}
+						data-parameter-mode={parameter.mode}
+						data-parameter-connected={connected ? "true" : "false"}
+					>
+						<span className={styles.parameterSocket}>
+							{connectable ? (
+								<Handle
+									id={parameter.id}
+									type="target"
+									position={Position.Left}
+									className={styles.parameterHandle}
+									data-flow-port-id={parameter.id}
+									data-flow-port-type={parameter.dataTypes[0]}
+								/>
+							) : null}
+						</span>
+						<span className={styles.parameterLabel}>{parameter.label}</span>
+						{!hidesControl && configField !== null && schema !== undefined ? (
+							<div className={styles.parameterControl}>
+								{renderControl(configField, schema, parameter.label)}
+							</div>
+						) : null}
+					</div>
 				);
 			})}
 		</div>
@@ -434,6 +506,8 @@ function pluginUiHost(pluginId: string): string {
 function SandboxEditor({
 	node,
 	definition,
+	parameters,
+	connectedInputIds,
 	editorOptions,
 	disabled,
 	onChange,
@@ -441,6 +515,8 @@ function SandboxEditor({
 }: {
 	node: FlowDocumentNode;
 	definition: FlowNodeTypeDefinition & { ui: { kind: "sandbox"; entry: string; actions: string[] } };
+	parameters: FlowNodeParameterDefinition[];
+	connectedInputIds: ReadonlySet<string>;
 	editorOptions: FlowNodeEditorOptions;
 	disabled: boolean;
 	onChange: (config: Record<string, unknown>) => void;
@@ -455,6 +531,7 @@ function SandboxEditor({
 		(): string => `plugin-ui://${host}/${definition.ui.entry.replace(/^\.\//u, "")}`,
 		[definition.ui.entry, host],
 	);
+	const connectedInputKey = [...connectedInputIds].sort().join("\u0000");
 	useEffect((): (() => void) => {
 		const receive = (event: MessageEvent): void => {
 			// An iframe without allow-same-origin intentionally has an opaque origin.
@@ -505,60 +582,106 @@ function SandboxEditor({
 		window.addEventListener("message", receive);
 		return (): void => window.removeEventListener("message", receive);
 	}, [definition.configSchema, definition.ui.actions, disabled, host, node.config, onAction, onChange]);
+	useEffect((): void => {
+		iframeRef.current?.contentWindow?.postMessage(
+			{
+				type: "daedalus.flow.update",
+				readOnly: disabled,
+				config: node.config,
+				connectedInputIds: [...connectedInputIds],
+			},
+			"*",
+		);
+	}, [connectedInputIds, connectedInputKey, disabled, node.config]);
 	if (failed)
 		return (
 			<SchemaEditor
 				node={node}
 				definition={definition}
+				parameters={parameters}
+				connectedInputIds={connectedInputIds}
 				editorOptions={editorOptions}
 				disabled={disabled}
 				onChange={onChange}
 			/>
 		);
 	return (
-		<iframe
-			ref={iframeRef}
-			className={`${styles.pluginEditor} nodrag nowheel`}
-			style={{ height }}
-			src={source}
-			sandbox="allow-scripts"
-			title={definition.defaultTitle}
-			onError={(): void => setFailed(true)}
-			onLoad={(): void => {
-				iframeRef.current?.contentWindow?.postMessage(
-					{
-						type: "daedalus.flow.init",
-						version: 1,
-						theme: document.documentElement.dataset.theme ?? "system",
-						language: i18n.resolvedLanguage ?? i18n.language,
-						readOnly: disabled,
-						config: node.config,
-					},
-					"*",
-				);
-			}}
-		/>
+		<>
+			<div className={styles.parameterList}>
+				{parameters
+					.filter((parameter): boolean => parameter.mode !== "fixed")
+					.map(
+						(parameter): React.JSX.Element => (
+							<div
+								className={`${styles.parameterRow} ${styles.parameterRowConnectionOnly}`}
+								key={parameter.id}
+							>
+								<span className={styles.parameterSocket}>
+									<Handle
+										id={parameter.id}
+										type="target"
+										position={Position.Left}
+										className={styles.parameterHandle}
+										data-flow-port-id={parameter.id}
+										data-flow-port-type={
+											parameter.mode === "fixed" ? undefined : parameter.dataTypes[0]
+										}
+									/>
+								</span>
+								<span className={styles.parameterLabel}>{parameter.label}</span>
+							</div>
+						),
+					)}
+			</div>
+			<iframe
+				ref={iframeRef}
+				className={`${styles.pluginEditor} nodrag nowheel`}
+				style={{ height }}
+				src={source}
+				sandbox="allow-scripts"
+				title={definition.defaultTitle}
+				onError={(): void => setFailed(true)}
+				onLoad={(): void => {
+					iframeRef.current?.contentWindow?.postMessage(
+						{
+							type: "daedalus.flow.init",
+							version: 1,
+							theme: document.documentElement.dataset.theme ?? "system",
+							language: i18n.resolvedLanguage ?? i18n.language,
+							readOnly: disabled,
+							config: node.config,
+							connectedInputIds: [...connectedInputIds],
+						},
+						"*",
+					);
+				}}
+			/>
+		</>
 	);
 }
 
-function PortRail({ ports, type }: { ports: FlowNodePortDefinition[]; type: "source" | "target" }): React.JSX.Element {
+function OutputRows({ outputs }: { outputs: FlowNodeOutputDefinition[] }): React.JSX.Element | null {
+	if (outputs.length === 0) return null;
 	return (
-		<div className={`${styles.portRail} ${type === "target" ? styles.portRailLeft : styles.portRailRight}`}>
-			{ports.map(
-				(port): React.JSX.Element => (
+		<div className={styles.outputList}>
+			{outputs.map(
+				(output): React.JSX.Element => (
 					<div
-						className={styles.portItem}
-						key={port.id}
-						title={`${port.label} · ${port.dataTypes.join("/")}`}
+						className={styles.outputRow}
+						key={output.id}
+						title={`${output.label} · ${output.dataTypes.join("/")}`}
 					>
-						<Handle
-							id={port.id}
-							type={type}
-							position={type === "target" ? Position.Left : Position.Right}
-							className={styles.nodeHandle}
-							data-flow-port-id={port.id}
-						/>
-						<span>{port.label}</span>
+						<span className={styles.outputLabel}>{output.label}</span>
+						<span className={styles.outputSocket}>
+							<Handle
+								id={output.id}
+								type="source"
+								position={Position.Right}
+								className={styles.parameterHandle}
+								data-flow-port-id={output.id}
+								data-flow-port-type={output.dataTypes[0]}
+							/>
+						</span>
 					</div>
 				),
 			)}
@@ -569,19 +692,47 @@ function PortRail({ ports, type }: { ports: FlowNodePortDefinition[]; type: "sou
 function FlowNodeCard({ data }: NodeProps<FlowCanvasNode>): React.JSX.Element {
 	const { t } = useTranslation();
 	const { flowNode, definition } = data;
-	const ports = useMemo(
-		(): FlowNodePortDefinition[] => resolveFlowCanvasPorts(flowNode, definition),
+	const updateNodeInternals = useUpdateNodeInternals();
+	const parameters = useMemo(
+		(): FlowNodeParameterDefinition[] =>
+			definition === null
+				? flowNode.ports
+						.filter((port): boolean => port.direction === "input")
+						.map(
+							(port): FlowNodeParameterDefinition => ({
+								id: port.id,
+								label: port.label,
+								mode: "connection",
+								dataTypes: [...port.dataTypes],
+								required: port.required,
+								multiple: port.multiple,
+								defaultConnect: port.defaultConnect,
+							}),
+						)
+				: resolveFlowDefinitionParameters(definition, flowNode.config),
 		[definition, flowNode],
 	);
-	const inputPorts = useMemo(
-		(): FlowNodePortDefinition[] => ports.filter((port): boolean => port.direction === "input"),
-		[ports],
+	const outputs = useMemo(
+		(): FlowNodeOutputDefinition[] =>
+			definition === null
+				? flowNode.ports
+						.filter((port): boolean => port.direction === "output")
+						.map(
+							(port): FlowNodeOutputDefinition => ({
+								id: port.id,
+								label: port.label,
+								dataTypes: [...port.dataTypes],
+								defaultConnect: port.defaultConnect,
+							}),
+						)
+				: definition.outputs,
+		[definition, flowNode.ports],
 	);
-	const outputPorts = useMemo(
-		(): FlowNodePortDefinition[] => ports.filter((port): boolean => port.direction === "output"),
-		[ports],
+	const handleLayoutKey = `${outputs.map((output): string => output.id).join("|")}:${parameters.map((parameter): string => `${parameter.id}:${data.connectedInputIds.has(parameter.id) ? 1 : 0}`).join("|")}`;
+	useEffect(
+		(): void => updateNodeInternals(flowNode.nodeId),
+		[flowNode.nodeId, handleLayoutKey, updateNodeInternals],
 	);
-	const portAreaHeight = Math.max(inputPorts.length, outputPorts.length) * 32;
 	const isOutputNode = flowNode.typeId === "builtin/output";
 	const outputMarkdown =
 		data.nodeRun?.output === null || data.nodeRun?.output === undefined
@@ -590,7 +741,6 @@ function FlowNodeCard({ data }: NodeProps<FlowCanvasNode>): React.JSX.Element {
 	const updateConfig = (config: Record<string, unknown>): void => data.onUpdate(flowNode.nodeId, { config });
 	return (
 		<div className={styles.nodeShell} data-flow-node-id={flowNode.nodeId}>
-			<PortRail ports={inputPorts} type="target" />
 			<article
 				className={`${styles.nodeCard} ${data.matched ? styles.nodeCardMatched : ""} ${definition === null ? styles.unknownNode : ""}`}
 				data-node-type={flowNode.typeId}
@@ -602,9 +752,7 @@ function FlowNodeCard({ data }: NodeProps<FlowCanvasNode>): React.JSX.Element {
 					</Tag>
 				</header>
 				<div className={styles.body}>
-					{portAreaHeight > 0 ? (
-						<div className={styles.portSpacer} style={{ height: portAreaHeight }} aria-hidden />
-					) : null}
+					<OutputRows outputs={outputs} />
 					{definition === null ? (
 						<NodeSummary node={flowNode} definition={definition} />
 					) : definition.ui.kind === "sandbox" ? (
@@ -615,6 +763,8 @@ function FlowNodeCard({ data }: NodeProps<FlowCanvasNode>): React.JSX.Element {
 									ui: { kind: "sandbox"; entry: string; actions: string[] };
 								}
 							}
+							parameters={parameters}
+							connectedInputIds={data.connectedInputIds}
 							editorOptions={data.editorOptions}
 							disabled={data.locked}
 							onChange={updateConfig}
@@ -624,6 +774,8 @@ function FlowNodeCard({ data }: NodeProps<FlowCanvasNode>): React.JSX.Element {
 						<SchemaEditor
 							node={flowNode}
 							definition={definition}
+							parameters={parameters}
+							connectedInputIds={data.connectedInputIds}
 							editorOptions={data.editorOptions}
 							disabled={data.locked}
 							onChange={updateConfig}
@@ -648,7 +800,6 @@ function FlowNodeCard({ data }: NodeProps<FlowCanvasNode>): React.JSX.Element {
 					) : null}
 				</div>
 			</article>
-			<PortRail ports={outputPorts} type="source" />
 		</div>
 	);
 }

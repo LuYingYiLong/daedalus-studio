@@ -9,7 +9,6 @@
 
 .pickerOverlay {
 	position: relative;
-	width: min(360px, calc(100vw - 24px));
 	max-height: min(540px, calc(100vh - 24px));
 	padding: var(--ds-space-2);
 	overflow: visible;

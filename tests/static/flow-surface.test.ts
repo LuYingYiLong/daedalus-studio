@@ -8,6 +8,15 @@ describe("Flow home surface", (): void => {
 		const surface = readRepoFile("src", "renderer", "src", "widgets", "flow", "HomeFlowSurface.tsx");
 		const welcome = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowWelcome.tsx");
 		const nodes = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodes.tsx");
+		const nodeStyles = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodes.module.css");
+		const surfaceStyles = readRepoFile(
+			"src",
+			"renderer",
+			"src",
+			"widgets",
+			"flow",
+			"HomeFlowSurface.module.css",
+		);
 		const picker = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodePicker.tsx");
 		const shortcutSettings = readRepoFile("src", "renderer", "src", "widgets", "settings", "pages", "studio", "KeyboardShortcutsSettingsPage.tsx");
 		const controller = readRepoFile("src", "renderer", "src", "features", "home", "flow", "useHomeFlowController.ts");
@@ -19,10 +28,22 @@ describe("Flow home surface", (): void => {
 		expect(surface).toContain("sourceHandle: edge.sourcePort");
 		expect(surface).toContain("targetHandle: edge.targetPort");
 		expect(surface).toContain("onConnectEnd={onConnectEnd}");
+		expect(surface).toContain("onReconnect={onReconnect}");
+		expect(surface).toContain("onReconnectEnd={onReconnectEnd}");
+		expect(surface).toContain("edgesReconnectable={!controller.isGraphLocked}");
+		expect(surface).toContain("detachedEdgeIdRef.current");
+		expect(surface).toContain("detachedConnectionSourceRef.current");
+		expect(surface).toContain("connectionLineComponent={connectionLineComponent}");
+		expect(surface).toContain("setReconnectingEdgeId(detachedEdge.edgeId)");
 		expect(surface).toContain("createConnectedNode");
 		expect(surface).toContain("onMoveEnd={onMoveEnd}");
 		expect(surface).not.toContain("viewportSaveTimerRef");
 		expect(surface).toContain("onMoveStart={onMoveStart}");
+		expect(surface).toContain('setAttribute("data-flow-moving", "true")');
+		expect(surface).not.toContain("setIsViewportMoving");
+		expect(surface).not.toContain("requestAnimationFrame(sampleFrame)");
+		expect(surface).toContain('performance.clearMeasures("daedalus.flow.interaction")');
+		expect(surface).toContain("onlyRenderVisibleElements={nodes.length >= 80}");
 		expect(surface).not.toContain("MiniMap");
 		expect(surface).toContain("menu={approvalModeMenu}");
 		expect(surface).toContain('running ? "stop" : "play"');
@@ -52,7 +73,11 @@ describe("Flow home surface", (): void => {
 		expect(nodes).toContain('control === "reasoning-effort"');
 		expect(surface).toContain("commitActiveEditor");
 		expect(surface).toContain("listProviderModels");
-		expect(nodes).toContain("id={port.id}");
+		expect(nodes).toContain("id={parameter.id}");
+		expect(nodes).toContain("id={output.id}");
+		expect(nodes).toContain("connectedInputIds.has(parameter.id)");
+		expect(nodes).toContain("parameter.hideControlWhenConnected");
+		expect(nodes).toContain("useUpdateNodeInternals");
 		expect(nodes).not.toContain("<Collapse");
 		expect(nodes).not.toContain("data.onDelete");
 		expect(nodes).not.toContain("draftTitle");
@@ -62,6 +87,17 @@ describe("Flow home surface", (): void => {
 		expect(nodes).toContain("<MarkdownContent>{outputMarkdown}</MarkdownContent>");
 		expect(nodes).toContain('format === "json"');
 		expect(nodes).not.toContain("resultPreview");
+		expect(nodeStyles).toContain("grid-template-columns: minmax(72px, auto) minmax(0, 1fr);");
+		expect(nodeStyles).not.toContain("grid-template-columns: 12px");
+		expect(nodeStyles).toContain("left: calc(0px - var(--ds-space-3) - 1px);");
+		expect(nodeStyles).toContain("transform: translate(-50%, -50%) !important;");
+		expect(nodeStyles).not.toContain(".nodeCard:hover");
+		expect(nodeStyles).not.toContain("transition:");
+		expect(nodeStyles).not.toContain("overflow-clip-margin");
+		expect(surfaceStyles).toContain(".canvasRegion :global(.react-flow__viewport)");
+		expect(surfaceStyles).toContain("will-change: transform;");
+		expect(surfaceStyles).toContain("backface-visibility: hidden;");
+		expect(surfaceStyles).not.toContain("box-shadow: none;");
 		expect(picker).toContain("<Dropdown");
 		expect(picker).toContain("popupRender=");
 		expect(picker).toContain("children: categoryDefinitions.map");
@@ -73,13 +109,15 @@ describe("Flow home surface", (): void => {
 		expect(picker).toContain("motionLeave: false");
 		expect(picker).toContain("onTitleMouseEnter:");
 		expect(picker).not.toContain("flow.editor.picker.hint");
-		expect(nodes).toContain("portSpacer");
+		expect(nodes).not.toContain("portSpacer");
 		expect(nodes).not.toContain("selected && definition !== null");
 		expect(surface).toContain("clientX + FLOW_NODE_CREATE_OFFSET");
 		expect(shortcutSettings).toContain("SHORTCUT_DEFINITIONS");
 		expect(shortcutSettings).not.toContain("FlowShortcutReference");
 		expect(controller).toContain("next = applyFlowOperation(next, operation");
 		expect(controller).toContain("flowOperationOutbox.enqueue");
+		expect(controller).toContain("const reconnectEdge = useCallback");
+		expect(controller).toContain("applyOperations([");
 		expect(api).toContain('"flow.patch.commit"');
 		expect(api).toContain('"flow.run.start"');
 		expect(api).not.toContain('"flow.node.create"');

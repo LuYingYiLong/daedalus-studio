@@ -131,7 +131,16 @@
 	will-change: transform;
 }
 
-.canvasMoving :global(.react-flow__edge.animated path) {
+.canvasRegion :global(.react-flow__viewport) {
+	will-change: transform;
+	backface-visibility: hidden;
+}
+
+.canvasRegion[data-flow-moving="true"] :global(.react-flow__node) {
+	pointer-events: none;
+}
+
+.canvasRegion[data-flow-moving="true"] :global(.react-flow__edge.animated path) {
 	animation-play-state: paused;
 }
 
