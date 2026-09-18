@@ -4,6 +4,7 @@ import { archiveFlow, commitFlowPatch, createFlow, exportFlowToSession, fetchFlo
 import { onBackendEvent, onBackendReconnected } from "@/platform/rpc/transport/backend-client";
 import type { FlowDocumentSummary, FlowDocument, FlowDocumentEdge, FlowDocumentNode, FlowDocumentNodeRun, FlowDocumentRun, FlowDocumentSnapshot, FlowNodeTypeId, FlowNodeTypeDefinition, FlowToolDefinition, FlowApproval, FlowOperation, FlowTreeOrder, FlowTreeOrderUpdate, SessionMetadata } from "@/platform/rpc/types";
 import { createFlowMutationId, flowOperationOutbox } from "@/domain/flow/flow-operation-outbox";
+import { applyFlowRunFinished, markActiveFlowRead, removeUnreadFlows } from "@/domain/flow/flow-unread";
 
 export type FlowNodeDetail = { node: FlowDocumentNode };
 
@@ -17,6 +18,7 @@ export type HomeFlowController = {
 	flows: FlowDocumentSummary[];
 	flowOrder: FlowTreeOrder | null;
 	flowRuntimeStatusById: Readonly<Record<string, "running" | "failed" | "completed">>;
+	unreadFlowIds: ReadonlySet<string>;
 	snapshot: FlowDocumentSnapshot | null;
 	nodeDefinitions: FlowNodeTypeDefinition[];
 	tools: FlowToolDefinition[];
@@ -202,6 +204,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	const [flows, setFlows] = useState<FlowDocumentSummary[]>([]);
 	const [flowOrder, setFlowOrder] = useState<FlowTreeOrder | null>(null);
 	const [flowRuntimeStatusById, setFlowRuntimeStatusById] = useState<Record<string, "running" | "failed" | "completed">>({});
+	const [unreadFlowIds, setUnreadFlowIds] = useState<ReadonlySet<string>>(() => new Set<string>());
 	const [snapshot, setSnapshot] = useState<FlowDocumentSnapshot | null>(null);
 	const [nodeDefinitions, setNodeDefinitions] = useState<FlowNodeTypeDefinition[]>([]);
 	const [tools, setTools] = useState<FlowToolDefinition[]>([]);
@@ -214,6 +217,8 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	const snapshotRef = useRef<FlowDocumentSnapshot | null>(null);
 	const nodeDefinitionsRef = useRef<FlowNodeTypeDefinition[]>([]);
 	const selectedFlowIdRef = useRef<string | null>(null);
+	const enabledRef = useRef<boolean>(enabled);
+	const windowFocusedRef = useRef<boolean>(document.hasFocus());
 	const refreshRef = useRef<() => Promise<void>>(() => Promise.resolve());
 	const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
 	const ignoreFlowEventsUntilRef = useRef<number>(0);
@@ -221,6 +226,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	const redoStackRef = useRef<FlowHistoryCommand[]>([]);
 	const isGraphLocked = snapshot?.runs.some((run): boolean => run.status === "queued" || run.status === "running" || run.status === "waiting") ?? false;
 	nodeDefinitionsRef.current = nodeDefinitions;
+	enabledRef.current = enabled;
 
 	const loadFlowResources = useCallback(async (flowId: string): Promise<void> => {
 		const [nodeResult, toolResult, approvalResult] = await Promise.all([listFlowNodeTypes({ flowId }), listFlowTools(flowId), listFlowApprovals(flowId)]);
@@ -332,6 +338,33 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		};
 	}, [applySnapshot]);
 
+	useEffect((): (() => void) => {
+		const handleWindowFocus = (): void => {
+			windowFocusedRef.current = true;
+			setUnreadFlowIds((currentFlowIds): ReadonlySet<string> =>
+				markActiveFlowRead(
+					currentFlowIds,
+					selectedFlowIdRef.current,
+					enabledRef.current,
+					true,
+				),
+			);
+		};
+		const handleWindowBlur = (): void => {
+			windowFocusedRef.current = false;
+		};
+
+		window.addEventListener("focus", handleWindowFocus);
+		window.addEventListener("blur", handleWindowBlur);
+		if (document.hasFocus()) handleWindowFocus();
+		else handleWindowBlur();
+
+		return (): void => {
+			window.removeEventListener("focus", handleWindowFocus);
+			window.removeEventListener("blur", handleWindowBlur);
+		};
+	}, []);
+
 	const refresh = useCallback(async (): Promise<void> => {
 		setIsLoading(true);
 		setError(null);
@@ -363,6 +396,16 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		void refresh();
 	}, [enabled, refresh]);
 	useEffect((): void => {
+		setUnreadFlowIds((currentFlowIds): ReadonlySet<string> =>
+			markActiveFlowRead(
+				currentFlowIds,
+				snapshot?.flow.flowId ?? null,
+				enabled,
+				windowFocusedRef.current,
+			),
+		);
+	}, [enabled, snapshot?.flow.flowId]);
+	useEffect((): void => {
 		const flowId = snapshot?.flow.flowId;
 		if (!enabled || flowId === undefined) {
 			setNodeDefinitions([]);
@@ -378,7 +421,29 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		void onBackendEvent((event): void => {
 			const data = typeof event.data === "object" && event.data !== null ? (event.data as Record<string, unknown>) : {};
 			const flowId = typeof data.flowId === "string" ? data.flowId : null;
-			if (flowId === null || flowId !== selectedFlowIdRef.current) return;
+			if (flowId === null) return;
+			if (event.event === "flow.run.state") {
+				const status = typeof data.status === "string" ? data.status : "running";
+				setFlowRuntimeStatusById((values): Record<string, "running" | "failed" | "completed"> => ({
+					...values,
+					[flowId]: status === "running" || status === "queued" || status === "waiting"
+						? "running"
+						: status === "failed"
+							? "failed"
+							: "completed",
+				}));
+				if (status === "completed" || status === "failed") {
+					setUnreadFlowIds((currentFlowIds): ReadonlySet<string> =>
+						applyFlowRunFinished(currentFlowIds, {
+							activeFlowId: selectedFlowIdRef.current,
+							flowId,
+							surfaceVisible: enabledRef.current,
+							windowFocused: windowFocusedRef.current,
+						}),
+					);
+				}
+			}
+			if (flowId !== selectedFlowIdRef.current) return;
 			if (event.event === "flow.patch.applied") {
 				if (data.clientId === flowOperationOutbox.clientId) return;
 				undoStackRef.current = [];
@@ -418,15 +483,6 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 					};
 					snapshotRef.current = next;
 					setSnapshot(next);
-					if (event.event === "flow.run.state")
-						setFlowRuntimeStatusById((values): Record<string, "running" | "failed" | "completed"> => ({
-							...values,
-							[flowId]: status === "running" || status === "queued" || status === "waiting"
-								? "running"
-								: status === "failed"
-									? "failed"
-									: "completed",
-						}));
 				}
 				void listFlowApprovals(flowId).then((result): void => setApprovals(result.approvals));
 				return;
@@ -545,6 +601,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			try {
 				await archiveFlow(flowId, current.revision);
 				setFlows((items): FlowDocumentSummary[] => items.filter((flow): boolean => flow.flowId !== flowId));
+				setUnreadFlowIds((currentFlowIds): ReadonlySet<string> => removeUnreadFlows(currentFlowIds, [flowId]));
 				if (selectedFlowIdRef.current === flowId) {
 					selectedFlowIdRef.current = null;
 					snapshotRef.current = null;
@@ -800,6 +857,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		flows,
 		flowOrder,
 		flowRuntimeStatusById,
+		unreadFlowIds,
 		snapshot,
 		nodeDefinitions,
 		tools,

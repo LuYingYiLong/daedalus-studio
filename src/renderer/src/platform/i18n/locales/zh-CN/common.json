@@ -648,6 +648,7 @@
 		"busy": "另一条分支正在运行。当前 Flow 同时只能运行一条分支。",
 		"status": {
 			"completed": "已完成",
+			"unreadResult": "未读 Flow 运行结果",
 			"streaming": "响应中",
 			"waiting": "等待中",
 			"failed": "失败",

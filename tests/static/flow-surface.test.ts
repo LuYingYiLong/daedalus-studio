@@ -20,6 +20,7 @@ describe("Flow home surface", (): void => {
 		const picker = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodePicker.tsx");
 		const shortcutSettings = readRepoFile("src", "renderer", "src", "widgets", "settings", "pages", "studio", "KeyboardShortcutsSettingsPage.tsx");
 		const controller = readRepoFile("src", "renderer", "src", "features", "home", "flow", "useHomeFlowController.ts");
+		const tree = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowTree.tsx");
 		const api = readRepoFile("src", "renderer", "src", "platform", "rpc", "flow-api.ts");
 		expect(sidebar).toContain("value={primarySurface}");
 		expect(sidebar).toContain("onPrimarySurfaceChange");
@@ -66,6 +67,12 @@ describe("Flow home surface", (): void => {
 		expect(controller).toContain("flowOperationOutbox.flushFully");
 		expect(controller).toContain("data.nodeRun");
 		expect(controller).toContain("data.run");
+		expect(controller).toContain("applyFlowRunFinished");
+		expect(controller).toContain("markActiveFlowRead");
+		expect(home).toContain("unreadFlowIds: [...flowController.unreadFlowIds]");
+		expect(tree).toContain("dot={isUnread}");
+		expect(tree).toContain('color="var(--ant-color-primary)"');
+		expect(tree).not.toContain("dot={isUnread || runtimeStatus !== undefined}");
 		expect(nodes).toContain("resolveFlowCanvasPorts");
 		expect(nodes).toContain('schema["x-daedalus-control"]');
 		expect(nodes).toContain('control === "provider"');

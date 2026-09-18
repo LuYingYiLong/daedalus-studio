@@ -381,7 +381,7 @@ function SchemaEditor({
 					disabled={disabled}
 					value={typeof config[key] === "string" ? config[key] : ""}
 					placeholder={title}
-					autoSize={{ minRows: 2, maxRows: 8 }}
+					autoSize={{ minRows: 1, maxRows: 8 }}
 					onChange={(event): void => update(key, event.target.value, false)}
 					onBlur={(): void => commitConfig(configRef.current)}
 				/>

@@ -801,8 +801,8 @@ function FlowTreeItem({
 }: FlowTreeItemProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const isRunning: boolean = runtimeStatus === "running";
-	const unreadLabel: string = t("workspaceTree.status.unreadResponse", {
-		defaultValue: "Unread assistant response",
+	const unreadLabel: string = t("flow.status.unreadResult", {
+		defaultValue: "Unread Flow result",
 	});
 	const actionMenu: MenuProps = {
 		items: [
@@ -836,8 +836,8 @@ function FlowTreeItem({
 	return (
 		<Dropdown menu={actionMenu} trigger={["contextMenu"]}>
 			<Badge
-				dot={isUnread || runtimeStatus !== undefined}
-				color={runtimeStatus === "failed" ? "var(--ant-color-error)" : runtimeStatus === "completed" ? "var(--ant-color-success)" : "var(--ant-color-primary)"}
+				dot={isUnread}
+				color="var(--ant-color-primary)"
 				offset={[-2, 4]}
 				title={isUnread ? unreadLabel : undefined}
 				className={styles.itemUnreadBadge}

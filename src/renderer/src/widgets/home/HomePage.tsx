@@ -423,7 +423,6 @@ function HomePage({
 			setIsFlowWorkspaceDeleting(false);
 		}
 	}, [flowController.refresh, flowWorkspaceDeleteTarget, isFlowWorkspaceDeleting, messageApi, onWorkspaceDelete, t]);
-	const unreadFlowIds: string[] = [];
 	const lastChatSessionRef = useRef<SessionMetadata | null>(null);
 	useEffect((): void => {
 		if (primarySurface === "chat") {
@@ -703,7 +702,7 @@ function HomePage({
 		flows: flowController.flows,
 		workspaces: workspaceOptionsInTreeOrder,
 		selectedFlowId: flowController.snapshot?.flow.flowId ?? null,
-		unreadFlowIds,
+		unreadFlowIds: [...flowController.unreadFlowIds],
 		flowRuntimeStatusById: flowController.flowRuntimeStatusById,
 		isLoading: flowController.isLoading,
 		isMutating: flowController.isMutating,

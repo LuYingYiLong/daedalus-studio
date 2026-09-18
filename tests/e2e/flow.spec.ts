@@ -603,6 +603,23 @@ test.describe("Daedalus Flow node workflow", () => {
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toContainText("approved result");
 		await mainWindow.getByRole("button", { name: /Run|运行/ }).click();
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toContainText("cached result");
+		const flowTreeItem = mainWindow.locator(".ant-tree-treenode").filter({ hasText: "E2E Workflow" });
+		await expect(flowTreeItem.locator(".ant-badge-dot")).toHaveCount(0);
+
+		await mainWindow.evaluate((): void => {
+			window.dispatchEvent(new Event("blur"));
+		});
+		mockBackend.sendEvent("flow.run.state", {
+			flowId: FLOW_ID,
+			runId: "run-unread-e2e",
+			revision: graphRevision,
+			status: "completed",
+		}, { runId: "run-unread-e2e" });
+		await expect(flowTreeItem.locator(".ant-badge-dot")).toHaveCount(1);
+		await mainWindow.evaluate((): void => {
+			window.dispatchEvent(new Event("focus"));
+		});
+		await expect(flowTreeItem.locator(".ant-badge-dot")).toHaveCount(0);
 
 		const outputNode = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])');
 		const patchCountBeforeDelete = mockBackend.getRequests("flow.patch.commit").length;

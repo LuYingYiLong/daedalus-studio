@@ -653,6 +653,7 @@
 		"busy": "Another branch is running. A Flow can run only one branch at a time.",
 		"status": {
 			"completed": "Completed",
+			"unreadResult": "Unread Flow result",
 			"streaming": "Streaming",
 			"waiting": "Waiting",
 			"failed": "Failed",
