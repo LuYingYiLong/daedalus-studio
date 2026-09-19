@@ -326,7 +326,7 @@
 	width: 12px !important;
 	height: 12px !important;
 	border: 2px solid var(--ant-color-bg-container) !important;
-	background: var(--flow-handle-color, var(--flow-port-color, var(--ant-color-primary))) !important;
+	background: var(--flow-port-color, var(--ant-color-primary)) !important;
 	pointer-events: auto;
 	transform: translate(-50%, -50%) !important;
 }
@@ -335,28 +335,4 @@
 .outputSocket .parameterHandle {
 	left: 0 !important;
 	right: auto !important;
-}
-
-.parameterHandle[data-flow-port-type="json"] {
-	--flow-port-color: #722ed1;
-}
-
-.parameterHandle[data-flow-port-type="artifact"] {
-	--flow-port-color: #d46b08;
-}
-
-.parameterHandle[data-flow-port-type="image"] {
-	--flow-port-color: #13c2c2;
-}
-
-.parameterHandle[data-flow-port-type="video"] {
-	--flow-port-color: #eb2f96;
-}
-
-.parameterHandle[data-flow-port-type="audio"] {
-	--flow-port-color: #fa8c16;
-}
-
-.parameterHandle[data-flow-port-type="frames"] {
-	--flow-port-color: #2f54eb;
 }

@@ -58,12 +58,12 @@ import FlowNodePicker from "./FlowNodePicker";
 import FlowWelcome from "./FlowWelcome";
 import {
 	FlowDocumentNodeView,
-	flowNodeColor,
 	resolveFlowCanvasPorts,
 	resolveFlowDefinitionPorts,
 	type FlowCanvasNode,
 	type FlowNodeEditorOptions,
 } from "./FlowNodes";
+import { flowPortColor } from "./flow-port-colors";
 import styles from "./HomeFlowSurface.module.css";
 
 export type FlowSearchHandle = {
@@ -646,6 +646,8 @@ function HomeFlowSurface({
 				.map((edge): FlowCanvasEdge => {
 					const sourceNode = snapshot?.nodes.find((node): boolean => node.nodeId === edge.sourceNodeId);
 					const targetNode = snapshot?.nodes.find((node): boolean => node.nodeId === edge.targetNodeId);
+					const sourcePort = portFor(sourceNode, controller.nodeDefinitions, edge.sourcePort, "output");
+					const targetPort = portFor(targetNode, controller.nodeDefinitions, edge.targetPort, "input");
 					return {
 						id: edge.edgeId,
 						source: edge.sourceNodeId,
@@ -654,13 +656,14 @@ function HomeFlowSurface({
 						targetHandle: edge.targetPort,
 						type: "flowGradient",
 						data: {
-							sourceColor: sourceNode === undefined ? "hsl(215 14% 65%)" : flowNodeColor(sourceNode.typeId),
-							targetColor: targetNode === undefined ? "hsl(215 14% 65%)" : flowNodeColor(targetNode.typeId),
+							sourceColor: flowPortColor(sourcePort?.dataTypes ?? [edge.dataType]),
+							targetColor: flowPortColor(targetPort?.dataTypes ?? [edge.dataType]),
 						},
 					};
 				}),
 		[
 			canvasNodeIds,
+			controller.nodeDefinitions,
 			reconnectingEdgeId,
 			snapshot?.edges,
 			snapshot?.nodes,
@@ -680,10 +683,14 @@ function HomeFlowSurface({
 			let targetPosition = props.toPosition;
 			const resolveHandleColor = (
 				nodeId: string | null | undefined,
+				portId: string | null | undefined,
+				handleType: HandleType | null | undefined,
 			): string => {
-				if (nodeId === null || nodeId === undefined) return "hsl(215 14% 65%)";
+				if (nodeId === null || nodeId === undefined) return flowPortColor(undefined);
 				const node = snapshot?.nodes.find((candidate): boolean => candidate.nodeId === nodeId);
-				return node === undefined ? "hsl(215 14% 65%)" : flowNodeColor(node.typeId);
+				if (node === undefined) return flowPortColor(undefined);
+				const direction = handleType === "target" ? "input" : "output";
+				return flowPortColor(portFor(node, controller.nodeDefinitions, portId, direction)?.dataTypes);
 			};
 			if (source !== null) {
 				const internalNode = flowInstance?.getInternalNode(source.sourceNodeId);
@@ -701,12 +708,12 @@ function HomeFlowSurface({
 			}
 			const sourceColor =
 				source === null
-					? resolveHandleColor(props.fromHandle?.nodeId)
-					: resolveHandleColor(source.sourceNodeId);
+					? resolveHandleColor(props.fromHandle?.nodeId, props.fromHandle?.id, props.fromHandle?.type)
+					: resolveHandleColor(source.sourceNodeId, source.sourcePort, "source");
 			const targetColor =
 				props.toHandle === null || props.toHandle === undefined
 					? sourceColor
-					: resolveHandleColor(props.toHandle.nodeId);
+					: resolveHandleColor(props.toHandle.nodeId, props.toHandle.id, props.toHandle.type);
 			const [path] = getBezierPath({
 				sourceX,
 				sourceY,
@@ -743,7 +750,7 @@ function HomeFlowSurface({
 				</>
 			);
 		},
-		[flowInstance, snapshot?.nodes],
+		[controller.nodeDefinitions, flowInstance, snapshot?.nodes],
 	);
 
 	const closePicker = useCallback((): void => setPicker(null), []);

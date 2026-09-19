@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+	<defs>
+		<clipPath id="clipPath_16">
+			<rect width="20.000000" height="14.000000" x="2.000000" y="5.000000" fill="currentColor" />
+		</clipPath>
+	</defs>
+	<g customFrame="url(#clipPath_16)">
+		<rect width="20.000000" height="14.000000" x="2.000000" y="5.000000" fill="currentColor" fill-opacity="0" />
+		<path d="M16 5L4 5C2.89545 5 2 5.89545 2 7L2 17C2 18.1046 2.89545 19 4 19L16 19C17.0109 19 17.8466 18.25 17.9811 17.276L20.7575 17.9701C20.8368 17.99 20.9182 18 21 18C21.5523 18 22 17.5523 22 17L22 7C22 6.84476 21.9639 6.69164 21.8944 6.5528C21.6474 6.05882 21.0468 5.85858 20.5528 6.10558L18 7.38197L18 7C18 5.89545 17.1046 5 16 5ZM18 9.61804L18 15.2192L20 15.7192L20 8.61804L18 9.61804ZM4 17L4 7L16 7L16 17L4 17Z" fill="currentColor" fill-rule="evenodd" />
+	</g>
+</svg>

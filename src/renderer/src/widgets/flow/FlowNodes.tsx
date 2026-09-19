@@ -18,6 +18,7 @@ import MarkdownContent from "@/widgets/markdown/MarkdownContent";
 import { getFlowArtifact } from "@/platform/rpc/flow-api";
 import styles from "./FlowNodes.module.css";
 import { flowNodeOutputLabel, flowNodeParameterLabel, flowNodeTypeLabel } from "./flow-node-labels";
+import { flowPortColor, flowPortColorKind } from "./flow-port-colors";
 
 export type FlowNodeEditorOptions = {
 	modelSelection: ProviderModelSelection | null;
@@ -539,7 +540,8 @@ function SchemaEditor({
 									position={Position.Left}
 									className={styles.parameterHandle}
 									data-flow-port-id={parameter.id}
-									data-flow-port-type={parameter.dataTypes[0]}
+									data-flow-port-kind={flowPortColorKind(parameter.dataTypes)}
+									style={{ "--flow-port-color": flowPortColor(parameter.dataTypes) } as CSSProperties}
 								/>
 							) : null}
 						</span>
@@ -729,7 +731,10 @@ function SandboxEditor({
 		<>
 			<div className={styles.parameterList}>
 				{parameters
-					.filter((parameter): boolean => parameter.mode !== "fixed")
+					.filter(
+						(parameter): parameter is Exclude<FlowNodeParameterDefinition, { mode: "fixed" }> =>
+							parameter.mode !== "fixed",
+					)
 					.map(
 						(parameter): React.JSX.Element => (
 							<div
@@ -743,9 +748,8 @@ function SandboxEditor({
 										position={Position.Left}
 										className={styles.parameterHandle}
 										data-flow-port-id={parameter.id}
-										data-flow-port-type={
-											parameter.mode === "fixed" ? undefined : parameter.dataTypes[0]
-										}
+										data-flow-port-kind={flowPortColorKind(parameter.dataTypes)}
+										style={{ "--flow-port-color": flowPortColor(parameter.dataTypes) } as CSSProperties}
 									/>
 								</span>
 								<span
@@ -812,7 +816,8 @@ function OutputRows({
 								position={Position.Right}
 								className={styles.parameterHandle}
 								data-flow-port-id={output.id}
-								data-flow-port-type={output.dataTypes[0]}
+								data-flow-port-kind={flowPortColorKind(output.dataTypes)}
+								style={{ "--flow-port-color": flowPortColor(output.dataTypes) } as CSSProperties}
 							/>
 						</span>
 					</div>
@@ -891,7 +896,6 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 		<div
 			className={styles.nodeShell}
 			data-flow-node-id={flowNode.nodeId}
-			style={{ "--flow-handle-color": flowNodeColor(flowNode.typeId) } as CSSProperties}
 		>
 			<article
 				className={`${styles.nodeCard} ${selected ? styles.nodeCardSelected : ""} ${data.matched ? styles.nodeCardMatched : ""} ${definition === null ? styles.unknownNode : ""}`}
