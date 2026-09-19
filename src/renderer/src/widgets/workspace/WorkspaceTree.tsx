@@ -739,6 +739,7 @@ function createProjectTreeData(
 								kind: "empty",
 								sectionKey: "projects",
 								workspaceId: workspace.id,
+								className: styles.emptyProjectNode,
 								isLeaf: true,
 							},
 						],

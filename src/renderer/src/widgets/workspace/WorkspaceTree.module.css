@@ -122,7 +122,8 @@
 }
 
 .workspaceTreeNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit:first-child),
-.projectSessionTreeNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit:first-child) {
+.projectSessionTreeNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit:first-child),
+.emptyProjectNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit:first-child) {
 	display: none;
 }
 
