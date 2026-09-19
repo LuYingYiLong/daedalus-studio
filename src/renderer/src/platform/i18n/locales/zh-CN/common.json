@@ -730,7 +730,7 @@
 				"workspaceRequired": "需要工作区",
 				"visualOnly": "仅用于标注",
 				"recent": "最近",
-				"categories": { "basic": "基础", "ai": "AI", "workspace": "工作区" },
+				"categories": { "basic": "基础", "ai": "AI", "workspace": "工作区", "media": "媒体" },
 				"hint": "↑↓ 选择 · Enter 添加 · Esc 关闭"
 			},
 			"nodes": {
@@ -747,6 +747,11 @@
 				"builtin/tool": "工具",
 				"builtin/command": "命令",
 				"builtin/output": "输出",
+				"builtin/text-to-image": "文生图",
+				"builtin/image-to-image": "图生图",
+				"builtin/text-to-video": "文生视频",
+				"builtin/image-to-video": "图生视频",
+				"builtin/media-output": "媒体输出",
 				"builtin/note": "便签"
 			},
 			"parameters": {
@@ -763,6 +768,11 @@
 				"builtin/tool": { "input": "输入参数", "toolName": "工具", "args": "参数", "bindings": "参数绑定" },
 				"builtin/command": { "stdin": "标准输入", "commandLine": "命令", "cwd": "工作目录", "env": "环境变量", "timeoutMs": "超时时间" },
 				"builtin/output": { "input": "输入值", "format": "输出格式" },
+				"builtin/text-to-image": { "prompt": "提示词", "provider": "供应商", "model": "模型", "negativePrompt": "反向提示词", "aspectRatio": "宽高比", "style": "风格", "seed": "种子", "count": "数量", "outputFormat": "输出格式" },
+				"builtin/image-to-image": { "image": "输入图像", "prompt": "提示词", "provider": "供应商", "model": "模型", "negativePrompt": "反向提示词", "seed": "种子", "count": "数量", "outputFormat": "输出格式" },
+				"builtin/text-to-video": { "prompt": "提示词", "provider": "供应商", "model": "模型", "negativePrompt": "反向提示词", "width": "宽度", "height": "高度", "durationMs": "时长", "fps": "帧率", "seed": "种子", "count": "数量", "outputFormat": "输出格式" },
+				"builtin/image-to-video": { "image": "输入图像", "prompt": "提示词", "provider": "供应商", "model": "模型", "negativePrompt": "反向提示词", "width": "宽度", "height": "高度", "durationMs": "时长", "fps": "帧率", "seed": "种子", "count": "数量", "outputFormat": "输出格式" },
+				"builtin/media-output": { "format": "展示方式" },
 				"builtin/note": { "text": "内容" }
 			},
 			"outputs": {
@@ -777,7 +787,12 @@
 				"builtin/flow-input": { "output": "输入值" },
 				"builtin/llm": { "output": "模型回复" },
 				"builtin/tool": { "result": "结果", "text": "文本", "artifact": "工件" },
-				"builtin/command": { "result": "结果", "stdout": "标准输出", "stderr": "标准错误" }
+				"builtin/command": { "result": "结果", "stdout": "标准输出", "stderr": "标准错误" },
+				"builtin/text-to-image": { "image": "图像" },
+				"builtin/image-to-image": { "image": "图像" },
+				"builtin/text-to-video": { "video": "视频" },
+				"builtin/image-to-video": { "video": "视频" },
+				"builtin/media-output": { "result": "媒体" }
 			}
 		},
 		"aria": {
@@ -3059,6 +3074,7 @@
 			"useGoalModel": "未配置时使用 Goal 创建模型",
 			"configureVisionModel": "需显式配置视觉模型",
 			"configureImageGenerationModel": "需显式配置图像生成模型",
+			"configureVideoGenerationModel": "需显式配置视频生成模型",
 			"routing": {
 				"sessionTitle": {
 					"title": "会话标题模型",
@@ -3083,6 +3099,10 @@
 				"imageGeneration": {
 					"title": "图像生成/编辑模型",
 					"description": "用于 @image-gen 和 mcp_image_generate 的文生图或图生图任务，需要配置支持图像生成或编辑的模型。"
+				},
+				"videoGeneration": {
+					"title": "视频生成/编辑模型",
+					"description": "用于 Flow 媒体节点的文生视频或图生视频任务，只有对应供应商适配器可用后才会运行。"
 				},
 				"gitCommit": {
 					"title": "Git commit 模型",

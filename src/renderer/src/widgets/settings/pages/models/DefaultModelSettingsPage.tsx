@@ -13,7 +13,7 @@ import {
 	type ProviderModelSelectionProvider,
 	type ProviderTaskModelRef,
 } from "@/platform/rpc/provider-api";
-import { isImageTaskModel, isVisionModel } from "@/domain/settings/provider-model-filters";
+import { isImageTaskModel, isVideoTaskModel, isVisionModel } from "@/domain/settings/provider-model-filters";
 import styles from "./DefaultModelSettingsPage.module.css";
 
 type RoutingKey = keyof ProviderModelRouting;
@@ -74,6 +74,13 @@ const ROUTING_OPTIONS: RoutingOption[] = [
 			"settings.defaultModel.routing.imageGeneration.description",
 		filterModel: isImageTaskModel,
 		placeholderKey: "settings.defaultModel.configureImageGenerationModel",
+	},
+	{
+		key: "videoGeneration",
+		titleKey: "settings.defaultModel.routing.videoGeneration.title",
+		descriptionKey: "settings.defaultModel.routing.videoGeneration.description",
+		filterModel: isVideoTaskModel,
+		placeholderKey: "settings.defaultModel.configureVideoGenerationModel",
 	},
 	{
 		key: "gitCommit",

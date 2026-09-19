@@ -7,3 +7,7 @@ export function isVisionModel(model: ProviderModelInfo): boolean {
 export function isImageTaskModel(model: ProviderModelInfo): boolean {
 	return model.capabilities.imageGeneration === true || model.capabilities.imageEdit === true;
 }
+
+export function isVideoTaskModel(model: ProviderModelInfo): boolean {
+	return model.capabilities.videoGeneration === true || model.capabilities.videoEdit === true;
+}

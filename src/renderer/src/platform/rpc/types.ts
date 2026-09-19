@@ -207,6 +207,23 @@ export type FlowTreeOrderUpdate = Omit<FlowTreeOrder, "schemaVersion" | "updated
 export type FlowNodeTypeId = `${string}/${string}`;
 export type FlowDocumentNodeStatus = "idle" | "queued" | "running" | "waiting" | "completed" | "cached" | "failed" | "cancelled" | "skipped";
 export type FlowDocumentRunStatus = "queued" | "running" | "waiting" | "completed" | "failed" | "cancelled";
+export type FlowMediaArtifactRef = {
+	artifactId: string;
+	flowId: string;
+	runId: string;
+	nodeId: string;
+	mimeType: string;
+	byteSize: number;
+	sha256: string;
+	width?: number;
+	height?: number;
+	durationMs?: number;
+	fps?: number;
+	previewArtifactId?: string;
+	storagePath: string;
+	metadata: Record<string, unknown>;
+	createdAt: string;
+};
 export type FlowDocument = {
 	flowId: string;
 	title: string;
@@ -248,7 +265,7 @@ export type FlowDocumentEdge = {
 	sourcePort: string;
 	targetNodeId: string;
 	targetPort: string;
-	dataType: "text" | "json" | "artifact";
+	dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact";
 };
 export type FlowDocumentNodeRun = {
 	runId: string;
@@ -258,6 +275,8 @@ export type FlowDocumentNodeRun = {
 	pluginFingerprint: string;
 	configVersion: number;
 	status: FlowDocumentNodeStatus;
+	providerJobId?: string | null;
+	progress?: number;
 	inputFingerprint: string | null;
 	output: unknown;
 	error: string | null;
@@ -656,7 +675,7 @@ export type FlowNodePortDefinition = {
 	id: string;
 	label: string;
 	direction: "input" | "output";
-	dataTypes: Array<"text" | "json" | "artifact">;
+	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact">;
 	required: boolean;
 	multiple: boolean;
 	defaultConnect: boolean;
@@ -667,7 +686,7 @@ export type FlowNodeParameterDefinition =
 			id: string;
 			label: string;
 			mode: "connection";
-			dataTypes: Array<"text" | "json" | "artifact">;
+			dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact">;
 			required: boolean;
 			multiple: boolean;
 			defaultConnect: boolean;
@@ -677,7 +696,7 @@ export type FlowNodeParameterDefinition =
 			label: string;
 			mode: "hybrid";
 			configField: string;
-			dataTypes: Array<"text" | "json" | "artifact">;
+			dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact">;
 			required: boolean;
 			multiple: boolean;
 			defaultConnect: boolean;
@@ -686,14 +705,14 @@ export type FlowNodeParameterDefinition =
 export type FlowNodeOutputDefinition = {
 	id: string;
 	label: string;
-	dataTypes: Array<"text" | "json" | "artifact">;
+	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact">;
 	defaultConnect: boolean;
 };
 export type FlowDynamicParameterDefinition = {
 	configField: string;
 	idField: string;
 	labelField: string;
-	dataTypes: Array<"text" | "json" | "artifact">;
+	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact">;
 	dataTypeField?: string;
 	required: boolean;
 	multiple: boolean;

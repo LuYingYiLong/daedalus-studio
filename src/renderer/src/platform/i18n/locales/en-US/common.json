@@ -738,7 +738,8 @@
 				"categories": {
 					"basic": "Basic",
 					"ai": "AI",
-					"workspace": "Workspace"
+					"workspace": "Workspace",
+					"media": "Media"
 				},
 				"hint": "↑↓ Select · Enter Add · Esc Close"
 			},
@@ -756,6 +757,11 @@
 				"builtin/tool": "Tool",
 				"builtin/command": "Command",
 				"builtin/output": "Output",
+				"builtin/text-to-image": "Text to Image",
+				"builtin/image-to-image": "Image to Image",
+				"builtin/text-to-video": "Text to Video",
+				"builtin/image-to-video": "Image to Video",
+				"builtin/media-output": "Media Output",
 				"builtin/note": "Note"
 			},
 			"parameters": {
@@ -772,6 +778,11 @@
 				"builtin/tool": { "input": "Input", "toolName": "Tool", "args": "Arguments", "bindings": "Bindings" },
 				"builtin/command": { "stdin": "Standard input", "commandLine": "Command", "cwd": "Working directory", "env": "Environment", "timeoutMs": "Timeout" },
 				"builtin/output": { "input": "Input", "format": "Output format" },
+				"builtin/text-to-image": { "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "aspectRatio": "Aspect ratio", "style": "Style", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
+				"builtin/image-to-image": { "image": "Input image", "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
+				"builtin/text-to-video": { "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "width": "Width", "height": "Height", "durationMs": "Duration", "fps": "Frame rate", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
+				"builtin/image-to-video": { "image": "Input image", "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "width": "Width", "height": "Height", "durationMs": "Duration", "fps": "Frame rate", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
+				"builtin/media-output": { "format": "Display mode" },
 				"builtin/note": { "text": "Content" }
 			},
 			"outputs": {
@@ -786,7 +797,12 @@
 				"builtin/flow-input": { "output": "Input value" },
 				"builtin/llm": { "output": "Response" },
 				"builtin/tool": { "result": "Result", "text": "Text", "artifact": "Artifact" },
-				"builtin/command": { "result": "Result", "stdout": "Standard output", "stderr": "Standard error" }
+				"builtin/command": { "result": "Result", "stdout": "Standard output", "stderr": "Standard error" },
+				"builtin/text-to-image": { "image": "Image" },
+				"builtin/image-to-image": { "image": "Image" },
+				"builtin/text-to-video": { "video": "Video" },
+				"builtin/image-to-video": { "video": "Video" },
+				"builtin/media-output": { "result": "Media" }
 			}
 		},
 		"aria": {
@@ -3073,6 +3089,7 @@
 			"useGoalModel": "Uses the Goal creation model when unset",
 			"configureVisionModel": "Configure a vision model",
 			"configureImageGenerationModel": "Configure an image generation model",
+			"configureVideoGenerationModel": "Configure a video generation model",
 			"routing": {
 				"sessionTitle": {
 					"title": "Session title model",
@@ -3097,6 +3114,10 @@
 				"imageGeneration": {
 					"title": "Image generation/edit model",
 					"description": "Used by @image-gen and mcp_image_generate for text-to-image or image-to-image tasks; configure a model that supports image generation or editing."
+				},
+				"videoGeneration": {
+					"title": "Video generation/edit model",
+					"description": "Used by Flow media nodes for text-to-video or image-to-video tasks; configure a model only after its provider adapter is available."
 				},
 				"gitCommit": {
 					"title": "Git commit model",

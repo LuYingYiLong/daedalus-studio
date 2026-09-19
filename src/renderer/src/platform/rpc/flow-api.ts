@@ -10,6 +10,7 @@ import type {
 	FlowPatchAck,
 	FlowTreeOrder,
 	FlowTreeOrderUpdate,
+	FlowMediaArtifactRef,
 	SessionMetadata,
 } from "./types";
 
@@ -101,4 +102,32 @@ export async function importFlowFromSession(params: { sourceSessionId: string; t
 
 export async function exportFlowToSession(params: { flowId: string; outputNodeId: string; title: string }): Promise<{ metadata: SessionMetadata }> {
 	return (await createBackendClient()).request("flow.export.toSession", params);
+}
+
+export async function listFlowArtifacts(flowId: string, runId?: string): Promise<{ artifacts: FlowMediaArtifactRef[] }> {
+	return (await createBackendClient()).request("flow.artifact.list", { flowId, ...(runId === undefined ? {} : { runId }) });
+}
+
+export async function getFlowArtifact(artifactId: string, includeData = false): Promise<{ ref: FlowMediaArtifactRef; dataBase64?: string }> {
+	return (await createBackendClient()).request("flow.artifact.get", { artifactId, includeData });
+}
+
+export async function previewFlowArtifact(artifactId: string): Promise<{ ref: FlowMediaArtifactRef; dataBase64: string }> {
+	return (await createBackendClient()).request("flow.artifact.preview", { artifactId });
+}
+
+export async function thumbnailFlowArtifact(artifactId: string): Promise<{ ref: FlowMediaArtifactRef; dataBase64: string }> {
+	return (await createBackendClient()).request("flow.artifact.thumbnail", { artifactId });
+}
+
+export async function downloadFlowArtifact(artifactId: string): Promise<{ ref: FlowMediaArtifactRef; dataBase64: string }> {
+	return (await createBackendClient()).request("flow.artifact.download", { artifactId });
+}
+
+export async function deleteFlowArtifact(artifactId: string): Promise<{ deleted: boolean }> {
+	return (await createBackendClient()).request("flow.artifact.delete", { artifactId });
+}
+
+export async function cleanupFlowArtifacts(flowId: string, keepRunIds?: string[]): Promise<{ removed: number }> {
+	return (await createBackendClient()).request("flow.artifact.cleanup", { flowId, ...(keepRunIds === undefined ? {} : { keepRunIds }) });
 }

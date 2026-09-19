@@ -20,7 +20,7 @@ type Port = {
 	id: string;
 	label: string;
 	direction: "input" | "output";
-	dataTypes: Array<"text" | "json" | "artifact">;
+	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact">;
 	required: boolean;
 	multiple: boolean;
 	defaultConnect: boolean;
@@ -53,7 +53,7 @@ type FlowEdge = {
 	sourcePort: string;
 	targetNodeId: string;
 	targetPort: string;
-	dataType: "text" | "json" | "artifact";
+	dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact";
 };
 
 function input(id: string, label: string, dataTypes: Port["dataTypes"], defaultConnect = false): Port {
@@ -185,7 +185,7 @@ const nodeDefinitions = [
 		summaryFields: ["format"],
 		ui: { kind: "schema" },
 		parameters: [
-			{ id: "input", label: "Value", mode: "connection", dataTypes: ["text", "json", "artifact"], required: false, multiple: false, defaultConnect: true },
+			{ id: "input", label: "Value", mode: "connection", dataTypes: ["text", "json", "image", "video", "audio", "frames", "artifact"], required: false, multiple: false, defaultConnect: true },
 			{ id: "format", label: "Format", mode: "fixed", configField: "format" },
 		] satisfies DefinitionParameter[],
 		outputs: [],

@@ -22,7 +22,15 @@ import {
 	type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type MouseEvent as ReactMouseEvent,
+	type MutableRefObject,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { HomeFlowController } from "@/features/home/flow/useHomeFlowController";
@@ -131,7 +139,14 @@ function FlowGradientEdge({
 	return (
 		<>
 			<defs>
-				<linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={sourceX} y1={sourceY} x2={targetX} y2={targetY}>
+				<linearGradient
+					id={gradientId}
+					gradientUnits="userSpaceOnUse"
+					x1={sourceX}
+					y1={sourceY}
+					x2={targetX}
+					y2={targetY}
+				>
 					<stop offset="0%" stopColor={data?.sourceColor ?? "hsl(215 14% 65%)"} />
 					<stop offset="100%" stopColor={data?.targetColor ?? "hsl(215 14% 65%)"} />
 				</linearGradient>
@@ -216,7 +231,7 @@ function portFor(
 function compatibleType(
 	source: FlowNodePortDefinition,
 	target: FlowNodePortDefinition,
-): "text" | "json" | "artifact" | null {
+): "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | null {
 	return source.dataTypes.find((dataType): boolean => target.dataTypes.includes(dataType)) ?? null;
 }
 
@@ -336,11 +351,15 @@ function HomeFlowSurface({
 				snapshot?.flow.workspaceId === null
 					? undefined
 					: async (): Promise<string | null> => {
-						const workspace = workspaceOptions.find((candidate): boolean => candidate.id === snapshot?.flow.workspaceId);
-						if (workspace === undefined || window.electronAPI === undefined) return null;
-						const entries = await window.electronAPI.workspaceFs.pickWorkspaceFiles({ workspaceRoot: workspace.rootPath });
-						return entries?.[0]?.relativePath ?? null;
-					},
+							const workspace = workspaceOptions.find(
+								(candidate): boolean => candidate.id === snapshot?.flow.workspaceId,
+							);
+							if (workspace === undefined || window.electronAPI === undefined) return null;
+							const entries = await window.electronAPI.workspaceFs.pickWorkspaceFiles({
+								workspaceRoot: workspace.rootPath,
+							});
+							return entries?.[0]?.relativePath ?? null;
+						},
 		}),
 		[modelsByProvider, providerModelSelection, snapshot?.flow.workspaceId, workspaceOptions],
 	);
@@ -655,9 +674,7 @@ function HomeFlowSurface({
 				}
 				const node = snapshot?.nodes.find((candidate): boolean => candidate.nodeId === nodeId);
 				const direction = handleType === "target" ? "input" : "output";
-				return flowHandleColor(
-					portFor(node, controller.nodeDefinitions, handleId, direction)?.dataTypes[0],
-				);
+				return flowHandleColor(portFor(node, controller.nodeDefinitions, handleId, direction)?.dataTypes[0]);
 			};
 			if (source !== null) {
 				const internalNode = flowInstance?.getInternalNode(source.sourceNodeId);
@@ -869,7 +886,12 @@ function HomeFlowSurface({
 				const rect = canvasRef.current?.getBoundingClientRect();
 				if (rect !== undefined) {
 					const pointer = lastPointerPositionRef.current;
-					const inside = pointer !== null && pointer.x >= rect.left && pointer.x <= rect.right && pointer.y >= rect.top && pointer.y <= rect.bottom;
+					const inside =
+						pointer !== null &&
+						pointer.x >= rect.left &&
+						pointer.x <= rect.right &&
+						pointer.y >= rect.top &&
+						pointer.y <= rect.bottom;
 					openPickerAt(
 						inside && pointer !== null ? pointer.x : rect.left + rect.width / 2,
 						inside && pointer !== null ? pointer.y : rect.top + rect.height / 2,
@@ -1095,7 +1117,7 @@ function HomeFlowSurface({
 	if (snapshot === null)
 		return (
 			<section className={styles.flowSurface} data-studio-flow-surface="true">
-				<header className={styles.flowHeader}>
+				<header className={styles.header}>
 					<Typography.Text className={styles.flowTitle}>
 						{t("flow.welcome.nodeTitle", {
 							defaultValue: "Build a workflow from nodes",
@@ -1117,9 +1139,9 @@ function HomeFlowSurface({
 		);
 	return (
 		<section className={styles.flowSurface} data-studio-flow-surface="true">
-			<header className={styles.flowHeader}>
+			<header className={styles.header}>
 				<Typography.Text className={styles.flowTitle}>{snapshot.flow.title}</Typography.Text>
-				<Flex align="center" gap="small" className={styles.flowHeaderActions}>
+				<Flex align="center" gap="small" className={styles.headerActions}>
 					<Tooltip title={t("files.editorMenu.undo")} placement="bottom">
 						<Button
 							type="text"

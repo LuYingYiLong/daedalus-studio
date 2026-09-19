@@ -49,12 +49,12 @@ export type HomeFlowController = {
 	archiveCurrentFlow: () => Promise<void>;
 	updateFlowOrder: (order: FlowTreeOrderUpdate) => Promise<void>;
 	createNode: (type: FlowNodeTypeId, x: number, y: number) => Promise<void>;
-	createConnectedNode: (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "artifact" }) => Promise<void>;
+	createConnectedNode: (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" }) => Promise<void>;
 	updateNode: (nodeId: string, patch: Record<string, unknown>) => Promise<void>;
 	updateNodePosition: (nodeId: string, x: number, y: number) => Promise<void>;
 	deleteNode: (nodeId: string) => Promise<void>;
-	createEdge: (sourceNodeId: string, targetNodeId: string, sourcePort?: string, targetPort?: string, dataType?: "text" | "json" | "artifact") => Promise<void>;
-	reconnectEdge: (edgeId: string, sourceNodeId: string, targetNodeId: string, sourcePort: string, targetPort: string, dataType: "text" | "json" | "artifact") => Promise<void>;
+	createEdge: (sourceNodeId: string, targetNodeId: string, sourcePort?: string, targetPort?: string, dataType?: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact") => Promise<void>;
+	reconnectEdge: (edgeId: string, sourceNodeId: string, targetNodeId: string, sourcePort: string, targetPort: string, dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact") => Promise<void>;
 	deleteEdge: (edgeId: string) => Promise<void>;
 	updateViewport: (viewport: { x: number; y: number; zoom: number }) => Promise<void>;
 	startRun: (request?: FlowRunRequest) => Promise<boolean>;
@@ -111,7 +111,7 @@ function resolveOptimisticPorts(node: Pick<FlowDocumentNode, "ports" | "typeId" 
 			const id = record[dynamic.idField];
 			if (typeof id !== "string" || id.length === 0 || parameters.some((parameter): boolean => parameter.id === id)) continue;
 			const configuredType = dynamic.dataTypeField === undefined ? undefined : record[dynamic.dataTypeField];
-			const dataTypes: FlowDocumentNode["ports"][number]["dataTypes"] = typeof configuredType === "string" && (configuredType === "text" || configuredType === "json" || configuredType === "artifact") ? [configuredType] : [...dynamic.dataTypes];
+			const dataTypes: FlowDocumentNode["ports"][number]["dataTypes"] = typeof configuredType === "string" && ["text", "json", "image", "video", "audio", "frames", "artifact"].includes(configuredType) ? [configuredType as FlowDocumentNode["ports"][number]["dataTypes"][number]] : [...dynamic.dataTypes];
 			const label = record[dynamic.labelField];
 			parameters.push({ id, label: typeof label === "string" && label.length > 0 ? label : id, mode: "connection", dataTypes, required: dynamic.required, multiple: dynamic.multiple, defaultConnect: dynamic.defaultConnect });
 		}
@@ -503,7 +503,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 								: {
 									...run,
 									nodes: run.nodes.map((node) => node.nodeId === data.nodeId
-										? (eventNodeRun ?? { ...node, status: status as typeof node.status })
+									? (eventNodeRun ?? { ...node, status: status as typeof node.status, ...(typeof data.progress === "number" ? { progress: data.progress } : {}) })
 										: node),
 								}),
 					};
@@ -665,7 +665,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	);
 
 	const createConnectedNode = useCallback(
-		async (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "artifact" }): Promise<void> => {
+		async (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" }): Promise<void> => {
 			const current = snapshotRef.current;
 			if (current === null || isGraphLocked) return;
 			const definition = nodeDefinitions.find((candidate): boolean => candidate.typeId === params.type);
@@ -709,7 +709,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	);
 
 	const createEdge = useCallback(
-		async (sourceNodeId: string, targetNodeId: string, sourcePort = "output", targetPort = "input", dataType: "text" | "json" | "artifact" = "text"): Promise<void> => {
+		async (sourceNodeId: string, targetNodeId: string, sourcePort = "output", targetPort = "input", dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" = "text"): Promise<void> => {
 			const current = snapshotRef.current;
 			if (current === null || isGraphLocked) return;
 			applyOperation({ mutationId: createFlowMutationId(), kind: "edge.create", baseGraphRevision: current.flow.graphRevision, payload: { edgeId: `edge-${crypto.randomUUID()}`, sourceNodeId, sourcePort, targetNodeId, targetPort, dataType } });
@@ -724,7 +724,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			targetNodeId: string,
 			sourcePort: string,
 			targetPort: string,
-			dataType: "text" | "json" | "artifact",
+			dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact",
 		): Promise<void> => {
 			const current = snapshotRef.current;
 			if (current === null || isGraphLocked) return;

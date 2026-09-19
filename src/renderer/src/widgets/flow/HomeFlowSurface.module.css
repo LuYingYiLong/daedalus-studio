@@ -4,8 +4,7 @@
 	--agent-chat-surface-width: calc(var(--agent-chat-content-width) + var(--agent-chat-side-padding) * 2);
 
 	position: relative;
-	display: grid;
-	grid-template-rows: auto auto minmax(0, 1fr);
+	display: block;
 	width: 100%;
 	height: 100%;
 	min-width: 0;
@@ -14,14 +13,14 @@
 	background: var(--ds-bg);
 }
 
-.flowHeader {
-	position: relative;
+.header {
+	position: absolute;
+	inset: 0 0 auto;
 	z-index: 3;
-	grid-row: 1;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: var(--ds-space-3);
+	gap: var(--ds-space-1);
 	width: 100%;
 	box-sizing: border-box;
 	height: 40px;
@@ -31,7 +30,27 @@
 	user-select: none;
 }
 
-.flowHeaderActions {
+.header::after {
+	position: absolute;
+	inset: 0 0 -36px;
+	z-index: 0;
+	background: linear-gradient(
+		to bottom,
+		var(--ds-bg) 0%,
+		var(--ds-bg) 42%,
+		color-mix(in srgb, var(--ds-bg) 72%, transparent) 70%,
+		transparent 100%
+	);
+	pointer-events: none;
+	content: "";
+}
+
+.header > * {
+	position: relative;
+	z-index: 1;
+}
+
+.headerActions {
 	min-width: 0;
 }
 
@@ -47,7 +66,7 @@
 	white-space: nowrap;
 }
 
-.flowHeader[data-side-dock-open="true"] {
+.header[data-side-dock-open="true"] {
 	padding-right: var(--ds-space-2);
 }
 
@@ -72,13 +91,17 @@
 }
 
 .flowAlert {
-	grid-row: 2;
-	margin: var(--ds-space-2) var(--ds-space-3) 0;
+	position: absolute;
+	top: calc(40px + var(--ds-space-2));
+	right: var(--ds-space-3);
+	left: var(--ds-space-3);
+	z-index: 5;
+	margin: 0;
 }
 
 .canvasRegion {
-	grid-row: 3;
-	position: relative;
+	position: absolute;
+	inset: 0;
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;

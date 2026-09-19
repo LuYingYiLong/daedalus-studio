@@ -235,7 +235,7 @@ function HomeChatSurface({
 
 	return (
 		<section className={styles.chatPanel}>
-			<header className={styles.chatHeader} data-side-dock-open={sideDockOpen ? "true" : undefined}>
+			<header className={styles.header} data-side-dock-open={sideDockOpen ? "true" : undefined}>
 				<div className={styles.chatTitleRow}>
 					<Typography.Text
 						className={styles.chatText}
@@ -476,7 +476,9 @@ function HomeChatSurface({
 							/>
 						) : null}
 						{isDockFullscreen ? null : (
-							<div className={styles.composerAnchor}>{renderComposer(false, composerFloating, composerFloatingWithFooter)}</div>
+							<div className={styles.composerAnchor}>
+								{renderComposer(false, composerFloating, composerFloatingWithFooter)}
+							</div>
 						)}
 					</>
 				)}

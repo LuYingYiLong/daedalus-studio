@@ -6,6 +6,7 @@ import type {
 	FlowDocumentNode,
 	FlowDocumentNodeRun,
 	FlowDocumentNodeStatus,
+	FlowMediaArtifactRef,
 	FlowNodeOutputDefinition,
 	FlowNodeParameterDefinition,
 	FlowNodePortDefinition,
@@ -14,6 +15,7 @@ import type {
 import type { ProviderModelInfo, ProviderModelSelection } from "@/platform/rpc/provider-api";
 import { Icon } from "@/assets/icons";
 import MarkdownContent from "@/widgets/markdown/MarkdownContent";
+import { getFlowArtifact } from "@/platform/rpc/flow-api";
 import styles from "./FlowNodes.module.css";
 import { flowNodeOutputLabel, flowNodeParameterLabel, flowNodeTypeLabel } from "./flow-node-labels";
 
@@ -71,6 +73,57 @@ function formatOutputMarkdown(output: unknown, format: unknown): string {
 	return String(value);
 }
 
+function collectMediaArtifacts(value: unknown, result: FlowMediaArtifactRef[] = []): FlowMediaArtifactRef[] {
+	if (Array.isArray(value)) {
+		for (const item of value) collectMediaArtifacts(item, result);
+		return result;
+	}
+	if (value === null || typeof value !== "object") return result;
+	const record = value as Record<string, unknown>;
+	if (typeof record.artifactId === "string" && typeof record.mimeType === "string") {
+		result.push(record as unknown as FlowMediaArtifactRef);
+		return result;
+	}
+	for (const item of Object.values(record)) collectMediaArtifacts(item, result);
+	return result;
+}
+
+function MediaArtifactPreview({ artifacts }: { artifacts: FlowMediaArtifactRef[] }): React.JSX.Element {
+	const [sources, setSources] = useState<Record<string, string>>({});
+	useEffect((): (() => void) => {
+		let disposed = false;
+		void Promise.all(
+			artifacts.map(async (artifact): Promise<[string, string] | null> => {
+				try {
+					const response = await getFlowArtifact(artifact.artifactId, true);
+					if (response.dataBase64 === undefined) return null;
+					return [artifact.artifactId, `data:${artifact.mimeType};base64,${response.dataBase64}`];
+				} catch {
+					return null;
+				}
+			}),
+		).then((entries): void => {
+			if (disposed) return;
+			setSources(Object.fromEntries(entries.filter((entry): entry is [string, string] => entry !== null)));
+		});
+		return (): void => {
+			disposed = true;
+		};
+	}, [artifacts]);
+	return (
+		<div className={styles.mediaPreviewList}>
+			{artifacts.map((artifact): React.JSX.Element => {
+				const source = sources[artifact.artifactId];
+				if (source === undefined) return <Typography.Text key={artifact.artifactId} type="secondary">{artifact.mimeType}</Typography.Text>;
+				if (artifact.mimeType.startsWith("image/")) return <img key={artifact.artifactId} className={styles.mediaPreviewImage} src={source} alt="" />;
+				if (artifact.mimeType.startsWith("video/")) return <video key={artifact.artifactId} className={styles.mediaPreviewVideo} src={source} controls preload="metadata" />;
+				if (artifact.mimeType.startsWith("audio/")) return <audio key={artifact.artifactId} className={styles.mediaPreviewAudio} src={source} controls preload="metadata" />;
+				return <Typography.Text key={artifact.artifactId} type="secondary">{artifact.mimeType}</Typography.Text>;
+			})}
+		</div>
+	);
+}
+
 export function flowNodeColor(typeId: string): string {
 	let hash = 0;
 	for (const char of typeId) hash = (hash * 31 + char.charCodeAt(0)) | 0;
@@ -100,8 +153,8 @@ export function resolveFlowDefinitionParameters(
 			const configuredType = dynamic.dataTypeField === undefined ? undefined : record[dynamic.dataTypeField];
 			const dataTypes: FlowNodePortDefinition["dataTypes"] =
 				typeof configuredType === "string" &&
-				(configuredType === "text" || configuredType === "json" || configuredType === "artifact")
-					? [configuredType]
+				["text", "json", "image", "video", "audio", "frames", "artifact"].includes(configuredType)
+					? [configuredType as FlowNodePortDefinition["dataTypes"][number]]
 					: [...dynamic.dataTypes];
 			const label = record[dynamic.labelField];
 			parameters.push({
@@ -248,11 +301,17 @@ function SchemaEditor({
 	};
 	const providerId = typeof config.provider === "string" ? config.provider : "";
 	const modelId = typeof config.model === "string" ? config.model : "";
+	const requiredCapability =
+		definition.typeId === "builtin/text-to-image" ? "imageGeneration" :
+		definition.typeId === "builtin/image-to-image" ? "imageEdit" :
+		definition.typeId === "builtin/text-to-video" || definition.typeId === "builtin/image-to-video" ? "videoGeneration" : null;
+	const supportsRequiredCapability = (model: ProviderModelInfo): boolean =>
+		requiredCapability === null || model.capabilities[requiredCapability] === true;
 	const providerOptions = (editorOptions.modelSelection?.providers ?? [])
-		.filter((provider): boolean => provider.configured || provider.provider === providerId)
+		.filter((provider): boolean => (provider.configured || provider.provider === providerId) && (requiredCapability === null || (editorOptions.modelsByProvider[provider.provider] ?? []).some(supportsRequiredCapability)))
 		.map((provider) => ({ value: provider.provider, label: provider.displayName }));
 	const modelCatalog = editorOptions.modelsByProvider[providerId] ?? [];
-	const modelOptions = modelCatalog.map((model) => ({ value: model.id, label: model.displayName }));
+	const modelOptions = modelCatalog.filter(supportsRequiredCapability).map((model) => ({ value: model.id, label: model.displayName }));
 	if (modelId.length > 0 && !modelOptions.some((option): boolean => option.value === modelId))
 		modelOptions.unshift({ value: modelId, label: modelId });
 	const selectedModel = modelCatalog.find((model): boolean => model.id === modelId);
@@ -791,7 +850,8 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 		(): void => updateNodeInternals(flowNode.nodeId),
 		[flowNode.nodeId, handleLayoutKey, updateNodeInternals],
 	);
-	const isOutputNode = flowNode.typeId === "builtin/output";
+	const isOutputNode = flowNode.typeId === "builtin/output" || flowNode.typeId === "builtin/media-output";
+	const mediaArtifacts = useMemo((): FlowMediaArtifactRef[] => collectMediaArtifacts(data.nodeRun?.output), [data.nodeRun?.output]);
 	const outputMarkdown =
 		data.nodeRun?.output === null || data.nodeRun?.output === undefined
 			? ""
@@ -844,6 +904,11 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 					) : null}
 				</header>
 				<div className={styles.body}>
+					{typeof data.nodeRun?.progress === "number" && data.nodeRun.status === "running" ? (
+						<div className={styles.progressTrack} aria-label={`${Math.round(data.nodeRun.progress * 100)}%`}>
+							<div className={styles.progressValue} style={{ width: `${Math.round(data.nodeRun.progress * 100)}%` }} />
+						</div>
+					) : null}
 					<OutputRows typeId={flowNode.typeId} outputs={outputs} />
 					{definition === null ? (
 						<NodeSummary node={flowNode} definition={definition} />
@@ -879,7 +944,9 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 							role="region"
 							aria-label={t("flow.editor.outputResult", { defaultValue: "Output result" })}
 						>
-							{outputMarkdown.length > 0 ? (
+							{mediaArtifacts.length > 0 ? (
+								<MediaArtifactPreview artifacts={mediaArtifacts} />
+							) : outputMarkdown.length > 0 ? (
 								<MarkdownContent>{outputMarkdown}</MarkdownContent>
 							) : (
 								<Typography.Text type="secondary">

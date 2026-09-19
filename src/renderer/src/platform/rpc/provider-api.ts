@@ -28,6 +28,7 @@ export type ProviderModelRouting = {
 	sessionTitle: ProviderTaskModelRef | null;
 	nextStepHints: ProviderTaskModelRef | null;
 	imageGeneration: ProviderTaskModelRef | null;
+	videoGeneration: ProviderTaskModelRef | null;
 	gitCommit: ProviderTaskModelRef | null;
 	commandReview: ProviderTaskModelRef | null;
 	goalEvaluator: ProviderTaskModelRef | null;
@@ -64,6 +65,9 @@ export type ProviderModelCapabilities = {
 	vision?: boolean | undefined;
 	imageGeneration?: boolean | undefined;
 	imageEdit?: boolean | undefined;
+	videoGeneration?: boolean | undefined;
+	videoEdit?: boolean | undefined;
+	audioGeneration?: boolean | undefined;
 };
 
 export type ProviderModelCapabilityOverrides = Partial<
@@ -76,6 +80,9 @@ export type ProviderModelCapabilityOverrides = Partial<
 		| "webSearch"
 		| "imageGeneration"
 		| "imageEdit"
+		| "videoGeneration"
+		| "videoEdit"
+		| "audioGeneration"
 	>
 >;
 

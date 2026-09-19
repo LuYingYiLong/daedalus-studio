@@ -220,7 +220,7 @@
 	overflow: hidden;
 }
 
-.chatHeader {
+.header {
 	position: relative;
 	z-index: 3;
 	display: flex;
@@ -237,7 +237,7 @@
 	user-select: none;
 }
 
-.chatHeader[data-side-dock-open="true"] {
+.header[data-side-dock-open="true"] {
 	padding-right: var(--ds-space-2);
 }
 
