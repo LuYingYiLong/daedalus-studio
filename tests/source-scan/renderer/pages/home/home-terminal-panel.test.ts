@@ -89,7 +89,7 @@ describe("HomePage terminal panel source", () => {
 		const waitGuardIndex: number = terminalPanelSource.indexOf("waitForCwdRef.current && cwdRef.current === null");
 		const createIndex: number = terminalPanelSource.indexOf("window.electronAPI.terminal.create");
 
-		expect(agentSource).toContain("const terminalWaitForCwd: boolean = !isHome && isSessionLoading && workspaceForActions === null;");
+		expect(agentSource).toContain("const terminalWaitForCwd: boolean = primarySurface === \"chat\" && !isHome && isSessionLoading && workspaceForActions === null;");
 		expect(agentSource).toContain("waitForCwd={terminalWaitForCwd}");
 		expect(dockPanelTabsSource).toContain("waitForCwd: boolean;");
 		expect(dockPanelTabsSource).toContain("waitForCwd={waitForCwd}");
@@ -108,9 +108,10 @@ describe("HomePage terminal panel source", () => {
 		expect(dockPanelTabsSource).toContain('t("dock.add.reviewPanel")');
 		expect(dockPanelTabsSource).toContain('t("dock.add.terminalPanel")');
 		expect(dockPanelTabsSource).toContain("forceRender: tab.kind === \"terminal\"");
-		expect(dockPanelTabsSource).toContain("createTerminalRuntimeId(sessionId, targetKey)");
+		expect(dockPanelTabsSource).toContain("terminalRuntimeScopeId");
+		expect(dockPanelTabsSource).toContain("targetKey");
 		expect(dockPanelTabsSource).toContain("open: nextTabs.length > 0 && layout.open");
-		expect(dockPanelTabsSource).toContain("terminalId={createTerminalRuntimeId(sessionId, tab.key)}");
+		expect(dockPanelTabsSource).toContain("tab.key");
 		expect(dockPanelTabsSource).toContain("<GitDiffReviewPanel workspaceId={workspaceId} sourceFolderId={sourceFolderId} sourceFolders={sourceFolders} primarySourceFolderId={primarySourceFolderId} onSourceFolderChange={onSourceFolderChange} gitStateRevision={gitStateRevision} contextItems={contextItems}");
 		expect(dockPanelTabsSource).toContain("tabs: reorderDockTabs(layout.tabs, sourceKey, targetKey)");
 		expect(terminalPanelSource).not.toContain("Tabs");

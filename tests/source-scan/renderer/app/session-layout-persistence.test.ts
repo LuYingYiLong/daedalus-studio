@@ -30,8 +30,8 @@ describe("session layout persistence wiring", () => {
 		expect(dockSource).not.toContain("useState<DockTab");
 		expect(dockSource).toContain("layout: DockLayoutPreferences;");
 		expect(dockSource).toContain("onLayoutChange: (layout: DockLayoutPreferences) => void;");
-		expect(dockSource).toContain("createTerminalRuntimeId(sessionId, tab.key)");
-		expect(homeSource).toContain("listTerminalRuntimeIds(previous.sessionId, previous.layout)");
+		expect(dockSource).toContain("terminalRuntimeScopeId");
+		expect(homeSource).toContain("previous.terminalRuntimeScopeId");
 	});
 
 	it("cleans layouts only from destructive session lifecycle paths", () => {

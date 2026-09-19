@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CollapseProps } from "antd";
 import { Button, Spin, Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
@@ -42,8 +42,8 @@ type SummaryGitActionRequest = {
 };
 
 export type HomePageSummaryControllerParams = {
-	activeSessionId: string | null;
-	isHome: boolean;
+	summarySessionId: string | null;
+	summaryScopeKey: string;
 	workspaceForActions: WorkspaceConfig | null;
 	effectiveGodotLaunchExecutablePath: string | null;
 	messageApi: MessageInstance;
@@ -108,8 +108,8 @@ export type HomePageSummaryController = {
 };
 
 function useHomePageSummaryController({
-	activeSessionId,
-	isHome,
+	summarySessionId,
+	summaryScopeKey,
 	workspaceForActions,
 	effectiveGodotLaunchExecutablePath,
 	messageApi,
@@ -161,9 +161,6 @@ function useHomePageSummaryController({
 	const summaryGitActionRequestIdRef = useRef<number>(0);
 	const planPreviewRequestIdRef = useRef<number>(0);
 
-	const summarySessionId: string | null = isHome ? null : activeSessionId;
-	const summaryScopeKey: string =
-		summarySessionId ?? `workspace:${workspaceForActions?.id ?? "none"}`;
 	const {
 		summaryOpen,
 		summaryOverview,
@@ -229,7 +226,7 @@ function useHomePageSummaryController({
 		};
 	}, [effectiveGodotLaunchExecutablePath, workspaceForActions]);
 
-	useEffect((): void => {
+	useLayoutEffect((): void => {
 		setSummaryGitSourceFolderId(null);
 		setSummaryGitActionRequest(null);
 		setPlansModalOpen(false);
@@ -250,7 +247,7 @@ function useHomePageSummaryController({
 	}, [summaryScopeKey]);
 
 	useEffect((): (() => void) | void => {
-		if (!plansModalOpen || activeSessionId === null) {
+		if (!plansModalOpen || summarySessionId === null) {
 			return;
 		}
 
@@ -259,7 +256,7 @@ function useHomePageSummaryController({
 		setPlansDialogError(null);
 		const frameId: number = window.requestAnimationFrame((): void => {
 			void fetchSessionOverview({
-				sessionId: activeSessionId,
+				sessionId: summarySessionId,
 				planLimit: SUMMARY_SEE_MORE_LIMIT,
 				sourceLimit: 0,
 				includePlanPreviews: false,
@@ -294,10 +291,10 @@ function useHomePageSummaryController({
 			cancelled = true;
 			window.cancelAnimationFrame(frameId);
 		};
-	}, [activeSessionId, plansModalOpen, t]);
+	}, [plansModalOpen, summarySessionId, t]);
 
 	useEffect((): (() => void) | void => {
-		if (!sourcesModalOpen || activeSessionId === null) {
+		if (!sourcesModalOpen || summarySessionId === null) {
 			return;
 		}
 
@@ -306,7 +303,7 @@ function useHomePageSummaryController({
 		setSourcesDialogError(null);
 		const frameId: number = window.requestAnimationFrame((): void => {
 			void fetchSessionOverview({
-				sessionId: activeSessionId,
+				sessionId: summarySessionId,
 				planLimit: 0,
 				sourceLimit: SUMMARY_SEE_MORE_LIMIT,
 				includeSourceImages: false,
@@ -340,7 +337,7 @@ function useHomePageSummaryController({
 			cancelled = true;
 			window.cancelAnimationFrame(frameId);
 		};
-	}, [activeSessionId, sourcesModalOpen, t]);
+	}, [sourcesModalOpen, summarySessionId, t]);
 
 	const handleDockGitStateChange = useCallback(async (): Promise<void> => {
 		setGitStateRevision((current: number): number => current + 1);
@@ -580,14 +577,14 @@ function useHomePageSummaryController({
 				setIsPlanPreviewLoading(false);
 				return;
 			}
-			if (activeSessionId === null) {
+			if (summarySessionId === null) {
 				setIsPlanPreviewLoading(false);
 				setPlanPreviewError(t("agentPage.summary.errors.load"));
 				return;
 			}
 
 			setIsPlanPreviewLoading(true);
-			void getPlan(plan.planId, activeSessionId)
+			void getPlan(plan.planId, summarySessionId)
 				.then((result: PlanResult): void => {
 					if (requestId !== planPreviewRequestIdRef.current) {
 						return;
@@ -620,7 +617,7 @@ function useHomePageSummaryController({
 					}
 				});
 		},
-		[activeSessionId, t],
+		[summarySessionId, t],
 	);
 
 	const closePlanPreview = useCallback((): void => {

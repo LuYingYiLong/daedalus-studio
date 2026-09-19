@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { WorkspaceConfig } from "@/platform/rpc/types";
 import {
@@ -89,7 +89,7 @@ function useSessionSummaryOverview({
 		}
 	}, [previewLimit, t]);
 
-	useEffect((): void => {
+	useLayoutEffect((): void => {
 		requestIdRef.current += 1;
 		setSummaryOpen(false);
 		setSummaryOverview(null);

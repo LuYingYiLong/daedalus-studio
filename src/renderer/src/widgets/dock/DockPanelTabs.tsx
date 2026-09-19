@@ -47,6 +47,7 @@ export type DockPanelTabsProps = {
 	dockId: string;
 	placement: DockPanelPlacement;
 	sessionId: string | null;
+	terminalRuntimeScopeId: string | null;
 	workspaceId: string | null;
 	workspace: WorkspaceConfig | null;
 	launchTargets: Array<{ id: WorkspaceLaunchTargetId; label: string }>;
@@ -146,6 +147,7 @@ function DockPanelTabs({
 	dockId,
 	placement,
 	sessionId,
+	terminalRuntimeScopeId,
 	workspaceId,
 	workspace,
 	launchTargets,
@@ -343,7 +345,10 @@ function DockPanelTabs({
 		if (targetTab?.kind === "terminal") {
 			void window.electronAPI.terminal
 				.kill({
-					terminalId: createTerminalRuntimeId(sessionId, targetKey),
+					terminalId: createTerminalRuntimeId(
+						terminalRuntimeScopeId,
+						targetKey,
+					),
 				})
 				.catch((error: unknown): void => {
 					console.error(
@@ -482,7 +487,10 @@ function DockPanelTabs({
 
 		return (
 			<TerminalPanel
-				terminalId={createTerminalRuntimeId(sessionId, tab.key)}
+				terminalId={createTerminalRuntimeId(
+					terminalRuntimeScopeId,
+					tab.key,
+				)}
 				cwd={cwd}
 				isOpen={isOpen && activeKey === tab.key}
 				waitForCwd={waitForCwd}

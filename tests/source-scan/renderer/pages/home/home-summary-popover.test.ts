@@ -32,10 +32,9 @@ describe("HomePage summary popover source", () => {
 	it("keeps the summary action mounted while NewSessionHome changes scope", () => {
 		expect(source).toContain('mainSurface === "chat" && workspaceForActions !== null');
 		expect(source).toContain("const showSummaryButton: boolean = true;");
-		expect(source).toContain("const summarySessionId: string | null = isHome ? null : activeSessionId;");
-		expect(source).toContain("const summaryScopeKey: string =");
-		expect(source).toContain('`workspace:${workspaceForActions?.id ?? "none"}`');
-		expect(source).toContain("sessionId: summarySessionId");
+		expect(source).toContain("resolveHomeWorkbenchScope({");
+		expect(source).toContain("summarySessionId: workbenchScope.sessionId");
+		expect(source).toContain("summaryScopeKey: workbenchScope.summaryScopeKey");
 		expect(source).toContain("showWorkspaceLaunchControls");
 		expect(source).toContain("showSummaryButton ? renderSummaryButton() : null");
 		expect(source).toContain("className={styles.floatingActionSlot}");

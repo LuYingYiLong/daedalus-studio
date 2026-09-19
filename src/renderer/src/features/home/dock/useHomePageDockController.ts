@@ -38,7 +38,8 @@ type UseHomePageDockControllerParams = {
 		layout: SessionLayoutPreferences,
 		options?: { persist?: boolean },
 	) => void;
-	activeSessionId: string | null;
+	layoutScopeId: string | null;
+	terminalRuntimeScopeId: string | null;
 	workspaceForActions: WorkspaceConfig | null;
 };
 
@@ -99,13 +100,14 @@ function useHomePageDockController({
 	sessionLayout,
 	onWorkspaceSidebarChange,
 	onSessionLayoutChange,
-	activeSessionId,
+	layoutScopeId,
+	terminalRuntimeScopeId,
 	workspaceForActions,
 }: UseHomePageDockControllerParams): HomePageDockController {
 	const layoutController: HomeDockLayoutController = useHomeDockLayout({
 		workspaceSidebar,
 		sessionLayout,
-		sessionLayoutScopeId: activeSessionId,
+		sessionLayoutScopeId: layoutScopeId,
 		onWorkspaceSidebarChange,
 		onSessionLayoutChange,
 	});
@@ -128,10 +130,12 @@ function useHomePageDockController({
 	const [sideDockActivationRequest, setSideDockActivationRequest] =
 		useState<DockPanelActivationRequest | null>(null);
 	const previousSessionLayoutRef = useRef<{
-		sessionId: string | null;
+		layoutScopeId: string | null;
+		terminalRuntimeScopeId: string | null;
 		layout: SessionLayoutPreferences;
 	}>({
-		sessionId: activeSessionId,
+		layoutScopeId,
+		terminalRuntimeScopeId,
 		layout: sessionLayout,
 	});
 
@@ -160,6 +164,11 @@ function useHomePageDockController({
 		fullscreenDockLayout?.tabs.find(
 			(tab): boolean => tab.key === fullscreenDockLayout.activeTabKey,
 		)?.kind === "browser";
+
+	useLayoutEffect((): void => {
+		sideDockProgrammaticOpenUntilRef.current = 0;
+		setSideDockActivationRequest(null);
+	}, [layoutScopeId]);
 
 	const updateSideDock = useCallback(
 		(
@@ -278,9 +287,9 @@ function useHomePageDockController({
 
 	useLayoutEffect((): void => {
 		const previous = previousSessionLayoutRef.current;
-		if (previous.sessionId !== activeSessionId) {
+		if (previous.layoutScopeId !== layoutScopeId) {
 			for (const terminalId of listTerminalRuntimeIds(
-				previous.sessionId,
+				previous.terminalRuntimeScopeId,
 				previous.layout,
 			)) {
 				void window.electronAPI.terminal
@@ -294,10 +303,11 @@ function useHomePageDockController({
 			}
 		}
 		previousSessionLayoutRef.current = {
-			sessionId: activeSessionId,
+			layoutScopeId,
+			terminalRuntimeScopeId,
 			layout: sessionLayout,
 		};
-	}, [activeSessionId, sessionLayout]);
+	}, [layoutScopeId, sessionLayout, terminalRuntimeScopeId]);
 
 	const requestSideDockKind = useCallback((kind: DockPanelKind): void => {
 		dockActivationRequestIdRef.current += 1;

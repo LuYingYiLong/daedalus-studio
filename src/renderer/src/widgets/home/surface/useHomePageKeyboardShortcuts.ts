@@ -156,7 +156,7 @@ export default function useHomePageKeyboardShortcuts({
 				return;
 			}
 			if (commandId === "workbench.toggleSessionSidebar") {
-				if (activeSessionId === null || !showSideDockButton) {
+				if ((activeSessionId === null && !isFlowSurface) || !showSideDockButton) {
 					return;
 				}
 				event.preventDefault();

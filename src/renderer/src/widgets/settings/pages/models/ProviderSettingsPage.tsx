@@ -82,19 +82,12 @@ type AddProviderFormValues = {
 	websiteUrl?: string | null;
 };
 
-function renderCapabilityTags(
-	capabilities: ProviderModelCapabilities,
-	t: (key: string) => string,
-): React.JSX.Element {
+function renderCapabilityTags(capabilities: ProviderModelCapabilities, t: (key: string) => string): React.JSX.Element {
 	return (
 		<span className={styles.capabilities}>
 			{getVisibleCapabilities(capabilities).map(
 				(capability: CapabilityBadge): React.JSX.Element => (
-					<Tag
-						key={capability.key}
-						color={capability.color}
-						className={styles.capabilityTag}
-					>
+					<Tag key={capability.key} color={capability.color} className={styles.capabilityTag}>
 						<Icon name={capability.icon} width={16} />
 						{t(capability.labelKey)}
 					</Tag>
@@ -104,68 +97,38 @@ function renderCapabilityTags(
 	);
 }
 
-function ProviderSettingsPage({
-	onSelectionChange,
-}: ProviderSettingsPageProps): React.JSX.Element | null {
+function ProviderSettingsPage({ onSelectionChange }: ProviderSettingsPageProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const { message, modal } = App.useApp();
-	const [selection, setSelection] = useState<ProviderModelSelection | null>(
-		null,
-	);
-	const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
-		null,
-	);
+	const [selection, setSelection] = useState<ProviderModelSelection | null>(null);
+	const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
 	const [query, setQuery] = useState<string>("");
 	const [draftBaseUrl, setDraftBaseUrl] = useState<string>("");
 	const [draftApiKey, setDraftApiKey] = useState<string>("");
 	const [isApiKeyDirty, setIsApiKeyDirty] = useState<boolean>(false);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
-	const [isCredentialSaving, setIsCredentialSaving] =
-		useState<boolean>(false);
+	const [isCredentialSaving, setIsCredentialSaving] = useState<boolean>(false);
 	const [isTesting, setIsTesting] = useState<boolean>(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-	const [isRequestConfigOpen, setIsRequestConfigOpen] =
-		useState<boolean>(false);
-	const [isRequestConfigSaving, setIsRequestConfigSaving] =
-		useState<boolean>(false);
-	const [providerAction, setProviderAction] = useState<
-		"enable" | "disable" | "remove" | null
-	>(null);
-	const [requestConfigError, setRequestConfigError] = useState<string | null>(
-		null,
-	);
-	const [providerDialogMode, setProviderDialogMode] = useState<
-		"add" | "edit" | null
-	>(null);
-	const [editingProvider, setEditingProvider] =
-		useState<ProviderModelSelectionProvider | null>(null);
-	const [modelDialogMode, setModelDialogMode] = useState<
-		"add" | "edit" | null
-	>(null);
-	const [editingModel, setEditingModel] = useState<ProviderModelInfo | null>(
-		null,
-	);
+	const [isRequestConfigOpen, setIsRequestConfigOpen] = useState<boolean>(false);
+	const [isRequestConfigSaving, setIsRequestConfigSaving] = useState<boolean>(false);
+	const [providerAction, setProviderAction] = useState<"enable" | "disable" | "remove" | null>(null);
+	const [requestConfigError, setRequestConfigError] = useState<string | null>(null);
+	const [providerDialogMode, setProviderDialogMode] = useState<"add" | "edit" | null>(null);
+	const [editingProvider, setEditingProvider] = useState<ProviderModelSelectionProvider | null>(null);
+	const [modelDialogMode, setModelDialogMode] = useState<"add" | "edit" | null>(null);
+	const [editingModel, setEditingModel] = useState<ProviderModelInfo | null>(null);
 	const [dialogError, setDialogError] = useState<string | null>(null);
 	const [isDialogSaving, setIsDialogSaving] = useState<boolean>(false);
 	const [isDiscoveryOpen, setIsDiscoveryOpen] = useState<boolean>(false);
-	const [discoveryProvider, setDiscoveryProvider] =
-		useState<ProviderModelSelectionProvider | null>(null);
+	const [discoveryProvider, setDiscoveryProvider] = useState<ProviderModelSelectionProvider | null>(null);
 	const [discoveryQuery, setDiscoveryQuery] = useState<string>("");
-	const [discoveredModels, setDiscoveredModels] = useState<
-		ManagedProviderModel[]
-	>([]);
-	const [latestRemoteModels, setLatestRemoteModels] = useState<
-		DiscoveredProviderModel[]
-	>([]);
-	const [selectedDiscoveredModelIds, setSelectedDiscoveredModelIds] =
-		useState<Key[]>([]);
-	const [initialEnabledModelIds, setInitialEnabledModelIds] = useState<
-		Set<string>
-	>(new Set());
-	const [discoverySource, setDiscoverySource] = useState<
-		ProviderModelsDiscoverResult["source"] | null
-	>(null);
+	const [discoveredModels, setDiscoveredModels] = useState<ManagedProviderModel[]>([]);
+	const [latestRemoteModels, setLatestRemoteModels] = useState<DiscoveredProviderModel[]>([]);
+	const [selectedDiscoveredModelIds, setSelectedDiscoveredModelIds] = useState<Key[]>([]);
+	const [initialEnabledModelIds, setInitialEnabledModelIds] = useState<Set<string>>(new Set());
+	const [discoverySource, setDiscoverySource] = useState<ProviderModelsDiscoverResult["source"] | null>(null);
 	const [discoveryError, setDiscoveryError] = useState<string | null>(null);
 	const [isDiscovering, setIsDiscovering] = useState<boolean>(false);
 	const [isImporting, setIsImporting] = useState<boolean>(false);
@@ -173,22 +136,16 @@ function ProviderSettingsPage({
 	const [providerForm] = Form.useForm<AddProviderFormValues>();
 	const [modelForm] = Form.useForm<ModelFormValues>();
 	const canInheritModelFields: boolean =
-		modelDialogMode === "edit" &&
-		editingModel?.customization?.source !== "custom";
-	const inheritDisplayName: boolean =
-		Form.useWatch("inheritDisplayName", modelForm) ?? false;
-	const inheritContextWindowTokens: boolean =
-		Form.useWatch("inheritContextWindowTokens", modelForm) ?? false;
-	const inheritMaxOutputTokens: boolean =
-		Form.useWatch("inheritMaxOutputTokens", modelForm) ?? false;
-	const inheritReasoningEfforts: boolean =
-		Form.useWatch("inheritReasoningEfforts", modelForm) ?? false;
+		modelDialogMode === "edit" && editingModel?.customization?.source !== "custom";
+	const inheritDisplayName: boolean = Form.useWatch("inheritDisplayName", modelForm) ?? false;
+	const inheritContextWindowTokens: boolean = Form.useWatch("inheritContextWindowTokens", modelForm) ?? false;
+	const inheritMaxOutputTokens: boolean = Form.useWatch("inheritMaxOutputTokens", modelForm) ?? false;
+	const inheritReasoningEfforts: boolean = Form.useWatch("inheritReasoningEfforts", modelForm) ?? false;
 	const reasoningCapabilityValue: CapabilityFormValue =
 		Form.useWatch(["capabilities", "reasoning"], modelForm) ?? "disabled";
 	const reasoningEffortsEnabled: boolean =
 		reasoningCapabilityValue === "enabled" ||
-		(reasoningCapabilityValue === "inherit" &&
-			editingModel?.capabilities.reasoning === true);
+		(reasoningCapabilityValue === "inherit" && editingModel?.capabilities.reasoning === true);
 
 	useEffect((): (() => void) => {
 		let cancelled: boolean = false;
@@ -197,8 +154,7 @@ function ProviderSettingsPage({
 			try {
 				setIsLoading(true);
 				setErrorMessage(null);
-				const result: ProviderModelSelection =
-					await fetchProviderModelSelection();
+				const result: ProviderModelSelection = await fetchProviderModelSelection();
 
 				if (cancelled) {
 					return;
@@ -206,22 +162,12 @@ function ProviderSettingsPage({
 
 				setSelection(result);
 				onSelectionChange?.(result);
-				setSelectedProviderId(
-					(currentProviderId: string | null): string => {
-						return (
-							currentProviderId ??
-							result.providers[0]?.provider ??
-							result.activeModel.providerId
-						);
-					},
-				);
+				setSelectedProviderId((currentProviderId: string | null): string => {
+					return currentProviderId ?? result.providers[0]?.provider ?? result.activeModel.providerId;
+				});
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(
-						error instanceof Error
-							? error.message
-							: t("settings.provider.errors.load"),
-					);
+					setErrorMessage(error instanceof Error ? error.message : t("settings.provider.errors.load"));
 				}
 			} finally {
 				if (!cancelled) {
@@ -243,11 +189,9 @@ function ProviderSettingsPage({
 				return null;
 			}
 			return (
-				selection.providers.find(
-					(provider: ProviderModelSelectionProvider): boolean => {
-						return provider.provider === selectedProviderId;
-					},
-				) ??
+				selection.providers.find((provider: ProviderModelSelectionProvider): boolean => {
+					return provider.provider === selectedProviderId;
+				}) ??
 				selection.providers[0] ??
 				null
 			);
@@ -268,59 +212,44 @@ function ProviderSettingsPage({
 		setRequestConfigError(null);
 	}, [selectedProviderId]);
 
-	const filteredProviders: ProviderModelSelectionProvider[] =
-		useMemo((): ProviderModelSelectionProvider[] => {
-			if (selection === null) {
-				return [];
-			}
+	const filteredProviders: ProviderModelSelectionProvider[] = useMemo((): ProviderModelSelectionProvider[] => {
+		if (selection === null) {
+			return [];
+		}
 
-			const normalizedQuery: string = query.trim().toLowerCase();
-			if (normalizedQuery.length === 0) {
-				return selection.providers;
-			}
+		const normalizedQuery: string = query.trim().toLowerCase();
+		if (normalizedQuery.length === 0) {
+			return selection.providers;
+		}
 
-			return selection.providers.filter(
-				(provider: ProviderModelSelectionProvider): boolean => {
-					return (
-						provider.displayName
-							.toLowerCase()
-							.includes(normalizedQuery) ||
-						provider.provider
-							.toLowerCase()
-							.includes(normalizedQuery)
-					);
-				},
+		return selection.providers.filter((provider: ProviderModelSelectionProvider): boolean => {
+			return (
+				provider.displayName.toLowerCase().includes(normalizedQuery) ||
+				provider.provider.toLowerCase().includes(normalizedQuery)
 			);
-		}, [query, selection]);
+		});
+	}, [query, selection]);
 
-	const providerMenuItems: MenuProps["items"] =
-		useMemo((): MenuProps["items"] => {
-			return filteredProviders.map(
-				(
-					provider: ProviderModelSelectionProvider,
-				): NonNullable<MenuProps["items"]>[number] => {
-					const enabled: boolean = provider.enabled !== false;
-					return {
-						key: provider.provider,
-						label: (
-							<span className={styles.providerMenuLabel}>
-								<span className={styles.providerName}>
-									{provider.displayName}
-								</span>
-								{enabled ? (
-									<Tag
-										color="success"
-										className={styles.providerStatusTag}
-									>
-										{t("settings.common.on")}
-									</Tag>
-								) : null}
-							</span>
-						),
-					};
-				},
-			);
-		}, [filteredProviders, t]);
+	const providerMenuItems: MenuProps["items"] = useMemo((): MenuProps["items"] => {
+		return filteredProviders.map(
+			(provider: ProviderModelSelectionProvider): NonNullable<MenuProps["items"]>[number] => {
+				const enabled: boolean = provider.enabled !== false;
+				return {
+					key: provider.provider,
+					label: (
+						<span className={styles.providerMenuLabel}>
+							<span className={styles.providerName}>{provider.displayName}</span>
+							{enabled ? (
+								<Tag color="success" className={styles.providerStatusTag}>
+									{t("settings.common.on")}
+								</Tag>
+							) : null}
+						</span>
+					),
+				};
+			},
+		);
+	}, [filteredProviders, t]);
 
 	function createDiscoveryParams(
 		provider: ProviderModelSelectionProvider,
@@ -343,8 +272,7 @@ function ProviderSettingsPage({
 	): Parameters<typeof saveProviderConfig>[0] {
 		const payload: Parameters<typeof saveProviderConfig>[0] = {
 			provider: provider.provider,
-			baseUrl:
-				draftBaseUrl.trim().length > 0 ? draftBaseUrl.trim() : null,
+			baseUrl: draftBaseUrl.trim().length > 0 ? draftBaseUrl.trim() : null,
 			activate: false,
 		};
 		if (enableProvider) {
@@ -356,9 +284,7 @@ function ProviderSettingsPage({
 		return payload;
 	}
 
-	async function handleSaveRequestOverrides(
-		value: ProviderRequestOverrides,
-	): Promise<void> {
+	async function handleSaveRequestOverrides(value: ProviderRequestOverrides): Promise<void> {
 		if (selectedProvider === null) {
 			return;
 		}
@@ -366,33 +292,26 @@ function ProviderSettingsPage({
 		try {
 			setIsRequestConfigSaving(true);
 			setRequestConfigError(null);
-			const nextSelection: ProviderModelSelection =
-				await saveProviderConfig({
-					provider: selectedProvider.provider,
-					requestOverrides: value,
-					activate: false,
-				});
+			const nextSelection: ProviderModelSelection = await saveProviderConfig({
+				provider: selectedProvider.provider,
+				requestOverrides: value,
+				activate: false,
+			});
 			setSelection(nextSelection);
 			onSelectionChange?.(nextSelection);
 			setSelectedProviderId(selectedProvider.provider);
 			setIsRequestConfigOpen(false);
-			void message.success(
-				t("settings.provider.messages.requestConfigurationSaved"),
-			);
+			void message.success(t("settings.provider.messages.requestConfigurationSaved"));
 		} catch (error: unknown) {
 			setRequestConfigError(
-				error instanceof Error
-					? error.message
-					: t("settings.provider.errors.saveRequestConfiguration"),
+				error instanceof Error ? error.message : t("settings.provider.errors.saveRequestConfiguration"),
 			);
 		} finally {
 			setIsRequestConfigSaving(false);
 		}
 	}
 
-	async function handleClearApiKey(
-		provider: ProviderModelSelectionProvider,
-	): Promise<void> {
+	async function handleClearApiKey(provider: ProviderModelSelectionProvider): Promise<void> {
 		if (!provider.configured) {
 			setDraftApiKey("");
 			setIsApiKeyDirty(false);
@@ -402,78 +321,60 @@ function ProviderSettingsPage({
 		try {
 			setIsSaving(true);
 			setErrorMessage(null);
-			const resolvedModel: string | null =
-				provider.selectedModel ?? provider.defaultModel;
+			const resolvedModel: string | null = provider.selectedModel ?? provider.defaultModel;
 			const payload: Parameters<typeof saveProviderConfig>[0] = {
 				provider: provider.provider,
 				apiKey: null,
-				baseUrl:
-					draftBaseUrl.trim().length > 0 ? draftBaseUrl.trim() : null,
+				baseUrl: draftBaseUrl.trim().length > 0 ? draftBaseUrl.trim() : null,
 				activate: provider.selected && resolvedModel !== null,
 			};
 			if (resolvedModel !== null) {
 				payload.model = resolvedModel;
 			}
-			const nextSelection: ProviderModelSelection =
-				await saveProviderConfig(payload);
+			const nextSelection: ProviderModelSelection = await saveProviderConfig(payload);
 			setSelection(nextSelection);
 			onSelectionChange?.(nextSelection);
 			setSelectedProviderId(provider.provider);
 			setDraftApiKey("");
 			setIsApiKeyDirty(false);
 		} catch (error: unknown) {
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: t("settings.provider.errors.clearApiKey"),
-			);
+			setErrorMessage(error instanceof Error ? error.message : t("settings.provider.errors.clearApiKey"));
 		} finally {
 			setIsSaving(false);
 		}
 	}
 
-	async function handleSaveCredentials(
-		provider: ProviderModelSelectionProvider,
-	): Promise<void> {
+	async function handleSaveCredentials(provider: ProviderModelSelectionProvider): Promise<void> {
 		try {
 			setIsCredentialSaving(true);
 			setErrorMessage(null);
-			const nextSelection: ProviderModelSelection =
-				await saveProviderConfig(createCredentialSavePayload(provider));
+			const nextSelection: ProviderModelSelection = await saveProviderConfig(
+				createCredentialSavePayload(provider),
+			);
 			setSelection(nextSelection);
 			onSelectionChange?.(nextSelection);
 			setSelectedProviderId(provider.provider);
 			setDraftApiKey("");
 			setIsApiKeyDirty(false);
-			void message.success(
-				t("settings.provider.messages.credentialsSaved"),
-			);
+			void message.success(t("settings.provider.messages.credentialsSaved"));
 		} catch (error: unknown) {
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: t("settings.provider.errors.saveCredentials"),
-			);
+			setErrorMessage(error instanceof Error ? error.message : t("settings.provider.errors.saveCredentials"));
 		} finally {
 			setIsCredentialSaving(false);
 		}
 	}
 
-	async function handleTestProvider(
-		provider: ProviderModelSelectionProvider,
-	): Promise<void> {
+	async function handleTestProvider(provider: ProviderModelSelectionProvider): Promise<void> {
 		try {
 			setIsTesting(true);
 			setErrorMessage(null);
-			const result: ProviderModelsDiscoverResult =
-				await discoverProviderModels(createDiscoveryParams(provider));
+			const result: ProviderModelsDiscoverResult = await discoverProviderModels(createDiscoveryParams(provider));
 			if (result.source !== "api" || result.error !== undefined) {
 				throw new Error(getDiscoveryFailureMessage(result, t));
 			}
-			const nextSelection: ProviderModelSelection =
-				await saveProviderConfig(
-					createCredentialSavePayload(provider, true),
-				);
+			const nextSelection: ProviderModelSelection = await saveProviderConfig(
+				createCredentialSavePayload(provider, true),
+			);
 			setSelection(nextSelection);
 			onSelectionChange?.(nextSelection);
 			setSelectedProviderId(provider.provider);
@@ -481,11 +382,7 @@ function ProviderSettingsPage({
 			setIsApiKeyDirty(false);
 			void message.success(t("settings.provider.messages.testSuccess"));
 		} catch (error: unknown) {
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: t("settings.provider.errors.testConnection"),
-			);
+			setErrorMessage(error instanceof Error ? error.message : t("settings.provider.errors.testConnection"));
 		} finally {
 			setIsTesting(false);
 		}
@@ -500,119 +397,70 @@ function ProviderSettingsPage({
 		setIsDiscovering(true);
 		setDiscoveryError(null);
 		try {
-			const result: ProviderModelsDiscoverResult =
-				await discoverProviderModels(createDiscoveryParams(provider));
+			const result: ProviderModelsDiscoverResult = await discoverProviderModels(createDiscoveryParams(provider));
 			if (discoveryRequestIdRef.current !== requestId) {
 				return;
 			}
-			setLatestRemoteModels(
-				(
-					currentModels: DiscoveredProviderModel[],
-				): DiscoveredProviderModel[] => {
-					if (!preserveSelection) {
-						return result.models;
+			setLatestRemoteModels((currentModels: DiscoveredProviderModel[]): DiscoveredProviderModel[] => {
+				if (!preserveSelection) {
+					return result.models;
+				}
+				const modelsById: Map<string, DiscoveredProviderModel> = new Map(
+					currentModels.map((model: DiscoveredProviderModel): [string, DiscoveredProviderModel] => [
+						model.id,
+						model,
+					]),
+				);
+				for (const model of result.models) {
+					modelsById.set(model.id, model);
+				}
+				return [...modelsById.values()];
+			});
+			setDiscoveredModels((currentModels: ManagedProviderModel[]): ManagedProviderModel[] => {
+				const nextModels: ManagedProviderModel[] = mergeManagedModels(
+					currentModels,
+					result.managedModels,
+					result.models,
+					preserveSelection,
+				);
+				const availableIds: Set<string> = new Set(
+					nextModels.map((model: ManagedProviderModel): string => model.id),
+				);
+				const guardedIds: Set<string> = new Set(
+					nextModels
+						.filter((model: ManagedProviderModel): boolean => model.removalGuards.length > 0)
+						.map((model: ManagedProviderModel): string => model.id),
+				);
+				setSelectedDiscoveredModelIds((currentIds: Key[]): Key[] => {
+					const nextIds: Set<string> = preserveSelection
+						? new Set(
+								currentIds
+									.map((currentId: Key): string => String(currentId))
+									.filter((modelId: string): boolean => availableIds.has(modelId)),
+							)
+						: new Set(
+								result.managedModels
+									.filter((model: ManagedProviderModel): boolean => model.enabled)
+									.map((model: ManagedProviderModel): string => model.id),
+							);
+					for (const modelId of guardedIds) {
+						nextIds.add(modelId);
 					}
-					const modelsById: Map<string, DiscoveredProviderModel> =
-						new Map(
-							currentModels.map(
-								(
-									model: DiscoveredProviderModel,
-								): [string, DiscoveredProviderModel] => [
-									model.id,
-									model,
-								],
-							),
-						);
-					for (const model of result.models) {
-						modelsById.set(model.id, model);
-					}
-					return [...modelsById.values()];
-				},
-			);
-			setDiscoveredModels(
-				(
-					currentModels: ManagedProviderModel[],
-				): ManagedProviderModel[] => {
-					const nextModels: ManagedProviderModel[] =
-						mergeManagedModels(
-							currentModels,
-							result.managedModels,
-							result.models,
-							preserveSelection,
-						);
-					const availableIds: Set<string> = new Set(
-						nextModels.map(
-							(model: ManagedProviderModel): string => model.id,
+					return [...nextIds];
+				});
+				if (!preserveSelection) {
+					setInitialEnabledModelIds(
+						new Set(
+							result.managedModels
+								.filter((model: ManagedProviderModel): boolean => model.enabled)
+								.map((model: ManagedProviderModel): string => model.id),
 						),
 					);
-					const guardedIds: Set<string> = new Set(
-						nextModels
-							.filter(
-								(model: ManagedProviderModel): boolean =>
-									model.removalGuards.length > 0,
-							)
-							.map(
-								(model: ManagedProviderModel): string =>
-									model.id,
-							),
-					);
-					setSelectedDiscoveredModelIds(
-						(currentIds: Key[]): Key[] => {
-							const nextIds: Set<string> = preserveSelection
-								? new Set(
-										currentIds
-											.map((currentId: Key): string =>
-												String(currentId),
-											)
-											.filter(
-												(modelId: string): boolean =>
-													availableIds.has(modelId),
-											),
-									)
-								: new Set(
-										result.managedModels
-											.filter(
-												(
-													model: ManagedProviderModel,
-												): boolean => model.enabled,
-											)
-											.map(
-												(
-													model: ManagedProviderModel,
-												): string => model.id,
-											),
-									);
-							for (const modelId of guardedIds) {
-								nextIds.add(modelId);
-							}
-							return [...nextIds];
-						},
-					);
-					if (!preserveSelection) {
-						setInitialEnabledModelIds(
-							new Set(
-								result.managedModels
-									.filter(
-										(
-											model: ManagedProviderModel,
-										): boolean => model.enabled,
-									)
-									.map(
-										(model: ManagedProviderModel): string =>
-											model.id,
-									),
-							),
-						);
-					}
-					return nextModels;
-				},
-			);
+				}
+				return nextModels;
+			});
 			setDiscoverySource(result.source);
-			setDiscoveryError(
-				result.error === undefined
-					? null
-					: getDiscoveryFailureMessage(result, t),
-			);
+			setDiscoveryError(result.error === undefined ? null : getDiscoveryFailureMessage(result, t));
 		} catch (error: unknown) {
 			if (discoveryRequestIdRef.current === requestId) {
 				if (!preserveSelection) {
@@ -623,9 +471,7 @@ function ProviderSettingsPage({
 				}
 				setDiscoverySource(null);
 				setDiscoveryError(
-					error instanceof Error
-						? error.message
-						: t("settings.provider.errors.discoverModels"),
+					error instanceof Error ? error.message : t("settings.provider.errors.discoverModels"),
 				);
 			}
 		} finally {
@@ -635,9 +481,7 @@ function ProviderSettingsPage({
 		}
 	}
 
-	function openDiscoveryDialog(
-		provider: ProviderModelSelectionProvider,
-	): void {
+	function openDiscoveryDialog(provider: ProviderModelSelectionProvider): void {
 		setDiscoveryProvider(provider);
 		setDiscoveryQuery("");
 		setDiscoveredModels([]);
@@ -663,9 +507,7 @@ function ProviderSettingsPage({
 			case "activeModel":
 				return t("settings.provider.discovery.guards.activeModel");
 			case "providerSelection":
-				return t(
-					"settings.provider.discovery.guards.providerSelection",
-				);
+				return t("settings.provider.discovery.guards.providerSelection");
 			case "taskRouting":
 				return t("settings.provider.discovery.guards.taskRouting", {
 					task: guard.task,
@@ -681,22 +523,16 @@ function ProviderSettingsPage({
 				model: usage.model,
 			});
 		}
-		const task: string = t(
-			`settings.defaultModel.routing.${usage.task}.title`,
-			{
-				defaultValue: usage.task,
-			},
-		);
+		const task: string = t(`settings.defaultModel.routing.${usage.task}.title`, {
+			defaultValue: usage.task,
+		});
 		return t("settings.provider.usage.taskRouting", {
 			task,
 			model: usage.model,
 		});
 	}
 
-	function showProviderUsageBlocked(
-		provider: ProviderModelSelectionProvider,
-		usages: ProviderModelUsage[],
-	): void {
+	function showProviderUsageBlocked(provider: ProviderModelSelectionProvider, usages: ProviderModelUsage[]): void {
 		void modal.warning({
 			title: t("settings.provider.usage.blockedTitle"),
 			content: (
@@ -727,16 +563,11 @@ function ProviderSettingsPage({
 		});
 	}
 
-	function applyProviderSelection(
-		nextSelection: ProviderModelSelection,
-		nextProviderId: string | null,
-	): void {
+	function applyProviderSelection(nextSelection: ProviderModelSelection, nextProviderId: string | null): void {
 		setSelection(nextSelection);
 		onSelectionChange?.(nextSelection);
 		setSelectedProviderId(
-			nextProviderId ??
-				nextSelection.providers[0]?.provider ??
-				nextSelection.activeModel.providerId,
+			nextProviderId ?? nextSelection.providers[0]?.provider ?? nextSelection.activeModel.providerId,
 		);
 	}
 
@@ -767,21 +598,13 @@ function ProviderSettingsPage({
 				),
 			);
 		} catch (error: unknown) {
-			setErrorMessage(
-				getCustomizationErrorMessage(
-					error,
-					"settings.provider.errors.updateProviderState",
-					t,
-				),
-			);
+			setErrorMessage(getCustomizationErrorMessage(error, "settings.provider.errors.updateProviderState", t));
 		} finally {
 			setProviderAction(null);
 		}
 	}
 
-	async function handleRemoveProvider(
-		provider: ProviderModelSelectionProvider,
-	): Promise<void> {
+	async function handleRemoveProvider(provider: ProviderModelSelectionProvider): Promise<void> {
 		if (!provider.custom) {
 			return;
 		}
@@ -793,13 +616,7 @@ function ProviderSettingsPage({
 				return;
 			}
 		} catch (error: unknown) {
-			setErrorMessage(
-				getCustomizationErrorMessage(
-					error,
-					"settings.provider.errors.removeProvider",
-					t,
-				),
-			);
+			setErrorMessage(getCustomizationErrorMessage(error, "settings.provider.errors.removeProvider", t));
 			return;
 		}
 
@@ -831,13 +648,7 @@ function ProviderSettingsPage({
 				}),
 			);
 		} catch (error: unknown) {
-			setErrorMessage(
-				getCustomizationErrorMessage(
-					error,
-					"settings.provider.errors.removeProvider",
-					t,
-				),
-			);
+			setErrorMessage(getCustomizationErrorMessage(error, "settings.provider.errors.removeProvider", t));
 		} finally {
 			setProviderAction(null);
 		}
@@ -847,15 +658,12 @@ function ProviderSettingsPage({
 		if (discoveryProvider === null) {
 			return;
 		}
-		const selectedIds: Set<string> = new Set(
-			selectedDiscoveredModelIds.map((id: Key): string => String(id)),
+		const selectedIds: Set<string> = new Set(selectedDiscoveredModelIds.map((id: Key): string => String(id)));
+		const upsertModels: DiscoveredProviderModel[] = latestRemoteModels.filter(
+			(model: DiscoveredProviderModel): boolean => {
+				return selectedIds.has(model.id);
+			},
 		);
-		const upsertModels: DiscoveredProviderModel[] =
-			latestRemoteModels.filter(
-				(model: DiscoveredProviderModel): boolean => {
-					return selectedIds.has(model.id);
-				},
-			);
 		const enableModelIds: string[] = [...selectedIds].filter(
 			(modelId: string): boolean => !initialEnabledModelIds.has(modelId),
 		);
@@ -863,27 +671,21 @@ function ProviderSettingsPage({
 			(modelId: string): boolean => !selectedIds.has(modelId),
 		);
 		if (removeModelIds.length > 0) {
-			const removedModels: ManagedProviderModel[] =
-				discoveredModels.filter(
-					(model: ManagedProviderModel): boolean => {
-						return removeModelIds.includes(model.id);
-					},
-				);
+			const removedModels: ManagedProviderModel[] = discoveredModels.filter(
+				(model: ManagedProviderModel): boolean => {
+					return removeModelIds.includes(model.id);
+				},
+			);
 			const confirmed: boolean = await modal.confirm({
 				title: t("settings.provider.discovery.removeConfirmTitle"),
 				content: (
 					<div>
 						<Typography.Paragraph>
-							{t(
-								"settings.provider.discovery.removeConfirmDescription",
-								{ count: removedModels.length },
-							)}
+							{t("settings.provider.discovery.removeConfirmDescription", { count: removedModels.length })}
 						</Typography.Paragraph>
 						<ul>
 							{removedModels.map(
-								(
-									model: ManagedProviderModel,
-								): React.JSX.Element => (
+								(model: ManagedProviderModel): React.JSX.Element => (
 									<li key={model.id}>
 										{model.displayName} ({model.id})
 									</li>
@@ -905,17 +707,14 @@ function ProviderSettingsPage({
 			setIsImporting(true);
 			setDiscoveryError(null);
 			if (discoverySource === "api") {
-				await saveProviderConfig(
-					createCredentialSavePayload(discoveryProvider),
-				);
+				await saveProviderConfig(createCredentialSavePayload(discoveryProvider));
 			}
-			const nextSelection: ProviderModelSelection =
-				await syncProviderModels({
-					provider: discoveryProvider.provider,
-					upsertModels,
-					enableModelIds,
-					removeModelIds,
-				});
+			const nextSelection: ProviderModelSelection = await syncProviderModels({
+				provider: discoveryProvider.provider,
+				upsertModels,
+				enableModelIds,
+				removeModelIds,
+			});
 			setSelection(nextSelection);
 			onSelectionChange?.(nextSelection);
 			setSelectedProviderId(discoveryProvider.provider);
@@ -931,11 +730,7 @@ function ProviderSettingsPage({
 				}),
 			);
 		} catch (error: unknown) {
-			setDiscoveryError(
-				error instanceof Error
-					? error.message
-					: t("settings.provider.errors.syncModels"),
-			);
+			setDiscoveryError(error instanceof Error ? error.message : t("settings.provider.errors.syncModels"));
 		} finally {
 			setIsImporting(false);
 		}
@@ -952,9 +747,7 @@ function ProviderSettingsPage({
 		setProviderDialogMode("add");
 	}
 
-	function openEditProviderDialog(
-		provider: ProviderModelSelectionProvider,
-	): void {
+	function openEditProviderDialog(provider: ProviderModelSelectionProvider): void {
 		if (!provider.custom) {
 			return;
 		}
@@ -984,8 +777,7 @@ function ProviderSettingsPage({
 
 	async function handleAddProvider(): Promise<void> {
 		try {
-			const values: AddProviderFormValues =
-				await providerForm.validateFields();
+			const values: AddProviderFormValues = await providerForm.validateFields();
 			setIsDialogSaving(true);
 			setDialogError(null);
 			const result = await addCustomProvider({
@@ -1016,8 +808,7 @@ function ProviderSettingsPage({
 			return;
 		}
 		try {
-			const values: AddProviderFormValues =
-				await providerForm.validateFields();
+			const values: AddProviderFormValues = await providerForm.validateFields();
 			setIsDialogSaving(true);
 			setDialogError(null);
 			const result = await updateCustomProvider({
@@ -1031,9 +822,7 @@ function ProviderSettingsPage({
 			setSelectedProviderId(editingProvider.provider);
 			setProviderDialogMode(null);
 			setEditingProvider(null);
-			void message.success(
-				t("settings.provider.messages.providerUpdated"),
-			);
+			void message.success(t("settings.provider.messages.providerUpdated"));
 		} catch (error: unknown) {
 			const errorMessage: string | null = getCustomizationErrorMessage(
 				error,
@@ -1048,9 +837,7 @@ function ProviderSettingsPage({
 		}
 	}
 
-	async function handleOpenProviderWebsite(
-		provider: ProviderModelSelectionProvider,
-	): Promise<void> {
+	async function handleOpenProviderWebsite(provider: ProviderModelSelectionProvider): Promise<void> {
 		const websiteUrl: string | undefined = provider.websiteUrl;
 		if (websiteUrl === undefined) {
 			return;
@@ -1058,11 +845,7 @@ function ProviderSettingsPage({
 		try {
 			await window.electronAPI.windowControl.openExternal(websiteUrl);
 		} catch (error: unknown) {
-			void message.error(
-				error instanceof Error
-					? error.message
-					: t("settings.provider.errors.openWebsite"),
-			);
+			void message.error(error instanceof Error ? error.message : t("settings.provider.errors.openWebsite"));
 		}
 	}
 
@@ -1073,9 +856,7 @@ function ProviderSettingsPage({
 		try {
 			const values: ModelFormValues = await modelForm.validateFields();
 			const reasoningEfforts: ProviderReasoningEffortOption[] =
-				values.capabilities.reasoning === "disabled"
-					? []
-					: toReasoningEffortOptions(values.reasoningEfforts);
+				values.capabilities.reasoning === "disabled" ? [] : toReasoningEffortOptions(values.reasoningEfforts);
 			setIsDialogSaving(true);
 			setDialogError(null);
 			const nextSelection: ProviderModelSelection =
@@ -1086,33 +867,20 @@ function ProviderSettingsPage({
 							displayName: values.displayName,
 							contextWindowTokens: values.contextWindowTokens,
 							maxOutputTokens: values.maxOutputTokens,
-							capabilities: toCustomModelCapabilities(
-								values.capabilities,
-							),
+							capabilities: toCustomModelCapabilities(values.capabilities),
 							reasoningEfforts,
 						})
 					: await updateProviderModel({
 							provider: selectedProvider.provider,
 							id: editingModel?.id ?? values.id,
-							displayName:
-								canInheritModelFields &&
-								values.inheritDisplayName
-									? null
-									: values.displayName,
+							displayName: canInheritModelFields && values.inheritDisplayName ? null : values.displayName,
 							contextWindowTokens:
-								canInheritModelFields &&
-								values.inheritContextWindowTokens
+								canInheritModelFields && values.inheritContextWindowTokens
 									? null
 									: values.contextWindowTokens,
 							maxOutputTokens:
-								canInheritModelFields &&
-								values.inheritMaxOutputTokens
-									? null
-									: values.maxOutputTokens,
-							capabilities: toEditableCapabilities(
-								values.capabilities,
-								canInheritModelFields,
-							),
+								canInheritModelFields && values.inheritMaxOutputTokens ? null : values.maxOutputTokens,
+							capabilities: toEditableCapabilities(values.capabilities, canInheritModelFields),
 							reasoningEfforts:
 								values.capabilities.reasoning !== "disabled" &&
 								canInheritModelFields &&
@@ -1126,11 +894,7 @@ function ProviderSettingsPage({
 			setModelDialogMode(null);
 			setEditingModel(null);
 		} catch (error: unknown) {
-			const message: string | null = getCustomizationErrorMessage(
-				error,
-				"settings.provider.errors.saveModel",
-				t,
-			);
+			const message: string | null = getCustomizationErrorMessage(error, "settings.provider.errors.saveModel", t);
 			if (message !== null) {
 				setDialogError(message);
 			}
@@ -1152,10 +916,7 @@ function ProviderSettingsPage({
 						<div className={styles.detailBody}>
 							<Alert
 								type="error"
-								description={
-									errorMessage ??
-									t("settings.provider.errors.noSettings")
-								}
+								description={errorMessage ?? t("settings.provider.errors.noSettings")}
 							/>
 						</div>
 					</div>
@@ -1169,10 +930,7 @@ function ProviderSettingsPage({
 			title: t("settings.provider.columns.model"),
 			align: "center",
 			key: "model",
-			render: (
-				_value: unknown,
-				model: ProviderModelInfo,
-			): React.JSX.Element => (
+			render: (_value: unknown, model: ProviderModelInfo): React.JSX.Element => (
 				<span className={styles.modelName}>{model.displayName}</span>
 			),
 		},
@@ -1182,29 +940,20 @@ function ProviderSettingsPage({
 			key: "capabilities",
 			align: "center",
 			width: 460,
-			render: (
-				capabilities: ProviderModelCapabilities,
-			): React.JSX.Element => renderCapabilityTags(capabilities, t),
+			render: (capabilities: ProviderModelCapabilities): React.JSX.Element =>
+				renderCapabilityTags(capabilities, t),
 		},
 	];
-	const normalizedDiscoveryQuery: string = discoveryQuery
-		.trim()
-		.toLowerCase();
+	const normalizedDiscoveryQuery: string = discoveryQuery.trim().toLowerCase();
 	const filteredDiscoveredModels: ManagedProviderModel[] =
 		normalizedDiscoveryQuery.length === 0
 			? discoveredModels
-			: discoveredModels.filter(
-					(model: ManagedProviderModel): boolean => {
-						return (
-							model.id
-								.toLowerCase()
-								.includes(normalizedDiscoveryQuery) ||
-							model.displayName
-								.toLowerCase()
-								.includes(normalizedDiscoveryQuery)
-						);
-					},
-				);
+			: discoveredModels.filter((model: ManagedProviderModel): boolean => {
+					return (
+						model.id.toLowerCase().includes(normalizedDiscoveryQuery) ||
+						model.displayName.toLowerCase().includes(normalizedDiscoveryQuery)
+					);
+				});
 	const discoveryColumns: TableProps<ManagedProviderModel>["columns"] = [
 		{
 			title: t("settings.provider.fields.modelId"),
@@ -1212,20 +961,11 @@ function ProviderSettingsPage({
 			key: "id",
 			width: 240,
 			ellipsis: true,
-			render: (
-				modelId: string,
-				model: ManagedProviderModel,
-			): React.JSX.Element => {
+			render: (modelId: string, model: ManagedProviderModel): React.JSX.Element => {
 				const guardMessage: string | null =
-					model.removalGuards[0] === undefined
-						? null
-						: getRemovalGuardMessage(model.removalGuards[0]);
+					model.removalGuards[0] === undefined ? null : getRemovalGuardMessage(model.removalGuards[0]);
 				const content: React.JSX.Element = <span>{modelId}</span>;
-				return guardMessage === null ? (
-					content
-				) : (
-					<Tooltip title={guardMessage}>{content}</Tooltip>
-				);
+				return guardMessage === null ? content : <Tooltip title={guardMessage}>{content}</Tooltip>;
 			},
 		},
 		{
@@ -1240,9 +980,8 @@ function ProviderSettingsPage({
 			key: "capabilities",
 			align: "center",
 			width: 460,
-			render: (
-				capabilities: ProviderModelCapabilities,
-			): React.JSX.Element => renderCapabilityTags(capabilities, t),
+			render: (capabilities: ProviderModelCapabilities): React.JSX.Element =>
+				renderCapabilityTags(capabilities, t),
 		},
 	];
 	const selectedDiscoveryIds: Set<string> = new Set(
@@ -1250,25 +989,16 @@ function ProviderSettingsPage({
 	);
 	const selectionChanged: boolean =
 		selectedDiscoveryIds.size !== initialEnabledModelIds.size ||
-		[...selectedDiscoveryIds].some(
-			(modelId: string): boolean => !initialEnabledModelIds.has(modelId),
-		);
-	const hasSelectedRemoteModels: boolean = latestRemoteModels.some(
-		(model: DiscoveredProviderModel): boolean => {
-			return selectedDiscoveryIds.has(model.id);
-		},
-	);
-	const canApplyDiscoveryChanges: boolean =
-		selectionChanged || hasSelectedRemoteModels;
+		[...selectedDiscoveryIds].some((modelId: string): boolean => !initialEnabledModelIds.has(modelId));
+	const hasSelectedRemoteModels: boolean = latestRemoteModels.some((model: DiscoveredProviderModel): boolean => {
+		return selectedDiscoveryIds.has(model.id);
+	});
+	const canApplyDiscoveryChanges: boolean = selectionChanged || hasSelectedRemoteModels;
 	const selectedProviderEnabled: boolean = selectedProvider.enabled !== false;
-	const providerEnableUnavailable: boolean =
-		!selectedProviderEnabled && !selectedProvider.configured;
+	const providerEnableUnavailable: boolean = !selectedProviderEnabled && !selectedProvider.configured;
 	const isProviderActionPending: boolean = providerAction !== null;
-	const hasUnsavedCredentials: boolean =
-		isApiKeyDirty ||
-		draftBaseUrl.trim() !== selectedProvider.baseUrl.trim();
-	const showOpenAICompatibleBaseUrlHint: boolean =
-		isOpenAICompatibleCustomProvider(selectedProvider);
+	const hasUnsavedCredentials: boolean = isApiKeyDirty || draftBaseUrl.trim() !== selectedProvider.baseUrl.trim();
+	const showOpenAICompatibleBaseUrlHint: boolean = isOpenAICompatibleCustomProvider(selectedProvider);
 
 	return (
 		<section className={styles.page}>
@@ -1278,9 +1008,7 @@ function ProviderSettingsPage({
 					placeholder={t("settings.provider.searchPlaceholder")}
 					className={styles.searchBox}
 					value={query}
-					onChange={(event: ChangeEvent<HTMLInputElement>): void =>
-						setQuery(event.target.value)
-					}
+					onChange={(event: ChangeEvent<HTMLInputElement>): void => setQuery(event.target.value)}
 				/>
 
 				<Menu
@@ -1289,51 +1017,29 @@ function ProviderSettingsPage({
 					items={providerMenuItems}
 					mode="inline"
 					selectedKeys={[selectedProvider.provider]}
-					onClick={({ key }): void =>
-						setSelectedProviderId(String(key))
-					}
+					onClick={({ key }): void => setSelectedProviderId(String(key))}
 				/>
 
-				<Button
-					className={styles.addProviderButton}
-					icon={<Icon name="add" />}
-					onClick={openAddProviderDialog}
-				>
+				<Button className={styles.addProviderButton} icon={<Icon name="add" />} onClick={openAddProviderDialog}>
 					{t("settings.common.add")}
 				</Button>
 			</aside>
 
 			<section className={styles.detailPane}>
-				<div
-					key={selectedProvider.provider}
-					className={`${styles.detailContent} ${styles.detailTransition}`}
-				>
+				<div key={selectedProvider.provider} className={`${styles.detailContent} ${styles.detailTransition}`}>
 					<header className={styles.detailHeader}>
 						<Space>
-							<Typography.Title
-								level={3}
-								className={styles.detailTitle}
-							>
+							<Typography.Title level={3} className={styles.detailTitle}>
 								{selectedProvider.displayName}
 							</Typography.Title>
 							{selectedProvider.websiteUrl !== undefined ? (
-								<Tooltip
-									title={t(
-										"settings.provider.actions.openWebsite",
-									)}
-								>
+								<Tooltip title={t("settings.provider.actions.openWebsite")}>
 									<Button
 										type="text"
 										icon={<Icon name="external-link" />}
 										shape="circle"
-										aria-label={t(
-											"settings.provider.actions.openWebsite",
-										)}
-										onClick={(): void =>
-											void handleOpenProviderWebsite(
-												selectedProvider,
-											)
-										}
+										aria-label={t("settings.provider.actions.openWebsite")}
+										onClick={(): void => void handleOpenProviderWebsite(selectedProvider)}
 									/>
 								</Tooltip>
 							) : null}
@@ -1344,85 +1050,44 @@ function ProviderSettingsPage({
 									providerEnableUnavailable
 										? t("settings.provider.enterApiKey")
 										: selectedProviderEnabled
-											? t(
-													"settings.provider.actions.disableProvider",
-												)
-											: t(
-													"settings.provider.actions.enableProvider",
-												)
+											? t("settings.provider.actions.disableProvider")
+											: t("settings.provider.actions.enableProvider")
 								}
 								placement="bottom"
 							>
 								<Switch
 									checked={selectedProviderEnabled}
-									loading={
-										providerAction === "enable" ||
-										providerAction === "disable"
-									}
-									disabled={
-										isProviderActionPending ||
-										providerEnableUnavailable
-									}
+									loading={providerAction === "enable" || providerAction === "disable"}
+									disabled={isProviderActionPending || providerEnableUnavailable}
 									aria-label={
 										selectedProviderEnabled
-											? t(
-													"settings.provider.actions.disableProvider",
-												)
-											: t(
-													"settings.provider.actions.enableProvider",
-												)
+											? t("settings.provider.actions.disableProvider")
+											: t("settings.provider.actions.enableProvider")
 									}
 									onChange={(enabled: boolean): void =>
-										void handleProviderEnabledChange(
-											selectedProvider,
-											enabled,
-										)
+										void handleProviderEnabledChange(selectedProvider, enabled)
 									}
 								/>
 							</Tooltip>
-							<Tooltip
-								title={t(
-									"settings.provider.actions.removeProvider",
-								)}
-								placement="bottom"
-							>
+							<Tooltip title={t("settings.provider.actions.removeProvider")} placement="bottom">
 								<Button
 									type="text"
 									shape="circle"
 									danger
 									icon={<Icon name="remove" />}
 									loading={providerAction === "remove"}
-									disabled={
-										isProviderActionPending ||
-										!selectedProvider.custom
-									}
-									onClick={(): void =>
-										void handleRemoveProvider(
-											selectedProvider,
-										)
-									}
+									disabled={isProviderActionPending || !selectedProvider.custom}
+									onClick={(): void => void handleRemoveProvider(selectedProvider)}
 								/>
 							</Tooltip>
-							<Tooltip
-								title={t(
-									"settings.provider.actions.editProvider",
-								)}
-								placement="bottom"
-							>
+							<Tooltip title={t("settings.provider.actions.editProvider")} placement="bottom">
 								<Button
 									type="text"
 									shape="circle"
 									icon={<Icon name="pencil" />}
-									disabled={
-										isProviderActionPending ||
-										!selectedProvider.custom
-									}
-									aria-label={t(
-										"settings.provider.actions.editProvider",
-									)}
-									onClick={(): void =>
-										openEditProviderDialog(selectedProvider)
-									}
+									disabled={isProviderActionPending || !selectedProvider.custom}
+									aria-label={t("settings.provider.actions.editProvider")}
+									onClick={(): void => openEditProviderDialog(selectedProvider)}
 								/>
 							</Tooltip>
 						</Space>
@@ -1439,9 +1104,7 @@ function ProviderSettingsPage({
 										size="small"
 										type="text"
 										icon={<Icon name="close" />}
-										onClick={(): void =>
-											setErrorMessage(null)
-										}
+										onClick={(): void => setErrorMessage(null)}
 									/>
 								}
 							/>
@@ -1449,57 +1112,33 @@ function ProviderSettingsPage({
 
 						<div className={styles.fieldGroup}>
 							<div className={styles.fieldLabelRow}>
-								<Typography.Title
-									className={styles.fieldLabel}
-									level={4}
-								>
+								<Typography.Title className={styles.fieldLabel} level={4}>
 									{t("settings.provider.apiKey")}
 								</Typography.Title>
 							</div>
 							<Flex gap="small">
-								<Space.Compact
-									block
-									className={styles.apiKeyCompact}
-								>
+								<Space.Compact block className={styles.apiKeyCompact}>
 									<Input.Password
 										value={draftApiKey}
 										placeholder={
-											selectedProvider.apiKeyMasked ??
-											t("settings.provider.enterApiKey")
+											selectedProvider.apiKeyMasked ?? t("settings.provider.enterApiKey")
 										}
-										onChange={(
-											event: ChangeEvent<HTMLInputElement>,
-										): void => {
+										onChange={(event: ChangeEvent<HTMLInputElement>): void => {
 											setDraftApiKey(event.target.value);
 											setIsApiKeyDirty(true);
 										}}
 									/>
 									<Button
-										onClick={(): void =>
-											void handleTestProvider(
-												selectedProvider,
-											)
-										}
+										onClick={(): void => void handleTestProvider(selectedProvider)}
 										loading={isTesting}
-										disabled={
-											isSaving || isCredentialSaving
-										}
+										disabled={isSaving || isCredentialSaving}
 									>
 										{t("settings.provider.actions.test")}
 									</Button>
 									<Button
-										onClick={(): void =>
-											void handleSaveCredentials(
-												selectedProvider,
-											)
-										}
+										onClick={(): void => void handleSaveCredentials(selectedProvider)}
 										loading={isCredentialSaving}
-										disabled={
-											isSaving ||
-											isCredentialSaving ||
-											isTesting ||
-											!hasUnsavedCredentials
-										}
+										disabled={isSaving || isCredentialSaving || isTesting || !hasUnsavedCredentials}
 									>
 										{t("settings.common.save")}
 									</Button>
@@ -1509,28 +1148,19 @@ function ProviderSettingsPage({
 									variant="solid"
 									icon={<Icon name="clear" />}
 									danger={selectedProvider.configured}
-									aria-label={t(
-										"settings.provider.actions.clearApiKey",
-									)}
+									aria-label={t("settings.provider.actions.clearApiKey")}
 									disabled={
 										isSaving ||
 										isCredentialSaving ||
 										isTesting ||
-										(!selectedProvider.configured &&
-											draftApiKey.length === 0)
+										(!selectedProvider.configured && draftApiKey.length === 0)
 									}
 									loading={isSaving}
-									onClick={(): void =>
-										void handleClearApiKey(selectedProvider)
-									}
+									onClick={(): void => void handleClearApiKey(selectedProvider)}
 								/>
 							</Flex>
-							<Typography.Text
-								type="secondary"
-								className={styles.fieldHint}
-							>
-								{selectedProvider.apiKeyMasked !== null &&
-								!isApiKeyDirty
+							<Typography.Text type="secondary" className={styles.fieldHint}>
+								{selectedProvider.apiKeyMasked !== null && !isApiKeyDirty
 									? t("settings.provider.savedKey", {
 											key: selectedProvider.apiKeyMasked,
 										})
@@ -1540,24 +1170,15 @@ function ProviderSettingsPage({
 
 						<div className={styles.fieldGroup}>
 							<Flex justify="space-between">
-								<Typography.Title
-									className={styles.fieldLabel}
-									level={4}
-								>
+								<Typography.Title className={styles.fieldLabel} level={4}>
 									{t("settings.provider.apiBaseUrl")}
 								</Typography.Title>
-								<Tooltip
-									title={t(
-										"settings.provider.requestConfiguration.open",
-									)}
-								>
+								<Tooltip title={t("settings.provider.requestConfiguration.open")}>
 									<Button
 										type="text"
 										shape="circle"
 										icon={<Icon name="more-v" />}
-										aria-label={t(
-											"settings.provider.requestConfiguration.open",
-										)}
+										aria-label={t("settings.provider.requestConfiguration.open")}
 										onClick={(): void => {
 											setRequestConfigError(null);
 											setIsRequestConfigOpen(true);
@@ -1567,25 +1188,17 @@ function ProviderSettingsPage({
 							</Flex>
 							<Input
 								value={draftBaseUrl}
-								onChange={(
-									event: ChangeEvent<HTMLInputElement>,
-								): void => setDraftBaseUrl(event.target.value)}
+								onChange={(event: ChangeEvent<HTMLInputElement>): void =>
+									setDraftBaseUrl(event.target.value)
+								}
 							/>
 							<div className={styles.fieldHints}>
 								{showOpenAICompatibleBaseUrlHint ? (
-									<Typography.Text
-										type="secondary"
-										className={styles.fieldHint}
-									>
-										{t(
-											"settings.provider.baseUrlHints.openaiCompatible",
-										)}
+									<Typography.Text type="secondary" className={styles.fieldHint}>
+										{t("settings.provider.baseUrlHints.openaiCompatible")}
 									</Typography.Text>
 								) : null}
-								<Typography.Text
-									type="secondary"
-									className={styles.fieldHint}
-								>
+								<Typography.Text type="secondary" className={styles.fieldHint}>
 									{t("settings.provider.modelListSource", {
 										source: selectedProvider.modelsSource,
 									})}
@@ -1598,10 +1211,7 @@ function ProviderSettingsPage({
 
 						<div className={styles.modelSectionHeader}>
 							<div className={styles.modelTitle}>
-								<Typography.Title
-									className={styles.fieldLabel}
-									level={4}
-								>
+								<Typography.Title className={styles.fieldLabel} level={4}>
 									{t("settings.provider.models")}
 								</Typography.Title>
 								<Tag>{selectedProvider.models.length}</Tag>
@@ -1610,22 +1220,14 @@ function ProviderSettingsPage({
 								<Space.Compact>
 									<Button
 										icon={<Icon name="reload" />}
-										onClick={(): void =>
-											openDiscoveryDialog(
-												selectedProvider,
-											)
-										}
+										onClick={(): void => openDiscoveryDialog(selectedProvider)}
 										disabled={isTesting}
 									>
-										{t(
-											"settings.provider.actions.fetchModels",
-										)}
+										{t("settings.provider.actions.fetchModels")}
 									</Button>
 									<Button
 										icon={<Icon name="add" />}
-										aria-label={t(
-											"settings.provider.actions.addModel",
-										)}
+										aria-label={t("settings.provider.actions.addModel")}
 										onClick={openAddModelDialog}
 									/>
 								</Space.Compact>
@@ -1641,21 +1243,13 @@ function ProviderSettingsPage({
 								rowKey="id"
 								size="small"
 								scroll={{ x: true }}
-								onRow={(
-									model: ProviderModelInfo,
-								): React.HTMLAttributes<HTMLTableRowElement> => ({
+								onRow={(model: ProviderModelInfo): React.HTMLAttributes<HTMLTableRowElement> => ({
 									className: styles.editableModelRow,
 									role: "button",
 									tabIndex: 0,
-									onClick: (): void =>
-										openEditModelDialog(model),
-									onKeyDown: (
-										event: KeyboardEvent<HTMLTableRowElement>,
-									): void => {
-										if (
-											event.key === "Enter" ||
-											event.key === " "
-										) {
+									onClick: (): void => openEditModelDialog(model),
+									onKeyDown: (event: KeyboardEvent<HTMLTableRowElement>): void => {
+										if (event.key === "Enter" || event.key === " ") {
 											event.preventDefault();
 											openEditModelDialog(model);
 										}
@@ -1679,17 +1273,13 @@ function ProviderSettingsPage({
 						setRequestConfigError(null);
 					}
 				}}
-				onSave={(value: ProviderRequestOverrides): void =>
-					void handleSaveRequestOverrides(value)
-				}
+				onSave={(value: ProviderRequestOverrides): void => void handleSaveRequestOverrides(value)}
 			/>
 
 			<Modal
 				open={isDiscoveryOpen}
 				title={t("settings.provider.dialogs.discoverModelsTitle", {
-					provider:
-						discoveryProvider?.displayName ??
-						selectedProvider.displayName,
+					provider: discoveryProvider?.displayName ?? selectedProvider.displayName,
 				})}
 				okText={t("settings.provider.actions.applyModelChanges")}
 				cancelText={t("settings.common.cancel")}
@@ -1711,33 +1301,22 @@ function ProviderSettingsPage({
 					<Flex className={styles.discoveryHeader} gap="small">
 						<Input
 							prefix={<Icon name="search" />}
-							placeholder={t(
-								"settings.provider.discovery.searchPlaceholder",
-							)}
+							placeholder={t("settings.provider.discovery.searchPlaceholder")}
 							value={discoveryQuery}
 							allowClear={true}
-							onChange={(
-								event: ChangeEvent<HTMLInputElement>,
-							): void => setDiscoveryQuery(event.target.value)}
+							onChange={(event: ChangeEvent<HTMLInputElement>): void =>
+								setDiscoveryQuery(event.target.value)
+							}
 						/>
-						<Tooltip
-							title={t("settings.provider.actions.reloadModels")}
-						>
+						<Tooltip title={t("settings.provider.actions.reloadModels")}>
 							<Button
 								icon={<Icon name="reload" />}
-								aria-label={t(
-									"settings.provider.actions.reloadModels",
-								)}
+								aria-label={t("settings.provider.actions.reloadModels")}
 								loading={isDiscovering}
-								disabled={
-									isImporting || discoveryProvider === null
-								}
+								disabled={isImporting || discoveryProvider === null}
 								onClick={(): void => {
 									if (discoveryProvider !== null) {
-										void loadDiscoveredModels(
-											discoveryProvider,
-											true,
-										);
+										void loadDiscoveredModels(discoveryProvider, true);
 									}
 								}}
 							/>
@@ -1747,22 +1326,15 @@ function ProviderSettingsPage({
 					{discoveryError !== null ? (
 						<>
 							<Alert
-								type={
-									discoveredModels.length > 0
-										? "warning"
-										: "error"
-								}
+								type={discoveredModels.length > 0 ? "warning" : "error"}
 								showIcon={true}
 								description={discoveryError}
 							/>
-							{discoverySource === "fallback" &&
-							discoveryProvider?.custom ? (
+							{discoverySource === "fallback" && discoveryProvider?.custom ? (
 								<Alert
 									type="info"
 									showIcon={true}
-									description={t(
-										"settings.provider.discovery.manualModelHint",
-									)}
+									description={t("settings.provider.discovery.manualModelHint")}
 								/>
 							) : null}
 						</>
@@ -1780,40 +1352,24 @@ function ProviderSettingsPage({
 						rowSelection={{
 							selectedRowKeys: selectedDiscoveredModelIds,
 							preserveSelectedRowKeys: true,
-							getCheckboxProps: (
-								model: ManagedProviderModel,
-							) => ({
+							getCheckboxProps: (model: ManagedProviderModel) => ({
 								disabled: model.removalGuards.length > 0,
 								title:
 									model.removalGuards[0] === undefined
 										? undefined
-										: getRemovalGuardMessage(
-												model.removalGuards[0],
-											),
+										: getRemovalGuardMessage(model.removalGuards[0]),
 								"aria-label":
 									model.removalGuards[0] === undefined
-										? t(
-												"settings.provider.discovery.selectModel",
-												{ model: model.displayName },
-											)
-										: getRemovalGuardMessage(
-												model.removalGuards[0],
-											),
+										? t("settings.provider.discovery.selectModel", { model: model.displayName })
+										: getRemovalGuardMessage(model.removalGuards[0]),
 							}),
 							onChange: (keys: Key[]): void => {
 								const nextIds: Set<string> = new Set(
 									discoveredModels
 										.filter(
-											(
-												model: ManagedProviderModel,
-											): boolean =>
-												model.removalGuards.length > 0,
+											(model: ManagedProviderModel): boolean => model.removalGuards.length > 0,
 										)
-										.map(
-											(
-												model: ManagedProviderModel,
-											): string => model.id,
-										),
+										.map((model: ManagedProviderModel): string => model.id),
 								);
 								for (const key of keys) {
 									nextIds.add(String(key));
@@ -1825,10 +1381,7 @@ function ProviderSettingsPage({
 							emptyText: isDiscovering ? null : (
 								<Empty
 									image={Empty.PRESENTED_IMAGE_SIMPLE}
-									description={
-										discoveryError ??
-										t("settings.provider.discovery.empty")
-									}
+									description={discoveryError ?? t("settings.provider.discovery.empty")}
 								/>
 							),
 						}}
@@ -1843,11 +1396,7 @@ function ProviderSettingsPage({
 						? t("settings.provider.dialogs.editProviderTitle")
 						: t("settings.provider.dialogs.addProviderTitle")
 				}
-				okText={
-					providerDialogMode === "edit"
-						? t("settings.common.save")
-						: t("settings.common.add")
-				}
+				okText={providerDialogMode === "edit" ? t("settings.common.save") : t("settings.common.add")}
 				cancelText={t("settings.common.cancel")}
 				confirmLoading={isDialogSaving}
 				destroyOnHidden={true}
@@ -1856,20 +1405,11 @@ function ProviderSettingsPage({
 					setEditingProvider(null);
 					setDialogError(null);
 				}}
-				onOk={(): void =>
-					void (providerDialogMode === "edit"
-						? handleSaveProvider()
-						: handleAddProvider())
-				}
+				onOk={(): void => void (providerDialogMode === "edit" ? handleSaveProvider() : handleAddProvider())}
 				className={styles.modal}
 			>
 				{dialogError !== null ? (
-					<Alert
-						className={styles.dialogAlert}
-						type="error"
-						showIcon={true}
-						description={dialogError}
-					/>
+					<Alert className={styles.dialogAlert} type="error" showIcon={true} description={dialogError} />
 				) : null}
 				<Form<AddProviderFormValues>
 					form={providerForm}
@@ -1885,9 +1425,7 @@ function ProviderSettingsPage({
 								required: true,
 								whitespace: true,
 								max: 80,
-								message: t(
-									"settings.provider.validation.providerName",
-								),
+								message: t("settings.provider.validation.providerName"),
 							},
 						]}
 					>
@@ -1899,9 +1437,7 @@ function ProviderSettingsPage({
 						rules={[
 							{
 								required: true,
-								message: t(
-									"settings.provider.validation.providerType",
-								),
+								message: t("settings.provider.validation.providerType"),
 							},
 						]}
 					>
@@ -1921,40 +1457,24 @@ function ProviderSettingsPage({
 						label={t("settings.provider.fields.websiteUrl")}
 						rules={[
 							{
-								validator: async (
-									_rule: unknown,
-									value: string | undefined,
-								): Promise<void> => {
-									const normalized: string =
-										value?.trim() ?? "";
+								validator: async (_rule: unknown, value: string | undefined): Promise<void> => {
+									const normalized: string = value?.trim() ?? "";
 									if (normalized.length === 0) {
 										return;
 									}
 									try {
 										const url: URL = new URL(normalized);
-										if (
-											url.protocol !== "http:" &&
-											url.protocol !== "https:"
-										) {
+										if (url.protocol !== "http:" && url.protocol !== "https:") {
 											throw new Error("invalid_protocol");
 										}
 									} catch {
-										throw new Error(
-											t(
-												"settings.provider.validation.websiteUrl",
-											),
-										);
+										throw new Error(t("settings.provider.validation.websiteUrl"));
 									}
 								},
 							},
 						]}
 					>
-						<Input
-							placeholder={t(
-								"settings.provider.placeholders.websiteUrl",
-							)}
-							maxLength={2048}
-						/>
+						<Input placeholder={t("settings.provider.placeholders.websiteUrl")} maxLength={2048} />
 					</Form.Item>
 				</Form>
 			</Modal>
@@ -1966,11 +1486,7 @@ function ProviderSettingsPage({
 						? t("settings.provider.dialogs.editModelTitle")
 						: t("settings.provider.dialogs.addModelTitle")
 				}
-				okText={
-					modelDialogMode === "edit"
-						? t("settings.common.save")
-						: t("settings.common.add")
-				}
+				okText={modelDialogMode === "edit" ? t("settings.common.save") : t("settings.common.add")}
 				cancelText={t("settings.common.cancel")}
 				confirmLoading={isDialogSaving}
 				forceRender={true}
@@ -1983,10 +1499,7 @@ function ProviderSettingsPage({
 							? createEditModelFormValues(editingModel)
 							: createAddModelFormValues();
 					modelForm.setFieldsValue(values);
-					modelForm.setFieldValue(
-						"reasoningEfforts",
-						values.reasoningEfforts,
-					);
+					modelForm.setFieldValue("reasoningEfforts", values.reasoningEfforts);
 				}}
 				onCancel={(): void => {
 					setModelDialogMode(null);
@@ -1998,21 +1511,14 @@ function ProviderSettingsPage({
 				width={720}
 			>
 				{dialogError !== null ? (
-					<Alert
-						className={styles.dialogAlert}
-						type="error"
-						showIcon={true}
-						description={dialogError}
-					/>
+					<Alert className={styles.dialogAlert} type="error" showIcon={true} description={dialogError} />
 				) : null}
 				{canInheritModelFields ? (
 					<Alert
 						className={styles.dialogAlert}
 						type="info"
 						showIcon={true}
-						description={t(
-							"settings.provider.modelOverrides.description",
-						)}
+						description={t("settings.provider.modelOverrides.description")}
 						action={
 							<Button
 								type="primary"
@@ -2021,10 +1527,7 @@ function ProviderSettingsPage({
 										inheritDisplayName: true,
 										inheritContextWindowTokens: true,
 										inheritMaxOutputTokens: true,
-										capabilities:
-											createUniformCapabilityFormValues(
-												"inherit",
-											),
+										capabilities: createUniformCapabilityFormValues("inherit"),
 										inheritReasoningEfforts: true,
 									});
 								}}
@@ -2042,8 +1545,7 @@ function ProviderSettingsPage({
 						inheritDisplayName: false,
 						inheritContextWindowTokens: false,
 						inheritMaxOutputTokens: false,
-						capabilities:
-							createUniformCapabilityFormValues("disabled"),
+						capabilities: createUniformCapabilityFormValues("disabled"),
 						inheritReasoningEfforts: false,
 						reasoningEfforts: [],
 					}}
@@ -2056,9 +1558,7 @@ function ProviderSettingsPage({
 								required: true,
 								whitespace: true,
 								max: 200,
-								message: t(
-									"settings.provider.validation.modelId",
-								),
+								message: t("settings.provider.validation.modelId"),
 							},
 						]}
 					>
@@ -2078,48 +1578,29 @@ function ProviderSettingsPage({
 										required: true,
 										whitespace: true,
 										max: 120,
-										message: t(
-											"settings.provider.validation.modelName",
-										),
+										message: t("settings.provider.validation.modelName"),
 									},
 								]}
 							>
 								<Input
 									autoFocus={modelDialogMode === "edit"}
-									disabled={
-										canInheritModelFields &&
-										inheritDisplayName
-									}
+									disabled={canInheritModelFields && inheritDisplayName}
 									maxLength={120}
 								/>
 							</Form.Item>
 							{canInheritModelFields ? (
-								<Flex
-									gap={6}
-									align="center"
-									className={styles.inheritControl}
-								>
-									<Form.Item
-										noStyle={true}
-										name="inheritDisplayName"
-										valuePropName="checked"
-									>
+								<Flex gap={6} align="center" className={styles.inheritControl}>
+									<Form.Item noStyle={true} name="inheritDisplayName" valuePropName="checked">
 										<Switch size="small" />
 									</Form.Item>
 									<Typography.Text type="secondary">
-										{t(
-											"settings.provider.modelOverrides.inherit",
-										)}
+										{t("settings.provider.modelOverrides.inherit")}
 									</Typography.Text>
 								</Flex>
 							) : null}
 						</Flex>
 					</Form.Item>
-					<Form.Item
-						label={t(
-							"settings.provider.fields.contextWindowTokens",
-						)}
-					>
+					<Form.Item label={t("settings.provider.fields.contextWindowTokens")}>
 						<Flex gap="small" align="center">
 							<Form.Item
 								noStyle={true}
@@ -2130,17 +1611,12 @@ function ProviderSettingsPage({
 										type: "number",
 										min: 1,
 										max: 2_000_000_000,
-										message: t(
-											"settings.provider.validation.tokenLimit",
-										),
+										message: t("settings.provider.validation.tokenLimit"),
 									},
 								]}
 							>
 								<InputNumber<number>
-									disabled={
-										canInheritModelFields &&
-										inheritContextWindowTokens
-									}
+									disabled={canInheritModelFields && inheritContextWindowTokens}
 									min={1}
 									max={2_000_000_000}
 									precision={0}
@@ -2148,30 +1624,18 @@ function ProviderSettingsPage({
 								/>
 							</Form.Item>
 							{canInheritModelFields ? (
-								<Flex
-									gap={6}
-									align="center"
-									className={styles.inheritControl}
-								>
-									<Form.Item
-										noStyle={true}
-										name="inheritContextWindowTokens"
-										valuePropName="checked"
-									>
+								<Flex gap={6} align="center" className={styles.inheritControl}>
+									<Form.Item noStyle={true} name="inheritContextWindowTokens" valuePropName="checked">
 										<Switch size="small" />
 									</Form.Item>
 									<Typography.Text type="secondary">
-										{t(
-											"settings.provider.modelOverrides.inherit",
-										)}
+										{t("settings.provider.modelOverrides.inherit")}
 									</Typography.Text>
 								</Flex>
 							) : null}
 						</Flex>
 					</Form.Item>
-					<Form.Item
-						label={t("settings.provider.fields.maxOutputTokens")}
-					>
+					<Form.Item label={t("settings.provider.fields.maxOutputTokens")}>
 						<Flex gap="small" align="center">
 							<Form.Item
 								noStyle={true}
@@ -2182,17 +1646,12 @@ function ProviderSettingsPage({
 										type: "number",
 										min: 1,
 										max: 2_000_000_000,
-										message: t(
-											"settings.provider.validation.tokenLimit",
-										),
+										message: t("settings.provider.validation.tokenLimit"),
 									},
 								]}
 							>
 								<InputNumber<number>
-									disabled={
-										canInheritModelFields &&
-										inheritMaxOutputTokens
-									}
+									disabled={canInheritModelFields && inheritMaxOutputTokens}
 									min={1}
 									max={2_000_000_000}
 									precision={0}
@@ -2200,31 +1659,18 @@ function ProviderSettingsPage({
 								/>
 							</Form.Item>
 							{canInheritModelFields ? (
-								<Flex
-									gap={6}
-									align="center"
-									className={styles.inheritControl}
-								>
-									<Form.Item
-										noStyle={true}
-										name="inheritMaxOutputTokens"
-										valuePropName="checked"
-									>
+								<Flex gap={6} align="center" className={styles.inheritControl}>
+									<Form.Item noStyle={true} name="inheritMaxOutputTokens" valuePropName="checked">
 										<Switch size="small" />
 									</Form.Item>
 									<Typography.Text type="secondary">
-										{t(
-											"settings.provider.modelOverrides.inherit",
-										)}
+										{t("settings.provider.modelOverrides.inherit")}
 									</Typography.Text>
 								</Flex>
 							) : null}
 						</Flex>
 					</Form.Item>
-					<Divider
-						orientation="horizontal"
-						className={styles.modelFormDivider}
-					>
+					<Divider orientation="horizontal" className={styles.modelFormDivider}>
 						{t("settings.provider.fields.modelCapabilities")}
 					</Divider>
 					{EDITABLE_CAPABILITIES.map(
@@ -2241,9 +1687,7 @@ function ProviderSettingsPage({
 											? [
 													{
 														value: "inherit" as CapabilityFormValue,
-														label: t(
-															"settings.provider.modelOverrides.inherit",
-														),
+														label: t("settings.provider.modelOverrides.inherit"),
 													},
 												]
 											: []),
@@ -2260,10 +1704,7 @@ function ProviderSettingsPage({
 							</Form.Item>
 						),
 					)}
-					<Divider
-						orientation="horizontal"
-						className={styles.modelFormDivider}
-					>
+					<Divider orientation="horizontal" className={styles.modelFormDivider}>
 						{t("settings.provider.fields.reasoningEfforts")}
 					</Divider>
 					<div className={styles.reasoningEffortHeader}>
@@ -2275,25 +1716,12 @@ function ProviderSettingsPage({
 							)}
 						</Typography.Text>
 						{canInheritModelFields ? (
-							<Flex
-								gap={6}
-								align="center"
-								className={styles.inheritControl}
-							>
-								<Form.Item
-									noStyle={true}
-									name="inheritReasoningEfforts"
-									valuePropName="checked"
-								>
-									<Switch
-										size="small"
-										disabled={!reasoningEffortsEnabled}
-									/>
+							<Flex gap={6} align="center" className={styles.inheritControl}>
+								<Form.Item noStyle={true} name="inheritReasoningEfforts" valuePropName="checked">
+									<Switch size="small" disabled={!reasoningEffortsEnabled} />
 								</Form.Item>
 								<Typography.Text type="secondary">
-									{t(
-										"settings.provider.modelOverrides.inherit",
-									)}
+									{t("settings.provider.modelOverrides.inherit")}
 								</Typography.Text>
 							</Flex>
 						) : null}
@@ -2302,59 +1730,35 @@ function ProviderSettingsPage({
 						{(fields, { add, remove }): React.JSX.Element => (
 							<div className={styles.reasoningEffortList}>
 								{fields.length === 0 ? (
-									<Typography.Text
-										type="secondary"
-										className={styles.reasoningEffortEmpty}
-									>
-										{t(
-											"settings.provider.reasoningEfforts.empty",
-										)}
+									<Typography.Text type="secondary" className={styles.reasoningEffortEmpty}>
+										{t("settings.provider.reasoningEfforts.empty")}
 									</Typography.Text>
 								) : null}
 								{fields.map(
 									(field): React.JSX.Element => (
-										<div
-											key={field.key}
-											className={
-												styles.reasoningEffortRow
-											}
-										>
+										<div key={field.key} className={styles.reasoningEffortRow}>
 											<Form.Item
 												name={[field.name, "id"]}
-												label={t(
-													"settings.provider.fields.reasoningEffortId",
-												)}
+												label={t("settings.provider.fields.reasoningEffortId")}
 												rules={[
 													{
 														required: true,
 														whitespace: true,
 														max: 32,
-														message: t(
-															"settings.provider.validation.reasoningEffortId",
-														),
+														message: t("settings.provider.validation.reasoningEffortId"),
 													},
 													{
 														validator: async (
 															_rule,
-															value:
-																| string
-																| undefined,
+															value: string | undefined,
 														): Promise<void> => {
-															const id: string =
-																value?.trim() ??
-																"";
+															const id: string = value?.trim() ?? "";
 															const efforts: ReasoningEffortFormValue[] =
-																modelForm.getFieldValue(
-																	"reasoningEfforts",
-																) ?? [];
+																modelForm.getFieldValue("reasoningEfforts") ?? [];
 															if (
 																id.length > 0 &&
 																efforts.filter(
-																	(
-																		effort,
-																	): boolean =>
-																		effort?.id?.trim() ===
-																		id,
+																	(effort): boolean => effort?.id?.trim() === id,
 																).length > 1
 															) {
 																throw new Error(
@@ -2368,36 +1772,19 @@ function ProviderSettingsPage({
 												]}
 											>
 												<Input
-													disabled={
-														!reasoningEffortsEnabled ||
-														inheritReasoningEfforts
-													}
+													disabled={!reasoningEffortsEnabled || inheritReasoningEfforts}
 													maxLength={32}
 												/>
 											</Form.Item>
 											<Form.Item
 												name={[field.name, "fallback"]}
-												label={t(
-													"settings.provider.fields.reasoningEffortFallback",
-												)}
+												label={t("settings.provider.fields.reasoningEffortFallback")}
 												rules={[{ required: true }]}
 											>
 												<Select
-													disabled={
-														!reasoningEffortsEnabled ||
-														inheritReasoningEfforts
-													}
-													options={(
-														[
-															"low",
-															"medium",
-															"high",
-															"max",
-														] as const
-													).map(
-														(
-															fallback: BaseReasoningEffort,
-														) => ({
+													disabled={!reasoningEffortsEnabled || inheritReasoningEfforts}
+													options={(["low", "medium", "high", "max"] as const).map(
+														(fallback: BaseReasoningEffort) => ({
 															value: fallback,
 															label: t(
 																`settings.provider.reasoningEfforts.fallback.${fallback}`,
@@ -2408,37 +1795,23 @@ function ProviderSettingsPage({
 											</Form.Item>
 											<Form.Item
 												name={[field.name, "default"]}
-												label={t(
-													"settings.provider.fields.reasoningEffortDefault",
-												)}
+												label={t("settings.provider.fields.reasoningEffortDefault")}
 												valuePropName="checked"
 											>
 												<Switch
-													disabled={
-														!reasoningEffortsEnabled ||
-														inheritReasoningEfforts
-													}
-													onChange={(
-														checked: boolean,
-													): void => {
+													disabled={!reasoningEffortsEnabled || inheritReasoningEfforts}
+													onChange={(checked: boolean): void => {
 														if (!checked) {
 															return;
 														}
 														const efforts: ReasoningEffortFormValue[] =
-															modelForm.getFieldValue(
-																"reasoningEfforts",
-															) ?? [];
+															modelForm.getFieldValue("reasoningEfforts") ?? [];
 														modelForm.setFieldValue(
 															"reasoningEfforts",
 															efforts.map(
-																(
-																	effort,
-																	index,
-																): ReasoningEffortFormValue => ({
+																(effort, index): ReasoningEffortFormValue => ({
 																	...effort,
-																	default:
-																		index ===
-																		field.name,
+																	default: index === field.name,
 																}),
 															),
 														);
@@ -2448,27 +1821,19 @@ function ProviderSettingsPage({
 											<Button
 												type="text"
 												danger={true}
-												disabled={
-													!reasoningEffortsEnabled ||
-													inheritReasoningEfforts
-												}
-												onClick={(): void =>
-													remove(field.name)
-												}
+												disabled={!reasoningEffortsEnabled || inheritReasoningEfforts}
+												onClick={(): void => remove(field.name)}
 											>
-												{t(
-													"settings.provider.actions.removeReasoningEffort",
-												)}
+												{t("settings.provider.actions.removeReasoningEffort")}
 											</Button>
 										</div>
 									),
 								)}
 								<Button
 									icon={<Icon name="add" />}
+									type="dashed"
 									disabled={
-										!reasoningEffortsEnabled ||
-										inheritReasoningEfforts ||
-										fields.length >= 16
+										!reasoningEffortsEnabled || inheritReasoningEfforts || fields.length >= 16
 									}
 									onClick={(): void =>
 										add({
@@ -2478,9 +1843,7 @@ function ProviderSettingsPage({
 										})
 									}
 								>
-									{t(
-										"settings.provider.actions.addReasoningEffort",
-									)}
+									{t("settings.provider.actions.addReasoningEffort")}
 								</Button>
 							</div>
 						)}

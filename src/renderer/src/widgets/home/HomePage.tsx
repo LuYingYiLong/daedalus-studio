@@ -24,7 +24,7 @@ import DeleteWorkspaceDialog from "@/widgets/workspace/DeleteWorkspaceDialog";
 import WorkspaceProjectDialog from "@/widgets/workspace/WorkspaceProjectDialog";
 import HomePageShell from "./surface/HomePageShell";
 import TimelineWorkflowTodoPanel from "./surface/TimelineWorkflowTodoPanel";
-import type { SessionLayoutPreferences } from "@/domain/session/session-layout";
+import { createDefaultSessionLayout, type SessionLayoutPreferences } from "@/domain/session/session-layout";
 import { useSubagentGraphs } from "@/domain/subagent/subagent-graph-store";
 import SessionSummaryPopover from "./summary/SessionSummaryPopover";
 import useHomePageDockController, { BOTTOM_DOCK_CLOSED_SIZE, BOTTOM_DOCK_MAX_SIZE, SIDE_DOCK_CLOSED_SIZE, SIDE_DOCK_MAX_SIZE } from "@/features/home/dock/useHomePageDockController";
@@ -44,6 +44,7 @@ import type { TimelinePageStore } from "@/domain/workbench/timeline-page-store";
 import { type WorkspaceLaunchTargetId } from "@/domain/workspace/workspace-launch";
 import { sortWorkspacesByIds } from "@/domain/workspace/workspace-tree-order";
 import useHomeFlowController from "@/features/home/flow/useHomeFlowController";
+import { resolveHomeWorkbenchScope } from "@/features/home/surface/home-workbench-scope";
 
 type HomePageProps = {
 	workspaceRefreshToken: number;
@@ -444,21 +445,54 @@ function HomePage({
 	const scrollToBottomButtonRef = useRef<HTMLButtonElement | null>(null);
 	const scrollToBottomButtonVisibleRef = useRef<boolean>(false);
 
-	const workspaceSnapshotForActions: WorkspaceConfig | null = activeWorkspace ?? (isHome ? homeWorkspace : null);
+	const chatWorkspaceSnapshotForActions: WorkspaceConfig | null = activeWorkspace ?? (isHome ? homeWorkspace : null);
+	const flowWorkspaceId: string | null = flowController.snapshot?.flow.workspaceId ?? null;
+	const flowWorkspaceSnapshotForActions: WorkspaceConfig | null = flowWorkspaceId === null
+		? null
+		: (workspaceOptions.find((workspace: WorkspaceConfig): boolean => workspace.id === flowWorkspaceId) ?? null);
+	const workspaceSnapshotForActions: WorkspaceConfig | null = primarySurface === "flow"
+		? flowWorkspaceSnapshotForActions
+		: chatWorkspaceSnapshotForActions;
 	const workspaceForActions: WorkspaceConfig | null = workspaceSnapshotForActions === null ? null : (workspaceOptions.find((workspace: WorkspaceConfig): boolean => workspace.id === workspaceSnapshotForActions.id) ?? workspaceSnapshotForActions);
+	const workbenchScope = resolveHomeWorkbenchScope({
+		primarySurface,
+		isHome,
+		activeSessionId,
+		flowId: flowController.snapshot?.flow.flowId ?? null,
+		workspaceId: workspaceForActions?.id ?? null,
+	});
+	const [flowSessionLayouts, setFlowSessionLayouts] = useState<Record<string, SessionLayoutPreferences>>({});
+	const defaultFlowSessionLayout = useMemo(
+		(): SessionLayoutPreferences => createDefaultSessionLayout(),
+		[],
+	);
+	const flowLayoutScopeId: string = workbenchScope.layoutScopeId ?? "flow:none";
+	const workbenchSessionLayout: SessionLayoutPreferences = primarySurface === "flow"
+		? (flowSessionLayouts[flowLayoutScopeId] ?? defaultFlowSessionLayout)
+		: sessionLayout;
+	const handleFlowSessionLayoutChange = useCallback((layout: SessionLayoutPreferences): void => {
+		setFlowSessionLayouts((current): Record<string, SessionLayoutPreferences> => {
+			if (current[flowLayoutScopeId] === layout) return current;
+			return { ...current, [flowLayoutScopeId]: layout };
+		});
+	}, [flowLayoutScopeId]);
+	const handleWorkbenchSessionLayoutChange = primarySurface === "flow"
+		? handleFlowSessionLayoutChange
+		: onSessionLayoutChange;
 	const { visualWorkspaceSidebar, visualSessionLayout, visualWorkspaceSidebarRef, visualSessionLayoutRef, commitSessionLayout, scheduleWorkspaceSidebarSave, fullscreenMotionDisabled, workspaceSidebarOpen, sideDockOpen, sideDockSize, bottomDockOpen, bottomDockSize, fullscreenDock, sideDockFullscreen, bottomDockFullscreen, isDockFullscreen, activeFullscreenDock, fullscreenDockLayout, isFullscreenBrowserPanel, sideDockActivationRequest, updateSideDock, updateBottomDock, updateFilePanel, updateBrowserPanel, updateSubagentPanel, toggleDockFullscreen, openSideDock, closeSideDock, toggleSideDock, openReviewPanel, openBottomDock, closeBottomDock, toggleBottomDock, handleWorkspaceSidebarResize, handleWorkspaceSidebarResizeEnd, handleSideDockResize, handleSideDockResizeEnd, handleBottomDockResize, handleBottomDockResizeEnd } = useHomePageDockController({
 		workspaceSidebar,
-		sessionLayout,
+		sessionLayout: workbenchSessionLayout,
 		onWorkspaceSidebarChange,
-		onSessionLayoutChange,
-		activeSessionId,
+		onSessionLayoutChange: handleWorkbenchSessionLayoutChange,
+		layoutScopeId: workbenchScope.layoutScopeId,
+		terminalRuntimeScopeId: workbenchScope.terminalRuntimeScopeId,
 		workspaceForActions,
 	});
 	const showDockControls: boolean = true;
-	const subagentGraphs = useSubagentGraphs(activeSessionId);
+	const subagentGraphs = useSubagentGraphs(workbenchScope.sessionId);
 	const openedSubagentGraphIdsRef = useRef<Set<string>>(new Set());
 	useEffect((): void => {
-		if (activeSessionId === null || subagentGraphs.length === 0) return;
+		if (workbenchScope.sessionId === null || subagentGraphs.length === 0) return;
 		const hasNewGraph: boolean = subagentGraphs.some((view): boolean => {
 			const graphId: string = view.snapshot.graph.graphId;
 			if (openedSubagentGraphIdsRef.current.has(graphId)) return false;
@@ -466,14 +500,14 @@ function HomePage({
 			return true;
 		});
 		if (hasNewGraph) openSideDock("subagent");
-	}, [activeSessionId, openSideDock, subagentGraphs]);
+	}, [openSideDock, subagentGraphs, workbenchScope.sessionId]);
 	const showWorkspaceLaunchControls: boolean = mainSurface === "chat" && workspaceForActions !== null;
 	const showSummaryButton: boolean = true;
 	const showSideDockButton: boolean = showDockControls;
 	const showBottomDockButton: boolean = showDockControls;
-	const terminalWaitForCwd: boolean = !isHome && isSessionLoading && workspaceForActions === null;
+	const terminalWaitForCwd: boolean = primarySurface === "chat" && !isHome && isSessionLoading && workspaceForActions === null;
 	const showWorkflowTodoPanel: boolean = !workflowTodoCollapsed && workflowTodoSnapshot !== null;
-	const showExecutionStatusPanel: boolean = !isHome && pendingApproval === null && pendingToolBudget === null && pendingPlanClarification === null && pendingPlanApproval === null && (currentGoal !== null || showWorkflowTodoPanel);
+	const showExecutionStatusPanel: boolean = primarySurface === "chat" && !isHome && pendingApproval === null && pendingToolBudget === null && pendingPlanClarification === null && pendingPlanApproval === null && (currentGoal !== null || showWorkflowTodoPanel);
 	const effectiveGodotLaunchExecutablePath: string | null = godotLaunchExecutablePath?.trim() ? godotLaunchExecutablePath.trim() : null;
 	const launchController = useHomePageLaunchController({
 		workspaceForActions,
@@ -486,8 +520,8 @@ function HomePage({
 	});
 	const { workspaceLaunchTargets, selectedLaunchTarget, selectedLaunchTargetId, workspaceLaunchMenuItems, isOpeningLaunchTarget, handleWorkspaceLaunchMenuClick, openWorkspaceLaunchTarget } = launchController;
 	const summaryController = useHomePageSummaryController({
-		activeSessionId,
-		isHome,
+		summarySessionId: workbenchScope.sessionId,
+		summaryScopeKey: workbenchScope.summaryScopeKey,
 		workspaceForActions,
 		effectiveGodotLaunchExecutablePath,
 		messageApi,
@@ -540,12 +574,12 @@ function HomePage({
 	}, [setScrollToBottomButtonVisible]);
 
 	const { openMessageWebUrl, openMessageHtmlFile } = useIntegratedBrowserSession({
-		activeSessionId,
+		activeSessionId: workbenchScope.sessionId,
 		visualSessionLayoutRef,
 		commitSessionLayout,
 		messageApi,
 	});
-	useExternalBrowserSession(mainSurface === "scheduledTasks" ? null : activeSessionId, workspaceForActions?.id ?? null);
+	useExternalBrowserSession(mainSurface === "scheduledTasks" ? null : workbenchScope.sessionId, workspaceForActions?.id ?? null);
 	const toggleWorkspaceSidebar = useCallback((): void => {
 		scheduleWorkspaceSidebarSave({
 			...visualWorkspaceSidebarRef.current,
@@ -555,7 +589,7 @@ function HomePage({
 
 	useHomePageKeyboardShortcuts({
 		keyboardShortcuts,
-		activeSessionId,
+		activeSessionId: workbenchScope.sessionId,
 		isHome,
 		isFlowSurface: primarySurface === "flow",
 		timelineNavigationEntriesLength: timelineNavigationEntries.length,
@@ -739,7 +773,8 @@ function HomePage({
 	};
 
 	const commonDockPanelProps = {
-		sessionId: activeSessionId,
+		sessionId: workbenchScope.sessionId,
+		terminalRuntimeScopeId: workbenchScope.terminalRuntimeScopeId,
 		workspaceId: workspaceForActions?.id ?? null,
 		workspace: workspaceForActions,
 		launchTargets: workspaceLaunchTargets,
@@ -887,7 +922,7 @@ function HomePage({
 
 	return (
 		<>
-			<ComputerObservationBoundary sessionId={mainSurface === "scheduledTasks" ? null : activeSessionId} workspaceId={workspaceForActions?.id ?? null} />
+			<ComputerObservationBoundary sessionId={mainSurface === "scheduledTasks" ? null : workbenchScope.sessionId} workspaceId={workspaceForActions?.id ?? null} />
 			<HomePageShell
 				messageContextHolder={messageContextHolder}
 				workspaceSidebarPreferences={visualWorkspaceSidebar}
