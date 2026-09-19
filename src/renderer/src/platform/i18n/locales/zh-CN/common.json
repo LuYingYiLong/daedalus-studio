@@ -3298,12 +3298,18 @@
 				}
 			},
 			"capabilities": {
-				"imageEdit": "编辑",
+				"audioGeneration": "音频生成",
+				"imageEdit": "图像编辑",
 				"imageGeneration": "图像生成",
 				"imageInput": "图片输入",
-				"videoInput": "视频输入",
+				"imageToVideo": "图生视频",
+				"referenceToVideo": "参考生视频",
 				"reasoning": "推理",
+				"textToVideo": "文生视频",
 				"tools": "工具",
+				"videoEdit": "视频编辑",
+				"videoGeneration": "视频生成",
+				"videoInput": "视频输入",
 				"vision": "视觉",
 				"webSearch": "搜索"
 			},

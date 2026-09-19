@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+	<path d="M21 6C21 4.34315 19.6569 3 18 3L6 3C4.34315 3 3 4.34315 3 6L3 11.8027C3.60738 11.4513 4.28208 11.2034 5 11.083L5 6C5 5.44772 5.44772 5 6 5L18 5C18.5523 5 19 5.44772 19 6L19 18C19 18.5523 18.5523 19 18 19L11.6586 19C11.3952 19.7452 10.9887 20.4229 10.4722 21L18 21C19.6569 21 21 19.6569 21 18L21 6Z" fill="currentColor" fill-rule="evenodd" />
+	<circle cx="15" cy="9" r="2" fill="currentColor" />
+	<path d="M3 16L9 16M6 19L9 16L6 13" stroke="currentColor" stroke-linecap="round" stroke-width="2.000000" />
+</svg>

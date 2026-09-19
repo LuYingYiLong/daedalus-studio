@@ -1181,7 +1181,7 @@ function ProviderSettingsPage({
 			dataIndex: "capabilities",
 			key: "capabilities",
 			align: "center",
-			width: 360,
+			width: 460,
 			render: (
 				capabilities: ProviderModelCapabilities,
 			): React.JSX.Element => renderCapabilityTags(capabilities, t),
@@ -1239,7 +1239,7 @@ function ProviderSettingsPage({
 			dataIndex: "capabilities",
 			key: "capabilities",
 			align: "center",
-			width: 320,
+			width: 460,
 			render: (
 				capabilities: ProviderModelCapabilities,
 			): React.JSX.Element => renderCapabilityTags(capabilities, t),
@@ -1776,7 +1776,7 @@ function ProviderSettingsPage({
 						size="small"
 						pagination={false}
 						loading={isDiscovering}
-						scroll={{ x: 760, y: 420 }}
+						scroll={{ x: 900, y: 420 }}
 						rowSelection={{
 							selectedRowKeys: selectedDiscoveredModelIds,
 							preserveSelectedRowKeys: true,

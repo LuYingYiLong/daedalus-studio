@@ -3313,12 +3313,18 @@
 				}
 			},
 			"capabilities": {
-				"imageEdit": "Edit",
+				"audioGeneration": "Audio generation",
+				"imageEdit": "Image editing",
 				"imageGeneration": "Image generation",
 				"imageInput": "Image input",
-				"videoInput": "Video input",
+				"imageToVideo": "Image to video",
+				"referenceToVideo": "Reference to video",
 				"reasoning": "Reasoning",
+				"textToVideo": "Text to video",
 				"tools": "Tools",
+				"videoEdit": "Video editing",
+				"videoGeneration": "Video generation",
+				"videoInput": "Video input",
 				"vision": "Vision",
 				"webSearch": "Search"
 			},

@@ -317,7 +317,8 @@ function SchemaEditor({
 	const requiredCapability =
 		definition.typeId === "builtin/text-to-image" ? "imageGeneration" :
 		definition.typeId === "builtin/image-to-image" ? "imageEdit" :
-		definition.typeId === "builtin/text-to-video" || definition.typeId === "builtin/image-to-video" ? "videoGeneration" : null;
+		definition.typeId === "builtin/text-to-video" ? "textToVideo" :
+		definition.typeId === "builtin/image-to-video" ? "imageToVideo" : null;
 	const supportsRequiredCapability = (model: ProviderModelInfo): boolean =>
 		requiredCapability === null || model.capabilities[requiredCapability] === true;
 	const providerOptions = (editorOptions.modelSelection?.providers ?? [])

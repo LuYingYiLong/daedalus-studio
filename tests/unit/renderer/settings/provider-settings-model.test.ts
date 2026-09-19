@@ -29,8 +29,31 @@ describe("provider settings model", () => {
 	});
 
 	it("keeps capability visibility and stable error mapping in the model layer", () => {
-		const visible = getVisibleCapabilities({ imageInput: true, tools: true } as never);
-		expect(visible.map((capability) => capability.key)).toEqual(["imageInput", "tools"]);
+		const visible = getVisibleCapabilities({
+			imageInput: true,
+			videoInput: true,
+			imageGeneration: true,
+			imageEdit: true,
+			videoGeneration: true,
+			textToVideo: true,
+			imageToVideo: true,
+			referenceToVideo: true,
+			videoEdit: true,
+			audioGeneration: true,
+			tools: true,
+		} as never);
+		expect(visible.map((capability) => capability.key)).toEqual([
+			"imageInput",
+			"videoInput",
+			"imageGeneration",
+			"imageEdit",
+			"textToVideo",
+			"imageToVideo",
+			"referenceToVideo",
+			"videoEdit",
+			"audioGeneration",
+			"tools",
+		]);
 		expect(
 			getCustomizationErrorMessage(
 				new Error("provider_model_exists:gpt-e2e"),

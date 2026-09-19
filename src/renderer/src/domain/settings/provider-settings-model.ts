@@ -49,9 +49,63 @@ export type EditableCapability = {
 export const CAPABILITY_BADGES: CapabilityBadge[] = [
 	{
 		key: "imageInput",
-		labelKey: "settings.provider.capabilities.vision",
-		icon: "vision",
+		labelKey: "settings.provider.capabilities.imageInput",
+		icon: "image-input",
 		color: "purple",
+	},
+	{
+		key: "videoInput",
+		labelKey: "settings.provider.capabilities.videoInput",
+		icon: "video-input",
+		color: "geekblue",
+	},
+	{
+		key: "imageGeneration",
+		labelKey: "settings.provider.capabilities.imageGeneration",
+		icon: "image-generation",
+		color: "magenta",
+	},
+	{
+		key: "imageEdit",
+		labelKey: "settings.provider.capabilities.imageEdit",
+		icon: "image-edit",
+		color: "volcano",
+	},
+	{
+		key: "videoGeneration",
+		labelKey: "settings.provider.capabilities.videoGeneration",
+		icon: "video-generation",
+		color: "cyan",
+	},
+	{
+		key: "textToVideo",
+		labelKey: "settings.provider.capabilities.textToVideo",
+		icon: "text-to-video",
+		color: "cyan",
+	},
+	{
+		key: "imageToVideo",
+		labelKey: "settings.provider.capabilities.imageToVideo",
+		icon: "image-to-video",
+		color: "blue",
+	},
+	{
+		key: "referenceToVideo",
+		labelKey: "settings.provider.capabilities.referenceToVideo",
+		icon: "reference-to-video",
+		color: "geekblue",
+	},
+	{
+		key: "videoEdit",
+		labelKey: "settings.provider.capabilities.videoEdit",
+		icon: "video-edit",
+		color: "blue",
+	},
+	{
+		key: "audioGeneration",
+		labelKey: "settings.provider.capabilities.audioGeneration",
+		icon: "audio-generation",
+		color: "gold",
 	},
 	{
 		key: "webSearch",
@@ -74,18 +128,22 @@ export const CAPABILITY_BADGES: CapabilityBadge[] = [
 ];
 
 export const EDITABLE_CAPABILITIES: EditableCapability[] = [
-	{ key: "imageInput", labelKey: "settings.provider.capabilities.vision" },
+	{ key: "imageInput", labelKey: "settings.provider.capabilities.imageInput" },
 	{ key: "videoInput", labelKey: "settings.provider.capabilities.videoInput" },
 	{ key: "reasoning", labelKey: "settings.provider.capabilities.reasoning" },
 	{ key: "tools", labelKey: "settings.provider.capabilities.tools" },
 	{ key: "webSearch", labelKey: "settings.provider.capabilities.webSearch" },
 	{ key: "imageGeneration", labelKey: "settings.provider.capabilities.imageGeneration" },
 	{ key: "imageEdit", labelKey: "settings.provider.capabilities.imageEdit" },
+	{ key: "videoGeneration", labelKey: "settings.provider.capabilities.videoGeneration" },
+	{ key: "videoEdit", labelKey: "settings.provider.capabilities.videoEdit" },
+	{ key: "audioGeneration", labelKey: "settings.provider.capabilities.audioGeneration" },
+	{ key: "textToVideo", labelKey: "settings.provider.capabilities.textToVideo" },
+	{ key: "imageToVideo", labelKey: "settings.provider.capabilities.imageToVideo" },
+	{ key: "referenceToVideo", labelKey: "settings.provider.capabilities.referenceToVideo" },
 ];
 
-export function createUniformCapabilityFormValues(
-	value: CapabilityFormValue,
-): ModelFormValues["capabilities"] {
+export function createUniformCapabilityFormValues(value: CapabilityFormValue): ModelFormValues["capabilities"] {
 	const values = {} as ModelFormValues["capabilities"];
 	for (const capability of EDITABLE_CAPABILITIES) {
 		values[capability.key] = value;
@@ -93,11 +151,14 @@ export function createUniformCapabilityFormValues(
 	return values;
 }
 
-export function getVisibleCapabilities(
-	capabilities: ProviderModelCapabilities,
-): CapabilityBadge[] {
+export function getVisibleCapabilities(capabilities: ProviderModelCapabilities): CapabilityBadge[] {
+	const hasDetailedVideoGeneration: boolean =
+		capabilities.textToVideo === true ||
+		capabilities.imageToVideo === true ||
+		capabilities.referenceToVideo === true;
 	return CAPABILITY_BADGES.filter(
-		(badge: CapabilityBadge): boolean => capabilities[badge.key] === true,
+		(badge: CapabilityBadge): boolean =>
+			capabilities[badge.key] === true && !(badge.key === "videoGeneration" && hasDetailedVideoGeneration),
 	);
 }
 
@@ -105,18 +166,14 @@ export function createCapabilityFormValues(
 	model: ProviderModelInfo | null,
 	allowInheritance: boolean,
 ): ModelFormValues["capabilities"] {
-	const values: ModelFormValues["capabilities"] =
-		createUniformCapabilityFormValues("disabled");
+	const values: ModelFormValues["capabilities"] = createUniformCapabilityFormValues("disabled");
 	for (const capability of EDITABLE_CAPABILITIES) {
-		const override: boolean | undefined =
-			model?.customization?.capabilities[capability.key];
+		const override: boolean | undefined = model?.customization?.capabilities[capability.key];
 		if (allowInheritance && override === undefined) {
 			values[capability.key] = "inherit";
 		} else {
 			values[capability.key] =
-				(override ?? model?.capabilities[capability.key]) === true
-					? "enabled"
-					: "disabled";
+				(override ?? model?.capabilities[capability.key]) === true ? "enabled" : "disabled";
 		}
 	}
 	return values;
@@ -129,15 +186,12 @@ export function toEditableCapabilities(
 	const capabilities = {} as EditableModelCapabilityUpdates;
 	for (const capability of EDITABLE_CAPABILITIES) {
 		const value: CapabilityFormValue = values[capability.key];
-		capabilities[capability.key] =
-			allowInheritance && value === "inherit" ? null : value === "enabled";
+		capabilities[capability.key] = allowInheritance && value === "inherit" ? null : value === "enabled";
 	}
 	return capabilities;
 }
 
-export function toCustomModelCapabilities(
-	values: ModelFormValues["capabilities"],
-): EditableModelCapabilityValues {
+export function toCustomModelCapabilities(values: ModelFormValues["capabilities"]): EditableModelCapabilityValues {
 	const capabilities = {} as EditableModelCapabilityValues;
 	for (const capability of EDITABLE_CAPABILITIES) {
 		capabilities[capability.key] = values[capability.key] === "enabled";
@@ -145,13 +199,9 @@ export function toCustomModelCapabilities(
 	return capabilities;
 }
 
-export function createReasoningEffortFormValues(
-	model: ProviderModelInfo | null,
-): ReasoningEffortFormValue[] {
+export function createReasoningEffortFormValues(model: ProviderModelInfo | null): ReasoningEffortFormValue[] {
 	const efforts: readonly ProviderReasoningEffortOption[] =
-		model?.customization?.reasoningEfforts ??
-		model?.capabilities.reasoningEfforts ??
-		[];
+		model?.customization?.reasoningEfforts ?? model?.capabilities.reasoningEfforts ?? [];
 	return efforts.map(
 		(effort: ProviderReasoningEffortOption): ReasoningEffortFormValue => ({
 			id: effort.id,
@@ -192,9 +242,7 @@ export function createEditModelFormValues(model: ProviderModelInfo): ModelFormVa
 	};
 }
 
-export function toReasoningEffortOptions(
-	values: readonly ReasoningEffortFormValue[],
-): ProviderReasoningEffortOption[] {
+export function toReasoningEffortOptions(values: readonly ReasoningEffortFormValue[]): ProviderReasoningEffortOption[] {
 	return values.map(
 		(effort: ReasoningEffortFormValue): ProviderReasoningEffortOption => ({
 			id: effort.id.trim(),
@@ -221,9 +269,7 @@ export function getCustomizationErrorMessage(
 	if (error.message.startsWith("provider_model_not_found:")) {
 		return t("settings.provider.errors.modelNotFound");
 	}
-	return error.message.length > 0
-		? `${t(fallbackKey)}: ${error.message}`
-		: t(fallbackKey);
+	return error.message.length > 0 ? `${t(fallbackKey)}: ${error.message}` : t(fallbackKey);
 }
 
 export function mergeManagedModels(
@@ -252,14 +298,9 @@ export function mergeManagedModels(
 	return [...modelsById.values()];
 }
 
-export function getDiscoveryFailureMessage(
-	result: ProviderModelsDiscoverResult,
-	t: (key: string) => string,
-): string {
+export function getDiscoveryFailureMessage(result: ProviderModelsDiscoverResult, t: (key: string) => string): string {
 	const code: ProviderModelDiscoveryFailureCode | undefined = result.failure?.code;
-	const guidanceKey: string | null = code === undefined
-		? null
-		: `settings.provider.discovery.failures.${code}`;
+	const guidanceKey: string | null = code === undefined ? null : `settings.provider.discovery.failures.${code}`;
 	const guidance: string | null = guidanceKey === null ? null : t(guidanceKey);
 	const detail: string | undefined = result.error;
 	if (guidance === null || guidance === guidanceKey) {
@@ -268,9 +309,6 @@ export function getDiscoveryFailureMessage(
 	return detail === undefined ? guidance : `${guidance} (${detail})`;
 }
 
-export function isOpenAICompatibleCustomProvider(
-	provider: ProviderModelSelectionProvider,
-): boolean {
-	return provider.custom &&
-		(provider.providerType === "openai" || provider.providerType === "openai-responses");
+export function isOpenAICompatibleCustomProvider(provider: ProviderModelSelectionProvider): boolean {
+	return provider.custom && (provider.providerType === "openai" || provider.providerType === "openai-responses");
 }

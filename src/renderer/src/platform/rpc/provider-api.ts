@@ -68,6 +68,9 @@ export type ProviderModelCapabilities = {
 	videoGeneration?: boolean | undefined;
 	videoEdit?: boolean | undefined;
 	audioGeneration?: boolean | undefined;
+	textToVideo?: boolean | undefined;
+	imageToVideo?: boolean | undefined;
+	referenceToVideo?: boolean | undefined;
 };
 
 export type ProviderModelCapabilityOverrides = Partial<
@@ -83,6 +86,9 @@ export type ProviderModelCapabilityOverrides = Partial<
 		| "videoGeneration"
 		| "videoEdit"
 		| "audioGeneration"
+		| "textToVideo"
+		| "imageToVideo"
+		| "referenceToVideo"
 	>
 >;
 
