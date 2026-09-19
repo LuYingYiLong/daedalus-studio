@@ -96,6 +96,67 @@ function definitionPorts(definition: { parameters: DefinitionParameter[]; output
 
 const nodeDefinitions = [
 	{
+		typeId: "builtin/flow-input",
+		pluginId: "builtin",
+		pluginVersion: "1.0.0",
+		pluginFingerprint: "builtin:flow-input:1",
+		configVersion: 1,
+		category: "basic",
+		workspaceRequired: false,
+		sideEffecting: false,
+		executable: true,
+		cachePolicy: "never",
+		defaultTitle: "Flow Input",
+		defaultConfig: { label: "Input", dataType: "text", defaultValue: "" },
+		configSchema: {
+			type: "object",
+			properties: {
+				label: { type: "string" },
+				dataType: { type: "string", enum: ["text", "json"] },
+				defaultValue: { type: "string" },
+			},
+		},
+		summaryFields: ["label", "dataType"],
+		ui: { kind: "schema" },
+		parameters: [
+			{ id: "label", label: "Name", mode: "fixed", configField: "label" },
+			{ id: "dataType", label: "Type", mode: "fixed", configField: "dataType" },
+			{ id: "defaultValue", label: "Default value", mode: "fixed", configField: "defaultValue" },
+		] satisfies DefinitionParameter[],
+		outputs: [{ id: "output", label: "Value", dataTypes: ["text", "json"] as Port["dataTypes"], defaultConnect: true }],
+	},
+	{
+		typeId: "builtin/user-prompt",
+		pluginId: "builtin",
+		pluginVersion: "1.0.0",
+		pluginFingerprint: "builtin:user-prompt:1",
+		configVersion: 1,
+		category: "basic",
+		workspaceRequired: false,
+		sideEffecting: false,
+		executable: true,
+		cachePolicy: "always",
+		defaultTitle: "User Prompt",
+		defaultConfig: { text: "" },
+		configSchema: { type: "object", properties: { text: { type: "string" } } },
+		summaryFields: ["text"],
+		ui: { kind: "schema" },
+		parameters: [
+			{
+				id: "input",
+				label: "User prompt",
+				mode: "hybrid",
+				configField: "text",
+				dataTypes: ["text", "json"],
+				required: false,
+				multiple: false,
+				defaultConnect: true,
+				hideControlWhenConnected: true,
+			},
+		] satisfies DefinitionParameter[],
+		outputs: [{ id: "output", label: "User prompt", dataTypes: ["text"] as Port["dataTypes"], defaultConnect: true }],
+	},
+	{
 		typeId: "builtin/text",
 		pluginId: "builtin",
 		pluginVersion: "1.0.0",
@@ -241,7 +302,7 @@ test.describe("Daedalus Flow node workflow", () => {
 		let approvals: Array<Record<string, unknown>> = [];
 		const document = flowDocument();
 		const snapshot = (): Record<string, unknown> => ({
-			flow: { ...document, graphRevision, layoutRevision },
+			flow: { ...document, revision: graphRevision, graphRevision, layoutRevision },
 			nodes: nodes.map((node): FlowNode => ({ ...node })),
 			edges: edges.map((edge): FlowEdge => ({ ...edge })),
 			runs,
@@ -285,11 +346,20 @@ test.describe("Daedalus Flow node workflow", () => {
 		};
 
 		mockBackend.setHandler("flow.list", () => ({
-			flows: created ? [{ ...document, graphRevision, layoutRevision }] : [],
+			flows: created ? [{ ...document, revision: graphRevision, graphRevision, layoutRevision }] : [],
 			order: flowOrder(),
 		}));
 		mockBackend.setHandler("flow.create", () => {
 			created = true;
+			if (nodes.length === 0) {
+				const flowInput = addNode("builtin/flow-input", -360, -120, {
+					label: "User prompt",
+					dataType: "text",
+					defaultValue: "",
+				});
+				const userPrompt = addNode("builtin/user-prompt", 0, -120, { text: "" });
+				addEdge(flowInput.nodeId, "output", userPrompt.nodeId, "input", "text");
+			}
 			return snapshot();
 		});
 		mockBackend.setHandler("flow.get", () => snapshot());
@@ -368,6 +438,12 @@ test.describe("Daedalus Flow node workflow", () => {
 				}
 			}
 			return { flowId: FLOW_ID, graphRevision, layoutRevision, acceptedMutationIds: operations.map((operation): string => operation.mutationId), operations };
+		});
+		mockBackend.setHandler("flow.archive", ({ params }) => {
+			const requestedRevision = Number((params as { revision: number }).revision);
+			expect(requestedRevision).toBe(graphRevision);
+			created = false;
+			return { ...document, revision: graphRevision + 1, graphRevision, layoutRevision, archivedAt: NOW };
 		});
 		let runStartCount = 0;
 		mockBackend.setHandler("flow.run.start", () => {
@@ -511,10 +587,84 @@ test.describe("Daedalus Flow node workflow", () => {
 		await mainWindow.locator('[data-studio-new-flow="true"]').click();
 		await expect(mainWindow.locator('[data-studio-flow-surface="true"]')).toBeVisible();
 		await expect.poll(() => mockBackend.getRequests("flow.node.types.list").length).toBeGreaterThan(0);
+		await mainWindow.getByRole("button", { name: "Fit View" }).click();
+		const starterFlowInput = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/flow-input"])');
+		const starterUserPrompt = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/user-prompt"])');
+		await expect(starterFlowInput).toBeVisible();
+		await expect(starterUserPrompt).toBeVisible();
+		const starterEdge = mainWindow.locator(".react-flow__edge");
+		await expect(starterEdge).toHaveCount(1);
+		const starterSourceColor = await starterFlowInput
+			.locator('[data-flow-port-id="output"]')
+			.evaluate((handle): string => getComputedStyle(handle).getPropertyValue("--flow-handle-color").trim());
+		const starterTargetColor = await starterUserPrompt
+			.locator('[data-flow-port-id="input"]')
+			.evaluate((handle): string => getComputedStyle(handle).getPropertyValue("--flow-handle-color").trim());
+		const starterGradientColors = await starterEdge.locator("linearGradient stop").evaluateAll(
+			(stops): string[] => stops.map((stop): string => stop.getAttribute("stop-color") ?? ""),
+		);
+		expect(starterSourceColor).not.toBe(starterTargetColor);
+		expect(starterGradientColors).toEqual([starterSourceColor, starterTargetColor]);
+		await expect(starterUserPrompt.locator("textarea")).toHaveCount(0);
+		await starterUserPrompt.locator("header").click();
+		await mainWindow.keyboard.press("Delete");
+		await starterFlowInput.locator("header").click();
+		await mainWindow.keyboard.press("Delete");
+		await expect(mainWindow.locator(".react-flow__node")).toHaveCount(0);
 
 		await mainWindow.keyboard.press("Shift+A");
 		await expect(mainWindow.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ })).toBeVisible();
 		await mainWindow.keyboard.press("Escape");
+
+		await mainWindow.getByRole("button", { name: /Add node|添加节点/u }).click();
+		await selectFlowNodeType(mainWindow, /Basic|基础/u, /Flow Input|运行输入/u);
+		await mainWindow.keyboard.press("Shift+A");
+		await selectFlowNodeType(mainWindow, /Basic|基础/u, /User Prompt|用户提示词/u);
+		await mainWindow.getByRole("button", { name: "Fit View" }).click();
+		const flowInputNode = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/flow-input"])');
+		const userPromptNode = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/user-prompt"])');
+		await expect(flowInputNode).toBeVisible();
+		await expect(userPromptNode).toBeVisible();
+		await expect(userPromptNode.locator("textarea")).toBeVisible();
+		const flowInputOutput = flowInputNode.locator('[data-flow-port-id="output"]');
+		const userPromptInput = userPromptNode.locator('[data-flow-port-id="input"]');
+		const flowInputOutputBox = await flowInputOutput.boundingBox();
+		const userPromptInputBox = await userPromptInput.boundingBox();
+		expect(flowInputOutputBox).not.toBeNull();
+		expect(userPromptInputBox).not.toBeNull();
+		await mainWindow.mouse.move(
+			flowInputOutputBox!.x + flowInputOutputBox!.width / 2,
+			flowInputOutputBox!.y + flowInputOutputBox!.height / 2,
+		);
+		await mainWindow.mouse.down();
+		await mainWindow.mouse.move(
+			userPromptInputBox!.x + userPromptInputBox!.width / 2,
+			userPromptInputBox!.y + userPromptInputBox!.height / 2,
+			{ steps: 12 },
+		);
+		await mainWindow.mouse.up();
+		await expect(mainWindow.locator(".react-flow__edge")).toHaveCount(1);
+		await expect(userPromptNode.locator("textarea")).toHaveCount(0);
+		await userPromptInput.hover();
+		await mainWindow.mouse.down();
+		const paneForDisconnect = mainWindow.locator(".react-flow__pane");
+		const paneForDisconnectBox = await paneForDisconnect.boundingBox();
+		expect(paneForDisconnectBox).not.toBeNull();
+		await mainWindow.mouse.move(
+			paneForDisconnectBox!.x + paneForDisconnectBox!.width * 0.1,
+			paneForDisconnectBox!.y + paneForDisconnectBox!.height * 0.8,
+			{ steps: 12 },
+		);
+		await mainWindow.mouse.up();
+		await expect(mainWindow.locator(".react-flow__edge")).toHaveCount(0);
+		await expect(userPromptNode.locator("textarea")).toBeVisible();
+		await userPromptNode.locator("textarea").fill("editable user prompt");
+		await userPromptNode.locator("header").click();
+		await mainWindow.keyboard.press("Delete");
+		await flowInputNode.locator("header").click();
+		await mainWindow.keyboard.press("Delete");
+		await expect(userPromptNode).toHaveCount(0);
+		await expect(flowInputNode).toHaveCount(0);
 
 		const pane = mainWindow.locator(".react-flow__pane");
 		await mainWindow.locator('section[aria-labelledby="flow-welcome-title"]').click({ button: "right", position: { x: 460, y: 260 } });
@@ -549,7 +699,7 @@ test.describe("Daedalus Flow node workflow", () => {
 		await mainWindow.getByRole("button", { name: "Fit View" }).click();
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/tool"])')).toBeVisible();
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toBeVisible();
-		await expect(mainWindow.locator(".react-flow__edge-default")).toHaveCount(1);
+		await expect(mainWindow.locator(".react-flow__edge")).toHaveCount(1);
 		const conditionInput = mainWindow
 			.locator('.react-flow__node:has([data-node-type="builtin/condition"])')
 			.locator('[data-flow-port-id="input"]');
@@ -563,7 +713,7 @@ test.describe("Daedalus Flow node workflow", () => {
 		await mainWindow.mouse.move(paneBox!.x + paneBox!.width * 0.78, paneBox!.y + paneBox!.height * 0.78, {
 			steps: 12,
 		});
-		await expect(mainWindow.locator(".react-flow__edge-default")).toHaveCount(0);
+		await expect(mainWindow.locator(".react-flow__edge")).toHaveCount(0);
 		await expect(mainWindow.locator(".react-flow__connection-path")).toHaveCount(1);
 		const currentSourceBox = await source.boundingBox();
 		expect(currentSourceBox).not.toBeNull();
@@ -582,7 +732,7 @@ test.describe("Daedalus Flow node workflow", () => {
 		expect(Math.abs(connectionStart.x - sourceCenter.x)).toBeLessThan(2);
 		expect(Math.abs(connectionStart.y - sourceCenter.y)).toBeLessThan(2);
 		await mainWindow.mouse.up();
-		await expect(mainWindow.locator(".react-flow__edge-default")).toHaveCount(0);
+		await expect(mainWindow.locator(".react-flow__edge")).toHaveCount(0);
 		await expect(mainWindow.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ })).toHaveCount(0);
 		const snapButton = mainWindow.getByRole("button", {
 			name: /Disable grid snapping|关闭网格吸附/,
@@ -595,13 +745,13 @@ test.describe("Daedalus Flow node workflow", () => {
 		await expect(disabledSnapButton).toHaveAttribute("aria-pressed", "false");
 		await disabledSnapButton.click();
 
-		await mainWindow.getByRole("button", { name: /Run|运行/ }).click();
-		await expect(mainWindow.getByRole("button", { name: /Stop|停止/ })).toBeVisible();
+		await mainWindow.getByRole("button", { name: /Run|运\s*行/ }).click();
+		await expect(mainWindow.getByRole("button", { name: /Stop|停\s*止/ })).toBeVisible();
 		await expect(mainWindow.getByText(/Pending approvals|待审批操作/)).toBeVisible();
 		await mainWindow.getByRole("button", { name: /Approve|批\s*准/ }).click();
 		await expect.poll(() => mockBackend.getRequests("flow.approval.resolve").length).toBe(1);
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toContainText("approved result");
-		await mainWindow.getByRole("button", { name: /Run|运行/ }).click();
+		await mainWindow.getByRole("button", { name: /Run|运\s*行/ }).click();
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toContainText("cached result");
 		const flowTreeItem = mainWindow.locator(".ant-tree-treenode").filter({ hasText: "E2E Workflow" });
 		await expect(flowTreeItem.locator(".ant-badge-dot")).toHaveCount(0);
@@ -626,8 +776,10 @@ test.describe("Daedalus Flow node workflow", () => {
 		await outputNode.locator("header").click();
 		await mainWindow.keyboard.press("Delete");
 		await expect(outputNode).toHaveCount(0);
+		await flowTreeItem.hover();
+		await flowTreeItem.getByRole("button", { name: /Archive Flow|归档 Flow/u }).click();
+		await expect.poll(() => mockBackend.getRequests("flow.archive").length).toBe(1);
 		await expect.poll(() => mockBackend.getRequests("flow.patch.commit").length).toBeGreaterThan(patchCountBeforeDelete);
-		await mainWindow.waitForTimeout(350);
-		await expect(outputNode).toHaveCount(0);
+		await expect(flowTreeItem).toHaveCount(0);
 	});
 });

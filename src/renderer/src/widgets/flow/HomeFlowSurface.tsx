@@ -58,6 +58,7 @@ import FlowNodePicker from "./FlowNodePicker";
 import FlowWelcome from "./FlowWelcome";
 import {
 	FlowDocumentNodeView,
+	flowNodeColor,
 	resolveFlowCanvasPorts,
 	resolveFlowDefinitionPorts,
 	type FlowCanvasNode,
@@ -100,12 +101,6 @@ type DetachedConnectionSource = {
 const nodeTypes = { flowNode: FlowDocumentNodeView };
 type FlowEdgeData = { sourceColor: string; targetColor: string };
 type FlowCanvasEdge = Edge<FlowEdgeData, "flowGradient">;
-
-function flowHandleColor(dataType: string | undefined): string {
-	if (dataType === "json") return "#722ed1";
-	if (dataType === "artifact") return "#d46b08";
-	return "var(--ant-color-primary)";
-}
 
 function oppositeFlowPosition(position: Position): Position {
 	switch (position) {
@@ -312,6 +307,15 @@ function HomeFlowSurface({
 	);
 	const [consentText, setConsentText] = useState<Record<string, string>>({});
 	const [modelsByProvider, setModelsByProvider] = useState<Record<string, ProviderModelInfo[]>>({});
+	const canvasNodeMembershipKey = useMemo(
+		(): string => nodes.map((node): string => node.id).sort().join("\u0000"),
+		[nodes],
+	);
+	const canvasNodeIds = useMemo(
+		(): ReadonlySet<string> =>
+			new Set(canvasNodeMembershipKey.length === 0 ? [] : canvasNodeMembershipKey.split("\u0000")),
+		[canvasNodeMembershipKey],
+	);
 	const canvasRef = useRef<HTMLDivElement | null>(null);
 	const lastPointerPositionRef = useRef<{ x: number; y: number } | null>(null);
 	const searchInputRef = useRef<InputRef | null>(null);
@@ -623,12 +627,26 @@ function HomeFlowSurface({
 			}),
 		);
 	}, [latestRun?.nodes]);
+	useEffect((): void => {
+		if (reconnectingEdgeId === null) return;
+		if ((snapshot?.edges ?? []).some((edge): boolean => edge.edgeId === reconnectingEdgeId)) return;
+		// The backend may acknowledge a replacement before ReactFlow emits its
+		// reconnect-end callback. Do not keep filtering the old edge id.
+		setReconnectingEdgeId(null);
+	}, [reconnectingEdgeId, snapshot?.edges]);
 	const edges = useMemo(
 		(): FlowCanvasEdge[] =>
 			(snapshot?.edges ?? [])
-				.filter((edge): boolean => edge.edgeId !== reconnectingEdgeId)
-				.map(
-					(edge): FlowCanvasEdge => ({
+				.filter(
+					(edge): boolean =>
+						edge.edgeId !== reconnectingEdgeId &&
+						canvasNodeIds.has(edge.sourceNodeId) &&
+						canvasNodeIds.has(edge.targetNodeId),
+				)
+				.map((edge): FlowCanvasEdge => {
+					const sourceNode = snapshot?.nodes.find((node): boolean => node.nodeId === edge.sourceNodeId);
+					const targetNode = snapshot?.nodes.find((node): boolean => node.nodeId === edge.targetNodeId);
+					return {
 						id: edge.edgeId,
 						source: edge.sourceNodeId,
 						target: edge.targetNodeId,
@@ -636,26 +654,22 @@ function HomeFlowSurface({
 						targetHandle: edge.targetPort,
 						type: "flowGradient",
 						data: {
-							sourceColor: flowHandleColor(
-								portFor(
-									snapshot?.nodes.find((node): boolean => node.nodeId === edge.sourceNodeId),
-									controller.nodeDefinitions,
-									edge.sourcePort,
-									"output",
-								)?.dataTypes[0],
-							),
-							targetColor: flowHandleColor(
-								portFor(
-									snapshot?.nodes.find((node): boolean => node.nodeId === edge.targetNodeId),
-									controller.nodeDefinitions,
-									edge.targetPort,
-									"input",
-								)?.dataTypes[0],
-							),
+							sourceColor: sourceNode === undefined ? "hsl(215 14% 65%)" : flowNodeColor(sourceNode.typeId),
+							targetColor: targetNode === undefined ? "hsl(215 14% 65%)" : flowNodeColor(targetNode.typeId),
 						},
-					}),
-				),
-		[controller.nodeDefinitions, reconnectingEdgeId, snapshot?.edges, snapshot?.nodes],
+					};
+				}),
+		[
+			canvasNodeIds,
+			reconnectingEdgeId,
+			snapshot?.edges,
+			snapshot?.nodes,
+		],
+	);
+	const onNodesChange = useCallback(
+		(changes: NodeChange<FlowCanvasNode>[]): void =>
+			setNodes((current): FlowCanvasNode[] => applyNodeChanges(changes, current)),
+		[],
 	);
 	const connectionLineComponent = useCallback(
 		(props: ConnectionLineComponentProps<FlowCanvasNode>): React.JSX.Element => {
@@ -666,15 +680,10 @@ function HomeFlowSurface({
 			let targetPosition = props.toPosition;
 			const resolveHandleColor = (
 				nodeId: string | null | undefined,
-				handleId: string | null | undefined,
-				handleType: "source" | "target" | undefined,
 			): string => {
-				if (nodeId === null || nodeId === undefined || handleId === null || handleId === undefined) {
-					return flowHandleColor(undefined);
-				}
+				if (nodeId === null || nodeId === undefined) return "hsl(215 14% 65%)";
 				const node = snapshot?.nodes.find((candidate): boolean => candidate.nodeId === nodeId);
-				const direction = handleType === "target" ? "input" : "output";
-				return flowHandleColor(portFor(node, controller.nodeDefinitions, handleId, direction)?.dataTypes[0]);
+				return node === undefined ? "hsl(215 14% 65%)" : flowNodeColor(node.typeId);
 			};
 			if (source !== null) {
 				const internalNode = flowInstance?.getInternalNode(source.sourceNodeId);
@@ -692,12 +701,12 @@ function HomeFlowSurface({
 			}
 			const sourceColor =
 				source === null
-					? resolveHandleColor(props.fromHandle?.nodeId, props.fromHandle?.id, props.fromHandle?.type)
-					: resolveHandleColor(source.sourceNodeId, source.sourcePort, "source");
+					? resolveHandleColor(props.fromHandle?.nodeId)
+					: resolveHandleColor(source.sourceNodeId);
 			const targetColor =
 				props.toHandle === null || props.toHandle === undefined
 					? sourceColor
-					: resolveHandleColor(props.toHandle.nodeId, props.toHandle.id, props.toHandle.type);
+					: resolveHandleColor(props.toHandle.nodeId);
 			const [path] = getBezierPath({
 				sourceX,
 				sourceY,
@@ -734,7 +743,7 @@ function HomeFlowSurface({
 				</>
 			);
 		},
-		[controller.nodeDefinitions, flowInstance, snapshot?.nodes],
+		[flowInstance, snapshot?.nodes],
 	);
 
 	const closePicker = useCallback((): void => setPicker(null), []);
@@ -939,26 +948,22 @@ function HomeFlowSurface({
 			if (sourcePort === undefined || targetPort === undefined) return;
 			const dataType = compatibleType(sourcePort, targetPort);
 			if (dataType === null) return;
-			const detachedEdgeId = detachedEdgeIdRef.current;
-			if (detachedEdgeId !== null)
-				void controller.reconnectEdge(
-					detachedEdgeId,
-					connection.source,
-					connection.target,
-					connection.sourceHandle,
-					connection.targetHandle,
-					dataType,
-				);
-			else
-				void controller.createEdge(
-					connection.source,
-					connection.target,
-					connection.sourceHandle,
-					connection.targetHandle,
-					dataType,
-				);
+			// edge.create replaces a single-connection target atomically. Generate a
+			// fresh edge id so ReactFlow cannot retain the old reconnecting edge in
+			// its internal edge cache.
+			void controller.createEdge(
+				connection.source,
+				connection.target,
+				connection.sourceHandle,
+				connection.targetHandle,
+				dataType,
+			);
+			// A successful connection has already replaced the hidden edge locally.
+			// Clear this immediately instead of waiting for onConnectEnd, which can
+			// be skipped when the pointer is released over another Handle.
+			setReconnectingEdgeId(null);
 		},
-		[controller, snapshot],
+		[controller, setReconnectingEdgeId, snapshot],
 	);
 	const onReconnect = useCallback<OnReconnect<FlowCanvasEdge>>(
 		(edge, connection): void => {
@@ -977,6 +982,9 @@ function HomeFlowSurface({
 			if (sourcePort === undefined || targetPort === undefined) return;
 			const dataType = compatibleType(sourcePort, targetPort);
 			if (dataType === null) return;
+			// A reconnect is represented by a new edge. The backend replaces the
+			// occupied target port in the same transaction, while the fresh id makes
+			// ReactFlow recalculate the visible path immediately.
 			void controller.reconnectEdge(
 				edge.id,
 				connection.source,
@@ -995,6 +1003,9 @@ function HomeFlowSurface({
 			_handleType: "source" | "target",
 			state: FinalConnectionState,
 		): void => {
+			detachedConnectionSourceRef.current = null;
+			detachedEdgeIdRef.current = null;
+			setReconnectingEdgeId(null);
 			if (state.toHandle === null) void controller.deleteEdge(edge.id);
 		},
 		[controller.deleteEdge],
@@ -1373,9 +1384,7 @@ function HomeFlowSurface({
 					edgeTypes={edgeTypes}
 					defaultViewport={snapshot.flow.viewport}
 					onInit={setFlowInstance}
-					onNodesChange={(changes: NodeChange<FlowCanvasNode>[]): void =>
-						setNodes((current): FlowCanvasNode[] => applyNodeChanges(changes, current))
-					}
+					onNodesChange={onNodesChange}
 					onNodeDragStart={(): void => startInteractionSample("node-drag")}
 					onNodeDragStop={onNodeDragStop}
 					onConnect={onConnect}

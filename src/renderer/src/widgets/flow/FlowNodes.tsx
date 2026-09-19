@@ -1,5 +1,5 @@
 import { Button, Input, InputNumber, Select, Space, Tooltip, Typography } from "antd";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { Handle, Position, useUpdateNodeInternals, type Node, type NodeProps } from "@xyflow/react";
 import type {
@@ -128,6 +128,19 @@ export function flowNodeColor(typeId: string): string {
 	let hash = 0;
 	for (const char of typeId) hash = (hash * 31 + char.charCodeAt(0)) | 0;
 	return `hsl(${Math.abs(hash) % 360} 68% 38%)`;
+}
+
+export function applyFlowProviderSelection(
+	config: Record<string, unknown>,
+	provider: string,
+	model: string,
+	reasoningEffort: string,
+	supportsReasoningEffort: boolean,
+): Record<string, unknown> {
+	const next: Record<string, unknown> = { ...config, provider, model };
+	if (supportsReasoningEffort) next.reasoningEffort = reasoningEffort;
+	else delete next.reasoningEffort;
+	return next;
 }
 
 export function resolveFlowDefinitionParameters(
@@ -325,6 +338,7 @@ function SchemaEditor({
 	if (currentEffort.length > 0 && !effortOptions.some((option): boolean => option.value === currentEffort))
 		effortOptions.push({ value: currentEffort, label: currentEffort });
 	const properties = readSchemaProperties(definition.configSchema);
+	const supportsReasoningEffort = Object.prototype.hasOwnProperty.call(properties, "reasoningEffort");
 	const renderControl = (key: string, schema: Record<string, unknown>, title: string): React.JSX.Element => {
 		const control = schema["x-daedalus-control"];
 		const isWorkspaceFileControl =
@@ -383,12 +397,13 @@ function SchemaEditor({
 								nextModelInfo?.capabilities.reasoningEfforts ??
 								[]
 							).find((effort): boolean => effort.default === true)?.id ?? "";
-						const next = {
-							...configRef.current,
-							provider: value,
-							model: nextModel,
-							reasoningEffort: nextEffort,
-						};
+						const next = applyFlowProviderSelection(
+							configRef.current,
+							value,
+							nextModel,
+							nextEffort,
+							supportsReasoningEffort,
+						);
 						configRef.current = next;
 						setConfig(next);
 						commitConfig(next);
@@ -845,7 +860,11 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 				: definition.outputs,
 		[definition, flowNode.ports],
 	);
-	const handleLayoutKey = `${outputs.map((output): string => output.id).join("|")}:${parameters.map((parameter): string => `${parameter.id}:${data.connectedInputIds.has(parameter.id) ? 1 : 0}`).join("|")}`;
+	const definitionLayoutKey =
+		definition === null
+			? "unknown"
+			: `${definition.pluginFingerprint}:${definition.configVersion}:${definition.ui.kind}`;
+	const handleLayoutKey = `${definitionLayoutKey}:${outputs.map((output): string => output.id).join("|")}:${parameters.map((parameter): string => `${parameter.id}:${data.connectedInputIds.has(parameter.id) ? 1 : 0}`).join("|")}`;
 	useEffect(
 		(): void => updateNodeInternals(flowNode.nodeId),
 		[flowNode.nodeId, handleLayoutKey, updateNodeInternals],
@@ -868,7 +887,11 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 			? flowNode.config.label.trim()
 			: nodeTitle;
 	return (
-		<div className={styles.nodeShell} data-flow-node-id={flowNode.nodeId}>
+		<div
+			className={styles.nodeShell}
+			data-flow-node-id={flowNode.nodeId}
+			style={{ "--flow-handle-color": flowNodeColor(flowNode.typeId) } as CSSProperties}
+		>
 			<article
 				className={`${styles.nodeCard} ${selected ? styles.nodeCardSelected : ""} ${data.matched ? styles.nodeCardMatched : ""} ${definition === null ? styles.unknownNode : ""}`}
 				data-node-type={flowNode.typeId}

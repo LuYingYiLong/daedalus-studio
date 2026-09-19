@@ -326,7 +326,7 @@
 	width: 12px !important;
 	height: 12px !important;
 	border: 2px solid var(--ant-color-bg-container) !important;
-	background: var(--ant-color-primary) !important;
+	background: var(--flow-handle-color, var(--flow-port-color, var(--ant-color-primary))) !important;
 	pointer-events: auto;
 	transform: translate(-50%, -50%) !important;
 }
@@ -338,25 +338,25 @@
 }
 
 .parameterHandle[data-flow-port-type="json"] {
-	background: #722ed1 !important;
+	--flow-port-color: #722ed1;
 }
 
 .parameterHandle[data-flow-port-type="artifact"] {
-	background: #d46b08 !important;
+	--flow-port-color: #d46b08;
 }
 
 .parameterHandle[data-flow-port-type="image"] {
-	background: #13c2c2 !important;
+	--flow-port-color: #13c2c2;
 }
 
 .parameterHandle[data-flow-port-type="video"] {
-	background: #eb2f96 !important;
+	--flow-port-color: #eb2f96;
 }
 
 .parameterHandle[data-flow-port-type="audio"] {
-	background: #fa8c16 !important;
+	--flow-port-color: #fa8c16;
 }
 
 .parameterHandle[data-flow-port-type="frames"] {
-	background: #2f54eb !important;
+	--flow-port-color: #2f54eb;
 }

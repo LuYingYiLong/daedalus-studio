@@ -99,6 +99,41 @@ function toSummary(flow: FlowDocument): FlowDocumentSummary {
 	return flow;
 }
 
+async function flushAndFetchFlow(flowId: string): Promise<FlowDocumentSnapshot> {
+	await flowOperationOutbox.flushFully(flowId);
+	return fetchFlow(flowId);
+}
+
+const MEDIA_GENERATION_NODE_TYPES = new Set<FlowNodeTypeId>([
+	"builtin/text-to-image",
+	"builtin/image-to-image",
+	"builtin/text-to-video",
+	"builtin/image-to-video",
+]);
+
+function sanitizeFlowOperationForCommit(
+	operation: FlowOperation,
+	snapshot: FlowDocumentSnapshot | null,
+): FlowOperation {
+	let typeId: FlowNodeTypeId | null = null;
+	let config: Record<string, unknown> | undefined;
+	if (operation.kind === "node.create") {
+		typeId = operation.payload.typeId;
+		config = operation.payload.config;
+	} else if (operation.kind === "node.update") {
+		typeId = snapshot?.nodes.find((node): boolean => node.nodeId === operation.payload.nodeId)?.typeId ?? null;
+		config = operation.payload.config;
+	}
+	if (typeId === null || !MEDIA_GENERATION_NODE_TYPES.has(typeId) || config === undefined || !("reasoningEffort" in config))
+		return operation;
+	const sanitizedConfig = { ...config };
+	delete sanitizedConfig.reasoningEffort;
+	return {
+		...operation,
+		payload: { ...operation.payload, config: sanitizedConfig },
+	} as FlowOperation;
+}
+
 function resolveOptimisticPorts(node: Pick<FlowDocumentNode, "ports" | "typeId" | "config">, definition: FlowNodeTypeDefinition | undefined, config: Record<string, unknown>): FlowDocumentNode["ports"] {
 	if (definition === undefined) return node.ports;
 	const parameters = definition.parameters.map((parameter) => structuredClone(parameter));
@@ -328,13 +363,35 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	useEffect((): (() => void) => {
 		const disconnectOutbox = flowOperationOutbox.connect(
 			async (flowId, clientId, operations) => {
-				const ack = await commitFlowPatch({ flowId, clientId, operations });
+				const activeSnapshot = snapshotRef.current?.flow.flowId === flowId ? snapshotRef.current : null;
+				const commitSnapshot = activeSnapshot ?? await fetchFlow(flowId);
+				const sanitizedOperations = operations.map(
+					(operation): FlowOperation => sanitizeFlowOperationForCommit(operation, commitSnapshot),
+				);
+				const ack = await commitFlowPatch({ flowId, clientId, operations: sanitizedOperations });
 				const current = snapshotRef.current;
 				if (current?.flow.flowId === flowId) {
-					const next = { ...current, flow: { ...current.flow, graphRevision: ack.graphRevision, layoutRevision: ack.layoutRevision, revision: Math.max(current.flow.revision, ack.graphRevision) } };
+					const repairedConfigByNodeId = new Map<string, Record<string, unknown>>();
+					for (let index = 0; index < operations.length; index += 1) {
+						if (sanitizedOperations[index] === operations[index]) continue;
+						const operation = sanitizedOperations[index];
+						if ((operation?.kind === "node.create" || operation?.kind === "node.update") && operation.payload.config !== undefined)
+							repairedConfigByNodeId.set(operation.payload.nodeId, operation.payload.config);
+					}
+					const next = {
+						...current,
+						nodes: repairedConfigByNodeId.size === 0
+							? current.nodes
+							: current.nodes.map((node): FlowDocumentNode => {
+								const repairedConfig = repairedConfigByNodeId.get(node.nodeId);
+								return repairedConfig === undefined ? node : { ...node, config: repairedConfig };
+							}),
+						flow: { ...current.flow, graphRevision: ack.graphRevision, layoutRevision: ack.layoutRevision, revision: Math.max(current.flow.revision, ack.graphRevision) },
+					};
 					snapshotRef.current = next;
 					setSnapshot(next);
 				}
+				setError(null);
 				return ack;
 			},
 			(error, failedFlowId): void => {
@@ -606,8 +663,10 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			const current = snapshotRef.current?.flow.flowId === flowId ? snapshotRef.current.flow : flows.find((flow): boolean => flow.flowId === flowId);
 			if (current === undefined) return;
 			setIsMutating(true);
+			setError(null);
 			try {
-				const updated = await renameFlow(flowId, title, current.revision);
+				const saved = await flushAndFetchFlow(flowId);
+				const updated = await renameFlow(flowId, title, saved.flow.revision);
 				setFlows((items): FlowDocumentSummary[] => items.map((flow): FlowDocumentSummary => (flow.flowId === flowId ? { ...flow, ...updated } : flow)));
 				if (snapshotRef.current?.flow.flowId === flowId) applySnapshot({ ...snapshotRef.current, flow: updated });
 			} catch (mutationError: unknown) {
@@ -624,8 +683,11 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			const current = snapshotRef.current?.flow.flowId === flowId ? snapshotRef.current.flow : flows.find((flow): boolean => flow.flowId === flowId);
 			if (current === undefined) return;
 			setIsMutating(true);
+			setError(null);
 			try {
-				await archiveFlow(flowId, current.revision);
+				const saved = await flushAndFetchFlow(flowId);
+				await archiveFlow(flowId, saved.flow.revision);
+				flowOperationOutbox.discard(flowId);
 				setFlows((items): FlowDocumentSummary[] => items.filter((flow): boolean => flow.flowId !== flowId));
 				setUnreadFlowIds((currentFlowIds): ReadonlySet<string> => removeUnreadFlows(currentFlowIds, [flowId]));
 				if (selectedFlowIdRef.current === flowId) {
@@ -719,7 +781,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 
 	const reconnectEdge = useCallback(
 		async (
-			edgeId: string,
+			_edgeId: string,
 			sourceNodeId: string,
 			targetNodeId: string,
 			sourcePort: string,
@@ -728,23 +790,24 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		): Promise<void> => {
 			const current = snapshotRef.current;
 			if (current === null || isGraphLocked) return;
-			const baseGraphRevision = current.flow.graphRevision;
-			applyOperations([
-				{
-					mutationId: createFlowMutationId(),
-					kind: "edge.delete",
-					baseGraphRevision,
-					payload: { edgeId },
+			// The backend replaces a single-connection target as part of edge.create.
+			// A new id is intentional: ReactFlow otherwise may keep the old edge's
+			// cached geometry after a reconnect and leave the accepted edge invisible.
+			applyOperation({
+				mutationId: createFlowMutationId(),
+				kind: "edge.create",
+				baseGraphRevision: current.flow.graphRevision,
+				payload: {
+					edgeId: `edge-${crypto.randomUUID()}`,
+					sourceNodeId,
+					sourcePort,
+					targetNodeId,
+					targetPort,
+					dataType,
 				},
-				{
-					mutationId: createFlowMutationId(),
-					kind: "edge.create",
-					baseGraphRevision,
-					payload: { edgeId, sourceNodeId, sourcePort, targetNodeId, targetPort, dataType },
-				},
-			]);
+			});
 		},
-		[applyOperations, isGraphLocked],
+		[applyOperation, isGraphLocked],
 	);
 
 	const deleteEdge = useCallback(
@@ -840,10 +903,12 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		async (mode: FlowDocument["approvalMode"]): Promise<void> => {
 			const current = snapshotRef.current;
 			if (current === null) return;
+			setError(null);
 			try {
+				const saved = await flushAndFetchFlow(current.flow.flowId);
 				const flow = await updateFlowSettings({
-					flowId: current.flow.flowId,
-					revision: current.flow.revision,
+					flowId: saved.flow.flowId,
+					revision: saved.flow.revision,
 					approvalMode: mode,
 				});
 				if (snapshotRef.current?.flow.flowId === flow.flowId) applySnapshot({ ...snapshotRef.current, flow });
