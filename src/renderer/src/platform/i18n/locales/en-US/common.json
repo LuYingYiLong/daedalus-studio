@@ -722,6 +722,7 @@
 			"modelDefault": "Default",
 			"outputResult": "Output result",
 			"outputPending": "Run the Flow to see its output here",
+			"chooseFile": "Choose file",
 			"approvalModes": {
 				"manual": "Manual",
 				"auto-safe": "Auto safe",

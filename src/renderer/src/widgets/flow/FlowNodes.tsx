@@ -1,4 +1,4 @@
-import { Button, Input, InputNumber, Select, Tooltip, Typography } from "antd";
+import { Button, Input, InputNumber, Select, Space, Tooltip, Typography } from "antd";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Handle, Position, useUpdateNodeInternals, type Node, type NodeProps } from "@xyflow/react";
@@ -20,6 +20,7 @@ import { flowNodeOutputLabel, flowNodeParameterLabel, flowNodeTypeLabel } from "
 export type FlowNodeEditorOptions = {
 	modelSelection: ProviderModelSelection | null;
 	modelsByProvider: Readonly<Record<string, ProviderModelInfo[]>>;
+	selectWorkspaceFile?: (() => Promise<string | null>) | undefined;
 };
 
 export type FlowCanvasNodeData = {
@@ -70,7 +71,7 @@ function formatOutputMarkdown(output: unknown, format: unknown): string {
 	return String(value);
 }
 
-function headerColor(typeId: string): string {
+export function flowNodeColor(typeId: string): string {
 	let hash = 0;
 	for (const char of typeId) hash = (hash * 31 + char.charCodeAt(0)) | 0;
 	return `hsl(${Math.abs(hash) % 360} 68% 38%)`;
@@ -267,6 +268,39 @@ function SchemaEditor({
 	const properties = readSchemaProperties(definition.configSchema);
 	const renderControl = (key: string, schema: Record<string, unknown>, title: string): React.JSX.Element => {
 		const control = schema["x-daedalus-control"];
+		const isWorkspaceFileControl =
+			control === "workspace-file" ||
+			schema.format === "workspace-file" ||
+			(definition.typeId === "builtin/file-input" && key === "path");
+		if (isWorkspaceFileControl)
+			return (
+				<Space.Compact block className="nodrag">
+					<Input
+						className="nodrag"
+						disabled={disabled}
+						value={typeof config[key] === "string" ? config[key] : ""}
+						placeholder={title}
+						onChange={(event): void => update(key, event.target.value, false)}
+						onBlur={(): void => commitConfig(configRef.current)}
+					/>
+					<Tooltip title={t("flow.editor.chooseFile", { defaultValue: "Choose file" })}>
+						<Button
+							className="nodrag"
+							aria-label={t("flow.editor.chooseFile", { defaultValue: "Choose file" })}
+							disabled={disabled || editorOptions.selectWorkspaceFile === undefined}
+							icon={<Icon name="folder-open" />}
+							onClick={(): void => {
+								if (editorOptions.selectWorkspaceFile === undefined) return;
+								void editorOptions.selectWorkspaceFile()
+									.then((path): void => {
+										if (path !== null) update(key, path);
+									})
+									.catch((): void => undefined);
+							}}
+						/>
+					</Tooltip>
+				</Space.Compact>
+			);
 		if (control === "provider")
 			return (
 				<Select
@@ -779,7 +813,7 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 				className={`${styles.nodeCard} ${selected ? styles.nodeCardSelected : ""} ${data.matched ? styles.nodeCardMatched : ""} ${definition === null ? styles.unknownNode : ""}`}
 				data-node-type={flowNode.typeId}
 			>
-				<header className={styles.header} style={{ background: headerColor(flowNode.typeId) }}>
+			<header className={styles.header} style={{ background: flowNodeColor(flowNode.typeId) }}>
 					<div className={styles.headerTitle}>
 						<Tooltip title={data.nodeRun?.error ?? runStatusLabel}>
 							<span

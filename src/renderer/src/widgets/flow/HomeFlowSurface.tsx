@@ -2,15 +2,19 @@ import { Alert, Badge, Button, Divider, Dropdown, Flex, Input, Spin, Tooltip, Ty
 import type { InputRef, MenuProps } from "antd";
 import {
 	Background,
+	BaseEdge,
 	Controls,
 	Position,
 	ReactFlow,
+	SelectionMode,
 	applyNodeChanges,
 	getBezierPath,
 	type Connection,
 	type ConnectionLineComponentProps,
 	type Edge,
+	type EdgeProps,
 	type FinalConnectionState,
+	type HandleType,
 	type NodeChange,
 	type OnConnectStartParams,
 	type OnNodeDrag,
@@ -18,7 +22,7 @@ import {
 	type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { HomeFlowController } from "@/features/home/flow/useHomeFlowController";
@@ -86,6 +90,64 @@ type DetachedConnectionSource = {
 };
 
 const nodeTypes = { flowNode: FlowDocumentNodeView };
+type FlowEdgeData = { sourceColor: string; targetColor: string };
+type FlowCanvasEdge = Edge<FlowEdgeData, "flowGradient">;
+
+function flowHandleColor(dataType: string | undefined): string {
+	if (dataType === "json") return "#722ed1";
+	if (dataType === "artifact") return "#d46b08";
+	return "var(--ant-color-primary)";
+}
+
+function oppositeFlowPosition(position: Position): Position {
+	switch (position) {
+		case Position.Left:
+			return Position.Right;
+		case Position.Right:
+			return Position.Left;
+		case Position.Top:
+			return Position.Bottom;
+		case Position.Bottom:
+			return Position.Top;
+	}
+}
+
+function FlowGradientEdge({
+	id,
+	sourceX,
+	sourceY,
+	targetX,
+	targetY,
+	sourcePosition,
+	targetPosition,
+	data,
+	style,
+	markerStart,
+	markerEnd,
+	interactionWidth,
+}: EdgeProps<FlowCanvasEdge>): React.JSX.Element {
+	const [path] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
+	const gradientId = `flow-edge-gradient-${id.replace(/[^a-zA-Z0-9_-]/gu, "-")}`;
+	return (
+		<>
+			<defs>
+				<linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={sourceX} y1={sourceY} x2={targetX} y2={targetY}>
+					<stop offset="0%" stopColor={data?.sourceColor ?? "hsl(215 14% 65%)"} />
+					<stop offset="100%" stopColor={data?.targetColor ?? "hsl(215 14% 65%)"} />
+				</linearGradient>
+			</defs>
+			<BaseEdge
+				path={path}
+				markerStart={markerStart}
+				markerEnd={markerEnd}
+				interactionWidth={interactionWidth ?? 24}
+				style={{ ...style, stroke: `url(#${gradientId})`, strokeWidth: 2 }}
+			/>
+		</>
+	);
+}
+
+const edgeTypes = { flowGradient: FlowGradientEdge };
 const FLOW_NODE_WIDTH = 320;
 const FLOW_NODE_HEIGHT = 220;
 const FLOW_NODE_GAP = 28;
@@ -227,7 +289,7 @@ function HomeFlowSurface({
 	const [searchOpen, setSearchOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchIndex, setSearchIndex] = useState(0);
-	const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<FlowCanvasNode, Edge> | null>(null);
+	const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<FlowCanvasNode, FlowCanvasEdge> | null>(null);
 	const [reconnectingEdgeId, setReconnectingEdgeId] = useState<string | null>(null);
 	const [snapToGrid, setSnapToGrid] = useState<boolean>((): boolean => getCachedClientPreferences().flowSnapToGrid);
 	const [runEntryByFlowId, setRunEntryByFlowId] = useState<Record<string, string>>(
@@ -236,6 +298,7 @@ function HomeFlowSurface({
 	const [consentText, setConsentText] = useState<Record<string, string>>({});
 	const [modelsByProvider, setModelsByProvider] = useState<Record<string, ProviderModelInfo[]>>({});
 	const canvasRef = useRef<HTMLDivElement | null>(null);
+	const lastPointerPositionRef = useRef<{ x: number; y: number } | null>(null);
 	const searchInputRef = useRef<InputRef | null>(null);
 	const connectStartRef = useRef<OnConnectStartParams | null>(null);
 	const detachedEdgeIdRef = useRef<string | null>(null);
@@ -266,8 +329,20 @@ function HomeFlowSurface({
 		return new Map(mutable);
 	}, [snapshot?.edges]);
 	const editorOptions = useMemo<FlowNodeEditorOptions>(
-		(): FlowNodeEditorOptions => ({ modelSelection: providerModelSelection, modelsByProvider }),
-		[modelsByProvider, providerModelSelection],
+		(): FlowNodeEditorOptions => ({
+			modelSelection: providerModelSelection,
+			modelsByProvider,
+			selectWorkspaceFile:
+				snapshot?.flow.workspaceId === null
+					? undefined
+					: async (): Promise<string | null> => {
+						const workspace = workspaceOptions.find((candidate): boolean => candidate.id === snapshot?.flow.workspaceId);
+						if (workspace === undefined || window.electronAPI === undefined) return null;
+						const entries = await window.electronAPI.workspaceFs.pickWorkspaceFiles({ workspaceRoot: workspace.rootPath });
+						return entries?.[0]?.relativePath ?? null;
+					},
+		}),
+		[modelsByProvider, providerModelSelection, snapshot?.flow.workspaceId, workspaceOptions],
 	);
 	const latestRun = snapshot?.runs[0];
 	const running =
@@ -530,20 +605,38 @@ function HomeFlowSurface({
 		);
 	}, [latestRun?.nodes]);
 	const edges = useMemo(
-		(): Edge[] =>
+		(): FlowCanvasEdge[] =>
 			(snapshot?.edges ?? [])
 				.filter((edge): boolean => edge.edgeId !== reconnectingEdgeId)
 				.map(
-					(edge): Edge => ({
+					(edge): FlowCanvasEdge => ({
 						id: edge.edgeId,
 						source: edge.sourceNodeId,
 						target: edge.targetNodeId,
 						sourceHandle: edge.sourcePort,
 						targetHandle: edge.targetPort,
-						type: "default",
+						type: "flowGradient",
+						data: {
+							sourceColor: flowHandleColor(
+								portFor(
+									snapshot?.nodes.find((node): boolean => node.nodeId === edge.sourceNodeId),
+									controller.nodeDefinitions,
+									edge.sourcePort,
+									"output",
+								)?.dataTypes[0],
+							),
+							targetColor: flowHandleColor(
+								portFor(
+									snapshot?.nodes.find((node): boolean => node.nodeId === edge.targetNodeId),
+									controller.nodeDefinitions,
+									edge.targetPort,
+									"input",
+								)?.dataTypes[0],
+							),
+						},
 					}),
 				),
-		[reconnectingEdgeId, snapshot?.edges],
+		[controller.nodeDefinitions, reconnectingEdgeId, snapshot?.edges, snapshot?.nodes],
 	);
 	const connectionLineComponent = useCallback(
 		(props: ConnectionLineComponentProps<FlowCanvasNode>): React.JSX.Element => {
@@ -551,30 +644,80 @@ function HomeFlowSurface({
 			let sourceX = props.fromX;
 			let sourceY = props.fromY;
 			let sourcePosition = props.fromPosition;
+			let targetPosition = props.toPosition;
+			const resolveHandleColor = (
+				nodeId: string | null | undefined,
+				handleId: string | null | undefined,
+				handleType: "source" | "target" | undefined,
+			): string => {
+				if (nodeId === null || nodeId === undefined || handleId === null || handleId === undefined) {
+					return flowHandleColor(undefined);
+				}
+				const node = snapshot?.nodes.find((candidate): boolean => candidate.nodeId === nodeId);
+				const direction = handleType === "target" ? "input" : "output";
+				return flowHandleColor(
+					portFor(node, controller.nodeDefinitions, handleId, direction)?.dataTypes[0],
+				);
+			};
 			if (source !== null) {
 				const internalNode = flowInstance?.getInternalNode(source.sourceNodeId);
 				const sourceHandle = internalNode?.internals.handleBounds?.source?.find(
 					(handle): boolean => handle.id === source.sourcePort,
 				);
 				if (internalNode !== undefined && sourceHandle !== undefined) {
-					sourceX = internalNode.internals.positionAbsolute.x + sourceHandle.x + sourceHandle.width / 2;
-					sourceY = internalNode.internals.positionAbsolute.y + sourceHandle.y + sourceHandle.height / 2;
+					const handleX = internalNode.internals.positionAbsolute.x + sourceHandle.x;
+					const handleY = internalNode.internals.positionAbsolute.y + sourceHandle.y;
 					sourcePosition = sourceHandle.position ?? Position.Right;
+					sourceX = handleX + sourceHandle.width / 2;
+					sourceY = handleY + sourceHandle.height / 2;
+					targetPosition = oppositeFlowPosition(sourcePosition);
 				}
 			}
+			const sourceColor =
+				source === null
+					? resolveHandleColor(props.fromHandle?.nodeId, props.fromHandle?.id, props.fromHandle?.type)
+					: resolveHandleColor(source.sourceNodeId, source.sourcePort, "source");
+			const targetColor =
+				props.toHandle === null || props.toHandle === undefined
+					? sourceColor
+					: resolveHandleColor(props.toHandle.nodeId, props.toHandle.id, props.toHandle.type);
 			const [path] = getBezierPath({
 				sourceX,
 				sourceY,
 				sourcePosition,
 				targetX: props.toX,
 				targetY: props.toY,
-				targetPosition: props.toPosition,
+				targetPosition,
 			});
 			return (
-				<path d={path} fill="none" className="react-flow__connection-path" style={props.connectionLineStyle} />
+				<>
+					<defs>
+						<linearGradient
+							id="flow-connection-preview-gradient"
+							gradientUnits="userSpaceOnUse"
+							x1={sourceX}
+							y1={sourceY}
+							x2={props.toX}
+							y2={props.toY}
+						>
+							<stop offset="0%" stopColor={sourceColor} />
+							<stop offset="100%" stopColor={targetColor} />
+						</linearGradient>
+					</defs>
+					<path
+						d={path}
+						fill="none"
+						className="react-flow__connection-path"
+						style={{
+							...props.connectionLineStyle,
+							stroke: "url(#flow-connection-preview-gradient)",
+							strokeWidth: 2,
+						}}
+					/>
+				</>
 			);
 		},
-		[flowInstance],
+		[controller.nodeDefinitions, flowInstance, snapshot?.nodes],
 	);
 
 	const closePicker = useCallback((): void => setPicker(null), []);
@@ -724,8 +867,14 @@ function HomeFlowSurface({
 			if (matchesFlowShortcut(event, "flow.addNode") || matchesFlowShortcut(event, "flow.searchNodes")) {
 				event.preventDefault();
 				const rect = canvasRef.current?.getBoundingClientRect();
-				if (rect !== undefined)
-					openPickerAt(rect.left + rect.width / 2, rect.top + Math.min(180, rect.height / 2));
+				if (rect !== undefined) {
+					const pointer = lastPointerPositionRef.current;
+					const inside = pointer !== null && pointer.x >= rect.left && pointer.x <= rect.right && pointer.y >= rect.top && pointer.y <= rect.bottom;
+					openPickerAt(
+						inside && pointer !== null ? pointer.x : rect.left + rect.width / 2,
+						inside && pointer !== null ? pointer.y : rect.top + rect.height / 2,
+					);
+				}
 				return;
 			}
 			if (matchesFlowShortcut(event, "flow.deleteSelection")) {
@@ -789,7 +938,7 @@ function HomeFlowSurface({
 		},
 		[controller, snapshot],
 	);
-	const onReconnect = useCallback<OnReconnect<Edge>>(
+	const onReconnect = useCallback<OnReconnect<FlowCanvasEdge>>(
 		(edge, connection): void => {
 			if (
 				connection.source === null ||
@@ -820,13 +969,27 @@ function HomeFlowSurface({
 	const onReconnectEnd = useCallback(
 		(
 			_event: MouseEvent | TouchEvent,
-			edge: Edge,
+			edge: FlowCanvasEdge,
 			_handleType: "source" | "target",
 			state: FinalConnectionState,
 		): void => {
 			if (state.toHandle === null) void controller.deleteEdge(edge.id);
 		},
 		[controller.deleteEdge],
+	);
+	const onReconnectStart = useCallback(
+		(_event: ReactMouseEvent, edge: FlowCanvasEdge, handleType: HandleType): void => {
+			closePicker();
+			// 拖动目标端点时，XYFlow 会从原 source 开始创建预览线，显式保留它避免旧边隐藏后起点漂移。
+			if (handleType === "source") {
+				detachedConnectionSourceRef.current = {
+					edgeId: edge.id,
+					sourceNodeId: edge.source,
+					sourcePort: edge.sourceHandle ?? "output",
+				};
+			}
+		},
+		[closePicker],
 	);
 	const onConnectEnd = useCallback(
 		(event: MouseEvent | TouchEvent, state: FinalConnectionState): void => {
@@ -1066,6 +1229,9 @@ function HomeFlowSurface({
 			<div
 				ref={canvasRef}
 				className={styles.canvasRegion}
+				onPointerMove={(event): void => {
+					lastPointerPositionRef.current = { x: event.clientX, y: event.clientY };
+				}}
 				onContextMenu={(event): void => {
 					if (controller.isGraphLocked || (event.target as Element).closest(".react-flow__node") !== null)
 						return;
@@ -1182,6 +1348,7 @@ function HomeFlowSurface({
 					nodes={nodes}
 					edges={edges}
 					nodeTypes={nodeTypes}
+					edgeTypes={edgeTypes}
 					defaultViewport={snapshot.flow.viewport}
 					onInit={setFlowInstance}
 					onNodesChange={(changes: NodeChange<FlowCanvasNode>[]): void =>
@@ -1193,8 +1360,10 @@ function HomeFlowSurface({
 					onConnectStart={(_event, params): void => {
 						closePicker();
 						connectStartRef.current = params;
+						const reconnectSource = detachedConnectionSourceRef.current;
 						detachedEdgeIdRef.current = null;
-						detachedConnectionSourceRef.current = null;
+						if (params.handleType !== "source" || reconnectSource === null)
+							detachedConnectionSourceRef.current = null;
 						setReconnectingEdgeId(null);
 						if (params.handleType !== "target" || params.nodeId === null || params.handleId === null)
 							return;
@@ -1217,7 +1386,7 @@ function HomeFlowSurface({
 					onConnectEnd={onConnectEnd}
 					connectionLineComponent={connectionLineComponent}
 					onReconnect={onReconnect}
-					onReconnectStart={closePicker}
+					onReconnectStart={onReconnectStart}
 					onReconnectEnd={onReconnectEnd}
 					edgesReconnectable={!controller.isGraphLocked}
 					reconnectRadius={18}
@@ -1232,6 +1401,7 @@ function HomeFlowSurface({
 					zoomOnPinch
 					zoomOnDoubleClick
 					selectionOnDrag
+					selectionMode={SelectionMode.Partial}
 					fitView={snapshot.nodes.length > 0}
 					fitViewOptions={{ padding: 0.2 }}
 					minZoom={0.2}

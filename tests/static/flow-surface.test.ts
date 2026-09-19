@@ -59,7 +59,10 @@ describe("Flow home surface", (): void => {
 		expect(surface).toContain('matchesFlowShortcut(event, "flow.deleteSelection")');
 		expect(surface).toContain("snapToGrid={snapToGrid}");
 		expect(surface).toContain('name={snapToGrid ? "snap-on" : "snap-off"}');
-		expect(surface).toContain('type: "default"');
+		expect(surface).toContain('type: "flowGradient"');
+		expect(surface).toContain("selectionMode={SelectionMode.Partial}");
+		expect(surface).toContain("edgeTypes={edgeTypes}");
+		expect(surface).toContain("lastPointerPositionRef");
 		expect(surface).not.toContain("renderComposer");
 		expect(surface).not.toContain("<Empty");
 		expect(surface).toContain('mode="create"');
@@ -86,6 +89,8 @@ describe("Flow home surface", (): void => {
 		expect(nodes).toContain('control === "provider"');
 		expect(nodes).toContain('control === "model"');
 		expect(nodes).toContain('control === "reasoning-effort"');
+		expect(nodes).toContain('control === "workspace-file"');
+		expect(nodes).toContain('name="folder-open"');
 		expect(surface).toContain("commitActiveEditor");
 		expect(surface).toContain("listProviderModels");
 		expect(nodes).toContain("id={parameter.id}");

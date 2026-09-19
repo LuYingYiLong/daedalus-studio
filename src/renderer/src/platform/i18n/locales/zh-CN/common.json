@@ -717,6 +717,7 @@
 			"modelDefault": "默认",
 			"outputResult": "输出内容",
 			"outputPending": "运行 Flow 后，输出内容会显示在这里",
+			"chooseFile": "选择文件",
 			"approvalModes": {
 				"manual": "手动",
 				"auto-safe": "自动安全",
