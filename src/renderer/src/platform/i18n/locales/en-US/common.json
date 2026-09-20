@@ -704,11 +704,8 @@
 			"runSaving": "Saving",
 			"runStarting": "Starting",
 			"runSaveTimeout": "Saving Flow changes timed out. Try running again.",
-			"nodeRunStatus": {
-				"idle": "Idle",
-				"success": "Succeeded",
-				"failed": "Failed"
-			},
+			"nodeFailed": "Node execution failed",
+			"nodeFailureFallback": "Node execution failed. No error details were provided.",
 			"addNode": "Add node",
 			"search": "Search",
 			"fitCanvas": "Fit canvas",

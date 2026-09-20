@@ -34,6 +34,7 @@
 
 .header,
 .headerTitle,
+.headerActions,
 .role,
 .dynamicInputRow {
 	display: flex;
@@ -53,24 +54,30 @@
 	gap: var(--ds-space-2);
 }
 
-.runStatus {
-	width: 12px;
-	height: 12px;
-	flex: 0 0 12px;
-	border: 1px solid rgb(255 255 255 / 72%);
-	border-radius: 50%;
+.headerActions {
+	flex: none;
+	gap: var(--ds-space-1);
 }
 
-.runStatusIdle {
-	background: #8c8c8c;
+.failedIndicator {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	color: inherit;
+	cursor: help;
 }
 
-.runStatusSuccess {
-	background: #52c41a;
+.failedIndicator:focus-visible {
+	outline: 1px solid currentColor;
+	outline-offset: 2px;
+	border-radius: var(--ds-radius-sm);
 }
 
-.runStatusFailed {
-	background: #ff4d4f;
+.errorTooltip {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
 }
 
 .runInputButton {

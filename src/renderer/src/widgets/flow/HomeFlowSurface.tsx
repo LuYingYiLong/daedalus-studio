@@ -150,7 +150,8 @@ function FlowGradientEdge({
 				markerStart={markerStart}
 				markerEnd={markerEnd}
 				interactionWidth={interactionWidth ?? 24}
-				style={{ ...style, stroke: `url(#${gradientId})`, strokeWidth: 2 }}
+				// Canvas 始终绘制渐变；SVG 只保留命中、选择和重连，不叠加第二条可见描边
+				style={{ ...style, stroke: `url(#${gradientId})`, strokeWidth: 2, strokeOpacity: 0 }}
 			/>
 		</>
 	);
@@ -299,6 +300,7 @@ function HomeFlowSurface({
 	const [searchIndex, setSearchIndex] = useState(0);
 	const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<FlowCanvasNode, FlowCanvasEdge> | null>(null);
 	const [reconnectingEdgeId, setReconnectingEdgeId] = useState<string | null>(null);
+	const reconnectingOverlayEdgeRef = useRef<string | null>(null);
 	const [snapToGrid, setSnapToGrid] = useState<boolean>((): boolean => getCachedClientPreferences().flowSnapToGrid);
 	const [runEntryByFlowId, setRunEntryByFlowId] = useState<Record<string, string>>(
 		(): Record<string, string> => getCachedClientPreferences().flowRunEntryByFlowId,
@@ -1044,6 +1046,7 @@ function HomeFlowSurface({
 			_handleType: "source" | "target",
 			state: FinalConnectionState,
 		): void => {
+			reconnectingOverlayEdgeRef.current = null;
 			detachedConnectionSourceRef.current = null;
 			detachedEdgeIdRef.current = null;
 			setReconnectingEdgeId(null);
@@ -1054,6 +1057,7 @@ function HomeFlowSurface({
 	const onReconnectStart = useCallback(
 		(_event: ReactMouseEvent, edge: FlowCanvasEdge, handleType: HandleType): void => {
 			closePicker();
+			reconnectingOverlayEdgeRef.current = edge.id;
 			// 拖动目标端点时，XYFlow 会从原 source 开始创建预览线，显式保留它避免旧边隐藏后起点漂移。
 			if (handleType === "source") {
 				detachedConnectionSourceRef.current = {
@@ -1426,6 +1430,11 @@ function HomeFlowSurface({
 					onConnectStart={(_event, params): void => {
 						closePicker();
 						connectStartRef.current = params;
+						// XYFlow 重连回调先于连接开始触发，保留原边的隐藏状态直到重连结束
+						if (reconnectingOverlayEdgeRef.current !== null) {
+							setReconnectingEdgeId(reconnectingOverlayEdgeRef.current);
+							return;
+						}
 						const reconnectSource = detachedConnectionSourceRef.current;
 						detachedEdgeIdRef.current = null;
 						if (params.handleType !== "source" || reconnectSource === null) detachedConnectionSourceRef.current = null;

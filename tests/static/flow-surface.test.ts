@@ -106,7 +106,7 @@ describe("Flow home surface", (): void => {
 		expect(nodes).not.toContain("draftTitle");
 		expect(nodes).not.toContain("<footer");
 		expect(nodes).not.toContain("<Tag");
-		expect(nodes).toContain("normalizeFlowNodeRunStatus");
+		expect(nodes).not.toContain("normalizeFlowNodeRunStatus");
 		expect(nodes).toContain('flowNode.typeId === "builtin/flow-input"');
 		expect(nodes).toContain('name="play"');
 		expect(nodes).toContain('flowNode.typeId === "builtin/output"');

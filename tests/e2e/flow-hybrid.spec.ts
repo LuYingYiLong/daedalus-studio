@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures/studio";
 import { installFlowPerformanceScenario } from "./fixtures/flow-performance";
+import type { FlowDocumentNodeStatus } from "../../src/renderer/src/platform/rpc/types";
 
 test("keeps graph geometry while culling controls and preserving editing drafts", async ({
 	launchStudio,
@@ -124,4 +125,55 @@ test("patches node runs without remounting unrelated controls or reading full sn
 	await expect(first).toHaveAttribute("data-flow-commit-count", unrelatedCommits!);
 	expect(mockBackend.getRequests("flow.get").length).toBe(reads);
 	await expect(page.locator("iframe")).toHaveCount(0);
+});
+
+test("shows the node border beam only while running and exposes failure details in the header", async ({
+	launchStudio,
+	mockBackend,
+}) => {
+	installFlowPerformanceScenario(mockBackend, 12, true);
+	const { mainWindow: page } = await launchStudio();
+	await page.locator(".ant-segmented-item").filter({ hasText: /^Flow$/ }).click();
+	await page.getByText("Performance 12", { exact: true }).first().click();
+	const node = page.locator('[data-flow-node-id="perf-1"]');
+	const card = node.locator("article");
+	const beam = node.locator(".ant-border-beam");
+	const failed = node.locator('header [role="img"]');
+	await expect(card).toHaveAttribute("data-node-status", "completed");
+	await expect(beam).toBeHidden();
+	await expect(node.locator('header [role="status"]')).toHaveCount(0);
+	const input = await node.locator("textarea").first().elementHandle();
+	const setStatus = async (status: FlowDocumentNodeStatus, error: string | null = null): Promise<void> => {
+		mockBackend.sendEvent("flow.node.state", {
+			flowId: "flow-performance", runId: "perf-run", nodeId: "perf-1", status,
+			nodeRun: {
+				runId: "perf-run", nodeId: "perf-1", typeId: "builtin/text", pluginVersion: "1.0.0",
+				pluginFingerprint: "perf:text:1", configVersion: 1, status, error,
+				inputFingerprint: null, output: null, startedAt: null, finishedAt: null,
+			},
+		});
+		await expect(card).toHaveAttribute("data-node-status", status);
+	};
+	await setStatus("running");
+	await expect(beam).toBeVisible();
+	await expect(failed).toHaveCount(0);
+	for (const status of ["waiting", "completed", "cached", "cancelled", "skipped", "queued", "idle"] as const) {
+		await setStatus(status);
+		await expect(beam).toBeHidden();
+		await expect(failed).toHaveCount(0);
+	}
+	const error = "Provider request timed out. Please retry.";
+	await setStatus("failed", error);
+	await expect(beam).toBeHidden();
+	await expect(failed).toBeVisible();
+	await failed.hover();
+	await expect(page.getByRole("tooltip")).toHaveText(error);
+	await setStatus("running");
+	await expect(beam).toBeVisible();
+	await expect(failed).toHaveCount(0);
+	await expect(page.getByRole("tooltip")).toBeHidden();
+	await setStatus("failed", " ");
+	await failed.focus();
+	await expect(page.getByRole("tooltip")).toContainText(/未提供错误详情|No error details were provided/);
+	expect(await input!.evaluate((element) => element.isConnected)).toBe(true);
 });

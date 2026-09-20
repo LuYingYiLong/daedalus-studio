@@ -362,7 +362,8 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 				context.fillRect(region.x, region.y, region.width, region.height);
 			}
 			for (const id of runtime.geometry.edges.query(viewRect(padding))) {
-				if (id === propsRef.current.excludedEdgeId || id === hovered || runtime.selectedEdges.has(id)) continue;
+				// 悬浮和选择只启用 SVG 命中层，不交接绘制，避免异步切层导致空帧或线条变色
+				if (id === propsRef.current.excludedEdgeId) continue;
 				const curve = curves.get(id);
 				if (!curve) continue;
 				const gradient = context.createLinearGradient(
@@ -454,9 +455,7 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 			const next = svg?.getAttribute("data-id") ?? hit(event);
 			if (next !== hovered) {
 				hovered = next;
-				visualDirty = true;
 				overlay();
-				scheduleDraw();
 			}
 		};
 		const pointerDown = (event: PointerEvent): void => {

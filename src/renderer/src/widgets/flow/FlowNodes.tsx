@@ -1,4 +1,4 @@
-import { Button, Input, InputNumber, Select, Space, Tooltip, Typography } from "antd";
+import { BorderBeam, Button, Input, InputNumber, Select, Space, Tooltip, Typography } from "antd";
 import {
 	memo,
 	useContext,
@@ -18,7 +18,6 @@ import { FlowCanvasStore } from "@/domain/flow/flow-render-stores";
 import type {
 	FlowDocumentNode,
 	FlowDocumentNodeRun,
-	FlowDocumentNodeStatus,
 	FlowMediaArtifactRef,
 	FlowNodeOutputDefinition,
 	FlowNodeParameterDefinition,
@@ -53,14 +52,6 @@ export type FlowCanvasNodeData = {
 };
 
 export type FlowCanvasNode = Node<FlowCanvasNodeData, "flowNode">;
-
-type FlowNodeRunStatus = "idle" | "success" | "failed";
-
-export function normalizeFlowNodeRunStatus(status: FlowDocumentNodeStatus): FlowNodeRunStatus {
-	if (status === "failed") return "failed";
-	if (status === "running" || status === "completed" || status === "cached") return "success";
-	return "idle";
-}
 
 function unwrapNodeOutput(output: unknown): unknown {
 	if (output !== null && typeof output === "object" && !Array.isArray(output)) {
@@ -188,7 +179,9 @@ export function resolveFlowDefinitionParameters(
 	definition: FlowNodeTypeDefinition,
 	config: Record<string, unknown>,
 ): FlowNodeParameterDefinition[] {
-	const parameters = definition.parameters.map((parameter): FlowNodeParameterDefinition => structuredClone(parameter));
+	const parameters = definition.parameters.map(
+		(parameter): FlowNodeParameterDefinition => structuredClone(parameter),
+	);
 	for (const dynamic of definition.dynamicParameters ?? []) {
 		const values = config[dynamic.configField];
 		if (!Array.isArray(values)) continue;
@@ -196,7 +189,11 @@ export function resolveFlowDefinitionParameters(
 			if (typeof value !== "object" || value === null || Array.isArray(value)) continue;
 			const record = value as Record<string, unknown>;
 			const id = record[dynamic.idField];
-			if (typeof id !== "string" || id.length === 0 || parameters.some((parameter): boolean => parameter.id === id))
+			if (
+				typeof id !== "string" ||
+				id.length === 0 ||
+				parameters.some((parameter): boolean => parameter.id === id)
+			)
 				continue;
 			const configuredType = dynamic.dataTypeField === undefined ? undefined : record[dynamic.dataTypeField];
 			const dataTypes: FlowNodePortDefinition["dataTypes"] =
@@ -502,7 +499,9 @@ function SchemaEditor({
 				/>
 			);
 		const enumValues = Array.isArray(schema.enum)
-			? schema.enum.filter((value): value is string | number => typeof value === "string" || typeof value === "number")
+			? schema.enum.filter(
+					(value): value is string | number => typeof value === "string" || typeof value === "number",
+				)
 			: [];
 		if (enumValues.length > 0)
 			return (
@@ -616,7 +615,9 @@ function SchemaEditor({
 							{parameterLabel}
 						</span>
 						{!hidesControl && configField !== null && schema !== undefined ? (
-							<div className={styles.parameterControl}>{renderControl(configField, schema, parameterLabel)}</div>
+							<div className={styles.parameterControl}>
+								{renderControl(configField, schema, parameterLabel)}
+							</div>
 						) : null}
 					</div>
 				);
@@ -635,7 +636,9 @@ function NodeSummary({
 	const { t } = useTranslation();
 	const values = (definition?.summaryFields ?? []).flatMap((field): string[] => {
 		const value = node.config[field];
-		return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? [String(value)] : [];
+		return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+			? [String(value)]
+			: [];
 	});
 	return (
 		<Typography.Paragraph className={styles.nodeSummary} ellipsis={{ rows: 3 }}>
@@ -749,7 +752,8 @@ function SandboxEditor({
 				const properties = readSchemaProperties(definition.configSchema);
 				if (
 					Object.entries(patch).every(
-						([key, value]): boolean => properties[key] !== undefined && schemaAccepts(properties[key]!, value),
+						([key, value]): boolean =>
+							properties[key] !== undefined && schemaAccepts(properties[key]!, value),
 					)
 				)
 					onChange({ ...node.config, ...patch });
@@ -799,7 +803,10 @@ function SandboxEditor({
 					)
 					.map(
 						(parameter): React.JSX.Element => (
-							<div className={`${styles.parameterRow} ${styles.parameterRowConnectionOnly}`} key={parameter.id}>
+							<div
+								className={`${styles.parameterRow} ${styles.parameterRowConnectionOnly}`}
+								key={parameter.id}
+							>
 								<span className={styles.parameterSocket}>
 									<Handle
 										id={parameter.id}
@@ -808,7 +815,9 @@ function SandboxEditor({
 										className={styles.parameterHandle}
 										data-flow-port-id={parameter.id}
 										data-flow-port-kind={flowPortColorKind(parameter.dataTypes)}
-										style={{ "--flow-port-color": flowPortColor(parameter.dataTypes) } as CSSProperties}
+										style={
+											{ "--flow-port-color": flowPortColor(parameter.dataTypes) } as CSSProperties
+										}
 									/>
 								</span>
 								<span
@@ -862,7 +871,11 @@ function OutputRows({
 			{outputs.map((output): React.JSX.Element => {
 				const outputLabel = flowNodeOutputLabel(t, typeId, output.id, output.label);
 				return (
-					<div className={styles.outputRow} key={output.id} title={`${outputLabel} · ${output.dataTypes.join("/")}`}>
+					<div
+						className={styles.outputRow}
+						key={output.id}
+						title={`${outputLabel} · ${output.dataTypes.join("/")}`}
+					>
 						<span className={styles.outputLabel}>{outputLabel}</span>
 						<span className={styles.outputSocket}>
 							<Handle
@@ -937,7 +950,10 @@ function FlowNodeCard({ data, selected }: { data: FlowCanvasNodeData; selected: 
 			? "unknown"
 			: `${definition.pluginFingerprint}:${definition.configVersion}:${definition.ui.kind}`;
 	const handleLayoutKey = `${definitionLayoutKey}:${outputs.map((output): string => output.id).join("|")}:${parameters.map((parameter): string => `${parameter.id}:${data.connectedInputIds.has(parameter.id) ? 1 : 0}`).join("|")}`;
-	useEffect((): void => updateNodeInternals(flowNode.nodeId), [flowNode.nodeId, handleLayoutKey, updateNodeInternals]);
+	useEffect(
+		(): void => updateNodeInternals(flowNode.nodeId),
+		[flowNode.nodeId, handleLayoutKey, updateNodeInternals],
+	);
 	const isOutputNode = flowNode.typeId === "builtin/output" || flowNode.typeId === "builtin/media-output";
 	const mediaArtifacts = useMemo(
 		(): FlowMediaArtifactRef[] => collectMediaArtifacts(data.nodeRun?.output),
@@ -947,123 +963,141 @@ function FlowNodeCard({ data, selected }: { data: FlowCanvasNodeData; selected: 
 		data.nodeRun?.output === null || data.nodeRun?.output === undefined
 			? ""
 			: formatOutputMarkdown(data.nodeRun.output, flowNode.config.format);
-	const updateConfig = (config: Record<string, unknown>): void => data.onUpdate(flowNode.nodeId, { config, historyGroup: runtime?.canvas.editGroups.get(flowNode.nodeId) });
+	const updateConfig = (config: Record<string, unknown>): void =>
+		data.onUpdate(flowNode.nodeId, { config, historyGroup: runtime?.canvas.editGroups.get(flowNode.nodeId) });
 	const nodeTitle = flowNodeTitle(t, flowNode, definition);
-	const runStatus = normalizeFlowNodeRunStatus(data.nodeRun?.status ?? flowNode.status);
-	const runStatusLabel = t(`flow.editor.nodeRunStatus.${runStatus}`);
+	const nodeStatus = data.nodeRun?.status ?? flowNode.status;
+	const nodeError = data.nodeRun?.error?.trim() || t("flow.editor.nodeFailureFallback");
 	const runInputLabel =
 		typeof flowNode.config.label === "string" && flowNode.config.label.trim().length > 0
 			? flowNode.config.label.trim()
 			: nodeTitle;
 	return (
 		<div ref={nodeElement} className={styles.nodeShell} data-flow-node-id={flowNode.nodeId}>
-			<article
-				className={`${styles.nodeCard} ${selected ? styles.nodeCardSelected : ""} ${data.matched ? styles.nodeCardMatched : ""} ${definition === null ? styles.unknownNode : ""}`}
-				data-node-type={flowNode.typeId}
-			>
-				<header className={styles.header} style={{ background: flowNodeColor(flowNode.typeId) }}>
-					<div className={styles.headerTitle}>
-						<Tooltip title={data.nodeRun?.error ?? runStatusLabel}>
-							<span
-								className={`${styles.runStatus} ${styles[`runStatus${runStatus === "idle" ? "Idle" : runStatus === "success" ? "Success" : "Failed"}`]}`}
-								role="status"
-								aria-label={runStatusLabel}
-							/>
-						</Tooltip>
-						<span className={styles.role}>{nodeTitle}</span>
-					</div>
-					{flowNode.typeId === "builtin/flow-input" ? (
-						<Tooltip title={t("flow.editor.runEntry", { input: runInputLabel })}>
-							<Button
-								type="text"
-								shape="circle"
-								size="small"
-								className={`${styles.runInputButton} nodrag nopan`}
-								icon={<Icon name="play" />}
-								disabled={data.runDisabled}
-								aria-label={t("flow.editor.runEntry", { input: runInputLabel })}
-								onPointerDown={(event): void => event.stopPropagation()}
-								onClick={(event): void => {
-									event.stopPropagation();
-									data.onAction(flowNode.nodeId, "run-input");
-								}}
-							/>
-						</Tooltip>
-					) : null}
-				</header>
-				<div className={styles.body}>
-					{typeof data.nodeRun?.progress === "number" && data.nodeRun.status === "running" ? (
-						<div className={styles.progressTrack} aria-label={`${Math.round(data.nodeRun.progress * 100)}%`}>
-							<div className={styles.progressValue} style={{ width: `${Math.round(data.nodeRun.progress * 100)}%` }} />
+			<BorderBeam lineWidth={2} size={256} style={{ display: nodeStatus === "running" ? undefined : "none" }}>
+				<article
+					className={`${styles.nodeCard} ${selected ? styles.nodeCardSelected : ""} ${data.matched ? styles.nodeCardMatched : ""} ${definition === null ? styles.unknownNode : ""}`}
+					data-node-type={flowNode.typeId}
+					data-node-status={nodeStatus}
+				>
+					<header className={styles.header} style={{ background: flowNodeColor(flowNode.typeId) }}>
+						<div className={styles.headerTitle}>
+							<span className={styles.role}>{nodeTitle}</span>
 						</div>
-					) : null}
-					<OutputRows typeId={flowNode.typeId} outputs={outputs} />
-					{definition === null ? (
-						<NodeSummary node={flowNode} definition={definition} />
-					) : definition.ui.kind === "sandbox" && pluginEditing ? (
-						<SandboxEditor
-							node={flowNode}
-							definition={
-								definition as FlowNodeTypeDefinition & {
-									ui: { kind: "sandbox"; entry: string; actions: string[] };
+						<div className={styles.headerActions}>
+							{flowNode.typeId === "builtin/flow-input" ? (
+								<Tooltip title={t("flow.editor.runEntry", { input: runInputLabel })}>
+									<Button
+										type="text"
+										shape="circle"
+										size="small"
+										className={`${styles.runInputButton} nodrag nopan`}
+										icon={<Icon name="play" />}
+										disabled={data.runDisabled}
+										aria-label={t("flow.editor.runEntry", { input: runInputLabel })}
+										onPointerDown={(event): void => event.stopPropagation()}
+										onClick={(event): void => {
+											event.stopPropagation();
+											data.onAction(flowNode.nodeId, "run-input");
+										}}
+									/>
+								</Tooltip>
+							) : null}
+							{nodeStatus === "failed" ? (
+								<Tooltip title={<span className={styles.errorTooltip}>{nodeError}</span>} trigger={["hover", "focus"]}>
+									<span
+										className={`${styles.failedIndicator} nodrag nopan`}
+										role="img"
+										aria-label={t("flow.editor.nodeFailed")}
+										tabIndex={0}
+										onPointerDown={(event): void => event.stopPropagation()}
+									>
+										<Icon name="failed" aria-hidden="true" />
+									</span>
+								</Tooltip>
+							) : null}
+						</div>
+					</header>
+					<div className={styles.body}>
+						{typeof data.nodeRun?.progress === "number" && data.nodeRun.status === "running" ? (
+							<div
+								className={styles.progressTrack}
+								aria-label={`${Math.round(data.nodeRun.progress * 100)}%`}
+							>
+								<div
+									className={styles.progressValue}
+									style={{ width: `${Math.round(data.nodeRun.progress * 100)}%` }}
+								/>
+							</div>
+						) : null}
+						<OutputRows typeId={flowNode.typeId} outputs={outputs} />
+						{definition === null ? (
+							<NodeSummary node={flowNode} definition={definition} />
+						) : definition.ui.kind === "sandbox" && pluginEditing ? (
+							<SandboxEditor
+								node={flowNode}
+								definition={
+									definition as FlowNodeTypeDefinition & {
+										ui: { kind: "sandbox"; entry: string; actions: string[] };
+									}
 								}
-							}
-							parameters={parameters}
-							connectedInputIds={data.connectedInputIds}
-							editorOptions={data.editorOptions}
-							disabled={data.locked}
-							onChange={updateConfig}
-							onAction={(action): void => data.onAction(flowNode.nodeId, action)}
-						/>
-					) : (
-						<SchemaEditor
-							node={flowNode}
-							definition={definition}
-							parameters={parameters}
-							connectedInputIds={data.connectedInputIds}
-							editorOptions={data.editorOptions}
-							disabled={data.locked}
-							onChange={updateConfig}
-						/>
-					)}
-					{definition?.ui.kind === "sandbox" ? (
-						<Button
-							size="small"
-							className="nodrag nopan"
-							onClick={() => {
-								const next = !pluginEditing;
-								setPluginEditing(next);
-								runtime?.canvas.pin(flowNode.nodeId, next);
-								if (next) runtime?.canvas.pluginEditors.add(flowNode.nodeId);
-								else runtime?.canvas.pluginEditors.delete(flowNode.nodeId);
-							}}
-						>
-							{t(pluginEditing ? "flow.editor.closePluginEditor" : "flow.editor.openPluginEditor", {
-								defaultValue: pluginEditing ? "Finish editing" : "Open plugin editor",
-							})}
-						</Button>
-					) : null}
-					{isOutputNode ? (
-						<div
-							className={`${styles.outputResult} nodrag nowheel`}
-							role="region"
-							aria-label={t("flow.editor.outputResult", { defaultValue: "Output result" })}
-						>
-							{mediaArtifacts.length > 0 ? (
-								<MediaArtifactPreview artifacts={mediaArtifacts} />
-							) : outputMarkdown.length > 0 ? (
-								<MarkdownContent cacheParsing>{outputMarkdown}</MarkdownContent>
-							) : (
-								<Typography.Text type="secondary">
-									{t("flow.editor.outputPending", {
-										defaultValue: "Run the Flow to see its output here",
-									})}
-								</Typography.Text>
-							)}
-						</div>
-					) : null}
-				</div>
-			</article>
+								parameters={parameters}
+								connectedInputIds={data.connectedInputIds}
+								editorOptions={data.editorOptions}
+								disabled={data.locked}
+								onChange={updateConfig}
+								onAction={(action): void => data.onAction(flowNode.nodeId, action)}
+							/>
+						) : (
+							<SchemaEditor
+								node={flowNode}
+								definition={definition}
+								parameters={parameters}
+								connectedInputIds={data.connectedInputIds}
+								editorOptions={data.editorOptions}
+								disabled={data.locked}
+								onChange={updateConfig}
+							/>
+						)}
+						{definition?.ui.kind === "sandbox" ? (
+							<Button
+								size="small"
+								className="nodrag nopan"
+								onClick={() => {
+									const next = !pluginEditing;
+									setPluginEditing(next);
+									runtime?.canvas.pin(flowNode.nodeId, next);
+									if (next) runtime?.canvas.pluginEditors.add(flowNode.nodeId);
+									else runtime?.canvas.pluginEditors.delete(flowNode.nodeId);
+								}}
+							>
+								{t(pluginEditing ? "flow.editor.closePluginEditor" : "flow.editor.openPluginEditor", {
+									defaultValue: pluginEditing ? "Finish editing" : "Open plugin editor",
+								})}
+							</Button>
+						) : null}
+						{isOutputNode ? (
+							<div
+								className={`${styles.outputResult} nodrag nowheel`}
+								role="region"
+								aria-label={t("flow.editor.outputResult", { defaultValue: "Output result" })}
+							>
+								{mediaArtifacts.length > 0 ? (
+									<MediaArtifactPreview artifacts={mediaArtifacts} />
+								) : outputMarkdown.length > 0 ? (
+									<MarkdownContent cacheParsing>{outputMarkdown}</MarkdownContent>
+								) : (
+									<Typography.Text type="secondary">
+										{t("flow.editor.outputPending", {
+											defaultValue: "Run the Flow to see its output here",
+										})}
+									</Typography.Text>
+								)}
+							</div>
+						) : null}
+					</div>
+				</article>
+			</BorderBeam>
 		</div>
 	);
 }

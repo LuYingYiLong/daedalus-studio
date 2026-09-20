@@ -18,10 +18,10 @@ describe("Flow rendering stores", () => {
 	it("retains zoom detail within the hysteresis interval", () => {
 		const canvas = new FlowCanvasStore();
 		expect(canvas.updateDetail(0.5)).toBe(true);
-		expect(canvas.updateDetail(0.46)).toBe(true);
-		expect(canvas.updateDetail(0.45)).toBe(false);
-		expect(canvas.updateDetail(0.54)).toBe(false);
-		expect(canvas.updateDetail(0.55)).toBe(true);
+		expect(canvas.updateDetail(0.16)).toBe(true);
+		expect(canvas.updateDetail(0.15)).toBe(false);
+		expect(canvas.updateDetail(0.24)).toBe(false);
+		expect(canvas.updateDetail(0.25)).toBe(true);
 		canvas.pin("editing", true);
 		expect(canvas.getMode("editing")).toBe("full");
 		expect(canvas.getMode("merely-selected")).toBe("outline");

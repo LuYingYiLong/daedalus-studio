@@ -699,11 +699,8 @@
 			"runSaving": "保存中",
 			"runStarting": "启动中",
 			"runSaveTimeout": "保存 Flow 修改超时，请重试运行。",
-			"nodeRunStatus": {
-				"idle": "闲置",
-				"success": "成功",
-				"failed": "失败"
-			},
+			"nodeFailed": "节点运行失败",
+			"nodeFailureFallback": "节点运行失败，未提供错误详情。",
 			"addNode": "添加节点",
 			"search": "搜索",
 			"fitCanvas": "适应画布",
