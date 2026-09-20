@@ -1,4 +1,5 @@
 .flowSurface {
+	--flow-header-height: 40px;
 	--agent-chat-content-width: 880px;
 	--agent-chat-side-padding: 8px;
 	--agent-chat-surface-width: calc(var(--agent-chat-content-width) + var(--agent-chat-side-padding) * 2);
@@ -23,8 +24,8 @@
 	gap: var(--ds-space-1);
 	width: 100%;
 	box-sizing: border-box;
-	height: 40px;
-	min-height: 40px;
+	height: var(--flow-header-height);
+	min-height: var(--flow-header-height);
 	padding: 0px var(--flow-header-action-reserve, var(--ds-space-2)) 0px var(--ds-space-2);
 	background: transparent;
 	user-select: none;
@@ -92,7 +93,7 @@
 
 .flowAlert {
 	position: absolute;
-	top: calc(40px + var(--ds-space-2));
+	top: calc(var(--flow-header-height) + var(--ds-space-2));
 	right: var(--ds-space-3);
 	left: var(--ds-space-3);
 	z-index: 5;
@@ -100,6 +101,10 @@
 }
 
 .canvasRegion {
+	/* 画布铺到标题栏下方，搜索面板需要避开标题栏并高于错误提示 */
+	--conversation-search-block-start: calc(var(--flow-header-height) + var(--ds-space-2));
+	--conversation-search-z-index: 6;
+
 	position: absolute;
 	inset: 0;
 	min-width: 0;
