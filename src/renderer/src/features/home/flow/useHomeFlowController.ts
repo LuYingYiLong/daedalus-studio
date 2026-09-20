@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { archiveFlow, commitFlowPatch, createFlow, exportFlowToSession, fetchFlow, fetchFlows, importFlowFromSession, renameFlow, startFlowRun, stopFlowRun, updateFlowSettings, listFlowNodeTypes, listFlowTools, listFlowApprovals, resolveFlowApproval, updateFlowTreeOrder as persistFlowTreeOrder, type CreateFlowParams } from "@/platform/rpc/flow-api";
+import { archiveFlow, commitFlowPatch, createFlow, exportFlowData, exportFlowToSession, fetchFlow, fetchFlows, importFlowFromSession, renameFlow, startFlowRun, stopFlowRun, updateFlowSettings, listFlowNodeTypes, listFlowTools, listFlowApprovals, resolveFlowApproval, updateFlowTreeOrder as persistFlowTreeOrder, type CreateFlowParams } from "@/platform/rpc/flow-api";
 import { onBackendEvent, onBackendReconnected } from "@/platform/rpc/transport/backend-client";
 import { BackendRpcError } from "@/platform/rpc/transport/backend-rpc-client";
 import type { FlowDocumentSummary, FlowDocument, FlowDocumentEdge, FlowDocumentNode, FlowDocumentNodeRun, FlowDocumentRun, FlowDocumentSnapshot, FlowNodeTypeId, FlowNodeTypeDefinition, FlowToolDefinition, FlowApproval, FlowOperation, FlowTreeOrder, FlowTreeOrderUpdate, SessionMetadata } from "@/platform/rpc/types";
@@ -53,15 +53,17 @@ export type HomeFlowController = {
 	archiveCurrentFlow: () => Promise<void>;
 	updateFlowOrder: (order: FlowTreeOrderUpdate) => Promise<void>;
 	createNode: (type: FlowNodeTypeId, x: number, y: number) => Promise<string | null>;
-	createConnectedNode: (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" }) => Promise<string | null>;
+	createConnectedNode: (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: FlowDocumentNode["ports"][number]["dataTypes"][number] }) => Promise<string | null>;
 	updateNode: (nodeId: string, patch: Record<string, unknown>) => Promise<void>;
 	updateNodePosition: (nodeId: string, x: number, y: number) => Promise<void>;
 	updateNodePositions: (positions: Array<{ nodeId: string; x: number; y: number }>) => void;
+	setNodeCollapsed: (nodeId: string, collapsed: boolean) => void;
+	exportFlowDataById: (flowId: string, destinationPath: string) => ReturnType<typeof exportFlowData>;
 	updateNodeLayouts: (layouts: readonly FlowLayoutUpdate[], createdNodeId?: string) => void;
 	duplicateNodes: (nodeIds: string[]) => string[];
 	deleteNode: (nodeId: string) => Promise<void>;
-	createEdge: (sourceNodeId: string, targetNodeId: string, sourcePort?: string, targetPort?: string, dataType?: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact") => Promise<void>;
-	reconnectEdge: (edgeId: string, sourceNodeId: string, targetNodeId: string, sourcePort: string, targetPort: string, dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact") => Promise<void>;
+	createEdge: (sourceNodeId: string, targetNodeId: string, sourcePort?: string, targetPort?: string, dataType?: FlowDocumentNode["ports"][number]["dataTypes"][number]) => Promise<void>;
+	reconnectEdge: (edgeId: string, sourceNodeId: string, targetNodeId: string, sourcePort: string, targetPort: string, dataType: FlowDocumentNode["ports"][number]["dataTypes"][number]) => Promise<void>;
 	deleteEdge: (edgeId: string) => Promise<void>;
 	updateViewport: (viewport: { x: number; y: number; zoom: number }) => Promise<void>;
 	startRun: (request?: FlowRunRequest) => Promise<boolean>;
@@ -158,10 +160,13 @@ function resolveOptimisticPorts(node: Pick<FlowDocumentNode, "ports" | "typeId" 
 			parameters.push({ id, label: typeof label === "string" && label.length > 0 ? label : id, mode: "connection", dataTypes, required: dynamic.required, multiple: dynamic.multiple, defaultConnect: dynamic.defaultConnect });
 		}
 	}
-	return [
-		...parameters.flatMap((parameter): FlowDocumentNode["ports"] => parameter.mode === "fixed" ? [] : [{ id: parameter.id, label: parameter.label, direction: "input", dataTypes: [...parameter.dataTypes], required: parameter.required, multiple: parameter.multiple, defaultConnect: parameter.defaultConnect }]),
-		...definition.outputs.map((output): FlowDocumentNode["ports"][number] => ({ id: output.id, label: output.label, direction: "output", dataTypes: [...output.dataTypes], required: false, multiple: true, defaultConnect: output.defaultConnect })),
+	const ports = [
+		...parameters.flatMap((parameter): FlowDocumentNode["ports"] => parameter.mode === "fixed" ? [] : [{ id: parameter.id, label: parameter.label, direction: "input", dataTypes: [...parameter.dataTypes], required: parameter.required, multiple: parameter.multiple, defaultConnect: parameter.defaultConnect, ...(parameter.cardinality ? { cardinality: parameter.cardinality } : {}) }]),
+		...definition.outputs.map((output): FlowDocumentNode["ports"][number] => ({ id: output.id, label: output.label, direction: "output", dataTypes: [...output.dataTypes], required: false, multiple: true, defaultConnect: output.defaultConnect, ...(output.cardinality ? { cardinality: output.cardinality } : {}) })),
 	];
+	if (typeof config.elementType === "string") for (const port of ports) if (port.id !== "index") port.dataTypes = [config.elementType as FlowDocumentNode["ports"][number]["dataTypes"][number]];
+	if (node.typeId === "builtin/flow-input") for (const port of ports) if (port.direction === "output") port.dataTypes = [config.dataType === "json" ? "json" : "text"];
+	return ports;
 }
 
 function applyFlowOperation(snapshot: FlowDocumentSnapshot, operation: FlowOperation, definitions: readonly FlowNodeTypeDefinition[]): FlowDocumentSnapshot {
@@ -182,6 +187,7 @@ function applyFlowOperation(snapshot: FlowDocumentSnapshot, operation: FlowOpera
 			y: operation.payload.y,
 			width: 300,
 			height: 180,
+			collapsed: false,
 			config: operation.payload.config ?? definition.defaultConfig,
 			ports: resolveOptimisticPorts({ ports: [], typeId: definition.typeId, config: operation.payload.config ?? definition.defaultConfig }, definition, operation.payload.config ?? definition.defaultConfig),
 			status: "idle",
@@ -202,6 +208,7 @@ function applyFlowOperation(snapshot: FlowDocumentSnapshot, operation: FlowOpera
 	}
 	if (operation.kind === "node.delete") return { ...snapshot, nodes: snapshot.nodes.filter((node): boolean => node.nodeId !== operation.payload.nodeId), edges: snapshot.edges.filter((edge): boolean => edge.sourceNodeId !== operation.payload.nodeId && edge.targetNodeId !== operation.payload.nodeId) };
 	if (operation.kind === "node.move") return { ...snapshot, nodes: snapshot.nodes.map((node): FlowDocumentNode => node.nodeId === operation.payload.nodeId ? { ...node, x: operation.payload.x, y: operation.payload.y } : node) };
+	if (operation.kind === "node.collapse") return { ...snapshot, nodes: snapshot.nodes.map(node => node.nodeId === operation.payload.nodeId ? { ...node, collapsed: operation.payload.collapsed } : node) };
 	if (operation.kind === "node.resize") return { ...snapshot, nodes: snapshot.nodes.map((node): FlowDocumentNode => node.nodeId === operation.payload.nodeId ? { ...node, width: operation.payload.width, height: operation.payload.height } : node) };
 	if (operation.kind === "edge.create") {
 		const edge: FlowDocumentEdge = { flowId: snapshot.flow.flowId, ...operation.payload };
@@ -224,6 +231,10 @@ function inverseFlowOperations(snapshot: FlowDocumentSnapshot, operation: FlowOp
 		const node = snapshot.nodes.find((candidate): boolean => candidate.nodeId === operation.payload.nodeId);
 		return node === undefined ? [] : [{ mutationId, kind: "node.move", payload: { nodeId: node.nodeId, x: node.x, y: node.y } }];
 	}
+	if (operation.kind === "node.collapse") {
+		const node = snapshot.nodes.find(candidate => candidate.nodeId === operation.payload.nodeId);
+		return node ? [{ mutationId, kind: "node.collapse", payload: { nodeId: node.nodeId, collapsed: node.collapsed ?? false } }] : [];
+	}
 	if (operation.kind === "node.resize") {
 		const node = snapshot.nodes.find((candidate): boolean => candidate.nodeId === operation.payload.nodeId);
 		return node === undefined ? [] : [{ mutationId, kind: "node.resize", payload: { nodeId: node.nodeId, width: node.width, height: node.height } }];
@@ -235,6 +246,7 @@ function inverseFlowOperations(snapshot: FlowDocumentSnapshot, operation: FlowOp
 		return [
 			{ mutationId, kind: "node.create", payload: { nodeId: node.nodeId, typeId: node.typeId, title: node.title, x: node.x, y: node.y, config: structuredClone(node.config) } },
 			{ mutationId, kind: "node.resize", payload: { nodeId: node.nodeId, width: node.width, height: node.height } },
+			{ mutationId, kind: "node.collapse", payload: { nodeId: node.nodeId, collapsed: node.collapsed ?? false } },
 			...connected.map((edge): FlowOperation => ({ mutationId, kind: "edge.create", payload: { edgeId: edge.edgeId, sourceNodeId: edge.sourceNodeId, sourcePort: edge.sourcePort, targetNodeId: edge.targetNodeId, targetPort: edge.targetPort, dataType: edge.dataType } })),
 		];
 	}
@@ -255,7 +267,7 @@ function inverseFlowOperations(snapshot: FlowDocumentSnapshot, operation: FlowOp
 
 function materializeHistoryOperation(operation: FlowOperation, snapshot: FlowDocumentSnapshot): FlowOperation {
 	const mutationId = createFlowMutationId();
-	if (operation.kind === "node.move" || operation.kind === "node.resize" || operation.kind === "viewport.update") return { ...operation, mutationId, baseLayoutRevision: snapshot.flow.layoutRevision } as FlowOperation;
+	if (operation.kind === "node.move" || operation.kind === "node.resize" || operation.kind === "node.collapse" || operation.kind === "viewport.update") return { ...operation, mutationId, baseLayoutRevision: snapshot.flow.layoutRevision } as FlowOperation;
 	return { ...operation, mutationId, baseGraphRevision: snapshot.flow.graphRevision } as FlowOperation;
 }
 
@@ -329,7 +341,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			setFlowRuntimeStatusById(
 				(current): Record<string, "running" | "failed" | "completed"> => ({
 					...current,
-					[next.flow.flowId]: latestRun.status === "running" || latestRun.status === "queued" || latestRun.status === "waiting" ? "running" : latestRun.status === "failed" ? "failed" : "completed",
+					[next.flow.flowId]: latestRun.status === "running" || latestRun.status === "queued" || latestRun.status === "waiting" ? "running" : latestRun.status === "failed" || latestRun.status === "partial_failure" ? "failed" : "completed",
 				}),
 			);
 	}, []);
@@ -534,11 +546,11 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 					...values,
 					[flowId]: status === "running" || status === "queued" || status === "waiting"
 						? "running"
-						: status === "failed"
+						: status === "failed" || status === "partial_failure"
 							? "failed"
 							: "completed",
 				}));
-				if (status === "completed" || status === "failed") {
+				if (status === "completed" || status === "failed" || status === "partial_failure") {
 					setUnreadFlowIds((currentFlowIds): ReadonlySet<string> =>
 						applyFlowRunFinished(currentFlowIds, {
 							activeFlowId: selectedFlowIdRef.current,
@@ -561,6 +573,14 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 				const patched = { ...next, flow: { ...next.flow, graphRevision: Number(data.graphRevision ?? next.flow.graphRevision), layoutRevision: Number(data.layoutRevision ?? next.flow.layoutRevision) } };
 				snapshotRef.current = patched;
 				setSnapshot(patched);
+				return;
+			}
+			if (String(event.event) === "flow.batch.item.state") {
+				const current = runStore.get(String(data.nodeId));
+				if (current !== undefined && current.runId === data.runId) {
+					const items = { ...(current.batchItems ?? {}), [String(data.itemId)]: data };
+					runStore.set(current.nodeId, { ...current, batchItems: items });
+				}
 				return;
 			}
 			if (event.event === "flow.node.state" || event.event === "flow.run.state") {
@@ -757,7 +777,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	);
 
 	const createConnectedNode = useCallback(
-		async (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" }): Promise<string | null> => {
+		async (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: FlowDocumentNode["ports"][number]["dataTypes"][number] }): Promise<string | null> => {
 			const current = snapshotRef.current;
 			if (current === null || isGraphLocked) return null;
 			const definition = nodeDefinitions.find((candidate): boolean => candidate.typeId === params.type);
@@ -795,6 +815,17 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		const current = snapshotRef.current; if (!current || !positions.length) return;
 		applyOperations(positions.map(payload => ({ mutationId: createFlowMutationId(), kind: "node.move", baseLayoutRevision: current.flow.layoutRevision, payload })));
 	}, [applyOperations]);
+	const setNodeCollapsed = useCallback((nodeId: string, collapsed: boolean): void => {
+		const current = snapshotRef.current;
+		const node = current?.nodes.find(node => node.nodeId === nodeId);
+		if (!current || !node || (node.collapsed ?? false) === collapsed) return;
+		applyOperation({ mutationId: createFlowMutationId(), kind: "node.collapse", baseLayoutRevision: current.flow.layoutRevision, payload: { nodeId, collapsed } });
+	}, [applyOperation]);
+	const exportFlowDataById = useCallback(async (flowId: string, destinationPath: string) => {
+		documentStore.flushEditors();
+		await flowOperationOutbox.flushFully(flowId);
+		return exportFlowData(flowId, destinationPath);
+	}, [documentStore]);
 	const updateNodeLayouts = useCallback((layouts: readonly FlowLayoutUpdate[], createdNodeId?: string): void => {
 		const current = snapshotRef.current;
 		if (!current) return;
@@ -829,6 +860,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			created.push(nodeId);
 			operations.push({ mutationId: createFlowMutationId(), kind: "node.create", baseGraphRevision: current.flow.graphRevision, payload: { nodeId, typeId: node.typeId, title: node.title, config: structuredClone(node.config), x: node.x + 24, y: node.y + 24 } });
 			operations.push({ mutationId: createFlowMutationId(), kind: "node.resize", baseLayoutRevision: current.flow.layoutRevision, payload: { nodeId, width: node.width, height: node.height } });
+			if (node.collapsed) operations.push({ mutationId: createFlowMutationId(), kind: "node.collapse", baseLayoutRevision: current.flow.layoutRevision, payload: { nodeId, collapsed: true } });
 		}
 		if (operations.length) applyOperations(operations);
 		return created;
@@ -844,7 +876,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	);
 
 	const createEdge = useCallback(
-		async (sourceNodeId: string, targetNodeId: string, sourcePort = "output", targetPort = "input", dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" = "text"): Promise<void> => {
+		async (sourceNodeId: string, targetNodeId: string, sourcePort = "output", targetPort = "input", dataType: FlowDocumentNode["ports"][number]["dataTypes"][number] = "text"): Promise<void> => {
 			const current = snapshotRef.current;
 			if (current === null || isGraphLocked) return;
 			applyOperation({ mutationId: createFlowMutationId(), kind: "edge.create", baseGraphRevision: current.flow.graphRevision, payload: { edgeId: `edge-${crypto.randomUUID()}`, sourceNodeId, sourcePort, targetNodeId, targetPort, dataType } });
@@ -859,7 +891,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			targetNodeId: string,
 			sourcePort: string,
 			targetPort: string,
-			dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact",
+			dataType: FlowDocumentNode["ports"][number]["dataTypes"][number],
 		): Promise<void> => {
 			const current = snapshotRef.current;
 			if (current === null || isGraphLocked) return;
@@ -920,7 +952,8 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 				const savedNodeTypes = new Map(saved.nodes.map((node): [string, string] => [node.nodeId, node.typeId]));
 				if (request.entryNodeIds?.some((nodeId): boolean => savedNodeTypes.get(nodeId) !== "builtin/flow-input") === true)
 					throw new Error(t("flow.editor.runEntryUnavailable", { defaultValue: "The selected run input has not been saved. Wait for Flow changes to finish saving and try again." }));
-				if (request.targetNodeIds?.some((nodeId): boolean => savedNodeTypes.get(nodeId) !== "builtin/output") === true)
+				const terminalTypes = new Set<string>(nodeDefinitionsRef.current.filter(definition => definition.terminal).map(definition => definition.typeId));
+				if (request.targetNodeIds?.some((nodeId): boolean => !terminalTypes.has(savedNodeTypes.get(nodeId) ?? "")) === true)
 					throw new Error(t("flow.editor.runTargetUnavailable", { defaultValue: "A selected Output node has not been saved. Wait for Flow changes to finish saving and try again." }));
 				applySnapshot(saved);
 				current = saved;
@@ -1002,16 +1035,22 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			const approval = approvals.find((candidate): boolean => candidate.approvalId === approvalId);
 			if (approval === undefined) return;
 			try {
-				await resolveFlowApproval({
+				const run = await resolveFlowApproval({
 					flowId: current.flow.flowId,
 					runId: approval.runId,
 					approvalId,
 					decision,
 					...(consentText === undefined ? {} : { consentText }),
 				});
-				const [next, approvalResult] = await Promise.all([fetchFlow(current.flow.flowId), listFlowApprovals(current.flow.flowId)]);
-				applySnapshot(next);
-				setApprovals(approvalResult.approvals);
+				const latest = snapshotRef.current;
+				if (latest?.flow.flowId !== current.flow.flowId) return;
+				const received = latest.runs.find(candidate => candidate.runId === run.runId);
+				const resolved = received?.finishedAt && !run.finishedAt ? received : run;
+				applySnapshot({ ...latest, runs: latest.runs.some(candidate => candidate.runId === run.runId)
+					? latest.runs.map(candidate => candidate.runId === run.runId ? resolved : candidate)
+					: [resolved, ...latest.runs] });
+				const approvalResult = await listFlowApprovals(current.flow.flowId);
+				if (snapshotRef.current?.flow.flowId === current.flow.flowId) setApprovals(approvalResult.approvals);
 			} catch (approvalError: unknown) {
 				setError(errorMessage(approvalError));
 			}
@@ -1084,6 +1123,8 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		updateNode,
 		updateNodePosition,
 		updateNodePositions,
+		setNodeCollapsed,
+		exportFlowDataById,
 		updateNodeLayouts,
 		duplicateNodes,
 		deleteNode,

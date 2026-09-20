@@ -595,6 +595,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	},
 
 	sessionFs: {
+		pickFlowExportDestination: (params: { flowId: string; title: string; dialogTitle?: string; buttonLabel?: string }): Promise<string | null> => ipcRenderer.invoke("flow-fs:pick-export-destination", params),
 		openSessionDirectory: (sessionId: string): Promise<{ opened: true }> => {
 			return ipcRenderer.invoke("session-fs:open-directory", sessionId);
 		},

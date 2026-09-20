@@ -41,7 +41,8 @@ function FlowNodeShell({ data, selected }: NodeProps<FlowInteractionNode>): Reac
 		runtime.canvas.popups.delete(nodeId);
 		runtime.canvas.pluginEditors.delete(nodeId);
 		runtime.canvas.playing.delete(nodeId);
-		runtime.canvas.collapsed.set(nodeId, !(runtime.canvas.collapsed.get(nodeId) ?? false));
+		const collapsed = !(runtime.canvas.collapsed.get(nodeId) ?? false);
+		runtime.views.get(nodeId)?.onAction(nodeId, collapsed ? "collapse" : "expand");
 	}, [runtime, nodeId]);
 	useLayoutEffect(() => {
 		const node = flow.getNode(nodeId);

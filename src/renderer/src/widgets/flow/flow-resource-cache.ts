@@ -1,4 +1,4 @@
-import { getFlowArtifact } from "@/platform/rpc/flow-api";
+import { getFlowArtifact, thumbnailFlowArtifact } from "@/platform/rpc/flow-api";
 
 // 仅缓存预览结果；节点 DOM 卸载不重新请求，缓存有独立的字节上限
 const previews = new Map<string, { source: string; bytes: number }>();
@@ -6,7 +6,9 @@ const pending = new Map<string, Promise<string | null>>();
 let bytes = 0;
 const MAX_BYTES = 16 * 1024 * 1024;
 
-export function getFlowPreviewSource(id: string, mimeType: string): Promise<string | null> {
+export function getFlowPreviewSource(id: string, mimeType: string, thumbnail = false): Promise<string | null> {
+	const artifactId = id;
+	if (thumbnail) id = `thumb:${id}`;
 	const cached = previews.get(id);
 	if (cached) {
 		previews.delete(id);
@@ -15,10 +17,10 @@ export function getFlowPreviewSource(id: string, mimeType: string): Promise<stri
 	}
 	const inflight = pending.get(id);
 	if (inflight) return inflight;
-	const task = getFlowArtifact(id, true)
+	const task = (thumbnail ? thumbnailFlowArtifact(artifactId) : getFlowArtifact(artifactId, true))
 		.then((response) => {
 			if (!response.dataBase64) return null;
-			const source = `data:${mimeType};base64,${response.dataBase64}`;
+			const source = `data:${thumbnail ? "image/png" : mimeType};base64,${response.dataBase64}`;
 			const size = source.length * 2;
 			if (size <= MAX_BYTES) {
 				while (bytes + size > MAX_BYTES && previews.size) {

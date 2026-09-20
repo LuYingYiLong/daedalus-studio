@@ -11,7 +11,7 @@ function isFlowOperation(value: unknown): value is FlowOperation {
 }
 
 function operationMergeKey(operation: FlowOperation): string | null {
-	if (operation.kind === "node.move" || operation.kind === "node.resize") return `${operation.kind}:${operation.payload.nodeId}`;
+	if (operation.kind === "node.move" || operation.kind === "node.resize" || operation.kind === "node.collapse") return `${operation.kind}:${operation.payload.nodeId}`;
 	if (operation.kind === "viewport.update") return operation.kind;
 	return null;
 }

@@ -231,6 +231,7 @@ const nodeDefinitions = [
 	},
 	{
 		typeId: "builtin/output",
+		terminal: true,
 		pluginId: "builtin",
 		pluginVersion: "1.0.0",
 		pluginFingerprint: "builtin:output:1",
@@ -608,7 +609,9 @@ test.describe("Daedalus Flow node workflow", () => {
 		const starterGradientColors = await starterEdge.locator("linearGradient stop").evaluateAll(
 			(stops): string[] => stops.map((stop): string => stop.getAttribute("stop-color") ?? ""),
 		);
-		expect(starterSourceColor).not.toBe(starterTargetColor);
+		// Both sockets now explicitly declare text, so both gradient endpoints are brown.
+		expect(starterSourceColor).toBe("#a65f2a");
+		expect(starterTargetColor).toBe(starterSourceColor);
 		expect(starterGradientColors).toEqual([starterSourceColor, starterTargetColor]);
 		await starterFlowInput.getByRole("button", { name: /Collapse node|折叠节点/ }).click();
 		await starterUserPrompt.getByRole("button", { name: /Collapse node|折叠节点/ }).click();

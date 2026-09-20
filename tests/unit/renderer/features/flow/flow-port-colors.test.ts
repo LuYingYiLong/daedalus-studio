@@ -3,6 +3,7 @@ import {
 	FLOW_PORT_COLORS,
 	flowPortColor,
 	flowPortColorKind,
+	flowDefaultControl,
 	type FlowPortDataType,
 } from "@/widgets/flow/flow-port-colors";
 
@@ -14,6 +15,7 @@ const ALL_DATA_TYPES: FlowPortDataType[] = [
 	"audio",
 	"frames",
 	"artifact",
+	"number", "boolean", "color", "size", "mask",
 ];
 
 describe("Flow port colors", () => {
@@ -35,5 +37,10 @@ describe("Flow port colors", () => {
 	it("uses gray when port metadata is unavailable", () => {
 		expect(flowPortColorKind(undefined)).toBe("unknown");
 		expect(flowPortColor([])).toBe("#8c8c8c");
+	});
+	it("selects generic controls from the shared type metadata", () => {
+		expect(flowDefaultControl(["color"])).toBe("color");
+		expect(flowDefaultControl(["size"])).toBe("size");
+		expect(flowDefaultControl(["text", "json"])).toBeUndefined();
 	});
 });

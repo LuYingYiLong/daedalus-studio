@@ -53,7 +53,7 @@ describe("Flow home surface", (): void => {
 		expect(surface).toContain("<Dropdown.Button");
 		expect(surface).toContain("menu={runEntryMenu}");
 		expect(surface).toContain("entryNodeIds: group.nodeIds");
-		expect(surface).toContain("forceNodeIds: forceNodeIds ?? snapshot?.nodes.map");
+		expect(surface).toContain("forceNodeIds: forceNodeIds ?? snapshot?.nodes.filter");
 		expect(surface).toContain('action === "run-input"');
 		expect(surface).toContain("reachableOutputNodeIds([nodeId]");
 		expect(surface).toContain("groupFlowRunEntries");

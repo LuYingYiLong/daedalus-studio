@@ -205,8 +205,8 @@ export type FlowTreeOrder = {
 export type FlowTreeOrderUpdate = Omit<FlowTreeOrder, "schemaVersion" | "updatedAt">;
 
 export type FlowNodeTypeId = `${string}/${string}`;
-export type FlowDocumentNodeStatus = "idle" | "queued" | "running" | "waiting" | "completed" | "cached" | "failed" | "cancelled" | "skipped";
-export type FlowDocumentRunStatus = "queued" | "running" | "waiting" | "completed" | "failed" | "cancelled";
+export type FlowDocumentNodeStatus = "idle" | "queued" | "running" | "waiting" | "completed" | "cached" | "partial_failure" | "failed" | "cancelled" | "skipped";
+export type FlowDocumentRunStatus = "queued" | "running" | "waiting" | "completed" | "partial_failure" | "failed" | "cancelled";
 export type FlowMediaArtifactRef = {
 	artifactId: string;
 	flowId: string;
@@ -240,6 +240,7 @@ export type FlowDocument = {
 };
 export type FlowDocumentSummary = FlowDocument;
 export type FlowDocumentNode = {
+	collapsed: boolean;
 	nodeId: string;
 	flowId: string;
 	typeId: FlowNodeTypeId;
@@ -265,9 +266,10 @@ export type FlowDocumentEdge = {
 	sourcePort: string;
 	targetNodeId: string;
 	targetPort: string;
-	dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact";
+	dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | "number" | "boolean" | "color" | "size" | "mask";
 };
 export type FlowDocumentNodeRun = {
+	batchItems?: Record<string, Record<string, unknown>>;
 	runId: string;
 	nodeId: string;
 	typeId: FlowNodeTypeId;
@@ -675,7 +677,8 @@ export type FlowNodePortDefinition = {
 	id: string;
 	label: string;
 	direction: "input" | "output";
-	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact">;
+	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | "number" | "boolean" | "color" | "size" | "mask">;
+	cardinality?: "one" | "many" | "one-or-many";
 	required: boolean;
 	multiple: boolean;
 	defaultConnect: boolean;
@@ -686,7 +689,8 @@ export type FlowNodeParameterDefinition =
 			id: string;
 			label: string;
 			mode: "connection";
-			dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact">;
+			dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | "number" | "boolean" | "color" | "size" | "mask">;
+	cardinality?: "one" | "many" | "one-or-many";
 			required: boolean;
 			multiple: boolean;
 			defaultConnect: boolean;
@@ -696,7 +700,8 @@ export type FlowNodeParameterDefinition =
 			label: string;
 			mode: "hybrid";
 			configField: string;
-			dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact">;
+			dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | "number" | "boolean" | "color" | "size" | "mask">;
+	cardinality?: "one" | "many" | "one-or-many";
 			required: boolean;
 			multiple: boolean;
 			defaultConnect: boolean;
@@ -705,14 +710,17 @@ export type FlowNodeParameterDefinition =
 export type FlowNodeOutputDefinition = {
 	id: string;
 	label: string;
-	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact">;
+	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | "number" | "boolean" | "color" | "size" | "mask">;
+	cardinality?: "one" | "many" | "one-or-many";
 	defaultConnect: boolean;
+	optional?: boolean;
 };
 export type FlowDynamicParameterDefinition = {
 	configField: string;
 	idField: string;
 	labelField: string;
-	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact">;
+	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | "number" | "boolean" | "color" | "size" | "mask">;
+	cardinality?: "one" | "many" | "one-or-many";
 	dataTypeField?: string;
 	required: boolean;
 	multiple: boolean;
@@ -727,6 +735,9 @@ export type FlowNodeTypeDefinition = {
 	category: string;
 	workspaceRequired: boolean;
 	sideEffecting: boolean;
+	terminal?: boolean;
+	batch?: boolean;
+	modelCapability?: "imageGeneration" | "imageEdit" | "textToVideo" | "imageToVideo";
 	executable: boolean;
 	cachePolicy: "always" | "read-only" | "never";
 	defaultTitle: string;
@@ -739,6 +750,7 @@ export type FlowNodeTypeDefinition = {
 	dynamicParameters?: FlowDynamicParameterDefinition[];
 };
 export type FlowOperation =
+	| { mutationId: string; kind: "node.collapse"; baseLayoutRevision?: number; payload: { nodeId: string; collapsed: boolean } }
 	| { mutationId: string; kind: "node.create"; baseGraphRevision?: number; payload: { nodeId: string; typeId: FlowNodeTypeId; title?: string; x: number; y: number; config?: Record<string, unknown> } }
 	| { mutationId: string; kind: "node.update"; baseGraphRevision?: number; payload: { nodeId: string; title?: string; config?: Record<string, unknown> } }
 	| { mutationId: string; kind: "node.delete"; baseGraphRevision?: number; payload: { nodeId: string } }
@@ -827,7 +839,7 @@ export type SubagentWorktreeMetadata = {
 		detached: boolean;
 	}>;
 	mergeStatus: "not_requested" | "previewed" | "pending" | "merged" | "conflict" | "failed";
-	cleanupStatus: "not_requested" | "pending" | "completed" | "failed";
+	cleanupStatus: "not_requested" | "pending" | "completed" | "partial_failure" | "failed";
 };
 
 export type SubagentFailure = {
@@ -1103,7 +1115,7 @@ export type TimelineBodyPart =
 	  }
 	| {
 			type: "image_generation";
-			status: "running" | "completed" | "failed";
+			status: "running" | "completed" | "partial_failure" | "failed";
 			prompt: string;
 			detailLevel?: "full" | "compacted";
 			compactedSummary?: string;

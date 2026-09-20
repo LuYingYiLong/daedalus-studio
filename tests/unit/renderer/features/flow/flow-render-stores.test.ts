@@ -3,6 +3,19 @@ import { FlowCanvasStore, FlowGeometryStore, FlowKeyedStore, FlowSpatialIndex } 
 
 afterEach(() => vi.useRealTimers());
 describe("Flow rendering stores", () => {
+	it("retains list draft identities after removing an earlier row and remounting", () => {
+		const canvas = new FlowCanvasStore();
+		const field = "node\u0000items";
+		const original = [...canvas.getListItemKeys(field, 3)];
+		canvas.rawFields.set(`${field}\u0000${original[1]}`, "unfinished JSON");
+		canvas.removeListItem(field, 0);
+		expect(canvas.getListItemKeys(field, 2)).toEqual(original.slice(1));
+		expect(canvas.rawFields.get(`${field}\u0000${original[1]}`)).toBe("unfinished JSON");
+		canvas.removeNode("node");
+		expect(canvas.rawFields.size).toBe(0);
+		expect(canvas.getListItemKeys(field, 2)).not.toContain(original[1]);
+		canvas.dispose();
+	});
 	it("notifies only the changed entity and preserves unchanged identities", () => {
 		const store = new FlowKeyedStore<{ value: string }>();
 		const a = vi.fn(),

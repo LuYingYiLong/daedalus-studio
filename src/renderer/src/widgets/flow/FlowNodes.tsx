@@ -1,4 +1,7 @@
-import { BorderBeam, Button, Input, InputNumber, Select, Space, Tooltip, Typography } from "antd";
+import { FlowMediaGallery } from "./FlowMediaGallery";
+import { FlowParameterSetsEditor } from "./FlowParameterSetsEditor";
+import { FlowListEditor } from "./FlowListEditor";
+import { Popconfirm, BorderBeam, ColorPicker, Switch, Button, Input, InputNumber, Select, Space, Tooltip, Typography } from "antd";
 import {
 	memo,
 	useContext,
@@ -27,10 +30,9 @@ import type {
 import type { ProviderModelInfo, ProviderModelSelection } from "@/platform/rpc/provider-api";
 import { Icon } from "@/assets/icons";
 import MarkdownContent from "@/widgets/markdown/MarkdownContent";
-import { getFlowPreviewSource } from "./flow-resource-cache";
 import styles from "./FlowNodes.module.css";
 import { flowNodeOutputLabel, flowNodeParameterLabel, flowNodeTitle, flowNodeTypeLabel } from "./flow-node-labels";
-import { flowPortColor, flowPortColorKind } from "./flow-port-colors";
+import { flowDefaultControl, flowPortColor, flowPortColorKind, FLOW_PORT_COLORS } from "./flow-port-colors";
 
 export type FlowNodeEditorOptions = {
 	modelSelection: ProviderModelSelection | null;
@@ -93,68 +95,6 @@ function collectMediaArtifacts(value: unknown, result: FlowMediaArtifactRef[] = 
 	return result;
 }
 
-function MediaArtifactPreview({ artifacts }: { artifacts: FlowMediaArtifactRef[] }): React.JSX.Element {
-	const [sources, setSources] = useState<Record<string, string>>({});
-	useEffect((): (() => void) => {
-		let disposed = false;
-		void Promise.all(
-			artifacts.map(async (artifact): Promise<[string, string] | null> => {
-				try {
-					const source = await getFlowPreviewSource(artifact.artifactId, artifact.mimeType);
-					return source === null ? null : [artifact.artifactId, source];
-				} catch {
-					return null;
-				}
-			}),
-		).then((entries): void => {
-			if (disposed) return;
-			setSources(Object.fromEntries(entries.filter((entry): entry is [string, string] => entry !== null)));
-		});
-		return (): void => {
-			disposed = true;
-		};
-	}, [artifacts]);
-	return (
-		<div className={`${styles.mediaPreviewList}${artifacts.length === 1 ? ` ${styles.singleMediaPreview}` : ""}`}>
-			{artifacts.map((artifact): React.JSX.Element => {
-				const source = sources[artifact.artifactId];
-				if (source === undefined)
-					return (
-						<Typography.Text key={artifact.artifactId} type="secondary">
-							{artifact.mimeType}
-						</Typography.Text>
-					);
-				if (artifact.mimeType.startsWith("image/"))
-					return <img key={artifact.artifactId} className={styles.mediaPreviewImage} src={source} alt="" />;
-				if (artifact.mimeType.startsWith("video/"))
-					return (
-						<video
-							key={artifact.artifactId}
-							className={styles.mediaPreviewVideo}
-							src={source}
-							controls
-							preload="metadata"
-						/>
-					);
-				if (artifact.mimeType.startsWith("audio/"))
-					return (
-						<audio
-							key={artifact.artifactId}
-							className={styles.mediaPreviewAudio}
-							src={source}
-							controls
-							preload="metadata"
-						/>
-					);
-				return (
-					<Typography.Text key={artifact.artifactId} type="secondary">
-						{artifact.mimeType}
-					</Typography.Text>
-				);
-			})}
-		</div>
-	);
-}
 
 export function flowNodeColor(typeId: string): string {
 	let hash = 0;
@@ -198,7 +138,7 @@ export function resolveFlowDefinitionParameters(
 			const configuredType = dynamic.dataTypeField === undefined ? undefined : record[dynamic.dataTypeField];
 			const dataTypes: FlowNodePortDefinition["dataTypes"] =
 				typeof configuredType === "string" &&
-				["text", "json", "image", "video", "audio", "frames", "artifact"].includes(configuredType)
+				Object.prototype.hasOwnProperty.call(FLOW_PORT_COLORS, configuredType)
 					? [configuredType as FlowNodePortDefinition["dataTypes"][number]]
 					: [...dynamic.dataTypes];
 			const label = record[dynamic.labelField];
@@ -213,6 +153,8 @@ export function resolveFlowDefinitionParameters(
 			});
 		}
 	}
+	if (typeof config.elementType === "string" && Object.prototype.hasOwnProperty.call(FLOW_PORT_COLORS, config.elementType))
+		for (const parameter of parameters) if (parameter.mode !== "fixed" && parameter.id !== "index") parameter.dataTypes = [config.elementType as FlowNodePortDefinition["dataTypes"][number]];
 	return parameters;
 }
 
@@ -232,6 +174,7 @@ export function resolveFlowDefinitionPorts(
 						required: parameter.required,
 						multiple: parameter.multiple,
 						defaultConnect: parameter.defaultConnect,
+						cardinality: parameter.cardinality,
 					},
 				],
 	);
@@ -244,7 +187,10 @@ export function resolveFlowDefinitionPorts(
 			required: false,
 			multiple: true,
 			defaultConnect: output.defaultConnect,
+			cardinality: output.cardinality,
 		});
+	if (definition.typeId === "builtin/flow-input") for (const port of ports) if (port.direction === "output") port.dataTypes = [config.dataType === "json" ? "json" : "text"];
+	if (typeof config.elementType === "string" && Object.prototype.hasOwnProperty.call(FLOW_PORT_COLORS, config.elementType)) for (const port of ports) if (port.id !== "index") port.dataTypes = [config.elementType as FlowNodePortDefinition["dataTypes"][number]];
 	return ports;
 }
 
@@ -352,16 +298,7 @@ function SchemaEditor({
 	};
 	const providerId = typeof config.provider === "string" ? config.provider : "";
 	const modelId = typeof config.model === "string" ? config.model : "";
-	const requiredCapability =
-		definition.typeId === "builtin/text-to-image"
-			? "imageGeneration"
-			: definition.typeId === "builtin/image-to-image"
-				? "imageEdit"
-				: definition.typeId === "builtin/text-to-video"
-					? "textToVideo"
-					: definition.typeId === "builtin/image-to-video"
-						? "imageToVideo"
-						: null;
+	const requiredCapability = definition.modelCapability ?? null;
 	const supportsRequiredCapability = (model: ProviderModelInfo): boolean =>
 		requiredCapability === null || model.capabilities[requiredCapability] === true;
 	const providerOptions = (editorOptions.modelSelection?.providers ?? [])
@@ -400,7 +337,25 @@ function SchemaEditor({
 	};
 	const supportsReasoningEffort = Object.prototype.hasOwnProperty.call(properties, "reasoningEffort");
 	const renderControl = (key: string, schema: Record<string, unknown>, title: string): React.JSX.Element => {
-		const control = schema["x-daedalus-control"];
+		const parameter = definition.parameters.find(parameter => parameter.mode !== "connection" && parameter.configField === key);
+		const control = schema["x-daedalus-control"] ?? (parameter?.mode === "hybrid" ? flowDefaultControl(parameter.dataTypes) : undefined);
+		if (control === "parameter-sets") return <FlowParameterSetsEditor disabled={disabled} value={config[key]} onChange={value => update(key, value, false)} />;
+		if (control === "typed-list") {
+			const fieldId = `${node.nodeId}\u0000${key}`;
+			const items = Array.isArray(config[key]) ? config[key] : [];
+			return <FlowListEditor type={String(config.elementType ?? "json")} value={items} disabled={disabled}
+				itemKeys={canvas.getListItemKeys(fieldId, items.length)} onRemove={index => canvas.removeListItem(fieldId, index)}
+				onChange={value => update(key, value, false)} onOpenChange={onSelectOpenChange}
+				renderJson={(itemKey, value, onChange) => <JsonField fieldId={`${fieldId}\u0000${itemKey}`} name={title} value={value} disabled={disabled} onChange={onChange} />} />;
+		}
+		if (control === "color") {
+			const color = (config[key] ?? { r: 1, g: 1, b: 1, a: 1 }) as { r: number; g: number; b: number; a: number };
+			return <ColorPicker disabled={disabled} value={`rgba(${color.r * 255}, ${color.g * 255}, ${color.b * 255}, ${color.a})`} onOpenChange={onSelectOpenChange} onChangeComplete={value => { const rgb = value.toRgb(); update(key, { r: rgb.r / 255, g: rgb.g / 255, b: rgb.b / 255, a: rgb.a }); }} />;
+		}
+		if (control === "size") {
+			const value = (config[key] ?? { width: 1024, height: 1024 }) as { width: number; height: number };
+			return <Space.Compact><InputNumber disabled={disabled} min={1} max={16000} value={value.width} onChange={width => { if (width !== null) update(key, { ...value, width }); }} /><InputNumber disabled={disabled} min={1} max={16000} value={value.height} onChange={height => { if (height !== null) update(key, { ...value, height }); }} /></Space.Compact>;
+		}
 		const isWorkspaceFileControl =
 			control === "workspace-file" ||
 			schema.format === "workspace-file" ||
@@ -450,7 +405,9 @@ function SchemaEditor({
 						const nextProvider = editorOptions.modelSelection?.providers.find(
 							(candidate): boolean => candidate.provider === value,
 						);
-						const nextModel = nextProvider?.selectedModel ?? nextProvider?.defaultModel ?? "";
+						const compatibleModels = (editorOptions.modelsByProvider[value] ?? []).filter(supportsRequiredCapability);
+						const preferredModel = nextProvider?.selectedModel ?? nextProvider?.defaultModel;
+						const nextModel = compatibleModels.find(candidate => candidate.id === preferredModel)?.id ?? compatibleModels[0]?.id ?? "";
 						const nextModelInfo = editorOptions.modelsByProvider[value]?.find(
 							(candidate): boolean => candidate.id === nextModel,
 						);
@@ -515,21 +472,7 @@ function SchemaEditor({
 					onChange={(value): void => update(key, value)}
 				/>
 			);
-		if (schema.type === "boolean")
-			return (
-				<Select
-					onOpenChange={onSelectOpenChange}
-					className="nodrag"
-					disabled={disabled}
-					value={typeof config[key] === "boolean" ? config[key] : undefined}
-					placeholder={title}
-					options={[
-						{ value: true, label: `${title}: true` },
-						{ value: false, label: `${title}: false` },
-					]}
-					onChange={(value): void => update(key, value)}
-				/>
-			);
+		if (schema.type === "boolean") return <Switch disabled={disabled} checked={config[key] === true} onChange={value => update(key, value, false)} />;
 		if (schema.type === "number" || schema.type === "integer")
 			return (
 				<InputNumber
@@ -591,12 +534,14 @@ function SchemaEditor({
 				const hidesControl =
 					parameter.mode === "connection" ||
 					(parameter.mode === "hybrid" && connected && parameter.hideControlWhenConnected);
+				const expandedControl = schema?.["x-daedalus-control"] === "parameter-sets" || schema?.["x-daedalus-control"] === "typed-list";
 				return (
 					<div
 						key={parameter.id}
 						className={`${styles.parameterRow} ${hidesControl ? styles.parameterRowConnectionOnly : ""}`}
 						data-parameter-mode={parameter.mode}
 						data-parameter-connected={connected ? "true" : "false"}
+						style={expandedControl ? { flexWrap: "wrap" } : undefined}
 					>
 						<span className={styles.parameterSocket}>
 							{connectable ? (
@@ -612,10 +557,10 @@ function SchemaEditor({
 							) : null}
 						</span>
 						<span className={styles.parameterLabel} title={parameterLabel}>
-							{parameterLabel}
+							{parameterLabel}{connectable && parameter.cardinality && parameter.cardinality !== "one" ? " []" : ""}
 						</span>
 						{!hidesControl && configField !== null && schema !== undefined ? (
-							<div className={styles.parameterControl}>
+							<div className={styles.parameterControl} style={expandedControl ? { flex: "1 1 100%", maxWidth: "100%" } : undefined}>
 								{renderControl(configField, schema, parameterLabel)}
 							</div>
 						) : null}
@@ -876,7 +821,7 @@ function OutputRows({
 						key={output.id}
 						title={`${outputLabel} · ${output.dataTypes.join("/")}`}
 					>
-						<span className={styles.outputLabel}>{outputLabel}</span>
+						<span className={styles.outputLabel}>{outputLabel}{output.cardinality === "many" ? " []" : ""}</span>
 						<span className={styles.outputSocket}>
 							<Handle
 								id={output.id}
@@ -960,7 +905,7 @@ function FlowNodeCard({ data, selected, collapsed, onToggleCollapsed }: {
 								defaultConnect: port.defaultConnect,
 							}),
 						)
-				: definition.outputs,
+				: resolveFlowDefinitionPorts(definition, flowNode.config).filter(port => port.direction === "output"),
 		[definition, flowNode.ports],
 	);
 	const definitionLayoutKey =
@@ -1032,7 +977,7 @@ function FlowNodeCard({ data, selected, collapsed, onToggleCollapsed }: {
 									/>
 								</Tooltip>
 							) : null}
-							{nodeStatus === "failed" ? (
+							{(nodeStatus === "failed" || nodeStatus === "partial_failure") ? (
 								<Tooltip title={<span className={styles.errorTooltip}>{nodeError}</span>} trigger={["hover", "focus"]}>
 									<span
 										className={`${styles.failedIndicator} nodrag nopan`}
@@ -1105,6 +1050,12 @@ function FlowNodeCard({ data, selected, collapsed, onToggleCollapsed }: {
 								})}
 							</Button>
 						) : null}
+						{data.nodeRun?.batchItems ? <div className="nodrag nowheel" style={{ maxHeight: 200, overflow: "auto" }}>
+ <Typography.Text type="secondary">{t("flow.batch.completed", { count: Object.values(data.nodeRun.batchItems).filter(item => item.status === "completed").length, total: Object.keys(data.nodeRun.batchItems).length })}</Typography.Text>
+ {Object.values(data.nodeRun.batchItems).sort((a, b) => Number(a.ordinal) - Number(b.ordinal)).map(item => <div key={String(item.itemId)}><Tooltip title={JSON.stringify(item.params)}><Typography.Text type={item.status === "failed" || item.status === "uncertain" ? "danger" : "secondary"}>{Number(item.ordinal) + 1}. {t(`flow.batch.status.${item.status}`)}{item.error ? ` · ${String(item.error)}` : ""}</Typography.Text></Tooltip></div>)}
+ <Button disabled={data.runDisabled} size="small" onClick={() => data.onAction(flowNode.nodeId, "retry-batch")}>{t("flow.batch.retry")}</Button>
+ <Popconfirm title={t("flow.batch.regenerateConfirm")} onConfirm={() => data.onAction(flowNode.nodeId, "run")}><Button disabled={data.runDisabled} size="small" danger>{t("flow.batch.regenerate")}</Button></Popconfirm>
+ </div> : null}
 						{isOutputNode ? (
 							<div
 								className={`${styles.outputResult}${mediaArtifacts.length > 0 ? ` ${styles.outputResultMedia}` : ""} nodrag nowheel`}
@@ -1112,7 +1063,7 @@ function FlowNodeCard({ data, selected, collapsed, onToggleCollapsed }: {
 								aria-label={t("flow.editor.outputResult", { defaultValue: "Output result" })}
 							>
 								{mediaArtifacts.length > 0 ? (
-									<MediaArtifactPreview artifacts={mediaArtifacts} />
+									<FlowMediaGallery artifacts={mediaArtifacts} />
 								) : outputMarkdown.length > 0 ? (
 									<MarkdownContent cacheParsing>{outputMarkdown}</MarkdownContent>
 								) : (

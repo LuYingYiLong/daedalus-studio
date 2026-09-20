@@ -619,6 +619,13 @@
 		}
 	},
 	"flow": {
+		"exportData": {
+			"exporting": "正在导出…",
+			"dialogTitle": "导出 Flow 数据",
+			"success": "Flow 数据已导出",
+			"missing": "Flow 数据已导出，但有 {{count}} 个媒体文件缺失",
+			"failed": "导出 Flow 数据失败"
+		},
 		"surfaces": { "chat": "对话", "flow": "Flow" },
 		"defaultTitle": "未命名 Flow {{count}}",
 		"new": { "title": "新建 Flow" },
@@ -660,6 +667,7 @@
 			"emptyResponse": "暂无回答内容"
 		},
 		"actions": {
+			"exportData": "导出 Flow 数据",
 			"new": "新建 Flow",
 			"details": "查看详情",
 			"regenerate": "重新生成为新分支",
@@ -738,7 +746,14 @@
 				"workspaceRequired": "需要工作区",
 				"visualOnly": "仅用于标注",
 				"recent": "最近",
-				"categories": { "basic": "基础", "ai": "AI", "workspace": "工作区", "media": "媒体" },
+				"categories": {
+					"basic": "基础",
+					"ai": "AI",
+					"workspace": "工作区",
+					"media": "媒体",
+					"parameters": "参数",
+					"collections": "列表与批量"
+				},
 				"hint": "↑↓ 选择 · Enter 添加 · Esc 关闭"
 			},
 			"nodes": {
@@ -760,7 +775,26 @@
 				"builtin/text-to-video": "文生视频",
 				"builtin/image-to-video": "图生视频",
 				"builtin/media-output": "媒体输出",
-				"builtin/note": "便签"
+				"builtin/note": "便签",
+				"builtin/number": "数字",
+				"builtin/boolean": "布尔",
+				"builtin/color": "颜色",
+				"builtin/size": "尺寸",
+				"builtin/text-replace": "文本替换",
+				"builtin/to-text": "转为文本",
+				"builtin/image-input": "读取图片",
+				"builtin/image-resize": "缩放图片",
+				"builtin/image-crop": "裁剪图片",
+				"builtin/image-rotate": "旋转与翻转",
+				"builtin/image-composite": "叠加图片",
+				"builtin/image-convert": "转换图片格式",
+				"builtin/list": "构建列表",
+				"builtin/list-item": "列表取项",
+				"builtin/list-merge": "合并列表",
+				"builtin/parameter-sets": "参数组",
+				"builtin/batch-text-to-image": "批量文生图",
+				"builtin/batch-image-to-image": "批量图生图",
+				"builtin/save-images": "保存图片"
 			},
 			"parameters": {
 				"builtin/user-prompt": { "input": "用户提示词" },
@@ -781,7 +815,98 @@
 				"builtin/text-to-video": { "prompt": "提示词", "provider": "供应商", "model": "模型", "negativePrompt": "反向提示词", "width": "宽度", "height": "高度", "durationMs": "时长", "fps": "帧率", "seed": "种子", "count": "数量", "outputFormat": "输出格式" },
 				"builtin/image-to-video": { "image": "输入图像", "prompt": "提示词", "provider": "供应商", "model": "模型", "negativePrompt": "反向提示词", "width": "宽度", "height": "高度", "durationMs": "时长", "fps": "帧率", "seed": "种子", "count": "数量", "outputFormat": "输出格式" },
 				"builtin/media-output": { "format": "展示方式" },
-				"builtin/note": { "text": "内容" }
+				"builtin/note": { "text": "内容" },
+				"builtin/number": {
+					"value": "数值"
+				},
+				"builtin/boolean": {
+					"value": "数值"
+				},
+				"builtin/color": {
+					"value": "数值"
+				},
+				"builtin/size": {
+					"value": "数值"
+				},
+				"builtin/text-replace": {
+					"text": "文本",
+					"search": "查找",
+					"replacement": "替换为"
+				},
+				"builtin/to-text": {
+					"value": "数值"
+				},
+				"builtin/image-input": {
+					"path": "文件路径"
+				},
+				"builtin/image-resize": {
+					"image": "图片",
+					"size": "尺寸",
+					"width": "宽度",
+					"height": "高度",
+					"fit": "缩放方式",
+					"background": "背景颜色"
+				},
+				"builtin/image-crop": {
+					"image": "图片",
+					"x": "X 坐标",
+					"y": "Y 坐标",
+					"width": "宽度",
+					"height": "高度"
+				},
+				"builtin/image-rotate": {
+					"image": "图片",
+					"angle": "旋转角度",
+					"flip": "垂直翻转",
+					"flop": "水平翻转"
+				},
+				"builtin/image-composite": {
+					"image": "图片",
+					"overlay": "叠加图片",
+					"x": "X 坐标",
+					"y": "Y 坐标",
+					"opacity": "不透明度"
+				},
+				"builtin/image-convert": {
+					"image": "图片",
+					"format": "格式",
+					"quality": "质量"
+				},
+				"builtin/list": {
+					"elementType": "元素类型",
+					"values": "列表值"
+				},
+				"builtin/list-item": {
+					"elementType": "元素类型",
+					"items": "列表",
+					"index": "索引"
+				},
+				"builtin/list-merge": {
+					"elementType": "元素类型",
+					"a": "第一个列表",
+					"b": "第二个列表"
+				},
+				"builtin/parameter-sets": {
+					"rows": "参数组"
+				},
+				"builtin/batch-text-to-image": {
+					"rows": "参数组",
+					"provider": "供应商",
+					"model": "模型",
+					"outputFormat": "输出格式"
+				},
+				"builtin/batch-image-to-image": {
+					"rows": "参数组",
+					"image": "图片",
+					"provider": "供应商",
+					"model": "模型",
+					"outputFormat": "输出格式"
+				},
+				"builtin/save-images": {
+					"images": "图片列表",
+					"directory": "保存目录",
+					"fileName": "文件名模板"
+				}
 			},
 			"outputs": {
 				"builtin/user-prompt": { "output": "用户提示词" },
@@ -800,7 +925,65 @@
 				"builtin/image-to-image": { "image": "图像" },
 				"builtin/text-to-video": { "video": "视频" },
 				"builtin/image-to-video": { "video": "视频" },
-				"builtin/media-output": { "result": "媒体" }
+				"builtin/media-output": { "result": "媒体" },
+				"builtin/number": {
+					"value": "数值"
+				},
+				"builtin/boolean": {
+					"value": "数值"
+				},
+				"builtin/color": {
+					"value": "数值"
+				},
+				"builtin/size": {
+					"value": "数值"
+				},
+				"builtin/text-replace": {
+					"text": "文本"
+				},
+				"builtin/to-text": {
+					"text": "文本"
+				},
+				"builtin/image-input": {
+					"image": "图片",
+					"size": "尺寸"
+				},
+				"builtin/image-resize": {
+					"images": "图片列表"
+				},
+				"builtin/image-crop": {
+					"images": "图片列表"
+				},
+				"builtin/image-rotate": {
+					"images": "图片列表"
+				},
+				"builtin/image-composite": {
+					"images": "图片列表"
+				},
+				"builtin/image-convert": {
+					"images": "图片列表"
+				},
+				"builtin/list": {
+					"items": "列表"
+				},
+				"builtin/list-item": {
+					"value": "数值"
+				},
+				"builtin/list-merge": {
+					"items": "列表"
+				},
+				"builtin/parameter-sets": {
+					"rows": "参数组"
+				},
+				"builtin/batch-text-to-image": {
+					"images": "图片列表",
+					"report": "执行报告"
+				},
+				"builtin/batch-image-to-image": {
+					"images": "图片列表",
+					"report": "执行报告"
+				},
+				"builtin/save-images": {}
 			}
 		},
 		"aria": {
@@ -814,6 +997,32 @@
 			"placeholder": "输入 Flow 名称",
 			"empty": "Flow 名称不能为空",
 			"failed": "重命名 Flow 失败"
+		},
+		"batch": {
+			"plan": "{{requests}} 次请求 · {{images}} 张图片",
+			"add": "添加参数组",
+			"duplicate": "复制",
+			"remove": "删除",
+			"prompt": "提示词",
+			"negativePrompt": "反向提示词",
+			"seed": "种子",
+			"width": "宽度",
+			"height": "高度",
+			"count": "数量",
+			"compare": "对比图片",
+			"retry": "重试失败项",
+			"regenerate": "重新生成全部",
+			"regenerateConfirm": "重新请求全部图片，包括成功项，可能再次计费。继续？",
+			"completed": "已完成 {{count}} / {{total}}",
+			"status": {
+				"queued": "排队中",
+				"submitting": "提交中",
+				"running": "运行中",
+				"completed": "已完成",
+				"failed": "失败",
+				"cancelled": "已取消",
+				"uncertain": "提交结果不确定，请确认后重新生成"
+			}
 		}
 	},
 	"agentPage": {

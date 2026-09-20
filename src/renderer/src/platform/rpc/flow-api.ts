@@ -1,3 +1,4 @@
+import { installFlowTypePresentation } from "@/domain/flow/flow-value-presentation";
 import { createBackendClient } from "@/platform/rpc/transport/backend-client";
 import type {
 	FlowDocument,
@@ -53,11 +54,13 @@ export async function fetchFlowTreeOrder(): Promise<FlowTreeOrder> {
 }
 
 export async function listFlowNodeTypes(params: { flowId?: string; workspaceId?: string } = {}): Promise<{ nodes: FlowNodeTypeDefinition[] }> {
-	return (await createBackendClient()).request("flow.node.types.list", params);
+	const result = await (await createBackendClient()).request<{ nodes: FlowNodeTypeDefinition[]; valueTypes?: Record<string, { color: string; control: string }> }>("flow.node.types.list", params);
+	if (result.valueTypes) installFlowTypePresentation(result.valueTypes);
+	return result;
 }
 
 export async function commitFlowPatch(params: { flowId: string; clientId: string; operations: FlowOperation[] }): Promise<FlowPatchAck> {
-	return (await createBackendClient()).request("flow.patch.commit", params);
+	return (await createBackendClient()).request("flow.patch.commit", { ...params, generation: "flow-composable-1" });
 }
 
 
@@ -130,4 +133,9 @@ export async function deleteFlowArtifact(artifactId: string): Promise<{ deleted:
 
 export async function cleanupFlowArtifacts(flowId: string, keepRunIds?: string[]): Promise<{ removed: number }> {
 	return (await createBackendClient()).request("flow.artifact.cleanup", { flowId, ...(keepRunIds === undefined ? {} : { keepRunIds }) });
+}
+
+export type FlowExportResult = { exported: true; flowId: string; destinationPath: string; byteSize: number; tableCounts: Record<string, number>; embeddedFileCount: number; missingFileCount: number };
+export async function exportFlowData(flowId: string, destinationPath: string): Promise<FlowExportResult> {
+	return (await createBackendClient()).request("flow.export", { flowId, destinationPath });
 }

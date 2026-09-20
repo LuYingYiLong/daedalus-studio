@@ -3,9 +3,23 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { openSessionDirectory, pickSessionExportDestination, resolveSessionDirectory } from "@main/services/session-fs";
+import { openSessionDirectory, pickFlowExportDestination, pickSessionExportDestination, resolveSessionDirectory } from "@main/services/session-fs";
 
 describe("session-fs", () => {
+	it("uses the shared save dialog for Flow exports and supports cancellation", async () => {
+		const options = {
+			documentsDirectory: "C:/Users/test/Documents",
+			showSaveDialog: async (_owner: unknown, dialog: { defaultPath?: string }) => {
+				expect(dialog.defaultPath).toBe(join("C:/Users/test/Documents", "My Flow-flow-test.sqlite"));
+				return { canceled: false, filePath: "C:/Users/test/Documents/flow-data" };
+			},
+		};
+		await expect(pickFlowExportDestination({ flowId: "flow-test", title: "My Flow" }, undefined, options)).resolves.toBe(resolve("C:/Users/test/Documents/flow-data.sqlite"));
+		await expect(pickFlowExportDestination({ flowId: "../escape", title: "Flow" }, undefined, options)).rejects.toThrow();
+		await expect(pickFlowExportDestination({ flowId: "flow-test", title: "Flow" }, undefined, {
+			...options, showSaveDialog: async () => ({ canceled: true, filePath: "" }),
+		})).resolves.toBeNull();
+	});
 	it("resolves session directories inside the Daedalus sessions root", () => {
 		const homeDirectory: string = "C:/Users/test";
 

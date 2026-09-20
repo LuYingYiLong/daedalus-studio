@@ -126,6 +126,19 @@ export class FlowCanvasStore extends FlowKeyedStore<FlowNodeRenderMode> {
 	readonly collapsed = new FlowKeyedStore<boolean>();
 	readonly drafts = new FlowKeyedStore<Record<string, unknown>>();
 	readonly rawFields = new Map<string, string>();
+	private listItemKeys = new Map<string, string[]>();
+	getListItemKeys(fieldId: string, length: number): readonly string[] {
+		const keys = this.listItemKeys.get(fieldId) ?? [];
+		for (const key of keys.slice(length)) this.rawFields.delete(`${fieldId}\u0000${key}`);
+		keys.length = Math.min(keys.length, length);
+		while (keys.length < length) keys.push(crypto.randomUUID());
+		this.listItemKeys.set(fieldId, keys);
+		return keys;
+	}
+	removeListItem(fieldId: string, index: number): void {
+		const key = this.listItemKeys.get(fieldId)?.splice(index, 1)[0];
+		if (key !== undefined) this.rawFields.delete(`${fieldId}\u0000${key}`);
+	}
 	private pendingDrafts = new Map<string, Draft>();
 	private detail: boolean | null = null;
 	getMode = (id: string): FlowNodeRenderMode => this.get(id) ?? "outline";
@@ -174,6 +187,7 @@ export class FlowCanvasStore extends FlowKeyedStore<FlowNodeRenderMode> {
 	removeNode(id: string): void {
 		this.collapsed.delete(id);
 		for (const key of this.rawFields.keys()) if (key.startsWith(`${id}\u0000`)) this.rawFields.delete(key);
+		for (const key of this.listItemKeys.keys()) if (key.startsWith(`${id}\u0000`)) this.listItemKeys.delete(key);
 		const draft = this.pendingDrafts.get(id);
 		if (draft?.timer) clearTimeout(draft.timer);
 		this.pendingDrafts.delete(id);
@@ -196,6 +210,7 @@ export class FlowCanvasStore extends FlowKeyedStore<FlowNodeRenderMode> {
 		this.pendingDrafts.clear();
 		this.drafts.clear();
 		this.rawFields.clear();
+		this.listItemKeys.clear();
 		this.editing.clear();
 		this.editGroups.clear();
 		this.playing.clear();

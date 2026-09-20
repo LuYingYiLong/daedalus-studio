@@ -621,6 +621,13 @@
 		}
 	},
 	"flow": {
+		"exportData": {
+			"exporting": "Exporting…",
+			"dialogTitle": "Export Flow data",
+			"success": "Flow data exported",
+			"missing": "Flow data exported, but {{count}} media files are missing",
+			"failed": "Failed to export Flow data"
+		},
 		"surfaces": { "chat": "Chat", "flow": "Flow" },
 		"defaultTitle": "Untitled Flow {{count}}",
 		"new": { "title": "New Flow" },
@@ -665,6 +672,7 @@
 			"emptyResponse": "No response yet"
 		},
 		"actions": {
+			"exportData": "Export Flow data",
 			"new": "New Flow",
 			"details": "Details",
 			"regenerate": "Regenerate as branch",
@@ -747,7 +755,9 @@
 					"basic": "Basic",
 					"ai": "AI",
 					"workspace": "Workspace",
-					"media": "Media"
+					"media": "Media",
+					"parameters": "Parameters",
+					"collections": "Lists & batches"
 				},
 				"hint": "↑↓ Select · Enter Add · Esc Close"
 			},
@@ -770,7 +780,26 @@
 				"builtin/text-to-video": "Text to Video",
 				"builtin/image-to-video": "Image to Video",
 				"builtin/media-output": "Media Output",
-				"builtin/note": "Note"
+				"builtin/note": "Note",
+				"builtin/number": "Number",
+				"builtin/boolean": "Boolean",
+				"builtin/color": "Color",
+				"builtin/size": "Size",
+				"builtin/text-replace": "Text Replace",
+				"builtin/to-text": "To Text",
+				"builtin/image-input": "Image Input",
+				"builtin/image-resize": "Image Resize",
+				"builtin/image-crop": "Image Crop",
+				"builtin/image-rotate": "Image Rotate",
+				"builtin/image-composite": "Image Composite",
+				"builtin/image-convert": "Image Convert",
+				"builtin/list": "List",
+				"builtin/list-item": "List Item",
+				"builtin/list-merge": "List Merge",
+				"builtin/parameter-sets": "Parameter Sets",
+				"builtin/batch-text-to-image": "Batch Text To Image",
+				"builtin/batch-image-to-image": "Batch Image To Image",
+				"builtin/save-images": "Save Images"
 			},
 			"parameters": {
 				"builtin/user-prompt": { "input": "User prompt" },
@@ -791,7 +820,98 @@
 				"builtin/text-to-video": { "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "width": "Width", "height": "Height", "durationMs": "Duration", "fps": "Frame rate", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
 				"builtin/image-to-video": { "image": "Input image", "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "width": "Width", "height": "Height", "durationMs": "Duration", "fps": "Frame rate", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
 				"builtin/media-output": { "format": "Display mode" },
-				"builtin/note": { "text": "Content" }
+				"builtin/note": { "text": "Content" },
+				"builtin/number": {
+					"value": "Value"
+				},
+				"builtin/boolean": {
+					"value": "Value"
+				},
+				"builtin/color": {
+					"value": "Value"
+				},
+				"builtin/size": {
+					"value": "Value"
+				},
+				"builtin/text-replace": {
+					"text": "Text",
+					"search": "Find",
+					"replacement": "Replace with"
+				},
+				"builtin/to-text": {
+					"value": "Value"
+				},
+				"builtin/image-input": {
+					"path": "File path"
+				},
+				"builtin/image-resize": {
+					"image": "Image",
+					"size": "Size",
+					"width": "Width",
+					"height": "Height",
+					"fit": "Fit mode",
+					"background": "Background"
+				},
+				"builtin/image-crop": {
+					"image": "Image",
+					"x": "X",
+					"y": "Y",
+					"width": "Width",
+					"height": "Height"
+				},
+				"builtin/image-rotate": {
+					"image": "Image",
+					"angle": "Angle",
+					"flip": "Flip vertically",
+					"flop": "Flip horizontally"
+				},
+				"builtin/image-composite": {
+					"image": "Image",
+					"overlay": "Overlay image",
+					"x": "X",
+					"y": "Y",
+					"opacity": "Opacity"
+				},
+				"builtin/image-convert": {
+					"image": "Image",
+					"format": "Format",
+					"quality": "Quality"
+				},
+				"builtin/list": {
+					"elementType": "Element type",
+					"values": "Values"
+				},
+				"builtin/list-item": {
+					"elementType": "Element type",
+					"items": "Items",
+					"index": "Index"
+				},
+				"builtin/list-merge": {
+					"elementType": "Element type",
+					"a": "First list",
+					"b": "Second list"
+				},
+				"builtin/parameter-sets": {
+					"rows": "Parameter rows"
+				},
+				"builtin/batch-text-to-image": {
+					"rows": "Parameter rows",
+					"provider": "Provider",
+					"model": "Model",
+					"outputFormat": "Output format"
+				},
+				"builtin/batch-image-to-image": {
+					"rows": "Parameter rows",
+					"image": "Image",
+					"provider": "Provider",
+					"model": "Model",
+					"outputFormat": "Output format"
+				},
+				"builtin/save-images": {
+					"images": "Images",
+					"directory": "Directory",
+					"fileName": "Filename pattern"
+				}
 			},
 			"outputs": {
 				"builtin/user-prompt": { "output": "User prompt" },
@@ -810,7 +930,65 @@
 				"builtin/image-to-image": { "image": "Image" },
 				"builtin/text-to-video": { "video": "Video" },
 				"builtin/image-to-video": { "video": "Video" },
-				"builtin/media-output": { "result": "Media" }
+				"builtin/media-output": { "result": "Media" },
+				"builtin/number": {
+					"value": "Value"
+				},
+				"builtin/boolean": {
+					"value": "Value"
+				},
+				"builtin/color": {
+					"value": "Value"
+				},
+				"builtin/size": {
+					"value": "Value"
+				},
+				"builtin/text-replace": {
+					"text": "Text"
+				},
+				"builtin/to-text": {
+					"text": "Text"
+				},
+				"builtin/image-input": {
+					"image": "Image",
+					"size": "Size"
+				},
+				"builtin/image-resize": {
+					"images": "Images"
+				},
+				"builtin/image-crop": {
+					"images": "Images"
+				},
+				"builtin/image-rotate": {
+					"images": "Images"
+				},
+				"builtin/image-composite": {
+					"images": "Images"
+				},
+				"builtin/image-convert": {
+					"images": "Images"
+				},
+				"builtin/list": {
+					"items": "Items"
+				},
+				"builtin/list-item": {
+					"value": "Value"
+				},
+				"builtin/list-merge": {
+					"items": "Items"
+				},
+				"builtin/parameter-sets": {
+					"rows": "Parameter rows"
+				},
+				"builtin/batch-text-to-image": {
+					"images": "Images",
+					"report": "Report"
+				},
+				"builtin/batch-image-to-image": {
+					"images": "Images",
+					"report": "Report"
+				},
+				"builtin/save-images": {}
 			}
 		},
 		"aria": {
@@ -824,6 +1002,32 @@
 			"placeholder": "Enter a Flow name",
 			"empty": "Flow name cannot be empty",
 			"failed": "Could not rename Flow"
+		},
+		"batch": {
+			"plan": "{{requests}} requests · {{images}} images",
+			"add": "Add row",
+			"duplicate": "Copy",
+			"remove": "Delete",
+			"prompt": "Prompt",
+			"negativePrompt": "Negative prompt",
+			"seed": "Seed",
+			"width": "Width",
+			"height": "Height",
+			"count": "Count",
+			"compare": "Compare image",
+			"retry": "Retry failed items",
+			"regenerate": "Regenerate all",
+			"regenerateConfirm": "Request all images again, including successes? Additional charges may apply.",
+			"completed": "Completed {{count}} / {{total}}",
+			"status": {
+				"queued": "Queued",
+				"submitting": "Submitting",
+				"running": "Running",
+				"completed": "Completed",
+				"failed": "Failed",
+				"cancelled": "Cancelled",
+				"uncertain": "Submission uncertain — confirm before regenerating"
+			}
 		}
 	},
 	"agentPage": {

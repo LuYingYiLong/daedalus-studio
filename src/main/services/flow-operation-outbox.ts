@@ -35,7 +35,8 @@ async function readOutbox(): Promise<FlowOperationOutboxDocument> {
 	try {
 		const content = await readFile(getOutboxPath(), "utf8");
 		if (Buffer.byteLength(content, "utf8") > MAX_DOCUMENT_BYTES) return {};
-		return normalizeDocument(JSON.parse(content) as unknown);
+		const envelope = JSON.parse(content) as { generation?: string; operations?: unknown };
+		return envelope.generation === "flow-composable-1" ? normalizeDocument(envelope.operations) : {};
 	} catch (error: unknown) {
 		if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
 		return {};
@@ -48,7 +49,7 @@ function getCachedDocument(): Promise<FlowOperationOutboxDocument> {
 }
 
 async function writeOutbox(document: FlowOperationOutboxDocument): Promise<void> {
-	const content = JSON.stringify(document);
+	const content = JSON.stringify({ generation: "flow-composable-1", operations: document });
 	if (Buffer.byteLength(content, "utf8") > MAX_DOCUMENT_BYTES) throw new Error("flow_operation_outbox_too_large");
 	const path = getOutboxPath();
 	const temporaryPath = `${path}.${process.pid}.tmp`;

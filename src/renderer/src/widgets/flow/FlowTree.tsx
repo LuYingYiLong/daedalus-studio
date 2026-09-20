@@ -1,4 +1,4 @@
-import { Badge, Button, Dropdown, Input, Modal, Spin, Tooltip, Tree, Typography } from "antd";
+import { message, Badge, Button, Dropdown, Input, Modal, Spin, Tooltip, Tree, Typography } from "antd";
 import type { MenuProps, TreeProps } from "antd";
 import type { DragEvent, Key, MouseEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -16,6 +16,7 @@ import { workspaceSupportsWorktrees } from "@/domain/workspace/worktree-capabili
 import styles from "./FlowTree.module.css";
 
 export type FlowTreeProps = {
+	onExport: (flowId: string, destinationPath: string) => Promise<{ missingFileCount: number }>;
 	flows: FlowDocumentSummary[];
 	workspaces: WorkspaceConfig[];
 	selectedFlowId: string | null;
@@ -216,6 +217,7 @@ function moveFlow(
 }
 
 function FlowTree({
+	onExport,
 	flows,
 	workspaces,
 	selectedFlowId,
@@ -237,6 +239,34 @@ function FlowTree({
 	onWorkspaceDelete,
 }: FlowTreeProps): React.JSX.Element {
 	const { t } = useTranslation();
+	const [messageApi, messageContext] = message.useMessage();
+	const [exportingFlowId, setExportingFlowId] = useState<string | null>(null);
+	const exportBusy = useRef(false);
+	const handleExport = async (flow: FlowDocumentSummary): Promise<void> => {
+		if (exportBusy.current) return;
+		exportBusy.current = true;
+		setExportingFlowId(flow.flowId);
+		try {
+			const destinationPath = await window.electronAPI.sessionFs.pickFlowExportDestination({
+				flowId: flow.flowId,
+				title: flow.title,
+				dialogTitle: t("flow.exportData.dialogTitle"),
+				buttonLabel: t("workspaceTree.exportDialog.button"),
+			});
+			if (destinationPath === null) return;
+			const result = await onExport(flow.flowId, destinationPath);
+			if (result.missingFileCount > 0)
+				void messageApi.warning(t("flow.exportData.missing", { count: result.missingFileCount }));
+			else void messageApi.success(t("flow.exportData.success"));
+		} catch (error: unknown) {
+			void messageApi.error(
+				`${t("flow.exportData.failed")}: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		} finally {
+			exportBusy.current = false;
+			setExportingFlowId(null);
+		}
+	};
 	const effectiveOrder: FlowTreeOrderUpdate = useMemo(
 		(): FlowTreeOrderUpdate => normalizeOrder(flows, workspaces, order),
 		[flows, order, workspaces],
@@ -549,6 +579,7 @@ function FlowTree({
 
 	return (
 		<div className={styles.tree}>
+			{messageContext}
 			<Tree<FlowTreeNode>
 				aria-label={t("flow.tree.label")}
 				blockNode
@@ -567,6 +598,8 @@ function FlowTree({
 						const flow: FlowDocumentSummary | undefined = flowById.get(node.flowId);
 						return flow === undefined ? null : (
 							<FlowTreeItem
+								onExport={handleExport}
+								exportingFlowId={exportingFlowId}
 								flow={flow}
 								isSelected={flow.flowId === selectedFlowId}
 								isUnread={unreadFlowIdSet.has(flow.flowId)}
@@ -633,21 +666,21 @@ function FlowTree({
 								<span className={styles.workspaceMenuItem}>
 									<span className={styles.workspaceTitle}>{workspace.name}</span>
 									<span
-									className={styles.workspaceActions}
-									draggable={false}
-									onMouseDown={(event: MouseEvent<HTMLElement>): void => event.stopPropagation()}
-									onPointerDown={(event): void => event.stopPropagation()}
-									onDragStart={(event: DragEvent<HTMLElement>): void => {
-										event.preventDefault();
-										event.stopPropagation();
-									}}
+										className={styles.workspaceActions}
+										draggable={false}
+										onMouseDown={(event: MouseEvent<HTMLElement>): void => event.stopPropagation()}
+										onPointerDown={(event): void => event.stopPropagation()}
+										onDragStart={(event: DragEvent<HTMLElement>): void => {
+											event.preventDefault();
+											event.stopPropagation();
+										}}
 									>
 										<Tooltip title={t("flow.actions.newInWorkspace")}>
 											<Button
 												type="text"
 												shape="circle"
 												size="small"
-														aria-label={t("flow.aria.newInWorkspace", {
+												aria-label={t("flow.aria.newInWorkspace", {
 													workspaceName: workspace.name,
 												})}
 												className={styles.workspaceActionButton}
@@ -655,7 +688,7 @@ function FlowTree({
 												onClick={(event: MouseEvent<HTMLElement>): void => {
 													event.preventDefault();
 													event.stopPropagation();
-															onWorkspaceNewFlow(workspace);
+													onWorkspaceNewFlow(workspace);
 												}}
 											/>
 										</Tooltip>
@@ -777,6 +810,8 @@ function sourceForUnpinnedFlow(flow: FlowDocumentSummary): FlowBucket {
 }
 
 type FlowTreeItemProps = {
+	onExport: (flow: FlowDocumentSummary) => Promise<void>;
+	exportingFlowId: string | null;
 	flow: FlowDocumentSummary;
 	isSelected: boolean;
 	isUnread: boolean;
@@ -789,6 +824,8 @@ type FlowTreeItemProps = {
 };
 
 function FlowTreeItem({
+	onExport,
+	exportingFlowId,
 	flow,
 	isSelected,
 	isUnread,
@@ -824,6 +861,12 @@ function FlowTreeItem({
 				icon: <Icon name="archive" />,
 				disabled: isMutating || isRunning,
 			},
+			{
+				key: "export",
+				label: t(exportingFlowId === flow.flowId ? "flow.exportData.exporting" : "flow.actions.exportData"),
+				icon: exportingFlowId === flow.flowId ? <Spin size="small" /> : <Icon name="export" />,
+				disabled: exportingFlowId !== null,
+			},
 		],
 		onClick: ({ key, domEvent }): void => {
 			domEvent.preventDefault();
@@ -831,6 +874,7 @@ function FlowTreeItem({
 			if (key === "pin") onTogglePin();
 			if (key === "rename") onRenameStart();
 			if (key === "archive") onArchive(flow);
+			if (key === "export") void onExport(flow);
 		},
 	};
 	return (

@@ -54,6 +54,7 @@ export function installFlowPerformanceScenario(backend: MockBackend, count: numb
 	const outputDefinition = {
 		...definition,
 		typeId: "builtin/output",
+		terminal: true,
 		pluginFingerprint: "perf:output:1",
 		defaultTitle: "Output",
 	};
@@ -78,6 +79,7 @@ export function installFlowPerformanceScenario(backend: MockBackend, count: numb
 		y: Math.floor(index / 20) * 310,
 		width: 320,
 		height: 240,
+		collapsed: false,
 		config: { ...definition.defaultConfig, text: `Node ${index}` },
 		ports: [input, output],
 		status: "idle",
@@ -184,7 +186,7 @@ export function installFlowPerformanceScenario(backend: MockBackend, count: numb
 				flow.graphRevision++;
 			}
 			if (operation.kind === "viewport.update") flow.viewport = operation.payload as typeof flow.viewport;
-			if (operation.kind === "node.move" || operation.kind === "node.resize") {
+			if (operation.kind === "node.move" || operation.kind === "node.resize" || operation.kind === "node.collapse") {
 				const node = nodes.find((candidate) => candidate.nodeId === operation.payload.nodeId);
 				if (node) Object.assign(node, operation.payload);
 			}

@@ -1,0 +1,722 @@
+[
+  {
+    "typeId": "builtin/batch-text-to-image",
+    "pluginId": "builtin",
+    "pluginVersion": "4.0.0",
+    "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
+    "configVersion": 4,
+    "category": "media",
+    "modelCapability": "imageGeneration",
+    "batch": true,
+    "terminal": false,
+    "workspaceRequired": false,
+    "sideEffecting": false,
+    "executable": true,
+    "cachePolicy": "never",
+    "defaultTitle": "Batch Text to Image",
+    "defaultConfig": {
+      "provider": "",
+      "model": "",
+      "outputFormat": "png"
+    },
+    "configSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "x-daedalus-control": "provider"
+        },
+        "model": {
+          "type": "string",
+          "x-daedalus-control": "model"
+        },
+        "outputFormat": {
+          "type": "string",
+          "enum": [
+            "png",
+            "jpeg",
+            "webp"
+          ]
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "outputFormat"
+      ],
+      "additionalProperties": false
+    },
+    "summaryFields": [],
+    "ui": {
+      "kind": "schema"
+    },
+    "parameters": [
+      {
+        "id": "rows",
+        "label": "rows",
+        "mode": "connection",
+        "dataTypes": [
+          "json"
+        ],
+        "cardinality": "many",
+        "required": true,
+        "multiple": false,
+        "defaultConnect": true
+      },
+      {
+        "id": "provider",
+        "label": "provider",
+        "mode": "fixed",
+        "configField": "provider"
+      },
+      {
+        "id": "model",
+        "label": "model",
+        "mode": "fixed",
+        "configField": "model"
+      },
+      {
+        "id": "outputFormat",
+        "label": "outputFormat",
+        "mode": "fixed",
+        "configField": "outputFormat"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "images",
+        "label": "images",
+        "dataTypes": [
+          "image"
+        ],
+        "cardinality": "many",
+        "defaultConnect": true
+      },
+      {
+        "id": "report",
+        "label": "report",
+        "dataTypes": [
+          "json"
+        ],
+        "cardinality": "one",
+        "defaultConnect": true
+      }
+    ]
+  },
+  {
+    "typeId": "builtin/image-composite",
+    "pluginId": "builtin",
+    "pluginVersion": "4.0.0",
+    "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
+    "configVersion": 4,
+    "category": "media",
+    "terminal": false,
+    "workspaceRequired": false,
+    "sideEffecting": false,
+    "executable": true,
+    "cachePolicy": "always",
+    "defaultTitle": "Image Composite",
+    "defaultConfig": {
+      "x": 0,
+      "y": 0,
+      "opacity": 1
+    },
+    "configSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16000
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16000
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "opacity"
+      ],
+      "additionalProperties": false
+    },
+    "summaryFields": [],
+    "ui": {
+      "kind": "schema"
+    },
+    "parameters": [
+      {
+        "id": "image",
+        "label": "image",
+        "mode": "connection",
+        "dataTypes": [
+          "image"
+        ],
+        "cardinality": "one-or-many",
+        "required": true,
+        "multiple": false,
+        "defaultConnect": true
+      },
+      {
+        "id": "overlay",
+        "label": "overlay",
+        "mode": "connection",
+        "dataTypes": [
+          "image"
+        ],
+        "cardinality": "one",
+        "required": true,
+        "multiple": false,
+        "defaultConnect": true
+      },
+      {
+        "id": "x",
+        "label": "x",
+        "mode": "hybrid",
+        "configField": "x",
+        "dataTypes": [
+          "number"
+        ],
+        "required": true,
+        "multiple": false,
+        "defaultConnect": false,
+        "hideControlWhenConnected": true
+      },
+      {
+        "id": "y",
+        "label": "y",
+        "mode": "hybrid",
+        "configField": "y",
+        "dataTypes": [
+          "number"
+        ],
+        "required": true,
+        "multiple": false,
+        "defaultConnect": false,
+        "hideControlWhenConnected": true
+      },
+      {
+        "id": "opacity",
+        "label": "opacity",
+        "mode": "hybrid",
+        "configField": "opacity",
+        "dataTypes": [
+          "number"
+        ],
+        "required": true,
+        "multiple": false,
+        "defaultConnect": false,
+        "hideControlWhenConnected": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "images",
+        "label": "images",
+        "dataTypes": [
+          "image"
+        ],
+        "cardinality": "many",
+        "defaultConnect": true
+      }
+    ]
+  },
+  {
+    "typeId": "builtin/image-input",
+    "pluginId": "builtin",
+    "pluginVersion": "4.0.0",
+    "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
+    "configVersion": 4,
+    "category": "media",
+    "terminal": false,
+    "workspaceRequired": true,
+    "sideEffecting": false,
+    "executable": true,
+    "cachePolicy": "never",
+    "defaultTitle": "Image Input",
+    "defaultConfig": {
+      "path": ""
+    },
+    "configSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "maxLength": 4000,
+          "x-daedalus-control": "workspace-file"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "summaryFields": [],
+    "ui": {
+      "kind": "schema"
+    },
+    "parameters": [
+      {
+        "id": "path",
+        "label": "path",
+        "mode": "fixed",
+        "configField": "path"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "image",
+        "label": "image",
+        "dataTypes": [
+          "image"
+        ],
+        "cardinality": "one",
+        "defaultConnect": true
+      },
+      {
+        "id": "size",
+        "label": "size",
+        "dataTypes": [
+          "size"
+        ],
+        "cardinality": "one",
+        "defaultConnect": true
+      }
+    ]
+  },
+  {
+    "typeId": "builtin/image-resize",
+    "pluginId": "builtin",
+    "pluginVersion": "4.0.0",
+    "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
+    "configVersion": 4,
+    "category": "media",
+    "terminal": false,
+    "workspaceRequired": false,
+    "sideEffecting": false,
+    "executable": true,
+    "cachePolicy": "always",
+    "defaultTitle": "Image Resize",
+    "defaultConfig": {
+      "width": 1024,
+      "height": 1024,
+      "fit": "contain",
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 0
+      }
+    },
+    "configSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16000
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16000
+        },
+        "fit": {
+          "type": "string",
+          "enum": [
+            "contain",
+            "cover",
+            "fill"
+          ]
+        },
+        "background": {
+          "type": "object",
+          "properties": {
+            "r": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "g": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "b": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "a": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [
+            "r",
+            "g",
+            "b",
+            "a"
+          ],
+          "additionalProperties": false,
+          "x-daedalus-control": "color"
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "fit",
+        "background"
+      ],
+      "additionalProperties": false
+    },
+    "summaryFields": [],
+    "ui": {
+      "kind": "schema"
+    },
+    "parameters": [
+      {
+        "id": "image",
+        "label": "image",
+        "mode": "connection",
+        "dataTypes": [
+          "image"
+        ],
+        "cardinality": "one-or-many",
+        "required": true,
+        "multiple": false,
+        "defaultConnect": true
+      },
+      {
+        "id": "size",
+        "label": "size",
+        "mode": "connection",
+        "dataTypes": [
+          "size"
+        ],
+        "cardinality": "one",
+        "required": false,
+        "multiple": false,
+        "defaultConnect": false
+      },
+      {
+        "id": "width",
+        "label": "width",
+        "mode": "hybrid",
+        "configField": "width",
+        "dataTypes": [
+          "number"
+        ],
+        "required": true,
+        "multiple": false,
+        "defaultConnect": false,
+        "hideControlWhenConnected": true
+      },
+      {
+        "id": "height",
+        "label": "height",
+        "mode": "hybrid",
+        "configField": "height",
+        "dataTypes": [
+          "number"
+        ],
+        "required": true,
+        "multiple": false,
+        "defaultConnect": false,
+        "hideControlWhenConnected": true
+      },
+      {
+        "id": "fit",
+        "label": "fit",
+        "mode": "fixed",
+        "configField": "fit"
+      },
+      {
+        "id": "background",
+        "label": "background",
+        "mode": "hybrid",
+        "configField": "background",
+        "dataTypes": [
+          "color"
+        ],
+        "required": true,
+        "multiple": false,
+        "defaultConnect": false,
+        "hideControlWhenConnected": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "images",
+        "label": "images",
+        "dataTypes": [
+          "image"
+        ],
+        "cardinality": "many",
+        "defaultConnect": true
+      }
+    ]
+  },
+  {
+    "typeId": "builtin/media-output",
+    "pluginId": "builtin",
+    "pluginVersion": "4.0.0",
+    "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
+    "configVersion": 4,
+    "category": "media",
+    "terminal": true,
+    "workspaceRequired": false,
+    "sideEffecting": false,
+    "executable": true,
+    "cachePolicy": "always",
+    "defaultTitle": "Media Output",
+    "defaultConfig": {
+      "format": "preview"
+    },
+    "configSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "format": {
+          "default": "preview",
+          "type": "string",
+          "enum": [
+            "preview",
+            "download",
+            "workspace"
+          ]
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "additionalProperties": false
+    },
+    "summaryFields": [
+      "format"
+    ],
+    "ui": {
+      "kind": "schema"
+    },
+    "parameters": [
+      {
+        "id": "input",
+        "label": "Media",
+        "mode": "connection",
+        "dataTypes": [
+          "image",
+          "video",
+          "audio",
+          "frames",
+          "artifact"
+        ],
+        "required": true,
+        "multiple": false,
+        "defaultConnect": true,
+        "cardinality": "one-or-many"
+      },
+      {
+        "id": "format",
+        "label": "Display mode",
+        "mode": "fixed",
+        "configField": "format"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "typeId": "builtin/parameter-sets",
+    "pluginId": "builtin",
+    "pluginVersion": "4.0.0",
+    "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
+    "configVersion": 4,
+    "category": "collections",
+    "terminal": false,
+    "workspaceRequired": false,
+    "sideEffecting": false,
+    "executable": true,
+    "cachePolicy": "always",
+    "defaultTitle": "Parameter Sets",
+    "defaultConfig": {
+      "rows": [
+        {
+          "id": "row-1",
+          "prompt": "",
+          "negativePrompt": "",
+          "width": 1024,
+          "height": 1024,
+          "count": 1
+        }
+      ]
+    },
+    "configSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "rows": {
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+              },
+              "prompt": {
+                "type": "string",
+                "maxLength": 32000
+              },
+              "negativePrompt": {
+                "default": "",
+                "type": "string",
+                "maxLength": 8000
+              },
+              "seed": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "width": {
+                "default": 1024,
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16000
+              },
+              "height": {
+                "default": 1024,
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16000
+              },
+              "count": {
+                "default": 1,
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4
+              }
+            },
+            "required": [
+              "id",
+              "prompt",
+              "negativePrompt",
+              "width",
+              "height",
+              "count"
+            ],
+            "additionalProperties": false
+          },
+          "x-daedalus-control": "parameter-sets"
+        }
+      },
+      "required": [
+        "rows"
+      ],
+      "additionalProperties": false
+    },
+    "summaryFields": [],
+    "ui": {
+      "kind": "schema"
+    },
+    "parameters": [
+      {
+        "id": "rows",
+        "label": "rows",
+        "mode": "fixed",
+        "configField": "rows"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "rows",
+        "label": "rows",
+        "dataTypes": [
+          "json"
+        ],
+        "cardinality": "many",
+        "defaultConnect": true
+      }
+    ]
+  },
+  {
+    "typeId": "builtin/save-images",
+    "pluginId": "builtin",
+    "pluginVersion": "4.0.0",
+    "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
+    "configVersion": 4,
+    "category": "workspace",
+    "terminal": true,
+    "workspaceRequired": true,
+    "sideEffecting": true,
+    "executable": true,
+    "cachePolicy": "never",
+    "defaultTitle": "Save Images",
+    "defaultConfig": {
+      "directory": "outputs",
+      "fileName": "{runId}-{index}"
+    },
+    "configSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "directory": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "fileName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        }
+      },
+      "required": [
+        "directory",
+        "fileName"
+      ],
+      "additionalProperties": false
+    },
+    "summaryFields": [],
+    "ui": {
+      "kind": "schema"
+    },
+    "parameters": [
+      {
+        "id": "images",
+        "label": "images",
+        "mode": "connection",
+        "dataTypes": [
+          "image"
+        ],
+        "cardinality": "one-or-many",
+        "required": true,
+        "multiple": false,
+        "defaultConnect": true
+      },
+      {
+        "id": "directory",
+        "label": "directory",
+        "mode": "fixed",
+        "configField": "directory"
+      },
+      {
+        "id": "fileName",
+        "label": "fileName",
+        "mode": "fixed",
+        "configField": "fileName"
+      }
+    ],
+    "outputs": []
+  }
+]

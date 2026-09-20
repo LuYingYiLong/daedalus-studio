@@ -114,12 +114,16 @@ export async function openSessionDirectory(
 	return { opened: true };
 }
 
-export async function pickSessionExportDestination(
-	params: SessionFsPickExportDestinationParams,
-	owner?: BrowserWindow,
-	options: SessionFsPickExportDestinationOptions = {}
-): Promise<string | null> {
-	if (!SESSION_ID_PATTERN.test(params.sessionId)) {
+export async function pickSessionExportDestination(params: SessionFsPickExportDestinationParams, owner?: BrowserWindow, options: SessionFsPickExportDestinationOptions = {}): Promise<string | null> {
+	return pickDocumentExportDestination(params, owner, options, "session");
+}
+
+export async function pickFlowExportDestination(params: { flowId: string; title: string; dialogTitle?: string; buttonLabel?: string }, owner?: BrowserWindow, options: SessionFsPickExportDestinationOptions = {}): Promise<string | null> {
+	return pickDocumentExportDestination({ ...params, sessionId: params.flowId }, owner, options, "flow");
+}
+
+async function pickDocumentExportDestination(params: SessionFsPickExportDestinationParams, owner: BrowserWindow | undefined, options: SessionFsPickExportDestinationOptions, kind: "session" | "flow"): Promise<string | null> {
+	if (!(kind === "flow" ? /^flow-[A-Za-z0-9_-]+$/u : SESSION_ID_PATTERN).test(params.sessionId)) {
 		throw new Error("Invalid session id.");
 	}
 	if (typeof params.title !== "string" || params.title.length > 500) {
@@ -134,7 +138,7 @@ export async function pickSessionExportDestination(
 	const documentsDirectory: string = options.documentsDirectory ?? app.getPath("documents");
 	const showSaveDialog = options.showSaveDialog ?? showSessionExportSaveDialog;
 	const result: SaveDialogReturnValue = await showSaveDialog(owner, {
-		title: params.dialogTitle?.trim() || "Export session data",
+		title: params.dialogTitle?.trim() || (kind === "flow" ? "Export Flow data" : "Export session data"),
 		defaultPath: join(documentsDirectory, sanitizeExportFileName(params.title, params.sessionId)),
 		buttonLabel: params.buttonLabel?.trim() || "Export",
 		filters: [{ name: "SQLite Database", extensions: ["sqlite"] }],
@@ -175,6 +179,9 @@ export async function pickSessionImportSource(
 export function registerSessionFsIpc(): void {
 	ipcMain.handle("session-fs:open-directory", async (_event, sessionId: string): Promise<SessionFsOpenDirectoryResult> => {
 		return openSessionDirectory(sessionId);
+	});
+	ipcMain.handle("flow-fs:pick-export-destination", async (event, params: Parameters<typeof pickFlowExportDestination>[0]): Promise<string | null> => {
+		return pickFlowExportDestination(params, BrowserWindow.fromWebContents(event.sender) ?? undefined);
 	});
 	ipcMain.handle("session-fs:pick-export-destination", async (event, params: SessionFsPickExportDestinationParams): Promise<string | null> => {
 		return pickSessionExportDestination(params, BrowserWindow.fromWebContents(event.sender) ?? undefined);

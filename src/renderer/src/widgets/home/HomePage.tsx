@@ -733,6 +733,7 @@ function HomePage({
 		onWorkspaceProjectCreated,
 	};
 	const flowTreeProps = {
+		onExport: flowController.exportFlowDataById,
 		flows: flowController.flows,
 		workspaces: workspaceOptionsInTreeOrder,
 		selectedFlowId: flowController.snapshot?.flow.flowId ?? null,

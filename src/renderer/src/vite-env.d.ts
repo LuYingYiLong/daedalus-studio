@@ -344,6 +344,7 @@ declare global {
 	}
 
 	interface SessionFsAPI {
+		pickFlowExportDestination: (params: { flowId: string; title: string; dialogTitle?: string; buttonLabel?: string }) => Promise<string | null>;
 		openSessionDirectory: (sessionId: string) => Promise<{ opened: true }>;
 		pickExportDestination: (params: {
 			sessionId: string;

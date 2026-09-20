@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createReadStream, existsSync } from "node:fs";
 import {
+	cp,
 	copyFile,
 	mkdir,
 	open,
@@ -577,11 +578,16 @@ const POWERSHELL_EXTRACT_SCRIPT: string = [
 	"  $allowed = @('daedalus-backend.exe', 'daedalus-windows-sandbox-helper.exe', 'backend-manifest.json')",
 	"  $seen = @{}",
 	"  foreach ($entry in $archive.Entries) {",
-	"    if ($entry.FullName -notin $allowed -or $seen.ContainsKey($entry.FullName)) {",
+	"    $name = $entry.FullName.Replace('\\', '/')",
+ "    $media = $name -match '^media/[a-zA-Z0-9@_.+/-]+$' -and $name -notmatch '(^|/)\\.\\.?(/|$)'",
+ "    if (($name -notin $allowed -and -not $media) -or $seen.ContainsKey($name)) {",
 	"      throw \"Unexpected or duplicate backend archive entry: $($entry.FullName)\"",
 	"    }",
-	"    $seen[$entry.FullName] = $true",
-	"    $target = Join-Path $env:DAEDALUS_EXTRACT_DIR $entry.FullName",
+	"    $seen[$name] = $true",
+ "    if ($seen.Count -gt 5000 -or $entry.Length -gt 268435456) { throw \"Backend archive limit exceeded\" }",
+	"    $target = Join-Path $env:DAEDALUS_EXTRACT_DIR $name",
+ "    if ($name.EndsWith('/')) { [System.IO.Directory]::CreateDirectory($target) | Out-Null; continue }",
+ "    [System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($target)) | Out-Null",
 	"    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $false)",
 	"  }",
 	"  foreach ($required in $allowed) {",
@@ -599,7 +605,7 @@ async function extractBackendArchive(archivePath: string, destinationDir: string
                 }
                 const entries: string[] = listing.stdout.split(/\r?\n/u).map((entry) => entry.trim()).filter(Boolean);
                 const allowedEntries: string[] = [EXECUTABLE_FILE_NAME, PAYLOAD_MANIFEST_FILE_NAME];
-                if (entries.length !== allowedEntries.length || entries.some((entry) => !allowedEntries.includes(entry))) {
+                if (entries.length > 5000 || new Set(entries).size !== entries.length || allowedEntries.some(entry => !entries.includes(entry)) || entries.some(entry => !allowedEntries.includes(entry) && (!/^media\/[a-zA-Z0-9@_.+/-]+$/u.test(entry) || entry.split("/").some(part => part === "." || part === "..")))) {
                         throw new Error("Unexpected backend archive entries.");
                 }
                 const result: CommandResult = await runCommand("unzip", ["-q", archivePath, "-d", destinationDir], { env: process.env, timeoutMs: 60000 });
@@ -607,6 +613,7 @@ async function extractBackendArchive(archivePath: string, destinationDir: string
                         throw new Error(result.stderr.trim() || result.stdout.trim() || "Failed to extract backend archive.");
                 }
                 await chmod(join(destinationDir, EXECUTABLE_FILE_NAME), 0o755);
+                if (existsSync(join(destinationDir, "media/node"))) await chmod(join(destinationDir, "media/node"), 0o755);
                 return;
         }
         const result: CommandResult = await runCommand(
@@ -720,6 +727,8 @@ export async function stageBundledBackend(): Promise<InstalledBackendBinary> {
         try {
                 const targetExecutablePath: string = join(stagingDir, EXECUTABLE_FILE_NAME);
                 await copyFile(bundled.executablePath, targetExecutablePath);
+                const mediaRoot = join(dirname(bundled.executablePath), "media");
+                if (existsSync(mediaRoot)) await cp(mediaRoot, join(stagingDir, "media"), { recursive: true, dereference: true });
                 await chmod(targetExecutablePath, 0o755);
                 if (bundled.sandboxHelperPath !== null) {
                         await copyFile(bundled.sandboxHelperPath, join(stagingDir, SANDBOX_HELPER_FILE_NAME));
