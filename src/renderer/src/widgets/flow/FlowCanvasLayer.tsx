@@ -240,6 +240,23 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 			curves.set(edge.id, curve);
 			return curve;
 		};
+		const scheduleSettle = (): void => {
+			clearTimeout(settleTimer);
+			clearTimeout(qualityTimer);
+			settleTimer = window.setTimeout(() => {
+				moving = false;
+				runtime.canvas.interaction = false;
+				detail = runtime.canvas.updateDetail(xyStore.getState().transform[2]);
+				upgrade();
+				scheduleDraw();
+			}, 150);
+			qualityTimer = window.setTimeout(() => {
+				highQuality = true;
+				// 即使 DPR/zoom 相同，也要烘焙最终平移，避免长期缩放或亚像素平移旧位图
+				visualDirty = true;
+				scheduleDraw();
+			}, 500);
+		};
 		function draw(): void {
 			frame = 0;
 			if (disposed) return;
@@ -251,20 +268,10 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 			if (lastTransform !== transform) {
 				lastTransform = transform;
 				moving = true;
+				highQuality = false;
 				runtime.canvas.interaction = true;
-				clearTimeout(settleTimer);
-				clearTimeout(qualityTimer);
 				cancelAnimationFrame(upgradeFrame);
-				settleTimer = window.setTimeout(() => {
-					moving = false;
-					runtime.canvas.interaction = false;
-					detail = runtime.canvas.updateDetail(zoom);
-					upgrade();
-				}, 150);
-				qualityTimer = window.setTimeout(() => {
-					highQuality = true;
-					scheduleDraw();
-				}, 500);
+				scheduleSettle();
 			}
 			if (contentDirty && !moving) {
 				contentDirty = false;
@@ -476,20 +483,7 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 				scheduleDraw();
 			}
 		};
-		const pointerUp = (): void => {
-			clearTimeout(settleTimer);
-			clearTimeout(qualityTimer);
-			settleTimer = window.setTimeout(() => {
-				moving = false;
-				runtime.canvas.interaction = false;
-				detail = runtime.canvas.updateDetail(xyStore.getState().transform[2]);
-				upgrade();
-			}, 150);
-			qualityTimer = window.setTimeout(() => {
-				highQuality = true;
-				scheduleDraw();
-			}, 500);
-		};
+		const pointerUp = (): void => scheduleSettle();
 		const wheel = (): void => {
 			highQuality = false;
 			cancelAnimationFrame(upgradeFrame);
@@ -529,6 +523,9 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 		host.addEventListener("pointerdown", pointerDown, true);
 		host.addEventListener("wheel", wheel, { passive: true });
 		window.addEventListener("pointerup", pointerUp);
+		window.addEventListener("pointercancel", pointerUp);
+		window.addEventListener("blur", pointerUp);
+		window.addEventListener("resize", scheduleSettle);
 		scheduleDraw();
 		return () => {
 			disposed = true;
@@ -546,6 +543,9 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 			host.removeEventListener("pointerdown", pointerDown, true);
 			host.removeEventListener("wheel", wheel);
 			window.removeEventListener("pointerup", pointerUp);
+			window.removeEventListener("pointercancel", pointerUp);
+			window.removeEventListener("blur", pointerUp);
+			window.removeEventListener("resize", scheduleSettle);
 			curves.clear();
 			titles.clear();
 			runtime.geometry.edges.clear();

@@ -13,7 +13,7 @@
 	width: 100%;
 	min-height: 176px;
 	overflow: visible;
-	border: 1px solid var(--ds-border);
+	border: 2px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);
 	background: var(--ant-color-bg-container, var(--ds-surface-elevated));
 	box-shadow: var(--ds-box-shadow);
@@ -26,16 +26,10 @@
 
 .nodeCardMatched {
 	border-color: var(--ant-color-primary);
-	box-shadow:
-		0 0 0 2px color-mix(in srgb, var(--ant-color-primary) 22%, transparent),
-		var(--ds-box-shadow);
 }
 
 .nodeCardSelected {
 	border-color: var(--ant-color-primary);
-	box-shadow:
-		0 0 0 2px color-mix(in srgb, var(--ant-color-primary) 36%, transparent),
-		var(--ds-box-shadow);
 }
 
 .header,

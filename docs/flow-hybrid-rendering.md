@@ -24,6 +24,8 @@ Canvas 与 SVG 使用同一贝塞尔算法及端点颜色，基准线宽 2px。�
 
 Canvas 仅分配视口加四周 256px 的缓冲区，位图不超过 64MiB。平移时复用缓冲区并更新合成变换，越界后补画；交互补画使用 DPR 1，静止 500ms 后恢复至 min(DPR, 2)。网格也包含在缓存内，避免 SVG pattern 每帧更新。没有节点微位移动画或定时拆卸合成层。
 
+停止交互后的清晰帧强制按最终坐标和缩放重新绘制，即使 DPR/zoom 没变也不继续平移旧位图；指针取消、窗口失焦和尺寸变化也会调度收尾。完整节点 viewport 保留 `backface-visibility: hidden`，移除常驻 `will-change: transform`，让 Chromium 能随比例变化重新栅格化文字，避免依赖节点内容变化来刷新。参考 [Chrome 的缩放栅格化说明](https://developer.chrome.com/blog/re-rastering-composite)。
+
 ## 持久化与生命周期
 
 拖动过程中没有位置操作；结束后每个移动节点产生一次最终操作，多选拖动合并为一个历史命令。viewport 保存合并且不进入内容历史。输入草稿及定时提交存于 runtime，不依赖控件是否挂载；同一次聚焦编辑的防抖提交合并为一次撤销。窗口失焦、切换 Flow、卸载时 flush。
@@ -68,3 +70,9 @@ npm run test:flow:performance:built
 概览测试现明确缩小至不高于 0.12，并断言完整控件已释放，避免把完整模式当作轮廓模式测量；正常缩放的前六段交互保持不变。本机 200 节点 / 400 边复测 p95 13.9ms / p99 20.8ms，各交互分段也通过门槛。数据和 header 截图位于 `test-results/flow-outline-header-gpu-outline/`。这不代表低 LOD 阈值下同时挂载大量控件的性能问题已经消除。
 
 参考：[XYFlow 性能建议](https://reactflow.dev/learn/advanced-use/performance)、[节点尺寸和端口几何](https://reactflow.dev/learn/advanced-use/ssr-ssg-configuration)。
+
+### 缩放清晰度回归
+
+`test:flow:performance:built` 同时运行 GPU 清晰度场景：在 0.3 倍下编辑节点、放大至 1.7 倍，不再操作节点，比较显示结果与最终比例的重新栅格化参考图，并验证短距离平移后 Canvas 的最终坐标及 DPR。修复后截图差异为 0，三个清晰度/混合渲染 E2E 通过，数据在 `test-results/flow-zoom-regression/`。同一构建的 200 节点 GPU 场景 p95 13.9ms / p99 20.9ms，各交互分段通过，数据在 `test-results/flow-zoom-quality-fixed/`。构建和类型检查通过。
+
+用户反馈的偶发文字模糊未在修复前的两次 GPU 截图中稳定复现；本次验证证明收尾重绘及所测场景的清晰度、性能，不宣称覆盖所有 GPU 的偶发现象。

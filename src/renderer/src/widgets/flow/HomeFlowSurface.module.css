@@ -155,7 +155,7 @@
 }
 
 .canvasRegion :global(.react-flow__viewport) {
-	will-change: transform;
+	/* 保留合成层，但允许缩放时按新比例栅格化节点文字 */
 	backface-visibility: hidden;
 }
 

@@ -3,7 +3,7 @@ const { resolve } = require("node:path");
 
 const result = spawnSync(process.execPath, [
 	resolve(__dirname, "../node_modules/@playwright/test/cli.js"),
-	"test", "tests/e2e/flow-performance.spec.ts", "--project=electron",
+	"test", "tests/e2e/flow-performance.spec.ts", "tests/e2e/flow-zoom-quality.spec.ts", "--project=electron",
 	"--output=test-results/flow-performance", ...process.argv.slice(2),
 ], {
 	cwd: resolve(__dirname, ".."),
