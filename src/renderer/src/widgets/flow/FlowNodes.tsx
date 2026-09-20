@@ -115,7 +115,7 @@ function MediaArtifactPreview({ artifacts }: { artifacts: FlowMediaArtifactRef[]
 		};
 	}, [artifacts]);
 	return (
-		<div className={styles.mediaPreviewList}>
+		<div className={`${styles.mediaPreviewList}${artifacts.length === 1 ? ` ${styles.singleMediaPreview}` : ""}`}>
 			{artifacts.map((artifact): React.JSX.Element => {
 				const source = sources[artifact.artifactId];
 				if (source === undefined)
@@ -895,7 +895,24 @@ function OutputRows({
 	);
 }
 
-function FlowNodeCard({ data, selected }: { data: FlowCanvasNodeData; selected: boolean }): React.JSX.Element {
+function CollapsedPorts({ ids, direction }: { ids: string[]; direction: "input" | "output" }): React.JSX.Element | null {
+	const { t } = useTranslation();
+	if (ids.length === 0) return null;
+	return (
+		<span className={`${styles.collapsedPorts} ${direction === "input" ? styles.collapsedPortsLeft : styles.collapsedPortsRight}`}
+			data-flow-collapsed-ports={direction} title={t("flow.editor.expandPorts")}>
+			{ids.map(id => (
+				<Handle key={id} id={id} type={direction === "input" ? "target" : "source"}
+					position={direction === "input" ? Position.Left : Position.Right}
+					className={styles.collapsedPortAnchor} isConnectable={false} />
+			))}
+		</span>
+	);
+}
+
+function FlowNodeCard({ data, selected, collapsed, onToggleCollapsed }: {
+	data: FlowCanvasNodeData; selected: boolean; collapsed: boolean; onToggleCollapsed: () => void;
+}): React.JSX.Element {
 	const { t } = useTranslation();
 	const nodeElement = useRef<HTMLDivElement>(null);
 	const commits = useRef(0);
@@ -908,6 +925,7 @@ function FlowNodeCard({ data, selected }: { data: FlowCanvasNodeData; selected: 
 	});
 	const runtime = useContext(FlowRenderContext);
 	const [pluginEditing, setPluginEditing] = useState(false);
+	useEffect(() => { if (collapsed) setPluginEditing(false); }, [collapsed]);
 	const { flowNode, definition } = data;
 	const updateNodeInternals = useUpdateNodeInternals();
 	const parameters = useMemo(
@@ -952,7 +970,7 @@ function FlowNodeCard({ data, selected }: { data: FlowCanvasNodeData; selected: 
 	const handleLayoutKey = `${definitionLayoutKey}:${outputs.map((output): string => output.id).join("|")}:${parameters.map((parameter): string => `${parameter.id}:${data.connectedInputIds.has(parameter.id) ? 1 : 0}`).join("|")}`;
 	useEffect(
 		(): void => updateNodeInternals(flowNode.nodeId),
-		[flowNode.nodeId, handleLayoutKey, updateNodeInternals],
+		[flowNode.nodeId, handleLayoutKey, collapsed, updateNodeInternals],
 	);
 	const isOutputNode = flowNode.typeId === "builtin/output" || flowNode.typeId === "builtin/media-output";
 	const mediaArtifacts = useMemo(
@@ -973,15 +991,26 @@ function FlowNodeCard({ data, selected }: { data: FlowCanvasNodeData; selected: 
 			? flowNode.config.label.trim()
 			: nodeTitle;
 	return (
-		<div ref={nodeElement} className={styles.nodeShell} data-flow-node-id={flowNode.nodeId}>
+		<div ref={nodeElement} className={`${styles.nodeShell} ${collapsed ? styles.nodeShellCollapsed : ""}`} data-flow-node-id={flowNode.nodeId}>
 			<BorderBeam lineWidth={2} size={256} style={{ display: nodeStatus === "running" ? undefined : "none" }}>
 				<article
-					className={`${styles.nodeCard} ${selected ? styles.nodeCardSelected : ""} ${data.matched ? styles.nodeCardMatched : ""} ${definition === null ? styles.unknownNode : ""}`}
+					className={`${styles.nodeCard} ${collapsed ? styles.nodeCardCollapsed : ""} ${selected ? styles.nodeCardSelected : ""} ${data.matched ? styles.nodeCardMatched : ""} ${definition === null ? styles.unknownNode : ""}`}
 					data-node-type={flowNode.typeId}
 					data-node-status={nodeStatus}
 				>
 					<header className={styles.header} style={{ background: flowNodeColor(flowNode.typeId) }}>
+						{collapsed ? <>
+							<CollapsedPorts ids={parameters.filter(parameter => parameter.mode !== "fixed").map(parameter => parameter.id)} direction="input" />
+							<CollapsedPorts ids={outputs.map(output => output.id)} direction="output" />
+						</> : null}
 						<div className={styles.headerTitle}>
+							<button type="button" className={`${styles.switcher} nodrag nopan`} data-flow-switcher
+								aria-expanded={!collapsed} aria-label={t(collapsed ? "flow.editor.expandNode" : "flow.editor.collapseNode")}
+								title={t(collapsed ? "flow.editor.expandNode" : "flow.editor.collapseNode")}
+								onPointerDown={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}
+								onClick={event => { event.stopPropagation(); onToggleCollapsed(); }}>
+								<Icon name="arrow-down" />
+							</button>
 							<span className={styles.role}>{nodeTitle}</span>
 						</div>
 						<div className={styles.headerActions}>
@@ -1018,7 +1047,7 @@ function FlowNodeCard({ data, selected }: { data: FlowCanvasNodeData; selected: 
 							) : null}
 						</div>
 					</header>
-					<div className={styles.body}>
+					{!collapsed ? <div className={`${styles.body}${isOutputNode ? ` ${styles.outputBody}` : ""}`}>
 						{typeof data.nodeRun?.progress === "number" && data.nodeRun.status === "running" ? (
 							<div
 								className={styles.progressTrack}
@@ -1078,7 +1107,7 @@ function FlowNodeCard({ data, selected }: { data: FlowCanvasNodeData; selected: 
 						) : null}
 						{isOutputNode ? (
 							<div
-								className={`${styles.outputResult} nodrag nowheel`}
+								className={`${styles.outputResult}${mediaArtifacts.length > 0 ? ` ${styles.outputResultMedia}` : ""} nodrag nowheel`}
 								role="region"
 								aria-label={t("flow.editor.outputResult", { defaultValue: "Output result" })}
 							>
@@ -1095,7 +1124,7 @@ function FlowNodeCard({ data, selected }: { data: FlowCanvasNodeData; selected: 
 								)}
 							</div>
 						) : null}
-					</div>
+					</div> : null}
 				</article>
 			</BorderBeam>
 		</div>

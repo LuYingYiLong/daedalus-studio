@@ -62,6 +62,7 @@ import { flowPortColor } from "./flow-port-colors";
 import FlowNodeShell, { type FlowInteractionNode as FlowCanvasNode } from "./FlowNodeShell";
 import FlowCanvasLayer from "./FlowCanvasLayer";
 import { FlowRenderRuntime } from "./flow-render-runtime";
+import { useFlowNodeLayout } from "./useFlowNodeLayout";
 import styles from "./HomeFlowSurface.module.css";
 
 export type FlowSearchHandle = {
@@ -302,6 +303,7 @@ function HomeFlowSurface({
 	const [reconnectingEdgeId, setReconnectingEdgeId] = useState<string | null>(null);
 	const reconnectingOverlayEdgeRef = useRef<string | null>(null);
 	const [snapToGrid, setSnapToGrid] = useState<boolean>((): boolean => getCachedClientPreferences().flowSnapToGrid);
+	useFlowNodeLayout(runtime, flowInstance, snapToGrid, controller.updateNodeLayouts);
 	const [runEntryByFlowId, setRunEntryByFlowId] = useState<Record<string, string>>(
 		(): Record<string, string> => getCachedClientPreferences().flowRunEntryByFlowId,
 	);
@@ -602,7 +604,9 @@ function HomeFlowSurface({
 				const previous = byId.get(node.nodeId);
 				if (
 					previous?.data.runtime === runtime &&
-					(previous.dragging || (previous.position.x === node.x && previous.position.y === node.y))
+					(previous.dragging || previous.resizing || runtime.resizingNodes.has(node.nodeId) ||
+						((runtime.animatingNodes.has(node.nodeId) || (previous.position.x === node.x && previous.position.y === node.y)) &&
+							previous.data.layoutWidth === node.width && previous.data.layoutHeight === node.height))
 				)
 					return previous;
 				return {
@@ -610,7 +614,11 @@ function HomeFlowSurface({
 					id: node.nodeId,
 					type: "flowNode",
 					position: { x: node.x, y: node.y },
-					data: previous?.data.runtime === runtime ? previous.data : { nodeId: node.nodeId, runtime },
+					width: node.width,
+					height: undefined,
+					style: { ...previous?.style, width: undefined, height: undefined, minHeight: runtime.canvas.collapsed.get(node.nodeId) ? 0 : node.height },
+					data: previous?.data.runtime === runtime && previous.data.layoutWidth === node.width && previous.data.layoutHeight === node.height
+						? previous.data : { nodeId: node.nodeId, runtime, layoutWidth: node.width, layoutHeight: node.height },
 				};
 			});
 			return next.length === current.length && next.every((node, index) => node === current[index]) ? current : next;
@@ -789,7 +797,8 @@ function HomeFlowSurface({
 		(type: FlowNodeTypeId): void => {
 			if (picker === null) return;
 			const connection = picker.connection;
-			if (connection === null) void controller.createNode(type, picker.flowPosition.x, picker.flowPosition.y);
+			const created = (nodeId: string | null): void => { if (nodeId) runtime.layout?.added([nodeId]); };
+			if (connection === null) void controller.createNode(type, picker.flowPosition.x, picker.flowPosition.y).then(created);
 			else {
 				const definition = picker.definitions.find((candidate): boolean => candidate.typeId === type);
 				const neededDirection = connection.direction === "from_existing" ? "input" : "output";
@@ -820,11 +829,11 @@ function HomeFlowSurface({
 						...connection,
 						newPort: newPort.id,
 						dataType,
-					});
+					}).then(created);
 			}
 			setPicker(null);
 		},
-		[controller, picker, snapshot?.nodes],
+		[controller, picker, runtime, snapshot?.nodes],
 	);
 	const openSearch = useCallback((selectedQuery?: string): void => {
 		setSearchQuery(selectedQuery ?? "");
@@ -887,12 +896,12 @@ function HomeFlowSurface({
 			if (target?.matches('input, textarea, [contenteditable="true"]')) return;
 			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "d") {
 				event.preventDefault();
-				controller.duplicateNodes(
+				runtime.layout?.added(controller.duplicateNodes(
 					flowInstance
 						?.getNodes()
 						.filter((node) => node.selected)
 						.map((node) => node.id) ?? [],
-				);
+				));
 				return;
 			}
 			if (event.key === "Enter") {
@@ -1424,7 +1433,10 @@ function HomeFlowSurface({
 					edgeTypes={edgeTypes}
 					defaultViewport={snapshot.flow.viewport}
 					onInit={setFlowInstance}
-					onNodeDragStart={(): void => startInteractionSample("node-drag")}
+					onNodeDragStart={(_event, node): void => {
+						runtime.layout?.cancelAnimation(node.id);
+						startInteractionSample("node-drag");
+					}}
 					onNodeDragStop={onNodeDragStop}
 					onConnect={onConnect}
 					onConnectStart={(_event, params): void => {

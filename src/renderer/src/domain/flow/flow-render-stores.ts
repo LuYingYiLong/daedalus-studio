@@ -123,6 +123,7 @@ export class FlowCanvasStore extends FlowKeyedStore<FlowNodeRenderMode> {
 	readonly popups = new Set<string>();
 	readonly pluginEditors = new Set<string>();
 	readonly composing = new Set<string>();
+	readonly collapsed = new FlowKeyedStore<boolean>();
 	readonly drafts = new FlowKeyedStore<Record<string, unknown>>();
 	readonly rawFields = new Map<string, string>();
 	private pendingDrafts = new Map<string, Draft>();
@@ -171,6 +172,7 @@ export class FlowCanvasStore extends FlowKeyedStore<FlowNodeRenderMode> {
 		this.drafts.set(id, config);
 	}
 	removeNode(id: string): void {
+		this.collapsed.delete(id);
 		for (const key of this.rawFields.keys()) if (key.startsWith(`${id}\u0000`)) this.rawFields.delete(key);
 		const draft = this.pendingDrafts.get(id);
 		if (draft?.timer) clearTimeout(draft.timer);
@@ -189,6 +191,7 @@ export class FlowCanvasStore extends FlowKeyedStore<FlowNodeRenderMode> {
 	}
 	dispose(): void {
 		this.flush();
+		this.collapsed.clear();
 		this.generation++;
 		this.pendingDrafts.clear();
 		this.drafts.clear();

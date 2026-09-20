@@ -705,6 +705,15 @@
 			"runStarting": "Starting",
 			"runSaveTimeout": "Saving Flow changes timed out. Try running again.",
 			"nodeFailed": "Node execution failed",
+			"collapseNode": "Collapse node",
+			"expandNode": "Expand node",
+			"expandPorts": "Expand the node to connect individual parameters",
+			"resizeNode": {
+				"top-left": "Resize node from top left",
+				"top-right": "Resize node from top right",
+				"bottom-left": "Resize node from bottom left",
+				"bottom-right": "Resize node from bottom right"
+			},
 			"nodeFailureFallback": "Node execution failed. No error details were provided.",
 			"addNode": "Add node",
 			"search": "Search",

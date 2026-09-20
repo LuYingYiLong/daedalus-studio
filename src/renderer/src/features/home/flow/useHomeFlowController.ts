@@ -7,6 +7,7 @@ import type { FlowDocumentSummary, FlowDocument, FlowDocumentEdge, FlowDocumentN
 import { createFlowMutationId, flowOperationOutbox } from "@/domain/flow/flow-operation-outbox";
 import { applyFlowRunFinished, markActiveFlowRead, removeUnreadFlows } from "@/domain/flow/flow-unread";
 import { FlowDocumentStore, FlowRunStore } from "@/domain/flow/flow-render-stores";
+import type { FlowLayoutUpdate } from "@/domain/flow/flow-node-layout";
 
 export type FlowNodeDetail = { node: FlowDocumentNode };
 export type FlowRunRequest = {
@@ -51,12 +52,13 @@ export type HomeFlowController = {
 	archiveFlowById: (flowId: string) => Promise<void>;
 	archiveCurrentFlow: () => Promise<void>;
 	updateFlowOrder: (order: FlowTreeOrderUpdate) => Promise<void>;
-	createNode: (type: FlowNodeTypeId, x: number, y: number) => Promise<void>;
-	createConnectedNode: (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" }) => Promise<void>;
+	createNode: (type: FlowNodeTypeId, x: number, y: number) => Promise<string | null>;
+	createConnectedNode: (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" }) => Promise<string | null>;
 	updateNode: (nodeId: string, patch: Record<string, unknown>) => Promise<void>;
 	updateNodePosition: (nodeId: string, x: number, y: number) => Promise<void>;
 	updateNodePositions: (positions: Array<{ nodeId: string; x: number; y: number }>) => void;
-	duplicateNodes: (nodeIds: string[]) => void;
+	updateNodeLayouts: (layouts: readonly FlowLayoutUpdate[], createdNodeId?: string) => void;
+	duplicateNodes: (nodeIds: string[]) => string[];
 	deleteNode: (nodeId: string) => Promise<void>;
 	createEdge: (sourceNodeId: string, targetNodeId: string, sourcePort?: string, targetPort?: string, dataType?: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact") => Promise<void>;
 	reconnectEdge: (edgeId: string, sourceNodeId: string, targetNodeId: string, sourcePort: string, targetPort: string, dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact") => Promise<void>;
@@ -741,23 +743,25 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	}, []);
 
 	const createNode = useCallback(
-		async (type: FlowNodeTypeId, x: number, y: number): Promise<void> => {
+		async (type: FlowNodeTypeId, x: number, y: number): Promise<string | null> => {
 			const current = snapshotRef.current;
-			if (current === null || isGraphLocked) return;
+			if (current === null || isGraphLocked) return null;
 			const definition = nodeDefinitions.find((candidate): boolean => candidate.typeId === type);
-			if (definition === undefined) return;
+			if (definition === undefined) return null;
 			const config = { ...definition.defaultConfig, ...(type === "builtin/llm" ? { provider: defaultFlow.provider ?? "", model: defaultFlow.model ?? "", reasoningEffort: defaultFlow.reasoningEffort ?? "" } : {}) };
-			applyOperation({ mutationId: createFlowMutationId(), kind: "node.create", baseGraphRevision: current.flow.graphRevision, payload: { nodeId: `node-${crypto.randomUUID()}`, typeId: type, title: definition.defaultTitle, x, y, config } });
+			const nodeId = `node-${crypto.randomUUID()}`;
+			applyOperation({ mutationId: createFlowMutationId(), kind: "node.create", baseGraphRevision: current.flow.graphRevision, payload: { nodeId, typeId: type, title: definition.defaultTitle, x, y, config } });
+			return nodeId;
 		},
 		[applyOperation, defaultFlow.model, defaultFlow.provider, defaultFlow.reasoningEffort, isGraphLocked, nodeDefinitions],
 	);
 
 	const createConnectedNode = useCallback(
-		async (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" }): Promise<void> => {
+		async (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" }): Promise<string | null> => {
 			const current = snapshotRef.current;
-			if (current === null || isGraphLocked) return;
+			if (current === null || isGraphLocked) return null;
 			const definition = nodeDefinitions.find((candidate): boolean => candidate.typeId === params.type);
-			if (definition === undefined) return;
+			if (definition === undefined) return null;
 			const nodeId = `node-${crypto.randomUUID()}`;
 			const config = { ...definition.defaultConfig, ...(params.type === "builtin/llm" ? { provider: defaultFlow.provider ?? "", model: defaultFlow.model ?? "", reasoningEffort: defaultFlow.reasoningEffort ?? "" } : {}) };
 			const createOperation: FlowOperation = { mutationId: createFlowMutationId(), kind: "node.create", baseGraphRevision: current.flow.graphRevision, payload: { nodeId, typeId: params.type, title: definition.defaultTitle, x: params.x, y: params.y, config } };
@@ -765,6 +769,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			const targetNodeId = params.direction === "from_existing" ? nodeId : params.existingNodeId;
 			const edgeOperation: FlowOperation = { mutationId: createFlowMutationId(), kind: "edge.create", baseGraphRevision: current.flow.graphRevision, payload: { edgeId: `edge-${crypto.randomUUID()}`, sourceNodeId, sourcePort: params.direction === "from_existing" ? params.existingPort : params.newPort, targetNodeId, targetPort: params.direction === "from_existing" ? params.newPort : params.existingPort, dataType: params.dataType } };
 			applyOperations([createOperation, edgeOperation]);
+			return nodeId;
 		},
 		[applyOperations, defaultFlow.model, defaultFlow.provider, defaultFlow.reasoningEffort, isGraphLocked, nodeDefinitions],
 	);
@@ -790,15 +795,43 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		const current = snapshotRef.current; if (!current || !positions.length) return;
 		applyOperations(positions.map(payload => ({ mutationId: createFlowMutationId(), kind: "node.move", baseLayoutRevision: current.flow.layoutRevision, payload })));
 	}, [applyOperations]);
-	const duplicateNodes = useCallback((nodeIds: string[]): void => {
-		const current = snapshotRef.current; if (!current || isGraphLocked) return;
+	const updateNodeLayouts = useCallback((layouts: readonly FlowLayoutUpdate[], createdNodeId?: string): void => {
+		const current = snapshotRef.current;
+		if (!current) return;
 		const operations: FlowOperation[] = [];
+		for (const layout of layouts) {
+			const node = current.nodes.find(candidate => candidate.nodeId === layout.nodeId);
+			if (!node) continue;
+			if (node.x !== layout.x || node.y !== layout.y)
+				operations.push({ mutationId: createFlowMutationId(), kind: "node.move", baseLayoutRevision: current.flow.layoutRevision, payload: { nodeId: node.nodeId, x: layout.x, y: layout.y } });
+			if (layout.width !== undefined && layout.height !== undefined && (node.width !== layout.width || node.height !== layout.height))
+				operations.push({ mutationId: createFlowMutationId(), kind: "node.resize", baseLayoutRevision: current.flow.layoutRevision, payload: { nodeId: node.nodeId, width: layout.width, height: layout.height } });
+		}
+		if (operations.length) {
+			const creation = undoStackRef.current.at(-1);
+			const append = createdNodeId !== undefined && creation?.redo.some(operation => operation.kind === "node.create" && operation.payload.nodeId === createdNodeId);
+			applyOperations(operations);
+			if (append && creation) {
+				const layout = undoStackRef.current.at(-1)!;
+				undoStackRef.current = [...undoStackRef.current.slice(0, -2), {
+					undo: [...layout.undo, ...creation.undo], redo: [...creation.redo, ...layout.redo],
+				}];
+			}
+		}
+	}, [applyOperations]);
+	const duplicateNodes = useCallback((nodeIds: string[]): string[] => {
+		const current = snapshotRef.current; if (!current || isGraphLocked) return [];
+		const operations: FlowOperation[] = [];
+		const created: string[] = [];
 		for (const id of nodeIds) {
 			const node = current.nodes.find(candidate => candidate.nodeId === id); if (!node) continue;
 			const nodeId = `node-${crypto.randomUUID()}`;
+			created.push(nodeId);
 			operations.push({ mutationId: createFlowMutationId(), kind: "node.create", baseGraphRevision: current.flow.graphRevision, payload: { nodeId, typeId: node.typeId, title: node.title, config: structuredClone(node.config), x: node.x + 24, y: node.y + 24 } });
+			operations.push({ mutationId: createFlowMutationId(), kind: "node.resize", baseLayoutRevision: current.flow.layoutRevision, payload: { nodeId, width: node.width, height: node.height } });
 		}
 		if (operations.length) applyOperations(operations);
+		return created;
 	}, [applyOperations, isGraphLocked]);
 
 	const deleteNode = useCallback(
@@ -1051,6 +1084,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		updateNode,
 		updateNodePosition,
 		updateNodePositions,
+		updateNodeLayouts,
 		duplicateNodes,
 		deleteNode,
 		createEdge,

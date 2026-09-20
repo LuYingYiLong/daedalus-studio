@@ -169,13 +169,22 @@ export function installFlowPerformanceScenario(backend: MockBackend, count: numb
 			params as { operations: Array<{ mutationId: string; kind: string; payload: Record<string, unknown> }> }
 		).operations;
 		for (const operation of operations) {
+			if (operation.kind === "node.create") {
+				nodes.push({ ...structuredClone(nodes[0]!), ...operation.payload, typeId: String(operation.payload.typeId),
+					nodeId: String(operation.payload.nodeId), x: Number(operation.payload.x), y: Number(operation.payload.y),
+					width: 300, height: 180, config: { ...definition.defaultConfig, ...operation.payload.config as object } });
+			}
+			if (operation.kind === "node.delete") {
+				const index = nodes.findIndex(node => node.nodeId === operation.payload.nodeId);
+				if (index >= 0) nodes.splice(index, 1);
+			}
 			if (operation.kind === "node.update") {
 				const node = nodes.find(candidate => candidate.nodeId === operation.payload.nodeId);
 				if (node && operation.payload.config) node.config = operation.payload.config as typeof node.config;
 				flow.graphRevision++;
 			}
 			if (operation.kind === "viewport.update") flow.viewport = operation.payload as typeof flow.viewport;
-			if (operation.kind === "node.move") {
+			if (operation.kind === "node.move" || operation.kind === "node.resize") {
 				const node = nodes.find((candidate) => candidate.nodeId === operation.payload.nodeId);
 				if (node) Object.assign(node, operation.payload);
 			}

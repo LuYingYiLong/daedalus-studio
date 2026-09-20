@@ -610,6 +610,21 @@ test.describe("Daedalus Flow node workflow", () => {
 		);
 		expect(starterSourceColor).not.toBe(starterTargetColor);
 		expect(starterGradientColors).toEqual([starterSourceColor, starterTargetColor]);
+		await starterFlowInput.getByRole("button", { name: /Collapse node|折叠节点/ }).click();
+		await starterUserPrompt.getByRole("button", { name: /Collapse node|折叠节点/ }).click();
+		await expect(starterFlowInput.locator('[data-flow-collapsed-ports="input"]')).toHaveCount(0);
+		await expect(starterFlowInput.locator('[data-flow-collapsed-ports="output"]')).toHaveCount(1);
+		await expect(starterUserPrompt.locator('[data-flow-collapsed-ports]')).toHaveCount(2);
+		await expect.poll(async () => {
+			const foldedSource = (await starterFlowInput.locator('[data-flow-collapsed-ports="output"]').boundingBox())!;
+			const foldedTarget = (await starterUserPrompt.locator('[data-flow-collapsed-ports="input"]').boundingBox())!;
+			await mainWindow.mouse.move(foldedSource.x + 20, foldedSource.y - 20);
+			await mainWindow.mouse.move((foldedSource.x + foldedSource.width + foldedTarget.x) / 2, (foldedSource.y + foldedSource.height / 2 + foldedTarget.y + foldedTarget.height / 2) / 2);
+			return starterEdge.count();
+		}).toBe(1);
+		expect(await starterEdge.locator("linearGradient stop").evaluateAll(stops => stops.map(stop => stop.getAttribute("stop-color")))).toEqual(starterGradientColors);
+		await starterFlowInput.getByRole("button", { name: /Expand node|展开节点/ }).click();
+		await starterUserPrompt.getByRole("button", { name: /Expand node|展开节点/ }).click();
 		await expect(starterUserPrompt.locator("textarea")).toHaveCount(0);
 		await starterUserPrompt.locator("header").click();
 		await mainWindow.keyboard.press("Delete");
@@ -760,6 +775,11 @@ test.describe("Daedalus Flow node workflow", () => {
 		await mainWindow.getByRole("button", { name: /Approve|批\s*准/ }).click();
 		await expect.poll(() => mockBackend.getRequests("flow.approval.resolve").length).toBe(1);
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toContainText("approved result");
+		const foldedOutput = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])');
+		await foldedOutput.getByRole("button", { name: /Collapse node|折叠节点/ }).click();
+		await expect(foldedOutput.locator('[data-flow-collapsed-ports="input"]')).toHaveCount(1);
+		await expect(foldedOutput.locator('[data-flow-collapsed-ports="output"]')).toHaveCount(0);
+		await foldedOutput.getByRole("button", { name: /Expand node|展开节点/ }).click();
 		await mainWindow.getByRole("button", { name: /Run|运\s*行/ }).click();
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toContainText("cached result");
 		const flowTreeItem = mainWindow.locator(".ant-tree-treenode").filter({ hasText: "E2E Workflow" });

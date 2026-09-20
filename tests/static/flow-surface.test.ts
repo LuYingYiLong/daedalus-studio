@@ -101,7 +101,7 @@ describe("Flow home surface", (): void => {
 		expect(nodes).toContain("connectedInputIds.has(parameter.id)");
 		expect(nodes).toContain("parameter.hideControlWhenConnected");
 		expect(nodes).toContain("useUpdateNodeInternals");
-		expect(nodes).not.toContain("<Collapse");
+		expect(nodes).not.toMatch(/<Collapse(?:\s|>)/);
 		expect(nodes).not.toContain("data.onDelete");
 		expect(nodes).not.toContain("draftTitle");
 		expect(nodes).not.toContain("<footer");
@@ -110,7 +110,7 @@ describe("Flow home surface", (): void => {
 		expect(nodes).toContain('flowNode.typeId === "builtin/flow-input"');
 		expect(nodes).toContain('name="play"');
 		expect(nodes).toContain('flowNode.typeId === "builtin/output"');
-		expect(nodes).toContain('className={`${styles.outputResult} nodrag nowheel`}');
+		expect(nodes).toMatch(/className=\{.*styles\.outputResult.*nodrag nowheel/);
 		expect(nodes).toContain("<MarkdownContent cacheParsing>{outputMarkdown}</MarkdownContent>");
 		expect(nodes).toContain('format === "json"');
 		expect(nodes).not.toContain("resultPreview");

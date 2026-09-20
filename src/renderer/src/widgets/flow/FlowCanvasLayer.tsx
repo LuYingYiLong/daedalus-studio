@@ -176,7 +176,8 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 					!runtime.canvas.editing.has(id) &&
 					!runtime.canvas.popups.has(id) &&
 					!runtime.canvas.pluginEditors.has(id) &&
-					!runtime.canvas.composing.has(id)
+					!runtime.canvas.composing.has(id) &&
+					!runtime.resizingNodes.has(id)
 				)
 					pending.push({ id, mode: "outline" });
 			}
@@ -391,21 +392,30 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 				if (runtime.canvas.getMode(id) === "full") continue;
 				const node = runtime.geometry.get(id)!;
 				const view = runtime.views.get(id);
-				const height = Math.min(headerHeight, node.height);
+				const collapsed = runtime.canvas.collapsed.get(id) === true;
+				const height = collapsed ? node.height : Math.min(headerHeight, node.height);
 				const corner = Math.min(radius, node.width / 2, height / 2);
 				context.beginPath();
 				context.roundRect(node.x, node.y, node.width, node.height, corner);
 				context.fillStyle = background;
 				context.fill();
 				context.beginPath();
-				context.roundRect(node.x, node.y, node.width, height, [corner, corner, 0, 0]);
+				context.roundRect(node.x, node.y, node.width, height, collapsed ? corner : [corner, corner, 0, 0]);
 				context.fillStyle = node.color;
 				context.fill();
 				if (view) {
+					const arrowX = node.x + titlePadding + 8, arrowY = node.y + height / 2;
+					context.beginPath();
+					context.moveTo(arrowX - (collapsed ? 2 : 4), arrowY - (collapsed ? 4 : 2));
+					context.lineTo(arrowX + (collapsed ? 2 : 0), arrowY + (collapsed ? 0 : 2));
+					context.lineTo(arrowX + (collapsed ? -2 : 4), arrowY + (collapsed ? 4 : -2));
+					context.strokeStyle = "#fff";
+					context.lineWidth = 1.5;
+					context.stroke();
 					context.fillStyle = "#fff";
 					context.fillText(
-						fitTitle(id, flowNodeTitle(translateRef.current, view.flowNode, view.definition), Math.max(0, node.width - titlePadding * 2)),
-						node.x + titlePadding,
+						fitTitle(id, flowNodeTitle(translateRef.current, view.flowNode, view.definition), Math.max(0, node.width - titlePadding * 2 - 28)),
+						node.x + titlePadding + 28,
 						node.y + height / 2,
 					);
 				}
@@ -414,6 +424,18 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 				context.strokeStyle = node.selected ? "#4096ff" : node.color;
 				context.lineWidth = node.selected ? 2.5 : 1.5;
 				context.stroke();
+				if (collapsed) {
+					for (const side of ["target", "source"] as const) {
+						if (!node.handles.some(handle => handle.type === side)) continue;
+						context.beginPath();
+						context.roundRect(node.x + (side === "target" ? -4 : node.width - 6), node.y + node.height / 2 - 10, 10, 20, 5);
+						context.fillStyle = "#8c8c8c";
+						context.fill();
+						context.strokeStyle = background;
+						context.lineWidth = 2;
+						context.stroke();
+					}
+				}
 			}
 		}
 		function scheduleDraw(): void {
@@ -504,6 +526,11 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 			visualDirty = true;
 			scheduleDraw();
 		});
+		const unsubscribeCollapsed = runtime.canvas.collapsed.subscribeAll(() => {
+			geometryDirty = true;
+			visualDirty = true;
+			scheduleDraw();
+		});
 		const themeObserver = new MutationObserver(() => {
 			visualDirty = true;
 			scheduleDraw();
@@ -535,6 +562,7 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 			unsubscribe();
 			unsubscribeViews();
 			unsubscribeModes();
+			unsubscribeCollapsed();
 			themeObserver.disconnect();
 			document.fonts.removeEventListener("loadingdone", fontsLoaded);
 			invalidateRef.current = () => undefined;
