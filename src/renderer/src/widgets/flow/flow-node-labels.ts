@@ -1,8 +1,16 @@
 import type { TFunction } from "i18next";
-import type { FlowNodeTypeDefinition } from "@/platform/rpc/types";
+import type { FlowDocumentNode, FlowNodeTypeDefinition } from "@/platform/rpc/types";
 
 export function flowNodeTypeLabel(t: TFunction, definition: FlowNodeTypeDefinition): string {
 	return t(`flow.editor.nodes.${definition.typeId}`, { defaultValue: definition.defaultTitle });
+}
+
+export function flowNodeTitle(
+	t: TFunction,
+	node: FlowDocumentNode,
+	definition: FlowNodeTypeDefinition | null,
+): string {
+	return definition !== null && node.title === definition.defaultTitle ? flowNodeTypeLabel(t, definition) : node.title;
 }
 
 export function flowNodeParameterLabel(

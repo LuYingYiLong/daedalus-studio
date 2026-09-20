@@ -969,6 +969,7 @@ function HomePage({
 						keyboardShortcuts,
 						providerModelSelection,
 						workspaceOptions: workspaceOptionsInTreeOrder,
+						sideDockOpen,
 						searchHandleRef: flowSearchHandleRef,
 					}}
 					sideDockConfig={sideDockConfig}

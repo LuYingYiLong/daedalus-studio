@@ -1,7 +1,20 @@
 import { Button, Input, InputNumber, Select, Space, Tooltip, Typography } from "antd";
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+	memo,
+	useContext,
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+	useSyncExternalStore,
+	type CSSProperties,
+} from "react";
 import { useTranslation } from "react-i18next";
-import { Handle, Position, useUpdateNodeInternals, type Node, type NodeProps } from "@xyflow/react";
+import { Handle, Position, useUpdateNodeInternals, type Node } from "@xyflow/react";
+import { FlowRenderContext } from "./flow-render-runtime";
+import { FlowCanvasStore } from "@/domain/flow/flow-render-stores";
 import type {
 	FlowDocumentNode,
 	FlowDocumentNodeRun,
@@ -15,9 +28,9 @@ import type {
 import type { ProviderModelInfo, ProviderModelSelection } from "@/platform/rpc/provider-api";
 import { Icon } from "@/assets/icons";
 import MarkdownContent from "@/widgets/markdown/MarkdownContent";
-import { getFlowArtifact } from "@/platform/rpc/flow-api";
+import { getFlowPreviewSource } from "./flow-resource-cache";
 import styles from "./FlowNodes.module.css";
-import { flowNodeOutputLabel, flowNodeParameterLabel, flowNodeTypeLabel } from "./flow-node-labels";
+import { flowNodeOutputLabel, flowNodeParameterLabel, flowNodeTitle, flowNodeTypeLabel } from "./flow-node-labels";
 import { flowPortColor, flowPortColorKind } from "./flow-port-colors";
 
 export type FlowNodeEditorOptions = {
@@ -96,9 +109,8 @@ function MediaArtifactPreview({ artifacts }: { artifacts: FlowMediaArtifactRef[]
 		void Promise.all(
 			artifacts.map(async (artifact): Promise<[string, string] | null> => {
 				try {
-					const response = await getFlowArtifact(artifact.artifactId, true);
-					if (response.dataBase64 === undefined) return null;
-					return [artifact.artifactId, `data:${artifact.mimeType};base64,${response.dataBase64}`];
+					const source = await getFlowPreviewSource(artifact.artifactId, artifact.mimeType);
+					return source === null ? null : [artifact.artifactId, source];
 				} catch {
 					return null;
 				}
@@ -115,11 +127,39 @@ function MediaArtifactPreview({ artifacts }: { artifacts: FlowMediaArtifactRef[]
 		<div className={styles.mediaPreviewList}>
 			{artifacts.map((artifact): React.JSX.Element => {
 				const source = sources[artifact.artifactId];
-				if (source === undefined) return <Typography.Text key={artifact.artifactId} type="secondary">{artifact.mimeType}</Typography.Text>;
-				if (artifact.mimeType.startsWith("image/")) return <img key={artifact.artifactId} className={styles.mediaPreviewImage} src={source} alt="" />;
-				if (artifact.mimeType.startsWith("video/")) return <video key={artifact.artifactId} className={styles.mediaPreviewVideo} src={source} controls preload="metadata" />;
-				if (artifact.mimeType.startsWith("audio/")) return <audio key={artifact.artifactId} className={styles.mediaPreviewAudio} src={source} controls preload="metadata" />;
-				return <Typography.Text key={artifact.artifactId} type="secondary">{artifact.mimeType}</Typography.Text>;
+				if (source === undefined)
+					return (
+						<Typography.Text key={artifact.artifactId} type="secondary">
+							{artifact.mimeType}
+						</Typography.Text>
+					);
+				if (artifact.mimeType.startsWith("image/"))
+					return <img key={artifact.artifactId} className={styles.mediaPreviewImage} src={source} alt="" />;
+				if (artifact.mimeType.startsWith("video/"))
+					return (
+						<video
+							key={artifact.artifactId}
+							className={styles.mediaPreviewVideo}
+							src={source}
+							controls
+							preload="metadata"
+						/>
+					);
+				if (artifact.mimeType.startsWith("audio/"))
+					return (
+						<audio
+							key={artifact.artifactId}
+							className={styles.mediaPreviewAudio}
+							src={source}
+							controls
+							preload="metadata"
+						/>
+					);
+				return (
+					<Typography.Text key={artifact.artifactId} type="secondary">
+						{artifact.mimeType}
+					</Typography.Text>
+				);
 			})}
 		</div>
 	);
@@ -148,9 +188,7 @@ export function resolveFlowDefinitionParameters(
 	definition: FlowNodeTypeDefinition,
 	config: Record<string, unknown>,
 ): FlowNodeParameterDefinition[] {
-	const parameters = definition.parameters.map(
-		(parameter): FlowNodeParameterDefinition => structuredClone(parameter),
-	);
+	const parameters = definition.parameters.map((parameter): FlowNodeParameterDefinition => structuredClone(parameter));
 	for (const dynamic of definition.dynamicParameters ?? []) {
 		const values = config[dynamic.configField];
 		if (!Array.isArray(values)) continue;
@@ -158,11 +196,7 @@ export function resolveFlowDefinitionParameters(
 			if (typeof value !== "object" || value === null || Array.isArray(value)) continue;
 			const record = value as Record<string, unknown>;
 			const id = record[dynamic.idField];
-			if (
-				typeof id !== "string" ||
-				id.length === 0 ||
-				parameters.some((parameter): boolean => parameter.id === id)
-			)
+			if (typeof id !== "string" || id.length === 0 || parameters.some((parameter): boolean => parameter.id === id))
 				continue;
 			const configuredType = dynamic.dataTypeField === undefined ? undefined : record[dynamic.dataTypeField];
 			const dataTypes: FlowNodePortDefinition["dataTypes"] =
@@ -234,18 +268,25 @@ function readSchemaProperties(schema: Record<string, unknown>): Record<string, R
 
 function JsonField({
 	name,
+	fieldId,
 	value,
 	disabled,
 	onChange,
 }: {
 	name: string;
+	fieldId: string;
 	value: unknown;
 	disabled: boolean;
 	onChange: (value: unknown) => void;
 }): React.JSX.Element {
-	const [text, setText] = useState((): string => JSON.stringify(value ?? {}, null, 2));
+	const runtime = useContext(FlowRenderContext);
+	const [text, setText] = useState(
+		(): string => runtime?.canvas.rawFields.get(fieldId) ?? JSON.stringify(value ?? {}, null, 2),
+	);
 	const [invalid, setInvalid] = useState(false);
-	useEffect((): void => setText(JSON.stringify(value ?? {}, null, 2)), [value]);
+	useEffect((): void => {
+		if (!runtime?.canvas.rawFields.has(fieldId)) setText(JSON.stringify(value ?? {}, null, 2));
+	}, [value, runtime, fieldId]);
 	return (
 		<Input.TextArea
 			className="nodrag"
@@ -254,10 +295,14 @@ function JsonField({
 			value={text}
 			autoSize={{ minRows: 2, maxRows: 7 }}
 			placeholder={name}
-			onChange={(event): void => setText(event.target.value)}
+			onChange={(event): void => {
+				setText(event.target.value);
+				runtime?.canvas.rawFields.set(fieldId, event.target.value);
+			}}
 			onBlur={(): void => {
 				try {
 					onChange(JSON.parse(text) as unknown);
+					runtime?.canvas.rawFields.delete(fieldId);
 					setInvalid(false);
 				} catch {
 					setInvalid(true);
@@ -285,48 +330,55 @@ function SchemaEditor({
 	onChange: (config: Record<string, unknown>) => void;
 }): React.JSX.Element {
 	const { t } = useTranslation();
-	const [config, setConfig] = useState<Record<string, unknown>>(node.config);
-	const configRef = useRef<Record<string, unknown>>(node.config);
-	const commitTimerRef = useRef<number | null>(null);
-	useEffect((): void => {
-		configRef.current = node.config;
-		setConfig(node.config);
-	}, [node.config]);
-	useEffect(
-		(): (() => void) => (): void => {
-			if (commitTimerRef.current !== null) window.clearTimeout(commitTimerRef.current);
-		},
-		[],
+	const runtime = useContext(FlowRenderContext);
+	const [fallbackStore] = useState(() => new FlowCanvasStore());
+	const canvas = runtime?.canvas ?? fallbackStore;
+	const config = useSyncExternalStore(
+		useCallback((listener) => canvas.drafts.subscribe(node.nodeId, listener), [canvas, node.nodeId]),
+		() => canvas.drafts.get(node.nodeId) ?? node.config,
 	);
+	const configRef = useRef(config);
+	configRef.current = config;
+	const setConfig = (next: Record<string, unknown>): void => canvas.drafts.set(node.nodeId, next);
+	useEffect((): void => {
+		canvas.acceptConfig(node.nodeId, node.config);
+	}, [canvas, node.nodeId, node.config]);
+	useEffect(() => () => fallbackStore.dispose(), [fallbackStore]);
 	const commitConfig = (next: Record<string, unknown>): void => {
-		if (commitTimerRef.current !== null) window.clearTimeout(commitTimerRef.current);
-		commitTimerRef.current = null;
-		onChange(next);
+		if (next !== node.config) canvas.updateDraft(node.nodeId, next, onChange, true);
 	};
 	const update = (key: string, value: unknown, commit = true): void => {
 		const next = { ...configRef.current, [key]: value };
 		configRef.current = next;
 		setConfig(next);
-		if (commit) commitConfig(next);
-		else {
-			if (commitTimerRef.current !== null) window.clearTimeout(commitTimerRef.current);
-			commitTimerRef.current = window.setTimeout((): void => commitConfig(configRef.current), 250);
-		}
+		canvas.updateDraft(node.nodeId, next, onChange, commit);
 	};
 	const providerId = typeof config.provider === "string" ? config.provider : "";
 	const modelId = typeof config.model === "string" ? config.model : "";
 	const requiredCapability =
-		definition.typeId === "builtin/text-to-image" ? "imageGeneration" :
-		definition.typeId === "builtin/image-to-image" ? "imageEdit" :
-		definition.typeId === "builtin/text-to-video" ? "textToVideo" :
-		definition.typeId === "builtin/image-to-video" ? "imageToVideo" : null;
+		definition.typeId === "builtin/text-to-image"
+			? "imageGeneration"
+			: definition.typeId === "builtin/image-to-image"
+				? "imageEdit"
+				: definition.typeId === "builtin/text-to-video"
+					? "textToVideo"
+					: definition.typeId === "builtin/image-to-video"
+						? "imageToVideo"
+						: null;
 	const supportsRequiredCapability = (model: ProviderModelInfo): boolean =>
 		requiredCapability === null || model.capabilities[requiredCapability] === true;
 	const providerOptions = (editorOptions.modelSelection?.providers ?? [])
-		.filter((provider): boolean => (provider.configured || provider.provider === providerId) && (requiredCapability === null || (editorOptions.modelsByProvider[provider.provider] ?? []).some(supportsRequiredCapability)))
+		.filter(
+			(provider): boolean =>
+				(provider.configured || provider.provider === providerId) &&
+				(requiredCapability === null ||
+					(editorOptions.modelsByProvider[provider.provider] ?? []).some(supportsRequiredCapability)),
+		)
 		.map((provider) => ({ value: provider.provider, label: provider.displayName }));
 	const modelCatalog = editorOptions.modelsByProvider[providerId] ?? [];
-	const modelOptions = modelCatalog.filter(supportsRequiredCapability).map((model) => ({ value: model.id, label: model.displayName }));
+	const modelOptions = modelCatalog
+		.filter(supportsRequiredCapability)
+		.map((model) => ({ value: model.id, label: model.displayName }));
 	if (modelId.length > 0 && !modelOptions.some((option): boolean => option.value === modelId))
 		modelOptions.unshift({ value: modelId, label: modelId });
 	const selectedModel = modelCatalog.find((model): boolean => model.id === modelId);
@@ -340,6 +392,15 @@ function SchemaEditor({
 	if (currentEffort.length > 0 && !effortOptions.some((option): boolean => option.value === currentEffort))
 		effortOptions.push({ value: currentEffort, label: currentEffort });
 	const properties = readSchemaProperties(definition.configSchema);
+	const onSelectOpenChange = (open: boolean): void => {
+		if (open) {
+			canvas.popups.add(node.nodeId);
+			canvas.pin(node.nodeId, true);
+		} else {
+			canvas.popups.delete(node.nodeId);
+			canvas.pin(node.nodeId, false);
+		}
+	};
 	const supportsReasoningEffort = Object.prototype.hasOwnProperty.call(properties, "reasoningEffort");
 	const renderControl = (key: string, schema: Record<string, unknown>, title: string): React.JSX.Element => {
 		const control = schema["x-daedalus-control"];
@@ -366,9 +427,11 @@ function SchemaEditor({
 							icon={<Icon name="folder-open" />}
 							onClick={(): void => {
 								if (editorOptions.selectWorkspaceFile === undefined) return;
-								void editorOptions.selectWorkspaceFile()
+								const generation = canvas.generation;
+								void editorOptions
+									.selectWorkspaceFile()
 									.then((path): void => {
-										if (path !== null) update(key, path);
+										if (path !== null && canvas.generation === generation) update(key, path);
 									})
 									.catch((): void => undefined);
 							}}
@@ -379,6 +442,7 @@ function SchemaEditor({
 		if (control === "provider")
 			return (
 				<Select
+					onOpenChange={onSelectOpenChange}
 					className="nodrag"
 					disabled={disabled}
 					value={providerId || undefined}
@@ -415,6 +479,7 @@ function SchemaEditor({
 		if (control === "model")
 			return (
 				<Select
+					onOpenChange={onSelectOpenChange}
 					className="nodrag"
 					disabled={disabled || providerId.length === 0}
 					value={modelId || undefined}
@@ -427,6 +492,7 @@ function SchemaEditor({
 		if (control === "reasoning-effort")
 			return (
 				<Select
+					onOpenChange={onSelectOpenChange}
 					className="nodrag"
 					disabled={disabled || modelId.length === 0}
 					value={currentEffort}
@@ -436,13 +502,12 @@ function SchemaEditor({
 				/>
 			);
 		const enumValues = Array.isArray(schema.enum)
-			? schema.enum.filter(
-					(value): value is string | number => typeof value === "string" || typeof value === "number",
-				)
+			? schema.enum.filter((value): value is string | number => typeof value === "string" || typeof value === "number")
 			: [];
 		if (enumValues.length > 0)
 			return (
 				<Select
+					onOpenChange={onSelectOpenChange}
 					className="nodrag"
 					disabled={disabled}
 					value={config[key] as string | number | undefined}
@@ -454,6 +519,7 @@ function SchemaEditor({
 		if (schema.type === "boolean")
 			return (
 				<Select
+					onOpenChange={onSelectOpenChange}
 					className="nodrag"
 					disabled={disabled}
 					value={typeof config[key] === "boolean" ? config[key] : undefined}
@@ -480,6 +546,7 @@ function SchemaEditor({
 		if (schema.type === "object" || schema.type === "array")
 			return (
 				<JsonField
+					fieldId={`${node.nodeId}\u0000${key}`}
 					name={title}
 					value={config[key]}
 					disabled={disabled}
@@ -549,9 +616,7 @@ function SchemaEditor({
 							{parameterLabel}
 						</span>
 						{!hidesControl && configField !== null && schema !== undefined ? (
-							<div className={styles.parameterControl}>
-								{renderControl(configField, schema, parameterLabel)}
-							</div>
+							<div className={styles.parameterControl}>{renderControl(configField, schema, parameterLabel)}</div>
 						) : null}
 					</div>
 				);
@@ -570,9 +635,7 @@ function NodeSummary({
 	const { t } = useTranslation();
 	const values = (definition?.summaryFields ?? []).flatMap((field): string[] => {
 		const value = node.config[field];
-		return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
-			? [String(value)]
-			: [];
+		return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? [String(value)] : [];
 	});
 	return (
 		<Typography.Paragraph className={styles.nodeSummary} ellipsis={{ rows: 3 }}>
@@ -686,8 +749,7 @@ function SandboxEditor({
 				const properties = readSchemaProperties(definition.configSchema);
 				if (
 					Object.entries(patch).every(
-						([key, value]): boolean =>
-							properties[key] !== undefined && schemaAccepts(properties[key]!, value),
+						([key, value]): boolean => properties[key] !== undefined && schemaAccepts(properties[key]!, value),
 					)
 				)
 					onChange({ ...node.config, ...patch });
@@ -737,10 +799,7 @@ function SandboxEditor({
 					)
 					.map(
 						(parameter): React.JSX.Element => (
-							<div
-								className={`${styles.parameterRow} ${styles.parameterRowConnectionOnly}`}
-								key={parameter.id}
-							>
+							<div className={`${styles.parameterRow} ${styles.parameterRowConnectionOnly}`} key={parameter.id}>
 								<span className={styles.parameterSocket}>
 									<Handle
 										id={parameter.id}
@@ -803,11 +862,7 @@ function OutputRows({
 			{outputs.map((output): React.JSX.Element => {
 				const outputLabel = flowNodeOutputLabel(t, typeId, output.id, output.label);
 				return (
-					<div
-						className={styles.outputRow}
-						key={output.id}
-						title={`${outputLabel} · ${output.dataTypes.join("/")}`}
-					>
+					<div className={styles.outputRow} key={output.id} title={`${outputLabel} · ${output.dataTypes.join("/")}`}>
 						<span className={styles.outputLabel}>{outputLabel}</span>
 						<span className={styles.outputSocket}>
 							<Handle
@@ -827,8 +882,19 @@ function OutputRows({
 	);
 }
 
-function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.Element {
+function FlowNodeCard({ data, selected }: { data: FlowCanvasNodeData; selected: boolean }): React.JSX.Element {
 	const { t } = useTranslation();
+	const nodeElement = useRef<HTMLDivElement>(null);
+	const commits = useRef(0);
+	useLayoutEffect(() => {
+		commits.current++;
+		if (nodeElement.current) nodeElement.current.dataset.flowCommitCount = String(commits.current);
+		if ((window as unknown as { __DAEDALUS_FLOW_TRACE__?: boolean }).__DAEDALUS_FLOW_TRACE__) {
+			performance.mark("daedalus.flow.node.commit", { detail: { nodeId: data.flowNode.nodeId } });
+		}
+	});
+	const runtime = useContext(FlowRenderContext);
+	const [pluginEditing, setPluginEditing] = useState(false);
 	const { flowNode, definition } = data;
 	const updateNodeInternals = useUpdateNodeInternals();
 	const parameters = useMemo(
@@ -871,21 +937,18 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 			? "unknown"
 			: `${definition.pluginFingerprint}:${definition.configVersion}:${definition.ui.kind}`;
 	const handleLayoutKey = `${definitionLayoutKey}:${outputs.map((output): string => output.id).join("|")}:${parameters.map((parameter): string => `${parameter.id}:${data.connectedInputIds.has(parameter.id) ? 1 : 0}`).join("|")}`;
-	useEffect(
-		(): void => updateNodeInternals(flowNode.nodeId),
-		[flowNode.nodeId, handleLayoutKey, updateNodeInternals],
-	);
+	useEffect((): void => updateNodeInternals(flowNode.nodeId), [flowNode.nodeId, handleLayoutKey, updateNodeInternals]);
 	const isOutputNode = flowNode.typeId === "builtin/output" || flowNode.typeId === "builtin/media-output";
-	const mediaArtifacts = useMemo((): FlowMediaArtifactRef[] => collectMediaArtifacts(data.nodeRun?.output), [data.nodeRun?.output]);
+	const mediaArtifacts = useMemo(
+		(): FlowMediaArtifactRef[] => collectMediaArtifacts(data.nodeRun?.output),
+		[data.nodeRun?.output],
+	);
 	const outputMarkdown =
 		data.nodeRun?.output === null || data.nodeRun?.output === undefined
 			? ""
 			: formatOutputMarkdown(data.nodeRun.output, flowNode.config.format);
-	const updateConfig = (config: Record<string, unknown>): void => data.onUpdate(flowNode.nodeId, { config });
-	const nodeTitle =
-		definition !== null && flowNode.title === definition.defaultTitle
-			? flowNodeTypeLabel(t, definition)
-			: flowNode.title;
+	const updateConfig = (config: Record<string, unknown>): void => data.onUpdate(flowNode.nodeId, { config, historyGroup: runtime?.canvas.editGroups.get(flowNode.nodeId) });
+	const nodeTitle = flowNodeTitle(t, flowNode, definition);
 	const runStatus = normalizeFlowNodeRunStatus(data.nodeRun?.status ?? flowNode.status);
 	const runStatusLabel = t(`flow.editor.nodeRunStatus.${runStatus}`);
 	const runInputLabel =
@@ -893,15 +956,12 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 			? flowNode.config.label.trim()
 			: nodeTitle;
 	return (
-		<div
-			className={styles.nodeShell}
-			data-flow-node-id={flowNode.nodeId}
-		>
+		<div ref={nodeElement} className={styles.nodeShell} data-flow-node-id={flowNode.nodeId}>
 			<article
 				className={`${styles.nodeCard} ${selected ? styles.nodeCardSelected : ""} ${data.matched ? styles.nodeCardMatched : ""} ${definition === null ? styles.unknownNode : ""}`}
 				data-node-type={flowNode.typeId}
 			>
-			<header className={styles.header} style={{ background: flowNodeColor(flowNode.typeId) }}>
+				<header className={styles.header} style={{ background: flowNodeColor(flowNode.typeId) }}>
 					<div className={styles.headerTitle}>
 						<Tooltip title={data.nodeRun?.error ?? runStatusLabel}>
 							<span
@@ -940,7 +1000,7 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 					<OutputRows typeId={flowNode.typeId} outputs={outputs} />
 					{definition === null ? (
 						<NodeSummary node={flowNode} definition={definition} />
-					) : definition.ui.kind === "sandbox" ? (
+					) : definition.ui.kind === "sandbox" && pluginEditing ? (
 						<SandboxEditor
 							node={flowNode}
 							definition={
@@ -966,6 +1026,23 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 							onChange={updateConfig}
 						/>
 					)}
+					{definition?.ui.kind === "sandbox" ? (
+						<Button
+							size="small"
+							className="nodrag nopan"
+							onClick={() => {
+								const next = !pluginEditing;
+								setPluginEditing(next);
+								runtime?.canvas.pin(flowNode.nodeId, next);
+								if (next) runtime?.canvas.pluginEditors.add(flowNode.nodeId);
+								else runtime?.canvas.pluginEditors.delete(flowNode.nodeId);
+							}}
+						>
+							{t(pluginEditing ? "flow.editor.closePluginEditor" : "flow.editor.openPluginEditor", {
+								defaultValue: pluginEditing ? "Finish editing" : "Open plugin editor",
+							})}
+						</Button>
+					) : null}
 					{isOutputNode ? (
 						<div
 							className={`${styles.outputResult} nodrag nowheel`}
@@ -975,7 +1052,7 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowCanvasNode>): React.JSX.
 							{mediaArtifacts.length > 0 ? (
 								<MediaArtifactPreview artifacts={mediaArtifacts} />
 							) : outputMarkdown.length > 0 ? (
-								<MarkdownContent>{outputMarkdown}</MarkdownContent>
+								<MarkdownContent cacheParsing>{outputMarkdown}</MarkdownContent>
 							) : (
 								<Typography.Text type="secondary">
 									{t("flow.editor.outputPending", {

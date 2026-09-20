@@ -48,6 +48,8 @@
 		"test": "npm run test:unit && npm run test:static",
 		"test:e2e": "npm run build && npm run test:e2e:built",
 		"test:e2e:built": "playwright test",
+		"test:flow:performance": "npm run build && node scripts/test-flow-performance.cjs",
+		"test:flow:performance:built": "node scripts/test-flow-performance.cjs",
 		"test:remote": "npm run build && npm run test:remote:built",
 		"test:remote:built": "node scripts/preview-remote.cjs",
 		"test:watch": "vitest --configLoader runner",

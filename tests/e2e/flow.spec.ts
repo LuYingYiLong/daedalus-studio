@@ -147,7 +147,7 @@ const nodeDefinitions = [
 				label: "User prompt",
 				mode: "hybrid",
 				configField: "text",
-				dataTypes: ["text", "json"],
+				dataTypes: ["text"],
 				required: false,
 				multiple: false,
 				defaultConnect: true,
@@ -593,13 +593,18 @@ test.describe("Daedalus Flow node workflow", () => {
 		await expect(starterFlowInput).toBeVisible();
 		await expect(starterUserPrompt).toBeVisible();
 		const starterEdge = mainWindow.locator(".react-flow__edge");
+		await expect(mainWindow.locator("[data-flow-canvas-layer]")).toHaveAttribute("data-flow-edge-count", "1");
+		const sourceSocket = (await starterFlowInput.locator('[data-flow-port-id="output"]').boundingBox())!;
+		const targetSocket = (await starterUserPrompt.locator('[data-flow-port-id="input"]').boundingBox())!;
+		await mainWindow.waitForTimeout(300);
+		await mainWindow.mouse.move((sourceSocket.x + sourceSocket.width + targetSocket.x) / 2, (sourceSocket.y + sourceSocket.height / 2 + targetSocket.y + targetSocket.height / 2) / 2);
 		await expect(starterEdge).toHaveCount(1);
 		const starterSourceColor = await starterFlowInput
 			.locator('[data-flow-port-id="output"]')
-			.evaluate((handle): string => getComputedStyle(handle).getPropertyValue("--flow-handle-color").trim());
+			.evaluate((handle): string => getComputedStyle(handle).getPropertyValue("--flow-port-color").trim());
 		const starterTargetColor = await starterUserPrompt
 			.locator('[data-flow-port-id="input"]')
-			.evaluate((handle): string => getComputedStyle(handle).getPropertyValue("--flow-handle-color").trim());
+			.evaluate((handle): string => getComputedStyle(handle).getPropertyValue("--flow-port-color").trim());
 		const starterGradientColors = await starterEdge.locator("linearGradient stop").evaluateAll(
 			(stops): string[] => stops.map((stop): string => stop.getAttribute("stop-color") ?? ""),
 		);
@@ -626,6 +631,9 @@ test.describe("Daedalus Flow node workflow", () => {
 		await expect(flowInputNode).toBeVisible();
 		await expect(userPromptNode).toBeVisible();
 		await expect(userPromptNode.locator("textarea")).toBeVisible();
+		await mainWindow.getByRole("button", { name: "Fit View" }).click();
+		await mainWindow.getByRole("button", { name: "Zoom Out", exact: true }).click();
+		await mainWindow.waitForTimeout(350);
 		const flowInputOutput = flowInputNode.locator('[data-flow-port-id="output"]');
 		const userPromptInput = userPromptNode.locator('[data-flow-port-id="input"]');
 		const flowInputOutputBox = await flowInputOutput.boundingBox();
@@ -642,8 +650,9 @@ test.describe("Daedalus Flow node workflow", () => {
 			userPromptInputBox!.y + userPromptInputBox!.height / 2,
 			{ steps: 12 },
 		);
+		await expect(userPromptInput).toHaveClass(/\bvalid\b/);
 		await mainWindow.mouse.up();
-		await expect(mainWindow.locator(".react-flow__edge")).toHaveCount(1);
+		await expect(mainWindow.locator("[data-flow-canvas-layer]" )).toHaveAttribute("data-flow-edge-count", "1");
 		await expect(userPromptNode.locator("textarea")).toHaveCount(0);
 		await userPromptInput.hover();
 		await mainWindow.mouse.down();
@@ -656,7 +665,7 @@ test.describe("Daedalus Flow node workflow", () => {
 			{ steps: 12 },
 		);
 		await mainWindow.mouse.up();
-		await expect(mainWindow.locator(".react-flow__edge")).toHaveCount(0);
+		await expect(mainWindow.locator("[data-flow-canvas-layer]" )).toHaveAttribute("data-flow-edge-count", "0");
 		await expect(userPromptNode.locator("textarea")).toBeVisible();
 		await userPromptNode.locator("textarea").fill("editable user prompt");
 		await userPromptNode.locator("header").click();
@@ -699,7 +708,7 @@ test.describe("Daedalus Flow node workflow", () => {
 		await mainWindow.getByRole("button", { name: "Fit View" }).click();
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/tool"])')).toBeVisible();
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toBeVisible();
-		await expect(mainWindow.locator(".react-flow__edge")).toHaveCount(1);
+		await expect(mainWindow.locator("[data-flow-canvas-layer]" )).toHaveAttribute("data-flow-edge-count", "1");
 		const conditionInput = mainWindow
 			.locator('.react-flow__node:has([data-node-type="builtin/condition"])')
 			.locator('[data-flow-port-id="input"]');
@@ -713,7 +722,7 @@ test.describe("Daedalus Flow node workflow", () => {
 		await mainWindow.mouse.move(paneBox!.x + paneBox!.width * 0.78, paneBox!.y + paneBox!.height * 0.78, {
 			steps: 12,
 		});
-		await expect(mainWindow.locator(".react-flow__edge")).toHaveCount(0);
+		await expect(mainWindow.locator("[data-flow-canvas-layer]" )).toHaveAttribute("data-flow-edge-count", "0");
 		await expect(mainWindow.locator(".react-flow__connection-path")).toHaveCount(1);
 		const currentSourceBox = await source.boundingBox();
 		expect(currentSourceBox).not.toBeNull();
@@ -732,7 +741,7 @@ test.describe("Daedalus Flow node workflow", () => {
 		expect(Math.abs(connectionStart.x - sourceCenter.x)).toBeLessThan(2);
 		expect(Math.abs(connectionStart.y - sourceCenter.y)).toBeLessThan(2);
 		await mainWindow.mouse.up();
-		await expect(mainWindow.locator(".react-flow__edge")).toHaveCount(0);
+		await expect(mainWindow.locator("[data-flow-canvas-layer]" )).toHaveAttribute("data-flow-edge-count", "0");
 		await expect(mainWindow.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ })).toHaveCount(0);
 		const snapButton = mainWindow.getByRole("button", {
 			name: /Disable grid snapping|关闭网格吸附/,

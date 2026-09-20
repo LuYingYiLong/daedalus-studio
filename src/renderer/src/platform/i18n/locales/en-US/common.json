@@ -721,6 +721,8 @@
 			"reject": "Reject",
 			"modelDefault": "Default",
 			"outputResult": "Output result",
+			"openPluginEditor": "Open plugin editor",
+			"closePluginEditor": "Finish plugin editing",
 			"outputPending": "Run the Flow to see its output here",
 			"chooseFile": "Choose file",
 			"approvalModes": {

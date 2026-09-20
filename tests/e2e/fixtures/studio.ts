@@ -22,6 +22,7 @@ const LAST_SEEN_CHANGELOG_VERSION_KEY: string =
 
 export type LaunchOptions = {
 	completedOnboarding?: boolean;
+	hardwareAcceleration?: boolean;
 };
 
 export type LaunchedStudio = {
@@ -130,9 +131,7 @@ export const test = base.extend<StudioFixtures>({
 				args: [
 					"-r",
 					join(__dirname, "electron-health.cjs"),
-					"--disable-gpu",
-					"--disable-software-rasterizer",
-					"--in-process-gpu",
+					...(options.hardwareAcceleration ? [] : ["--disable-gpu", "--disable-software-rasterizer", "--in-process-gpu"]),
 					builtEntryPoint,
 					`--user-data-dir=${isolatedProfileRoot}`,
 				],
@@ -144,6 +143,7 @@ export const test = base.extend<StudioFixtures>({
 					TEMP: userDataDir,
 					TMP: userDataDir,
 					DAEDALUS_E2E: "1",
+					DAEDALUS_E2E_GPU: options.hardwareAcceleration ? "1" : "0",
 					DAEDALUS_E2E_HEALTH_LOG: healthLog,
 					DAEDALUS_E2E_BACKEND_PORT: String(mockBackend.getPort()),
 					ELECTRON_DISABLE_SECURITY_WARNINGS: "true",

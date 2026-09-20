@@ -159,14 +159,6 @@
 	backface-visibility: hidden;
 }
 
-.canvasRegion[data-flow-moving="true"] :global(.react-flow__node) {
-	pointer-events: none;
-}
-
-.canvasRegion[data-flow-moving="true"] :global(.react-flow__edge.animated path) {
-	animation-play-state: paused;
-}
-
 .canvasSpinner {
 	position: absolute;
 	top: var(--ds-space-3);

@@ -6,6 +6,7 @@ import { BackendRpcError } from "@/platform/rpc/transport/backend-rpc-client";
 import type { FlowDocumentSummary, FlowDocument, FlowDocumentEdge, FlowDocumentNode, FlowDocumentNodeRun, FlowDocumentRun, FlowDocumentSnapshot, FlowNodeTypeId, FlowNodeTypeDefinition, FlowToolDefinition, FlowApproval, FlowOperation, FlowTreeOrder, FlowTreeOrderUpdate, SessionMetadata } from "@/platform/rpc/types";
 import { createFlowMutationId, flowOperationOutbox } from "@/domain/flow/flow-operation-outbox";
 import { applyFlowRunFinished, markActiveFlowRead, removeUnreadFlows } from "@/domain/flow/flow-unread";
+import { FlowDocumentStore, FlowRunStore } from "@/domain/flow/flow-render-stores";
 
 export type FlowNodeDetail = { node: FlowDocumentNode };
 export type FlowRunRequest = {
@@ -23,6 +24,8 @@ type UseHomeFlowControllerParams = {
 };
 
 export type HomeFlowController = {
+	documentStore: FlowDocumentStore;
+	runStore: FlowRunStore;
 	flows: FlowDocumentSummary[];
 	flowOrder: FlowTreeOrder | null;
 	flowRuntimeStatusById: Readonly<Record<string, "running" | "failed" | "completed">>;
@@ -52,6 +55,8 @@ export type HomeFlowController = {
 	createConnectedNode: (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" }) => Promise<void>;
 	updateNode: (nodeId: string, patch: Record<string, unknown>) => Promise<void>;
 	updateNodePosition: (nodeId: string, x: number, y: number) => Promise<void>;
+	updateNodePositions: (positions: Array<{ nodeId: string; x: number; y: number }>) => void;
+	duplicateNodes: (nodeIds: string[]) => void;
 	deleteNode: (nodeId: string) => Promise<void>;
 	createEdge: (sourceNodeId: string, targetNodeId: string, sourcePort?: string, targetPort?: string, dataType?: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact") => Promise<void>;
 	reconnectEdge: (edgeId: string, sourceNodeId: string, targetNodeId: string, sourcePort: string, targetPort: string, dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact") => Promise<void>;
@@ -67,7 +72,7 @@ export type HomeFlowController = {
 	canRedo: boolean;
 };
 
-type FlowHistoryCommand = { undo: FlowOperation[]; redo: FlowOperation[] };
+type FlowHistoryCommand = { undo: FlowOperation[]; redo: FlowOperation[]; group?: string | undefined };
 
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
@@ -259,7 +264,14 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	const [flowOrder, setFlowOrder] = useState<FlowTreeOrder | null>(null);
 	const [flowRuntimeStatusById, setFlowRuntimeStatusById] = useState<Record<string, "running" | "failed" | "completed">>({});
 	const [unreadFlowIds, setUnreadFlowIds] = useState<ReadonlySet<string>>(() => new Set<string>());
-	const [snapshot, setSnapshot] = useState<FlowDocumentSnapshot | null>(null);
+	const [snapshot, setSnapshotState] = useState<FlowDocumentSnapshot | null>(null);
+	const [documentStore] = useState(() => new FlowDocumentStore());
+	const [runStore] = useState(() => new FlowRunStore());
+	const setSnapshot = useCallback((next: FlowDocumentSnapshot | null): void => {
+		documentStore.replace(next);
+		runStore.replace(next?.runs[0]?.runId ?? null, next?.runs[0]?.nodes ?? []);
+		setSnapshotState(next);
+	}, [documentStore, runStore]);
 	const [nodeDefinitions, setNodeDefinitions] = useState<FlowNodeTypeDefinition[]>([]);
 	const [tools, setTools] = useState<FlowToolDefinition[]>([]);
 	const [approvals, setApprovals] = useState<FlowApproval[]>([]);
@@ -302,6 +314,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 
 	const applySnapshot = useCallback((next: FlowDocumentSnapshot): void => {
 		if (selectedFlowIdRef.current !== next.flow.flowId) {
+			documentStore.flushEditors();
 			undoStackRef.current = [];
 			redoStackRef.current = [];
 			setHistoryRevision((value): number => value + 1);
@@ -319,7 +332,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			);
 	}, []);
 
-	const applyOperations = useCallback((operations: FlowOperation[], recordHistory = true): void => {
+	const applyOperations = useCallback((operations: FlowOperation[], recordHistory = true, group?: string): void => {
 		const current = snapshotRef.current;
 		if (current === null) return;
 		let next = current;
@@ -332,7 +345,11 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		snapshotRef.current = next;
 		setSnapshot(next);
 		if (recordHistory && inverse.length > 0) {
-			undoStackRef.current = [...undoStackRef.current.slice(-99), { undo: inverse, redo: operations.map((operation): FlowOperation => structuredClone(operation)) }];
+			const previous = undoStackRef.current.at(-1);
+			const redo = operations.map((operation): FlowOperation => structuredClone(operation));
+			if (group !== undefined && previous?.group === group) {
+				undoStackRef.current = [...undoStackRef.current.slice(0, -1), { ...previous, redo }];
+			} else undoStackRef.current = [...undoStackRef.current.slice(-99), { undo: inverse, redo, group }];
 			redoStackRef.current = [];
 			setHistoryRevision((value): number => value + 1);
 		}
@@ -389,7 +406,10 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 						flow: { ...current.flow, graphRevision: ack.graphRevision, layoutRevision: ack.layoutRevision, revision: Math.max(current.flow.revision, ack.graphRevision) },
 					};
 					snapshotRef.current = next;
-					setSnapshot(next);
+					// Revision-only ACKs arrive shortly after viewport and node movement. The
+					// renderer does not display revisions, so keep them in the imperative
+					// snapshot without interrupting a following pointer interaction.
+					if (repairedConfigByNodeId.size > 0) setSnapshot(next);
 				}
 				setError(null);
 				return ack;
@@ -412,6 +432,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			},
 		);
 		const flushOnBlur = (): void => {
+			documentStore.flushEditors();
 			void flowOperationOutbox.flushAll().catch((): void => undefined);
 		};
 		window.addEventListener("blur", flushOnBlur);
@@ -565,9 +586,13 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 								}),
 					};
 					snapshotRef.current = next;
-					setSnapshot(next);
+					if (event.event === "flow.node.state") {
+						const nodeRun = next.runs[0]?.nodes.find((node) => node.nodeId === data.nodeId);
+						if (nodeRun && next.runs[0]?.runId === runId) runStore.set(nodeRun.nodeId, nodeRun);
+					} else setSnapshot(next);
 				}
-				void listFlowApprovals(flowId).then((result): void => setApprovals(result.approvals));
+				if (data.status === "waiting" || event.event === "flow.run.state")
+					void listFlowApprovals(flowId).then((result): void => setApprovals(result.approvals));
 				return;
 			}
 			window.setTimeout((): void => void refreshRef.current(), 30);
@@ -638,6 +663,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			setError(null);
 			try {
 				const previousFlowId = selectedFlowIdRef.current;
+				documentStore.flushEditors();
 				if (previousFlowId !== null && previousFlowId !== flowId) await flowOperationOutbox.flush(previousFlowId);
 				applySnapshot(await fetchFlow(flowId));
 			} catch (loadError: unknown) {
@@ -746,10 +772,10 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	const updateNode = useCallback(
 		async (nodeId: string, patch: Record<string, unknown>): Promise<void> => {
 			const current = snapshotRef.current;
-			if (current === null || isGraphLocked) return;
-			applyOperation({ mutationId: createFlowMutationId(), kind: "node.update", baseGraphRevision: current.flow.graphRevision, payload: { nodeId, ...(typeof patch.title === "string" ? { title: patch.title } : {}), ...(patch.config !== null && typeof patch.config === "object" && !Array.isArray(patch.config) ? { config: patch.config as Record<string, unknown> } : {}) } });
+			if (current === null || isGraphLocked || !current.nodes.some(node => node.nodeId === nodeId)) return;
+			applyOperations([{ mutationId: createFlowMutationId(), kind: "node.update", baseGraphRevision: current.flow.graphRevision, payload: { nodeId, ...(typeof patch.title === "string" ? { title: patch.title } : {}), ...(patch.config !== null && typeof patch.config === "object" && !Array.isArray(patch.config) ? { config: patch.config as Record<string, unknown> } : {}) } }], true, typeof patch.historyGroup === "string" ? patch.historyGroup : undefined);
 		},
-		[applyOperation, isGraphLocked],
+		[applyOperations, isGraphLocked],
 	);
 
 	const updateNodePosition = useCallback(
@@ -760,6 +786,20 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		},
 		[applyOperation],
 	);
+	const updateNodePositions = useCallback((positions: Array<{ nodeId: string; x: number; y: number }>): void => {
+		const current = snapshotRef.current; if (!current || !positions.length) return;
+		applyOperations(positions.map(payload => ({ mutationId: createFlowMutationId(), kind: "node.move", baseLayoutRevision: current.flow.layoutRevision, payload })));
+	}, [applyOperations]);
+	const duplicateNodes = useCallback((nodeIds: string[]): void => {
+		const current = snapshotRef.current; if (!current || isGraphLocked) return;
+		const operations: FlowOperation[] = [];
+		for (const id of nodeIds) {
+			const node = current.nodes.find(candidate => candidate.nodeId === id); if (!node) continue;
+			const nodeId = `node-${crypto.randomUUID()}`;
+			operations.push({ mutationId: createFlowMutationId(), kind: "node.create", baseGraphRevision: current.flow.graphRevision, payload: { nodeId, typeId: node.typeId, title: node.title, config: structuredClone(node.config), x: node.x + 24, y: node.y + 24 } });
+		}
+		if (operations.length) applyOperations(operations);
+	}, [applyOperations, isGraphLocked]);
 
 	const deleteNode = useCallback(
 		async (nodeId: string): Promise<void> => {
@@ -823,9 +863,12 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		async (viewport: { x: number; y: number; zoom: number }): Promise<void> => {
 			const current = snapshotRef.current;
 			if (current === null) return;
-			applyOperation({ mutationId: createFlowMutationId(), kind: "viewport.update", baseLayoutRevision: current.flow.layoutRevision, payload: viewport });
+			const old = current.flow.viewport;
+			if (old.x === viewport.x && old.y === viewport.y && old.zoom === viewport.zoom) return;
+			snapshotRef.current = { ...current, flow: { ...current.flow, viewport } };
+			flowOperationOutbox.enqueue(current.flow.flowId, { mutationId: createFlowMutationId(), kind: "viewport.update", baseLayoutRevision: current.flow.layoutRevision, payload: viewport });
 		},
-		[applyOperation],
+		[],
 	);
 
 	const startRun = useCallback(
@@ -976,6 +1019,8 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	}, [archiveFlowById]);
 
 	return {
+		documentStore,
+		runStore,
 		flows,
 		flowOrder,
 		flowRuntimeStatusById,
@@ -1005,6 +1050,8 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		createConnectedNode,
 		updateNode,
 		updateNodePosition,
+		updateNodePositions,
+		duplicateNodes,
 		deleteNode,
 		createEdge,
 		reconnectEdge,

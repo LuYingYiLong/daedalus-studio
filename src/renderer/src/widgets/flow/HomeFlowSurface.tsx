@@ -1,13 +1,11 @@
 import { Alert, Badge, Button, Divider, Dropdown, Flex, Input, Spin, Tooltip, Typography } from "antd";
 import type { InputRef, MenuProps } from "antd";
 import {
-	Background,
 	BaseEdge,
 	Controls,
 	Position,
 	ReactFlow,
 	SelectionMode,
-	applyNodeChanges,
 	getBezierPath,
 	type Connection,
 	type ConnectionLineComponentProps,
@@ -15,7 +13,6 @@ import {
 	type EdgeProps,
 	type FinalConnectionState,
 	type HandleType,
-	type NodeChange,
 	type OnConnectStartParams,
 	type OnNodeDrag,
 	type OnReconnect,
@@ -46,7 +43,6 @@ import {
 import type {
 	FlowDocumentEdge,
 	FlowDocumentNode,
-	FlowDocumentNodeRun,
 	FlowNodeTypeId,
 	FlowNodePortDefinition,
 	FlowNodeTypeDefinition,
@@ -57,13 +53,15 @@ import { createApprovalModeItems, isApprovalMode } from "@/widgets/composer/comp
 import FlowNodePicker from "./FlowNodePicker";
 import FlowWelcome from "./FlowWelcome";
 import {
-	FlowDocumentNodeView,
 	resolveFlowCanvasPorts,
 	resolveFlowDefinitionPorts,
-	type FlowCanvasNode,
+	type FlowCanvasNodeData,
 	type FlowNodeEditorOptions,
 } from "./FlowNodes";
 import { flowPortColor } from "./flow-port-colors";
+import FlowNodeShell, { type FlowInteractionNode as FlowCanvasNode } from "./FlowNodeShell";
+import FlowCanvasLayer from "./FlowCanvasLayer";
+import { FlowRenderRuntime } from "./flow-render-runtime";
 import styles from "./HomeFlowSurface.module.css";
 
 export type FlowSearchHandle = {
@@ -75,6 +73,7 @@ export type HomeFlowSurfaceProps = {
 	keyboardShortcuts: KeyboardShortcutOverrides;
 	providerModelSelection: ProviderModelSelection | null;
 	workspaceOptions: WorkspaceConfig[];
+	sideDockOpen: boolean;
 	searchHandleRef?: MutableRefObject<FlowSearchHandle | null>;
 };
 type PickerConnection = {
@@ -98,9 +97,9 @@ type DetachedConnectionSource = {
 	sourcePort: string;
 };
 
-const nodeTypes = { flowNode: FlowDocumentNodeView };
+const nodeTypes = { flowNode: FlowNodeShell };
 type FlowEdgeData = { sourceColor: string; targetColor: string };
-type FlowCanvasEdge = Edge<FlowEdgeData, "flowGradient">;
+export type FlowCanvasEdge = Edge<FlowEdgeData, "flowGradient">;
 
 function oppositeFlowPosition(position: Position): Position {
 	switch (position) {
@@ -164,42 +163,23 @@ const FLOW_NODE_GAP = 28;
 const FLOW_SNAP_GRID: [number, number] = [24, 24];
 const FLOW_NODE_CREATE_OFFSET = 32;
 const EMPTY_CONNECTED_INPUT_IDS: ReadonlySet<string> = new Set<string>();
+const EMPTY_EDITOR_OPTIONS: FlowNodeEditorOptions = { modelSelection: null, modelsByProvider: {} };
 
-function intersectsNode(
-	left: { x: number; y: number; width: number; height: number },
-	right: { x: number; y: number; width: number; height: number },
-): boolean {
-	return (
-		left.x < right.x + right.width + FLOW_NODE_GAP &&
-		left.x + left.width + FLOW_NODE_GAP > right.x &&
-		left.y < right.y + right.height + FLOW_NODE_GAP &&
-		left.y + left.height + FLOW_NODE_GAP > right.y
-	);
+function usesEditorResources(definition: FlowNodeTypeDefinition | null): boolean {
+	const properties = definition?.configSchema.properties;
+	if (!properties || typeof properties !== "object" || Array.isArray(properties)) return false;
+	return Object.entries(properties).some(([key, field]) => {
+		if (["provider", "model", "reasoningEffort"].includes(key)) return true;
+		if (!field || typeof field !== "object" || Array.isArray(field)) return false;
+		const schema = field as Record<string, unknown>;
+		return (
+			["provider", "model", "reasoning-effort", "workspace-file"].includes(String(schema["x-daedalus-control"])) ||
+			schema.format === "workspace-file" ||
+			(definition?.typeId === "builtin/file-input" && key === "path")
+		);
+	});
 }
-function resolveNodePositions(flowNodes: readonly FlowDocumentNode[]): Map<string, { x: number; y: number }> {
-	const occupied: Array<{
-		x: number;
-		y: number;
-		width: number;
-		height: number;
-	}> = [];
-	const positions = new Map<string, { x: number; y: number }>();
-	for (const node of flowNodes) {
-		const width = node.width > 0 ? node.width : FLOW_NODE_WIDTH;
-		const height = node.height > 0 ? node.height : FLOW_NODE_HEIGHT;
-		let x = node.x;
-		let y = node.y;
-		let attempt = 0;
-		while (occupied.some((candidate): boolean => intersectsNode({ x, y, width, height }, candidate))) {
-			x = node.x + (attempt % 3) * (FLOW_NODE_WIDTH + FLOW_NODE_GAP);
-			y = node.y + Math.floor(attempt / 3) * (FLOW_NODE_HEIGHT + FLOW_NODE_GAP);
-			attempt += 1;
-		}
-		occupied.push({ x, y, width, height });
-		positions.set(node.nodeId, { x, y });
-	}
-	return positions;
-}
+
 function nodeText(node: FlowDocumentNode): string {
 	return `${node.title} ${JSON.stringify(node.config)}`.toLocaleLowerCase();
 }
@@ -290,10 +270,28 @@ function HomeFlowSurface({
 	keyboardShortcuts,
 	providerModelSelection,
 	workspaceOptions,
+	sideDockOpen,
 	searchHandleRef,
 }: HomeFlowSurfaceProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const snapshot = controller.snapshot;
+	const runtime = useMemo(
+		() => new FlowRenderRuntime(controller.documentStore, controller.runStore),
+		[controller.documentStore, controller.runStore, snapshot?.flow.flowId],
+	);
+	const [overlayEdgeIds, setOverlayEdgeIds] = useState<readonly string[]>([]);
+	useEffect(() => {
+		const flush = (): void => runtime.canvas.flush();
+		controller.documentStore.editorFlushers.add(flush);
+		window.addEventListener("blur", flush);
+		window.addEventListener("beforeunload", flush);
+		return () => {
+			controller.documentStore.editorFlushers.delete(flush);
+			window.removeEventListener("blur", flush);
+			window.removeEventListener("beforeunload", flush);
+			runtime.dispose();
+		};
+	}, [runtime]);
 	const [nodes, setNodes] = useState<FlowCanvasNode[]>([]);
 	const [picker, setPicker] = useState<PickerState | null>(null);
 	const [searchOpen, setSearchOpen] = useState(false);
@@ -308,7 +306,11 @@ function HomeFlowSurface({
 	const [consentText, setConsentText] = useState<Record<string, string>>({});
 	const [modelsByProvider, setModelsByProvider] = useState<Record<string, ProviderModelInfo[]>>({});
 	const canvasNodeMembershipKey = useMemo(
-		(): string => nodes.map((node): string => node.id).sort().join("\u0000"),
+		(): string =>
+			nodes
+				.map((node): string => node.id)
+				.sort()
+				.join("\u0000"),
 		[nodes],
 	);
 	const canvasNodeIds = useMemo(
@@ -324,10 +326,6 @@ function HomeFlowSurface({
 	const detachedConnectionSourceRef = useRef<DetachedConnectionSource | null>(null);
 	const interactionSampleRef = useRef<InteractionSample | null>(null);
 	const loadingProviderModelsRef = useRef<Set<string>>(new Set());
-	const resolvedPositions = useMemo(
-		(): Map<string, { x: number; y: number }> => resolveNodePositions(snapshot?.nodes ?? []),
-		[snapshot?.nodes],
-	);
 	const definitionsByType = useMemo(
 		(): Map<string, FlowNodeTypeDefinition> =>
 			new Map(
@@ -368,8 +366,7 @@ function HomeFlowSurface({
 		[modelsByProvider, providerModelSelection, snapshot?.flow.workspaceId, workspaceOptions],
 	);
 	const latestRun = snapshot?.runs[0];
-	const running =
-		latestRun?.status === "running" || latestRun?.status === "queued" || latestRun?.status === "waiting";
+	const running = latestRun?.status === "running" || latestRun?.status === "queued" || latestRun?.status === "waiting";
 	const shortcutPlatform = useMemo(() => detectShortcutPlatform(), []);
 	const matchingNodes = useMemo((): FlowDocumentNode[] => {
 		const query = searchQuery.trim().toLocaleLowerCase();
@@ -403,9 +400,8 @@ function HomeFlowSurface({
 	);
 	const outputNodeIds = useMemo(
 		(): string[] =>
-			snapshot?.nodes
-				.filter((node): boolean => node.typeId === "builtin/output")
-				.map((node): string => node.nodeId) ?? [],
+			snapshot?.nodes.filter((node): boolean => node.typeId === "builtin/output").map((node): string => node.nodeId) ??
+			[],
 		[snapshot?.nodes],
 	);
 	const selectedRunEntryGroup = useMemo((): FlowRunEntryGroup | null => {
@@ -414,10 +410,7 @@ function HomeFlowSurface({
 		const saved = runEntryGroups.find((group): boolean => group.label === savedLabel);
 		return saved?.targetNodeIds.length
 			? saved
-			: (runEntryGroups.find((group): boolean => group.targetNodeIds.length > 0) ??
-					saved ??
-					runEntryGroups[0] ??
-					null);
+			: (runEntryGroups.find((group): boolean => group.targetNodeIds.length > 0) ?? saved ?? runEntryGroups[0] ?? null);
 	}, [runEntryByFlowId, runEntryGroups, snapshot?.flow.flowId]);
 	useEffect((): void => {
 		const providerIds = new Set<string>();
@@ -428,8 +421,7 @@ function HomeFlowSurface({
 		if (providerModelSelection?.activeModel.providerId !== undefined)
 			providerIds.add(providerModelSelection.activeModel.providerId);
 		for (const providerId of providerIds) {
-			if (modelsByProvider[providerId] !== undefined || loadingProviderModelsRef.current.has(providerId))
-				continue;
+			if (modelsByProvider[providerId] !== undefined || loadingProviderModelsRef.current.has(providerId)) continue;
 			loadingProviderModelsRef.current.add(providerId);
 			void listProviderModels(providerId)
 				.then((result): void => {
@@ -475,8 +467,7 @@ function HomeFlowSurface({
 			setRunEntryByFlowId(next);
 			void updateClientPreferences({ flowRunEntryByFlowId: next }).catch((): void => {
 				setRunEntryByFlowId(
-					(current): Record<string, string> =>
-						current[snapshot.flow.flowId] === entryLabel ? previous : current,
+					(current): Record<string, string> => (current[snapshot.flow.flowId] === entryLabel ? previous : current),
 				);
 			});
 		},
@@ -535,7 +526,7 @@ function HomeFlowSurface({
 		},
 		[controller.updateNode],
 	);
-	const runCanvasNodeAction = useCallback(
+	const runCanvasNodeActionImpl = useCallback(
 		(nodeId: string, action: string): void => {
 			if (action === "run-input") {
 				const flowNodes = snapshot?.nodes ?? [];
@@ -553,80 +544,91 @@ function HomeFlowSurface({
 		},
 		[runSelectedEntry, snapshot?.edges, snapshot?.nodes, startRequestedRun],
 	);
+	const actionRef = useRef(runCanvasNodeActionImpl);
+	actionRef.current = runCanvasNodeActionImpl;
+	const runCanvasNodeAction = useCallback(
+		(nodeId: string, action: string): void => actionRef.current(nodeId, action),
+		[],
+	);
 
 	useEffect((): void => {
-		setNodes((current): FlowCanvasNode[] => {
-			const currentById = new Map(current.map((node): [string, FlowCanvasNode] => [node.id, node]));
-			const runDisabled = controller.isGraphLocked || controller.runRequestStage !== "idle";
-			return (snapshot?.nodes ?? []).map((flowNode): FlowCanvasNode => {
-				const existing = currentById.get(flowNode.nodeId);
-				const position = resolvedPositions.get(flowNode.nodeId) ?? { x: flowNode.x, y: flowNode.y };
-				const registeredDefinition = definitionsByType.get(flowNode.typeId);
-				const definition =
-					registeredDefinition !== undefined &&
-					registeredDefinition.pluginVersion === flowNode.pluginVersion &&
-					registeredDefinition.pluginFingerprint === flowNode.pluginFingerprint &&
-					registeredDefinition.configVersion === flowNode.configVersion
-						? registeredDefinition
-						: null;
-				const matched = matchingIds.has(flowNode.nodeId);
-				const connectedInputIds = connectedInputIdsByNode.get(flowNode.nodeId) ?? EMPTY_CONNECTED_INPUT_IDS;
+		const retained = new Set(snapshot?.nodes.map((node) => node.nodeId) ?? []);
+		for (const [id] of runtime.views.entries())
+			if (!retained.has(id)) {
+				runtime.views.delete(id);
+				runtime.canvas.removeNode(id);
+			}
+		const runDisabled = controller.isGraphLocked || controller.runRequestStage !== "idle";
+		for (const flowNode of snapshot?.nodes ?? []) {
+			const registered = definitionsByType.get(flowNode.typeId);
+			const definition =
+				registered?.pluginVersion === flowNode.pluginVersion &&
+				registered.pluginFingerprint === flowNode.pluginFingerprint &&
+				registered.configVersion === flowNode.configVersion
+					? registered
+					: null;
+			const previous = runtime.views.get(flowNode.nodeId);
+			let connectedInputIds = connectedInputIdsByNode.get(flowNode.nodeId) ?? EMPTY_CONNECTED_INPUT_IDS;
+			if (
+				previous &&
+				previous.connectedInputIds.size === connectedInputIds.size &&
+				[...connectedInputIds].every((id) => previous.connectedInputIds.has(id))
+			)
+				connectedInputIds = previous.connectedInputIds;
+			const value: FlowCanvasNodeData = {
+				flowNode,
+				nodeRun: null,
+				definition,
+				editorOptions: usesEditorResources(definition) ? editorOptions : EMPTY_EDITOR_OPTIONS,
+				connectedInputIds,
+				matched: matchingIds.has(flowNode.nodeId),
+				locked: controller.isGraphLocked,
+				runDisabled,
+				onUpdate: updateCanvasNode,
+				onAction: runCanvasNodeAction,
+			};
+			if (
+				!previous ||
+				(Object.keys(value) as Array<keyof FlowCanvasNodeData>).some((key) => value[key] !== previous[key])
+			)
+				runtime.views.set(flowNode.nodeId, value);
+			runtime.canvas.acceptConfig(flowNode.nodeId, flowNode.config);
+		}
+		setNodes((current) => {
+			const byId = new Map((flowInstance?.getNodes() ?? current).map((node) => [node.id, node]));
+			const next = (snapshot?.nodes ?? []).map((node): FlowCanvasNode => {
+				const previous = byId.get(node.nodeId);
 				if (
-					existing !== undefined &&
-					existing.data.flowNode === flowNode &&
-					existing.data.definition === definition &&
-					existing.data.editorOptions === editorOptions &&
-					existing.data.connectedInputIds === connectedInputIds &&
-					existing.data.matched === matched &&
-					existing.data.locked === controller.isGraphLocked &&
-					existing.data.runDisabled === runDisabled &&
-					existing.position.x === position.x &&
-					existing.position.y === position.y
+					previous?.data.runtime === runtime &&
+					(previous.dragging || (previous.position.x === node.x && previous.position.y === node.y))
 				)
-					return existing;
+					return previous;
 				return {
-					...(existing ?? {}),
-					id: flowNode.nodeId,
+					...previous,
+					id: node.nodeId,
 					type: "flowNode",
-					position,
-					data: {
-						flowNode,
-						nodeRun: existing?.data.nodeRun ?? null,
-						definition,
-						editorOptions,
-						connectedInputIds,
-						matched,
-						locked: controller.isGraphLocked,
-						runDisabled,
-						onUpdate: updateCanvasNode,
-						onAction: runCanvasNodeAction,
-					},
+					position: { x: node.x, y: node.y },
+					data: previous?.data.runtime === runtime ? previous.data : { nodeId: node.nodeId, runtime },
 				};
 			});
+			return next.length === current.length && next.every((node, index) => node === current[index]) ? current : next;
 		});
 	}, [
+		runtime,
+		flowInstance,
 		controller.isGraphLocked,
 		controller.runRequestStage,
 		connectedInputIdsByNode,
 		definitionsByType,
 		editorOptions,
 		matchingIds,
-		resolvedPositions,
 		runCanvasNodeAction,
 		snapshot?.nodes,
 		updateCanvasNode,
 	]);
-	useEffect((): void => {
-		const runByNode = new Map(
-			(latestRun?.nodes ?? []).map((nodeRun): [string, FlowDocumentNodeRun] => [nodeRun.nodeId, nodeRun]),
-		);
-		setNodes((current): FlowCanvasNode[] =>
-			current.map((node): FlowCanvasNode => {
-				const nextRun = runByNode.get(node.id) ?? null;
-				return node.data.nodeRun === nextRun ? node : { ...node, data: { ...node.data, nodeRun: nextRun } };
-			}),
-		);
-	}, [latestRun?.nodes]);
+	useEffect(() => {
+		flowInstance?.setNodes(nodes);
+	}, [flowInstance, nodes]);
 	useEffect((): void => {
 		if (reconnectingEdgeId === null) return;
 		if ((snapshot?.edges ?? []).some((edge): boolean => edge.edgeId === reconnectingEdgeId)) return;
@@ -634,46 +636,49 @@ function HomeFlowSurface({
 		// reconnect-end callback. Do not keep filtering the old edge id.
 		setReconnectingEdgeId(null);
 	}, [reconnectingEdgeId, snapshot?.edges]);
-	const edges = useMemo(
-		(): FlowCanvasEdge[] =>
-			(snapshot?.edges ?? [])
-				.filter(
-					(edge): boolean =>
-						edge.edgeId !== reconnectingEdgeId &&
-						canvasNodeIds.has(edge.sourceNodeId) &&
-						canvasNodeIds.has(edge.targetNodeId),
+	const previousEdgesRef = useRef<FlowCanvasEdge[]>([]);
+	const edges = useMemo((): FlowCanvasEdge[] => {
+		const nodeById = new Map(snapshot?.nodes.map((node) => [node.nodeId, node]));
+		const previousById = new Map(previousEdgesRef.current.map((edge) => [edge.id, edge]));
+		const next = (snapshot?.edges ?? [])
+			.filter((edge): boolean => canvasNodeIds.has(edge.sourceNodeId) && canvasNodeIds.has(edge.targetNodeId))
+			.map((edge): FlowCanvasEdge => {
+				const sourceNode = nodeById.get(edge.sourceNodeId);
+				const targetNode = nodeById.get(edge.targetNodeId);
+				const sourcePort = portFor(sourceNode, controller.nodeDefinitions, edge.sourcePort, "output");
+				const targetPort = portFor(targetNode, controller.nodeDefinitions, edge.targetPort, "input");
+				const sourceColor = flowPortColor(sourcePort?.dataTypes ?? [edge.dataType]);
+				const targetColor = flowPortColor(targetPort?.dataTypes ?? [edge.dataType]);
+				const previous = previousById.get(edge.edgeId);
+				if (
+					previous?.source === edge.sourceNodeId &&
+					previous.target === edge.targetNodeId &&
+					previous.sourceHandle === edge.sourcePort &&
+					previous.targetHandle === edge.targetPort &&
+					previous.data?.sourceColor === sourceColor &&
+					previous.data?.targetColor === targetColor
 				)
-				.map((edge): FlowCanvasEdge => {
-					const sourceNode = snapshot?.nodes.find((node): boolean => node.nodeId === edge.sourceNodeId);
-					const targetNode = snapshot?.nodes.find((node): boolean => node.nodeId === edge.targetNodeId);
-					const sourcePort = portFor(sourceNode, controller.nodeDefinitions, edge.sourcePort, "output");
-					const targetPort = portFor(targetNode, controller.nodeDefinitions, edge.targetPort, "input");
-					return {
-						id: edge.edgeId,
-						source: edge.sourceNodeId,
-						target: edge.targetNodeId,
-						sourceHandle: edge.sourcePort,
-						targetHandle: edge.targetPort,
-						type: "flowGradient",
-						data: {
-							sourceColor: flowPortColor(sourcePort?.dataTypes ?? [edge.dataType]),
-							targetColor: flowPortColor(targetPort?.dataTypes ?? [edge.dataType]),
-						},
-					};
-				}),
-		[
-			canvasNodeIds,
-			controller.nodeDefinitions,
-			reconnectingEdgeId,
-			snapshot?.edges,
-			snapshot?.nodes,
-		],
-	);
-	const onNodesChange = useCallback(
-		(changes: NodeChange<FlowCanvasNode>[]): void =>
-			setNodes((current): FlowCanvasNode[] => applyNodeChanges(changes, current)),
-		[],
-	);
+					return previous;
+				return {
+					id: edge.edgeId,
+					source: edge.sourceNodeId,
+					target: edge.targetNodeId,
+					sourceHandle: edge.sourcePort,
+					targetHandle: edge.targetPort,
+					type: "flowGradient",
+					data: {
+						sourceColor,
+						targetColor,
+					},
+				};
+			});
+		if (
+			next.length !== previousEdgesRef.current.length ||
+			next.some((edge, index) => edge !== previousEdgesRef.current[index])
+		)
+			previousEdgesRef.current = next;
+		return previousEdgesRef.current;
+	}, [canvasNodeIds, controller.nodeDefinitions, snapshot?.edges, snapshot?.nodes]);
 	const connectionLineComponent = useCallback(
 		(props: ConnectionLineComponentProps<FlowCanvasNode>): React.JSX.Element => {
 			const source = detachedConnectionSourceRef.current;
@@ -865,11 +870,7 @@ function HomeFlowSurface({
 	}, [controller.deleteEdge, controller.deleteNode, controller.isGraphLocked, flowInstance]);
 	const matchesFlowShortcut = useCallback(
 		(event: KeyboardEvent, commandId: ShortcutCommandId): boolean =>
-			matchesShortcutKeyboardEvent(
-				event,
-				getEffectiveShortcutBinding(keyboardShortcuts, commandId),
-				shortcutPlatform,
-			),
+			matchesShortcutKeyboardEvent(event, getEffectiveShortcutBinding(keyboardShortcuts, commandId), shortcutPlatform),
 		[keyboardShortcuts, shortcutPlatform],
 	);
 	const handleKeyDown = useCallback(
@@ -882,6 +883,37 @@ function HomeFlowSurface({
 				return;
 			}
 			if (target?.matches('input, textarea, [contenteditable="true"]')) return;
+			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "d") {
+				event.preventDefault();
+				controller.duplicateNodes(
+					flowInstance
+						?.getNodes()
+						.filter((node) => node.selected)
+						.map((node) => node.id) ?? [],
+				);
+				return;
+			}
+			if (event.key === "Enter") {
+				const node = flowInstance?.getNodes().find((node) => node.selected);
+				if (node && flowInstance) {
+					event.preventDefault();
+					runtime.canvas.pin(node.id, true);
+					void flowInstance
+						.setCenter(
+							node.position.x + (node.measured?.width ?? 320) / 2,
+							node.position.y + (node.measured?.height ?? 220) / 2,
+							{ zoom: Math.max(0.75, flowInstance.getZoom()), duration: 180 },
+						)
+						.then(() =>
+							canvasRef.current
+								?.querySelector<HTMLElement>(
+									`[data-flow-shell="${CSS.escape(node.id)}"] input, [data-flow-shell="${CSS.escape(node.id)}"] textarea`,
+								)
+								?.focus(),
+						);
+				}
+				return;
+			}
 			if (matchesFlowShortcut(event, "flow.undo")) {
 				event.preventDefault();
 				controller.undo();
@@ -922,6 +954,8 @@ function HomeFlowSurface({
 		},
 		[
 			controller.redo,
+			controller.duplicateNodes,
+			runtime,
 			controller.stopRun,
 			controller.undo,
 			deleteSelectedElements,
@@ -1104,29 +1138,26 @@ function HomeFlowSurface({
 		},
 		[finishInteractionSample],
 	);
-	useEffect(
-		(): (() => void) => (): void => {
-			finishInteractionSample();
-			canvasRef.current?.removeAttribute("data-flow-moving");
-		},
-		[finishInteractionSample],
-	);
 	const onNodeDragStop = useCallback<OnNodeDrag<FlowCanvasNode>>(
-		(_event, node): void => {
+		(_event, _node, moved): void => {
 			finishInteractionSample("node-drag");
-			const { x, y } = node.position;
-			void controller.updateNodePosition(node.id, x, y);
+			controller.updateNodePositions(
+				moved
+					.filter((node) => {
+						const previous = runtime.document.get(node.id);
+						return previous && (previous.x !== node.position.x || previous.y !== node.position.y);
+					})
+					.map((node) => ({ nodeId: node.id, ...node.position })),
+			);
 		},
-		[controller.updateNodePosition, finishInteractionSample],
+		[controller.updateNodePositions, finishInteractionSample, runtime],
 	);
 	const onMoveStart = useCallback((): void => {
 		startInteractionSample("viewport");
-		canvasRef.current?.setAttribute("data-flow-moving", "true");
 	}, [startInteractionSample]);
 	const onMoveEnd = useCallback(
 		(_event: unknown, viewport: { x: number; y: number; zoom: number }): void => {
 			finishInteractionSample("viewport");
-			canvasRef.current?.removeAttribute("data-flow-moving");
 			void controller.updateViewport(viewport);
 		},
 		[controller.updateViewport, finishInteractionSample],
@@ -1135,7 +1166,7 @@ function HomeFlowSurface({
 	if (snapshot === null)
 		return (
 			<section className={styles.flowSurface} data-studio-flow-surface="true">
-				<header className={styles.header}>
+				<header className={styles.header} data-side-dock-open={sideDockOpen ? "true" : undefined}>
 					<Typography.Text className={styles.flowTitle}>
 						{t("flow.welcome.nodeTitle", {
 							defaultValue: "Build a workflow from nodes",
@@ -1157,7 +1188,7 @@ function HomeFlowSurface({
 		);
 	return (
 		<section className={styles.flowSurface} data-studio-flow-surface="true">
-			<header className={styles.header}>
+			<header className={styles.header} data-side-dock-open={sideDockOpen ? "true" : undefined}>
 				<Typography.Text className={styles.flowTitle}>{snapshot.flow.title}</Typography.Text>
 				<Flex align="center" gap="small" className={styles.headerActions}>
 					<Tooltip title={t("files.editorMenu.undo")} placement="bottom">
@@ -1178,10 +1209,7 @@ function HomeFlowSurface({
 							onClick={controller.redo}
 						/>
 					</Tooltip>
-					<Tooltip
-						title={t(snapToGrid ? "flow.editor.disableSnap" : "flow.editor.enableSnap")}
-						placement="bottom"
-					>
+					<Tooltip title={t(snapToGrid ? "flow.editor.disableSnap" : "flow.editor.enableSnap")} placement="bottom">
 						<Button
 							type="text"
 							shape="circle"
@@ -1273,8 +1301,7 @@ function HomeFlowSurface({
 					lastPointerPositionRef.current = { x: event.clientX, y: event.clientY };
 				}}
 				onContextMenu={(event): void => {
-					if (controller.isGraphLocked || (event.target as Element).closest(".react-flow__node") !== null)
-						return;
+					if (controller.isGraphLocked || (event.target as Element).closest(".react-flow__node") !== null) return;
 					event.preventDefault();
 					openPickerAt(event.clientX, event.clientY);
 				}}
@@ -1292,15 +1319,11 @@ function HomeFlowSurface({
 					}}
 					onPrevious={(): void =>
 						setSearchIndex((current): number =>
-							matchingNodes.length === 0
-								? 0
-								: (current - 1 + matchingNodes.length) % matchingNodes.length,
+							matchingNodes.length === 0 ? 0 : (current - 1 + matchingNodes.length) % matchingNodes.length,
 						)
 					}
 					onNext={(): void =>
-						setSearchIndex((current): number =>
-							matchingNodes.length === 0 ? 0 : (current + 1) % matchingNodes.length,
-						)
+						setSearchIndex((current): number => (matchingNodes.length === 0 ? 0 : (current + 1) % matchingNodes.length))
 					}
 					onClose={closeSearch}
 				/>
@@ -1312,8 +1335,7 @@ function HomeFlowSurface({
 							errorMessage={null}
 							onAddPrompt={(): void => {
 								const rect = canvasRef.current?.getBoundingClientRect();
-								if (rect !== undefined)
-									openPickerAt(rect.left + rect.width / 2, rect.top + rect.height / 2);
+								if (rect !== undefined) openPickerAt(rect.left + rect.width / 2, rect.top + rect.height / 2);
 							}}
 						/>
 					</div>
@@ -1332,9 +1354,7 @@ function HomeFlowSurface({
 										<Typography.Text type="secondary">{approval.reason}</Typography.Text>
 										{approval.requiredConsent !== null ? (
 											<>
-												<Typography.Text type="secondary">
-													{approval.requiredConsent.prompt}
-												</Typography.Text>
+												<Typography.Text type="secondary">{approval.requiredConsent.prompt}</Typography.Text>
 												<Input
 													size="small"
 													value={consentText[approval.approvalId] ?? ""}
@@ -1364,8 +1384,7 @@ function HomeFlowSurface({
 												type="primary"
 												disabled={
 													approval.requiredConsent !== null &&
-													consentText[approval.approvalId] !==
-														approval.requiredConsent.expectedText
+													consentText[approval.approvalId] !== approval.requiredConsent.expectedText
 												}
 												onClick={(): void => {
 													void controller.resolveApproval(
@@ -1385,13 +1404,22 @@ function HomeFlowSurface({
 				) : null}
 				<ReactFlow
 					key={snapshot.flow.flowId}
-					nodes={nodes}
-					edges={edges}
+					defaultNodes={nodes}
+					edges={edges
+						.filter((edge) => edge.id !== reconnectingEdgeId && overlayEdgeIds.includes(edge.id))
+						.map((edge) => ({ ...edge, selected: runtime.selectedEdges.has(edge.id) }))}
+					onEdgesChange={(changes) => {
+						for (const change of changes)
+							if (change.type === "select") {
+								if (change.selected) runtime.selectedEdges.add(change.id);
+								else runtime.selectedEdges.delete(change.id);
+							}
+						if (changes.some((change) => change.type === "select")) setOverlayEdgeIds((current) => [...current]);
+					}}
 					nodeTypes={nodeTypes}
 					edgeTypes={edgeTypes}
 					defaultViewport={snapshot.flow.viewport}
 					onInit={setFlowInstance}
-					onNodesChange={onNodesChange}
 					onNodeDragStart={(): void => startInteractionSample("node-drag")}
 					onNodeDragStop={onNodeDragStop}
 					onConnect={onConnect}
@@ -1400,17 +1428,14 @@ function HomeFlowSurface({
 						connectStartRef.current = params;
 						const reconnectSource = detachedConnectionSourceRef.current;
 						detachedEdgeIdRef.current = null;
-						if (params.handleType !== "source" || reconnectSource === null)
-							detachedConnectionSourceRef.current = null;
+						if (params.handleType !== "source" || reconnectSource === null) detachedConnectionSourceRef.current = null;
 						setReconnectingEdgeId(null);
-						if (params.handleType !== "target" || params.nodeId === null || params.handleId === null)
-							return;
+						if (params.handleType !== "target" || params.nodeId === null || params.handleId === null) return;
 						const targetNode = snapshot.nodes.find((node): boolean => node.nodeId === params.nodeId);
 						const targetPort = portFor(targetNode, controller.nodeDefinitions, params.handleId, "input");
 						if (targetPort?.multiple === true) return;
 						const detachedEdge = snapshot.edges.find(
-							(edge): boolean =>
-								edge.targetNodeId === params.nodeId && edge.targetPort === params.handleId,
+							(edge): boolean => edge.targetNodeId === params.nodeId && edge.targetPort === params.handleId,
 						);
 						if (detachedEdge === undefined) return;
 						detachedEdgeIdRef.current = detachedEdge.edgeId;
@@ -1440,16 +1465,21 @@ function HomeFlowSurface({
 					zoomOnDoubleClick
 					selectionOnDrag
 					selectionMode={SelectionMode.Partial}
-					fitView={snapshot.nodes.length > 0}
+					fitView={false}
 					fitViewOptions={{ padding: 0.2 }}
-					minZoom={0.2}
+					minZoom={0.05}
 					maxZoom={2}
-					onlyRenderVisibleElements={nodes.length >= 80}
+					onlyRenderVisibleElements={false}
 					snapToGrid={snapToGrid}
 					snapGrid={FLOW_SNAP_GRID}
 					deleteKeyCode={null}
 				>
-					<Background gap={24} size={1} />
+					<FlowCanvasLayer
+						runtime={runtime}
+						edges={edges}
+						excludedEdgeId={reconnectingEdgeId}
+						onOverlayChange={setOverlayEdgeIds}
+					/>
 					<Controls showInteractive={false} />
 				</ReactFlow>
 				<FlowNodePicker

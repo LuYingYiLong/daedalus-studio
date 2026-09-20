@@ -21,6 +21,7 @@ import "katex/dist/katex.min.css";
 
 export type MarkdownContentProps = {
 	children: string;
+	cacheParsing?: boolean;
 	streaming?: boolean;
 	stickyCodeHeaders?: boolean; // 让代码块标题在所在滚动容器顶部吸附，方便持续使用复制按钮，默认关闭
 };
@@ -339,12 +340,26 @@ type RenderedMarkdownProps = {
 	source: string;
 	streaming: boolean;
 	stickyCodeHeaders: boolean;
+	cacheParsing: boolean;
 };
 
-const RenderedMarkdown = memo(function RenderedMarkdown({ source, streaming, stickyCodeHeaders }: RenderedMarkdownProps): React.JSX.Element {
+const parsedMarkdownCache = new Map<string, React.JSX.Element>();
+let parsedMarkdownCharacters = 0;
+const RenderedMarkdown = memo(function RenderedMarkdown({ source, streaming, stickyCodeHeaders, cacheParsing }: RenderedMarkdownProps): React.JSX.Element {
 	const components: Components = streaming
 		? (stickyCodeHeaders ? STICKY_STREAMING_MARKDOWN_COMPONENTS : STREAMING_MARKDOWN_COMPONENTS)
 		: (stickyCodeHeaders ? STICKY_MARKDOWN_COMPONENTS : MARKDOWN_COMPONENTS);
+	if (cacheParsing && !streaming && source.length <= 100_000) {
+		const key = `${stickyCodeHeaders ? 1 : 0}:${source}`;
+		const cached = parsedMarkdownCache.get(key);
+		if (cached) { parsedMarkdownCache.delete(key); parsedMarkdownCache.set(key, cached); return cached; }
+		const parsed = Markdown({ children: source, remarkPlugins: MARKDOWN_REMARK_PLUGINS, rehypePlugins: MARKDOWN_REHYPE_PLUGINS, components, urlTransform: transformMarkdownUrl });
+		while (parsedMarkdownCache.size >= 32 || (parsedMarkdownCache.size && parsedMarkdownCharacters + key.length > 500_000)) {
+			const oldest = parsedMarkdownCache.keys().next().value!; parsedMarkdownCache.delete(oldest); parsedMarkdownCharacters -= oldest.length;
+		}
+		parsedMarkdownCache.set(key, parsed); parsedMarkdownCharacters += key.length;
+		return parsed;
+	}
 	return (
 		<Markdown
 			remarkPlugins={MARKDOWN_REMARK_PLUGINS}
@@ -357,9 +372,9 @@ const RenderedMarkdown = memo(function RenderedMarkdown({ source, streaming, sti
 	);
 });
 
-function MarkdownContent({ children, streaming = false, stickyCodeHeaders = false }: MarkdownContentProps): React.JSX.Element {
+function MarkdownContent({ children, streaming = false, stickyCodeHeaders = false, cacheParsing = false }: MarkdownContentProps): React.JSX.Element {
 	const renderedSource: string = useStreamingMarkdownSource(children, streaming);
-	return <RenderedMarkdown source={renderedSource} streaming={streaming} stickyCodeHeaders={stickyCodeHeaders} />;
+	return <RenderedMarkdown source={renderedSource} streaming={streaming} stickyCodeHeaders={stickyCodeHeaders} cacheParsing={cacheParsing} />;
 }
 
 export default memo(MarkdownContent);

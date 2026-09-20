@@ -25,6 +25,10 @@ describe("Flow home surface", (): void => {
 		expect(sidebar).toContain("value={primarySurface}");
 		expect(sidebar).toContain("onPrimarySurfaceChange");
 		expect(home).toContain('mainSurface === "chat" && workspaceForActions !== null');
+		expect(home).toContain("sideDockOpen,");
+		expect(surface).toContain("sideDockOpen: boolean;");
+		expect(surface).toContain('data-side-dock-open={sideDockOpen ? "true" : undefined}');
+		expect(surfaceStyles).toContain('.header[data-side-dock-open="true"]');
 		expect(surface).toContain("onConnect={onConnect}");
 		expect(surface).toContain("sourceHandle: edge.sourcePort");
 		expect(surface).toContain("targetHandle: edge.targetPort");
@@ -40,11 +44,10 @@ describe("Flow home surface", (): void => {
 		expect(surface).toContain("onMoveEnd={onMoveEnd}");
 		expect(surface).not.toContain("viewportSaveTimerRef");
 		expect(surface).toContain("onMoveStart={onMoveStart}");
-		expect(surface).toContain('setAttribute("data-flow-moving", "true")');
+		expect(surface).not.toContain('setAttribute("data-flow-moving", "true")');
 		expect(surface).not.toContain("setIsViewportMoving");
 		expect(surface).not.toContain("requestAnimationFrame(sampleFrame)");
 		expect(surface).toContain('performance.clearMeasures("daedalus.flow.interaction")');
-		expect(surface).toContain("onlyRenderVisibleElements={nodes.length >= 80}");
 		expect(surface).not.toContain("MiniMap");
 		expect(surface).toContain("menu={approvalModeMenu}");
 		expect(surface).toContain("<Dropdown.Button");
@@ -108,7 +111,7 @@ describe("Flow home surface", (): void => {
 		expect(nodes).toContain('name="play"');
 		expect(nodes).toContain('flowNode.typeId === "builtin/output"');
 		expect(nodes).toContain('className={`${styles.outputResult} nodrag nowheel`}');
-		expect(nodes).toContain("<MarkdownContent>{outputMarkdown}</MarkdownContent>");
+		expect(nodes).toContain("<MarkdownContent cacheParsing>{outputMarkdown}</MarkdownContent>");
 		expect(nodes).toContain('format === "json"');
 		expect(nodes).not.toContain("resultPreview");
 		expect(nodeStyles).toContain(".nodeCardSelected");
@@ -119,11 +122,13 @@ describe("Flow home surface", (): void => {
 		expect(nodeStyles).toContain("left: calc(0px - var(--ds-space-3) - 1px);");
 		expect(nodeStyles).toContain("transform: translate(-50%, -50%) !important;");
 		expect(nodeStyles).not.toContain(".nodeCard:hover");
-		expect(nodeStyles).not.toContain("transition:");
+		expect(nodeStyles).not.toMatch(/\.nodeCard\s*\{[^}]*transition:/u);
 		expect(nodeStyles).not.toContain("overflow-clip-margin");
-		expect(surfaceStyles).toContain(".canvasRegion :global(.react-flow__viewport)");
 		expect(surfaceStyles).toContain("will-change: transform;");
 		expect(surfaceStyles).toContain("backface-visibility: hidden;");
+		expect(surfaceStyles).toContain(".canvasRegion :global(.react-flow__viewport)");
+		expect(surfaceStyles).not.toContain('[data-flow-resampling="true"]');
+		expect(surfaceStyles).not.toContain('[data-flow-moving="true"]');
 		expect(surfaceStyles).not.toContain("box-shadow: none;");
 		expect(picker).toContain("<Dropdown");
 		expect(picker).toContain("popupRender=");
@@ -145,6 +150,7 @@ describe("Flow home surface", (): void => {
 		expect(shortcutSettings).not.toContain("FlowShortcutReference");
 		expect(controller).toContain("next = applyFlowOperation(next, operation");
 		expect(controller).toContain("flowOperationOutbox.enqueue");
+		expect(controller).toContain("if (repairedConfigByNodeId.size > 0) setSnapshot(next);");
 		expect(controller).toContain("const reconnectEdge = useCallback");
 		expect(controller).toContain("applyOperations([");
 		expect(api).toContain('"flow.patch.commit"');
