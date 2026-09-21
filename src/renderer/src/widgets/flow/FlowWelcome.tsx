@@ -8,6 +8,7 @@ import styles from "./FlowWelcome.module.css";
 type FlowWelcomeCreateProps = {
 	mode: "create";
 	workspaces: WorkspaceConfig[];
+	initialWorkspaceId?: string | null;
 	isCreating: boolean;
 	onCreate: (workspaceId: string | null) => void;
 	errorMessage: string | null;
@@ -23,8 +24,12 @@ type FlowWelcomeProps = FlowWelcomeCreateProps | FlowWelcomeEmptyProps;
 
 function FlowWelcome(props: FlowWelcomeProps): React.JSX.Element {
 	const { t } = useTranslation();
-	const [workspaceId, setWorkspaceId] = useState<string>("");
+	const initialWorkspaceId = props.mode === "create" ? props.initialWorkspaceId ?? "" : "";
+	const [workspaceId, setWorkspaceId] = useState<string>(initialWorkspaceId);
 	const workspaces = props.mode === "create" ? props.workspaces : null;
+	useEffect((): void => {
+		setWorkspaceId(initialWorkspaceId);
+	}, [initialWorkspaceId]);
 	useEffect((): void => {
 		if (
 			workspaceId.length > 0 &&

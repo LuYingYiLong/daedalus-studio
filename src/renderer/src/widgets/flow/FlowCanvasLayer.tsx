@@ -4,9 +4,10 @@ import { getBezierPath, Position, useStoreApi } from "@xyflow/react";
 import type { FlowCanvasEdge } from "./HomeFlowSurface";
 import type { FlowInteractionNode } from "./FlowNodeShell";
 import type { FlowRenderRuntime } from "./flow-render-runtime";
-import { flowNodeColor } from "./FlowNodes";
+import { flowNodeCategoryColor } from "./flow-node-category-colors";
 import { flowNodeTitle } from "./flow-node-labels";
 import type { FlowHandleGeometry, FlowNodeGeometry, FlowRect } from "@/domain/flow/flow-render-stores";
+import type { FlowNodeTypeDefinition } from "@/platform/rpc/types";
 
 type Curve = {
 	source: FlowNodeGeometry;
@@ -22,21 +23,22 @@ type Props = {
 	runtime: FlowRenderRuntime;
 	edges: FlowCanvasEdge[];
 	excludedEdgeId: string | null;
+	nodeCategories: ReadonlyMap<string, FlowNodeTypeDefinition>;
 	onOverlayChange: (ids: readonly string[]) => void;
 };
 
-function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Props): React.JSX.Element {
+function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOverlayChange }: Props): React.JSX.Element {
 	const { t } = useTranslation();
 	const translateRef = useRef(t);
 	translateRef.current = t;
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const xyStore = useStoreApi<FlowInteractionNode, FlowCanvasEdge>();
-	const propsRef = useRef({ edges, excludedEdgeId, onOverlayChange });
-	propsRef.current = { edges, excludedEdgeId, onOverlayChange };
+	const propsRef = useRef({ edges, excludedEdgeId, nodeCategories, onOverlayChange });
+	propsRef.current = { edges, excludedEdgeId, nodeCategories, onOverlayChange };
 	const invalidateRef = useRef<() => void>(() => undefined);
 	useEffect(() => {
 		invalidateRef.current();
-	}, [edges, excludedEdgeId, t]);
+	}, [edges, excludedEdgeId, nodeCategories, t]);
 	useEffect(() => {
 		const canvas = canvasRef.current!;
 		const host = canvas.parentElement!;
@@ -154,7 +156,7 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 					width,
 					height,
 					handles,
-					color: flowNodeColor(view.flowNode.typeId),
+					color: flowNodeCategoryColor(propsRef.current.nodeCategories.get(view.flowNode.typeId)?.category),
 					selected: node.selected === true,
 				});
 				if (runtime.geometry.get(id) !== old) {
@@ -392,6 +394,10 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, onOverlayChange }: Pr
 				if (runtime.canvas.getMode(id) === "full") continue;
 				const node = runtime.geometry.get(id)!;
 				const view = runtime.views.get(id);
+				const categoryColor = flowNodeCategoryColor(
+					view === undefined ? undefined : propsRef.current.nodeCategories.get(view.flowNode.typeId)?.category,
+				);
+				if (node.color !== categoryColor) node.color = categoryColor;
 				const collapsed = runtime.canvas.collapsed.get(id) === true;
 				const height = collapsed ? node.height : Math.min(headerHeight, node.height);
 				const corner = Math.min(radius, node.width / 2, height / 2);

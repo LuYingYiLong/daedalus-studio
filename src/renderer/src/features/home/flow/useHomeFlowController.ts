@@ -42,7 +42,7 @@ export type HomeFlowController = {
 	runRequestStage: FlowRunRequestStage;
 	error: string | null;
 	refresh: () => Promise<void>;
-	createNewFlow: (workspaceId?: string | null) => Promise<void>;
+	createNewFlow: (workspaceId?: string | null) => Promise<boolean>;
 	createFromChat: (session: SessionMetadata) => Promise<boolean>;
 	selectFlow: (flowId: string) => Promise<void>;
 	selectNode: (nodeId: string | null) => Promise<void>;
@@ -631,7 +631,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	}, [enabled]);
 
 	const createNewFlow = useCallback(
-		async (workspaceId?: string | null): Promise<void> => {
+		async (workspaceId?: string | null): Promise<boolean> => {
 			setIsMutating(true);
 			setError(null);
 			try {
@@ -648,8 +648,10 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 				const result = await fetchFlows();
 				setFlows(result.flows.map(toSummary));
 				if (result.order !== undefined) setFlowOrder(result.order);
+				return true;
 			} catch (mutationError: unknown) {
 				setError(errorMessage(mutationError));
+				return false;
 			} finally {
 				setIsMutating(false);
 			}

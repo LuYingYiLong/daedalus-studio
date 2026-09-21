@@ -750,7 +750,12 @@
 					"basic": "基础",
 					"ai": "AI",
 					"workspace": "工作区",
+					"workspace-media": "媒体文件",
 					"media": "媒体",
+					"media-input": "媒体输入",
+					"media-processing": "图像处理",
+					"media-generation": "媒体生成",
+					"media-output": "媒体输出",
 					"parameters": "参数",
 					"collections": "列表与批量"
 				},
@@ -794,7 +799,8 @@
 				"builtin/parameter-sets": "参数组",
 				"builtin/batch-text-to-image": "批量文生图",
 				"builtin/batch-image-to-image": "批量图生图",
-				"builtin/save-images": "保存图片"
+				"builtin/save-images": "保存图片",
+				"builtin/save-videos": "保存视频"
 			},
 			"parameters": {
 				"builtin/user-prompt": { "input": "用户提示词" },
@@ -906,6 +912,11 @@
 					"images": "图片列表",
 					"directory": "保存目录",
 					"fileName": "文件名模板"
+				},
+				"builtin/save-videos": {
+					"videos": "视频列表",
+					"directory": "保存目录",
+					"fileName": "文件名模板"
 				}
 			},
 			"outputs": {
@@ -983,7 +994,8 @@
 					"images": "图片列表",
 					"report": "执行报告"
 				},
-				"builtin/save-images": {}
+				"builtin/save-images": {},
+				"builtin/save-videos": {}
 			}
 		},
 		"aria": {

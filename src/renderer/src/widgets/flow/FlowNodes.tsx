@@ -1,7 +1,19 @@
 import { FlowMediaGallery } from "./FlowMediaGallery";
 import { FlowParameterSetsEditor } from "./FlowParameterSetsEditor";
 import { FlowListEditor } from "./FlowListEditor";
-import { Popconfirm, BorderBeam, ColorPicker, Switch, Button, Input, InputNumber, Select, Space, Tooltip, Typography } from "antd";
+import {
+	Popconfirm,
+	BorderBeam,
+	ColorPicker,
+	Switch,
+	Button,
+	Input,
+	InputNumber,
+	Select,
+	Space,
+	Tooltip,
+	Typography,
+} from "antd";
 import {
 	memo,
 	useContext,
@@ -33,6 +45,7 @@ import MarkdownContent from "@/widgets/markdown/MarkdownContent";
 import styles from "./FlowNodes.module.css";
 import { flowNodeOutputLabel, flowNodeParameterLabel, flowNodeTitle, flowNodeTypeLabel } from "./flow-node-labels";
 import { flowDefaultControl, flowPortColor, flowPortColorKind, FLOW_PORT_COLORS } from "./flow-port-colors";
+import { flowNodeCategoryColor } from "./flow-node-category-colors";
 
 export type FlowNodeEditorOptions = {
 	modelSelection: ProviderModelSelection | null;
@@ -95,13 +108,6 @@ function collectMediaArtifacts(value: unknown, result: FlowMediaArtifactRef[] = 
 	return result;
 }
 
-
-export function flowNodeColor(typeId: string): string {
-	let hash = 0;
-	for (const char of typeId) hash = (hash * 31 + char.charCodeAt(0)) | 0;
-	return `hsl(${Math.abs(hash) % 360} 68% 38%)`;
-}
-
 export function applyFlowProviderSelection(
 	config: Record<string, unknown>,
 	provider: string,
@@ -153,8 +159,13 @@ export function resolveFlowDefinitionParameters(
 			});
 		}
 	}
-	if (typeof config.elementType === "string" && Object.prototype.hasOwnProperty.call(FLOW_PORT_COLORS, config.elementType))
-		for (const parameter of parameters) if (parameter.mode !== "fixed" && parameter.id !== "index") parameter.dataTypes = [config.elementType as FlowNodePortDefinition["dataTypes"][number]];
+	if (
+		typeof config.elementType === "string" &&
+		Object.prototype.hasOwnProperty.call(FLOW_PORT_COLORS, config.elementType)
+	)
+		for (const parameter of parameters)
+			if (parameter.mode !== "fixed" && parameter.id !== "index")
+				parameter.dataTypes = [config.elementType as FlowNodePortDefinition["dataTypes"][number]];
 	return parameters;
 }
 
@@ -189,8 +200,16 @@ export function resolveFlowDefinitionPorts(
 			defaultConnect: output.defaultConnect,
 			cardinality: output.cardinality,
 		});
-	if (definition.typeId === "builtin/flow-input") for (const port of ports) if (port.direction === "output") port.dataTypes = [config.dataType === "json" ? "json" : "text"];
-	if (typeof config.elementType === "string" && Object.prototype.hasOwnProperty.call(FLOW_PORT_COLORS, config.elementType)) for (const port of ports) if (port.id !== "index") port.dataTypes = [config.elementType as FlowNodePortDefinition["dataTypes"][number]];
+	if (definition.typeId === "builtin/flow-input")
+		for (const port of ports)
+			if (port.direction === "output") port.dataTypes = [config.dataType === "json" ? "json" : "text"];
+	if (
+		typeof config.elementType === "string" &&
+		Object.prototype.hasOwnProperty.call(FLOW_PORT_COLORS, config.elementType)
+	)
+		for (const port of ports)
+			if (port.id !== "index")
+				port.dataTypes = [config.elementType as FlowNodePortDefinition["dataTypes"][number]];
 	return ports;
 }
 
@@ -337,24 +356,83 @@ function SchemaEditor({
 	};
 	const supportsReasoningEffort = Object.prototype.hasOwnProperty.call(properties, "reasoningEffort");
 	const renderControl = (key: string, schema: Record<string, unknown>, title: string): React.JSX.Element => {
-		const parameter = definition.parameters.find(parameter => parameter.mode !== "connection" && parameter.configField === key);
-		const control = schema["x-daedalus-control"] ?? (parameter?.mode === "hybrid" ? flowDefaultControl(parameter.dataTypes) : undefined);
-		if (control === "parameter-sets") return <FlowParameterSetsEditor disabled={disabled} value={config[key]} onChange={value => update(key, value, false)} />;
+		const parameter = definition.parameters.find(
+			(parameter) => parameter.mode !== "connection" && parameter.configField === key,
+		);
+		const control =
+			schema["x-daedalus-control"] ??
+			(parameter?.mode === "hybrid" ? flowDefaultControl(parameter.dataTypes) : undefined);
+		if (control === "parameter-sets")
+			return (
+				<FlowParameterSetsEditor
+					disabled={disabled}
+					value={config[key]}
+					onChange={(value) => update(key, value, false)}
+				/>
+			);
 		if (control === "typed-list") {
 			const fieldId = `${node.nodeId}\u0000${key}`;
 			const items = Array.isArray(config[key]) ? config[key] : [];
-			return <FlowListEditor type={String(config.elementType ?? "json")} value={items} disabled={disabled}
-				itemKeys={canvas.getListItemKeys(fieldId, items.length)} onRemove={index => canvas.removeListItem(fieldId, index)}
-				onChange={value => update(key, value, false)} onOpenChange={onSelectOpenChange}
-				renderJson={(itemKey, value, onChange) => <JsonField fieldId={`${fieldId}\u0000${itemKey}`} name={title} value={value} disabled={disabled} onChange={onChange} />} />;
+			return (
+				<FlowListEditor
+					type={String(config.elementType ?? "json")}
+					value={items}
+					disabled={disabled}
+					itemKeys={canvas.getListItemKeys(fieldId, items.length)}
+					onRemove={(index) => canvas.removeListItem(fieldId, index)}
+					onChange={(value) => update(key, value, false)}
+					onOpenChange={onSelectOpenChange}
+					renderJson={(itemKey, value, onChange) => (
+						<JsonField
+							fieldId={`${fieldId}\u0000${itemKey}`}
+							name={title}
+							value={value}
+							disabled={disabled}
+							onChange={onChange}
+						/>
+					)}
+				/>
+			);
 		}
 		if (control === "color") {
 			const color = (config[key] ?? { r: 1, g: 1, b: 1, a: 1 }) as { r: number; g: number; b: number; a: number };
-			return <ColorPicker disabled={disabled} value={`rgba(${color.r * 255}, ${color.g * 255}, ${color.b * 255}, ${color.a})`} onOpenChange={onSelectOpenChange} onChangeComplete={value => { const rgb = value.toRgb(); update(key, { r: rgb.r / 255, g: rgb.g / 255, b: rgb.b / 255, a: rgb.a }); }} />;
+			return (
+				<ColorPicker
+					disabled={disabled}
+					value={`rgba(${color.r * 255}, ${color.g * 255}, ${color.b * 255}, ${color.a})`}
+					onOpenChange={onSelectOpenChange}
+					onChangeComplete={(value) => {
+						const rgb = value.toRgb();
+						update(key, { r: rgb.r / 255, g: rgb.g / 255, b: rgb.b / 255, a: rgb.a });
+					}}
+					showText
+				/>
+			);
 		}
 		if (control === "size") {
 			const value = (config[key] ?? { width: 1024, height: 1024 }) as { width: number; height: number };
-			return <Space.Compact><InputNumber disabled={disabled} min={1} max={16000} value={value.width} onChange={width => { if (width !== null) update(key, { ...value, width }); }} /><InputNumber disabled={disabled} min={1} max={16000} value={value.height} onChange={height => { if (height !== null) update(key, { ...value, height }); }} /></Space.Compact>;
+			return (
+				<Space.Compact>
+					<InputNumber
+						disabled={disabled}
+						min={1}
+						max={16000}
+						value={value.width}
+						onChange={(width) => {
+							if (width !== null) update(key, { ...value, width });
+						}}
+					/>
+					<InputNumber
+						disabled={disabled}
+						min={1}
+						max={16000}
+						value={value.height}
+						onChange={(height) => {
+							if (height !== null) update(key, { ...value, height });
+						}}
+					/>
+				</Space.Compact>
+			);
 		}
 		const isWorkspaceFileControl =
 			control === "workspace-file" ||
@@ -405,9 +483,14 @@ function SchemaEditor({
 						const nextProvider = editorOptions.modelSelection?.providers.find(
 							(candidate): boolean => candidate.provider === value,
 						);
-						const compatibleModels = (editorOptions.modelsByProvider[value] ?? []).filter(supportsRequiredCapability);
+						const compatibleModels = (editorOptions.modelsByProvider[value] ?? []).filter(
+							supportsRequiredCapability,
+						);
 						const preferredModel = nextProvider?.selectedModel ?? nextProvider?.defaultModel;
-						const nextModel = compatibleModels.find(candidate => candidate.id === preferredModel)?.id ?? compatibleModels[0]?.id ?? "";
+						const nextModel =
+							compatibleModels.find((candidate) => candidate.id === preferredModel)?.id ??
+							compatibleModels[0]?.id ??
+							"";
 						const nextModelInfo = editorOptions.modelsByProvider[value]?.find(
 							(candidate): boolean => candidate.id === nextModel,
 						);
@@ -472,7 +555,14 @@ function SchemaEditor({
 					onChange={(value): void => update(key, value)}
 				/>
 			);
-		if (schema.type === "boolean") return <Switch disabled={disabled} checked={config[key] === true} onChange={value => update(key, value, false)} />;
+		if (schema.type === "boolean")
+			return (
+				<Switch
+					disabled={disabled}
+					checked={config[key] === true}
+					onChange={(value) => update(key, value, false)}
+				/>
+			);
 		if (schema.type === "number" || schema.type === "integer")
 			return (
 				<InputNumber
@@ -534,7 +624,9 @@ function SchemaEditor({
 				const hidesControl =
 					parameter.mode === "connection" ||
 					(parameter.mode === "hybrid" && connected && parameter.hideControlWhenConnected);
-				const expandedControl = schema?.["x-daedalus-control"] === "parameter-sets" || schema?.["x-daedalus-control"] === "typed-list";
+				const expandedControl =
+					schema?.["x-daedalus-control"] === "parameter-sets" ||
+					schema?.["x-daedalus-control"] === "typed-list";
 				return (
 					<div
 						key={parameter.id}
@@ -557,10 +649,14 @@ function SchemaEditor({
 							) : null}
 						</span>
 						<span className={styles.parameterLabel} title={parameterLabel}>
-							{parameterLabel}{connectable && parameter.cardinality && parameter.cardinality !== "one" ? " []" : ""}
+							{parameterLabel}
+							{connectable && parameter.cardinality && parameter.cardinality !== "one" ? " []" : ""}
 						</span>
 						{!hidesControl && configField !== null && schema !== undefined ? (
-							<div className={styles.parameterControl} style={expandedControl ? { flex: "1 1 100%", maxWidth: "100%" } : undefined}>
+							<div
+								className={styles.parameterControl}
+								style={expandedControl ? { flex: "1 1 100%", maxWidth: "100%" } : undefined}
+							>
 								{renderControl(configField, schema, parameterLabel)}
 							</div>
 						) : null}
@@ -821,7 +917,10 @@ function OutputRows({
 						key={output.id}
 						title={`${outputLabel} · ${output.dataTypes.join("/")}`}
 					>
-						<span className={styles.outputLabel}>{outputLabel}{output.cardinality === "many" ? " []" : ""}</span>
+						<span className={styles.outputLabel}>
+							{outputLabel}
+							{output.cardinality === "many" ? " []" : ""}
+						</span>
 						<span className={styles.outputSocket}>
 							<Handle
 								id={output.id}
@@ -840,23 +939,45 @@ function OutputRows({
 	);
 }
 
-function CollapsedPorts({ ids, direction }: { ids: string[]; direction: "input" | "output" }): React.JSX.Element | null {
+function CollapsedPorts({
+	ids,
+	direction,
+}: {
+	ids: string[];
+	direction: "input" | "output";
+}): React.JSX.Element | null {
 	const { t } = useTranslation();
 	if (ids.length === 0) return null;
 	return (
-		<span className={`${styles.collapsedPorts} ${direction === "input" ? styles.collapsedPortsLeft : styles.collapsedPortsRight}`}
-			data-flow-collapsed-ports={direction} title={t("flow.editor.expandPorts")}>
-			{ids.map(id => (
-				<Handle key={id} id={id} type={direction === "input" ? "target" : "source"}
+		<span
+			className={`${styles.collapsedPorts} ${direction === "input" ? styles.collapsedPortsLeft : styles.collapsedPortsRight}`}
+			data-flow-collapsed-ports={direction}
+			title={t("flow.editor.expandPorts")}
+		>
+			{ids.map((id) => (
+				<Handle
+					key={id}
+					id={id}
+					type={direction === "input" ? "target" : "source"}
 					position={direction === "input" ? Position.Left : Position.Right}
-					className={styles.collapsedPortAnchor} isConnectable={false} />
+					className={styles.collapsedPortAnchor}
+					isConnectable={false}
+				/>
 			))}
 		</span>
 	);
 }
 
-function FlowNodeCard({ data, selected, collapsed, onToggleCollapsed }: {
-	data: FlowCanvasNodeData; selected: boolean; collapsed: boolean; onToggleCollapsed: () => void;
+function FlowNodeCard({
+	data,
+	selected,
+	collapsed,
+	onToggleCollapsed,
+}: {
+	data: FlowCanvasNodeData;
+	selected: boolean;
+	collapsed: boolean;
+	onToggleCollapsed: () => void;
 }): React.JSX.Element {
 	const { t } = useTranslation();
 	const nodeElement = useRef<HTMLDivElement>(null);
@@ -870,7 +991,9 @@ function FlowNodeCard({ data, selected, collapsed, onToggleCollapsed }: {
 	});
 	const runtime = useContext(FlowRenderContext);
 	const [pluginEditing, setPluginEditing] = useState(false);
-	useEffect(() => { if (collapsed) setPluginEditing(false); }, [collapsed]);
+	useEffect(() => {
+		if (collapsed) setPluginEditing(false);
+	}, [collapsed]);
 	const { flowNode, definition } = data;
 	const updateNodeInternals = useUpdateNodeInternals();
 	const parameters = useMemo(
@@ -905,7 +1028,7 @@ function FlowNodeCard({ data, selected, collapsed, onToggleCollapsed }: {
 								defaultConnect: port.defaultConnect,
 							}),
 						)
-				: resolveFlowDefinitionPorts(definition, flowNode.config).filter(port => port.direction === "output"),
+				: resolveFlowDefinitionPorts(definition, flowNode.config).filter((port) => port.direction === "output"),
 		[definition, flowNode.ports],
 	);
 	const definitionLayoutKey =
@@ -936,24 +1059,44 @@ function FlowNodeCard({ data, selected, collapsed, onToggleCollapsed }: {
 			? flowNode.config.label.trim()
 			: nodeTitle;
 	return (
-		<div ref={nodeElement} className={`${styles.nodeShell} ${collapsed ? styles.nodeShellCollapsed : ""}`} data-flow-node-id={flowNode.nodeId}>
+		<div
+			ref={nodeElement}
+			className={`${styles.nodeShell} ${collapsed ? styles.nodeShellCollapsed : ""}`}
+			data-flow-node-id={flowNode.nodeId}
+		>
 			<BorderBeam lineWidth={2} size={256} style={{ display: nodeStatus === "running" ? undefined : "none" }}>
 				<article
 					className={`${styles.nodeCard} ${collapsed ? styles.nodeCardCollapsed : ""} ${selected ? styles.nodeCardSelected : ""} ${data.matched ? styles.nodeCardMatched : ""} ${definition === null ? styles.unknownNode : ""}`}
 					data-node-type={flowNode.typeId}
 					data-node-status={nodeStatus}
 				>
-					<header className={styles.header} style={{ background: flowNodeColor(flowNode.typeId) }}>
-						{collapsed ? <>
-							<CollapsedPorts ids={parameters.filter(parameter => parameter.mode !== "fixed").map(parameter => parameter.id)} direction="input" />
-							<CollapsedPorts ids={outputs.map(output => output.id)} direction="output" />
-						</> : null}
+					<header className={styles.header} style={{ background: flowNodeCategoryColor(definition?.category) }}>
+						{collapsed ? (
+							<>
+								<CollapsedPorts
+									ids={parameters
+										.filter((parameter) => parameter.mode !== "fixed")
+										.map((parameter) => parameter.id)}
+									direction="input"
+								/>
+								<CollapsedPorts ids={outputs.map((output) => output.id)} direction="output" />
+							</>
+						) : null}
 						<div className={styles.headerTitle}>
-							<button type="button" className={`${styles.switcher} nodrag nopan`} data-flow-switcher
-								aria-expanded={!collapsed} aria-label={t(collapsed ? "flow.editor.expandNode" : "flow.editor.collapseNode")}
+							<button
+								type="button"
+								className={`${styles.switcher} nodrag nopan`}
+								data-flow-switcher
+								aria-expanded={!collapsed}
+								aria-label={t(collapsed ? "flow.editor.expandNode" : "flow.editor.collapseNode")}
 								title={t(collapsed ? "flow.editor.expandNode" : "flow.editor.collapseNode")}
-								onPointerDown={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}
-								onClick={event => { event.stopPropagation(); onToggleCollapsed(); }}>
+								onPointerDown={(event) => event.stopPropagation()}
+								onDoubleClick={(event) => event.stopPropagation()}
+								onClick={(event) => {
+									event.stopPropagation();
+									onToggleCollapsed();
+								}}
+							>
 								<Icon name="arrow-down" />
 							</button>
 							<span className={styles.role}>{nodeTitle}</span>
@@ -977,8 +1120,11 @@ function FlowNodeCard({ data, selected, collapsed, onToggleCollapsed }: {
 									/>
 								</Tooltip>
 							) : null}
-							{(nodeStatus === "failed" || nodeStatus === "partial_failure") ? (
-								<Tooltip title={<span className={styles.errorTooltip}>{nodeError}</span>} trigger={["hover", "focus"]}>
+							{nodeStatus === "failed" || nodeStatus === "partial_failure" ? (
+								<Tooltip
+									title={<span className={styles.errorTooltip}>{nodeError}</span>}
+									trigger={["hover", "focus"]}
+								>
 									<span
 										className={`${styles.failedIndicator} nodrag nopan`}
 										role="img"
@@ -992,90 +1138,137 @@ function FlowNodeCard({ data, selected, collapsed, onToggleCollapsed }: {
 							) : null}
 						</div>
 					</header>
-					{!collapsed ? <div className={`${styles.body}${isOutputNode ? ` ${styles.outputBody}` : ""}`}>
-						{typeof data.nodeRun?.progress === "number" && data.nodeRun.status === "running" ? (
-							<div
-								className={styles.progressTrack}
-								aria-label={`${Math.round(data.nodeRun.progress * 100)}%`}
-							>
+					{!collapsed ? (
+						<div className={`${styles.body}${isOutputNode ? ` ${styles.outputBody}` : ""}`}>
+							{typeof data.nodeRun?.progress === "number" && data.nodeRun.status === "running" ? (
 								<div
-									className={styles.progressValue}
-									style={{ width: `${Math.round(data.nodeRun.progress * 100)}%` }}
-								/>
-							</div>
-						) : null}
-						<OutputRows typeId={flowNode.typeId} outputs={outputs} />
-						{definition === null ? (
-							<NodeSummary node={flowNode} definition={definition} />
-						) : definition.ui.kind === "sandbox" && pluginEditing ? (
-							<SandboxEditor
-								node={flowNode}
-								definition={
-									definition as FlowNodeTypeDefinition & {
-										ui: { kind: "sandbox"; entry: string; actions: string[] };
+									className={styles.progressTrack}
+									aria-label={`${Math.round(data.nodeRun.progress * 100)}%`}
+								>
+									<div
+										className={styles.progressValue}
+										style={{ width: `${Math.round(data.nodeRun.progress * 100)}%` }}
+									/>
+								</div>
+							) : null}
+							<OutputRows typeId={flowNode.typeId} outputs={outputs} />
+							{definition === null ? (
+								<NodeSummary node={flowNode} definition={definition} />
+							) : definition.ui.kind === "sandbox" && pluginEditing ? (
+								<SandboxEditor
+									node={flowNode}
+									definition={
+										definition as FlowNodeTypeDefinition & {
+											ui: { kind: "sandbox"; entry: string; actions: string[] };
+										}
 									}
-								}
-								parameters={parameters}
-								connectedInputIds={data.connectedInputIds}
-								editorOptions={data.editorOptions}
-								disabled={data.locked}
-								onChange={updateConfig}
-								onAction={(action): void => data.onAction(flowNode.nodeId, action)}
-							/>
-						) : (
-							<SchemaEditor
-								node={flowNode}
-								definition={definition}
-								parameters={parameters}
-								connectedInputIds={data.connectedInputIds}
-								editorOptions={data.editorOptions}
-								disabled={data.locked}
-								onChange={updateConfig}
-							/>
-						)}
-						{definition?.ui.kind === "sandbox" ? (
-							<Button
-								size="small"
-								className="nodrag nopan"
-								onClick={() => {
-									const next = !pluginEditing;
-									setPluginEditing(next);
-									runtime?.canvas.pin(flowNode.nodeId, next);
-									if (next) runtime?.canvas.pluginEditors.add(flowNode.nodeId);
-									else runtime?.canvas.pluginEditors.delete(flowNode.nodeId);
-								}}
-							>
-								{t(pluginEditing ? "flow.editor.closePluginEditor" : "flow.editor.openPluginEditor", {
-									defaultValue: pluginEditing ? "Finish editing" : "Open plugin editor",
-								})}
-							</Button>
-						) : null}
-						{data.nodeRun?.batchItems ? <div className="nodrag nowheel" style={{ maxHeight: 200, overflow: "auto" }}>
- <Typography.Text type="secondary">{t("flow.batch.completed", { count: Object.values(data.nodeRun.batchItems).filter(item => item.status === "completed").length, total: Object.keys(data.nodeRun.batchItems).length })}</Typography.Text>
- {Object.values(data.nodeRun.batchItems).sort((a, b) => Number(a.ordinal) - Number(b.ordinal)).map(item => <div key={String(item.itemId)}><Tooltip title={JSON.stringify(item.params)}><Typography.Text type={item.status === "failed" || item.status === "uncertain" ? "danger" : "secondary"}>{Number(item.ordinal) + 1}. {t(`flow.batch.status.${item.status}`)}{item.error ? ` · ${String(item.error)}` : ""}</Typography.Text></Tooltip></div>)}
- <Button disabled={data.runDisabled} size="small" onClick={() => data.onAction(flowNode.nodeId, "retry-batch")}>{t("flow.batch.retry")}</Button>
- <Popconfirm title={t("flow.batch.regenerateConfirm")} onConfirm={() => data.onAction(flowNode.nodeId, "run")}><Button disabled={data.runDisabled} size="small" danger>{t("flow.batch.regenerate")}</Button></Popconfirm>
- </div> : null}
-						{isOutputNode ? (
-							<div
-								className={`${styles.outputResult}${mediaArtifacts.length > 0 ? ` ${styles.outputResultMedia}` : ""} nodrag nowheel`}
-								role="region"
-								aria-label={t("flow.editor.outputResult", { defaultValue: "Output result" })}
-							>
-								{mediaArtifacts.length > 0 ? (
-									<FlowMediaGallery artifacts={mediaArtifacts} />
-								) : outputMarkdown.length > 0 ? (
-									<MarkdownContent cacheParsing>{outputMarkdown}</MarkdownContent>
-								) : (
+									parameters={parameters}
+									connectedInputIds={data.connectedInputIds}
+									editorOptions={data.editorOptions}
+									disabled={data.locked}
+									onChange={updateConfig}
+									onAction={(action): void => data.onAction(flowNode.nodeId, action)}
+								/>
+							) : (
+								<SchemaEditor
+									node={flowNode}
+									definition={definition}
+									parameters={parameters}
+									connectedInputIds={data.connectedInputIds}
+									editorOptions={data.editorOptions}
+									disabled={data.locked}
+									onChange={updateConfig}
+								/>
+							)}
+							{definition?.ui.kind === "sandbox" ? (
+								<Button
+									size="small"
+									className="nodrag nopan"
+									onClick={() => {
+										const next = !pluginEditing;
+										setPluginEditing(next);
+										runtime?.canvas.pin(flowNode.nodeId, next);
+										if (next) runtime?.canvas.pluginEditors.add(flowNode.nodeId);
+										else runtime?.canvas.pluginEditors.delete(flowNode.nodeId);
+									}}
+								>
+									{t(
+										pluginEditing
+											? "flow.editor.closePluginEditor"
+											: "flow.editor.openPluginEditor",
+										{
+											defaultValue: pluginEditing ? "Finish editing" : "Open plugin editor",
+										},
+									)}
+								</Button>
+							) : null}
+							{data.nodeRun?.batchItems ? (
+								<div className="nodrag nowheel" style={{ maxHeight: 200, overflow: "auto" }}>
 									<Typography.Text type="secondary">
-										{t("flow.editor.outputPending", {
-											defaultValue: "Run the Flow to see its output here",
+										{t("flow.batch.completed", {
+											count: Object.values(data.nodeRun.batchItems).filter(
+												(item) => item.status === "completed",
+											).length,
+											total: Object.keys(data.nodeRun.batchItems).length,
 										})}
 									</Typography.Text>
-								)}
-							</div>
-						) : null}
-					</div> : null}
+									{Object.values(data.nodeRun.batchItems)
+										.sort((a, b) => Number(a.ordinal) - Number(b.ordinal))
+										.map((item) => (
+											<div key={String(item.itemId)}>
+												<Tooltip title={JSON.stringify(item.params)}>
+													<Typography.Text
+														type={
+															item.status === "failed" || item.status === "uncertain"
+																? "danger"
+																: "secondary"
+														}
+													>
+														{Number(item.ordinal) + 1}.{" "}
+														{t(`flow.batch.status.${item.status}`)}
+														{item.error ? ` · ${String(item.error)}` : ""}
+													</Typography.Text>
+												</Tooltip>
+											</div>
+										))}
+									<Button
+										disabled={data.runDisabled}
+										size="small"
+										onClick={() => data.onAction(flowNode.nodeId, "retry-batch")}
+									>
+										{t("flow.batch.retry")}
+									</Button>
+									<Popconfirm
+										title={t("flow.batch.regenerateConfirm")}
+										onConfirm={() => data.onAction(flowNode.nodeId, "run")}
+									>
+										<Button disabled={data.runDisabled} size="small" danger>
+											{t("flow.batch.regenerate")}
+										</Button>
+									</Popconfirm>
+								</div>
+							) : null}
+							{isOutputNode ? (
+								<div
+									className={`${styles.outputResult}${mediaArtifacts.length > 0 ? ` ${styles.outputResultMedia}` : ""} nodrag nowheel`}
+									role="region"
+									aria-label={t("flow.editor.outputResult", { defaultValue: "Output result" })}
+								>
+									{mediaArtifacts.length > 0 ? (
+										<FlowMediaGallery artifacts={mediaArtifacts} />
+									) : outputMarkdown.length > 0 ? (
+										<MarkdownContent cacheParsing>{outputMarkdown}</MarkdownContent>
+									) : (
+										<Typography.Text type="secondary">
+											{t("flow.editor.outputPending", {
+												defaultValue: "Run the Flow to see its output here",
+											})}
+										</Typography.Text>
+									)}
+								</div>
+							) : null}
+						</div>
+					) : null}
 				</article>
 			</BorderBeam>
 		</div>

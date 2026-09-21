@@ -755,7 +755,12 @@
 					"basic": "Basic",
 					"ai": "AI",
 					"workspace": "Workspace",
+					"workspace-media": "Media files",
 					"media": "Media",
+					"media-input": "Media input",
+					"media-processing": "Image processing",
+					"media-generation": "Media generation",
+					"media-output": "Media output",
 					"parameters": "Parameters",
 					"collections": "Lists & batches"
 				},
@@ -799,7 +804,8 @@
 				"builtin/parameter-sets": "Parameter Sets",
 				"builtin/batch-text-to-image": "Batch Text To Image",
 				"builtin/batch-image-to-image": "Batch Image To Image",
-				"builtin/save-images": "Save Images"
+				"builtin/save-images": "Save Images",
+				"builtin/save-videos": "Save Videos"
 			},
 			"parameters": {
 				"builtin/user-prompt": { "input": "User prompt" },
@@ -911,6 +917,11 @@
 					"images": "Images",
 					"directory": "Directory",
 					"fileName": "Filename pattern"
+				},
+				"builtin/save-videos": {
+					"videos": "Videos",
+					"directory": "Directory",
+					"fileName": "Filename pattern"
 				}
 			},
 			"outputs": {
@@ -988,7 +999,8 @@
 					"images": "Images",
 					"report": "Report"
 				},
-				"builtin/save-images": {}
+				"builtin/save-images": {},
+				"builtin/save-videos": {}
 			}
 		},
 		"aria": {

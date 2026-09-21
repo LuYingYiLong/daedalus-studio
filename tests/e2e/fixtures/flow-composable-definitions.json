@@ -5,7 +5,7 @@
     "pluginVersion": "4.0.0",
     "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
     "configVersion": 4,
-    "category": "media",
+    "category": "media-generation",
     "modelCapability": "imageGeneration",
     "batch": true,
     "terminal": false,
@@ -110,7 +110,7 @@
     "pluginVersion": "4.0.0",
     "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
     "configVersion": 4,
-    "category": "media",
+    "category": "media-processing",
     "terminal": false,
     "workspaceRequired": false,
     "sideEffecting": false,
@@ -236,7 +236,7 @@
     "pluginVersion": "4.0.0",
     "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
     "configVersion": 4,
-    "category": "media",
+    "category": "media-input",
     "terminal": false,
     "workspaceRequired": true,
     "sideEffecting": false,
@@ -300,7 +300,7 @@
     "pluginVersion": "4.0.0",
     "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
     "configVersion": 4,
-    "category": "media",
+    "category": "media-processing",
     "terminal": false,
     "workspaceRequired": false,
     "sideEffecting": false,
@@ -475,7 +475,7 @@
     "pluginVersion": "4.0.0",
     "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
     "configVersion": 4,
-    "category": "media",
+    "category": "media-output",
     "terminal": true,
     "workspaceRequired": false,
     "sideEffecting": false,
@@ -656,7 +656,7 @@
     "pluginVersion": "4.0.0",
     "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
     "configVersion": 4,
-    "category": "workspace",
+    "category": "workspace-media",
     "terminal": true,
     "workspaceRequired": true,
     "sideEffecting": true,
@@ -698,6 +698,75 @@
         "mode": "connection",
         "dataTypes": [
           "image"
+        ],
+        "cardinality": "one-or-many",
+        "required": true,
+        "multiple": false,
+        "defaultConnect": true
+      },
+      {
+        "id": "directory",
+        "label": "directory",
+        "mode": "fixed",
+        "configField": "directory"
+      },
+      {
+        "id": "fileName",
+        "label": "fileName",
+        "mode": "fixed",
+        "configField": "fileName"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "typeId": "builtin/save-videos",
+    "pluginId": "builtin",
+    "pluginVersion": "4.0.0",
+    "pluginFingerprint": "builtin@4.0.0/sharp:0.35.4/image-contract:1",
+    "configVersion": 4,
+    "category": "workspace-media",
+    "terminal": true,
+    "workspaceRequired": true,
+    "sideEffecting": true,
+    "executable": true,
+    "cachePolicy": "never",
+    "defaultTitle": "Save Videos",
+    "defaultConfig": {
+      "directory": "outputs",
+      "fileName": "{runId}-{index}"
+    },
+    "configSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "directory": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "fileName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        }
+      },
+      "required": [
+        "directory",
+        "fileName"
+      ],
+      "additionalProperties": false
+    },
+    "summaryFields": [],
+    "ui": {
+      "kind": "schema"
+    },
+    "parameters": [
+      {
+        "id": "videos",
+        "label": "videos",
+        "mode": "connection",
+        "dataTypes": [
+          "video"
         ],
         "cardinality": "one-or-many",
         "required": true,

@@ -586,7 +586,16 @@ test.describe("Daedalus Flow node workflow", () => {
 		const { mainWindow } = await launchStudio();
 		await switchToFlow(mainWindow);
 		await mainWindow.locator('[data-studio-new-flow="true"]').click();
+		await expect(mainWindow.locator('section[aria-labelledby="flow-welcome-title"]')).toBeVisible();
+		await mainWindow.getByRole("button", { name: /Create Flow|创建 Flow/u }).click();
 		await expect(mainWindow.locator('[data-studio-flow-surface="true"]')).toBeVisible();
+		await expect(mainWindow.locator(".ant-tree-treenode-selected")).toHaveCount(1);
+		await mainWindow.locator('[data-studio-new-flow="true"]').click();
+		await expect(mainWindow.locator('section[aria-labelledby="flow-welcome-title"]')).toBeVisible();
+		await expect(mainWindow.locator(".ant-tree-treenode-selected")).toHaveCount(0);
+		await mainWindow.locator(".ant-tree-treenode").filter({ hasText: "E2E Workflow" }).click();
+		await expect(mainWindow.locator('section[aria-labelledby="flow-welcome-title"]')).toBeHidden();
+		await expect(mainWindow.locator(".ant-tree-treenode-selected")).toHaveCount(1);
 		await expect.poll(() => mockBackend.getRequests("flow.node.types.list").length).toBeGreaterThan(0);
 		await mainWindow.getByRole("button", { name: "Fit View" }).click();
 		const starterFlowInput = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/flow-input"])');

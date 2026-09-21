@@ -218,51 +218,6 @@
 	background: rgb(255 255 255 / 18%) !important;
 }
 
-.header-prompt,
-.header-text {
-	background: #1677ff;
-}
-
-.header-template {
-	background: #08979c;
-}
-
-.header-merge {
-	background: #096dd9;
-}
-
-.header-json_extract {
-	background: #531dab;
-}
-
-.header-condition {
-	background: #d46b08;
-}
-
-.header-file_input {
-	background: #237804;
-}
-
-.header-llm {
-	background: #722ed1;
-}
-
-.header-tool {
-	background: #006d75;
-}
-
-.header-command {
-	background: #262626;
-}
-
-.header-output {
-	background: #389e0d;
-}
-
-.header-note {
-	background: #d48806;
-}
-
 .role {
 	min-width: 0;
 	overflow: hidden;

@@ -363,6 +363,7 @@ function HomePage({
 	const [messageApi, messageContextHolder] = antdMessage.useMessage();
 	const [workspaceOrderIds, setWorkspaceOrderIds] = useState<string[]>(() => [...initialWorkspaceTreeOrder.workspaceIds]);
 	const [isFlowWorkspaceCreateOpen, setIsFlowWorkspaceCreateOpen] = useState(false);
+	const [flowWelcomeRequest, setFlowWelcomeRequest] = useState<{ workspaceId: string | null } | null>(null);
 	const [flowWorkspaceEditTarget, setFlowWorkspaceEditTarget] = useState<WorkspaceConfig | null>(null);
 	const [flowWorkspaceDeleteTarget, setFlowWorkspaceDeleteTarget] = useState<WorkspaceConfig | null>(null);
 	const [isFlowWorkspaceDeleting, setIsFlowWorkspaceDeleting] = useState(false);
@@ -379,6 +380,16 @@ function HomePage({
 		onNewWorkspaceSession,
 		onSessionSelect,
 	});
+	const requestFlowWelcome = useCallback(
+		(workspaceId?: string | null): void => {
+			setFlowWelcomeRequest({ workspaceId: workspaceId ?? null });
+			showPrimarySurface("flow");
+		},
+		[showPrimarySurface],
+	);
+	useEffect((): void => {
+		if (primarySurface !== "flow") setFlowWelcomeRequest(null);
+	}, [primarySurface]);
 	const defaultFlowOptions = useMemo(
 		() => ({
 			...(homeWorkspace?.id === undefined ? {} : { workspaceId: homeWorkspace.id }),
@@ -736,13 +747,15 @@ function HomePage({
 		onExport: flowController.exportFlowDataById,
 		flows: flowController.flows,
 		workspaces: workspaceOptionsInTreeOrder,
-		selectedFlowId: flowController.snapshot?.flow.flowId ?? null,
+		selectedFlowId:
+			flowWelcomeRequest === null ? (flowController.snapshot?.flow.flowId ?? null) : null,
 		unreadFlowIds: [...flowController.unreadFlowIds],
 		flowRuntimeStatusById: flowController.flowRuntimeStatusById,
 		isLoading: flowController.isLoading,
 		isMutating: flowController.isMutating,
 		order: flowController.flowOrder,
 		onSelect: (flowId: string): void => {
+			setFlowWelcomeRequest(null);
 			void flowController.selectFlow(flowId);
 		},
 		onRename: flowController.renameFlowById,
@@ -751,17 +764,9 @@ function HomePage({
 		},
 		onOrderUpdate: flowController.updateFlowOrder,
 		onNewProject: (): void => setIsFlowWorkspaceCreateOpen(true),
-		onNewSession: (): void => {
-			void flowController.createNewFlow(null).then((): void => {
-				showPrimarySurface("flow");
-			});
-		},
+		onNewSession: (): void => requestFlowWelcome(),
 		onWorkspaceEdit: setFlowWorkspaceEditTarget,
-		onWorkspaceNewFlow: (workspace: WorkspaceConfig): void => {
-			void flowController.createNewFlow(workspace.id).then((): void => {
-				showPrimarySurface("flow");
-			});
-		},
+		onWorkspaceNewFlow: (workspace: WorkspaceConfig): void => requestFlowWelcome(workspace.id),
 		onWorkspaceNewWorktree: (workspace: WorkspaceConfig): void => {
 			onNewWorkspaceSession(workspace, "worktree");
 		},
@@ -938,11 +943,7 @@ function HomePage({
 						primarySurface={primarySurface}
 						isOpen={workspaceSidebarOpen}
 						onNewSession={requestNewSessionSurface}
-						onNewFlow={(): void => {
-							void flowController.createNewFlow(null).then((): void => {
-								showPrimarySurface("flow");
-							});
-						}}
+						onNewFlow={(): void => requestFlowWelcome()}
 						onPrimarySurfaceChange={handlePrimarySurfaceChange}
 						onOpenScheduledTasks={showScheduledTasksSurface}
 						scheduledTasksActive={mainSurface === "scheduledTasks"}
@@ -971,6 +972,9 @@ function HomePage({
 						providerModelSelection,
 						workspaceOptions: workspaceOptionsInTreeOrder,
 						sideDockOpen,
+						showCreateWelcome: flowWelcomeRequest !== null,
+						createWelcomeWorkspaceId: flowWelcomeRequest?.workspaceId ?? null,
+						onCreateWelcomeClose: (): void => setFlowWelcomeRequest(null),
 						searchHandleRef: flowSearchHandleRef,
 					}}
 					sideDockConfig={sideDockConfig}

@@ -75,6 +75,9 @@ export type HomeFlowSurfaceProps = {
 	providerModelSelection: ProviderModelSelection | null;
 	workspaceOptions: WorkspaceConfig[];
 	sideDockOpen: boolean;
+	showCreateWelcome?: boolean;
+	createWelcomeWorkspaceId?: string | null;
+	onCreateWelcomeClose?: () => void;
 	searchHandleRef?: MutableRefObject<FlowSearchHandle | null>;
 };
 type PickerConnection = {
@@ -278,6 +281,9 @@ function HomeFlowSurface({
 	providerModelSelection,
 	workspaceOptions,
 	sideDockOpen,
+	showCreateWelcome = false,
+	createWelcomeWorkspaceId = null,
+	onCreateWelcomeClose,
 	searchHandleRef,
 }: HomeFlowSurfaceProps): React.JSX.Element {
 	const { t } = useTranslation();
@@ -1062,6 +1068,27 @@ function HomeFlowSurface({
 		},
 		[controller, setReconnectingEdgeId, snapshot],
 	);
+	const isValidConnection = useCallback(
+		(connection: Connection | FlowCanvasEdge): boolean => {
+			if (
+				connection.source === null ||
+				connection.target === null ||
+				connection.sourceHandle === null ||
+				connection.sourceHandle === undefined ||
+				connection.targetHandle === null ||
+				connection.targetHandle === undefined ||
+				snapshot === null ||
+				connection.source === connection.target
+			)
+				return false;
+			const sourceNode = snapshot.nodes.find((node): boolean => node.nodeId === connection.source);
+			const targetNode = snapshot.nodes.find((node): boolean => node.nodeId === connection.target);
+			const sourcePort = portFor(sourceNode, controller.nodeDefinitions, connection.sourceHandle, "output");
+			const targetPort = portFor(targetNode, controller.nodeDefinitions, connection.targetHandle, "input");
+			return sourcePort !== undefined && targetPort !== undefined && compatibleType(sourcePort, targetPort) !== null;
+		},
+		[controller.nodeDefinitions, snapshot],
+	);
 	const onReconnect = useCallback<OnReconnect<FlowCanvasEdge>>(
 		(edge, connection): void => {
 			if (
@@ -1221,7 +1248,7 @@ function HomeFlowSurface({
 		[controller.updateViewport, finishInteractionSample],
 	);
 
-	if (snapshot === null)
+	if (snapshot === null || showCreateWelcome)
 		return (
 			<section className={styles.flowSurface} data-studio-flow-surface="true">
 				<header className={styles.header} data-side-dock-open={sideDockOpen ? "true" : undefined}>
@@ -1235,10 +1262,13 @@ function HomeFlowSurface({
 					<FlowWelcome
 						mode="create"
 						workspaces={workspaceOptions}
+						initialWorkspaceId={createWelcomeWorkspaceId}
 						isCreating={controller.isMutating}
 						errorMessage={controller.error}
 						onCreate={(workspaceId): void => {
-							void controller.createNewFlow(workspaceId);
+							void controller.createNewFlow(workspaceId).then((created): void => {
+								if (created) onCreateWelcomeClose?.();
+							});
 						}}
 					/>
 				</div>
@@ -1496,6 +1526,7 @@ function HomeFlowSurface({
 					}}
 					onNodeDragStop={onNodeDragStop}
 					onConnect={onConnect}
+					isValidConnection={isValidConnection}
 					onConnectStart={(_event, params): void => {
 						closePicker();
 						connectStartRef.current = params;
@@ -1559,6 +1590,7 @@ function HomeFlowSurface({
 						runtime={runtime}
 						edges={edges}
 						excludedEdgeId={reconnectingEdgeId}
+						nodeCategories={definitionsByType}
 						onOverlayChange={setOverlayEdgeIds}
 					/>
 					<Controls showInteractive={false} />

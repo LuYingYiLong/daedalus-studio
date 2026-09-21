@@ -26,7 +26,13 @@ describe("Flow home surface", (): void => {
 		expect(sidebar).toContain("onPrimarySurfaceChange");
 		expect(home).toContain('mainSurface === "chat" && workspaceForActions !== null');
 		expect(home).toContain("sideDockOpen,");
+		expect(home).toContain("requestFlowWelcome");
+		expect(home).not.toContain("flowController.createNewFlow");
+		expect(home).toContain("flowWelcomeRequest === null ? (flowController.snapshot?.flow.flowId ?? null) : null");
+		expect(home).toContain("setFlowWelcomeRequest(null);");
 		expect(surface).toContain("sideDockOpen: boolean;");
+		expect(surface).toContain("showCreateWelcome");
+		expect(surface).toContain("onCreateWelcomeClose");
 		expect(surface).toContain('data-side-dock-open={sideDockOpen ? "true" : undefined}');
 		expect(surfaceStyles).toContain('.header[data-side-dock-open="true"]');
 		expect(surface).toContain("onConnect={onConnect}");

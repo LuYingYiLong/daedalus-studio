@@ -581,6 +581,7 @@ function FlowTree({
 		<div className={styles.tree}>
 			{messageContext}
 			<Tree<FlowTreeNode>
+				key={`flow-tree-${selectedFlowId ?? "none"}`}
 				aria-label={t("flow.tree.label")}
 				blockNode
 				virtual={false}
