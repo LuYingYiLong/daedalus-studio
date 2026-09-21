@@ -28,6 +28,7 @@ import {
 	type MouseEvent as ReactMouseEvent,
 	type MutableRefObject,
 } from "react";
+import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { HomeFlowController } from "@/features/home/flow/useHomeFlowController";
@@ -1166,9 +1167,18 @@ function HomeFlowSurface({
 				(candidate): boolean => candidate.targetNodeId === nodeId && candidate.targetPort === handleId,
 			);
 			if (edge === undefined) return;
-			const updater = canvasRef.current?.querySelector<SVGCircleElement>(
-				`.react-flow__edge[data-id="${CSS.escape(edge.edgeId)}"] .react-flow__edgeupdater-target`,
-			);
+			const updaterSelector = `.react-flow__edge[data-id="${CSS.escape(edge.edgeId)}"] .react-flow__edgeupdater-target`;
+			let updater = canvasRef.current?.querySelector<SVGCircleElement>(updaterSelector);
+			if (updater === null || updater === undefined) {
+				// The Canvas layer normally keeps SVG edges unmounted. Materialize only
+				// this edge before forwarding the same mouse gesture to its native updater.
+				flushSync((): void => {
+					setOverlayEdgeIds((current): readonly string[] =>
+						current.includes(edge.edgeId) ? current : [...current, edge.edgeId],
+					);
+				});
+				updater = canvasRef.current?.querySelector<SVGCircleElement>(updaterSelector);
+			}
 			if (updater === null || updater === undefined) return;
 
 			// A target Handle normally starts a reverse connection and therefore only
@@ -1551,16 +1561,15 @@ function HomeFlowSurface({
 				<ReactFlow
 					key={snapshot.flow.flowId}
 					defaultNodes={nodes}
-					// Keep every edge in XYFlow's interaction graph. The visible path is still
-					// painted by FlowCanvasLayer, but XYFlow must retain its endpoint updater
-					// anchors for reconnecting an ordinary, unselected edge.
-					edges={edges.map((edge) => ({
-						...edge,
-						// Outputs may fan out, so their Handle must always start a new edge.
-						// Reconnection is owned exclusively by the existing edge's target end.
-						reconnectable: controller.isGraphLocked ? false : "target" as const,
-						selected: runtime.selectedEdges.has(edge.id),
-					}))}
+					edges={edges
+						.filter((edge): boolean => overlayEdgeIds.includes(edge.id))
+						.map((edge) => ({
+							...edge,
+							// Outputs may fan out, so their Handle must always start a new edge.
+							// Reconnection is owned exclusively by the existing edge's target end.
+							reconnectable: controller.isGraphLocked ? false : "target" as const,
+							selected: runtime.selectedEdges.has(edge.id),
+						}))}
 					onEdgesChange={(changes) => {
 						// Canvas hit-testing owns edge selection. XYFlow can emit a stale deselect after
 						// the SVG overlay mounts, so only merge positive selections from its controls.

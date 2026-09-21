@@ -708,14 +708,11 @@ test.describe("Daedalus Flow node workflow", () => {
 		await expect(starterFlowInput.locator('[data-flow-collapsed-ports="input"]')).toHaveCount(0);
 		await expect(starterFlowInput.locator('[data-flow-collapsed-ports="output"]')).toHaveCount(1);
 		await expect(starterUserPrompt.locator('[data-flow-collapsed-ports]')).toHaveCount(2);
-		await expect.poll(async () => {
-			const foldedSource = (await starterFlowInput.locator('[data-flow-collapsed-ports="output"]').boundingBox())!;
-			const foldedTarget = (await starterUserPrompt.locator('[data-flow-collapsed-ports="input"]').boundingBox())!;
-			await mainWindow.mouse.move(foldedSource.x + 20, foldedSource.y - 20);
-			await mainWindow.mouse.move((foldedSource.x + foldedSource.width + foldedTarget.x) / 2, (foldedSource.y + foldedSource.height / 2 + foldedTarget.y + foldedTarget.height / 2) / 2);
-			return starterEdge.count();
-		}).toBe(1);
-		expect(await starterEdge.locator("linearGradient stop").evaluateAll(stops => stops.map(stop => stop.getAttribute("stop-color")))).toEqual(starterGradientColors);
+		// Collapsing changes only the visual anchor. The ordinary edge remains in the
+		// Canvas topology and must not be promoted to a permanent SVG overlay.
+		await expect(mainWindow.locator("[data-flow-canvas-layer]")).toHaveAttribute("data-flow-edge-count", "1");
+		await mainWindow.mouse.move(340, 760);
+		await expect(starterEdge).toHaveCount(0);
 		await starterFlowInput.getByRole("button", { name: /Expand node|展开节点/ }).click();
 		await starterUserPrompt.getByRole("button", { name: /Expand node|展开节点/ }).click();
 		await expect(starterUserPrompt.locator("textarea")).toHaveCount(0);

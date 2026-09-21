@@ -51,6 +51,8 @@ describe("Flow home surface", (): void => {
 		expect(surface).toContain("redirectConnectedInputToNativeReconnect");
 		expect(surface).toContain('querySelector<SVGCircleElement>');
 		expect(surface).toContain('new MouseEvent("mousedown"');
+		expect(surface).toContain("flushSync((): void =>");
+		expect(surface).toContain(".filter((edge): boolean => overlayEdgeIds.includes(edge.id))");
 		expect(surface).toContain("connectionLineComponent={connectionLineComponent}");
 		expect(surface).not.toContain("detachedEdgeIdRef");
 		expect(surface).toContain("createConnectedNode");
