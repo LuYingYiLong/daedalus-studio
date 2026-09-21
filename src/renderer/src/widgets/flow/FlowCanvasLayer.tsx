@@ -479,6 +479,10 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 		};
 		const pointerMove = (event: PointerEvent): void => {
 			if (event.buttons || moving) return;
+			// XYFlow owns the transparent endpoint hit area while an edge is being
+			// reconnected. Do not update the Canvas overlay during that gesture: a
+			// parent rerender here can replace the updater before the drop is handled.
+			if ((event.target as Element).closest(".react-flow__edgeupdater") !== null) return;
 			const svg = (event.target as Element).closest(".react-flow__edge");
 			const next = svg?.getAttribute("data-id") ?? hit(event);
 			if (next !== hovered) {
@@ -487,27 +491,30 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 			}
 		};
 		const pointerDown = (event: PointerEvent): void => {
+			const element = event.target as Element;
+			// Let XYFlow receive the updater's pointerdown unchanged. Canvas edge
+			// selection and overlay updates must not race its reconnect state machine.
+			if (element.closest(".react-flow__edgeupdater") !== null) return;
+			if (event.button !== 0) return;
 			cancelAnimationFrame(upgradeFrame);
 			clearTimeout(settleTimer);
 			clearTimeout(qualityTimer);
 			highQuality = false;
 			moving = true;
 			runtime.canvas.interaction = true;
-			if (event.button !== 0) return;
 			visualDirty = true;
-			const id = (event.target as Element).closest(".react-flow__edge")?.getAttribute("data-id") ?? hit(event);
+			const id = element.closest(".react-flow__edge")?.getAttribute("data-id") ?? hit(event);
 			if (id) {
 				const additive = event.ctrlKey || event.metaKey || event.shiftKey;
-				const reconnectHandle = (event.target as Element).closest(".react-flow__edgeupdater") !== null;
 				if (!additive) runtime.selectedEdges.clear();
-				if (!reconnectHandle && additive && runtime.selectedEdges.has(id)) runtime.selectedEdges.delete(id);
+				if (additive && runtime.selectedEdges.has(id)) runtime.selectedEdges.delete(id);
 				else runtime.selectedEdges.add(id);
 				hovered = id;
 				overlay();
 				scheduleDraw();
 				// Selection is owned by the canvas runtime. Let only the reconnect handle reach XYFlow;
-				// otherwise its internal edge selection can race the controlled overlay and clear it again.
-				if (!reconnectHandle) event.stopPropagation();
+				// ordinary edge gestures are handled by Canvas and must not race XYFlow's selection.
+				event.stopPropagation();
 			} else if (!(event.ctrlKey || event.metaKey || event.shiftKey)) {
 				runtime.selectedEdges.clear();
 				if ((event.target as Element).closest(".react-flow__pane")) hovered = null;

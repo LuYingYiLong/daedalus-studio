@@ -146,6 +146,18 @@
 	border-color: var(--ant-color-border-secondary);
 }
 
+.canvasRegion :global(.react-flow__edgeupdater) {
+	cursor: crosshair;
+	fill: transparent;
+	stroke: transparent;
+	pointer-events: all;
+}
+
+.canvasRegion :global(.react-flow__edge) {
+	/* Canvas owns edge hit-testing; leave only the transparent endpoint hit areas interactive. */
+	pointer-events: none;
+}
+
 .canvasRegion :global(.react-flow__pane.draggable) {
 	cursor: grab;
 }

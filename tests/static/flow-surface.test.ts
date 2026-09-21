@@ -42,10 +42,17 @@ describe("Flow home surface", (): void => {
 		expect(surface).toContain("onReconnect={onReconnect}");
 		expect(surface).toContain("onReconnectEnd={onReconnectEnd}");
 		expect(surface).toContain("edgesReconnectable={!controller.isGraphLocked}");
-		expect(surface).toContain("detachedEdgeIdRef.current");
+		expect(surface).toContain('reconnectable: controller.isGraphLocked ? false : "target" as const');
+		expect(surface).toContain("reconnectRadius={12}");
+		expect(surface).toContain("connectionRadius={FLOW_CONNECTION_RADIUS}");
+		expect(surfaceStyles).toContain(".canvasRegion :global(.react-flow__edgeupdater)");
+		expect(surfaceStyles).toContain("pointer-events: all");
 		expect(surface).toContain("detachedConnectionSourceRef.current");
+		expect(surface).toContain("redirectConnectedInputToNativeReconnect");
+		expect(surface).toContain('querySelector<SVGCircleElement>');
+		expect(surface).toContain('new MouseEvent("mousedown"');
 		expect(surface).toContain("connectionLineComponent={connectionLineComponent}");
-		expect(surface).toContain("setReconnectingEdgeId(detachedEdge.edgeId)");
+		expect(surface).not.toContain("detachedEdgeIdRef");
 		expect(surface).toContain("createConnectedNode");
 		expect(surface).toContain("onMoveEnd={onMoveEnd}");
 		expect(surface).not.toContain("viewportSaveTimerRef");
@@ -81,6 +88,7 @@ describe("Flow home surface", (): void => {
 		expect(welcome).toContain("props.onCreate(workspaceId.length === 0 ? null : workspaceId)");
 		expect(controller).toContain('kind: "node.create"');
 		expect(controller).toContain("flowOperationOutbox.enqueue");
+		expect(controller).toContain("kind: \"edge.delete\"");
 		expect(controller).toContain("updateNodePosition");
 		expect(controller).toContain("ignoreFlowEventsUntilRef");
 		expect(controller).toContain("startFlowRun");
