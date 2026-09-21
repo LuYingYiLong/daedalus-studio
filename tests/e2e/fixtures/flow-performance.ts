@@ -1,6 +1,11 @@
 import type { MockBackend } from "./mock-backend";
 
-export function installFlowPerformanceScenario(backend: MockBackend, count: number, mixed = false): void {
+export function installFlowPerformanceScenario(
+	backend: MockBackend,
+	count: number,
+	mixed = false,
+	variant: "default" | "vertical-output" = "default",
+): void {
 	const now = "2026-09-20T00:00:00.000Z";
 	const flowId = "flow-performance";
 	const input = {
@@ -75,8 +80,8 @@ export function installFlowPerformanceScenario(backend: MockBackend, count: numb
 		pluginFingerprint: definition.pluginFingerprint,
 		configVersion: 1,
 		title: `Node ${index}`,
-		x: (index % 20) * 400,
-		y: Math.floor(index / 20) * 310,
+		x: variant === "vertical-output" ? 0 : (index % 20) * 400,
+		y: variant === "vertical-output" ? index * 320 : Math.floor(index / 20) * 310,
 		width: 320,
 		height: 240,
 		collapsed: false,
@@ -88,7 +93,7 @@ export function installFlowPerformanceScenario(backend: MockBackend, count: numb
 	}));
 	if (mixed)
 		for (const [index, node] of nodes.entries()) {
-			const selected = index % 5 === 0 ? outputDefinition : index % 7 === 0 ? pluginDefinition : definition;
+			const selected = variant === "vertical-output" ? outputDefinition : index % 5 === 0 ? outputDefinition : index % 7 === 0 ? pluginDefinition : definition;
 			node.typeId = selected.typeId;
 			node.pluginId = selected.pluginId;
 			node.pluginFingerprint = selected.pluginFingerprint;

@@ -87,7 +87,8 @@ test("resizes all four corners, persists dimensions, and only avoids neighbours 
 		const fixedY = corner.startsWith("top") ? resized.y + resized.height : resized.y;
 		expect(fixedX).toBeCloseTo(corner.endsWith("left") ? original.x + original.width : original.x, 0);
 		expect(fixedY).toBeCloseTo(corner.startsWith("top") ? original.y + original.height : original.y, 0);
-		const animationSamples = corner === "bottom-right" ? neighbour.evaluate(element => new Promise<number[]>(resolve => {
+		await page.mouse.up();
+		const positions = await neighbour.evaluate(element => new Promise<number[]>(resolve => {
 			const samples: number[] = [], started = performance.now();
 			const sample = (): void => {
 				samples.push(new DOMMatrix(getComputedStyle(element).transform).e);
@@ -95,10 +96,8 @@ test("resizes all four corners, persists dimensions, and only avoids neighbours 
 				else resolve(samples);
 			};
 			requestAnimationFrame(sample);
-		})) : null;
-		await page.mouse.up();
-		if (animationSamples) {
-			const positions = await animationSamples;
+		}));
+		if (corner === "bottom-right") {
 			expect(new Set(positions.map(x => Math.round(x))).size).toBeGreaterThan(3);
 			for (let i = 1; i < positions.length; i++) expect(positions[i]).toBeGreaterThanOrEqual(positions[i - 1]);
 		}
@@ -158,6 +157,46 @@ test("resizes all four corners, persists dimensions, and only avoids neighbours 
 	await page.mouse.move(shrink.x + shrink.width / 2 - 37, shrink.y + shrink.height / 2 - 43, { steps: 6 });
 	await page.mouse.up();
 	await expect.poll(() => layout(node)).toEqual(original);
+});
+
+test("animates avoidance while alternately resizing two vertical output nodes", async ({ launchStudio, mockBackend }) => {
+	installFlowPerformanceScenario(mockBackend, 2, true, "vertical-output");
+	const { mainWindow: page } = await launchStudio();
+	await page.emulateMedia({ reducedMotion: "reduce" });
+	expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
+	await page.locator(".ant-segmented-item").filter({ hasText: /^Flow$/ }).click();
+	await page.getByText("Performance 2", { exact: true }).first().click();
+	const node = page.locator('.react-flow__node[data-id="perf-0"]');
+	const neighbour = page.locator('.react-flow__node[data-id="perf-1"]');
+	await expect(node.getByRole("region", { name: /Output result|输出内容/ })).toBeVisible();
+	await page.waitForTimeout(700);
+	await page.getByRole("button", { name: /Disable grid snapping|关闭网格吸附/ }).click();
+	const sampleY = (target: Locator): Promise<number[]> => target.evaluate(element => new Promise<number[]>(resolve => {
+		const values: number[] = [], started = performance.now();
+		const sample = (): void => {
+			values.push(new DOMMatrix(getComputedStyle(element).transform).f);
+			if (performance.now() - started < 400) requestAnimationFrame(sample);
+			else resolve(values);
+		};
+		requestAnimationFrame(sample);
+	}));
+	const positions: number[] = [];
+	for (const [anchor, target, corner, dy] of [
+		[node, neighbour, "bottom-right", 192],
+		[neighbour, node, "top-left", -260],
+	] as const) {
+		await anchor.locator("header").hover();
+		const control = anchor.locator(`.react-flow__resize-control:has([data-flow-resize-corner="${corner}"])`);
+		const box = (await control.boundingBox())!;
+		await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+		await page.mouse.down();
+		await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + dy, { steps: 10 });
+		await page.mouse.up();
+		const samples = await sampleY(target);
+		positions.push(new Set(samples.map(x => Math.round(x))).size);
+	}
+	expect(positions[0]).toBeGreaterThan(3);
+	expect(positions[1]).toBeGreaterThan(3);
 });
 
 test("creates at the pointer's lower right and animates neighbours away without moving the new node", async ({ launchStudio, mockBackend }) => {
