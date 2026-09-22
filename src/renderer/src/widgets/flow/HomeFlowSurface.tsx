@@ -2,6 +2,7 @@ import { Alert, Badge, Button, Dropdown, Flex, Input, Spin, Tooltip, Typography 
 import type { InputRef, MenuProps } from "antd";
 import {
 	BaseEdge,
+	ControlButton,
 	Controls,
 	Position,
 	ReactFlow,
@@ -1633,7 +1634,38 @@ function HomeFlowSurface({
 						nodeCategories={definitionsByType}
 						onOverlayChange={setOverlayEdgeIds}
 					/>
-					<Controls showInteractive={false} />
+					<Controls showZoom={false} showFitView={false} showInteractive={false}>
+						<ControlButton
+							type="button"
+							aria-label={t("flow.editor.zoomIn")}
+							title={t("flow.editor.zoomIn")}
+							onClick={(): void => {
+								void flowInstance?.zoomIn();
+							}}
+						>
+							<Icon name="add" width={20} height={20} />
+						</ControlButton>
+						<ControlButton
+							type="button"
+							aria-label={t("flow.editor.zoomOut")}
+							title={t("flow.editor.zoomOut")}
+							onClick={(): void => {
+								void flowInstance?.zoomOut();
+							}}
+						>
+							<Icon name="minimize" width={20} height={20} />
+						</ControlButton>
+						<ControlButton
+							type="button"
+							aria-label={t("flow.editor.fitCanvas")}
+							title={t("flow.editor.fitCanvas")}
+							onClick={(): void => {
+								void flowInstance?.fitView({ duration: 250, padding: 0.2 });
+							}}
+						>
+							<Icon name="distraction-free" width={20} height={20} />
+						</ControlButton>
+					</Controls>
 				</ReactFlow>
 				<FlowNodePicker
 					open={picker !== null}

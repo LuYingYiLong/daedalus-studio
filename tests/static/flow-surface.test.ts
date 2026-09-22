@@ -75,6 +75,10 @@ describe("Flow home surface", (): void => {
 		expect(surface).toContain('type: "flowGradient"');
 		expect(surface).toContain("selectionMode={SelectionMode.Partial}");
 		expect(surface).toContain("edgeTypes={edgeTypes}");
+		expect(surface).toContain('<Controls showZoom={false} showFitView={false} showInteractive={false}>');
+		expect(surface).toContain('<Icon name="add" width={20} height={20} />');
+		expect(surface).toContain('<Icon name="minimize" width={20} height={20} />');
+		expect(surface).toContain('<Icon name="distraction-free" width={20} height={20} />');
 		expect(surface).toContain("lastPointerPositionRef");
 		expect(surface).not.toContain("renderComposer");
 		expect(surface).not.toContain("<Empty");

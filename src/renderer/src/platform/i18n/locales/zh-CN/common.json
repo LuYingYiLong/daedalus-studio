@@ -720,6 +720,8 @@
 			"nodeFailureFallback": "节点运行失败，未提供错误详情。",
 			"addNode": "添加节点",
 			"search": "搜索",
+			"zoomIn": "放大画布",
+			"zoomOut": "缩小画布",
 			"fitCanvas": "适应画布",
 			"enableSnap": "开启网格吸附",
 			"disableSnap": "关闭网格吸附",

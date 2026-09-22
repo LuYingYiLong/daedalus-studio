@@ -146,6 +146,14 @@
 	border-color: var(--ant-color-border-secondary);
 }
 
+.canvasRegion :global(.react-flow__controls-button) > svg {
+	width: 16px;
+	height: 16px;
+	max-width: 16px;
+	max-height: 16px;
+	flex: 0 0 16px;
+}
+
 .canvasRegion :global(.react-flow__edgeupdater) {
 	cursor: crosshair;
 	fill: transparent;

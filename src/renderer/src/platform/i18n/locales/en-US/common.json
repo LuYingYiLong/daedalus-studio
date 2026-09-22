@@ -725,6 +725,8 @@
 			"nodeFailureFallback": "Node execution failed. No error details were provided.",
 			"addNode": "Add node",
 			"search": "Search",
+			"zoomIn": "Zoom in",
+			"zoomOut": "Zoom out",
 			"fitCanvas": "Fit canvas",
 			"enableSnap": "Enable grid snapping",
 			"disableSnap": "Disable grid snapping",
