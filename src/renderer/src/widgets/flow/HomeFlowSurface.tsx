@@ -34,7 +34,7 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { HomeFlowController } from "@/features/home/flow/useHomeFlowController";
 import { getCachedClientPreferences, updateClientPreferences } from "@/platform/rpc/client-preferences-api";
-import { listProviderModels, type ProviderModelInfo, type ProviderModelSelection } from "@/platform/rpc/provider-api";
+import { type ProviderModelInfo, type ProviderModelSelection } from "@/platform/rpc/provider-api";
 import {
 	detectShortcutPlatform,
 	getEffectiveShortcutBinding,
@@ -322,7 +322,15 @@ function HomeFlowSurface({
 		(): Record<string, string> => getCachedClientPreferences().flowRunEntryByFlowId,
 	);
 	const [consentText, setConsentText] = useState<Record<string, string>>({});
-	const [modelsByProvider, setModelsByProvider] = useState<Record<string, ProviderModelInfo[]>>({});
+	const modelsByProvider = useMemo<Record<string, ProviderModelInfo[]>>(
+		(): Record<string, ProviderModelInfo[]> =>
+			Object.fromEntries(
+				(providerModelSelection?.providers ?? []).map(
+					(provider): [string, ProviderModelInfo[]] => [provider.provider, provider.models],
+				),
+			),
+		[providerModelSelection?.providers],
+	);
 	const canvasNodeMembershipKey = useMemo(
 		(): string =>
 			nodes
@@ -342,7 +350,6 @@ function HomeFlowSurface({
 	const connectStartRef = useRef<OnConnectStartParams | null>(null);
 	const detachedConnectionSourceRef = useRef<DetachedConnectionSource | null>(null);
 	const interactionSampleRef = useRef<InteractionSample | null>(null);
-	const loadingProviderModelsRef = useRef<Set<string>>(new Set());
 	const definitionsByType = useMemo(
 		(): Map<string, FlowNodeTypeDefinition> =>
 			new Map(
@@ -434,40 +441,6 @@ function HomeFlowSurface({
 					runEntryGroups[0] ??
 					null);
 	}, [runEntryByFlowId, runEntryGroups, snapshot?.flow.flowId]);
-	useEffect((): void => {
-		const providerIds = new Set<string>();
-		for (const node of snapshot?.nodes ?? []) {
-			const providerId = node.config.provider;
-			if (typeof providerId === "string" && providerId.length > 0) providerIds.add(providerId);
-		}
-		if (providerModelSelection?.activeModel.providerId !== undefined)
-			providerIds.add(providerModelSelection.activeModel.providerId);
-		for (const providerId of providerIds) {
-			if (modelsByProvider[providerId] !== undefined || loadingProviderModelsRef.current.has(providerId))
-				continue;
-			loadingProviderModelsRef.current.add(providerId);
-			void listProviderModels(providerId)
-				.then((result): void => {
-					setModelsByProvider(
-						(current): Record<string, ProviderModelInfo[]> => ({
-							...current,
-							[providerId]: result.models,
-						}),
-					);
-				})
-				.catch((): void => {
-					setModelsByProvider(
-						(current): Record<string, ProviderModelInfo[]> => ({
-							...current,
-							[providerId]: [],
-						}),
-					);
-				})
-				.finally((): void => {
-					loadingProviderModelsRef.current.delete(providerId);
-				});
-		}
-	}, [modelsByProvider, providerModelSelection?.activeModel.providerId, snapshot?.nodes]);
 	const commitActiveEditor = useCallback(async (): Promise<void> => {
 		const activeElement = document.activeElement;
 		if (activeElement instanceof HTMLElement && canvasRef.current?.contains(activeElement)) activeElement.blur();

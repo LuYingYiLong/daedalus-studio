@@ -109,7 +109,8 @@ describe("Flow home surface", (): void => {
 		expect(nodes).toContain('control === "workspace-file"');
 		expect(nodes).toContain('name="folder-open"');
 		expect(surface).toContain("commitActiveEditor");
-		expect(surface).toContain("listProviderModels");
+		expect(surface).toContain("provider.provider, provider.models");
+		expect(surface).not.toContain("listProviderModels");
 		expect(nodes).toContain("id={parameter.id}");
 		expect(nodes).toContain("id={output.id}");
 		expect(nodes).toContain("connectedInputIds.has(parameter.id)");

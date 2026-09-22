@@ -2381,6 +2381,7 @@
 		"common": {
 			"add": "Add",
 			"cancel": "Cancel",
+			"confirm": "OK",
 			"delete": "Delete",
 			"disable": "Disable",
 			"edit": "Edit",
