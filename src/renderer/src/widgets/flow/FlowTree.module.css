@@ -65,11 +65,11 @@
 	width: 16px !important;
 	min-width: 16px !important;
 	height: 28px;
-	margin-inline-end: 8px;
+	margin-inline-end: 4px;
 	line-height: 0;
 }
 
-/* Keep the tree switcher grid identical to the sidebar buttons: 16px icon + 8px gap. */
+/* Keep the tree switcher grid identical to the sidebar buttons: 16px icon + 4px gap. */
 .treeItem :global(.ant-tree-switcher) {
 	box-sizing: border-box;
 	flex: 0 0 16px;
@@ -133,6 +133,14 @@
 	height: 28px !important;
 }
 
+/* Leaf nodes render Ant's noop switcher, which otherwise reserves an empty grid cell. */
+.treeItem :global(.ant-tree-switcher-noop) {
+	flex: 0 0 0 !important;
+	width: 0 !important;
+	min-width: 0 !important;
+	margin-inline-end: 0 !important;
+}
+
 .treeItem:global(.ant-tree-treenode-leaf) .treeItemSwitcher {
 	width: 0 !important;
 	min-width: 0 !important;
@@ -156,6 +164,17 @@
 .flowProjectNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit:first-child),
 .emptyProjectNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit:first-child) {
 	display: none;
+}
+
+/* Keep leaf titles aligned with the surrounding sidebar rows while retaining their tree depth. */
+.treeItem:global(.ant-tree-treenode-leaf) > :global(.ant-tree-indent) {
+	width: 22px !important;
+}
+
+.treeItem:global(.ant-tree-treenode-leaf)
+	> :global(.ant-tree-indent)
+	> :global(.ant-tree-indent-unit:first-child) {
+	width: 22px !important;
 }
 
 .groupTitle {

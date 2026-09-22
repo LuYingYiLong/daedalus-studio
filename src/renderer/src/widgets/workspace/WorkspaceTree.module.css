@@ -72,7 +72,7 @@
 	width: 16px !important;
 	min-width: 16px !important;
 	height: 28px;
-	margin-inline-end: 8px;
+	margin-inline-end: 4px;
 	line-height: 0;
 }
 
@@ -112,6 +112,14 @@
 .projectTreeItem :global(.ant-tree-switcher)::before {
 	width: 16px !important;
 	height: 28px !important;
+}
+
+/* Leaf sessions render Ant's noop switcher, which otherwise reserves an empty grid cell. */
+.projectTreeItem :global(.ant-tree-switcher-noop) {
+	flex: 0 0 0 !important;
+	width: 0 !important;
+	min-width: 0 !important;
+	margin-inline-end: 0 !important;
 }
 
 .projectTreeItem:global(.ant-tree-treenode-leaf) .projectTreeSwitcher {
@@ -157,6 +165,17 @@
 .projectSessionTreeNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit:first-child),
 .emptyProjectNode > :global(.ant-tree-indent) > :global(.ant-tree-indent-unit:first-child) {
 	display: none;
+}
+
+/* Keep leaf session titles aligned with the surrounding sidebar rows while retaining their tree depth. */
+.projectTreeItem:global(.ant-tree-treenode-leaf) > :global(.ant-tree-indent) {
+	width: 22px !important;
+}
+
+.projectTreeItem:global(.ant-tree-treenode-leaf)
+	> :global(.ant-tree-indent)
+	> :global(.ant-tree-indent-unit:first-child) {
+	width: 22px !important;
 }
 
 .workspaceMenuItem {

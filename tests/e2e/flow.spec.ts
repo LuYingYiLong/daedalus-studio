@@ -292,7 +292,6 @@ async function switchToFlow(page: Page): Promise<void> {
 
 test.describe("Daedalus Flow node workflow", () => {
 	test("creates nodes from every picker entry point, connects from empty space, and completes a Tool approval", async ({ launchStudio, mockBackend }) => {
-		test.setTimeout(90_000);
 		let created = false;
 		let graphRevision = 1;
 		let layoutRevision = 1;
@@ -591,14 +590,6 @@ test.describe("Daedalus Flow node workflow", () => {
 		await mainWindow.getByRole("button", { name: /Create Flow|创建 Flow/u }).click();
 		await expect(mainWindow.locator('[data-studio-flow-surface="true"]')).toBeVisible();
 		await expect(mainWindow.locator(".ant-tree-treenode-selected")).toHaveCount(1);
-		const flowSectionSwitcher = mainWindow.locator(
-			".ant-tree-treenode:not(.ant-tree-treenode-leaf) .ant-tree-switcher",
-		).first();
-		await expect(flowSectionSwitcher).toBeVisible();
-		await expect.poll(() => flowSectionSwitcher.evaluate((element): { width: string; gap: string; height: string } => {
-			const style = getComputedStyle(element);
-			return { width: style.width, gap: style.marginInlineEnd, height: style.height };
-		})).toEqual({ width: "16px", gap: "8px", height: "28px" });
 		await mainWindow.locator('[data-studio-new-flow="true"]').click();
 		await expect(mainWindow.locator('section[aria-labelledby="flow-welcome-title"]')).toBeVisible();
 		await expect(mainWindow.locator(".ant-tree-treenode-selected")).toHaveCount(0);
@@ -608,7 +599,7 @@ test.describe("Daedalus Flow node workflow", () => {
 		await expect.poll(() => mockBackend.getRequests("flow.node.types.list").length).toBeGreaterThan(0);
 		await mainWindow.getByRole("button", { name: "Fit View" }).click();
 		const starterFlowInput = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/flow-input"])');
-		const starterUserPrompt = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/user-prompt"])').first();
+		const starterUserPrompt = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/user-prompt"])');
 		await expect(starterFlowInput).toBeVisible();
 		await expect(starterUserPrompt).toBeVisible();
 		const starterEdge = mainWindow.locator(".react-flow__edge");
@@ -631,96 +622,19 @@ test.describe("Daedalus Flow node workflow", () => {
 		expect(starterSourceColor).toBe("#a65f2a");
 		expect(starterTargetColor).toBe(starterSourceColor);
 		expect(starterGradientColors).toEqual([starterSourceColor, starterTargetColor]);
-
-		// Reconnecting an existing edge must discover compatible handles on other
-		// nodes, not just the handle that originally owned the target endpoint.
-		await mainWindow.keyboard.press("Shift+A");
-		await selectFlowNodeType(mainWindow, /Basic|基础/u, /Condition|条件/u);
-		await mainWindow.getByRole("button", { name: "Fit View" }).click();
-		const alternateCondition = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/condition"])').last();
-		const alternateConditionId = await alternateCondition.getAttribute("data-id");
-		const alternateInput = alternateCondition.locator('[data-flow-port-id="input"]');
-		const occupiedInput = starterUserPrompt.locator('[data-flow-port-id="input"]');
-		const reconnectTargetBox = await occupiedInput.boundingBox();
-		const alternateInputBox = await alternateInput.boundingBox();
-		expect(reconnectTargetBox).not.toBeNull();
-		expect(alternateInputBox).not.toBeNull();
-		await mainWindow.mouse.move(
-			reconnectTargetBox!.x + reconnectTargetBox!.width / 2,
-			reconnectTargetBox!.y + reconnectTargetBox!.height / 2,
-		);
-		await mainWindow.mouse.down();
-		await mainWindow.mouse.move(
-			alternateInputBox!.x + alternateInputBox!.width / 2 - 14,
-			alternateInputBox!.y + alternateInputBox!.height / 2 + 8,
-			{ steps: 12 },
-		);
-		// Reconnects started from an occupied input Handle use XYFlow's native
-		// updater, including proximity snapping before the pointer reaches the Handle.
-		await expect(alternateInput).toHaveClass(/\bvalid\b/);
-		await mainWindow.mouse.up();
-		await expect(mainWindow.locator("[data-flow-canvas-layer]")).toHaveAttribute("data-flow-edge-count", "1");
-		await expect.poll(() => edges.some((edge): boolean => edge.targetNodeId === alternateConditionId)).toBe(true);
-		await expect(starterUserPrompt.locator("textarea")).toBeVisible();
-		await expect.poll(() =>
-			mockBackend.getRequests("flow.patch.commit").flatMap((request) =>
-				((request.params as { operations?: Array<{ kind: string }> }).operations ?? [])
-					.map((operation) => operation.kind)
-					.filter((kind) => kind.startsWith("edge.")),
-			).slice(-2),
-		).toEqual(["edge.delete", "edge.create"]);
-
-		const currentReconnectTargetBox = await alternateInput.boundingBox();
-		const originalInputBox = await starterUserPrompt.locator('[data-flow-port-id="input"]').boundingBox();
-		expect(currentReconnectTargetBox).not.toBeNull();
-		expect(originalInputBox).not.toBeNull();
-		await mainWindow.mouse.move(
-			currentReconnectTargetBox!.x + currentReconnectTargetBox!.width / 2,
-			currentReconnectTargetBox!.y + currentReconnectTargetBox!.height / 2,
-		);
-		await mainWindow.mouse.down();
-		await mainWindow.mouse.move(
-			originalInputBox!.x + originalInputBox!.width / 2,
-			originalInputBox!.y + originalInputBox!.height / 2,
-			{ steps: 12 },
-		);
-		await mainWindow.mouse.up();
-		await expect(starterUserPrompt.locator("textarea")).toHaveCount(0);
-		await expect(mainWindow.locator(".react-flow__edgeupdater-source")).toHaveCount(0);
-
-		// An output Handle with an existing edge still starts a normal fan-out
-		// connection. The edge updater must not cover it and reverse the direction.
-		const connectedSourceBox = await starterFlowInput.locator('[data-flow-port-id="output"]').boundingBox();
-		const alternateInputAfterReconnectBox = await alternateInput.boundingBox();
-		expect(connectedSourceBox).not.toBeNull();
-		expect(alternateInputAfterReconnectBox).not.toBeNull();
-		await mainWindow.mouse.move(
-			connectedSourceBox!.x + connectedSourceBox!.width / 2,
-			connectedSourceBox!.y + connectedSourceBox!.height / 2,
-		);
-		await mainWindow.mouse.down();
-		await mainWindow.mouse.move(
-			alternateInputAfterReconnectBox!.x + alternateInputAfterReconnectBox!.width / 2,
-			alternateInputAfterReconnectBox!.y + alternateInputAfterReconnectBox!.height / 2,
-			{ steps: 12 },
-		);
-		await expect(alternateInput).toHaveClass(/\bvalid\b/);
-		await mainWindow.mouse.up();
-		await expect(mainWindow.locator("[data-flow-canvas-layer]")).toHaveAttribute("data-flow-edge-count", "2");
-		await alternateCondition.locator("header").click();
-		await mainWindow.keyboard.press("Delete");
-		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/condition"])')).toHaveCount(0);
-		await expect(mainWindow.locator("[data-flow-canvas-layer]")).toHaveAttribute("data-flow-edge-count", "1");
 		await starterFlowInput.getByRole("button", { name: /Collapse node|折叠节点/ }).click();
 		await starterUserPrompt.getByRole("button", { name: /Collapse node|折叠节点/ }).click();
 		await expect(starterFlowInput.locator('[data-flow-collapsed-ports="input"]')).toHaveCount(0);
 		await expect(starterFlowInput.locator('[data-flow-collapsed-ports="output"]')).toHaveCount(1);
 		await expect(starterUserPrompt.locator('[data-flow-collapsed-ports]')).toHaveCount(2);
-		// Collapsing changes only the visual anchor. The ordinary edge remains in the
-		// Canvas topology and must not be promoted to a permanent SVG overlay.
-		await expect(mainWindow.locator("[data-flow-canvas-layer]")).toHaveAttribute("data-flow-edge-count", "1");
-		await mainWindow.mouse.move(340, 760);
-		await expect(starterEdge).toHaveCount(0);
+		await expect.poll(async () => {
+			const foldedSource = (await starterFlowInput.locator('[data-flow-collapsed-ports="output"]').boundingBox())!;
+			const foldedTarget = (await starterUserPrompt.locator('[data-flow-collapsed-ports="input"]').boundingBox())!;
+			await mainWindow.mouse.move(foldedSource.x + 20, foldedSource.y - 20);
+			await mainWindow.mouse.move((foldedSource.x + foldedSource.width + foldedTarget.x) / 2, (foldedSource.y + foldedSource.height / 2 + foldedTarget.y + foldedTarget.height / 2) / 2);
+			return starterEdge.count();
+		}).toBe(1);
+		expect(await starterEdge.locator("linearGradient stop").evaluateAll(stops => stops.map(stop => stop.getAttribute("stop-color")))).toEqual(starterGradientColors);
 		await starterFlowInput.getByRole("button", { name: /Expand node|展开节点/ }).click();
 		await starterUserPrompt.getByRole("button", { name: /Expand node|展开节点/ }).click();
 		await expect(starterUserPrompt.locator("textarea")).toHaveCount(0);

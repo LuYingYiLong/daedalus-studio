@@ -124,7 +124,13 @@ export function useFlowNodeLayout(
 				// Undo、删除或外部位置修改优先于尚未结束的动画，不能被迟到帧覆盖
 				animation.unsubscribe = runtime.document.subscribe(other.id, () => {
 					const saved = runtime.document.get(other.id);
-					if (!saved || saved.x !== move.x || saved.y !== move.y) {
+					// The commit that records the avoidance move can notify once with
+					// the pre-commit document position and then again with the target.
+					// Keep the animation alive for both expected snapshots; cancel only
+					// when an unrelated external edit changes the position.
+					const isExpectedPosition = saved !== undefined &&
+						((saved.x === from.x && saved.y === from.y) || (saved.x === move.x && saved.y === move.y));
+					if (!isExpectedPosition) {
 						animatedPositions.delete(other.id);
 						cancelAnimation(other.id);
 						if (saved) flow.updateNode(other.id, { position: { x: saved.x, y: saved.y } });
@@ -141,6 +147,15 @@ export function useFlowNodeLayout(
 			for (const [id, state] of pending) {
 				const node = flow.getNode(id);
 				state.attempts++;
+				// A newly mounted node may not have a measured DOM box yet while its
+				// persisted/default dimensions are already authoritative. Run the
+				// first avoidance pass from those dimensions so an inserted node never
+				// remains stacked on an existing node waiting for measurement.
+				if (node && state.attempts === 1 && (node.measured?.width === undefined || node.measured?.height === undefined)) {
+					pending.delete(id);
+					settle(id);
+					continue;
+				}
 				if (node?.measured?.width && node.measured.height) {
 					const size = `${node.measured.width}:${node.measured.height}`;
 					state.stable = size === state.previous ? state.stable + 1 : 0;

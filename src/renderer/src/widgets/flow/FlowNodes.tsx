@@ -1070,7 +1070,16 @@ function FlowNodeCard({
 					data-node-type={flowNode.typeId}
 					data-node-status={nodeStatus}
 				>
-					<header className={styles.header} style={{ background: flowNodeCategoryColor(definition?.category) }}>
+					<header
+						className={styles.header}
+						style={{ background: flowNodeCategoryColor(definition?.category) }}
+						onPointerDown={(event): void => {
+							if ((event.target as Element).closest("button,input,textarea,select,[contenteditable=true]") !== null)
+								return;
+							const active = document.activeElement;
+							if (active instanceof HTMLElement && nodeElement.current?.contains(active)) active.blur();
+						}}
+					>
 						{collapsed ? (
 							<>
 								<CollapsedPorts
