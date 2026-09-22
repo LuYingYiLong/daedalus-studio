@@ -42,10 +42,14 @@ describe("Flow home surface", (): void => {
 		expect(surface).toContain("onReconnect={onReconnect}");
 		expect(surface).toContain("onReconnectEnd={onReconnectEnd}");
 		expect(surface).toContain("edgesReconnectable={!controller.isGraphLocked}");
-		expect(surface).toContain("detachedEdgeIdRef.current");
+		expect(surface).toContain("redirectConnectedInputToNativeReconnect");
+		expect(surface).toContain("react-flow__edgeupdater-target");
+		expect(surface).toContain("connectionRadius={FLOW_CONNECTION_RADIUS}");
+		expect(surface).not.toContain("detachedEdgeIdRef.current");
 		expect(surface).toContain("detachedConnectionSourceRef.current");
 		expect(surface).toContain("connectionLineComponent={connectionLineComponent}");
-		expect(surface).toContain("setReconnectingEdgeId(detachedEdge.edgeId)");
+		expect(surface).toContain('reconnectable: controller.isGraphLocked ? false : "target" as const');
+		expect(surface).not.toContain("edge.id !== reconnectingEdgeId && overlayEdgeIds.includes(edge.id)");
 		expect(surface).toContain("createConnectedNode");
 		expect(surface).toContain("onMoveEnd={onMoveEnd}");
 		expect(surface).not.toContain("viewportSaveTimerRef");

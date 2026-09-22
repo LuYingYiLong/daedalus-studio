@@ -28,6 +28,7 @@ import {
 	type MouseEvent as ReactMouseEvent,
 	type MutableRefObject,
 } from "react";
+import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import type { HomeFlowController } from "@/features/home/flow/useHomeFlowController";
@@ -167,6 +168,7 @@ const FLOW_NODE_HEIGHT = 220;
 const FLOW_NODE_GAP = 28;
 const FLOW_SNAP_GRID: [number, number] = [24, 24];
 const FLOW_NODE_CREATE_OFFSET = 32;
+const FLOW_CONNECTION_RADIUS = 24;
 const EMPTY_CONNECTED_INPUT_IDS: ReadonlySet<string> = new Set<string>();
 const EMPTY_EDITOR_OPTIONS: FlowNodeEditorOptions = { modelSelection: null, modelsByProvider: {} };
 
@@ -337,7 +339,6 @@ function HomeFlowSurface({
 	const lastPointerPositionRef = useRef<{ x: number; y: number } | null>(null);
 	const searchInputRef = useRef<InputRef | null>(null);
 	const connectStartRef = useRef<OnConnectStartParams | null>(null);
-	const detachedEdgeIdRef = useRef<string | null>(null);
 	const detachedConnectionSourceRef = useRef<DetachedConnectionSource | null>(null);
 	const interactionSampleRef = useRef<InteractionSample | null>(null);
 	const loadingProviderModelsRef = useRef<Set<string>>(new Set());
@@ -1129,7 +1130,6 @@ function HomeFlowSurface({
 		): void => {
 			reconnectingOverlayEdgeRef.current = null;
 			detachedConnectionSourceRef.current = null;
-			detachedEdgeIdRef.current = null;
 			setReconnectingEdgeId(null);
 			if (state.toHandle === null) void controller.deleteEdge(edge.id);
 		},
@@ -1150,19 +1150,73 @@ function HomeFlowSurface({
 		},
 		[closePicker],
 	);
+	const redirectConnectedInputToNativeReconnect = useCallback(
+		(event: ReactMouseEvent<HTMLDivElement>): void => {
+			if (event.button !== 0 || controller.isGraphLocked || snapshot === null) return;
+			const element = event.target;
+			if (!(element instanceof Element) || element.closest(".react-flow__edgeupdater") !== null) return;
+			const handle = element.closest<HTMLElement>(".react-flow__handle.target");
+			if (handle === null) return;
+			const nodeId = handle.dataset.nodeid;
+			const handleId = handle.dataset.handleid;
+			if (!nodeId || !handleId) return;
+			const node = snapshot.nodes.find((candidate): boolean => candidate.nodeId === nodeId);
+			const port = portFor(node, controller.nodeDefinitions, handleId, "input");
+			if (port === undefined || port.multiple) return;
+			const edge = snapshot.edges.find(
+				(candidate): boolean => candidate.targetNodeId === nodeId && candidate.targetPort === handleId,
+			);
+			if (edge === undefined) return;
+
+			const updaterSelector = `.react-flow__edge[data-id="${CSS.escape(edge.edgeId)}"] .react-flow__edgeupdater-target`;
+			let updater = canvasRef.current?.querySelector<SVGCircleElement>(updaterSelector);
+			if (updater === null || updater === undefined) {
+				flushSync((): void => {
+					setOverlayEdgeIds((current): readonly string[] =>
+						current.includes(edge.edgeId) ? current : [...current, edge.edgeId],
+					);
+				});
+				updater = canvasRef.current?.querySelector<SVGCircleElement>(updaterSelector);
+			}
+			if (updater === null || updater === undefined) return;
+
+			// An occupied target Handle would normally start a reverse connection and
+			// can therefore only snap to source Handles. Forward the same gesture to
+			// the edge's target updater so XYFlow keeps the original source fixed and
+			// provides its native target-Handle snapping and validation.
+			event.preventDefault();
+			event.nativeEvent.stopImmediatePropagation();
+			event.stopPropagation();
+			updater.dispatchEvent(
+				new MouseEvent("mousedown", {
+					bubbles: true,
+					cancelable: true,
+					view: window,
+					button: event.button,
+					buttons: event.buttons,
+					clientX: event.clientX,
+					clientY: event.clientY,
+					screenX: event.screenX,
+					screenY: event.screenY,
+					ctrlKey: event.ctrlKey,
+					shiftKey: event.shiftKey,
+					altKey: event.altKey,
+					metaKey: event.metaKey,
+				}),
+			);
+		},
+		[controller.isGraphLocked, controller.nodeDefinitions, snapshot],
+	);
 	const onConnectEnd = useCallback(
 		(event: MouseEvent | TouchEvent, state: FinalConnectionState): void => {
 			const started = connectStartRef.current;
-			const detachedEdgeId = detachedEdgeIdRef.current;
 			connectStartRef.current = null;
-			detachedEdgeIdRef.current = null;
+			// Native edge reconnection has its own completion callback. Avoid running
+			// the blank-canvas picker path for the same gesture.
+			if (reconnectingOverlayEdgeRef.current !== null) return;
 			detachedConnectionSourceRef.current = null;
 			setReconnectingEdgeId(null);
 			if (started === null || started.nodeId === null || started.handleId === null || snapshot === null) return;
-			if (detachedEdgeId !== null) {
-				if (state.toHandle === null) void controller.deleteEdge(detachedEdgeId);
-				return;
-			}
 			if (state.toHandle !== null) return;
 			const point = eventPoint(event);
 			const element = document.elementFromPoint(point.x, point.y);
@@ -1201,7 +1255,7 @@ function HomeFlowSurface({
 				existingPort: started.handleId,
 			});
 		},
-		[controller.deleteEdge, controller.nodeDefinitions, openPickerAt, snapshot],
+		[controller.nodeDefinitions, openPickerAt, snapshot],
 	);
 	const finishInteractionSample = useCallback((kind?: InteractionSample["kind"]): void => {
 		const sample = interactionSampleRef.current;
@@ -1388,6 +1442,7 @@ function HomeFlowSurface({
 			<div
 				ref={canvasRef}
 				className={styles.canvasRegion}
+				onMouseDownCapture={redirectConnectedInputToNativeReconnect}
 				onPointerMove={(event): void => {
 					lastPointerPositionRef.current = { x: event.clientX, y: event.clientY };
 				}}
@@ -1506,8 +1561,12 @@ function HomeFlowSurface({
 					key={snapshot.flow.flowId}
 					defaultNodes={nodes}
 					edges={edges
-						.filter((edge) => edge.id !== reconnectingEdgeId && overlayEdgeIds.includes(edge.id))
-						.map((edge) => ({ ...edge, selected: runtime.selectedEdges.has(edge.id) }))}
+						.filter((edge): boolean => overlayEdgeIds.includes(edge.id))
+						.map((edge) => ({
+							...edge,
+							reconnectable: controller.isGraphLocked ? false : "target" as const,
+							selected: runtime.selectedEdges.has(edge.id),
+						}))}
 					onEdgesChange={(changes) => {
 						// Canvas hit-testing owns edge selection. XYFlow can emit a stale deselect after
 						// the SVG overlay mounts, so only merge positive selections from its controls.
@@ -1535,28 +1594,8 @@ function HomeFlowSurface({
 							setReconnectingEdgeId(reconnectingOverlayEdgeRef.current);
 							return;
 						}
-						const reconnectSource = detachedConnectionSourceRef.current;
-						detachedEdgeIdRef.current = null;
-						if (params.handleType !== "source" || reconnectSource === null)
-							detachedConnectionSourceRef.current = null;
+						detachedConnectionSourceRef.current = null;
 						setReconnectingEdgeId(null);
-						if (params.handleType !== "target" || params.nodeId === null || params.handleId === null)
-							return;
-						const targetNode = snapshot.nodes.find((node): boolean => node.nodeId === params.nodeId);
-						const targetPort = portFor(targetNode, controller.nodeDefinitions, params.handleId, "input");
-						if (targetPort?.multiple === true) return;
-						const detachedEdge = snapshot.edges.find(
-							(edge): boolean =>
-								edge.targetNodeId === params.nodeId && edge.targetPort === params.handleId,
-						);
-						if (detachedEdge === undefined) return;
-						detachedEdgeIdRef.current = detachedEdge.edgeId;
-						detachedConnectionSourceRef.current = {
-							edgeId: detachedEdge.edgeId,
-							sourceNodeId: detachedEdge.sourceNodeId,
-							sourcePort: detachedEdge.sourcePort,
-						};
-						setReconnectingEdgeId(detachedEdge.edgeId);
 					}}
 					onConnectEnd={onConnectEnd}
 					connectionLineComponent={connectionLineComponent}
@@ -1564,7 +1603,8 @@ function HomeFlowSurface({
 					onReconnectStart={onReconnectStart}
 					onReconnectEnd={onReconnectEnd}
 					edgesReconnectable={!controller.isGraphLocked}
-					reconnectRadius={18}
+					reconnectRadius={12}
+					connectionRadius={FLOW_CONNECTION_RADIUS}
 					onMoveStart={onMoveStart}
 					onMoveEnd={onMoveEnd}
 					nodesDraggable

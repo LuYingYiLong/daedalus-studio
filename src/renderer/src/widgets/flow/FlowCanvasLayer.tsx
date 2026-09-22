@@ -479,6 +479,7 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 		};
 		const pointerMove = (event: PointerEvent): void => {
 			if (event.buttons || moving) return;
+			if ((event.target as Element).closest(".react-flow__edgeupdater") !== null) return;
 			const svg = (event.target as Element).closest(".react-flow__edge");
 			const next = svg?.getAttribute("data-id") ?? hit(event);
 			if (next !== hovered) {
@@ -487,6 +488,7 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 			}
 		};
 		const pointerDown = (event: PointerEvent): void => {
+			if ((event.target as Element).closest(".react-flow__edgeupdater") !== null) return;
 			cancelAnimationFrame(upgradeFrame);
 			clearTimeout(settleTimer);
 			clearTimeout(qualityTimer);

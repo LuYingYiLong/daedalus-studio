@@ -888,7 +888,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 
 	const reconnectEdge = useCallback(
 		async (
-			_edgeId: string,
+			edgeId: string,
 			sourceNodeId: string,
 			targetNodeId: string,
 			sourcePort: string,
@@ -897,24 +897,29 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		): Promise<void> => {
 			const current = snapshotRef.current;
 			if (current === null || isGraphLocked) return;
-			// The backend replaces a single-connection target as part of edge.create.
-			// A new id is intentional: ReactFlow otherwise may keep the old edge's
-			// cached geometry after a reconnect and leave the accepted edge invisible.
-			applyOperation({
-				mutationId: createFlowMutationId(),
-				kind: "edge.create",
-				baseGraphRevision: current.flow.graphRevision,
-				payload: {
-					edgeId: `edge-${crypto.randomUUID()}`,
-					sourceNodeId,
-					sourcePort,
-					targetNodeId,
-					targetPort,
-					dataType,
+			applyOperations([
+				{
+					mutationId: createFlowMutationId(),
+					kind: "edge.delete",
+					baseGraphRevision: current.flow.graphRevision,
+					payload: { edgeId },
 				},
-			});
+				{
+					mutationId: createFlowMutationId(),
+					kind: "edge.create",
+					baseGraphRevision: current.flow.graphRevision,
+					payload: {
+						edgeId: `edge-${crypto.randomUUID()}`,
+						sourceNodeId,
+						sourcePort,
+						targetNodeId,
+						targetPort,
+						dataType,
+					},
+				},
+			]);
 		},
-		[applyOperation, isGraphLocked],
+		[applyOperations, isGraphLocked],
 	);
 
 	const deleteEdge = useCallback(

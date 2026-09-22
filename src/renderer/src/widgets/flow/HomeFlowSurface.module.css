@@ -146,6 +146,13 @@
 	border-color: var(--ant-color-border-secondary);
 }
 
+.canvasRegion :global(.react-flow__edgeupdater) {
+	cursor: crosshair;
+	fill: transparent;
+	stroke: transparent;
+	pointer-events: all;
+}
+
 .canvasRegion :global(.react-flow__pane.draggable) {
 	cursor: grab;
 }
