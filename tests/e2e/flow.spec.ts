@@ -591,6 +591,14 @@ test.describe("Daedalus Flow node workflow", () => {
 		await mainWindow.getByRole("button", { name: /Create Flow|创建 Flow/u }).click();
 		await expect(mainWindow.locator('[data-studio-flow-surface="true"]')).toBeVisible();
 		await expect(mainWindow.locator(".ant-tree-treenode-selected")).toHaveCount(1);
+		const flowSectionSwitcher = mainWindow.locator(
+			".ant-tree-treenode:not(.ant-tree-treenode-leaf) .ant-tree-switcher",
+		).first();
+		await expect(flowSectionSwitcher).toBeVisible();
+		await expect.poll(() => flowSectionSwitcher.evaluate((element): { width: string; gap: string; height: string } => {
+			const style = getComputedStyle(element);
+			return { width: style.width, gap: style.marginInlineEnd, height: style.height };
+		})).toEqual({ width: "16px", gap: "8px", height: "28px" });
 		await mainWindow.locator('[data-studio-new-flow="true"]').click();
 		await expect(mainWindow.locator('section[aria-labelledby="flow-welcome-title"]')).toBeVisible();
 		await expect(mainWindow.locator(".ant-tree-treenode-selected")).toHaveCount(0);

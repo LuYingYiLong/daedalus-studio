@@ -14,6 +14,7 @@
 .treeItem {
 	display: flex;
 	align-items: center;
+	box-sizing: border-box;
 	width: 100%;
 	min-width: 0;
 	min-height: 28px;
@@ -58,12 +59,31 @@
 
 .treeItemSwitcher {
 	display: inline-flex;
-	flex: none;
+	flex: 0 0 16px;
 	align-items: center;
 	justify-content: center;
-	width: 20px !important;
-	min-width: 20px !important;
-	margin-inline-end: 4px;
+	width: 16px !important;
+	min-width: 16px !important;
+	height: 28px;
+	margin-inline-end: 8px;
+	line-height: 0;
+}
+
+/* Keep the tree switcher grid identical to the sidebar buttons: 16px icon + 8px gap. */
+.treeItem :global(.ant-tree-switcher) {
+	box-sizing: border-box;
+	flex: 0 0 16px;
+	width: 16px !important;
+	min-width: 16px !important;
+	height: 28px;
+	margin-inline-end: 4px !important;
+	line-height: 0;
+}
+
+.treeItemSwitcher :global(.daedalus-icon) {
+	display: block;
+	width: 16px;
+	height: 16px;
 }
 
 .sectionNode {
@@ -108,7 +128,19 @@
 	background: transparent !important;
 }
 
+.treeItem :global(.ant-tree-switcher)::before {
+	width: 16px !important;
+	height: 28px !important;
+}
+
 .treeItem:global(.ant-tree-treenode-leaf) .treeItemSwitcher {
+	width: 0 !important;
+	min-width: 0 !important;
+	margin-inline-end: 0 !important;
+}
+
+.treeItem:global(.ant-tree-treenode-leaf) :global(.ant-tree-switcher) {
+	flex-basis: 0;
 	width: 0 !important;
 	min-width: 0 !important;
 	margin-inline-end: 0 !important;

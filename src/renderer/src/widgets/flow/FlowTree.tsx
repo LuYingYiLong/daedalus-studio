@@ -592,6 +592,17 @@ function FlowTree({
 					itemTitle: styles.treeItemTitle,
 					itemSwitcher: styles.treeItemSwitcher,
 				}}
+				styles={{
+					itemSwitcher: {
+						boxSizing: "border-box",
+						flex: "0 0 16px",
+						width: 16,
+						minWidth: 16,
+						height: 28,
+						marginInlineEnd: 4,
+						lineHeight: 0,
+					},
+				}}
 				treeData={treeData}
 				titleRender={(item): ReactNode => {
 					const node = item as FlowTreeNode;

@@ -2026,6 +2026,17 @@ function WorkspaceTree({
 						itemTitle: styles.projectTreeTitle,
 						itemSwitcher: styles.projectTreeSwitcher,
 					}}
+					styles={{
+						itemSwitcher: {
+							boxSizing: "border-box",
+							flex: "0 0 16px",
+							width: 16,
+							minWidth: 16,
+							height: 28,
+							marginInlineEnd: 4,
+							lineHeight: 0,
+						},
+					}}
 					treeData={sectionTreeData}
 					expandedKeys={expandedTreeKeys}
 					selectedKeys={effectiveSelectedMenuKeys}
