@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
 	<defs>
-		<clipPath id="clipPath_7">
+		<clipPath id="clipPath_11">
 			<rect width="19.060659" height="19.060659" x="2.000000" y="2.000000" fill="currentColor" />
 		</clipPath>
 	</defs>
-	<g customFrame="url(#clipPath_7)">
+	<g customFrame="url(#clipPath_11)">
 		<rect width="19.060659" height="19.060659" x="2.000000" y="2.000000" fill="currentColor" fill-opacity="0" />
 		<path d="M14.6064 13.1922C15.4816 12.0236 16 10.5723 16 9C16 5.134 12.866 2 9 2C5.134 2 2 5.134 2 9C2 12.866 5.134 16 9 16C10.5723 16 12.0236 15.4816 13.1922 14.6064L19.2929 20.7071C19.5286 20.9428 19.7643 21.0607 20 21.0607C20.2357 21.0607 20.4714 20.9428 20.7071 20.7071C20.9428 20.4714 21.0607 20.2357 21.0607 20C21.0607 19.7643 20.9428 19.5286 20.7071 19.2929L14.6064 13.1922ZM9 3.75C11.8995 3.75 14.25 6.1005 14.25 9C14.25 11.8995 11.8995 14.25 9 14.25C6.1005 14.25 3.75 11.8995 3.75 9C3.75 6.1005 6.1005 3.75 9 3.75Z" fill="currentColor" fill-rule="evenodd" />
 	</g>
-	<path d="M6 9L9 9L12 9M9 9L9 6M9 12L9 9" stroke="currentColor" stroke-width="2.000000" />
+	<path d="M6 9L12 9" stroke="currentColor" stroke-width="2.000000" />
 </svg>

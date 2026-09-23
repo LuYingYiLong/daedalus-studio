@@ -21,7 +21,7 @@ test.describe("Flow GPU performance", () => {
 			await expect(page.locator(".react-flow__node").first()).toBeAttached();
 			const canvas = page.locator(".react-flow");
 			const box = (await canvas.boundingBox())!;
-			await page.getByRole("button", { name: "Fit View" }).click();
+			await page.getByRole("button", { name: /^(?:Fit canvas|适应画布)$/ }).click();
 			await page.waitForTimeout(350);
 			await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 			const initialZoom = await page
@@ -77,7 +77,7 @@ test.describe("Flow GPU performance", () => {
 			});
 			for (let sweep = 0; sweep < 12; sweep += 1) {
 				if (sweep === 6) {
-					await page.getByRole("button", { name: "Fit View" }).click();
+					await page.getByRole("button", { name: /^(?:Fit canvas|适应画布)$/ }).click();
 					// 适配后的比例可能落在用户自定义 LOD 的滞回区，明确进入轮廓再测概览交互
 					const fittedZoom = await page
 						.locator(".react-flow__viewport")

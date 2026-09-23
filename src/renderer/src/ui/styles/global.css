@@ -160,7 +160,7 @@ body {
 	width: 32px !important;
 	height: 32px !important;
 	border: 1px solid var(--ds-border) !important;
-	border-radius: var(--ds-radius-lg) !important;
+	border-radius: 50% !important;
 	color: var(--ds-text-primary) !important;
 	background: var(--ds-surface-elevated) !important;
 	box-shadow: none !important;

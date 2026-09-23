@@ -51,7 +51,7 @@ test("keeps graph geometry while culling controls and preserving editing drafts"
 			const zoom = new DOMMatrix(getComputedStyle(document.querySelector(".react-flow__viewport")!).transform).a;
 			return { x: (port.x + port.width / 2 - node.x) / zoom, y: (port.y + port.height / 2 - node.y) / zoom };
 		});
-	await page.getByRole("button", { name: "Fit View" }).click();
+	await page.getByRole("button", { name: /^(?:Fit canvas|适应画布)$/ }).click();
 	await expect.poll(async () => page.locator('[data-flow-render-mode="full"]').count()).toBe(0);
 	await expect(page.locator(".react-flow__node")).toHaveCount(200);
 	await expect(page.locator("[data-flow-canvas-layer]")).toHaveAttribute("data-flow-edge-count", "400");
@@ -83,7 +83,7 @@ test("keeps graph geometry while culling controls and preserving editing drafts"
 		.toBe(true);
 	await expect(page.locator("iframe")).toHaveCount(0);
 	for (let cycle = 0; cycle < 3; cycle++) {
-		await page.getByRole("button", { name: "Fit View" }).click();
+		await page.getByRole("button", { name: /^(?:Fit canvas|适应画布)$/ }).click();
 		await expect.poll(() => page.locator('[data-flow-render-mode="full"]').count()).toBe(0);
 		await first.dblclick();
 		await expect(first.locator("textarea").first()).toHaveValue("草稿不能丢失");
