@@ -8,6 +8,7 @@ describe("Flow home surface", (): void => {
 		const surface = readRepoFile("src", "renderer", "src", "widgets", "flow", "HomeFlowSurface.tsx");
 		const welcome = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowWelcome.tsx");
 		const nodes = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodes.tsx");
+		const mediaGallery = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowMediaGallery.tsx");
 		const nodeStyles = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodes.module.css");
 		const surfaceStyles = readRepoFile(
 			"src",
@@ -60,10 +61,13 @@ describe("Flow home surface", (): void => {
 		expect(surface).toContain('performance.clearMeasures("daedalus.flow.interaction")');
 		expect(surface).not.toContain("MiniMap");
 		expect(surface).toContain("menu={approvalModeMenu}");
-		expect(surface).toContain("<Dropdown.Button");
+		expect(surface).not.toContain("<Dropdown.Button");
+		expect(surface).toContain("<Space.Compact>");
+		expect(surface).toContain("aria-label={t(\"flow.editor.selectRunInput\"");
 		expect(surface).toContain("menu={runEntryMenu}");
 		expect(surface).toContain("entryNodeIds: group.nodeIds");
-		expect(surface).toContain("forceNodeIds: forceNodeIds ?? snapshot?.nodes.filter");
+		expect(surface).toContain("forceAllSelected: true");
+		expect(surface).toContain("...(forceNodeIds === undefined ? {} : { forceNodeIds })");
 		expect(surface).toContain('action === "run-input"');
 		expect(surface).toContain("reachableOutputNodeIds([nodeId]");
 		expect(surface).toContain("groupFlowRunEntries");
@@ -125,7 +129,10 @@ describe("Flow home surface", (): void => {
 		expect(nodes).toContain('flowNode.typeId === "builtin/flow-input"');
 		expect(nodes).toContain('name="play"');
 		expect(nodes).toContain('flowNode.typeId === "builtin/output"');
-		expect(nodes).toMatch(/className=\{.*styles\.outputResult.*nodrag nowheel/);
+		expect(nodes).toMatch(/className=\{.*styles\.outputResult.*nodrag/u);
+		expect(nodes).toContain('mediaArtifacts.length === 0 ? " nowheel" : ""');
+		expect(mediaGallery).toContain('className="nodrag"');
+		expect(mediaGallery).not.toContain("nowheel");
 		expect(nodes).toContain("<MarkdownContent cacheParsing>{outputMarkdown}</MarkdownContent>");
 		expect(nodes).toContain('format === "json"');
 		expect(nodes).not.toContain("resultPreview");

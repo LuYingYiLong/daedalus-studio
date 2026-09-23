@@ -359,7 +359,6 @@
 	box-sizing: border-box;
 	flex: 1 1 112px;
 	min-height: 112px;
-	padding: var(--ds-space-2) var(--ds-space-3);
 	overflow: auto;
 	border: 1px solid var(--ds-border-secondary);
 	border-radius: var(--ds-radius-md);

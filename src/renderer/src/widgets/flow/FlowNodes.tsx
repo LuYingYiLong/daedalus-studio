@@ -1264,7 +1264,7 @@ function FlowNodeCard({
 							) : null}
 							{isOutputNode ? (
 								<div
-									className={`${styles.outputResult}${mediaArtifacts.length > 0 ? ` ${styles.outputResultMedia}` : ""} nodrag nowheel`}
+									className={`${styles.outputResult}${mediaArtifacts.length > 0 ? ` ${styles.outputResultMedia}` : ""} nodrag${mediaArtifacts.length === 0 ? " nowheel" : ""}`}
 									role="region"
 									aria-label={t("flow.editor.outputResult", { defaultValue: "Output result" })}
 								>

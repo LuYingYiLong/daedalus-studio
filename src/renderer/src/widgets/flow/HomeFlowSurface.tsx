@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Dropdown, Flex, Input, Spin, Tooltip, Typography } from "antd";
+import { Alert, Badge, Button, Dropdown, Flex, Input, Space, Spin, Tooltip, Typography } from "antd";
 import type { InputRef, MenuProps } from "antd";
 import {
 	BaseEdge,
@@ -1390,25 +1390,36 @@ function HomeFlowSurface({
 							{t("flow.editor.stop")}
 						</Button>
 					) : (
-						<Dropdown.Button
-							type="primary"
-							menu={runEntryMenu}
-							trigger={["click"]}
-							loading={controller.runRequestStage !== "idle"}
-							disabled={!canRunSelectedEntry}
-							icon={<Icon name="arrow-down" />}
-							onClick={(): void => {
-								void runSelectedEntry();
-							}}
-						>
-							{controller.runRequestStage === "saving"
-								? t("flow.editor.runSaving", { defaultValue: "Saving" })
-								: controller.runRequestStage === "starting"
-									? t("flow.editor.runStarting", { defaultValue: "Starting" })
-									: selectedRunEntryGroup === null
-										? t("flow.editor.run")
-										: t("flow.editor.runEntry", { input: selectedRunEntryGroup.label })}
-						</Dropdown.Button>
+						<Space.Compact>
+							<Button
+								type="primary"
+								loading={controller.runRequestStage !== "idle"}
+								disabled={!canRunSelectedEntry}
+								onClick={(): void => {
+									void runSelectedEntry();
+								}}
+							>
+								{controller.runRequestStage === "saving"
+									? t("flow.editor.runSaving", { defaultValue: "Saving" })
+									: controller.runRequestStage === "starting"
+										? t("flow.editor.runStarting", { defaultValue: "Starting" })
+										: selectedRunEntryGroup === null
+											? t("flow.editor.run")
+											: t("flow.editor.runEntry", { input: selectedRunEntryGroup.label })}
+							</Button>
+							<Dropdown
+								menu={runEntryMenu}
+								trigger={["click"]}
+								disabled={!canRunSelectedEntry || controller.runRequestStage !== "idle"}
+							>
+								<Button
+									type="primary"
+									disabled={!canRunSelectedEntry || controller.runRequestStage !== "idle"}
+									icon={<Icon name="arrow-down" />}
+									aria-label={t("flow.editor.selectRunInput", { defaultValue: "Select run input" })}
+								/>
+							</Dropdown>
+						</Space.Compact>
 					)}
 				</Flex>
 			</header>

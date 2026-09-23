@@ -72,7 +72,7 @@ export function FlowMediaGallery({ artifacts }: { artifacts: FlowMediaArtifactRe
 	const start = Math.max(0, Math.floor(scroll / 90) - 1);
 	return (
 		<div
-			className="nodrag nowheel"
+			className="nodrag"
 			style={{ display: "flex", flexDirection: "column", gap: 8, minHeight: 0, height: "100%" }}
 		>
 			<Space wrap>
